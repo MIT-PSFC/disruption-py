@@ -1,4 +1,4 @@
-db = set_database('logbook');
+db = set_database('east_database');
 result=fetch(db,['select * from information_schema.columns ' ...
   'where table_name=''disruption_warning'' ']);
 

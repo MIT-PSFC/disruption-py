@@ -1,0 +1,3 @@
+# ignore .mat files
+*.mat
+/utils/*mat
