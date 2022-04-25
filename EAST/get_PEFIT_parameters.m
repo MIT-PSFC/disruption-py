@@ -96,7 +96,7 @@ qstar = mdsvalue('\efit_aeqdsk:qstar');
 q95 = mdsvalue('\efit_aeqdsk:q95');
 Wmhd = mdsvalue('\efit_aeqdsk:wmhd');
 
-[aminor, status] = mdsvalue('\efit_aeqdsk:aout'); %FIX ME, is this aout or aminor?
+[aminor, status] = mdsvalue('\efit_aeqdsk:aout'); %aout and aminor coincide with min r
 if (mod(status,2) == 0);
   aminor = 0.45 * ones(size(efittime));
 end;

@@ -2,10 +2,6 @@ load('EAST_NEW_SHOTS_2018_2020.mat');
 shotlist = SHOTLIST;
 clearvars -except shotlist
 
-addpath('/home/ASIPP/granetz/matlab', ...
-        '/home/ASIPP/granetz/disruption_warning_database', ...
-        '/home/ASIPP/granetz/disruption_database');
-
 mdsconnect('mds.ipp.ac.cn'); % Connect to EAST MDSplus server
 
 nshots = length(shotlist);
