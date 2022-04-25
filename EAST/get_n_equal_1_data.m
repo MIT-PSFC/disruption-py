@@ -1,6 +1,6 @@
 function [n_equal_1_normalized, n_equal_1_mode, n_equal_1_phase, ...
   rmp_n_equal_1, rmp_n_equal_1_phase, btor] = ...
-  get_n_equal_1_data_EAST(shot, timebase);
+  get_n_equal_1_data(shot, timebase);
 
 % This function computes the amplitude and phase of the n=1 Fourier
 % component of the net saddle signals (total saddle signals minus the

@@ -1,5 +1,5 @@
-function [beta_n, beta_p, kappa, li, q95, Wmhd, aminor] = ...
-  get_PEFIT_parameters(shot, timebase);
+function [beta_n, beta_p, kappa, kappa_area, upper_gap, lower_gap, li, ...
+  q0, qstar, q95, Wmhd, aminor] = get_PEFIT_parameters(shot, timebase);
 
 % This function obtains the P-EFIT parameters from 'pefit_east' tree
 %
@@ -11,7 +11,12 @@ function [beta_n, beta_p, kappa, li, q95, Wmhd, aminor] = ...
 %   beta_n = normalized beta
 %   beta_p = beta poloidal
 %   kappa = elongation
+%   kappa_area = elongation (from cross section area)
+%   upper_gap = upper gap [m]
+%   lower_gap = lower gap [m]
 %   li = internal inductance
+%   q0 = safety factor at center
+%   qstar = q* = cylindrical safety factor
 %   q95 = edge safety factor
 %   Wmhd = diamagnetic energy, [J]
 %   aminor = plasma minor radius, [m]
@@ -31,7 +36,12 @@ function [beta_n, beta_p, kappa, li, q95, Wmhd, aminor] = ...
 beta_n     = NaN(size(timebase));
 beta_p     = NaN(size(timebase));
 kappa      = NaN(size(timebase));
+kappa_area = NaN(size(timebase));
+upper_gap  = NaN(size(timebase));
+lower_gap  = NaN(size(timebase));
 li         = NaN(size(timebase));
+q0         = NaN(size(timebase));
+qstar      = NaN(size(timebase));
 q95        = NaN(size(timebase));
 Wmhd       = NaN(size(timebase));
 aminor     = NaN(size(timebase));
@@ -81,24 +91,50 @@ end;
 beta_p = mdsvalue('\efit_aeqdsk:betap'); 
 kappa = mdsvalue('\efit_aeqdsk:kappa'); % different from C-Mod
 li = mdsvalue('\efit_aeqdsk:li');
+q0 = mdsvalue('\efit_aeqdsk:q0');
+qstar = mdsvalue('\efit_aeqdsk:qstar');
 q95 = mdsvalue('\efit_aeqdsk:q95');
 Wmhd = mdsvalue('\efit_aeqdsk:wmhd');
-aminor = mdsvalue('\efit_aeqdsk:aminor');
+
+[aminor, status] = mdsvalue('\efit_aeqdsk:aout'); %FIX ME, is this aout or aminor?
+if (mod(status,2) == 0);
+  aminor = 0.45 * ones(size(efittime));
+end;
+[area, status] = mdsvalue('\efit_aeqdsk:area');
+if (mod(status,2)==0);
+  kappa_area = NaN(size(timebase));
+  return;
+end;
+
 chisq = mdsvalue('\efit_aeqdsk:chisq'); % Use chisq to determine which time
                                         % slices are invalid.
 convergence = mdsvalue('\efit_aeqdsk:error'); % Use convergence error to determine
                                               % invalid time slices.
 mdsclose;
+
+[upper_gap, lower_gap] = get_PEFIT_gaps(double(shot)); % adaptation of 
+                                                       % Jinxiang Zhu's routine
+% Note: Jinxiang's routine does an mdsopen and mdsclose of the EFIT tree,
+% so it needs to be called after all the other EFIT information has been
+% obtained.
   
 beta_n = beta_n(unique_indices);
 beta_p = beta_p(unique_indices);
 kappa = kappa(unique_indices);
 li = li(unique_indices);
+upper_gap = upper_gap(unique_indices);
+lower_gap = lower_gap(unique_indices);
+q0 = q0(unique_indices);
+qstar = qstar(unique_indices);
 q95 = q95(unique_indices);
 Wmhd = Wmhd(unique_indices);
+area = area(unique_indices);
 aminor = aminor(unique_indices);
 chisq = chisq(unique_indices);
-% convergence = convergence(unique_indices);
+convergence = convergence(unique_indices);
+
+% calculate kappa_area, convert area from cm^2 to m^2
+kappa_area = area*1e-4 ./ (pi*aminor.^2);
 
 % P-EFIT reconstructions are sometimes invalid, particularly when very close
 % to a disruption.  There are a number of P-EFIT parameters that can indicate
@@ -117,7 +153,12 @@ invalid_indices = find(chisq > 20 & convergence < 1);
 beta_n(invalid_indices) = NaN;
 beta_p(invalid_indices) = NaN;
 kappa(invalid_indices) = NaN;
+kappa_area(invalid_indices) = NaN;
 li(invalid_indices) = NaN;
+upper_gap(invalid_indices) = NaN;
+lower_gap(invalid_indices) = NaN;
+q0(invalid_indices) = NaN;
+qstar(invalid_indices) = NaN;
 q95(invalid_indices) = NaN;
 Wmhd(invalid_indices) = NaN;
 aminor(invalid_indices) = NaN;
@@ -131,9 +172,14 @@ beta_n    = interp1(efittime, beta_n,    timebase_column);
 beta_p    = interp1(efittime, beta_p,    timebase_column);
 kappa     = interp1(efittime, kappa,     timebase_column);
 li        = interp1(efittime, li,        timebase_column);
+upper_gap = interp1(efittime, upper_gap, timebase_column);
+lower_gap = interp1(efittime, lower_gap, timebase_column);
+q0        = interp1(efittime, q0,        timebase_column);
+qstar     = interp1(efittime, qstar,     timebase_column);
 q95       = interp1(efittime, q95,       timebase_column);
 Wmhd      = interp1(efittime, Wmhd,      timebase_column);
 aminor    = interp1(efittime, aminor,    timebase_column);
+kappa_area     = interp1(efittime, kappa_area,      timebase_column);
 
 % If "timebase" is a row vector, then convert all the outputs back to row
 % vectors before exiting this routine.
@@ -142,7 +188,12 @@ if (size(timebase,2) > 1);
   beta_n    = transpose(beta_n);
   beta_p    = transpose(beta_p);
   kappa     = transpose(kappa);
+  kappa_area     = transpose(kappa_area);
   li        = transpose(li);
+  upper_gap = transpose(upper_gap);
+  lower_gap = transpose(lower_gap);
+  q0        = transpose(q0);
+  qstar     = transpose(qstar);
   q95       = transpose(q95);
   Wmhd      = transpose(Wmhd);
   aminor    = transpose(aminor);

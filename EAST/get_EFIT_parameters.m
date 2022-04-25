@@ -1,6 +1,6 @@
 function [beta_n, beta_p, dbetap_dt, kappa, upper_gap, lower_gap, ...
   li, dli_dt, q0, qstar, q95, Wmhd, dWmhd_dt] = ...
-  get_EFIT_parameters_EAST(shot, timebase);
+  get_EFIT_parameters(shot, timebase);
 
 % This function obtains the EFIT parameters, and also calculates the time
 % derivatives of a few of them.
@@ -119,7 +119,7 @@ chisq = mdsvalue('\efit_aeqdsk:chisq'); % Use chisq to determine which time
 %lower_gap= mdsvalue('\efit_aeqdsk:gapbot')/100; % meters, different from C-Mod
 mdsclose;
 
-[upper_gap, lower_gap] = get_EFIT_gaps_EAST(double(shot)); % Jinxiang Zhu's
+[upper_gap, lower_gap] = get_EFIT_gaps(double(shot)); % Jinxiang Zhu's
                                                            % routine
 % Note: Jinxiang's routine does an mdsopen and mdsclose of the EFIT tree,
 % so it needs to be called after all the other EFIT information has been

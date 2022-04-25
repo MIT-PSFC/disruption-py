@@ -1,8 +1,8 @@
-function [upper_gap, lower_gap] = get_EFIT_gaps(shot)
+function [upper_gap, lower_gap] = get_PEFIT_gaps(shot)
 
 mdsconnect('mds.ipp.ac.cn');
 
-[~, status] = mdsopen('efit18', double(shot));
+[~, status] = mdsopen('pefit_east', double(shot));
 if (mod(status,2) == 0);
   [~, status] = mdsopen('efit_east', double(shot));
   if (mod(status,2) == 0);

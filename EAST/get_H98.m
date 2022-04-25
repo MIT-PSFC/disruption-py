@@ -1,4 +1,4 @@
-function H98_y2 = get_H98_EAST(shot,timebase)
+function H98_y2 = get_H98(shot,timebase)
 
 if (size(timebase,2)>1)
     timebase=transpose(timebase);

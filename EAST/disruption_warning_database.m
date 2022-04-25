@@ -1,4 +1,4 @@
-function disruption_warning_database_EAST(shotlist);
+function disruption_warning_database(shotlist);
 
 % 'shotlist' is a Matlab array of shot numbers.  It can be a single shot,
 %   or a sequence of shots [49848:51390], or a list of specific shots
@@ -60,14 +60,11 @@ function disruption_warning_database_EAST(shotlist);
 %  2020/03/11 - CR;  Modified to add kappa_area to EAST SQL db.
 %  2021/12/08 - CR;  Populate the database with shots from 2018-2020
 %                    Also, add n1rms, n2rms (routines written by J. Zhu)
+%  2022/04/22 - CR;  Changing routines names for pushing wflow to github
 
 % Define path to some required Matlab routines
 
-oldpath = addpath('/home/ASIPP/granetz/matlab', ...
-                  '/home/ASIPP/granetz/disruption_warning_database', ...
-                  '/home/ASIPP/granetz/disruption_database', ...
-                  '/home/ASIPP/jinxiang.zhu');
-%                 '/home/ASIPP/xianggu/Disruption/code');
+oldpath = addpath('utils/');
 
 % Turn off annoying warning messages about calculations with NaN values in
 % the Matlab INTERP1 interpolation routine.
@@ -180,7 +177,6 @@ for ishot = 1:nshots;
   if (ntimes_for_db == 0); continue; end;
 
 % Get list of time slices that are already in the database for this shot
-%% CR 2021/12/8 this part needs to change?
   result = fetch(db, ['select time,dbkey from disruption_warning where ' ...
     'shot = ' int2str(shot) ' order by time']);
   if (length(result) > 0);
@@ -286,7 +282,7 @@ for ishot = 1:nshots;
   
 % Get the loop voltage
 
-  v_loop = get_v_loop_EAST(shot, times_for_db);
+  v_loop = get_v_loop(shot, times_for_db);
 
     field_counter = field_counter + 1;
     fields(field_counter) = {'v_loop'};
@@ -299,7 +295,7 @@ for ishot = 1:nshots;
 
   [z_error, z_prog, zcur, zcur_lmsz, z_error_lmsz, ...
     zcur_lmsz_normalized, z_error_lmsz_normalized] = ...
-    get_Z_error_EAST(shot, times_for_db);
+    get_Z_error(shot, times_for_db);
 
     field_counter = field_counter + 1;
     fields(field_counter) = {'zcur'};
@@ -325,22 +321,11 @@ for ishot = 1:nshots;
     fields(field_counter) = {'z_error_lmsz_normalized'};
     values(:,field_counter) = num2cell(z_error_lmsz_normalized);
   
-% Get vertical drift velocity and associated parameter
-
-%  [Z_cur1, v_z, z_times_v_z] = get_Z(shot, times_for_db);
-
-%    field_counter = field_counter + 1;
-%    fields(field_counter) = {'v_z'};
-%    values(:,field_counter) = num2cell(v_z);
-  
-%   field_counter = field_counter + 1;
-%   fields(field_counter) = {'z_times_v_z'};
-%   values(:,field_counter) = num2cell(z_times_v_z);
 
 % Get density and Greenwald fraction
 
   [ne, Greenwald_fraction, dn_dt] = ...
-    get_density_parameters_EAST(shot, times_for_db);
+    get_density_parameters(shot, times_for_db);
 
     field_counter = field_counter + 1;
     fields(field_counter) = {'n_e'};
@@ -357,7 +342,7 @@ for ishot = 1:nshots;
 % Get heating input powers and radiated output power
 
   [p_rad, p_ecrh, p_lh, p_oh, p_icrf, p_nbi, rad_input_frac, ...
-    rad_loss_frac, p_input] = get_power_EAST(shot, times_for_db);
+    rad_loss_frac, p_input] = get_power(shot, times_for_db);
 
     field_counter = field_counter + 1;
     fields(field_counter) = {'p_rad'};
@@ -394,7 +379,7 @@ for ishot = 1:nshots;
 % Get n=1 error field data
 
   [n_equal_1_normalized, n_equal_1_mode, n_equal_1_phase, rmp_n_equal_1, ...
-    rmp_n_equal_1_phase, btor] = get_n_equal_1_data_EAST(shot, times_for_db);
+    rmp_n_equal_1_phase, btor] = get_n_equal_1_data(shot, times_for_db);
 
     field_counter = field_counter + 1;
     fields(field_counter) = {'n_equal_1_normalized'};
@@ -422,8 +407,9 @@ for ishot = 1:nshots;
 
 % Get PEFIT parameters
 
-  [beta_n, beta_p, kappa, li, q95, Wmhd, aminor] = ...
-    get_PEFIT_parameters(shot, times_for_db);
+  [beta_n, beta_p, kappa, kappa_area, upper_gap, lower_gap, li, ...
+   q0, qstar, q95, Wmhd, aminor] = ...
+   get_PEFIT_parameters(shot, times_for_db);
 
     field_counter = field_counter + 1;
     fields(field_counter) = {'Pbeta_n'};
@@ -438,9 +424,29 @@ for ishot = 1:nshots;
     values(:,field_counter) = num2cell(kappa);
     
     field_counter = field_counter + 1;
+    fields(field_counter) = {'Pkappa_area'};
+    values(:,field_counter) = num2cell(kappa_area);
+
+    field_counter = field_counter + 1;
     fields(field_counter) = {'Pli'};
     values(:,field_counter) = num2cell(li);
+
+    field_counter = field_counter + 1;
+    fields(field_counter) = {'Pupper_gap'};
+    values(:,field_counter) = num2cell(upper_gap);
+
+    field_counter = field_counter + 1;
+    fields(field_counter) = {'Plower_gap'};
+    values(:,field_counter) = num2cell(lower_gap);
   
+    field_counter = field_counter + 1;
+    fields(field_counter) = {'Pq0'};
+    values(:,field_counter) = num2cell(q0);
+  
+    field_counter = field_counter + 1;
+    fields(field_counter) = {'Pqstar'};
+    values(:,field_counter) = num2cell(qstar);
+
     field_counter = field_counter + 1;
     fields(field_counter) = {'Pq95'};
     values(:,field_counter) = num2cell(q95);
@@ -453,12 +459,13 @@ for ishot = 1:nshots;
     fields(field_counter) = {'Paminor'};
     values(:,field_counter) = num2cell(aminor);
 
-
+% 2022-04-25: for 2018-2020 data, will populate only PEFIT data
+%{ 
 % Get EFIT parameters
 
   [beta_n, beta_p, dbetap_dt, kappa, upper_gap, lower_gap, ...
     li, dli_dt, q0, qstar, q95, Wmhd, dWmhd_dt] = ...
-    get_EFIT_parameters_EAST(shot, times_for_db);
+    get_EFIT_parameters(shot, times_for_db);
 
 
     field_counter = field_counter + 1;
@@ -525,20 +532,6 @@ for ishot = 1:nshots;
     fields(field_counter) = {'kappa_area'};
     values(:,field_counter) = num2cell(kappa_area);
 
-%{
-% Get toroidal rotation velocities (on-axis and mid-radius)
-
-  [v_0, v_mid] = get_rotation_velocity(shot, times_for_db);
-
-    field_counter = field_counter + 1;
-    fields(field_counter) = {'v_0'};
-    values(:,field_counter) = num2cell(v_0);
-  
-    field_counter = field_counter + 1;
-    fields(field_counter) = {'v_mid'};
-    values(:,field_counter) = num2cell(v_mid);
-  
-%}
   [Te_width_normalized, Te_width_MI] = get_Te_width(shot, times_for_db);
 
     field_counter = field_counter + 1;
@@ -548,10 +541,11 @@ for ishot = 1:nshots;
     field_counter = field_counter + 1;
     fields(field_counter) = {'Te_width_MI'};
     values(:,field_counter) = num2cell(Te_width_MI);
+%}
 
   [p_rad_RT, p_ecrh_RT, p_lh_RT, p_oh_RT, p_icrf_RT, p_nbi_RT, ...
     rad_input_frac_RT, rad_loss_frac_RT, ip_error_RT, ...
-    q95_RT, beta_p_RT, li_RT, Wmhd_RT] = get_PCS_EAST(shot, times_for_db);
+    q95_RT, beta_p_RT, li_RT, Wmhd_RT] = get_PCS(shot, times_for_db);
 
     field_counter = field_counter + 1;
     fields(field_counter) = {'p_rad_RT'};
@@ -603,7 +597,7 @@ for ishot = 1:nshots;
     values(:,field_counter) = num2cell(Mirnov_std_normalized);
 
   [n1rms, n2rms, n1rms_normalized, n2rms_normalized] = ...
-    get_n1rms_n2rms_EAST(shot, times_for_db);
+    get_n1rms_n2rms(shot, times_for_db);
 
     field_counter = field_counter + 1;
     fields(field_counter) = {'n1rms'};
@@ -621,7 +615,7 @@ for ishot = 1:nshots;
     fields(field_counter) = {'n2rms_normalized'};
     values(:,field_counter) = num2cell(Mirnov_std_normalized);
 
-  H98 = get_H98_EAST(shot, times_for_db);
+  H98 = get_H98(shot, times_for_db);
 
     field_counter = field_counter + 1;
     fields(field_counter) = {'H98'};

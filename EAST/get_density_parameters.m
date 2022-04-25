@@ -1,5 +1,5 @@
 function [ne, Greenwald_fraction, dn_dt] = ...
-  get_density_parameters_EAST(shot, timebase);
+  get_density_parameters(shot, timebase);
 
 % This routine obtains the line-averaged density from the HCN vertical
 % chord.  The node is called \DFSDEV in the PCS_EAST tree.  This signal is

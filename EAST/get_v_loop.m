@@ -1,4 +1,4 @@
-function v_loop = get_v_loop_EAST(shot, timebase);
+function v_loop = get_v_loop(shot, timebase);
 
 % This routine gets the loop voltage from the EAST tree.  The signal in the
 % tree is derived by taking the time derivative of a flux loop near the

@@ -1,6 +1,6 @@
 function [Z_error, Z_prog, Z_cur, zcur_lmsz, z_error_lmsz, ...
   zcur_lmsz_normalized, z_error_lmsz_normalized] = ...
-  get_Z_error_EAST(shot, timebase);
+  get_Z_error(shot, timebase);
 
 % This script calculates Z_error = Z_cur - Z_programmed, or how much the
 % actual vertical position differs from the requested position.  Two

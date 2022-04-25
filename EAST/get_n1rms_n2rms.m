@@ -1,4 +1,4 @@
-function [n1rms, n2rms, n1rms_normalized, n2rms_normalized] = get_n1rms_n2rms_EAST(shot, timebase)
+function [n1rms, n2rms, n1rms_normalized, n2rms_normalized] = get_n1rms_n2rms(shot, timebase)
 
 % Read in the saddle sensor data and the rmp currents from the MDSplus
 % tree.  All the outputs have time as their 1st dimension,

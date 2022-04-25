@@ -1,6 +1,6 @@
 function [p_rad_RT, p_ecrh_RT, p_lh_RT, p_oh_RT, p_icrf_RT, p_nbi_RT,  ...
   rad_input_frac_RT, rad_loss_frac_RT, ip_error_RT,  ...
-  q95_RT, beta_p_RT, li_RT, Wmhd_RT] = get_PCS_EAST(shot, timebase);
+  q95_RT, beta_p_RT, li_RT, Wmhd_RT] = get_PCS(shot, timebase);
 
 % This function gets many of the real time signals that are actually used
 % in the plasma control system (PCS) on the EAST tokamak.  For development
@@ -183,7 +183,7 @@ the NBI signals available in this EAST campaign. The PLHI2 and PLHR2 for
 2.45G  LHW system have signals but are not calibrated yet. 
 %}
 
-P_ohm = get_P_ohm_EAST(shot, timebase);  % Note, I'm not bothering to
+P_ohm = get_P_ohm(shot, timebase);  % Note, I'm not bothering to
                                          % to calculate a real time version
 mdsclose;
 

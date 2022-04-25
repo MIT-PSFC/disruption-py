@@ -1,5 +1,5 @@
 function [p_RAD, p_ECRH, p_LH, p_OHM, p_ICRF, p_NBI, rad_input_frac, ...
-  rad_loss_frac, p_input] = get_power_EAST(shot, timebase);
+  rad_loss_frac, p_input] = get_power(shot, timebase);
 
 % This function gets the input heating powers -- ohmic (p_OHM),electron 
 % cyclotron resonance heating (p_ECRH), neutral beam injection system (p_NBI)
@@ -301,7 +301,7 @@ end;
 % ------------------------------------
 % Get ohmic power
 
- p_OHM = get_P_ohm_EAST(shot, timebase); %[W]
+ p_OHM = get_P_ohm(shot, timebase); %[W]
 
 % ------------------------------------
 % Radiated power

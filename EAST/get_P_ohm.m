@@ -1,4 +1,4 @@
-function P_ohm = get_P_ohm_EAST(shot, timebase);
+function P_ohm = get_P_ohm(shot, timebase);
 %
 % This function calculates the ohmic power, P_ohm.  The output vector,
 % P_ohm, has the same shape as the input vector, "timebase", i.e. if

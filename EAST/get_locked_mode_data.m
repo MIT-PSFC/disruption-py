@@ -1,5 +1,5 @@
 function [n_equal_1_mode, n_equal_2_mode, n_equal_3_mode] = ...
-  get_locked_mode_data_EAST(shot, timebase);
+  get_locked_mode_data(shot, timebase);
 
 % This routine gets the n=1, 2, and 3 locked mode amplitudes from the EAST
 % saddle coil measurements.  If the error field correction coils are on,
