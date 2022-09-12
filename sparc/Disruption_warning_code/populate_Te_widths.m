@@ -1,4 +1,4 @@
-function disruption_warning_database(shotlist, varargin);
+function populate_Te_widths(shotlist, varargin);
 
 % 'shotlist' is a Matlab array of shot numbers.  It can be a single shot,
 %   or a sequence of shots [1150901001:1150901099], or a list of specific
@@ -6,86 +6,34 @@ function disruption_warning_database(shotlist, varargin);
 %   [1150901001:1150901099, 1150922001, 1150922020, 1150923005 ].  Shot #0
 %   refers to the current shot.
 %
-% 'varargin' allows for explicit specification of the fields that will be
-%   written into the disruption_warning table.  The varargin parameter(s)
-%   must be character strings.  If varargin is not specified, then all
-%   fields with available data will be written.
+% 'varargin' is unused here
+%  
+% This code is taken from this MATLAB script:
 %
-% Examples of usage:
+% /home/granetz/JRT_2016/disruption_warning_database/disruption_warning
+% _database.m
 %
-%  disruption_warning_database(0);
-%                         % Process current shot.  First check to see if
-%                         % there was a plasma.  (There was a plasma if
-%                         % EFIT data exists.)  If there was no plasma,
-%                         % then skip the shot.  If no records already
-%                         % exist in the database with the specified shot
-%                         % and times (within 10 microseconds), then
-%                         % insert new records.  If records for the
-%                         % specified shot and time(s) already exist, then
-%                         % update the existing records.  If varargin
-%                         % parameter(s) is/are specified, then only write
-%                         % values into the specified fields.
+% Many of the unnecessary parts are commented out, and two clauses (lines 
+% 78-83 and lines 414 to 424) were added to populate the 
+% 'intentional_disruption' column in the database. 
 %
-%  disruption_warning_database(1150901001:1150901099);
-%                         % Process all plasma shots from 1150901001 to
-%                         % 1150901099.  
-%
-%  disruption_warning_database(1150901001:1150901099, 'ip_error',
-%    'beta_n', 'z_error');
-%                         % Process all plasma shots from 1150901001 to
-%                         % 1150901099.  Only write data into fields
-%                         % 'ip_error', 'beta_n', and 'z_error'.
-%
-% Revision/history:
-%  2015/09    - RSG; Created (starting from the disruption database program
-%                     that I wrote for the EAST tokamak), and using the
-%                     many routines that Alex Tinguely wrote to get the
-%                     data.
-%  2016/01    - RSG; Added 1 ms sampling during the 20 ms period before
-%                     disruptions.  This was accomplished by rerunning EFIT
-%                     on every disruption, using both the standard timebase
-%                     AND the higher sampling timebase just prior to
-%                     disruptions.  These EFIT data are written in my EFIT18
-%                     tree.  The EFIT18 trees need to be used on disruption
-%                     shots, and the ANALYSIS trees need to be used on
-%                     non-disruptive shots.
-%  2016/02    - RSG; Obtain loop voltage from the mflux calculation, instead
-%                     of from EFIT.  This is because EFIT's loop voltage
-%                     signal uses a wide acausal filter window which is
-%                     unacceptable before disruptions.  This change to the
-%                     loop voltage is also incorporated into the get_P_ohm
-%                     routine.
-%  2016/03/14 - RSG; Added EFIT ssep variable, and changed Wth to Wmhd, and
-%                     dWdiam_dt to dWmhd_dt
-%  2017/10/17 - RSG; Added EFIT variables Wmhd and n_over_ncrit (xnnc), and
-%                     ran routine over all shots in database to insert the
-%                     data for these new SQL variables
-%  2019/01    - RMS; Commented out the get_Z_parameters block in order to 
-%                     populate 2012 discharges
-%  2020/03/11 - RSG; Added the parameter "kappa_area".  This is an alternate
-%                     definition of elongation:
-%                      kappa_area = (plasma cross-section area)/pi*a^2
-%                     Note: 'cross-section area' and 'a' come from EFIT.
-%  2020/03/12 - RSG; Added check for infinite values, in addition to NaN
-%                     prior to executing SQL update statement
-%  2020/06/15 - RSG; Added I_efc (current from fast chopper power supply) in
-%                     response to query from Darren Garnier regarding control
-%                     requirements for SPARC
-%  2020/08/03 - RSG; Added central SXR (array_1:chord_16) to a subset of
-%                     the shots in the database (only moly UFO shots).  The
-%                     SXR data will be used to confirm the UFO designation.
+% If intentional_disruption == 1, then the shot was intentionally
+% disrupted. If intentional_disruption == 0, then the shot was not 
+% intentionally disrupted. 
+% 
+% Author: Kevin Montes                      June 2017
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 fieldlist = lower(strtrim(varargin)); % lowercase; remove spaces
 
 % Define path to some required Matlab routines
 
 oldpath = path;
-% addpath(genpath('/home/tinguely/Disruptions/Code/Disruption_Database'));
-% addpath('/home/montes/Disruption_warning_code');  % Te width routine
-%addpath('/home/jxzhu/matlab/yags/');  % peaking factors routine
-% path('/home/granetz/matlab', path);
-% path('/home/granetz/JRT_2016/disruption_warning_database', path);
-% path('/home/granetz/SPARC/disruptions', path);
+path('/home/granetz/matlab', path);
+addpath(genpath('/home/tinguely/Disruptions/Code/Disruption_Database'));
+addpath('/home/montes/Disruption_warning_code');
+addpath('/home/granetz/JRT_2016/disruption_warning_database');
 
 % Turn off annoying warning messages from the "interp1" routine about
 % calculations with NaN's.  The original setting for this feature will be
@@ -102,9 +50,6 @@ end;
 db = set_database('logbook'); % Connect to the C-Mod SQL database
 
 fields_in_db = get_columns(db, 'disruption_warning');
-if strcmp(class(fields_in_db), 'table');
-  fields_in_db = table2cell(fields_in_db);
-end;
 fields_in_db = lower(fields_in_db); % lowercase
 
 if (length(fieldlist) == 0);
@@ -126,13 +71,10 @@ end;
 % disrupted.
 
 result = fetch(db, 'select shot,t_disrupt from disruptions order by shot');
-if strcmp(class(result), 'table');
-  result = table2cell(result);
-end;
 disruption_shotlist = int32(cell2mat(result(:,1)));
 t_disrupt_list = cell2mat(result(:,2));
 
-% mdsconnect('alcdata.psfc.mit.edu'); % Connect to C-Mod MDSplus server
+mdsconnect('alcdata.psfc.mit.edu'); % Connect to C-Mod MDSplus server
 
 % Just a few more things to do before we start the main loop over the list
 % of shots
@@ -140,6 +82,14 @@ t_disrupt_list = cell2mat(result(:,2));
 nshots = length(shotlist);
 ndigits = int2str(floor(log10(nshots)) + 1); % (for formatting in the 
                                              %  upcoming fprintf statement)
+                                             
+% Make list of intentionally disrupted shots from 2 MGI run days
+
+run1 = 1150602000;
+run2 = 1150605000;
+mgi_disrupted_shots = int32([run1+[20,28],run2+[1,3,9,10,14,16,17, ...
+    18,19,20,21,23,24,25,26]]);
+                                            
 %*********************
 %
 % Start the main loop over the list of shots.
@@ -162,61 +112,29 @@ for ishot = 1:nshots;
 % used, since it has a burst of fast sampling prior to the disruption time,
 % in addition to the standard sampling times throughout the shot.
 
-% if (ismember(shot, disruption_shotlist));
-%   [shotopened, status] = mdsopen('efit18', shot);
-%   if (mod(status,2) == 0);
-%     fprintf(1,'  WARNING: no EFIT18 tree for this disruption shot\n');
-%     [shotopened, status] = mdsopen('analysis', shot);
-%   end;
-% else;
-%   [shotopened, status] = mdsopen('analysis', shot);
-% end;
-%
-% if (mod(status,2) == 1);
-%   [efittimes, status] = mdsvalue('\efit_aeqdsk:time');
-%   if (mod(status,2) == 1);
-%     mdsclose;
-%     if (length(efittimes) == 0);
-%       continue;
-%     end;
-%   else;
-%     mdsclose;
-%     continue;
-%   end;
-% else;
-%   continue; % If no EFIT tree, skip this shot.
-% end;
-
-  [shotopened, status] = mdsopen('cmod', shot);
-  if (mod(status,2) == 0);
-    fprintf(1,'  WARNING: no CMOD tree for this shot\n');
-    continue;
-  end;
-
   if (ismember(shot, disruption_shotlist));
-    [~, status1] = mdsopen('efit18', shot);
-    if (mod(status1, 2) == 1);
-      [efittimes, status2] = mdsvalue('\efit18::efit_aeqdsk:time');
-      if (mod(status2, 2) == 0);
-        fprintf(1,'  WARNING: no EFIT18 data for this disruption shot\n');
-      end;
-    else;
+    [shotopened, status] = mdsopen('efit18', shot);
+    if (mod(status,2) == 0);
       fprintf(1,'  WARNING: no EFIT18 tree for this disruption shot\n');
-    end;
-
-    if (mod(status1, 2) == 0 || mod(status2, 2) == 0);
-      [efittimes, status] = mdsvalue('\analysis::efit_aeqdsk:time');
-      if (mod(status,2) == 0);
-        fprintf(1,'  WARNING: no EFIT data.  Skipping this shot\n');
-        continue; % If no EFIT data, skip this shot.
-      end;
+      [shotopened, status] = mdsopen('analysis', shot);
     end;
   else;
-    [efittimes, status] = mdsvalue('\analysis::efit_aeqdsk:time');
-    if (mod(status,2) == 0);
-      fprintf(1,'  WARNING: no EFIT data.  Skipping this shot\n');
-      continue; % If no EFIT data, skip this shot.
+    [shotopened, status] = mdsopen('analysis', shot);
+  end;
+
+  if (mod(status,2) == 1);
+    [efittimes, status] = mdsvalue('\efit_aeqdsk:time');
+    if (mod(status,2) == 1);
+      if (length(efittimes) == 0);
+        mdsclose;
+        continue;
+      end;
+    else;
+      mdsclose;
+      continue;
     end;
+  else;
+    continue; % If no EFIT tree, skip this shot.
   end;
 
 % Define the times for the database time slices to be the same as the EFIT
@@ -233,9 +151,6 @@ for ishot = 1:nshots;
 
   result = fetch(db, ['select time, dbkey from disruption_warning ' ...
     'where shot = ' int2str(shot) ' order by time']);
-  if strcmp(class(result), 'table');
-    result = table2cell(result);
-  end;
   if (length(result) > 0);
     times_in_db = cell2mat(result(:,1));
     dbkey = cell2mat(result(:,2));
@@ -276,6 +191,8 @@ for ishot = 1:nshots;
 % the Matlab routines that get these data.  I have modified some of them.
 
   field_counter = 0;
+
+%{
 
 % Start with the time values for the 'time' field.  All of the other data
 % will be on this timebase.
@@ -336,7 +253,7 @@ for ishot = 1:nshots;
 % (Z_prog), the error between zcur and the programmed zcur (z_error), the
 % vertical velocity (v_z = d(zcur)/dt), and v_z * zcur
 
-  [z_error, Z_prog, zcur, v_z, z_times_v_z] = ...
+[z_error, Z_prog, zcur, v_z, z_times_v_z] = ...
     get_Z_parameters(shot, times_for_db);
 
     field_counter = field_counter + 1;
@@ -354,7 +271,7 @@ for ishot = 1:nshots;
     field_counter = field_counter + 1;
     fields(field_counter) = {'z_times_v_z'};
     values(:,field_counter) = num2cell(z_times_v_z);
-
+  
 % Get heating input powers and radiated output power
 
   [p_rad, dprad_dt, p_lh, p_oh, p_icrf, p_input, radiated_fraction, ...
@@ -391,8 +308,8 @@ for ishot = 1:nshots;
 % Get EFIT parameters
 
   [beta_n, beta_p, dbetap_dt, kappa, upper_gap, lower_gap, ...
-    li, dli_dt, q0, qstar, q95, v_loop_efit, Wmhd, dWmhd_dt, ...
-    ssep, n_over_ncrit] = get_EFIT_parameters(shot, times_for_db);
+    li, dli_dt, q0, qstar, q95, v_loop_efit, Wmhd, dWmhd_dt, ssep] = ...
+    get_EFIT_parameters(shot, times_for_db);
 
     field_counter = field_counter + 1;
     fields(field_counter) = {'beta_n'};
@@ -439,12 +356,8 @@ for ishot = 1:nshots;
     values(:,field_counter) = num2cell(q95);
   
 %   field_counter = field_counter + 1;
-%   fields(field_counter) = {'v_loop_efit'};
+%   fields(field_counter) = {'v_loop_efit/home/montes/Disruption_warning_code'};
 %   values(:,field_counter) = num2cell(v_loop_efit);
-  
-    field_counter = field_counter + 1;
-    fields(field_counter) = {'Wmhd'};
-    values(:,field_counter) = num2cell(Wmhd);
   
     field_counter = field_counter + 1;
     fields(field_counter) = {'dWmhd_dt'};
@@ -454,18 +367,6 @@ for ishot = 1:nshots;
     fields(field_counter) = {'ssep'};
     values(:,field_counter) = num2cell(ssep);
   
-    field_counter = field_counter + 1;
-    fields(field_counter) = {'n_over_ncrit'};
-    values(:,field_counter) = num2cell(n_over_ncrit);
-  
-% Get kappa area
-
-  kappa_area = get_kappa_area(shot, times_for_db);
-
-    field_counter = field_counter + 1;
-    fields(field_counter) = {'kappa_area'};
-    values(:,field_counter) = num2cell(kappa_area);
-
 % Get toroidal rotation velocities (on-axis and mid-radius)
 
   [v_0, v_mid] = get_rotation_velocity(shot, times_for_db);
@@ -481,20 +382,17 @@ for ishot = 1:nshots;
     field_counter = field_counter + 1;
     fields(field_counter) = {'v_mid'};
     values(:,field_counter) = num2cell(v_mid);
-
+  
 % Get n=1 amplitude
 
-  [n_equal_1_mode, n_equal_1_normalized, n_equal_1_phase] = ...
-    get_n_equal_1_amplitude(shot, times_for_db);
+  n_equal_1_mode = get_n_equal_1_amplitude(shot, times_for_db);
 
     field_counter = field_counter + 1;
     fields(field_counter) = {'n_equal_1_mode'};
     values(:,field_counter) = num2cell(n_equal_1_mode);
-
-    field_counter = field_counter + 1;
-    fields(field_counter) = {'n_equal_1_normalized'};
-    values(:,field_counter) = num2cell(n_equal_1_normalized);
   
+
+
 % Get Te profile width
 
   Te_HWHM = get_TS_data_cmod(shot, times_for_db);
@@ -502,21 +400,16 @@ for ishot = 1:nshots;
     field_counter = field_counter + 1;
     fields(field_counter) = {'Te_width'};
     values(:,field_counter) = num2cell(Te_HWHM);
-
-  [ne_peaking, Te_peaking, pressure_peaking] = ... 
-    get_peaking_factor_cmod(shot, times_for_db);
-
-    field_counter = field_counter + 1;
-    fields(field_counter) = {'ne_peaking'};
-    values(:,field_counter) = num2cell(ne_peaking);
+    
+%}
+    
+  Te_HWHM_2 = get_ECE_data_cmod(shot, times_for_db);
 
     field_counter = field_counter + 1;
-    fields(field_counter) = {'Te_peaking'};
-    values(:,field_counter) = num2cell(Te_peaking);
-
-    field_counter = field_counter + 1;
-    fields(field_counter) = {'pressure_peaking'};
-    values(:,field_counter) = num2cell(pressure_peaking);
+    fields(field_counter) = {'Te_width_ECE'};
+    values(:,field_counter) = num2cell(Te_HWHM_2);
+    
+%{
 
 % Get density and Greenwald fraction
 
@@ -534,36 +427,20 @@ for ishot = 1:nshots;
     fields(field_counter) = {'Greenwald_fraction'};
     values(:,field_counter) = num2cell(Greenwald_fraction);
 
-% Get Mirnov standard deviation data
+% Get 'intentional disruption' column
 
-%{
-  [Mirnov_std_normalized, Mirnov_std] = get_Mirnov_std(shot, times_for_db);
-
+    if (ismember(shot,mgi_disrupted_shots))
+        intentional_disrupt = ones(ntimes_for_db,1);
+    else
+        intentional_disrupt = zeros(ntimes_for_db,1);
+    end
+    
     field_counter = field_counter + 1;
-    fields(field_counter) = {'Mirnov'};
-    values(:,field_counter) = num2cell(Mirnov_std);
-
-    field_counter = field_counter + 1;
-    fields(field_counter) = {'Mirnov_norm_btor'};
-    values(:,field_counter) = num2cell(Mirnov_std_normalized);
+        fields(field_counter) = {'intentional_disruption'};
+        values(:,field_counter) = num2cell(intentional_disrupt);
+        
 %}
-
-% Get EFC current
-
-  Iefc = get_efc_current(shot, times_for_db);
-
-    field_counter = field_counter + 1;
-    fields(field_counter) = {'I_efc'};
-    values(:,field_counter) = num2cell(Iefc);
-
-% Get SXR data
-
-  SXR = get_sxr_data(shot, times_for_db);
-
-    field_counter = field_counter + 1;
-    fields(field_counter) = {'SXR'};
-    values(:,field_counter) = num2cell(SXR);
-
+  
 % All the information for this shot has been obtained.  Now prepare to
 % enter the information into the disruption_warning table.
 
@@ -574,23 +451,15 @@ for ishot = 1:nshots;
   fields = fields(1:field_counter);   % Truncate these cell arrays to get
   values = values(:,1:field_counter); % rid of unassigned fields.
 
-
 % For the time slices that already exist in the database, an SQL 'update'
 % operation will be performed.  Otherwise, an SQL 'insert' or 'fastinsert'
 % operation will be performed.
 
   for itime = 1:ntimes_for_db;
     if (isnan(record_keys(itime)));
-%-------------
-      for ifield = 1:field_counter;
-        if (isnan(cell2mat(values(itime, ifield))) || ...
-            isinf(cell2mat(values(itime, ifield))));
-          values(itime, ifield) = {[]};
-        end;
-      end;
-%-------------
       insert(db, 'disruption_warning', fields, values(itime,:));
     else;
+
 % Apparently in the latest version of Matlab's Database Toolbox, the
 % "update" function no longer handles 'NaN' values.  These now have to be
 % replaced with empty values ('').  Here is the exact statement in the
@@ -604,8 +473,7 @@ for ishot = 1:nshots;
 % with this reduced capability!
 %-------------
       for ifield = 1:field_counter;
-        if (isnan(cell2mat(values(itime, ifield))) || ...
-            isinf(cell2mat(values(itime, ifield))));
+        if (isnan(cell2mat(values(itime, ifield))));
           values(itime, ifield) = {''};
         end;
       end;
@@ -622,10 +490,9 @@ end;
 % Okay, we have processed all the shots in the list.  We just need to clean
 % up a few things, and then we're done.
 
-
 path(oldpath);
 close(db);
-% mdsdisconnect;
+mdsdisconnect;
 if (strcmp(warning_status.state, 'on'));  % Turn warning messages about calcs
   warning('on', 'MATLAB:interp1:NaNinY'); % w/NaN's back on if it was on
 end;                                      % when this routine was called.
