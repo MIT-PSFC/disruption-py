@@ -82,11 +82,11 @@ fieldlist = lower(strtrim(varargin)); % lowercase; remove spaces
 oldpath = path;
 % addpath(genpath('/home/tinguely/Disruptions/Code/Disruption_Database'));
 % addpath('/home/montes/Disruption_warning_code');  % Te width routine
-%addpath('/home/jxzhu/matlab/yags/');  % peaking factors routine
+% addpath('/home/jxzhu/matlab/yags/');  % peaking factors routine
 % path('/home/granetz/matlab', path);
 % path('/home/granetz/JRT_2016/disruption_warning_database', path);
 % path('/home/granetz/SPARC/disruptions', path);
-
+path('/home/hmturner/Documents/disruption-warning-db-workflow/sparc', path);
 % Turn off annoying warning messages from the "interp1" routine about
 % calculations with NaN's.  The original setting for this feature will be
 % restored at the end of this program.

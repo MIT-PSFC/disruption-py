@@ -1,5 +1,11 @@
 function [ne_PF, Te_PF, pressure_PF] = get_peaking_factor_cmod(shot, timebase)
 
+
+path('/home/jxzhu/matlab/yags', path);
+addpath(genpath('/home/tinguely/Disruptions/Code/Disruption_Database'));
+addpath('/home/montes/Disruption_warning_code');
+addpath('/home/granetz/matlab');
+
 if (size(timebase,1) > 1)
   timebase_column = timebase;
 else
