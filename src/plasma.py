@@ -8,12 +8,9 @@ from scipy.signal.windows import boxcar
 
 from MDSplus import *
 
-from utils import interp1
+from utils import interp1, smooth
 
 DEFAULT_SHOT_COLUMNS = ['time','shot','time_until_disrupt','ip']
-
-nan_arr = np.empty(len(self._times))
-nan_arr.fill(np.nan)
 
 class Shot:
     """
@@ -63,9 +60,13 @@ class Shot:
         self.data['time_until_disrupt'] = self._calc_time_until_disrupt() 
         self.data['ip'],self.data['dip'],self.data['dip_smoothed'] = self._calc_Ip_parameters()
         self.data['p_ohm'], self.data['v_loop'] = self._calc_p_ohm_v_loop()
+        print("Point 0")
         self.data['p_rad'], self.data['dprad'], self.data['p_lh'], self.data['p_icrf'], self.data['p_input'], self.data['rad_fraction'] = self._calc_power()
+        print("Point 1")
         self.data['kappa_area'] = self._calc_kappa_area()
+        print("Point 2")
         self.data['v_0'],self.data['v_mid'] = self._calc_rotation_velocity()
+        print("Point 3")
         self.data['sxr'] = self._calc_sxr_data()
         self.data['beta_N'], self.data['beta_p'], self.data['beta_p_dot'], self.data['kappa'], self.data['upper_gap'], self.data['lower_gap'], self.data['li'], self.data['li_dot'], self.data['q0'], self.data['qstar'], self.data['q95'], self.data['V_loop_efit'], self.data['Wmhd'], self.data['dWmhd_dt'], self.data['ssep'], self.data['n_over_ncrit'] = self._calc_EFIT_parameters()   
 
@@ -85,23 +86,24 @@ class Shot:
         dip = np.gradient(ip, magtime)
         dip_smoothed = smooth(dip, 11)
         ip = interp1(magtime, ip, self._times)
-        dip = interp1(matime, dip, self._times)
+        dip = interp1(magtime, dip, self._times)
         dip_smoothed = interp1(magtime, dip_smoothed, self._times)
         return ip, dip, dip_smoothed
 
+    #TODO: Complete
     def _calc_Z_parameters(self):
-        pass
+        raise NotImplementedError("Skipping over this function for now because not core to demonstrating library capabilities")
 
     def _calc_p_ohm_v_loop(self):
         v_loop_record = self._analysis_tree.getNode(r"\top.mflux:v0").getData()
         v_loop = v_loop_record.data()
         v_loop_time = v_loop_record.dim_of(0)
         if len(v_loop_time) <= 1:
-            return nan_arr.copy(),nan_arr.copy()
-        li_record = self._analysis_tree(r"\efit_aeqdsk:li").getData()
+            return None, None
+        li_record = self._analysis_tree.getNode(r"\efit_aeqdsk:li").getData()
         li = li_record.data()
         efittime = li_record.dim_of(0)
-        inductance = 4*pi*1.e-7 * 0.68 * li/2 # For simplicity, we use R0 = 0.68 m, but we could use \efit_aeqdsk:rmagx
+        inductance = 4*np.pi*1.e-7 * 0.68 * li/2 # For simplicity, we use R0 = 0.68 m, but we could use \efit_aeqdsk:rmagx
         v_loop = interp1(v_loop_time, v_loop, self._times)
         inductance = interp1(efittime, inductance, self._times)
         v_inductive = inductance * self.data['dip_smoothed']
@@ -110,40 +112,50 @@ class Shot:
         return p_ohm, v_loop
 
     def _calc_power(self):
-    """
-    NOTE: the timebase for the LH power signal does not extend over the full
-        time span of the discharge.  Therefore, when interpolating the LH power
-        signal onto the "timebase" array, the LH signal has to be extrapolated
-        with zero values.  This is an option in the 'interp1' routine.  If the
-        extrapolation is not done, then the 'interp1' routine will assign NaN
-        (Not-a-Number) values for times outside the LH timebase, and the NaN's
-        will propagate into p_input and rad_fraction, which is not desirable.
-    """
-        lh_tree = Tree('LH',self._shot_id)
-        lh_record = lh_tree.getNode('\LH::TOP.RESULTS:NETPOW').getData()
-        p_lh = 1e3 *lh_record.data()
-        t_lh = lh_record.dim_of(0)
-        p_lh = interp1(t_lh, p_lh, self._times, bounds_error = False)
+        """
+        NOTE: the timebase for the LH power signal does not extend over the full
+            time span of the discharge.  Therefore, when interpolating the LH power
+            signal onto the "timebase" array, the LH signal has to be extrapolated
+            with zero values.  This is an option in the 'interp1' routine.  If the
+            extrapolation is not done, then the 'interp1' routine will assign NaN
+            (Not-a-Number) values for times outside the LH timebase, and the NaN's
+            will propagate into p_input and rad_fraction, which is not desirable.
+        """
+        try:
+            lh_tree = Tree('LH',self._shot_id)
+            lh_record = lh_tree.getNode('\LH::TOP.RESULTS:NETPOW').getData()
+            p_lh = 1e3 *lh_record.data()
+            t_lh = lh_record.dim_of(0)
+            p_lh = interp1(t_lh, p_lh, self._times, bounds_error = False)
+        except mdsExceptions.TreeFOPENR as e:
+            print(e)
+            p_lh = np.zeros(len(self._times))
         try:
             rf_tree = Tree('RF',self._shot_id)
-            p_icrf_record = rf_tree.GetNode(r"(\rf::rf_power_net").getData()
+            p_icrf_record = rf_tree.getNode(r"(\rf::rf_power_net").getData()
             p_icrf = 1e6 * p_icrf_record.data()
             t_icrf = p_icrf_record.dim_of(0)
             p_icrf = interp1(t_icrf, p_icrf, self._times,bounds_error = False)
-        except mdsExceptions.TreeFOPENR as e:
+        except (mdsExceptions.TreeFOPENR,mdsExceptions.TreeINVPATH) as e:
             print(e)
             p_icrf = np.zeros(len(self._times))
-        spec_tree = Tree('spectroscopy', self._shot_id)
-        p_rad_record = spec_tree.getNode(r"\twopi_diode").getData()
-        p_rad = p_rad_record.data()
-        t_rad = p_rad_record.dim_of(0)
-        if len(t_rad) == 1:
-            return nan_arr,nan_arr
-        # TODO: 
-        dprad = gradient(p_rad,t_rad)
-        p_rad = interp1(t_rad, p_rad, self._times)
-        dprad = interp1(t_rad, dprad, self._times)
-        p_input = p_ohm + p_lh + p_icrf 
+        try:
+            spec_tree = Tree('spectroscopy', self._shot_id)
+            p_rad_record = spec_tree.getNode(r"\twopi_diode").getData()
+            p_rad = p_rad_record.data()
+            t_rad = p_rad_record.dim_of(0)
+            if len(t_rad) == 1:
+                p_rad = np.array([np.nan]*len(self._times)) #TODO: Fix 
+                dprad = p_rad.copy()
+            else:
+                dprad = np.gradient(p_rad,t_rad)
+                p_rad = interp1(t_rad, p_rad, self._times)
+                dprad = interp1(t_rad, dprad, self._times)
+        except mdsExceptions.TreeFOPENR as e:
+            print(e)
+            p_rad = np.array([np.nan]*len(self._times)) #TODO: Fix 
+            dprad = p_rad.copy()
+        p_input = self.data['p_ohm'] + p_lh + p_icrf 
         rad_fraction = p_rad/p_input
         rad_fraction[rad_fraction == np.inf] = np.nan 
         return p_rad, dprad, p_lh, p_icrf, p_input, rad_fraction
@@ -162,7 +174,7 @@ class Shot:
         V_loop_efit = self._analysis_tree.getNode('\efit_aeqdsk:vloopt').getData().data() #
         Wmhd = self._analysis_tree.getNode('\efit_aeqdsk:wplasm').getData().data() #
         ssep = self._analysis_tree.getNode('\efit_aeqdsk:ssep').getData().data() #100 % meters
-        n_over_ncrit =self._analysis_tree.getNode('-\efit_aeqdsk:xnnc').getData().data() #
+        n_over_ncrit =self._analysis_tree.getNode('\efit_aeqdsk:xnnc').getData().data() #
         beta_p_dot = np.gradient(beta_p, efittime)
         li_dot = np.gradient(li, efittime)
         dWmhd_dt = np.gradient(Wmhd, efittime)
@@ -187,11 +199,9 @@ class Shot:
     def _calc_kappa_area(self):
         aminor = self._analysis_tree.getNode(r'\efit_a_eqdsk:aminor').getData().data()
         area = self._analysis_tree.getNode(r'\efit_a_eqdsk:area').getData().data()
-        times = self._analysis_tree.getNode()
+        times = self._analysis_tree.getNode(r'\efit_aeqdsk:time').getData().data()
         kappa_area = area/(np.pi * aminor**2)
-        set_kappa_interp = interp1d(self._times, kappa_area, kind='linear')
-        kappa_area = set_kappa_interp(self._times) #Redundant for now I know, this is a placeholder
-        kappa_area = interp1(sel)
+        kappa_area = interp1(times,kappa_area,self._times)
         return kappa_area
 
     # TODO: Calculate v_mid
@@ -229,7 +239,16 @@ class Shot:
         
     
     def _calc_n_equal_1_amplitude(self):
-        pass
+        """ Calculate n=1 amplitude and phase for the disruption warning database
+        using the four BP13 Bp sensors near the midplane on the outboard vessel
+        wall.  The calculation is done by using a least squares fit to an
+        expansion in terms of n = 0 & 1 toroidal harmonics.  The BP13 sensors are
+        part of the set used for plasma control and equilibrium reconstruction,
+        and their signals have been analog integrated (units: tesla), so they
+        don't have to be numerically integrated.  These four sensors were working
+        well in 2014, 2015, and 2016.  I looked at our locked mode MGI run on
+        1150605, and the different applied A-coil phasings do indeed show up on
+        the n=1 signal. """
 
     def _calc_densities(self):
         e_tree = Tree('electroncs', self._shot_id)
