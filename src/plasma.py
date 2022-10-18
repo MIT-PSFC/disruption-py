@@ -60,13 +60,9 @@ class Shot:
         self.data['time_until_disrupt'] = self._calc_time_until_disrupt() 
         self.data['ip'],self.data['dip'],self.data['dip_smoothed'] = self._calc_Ip_parameters()
         self.data['p_ohm'], self.data['v_loop'] = self._calc_p_ohm_v_loop()
-        print("Point 0")
         self.data['p_rad'], self.data['dprad'], self.data['p_lh'], self.data['p_icrf'], self.data['p_input'], self.data['rad_fraction'] = self._calc_power()
-        print("Point 1")
         self.data['kappa_area'] = self._calc_kappa_area()
-        print("Point 2")
         self.data['v_0'],self.data['v_mid'] = self._calc_rotation_velocity()
-        print("Point 3")
         self.data['sxr'] = self._calc_sxr_data()
         self.data['beta_N'], self.data['beta_p'], self.data['beta_p_dot'], self.data['kappa'], self.data['upper_gap'], self.data['lower_gap'], self.data['li'], self.data['li_dot'], self.data['q0'], self.data['qstar'], self.data['q95'], self.data['V_loop_efit'], self.data['Wmhd'], self.data['dWmhd_dt'], self.data['ssep'], self.data['n_over_ncrit'] = self._calc_EFIT_parameters()   
 

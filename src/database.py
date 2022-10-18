@@ -19,8 +19,14 @@ class DatabaseHandler:
         self.driver_file)
     
     def query(self, query):
-        """ Query SQL database """ 
-        return pd.read_sql_query(query, self.conn)
+        """ Query SQL database. SELECT queries return a pandas dataframe. """
+        if "SELECT" in query:
+            return pd.read_sql_query(query, self.conn)
+        curs = self.conn.cursor()
+        curs.execute(query)
+        output = curs.fetchall()
+        curs.close()
+        return output
 
     def add_shot(self,shot_id, shot=None):
         """ 

@@ -45,7 +45,7 @@ end;
 
 % Define the java class path for the SQL driver, if not already defined.
 
-sql_jdbc_driver = '/home/hmturner/Documents/disruption-warning-db-workflow/cmod/sqljdbc4.jar';
+sql_jdbc_driver = '/home/hmturner/Documents/disruption-warning-db-workflow/src/sqljdbc4.jar';
 
 dpath = javaclasspath; % Get current list of dynamic java class path(s)
 
