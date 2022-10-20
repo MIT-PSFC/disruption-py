@@ -87,15 +87,17 @@ class DatabaseHandler:
         """ Get pandas dataframe of all disruption shots and times from the disruption table"""
         return self.query('select shot,t_disrupt from disruptions order by shot')
     
+    @classmethod
+    def create_cmod_handler(self):
+        return DatabaseHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver","sqljdbc4.jar","jdbc:sqlserver://alcdb2.psfc.mit.edu:1433","hmturner","pfcworld")
 
-def create_cmod_handler():
-    return DatabaseHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver","sqljdbc4.jar","jdbc:sqlserver://alcdb2.psfc.mit.edu:1433","hmturner","pfcworld")
+    @classmethod
+    def create_d3d_handler(self):
+        pass 
 
-def create_d3d_handler():
-    pass 
-
-def create_east_handler():
-    pass
+    @classmethod
+    def create_east_handler(self):
+        pass
 
 if __name__ == '__main__':
     test_handler = create_cmod_handler()
