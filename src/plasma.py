@@ -54,7 +54,7 @@ class Shot:
         if data is None:
             self.data = pd.DataFrame()
             self._populate_shot_data()
-    
+
     def _populate_shot_data(self):
         self.data['times'] = self._times
         self.data['commit_hash'] = self._metadata['commit_hash'] #TODO: convert from bytes
@@ -90,6 +90,16 @@ class Shot:
 
     def _calc_Ip_parameters(self):
         magnetics_tree = Tree('magnetics',self._shot_id) # Automatically generated
+        pcs_tree = Tree('pcs',self._shot_id)
+        segment_nodes = tree.getNodeWild("\\top.seg_*")
+        # Collect active segments and their information
+        # TODO: Finish adding programmed current
+        active_segments = []
+        start_times = []
+        for node in segment_nodes: 
+            if node.isOn():
+                active_segments.append(node)
+                start_times.append(node.getNode(":start_time").getData().data())
         ip = magnetics_tree.getNode(r"\ip").getData().data().astype('float64',copy=False)
         magtime = magnetics_tree.getNode(r"\ip").getData().dim_of(0)
         return Shot.calc_IP_parameters(self._times, ip, magtime)

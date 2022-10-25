@@ -84,12 +84,15 @@ class DatabaseHandler:
         return 0
 
     def get_disruption_shotlist(self):
-        """ Get pandas dataframe of all disruption shots and times from the disruption table"""
+        """ 
+        Get pandas dataframe of all disruption shots and times from the disruption table. Used as a cross-reference to determine whether a given shot is disruptive or not(provides t_disrupt). 
+        NOTE: The disruption_warning table contains ONLY a subset of shots in this table
+        """
         return self.query('select shot,t_disrupt from disruptions order by shot')
     
     @classmethod
     def create_cmod_handler(self):
-        return DatabaseHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver","sqljdbc4.jar","jdbc:sqlserver://alcdb2.psfc.mit.edu:1433","hmturner","pfcworld")
+        return DatabaseHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver","../src/sqljdbc4.jar","jdbc:sqlserver://alcdb2.psfc.mit.edu:1433","hmturner","pfcworld")
 
     @classmethod
     def create_d3d_handler(self):
