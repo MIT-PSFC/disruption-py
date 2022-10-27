@@ -45,16 +45,40 @@ class DatabaseHandler:
         curs.close()
         return output
 
-    def add_shot(self,shot_id, shot=None):
+    def add_shots(self, shot_ids, shots = None, update = False):
+        shot_ids = tuple([int(shot) for shot in shot_ids])
+        if shots is None:
+            shots = [Shot(shot_id) for shot_id in shot_ids]
+        curr_data_df = pd.read_sql_query(f'''select * from disruption_warning where shot in {shot_ids} order by time''', self.conn)
+        grouped_df = curr_data_df.groupby(by=["shot"])
+        shots_in_db = list(grouped_df.keys())
+        for shot in shots: 
+            if shot not in shot_ins_db:
+                values = ', '.join(map(str, shot.data))
+                curs.executemany(f"""insert into disruption_warning values {values}""")
+                continue 
+            curr_df = grouped_df[shot._shot_id]
+            for index, row in shot.data.iterrows():
+                update_row = curr_df[abs(curr_df['time']-row['time']) < 1e-6]
+                if len(update_row > 1):
+                    raise Exception("Too many matches") #TODO: Pick appropriate error
+                elif len(update_row) == 1:
+                    # curs.execute(f"""update """)
+                    pass
+
+
+    def add_shot(self,shot_id, shot=None,update=False):
         """ 
         Upload shot to SQL database. Can include shot object if available to avoid redundant computation. 
         Returns an error if there is at least one row already containing the shot id.
         """
-        pass
-
-    def update_shot(self,shot_id, shot=None):
-        """ """
-        pass
+        if shot is None:
+            shot = Shot(shot_id)
+        curr_data_df = shot.data 
+        curs = self.conn.cursor()
+        if len(curr_data_df) == 0:
+            curs.executemany(f"""insert into disruption_warning values""",curr_data_df)
+        # Disjoint used since one shot won't take up much memory
 
     def remove_shot(self,shot_id):
         """ Remove shot from SQL database."""
@@ -62,10 +86,15 @@ class DatabaseHandler:
 
     def get_shot(self,shot_id):
         shot_id = int(shot_id)
-        data_df = pd.read_sql_query(f'''select * from disruption_warning where shot = {shot_id}''', self.conn)
+        data_df = pd.read_sql_query(f'''select * from disruption_warning where shot = {shot_id} order by time''', self.conn)
         if self.shot_class == Shot:
             return Shot('cmod',shot_id,data=data_df)
         return None
+    
+    def get_shots(self,shot_ids):
+        shot_ids = tuple([int(shot_id) for shot_id in shot_ids])
+        shot_df = pd.read_sql_query(f'''select * from disruption_warning where shot in {shot_ids} order by time''', self.conn)
+        return [Shot('cmod', shot_data['shot'].iloc[0],data=shot_data) for _, shot_data in shot_df.groupby(by=["shot"])]
 
     def add_column(self, col_name, var_type="TEXT", table="disruption_warning"):
         if col_name not in self.data_columns:

@@ -59,7 +59,7 @@ class Shot:
         self.data['times'] = self._times
         self.data['commit_hash'] = self._metadata['commit_hash'] #TODO: convert from bytes
         self.data['time_until_disrupt'] = self._calc_time_until_disrupt() 
-        self.data['ip'],self.data['dip'],self.data['dip_smoothed'] = self._calc_Ip_parameters()
+        self.data['ip'],self.data['dip'],self.data['dip_smoothed'],self.data['ip_prog'],self.data['dipprog_dt'],self.data['ip_error'] = self._calc_Ip_parameters()
         self.data['p_ohm'], self.data['v_loop'] = self._calc_p_ohm_v_loop()
         self.data['p_rad'], self.data['dprad'], self.data['p_lh'], self.data['p_icrf'], self.data['p_input'], self.data['rad_fraction'] = self._calc_power()
         self.data['kappa_area'] = self._calc_kappa_area()
@@ -80,29 +80,63 @@ class Shot:
 
     # TODO: Fix plasma current calculation. Add programmed current
     @staticmethod 
-    def calc_IP_parameters(times, ip, magtime):
+    def calc_IP_parameters(times, ip, magtime,ip_prog, pcstime):
         dip = np.gradient(ip, magtime)
         dip_smoothed = smooth(dip, 11)
+        dipprog_dt = np.gradient(ip_prog,pcstime)
+        ip_prog = interp1(pcstime, ip_prog,times, fill_value=ip_prog[-1])
+        dipprog_dt = interp1(pcstime, dipprog_dt, times)
         ip = interp1(magtime, ip, times)
         dip = interp1(magtime, dip, times)
         dip_smoothed = interp1(magtime, dip_smoothed, times)
-        return ip, dip, dip_smoothed
+        ip_error = ip-ip_prog
+        return ip, dip, dip_smoothed, ip_prog,dipprog_dt, ip_error
 
     def _calc_Ip_parameters(self):
         magnetics_tree = Tree('magnetics',self._shot_id) # Automatically generated
         pcs_tree = Tree('pcs',self._shot_id)
-        segment_nodes = tree.getNodeWild("\\top.seg_*")
+        segment_nodes = pcs_tree.getNodeWild("\\top.seg_*")
         # Collect active segments and their information
-        # TODO: Finish adding programmed current
         active_segments = []
-        start_times = []
         for node in segment_nodes: 
             if node.isOn():
-                active_segments.append(node)
-                start_times.append(node.getNode(":start_time").getData().data())
+                active_segments.append([node,node.getNode(":start_time").getData().data()])
+        active_segments.sort(key=lambda n: n[1])
+        end_times = np.roll(np.asarray([n[1] for n in active_segments]),-1)
+        end_times[-1] = 12.383
+        for i in range(len(active_segments)):
+            active_segments[i].append(end_times[i])
+        # Default PCS timebase is 1 KHZ
+        pcstime = np.arange(-4,12.383,.001)
+        ip_prog = np.empty(pcstime.shape)
+        ip_prog.fill(np.nan)
+        # For each activate segment:
+        # 1.) Find the wire for IP control and check if it has non-zero PID gains
+        # 2.) IF it does, interpolate IP programming onto the PCS timebase 
+        # 3.) Clip to the start and stop times of PCS timebase
+        for segment,start,end in active_segments:
+            # Ip wire can be one of 16 but is normally #16
+            for wire_index in range(16,1,-1):
+                wire_node = segment.getNode(f":P_{wire_index :2.0f}:name")
+                if wire_node.getData().data() == 'IP':
+                    try:
+                        pid_gains = wire_node.getNode(":pid_gains").getData().data()
+                        if sum(np.nonzero(pid_gains)) > 0:
+                            sig_node = segment.getNode(f":P_{wire :2.0f}")
+                            signal_record = sig_node.getData()
+                            sigtime = signal_record.dim_of(0)
+                            signal = signal_record.data()
+                            ip_prog = interp1(sigtime, signal, pcstime)
+                            ip_prog = ip_prog[np.where(pcstime >= start &  pcstime <= end)]
+                        break
+                    except mdsExceptions.MdsException as e:
+                        pass
+                else:
+                    continue 
+                break
         ip = magnetics_tree.getNode(r"\ip").getData().data().astype('float64',copy=False)
         magtime = magnetics_tree.getNode(r"\ip").getData().dim_of(0)
-        return Shot.calc_IP_parameters(self._times, ip, magtime)
+        return Shot.calc_IP_parameters(self._times, ip, magtime, ip_prog, pcstime)
 
     def _calc_Z_parameters(self):
         raise NotImplementedError("Skipping over this function for now because not core to demonstrating library capabilities")

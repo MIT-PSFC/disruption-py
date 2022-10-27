@@ -1,7 +1,6 @@
 import sys
 sys.path.insert(1, '..')
 sys.path.insert(1, '../src')
-from MDSplus import *
 from src import database
 
 data_handler = database.DatabaseHandler.create_cmod_handler()
