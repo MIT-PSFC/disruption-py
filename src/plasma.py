@@ -66,9 +66,10 @@ class Shot:
         self.data['v_0'],self.data['v_mid'] = self._calc_rotation_velocity()
         self.data['sxr'] = self._calc_sxr_data()
         self.data['beta_N'], self.data['beta_p'], self.data['beta_p_dot'], self.data['kappa'], self.data['upper_gap'], self.data['lower_gap'], self.data['li'], self.data['li_dot'], self.data['q0'], self.data['qstar'], self.data['q95'], self.data['V_loop_efit'], self.data['Wmhd'], self.data['dWmhd_dt'], self.data['ssep'], self.data['n_over_ncrit'] = self._calc_EFIT_parameters()   
+        self.data['z_error'], self.data['z_prog'], self.data['z_cur'], self.data['v_z'], self.data['z_times_v_z'] = self._calc_Z_parameters()
         # Check there are no floats(float32) since the SQL database only contains type doubles(float64)
         float_columns = list(self.data.select_dtypes(include=['float32']).columns)
-        print(float_columns)
+        print(float_columns) #TODO: Change to an assert
         # self.data[float_columns] = self.data[float_columns].astype('float64')
 
     def get_active_wire_segments(self):
@@ -114,7 +115,7 @@ class Shot:
         magnetics_tree = Tree('magnetics',self._shot_id) # Automatically generated
         active_segments = self.get_active_wire_segments()
         # Default PCS timebase is 1 KHZ
-        pcstime = np.arange(-4,12.383,.001)
+        pcstime = np.array(np.arange(-4,12.383,.001))       
         ip_prog = np.empty(pcstime.shape)
         ip_prog.fill(np.nan)
         # For each activate segment:
@@ -123,13 +124,13 @@ class Shot:
         # 3.) Clip to the start and stop times of PCS timebase
         for segment,start,end in active_segments:
             # Ip wire can be one of 16 but is normally no. 16
-            for wire_index in range(16,1,-1):
-                wire_node = segment.getNode(f":P_{wire_index :2.0f}:name")
+            for wire_index in range(16,0,-1):
+                wire_node = segment.getNode(f":P_{wire_index :02d}:name")
                 if wire_node.getData().data() == 'IP':
                     try:
                         pid_gains = wire_node.getNode(":pid_gains").getData().data()
-                        if sum(np.nonzero(pid_gains)) > 0:
-                            sig_node = segment.getNode(f":P_{wire_index :2.0f}")
+                        if np.any(pid_gains):
+                            sig_node = segment.getNode(f":P_{wire_index :02d}")
                             signal_record = sig_node.getData()
                             sigtime = signal_record.dim_of(0)
                             signal = signal_record.data()
@@ -145,31 +146,44 @@ class Shot:
         return Shot.calc_IP_parameters(self._times, ip, magtime, ip_prog, pcstime)
     
     @staticmethod 
-    def calc_Z_parameters(z_prog, z_cur, pcstime, z_eror_without_ip, ip, dpcstime):
+    def calc_Z_parameters(times, z_prog, pcstime, z_error_without_ip, ip, dpcstime):
         z_error = z_error_without_ip/ip # [m]
         z_prog_dpcs = interp1(pcstime, z_prog, dpcstime)
-        z_cur = z_prog_dpcs + z_erorr #[m]
+        z_cur = z_prog_dpcs + z_error #[m]
+        v_z = np.gradient(z_cur, dpcstime) # m/s
+        z_times_v_z = z_cur * v_z # m^2/s
+        z_prog = interp1(pcstime, z_prog, times, 'linear', False, z_prog[-1])
+        z_error = -interp1(dpcstime, z_error, times, 'linear', False,z_error[-1])
+        z_cur = -interp1(dpcstime, z_cur, times, 'linear',False, z_cur[-1])
+        v_z = interp1(dpcstime, v_z, times, 'linear',False, v_z[-1])
+        z_times_v_z = interp1(dpcstime, z_times_v_z, times, 'linear', False, z_times_v_z[-1])
+        return z_error, z_prog, z_cur, v_z, z_times_v_z
 
     def _calc_Z_parameters(self):
-        pcstime = np.arange(-4,12.383,.001)
-        z_prog = np.empty(len(pcstime))
+        pcstime = np.array(np.arange(-4,12.383,.001))
+        z_prog = np.empty(pcstime.shape)
         z_prog.fill(np.nan)
+        z_prog_temp = z_prog.copy()
         z_wire_index = -1
         active_wire_segments = self.get_active_wire_segments()
         for segment,start,end in active_wire_segments:
-            for wire_index in range(1, 16):
-                wire_node = segment.getNode(f":P_{wire_index :2.0f}:name")
-                if wire_node.getData().data() == 'ZCUR':
+            for wire_index in range(1, 17):
+                wire_node = segment.getNode(f":P_{wire_index :02d}:name")
+                if wire_node.getData().data() == "ZCUR":
                     try:
-                        pid_gains = wire_node.getNode(":pid_gains").getData().data()
-                        if sum(np.nonzero(pid_gains)) > 0:
-                            sig_node = segment.getNode(f":P_{wire_index :2.0f}")
+                        pid_gains = segment.getNode(f":P_{wire_index :02d}:pid_gains").getData().data()
+                        if np.any(pid_gains):
+                            sig_node = segment.getNode(f":P_{wire_index :02d}")
                             signal_record = sig_node.getData()
                             sigtime = signal_record.dim_of(0)
                             signal = signal_record.data()
+                            z_prog_temp = interp1(sigtime, signal, pcstime,'linear',False, fill_value = signal[-1])
                             z_wire_index = wire_index
-                            z_prog = interp1(sigtime, signal, pcstime)[np.where(pcstime >= start &  pcstime <= end)]
+                            segment_indices = [np.where((pcstime >= start) &  (pcstime <= end))]
+                            z_prog[segment_indices] = z_prog_temp[segment_indices]
+                            break
                     except mdsExceptions.MdsException as e:
+                        print(e)
                         continue #TODO: Consider raising appropriate error
                 else:
                     continue 
@@ -178,13 +192,12 @@ class Shot:
             raise ValueError("No ZCUR wire was found") #TODO: Make appropriate error
         # Read in A_OUT, which is a 16xN matrix of the errors for *all* 16 wires for
         # *all* of the segments. Note that DPCS time is usually taken at 10kHz. 
-        hybrid_tree = Tree('hybrid', self.shot_id)
+        hybrid_tree = Tree('hybrid', self._shot_id)
         wire_errors_record = hybrid_tree.getNode(r'\top.hardware.dpcs.signals:a_out').getData()
-        wire_errors = wire_errors_record.data()
-        dpcstime = temp_node.dim_of(0) # s
+        wire_errors, dpcstime = wire_errors_record.data(), np.array(wire_errors_record.dim_of(1)) # s
         # The value of Z_error we read is not in the units we want. It must be *divided* by a factor AND *divided* by the plasma current.
-        z_error_without_factor_and_ip = wire_errors[z_wire_index,:]
-        z_error_without_ip = np.empy(z_error_without_factor_and_ip.shape)
+        z_error_without_factor_and_ip = wire_errors[:,z_wire_index]
+        z_error_without_ip = np.empty(z_error_without_factor_and_ip.shape)
         z_error_without_ip.fill(np.nan)
         # Also, it turns out that different segments have different factors. So we
         # search through the active segments (determined above), find the factors,
@@ -192,9 +205,8 @@ class Shot:
         # determined from start_times and stop_times.
         for i in range(len(active_wire_segments)):
             segment, start,end = active_wire_segments[i]
-            z_factor_record = hybrid_tree.getNode(fr'\dpcs::top.seg_{i:2.0f}:p_{z_wire_index:2.0f}:predictor:factor').getData()
-            z_factor,z_factor_time = z_factor_record.data(),z_factor_record.dim_of(0)
-            z_error_without_ip[np.where(dpcstime >= start & dpcstime <= end)] /= z_factor # [A*m] 
+            z_factor = hybrid_tree.getNode(fr'\dpcs::top.seg_{i+1:02d}:p_{z_wire_index:02d}:predictor:factor').getData().data()
+            z_error_without_ip[np.where((dpcstime >= start) & (dpcstime <= end))] /= z_factor # [A*m] 
         #Next we grab ip, which comes from a_in:input_056. This also requires 
         #*multiplication* by a factor.
         #NOTE that I can't get the following ip_without_factor to work for shots
@@ -202,7 +214,7 @@ class Shot:
         #TODO: Try to fix this
         if self._shot_id > 1150101000:
             ip_without_factor = hybrid_tree.getNode(r'\hybrid::top.hardware.dpcs.signals.a_in:input_056').getData().data()
-            ip_factor = hybrid_Tree.getNode(r'\hybrid::top.dpcs_config.inputs:input_056:p_to_v_expr').getData().data()
+            ip_factor = hybrid_tree.getNode(r'\hybrid::top.dpcs_config.inputs:input_056:p_to_v_expr').getData().data()
             ip = ip_without_factor*ip_factor #[A]
         else:
             magnetics_tree = Tree('magnetics',self._shot_id)
@@ -210,7 +222,7 @@ class Shot:
             ip = ip_record.data()
             ip_time = ip_record.dim_of(0)
             ip = interp1(ip_time,ip,dpcstime)
-        return self.calc_Z_parameters(z_prog,pcstime, z_eror_without_ip, ip, dpcstime)
+        return self.calc_Z_parameters(self._times,z_prog,pcstime, z_error_without_ip, ip, dpcstime)
 
     @staticmethod
     def calc_p_oh_v_loop(times, v_loop,v_loop_time,li,efittime, dip_smoothed, ip):

@@ -69,7 +69,7 @@ class DatabaseHandler:
         with self.conn.cursor() as curs:
             if len(curr_df) == 0:
                 curs.executemany("""insert into disruption_warning values""",shot.data)
-                continue
+                return
             if update:
                 self._update_shot(shot.data,curr_df,curs)
             print("Warning: Not updating shot")
