@@ -49,22 +49,11 @@ class DatabaseHandler:
         shot_ids = tuple([int(shot) for shot in shot_ids])
         if shots is None:
             shots = [Shot(shot_id) for shot_id in shot_ids]
-        curr_data_df = pd.read_sql_query(f'''select * from disruption_warning where shot in {shot_ids} order by time''', self.conn)
-        grouped_df = curr_data_df.groupby(by=["shot"])
+        curr_df = pd.read_sql_query(f'''select * from disruption_warning where shot in {shot_ids} order by time''', self.conn)
+        grouped_df = curr_df.groupby(by=["shot"])
         shots_in_db = list(grouped_df.keys())
         for shot in shots: 
-            if shot not in shot_ins_db:
-                values = ', '.join(map(str, shot.data))
-                curs.executemany(f"""insert into disruption_warning values {values}""")
-                continue 
-            curr_df = grouped_df[shot._shot_id]
-            for index, row in shot.data.iterrows():
-                update_row = curr_df[abs(curr_df['time']-row['time']) < 1e-6]
-                if len(update_row > 1):
-                    raise Exception("Too many matches") #TODO: Pick appropriate error
-                elif len(update_row) == 1:
-                    # curs.execute(f"""update """)
-                    pass
+            self.add_shot(shot._shot_id, shot.data, update=update)
 
 
     def add_shot(self,shot_id, shot=None,update=False):
@@ -72,13 +61,29 @@ class DatabaseHandler:
         Upload shot to SQL database. Can include shot object if available to avoid redundant computation. 
         Returns an error if there is at least one row already containing the shot id.
         """
+        shot_id = int(shot_id)
         if shot is None:
             shot = Shot(shot_id)
-        curr_data_df = shot.data 
-        curs = self.conn.cursor()
-        if len(curr_data_df) == 0:
-            curs.executemany(f"""insert into disruption_warning values""",curr_data_df)
-        # Disjoint used since one shot won't take up much memory
+        curr_df = pd.read_sql_query(f'''select * from disruption_warning where shot in {shot_id} order by time''', self.conn)
+        with self.conn.cursor() as curs:
+            if len(curr_df) == 0:
+                curs.executemany("""insert into disruption_warning values""",shot.data)
+                continue
+            if update:
+                self._update_shot(shot.data,curr_df,curs)
+            print("Warning: Not updating shot")
+
+    def _update_shot(shot_data,curr_df,curs):
+        new_rows = []
+        for index, row in shot.data.iterrows():
+            update_row = curr_df[abs(curr_df['time']-row['time']) < 1e-6]
+            if len(update_row) > 1:
+                raise Exception("Too many matches") #TODO: Pick appropriate error
+            elif len(update_row) == 1:
+                curs.execute(f"""insert into disruption_warning values where dbkey""", update_row, update_row['dbkey'])
+            else:
+                new_rows.append(index)
+        curs.executemany(f"""insert into disruption_warning values""",curr_data_df.iloc[new_rows,:])
 
     def remove_shot(self,shot_id):
         """ Remove shot from SQL database."""
