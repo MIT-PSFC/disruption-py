@@ -5,6 +5,7 @@ from plasma import *
 
 # Alter queries for these columns will fail 
 PROTECTED_COLUMNS = ['dbkey', 'shot', 'time', 'time_until_disrupt', 'ip_error', 'dip_dt', 'beta_p', 'beta_n', 'li', 'n_equal_1_normalized', 'z_error', 'v_z', 'z_times_v_z', 'kappa', 'pressure_peaking', 'H98', 'q0', 'qstar', 'q95', 'v_0', 'v_mid', 'v_edge', 'dn_dt', 'p_rad_slow', 'p_oh_slow', 'p_icrf', 'p_lh', 'radiated_fraction', 'power_supply_railed', 'v_loop_efit', 'r_dd', 'lower_gap', 'upper_gap', 'dbetap_dt', 'dli_dt', 'ip', 'zcur', 'n_e', 'dipprog_dt', 'v_loop', 'p_rad', 'p_oh', 'ssep', 'dWmhd_dt', 'dprad_dt', 'v_0_uncalibrated', 'Te_width', 'Greenwald_fraction', 'intentional_disruption', 'Te_width_ECE', 'Wmhd', 'n_over_ncrit', 'n_equal_1_mode', 'Mirnov', 'Mirnov_norm_btor', 'Mirnov_norm_bpol', 'Te_peaking', 'ne_peaking', 'Te_peaking_ECE', 'SXR_peaking', 'kappa_area', 'I_efc', 'SXR', 'H_alpha', 'Prad_peaking_CVA', 'commit_hash']
+TIME_CONST = 1e-6 # [s] Time frame for which an insertion into SQL database becomes an update 
 
 class DatabaseHandler:
     """
@@ -76,7 +77,7 @@ class DatabaseHandler:
     def _update_shot(shot_data,curr_df,curs):
         new_rows = []
         for index, row in shot.data.iterrows():
-            update_row = curr_df[abs(curr_df['time']-row['time']) < 1e-6]
+            update_row = curr_df[abs(curr_df['time']-row['time']) < TIME_CONST]
             if len(update_row) > 1:
                 raise Exception("Too many matches") #TODO: Pick appropriate error
             elif len(update_row) == 1:
