@@ -53,6 +53,7 @@ class DatabaseHandler:
         curr_df = pd.read_sql_query(f'''select * from disruption_warning where shot in {shot_ids} order by time''', self.conn)
         grouped_df = curr_df.groupby(by=["shot"])
         shots_in_db = list(grouped_df.keys())
+        # TODO: Paralellize in D3D and EAST subclasses 
         for shot in shots: 
             self.add_shot(shot._shot_id, shot.data, update=update)
 
@@ -79,7 +80,7 @@ class DatabaseHandler:
         for index, row in shot.data.iterrows():
             update_row = curr_df[abs(curr_df['time']-row['time']) < TIME_CONST]
             if len(update_row) > 1:
-                raise Exception("Too many matches") #TODO: Pick appropriate error
+                raise Exception("Too many matches") #TODO: Change to update all with a new value 
             elif len(update_row) == 1:
                 curs.execute(f"""insert into disruption_warning values where dbkey""", update_row, update_row['dbkey'])
             else:

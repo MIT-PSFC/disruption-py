@@ -1,4 +1,5 @@
 from scipy.interpolate import interp1d
+from scipy.optimize import curve_fit
 import numpy as np
 
 def interp1(x,y, new_x, kind='linear',bounds_error = True, fill_value = 0):
@@ -14,3 +15,14 @@ def smooth(arr, window_size):
     start = np.cumsum(arr[:window_size-1][::2]/b_weights)
     end = (np.cumsum(arr[:-window_size:-1])[::2]/b_weights)[::-1]
     return np.concatenate((start, mid, end))
+
+
+# Credit to: https://stackoverflow.com/questions/11507028/fit-a-gaussian-function
+def gaussian_fit(x,y):
+    coeffs, var_matrix = curve_fit(guass, x, y)
+    return coeffs 
+
+def gauss(x, *params):
+    """ Guassian function"""
+    z, mu, sigma = p
+    return z*np.exp(-(x-mu)**2/(2.0*sigma**2))

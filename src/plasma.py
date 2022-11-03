@@ -60,13 +60,17 @@ class Shot:
         self.data['commit_hash'] = self._metadata['commit_hash'] #TODO: convert from bytes
         self.data['time_until_disrupt'] = self._calc_time_until_disrupt() 
         self.data['ip'],self.data['dip'],self.data['dip_smoothed'],self.data['ip_prog'],self.data['dipprog_dt'],self.data['ip_error'] = self._calc_Ip_parameters()
-        self.data['p_ohm'], self.data['v_loop'] = self._calc_p_ohm_v_loop()
-        self.data['p_rad'], self.data['dprad'], self.data['p_lh'], self.data['p_icrf'], self.data['p_input'], self.data['rad_fraction'] = self._calc_power()
+        self.data['p_oh'], self.data['v_loop'] = self._calc_p_ohm_v_loop()
+        self.data['p_rad'], self.data['dprad_dt'], self.data['p_lh'], self.data['p_icrf'], self.data['p_input'], self.data['radiated_fraction'] = self._calc_power()
         self.data['kappa_area'] = self._calc_kappa_area()
-        self.data['v_0'],self.data['v_mid'] = self._calc_rotation_velocity()
+        self.data['v_0'] = self._calc_rotation_velocity()
+        self.data['v_0_uncalibrated'] = [np.nan]*len(self.data) #TODO: Populate when shot is missing from calibrated.txt 
+        self.data['v_mid'] = [np.nan]*len(self.data) #TODO: Ask about removing from database
         self.data['sxr'] = self._calc_sxr_data()
-        self.data['beta_N'], self.data['beta_p'], self.data['beta_p_dot'], self.data['kappa'], self.data['upper_gap'], self.data['lower_gap'], self.data['li'], self.data['li_dot'], self.data['q0'], self.data['qstar'], self.data['q95'], self.data['V_loop_efit'], self.data['Wmhd'], self.data['dWmhd_dt'], self.data['ssep'], self.data['n_over_ncrit'] = self._calc_EFIT_parameters()   
+        self.data['beta_n'], self.data['beta_p'], self.data['dbetap_dt'], self.data['kappa'], self.data['upper_gap'], self.data['lower_gap'], self.data['li'], self.data['dli_dt'], self.data['q0'], self.data['qstar'], self.data['q95'], _, self.data['Wmhd'], self.data['dWmhd_dt'], self.data['ssep'], self.data['n_over_ncrit'] = self._calc_EFIT_parameters()   
         self.data['z_error'], self.data['z_prog'], self.data['z_cur'], self.data['v_z'], self.data['z_times_v_z'] = self._calc_Z_parameters()
+        self.data['iefc'] = self._calc_efc_current()
+        self.data['n_equal_1_mode'],self.data['n_equal_1_normalized'], _ = self._calc_n_equal_1_amplitude()
         # Check there are no floats(float32) since the SQL database only contains type doubles(float64)
         float_columns = list(self.data.select_dtypes(include=['float32']).columns)
         print(float_columns) #TODO: Change to an assert
@@ -137,7 +141,7 @@ class Shot:
                             ip_prog = interp1(sigtime, signal, pcstime)
                             ip_prog = ip_prog[np.where(pcstime >= start &  pcstime <= end)]
                     except mdsExceptions.MdsException as e:
-                        pass
+                        pass #TODO: Change
                 else:
                     continue 
                 break
@@ -330,22 +334,31 @@ class Shot:
         times = self._analysis_tree.getNode(r'\efit_aeqdsk:time').getData().data().astype('float64',copy=False)
         return Shot.calc_kappa_area(self._times, aminor, area, times)
 
-    #TODO: Consider if necessary
     @staticmethod
-    def calc_rotation_velocity():
-        pass
+    def calc_rotation_velocity(intensity, time, vel, hirextime):
+        """ 
+        Uses spectroscopy graphs of ionized(to hydrogen and helium levels) Argon to calculate velocity. Because of the heat profile of the plasma, suitable measurements are only found near the center
+        """
+        v_0 = np.empty(len(self._times))
+        # Check that the argon intensity pulse has a minimum count and duration threshold
+        valid_indices = np.where(intensity>1000 & intensity<10000)
+        # Matlab code just multiplies by time delta but that doesn't work in the case where we have different time deltas
+        # Instead we sum the time deltas for all valid indices to check the total duration
+        if np.sum(time[valid_indices+1] - time[valid_indices]) >= .2:
+            v_0 = interp1(hirextime, vel, self._times)
+            v_0[np.where(abs(v_0) > 200)] = np.nan #TODO: Determine better threshold
+            v_0 *= 1000.0
+    return v_0
 
     # TODO: Calculate v_mid
     def _calc_rotation_velocity(self):
         calibrated = pd.read_csv("lock_mode_calib_shots.txt") #TODO: productionize
-        v_0 = np.empty(len(self._times))
-        v_mid = np.empty(len(self._times))
         # Check to see if shot was done on a day where there was a locked
         # mode HIREX calibration by cross checking with list of calibrated 
         # runs. If not calibrated, return NaN outputs.
         if self._shot_id not in calibrated:
+            v_0 = np.empty(len(self._times))
             v_0.fill(np.nan)
-            v_mid.fill(np.nan)
             return v_0,v_mid
         try:
             spec_tree = Tree('spectroscopy', self._shot_id)
@@ -355,19 +368,14 @@ class Shot:
             vel_record = spec_tree.getNode('.hirex_sr.analysis.a:vel').getData()
             vel = vel_record.data().astype('float64',copy=False)
             hirextime = vel_record.dim_of(0)
-            # Check that the argon intensity pulse  a minimum count and duration threshold
-            valid_indices = np.where(intensity>1000 & intensity<10000)
-            # Matlab code just multiplies by time delta but that doesn't work in the case where we have different time deltas
-            # Instead we sum the time deltas for all valid indices
-            if np.sum(time[valid_indices+1] - time[valid_indices]) >= .2:
-                set_v_0_interp = interp1d(hirextime, vel, kind='linear')
-                v_0 = set_v_0_interp(self._times)
-                v_0[np.where(abs(v_0) > 200)] = np.nan #TODO: Determine better threshold
-                v_0 *= 1000.0
         except mdsExceptions.TreeFOPENR as e:
             print("WARNING: failed to open necessary tress for rotational velocity calculations.")
-        return v_0,v_mid
-        
+            v_0 = np.empty(len(self._times))
+            v_0.fill(np.nan)
+            return v_0
+        return Shot.calc_rotation_velocity(intensity, time, vel, hirextime)
+
+    # TODO: Split into static and instance method
     @staticmethod 
     def calc_n_equal_1_amplitude():
         pass 
@@ -382,8 +390,66 @@ class Shot:
         don't have to be numerically integrated.  These four sensors were working
         well in 2014, 2015, and 2016.  I looked at our locked mode MGI run on
         1150605, and the different applied A-coil phasings do indeed show up on
-        the n=1 signal. """
-        pass
+        the n=1 signal. 
+
+        N=1 toroidal assymmetry in the magnetic fields
+        """
+        n_equal_1_amplitude = np.empty(len(self._times))
+        n_equal_1_amplitude.fill(np.nan)
+        n_equal_1_normalized = n_equal_1_amplitude.copy()
+        n_equal_1_phase = n_equal1_amplitude.copy()
+        bp13_names = ['BP13_BC', 'BP13_DE', 'BP13_GH', 'BP13_JK'] # These sensors are placed toroidally around the machine. Letters refer to the 2 ports the sensors were placed between.
+        bp13_signals = np.empty((len(self._times), len(bp13_names)))
+        mag_tree = Tree('magnetics',self._shot_id)
+        path = r"\mag_bp_coils"
+        bp_node_names = mag_tree.getNode(path + "nodename").getData().data()
+        phi = mag_tree.GetNode(path + "btor_pickup").getData().data()
+        bp13_indices = np.intersect1d(bp_node_names,bp13_names)
+        bp13_phi = phi[bp13_indices] + 360 # INFO
+        bp13_btor_pickup_coeffs = btor_pickup_coeffs[bp13_indices]
+        btor_record = mag_tree.getNode(path + r"\btor").getData()
+        btor = btor_record.data()
+        t_mag = btor_record.dim_of(0)
+        baseline_indices = np.where(t_mag <= -1.8) # Toroidal power supply takes time to turn on, from ~ -1.8 and should be on by t=-1. So pick the time before that to calculate baseline
+        btor = btor - np.mean(btor[baseline_indices])
+        path = r"\mag_bp_coils.signals"
+        # For each sensor:
+        # 1. Subtract baseline offset
+        # 2. Subtract btor pickup
+        # 3. Interpolate bp onto shot timebase
+        for i in range(len(bp13_names)):
+            signal = mag_tree.getNode(path + bp13_names[i]).getData().data()
+            if len(signal) == 1:
+                print("WARNING: Can't fit with signal. Returning nans")
+                return n_equal_1_amplitude, n_equal_1_normalized, n_equal_1_phase
+            baseline = np.mean(signal[baseline_indices])
+            signal = signal - baseline 
+            signal = signal - bp13_btor_pickup_coeffs[i]*btor 
+            bp13_signals[:,i] = interp1(t_mag, signal, self._times)
+        polarity = np.sign() #TODO: Examine edge case behavior of sign 
+        btor_magnitude = btor*polarity 
+        btor_magnitude = interp1(t_mag, btor_magnitude, self._times)
+        # Create the 'design' matrix ('A') for the linear system of equations:
+        # Bp(phi) = A1 + A2*sin(phi) + A3*cos(phi)
+        ncoeffs = 3 
+        A = np.empty((len(bp13_names),ncoeffs))
+        A[:,0] = np.ones
+        A[:, 1] = np.sin(bp13_phi*np.pi/180.0)
+        A[:,2] = np.cos(bp13_phi*np.pi/180.0)
+        coeffs = np.linalg.inv(A) @ bp13_signals 
+        # The n=1 amplitude at each time is sqrt(A2^2 + A3^2)
+        # The n=1 phase at each time is arctan(-A2/A3), using complex number
+        # phasor formalism, exp(i(phi - delta))
+        n_equal_1_amplitude = np.sqrt(coeffs[1,:]**2 + coeffs[2,:]**2)
+        n_equal_1_phase = np.arctan2(-coeffs[1,:], coeffs[2,:]) #TODO: Confirm arctan2 = atan2
+        n_equal_1_normalized = n_equal_1_ampltiude / btor_magnitude
+
+        # INFO: Debugging purpose block of code at end of matlab file
+        # INFO: n_equal_1_amplitude vs n_equal_1_mode
+        return n_equal_1_amplitude, n_equal_1_normalized, n_equal_1_phase
+
+
+
 
     @staticmethod 
     def calc_densities(times, n_e,t_n, ip, t_ip,a_minor,t_a):
@@ -416,10 +482,53 @@ class Shot:
         a_minor = a_minor_record.data().astype('float64',copy=False)
         return Shot.calc_densities(self._times, n_e, t_n, ip, t_ip, a_minor,t_a)
         
+    @staticmethod 
+    def calc_efc_current(times, iefc, t_iefc):
+        return interp1(t_iefc, iefc, times, 'linear')
 
     def _calc_efc_current(self):
-        pass
+        eng_tree = Tree('engineering',self._shot_id)
+        iefc_record = eng_tree.getNode(r'\efc:_u_bus_r_cur').getData()
+        iefc, t_iefc = iefc_record.data(), iefc_record.dim_of(0)
+        return calc_efc_current(self._times,iefc, t_iefc)
 
+    #TODO: Split 
+    @staticmethod 
+    def calc_Ts_data(times, ts_data, ts_time, ts_z):
+        zarray = np.array(np.arange(-.5,.5,.001))
+        valid_times = np.where(ts_time > 0)
+        y = ts_data[valid_times,:]
+        ok_indices = np.where(y != 0)
+        y = y[ok_indices]
+        z = ts_z[ok_indices]
+        _, _, sigma = gaussian_fit(z,y)
+        te_hwm = sigma*1.1774 #50%
+        te_hwm = interp1(ts_time, te_hwm, self._times)
+        return te_hwm 
+
+    def _calc_Ts_data(self):
+        # TODO: Guassian vs parabolic fit for te profile
+        te_hwm = np.empty((len(self._times)))
+        electron_tree = Tree("electrons",self._shot_id)
+
+        # Read in Thomson core temperature data, which is a 2-D array, with the
+        # dependent dimensions being time and z (vertical coordinate)
+        node_path = ".yag_new.results.profiles"
+        try:
+            ts_data = electron_tree.getNode(node_path + ":te_rz").getData().data()
+            ts_time = electron_tree.getNode(node_path + ":te_rz").getData().dim_of(0)
+            ts_z = electron_tree.getNode(node_path + ":z_sorted").getData().data()
+        except mdsExceptions.MdsException as e:
+            print(e) #TODO: Change 
+            te_hwm.fill(np.nan)
+            return te_hwm 
+        return Shot.calc_Ts_data(self._times, ts_data, ts_time, ts_z)
+        
+        
+
+    @staticmethod 
+    def calc_sxr_data():
+        pass
     # TODO: get more accurate description of soft x-ray data
     def _calc_sxr_data(self):
         """ """
