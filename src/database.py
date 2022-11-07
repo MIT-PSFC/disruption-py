@@ -1,3 +1,5 @@
+import os 
+
 import pandas as pd 
 import pymysql.cursors
 import jaydebeapi
@@ -128,8 +130,16 @@ class DatabaseHandler:
     
     @classmethod
     def create_cmod_handler(self):
-        return DatabaseHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver","../src/sqljdbc4.jar","jdbc:sqlserver://alcdb2.psfc.mit.edu:1433","hmturner","pfcworld")
-
+        USER = os.getenv('USER')
+        # TODO: Catch error if file not found and output helpful error message
+        with open(f"/home/{USER}/logbook.sybase_login","r") as profile:
+            content = profile.read().splitlines()[1:]
+            db_server = content[0]
+            db_name = content[1]
+            db_username = content[2]
+            assert db_username == USER,f"db_username:{db_username};user:{USER}"
+            db_password = content[3]
+        return DatabaseHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver","../src/sqljdbc4.jar",f"jdbc:sqlserver://{db_server}.psfc.mit.edu:1433",db_username,db_password)
     @classmethod
     def create_d3d_handler(self):
         pass 

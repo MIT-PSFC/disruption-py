@@ -348,7 +348,7 @@ class Shot:
             v_0 = interp1(hirextime, vel, self._times)
             v_0[np.where(abs(v_0) > 200)] = np.nan #TODO: Determine better threshold
             v_0 *= 1000.0
-    return v_0
+        return v_0
 
     # TODO: Calculate v_mid
     def _calc_rotation_velocity(self):
