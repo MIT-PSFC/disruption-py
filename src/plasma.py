@@ -523,8 +523,14 @@ class Shot:
             te_hwm.fill(np.nan)
             return te_hwm 
         return Shot.calc_Ts_data(self._times, ts_data, ts_time, ts_z)
-        
-        
+
+    # TODO: Finish
+    @staticmethod 
+    def calc_peaking_factor():
+        pass 
+
+    def _calc_peaking_factor(self):
+        pass        
 
     @staticmethod 
     def calc_sxr_data():
