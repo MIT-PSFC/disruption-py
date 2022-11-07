@@ -13,6 +13,9 @@ from utils import interp1, smooth
 DEFAULT_SHOT_COLUMNS = ['time','shot','time_until_disrupt','ip']
 
 class Shot:
+    pass 
+    
+class CmodShot(Shot):
     """
     Base shot class to represent a single shot of a fusion experiment.
 
@@ -557,9 +560,3 @@ class D3DShot(Shot):
 
 class EASTShot(Shot):
     pass
-
-class CMODShot(Shot):
-
-    def _calc_TS_data_cmod(self):
-        pass
-    
