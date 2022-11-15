@@ -1,0 +1,14 @@
+function shotlist = create_list_of_disruptions_in_2015;
+db = set_database('d3drdb');
+result = fetch(db, ['select shot, timestamp from disruptions order by shot']);
+all_disruptions = int32(cell2mat(result(:,1)));
+indices = zeros(length(all_disruptions), 1);
+for i = 1:length(all_disruptions);
+  timestamp = char(cell2mat(result(i,2)));
+  if length(timestamp) ~= 19;
+    timestamp = blanks(19);
+  end;
+  indices(i) = strcmpi(timestamp(1:4), '2015');
+end;
+indices = find(indices);
+shotlist = all_disruptions(indices);

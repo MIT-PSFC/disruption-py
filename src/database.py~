@@ -149,7 +149,7 @@ class DatabaseHandler:
             db_username = content[0]
             assert db_username == USER, f"db_username:{db_username};user:{USER}"
             db_password = content[1]
-        return DatabaseHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver","../src/sqljdbc4.jar",f"'jdbc:sqlserver://d3drdb.gat.com:8001;database=d3drdb", db_username,db_password)
+        return DatabaseHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver","../src/sqljdbc4.jar",f"'jdbc:sqlserver://d3drdb.gat.com:8001", db_username,db_password)
 
     @classmethod
     def create_east_handler(self):
