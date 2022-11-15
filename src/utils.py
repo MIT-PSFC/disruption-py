@@ -16,7 +16,6 @@ def smooth(arr, window_size):
     end = (np.cumsum(arr[:-window_size:-1])[::2]/b_weights)[::-1]
     return np.concatenate((start, mid, end))
 
-
 # Credit to: https://stackoverflow.com/questions/11507028/fit-a-gaussian-function
 def gaussian_fit(x,y):
     coeffs, var_matrix = curve_fit(guass, x, y)

@@ -533,8 +533,18 @@ class CmodShot(Shot):
         pass 
 
     def _calc_peaking_factor(self):
-        pass        
-
+        try:
+            efit_tree = Tree('cmod', self._shot_id)        
+            z0=0.01*efit_tree.getNode('\efit_aeqdsk:zmagx').getData().data()
+            aminor=efit_tree.getNode('\efit_aeqdsk:aminor').getData().data()
+            kappa=efit_tree.getNode('\efit_aeqdsk:kappa').getData().data()
+            efittime=efit_tree.getNode('\efit_aeqdsk:aminor').getData().dim_of(0)
+            electron_tree = Tree('electroncs',self._shot_id)
+        except mds.Exceptions.MdsException as e: 
+            nan_arr = np.fill((len(self._times)),np.nan)
+            return nan_arr, nan_arr.copy(),nan_arr.copy()
+        
+        
     @staticmethod 
     def calc_sxr_data():
         pass
