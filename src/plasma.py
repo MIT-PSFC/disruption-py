@@ -556,7 +556,34 @@ class CmodShot(Shot):
         return self._metadata if key == 'metadata' else self.data[key]
 
 class D3DShot(Shot):
-    pass
+    def __init__(self, shot_id,data_columns = DEFAULT_SHOT_COLUMNS,data = None):
+        self._shot_id = shot_id
+        self._metadata = {
+            'labels': {},
+            'commit_hash': subprocess.check_output(["git", "describe","--always"]).strip(), 
+            'timestep': {},
+            'duration': {},
+            'description': "",
+            'disrupted': 100  #TODO: Fix
+        }
+        self.data = data
+        if data is None:
+            self.data = pd.DataFrame()
+            self._populate_shot_data()
+	
+    def _populate_shot_data(self):
+        self.data['aminor'], self.data['raxis'], self.data['zaxis'], self.data['wmhd'], self.data['topology'], self.data['betap'],self.data['elong'],self.data['li'], self.data['q95'],self.data['gap_inner'], self.data['gap_outer'], self.data['gap_inner'], self.data['betan'] = self._calc_efit_parameters()
+	
+    @staticmethod
+    def calc_efit_parameters():
+        pass
+    def _calc_efit_parameters():
+        pass
+    def get_efit_tree(self):
+        pass
+		
+
+
 
 class EASTShot(Shot):
     pass

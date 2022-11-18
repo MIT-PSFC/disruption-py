@@ -96,8 +96,10 @@ class DatabaseHandler:
     def get_shot(self,shot_id):
         shot_id = int(shot_id)
         data_df = pd.read_sql_query(f'''select * from disruption_warning where shot = {shot_id} order by time''', self.conn)
-        if self.shot_class == Shot:
-            return Shot('cmod',shot_id,data=data_df)
+        if self.shot_class == CmodShot:
+            return CmodShot('cmod',shot_id,data=data_df)
+        elif self.shot_class:
+            return D3DShot(shot_id,data=data_df)
         return None
     
     def get_shots(self,shot_ids):
@@ -149,7 +151,7 @@ class DatabaseHandler:
             db_username = content[0]
             assert db_username == USER, f"db_username:{db_username};user:{USER}"
             db_password = content[1]
-        return DatabaseHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver","../src/sqljdbc4.jar",f"'jdbc:sqlserver://d3drdb.gat.com:8001;database=d3drdb", db_username,db_password)
+        return DatabaseHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver","../src/sqljdbc4.jar","jdbc:sqlserver://d3drdb.gat.com:8001;database=d3drdb", db_username,db_password, shot_class=D3DShot)
 
     @classmethod
     def create_east_handler(self):
