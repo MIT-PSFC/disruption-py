@@ -52,7 +52,7 @@ class DatabaseHandler:
         shot_ids = tuple([int(shot) for shot in shot_ids])
         if shots is None:
             shots = [Shot(shot_id) for shot_id in shot_ids]
-        curr_df = pd.read_sql_query(f'''select * from disruption_warning where shot in {shot_ids} order by time''', self.conn)
+        curr_df = pd.read_sql_query(f"select * from disruption_warning where shot in {shot_ids} order by time", self.conn)
         grouped_df = curr_df.groupby(by=["shot"])
         shots_in_db = list(grouped_df.keys())
         # TODO: Paralellize in D3D and EAST subclasses 
@@ -68,7 +68,7 @@ class DatabaseHandler:
         shot_id = int(shot_id)
         if shot is None:
             shot = Shot(shot_id)
-        curr_df = pd.read_sql_query(f'''select * from disruption_warning where shot in {shot_id} order by time''', self.conn)
+        curr_df = pd.read_sql_query(f"select * from disruption_warning where shot in {shot_id} order by time", self.conn)
         with self.conn.cursor() as curs:
             if len(curr_df) == 0:
                 curs.executemany("""insert into disruption_warning values""",shot.data)
@@ -95,16 +95,16 @@ class DatabaseHandler:
 
     def get_shot(self,shot_id):
         shot_id = int(shot_id)
-        data_df = pd.read_sql_query(f'''select * from disruption_warning where shot = {shot_id} order by time''', self.conn)
+        data_df = pd.read_sql_query(f"select * from disruption_warning where shot = {shot_id} order by time", self.conn)
         if self.shot_class == CmodShot:
             return CmodShot('cmod',shot_id,data=data_df)
-        elif self.shot_class:
-            return D3DShot(shot_id,data=data_df)
+        elif self.shot_class == D3DShot:
+            raise Exception("Invalid shot class for this handler") #TODO: Better exception
         return None
     
     def get_shots(self,shot_ids):
         shot_ids = tuple([int(shot_id) for shot_id in shot_ids])
-        shot_df = pd.read_sql_query(f'''select * from disruption_warning where shot in {shot_ids} order by time''', self.conn)
+        shot_df = pd.read_sql_query(f"select * from disruption_warning where shot in {shot_ids} order by time", self.conn)
         return [Shot('cmod', shot_data['shot'].iloc[0],data=shot_data) for _, shot_data in shot_df.groupby(by=["shot"])]
 
     def add_column(self, col_name, var_type="TEXT", table="disruption_warning"):
@@ -129,35 +129,53 @@ class DatabaseHandler:
         NOTE: The disruption_warning table contains ONLY a subset of shots in this table
         """
         return self.query('select shot,t_disrupt from disruptions order by shot')
-    
-    @classmethod
-    def create_cmod_handler(self):
-        USER = os.getenv('USER')
-        # TODO: Catch error if file not found and output helpful error message
-        with open(f"/home/{USER}/logbook.sybase_login","r") as profile:
-            content = profile.read().splitlines()[1:]
-            db_server = content[0]
-            db_name = content[1]
-            db_username = content[2]
-            assert db_username == USER,f"db_username:{db_username};user:{USER}"
-            db_password = content[3]
-        return DatabaseHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver","../src/sqljdbc4.jar",f"jdbc:sqlserver://{db_server}.psfc.mit.edu:1433",db_username,db_password)
-    @classmethod
-    def create_d3d_handler(self):
-        USER = os.getenv('USER')
-        # TODO: Catch error if file not found and output helpful error message
-        with open(f"/home/{USER}/D3DRDB.sybase_login","r") as profile:
-            content = profile.read().splitlines()
-            db_username = content[0]
-            assert db_username == USER, f"db_username:{db_username};user:{USER}"
-            db_password = content[1]
-        return DatabaseHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver","../src/sqljdbc4.jar","jdbc:sqlserver://d3drdb.gat.com:8001;database=d3drdb", db_username,db_password, shot_class=D3DShot)
 
-    @classmethod
-    def create_east_handler(self):
-        pass
+class D3DHandler(DatabaseHandler):
+    def __init__(self, driver,driver_file, host, user,passwd, shot_class=D3DShot):
+        super().__init__(driver, driver_file,host + "database=d3drdb",user,passwd,shot_class)
+        self.tree_conn = jaydebeapi.connect(self.driver,
+        host + "database=code_rundb",[self.user, self.passwd],
+        self.driver_file)
+	
+    def get_shot(self, shot_id):
+        shot_id = int(shot_id)
+        data_df = pd.read_sql_query(f"select * from disruption_warning where shot = {shot_id} order by time", self.conn)
+        with self.tree_conn.cursor() as curs:
+            curs.execute(f"select tree from plasmas where shot = {shot_id} and runtag = 'DIS' and deleted = 0 order by idx")
+            efit_trees = curs.fetchall()
+        return D3DShot(shot_id,efit_trees[-1],data=data_df)
+
+    #TODO: Make more efficient
+    def get_shots(self, shot_ids):
+        return [self.get_shot(shot_id) for shot_id in shot_ids]
+	
+	
+def create_cmod_handler():
+    USER = os.getenv('USER')
+    # TODO: Catch error if file not found and output helpful error message
+    with open(f"/home/{USER}/logbook.sybase_login","r") as profile:
+        content = profile.read().splitlines()[1:]
+        db_server = content[0]
+        db_name = content[1]
+        db_username = content[2]
+        assert db_username == USER,f"db_username:{db_username};user:{USER}"
+        db_password = content[3]
+    return DatabaseHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver","../src/sqljdbc4.jar",f"jdbc:sqlserver://{db_server}.psfc.mit.edu:1433",db_username,db_password)
+
+def create_d3d_handler():
+    USER = os.getenv('USER')
+    # TODO: Catch error if file not found and output helpful error message
+    with open(f"/home/{USER}/D3DRDB.sybase_login","r") as profile:
+        content = profile.read().splitlines()
+        db_username = content[0]
+        assert db_username == USER, f"db_username:{db_username};user:{USER}"
+        db_password = content[1]
+    return D3DHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver","../src/sqljdbc4.jar","jdbc:sqlserver://d3drdb.gat.com:8001;", db_username,db_password, shot_class=D3DShot)
+
+def create_east_handler(self):
+    pass
 
 if __name__ == '__main__':
-    test_handler = DatabaseHandler.create_d3d_handler()
+    test_handler = create_d3d_handler()
     shot = test_handler.get_shot('160946')
     print(shot)

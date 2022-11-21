@@ -556,7 +556,9 @@ class CmodShot(Shot):
         return self._metadata if key == 'metadata' else self.data[key]
 
 class D3DShot(Shot):
-    def __init__(self, shot_id,data_columns = DEFAULT_SHOT_COLUMNS,data = None):
+    efit_vars = {'beta_n':'\efit_a_eqdsk:betan', 'beta_p':'\efit_a_eqdsk:betap', 'kappa':'\efit_a_eqdsk:kappa', 'li':'\efit_a_eqdsk:li', 'upper_gap':'\efit_a_eqdsk:gaptop', 'lower_gap':'\efit_a_eqdsk:gapbot',  'q0':'\efit_a_eqdsk:q0', 'qstar': '\efit_a_eqdsk:qstar','q95':'\efit_a_eqdsk:q95',  'v_loop_efit':'\efit_a_eqdsk:vsurf', 'Whmd':'\efit_a_eqdsk:wmhd', 'chisq':'\efit_a_eqdsk:chisq'}
+    efit_derivs = ['\efit_a_eqdsk:betap','\efit_a_eqdsk:li','Wmhd']
+    def __init__(self, shot_id,efit_tree_name, data_columns = DEFAULT_SHOT_COLUMNS,data = None):
         self._shot_id = shot_id
         self._metadata = {
             'labels': {},
@@ -567,21 +569,26 @@ class D3DShot(Shot):
             'disrupted': 100  #TODO: Fix
         }
         self.data = data
+		self.efit_tree_name = efit_tree_name
         if data is None:
             self.data = pd.DataFrame()
             self._populate_shot_data()
 	
     def _populate_shot_data(self):
-        self.data['aminor'], self.data['raxis'], self.data['zaxis'], self.data['wmhd'], self.data['topology'], self.data['betap'],self.data['elong'],self.data['li'], self.data['q95'],self.data['gap_inner'], self.data['gap_outer'], self.data['gap_inner'], self.data['betan'] = self._calc_efit_parameters()
+        efit_data = self._calc_efit_parameters()
+        self.data = pd.concat([self.data, efit_data], ignore_index=True)
 	
     @staticmethod
     def calc_efit_parameters():
         pass
-    def _calc_efit_parameters():
-        pass
-    def get_efit_tree(self):
-        pass
-		
+    def _calc_efit_parameters(self):
+        efit_tree = Tree(self.efit_tree_name,self._shot_id)
+        efit_data = {k:efit_tree.getNode(v) for k,v in self.efit_vars}
+        efit_data['time']/=1000
+        for key in efit_derivs:
+            efit_data['d' + key + '_dt'] = np.gradient(efit_data[key],efit_data['time']
+        return pd.DataFrame([efit_data]) 
+        		
 
 
 
