@@ -141,9 +141,10 @@ class D3DHandler(DatabaseHandler):
         shot_id = int(shot_id)
         data_df = pd.read_sql_query(f"select * from disruption_warning where shot = {shot_id} order by time", self.conn)
         with self.tree_conn.cursor() as curs:
-            curs.execute(f"select tree from plasmas where shot = {shot_id} and runtag = '{runtag}' and deleted = 0 order by idx")
+            curs.execute(f"select tree from plasmas where shot = {shot_id} and runtag = 'DIS' and deleted = 0 order by idx")
             efit_trees = curs.fetchall()
-        return D3DShot(shot_id,efit_trees[-1],data=data_df)
+        print(efit_trees)
+        return D3DShot(shot_id,efit_trees[0][0],data=data_df)
 
     #TODO: Make more efficient
     def get_shots(self, shot_ids):
