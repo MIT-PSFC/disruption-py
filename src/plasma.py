@@ -575,18 +575,25 @@ class D3DShot(Shot):
             self._populate_shot_data()
 	
     def _populate_shot_data(self):
-        efit_data = self._calc_efit_parameters()
+        efit_data = self.get_efit_parameters()
         self.data = pd.concat([self.data, efit_data], ignore_index=True)
 	
-    @staticmethod
-    def calc_efit_parameters():
-        pass
-    def _calc_efit_parameters(self):
+    def get_efit_parameters(self):
         efit_tree = Tree(self.efit_tree_name,self._shot_id)
-        efit_data = {k:efit_tree.getNode(v) for k,v in self.efit_vars}
-        efit_data['time']/=1000
-        for key in efit_derivs:
-            efit_data['d' + key + '_dt'] = np.gradient(efit_data[key],efit_data['time']
+        efit_data = {k:efit_tree.getNode(v).getData().data() for k,v in self.efit_vars}
+        efit_time = efit_tree.getNode('\efit_a_eqdsk:atime').getData().data()
+		# EFIT reconstructions are sometimes invalid, particularly when very close
+		# to a disruption.  There are a number of EFIT parameters that can indicate
+		# invalid reconstructions, such as 'terror' and 'chisq'.  Here we use
+		# 'chisq' to determine which time slices should be excluded from our
+		# disruption warning database.
+		invalid_indices= np.where(efit_data['chisq'] > 50)
+		for param in efit_data:
+			efit_data[param][invalid_indices] = np.nan
+        for param in efit_derivs:
+            efit_data['d' + param + '_dt'] = np.gradient(efit_data[param],efit_data['time'])
+		for param in efit_data:
+			efit_data[param] = interp1(efit_times, efit_data[param], self._times)
         return pd.DataFrame([efit_data]) 
         		
 
