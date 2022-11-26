@@ -6,6 +6,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy.signal.windows import boxcar
 
+import MDSplus
 from MDSplus import *
 
 from utils import interp1, smooth
@@ -13,7 +14,20 @@ from utils import interp1, smooth
 DEFAULT_SHOT_COLUMNS = ['time','shot','time_until_disrupt','ip']
 
 class Shot:
-    pass 
+    def __init__(self, shot_id, data_columns,data = None):
+        self._shot_id = shot_id
+        self._metadata = {
+            'labels': {},
+            'commit_hash': subprocess.check_output(["git", "describe","--always"]).strip(), 
+            'timestep': {},
+            'duration': {},
+            'description': "",
+            'disrupted': 100  #TODO: Fix
+        }
+        self.data = data 
+        if data is None:
+            self.data = pd.DataFrame()
+			 
     
 class CmodShot(Shot):
     """
@@ -33,7 +47,6 @@ class CmodShot(Shot):
 
     # TODO: Populate metadata dict
     def __init__(self, mdsplus_name,shot_id,data_columns = DEFAULT_SHOT_COLUMNS,data = None):
-        # self._tree = Tree(mdsplus_name,shot_id)
         self._shot_id = shot_id
         self._metadata = {
             'labels': {},
@@ -565,8 +578,61 @@ class CmodShot(Shot):
     def __getitem__(self, key):
         return self._metadata if key == 'metadata' else self.data[key]
 
+"""
+Useful Examples:
+https://diii-d.gat.com/diii-d/MDSplusAPI_Python_pg1
+https://diii-d.gat.com/diii-d/Gadata_py
+"""
 class D3DShot(Shot):
-    pass
+    efit_vars = {'beta_n':'\efit_a_eqdsk:betan', 'beta_p':'\efit_a_eqdsk:betap', 'kappa':'\efit_a_eqdsk:kappa', 'li':'\efit_a_eqdsk:li', 'upper_gap':'\efit_a_eqdsk:gaptop', 'lower_gap':'\efit_a_eqdsk:gapbot',  'q0':'\efit_a_eqdsk:q0', 'qstar': '\efit_a_eqdsk:qstar','q95':'\efit_a_eqdsk:q95',  'v_loop_efit':'\efit_a_eqdsk:vsurf', 'Wmhd':'\efit_a_eqdsk:wmhd', 'chisq':'\efit_a_eqdsk:chisq'}
+    efit_derivs = ['beta_p','li','Wmhd']
+    def __init__(self, shot_id,efit_tree_name, data_columns = DEFAULT_SHOT_COLUMNS,data = None):
+        super().__init__(shot_id, data_columns, data)
+        self.conn = MDSplus.Connection('atlas.gat.com')
+        self.efit_tree_name = str(efit_tree_name)
+        print(efit_tree_name)
+        if data is None:
+            self.data = pd.DataFrame()
+            self._populate_shot_data()
+        self._times = None #TODO: Set somehow
+	
+    def _populate_shot_data(self):
+        efit_data = self.get_efit_parameters()
+        self.data = pd.concat([self.data, efit_data], ignore_index=True)
+	
+    def get_efit_parameters(self):
+        print(type(self._shot_id))
+        print(self._shot_id)
+        self.conn.openTree(self.efit_tree_name,self._shot_id)
+        efit_data = {k:self.conn.get(v).data() for k,v in self.efit_vars.items()}
+        efit_data['time'] = self.conn.get('\efit_a_eqdsk:atime').data()/1000.0
+        if self._times is None:
+            self._times = efit_data['time']
+		# EFIT reconstructions are sometimes invalid, particularly when very close
+		# to a disruption.  There are a number of EFIT parameters that can indicate
+		# invalid reconstructions, such as 'terror' and 'chisq'.  Here we use
+		# 'chisq' to determine which time slices should be excluded from our
+		# disruption warning database.
+        invalid_indices= np.where(efit_data['chisq'] > 50)
+        for param in efit_data:
+            efit_data[param][invalid_indices] = np.nan
+        for param in self.efit_derivs:
+            efit_data['d' + param + '_dt'] = np.gradient(efit_data[param],efit_data['time'])
+        if np.array_equal(self._times,efit_data['time']):
+            for param in efit_data:
+                efit_data[param] = interp1(efit_times, efit_data[param], self._times)
+        return pd.DataFrame([efit_data]) 
+    
+    def get_power(self):
+        pass
 
 class EASTShot(Shot):
     pass
+
+
+if __name__ == '__main__':
+    from database import create_d3d_handler
+    test_handler = create_d3d_handler()
+    shot = test_handler.get_shot(165492)
+    shot._populate_shot_data()
+    print(shot.data.head())
