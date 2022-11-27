@@ -3,13 +3,11 @@ import subprocess
 
 import pandas as pd
 import numpy as np
-from scipy.interpolate import interp1d
-from scipy.signal.windows import boxcar
 
 import MDSplus
 from MDSplus import *
 
-from utils import interp1, smooth
+from utils import interp1, interp2, smooth, gaussian_fit
 
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
 
@@ -96,21 +94,23 @@ class CmodShot(Shot):
         self.data['time_until_disrupt'] = self._calc_time_until_disrupt()
         self.data['ip'], self.data['dip'], self.data['dip_smoothed'], self.data[
             'ip_prog'], self.data['dipprog_dt'], self.data['ip_error'] = self._calc_Ip_parameters()
+        self.data['z_error'], _, self.data['zcur'], self.data['v_z'], self.data['z_times_v_z'] = self._calc_Z_parameters()
         self.data['p_oh'], self.data['v_loop'] = self._calc_p_ohm_v_loop()
         self.data['p_rad'], self.data['dprad_dt'], self.data['p_lh'], self.data[
             'p_icrf'], self.data['p_input'], self.data['radiated_fraction'] = self._calc_power()
+        self.data['beta_n'], self.data['beta_p'], self.data['dbetap_dt'], self.data['kappa'], self.data['upper_gap'], self.data['lower_gap'], self.data['li'], self.data['dli_dt'], self.data[
+            'q0'], self.data['qstar'], self.data['q95'], _, self.data['Wmhd'], self.data['dWmhd_dt'], self.data['ssep'], self.data['n_over_ncrit'] = self._calc_EFIT_parameters()
         self.data['kappa_area'] = self._calc_kappa_area()
         self.data['v_0'] = self._calc_rotation_velocity()
         # TODO: Populate when shot is missing from calibrated.txt
         self.data['v_0_uncalibrated'] = [np.nan]*len(self.data)
         # TODO: Ask about removing from database
         self.data['v_mid'] = [np.nan]*len(self.data)
-        self.data['sxr'] = self._calc_sxr_data()
-        self.data['beta_n'], self.data['beta_p'], self.data['dbetap_dt'], self.data['kappa'], self.data['upper_gap'], self.data['lower_gap'], self.data['li'], self.data['dli_dt'], self.data[
-            'q0'], self.data['qstar'], self.data['q95'], _, self.data['Wmhd'], self.data['dWmhd_dt'], self.data['ssep'], self.data['n_over_ncrit'] = self._calc_EFIT_parameters()
-        self.data['z_error'], self.data['z_prog'], self.data['z_cur'], self.data['v_z'], self.data['z_times_v_z'] = self._calc_Z_parameters()
-        self.data['iefc'] = self._calc_efc_current()
         self.data['n_equal_1_mode'], self.data['n_equal_1_normalized'], _ = self._calc_n_equal_1_amplitude()
+        self.data['Te_width'] = self._calc_Ts_data()
+        self.data['n_e'], self.data['dn_dt'], self.data['Greenwald_fraction'] = self._calc_densities()
+        self.data['I_efc'] = self._calc_efc_current()
+        self.data['SXR'] = self._calc_sxr_data()
         # Check there are no floats(float32) since the SQL database only contains type doubles(float64)
         float_columns = list(self.data.select_dtypes(
             include=['float32']).columns)
@@ -351,6 +351,7 @@ class CmodShot(Shot):
                 continue
         return Shot.calc_power(self._times, *values, self.data['p_ohm'])
 
+    # TODO: Replace with for loop like in D3D shot class
     def _calc_EFIT_parameters(self):
         efittime = self._analysis_tree.getNode('\efit_aeqdsk:time')
         beta_N = self._analysis_tree.getNode(
@@ -414,20 +415,21 @@ class CmodShot(Shot):
         return Shot.calc_kappa_area(self._times, aminor, area, times)
 
     @staticmethod
-    def calc_rotation_velocity(intensity, time, vel, hirextime):
+    def calc_rotation_velocity(times, intensity, time, vel, hirextime):
         """ 
         Uses spectroscopy graphs of ionized(to hydrogen and helium levels) Argon to calculate velocity. Because of the heat profile of the plasma, suitable measurements are only found near the center
         """
-        v_0 = np.empty(len(self._times))
+        v_0 = np.empty(len(time))
         # Check that the argon intensity pulse has a minimum count and duration threshold
         valid_indices = np.where(intensity > 1000 & intensity < 10000)
         # Matlab code just multiplies by time delta but that doesn't work in the case where we have different time deltas
         # Instead we sum the time deltas for all valid indices to check the total duration
         if np.sum(time[valid_indices+1] - time[valid_indices]) >= .2:
-            v_0 = interp1(hirextime, vel, self._times)
+            v_0 = interp1(hirextime, vel, time)
             # TODO: Determine better threshold
             v_0[np.where(abs(v_0) > 200)] = np.nan
             v_0 *= 1000.0
+        v_0 = interp1(time, v_0, times)
         return v_0
 
     # TODO: Calculate v_mid
@@ -440,7 +442,7 @@ class CmodShot(Shot):
         if self._shot_id not in calibrated:
             v_0 = np.empty(len(self._times))
             v_0.fill(np.nan)
-            return v_0, v_mid
+            return v_0
         try:
             spec_tree = Tree('spectroscopy', self._shot_id)
             intensity_record = spec_tree.getNode(
@@ -457,7 +459,7 @@ class CmodShot(Shot):
             v_0 = np.empty(len(self._times))
             v_0.fill(np.nan)
             return v_0
-        return Shot.calc_rotation_velocity(intensity, time, vel, hirextime)
+        return Shot.calc_rotation_velocity(self._times, intensity, time, vel, hirextime)
 
     # TODO: Split into static and instance method
     @staticmethod
@@ -540,13 +542,13 @@ class CmodShot(Shot):
         if len(n_e) == len(t_n):
             nan_arr = np.empty(len(times))
             nan_arr.fill(np.nan)
-            return arr, arr, arr
+            return nan_arr, nan_arr.copy(), nan_arr.copy()
         dn_dt = np.gradient(n_e, t_n)
         n_e = interp1(t_n, n_e, times)
         dn_dt = interp1(t_n, dn_dt, times)
         ip = -ip/1e6  # Convert from A to MA and take positive value
         ip = interp1(t_ip, ip, times)
-        a_minor = interp1(t_a, aminor, times)
+        a_minor = interp1(t_a, a_minor, times)
         n_G = ip/(np.pi*a_minor**2)*1e20  # Greenwald density in m ^-3
         g_f = abs(n_e/n_G)
         return n_e, dn_dt, g_f
@@ -554,8 +556,8 @@ class CmodShot(Shot):
     def _calc_densities(self):
         e_tree = Tree('electroncs', self._shot_id)
         n_e_record = e_tree.getNode(r'.tci.results:nl_04/0.6').getData()
-        n_e = record.data().astype('float64', copy=False)
-        t_n = record.dim_of(0)
+        n_e = n_e_record.data().astype('float64', copy=False)
+        t_n = n_e_record.dim_of(0)
         mag_tree = Tree('magnetics', self._shot_id)
         ip_record = mag_tree.getNode(r'\ip').getData()
         ip = ip_record.data().astype('float64', copy=False)
@@ -575,7 +577,7 @@ class CmodShot(Shot):
         eng_tree = Tree('engineering', self._shot_id)
         iefc_record = eng_tree.getNode(r'\efc:_u_bus_r_cur').getData()
         iefc, t_iefc = iefc_record.data(), iefc_record.dim_of(0)
-        return calc_efc_current(self._times, iefc, t_iefc)
+        return Shot.calc_efc_current(self._times, iefc, t_iefc)
 
     #TODO: Split
     @staticmethod
@@ -588,7 +590,7 @@ class CmodShot(Shot):
         z = ts_z[ok_indices]
         _, _, sigma = gaussian_fit(z, y)
         te_hwm = sigma*1.1774  # 50%
-        te_hwm = interp1(ts_time, te_hwm, self._times)
+        te_hwm = interp1(ts_time, te_hwm, times)
         return te_hwm
 
     def _calc_Ts_data(self):
@@ -618,6 +620,11 @@ class CmodShot(Shot):
         pass
 
     def _calc_peaking_factor(self):
+        ne_PF = np.fill(len(self._times), np.nan)
+        Te_PF = ne_PF.copy()
+        pressure_PF = ne_PF.copy()
+        if (self._shot_id > 1120000000 and self._shot_id < 1120213000) or (self._shot_id > 1140000000 and self._shot_id < 1140227000) or (self._shot_id > 1150000000 and self._shot_id < 1150610000) or (self._shot_id > 1160000000 and self._shot_id < 1160303000):
+            return ne_PF, Te_PF, pressure_PF
         try:
             efit_tree = Tree('cmod', self._shot_id)
             z0 = 0.01*efit_tree.getNode('\efit_aeqdsk:zmagx').getData().data()
@@ -626,12 +633,256 @@ class CmodShot(Shot):
             efittime = efit_tree.getNode(
                 '\efit_aeqdsk:aminor').getData().dim_of(0)
             electron_tree = Tree('electroncs', self._shot_id)
+            node_ext = '.yag_new.results.profiles'
+            nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = self.compare_ts_tci(
+                electron_tree, nlnum=4)
+            TS_te = electron_tree.getNode(
+                f"{node_ext}:te_rz").getData().data()*1000*11600
+            tets_edge = electron_tree.getNode('\ts_te').getData().data()*11600
+            TS_te = np.concatenate((TS_te, tets_edge))
+            TS_time = electron_tree.getNode(
+                f"{node_ext}:te_rz").getData().dim_of(0)
+            TS_z = electron_tree.getNode(
+                f"{node_ext}:z_sorted").getData().data()
+            zts_edge = electron_tree.getNode(f"\fiber_z").getData().data()
+            TS_z = np.concatenate((TS_z, zts_edge))
+            if len(zts_edge) != tets_edge.shape[1]:
+                return ne_PF, Te_PF, pressure_PF
 
         except mds.Exceptions.MdsException as e:
-            nan_arr = np.fill((len(self._times)), np.nan)
-            return nan_arr, nan_arr.copy(), nan_arr.copy()
+            return ne_PF, Te_PF, pressure_PF
 
-    def _
+    # The following methods are translated from IDL code.
+    def compare_ts_tci(self, electron_tree, nlnum=4):
+        """
+        Comparison between chord integrated Thomson electron density and TCI results.
+        """
+        core_mult = 1.0
+        edge_mult = 1.0
+        nl_ts1 = [1e32]
+        nl_ts2 = [1e32]
+        nl_tci1 = [1e32]
+        nl_tci2 = [1e32]
+        ts_time1 = [1e32]
+        ts_time2 = [1e32]
+        tci_time = electron_tree.getNode(
+            ".YAG_NEW.RESULTS.PROFILES:NE_RZ").getData().dim_of(0)
+        tci_record = electron_tree.getNode(".TCI.RESULTS:NL_{nlnum:02d}")
+        tci = tci_record.data()
+        tci_t = tci_record.dim_of(0)
+        nlts, nlts_t = self.integrate_ts_tci(nlnum)
+        t0 = np.amin(nlts_t)
+        t1 = np.amax(nlts_t)
+        nyag1, nyag2, indices1, indices2 = self.parse_yags()
+        if nyag1 > 0:
+            indices1 += 1
+            ts_time1 = tci_time[indices1]
+            valid_indices = np.where(ts_time1 >= t0 & ts_time1 <= t1)
+            if valid_indices.size > 0:
+                nl_tci1 = interp1(tci_t, tci, ts_time1[valid_indices])
+                nl_ts1 = interp1(nlts_t, nlts, ts_time1[valid_indices])
+                time1 = ts_time1[valid_indices]
+        else:
+            time1 = -1
+        if nyag2 > 0:
+            indices2 += 1
+            ts_time2 = tci_time[indices2]
+            valid_indices = np.where(ts_time2 >= t0 & ts_time2 <= t1)
+            if valid_indices.size > 0:
+                nl_tci1 = interp1(tci_t, tci, ts_time2[valid_indices])
+                nl_ts1 = interp1(nlts_t, nlts, ts_time2[valid_indices])
+                time2 = ts_time2[valid_indices]
+        else:
+            time2 = -1
+        return nl_ts1, nl_ts2, nl_tci1, nl_tci2, time1, time2
+
+    def parse_yags(self):
+        electron_tree = Tree('electrons', self._shot_id)
+        nyag1 = electron_tree.getNode('\knobs:pulses_q').getData().data()
+        nyag2 = electron_tree.getNode('\knobs:pulses_q_2').getData().data()
+        indices1 = -1
+        indices2 = -1
+        dark = electron_tree.getNode('\n_dark_prior').getData().data()
+        ntotal = electron_tree.getNode('\n_total').getData().data()
+        nt = ntotal-dark
+        if nyag1 == 0:
+            if nyag2 != 0:
+                indices2 = np.arange(nyag2)
+        else:
+            if nyag2 == 0:
+                indices1 = np.arange(nyag1)
+            else:
+                if nyag1 == nyag2:
+                    indices1 = 2*np.arange(nyag1)
+                    indices2 = indices1 + 1
+                else:
+                    if nyag1 == nyag2:
+                        indices1 = 2*np.arange(nyag1)
+                        indices2 = indices1+1
+                    else:
+                        indices1 = 2*np.arange(nyag1) + (nyag1 > nyag2)
+                        indices2 = np.concatenate(
+                            (2*np.arange(nyag2) + (nyag1 < nyag2), 2*nyag2 + np.arange(nyag1-nyag2-1)))
+        v_ind1 = np.where(indices1 < nt)
+        if nyag1 > 0 and v_ind1.size > 0:
+            indices1 = indices1[v_ind1]
+        else:
+            indices1 = -1
+        v_ind2 = np.where(indices2 < nt)
+        if nyag2 > 0 and v_ind2.size > 0:
+            indices2 = indices2[v_ind2]
+        else:
+            indices2 = -1
+        return nyag1, nyag2, indices1, indices2
+
+    def integrate_ts_tci(self, nlnum):
+        """
+        Integrate Thomson electron density measurement to the line integrated electron density for comparison with two color interferometer (TCI) measurement results
+        """
+        core_mult = 1.0
+        edge_mult = 1.0
+        nlts = 1e32
+        nlts_t = 1e32
+        t, z, n_e, n_e_sig = self.map_ts2tci(nlnum)
+        if z[0, 0] == 1e32:
+            return None, None  # TODO: Log and maybe return nan arrs
+        nts = len(t)
+        nlts_t = t
+        nlts = np.fill(t.shape, np.nan)
+        for i in range(len(nts)):
+            ind = np.where(np.abs(z[i, :]) < 0.5 & n_e[i, :] >
+                           0 & n_e[i, :] < 1e21 & n_e[i, :]/n_e_sig[i, :] > 2)
+            if len(ind) < 3:
+                nlts[i] = 0
+            else:
+                x = z[i, ind]
+                y = n_e[i, ind]
+                values_uniq, ind_uniq = np.unique(x, return_index=True)
+                y = y[ind_uniq]
+                nlts[i] = np.trapz(y, x)
+        return nlts, nlts_t
+
+    def map_ts2tci(self, nlnum):
+        core_mult = 1.0
+        edge_mult = 1.0
+        t = [1e32]
+        z = [1e32]
+        n_e = [1e32]
+        n_e_sig = [1e32]
+        flag = 1
+        valid_indices, efit_times = self.efit_check()
+        cmod_tree = Tree('cmod', self._shot_id)
+        ip = cmod_tree.getNode('\ip').getData().data()
+        if np.mean(ip) > 0:
+            flag = 0
+        t1 = np.amin(efit_times)
+        t2 = np.amax(efit_times)
+        analysis_tree = Tree('analysis', self._shot_id)
+        psia = analysis_tree.getNode('\efit_aeqdsk:SIBDRY').getData().data()
+        psia_t = analysis_tree.getNode(
+            '\efit_aeqdsk:SIBDRY').getData().dim_of(0)
+        psi_0 = analysis_tree.getNode('\efit_aeqdsk:SIMAGX')
+        electron_tree = Tree('electrons', self._shot_id)
+        nets_core = electron_tree.getNode(
+            '.YAG_NEW.RESULTS.PROFILES:NE_RZ').getData().data()
+        nets_core_t = electron_tree.getNode(
+            '.YAG_NEW.RESULTS.PROFILES:NE_RZ').getData().dim_of(0)
+        nets_core_err = electron_tree.getNode(
+            '.YAG_NEW.RESULTS.PROFILES:NE_ERR').getData().data()
+        zts_core = electron_tree.getNode(
+            '.YAG_NEW.RESULTS.PROFILES:Z_SORTED').getData().data()
+        mts_core = len(zts_core)
+        zts_edge = electron_tree.getNode('\fiber_z').getData().data()
+        mts_edge = len(zts_edge)
+        try:
+            nets_edge = electron_tree.getNode('\ts_ne').getData().data()
+            nets_edge_err = electron_tree.getNode(
+                '\ts_ne_err').getData().data()
+        except mdsExceptions.mdsException as err:
+            nets_edge = np.zeros((len(nets_core[:, 1]), mts_edge))
+            nets_edge_err = nets_edge + 1e20
+        mts = mts_core + mts_edge
+        rts = electron_tree.getNode(
+            '.YAG.RESULTS.PARAM:R') + np.zeros((1, mts))
+        rtci = electron_tree.getNode('.tci.results:rad').getData().data()
+        nts = len(nets_core_t)
+        zts = np.zeros((1, mts))
+        zts[:mts_core+1] = zts_core
+        zts[mts_core:] = zts_edge
+        nets = np.zeros((nts, mts))
+        nets_err = np.zeros((nts, mts))
+        nets[:, :mts_core+1] = nets_core*core_mult
+        nets_err[:, :mts_core+1] = nets_core_err*core_mult
+        nets[:, mts_core+1:] = nets_edge*edge_mult
+        nets_err[:, mts_core+1:] = nets_edge_err*edge_mult
+        valid_indices = np.where(nets_core_t >= t1 & nets_core_t <= t2)
+        if valid_indices.size == 0:
+            return t, z, n_e, n_e_sig
+        nets_core_t = nets_core_t[valid_indices]
+        nets = nets[valid_indices]
+        nets_err = nets_err[valid_indices]
+        psits = self.efit_rz2psi(rts, zts, nets_core_t)
+        mtci = 101
+        ztci = -0.4 + .8*np.arange(0, mtci)/(mtci-1)
+        rtci = rtci[nlnum] + np.zeros((1, mtci))
+        psitci = self.efit_rz2psi(rtci, ztci, nets_core_t)
+        psia = interp1(psia_t, psia, nets_core_t)
+        psi_0 = interp1(psia_t, psi_0, nets_core_t)
+        nts = len(nets_core_t)
+        for i in range(len(nts)):
+            psits[i, :] = (psits[i, :]-psi_0[i])/(psia[i]-psi_0[i])
+            psitci[i, :] = (psitci[i, :]-psi_0[i])/(psia[i]-psi_0[i])
+        zmapped = np.zeros((nts, 2*mts)) + 1e32
+        nemapped = zmapped.copy()
+        nemapped_err = zmapped.copy()
+        for i in range(len(nts)):
+            index = np.argmin(
+                psitci[i, :]) if flag else np.argmax(psitci[i, :])
+            psi_val = psitci[i, index]
+            for j in range(len(mts)):
+                if (flag and psits[i, j] >= psi_val) or (not flag and psits[i, j] <= psi_val):
+                    a1 = interp1(psitci[i, :index],
+                                 ztci[:index], psits[i, j])
+                    a2 = interp1(psitci[i, index:], ztci[index:], psits[i, j])
+                    zmapped[i, np.arange(j, j+mts+1)] = np.arange(a1, a2)
+                    nemapped[i, np.arange(j, j+mts+1)] = nets[i, j]
+                    nemapped_err[i, np.arange(j, j+mts+1)] = nets_err[i, j]
+            sorted_indices = np.argsort(zmapped[i, :])
+            zmapped[i, :] = zmapped[i, sorted_indices]
+            nemapped[i, :] = nemapped[i, sorted_indices]
+            nemapped_err[i, :] = nemapped_err[i, sorted_indices]
+        z = zmapped
+        n_e = nemapped
+        n_e_sig = nemapped_err
+        t = nets_core_t
+        return t, z, n_e, n_e_sig
+
+    def efit_rz2psi(self, r, z, t, tree='analysis'):
+        psi = np.fill((len(r), len(t)), np.nan)
+        z = z.astype('float32')  # TODO: Ask if this change is necessary
+        psi_tree = Tree(tree, self._shot_id)
+        psi_record = psi_tree.getNode('\efit_geqdsk:psirz').getData()
+        psirz = psi_record.data()
+        rgrid = psi_record.dim_of(0)
+        zgrid = psi_record.dim_of(1)
+        times = psi_record.dim_of(2)
+        rgrid, zgrid = np.eshgrid(rgrid, zgrid, indexing='ij')
+        for i in range(len(t)):
+            # Select EFIT times closest to the requested times
+            indx = np.min(np.abs(times - t[i]))
+            psi[:, i] = interp2(rgrid, zgrid, psirz[:, :, indx], r, z, 'cubic')
+        return psi
+
+    def efit_check(self):
+        """ 
+        #TODO: Get description from Jinxiang
+        """
+        analysis_tree = Tree('analysis', self._shot_id)
+        values = analysis_tree.getNode(
+            '_lf=\analysis::efit_aeqdsk:lflag,_l0=((sum(_lf,1) - _lf[*,20] - _lf[*,1])==0),_n=\analysis::efit_fitout:nitera,(_l0 and (_n>4))').getData().data()
+        valid_indices = np.nonzero(values)
+        times = analysis_tree.getNode('_lf').getData().dim_of(0)
+        return valid_indices, times[valid_indices]
 
     @staticmethod
     def calc_sxr_data():
@@ -688,24 +939,24 @@ class D3DShot(Shot):
         self.conn.openTree(self.efit_tree_name, self._shot_id)
         efit_data = {k: self.conn.get(v).data()
                      for k, v in self.efit_vars.items()}
-        efit_data['time'] = self.conn.get('\efit_a_eqdsk:atime').data()/1000.0
-        if self._times is None:
-            self._times = efit_data['time']
-            # EFIT reconstructions are sometimes invalid, particularly when very close
-            # to a disruption.  There are a number of EFIT parameters that can indicate
-            # invalid reconstructions, such as 'terror' and 'chisq'.  Here we use
-            # 'chisq' to determine which time slices should be excluded from our
-            # disruption warning database.
+        efit_time = self.conn.get('\efit_a_eqdsk:atime').data()/1000.0
+        self._times = efit_time  # TODO: Reconsider how shot times are chosen
+        # EFIT reconstructions are sometimes invalid, particularly when very close
+        # to a disruption.  There are a number of EFIT parameters that can indicate
+        # invalid reconstructions, such as 'terror' and 'chisq'.  Here we use
+        # 'chisq' to determine which time slices should be excluded from our
+        # disruption warning database.
         invalid_indices = np.where(efit_data['chisq'] > 50)
         for param in efit_data:
             efit_data[param][invalid_indices] = np.nan
+        self._times[invalid_indices] = np.nan
         for param in self.efit_derivs:
             efit_data['d' + param +
-                      '_dt'] = np.gradient(efit_data[param], efit_data['time'])
-        if np.array_equal(self._times, efit_data['time']):
+                      '_dt'] = np.gradient(efit_data[param], efit_time)
+        if not np.array_equal(self._times, efit_time):
             for param in efit_data:
                 efit_data[param] = interp1(
-                    efit_times, efit_data[param], self._times)
+                    efit_time, efit_data[param], self._times)
         return pd.DataFrame([efit_data])
 
     def get_power(self):
