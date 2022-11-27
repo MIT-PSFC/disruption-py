@@ -108,6 +108,7 @@ class CmodShot(Shot):
         self.data['v_mid'] = [np.nan]*len(self.data)
         self.data['n_equal_1_mode'], self.data['n_equal_1_normalized'], _ = self._calc_n_equal_1_amplitude()
         self.data['Te_width'] = self._calc_Ts_data()
+        self.data['ne_peaking'], self.data['Te_peaking'], self.data['pressure_peaking'] = self._calc_peaking_factor()
         self.data['n_e'], self.data['dn_dt'], self.data['Greenwald_fraction'] = self._calc_densities()
         self.data['I_efc'] = self._calc_efc_current()
         self.data['SXR'] = self._calc_sxr_data()
@@ -194,7 +195,7 @@ class CmodShot(Shot):
         ip = magnetics_tree.getNode(r"\ip").getData(
         ).data().astype('float64', copy=False)
         magtime = magnetics_tree.getNode(r"\ip").getData().dim_of(0)
-        return Shot.calc_IP_parameters(self._times, ip, magtime, ip_prog, pcstime)
+        return CmodShot.calc_IP_parameters(self._times, ip, magtime, ip_prog, pcstime)
 
     @staticmethod
     def calc_Z_parameters(times, z_prog, pcstime, z_error_without_ip, ip, dpcstime):
@@ -285,7 +286,7 @@ class CmodShot(Shot):
             ip = ip_record.data()
             ip_time = ip_record.dim_of(0)
             ip = interp1(ip_time, ip, dpcstime)
-        return self.calc_Z_parameters(self._times, z_prog, pcstime, z_error_without_ip, ip, dpcstime)
+        return CmodShot.calc_Z_parameters(self._times, z_prog, pcstime, z_error_without_ip, ip, dpcstime)
 
     @staticmethod
     def calc_p_oh_v_loop(times, v_loop, v_loop_time, li, efittime, dip_smoothed, ip):
@@ -307,7 +308,7 @@ class CmodShot(Shot):
         li_record = self._analysis_tree.getNode(r"\efit_aeqdsk:li").getData()
         li = li_record.data().astype('float64', copy=False)
         efittime = li_record.dim_of(0)
-        return Shot.calc_p_oh_v_loop(self._times, v_loop, v_loop_time, li, efittime, self.data['dip_smoothed'], self.data['ip'])
+        return CmodShot.calc_p_oh_v_loop(self._times, v_loop, v_loop_time, li, efittime, self.data['dip_smoothed'], self.data['ip'])
 
     @staticmethod
     def calc_power(times, p_lh, t_lh, p_icrf, t_icrf, p_rad, t_rad, p_ohm):
@@ -349,7 +350,7 @@ class CmodShot(Shot):
                 values[2*i + 1] = record.dim_of(0)
             except mdsExceptions.TreeFOPENR as e:
                 continue
-        return Shot.calc_power(self._times, *values, self.data['p_ohm'])
+        return CmodShot.calc_power(self._times, *values, self.data['p_oh'])
 
     # TODO: Replace with for loop like in D3D shot class
     def _calc_EFIT_parameters(self):
@@ -412,7 +413,7 @@ class CmodShot(Shot):
             r'\efit_a_eqdsk:area').getData().data().astype('float64', copy=False)
         times = self._analysis_tree.getNode(
             r'\efit_aeqdsk:time').getData().data().astype('float64', copy=False)
-        return Shot.calc_kappa_area(self._times, aminor, area, times)
+        return CmodShot.calc_kappa_area(self._times, aminor, area, times)
 
     @staticmethod
     def calc_rotation_velocity(times, intensity, time, vel, hirextime):
@@ -435,7 +436,7 @@ class CmodShot(Shot):
     # TODO: Calculate v_mid
     def _calc_rotation_velocity(self):
         calibrated = pd.read_csv(
-            "lock_mode_calib_shots.txt")  # TODO: productionize
+            "src/lock_mode_calib_shots.txt")  # TODO: productionize
         # Check to see if shot was done on a day where there was a locked
         # mode HIREX calibration by cross checking with list of calibrated
         # runs. If not calibrated, return NaN outputs.
@@ -459,7 +460,7 @@ class CmodShot(Shot):
             v_0 = np.empty(len(self._times))
             v_0.fill(np.nan)
             return v_0
-        return Shot.calc_rotation_velocity(self._times, intensity, time, vel, hirextime)
+        return CmodShot.calc_rotation_velocity(self._times, intensity, time, vel, hirextime)
 
     # TODO: Split into static and instance method
     @staticmethod
@@ -483,24 +484,27 @@ class CmodShot(Shot):
         n_equal_1_amplitude = np.empty(len(self._times))
         n_equal_1_amplitude.fill(np.nan)
         n_equal_1_normalized = n_equal_1_amplitude.copy()
-        n_equal_1_phase = n_equal1_amplitude.copy()
+        n_equal_1_phase = n_equal_1_amplitude.copy()
         # These sensors are placed toroidally around the machine. Letters refer to the 2 ports the sensors were placed between.
         bp13_names = ['BP13_BC', 'BP13_DE', 'BP13_GH', 'BP13_JK']
         bp13_signals = np.empty((len(self._times), len(bp13_names)))
         mag_tree = Tree('magnetics', self._shot_id)
-        path = r"\mag_bp_coils"
+        path = r"\mag_bp_coils."
         bp_node_names = mag_tree.getNode(path + "nodename").getData().data()
-        phi = mag_tree.GetNode(path + "btor_pickup").getData().data()
-        bp13_indices = np.intersect1d(bp_node_names, bp13_names)
+        phi = mag_tree.getNode(path + 'phi').getData().data()
+        btor_pickup_coeffs = mag_tree.getNode(
+            path + "btor_pickup").getData().data()
+        _, bp13_indices, _ = np.intersect1d(
+            bp_node_names, bp13_names, return_indices=True)
         bp13_phi = phi[bp13_indices] + 360  # INFO
         bp13_btor_pickup_coeffs = btor_pickup_coeffs[bp13_indices]
-        btor_record = mag_tree.getNode(path + r"\btor").getData()
+        btor_record = mag_tree.getNode(r"\btor").getData()
         btor = btor_record.data()
         t_mag = btor_record.dim_of(0)
         # Toroidal power supply takes time to turn on, from ~ -1.8 and should be on by t=-1. So pick the time before that to calculate baseline
         baseline_indices = np.where(t_mag <= -1.8)
         btor = btor - np.mean(btor[baseline_indices])
-        path = r"\mag_bp_coils.signals"
+        path = r"\mag_bp_coils.signals."
         # For each sensor:
         # 1. Subtract baseline offset
         # 2. Subtract btor pickup
@@ -514,24 +518,25 @@ class CmodShot(Shot):
             signal = signal - baseline
             signal = signal - bp13_btor_pickup_coeffs[i]*btor
             bp13_signals[:, i] = interp1(t_mag, signal, self._times)
-        polarity = np.sign()  # TODO: Examine edge case behavior of sign
+        # TODO: Examine edge case behavior of sign
+        polarity = np.sign(np.mean(btor))
         btor_magnitude = btor*polarity
         btor_magnitude = interp1(t_mag, btor_magnitude, self._times)
         # Create the 'design' matrix ('A') for the linear system of equations:
         # Bp(phi) = A1 + A2*sin(phi) + A3*cos(phi)
         ncoeffs = 3
         A = np.empty((len(bp13_names), ncoeffs))
-        A[:, 0] = np.ones
+        A[:, 0] = np.ones(4)
         A[:, 1] = np.sin(bp13_phi*np.pi/180.0)
         A[:, 2] = np.cos(bp13_phi*np.pi/180.0)
-        coeffs = np.linalg.inv(A) @ bp13_signals
+        coeffs = np.linalg.pinv(A) @ bp13_signals.T
         # The n=1 amplitude at each time is sqrt(A2^2 + A3^2)
         # The n=1 phase at each time is arctan(-A2/A3), using complex number
         # phasor formalism, exp(i(phi - delta))
         n_equal_1_amplitude = np.sqrt(coeffs[1, :]**2 + coeffs[2, :]**2)
         # TODO: Confirm arctan2 = atan2
         n_equal_1_phase = np.arctan2(-coeffs[1, :], coeffs[2, :])
-        n_equal_1_normalized = n_equal_1_ampltiude / btor_magnitude
+        n_equal_1_normalized = n_equal_1_amplitude / btor_magnitude
 
         # INFO: Debugging purpose block of code at end of matlab file
         # INFO: n_equal_1_amplitude vs n_equal_1_mode
@@ -554,42 +559,51 @@ class CmodShot(Shot):
         return n_e, dn_dt, g_f
 
     def _calc_densities(self):
-        e_tree = Tree('electroncs', self._shot_id)
-        n_e_record = e_tree.getNode(r'.tci.results:nl_04/0.6').getData()
-        n_e = n_e_record.data().astype('float64', copy=False)
-        t_n = n_e_record.dim_of(0)
-        mag_tree = Tree('magnetics', self._shot_id)
-        ip_record = mag_tree.getNode(r'\ip').getData()
-        ip = ip_record.data().astype('float64', copy=False)
-        t_ip = ip_record.dim_of(0)
-        a_tree = Tree('analysis', self._shot_id)
-        a_minor_record = a_tree.getNode(
-            r'.efit.results.a_eqdsk:aminor').getData()
-        t_a = a_minor_record.dim_of(0)
-        a_minor = a_minor_record.data().astype('float64', copy=False)
-        return Shot.calc_densities(self._times, n_e, t_n, ip, t_ip, a_minor, t_a)
+        try:
+            e_tree = Tree('electrons', self._shot_id)
+            n_e_record = e_tree.getNode(r'.tci.results:nl_04/0.6').getData()
+            n_e = n_e_record.data().astype('float64', copy=False)
+            t_n = n_e_record.dim_of(0)
+            mag_tree = Tree('magnetics', self._shot_id)
+            ip_record = mag_tree.getNode(r'\ip').getData()
+            ip = ip_record.data().astype('float64', copy=False)
+            t_ip = ip_record.dim_of(0)
+            a_tree = Tree('analysis', self._shot_id)
+            a_minor_record = a_tree.getNode(
+                r'.efit.results.a_eqdsk:aminor').getData()
+            t_a = a_minor_record.dim_of(0)
+            a_minor = a_minor_record.data().astype('float64', copy=False)
+        except Exception as e:
+            return None, None, None
+        return CmodShot.calc_densities(self._times, n_e, t_n, ip, t_ip, a_minor, t_a)
 
     @staticmethod
     def calc_efc_current(times, iefc, t_iefc):
         return interp1(t_iefc, iefc, times, 'linear')
 
     def _calc_efc_current(self):
-        eng_tree = Tree('engineering', self._shot_id)
-        iefc_record = eng_tree.getNode(r'\efc:_u_bus_r_cur').getData()
-        iefc, t_iefc = iefc_record.data(), iefc_record.dim_of(0)
-        return Shot.calc_efc_current(self._times, iefc, t_iefc)
+        try:
+            eng_tree = Tree('engineering', self._shot_id)
+            iefc_record = eng_tree.getNode(r'\efc:_u_bus_r_cur').getData()
+            iefc, t_iefc = iefc_record.data(), iefc_record.dim_of(0)
+        except Exception as e:
+            return None
+        return CmodShot.calc_efc_current(self._times, iefc, t_iefc)
 
     #TODO: Split
     @staticmethod
     def calc_Ts_data(times, ts_data, ts_time, ts_z):
-        zarray = np.array(np.arange(-.5, .5, .001))
+        te_hwm = np.full(len(ts_time), np.nan)
         valid_times = np.where(ts_time > 0)
-        y = ts_data[valid_times, :]
-        ok_indices = np.where(y != 0)
-        y = y[ok_indices]
-        z = ts_z[ok_indices]
-        _, _, sigma = gaussian_fit(z, y)
-        te_hwm = sigma*1.1774  # 50%
+        #TODO: Vectorize
+        for i in range(len(valid_times)):
+            y = ts_data[:, valid_times[i]]
+            ok_indices = np.where(y != 0)
+            if len(ok_indices) > 2:
+                y = y[ok_indices]
+                z = ts_z[ok_indices]
+                _, _, sigma = gaussian_fit(z, y)
+                te_hwm[valid_times[i]] = sigma*1.1774  # 50%
         te_hwm = interp1(ts_time, te_hwm, times)
         return te_hwm
 
@@ -612,7 +626,7 @@ class CmodShot(Shot):
             print(e)  # TODO: Change
             te_hwm.fill(np.nan)
             return te_hwm
-        return Shot.calc_Ts_data(self._times, ts_data, ts_time, ts_z)
+        return CmodShot.calc_Ts_data(self._times, ts_data, ts_time, ts_z)
 
     # TODO: Finish
     @staticmethod
@@ -620,7 +634,7 @@ class CmodShot(Shot):
         pass
 
     def _calc_peaking_factor(self):
-        ne_PF = np.fill(len(self._times), np.nan)
+        ne_PF = np.full(len(self._times), np.nan)
         Te_PF = ne_PF.copy()
         pressure_PF = ne_PF.copy()
         if (self._shot_id > 1120000000 and self._shot_id < 1120213000) or (self._shot_id > 1140000000 and self._shot_id < 1140227000) or (self._shot_id > 1150000000 and self._shot_id < 1150610000) or (self._shot_id > 1160000000 and self._shot_id < 1160303000):
@@ -630,8 +644,9 @@ class CmodShot(Shot):
             z0 = 0.01*efit_tree.getNode('\efit_aeqdsk:zmagx').getData().data()
             aminor = efit_tree.getNode('\efit_aeqdsk:aminor').getData().data()
             kappa = efit_tree.getNode('\efit_aeqdsk:kappa').getData().data()
-            efittime = efit_tree.getNode(
+            efit_time = efit_tree.getNode(
                 '\efit_aeqdsk:aminor').getData().dim_of(0)
+            bminor = aminor*kappa
             electron_tree = Tree('electroncs', self._shot_id)
             node_ext = '.yag_new.results.profiles'
             nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = self.compare_ts_tci(
@@ -648,8 +663,32 @@ class CmodShot(Shot):
             TS_z = np.concatenate((TS_z, zts_edge))
             if len(zts_edge) != tets_edge.shape[1]:
                 return ne_PF, Te_PF, pressure_PF
+            Te_PF = Te_PF[:len(TS_time)]
+            itimes = np.where(TS_time > 0 & TS_time < self._times[-1])
+            bminor = interp1(efit_time, bminor, TS_time)
+            z0 = interp1(efit_time, z0, TS_time)
+            for i in range(len(itimes)):
+                Te_arr = TS_te[itimes[i], :]
+                indx = np.where(Te_arr > 0)
+                if len(indx) < 10:
+                    continue
+                Te_arr = Te_arr[indx]
+                TS_z_arr = TS_z[indx]
+                sorted_indx = np.argsort(TS_z_arr)
+                Ts_z_arr = Ts_z_arr[sorted_indx]
+                Te_arr = Te_arr[sorted_indx]
+                z_arr = np.linspace(z0[itimes[i]], TS_z_arr[-1], len(Ts_z_arr))
+                Te_arr = interp1(TS_z_arr, Te_arr, z_arr)
+                core_index = np.where(z_arr < (
+                    z0[itimes[i]] + .2*bminor[itimes[i]]) & z_arr > (z0[itimes[i]] - .2*bminor[itimes[i]]))
+                if len(core_index) < 2:
+                    continue
+                Te_PF[itimes[i]] = np.mean(Te_arr[core_index])/np.mean(Te_arr)
+            Te_PF = interp1(TS_time, Te_PF, self._times)
+            calib = np.nan
+            return ne_PF, Te_PF, pressure_PF
 
-        except mds.Exceptions.MdsException as e:
+        except mdsExceptions.MdsException as e:
             return ne_PF, Te_PF, pressure_PF
 
     # The following methods are translated from IDL code.
@@ -748,7 +787,7 @@ class CmodShot(Shot):
             return None, None  # TODO: Log and maybe return nan arrs
         nts = len(t)
         nlts_t = t
-        nlts = np.fill(t.shape, np.nan)
+        nlts = np.full(t.shape, np.nan)
         for i in range(len(nts)):
             ind = np.where(np.abs(z[i, :]) < 0.5 & n_e[i, :] >
                            0 & n_e[i, :] < 1e21 & n_e[i, :]/n_e_sig[i, :] > 2)
@@ -858,7 +897,7 @@ class CmodShot(Shot):
         return t, z, n_e, n_e_sig
 
     def efit_rz2psi(self, r, z, t, tree='analysis'):
-        psi = np.fill((len(r), len(t)), np.nan)
+        psi = np.full((len(r), len(t)), np.nan)
         z = z.astype('float32')  # TODO: Ask if this change is necessary
         psi_tree = Tree(tree, self._shot_id)
         psi_record = psi_tree.getNode('\efit_geqdsk:psirz').getData()
@@ -923,7 +962,6 @@ class D3DShot(Shot):
         super().__init__(shot_id, data_columns, data)
         self.conn = MDSplus.Connection('atlas.gat.com')
         self.efit_tree_name = str(efit_tree_name)
-        print(efit_tree_name)
         if data is None:
             self.data = pd.DataFrame()
             self._populate_shot_data()
@@ -934,8 +972,6 @@ class D3DShot(Shot):
         self.data = pd.concat([self.data, efit_data], ignore_index=True)
 
     def get_efit_parameters(self):
-        print(type(self._shot_id))
-        print(self._shot_id)
         self.conn.openTree(self.efit_tree_name, self._shot_id)
         efit_data = {k: self.conn.get(v).data()
                      for k, v in self.efit_vars.items()}
@@ -968,4 +1004,5 @@ class EASTShot(Shot):
 
 
 if __name__ == '__main__':
-    shot = Shot('cmod', 1150922001)
+    shot = CmodShot('cmod', 1150922001)
+    print(shot.data.head())
