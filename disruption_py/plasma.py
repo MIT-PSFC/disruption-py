@@ -1,6 +1,10 @@
 import math
 import subprocess
-import pkg_resources
+try:
+    import importlib.resources as importlib_resources
+except ImportError:
+    # Try backported to PY<37 `importlib_resources`.
+    import importlib_resources
 
 import pandas as pd
 import numpy as np
@@ -8,7 +12,8 @@ import numpy as np
 import MDSplus
 from MDSplus import *
 
-from src.utils import interp1, interp2, smooth, gaussian_fit
+from disruption_py.utils import interp1, interp2, smooth, gaussian_fit
+import disruption_py.data
 
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
 
@@ -93,8 +98,8 @@ class CmodShot(Shot):
         # TODO: convert from bytes
         self.data['commit_hash'] = self._metadata['commit_hash']
         self.data['time_until_disrupt'] = self._calc_time_until_disrupt()
-        self.data['ip'], self.data['dip'], self.data['dip_smoothed'], self.data[
-            'ip_prog'], self.data['dipprog_dt'], self.data['ip_error'] = self._calc_Ip_parameters()
+        self.data['ip'], self.data['dip_dt'], self.data['dip_smoothed'], _, self.data[
+            'dipprog_dt'], self.data['ip_error'] = self._calc_Ip_parameters()
         self.data['z_error'], _, self.data['zcur'], self.data['v_z'], self.data['z_times_v_z'] = self._calc_Z_parameters()
         self.data['p_oh'], self.data['v_loop'] = self._calc_p_ohm_v_loop()
         self.data['p_rad'], self.data['dprad_dt'], self.data['p_lh'], self.data[
@@ -152,8 +157,9 @@ class CmodShot(Shot):
         dip = np.gradient(ip, magtime)
         dip_smoothed = smooth(dip, 11)
         dipprog_dt = np.gradient(ip_prog, pcstime)
-        ip_prog = interp1(pcstime, ip_prog, times, fill_value=ip_prog[-1])
-        dipprog_dt = interp1(pcstime, dipprog_dt, times)
+        ip_prog = interp1(pcstime, ip_prog, times,
+                          bounds_error=False, fill_value=ip_prog[-1])
+        dipprog_dt = interp1(pcstime, dipprog_dt, times, bounds_error=False)
         ip = interp1(magtime, ip, times)
         dip = interp1(magtime, dip, times)
         dip_smoothed = interp1(magtime, dip_smoothed, times)
@@ -166,8 +172,7 @@ class CmodShot(Shot):
         active_segments = self.get_active_wire_segments()
         # Default PCS timebase is 1 KHZ
         pcstime = np.array(np.arange(-4, 12.383, .001))
-        ip_prog = np.empty(pcstime.shape)
-        ip_prog.fill(np.nan)
+        ip_prog = np.full(pcstime.shape, np.nan)
         # For each activate segment:
         # 1.) Find the wire for IP control and check if it has non-zero PID gains
         # 2.) IF it does, interpolate IP programming onto the PCS timebase
@@ -178,18 +183,20 @@ class CmodShot(Shot):
                 wire_node = segment.getNode(f":P_{wire_index :02d}:name")
                 if wire_node.getData().data() == 'IP':
                     try:
-                        pid_gains = wire_node.getNode(
-                            ":pid_gains").getData().data()
+                        pid_gains = segment.getNode(
+                            f":P_{wire_index :02d}:pid_gains").getData().data()
                         if np.any(pid_gains):
                             sig_node = segment.getNode(f":P_{wire_index :02d}")
                             signal_record = sig_node.getData()
                             sigtime = signal_record.dim_of(0)
                             signal = signal_record.data()
-                            ip_prog = interp1(sigtime, signal, pcstime)
-                            ip_prog = ip_prog[np.where(
-                                pcstime >= start & pcstime <= end)]
+                            ip_prog_temp = interp1(
+                                sigtime, signal, pcstime, bounds_error=False, fill_value=signal[-1])
+                            segment_indices = np.where(
+                                (pcstime >= start) & (pcstime <= end))
+                            ip_prog[segment_indices] = ip_prog_temp[segment_indices]
                     except mdsExceptions.MdsException as e:
-                        pass  # TODO: Change
+                        print(e)  # TODO: Change
                 else:
                     continue
                 break
@@ -365,9 +372,9 @@ class CmodShot(Shot):
         li = self._analysis_tree.getNode(
             '\efit_aeqdsk:li').getData().data().astype('float64', copy=False)
         upper_gap = self._analysis_tree.getNode('\efit_aeqdsk:otop').getData(
-        ).data().astype('float64', copy=False)  # 100 % meters
+        ).data().astype('float64', copy=False)/100.0  # meters
         lower_gap = self._analysis_tree.getNode('\efit_aeqdsk:obott').getData(
-        ).data().astype('float64', copy=False)  # 100 % meters
+        ).data().astype('float64', copy=False)/100.0  # meters
         q0 = self._analysis_tree.getNode(
             '\efit_aeqdsk:q0').getData().data().astype('float64', copy=False)
         qstar = self._analysis_tree.getNode(
@@ -379,8 +386,8 @@ class CmodShot(Shot):
         Wmhd = self._analysis_tree.getNode(
             '\efit_aeqdsk:wplasm').getData().data().astype('float64', copy=False)
         ssep = self._analysis_tree.getNode('\efit_aeqdsk:ssep').getData(
-        ).data().astype('float64', copy=False)  # 100 % meters
-        n_over_ncrit = self._analysis_tree.getNode(
+        ).data().astype('float64', copy=False)/100.0  # meters
+        n_over_ncrit = -self._analysis_tree.getNode(
             '\efit_aeqdsk:xnnc').getData().data().astype('float64', copy=False)
         beta_p_dot = np.gradient(beta_p, efittime)
         li_dot = np.gradient(li, efittime)
@@ -436,9 +443,9 @@ class CmodShot(Shot):
 
     # TODO: Calculate v_mid
     def _calc_rotation_velocity(self):
-        calib_stream = pkg_resources.resource_stream(
-            __name__, 'data/lock_mode_calib_shots.txt')
-        calibrated = pd.read_csv(calib_stream)
+        with importlib_resources.path(
+                disruption_py.data, 'lock_mode_calib_shots.txt') as calib_path:
+            calibrated = pd.read_csv(calib_path)
         # Check to see if shot was done on a day where there was a locked
         # mode HIREX calibration by cross checking with list of calibrated
         # runs. If not calibrated, return NaN outputs.
@@ -586,9 +593,10 @@ class CmodShot(Shot):
     def _calc_efc_current(self):
         try:
             eng_tree = Tree('engineering', self._shot_id)
-            iefc_record = eng_tree.getNode(r'\efc:_u_bus_r_cur').getData()
+            iefc_record = eng_tree.getNode(r"\efc:u_bus_r_cur").getData()
             iefc, t_iefc = iefc_record.data(), iefc_record.dim_of(0)
         except Exception as e:
+            print(e)
             return None
         return CmodShot.calc_efc_current(self._times, iefc, t_iefc)
 

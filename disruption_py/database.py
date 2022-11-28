@@ -1,9 +1,15 @@
 import os
+try:
+    import importlib.resources as importlib_resources
+except ImportError:
+    # Try backported to PY<37 `importlib_resources`.
+    import importlib_resources
 
 import pandas as pd
 import pymysql.cursors
 import jaydebeapi
-from src.plasma import *
+from disruption_py.plasma import *
+import disruption_py.data
 
 # Alter queries for these columns will fail
 PROTECTED_COLUMNS = ['dbkey', 'shot', 'time', 'time_until_disrupt', 'ip_error', 'dip_dt', 'beta_p', 'beta_n', 'li', 'n_equal_1_normalized', 'z_error', 'v_z', 'z_times_v_z', 'kappa', 'pressure_peaking', 'H98', 'q0', 'qstar', 'q95', 'v_0', 'v_mid', 'v_edge', 'dn_dt', 'p_rad_slow', 'p_oh_slow', 'p_icrf', 'p_lh', 'radiated_fraction', 'power_supply_railed', 'v_loop_efit', 'r_dd', 'lower_gap', 'upper_gap', 'dbetap_dt', 'dli_dt',
@@ -23,7 +29,7 @@ class DatabaseHandler:
         self.driver = driver
         self.driver_file = driver_file
         self.host = host
-        self.shot_class = Shot
+        self.shot_class = shot_class
         self.conn = jaydebeapi.connect(self.driver,
                                        self.host, [self.user, self.passwd],
                                        self.driver_file)
@@ -192,7 +198,11 @@ def create_cmod_handler():
         db_username = content[2]
         assert db_username == USER, f"db_username:{db_username};user:{USER}"
         db_password = content[3]
-    return DatabaseHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver", "data/sqljdbc4.jar", f"jdbc:sqlserver://{db_server}.psfc.mit.edu:1433", db_username, db_password)
+    with importlib_resources.path(disruption_py.data, "sqljdbc4.jar") as p:
+        db_driver_path = str(p)  # Absolute path to jar file
+    print(db_driver_path)
+    print(os.getcwd())
+    return DatabaseHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver", db_driver_path, f"jdbc:sqlserver://{db_server}.psfc.mit.edu: 1433", db_username, db_password, shot_class=CmodShot)
 
 
 def create_d3d_handler():
@@ -203,7 +213,9 @@ def create_d3d_handler():
         db_username = content[0]
         assert db_username == USER, f"db_username:{db_username};user:{USER}"
         db_password = content[1]
-    return D3DHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver", "data/sqljdbc4.jar", "jdbc:sqlserver://d3drdb.gat.com:8001;", db_username, db_password, shot_class=D3DShot)
+    with importlib_resources.path(disruption_py.data, "sqljdbc4.jar") as p:
+        db_driver_path = p
+    return D3DHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver", db_driver_path, "jdbc:sqlserver://d3drdb.gat.com:8001;", db_username, db_password, shot_class=D3DShot)
 
 
 def create_east_handler(self):
@@ -211,6 +223,8 @@ def create_east_handler(self):
 
 
 if __name__ == '__main__':
-    test_handler = create_d3d_handler()
-    shot = test_handler.get_shot('160946')
+    test_handler = create_cmod_handler()
+    shot = test_handler.get_shot('1150922001')
+    # test_handler = create_d3d_handler()
+    # shot = test_handler.get_shot('160946')
     print(shot)

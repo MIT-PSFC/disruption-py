@@ -3,3 +3,4 @@ data/*
 *.csv
 *~
 *.egg-info/*
+.vscode/*

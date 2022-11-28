@@ -1,11 +1,11 @@
 from setuptools import setup
 
 setup(
-    name='',
+    name='disruption_py',
     version='0.1.0-alpha',
     author='Herbert Turner',
     author_email='hmturner@mit.edu',
-    packages=['src', 'src.test'],
+    packages=['disruption_py', 'disruption_py.test'],
     scripts=['scripts/summarize_database.py'],
     url='http://pypi.python.org/pypi/PackageName/',
     license='LICENSE',
@@ -15,5 +15,4 @@ setup(
         "pytest",
     ],
     include_package_data=True,
-    package_data={'': ['data/*']}
 )
