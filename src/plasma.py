@@ -1,5 +1,6 @@
 import math
 import subprocess
+import pkg_resources
 
 import pandas as pd
 import numpy as np
@@ -7,7 +8,7 @@ import numpy as np
 import MDSplus
 from MDSplus import *
 
-from utils import interp1, interp2, smooth, gaussian_fit
+from src.utils import interp1, interp2, smooth, gaussian_fit
 
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
 
@@ -435,8 +436,9 @@ class CmodShot(Shot):
 
     # TODO: Calculate v_mid
     def _calc_rotation_velocity(self):
-        calibrated = pd.read_csv(
-            "src/lock_mode_calib_shots.txt")  # TODO: productionize
+        calib_stream = pkg_resources.resource_stream(
+            __name__, 'data/lock_mode_calib_shots.txt')
+        calibrated = pd.read_csv(calib_stream)
         # Check to see if shot was done on a day where there was a locked
         # mode HIREX calibration by cross checking with list of calibrated
         # runs. If not calibrated, return NaN outputs.

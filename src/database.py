@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import pymysql.cursors
 import jaydebeapi
-from plasma import *
+from src.plasma import *
 
 # Alter queries for these columns will fail
 PROTECTED_COLUMNS = ['dbkey', 'shot', 'time', 'time_until_disrupt', 'ip_error', 'dip_dt', 'beta_p', 'beta_n', 'li', 'n_equal_1_normalized', 'z_error', 'v_z', 'z_times_v_z', 'kappa', 'pressure_peaking', 'H98', 'q0', 'qstar', 'q95', 'v_0', 'v_mid', 'v_edge', 'dn_dt', 'p_rad_slow', 'p_oh_slow', 'p_icrf', 'p_lh', 'radiated_fraction', 'power_supply_railed', 'v_loop_efit', 'r_dd', 'lower_gap', 'upper_gap', 'dbetap_dt', 'dli_dt',
@@ -192,7 +192,7 @@ def create_cmod_handler():
         db_username = content[2]
         assert db_username == USER, f"db_username:{db_username};user:{USER}"
         db_password = content[3]
-    return DatabaseHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver", "../src/sqljdbc4.jar", f"jdbc:sqlserver://{db_server}.psfc.mit.edu:1433", db_username, db_password)
+    return DatabaseHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver", "data/sqljdbc4.jar", f"jdbc:sqlserver://{db_server}.psfc.mit.edu:1433", db_username, db_password)
 
 
 def create_d3d_handler():
@@ -203,7 +203,7 @@ def create_d3d_handler():
         db_username = content[0]
         assert db_username == USER, f"db_username:{db_username};user:{USER}"
         db_password = content[1]
-    return D3DHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver", "../src/sqljdbc4.jar", "jdbc:sqlserver://d3drdb.gat.com:8001;", db_username, db_password, shot_class=D3DShot)
+    return D3DHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver", "data/sqljdbc4.jar", "jdbc:sqlserver://d3drdb.gat.com:8001;", db_username, db_password, shot_class=D3DShot)
 
 
 def create_east_handler(self):

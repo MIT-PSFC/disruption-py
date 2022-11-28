@@ -2,3 +2,4 @@ data/*
 *.pyc
 *.csv
 *~
+*.egg-info/*
