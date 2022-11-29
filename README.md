@@ -1,17 +1,17 @@
-# disruption-warning-db-workflow
-Workflow, modules, and submodules to populate SQL databases on multiple machines for disruption prediction analysis and beyond.
+# disruption-warning-db-workflow on cmod
 
-! Work in progress !
+## Installation 
+The following command will install the disruption warning package locally in develop mode. In develop mode, changes to the directory used for installation will be reflected in the installed package.    
+   
+```
+pip3 install --user -e /home/hmturner/disruption_py
+```
 
-## Tags
+NOTE: The directory for installation is not the one I use for daily development and I will only push changes to it that have been tested. 
+## [Getting Started](https://github.com/crea-psfc/disruption-warning-db-workflow/blob/cmod/notebooks/cmod_example.ipynb)
+(Getting Started links to the cmod_example notebook which has some code snippets and detailed descriptions)
+## Development
+Feel free to leave a PR if you're using the library but need a new feature.
+### Tags
 INFO: Need to ask an expert for a description or explanation 
-TODO(priority) + comment: Coding change/fix that needs to happen at the given priority level
-Workflow, modules, and submodules to populate SQL databases on multiple machines for disruption prediction analysis and beyond
-
-## Source folders in order of focus for D3D
-1. /fusion/projects/disruption_warning/software/matlab_programs
-2. /fusion/projects/disruption_warning/software/peaking_factors_d3d
-3. /fusion/projects/disruption_warning/software/peaking_factors_d3d/recalc_bradial  
-  
-Repo location: /fusion/projects/disruption_warning/disruption-warning-db-workflow
-
+TODO(optional priority) + comment: Coding change/fix that needs to happen at the given priority level
