@@ -589,7 +589,8 @@ class D3DShot(Shot):
     def _populate_shot_data(self):
         efit_data = self.get_efit_parameters()
         self.data = pd.concat([self.data, efit_data], ignore_index=True)
-	
+
+	#TODO: Adjust to cover get_efit_data, get_efit_parameters, get_efit_parameters_RT, and get_kappa_area
     def get_efit_parameters(self):
         print(type(self._shot_id))
         print(self._shot_id)
@@ -613,7 +614,15 @@ class D3DShot(Shot):
                 efit_data[param] = interp1(efit_times, efit_data[param], self._times)
         return pd.DataFrame([efit_data]) 
     
-    def get_power(self):
+    def get_power_parameters(self):
+        pass
+
+    #TODO: Cover all matlab density files
+    def get_density_parameters(self):
+        pass
+    
+    #TODO: Again cover all ip scripts
+    def get_ip_parameters(self):
         pass
 
 class EASTShot(Shot):
