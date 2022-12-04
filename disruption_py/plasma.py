@@ -1006,39 +1006,45 @@ class D3DShot(Shot):
         return pd.DataFrame([efit_data])
 
     def get_power_parameters(self):
-        self.conn.openTree('d3d',self._shot_id) 
-        # Get neutral beam injected power       
+        self.conn.openTree('d3d', self._shot_id)
+        # Get neutral beam injected power
         try:
-            p_nbi = self.conn.get(r"\d3d::top.nb:pinj").data()*1.e3 # [KW]->[W]
-            t_nbi = tree.getNode(r"\d3d::top.nb:pinj").dim_of(0)*1.e3 # [ms]->[s]
+            p_nbi = self.conn.get(
+                r"\d3d::top.nb:pinj").data()*1.e3  # [KW]->[W]
+            t_nbi = tree.getNode(r"\d3d::top.nb:pinj").dim_of(
+                0)*1.e3  # [ms]->[s]
             if len(t_nbi) > 2:
-                p_nbi = interp1(t_nbi, p_nbi, self._times,'linear', bounds_error=False,fill_value=0.)
+                p_nbi = interp1(t_nbi, p_nbi, self._times,
+                                'linear', bounds_error=False, fill_value=0.)
             else:
                 p_nbi = np.zeros(len(self._times))
         except mdsExceptions.TreeFOPENR as e:
             p_nbi = np.zeros(len(self._times))
             print("Failed to get nbi data. Defaulting to 0.")
         # Get ECH power. It's poitn data, so it's not stored in an MDSplus tree
-        self.conn.openTree('rf', self._shot_id)        
+        self.conn.openTree('rf', self._shot_id)
         try:
-            p_ech = self.conn.get(r"\top.ech.totl:echpwrc")data() # [W]
-            t_ech = self.conn.get(r"\top.ech.totl:echpwrc").dim_of(0)*1.e3 # [ms]->[s]
+            p_ech = self.conn.get(r"\top.ech.totl:echpwrc").data()  # [W]
+            t_ech = self.conn.get(r"\top.ech.totl:echpwrc").dim_of(
+                0)*1.e3  # [ms]->[s]
             if len(t_ech) > 2:
-                p_ech = interp1(t_ech, p_ech, self._times,'linear', bounds_error=False,fill_value=0.)
+                p_ech = interp1(t_ech, p_ech, self._times,
+                                'linear', bounds_error=False, fill_value=0.)
             else:
                 p_ech = np.zeros(len(self._times))
         except mdsExceptions.TreeFOPENR as e:
             p_ech = np.zeros(len(self._times))
             print("Failed to get ech data. Defaulting to 0.")
-        # Get ohmic power and loop voltage 
-        
-    
+        # Get ohmic power and loop voltage
+
     def get_ohmic_parameters(self):
-        self.conn.openTree('d3d',self._shot_id)
-        # Get edge loop voltage and smooth it a bit with a median filter        
+        self.conn.openTree('d3d', self._shot_id)
+        # Get edge loop voltage and smooth it a bit with a median filter
         try:
-            v_loop = self.conn.get(f"ptdata('vloopb', {self._shot_id})").data() # [V]
-            t_v_loop = self.conn.get(f"dim_of(ptdata('vloopb', {self._shot_id})").data()/1.e3 # [ms]->[s]
+            v_loop = self.conn.get(
+                f"ptdata('vloopb', {self._shot_id})").data()  # [V]
+            t_v_loop = self.conn.get(
+                f"dim_of(ptdata('vloopb', {self._shot_id})").data()/1.e3  # [ms]->[s]
             v_loop = scipy.signal.medfilt(v_loop, 11)
             v_loop = interp1(t_v_loop, v_loop, self._times, 'linear')
         except mdsExceptions.TreeFOPENR as e:
@@ -1046,85 +1052,98 @@ class D3DShot(Shot):
             t_v_loop = v_loop.copy()
        # Get plasma current
         try:
-            ip = self.conn.get(f"ptdata('ip', {self._shot_id})").data() # [A]
-            t_ip = self.conn.get(f"dim_of(ptdata('ip', {self._shot_id})").data()/1.e3 # [ms] -> [s]
+            ip = self.conn.get(f"ptdata('ip', {self._shot_id})").data()  # [A]
+            t_ip = self.conn.get(
+                f"dim_of(ptdata('ip', {self._shot_id})").data()/1.e3  # [ms] -> [s]
             # We choose a 20-point width for gsastd. This means a 10ms window for ip smoothing
             diptdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
             self.conn.openTree(self.efit_tree_name, self.shot_id)
             li = self.conn.get(r"\efit_a_eqdsk:li").data()
-            t_li = self.conn.get(r"dim_of(\efit_a_eqdsk:li)").data()/1.e3 # [ms] -> [s]
+            t_li = self.conn.get(
+                r"dim_of(\efit_a_eqdsk:li)").data()/1.e3  # [ms] -> [s]
             chisq = self.conn.get(r"\efit_a_eqdsk:chisq").data()
-            # Filter out invalid indices of efit reconstruction 
-            invalid_indices = np.where 
+            # Filter out invalid indices of efit reconstruction
+            invalid_indices = np.where
         except mdsExceptions.TreeFOPENR as e:
             p_ohm = np.full(len(self._times), np.nan)
             return p_ohm, v_loop
-        r_0 = 1.67 # [m] For simplicity, use fixed r_0 = 1.67 for DIII-D major radius
-        inductance = 4.*np.pi*r_0 * li/2 # [H]
+        # [m] For simplicity, use fixed r_0 = 1.67 for DIII-D major radius
+        r_0 = 1.67
+        inductance = 4.*np.pi*r_0 * li/2  # [H]
         inductance = interp1(t_li, inductance, self._times, 'linear')
         ip = interp1(t_ip, ip, self._times, 'linear')
         dipdt_smoothed = interp1(t_ip, dipdt_smoothed, self._times, 'linear')
-        v_inductive = inductance * dipdt_smoothed # [V]
-        v_resistive = v_loop - v_inductive # [V]
-        p_ohm = ip * v_resistive # [W]
-        return p_oh, v_loop 
-        
-    
-    #TODO: Cover all matlab density files
+        v_inductive = inductance * dipdt_smoothed  # [V]
+        v_resistive = v_loop - v_inductive  # [V]
+        p_ohm = ip * v_resistive  # [W]
+        return p_ohm, v_loop
+
+    # TODO: Cover all matlab density files
+
     def get_density_parameters(self):
-        ne = np.full(len(self._times),np.nan)
+        ne = np.full(len(self._times), np.nan)
         g_f = ne.copy()
         dne_dt = ne.copy()
         self.conn.openTree(self.efit_tree_name, self._shot_id)
         try:
-            t_ne = self.conn.get("dim_of(\density)").data()/1.e3 # [ms] -> [s]
-            ne = self.conn.get("\density").data()*1.e6 # [cm^3] -> [m^3]
-            dne_dt = np.gradient(ne,t_ne)
+            t_ne = self.conn.get("dim_of(\density)").data()/1.e3  # [ms] -> [s]
+            ne = self.conn.get("\density").data()*1.e6  # [cm^3] -> [m^3]
+            dne_dt = np.gradient(ne, t_ne)
             ne = interp1(t_ne, ne, self._times, 'linear')
-            dne_dt = interp1(t_ne, dne_dt, self._times,'linear')
-            t_ip = self.conn.get(f"dim_of(ptdata('ip', {self._shot_id}))").data()/1.e3 # [ms] -> [s]
-            ip = self.conn.get(f"ptdata('ip', {self._shot_id})").data() # [A]
-            ipsign = sign(np.sum(ip))
+            dne_dt = interp1(t_ne, dne_dt, self._times, 'linear')
+            t_ip = self.conn.get(
+                f"dim_of(ptdata('ip', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
+            ip = self.conn.get(f"ptdata('ip', {self._shot_id})").data()  # [A]
+            ipsign = np.sign(np.sum(ip))
             ip = interp1(t_ip, ip*ipsign, self._times, 'linear')
-            a_minor = self.conn.get("\efit_a_eqdsk:aminor").data() # [m]
-            t_a = self.conn.get("\efit_a_eqdsk:atime").data()/1.e3 # [ms] -> [s]
+            a_minor = self.conn.get("\efit_a_eqdsk:aminor").data()  # [m]
+            t_a = self.conn.get(
+                "\efit_a_eqdsk:atime").data()/1.e3  # [ms] -> [s]
             a_minor = interp1(t_a, a_minor, self._times, 'linear')
-            n_g = ip/1.e6 / (np.pi*a_minor**2) # [MA/m^2]
-            g_f = ne/1.e20 /n_g # TODO: Fill in units 
+            n_g = ip/1.e6 / (np.pi*a_minor**2)  # [MA/m^2]
+            g_f = ne/1.e20 / n_g  # TODO: Fill in units
         except mdsExceptions.TreeFOPENR as e:
-            print("Failed to get some parameter") # TODO: Better exception message
+            # TODO: Better exception message
+            print("Failed to get some parameter")
         return ne, g_f, dne_dt
 
     def get_rt_density_parameters(self):
-        ne_rt = np.full(len(self._times),np.nan)
+        ne_rt = np.full(len(self._times), np.nan)
         g_f_rt = ne_rt.copy()
-        dne_dt_rt = ne_rt.copy()  
+        dne_dt_rt = ne_rt.copy()
         try:
-            t_ne_rt = self.conn.get(f"dim_of(ptdata('dssdenest', {self._shot_id}))").data()/1.e3 # [ms] to [s]
-            ne_rt = self.conn.get(f"ptdata('dssdenest', {self._shot_id})").data()*1.e19 # [10^19 m^-3] -> [m^-3]
-            dne_dt_rt = np.gradient(ne_rt,t_ne_rt) #[m^-3/s]
-            ne_rt = interp1(t_ne_rt, ne_rt, self._times ,'linear')
+            t_ne_rt = self.conn.get(
+                f"dim_of(ptdata('dssdenest', {self._shot_id}))").data()/1.e3  # [ms] to [s]
+            # [10^19 m^-3] -> [m^-3]
+            ne_rt = self.conn.get(
+                f"ptdata('dssdenest', {self._shot_id})").data()*1.e19
+            dne_dt_rt = np.gradient(ne_rt, t_ne_rt)  # [m^-3/s]
+            ne_rt = interp1(t_ne_rt, ne_rt, self._times, 'linear')
             dne_dt_rt = interp1(t_ne_rt, dne_dt_rt, self._times, 'linear')
             try:
-                t_ip_rt = self.conn.get(f"dim_of(ptdata('ipsip', {self._shot_id}))").data()/1.e3 # [ms] to [s]
-                ip_rt = self.conn.get(f"ptdata('ipsip', {self._shot_id})").data() # [MA]
+                t_ip_rt = self.conn.get(
+                    f"dim_of(ptdata('ipsip', {self._shot_id}))").data()/1.e3  # [ms] to [s]
+                ip_rt = self.conn.get(
+                    f"ptdata('ipsip', {self._shot_id})").data()  # [MA]
             except Exception as e:
-                t_ip_rt = self.conn.get(f"dim_of(ptdata('ipspr15v', {self._shot_id}))").data()/1.e3 # [ms] to [s]
-                ip_rt = self.conn.get(f"ptdata('ipspr15v', {self._shot_id})").data() # [MA]
+                t_ip_rt = self.conn.get(
+                    f"dim_of(ptdata('ipspr15v', {self._shot_id}))").data()/1.e3  # [ms] to [s]
+                ip_rt = self.conn.get(
+                    f"ptdata('ipspr15v', {self._shot_id})").data()  # [MA]
             ip_sign = np.sign(np.sum(ip_rt))
             ip = interp1(t_ip_rt, ip_rt*ip_sign, self._times, 'linear')
-            self.conn.openTree('efitrt1',self._shot_id)
-            a_minor_rt = self.conn.get("\efit_a_eqdsk:aminor").data() # [m]
-            t_a_rt = self.conn.get("\efit_a_eqdsk:atime").data()/1.e3 # [ms] -> [s]
+            self.conn.openTree('efitrt1', self._shot_id)
+            a_minor_rt = self.conn.get("\efit_a_eqdsk:aminor").data()  # [m]
+            t_a_rt = self.conn.get(
+                "\efit_a_eqdsk:atime").data()/1.e3  # [ms] -> [s]
             a_minor_rt = interp1(t_a_rt, a_minor_rt, self._times, 'linear')
-            n_g_rt = ip/1.e6 / (np.pi*a_minor_rt**2) # [MA/m^2]
-            g_f_rt = ne_rt/1.e20 /n_g_rt # TODO: Fill in units 
+            n_g_rt = ip/1.e6 / (np.pi*a_minor_rt**2)  # [MA/m^2]
+            g_f_rt = ne_rt/1.e20 / n_g_rt  # TODO: Fill in units
         except mdsExceptions.TreeFOPENR as e:
-            print("Failed to get some parameter") # TODO: Better exception message
-        return ne_rt,g_f_rt,dne_dt_rt
-    
+            # TODO: Better exception message
+            print("Failed to get some parameter")
+        return ne_rt, g_f_rt, dne_dt_rt
 
-    #TODO: Again cover all ip scripts
     def get_ip_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
         ip = np.full(len(self._times), np.nan)
@@ -1134,24 +1153,28 @@ class D3DShot(Shot):
         dipprog_dt = np.full(len(self._times), np.nan)
         # Get measured plasma current parameters
         try:
-            t_ip = self.conn.get(f"dim_of(ptdata('ip', {self._shot_id}))").data()/1.e3 # [ms] -> [s]
-            ip = self.conn.get(f"ptdata('ip', {self._shot_id})").data() # [A]
+            t_ip = self.conn.get(
+                f"dim_of(ptdata('ip', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
+            ip = self.conn.get(f"ptdata('ip', {self._shot_id})").data()  # [A]
             dip_dt = np.gradient(ip, t_ip)
-            ip = interp1(t_ip, ip, self._times ,'linear')
-            dip_dt = interp1(t_ip, dip_dt, self._times , 'linear')
+            ip = interp1(t_ip, ip, self._times, 'linear')
+            dip_dt = interp1(t_ip, dip_dt, self._times, 'linear')
         except mdsExceptions.TreeFOPENR as e:
             print("Failed to get measured plasma current parameters")
         # Get programmed plasma current parameters
         try:
-            t_ip_prog = self.conn.get(f"dim_of(ptdata('iptipp', {self._shot_id}))").data()/1.e3 # [ms] -> [s]
-            ip_prog = self.conn.get(f"ptdata('iptipp', {self._shot_id})").data()# [A]
-            polarity = np.unique(self.conn.get(f"ptdata('iptdirect', {self._shot_id})").data())
+            t_ip_prog = self.conn.get(
+                f"dim_of(ptdata('iptipp', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
+            ip_prog = self.conn.get(
+                f"ptdata('iptipp', {self._shot_id})").data()  # [A]
+            polarity = np.unique(self.conn.get(
+                f"ptdata('iptdirect', {self._shot_id})").data())
             if len(polarity) > 1:
                 print("Polarity of Ip target is not constant")
                 polarity = polarity[0]
             ip_prog = ip_prog * polarity
             dipprog_dt = np.gradient(ip_prog, t_ip_prog)
-            ip_prog = interp1(t_ip_prog, ip_prog, self._times ,'linear')
+            ip_prog = interp1(t_ip_prog, ip_prog, self._times, 'linear')
             dipprog_dt = interp1(t_ip_prog, dipprog_dt, self._times, 'linear')
         except mdsExceptions.TreeFOPENR as e:
             print("Failed to get programmed plasma current parameters")
@@ -1165,22 +1188,26 @@ class D3DShot(Shot):
         #  Anything else: not in normal Ip feedback mode.  In this case, the
         # 'ip_prog' signal is irrelevant, and therefore 'ip_error' is not defined.
         try:
-            ipimode = self.conn.get(f"ptdata('ipimode', {self._shot_id})").data()
-            t_ipimode = self.conn.get(f"dim_of(ptdata('ipimode', {self._shot_id}))").data()/1.e3 # [ms] -> [s]        
+            ipimode = self.conn.get(
+                f"ptdata('ipimode', {self._shot_id})").data()
+            t_ipimode = self.conn.get(
+                f"dim_of(ptdata('ipimode', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
             ipimode = interp1(t_ipimode, ipimode, self._times, 'linear')
         except mdsExceptions.TreeFOPENR as e:
             print("Failed to get ipimode signal")
-            ipimode = np.full(len(self._times),np.nan) 
+            ipimode = np.full(len(self._times), np.nan)
         feedback_on_indices = np.where(ipimode == 0 | ipimode == 3)
-        ip_error[feedback_on_indices] = ip[feedback_on_indices] - ip_prog[feedback_on_indices]
+        ip_error[feedback_on_indices] = ip[feedback_on_indices] - \
+            ip_prog[feedback_on_indices]
         # Finally, get 'epsoff' to determine if/when the E-coil power supplies have railed
         # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
         # PCS feedback control of Ip is not being applied.  Therefore the
         # 'ip_error' parameter is undefined for these times.
         try:
-            epsoff = self.conn.get(f"ptdata('epsoff', {self._shot_id})").data() 
-            t_epsoff = self.conn.get(f"dim_of(ptdata('epsoff', {self._shot_id}))").data()/1.e3 # [ms] -> [s]
-            t_epsoff += .001 # Avoid problem with simultaneity of epsoff being triggered exactly on the last time sample
+            epsoff = self.conn.get(f"ptdata('epsoff', {self._shot_id})").data()
+            t_epsoff = self.conn.get(
+                f"dim_of(ptdata('epsoff', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
+            t_epsoff += .001  # Avoid problem with simultaneity of epsoff being triggered exactly on the last time sample
             epsoff = interp1(t_epsoff, epsoff, self._times, 'linear')
             railed_indices = np.where(np.abs(epsoff) > .5)
             power_supply_railed = np.zeros(len(self._times))
@@ -1188,7 +1215,7 @@ class D3DShot(Shot):
             ip_error[railed_indices] = np.nan
         except mdsExceptions.TreeFOPENR as e:
             print("Failed to get epsoff signal")
-            power_supply_railed = np.full(len(self._times),np.nan)
+            power_supply_railed = np.full(len(self._times), np.nan)
         return ip, ip_prog, ip_error, dip_dt, dipprog_dt, power_supply_railed
 
     def get_rt_ip_parameters(self):
@@ -1199,34 +1226,44 @@ class D3DShot(Shot):
         dip_dt_rt = np.full(len(self._times), np.nan)
         dipprog_dt_rt = np.full(len(self._times), np.nan)
         # Get measured plasma current parameters
-        try: #TODO: Ask about using ipspr15V 
-            t_ip_rt = self.conn.get(f"dim_of(ptdata('ipsip', {self._shot_id}))").data()/1.e3 # [ms] -> [s]
-            ip_rt = self.conn.get(f"ptdata('ipsip', {self._shot_id})").data()*1.e6 # [MA] -> [A]
+        try:  # TODO: Ask about using ipspr15V
+            t_ip_rt = self.conn.get(
+                f"dim_of(ptdata('ipsip', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
+            ip_rt = self.conn.get(
+                f"ptdata('ipsip', {self._shot_id})").data()*1.e6  # [MA] -> [A]
             dip_dt_rt = np.gradient(ip_rt, t_ip_rt)
-            ip_rt = interp1(t_ip_rt, ip_rt, self._times ,'linear')
-            dip_dt_rt = interp1(t_ip_rt, dip_dt_rt, self._times , 'linear')
+            ip_rt = interp1(t_ip_rt, ip_rt, self._times, 'linear')
+            dip_dt_rt = interp1(t_ip_rt, dip_dt_rt, self._times, 'linear')
         except mdsExceptions.TreeFOPENR as e:
             print("Failed to get measured plasma current parameters")
         # Get programmed plasma current parameters
         try:
-            t_ip_prog_rt = self.conn.get(f"dim_of(ptdata('ipsiptargt', {self._shot_id}))").data()/1.e3 # [ms] -> [s]
-            ip_prog_rt = self.conn.get(f"ptdata('ipsiptargt', {self._shot_id})").data()*1.e6*.5 # [MA] -> [A]
-            polarity = np.unique(self.conn.get(f"ptdata('iptdirect', {self._shot_id})").data())
+            t_ip_prog_rt = self.conn.get(
+                f"dim_of(ptdata('ipsiptargt', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
+            ip_prog_rt = self.conn.get(
+                f"ptdata('ipsiptargt', {self._shot_id})").data()*1.e6*.5  # [MA] -> [A]
+            polarity = np.unique(self.conn.get(
+                f"ptdata('iptdirect', {self._shot_id})").data())
             if len(polarity) > 1:
                 print("Polarity of Ip target is not constant")
                 polarity = polarity[0]
             ip_prog_rt = ip_prog_rt * polarity
             dipprog_dt_rt = np.gradient(ip_prog_rt, t_ip_prog_rt)
-            ip_prog_rt = interp1(t_ip_prog_rt, ip_prog_rt, self._times ,'linear')
-            dipprog_dt_rt = interp1(t_ip_prog_rt, dipprog_dt_rt, self._times, 'linear')
+            ip_prog_rt = interp1(t_ip_prog_rt, ip_prog_rt,
+                                 self._times, 'linear')
+            dipprog_dt_rt = interp1(
+                t_ip_prog_rt, dipprog_dt_rt, self._times, 'linear')
         except mdsExceptions.TreeFOPENR as e:
             print("Failed to get programmed plasma current parameters")
         try:
-            t_ip_error_rt = self.conn.get(f"dim_of(ptdata('ipeecoil', {self._num_id}))").data()/1.e3 # [ms] to [s]
-            ip_error_rt = self.conn.get(f"ptdata('ipeecoil', {self._num_id})").data()*1.e6*.5 # [MA] -> [A] 
-            ip_error_rt = interp1(t_ip_error, ip_error_rt, self._times, 'linear')
+            t_ip_error_rt = self.conn.get(
+                f"dim_of(ptdata('ipeecoil', {self._shot_id}))").data()/1.e3  # [ms] to [s]
+            ip_error_rt = self.conn.get(
+                f"ptdata('ipeecoil', {self._shot_id})").data()*1.e6*.5  # [MA] -> [A]
+            ip_error_rt = interp1(
+                t_ip_error_rt, ip_error_rt, self._times, 'linear')
         except mdsExceptions.TreeFOPENR as e:
-            print("Failed to get ipeecoil signal") 
+            print("Failed to get ipeecoil signal")
         # Now get the signal pointname 'ipimode'.  This PCS signal denotes whether
         # or not PCS is actually feedback controlling the plasma current.  There
         # are times when feedback of Ip is purposely turned off, such as during
@@ -1237,33 +1274,73 @@ class D3DShot(Shot):
         #  Anything else: not in normal Ip feedback mode.  In this case, the
         # 'ip_prog' signal is irrelevant, and therefore 'ip_error' is not defined.
         try:
-            ipimode = self.conn.get(f"ptdata('ipimode', {self._shot_id})").data()
-            t_ipimode = self.conn.get(f"dim_of(ptdata('ipimode', {self._shot_id}))").data()/1.e3 # [ms] -> [s]        
+            ipimode = self.conn.get(
+                f"ptdata('ipimode', {self._shot_id})").data()
+            t_ipimode = self.conn.get(
+                f"dim_of(ptdata('ipimode', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
             ipimode = interp1(t_ipimode, ipimode, self._times, 'linear')
         except mdsExceptions.TreeFOPENR as e:
             print("Failed to get ipimode signal")
-            ipimode = np.full(len(self._times),np.nan) 
+            ipimode = np.full(len(self._times), np.nan)
         feedback_off_indices = np.where(ipimode != 0 & ipimode == 3)
-        ip_error[feedback_off_indices] = np.nan
+        ip_error_rt[feedback_off_indices] = np.nan
         # Finally, get 'epsoff' to determine if/when the E-coil power supplies have railed
         # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
         # PCS feedback control of Ip is not being applied.  Therefore the
         # 'ip_error' parameter is undefined for these times.
         try:
-            epsoff = self.conn.get(f"ptdata('epsoff', {self._shot_id})").data() 
-            t_epsoff = self.conn.get(f"dim_of(ptdata('epsoff', {self._shot_id}))").data()/1.e3 # [ms] -> [s]
-            t_epsoff += .001 # Avoid problem with simultaneity of epsoff being triggered exactly on the last time sample
+            epsoff = self.conn.get(f"ptdata('epsoff', {self._shot_id})").data()
+            t_epsoff = self.conn.get(
+                f"dim_of(ptdata('epsoff', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
+            t_epsoff += .001  # Avoid problem with simultaneity of epsoff being triggered exactly on the last time sample
             epsoff = interp1(t_epsoff, epsoff, self._times, 'linear')
             railed_indices = np.where(np.abs(epsoff) > .5)
             power_supply_railed = np.zeros(len(self._times))
             power_supply_railed[railed_indices] = 1
-            ip_error[railed_indices] = np.nan
+            ip_error_rt[railed_indices] = np.nan
         except mdsExceptions.TreeFOPENR as e:
             print("Failed to get epsoff signal")
-            power_supply_railed = np.full(len(self._times),np.nan)
-        return ip, ip_prog, ip_error, dip_dt, dipprog_dt, power_supply_railed
-        
-        
+            power_supply_railed = np.full(len(self._times), np.nan)
+        return ip_rt, ip_prog_rt, ip_error_rt, dip_dt_rt, dipprog_dt_rt, power_supply_railed
+
+    def get_z_parameters(self):
+        """
+        On DIII-D the plasma control system uses isoflux
+        control to control the plasma shape and position.  It does
+        NOT use zcur control.  Therefore, the PCS does not have a
+        programmed vertical position.  This this routine will now
+        always return an arrays of NaN for z_prog, z_error, and
+        z_error_norm.
+        """
+        z_cur = np.full(len(self._times), np.nan)
+        z_cur_norm = np.full(len(self._times), np.nan)
+        z_prog = np.full(len(self._times), np.nan)
+        z_error = np.full(len(self._times), np.nan)
+        z_error_norm = np.full(len(self._times), np.nan)
+        self.conn.openTree('d3d', self._shot_id)
+        try:
+            t_z_cur = self.conn.get(
+                f"dim_of(ptdata('vpszp', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
+            z_cur = self.conn.get(
+                f"ptdata('vpszp', {self._shot_id})").data()/1.e2  # [cm] -> [m]
+            z_cur = interp1(t_z_cur, z_cur, self._times, 'linear')
+        except mdsExceptions.TreeFOPENR as e:
+            print("Failed to get vpszp signal")
+            return z_cur, z_cur_norm, z_prog, z_error, z_error_norm
+        self.conn.openTree(self.efit_tree_name, self._shot_id)
+        try:
+            t_a = self.conn.get(
+                r"\efit_a_eqdsk:atime").data()/1.e3  # [ms] -> [s]
+            a_minor = self.conn.get(r"\efit_a_eqdsk:aminor").data()  # [m]
+            chisq = self.conn.get(r"\efit_a_eqdsk:chisq").data()
+            invalid_indices = np.where(chisq > 50)
+            a_minor[invalid_indices] = np.nan
+            a_minor = interp1(t_a, a_minor, self._times, 'linear')
+            z_cur_norm = z_cur/a_minor
+        except mdsExceptions.TreeFOPENR as e:
+            print("Failed to get efit parameters")
+            z_cur_norm = z_cur / .59
+        return z_cur, z_cur_norm, z_prog, z_error, z_error_norm
 
 
 class EASTShot(Shot):
