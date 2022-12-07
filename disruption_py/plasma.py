@@ -16,6 +16,7 @@ from disruption_py.utils import interp1, interp2, smooth, gaussian_fit, gsastd
 import disruption_py.data
 
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
+D3D_DISRUPTED_SHOT = 175552
 
 
 class Shot:
@@ -967,6 +968,7 @@ class D3DShot(Shot):
     efit_vars = {'beta_n': '\efit_a_eqdsk:betan', 'beta_p': '\efit_a_eqdsk:betap', 'kappa': '\efit_a_eqdsk:kappa', 'li': '\efit_a_eqdsk:li', 'upper_gap': '\efit_a_eqdsk:gaptop', 'lower_gap': '\efit_a_eqdsk:gapbot',
                  'q0': '\efit_a_eqdsk:q0', 'qstar': '\efit_a_eqdsk:qstar', 'q95': '\efit_a_eqdsk:q95',  'v_loop_efit': '\efit_a_eqdsk:vsurf', 'Wmhd': '\efit_a_eqdsk:wmhd', 'chisq': '\efit_a_eqdsk:chisq'}
     efit_derivs = ['beta_p', 'li', 'Wmhd']
+    nominal_flattop_radius = 0.59
 
     def __init__(self, shot_id, efit_tree_name, data_columns=DEFAULT_SHOT_COLUMNS, data=None):
         super().__init__(shot_id, data_columns, data)
@@ -1339,7 +1341,7 @@ class D3DShot(Shot):
             z_cur_norm = z_cur/a_minor
         except mdsExceptions.TreeFOPENR as e:
             print("Failed to get efit parameters")
-            z_cur_norm = z_cur / .59
+            z_cur_norm = z_cur / nominal_flattop_radius
         return z_cur, z_cur_norm, z_prog, z_error, z_error_norm
 
 
