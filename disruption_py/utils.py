@@ -17,6 +17,11 @@ def interp2(X, Y, V, Xq, Yq, kind='linear'):
     return set_interp(Xq, Yq)
 
 
+# TODO: Implement this
+def efit_rz_interp():
+    pass
+
+
 def smooth(arr, window_size):
     """
     Implements Matlab's smooth function https://www.mathworks.com/help/curvefit/smooth.html.
@@ -288,9 +293,3 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         bolo_shot.channels[i].pwr = medfilt(
             (gam[i+1]*temp_filtered + tau[i+1]*dr_dt)/scrfact[i], window_size)
     return bolo_shot
-
-# TODO: Implement mapping of efit rz grid to rho
-
-
-def efitmap_Rz_to_rho():
-    pass
