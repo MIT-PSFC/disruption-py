@@ -94,8 +94,6 @@ def smooth(y, smooth_width, ends_type):
     return s/w
 
 
-# TODO: Add get_bolowew and power_new
-
 def power(a):
     # Multiplicative constants (kappa) to get the power radiating in the i^th viewing chord
     kappa = np.array([1.976e8, 2.060e8, 2.146e8, 2.319e8, 2.277e8, 2.773e8,
@@ -290,3 +288,9 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         bolo_shot.channels[i].pwr = medfilt(
             (gam[i+1]*temp_filtered + tau[i+1]*dr_dt)/scrfact[i], window_size)
     return bolo_shot
+
+# TODO: Implement mapping of efit rz grid to rho
+
+
+def efitmap_Rz_to_rho():
+    pass

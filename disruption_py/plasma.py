@@ -12,7 +12,7 @@ import numpy as np
 import MDSplus
 from MDSplus import *
 
-from disruption_py.utils import interp1, interp2, smooth, gaussian_fit, gsastd
+from disruption_py.utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power
 import disruption_py.data
 
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
@@ -41,10 +41,10 @@ class CmodShot(Shot):
 
     Attributes
     ---
-    metadata->dict: 
+    metadata->dict:
         labels: {} /* Dictionary where key is the label name(e.g. "disruption period")
                     and value is a list of starting and ending time tuples(e.g.[(10,100)]*/
-        commit_hash: // Commit hash of code version that was used to generate shot data 
+        commit_hash: // Commit hash of code version that was used to generate shot data
         timestep: // Time delta. Every array must conform to this time step
         duration: // Length in milliseconds of shot
         description: // Optional text summary to add to shot
@@ -426,7 +426,7 @@ class CmodShot(Shot):
 
     @staticmethod
     def calc_rotation_velocity(times, intensity, time, vel, hirextime):
-        """ 
+        """
         Uses spectroscopy graphs of ionized(to hydrogen and helium levels) Argon to calculate velocity. Because of the heat profile of the plasma, suitable measurements are only found near the center
         """
         v_0 = np.empty(len(time))
@@ -487,7 +487,7 @@ class CmodShot(Shot):
         don't have to be numerically integrated.  These four sensors were working
         well in 2014, 2015, and 2016.  I looked at our locked mode MGI run on
         1150605, and the different applied A-coil phasings do indeed show up on
-        the n=1 signal. 
+        the n=1 signal.
 
         N=1 toroidal assymmetry in the magnetic fields
         """
@@ -601,12 +601,12 @@ class CmodShot(Shot):
             return None
         return CmodShot.calc_efc_current(self._times, iefc, t_iefc)
 
-    #TODO: Split
+    # TODO: Split
     @staticmethod
     def calc_Ts_data(times, ts_data, ts_time, ts_z):
         te_hwm = np.full(len(ts_time), np.nan)
         valid_times = np.where(ts_time > 0)
-        #TODO: Vectorize
+        # TODO: Vectorize
         for i in range(len(valid_times)):
             y = ts_data[:, valid_times[i]]
             ok_indices = np.where(y != 0)
@@ -907,6 +907,7 @@ class CmodShot(Shot):
         t = nets_core_t
         return t, z, n_e, n_e_sig
 
+    # TODO: Move to utils
     def efit_rz2psi(self, r, z, t, tree='analysis'):
         psi = np.full((len(r), len(t)), np.nan)
         z = z.astype('float32')  # TODO: Ask if this change is necessary
@@ -916,7 +917,7 @@ class CmodShot(Shot):
         rgrid = psi_record.dim_of(0)
         zgrid = psi_record.dim_of(1)
         times = psi_record.dim_of(2)
-        rgrid, zgrid = np.eshgrid(rgrid, zgrid, indexing='ij')
+        rgrid, zgrid = np.meshgrid(rgrid, zgrid, indexing='ij')
         for i in range(len(t)):
             # Select EFIT times closest to the requested times
             indx = np.min(np.abs(times - t[i]))
@@ -924,8 +925,8 @@ class CmodShot(Shot):
         return psi
 
     def efit_check(self):
-        """ 
-        #TODO: Get description from Jinxiang
+        """
+        # TODO: Get description from Jinxiang
         """
         analysis_tree = Tree('analysis', self._shot_id)
         values = analysis_tree.getNode(
@@ -1038,6 +1039,33 @@ class D3DShot(Shot):
             p_ech = np.zeros(len(self._times))
             print("Failed to get ech data. Defaulting to 0.")
         # Get ohmic power and loop voltage
+        p_ohm, v_loop = self.get_ohmic_parameters()
+        # Radiated power
+        # We had planned to use the standard signal '\bolom::prad_tot' for this
+        # parameter.  However, the processing involved in calculating \prad_tot
+        # from the arrays of bolometry channels involves non-causal filtering with
+        # a 50 ms window.  This is not acceptable for our purposes.  Tony Leonard
+        # provided us with the two IDL routines that are used to do the automatic
+        # processing that generates the \prad_tot signal in the tree (getbolo.pro
+        # and powers.pro).  I converted them into Matlab routines, and modified the
+        # analysis so that the smoothing is causal, and uses a shorter window.
+        smoothing_window = 0.010  # [s]
+        bol_prm = self.conn.get(r"\bol_prm").data()
+        lower_names = [f"\bol_u{i+1:02d}_v"for i in range(24)]
+        upper_names = [f"\bol_l{i+1:02d}_v" for i in range(24)]
+        bol_chan_names = lower_names + upper_names
+        bol_channels = []
+        bol_top = []
+        bol_time = []
+        for i in range(48):
+            bol_channels.append()
+        bol_top = []
+        for i in range(48):
+            bol_time = self.conn.get(
+                f"dim_of(\top.raw:bolo{i+1:02d})").data()/1.e3
+        a_struct = get_bolo(self._shot_id, bol_channels,
+                            bol_prm, bol_top, bol_time)
+        ier = 0
 
     def get_ohmic_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
@@ -1343,6 +1371,10 @@ class D3DShot(Shot):
             print("Failed to get efit parameters")
             z_cur_norm = z_cur / nominal_flattop_radius
         return z_cur, z_cur_norm, z_prog, z_error, z_error_norm
+
+    # TODO: Complete n1 bradial method
+    def get_n1_bradial(self):
+        pass
 
 
 class EASTShot(Shot):
