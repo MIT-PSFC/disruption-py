@@ -63,7 +63,7 @@ end;
 tree=char(efittrees(end,:));
 
 try
-    TS = get_thomson(shot); % Load Thomson scattering data
+    TS = load_ne_Te(shot); % Load Thomson scattering data
 catch ME
     disp(ME)
     return

@@ -35,8 +35,8 @@ Prad_metric = 'brightness';%'brightness'; % either 'brightness' or 'power' ('z')
 
 % Add libraries & paths to necessary scripts
 % ------------------------------------------
-addpath('/fusion/projects/disruption_warning/peaking_factors_d3d/Physics-based_indicators/DIAG_parameterization'); % path [1]
-addpath('/fusion/projects/disruption_warning/peaking_factors_d3d/shared_scripts'); % path [2]
+addpath('/fusion/projects/disruption_warning/software/peaking_factors_d3d/Physics-based_indicators/DIAG_parameterization'); % path [1]
+addpath('/fusion/projects/disruption_warning/software/peaking_factors_d3d/shared_scripts'); % path [2]
 
 % Make sure input timebase is column vector, and input shot number is double type 
 %-------------------------------------------------------------------------------
