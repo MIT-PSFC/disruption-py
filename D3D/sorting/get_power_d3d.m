@@ -32,7 +32,6 @@ function [p_RAD, p_NBI, p_OHM, p_ECH, rad_fraction, p_input, v_loop] = ...
 % Updated by Cristina Rea for DIII-D 2016-09-19 (implemented automated
 %   selection of efit trees)
 % Some modifications by Robert Granetz 2016/11/11
-% Updated by Kevin Montes 2020-05-05 (fixed error retrieving ECH power)
 
 % We want the output vectors to have the same shape as the input vector,
 % "timebase", i.e. if "timebase" is a row vector, the output vectors will
@@ -73,30 +72,6 @@ end;
 % ------------------------------------
 % Get ECH power.  It's point data, so it's not stored in an MDSplus tree
 
-[shotopened, status] = mdsopen('rf', shot);
-
-if (mod(status, 2)==1);
-  p_ech = mdsvalue('\top.ech.total:echpwrc'); % [W]
-  [t_ech, status] = mdsvalue('dim_of(\top.ech.total:echpwrc)'); % [ms]
-  t_ech = t_ech/1.e3; % convert to seconds
-  if (mod(status,2)==1 && length(t_ech) > 2);
-	% Sometimes, t_ech has an extra "0" value tacked on to the end. This must
-	% be removed before the interpolation.
-	if t_ech(end)==0
-		t_ech = t_ech(1:end-1); p_ech = p_ech(1:end-1);
-  	end
-    p_ECH = interp1(t_ech, p_ech, timebase_column, 'linear', 0.);
-  else;
-    p_ECH = zeros(size(timebase_column));
-  end;
-  mdsclose;
-else;
-  p_ECH = zeros(size(timebase_column));
-end;
-
-%{
-%% Old ECH code using echpwr pointname (before 05/2020 update)
-%-------------------------------------------------------------
   p_ech = mdsvalue(['ptdata("echpwr", ' num2str(shot) ')']); % [W]
   [t_ech, status] = ...
     mdsvalue(['dim_of(ptdata("echpwr", ' num2str(shot) '))']); % [ms]
@@ -115,7 +90,6 @@ end;
   else;
     p_ECH = zeros(size(timebase_column));
   end;
-%}
 
 % ------------------------------------
 % Get ohmic power and loop voltage
@@ -135,7 +109,7 @@ end;
 % analysis so that the smoothing is causal, and uses a shorter window.
 
 smoothing_window = 0.010; % use 10 ms causal smoothing window
-a_structure = getbolo_new(shot, smoothing_window*1.e3);
+a_structure = getbolo(shot, smoothing_window*1.e3);
 
 % Sometimes the bolo data is garbage.  Check the 'ier' subfields to
 % determine this
@@ -149,7 +123,7 @@ end;
 if ier == 1;
   p_RAD = NaN(size(timebase_column));
 else;
-  b_structure = powers_new(a_structure);
+  b_structure = powers(a_structure);
   p_RAD = b_structure.pwrmix; % watts
   p_RAD_timebase = a_structure.rawtime; % seconds
 

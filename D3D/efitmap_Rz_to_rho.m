@@ -4,9 +4,10 @@
 
 function [rho_diag,varargout] = efitmap_Rz_to_rho(diag_time,...
     diag_r,diag_z,pulse,varargin)
-%EFITMAP_RZ_TO_RHO Convert absolute [R,z] channel coords to 1D midplane
-%   normalized rho. Takes EFIT data from DIII-D MDS+, interpolates the 
-%   user-specified positions onto flux surfaces, then maps to the midplane
+%EFITMAP_RZ_TO_RHO Convert absolute [R,z] channel coords to normalized
+%   effective radius, rho (using toroidal flux definition). Takes EFIT data 
+%	from DIII-D MDS+, interpolates the user-specified positions onto flux 
+%	surfaces, then maps to the rho
 %
 %   Inputs:
 %       - diag_time: timebase [s] for input diagnostic
@@ -26,7 +27,7 @@ if size(diag_z,2)==1; diag_z = diag_z'; end
 if size(diag_time,1)==1; diag_time = diag_time'; end
 
 % Grab EFIT data for this pulse from MDS+
-if nargin > 5
+if length(varargin) > 2
     trees = varargin{2};
     EFIT = load_efit(pulse,trees);
 else
@@ -138,7 +139,7 @@ end
 % Write if/then cases here to handle different arguments 'type' (maybe
 % normalized_rho, absolute_rho, etc...)
 
-if nargin > 4
+if length(varargin) > 0
     type = varargin{1};
     if strcmp(type,'absolute_rho'); % not sure about this -> depends on how rhovn and aminor are defined
         aminor_diag = interp1(EFIT.aminor_time,EFIT.aminor,diag_time);
