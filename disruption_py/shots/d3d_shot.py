@@ -7,6 +7,7 @@ except ImportError:
 
 import pandas as pd
 import numpy as np
+import netCDF4 as nc
 
 import MDSplus
 from MDSplus import *
@@ -108,22 +109,40 @@ class D3DShot(Shot):
         # and powers.pro).  I converted them into Matlab routines, and modified the
         # analysis so that the smoothing is causal, and uses a shorter window.
         smoothing_window = 0.010  # [s]
-        bol_prm = self.conn.get(r"\bol_prm").data()
-        lower_names = [f"\bol_u{i+1:02d}_v"for i in range(24)]
-        upper_names = [f"\bol_l{i+1:02d}_v" for i in range(24)]
-        bol_chan_names = lower_names + upper_names
-        bol_channels = []
-        bol_top = []
-        bol_time = []
+        bol_prm, _ = self.get_signal(r"\bol_prm", interpolate=False)
+        lower_channels = [f"\bol_u{i+1:02d}_v"for i in range(24)]
+        upper_channels = [f"\bol_l{i+1:02d}_v" for i in range(24)]
+        bol_channels = lower_channels + upper_channels
+        bol_signals = []
+        bol_times = []
         for i in range(48):
-            bol_channels.append()
-        bol_top = []
-        for i in range(48):
-            bol_time = self.conn.get(
-                f"dim_of(\top.raw:bolo{i+1:02d})").data()/1.e3
+            bol_signal, bol_time = self.get_signal(
+                f"\top.raw:{bol_channels[i]}", interpolate=False)
+            bol_signals.append(bol_signal)
+            bol_times.append(bol_time)
         a_struct = get_bolo(self._shot_id, bol_channels,
-                            bol_prm, bol_top, bol_time)
+                            bol_prm, bol_signals, bol_times)
         ier = 0
+        for j in range(48):
+            # TODO: Ask about how many valid channels are needed for proper calculation
+            if a_struct.channels[j].ier == 1:
+                ier = 1
+                p_rad = np.nan(len(self._times))
+                break
+        if ier == 0:
+            b_struct = power(a_struct)
+            p_rad = b_struct.pwrmix  # [W]
+            p_rad = interp1(a_struct.time, p_rad, self._times, 'linear')
+
+        # Remove any negative values from the power data
+        p_rad[p_rad < 0] = 0
+        p_nbi[p_nbi < 0] = 0
+        p_ech[p_ech < 0] = 0
+
+        p_input = p_rad + p_nbi + p_ech  # [W]
+        rad_fraction = p_rad/p_input
+        rad_fraction[np.isinf(rad_fraction)] = np.nan
+        return pd.DataFrame([{'p_rad': p_rad, 'p_nbi': p_nbi, 'p_ech': p_ech, 'p_ohm': p_ohm, 'radiated_fraction': rad_fraction, 'v_loop': v_loop}])
 
     def get_ohmic_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
@@ -164,7 +183,7 @@ class D3DShot(Shot):
         v_inductive = inductance * dipdt_smoothed  # [V]
         v_resistive = v_loop - v_inductive  # [V]
         p_ohm = ip * v_resistive  # [W]
-        return p_ohm, v_loop
+        return pd.DataFrame([{'p_ohm': p_ohm, 'v_loop': v_loop}])
 
     # TODO: Cover all matlab density files
 
@@ -433,7 +452,123 @@ class D3DShot(Shot):
 
     # TODO: Complete n1 bradial method
     def get_n1_bradial(self):
-        pass
+        # The following shots are missing bradial calculations in MDSplus and must be loaded from a separate datafile
+        if self._shot_id >= 176030 and self._shot_id <= 176912:
+            # TODO: Confirm permanent location with Cristina
+            filename = '/fusion/projects/disruption_warning/matlab_programs/recalc.nc'
+            ncid = nc.Dataset(filename, 'r')
+            brad = ncid.variables['dusbradial_calculated'][:]
+            t_n1 = ncid.variables['times'][:]*1.e-3  # [ms] -> [s]
+            shots = ncid.variables['shots'][:]
+            shot_indices = np.where(shots == self._shot_id)
+            if len(shot_indices) == 1:
+                dusbradial = brad[shot_indices, :]*1.e-4  # [T]
+            else:
+                print(
+                    f"Shot {self._shot_id} not found in {filename}.  Returning NaN.")
+                dusbradial = np.full(len(self._times), np.nan)
+            ncid.close()
+        # Check DUD then ONFR
+        else:
+            try:
+                n_equal_1_mode, _ = self.get_signal(
+                    f"ptdata('dusbradial',{self._shot_id})")*1.e-4  # [T]
+            except mdsExceptions.TreeFOPENR as e:
+                try:
+                    n_equal_1_mode, _ = self.get_signal(
+                        f"ptdata('onsbradial',{self._shot_id})")*1.e-4  # [T]
+                except mdsExceptions.TreeFOPENR as e:
+                    print("Failed to get n1 bradial signal")
+                    n_equal_1_mode = np.full(len(self._times), np.nan)
+                    n_equal_1_normalized = np.full(len(self._times), np.nan)
+                    return pd.DataFrame({'n_equal_1_normalized': n_equal_1_normalized, 'n_equal_1_mode': n_equal_1_mode})
+        # Get toroidal field Btor
+        b_tor, _ = self.get_signal(
+            "ptdata('bt',{self._shot_id})")  # [T]
+        n_equal_1_normalized = n_equal_1_mode/b_tor
+        return pd.DataFrame({'n_equal_1_normalized': n_equal_1_normalized, 'n_equal_1_mode': n_equal_1_mode})
+
+    def _get_ne_te(self, data_source="blessed", ts_systems=['core', 'tangential']):
+        if data_source == 'blessed':  # 'blessed' by Thomson group
+            mds_path = r'\top.ts.blessed.'
+        elif data_source == 'unblessed':
+            mds_path = r'\top.ts.revisions.revision00.'
+        elif data_source == 'ptdata':
+            mds_path = r'\top.ts.blessed'  # Don't ask...I don't have the answer
+            raise NotImplementedError(
+                "ptdata case not fully implemented yet")  # TODO
+        else:
+            raise ValueError(f"Invalid data_source: {data_source}")
+        # Account for pointname formatting change in 2017 (however using ptdata is unimplemented)
+        suffix = {'core': 'cor', 'tangential': 'tan'}
+        if self._shot_id < 172749:  # First shot on Sep 19, 2017
+            suffix['tangential'] = 'hor'
+        self.conn.openTree('electrons', self._shot_id)
+        lasers = dict()
+        for laser in ts_systems:
+            lasers[laser] = dict()
+            sub_tree = f"{mds_path}{laser}"
+            try:
+                lasers[laser]['time'] = self.conn.get(
+                    f"dim_of({sub_tree}:temp,0)").data()/1.e3  # [ms] -> [s]
+                # major radial position of measurement
+                lasers[laser]['r'] = self.conn.get(f"{sub_tree}:r").data()
+                # vertical position of measurement
+                lasers[laser]['z'] = self.conn.get(f"{sub_tree}:z").data()
+                # electron temperature
+                lasers[laser]['te'] = self.conn.get(
+                    f"{sub_tree}:temp").data()
+                lasers[laser]['ne'] = self.conn.get(
+                    f"{sub_tree}:dens").data()  # electron density
+                lasers[laser]['te_error'] = self.conn.get(
+                    f"{sub_tree}:temp_e").data()
+                lasers[laser]['ne_error'] = self.conn.get(
+                    f"{sub_tree}:temp_e").data()
+                # Place NaNs for broken channels
+                lasers[laser]['te'][np.where(
+                    lasers[laser]['te'] == 0)] = np.nan
+                lasers[laser]['ne'][np.where(
+                    lasers[laser]['ne'] == 0)] = np.nan
+            except mdsExceptions.TreeNNF as e:
+                lasers[laser] == None
+                print(f"Failed to get {laser} data")
+        # If both systems/lasers available, combine them and interpolate the data
+        # from the tangential system onto the finer (core) timebase
+        if 'tangential' in lasers and lasers['tangential'] is not None:
+            if 'core' in lasers and lasers['core'] is not None:
+                # Interpolate tangential data onto core timebase
+                for key in lasers['tangential']:
+                    if key != 'time':
+                        lasers['tangential'][key] = interp1(
+                            lasers['tangential']['time'], lasers['tangential'][key], lasers['core']['time'])
+                lasers['tangential']['time'] = lasers['core']['time']
+        return lasers
+
+    def _load_prad(self, fan, smoothing_window):
+        if fan == 'upper':
+            fan_chans = np.arange(0, 24)
+        elif fan == 'lower':
+            fan_chans = np.arange(24, 48)
+        elif fan == 'custom':
+            # 1st choice (heavily cover divertor and core)
+            fan_chans = np.arange(2, 22) + 24
+        bol_prm, _ = self.get_signal(r"\bol_prm", interpolate=False)
+        lower_channels = [f"\bol_u{i+1:02d}_v"for i in range(24)]
+        upper_channels = [f"\bol_l{i+1:02d}_v" for i in range(24)]
+        bol_channels = lower_channels + upper_channels
+        bol_signals = []
+        bol_times = []
+        for i in range(48):
+            bol_signal, bol_time = self.get_signal(
+                f"\top.raw:{bol_channels[i]}", interpolate=False)
+            bol_signals.append(bol_signal)
+            bol_times.append(bol_time)
+        a_struct = get_bolo(self._shot_id, bol_channels,
+                            bol_prm, bol_signals, bol_times)
+        b_struct = power(a_struct)
+        ier = 0
+        ch_avail = []
+        x = fg
 
 
 if __name__ == '__main__':

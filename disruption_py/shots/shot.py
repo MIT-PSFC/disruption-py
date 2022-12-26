@@ -24,8 +24,8 @@ class Shot:
         if data is None:
             self.data = pd.DataFrame()
 
-    def get_signal(self, signal_name, signal_getter, interpolate=True, interpolation_timebase=None):
-        if isinstance(MDSplus.Connection, signal_getter):
+    def get_signal(self, signal_name, signal_getter=None, interpolate=True, interpolation_timebase=None):
+        if signal_getter is None:
             signal = signal_getter.get(signal_name).data()
             orig_timebase = signal_getter.get(
                 f"dim_of({signal_name})").data()/1e3  # [ms] -> [s]

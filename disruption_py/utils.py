@@ -43,7 +43,7 @@ def gaussian_fit(x, y):
 
 def gauss(x, *params):
     """ Guassian function"""
-    z, mu, sigma = p
+    z, mu, sigma = params
     return z*np.exp(-(x-mu)**2/(2.0*sigma**2))
 
 # Alessandro Pau (JET & AUG) has given Cristina a robust routine that
