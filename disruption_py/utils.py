@@ -74,14 +74,14 @@ def deriv(x, y):
     d[0] = (y[1]-y[0])/(x[1]-x[0])
     d[n] = (y[n]-y[n-1])/(x[n]-x[n-1])
     for i in range(1, n-1):
-        d[i] = (y[i+1]-y[i-1])/(x[j+1]-x[j-1])
+        d[i] = (y[i+1]-y[i-1])/(x[i+1]-x[i-1])
     return d
 
 
 def fastsmooth(y, w, smooth_type=1, ends_type=0):
     smoothed_y = smooth(y, w, ends_type)
     for i in range(smooth_type-1):
-        smoothed_y = smooth(smoothed_y, w, ends)
+        smoothed_y = smooth(smoothed_y, w, ends_type)
     return smoothed_y
 
 

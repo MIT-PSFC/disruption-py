@@ -1,4 +1,4 @@
-from shot import Shot
+from shot import Shot, DEFAULT_SHOT_COLUMNS
 try:
     import importlib.resources as importlib_resources
 except ImportError:
@@ -7,6 +7,7 @@ except ImportError:
 
 import pandas as pd
 import numpy as np
+import scipy
 import netCDF4 as nc
 
 import MDSplus
@@ -568,7 +569,9 @@ class D3DShot(Shot):
         b_struct = power(a_struct)
         ier = 0
         ch_avail = []
-        x = fg
+        z = []
+        brightness = []
+        powers = []
 
 
 if __name__ == '__main__':
