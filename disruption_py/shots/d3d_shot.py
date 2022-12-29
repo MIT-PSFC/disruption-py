@@ -489,6 +489,7 @@ class D3DShot(Shot):
         n_equal_1_normalized = n_equal_1_mode/b_tor
         return pd.DataFrame({'n_equal_1_normalized': n_equal_1_normalized, 'n_equal_1_mode': n_equal_1_mode})
 
+    # TODO: Finish after conversation with cristina about core vs tangential lasers
     def get_peaking_factors(self):
         ts_data_type = 'blessed'  # either 'blessed', 'unblessed', or 'ptdata'
         # metric to use for core/edge binning (either 'psin' or 'rhovn')
@@ -496,7 +497,7 @@ class D3DShot(Shot):
         # ts_radius value defining boundary of 'core' region (between 0 and 1)
         ts_core_margin = 0.3
         # All data outside this range excluded. For example, psin=0 at magnetic axis and 1 at separatrix.
-        ts_radial_range = [0, 1]
+        ts_radial_range = (0, 1)
         # set to true to interpolate ts_channel data onto equispaced radial grid
         ts_equispaced = False
         # fan to use for P_rad peaking factors (either 'lower', 'upper', or 'custom')
@@ -514,7 +515,8 @@ class D3DShot(Shot):
         rad_xdiv = np.full(len(self._times), np.nan)
         try:
             ts = self._get_ne_te()
-            ts = efit_rz_interp()
+            efit_dict = self._get_efit_dict
+            ts['psin'], ts['rho_vn'] = efit_rz_interp(ts, efit_dict)
         except Exception as e:
             print(e)
             ts = 0
@@ -523,7 +525,13 @@ class D3DShot(Shot):
         except Exception as e:
             print(e)
             p_rad = 0
-
+        if p_rad == 0 and ts == 0:
+            print(
+                f"Both TS and bolometer data missing for shot #{self._shot_id}")
+        if ts != 0:
+            # Drop data outside of valid range
+            invalid_indices = np.where((ts[ts_radius] < ts_radial_range[0]) | (
+                ts[ts_radius] > ts_radial_range[1]))
         return pd.DataFrame({'te_pf': te_pf, 'ne_pf': ne_pf, 'rad_cva': rad_cva, 'rad_xdiv': rad_xdiv})
 
     def _get_ne_te(self, data_source="blessed", ts_systems=['core', 'tangential']):
@@ -629,6 +637,19 @@ class D3DShot(Shot):
             data_dict['z'].append(b_struct.chan[i].chanpwr)
             data_dict['brightness'].append(b_struct.chan[i].brightness)
         return data_dict
+
+    # TODO: Replace all instances of efit_dict with a dataclass
+    def _get_efit_dict(self):
+        self.conn.openTree(self.efit_tree_name, self._shot_id)
+        efit_dict = dict()
+        path = r"\top.results.geqdsk:"
+        efit_dict['time'] = self.conn.get(
+            f"dim_of({path}psirz,2)").data()/1.e3  # [ms] -> [s]
+        efit_dict['z'] = self.conn.get(f"{path}z").data()
+        efit_dict['r'] = self.conn.get(f"{path}r").data()
+        efit_dict['rho_vn'] = self.conn.get(f"{path}rho_vn").data()
+        efit_dict['psirz'] = self.conn.get(f"{path}psirz").data()
+        return efit_dict
 
 
 if __name__ == '__main__':

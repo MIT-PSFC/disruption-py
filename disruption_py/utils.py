@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from scipy.interpolate import interp1d, interp2d
+from scipy.interpolate import interp1d, interp2d, RegularGridInterpolator
 from scipy.optimize import curve_fit
 from scipy.signal import lfilter, medfilt
 import numpy as np
@@ -18,8 +18,20 @@ def interp2(X, Y, V, Xq, Yq, kind='linear'):
 
 
 # TODO: Implement this
-def efit_rz_interp():
-    pass
+def efit_rz_interp(data_dict, efit_dict):
+    T = np.tile(data_dict['time'], (1, len(efit_dict['r'])))
+    R = np.tile(efit_dict['r'], (len(data_dict['time']), 1))
+    Z = np.tile(efit_dict['z'], (len(data_dict['time']), 1))
+    interp = RegularGridInterpolator(
+        (efit_dict['time'], efit_dict['r'], efit_dict['z']), efit_dict['psin'], method='linear')
+    psin = interp(T, R, Z)
+    rho_vn_diag_almost = interp1(
+        efit_dict['time'], efit_dict['rho_vn'], data_dict['time'])
+    rho_vn_diag = np.empty(len(psin))
+    psin_timebase = np.linspace(0, 1, len(efit_dict['rho_vn']))
+    for i in range(len(psin)):
+        rho_vn_diag[i] = interp1(psin_timebase, rho_vn_diag_almost[i], psin[i])
+    return psin, rho_vn_diag
 
 
 def smooth(arr, window_size):
