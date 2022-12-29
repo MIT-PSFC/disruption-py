@@ -13,7 +13,7 @@ import netCDF4 as nc
 import MDSplus
 from MDSplus import *
 
-from disruption_py.utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power
+from disruption_py.utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power, efit_rz_interp
 import disruption_py.data
 D3D_DISRUPTED_SHOT = 175552
 """
@@ -171,7 +171,7 @@ class D3DShot(Shot):
                 r"dim_of(\efit_a_eqdsk:li)").data()/1.e3  # [ms] -> [s]
             chisq = self.conn.get(r"\efit_a_eqdsk:chisq").data()
             # Filter out invalid indices of efit reconstruction
-            invalid_indices = np.where
+            invalid_indices = None  # TODO: Finish
         except mdsExceptions.TreeFOPENR as e:
             p_ohm = np.full(len(self._times), np.nan)
             return p_ohm, v_loop
@@ -489,6 +489,43 @@ class D3DShot(Shot):
         n_equal_1_normalized = n_equal_1_mode/b_tor
         return pd.DataFrame({'n_equal_1_normalized': n_equal_1_normalized, 'n_equal_1_mode': n_equal_1_mode})
 
+    def get_peaking_factors(self):
+        ts_data_type = 'blessed'  # either 'blessed', 'unblessed', or 'ptdata'
+        # metric to use for core/edge binning (either 'psin' or 'rhovn')
+        ts_radius = 'rhovn'
+        # ts_radius value defining boundary of 'core' region (between 0 and 1)
+        ts_core_margin = 0.3
+        # All data outside this range excluded. For example, psin=0 at magnetic axis and 1 at separatrix.
+        ts_radial_range = [0, 1]
+        # set to true to interpolate ts_channel data onto equispaced radial grid
+        ts_equispaced = False
+        # fan to use for P_rad peaking factors (either 'lower', 'upper', or 'custom')
+        bolometer_fan = 'custom'
+        # array of bolometer fan channel numbers covering divertor (upper fan: 1->24, lower fan: 25:48)
+        div_channels = np.arange(3, 8)+24
+        # time window for filtering raw bolometer signal in [ms]
+        smoothing_window = 40
+        p_rad_core_def = 0.06  # percentage of DIII-D veritcal extent defining the core margin
+        # 'brightness'; % either 'brightness' or 'power' ('z')
+        p_rad_metric = 'brightness'
+        te_pf = np.full(len(self._times), np.nan)
+        ne_pf = np.full(len(self._times), np.nan)
+        rad_cva = np.full(len(self._times), np.nan)
+        rad_xdiv = np.full(len(self._times), np.nan)
+        try:
+            ts = self._get_ne_te()
+            ts = efit_rz_interp()
+        except Exception as e:
+            print(e)
+            ts = 0
+        try:
+            p_rad = self._get_p_rad()
+        except Exception as e:
+            print(e)
+            p_rad = 0
+
+        return pd.DataFrame({'te_pf': te_pf, 'ne_pf': ne_pf, 'rad_cva': rad_cva, 'rad_xdiv': rad_xdiv})
+
     def _get_ne_te(self, data_source="blessed", ts_systems=['core', 'tangential']):
         if data_source == 'blessed':  # 'blessed' by Thomson group
             mds_path = r'\top.ts.blessed.'
@@ -545,7 +582,7 @@ class D3DShot(Shot):
                 lasers['tangential']['time'] = lasers['core']['time']
         return lasers
 
-    def _load_prad(self, fan, smoothing_window):
+    def _get_prad(self, fan):
         if fan == 'upper':
             fan_chans = np.arange(0, 24)
         elif fan == 'lower':
@@ -553,6 +590,8 @@ class D3DShot(Shot):
         elif fan == 'custom':
             # 1st choice (heavily cover divertor and core)
             fan_chans = np.arange(2, 22) + 24
+
+        # Get bolometry data
         bol_prm, _ = self.get_signal(r"\bol_prm", interpolate=False)
         lower_channels = [f"\bol_u{i+1:02d}_v"for i in range(24)]
         upper_channels = [f"\bol_l{i+1:02d}_v" for i in range(24)]
@@ -567,11 +606,29 @@ class D3DShot(Shot):
         a_struct = get_bolo(self._shot_id, bol_channels,
                             bol_prm, bol_signals, bol_times)
         b_struct = power(a_struct)
-        ier = 0
-        ch_avail = []
-        z = []
-        brightness = []
-        powers = []
+
+        # "Sometimes the bolo data is garbage." Check the 'ier' flag and remove bad channels
+        self.conn.openTree(self.efit_tree_name, self._shot_id)
+        r_major_axis, efit_time = self.get_signal(
+            r"\top.results.geqdsk:rmaxis", interpolate=False)
+        # TODO: self._times needs to be actual Efit time
+        data_dict = {'ch_avail': [], 'z': [], 'brightness': [],
+                     'powers': [], 'x': np.full((len(efit_time), len(fan_chans)), np.nan), 'xtime': efit_time, 't': a_struct.raw_time}
+        for i in range(len(fan_chans)):
+            chan = fan_chans[i]
+            data_dict['power'].append(b_struct.chan[chan].chanpwr)
+            if a_struct.chan[chan].ier == 0:
+                data_dict['ch_avail'].append(chan)
+            data_dict['x'][:, i] = a_struct.chan[chan].Z + \
+                np.tan(a_struct.chan[chan].angle*np.pi/180.0) * \
+                (r_major_axis - a_struct.chan[chan].R)
+            b_struct.chan[chan].chanpwr[np.where(
+                b_struct.chan[chan].chanpwr < 0)] = 0
+            b_struct.chan[chan].brightness[np.where(
+                b_struct.chan[chan].brightness < 0)] = 0
+            data_dict['z'].append(b_struct.chan[i].chanpwr)
+            data_dict['brightness'].append(b_struct.chan[i].brightness)
+        return data_dict
 
 
 if __name__ == '__main__':
