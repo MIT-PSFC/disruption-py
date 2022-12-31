@@ -7,26 +7,109 @@ import numpy as np
 
 
 def interp1(x, y, new_x, kind='linear', bounds_error=True, fill_value=0):
+    """ Interpolate a 1-D array.
+
+    This function interpolates a 1-D array using the given x and y values
+    and interpolation method. It also allows the user to specify the value
+    of the new_x array, and whether or not to raise an error if the new
+    x-values are outside the range of the original x-values.
+
+    Parameters
+    ----------
+    x : array
+        The x-values of the original array.
+    y : array
+        The y-values of the original array.
+    new_x : array
+        The x-values of the interpolated array.
+    kind : str, optional
+        The interpolation method to use. Options are 'linear', 'nearest',
+        'zero', 'slinear', 'quadratic', and 'cubic'. Defaults to 'linear'.
+    bounds_error : bool, optional
+        If True, an error is raised if new_x is outside of the range of x.
+        If False, the new x-values are set to fill_value. Defaults to True.
+    fill_value : float, optional
+        The value to use for new_x values outside of the range of x. This
+        is only used if bounds_error is False. Defaults to 0.
+
+    Returns
+    -------
+    _ : array
+        The interpolated y-values.
+    """
     set_interp = interp1d(
         x, y, kind=kind, bounds_error=bounds_error, fill_value=fill_value)
     return set_interp(new_x)
 
 
 def interp2(X, Y, V, Xq, Yq, kind='linear'):
+    """
+    Interpolate a 2-D array.
+
+    This function takes in 2D arrays of X and Y coordinates, and a 2D array of
+    data V, and returns the interpolated value at the point (Xq, Yq). The
+    kind of interpolation is specified by the user. The function uses the
+    scipy.interpolate.interp2d function to create the interpolant, which is
+    then evaluated at the point (Xq, Yq).
+
+    Parameters
+    ----------
+    X : array
+        The X-coordinates of the original array.
+    Y : array
+        The Y-coordinates of the original array.
+    V : array
+        The data of the original array.
+    Xq : float
+        The X-coordinate of the interpolated point.
+    Yq : float
+        The Y-coordinate of the interpolated point.
+    kind : str, optional
+        The interpolation method to use. Options are 'linear', 'nearest',
+        'zero', 'slinear', 'quadratic', and 'cubic'. Defaults to 'linear'.
+
+    Returns
+    -------
+    _ : float
+        The interpolated value at the point (Xq, Yq).
+
+    """
     set_interp = interp2d(X, Y, V, kind=kind)
     return set_interp(Xq, Yq)
 
-
 # TODO: Implement this
-def efit_rz_interp(data_dict, efit_dict):
-    T = np.tile(data_dict['time'], (1, len(efit_dict['r'])))
-    R = np.tile(efit_dict['r'], (len(data_dict['time']), 1))
-    Z = np.tile(efit_dict['z'], (len(data_dict['time']), 1))
+
+
+def efit_rz_interp(times, efit_dict: dict) -> tuple:
+    """
+    Interpolate the efit data to the given timebase and project onto the
+    poloidal plane.
+
+    Parameters
+    ----------
+    times: np.ndarray
+        Timebase to interpolate to
+
+    efit_dict: dict
+        Dictionary with the efit data. Keys are 'time', 'r', 'z', 'psin', 'rho_vn'
+
+    Returns
+    -------
+    psin: np.ndarray
+        Array of plasma normalized flux
+
+    rho_vn_diag: np.ndarray
+        Array of normalized minor radius
+
+    """
+    T = np.tile(times, (1, len(efit_dict['r'])))
+    R = np.tile(efit_dict['r'], (len(times), 1))
+    Z = np.tile(efit_dict['z'], (len(times), 1))
     interp = RegularGridInterpolator(
         (efit_dict['time'], efit_dict['r'], efit_dict['z']), efit_dict['psin'], method='linear')
     psin = interp(T, R, Z)
     rho_vn_diag_almost = interp1(
-        efit_dict['time'], efit_dict['rho_vn'], data_dict['time'])
+        efit_dict['time'], efit_dict['rho_vn'], times)
     rho_vn_diag = np.empty(len(psin))
     psin_timebase = np.linspace(0, 1, len(efit_dict['rho_vn']))
     for i in range(len(psin)):
@@ -34,9 +117,22 @@ def efit_rz_interp(data_dict, efit_dict):
     return psin, rho_vn_diag
 
 
-def smooth(arr, window_size):
+def smooth(arr: np.ndarray, window_size: int) -> np.ndarray:
     """
     Implements Matlab's smooth function https://www.mathworks.com/help/curvefit/smooth.html.
+
+    Parameters
+    ----------
+    arr: np.ndarray
+        Array to smooth
+
+    window_size: int
+        Size of the window to smooth over
+
+    Returns
+    -------
+    np.ndarray
+        Smoothed array
     """
     mid = np.convolve(arr, np.ones(window_size, dtype=int),
                       'valid')/window_size
@@ -49,12 +145,43 @@ def smooth(arr, window_size):
 
 
 def gaussian_fit(x, y):
+    """
+    Fits a Gaussian curve to a set of data points (x,y).
+    Returns an array of coefficients, c, that describe the fit.
+
+    Credit to: https://stackoverflow.com/questions/11507028/fit-a-gaussian-function
+
+    Parameters
+    ----------
+    x : array
+        The x-coordinates of the data points.
+    y : array
+        The y-coordinates of the data points.
+
+    Returns
+    -------
+    coeffs : array
+        The coefficients of the fit.
+    """
     coeffs, var_matrix = curve_fit(gauss, x, y)
     return coeffs
 
 
 def gauss(x, *params):
-    """ Guassian function"""
+    """ Gaussian function. 
+
+    Parameters
+    ----------
+    x : array
+        The x-coordinates of the data points.
+    params : array
+        The parameters of the Gaussian function.
+
+    Returns
+    -------
+    _ : array
+        The Gaussian function evaluated at the given x-coordinates.
+    """
     z, mu, sigma = params
     return z*np.exp(-(x-mu)**2/(2.0*sigma**2))
 
@@ -66,6 +193,40 @@ def gauss(x, *params):
 
 
 def gsastd(x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=None):
+    """
+    Fast non-causal differentiation of noisy data.
+
+    Parameters
+    ----------
+    x : array_like
+        The x coordinates of the dataset.
+    y : array_like
+        The y coordinates of the dataset.
+    derivative_mode : int
+        If 0, the standard deviation of the dataset is calculated. If 1, the
+        standard deviation of the first derivative of the dataset is
+        calculated.
+    width : int
+        The width of the smoothing window.
+    smooth_type : int, optional
+        Determines the type of smoothing to use.
+        0 -> no smoothing.
+        1 -> rectangular (sliding-average or boxcar)
+        2 -> triangular (2 passes of sliding-average)
+        3 -> pseudo-Gaussian (3 passes of sliding-average)
+    ends_type : int, optional
+        Determines how the "ends" of the signal are handled.
+        0 -> ends are "zeroed"
+        1 -> the ends are smoothed with progressively smaller smooths the closer to the end.
+    slew_rate : float, optional
+        The slew rate of the dataset. If specified, the dataset is
+        processed to remove any points that exceed the slew rate.
+
+    Returns
+    -------
+    array_like
+        Smoothed dataset.
+    """
     if slew_rate is not None:
         for i in range(1, len(y)-1):
             diff = y[i+1] - y[i]
@@ -81,6 +242,21 @@ def gsastd(x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=N
 
 
 def deriv(x, y):
+    """
+    Calculate the derivative of a dataset.
+
+    Parameters
+    ----------
+    x: array
+        The x-coordinates of the data points.
+    y: array
+        The y-coordinates of the data points.
+
+    Returns
+    -------
+    d: array
+        The derivative of the dataset.
+    """
     n = len(y)
     d = np.zeros(y.shape)
     d[0] = (y[1]-y[0])/(x[1]-x[0])
@@ -91,6 +267,31 @@ def deriv(x, y):
 
 
 def fastsmooth(y, w, smooth_type=1, ends_type=0):
+    """
+    Wrapper for looping over the dataset using the smooth function.
+
+    Parameters
+    ----------
+    y : array_like
+        The y coordinates of the dataset.
+    w : int
+        The width of the smoothing window.
+    smooth_type : int, optional
+        Determines the type of smoothing to use.
+        0 -> no smoothing.
+        1 -> rectangular (sliding-average or boxcar)
+        2 -> triangular (2 passes of sliding-average)
+        3 -> pseudo-Gaussian (3 passes of sliding-average)
+    ends_type : int, optional
+        Determines how the "ends" of the signal are handled.
+        0 -> ends are "zeroed"
+        1 -> the ends are smoothed with progressively smaller smooths the closer to the end.
+
+    Returns
+    -------
+    array_like
+        The smoothed dataset.
+    """
     smoothed_y = smooth(y, w, ends_type)
     for i in range(smooth_type-1):
         smoothed_y = smooth(smoothed_y, w, ends_type)
@@ -98,7 +299,26 @@ def fastsmooth(y, w, smooth_type=1, ends_type=0):
 
 
 def smooth(y, smooth_width, ends_type):
-    # TODO: Ask why this is. NOTE: numpy behaviour is different than matlab and will round X.5 to nearest even value instead of value farther away from 0
+    """
+    Smooth a dataset using a Gaussian window.
+
+    Parameters
+    ----------
+    y : array_like
+        The y coordinates of the dataset.
+    smooth_width : int
+        The width of the smoothing window.
+    ends_type : int
+        Determines how the "ends" of the signal are handled.
+        0 -> ends are "zeroed"
+        1 -> the ends are smoothed with progressively smaller smooths the closer to the end.
+
+    Returns
+    -------
+    array_like
+        The smoothed dataset.
+    """
+    # NOTE: numpy behaviour is different than matlab and will round X.5 to nearest even value instead of value farther away from 0
     w = np.round(smooth_width)
     sum_points = np.sum(y[:w])
     s = np.zeros(y.shape)
@@ -111,6 +331,7 @@ def smooth(y, smooth_width, ends_type):
     return s/w
 
 
+# TODO: Cover documentation with Cristina
 def power(a):
     # Multiplicative constants (kappa) to get the power radiating in the i^th viewing chord
     kappa = np.array([1.976e8, 2.060e8, 2.146e8, 2.319e8, 2.277e8, 2.773e8,
