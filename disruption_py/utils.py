@@ -1,3 +1,7 @@
+"""
+This module contains utility functions for various numerical operations. 
+"""
+
 from dataclasses import dataclass
 
 from scipy.interpolate import interp1d, interp2d, RegularGridInterpolator
@@ -7,7 +11,8 @@ import numpy as np
 
 
 def interp1(x, y, new_x, kind='linear', bounds_error=True, fill_value=0):
-    """ Interpolate a 1-D array.
+    """ 
+    Interpolate a 1-D array.
 
     This function interpolates a 1-D array using the given x and y values
     and interpolation method. It also allows the user to specify the value
