@@ -8,7 +8,9 @@ except ImportError:
 import pandas as pd
 import pymysql.cursors
 import jaydebeapi
-from disruption_py.plasma import *
+import matplotlib.pyplot as plt
+
+from disruption_py.shots import *
 import disruption_py.data
 
 # Alter queries for these columns will fail
@@ -103,7 +105,7 @@ class DatabaseHandler:
             else:
                 new_rows.append(index)
         curs.executemany(
-            f"""insert into disruption_warning values""", curr_data_df.iloc[new_rows, :])
+            f"""insert into disruption_warning values""", curr_df.iloc[new_rows, :])
 
     # TODO: Protect against injection attacks
     def remove_shot(self, shot_id):
@@ -123,8 +125,8 @@ class DatabaseHandler:
         shot_id = int(shot_id)
         data_df = pd.read_sql_query(
             f"select * from disruption_warning where shot = {shot_id} order by time", self.conn)
-        if self.shot_class == CmodShot:
-            return CmodShot('cmod', shot_id, data=data_df)
+        if self.shot_class == CModShot:
+            return CModShot('cmod', shot_id, data=data_df)
         elif self.shot_class == D3DShot:
             # TODO: Better exception
             raise Exception("Invalid shot class for this handler")
@@ -160,6 +162,46 @@ class DatabaseHandler:
         NOTE: The disruption_warning table contains ONLY a subset of shots in this table
         """
         return self.query('select shot,t_disrupt from disruptions order by shot')
+
+    def validate_shot(self, shot_id, visualize_differences=False):
+        """
+        Compare shot data currently in disruption database to what is calculated by the shot object.
+
+        Parameters
+        ----------
+        shot_id : int or str
+            Shot number to validate
+        visualize_differences : bool, optional
+            Whether to plot the differences between the two dataframes, by default False
+
+        Returns
+        -------
+        bool
+            Whether the shot data is correct according to the disruption database
+        """
+        shot_id = int(shot_id)
+        true_shot = self.get_shot(shot_id)
+        if true_shot is None:
+            print("Shot not in database")
+            return False
+        local_shot = Shot(shot_id)
+        comparison = true_shot.data - local_shot.data
+        comparison['time'] = true_shot.data['time']
+        if not comparison.empty:
+            print("Shot data is not correct")
+            if visualize_differences:
+                for col in comparison.columns:
+                    if (comparison[col] > 1e-10).any():
+                        plt.plot(comparison['time'],
+                                 comparison[col], label='difference')
+                        plt.plot(
+                            true_shot.data['time'], true_shot.data[col], label='database')
+                        plt.plot(
+                            local_shot.data['time'], local_shot.data[col], label='local')
+                        plt.title(col)
+                        plt.show()
+            return False
+        return True
 
 
 class D3DHandler(DatabaseHandler):

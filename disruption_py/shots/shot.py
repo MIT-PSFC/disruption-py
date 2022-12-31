@@ -5,6 +5,7 @@ import MDSplus
 from MDSplus import *
 
 import pandas as pd
+import numpy as np
 
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
 
@@ -25,6 +26,31 @@ class Shot:
             self.data = pd.DataFrame()
 
     def get_signal(self, signal_name, signal_getter=None, interpolate=True, interpolation_timebase=None):
+        """Get a signal from MDSplus.
+
+        Parameters
+        ----------
+        signal_name : str
+            Name of the signal in MDSplus.
+        signal_getter : MDSplus.Connection, optional
+            MDSplus connection to get the signal from. If not provided, the default
+            connection will be used.
+        interpolate : bool, optional
+            Whether to interpolate the signal onto the timebase of the experiment.
+            If True, the signal will be interpolated from the timebase of the signal
+            in MDSplus to the timebase of the experiment.
+        interpolation_timebase : array_like, optional
+            Timebase to interpolate the signal to. If not provided, the current timebase of
+            the Shot object will be used.
+
+        Returns
+        -------
+        signal : array_like
+            Signal from MDSplus.
+        orig_timebase : array_like
+            Timebase of the signal in MDSplus.
+
+        """
         if signal_getter is None:
             signal = signal_getter.get(signal_name).data()
             orig_timebase = signal_getter.get(
