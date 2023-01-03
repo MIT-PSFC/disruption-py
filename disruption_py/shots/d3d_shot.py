@@ -39,13 +39,14 @@ class D3DShot(Shot):
         self._times = None  # TODO: Set somehow
 
     def _populate_shot_data(self):
-        self.data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(), self.get_ip_parameters(), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters()], ignore_index=True)
+        self.data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(
+        ), self.get_ip_parameters(), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters()], ignore_index=True)
 
     def get_efit_parameters(self):
         self.conn.openTree(self.efit_tree_name, self._shot_id)
         efit_data = {k: self.conn.get(v).data()
                      for k, v in self.efit_vars.items()}
-        efit_time = self.conn.get('\efit_a_eqdsk:atime').data()/1.e3 
+        efit_time = self.conn.get('\efit_a_eqdsk:atime').data()/1.e3
         self._times = efit_time  # TODO: Reconsider how shot times are chosen
         # EFIT reconstructions are sometimes invalid, particularly when very close
         # to a disruption.  There are a number of EFIT parameters that can indicate
@@ -196,8 +197,10 @@ class D3DShot(Shot):
             ne = self.conn.get("\density").data()*1.e6  # [cm^3] -> [m^3]
             dne_dt = np.gradient(ne, t_ne)
             # NOTE: t_ne has higher resolution than efit_time so t_ne[0] < efit_time[0] because of rounding, meaning we need to allow extrapolation
-            ne = interp1(t_ne, ne, self._times, 'linear',bounds_error=False,fill_value='extrapolate')
-            dne_dt = interp1(t_ne, dne_dt, self._times, 'linear',bounds_error=False,fill_value='extrapolate')
+            ne = interp1(t_ne, ne, self._times, 'linear',
+                         bounds_error=False, fill_value='extrapolate')
+            dne_dt = interp1(t_ne, dne_dt, self._times, 'linear',
+                             bounds_error=False, fill_value='extrapolate')
             t_ip = self.conn.get(
                 f"dim_of(ptdata('ip', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
             ip = self.conn.get(f"ptdata('ip', {self._shot_id})").data()  # [A]
@@ -213,7 +216,7 @@ class D3DShot(Shot):
             # TODO: Fix this exception
             # TODO: Confirm that there is a separate exception if ptdata name doesn't exist
             print(f"Failed to get some parameter:{e}")
-        return pd.DataFrame([{'ne':ne, 'g_f':g_f, 'dne_dt':dne_dt}])
+        return pd.DataFrame([{'ne': ne, 'g_f': g_f, 'dne_dt': dne_dt}])
 
     def get_rt_density_parameters(self):
         ne_rt = np.full(len(self._times), np.nan)
@@ -250,7 +253,7 @@ class D3DShot(Shot):
         except MdsException as e:
             # TODO: Better exception message
             print("Failed to get some parameter")
-        return pd.DataFrame([{'ne_rt':ne_rt, 'g_f_rt':g_f_rt, 'dne_dt_rt':dne_dt_rt}])
+        return pd.DataFrame([{'ne_rt': ne_rt, 'g_f_rt': g_f_rt, 'dne_dt_rt': dne_dt_rt}])
 
     def get_ip_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
@@ -324,7 +327,7 @@ class D3DShot(Shot):
         except mdsExceptions.TreeFOPENR as e:
             print("Failed to get epsoff signal")
             power_supply_railed = np.full(len(self._times), np.nan)
-        return pd.DataFrame([{'ip':ip, 'ip_prog':ip_prog, 'ip_error':ip_error, 'dip_dt':dip_dt, 'dipprog_dt':dipprog_dt, 'power_spuply_railed':power_supply_railed}])
+        return pd.DataFrame([{'ip': ip, 'ip_prog': ip_prog, 'ip_error': ip_error, 'dip_dt': dip_dt, 'dipprog_dt': dipprog_dt, 'power_spuply_railed': power_supply_railed}])
 
     def get_rt_ip_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
@@ -409,8 +412,8 @@ class D3DShot(Shot):
         except MdsException as e:
             print("Failed to get epsoff signal")
             power_supply_railed = np.full(len(self._times), np.nan)
-        return pd.DataFrame([{'ip_rt':ip_rt, 'ip_prog_rt':ip_prog_rt, 'ip_errort_rt':ip_error_rt, 
-'dip_dt_rt':dip_dt_rt, 'dipprog_dt_rt':dipprog_dt_rt, 'power_supply_railed':power_supply_railed}])
+        return pd.DataFrame([{'ip_rt': ip_rt, 'ip_prog_rt': ip_prog_rt, 'ip_errort_rt': ip_error_rt,
+                              'dip_dt_rt': dip_dt_rt, 'dipprog_dt_rt': dipprog_dt_rt, 'power_supply_railed': power_supply_railed}])
 
     def get_z_parameters(self):
         """
@@ -449,7 +452,7 @@ class D3DShot(Shot):
         except MdsException as e:
             print("Failed to get efit parameters")
             z_cur_norm = z_cur / self.nominal_flattop_radius
-        return pd.DataFrame([{'z_cur':z_cur, 'z_cur_norm':z_cur_norm, 'z_prog':z_prog, 'z_error':z_error,'z_error_norm':z_error_norm}])
+        return pd.DataFrame([{'z_cur': z_cur, 'z_cur_norm': z_cur_norm, 'z_prog': z_prog, 'z_error': z_error, 'z_error_norm': z_error_norm}])
 
     # TODO: Complete n1 bradial method
     def get_n1_bradial(self):
@@ -469,15 +472,15 @@ class D3DShot(Shot):
                     f"Shot {self._shot_id} not found in {filename}.  Returning NaN.")
                 dusbradial = np.full(len(self._times), np.nan)
             ncid.close()
-        # Check DUD then ONFR
+        # Check ONFR than DUD(legacy)
         else:
             try:
                 n_equal_1_mode, _ = self.get_signal(
-                    f"ptdata('dusbradial',{self._shot_id})")*1.e-4  # [T]
+                    f"ptdata('onsbradial',{self._shot_id})")*1.e-4  # [T]
             except MdsException as e:
                 try:
                     n_equal_1_mode, _ = self.get_signal(
-                        f"ptdata('onsbradial',{self._shot_id})")*1.e-4  # [T]
+                        f"ptdata('dusbradial',{self._shot_id})")*1.e-4  # [T]
                 except MdsException as e:
                     print("Failed to get n1 bradial signal")
                     n_equal_1_mode = np.full(len(self._times), np.nan)
@@ -597,7 +600,8 @@ class D3DShot(Shot):
             fan_chans = np.arange(24, 48)
         elif fan == 'custom':
             # 1st choice (heavily cover divertor and core)
-            fan_chans = np.arange(2, 22) + 24
+            fan_chans = np.array(
+                [3, 4, 5, 6, 7, 8, 9, 12, 14, 15, 16, 22]) + 24
 
         # Get bolometry data
         bol_prm, _ = self.get_signal(r"\bol_prm", interpolate=False)
@@ -622,7 +626,7 @@ class D3DShot(Shot):
             r"\top.results.geqdsk:rmaxis", interpolate=False)
         # TODO: self._times needs to be actual Efit time
         data_dict = {'ch_avail': [], 'z': [], 'brightness': [],
-                     'powers': [], 'x': np.full((len(efit_time), len(fan_chans)), np.nan), 'xtime': efit_time, 't': a_struct.raw_time}
+                     'power': [], 'x': np.full((len(efit_time), len(fan_chans)), np.nan), 'xtime': efit_time, 't': a_struct.raw_time}
         for i in range(len(fan_chans)):
             chan = fan_chans[i]
             data_dict['power'].append(b_struct.chan[chan].chanpwr)
@@ -654,5 +658,5 @@ class D3DShot(Shot):
 
 
 if __name__ == '__main__':
-    shot = D3DShot(D3D_DISRUPTED_SHOT,'EFIT05')
+    shot = D3DShot(D3D_DISRUPTED_SHOT, 'EFIT05')
     print(shot.data.head())
