@@ -256,7 +256,7 @@ def create_d3d_handler():
         assert db_username == USER, f"db_username:{db_username};user:{USER}"
         db_password = content[1]
     with importlib_resources.path(disruption_py.data, "sqljdbc4.jar") as p:
-        db_driver_path = p
+        db_driver_path = str(p)
     return D3DHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver", db_driver_path, "jdbc:sqlserver://d3drdb.gat.com:8001;", db_username, db_password, shot_class=D3DShot)
 
 
@@ -265,8 +265,8 @@ def create_east_handler(self):
 
 
 if __name__ == '__main__':
-    test_handler = create_cmod_handler()
-    shot = test_handler.get_shot('1150922001')
-    # test_handler = create_d3d_handler()
-    # shot = test_handler.get_shot('160946')
-    print(shot)
+    # test_handler = create_cmod_handler()
+    # shot = test_handler.get_shot('1150922001')
+    test_handler = create_d3d_handler()
+    shot = test_handler.get_shot('175552')
+    print(shot.efit_tree_name)

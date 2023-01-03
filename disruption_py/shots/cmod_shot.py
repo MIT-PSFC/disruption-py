@@ -1,4 +1,4 @@
-from shot import Shot
+from disruption_py.shots.shot import Shot, DEFAULT_SHOT_COLUMNS
 try:
     import importlib.resources as importlib_resources
 except ImportError:
@@ -15,7 +15,7 @@ from disruption_py.utils import interp1, interp2, smooth, gaussian_fit, gsastd, 
 import disruption_py.data
 
 
-class CmodShot(Shot):
+class CModShot(Shot):
     """
     Base shot class to represent a single shot of a fusion experiment.
 
@@ -939,5 +939,5 @@ class CmodShot(Shot):
 
 
 if __name__ == '__main__':
-    shot = CmodShot('cmod', 1150922001)
+    shot = CModShot('cmod', 1150922001)
     print(shot.data.head())
