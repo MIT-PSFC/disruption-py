@@ -653,6 +653,5 @@ class D3DShot(Shot):
 
 
 if __name__ == '__main__':
-    pass
-    # shot = D3DShot('', D3D_DISRUPTED_SHOT)
-    # print(shot.data.head())
+    shot = D3DShot('', D3D_DISRUPTED_SHOT)
+    print(shot.data.head())
