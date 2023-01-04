@@ -13,6 +13,13 @@ setup(
     long_description=open('README.md').read(),
     install_requires=[
         "pytest",
+		"pandas",
+		"numpy",
+		"scipy",
+		"matplotlib",
+		"jaydebeapi",
+		"pymysql",
+		"netCDF4",
     ],
     include_package_data=True,
 )
