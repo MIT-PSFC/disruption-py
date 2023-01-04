@@ -29,15 +29,21 @@ class D3DShot(Shot):
     efit_derivs = ['beta_p', 'li', 'Wmhd']
     nominal_flattop_radius = 0.59
 
-    def __init__(self, shot_id, efit_tree_name, data_columns=DEFAULT_SHOT_COLUMNS, data=None):
+    def __init__(self, shot_id, efit_tree_name, data_columns=DEFAULT_SHOT_COLUMNS, data=None, times=None):
         super().__init__(shot_id, data_columns, data)
         self.conn = MDSplus.Connection('atlas.gat.com')
         self.efit_tree_name = str(efit_tree_name)
-        if data is None:
+        self.data = data
+        self._times = times
+        if self.data is None:
             self.data = pd.DataFrame()
             self._populate_shot_data()
-        self._times = None  # TODO: Set somehow
-
+        else:
+            try:
+                self._times = self.data['time']
+            except KeyError as e:
+                print("WARNING: Shot constructor was passed data but no timebase.")
+   
     def _populate_shot_data(self):
         self.data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(
         ), self.get_ip_parameters(), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters()], ignore_index=True)
@@ -47,7 +53,8 @@ class D3DShot(Shot):
         efit_data = {k: self.conn.get(v).data()
                      for k, v in self.efit_vars.items()}
         efit_time = self.conn.get('\efit_a_eqdsk:atime').data()/1.e3
-        self._times = efit_time  # TODO: Reconsider how shot times are chosen
+        if self._times is None:
+            self._times = efit_time
         # EFIT reconstructions are sometimes invalid, particularly when very close
         # to a disruption.  There are a number of EFIT parameters that can indicate
         # invalid reconstructions, such as 'terror' and 'chisq'.  Here we use
@@ -569,10 +576,12 @@ class D3DShot(Shot):
                     f"{sub_tree}:temp").data()
                 lasers[laser]['ne'] = self.conn.get(
                     f"{sub_tree}:dens").data()  # electron density
+                # NOTE: These are absolute errors
+                # NOTE: Matlab scripts currently populate both errors with temperature error 
                 lasers[laser]['te_error'] = self.conn.get(
                     f"{sub_tree}:temp_e").data()
                 lasers[laser]['ne_error'] = self.conn.get(
-                    f"{sub_tree}:temp_e").data()
+                    f"{sub_tree}:density_e").data()
                 # Place NaNs for broken channels
                 lasers[laser]['te'][np.where(
                     lasers[laser]['te'] == 0)] = np.nan
@@ -604,6 +613,7 @@ class D3DShot(Shot):
                 [3, 4, 5, 6, 7, 8, 9, 12, 14, 15, 16, 22]) + 24
 
         # Get bolometry data
+        self.conn.openTree("bolom", self._shot_id)
         bol_prm, _ = self.get_signal(r"\bol_prm", interpolate=False)
         lower_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
         upper_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
@@ -611,9 +621,8 @@ class D3DShot(Shot):
         bol_signals = []
         bol_times = []
         for i in range(48):
-            print(f"\top.raw:{bol_channels[i]}")
             bol_signal, bol_time = self.get_signal(
-                f"\top.raw:{bol_channels[i]}", interpolate=False)
+                fr"\top.raw:{bol_channels[i]}", interpolate=False)
             bol_signals.append(bol_signal)
             bol_times.append(bol_time)
         a_struct = get_bolo(self._shot_id, bol_channels,
@@ -630,11 +639,11 @@ class D3DShot(Shot):
         for i in range(len(fan_chans)):
             chan = fan_chans[i]
             data_dict['power'].append(b_struct.chan[chan].chanpwr)
-            if a_struct.chan[chan].ier == 0:
+            if a_struct.channels[chan].ier == 0:
                 data_dict['ch_avail'].append(chan)
-            data_dict['x'][:, i] = a_struct.chan[chan].Z + \
-                np.tan(a_struct.chan[chan].angle*np.pi/180.0) * \
-                (r_major_axis - a_struct.chan[chan].R)
+            data_dict['x'][:, i] = a_struct.channels[chan].Z + \
+                np.tan(a_struct.channels[chan].angle*np.pi/180.0) * \
+                (r_major_axis - a_struct.channels[chan].R)
             b_struct.chan[chan].chanpwr[np.where(
                 b_struct.chan[chan].chanpwr < 0)] = 0
             b_struct.chan[chan].brightness[np.where(

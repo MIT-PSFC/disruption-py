@@ -356,7 +356,7 @@ def power(a):
                        7129, 6854, 11162, 11070, 11081, 11196, 11419, 11761,
                        29321, 28825, 28449, 28187, 28033, 7058, 7140, 7334,
                        7657, 8136, 8819, 7112, 6654, 6330, 6123, 29621,
-                       29485, 29431, 29458, 29565, 29756, 30032, 30397, 6406]*1e4, dtype=np.float64)  # convert to [m^(-2)]
+                       29485, 29431, 29458, 29565, 29756, 30032, 30397, 6406], dtype=np.float64)*1.e4  # convert to [m^(-2)]
 
     @dataclass
     class Channel:
@@ -373,21 +373,21 @@ def power(a):
         divl: np.ndarray
         divu: np.ndarray
         chan: np.ndarray
-    c = Channel('', np.zeros((1, 4096)), np.zeros((1, 4096)), 0.0, 0.0, 0.0)
-    b = Power(np.zeros((1, 4096)), np.zeros((1, 4096)),
-              np.zeros((1, 4096)), np.tile(c, (1, 48)))
+    c = Channel('', np.zeros((4096)), np.zeros((4096)), 0.0, 0.0, 0.0)
+    b = Power(np.zeros((4096)), np.zeros((4096)),
+              np.zeros((4096)), np.tile(c, (48)))
     for i in range(48):
-        b.chan[i].chanpwr = kappa[i]*a.chan[i].pwr
-        b.chan[i].brightness = etendu[i] * a.chan[i].pwr
-        b.chan[i].R = a.chan[i].R
-        b.chan[i].Z = a.chan[i].Z
-        b.chan[i].angle = a.chan[i].angle
+        b.chan[i].chanpwr = kappa[i]*a.channels[i].pwr
+        b.chan[i].brightness = etendu[i] * a.channels[i].pwr
+        b.chan[i].R = a.channels[i].R
+        b.chan[i].Z = a.channels[i].Z
+        b.chan[i].angle = a.channels[i].angle
     b.pwrmix = 0.0
     b.divl = 0.0
     b.divu = 0.0
     # Calculate power radiated from lower divertor region
     for i in range(24, 31):
-        b.div1 = b.div1 + b.chan[i].chanpwr
+        b.divl = b.divl + b.chan[i].chanpwr
     # Calculate power radiated from upper divertor region
     for i in range(21, 24):
         b.divu = b.divu + b.chan[i].chanpwr
@@ -512,7 +512,7 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
     k[nzer] = 1.0 / k[nzer]
     k = k/t_del/(np.fix(m/2)*2)
     for i in range(48):
-        bolo_shot.chan[i].label = bol_channels[i]
+        bolo_shot.channels[i].label = bol_channels[i]
         data = interp1(bol_time, bol_top[i], bolo_shot.raw_time)
         bolo_shot.channels[i].ier = 0
         bolo_shot.channels[i].raw = data
