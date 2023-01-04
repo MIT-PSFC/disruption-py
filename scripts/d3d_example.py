@@ -5,7 +5,7 @@ from disruption_py.database import create_d3d_handler
 This script demonstrates how to use disruption_py to generate a csv shot dataset
 with chosen columns.
 """
-FEATURE_COLUMNS = ['time', 'z_prog']  # Shot columns we want
+FEATURE_COLUMNS = ['time', 'ip']  # Shot columns we want
 
 
 def generate_full_dataset():
@@ -14,15 +14,15 @@ def generate_full_dataset():
     # Get all shots from database (you can pass a list of shot_ids to get a subset)
     shots = handler.get_shots()
     # Combine into one dataframe
-    df = pd.concat([shot.get_dataframe(FEATURE_COLUMNS) for shot in shots])
+    df = pd.concat([shot.data[FEATURE_COLUMNS] for shot in shots])
     # Save to csv
     df.to_csv('d3d_shot_data.csv')
 
-
+# Same as generate_full_dataset but for a subset of shots 
 def generate_subset_dataset(shot_ids):
     handler = create_d3d_handler()
     shots = handler.get_shots(shot_ids)
-    df = pd.concat([shot.get_dataframe(FEATURE_COLUMNS) for shot in shots])
+    df = pd.concat([shot.data[FEATURE_COLUMNS] for shot in shots])
     df.to_csv('d3d_shot_data.csv')
 
 

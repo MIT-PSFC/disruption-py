@@ -225,7 +225,6 @@ class D3DHandler(DatabaseHandler):
             curs.execute(
                 f"select tree from plasmas where shot = {shot_id} and runtag = 'DIS' and deleted = 0 order by idx")
             efit_trees = curs.fetchall()
-        print(efit_trees)
         return D3DShot(shot_id, efit_trees[-1][0], data=data_df)
 
     # TODO: Make more efficient
