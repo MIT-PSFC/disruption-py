@@ -132,10 +132,13 @@ class DatabaseHandler:
             raise Exception("Invalid shot class for this handler")
         return None
 
-    def get_shots(self, shot_ids):
+    def get_shots(self, shot_ids=None):
         shot_ids = tuple([int(shot_id) for shot_id in shot_ids])
-        shot_df = pd.read_sql_query(
-            f"select * from disruption_warning where shot in {shot_ids} order by time", self.conn)
+        if shot_ids is None:
+            query = f"select * from disruption_warning order by time"
+        else:
+            query = f"select * from disruption_warning where shot in {shot_ids} order by time"
+        shot_df = pd.read_sql_query(query, self.conn)
         return [Shot('cmod', shot_data['shot'].iloc[0], data=shot_data) for _, shot_data in shot_df.groupby(by=["shot"])]
 
     def add_column(self, col_name, var_type="TEXT", table="disruption_warning"):

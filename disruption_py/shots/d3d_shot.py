@@ -43,7 +43,7 @@ class D3DShot(Shot):
                 self._times = self.data['time']
             except KeyError as e:
                 print("WARNING: Shot constructor was passed data but no timebase.")
-   
+
     def _populate_shot_data(self):
         self.data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(
         ), self.get_ip_parameters(), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters()], ignore_index=True)
@@ -499,7 +499,7 @@ class D3DShot(Shot):
         n_equal_1_normalized = n_equal_1_mode/b_tor
         return pd.DataFrame({'n_equal_1_normalized': n_equal_1_normalized, 'n_equal_1_mode': n_equal_1_mode})
 
-    # TODO: Finish after conversation with cristina about core vs tangential lasers
+    # TODO: Finish. Remember to concatenate core and tangential laser data(r and z) in _get_p_rad
     def get_peaking_factors(self):
         ts_data_type = 'blessed'  # either 'blessed', 'unblessed', or 'ptdata'
         # metric to use for core/edge binning (either 'psin' or 'rhovn')
@@ -577,7 +577,7 @@ class D3DShot(Shot):
                 lasers[laser]['ne'] = self.conn.get(
                     f"{sub_tree}:dens").data()  # electron density
                 # NOTE: These are absolute errors
-                # NOTE: Matlab scripts currently populate both errors with temperature error 
+                # NOTE: Matlab scripts currently populate both errors with temperature error
                 lasers[laser]['te_error'] = self.conn.get(
                     f"{sub_tree}:temp_e").data()
                 lasers[laser]['ne_error'] = self.conn.get(
@@ -633,7 +633,6 @@ class D3DShot(Shot):
         self.conn.openTree(self.efit_tree_name, self._shot_id)
         r_major_axis, efit_time = self.get_signal(
             r"\top.results.geqdsk:rmaxis", interpolate=False)
-        # TODO: self._times needs to be actual Efit time
         data_dict = {'ch_avail': [], 'z': [], 'brightness': [],
                      'power': [], 'x': np.full((len(efit_time), len(fan_chans)), np.nan), 'xtime': efit_time, 't': a_struct.raw_time}
         for i in range(len(fan_chans)):
