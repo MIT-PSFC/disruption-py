@@ -217,19 +217,21 @@ class D3DHandler(DatabaseHandler):
                                                 self.user, self.passwd],
                                             self.driver_file)
 
-    def get_shot(self, shot_id):
+    def get_shot(self, shot_id, efit_tree = None):
         shot_id = int(shot_id)
         data_df = pd.read_sql_query(
             f"select * from disruption_warning where shot = {shot_id} order by time", self.conn)
-        with self.tree_conn.cursor() as curs:
-            curs.execute(
-                f"select tree from plasmas where shot = {shot_id} and runtag = 'DIS' and deleted = 0 order by idx")
-            efit_trees = curs.fetchall()
-        return D3DShot(shot_id, efit_trees[-1][0], data=data_df)
+        if efit_tree is None:
+            with self.tree_conn.cursor() as curs:
+                curs.execute(
+                    f"select tree from plasmas where shot = {shot_id} and runtag = 'DIS' and deleted = 0 order by idx")
+                efit_trees = curs.fetchall()
+            efit_tree = efit_trees[-1][0]
+        return D3DShot(shot_id, efit_tree, data=data_df)
 
     # TODO: Make more efficient
-    def get_shots(self, shot_ids):
-        return [self.get_shot(shot_id) for shot_id in shot_ids]
+    def get_shots(self, shot_ids, efit_tree=None):
+        return [self.get_shot(shot_id,efit_tree) for shot_id in shot_ids]
 
 
 def create_cmod_handler():

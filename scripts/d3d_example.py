@@ -12,7 +12,7 @@ def generate_full_dataset():
     # Create database handler for grabbing shots from SQL database
     handler = create_d3d_handler()
     # Get all shots from database (you can pass a list of shot_ids to get a subset)
-    shots = handler.get_shots()
+    shots = handler.get_shots(efit_tree='EFIT01')
     # Combine into one dataframe
     df = pd.concat([shot.data[FEATURE_COLUMNS] for shot in shots])
     # Save to csv
@@ -21,10 +21,10 @@ def generate_full_dataset():
 # Same as generate_full_dataset but for a subset of shots 
 def generate_subset_dataset(shot_ids):
     handler = create_d3d_handler()
-    shots = handler.get_shots(shot_ids)
+    shots = handler.get_shots(shot_ids,'EFIT01')
     df = pd.concat([shot.data[FEATURE_COLUMNS] for shot in shots])
     df.to_csv('d3d_shot_data.csv')
 
 
 if __name__ == '__main__':
-    generate_subset_dataset(['175552', '175553'])
+    generate_subset_dataset(['191786', '191914'])
