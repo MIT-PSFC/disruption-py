@@ -1,0 +1,27 @@
+attrs==22.2.0
+cftime==1.6.2
+contourpy==1.0.6
+cycler==0.11.0
+-e git+https://andrew-maris@github.com/crea-psfc/disruption-warning-db-workflow.git@5deafd10c99d487e8c96d49d10128e8e7ce63532#egg=disruption_py
+exceptiongroup==1.1.0
+fonttools==4.38.0
+iniconfig==1.1.1
+JayDeBeApi==1.2.3
+JPype1==1.4.1
+kiwisolver==1.4.4
+matplotlib==3.1.2
+mpi4py==3.1.4
+netCDF4==1.5.3
+numpy==1.18.1
+packaging==22.0
+pandas==0.25.3
+Pillow==9.4.0
+pluggy==1.0.0
+PyMySQL==1.0.2
+pyparsing==3.0.9
+pytest==7.2.0
+python-dateutil==2.8.2
+pytz==2022.7
+scipy==1.4.1
+six==1.16.0
+tomli==2.0.1
