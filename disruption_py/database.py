@@ -166,6 +166,12 @@ class DatabaseHandler:
         """
         return self.query('select shot,t_disrupt from disruptions order by shot')
 
+    def get_disruption_table_shotlist(self):
+        """ 
+        Get pandas dataframe of all shots in the disruption table.
+        """
+        return self.query('select shot from disruption_warning order by shot')
+
     def validate_shot(self, shot_id, visualize_differences=False):
         """
         Compare shot data currently in disruption database to what is calculated by the shot object.
@@ -217,7 +223,7 @@ class D3DHandler(DatabaseHandler):
                                                 self.user, self.passwd],
                                             self.driver_file)
 
-    def get_shot(self, shot_id, efit_tree = None):
+    def get_shot(self, shot_id, efit_tree=None):
         shot_id = int(shot_id)
         data_df = pd.read_sql_query(
             f"select * from disruption_warning where shot = {shot_id} order by time", self.conn)
@@ -231,7 +237,7 @@ class D3DHandler(DatabaseHandler):
 
     # TODO: Make more efficient
     def get_shots(self, shot_ids, efit_tree=None):
-        return [self.get_shot(shot_id,efit_tree) for shot_id in shot_ids]
+        return [self.get_shot(shot_id, efit_tree) for shot_id in shot_ids]
 
 
 def create_cmod_handler():
