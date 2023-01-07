@@ -32,6 +32,7 @@ class D3DShot(Shot):
     def __init__(self, shot_id, efit_tree_name, data_columns=DEFAULT_SHOT_COLUMNS, data=None, times=None):
         super().__init__(shot_id, data_columns, data)
         self.conn = MDSplus.Connection('atlas.gat.com')
+        print(self.conn)
         self.efit_tree_name = str(efit_tree_name)
         self.data = data
         self._times = times
@@ -49,7 +50,10 @@ class D3DShot(Shot):
         ), self.get_ip_parameters(), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_Zeff_parameters()], ignore_index=True)
 
     def get_efit_parameters(self):
-        self.conn.openTree(self.efit_tree_name, self._shot_id)
+        print(self.efit_tree_name)
+        print(self._shot_id)
+        self.conn.openTree('d3d',self._shot_id)
+        test = self.conn.openTree(self.efit_tree_name, self._shot_id)
         efit_data = {k: self.conn.get(v).data()
                      for k, v in self.efit_vars.items()}
         efit_time = self.conn.get('\efit_a_eqdsk:atime').data()/1.e3

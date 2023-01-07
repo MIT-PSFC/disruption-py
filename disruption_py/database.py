@@ -170,7 +170,7 @@ class DatabaseHandler:
         """ 
         Get pandas dataframe of all shots in the disruption table.
         """
-        return self.query('select shot from disruption_warning order by shot')
+        return self.query('select distinct shot from disruption_warning order by shot')
 
     def validate_shot(self, shot_id, visualize_differences=False):
         """

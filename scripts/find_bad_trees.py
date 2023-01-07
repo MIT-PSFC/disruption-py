@@ -16,10 +16,10 @@ from disruption_py.database import create_d3d_handler
 import MDSplus
 
 
-def find_shots_with_bad_trees(tree_to_check=['efit01']):
+def find_shots_with_bad_trees(table='disruption_warning',tree_to_check=['efit01']):
     """
     This function connects to the MDSplus server, and loops over all shots in the
-    DIII-D disruption_warning table, attempting to open the 'trees_to_check' trees for each shot.
+    specified DIII-D table, attempting to open the 'trees_to_check' trees for each shot.
     It then returns a list of shots for which at least one of the trees could not be opened, along with the
     number of shots that were attempted.
 
@@ -33,7 +33,12 @@ def find_shots_with_bad_trees(tree_to_check=['efit01']):
     """
     d3d = create_d3d_handler()
     bad_shots = []
-    all_shots = d3d.get_disruption_table_shotlist()
+    if table == 'disruption_warning':
+        all_shots = d3d.get_disruption_table_shotlist()
+    elif table =='disruptions':
+        all_shots = d3d.get_disruption_shotlist()
+    else:
+        raise ValueError(f"{table} table is not supported by the d3d handler")
     num_shots = len(all_shots)
     conn = MDSplus.Connection('atlas.gat.com')
     for shot in all_shots['shot']:
@@ -47,10 +52,10 @@ def find_shots_with_bad_trees(tree_to_check=['efit01']):
 
 
 if __name__ == '__main__':
-    bad_shots, num_shots = find_shots_with_bad_trees()
-    with open('bad_shots.csv', 'w') as f:
+    bad_shots, num_shots = find_shots_with_bad_trees('disruptions')
+    with open('bad_shots_all.csv', 'w') as f:
         f.write('shot,error')
         for shot, error in bad_shots:
-            f.write('{},{}'.format(shot, error))
+            f.write('{},{}\n'.format(shot, error))
     print(
         f"Found a total of {len(bad_shots)} bad shots(out of {num_shots}).")
