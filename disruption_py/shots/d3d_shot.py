@@ -25,7 +25,7 @@ https://diii-d.gat.com/diii-d/Gadata_py
 
 class D3DShot(Shot):
     efit_vars = {'beta_n': '\efit_a_eqdsk:betan', 'beta_p': '\efit_a_eqdsk:betap', 'kappa': '\efit_a_eqdsk:kappa', 'li': '\efit_a_eqdsk:li', 'upper_gap': '\efit_a_eqdsk:gaptop', 'lower_gap': '\efit_a_eqdsk:gapbot',
-                 'q0': '\efit_a_eqdsk:q0', 'qstar': '\efit_a_eqdsk:qstar', 'q95': '\efit_a_eqdsk:q95',  'v_loop_efit': '\efit_a_eqdsk:vsurf', 'Wmhd': '\efit_a_eqdsk:wmhd', 'chisq': '\efit_a_eqdsk:chisq','bt0':'\efit_a_eqdsk:bt0'}
+                 'q0': '\efit_a_eqdsk:q0', 'qstar': '\efit_a_eqdsk:qstar', 'q95': '\efit_a_eqdsk:q95',  'v_loop_efit': '\efit_a_eqdsk:vsurf', 'Wmhd': '\efit_a_eqdsk:wmhd', 'chisq': '\efit_a_eqdsk:chisq', 'bt0': '\efit_a_eqdsk:bt0'}
     efit_derivs = ['beta_p', 'li', 'Wmhd']
     nominal_flattop_radius = 0.59
 
@@ -47,12 +47,12 @@ class D3DShot(Shot):
 
     def _populate_shot_data(self):
         self.data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(
-        ), self.get_ip_parameters(), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_Zeff_parameters()], ignore_index=True)
+        ), self.get_ip_parameters(), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters()], ignore_index=True)
 
     def get_efit_parameters(self):
         print(self.efit_tree_name)
         print(self._shot_id)
-        self.conn.openTree('d3d',self._shot_id)
+        self.conn.openTree('d3d', self._shot_id)
         test = self.conn.openTree(self.efit_tree_name, self._shot_id)
         efit_data = {k: self.conn.get(v).data()
                      for k, v in self.efit_vars.items()}
@@ -156,10 +156,10 @@ class D3DShot(Shot):
         rad_fraction = p_rad/p_input
         rad_fraction[np.isinf(rad_fraction)] = np.nan
 
-	#Computer P_sol, defined as P_in - P_rad
+        # Computer P_sol, defined as P_in - P_rad
         p_sol = p_input - p_rad
 
-        return pd.DataFrame([{'p_rad': p_rad, 'p_nbi': p_nbi, 'p_ech': p_ech, 'p_ohm': p_ohm, 'radiated_fraction': rad_fraction, 'v_loop': v_loop,'p_input':p_input,'p_sol':p_sol}])
+        return pd.DataFrame([{'p_rad': p_rad, 'p_nbi': p_nbi, 'p_ech': p_ech, 'p_ohm': p_ohm, 'radiated_fraction': rad_fraction, 'v_loop': v_loop, 'p_input': p_input, 'p_sol': p_sol}])
 
     def get_ohmic_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
@@ -553,14 +553,14 @@ class D3DShot(Shot):
         return pd.DataFrame({'te_pf': te_pf, 'ne_pf': ne_pf, 'rad_cva': rad_cva, 'rad_xdiv': rad_xdiv})
 
     def get_core_edge_vals(self):
-	##################################################	
-	#Settings
+        ##################################################
+        # Settings
         ts_data_type = 'blessed'  # either 'blessed', 'unblessed', or 'ptdata'
         # metric to use for core/edge binning (either 'psin' or 'rhovn')
         ts_radius = 'rhovn'
         # ts_radius value defining boundary of 'core' region (between 0 and 1)
         ts_core_margin = 0.3
-	# ts_radius value defining inner and outer side of 'edge' region (between ts_core_margin and 1)
+        # ts_radius value defining inner and outer side of 'edge' region (between ts_core_margin and 1)
         ts_edge_inner = 0.85
         ts_edge_outer = 0.95
         # All data outside this range excluded. For example, psin=0 at magnetic axis and 1 at separatrix.
@@ -575,7 +575,7 @@ class D3DShot(Shot):
         # Averaged over edge region
         te_edge = np.full(len(self._times), np.nan)
         ne_edge = np.full(len(self._times), np.nan)
-	#Averaged over 85th to 88th surface
+        # Averaged over 85th to 88th surface
         te_edge_80to85 = np.full(len(self._times), np.nan)
         ne_edge_80to85 = np.full(len(self._times), np.nan)
         te_edge_85to90 = np.full(len(self._times), np.nan)
@@ -584,11 +584,11 @@ class D3DShot(Shot):
         ne_edge_90to95 = np.full(len(self._times), np.nan)
         te_edge_95to100 = np.full(len(self._times), np.nan)
         ne_edge_95to100 = np.full(len(self._times), np.nan)
-	#Separatrix 
+        # Separatrix
         te_sep = np.full(len(self._times), np.nan)
         ne_sep = np.full(len(self._times), np.nan)
-        
-	# Try to get data via _get_ne_te()	
+
+        # Try to get data via _get_ne_te()
         try:
             ts = self._get_ne_te()
             efit_dict = self._get_efit_dict
@@ -604,13 +604,13 @@ class D3DShot(Shot):
             invalid_indices = np.where((ts[ts_radius] < ts_radial_range[0]) | (
                 ts[ts_radius] > ts_radial_range[1]))
 
-	# TODO: 1) Interpolate in core and edge regions, 2) compute average in these regions and store in respective array. Note that we may need to expand the available indices beyond 1
+        # TODO: 1) Interpolate in core and edge regions, 2) compute average in these regions and store in respective array. Note that we may need to expand the available indices beyond 1
 
-        return pd.DataFrame({'te_core': te_core, 'ne_core': ne_core,'te_core': te_edge, 'ne_edge': ne_edge,'te_edge_80to85':te_edge_80to85, 'ne_edge_80to85':ne_edge_80to85,
-'te_edge_85to90':te_edge_85to90, 'ne_edge_85to90':ne_edge_85to90,'te_edge_90to95':te_edge_90to95, 'ne_edge_90to95':ne_edge_90to95,'te_edge_95to100':te_edge_95to100, 'ne_edge_95to100':ne_edge_95to100,'te_sep': te_sep, 'ne_sep': ne_sep})
+        return pd.DataFrame({'te_core': te_core, 'ne_core': ne_core, 'te_core': te_edge, 'ne_edge': ne_edge, 'te_edge_80to85': te_edge_80to85, 'ne_edge_80to85': ne_edge_80to85,
+                             'te_edge_85to90': te_edge_85to90, 'ne_edge_85to90': ne_edge_85to90, 'te_edge_90to95': te_edge_90to95, 'ne_edge_90to95': ne_edge_90to95, 'te_edge_95to100': te_edge_95to100, 'ne_edge_95to100': ne_edge_95to100, 'te_sep': te_sep, 'ne_sep': ne_sep})
 
-    def get_Zeff_parameters(self):
-	
+    def get_zeff_parameters(self):
+
         self.conn.openTree('d3d', self._shot_id)
         # Get Zeff
         try:
@@ -618,9 +618,9 @@ class D3DShot(Shot):
                 r"\d3d::top.spectroscopy.vb.zeff:zeff").data()
             t_zeff = self.conn.get(
                 r"dim_of(\d3d::top.nb:pinj)").data()*1.e3  # [ms]->[s]
-            if len(t_nbi) > 2:
+            if len(t_zeff) > 2:
                 zeff = interp1(t_zeff, zeff, self._times,
-                                'linear', bounds_error=False, fill_value=0.)
+                               'linear', bounds_error=False, fill_value=0.)
             else:
                 print("No zeff data found in this shot.")
                 zeff = np.zeros(len(self._times))
@@ -628,8 +628,7 @@ class D3DShot(Shot):
             zeff = np.zeros(len(self._times))
             print("Failed to open Zeff node")
 
-        return pd.DataFrame({'Z_eff': Z_eff})
-	
+        return pd.DataFrame({'Z_eff': zeff})
 
     def _get_ne_te(self, data_source="blessed", ts_systems=['core', 'tangential']):
         if data_source == 'blessed':  # 'blessed' by Thomson group

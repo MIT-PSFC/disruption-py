@@ -16,7 +16,7 @@ from disruption_py.database import create_d3d_handler
 import MDSplus
 
 
-def find_shots_with_bad_trees(table='disruption_warning',tree_to_check=['efit01']):
+def find_shots_with_bad_trees(table='disruption_warning', tree_to_check=['efit01']):
     """
     This function connects to the MDSplus server, and loops over all shots in the
     specified DIII-D table, attempting to open the 'trees_to_check' trees for each shot.
@@ -35,7 +35,7 @@ def find_shots_with_bad_trees(table='disruption_warning',tree_to_check=['efit01'
     bad_shots = []
     if table == 'disruption_warning':
         all_shots = d3d.get_disruption_table_shotlist()
-    elif table =='disruptions':
+    elif table == 'disruptions':
         all_shots = d3d.get_disruption_shotlist()
     else:
         raise ValueError(f"{table} table is not supported by the d3d handler")
