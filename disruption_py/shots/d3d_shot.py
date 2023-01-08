@@ -29,25 +29,34 @@ class D3DShot(Shot):
     efit_derivs = ['beta_p', 'li', 'Wmhd']
     nominal_flattop_radius = 0.59
 
-    def __init__(self, shot_id, efit_tree_name, data_columns=DEFAULT_SHOT_COLUMNS, data=None, times=None):
+    def __init__(self, shot_id, efit_tree_name, data_columns=DEFAULT_SHOT_COLUMNS, data=None, times=None, override_cols=True):
         super().__init__(shot_id, data_columns, data)
         self.conn = MDSplus.Connection('atlas.gat.com')
-        print(self.conn)
         self.efit_tree_name = str(efit_tree_name)
         self.data = data
         self._times = times
+        self.override_cols = override_cols
         if self.data is None:
             self.data = pd.DataFrame()
-            self._populate_shot_data()
         else:
             try:
                 self._times = self.data['time']
             except KeyError as e:
                 print("WARNING: Shot constructor was passed data but no timebase.")
+        self._populate_shot_data(data is None)
 
-    def _populate_shot_data(self):
-        self.data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(
-        ), self.get_ip_parameters(), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters()], ignore_index=True)
+    def _populate_shot_data(self, already_populated=False):
+        local_data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(
+        ), self.get_ip_parameters(), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters()], axis=1)
+        if not already_populated:
+            self.data = local_data
+        else: 
+            for col in list(local_data.columns):
+                if col not in list(self.data.columns) or self.override_cols:
+                    print(len(local_data[col]))
+                    print(len(self.data)) 
+                    self.data[col] = local_data[col]
+        self.data['time'] = self._times
 
     def get_efit_parameters(self):
         print(self.efit_tree_name)
@@ -75,7 +84,8 @@ class D3DShot(Shot):
             for param in efit_data:
                 efit_data[param] = interp1(
                     efit_time, efit_data[param], self._times)
-        return pd.DataFrame([efit_data])
+        print(pd.DataFrame(efit_data).head())
+        return pd.DataFrame(efit_data)
 
     def get_power_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
@@ -159,7 +169,7 @@ class D3DShot(Shot):
         # Computer P_sol, defined as P_in - P_rad
         p_sol = p_input - p_rad
 
-        return pd.DataFrame([{'p_rad': p_rad, 'p_nbi': p_nbi, 'p_ech': p_ech, 'p_ohm': p_ohm, 'radiated_fraction': rad_fraction, 'v_loop': v_loop, 'p_input': p_input, 'p_sol': p_sol}])
+        return pd.DataFrame({'p_rad': p_rad, 'p_nbi': p_nbi, 'p_ech': p_ech, 'p_ohm': p_ohm, 'radiated_fraction': rad_fraction, 'v_loop': v_loop, 'p_input': p_input, 'p_sol': p_sol})
 
     def get_ohmic_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
@@ -190,7 +200,7 @@ class D3DShot(Shot):
             invalid_indices = None  # TODO: Finish
         except MdsException as e:
             p_ohm = np.full(len(self._times), np.nan)
-            return p_ohm, v_loop
+            return pd.DataFrame({'p_ohm': p_ohm, 'v_loop': v_loop})
         # [m] For simplicity, use fixed r_0 = 1.67 for DIII-D major radius
         r_0 = 1.67
         inductance = 4.*np.pi*r_0 * li/2  # [H]
@@ -200,7 +210,7 @@ class D3DShot(Shot):
         v_inductive = inductance * dipdt_smoothed  # [V]
         v_resistive = v_loop - v_inductive  # [V]
         p_ohm = ip * v_resistive  # [W]
-        return pd.DataFrame([{'p_ohm': p_ohm, 'v_loop': v_loop}])
+        return pd.DataFrame({'p_ohm': p_ohm, 'v_loop': v_loop})
 
     def get_density_parameters(self):
         ne = np.full(len(self._times), np.nan)
@@ -231,7 +241,7 @@ class D3DShot(Shot):
             # TODO: Fix this exception
             # TODO: Confirm that there is a separate exception if ptdata name doesn't exist
             print(f"Failed to get some parameter:{e}")
-        return pd.DataFrame([{'ne': ne, 'g_f': g_f, 'dne_dt': dne_dt}])
+        return pd.DataFrame({'n_e': ne, 'g_f': g_f, 'dne_dt': dne_dt})
 
     def get_rt_density_parameters(self):
         ne_rt = np.full(len(self._times), np.nan)
@@ -268,7 +278,7 @@ class D3DShot(Shot):
         except MdsException as e:
             # TODO: Better exception message
             print("Failed to get some parameter")
-        return pd.DataFrame([{'ne_rt': ne_rt, 'g_f_rt': g_f_rt, 'dne_dt_rt': dne_dt_rt}])
+        return pd.DataFrame({'ne_rt': ne_rt, 'g_f_rt': g_f_rt, 'dne_dt_rt': dne_dt_rt})
 
     def get_ip_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
@@ -342,7 +352,7 @@ class D3DShot(Shot):
         except mdsExceptions.TreeFOPENR as e:
             print("Failed to get epsoff signal")
             power_supply_railed = np.full(len(self._times), np.nan)
-        return pd.DataFrame([{'ip': ip, 'ip_prog': ip_prog, 'ip_error': ip_error, 'dip_dt': dip_dt, 'dipprog_dt': dipprog_dt, 'power_spuply_railed': power_supply_railed}])
+        return pd.DataFrame({'ip': ip, 'ip_prog': ip_prog, 'ip_error': ip_error, 'dip_dt': dip_dt, 'dipprog_dt': dipprog_dt, 'power_spuply_railed': power_supply_railed})
 
     def get_rt_ip_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
@@ -427,8 +437,8 @@ class D3DShot(Shot):
         except MdsException as e:
             print("Failed to get epsoff signal")
             power_supply_railed = np.full(len(self._times), np.nan)
-        return pd.DataFrame([{'ip_rt': ip_rt, 'ip_prog_rt': ip_prog_rt, 'ip_errort_rt': ip_error_rt,
-                              'dip_dt_rt': dip_dt_rt, 'dipprog_dt_rt': dipprog_dt_rt, 'power_supply_railed': power_supply_railed}])
+        return pd.DataFrame({'ip_rt': ip_rt, 'ip_prog_rt': ip_prog_rt, 'ip_errort_rt': ip_error_rt,
+                              'dip_dt_rt': dip_dt_rt, 'dipprog_dt_rt': dipprog_dt_rt, 'power_supply_railed': power_supply_railed})
 
     def get_z_parameters(self):
         """
@@ -451,23 +461,22 @@ class D3DShot(Shot):
             z_cur = self.conn.get(
                 f"ptdata('vpszp', {self._shot_id})").data()/1.e2  # [cm] -> [m]
             z_cur = interp1(t_z_cur, z_cur, self._times, 'linear')
+            self.conn.openTree(self.efit_tree_name, self._shot_id)
+            try:
+                t_a = self.conn.get(
+                    r"\efit_a_eqdsk:atime").data()/1.e3  # [ms] -> [s]
+                a_minor = self.conn.get(r"\efit_a_eqdsk:aminor").data()  # [m]
+                chisq = self.conn.get(r"\efit_a_eqdsk:chisq").data()
+                invalid_indices = np.where(chisq > 50)
+                a_minor[invalid_indices] = np.nan
+                a_minor = interp1(t_a, a_minor, self._times, 'linear')
+                z_cur_norm = z_cur/a_minor
+            except MdsException as e:
+                print("Failed to get efit parameters")
+                z_cur_norm = z_cur / self.nominal_flattop_radius
         except MdsException as e:
             print("Failed to get vpszp signal")
-            return z_cur, z_cur_norm, z_prog, z_error, z_error_norm
-        self.conn.openTree(self.efit_tree_name, self._shot_id)
-        try:
-            t_a = self.conn.get(
-                r"\efit_a_eqdsk:atime").data()/1.e3  # [ms] -> [s]
-            a_minor = self.conn.get(r"\efit_a_eqdsk:aminor").data()  # [m]
-            chisq = self.conn.get(r"\efit_a_eqdsk:chisq").data()
-            invalid_indices = np.where(chisq > 50)
-            a_minor[invalid_indices] = np.nan
-            a_minor = interp1(t_a, a_minor, self._times, 'linear')
-            z_cur_norm = z_cur/a_minor
-        except MdsException as e:
-            print("Failed to get efit parameters")
-            z_cur_norm = z_cur / self.nominal_flattop_radius
-        return pd.DataFrame([{'z_cur': z_cur, 'z_cur_norm': z_cur_norm, 'z_prog': z_prog, 'z_error': z_error, 'z_error_norm': z_error_norm}])
+        return pd.DataFrame({'z_cur': z_cur, 'z_cur_norm': z_cur_norm, 'z_prog': z_prog, 'z_error': z_error, 'z_error_norm': z_error_norm})
 
     # TODO: Complete n1 bradial method
     def get_n1_bradial(self):
@@ -610,25 +619,24 @@ class D3DShot(Shot):
                              'te_edge_85to90': te_edge_85to90, 'ne_edge_85to90': ne_edge_85to90, 'te_edge_90to95': te_edge_90to95, 'ne_edge_90to95': ne_edge_90to95, 'te_edge_95to100': te_edge_95to100, 'ne_edge_95to100': ne_edge_95to100, 'te_sep': te_sep, 'ne_sep': ne_sep})
 
     def get_zeff_parameters(self):
-
         self.conn.openTree('d3d', self._shot_id)
         # Get Zeff
         try:
             zeff = self.conn.get(
                 r"\d3d::top.spectroscopy.vb.zeff:zeff").data()
-            t_zeff = self.conn.get(
-                r"dim_of(\d3d::top.nb:pinj)").data()*1.e3  # [ms]->[s]
+            # t_nbi = self.conn.get(
+                # r"dim_of(\d3d::top.nb:pinj)").data()/1.e3  # [ms]->[s]
+            t_zeff = self.conn.get(r"dim_of(\d3d::top.spectroscopy.vb.zeff:zeff)").data()/1.e3 # [ms] -> [s]
             if len(t_zeff) > 2:
                 zeff = interp1(t_zeff, zeff, self._times,
                                'linear', bounds_error=False, fill_value=0.)
             else:
-                print("No zeff data found in this shot.")
                 zeff = np.zeros(len(self._times))
-        except mdsExceptions.TreeFOPENR as e:
+                print("No zeff data found in this shot.")
+        except MdsException as e:
             zeff = np.zeros(len(self._times))
             print("Failed to open Zeff node")
-
-        return pd.DataFrame({'Z_eff': zeff})
+        return pd.DataFrame({'z_eff': zeff})
 
     def _get_ne_te(self, data_source="blessed", ts_systems=['core', 'tangential']):
         if data_source == 'blessed':  # 'blessed' by Thomson group

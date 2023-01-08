@@ -10,13 +10,14 @@ File "/fusion/projects/disruption_warning/disruption-warning-db-workflow/disrupt
     raise MdsException(str(ans))
 MDSplus._mdsshr.MdsException: %TDI-E-INVDTYDSC, Storage data type is not valid
 
-This script generates a CSV containing all the shots that have this error for 'efit01'.
+This script generates a CSV containing all the shots that have this error for 'EFIT01'.
 """
 from disruption_py.database import create_d3d_handler
 import MDSplus
 
 
-def find_shots_with_bad_trees(table='disruption_warning', tree_to_check=['efit01']):
+
+def find_shots_with_bad_trees(table='disruption_warning',tree_to_check=['EFIT01']):
     """
     This function connects to the MDSplus server, and loops over all shots in the
     specified DIII-D table, attempting to open the 'trees_to_check' trees for each shot.

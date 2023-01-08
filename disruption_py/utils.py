@@ -10,7 +10,7 @@ from scipy.signal import lfilter, medfilt
 import numpy as np
 
 
-def interp1(x, y, new_x, kind='linear', bounds_error=True, fill_value=0):
+def interp1(x, y, new_x, kind='linear', bounds_error=False, fill_value='extrapolate'):
     """ 
     Interpolate a 1-D array.
 

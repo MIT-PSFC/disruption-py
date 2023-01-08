@@ -5,7 +5,7 @@ from disruption_py.database import create_d3d_handler
 This script demonstrates how to use disruption_py to generate a csv shot dataset
 with chosen columns.
 """
-FEATURE_COLUMNS = ['time', 'ip','n_e','Greenwald_fraction','Z_eff','bt0']  # Shot columns we want
+FEATURE_COLUMNS = ['time','n_e', 'ip','g_f','z_eff','bt0']  # Shot columns we want
 
 
 def generate_full_dataset():
