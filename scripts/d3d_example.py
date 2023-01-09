@@ -30,10 +30,10 @@ def generate_subset_dataset(shot_ids):
 if __name__ == '__main__':
     # generate_subset_dataset(['175552','175553'])
     shot_ids = ['191914','191786']
-    generate_subset_dataset(shot_ids)
+    # generate_subset_dataset(shot_ids)
     shots = []
     for shot_id in shot_ids:
         print(shot_id)
-        shots.append(D3DShot(shot_id, "EFIT01"))
+        shots.append(D3DShot(shot_id, "efit01"))
     df = pd.concat([shot.data[FEATURE_COLUMNS] for shot in shots])
     df.to_csv('d3d_shot_data_local.csv')

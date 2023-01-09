@@ -26,7 +26,7 @@ https://diii-d.gat.com/diii-d/Gadata_py
 class D3DShot(Shot):
     efit_vars = {'beta_n': '\efit_a_eqdsk:betan', 'beta_p': '\efit_a_eqdsk:betap', 'kappa': '\efit_a_eqdsk:kappa', 'li': '\efit_a_eqdsk:li', 'upper_gap': '\efit_a_eqdsk:gaptop', 'lower_gap': '\efit_a_eqdsk:gapbot',
                  'q0': '\efit_a_eqdsk:q0', 'qstar': '\efit_a_eqdsk:qstar', 'q95': '\efit_a_eqdsk:q95',  'v_loop_efit': '\efit_a_eqdsk:vsurf', 'wmhd': '\efit_a_eqdsk:wmhd', 'chisq': '\efit_a_eqdsk:chisq', 'bt0': '\efit_a_eqdsk:bt0'}
-    efit_derivs = ['beta_p', 'li', 'Wmhd']
+    efit_derivs = ['beta_p', 'li', 'wmhd']
     nominal_flattop_radius = 0.59
 
     def __init__(self, shot_id, efit_tree_name, data_columns=DEFAULT_SHOT_COLUMNS, data=None, times=None, override_cols=True):
@@ -44,13 +44,15 @@ class D3DShot(Shot):
             except KeyError as e:
                 print("WARNING: Shot constructor was passed data but no timebase.")
         self._populate_shot_data(data is None)
+        if 'time' not in list(self.data.columns):
+            self.data['time'] = self._times
 
     def _populate_shot_data(self, already_populated=False):
         local_data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(
-        ), self.get_ip_parameters(), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters(), self.get_n1_bradial()], axis=1)
+        ), self.get_ip_parameters(), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters()], axis=1)
+        local_data = local_data.loc[:, ~local_data.columns.duplicated()]
         if not already_populated:
             self.data = local_data
-            self.data['time'] = self._times
         else:
             for col in list(local_data.columns):
                 if col not in list(self.data.columns) or self.override_cols:
@@ -80,7 +82,6 @@ class D3DShot(Shot):
             for param in efit_data:
                 efit_data[param] = interp1(
                     efit_time, efit_data[param], self._times)
-        print(pd.DataFrame(efit_data).head())
         return pd.DataFrame(efit_data)
 
     def get_power_parameters(self):
@@ -800,4 +801,5 @@ class D3DShot(Shot):
 
 if __name__ == '__main__':
     shot = D3DShot(D3D_DISRUPTED_SHOT, 'EFIT05')
+    print(shot.data.columns)
     print(shot.data.head())
