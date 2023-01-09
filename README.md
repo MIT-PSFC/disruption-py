@@ -1,13 +1,26 @@
 # DisruptionPy
 
-## Installation 
-The following command will install the disruption warning package locally in develop mode. In develop mode, changes to the directory used for installation will be reflected in the installed package.    
-
-CMOD:  
+## Installation  
+Installation is cluster-specific:
+### CMOD:  
+The following command will install the disruption warning package locally in develop mode. In develop mode, changes to the directory used for installation will be reflected in the installed package.   
 ```
 pip3 install --user -e /home/hmturner/disruption_py
 ```
-D3D:
+### D3D:
+First we need to load the proper modules:
+```
+module load python/3
+module unload gcc-4.9.2
+module load gcc7/default
+```
+(OPTIONAL) Create and activate a new virtual env. I named it disruptions but feel free to name it whatever you want. 
+```
+python3 -m venv disruptions
+source disruptions/bin/activate
+```
+
+Finally, we'll install the package. The following command will install the disruption warning package locally in develop mode. In develop mode, changes to the directory used for installation will be reflected in the installed package.   
 ```
 pip3 install --user -e /fusion/projects/disruption_warning/disruption-warning-db-workflow/
 ```

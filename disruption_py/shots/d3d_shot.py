@@ -47,7 +47,7 @@ class D3DShot(Shot):
 
     def _populate_shot_data(self, already_populated=False):
         local_data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(
-        ), self.get_ip_parameters(), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters()], axis=1)
+        ), self.get_ip_parameters(), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters(), self.get_n1_bradial()], axis=1)
         if not already_populated:
             self.data = local_data
             self.data['time'] = self._times
@@ -348,7 +348,7 @@ class D3DShot(Shot):
         except mdsExceptions.TreeFOPENR as e:
             print("Failed to get epsoff signal")
             power_supply_railed = np.full(len(self._times), np.nan)
-        return pd.DataFrame({'ip': ip, 'ip_prog': ip_prog, 'ip_error': ip_error, 'dip_dt': dip_dt, 'dipprog_dt': dipprog_dt, 'power_spuply_railed': power_supply_railed})
+        return pd.DataFrame({'ip': ip, 'ip_prog': ip_prog, 'ip_error': ip_error, 'dip_dt': dip_dt, 'dipprog_dt': dipprog_dt, 'power_supply_railed': power_supply_railed})
 
     def get_rt_ip_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
@@ -358,7 +358,7 @@ class D3DShot(Shot):
         dip_dt_rt = np.full(len(self._times), np.nan)
         dipprog_dt_rt = np.full(len(self._times), np.nan)
         # Get measured plasma current parameters
-        try:  # TODO: Ask about using ipspr15V
+        try:
             t_ip_rt = self.conn.get(
                 f"dim_of(ptdata('ipsip', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
             ip_rt = self.conn.get(
@@ -474,7 +474,7 @@ class D3DShot(Shot):
             print("Failed to get vpszp signal")
         return pd.DataFrame({'z_cur': z_cur, 'z_cur_norm': z_cur_norm, 'z_prog': z_prog, 'z_error': z_error, 'z_error_norm': z_error_norm})
 
-    # TODO: Complete n1 bradial method
+    #TODO: Finish
     def get_n1_bradial(self):
         # The following shots are missing bradial calculations in MDSplus and must be loaded from a separate datafile
         if self._shot_id >= 176030 and self._shot_id <= 176912:
@@ -636,7 +636,16 @@ class D3DShot(Shot):
         return pd.DataFrame({'z_eff': zeff})
 
     def get_kappa_area(self):
-        self.conn.openTree
+        self.conn.openTree(self.efit_tree_name, self._shot_id)
+        a_minor = self.conn.get('\efit_a_eqdsk:aminor').data()
+        area = self.conn.get('\efit_a_eqdsk:area').data()
+        chisq = self.conn.get('\efit_a_eqdsk:chisq').data()
+        t = self.conn.get('\efit_a_eqdsk:atime')
+        kappa_area = area / (np.pi * a_minor**2)
+        invalid_indices = np.where(chisq > 50)
+        kappa_area[invalid_indices] = np.nan
+        kappa_area = interp1(t, kappa_area, self._times)
+        return pd.DataFrame({'kappa_area': kappa_area})
 
     def get_shape_parameters(self):
         self.conn.openTree(self.efit_tree_name, self._shot_id)
