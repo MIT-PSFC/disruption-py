@@ -25,7 +25,7 @@ https://diii-d.gat.com/diii-d/Gadata_py
 
 class D3DShot(Shot):
     efit_vars = {'beta_n': '\efit_a_eqdsk:betan', 'beta_p': '\efit_a_eqdsk:betap', 'kappa': '\efit_a_eqdsk:kappa', 'li': '\efit_a_eqdsk:li', 'upper_gap': '\efit_a_eqdsk:gaptop', 'lower_gap': '\efit_a_eqdsk:gapbot',
-                 'q0': '\efit_a_eqdsk:q0', 'qstar': '\efit_a_eqdsk:qstar', 'q95': '\efit_a_eqdsk:q95',  'v_loop_efit': '\efit_a_eqdsk:vsurf', 'Wmhd': '\efit_a_eqdsk:wmhd', 'chisq': '\efit_a_eqdsk:chisq', 'bt0': '\efit_a_eqdsk:bt0'}
+                 'q0': '\efit_a_eqdsk:q0', 'qstar': '\efit_a_eqdsk:qstar', 'q95': '\efit_a_eqdsk:q95',  'v_loop_efit': '\efit_a_eqdsk:vsurf', 'wmhd': '\efit_a_eqdsk:wmhd', 'chisq': '\efit_a_eqdsk:chisq', 'bt0': '\efit_a_eqdsk:bt0'}
     efit_derivs = ['beta_p', 'li', 'Wmhd']
     nominal_flattop_radius = 0.59
 
@@ -47,20 +47,16 @@ class D3DShot(Shot):
 
     def _populate_shot_data(self, already_populated=False):
         local_data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(
-        ), self.get_ip_parameters(), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters()], axis=1)
+        ), self.get_ip_parameters(), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters()], axis=1)
         if not already_populated:
             self.data = local_data
-        else: 
+            self.data['time'] = self._times
+        else:
             for col in list(local_data.columns):
                 if col not in list(self.data.columns) or self.override_cols:
-                    print(len(local_data[col]))
-                    print(len(self.data)) 
                     self.data[col] = local_data[col]
-        self.data['time'] = self._times
 
     def get_efit_parameters(self):
-        print(self.efit_tree_name)
-        print(self._shot_id)
         self.conn.openTree('d3d', self._shot_id)
         test = self.conn.openTree(self.efit_tree_name, self._shot_id)
         efit_data = {k: self.conn.get(v).data()
@@ -278,7 +274,7 @@ class D3DShot(Shot):
         except MdsException as e:
             # TODO: Better exception message
             print("Failed to get some parameter")
-        return pd.DataFrame({'ne_rt': ne_rt, 'g_f_rt': g_f_rt, 'dne_dt_rt': dne_dt_rt})
+        return pd.DataFrame({'n_e_rt': ne_rt, 'g_f_rt': g_f_rt, 'dne_dt_rt': dne_dt_rt})
 
     def get_ip_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
@@ -437,8 +433,8 @@ class D3DShot(Shot):
         except MdsException as e:
             print("Failed to get epsoff signal")
             power_supply_railed = np.full(len(self._times), np.nan)
-        return pd.DataFrame({'ip_rt': ip_rt, 'ip_prog_rt': ip_prog_rt, 'ip_errort_rt': ip_error_rt,
-                              'dip_dt_rt': dip_dt_rt, 'dipprog_dt_rt': dipprog_dt_rt, 'power_supply_railed': power_supply_railed})
+        return pd.DataFrame({'ip_rt': ip_rt, 'ip_prog_rt': ip_prog_rt, 'ip_error_rt': ip_error_rt,
+                             'dip_dt_rt': dip_dt_rt, 'dipprog_dt_rt': dipprog_dt_rt, 'power_supply_railed': power_supply_railed})
 
     def get_z_parameters(self):
         """
@@ -625,8 +621,9 @@ class D3DShot(Shot):
             zeff = self.conn.get(
                 r"\d3d::top.spectroscopy.vb.zeff:zeff").data()
             # t_nbi = self.conn.get(
-                # r"dim_of(\d3d::top.nb:pinj)").data()/1.e3  # [ms]->[s]
-            t_zeff = self.conn.get(r"dim_of(\d3d::top.spectroscopy.vb.zeff:zeff)").data()/1.e3 # [ms] -> [s]
+            # r"dim_of(\d3d::top.nb:pinj)").data()/1.e3  # [ms]->[s]
+            t_zeff = self.conn.get(
+                r"dim_of(\d3d::top.spectroscopy.vb.zeff:zeff)").data()/1.e3  # [ms] -> [s]
             if len(t_zeff) > 2:
                 zeff = interp1(t_zeff, zeff, self._times,
                                'linear', bounds_error=False, fill_value=0.)
@@ -637,6 +634,39 @@ class D3DShot(Shot):
             zeff = np.zeros(len(self._times))
             print("Failed to open Zeff node")
         return pd.DataFrame({'z_eff': zeff})
+
+    def get_kappa_area(self):
+        self.conn.openTree
+
+    def get_shape_parameters(self):
+        self.conn.openTree(self.efit_tree_name, self._shot_id)
+        efit_time = self.conn.get(
+            '\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
+        sqfod = self.conn.get('\efit_a_eqdsk:sqfod').data()
+        sqfou = self.conn.get('\efit_a_eqdsk:sqfou').data()
+        tritop = self.conn.get('\efit_a_eqdsk:tritop').data()  # meters
+        tribot = self.conn.get('\efit_a_eqdsk:tribot').data()  # meters
+        # plasma minor radius [m]
+        aminor = self.conn.get('\efit_a_eqdsk:aminor').data()
+        chisq = self.conn.get('\efit_a_eqdsk:chisq').data()
+        # Compute triangularity and squareness:
+        delta = (tritop+tribot)/2.0
+        squareness = (sqfod+sqfou)/2.0
+
+        # Remove invalid indices
+        invalid_indices = np.where(chisq > 50)
+        delta[invalid_indices] = np.nan
+        squareness[invalid_indices] = np.nan
+        aminor[invalid_indices] = np.nan
+
+        # Interpolate to desired times
+        delta = interp1(efit_time, delta, self._times, 'linear',
+                        bounds_error=False, fill_value=np.nan)
+        squareness = interp1(efit_time, squareness, self._times,
+                             'linear', bounds_error=False, fill_value=np.nan)
+        aminor = interp1(efit_time, aminor, self._times,
+                         'linear', bounds_error=False, fill_value=np.nan)
+        return pd.DataFrame({'delta': delta, 'squareness': squareness, 'a_minor': aminor})
 
     def _get_ne_te(self, data_source="blessed", ts_systems=['core', 'tangential']):
         if data_source == 'blessed':  # 'blessed' by Thomson group
