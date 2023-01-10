@@ -58,6 +58,10 @@ class D3DShot(Shot):
                 if col not in list(self.data.columns) or self.override_cols:
                     self.data[col] = local_data[col]
 
+    # TODO
+    def get_time_to_disrupt(self):
+        raise NotImplementedError()
+
     def get_efit_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
         test = self.conn.openTree(self.efit_tree_name, self._shot_id)
@@ -98,7 +102,7 @@ class D3DShot(Shot):
             else:
                 print("No NBI power data found in this shot.")
                 p_nbi = np.zeros(len(self._times))
-        except mdsExceptions.TreeFOPENR as e:
+        except MdsException as e:
             p_nbi = np.zeros(len(self._times))
             print("Failed to open NBI node")
         # Get electron cycholotrn heating (ECH) power. It's poitn data, so it's not stored in an MDSplus tree
@@ -309,7 +313,7 @@ class D3DShot(Shot):
             dipprog_dt = np.gradient(ip_prog, t_ip_prog)
             ip_prog = interp1(t_ip_prog, ip_prog, self._times, 'linear')
             dipprog_dt = interp1(t_ip_prog, dipprog_dt, self._times, 'linear')
-        except mdsExceptions.TreeFOPENR as e:
+        except MdsException as e:
             print("Failed to get programmed plasma current parameters")
         # Now get the signal pointname 'ipimode'.  This PCS signal denotes whether
         # or not PCS is actually feedback controlling the plasma current.  There
@@ -326,7 +330,7 @@ class D3DShot(Shot):
             t_ipimode = self.conn.get(
                 f"dim_of(ptdata('ipimode', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
             ipimode = interp1(t_ipimode, ipimode, self._times, 'linear')
-        except mdsExceptions.TreeFOPENR as e:
+        except MdsException as e:
             print("Failed to get ipimode signal")
             ipimode = np.full(len(self._times), np.nan)
         feedback_on_indices = np.where((ipimode == 0) | (ipimode == 3))
@@ -346,7 +350,7 @@ class D3DShot(Shot):
             power_supply_railed = np.zeros(len(self._times))
             power_supply_railed[railed_indices] = 1
             ip_error[railed_indices] = np.nan
-        except mdsExceptions.TreeFOPENR as e:
+        except MdsException as e:
             print("Failed to get epsoff signal")
             power_supply_railed = np.full(len(self._times), np.nan)
         return pd.DataFrame({'ip': ip, 'ip_prog': ip_prog, 'ip_error': ip_error, 'dip_dt': dip_dt, 'dipprog_dt': dipprog_dt, 'power_supply_railed': power_supply_railed})
