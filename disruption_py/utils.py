@@ -8,7 +8,8 @@ from scipy.interpolate import interp1d, interp2d, RegularGridInterpolator
 from scipy.optimize import curve_fit
 from scipy.signal import lfilter, medfilt
 import numpy as np
-
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 
 def interp1(x, y, new_x, kind='linear', bounds_error=False, fill_value='extrapolate'):
     """ 
@@ -531,3 +532,11 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         bolo_shot.channels[i].pwr = medfilt(
             (gam[i+1]*temp_filtered + tau[i+1]*dr_dt)/scrfact[i], window_size)
     return bolo_shot
+
+def save_open_plots(filename):
+   pp = PdfPages(filename)
+   fig_nums = plt.get_fignums()
+   figs = [plt.figure(n) for n in fig_nums]
+   for fig in figs:
+      fig.savefig(pp, format='pdf')
+   pp.close()

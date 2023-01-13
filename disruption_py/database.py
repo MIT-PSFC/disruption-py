@@ -6,11 +6,13 @@ except ImportError:
     import importlib_resources
 
 import pandas as pd
+from pandas.api.types import is_numeric_dtype
 import pymysql.cursors
 import jaydebeapi
 import matplotlib.pyplot as plt
 
 from disruption_py.shots import *
+from disruption_py.utils import save_open_plots
 import disruption_py.data
 
 # Alter queries for these columns will fail
@@ -172,6 +174,37 @@ class DatabaseHandler:
         """
         return self.query('select distinct shot from disruption_warning order by shot')
 
+
+class D3DHandler(DatabaseHandler):
+    def __init__(self, driver, driver_file, host, user, passwd, shot_class=D3DShot):
+        super().__init__(driver, driver_file, host +
+                         "database=d3drdb", user, passwd, shot_class)
+        self.tree_conn = jaydebeapi.connect(self.driver,
+                                            host +
+                                            "database=code_rundb", [
+                                                self.user, self.passwd],
+                                            self.driver_file)
+    
+    def get_efit_tree(self, shot_id):
+        with self.tree_conn.cursor() as curs:
+            curs.execute(f"select tree from plasmas where shot = {shot_id} and runtag = 'DIS' and deleted = 0 order by idx")
+            efit_trees = curs.fetchall()
+        efit_tree = efit_trees[-1][0]
+        return efit_tree
+                 
+    
+    def get_shot(self, shot_id, efit_tree=None):
+        shot_id = int(shot_id)
+        data_df = pd.read_sql_query(
+            f"select * from disruption_warning where shot = {shot_id} order by time", self.conn)
+        if efit_tree is None:
+            efit_tree = self.get_efit_tree(shot_id)
+        return D3DShot(shot_id, efit_tree, data=data_df)
+
+    # TODO: Make more efficient
+    def get_shots(self, shot_ids, efit_tree=None):
+        return [self.get_shot(shot_id, efit_tree) for shot_id in shot_ids]
+
     def validate_shot(self, shot_id, visualize_differences=False):
         """
         Compare shot data currently in disruption database to what is calculated by the shot object.
@@ -193,51 +226,30 @@ class DatabaseHandler:
         if true_shot is None:
             print("Shot not in database")
             return False
-        local_shot = Shot(shot_id)
-        comparison = true_shot.data - local_shot.data
+        local_shot = D3DShot(shot_id, self.get_efit_tree(shot_id))
+        comparison = pd.DataFrame()
+        for col in list(local_shot.data.columns):
+            if is_numeric_dtype(local_shot.data[col]):
+                comparison[col] = true_shot.data[col] - local_shot.data[col]
         comparison['time'] = true_shot.data['time']
         if not comparison.empty:
             print("Shot data is not correct")
+            for col in comparison.columns:
+                if (comparison[col] > 1e-10).any():
+                    plt.figure()
+                    plt.plot(comparison['time'],
+                             comparison[col], label='difference')
+                    plt.plot(
+                        true_shot.data['time'], true_shot.data[col], label='database')
+                    plt.plot(
+                        local_shot.data['time'], local_shot.data[col], label='local')
+                    plt.title(col)
+                    plt.legend()
+            save_open_plots('shot_error_graphs.pdf')
             if visualize_differences:
-                for col in comparison.columns:
-                    if (comparison[col] > 1e-10).any():
-                        plt.plot(comparison['time'],
-                                 comparison[col], label='difference')
-                        plt.plot(
-                            true_shot.data['time'], true_shot.data[col], label='database')
-                        plt.plot(
-                            local_shot.data['time'], local_shot.data[col], label='local')
-                        plt.title(col)
-                        plt.show()
+                plt.show()
             return False
         return True
-
-
-class D3DHandler(DatabaseHandler):
-    def __init__(self, driver, driver_file, host, user, passwd, shot_class=D3DShot):
-        super().__init__(driver, driver_file, host +
-                         "database=d3drdb", user, passwd, shot_class)
-        self.tree_conn = jaydebeapi.connect(self.driver,
-                                            host +
-                                            "database=code_rundb", [
-                                                self.user, self.passwd],
-                                            self.driver_file)
-
-    def get_shot(self, shot_id, efit_tree=None):
-        shot_id = int(shot_id)
-        data_df = pd.read_sql_query(
-            f"select * from disruption_warning where shot = {shot_id} order by time", self.conn)
-        if efit_tree is None:
-            with self.tree_conn.cursor() as curs:
-                curs.execute(
-                    f"select tree from plasmas where shot = {shot_id} and runtag = 'DIS' and deleted = 0 order by idx")
-                efit_trees = curs.fetchall()
-            efit_tree = efit_trees[-1][0]
-        return D3DShot(shot_id, efit_tree, data=data_df)
-
-    # TODO: Make more efficient
-    def get_shots(self, shot_ids, efit_tree=None):
-        return [self.get_shot(shot_id, efit_tree) for shot_id in shot_ids]
 
 
 def create_cmod_handler():
