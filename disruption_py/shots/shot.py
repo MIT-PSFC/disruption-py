@@ -11,7 +11,7 @@ DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
 
 
 class Shot:
-    def __init__(self, shot_id, data_columns, data=None):
+    def __init__(self, shot_id, data=None):
         self._shot_id = int(shot_id)
         self._metadata = {
             'labels': {},

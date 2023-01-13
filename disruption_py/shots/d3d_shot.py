@@ -29,8 +29,8 @@ class D3DShot(Shot):
     efit_derivs = ['beta_p', 'li', 'wmhd']
     nominal_flattop_radius = 0.59
 
-    def __init__(self, shot_id, efit_tree_name, data_columns=DEFAULT_SHOT_COLUMNS, data=None, times=None, override_cols=True):
-        super().__init__(shot_id, data_columns, data)
+    def __init__(self, shot_id, efit_tree_name, data=None, times=None, override_cols=True):
+        super().__init__(shot_id, data)
         self.conn = MDSplus.Connection('atlas.gat.com')
         self.efit_tree_name = str(efit_tree_name)
         self.data = data
