@@ -479,11 +479,10 @@ class D3DShot(Shot):
             print("Failed to get vpszp signal")
         return pd.DataFrame({'z_cur': z_cur, 'z_cur_norm': z_cur_norm, 'z_prog': z_prog, 'z_error': z_error, 'z_error_norm': z_error_norm})
 
-    #TODO: Finish
-    def get_n1_bradial(self):
+    def get_n1_bradial_parameters(self):
         # The following shots are missing bradial calculations in MDSplus and must be loaded from a separate datafile
         if self._shot_id >= 176030 and self._shot_id <= 176912:
-            # TODO: Confirm permanent location with Cristina
+            # TODO: Move to a folder like "/fusion/projects/disruption_warning/data"
             filename = '/fusion/projects/disruption_warning/matlab_programs/recalc.nc'
             ncid = nc.Dataset(filename, 'r')
             brad = ncid.variables['dusbradial_calculated'][:]
@@ -500,22 +499,33 @@ class D3DShot(Shot):
         # Check ONFR than DUD(legacy)
         else:
             try:
-                n_equal_1_mode, _ = self.get_signal(
+                dusbradial, t_n1 = self.get_signal(
                     f"ptdata('onsbradial',{self._shot_id})")*1.e-4  # [T]
             except MdsException as e:
                 try:
-                    n_equal_1_mode, _ = self.get_signal(
+                    dusbradial, t_n1 = self.get_signal(
                         f"ptdata('dusbradial',{self._shot_id})")*1.e-4  # [T]
                 except MdsException as e:
                     print("Failed to get n1 bradial signal")
                     n_equal_1_mode = np.full(len(self._times), np.nan)
                     n_equal_1_normalized = np.full(len(self._times), np.nan)
                     return pd.DataFrame({'n_equal_1_normalized': n_equal_1_normalized, 'n_equal_1_mode': n_equal_1_mode})
+        n_equal_1_mode = interp1(dusbradial, t_n1, self._times)
         # Get toroidal field Btor
         b_tor, _ = self.get_signal(
             "ptdata('bt',{self._shot_id})")  # [T]
         n_equal_1_normalized = n_equal_1_mode/b_tor
         return pd.DataFrame({'n_equal_1_normalized': n_equal_1_normalized, 'n_equal_1_mode': n_equal_1_mode})
+
+    def get_n1rms_parameters(self):
+        self.conn.openTree('d3d', self._shot_id)
+        n1rms, t_n1rms = self.get_signal('\n1rms', interpolate=False)
+        n1rms *= 1.e-4  # Gauss -> Tesla
+        n1rms = interp1(t_n1rms, n1rms, self._times)
+        b_tor = self.get_signal(
+            "ptdata('bt',{self._shot_id})")  # [T]
+        n1rms_norm = n1rms / np.abs(b_tor)
+        return pd.DataFrame({'n1rms': n1rms, 'n1rms_normalized': n1rms_norm})
 
     # TODO: Finish. Remember to concatenate core and tangential laser data(r and z) in _get_p_rad
     def get_peaking_factors(self):
@@ -651,6 +661,16 @@ class D3DShot(Shot):
         kappa_area[invalid_indices] = np.nan
         kappa_area = interp1(t, kappa_area, self._times)
         return pd.DataFrame({'kappa_area': kappa_area})
+
+    def get_h_parameters(self):
+        h98 = np.full(len(self._times), np.nan)
+        self.conn.openTree('transport', self._shot_id)
+        h98, t_h98 = self.get_signal('\H_THH98Y2')
+        self.conn.openTree('d3d')
+        h_alpha, t_h_alpha = self.get_signal('\fs04')
+        h98 = interp1(t_h98, h98, self._times)
+        h_alpha = interp1(t_h_alpha, h_alpha, self._times)
+        return pd.DataFrame({'h_98': h98, 'h_alpha': h_alpha})
 
     def get_shape_parameters(self):
         self.conn.openTree(self.efit_tree_name, self._shot_id)

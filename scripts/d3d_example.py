@@ -19,8 +19,11 @@ def generate_full_dataset():
     # Save to csv
     df.to_csv('d3d_shot_data.csv')
 
-# Same as generate_full_dataset but for a subset of shots 
+
 def generate_subset_dataset(shot_ids):
+    """
+    Same as generate_full_dataset but for a subset of shots
+    """
     handler = create_d3d_handler()
     shots = handler.get_shots(shot_ids)
     df = pd.concat([shot.data[FEATURE_COLUMNS] for shot in shots])
@@ -29,7 +32,7 @@ def generate_subset_dataset(shot_ids):
 
 if __name__ == '__main__':
     # generate_subset_dataset(['175552','175553'])
-    shot_ids = ['191914','191786']
+    shot_ids = ['191914', '191786']
     # generate_subset_dataset(shot_ids)
     shots = []
     for shot_id in shot_ids:
