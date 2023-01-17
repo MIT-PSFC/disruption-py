@@ -1,4 +1,5 @@
 import os
+import logging
 try:
     import importlib.resources as importlib_resources
 except ImportError:
@@ -20,6 +21,9 @@ PROTECTED_COLUMNS = ['dbkey', 'shot', 'time', 'time_until_disrupt', 'ip_error', 
                      'ip', 'zcur', 'n_e', 'dipprog_dt', 'v_loop', 'p_rad', 'p_oh', 'ssep', 'dWmhd_dt', 'dprad_dt', 'v_0_uncalibrated', 'Te_width', 'Greenwald_fraction', 'intentional_disruption', 'Te_width_ECE', 'Wmhd', 'n_over_ncrit', 'n_equal_1_mode', 'Mirnov', 'Mirnov_norm_btor', 'Mirnov_norm_bpol', 'Te_peaking', 'ne_peaking', 'Te_peaking_ECE', 'SXR_peaking', 'kappa_area', 'I_efc', 'SXR', 'H_alpha', 'Prad_peaking_CVA', 'commit_hash']
 # [s] Time frame for which an insertion into SQL database becomes an update
 TIME_CONST = 1e-6
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
 
 
 class DatabaseHandler:
@@ -46,7 +50,7 @@ class DatabaseHandler:
         if "alter" in query.lower():
             for col in PROTECTED_COLUMNS:
                 if col in query.lower():
-                    print("ERROR: PROTECTED COLUMN")
+                    logger.error(f"PROTECTED COLUMN: {col}")
                     return 0
         if use_pandas:
             return pd.read_sql_query(query, self.conn)
@@ -57,8 +61,8 @@ class DatabaseHandler:
             if "select" in query.lower():
                 output = curs.fetchall()
         except jaydebeapi.DatabaseError as e:
-            print(e)
-            print("ERROR: Query failed, returning None")
+            logger.debug(e)
+            logger.error("Query failed, returning None")
         curs.close()
         return output
 
@@ -92,7 +96,7 @@ class DatabaseHandler:
                 return
             if update:
                 self._update_shot(shot.data, curr_df, curs)
-            print("Warning: Not updating shot")
+            logger.warning("Not updating shot")
 
     def _update_shot(shot_data, curr_df, curs):
         new_rows = []
@@ -149,7 +153,7 @@ class DatabaseHandler:
                 f"alter table {table} add {col_name} {var_type};", use_pandas=False)
             self.data_columns.append(col_name)
             return 1
-        print("Column already in database table")
+        logger.info("Column already in database table")
         return 0
 
     def remove_column(self, col_name, table="disruption_warning"):
@@ -158,7 +162,7 @@ class DatabaseHandler:
                 f"alter table {table} drop column {col_name};", use_pandas=False)
             self.data_columns.remove(col_name)
             return 1
-        print("Column not in database table")
+        logger.info("Column not in database table")
         return 0
 
     def get_disruption_shotlist(self):
@@ -184,15 +188,15 @@ class D3DHandler(DatabaseHandler):
                                             "database=code_rundb", [
                                                 self.user, self.passwd],
                                             self.driver_file)
-    
+
     def get_efit_tree(self, shot_id):
         with self.tree_conn.cursor() as curs:
-            curs.execute(f"select tree from plasmas where shot = {shot_id} and runtag = 'DIS' and deleted = 0 order by idx")
+            curs.execute(
+                f"select tree from plasmas where shot = {shot_id} and runtag = 'DIS' and deleted = 0 order by idx")
             efit_trees = curs.fetchall()
         efit_tree = efit_trees[-1][0]
         return efit_tree
-                 
-    
+
     def get_shot(self, shot_id, efit_tree=None):
         shot_id = int(shot_id)
         data_df = pd.read_sql_query(
@@ -224,7 +228,7 @@ class D3DHandler(DatabaseHandler):
         shot_id = int(shot_id)
         true_shot = self.get_shot(shot_id)
         if true_shot is None:
-            print("Shot not in database")
+            logging.debug("Shot not in database")
             return False
         local_shot = D3DShot(shot_id, self.get_efit_tree(shot_id))
         comparison = pd.DataFrame()
@@ -233,7 +237,7 @@ class D3DHandler(DatabaseHandler):
                 comparison[col] = true_shot.data[col] - local_shot.data[col]
         comparison['time'] = true_shot.data['time']
         if not comparison.empty:
-            print("Shot data is not correct")
+            logging.debug("Shot data is not correct")
             for col in comparison.columns:
                 if (comparison[col] > 1e-10).any():
                     plt.figure()
@@ -264,8 +268,8 @@ def create_cmod_handler():
         db_password = content[3]
     with importlib_resources.path(disruption_py.data, "sqljdbc4.jar") as p:
         db_driver_path = str(p)  # Absolute path to jar file
-    print(db_driver_path)
-    print(os.getcwd())
+    logging.debug(db_driver_path)
+    logging.debug(os.getcwd())
     return DatabaseHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver", db_driver_path, f"jdbc:sqlserver://{db_server}.psfc.mit.edu: 1433", db_username, db_password, shot_class=CmodShot)
 
 

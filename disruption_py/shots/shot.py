@@ -6,11 +6,15 @@ from MDSplus import *
 
 import pandas as pd
 import numpy as np
+import logging
 
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
 
 
 class Shot:
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.WARNING)
+
     def __init__(self, shot_id, data=None):
         self._shot_id = int(shot_id)
         self._metadata = {

@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
+import logging
+
 import pandas as pd
+import disruption_py
 from disruption_py.database import create_d3d_handler
 from disruption_py.shots import D3DShot
 """
@@ -31,6 +34,10 @@ def generate_subset_dataset(shot_ids):
 
 
 if __name__ == '__main__':
+    ch = logging.FileHandler('d3d_example.log')
+    ch.setLevel(logging.INFO)
+    disruption_py.shots.shot.logger.addHandler(ch)
+    disruption_py.database.logger.addHandler(ch)
     # generate_subset_dataset(['175552','175553'])
     shot_ids = ['191914', '191786']
     # generate_subset_dataset(shot_ids)

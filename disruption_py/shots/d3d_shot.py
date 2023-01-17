@@ -42,7 +42,8 @@ class D3DShot(Shot):
             try:
                 self._times = self.data['time']
             except KeyError as e:
-                print("WARNING: Shot constructor was passed data but no timebase.")
+                self.logger.warning(
+                    "Shot constructor was passed data but no timebase.")
         self._populate_shot_data(data is None)
         if 'time' not in list(self.data.columns):
             self.data['time'] = self._times
@@ -100,11 +101,11 @@ class D3DShot(Shot):
                 p_nbi = interp1(t_nbi, p_nbi, self._times,
                                 'linear', bounds_error=False, fill_value=0.)
             else:
-                print("No NBI power data found in this shot.")
+                self.logger.debug("No NBI power data found in this shot.")
                 p_nbi = np.zeros(len(self._times))
         except MdsException as e:
             p_nbi = np.zeros(len(self._times))
-            print("Failed to open NBI node")
+            self.logger.debug("Failed to open NBI node")
         # Get electron cycholotrn heating (ECH) power. It's poitn data, so it's not stored in an MDSplus tree
         self.conn.openTree('rf', self._shot_id)
         try:
@@ -115,11 +116,13 @@ class D3DShot(Shot):
                 p_ech = interp1(t_ech, p_ech, self._times,
                                 'linear', bounds_error=False, fill_value=0.)
             else:
-                print("No ECH power data found in this shot.")
+                self.logger.info(
+                    "No ECH power data found in this shot. Setting to zeros")
                 p_ech = np.zeros(len(self._times))
         except MdsException as e:
             p_ech = np.zeros(len(self._times))
-            print("Failed to open ECH node")
+            self.logger.info("Failed to open ECH node. Setting to zeros")
+            self.logger.debug(e)
         # Get ohmic power and loop voltage
         p_ohm, v_loop = self.get_ohmic_parameters()
         # Radiated power
@@ -183,6 +186,8 @@ class D3DShot(Shot):
             v_loop = scipy.signal.medfilt(v_loop, 11)
             v_loop = interp1(t_v_loop, v_loop, self._times, 'linear')
         except MdsException as e:
+            self.logger.debug(e)
+            self.logger.info("Failed to open VLOOPB node. Setting to NaN.")
             v_loop = np.full(len(self._times), np.nan)
             t_v_loop = v_loop.copy()
        # Get plasma current
@@ -200,6 +205,9 @@ class D3DShot(Shot):
             # Filter out invalid indices of efit reconstruction
             invalid_indices = None  # TODO: Finish
         except MdsException as e:
+            self.logger.debug(e)
+            self.logger.info(
+                "Unable to get plasma current data. p_ohm set to NaN.")
             p_ohm = np.full(len(self._times), np.nan)
             return pd.DataFrame({'p_ohm': p_ohm, 'v_loop': v_loop})
         # [m] For simplicity, use fixed r_0 = 1.67 for DIII-D major radius
@@ -239,9 +247,9 @@ class D3DShot(Shot):
             n_g = ip/1.e6 / (np.pi*a_minor**2)  # [MA/m^2]
             g_f = ne/1.e20 / n_g  # TODO: Fill in units
         except MdsException as e:
-            # TODO: Fix this exception
             # TODO: Confirm that there is a separate exception if ptdata name doesn't exist
-            print(f"Failed to get some parameter:{e}")
+            self.logger.info(f"Failed to get some parameter")
+            self.logger.debug(e)
         return pd.DataFrame({'n_e': ne, 'g_f': g_f, 'dne_dt': dne_dt})
 
     def get_rt_density_parameters(self):
@@ -277,8 +285,8 @@ class D3DShot(Shot):
             n_g_rt = ip/1.e6 / (np.pi*a_minor_rt**2)  # [MA/m^2]
             g_f_rt = ne_rt/1.e20 / n_g_rt  # TODO: Fill in units
         except MdsException as e:
-            # TODO: Better exception message
-            print("Failed to get some parameter")
+            self.logger.info("Failed to get some parameter")
+            self.logger.debug(e)
         return pd.DataFrame({'n_e_rt': ne_rt, 'g_f_rt': g_f_rt, 'dne_dt_rt': dne_dt_rt})
 
     def get_ip_parameters(self):
@@ -297,7 +305,8 @@ class D3DShot(Shot):
             ip = interp1(t_ip, ip, self._times, 'linear')
             dip_dt = interp1(t_ip, dip_dt, self._times, 'linear')
         except MdsException as e:
-            print("Failed to get measured plasma current parameters")
+            self.logger.debug(
+                "Failed to get measured plasma current parameters")
         # Get programmed plasma current parameters
         try:
             t_ip_prog = self.conn.get(
@@ -314,7 +323,9 @@ class D3DShot(Shot):
             ip_prog = interp1(t_ip_prog, ip_prog, self._times, 'linear')
             dipprog_dt = interp1(t_ip_prog, dipprog_dt, self._times, 'linear')
         except MdsException as e:
-            print("Failed to get programmed plasma current parameters")
+            self.logger.info(
+                "Failed to get programmed plasma current parameters")
+            self.logger.debug(e)
         # Now get the signal pointname 'ipimode'.  This PCS signal denotes whether
         # or not PCS is actually feedback controlling the plasma current.  There
         # are times when feedback of Ip is purposely turned off, such as during
@@ -331,7 +342,8 @@ class D3DShot(Shot):
                 f"dim_of(ptdata('ipimode', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
             ipimode = interp1(t_ipimode, ipimode, self._times, 'linear')
         except MdsException as e:
-            print("Failed to get ipimode signal")
+            self.logger.info("Failed to get ipimode signal. Setting to NaN.")
+            self.logger.debug(e)
             ipimode = np.full(len(self._times), np.nan)
         feedback_on_indices = np.where((ipimode == 0) | (ipimode == 3))
         ip_error[feedback_on_indices] = ip[feedback_on_indices] - \
@@ -351,7 +363,8 @@ class D3DShot(Shot):
             power_supply_railed[railed_indices] = 1
             ip_error[railed_indices] = np.nan
         except MdsException as e:
-            print("Failed to get epsoff signal")
+            self.logger.info("Failed to get epsoff signal. Setting to NaN.")
+            self.logger.debug(e)
             power_supply_railed = np.full(len(self._times), np.nan)
         return pd.DataFrame({'ip': ip, 'ip_prog': ip_prog, 'ip_error': ip_error, 'dip_dt': dip_dt, 'dipprog_dt': dipprog_dt, 'power_supply_railed': power_supply_railed})
 
@@ -372,7 +385,8 @@ class D3DShot(Shot):
             ip_rt = interp1(t_ip_rt, ip_rt, self._times, 'linear')
             dip_dt_rt = interp1(t_ip_rt, dip_dt_rt, self._times, 'linear')
         except MdsException as e:
-            print("Failed to get measured plasma current parameters")
+            self.logger.debug(
+                "Failed to get measured plasma current parameters")
         # Get programmed plasma current parameters
         try:
             t_ip_prog_rt = self.conn.get(
@@ -382,7 +396,9 @@ class D3DShot(Shot):
             polarity = np.unique(self.conn.get(
                 f"ptdata('iptdirect', {self._shot_id})").data())
             if len(polarity) > 1:
-                print("Polarity of Ip target is not constant")
+                self.logger.info(
+                    "Polarity of Ip target is not constant. Setting to first value in array.")
+                self.logger.debug(f"Polarity array: {polarity}")
                 polarity = polarity[0]
             ip_prog_rt = ip_prog_rt * polarity
             dipprog_dt_rt = np.gradient(ip_prog_rt, t_ip_prog_rt)
@@ -391,7 +407,9 @@ class D3DShot(Shot):
             dipprog_dt_rt = interp1(
                 t_ip_prog_rt, dipprog_dt_rt, self._times, 'linear')
         except MdsException as e:
-            print("Failed to get programmed plasma current parameters")
+            self.logger.info(
+                "Failed to get programmed plasma current parameters")
+            self.logger.debug(e)
         try:
             t_ip_error_rt = self.conn.get(
                 f"dim_of(ptdata('ipeecoil', {self._shot_id}))").data()/1.e3  # [ms] to [s]
@@ -400,7 +418,8 @@ class D3DShot(Shot):
             ip_error_rt = interp1(
                 t_ip_error_rt, ip_error_rt, self._times, 'linear')
         except MdsException as e:
-            print("Failed to get ipeecoil signal")
+            self.logger.info("Failed to get ipeecoil signal. Setting to NaN.")
+            self.logger.debug(e)
         # Now get the signal pointname 'ipimode'.  This PCS signal denotes whether
         # or not PCS is actually feedback controlling the plasma current.  There
         # are times when feedback of Ip is purposely turned off, such as during
@@ -417,7 +436,8 @@ class D3DShot(Shot):
                 f"dim_of(ptdata('ipimode', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
             ipimode = interp1(t_ipimode, ipimode, self._times, 'linear')
         except MdsException as e:
-            print("Failed to get ipimode signal")
+            self.logger.info("Failed to get ipimode signal. Setting to NaN.")
+            self.logger.debug(e)
             ipimode = np.full(len(self._times), np.nan)
         feedback_off_indices = np.where((ipimode != 0) & (ipimode == 3))
         ip_error_rt[feedback_off_indices] = np.nan
@@ -436,7 +456,9 @@ class D3DShot(Shot):
             power_supply_railed[railed_indices] = 1
             ip_error_rt[railed_indices] = np.nan
         except MdsException as e:
-            print("Failed to get epsoff signal")
+            self.logger.info(
+                "Failed to get epsoff signal. power_supply_railed will be NaN.")
+            self.logger.debug(e)
             power_supply_railed = np.full(len(self._times), np.nan)
         return pd.DataFrame({'ip_rt': ip_rt, 'ip_prog_rt': ip_prog_rt, 'ip_error_rt': ip_error_rt,
                              'dip_dt_rt': dip_dt_rt, 'dipprog_dt_rt': dipprog_dt_rt, 'power_supply_railed': power_supply_railed})
@@ -473,10 +495,12 @@ class D3DShot(Shot):
                 a_minor = interp1(t_a, a_minor, self._times, 'linear')
                 z_cur_norm = z_cur/a_minor
             except MdsException as e:
-                print("Failed to get efit parameters")
+                self.logger.info("Failed to get efit parameters")
+                self.logger.debug(e)
                 z_cur_norm = z_cur / self.nominal_flattop_radius
         except MdsException as e:
-            print("Failed to get vpszp signal")
+            self.logger.info("Failed to get vpszp signal")
+            self.logger.debug(e)
         return pd.DataFrame({'z_cur': z_cur, 'z_cur_norm': z_cur_norm, 'z_prog': z_prog, 'z_error': z_error, 'z_error_norm': z_error_norm})
 
     def get_n1_bradial_parameters(self):
@@ -492,7 +516,7 @@ class D3DShot(Shot):
             if len(shot_indices) == 1:
                 dusbradial = brad[shot_indices, :]*1.e-4  # [T]
             else:
-                print(
+                self.logger.info(
                     f"Shot {self._shot_id} not found in {filename}.  Returning NaN.")
                 dusbradial = np.full(len(self._times), np.nan)
             ncid.close()
@@ -502,11 +526,14 @@ class D3DShot(Shot):
                 dusbradial, t_n1 = self.get_signal(
                     f"ptdata('onsbradial',{self._shot_id})")*1.e-4  # [T]
             except MdsException as e:
+                self.logger.debug(e)
                 try:
                     dusbradial, t_n1 = self.get_signal(
                         f"ptdata('dusbradial',{self._shot_id})")*1.e-4  # [T]
                 except MdsException as e:
-                    print("Failed to get n1 bradial signal")
+                    self.logger.info(
+                        "Failed to get n1 bradial signal. Returning NaN.")
+                    self.logger.debug(e)
                     n_equal_1_mode = np.full(len(self._times), np.nan)
                     n_equal_1_normalized = np.full(len(self._times), np.nan)
                     return pd.DataFrame({'n_equal_1_normalized': n_equal_1_normalized, 'n_equal_1_mode': n_equal_1_mode})
@@ -556,15 +583,15 @@ class D3DShot(Shot):
             efit_dict = self._get_efit_dict
             ts['psin'], ts['rho_vn'] = efit_rz_interp(ts, efit_dict)
         except Exception as e:
-            print(e)
+            self.logger.debug(e)
             ts = 0
         try:
             p_rad = self._get_p_rad()
         except Exception as e:
-            print(e)
+            self.logger.debug(e)
             p_rad = 0
         if p_rad == 0 and ts == 0:
-            print(
+            self.logger.info(
                 f"Both TS and bolometer data missing for shot #{self._shot_id}")
         if ts != 0:
             # Drop data outside of valid range
@@ -614,10 +641,10 @@ class D3DShot(Shot):
             efit_dict = self._get_efit_dict
             ts['psin'], ts['rho_vn'] = efit_rz_interp(ts, efit_dict)
         except Exception as e:
-            print(e)
+            self.logger.debug(e)
             ts = 0
         if ts == 0:
-            print(
+            self.logger.info(
                 f"Both TS data missing for shot #{self._shot_id}")
         if ts != 0:
             # Drop data outside of valid range #ADM: this looks unfinished
@@ -644,10 +671,11 @@ class D3DShot(Shot):
                                'linear', bounds_error=False, fill_value=0.)
             else:
                 zeff = np.zeros(len(self._times))
-                print("No zeff data found in this shot.")
+                self.logger.info("No zeff data found in this shot.")
         except MdsException as e:
             zeff = np.zeros(len(self._times))
-            print("Failed to open Zeff node")
+            self.logger.info("Failed to open Zeff node")
+            self.logger.debug(e)
         return pd.DataFrame({'z_eff': zeff})
 
     def get_kappa_area(self):
