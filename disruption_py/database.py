@@ -132,6 +132,7 @@ class DatabaseHandler:
         data_df = pd.read_sql_query(
             f"select * from disruption_warning where shot = {shot_id} order by time", self.conn)
         if self.shot_class == CModShot:
+            logger.info(f"Grabbed shot: {shot_id}")
             return CModShot('cmod', shot_id, data=data_df)
         elif self.shot_class == D3DShot:
             # TODO: Better exception

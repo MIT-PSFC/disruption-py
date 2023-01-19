@@ -1,0 +1,6 @@
+INFO:root:Failed to open ECH node. Setting to zeros
+INFO:root:Failed to open VLOOPB node. Setting to NaN.
+INFO:root:Unable to get plasma current data. p_ohm set to NaN.
+INFO:root:Failed to open ECH node. Setting to zeros
+INFO:root:Failed to open VLOOPB node. Setting to NaN.
+INFO:root:Unable to get plasma current data. p_ohm set to NaN.

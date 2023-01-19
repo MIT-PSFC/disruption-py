@@ -10,10 +10,8 @@ import logging
 
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
 
-
 class Shot:
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.WARNING)
+    logger = logging.getLogger()
 
     def __init__(self, shot_id, data=None):
         self._shot_id = int(shot_id)
