@@ -101,19 +101,20 @@ class D3DShot(Shot):
                 p_nbi = interp1(t_nbi, p_nbi, self._times,
                                 'linear', bounds_error=False, fill_value=0.)
             else:
-                self.logger.debug(
+                self.logger.info(
                     f"[Shot {self._shot_id}]:No NBI power data found in this shot.")
                 p_nbi = np.zeros(len(self._times))
         except MdsException as e:
             p_nbi = np.zeros(len(self._times))
-            self.logger.debug(
+            self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to open NBI node")
+            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
         # Get electron cycholotrn heating (ECH) power. It's poitn data, so it's not stored in an MDSplus tree
         self.conn.openTree('rf', self._shot_id)
         try:
-            p_ech = self.conn.get(r"\top.ech.totl:echpwrc").data()  # [W]
+            p_ech = self.conn.get(r"\top.ech.total:echpwrc").data()  # [W]
             t_ech = self.conn.get(
-                r"dim_of(\top.ech.totl:echpwrc)").data()/1.e3  # [ms]->[s]
+                r"dim_of(\top.ech.total:echpwrc)").data()/1.e3  # [ms]->[s]
             if len(t_ech) > 2:
                 p_ech = interp1(t_ech, p_ech, self._times,
                                 'linear', bounds_error=False, fill_value=0.)
@@ -183,15 +184,15 @@ class D3DShot(Shot):
         # Get edge loop voltage and smooth it a bit with a median filter
         try:
             v_loop = self.conn.get(
-                f"ptdata('vloopb', {self._shot_id})").data()  # [V]
+                f'ptdata("vloopb", {self._shot_id})').data()  # [V]
             t_v_loop = self.conn.get(
-                f"dim_of(ptdata('vloopb', {self._shot_id})").data()/1.e3  # [ms]->[s]
+                f'dim_of(ptdata("vloopb", {self._shot_id})').data()/1.e3  # [ms]->[s]
             v_loop = scipy.signal.medfilt(v_loop, 11)
             v_loop = interp1(t_v_loop, v_loop, self._times, 'linear')
         except MdsException as e:
-            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to open VLOOPB node. Setting to NaN.")
+            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
             v_loop = np.full(len(self._times), np.nan)
             t_v_loop = v_loop.copy()
        # Get plasma current
@@ -209,9 +210,9 @@ class D3DShot(Shot):
             # Filter out invalid indices of efit reconstruction
             invalid_indices = None  # TODO: Finish
         except MdsException as e:
-            self.logger.debug(f"[Shot {self._shot_id}]:e")
             self.logger.info(
                 f"[Shot {self._shot_id}]:Unable to get plasma current data. p_ohm set to NaN.")
+            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
             p_ohm = np.full(len(self._times), np.nan)
             return pd.DataFrame({'p_ohm': p_ohm, 'v_loop': v_loop})
         # [m] For simplicity, use fixed r_0 = 1.67 for DIII-D major radius
@@ -311,8 +312,9 @@ class D3DShot(Shot):
             ip = interp1(t_ip, ip, self._times, 'linear')
             dip_dt = interp1(t_ip, dip_dt, self._times, 'linear')
         except MdsException as e:
-            self.logger.debug(
+            self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to get measured plasma current parameters")
+            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
         # Get programmed plasma current parameters
         try:
             t_ip_prog = self.conn.get(
@@ -393,8 +395,9 @@ class D3DShot(Shot):
             ip_rt = interp1(t_ip_rt, ip_rt, self._times, 'linear')
             dip_dt_rt = interp1(t_ip_rt, dip_dt_rt, self._times, 'linear')
         except MdsException as e:
-            self.logger.debug(
+            self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to get measured plasma current parameters")
+            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
         # Get programmed plasma current parameters
         try:
             t_ip_prog_rt = self.conn.get(
