@@ -186,7 +186,7 @@ class D3DShot(Shot):
             v_loop = self.conn.get(
                 f'ptdata("vloopb", {self._shot_id})').data()  # [V]
             t_v_loop = self.conn.get(
-                f'dim_of(ptdata("vloopb", {self._shot_id})').data()/1.e3  # [ms]->[s]
+                f'dim_of(ptdata("vloopb", {self._shot_id}))').data()/1.e3  # [ms]->[s]
             v_loop = scipy.signal.medfilt(v_loop, 11)
             v_loop = interp1(t_v_loop, v_loop, self._times, 'linear')
         except MdsException as e:
@@ -199,7 +199,7 @@ class D3DShot(Shot):
         try:
             ip = self.conn.get(f"ptdata('ip', {self._shot_id})").data()  # [A]
             t_ip = self.conn.get(
-                f"dim_of(ptdata('ip', {self._shot_id})").data()/1.e3  # [ms] -> [s]
+                f"dim_of(ptdata('ip', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
             # We choose a 20-point width for gsastd. This means a 10ms window for ip smoothing
             diptdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
             self.conn.openTree(self.efit_tree_name, self.shot_id)
