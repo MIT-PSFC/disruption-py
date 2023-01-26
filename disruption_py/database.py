@@ -175,7 +175,7 @@ class DatabaseHandler:
 
     def get_disruption_table_shotlist(self):
         """ 
-        Get pandas dataframe of all shots in the disruption table.
+        Get pandas dataframe of all shots in the disruption_warning table.
         """
         return self.query('select distinct shot from disruption_warning order by shot')
 

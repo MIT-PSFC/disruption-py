@@ -24,17 +24,24 @@ https://diii-d.gat.com/diii-d/Gadata_py
 
 
 class D3DShot(Shot):
+    # Tokamak Variables
+    nominal_flattop_radius = 0.59
+    # EFIT Variables
     efit_cols = {'beta_n': '\efit_a_eqdsk:betan', 'beta_p': '\efit_a_eqdsk:betap', 'kappa': '\efit_a_eqdsk:kappa', 'li': '\efit_a_eqdsk:li', 'upper_gap': '\efit_a_eqdsk:gaptop', 'lower_gap': '\efit_a_eqdsk:gapbot',
                  'q0': '\efit_a_eqdsk:q0', 'qstar': '\efit_a_eqdsk:qstar', 'q95': '\efit_a_eqdsk:q95',  'v_loop_efit': '\efit_a_eqdsk:vsurf', 'wmhd': '\efit_a_eqdsk:wmhd', 'chisq': '\efit_a_eqdsk:chisq', 'bt0': '\efit_a_eqdsk:bt0'}
     efit_derivs = ['beta_p', 'li', 'wmhd']
-    nominal_flattop_radius = 0.59
+    # Disruption Variables
+    dt_before_disruption = 0.002
+    duration_before_disruption = 0.10
 
-    def __init__(self, shot_id, efit_tree_name, data=None, times=None, override_cols=True):
+    def __init__(self, shot_id, efit_tree_name, data=None, times=None, disruption_time=None, override_cols=True):
         super().__init__(shot_id, data)
+        self._times = times
         self.conn = MDSplus.Connection('atlas.gat.com')
         self.efit_tree_name = str(efit_tree_name)
         self.data = data
-        self._times = times
+        self.disruption_time = disruption_time
+        self.disrupted = self.disruption_time is not None
         self.override_cols = override_cols
         if self.data is None:
             self.data = pd.DataFrame()
@@ -49,6 +56,7 @@ class D3DShot(Shot):
             self.data['time'] = self._times
 
     def _populate_shot_data(self, already_populated=False):
+        self._times = self.get_disruption_timebase()
         local_data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(
         ), self.get_ip_parameters(), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters()], axis=1)
         local_data = local_data.loc[:, ~local_data.columns.duplicated()]
@@ -59,7 +67,58 @@ class D3DShot(Shot):
                 if col not in list(self.data.columns) or self.override_cols:
                     self.data[col] = local_data[col]
 
+    def get_disruption_timebase(self, minimum_ip=4.e5, minimum_duration=0.1):
+        self.conn.openTree('d3d', self._shot_id)
+        ip = self.conn.get(f'ptdata("ip", {self._shot_id})').data()
+        ip_time = self.conn.get(
+            f'ptdata("ip", {self._shot_id}, "time")').data()
+        baseline = np.mean(ip[0:10])
+        ip = ip - baseline
+        duration, ip_max = self.get_end_of_shot(ip, ip_time, 100e3)
+        if duration < minimum_duration or np.abs(ip_max) < minimum_ip:
+            raise NotImplementedError()
+        times = np.arange(0.100, duration, 0.025)
+        if self.disrupted:
+            additional_times = np.arange(
+                self.disruption_time-self.duration_before_disruption, self.disruption_time, self.dt_before_disruption)
+            times = np.where(times < (self.disruption_time -
+                             self.duration_before_disruption))
+            times = np.concatenate((times, additional_times))
+        return times
+
+    def get_end_of_shot(self, signal, signal_time, threshold=1.e5):
+        duration = 0
+        signal_max = 0
+        if threshold < 0:
+            raise Warning("Threshold is negative.")
+        base_indices = np.where(signal_time <= 0.0)
+        if len(base_indices) > 0:
+            baseline = np.mean(signal[base_indices])
+        else:
+            baseline = 0
+        signal = signal - baseline
+        # Check if there was a finite signal otherwise consider the shot a "no plasma" shot
+        finite_indices = np.where(
+            signal_time >= 0.0 & np.abs(signal) > threshold)
+        if len(finite_indices) == 0:
+            return duration, signal_max
+        else:
+            dt = np.diff(signal_time)
+            duration = np.sum(dt[finite_indices[:-1]])
+            if duration < 0.1:  # Assuming < 100 ms is not a bona fide plasma
+                duration = 0
+                return duration, signal_max
+        polarity = np.sign(
+            np.trapz(signal_time[finite_indices], signal[finite_indices]))
+        polarized_signal = polarity * signal
+        valid_indices = np.where(
+            polarized_signal > threshold & signal_time > 0.0)
+        if len(valid_indices) == signal_time.size:
+            duration = - duration
+        signal_max = np.max(signal)
+        return duration, signal_max
     # TODO
+
     def get_time_to_disrupt(self):
         raise NotImplementedError()
 
