@@ -16,6 +16,7 @@ from MDSplus import *
 from disruption_py.utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power, efit_rz_interp
 import disruption_py.data
 D3D_DISRUPTED_SHOT = 175552
+D3D_MAX_SHOT_TIME = 7.0  # [s]
 """
 Useful Examples:
 https://diii-d.gat.com/diii-d/MDSplusAPI_Python_pg1
@@ -39,33 +40,30 @@ class D3DShot(Shot):
         self._times = times
         self.conn = MDSplus.Connection('atlas.gat.com')
         self.efit_tree_name = str(efit_tree_name)
-        self.data = data
         self.disruption_time = disruption_time
         self.disrupted = self.disruption_time is not None
         self.override_cols = override_cols
+        self.data = data
         if self.data is None:
-            self.data = pd.DataFrame()
+            self._populate_shot_data()
         else:
             try:
-                self._times = self.data['time']
+                self._times = self.data['time'].to_numpy()
+                # Check if the timebase is in ms instead of s
+                if self._times.iloc[-1] > D3D_MAX_SHOT_TIME:
+                    self._times /= 1000  # [ms] -> [s]
             except KeyError as e:
                 self.logger.warning(
                     f"[Shot {self._shot_id}]:Shot constructor was passed data but no timebase.")
-        self._populate_shot_data(data is None)
-        if 'time' not in list(self.data.columns):
-            self.data['time'] = self._times
+                self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+                self._times = self.get_disruption_timebase()
 
-    def _populate_shot_data(self, already_populated=False):
+    def _populate_shot_data(self):
         self._times = self.get_disruption_timebase()
-        local_data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(
-        ), self.get_ip_parameters(), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters()], axis=1)
+        local_data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(), self.get_ip_parameters(
+        ), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters()], axis=1)
         local_data = local_data.loc[:, ~local_data.columns.duplicated()]
-        if not already_populated:
-            self.data = local_data
-        else:
-            for col in list(local_data.columns):
-                if col not in list(self.data.columns) or self.override_cols:
-                    self.data[col] = local_data[col]
+        self.data = local_data
 
     def get_disruption_timebase(self, minimum_ip=4.e5, minimum_duration=0.1):
         self.conn.openTree('d3d', self._shot_id)
@@ -153,9 +151,9 @@ class D3DShot(Shot):
         # Get neutral beam injected power
         try:
             p_nbi = self.conn.get(
-                r"\d3d::top.nb:pinj").data()*1.e3  # [KW]->[W]
+                r"\d3d::top.nb:pinj").data()*1.e3  # [KW] -> [W]
             t_nbi = self.conn.get(
-                r"dim_of(\d3d::top.nb:pinj)").data()*1.e3  # [ms]->[s]
+                r"dim_of(\d3d::top.nb:pinj)").data()*1.e3  # [ms] -> [s]
             if len(t_nbi) > 2:
                 p_nbi = interp1(t_nbi, p_nbi, self._times,
                                 'linear', bounds_error=False, fill_value=0.)
@@ -173,7 +171,7 @@ class D3DShot(Shot):
         try:
             p_ech = self.conn.get(r"\top.ech.total:echpwrc").data()  # [W]
             t_ech = self.conn.get(
-                r"dim_of(\top.ech.total:echpwrc)").data()/1.e3  # [ms]->[s]
+                r"dim_of(\top.ech.total:echpwrc)").data()/1.e3  # [ms] -> [s]
             if len(t_ech) > 2:
                 p_ech = interp1(t_ech, p_ech, self._times,
                                 'linear', bounds_error=False, fill_value=0.)
