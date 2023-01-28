@@ -263,11 +263,11 @@ def deriv(x, y):
     d: array
         The derivative of the dataset.
     """
-    n = len(y)
+    n = len(y)-1
     d = np.zeros(y.shape)
     d[0] = (y[1]-y[0])/(x[1]-x[0])
     d[n] = (y[n]-y[n-1])/(x[n]-x[n-1])
-    for i in range(1, n-1):
+    for i in range(1, n):
         d[i] = (y[i+1]-y[i-1])/(x[i+1]-x[i-1])
     return d
 
@@ -328,7 +328,7 @@ def smooth(y, smooth_width, ends_type):
     w = np.round(smooth_width)
     sum_points = np.sum(y[:w])
     s = np.zeros(y.shape)
-    half_w = np.round(w/2.0)
+    half_w = int(np.round(w/2.0))
     l = len(y)
     for i in range(l-w):
         s[i+half_w-1] = sum_points
