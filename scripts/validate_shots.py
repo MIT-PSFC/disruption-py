@@ -7,6 +7,7 @@ from disruption_py.database import *
 TEST_D3D_SHOT_LIST = [175552, 191914, '191786']
 
 if __name__ == '__main__':
+    logging.basicConfig(filename='validation.log', level=logging.DEBUG)
     parser = argparse.ArgumentParser(
         description="Validate shots against their information in the disruption databases.")
     parser.add_argument('shot_list', nargs='*',
@@ -17,4 +18,4 @@ if __name__ == '__main__':
     if args.shot_list:
         shot_list = args.shot_list
     for shot in shot_list:
-        d3d.validate_shot(shot, visualize_differences=True)
+        d3d.validate_shot(shot, visualize_differences=False)

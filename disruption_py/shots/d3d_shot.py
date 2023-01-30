@@ -44,28 +44,34 @@ class D3DShot(Shot):
         self.disrupted = self.disruption_time is not None
         self.override_cols = override_cols
         self.data = data
-        if self.data is None:
-            self._populate_shot_data()
-        else:
+        if self.data is not None and self._times is None:
             try:
                 self._times = self.data['time'].to_numpy()
                 # Check if the timebase is in ms instead of s
-                if self._times.iloc[-1] > D3D_MAX_SHOT_TIME:
+                if self._times[-1] > D3D_MAX_SHOT_TIME:
                     self._times /= 1000  # [ms] -> [s]
             except KeyError as e:
                 self.logger.warning(
                     f"[Shot {self._shot_id}]:Shot constructor was passed data but no timebase.")
                 self.logger.debug(f"[Shot {self._shot_id}]:{e}")
                 self._times = self.get_disruption_timebase()
+        else: 
+            self._times = self.get_disruption_timebase()
+        self._populate_shot_data(data is not None)
 
-    def _populate_shot_data(self):
-        self._times = self.get_disruption_timebase()
+    def _populate_shot_data(self,already_populated=False):
         local_data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(), self.get_ip_parameters(
         ), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters(), self.get_time_to_disrupt()], axis=1)
         local_data = local_data.loc[:, ~local_data.columns.duplicated()]
-        self.data = local_data
+        if not already_populated:
+            self.data = local_data
+            self.data['time'] = self._times
+        else:
+            for col in list(local_data.columns):
+                if col not in list(self.data.columns) or self.override_cols:
+                    self.data[col] = local_data[col]
 
-    def get_disruption_timebase(self, minimum_ip=4.e5, minimum_duration=0.1):
+    def get_disruption_timebase(self, minimum_ip=4.e3, minimum_duration=0.1):
         self.conn.openTree('d3d', self._shot_id)
         ip = self.conn.get(f'ptdata("ip", {self._shot_id})').data()
         ip_time = self.conn.get(
@@ -75,12 +81,12 @@ class D3DShot(Shot):
         duration, ip_max = self.get_end_of_shot(ip, ip_time, 100e3)
         if duration < minimum_duration or np.abs(ip_max) < minimum_ip:
             raise NotImplementedError()
-        times = np.arange(0.100, duration, 0.025)
+        times = np.arange(0.100, duration+0.025, 0.025)
         if self.disrupted:
             additional_times = np.arange(
-                self.disruption_time-self.duration_before_disruption, self.disruption_time, self.dt_before_disruption)
-            times = np.where(times < (self.disruption_time -
-                             self.duration_before_disruption))
+                self.disruption_time-self.duration_before_disruption, self.disruption_time + self.dt_before_disruption, self.dt_before_disruption)
+            times = times[np.where(times < (self.disruption_time -
+                             self.duration_before_disruption))]
             times = np.concatenate((times, additional_times))
         return times
 
@@ -97,7 +103,7 @@ class D3DShot(Shot):
         signal = signal - baseline
         # Check if there was a finite signal otherwise consider the shot a "no plasma" shot
         finite_indices = np.where(
-            signal_time >= 0.0 & np.abs(signal) > threshold)
+            (signal_time >= 0.0) & (np.abs(signal) > threshold))
         if len(finite_indices) == 0:
             return duration, signal_max
         else:
@@ -110,7 +116,7 @@ class D3DShot(Shot):
             np.trapz(signal_time[finite_indices], signal[finite_indices]))
         polarized_signal = polarity * signal
         valid_indices = np.where(
-            polarized_signal > threshold & signal_time > 0.0)
+            (polarized_signal >= threshold) & (signal_time > 0.0))
         if len(valid_indices) == signal_time.size:
             duration = - duration
         signal_max = np.max(signal)
@@ -201,13 +207,13 @@ class D3DShot(Shot):
         # and powers.pro).  I converted them into Matlab routines, and modified the
         # analysis so that the smoothing is causal, and uses a shorter window.
         smoothing_window = 0.010  # [s]
+        self.conn.openTree("bolom", self._shot_id)
         bol_prm, _ = self.get_signal(r"\bol_prm", interpolate=False)
         lower_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
         upper_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
         bol_channels = lower_channels + upper_channels
         bol_signals = []
         bol_times = []
-        self.conn.openTree("bolom", self._shot_id)
         for i in range(48):
             bol_signal, bol_time = self.get_signal(
                 fr"\top.raw:{bol_channels[i]}", interpolate=False)
@@ -263,8 +269,8 @@ class D3DShot(Shot):
             t_ip = self.conn.get(
                 f"dim_of(ptdata('ip', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
             # We choose a 20-point width for gsastd. This means a 10ms window for ip smoothing
-            diptdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
-            self.conn.openTree(self.efit_tree_name, self.shot_id)
+            dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
+            self.conn.openTree(self.efit_tree_name, self._shot_id)
             li = self.conn.get(r"\efit_a_eqdsk:li").data()
             t_li = self.conn.get(
                 r"dim_of(\efit_a_eqdsk:li)").data()/1.e3  # [ms] -> [s]
@@ -386,7 +392,8 @@ class D3DShot(Shot):
             polarity = np.unique(self.conn.get(
                 f"ptdata('iptdirect', {self._shot_id})").data())
             if len(polarity) > 1:
-                print("Polarity of Ip target is not constant")
+                self.logger.info(f"[Shot {self._shot_id}]:Polarity of Ip target is not constant. Using value at first timestep.")
+                self.logger.debug(f"[Shot {self._shot_id}]: Polarity array {polarity}")
                 polarity = polarity[0]
             ip_prog = ip_prog * polarity
             dipprog_dt = np.gradient(ip_prog, t_ip_prog)
@@ -855,7 +862,8 @@ class D3DShot(Shot):
                     lasers[laser]['ne'] == 0)] = np.nan
             except MdsException as e:
                 lasers[laser] == None
-                print(f"Failed to get {laser} data")
+                self.logger.info(f"[Shot {self._shot_id}]: Failed to get {laser} data")
+                self.logger.debug(f"[Shot {self._shot_id}]: {e}")
         # If both systems/lasers available, combine them and interpolate the data
         # from the tangential system onto the finer (core) timebase
         if 'tangential' in lasers and lasers['tangential'] is not None:

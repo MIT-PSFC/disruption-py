@@ -8,6 +8,7 @@ except ImportError:
 
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
+import numpy as np
 import pymysql.cursors
 import jaydebeapi
 import matplotlib.pyplot as plt
@@ -120,7 +121,7 @@ class DatabaseHandler:
         data_df = pd.read_sql_query(
             f'''select * from disruption_warning where shot = {shot_id} order by time''', self.conn)
         if len(data_df) == 0:
-            print("Shot does not exist in database")
+            logger.info(f"Shot {shot_id} does not exist in database")
             return
         with self.conn.cursor() as curs:
             curs.execute(
@@ -195,8 +196,18 @@ class D3DHandler(DatabaseHandler):
             curs.execute(
                 f"select tree from plasmas where shot = {shot_id} and runtag = 'DIS' and deleted = 0 order by idx")
             efit_trees = curs.fetchall()
+        if len(efit_trees) == 0:
+            return None
         efit_tree = efit_trees[-1][0]
         return efit_tree
+    
+    def get_disruption_time(self, shot_id):
+        with self.conn.cursor() as curs:
+            curs.execute(f"select t_disrupt from disruptions where shot = {shot_id}")
+            t_disrupt = curs.fetchall()[0]
+        if t_disrupt is not None:
+            t_disrupt = t_disrupt[0]
+        return t_disrupt
 
     def get_shot(self, shot_id, efit_tree=None):
         shot_id = int(shot_id)
@@ -204,6 +215,9 @@ class D3DHandler(DatabaseHandler):
             f"select * from disruption_warning where shot = {shot_id} order by time", self.conn)
         if efit_tree is None:
             efit_tree = self.get_efit_tree(shot_id)
+            if efit_tree is None:
+                logging.info(f"Shot {shot_id} has no disruptions group efit run")
+                return None
         return D3DShot(shot_id, efit_tree, data=data_df)
 
     # TODO: Make more efficient
@@ -231,26 +245,31 @@ class D3DHandler(DatabaseHandler):
         if true_shot is None:
             logging.debug("Shot not in database")
             return False
-        local_shot = D3DShot(shot_id, self.get_efit_tree(shot_id))
+        local_shot = D3DShot(shot_id, self.get_efit_tree(shot_id), disruption_time = self.get_disruption_time(shot_id))
         comparison = pd.DataFrame()
         for col in list(local_shot.data.columns):
             if is_numeric_dtype(local_shot.data[col]):
-                comparison[col] = true_shot.data[col] - local_shot.data[col]
-        comparison['time'] = true_shot.data['time']
+                comparison[col] = np.abs((true_shot.data[col] - local_shot.data[col])/true_shot.data[col])
+        # if comparison['time'] != true_shot.data['time']
+        # plt.figure()
+        # plt.plot(true_shot.data['time'], label='database')
+        # plt.plot(local_shot.data['time'], label='local',linestyle="dotted")
+        # plt.title('time')
+        # plt.legend()
         if not comparison.empty:
             logging.debug("Shot data is not correct")
             for col in comparison.columns:
-                if (comparison[col] > 1e-10).any():
-                    plt.figure()
-                    plt.plot(comparison['time'],
-                             comparison[col], label='difference')
-                    plt.plot(
+                if (comparison[col] > 1e-6).any():
+                    fig, axs = plt.subplots(2,1, sharex=True)
+                    axs[0].plot(
                         true_shot.data['time'], true_shot.data[col], label='database')
-                    plt.plot(
-                        local_shot.data['time'], local_shot.data[col], label='local')
-                    plt.title(col)
-                    plt.legend()
-            save_open_plots('shot_error_graphs.pdf')
+                    axs[0].plot(
+                        local_shot.data['time'], local_shot.data[col], label='local',linestyle="dotted")
+                    axs[1].plot(local_shot.data['time'], comparison[col])
+                    axs[0].set_title(col)
+                    axs[1].set_title("Normalized Error")
+                    axs[0].legend()
+            save_open_plots(f"shot_{shot_id}_error_graphs.pdf")
             if visualize_differences:
                 plt.show()
             return False

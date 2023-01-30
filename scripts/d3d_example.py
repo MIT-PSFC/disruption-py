@@ -34,13 +34,16 @@ def generate_subset_dataset(shot_ids):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(filename='d3d_example.log', level=logging.INFO)
+    # Output to terminal
+    # logging.basicConfig(level=logging.DEBUG)
+
+    # Output to file:
+    logging.basicConfig(filename='d3d_example.log', level=logging.DEBUG)
+
     # generate_subset_dataset(['175552','175553'])
     shot_ids = ['191914', '191786']
-    # generate_subset_dataset(shot_ids)
     shots = []
     for shot_id in shot_ids:
-        disruption_py.database.logger.info(shot_id)
         shots.append(D3DShot(shot_id, "efit01"))
     df = pd.concat([shot.data[FEATURE_COLUMNS] for shot in shots])
     df.to_csv('d3d_shot_data_local.csv')
