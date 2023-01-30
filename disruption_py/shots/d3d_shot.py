@@ -29,8 +29,8 @@ class D3DShot(Shot):
     nominal_flattop_radius = 0.59
     # EFIT Variables
     efit_cols = {'beta_n': '\efit_a_eqdsk:betan', 'beta_p': '\efit_a_eqdsk:betap', 'kappa': '\efit_a_eqdsk:kappa', 'li': '\efit_a_eqdsk:li', 'upper_gap': '\efit_a_eqdsk:gaptop', 'lower_gap': '\efit_a_eqdsk:gapbot',
-                 'q0': '\efit_a_eqdsk:q0', 'qstar': '\efit_a_eqdsk:qstar', 'q95': '\efit_a_eqdsk:q95',  'v_loop_efit': '\efit_a_eqdsk:vsurf', 'wmhd': '\efit_a_eqdsk:wmhd', 'chisq': '\efit_a_eqdsk:chisq', 'bt0': '\efit_a_eqdsk:bt0'}
-    efit_derivs = ['beta_p', 'li', 'wmhd']
+                 'q0': '\efit_a_eqdsk:q0', 'qstar': '\efit_a_eqdsk:qstar', 'q95': '\efit_a_eqdsk:q95',  'v_loop_efit': '\efit_a_eqdsk:vsurf', 'Wmhd': '\efit_a_eqdsk:wmhd', 'chisq': '\efit_a_eqdsk:chisq', 'bt0': '\efit_a_eqdsk:bt0'}
+    efit_derivs = {'beta_p': 'dbetap_dt', 'li': 'dli_dt', 'Wmhd': 'dWmhd_dt'}
     # Disruption Variables
     dt_before_disruption = 0.002
     duration_before_disruption = 0.10
@@ -61,7 +61,7 @@ class D3DShot(Shot):
     def _populate_shot_data(self):
         self._times = self.get_disruption_timebase()
         local_data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(), self.get_ip_parameters(
-        ), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters()], axis=1)
+        ), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters(), self.get_time_to_disrupt()], axis=1)
         local_data = local_data.loc[:, ~local_data.columns.duplicated()]
         self.data = local_data
 
@@ -115,17 +115,19 @@ class D3DShot(Shot):
             duration = - duration
         signal_max = np.max(signal)
         return duration, signal_max
-    # TODO
 
     def get_time_to_disrupt(self):
-        raise NotImplementedError()
+        if self.disrupted:
+            return pd.DataFrame({'time_until_disrupt': self.disruption_time - self._times})
+        return pd.DataFrame({'time_until_disrupt': np.full(self._times.size, np.nan)})
 
     def get_efit_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
         test = self.conn.openTree(self.efit_tree_name, self._shot_id)
         efit_data = {k: self.conn.get(v).data()
                      for k, v in self.efit_cols.items()}
-        efit_time = self.conn.get('\efit_a_eqdsk:atime').data()/1.e3
+        efit_time = self.conn.get(
+            '\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
         if self._times is None:
             self._times = efit_time
         # EFIT reconstructions are sometimes invalid, particularly when very close
@@ -136,15 +138,18 @@ class D3DShot(Shot):
         invalid_indices = np.where(efit_data['chisq'] > 50)
         for param in efit_data:
             efit_data[param][invalid_indices] = np.nan
-        # self._times[invalid_indices] = np.nan
         for param in self.efit_derivs:
-            efit_data['d' + param +
-                      '_dt'] = np.gradient(efit_data[param], efit_time)
+            efit_data[self.efit_derivs[param]] = np.gradient(
+                efit_data[param], efit_time)
         if not np.array_equal(self._times, efit_time):
             for param in efit_data:
                 efit_data[param] = interp1(
                     efit_time, efit_data[param], self._times)
         return pd.DataFrame(efit_data)
+
+    # TODO
+    def get_rt_efit_parameters(self):
+        raise NotImplementedError("")
 
     def get_power_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
@@ -313,7 +318,7 @@ class D3DShot(Shot):
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to get some parameter")
             self.logger.debug(f"[Shot {self._shot_id}]::{e}")
-        return pd.DataFrame({'n_e': ne, 'g_f': g_f, 'dne_dt': dne_dt})
+        return pd.DataFrame({'n_e': ne, 'Greenwald_fraction': g_f, 'dn_dt': dne_dt})
 
     def get_rt_density_parameters(self):
         ne_rt = np.full(len(self._times), np.nan)
@@ -351,7 +356,7 @@ class D3DShot(Shot):
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to get some parameter")
             self.logger.debug(f"[Shot {self._shot_id}]:{e}")
-        return pd.DataFrame({'n_e_rt': ne_rt, 'g_f_rt': g_f_rt, 'dne_dt_rt': dne_dt_rt})
+        return pd.DataFrame({'n_e_RT': ne_rt, 'Greenwald_fraction_RT': g_f_rt, 'dne_dt_RT': dne_dt_rt})
 
     def get_ip_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
@@ -531,8 +536,8 @@ class D3DShot(Shot):
                 f"[Shot {self._shot_id}]:Failed to get epsoff signal. power_supply_railed will be NaN.")
             self.logger.debug(f"[Shot {self._shot_id}]:{e}")
             power_supply_railed = np.full(len(self._times), np.nan)
-        return pd.DataFrame({'ip_rt': ip_rt, 'ip_prog_rt': ip_prog_rt, 'ip_error_rt': ip_error_rt,
-                             'dip_dt_rt': dip_dt_rt, 'dipprog_dt_rt': dipprog_dt_rt, 'power_supply_railed': power_supply_railed})
+        return pd.DataFrame({'ip_RT': ip_rt, 'ip_error_RT': ip_error_rt,
+                             'dip_dt_RT': dip_dt_rt, 'dipprog_dt_RT': dipprog_dt_rt, 'power_supply_railed': power_supply_railed})
 
     def get_z_parameters(self):
         """
@@ -574,7 +579,7 @@ class D3DShot(Shot):
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to get vpszp signal")
             self.logger.debug(f"[Shot {self._shot_id}]:{e}")
-        return pd.DataFrame({'z_cur': z_cur, 'z_cur_norm': z_cur_norm, 'z_prog': z_prog, 'z_error': z_error, 'z_error_norm': z_error_norm})
+        return pd.DataFrame({'zcur': z_cur, 'zcur_normalized': z_cur_norm, 'z_prog': z_prog, 'z_error': z_error, 'z_error_normalized': z_error_norm})
 
     def get_n1_bradial_parameters(self):
         # The following shots are missing bradial calculations in MDSplus and must be loaded from a separate datafile
@@ -773,7 +778,7 @@ class D3DShot(Shot):
         h_alpha, t_h_alpha = self.get_signal('\fs04')
         h98 = interp1(t_h98, h98, self._times)
         h_alpha = interp1(t_h_alpha, h_alpha, self._times)
-        return pd.DataFrame({'h_98': h98, 'h_alpha': h_alpha})
+        return pd.DataFrame({'H98': h98, 'H_alpha': h_alpha})
 
     def get_shape_parameters(self):
         self.conn.openTree(self.efit_tree_name, self._shot_id)
@@ -803,7 +808,7 @@ class D3DShot(Shot):
                              'linear', bounds_error=False, fill_value=np.nan)
         aminor = interp1(efit_time, aminor, self._times,
                          'linear', bounds_error=False, fill_value=np.nan)
-        return pd.DataFrame({'delta': delta, 'squareness': squareness, 'a_minor': aminor})
+        return pd.DataFrame({'delta': delta, 'squareness': squareness, 'aminor': aminor})
 
     def _get_ne_te(self, data_source="blessed", ts_systems=['core', 'tangential']):
         if data_source == 'blessed':  # 'blessed' by Thomson group
