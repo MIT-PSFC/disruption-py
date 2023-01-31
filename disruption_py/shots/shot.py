@@ -10,8 +10,9 @@ import logging
 
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
 
+
 class Shot:
-    logger = logging.getLogger()
+    logger = logging.getLogger('disruption_py')
 
     def __init__(self, shot_id, data=None):
         self._shot_id = int(shot_id)

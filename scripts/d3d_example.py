@@ -34,11 +34,15 @@ def generate_subset_dataset(shot_ids):
 
 
 if __name__ == '__main__':
+    logger = logging.getLogger('disruption_py')
     # Output to terminal
-    # logging.basicConfig(level=logging.DEBUG)
+    # ch = logging.StreamHandler()
 
     # Output to file:
-    logging.basicConfig(filename='d3d_example.log', level=logging.DEBUG)
+    ch = logging.FileHandler('d3d_example.log')
+
+    ch.setLevel(logging.DEBUG)
+    logger.addHandler(ch)
 
     # generate_subset_dataset(['175552','175553'])
     shot_ids = ['191914', '191786']

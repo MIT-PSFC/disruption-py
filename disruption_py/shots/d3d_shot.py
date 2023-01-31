@@ -55,11 +55,11 @@ class D3DShot(Shot):
                     f"[Shot {self._shot_id}]:Shot constructor was passed data but no timebase.")
                 self.logger.debug(f"[Shot {self._shot_id}]:{e}")
                 self._times = self.get_disruption_timebase()
-        else: 
+        else:
             self._times = self.get_disruption_timebase()
         self._populate_shot_data(data is not None)
 
-    def _populate_shot_data(self,already_populated=False):
+    def _populate_shot_data(self, already_populated=False):
         local_data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(), self.get_ip_parameters(
         ), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters(), self.get_time_to_disrupt()], axis=1)
         local_data = local_data.loc[:, ~local_data.columns.duplicated()]
@@ -86,7 +86,7 @@ class D3DShot(Shot):
             additional_times = np.arange(
                 self.disruption_time-self.duration_before_disruption, self.disruption_time + self.dt_before_disruption, self.dt_before_disruption)
             times = times[np.where(times < (self.disruption_time -
-                             self.duration_before_disruption))]
+                                            self.duration_before_disruption))]
             times = np.concatenate((times, additional_times))
         return times
 
@@ -392,8 +392,10 @@ class D3DShot(Shot):
             polarity = np.unique(self.conn.get(
                 f"ptdata('iptdirect', {self._shot_id})").data())
             if len(polarity) > 1:
-                self.logger.info(f"[Shot {self._shot_id}]:Polarity of Ip target is not constant. Using value at first timestep.")
-                self.logger.debug(f"[Shot {self._shot_id}]: Polarity array {polarity}")
+                self.logger.info(
+                    f"[Shot {self._shot_id}]:Polarity of Ip target is not constant. Using value at first timestep.")
+                self.logger.debug(
+                    f"[Shot {self._shot_id}]: Polarity array {polarity}")
                 polarity = polarity[0]
             ip_prog = ip_prog * polarity
             dipprog_dt = np.gradient(ip_prog, t_ip_prog)
@@ -862,7 +864,8 @@ class D3DShot(Shot):
                     lasers[laser]['ne'] == 0)] = np.nan
             except MdsException as e:
                 lasers[laser] == None
-                self.logger.info(f"[Shot {self._shot_id}]: Failed to get {laser} data")
+                self.logger.info(
+                    f"[Shot {self._shot_id}]: Failed to get {laser} data")
                 self.logger.debug(f"[Shot {self._shot_id}]: {e}")
         # If both systems/lasers available, combine them and interpolate the data
         # from the tangential system onto the finer (core) timebase
