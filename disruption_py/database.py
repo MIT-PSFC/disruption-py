@@ -200,11 +200,11 @@ class D3DHandler(DatabaseHandler):
 
     def get_disruption_time(self, shot_id):
         with self.conn.cursor() as curs:
-            curs.execute(
-                f"select t_disrupt from disruptions where shot = {shot_id}")
-            t_disrupt = curs.fetchall()[0]
-        if t_disrupt is not None:
-            t_disrupt = t_disrupt[0]
+            curs.execute(f"select t_disrupt from disruptions where shot = {shot_id}")
+            t_disrupt = curs.fetchall()
+        if len(t_disrupt) == 0:
+            return None
+        t_disrupt = t_disrupt[0]
         return t_disrupt
 
     def get_shot(self, shot_id, efit_tree=None):
