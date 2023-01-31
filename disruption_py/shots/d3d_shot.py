@@ -31,6 +31,9 @@ class D3DShot(Shot):
     efit_cols = {'beta_n': '\efit_a_eqdsk:betan', 'beta_p': '\efit_a_eqdsk:betap', 'kappa': '\efit_a_eqdsk:kappa', 'li': '\efit_a_eqdsk:li', 'upper_gap': '\efit_a_eqdsk:gaptop', 'lower_gap': '\efit_a_eqdsk:gapbot',
                  'q0': '\efit_a_eqdsk:q0', 'qstar': '\efit_a_eqdsk:qstar', 'q95': '\efit_a_eqdsk:q95',  'v_loop_efit': '\efit_a_eqdsk:vsurf', 'Wmhd': '\efit_a_eqdsk:wmhd', 'chisq': '\efit_a_eqdsk:chisq', 'bt0': '\efit_a_eqdsk:bt0'}
     efit_derivs = {'beta_p': 'dbetap_dt', 'li': 'dli_dt', 'Wmhd': 'dWmhd_dt'}
+    rt_efit_cols = {'beta_p_RT': '\efit_a_eqdsk:betap', 'li_RT': '\efit_a_eqdsk:li',
+                    'q95_RT': '\efit_a_eqdsk:q95', 'Wmhd_RT': '\efit_a_eqdsk:wmhd', 'v_loop_efit_RT': '\efit_a_eqdsk:vsurf'}
+
     # Disruption Variables
     dt_before_disruption = 0.002
     duration_before_disruption = 0.10
@@ -60,7 +63,7 @@ class D3DShot(Shot):
         self._populate_shot_data(data is not None)
 
     def _populate_shot_data(self, already_populated=False):
-        local_data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(), self.get_ip_parameters(
+        local_data = pd.concat([self.get_efit_parameters(), self.get_rt_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(), self.get_ip_parameters(
         ), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters(), self.get_time_to_disrupt()], axis=1)
         local_data = local_data.loc[:, ~local_data.columns.duplicated()]
         if not already_populated:
@@ -128,8 +131,7 @@ class D3DShot(Shot):
         return pd.DataFrame({'time_until_disrupt': np.full(self._times.size, np.nan)})
 
     def get_efit_parameters(self):
-        self.conn.openTree('d3d', self._shot_id)
-        test = self.conn.openTree(self.efit_tree_name, self._shot_id)
+        self.conn.openTree(self.efit_tree_name, self._shot_id)
         efit_data = {k: self.conn.get(v).data()
                      for k, v in self.efit_cols.items()}
         efit_time = self.conn.get(
@@ -153,7 +155,51 @@ class D3DShot(Shot):
                     efit_time, efit_data[param], self._times)
         return pd.DataFrame(efit_data)
 
-    # TODO
+    def get_rt_efit_parameters(self):
+        self.conn.openTree('efitrt1', self._shot_id)
+        efit_data = {k: self.conn.get(v).data()
+                     for k, v in self.rt_efit_cols.items()}
+        efit_time = self.conn.get(
+            '\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
+        if self._times is None:
+            self._times = efit_time
+        # EFIT reconstructions are sometimes invalid, particularly when very close
+        # to a disruption.  There are a number of EFIT parameters that can indicate
+        # invalid reconstructions, such as 'terror' and 'chisq'.  Here we use
+        # 'chisq' to determine which time slices should be excluded from our
+        # disruption warning database.
+        invalid_indices = np.where(efit_data['chisq'] > 50)
+        for param in efit_data:
+            efit_data[param][invalid_indices] = np.nan
+        for param in self.efit_derivs:
+            efit_data[self.efit_derivs[param]] = np.gradient(
+                efit_data[param], efit_time)
+        if not np.array_equal(self._times, efit_time):
+            for param in efit_data:
+                efit_data[param] = interp1(
+                    efit_time, efit_data[param], self._times)
+        return pd.DataFrame(efit_data)
+
+    def get_H_parameters(self):
+        self.conn.openTree('transport', self._shot_id)
+        try:
+            h_98, _ = self.get_signal('\H_THH98Y2')
+        except ValueError as e:
+            self.logger.info(
+                f"[Shot {self._shot_id}]: Failed to get H98 signal. Returning NaNs.")
+            self.logger.debug(f"[Shot {self._shot_id}]: {e}")
+            h_98 = np.full(self._times.size, np.nan)
+        self.conn.openTree('d3d', self._shot_id)
+        try:
+            h_alpha, _ = self.get_signal('\fs04')
+        except ValueError as e:
+            self.logger.info(
+                f"[Shot {self._shot_id}]: Failed to get H_alpha signal. Returning NaNs.")
+            self.logger.debug(f"[Shot {self._shot_id}]: {e}")
+            h_alpha = np.full(self._times.size, np.nan)
+        return pd.DataFrame({'H98': h_98, 'H_alpha': h_alpha})
+
+    # TODO: Implement or remove this
     def get_rt_efit_parameters(self):
         raise NotImplementedError("")
 
