@@ -23,10 +23,7 @@ PROTECTED_COLUMNS = ['dbkey', 'shot', 'time', 'time_until_disrupt', 'ip_error', 
 # [s] Time frame for which an insertion into SQL database becomes an update
 TIME_CONST = 1e-6
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARNING)
-
-
+logger = logging.getLogger('disruption_py')
 class DatabaseHandler:
     """
     Handles grabbing data from MySQL server. 
@@ -200,10 +197,11 @@ class D3DHandler(DatabaseHandler):
             return None
         efit_tree = efit_trees[-1][0]
         return efit_tree
-    
+
     def get_disruption_time(self, shot_id):
         with self.conn.cursor() as curs:
-            curs.execute(f"select t_disrupt from disruptions where shot = {shot_id}")
+            curs.execute(
+                f"select t_disrupt from disruptions where shot = {shot_id}")
             t_disrupt = curs.fetchall()[0]
         if t_disrupt is not None:
             t_disrupt = t_disrupt[0]
@@ -216,7 +214,8 @@ class D3DHandler(DatabaseHandler):
         if efit_tree is None:
             efit_tree = self.get_efit_tree(shot_id)
             if efit_tree is None:
-                logging.info(f"Shot {shot_id} has no disruptions group efit run")
+                logging.info(
+                    f"Shot {shot_id} has no disruptions group efit run")
                 return None
         return D3DShot(shot_id, efit_tree, data=data_df)
 
@@ -245,11 +244,13 @@ class D3DHandler(DatabaseHandler):
         if true_shot is None:
             logging.debug("Shot not in database")
             return False
-        local_shot = D3DShot(shot_id, self.get_efit_tree(shot_id), disruption_time = self.get_disruption_time(shot_id))
+        local_shot = D3DShot(shot_id, self.get_efit_tree(
+            shot_id), disruption_time=self.get_disruption_time(shot_id))
         comparison = pd.DataFrame()
         for col in list(local_shot.data.columns):
             if is_numeric_dtype(local_shot.data[col]):
-                comparison[col] = np.abs((true_shot.data[col] - local_shot.data[col])/true_shot.data[col])
+                comparison[col] = np.abs(
+                    (true_shot.data[col] - local_shot.data[col])/true_shot.data[col])
         # if comparison['time'] != true_shot.data['time']
         # plt.figure()
         # plt.plot(true_shot.data['time'], label='database')
@@ -260,11 +261,11 @@ class D3DHandler(DatabaseHandler):
             logging.debug("Shot data is not correct")
             for col in comparison.columns:
                 if (comparison[col] > 1e-6).any():
-                    fig, axs = plt.subplots(2,1, sharex=True)
+                    fig, axs = plt.subplots(2, 1, sharex=True)
                     axs[0].plot(
                         true_shot.data['time'], true_shot.data[col], label='database')
                     axs[0].plot(
-                        local_shot.data['time'], local_shot.data[col], label='local',linestyle="dotted")
+                        local_shot.data['time'], local_shot.data[col], label='local', linestyle="dotted")
                     axs[1].plot(local_shot.data['time'], comparison[col])
                     axs[0].set_title(col)
                     axs[1].set_title("Normalized Error")
