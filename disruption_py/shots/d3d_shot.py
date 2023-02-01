@@ -29,10 +29,12 @@ class D3DShot(Shot):
     nominal_flattop_radius = 0.59
     # EFIT Variables
     efit_cols = {'beta_n': '\efit_a_eqdsk:betan', 'beta_p': '\efit_a_eqdsk:betap', 'kappa': '\efit_a_eqdsk:kappa', 'li': '\efit_a_eqdsk:li', 'upper_gap': '\efit_a_eqdsk:gaptop', 'lower_gap': '\efit_a_eqdsk:gapbot',
-                 'q0': '\efit_a_eqdsk:q0', 'qstar': '\efit_a_eqdsk:qstar', 'q95': '\efit_a_eqdsk:q95',  'v_loop_efit': '\efit_a_eqdsk:vsurf', 'Wmhd': '\efit_a_eqdsk:wmhd', 'chisq': '\efit_a_eqdsk:chisq', 'bt0': '\efit_a_eqdsk:bt0'}
+                 'q0': '\efit_a_eqdsk:q0', 'qstar': '\efit_a_eqdsk:qstar', 'q95': '\efit_a_eqdsk:q95', 'Wmhd': '\efit_a_eqdsk:wmhd', 'chisq': '\efit_a_eqdsk:chisq'}
+    # 'v_loop_efit': ,'\efit_a_eqdsk:vsurf', 'bt0': '\efit_a_eqdsk:bt0'
     efit_derivs = {'beta_p': 'dbetap_dt', 'li': 'dli_dt', 'Wmhd': 'dWmhd_dt'}
     rt_efit_cols = {'beta_p_RT': '\efit_a_eqdsk:betap', 'li_RT': '\efit_a_eqdsk:li',
-                    'q95_RT': '\efit_a_eqdsk:q95', 'Wmhd_RT': '\efit_a_eqdsk:wmhd', 'v_loop_efit_RT': '\efit_a_eqdsk:vsurf'}
+                    'q95_RT': '\efit_a_eqdsk:q95', 'Wmhd_RT': '\efit_a_eqdsk:wmhd', 'chisq':'\efit_a_eqdsk:chisq'}
+    # 'v_loop_efit_RT': '\efit_a_eqdsk:vsurf',
 
     # Disruption Variables
     dt_before_disruption = 0.002
@@ -70,15 +72,14 @@ class D3DShot(Shot):
             self.data = local_data
             self.data['time'] = self._times
         else:
+            return
             for col in list(local_data.columns):
                 if col not in list(self.data.columns) or self.override_cols:
                     self.data[col] = local_data[col]
 
-    def get_disruption_timebase(self, minimum_ip=4.e3, minimum_duration=0.1):
+    def get_disruption_timebase(self, minimum_ip=400.e3, minimum_duration=0.1):
         self.conn.openTree('d3d', self._shot_id)
-        ip = self.conn.get(f'ptdata("ip", {self._shot_id})').data()
-        ip_time = self.conn.get(
-            f'ptdata("ip", {self._shot_id}, "time")').data()
+        ip, ip_time = self.get_signal(f"ptdata('ip', {self._shot_id})", interpolate=False)             
         baseline = np.mean(ip[0:10])
         ip = ip - baseline
         duration, ip_max = self.get_end_of_shot(ip, ip_time, 100e3)
@@ -86,6 +87,7 @@ class D3DShot(Shot):
             raise NotImplementedError()
         times = np.arange(0.100, duration+0.025, 0.025)
         if self.disrupted:
+            print(self.disruption_time)
             additional_times = np.arange(
                 self.disruption_time-self.duration_before_disruption, self.disruption_time + self.dt_before_disruption, self.dt_before_disruption)
             times = times[np.where(times < (self.disruption_time -
@@ -108,6 +110,7 @@ class D3DShot(Shot):
         finite_indices = np.where(
             (signal_time >= 0.0) & (np.abs(signal) > threshold))
         if len(finite_indices) == 0:
+            print(" 'No plasma' shot.")
             return duration, signal_max
         else:
             dt = np.diff(signal_time)
@@ -116,13 +119,14 @@ class D3DShot(Shot):
                 duration = 0
                 return duration, signal_max
         polarity = np.sign(
-            np.trapz(signal_time[finite_indices], signal[finite_indices]))
+            np.trapz(signal[finite_indices],signal_time[finite_indices]))
         polarized_signal = polarity * signal
         valid_indices = np.where(
             (polarized_signal >= threshold) & (signal_time > 0.0))
+        duration = signal_time[np.max(valid_indices)]
         if len(valid_indices) == signal_time.size:
             duration = - duration
-        signal_max = np.max(signal)
+        signal_max = np.max(polarized_signal)*polarity
         return duration, signal_max
 
     def get_time_to_disrupt(self):
@@ -144,6 +148,7 @@ class D3DShot(Shot):
         # 'chisq' to determine which time slices should be excluded from our
         # disruption warning database.
         invalid_indices = np.where(efit_data['chisq'] > 50)
+        del efit_data['chisq']
         for param in efit_data:
             efit_data[param][invalid_indices] = np.nan
         for param in self.efit_derivs:
@@ -161,19 +166,15 @@ class D3DShot(Shot):
                      for k, v in self.rt_efit_cols.items()}
         efit_time = self.conn.get(
             '\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
-        if self._times is None:
-            self._times = efit_time
         # EFIT reconstructions are sometimes invalid, particularly when very close
         # to a disruption.  There are a number of EFIT parameters that can indicate
         # invalid reconstructions, such as 'terror' and 'chisq'.  Here we use
         # 'chisq' to determine which time slices should be excluded from our
         # disruption warning database.
         invalid_indices = np.where(efit_data['chisq'] > 50)
+        del efit_data['chisq']
         for param in efit_data:
             efit_data[param][invalid_indices] = np.nan
-        for param in self.efit_derivs:
-            efit_data[self.efit_derivs[param]] = np.gradient(
-                efit_data[param], efit_time)
         if not np.array_equal(self._times, efit_time):
             for param in efit_data:
                 efit_data[param] = interp1(
@@ -198,10 +199,6 @@ class D3DShot(Shot):
             self.logger.debug(f"[Shot {self._shot_id}]: {e}")
             h_alpha = np.full(self._times.size, np.nan)
         return pd.DataFrame({'H98': h_98, 'H_alpha': h_alpha})
-
-    # TODO: Implement or remove this
-    def get_rt_efit_parameters(self):
-        raise NotImplementedError("")
 
     def get_power_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
@@ -291,7 +288,7 @@ class D3DShot(Shot):
         # Computer P_sol, defined as P_in - P_rad
         p_sol = p_input - p_rad
 
-        return pd.DataFrame({'p_rad': p_rad, 'p_nbi': p_nbi, 'p_ech': p_ech, 'p_ohm': p_ohm, 'radiated_fraction': rad_fraction, 'v_loop': v_loop, 'p_input': p_input, 'p_sol': p_sol})
+        return pd.DataFrame({'p_rad': p_rad, 'p_nbi': p_nbi, 'p_ech': p_ech, 'p_ohm': p_ohm, 'radiated_fraction': rad_fraction, 'v_loop': v_loop})
 
     def get_ohmic_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
@@ -408,7 +405,8 @@ class D3DShot(Shot):
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to get some parameter")
             self.logger.debug(f"[Shot {self._shot_id}]:{e}")
-        return pd.DataFrame({'n_e_RT': ne_rt, 'Greenwald_fraction_RT': g_f_rt, 'dne_dt_RT': dne_dt_rt})
+        #' dne_dt_RT': dne_dt_rt
+        return pd.DataFrame({'n_e_RT': ne_rt, 'Greenwald_fraction_RT': g_f_rt})
 
     def get_ip_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
@@ -493,7 +491,8 @@ class D3DShot(Shot):
                 f"[Shot {self._shot_id}]:Failed to get epsoff signal. Setting to NaN.")
             self.logger.debug(f"[Shot {self._shot_id}]:{e}")
             power_supply_railed = np.full(len(self._times), np.nan)
-        return pd.DataFrame({'ip': ip, 'ip_prog': ip_prog, 'ip_error': ip_error, 'dip_dt': dip_dt, 'dipprog_dt': dipprog_dt, 'power_supply_railed': power_supply_railed})
+        # 'ip_prog': ip_prog,
+        return pd.DataFrame({'ip': ip, 'ip_error': ip_error, 'dip_dt': dip_dt, 'dipprog_dt': dipprog_dt, 'power_supply_railed': power_supply_railed})
 
     def get_rt_ip_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
@@ -591,8 +590,8 @@ class D3DShot(Shot):
                 f"[Shot {self._shot_id}]:Failed to get epsoff signal. power_supply_railed will be NaN.")
             self.logger.debug(f"[Shot {self._shot_id}]:{e}")
             power_supply_railed = np.full(len(self._times), np.nan)
-        return pd.DataFrame({'ip_RT': ip_rt, 'ip_error_RT': ip_error_rt,
-                             'dip_dt_RT': dip_dt_rt, 'dipprog_dt_RT': dipprog_dt_rt, 'power_supply_railed': power_supply_railed})
+        # 'dip_dt_RT': dip_dt_rt,
+        return pd.DataFrame({'ip_RT': ip_rt, 'ip_error_RT': ip_error_rt, 'dipprog_dt_RT': dipprog_dt_rt, 'power_supply_railed': power_supply_railed})
 
     def get_z_parameters(self):
         """

@@ -5,3 +5,4 @@ data/*
 *.egg-info/*
 .vscode/*
 *.pdf
+*.log

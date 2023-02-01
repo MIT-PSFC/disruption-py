@@ -18,8 +18,8 @@ from disruption_py.utils import save_open_plots
 import disruption_py.data
 
 # Alter queries for these columns will fail
-PROTECTED_COLUMNS = ['dbkey', 'shot', 'time', 'time_until_disrupt', 'ip_error', 'dip_dt', 'beta_p', 'beta_n', 'li', 'n_equal_1_normalized', 'z_error', 'v_z', 'z_times_v_z', 'kappa', 'pressure_peaking', 'H98', 'q0', 'qstar', 'q95', 'v_0', 'v_mid', 'v_edge', 'dn_dt', 'p_rad_slow', 'p_oh_slow', 'p_icrf', 'p_lh', 'radiated_fraction', 'power_supply_railed', 'v_loop_efit', 'r_dd', 'lower_gap', 'upper_gap', 'dbetap_dt', 'dli_dt',
-                     'ip', 'zcur', 'n_e', 'dipprog_dt', 'v_loop', 'p_rad', 'p_oh', 'ssep', 'dWmhd_dt', 'dprad_dt', 'v_0_uncalibrated', 'Te_width', 'Greenwald_fraction', 'intentional_disruption', 'Te_width_ECE', 'Wmhd', 'n_over_ncrit', 'n_equal_1_mode', 'Mirnov', 'Mirnov_norm_btor', 'Mirnov_norm_bpol', 'Te_peaking', 'ne_peaking', 'Te_peaking_ECE', 'SXR_peaking', 'kappa_area', 'I_efc', 'SXR', 'H_alpha', 'Prad_peaking_CVA', 'commit_hash']
+CMOD_PROTECTED_COLUMNS = ['dbkey', 'shot', 'time', 'time_until_disrupt', 'ip_error', 'dip_dt', 'beta_p', 'beta_n', 'li', 'n_equal_1_normalized', 'z_error', 'v_z', 'z_times_v_z', 'kappa', 'pressure_peaking', 'H98', 'q0', 'qstar', 'q95', 'dn_dt', 'p_rad_slow', 'p_oh_slow', 'p_icrf', 'p_lh', 'radiated_fraction', 'power_supply_railed', 'v_loop_efit', 'lower_gap', 'upper_gap', 'dbetap_dt', 'dli_dt','ip', 'zcur', 'n_e', 'dipprog_dt', 'v_loop', 'p_rad', 'p_oh', 'ssep', 'dWmhd_dt', 'dprad_dt', 'Te_width', 'Greenwald_fraction', 'intentional_disruption', 'Te_width_ECE', 'Wmhd', 'n_over_ncrit', 'n_equal_1_mode', 'Mirnov', 'Mirnov_norm_btor', 'Mirnov_norm_bpol', 'Te_peaking', 'ne_peaking', 'Te_peaking_ECE', 'SXR_peaking', 'kappa_area', 'I_efc', 'SXR', 'H_alpha', 'Prad_peaking_CVA', 'commit_hash']
+D3D_PROTECTED_COLUMNS = []
 # [s] Time frame for which an insertion into SQL database becomes an update
 TIME_CONST = 1e-6
 
@@ -28,14 +28,14 @@ class DatabaseHandler:
     """
     Handles grabbing data from MySQL server. 
     """
-
-    def __init__(self, driver, driver_file, host, user, passwd, shot_class=Shot):
+    def __init__(self, driver, driver_file, host, user, passwd, shot_class=Shot,protected_columns=[]):
         self.user = user
         self.passwd = passwd
         self.driver = driver
         self.driver_file = driver_file
         self.host = host
         self.shot_class = shot_class
+        self.protected_columns = protected_columns
         self.conn = jaydebeapi.connect(self.driver,
                                        self.host, [self.user, self.passwd],
                                        self.driver_file)
@@ -46,7 +46,7 @@ class DatabaseHandler:
     def query(self, query, use_pandas=True):
         """ Query SQL database. SELECT queries return a pandas dataframe. """
         if "alter" in query.lower():
-            for col in PROTECTED_COLUMNS:
+            for col in self.protected_columns:
                 if col in query.lower():
                     logger.error(f"PROTECTED COLUMN: {col}")
                     return 0
@@ -59,6 +59,7 @@ class DatabaseHandler:
             if "select" in query.lower():
                 output = curs.fetchall()
         except jaydebeapi.DatabaseError as e:
+            print(e)
             logger.debug(e)
             logger.error("Query failed, returning None")
         curs.close()
@@ -181,7 +182,7 @@ class DatabaseHandler:
 class D3DHandler(DatabaseHandler):
     def __init__(self, driver, driver_file, host, user, passwd, shot_class=D3DShot):
         super().__init__(driver, driver_file, host +
-                         "database=d3drdb", user, passwd, shot_class)
+                         "database=d3drdb", user, passwd, shot_class, protected_columns=D3D_PROTECTED_COLUMNS)
         self.tree_conn = jaydebeapi.connect(self.driver,
                                             host +
                                             "database=code_rundb", [
@@ -204,7 +205,7 @@ class D3DHandler(DatabaseHandler):
             t_disrupt = curs.fetchall()
         if len(t_disrupt) == 0:
             return None
-        t_disrupt = t_disrupt[0]
+        t_disrupt = t_disrupt[0][0]
         return t_disrupt
 
     def get_shot(self, shot_id, efit_tree=None):
@@ -260,17 +261,18 @@ class D3DHandler(DatabaseHandler):
         if not comparison.empty:
             logging.debug("Shot data is not correct")
             for col in comparison.columns:
-                if (comparison[col] > 1e-6).any():
+                if (comparison[col] > 1e-4).any():
                     fig, axs = plt.subplots(2, 1, sharex=True)
                     axs[0].plot(
                         true_shot.data['time'], true_shot.data[col], label='database')
                     axs[0].plot(
                         local_shot.data['time'], local_shot.data[col], label='local', linestyle="dotted")
                     axs[1].plot(local_shot.data['time'], comparison[col])
-                    axs[0].set_title(col)
+                    axs[0].set_title(f"Shot {shot_id}:{col}")
                     axs[1].set_title("Normalized Error")
                     axs[0].legend()
             save_open_plots(f"shot_{shot_id}_error_graphs.pdf")
+            plt.close('all')
             if visualize_differences:
                 plt.show()
             return False
