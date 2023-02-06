@@ -67,7 +67,7 @@ def filter_dataset_df(df, **kwargs):
 def create_dataset(df, **kwargs):
     features = list(df.columns)
     features.remove('target')
-    X, y = df.loc[features].values, df['target'].values
+    X, y = df.loc[features], df['target']
     ratio = kwargs['ratio'] if 'ratio' in kwargs else DEFAULT_RATIO
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=ratio, random_state=42)
     return X_train, X_test, y_train, y_test
@@ -78,8 +78,8 @@ def main():
     X_train, X_test, y_train, y_test = create_dataset(dataset_df, ratio=DEFAULT_RATIO)
     print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
     df.to_csv('./whole_df.csv', sep=',', index=False)
-    df_train = pd.DataFrame(column_stack((X_train, y_train)), columns=cols + ['label'])
+    df_train = pd.concat([X_train, y_train], axis=1)
     df_train.to_csv('./train.csv', sep=',', index=False)
-    df_test = pd.DataFrame(column_stack((X_test, y_test)), columns=cols + ['label'])
+    df_test = pd.concat([X_test, y_test], axis=1)
     df_test.to_csv('./test.csv', sep=',', index=False)
     
