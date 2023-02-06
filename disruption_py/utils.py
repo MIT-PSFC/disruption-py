@@ -83,6 +83,29 @@ def interp2(X, Y, V, Xq, Yq, kind='linear'):
     set_interp = interp2d(X, Y, V, kind=kind)
     return set_interp(Xq, Yq)
 
+def exp_filter(x, w):
+    """
+    Implements an exponential filter.
+
+    This function implements an exponential filter on the given array x.
+    Parameters
+    ----------
+    x : array
+        The array to filter.
+    w : float
+        The filter weight.
+    
+    Returns
+    -------
+    _ : array
+        The filtered array.
+    """
+    filtered_x = np.zeros(x.shape)
+    filtered_x[0] = x[0]
+    for i in range(1, len(x)):
+        filtered_x[i] = w*x[i] + (1-w)*filtered_x[i-1]
+    return filtered_x
+
 # TODO: Implement this
 
 

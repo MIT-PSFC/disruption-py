@@ -18,17 +18,21 @@ from disruption_py.utils import save_open_plots
 import disruption_py.data
 
 # Alter queries for these columns will fail
-CMOD_PROTECTED_COLUMNS = ['dbkey', 'shot', 'time', 'time_until_disrupt', 'ip_error', 'dip_dt', 'beta_p', 'beta_n', 'li', 'n_equal_1_normalized', 'z_error', 'v_z', 'z_times_v_z', 'kappa', 'pressure_peaking', 'H98', 'q0', 'qstar', 'q95', 'dn_dt', 'p_rad_slow', 'p_oh_slow', 'p_icrf', 'p_lh', 'radiated_fraction', 'power_supply_railed', 'v_loop_efit', 'lower_gap', 'upper_gap', 'dbetap_dt', 'dli_dt','ip', 'zcur', 'n_e', 'dipprog_dt', 'v_loop', 'p_rad', 'p_oh', 'ssep', 'dWmhd_dt', 'dprad_dt', 'Te_width', 'Greenwald_fraction', 'intentional_disruption', 'Te_width_ECE', 'Wmhd', 'n_over_ncrit', 'n_equal_1_mode', 'Mirnov', 'Mirnov_norm_btor', 'Mirnov_norm_bpol', 'Te_peaking', 'ne_peaking', 'Te_peaking_ECE', 'SXR_peaking', 'kappa_area', 'I_efc', 'SXR', 'H_alpha', 'Prad_peaking_CVA', 'commit_hash']
+CMOD_PROTECTED_COLUMNS = ['dbkey', 'shot', 'time', 'time_until_disrupt', 'ip_error', 'dip_dt', 'beta_p', 'beta_n', 'li', 'n_equal_1_normalized', 'z_error', 'v_z', 'z_times_v_z', 'kappa', 'pressure_peaking', 'H98', 'q0', 'qstar', 'q95', 'dn_dt', 'p_rad_slow', 'p_oh_slow', 'p_icrf', 'p_lh', 'radiated_fraction', 'power_supply_railed', 'v_loop_efit', 'lower_gap', 'upper_gap', 'dbetap_dt', 'dli_dt',
+                          'ip', 'zcur', 'n_e', 'dipprog_dt', 'v_loop', 'p_rad', 'p_oh', 'ssep', 'dWmhd_dt', 'dprad_dt', 'Te_width', 'Greenwald_fraction', 'intentional_disruption', 'Te_width_ECE', 'Wmhd', 'n_over_ncrit', 'n_equal_1_mode', 'Mirnov', 'Mirnov_norm_btor', 'Mirnov_norm_bpol', 'Te_peaking', 'ne_peaking', 'Te_peaking_ECE', 'SXR_peaking', 'kappa_area', 'I_efc', 'SXR', 'H_alpha', 'Prad_peaking_CVA', 'commit_hash']
 D3D_PROTECTED_COLUMNS = []
 # [s] Time frame for which an insertion into SQL database becomes an update
 TIME_CONST = 1e-6
 
 logger = logging.getLogger('disruption_py')
+
+
 class DatabaseHandler:
     """
     Handles grabbing data from MySQL server. 
     """
-    def __init__(self, driver, driver_file, host, user, passwd, shot_class=Shot,protected_columns=[]):
+
+    def __init__(self, driver, driver_file, host, user, passwd, shot_class=Shot, protected_columns=[]):
         self.user = user
         self.passwd = passwd
         self.driver = driver
@@ -138,13 +142,20 @@ class DatabaseHandler:
             raise Exception("Invalid shot class for this handler")
         return None
 
-    def get_shots(self, shot_ids=None):
+    def get_shot_data(self, shot_ids=None,cols = None):
         shot_ids = tuple([int(shot_id) for shot_id in shot_ids])
+        cols = tuple(cols)
+        if cols is None:
+            cols = "*"
         if shot_ids is None:
-            query = f"select * from disruption_warning order by time"
+            query = f"select {cols} from disruption_warning order by time"
         else:
-            query = f"select * from disruption_warning where shot in {shot_ids} order by time"
+            query = f"select {cols} from disruption_warning where shot in {shot_ids} order by time"
         shot_df = pd.read_sql_query(query, self.conn)
+        return shot_df
+
+    def get_shots(self, shot_ids=None):
+        shot_df = self.get_shot_data(shot_ids)
         return [Shot('cmod', shot_data['shot'].iloc[0], data=shot_data) for _, shot_data in shot_df.groupby(by=["shot"])]
 
     def add_column(self, col_name, var_type="TEXT", table="disruption_warning"):
@@ -201,7 +212,8 @@ class D3DHandler(DatabaseHandler):
 
     def get_disruption_time(self, shot_id):
         with self.conn.cursor() as curs:
-            curs.execute(f"select t_disrupt from disruptions where shot = {shot_id}")
+            curs.execute(
+                f"select t_disrupt from disruptions where shot = {shot_id}")
             t_disrupt = curs.fetchall()
         if len(t_disrupt) == 0:
             return None

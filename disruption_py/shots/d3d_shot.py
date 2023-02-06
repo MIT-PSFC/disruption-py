@@ -33,7 +33,7 @@ class D3DShot(Shot):
     # 'v_loop_efit': ,'\efit_a_eqdsk:vsurf', 'bt0': '\efit_a_eqdsk:bt0'
     efit_derivs = {'beta_p': 'dbetap_dt', 'li': 'dli_dt', 'Wmhd': 'dWmhd_dt'}
     rt_efit_cols = {'beta_p_RT': '\efit_a_eqdsk:betap', 'li_RT': '\efit_a_eqdsk:li',
-                    'q95_RT': '\efit_a_eqdsk:q95', 'Wmhd_RT': '\efit_a_eqdsk:wmhd', 'chisq':'\efit_a_eqdsk:chisq'}
+                    'q95_RT': '\efit_a_eqdsk:q95', 'Wmhd_RT': '\efit_a_eqdsk:wmhd', 'chisq': '\efit_a_eqdsk:chisq'}
     # 'v_loop_efit_RT': '\efit_a_eqdsk:vsurf',
 
     # Disruption Variables
@@ -66,20 +66,16 @@ class D3DShot(Shot):
 
     def _populate_shot_data(self, already_populated=False):
         local_data = pd.concat([self.get_efit_parameters(), self.get_rt_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(), self.get_ip_parameters(
-        ), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters(), self.get_time_to_disrupt()], axis=1)
+        ), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters(), self.get_time_until_disrupt()], axis=1)
         local_data = local_data.loc[:, ~local_data.columns.duplicated()]
         if not already_populated:
             self.data = local_data
             self.data['time'] = self._times
-        else:
-            return
-            for col in list(local_data.columns):
-                if col not in list(self.data.columns) or self.override_cols:
-                    self.data[col] = local_data[col]
 
     def get_disruption_timebase(self, minimum_ip=400.e3, minimum_duration=0.1):
         self.conn.openTree('d3d', self._shot_id)
-        ip, ip_time = self.get_signal(f"ptdata('ip', {self._shot_id})", interpolate=False)             
+        ip, ip_time = self.get_signal(
+            f"ptdata('ip', {self._shot_id})", interpolate=False)
         baseline = np.mean(ip[0:10])
         ip = ip - baseline
         duration, ip_max = self.get_end_of_shot(ip, ip_time, 100e3)
@@ -119,7 +115,7 @@ class D3DShot(Shot):
                 duration = 0
                 return duration, signal_max
         polarity = np.sign(
-            np.trapz(signal[finite_indices],signal_time[finite_indices]))
+            np.trapz(signal[finite_indices], signal_time[finite_indices]))
         polarized_signal = polarity * signal
         valid_indices = np.where(
             (polarized_signal >= threshold) & (signal_time > 0.0))
@@ -129,7 +125,7 @@ class D3DShot(Shot):
         signal_max = np.max(polarized_signal)*polarity
         return duration, signal_max
 
-    def get_time_to_disrupt(self):
+    def get_time_until_disrupt(self):
         if self.disrupted:
             return pd.DataFrame({'time_until_disrupt': self.disruption_time - self._times})
         return pd.DataFrame({'time_until_disrupt': np.full(self._times.size, np.nan)})
@@ -204,10 +200,9 @@ class D3DShot(Shot):
         self.conn.openTree('d3d', self._shot_id)
         # Get neutral beam injected power
         try:
-            p_nbi = self.conn.get(
-                r"\d3d::top.nb:pinj").data()*1.e3  # [KW] -> [W]
-            t_nbi = self.conn.get(
-                r"dim_of(\d3d::top.nb:pinj)").data()*1.e3  # [ms] -> [s]
+            p_nbi, t_nbi = self.get_signal(
+                r"\d3d::top.nb:pinj", interpolate=False)
+            p_nbi *= 1.e3  # [KW] -> [W]
             if len(t_nbi) > 2:
                 p_nbi = interp1(t_nbi, p_nbi, self._times,
                                 'linear', bounds_error=False, fill_value=0.)
@@ -223,9 +218,8 @@ class D3DShot(Shot):
         # Get electron cycholotrn heating (ECH) power. It's poitn data, so it's not stored in an MDSplus tree
         self.conn.openTree('rf', self._shot_id)
         try:
-            p_ech = self.conn.get(r"\top.ech.total:echpwrc").data()  # [W]
-            t_ech = self.conn.get(
-                r"dim_of(\top.ech.total:echpwrc)").data()/1.e3  # [ms] -> [s]
+            p_ech, t_ech = self.get_signal(
+                r"\top.ech.total:echpwrc", interpolate=False)
             if len(t_ech) > 2:
                 p_ech = interp1(t_ech, p_ech, self._times,
                                 'linear', bounds_error=False, fill_value=0.)
@@ -294,10 +288,8 @@ class D3DShot(Shot):
         self.conn.openTree('d3d', self._shot_id)
         # Get edge loop voltage and smooth it a bit with a median filter
         try:
-            v_loop = self.conn.get(
-                f'ptdata("vloopb", {self._shot_id})').data()  # [V]
-            t_v_loop = self.conn.get(
-                f'dim_of(ptdata("vloopb", {self._shot_id}))').data()/1.e3  # [ms]->[s]
+            v_loop, t_v_loop = self.get_signal(
+                f'ptdata("vloopb", {self._shot_id})', interpolate=False)
             v_loop = scipy.signal.medfilt(v_loop, 11)
             v_loop = interp1(t_v_loop, v_loop, self._times, 'linear')
         except MdsException as e:
@@ -314,9 +306,7 @@ class D3DShot(Shot):
             # We choose a 20-point width for gsastd. This means a 10ms window for ip smoothing
             dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
             self.conn.openTree(self.efit_tree_name, self._shot_id)
-            li = self.conn.get(r"\efit_a_eqdsk:li").data()
-            t_li = self.conn.get(
-                r"dim_of(\efit_a_eqdsk:li)").data()/1.e3  # [ms] -> [s]
+            li, t_li = self.get_signal(r"\efit_a_eqdsk:li", interpolate=False)
             chisq = self.conn.get(r"\efit_a_eqdsk:chisq").data()
             # Filter out invalid indices of efit reconstruction
             invalid_indices = None  # TODO: Finish
@@ -405,7 +395,7 @@ class D3DShot(Shot):
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to get some parameter")
             self.logger.debug(f"[Shot {self._shot_id}]:{e}")
-        #' dne_dt_RT': dne_dt_rt
+        # ' dne_dt_RT': dne_dt_rt
         return pd.DataFrame({'n_e_RT': ne_rt, 'Greenwald_fraction_RT': g_f_rt})
 
     def get_ip_parameters(self):
