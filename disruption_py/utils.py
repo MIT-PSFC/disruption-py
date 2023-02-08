@@ -83,17 +83,19 @@ def interp2(X, Y, V, Xq, Yq, kind='linear'):
     set_interp = interp2d(X, Y, V, kind=kind)
     return set_interp(Xq, Yq)
 
-def exp_filter(x, w):
+def exp_filter(x, w, strategy='fragmented'):
     """
     Implements an exponential filter.
 
-    This function implements an exponential filter on the given array x.
+    This function implements an exponential filter on the given array x. In the case of nan values in the input array, we default to using the last timestep that was not a nan value. In the fragmented strategy, any time we encounter invald values, we restart the filter at the next valid value.
     Parameters
     ----------
     x : array
         The array to filter.
     w : float
         The filter weight.
+    strategy: str, optional
+        Imputation strategy to be used, if any. Options are 'fragmented' or 'none'. Default is 'fragmented.'
     
     Returns
     -------
@@ -104,6 +106,9 @@ def exp_filter(x, w):
     filtered_x[0] = x[0]
     for i in range(1, len(x)):
         filtered_x[i] = w*x[i] + (1-w)*filtered_x[i-1]
+        if strategy=='fragmented':
+            if filtered_x[i-1] == np.nan:
+                filtered_x[i] = x[i] 
     return filtered_x
 
 from sklearn.impute import SimpleImputer
@@ -157,12 +162,6 @@ def impute_shot_df_NaNs(df, strategy='median', missing_values=np.nan):
             flag_imputed_nans.extend(tmp_flag)
 
         df[var] = np.array(imputed_var)
-
-    # for i in ['time', 'time_until_disrupt', 'shot', 'label']:
-        # ordered_names.remove(i)
-    # ordered_names.extend(['time', 'time_until_disrupt', 'shot', 'label'])
-    # df = df.ix[:, ordered_names]
-    print(df)
     return df
 # TODO: Implement this
 

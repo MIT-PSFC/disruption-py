@@ -1,27 +1,30 @@
 import argparse
+import pickle
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, fbeta_score
 
 def create_model(model_type):
     if model_type == 'random_forest':
-        model = RandomForestClassifier(n_estimators=100, max_depth=2, random_state=0)
+        model = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=0)
     else:
         raise NotImplementedError('Only random forest implemented')
     return model
 
 def train_local(x_train, y_train,x_test,y_test, **kwargs):
+    if 'omit_after_quench' in kwargs and kwargs['omit_after_quench'] is not None:
+        raise NotImplementedError("Talk to Cristina about implementing")
     if 'features' in kwargs and kwargs['features'] is not None:
         features = kwargs['features']
         x_train = x_train[features]
     if 'model' in kwargs and kwargs['model'] is not None:
         raise NotImplementedError('Only random forest implemented')
     else:
-        print(x_train.columns)
-        model = RandomForestClassifier(n_estimators=100, max_depth=2, random_state=0)
+        model = RandomForestClassifier(n_estimators=500, max_depth=10, random_state=0)
+
         model.fit(x_train, y_train)
         return {'model': model,
         'predictions': model.predict(x_train),
@@ -31,17 +34,32 @@ def train_local(x_train, y_train,x_test,y_test, **kwargs):
         'score': model.score(x_test, y_test)}
 
 def main(args):
-    train = pd.read_csv(args.train_path)
-    test = pd.read_csv(args.test_path)
-    y_train = train['label']
-    x_train = train.drop('label', axis=1)
-    y_test = test['label']
-    x_test = test.drop('label', axis=1)
+    if 'pkl' in args.train_path:
+        with open(args.train_path, 'rb') as f:
+            train = pickle.load(f,encoding='latin1')
+        x_train = train['X_train']
+        y_train = train['y_train'].astype(int)
+    else:
+        train = pd.read_csv(args.train_path)
+        y_train = train['label']
+        x_train = train.drop('label', axis=1)
+    if 'pkl' in args.test_path:
+        with open(args.test_path,'rb') as f:
+            test = pickle.load(f,encoding='latin1')
+        x_test = test['X_test']
+        y_test = test['y_test']
+    else:
+        test = pd.read_csv(args.test_path)
+        y_test = test['label']
+        x_test = test.drop('label', axis=1)
     results_dict = train_local(x_train, y_train, x_test, y_test, features=args.features)
-    model = results_dict['model']
+    model = results_dict['model']  
+    test_predictions = model.predict(x_test)  
+    print("Train F2-Score:", fbeta_score(y_train, results_dict['predictions'], beta=2))
+    print("Test F2-Score:", fbeta_score(y_test, test_predictions, beta=2))
     conf_mat = confusion_matrix(y_train, results_dict['predictions'])
     disp_train = ConfusionMatrixDisplay(confusion_matrix = conf_mat, display_labels = model.classes_)
-    conf_mat = confusion_matrix(y_test,model.predict(x_test))
+    conf_mat = confusion_matrix(y_test,test_predictions)
     disp_test = ConfusionMatrixDisplay(confusion_matrix=conf_mat, display_labels=model.classes_)
     disp_train.plot()
     disp_test.plot()

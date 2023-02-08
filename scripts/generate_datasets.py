@@ -1,6 +1,8 @@
+import random
+
 from disruption_py.database import *
 from sklearn.model_selection import train_test_split
-from disruption_py.utils import impute_shot_df_NaNs
+from disruption_py.utils import impute_shot_df_NaNs, exp_filter
 
 #TODO: Consider renaming 'target' to 'label' to be consistent with other code
 DEFAULT_COLS = [
@@ -28,6 +30,10 @@ PAPER_COLS = [
 'kappa',
 'squareness'
 ]
+DERIVED_PAPER_COLS = [
+'ip-exp-10-none',
+'ip-exp-50-none',
+]
 REQUIRED_COLS = ['time', 'time_until_disrupt', 'shot']
 TOKAMAKS = {'d3d': create_d3d_handler,
             'cmod': create_cmod_handler, 'east': create_east_handler}
@@ -45,11 +51,12 @@ def create_label(time_until_disrupt, threshold, label_type, multiple_thresholds)
         raise NotImplementedError('Only binary labels are implemented')
     return target
 
-
 def get_dataset_df(cols=DEFAULT_COLS, shot_ids=None,threshold = DEFAULT_THRESHOLD, tokamak='d3d', required_cols=REQUIRED_COLS):
     tokamak = TOKAMAKS[tokamak]()
     if shot_ids is None:
-        shot_ids = tokamak.get_disruption_table_shotlist()['shot'][5000:5300]
+        shot_ids = tokamak.get_disruption_table_shotlist()['shot']
+        random.shuffle(shot_ids)
+        shot_ids = shot_ids[:1200]
     dataset_df = tokamak.get_shot_data(shot_ids, cols)
     print(dataset_df)
     dataset_df = dataset_df.fillna(value=np.nan)
@@ -62,7 +69,16 @@ def get_dataset_df(cols=DEFAULT_COLS, shot_ids=None,threshold = DEFAULT_THRESHOL
     # cols = cols + required_cols
     dataset_df['label'] = create_label(dataset_df['time_until_disrupt'].values, threshold, 'binary', False)
     return dataset_df
-    
+
+def add_derived_features(df,cols):
+    for col in cols:
+        feature,func, *args = col.split('-')
+        if func == 'exp':
+            w = float(args[0])/100.
+            df[col] = exp_filter(df[feature], w, *args[1:])
+        else:
+            print(f"{func} is not supported")
+    return df
 
 def filter_dataset_df(df, **kwargs):
     if 'exclude_non_disruptive' in kwargs and kwargs['exclude_non_disruptive']:
@@ -72,6 +88,7 @@ def filter_dataset_df(df, **kwargs):
         df = df[(df['time_until_disrupt'] > kwargs['exclude_black_window']) | np.isnan(df['time_until_disrupt'])]
     if 'impute' in kwargs and kwargs['impute']:
         df = impute_shot_df_NaNs(df)
+        print(df.iloc[0])
         df = df.dropna()
         print(df)
     else:
@@ -87,13 +104,16 @@ def create_dataset(df, **kwargs):
     features = list(df.columns)
     features.remove('label')
     features.remove('time_until_disrupt')
+    features.remove('shot')
     X, y = df[features], df['label']
     ratio = kwargs['ratio'] if 'ratio' in kwargs else DEFAULT_RATIO
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=ratio, random_state=42)
     return X_train, X_test, y_train, y_test
 
 def main():
-    dataset_df = get_dataset_df(PAPER_COLS + REQUIRED_COLS)
+    shots= pd.concat([pd.read_csv('train_disr.txt',header=None), pd.read_csv('train_nondisr.txt',header=None)]).iloc[:,0].values
+    dataset_df = get_dataset_df(PAPER_COLS + REQUIRED_COLS, shot_ids = shots)
+    dataset_df = add_derived_features(dataset_df,DERIVED_PAPER_COLS)
     dataset_df = filter_dataset_df(dataset_df, exclude_non_disruptive=True, exclude_black_window=BLACK_WINDOW_THRESHOLD,impute=True)
     X_train, X_test, y_train, y_test = create_dataset(dataset_df, ratio=DEFAULT_RATIO)
     print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)

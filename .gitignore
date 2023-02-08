@@ -6,3 +6,4 @@ data/*
 .vscode/*
 *.pdf
 *.log
+*.pkl
