@@ -1,8 +1,10 @@
 import argparse
 
+import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
 def create_model(model_type):
     if model_type == 'random_forest':
@@ -18,13 +20,14 @@ def train_local(x_train, y_train,x_test,y_test, **kwargs):
     if 'model' in kwargs and kwargs['model'] is not None:
         raise NotImplementedError('Only random forest implemented')
     else:
+        print(x_train.columns)
         model = RandomForestClassifier(n_estimators=100, max_depth=2, random_state=0)
         model.fit(x_train, y_train)
         return {'model': model,
         'predictions': model.predict(x_train),
         'predictions_proba': model.predict_proba(x_train),
         'features': model.feature_importances_,
-        'std_imp':np.std([model.feature_importances_ for model in forest.estimators_], axis=0),
+        'std_imp':np.std([tree.feature_importances_ for tree in model.estimators_], axis=0),
         'score': model.score(x_test, y_test)}
 
 def main(args):
@@ -35,8 +38,17 @@ def main(args):
     y_test = test['label']
     x_test = test.drop('label', axis=1)
     results_dict = train_local(x_train, y_train, x_test, y_test, features=args.features)
-    conf_mat = confusion_matrix(y_test, results_dict['predictions'])
-    print(conf_mat)
+    model = results_dict['model']
+    conf_mat = confusion_matrix(y_train, results_dict['predictions'])
+    disp_train = ConfusionMatrixDisplay(confusion_matrix = conf_mat, display_labels = model.classes_)
+    conf_mat = confusion_matrix(y_test,model.predict(x_test))
+    disp_test = ConfusionMatrixDisplay(confusion_matrix=conf_mat, display_labels=model.classes_)
+    disp_train.plot()
+    disp_test.plot()
+    disp_train.ax_.set_title('Train Matrix')
+    disp_test.ax_.set_title('Test Matrix')
+    plt.show()
+    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(

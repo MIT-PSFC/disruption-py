@@ -144,7 +144,7 @@ class DatabaseHandler:
 
     def get_shot_data(self, shot_ids=None,cols = None):
         shot_ids = tuple([int(shot_id) for shot_id in shot_ids])
-        cols = tuple(cols)
+        cols = ' '.join([f"{col}," for col in cols[:-1]]) + f" {cols[-1]}"
         if cols is None:
             cols = "*"
         if shot_ids is None:
