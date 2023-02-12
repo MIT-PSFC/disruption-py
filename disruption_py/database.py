@@ -29,7 +29,7 @@ logger = logging.getLogger('disruption_py')
 
 class DatabaseHandler:
     """
-    Handles grabbing data from MySQL server. 
+    Handles grabbing data from MySQL server.
     """
 
     def __init__(self, driver, driver_file, host, user, passwd, shot_class=Shot, protected_columns=[]):
@@ -82,8 +82,8 @@ class DatabaseHandler:
             self.add_shot(shot._shot_id, shot.data, update=update)
 
     def add_shot(self, shot_id, shot=None, update=False):
-        """ 
-        Upload shot to SQL database. Can include shot object if available to avoid redundant computation. 
+        """
+        Upload shot to SQL database. Can include shot object if available to avoid redundant computation.
         Returns an error if there is at least one row already containing the shot id.
         """
         shot_id = int(shot_id)
@@ -142,7 +142,7 @@ class DatabaseHandler:
             raise Exception("Invalid shot class for this handler")
         return None
 
-    def get_shot_data(self, shot_ids=None,cols = None):
+    def get_shot_data(self, shot_ids=None, cols=None):
         shot_ids = tuple([int(shot_id) for shot_id in shot_ids])
         cols = ' '.join([f"{col}," for col in cols[:-1]]) + f" {cols[-1]}"
         if cols is None:
@@ -209,6 +209,10 @@ class D3DHandler(DatabaseHandler):
             return None
         efit_tree = efit_trees[-1][0]
         return efit_tree
+
+    # TODO: Implement
+    def get_efit_trees(self, shot_ids):
+        pass
 
     def get_disruption_time(self, shot_id):
         with self.conn.cursor() as curs:

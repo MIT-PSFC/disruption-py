@@ -1,3 +1,5 @@
+import subprocess
+
 from disruption_py.shots.shot import Shot, DEFAULT_SHOT_COLUMNS
 try:
     import importlib.resources as importlib_resources

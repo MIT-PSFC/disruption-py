@@ -28,6 +28,10 @@ class Shot:
         if data is None:
             self.data = pd.DataFrame()
 
+    @classmethod
+    def get_signal(id, signal_name):
+        pass
+
     def get_signal(self, signal_name, signal_getter=None, interpolate=True, interpolation_timebase=None):
         """Get a signal from MDSplus.
 
