@@ -111,6 +111,62 @@ def exp_filter(x, w, strategy='fragmented'):
                 filtered_x[i] = x[i] 
     return filtered_x
 
+def hist_time_th(thL, thH, thA, dt, v, v_old, c_old, a_old):
+
+    ##=================
+    ## double threshold
+    ##=================
+    # if signal is below LOW threshold output is always 0
+    if v < thL:
+        v = 0
+    # if signal is above HIGHT threshold output is always 1
+    elif v > thH:
+        v = 1
+    else:
+        v = v_old
+    ##=================
+    ## time accumulation
+    ##=================
+    # when output signal is 0 counter gets reset
+    if v == 0:
+        c = 0
+    # when output signal is 1 counter gets incremented
+    else:
+        c = c_old + dt
+    ##=================
+    ## sound alarm
+    ##=================
+    # if counter surpasses allarm threshold or old allarm was on
+    if c > thA or a_old:
+        a = 1
+    else:
+        a = 0
+
+    return v, c, a
+
+def trigger_alarm(time, value, low_thr, high_thr, thA):
+    output = []
+    alarm = []
+    if time[0] < 0:
+        tstart = 0
+    else:
+        tstart = time[0]  # 0
+    v_old = 0
+    c_old = 0
+    a_old = 0
+
+    for t, v in zip(time, value):
+        dt = t - tstart
+        v, c, a = hist_time_th(low_thr, high_thr, thA, dt, v, v_old, c_old, a_old)
+        output.append(v)
+        alarm.append(a)
+        if output[0] != 0:
+            v, c, a = 0, 0, 0
+            output[0], alarm[0] = 0, 0
+        v_old, c_old, a_old = v, c, a
+        tstart = t
+    return alarm
+
 from sklearn.impute import SimpleImputer
 
 #TODO: Clean up this function

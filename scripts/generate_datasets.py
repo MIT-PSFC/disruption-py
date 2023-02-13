@@ -64,17 +64,17 @@ def create_label(time_until_disrupt, threshold, label_type, multiple_thresholds)
         raise NotImplementedError('Only binary labels are implemented')
     return target
 
+
 # TODO: Add support for CMOD
-
-
-def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=None, threshold=DEFAULT_THRESHOLD, tokamak='d3d', required_cols=REQUIRED_COLS):
+def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=None, threshold=DEFAULT_THRESHOLD, tokamak='d3d', required_cols=REQUIRED_COLS,**kwargs):
     if tokamak != 'd3d':
         raise NotImplementedError(
             "Currently only support DIII-D data retrieval")
     tokamak = TOKAMAKS[tokamak]()
     if shot_ids is None:
+        random_state = kwargs.get('random_state', 8808)
         shot_ids = tokamak.get_disruption_table_shotlist()['shot']
-        random.shuffle(shot_ids)
+        random.Random(random_state).shuffle(shot_ids)
         shot_ids = shot_ids[:1200]
     if data_source == 0:
         shots = [tokamak.get_shot(shot_id, efit_tree) for shot_id in shot_ids]
@@ -119,35 +119,36 @@ def add_derived_features(df, cols):
 
 
 def filter_dataset_df(df, **kwargs):
-    if 'exclude_non_disruptive' in kwargs and kwargs['exclude_non_disruptive']:
+    exclude_non_disrupted = kwargs.get('exclude_non_disruptive', False)
+    exclude_black_window = kwargs.get('exclude_black_window', 0)
+    impute = kwargs.get('impute', True)
+    write_to_csv = kwargs.get('write_to_csv', False)
+    csv_path = kwargs.get('csv_path', './filtered_dataset.csv')
+    if exclude_non_disrupted:
         keep_disrupt = np.where(~np.isnan(df['time_until_disrupt'].values))[0]
         df = df.iloc[keep_disrupt]
-    if 'exclude_black_window' in kwargs and kwargs['exclude_black_window'] != 0:
-        df = df[(df['time_until_disrupt'] > kwargs['exclude_black_window'])
-                | np.isnan(df['time_until_disrupt'])]
-    if 'impute' in kwargs and kwargs['impute']:
+    if exclude_black_window != 0:
+        df = df[(df['time_until_disrupt'] > exclude_black_window) | np.isnan(df['time_until_disrupt'])]
+    if impute:
         df = impute_shot_df_NaNs(df)
         df = df.dropna()
     else:
         features = list(df.columns)
-        df = df.dropna(
-            subset=[feat for feat in features if feat != 'time_until_disrupt'])
-    if 'print_to_csv' in kwargs:
-        if kwargs['print_to_csv']:
-            df.to_csv('filtered_dataset.csv')
+        df = df.dropna(subset=[feat for feat in features  if feat != 'time_until_disrupt'])
+    if write_to_csv:
+        df.to_csv(csv_path)
     return df
 
 
 def create_dataset(df, split_by_shot=True, **kwargs):
     features = list(df.columns)
     features.remove('label')
-    features.remove('time_until_disrupt')
-    features.remove('shot')
     X, y = df[features], df['label']
     ratio = kwargs.get('ratio', DEFAULT_RATIO)
+    random_state = kwargs.get('random_state', 42)
     if split_by_shot:
         shots = pd.unique(df['shot'])
-        random.shuffle(shots)
+        random.Random(random_state).shuffle(shots)
         n_test = int(np.ceil(len(shots)*ratio))
         test_shots = shots[:n_test]
         train_shots = shots[n_test:]
@@ -157,7 +158,7 @@ def create_dataset(df, split_by_shot=True, **kwargs):
             test_shots)]
     else:
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=ratio, random_state=42)
+            X, y, test_size=ratio, random_state=random_state)
     return X_train, X_test, y_train, y_test
 
 
@@ -186,7 +187,7 @@ def main(args):
             args.shotlist = str(p)
     shot_ids = pd.read_csv(args.shotlist, header=None).iloc[:, 0].values
     feature_cols, derived_feature_cols = parse_feature_cols(args.feature_cols)
-    dataset_df = get_dataset_df(
+    dataset_df = get_dataset_df(args.data_source,
         feature_cols + REQUIRED_COLS, shot_ids=shot_ids)
     dataset_df = add_derived_features(dataset_df, derived_feature_cols)
     dataset_df = filter_dataset_df(dataset_df, exclude_non_disruptive=True,
@@ -204,9 +205,9 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description="Generate DPRF compatible datasets for training and inference. Currently only supports DIII-D data")
-    parser.add_argument('--shotlist', type='str',
+    parser.add_argument('--shotlist', type=str,
                         help='Path to file specifying shotlist', default=None)
-    parser.add_argument('--feature_cols', type='str',
+    parser.add_argument('--feature_cols', type=str,
                         help='Either a file or comma-separated list of desired feature columns', default=None)
     parser.add_argument('--output_dir', type=str,
                         help='Path to generated data.', default='./data/')
