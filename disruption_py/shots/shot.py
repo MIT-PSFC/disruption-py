@@ -62,7 +62,7 @@ class Shot:
             signal_getter = self.conn
             signal = signal_getter.get(signal_name).data()
             orig_timebase = signal_getter.get(
-                f"dim_of({signal_name})").data()/1e3  # [ms] -> [s]
+                f"dim_of({signal_name})").data()/1.e3  # [ms] -> [s]
         elif isinstance(MDSplus.Tree, signal_getter):
             signal_record = signal_getter.getNode(signal_name).getData()
             signal = signal_record.data()

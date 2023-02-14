@@ -90,12 +90,13 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
                 shots.append(D3DShot(shot_id, tokamak.get_efit_tree(shot_id)))
             else:
                 shots.append(D3DShot(shot_id, efit_tree))
-        dataset_df = pd.concat([shot.data for shot in shots])
+        dataset_df = pd.concat([shot.data for shot in shots])[cols]
     else:
         raise ValueError(
             'Datasource must be one of 4 options: 0,1,2,3. See generate_datsets.py -h for more details.')
     dataset_df = dataset_df.fillna(value=np.nan)
     cols = list(dataset_df.columns)
+    print(cols)
     if not set(required_cols).issubset(set(cols)):
         raise ValueError('Required columns not in dataset')
     # for col in required_cols:
@@ -129,11 +130,12 @@ def filter_dataset_df(df, **kwargs):
         df = df.iloc[keep_disrupt]
     if exclude_black_window != 0:
         df = df[(df['time_until_disrupt'] > exclude_black_window) | np.isnan(df['time_until_disrupt'])]
+    print(df.head())
+    features = list(df.columns)
     if impute:
         df = impute_shot_df_NaNs(df)
-        df = df.dropna()
+        df = df.dropna(subset=[feat for feat in features  if feat != 'time_until_disrupt'])
     else:
-        features = list(df.columns)
         df = df.dropna(subset=[feat for feat in features  if feat != 'time_until_disrupt'])
     if write_to_csv:
         df.to_csv(csv_path)
@@ -164,7 +166,7 @@ def create_dataset(df, split_by_shot=True, **kwargs):
 
 def parse_feature_cols(feature_str):
     if feature_str is None:
-        return PAPER_COLS, DERIVED_PAPER_COLS
+        return PAPER_COLS, []
     elif os.is_file(feature_str):
         all_cols = pd.read_csv(
             feature_str, header=None).iloc[:, 0].values
@@ -185,12 +187,13 @@ def main(args):
     if args.shotlist is None:
         with importlib_resources.path(disruption_py.data, "paper_shotlist.txt") as p:
             args.shotlist = str(p)
-    shot_ids = pd.read_csv(args.shotlist, header=None).iloc[:, 0].values
+    shot_ids = pd.read_csv(args.shotlist, header=None).iloc[:, 0].values.tolist()
+    print(shot_ids)
     feature_cols, derived_feature_cols = parse_feature_cols(args.feature_cols)
-    dataset_df = get_dataset_df(args.data_source,
-        feature_cols + REQUIRED_COLS, shot_ids=shot_ids)
+    dataset_df = get_dataset_df(args.data_source,cols=
+        feature_cols + REQUIRED_COLS, efit_tree=args.efit_tree, shot_ids=shot_ids)
     dataset_df = add_derived_features(dataset_df, derived_feature_cols)
-    dataset_df = filter_dataset_df(dataset_df, exclude_non_disruptive=True,
+    dataset_df = filter_dataset_df(dataset_df, exclude_non_disruptive=False,
                                    exclude_black_window=BLACK_WINDOW_THRESHOLD, impute=True)
     X_train, X_test, y_train, y_test = create_dataset(
         dataset_df, ratio=DEFAULT_RATIO)

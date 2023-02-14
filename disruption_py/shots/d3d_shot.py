@@ -71,13 +71,14 @@ class D3DShot(Shot):
         if not already_populated:
             self.data = local_data
             self.data['time'] = self._times
+            self.data['shot'] = self._shot_id
 
     def get_disruption_timebase(self, minimum_ip=400.e3, minimum_duration=0.1):
         self.conn.openTree('d3d', self._shot_id)
-        ip, ip_time = self.get_signal(
+        raw_ip, ip_time = self.get_signal(
             f"ptdata('ip', {self._shot_id})", interpolate=False)
-        baseline = np.mean(ip[0:10])
-        ip = ip - baseline
+        baseline = np.mean(raw_ip[0:10])
+        ip = raw_ip - baseline
         duration, ip_max = self.get_end_of_shot(ip, ip_time, 100e3)
         if duration < minimum_duration or np.abs(ip_max) < minimum_ip:
             raise NotImplementedError()
@@ -89,6 +90,10 @@ class D3DShot(Shot):
             times = times[np.where(times < (self.disruption_time -
                                             self.duration_before_disruption))]
             times = np.concatenate((times, additional_times))
+        else:
+            ip_start = np.argmax(ip_time>=1.)
+            ip_end = np.argmax(raw_ip[ip_start:]<=100000) + ip_start
+            return ip_time[ip_start:ip_end] # [ms] -> [s]
         return times
 
     def get_end_of_shot(self, signal, signal_time, threshold=1.e5):
