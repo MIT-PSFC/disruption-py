@@ -16,9 +16,13 @@ class Shot:
 
     def __init__(self, shot_id, data=None):
         self._shot_id = int(shot_id)
+        try:
+            commit_hash = subprocess.check_output(["git", "describe", "--always"]).strip()
+        except Exception as e:
+            commit_hash = 'Unknown'
         self._metadata = {
             'labels': {},
-            'commit_hash': subprocess.check_output(["git", "describe", "--always"]).strip(),
+            'commit_hash': commit_hash,
             'timestep': {},
             'duration': {},
             'description': "",

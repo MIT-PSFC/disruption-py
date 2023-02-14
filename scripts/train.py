@@ -6,12 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, fbeta_score
-
-def eval_shots(df, lower_threshold = .05, disruptivity = .45, window= .025):
-    for _, shot_data in df.groupby(by=['shot']):
-        alarm = trigger_alarm(shot_data['time'], shot_data['score'],lower_threshold,disruptivity, window)
-        
-
+     
 def create_model(model_type):
     if model_type == 'random_forest':
         model = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=0)
