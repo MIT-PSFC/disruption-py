@@ -241,6 +241,7 @@ class HDF5RFModel():
         self.children_right_arr = children_right_arr
         self.threshold_arr = threshold_arr
         self.stride = stride
+        self.classes_ = [0,1]
 
     def predict_proba(self, X):
         predictions = np.zeros((len(X)//self.stride,))

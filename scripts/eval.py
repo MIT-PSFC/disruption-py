@@ -106,7 +106,7 @@ def eval_shots(df, lower_threshold=.05, disruptivity=.45, window=.025):
                 missed_warnings.append(shot_id)
     results = {}
     # TODO: Replace with f"" strings
-    if len(disruptions) == 0:
+    if len(disruptions) != 0:
         print(
             "Disruptions warned: %d/%d (%d%%)"
             % (len(good_warnings), len(disruptions), round(float(len(good_warnings)) / len(disruptions) * 100, 2))
@@ -115,7 +115,7 @@ def eval_shots(df, lower_threshold=.05, disruptivity=.45, window=.025):
             "Missed disruptions: %d/%d (%d%%)"
             % (len(missed_warnings), len(disruptions), round(float(len(missed_warnings)) / len(disruptions) * 100, 2))
         )
-    if len(non_disruptions) == 0:
+    if len(non_disruptions) != 0:
         print(
             "False Alarms: %d/%d (%d%%)"
             % (len(false_alarms), len(non_disruptions), round(float(len(false_alarms)) / len(non_disruptions) * 100, 2))
