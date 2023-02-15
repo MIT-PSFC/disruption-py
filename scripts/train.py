@@ -1,5 +1,7 @@
 import argparse
 import pickle
+import joblib
+from datetime import date
 
 import pandas as pd
 import numpy as np
@@ -9,7 +11,7 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, fbeta_scor
      
 def create_model(model_type):
     if model_type == 'random_forest':
-        model = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=0)
+        model = RandomForestClassifier(n_estimators=245, max_depth=10, random_state=0)
     else:
         raise NotImplementedError('Only random forest implemented')
     return model
@@ -58,16 +60,18 @@ def main(args):
     test['scores'] = model.predict(x_test) 
      
     print("Train F2-Score:", fbeta_score(y_train, results_dict['predictions'], beta=2))
-    print("Test F2-Score:", fbeta_score(y_test, test_predictions, beta=2))
+    print("Test F2-Score:", fbeta_score(y_test, test['scores'], beta=2))
     conf_mat = confusion_matrix(y_train, results_dict['predictions'])
     disp_train = ConfusionMatrixDisplay(confusion_matrix = conf_mat, display_labels = model.classes_)
-    conf_mat = confusion_matrix(y_test,test_predictions)
+    conf_mat = confusion_matrix(y_test,test['scores'])
     disp_test = ConfusionMatrixDisplay(confusion_matrix=conf_mat, display_labels=model.classes_)
     disp_train.plot()
     disp_test.plot()
     disp_train.ax_.set_title('Train Matrix')
     disp_test.ax_.set_title('Test Matrix')
     plt.show()
+    joblib.dump(model, args.output_dir + f"random_forest{date.today()}.joblib")
+	
     
     
 
