@@ -83,7 +83,7 @@ def eval_shots(df, lower_threshold=.05, disruptivity=.45, window=.025):
         shot_id = shot_data['shot'].values[0]
         time_until_disrupt = shot_data['time_until_disrupt'].values
         alarm = trigger_alarm(
-            shot_data['time'], shot_data['score'], lower_threshold, disruptivity, window)
+            shot_data['time'].values, shot_data['score'].values, lower_threshold, disruptivity, window)
         plt.figure()
         plt.plot(shot_data['time'], shot_data['score'])
         plt.plot(shot_data['time'], alarm)
