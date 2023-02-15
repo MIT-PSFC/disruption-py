@@ -1,15 +1,17 @@
 """
 This module contains utility functions for various numerical operations. 
 """
-
 from dataclasses import dataclass
 
+import h5py
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.impute import SimpleImputer
 from scipy.interpolate import interp1d, interp2d, RegularGridInterpolator
 from scipy.optimize import curve_fit
 from scipy.signal import lfilter, medfilt
-import numpy as np
-import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+
 
 def interp1(x, y, new_x, kind='linear', bounds_error=False, fill_value='extrapolate'):
     """ 
@@ -83,6 +85,7 @@ def interp2(X, Y, V, Xq, Yq, kind='linear'):
     set_interp = interp2d(X, Y, V, kind=kind)
     return set_interp(Xq, Yq)
 
+
 def exp_filter(x, w, strategy='fragmented'):
     """
     Implements an exponential filter.
@@ -96,7 +99,7 @@ def exp_filter(x, w, strategy='fragmented'):
         The filter weight.
     strategy: str, optional
         Imputation strategy to be used, if any. Options are 'fragmented' or 'none'. Default is 'fragmented.'
-    
+
     Returns
     -------
     _ : array
@@ -106,16 +109,17 @@ def exp_filter(x, w, strategy='fragmented'):
     filtered_x[0] = x[0]
     for i in range(1, len(x)):
         filtered_x[i] = w*x[i] + (1-w)*filtered_x[i-1]
-        if strategy=='fragmented':
+        if strategy == 'fragmented':
             if filtered_x[i-1] == np.nan:
-                filtered_x[i] = x[i] 
+                filtered_x[i] = x[i]
     return filtered_x
+
 
 def hist_time_th(thL, thH, thA, dt, v, v_old, c_old, a_old):
 
-    ##=================
-    ## double threshold
-    ##=================
+    # =================
+    # double threshold
+    # =================
     # if signal is below LOW threshold output is always 0
     if v < thL:
         v = 0
@@ -124,18 +128,18 @@ def hist_time_th(thL, thH, thA, dt, v, v_old, c_old, a_old):
         v = 1
     else:
         v = v_old
-    ##=================
-    ## time accumulation
-    ##=================
+    # =================
+    # time accumulation
+    # =================
     # when output signal is 0 counter gets reset
     if v == 0:
         c = 0
     # when output signal is 1 counter gets incremented
     else:
         c = c_old + dt
-    ##=================
-    ## sound alarm
-    ##=================
+    # =================
+    # sound alarm
+    # =================
     # if counter surpasses allarm threshold or old allarm was on
     if c > thA or a_old:
         a = 1
@@ -143,6 +147,7 @@ def hist_time_th(thL, thH, thA, dt, v, v_old, c_old, a_old):
         a = 0
 
     return v, c, a
+
 
 def trigger_alarm(time, value, low_thr, high_thr, thA):
     output = []
@@ -157,7 +162,8 @@ def trigger_alarm(time, value, low_thr, high_thr, thA):
 
     for t, v in zip(time, value):
         dt = t - tstart
-        v, c, a = hist_time_th(low_thr, high_thr, thA, dt, v, v_old, c_old, a_old)
+        v, c, a = hist_time_th(low_thr, high_thr, thA,
+                               dt, v, v_old, c_old, a_old)
         output.append(v)
         alarm.append(a)
         if output[0] != 0:
@@ -167,12 +173,12 @@ def trigger_alarm(time, value, low_thr, high_thr, thA):
         tstart = t
     return alarm
 
-from sklearn.impute import SimpleImputer
 
-#TODO: Clean up this function
-#TODO: Fix issue with None 
+# TODO: Clean up this function
+# TODO: Fix issue with None
+
+
 def impute_shot_df_NaNs(df, strategy='median', missing_values=np.nan):
-
     """
     This routine imputes missing values for all columns in a given df.
     Values are imputed on the basis of different shot numbers.
@@ -186,10 +192,12 @@ def impute_shot_df_NaNs(df, strategy='median', missing_values=np.nan):
     return df
     """
 
-    impute = SimpleImputer(missing_values=missing_values, strategy=strategy, verbose=0)
+    impute = SimpleImputer(missing_values=missing_values,
+                           strategy=strategy, verbose=0)
     variables = []
     ordered_names = list(df.columns)
-    cols = [col for col in ordered_names if col not in ['time_until_disrupt','label']]
+    cols = [col for col in ordered_names if col not in [
+        'time_until_disrupt', 'label']]
     for col in cols:
         if df[col].isnull().values.any():
             variables.append(col)
@@ -202,7 +210,7 @@ def impute_shot_df_NaNs(df, strategy='median', missing_values=np.nan):
 
         for shot in shots:
             index = np.where(df['shot'].values == shot)[0]
-            original_var = np.array(df[var].values[index],dtype=np.float64)
+            original_var = np.array(df[var].values[index], dtype=np.float64)
             tmp_flag = np.zeros(np.size(original_var))
             nan_original_var = np.where(np.isnan(original_var))[0]
             # if the whole column is NaN or more than 50% are NaNs
@@ -219,7 +227,58 @@ def impute_shot_df_NaNs(df, strategy='median', missing_values=np.nan):
 
         df[var] = np.array(imputed_var)
     return df
-# TODO: Implement this
+
+
+class HDF5RFModel():
+    def __init__(self, n_trees, n_nodes, n_classes, value_arr, tree_start_arr, feature_arr, children_left_arr, children_right_arr, threshold_arr, stride):
+        self.n_trees = n_trees
+        self.n_nodes = n_nodes
+        self.n_classes = n_classes
+        self.value_arr = value_arr
+        self.tree_start_arr = tree_start_arr
+        self.feature_arr = feature_arr
+        self.children_left_arr = children_left_arr
+        self.children_right_arr = children_right_arr
+        self.threshold_arr = threshold_arr
+        self.stride = stride
+
+    def predict_proba(self, X):
+        predictions = np.zeros((len(X)//self.stride,))
+        results = np.zeros((self.n_trees,))
+        for j in np.arange(len(X)//self.stride):
+            X_eval = X[self.stride*j, :]
+            for i in np.arange(self.n_trees):
+                current_node = 0
+                current_index = self.tree_start_arr[i]+current_node
+                while self.children_left_arr[current_index] != self.children_right_arr[current_index]:
+                    if X_eval[self.feature_arr[current_index]] <= self.threshold_arr[current_index]:
+                        current_node = self.children_left_arr[current_index]
+                    else:
+                        current_node = self.children_right_arr[current_index]
+                    current_index = self.tree_start_arr[i]+current_node
+                results[i] = self.value_arr[current_index][1] / \
+                    np.sum(self.value_arr[current_index])
+            predictions[j] = np.sum(results)/self.n_trees
+        return predictions
+
+
+def load_model_from_hdf5(model_path, model_type='RandomForestClassifier'):
+    if model_type == 'RandomForestClassifier':
+        f_dict = h5py.File(model_path, 'r')
+        n_trees = f_dict['n_trees'][0]
+        n_nodes = f_dict['n_nodes'][0]
+        n_classes = f_dict['n_classes'][0]
+        value_arr = f_dict['value'][:]
+        tree_start_arr = f_dict['tree_start'][:]
+        feature_arr = f_dict['feature'][:]
+        children_left_arr = f_dict['children_left'][:]
+        children_right_arr = f_dict['children_right'][:]
+        threshold_arr = f_dict['threshold'][:]
+        stride = 1
+        return HDF5RFModel(n_trees, n_nodes, n_classes, value_arr, tree_start_arr,
+                           feature_arr, children_left_arr, children_right_arr, threshold_arr, stride)
+    else:
+        raise ValueError('Model type not supported')
 
 
 def efit_rz_interp(times, efit_dict: dict) -> tuple:
@@ -669,10 +728,11 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
             (gam[i+1]*temp_filtered + tau[i+1]*dr_dt)/scrfact[i], window_size)
     return bolo_shot
 
+
 def save_open_plots(filename):
-   pp = PdfPages(filename)
-   fig_nums = plt.get_fignums()
-   figs = [plt.figure(n) for n in fig_nums]
-   for fig in figs:
-      fig.savefig(pp, format='pdf')
-   pp.close()
+    pp = PdfPages(filename)
+    fig_nums = plt.get_fignums()
+    figs = [plt.figure(n) for n in fig_nums]
+    for fig in figs:
+        fig.savefig(pp, format='pdf')
+    pp.close()

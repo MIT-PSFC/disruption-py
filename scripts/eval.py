@@ -3,7 +3,7 @@ import pickle
 import joblib
 
 import pandas as pd
-from sklearn.metrics import confusion_matrix, fbeta_score
+from sklearn.metrics import confusion_matrix, fbeta_score, ConfusionMatrixDisplay
 from sklearn.ensemble import RandomForestClassifier
 from disruption_py.utils import *
 
@@ -18,7 +18,8 @@ DEFAULT_ORDER = {
     'li': 7,
 }
 
-def plot_confusion_matrix(cm, classes=[0,1],
+
+def plot_confusion_matrix(cm, classes=[0, 1],
                           normalize=False,
                           title=None,
                           cmap=plt.cm.Blues):
@@ -71,7 +72,6 @@ def plot_confusion_matrix(cm, classes=[0,1],
     return ax
 
 
-
 def eval_shots(df, lower_threshold=.05, disruptivity=.45, window=.025):
     good_warnings = []
     missed_warnings = []
@@ -84,6 +84,9 @@ def eval_shots(df, lower_threshold=.05, disruptivity=.45, window=.025):
         time_until_disrupt = shot_data['time_until_disrupt'].values
         alarm = trigger_alarm(
             shot_data['time'], shot_data['score'], lower_threshold, disruptivity, window)
+        plt.figure()
+        plt.plot(shot_data['time'], shot_data['score'])
+        plt.plot(shot_data['time'], alarm)
         trigger = np.where(np.array(alarm) == 1)[0]
         disrupted = np.isnan(time_until_disrupt).all()
         if disrupted:
@@ -102,28 +105,37 @@ def eval_shots(df, lower_threshold=.05, disruptivity=.45, window=.025):
             if disrupted:
                 missed_warnings.append(shot_id)
     results = {}
-    # print(
-        # "Disruptions warned: %d/%d (%d%%)"
-        # % (len(good_warnings), len(disruptions), round(float(len(good_warnings)) / len(disruptions) * 100, 2))
-    # )
-    # print(
-        # "Missed disruptions: %d/%d (%d%%)"
-        # % (len(missed_warnings), len(disruptions), round(float(len(missed_warnings)) / len(disruptions) * 100, 2))
-    # )
-    # print(
-        # "False Alarms: %d/%d (%d%%)"
-        # % (len(false_alarms), len(non_disruptions), round(float(len(false_alarms)) / len(non_disruptions) * 100, 2))
-    # )
-
+    # TODO: Replace with f"" strings
+    if len(disruptions) == 0:
+        print(
+            "Disruptions warned: %d/%d (%d%%)"
+            % (len(good_warnings), len(disruptions), round(float(len(good_warnings)) / len(disruptions) * 100, 2))
+        )
+        print(
+            "Missed disruptions: %d/%d (%d%%)"
+            % (len(missed_warnings), len(disruptions), round(float(len(missed_warnings)) / len(disruptions) * 100, 2))
+        )
+    if len(non_disruptions) == 0:
+        print(
+            "False Alarms: %d/%d (%d%%)"
+            % (len(false_alarms), len(non_disruptions), round(float(len(false_alarms)) / len(non_disruptions) * 100, 2))
+        )
     results['good_warnings'] = good_warnings
     results['missed_warnings'] = missed_warnings
     results['false_alarms'] = false_alarms
     results['warning_times'] = warning_times
-    # results['TP'] = len(good_warnings) / float(len(disruptions))
-    # results['FP'] = len(false_alarms) / float(len(non_disruptions))
-    # results['FN'] = len(missed_warnings) / float(len(disruptions))
-    # results['TN'] = -(len(good_warnings) + len(false_alarms) +
-                      # len(missed_warnings) - len(df) / float(len(non_disruptions)))
+    results['TP'] = 0
+    results['FN'] = 0
+    results['FP'] = 0
+    results['TN'] = 0
+    if len(disruptions) > 0:
+        results['TP'] = len(good_warnings) / float(len(disruptions))
+        results['FN'] = len(missed_warnings) / float(len(disruptions))
+    if len(non_disruptions) > 0:
+        results['FP'] = len(false_alarms) / float(len(non_disruptions))
+        results['TN'] = -(len(good_warnings) + len(false_alarms) +
+                          len(missed_warnings) - len(df) / float(len(non_disruptions)))
+    save_open_plots('eval_shots.pdf')
     return results
 
 
@@ -131,10 +143,10 @@ def load_model(model_path):
     if model_path.endswith('.joblib'):
         model = joblib.load(model_path)
     elif model_path.endswith('.pkl'):
-        with open(model_path,'rb') as f:
+        with open(model_path, 'rb') as f:
             model = pickle.load(f)
     elif model_path.endswith('.h5'):
-        pass
+        model = load_model_from_hdf5(model_path)
     else:
         raise ValueError(f"Unknown model file type: {model_path}")
     return model
@@ -144,7 +156,7 @@ def predict(model, df, order=DEFAULT_ORDER):
     arr = np.empty((len(df), len(order)))
     for col in order:
         arr[:, order[col]] = df[col].values
-    df['score'] = model.predict(arr)
+    df['score'] = model.predict_proba(arr)
     return df
 
 
@@ -154,16 +166,18 @@ def main(args):
     data = predict(model, data)
     results = eval_shots(data)
     print(results)
-    # conf_mat = np.array([[results['TN'], results['FP']],
-                        # [results['FN'], results['TP']]])
-    # disp = ConfusionMatrixDisplay(confusion_matrix = conf_mat, display_labels = model.classes_)
-    # disp.plot()
-    # plt.show()
+    conf_mat = np.array([[results['TN'], results['FP']],
+                         [results['FN'], results['TP']]])
+    disp = ConfusionMatrixDisplay(
+        confusion_matrix=conf_mat, display_labels=model.classes_)
+    disp.plot()
+    plt.show()
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_path', type=str, default='/fusion/projects/disruption_warning/papers/SORI2020/forest_245_20_dan.pkl')
+    parser.add_argument('--model_path', type=str,
+                        default='/fusion/projects/disruption_warning/papers/SORI2020/forest_245_20_dan.pkl')
     parser.add_argument('data_path', type=str)
     args = parser.parse_args()
     main(args)
