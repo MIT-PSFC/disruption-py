@@ -18,60 +18,6 @@ DEFAULT_ORDER = {
     'li': 7,
 }
 
-
-def plot_confusion_matrix(cm, classes=[0, 1],
-                          normalize=False,
-                          title=None,
-                          cmap=plt.cm.Blues):
-    """
-    This function prints and plots the confusion matrix.
-    Normalization can be applied by setting `normalize=True`.
-    """
-    if not title:
-        if normalize:
-            title = 'Normalized confusion matrix'
-        else:
-            title = 'Confusion matrix, without normalization'
-
-    # Compute confusion matrix
-    cm = confusion_matrix(y_true, y_pred)
-    # Only use the labels that appear in the data
-    if normalize:
-        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-        print("Normalized confusion matrix")
-    else:
-        print('Confusion matrix, without normalization')
-
-    print(cm)
-
-    fig, ax = plt.subplots()
-    im = ax.imshow(cm, interpolation='nearest', cmap=cmap)
-    ax.figure.colorbar(im, ax=ax)
-    # We want to show all ticks...
-    ax.set(xticks=np.arange(cm.shape[1]),
-           yticks=np.arange(cm.shape[0]),
-           # ... and label them with the respective list entries
-           xticklabels=classes, yticklabels=classes,
-           title=title,
-           ylabel='True label',
-           xlabel='Predicted label')
-
-    # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
-             rotation_mode="anchor")
-
-    # Loop over data dimensions and create text annotations.
-    fmt = '.2f' if normalize else 'd'
-    thresh = cm.max() / 2.
-    for i in range(cm.shape[0]):
-        for j in range(cm.shape[1]):
-            ax.text(j, i, format(cm[i, j], fmt),
-                    ha="center", va="center",
-                    color="white" if cm[i, j] > thresh else "black")
-    fig.tight_layout()
-    return ax
-
-
 def eval_shots(df, lower_threshold=.05, disruptivity=.45, window=.025):
     good_warnings = []
     missed_warnings = []
@@ -85,14 +31,17 @@ def eval_shots(df, lower_threshold=.05, disruptivity=.45, window=.025):
         alarm = trigger_alarm(
             shot_data['time'].values, shot_data['score'].values, lower_threshold, disruptivity, window)
         plt.figure()
-        plt.plot(shot_data['time'], shot_data['score'])
-        plt.plot(shot_data['time'], alarm)
+        plt.title(f"Shot {shot_id}\nlower_threshold={lower_threshold};disruptivity={disruptivity};window={window}")
+        plt.plot(shot_data['time'], shot_data['score'],label='Disruptivity Score')
+        plt.plot(shot_data['time'], alarm,label='Alarm Activated')
         trigger = np.where(np.array(alarm) == 1)[0]
         disrupted = np.isnan(time_until_disrupt).all()
         if disrupted:
             disruptions.append(shot_id)
+            plt.axvline(x = shot_data['time'].values[0] + shot_data['time_until_disrupt'].values[0], label = 'Time of disruption')
         else:
             non_disruptions.append(shot_id)
+        plt.legend()
         if np.size(trigger) > 0:
             if disrupted:
                 warning_time = time_until_disrupt[trigger][0]
@@ -135,7 +84,6 @@ def eval_shots(df, lower_threshold=.05, disruptivity=.45, window=.025):
         results['FP'] = len(false_alarms) / float(len(non_disruptions))
         results['TN'] = -(len(good_warnings) + len(false_alarms) +
                           len(missed_warnings) - len(df) / float(len(non_disruptions)))
-    save_open_plots('eval_shots.pdf')
     return results
 
 
@@ -164,6 +112,7 @@ def main(args):
     data = pd.read_csv(args.data_path)
     model = load_model(args.model_path)
     data = predict(model, data)
+    data.to_csv(args.output_path)
     results = eval_shots(data)
     print(results)
     conf_mat = np.array([[results['TN'], results['FP']],
@@ -171,13 +120,17 @@ def main(args):
     disp = ConfusionMatrixDisplay(
         confusion_matrix=conf_mat, display_labels=model.classes_)
     disp.plot()
-    plt.show()
+    save_open_plots('eval_shots.pdf')
+    if args.visualize:
+        plt.show()
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_path', type=str,
                         default='/fusion/projects/disruption_warning/papers/SORI2020/forest_245_20_dan.pkl')
+    parser.add_argument('--output_path', type=str, default='./eval_data.csv')
     parser.add_argument('data_path', type=str)
+    parser.add_argument('--visualize', type=bool, default=True)
     args = parser.parse_args()
     main(args)
