@@ -88,6 +88,7 @@ def main(args):
                 f"random_forest{date.today()}_{args.unique_id}.joblib")
     with open(f"train_{args.unique_id}_.json", "w") as f:
         json.dump(vars(args), f)
+    print(f"Unique ID for this run: {args.unique_id}")
 
 
 if __name__ == '__main__':

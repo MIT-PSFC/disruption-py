@@ -130,6 +130,7 @@ def main(args):
         json.dump(vars(args), f)
     if args.visualize:
         plt.show()
+    print(f"Unique ID for this run: {args.unique_id}")
 
 
 if __name__ == '__main__':

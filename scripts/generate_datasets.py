@@ -210,6 +210,7 @@ def main(args):
     df_test.to_csv(f"./test_{args.unique_id}.csv", sep=',', index=False)
     with open(f"generate_datasets_{args.unique_id}.json", "w") as f:
         json.dump(vars(args), f)
+    print(f"Unique ID for this run: {args.unique_id}")
 
 
 if __name__ == '__main__':
