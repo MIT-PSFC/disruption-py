@@ -1,9 +1,11 @@
 """
-This module contains utility functions for various numerical operations. 
+This module contains utility functions for various numerical operations.
 """
 from dataclasses import dataclass
 
 import h5py
+import string
+import random
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.impute import SimpleImputer
@@ -13,8 +15,12 @@ from scipy.signal import lfilter, medfilt
 from matplotlib.backends.backend_pdf import PdfPages
 
 
+def generate_id(size=8):
+    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+
+
 def interp1(x, y, new_x, kind='linear', bounds_error=False, fill_value='extrapolate'):
-    """ 
+    """
     Interpolate a 1-D array.
 
     This function interpolates a 1-D array using the given x and y values
@@ -241,7 +247,7 @@ class HDF5RFModel():
         self.children_right_arr = children_right_arr
         self.threshold_arr = threshold_arr
         self.stride = stride
-        self.classes_ = [0,1]
+        self.classes_ = [0, 1]
 
     def predict_proba(self, X):
         predictions = np.zeros((len(X)//self.stride,))
@@ -370,7 +376,7 @@ def gaussian_fit(x, y):
 
 
 def gauss(x, *params):
-    """ Gaussian function. 
+    """ Gaussian function.
 
     Parameters
     ----------
@@ -555,7 +561,7 @@ def power(a):
                        7657, 8136, 8819, 7112, 6654, 6330, 6123, 29621,
                        29485, 29431, 29458, 29565, 29756, 30032, 30397, 6406], dtype=np.float64)*1.e4  # convert to [m^(-2)]
 
-    @dataclass
+    @ dataclass
     class Channel:
         label: str
         chanpwr: np.ndarray
@@ -564,7 +570,7 @@ def power(a):
         Z: float
         angle: float
 
-    @dataclass
+    @ dataclass
     class Power:
         pwrmix: np.ndarray
         divl: np.ndarray
@@ -649,7 +655,7 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
                       135.780, 129.600, 126.600, 123.600, 120.600, 117.600, 114.600,
                       111.600, 108.600, 101.910])
 
-    @dataclass
+    @ dataclass
     class Channel:
         label: str
         R: float
@@ -665,7 +671,7 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         (1, 4096)), np.zeros((1, 4096)), 0.0, 0.0, 0.0)
     channels = np.tile(one_channel, (48))
 
-    @dataclass
+    @ dataclass
     class Bolo:
         shot_id: int
         kappa: np.ndarray

@@ -1,6 +1,7 @@
 import argparse
 import pickle
 import joblib
+import json
 
 import pandas as pd
 from sklearn.metrics import confusion_matrix, fbeta_score, ConfusionMatrixDisplay
@@ -18,6 +19,7 @@ DEFAULT_ORDER = {
     'li': 7,
 }
 
+
 def eval_shots(df, lower_threshold=.05, disruptivity=.45, window=.025):
     good_warnings = []
     missed_warnings = []
@@ -31,14 +33,17 @@ def eval_shots(df, lower_threshold=.05, disruptivity=.45, window=.025):
         alarm = trigger_alarm(
             shot_data['time'].values, shot_data['score'].values, lower_threshold, disruptivity, window)
         plt.figure()
-        plt.title(f"Shot {shot_id}\nlower_threshold={lower_threshold};disruptivity={disruptivity};window={window}")
-        plt.plot(shot_data['time'], shot_data['score'],label='Disruptivity Score')
-        plt.plot(shot_data['time'], alarm,label='Alarm Activated')
+        plt.title(
+            f"Shot {shot_id}\nlower_threshold={lower_threshold};disruptivity={disruptivity};window={window}")
+        plt.plot(shot_data['time'], shot_data['score'],
+                 label='Disruptivity Score')
+        plt.plot(shot_data['time'], alarm, label='Alarm Activated')
         trigger = np.where(np.array(alarm) == 1)[0]
         disrupted = np.isnan(time_until_disrupt).all()
         if disrupted:
             disruptions.append(shot_id)
-            plt.axvline(x = shot_data['time'].values[0] + shot_data['time_until_disrupt'].values[0], label = 'Time of disruption')
+            plt.axvline(x=shot_data['time'].values[0] +
+                        shot_data['time_until_disrupt'].values[0], label='Time of disruption')
         else:
             non_disruptions.append(shot_id)
         plt.legend()
@@ -120,7 +125,9 @@ def main(args):
     disp = ConfusionMatrixDisplay(
         confusion_matrix=conf_mat, display_labels=model.classes_)
     disp.plot()
-    save_open_plots('eval_shots.pdf')
+    save_open_plots(f"eval_shots_{args.unique_id}.pdf")
+    with open(f"eval_{args.unique_id}.json", "w") as f:
+        json.dump(vars(args), f)
     if args.visualize:
         plt.show()
 
@@ -132,5 +139,7 @@ if __name__ == '__main__':
     parser.add_argument('--output_path', type=str, default='./eval_data.csv')
     parser.add_argument('data_path', type=str)
     parser.add_argument('--visualize', type=bool, default=True)
+    parser.add_argument('--unique_id', type=str,
+                        help='Unique identifier for the dataset. Used to name the output files.', default=generate_id())
     args = parser.parse_args()
     main(args)

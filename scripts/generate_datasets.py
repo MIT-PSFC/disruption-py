@@ -1,3 +1,4 @@
+import json
 import random
 import argparse
 try:
@@ -9,7 +10,7 @@ except ImportError:
 from sklearn.model_selection import train_test_split
 
 from disruption_py.database import *
-from disruption_py.utils import impute_shot_df_NaNs, exp_filter
+from disruption_py.utils import impute_shot_df_NaNs, exp_filter, generate_id
 import disruption_py.data
 
 # TODO: Add argument for picking between MDSPlus data and SQL data
@@ -66,7 +67,7 @@ def create_label(time_until_disrupt, threshold, label_type, multiple_thresholds)
 
 
 # TODO: Add support for CMOD
-def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=None, threshold=DEFAULT_THRESHOLD, tokamak='d3d', required_cols=REQUIRED_COLS,**kwargs):
+def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=None, threshold=DEFAULT_THRESHOLD, tokamak='d3d', required_cols=REQUIRED_COLS, **kwargs):
     if tokamak != 'd3d':
         raise NotImplementedError(
             "Currently only support DIII-D data retrieval")
@@ -129,14 +130,17 @@ def filter_dataset_df(df, **kwargs):
         keep_disrupt = np.where(~np.isnan(df['time_until_disrupt'].values))[0]
         df = df.iloc[keep_disrupt]
     if exclude_black_window != 0:
-        df = df[(df['time_until_disrupt'] > exclude_black_window) | np.isnan(df['time_until_disrupt'])]
+        df = df[(df['time_until_disrupt'] > exclude_black_window)
+                | np.isnan(df['time_until_disrupt'])]
     print(df.head())
     features = list(df.columns)
     if impute:
         df = impute_shot_df_NaNs(df)
-        df = df.dropna(subset=[feat for feat in features  if feat != 'time_until_disrupt'])
+        df = df.dropna(
+            subset=[feat for feat in features if feat != 'time_until_disrupt'])
     else:
-        df = df.dropna(subset=[feat for feat in features  if feat != 'time_until_disrupt'])
+        df = df.dropna(
+            subset=[feat for feat in features if feat != 'time_until_disrupt'])
     if write_to_csv:
         df.to_csv(csv_path)
     return df
@@ -187,22 +191,25 @@ def main(args):
     if args.shotlist is None:
         with importlib_resources.path(disruption_py.data, "paper_shotlist.txt") as p:
             args.shotlist = str(p)
-    shot_ids = pd.read_csv(args.shotlist, header=None).iloc[:, 0].values.tolist()
+    shot_ids = pd.read_csv(
+        args.shotlist, header=None).iloc[:, 0].values.tolist()
     print(shot_ids)
     feature_cols, derived_feature_cols = parse_feature_cols(args.feature_cols)
-    dataset_df = get_dataset_df(args.data_source,cols=
-        feature_cols + REQUIRED_COLS, efit_tree=args.efit_tree, shot_ids=shot_ids)
+    dataset_df = get_dataset_df(args.data_source, cols=feature_cols +
+                                REQUIRED_COLS, efit_tree=args.efit_tree, shot_ids=shot_ids)
     dataset_df = add_derived_features(dataset_df, derived_feature_cols)
     dataset_df = filter_dataset_df(dataset_df, exclude_non_disruptive=False,
                                    exclude_black_window=BLACK_WINDOW_THRESHOLD, impute=True)
     X_train, X_test, y_train, y_test = create_dataset(
         dataset_df, ratio=DEFAULT_RATIO)
     print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
-    dataset_df.to_csv('./whole_df.csv', sep=',', index=False)
+    dataset_df.to_csv(f"./whole_df_{args.unique_id}.csv", sep=',', index=False)
     df_train = pd.concat([X_train, y_train], axis=1)
-    df_train.to_csv('./train.csv', sep=',', index=False)
+    df_train.to_csv(f"./train_{args.unique_id}.csv", sep=',', index=False)
     df_test = pd.concat([X_test, y_test], axis=1)
-    df_test.to_csv('./test.csv', sep=',', index=False)
+    df_test.to_csv(f"./test_{args.unique_id}.csv", sep=',', index=False)
+    with open(f"generate_datasets_{args.unique_id}.json", "w") as f:
+        json.dump(vars(args), f)
 
 
 if __name__ == '__main__':
@@ -220,5 +227,7 @@ if __name__ == '__main__':
                         help="Name of efit tree to use for each shot. If left as None, the script will use the get_efit_tree method in database.py.", default=None)
     parser.add_argument('--data_source', type=int, choices=[
                         0, 1, 2, 3], help=r"0: Default to SQL database then MDSPlus.\n1: Default to MDSPlus then SQL database.\n2: SQL database only.\n3: MDSPlus only.", default=0)
+    parser.add_argument('--unique_id', type=str,
+                        help='Unique identifier for the dataset. Used to name the output files.', default=generate_id())
     args = parser.parse_args()
     main(args)
