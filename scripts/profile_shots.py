@@ -6,7 +6,9 @@ https://docs.python.org/3/library/profile.html
 """
 
 import cProfile
+import profile
 import pstats
+import io
 import argparse
 from pstats import SortKey
 
@@ -28,11 +30,10 @@ if __name__ == '__main__':
     parser.add_argument('--efit', type=str, default='EFIT05')
     parser.add_argument('--num_calls', type=int, default=1)
     args = parser.parse_args()
-    pr = cProfile.Profile()
+    pr = profile.Profile()
     pr.bias = calibrate_profiler(pr)
-    pr.enable()
-    cProfile.run('main(args)', 'd3d_shot_stats')
-    pr.disable()
-    p = pstats.Stats('d3d_shot_stats')
+    pr.run('main(args)')
+    p = pstats.Stats(pr)
     p.sort_stats(SortKey.CUMULATIVE).print_stats(20)
     p.sort_stats(SortKey.TIME).print_stats(20)
+    pr.dump_stats(f"shot_{args.shot}_{args.efit}_profileX{args.num_calls}")
