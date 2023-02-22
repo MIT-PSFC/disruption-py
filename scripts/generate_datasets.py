@@ -202,10 +202,14 @@ def main(args):
                                    exclude_black_window=BLACK_WINDOW_THRESHOLD, impute=True)
     X_train, X_test, y_train, y_test = create_dataset(
         dataset_df, ratio=DEFAULT_RATIO)
-    print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
     dataset_df.to_csv(f"./whole_df_{args.unique_id}.csv", sep=',', index=False)
+    df_train_val = pd.concat([X_train, y_train], axis=1)
+    X_train, X_val, y_train, y_val = create_dataset(df_train_val, ratio=.25)
+    print(X_train.shape, X_val.shape, X_test.shape, y_train.shape, y_val.shape, y_test.shape)
     df_train = pd.concat([X_train, y_train], axis=1)
     df_train.to_csv(f"./train_{args.unique_id}.csv", sep=',', index=False)
+    df_val = pd.concat([X_val, y_val], axis=1)
+    df_val.to_csv(f"./val_{args.unique_id}.csv", sep=",", index=False)
     df_test = pd.concat([X_test, y_test], axis=1)
     df_test.to_csv(f"./test_{args.unique_id}.csv", sep=',', index=False)
     with open(f"generate_datasets_{args.unique_id}.json", "w") as f:
@@ -227,7 +231,7 @@ if __name__ == '__main__':
     parser.add_argument('--efit_tree', type=str,
                         help="Name of efit tree to use for each shot. If left as None, the script will use the get_efit_tree method in database.py.", default=None)
     parser.add_argument('--data_source', type=int, choices=[
-                        0, 1, 2, 3], help=r"0: Default to SQL database then MDSPlus.\n1: Default to MDSPlus then SQL database.\n2: SQL database only.\n3: MDSPlus only.", default=0)
+                        0, 1, 2, 3], help=r"0: Default to SQL database then MDSPlus.\n1: Default to MDSPlus then SQL database.\n2: SQL database only.\n3: MDSPlus only.", default=2)
     parser.add_argument('--unique_id', type=str,
                         help='Unique identifier for the dataset. Used to name the output files.', default=generate_id())
     args = parser.parse_args()

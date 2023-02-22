@@ -34,9 +34,9 @@ class Shot:
 
     @classmethod
     def get_signal(id, signal_name):
-        pass
+        
 
-    def get_signal(self, signal_name, signal_getter=None, interpolate=True, interpolation_timebase=None):
+    def get_signal(self, signal_name, remote=False, interpolate=True, interpolation_timebase=None):
         """Get a signal from MDSplus.
 
         Parameters
