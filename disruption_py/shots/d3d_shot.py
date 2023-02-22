@@ -75,7 +75,7 @@ class D3DShot(Shot):
 
     def get_disruption_timebase(self, minimum_ip=400.e3, minimum_duration=0.1):
         self.conn.openTree('d3d', self._shot_id)
-        raw_ip, ip_time = self.get_signal(
+        raw_ip, ip_time = self._get_signal(
             f"ptdata('ip', {self._shot_id})", interpolate=False)
         baseline = np.mean(raw_ip[0:10])
         ip = raw_ip - baseline
@@ -91,9 +91,9 @@ class D3DShot(Shot):
                                             self.duration_before_disruption))]
             times = np.concatenate((times, additional_times))
         else:
-            ip_start = np.argmax(ip_time>=1.)
-            ip_end = np.argmax(raw_ip[ip_start:]<=100000) + ip_start
-            return ip_time[ip_start:ip_end] # [ms] -> [s]
+            ip_start = np.argmax(ip_time >= 1.)
+            ip_end = np.argmax(raw_ip[ip_start:] <= 100000) + ip_start
+            return ip_time[ip_start:ip_end]  # [ms] -> [s]
         return times
 
     def get_end_of_shot(self, signal, signal_time, threshold=1.e5):
@@ -185,7 +185,7 @@ class D3DShot(Shot):
     def get_H_parameters(self):
         self.conn.openTree('transport', self._shot_id)
         try:
-            h_98, _ = self.get_signal('\H_THH98Y2')
+            h_98, _ = self._get_signal('\H_THH98Y2')
         except ValueError as e:
             self.logger.info(
                 f"[Shot {self._shot_id}]: Failed to get H98 signal. Returning NaNs.")
@@ -193,7 +193,7 @@ class D3DShot(Shot):
             h_98 = np.full(self._times.size, np.nan)
         self.conn.openTree('d3d', self._shot_id)
         try:
-            h_alpha, _ = self.get_signal('\fs04')
+            h_alpha, _ = self._get_signal('\fs04')
         except ValueError as e:
             self.logger.info(
                 f"[Shot {self._shot_id}]: Failed to get H_alpha signal. Returning NaNs.")
@@ -205,7 +205,7 @@ class D3DShot(Shot):
         self.conn.openTree('d3d', self._shot_id)
         # Get neutral beam injected power
         try:
-            p_nbi, t_nbi = self.get_signal(
+            p_nbi, t_nbi = self._get_signal(
                 r"\d3d::top.nb:pinj", interpolate=False)
             p_nbi *= 1.e3  # [KW] -> [W]
             if len(t_nbi) > 2:
@@ -223,7 +223,7 @@ class D3DShot(Shot):
         # Get electron cycholotrn heating (ECH) power. It's poitn data, so it's not stored in an MDSplus tree
         self.conn.openTree('rf', self._shot_id)
         try:
-            p_ech, t_ech = self.get_signal(
+            p_ech, t_ech = self._get_signal(
                 r"\top.ech.total:echpwrc", interpolate=False)
             if len(t_ech) > 2:
                 p_ech = interp1(t_ech, p_ech, self._times,
@@ -250,14 +250,14 @@ class D3DShot(Shot):
         # analysis so that the smoothing is causal, and uses a shorter window.
         smoothing_window = 0.010  # [s]
         self.conn.openTree("bolom", self._shot_id)
-        bol_prm, _ = self.get_signal(r"\bol_prm", interpolate=False)
+        bol_prm, _ = self._get_signal(r"\bol_prm", interpolate=False)
         lower_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
         upper_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
         bol_channels = lower_channels + upper_channels
         bol_signals = []
         bol_times = []
         for i in range(48):
-            bol_signal, bol_time = self.get_signal(
+            bol_signal, bol_time = self._get_signal(
                 fr"\top.raw:{bol_channels[i]}", interpolate=False)
             bol_signals.append(bol_signal)
             bol_times.append(bol_time)
@@ -293,7 +293,7 @@ class D3DShot(Shot):
         self.conn.openTree('d3d', self._shot_id)
         # Get edge loop voltage and smooth it a bit with a median filter
         try:
-            v_loop, t_v_loop = self.get_signal(
+            v_loop, t_v_loop = self._get_signal(
                 f'ptdata("vloopb", {self._shot_id})', interpolate=False)
             v_loop = scipy.signal.medfilt(v_loop, 11)
             v_loop = interp1(t_v_loop, v_loop, self._times, 'linear')
@@ -311,7 +311,7 @@ class D3DShot(Shot):
             # We choose a 20-point width for gsastd. This means a 10ms window for ip smoothing
             dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
             self.conn.openTree(self.efit_tree_name, self._shot_id)
-            li, t_li = self.get_signal(r"\efit_a_eqdsk:li", interpolate=False)
+            li, t_li = self._get_signal(r"\efit_a_eqdsk:li", interpolate=False)
             chisq = self.conn.get(r"\efit_a_eqdsk:chisq").data()
             # Filter out invalid indices of efit reconstruction
             invalid_indices = None  # TODO: Finish
@@ -650,12 +650,12 @@ class D3DShot(Shot):
         # Check ONFR than DUD(legacy)
         else:
             try:
-                dusbradial, t_n1 = self.get_signal(
+                dusbradial, t_n1 = self._get_signal(
                     f"ptdata('onsbradial',{self._shot_id})")*1.e-4  # [T]
             except MdsException as e:
                 self.logger.debug(f"[Shot {self._shot_id}]: {e}")
                 try:
-                    dusbradial, t_n1 = self.get_signal(
+                    dusbradial, t_n1 = self._get_signal(
                         f"ptdata('dusbradial',{self._shot_id})")*1.e-4  # [T]
                 except MdsException as e:
                     self.logger.info(
@@ -666,17 +666,17 @@ class D3DShot(Shot):
                     return pd.DataFrame({'n_equal_1_normalized': n_equal_1_normalized, 'n_equal_1_mode': n_equal_1_mode})
         n_equal_1_mode = interp1(dusbradial, t_n1, self._times)
         # Get toroidal field Btor
-        b_tor, _ = self.get_signal(
+        b_tor, _ = self._get_signal(
             "ptdata('bt',{self._shot_id})")  # [T]
         n_equal_1_normalized = n_equal_1_mode/b_tor
         return pd.DataFrame({'n_equal_1_normalized': n_equal_1_normalized, 'n_equal_1_mode': n_equal_1_mode})
 
     def get_n1rms_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
-        n1rms, t_n1rms = self.get_signal('\n1rms', interpolate=False)
+        n1rms, t_n1rms = self._get_signal('\n1rms', interpolate=False)
         n1rms *= 1.e-4  # Gauss -> Tesla
         n1rms = interp1(t_n1rms, n1rms, self._times)
-        b_tor = self.get_signal(
+        b_tor = self._get_signal(
             "ptdata('bt',{self._shot_id})")  # [T]
         n1rms_norm = n1rms / np.abs(b_tor)
         return pd.DataFrame({'n1rms': n1rms, 'n1rms_normalized': n1rms_norm})
@@ -822,9 +822,9 @@ class D3DShot(Shot):
     def get_h_parameters(self):
         h98 = np.full(len(self._times), np.nan)
         self.conn.openTree('transport', self._shot_id)
-        h98, t_h98 = self.get_signal('\H_THH98Y2')
+        h98, t_h98 = self._get_signal('\H_THH98Y2')
         self.conn.openTree('d3d')
-        h_alpha, t_h_alpha = self.get_signal('\fs04')
+        h_alpha, t_h_alpha = self._get_signal('\fs04')
         h98 = interp1(t_h98, h98, self._times)
         h_alpha = interp1(t_h_alpha, h_alpha, self._times)
         return pd.DataFrame({'H98': h98, 'H_alpha': h_alpha})
@@ -931,14 +931,14 @@ class D3DShot(Shot):
 
         # Get bolometry data
         self.conn.openTree("bolom", self._shot_id)
-        bol_prm, _ = self.get_signal(r"\bol_prm", interpolate=False)
+        bol_prm, _ = self._get_signal(r"\bol_prm", interpolate=False)
         lower_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
         upper_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
         bol_channels = lower_channels + upper_channels
         bol_signals = []
         bol_times = []
         for i in range(48):
-            bol_signal, bol_time = self.get_signal(
+            bol_signal, bol_time = self._get_signal(
                 fr"\top.raw:{bol_channels[i]}", interpolate=False)
             bol_signals.append(bol_signal)
             bol_times.append(bol_time)
@@ -948,7 +948,7 @@ class D3DShot(Shot):
 
         # "Sometimes the bolo data is garbage." Check the 'ier' flag and remove bad channels
         self.conn.openTree(self.efit_tree_name, self._shot_id)
-        r_major_axis, efit_time = self.get_signal(
+        r_major_axis, efit_time = self._get_signal(
             r"\top.results.geqdsk:rmaxis", interpolate=False)
         data_dict = {'ch_avail': [], 'z': [], 'brightness': [],
                      'power': [], 'x': np.full((len(efit_time), len(fan_chans)), np.nan), 'xtime': efit_time, 't': a_struct.raw_time}
