@@ -40,7 +40,7 @@ class D3DShot(Shot):
     dt_before_disruption = 0.002
     duration_before_disruption = 0.10
 
-    def __init__(self, shot_id, efit_tree_name, data=None, times=None, disruption_time=None, override_cols=True):
+    def __init__(self, shot_id, efit_tree_name, data=None, times=None, disruption_time=None, override_cols=True, **kwargs):
         super().__init__(shot_id, data)
         self._times = times
         self.conn = MDSplus.Connection('atlas.gat.com')
@@ -59,9 +59,10 @@ class D3DShot(Shot):
                 self.logger.warning(
                     f"[Shot {self._shot_id}]:Shot constructor was passed data but no timebase.")
                 self.logger.debug(f"[Shot {self._shot_id}]:{e}")
-                self._times = self.get_disruption_timebase()
-        else:
-            self._times = self.get_disruption_timebase()
+                timebase_signal = kwargs.get('timebase_signal', None)
+                self._times = self.get_timebase(timebase_signal, **kwargs)
+        if self._times is None:
+            self._times = self.get_timebase(**kwargs)
         self._populate_shot_data(data is not None)
 
     def _populate_shot_data(self, already_populated=False):
@@ -72,6 +73,19 @@ class D3DShot(Shot):
             self.data = local_data
             self.data['time'] = self._times
             self.data['shot'] = self._shot_id
+
+    def get_timebase(self, timebase_signal, **kwargs):
+        if timebase_signal == None or timebase_signal == 'disruption_timebase':
+            minimum_ip = kwargs.get('minimum_ip', 400.e3)
+            minimum_duration = kwargs.get('minimum_duration', 0.1)
+            return self.get_disruption_timebase(minimum_ip, minimum_duration)
+        elif timebase_signal == 'ip':
+            _, ip_time = self._get_signal(
+                f"ptdata('ip', {self._shot_id})", interpolate=False)
+            return ip_time
+        else:
+            raise NotImplementedError(
+                "Only 'disruption_timebase' and 'ip' are supported for timebase_signal.")
 
     def get_disruption_timebase(self, minimum_ip=400.e3, minimum_duration=0.1):
         self.conn.openTree('d3d', self._shot_id)
@@ -84,6 +98,7 @@ class D3DShot(Shot):
             raise NotImplementedError()
         times = np.arange(0.100, duration+0.025, 0.025)
         if self.disrupted:
+            print(self.disruption_time)
             additional_times = np.arange(
                 self.disruption_time-self.duration_before_disruption, self.disruption_time + self.dt_before_disruption, self.dt_before_disruption)
             times = times[np.where(times < (self.disruption_time -
@@ -92,7 +107,7 @@ class D3DShot(Shot):
         else:
             ip_start = np.argmax(ip_time >= 1.)
             ip_end = np.argmax(raw_ip[ip_start:] <= 100000) + ip_start
-            times = ip_time[ip_start:ip_end] # [ms] -> [s]
+            return ip_time[ip_start:ip_end]  # [ms] -> [s]
         return times
 
     def get_end_of_shot(self, signal, signal_time, threshold=1.e5):
@@ -982,14 +997,6 @@ class D3DShot(Shot):
 
 
 if __name__ == '__main__':
-    import logging
-    from disruption_py.database import create_d3d_handler
-    logger = logging.getLogger('disruption_py')
-    # Output to terminal
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-    logger.addHandler(ch)
-    d3d = create_d3d_handler()
-    shot = D3DShot(D3D_DISRUPTED_SHOT, 'EFIT05', disruption_time=d3d.get_disruption_time(D3D_DISRUPTED_SHOT))
+    shot = D3DShot(D3D_DISRUPTED_SHOT, 'EFIT05')
     print(shot.data.columns)
     print(shot.data.head())

@@ -72,7 +72,7 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
         raise NotImplementedError(
             "Currently only support DIII-D data retrieval")
     tokamak = TOKAMAKS[tokamak]()
-    time_signal = '
+    timebase_signal = kwargs.get('timebase_signal', None)
     if shot_ids is None:
         random_state = kwargs.get('random_state', 8808)
         shot_ids = tokamak.get_disruption_table_shotlist()['shot']
@@ -89,9 +89,11 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
         shots = []
         for shot_id in shot_ids:
             if efit_tree is None:
-                shots.append(D3DShot(shot_id, tokamak.get_efit_tree(shot_id)))
+                shots.append(D3DShot(shot_id, tokamak.get_efit_tree(
+                    shot_id), timebase_signal=timebase_signal))
             else:
-                shots.append(D3DShot(shot_id, efit_tree))
+                shots.append(D3DShot(shot_id, efit_tree,
+                             timebase_signal=timebase_signal))
         dataset_df = pd.concat([shot.data for shot in shots])[cols]
     else:
         raise ValueError(
@@ -197,22 +199,27 @@ def main(args):
     print(shot_ids)
     feature_cols, derived_feature_cols = parse_feature_cols(args.feature_cols)
     dataset_df = get_dataset_df(args.data_source, cols=feature_cols +
-                                REQUIRED_COLS, efit_tree=args.efit_tree, shot_ids=shot_ids)
+                                REQUIRED_COLS, efit_tree=args.efit_tree, shot_ids=shot_ids, timebase_signal=args.timebase_signal)
     dataset_df = add_derived_features(dataset_df, derived_feature_cols)
     dataset_df = filter_dataset_df(dataset_df, exclude_non_disruptive=False,
                                    exclude_black_window=BLACK_WINDOW_THRESHOLD, impute=True)
     X_train, X_test, y_train, y_test = create_dataset(
         dataset_df, ratio=DEFAULT_RATIO)
-    dataset_df.to_csv(args.output_dir + f"whole_df_{args.unique_id}.csv", sep=',', index=False)
+    dataset_df.to_csv(args.output_dir +
+                      f"whole_df_{args.unique_id}.csv", sep=',', index=False)
     df_train_val = pd.concat([X_train, y_train], axis=1)
     X_train, X_val, y_train, y_val = create_dataset(df_train_val, ratio=.25)
-    print(X_train.shape, X_val.shape, X_test.shape, y_train.shape, y_val.shape, y_test.shape)
+    print(X_train.shape, X_val.shape, X_test.shape,
+          y_train.shape, y_val.shape, y_test.shape)
     df_train = pd.concat([X_train, y_train], axis=1)
-    df_train.to_csv(args.output_dir + f"train_{args.unique_id}.csv", sep=',', index=False)
+    df_train.to_csv(args.output_dir +
+                    f"train_{args.unique_id}.csv", sep=',', index=False)
     df_val = pd.concat([X_val, y_val], axis=1)
-    df_val.to_csv(args.output_dir + f"val_{args.unique_id}.csv", sep=",", index=False)
+    df_val.to_csv(args.output_dir +
+                  f"val_{args.unique_id}.csv", sep=",", index=False)
     df_test = pd.concat([X_test, y_test], axis=1)
-    df_test.to_csv(args.output_dir + f"test_{args.unique_id}.csv", sep=',', index=False)
+    df_test.to_csv(args.output_dir +
+                   f"test_{args.unique_id}.csv", sep=',', index=False)
     with open(args.output_dir + f"generate_datasets_{args.unique_id}.json", "w") as f:
         json.dump(vars(args), f)
     print(f"Unique ID for this run: {args.unique_id}")
