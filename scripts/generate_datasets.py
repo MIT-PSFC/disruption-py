@@ -202,7 +202,7 @@ def main(args):
     print(shot_ids)
     feature_cols, derived_feature_cols = parse_feature_cols(args.feature_cols)
     dataset_df = get_dataset_df(args.data_source, cols=feature_cols +
-                                REQUIRED_COLS, efit_tree=args.efit_tree, shot_ids=shot_ids, timebase_signal=args.timebase_signal)
+                                REQUIRED_COLS, efit_tree=args.efit_tree, shot_ids=shot_ids, timebase_signal = args.timebase_signal)
     dataset_df = add_derived_features(dataset_df, derived_feature_cols)
     dataset_df = filter_dataset_df(dataset_df, exclude_non_disruptive=False,
                                    exclude_black_window=BLACK_WINDOW_THRESHOLD, impute=True)
