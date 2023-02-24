@@ -87,6 +87,9 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
         dataset_df = tokamak.get_shot_data(shot_ids, cols)
     elif data_source == 3:
         shots = []
+        timebase_signal = kwargs.get('timebase_signal', default=None)
+        if timebase_signal is not None:
+            conn = MDSPlus.
         for shot_id in shot_ids:
             if efit_tree is None:
                 shots.append(D3DShot(shot_id, tokamak.get_efit_tree(
