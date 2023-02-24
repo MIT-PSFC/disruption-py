@@ -86,7 +86,7 @@ def main(args):
     plt.show()
     joblib.dump(model, args.output_dir +
                 f"random_forest{date.today()}_{args.unique_id}.joblib")
-    with open(f"train_{args.unique_id}_.json", "w") as f:
+    with open(args.output_dir + f"train_{args.unique_id}_.json", "w") as f:
         json.dump(vars(args), f)
     print(f"Unique ID for this run: {args.unique_id}")
 
@@ -95,10 +95,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description="Train a model on a dataset.")
     parser.add_argument('--train_path', type=str,
-                        help='Path to training data. Must be a csv file.', default='./train.csv')
+                        help='Path to training data. Must be a csv file.', default='./output/train.csv')
     parser.add_argument('--test_path', type=str,
-                        help='Path to test data. Must be a csv file.', default='./test.csv')
-    parser.add_argument('--output_dir', type=str,
+                        help='Path to test data. Must be a csv file.', default='./output/test.csv')
+    parser.add_argument('--output_dir', type=str, default='./output/'
                         help='Path to output model files. Must be a directory.', default='./model_dir/')
     parser.add_argument('--features', type=str, nargs='+',
                         help='List of features to use for training. If not provided, all features will be used.', default=None)

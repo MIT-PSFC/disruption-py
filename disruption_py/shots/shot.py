@@ -33,13 +33,13 @@ class Shot:
         if data is None:
             self.data = pd.DataFrame()
 
-    @classmethod
+    @staticmethod
     def get_signal(id, signal_name, conn, interpolate=True, interpolation_timebase=None):
-        if isinstance(MDSplus.Tree, conn):
+        if isinstance(conn,MDSplus.Tree):
             signal_record = conn.getNode(signal_name).getData()
             signal = signal_record.data()
             orig_timebase = signal_record.dim_of(0)
-        elif isinstance(MDSplus.Connection, conn):
+        elif isinstance(conn,MDSplus.Connection):
             signal = conn.get(signal_name).data()
             orig_timebase = conn.get(
                 f"dim_of({signal_name})").data()/1.e3  # [ms] -> [s]
@@ -85,5 +85,5 @@ class Shot:
         if signal_conn is None:
             signal_conn = self.conn
         if interpolation_timebase is None and interpolate:
-            interpolation_timebase = self.data['time']
+            interpolation_timebase = self._times
         return type(self).get_signal(self._shot_id, signal_name, signal_conn, interpolate, interpolation_timebase)

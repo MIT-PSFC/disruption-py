@@ -84,7 +84,6 @@ class D3DShot(Shot):
             raise NotImplementedError()
         times = np.arange(0.100, duration+0.025, 0.025)
         if self.disrupted:
-            print(self.disruption_time)
             additional_times = np.arange(
                 self.disruption_time-self.duration_before_disruption, self.disruption_time + self.dt_before_disruption, self.dt_before_disruption)
             times = times[np.where(times < (self.disruption_time -
@@ -93,7 +92,7 @@ class D3DShot(Shot):
         else:
             ip_start = np.argmax(ip_time >= 1.)
             ip_end = np.argmax(raw_ip[ip_start:] <= 100000) + ip_start
-            return ip_time[ip_start:ip_end]  # [ms] -> [s]
+            times = ip_time[ip_start:ip_end] # [ms] -> [s]
         return times
 
     def get_end_of_shot(self, signal, signal_time, threshold=1.e5):
@@ -983,6 +982,14 @@ class D3DShot(Shot):
 
 
 if __name__ == '__main__':
-    shot = D3DShot(D3D_DISRUPTED_SHOT, 'EFIT05')
+    import logging
+    from disruption_py.database import create_d3d_handler
+    logger = logging.getLogger('disruption_py')
+    # Output to terminal
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    logger.addHandler(ch)
+    d3d = create_d3d_handler()
+    shot = D3DShot(D3D_DISRUPTED_SHOT, 'EFIT05', disruption_time=d3d.get_disruption_time(D3D_DISRUPTED_SHOT))
     print(shot.data.columns)
     print(shot.data.head())

@@ -181,9 +181,9 @@ class DatabaseHandler:
         Get pandas dataframe of all disruption shots and times from the disruption table. Used as a cross-reference to determine whether a given shot is disruptive or not(provides t_disrupt). 
         NOTE: The disruption_warning table contains ONLY a subset of shots in this table
         """
-        return self.query('select shot,t_disrupt from disruptions order by shot')
+        return self.query('select distinct shot from disruptions order by shot')
 
-    def get_disruption_table_shotlist(self):
+    def get_disruption_warning_shotlist(self):
         """ 
         Get pandas dataframe of all shots in the disruption_warning table.
         """
@@ -234,13 +234,13 @@ class D3DHandler(DatabaseHandler):
                 logging.info(
                     f"Shot {shot_id} has no disruptions group efit run")
                 return None
-        return D3DShot(shot_id, efit_tree, data=data_df)
+        return D3DShot(shot_id, efit_tree, data=data_df,disruption_time=self.get_disruption_time(shot_id))
 
     # TODO: Make more efficient
     def get_shots(self, shot_ids, efit_tree=None):
         return [self.get_shot(shot_id, efit_tree) for shot_id in shot_ids]
 
-    def validate_shot(self, shot_id, visualize_differences=False):
+    def validate_shot(self, shot_id, visualize_differences=False, output_dir='./'):
         """
         Compare shot data currently in disruption database to what is calculated by the shot object.
 
@@ -257,17 +257,22 @@ class D3DHandler(DatabaseHandler):
             Whether the shot data is correct according to the disruption database
         """
         shot_id = int(shot_id)
-        true_shot = self.get_shot(shot_id)
-        if true_shot is None:
-            logging.debug("Shot not in database")
+        try:
+            true_shot = self.get_shot(shot_id)
+            if true_shot is None:
+                logging.debug("Shot not in database")
+                return False
+        except Exception as e:
+            logging.warning(f"Failed to load shot {shot_id} from SQL database")
+            logging.debug(e)
             return False
         local_shot = D3DShot(shot_id, self.get_efit_tree(
             shot_id), disruption_time=self.get_disruption_time(shot_id))
         comparison = pd.DataFrame()
         for col in list(local_shot.data.columns):
-            if is_numeric_dtype(local_shot.data[col]):
-                comparison[col] = np.abs(
-                    (true_shot.data[col] - local_shot.data[col])/true_shot.data[col])
+            if col in list(true_shot.data.columns):
+                if is_numeric_dtype(local_shot.data[col]):
+                    comparison[col] = np.abs((true_shot.data[col] - local_shot.data[col])/true_shot.data[col])
         # if comparison['time'] != true_shot.data['time']
         # plt.figure()
         # plt.plot(true_shot.data['time'], label='database')
@@ -287,7 +292,7 @@ class D3DHandler(DatabaseHandler):
                     axs[0].set_title(f"Shot {shot_id}:{col}")
                     axs[1].set_title("Normalized Error")
                     axs[0].legend()
-            save_open_plots(f"shot_{shot_id}_error_graphs.pdf")
+            save_open_plots(output_dir + f"shot_{shot_id}_error_graphs.pdf")
             plt.close('all')
             if visualize_differences:
                 plt.show()

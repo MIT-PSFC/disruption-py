@@ -72,6 +72,7 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
         raise NotImplementedError(
             "Currently only support DIII-D data retrieval")
     tokamak = TOKAMAKS[tokamak]()
+    time_signal = '
     if shot_ids is None:
         random_state = kwargs.get('random_state', 8808)
         shot_ids = tokamak.get_disruption_table_shotlist()['shot']
@@ -125,7 +126,7 @@ def filter_dataset_df(df, **kwargs):
     exclude_black_window = kwargs.get('exclude_black_window', 0)
     impute = kwargs.get('impute', True)
     write_to_csv = kwargs.get('write_to_csv', False)
-    csv_path = kwargs.get('csv_path', './filtered_dataset.csv')
+    csv_path = kwargs.get('csv_path', './output/filtered_dataset.csv')
     if exclude_non_disrupted:
         keep_disrupt = np.where(~np.isnan(df['time_until_disrupt'].values))[0]
         df = df.iloc[keep_disrupt]
@@ -202,17 +203,17 @@ def main(args):
                                    exclude_black_window=BLACK_WINDOW_THRESHOLD, impute=True)
     X_train, X_test, y_train, y_test = create_dataset(
         dataset_df, ratio=DEFAULT_RATIO)
-    dataset_df.to_csv(f"./whole_df_{args.unique_id}.csv", sep=',', index=False)
+    dataset_df.to_csv(args.output_dir + f"whole_df_{args.unique_id}.csv", sep=',', index=False)
     df_train_val = pd.concat([X_train, y_train], axis=1)
     X_train, X_val, y_train, y_val = create_dataset(df_train_val, ratio=.25)
     print(X_train.shape, X_val.shape, X_test.shape, y_train.shape, y_val.shape, y_test.shape)
     df_train = pd.concat([X_train, y_train], axis=1)
-    df_train.to_csv(f"./train_{args.unique_id}.csv", sep=',', index=False)
+    df_train.to_csv(args.output_dir + f"train_{args.unique_id}.csv", sep=',', index=False)
     df_val = pd.concat([X_val, y_val], axis=1)
-    df_val.to_csv(f"./val_{args.unique_id}.csv", sep=",", index=False)
+    df_val.to_csv(args.output_dir + f"val_{args.unique_id}.csv", sep=",", index=False)
     df_test = pd.concat([X_test, y_test], axis=1)
-    df_test.to_csv(f"./test_{args.unique_id}.csv", sep=',', index=False)
-    with open(f"generate_datasets_{args.unique_id}.json", "w") as f:
+    df_test.to_csv(args.output_dir + f"test_{args.unique_id}.csv", sep=',', index=False)
+    with open(args.output_dir + f"generate_datasets_{args.unique_id}.json", "w") as f:
         json.dump(vars(args), f)
     print(f"Unique ID for this run: {args.unique_id}")
 
@@ -225,7 +226,7 @@ if __name__ == '__main__':
     parser.add_argument('--feature_cols', type=str,
                         help='Either a file or comma-separated list of desired feature columns', default=None)
     parser.add_argument('--output_dir', type=str,
-                        help='Path to generated data.', default='./data/')
+                        help='Path to generated data.', default='./output/')
     parser.add_argument('--timebase_signal', type=str,
                         help='Signal whose timebase will be used as the unifying timebase of the dataset.', default=None)
     parser.add_argument('--efit_tree', type=str,

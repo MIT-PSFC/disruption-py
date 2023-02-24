@@ -9,3 +9,4 @@ data/*
 *.pkl
 *.joblib
 shot_*profileX*
+scripts/output/*
