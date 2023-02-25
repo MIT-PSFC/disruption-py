@@ -16,7 +16,7 @@ from disruption_py.utils import generate_id
 def create_model(model_type):
     if model_type == 'random_forest':
         model = RandomForestClassifier(
-            n_estimators=245, max_depth=10, random_state=0)
+            n_estimators=245, max_depth=15, random_state=0)
     else:
         raise NotImplementedError('Only random forest implemented')
     return model
@@ -32,7 +32,7 @@ def train_local(x_train, y_train, x_test, y_test, **kwargs):
         raise NotImplementedError('Only random forest implemented')
     else:
         model = RandomForestClassifier(
-            n_estimators=500, max_depth=10, random_state=0)
+            n_estimators=245, max_depth=10, random_state=0)
 
         model.fit(x_train, y_train)
         return {'model': model,
@@ -98,8 +98,8 @@ if __name__ == '__main__':
                         help='Path to training data. Must be a csv file.', default='./output/train.csv')
     parser.add_argument('--test_path', type=str,
                         help='Path to test data. Must be a csv file.', default='./output/test.csv')
-    parser.add_argument('--output_dir', type=str, default='./output/'
-                        help='Path to output model files. Must be a directory.', default='./model_dir/')
+    parser.add_argument('--output_dir', type=str, default='./output/',
+                        help='Path to output model files. Must be a directory.')
     parser.add_argument('--features', type=str, nargs='+',
                         help='List of features to use for training. If not provided, all features will be used.', default=None)
     parser.add_argument('--unique_id', type=str,

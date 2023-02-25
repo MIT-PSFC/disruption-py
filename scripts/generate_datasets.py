@@ -87,15 +87,13 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
         dataset_df = tokamak.get_shot_data(shot_ids, cols)
     elif data_source == 3:
         shots = []
-        timebase_signal = kwargs.get('timebase_signal', default=None)
-        if timebase_signal is not None:
-            conn = MDSPlus.
+        timebase_signal = kwargs.get('timebase_signal', None)
         for shot_id in shot_ids:
             if efit_tree is None:
                 shots.append(D3DShot(shot_id, tokamak.get_efit_tree(
-                    shot_id), timebase_signal=timebase_signal))
+                    shot_id),disruption_time=tokamak.get_disruption_time(shot_id), timebase_signal=timebase_signal))
             else:
-                shots.append(D3DShot(shot_id, efit_tree,
+                shots.append(D3DShot(shot_id, efit_tree,disruption_time=tokamak.get_disruption_time(shot_id),
                              timebase_signal=timebase_signal))
         dataset_df = pd.concat([shot.data for shot in shots])[cols]
     else:
@@ -210,16 +208,16 @@ def main(args):
         dataset_df, ratio=DEFAULT_RATIO)
     dataset_df.to_csv(args.output_dir +
                       f"whole_df_{args.unique_id}.csv", sep=',', index=False)
-    df_train_val = pd.concat([X_train, y_train], axis=1)
-    X_train, X_val, y_train, y_val = create_dataset(df_train_val, ratio=.25)
-    print(X_train.shape, X_val.shape, X_test.shape,
-          y_train.shape, y_val.shape, y_test.shape)
+    #df_train_val = pd.concat([X_train, y_train], axis=1)
+    # X_train, X_val, y_train, y_val = create_dataset(df_train_val, ratio=.25)
+    print(X_train.shape, X_test.shape,
+          y_train.shape, y_test.shape)
     df_train = pd.concat([X_train, y_train], axis=1)
     df_train.to_csv(args.output_dir +
                     f"train_{args.unique_id}.csv", sep=',', index=False)
-    df_val = pd.concat([X_val, y_val], axis=1)
-    df_val.to_csv(args.output_dir +
-                  f"val_{args.unique_id}.csv", sep=",", index=False)
+    # df_val = pd.concat([X_val, y_val], axis=1)
+    # df_val.to_csv(args.output_dir +
+                  # f"val_{args.unique_id}.csv", sep=",", index=False)
     df_test = pd.concat([X_test, y_test], axis=1)
     df_test.to_csv(args.output_dir +
                    f"test_{args.unique_id}.csv", sep=',', index=False)

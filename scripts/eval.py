@@ -51,7 +51,6 @@ def eval_shots(df, lower_threshold=.05, disruptivity=.45, window=.025):
             if disrupted:
                 warning_time = time_until_disrupt[trigger][0]
                 warning_times[shot_id] = warning_time
-                print(f"Warning time: {warning_time}")
                 good_warnings.append(warning_time)
             else:
                 false_alarms.append(shot_id)
@@ -109,7 +108,7 @@ def predict(model, df, order=DEFAULT_ORDER):
     arr = np.empty((len(df), len(order)))
     for col in order:
         arr[:, order[col]] = df[col].values
-    df['score'] = model.predict_proba(arr)
+    df['score'] = model.predict_proba(arr)[:,1]
     return df
 
 
@@ -129,7 +128,10 @@ def main(args):
     with open(args.output_dir + f"eval_{args.unique_id}.json", "w") as f:
         json.dump(vars(args), f)
     if args.visualize:
-        plt.show()
+        if results['FP'] + results['TP'] + results['FN'] + results['TN'] < 20:
+            plt.show()
+        else:
+            print("Displaying plots would open too many figures (>20). Plots have been saved but will not be displayed")
     print(f"Unique ID for this run: {args.unique_id}")
 
 
