@@ -108,7 +108,10 @@ def predict(model, df, order=DEFAULT_ORDER):
     arr = np.empty((len(df), len(order)))
     for col in order:
         arr[:, order[col]] = df[col].values
-    df['score'] = model.predict_proba(arr)[:,1]
+    predictions = model.predict_proba(arr)
+    if len(predictions.shape) > 1:
+        predictions = predictions[:,1]
+    df['score'] = predictions
     return df
 
 
