@@ -221,7 +221,7 @@ def impute_shot_df_NaNs(df, strategy='median', missing_values=np.nan):
             nan_original_var = np.where(np.isnan(original_var))[0]
             # if the whole column is NaN or more than 50% are NaNs
             # then the whole shot should be discarded
-            if (np.size(nan_original_var) == np.size(index)) or (np.size(nan_original_var) >= 0.5 * np.size(index)):
+            if (np.size(nan_original_var) == np.size(index)) or (np.size(nan_original_var) >= 0.8 * np.size(index)):
                 tmp_var = original_var * np.nan
                 tmp_flag = original_var * np.nan
             else:
