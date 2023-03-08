@@ -261,11 +261,11 @@ class D3DHandler(DatabaseHandler):
             true_shot = self.get_shot(shot_id)
             if true_shot is None:
                 logging.debug("Shot not in database")
-                return False
+                return False, "Shot not in database"
         except Exception as e:
             logging.warning(f"Failed to load shot {shot_id} from SQL database")
             logging.debug(e)
-            return False
+            return False, "Failed to load shot"
         local_shot = D3DShot(shot_id, self.get_efit_tree(
             shot_id), disruption_time=self.get_disruption_time(shot_id))
         comparison = pd.DataFrame()
@@ -279,6 +279,7 @@ class D3DHandler(DatabaseHandler):
         # plt.plot(local_shot.data['time'], label='local',linestyle="dotted")
         # plt.title('time')
         # plt.legend()
+        validation = False
         if not comparison.empty:
             logging.debug("Shot data is not correct")
             for col in comparison.columns:
@@ -296,8 +297,7 @@ class D3DHandler(DatabaseHandler):
             plt.close('all')
             if visualize_differences:
                 plt.show()
-            return False
-        return True
+        return validation, comparison
 
 
 def create_cmod_handler():

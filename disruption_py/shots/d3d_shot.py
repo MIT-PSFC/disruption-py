@@ -17,6 +17,7 @@ from disruption_py.utils import interp1, interp2, smooth, gaussian_fit, gsastd, 
 import disruption_py.data
 D3D_DISRUPTED_SHOT = 175552
 D3D_MAX_SHOT_TIME = 7.0  # [s]
+DEFAULT_A_MINOR = 0.56  # [m]
 """
 Useful Examples:
 https://diii-d.gat.com/diii-d/MDSplusAPI_Python_pg1
@@ -49,6 +50,7 @@ class D3DShot(Shot):
         self.disrupted = self.disruption_time is not None
         self.override_cols = override_cols
         self.data = data
+        timebase_signal = kwargs.pop('timebase_signal', None)
         if self.data is not None and self._times is None:
             try:
                 self._times = self.data['time'].to_numpy()
@@ -59,10 +61,9 @@ class D3DShot(Shot):
                 self.logger.warning(
                     f"[Shot {self._shot_id}]:Shot constructor was passed data but no timebase.")
                 self.logger.debug(f"[Shot {self._shot_id}]:{e}")
-                timebase_signal = kwargs.get('timebase_signal', None)
                 self._times = self.get_timebase(timebase_signal, **kwargs)
         if self._times is None:
-            self._times = self.get_timebase(**kwargs)
+            self._times = self.get_timebase(timebase_signal, **kwargs)
         self._populate_shot_data(data is not None)
 
     def _populate_shot_data(self, already_populated=False):

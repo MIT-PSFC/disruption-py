@@ -23,6 +23,8 @@ if __name__ == '__main__':
     parser.add_argument('shot_list', nargs='*',
                         help='List of shots to validate. If no shots are provided, all shots in the database will be validated.')
     parser.add_argument('--num_shots', type=int, help='Specify a number of random shots to validate on.', default = None)
+    parser.add_argument('--output_dir', type=str, help="Output directory for plots.", default='./output/')
+    parser.add_argument('--visualize', type=bool, help="Show comparison plots", default=False)
     args = parser.parse_args()
 
     d3d = create_d3d_handler()
@@ -32,5 +34,10 @@ if __name__ == '__main__':
     elif args.num_shots is not None:
         shot_list = random.choices(d3d.get_disruption_shotlist()['shot'].values.tolist(), k=args.num_shots)
         print(shot_list)
+    validation_results = []
     for shot in shot_list:
-        d3d.validate_shot(shot, visualize_differences=False)
+        validation_results.append(d3d.validate_shot(shot, visualize_differences=args.visualize, output_dir=args.output_dir))
+    for result, shot in zip(validation_results, shot_list):
+        print(f"Shot {shot} validation result: {result[0]}")
+        if isinstance(result[1], str):
+            print(result[1])
