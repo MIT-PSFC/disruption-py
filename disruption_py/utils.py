@@ -7,6 +7,7 @@ import h5py
 import string
 import random
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.impute import SimpleImputer
 from scipy.interpolate import interp1d, interp2d, RegularGridInterpolator
@@ -14,6 +15,7 @@ from scipy.optimize import curve_fit
 from scipy.signal import lfilter, medfilt
 from matplotlib.backends.backend_pdf import PdfPages
 
+pd.options.mode.chained_assignment = None
 
 def generate_id(size=8):
     return ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
@@ -231,7 +233,7 @@ def impute_shot_df_NaNs(df, strategy='median', missing_values=np.nan):
             imputed_var.extend(np.hstack(tmp_var))
             flag_imputed_nans.extend(tmp_flag)
 
-        df[var] = np.array(imputed_var)
+        df.loc[:, var] = imputed_var
     return df
 
 

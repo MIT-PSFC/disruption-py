@@ -143,14 +143,14 @@ class DatabaseHandler:
         return None
 
     def get_shot_data(self, shot_ids=None, cols=None):
-        shot_ids = tuple([int(shot_id) for shot_id in shot_ids])
+        shot_ids = ','.join([str(shot_id) for shot_id in shot_ids])
         cols = ' '.join([f"{col}," for col in cols[:-1]]) + f" {cols[-1]}"
         if cols is None:
             cols = "*"
         if shot_ids is None:
             query = f"select {cols} from disruption_warning order by time"
         else:
-            query = f"select {cols} from disruption_warning where shot in {shot_ids} order by time"
+            query = f"select {cols} from disruption_warning where shot in ({shot_ids}) order by time"
         shot_df = pd.read_sql_query(query, self.conn)
         return shot_df
 
@@ -178,14 +178,13 @@ class DatabaseHandler:
 
     def get_disruption_shotlist(self):
         """ 
-        Get pandas dataframe of all disruption shots and times from the disruption table. Used as a cross-reference to determine whether a given shot is disruptive or not(provides t_disrupt). 
-        NOTE: The disruption_warning table contains ONLY a subset of shots in this table
+        Get pandas dataframe of all disruptive shots and times from the disruption table. Can be sed as a cross-reference to determine whether a given shot is disruptive or not (all shots in this table are disruptive) and contain a t_disrupt.  
         """
         return self.query('select distinct shot from disruptions order by shot')
 
     def get_disruption_warning_shotlist(self):
         """ 
-        Get pandas dataframe of all shots in the disruption_warning table.
+        Get pandas dataframe of all shots in the disruption_warning table. NOTE: The disruption_warning table contains ONLY a subset of shots in this table
         """
         return self.query('select distinct shot from disruption_warning order by shot')
 

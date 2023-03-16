@@ -64,6 +64,7 @@ class D3DShot(Shot):
                 self._times = self.get_timebase(timebase_signal, **kwargs)
         if self._times is None:
             self._times = self.get_timebase(timebase_signal, **kwargs)
+        self.logger.debug(f"Timebase: {self._times}")
         self._populate_shot_data(data is not None)
 
     def _populate_shot_data(self, already_populated=False):
@@ -106,7 +107,7 @@ class D3DShot(Shot):
                                             self.duration_before_disruption))]
             times = np.concatenate((times, additional_times))
         else:
-            ip_start = np.argmax(ip_time >= 1.)
+            ip_start = np.argmax(ip_time <= .1)
             ip_end = np.argmax(raw_ip[ip_start:] <= 100000) + ip_start
             return ip_time[ip_start:ip_end]  # [ms] -> [s]
         return times
@@ -291,6 +292,7 @@ class D3DShot(Shot):
             p_rad = interp1(a_struct.time, p_rad, self._times, 'linear')
 
         # Remove any negative values from the power data
+        p_rad[np.isinf(p_rad)] = np.nan
         p_rad[p_rad < 0] = 0
         p_nbi[p_nbi < 0] = 0
         p_ech[p_ech < 0] = 0
@@ -370,8 +372,9 @@ class D3DShot(Shot):
             t_a = self.conn.get(
                 "\efit_a_eqdsk:atime").data()/1.e3  # [ms] -> [s]
             a_minor = interp1(t_a, a_minor, self._times, 'linear')
-            n_g = ip/1.e6 / (np.pi*a_minor**2)  # [MA/m^2]
-            g_f = ne/1.e20 / n_g  # TODO: Fill in units
+            with np.errstate(divide='ignore'):
+                n_g = ip/1.e6 / (np.pi*a_minor**2)  # [MA/m^2]
+                g_f = ne/1.e20 / n_g  # TODO: Fill in units
         except MdsException as e:
             # TODO: Confirm that there is a separate exception if ptdata name doesn't exist
             self.logger.info(
@@ -409,8 +412,9 @@ class D3DShot(Shot):
             t_a_rt = self.conn.get(
                 "\efit_a_eqdsk:atime").data()/1.e3  # [ms] -> [s]
             a_minor_rt = interp1(t_a_rt, a_minor_rt, self._times, 'linear')
-            n_g_rt = ip/1.e6 / (np.pi*a_minor_rt**2)  # [MA/m^2]
-            g_f_rt = ne_rt/1.e20 / n_g_rt  # TODO: Fill in units
+            with np.errstate(divide='ignore'):
+                n_g_rt = ip/1.e6 / (np.pi*a_minor_rt**2)  # [MA/m^2]
+                g_f_rt = ne_rt/1.e20 / n_g_rt  # TODO: Fill in units
         except MdsException as e:
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to get some parameter")
@@ -998,6 +1002,6 @@ class D3DShot(Shot):
 
 
 if __name__ == '__main__':
-    shot = D3DShot(D3D_DISRUPTED_SHOT, 'EFIT05')
+    shot = D3DShot(D3D_DISRUPTED_SHOT, 'EFIT05', disruption_time=4.369214483261109)
     print(shot.data.columns)
     print(shot.data.head())

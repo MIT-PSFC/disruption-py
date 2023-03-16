@@ -1,6 +1,7 @@
 import json
 import random
 import argparse
+import sys
 try:
     import importlib.resources as importlib_resources
 except ImportError:
@@ -56,6 +57,7 @@ DEFAULT_RATIO = .2  # Ratio of test data to total data and validation data to tr
 
 def create_label(time_until_disrupt, threshold, label_type, multiple_thresholds):
     if label_type == 'binary':
+        print(time_until_disrupt)
         dis = np.where((time_until_disrupt > threshold) &
                        (~np.isnan(time_until_disrupt)))[0]
         ndis = np.where(np.isnan(time_until_disrupt))[0]
@@ -192,6 +194,17 @@ def parse_feature_cols(feature_str):
 
 
 def main(args):
+    logger = logging.getLogger('disruption_py')
+    if args.log:
+        ch = logging.FileHandler('./output/validation.log')
+    else:
+        ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(args.log_level*10)
+    # log_format = '%(asctime)s | %(levelname)s: %(message)s'
+    # ch.setFormatter(logging.Formatter(log_format))
+    logger.addHandler(ch)
+    logger.setLevel(args.log_level*10)
+    print(logger)
     if args.shotlist is None:
         with importlib_resources.path(disruption_py.data, "paper_shotlist.txt") as p:
             args.shotlist = str(p)
@@ -243,5 +256,7 @@ if __name__ == '__main__':
                         0, 1, 2, 3], help=r"0: Default to SQL database then MDSPlus.\n1: Default to MDSPlus then SQL database.\n2: SQL database only.\n3: MDSPlus only.", default=2)
     parser.add_argument('--unique_id', type=str,
                         help='Unique identifier for the dataset. Used to name the output files.', default=generate_id())
+    parser.add_argument('--log', type=bool, help='By default, generate_datasets will log to commandline but if this argument is true it will log to a file in the output directory', default=False)
+    parser.add_argument('--log_level', type=int, choices=[0,1,2,3,4,5], help='Notset:0,Debug:1,Info:2,Warning:3,Error:4,Critical:5', default=2) 
     args = parser.parse_args()
     main(args)

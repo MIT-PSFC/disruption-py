@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='disruption_py',
-    version='0.1.0-alpha',
+    version='0.1.0a0',
     author='Herbert Turner',
     author_email='hmturner@mit.edu',
     packages=['disruption_py', 'disruption_py.test'],

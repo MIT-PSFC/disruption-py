@@ -16,6 +16,14 @@ class Shot:
 
     def __init__(self, shot_id, data=None):
         self._shot_id = int(shot_id)
+        if self.logger.level == logging.NOTSET:
+            self.logger.setLevel(logging.DEBUG)
+        assert self.logger.level != logging.NOTSET, "Logger level is NOTSET"
+        if not self.logger.hasHandlers():
+            handler = logging.StreamHandler(sys.stdout)
+            handler.setLevel(logging.DEBUG)
+            self.logger.addHandler(handler)
+        assert self.logger.hasHandlers(), "Logger has no handlers"
         try:
             commit_hash = subprocess.check_output(
                 ["git", "describe", "--always"]).strip()
