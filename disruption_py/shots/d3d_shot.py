@@ -85,6 +85,10 @@ class D3DShot(Shot):
             _, ip_time = self._get_signal(
                 f"ptdata('ip', {self._shot_id})", interpolate=False)
             return ip_time
+        elif timebase_signal == 'flattop':
+            _, ip_time = self._get_signal(
+                f"ptdata('ip', {self._shot_id})", interpolate=False)
+            return self.get_flattop_timebase(ip_time)
         else:
             raise NotImplementedError(
                 "Only 'disruption_timebase' and 'ip' are supported for timebase_signal.")
@@ -145,6 +149,44 @@ class D3DShot(Shot):
             duration = - duration
         signal_max = np.max(polarized_signal)*polarity
         return duration, signal_max
+
+    def get_flattop_timebase(self, times):
+        # time_until_disrupt = self.disruption_time - times
+        # time_until_disrupt[time_until_disrupt < 0] = np.nan
+        # indices_no_disrupt = np.where(np.isnan(time_until_disrupt))
+        # indices_disrupt = np.where(~np.isnan(time_until_disrupt))
+        try:
+            t_ip_prog, ip = self.conn.get(
+                f"dim_of(ptdata('iptipp', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
+            ip_prog = self.conn.get(
+                f"ptdata('iptipp', {self._shot_id})").data()  # [A]
+            polarity = np.unique(self.conn.get(
+                f"ptdata('iptdirect', {self._shot_id})").data())
+            if len(polarity) > 1:
+                self.logger.info(
+                    f"[Shot {self._shot_id}]:Polarity of Ip target is not constant. Using value at first timestep.")
+                self.logger.debug(
+                    f"[Shot {self._shot_id}]: Polarity array {polarity}")
+                polarity = polarity[0]
+            ip_prog = ip_prog * polarity
+            dipprog_dt = np.gradient(ip_prog, t_ip_prog)
+            ip_prog = interp1(t_ip_prog, ip_prog, times, 'linear')
+            dipprog_dt = interp1(t_ip_prog, dipprog_dt, times, 'linear')
+        except MdsException as e:
+            self.logger.info(
+                f"[Shot {self._shot_id}]:Failed to get programmed plasma current parameters")
+            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+        epsoff = self.conn.get(f"ptdata('epsoff', {self._shot_id})").data()
+        t_epsoff = self.conn.get(
+            f"dim_of(ptdata('epsoff', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
+        t_epsoff += .001  # Avoid problem with simultaneity of epsoff being triggered exactly on the last time sample
+        epsoff = interp1(t_epsoff, epsoff, self._times, 'linear')
+        railed_indices = np.where(np.abs(epsoff) > .5)
+        power_supply_railed = np.zeros(len(self._times))
+        power_supply_railed[railed_indices] = 1
+        indices_flattop = np.where((np.abs(dipprog_dt) <= 2.e3) & (
+            np.abs(ip_prog) > 100e3) & (power_supply_railed != 1))
+        return times[indices_flattop]
 
     def get_time_until_disrupt(self):
         if self.disrupted:
