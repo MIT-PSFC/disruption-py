@@ -19,33 +19,23 @@ import disruption_py.data
 
 class CModShot(Shot):
     """
-    Base shot class to represent a single shot of a fusion experiment.
+    Class for a single CMod shot.
 
-    Attributes
-    ---
-    metadata->dict:
-        labels: {} /* Dictionary where key is the label name(e.g. "disruption period")
-                    and value is a list of starting and ending time tuples(e.g.[(10,100)]*/
-        commit_hash: // Commit hash of code version that was used to generate shot data
-        timestep: // Time delta. Every array must conform to this time step
-        duration: // Length in milliseconds of shot
-        description: // Optional text summary to add to shot
-    data->pandas.DataFrame:
     """
-    efit_vars = ['\efit_aeqdsk:time',
-                 '\efit_aeqdsk:betan',
-                 '\efit_aeqdsk:betap',
-                 '\efit_aeqdsk:eout',
-                 '\efit_aeqdsk:li',
-                 '\efit_aeqdsk:otop',
-                 '\efit_aeqdsk:obott',
-                 '\efit_aeqdsk:q0',
-                 '\efit_aeqdsk:qstar',
-                 '\efit_aeqdsk:q95',
-                 '\efit_aeqdsk:vloopt',
-                 '\efit_aeqdsk:wplasm',
-                 '\efit_aeqdsk:ssep',
-                 '\efit_aeqdsk:xnnc']
+    efit_vars = [r'\efit_aeqdsk:time',
+                 r'\efit_aeqdsk:betan',
+                 r'\efit_aeqdsk:betap',
+                 r'\efit_aeqdsk:eout',
+                 r'\efit_aeqdsk:li',
+                 r'\efit_aeqdsk:otop',
+                 r'\efit_aeqdsk:obott',
+                 r'\efit_aeqdsk:q0',
+                 r'\efit_aeqdsk:qstar',
+                 r'\efit_aeqdsk:q95',
+                 r'\efit_aeqdsk:vloopt',
+                 r'\efit_aeqdsk:wplasm',
+                 r'\efit_aeqdsk:ssep',
+                 r'\efit_aeqdsk:xnnc']
 
     # TODO: Populate metadata dict
     def __init__(self, mdsplus_name, shot_id, data_columns=DEFAULT_SHOT_COLUMNS, data=None):
@@ -273,7 +263,7 @@ class CModShot(Shot):
             ip = ip_without_factor*ip_factor  # [A]
         else:
             magnetics_tree = Tree('magnetics', self._shot_id)
-            ip_record = magnetics_tree.getNode('\ip').getData()
+            ip_record = magnetics_tree.getNode(r'\ip').getData()
             ip = ip_record.data()
             ip_time = ip_record.dim_of(0)
             ip = interp1(ip_time, ip, dpcstime)
@@ -345,33 +335,33 @@ class CModShot(Shot):
 
     # TODO: Replace with for loop like in D3D shot class
     def _calc_EFIT_parameters(self):
-        efittime = self._analysis_tree.getNode('\efit_aeqdsk:time')
+        efittime = self._analysis_tree.getNode(r'\efit_aeqdsk:time')
         beta_N = self._analysis_tree.getNode(
-            '\efit_aeqdsk:betan').getData().data().astype('float64', copy=False)
+            r'\efit_aeqdsk:betan').getData().data().astype('float64', copy=False)
         beta_p = self._analysis_tree.getNode(
-            '\efit_aeqdsk:betap').getData().data().astype('float64', copy=False)
+            r'\efit_aeqdsk:betap').getData().data().astype('float64', copy=False)
         kappa = self._analysis_tree.getNode(
-            '\efit_aeqdsk:eout').getData().data().astype('float64', copy=False)
+            r'\efit_aeqdsk:eout').getData().data().astype('float64', copy=False)
         li = self._analysis_tree.getNode(
-            '\efit_aeqdsk:li').getData().data().astype('float64', copy=False)
-        upper_gap = self._analysis_tree.getNode('\efit_aeqdsk:otop').getData(
+            r'\efit_aeqdsk:li').getData().data().astype('float64', copy=False)
+        upper_gap = self._analysis_tree.getNode(r'\efit_aeqdsk:otop').getData(
         ).data().astype('float64', copy=False)/100.0  # meters
-        lower_gap = self._analysis_tree.getNode('\efit_aeqdsk:obott').getData(
+        lower_gap = self._analysis_tree.getNode(r'\efit_aeqdsk:obott').getData(
         ).data().astype('float64', copy=False)/100.0  # meters
         q0 = self._analysis_tree.getNode(
-            '\efit_aeqdsk:q0').getData().data().astype('float64', copy=False)
+            r'\efit_aeqdsk:q0').getData().data().astype('float64', copy=False)
         qstar = self._analysis_tree.getNode(
-            '\efit_aeqdsk:qstar').getData().data().astype('float64', copy=False)
+            r'\efit_aeqdsk:qstar').getData().data().astype('float64', copy=False)
         q95 = self._analysis_tree.getNode(
-            '\efit_aeqdsk:q95').getData().data().astype('float64', copy=False)
+            r'\efit_aeqdsk:q95').getData().data().astype('float64', copy=False)
         V_loop_efit = self._analysis_tree.getNode(
-            '\efit_aeqdsk:vloopt').getData().data().astype('float64', copy=False)
+            r'\efit_aeqdsk:vloopt').getData().data().astype('float64', copy=False)
         Wmhd = self._analysis_tree.getNode(
-            '\efit_aeqdsk:wplasm').getData().data().astype('float64', copy=False)
-        ssep = self._analysis_tree.getNode('\efit_aeqdsk:ssep').getData(
+            r'\efit_aeqdsk:wplasm').getData().data().astype('float64', copy=False)
+        ssep = self._analysis_tree.getNode(r'\efit_aeqdsk:ssep').getData(
         ).data().astype('float64', copy=False)/100.0  # meters
         n_over_ncrit = -self._analysis_tree.getNode(
-            '\efit_aeqdsk:xnnc').getData().data().astype('float64', copy=False)
+            r'\efit_aeqdsk:xnnc').getData().data().astype('float64', copy=False)
         beta_p_dot = np.gradient(beta_p, efittime)
         li_dot = np.gradient(li, efittime)
         dWmhd_dt = np.gradient(Wmhd, efittime)
@@ -634,11 +624,11 @@ class CModShot(Shot):
             return ne_PF, Te_PF, pressure_PF
         try:
             efit_tree = Tree('cmod', self._shot_id)
-            z0 = 0.01*efit_tree.getNode('\efit_aeqdsk:zmagx').getData().data()
-            aminor = efit_tree.getNode('\efit_aeqdsk:aminor').getData().data()
-            kappa = efit_tree.getNode('\efit_aeqdsk:kappa').getData().data()
+            z0 = 0.01*efit_tree.getNode(r'\efit_aeqdsk:zmagx').getData().data()
+            aminor = efit_tree.getNode(r'\efit_aeqdsk:aminor').getData().data()
+            kappa = efit_tree.getNode(r'\efit_aeqdsk:kappa').getData().data()
             efit_time = efit_tree.getNode(
-                '\efit_aeqdsk:aminor').getData().dim_of(0)
+                r'\efit_aeqdsk:aminor').getData().dim_of(0)
             bminor = aminor*kappa
             electron_tree = Tree('electroncs', self._shot_id)
             node_ext = '.yag_new.results.profiles'
@@ -646,7 +636,7 @@ class CModShot(Shot):
                 electron_tree, nlnum=4)
             TS_te = electron_tree.getNode(
                 f"{node_ext}:te_rz").getData().data()*1000*11600
-            tets_edge = electron_tree.getNode('\ts_te').getData().data()*11600
+            tets_edge = electron_tree.getNode(r'\ts_te').getData().data()*11600
             TS_te = np.concatenate((TS_te, tets_edge))
             TS_time = electron_tree.getNode(
                 f"{node_ext}:te_rz").getData().dim_of(0)
@@ -730,12 +720,12 @@ class CModShot(Shot):
 
     def parse_yags(self):
         electron_tree = Tree('electrons', self._shot_id)
-        nyag1 = electron_tree.getNode('\knobs:pulses_q').getData().data()
-        nyag2 = electron_tree.getNode('\knobs:pulses_q_2').getData().data()
+        nyag1 = electron_tree.getNode(r'\knobs:pulses_q').getData().data()
+        nyag2 = electron_tree.getNode(r'\knobs:pulses_q_2').getData().data()
         indices1 = -1
         indices2 = -1
-        dark = electron_tree.getNode('\n_dark_prior').getData().data()
-        ntotal = electron_tree.getNode('\n_total').getData().data()
+        dark = electron_tree.getNode(r'\n_dark_prior').getData().data()
+        ntotal = electron_tree.getNode(r'\n_total').getData().data()
         nt = ntotal-dark
         if nyag1 == 0:
             if nyag2 != 0:
@@ -804,16 +794,16 @@ class CModShot(Shot):
         flag = 1
         valid_indices, efit_times = self.efit_check()
         cmod_tree = Tree('cmod', self._shot_id)
-        ip = cmod_tree.getNode('\ip').getData().data()
+        ip = cmod_tree.getNode(r'\ip').getData().data()
         if np.mean(ip) > 0:
             flag = 0
         t1 = np.amin(efit_times)
         t2 = np.amax(efit_times)
         analysis_tree = Tree('analysis', self._shot_id)
-        psia = analysis_tree.getNode('\efit_aeqdsk:SIBDRY').getData().data()
+        psia = analysis_tree.getNode(r'\efit_aeqdsk:SIBDRY').getData().data()
         psia_t = analysis_tree.getNode(
-            '\efit_aeqdsk:SIBDRY').getData().dim_of(0)
-        psi_0 = analysis_tree.getNode('\efit_aeqdsk:SIMAGX')
+            r'\efit_aeqdsk:SIBDRY').getData().dim_of(0)
+        psi_0 = analysis_tree.getNode(r'\efit_aeqdsk:SIMAGX')
         electron_tree = Tree('electrons', self._shot_id)
         nets_core = electron_tree.getNode(
             '.YAG_NEW.RESULTS.PROFILES:NE_RZ').getData().data()
@@ -824,12 +814,12 @@ class CModShot(Shot):
         zts_core = electron_tree.getNode(
             '.YAG_NEW.RESULTS.PROFILES:Z_SORTED').getData().data()
         mts_core = len(zts_core)
-        zts_edge = electron_tree.getNode('\fiber_z').getData().data()
+        zts_edge = electron_tree.getNode(r'\fiber_z').getData().data()
         mts_edge = len(zts_edge)
         try:
-            nets_edge = electron_tree.getNode('\ts_ne').getData().data()
+            nets_edge = electron_tree.getNode(r'\ts_ne').getData().data()
             nets_edge_err = electron_tree.getNode(
-                '\ts_ne_err').getData().data()
+                r'\ts_ne_err').getData().data()
         except mdsExceptions.mdsException as err:
             nets_edge = np.zeros((len(nets_core[:, 1]), mts_edge))
             nets_edge_err = nets_edge + 1e20
@@ -894,7 +884,7 @@ class CModShot(Shot):
         psi = np.full((len(r), len(t)), np.nan)
         z = z.astype('float32')  # TODO: Ask if this change is necessary
         psi_tree = Tree(tree, self._shot_id)
-        psi_record = psi_tree.getNode('\efit_geqdsk:psirz').getData()
+        psi_record = psi_tree.getNode(r'\efit_geqdsk:psirz').getData()
         psirz = psi_record.data()
         rgrid = psi_record.dim_of(0)
         zgrid = psi_record.dim_of(1)

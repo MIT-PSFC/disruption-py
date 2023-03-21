@@ -12,23 +12,47 @@ DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
 
 
 class Shot:
+    """
+    Class for a single shot.
+
+    Parameters
+    ----------
+    shot_id : int
+        Shot number.
+    data : pandas.DataFrame, optional
+        Data for the shot. If not provided, an empty DataFrame will be created.
+
+    Attributes
+    ----------
+    data : pandas.DataFrame
+        Data for the shot.
+    conn : MDSplus.Connection
+        MDSplus connection to the shot.
+    tree : MDSplus.Tree
+        MDSplus tree for the shot.
+    logger : logging.Logger
+        Logger for the shot.
+    _shot_id : int
+        Shot number.
+    _metadata : dict
+        Metadata for the shot.
+    """
+
     logger = logging.getLogger('disruption_py')
 
     def __init__(self, shot_id, data=None):
         self._shot_id = int(shot_id)
-        if self.logger.level == logging.NOTSET:
-            self.logger.setLevel(logging.DEBUG)
-        assert self.logger.level != logging.NOTSET, "Logger level is NOTSET"
-        if not self.logger.hasHandlers():
-            handler = logging.StreamHandler(sys.stdout)
-            handler.setLevel(logging.DEBUG)
-            self.logger.addHandler(handler)
-        assert self.logger.hasHandlers(), "Logger has no handlers"
         try:
             commit_hash = subprocess.check_output(
                 ["git", "describe", "--always"]).strip()
         except Exception as e:
             commit_hash = 'Unknown'
+        if self.logger.level == logging.NOTSET:
+            self.logger.setLevel(logging.INFO)
+        assert self.logger.level != logging.NOTSET, "Logger level is NOTSET"
+        if not self.logger.hasHandlers():
+            self.logger.addHandler(logging.StreamHandler())
+        assert self.logger.hasHandlers(), "Logger has no handlers"
         self._metadata = {
             'labels': {},
             'commit_hash': commit_hash,
@@ -43,11 +67,11 @@ class Shot:
 
     @staticmethod
     def get_signal(id, signal_name, conn, interpolate=True, interpolation_timebase=None):
-        if isinstance(conn,MDSplus.Tree):
+        if isinstance(conn, MDSplus.Tree):
             signal_record = conn.getNode(signal_name).getData()
             signal = signal_record.data()
             orig_timebase = signal_record.dim_of(0)
-        elif isinstance(conn,MDSplus.Connection):
+        elif isinstance(conn, MDSplus.Connection):
             signal = conn.get(signal_name).data()
             orig_timebase = conn.get(
                 f"dim_of({signal_name})").data()/1.e3  # [ms] -> [s]

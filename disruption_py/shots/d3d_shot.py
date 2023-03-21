@@ -29,13 +29,13 @@ class D3DShot(Shot):
     # Tokamak Variables
     nominal_flattop_radius = 0.59
     # EFIT Variables
-    efit_cols = {'beta_n': '\efit_a_eqdsk:betan', 'beta_p': '\efit_a_eqdsk:betap', 'kappa': '\efit_a_eqdsk:kappa', 'li': '\efit_a_eqdsk:li', 'upper_gap': '\efit_a_eqdsk:gaptop', 'lower_gap': '\efit_a_eqdsk:gapbot',
-                 'q0': '\efit_a_eqdsk:q0', 'qstar': '\efit_a_eqdsk:qstar', 'q95': '\efit_a_eqdsk:q95', 'Wmhd': '\efit_a_eqdsk:wmhd', 'chisq': '\efit_a_eqdsk:chisq'}
-    # 'v_loop_efit': ,'\efit_a_eqdsk:vsurf', 'bt0': '\efit_a_eqdsk:bt0'
+    efit_cols = {'beta_n': r'\efit_a_eqdsk:betan', 'beta_p': r'\efit_a_eqdsk:betap', 'kappa': r'\efit_a_eqdsk:kappa', 'li': r'\efit_a_eqdsk:li', 'upper_gap': r'\efit_a_eqdsk:gaptop', 'lower_gap': r'\efit_a_eqdsk:gapbot',
+                 'q0': r'\efit_a_eqdsk:q0', 'qstar': r'\efit_a_eqdsk:qstar', 'q95': r'\efit_a_eqdsk:q95', 'Wmhd': r'\efit_a_eqdsk:wmhd', 'chisq': r'\efit_a_eqdsk:chisq'}
+    # 'v_loop_efit': ,r'\efit_a_eqdsk:vsurf', 'bt0': r'\efit_a_eqdsk:bt0'
     efit_derivs = {'beta_p': 'dbetap_dt', 'li': 'dli_dt', 'Wmhd': 'dWmhd_dt'}
-    rt_efit_cols = {'beta_p_RT': '\efit_a_eqdsk:betap', 'li_RT': '\efit_a_eqdsk:li',
-                    'q95_RT': '\efit_a_eqdsk:q95', 'Wmhd_RT': '\efit_a_eqdsk:wmhd', 'chisq': '\efit_a_eqdsk:chisq'}
-    # 'v_loop_efit_RT': '\efit_a_eqdsk:vsurf',
+    rt_efit_cols = {'beta_p_RT': r'\efit_a_eqdsk:betap', 'li_RT': r'\efit_a_eqdsk:li',
+                    'q95_RT': r'\efit_a_eqdsk:q95', 'Wmhd_RT': r'\efit_a_eqdsk:wmhd', 'chisq': r'\efit_a_eqdsk:chisq'}
+    # 'v_loop_efit_RT': r'\efit_a_eqdsk:vsurf',
 
     # Disruption Variables
     dt_before_disruption = 0.002
@@ -156,7 +156,7 @@ class D3DShot(Shot):
         efit_data = {k: self.conn.get(v).data()
                      for k, v in self.efit_cols.items()}
         efit_time = self.conn.get(
-            '\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
+            r'\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
         if self._times is None:
             self._times = efit_time
         # EFIT reconstructions are sometimes invalid, particularly when very close
@@ -182,7 +182,7 @@ class D3DShot(Shot):
         efit_data = {k: self.conn.get(v).data()
                      for k, v in self.rt_efit_cols.items()}
         efit_time = self.conn.get(
-            '\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
+            r'\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
         # EFIT reconstructions are sometimes invalid, particularly when very close
         # to a disruption.  There are a number of EFIT parameters that can indicate
         # invalid reconstructions, such as 'terror' and 'chisq'.  Here we use
@@ -201,7 +201,7 @@ class D3DShot(Shot):
     def get_H_parameters(self):
         self.conn.openTree('transport', self._shot_id)
         try:
-            h_98, _ = self._get_signal('\H_THH98Y2')
+            h_98, _ = self._get_signal(r'\H_THH98Y2')
         except ValueError as e:
             self.logger.info(
                 f"[Shot {self._shot_id}]: Failed to get H98 signal. Returning NaNs.")
@@ -209,7 +209,7 @@ class D3DShot(Shot):
             h_98 = np.full(self._times.size, np.nan)
         self.conn.openTree('d3d', self._shot_id)
         try:
-            h_alpha, _ = self._get_signal('\fs04')
+            h_alpha, _ = self._get_signal(r'\fs04')
         except ValueError as e:
             self.logger.info(
                 f"[Shot {self._shot_id}]: Failed to get H_alpha signal. Returning NaNs.")
@@ -222,7 +222,7 @@ class D3DShot(Shot):
         # Get neutral beam injected power
         try:
             p_nbi, t_nbi = self._get_signal(
-                r"\d3d::top.nb:pinj", interpolate=False)
+                r'\d3d::top.nb:pinj', interpolate=False)
             p_nbi *= 1.e3  # [KW] -> [W]
             if len(t_nbi) > 2:
                 p_nbi = interp1(t_nbi, p_nbi, self._times,
@@ -240,7 +240,7 @@ class D3DShot(Shot):
         self.conn.openTree('rf', self._shot_id)
         try:
             p_ech, t_ech = self._get_signal(
-                r"\top.ech.total:echpwrc", interpolate=False)
+                r'\top.ech.total:echpwrc', interpolate=False)
             if len(t_ech) > 2:
                 p_ech = interp1(t_ech, p_ech, self._times,
                                 'linear', bounds_error=False, fill_value=0.)
@@ -256,7 +256,7 @@ class D3DShot(Shot):
         # Get ohmic power and loop voltage
         p_ohm, v_loop = self.get_ohmic_parameters()
         # Radiated power
-        # We had planned to use the standard signal '\bolom::prad_tot' for this
+        # We had planned to use the standard signal r'\bolom::prad_tot' for this
         # parameter.  However, the processing involved in calculating \prad_tot
         # from the arrays of bolometry channels involves non-causal filtering with
         # a 50 ms window.  This is not acceptable for our purposes.  Tony Leonard
@@ -266,7 +266,7 @@ class D3DShot(Shot):
         # analysis so that the smoothing is causal, and uses a shorter window.
         smoothing_window = 0.010  # [s]
         self.conn.openTree("bolom", self._shot_id)
-        bol_prm, _ = self._get_signal(r"\bol_prm", interpolate=False)
+        bol_prm, _ = self._get_signal(r'\bol_prm', interpolate=False)
         lower_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
         upper_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
         bol_channels = lower_channels + upper_channels
@@ -328,8 +328,8 @@ class D3DShot(Shot):
             # We choose a 20-point width for gsastd. This means a 10ms window for ip smoothing
             dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
             self.conn.openTree(self.efit_tree_name, self._shot_id)
-            li, t_li = self._get_signal(r"\efit_a_eqdsk:li", interpolate=False)
-            chisq = self.conn.get(r"\efit_a_eqdsk:chisq").data()
+            li, t_li = self._get_signal(r'\efit_a_eqdsk:li', interpolate=False)
+            chisq = self.conn.get(r'\efit_a_eqdsk:chisq').data()
             # Filter out invalid indices of efit reconstruction
             invalid_indices = None  # TODO: Finish
         except MdsException as e:
@@ -355,8 +355,9 @@ class D3DShot(Shot):
         dne_dt = ne.copy()
         self.conn.openTree(self.efit_tree_name, self._shot_id)
         try:
-            t_ne = self.conn.get("dim_of(\density)").data()/1.e3  # [ms] -> [s]
-            ne = self.conn.get("\density").data()*1.e6  # [cm^3] -> [m^3]
+            t_ne = self.conn.get(
+                r'dim_of(\density)').data()/1.e3  # [ms] -> [s]
+            ne = self.conn.get(r'\density').data()*1.e6  # [cm^3] -> [m^3]
             dne_dt = np.gradient(ne, t_ne)
             # NOTE: t_ne has higher resolution than efit_time so t_ne[0] < efit_time[0] because of rounding, meaning we need to allow extrapolation
             ne = interp1(t_ne, ne, self._times, 'linear',
@@ -368,9 +369,9 @@ class D3DShot(Shot):
             ip = self.conn.get(f"ptdata('ip', {self._shot_id})").data()  # [A]
             ipsign = np.sign(np.sum(ip))
             ip = interp1(t_ip, ip*ipsign, self._times, 'linear')
-            a_minor = self.conn.get("\efit_a_eqdsk:aminor").data()  # [m]
+            a_minor = self.conn.get(r'\efit_a_eqdsk:aminor').data()  # [m]
             t_a = self.conn.get(
-                "\efit_a_eqdsk:atime").data()/1.e3  # [ms] -> [s]
+                r'\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
             a_minor = interp1(t_a, a_minor, self._times, 'linear')
             with np.errstate(divide='ignore'):
                 n_g = ip/1.e6 / (np.pi*a_minor**2)  # [MA/m^2]
@@ -408,9 +409,9 @@ class D3DShot(Shot):
             ip_sign = np.sign(np.sum(ip_rt))
             ip = interp1(t_ip_rt, ip_rt*ip_sign, self._times, 'linear')
             self.conn.openTree('efitrt1', self._shot_id)
-            a_minor_rt = self.conn.get("\efit_a_eqdsk:aminor").data()  # [m]
+            a_minor_rt = self.conn.get(r'\efit_a_eqdsk:aminor').data()  # [m]
             t_a_rt = self.conn.get(
-                "\efit_a_eqdsk:atime").data()/1.e3  # [ms] -> [s]
+                r'\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
             a_minor_rt = interp1(t_a_rt, a_minor_rt, self._times, 'linear')
             with np.errstate(divide='ignore'):
                 n_g_rt = ip/1.e6 / (np.pi*a_minor_rt**2)  # [MA/m^2]
@@ -631,9 +632,9 @@ class D3DShot(Shot):
             self.conn.openTree(self.efit_tree_name, self._shot_id)
             try:
                 t_a = self.conn.get(
-                    r"\efit_a_eqdsk:atime").data()/1.e3  # [ms] -> [s]
-                a_minor = self.conn.get(r"\efit_a_eqdsk:aminor").data()  # [m]
-                chisq = self.conn.get(r"\efit_a_eqdsk:chisq").data()
+                    r'\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
+                a_minor = self.conn.get(r'\efit_a_eqdsk:aminor').data()  # [m]
+                chisq = self.conn.get(r'\efit_a_eqdsk:chisq').data()
                 invalid_indices = np.where(chisq > 50)
                 a_minor[invalid_indices] = np.nan
                 a_minor = interp1(t_a, a_minor, self._times, 'linear')
@@ -692,7 +693,7 @@ class D3DShot(Shot):
 
     def get_n1rms_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
-        n1rms, t_n1rms = self._get_signal('\n1rms', interpolate=False)
+        n1rms, t_n1rms = self._get_signal(r'\n1rms', interpolate=False)
         n1rms *= 1.e-4  # Gauss -> Tesla
         n1rms = interp1(t_n1rms, n1rms, self._times)
         b_tor = self._get_signal(
@@ -807,7 +808,7 @@ class D3DShot(Shot):
         # Get Zeff
         try:
             zeff = self.conn.get(
-                r"\d3d::top.spectroscopy.vb.zeff:zeff").data()
+                r'\d3d::top.spectroscopy.vb.zeff:zeff').data()
             # t_nbi = self.conn.get(
             # r"dim_of(\d3d::top.nb:pinj)").data()/1.e3  # [ms]->[s]
             t_zeff = self.conn.get(
@@ -828,10 +829,10 @@ class D3DShot(Shot):
 
     def get_kappa_area(self):
         self.conn.openTree(self.efit_tree_name, self._shot_id)
-        a_minor = self.conn.get('\efit_a_eqdsk:aminor').data()
-        area = self.conn.get('\efit_a_eqdsk:area').data()
-        chisq = self.conn.get('\efit_a_eqdsk:chisq').data()
-        t = self.conn.get('\efit_a_eqdsk:atime')
+        a_minor = self.conn.get(r'\efit_a_eqdsk:aminor').data()
+        area = self.conn.get(r'\efit_a_eqdsk:area').data()
+        chisq = self.conn.get(r'\efit_a_eqdsk:chisq').data()
+        t = self.conn.get(r'\efit_a_eqdsk:atime')
         kappa_area = area / (np.pi * a_minor**2)
         invalid_indices = np.where(chisq > 50)
         kappa_area[invalid_indices] = np.nan
@@ -841,9 +842,9 @@ class D3DShot(Shot):
     def get_h_parameters(self):
         h98 = np.full(len(self._times), np.nan)
         self.conn.openTree('transport', self._shot_id)
-        h98, t_h98 = self._get_signal('\H_THH98Y2')
+        h98, t_h98 = self._get_signal(r'\H_THH98Y2')
         self.conn.openTree('d3d')
-        h_alpha, t_h_alpha = self._get_signal('\fs04')
+        h_alpha, t_h_alpha = self._get_signal(r'\fs04')
         h98 = interp1(t_h98, h98, self._times)
         h_alpha = interp1(t_h_alpha, h_alpha, self._times)
         return pd.DataFrame({'H98': h98, 'H_alpha': h_alpha})
@@ -851,14 +852,14 @@ class D3DShot(Shot):
     def get_shape_parameters(self):
         self.conn.openTree(self.efit_tree_name, self._shot_id)
         efit_time = self.conn.get(
-            '\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
-        sqfod = self.conn.get('\efit_a_eqdsk:sqfod').data()
-        sqfou = self.conn.get('\efit_a_eqdsk:sqfou').data()
-        tritop = self.conn.get('\efit_a_eqdsk:tritop').data()  # meters
-        tribot = self.conn.get('\efit_a_eqdsk:tribot').data()  # meters
+            r'\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
+        sqfod = self.conn.get(r'\efit_a_eqdsk:sqfod').data()
+        sqfou = self.conn.get(r'\efit_a_eqdsk:sqfou').data()
+        tritop = self.conn.get(r'\efit_a_eqdsk:tritop').data()  # meters
+        tribot = self.conn.get(r'\efit_a_eqdsk:tribot').data()  # meters
         # plasma minor radius [m]
-        aminor = self.conn.get('\efit_a_eqdsk:aminor').data()
-        chisq = self.conn.get('\efit_a_eqdsk:chisq').data()
+        aminor = self.conn.get(r'\efit_a_eqdsk:aminor').data()
+        chisq = self.conn.get(r'\efit_a_eqdsk:chisq').data()
         # Compute triangularity and squareness:
         delta = (tritop+tribot)/2.0
         squareness = (sqfod+sqfou)/2.0
@@ -950,7 +951,7 @@ class D3DShot(Shot):
 
         # Get bolometry data
         self.conn.openTree("bolom", self._shot_id)
-        bol_prm, _ = self._get_signal(r"\bol_prm", interpolate=False)
+        bol_prm, _ = self._get_signal(r'\bol_prm', interpolate=False)
         lower_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
         upper_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
         bol_channels = lower_channels + upper_channels
@@ -968,7 +969,7 @@ class D3DShot(Shot):
         # "Sometimes the bolo data is garbage." Check the 'ier' flag and remove bad channels
         self.conn.openTree(self.efit_tree_name, self._shot_id)
         r_major_axis, efit_time = self._get_signal(
-            r"\top.results.geqdsk:rmaxis", interpolate=False)
+            r'\top.results.geqdsk:rmaxis', interpolate=False)
         data_dict = {'ch_avail': [], 'z': [], 'brightness': [],
                      'power': [], 'x': np.full((len(efit_time), len(fan_chans)), np.nan), 'xtime': efit_time, 't': a_struct.raw_time}
         for i in range(len(fan_chans)):
@@ -991,7 +992,7 @@ class D3DShot(Shot):
     def _get_efit_dict(self):
         self.conn.openTree(self.efit_tree_name, self._shot_id)
         efit_dict = dict()
-        path = r"\top.results.geqdsk:"
+        path = r'\top.results.geqdsk:'
         efit_dict['time'] = self.conn.get(
             f"dim_of({path}psirz,2)").data()/1.e3  # [ms] -> [s]
         efit_dict['z'] = self.conn.get(f"{path}z").data()
@@ -1002,6 +1003,7 @@ class D3DShot(Shot):
 
 
 if __name__ == '__main__':
-    shot = D3DShot(D3D_DISRUPTED_SHOT, 'EFIT05', disruption_time=4.369214483261109)
+    shot = D3DShot(D3D_DISRUPTED_SHOT, 'EFIT05',
+                   disruption_time=4.369214483261109)
     print(shot.data.columns)
     print(shot.data.head())
