@@ -16,6 +16,8 @@ from MDSplus import *
 from disruption_py.utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power, efit_rz_interp
 import disruption_py.data
 D3D_DISRUPTED_SHOT = 175552
+# Retrieve efit from EFIT01, Peaking Factor Nodes: dpsrdcva dpsrdxdiv dpstepf dpsnepf
+D3D_PEAKING_FACTORS_SHOT = 180808
 D3D_MAX_SHOT_TIME = 7.0  # [s]
 DEFAULT_A_MINOR = 0.56  # [m]
 """
@@ -743,7 +745,9 @@ class D3DShot(Shot):
         n1rms_norm = n1rms / np.abs(b_tor)
         return pd.DataFrame({'n1rms': n1rms, 'n1rms_normalized': n1rms_norm})
 
-    # TODO: Finish. Remember to concatenate core and tangential laser data(r and z) in _get_p_rad
+    # TODO: Need to test and unblock recalculating peaking factors
+    # By default get_peaking_factors should grab the data from MDSPlus as opposed to recalculate. See DPP v4 document for details:
+    # https://docs.google.com/document/d/1R7fI7mCOkMQGt8xX2nS6ZmNNkcyvPQ7NmBfRPICFaFs/edit?usp=sharing
     def get_peaking_factors(self):
         ts_data_type = 'blessed'  # either 'blessed', 'unblessed', or 'ptdata'
         # metric to use for core/edge binning (either 'psin' or 'rhovn')
@@ -763,13 +767,30 @@ class D3DShot(Shot):
         p_rad_core_def = 0.06  # percentage of DIII-D veritcal extent defining the core margin
         # 'brightness'; % either 'brightness' or 'power' ('z')
         p_rad_metric = 'brightness'
+        # Ts options
+        ts_options = ['combined', 'core', 'tangential']
+        # vertical range of the DIII-D cross section in meters
+        vert_range = 3
         te_pf = np.full(len(self._times), np.nan)
         ne_pf = np.full(len(self._times), np.nan)
         rad_cva = np.full(len(self._times), np.nan)
         rad_xdiv = np.full(len(self._times), np.nan)
         try:
+            rad_cva = self._get_signal(
+                f"ptdata('dpsradcva',{self._shot_id})")
+            rad_xdiv = self._get_signal(
+                f"ptdata('dpsradxdiv',{self._shot_id})")
+        except MdsException as e:
+            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+            self.logger.info(
+                f"[Shot {self._shot_id}]:Failed to get CVA and XDIV from MDSPlus. Returning NaN.")
+        return pd.DataFrame({'te_pf': te_pf, 'ne_pf': ne_pf, 'rad_cva': rad_cva, 'rad_xdiv': rad_xdiv})
+        try:
             ts = self._get_ne_te()
-            efit_dict = self._get_efit_dict
+            for option in ts_options:
+                if option in ts:
+                    ts = ts[option]
+            efit_dict = self._get_efit_dict()
             ts['psin'], ts['rho_vn'] = efit_rz_interp(ts, efit_dict)
         except Exception as e:
             self.logger.debug(f"[Shot {self._shot_id}]:{e}")
@@ -786,7 +807,82 @@ class D3DShot(Shot):
             # Drop data outside of valid range
             invalid_indices = np.where((ts[ts_radius] < ts_radial_range[0]) | (
                 ts[ts_radius] > ts_radial_range[1]))
+            ts['te'][invalid_indices] = np.nan
+            ts['ne'][invalid_indices] = np.nan
+            ts['te'][np.isnan(ts[ts_radius])] = np.nan
+            ts['ne'][np.isnan(ts[ts_radius])] = np.nan
+            if ts_equispaced:
+                raise NotImplementedError(
+                    "Equispaced is currently assumed to be false")  # TODO
+            # Find core bin for Thomson and calculate Te, ne peaking factors
+            core_mask = ts[ts_radius] < ts_core_margin
+            te_core = ts['te']
+            te_core[~core_mask] = np.nan
+            ne_core = ts['ne']
+            ne_core[~core_mask] = np.nan
+            te_pf = np.nanmean(te_core, axis=1)/np.nanmean(ts['te'], axis=1)
+            ne_pf = np.nanmean(ne_core, axis=1)/np.nanmean(ts['ne'], axis=1)
+            # Calculate Prad CVA, X-DIV Peaking Factors
+            # # Interpolate zmaxis and channel intersects x onto the bolometer timebase
+            z_m_axis = interp1(efit_dict['time'],
+                               efit_dict['zmaxis'], ts['time'])
+            z_m_axis = np.repeat(
+                z_m_axis[:, np.newaxis], p_rad['x'].shape[1], axis=1)
+            p_rad['xinterp'] = interp1(p_rad['xtime'], p_rad['x'], p_rad['t'])
+            # # Determine the bolometer channels falling in the 'core' bin
+            core_indices = (p_rad['xinterp'] < z_m_axis + p_rad_core_def*vert_range) & (
+                p_rad['xinterp'] > z_m_axis - p_rad_core_def*vert_range)
+            # # Designate the divertor bin and find all 'other' channels not in that bin
+            div_indices = np.searchsorted(p_rad['ch_avail'], div_channels)
+            other_indices = ~div_indices
+            # # Grab p_rad measurements for each needed set of channels
+            p_rad_core = p_rad[p_rad_metric]
+            p_rad_all_but_core = p_rad_core.copy()
+            # QUESTION: Why fill with nans for core but just keep valid indices for divertor
+            p_rad_core[~core_indices] = np.nan
+            p_rad_all_but_core[core_indices] = np.nan
+            p_rad_div = p_rad[p_rad_metric][div_indices, :]
+            p_rad_all_but_div = p_rad[p_rad_metric][other_indices, :]
+            # # Calculate the peaking factors
+            rad_cva = np.nanmean(p_rad_core, axis=0) / \
+                np.nanmean(p_rad_all_but_div, axis=0)
+            rad_xdiv = np.nanmean(p_rad_div, axis=0) / \
+                np.nanmean(p_rad_all_but_core, axis=0)
+            rad_cva = interp1(p_rad['t'], rad_cva, self._times)
+            rad_xdiv = interp1(p_rad['t'], rad_xdiv, self._times)
         return pd.DataFrame({'te_pf': te_pf, 'ne_pf': ne_pf, 'rad_cva': rad_cva, 'rad_xdiv': rad_xdiv})
+
+    # TODO: Finish implementing just in case
+    def _efit_map_rz_to_rho_original(self, ts_dict, efit_dict):
+        slices = np.zeros(ts_dict['time'].shape)
+        # If thomson starts before EFIT (often does), then use the first valid EFIT slice for early Thomson data.
+        early_indices = np.where(ts_dict['time'] < efit_dict['time'])
+        if len(early_indices[0]) > 0:
+            slices[early_indices] = 1
+            first_ts = early_indices[0][-1]
+        else:
+            first_ts = 0
+        # If Thomson ends after EFIT (also often happens), then use the last valid EFIT slice for late Thomson data.
+        late_indices = np.where(ts_dict['time'] >= efit_dict['time'])
+        if len(late_indices[0]) > 0:
+            slices[late_indices] = len(efit_dict['time'])
+            last_ts = late_indices[0][0] - 1
+        else:
+            last_ts = len(ts_dict['time']) - 1
+        diag_slices = np.arange(first_ts, last_ts+1, 1)
+        # Acquire list of diag time slices w/in EFIT time range; Should find closest EFIT for each one
+        for i in diag_slices:
+            slices[i] = np.argmin(
+                np.abs(efit_dict['time'] - ts_dict['time'][i]))
+        # Interpolate EFIT data onto Thomson time slices
+        psin_diag_arr = np.zeros((len(efit_dict['time']), len(ts_dict['z'])))
+        for r in np.unique(ts_dict['r']):
+            dr = r - efit_dict['r']
+            # Find closet EFIT R on the left and right
+            right = np.where(efit_dict['r'] > r, 1)
+            left = right - 1
+            if efit_dict['r'][right] == r:
+                psin_slice = np.squeeze(efit_dict['psin'][:, right, :])
 
     def get_core_edge_vals(self):
         ##################################################
@@ -854,7 +950,7 @@ class D3DShot(Shot):
             # t_nbi = self.conn.get(
             # r"dim_of(\d3d::top.nb:pinj)").data()/1.e3  # [ms]->[s]
             t_zeff = self.conn.get(
-                r"dim_of(\d3d::top.spectroscopy.vb.zeff:zeff)").data()/1.e3  # [ms] -> [s]
+                r'dim_of(\d3d::top.spectroscopy.vb.zeff:zeff)').data()/1.e3  # [ms] -> [s]
             if len(t_zeff) > 2:
                 zeff = interp1(t_zeff, zeff, self._times,
                                'linear', bounds_error=False, fill_value=0.)
@@ -978,7 +1074,10 @@ class D3DShot(Shot):
                     if key != 'time':
                         lasers['tangential'][key] = interp1(
                             lasers['tangential']['time'], lasers['tangential'][key], lasers['core']['time'])
+                        lasers['combined'][key] = np.concatenate(
+                            lasers['core'][key], lasers['tangential'][key])
                 lasers['tangential']['time'] = lasers['core']['time']
+                lasers['combined']['time'] = lasers['core']['time']
         return lasers
 
     def _get_prad(self, fan):
@@ -1041,6 +1140,7 @@ class D3DShot(Shot):
         efit_dict['r'] = self.conn.get(f"{path}r").data()
         efit_dict['rho_vn'] = self.conn.get(f"{path}rho_vn").data()
         efit_dict['psirz'] = self.conn.get(f"{path}psirz").data()
+        efit_dict['zmaxis'] = self.conn.get(f"{path}zmaxis").data()
         return efit_dict
 
 

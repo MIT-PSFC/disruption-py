@@ -93,9 +93,9 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
         for shot_id in shot_ids:
             if efit_tree is None:
                 shots.append(D3DShot(shot_id, tokamak.get_efit_tree(
-                    shot_id),disruption_time=tokamak.get_disruption_time(shot_id), timebase_signal=timebase_signal))
+                    shot_id), disruption_time=tokamak.get_disruption_time(shot_id), timebase_signal=timebase_signal))
             else:
-                shots.append(D3DShot(shot_id, efit_tree,disruption_time=tokamak.get_disruption_time(shot_id),
+                shots.append(D3DShot(shot_id, efit_tree, disruption_time=tokamak.get_disruption_time(shot_id),
                              timebase_signal=timebase_signal))
         dataset_df = pd.concat([shot.data for shot in shots])[cols]
     else:
@@ -131,7 +131,7 @@ def filter_dataset_df(df, **kwargs):
     exclude_black_window = kwargs.get('exclude_black_window', 0)
     impute = kwargs.get('impute', True)
     write_to_csv = kwargs.get('write_to_csv', False)
-    csv_path = kwargs.get('csv_path', './output/filtered_dataset.csv')
+    csv_path = kwargs.get('csv_path', r'./output/filtered_dataset.csv')
     if exclude_non_disrupted:
         keep_disrupt = np.where(~np.isnan(df['time_until_disrupt'].values))[0]
         df = df.iloc[keep_disrupt]
@@ -196,7 +196,7 @@ def parse_feature_cols(feature_str):
 def main(args):
     logger = logging.getLogger('disruption_py')
     if args.log:
-        ch = logging.FileHandler('./output/validation.log')
+        ch = logging.FileHandler(r'./output/validation.log')
     else:
         ch = logging.StreamHandler(sys.stdout)
     ch.setLevel(args.log_level*10)
@@ -213,7 +213,7 @@ def main(args):
     print(shot_ids)
     feature_cols, derived_feature_cols = parse_feature_cols(args.feature_cols)
     dataset_df = get_dataset_df(args.data_source, cols=feature_cols +
-                                REQUIRED_COLS, efit_tree=args.efit_tree, shot_ids=shot_ids, timebase_signal = args.timebase_signal)
+                                REQUIRED_COLS, efit_tree=args.efit_tree, shot_ids=shot_ids, timebase_signal=args.timebase_signal)
     dataset_df = add_derived_features(dataset_df, derived_feature_cols)
     dataset_df = filter_dataset_df(dataset_df, exclude_non_disruptive=False,
                                    exclude_black_window=BLACK_WINDOW_THRESHOLD, impute=True)
@@ -230,7 +230,7 @@ def main(args):
                     f"train_{args.unique_id}.csv", sep=',', index=False)
     # df_val = pd.concat([X_val, y_val], axis=1)
     # df_val.to_csv(args.output_dir +
-                  # f"val_{args.unique_id}.csv", sep=",", index=False)
+    # f"val_{args.unique_id}.csv", sep=",", index=False)
     df_test = pd.concat([X_test, y_test], axis=1)
     df_test.to_csv(args.output_dir +
                    f"test_{args.unique_id}.csv", sep=',', index=False)
@@ -247,7 +247,7 @@ if __name__ == '__main__':
     parser.add_argument('--feature_cols', type=str,
                         help='Either a file or comma-separated list of desired feature columns', default=None)
     parser.add_argument('--output_dir', type=str,
-                        help='Path to generated data.', default='./output/')
+                        help='Path to generated data.', default=r'./output/')
     parser.add_argument('--timebase_signal', type=str,
                         help='Signal whose timebase will be used as the unifying timebase of the dataset.', default=None)
     parser.add_argument('--efit_tree', type=str,
@@ -256,7 +256,9 @@ if __name__ == '__main__':
                         0, 1, 2, 3], help=r"0: Default to SQL database then MDSPlus.\n1: Default to MDSPlus then SQL database.\n2: SQL database only.\n3: MDSPlus only.", default=2)
     parser.add_argument('--unique_id', type=str,
                         help='Unique identifier for the dataset. Used to name the output files.', default=generate_id())
-    parser.add_argument('--log', type=bool, help='By default, generate_datasets will log to commandline but if this argument is true it will log to a file in the output directory', default=False)
-    parser.add_argument('--log_level', type=int, choices=[0,1,2,3,4,5], help='Notset:0,Debug:1,Info:2,Warning:3,Error:4,Critical:5', default=2) 
+    parser.add_argument(
+        '--log', type=bool, help='By default, generate_datasets will log to commandline but if this argument is true it will log to a file in the output directory', default=False)
+    parser.add_argument('--log_level', type=int, choices=[
+                        0, 1, 2, 3, 4, 5], help='Notset:0,Debug:1,Info:2,Warning:3,Error:4,Critical:5', default=2)
     args = parser.parse_args()
     main(args)
