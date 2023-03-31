@@ -2,6 +2,7 @@ import json
 import random
 import argparse
 import sys
+import os
 try:
     import importlib.resources as importlib_resources
 except ImportError:
@@ -14,9 +15,6 @@ from disruption_py.database import *
 from disruption_py.utils import impute_shot_df_NaNs, exp_filter, generate_id
 import disruption_py.data
 
-# TODO: Add argument for picking between MDSPlus data and SQL data
-# TODO: Add argument for signal to use as master timebase
-# TODO  Add argument for efit to use (get_efit_tree(shot_id) or a specific efit tree name)
 DEFAULT_COLS = [
     #    'ip_error_frac', Use just need to fix bugs
     'Greenwald_fraction',
@@ -54,6 +52,7 @@ DEFAULT_THRESHOLD = 0.35  # Time until disrupt threshold for binary classificati
 BLACK_WINDOW_THRESHOLD = 5.e-3
 DEFAULT_RATIO = .2  # Ratio of test data to total data and validation data to train data
 
+LOGGER = logging.getLogger('disruption_py')
 
 def create_label(time_until_disrupt, threshold, label_type, multiple_thresholds):
     if label_type == 'binary':
@@ -69,12 +68,14 @@ def create_label(time_until_disrupt, threshold, label_type, multiple_thresholds)
 
 
 # TODO: Add support for CMOD
-def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=None, threshold=DEFAULT_THRESHOLD, tokamak='d3d', required_cols=REQUIRED_COLS, **kwargs):
+def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=None, threshold=DEFAULT_THRESHOLD, tokamak='d3d', required_cols=REQUIRED_COLS, label='binary', **kwargs):
     if tokamak != 'd3d':
         raise NotImplementedError(
             "Currently only support DIII-D data retrieval")
     tokamak = TOKAMAKS[tokamak]()
     timebase_signal = kwargs.get('timebase_signal', None)
+    populate = kwargs.get('populate', 'default') 
+    label = kwargs.get('label', 'none')
     if shot_ids is None:
         random_state = kwargs.get('random_state', 8808)
         shot_ids = tokamak.get_disruption_table_shotlist()['shot']
@@ -91,27 +92,33 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
         shots = []
         timebase_signal = kwargs.get('timebase_signal', None)
         for shot_id in shot_ids:
-            if efit_tree is None:
-                shots.append(D3DShot(shot_id, tokamak.get_efit_tree(
-                    shot_id), disruption_time=tokamak.get_disruption_time(shot_id), timebase_signal=timebase_signal))
-            else:
-                shots.append(D3DShot(shot_id, efit_tree, disruption_time=tokamak.get_disruption_time(shot_id),
-                             timebase_signal=timebase_signal))
+            try:
+                if efit_tree is None:
+                    shots.append(D3DShot(shot_id, tokamak.get_efit_tree(
+                        shot_id), disruption_time=tokamak.get_disruption_time(shot_id), timebase_signal=timebase_signal, populate=populate))
+                else:
+                    shots.append(D3DShot(shot_id, efit_tree, disruption_time=tokamak.get_disruption_time(shot_id),
+                                 timebase_signal=timebase_signal, populate=populate))
+                LOGGER.info(f"[Shot {shot_id}]:Generated shot object")
+            except Exception as e:
+                LOGGER.info(f"[Shot {shot_id}]:Failed to generate shot object")
+                # exc_type, exc_obj, exc_tb = sys.exc_info()
+                # fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                LOGGER.debug(f"[Shot {shot_id}]:{e}")
         dataset_df = pd.concat([shot.data for shot in shots])[cols]
     else:
         raise ValueError(
             'Datasource must be one of 4 options: 0,1,2,3. See generate_datsets.py -h for more details.')
+    LOGGER.info(f"Successfully processed {len(shots)}/{len(shot_ids)} shots")
     dataset_df = dataset_df.fillna(value=np.nan)
     cols = list(dataset_df.columns)
-    print(cols)
     if not set(required_cols).issubset(set(cols)):
         raise ValueError('Required columns not in dataset')
-    # for col in required_cols:
-    #     cols.remove(col)
-    # cols = sorted(cols)
-    # cols = cols + required_cols
-    dataset_df['label'] = create_label(
-        dataset_df['time_until_disrupt'].values, threshold, 'binary', False)
+    if label != 'none':
+        dataset_df['label'] = create_label(
+            dataset_df['time_until_disrupt'].values, threshold, label, False)
+    else:
+        dataset_df['label'] = np.nan
     return dataset_df
 
 
@@ -177,7 +184,7 @@ def create_dataset(df, split_by_shot=True, **kwargs):
 def parse_feature_cols(feature_str):
     if feature_str is None:
         return PAPER_COLS, []
-    elif os.is_file(feature_str):
+    elif os.path.isfile(feature_str):
         all_cols = pd.read_csv(
             feature_str, header=None).iloc[:, 0].values
     else:
@@ -194,17 +201,16 @@ def parse_feature_cols(feature_str):
 
 
 def main(args):
-    logger = logging.getLogger('disruption_py')
     if args.log:
-        ch = logging.FileHandler(r'./output/validation.log')
+        ch = logging.FileHandler(fr'./output/{args.unique_id}.log')
     else:
         ch = logging.StreamHandler(sys.stdout)
     ch.setLevel(args.log_level*10)
     # log_format = '%(asctime)s | %(levelname)s: %(message)s'
     # ch.setFormatter(logging.Formatter(log_format))
-    logger.addHandler(ch)
-    logger.setLevel(args.log_level*10)
-    print(logger)
+    LOGGER.addHandler(ch)
+    LOGGER.setLevel(args.log_level*10)
+    print(LOGGER)
     if args.shotlist is None:
         with importlib_resources.path(disruption_py.data, "paper_shotlist.txt") as p:
             args.shotlist = str(p)
@@ -212,11 +218,14 @@ def main(args):
         args.shotlist, header=None).iloc[:, 0].values.tolist()
     print(shot_ids)
     feature_cols, derived_feature_cols = parse_feature_cols(args.feature_cols)
+    print(feature_cols)
     dataset_df = get_dataset_df(args.data_source, cols=feature_cols +
-                                REQUIRED_COLS, efit_tree=args.efit_tree, shot_ids=shot_ids, timebase_signal=args.timebase_signal)
+                                REQUIRED_COLS, efit_tree=args.efit_tree, shot_ids=shot_ids, timebase_signal=args.timebase_signal, label=args.label, populate=args.populate)
     dataset_df = add_derived_features(dataset_df, derived_feature_cols)
-    dataset_df = filter_dataset_df(dataset_df, exclude_non_disruptive=False,
-                                   exclude_black_window=BLACK_WINDOW_THRESHOLD, impute=True)
+    if args.filter is True:
+        print(args.filter)
+        dataset_df = filter_dataset_df(dataset_df, exclude_non_disruptive=False,
+                                       exclude_black_window=BLACK_WINDOW_THRESHOLD, impute=True)
     X_train, X_test, y_train, y_test = create_dataset(
         dataset_df, ratio=DEFAULT_RATIO)
     dataset_df.to_csv(args.output_dir +
@@ -260,5 +269,8 @@ if __name__ == '__main__':
         '--log', type=bool, help='By default, generate_datasets will log to commandline but if this argument is true it will log to a file in the output directory', default=False)
     parser.add_argument('--log_level', type=int, choices=[
                         0, 1, 2, 3, 4, 5], help='Notset:0,Debug:1,Info:2,Warning:3,Error:4,Critical:5', default=2)
+    parser.add_argument('--label', type=str, choices=['binary','none'],help="Timestep disruption label. Currently only supports binary labels",default='binary')
+    parser.add_argument('--populate', type=str, choices=['default', 'l_mode'], help="Options for population at instantiation.", default='default')
+    parser.add_argument('--filter', type=int, help="Run filter_dataset method on produced dataset. Necessary for generating DPRF datasets", default=1)
     args = parser.parse_args()
     main(args)

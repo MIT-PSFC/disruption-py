@@ -53,6 +53,7 @@ class D3DShot(Shot):
         self.override_cols = override_cols
         self.data = data
         timebase_signal = kwargs.pop('timebase_signal', None)
+        populate = kwargs.pop('populate', 'default')
         if self.data is not None and self._times is None:
             try:
                 self._times = self.data['time'].to_numpy()
@@ -66,12 +67,19 @@ class D3DShot(Shot):
                 self._times = self.get_timebase(timebase_signal, **kwargs)
         if self._times is None:
             self._times = self.get_timebase(timebase_signal, **kwargs)
-        self.logger.debug(f"Timebase: {self._times}")
-        self._populate_shot_data(data is not None)
+        if populate == 'l_mode':
+            self._populate_l_mode_data()
+        else:
+            self._populate_shot_data(data is not None)
+    
+    def _populate_l_mode_data(self):
+        self.data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(),self.get_peaking_factors(),self.get_kappa_area(),self.get_time_until_disrupt()], axis=1)
+        self.data['time'] = self._times 
+        self.data['shot'] = self._shot_id
 
     def _populate_shot_data(self, already_populated=False):
         local_data = pd.concat([self.get_efit_parameters(), self.get_rt_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(), self.get_ip_parameters(
-        ), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters(), self.get_time_until_disrupt()], axis=1)
+        ), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters(),self.get_kappa_area(), self.get_peaking_factors(),self.get_time_until_disrupt()], axis=1)
         local_data = local_data.loc[:, ~local_data.columns.duplicated()]
         if not already_populated:
             self.data = local_data
@@ -106,7 +114,6 @@ class D3DShot(Shot):
             raise NotImplementedError()
         times = np.arange(0.100, duration+0.025, 0.025)
         if self.disrupted:
-            print(self.disruption_time)
             additional_times = np.arange(
                 self.disruption_time-self.duration_before_disruption, self.disruption_time + self.dt_before_disruption, self.dt_before_disruption)
             times = times[np.where(times < (self.disruption_time -
@@ -133,7 +140,6 @@ class D3DShot(Shot):
         finite_indices = np.where(
             (signal_time >= 0.0) & (np.abs(signal) > threshold))
         if len(finite_indices) == 0:
-            print(" 'No plasma' shot.")
             return duration, signal_max
         else:
             dt = np.diff(signal_time)
@@ -158,7 +164,7 @@ class D3DShot(Shot):
         # indices_no_disrupt = np.where(np.isnan(time_until_disrupt))
         # indices_disrupt = np.where(~np.isnan(time_until_disrupt))
         try:
-            t_ip_prog, ip = self.conn.get(
+            t_ip_prog= self.conn.get(
                 f"dim_of(ptdata('iptipp', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
             ip_prog = self.conn.get(
                 f"ptdata('iptipp', {self._shot_id})").data()  # [A]
@@ -182,9 +188,9 @@ class D3DShot(Shot):
         t_epsoff = self.conn.get(
             f"dim_of(ptdata('epsoff', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
         t_epsoff += .001  # Avoid problem with simultaneity of epsoff being triggered exactly on the last time sample
-        epsoff = interp1(t_epsoff, epsoff, self._times, 'linear')
+        epsoff = interp1(t_epsoff, epsoff, times, 'linear')
         railed_indices = np.where(np.abs(epsoff) > .5)
-        power_supply_railed = np.zeros(len(self._times))
+        power_supply_railed = np.zeros(len(times))
         power_supply_railed[railed_indices] = 1
         indices_flattop = np.where((np.abs(dipprog_dt) <= 2.e3) & (
             np.abs(ip_prog) > 100e3) & (power_supply_railed != 1))
@@ -267,6 +273,7 @@ class D3DShot(Shot):
         try:
             p_nbi, t_nbi = self._get_signal(
                 r'\d3d::top.nb:pinj', interpolate=False)
+            p_nbi = p_nbi.astype(np.float64)
             p_nbi *= 1.e3  # [KW] -> [W]
             if len(t_nbi) > 2:
                 p_nbi = interp1(t_nbi, p_nbi, self._times,
@@ -309,7 +316,12 @@ class D3DShot(Shot):
         # and powers.pro).  I converted them into Matlab routines, and modified the
         # analysis so that the smoothing is causal, and uses a shorter window.
         smoothing_window = 0.010  # [s]
-        self.conn.openTree("bolom", self._shot_id)
+        try:
+            self.conn.openTree("bolom", self._shot_id)
+        except MdsException as e:
+            self.logger.info(
+                f"[Shot {self._shot_id}]:Failed to open bolom tree.")
+            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
         bol_prm, _ = self._get_signal(r'\bol_prm', interpolate=False)
         lower_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
         upper_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
@@ -777,14 +789,15 @@ class D3DShot(Shot):
         rad_xdiv = np.full(len(self._times), np.nan)
         try:
             rad_cva = self._get_signal(
-                f"ptdata('dpsradcva',{self._shot_id})")
+                f"ptdata('dpsradcva', {self._shot_id})")
             rad_xdiv = self._get_signal(
-                f"ptdata('dpsradxdiv',{self._shot_id})")
+                f"ptdata('dpsradxdiv', {self._shot_id})")
         except MdsException as e:
             self.logger.debug(f"[Shot {self._shot_id}]:{e}")
             self.logger.info(
-                f"[Shot {self._shot_id}]:Failed to get CVA and XDIV from MDSPlus. Returning NaN.")
-        return pd.DataFrame({'te_pf': te_pf, 'ne_pf': ne_pf, 'rad_cva': rad_cva, 'rad_xdiv': rad_xdiv})
+                f"[Shot {self._shot_id}]:Failed to get CVA and XDIV from MDSPlus. Calculating locally, results may be inaccurate.")
+            rad_cva = np.full(len(self._times), np.nan)
+            rad_xdiv = np.full(len(self._times), np.nan)
         try:
             ts = self._get_ne_te()
             for option in ts_options:
@@ -1017,13 +1030,13 @@ class D3DShot(Shot):
                          'linear', bounds_error=False, fill_value=np.nan)
         return pd.DataFrame({'delta': delta, 'squareness': squareness, 'aminor': aminor})
 
-    def _get_ne_te(self, data_source="blessed", ts_systems=['core', 'tangential']):
+    def _get_ne_te(self, data_source="unblessed", ts_systems=['core', 'tangential']):
         if data_source == 'blessed':  # 'blessed' by Thomson group
             mds_path = r'\top.ts.blessed.'
         elif data_source == 'unblessed':
             mds_path = r'\top.ts.revisions.revision00.'
         elif data_source == 'ptdata':
-            mds_path = r'\top.ts.blessed'  # Don't ask...I don't have the answer
+            mds_path = r'\top.ts.blessed.'  # Don't ask...I don't have the answer
             raise NotImplementedError(
                 "ptdata case not fully implemented yet")  # TODO
         else:
@@ -1038,8 +1051,6 @@ class D3DShot(Shot):
             lasers[laser] = dict()
             sub_tree = f"{mds_path}{laser}"
             try:
-                lasers[laser]['time'] = self.conn.get(
-                    f"dim_of({sub_tree}:temp,0)").data()/1.e3  # [ms] -> [s]
                 # major radial position of measurement
                 lasers[laser]['r'] = self.conn.get(f"{sub_tree}:r").data()
                 # vertical position of measurement
@@ -1049,6 +1060,8 @@ class D3DShot(Shot):
                     f"{sub_tree}:temp").data()
                 lasers[laser]['ne'] = self.conn.get(
                     f"{sub_tree}:dens").data()  # electron density
+                lasers[laser]['time'] = self.conn.get(
+                    f"dim_of({sub_tree}:temp,0)").data()/1.e3  # [ms] -> [s]
                 # NOTE: These are absolute errors
                 # NOTE: Matlab scripts currently populate both errors with temperature error
                 lasers[laser]['te_error'] = self.conn.get(
@@ -1080,7 +1093,7 @@ class D3DShot(Shot):
                 lasers['combined']['time'] = lasers['core']['time']
         return lasers
 
-    def _get_prad(self, fan):
+    def _get_p_rad(self, fan='custom'):
         if fan == 'upper':
             fan_chans = np.arange(0, 24)
         elif fan == 'lower':
@@ -1146,6 +1159,6 @@ class D3DShot(Shot):
 
 if __name__ == '__main__':
     shot = D3DShot(D3D_DISRUPTED_SHOT, 'EFIT05',
-                   disruption_time=4.369214483261109)
+                   disruption_time=4.369214483261109,populate='l_mode')
     print(shot.data.columns)
     print(shot.data.head())
