@@ -2,6 +2,7 @@
 This module contains utility functions for various numerical operations.
 """
 from dataclasses import dataclass
+import logging
 
 import h5py
 import string
@@ -21,7 +22,7 @@ def generate_id(size=8):
     return ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
 
 
-def interp1(x, y, new_x, kind='linear', bounds_error=False, fill_value='extrapolate'):
+def interp1(x, y, new_x, kind='linear', bounds_error=False, fill_value='extrapolate', axis=-1):
     """
     Interpolate a 1-D array.
 
@@ -54,7 +55,7 @@ def interp1(x, y, new_x, kind='linear', bounds_error=False, fill_value='extrapol
         The interpolated y-values.
     """
     set_interp = interp1d(
-        x, y, kind=kind, bounds_error=bounds_error, fill_value=fill_value)
+        x, y, kind=kind, bounds_error=bounds_error, fill_value=fill_value, axis=axis)
     return set_interp(new_x)
 
 
@@ -290,7 +291,7 @@ def load_model_from_hdf5(model_path, model_type='RandomForestClassifier'):
         raise ValueError('Model type not supported')
 
 
-def efit_rz_interp(times, efit_dict: dict) -> tuple:
+def efit_rz_interp(ts, efit_dict: dict) -> tuple:
     """
     Interpolate the efit data to the given timebase and project onto the
     poloidal plane.
@@ -301,7 +302,7 @@ def efit_rz_interp(times, efit_dict: dict) -> tuple:
         Timebase to interpolate to
 
     efit_dict: dict
-        Dictionary with the efit data. Keys are 'time', 'r', 'z', 'psin', 'rho_vn'
+        Dictionary with the efit data. Keys are 'time', 'r', 'z', 'psin', 'rhovn'
 
     Returns
     -------
@@ -312,18 +313,22 @@ def efit_rz_interp(times, efit_dict: dict) -> tuple:
         Array of normalized minor radius
 
     """
-    T = np.tile(times, (1, len(efit_dict['r'])))
-    R = np.tile(efit_dict['r'], (len(times), 1))
-    Z = np.tile(efit_dict['z'], (len(times), 1))
+    times = ts['time']/1.e3
     interp = RegularGridInterpolator(
-        (efit_dict['time'], efit_dict['r'], efit_dict['z']), efit_dict['psin'], method='linear')
-    psin = interp(T, R, Z)
-    rho_vn_diag_almost = interp1(
-        efit_dict['time'], efit_dict['rho_vn'], times)
-    rho_vn_diag = np.empty(len(psin))
-    psin_timebase = np.linspace(0, 1, len(efit_dict['rho_vn']))
+        [efit_dict['time'], efit_dict['r'], efit_dict['z']], efit_dict['psin'],method='linear',bounds_error=False,fill_value=np.nan)
+    T,R,Z = np.meshgrid(times, efit_dict['r'], efit_dict['z'],indexing='ij')
+    # print(np.stack((T,R,Z),axis=1).shape)
+    psin = interp((T,R,Z))
+    print(psin.shape)
+    print(efit_dict['time'].shape)
+    print(efit_dict['rhovn'].shape)
+    rho_vn_diag_almost = interp1(efit_dict['time'], efit_dict['rhovn'], times,axis=0)
+    rho_vn_diag = np.empty(psin.shape)
+    psin_timebase = np.linspace(0, 1, len(efit_dict['rhovn']))
     for i in range(len(psin)):
-        rho_vn_diag[i] = interp1(psin_timebase, rho_vn_diag_almost[i], psin[i])
+        print(psin_timebase.shape)
+        print(rho_vn_diag_almost[:,i].shape)
+        rho_vn_diag[i] = interp1(psin_timebase, rho_vn_diag_almost[:,i], psin[:,i,i])
     return psin, rho_vn_diag
 
 
@@ -700,13 +705,14 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
     # decide if the data is valid or not.  If not, set 'ier' = 1 in the
     # appropriate field for each channel.
     if len(bol_time) <= 16384 or bol_time[-1] <= bol_time[0] or min(np.diff(bol_time)) < -1e-5:
+        print("Bolo data is garbage")
         for i in range(48):
             bolo_shot.channels[i].ier = 1
         return bolo_shot
     time = np.linspace(np.min(bol_time[0]), np.min(bol_time[-1]), 16384)
     dt = time[1] - time[0]
-    window_size = np.around(drtau/dt)
-    smoothing_kernel = (1/window_size) * np.ones((1, window_size))
+    window_size = int(np.around(drtau/dt))
+    smoothing_kernel = (1.0/window_size) * np.ones(window_size)
     bolo_shot.ntimes = int(len(time)/4)
     bolo_shot.time = np.linspace(np.min(time), np.max(time), bolo_shot.ntimes)
     t_del = bolo_shot.time[1] - bolo_shot.time[0]
@@ -730,11 +736,13 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         # Subtract baseline offset
         temp = data - np.mean(data[:20])
         # Filter signal using causal moving average filter (i.e. boxcar)
-        temp_filtered = lfilter(smoothing_kernel, 1, temp)
+        temp_filtered = np.convolve(temp, smoothing_kernel, 'same')
+        # temp_filtered = lfilter(smoothing_kernel, 1, temp)
         dr_dt = np.gradient(temp_filtered, dt)
         # Calculate power on each detector, P_d(t) [as given in Leonard et al, Rev. Sci. Instr. (1995)]
         bolo_shot.channels[i].pwr = medfilt(
-            (gam[i+1]*temp_filtered + tau[i+1]*dr_dt)/scrfact[i], window_size)
+            (gam[i+1]*temp_filtered + tau[i+1]*dr_dt)/scrfact[i], window_size + (not window_size%2))
+    print(bolo_shot.channels[:4])
     return bolo_shot
 
 

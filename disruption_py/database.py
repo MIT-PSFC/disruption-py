@@ -205,7 +205,10 @@ class D3DHandler(DatabaseHandler):
                 f"select tree from plasmas where shot = {shot_id} and runtag = 'DIS' and deleted = 0 order by idx")
             efit_trees = curs.fetchall()
         if len(efit_trees) == 0:
-            return None
+            efit_trees = [('EFIT01',)]
+            # with self.tree_conn.cursor() as curs:
+                # curs.execute(f"select tree from plasmas where shot = {shot_id} and deleted = 0 order by idx")
+                # efit_trees = curs.fetchall()
         efit_tree = efit_trees[-1][0]
         return efit_tree
 
@@ -337,5 +340,5 @@ if __name__ == '__main__':
     # test_handler = create_cmod_handler()
     # shot = test_handler.get_shot('1150922001')
     test_handler = create_d3d_handler()
-    shot = test_handler.get_shot('175552')
+    shot = test_handler.get_shot('180808')
     print(shot.efit_tree_name)
