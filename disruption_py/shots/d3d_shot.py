@@ -81,7 +81,7 @@ class D3DShot(Shot):
 
     def _populate_shot_data(self, already_populated=False):
         local_data = pd.concat([self.get_efit_parameters(), self.get_rt_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(), self.get_ip_parameters(
-        ), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters(),self.get_kappa_area(), self.get_peaking_factors(),self.get_time_until_disrupt()], axis=1)
+        ), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters(),self.get_kappa_area(),self.get_time_until_disrupt()], axis=1)
         local_data = local_data.loc[:, ~local_data.columns.duplicated()]
         if not already_populated:
             self.data = local_data
@@ -812,6 +812,7 @@ class D3DShot(Shot):
             ts = 0
         try:
             ts['psin'], ts['rhovn'] = efit_rz_interp(ts, efit_dict)
+            print(ts['rhovn'].shape)
         except Exception as e:
             self.logger.info(f"[Shot {self._shot_id}]:Failed to interpolate TS data")
             self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")    
@@ -828,6 +829,7 @@ class D3DShot(Shot):
             # Drop data outside of valid range
             invalid_indices = np.where((ts[ts_radius] < ts_radial_range[0]) | (
                 ts[ts_radius] > ts_radial_range[1]))
+            print(ts['te'].shape)
             ts['te'][invalid_indices] = np.nan
             ts['ne'][invalid_indices] = np.nan
             ts['te'][np.isnan(ts[ts_radius])] = np.nan
@@ -1076,12 +1078,6 @@ class D3DShot(Shot):
                     self.logger.info(
                     f"[Shot {self._shot_id}]: Failed to get {laser}:{name}({node}) data, Setting to all NaNs.")
                     self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
-            # NOTE: These are absolute errors
-            # NOTE: Matlab scripts currently populate both errors with temperature error
-            # lasers[laser]['te_error'] = self.conn.get(
-                # f"{sub_tree}:temp_e").data()
-            # lasers[laser]['ne_error'] = self.conn.get(
-                # f"{sub_tree}:density_e").data()
             # Place NaNs for broken channels
             lasers[laser]['te'][np.where(
                 lasers[laser]['te'] == 0)] = np.nan
@@ -1184,5 +1180,5 @@ if __name__ == '__main__':
                    disruption_time=4.369214483261109)#,populate='l_mode')
     # shot = D3DShot(D3D_PEAKING_FACTORS_SHOT, 'EFIT01', disruption_time=5.209270419120789)
     print(shot.data.columns)
-    print(shot.data[['te_pf','ne_pf','rad_cva','rad_xdiv']])
+    # print(shot.data[['te_pf','ne_pf','rad_cva','rad_xdiv']])
     print(shot.data.head())

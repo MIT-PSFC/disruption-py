@@ -3,6 +3,7 @@ This module contains utility functions for various numerical operations.
 """
 from dataclasses import dataclass
 import logging
+import copy
 
 import h5py
 import string
@@ -319,16 +320,11 @@ def efit_rz_interp(ts, efit_dict: dict) -> tuple:
     T,R,Z = np.meshgrid(times, efit_dict['r'], efit_dict['z'],indexing='ij')
     # print(np.stack((T,R,Z),axis=1).shape)
     psin = interp((T,R,Z))
-    print(psin.shape)
-    print(efit_dict['time'].shape)
-    print(efit_dict['rhovn'].shape)
     rho_vn_diag_almost = interp1(efit_dict['time'], efit_dict['rhovn'], times,axis=0)
     rho_vn_diag = np.empty(psin.shape)
-    psin_timebase = np.linspace(0, 1, len(efit_dict['rhovn']))
-    for i in range(len(psin)):
-        print(psin_timebase.shape)
-        print(rho_vn_diag_almost[:,i].shape)
-        rho_vn_diag[i] = interp1(psin_timebase, rho_vn_diag_almost[:,i], psin[:,i,i])
+    psin_timebase = np.linspace(0, 1, efit_dict['rhovn'].shape[1])
+    for i in range(psin.shape[0]):
+        rho_vn_diag[i] = interp1(psin_timebase, rho_vn_diag_almost[i,:], psin[i,:])
     return psin, rho_vn_diag
 
 
@@ -676,8 +672,7 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         scrfact: float
     one_channel = Channel('', 0.0, 0.0, 0.0, 0, np.zeros(
         (1, 4096)), np.zeros((1, 4096)), 0.0, 0.0, 0.0)
-    channels = np.tile(one_channel, (48))
-
+    channels = [copy.deepcopy(one_channel) for i in range(48)]
     @ dataclass
     class Bolo:
         shot_id: int
@@ -686,9 +681,10 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         raw_time: np.ndarray
         ntimes: int
         tot_pwr: np.ndarray
-        channels: np.ndarray
+        channels: list
     bolo_shot = Bolo(shot_id, kappa, np.zeros((1, 4096)), np.zeros(
         (1, 16384)), 0, np.zeros((1, 4096)), channels)
+    # TODO: Find explanation for this
     if shot_id > 79400:
         gam = bol_prm[:49]
         tau = bol_prm[49:98]
@@ -742,7 +738,6 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         # Calculate power on each detector, P_d(t) [as given in Leonard et al, Rev. Sci. Instr. (1995)]
         bolo_shot.channels[i].pwr = medfilt(
             (gam[i+1]*temp_filtered + tau[i+1]*dr_dt)/scrfact[i], window_size + (not window_size%2))
-    print(bolo_shot.channels[:4])
     return bolo_shot
 
 
