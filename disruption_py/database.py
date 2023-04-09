@@ -293,7 +293,7 @@ def create_cmod_handler():
         db_driver_path = str(p)  # Absolute path to jar file
     logging.debug(db_driver_path)
     logging.debug(os.getcwd())
-    return DatabaseHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver", db_driver_path, f"jdbc:sqlserver://{db_server}.psfc.mit.edu: 1433", db_username, db_password, shot_class=CmodShot)
+    return DatabaseHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver", db_driver_path, f"jdbc:sqlserver://{db_server}.psfc.mit.edu: 1433", db_username, db_password, shot_class=CModShot)
 
 
 def create_d3d_handler():
