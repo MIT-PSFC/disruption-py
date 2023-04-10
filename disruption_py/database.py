@@ -18,17 +18,21 @@ from disruption_py.utils import save_open_plots
 import disruption_py.data
 
 # Alter queries for these columns will fail
-CMOD_PROTECTED_COLUMNS = ['dbkey', 'shot', 'time', 'time_until_disrupt', 'ip_error', 'dip_dt', 'beta_p', 'beta_n', 'li', 'n_equal_1_normalized', 'z_error', 'v_z', 'z_times_v_z', 'kappa', 'pressure_peaking', 'H98', 'q0', 'qstar', 'q95', 'dn_dt', 'p_rad_slow', 'p_oh_slow', 'p_icrf', 'p_lh', 'radiated_fraction', 'power_supply_railed', 'v_loop_efit', 'lower_gap', 'upper_gap', 'dbetap_dt', 'dli_dt','ip', 'zcur', 'n_e', 'dipprog_dt', 'v_loop', 'p_rad', 'p_oh', 'ssep', 'dWmhd_dt', 'dprad_dt', 'Te_width', 'Greenwald_fraction', 'intentional_disruption', 'Te_width_ECE', 'Wmhd', 'n_over_ncrit', 'n_equal_1_mode', 'Mirnov', 'Mirnov_norm_btor', 'Mirnov_norm_bpol', 'Te_peaking', 'ne_peaking', 'Te_peaking_ECE', 'SXR_peaking', 'kappa_area', 'I_efc', 'SXR', 'H_alpha', 'Prad_peaking_CVA', 'commit_hash']
+CMOD_PROTECTED_COLUMNS = ['dbkey', 'shot', 'time', 'time_until_disrupt', 'ip_error', 'dip_dt', 'beta_p', 'beta_n', 'li', 'n_equal_1_normalized', 'z_error', 'v_z', 'z_times_v_z', 'kappa', 'pressure_peaking', 'H98', 'q0', 'qstar', 'q95', 'dn_dt', 'p_rad_slow', 'p_oh_slow', 'p_icrf', 'p_lh', 'radiated_fraction', 'power_supply_railed', 'v_loop_efit', 'lower_gap', 'upper_gap', 'dbetap_dt', 'dli_dt',
+                          'ip', 'zcur', 'n_e', 'dipprog_dt', 'v_loop', 'p_rad', 'p_oh', 'ssep', 'dWmhd_dt', 'dprad_dt', 'Te_width', 'Greenwald_fraction', 'intentional_disruption', 'Te_width_ECE', 'Wmhd', 'n_over_ncrit', 'n_equal_1_mode', 'Mirnov', 'Mirnov_norm_btor', 'Mirnov_norm_bpol', 'Te_peaking', 'ne_peaking', 'Te_peaking_ECE', 'SXR_peaking', 'kappa_area', 'I_efc', 'SXR', 'H_alpha', 'Prad_peaking_CVA', 'commit_hash']
 D3D_PROTECTED_COLUMNS = []
 # [s] Time frame for which an insertion into SQL database becomes an update
 TIME_CONST = 1e-6
 
 logger = logging.getLogger('disruption_py')
+
+
 class DatabaseHandler:
     """
-    Handles grabbing data from MySQL server. 
+    Handles grabbing data from MySQL server.
     """
-    def __init__(self, driver, driver_file, host, user, passwd, shot_class=Shot,protected_columns=[]):
+
+    def __init__(self, driver, driver_file, host, user, passwd, shot_class=Shot, protected_columns=[]):
         self.user = user
         self.passwd = passwd
         self.driver = driver
@@ -78,8 +82,8 @@ class DatabaseHandler:
             self.add_shot(shot._shot_id, shot.data, update=update)
 
     def add_shot(self, shot_id, shot=None, update=False):
-        """ 
-        Upload shot to SQL database. Can include shot object if available to avoid redundant computation. 
+        """
+        Upload shot to SQL database. Can include shot object if available to avoid redundant computation.
         Returns an error if there is at least one row already containing the shot id.
         """
         shot_id = int(shot_id)
@@ -138,13 +142,20 @@ class DatabaseHandler:
             raise Exception("Invalid shot class for this handler")
         return None
 
-    def get_shots(self, shot_ids=None):
-        shot_ids = tuple([int(shot_id) for shot_id in shot_ids])
+    def get_shot_data(self, shot_ids=None, cols=None):
+        shot_ids = ','.join([str(shot_id) for shot_id in shot_ids])
+        cols = ' '.join([f"{col}," for col in cols[:-1]]) + f" {cols[-1]}"
+        if cols is None:
+            cols = "*"
         if shot_ids is None:
-            query = f"select * from disruption_warning order by time"
+            query = f"select {cols} from disruption_warning order by time"
         else:
-            query = f"select * from disruption_warning where shot in {shot_ids} order by time"
+            query = f"select {cols} from disruption_warning where shot in ({shot_ids}) order by time"
         shot_df = pd.read_sql_query(query, self.conn)
+        return shot_df
+
+    def get_shots(self, shot_ids=None):
+        shot_df = self.get_shot_data(shot_ids)
         return [Shot('cmod', shot_data['shot'].iloc[0], data=shot_data) for _, shot_data in shot_df.groupby(by=["shot"])]
 
     def add_column(self, col_name, var_type="TEXT", table="disruption_warning"):
@@ -167,14 +178,13 @@ class DatabaseHandler:
 
     def get_disruption_shotlist(self):
         """ 
-        Get pandas dataframe of all disruption shots and times from the disruption table. Used as a cross-reference to determine whether a given shot is disruptive or not(provides t_disrupt). 
-        NOTE: The disruption_warning table contains ONLY a subset of shots in this table
+        Get pandas dataframe of all disruptive shots and times from the disruption table. Can be sed as a cross-reference to determine whether a given shot is disruptive or not (all shots in this table are disruptive) and contain a t_disrupt.  
         """
-        return self.query('select shot,t_disrupt from disruptions order by shot')
+        return self.query('select distinct shot from disruptions order by shot')
 
-    def get_disruption_table_shotlist(self):
+    def get_disruption_warning_shotlist(self):
         """ 
-        Get pandas dataframe of all shots in the disruption_warning table.
+        Get pandas dataframe of all shots in the disruption_warning table. NOTE: The disruption_warning table contains ONLY a subset of shots in this table
         """
         return self.query('select distinct shot from disruption_warning order by shot')
 
@@ -195,13 +205,21 @@ class D3DHandler(DatabaseHandler):
                 f"select tree from plasmas where shot = {shot_id} and runtag = 'DIS' and deleted = 0 order by idx")
             efit_trees = curs.fetchall()
         if len(efit_trees) == 0:
-            return None
+            efit_trees = [('EFIT01',)]
+            # with self.tree_conn.cursor() as curs:
+                # curs.execute(f"select tree from plasmas where shot = {shot_id} and deleted = 0 order by idx")
+                # efit_trees = curs.fetchall()
         efit_tree = efit_trees[-1][0]
         return efit_tree
 
+    # TODO: Implement
+    def get_efit_trees(self, shot_ids):
+        pass
+
     def get_disruption_time(self, shot_id):
         with self.conn.cursor() as curs:
-            curs.execute(f"select t_disrupt from disruptions where shot = {shot_id}")
+            curs.execute(
+                f"select t_disrupt from disruptions where shot = {shot_id}")
             t_disrupt = curs.fetchall()
         if len(t_disrupt) == 0:
             return None
@@ -218,13 +236,13 @@ class D3DHandler(DatabaseHandler):
                 logging.info(
                     f"Shot {shot_id} has no disruptions group efit run")
                 return None
-        return D3DShot(shot_id, efit_tree, data=data_df)
+        return D3DShot(shot_id, efit_tree, data=data_df,disruption_time=self.get_disruption_time(shot_id))
 
     # TODO: Make more efficient
     def get_shots(self, shot_ids, efit_tree=None):
         return [self.get_shot(shot_id, efit_tree) for shot_id in shot_ids]
 
-    def validate_shot(self, shot_id, visualize_differences=False):
+    def validate_shot(self, shot_id, visualize_differences=False, output_dir='./'):
         """
         Compare shot data currently in disruption database to what is calculated by the shot object.
 
@@ -241,23 +259,29 @@ class D3DHandler(DatabaseHandler):
             Whether the shot data is correct according to the disruption database
         """
         shot_id = int(shot_id)
-        true_shot = self.get_shot(shot_id)
-        if true_shot is None:
-            logging.debug("Shot not in database")
-            return False
+        try:
+            true_shot = self.get_shot(shot_id)
+            if true_shot is None:
+                logging.debug("Shot not in database")
+                return False, "Shot not in database"
+        except Exception as e:
+            logging.warning(f"Failed to load shot {shot_id} from SQL database")
+            logging.debug(e)
+            return False, "Failed to load shot"
         local_shot = D3DShot(shot_id, self.get_efit_tree(
             shot_id), disruption_time=self.get_disruption_time(shot_id))
         comparison = pd.DataFrame()
         for col in list(local_shot.data.columns):
-            if is_numeric_dtype(local_shot.data[col]):
-                comparison[col] = np.abs(
-                    (true_shot.data[col] - local_shot.data[col])/true_shot.data[col])
+            if col in list(true_shot.data.columns):
+                if is_numeric_dtype(local_shot.data[col]):
+                    comparison[col] = np.abs((true_shot.data[col] - local_shot.data[col])/true_shot.data[col])
         # if comparison['time'] != true_shot.data['time']
         # plt.figure()
         # plt.plot(true_shot.data['time'], label='database')
         # plt.plot(local_shot.data['time'], label='local',linestyle="dotted")
         # plt.title('time')
         # plt.legend()
+        validation = False
         if not comparison.empty:
             logging.debug("Shot data is not correct")
             for col in comparison.columns:
@@ -271,12 +295,11 @@ class D3DHandler(DatabaseHandler):
                     axs[0].set_title(f"Shot {shot_id}:{col}")
                     axs[1].set_title("Normalized Error")
                     axs[0].legend()
-            save_open_plots(f"shot_{shot_id}_error_graphs.pdf")
+            save_open_plots(output_dir + f"shot_{shot_id}_error_graphs.pdf")
             plt.close('all')
             if visualize_differences:
                 plt.show()
-            return False
-        return True
+        return validation, comparison
 
 
 def create_cmod_handler():
@@ -317,5 +340,5 @@ if __name__ == '__main__':
     # test_handler = create_cmod_handler()
     # shot = test_handler.get_shot('1150922001')
     test_handler = create_d3d_handler()
-    shot = test_handler.get_shot('175552')
+    shot = test_handler.get_shot('180808')
     print(shot.efit_tree_name)

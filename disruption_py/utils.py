@@ -1,18 +1,30 @@
 """
-This module contains utility functions for various numerical operations. 
+This module contains utility functions for various numerical operations.
 """
-
 from dataclasses import dataclass
+import logging
+import copy
 
+import h5py
+import string
+import random
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.impute import SimpleImputer
 from scipy.interpolate import interp1d, interp2d, RegularGridInterpolator
 from scipy.optimize import curve_fit
 from scipy.signal import lfilter, medfilt
-import numpy as np
-import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
-def interp1(x, y, new_x, kind='linear', bounds_error=False, fill_value='extrapolate'):
-    """ 
+pd.options.mode.chained_assignment = None
+
+def generate_id(size=8):
+    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+
+
+def interp1(x, y, new_x, kind='linear', bounds_error=False, fill_value='extrapolate', axis=-1):
+    """
     Interpolate a 1-D array.
 
     This function interpolates a 1-D array using the given x and y values
@@ -44,7 +56,7 @@ def interp1(x, y, new_x, kind='linear', bounds_error=False, fill_value='extrapol
         The interpolated y-values.
     """
     set_interp = interp1d(
-        x, y, kind=kind, bounds_error=bounds_error, fill_value=fill_value)
+        x, y, kind=kind, bounds_error=bounds_error, fill_value=fill_value, axis=axis)
     return set_interp(new_x)
 
 
@@ -83,10 +95,204 @@ def interp2(X, Y, V, Xq, Yq, kind='linear'):
     set_interp = interp2d(X, Y, V, kind=kind)
     return set_interp(Xq, Yq)
 
-# TODO: Implement this
+
+def exp_filter(x, w, strategy='fragmented'):
+    """
+    Implements an exponential filter.
+
+    This function implements an exponential filter on the given array x. In the case of nan values in the input array, we default to using the last timestep that was not a nan value. In the fragmented strategy, any time we encounter invald values, we restart the filter at the next valid value.
+    Parameters
+    ----------
+    x : array
+        The array to filter.
+    w : float
+        The filter weight.
+    strategy: str, optional
+        Imputation strategy to be used, if any. Options are 'fragmented' or 'none'. Default is 'fragmented.'
+
+    Returns
+    -------
+    _ : array
+        The filtered array.
+    """
+    filtered_x = np.zeros(x.shape)
+    filtered_x[0] = x[0]
+    for i in range(1, len(x)):
+        filtered_x[i] = w*x[i] + (1-w)*filtered_x[i-1]
+        if strategy == 'fragmented':
+            if filtered_x[i-1] == np.nan:
+                filtered_x[i] = x[i]
+    return filtered_x
 
 
-def efit_rz_interp(times, efit_dict: dict) -> tuple:
+def hist_time_th(thL, thH, thA, dt, v, v_old, c_old, a_old):
+
+    # =================
+    # double threshold
+    # =================
+    # if signal is below LOW threshold output is always 0
+    if v < thL:
+        v = 0
+    # if signal is above HIGHT threshold output is always 1
+    elif v > thH:
+        v = 1
+    else:
+        v = v_old
+    # =================
+    # time accumulation
+    # =================
+    # when output signal is 0 counter gets reset
+    if v == 0:
+        c = 0
+    # when output signal is 1 counter gets incremented
+    else:
+        c = c_old + dt
+    # =================
+    # sound alarm
+    # =================
+    # if counter surpasses allarm threshold or old allarm was on
+    if c > thA or a_old:
+        a = 1
+    else:
+        a = 0
+
+    return v, c, a
+
+
+def trigger_alarm(time, value, low_thr, high_thr, thA):
+    output = []
+    alarm = []
+    if time[0] < 0:
+        tstart = 0
+    else:
+        tstart = time[0]  # 0
+    v_old = 0
+    c_old = 0
+    a_old = 0
+
+    for t, v in zip(time, value):
+        dt = t - tstart
+        v, c, a = hist_time_th(low_thr, high_thr, thA,
+                               dt, v, v_old, c_old, a_old)
+        output.append(v)
+        alarm.append(a)
+        if output[0] != 0:
+            v, c, a = 0, 0, 0
+            output[0], alarm[0] = 0, 0
+        v_old, c_old, a_old = v, c, a
+        tstart = t
+    return alarm
+
+
+# TODO: Clean up this function
+# TODO: Fix issue with None
+
+
+def impute_shot_df_NaNs(df, strategy='median', missing_values=np.nan):
+    """
+    This routine imputes missing values for all columns in a given df.
+    Values are imputed on the basis of different shot numbers.
+    It returns a dataframe where all columns that have missing values
+    now have them imputed according to the selected strategy. In addition,
+    for every imputed column, a new flag_ column is added: if an original
+    NaN was in that row, a 1 is there otherwise 0.
+    df:                pandas dataframe;
+    strategy:          kwarg, default is 'median'. Other possible ones are 'mean' or 'nearest';
+    missing_values:    kwarg, default is 'NaN';
+    return df
+    """
+
+    impute = SimpleImputer(missing_values=missing_values,
+                           strategy=strategy, verbose=0)
+    variables = []
+    ordered_names = list(df.columns)
+    cols = [col for col in ordered_names if col not in [
+        'time_until_disrupt', 'label']]
+    for col in cols:
+        if df[col].isnull().values.any():
+            variables.append(col)
+
+    shots = np.unique(df['shot'].values)
+
+    for var in variables:
+        imputed_var = []
+        flag_imputed_nans = []
+
+        for shot in shots:
+            index = np.where(df['shot'].values == shot)[0]
+            original_var = np.array(df[var].values[index], dtype=np.float64)
+            tmp_flag = np.zeros(np.size(original_var))
+            nan_original_var = np.where(np.isnan(original_var))[0]
+            # if the whole column is NaN or more than 50% are NaNs
+            # then the whole shot should be discarded
+            if (np.size(nan_original_var) == np.size(index)) or (np.size(nan_original_var) >= 0.8 * np.size(index)):
+                tmp_var = original_var * np.nan
+                tmp_flag = original_var * np.nan
+            else:
+                tmp_var = impute.fit_transform(original_var.reshape(-1, 1))
+                tmp_flag[nan_original_var] = 1
+
+            imputed_var.extend(np.hstack(tmp_var))
+            flag_imputed_nans.extend(tmp_flag)
+
+        df.loc[:, var] = imputed_var
+    return df
+
+
+class HDF5RFModel():
+    def __init__(self, n_trees, n_nodes, n_classes, value_arr, tree_start_arr, feature_arr, children_left_arr, children_right_arr, threshold_arr, stride):
+        self.n_trees = n_trees
+        self.n_nodes = n_nodes
+        self.n_classes = n_classes
+        self.value_arr = value_arr
+        self.tree_start_arr = tree_start_arr
+        self.feature_arr = feature_arr
+        self.children_left_arr = children_left_arr
+        self.children_right_arr = children_right_arr
+        self.threshold_arr = threshold_arr
+        self.stride = stride
+        self.classes_ = [0, 1]
+
+    def predict_proba(self, X):
+        predictions = np.zeros((len(X)//self.stride,))
+        results = np.zeros((self.n_trees,))
+        for j in np.arange(len(X)//self.stride):
+            X_eval = X[self.stride*j, :]
+            for i in np.arange(self.n_trees):
+                current_node = 0
+                current_index = self.tree_start_arr[i]+current_node
+                while self.children_left_arr[current_index] != self.children_right_arr[current_index]:
+                    if X_eval[self.feature_arr[current_index]] <= self.threshold_arr[current_index]:
+                        current_node = self.children_left_arr[current_index]
+                    else:
+                        current_node = self.children_right_arr[current_index]
+                    current_index = self.tree_start_arr[i]+current_node
+                results[i] = self.value_arr[current_index][1] / \
+                    np.sum(self.value_arr[current_index])
+            predictions[j] = np.sum(results)/self.n_trees
+        return predictions
+
+
+def load_model_from_hdf5(model_path, model_type='RandomForestClassifier'):
+    if model_type == 'RandomForestClassifier':
+        f_dict = h5py.File(model_path, 'r')
+        n_trees = f_dict['n_trees'][0]
+        n_nodes = f_dict['n_nodes'][0]
+        n_classes = f_dict['n_classes'][0]
+        value_arr = f_dict['value'][:]
+        tree_start_arr = f_dict['tree_start'][:]
+        feature_arr = f_dict['feature'][:]
+        children_left_arr = f_dict['children_left'][:]
+        children_right_arr = f_dict['children_right'][:]
+        threshold_arr = f_dict['threshold'][:]
+        stride = 1
+        return HDF5RFModel(n_trees, n_nodes, n_classes, value_arr, tree_start_arr,
+                           feature_arr, children_left_arr, children_right_arr, threshold_arr, stride)
+    else:
+        raise ValueError('Model type not supported')
+
+
+def efit_rz_interp(ts, efit_dict: dict) -> tuple:
     """
     Interpolate the efit data to the given timebase and project onto the
     poloidal plane.
@@ -97,7 +303,7 @@ def efit_rz_interp(times, efit_dict: dict) -> tuple:
         Timebase to interpolate to
 
     efit_dict: dict
-        Dictionary with the efit data. Keys are 'time', 'r', 'z', 'psin', 'rho_vn'
+        Dictionary with the efit data. Keys are 'time', 'r', 'z', 'psin', 'rhovn'
 
     Returns
     -------
@@ -108,18 +314,17 @@ def efit_rz_interp(times, efit_dict: dict) -> tuple:
         Array of normalized minor radius
 
     """
-    T = np.tile(times, (1, len(efit_dict['r'])))
-    R = np.tile(efit_dict['r'], (len(times), 1))
-    Z = np.tile(efit_dict['z'], (len(times), 1))
+    times = ts['time']/1.e3
     interp = RegularGridInterpolator(
-        (efit_dict['time'], efit_dict['r'], efit_dict['z']), efit_dict['psin'], method='linear')
-    psin = interp(T, R, Z)
-    rho_vn_diag_almost = interp1(
-        efit_dict['time'], efit_dict['rho_vn'], times)
-    rho_vn_diag = np.empty(len(psin))
-    psin_timebase = np.linspace(0, 1, len(efit_dict['rho_vn']))
-    for i in range(len(psin)):
-        rho_vn_diag[i] = interp1(psin_timebase, rho_vn_diag_almost[i], psin[i])
+        [efit_dict['time'], efit_dict['r'], efit_dict['z']], efit_dict['psin'],method='linear',bounds_error=False,fill_value=np.nan)
+    T,R,Z = np.meshgrid(times, efit_dict['r'], efit_dict['z'],indexing='ij')
+    # print(np.stack((T,R,Z),axis=1).shape)
+    psin = interp((T,R,Z))
+    rho_vn_diag_almost = interp1(efit_dict['time'], efit_dict['rhovn'], times,axis=0)
+    rho_vn_diag = np.empty(psin.shape)
+    psin_timebase = np.linspace(0, 1, efit_dict['rhovn'].shape[1])
+    for i in range(psin.shape[0]):
+        rho_vn_diag[i] = interp1(psin_timebase, rho_vn_diag_almost[i,:], psin[i,:])
     return psin, rho_vn_diag
 
 
@@ -174,7 +379,7 @@ def gaussian_fit(x, y):
 
 
 def gauss(x, *params):
-    """ Gaussian function. 
+    """ Gaussian function.
 
     Parameters
     ----------
@@ -359,7 +564,7 @@ def power(a):
                        7657, 8136, 8819, 7112, 6654, 6330, 6123, 29621,
                        29485, 29431, 29458, 29565, 29756, 30032, 30397, 6406], dtype=np.float64)*1.e4  # convert to [m^(-2)]
 
-    @dataclass
+    @ dataclass
     class Channel:
         label: str
         chanpwr: np.ndarray
@@ -368,7 +573,7 @@ def power(a):
         Z: float
         angle: float
 
-    @dataclass
+    @ dataclass
     class Power:
         pwrmix: np.ndarray
         divl: np.ndarray
@@ -453,7 +658,7 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
                       135.780, 129.600, 126.600, 123.600, 120.600, 117.600, 114.600,
                       111.600, 108.600, 101.910])
 
-    @dataclass
+    @ dataclass
     class Channel:
         label: str
         R: float
@@ -467,9 +672,8 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         scrfact: float
     one_channel = Channel('', 0.0, 0.0, 0.0, 0, np.zeros(
         (1, 4096)), np.zeros((1, 4096)), 0.0, 0.0, 0.0)
-    channels = np.tile(one_channel, (48))
-
-    @dataclass
+    channels = [copy.deepcopy(one_channel) for i in range(48)]
+    @ dataclass
     class Bolo:
         shot_id: int
         kappa: np.ndarray
@@ -477,9 +681,10 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         raw_time: np.ndarray
         ntimes: int
         tot_pwr: np.ndarray
-        channels: np.ndarray
+        channels: list
     bolo_shot = Bolo(shot_id, kappa, np.zeros((1, 4096)), np.zeros(
         (1, 16384)), 0, np.zeros((1, 4096)), channels)
+    # TODO: Find explanation for this
     if shot_id > 79400:
         gam = bol_prm[:49]
         tau = bol_prm[49:98]
@@ -496,13 +701,14 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
     # decide if the data is valid or not.  If not, set 'ier' = 1 in the
     # appropriate field for each channel.
     if len(bol_time) <= 16384 or bol_time[-1] <= bol_time[0] or min(np.diff(bol_time)) < -1e-5:
+        print("Bolo data is garbage")
         for i in range(48):
             bolo_shot.channels[i].ier = 1
         return bolo_shot
     time = np.linspace(np.min(bol_time[0]), np.min(bol_time[-1]), 16384)
     dt = time[1] - time[0]
-    window_size = np.around(drtau/dt)
-    smoothing_kernel = (1/window_size) * np.ones((1, window_size))
+    window_size = int(np.around(drtau/dt))
+    smoothing_kernel = (1.0/window_size) * np.ones(window_size)
     bolo_shot.ntimes = int(len(time)/4)
     bolo_shot.time = np.linspace(np.min(time), np.max(time), bolo_shot.ntimes)
     t_del = bolo_shot.time[1] - bolo_shot.time[0]
@@ -526,17 +732,19 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         # Subtract baseline offset
         temp = data - np.mean(data[:20])
         # Filter signal using causal moving average filter (i.e. boxcar)
-        temp_filtered = lfilter(smoothing_kernel, 1, temp)
+        temp_filtered = np.convolve(temp, smoothing_kernel, 'same')
+        # temp_filtered = lfilter(smoothing_kernel, 1, temp)
         dr_dt = np.gradient(temp_filtered, dt)
         # Calculate power on each detector, P_d(t) [as given in Leonard et al, Rev. Sci. Instr. (1995)]
         bolo_shot.channels[i].pwr = medfilt(
-            (gam[i+1]*temp_filtered + tau[i+1]*dr_dt)/scrfact[i], window_size)
+            (gam[i+1]*temp_filtered + tau[i+1]*dr_dt)/scrfact[i], window_size + (not window_size%2))
     return bolo_shot
 
+
 def save_open_plots(filename):
-   pp = PdfPages(filename)
-   fig_nums = plt.get_fignums()
-   figs = [plt.figure(n) for n in fig_nums]
-   for fig in figs:
-      fig.savefig(pp, format='pdf')
-   pp.close()
+    pp = PdfPages(filename)
+    fig_nums = plt.get_fignums()
+    figs = [plt.figure(n) for n in fig_nums]
+    for fig in figs:
+        fig.savefig(pp, format='pdf')
+    pp.close()

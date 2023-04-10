@@ -6,3 +6,8 @@ data/*
 .vscode/*
 *.pdf
 *.log
+*.pkl
+*.joblib
+shot_*profileX*
+scripts/output/*
+scripts/*.txt

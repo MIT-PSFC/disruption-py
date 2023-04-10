@@ -12,13 +12,50 @@ DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
 
 
 class Shot:
+    """
+    Class for a single shot.
+
+    Parameters
+    ----------
+    shot_id : int
+        Shot number.
+    data : pandas.DataFrame, optional
+        Data for the shot. If not provided, an empty DataFrame will be created.
+
+    Attributes
+    ----------
+    data : pandas.DataFrame
+        Data for the shot.
+    conn : MDSplus.Connection
+        MDSplus connection to the shot.
+    tree : MDSplus.Tree
+        MDSplus tree for the shot.
+    logger : logging.Logger
+        Logger for the shot.
+    _shot_id : int
+        Shot number.
+    _metadata : dict
+        Metadata for the shot.
+    """
+
     logger = logging.getLogger('disruption_py')
 
     def __init__(self, shot_id, data=None):
         self._shot_id = int(shot_id)
+        try:
+            commit_hash = subprocess.check_output(
+                ["git", "describe", "--always"]).strip()
+        except Exception as e:
+            commit_hash = 'Unknown'
+        if self.logger.level == logging.NOTSET:
+            self.logger.setLevel(logging.INFO)
+        assert self.logger.level != logging.NOTSET, "Logger level is NOTSET"
+        if not self.logger.hasHandlers():
+            self.logger.addHandler(logging.StreamHandler())
+        assert self.logger.hasHandlers(), "Logger has no handlers"
         self._metadata = {
             'labels': {},
-            'commit_hash': subprocess.check_output(["git", "describe", "--always"]).strip(),
+            'commit_hash': commit_hash,
             'timestep': {},
             'duration': {},
             'description': "",
@@ -28,14 +65,37 @@ class Shot:
         if data is None:
             self.data = pd.DataFrame()
 
-    def get_signal(self, signal_name, signal_getter=None, interpolate=True, interpolation_timebase=None):
+    @staticmethod
+    def get_signal(id, signal_name, conn, interpolate=True, interpolation_timebase=None):
+        if isinstance(conn, MDSplus.Tree):
+            signal_record = conn.getNode(signal_name).getData()
+            signal = signal_record.data()
+            orig_timebase = signal_record.dim_of(0)
+        elif isinstance(conn, MDSplus.Connection):
+            signal = conn.get(signal_name).data()
+            orig_timebase = conn.get(
+                f"dim_of({signal_name})").data()/1.e3  # [ms] -> [s]
+        else:
+            raise TypeError(
+                "conn must be either MDSplus.Connection or MDSplus.Tree")
+        if len(orig_timebase) < 2:
+            raise ValueError(
+                f"Timebase for {signal_name} is too short ({len(orig_timebase)})")
+        if interpolate:
+            if interpolation_timebase is None:
+                raise ValueError(
+                    "interpolation_timebase must be provided if interpolate is True")
+            signal = interp1(orig_timebase, signal, interpolation_timebase)
+        return signal, orig_timebase
+
+    def _get_signal(self, signal_name, signal_conn=None, interpolate=True, interpolation_timebase=None):
         """Get a signal from MDSplus.
 
         Parameters
         ----------
         signal_name : str
             Name of the signal in MDSplus.
-        signal_getter : MDSplus.Connection, optional
+        signal_conn : MDSplus.Connection, optional
             MDSplus connection to get the signal from. If not provided, the default
             connection will be used.
         interpolate : bool, optional
@@ -54,23 +114,8 @@ class Shot:
             Timebase of the signal in MDSplus.
 
         """
-        if signal_getter is None:
-            signal_getter = self.conn
-            signal = signal_getter.get(signal_name).data()
-            orig_timebase = signal_getter.get(
-                f"dim_of({signal_name})").data()/1e3  # [ms] -> [s]
-        elif isinstance(MDSplus.Tree, signal_getter):
-            signal_record = signal_getter.getNode(signal_name).getData()
-            signal = signal_record.data()
-            orig_timebase = signal_record.dim_of(0)
-        else:
-            raise TypeError(
-                "signal_getter must be either MDSplus.Connection or MDSplus.Tree")
-        if len(orig_timebase) < 2:
-            raise ValueError(
-                f"Timebase for {signal_name} is too short ({len(orig_timebase)})")
-        if interpolate:
-            if interpolation_timebase is None:
-                interpolation_timebase = self.data['time']
-            signal = interp1(orig_timebase, signal, interpolation_timebase)
-        return signal, orig_timebase
+        if signal_conn is None:
+            signal_conn = self.conn
+        if interpolation_timebase is None and interpolate:
+            interpolation_timebase = self._times
+        return type(self).get_signal(self._shot_id, signal_name, signal_conn, interpolate, interpolation_timebase)

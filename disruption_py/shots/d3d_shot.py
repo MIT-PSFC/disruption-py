@@ -4,6 +4,8 @@ try:
 except ImportError:
     # Try backported to PY<37 `importlib_resources`.
     import importlib_resources
+import logging
+import traceback 
 
 import pandas as pd
 import numpy as np
@@ -16,7 +18,10 @@ from MDSplus import *
 from disruption_py.utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power, efit_rz_interp
 import disruption_py.data
 D3D_DISRUPTED_SHOT = 175552
+# Retrieve efit from EFIT01, Peaking Factor Nodes: dpsrdcva dpsrdxdiv dpstepf dpsnepf
+D3D_PEAKING_FACTORS_SHOT = 180808
 D3D_MAX_SHOT_TIME = 7.0  # [s]
+DEFAULT_A_MINOR = 0.56  # [m]
 """
 Useful Examples:
 https://diii-d.gat.com/diii-d/MDSplusAPI_Python_pg1
@@ -28,19 +33,19 @@ class D3DShot(Shot):
     # Tokamak Variables
     nominal_flattop_radius = 0.59
     # EFIT Variables
-    efit_cols = {'beta_n': '\efit_a_eqdsk:betan', 'beta_p': '\efit_a_eqdsk:betap', 'kappa': '\efit_a_eqdsk:kappa', 'li': '\efit_a_eqdsk:li', 'upper_gap': '\efit_a_eqdsk:gaptop', 'lower_gap': '\efit_a_eqdsk:gapbot',
-                 'q0': '\efit_a_eqdsk:q0', 'qstar': '\efit_a_eqdsk:qstar', 'q95': '\efit_a_eqdsk:q95', 'Wmhd': '\efit_a_eqdsk:wmhd', 'chisq': '\efit_a_eqdsk:chisq'}
-    # 'v_loop_efit': ,'\efit_a_eqdsk:vsurf', 'bt0': '\efit_a_eqdsk:bt0'
+    efit_cols = {'beta_n': r'\efit_a_eqdsk:betan', 'beta_p': r'\efit_a_eqdsk:betap', 'kappa': r'\efit_a_eqdsk:kappa', 'li': r'\efit_a_eqdsk:li', 'upper_gap': r'\efit_a_eqdsk:gaptop', 'lower_gap': r'\efit_a_eqdsk:gapbot',
+                 'q0': r'\efit_a_eqdsk:q0', 'qstar': r'\efit_a_eqdsk:qstar', 'q95': r'\efit_a_eqdsk:q95', 'Wmhd': r'\efit_a_eqdsk:wmhd', 'chisq': r'\efit_a_eqdsk:chisq'}
+    # 'v_loop_efit': ,r'\efit_a_eqdsk:vsurf', 'bt0': r'\efit_a_eqdsk:bt0'
     efit_derivs = {'beta_p': 'dbetap_dt', 'li': 'dli_dt', 'Wmhd': 'dWmhd_dt'}
-    rt_efit_cols = {'beta_p_RT': '\efit_a_eqdsk:betap', 'li_RT': '\efit_a_eqdsk:li',
-                    'q95_RT': '\efit_a_eqdsk:q95', 'Wmhd_RT': '\efit_a_eqdsk:wmhd', 'chisq':'\efit_a_eqdsk:chisq'}
-    # 'v_loop_efit_RT': '\efit_a_eqdsk:vsurf',
+    rt_efit_cols = {'beta_p_RT': r'\efit_a_eqdsk:betap', 'li_RT': r'\efit_a_eqdsk:li',
+                    'q95_RT': r'\efit_a_eqdsk:q95', 'Wmhd_RT': r'\efit_a_eqdsk:wmhd', 'chisq': r'\efit_a_eqdsk:chisq'}
+    # 'v_loop_efit_RT': r'\efit_a_eqdsk:vsurf',
 
     # Disruption Variables
     dt_before_disruption = 0.002
     duration_before_disruption = 0.10
 
-    def __init__(self, shot_id, efit_tree_name, data=None, times=None, disruption_time=None, override_cols=True):
+    def __init__(self, shot_id, efit_tree_name, data=None, times=None, disruption_time=None, override_cols=True, **kwargs):
         super().__init__(shot_id, data)
         self._times = times
         self.conn = MDSplus.Connection('atlas.gat.com')
@@ -49,6 +54,8 @@ class D3DShot(Shot):
         self.disrupted = self.disruption_time is not None
         self.override_cols = override_cols
         self.data = data
+        timebase_signal = kwargs.pop('timebase_signal', None)
+        populate = kwargs.pop('populate', 'default')
         if self.data is not None and self._times is None:
             try:
                 self._times = self.data['time'].to_numpy()
@@ -58,41 +65,66 @@ class D3DShot(Shot):
             except KeyError as e:
                 self.logger.warning(
                     f"[Shot {self._shot_id}]:Shot constructor was passed data but no timebase.")
-                self.logger.debug(f"[Shot {self._shot_id}]:{e}")
-                self._times = self.get_disruption_timebase()
+                self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+                self._times = self.get_timebase(timebase_signal, **kwargs)
+        if self._times is None:
+            self._times = self.get_timebase(timebase_signal, **kwargs)
+        if populate == 'l_mode':
+            self._populate_l_mode_data()
         else:
-            self._times = self.get_disruption_timebase()
-        self._populate_shot_data(data is not None)
+            self._populate_shot_data(data is not None)
+    
+    def _populate_l_mode_data(self):
+        self.data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(),self.get_peaking_factors(),self.get_kappa_area(),self.get_time_until_disrupt()], axis=1)
+        self.data['time'] = self._times 
+        self.data['shot'] = self._shot_id
 
     def _populate_shot_data(self, already_populated=False):
         local_data = pd.concat([self.get_efit_parameters(), self.get_rt_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(), self.get_ip_parameters(
-        ), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters(), self.get_time_to_disrupt()], axis=1)
+        ), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters(),self.get_kappa_area(),self.get_time_until_disrupt()], axis=1)
         local_data = local_data.loc[:, ~local_data.columns.duplicated()]
         if not already_populated:
             self.data = local_data
             self.data['time'] = self._times
+            self.data['shot'] = self._shot_id
+
+    def get_timebase(self, timebase_signal, **kwargs):
+        if timebase_signal == None or timebase_signal == 'disruption_timebase':
+            minimum_ip = kwargs.get('minimum_ip', 400.e3)
+            minimum_duration = kwargs.get('minimum_duration', 0.1)
+            return self.get_disruption_timebase(minimum_ip, minimum_duration)
+        elif timebase_signal == 'ip':
+            _, ip_time = self._get_signal(
+                f"ptdata('ip', {self._shot_id})", interpolate=False)
+            return ip_time
+        elif timebase_signal == 'flattop':
+            _, ip_time = self._get_signal(
+                f"ptdata('ip', {self._shot_id})", interpolate=False)
+            return self.get_flattop_timebase(ip_time)
         else:
-            return
-            for col in list(local_data.columns):
-                if col not in list(self.data.columns) or self.override_cols:
-                    self.data[col] = local_data[col]
+            raise NotImplementedError(
+                "Only 'disruption_timebase' and 'ip' are supported for timebase_signal.")
 
     def get_disruption_timebase(self, minimum_ip=400.e3, minimum_duration=0.1):
         self.conn.openTree('d3d', self._shot_id)
-        ip, ip_time = self.get_signal(f"ptdata('ip', {self._shot_id})", interpolate=False)             
-        baseline = np.mean(ip[0:10])
-        ip = ip - baseline
+        raw_ip, ip_time = self._get_signal(
+            f"ptdata('ip', {self._shot_id})", interpolate=False)
+        baseline = np.mean(raw_ip[0:10])
+        ip = raw_ip - baseline
         duration, ip_max = self.get_end_of_shot(ip, ip_time, 100e3)
         if duration < minimum_duration or np.abs(ip_max) < minimum_ip:
             raise NotImplementedError()
         times = np.arange(0.100, duration+0.025, 0.025)
         if self.disrupted:
-            print(self.disruption_time)
             additional_times = np.arange(
                 self.disruption_time-self.duration_before_disruption, self.disruption_time + self.dt_before_disruption, self.dt_before_disruption)
             times = times[np.where(times < (self.disruption_time -
                                             self.duration_before_disruption))]
             times = np.concatenate((times, additional_times))
+        else:
+            ip_start = np.argmax(ip_time <= .1)
+            ip_end = np.argmax(raw_ip[ip_start:] <= 100000) + ip_start
+            return ip_time[ip_start:ip_end]  # [ms] -> [s]
         return times
 
     def get_end_of_shot(self, signal, signal_time, threshold=1.e5):
@@ -110,7 +142,6 @@ class D3DShot(Shot):
         finite_indices = np.where(
             (signal_time >= 0.0) & (np.abs(signal) > threshold))
         if len(finite_indices) == 0:
-            print(" 'No plasma' shot.")
             return duration, signal_max
         else:
             dt = np.diff(signal_time)
@@ -119,7 +150,7 @@ class D3DShot(Shot):
                 duration = 0
                 return duration, signal_max
         polarity = np.sign(
-            np.trapz(signal[finite_indices],signal_time[finite_indices]))
+            np.trapz(signal[finite_indices], signal_time[finite_indices]))
         polarized_signal = polarity * signal
         valid_indices = np.where(
             (polarized_signal >= threshold) & (signal_time > 0.0))
@@ -129,7 +160,45 @@ class D3DShot(Shot):
         signal_max = np.max(polarized_signal)*polarity
         return duration, signal_max
 
-    def get_time_to_disrupt(self):
+    def get_flattop_timebase(self, times):
+        # time_until_disrupt = self.disruption_time - times
+        # time_until_disrupt[time_until_disrupt < 0] = np.nan
+        # indices_no_disrupt = np.where(np.isnan(time_until_disrupt))
+        # indices_disrupt = np.where(~np.isnan(time_until_disrupt))
+        try:
+            t_ip_prog= self.conn.get(
+                f"dim_of(ptdata('iptipp', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
+            ip_prog = self.conn.get(
+                f"ptdata('iptipp', {self._shot_id})").data()  # [A]
+            polarity = np.unique(self.conn.get(
+                f"ptdata('iptdirect', {self._shot_id})").data())
+            if len(polarity) > 1:
+                self.logger.info(
+                    f"[Shot {self._shot_id}]:Polarity of Ip target is not constant. Using value at first timestep.")
+                self.logger.debug(
+                    f"[Shot {self._shot_id}]: Polarity array {polarity}")
+                polarity = polarity[0]
+            ip_prog = ip_prog * polarity
+            dipprog_dt = np.gradient(ip_prog, t_ip_prog)
+            ip_prog = interp1(t_ip_prog, ip_prog, times, 'linear')
+            dipprog_dt = interp1(t_ip_prog, dipprog_dt, times, 'linear')
+        except MdsException as e:
+            self.logger.info(
+                f"[Shot {self._shot_id}]:Failed to get programmed plasma current parameters")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+        epsoff = self.conn.get(f"ptdata('epsoff', {self._shot_id})").data()
+        t_epsoff = self.conn.get(
+            f"dim_of(ptdata('epsoff', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
+        t_epsoff += .001  # Avoid problem with simultaneity of epsoff being triggered exactly on the last time sample
+        epsoff = interp1(t_epsoff, epsoff, times, 'linear')
+        railed_indices = np.where(np.abs(epsoff) > .5)
+        power_supply_railed = np.zeros(len(times))
+        power_supply_railed[railed_indices] = 1
+        indices_flattop = np.where((np.abs(dipprog_dt) <= 2.e3) & (
+            np.abs(ip_prog) > 100e3) & (power_supply_railed != 1))
+        return times[indices_flattop]
+
+    def get_time_until_disrupt(self):
         if self.disrupted:
             return pd.DataFrame({'time_until_disrupt': self.disruption_time - self._times})
         return pd.DataFrame({'time_until_disrupt': np.full(self._times.size, np.nan)})
@@ -139,7 +208,7 @@ class D3DShot(Shot):
         efit_data = {k: self.conn.get(v).data()
                      for k, v in self.efit_cols.items()}
         efit_time = self.conn.get(
-            '\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
+            r'\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
         if self._times is None:
             self._times = efit_time
         # EFIT reconstructions are sometimes invalid, particularly when very close
@@ -165,7 +234,7 @@ class D3DShot(Shot):
         efit_data = {k: self.conn.get(v).data()
                      for k, v in self.rt_efit_cols.items()}
         efit_time = self.conn.get(
-            '\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
+            r'\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
         # EFIT reconstructions are sometimes invalid, particularly when very close
         # to a disruption.  There are a number of EFIT parameters that can indicate
         # invalid reconstructions, such as 'terror' and 'chisq'.  Here we use
@@ -184,19 +253,19 @@ class D3DShot(Shot):
     def get_H_parameters(self):
         self.conn.openTree('transport', self._shot_id)
         try:
-            h_98, _ = self.get_signal('\H_THH98Y2')
+            h_98, _ = self._get_signal(r'\H_THH98Y2')
         except ValueError as e:
             self.logger.info(
                 f"[Shot {self._shot_id}]: Failed to get H98 signal. Returning NaNs.")
-            self.logger.debug(f"[Shot {self._shot_id}]: {e}")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
             h_98 = np.full(self._times.size, np.nan)
         self.conn.openTree('d3d', self._shot_id)
         try:
-            h_alpha, _ = self.get_signal('\fs04')
+            h_alpha, _ = self._get_signal(r'\fs04')
         except ValueError as e:
             self.logger.info(
                 f"[Shot {self._shot_id}]: Failed to get H_alpha signal. Returning NaNs.")
-            self.logger.debug(f"[Shot {self._shot_id}]: {e}")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
             h_alpha = np.full(self._times.size, np.nan)
         return pd.DataFrame({'H98': h_98, 'H_alpha': h_alpha})
 
@@ -204,10 +273,10 @@ class D3DShot(Shot):
         self.conn.openTree('d3d', self._shot_id)
         # Get neutral beam injected power
         try:
-            p_nbi = self.conn.get(
-                r"\d3d::top.nb:pinj").data()*1.e3  # [KW] -> [W]
-            t_nbi = self.conn.get(
-                r"dim_of(\d3d::top.nb:pinj)").data()*1.e3  # [ms] -> [s]
+            p_nbi, t_nbi = self._get_signal(
+                r'\d3d::top.nb:pinj', interpolate=False)
+            p_nbi = p_nbi.astype(np.float64)
+            p_nbi *= 1.e3  # [KW] -> [W]
             if len(t_nbi) > 2:
                 p_nbi = interp1(t_nbi, p_nbi, self._times,
                                 'linear', bounds_error=False, fill_value=0.)
@@ -219,13 +288,12 @@ class D3DShot(Shot):
             p_nbi = np.zeros(len(self._times))
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to open NBI node")
-            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
         # Get electron cycholotrn heating (ECH) power. It's poitn data, so it's not stored in an MDSplus tree
         self.conn.openTree('rf', self._shot_id)
         try:
-            p_ech = self.conn.get(r"\top.ech.total:echpwrc").data()  # [W]
-            t_ech = self.conn.get(
-                r"dim_of(\top.ech.total:echpwrc)").data()/1.e3  # [ms] -> [s]
+            p_ech, t_ech = self._get_signal(
+                r'\top.ech.total:echpwrc', interpolate=False)
             if len(t_ech) > 2:
                 p_ech = interp1(t_ech, p_ech, self._times,
                                 'linear', bounds_error=False, fill_value=0.)
@@ -237,11 +305,11 @@ class D3DShot(Shot):
             p_ech = np.zeros(len(self._times))
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to open ECH node. Setting to zeros")
-            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
         # Get ohmic power and loop voltage
         p_ohm, v_loop = self.get_ohmic_parameters()
         # Radiated power
-        # We had planned to use the standard signal '\bolom::prad_tot' for this
+        # We had planned to use the standard signal r'\bolom::prad_tot' for this
         # parameter.  However, the processing involved in calculating \prad_tot
         # from the arrays of bolometry channels involves non-causal filtering with
         # a 50 ms window.  This is not acceptable for our purposes.  Tony Leonard
@@ -250,15 +318,20 @@ class D3DShot(Shot):
         # and powers.pro).  I converted them into Matlab routines, and modified the
         # analysis so that the smoothing is causal, and uses a shorter window.
         smoothing_window = 0.010  # [s]
-        self.conn.openTree("bolom", self._shot_id)
-        bol_prm, _ = self.get_signal(r"\bol_prm", interpolate=False)
+        try:
+            self.conn.openTree("bolom", self._shot_id)
+        except MdsException as e:
+            self.logger.info(
+                f"[Shot {self._shot_id}]:Failed to open bolom tree.")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+        bol_prm, _ = self._get_signal(r'\bol_prm', interpolate=False)
         lower_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
         upper_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
         bol_channels = lower_channels + upper_channels
         bol_signals = []
         bol_times = []
         for i in range(48):
-            bol_signal, bol_time = self.get_signal(
+            bol_signal, bol_time = self._get_signal(
                 fr"\top.raw:{bol_channels[i]}", interpolate=False)
             bol_signals.append(bol_signal)
             bol_times.append(bol_time)
@@ -277,6 +350,7 @@ class D3DShot(Shot):
             p_rad = interp1(a_struct.time, p_rad, self._times, 'linear')
 
         # Remove any negative values from the power data
+        p_rad[np.isinf(p_rad)] = np.nan
         p_rad[p_rad < 0] = 0
         p_nbi[p_nbi < 0] = 0
         p_ech[p_ech < 0] = 0
@@ -294,16 +368,14 @@ class D3DShot(Shot):
         self.conn.openTree('d3d', self._shot_id)
         # Get edge loop voltage and smooth it a bit with a median filter
         try:
-            v_loop = self.conn.get(
-                f'ptdata("vloopb", {self._shot_id})').data()  # [V]
-            t_v_loop = self.conn.get(
-                f'dim_of(ptdata("vloopb", {self._shot_id}))').data()/1.e3  # [ms]->[s]
+            v_loop, t_v_loop = self._get_signal(
+                f'ptdata("vloopb", {self._shot_id})', interpolate=False)
             v_loop = scipy.signal.medfilt(v_loop, 11)
             v_loop = interp1(t_v_loop, v_loop, self._times, 'linear')
         except MdsException as e:
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to open VLOOPB node. Setting to NaN.")
-            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
             v_loop = np.full(len(self._times), np.nan)
             t_v_loop = v_loop.copy()
        # Get plasma current
@@ -314,16 +386,14 @@ class D3DShot(Shot):
             # We choose a 20-point width for gsastd. This means a 10ms window for ip smoothing
             dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
             self.conn.openTree(self.efit_tree_name, self._shot_id)
-            li = self.conn.get(r"\efit_a_eqdsk:li").data()
-            t_li = self.conn.get(
-                r"dim_of(\efit_a_eqdsk:li)").data()/1.e3  # [ms] -> [s]
-            chisq = self.conn.get(r"\efit_a_eqdsk:chisq").data()
+            li, t_li = self._get_signal(r'\efit_a_eqdsk:li', interpolate=False)
+            chisq = self.conn.get(r'\efit_a_eqdsk:chisq').data()
             # Filter out invalid indices of efit reconstruction
             invalid_indices = None  # TODO: Finish
         except MdsException as e:
             self.logger.info(
                 f"[Shot {self._shot_id}]:Unable to get plasma current data. p_ohm set to NaN.")
-            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
             p_ohm = np.full(len(self._times), np.nan)
             return pd.DataFrame({'p_ohm': p_ohm, 'v_loop': v_loop})
         # [m] For simplicity, use fixed r_0 = 1.67 for DIII-D major radius
@@ -343,8 +413,9 @@ class D3DShot(Shot):
         dne_dt = ne.copy()
         self.conn.openTree(self.efit_tree_name, self._shot_id)
         try:
-            t_ne = self.conn.get("dim_of(\density)").data()/1.e3  # [ms] -> [s]
-            ne = self.conn.get("\density").data()*1.e6  # [cm^3] -> [m^3]
+            t_ne = self.conn.get(
+                r'dim_of(\density)').data()/1.e3  # [ms] -> [s]
+            ne = self.conn.get(r'\density').data()*1.e6  # [cm^3] -> [m^3]
             dne_dt = np.gradient(ne, t_ne)
             # NOTE: t_ne has higher resolution than efit_time so t_ne[0] < efit_time[0] because of rounding, meaning we need to allow extrapolation
             ne = interp1(t_ne, ne, self._times, 'linear',
@@ -356,17 +427,18 @@ class D3DShot(Shot):
             ip = self.conn.get(f"ptdata('ip', {self._shot_id})").data()  # [A]
             ipsign = np.sign(np.sum(ip))
             ip = interp1(t_ip, ip*ipsign, self._times, 'linear')
-            a_minor = self.conn.get("\efit_a_eqdsk:aminor").data()  # [m]
+            a_minor = self.conn.get(r'\efit_a_eqdsk:aminor').data()  # [m]
             t_a = self.conn.get(
-                "\efit_a_eqdsk:atime").data()/1.e3  # [ms] -> [s]
+                r'\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
             a_minor = interp1(t_a, a_minor, self._times, 'linear')
-            n_g = ip/1.e6 / (np.pi*a_minor**2)  # [MA/m^2]
-            g_f = ne/1.e20 / n_g  # TODO: Fill in units
+            with np.errstate(divide='ignore'):
+                n_g = ip/1.e6 / (np.pi*a_minor**2)  # [MA/m^2]
+                g_f = ne/1.e20 / n_g  # TODO: Fill in units
         except MdsException as e:
             # TODO: Confirm that there is a separate exception if ptdata name doesn't exist
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to get some parameter")
-            self.logger.debug(f"[Shot {self._shot_id}]::{e}")
+            self.logger.debug(f"[Shot {self._shot_id}]::{traceback.format_exc()}")
         return pd.DataFrame({'n_e': ne, 'Greenwald_fraction': g_f, 'dn_dt': dne_dt})
 
     def get_rt_density_parameters(self):
@@ -395,17 +467,18 @@ class D3DShot(Shot):
             ip_sign = np.sign(np.sum(ip_rt))
             ip = interp1(t_ip_rt, ip_rt*ip_sign, self._times, 'linear')
             self.conn.openTree('efitrt1', self._shot_id)
-            a_minor_rt = self.conn.get("\efit_a_eqdsk:aminor").data()  # [m]
+            a_minor_rt = self.conn.get(r'\efit_a_eqdsk:aminor').data()  # [m]
             t_a_rt = self.conn.get(
-                "\efit_a_eqdsk:atime").data()/1.e3  # [ms] -> [s]
+                r'\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
             a_minor_rt = interp1(t_a_rt, a_minor_rt, self._times, 'linear')
-            n_g_rt = ip/1.e6 / (np.pi*a_minor_rt**2)  # [MA/m^2]
-            g_f_rt = ne_rt/1.e20 / n_g_rt  # TODO: Fill in units
+            with np.errstate(divide='ignore'):
+                n_g_rt = ip/1.e6 / (np.pi*a_minor_rt**2)  # [MA/m^2]
+                g_f_rt = ne_rt/1.e20 / n_g_rt  # TODO: Fill in units
         except MdsException as e:
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to get some parameter")
-            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
-        #' dne_dt_RT': dne_dt_rt
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+        # ' dne_dt_RT': dne_dt_rt
         return pd.DataFrame({'n_e_RT': ne_rt, 'Greenwald_fraction_RT': g_f_rt})
 
     def get_ip_parameters(self):
@@ -426,7 +499,7 @@ class D3DShot(Shot):
         except MdsException as e:
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to get measured plasma current parameters")
-            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
         # Get programmed plasma current parameters
         try:
             t_ip_prog = self.conn.get(
@@ -448,7 +521,7 @@ class D3DShot(Shot):
         except MdsException as e:
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to get programmed plasma current parameters")
-            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
         # Now get the signal pointname 'ipimode'.  This PCS signal denotes whether
         # or not PCS is actually feedback controlling the plasma current.  There
         # are times when feedback of Ip is purposely turned off, such as during
@@ -467,7 +540,7 @@ class D3DShot(Shot):
         except MdsException as e:
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to get ipimode signal. Setting to NaN.")
-            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
             ipimode = np.full(len(self._times), np.nan)
         feedback_on_indices = np.where((ipimode == 0) | (ipimode == 3))
         ip_error[feedback_on_indices] = ip[feedback_on_indices] - \
@@ -489,7 +562,7 @@ class D3DShot(Shot):
         except MdsException as e:
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to get epsoff signal. Setting to NaN.")
-            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
             power_supply_railed = np.full(len(self._times), np.nan)
         # 'ip_prog': ip_prog,
         return pd.DataFrame({'ip': ip, 'ip_error': ip_error, 'dip_dt': dip_dt, 'dipprog_dt': dipprog_dt, 'power_supply_railed': power_supply_railed})
@@ -513,7 +586,7 @@ class D3DShot(Shot):
         except MdsException as e:
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to get measured plasma current parameters")
-            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
         # Get programmed plasma current parameters
         try:
             t_ip_prog_rt = self.conn.get(
@@ -537,7 +610,7 @@ class D3DShot(Shot):
         except MdsException as e:
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to get programmed plasma current parameters")
-            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
         try:
             t_ip_error_rt = self.conn.get(
                 f"dim_of(ptdata('ipeecoil', {self._shot_id}))").data()/1.e3  # [ms] to [s]
@@ -548,7 +621,7 @@ class D3DShot(Shot):
         except MdsException as e:
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to get ipeecoil signal. Setting to NaN.")
-            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
         # Now get the signal pointname 'ipimode'.  This PCS signal denotes whether
         # or not PCS is actually feedback controlling the plasma current.  There
         # are times when feedback of Ip is purposely turned off, such as during
@@ -567,7 +640,7 @@ class D3DShot(Shot):
         except MdsException as e:
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to get ipimode signal. Setting to NaN.")
-            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
             ipimode = np.full(len(self._times), np.nan)
         feedback_off_indices = np.where((ipimode != 0) & (ipimode == 3))
         ip_error_rt[feedback_off_indices] = np.nan
@@ -588,7 +661,7 @@ class D3DShot(Shot):
         except MdsException as e:
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to get epsoff signal. power_supply_railed will be NaN.")
-            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
             power_supply_railed = np.full(len(self._times), np.nan)
         # 'dip_dt_RT': dip_dt_rt,
         return pd.DataFrame({'ip_RT': ip_rt, 'ip_error_RT': ip_error_rt, 'dipprog_dt_RT': dipprog_dt_rt, 'power_supply_railed': power_supply_railed})
@@ -617,9 +690,9 @@ class D3DShot(Shot):
             self.conn.openTree(self.efit_tree_name, self._shot_id)
             try:
                 t_a = self.conn.get(
-                    r"\efit_a_eqdsk:atime").data()/1.e3  # [ms] -> [s]
-                a_minor = self.conn.get(r"\efit_a_eqdsk:aminor").data()  # [m]
-                chisq = self.conn.get(r"\efit_a_eqdsk:chisq").data()
+                    r'\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
+                a_minor = self.conn.get(r'\efit_a_eqdsk:aminor').data()  # [m]
+                chisq = self.conn.get(r'\efit_a_eqdsk:chisq').data()
                 invalid_indices = np.where(chisq > 50)
                 a_minor[invalid_indices] = np.nan
                 a_minor = interp1(t_a, a_minor, self._times, 'linear')
@@ -627,12 +700,12 @@ class D3DShot(Shot):
             except MdsException as e:
                 self.logger.info(
                     f"[Shot {self._shot_id}]:Failed to get efit parameters")
-                self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+                self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
                 z_cur_norm = z_cur / self.nominal_flattop_radius
         except MdsException as e:
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to get vpszp signal")
-            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
         return pd.DataFrame({'zcur': z_cur, 'zcur_normalized': z_cur_norm, 'z_prog': z_prog, 'z_error': z_error, 'z_error_normalized': z_error_norm})
 
     def get_n1_bradial_parameters(self):
@@ -655,38 +728,40 @@ class D3DShot(Shot):
         # Check ONFR than DUD(legacy)
         else:
             try:
-                dusbradial, t_n1 = self.get_signal(
+                dusbradial, t_n1 = self._get_signal(
                     f"ptdata('onsbradial',{self._shot_id})")*1.e-4  # [T]
             except MdsException as e:
-                self.logger.debug(f"[Shot {self._shot_id}]: {e}")
+                self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
                 try:
-                    dusbradial, t_n1 = self.get_signal(
+                    dusbradial, t_n1 = self._get_signal(
                         f"ptdata('dusbradial',{self._shot_id})")*1.e-4  # [T]
                 except MdsException as e:
                     self.logger.info(
                         f"[Shot {self._shot_id}]:Failed to get n1 bradial signal. Returning NaN.")
-                    self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+                    self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
                     n_equal_1_mode = np.full(len(self._times), np.nan)
                     n_equal_1_normalized = np.full(len(self._times), np.nan)
                     return pd.DataFrame({'n_equal_1_normalized': n_equal_1_normalized, 'n_equal_1_mode': n_equal_1_mode})
         n_equal_1_mode = interp1(dusbradial, t_n1, self._times)
         # Get toroidal field Btor
-        b_tor, _ = self.get_signal(
+        b_tor, _ = self._get_signal(
             "ptdata('bt',{self._shot_id})")  # [T]
         n_equal_1_normalized = n_equal_1_mode/b_tor
         return pd.DataFrame({'n_equal_1_normalized': n_equal_1_normalized, 'n_equal_1_mode': n_equal_1_mode})
 
     def get_n1rms_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
-        n1rms, t_n1rms = self.get_signal('\n1rms', interpolate=False)
+        n1rms, t_n1rms = self._get_signal(r'\n1rms', interpolate=False)
         n1rms *= 1.e-4  # Gauss -> Tesla
         n1rms = interp1(t_n1rms, n1rms, self._times)
-        b_tor = self.get_signal(
+        b_tor = self._get_signal(
             "ptdata('bt',{self._shot_id})")  # [T]
         n1rms_norm = n1rms / np.abs(b_tor)
         return pd.DataFrame({'n1rms': n1rms, 'n1rms_normalized': n1rms_norm})
 
-    # TODO: Finish. Remember to concatenate core and tangential laser data(r and z) in _get_p_rad
+    # TODO: Need to test and unblock recalculating peaking factors
+    # By default get_peaking_factors should grab the data from MDSPlus as opposed to recalculate. See DPP v4 document for details:
+    # https://docs.google.com/document/d/1R7fI7mCOkMQGt8xX2nS6ZmNNkcyvPQ7NmBfRPICFaFs/edit?usp=sharing
     def get_peaking_factors(self):
         ts_data_type = 'blessed'  # either 'blessed', 'unblessed', or 'ptdata'
         # metric to use for core/edge binning (either 'psin' or 'rhovn')
@@ -706,30 +781,131 @@ class D3DShot(Shot):
         p_rad_core_def = 0.06  # percentage of DIII-D veritcal extent defining the core margin
         # 'brightness'; % either 'brightness' or 'power' ('z')
         p_rad_metric = 'brightness'
+        # Ts options
+        ts_options = ['combined', 'core', 'tangential']
+        # vertical range of the DIII-D cross section in meters
+        vert_range = 3
         te_pf = np.full(len(self._times), np.nan)
         ne_pf = np.full(len(self._times), np.nan)
         rad_cva = np.full(len(self._times), np.nan)
         rad_xdiv = np.full(len(self._times), np.nan)
         try:
+            rad_cva = self._get_signal(
+                f"ptdata('dpsradcva', {self._shot_id})")
+            rad_xdiv = self._get_signal(
+                f"ptdata('dpsradxdiv', {self._shot_id})")
+        except MdsException as e:
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+            self.logger.info(
+                f"[Shot {self._shot_id}]:Failed to get CVA and XDIV from MDSPlus. Calculating locally, results may be inaccurate.")
+            rad_cva = np.full(len(self._times), np.nan)
+            rad_xdiv = np.full(len(self._times), np.nan)
+        try:
             ts = self._get_ne_te()
-            efit_dict = self._get_efit_dict
-            ts['psin'], ts['rho_vn'] = efit_rz_interp(ts, efit_dict)
+            for option in ts_options:
+                if option in ts:
+                    ts = ts[option]
+            efit_dict = self._get_efit_dict()
         except Exception as e:
-            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+            self.logger.info(f"[Shot {self._shot_id}]:Failed to get TS data")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
             ts = 0
+        try:
+            ts['psin'], ts['rhovn'] = efit_rz_interp(ts, efit_dict)
+            print(ts['rhovn'].shape)
+        except Exception as e:
+            self.logger.info(f"[Shot {self._shot_id}]:Failed to interpolate TS data")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")    
         try:
             p_rad = self._get_p_rad()
         except Exception as e:
-            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+            self.logger.info(f"[Shot {self._shot_id}]:Failed to get bolometer data")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
             p_rad = 0
         if p_rad == 0 and ts == 0:
             self.logger.info(
-                f"[Shot {self._shot_id}]:Both TS and bolometer data missing for shot #{self._shot_id}")
-        if ts != 0:
+                f"[Shot {self._shot_id}]:Both TS and bolometer data missing for shot")
+        if ts != 0 and ts_radius in ts:
             # Drop data outside of valid range
             invalid_indices = np.where((ts[ts_radius] < ts_radial_range[0]) | (
                 ts[ts_radius] > ts_radial_range[1]))
+            print(ts['te'].shape)
+            ts['te'][invalid_indices] = np.nan
+            ts['ne'][invalid_indices] = np.nan
+            ts['te'][np.isnan(ts[ts_radius])] = np.nan
+            ts['ne'][np.isnan(ts[ts_radius])] = np.nan
+            if ts_equispaced:
+                raise NotImplementedError(
+                    "Equispaced is currently assumed to be false")  # TODO
+            # Find core bin for Thomson and calculate Te, ne peaking factors
+            core_mask = ts[ts_radius] < ts_core_margin
+            te_core = ts['te']
+            te_core[~core_mask] = np.nan
+            ne_core = ts['ne']
+            ne_core[~core_mask] = np.nan
+            te_pf = np.nanmean(te_core, axis=1)/np.nanmean(ts['te'], axis=1)
+            ne_pf = np.nanmean(ne_core, axis=1)/np.nanmean(ts['ne'], axis=1)
+            # Calculate Prad CVA, X-DIV Peaking Factors
+            # # Interpolate zmaxis and channel intersects x onto the bolometer timebase
+            z_m_axis = interp1(efit_dict['time'],
+                               efit_dict['zmaxis'], ts['time'])
+            z_m_axis = np.repeat(
+                z_m_axis[:, np.newaxis], p_rad['x'].shape[1], axis=1)
+            p_rad['xinterp'] = interp1(p_rad['xtime'], p_rad['x'], p_rad['t'])
+            # # Determine the bolometer channels falling in the 'core' bin
+            core_indices = (p_rad['xinterp'] < z_m_axis + p_rad_core_def*vert_range) & (
+                p_rad['xinterp'] > z_m_axis - p_rad_core_def*vert_range)
+            # # Designate the divertor bin and find all 'other' channels not in that bin
+            div_indices = np.searchsorted(p_rad['ch_avail'], div_channels)
+            other_indices = ~div_indices
+            # # Grab p_rad measurements for each needed set of channels
+            p_rad_core = p_rad[p_rad_metric]
+            p_rad_all_but_core = p_rad_core.copy()
+            # QUESTION: Why fill with nans for core but just keep valid indices for divertor
+            p_rad_core[~core_indices] = np.nan
+            p_rad_all_but_core[core_indices] = np.nan
+            p_rad_div = p_rad[p_rad_metric][div_indices, :]
+            p_rad_all_but_div = p_rad[p_rad_metric][other_indices, :]
+            # # Calculate the peaking factors
+            rad_cva = np.nanmean(p_rad_core, axis=0) / \
+                np.nanmean(p_rad_all_but_div, axis=0)
+            rad_xdiv = np.nanmean(p_rad_div, axis=0) / \
+                np.nanmean(p_rad_all_but_core, axis=0)
+            rad_cva = interp1(p_rad['t'], rad_cva, self._times)
+            rad_xdiv = interp1(p_rad['t'], rad_xdiv, self._times)
         return pd.DataFrame({'te_pf': te_pf, 'ne_pf': ne_pf, 'rad_cva': rad_cva, 'rad_xdiv': rad_xdiv})
+
+    # TODO: Finish implementing just in case
+    def _efit_map_rz_to_rho_original(self, ts_dict, efit_dict):
+        slices = np.zeros(ts_dict['time'].shape)
+        # If thomson starts before EFIT (often does), then use the first valid EFIT slice for early Thomson data.
+        early_indices = np.where(ts_dict['time'] < efit_dict['time'])
+        if len(early_indices[0]) > 0:
+            slices[early_indices] = 1
+            first_ts = early_indices[0][-1]
+        else:
+            first_ts = 0
+        # If Thomson ends after EFIT (also often happens), then use the last valid EFIT slice for late Thomson data.
+        late_indices = np.where(ts_dict['time'] >= efit_dict['time'])
+        if len(late_indices[0]) > 0:
+            slices[late_indices] = len(efit_dict['time'])
+            last_ts = late_indices[0][0] - 1
+        else:
+            last_ts = len(ts_dict['time']) - 1
+        diag_slices = np.arange(first_ts, last_ts+1, 1)
+        # Acquire list of diag time slices w/in EFIT time range; Should find closest EFIT for each one
+        for i in diag_slices:
+            slices[i] = np.argmin(
+                np.abs(efit_dict['time'] - ts_dict['time'][i]))
+        # Interpolate EFIT data onto Thomson time slices
+        psin_diag_arr = np.zeros((len(efit_dict['time']), len(ts_dict['z'])))
+        for r in np.unique(ts_dict['r']):
+            dr = r - efit_dict['r']
+            # Find closet EFIT R on the left and right
+            right = np.where(efit_dict['r'] > r, 1)
+            left = right - 1
+            if efit_dict['r'][right] == r:
+                psin_slice = np.squeeze(efit_dict['psin'][:, right, :])
 
     def get_core_edge_vals(self):
         ##################################################
@@ -771,9 +947,9 @@ class D3DShot(Shot):
         try:
             ts = self._get_ne_te()
             efit_dict = self._get_efit_dict
-            ts['psin'], ts['rho_vn'] = efit_rz_interp(ts, efit_dict)
+            ts['psin'], ts['rhovn'] = efit_rz_interp(ts, efit_dict)
         except Exception as e:
-            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
             ts = 0
         if ts == 0:
             self.logger.info(
@@ -793,11 +969,11 @@ class D3DShot(Shot):
         # Get Zeff
         try:
             zeff = self.conn.get(
-                r"\d3d::top.spectroscopy.vb.zeff:zeff").data()
+                r'\d3d::top.spectroscopy.vb.zeff:zeff').data()
             # t_nbi = self.conn.get(
             # r"dim_of(\d3d::top.nb:pinj)").data()/1.e3  # [ms]->[s]
             t_zeff = self.conn.get(
-                r"dim_of(\d3d::top.spectroscopy.vb.zeff:zeff)").data()/1.e3  # [ms] -> [s]
+                r'dim_of(\d3d::top.spectroscopy.vb.zeff:zeff)').data()/1.e3  # [ms] -> [s]
             if len(t_zeff) > 2:
                 zeff = interp1(t_zeff, zeff, self._times,
                                'linear', bounds_error=False, fill_value=0.)
@@ -809,15 +985,15 @@ class D3DShot(Shot):
             zeff = np.zeros(len(self._times))
             self.logger.info(
                 f"[Shot {self._shot_id}]:Failed to open Zeff node")
-            self.logger.debug(f"[Shot {self._shot_id}]:{e}")
+            self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
         return pd.DataFrame({'z_eff': zeff})
 
     def get_kappa_area(self):
         self.conn.openTree(self.efit_tree_name, self._shot_id)
-        a_minor = self.conn.get('\efit_a_eqdsk:aminor').data()
-        area = self.conn.get('\efit_a_eqdsk:area').data()
-        chisq = self.conn.get('\efit_a_eqdsk:chisq').data()
-        t = self.conn.get('\efit_a_eqdsk:atime')
+        a_minor = self.conn.get(r'\efit_a_eqdsk:aminor').data()
+        area = self.conn.get(r'\efit_a_eqdsk:area').data()
+        chisq = self.conn.get(r'\efit_a_eqdsk:chisq').data()
+        t = self.conn.get(r'\efit_a_eqdsk:atime')
         kappa_area = area / (np.pi * a_minor**2)
         invalid_indices = np.where(chisq > 50)
         kappa_area[invalid_indices] = np.nan
@@ -827,9 +1003,9 @@ class D3DShot(Shot):
     def get_h_parameters(self):
         h98 = np.full(len(self._times), np.nan)
         self.conn.openTree('transport', self._shot_id)
-        h98, t_h98 = self.get_signal('\H_THH98Y2')
+        h98, t_h98 = self._get_signal(r'\H_THH98Y2')
         self.conn.openTree('d3d')
-        h_alpha, t_h_alpha = self.get_signal('\fs04')
+        h_alpha, t_h_alpha = self._get_signal(r'\fs04')
         h98 = interp1(t_h98, h98, self._times)
         h_alpha = interp1(t_h_alpha, h_alpha, self._times)
         return pd.DataFrame({'H98': h98, 'H_alpha': h_alpha})
@@ -837,14 +1013,14 @@ class D3DShot(Shot):
     def get_shape_parameters(self):
         self.conn.openTree(self.efit_tree_name, self._shot_id)
         efit_time = self.conn.get(
-            '\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
-        sqfod = self.conn.get('\efit_a_eqdsk:sqfod').data()
-        sqfou = self.conn.get('\efit_a_eqdsk:sqfou').data()
-        tritop = self.conn.get('\efit_a_eqdsk:tritop').data()  # meters
-        tribot = self.conn.get('\efit_a_eqdsk:tribot').data()  # meters
+            r'\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
+        sqfod = self.conn.get(r'\efit_a_eqdsk:sqfod').data()
+        sqfou = self.conn.get(r'\efit_a_eqdsk:sqfou').data()
+        tritop = self.conn.get(r'\efit_a_eqdsk:tritop').data()  # meters
+        tribot = self.conn.get(r'\efit_a_eqdsk:tribot').data()  # meters
         # plasma minor radius [m]
-        aminor = self.conn.get('\efit_a_eqdsk:aminor').data()
-        chisq = self.conn.get('\efit_a_eqdsk:chisq').data()
+        aminor = self.conn.get(r'\efit_a_eqdsk:aminor').data()
+        chisq = self.conn.get(r'\efit_a_eqdsk:chisq').data()
         # Compute triangularity and squareness:
         delta = (tritop+tribot)/2.0
         squareness = (sqfod+sqfou)/2.0
@@ -870,7 +1046,7 @@ class D3DShot(Shot):
         elif data_source == 'unblessed':
             mds_path = r'\top.ts.revisions.revision00.'
         elif data_source == 'ptdata':
-            mds_path = r'\top.ts.blessed'  # Don't ask...I don't have the answer
+            mds_path = r'\top.ts.blessed.'  # Don't ask...I don't have the answer
             raise NotImplementedError(
                 "ptdata case not fully implemented yet")  # TODO
         else:
@@ -887,44 +1063,45 @@ class D3DShot(Shot):
             try:
                 lasers[laser]['time'] = self.conn.get(
                     f"dim_of({sub_tree}:temp,0)").data()/1.e3  # [ms] -> [s]
-                # major radial position of measurement
-                lasers[laser]['r'] = self.conn.get(f"{sub_tree}:r").data()
-                # vertical position of measurement
-                lasers[laser]['z'] = self.conn.get(f"{sub_tree}:z").data()
-                # electron temperature
-                lasers[laser]['te'] = self.conn.get(
-                    f"{sub_tree}:temp").data()
-                lasers[laser]['ne'] = self.conn.get(
-                    f"{sub_tree}:dens").data()  # electron density
-                # NOTE: These are absolute errors
-                # NOTE: Matlab scripts currently populate both errors with temperature error
-                lasers[laser]['te_error'] = self.conn.get(
-                    f"{sub_tree}:temp_e").data()
-                lasers[laser]['ne_error'] = self.conn.get(
-                    f"{sub_tree}:density_e").data()
-                # Place NaNs for broken channels
-                lasers[laser]['te'][np.where(
-                    lasers[laser]['te'] == 0)] = np.nan
-                lasers[laser]['ne'][np.where(
-                    lasers[laser]['ne'] == 0)] = np.nan
             except MdsException as e:
-                lasers[laser] == None
+                lasers[laser]= None
                 self.logger.info(
-                    f"[Shot {self._shot_id}]: Failed to get {laser} data")
-                self.logger.debug(f"[Shot {self._shot_id}]: {e}")
+                f"[Shot {self._shot_id}]: Failed to get {laser} time. Setting laser data to None.")
+                self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+                continue
+            child_nodes = {'r':'r','z':'z', 'te':'temp', 'ne':'density','time':'time','te_error':'temp_e','ne_error':'density_e'}
+            for node,name in child_nodes.items():
+                try:
+                    lasers[laser][node] = self.conn.get(f"{sub_tree}:{name}").data()
+                except MdsException as e:
+                    lasers[laser][node] = np.full(lasers[laser]['time'].shape, np.nan)
+                    self.logger.info(
+                    f"[Shot {self._shot_id}]: Failed to get {laser}:{name}({node}) data, Setting to all NaNs.")
+                    self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+            # Place NaNs for broken channels
+            lasers[laser]['te'][np.where(
+                lasers[laser]['te'] == 0)] = np.nan
+            lasers[laser]['ne'][np.where(
+                lasers[laser]['ne'] == 0)] = np.nan
         # If both systems/lasers available, combine them and interpolate the data
         # from the tangential system onto the finer (core) timebase
         if 'tangential' in lasers and lasers['tangential'] is not None:
             if 'core' in lasers and lasers['core'] is not None:
+                lasers['combined'] = dict()
                 # Interpolate tangential data onto core timebase
                 for key in lasers['tangential']:
-                    if key != 'time':
+                    if key not in ['time','r','z']:
                         lasers['tangential'][key] = interp1(
                             lasers['tangential']['time'], lasers['tangential'][key], lasers['core']['time'])
+                        lasers['combined'][key] = np.concatenate((
+                            lasers['core'][key], lasers['tangential'][key]))
                 lasers['tangential']['time'] = lasers['core']['time']
+                lasers['combined']['time'] = lasers['core']['time']
+                lasers['combined']['r'] = np.concatenate((lasers['core']['r'],lasers['tangential']['r']))
+                lasers['combined']['z'] = np.concatenate((lasers['core']['z'],lasers['tangential']['z']))
         return lasers
 
-    def _get_prad(self, fan):
+    def _get_p_rad(self, fan='custom'):
         if fan == 'upper':
             fan_chans = np.arange(0, 24)
         elif fan == 'lower':
@@ -936,25 +1113,23 @@ class D3DShot(Shot):
 
         # Get bolometry data
         self.conn.openTree("bolom", self._shot_id)
-        bol_prm, _ = self.get_signal(r"\bol_prm", interpolate=False)
+        bol_prm, _ = self._get_signal(r'\bol_prm', interpolate=False)
         lower_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
         upper_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
         bol_channels = lower_channels + upper_channels
         bol_signals = []
-        bol_times = []
+        bol_times = [] # TODO: Decide whether to actually use all bol_times instead of just first one
         for i in range(48):
-            bol_signal, bol_time = self.get_signal(
+            bol_signal, bol_time = self._get_signal(
                 fr"\top.raw:{bol_channels[i]}", interpolate=False)
             bol_signals.append(bol_signal)
             bol_times.append(bol_time)
         a_struct = get_bolo(self._shot_id, bol_channels,
-                            bol_prm, bol_signals, bol_times)
+                            bol_prm, bol_signals, bol_times[0])
         b_struct = power(a_struct)
-
-        # "Sometimes the bolo data is garbage." Check the 'ier' flag and remove bad channels
         self.conn.openTree(self.efit_tree_name, self._shot_id)
-        r_major_axis, efit_time = self.get_signal(
-            r"\top.results.geqdsk:rmaxis", interpolate=False)
+        r_major_axis, efit_time = self._get_signal(
+            r'\top.results.geqdsk:rmaxis', interpolate=False)
         data_dict = {'ch_avail': [], 'z': [], 'brightness': [],
                      'power': [], 'x': np.full((len(efit_time), len(fan_chans)), np.nan), 'xtime': efit_time, 't': a_struct.raw_time}
         for i in range(len(fan_chans)):
@@ -977,17 +1152,33 @@ class D3DShot(Shot):
     def _get_efit_dict(self):
         self.conn.openTree(self.efit_tree_name, self._shot_id)
         efit_dict = dict()
-        path = r"\top.results.geqdsk:"
+        path = r'\top.results.geqdsk:'
+        nodes = ['z','r','rhovn','psirz','zmaxis', 'ssimag', 'ssibry']
         efit_dict['time'] = self.conn.get(
             f"dim_of({path}psirz,2)").data()/1.e3  # [ms] -> [s]
-        efit_dict['z'] = self.conn.get(f"{path}z").data()
-        efit_dict['r'] = self.conn.get(f"{path}r").data()
-        efit_dict['rho_vn'] = self.conn.get(f"{path}rho_vn").data()
-        efit_dict['psirz'] = self.conn.get(f"{path}psirz").data()
+        for node in nodes:
+            try:
+                efit_dict[node] = self.conn.get(f"{path}{node}").data()
+            except MdsException as e:
+                efit_dict[node] = np.full(efit_dict['time'].shape, np.nan)
+                self.logger.info(f"[Shot {self._shot_id}]: Failed to get {node} from efit, Setting to all NaNs.")
+                self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+        # Normalize the poloidal flux grid (0=magnetic axis, 1=boundary)
+        # [Translated from D. Eldon's OMFITeqdsk read_basic_eq_from_mds() function] 
+        psi_norm_f = efit_dict['ssibry'] - efit_dict['ssimag']
+        problems = np.where(psi_norm_f == 0)[0]
+        psi_norm_f[problems] = 1 # Prevent divide by 0 error by replacing 0s in the denominator
+        efit_dict['psin'] = (efit_dict['psirz'] - efit_dict['ssimag'][:,np.newaxis,np.newaxis])/psi_norm_f[:,np.newaxis,np.newaxis]
+        efit_dict['psin'][problems,:,:] = 0
         return efit_dict
 
 
 if __name__ == '__main__':
-    shot = D3DShot(D3D_DISRUPTED_SHOT, 'EFIT05')
+    logger = logging.getLogger('disruption_py')
+    logger.setLevel(logging.DEBUG)
+    shot = D3DShot(D3D_DISRUPTED_SHOT, 'EFIT05',
+                   disruption_time=4.369214483261109)#,populate='l_mode')
+    # shot = D3DShot(D3D_PEAKING_FACTORS_SHOT, 'EFIT01', disruption_time=5.209270419120789)
     print(shot.data.columns)
+    # print(shot.data[['te_pf','ne_pf','rad_cva','rad_xdiv']])
     print(shot.data.head())
