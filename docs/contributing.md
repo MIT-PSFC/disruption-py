@@ -9,6 +9,16 @@ I recommend forking the repository and cloning it to your local folder on whatev
 I think GitHub Issues is a great way to track bugs as well as feature requests and development. If you find a bug, please submit an issue on the repository. If you'd like a significant feature change/addition or are planning to implement one yourself, please submit an issue as well. This will allow for useful discussion and collaboration among contributors.
 ## Coding and Style Guidelines
 In general, try to follow Google coding style guidelines for python. Every new method, class, module, or script should not be committed without a descriptive docstring.
+### Useful Links
+DIII-D Matlab source folders:    
+- /fusion/projects/disruption_warning/software/matlab_programs  
+- /fusion/projects/disruption_warning/software/peaking_factors_d3d  
+- /fusion/projects/disruption_warning/software/peaking_factors_d3d/recalc_bradial    
+Repo location: /fusion/projects/disruption_warning/disruption-warning-db-workflow
+### Tags
+QUESTION: Need to ask an expert for a description or explanation 
+TODO(optional priority) + comment: Coding change/fix that needs to happen at the optionally-given given priority level
+
 ## Submitting Changes
 Please submit all code changes as PRs, pull requests, from your forked repository or personal branch to either the main branch or the relevant cluster-specific branch: d3d, cmod or east. PRs will be reviewed within 1-3 days moving forward.  
 ## Easy ways to start contributing

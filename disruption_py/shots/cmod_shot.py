@@ -176,7 +176,7 @@ class CModShot(Shot):
         ip = magnetics_tree.getNode(r"\ip").getData(
         ).data().astype('float64', copy=False)
         magtime = magnetics_tree.getNode(r"\ip").getData().dim_of(0)
-        return CmodShot.calc_IP_parameters(self._times, ip, magtime, ip_prog, pcstime)
+        return CModShot.calc_IP_parameters(self._times, ip, magtime, ip_prog, pcstime)
 
     @staticmethod
     def calc_Z_parameters(times, z_prog, pcstime, z_error_without_ip, ip, dpcstime):
@@ -267,7 +267,7 @@ class CModShot(Shot):
             ip = ip_record.data()
             ip_time = ip_record.dim_of(0)
             ip = interp1(ip_time, ip, dpcstime)
-        return CmodShot.calc_Z_parameters(self._times, z_prog, pcstime, z_error_without_ip, ip, dpcstime)
+        return CModShot.calc_Z_parameters(self._times, z_prog, pcstime, z_error_without_ip, ip, dpcstime)
 
     @staticmethod
     def calc_p_oh_v_loop(times, v_loop, v_loop_time, li, efittime, dip_smoothed, ip):
@@ -289,7 +289,7 @@ class CModShot(Shot):
         li_record = self._analysis_tree.getNode(r"\efit_aeqdsk:li").getData()
         li = li_record.data().astype('float64', copy=False)
         efittime = li_record.dim_of(0)
-        return CmodShot.calc_p_oh_v_loop(self._times, v_loop, v_loop_time, li, efittime, self.data['dip_smoothed'], self.data['ip'])
+        return CModShot.calc_p_oh_v_loop(self._times, v_loop, v_loop_time, li, efittime, self.data['dip_smoothed'], self.data['ip'])
 
     @staticmethod
     def calc_power(times, p_lh, t_lh, p_icrf, t_icrf, p_rad, t_rad, p_ohm):
@@ -331,7 +331,7 @@ class CModShot(Shot):
                 values[2*i + 1] = record.dim_of(0)
             except mdsExceptions.TreeFOPENR as e:
                 continue
-        return CmodShot.calc_power(self._times, *values, self.data['p_oh'])
+        return CModShot.calc_power(self._times, *values, self.data['p_oh'])
 
     # TODO: Replace with for loop like in D3D shot class
     def _calc_EFIT_parameters(self):
@@ -394,7 +394,7 @@ class CModShot(Shot):
             r'\efit_a_eqdsk:area').getData().data().astype('float64', copy=False)
         times = self._analysis_tree.getNode(
             r'\efit_aeqdsk:time').getData().data().astype('float64', copy=False)
-        return CmodShot.calc_kappa_area(self._times, aminor, area, times)
+        return CModShot.calc_kappa_area(self._times, aminor, area, times)
 
     @staticmethod
     def calc_rotation_velocity(times, intensity, time, vel, hirextime):
@@ -442,7 +442,7 @@ class CModShot(Shot):
             v_0 = np.empty(len(self._times))
             v_0.fill(np.nan)
             return v_0
-        return CmodShot.calc_rotation_velocity(self._times, intensity, time, vel, hirextime)
+        return CModShot.calc_rotation_velocity(self._times, intensity, time, vel, hirextime)
 
     # TODO: Split into static and instance method
     @staticmethod
@@ -557,7 +557,7 @@ class CModShot(Shot):
             a_minor = a_minor_record.data().astype('float64', copy=False)
         except Exception as e:
             return None, None, None
-        return CmodShot.calc_densities(self._times, n_e, t_n, ip, t_ip, a_minor, t_a)
+        return CModShot.calc_densities(self._times, n_e, t_n, ip, t_ip, a_minor, t_a)
 
     @staticmethod
     def calc_efc_current(times, iefc, t_iefc):
@@ -571,7 +571,7 @@ class CModShot(Shot):
         except Exception as e:
             print(e)
             return None
-        return CmodShot.calc_efc_current(self._times, iefc, t_iefc)
+        return CModShot.calc_efc_current(self._times, iefc, t_iefc)
 
     # TODO: Split
     @staticmethod
@@ -609,7 +609,7 @@ class CModShot(Shot):
             print(e)  # TODO: Change
             te_hwm.fill(np.nan)
             return te_hwm
-        return CmodShot.calc_Ts_data(self._times, ts_data, ts_time, ts_z)
+        return CModShot.calc_Ts_data(self._times, ts_data, ts_time, ts_z)
 
     # TODO: Finish
     @staticmethod
