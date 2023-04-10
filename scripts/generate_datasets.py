@@ -54,6 +54,7 @@ DEFAULT_RATIO = .2  # Ratio of test data to total data and validation data to tr
 
 LOGGER = logging.getLogger('disruption_py')
 
+
 def create_label(time_until_disrupt, threshold, label_type, multiple_thresholds):
     if label_type == 'binary':
         print(time_until_disrupt)
@@ -74,7 +75,7 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
             "Currently only support DIII-D data retrieval")
     tokamak = TOKAMAKS[tokamak]()
     timebase_signal = kwargs.get('timebase_signal', None)
-    populate = kwargs.get('populate', 'default') 
+    populate = kwargs.get('populate', 'default')
     label = kwargs.get('label', 'none')
     if shot_ids is None:
         random_state = kwargs.get('random_state', 8808)
@@ -269,8 +270,11 @@ if __name__ == '__main__':
         '--log', type=bool, help='By default, generate_datasets will log to commandline but if this argument is true it will log to a file in the output directory', default=False)
     parser.add_argument('--log_level', type=int, choices=[
                         0, 1, 2, 3, 4, 5], help='Notset:0,Debug:1,Info:2,Warning:3,Error:4,Critical:5', default=2)
-    parser.add_argument('--label', type=str, choices=['binary','none'],help="Timestep disruption label. Currently only supports binary labels",default='binary')
-    parser.add_argument('--populate', type=str, choices=['default', 'l_mode'], help="Options for population at instantiation.", default='default')
-    parser.add_argument('--filter', type=int, help="Run filter_dataset method on produced dataset. Necessary for generating DPRF datasets", default=1)
+    parser.add_argument('--label', type=str, choices=[
+                        'binary', 'none'], help="Timestep disruption label. Currently only supports binary labels", default='binary')
+    parser.add_argument('--populate', type=str, choices=[
+                        'default', 'l_mode'], help="Options for population at instantiation.", default='default')
+    parser.add_argument(
+        '--filter', type=int, help="Run filter_dataset method on produced dataset. Necessary for generating DPRF datasets", default=1)
     args = parser.parse_args()
     main(args)

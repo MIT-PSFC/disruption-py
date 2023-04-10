@@ -22,6 +22,25 @@ def create_model(model_type):
     return model
 
 
+def grid_search(x_train, y_train, x_test, y_test, model_type, grid, **kwargs):
+    # Grid is a dictionary where each key is a parameter and each value is a list of values to try
+    # kwargs are any other parameters to pass to the model
+    searches = []
+    for param in grid:
+        for val in grid[param]:
+            if len(searches) == 0:
+                searches.append({param: val})
+            else:
+                searches = [dict(search, **{param: val})
+                            for search in searches]
+    results = []
+    for search in searches:
+        result = train_local(x_train, y_train, x_test,
+                             y_test,  **search, **kwargs)
+        results.append({'params': search, 'result': result})
+    return results
+
+
 def train_local(x_train, y_train, x_test, y_test, **kwargs):
     if 'omit_after_quench' in kwargs and kwargs['omit_after_quench'] is not None:
         raise NotImplementedError("Talk to Cristina about implementing")
@@ -31,9 +50,12 @@ def train_local(x_train, y_train, x_test, y_test, **kwargs):
     if 'model' in kwargs and kwargs['model'] is not None:
         raise NotImplementedError('Only random forest implemented')
     else:
+        n_estimators = kwargs.pop('n_estimators', 245)
+        max_depth = kwargs.pop('max_depth', 15)
+        random_state = kwargs.pop('random_state', 0)
+        n_jobs = kwargs.pop('n_jobs', -1)
         model = RandomForestClassifier(
-            n_estimators=245, max_depth=10, random_state=0)
-
+            n_estimators=n_estimators, max_depth=max_depth, random_state=random_state, n_jobs=n_jobs, **kwargs)
         model.fit(x_train, y_train)
         return {'model': model,
                 'predictions': model.predict(x_train),
@@ -64,16 +86,23 @@ def main(args):
         y_test = test['label']
         x_test = test.drop(['label', 'time_until_disrupt',
                            'shot'], axis=1, errors='ignore')
-    results_dict = train_local(
-        x_train, y_train, x_test, y_test, features=args.features)
-    model = results_dict['model']
-    train['scores'] = results_dict['predictions_proba']
+    if args.grid_search is not None:
+        grid = json.loads(args.grid_search)
+        results = grid_search(x_train, y_train, x_test, y_test, **grid)
+        with open(args.output_dir + f"grid_search_{args.unique_id}_.json", "w") as f:
+            json.dump(results, f)
+        return
+    else:
+        results = [train_local(
+            x_train, y_train, x_test, y_test, features=args.features)]
+        best_result = results[0]
+    model = best_result['model']
+    train['scores'] = best_result['predictions_proba']
     test['scores'] = model.predict(x_test)
-
     print("Train F2-Score:", fbeta_score(y_train,
-          results_dict['predictions'], beta=2))
+          best_result['predictions'], beta=2))
     print("Test F2-Score:", fbeta_score(y_test, test['scores'], beta=2))
-    conf_mat = confusion_matrix(y_train, results_dict['predictions'])
+    conf_mat = confusion_matrix(y_train, best_result['predictions'])
     disp_train = ConfusionMatrixDisplay(
         confusion_matrix=conf_mat, display_labels=model.classes_)
     conf_mat = confusion_matrix(y_test, test['scores'])
@@ -100,6 +129,8 @@ if __name__ == '__main__':
                         help='Path to test data. Must be a csv file.', default='./output/test.csv')
     parser.add_argument('--output_dir', type=str, default='./output/',
                         help='Path to output model files. Must be a directory.')
+    parser.add_argument('--grid_search', type=str, default=None,
+                        help='Path to grid search parameters. Must be a json file.')
     parser.add_argument('--features', type=str, nargs='+',
                         help='List of features to use for training. If not provided, all features will be used.', default=None)
     parser.add_argument('--unique_id', type=str,
