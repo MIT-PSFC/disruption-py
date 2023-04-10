@@ -1,0 +1,13 @@
+data/*
+*.pyc
+*.csv
+*~
+*.egg-info/*
+.vscode/*
+*.pdf
+*.log
+*.pkl
+*.joblib
+shot_*profileX*
+scripts/output/*
+scripts/*.txt

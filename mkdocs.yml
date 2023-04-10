@@ -1,0 +1,16 @@
+site_name: My Docs
+theme:
+  name: "material"
+  # features:
+  #   - navigation.instant
+  #   - navigation.tabs
+  #   - navigation.expand
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - API Reference:
+      - Shots: shots-reference.md
+      - Generate Datasets: generate_datasets.md
+plugins:
+  - search
+  - mkdocstrings
