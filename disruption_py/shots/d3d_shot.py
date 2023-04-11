@@ -75,6 +75,40 @@ class D3DShot(Shot):
         else:
             self._populate_shot_data(data is not None)
 
+    @staticmethod
+    def get_signal(signal, conn=None, interpolate=True, interpolation_timebase=None):
+        """ See Shot.get_signal. Note that for D3D get_signal assumes that the correct tree has already been loaded on the remote server
+        """
+        if conn is None:
+            conn = MDSplus.Connection('atlas.gat.com')
+            # TODO: Figure out what tree to open
+        if interpolate and not interpolation_timebase:
+            raise ValueError('Missing interpolation timebase')
+        return super().get_signal(signal, conn, interpolate, interpolation_timebase)
+
+    # TODO: Check if redundant
+    def _get_signal(self, signal, interpolate=True, interpolation_timebase=None):
+        if interpolate and not interpolation_timebase:
+            interpolation_timebase = self._times
+        return self.get_signal(signal, self.conn, interpolate, interpolation_timebase)
+
+    @staticmethod
+    def get_signals(signals, conn=None, interpolate=True, interpolation_timebase=None):
+        """ See Shot.get_signals. Note that for D3D get_signals assumes that the correct tree has already been loaded on the remote server
+        """
+        if conn is None:
+            conn = MDSplus.Connection('atlas.gat.com')
+            # TODO: Figure out what tree to open
+        if interpolate and not interpolation_timebase:
+            raise ValueError('Missing interpolation timebase')
+        return super().get_signals(signals, conn, interpolate, interpolation_timebase)
+
+    # TODO: Check if redundant
+    def _get_signals(self, signals, interpolate=True, interpolation_timebase=None):
+        if interpolate and not interpolation_timebase:
+            interpolation_timebase = self._times
+        return self.get_signals(signals, self.conn, interpolate, interpolation_timebase)
+
     def _populate_l_mode_data(self):
         self.data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(
         ), self.get_peaking_factors(), self.get_kappa_area(), self.get_time_until_disrupt()], axis=1)

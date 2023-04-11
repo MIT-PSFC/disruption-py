@@ -66,36 +66,14 @@ class Shot:
             self.data = pd.DataFrame()
 
     @staticmethod
-    def get_signal(id, signal_name, conn, interpolate=True, interpolation_timebase=None):
-        if isinstance(conn, MDSplus.Tree):
-            signal_record = conn.getNode(signal_name).getData()
-            signal = signal_record.data()
-            orig_timebase = signal_record.dim_of(0)
-        elif isinstance(conn, MDSplus.Connection):
-            signal = conn.get(signal_name).data()
-            orig_timebase = conn.get(
-                f"dim_of({signal_name})").data()/1.e3  # [ms] -> [s]
-        else:
-            raise TypeError(
-                "conn must be either MDSplus.Connection or MDSplus.Tree")
-        if len(orig_timebase) < 2:
-            raise ValueError(
-                f"Timebase for {signal_name} is too short ({len(orig_timebase)})")
-        if interpolate:
-            if interpolation_timebase is None:
-                raise ValueError(
-                    "interpolation_timebase must be provided if interpolate is True")
-            signal = interp1(orig_timebase, signal, interpolation_timebase)
-        return signal, orig_timebase
-
-    def _get_signal(self, signal_name, signal_conn=None, interpolate=True, interpolation_timebase=None):
+    def get_signal(signal, conn, interpolate=True, interpolation_timebase=None):
         """Get a signal from MDSplus.
 
         Parameters
         ----------
-        signal_name : str
+        signal : str
             Name of the signal in MDSplus.
-        signal_conn : MDSplus.Connection, optional
+        conn : MDSplus.Connection, optional
             MDSplus connection to get the signal from. If not provided, the default
             connection will be used.
         interpolate : bool, optional
@@ -114,8 +92,72 @@ class Shot:
             Timebase of the signal in MDSplus.
 
         """
-        if signal_conn is None:
-            signal_conn = self.conn
+        if isinstance(conn, MDSplus.Tree):
+            signal_record = conn.getNode(signal).getData()
+            signal = signal_record.data()
+            orig_timebase = signal_record.dim_of(0)
+        elif isinstance(conn, MDSplus.Connection):
+            signal = conn.get(signal).data()
+            orig_timebase = conn.get(
+                f"dim_of({signal})").data()/1.e3  # [ms] -> [s]
+        else:
+            raise TypeError(
+                "conn must be either MDSplus.Connection or MDSplus.Tree")
+        if len(orig_timebase) < 2:
+            raise ValueError(
+                f"Timebase for {signal} is too short ({len(orig_timebase)})")
+        if interpolate:
+            if interpolation_timebase is None:
+                raise ValueError(
+                    "interpolation_timebase must be provided if interpolate is True")
+            signal = interp1(orig_timebase, signal, interpolation_timebase)
+        return signal, orig_timebase
+
+    def _get_signal(self, signal, conn=None, interpolate=True, interpolation_timebase=None):
+        if conn is None:
+            conn = self.conn
         if interpolation_timebase is None and interpolate:
             interpolation_timebase = self._times
-        return type(self).get_signal(self._shot_id, signal_name, signal_conn, interpolate, interpolation_timebase)
+        return type(self).get_signal(signal, conn, interpolate, interpolation_timebase)
+
+    @staticmethod
+    def get_signals(signals, conn, interpolate=True, interpolation_timebase=None):
+        """ Get multiple signals from MDSplus. Signal names are executed in order meaning that while this method expects all signals to be on the same tree you can grab signals from multiple trees by adding open tree TDI expressions as signals 
+
+        Parameters
+        ----------
+        signals : list of str
+            Names of the signals in MDSplus.
+        conn : MDSplus.Connection
+            MDSplus connection to get the signals from.
+        interpolate : bool, optional
+            Whether to interpolate the signals onto the timebase of the experiment.
+            If True, the signals will be interpolated from the timebase of the signals
+            in MDSplus to the timebase of the experiment.
+        interpolation_timebase : array_like, optional
+            Timebase to interpolate the signals to. If not provided, the current timebase of
+            the Shot object will be used.
+
+        Returns
+        -------
+        signals : list of array_like
+            Signals from MDSplus.
+        orig_timebases : list of array_like
+            Timebases of the signals in MDSplus.
+        """
+        gm = MDSplus.Data.GetMany(conn)
+        for path in signals:
+            gm.append(path)
+
+        results = gm.get()
+        for i, result in enumerate(results):
+            if isinstance(result, MDSplus.Data.Error):
+                raise ValueError(
+                    f"Error getting signal {signals[i]}: {result}")
+            if interpolate:
+                if interpolation_timebase is None:
+                    raise ValueError(
+                        "interpolation_timebase must be provided if interpolate is True")
+                results[i] = interp1(result.dim_of(
+                    0).data(), result.data(), interpolation_timebase)
+        return [result.data() for result in results], [result.dim_of(0).data() for result in results]
