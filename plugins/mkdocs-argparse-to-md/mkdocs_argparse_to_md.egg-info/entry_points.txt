@@ -1,0 +1,3 @@
+[mkdocs.plugins]
+argparse_to_md = argparse_to_md.plugin:ArgparseToMDPlugin
+

@@ -14,6 +14,7 @@ python3 generate_datasets.py --data_source=3 --shotlist=./data/example_shotlist.
 ```
 
 ## Argument List
+.. argparse-md:: scripts.generate_datasets
 
 |Optional arguments|Description|
 |------------------|-----------|
