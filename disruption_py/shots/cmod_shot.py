@@ -64,33 +64,34 @@ class CModShot(Shot):
         self.data = data
         if data is None:
             self.data = pd.DataFrame()
-            self._populate_shot_data()
+            self._populate_shot_parameters
 
     def _populate_shot_data(self):
+        local_data = pd.concat([])
         self.data['times'] = self._times
         # TODO: convert from bytes
         self.data['commit_hash'] = self._metadata['commit_hash']
-        self.data['time_until_disrupt'] = self._calc_time_until_disrupt()
+        self.data['time_until_disrupt'] = self._get_time_until_disrupt()
         self.data['ip'], self.data['dip_dt'], self.data['dip_smoothed'], _, self.data[
-            'dipprog_dt'], self.data['ip_error'] = self._calc_Ip_parameters()
-        self.data['z_error'], _, self.data['zcur'], self.data['v_z'], self.data['z_times_v_z'] = self._calc_Z_parameters()
-        self.data['p_oh'], self.data['v_loop'] = self._calc_p_ohm_v_loop()
+            'dipprog_dt'], self.data['ip_error'] = self._get_Ip_parameters()
+        self.data['z_error'], _, self.data['zcur'], self.data['v_z'], self.data['z_times_v_z'] = self._get_Z_parameters()
+        self.data['p_oh'], self.data['v_loop'] = self._get_ohmic_parameters()
         self.data['p_rad'], self.data['dprad_dt'], self.data['p_lh'], self.data[
-            'p_icrf'], self.data['p_input'], self.data['radiated_fraction'] = self._calc_power()
+            'p_icrf'], self.data['p_input'], self.data['radiated_fraction'] = self._get_power()
         self.data['beta_n'], self.data['beta_p'], self.data['dbetap_dt'], self.data['kappa'], self.data['upper_gap'], self.data['lower_gap'], self.data['li'], self.data['dli_dt'], self.data[
-            'q0'], self.data['qstar'], self.data['q95'], _, self.data['Wmhd'], self.data['dWmhd_dt'], self.data['ssep'], self.data['n_over_ncrit'] = self._calc_EFIT_parameters()
-        self.data['kappa_area'] = self._calc_kappa_area()
-        self.data['v_0'] = self._calc_rotation_velocity()
+            'q0'], self.data['qstar'], self.data['q95'], _, self.data['Wmhd'], self.data['dWmhd_dt'], self.data['ssep'], self.data['n_over_ncrit'] = self._get_EFIT_parameters()
+        self.data['kappa_area'] = self._get_kappa_area()
+        self.data['v_0'] = self._get_rotation_velocity()
         # TODO: Populate when shot is missing from calibrated.txt
         self.data['v_0_uncalibrated'] = [np.nan]*len(self.data)
         # TODO: Ask about removing from database
         self.data['v_mid'] = [np.nan]*len(self.data)
-        self.data['n_equal_1_mode'], self.data['n_equal_1_normalized'], _ = self._calc_n_equal_1_amplitude()
-        self.data['Te_width'] = self._calc_Ts_data()
-        self.data['ne_peaking'], self.data['Te_peaking'], self.data['pressure_peaking'] = self._calc_peaking_factor()
-        self.data['n_e'], self.data['dn_dt'], self.data['Greenwald_fraction'] = self._calc_densities()
-        self.data['I_efc'] = self._calc_efc_current()
-        self.data['SXR'] = self._calc_sxr_data()
+        self.data['n_equal_1_mode'], self.data['n_equal_1_normalized'], _ = self._get_n_equal_1_amplitude()
+        self.data['Te_width'] = self._get_Ts_parameters
+        self.data['ne_peaking'], self.data['Te_peaking'], self.data['pressure_peaking'] = self._get_peaking_factors()
+        self.data['n_e'], self.data['dn_dt'], self.data['Greenwald_fraction'] = self._get_densities()
+        self.data['I_efc'] = self._get_efc_current()
+        self.data['SXR'] = self._get_sxr_parameters()
         # Check there are no floats(float32) since the SQL database only contains type doubles(float64)
         float_columns = list(self.data.select_dtypes(
             include=['float32']).columns)
@@ -113,20 +114,16 @@ class CModShot(Shot):
             active_segments[i].append(end_times[i])
         return active_segments
 
-    @staticmethod
-    def calc_time_until_disrupt():
-        pass
-
-    def _calc_time_until_disrupt(self):
+    def _get_time_until_disrupt(self):
         if self._metadata['disrupted']:
             if self._metadata['disrupted'] == -1:
                 raise ValueError("Shot disrupted but no t_disrupt found.")
             time_until_disrupt = self._metadata['disrupted'] - \
                 self.data['times']
-        return time_until_disrupt
+        return pd.DataFrame({'time_until_disrupt': time_until_disrupt})
 
     @staticmethod
-    def calc_IP_parameters(times, ip, magtime, ip_prog, pcstime):
+    def get_IP_parameters(times, ip, magtime, ip_prog, pcstime):
         dip = np.gradient(ip, magtime)
         dip_smoothed = smooth(dip, 11)
         dipprog_dt = np.gradient(ip_prog, pcstime)
@@ -139,7 +136,7 @@ class CModShot(Shot):
         ip_error = ip-ip_prog
         return ip, dip, dip_smoothed, ip_prog, dipprog_dt, ip_error
 
-    def _calc_Ip_parameters(self):
+    def _get_Ip_parameters(self):
         # Automatically generated
         magnetics_tree = Tree('magnetics', self._shot_id)
         active_segments = self.get_active_wire_segments()
@@ -176,10 +173,10 @@ class CModShot(Shot):
         ip = magnetics_tree.getNode(r"\ip").getData(
         ).data().astype('float64', copy=False)
         magtime = magnetics_tree.getNode(r"\ip").getData().dim_of(0)
-        return CModShot.calc_IP_parameters(self._times, ip, magtime, ip_prog, pcstime)
+        return CModShot.get_IP_parameters(self._times, ip, magtime, ip_prog, pcstime)
 
     @staticmethod
-    def calc_Z_parameters(times, z_prog, pcstime, z_error_without_ip, ip, dpcstime):
+    def get_Z_parameters(times, z_prog, pcstime, z_error_without_ip, ip, dpcstime):
         z_error = z_error_without_ip/ip  # [m]
         z_prog_dpcs = interp1(pcstime, z_prog, dpcstime)
         z_cur = z_prog_dpcs + z_error  # [m]
@@ -194,7 +191,7 @@ class CModShot(Shot):
                               'linear', False, z_times_v_z[-1])
         return z_error, z_prog, z_cur, v_z, z_times_v_z
 
-    def _calc_Z_parameters(self):
+    def _get_Z_parameters(self):
         pcstime = np.array(np.arange(-4, 12.383, .001))
         z_prog = np.empty(pcstime.shape)
         z_prog.fill(np.nan)
@@ -267,10 +264,10 @@ class CModShot(Shot):
             ip = ip_record.data()
             ip_time = ip_record.dim_of(0)
             ip = interp1(ip_time, ip, dpcstime)
-        return CModShot.calc_Z_parameters(self._times, z_prog, pcstime, z_error_without_ip, ip, dpcstime)
+        return CModShot.get_Z_parameters(self._times, z_prog, pcstime, z_error_without_ip, ip, dpcstime)
 
     @staticmethod
-    def calc_p_oh_v_loop(times, v_loop, v_loop_time, li, efittime, dip_smoothed, ip):
+    def get_ohmic_parameters(times, v_loop, v_loop_time, li, efittime, dip_smoothed, ip):
         # For simplicity, we use R0 = 0.68 m, but we could use \efit_aeqdsk:rmagx
         inductance = 4.0*np.pi*1.0e-7 * 0.68 * li/2.0
         v_loop = interp1(v_loop_time, v_loop, times)
@@ -280,7 +277,7 @@ class CModShot(Shot):
         p_ohm = ip * v_resistive
         return p_ohm, v_loop
 
-    def _calc_p_ohm_v_loop(self):
+    def _get_ohmic_parameters(self):
         v_loop_record = self._analysis_tree.getNode(r"\top.mflux:v0").getData()
         v_loop = v_loop_record.data().astype('float64', copy=False)
         v_loop_time = v_loop_record.dim_of(0)
@@ -289,10 +286,10 @@ class CModShot(Shot):
         li_record = self._analysis_tree.getNode(r"\efit_aeqdsk:li").getData()
         li = li_record.data().astype('float64', copy=False)
         efittime = li_record.dim_of(0)
-        return CModShot.calc_p_oh_v_loop(self._times, v_loop, v_loop_time, li, efittime, self.data['dip_smoothed'], self.data['ip'])
+        return CModShot.get_ohmic_parameters(self._times, v_loop, v_loop_time, li, efittime, self.data['dip_smoothed'], self.data['ip'])
 
     @staticmethod
-    def calc_power(times, p_lh, t_lh, p_icrf, t_icrf, p_rad, t_rad, p_ohm):
+    def get_power(times, p_lh, t_lh, p_icrf, t_icrf, p_rad, t_rad, p_ohm):
         p_lh = interp1(t_lh, p_lh * 1.0e3, times,
                        bounds_error=False) if p_lh is not None else np.zeros(len(times))
         p_icrf = interp1(t_icrf, p_icrf * 1.0e6, times,
@@ -309,7 +306,7 @@ class CModShot(Shot):
         rad_fraction[rad_fraction == np.inf] = np.nan
         return p_rad, dprad, p_lh, p_icrf, p_input, rad_fraction
 
-    def _calc_power(self):
+    def _get_power(self):
         """
         NOTE: the timebase for the LH power signal does not extend over the full
             time span of the discharge.  Therefore, when interpolating the LH power
@@ -331,10 +328,10 @@ class CModShot(Shot):
                 values[2*i + 1] = record.dim_of(0)
             except mdsExceptions.TreeFOPENR as e:
                 continue
-        return CModShot.calc_power(self._times, *values, self.data['p_oh'])
+        return CModShot.get_power(self._times, *values, self.data['p_oh'])
 
     # TODO: Replace with for loop like in D3D shot class
-    def _calc_EFIT_parameters(self):
+    def _get_EFIT_parameters(self):
         efittime = self._analysis_tree.getNode(r'\efit_aeqdsk:time')
         beta_N = self._analysis_tree.getNode(
             r'\efit_aeqdsk:betan').getData().data().astype('float64', copy=False)
@@ -384,20 +381,20 @@ class CModShot(Shot):
         return beta_N, beta_p, beta_p_dot, kappa, upper_gap, lower_gap, li, li_dot, q0, qstar, q95, V_loop_efit, Wmhd, dWmhd_dt, ssep, n_over_ncrit
 
     @staticmethod
-    def calc_kappa_area(times, aminor, area, a_times):
+    def get_kappa_area(times, aminor, area, a_times):
         return interp1(a_times, area/(np.pi * aminor**2), times)
 
-    def _calc_kappa_area(self):
+    def _get_kappa_area(self):
         aminor = self._analysis_tree.getNode(
             r'\efit_a_eqdsk:aminor').getData().data().astype('float64', copy=False)
         area = self._analysis_tree.getNode(
             r'\efit_a_eqdsk:area').getData().data().astype('float64', copy=False)
         times = self._analysis_tree.getNode(
             r'\efit_aeqdsk:time').getData().data().astype('float64', copy=False)
-        return CModShot.calc_kappa_area(self._times, aminor, area, times)
+        return CModShot.get_kappa_area(self._times, aminor, area, times)
 
     @staticmethod
-    def calc_rotation_velocity(times, intensity, time, vel, hirextime):
+    def get_rotation_velocity(times, intensity, time, vel, hirextime):
         """
         Uses spectroscopy graphs of ionized(to hydrogen and helium levels) Argon to calculate velocity. Because of the heat profile of the plasma, suitable measurements are only found near the center
         """
@@ -415,7 +412,7 @@ class CModShot(Shot):
         return v_0
 
     # TODO: Calculate v_mid
-    def _calc_rotation_velocity(self):
+    def _get_rotation_velocity(self):
         with importlib_resources.path(
                 disruption_py.data, 'lock_mode_calib_shots.txt') as calib_path:
             calibrated = pd.read_csv(calib_path)
@@ -442,16 +439,17 @@ class CModShot(Shot):
             v_0 = np.empty(len(self._times))
             v_0.fill(np.nan)
             return v_0
-        return CModShot.calc_rotation_velocity(self._times, intensity, time, vel, hirextime)
+        return CModShot.get_rotation_velocity(self._times, intensity, time, vel, hirextime)
 
     # TODO: Split into static and instance method
     @staticmethod
-    def calc_n_equal_1_amplitude():
+    def get_n_equal_1_amplitude():
         pass
 
-    def _calc_n_equal_1_amplitude(self):
-        """ Calculate n=1 amplitude and phase for the disruption warning database
-        using the four BP13 Bp sensors near the midplane on the outboard vessel
+    def _get_n_equal_1_amplitude(self):
+        """ Calculate n=1 amplitude and phase.
+
+        This method uses the four BP13 Bp sensors near the midplane on the outboard vessel
         wall.  The calculation is done by using a least squares fit to an
         expansion in terms of n = 0 & 1 toroidal harmonics.  The BP13 sensors are
         part of the set used for plasma control and equilibrium reconstruction,
@@ -525,7 +523,7 @@ class CModShot(Shot):
         return n_equal_1_amplitude, n_equal_1_normalized, n_equal_1_phase
 
     @staticmethod
-    def calc_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
+    def get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
         if len(n_e) == len(t_n):
             nan_arr = np.empty(len(times))
             nan_arr.fill(np.nan)
@@ -540,7 +538,7 @@ class CModShot(Shot):
         g_f = abs(n_e/n_G)
         return n_e, dn_dt, g_f
 
-    def _calc_densities(self):
+    def _get_densities(self):
         try:
             e_tree = Tree('electrons', self._shot_id)
             n_e_record = e_tree.getNode(r'.tci.results:nl_04/0.6').getData()
@@ -557,13 +555,13 @@ class CModShot(Shot):
             a_minor = a_minor_record.data().astype('float64', copy=False)
         except Exception as e:
             return None, None, None
-        return CModShot.calc_densities(self._times, n_e, t_n, ip, t_ip, a_minor, t_a)
+        return CModShot.get_densities(self._times, n_e, t_n, ip, t_ip, a_minor, t_a)
 
     @staticmethod
-    def calc_efc_current(times, iefc, t_iefc):
+    def get_efc_current(times, iefc, t_iefc):
         return interp1(t_iefc, iefc, times, 'linear')
 
-    def _calc_efc_current(self):
+    def _get_efc_current(self):
         try:
             eng_tree = Tree('engineering', self._shot_id)
             iefc_record = eng_tree.getNode(r"\efc:u_bus_r_cur").getData()
@@ -571,11 +569,11 @@ class CModShot(Shot):
         except Exception as e:
             print(e)
             return None
-        return CModShot.calc_efc_current(self._times, iefc, t_iefc)
+        return CModShot.get_efc_current(self._times, iefc, t_iefc)
 
     # TODO: Split
     @staticmethod
-    def calc_Ts_data(times, ts_data, ts_time, ts_z):
+    def get_Ts_parameters(times, ts_data, ts_time, ts_z):
         te_hwm = np.full(len(ts_time), np.nan)
         valid_times = np.where(ts_time > 0)
         # TODO: Vectorize
@@ -590,7 +588,7 @@ class CModShot(Shot):
         te_hwm = interp1(ts_time, te_hwm, times)
         return te_hwm
 
-    def _calc_Ts_data(self):
+    def _get_Ts_parameters(self):
         # TODO: Guassian vs parabolic fit for te profile
         te_hwm = np.empty((len(self._times)))
         electron_tree = Tree("electrons", self._shot_id)
@@ -609,14 +607,14 @@ class CModShot(Shot):
             print(e)  # TODO: Change
             te_hwm.fill(np.nan)
             return te_hwm
-        return CModShot.calc_Ts_data(self._times, ts_data, ts_time, ts_z)
+        return CModShot.get_Ts_parameters(self._times, ts_data, ts_time, ts_z)
 
     # TODO: Finish
     @staticmethod
-    def calc_peaking_factor():
+    def get_peaking_factors():
         pass
 
-    def _calc_peaking_factor(self):
+    def _get_peaking_factors(self):
         ne_PF = np.full(len(self._times), np.nan)
         Te_PF = ne_PF.copy()
         pressure_PF = ne_PF.copy()
@@ -908,11 +906,11 @@ class CModShot(Shot):
         return valid_indices, times[valid_indices]
 
     @staticmethod
-    def calc_sxr_data():
+    def get_sxr_parameters():
         pass
     # TODO: get more accurate description of soft x-ray data
 
-    def _calc_sxr_data(self):
+    def _get_sxr_data(self):
         """ """
         sxr = np.empty(len(self._times))
         try:
