@@ -1,14 +1,45 @@
 # Contributing
 ## Prerequisities
 - You have access to DIII-D or Alcator C-Mod servers 
-- Cristina Rea has given you access to the private repository
 - You have a GitHub account
+- Cristina Rea (crea@psfc.mit.edu) has given you access to the private repository
 ## Setting up development environment
 I recommend forking the repository and cloning it to your local folder on whatever cluster you're using. Install in edit mode following the instructions in the installation guide. You should then be all be set to begin development. You're also welcome to use the main repository but please make sure to create your own branch to work in.
 ## GitHub Issues
 I think GitHub Issues is a great way to track bugs as well as feature requests and development. If you find a bug, please submit an issue on the repository. If you'd like a significant feature change/addition or are planning to implement one yourself, please submit an issue as well. This will allow for useful discussion and collaboration among contributors.
 ## Coding and Style Guidelines
 In general, try to follow Google coding style guidelines for python. Every new method, class, module, or script should not be committed without a descriptive docstring.
+### Docstring format
+
+#### Module
+#### Class
+""" One-line description.
+
+More in-depth description. This should describe the purpose of the class and its uses.
+
+
+
+"""
+#### Shot Method
+""" One-line description.
+
+More in-depth description. This should describe in more detail how parameters are calculated and the basic theoretical reasoning for the chosen method.
+
+Parameters
+----------
+
+Returns
+-------
+
+Original Authors
+----------------
+- Yourself or whoever wrote the original routines you are converting
+
+Sources
+---------
+- Any relevant scripts either relative paths if stored in this repo, or URLs/absolute paths if stored elsewhere
+- Helpful papers or documents 
+"""
 ### Useful Links
 DIII-D Matlab source folders:    
 - /fusion/projects/disruption_warning/software/matlab_programs  

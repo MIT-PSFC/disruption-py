@@ -67,14 +67,13 @@ class CModShot(Shot):
             self._populate_shot_parameters
 
     def _populate_shot_data(self):
-        local_data = pd.concat([])
         self.data['times'] = self._times
         # TODO: convert from bytes
         self.data['commit_hash'] = self._metadata['commit_hash']
         self.data['time_until_disrupt'] = self._get_time_until_disrupt()
         self.data['ip'], self.data['dip_dt'], self.data['dip_smoothed'], _, self.data[
-            'dipprog_dt'], self.data['ip_error'] = self._get_Ip_parameters()
-        self.data['z_error'], _, self.data['zcur'], self.data['v_z'], self.data['z_times_v_z'] = self._get_Z_parameters()
+            'dipprog_dt'], self.data['ip_error'] = self._get_ip_parameters()
+        self.data['z_error'], _, self.data['zcur'], self.data['v_z'], self.data['z_times_v_z'] = self._get_z_parameters()
         self.data['p_oh'], self.data['v_loop'] = self._get_ohmic_parameters()
         self.data['p_rad'], self.data['dprad_dt'], self.data['p_lh'], self.data[
             'p_icrf'], self.data['p_input'], self.data['radiated_fraction'] = self._get_power()
@@ -123,7 +122,49 @@ class CModShot(Shot):
         return pd.DataFrame({'time_until_disrupt': time_until_disrupt})
 
     @staticmethod
-    def get_IP_parameters(times, ip, magtime, ip_prog, pcstime):
+    def get_ip_parameters(times, ip, magtime, ip_prog, pcstime):
+        """ Calculates actual and programmed current as well as their derivatives and difference.
+
+        The time derivatives are useful for discriminating between rampup, flattop, and rampdown.
+
+        Parameters
+        ----------
+        times : array_like
+            Time array for the shot.
+        ip : array_like
+            Actual plasma current.
+        magtime : array_like
+            Time array for the plasma current.
+        ip_prog : array_like
+            Programmed plasma current.
+        pcstime : array_like
+            Time array for the programmed plasma current.
+
+        Returns
+        -------
+        ip : array_like
+            Actual plasma current.
+        dip_dt : array_like
+            Time derivative of the actual plasma current.
+        dip_smoothed : array_like
+            Smoothed time derivative of the actual plasma current.
+        ip_prog : array_like
+            Programmed plasma current.
+        dipprog_dt : array_like
+            Time derivative of the programmed plasma current.
+        ip_error : array_like
+            Difference between the actual and programmed plasma current.
+
+        Original Authors
+        ----------------
+        - Alex Tinguely
+        - Robert Granetz
+        - Ryan Sweeney
+
+        Sources
+        -------
+        - matlab\cmod_matlab\matlab-core\get_Ip_parameters.m 
+        """
         dip = np.gradient(ip, magtime)
         dip_smoothed = smooth(dip, 11)
         dipprog_dt = np.gradient(ip_prog, pcstime)
@@ -136,7 +177,7 @@ class CModShot(Shot):
         ip_error = ip-ip_prog
         return ip, dip, dip_smoothed, ip_prog, dipprog_dt, ip_error
 
-    def _get_Ip_parameters(self):
+    def _get_ip_parameters(self):
         # Automatically generated
         magnetics_tree = Tree('magnetics', self._shot_id)
         active_segments = self.get_active_wire_segments()
@@ -173,10 +214,56 @@ class CModShot(Shot):
         ip = magnetics_tree.getNode(r"\ip").getData(
         ).data().astype('float64', copy=False)
         magtime = magnetics_tree.getNode(r"\ip").getData().dim_of(0)
-        return CModShot.get_IP_parameters(self._times, ip, magtime, ip_prog, pcstime)
+        return CModShot.get_ip_parameters(self._times, ip, magtime, ip_prog, pcstime)
 
     @staticmethod
-    def get_Z_parameters(times, z_prog, pcstime, z_error_without_ip, ip, dpcstime):
+    def get_z_parameters(times, z_prog, pcstime, z_error_without_ip, ip, dpcstime):
+        """ Get values of Z_error, Z_prog, and derived signals from plasma control system (PCS).
+
+            Z_prog is the programmed vertical position of the plasma current centroid, and Z_error is the difference
+            between the actual position and that requested (Z_error = Z_cur -
+            Z_prog). Thus, the actual (estimated) position, Z_cur, can be calculated.
+            And the vertical velocity, v_z, can be taken from the time derivative,
+            and the product z_times_v_z ( = Z_cur * v_z) is also calculated.
+
+            Parameters
+            ----------
+            times : array_like
+                Time array for the shot.
+            z_prog : array_like
+                Programmed vertical position of the plasma current centroid.
+            pcstime : array_like
+                Time array for the programmed vertical position of the plasma current centroid.
+            z_error_without_ip : array_like
+                Difference between the actual and programmed vertical position of the plasma current centroid.
+            ip : array_like
+                Actual plasma current.
+            dpcstime : array_like
+                Time array for the actual plasma current.
+
+            Returns
+            -------
+            z_error : array_like
+                Difference between the actual and programmed vertical position of the plasma current centroid.
+            z_prog : array_like
+                Programmed vertical position of the plasma current centroid.
+            z_cur : array_like
+                Actual (estimated) vertical position of the plasma current centroid.
+            v_z : array_like
+                Vertical velocity.
+            z_times_v_z : array_like
+                Product of the vertical position and vertical velocity.
+
+            Original Authors
+            ----------------
+            - Alex Tinguely
+            - Robert Granetz
+
+            Sources
+            -------
+            - matlab\cmod_matlab\matlab-core\get_Z_parameters.m
+
+        """
         z_error = z_error_without_ip/ip  # [m]
         z_prog_dpcs = interp1(pcstime, z_prog, dpcstime)
         z_cur = z_prog_dpcs + z_error  # [m]
@@ -191,7 +278,7 @@ class CModShot(Shot):
                               'linear', False, z_times_v_z[-1])
         return z_error, z_prog, z_cur, v_z, z_times_v_z
 
-    def _get_Z_parameters(self):
+    def _get_z_parameters(self):
         pcstime = np.array(np.arange(-4, 12.383, .001))
         z_prog = np.empty(pcstime.shape)
         z_prog.fill(np.nan)
@@ -264,12 +351,43 @@ class CModShot(Shot):
             ip = ip_record.data()
             ip_time = ip_record.dim_of(0)
             ip = interp1(ip_time, ip, dpcstime)
-        return CModShot.get_Z_parameters(self._times, z_prog, pcstime, z_error_without_ip, ip, dpcstime)
+        return CModShot.get_z_parameters(self._times, z_prog, pcstime, z_error_without_ip, ip, dpcstime)
 
     @staticmethod
     def get_ohmic_parameters(times, v_loop, v_loop_time, li, efittime, dip_smoothed, ip):
-        # For simplicity, we use R0 = 0.68 m, but we could use \efit_aeqdsk:rmagx
-        inductance = 4.0*np.pi*1.0e-7 * 0.68 * li/2.0
+        """Calculate the ohmic power from the loop voltage, inductive voltage, and plasma current.
+
+        Parameters
+        ----------
+        times : array_like
+            The times at which to calculate the ohmic power.
+        v_loop : array_like
+            The loop voltage.
+        v_loop_time : array_like
+            The times at which the loop voltage was measured.
+        li : array_like
+            The inductance of the loop.
+        efittime : array_like
+            The times at which the inductance was measured.
+        dip_smoothed : array_like
+            The smoothed plasma current.
+        ip : array_like
+            The plasma current.
+
+        Returns
+        -------
+        p_ohm : array_like
+            The ohmic power.
+        v_loop : array_like
+            The loop voltage.
+
+        Original Authors
+        ----------------
+
+
+        """
+        R0 = 0.68  # For simplicity, we use R0 = 0.68 m, but we could use \efit_aeqdsk:rmagx
+        inductance = 4.0*np.pi*1.0e-7 * R0 * li/2.0
         v_loop = interp1(v_loop_time, v_loop, times)
         inductance = interp1(efittime, inductance, times)
         v_inductive = inductance * dip_smoothed
