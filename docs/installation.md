@@ -5,7 +5,7 @@ TBD
 ### CMOD:  
 The following command will install the disruption warning package locally in develop mode. In develop mode, changes to the directory used for installation will be reflected in the installed package.   
 ```
-pip3 install --user -e /home/hmturner/disruption_py # No --user needed if installing in a virtual env
+pip3 install --user -e /usr/local/mfe/disruptions/disruption_py # No --user needed if installing in a virtual env
 ```
 ### D3D:
 First we need to load the proper modules(ignore on saga cluster):
