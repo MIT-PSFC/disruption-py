@@ -57,7 +57,7 @@ Please submit all code changes as PRs, pull requests, from your forked repositor
 - Add missing documentation to functions and calculations you are knowledgeable about
 - Add/fix documentaiton on this website
 ## Communication Channels(TODO: Link)
-- Slack: https://mit-psfc.slack.com/archives/C051HKPHQM9
+- Slack: https://mit-psfc.slack.com/archives/C04P4AGCCS3
 - Zoom meeting: https://mit.zoom.us/my/c.rea
 
 ## Important Notices and Warnings
