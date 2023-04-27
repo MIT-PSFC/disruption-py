@@ -2,12 +2,15 @@
 ## Locally 
 TBD
 ## On Specfic Clusters
-### CMOD:  
+### Pre-requirements:
+In order to access the specific clusters, i.e. Alcator C-Mod or DIII-D, a user agreement must first be signed. A local host must be identified, Cristina Rea (<crea@psfc.mit.edu>) will assist with the logistics.
+
+### Alcator C-Mod:  
 The following command will install the disruption warning package locally in develop mode. In develop mode, changes to the directory used for installation will be reflected in the installed package.   
 ```
 pip3 install --user -e /usr/local/mfe/disruptions/disruption_py # No --user needed if installing in a virtual env
 ```
-### D3D:
+### DIII-D:
 First we need to load the proper modules(ignore on saga cluster):
 ```
 module load python/3
