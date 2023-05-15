@@ -11,6 +11,7 @@ except ImportError:
 
 from sklearn.model_selection import train_test_split
 
+from disruption_py.shots import D3DShot, CModShot
 from disruption_py.database import *
 from disruption_py.utils import impute_shot_df_NaNs, exp_filter, generate_id
 import disruption_py.data
@@ -47,6 +48,8 @@ DERIVED_PAPER_COLS = [
 REQUIRED_COLS = ['time', 'time_until_disrupt', 'shot']
 TOKAMAKS = {'d3d': create_d3d_handler,
             'cmod': create_cmod_handler, 'east': create_east_handler}
+SHOT_CLASSES= {'d3d': D3DShot,
+            'cmod': CModShot, 'east': None}
 DEFAULT_THRESHOLD = 0.35  # Time until disrupt threshold for binary classification
 # A 'black window' threshold [s]; obscures input data from a window in time on disruptive shots during trianing/testing
 BLACK_WINDOW_THRESHOLD = 5.e-3
@@ -70,9 +73,10 @@ def create_label(time_until_disrupt, threshold, label_type, multiple_thresholds)
 
 # TODO: Add support for CMOD
 def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=None, threshold=DEFAULT_THRESHOLD, tokamak='d3d', required_cols=REQUIRED_COLS, label='binary', **kwargs):
-    if tokamak != 'd3d':
+    if tokamak not in ['d3d','cmod']:
         raise NotImplementedError(
-            "Currently only support DIII-D data retrieval")
+            "Currently only support DIII-D and Alcator C-MOD data retrieval")
+    tokamak_str = tokamak
     tokamak = TOKAMAKS[tokamak]()
     timebase_signal = kwargs.get('timebase_signal', None)
     populate = kwargs.get('populate', 'default')
@@ -94,12 +98,15 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
         timebase_signal = kwargs.get('timebase_signal', None)
         for shot_id in shot_ids:
             try:
-                if efit_tree is None:
-                    shots.append(D3DShot(shot_id, tokamak.get_efit_tree(
-                        shot_id), disruption_time=tokamak.get_disruption_time(shot_id), timebase_signal=timebase_signal, populate=populate))
-                else:
-                    shots.append(D3DShot(shot_id, efit_tree, disruption_time=tokamak.get_disruption_time(shot_id),
-                                 timebase_signal=timebase_signal, populate=populate))
+                if tokamak_str == 'd3d':
+                    if efit_tree is None:
+                        shots.append(D3DShot(shot_id, tokamak.get_efit_tree(
+                            shot_id), disruption_time=tokamak.get_disruption_time(shot_id), timebase_signal=timebase_signal, populate=populate))
+                    else:
+                        shots.append(D3DShot(shot_id, efit_tree, disruption_time=tokamak.get_disruption_time(shot_id),
+                                    timebase_signal=timebase_signal, populate=populate))
+                elif tokamak_str == 'cmod':
+                    shots.append(CModShot(shot_id=shot_id))
                 LOGGER.info(f"[Shot {shot_id}]:Generated shot object")
             except Exception as e:
                 LOGGER.info(f"[Shot {shot_id}]:Failed to generate shot object")
