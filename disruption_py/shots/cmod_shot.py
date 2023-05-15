@@ -79,9 +79,9 @@ class CModShot(Shot):
             self.data['ip'], self.data['dip_dt'], self.data['dip_smoothed'], _, self.data[
                 'dipprog_dt'], self.data['ip_error'] = self._get_ip_parameters()
             # self.data['z_error'], _, self.data['zcur'], self.data['v_z'], self.data['z_times_v_z'] = self._get_z_parameters()
-            # self.data['p_oh'], self.data['v_loop'] = self._get_ohmic_parameters()
-            # self.data['p_rad'], self.data['dprad_dt'], self.data['p_lh'], self.data[
-                # 'p_icrf'], self.data['p_input'], self.data['radiated_fraction'] = self._get_power()
+            self.data['p_oh'], self.data['v_loop'] = self._get_ohmic_parameters()
+            self.data['p_rad'], self.data['dprad_dt'], self.data['p_lh'], self.data[
+                'p_icrf'], self.data['p_input'], self.data['radiated_fraction'] = self._get_power()
             self.data['kappa_area'] = self._get_kappa_area()
             self.data['v_0'] = self._get_rotation_velocity()
             # TODO: Populate when shot is missing from calibrated.txt
@@ -94,7 +94,7 @@ class CModShot(Shot):
             self.data['n_e'], self.data['dn_dt'], self.data['Greenwald_fraction'] = self._get_densities()
             # self.data['I_efc'] = self._get_efc_current()
             # self.data['SXR'] = self._get_sxr_parameters()
-            self.data['delta'], self.data['squareness'],self.data['aminor'] = self._get_shape_parameters()
+            self.data['delta'],self.data['aminor'] = self._get_shape_parameters()
         except Exception as e:
             print("WARNING: Could not populate shot data")
             print(e)
@@ -402,9 +402,9 @@ class CModShot(Shot):
         p_ohm = ip * v_resistive
         return p_ohm, v_loop
 
-    def _get_ohmic_parameters(self):
-        v_loop_record = self._analysis_tree.getNode(r"\top.mflux:v0").getData()
-        v_loop = v_loop_record.data().astype('float64', copy=False)
+    def _get_ohmic_parameters(self):      
+        v_loop_record = self._analysis_tree.getNode(r"\top.mflux:v0").getData() #<-- this line is the culprit for breaking for 1120105021, 1120105027, 1140515017... even though it works for 1150922001
+        v_loop = v_loop_record.data().astype('float64', copy=False) 
         v_loop_time = v_loop_record.dim_of(0)
         if len(v_loop_time) <= 1:
             return None, None
@@ -511,9 +511,9 @@ class CModShot(Shot):
 
     def _get_kappa_area(self):
         aminor = self._analysis_tree.getNode(
-            r'\efit_a_eqdsk:aminor').getData().data().astype('float64', copy=False)
+            r'\efit_aeqdsk:aminor').getData().data().astype('float64', copy=False)
         area = self._analysis_tree.getNode(
-            r'\efit_a_eqdsk:area').getData().data().astype('float64', copy=False)
+            r'\efit_aeqdsk:area').getData().data().astype('float64', copy=False)
         times = self._analysis_tree.getNode(
             r'\efit_aeqdsk:time').getData().data().astype('float64', copy=False)
         return CModShot.get_kappa_area(self._times, aminor, area, times)
@@ -649,7 +649,7 @@ class CModShot(Shot):
 
     @staticmethod
     def get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
-        if len(n_e) == len(t_n):
+        if len(n_e) != len(t_n):
             nan_arr = np.empty(len(times))
             nan_arr.fill(np.nan)
             return nan_arr, nan_arr.copy(), nan_arr.copy()
@@ -666,7 +666,7 @@ class CModShot(Shot):
     def _get_densities(self):
         try:
             e_tree = Tree('electrons', self._shot_id)
-            n_e_record = e_tree.getNode(r'.tci.results:nl_04/0.6').getData()
+            n_e_record = e_tree.getNode(r'.tci.results:nl_04').getData()
             n_e = n_e_record.data().astype('float64', copy=False)
             t_n = n_e_record.dim_of(0)
             mag_tree = Tree('magnetics', self._shot_id)
@@ -674,12 +674,13 @@ class CModShot(Shot):
             ip = ip_record.data().astype('float64', copy=False)
             t_ip = ip_record.dim_of(0)
             a_tree = Tree('analysis', self._shot_id)
-            a_minor_record = a_tree.getNode(
-                r'.efit.results.a_eqdsk:aminor').getData()
+            a_minor_record = a_tree.getNode(r'.efit.results.a_eqdsk:aminor').getData() 
             t_a = a_minor_record.dim_of(0)
             a_minor = a_minor_record.data().astype('float64', copy=False)
         except Exception as e:
+            print(Exception)
             return None, None, None
+
         return CModShot.get_densities(self._times, n_e, t_n, ip, t_ip, a_minor, t_a)
 
     @staticmethod
@@ -1031,36 +1032,36 @@ class CModShot(Shot):
         return valid_indices, times[valid_indices]
 
     @staticmethod
-    def get_shape_parameters(times, sqfod, sqfou, tritop, tribot, aminor, chisq, efit_time):
+    def get_shape_parameters(times, tritop, tribot, aminor, chisq, efit_time):
         # Compute triangularity and squareness:
         delta = (tritop+tribot)/2.0
-        squareness = (sqfod+sqfou)/2.0
+        #squareness = (sqfod+sqfou)/2.0
 
         # Remove invalid indices
         invalid_indices = np.where(chisq > 50)
         delta[invalid_indices] = np.nan
-        squareness[invalid_indices] = np.nan
+        #squareness[invalid_indices] = np.nan
         aminor[invalid_indices] = np.nan
 
         # Interpolate to desired times
         delta = interp1(efit_time, delta, times, 'linear',
                         bounds_error=False, fill_value=np.nan)
-        squareness = interp1(efit_time, squareness, times,
-                             'linear', bounds_error=False, fill_value=np.nan)
+        #squareness = interp1(efit_time, squareness, times,
+        #                     'linear', bounds_error=False, fill_value=np.nan)
         aminor = interp1(efit_time, aminor, times,
                          'linear', bounds_error=False, fill_value=np.nan)
-        return delta, squareness, aminor
+        return delta, aminor
     
     def _get_shape_parameters(self):
         efittime = self._analysis_tree.getNode(r'\efit_aeqdsk:time')
-        sqfod = self._analysis_tree.getNode(r'\efit_a_eqdsk:sqfod').getData().data()
-        sqfou = self._analysis_tree.getNode(r'\efit_a_eqdsk:sqfou').getData().data()
-        tritop = self._analysis_tree.getNode(r'\efit_a_eqdsk:tritop').getData().data()  # meters
-        tribot = self._analysis_tree.getNode(r'\efit_a_eqdsk:tribot').getData().data()  # meters
+        #sqfod = self._analysis_tree.getNode(r'\efit_aeqdsk:sqfod').getData().data()
+        #sqfou = self._analysis_tree.getNode(r'\efit_aeqdsk:sqfou').getData().data()
+        tritop = self._analysis_tree.getNode(r'\efit_aeqdsk:doutu').getData().data()  # meters
+        tribot = self._analysis_tree.getNode(r'\efit_aeqdsk:doutl').getData().data()  # meters
         # plasma minor radius [m]
-        aminor = self._analysis_tree.getNode(r'\efit_a_eqdsk:aminor').getData().data()
-        chisq = self._analysis_tree.getNode(r'\efit_a_eqdsk:chisq').getData().data()
-        return self.get_shape_parameters(self._times, sqfod, sqfou, tritop, tribot, aminor, chisq, efittime)
+        aminor = self._analysis_tree.getNode(r'\efit_aeqdsk:aminor').getData().data()
+        chisq = self._analysis_tree.getNode(r'\efit_aeqdsk:chisq').getData().data()
+        return self.get_shape_parameters(self._times, tritop, tribot, aminor, chisq, efittime)
     
     @staticmethod
     def get_sxr_parameters():

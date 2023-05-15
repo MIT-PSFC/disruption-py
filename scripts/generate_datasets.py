@@ -197,7 +197,7 @@ def parse_feature_cols(feature_str):
         all_cols = pd.read_csv(
             feature_str, header=None).iloc[:, 0].values
     else:
-        all_cols = [feature.trim()
+        all_cols = [feature.strip()
                     for feature in feature_str.split(",")]
     feature_cols = []
     derived_feature_cols = []
