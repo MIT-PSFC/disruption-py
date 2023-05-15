@@ -50,15 +50,14 @@ class CModShot(Shot):
         }
         # Analysis tree has automatically generated Efit data. Efi18 is manually created Efit data
         try:
-            self._analysis_tree = Tree('efit18', shot_id, mode="readonly")
+            self._analysis_tree = Tree('analysis', shot_id, mode="readonly") #was 'efit18' before, not 'analysis
             self._times = self._analysis_tree.getNode(
-                r"\efit18::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
+                r"\analysis::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
         except mdsExceptions.TreeFOPENR as e:
-            try:
-                self._analysis_tree = Tree(
-                    'analysis', shot_id, mode="readonly")
+            try: #THIS DOESN'T WORK!!!!
+                self._analysis_tree = Tree('efit18', shot_id, mode="readonly")  #was 'analysis' before, not 'efit18'
                 self._times = self._analysis_tree.getNode(
-                    r"\analysis::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
+                    r"\efit18::efit.results.a_eqdsk:time").getData().data().astype('float64', copy=False)
             except mdsExceptions.TreeFOPENR as f:
                 print("WARNING: No EFIT data found")
         self.data = data
@@ -88,11 +87,11 @@ class CModShot(Shot):
             self.data['v_0_uncalibrated'] = [np.nan]*len(self.data)
             # TODO: Ask about removing from database
             self.data['v_mid'] = [np.nan]*len(self.data)
-            # self.data['n_equal_1_mode'], self.data['n_equal_1_normalized'], _ = self._get_n_equal_1_amplitude()
-            # self.data['Te_width'] = self._get_Ts_parameters
-            # self.data['ne_peaking'], self.data['Te_peaking'], self.data['pressure_peaking'] = self._get_peaking_factors()
+            self.data['n_equal_1_mode'], self.data['n_equal_1_normalized'], _ = self._get_n_equal_1_amplitude()
+            #self.data['Te_width'] = self._get_Ts_parameters
+            self.data['ne_peaking'], self.data['Te_peaking'], self.data['pressure_peaking'] = self._get_peaking_factors()
             self.data['n_e'], self.data['dn_dt'], self.data['Greenwald_fraction'] = self._get_densities()
-            # self.data['I_efc'] = self._get_efc_current()
+            self.data['I_efc'] = self._get_efc_current()
             # self.data['SXR'] = self._get_sxr_parameters()
             self.data['delta'],self.data['aminor'] = self._get_shape_parameters()
         except Exception as e:
@@ -403,6 +402,7 @@ class CModShot(Shot):
         return p_ohm, v_loop
 
     def _get_ohmic_parameters(self):      
+        print(self._analysis_tree) 
         v_loop_record = self._analysis_tree.getNode(r"\top.mflux:v0").getData() #<-- this line is the culprit for breaking for 1120105021, 1120105027, 1140515017... even though it works for 1150922001
         v_loop = v_loop_record.data().astype('float64', copy=False) 
         v_loop_time = v_loop_record.dim_of(0)
