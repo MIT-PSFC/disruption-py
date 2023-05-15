@@ -91,7 +91,7 @@ class CModShot(Shot):
             # self.data['n_equal_1_mode'], self.data['n_equal_1_normalized'], _ = self._get_n_equal_1_amplitude()
             # self.data['Te_width'] = self._get_Ts_parameters
             # self.data['ne_peaking'], self.data['Te_peaking'], self.data['pressure_peaking'] = self._get_peaking_factors()
-            self.data['n_e'], self.data['dn_dt'], self.data['Greenwald_fraction'],self.data['aminor'] = self._get_densities()
+            self.data['n_e'], self.data['dn_dt'], self.data['Greenwald_fraction'] = self._get_densities()
             # self.data['I_efc'] = self._get_efc_current()
             # self.data['SXR'] = self._get_sxr_parameters()
             self.data['delta'], self.data['squareness'],self.data['aminor'] = self._get_shape_parameters()
@@ -661,7 +661,7 @@ class CModShot(Shot):
         a_minor = interp1(t_a, a_minor, times)
         n_G = ip/(np.pi*a_minor**2)*1e20  # Greenwald density in m ^-3
         g_f = abs(n_e/n_G)
-        return n_e, dn_dt, g_f, a_minor
+        return n_e, dn_dt, g_f
 
     def _get_densities(self):
         try:
@@ -1060,7 +1060,7 @@ class CModShot(Shot):
         # plasma minor radius [m]
         aminor = self._analysis_tree.getNode(r'\efit_a_eqdsk:aminor').getData().data()
         chisq = self._analysis_tree.getNode(r'\efit_a_eqdsk:chisq').getData().data()
-        return self.get_shape_parameters(self._times, sqfod, sqfou, tritop, tribot, aminor, chisq, efit_time)
+        return self.get_shape_parameters(self._times, sqfod, sqfou, tritop, tribot, aminor, chisq, efittime)
     
     @staticmethod
     def get_sxr_parameters():
