@@ -62,6 +62,7 @@ class CModShot(Shot):
             except mdsExceptions.TreeFOPENR as f:
                 print("WARNING: No EFIT data found")
         self.data = data
+        print(self._times)
         if data is None:
             self.data = pd.DataFrame()
             self._populate_shot_data()
@@ -76,22 +77,22 @@ class CModShot(Shot):
                 'q0'], self.data['qstar'], self.data['q95'], _, self.data['Wmhd'], self.data['dWmhd_dt'], self.data['ssep'], self.data['n_over_ncrit'] = self._get_EFIT_parameters()
             self.data['ip'], self.data['dip_dt'], self.data['dip_smoothed'], _, self.data[
                 'dipprog_dt'], self.data['ip_error'] = self._get_ip_parameters()
-            self.data['z_error'], _, self.data['zcur'], self.data['v_z'], self.data['z_times_v_z'] = self._get_z_parameters()
-            self.data['p_oh'], self.data['v_loop'] = self._get_ohmic_parameters()
-            self.data['p_rad'], self.data['dprad_dt'], self.data['p_lh'], self.data[
-                'p_icrf'], self.data['p_input'], self.data['radiated_fraction'] = self._get_power()
+            # self.data['z_error'], _, self.data['zcur'], self.data['v_z'], self.data['z_times_v_z'] = self._get_z_parameters()
+            # self.data['p_oh'], self.data['v_loop'] = self._get_ohmic_parameters()
+            # self.data['p_rad'], self.data['dprad_dt'], self.data['p_lh'], self.data[
+                # 'p_icrf'], self.data['p_input'], self.data['radiated_fraction'] = self._get_power()
             self.data['kappa_area'] = self._get_kappa_area()
             self.data['v_0'] = self._get_rotation_velocity()
             # TODO: Populate when shot is missing from calibrated.txt
             self.data['v_0_uncalibrated'] = [np.nan]*len(self.data)
             # TODO: Ask about removing from database
             self.data['v_mid'] = [np.nan]*len(self.data)
-            self.data['n_equal_1_mode'], self.data['n_equal_1_normalized'], _ = self._get_n_equal_1_amplitude()
-            self.data['Te_width'] = self._get_Ts_parameters
-            self.data['ne_peaking'], self.data['Te_peaking'], self.data['pressure_peaking'] = self._get_peaking_factors()
+            # self.data['n_equal_1_mode'], self.data['n_equal_1_normalized'], _ = self._get_n_equal_1_amplitude()
+            # self.data['Te_width'] = self._get_Ts_parameters
+            # self.data['ne_peaking'], self.data['Te_peaking'], self.data['pressure_peaking'] = self._get_peaking_factors()
             self.data['n_e'], self.data['dn_dt'], self.data['Greenwald_fraction'] = self._get_densities()
-            self.data['I_efc'] = self._get_efc_current()
-            self.data['SXR'] = self._get_sxr_parameters()
+            # self.data['I_efc'] = self._get_efc_current()
+            # self.data['SXR'] = self._get_sxr_parameters()
         except Exception as e:
             print("WARNING: Could not populate shot data")
             print(e)
