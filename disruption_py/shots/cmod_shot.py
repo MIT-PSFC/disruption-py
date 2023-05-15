@@ -68,7 +68,8 @@ class CModShot(Shot):
             self._populate_shot_data()
 
     def _populate_shot_data(self):
-        self.data['times'] = self._times
+        self.data['time'] = self._times
+        self.data['shot'] = self._shot_id
         # TODO: convert from bytes
         try:
             self.data['commit_hash'] = self._metadata['commit_hash']
@@ -90,9 +91,10 @@ class CModShot(Shot):
             # self.data['n_equal_1_mode'], self.data['n_equal_1_normalized'], _ = self._get_n_equal_1_amplitude()
             # self.data['Te_width'] = self._get_Ts_parameters
             # self.data['ne_peaking'], self.data['Te_peaking'], self.data['pressure_peaking'] = self._get_peaking_factors()
-            self.data['n_e'], self.data['dn_dt'], self.data['Greenwald_fraction'] = self._get_densities()
+            self.data['n_e'], self.data['dn_dt'], self.data['Greenwald_fraction'],self.data['aminor'] = self._get_densities()
             # self.data['I_efc'] = self._get_efc_current()
             # self.data['SXR'] = self._get_sxr_parameters()
+            self.data['delta'], self.data['squareness'],self.data['aminor'] = self._get_shape_parameters()
         except Exception as e:
             print("WARNING: Could not populate shot data")
             print(e)
@@ -123,7 +125,7 @@ class CModShot(Shot):
             if self._metadata['disrupted'] == -1:
                 raise ValueError("Shot disrupted but no t_disrupt found.")
             time_until_disrupt = self._metadata['disrupted'] - \
-                self.data['times']
+                self.data['time']
         return pd.DataFrame({'time_until_disrupt': time_until_disrupt})
 
     @staticmethod
@@ -659,7 +661,7 @@ class CModShot(Shot):
         a_minor = interp1(t_a, a_minor, times)
         n_G = ip/(np.pi*a_minor**2)*1e20  # Greenwald density in m ^-3
         g_f = abs(n_e/n_G)
-        return n_e, dn_dt, g_f
+        return n_e, dn_dt, g_f, a_minor
 
     def _get_densities(self):
         try:
@@ -1028,6 +1030,38 @@ class CModShot(Shot):
         times = analysis_tree.getNode('_lf').getData().dim_of(0)
         return valid_indices, times[valid_indices]
 
+    @staticmethod
+    def get_shape_parameters(times, sqfod, sqfou, tritop, tribot, aminor, chisq, efit_time):
+        # Compute triangularity and squareness:
+        delta = (tritop+tribot)/2.0
+        squareness = (sqfod+sqfou)/2.0
+
+        # Remove invalid indices
+        invalid_indices = np.where(chisq > 50)
+        delta[invalid_indices] = np.nan
+        squareness[invalid_indices] = np.nan
+        aminor[invalid_indices] = np.nan
+
+        # Interpolate to desired times
+        delta = interp1(efit_time, delta, times, 'linear',
+                        bounds_error=False, fill_value=np.nan)
+        squareness = interp1(efit_time, squareness, times,
+                             'linear', bounds_error=False, fill_value=np.nan)
+        aminor = interp1(efit_time, aminor, times,
+                         'linear', bounds_error=False, fill_value=np.nan)
+        return delta, squareness, aminor
+    
+    def _get_shape_parameters(self):
+        efittime = self._analysis_tree.getNode(r'\efit_aeqdsk:time')
+        sqfod = self._analysis_tree.getNode(r'\efit_a_eqdsk:sqfod').getData().data()
+        sqfou = self._analysis_tree.getNode(r'\efit_a_eqdsk:sqfou').getData().data()
+        tritop = self._analysis_tree.getNode(r'\efit_a_eqdsk:tritop').getData().data()  # meters
+        tribot = self._analysis_tree.getNode(r'\efit_a_eqdsk:tribot').getData().data()  # meters
+        # plasma minor radius [m]
+        aminor = self._analysis_tree.getNode(r'\efit_a_eqdsk:aminor').getData().data()
+        chisq = self._analysis_tree.getNode(r'\efit_a_eqdsk:chisq').getData().data()
+        return self.get_shape_parameters(self._times, sqfod, sqfou, tritop, tribot, aminor, chisq, efit_time)
+    
     @staticmethod
     def get_sxr_parameters():
         pass
