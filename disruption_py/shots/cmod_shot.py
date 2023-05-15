@@ -170,7 +170,7 @@ class CModShot(Shot):
         - matlab\cmod_matlab\matlab-core\get_Ip_parameters.m 
         """
         dip = np.gradient(ip, magtime)
-        dip_smoothed = smooth(dip, 11)
+        dip_smoothed = smooth(dip, 11,ends_type=0)
         dipprog_dt = np.gradient(ip_prog, pcstime)
         ip_prog = interp1(pcstime, ip_prog, times,
                           bounds_error=False, fill_value=ip_prog[-1])
