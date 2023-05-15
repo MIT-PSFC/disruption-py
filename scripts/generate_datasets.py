@@ -48,8 +48,8 @@ DERIVED_PAPER_COLS = [
 REQUIRED_COLS = ['time', 'time_until_disrupt', 'shot']
 TOKAMAKS = {'d3d': create_d3d_handler,
             'cmod': create_cmod_handler, 'east': create_east_handler}
-SHOT_CLASSES= {'d3d': D3DShot,
-            'cmod': CModShot, 'east': None}
+SHOT_CLASSES = {'d3d': D3DShot,
+                'cmod': CModShot, 'east': None}
 DEFAULT_THRESHOLD = 0.35  # Time until disrupt threshold for binary classification
 # A 'black window' threshold [s]; obscures input data from a window in time on disruptive shots during trianing/testing
 BLACK_WINDOW_THRESHOLD = 5.e-3
@@ -73,7 +73,7 @@ def create_label(time_until_disrupt, threshold, label_type, multiple_thresholds)
 
 # TODO: Add support for CMOD
 def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=None, threshold=DEFAULT_THRESHOLD, tokamak='d3d', required_cols=REQUIRED_COLS, label='binary', **kwargs):
-    if tokamak not in ['d3d','cmod']:
+    if tokamak not in ['d3d', 'cmod']:
         raise NotImplementedError(
             "Currently only support DIII-D and Alcator C-MOD data retrieval")
     tokamak_str = tokamak
@@ -104,7 +104,7 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
                             shot_id), disruption_time=tokamak.get_disruption_time(shot_id), timebase_signal=timebase_signal, populate=populate))
                     else:
                         shots.append(D3DShot(shot_id, efit_tree, disruption_time=tokamak.get_disruption_time(shot_id),
-                                    timebase_signal=timebase_signal, populate=populate))
+                                             timebase_signal=timebase_signal, populate=populate))
                 elif tokamak_str == 'cmod':
                     shots.append(CModShot(shot_id=shot_id))
                 LOGGER.info(f"[Shot {shot_id}]:Generated shot object")
@@ -228,7 +228,7 @@ def main(args):
     feature_cols, derived_feature_cols = parse_feature_cols(args.feature_cols)
     print(feature_cols)
     dataset_df = get_dataset_df(args.data_source, cols=feature_cols +
-                                REQUIRED_COLS, efit_tree=args.efit_tree, shot_ids=shot_ids, timebase_signal=args.timebase_signal, label=args.label, populate=args.populate)
+                                REQUIRED_COLS, efit_tree=args.efit_tree, shot_ids=shot_ids, tokamak=args.tokamak, timebase_signal=args.timebase_signal, label=args.label, populate=args.populate)
     dataset_df = add_derived_features(dataset_df, derived_feature_cols)
     if args.filter is True:
         print(args.filter)
@@ -238,7 +238,7 @@ def main(args):
         dataset_df, ratio=DEFAULT_RATIO)
     dataset_df.to_csv(args.output_dir +
                       f"whole_df_{args.unique_id}.csv", sep=',', index=False)
-    #df_train_val = pd.concat([X_train, y_train], axis=1)
+    # df_train_val = pd.concat([X_train, y_train], axis=1)
     # X_train, X_val, y_train, y_val = create_dataset(df_train_val, ratio=.25)
     print(X_train.shape, X_test.shape,
           y_train.shape, y_test.shape)
@@ -261,6 +261,8 @@ if __name__ == '__main__':
         description="Generate DPRF compatible datasets for training and inference. Currently only supports DIII-D data")
     parser.add_argument('--shotlist', type=str,
                         help='Path to file specifying shotlist', default=None)
+    parser.add_argument('--tokamak', type=str,
+                        help='Tokamak to use for data source. Currently only supports DIII-D and Alcator C-Mod.', default='d3d')
     parser.add_argument('--feature_cols', type=str,
                         help='Either a file or comma-separated list of desired feature columns', default=None)
     parser.add_argument('--output_dir', type=str,
