@@ -107,7 +107,7 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
                         shots.append(D3DShot(shot_id, efit_tree, disruption_time=tokamak.get_disruption_time(shot_id),
                                              timebase_signal=timebase_signal, populate=populate))
                 elif tokamak_str == 'cmod':
-                    shots.append(CModShot(shot_id=shot_id))
+                    shots.append(CModShot("cmod",shot_id=shot_id))
                 LOGGER.info(f"[Shot {shot_id}]:Generated shot object")
             except Exception as e:
                 LOGGER.info(f"[Shot {shot_id}]:Failed to generate shot object")
