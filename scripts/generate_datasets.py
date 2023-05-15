@@ -77,7 +77,8 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
         raise NotImplementedError(
             "Currently only support DIII-D and Alcator C-MOD data retrieval")
     tokamak_str = tokamak
-    tokamak = TOKAMAKS[tokamak]()
+    if tokamak_str == 'd3d':
+        tokamak = TOKAMAKS[tokamak]()
     timebase_signal = kwargs.get('timebase_signal', None)
     populate = kwargs.get('populate', 'default')
     label = kwargs.get('label', 'none')
