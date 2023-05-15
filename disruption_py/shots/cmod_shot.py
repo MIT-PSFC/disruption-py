@@ -64,7 +64,7 @@ class CModShot(Shot):
         self.data = data
         if data is None:
             self.data = pd.DataFrame()
-            self._populate_shot_parameters
+            self._populate_shot_data()
 
     def _populate_shot_data(self):
         self.data['times'] = self._times
