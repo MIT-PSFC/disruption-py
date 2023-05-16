@@ -737,7 +737,10 @@ class CModShot(Shot):
 
     # TODO: Finish
     @staticmethod
-    def get_peaking_factors():
+    def get_peaking_factors(times,TS_time,ne_PF, Te_PF, pressure_PF):
+        #ne_PF = interp1(TS_time, ne_PF, times, 'linear')
+        #Te_PF = interp1(TS_time, Te_PF, times, 'linear')
+        #pressure_PF = interp1(TS_time, pressure_PF, times, 'linear')
         pass
 
     def _get_peaking_factors(self):
@@ -745,8 +748,9 @@ class CModShot(Shot):
         Te_PF = ne_PF.copy()
         pressure_PF = ne_PF.copy()
         if (self._shot_id > 1120000000 and self._shot_id < 1120213000) or (self._shot_id > 1140000000 and self._shot_id < 1140227000) or (self._shot_id > 1150000000 and self._shot_id < 1150610000) or (self._shot_id > 1160000000 and self._shot_id < 1160303000):
-            return ne_PF, Te_PF, pressure_PF
+            return ne_PF, Te_PF, pressure_PF #????????
         try:
+            print(f'shot {self._shot_id}')
             efit_tree = Tree('cmod', self._shot_id)
             z0 = 0.01*efit_tree.getNode(r'\efit_aeqdsk:zmagx').getData().data()
             aminor = efit_tree.getNode(r'\efit_aeqdsk:aminor').getData().data()
@@ -754,7 +758,7 @@ class CModShot(Shot):
             efit_time = efit_tree.getNode(
                 r'\efit_aeqdsk:aminor').getData().dim_of(0)
             bminor = aminor*kappa
-            electron_tree = Tree('electroncs', self._shot_id)
+            electron_tree = Tree('electrons', self._shot_id)
             node_ext = '.yag_new.results.profiles'
             nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = self.compare_ts_tci(
                 electron_tree, nlnum=4)
@@ -793,7 +797,7 @@ class CModShot(Shot):
                 Te_PF[itimes[i]] = np.mean(Te_arr[core_index])/np.mean(Te_arr)
             Te_PF = interp1(TS_time, Te_PF, self._times)
             calib = np.nan
-            return ne_PF, Te_PF, pressure_PF
+            return CModShot.get_Ts_parameters(self._times, TS_time, ne_PF, Te_PF, pressure_PF)
 
         except mdsExceptions.MdsException as e:
             return ne_PF, Te_PF, pressure_PF
@@ -813,7 +817,7 @@ class CModShot(Shot):
         ts_time2 = [1e32]
         tci_time = electron_tree.getNode(
             ".YAG_NEW.RESULTS.PROFILES:NE_RZ").getData().dim_of(0)
-        tci_record = electron_tree.getNode(".TCI.RESULTS:NL_{nlnum:02d}")
+        tci_record = electron_tree.getNode(f".TCI.RESULTS:NL_{nlnum:02d}")
         tci = tci_record.data()
         tci_t = tci_record.dim_of(0)
         nlts, nlts_t = self.integrate_ts_tci(nlnum)
@@ -1026,7 +1030,7 @@ class CModShot(Shot):
         """
         analysis_tree = Tree('analysis', self._shot_id)
         values = analysis_tree.getNode(
-            '_lf=\analysis::efit_aeqdsk:lflag,_l0=((sum(_lf,1) - _lf[*,20] - _lf[*,1])==0),_n=\analysis::efit_fitout:nitera,(_l0 and (_n>4))').getData().data()
+            r'_lf=\analysis::efit_aeqdsk:lflag,_l0=((sum(_lf,1) - _lf[*,20] - _lf[*,1])==0),_n=\analysis::efit_fitout:nitera,(_l0 and (_n>4))')#.getData().data()
         valid_indices = np.nonzero(values)
         times = analysis_tree.getNode('_lf').getData().dim_of(0)
         return valid_indices, times[valid_indices]
