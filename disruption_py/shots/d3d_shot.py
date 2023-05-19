@@ -115,9 +115,79 @@ class D3DShot(Shot):
         self.data['time'] = self._times
         self.data['shot'] = self._shot_id
 
-    def _populate_shot_data(self, already_populated=False):
-        local_data = pd.concat([self.get_efit_parameters(), self.get_rt_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(), self.get_ip_parameters(
-        ), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters(), self.get_kappa_area(), self.get_time_until_disrupt()], axis=1)
+    def _populate_shot_data(self, local_data, already_populated=False):
+        def _if_error(var, e):
+            if type(var) != list:
+                var = [var]
+            for v in var:
+                local_data[v] = [np.nan]*len(local_data)
+                print("WARNING: Could not populate {}".format(v))
+                print(e) 
+            return
+        
+        local_data = pd.DataFrame()
+
+        try:
+            efit_params = self.get_efit_parameters()
+            local_data["efit_params"] = efit_params
+        except Exception as e:
+            _if_error("efit_params", e)
+        try:
+            rt_efit_params = self.get_rt_efit_parameters()
+            local_data["rt_efit_params"] = rt_efit_params
+        except Exception as e:
+            _if_error("rt_efit_params", e)
+        try:
+            density_params = self.get_density_parameters()
+            local_data["density_params"] = density_params
+        except Exception as e:
+            _if_error("density_params", e)
+        try:
+            rt_density_params = self.get_rt_density_parameters()
+            local_data["rt_density_params"] = rt_density_params
+        except Exception as e:
+            _if_error("rt_density_params", e)
+        try:
+            ip_params = self.get_ip_parameters()
+            local_data["ip_params"] = ip_params
+        except Exception as e:
+            _if_error("ip_params", e)
+        try:
+            rt_ip_params = self.get_rt_ip_parameters()
+            local_data["rt_ip_params"] = rt_ip_params
+        except Exception as e:
+            _if_error("rt_ip_params", e)
+        try:
+            power_params = self.get_power_parameters()
+            local_data["power_params"] = power_params
+        except Exception as e:
+            _if_error("power_params", e)
+        try:
+            z_params = self.get_z_parameters()
+            local_data["z_params"] = z_params
+        except Exception as e:
+            _if_error("z_params", e)
+        try:
+            zeff_params = self.get_zeff_parameters()
+            local_data["zeff_params"] = zeff_params
+        except Exception as e:
+            _if_error("zeff_params", e)
+        try:
+            shape_params = self.get_shape_parameters()
+            local_data["shape_params"] = shape_params
+        except Exception as e:
+            _if_error("shape_params", e)
+        try:
+            kappa_area = self.get_kappa_area() 
+            local_data["kappa_area"] = kappa_area
+        except Exception as e:
+            _if_error("kappa_area", e)
+        try:
+            time_until_disrupt = self.get_time_until_disrupt()
+            local_data["time_until_disrupt"] = time_until_disrupt
+        except Exception as e:
+            _if_error("time_until_disrupt", e)
+
         local_data = local_data.loc[:, ~local_data.columns.duplicated()]
         if not already_populated:
             self.data = local_data
