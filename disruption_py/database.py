@@ -154,6 +154,18 @@ class DatabaseHandler:
         shot_df = pd.read_sql_query(query, self.conn)
         return shot_df
 
+    def get_shot_data_from_sql_table(self, shot_ids=None, cols=None, sql_table=None):
+        shot_ids = ','.join([str(shot_id) for shot_id in shot_ids])
+        cols = ' '.join([f"{col}," for col in cols[:-1]]) + f" {cols[-1]}"
+        if cols is None:
+            cols = "*"
+        if shot_ids is None:
+            query = f"select {cols} from {sql_table} order by time"
+        else:
+            query = f"select {cols} from {sql_table} where shot in ({shot_ids}) order by time"
+        shot_df = pd.read_sql_query(query, self.conn)
+        return shot_df
+
     def get_shots(self, shot_ids=None):
         shot_df = self.get_shot_data(shot_ids)
         return [Shot('cmod', shot_data['shot'].iloc[0], data=shot_data) for _, shot_data in shot_df.groupby(by=["shot"])]

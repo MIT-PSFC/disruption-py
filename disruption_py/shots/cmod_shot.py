@@ -68,36 +68,93 @@ class CModShot(Shot):
             self._populate_shot_data()
 
     def _populate_shot_data(self):
+        """
+        Populate the shot data with the data columns specified in the constructor.
+        """
+
+        def _if_error(var, e):
+            if type(var) != list:
+                var = [var]
+            for v in var:
+                self.data[v] = [np.nan]*len(self.data)
+                print("WARNING: Could not populate {}".format(v))
+                print(e) 
+            return
+
         self.data['time'] = self._times
         self.data['shot'] = self._shot_id
         # TODO: convert from bytes
         try:
             self.data['commit_hash'] = self._metadata['commit_hash']
+        except Exception as e:
+            _if_error("commit_hash", e)
+        try:
             self.data['time_until_disrupt'] = self._get_time_until_disrupt()
+        except Exception as e:
+            _if_error("time_until_disrupt", e)
+        try:
             self.data['beta_n'], self.data['beta_p'], self.data['dbetap_dt'], self.data['kappa'], self.data['upper_gap'], self.data['lower_gap'], self.data['li'], self.data['dli_dt'], self.data[
                 'q0'], self.data['qstar'], self.data['q95'], _, self.data['Wmhd'], self.data['dWmhd_dt'], self.data['ssep'], self.data['n_over_ncrit'] = self._get_EFIT_parameters()
+        except Exception as e:
+            _if_error(["beta_n", "beta_p", "dbetap_dt", "kappa", "upper_gap", "lower_gap", "q0", "qstar", "q95", "Wmhd", "dWmhd_dt", "ssep", "n_over_ncrit"], e)
+        try:
             self.data['ip'], self.data['dip_dt'], self.data['dip_smoothed'], _, self.data[
                 'dipprog_dt'], self.data['ip_error'] = self._get_ip_parameters()
-            # self.data['z_error'], _, self.data['zcur'], self.data['v_z'], self.data['z_times_v_z'] = self._get_z_parameters()
-            # self.data['p_oh'], self.data['v_loop'] = self._get_ohmic_parameters()
-            # self.data['p_rad'], self.data['dprad_dt'], self.data['p_lh'], self.data[
-                # 'p_icrf'], self.data['p_input'], self.data['radiated_fraction'] = self._get_power()
+        except Exception as e:
+            _if_error(["ip", "dip_dt", "dip_smoothed", "dipprog_dt", "ip_error"], e)
+        try:
+            self.data['z_error'], _, self.data['zcur'], self.data['v_z'], self.data['z_times_v_z'] = self._get_z_parameters()
+        except Exception as e:
+            _if_error(["z_error", "zcur", "v_z", "z_times_v_z"], e)
+        try:
+            self.data['p_oh'], self.data['v_loop'] = self._get_ohmic_parameters()
+        except Exception as e:
+            _if_error(["p_oh", "v_loop"], e)
+        try:
+            self.data['p_rad'], self.data['dprad_dt'], self.data['p_lh'], self.data[
+                'p_icrf'], self.data['p_input'], self.data['radiated_fraction'] = self._get_power()
+        except Exception as e:
+            _if_error(["p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", "radiated_fraction"], e)
+        try:
             self.data['kappa_area'] = self._get_kappa_area()
+        except Exception as e:
+            _if_error("kappa_area", e)
+        try:
             self.data['v_0'] = self._get_rotation_velocity()
+        except Exception as e:
+            _if_error("v_0", e)
             # TODO: Populate when shot is missing from calibrated.txt
-            self.data['v_0_uncalibrated'] = [np.nan]*len(self.data)
+            # self.data['v_0_uncalibrated'] = [np.nan]*len(self.data)
             # TODO: Ask about removing from database
-            self.data['v_mid'] = [np.nan]*len(self.data)
-            # self.data['n_equal_1_mode'], self.data['n_equal_1_normalized'], _ = self._get_n_equal_1_amplitude()
-            # self.data['Te_width'] = self._get_Ts_parameters
-            # self.data['ne_peaking'], self.data['Te_peaking'], self.data['pressure_peaking'] = self._get_peaking_factors()
+            # self.data['v_mid'] = [np.nan]*len(self.data)
+        try:
+            self.data['n_equal_1_mode'], self.data['n_equal_1_normalized'], _ = self._get_n_equal_1_amplitude()
+        except Exception as e:
+            _if_error(["n_equal_1_mode", "n_equal_1_normalized"], e)
+        try:
+            self.data['Te_width'] = self._get_Ts_parameters()
+        except Exception as e:
+            _if_error("Te_width", e)
+        try:
+            self.data['ne_peaking'], self.data['Te_peaking'], self.data['pressure_peaking'] = self._get_peaking_factors()
+        except Exception as e:
+            _if_error(["ne_peaking", "Te_peaking", "pressure_peaking"], e)
+        try:
             self.data['n_e'], self.data['dn_dt'], self.data['Greenwald_fraction'] = self._get_densities()
-            # self.data['I_efc'] = self._get_efc_current()
-            # self.data['SXR'] = self._get_sxr_parameters()
+        except Exception as e:
+            _if_error(["n_e", "dn_dt", "Greenwald_fraction"], e)
+        try:
+            self.data['I_efc'] = self._get_efc_current()
+        except Exception as e:
+            _if_error("I_efc", e)
+        try:
+            self.data['SXR'] = self._get_sxr_parameters()
+        except Exception as e:
+            _if_error("SXR", e)
+        try:
             self.data['delta'], self.data['squareness'],self.data['aminor'] = self._get_shape_parameters()
         except Exception as e:
-            print("WARNING: Could not populate shot data")
-            print(e)
+            _if_error(["delta", "squareness", "aminor"], e)
         # Check there are no floats(float32) since the SQL database only contains type doubles(float64)
         float_columns = list(self.data.select_dtypes(
             include=['float32']).columns)
