@@ -94,7 +94,7 @@ class CModShot(Shot):
             #self.data['I_efc'] = self._get_efc_current()
             # self.data['SXR'] = self._get_sxr_parameters()
             self.data['delta'],self.data['aminor'] = self._get_shape_parameters()
-            self.data['Te_edge'],self.data['ne_edge'] = self._get_shape_parameters()
+            self.data['Te_edge'],self.data['ne_edge'] = self._get_edge_parameters()
         except Exception as e:
             print("WARNING: Could not populate shot data")
             print(e)
@@ -1266,8 +1266,11 @@ class CModShot(Shot):
         return Te_edge, ne_edge
 
     def _get_edge_parameters(self):
+
+        #Ignore shots on the blacklist
+        if (self._shot_id > 1120000000 and self._shot_id < 1120213000) or (self._shot_id > 1140000000 and self._shot_id < 1140227000) or (self._shot_id > 1150000000 and self._shot_id < 1150610000) or (self._shot_id > 1160000000 and self._shot_id < 1160303000):
+            return None, None 
         
-        import numpy as np
         import sys
         import scipy as sp
         sys.path.append('/home/sciortino/usr/python3modules/profiletools3')
@@ -1303,6 +1306,7 @@ class CModShot(Shot):
 	        assert np.sum(equal_R) == len(p_ne.X[:,1])
         except:
 	        raise ValueError('Edge Thomson rhobase differs between ne and Te')
+	        return None, None
 
         # consider only flux surface on which points were measured, regardless of LFS or HFS
         p_Te.X=np.abs(p_Te.X)
