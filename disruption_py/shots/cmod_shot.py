@@ -13,6 +13,15 @@ import numpy as np
 import MDSplus
 from MDSplus import *
 
+#For edge paramebers
+import sys
+import scipy as sp
+sys.path.append('/home/sciortino/usr/python3modules/profiletools3')
+sys.path.append('/home/sciortino/usr/python3modules/eqtools3')
+import profiletools
+import eqtools
+import warnings
+
 from disruption_py.utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power
 import disruption_py.data
 
@@ -173,7 +182,7 @@ class CModShot(Shot):
         - matlab\cmod_matlab\matlab-core\get_Ip_parameters.m 
         """
         dip = np.gradient(ip, magtime)
-        dip_smoothed = smooth(dip, 11,ends_type=0)
+        dip_smoothed = smooth(dip, 11)#,ends_type=0)
         dipprog_dt = np.gradient(ip_prog, pcstime)
         ip_prog = interp1(pcstime, ip_prog, times,
                           bounds_error=False, fill_value=ip_prog[-1])
@@ -181,7 +190,9 @@ class CModShot(Shot):
         ip = interp1(magtime, ip, times)
         dip = interp1(magtime, dip, times)
         dip_smoothed = interp1(magtime, dip_smoothed, times)
-        ip_error = ip-ip_prog
+        
+        ip_error = (np.abs(ip)-np.abs(ip_prog))*np.sign(ip)
+        #import pdb; pdb.set_trace()
         return ip, dip, dip_smoothed, ip_prog, dipprog_dt, ip_error
 
     def _get_ip_parameters(self):
@@ -399,12 +410,15 @@ class CModShot(Shot):
         inductance = interp1(efittime, inductance, times)
         v_inductive = inductance * dip_smoothed
         v_resistive = v_loop - v_inductive
+        #print(v_resistive[50])
+        #print(v_loop[50])
+        #print(v_inductive[50])
+        #import pdb; pdb.set_trace()
         p_ohm = ip * v_resistive
         return p_ohm, v_loop
 
     def _get_ohmic_parameters(self):      
-        print(self._analysis_tree) 
-        v_loop_record = self._analysis_tree.getNode(r"\top.mflux:v0").getData() #<-- this line is the culprit for breaking for 1120105021, 1120105027, 1140515017... even though it works for 1150922001
+        v_loop_record = self._analysis_tree.getNode(r"\top.mflux:v0").getData() #<-- this line is the culprit for breaking when analysis tree is set to EFIT18
         v_loop = v_loop_record.data().astype('float64', copy=False) 
         v_loop_time = v_loop_record.dim_of(0)
         if len(v_loop_time) <= 1:
@@ -424,6 +438,11 @@ class CModShot(Shot):
             p_rad = np.array([np.nan]*len(times))  # TODO: Fix
             dprad = p_rad.copy()
         else:
+            p_rad = p_rad*1.0e3 #[W]
+            p_rad = p_rad* 4.5 # Factor of 4.5 comes from cross-calibration with
+                       # 2pi_foil during flattop times of non-disruptive
+                       # shots, excluding times for
+                       # which p_rad (uncalibrated) <= 1.e5 W            
             dprad = np.gradient(p_rad, t_rad)
             p_rad = interp1(t_rad, p_rad, times)
             dprad = interp1(t_rad, dprad, times)
@@ -1213,6 +1232,8 @@ class CModShot(Shot):
 
 
         """
+        #Base of rho to interpolate onto
+        rhobase=np.arange(0,1,0.001)
         
         #Linear interpolate on time and rho
         Te_interpolator = sp.interpolate.LinearNDInterpolator((p_Te.X[:,0],p_Te.X[:,1]), p_Te.y) 
@@ -1234,13 +1255,15 @@ class CModShot(Shot):
             plt.colorbar()
             plt.show(block=True)
 
-        ###########Compute Te_edge
+        ########### Compute Te_edge
         #Make mask for rho in edge region
         rhobase_mesh_mask = (rhobase_mesh >= edge_rho_min) & (rhobase_mesh <= edge_rho_max)#((rhobase_mesh >= edge_rho_min) & (rhobase_mesh <= edge_rho_max))
         #Assert that rho values are indeed in desired range
         assert np.all(rhobase_mesh[rhobase_mesh_mask]>= edge_rho_min)
         assert np.all(rhobase_mesh[rhobase_mesh_mask]<= edge_rho_max)
         #Use mask to get only edge values
+
+        
 
         Te_interp_edge=np.where(rhobase_mesh_mask,Te_interp,np.nan) 
         ne_interp_edge=np.where(rhobase_mesh_mask,ne_interp,np.nan)
@@ -1252,8 +1275,10 @@ class CModShot(Shot):
         #print(f'Te_interp.shape, {Te_interp.shape}')
         #print(f'Te_interp_edge.shape. {Te_interp_edge.shape}')
 
-        Te_edge = np.nanmean(Te_interp_edge,axis=0) 
-        ne_edge = np.nanmean(ne_interp_edge,axis=0) 
+        with warnings.catch_warnings(): #Carch warning about taking nanmean of an empty array. This is ok because we want it to return nan for empty arrays
+            warnings.filterwarnings("ignore", category=RuntimeWarning)
+            Te_edge = np.nanmean(Te_interp_edge,axis=0) 
+            ne_edge = np.nanmean(ne_interp_edge,axis=0) 
         assert len(Te_edge) == len(times)
         assert len(ne_edge) == len(times)
 
@@ -1271,14 +1296,7 @@ class CModShot(Shot):
         if (self._shot_id > 1120000000 and self._shot_id < 1120213000) or (self._shot_id > 1140000000 and self._shot_id < 1140227000) or (self._shot_id > 1150000000 and self._shot_id < 1150610000) or (self._shot_id > 1160000000 and self._shot_id < 1160303000):
             return None, None 
         
-        import sys
-        import scipy as sp
-        sys.path.append('/home/sciortino/usr/python3modules/profiletools3')
-        sys.path.append('/home/sciortino/usr/python3modules/eqtools3')
-        #sys.path.append('/home/millerma/python3modules/profiletools3')
-        #sys.path.append('/home/millerma/python3modules/eqtools3')
-        import profiletools
-        import eqtools
+
 
         #Range of rho to interpolate over
         rhobase=np.arange(0,1,0.001)
@@ -1291,8 +1309,11 @@ class CModShot(Shot):
         except:
             return None, None
 
-        t_min = ts_time.min()
-        t_max = ts_time.max()
+
+        t_min = np.max([0.1,np.min(ts_time)])
+        t_max = np.max(ts_time)
+        #print(f't_min {t_min}')
+        #print(f't_max {t_max}')
         
         
         # Get core and edge Thomson profiles over rho := sqrtpsinorm
@@ -1301,12 +1322,12 @@ class CModShot(Shot):
         p_ne= profiletools.ne(self._shot_id, include=['CTS','ETS'], abscissa='sqrtpsinorm',
 			        t_min=t_min,t_max=t_max, remove_zeros=True)
 
-        try:
-	        equal_R = p_ne.X[:,1] == p_Te.X[:,1]
-	        assert np.sum(equal_R) == len(p_ne.X[:,1])
-        except:
-	        raise ValueError('Edge Thomson rhobase differs between ne and Te')
-	        return None, None
+        #try:
+	    #    equal_R = p_ne.X[:,1] == p_Te.X[:,1]
+	    #    assert np.sum(equal_R) == len(p_ne.X[:,1])
+        #except:
+	    #    raise ValueError('Edge Thomson rhobase differs between ne and Te')
+	    #    return None, None
 
         # consider only flux surface on which points were measured, regardless of LFS or HFS
         p_Te.X=np.abs(p_Te.X)
@@ -1326,7 +1347,7 @@ class CModShot(Shot):
         # cleanup of low Te values
         p_Te.remove_points(np.logical_and(p_Te.X[:,0]<1.03, p_Te.y<0.015))  # TS Te should be >15 eV inside near SOL
 
-        return CModShot.get_edge_quantities(self._times, p_Te, p_ne)
+        return CModShot.get_edge_parameters(self._times, p_Te, p_ne)
 
         
         
