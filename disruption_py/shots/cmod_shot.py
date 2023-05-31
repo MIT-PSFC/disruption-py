@@ -83,7 +83,7 @@ class CModShot(Shot):
             self.data['commit_hash'] = self._metadata['commit_hash']
             self.data['time_until_disrupt'] = self._get_time_until_disrupt()
             self.data['beta_n'], self.data['beta_p'], self.data['dbetap_dt'], self.data['kappa'], self.data['upper_gap'], self.data['lower_gap'], self.data['li'], self.data['dli_dt'], self.data[
-                'q0'], self.data['qstar'], self.data['q95'], _, self.data['Wmhd'], self.data['dWmhd_dt'], self.data['ssep'], self.data['n_over_ncrit'] = self._get_EFIT_parameters()
+                'q0'], self.data['qstar'], self.data['q95'], _, self.data['Wmhd'], self.data['dWmhd_dt'], self.data['ssep'], self.data['n_over_ncrit'], self.data['V_surf'] = self._get_EFIT_parameters()
             self.data['ip'], self.data['dip_dt'], self.data['dip_smoothed'], _, self.data[
                 'dipprog_dt'], self.data['ip_error'] = self._get_ip_parameters()
             # self.data['z_error'], _, self.data['zcur'], self.data['v_z'], self.data['z_times_v_z'] = self._get_z_parameters()
@@ -102,8 +102,9 @@ class CModShot(Shot):
             self.data['n_e'], self.data['dn_dt'], self.data['Greenwald_fraction'] = self._get_densities()
             #self.data['I_efc'] = self._get_efc_current()
             # self.data['SXR'] = self._get_sxr_parameters()
-            self.data['delta'],self.data['aminor'] = self._get_shape_parameters()
+            self.data['delta'],self.data['aminor'], self,self.data['R0'] ._get_shape_parameters()
             self.data['Te_edge'],self.data['ne_edge'] = self._get_edge_parameters()
+            #self.data['H98'] = self._get_H98()
         except Exception as e:
             print("WARNING: Could not populate shot data")
             print(e)
@@ -504,6 +505,8 @@ class CModShot(Shot):
         ).data().astype('float64', copy=False)/100.0  # meters
         n_over_ncrit = -self._analysis_tree.getNode(
             r'\efit_aeqdsk:xnnc').getData().data().astype('float64', copy=False)
+        V_surf = -self._analysis_tree.getNode(
+            r'\efit_aeqdsk:vsurf').getData().data().astype('float64', copy=False)
         beta_p_dot = np.gradient(beta_p, efittime)
         li_dot = np.gradient(li, efittime)
         dWmhd_dt = np.gradient(Wmhd, efittime)
@@ -523,7 +526,8 @@ class CModShot(Shot):
         dWmhd_dt = interp1(efittime, dWmhd_dt, self._times)
         ssep = interp1(efittime, ssep, self._times)
         n_over_ncrit = interp1(efittime, n_over_ncrit, self._times)
-        return beta_N, beta_p, beta_p_dot, kappa, upper_gap, lower_gap, li, li_dot, q0, qstar, q95, V_loop_efit, Wmhd, dWmhd_dt, ssep, n_over_ncrit
+        n_over_ncrit = interp1(efittime, V_surf, self._times)
+        return beta_N, beta_p, beta_p_dot, kappa, upper_gap, lower_gap, li, li_dot, q0, qstar, q95, V_loop_efit, Wmhd, dWmhd_dt, ssep, n_over_ncrit, V_surf
 
     @staticmethod
     def get_kappa_area(times, aminor, area, a_times):
@@ -1149,7 +1153,7 @@ class CModShot(Shot):
         return valid_indices, times[valid_indices]
 
     @staticmethod
-    def get_shape_parameters(times, tritop, tribot, aminor, chisq, efit_time):
+    def get_shape_parameters(times, tritop, tribot, aminor, R0, chisq, efit_time):
         # Compute triangularity and squareness:
         delta = (tritop+tribot)/2.0
         #squareness = (sqfod+sqfou)/2.0
@@ -1159,6 +1163,7 @@ class CModShot(Shot):
         delta[invalid_indices] = np.nan
         #squareness[invalid_indices] = np.nan
         aminor[invalid_indices] = np.nan
+        R0[invalid_indices] = np.nan
 
         # Interpolate to desired times
         delta = interp1(efit_time, delta, times, 'linear',
@@ -1167,7 +1172,10 @@ class CModShot(Shot):
         #                     'linear', bounds_error=False, fill_value=np.nan)
         aminor = interp1(efit_time, aminor, times,
                          'linear', bounds_error=False, fill_value=np.nan)
-        return delta, aminor
+        R0 = interp1(efit_time, R0, times,
+                         'linear', bounds_error=False, fill_value=np.nan)
+
+        return delta, aminor, R0
     
     def _get_shape_parameters(self):
         efittime = self._analysis_tree.getNode(r'\efit_aeqdsk:time')
@@ -1177,8 +1185,9 @@ class CModShot(Shot):
         tribot = self._analysis_tree.getNode(r'\efit_aeqdsk:doutl').getData().data()  # meters
         # plasma minor radius [m]
         aminor = self._analysis_tree.getNode(r'\efit_aeqdsk:aminor').getData().data()
+        R0 = self._analysis_tree.getNode(r'\efit_aeqdsk:rout').getData().data() # major radius of geometric center [m]
         chisq = self._analysis_tree.getNode(r'\efit_aeqdsk:chisq').getData().data()
-        return self.get_shape_parameters(self._times, tritop, tribot, aminor, chisq, efittime)
+        return self.get_shape_parameters(self._times, tritop, tribot, aminor, R0, chisq, efittime)
     
     @staticmethod
     def get_sxr_parameters():
@@ -1209,7 +1218,7 @@ class CModShot(Shot):
         Parameters
         ----------
         times : array_like
-            The times at which to calculate the ohmic power.
+            The times at which to calculate the edge parameters.
         p_Te : BivariatePlasmaProfile
             The Te measurements [keV] in terms of the time and rho of the measurment.
         ne : BivariatePlasmaProfile
@@ -1348,8 +1357,52 @@ class CModShot(Shot):
         p_Te.remove_points(np.logical_and(p_Te.X[:,0]<1.03, p_Te.y<0.015))  # TS Te should be >15 eV inside near SOL
 
         return CModShot.get_edge_parameters(self._times, p_Te, p_ne)
+    
+    @staticmethod
+    def get_H98(times, tau, t_tau):
+        """Compute H98
 
-        
+        Parameters
+        ----------
+        times : array_like
+            The times at which to calculate the H98.
+        tau : array_like
+            Energy confinement time 
+
+
+        Returns
+        -------
+        H98 : array_like
+            H98 interpolated on the requested timebase.
+
+        Original Authors
+        ----------------
+        Andrew Maris (maris@mit.edu)
+
+        """
+        #Take R = 0.68 [m], A = 2
+
+        tau_98 = 0.144*self.data['n_e']**0.41*2**0.19*self.data['ip']**0.93*self.data['R0']**1.39*self.data['aminor']**0.58*self.data['kappa']**0.78*self.data['BT']**0.15*self.data['p_input']**-0.69
+        tau = interp1(t_tau, tau, times)
+        H98 = tau/tau_98
+
+        return H98
+
+
+
+def _get_H98(self):
+        """Prepare to compute H98 by getting tau_E
+
+
+
+        Original Authors
+        ----------------
+        Andrew Maris (maris@mit.edu)
+
+        """
+                
+
+        return CModShot.get_H98(self._times, tau, t_tau)       
         
 
 
