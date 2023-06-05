@@ -1,5 +1,7 @@
 from disruption_py.shots.shot import Shot, parameter_method
 
+from disruption_py.shots.shot import Shot, parameter_method
+
 try:
     import importlib.resources as importlib_resources
 except ImportError:
@@ -16,7 +18,7 @@ import netCDF4 as nc
 import MDSplus
 from MDSplus import *
 
-from disruption_py.utils import interp1, gsastd, get_bolo, power, efit_rz_interp
+from disruption_py.utils import interp1,gsastd, get_bolo, power, efit_rz_interp
 import disruption_py.data
 D3D_DISRUPTED_SHOT = 175552
 # Retrieve efit from EFIT01, Peaking Factor Nodes: dpsrdcva dpsrdxdiv dpstepf dpsnepf
@@ -58,8 +60,7 @@ class D3DShot(Shot):
         self.override_cols = override_cols
         self.data = data
         timebase_signal = kwargs.pop('timebase_signal', None)
-        populate_methods = kwargs.pop('populate_methods', None)
-        populate_tags = kwargs.pop('populate_tags', ['all'])
+        methods_to_populate = kwargs.pop('populate', 'default')
         if self.data is not None and self._times is None:
             try:
                 self._times = self.data['time'].to_numpy()
@@ -74,9 +75,26 @@ class D3DShot(Shot):
                 self._times = self.get_timebase(timebase_signal, **kwargs)
         if self._times is None:
             self._times = self.get_timebase(timebase_signal, **kwargs)
-        self._init_populate(data is not None, populate_methods, populate_tags)
+        self._populate(data is not None, methods_to_populate)
 
-    # TODO: Remove and add "l_mode" tag to relevant methods
+    @staticmethod
+    def get_signals(signals, conn=None, interpolate=True, interpolation_timebase=None):
+        """ See Shot.get_signals. Note that for D3D get_signals assumes that the correct tree has already been loaded on the remote server
+        """
+        if conn is None:
+            conn = MDSplus.Connection('atlas.gat.com')
+            # TODO: Figure out what tree to open
+        if interpolate and not interpolation_timebase:
+            raise ValueError('Missing interpolation timebase')
+        return super().get_signals(signals, conn, interpolate, interpolation_timebase)
+
+    # TODO: Check if redundant
+    def _get_signals(self, signals, interpolate=True, interpolation_timebase=None):
+        if interpolate and not interpolation_timebase:
+            interpolation_timebase = self._times
+        return self.get_signals(signals, self.conn, interpolate, interpolation_timebase)
+
+
     def _populate_l_mode_data(self):
         self.data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(
         ), self.get_peaking_factors(), self.get_kappa_area(), self.get_time_until_disrupt()], axis=1)
