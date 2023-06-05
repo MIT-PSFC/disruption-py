@@ -1,7 +1,5 @@
 from disruption_py.shots.shot import Shot, parameter_method
 
-from disruption_py.shots.shot import Shot, parameter_method
-
 try:
     import importlib.resources as importlib_resources
 except ImportError:
@@ -18,13 +16,15 @@ import netCDF4 as nc
 import MDSplus
 from MDSplus import *
 
-from disruption_py.utils import interp1, gsastd, get_bolo, power, efit_rz_interp
+from disruption_py.utils import interp1,gsastd, get_bolo, power, efit_rz_interp
 import disruption_py.data
 D3D_DISRUPTED_SHOT = 175552
 # Retrieve efit from EFIT01, Peaking Factor Nodes: dpsrdcva dpsrdxdiv dpstepf dpsnepf
 D3D_PEAKING_FACTORS_SHOT = 180808
 D3D_MAX_SHOT_TIME = 7.0  # [s]
 DEFAULT_A_MINOR = 0.56  # [m]
+DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
+
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
 
 """
@@ -60,8 +60,7 @@ class D3DShot(Shot):
         self.override_cols = override_cols
         self.data = data
         timebase_signal = kwargs.pop('timebase_signal', None)
-        populate_methods = kwargs.pop('populate_methods', None)
-        populate_tags = kwargs.pop('populate_tags', ['all'])
+        methods_to_populate = kwargs.pop('populate', 'default')
         if self.data is not None and self._times is None:
             try:
                 self._times = self.data['time'].to_numpy()
@@ -76,9 +75,26 @@ class D3DShot(Shot):
                 self._times = self.get_timebase(timebase_signal, **kwargs)
         if self._times is None:
             self._times = self.get_timebase(timebase_signal, **kwargs)
-        self._init_populate(data is not None, populate_methods, populate_tags)
+        self._populate(data is not None, methods_to_populate)
 
-    # TODO: Remove and add "l_mode" tag to relevant methods
+    @staticmethod
+    def get_signals(signals, conn=None, interpolate=True, interpolation_timebase=None):
+        """ See Shot.get_signals. Note that for D3D get_signals assumes that the correct tree has already been loaded on the remote server
+        """
+        if conn is None:
+            conn = MDSplus.Connection('atlas.gat.com')
+            # TODO: Figure out what tree to open
+        if interpolate and not interpolation_timebase:
+            raise ValueError('Missing interpolation timebase')
+        return super().get_signals(signals, conn, interpolate, interpolation_timebase)
+
+    # TODO: Check if redundant
+    def _get_signals(self, signals, interpolate=True, interpolation_timebase=None):
+        if interpolate and not interpolation_timebase:
+            interpolation_timebase = self._times
+        return self.get_signals(signals, self.conn, interpolate, interpolation_timebase)
+
+
     def _populate_l_mode_data(self):
         self.data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(
         ), self.get_peaking_factors(), self.get_kappa_area(), self.get_time_until_disrupt()], axis=1)
@@ -197,11 +213,13 @@ class D3DShot(Shot):
         return times[indices_flattop]
 
     @parameter_method
+    @parameter_method
     def get_time_until_disrupt(self):
         if self.disrupted:
             return pd.DataFrame({'time_until_disrupt': self.disruption_time - self._times})
         return pd.DataFrame({'time_until_disrupt': np.full(self._times.size, np.nan)})
 
+    @parameter_method
     @parameter_method
     def get_efit_parameters(self):
         self.conn.openTree(self.efit_tree_name, self._shot_id)
@@ -230,6 +248,7 @@ class D3DShot(Shot):
         return pd.DataFrame(efit_data)
 
     @parameter_method
+    @parameter_method
     def get_rt_efit_parameters(self):
         self.conn.openTree('efitrt1', self._shot_id)
         efit_data = {k: self.conn.get(v).data()
@@ -252,6 +271,7 @@ class D3DShot(Shot):
         return pd.DataFrame(efit_data)
 
     @parameter_method
+    @parameter_method
     def get_H_parameters(self):
         self.conn.openTree('transport', self._shot_id)
         try:
@@ -273,6 +293,7 @@ class D3DShot(Shot):
             h_alpha = np.full(self._times.size, np.nan)
         return pd.DataFrame({'H98': h_98, 'H_alpha': h_alpha})
 
+    @parameter_method
     @parameter_method
     def get_power_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
@@ -373,6 +394,7 @@ class D3DShot(Shot):
         return pd.DataFrame({'p_rad': p_rad, 'p_nbi': p_nbi, 'p_ech': p_ech, 'p_ohm': p_ohm, 'radiated_fraction': rad_fraction, 'v_loop': v_loop})
 
     @parameter_method
+    @parameter_method
     def get_ohmic_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
         # Get edge loop voltage and smooth it a bit with a median filter
@@ -419,6 +441,7 @@ class D3DShot(Shot):
         return pd.DataFrame({'p_ohm': p_ohm, 'v_loop': v_loop})
 
     @parameter_method
+    @parameter_method
     def get_density_parameters(self):
         ne = np.full(len(self._times), np.nan)
         g_f = ne.copy()
@@ -454,6 +477,7 @@ class D3DShot(Shot):
                 f"[Shot {self._shot_id}]::{traceback.format_exc()}")
         return pd.DataFrame({'n_e': ne, 'Greenwald_fraction': g_f, 'dn_dt': dne_dt})
 
+    @parameter_method
     @parameter_method
     def get_rt_density_parameters(self):
         ne_rt = np.full(len(self._times), np.nan)
@@ -496,6 +520,7 @@ class D3DShot(Shot):
         # ' dne_dt_RT': dne_dt_rt
         return pd.DataFrame({'n_e_RT': ne_rt, 'Greenwald_fraction_RT': g_f_rt})
 
+    @parameter_method
     @parameter_method
     def get_ip_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
@@ -587,6 +612,7 @@ class D3DShot(Shot):
         # 'ip_prog': ip_prog,
         return pd.DataFrame({'ip': ip, 'ip_error': ip_error, 'dip_dt': dip_dt, 'dipprog_dt': dipprog_dt, 'power_supply_railed': power_supply_railed})
 
+    @parameter_method
     @parameter_method
     def get_rt_ip_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
@@ -693,6 +719,7 @@ class D3DShot(Shot):
         return pd.DataFrame({'ip_RT': ip_rt, 'ip_error_RT': ip_error_rt, 'dipprog_dt_RT': dipprog_dt_rt, 'power_supply_railed': power_supply_railed})
 
     @parameter_method
+    @parameter_method
     def get_z_parameters(self):
         """
         On DIII-D the plasma control system uses isoflux
@@ -738,6 +765,7 @@ class D3DShot(Shot):
         return pd.DataFrame({'zcur': z_cur, 'zcur_normalized': z_cur_norm, 'z_prog': z_prog, 'z_error': z_error, 'z_error_normalized': z_error_norm})
 
     @parameter_method
+    @parameter_method
     def get_n1_bradial_parameters(self):
         # The following shots are missing bradial calculations in MDSplus and must be loaded from a separate datafile
         if self._shot_id >= 176030 and self._shot_id <= 176912:
@@ -761,11 +789,15 @@ class D3DShot(Shot):
                 dusbradial, t_n1 = self._get_signal(
                     f"ptdata('onsbradial',{self._shot_id})")
                 dusbradial *= 1.e-4  # [T]
+                    f"ptdata('onsbradial',{self._shot_id})")
+                dusbradial *= 1.e-4  # [T]
             except MdsException as e:
                 self.logger.debug(
                     f"[Shot {self._shot_id}]:{traceback.format_exc()}")
                 try:
                     dusbradial, t_n1 = self._get_signal(
+                        f"ptdata('dusbradial',{self._shot_id})")
+                    dusbradial *= 1.e-4  # [T]
                         f"ptdata('dusbradial',{self._shot_id})")
                     dusbradial *= 1.e-4  # [T]
                 except MdsException as e:
@@ -784,6 +816,7 @@ class D3DShot(Shot):
         return pd.DataFrame({'n_equal_1_normalized': n_equal_1_normalized, 'n_equal_1_mode': n_equal_1_mode})
 
     @parameter_method
+    @parameter_method
     def get_n1rms_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
         n1rms, t_n1rms = self._get_signal(r'\n1rms', interpolate=False)
@@ -791,12 +824,14 @@ class D3DShot(Shot):
         n1rms = interp1(t_n1rms, n1rms, self._times)
         b_tor = self._get_signal(
             "ptdata('bt', {self._shot_id})")  # [T]
+            "ptdata('bt', {self._shot_id})")  # [T]
         n1rms_norm = n1rms / np.abs(b_tor)
         return pd.DataFrame({'n1rms': n1rms, 'n1rms_normalized': n1rms_norm})
 
     # TODO: Need to test and unblock recalculating peaking factors
     # By default get_peaking_factors should grab the data from MDSPlus as opposed to recalculate. See DPP v4 document for details:
     # https://docs.google.com/document/d/1R7fI7mCOkMQGt8xX2nS6ZmNNkcyvPQ7NmBfRPICFaFs/edit?usp=sharing
+    @parameter_method
     @parameter_method
     def get_peaking_factors(self):
         ts_data_type = 'blessed'  # either 'blessed', 'unblessed', or 'ptdata'
@@ -1008,6 +1043,7 @@ class D3DShot(Shot):
                              'te_edge_85to90': te_edge_85to90, 'ne_edge_85to90': ne_edge_85to90, 'te_edge_90to95': te_edge_90to95, 'ne_edge_90to95': ne_edge_90to95, 'te_edge_95to100': te_edge_95to100, 'ne_edge_95to100': ne_edge_95to100, 'te_sep': te_sep, 'ne_sep': ne_sep})
 
     @parameter_method
+    @parameter_method
     def get_zeff_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
         # Get Zeff
@@ -1034,6 +1070,7 @@ class D3DShot(Shot):
         return pd.DataFrame({'z_eff': zeff})
 
     @parameter_method
+    @parameter_method
     def get_kappa_area(self):
         self.conn.openTree(self.efit_tree_name, self._shot_id)
         a_minor = self.conn.get(r'\efit_a_eqdsk:aminor').data()
@@ -1047,16 +1084,19 @@ class D3DShot(Shot):
         return pd.DataFrame({'kappa_area': kappa_area})
 
     @parameter_method
+    @parameter_method
     def get_h_parameters(self):
         h98 = np.full(len(self._times), np.nan)
         self.conn.openTree('transport', self._shot_id)
         h98, t_h98 = self._get_signal(r'\H_THH98Y2')
+        self.conn.openTree('d3d', self._shot_id)
         self.conn.openTree('d3d', self._shot_id)
         h_alpha, t_h_alpha = self._get_signal(r'\fs04')
         h98 = interp1(t_h98, h98, self._times)
         h_alpha = interp1(t_h_alpha, h_alpha, self._times)
         return pd.DataFrame({'H98': h98, 'H_alpha': h_alpha})
 
+    @parameter_method
     @parameter_method
     def get_shape_parameters(self):
         self.conn.openTree(self.efit_tree_name, self._shot_id)
@@ -1236,6 +1276,7 @@ if __name__ == '__main__':
     logger = logging.getLogger('disruption_py')
     logger.setLevel(logging.DEBUG)
     shot = D3DShot(D3D_DISRUPTED_SHOT, 'EFIT05',
+                   disruption_time=4.369214483261109)
                    disruption_time=4.369214483261109)
     print(shot.data.columns)
     print(shot.data.head())
