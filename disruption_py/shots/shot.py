@@ -1,5 +1,6 @@
 from disruption_py.utils import interp1
 import subprocess
+import traceback 
 
 import MDSplus
 from MDSplus import *
@@ -9,6 +10,11 @@ import numpy as np
 import logging
 
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
+
+def parameter_method(func, tags=["default"]):
+    func.populate = True 
+    func.tags = tags
+    return func 
 
 
 class Shot:
@@ -64,7 +70,7 @@ class Shot:
         self.data = data
         if data is None:
             self.data = pd.DataFrame()
-
+    
     @staticmethod
     def get_signal(signal, conn, interpolate=True, interpolation_timebase=None):
         """Get a signal from MDSplus.
@@ -94,10 +100,10 @@ class Shot:
         """
         if isinstance(conn, MDSplus.Tree):
             signal_record = conn.getNode(signal).getData()
-            signal = signal_record.data()
+            signal_data = signal_record.data()
             orig_timebase = signal_record.dim_of(0)
         elif isinstance(conn, MDSplus.Connection):
-            signal = conn.get(signal).data()
+            signal_data = conn.get(signal).data()
             orig_timebase = conn.get(
                 f"dim_of({signal})").data()/1.e3  # [ms] -> [s]
         else:
@@ -110,8 +116,8 @@ class Shot:
             if interpolation_timebase is None:
                 raise ValueError(
                     "interpolation_timebase must be provided if interpolate is True")
-            signal = interp1(orig_timebase, signal, interpolation_timebase)
-        return signal, orig_timebase
+            signal_data = interp1(orig_timebase, signal_data, interpolation_timebase)
+        return signal_data, orig_timebase
 
     def _get_signal(self, signal, conn=None, interpolate=True, interpolation_timebase=None):
         if conn is None:
@@ -161,3 +167,34 @@ class Shot:
                 results[i] = interp1(result.dim_of(
                     0).data(), result.data(), interpolation_timebase)
         return [result.data() for result in results], [result.dim_of(0).data() for result in results]
+
+    def _populate(self,already_populated=False,methods_to_populate='default'):
+        parameters = []
+        if isinstance(methods_to_populate, str):
+            tag = methods_to_populate
+            for method_name in dir(self):
+                method = getattr(self, method_name)
+                if callable(method) and hasattr(method, 'populate'):
+                    if tag not in method.tags:
+                        print(f"Skipping {method_name}")
+                        continue
+                    try: 
+                        parameters.append(method())
+                    except Exception as e:
+                        self.logger.warning(f"Failed to populate {method_name}")
+                        self.logger.debug(f"{traceback.format_exc()}")
+        else:
+            for method_name in methods_to_populate:
+                method = getattr(self, method_name)
+                if callable(method) and hasattr(method, 'populate'):
+                    try: 
+                        parameters.append(method())
+                    except Exception as e:
+                        self.logger.warning(f"Failed to populate {method_name}")
+                        self.logger.debug(f"{traceback.format_exc()}")
+        local_data = pd.concat(parameters, axis=1)
+        local_data = local_data.loc[:, ~local_data.columns.duplicated()]
+        if not already_populated:
+            self.data = local_data
+            self.data['time'] = self._times
+            self.data['shot'] = self._shot_id
