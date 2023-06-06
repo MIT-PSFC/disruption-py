@@ -58,7 +58,8 @@ class D3DShot(Shot):
         self.override_cols = override_cols
         self.data = data
         timebase_signal = kwargs.pop('timebase_signal', None)
-        methods_to_populate = kwargs.pop('populate', 'default')
+        populate_methods = kwargs.pop('populate_methods', None)
+        populate_tags = kwargs.pop('populate_tags', ['all'])
         if self.data is not None and self._times is None:
             try:
                 self._times = self.data['time'].to_numpy()
@@ -73,40 +74,14 @@ class D3DShot(Shot):
                 self._times = self.get_timebase(timebase_signal, **kwargs)
         if self._times is None:
             self._times = self.get_timebase(timebase_signal, **kwargs)
-        self._populate(data is not None, methods_to_populate)
+        self._init_populate(data is not None, populate_methods, populate_tags)
 
-    @staticmethod
-    def get_signals(signals, conn=None, interpolate=True, interpolation_timebase=None):
-        """ See Shot.get_signals. Note that for D3D get_signals assumes that the correct tree has already been loaded on the remote server
-        """
-        if conn is None:
-            conn = MDSplus.Connection('atlas.gat.com')
-            # TODO: Figure out what tree to open
-        if interpolate and not interpolation_timebase:
-            raise ValueError('Missing interpolation timebase')
-        return super().get_signals(signals, conn, interpolate, interpolation_timebase)
-
-    # TODO: Check if redundant
-    def _get_signals(self, signals, interpolate=True, interpolation_timebase=None):
-        if interpolate and not interpolation_timebase:
-            interpolation_timebase = self._times
-        return self.get_signals(signals, self.conn, interpolate, interpolation_timebase)
-
-
+    # TODO: Remove and add "l_mode" tag to relevant methods
     def _populate_l_mode_data(self):
         self.data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(
         ), self.get_peaking_factors(), self.get_kappa_area(), self.get_time_until_disrupt()], axis=1)
         self.data['time'] = self._times
         self.data['shot'] = self._shot_id
-
-    def _populate_shot_data(self, already_populated=False):
-        local_data = pd.concat([self.get_efit_parameters(), self.get_rt_efit_parameters(), self.get_density_parameters(), self.get_rt_density_parameters(), self.get_ip_parameters(
-        ), self.get_rt_ip_parameters(), self.get_power_parameters(), self.get_z_parameters(), self.get_zeff_parameters(), self.get_shape_parameters(), self.get_kappa_area(), self.get_time_until_disrupt()], axis=1)
-        local_data = local_data.loc[:, ~local_data.columns.duplicated()]
-        if not already_populated:
-            self.data = local_data
-            self.data['time'] = self._times
-            self.data['shot'] = self._shot_id
 
     def get_timebase(self, timebase_signal, **kwargs):
         if timebase_signal == None or timebase_signal == 'disruption_timebase':
@@ -1261,5 +1236,4 @@ if __name__ == '__main__':
     shot = D3DShot(D3D_DISRUPTED_SHOT, 'EFIT05',
                    disruption_time=4.369214483261109)
     print(shot.data.columns)
-    # print(shot.data[['te_pf','ne_pf','rad_cva','rad_xdiv']])
     print(shot.data.head())

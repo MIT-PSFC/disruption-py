@@ -142,9 +142,11 @@ class DatabaseHandler:
             raise Exception("Invalid shot class for this handler")
         return None
 
-    def get_shot_data(self, shot_ids=None, cols=None):
+    def get_shot_data(self, shot_ids=None, cols=["*"]):
         shot_ids = ','.join([str(shot_id) for shot_id in shot_ids])
-        cols = ' '.join([f"{col}," for col in cols[:-1]]) + f" {cols[-1]}"
+        cols = f"{cols[0]}" 
+        if len(cols) > 1:
+            cols += ' '.join([f",{col}" for col in cols[1:]]) 
         if cols is None:
             cols = "*"
         if shot_ids is None:
