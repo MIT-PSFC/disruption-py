@@ -11,7 +11,7 @@ import logging
 
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
 
-def parameter_method(func, tags=["default"]):
+def parameter_method(func, tags=["all"]):
     func.populate = True 
     func.tags = tags
     return func 
@@ -170,33 +170,65 @@ class Shot:
                     0).data(), result.data(), interpolation_timebase)
         return [result.data() for result in results], [result.dim_of(0).data() for result in results]
 
-    def _populate(self,already_populated=False,methods_to_populate='default'):
-        parameters = []
-        if isinstance(methods_to_populate, str):
-            tag = methods_to_populate
-            for method_name in dir(self):
-                method = getattr(self, method_name)
-                if callable(method) and hasattr(method, 'populate'):
-                    if tag not in method.tags:
-                        print(f"Skipping {method_name}")
-                        continue
-                    try: 
-                        parameters.append(method())
-                    except Exception as e:
-                        self.logger.warning(f"Failed to populate {method_name}")
-                        self.logger.debug(f"{traceback.format_exc()}")
-        else:
-            for method_name in methods_to_populate:
-                method = getattr(self, method_name)
-                if callable(method) and hasattr(method, 'populate'):
-                    try: 
-                        parameters.append(method())
-                    except Exception as e:
-                        self.logger.warning(f"Failed to populate {method_name}")
-                        self.logger.debug(f"{traceback.format_exc()}")
-        local_data = pd.concat(parameters, axis=1)
-        local_data = local_data.loc[:, ~local_data.columns.duplicated()]
+    def populate_methods(self, methods_to_populate):
+        """Populate the shot object with data from MDSplus.
+
+        Parameters
+        ----------
+        methods_to_populate : list of str
+            List of methods to populate. Each method must be a method of the Shot class
+            and must have a `populate` attribute set to True.
+        """
+        local_data = []
+        for method_name in methods_to_populate:
+            method = getattr(self, method_name)
+            if callable(method) and hasattr(method, 'populate'):
+                self.logger.info(f"Populating {method_name}")
+                try:
+                    local_data.append(method())
+                except Exception as e:
+                    self.logger.warning(f"Failed to populate {method_name}")
+                    self.logger.debug(f"{traceback.format_exc()}")
+            else:
+                self.logger.warning(
+                    f"Method {method_name} is not callable or does not have a `populate` attribute set to True")
+        self.data = pd.concat([self.data, *local_data], axis=1)
+
+    def populate_tags(self, tags):
+        local_data = []
+        for method_name in dir(self):
+            method = getattr(self, method_name)
+            if callable(method) and hasattr(method, 'populate'):
+                if bool(set(method.tags).intersection(tags)):
+                    print(f"[Shot {self._shot_id}]:Skipping {method_name}")
+                    continue
+                try: 
+                    local_data.append(method())
+                except Exception as e:
+                    self.logger.warning(f"[Shot {self._shot_id}]:Failed to populate {method_name}")
+                    self.logger.debug(f"{traceback.format_exc()}")
+        self.data = pd.concat([self.data, local_data], axis=1)
+
+    def _init_populate(self,already_populated, methods, tags):
         if not already_populated:
-            self.data = local_data
+            if self.data is None:
+                self.data = pd.DataFrame()
             self.data['time'] = self._times
             self.data['shot'] = self._shot_id
+        parameters = []
+        for method_name in dir(self):
+            method = getattr(self, method_name)
+            if callable(method) and hasattr(method, 'populate'):
+                if not bool(set(method.tags).intersection(tags)) or (methods is not None and method_name not in methods):
+                    print(f"Skipping {method_name}")
+                    continue
+                try: 
+                    parameters.append(method())
+                except Exception as e:
+                    self.logger.warning(f"[Shot {self._shot_id}]:Failed to populate {method_name}")
+                    self.logger.debug(f"{traceback.format_exc()}")
+        # TODO: This is a hack to get around the fact that some methods return 
+        #       multiple parameters. This should be fixed in the future.
+        local_data = pd.concat(parameters + [self.data], axis=1)
+        local_data = local_data.loc[:, ~local_data.columns.duplicated()]
+        self.data = local_data
