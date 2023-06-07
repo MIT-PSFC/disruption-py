@@ -1,17 +1,15 @@
-import json
-import argparse
-import sys
 import logging
-try:
-    import importlib.resources as importlib_resources
-except ImportError:
-    # Try backported to PY<37 `importlib_resources`.
-    import importlib_resources
+import random
+import os 
 
+import numpy as np
 import pandas as pd 
+from sklearn.model_selection import train_test_split
+from sklearn.impute import SimpleImputer
 
-from disruption_py.utils import generate_id
-import disruption_py.data
+from disruption_py.database import create_d3d_handler, create_cmod_handler, create_east_handler
+from disruption_py.shots import D3DShot, CModShot
+from disruption_py.utils import generate_id, exp_filter
 
 DEFAULT_COLS = [
     #    'ip_error_frac', Use just need to fix bugs
@@ -53,8 +51,6 @@ BLACK_WINDOW_THRESHOLD = 5.e-3
 DEFAULT_RATIO = .2  # Ratio of test data to total data and validation data to train data
 
 LOGGER = logging.getLogger('disruption_py')
-
-
 def create_label(time_until_disrupt, threshold, label_type, multiple_thresholds):
     if label_type == 'binary':
         print(time_until_disrupt)
@@ -94,8 +90,7 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
     elif data_source == 3:
         shots = []
         timebase_signal = kwargs.get('timebase_signal', None)
-        for idx,shot_id in enumerate(shot_ids):
-            percent_complete = idx/len(shot_ids)*100
+        for shot_id in shot_ids:
             try:
                 if tokamak_str == 'd3d':
                     if efit_tree is None:
@@ -106,9 +101,9 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
                                              timebase_signal=timebase_signal, populate=populate))
                 elif tokamak_str == 'cmod':
                     shots.append(CModShot("cmod",shot_id=shot_id))
-                LOGGER.info(f"[Shot {shot_id}]:Generated shot object, {idx} of {len(shot_ids)} ({percent_complete:.1f}% percent complete)' ")
+                LOGGER.info(f"[Shot {shot_id}]:Generated shot object")
             except Exception as e:
-                LOGGER.info(f"[Shot {shot_id}]:Failed to generate shot object, {idx} of {len(shot_ids)} ({percent_complete:.1f}% percent complete)'")
+                LOGGER.info(f"[Shot {shot_id}]:Failed to generate shot object")
                 # exc_type, exc_obj, exc_tb = sys.exc_info()
                 # fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 LOGGER.debug(f"[Shot {shot_id}]:{e}")
@@ -195,7 +190,7 @@ def parse_feature_cols(feature_str):
         all_cols = pd.read_csv(
             feature_str, header=None).iloc[:, 0].values
     else:
-        all_cols = [feature.strip()
+        all_cols = [feature.trim()
                     for feature in feature_str.split(",")]
     feature_cols = []
     derived_feature_cols = []
@@ -206,83 +201,54 @@ def parse_feature_cols(feature_str):
             feature_cols.append(col)
     return feature_cols, derived_feature_cols
 
+# TODO: Clean up this function
+# TODO: Fix issue with None
+def impute_shot_df_NaNs(df, strategy='median', missing_values=np.nan):
+    """
+    This routine imputes missing values for all columns in a given df.
+    Values are imputed on the basis of different shot numbers.
+    It returns a dataframe where all columns that have missing values
+    now have them imputed according to the selected strategy. In addition,
+    for every imputed column, a new flag_ column is added: if an original
+    NaN was in that row, a 1 is there otherwise 0.
+    df:                pandas dataframe;
+    strategy:          kwarg, default is 'median'. Other possible ones are 'mean' or 'nearest';
+    missing_values:    kwarg, default is 'NaN';
+    return df
+    """
 
-def main(args):
-    if args.log:
-        ch = logging.FileHandler(fr'./output/{args.unique_id}.log')
-    else:
-        ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(args.log_level*10)
-    # log_format = '%(asctime)s | %(levelname)s: %(message)s'
-    # ch.setFormatter(logging.Formatter(log_format))
-    LOGGER.addHandler(ch)
-    LOGGER.setLevel(args.log_level*10)
-    print(LOGGER)
-    if args.shotlist is None:
-        with importlib_resources.path(disruption_py.data, "paper_shotlist.txt") as p:
-            args.shotlist = str(p)
-    shot_ids = pd.read_csv(
-        args.shotlist, header=None).iloc[:, 0].values.tolist()
-    print(shot_ids)
-    feature_cols, derived_feature_cols = parse_feature_cols(args.feature_cols)
-    print(feature_cols)
-    dataset_df = get_dataset_df(args.data_source, cols=feature_cols +
-                                REQUIRED_COLS, efit_tree=args.efit_tree, shot_ids=shot_ids, tokamak=args.tokamak, timebase_signal=args.timebase_signal, label=args.label, populate=args.populate)
-    dataset_df = add_derived_features(dataset_df, derived_feature_cols)
-    if args.filter is True:
-        print(args.filter)
-        dataset_df = filter_dataset_df(dataset_df, exclude_non_disruptive=False,
-                                       exclude_black_window=BLACK_WINDOW_THRESHOLD, impute=True)
-    X_train, X_test, y_train, y_test = create_dataset(
-        dataset_df, ratio=DEFAULT_RATIO)
-    dataset_df.to_csv(args.output_dir +
-                      f"whole_df_{args.unique_id}.csv", sep=',', index=False)
-    # df_train_val = pd.concat([X_train, y_train], axis=1)
-    # X_train, X_val, y_train, y_val = create_dataset(df_train_val, ratio=.25)
-    print(X_train.shape, X_test.shape,
-          y_train.shape, y_test.shape)
-    df_train = pd.concat([X_train, y_train], axis=1)
-    df_train.to_csv(args.output_dir +
-                    f"train_{args.unique_id}.csv", sep=',', index=False)
-    # df_val = pd.concat([X_val, y_val], axis=1)
-    # df_val.to_csv(args.output_dir +
-    # f"val_{args.unique_id}.csv", sep=",", index=False)
-    df_test = pd.concat([X_test, y_test], axis=1)
-    df_test.to_csv(args.output_dir +
-                   f"test_{args.unique_id}.csv", sep=',', index=False)
-    with open(args.output_dir + f"generate_datasets_{args.unique_id}.json", "w") as f:
-        json.dump(vars(args), f)
-    print(f"Unique ID for this run: {args.unique_id}")
+    impute = SimpleImputer(missing_values=missing_values,
+                           strategy=strategy, verbose=0)
+    variables = []
+    ordered_names = list(df.columns)
+    cols = [col for col in ordered_names if col not in [
+        'time_until_disrupt', 'label']]
+    for col in cols:
+        if df[col].isnull().values.any():
+            variables.append(col)
 
+    shots = np.unique(df['shot'].values)
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description="Generate DPRF compatible datasets for training and inference. Currently only supports DIII-D data")
-    parser.add_argument('--shotlist', type=str,
-                        help='Path to file specifying shotlist', default=None)
-    parser.add_argument('--tokamak', type=str,
-                        help='Tokamak to use for data source. Currently only supports DIII-D and Alcator C-Mod.', default='d3d')
-    parser.add_argument('--feature_cols', type=str,
-                        help='Either a file or comma-separated list of desired feature columns', default=None)
-    parser.add_argument('--output_dir', type=str,
-                        help='Path to generated data.', default=r'./output/')
-    parser.add_argument('--timebase_signal', type=str,
-                        help='Signal whose timebase will be used as the unifying timebase of the dataset.', default=None)
-    parser.add_argument('--efit_tree', type=str,
-                        help="Name of efit tree to use for each shot. If left as None, the script will use the get_efit_tree method in database.py.", default=None)
-    parser.add_argument('--data_source', type=int, choices=[
-                        0, 1, 2, 3], help=r"0: Default to SQL database then MDSPlus.\n1: Default to MDSPlus then SQL database.\n2: SQL database only.\n3: MDSPlus only.", default=2)
-    parser.add_argument('--unique_id', type=str,
-                        help='Unique identifier for the dataset. Used to name the output files.', default=generate_id())
-    parser.add_argument(
-        '--log', type=bool, help='By default, generate_datasets will log to commandline but if this argument is true it will log to a file in the output directory', default=False)
-    parser.add_argument('--log_level', type=int, choices=[
-                        0, 1, 2, 3, 4, 5], help='Notset:0,Debug:1,Info:2,Warning:3,Error:4,Critical:5', default=2)
-    parser.add_argument('--label', type=str, choices=[
-                        'binary', 'none'], help="Timestep disruption label. Currently only supports binary labels", default='binary')
-    parser.add_argument('--populate', type=str, choices=[
-                        'default', 'l_mode'], help="Options for population at instantiation.", default='default')
-    parser.add_argument(
-        '--filter', type=int, help="Run filter_dataset method on produced dataset. Necessary for generating DPRF datasets", default=1)
-    args = parser.parse_args()
-    main(args)
+    for var in variables:
+        imputed_var = []
+        flag_imputed_nans = []
+
+        for shot in shots:
+            index = np.where(df['shot'].values == shot)[0]
+            original_var = np.array(df[var].values[index], dtype=np.float64)
+            tmp_flag = np.zeros(np.size(original_var))
+            nan_original_var = np.where(np.isnan(original_var))[0]
+            # if the whole column is NaN or more than 50% are NaNs
+            # then the whole shot should be discarded
+            if (np.size(nan_original_var) == np.size(index)) or (np.size(nan_original_var) >= 0.8 * np.size(index)):
+                tmp_var = original_var * np.nan
+                tmp_flag = original_var * np.nan
+            else:
+                tmp_var = impute.fit_transform(original_var.reshape(-1, 1))
+                tmp_flag[nan_original_var] = 1
+
+            imputed_var.extend(np.hstack(tmp_var))
+            flag_imputed_nans.extend(tmp_flag)
+
+        df.loc[:, var] = imputed_var
+    return df
