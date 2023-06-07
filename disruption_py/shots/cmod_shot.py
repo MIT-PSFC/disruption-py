@@ -53,16 +53,25 @@ class CModShot(Shot):
             self._analysis_tree = Tree('efit18', shot_id, mode="readonly")
             self._times = self._analysis_tree.getNode(
                 r"\efit18::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
+            
+            ## EFIT 18 was calculated with a specific timebase (.02 seconds and then .005 close to disruption), and then 
+            ## shots that aren't found in EFIT18 tree are interpolated from the analysis tree.
+
+            ## i.e. if we wanted to make a different timebase, we would overwrite self._times. 
+                ## (EFIT is very computationally intense and requires a lot of operator attention, so we don't want to rerun.)
+
+            print("Using EFIT18")
         except mdsExceptions.TreeFOPENR as e:
             try:
+
                 self._analysis_tree = Tree(
                     'analysis', shot_id, mode="readonly")
                 self._times = self._analysis_tree.getNode(
                     r"\analysis::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
+                print("Using ANALYSIS")
             except mdsExceptions.TreeFOPENR as f:
                 print("WARNING: No EFIT data found")
         self.data = data
-        print(self._times)
         if data is None:
             self.data = pd.DataFrame()
             self._populate_shot_data()
@@ -148,7 +157,7 @@ class CModShot(Shot):
         except Exception as e:
             _if_error("I_efc", e)
         try:
-            self.data['SXR'] = self._get_sxr_parameters()
+            self.data['SXR'] = self._get_sxr_data()
         except Exception as e:
             _if_error("SXR", e)
         try:
