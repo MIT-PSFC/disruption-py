@@ -1583,9 +1583,7 @@ class CModShot(Shot):
         Andrew Maris (maris@mit.edu)
 
         """
-                
-
-        return CModShot.get_H98(self._times, tau, t_tau)       
+                     
         
         #Estimate confinement time
         tau = efit_df.wmhd/(powers_df.p_input - efit_df.dWmhd_dt) 
