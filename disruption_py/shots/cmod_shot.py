@@ -13,6 +13,15 @@ import numpy as np
 import MDSplus
 from MDSplus import *
 
+#For edge paramebers
+import sys
+import scipy as sp
+sys.path.append('/home/sciortino/usr/python3modules/profiletools3')
+sys.path.append('/home/sciortino/usr/python3modules/eqtools3')
+import profiletools
+import eqtools
+import warnings
+
 from disruption_py.utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power
 import disruption_py.data
 
@@ -50,19 +59,18 @@ class CModShot(Shot):
         }
         # Analysis tree has automatically generated Efit data. Efi18 is manually created Efit data
         try:
-            self._analysis_tree = Tree('efit18', shot_id, mode="readonly")
+            self._analysis_tree = Tree('analysis', shot_id, mode="readonly") #was 'efit18' before, not 'analysis
             self._times = self._analysis_tree.getNode(
-                r"\efit18::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
+                r"\analysis::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
         except mdsExceptions.TreeFOPENR as e:
-            try:
-                self._analysis_tree = Tree(
-                    'analysis', shot_id, mode="readonly")
+            try: #THIS DOESN'T WORK!!!! while grabbing ohmic power
+                self._analysis_tree = Tree('efit18', shot_id, mode="readonly")  #was 'analysis' before, not 'efit18'
                 self._times = self._analysis_tree.getNode(
-                    r"\analysis::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
+                    r"\efit18::efit.results.a_eqdsk:time").getData().data().astype('float64', copy=False)
             except mdsExceptions.TreeFOPENR as f:
                 print("WARNING: No EFIT data found")
         self.data = data
-        print(self._times)
+        #print(self._times)
         if data is None:
             self.data = pd.DataFrame()
             self._populate_shot_data()
@@ -75,26 +83,28 @@ class CModShot(Shot):
             self.data['commit_hash'] = self._metadata['commit_hash']
             self.data['time_until_disrupt'] = self._get_time_until_disrupt()
             self.data['beta_n'], self.data['beta_p'], self.data['dbetap_dt'], self.data['kappa'], self.data['upper_gap'], self.data['lower_gap'], self.data['li'], self.data['dli_dt'], self.data[
-                'q0'], self.data['qstar'], self.data['q95'], _, self.data['Wmhd'], self.data['dWmhd_dt'], self.data['ssep'], self.data['n_over_ncrit'] = self._get_EFIT_parameters()
+                'q0'], self.data['qstar'], self.data['q95'], _, self.data['Wmhd'], self.data['dWmhd_dt'], self.data['ssep'], self.data['n_over_ncrit'], self.data['V_surf'] = self._get_EFIT_parameters()
             self.data['ip'], self.data['dip_dt'], self.data['dip_smoothed'], _, self.data[
                 'dipprog_dt'], self.data['ip_error'] = self._get_ip_parameters()
             # self.data['z_error'], _, self.data['zcur'], self.data['v_z'], self.data['z_times_v_z'] = self._get_z_parameters()
-            # self.data['p_oh'], self.data['v_loop'] = self._get_ohmic_parameters()
-            # self.data['p_rad'], self.data['dprad_dt'], self.data['p_lh'], self.data[
-                # 'p_icrf'], self.data['p_input'], self.data['radiated_fraction'] = self._get_power()
+            self.data['p_oh'], self.data['v_loop'] = self._get_ohmic_parameters()
+            self.data['p_rad'], self.data['dprad_dt'], self.data['p_lh'], self.data[
+                'p_icrf'], self.data['p_input'], self.data['radiated_fraction'] = self._get_power()
             self.data['kappa_area'] = self._get_kappa_area()
             self.data['v_0'] = self._get_rotation_velocity()
             # TODO: Populate when shot is missing from calibrated.txt
             self.data['v_0_uncalibrated'] = [np.nan]*len(self.data)
             # TODO: Ask about removing from database
             self.data['v_mid'] = [np.nan]*len(self.data)
-            # self.data['n_equal_1_mode'], self.data['n_equal_1_normalized'], _ = self._get_n_equal_1_amplitude()
-            # self.data['Te_width'] = self._get_Ts_parameters
-            # self.data['ne_peaking'], self.data['Te_peaking'], self.data['pressure_peaking'] = self._get_peaking_factors()
+            self.data['n_equal_1_mode'], self.data['n_equal_1_normalized'], _ = self._get_n_equal_1_amplitude()
+            #self.data['Te_width'] = self._get_Ts_parameters
+            #self.data['ne_peaking'], self.data['Te_peaking'], self.data['pressure_peaking'] = self._get_peaking_factors()
             self.data['n_e'], self.data['dn_dt'], self.data['Greenwald_fraction'] = self._get_densities()
-            # self.data['I_efc'] = self._get_efc_current()
+            #self.data['I_efc'] = self._get_efc_current()
             # self.data['SXR'] = self._get_sxr_parameters()
-            self.data['delta'], self.data['squareness'],self.data['aminor'] = self._get_shape_parameters()
+            self.data['delta'],self.data['aminor'], self,self.data['R0'] ._get_shape_parameters()
+            self.data['Te_edge'],self.data['ne_edge'] = self._get_edge_parameters()
+            #self.data['H98'] = self._get_H98()
         except Exception as e:
             print("WARNING: Could not populate shot data")
             print(e)
@@ -173,7 +183,7 @@ class CModShot(Shot):
         - matlab\cmod_matlab\matlab-core\get_Ip_parameters.m 
         """
         dip = np.gradient(ip, magtime)
-        dip_smoothed = smooth(dip, 11,ends_type=0)
+        dip_smoothed = smooth(dip, 11)#,ends_type=0)
         dipprog_dt = np.gradient(ip_prog, pcstime)
         ip_prog = interp1(pcstime, ip_prog, times,
                           bounds_error=False, fill_value=ip_prog[-1])
@@ -181,7 +191,9 @@ class CModShot(Shot):
         ip = interp1(magtime, ip, times)
         dip = interp1(magtime, dip, times)
         dip_smoothed = interp1(magtime, dip_smoothed, times)
-        ip_error = ip-ip_prog
+        
+        ip_error = (np.abs(ip)-np.abs(ip_prog))*np.sign(ip)
+        #import pdb; pdb.set_trace()
         return ip, dip, dip_smoothed, ip_prog, dipprog_dt, ip_error
 
     def _get_ip_parameters(self):
@@ -399,12 +411,16 @@ class CModShot(Shot):
         inductance = interp1(efittime, inductance, times)
         v_inductive = inductance * dip_smoothed
         v_resistive = v_loop - v_inductive
+        #print(v_resistive[50])
+        #print(v_loop[50])
+        #print(v_inductive[50])
+        #import pdb; pdb.set_trace()
         p_ohm = ip * v_resistive
         return p_ohm, v_loop
 
-    def _get_ohmic_parameters(self):
-        v_loop_record = self._analysis_tree.getNode(r"\top.mflux:v0").getData()
-        v_loop = v_loop_record.data().astype('float64', copy=False)
+    def _get_ohmic_parameters(self):      
+        v_loop_record = self._analysis_tree.getNode(r"\top.mflux:v0").getData() #<-- this line is the culprit for breaking when analysis tree is set to EFIT18
+        v_loop = v_loop_record.data().astype('float64', copy=False) 
         v_loop_time = v_loop_record.dim_of(0)
         if len(v_loop_time) <= 1:
             return None, None
@@ -423,6 +439,11 @@ class CModShot(Shot):
             p_rad = np.array([np.nan]*len(times))  # TODO: Fix
             dprad = p_rad.copy()
         else:
+            p_rad = p_rad*1.0e3 #[W]
+            p_rad = p_rad* 4.5 # Factor of 4.5 comes from cross-calibration with
+                       # 2pi_foil during flattop times of non-disruptive
+                       # shots, excluding times for
+                       # which p_rad (uncalibrated) <= 1.e5 W            
             dprad = np.gradient(p_rad, t_rad)
             p_rad = interp1(t_rad, p_rad, times)
             dprad = interp1(t_rad, dprad, times)
@@ -484,6 +505,8 @@ class CModShot(Shot):
         ).data().astype('float64', copy=False)/100.0  # meters
         n_over_ncrit = -self._analysis_tree.getNode(
             r'\efit_aeqdsk:xnnc').getData().data().astype('float64', copy=False)
+        V_surf = -self._analysis_tree.getNode(
+            r'\efit_aeqdsk:vsurf').getData().data().astype('float64', copy=False)
         beta_p_dot = np.gradient(beta_p, efittime)
         li_dot = np.gradient(li, efittime)
         dWmhd_dt = np.gradient(Wmhd, efittime)
@@ -503,7 +526,8 @@ class CModShot(Shot):
         dWmhd_dt = interp1(efittime, dWmhd_dt, self._times)
         ssep = interp1(efittime, ssep, self._times)
         n_over_ncrit = interp1(efittime, n_over_ncrit, self._times)
-        return beta_N, beta_p, beta_p_dot, kappa, upper_gap, lower_gap, li, li_dot, q0, qstar, q95, V_loop_efit, Wmhd, dWmhd_dt, ssep, n_over_ncrit
+        n_over_ncrit = interp1(efittime, V_surf, self._times)
+        return beta_N, beta_p, beta_p_dot, kappa, upper_gap, lower_gap, li, li_dot, q0, qstar, q95, V_loop_efit, Wmhd, dWmhd_dt, ssep, n_over_ncrit, V_surf
 
     @staticmethod
     def get_kappa_area(times, aminor, area, a_times):
@@ -511,11 +535,16 @@ class CModShot(Shot):
 
     def _get_kappa_area(self):
         aminor = self._analysis_tree.getNode(
-            r'\efit_a_eqdsk:aminor').getData().data().astype('float64', copy=False)
+            r'\efit_aeqdsk:aminor').getData().data().astype('float64', copy=False)
         area = self._analysis_tree.getNode(
-            r'\efit_a_eqdsk:area').getData().data().astype('float64', copy=False)
+            r'\efit_aeqdsk:area').getData().data().astype('float64', copy=False)
         times = self._analysis_tree.getNode(
             r'\efit_aeqdsk:time').getData().data().astype('float64', copy=False)
+        
+        aminor[aminor<=0] = 0.001 #make sure aminor is not 0 or less than 0
+        area[area<=0] = 3.14*0.001**2 #make sure area is not 0 or less than 0
+
+
         return CModShot.get_kappa_area(self._times, aminor, area, times)
 
     @staticmethod
@@ -649,7 +678,7 @@ class CModShot(Shot):
 
     @staticmethod
     def get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
-        if len(n_e) == len(t_n):
+        if len(n_e) != len(t_n):
             nan_arr = np.empty(len(times))
             nan_arr.fill(np.nan)
             return nan_arr, nan_arr.copy(), nan_arr.copy()
@@ -659,6 +688,7 @@ class CModShot(Shot):
         ip = -ip/1e6  # Convert from A to MA and take positive value
         ip = interp1(t_ip, ip, times)
         a_minor = interp1(t_a, a_minor, times)
+        a_minor[a_minor<=0] = 0.001 #make sure aminor is not 0 or less than 0
         n_G = ip/(np.pi*a_minor**2)*1e20  # Greenwald density in m ^-3
         g_f = abs(n_e/n_G)
         return n_e, dn_dt, g_f
@@ -666,7 +696,7 @@ class CModShot(Shot):
     def _get_densities(self):
         try:
             e_tree = Tree('electrons', self._shot_id)
-            n_e_record = e_tree.getNode(r'.tci.results:nl_04/0.6').getData()
+            n_e_record = e_tree.getNode(r'.tci.results:nl_04').getData()
             n_e = n_e_record.data().astype('float64', copy=False)
             t_n = n_e_record.dim_of(0)
             mag_tree = Tree('magnetics', self._shot_id)
@@ -674,12 +704,14 @@ class CModShot(Shot):
             ip = ip_record.data().astype('float64', copy=False)
             t_ip = ip_record.dim_of(0)
             a_tree = Tree('analysis', self._shot_id)
-            a_minor_record = a_tree.getNode(
-                r'.efit.results.a_eqdsk:aminor').getData()
+            a_minor_record = a_tree.getNode(r'.efit.results.a_eqdsk:aminor').getData() 
             t_a = a_minor_record.dim_of(0)
             a_minor = a_minor_record.data().astype('float64', copy=False)
+
         except Exception as e:
+            print(Exception)
             return None, None, None
+
         return CModShot.get_densities(self._times, n_e, t_n, ip, t_ip, a_minor, t_a)
 
     @staticmethod
@@ -736,7 +768,10 @@ class CModShot(Shot):
 
     # TODO: Finish
     @staticmethod
-    def get_peaking_factors():
+    def get_peaking_factors(times,TS_time,ne_PF, Te_PF, pressure_PF):
+        #ne_PF = interp1(TS_time, ne_PF, times, 'linear')
+        #Te_PF = interp1(TS_time, Te_PF, times, 'linear')
+        #pressure_PF = interp1(TS_time, pressure_PF, times, 'linear')
         pass
 
     def _get_peaking_factors(self):
@@ -744,8 +779,9 @@ class CModShot(Shot):
         Te_PF = ne_PF.copy()
         pressure_PF = ne_PF.copy()
         if (self._shot_id > 1120000000 and self._shot_id < 1120213000) or (self._shot_id > 1140000000 and self._shot_id < 1140227000) or (self._shot_id > 1150000000 and self._shot_id < 1150610000) or (self._shot_id > 1160000000 and self._shot_id < 1160303000):
-            return ne_PF, Te_PF, pressure_PF
+            return ne_PF, Te_PF, pressure_PF #Ignore shots on the blacklist
         try:
+            print(f'shot {self._shot_id}')
             efit_tree = Tree('cmod', self._shot_id)
             z0 = 0.01*efit_tree.getNode(r'\efit_aeqdsk:zmagx').getData().data()
             aminor = efit_tree.getNode(r'\efit_aeqdsk:aminor').getData().data()
@@ -753,10 +789,13 @@ class CModShot(Shot):
             efit_time = efit_tree.getNode(
                 r'\efit_aeqdsk:aminor').getData().dim_of(0)
             bminor = aminor*kappa
-            electron_tree = Tree('electroncs', self._shot_id)
+            electron_tree = Tree('electrons', self._shot_id)
+            print('here3')
             node_ext = '.yag_new.results.profiles'
+            print('here3.5')
             nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = self.compare_ts_tci(
                 electron_tree, nlnum=4)
+            print(f'here4')
             TS_te = electron_tree.getNode(
                 f"{node_ext}:te_rz").getData().data()*1000*11600
             tets_edge = electron_tree.getNode(r'\ts_te').getData().data()*11600
@@ -792,7 +831,73 @@ class CModShot(Shot):
                 Te_PF[itimes[i]] = np.mean(Te_arr[core_index])/np.mean(Te_arr)
             Te_PF = interp1(TS_time, Te_PF, self._times)
             calib = np.nan
+            return CModShot.get_Ts_parameters(self._times, TS_time, ne_PF, Te_PF, pressure_PF)
+
+        except mdsExceptions.MdsException as e:
             return ne_PF, Te_PF, pressure_PF
+
+    def _get_peaking_factors_no_tci(self):
+        I#Initialize PFs as empty arrarys        
+        ne_PF = np.full(len(self._times), np.nan)
+        Te_PF = ne_PF.copy()
+        pressure_PF = ne_PF.copy()
+        #Ignore shots on the blacklist
+        if (self._shot_id > 1120000000 and self._shot_id < 1120213000) or (self._shot_id > 1140000000 and self._shot_id < 1140227000) or (self._shot_id > 1150000000 and self._shot_id < 1150610000) or (self._shot_id > 1160000000 and self._shot_id < 1160303000):
+            return ne_PF, Te_PF, pressure_PF 
+        try:            
+            print(f'shot {self._shot_id}')
+            #Get shaping params
+            efit_tree = Tree('cmod', self._shot_id)
+            z0 = 0.01*efit_tree.getNode(r'\efit_aeqdsk:zmagx').getData().data()
+            aminor = efit_tree.getNode(r'\efit_aeqdsk:aminor').getData().data()
+            kappa = efit_tree.getNode(r'\efit_aeqdsk:kappa').getData().data()
+            efit_time = efit_tree.getNode(
+                r'\efit_aeqdsk:aminor').getData().dim_of(0)
+            bminor = aminor*kappa #length of major axis of plasma x-section
+            
+            #Get data from TS
+            electron_tree = Tree('electrons', self._shot_id)
+            node_ext = '.yag_new.results.profiles'
+            print('here3.5')
+            #nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = self.compare_ts_tci(
+            #    electron_tree, nlnum=4)
+            print(f'here4')
+            Te_core = electron_tree.getNode(
+                f"{node_ext}:te_rz").getData().data()*1000*11600 #Get core TS data
+            Te_edge = electron_tree.getNode(r'\ts_te').getData().data()*11600 #Get edge TS data
+            Te = np.concatenate((Te_core, Te_edge)) #Concat core and edge data
+            Te_time = electron_tree.getNode(
+                f"{node_ext}:te_rz").getData().dim_of(0) #Get time associated with 
+            z_core = electron_tree.getNode(
+                f"{node_ext}:z_sorted").getData().data() #Get z position of core TS points
+            z_edge = electron_tree.getNode(r"\fiber_z").getData().data() #Get z position of edge TS points
+            z = np.concatenate((z_core, z_edge)) #Concat core and edge data
+            if len(z_edge) != Te_edge.shape[1]: #Make sure that there are equal numbers of edge position and edge temperature points
+                return ne_PF, Te_PF, pressure_PF
+            Te_PF = Te_PF[:len(Te_time)] #Reshape Te_PF to length of Te_time
+            itimes = np.where(Te_time > 0 & Te_time < self._times[-1]) 
+            bminor = interp1(efit_time, bminor, TS_time) #Interpolate bminor onto desired timebase
+            z0 = interp1(efit_time, z0, TS_time) #Interpolate z0 onto desired timebase
+            for i in range(len(itimes)):
+                Te_arr = Te[itimes[i], :] 
+                indx = np.where(Te_arr > 0)
+                if len(indx) < 10:
+                    continue
+                Te_arr = Te_arr[indx]
+                TS_z_arr = z[indx]
+                sorted_indx = np.argsort(TS_z_arr) #Sort by z
+                Ts_z_arr = Ts_z_arr[sorted_indx] 
+                Te_arr = Te_arr[sorted_indx] #Sort by z
+                z_arr = np.linspace(z0[itimes[i]], TS_z_arr[-1], len(Ts_z_arr))
+                Te_arr = interp1(TS_z_arr, Te_arr, z_arr)
+                core_index = np.where(z_arr < (
+                    z0[itimes[i]] + .2*bminor[itimes[i]]) & z_arr > (z0[itimes[i]] - .2*bminor[itimes[i]]))
+                if len(core_index) < 2:
+                    continue
+                Te_PF[itimes[i]] = np.mean(Te_arr[core_index])/np.mean(Te_arr)
+            Te_PF = interp1(TS_time, Te_PF, self._times)
+            calib = np.nan
+            return CModShot.get_Ts_parameters(self._times, TS_time, ne_PF, Te_PF, pressure_PF)
 
         except mdsExceptions.MdsException as e:
             return ne_PF, Te_PF, pressure_PF
@@ -812,12 +917,15 @@ class CModShot(Shot):
         ts_time2 = [1e32]
         tci_time = electron_tree.getNode(
             ".YAG_NEW.RESULTS.PROFILES:NE_RZ").getData().dim_of(0)
-        tci_record = electron_tree.getNode(".TCI.RESULTS:NL_{nlnum:02d}")
+        tci_record = electron_tree.getNode(f".TCI.RESULTS:NL_{nlnum:02d}")
         tci = tci_record.data()
         tci_t = tci_record.dim_of(0)
+        print('HERE5')
         nlts, nlts_t = self.integrate_ts_tci(nlnum)
+        print('HERE6')
         t0 = np.amin(nlts_t)
         t1 = np.amax(nlts_t)
+        print('HERE7')
         nyag1, nyag2, indices1, indices2 = self.parse_yags()
         if nyag1 > 0:
             indices1 += 1
@@ -839,6 +947,7 @@ class CModShot(Shot):
                 time2 = ts_time2[valid_indices]
         else:
             time2 = -1
+        print('HERE8')
         return nl_ts1, nl_ts2, nl_tci1, nl_tci2, time1, time2
 
     def parse_yags(self):
@@ -888,7 +997,9 @@ class CModShot(Shot):
         edge_mult = 1.0
         nlts = 1e32
         nlts_t = 1e32
+        print('innerHERE0')
         t, z, n_e, n_e_sig = self.map_ts2tci(nlnum)
+        print('innerHERE1')
         if z[0, 0] == 1e32:
             return None, None  # TODO: Log and maybe return nan arrs
         nts = len(t)
@@ -915,14 +1026,20 @@ class CModShot(Shot):
         n_e = [1e32]
         n_e_sig = [1e32]
         flag = 1
+        print('innnerINNERHERE-5')
         valid_indices, efit_times = self.efit_check()
+        print('innnerINNERHERE-4')
         cmod_tree = Tree('cmod', self._shot_id)
+        print('innnerINNERHERE-3')
         ip = cmod_tree.getNode(r'\ip').getData().data()
+        print('innnerINNERHERE-2')
         if np.mean(ip) > 0:
             flag = 0
         t1 = np.amin(efit_times)
         t2 = np.amax(efit_times)
+        print('innnerINNERHERE-1')
         analysis_tree = Tree('analysis', self._shot_id)
+        print('innnerINNERHERE0')
         psia = analysis_tree.getNode(r'\efit_aeqdsk:SIBDRY').getData().data()
         psia_t = analysis_tree.getNode(
             r'\efit_aeqdsk:SIBDRY').getData().dim_of(0)
@@ -939,6 +1056,7 @@ class CModShot(Shot):
         mts_core = len(zts_core)
         zts_edge = electron_tree.getNode(r'\fiber_z').getData().data()
         mts_edge = len(zts_edge)
+        print('innerINNERHERE1')
         try:
             nets_edge = electron_tree.getNode(r'\ts_ne').getData().data()
             nets_edge_err = electron_tree.getNode(
@@ -1024,43 +1142,52 @@ class CModShot(Shot):
         # TODO: Get description from Jinxiang
         """
         analysis_tree = Tree('analysis', self._shot_id)
+        print('innerINNERinnerHERE1')
         values = analysis_tree.getNode(
-            '_lf=\analysis::efit_aeqdsk:lflag,_l0=((sum(_lf,1) - _lf[*,20] - _lf[*,1])==0),_n=\analysis::efit_fitout:nitera,(_l0 and (_n>4))').getData().data()
+            r'_lf=\analysis::efit_aeqdsk:lflag',r'_l0=((sum(_lf,1) - _lf[*,20] - _lf[*,1])==0)',r'_n=\analysis::efit_fitout:nitera,(_l0 and (_n>4))').getData().data()
+        print('innerINNERinnerHERE2')
         valid_indices = np.nonzero(values)
+        print('innerINNERinnerHERE3')
         times = analysis_tree.getNode('_lf').getData().dim_of(0)
+        print('innerINNERinnerHERE4')
         return valid_indices, times[valid_indices]
 
     @staticmethod
-    def get_shape_parameters(times, sqfod, sqfou, tritop, tribot, aminor, chisq, efit_time):
+    def get_shape_parameters(times, tritop, tribot, aminor, R0, chisq, efit_time):
         # Compute triangularity and squareness:
         delta = (tritop+tribot)/2.0
-        squareness = (sqfod+sqfou)/2.0
+        #squareness = (sqfod+sqfou)/2.0
 
         # Remove invalid indices
         invalid_indices = np.where(chisq > 50)
         delta[invalid_indices] = np.nan
-        squareness[invalid_indices] = np.nan
+        #squareness[invalid_indices] = np.nan
         aminor[invalid_indices] = np.nan
+        R0[invalid_indices] = np.nan
 
         # Interpolate to desired times
         delta = interp1(efit_time, delta, times, 'linear',
                         bounds_error=False, fill_value=np.nan)
-        squareness = interp1(efit_time, squareness, times,
-                             'linear', bounds_error=False, fill_value=np.nan)
+        #squareness = interp1(efit_time, squareness, times,
+        #                     'linear', bounds_error=False, fill_value=np.nan)
         aminor = interp1(efit_time, aminor, times,
                          'linear', bounds_error=False, fill_value=np.nan)
-        return delta, squareness, aminor
+        R0 = interp1(efit_time, R0, times,
+                         'linear', bounds_error=False, fill_value=np.nan)
+
+        return delta, aminor, R0
     
     def _get_shape_parameters(self):
         efittime = self._analysis_tree.getNode(r'\efit_aeqdsk:time')
-        sqfod = self._analysis_tree.getNode(r'\efit_a_eqdsk:sqfod').getData().data()
-        sqfou = self._analysis_tree.getNode(r'\efit_a_eqdsk:sqfou').getData().data()
-        tritop = self._analysis_tree.getNode(r'\efit_a_eqdsk:tritop').getData().data()  # meters
-        tribot = self._analysis_tree.getNode(r'\efit_a_eqdsk:tribot').getData().data()  # meters
+        #sqfod = self._analysis_tree.getNode(r'\efit_aeqdsk:sqfod').getData().data()
+        #sqfou = self._analysis_tree.getNode(r'\efit_aeqdsk:sqfou').getData().data()
+        tritop = self._analysis_tree.getNode(r'\efit_aeqdsk:doutu').getData().data()  # meters
+        tribot = self._analysis_tree.getNode(r'\efit_aeqdsk:doutl').getData().data()  # meters
         # plasma minor radius [m]
-        aminor = self._analysis_tree.getNode(r'\efit_a_eqdsk:aminor').getData().data()
-        chisq = self._analysis_tree.getNode(r'\efit_a_eqdsk:chisq').getData().data()
-        return self.get_shape_parameters(self._times, sqfod, sqfou, tritop, tribot, aminor, chisq, efittime)
+        aminor = self._analysis_tree.getNode(r'\efit_aeqdsk:aminor').getData().data()
+        R0 = self._analysis_tree.getNode(r'\efit_aeqdsk:rout').getData().data() # major radius of geometric center [m]
+        chisq = self._analysis_tree.getNode(r'\efit_aeqdsk:chisq').getData().data()
+        return self.get_shape_parameters(self._times, tritop, tribot, aminor, R0, chisq, efittime)
     
     @staticmethod
     def get_sxr_parameters():
@@ -1083,6 +1210,200 @@ class CModShot(Shot):
 
     def __getitem__(self, key):
         return self._metadata if key == 'metadata' else self.data[key]
+
+    @staticmethod
+    def get_edge_parameters(times, p_Te, p_ne,edge_rho_min=0.85,edge_rho_max=0.95):
+        """Compute the edge Temperature and edge Density signal from the TS.
+
+        Parameters
+        ----------
+        times : array_like
+            The times at which to calculate the edge parameters.
+        p_Te : BivariatePlasmaProfile
+            The Te measurements [keV] in terms of the time and rho of the measurment.
+        ne : BivariatePlasmaProfile
+            The ne measurements [keV] in terms of the time and rho of the measurment.
+        edge_rho_min : float [0,1]
+            The rho that defines the minimum of the "edge" region
+        edge_rho_max : float [0,1]
+            The rho that defines the maximum of the "edge" region
+
+        Returns
+        -------
+        Te_edge : array_like
+            The edge temperature (averaged over the edge region) on the requested timebase.
+        ne_edge : array_like
+            The edge density (averaged over the edge region) on the requested timebase.
+
+        Original Authors
+        ----------------
+        Andrew Maris (maris@mit.edu)
+
+
+        """
+        #Base of rho to interpolate onto
+        rhobase=np.arange(0,1,0.001)
+        
+        #Linear interpolate on time and rho
+        Te_interpolator = sp.interpolate.LinearNDInterpolator((p_Te.X[:,0],p_Te.X[:,1]), p_Te.y) 
+        ne_interpolator = sp.interpolate.LinearNDInterpolator((p_ne.X[:,0],p_ne.X[:,1]), p_ne.y) 
+        
+        #Create mesh to compute interpolation over
+        timebase_mesh, rhobase_mesh = np.meshgrid(times,rhobase)
+        #Compute interpolated values
+        Te_interp = Te_interpolator(timebase_mesh,rhobase_mesh)
+        ne_interp = ne_interpolator(timebase_mesh,rhobase_mesh)
+
+        plotting=False
+        if plotting:
+            import matplotlib.pyplot as plt
+            plt.ion()
+            plt.pcolormesh(timebase_mesh, rhobase_mesh, Te_interp, shading='auto')
+            plt.plot(p_Te.X[:,0],p_Te.X[:,1], "ok", label="input point")
+            plt.legend()
+            plt.colorbar()
+            plt.show(block=True)
+
+        ########### Compute Te_edge
+        #Make mask for rho in edge region
+        rhobase_mesh_mask = (rhobase_mesh >= edge_rho_min) & (rhobase_mesh <= edge_rho_max)#((rhobase_mesh >= edge_rho_min) & (rhobase_mesh <= edge_rho_max))
+        #Assert that rho values are indeed in desired range
+        assert np.all(rhobase_mesh[rhobase_mesh_mask]>= edge_rho_min)
+        assert np.all(rhobase_mesh[rhobase_mesh_mask]<= edge_rho_max)
+        #Use mask to get only edge values
+
+        
+
+        Te_interp_edge=np.where(rhobase_mesh_mask,Te_interp,np.nan) 
+        ne_interp_edge=np.where(rhobase_mesh_mask,ne_interp,np.nan)
+        #ne_interp_edge=ne_interp[rhobase_mesh_mask].reshape((num_edge_points,len(timebase)))
+        #Compute edge quantities
+        #print(f'rhobase_mesh.shape {rhobase_mesh.shape}')
+        #print(f'rhobase_mesh_mask {rhobase_mesh_mask}')
+        #print(f'rhobase_mesh_mask {rhobase_mesh_mask}')
+        #print(f'Te_interp.shape, {Te_interp.shape}')
+        #print(f'Te_interp_edge.shape. {Te_interp_edge.shape}')
+
+        with warnings.catch_warnings(): #Carch warning about taking nanmean of an empty array. This is ok because we want it to return nan for empty arrays
+            warnings.filterwarnings("ignore", category=RuntimeWarning)
+            Te_edge = np.nanmean(Te_interp_edge,axis=0) 
+            ne_edge = np.nanmean(ne_interp_edge,axis=0) 
+        assert len(Te_edge) == len(times)
+        assert len(ne_edge) == len(times)
+
+        if plotting:
+            plt.plot(times,Te_edge,label='Te_edge')
+            plt.plot(times,ne_edge,label='ne_edge')
+            plt.legend()
+            plt.show(block=True)
+
+        return Te_edge, ne_edge
+
+    def _get_edge_parameters(self):
+
+        #Ignore shots on the blacklist
+        if (self._shot_id > 1120000000 and self._shot_id < 1120213000) or (self._shot_id > 1140000000 and self._shot_id < 1140227000) or (self._shot_id > 1150000000 and self._shot_id < 1150610000) or (self._shot_id > 1160000000 and self._shot_id < 1160303000):
+            return None, None 
+        
+
+
+        #Range of rho to interpolate over
+        rhobase=np.arange(0,1,0.001)
+        #Get mina and max time from TS tree
+        electron_tree = Tree("electrons", self._shot_id)
+        node_path = ".yag_new.results.profiles"
+        try:
+            ts_time = electron_tree.getNode(
+                node_path + ":te_rz").getData().dim_of(0)
+        except:
+            return None, None
+
+
+        t_min = np.max([0.1,np.min(ts_time)])
+        t_max = np.max(ts_time)
+        #print(f't_min {t_min}')
+        #print(f't_max {t_max}')
+        
+        
+        # Get core and edge Thomson profiles over rho := sqrtpsinorm
+        p_Te= profiletools.Te(self._shot_id, include=['CTS','ETS'], abscissa='sqrtpsinorm',
+			        t_min=t_min,t_max=t_max, remove_zeros=True)
+        p_ne= profiletools.ne(self._shot_id, include=['CTS','ETS'], abscissa='sqrtpsinorm',
+			        t_min=t_min,t_max=t_max, remove_zeros=True)
+
+        #try:
+	    #    equal_R = p_ne.X[:,1] == p_Te.X[:,1]
+	    #    assert np.sum(equal_R) == len(p_ne.X[:,1])
+        #except:
+	    #    raise ValueError('Edge Thomson rhobase differs between ne and Te')
+	    #    return None, None
+
+        # consider only flux surface on which points were measured, regardless of LFS or HFS
+        p_Te.X=np.abs(p_Te.X)
+        p_ne.X=np.abs(p_ne.X)
+
+        # set some minimum uncertainties. Recall that units in objects are 1e20m^{-3} and keV
+        p_ne.y[p_ne.y<=0.] = 0.01  # 10^18 m^-3
+        p_Te.y[p_Te.y<=0.01] = 0.01 # 10 eV
+        p_ne.err_y[p_ne.err_y<=0.01] = 0.01 # 10^18 m^-3
+        p_Te.err_y[p_Te.err_y<=0.02] = 0.02 # 20 eV
+
+        # points in the pedestal that have x uncertainties larger than 0.1 don't help at all
+        # do this filtering here because filtering of err_X only works before time-averaging
+        p_ne.remove_points(np.logical_and(p_ne.X[:,1]>0.9, p_ne.err_X[:,1]>0.1))
+        p_Te.remove_points(np.logical_and(p_Te.X[:,1]>0.9, p_Te.err_X[:,1]>0.1))
+
+        # cleanup of low Te values
+        p_Te.remove_points(np.logical_and(p_Te.X[:,0]<1.03, p_Te.y<0.015))  # TS Te should be >15 eV inside near SOL
+
+        return CModShot.get_edge_parameters(self._times, p_Te, p_ne)
+    
+    @staticmethod
+    def get_H98(times, tau, t_tau):
+        """Compute H98
+
+        Parameters
+        ----------
+        times : array_like
+            The times at which to calculate the H98.
+        tau : array_like
+            Energy confinement time 
+
+
+        Returns
+        -------
+        H98 : array_like
+            H98 interpolated on the requested timebase.
+
+        Original Authors
+        ----------------
+        Andrew Maris (maris@mit.edu)
+
+        """
+        #Take R = 0.68 [m], A = 2
+
+        tau_98 = 0.144*self.data['n_e']**0.41*2**0.19*self.data['ip']**0.93*self.data['R0']**1.39*self.data['aminor']**0.58*self.data['kappa']**0.78*self.data['BT']**0.15*self.data['p_input']**-0.69
+        tau = interp1(t_tau, tau, times)
+        H98 = tau/tau_98
+
+        return H98
+
+
+
+def _get_H98(self):
+        """Prepare to compute H98 by getting tau_E
+
+
+
+        Original Authors
+        ----------------
+        Andrew Maris (maris@mit.edu)
+
+        """
+                
+
+        return CModShot.get_H98(self._times, tau, t_tau)       
+        
 
 
 if __name__ == '__main__':

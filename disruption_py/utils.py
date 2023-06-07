@@ -184,9 +184,47 @@ def smooth(arr: np.ndarray, window_size: int) -> np.ndarray:
     end = (np.cumsum(arr[:-window_size:-1])[::2]/b_weights)[::-1]
     return np.concatenate((start, mid, end))
 
+def gauss_smooth(y, smooth_width, ends_type):
+    """
+    Smooth a dataset using a Gaussian window.
+
+    Parameters
+    ----------
+    y : array_like
+        The y coordinates of the dataset.
+    smooth_width : int
+        The width of the smoothing window.
+    ends_type : int
+        Determines how the "ends" of the signal are handled.
+        0 -> ends are "zeroed"
+        1 -> the ends are smoothed with progressively smaller smooths the closer to the end.
+
+    Returns
+    -------
+    array_like
+        The smoothed dataset.
+    """
+    w = np.round(smooth_width)
+    w = int(w)  # Ensure w is an integer
+    l = len(y)
+    s = np.zeros(l)
+
+    for i in range(l):
+        if i < w // 2:
+            if ends_type == 0:
+                s[i] = 0
+            else:
+                s[i] = np.mean(y[:i + w // 2])
+        elif i >= l - w // 2:
+            if ends_type == 0:
+                s[i] = 0
+            else:
+                s[i] = np.mean(y[i - w // 2:])
+        else:
+            s[i] = np.mean(y[i - w // 2:i + w // 2])
+    return s
+
 # Credit to: https://stackoverflow.com/questions/11507028/fit-a-gaussian-function
-
-
 def gaussian_fit(x, y):
     """
     Fits a Gaussian curve to a set of data points (x,y).
@@ -341,37 +379,37 @@ def fastsmooth(y, w, smooth_type=1, ends_type=0):
     return smoothed_y
 
 
-def smooth(y, smooth_width, ends_type):
-    """
-    Smooth a dataset using a Gaussian window.
-
-    Parameters
-    ----------
-    y : array_like
-        The y coordinates of the dataset.
-    smooth_width : int
-        The width of the smoothing window.
-    ends_type : int
-        Determines how the "ends" of the signal are handled.
-        0 -> ends are "zeroed"
-        1 -> the ends are smoothed with progressively smaller smooths the closer to the end.
-
-    Returns
-    -------
-    array_like
-        The smoothed dataset.
-    """
+#def smooth(y, smooth_width, ends_type):
+#    """
+#    Smooth a dataset using a Gaussian window.
+#
+#    Parameters
+#    ----------
+#    y : array_like
+#        The y coordinates of the dataset.
+#    smooth_width : int
+#        The width of the smoothing window.
+#    ends_type : int
+#        Determines how the "ends" of the signal are handled.
+#        0 -> ends are "zeroed"
+#        1 -> the ends are smoothed with progressively smaller smooths the closer to the end.
+#
+#    Returns
+#    -------
+#    array_like
+#        The smoothed dataset.
+#    """
     # NOTE: numpy behaviour is different than matlab and will round X.5 to nearest even value instead of value farther away from 0
-    w = np.round(smooth_width)
-    sum_points = np.sum(y[:w])
-    s = np.zeros(y.shape)
-    half_w = int(np.round(w/2.0))
-    l = len(y)
-    for i in range(l-w):
-        s[i+half_w-1] = sum_points
-        sum_points = sum_points - y[i]
-    s[i+half_w] = np.sum(y[l-w:l])
-    return s/w
+#    w = np.round(smooth_width)
+#    sum_points = np.sum(y[:w])
+#    s = np.zeros(y.shape)
+#    half_w = int(np.round(w/2.0))
+#    l = len(y)
+#    for i in range(l-w):
+#        s[i+half_w-1] = sum_points
+#        sum_points = sum_points - y[i]
+#    s[i+half_w] = np.sum(y[l-w:l])
+#    return s/w
 
 
 # TODO: Cover documentation with Cristina
