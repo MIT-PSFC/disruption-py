@@ -1,9 +1,5 @@
-import sys
-sys.path.insert(1, '..')
-sys.path.insert(1, '../src')
-from src import database
-
-data_handler = database.DatabaseHandler.create_cmod_handler()
+from disruption_py.database import create_cmod_handler
+data_handler = create_cmod_handler()
 disruptions_df = data_handler.query("select * from disruption_warning order by time",use_pandas=True)
 grouped_df = disruptions_df.drop(columns=['commit_hash']).groupby(by=["shot"])
 percent_nan = grouped_df.apply(lambda group: group.isnull().sum()*100/len(group))

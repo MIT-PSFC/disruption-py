@@ -5,10 +5,8 @@ https://docs.python.org/3/library/profile.html
 
 """
 
-import cProfile
 import profile
 import pstats
-import io
 import argparse
 from pstats import SortKey
 
