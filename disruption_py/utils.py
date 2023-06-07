@@ -509,37 +509,37 @@ def fastsmooth(y, w, smooth_type=1, ends_type=0):
     return smoothed_y
 
 
-def smooth(y, smooth_width, ends_type):
-    """
-    Smooth a dataset using a Gaussian window.
-
-    Parameters
-    ----------
-    y : array_like
-        The y coordinates of the dataset.
-    smooth_width : int
-        The width of the smoothing window.
-    ends_type : int
-        Determines how the "ends" of the signal are handled.
-        0 -> ends are "zeroed"
-        1 -> the ends are smoothed with progressively smaller smooths the closer to the end.
-
-    Returns
-    -------
-    array_like
-        The smoothed dataset.
-    """
+#def smooth(y, smooth_width, ends_type):
+#    """
+#    Smooth a dataset using a Gaussian window.
+#
+#    Parameters
+#    ----------
+#    y : array_like
+#        The y coordinates of the dataset.
+#    smooth_width : int
+#        The width of the smoothing window.
+#    ends_type : int
+#        Determines how the "ends" of the signal are handled.
+#        0 -> ends are "zeroed"
+#        1 -> the ends are smoothed with progressively smaller smooths the closer to the end.
+#
+#    Returns
+#    -------
+#    array_like
+#        The smoothed dataset.
+#    """
     # NOTE: numpy behaviour is different than matlab and will round X.5 to nearest even value instead of value farther away from 0
-    w = np.round(smooth_width)
-    sum_points = np.sum(y[:w])
-    s = np.zeros(y.shape)
-    half_w = int(np.round(w/2.0))
-    l = len(y)
-    for i in range(l-w):
-        s[i+half_w-1] = sum_points
-        sum_points = sum_points - y[i]
-    s[i+half_w] = np.sum(y[l-w:l])
-    return s/w
+#    w = np.round(smooth_width)
+#    sum_points = np.sum(y[:w])
+#    s = np.zeros(y.shape)
+#    half_w = int(np.round(w/2.0))
+#    l = len(y)
+#    for i in range(l-w):
+#        s[i+half_w-1] = sum_points
+#        sum_points = sum_points - y[i]
+#    s[i+half_w] = np.sum(y[l-w:l])
+#    return s/w
 
 
 # TODO: Cover documentation with Cristina
