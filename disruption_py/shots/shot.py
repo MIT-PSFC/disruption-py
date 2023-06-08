@@ -170,6 +170,12 @@ class Shot:
                     0).data(), result.data(), interpolation_timebase)
         return [result.data() for result in results], [result.dim_of(0).data() for result in results]
 
+    def apply_shot_filter(self, shot_filter):
+        self.data = self.data.filter(shot_filter)
+    
+    def apply_shot_transform(self, shot_transform):
+        self.data = self.data.apply(shot_transform)
+
     def populate_methods(self, methods_to_populate):
         """Populate the shot object with data from MDSplus.
 
