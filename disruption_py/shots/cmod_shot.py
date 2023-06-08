@@ -16,10 +16,15 @@ from MDSplus import *
 #For edge paramebers
 import sys
 import scipy as sp
-sys.path.append('/home/sciortino/usr/python3modules/profiletools3')
-sys.path.append('/home/sciortino/usr/python3modules/eqtools3')
-import profiletools
-import eqtools
+#TODO: Please make these exportable in some way
+try:
+    sys.path.append('/home/sciortino/usr/python3modules/profiletools3')
+    sys.path.append('/home/sciortino/usr/python3modules/eqtools3')
+    import profiletools
+    import eqtools
+except ImportError:
+    print('Could not import profiletools or eqtools')
+    pass
 import warnings
 
 from disruption_py.utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power
@@ -154,7 +159,7 @@ class CModShot(Shot):
 
         Sources
         -------
-        - matlab\cmod_matlab\matlab-core\get_Ip_parameters.m 
+        - matlab/cmod_matlab/matlab-core/get_Ip_parameters.m 
         """
         dip = np.gradient(ip, magtime)
         dip_smoothed = smooth(dip, 11)#,ends_type=0)
@@ -255,7 +260,7 @@ class CModShot(Shot):
 
             Sources
             -------
-            - matlab\cmod_matlab\matlab-core\get_Z_parameters.m
+            - matlab/cmod_matlab/matlab-core/get_Z_parameters.m
 
         """
         z_error = z_error_without_ip/ip  # [m]
