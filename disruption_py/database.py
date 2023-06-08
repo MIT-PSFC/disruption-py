@@ -142,7 +142,7 @@ class DatabaseHandler:
             raise Exception("Invalid shot class for this handler")
         return None
 
-    def get_shot_data(self, shot_ids=None, cols=["*"]):
+    def get_shot_data(self, shot_ids=None, cols=["*"], sql_table="disruption_warning"):
         shot_ids = ','.join([str(shot_id) for shot_id in shot_ids])
         cols = f"{cols[0]}" 
         if len(cols) > 1:
@@ -191,6 +191,16 @@ class DatabaseHandler:
         t_disrupt = t_disrupt[0][0]
         return t_disrupt
 
+    def get_disruption_time(self, shot_id):
+        with self.conn.cursor() as curs:
+            curs.execute(
+                f"select t_disrupt from disruptions where shot = {shot_id}")
+            t_disrupt = curs.fetchall()
+        if len(t_disrupt) == 0:
+            return None
+        t_disrupt = t_disrupt[0][0]
+        return t_disrupt
+
     def get_disruption_shotlist(self):
         """ 
         Get pandas dataframe of all disruptive shots and times from the disruption table. Can be sed as a cross-reference to determine whether a given shot is disruptive or not (all shots in this table are disruptive) and contain a t_disrupt.  
@@ -203,22 +213,6 @@ class DatabaseHandler:
         """
         return self.query('select distinct shot from disruption_warning order by shot')
 
-class CModHandler(DatabaseHandler):
-    def get_shot(self, shot_id, efit_tree=None):
-        shot_id = int(shot_id)
-        data_df = pd.read_sql_query(
-            f"select * from disruption_warning where shot = {shot_id} order by time", self.conn)
-        if efit_tree is None:
-            efit_tree = self.get_efit_tree(shot_id)
-            if efit_tree is None:
-                logging.info(
-                    f"Shot {shot_id} has no disruptions group efit run")
-                return None
-        return CModShot(shot_id, data=data_df,disruption_time=self.get_disruption_time(shot_id))
-
-    # TODO: Make more efficient
-    def get_shots(self, shot_ids, efit_tree=None):
-        return [self.get_shot(shot_id, efit_tree) for shot_id in shot_ids] 
 class CModHandler(DatabaseHandler):
     def get_shot(self, shot_id, efit_tree=None):
         shot_id = int(shot_id)
@@ -347,6 +341,7 @@ def create_cmod_handler():
         db_driver_path = str(p)  # Absolute path to jar file
     logging.debug(db_driver_path)
     logging.debug(os.getcwd())
+    return CModHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver", db_driver_path, f"jdbc:sqlserver://{db_server}.psfc.mit.edu: 1433", db_username, db_password, shot_class=CModShot)
     return CModHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver", db_driver_path, f"jdbc:sqlserver://{db_server}.psfc.mit.edu: 1433", db_username, db_password, shot_class=CModShot)
 
 

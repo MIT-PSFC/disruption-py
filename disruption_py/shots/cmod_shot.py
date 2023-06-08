@@ -1,8 +1,6 @@
 import traceback
-import logging 
-import argparse 
 
-from disruption_py.shots.shot import Shot, parameter_method
+from disruption_py.shots.shot import Shot,parameter_method
 try:
     import importlib.resources as importlib_resources
 except ImportError:
@@ -34,37 +32,32 @@ import warnings
 from disruption_py.utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power
 import disruption_py.data
 
-MAX_SHOT_TIME = 7.0  # [s]
-CMOD_DISRUPTED_SHOT = 1120814006
-
-
+MAX_SHOT_TIME = 7.0 # [s]
 class CModShot(Shot):
     """
     Class for a single CMod shot.
 
     """
     efit_cols = {"beta_n": r'\efit_aeqdsk:betan',
-                 "beta_p": r'\efit_aeqdsk:betap',
-                 "kappa": r'\efit_aeqdsk:eout',
-                 "li": r'\efit_aeqdsk:li',
-                 "upper_gap": r'\efit_aeqdsk:otop',
-                 "lower_gap": r'\efit_aeqdsk:obott',
-                 "q0": r'\efit_aeqdsk:q0',
-                 "qstar": r'\efit_aeqdsk:qstar',
-                 "q95": r'\efit_aeqdsk:q95',
-                 "v_loop_efit": r'\efit_aeqdsk:vloopt',
-                 "Wmhd": r'\efit_aeqdsk:wplasm',
-                 "ssep": r'\efit_aeqdsk:ssep',
-                 "n_over_ncrit": r'\efit_aeqdsk:xnnc',
+                 "beta_p":r'\efit_aeqdsk:betap',
+                 "kappa":r'\efit_aeqdsk:eout',
+                 "li":r'\efit_aeqdsk:li',
+                 "upper_gap":r'\efit_aeqdsk:otop',
+                 "lower_gap":r'\efit_aeqdsk:obott',
+                 "q0":r'\efit_aeqdsk:q0',
+                 "qstar":r'\efit_aeqdsk:qstar',
+                 "q95":r'\efit_aeqdsk:q95',
+                 "v_loop_efit":r'\efit_aeqdsk:vloopt',
+                 "Wmhd":r'\efit_aeqdsk:wplasm',
+                 "ssep":r'\efit_aeqdsk:ssep',
+                 "n_over_ncrit":r'\efit_aeqdsk:xnnc',
                  "v_surf": r'\efit_aeqdsk:vsurf'}
     efit_derivs = {'beta_p': 'dbetap_dt', 'li': 'dli_dt', 'Wmhd': 'dWmhd_dt'}
 
     # TODO: Populate metadata dict
-    def __init__(self, shot_id, efit_tree_name='analysis', data=None, times=None, disruption_time=None, override_cols=True, **kwargs):
+    def __init__(self, shot_id, data=None, times=None, disruption_time=None, override_cols=True, **kwargs):
         super().__init__(shot_id, data)
         self._times = times
-        self.efit_tree_name = efit_tree_name
-        self._open_efit_tree()
         self.disruption_time = disruption_time
         self.disrupted = self.disruption_time is not None
         self.override_cols = override_cols
@@ -72,72 +65,36 @@ class CModShot(Shot):
         timebase_signal = kwargs.pop('timebase_signal', None)
         populate_methods = kwargs.pop('populate_methods', None)
         populate_tags = kwargs.pop('populate_tags', ['all'])
+        # Analysis tree has automatically generated Efit data. Efi18 is manually created Efit data
         if self.data is not None and self._times is None:
-            try:
-                self._times = self.data['time'].to_numpy()
-                # Check if the timebase is in ms instead of s
-                if self._times[-1] > MAX_SHOT_TIME:
-                    self._times /= 1000  # [ms] -> [s]
-            except KeyError as e:
-                self.logger.warning(
-                    f"[Shot {self._shot_id}]:Shot constructor was passed data but no timebase.")
-                self.logger.debug(
-                    f"[Shot {self._shot_id}]:{traceback.format_exc()}")
-                self.set_timebase(timebase_signal, **kwargs)
+                try:
+                    self._times = self.data['time'].to_numpy()
+                    # Check if the timebase is in ms instead of s
+                    if self._times[-1] > MAX_SHOT_TIME:
+                        self._times /= 1000  # [ms] -> [s]
+                except KeyError as e:
+                    self.logger.warning(
+                        f"[Shot {self._shot_id}]:Shot constructor was passed data but no timebase.")
+                    self.logger.debug(
+                        f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+                    self._times = self.get_timebase(timebase_signal, **kwargs)
         if self._times is None:
-            self.set_timebase(timebase_signal, **kwargs)
-
+            self._times = self.get_timebase(timebase_signal, **kwargs)
         self._init_populate(data is not None, populate_methods, populate_tags)
-
-    def _open_efit_tree(self):
-        try:
-            self._efit_tree = Tree(self.efit_tree_name,
-                                   self._shot_id, mode="readonly")
-        except mdsExceptions.TreeFOPENR as e:
-            self.logger.warning(
-                f"[Shot {self._shot_id}]:Failed to open efit tree {self.efit_tree_name}.")
-            if self.efit_tree_name == 'analysis':
-                raise e
-            self._efit_tree = Tree('analysis', self._shot_id, mode="readonly")
-
-    # TODO: Reinterpolate data if timebase is changed
-    def set_timebase(self, timebase_signal):
+    
+    def get_timebase(self, timebase_signal, **kwargs):
         if timebase_signal == None:
-            self.set_default_timebase()
-        # Check if timebase_signal is array-like. If so, use it as the timebase
-        elif isinstance(timebase_signal, (list, np.ndarray, pd.Series)):
-            self._times = timebase_signal
-        elif timebase_signal == 'flattop':
-            self.set_flattop_timebase()
-        else:
-            raise NotImplementedError(
-                "Non-default timebases are not currently supported")
-
-    def set_default_timebase(self):
-        try:
-            # was 'efit18' before, not 'analysis
-            self._efit_tree = Tree('analysis', self._shot_id, mode="readonly")
-            self._times = self._efit_tree.getNode(
-                r"\analysis::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
-        except mdsExceptions.TreeFOPENR as e:
-            # was 'analysis' before, not 'efit18'
-            self._efit_tree = Tree('efit18', self._shot_id, mode="readonly")
-            self._times = self._efit_tree.getNode(
-                r"\efit18::efit.results.a_eqdsk:time").getData().data().astype('float64', copy=False)
-
-    def set_flattop_timebase(self):
-        self.set_default_timebase()
-        ip_parameters = self._get_ip_parameters()
-        ipprog, dipprog_dt = ip_parameters['ipprog'], ip_parameters['dipprog_dt']
-        # Find the time of the flattop
-        indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 6e4)[0]
-        indices_flattop_2 = np.where(np.abs(ipprog) > 1.e5)[0]
-        indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
-        if len(indices_flattop) == 0:
-            self.logger.warning(
-                f"[Shot {self._shot_id}]:Could not find flattop timebase. Defaulting to full shot(efit) timebase.")
-            return
-        self._times = self._times[indices_flattop]
+            try:
+                self._analysis_tree = Tree('analysis', self._shot_id, mode="readonly") #was 'efit18' before, not 'analysis
+                return self._analysis_tree.getNode(
+                    r"\analysis::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
+            except mdsExceptions.TreeFOPENR as e:
+                self._analysis_tree = Tree('efit18', self._shot_id, mode="readonly")  #was 'analysis' before, not 'efit18'
+                return self._analysis_tree.getNode(
+                    r"\efit18::efit.results.a_eqdsk:time").getData().data().astype('float64', copy=False)
+        else: 
+            #TODO: Add more timebase options
+            raise NotImplementedError("Non-default timebases are not currently supported")
 
     def get_active_wire_segments(self):
         pcs_tree = Tree('pcs', self._shot_id)
@@ -158,12 +115,12 @@ class CModShot(Shot):
         #     active_segments[i].append(end_times[i])
         return active_segments
 
-    @parameter_method
+    @parameter_method 
     def _get_time_until_disrupt(self):
-        time_until_disrupt = np.full(len(self._times), np.nan)
+        time_until_disrupt = np.fill(len(self._times), np.nan)
         if self.disrupted:
             time_until_disrupt = self.disruption_time - self._times
-        return pd.DataFrame({"time_until_disrupt": time_until_disrupt})
+        return pd.DataFrame({"time_until_disrupt":time_until_disrupt})
 
     @staticmethod
     def get_ip_parameters(times, ip, magtime, ip_prog, pcstime):
@@ -220,9 +177,10 @@ class CModShot(Shot):
         dip_smoothed = interp1(magtime, dip_smoothed, times)
 
         ip_error = (np.abs(ip)-np.abs(ip_prog))*np.sign(ip)
-        # import pdb; pdb.set_trace()
-        return pd.DataFrame({"ip": ip, "dip_dt": dip, "dip_smoothed": dip_smoothed, "ip_prog": ip_prog, "dipprog_dt": dipprog_dt, "ip_error": ip_error})
+        #import pdb; pdb.set_trace()
+        return pd.DataFrame({"ip":ip, "dip_dt":dip, "dip_smoothed":dip_smoothed, "ip_prog":ip_prog, "dipprog_dt":dipprog_dt, "ip_error":ip_error})
 
+    @parameter_method
     @parameter_method
     def _get_ip_parameters(self):
         # Automatically generated
@@ -324,8 +282,8 @@ class CModShot(Shot):
         v_z = interp1(dpcstime, v_z, times, 'linear', False, v_z[-1])
         z_times_v_z = interp1(dpcstime, z_times_v_z, times,
                               'linear', False, z_times_v_z[-1])
-        return pd.DataFrame({"z_error": z_error, "z_prog": z_prog, "zcur": z_cur, "v_z": v_z, "z_times_v_z": z_times_v_z})
-
+        return pd.DataFrame({"z_error":z_error, "z_prog":z_prog, "zcur":z_cur, "v_z":v_z, "z_times_v_z":z_times_v_z})
+    
     @parameter_method
     def _get_z_parameters(self):
         pcstime = np.array(np.arange(-4, 12.383, .001))
@@ -447,13 +405,12 @@ class CModShot(Shot):
         # print(v_inductive[50])
         # import pdb; pdb.set_trace()
         p_ohm = ip * v_resistive
-        return pd.DataFrame({"p_oh": p_ohm, "v_loop": v_loop})
+        return pd.DataFrame({"p_oh":p_ohm, "v_loop":v_loop})
 
     @parameter_method
-    def _get_ohmic_parameters(self):
-        # <-- this line is the culprit for breaking when analysis tree is set to EFIT18
-        v_loop_record = self._efit_tree.getNode(r"\top.mflux:v0").getData()
-        v_loop = v_loop_record.data().astype('float64', copy=False)
+    def _get_ohmic_parameters(self):      
+        v_loop_record = self._analysis_tree.getNode(r"\top.mflux:v0").getData() #<-- this line is the culprit for breaking when analysis tree is set to EFIT18
+        v_loop = v_loop_record.data().astype('float64', copy=False) 
         v_loop_time = v_loop_record.dim_of(0)
         if len(v_loop_time) <= 1:
             return pd.DataFrame({"p_oh": np.zeros(len(self._times)), "v_loop": np.zeros(len(self._times))})
@@ -484,8 +441,9 @@ class CModShot(Shot):
         p_input = p_ohm + p_lh + p_icrf
         rad_fraction = p_rad/p_input
         rad_fraction[rad_fraction == np.inf] = np.nan
-        return pd.DataFrame({"p_rad": p_rad, "dprad_dt": dprad, "p_lh": p_lh, "p_icrf": p_icrf, "p_input": p_input, "radiated_fraction": rad_fraction})
+        return pd.DataFrame({"p_rad":p_rad, "dprad_dt":dprad, "p_lh":p_lh, "p_icrf":p_icrf, "p_input":p_input, "radiated_fraction":rad_fraction})
 
+    @parameter_method
     @parameter_method
     def _get_power(self):
         """
@@ -513,20 +471,12 @@ class CModShot(Shot):
 
     # TODO: Replace with for loop like in D3D shot class
     @parameter_method
+    @parameter_method
     def _get_EFIT_parameters(self):
-
-        efit_time = self._efit_tree.getNode(r'\efit_aeqdsk:time').data().astype(
-            'float64', copy=False) # [s]
-        efit_data = dict()
-        for param in self.efit_cols:
-            try:
-                efit_data[param] = self._efit_tree.getNode(
-                    self.efit_cols[param]).data().astype('float64', copy=False)
-            except:
-                print("unable to get " + str(param))
-                efit_data[param] = np.full(len(efit_time), np.nan)
-                pass
-
+        efit_data = {k: self._analysis_tree.getNode(v).data().astype('float64', copy=False)
+            for k, v in self.efit_cols.items()}
+        efit_time = self._analysis_tree.getNode(
+            r'\efit_a_eqdsk:atime').data().astype('float64', copy=False)/1.e3  # [ms] -> [s]
         for param in self.efit_derivs:
             efit_data[self.efit_derivs[param]] = np.gradient(
                 efit_data[param], efit_time)
@@ -535,11 +485,12 @@ class CModShot(Shot):
                 efit_data[param] = interp1(
                     efit_time, efit_data[param], self._times)
         return pd.DataFrame(efit_data)
-
+    
     @staticmethod
     def get_kappa_area(times, aminor, area, a_times):
-        return pd.DataFrame({"kappa_area": interp1(a_times, area/(np.pi * aminor**2), times)})
+        return pd.DataFrame({"kappa_area":interp1(a_times, area/(np.pi * aminor**2), times)})
 
+    @parameter_method
     @parameter_method
     def _get_kappa_area(self):
         aminor = self._efit_tree.getNode(
@@ -548,10 +499,9 @@ class CModShot(Shot):
             r'\efit_aeqdsk:area').getData().data().astype('float64', copy=False)
         times = self._efit_tree.getNode(
             r'\efit_aeqdsk:time').getData().data().astype('float64', copy=False)
-
-        aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
-        # make sure area is not 0 or less than 0
-        area[area <= 0] = 3.14*0.001**2
+        
+        aminor[aminor<=0] = 0.001 #make sure aminor is not 0 or less than 0
+        area[area<=0] = 3.14*0.001**2 #make sure area is not 0 or less than 0
         return CModShot.get_kappa_area(self._times, aminor, area, times)
 
     @staticmethod
@@ -570,9 +520,10 @@ class CModShot(Shot):
             v_0[np.where(abs(v_0) > 200)] = np.nan
             v_0 *= 1000.0
         v_0 = interp1(time, v_0, times)
-        return pd.DataFrame({"v_0": v_0})
+        return pd.DataFrame({"v_0":v_0})
 
     # TODO: Calculate v_mid
+    @parameter_method
     @parameter_method
     def _get_rotation_velocity(self):
         with importlib_resources.path(
@@ -608,6 +559,7 @@ class CModShot(Shot):
     def get_n_equal_1_amplitude():
         pass
 
+    @parameter_method
     @parameter_method
     def _get_n_equal_1_amplitude(self):
         """ Calculate n=1 amplitude and phase.
@@ -683,7 +635,7 @@ class CModShot(Shot):
         n_equal_1_normalized = n_equal_1_amplitude / btor_magnitude
         # INFO: Debugging purpose block of code at end of matlab file
         # INFO: n_equal_1_amplitude vs n_equal_1_mode
-        return pd.DataFrame({"n_equal_1_mode": n_equal_1_amplitude, "n_equal_1_normalized": n_equal_1_normalized, "n_equal_1_phase": n_equal_1_phase,'BT':btor})
+        return pd.DataFrame({"n_equal_1_mode":n_equal_1_amplitude, "n_equal_1_normalized":n_equal_1_normalized, "n_equal_1_phase":n_equal_1_phase})
 
     @staticmethod
     def get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
@@ -701,9 +653,9 @@ class CModShot(Shot):
         a_minor[a_minor <= 0] = 0.001
         n_G = ip/(np.pi*a_minor**2)*1e20  # Greenwald density in m ^-3
         g_f = abs(n_e/n_G)
-        return pd.DataFrame({"n_e": n_e, "dn_dt": dn_dt, "Greenwald_fraction": g_f})
+        return pd.DataFrame({"n_e":n_e, "dn_dt":dn_dt, "Greenwald_fraction":g_f})
 
-    @parameter_method
+    @parameter_method 
     def _get_densities(self):
         try:
             e_tree = Tree('electrons', self._shot_id)
@@ -721,14 +673,14 @@ class CModShot(Shot):
             a_minor = a_minor_record.data().astype('float64', copy=False)
         except Exception as e:
             # TODO: Handle this case
-            raise NotImplementedError(
-                "Can't currently handle failure of grabbing density data")
+            raise NotImplementedError("Can't currently handle failure of grabbing density data")
         return CModShot.get_densities(self._times, n_e, t_n, ip, t_ip, a_minor, t_a)
 
     @staticmethod
     def get_efc_current(times, iefc, t_iefc):
-        return pd.DataFrame({"I_efc": interp1(t_iefc, iefc, times, 'linear')})
+        return pd.DataFrame({"I_efc":interp1(t_iefc, iefc, times, 'linear')})
 
+    @parameter_method
     @parameter_method
     def _get_efc_current(self):
         try:
@@ -755,8 +707,9 @@ class CModShot(Shot):
                 _, _, sigma = gaussian_fit(z, y)
                 te_hwm[valid_times[i]] = sigma*1.1774  # 50%
         te_hwm = interp1(ts_time, te_hwm, times)
-        return pd.DataFrame({"Te_width": te_hwm})
+        return pd.DataFrame({"Te_width":te_hwm})
 
+    @parameter_method
     @parameter_method
     def _get_Ts_parameters(self):
         # TODO: Guassian vs parabolic fit for te profile
@@ -786,7 +739,7 @@ class CModShot(Shot):
         # Te_PF = interp1(TS_time, Te_PF, times, 'linear')
         # pressure_PF = interp1(TS_time, pressure_PF, times, 'linear')
         pass
-
+    
     @parameter_method
     def _get_peaking_factors(self):
         ne_PF = np.full(len(self._times), np.nan)
@@ -845,12 +798,12 @@ class CModShot(Shot):
             calib = np.nan
             return CModShot.get_Ts_parameters(self._times, TS_time, ne_PF, Te_PF, pressure_PF)
         except mdsExceptions.MdsException as e:
-            return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
+            return pd.DataFrame({"ne_peaking":ne_PF, "Te_peaking":Te_PF, "pressure_peaking": pressure_PF})
 
     @parameter_method
     @parameter_method
     def _get_peaking_factors_no_tci(self):
-        # Initialize PFs as empty arrarys
+        #Initialize PFs as empty arrarys        
         ne_PF = np.full(len(self._times), np.nan)
         Te_PF = ne_PF.copy()
         pressure_PF = ne_PF.copy()
@@ -921,9 +874,7 @@ class CModShot(Shot):
             calib = np.nan
             return CModShot.get_Ts_parameters(self._times, TS_time, ne_PF, Te_PF, pressure_PF)
         except mdsExceptions.MdsException as e:
-            print(e)
-            traceback.print_exc()
-            return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
+            return pd.DataFrame({"ne_peaking":ne_PF, "Te_peaking":Te_PF, "pressure_peaking": pressure_PF})
 
     # The following methods are translated from IDL code.
     def compare_ts_tci(self, electron_tree, nlnum=4):
@@ -1203,8 +1154,8 @@ class CModShot(Shot):
         R0 = interp1(efit_time, R0, times,
                      'linear', bounds_error=False, fill_value=np.nan)
 
-        return pd.DataFrame({"delta": delta, "aminor": aminor, "R0": R0})
-
+        return pd.DataFrame({"delta":delta, "aminor":aminor, "R0":R0})
+    
     @parameter_method
     def _get_shape_parameters(self):
         efittime = self._efit_tree.getNode(r'\efit_aeqdsk:time')
@@ -1226,6 +1177,7 @@ class CModShot(Shot):
     def get_sxr_parameters():
         pass
 
+    # TODO: get more accurate description of soft x-ray data
     # TODO: get more accurate description of soft x-ray data
     def _get_sxr_data(self):
         """ """
@@ -1333,8 +1285,9 @@ class CModShot(Shot):
             plt.legend()
             plt.show(block=True)
 
-        return pd.DataFrame({"Te_edge": Te_edge, "ne_edge": ne_edge})
+        return pd.DataFrame({"Te_edge":Te_edge, "ne_edge":ne_edge})
 
+    @parameter_method
     @parameter_method
     def _get_edge_parameters(self):
 
@@ -1395,7 +1348,7 @@ class CModShot(Shot):
         return CModShot.get_edge_parameters(self._times, p_Te, p_ne)
 
     @staticmethod
-    def get_H98():
+    def get_H98(times, tau, t_tau, n_e,ip,R0,aminor,kappa,BT,p_input):
         """Compute H98
 
         Parameters
@@ -1418,36 +1371,25 @@ class CModShot(Shot):
         """
         # Take R = 0.68 [m], A (atomic mass) = 2
 
-        pass
+        tau_98 = 0.144*n_e**0.41*2**0.19*ip**0.93*R0**1.39*aminor**0.58*kappa**0.78*BT**0.15*p_input**-0.69
+        tau = interp1(t_tau, tau, times)
+        H98 = tau/tau_98
 
-        #return pd.DataFrame({"H98": H98})
+        return pd.DataFrame({"H98":H98})
 
 
-    # TODO: Finish
-    @parameter_method
-    def _get_H98(self):
+#TODO: Finish
+@parameter_method
+def _get_H98(self):
         """Prepare to compute H98 by getting tau_E
         Original Authors
         ----------------
         Andrew Maris (maris@mit.edu)
 
         """
-        
-        #Get parameters for calculating confinement time
-        powers_df = self._get_power()
-        efit_df = self._get_EFIT_parameters()
-        density_df = self._get_densities()
-        ip_df = self._get_ip_parameters()
-        
-        #Get BT
-        mag_tree = Tree('magnetics', self._shot_id)
-        btor_record = mag_tree.getNode(r"\btor").getData()
-        btor = btor_record.data()
-        t_mag = btor_record.dim_of(0)
-        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be on by t=-1. So pick the time before that to calculate baseline
-        baseline_indices = np.where(t_mag <= -1.8)
-        btor = btor - np.mean(btor[baseline_indices])
-        btor = interp1(t_mag, btor, self._times)
+        tau = 0 
+        t_tau = [0]
+        return CModShot.get_H98(self._times, tau, t_tau)       
         
         #Estimate confinement time
         tau = efit_df._wmhd/(powers_df.p_input - efit_df.dWmhd_dt) 
