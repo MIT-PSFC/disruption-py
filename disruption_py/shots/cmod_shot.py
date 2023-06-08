@@ -17,18 +17,15 @@ from MDSplus import *
 # For edge paramebers
 import sys
 import scipy as sp
-# TODO: Please make these exportable in some way
-"""
+#TODO: Please make these exportable in some way
 try:
     sys.path.append('/home/sciortino/usr/python3modules/profiletools3')
     sys.path.append('/home/sciortino/usr/python3modules/eqtools3')
     import profiletools
     import eqtools
-except Exception as e:
+except ImportError:
     print('Could not import profiletools or eqtools')
     pass
-"""
-
 import warnings
 
 from disruption_py.utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power
