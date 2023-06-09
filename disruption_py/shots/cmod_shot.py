@@ -84,7 +84,6 @@ class CModShot(Shot):
                 self.set_timebase(timebase_signal, **kwargs)
         if self._times is None:
             self.set_timebase(timebase_signal, **kwargs)
-        print(self._efit_tree)
 
         self._init_populate(data is not None, populate_methods, populate_tags)
 
