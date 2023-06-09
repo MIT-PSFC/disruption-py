@@ -322,7 +322,7 @@ def create_cmod_handler():
         db_server = content[0]
         db_name = content[1]
         db_username = content[2]
-        assert db_username == USER, f"db_username:{db_username};user:{USER}"
+        #assert db_username == USER, f"db_username:{db_username};user:{USER}"
         db_password = content[3]
     with importlib_resources.path(disruption_py.data, "sqljdbc4.jar") as p:
         db_driver_path = str(p)  # Absolute path to jar file
