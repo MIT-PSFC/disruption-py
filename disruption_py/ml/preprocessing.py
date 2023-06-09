@@ -34,7 +34,7 @@ PAPER_COLS = [
     'li',
     'Wmhd',
     'kappa',
-    'squareness'
+    # 'squareness'
 ]
 DERIVED_PAPER_COLS = [
     'ip-exp-10-none',
