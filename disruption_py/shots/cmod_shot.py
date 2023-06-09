@@ -87,20 +87,13 @@ class CModShot(Shot):
     def get_timebase(self, timebase_signal, **kwargs):
         if timebase_signal == None:
             try:
-                self._analysis_tree = Tree('efit01', self._shot_id, mode="readonly") # TODO polish this up
-                self.logger.info(f"Using analysis tree {self._analysis_tree}")
-                
+                self._analysis_tree = Tree('analysis', self._shot_id, mode="readonly") #was 'efit18' before, not 'analysis
                 return self._analysis_tree.getNode(
-                    r"\efit01::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
-            except:
-                try:
-                    self._analysis_tree = Tree('analysis', self._shot_id, mode="readonly") #was 'efit18' before, not 'analysis
-                    return self._analysis_tree.getNode(
-                        r"\analysis::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
-                except mdsExceptions.TreeFOPENR as e:
-                    self._analysis_tree = Tree('efit18', self._shot_id, mode="readonly")  #was 'analysis' before, not 'efit18'
-                    return self._analysis_tree.getNode(
-                        r"\efit18::efit.results.a_eqdsk:time").getData().data().astype('float64', copy=False)
+                    r"\analysis::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
+            except mdsExceptions.TreeFOPENR as e:
+                self._analysis_tree = Tree('efit18', self._shot_id, mode="readonly")  #was 'analysis' before, not 'efit18'
+                return self._analysis_tree.getNode(
+                    r"\efit18::efit.results.a_eqdsk:time").getData().data().astype('float64', copy=False)
         else: 
             #TODO: Add more timebase options
             raise NotImplementedError("Non-default timebases are not currently supported")
