@@ -542,7 +542,7 @@ class CModShot(Shot):
         if self._shot_id not in calibrated:
             v_0 = np.empty(len(self._times))
             v_0.fill(np.nan)
-            return v_0
+            return pd.DataFrame({"v_0":v_0})
         try:
             spec_tree = Tree('spectroscopy', self._shot_id)
             intensity_record = spec_tree.getNode(
@@ -558,7 +558,7 @@ class CModShot(Shot):
                 "WARNING: failed to open necessary tress for rotational velocity calculations.")
             v_0 = np.empty(len(self._times))
             v_0.fill(np.nan)
-            return v_0
+            return pd.DataFrame({"v_0":v_0})
         return CModShot.get_rotation_velocity(self._times, intensity, time, vel, hirextime)
 
     # TODO: Split into static and instance method
@@ -647,7 +647,7 @@ class CModShot(Shot):
         if len(n_e) != len(t_n):
             nan_arr = np.empty(len(times))
             nan_arr.fill(np.nan)
-            return nan_arr, nan_arr.copy(), nan_arr.copy()
+            return pd.DataFrame({"n_e":nan_arr, "dn_dt":nan_arr.copy(), "Greenwald_fraction":nan_arr.copy()})
         dn_dt = np.gradient(n_e, t_n)
         n_e = interp1(t_n, n_e, times)
         dn_dt = interp1(t_n, dn_dt, times)
@@ -691,7 +691,7 @@ class CModShot(Shot):
             iefc, t_iefc = iefc_record.data(), iefc_record.dim_of(0)
         except Exception as e:
             print(e)
-            return None
+            return pd.DataFrame({"I_efc":np.empty(len(self._times))})
         return CModShot.get_efc_current(self._times, iefc, t_iefc)
 
     # TODO: Split
@@ -730,7 +730,7 @@ class CModShot(Shot):
         except mdsExceptions.MdsException as e:
             print(e)  # TODO: Change
             te_hwm.fill(np.nan)
-            return te_hwm
+            return pd.DataFrame({"Te_width":te_hwm})
         return CModShot.get_Ts_parameters(self._times, ts_data, ts_time, ts_z)
 
     # TODO: Finish
@@ -747,7 +747,7 @@ class CModShot(Shot):
         Te_PF = ne_PF.copy()
         pressure_PF = ne_PF.copy()
         if (self._shot_id > 1120000000 and self._shot_id < 1120213000) or (self._shot_id > 1140000000 and self._shot_id < 1140227000) or (self._shot_id > 1150000000 and self._shot_id < 1150610000) or (self._shot_id > 1160000000 and self._shot_id < 1160303000):
-            return ne_PF, Te_PF, pressure_PF #Ignore shots on the blacklist
+            return pd.DataFrame({"ne_peaking":ne_PF, "Te_peaking":Te_PF, "pressure_peaking": pressure_PF}) #Ignore shots on the blacklist
         try:
             print(f'shot {self._shot_id}')
             efit_tree = Tree('cmod', self._shot_id)
@@ -775,7 +775,7 @@ class CModShot(Shot):
             zts_edge = electron_tree.getNode(f"\fiber_z").getData().data()
             TS_z = np.concatenate((TS_z, zts_edge))
             if len(zts_edge) != tets_edge.shape[1]:
-                return ne_PF, Te_PF, pressure_PF
+                return pd.DataFrame({"ne_peaking":ne_PF, "Te_peaking":Te_PF, "pressure_peaking": pressure_PF})
             Te_PF = Te_PF[:len(TS_time)]
             itimes = np.where(TS_time > 0 & TS_time < self._times[-1])
             bminor = interp1(efit_time, bminor, TS_time)
@@ -810,7 +810,7 @@ class CModShot(Shot):
         pressure_PF = ne_PF.copy()
         #Ignore shots on the blacklist
         if (self._shot_id > 1120000000 and self._shot_id < 1120213000) or (self._shot_id > 1140000000 and self._shot_id < 1140227000) or (self._shot_id > 1150000000 and self._shot_id < 1150610000) or (self._shot_id > 1160000000 and self._shot_id < 1160303000):
-            return ne_PF, Te_PF, pressure_PF 
+            return pd.DataFrame({"ne_peaking":ne_PF, "Te_peaking":Te_PF, "pressure_peaking": pressure_PF}) 
         try:            
             print(f'shot {self._shot_id}')
             #Get shaping params
@@ -840,7 +840,7 @@ class CModShot(Shot):
             z_edge = electron_tree.getNode(r"\fiber_z").getData().data() #Get z position of edge TS points
             z = np.concatenate((z_core, z_edge)) #Concat core and edge data
             if len(z_edge) != Te_edge.shape[1]: #Make sure that there are equal numbers of edge position and edge temperature points
-                return ne_PF, Te_PF, pressure_PF
+                return pd.DataFrame({"ne_peaking":ne_PF, "Te_peaking":Te_PF, "pressure_peaking": pressure_PF})
             Te_PF = Te_PF[:len(Te_time)] #Reshape Te_PF to length of Te_time
             itimes = np.where(Te_time > 0 & Te_time < self._times[-1]) 
             bminor = interp1(efit_time, bminor, TS_time) #Interpolate bminor onto desired timebase
@@ -1269,10 +1269,10 @@ class CModShot(Shot):
 
     @parameter_method
     def _get_edge_parameters(self):
-
+        
         #Ignore shots on the blacklist
         if (self._shot_id > 1120000000 and self._shot_id < 1120213000) or (self._shot_id > 1140000000 and self._shot_id < 1140227000) or (self._shot_id > 1150000000 and self._shot_id < 1150610000) or (self._shot_id > 1160000000 and self._shot_id < 1160303000):
-            return None, None 
+            return pd.DataFrame({"Te_edge":np.full(len(self._times), np.nan), "ne_edge": np.full(len(self._times), np.nan)})
         
 
 
@@ -1285,7 +1285,7 @@ class CModShot(Shot):
             ts_time = electron_tree.getNode(
                 node_path + ":te_rz").getData().dim_of(0)
         except:
-            return None, None
+            return pd.DataFrame({"Te_edge":np.full(len(self._times), np.nan), "ne_edge": np.full(len(self._times), np.nan)})
 
 
         t_min = np.max([0.1,np.min(ts_time)])
@@ -1377,5 +1377,5 @@ def _get_H98(self):
 
 
 if __name__ == '__main__':
-    shot = CModShot('cmod', 1150922001)
+    shot = CModShot(1150922001, disruption_time=None)
     print(shot.data.head())
