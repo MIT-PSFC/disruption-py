@@ -1,6 +1,6 @@
 from disruption_py.utils import interp1
 import subprocess
-import traceback 
+import traceback
 
 import MDSplus
 from MDSplus import *
@@ -11,10 +11,11 @@ import logging
 
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
 
+
 def parameter_method(func, tags=["all"]):
-    func.populate = True 
+    func.populate = True
     func.tags = tags
-    return func 
+    return func
 
 
 class Shot:
@@ -70,7 +71,7 @@ class Shot:
         self.data = data
         if data is None:
             self.data = pd.DataFrame()
-    
+
     @staticmethod
     def get_signal(signal, conn, interpolate=True, interpolation_timebase=None):
         """Get a signal from MDSplus.
@@ -118,7 +119,8 @@ class Shot:
             if interpolation_timebase is None:
                 raise ValueError(
                     "interpolation_timebase must be provided if interpolate is True")
-            signal_data = interp1(orig_timebase, signal_data, interpolation_timebase)
+            signal_data = interp1(
+                orig_timebase, signal_data, interpolation_timebase)
         return signal_data, orig_timebase
 
     def _get_signal(self, signal, conn=None, interpolate=True, interpolation_timebase=None):
@@ -172,7 +174,7 @@ class Shot:
 
     def apply_shot_filter(self, shot_filter):
         self.data = self.data.filter(shot_filter)
-    
+
     def apply_shot_transform(self, shot_transform):
         self.data = self.data.apply(shot_transform)
 
@@ -208,14 +210,15 @@ class Shot:
                 if bool(set(method.tags).intersection(tags)):
                     print(f"[Shot {self._shot_id}]:Skipping {method_name}")
                     continue
-                try: 
+                try:
                     local_data.append(method())
                 except Exception as e:
-                    self.logger.warning(f"[Shot {self._shot_id}]:Failed to populate {method_name}")
+                    self.logger.warning(
+                        f"[Shot {self._shot_id}]:Failed to populate {method_name}")
                     self.logger.debug(f"{traceback.format_exc()}")
         self.data = pd.concat([self.data, local_data], axis=1)
 
-    def _init_populate(self,already_populated, methods, tags):
+    def _init_populate(self, already_populated, methods, tags):
         if not already_populated:
             if self.data is None:
                 self.data = pd.DataFrame()
@@ -228,13 +231,14 @@ class Shot:
                 if not bool(set(method.tags).intersection(tags)) or (methods is not None and method_name not in methods):
                     print(f"Skipping {method_name}")
                     continue
-                try: 
+                try:
                     parameters.append(method())
                 except Exception as e:
                     print(e)
-                    self.logger.warning(f"[Shot {self._shot_id}]:Failed to populate {method_name}")
+                    self.logger.warning(
+                        f"[Shot {self._shot_id}]:Failed to populate {method_name}")
                     self.logger.debug(f"{traceback.format_exc()}")
-        # TODO: This is a hack to get around the fact that some methods return 
+        # TODO: This is a hack to get around the fact that some methods return
         #       multiple parameters. This should be fixed in the future.
         local_data = pd.concat(parameters + [self.data], axis=1)
         local_data = local_data.loc[:, ~local_data.columns.duplicated()]
