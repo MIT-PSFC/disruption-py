@@ -5,16 +5,14 @@ from dataclasses import dataclass
 import logging
 import copy
 
-import h5py
 import string
 import random
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.impute import SimpleImputer
 from scipy.interpolate import interp1d, interp2d, RegularGridInterpolator
 from scipy.optimize import curve_fit
-from scipy.signal import lfilter, medfilt
+from scipy.signal import medfilt
 from matplotlib.backends.backend_pdf import PdfPages
 
 pd.options.mode.chained_assignment = None
