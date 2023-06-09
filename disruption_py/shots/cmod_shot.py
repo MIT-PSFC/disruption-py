@@ -18,6 +18,7 @@ from MDSplus import *
 import sys
 import scipy as sp
 #TODO: Please make these exportable in some way
+"""
 try:
     sys.path.append('/home/sciortino/usr/python3modules/profiletools3')
     sys.path.append('/home/sciortino/usr/python3modules/eqtools3')
@@ -26,6 +27,7 @@ try:
 except Exception as e:
     print('Could not import profiletools or eqtools')
     pass
+"""
 import warnings
 
 from disruption_py.utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power
@@ -79,18 +81,27 @@ class CModShot(Shot):
                     self._times = self.get_timebase(timebase_signal, **kwargs)
         if self._times is None:
             self._times = self.get_timebase(timebase_signal, **kwargs)
+        print(self._analysis_tree)
+
         self._init_populate(data is not None, populate_methods, populate_tags)
     
     def get_timebase(self, timebase_signal, **kwargs):
         if timebase_signal == None:
             try:
-                self._analysis_tree = Tree('analysis', self._shot_id, mode="readonly") #was 'efit18' before, not 'analysis
+                self._analysis_tree = Tree('efit01', self._shot_id, mode="readonly") # TODO polish this up
+                self.logger.info(f"Using analysis tree {self._analysis_tree}")
+                
                 return self._analysis_tree.getNode(
-                    r"\analysis::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
-            except mdsExceptions.TreeFOPENR as e:
-                self._analysis_tree = Tree('efit18', self._shot_id, mode="readonly")  #was 'analysis' before, not 'efit18'
-                return self._analysis_tree.getNode(
-                    r"\efit18::efit.results.a_eqdsk:time").getData().data().astype('float64', copy=False)
+                    r"\efit01::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
+            except:
+                try:
+                    self._analysis_tree = Tree('analysis', self._shot_id, mode="readonly") #was 'efit18' before, not 'analysis
+                    return self._analysis_tree.getNode(
+                        r"\analysis::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
+                except mdsExceptions.TreeFOPENR as e:
+                    self._analysis_tree = Tree('efit18', self._shot_id, mode="readonly")  #was 'analysis' before, not 'efit18'
+                    return self._analysis_tree.getNode(
+                        r"\efit18::efit.results.a_eqdsk:time").getData().data().astype('float64', copy=False)
         else: 
             #TODO: Add more timebase options
             raise NotImplementedError("Non-default timebases are not currently supported")
@@ -123,7 +134,7 @@ class CModShot(Shot):
 
     @parameter_method 
     def _get_time_until_disrupt(self):
-        time_until_disrupt = np.fill(len(self._times), np.nan)
+        time_until_disrupt = np.full(len(self._times), np.nan)
         if self.disrupted:
             time_until_disrupt = self.disruption_time - self._times
         return pd.DataFrame({"time_until_disrupt":time_until_disrupt})
@@ -495,10 +506,19 @@ class CModShot(Shot):
     # TODO: Replace with for loop like in D3D shot class
     @parameter_method
     def _get_EFIT_parameters(self):
-        efit_data = {k: self._analysis_tree.getNode(v).data().astype('float64', copy=False)
-            for k, v in self.efit_cols.items()}
-        efit_time = self._analysis_tree.getNode(
-            r'\efit_a_eqdsk:atime').data().astype('float64', copy=False)/1.e3  # [ms] -> [s]
+        
+        efit_time = self._analysis_tree.getNode(r'\efit_aeqdsk:time').data().astype('float64', copy=False)/1.e3  # [ms] -> [s]
+
+        efit_data = dict() 
+        for param in self.efit_cols:
+            try:
+                efit_data[param] = self._analysis_tree.getNode(
+                    self.efit_cols[param]).data().astype('float64', copy=False)
+            except:
+                print("unable to get " + str(param))
+                efit_data[param] = np.full(len(efit_time), np.nan)
+                pass
+        
         for param in self.efit_derivs:
             efit_data[self.efit_derivs[param]] = np.gradient(
                 efit_data[param], efit_time)
