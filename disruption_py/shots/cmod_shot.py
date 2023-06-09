@@ -22,7 +22,7 @@ try:
     sys.path.append('/home/sciortino/usr/python3modules/eqtools3')
     import profiletools
     import eqtools
-except ImportError:
+except Exception as e:
     print('Could not import profiletools or eqtools')
     pass
 import warnings
