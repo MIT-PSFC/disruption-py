@@ -69,39 +69,39 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
     if tokamak not in ['d3d', 'cmod']:
         raise NotImplementedError(
             "Currently only support DIII-D and Alcator C-MOD data retrieval")
-    tokamak_str = tokamak
-    if tokamak_str == 'd3d':
-        tokamak = TOKAMAKS[tokamak]()
+    else:
+        tokamak_handler = TOKAMAKS[tokamak]()
     timebase_signal = kwargs.get('timebase_signal', None)
     populate = kwargs.get('populate', 'default')
     label = kwargs.get('label', 'none')
     if shot_ids is None:
         random_state = kwargs.get('random_state', 8808)
-        shot_ids = tokamak.get_disruption_table_shotlist()['shot']
+        shot_ids = tokamak_handler.get_disruption_table_shotlist()['shot']
         random.Random(random_state).shuffle(shot_ids)
         shot_ids = shot_ids[:1200]
     if data_source == 0:
-        shots = [tokamak.get_shot(shot_id, efit_tree) for shot_id in shot_ids]
+        shots = [tokamak_handler.get_shot(shot_id, efit_tree) for shot_id in shot_ids]
         dataset_df = pd.concat([shot.data for shot in shots])
     elif data_source == 1:
         raise NotImplementedError
     elif data_source == 2:
-        dataset_df = tokamak.get_shot_data(shot_ids, cols)
+        dataset_df = tokamak_handler.get_shot_data(shot_ids, cols)
     elif data_source == 3:
         shots = []
         timebase_signal = kwargs.get('timebase_signal', None)
         for idx,shot_id in enumerate(shot_ids):
             percent_complete = idx/len(shot_ids)*100
             try:
-                if tokamak_str == 'd3d':
+                if tokamak == 'd3d':
                     if efit_tree is None:
-                        shots.append(D3DShot(shot_id, tokamak.get_efit_tree(
-                            shot_id), disruption_time=tokamak.get_disruption_time(shot_id), timebase_signal=timebase_signal, populate=populate))
+                        shots.append(D3DShot(shot_id, tokamak_handler.get_efit_tree(
+                            shot_id), disruption_time=tokamak_handler.get_disruption_time(shot_id), timebase_signal=timebase_signal, populate=populate))
                     else:
-                        shots.append(D3DShot(shot_id, efit_tree, disruption_time=tokamak.get_disruption_time(shot_id),
+                        shots.append(D3DShot(shot_id, efit_tree, disruption_time=tokamak_handler.get_disruption_time(shot_id),
                                              timebase_signal=timebase_signal, populate=populate))
-                elif tokamak_str == 'cmod':
-                    shots.append(CModShot("cmod",shot_id=shot_id))
+                elif tokamak == 'cmod':
+                    #shots.append(CModShot("cmod",shot_id=shot_id))
+                    shots.append(CModShot(shot_id=shot_id, disruption_time=tokamak_handler.get_disruption_time(shot_id)))
                 LOGGER.info(f"[Shot {shot_id}]:Generated shot object, {idx} of {len(shot_ids)} ({percent_complete:.1f}% percent complete)' ")
             except Exception as e:
                 LOGGER.info(f"[Shot {shot_id}]:Failed to generate shot object, {idx} of {len(shot_ids)} ({percent_complete:.1f}% percent complete)'")
