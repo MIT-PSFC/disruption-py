@@ -409,7 +409,7 @@ class CModShot(Shot):
         v_loop = v_loop_record.data().astype('float64', copy=False) 
         v_loop_time = v_loop_record.dim_of(0)
         if len(v_loop_time) <= 1:
-            return None, None
+            return pd.DataFrame({"p_oh":np.zeros(len(self._times)), "v_loop":np.zeros(len(self._times))})
         li_record = self._analysis_tree.getNode(r"\efit_aeqdsk:li").getData()
         li = li_record.data().astype('float64', copy=False)
         efittime = li_record.dim_of(0)
