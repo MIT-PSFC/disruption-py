@@ -16,7 +16,7 @@ import netCDF4 as nc
 import MDSplus
 from MDSplus import *
 
-from disruption_py.utils import interp1,gsastd, get_bolo, power, efit_rz_interp
+from disruption_py.utils import interp1, gsastd, get_bolo, power, efit_rz_interp
 import disruption_py.data
 D3D_DISRUPTED_SHOT = 175552
 # Retrieve efit from EFIT01, Peaking Factor Nodes: dpsrdcva dpsrdxdiv dpstepf dpsnepf
@@ -48,7 +48,7 @@ class D3DShot(Shot):
     dt_before_disruption = 0.002
     duration_before_disruption = 0.10
 
-    def __init__(self, shot_id, efit_tree_name, data=None, times=None, disruption_time=None, override_cols=True, **kwargs):
+    def __init__(self, shot_id, efit_tree_name='EFIT01', data=None, times=None, disruption_time=None, override_cols=True, **kwargs):
         super().__init__(shot_id, data)
         self._times = times
         self.conn = MDSplus.Connection('atlas.gat.com')
