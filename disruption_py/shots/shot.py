@@ -222,12 +222,6 @@ class Shot:
                 self.data = pd.DataFrame()
             self.data['time'] = self._times
             self.data['shot'] = self._shot_id
-        else:
-            return 
-        if tags is not None and not isinstance(tags, list):
-            populate_tags = [populate_tags]
-        if methods is not None and not isinstance(methods, list):
-            populate_methods = [populate_methods]
         parameters = []
         for method_name in dir(self):
             method = getattr(self, method_name)
@@ -237,8 +231,8 @@ class Shot:
                 try:
                     parameters.append(method())
                 except Exception as e:
-                    self.logger.warning(
-                        f"[Shot {self._shot_id}]:Failed to populate {method_name}")
+                    print(e)
+                    self.logger.warning(f"[Shot {self._shot_id}]:Failed to populate {method_name}")
                     self.logger.debug(f"{traceback.format_exc()}")
         # TODO: This is a hack to get around the fact that some methods return
         #       multiple parameters. This should be fixed in the future.
