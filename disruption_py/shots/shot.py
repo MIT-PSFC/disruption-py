@@ -235,6 +235,8 @@ class Shot:
                 try:
                     parameters.append(method())
                 except Exception as e:
+                    print(method)
+                    print(e)
                     self.logger.warning(
                         f"[Shot {self._shot_id}]:Failed to populate {method_name}")
                     self.logger.debug(f"{traceback.format_exc()}")
@@ -242,5 +244,4 @@ class Shot:
         #       multiple parameters. This should be fixed in the future.
         local_data = pd.concat(parameters + [self.data], axis=1)
         local_data = local_data.loc[:, ~local_data.columns.duplicated()]
-        self.data = local_data
         
