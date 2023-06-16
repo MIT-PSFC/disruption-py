@@ -19,7 +19,7 @@ from MDSplus import *
 import sys
 import scipy as sp
 # TODO: Please make these exportable in some way
-"""
+
 try:
     sys.path.append('/home/sciortino/usr/python3modules/profiletools3')
     sys.path.append('/home/sciortino/usr/python3modules/eqtools3')
@@ -28,7 +28,7 @@ try:
 except Exception as e:
     print('Could not import profiletools or eqtools')
     pass
-"""
+
 import warnings
 
 from disruption_py.utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power
@@ -683,7 +683,7 @@ class CModShot(Shot):
         n_equal_1_normalized = n_equal_1_amplitude / btor_magnitude
         # INFO: Debugging purpose block of code at end of matlab file
         # INFO: n_equal_1_amplitude vs n_equal_1_mode
-        return pd.DataFrame({"n_equal_1_mode": n_equal_1_amplitude, "n_equal_1_normalized": n_equal_1_normalized, "n_equal_1_phase": n_equal_1_phase})
+        return pd.DataFrame({"n_equal_1_mode": n_equal_1_amplitude, "n_equal_1_normalized": n_equal_1_normalized, "n_equal_1_phase": n_equal_1_phase,'BT':btor})
 
     @staticmethod
     def get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
@@ -707,8 +707,8 @@ class CModShot(Shot):
     def _get_densities(self):
         try:
             e_tree = Tree('electrons', self._shot_id)
-            n_e_record = e_tree.getNode(r'.tci.results:nl_04').getData()
-            n_e = n_e_record.data().astype('float64', copy=False)
+            n_e_record = e_tree.getNode(r'.tci.results:nl_04').getData() #Line integrated density
+            n_e = n_e_record.data().astype('float64', copy=False)/0.6 #Divide by chord length of ~0.6m to get line averaged density. For future refernce, chord length is stored in .01*\analysis::efit_aeqdsk:rco2v[3,*]
             t_n = n_e_record.dim_of(0)
             mag_tree = Tree('magnetics', self._shot_id)
             ip_record = mag_tree.getNode(r'\ip').getData()
@@ -1395,7 +1395,7 @@ class CModShot(Shot):
         return CModShot.get_edge_parameters(self._times, p_Te, p_ne)
 
     @staticmethod
-    def get_H98(times, tau, t_tau, n_e, ip, R0, aminor, kappa, BT, p_input):
+    def get_H98():
         """Compute H98
 
         Parameters
@@ -1416,31 +1416,50 @@ class CModShot(Shot):
         Andrew Maris (maris@mit.edu)
 
         """
-        # Take R = 0.68 [m], A = 2
-        # Take R = 0.68 [m], A = 2
+        # Take R = 0.68 [m], A (atomic mass) = 2
 
-        tau_98 = 0.144*n_e**0.41*2**0.19*ip**0.93*R0**1.39 * \
-            aminor**0.58*kappa**0.78*BT**0.15*p_input**-0.69
-        tau = interp1(t_tau, tau, times)
-        H98 = tau/tau_98
+        pass
 
-        return pd.DataFrame({"H98": H98})
-
-    # TODO: Finish
-    @parameter_method
-    def _get_H98(self):
-        """Prepare to compute H98 by getting tau_E
+        #return pd.DataFrame({"H98": H98})
 
 
+# TODO: Finish
+@parameter_method
+def _get_H98(self):
+    """Prepare to compute H98 by getting tau_E
+    Original Authors
+    ----------------
+    Andrew Maris (maris@mit.edu)
 
-        Original Authors
-        ----------------
-        Andrew Maris (maris@mit.edu)
+    """
+    
+    #Get parameters for calculating confinement time
+    powers_df = self._get_power()
+    efit_df = self._get_EFIT_parameters()
+    density_df = self._get_densities()
+    ip_df = self._get_ip_parameters()
+    
+    #Get BT
+    mag_tree = Tree('magnetics', self._shot_id)
+    btor_record = mag_tree.getNode(r"\btor").getData()
+    btor = btor_record.data()
+    t_mag = btor_record.dim_of(0)
+    # Toroidal power supply takes time to turn on, from ~ -1.8 and should be on by t=-1. So pick the time before that to calculate baseline
+    baseline_indices = np.where(t_mag <= -1.8)
+    btor = btor - np.mean(btor[baseline_indices])
+    btor = interp1(t_mag, btor, self._times)
+    
+    #Estimate confinement time
+    tau = efit_df._wmhd/(powers_df.p_input - efit_df.dWmhd_dt) 
+    
+    #Compute 1998 tau_E scaling, taking A (atomic mass) = 2
+    tau_98 = 0.144*density_df.n_e**0.41*2**0.19*ip_df.ip**0.93*efit_df.R0**1.39 * \
+            efit_df.aminor**0.58*efit_df.kappa**0.78*btor**0.15*powers_df.p_input**-0.69
+    
+    H98 = tau/tau_98
 
-        """
-        tau = 0
-        t_tau = [0]
-        return CModShot.get_H98(self._times, tau, t_tau)
+    return pd.DataFrame({"H98": H98})
+    #return CModShot.get_H98(self._times, tau)
 
 
 if __name__ == '__main__':
