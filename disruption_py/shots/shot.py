@@ -229,12 +229,10 @@ class Shot:
             method = getattr(self, method_name)
             if callable(method) and hasattr(method, 'populate'):
                 if not bool(set(method.tags).intersection(tags)) or (methods is not None and method_name not in methods):
-                    print(f"Skipping {method_name}")
                     continue
                 try:
                     parameters.append(method())
                 except Exception as e:
-                    print(e)
                     self.logger.warning(
                         f"[Shot {self._shot_id}]:Failed to populate {method_name}")
                     self.logger.debug(f"{traceback.format_exc()}")
