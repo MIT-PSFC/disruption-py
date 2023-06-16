@@ -243,3 +243,4 @@ class Shot:
         local_data = pd.concat(parameters + [self.data], axis=1)
         local_data = local_data.loc[:, ~local_data.columns.duplicated()]
         self.data = local_data
+        
