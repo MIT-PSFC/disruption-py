@@ -34,6 +34,7 @@ from disruption_py.utils import interp1, interp2, smooth, gaussian_fit, gsastd, 
 import disruption_py.data
 
 MAX_SHOT_TIME = 7.0  # [s]
+CMOD_DISRUPTED_SHOT = 1120814006
 
 
 class CModShot(Shot):
