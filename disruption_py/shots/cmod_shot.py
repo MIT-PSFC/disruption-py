@@ -72,10 +72,6 @@ class CModShot(Shot):
         timebase_signal = kwargs.pop('timebase_signal', None)
         populate_methods = kwargs.pop('populate_methods', None)
         populate_tags = kwargs.pop('populate_tags', ['all'])
-        if not isinstance(populate_tags, list):
-            populate_tags = [populate_tags]
-        if not isinstance(populate_methods, list):
-            populate_methods = [populate_methods]
         if self.data is not None and self._times is None:
             try:
                 self._times = self.data['time'].to_numpy()
@@ -153,13 +149,13 @@ class CModShot(Shot):
                 active_segments.append(
                     [node, node.getNode(":start_time").getData().data()])
         active_segments.sort(key=lambda n: n[1])
-        end_times = np.roll(np.asarray([n[1] for n in active_segments]), -1)
-        for i in range(len(end_times)-1):
-            if active_segments[i+1][1] == end_times[i]:
-                end_times[i] = 12.383
-        end_times[-1] = 12.383  # [s]
-        for i in range(len(active_segments)):
-            active_segments[i].append(end_times[i])
+        # end_times = np.roll(np.asarray([n[1] for n in active_segments]), -1)
+        # for i in range(len(end_times)-1):
+        #     if active_segments[i+1][1] == end_times[i]:
+        #         end_times[i] = 12.383
+        # end_times[-1] = 12.383  # [s]
+        # for i in range(len(active_segments)):
+        #     active_segments[i].append(end_times[i])
         return active_segments
 
     @parameter_method
@@ -240,7 +236,6 @@ class CModShot(Shot):
         # 2.) IF it does, interpolate IP programming onto the PCS timebase
         # 3.) Clip to the start and stop times of PCS timebase
         for segment, start in active_segments:
-        for segment, start in active_segments:
             # Ip wire can be one of 16 but is normally no. 16
             for wire_index in range(16, 0, -1):
                 wire_node = segment.getNode(f":P_{wire_index :02d}:name")
@@ -256,7 +251,6 @@ class CModShot(Shot):
                             signal = signal_record.data()
                             ip_prog_temp = interp1(
                                 sigtime, signal, pcstime, bounds_error=False, fill_value=signal[-1])
-                            end = pcstime[np.argmin(np.abs(pcstime - sigtime[-1])+ .0001)]
                             end = pcstime[np.argmin(np.abs(pcstime - sigtime[-1])+ .0001)]
                             segment_indices = np.where(
                                 (pcstime >= start) & (pcstime <= end))
@@ -341,7 +335,6 @@ class CModShot(Shot):
         z_wire_index = -1
         active_wire_segments = self.get_active_wire_segments()
         for segment, start in active_wire_segments:
-        for segment, start in active_wire_segments:
             for wire_index in range(1, 17):
                 wire_node = segment.getNode(f":P_{wire_index :02d}:name")
                 if wire_node.getData().data() == "ZCUR":
@@ -351,8 +344,6 @@ class CModShot(Shot):
                         if np.any(pid_gains):
                             sig_node = segment.getNode(f":P_{wire_index :02d}")
                             signal_record = sig_node.getData()
-                            sigtime = signal_record.dim_of(0).data()
-                            end = sigtime[np.argmin(np.abs(sigtime - pcstime[-1])+ .0001)]
                             sigtime = signal_record.dim_of(0).data()
                             end = sigtime[np.argmin(np.abs(sigtime - pcstime[-1])+ .0001)]
                             signal = signal_record.data()
@@ -1435,22 +1426,21 @@ class CModShot(Shot):
 
         return pd.DataFrame({"H98": H98})
 
-
-# TODO: Finish
-@parameter_method
-def _get_H98(self):
-    """Prepare to compute H98 by getting tau_E
-
+    # TODO: Finish
+    @parameter_method
+    def _get_H98(self):
+        """Prepare to compute H98 by getting tau_E
 
 
-    Original Authors
-    ----------------
-    Andrew Maris (maris@mit.edu)
 
-    """
-    tau = 0
-    t_tau = [0]
-    return CModShot.get_H98(self._times, tau, t_tau)
+        Original Authors
+        ----------------
+        Andrew Maris (maris@mit.edu)
+
+        """
+        tau = 0
+        t_tau = [0]
+        return CModShot.get_H98(self._times, tau, t_tau)
 
 
 if __name__ == '__main__':
@@ -1460,7 +1450,7 @@ if __name__ == '__main__':
     # parser.add_argument('--shot', type=int, help='Shot number to test', default=1150922001)
     parser.add_argument('--shot', type=int, help='Shot number to test', default=1090806010)
     # Add parser argument for list of methods to populate
-    parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=[])
+    parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_H98'])
     args = parser.parse_args()
     shot = CModShot(args.shot, disruption_time=None, populate_methods=args.populate_methods)
     # ohmics_parameters = shot._get_ohmic_parameters()
