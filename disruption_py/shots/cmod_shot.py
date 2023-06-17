@@ -1586,9 +1586,9 @@ class CModShot(Shot):
 
 
 
-    Original Authors
-    ----------------
-    Andrew Maris (maris@mit.edu)
+        Original Authors
+        ----------------
+        Andrew Maris (maris@mit.edu)
 
         """
                      
