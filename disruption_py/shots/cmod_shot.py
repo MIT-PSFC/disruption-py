@@ -72,10 +72,6 @@ class CModShot(Shot):
         timebase_signal = kwargs.pop('timebase_signal', None)
         populate_methods = kwargs.pop('populate_methods', None)
         populate_tags = kwargs.pop('populate_tags', ['all'])
-        if not isinstance(populate_tags, list):
-            populate_tags = [populate_tags]
-        if not isinstance(populate_methods, list):
-            populate_methods = [populate_methods]
         if self.data is not None and self._times is None:
             try:
                 self._times = self.data['time'].to_numpy()
@@ -153,13 +149,13 @@ class CModShot(Shot):
                 active_segments.append(
                     [node, node.getNode(":start_time").getData().data()])
         active_segments.sort(key=lambda n: n[1])
-        end_times = np.roll(np.asarray([n[1] for n in active_segments]), -1)
-        for i in range(len(end_times)-1):
-            if active_segments[i+1][1] == end_times[i]:
-                end_times[i] = 12.383
-        end_times[-1] = 12.383  # [s]
-        for i in range(len(active_segments)):
-            active_segments[i].append(end_times[i])
+        # end_times = np.roll(np.asarray([n[1] for n in active_segments]), -1)
+        # for i in range(len(end_times)-1):
+        #     if active_segments[i+1][1] == end_times[i]:
+        #         end_times[i] = 12.383
+        # end_times[-1] = 12.383  # [s]
+        # for i in range(len(active_segments)):
+        #     active_segments[i].append(end_times[i])
         return active_segments
 
     @parameter_method
@@ -1429,22 +1425,21 @@ class CModShot(Shot):
 
         return pd.DataFrame({"H98": H98})
 
-
-# TODO: Finish
-@parameter_method
-def _get_H98(self):
-    """Prepare to compute H98 by getting tau_E
-
+    # TODO: Finish
+    @parameter_method
+    def _get_H98(self):
+        """Prepare to compute H98 by getting tau_E
 
 
-    Original Authors
-    ----------------
-    Andrew Maris (maris@mit.edu)
 
-    """
-    tau = 0
-    t_tau = [0]
-    return CModShot.get_H98(self._times, tau, t_tau)
+        Original Authors
+        ----------------
+        Andrew Maris (maris@mit.edu)
+
+        """
+        tau = 0
+        t_tau = [0]
+        return CModShot.get_H98(self._times, tau, t_tau)
 
 
 if __name__ == '__main__':
@@ -1454,7 +1449,7 @@ if __name__ == '__main__':
     # parser.add_argument('--shot', type=int, help='Shot number to test', default=1150922001)
     parser.add_argument('--shot', type=int, help='Shot number to test', default=1090806010)
     # Add parser argument for list of methods to populate
-    parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=[])
+    parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_H98'])
     args = parser.parse_args()
     shot = CModShot(args.shot, disruption_time=None, populate_methods=args.populate_methods)
     # ohmics_parameters = shot._get_ohmic_parameters()
