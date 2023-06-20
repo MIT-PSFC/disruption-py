@@ -650,8 +650,7 @@ class CModShot(Shot):
     def get_n_equal_1_amplitude():
         pass
 
-    @parameter_method
-    @parameter_method
+        @parameter_method
     def _get_n_equal_1_amplitude(self):
         """ Calculate n=1 amplitude and phase.
 
@@ -726,7 +725,7 @@ class CModShot(Shot):
         n_equal_1_normalized = n_equal_1_amplitude / btor_magnitude
         # INFO: Debugging purpose block of code at end of matlab file
         # INFO: n_equal_1_amplitude vs n_equal_1_mode
-        return pd.DataFrame({"n_equal_1_mode": n_equal_1_amplitude, "n_equal_1_normalized": n_equal_1_normalized, "n_equal_1_phase": n_equal_1_phase})
+        return pd.DataFrame({"n_equal_1_mode": n_equal_1_amplitude, "n_equal_1_normalized": n_equal_1_normalized, "n_equal_1_phase": n_equal_1_phase,'BT':btor})
 
     @staticmethod
     def get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
@@ -1579,19 +1578,31 @@ class CModShot(Shot):
 
         return pd.DataFrame({"H98": H98})
 
-    # TODO: Finish
+# TODO: Finish
     @parameter_method
     def _get_H98(self):
         """Prepare to compute H98 by getting tau_E
-
-
-
         Original Authors
         ----------------
         Andrew Maris (maris@mit.edu)
 
         """
-                     
+        
+        #Get parameters for calculating confinement time
+        powers_df = self._get_power()
+        efit_df = self._get_EFIT_parameters()
+        density_df = self._get_densities()
+        ip_df = self._get_ip_parameters()
+        
+        #Get BT
+        mag_tree = Tree('magnetics', self._shot_id)
+        btor_record = mag_tree.getNode(r"\btor").getData()
+        btor = btor_record.data()
+        t_mag = btor_record.dim_of(0)
+        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be on by t=-1. So pick the time before that to calculate baseline
+        baseline_indices = np.where(t_mag <= -1.8)
+        btor = btor - np.mean(btor[baseline_indices])
+        btor = interp1(t_mag, btor, self._times)
         
         #Estimate confinement time
         tau = efit_df.wmhd/(powers_df.p_input - efit_df.dWmhd_dt) 
