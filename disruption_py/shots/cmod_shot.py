@@ -109,6 +109,8 @@ class CModShot(Shot):
             self._times = timebase_signal
         elif timebase_signal == 'flattop':
             self.set_flattop_timebase()
+        elif timebase_signal == 'rampup_and_flattop':
+            self.set_rampup_and_flattop_timebase()
         else:
             raise NotImplementedError(
                 "Non-default timebases are not currently supported")
@@ -138,6 +140,21 @@ class CModShot(Shot):
                 f"[Shot {self._shot_id}]:Could not find flattop timebase. Defaulting to full shot(efit) timebase.")
             return
         self._times = self._times[indices_flattop]
+
+    def set_rampup_and_flattop_timebase(self):
+        self.set_default_timebase()
+        ip_parameters = self._get_ip_parameters()
+        ipprog, dipprog_dt = ip_parameters['ipprog'], ip_parameters['dipprog_dt']
+        # Find end of flattop 
+        indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 6e4)[0]
+        indices_flattop_2 = np.where(np.abs(ipprog) > 1.e5)[0]
+        indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
+        if len(indices_flattop) == 0:
+            self.logger.warning(
+                f"[Shot {self._shot_id}]:Could not find flattop timebase. Defaulting to full shot(efit) timebase.")
+            return
+        end_index = np.max(indices_flattop)
+        self._times = self._times[:end_index]
 
     def get_active_wire_segments(self):
         pcs_tree = Tree('pcs', self._shot_id)

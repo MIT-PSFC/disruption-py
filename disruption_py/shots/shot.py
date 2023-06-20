@@ -222,6 +222,8 @@ class Shot:
                 self.data = pd.DataFrame()
             self.data['time'] = self._times
             self.data['shot'] = self._shot_id
+        else:
+            return 
         if tags is not None and not isinstance(tags, list):
             populate_tags = [populate_tags]
         if methods is not None and not isinstance(methods, list):

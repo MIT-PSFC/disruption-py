@@ -206,12 +206,8 @@ class CModHandler(DatabaseHandler):
         data_df = pd.read_sql_query(
             f"select * from disruption_warning where shot = {shot_id} order by time", self.conn)
         if efit_tree is None:
-            efit_tree = self.get_efit_tree(shot_id)
-            if efit_tree is None:
-                logging.info(
-                    f"Shot {shot_id} has no disruptions group efit run")
-                return None
-        return CModShot(shot_id, data=data_df,disruption_time=self.get_disruption_time(shot_id))
+            efit_tree = 'analysis'
+        return CModShot(shot_id, efit_tree_name=efit_tree, data=data_df,disruption_time=self.get_disruption_time(shot_id))
 
     # TODO: Make more efficient
     def get_shots(self, shot_ids, efit_tree=None):
