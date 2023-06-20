@@ -1583,9 +1583,21 @@ class CModShot(Shot):
         Andrew Maris (maris@mit.edu)
 
         """
-        tau = 0
-        t_tau = [0]
-        return CModShot.get_H98(self._times, tau, t_tau)
+                
+
+        return CModShot.get_H98(self._times, tau, t_tau)       
+        
+        #Estimate confinement time
+        tau = efit_df.wmhd/(powers_df.p_input - efit_df.dWmhd_dt) 
+        
+        #Compute 1998 tau_E scaling, taking A (atomic mass) = 2
+        tau_98 = 0.144*density_df.n_e**0.41*2**0.19*ip_df.ip**0.93*efit_df.R0**1.39 * \
+                efit_df.aminor**0.58*efit_df.kappa**0.78*btor**0.15*powers_df.p_input**-0.69
+        
+        H98 = tau/tau_98
+
+        return pd.DataFrame({"H98": H98})
+        #return CModShot.get_H98(self._times, tau)
 
 
 if __name__ == '__main__':
