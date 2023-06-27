@@ -56,7 +56,14 @@ class CModShot(Shot):
                  "Wmhd": r'\efit_aeqdsk:wplasm',
                  "ssep": r'\efit_aeqdsk:ssep',
                  "n_over_ncrit": r'\efit_aeqdsk:xnnc',
-                 "v_surf": r'\efit_aeqdsk:vsurf'}
+                 "v_surf": r'\efit_aeqdsk:vsurf',
+                 "R0": r'\efit_aeqdsk:rout',
+                 "tritop": r'\efit_aeqdsk:doutu',
+                 "tribot":  r'\efit_aeqdsk:doutl',
+                 "a_minor": r'\efit_aeqdsk:aminor',
+                 "R0":r'\efit_aeqdsk:rout',#TODO: Andrew will check that this is right
+                 "chisq":r'\efit_aeqdsk:chisq'}
+    
     efit_derivs = {'beta_p': 'dbetap_dt', 'li': 'dli_dt', 'Wmhd': 'dWmhd_dt'}
 
     # TODO: Populate metadata dict
@@ -130,7 +137,8 @@ class CModShot(Shot):
     def set_flattop_timebase(self):
         self.set_default_timebase()
         ip_parameters = self._get_ip_parameters()
-        ipprog, dipprog_dt = ip_parameters['ipprog'], ip_parameters['dipprog_dt']
+        ipprog, dipprog_dt = ip_parameters['ip_prog'], ip_parameters['dipprog_dt']
+        # ip, dip_dt = ip_parameters['ip'], ip_parameters['dip_dt']
         # Find the time of the flattop
         indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 6e4)[0]
         indices_flattop_2 = np.where(np.abs(ipprog) > 1.e5)[0]
@@ -144,7 +152,8 @@ class CModShot(Shot):
     def set_rampup_and_flattop_timebase(self):
         self.set_default_timebase()
         ip_parameters = self._get_ip_parameters()
-        ipprog, dipprog_dt = ip_parameters['ipprog'], ip_parameters['dipprog_dt']
+        ipprog, dipprog_dt = ip_parameters['ip_prog'], ip_parameters['dipprog_dt']
+        # ip, dip_dt = ip_parameters['ip'], ip_parameters['dip_dt']
         # Find end of flattop 
         indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 6e4)[0]
         indices_flattop_2 = np.where(np.abs(ipprog) > 1.e5)[0]
@@ -715,7 +724,7 @@ class CModShot(Shot):
             nan_arr.fill(np.nan)
             return pd.DataFrame({"n_e": nan_arr, "dn_dt": nan_arr.copy(), "Greenwald_fraction": nan_arr.copy()})
         dn_dt = np.gradient(n_e, t_n)
-        n_e = interp1(t_n, n_e, times)
+        n_e = interp1(t_n, n_e, times) 
         dn_dt = interp1(t_n, dn_dt, times)
         ip = -ip/1e6  # Convert from A to MA and take positive value
         ip = interp1(t_ip, ip, times)
@@ -1294,22 +1303,22 @@ class CModShot(Shot):
 
         return pd.DataFrame({"delta": delta, "aminor": aminor, "R0": R0})
 
-    @parameter_method
-    def _get_shape_parameters(self):
-        efittime = self._efit_tree.getNode(r'\efit_aeqdsk:time')
-        # sqfod = self._efit_tree.getNode(r'\efit_aeqdsk:sqfod').getData().data()
-        # sqfou = self._efit_tree.getNode(r'\efit_aeqdsk:sqfou').getData().data()
-        tritop = self._efit_tree.getNode(
-            r'\efit_aeqdsk:doutu').getData().data()  # meters
-        tribot = self._efit_tree.getNode(
-            r'\efit_aeqdsk:doutl').getData().data()  # meters
-        # plasma minor radius [m]
-        aminor = self._efit_tree.getNode(
-            r'\efit_aeqdsk:aminor').getData().data()
-        # major radius of geometric center [m]
-        R0 = self._efit_tree.getNode(r'\efit_aeqdsk:rout').getData().data()
-        chisq = self._efit_tree.getNode(r'\efit_aeqdsk:chisq').getData().data()
-        return self.get_shape_parameters(self._times, tritop, tribot, aminor, R0, chisq, efittime)
+    # @parameter_method
+    # def _get_shape_parameters(self):
+    #     efittime = self._efit_tree.getNode(r'\efit_aeqdsk:time')
+    #     # sqfod = self._efit_tree.getNode(r'\efit_aeqdsk:sqfod').getData().data()
+    #     # sqfou = self._efit_tree.getNode(r'\efit_aeqdsk:sqfou').getData().data()
+    #     tritop = self._efit_tree.getNode(
+    #         r'\efit_aeqdsk:doutu').getData().data()  # meters
+    #     tribot = self._efit_tree.getNode(
+    #         r'\efit_aeqdsk:doutl').getData().data()  # meters
+    #     # plasma minor radius [m]
+    #     aminor = self._efit_tree.getNode(
+    #         r'\efit_aeqdsk:aminor').getData().data()
+    #     # major radius of geometric center [m]
+    #     R0 = self._efit_tree.getNode(r'\efit_aeqdsk:rout').getData().data()
+    #     chisq = self._efit_tree.getNode(r'\efit_aeqdsk:chisq').getData().data()
+    #     return self.get_shape_parameters(self._times, tritop, tribot, aminor, R0, chisq, efittime)
 
     @staticmethod
     def get_sxr_parameters():
@@ -1520,17 +1529,46 @@ class CModShot(Shot):
     @parameter_method
     def _get_H98(self):
         """Prepare to compute H98 by getting tau_E
-
-
-
+        
+        Scaling from eq. 20, ITER Physics Basis Chapter 2 https://iopscience.iop.org/article/10.1088/0029-5515/39/12/302/pdf
+        (in s, MA, T, MW, 1019 m−3, AMU, m)
         Original Authors
         ----------------
         Andrew Maris (maris@mit.edu)
 
         """
-        tau = 0
-        t_tau = [0]
-        return CModShot.get_H98(self._times, tau, t_tau)
+        
+        #Get parameters for calculating confinement time
+        powers_df = self._get_power()
+        efit_df = self._get_EFIT_parameters()
+        density_df = self._get_densities()
+        ip_df = self._get_ip_parameters()
+        
+        #Get BT
+        mag_tree = Tree('magnetics', self._shot_id)
+        btor_record = mag_tree.getNode(r"\btor").getData()
+        btor = btor_record.data()
+        t_mag = btor_record.dim_of(0).data() # [s]
+        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be on by t=-1. So pick the time before that to calculate baseline
+        baseline_indices = np.where(t_mag <= -1.8)
+        btor = btor - np.mean(btor[baseline_indices])
+        btor = np.abs(interp1(t_mag, btor, self._times))
+        
+        ip = np.abs(ip_df.ip)/1e6 # [A] -> [MA]
+        n_e = density_df.n_e/1e19 # [m^-3] -> [10^19 m^-3]
+        p_input = powers_df.p_input/1.e6 # [W] -> [MW]
+        dWmhd_dt = efit_df.dWmhd_dt/1.e6 # [W] -> [MW]
+        Wmhd = efit_df.Wmhd/1.e6 # [J] -> [MJ]
+        #Estimate confinement time
+        tau = Wmhd/(p_input - dWmhd_dt)
+        
+        #Compute 1998 tau_E scaling, taking A (atomic mass) = 2
+        tau_98 = .0562*(n_e**0.41)*(2**0.19)*(ip**0.93)*(efit_df.R0**1.39) * \
+                (efit_df.a_minor**0.58)*(efit_df.kappa**0.78)*(btor**0.15)*(p_input**-0.69)
+        H98 = tau/tau_98
+
+        return pd.DataFrame({"H98": H98})
+        #return CModShot.get_H98(self._times, tau)
 
 
 if __name__ == '__main__':
@@ -1538,10 +1576,10 @@ if __name__ == '__main__':
     ch.setLevel(5)
     parser = argparse.ArgumentParser(description="Test CModShot class")
     # parser.add_argument('--shot', type=int, help='Shot number to test', default=1150922001)
-    parser.add_argument('--shot', type=int, help='Shot number to test', default=1090806010)
+    parser.add_argument('--shot', type=int, help='Shot number to test', default=1150922001)
     # Add parser argument for list of methods to populate
-    parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_prad_peaking'])
+    parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_H98', 'get_ip_parameters'])
     args = parser.parse_args()
-    shot = CModShot(args.shot, disruption_time=None, populate_methods=args.populate_methods)
+    shot = CModShot(args.shot, disruption_time=None, timebase_signal="rampup_and_flattop",populate_methods=args.populate_methods)
     # ohmics_parameters = shot._get_ohmic_parameters()
-    print(shot.data.head())
+    print(shot.data)
