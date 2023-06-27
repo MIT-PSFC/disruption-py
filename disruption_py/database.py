@@ -144,15 +144,13 @@ class DatabaseHandler:
 
     def get_shot_data(self, shot_ids=None, cols=["*"], sql_table="disruption_warning"):
         shot_ids = ','.join([str(shot_id) for shot_id in shot_ids])
-        cols = f"{cols[0]}" 
+        selected_cols = f"{cols[0]}"
         if len(cols) > 1:
-            cols += ' '.join([f",{col}" for col in cols[1:]]) 
-        if cols is None:
-            cols = "*"
+            selected_cols += ''.join([f", {col}" for col in cols[1:]])
         if shot_ids is None:
-            query = f"select {cols} from {sql_table} order by time"
+            query = f"select {selected_cols} from {sql_table} order by time"
         else:
-            query = f"select {cols} from {sql_table} where shot in ({shot_ids}) order by time"
+            query = f"select {selected_cols} from {sql_table} where shot in ({shot_ids}) order by time"
         shot_df = pd.read_sql_query(query, self.conn)
         return shot_df
 

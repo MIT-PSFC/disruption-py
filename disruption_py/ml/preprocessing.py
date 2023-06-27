@@ -113,7 +113,12 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
     else:
         raise ValueError(
             'Datasource must be one of 4 options: 0,1,2,3. See generate_datsets.py -h for more details.')
-    LOGGER.info(f"Successfully processed {len(shots)}/{len(shot_ids)} shots")
+    try:
+        LOGGER.info(f"Successfully processed {len(shots)}/{len(shot_ids)} shots")
+    except:
+        # TODO: implement regression tests so you catch when adding new features breaks workflows
+        # variable 'shots' not defined when using SQL data source
+        pass
     dataset_df = dataset_df.fillna(value=np.nan)
     cols = list(dataset_df.columns)
     if not set(required_cols).issubset(set(cols)):
