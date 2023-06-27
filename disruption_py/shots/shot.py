@@ -234,6 +234,11 @@ class Shot:
         for method_name in dir(self):
             method = getattr(self, method_name)
             if callable(method) and hasattr(method, 'populate'):
+                print('here-1')
+                import pdb; pdb.set_trace()
+                print(bool(set(method.tags).intersection(tags)))
+                print('never gets here!')
+                print((methods is not None and method_name not in methods))
                 if not bool(set(method.tags).intersection(tags)) or (methods is not None and method_name not in methods):
                     continue
                 try:

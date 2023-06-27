@@ -251,7 +251,6 @@ class CModShot(Shot):
         return pd.DataFrame({"ip": ip, "dip_dt": dip, "dip_smoothed": dip_smoothed, "ip_prog": ip_prog, "dipprog_dt": dipprog_dt, "ip_error": ip_error})
 
     @parameter_method
-    @parameter_method
     def _get_ip_parameters(self):
         # Automatically generated
         magnetics_tree = Tree('magnetics', self._shot_id)
