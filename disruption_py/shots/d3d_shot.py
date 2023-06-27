@@ -773,15 +773,11 @@ class D3DShot(Shot):
                 dusbradial, t_n1 = self._get_signal(
                     f"ptdata('onsbradial',{self._shot_id})")
                 dusbradial *= 1.e-4  # [T]
-                    f"ptdata('onsbradial',{self._shot_id})")
-                dusbradial *= 1.e-4  # [T]
             except MdsException as e:
                 self.logger.debug(
                     f"[Shot {self._shot_id}]:{traceback.format_exc()}")
                 try:
                     dusbradial, t_n1 = self._get_signal(
-                        f"ptdata('dusbradial',{self._shot_id})")
-                    dusbradial *= 1.e-4  # [T]
                         f"ptdata('dusbradial',{self._shot_id})")
                     dusbradial *= 1.e-4  # [T]
                 except MdsException as e:

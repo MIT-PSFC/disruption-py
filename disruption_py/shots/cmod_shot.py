@@ -1531,7 +1531,7 @@ class CModShot(Shot):
         """Prepare to compute H98 by getting tau_E
         
         Scaling from eq. 20, ITER Physics Basis Chapter 2 https://iopscience.iop.org/article/10.1088/0029-5515/39/12/302/pdf
-        (in s, MA, T, MW, 1019 m−3, AMU, m)
+        (in s, MA, T, MW, 10^19 m^−3, AMU, m)
         Original Authors
         ----------------
         Andrew Maris (maris@mit.edu)
