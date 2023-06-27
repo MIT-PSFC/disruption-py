@@ -72,7 +72,8 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
     else:
         tokamak_handler = TOKAMAKS[tokamak]()
     timebase_signal = kwargs.get('timebase_signal', None)
-    populate = kwargs.get('populate', 'default')
+    populate_methods = kwargs.get('populate_methods', None)
+    populate_tags = kwargs.get('populate_tags', None)
     label = kwargs.get('label', 'none')
     if shot_ids is None:
         random_state = kwargs.get('random_state', 8808)
@@ -95,13 +96,13 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
                 if tokamak == 'd3d':
                     if efit_tree is None:
                         shots.append(D3DShot(shot_id, tokamak_handler.get_efit_tree(
-                            shot_id), disruption_time=tokamak_handler.get_disruption_time(shot_id), timebase_signal=timebase_signal, populate=populate))
+                            shot_id), disruption_time=tokamak_handler.get_disruption_time(shot_id), timebase_signal=timebase_signal, populate_methods=populate_methods, populate_tags=populate_tags))
                     else:
                         shots.append(D3DShot(shot_id, efit_tree, disruption_time=tokamak_handler.get_disruption_time(shot_id),
-                                             timebase_signal=timebase_signal, populate=populate))
+                                             timebase_signal=timebase_signal, populate_methods=populate_methods, populate_tags=populate_tags))
                 elif tokamak == 'cmod':
                     #shots.append(CModShot("cmod",shot_id=shot_id))
-                    shots.append(CModShot(shot_id=shot_id, disruption_time=tokamak_handler.get_disruption_time(shot_id)))
+                    shots.append(CModShot(shot_id=shot_id, disruption_time=tokamak_handler.get_disruption_time(shot_id), timebase_signal=timebase_signal, populate_methods=populate_methods, populate_tags=populate_tags))
                 LOGGER.info(f"[Shot {shot_id}]:Generated shot object, {idx} of {len(shot_ids)} ({percent_complete:.1f}% percent complete)' ")
             except Exception as e:
                 LOGGER.info(f"[Shot {shot_id}]:Failed to generate shot object, {idx} of {len(shot_ids)} ({percent_complete:.1f}% percent complete)'")

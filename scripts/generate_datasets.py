@@ -35,7 +35,7 @@ def main(args):
     feature_cols, derived_feature_cols = parse_feature_cols(args.feature_cols)
     print(feature_cols)
     dataset_df = get_dataset_df(args.data_source, cols=feature_cols +
-                                REQUIRED_COLS, efit_tree=args.efit_tree, shot_ids=shot_ids, tokamak=args.tokamak, timebase_signal=args.timebase_signal, label=args.label, populate=args.populate)
+                                REQUIRED_COLS, efit_tree=args.efit_tree, shot_ids=shot_ids, tokamak=args.tokamak, timebase_signal=args.timebase_signal, label=args.label, populate_methods=args.populate_methods, populate_tags=args.populate_tags)
     dataset_df = add_derived_features(dataset_df, derived_feature_cols)
     if args.filter is True:
         print(args.filter)
@@ -88,8 +88,9 @@ if __name__ == '__main__':
                         0, 1, 2, 3, 4, 5], help='Notset:0,Debug:1,Info:2,Warning:3,Error:4,Critical:5', default=2)
     parser.add_argument('--label', type=str, choices=[
                         'binary', 'none'], help="Timestep disruption label. Currently only supports binary labels", default='binary')
-    parser.add_argument('--populate', type=str, choices=[
-                        'default', 'l_mode'], help="Options for population at instantiation.", default='default')
+    # Two argparse arguments. populate_methods which is a list of strings but defaults to None and populate_tags which is a list of strings that also defaults to None
+    parser.add_argument('--populate_methods', nargs='*', type=str, default=None)
+    parser.add_argument('--populate_tags', nargs='*', type=str, default=None) 
     parser.add_argument(
         '--filter', type=int, help="Run filter_dataset method on produced dataset. Necessary for generating DPRF datasets", default=1)
     args = parser.parse_args()
