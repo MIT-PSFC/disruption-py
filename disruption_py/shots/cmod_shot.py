@@ -93,7 +93,7 @@ class CModShot(Shot):
         try:
             self._efit_tree = Tree(self.efit_tree_name,
                                    self._shot_id, mode="readonly")
-        except mdsExceptions.TreeFOPENR as e:
+        except Exception as e:
             self.logger.warning(
                 f"[Shot {self._shot_id}]:Failed to open efit tree {self.efit_tree_name}.")
             if self.efit_tree_name == 'analysis':
@@ -873,6 +873,80 @@ class CModShot(Shot):
             return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
 
     @parameter_method
+    def _get_prad_peaking(self):
+        prad_peaking = np.full(len(self._times), np.nan)
+        cmod_tree = Tree('cmod', self._shot_id)
+        try:
+            r0 = 0.01* cmod_tree.getNode(r'\efit_aeqdsk:rmagx').getData().data()
+            z0 = 0.01 * cmod_tree.getNode(r'\efit_aeqdsk:zmagx').getData().data()
+            aminor = cmod_tree.getNode(r'\efit_aeqdsk:aminor').getData().data()
+            efit_time = cmod_tree.getNode(r'\efit_aeqdsk:aminor').getData().dim_of(0)
+        except mdsExceptions.MdsException as e:
+            self.logger.debug(f"[Shot {self._shot_id}]: Failed to get efit data")
+            return pd.DataFrame({"prad_peaking": prad_peaking})
+        spec_tree = Tree('spectroscopy', self._shot_id)
+        got_axa = False 
+        try: 
+            axa = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.AXA:BRIGHT").getData()
+            t_axa = axa.dim_of(1).data()
+            r_axa = axa.dim_of(0).data()
+            bright_axa = axa.data()
+            z_axa = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXA:Z_O").getData().data()
+            good_axa = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXA:GOOD").getData().data()
+            got_axa = True 
+        except mdsExceptions.MdsException as e:
+            self.logger.debug(f"[Shot {self._shot_id}]: Failed to get AXA data")
+        got_axj = False 
+        try: 
+            axj = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.AXJ:BRIGHT").getData() 
+            t_axj = axj.dim_of(1).data()
+            r_axj = axj.dim_of(0).data()
+            bright_axj = axj.data()
+            z_axj = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXJ:Z_O").getData().data()
+            good_axj = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXJ:GOOD").getData().data()
+            got_axj = True
+        except mdsExceptions.MdsException as e:
+            self.logger.debug(f"[Shot {self._shot_id}]: Failed to get AXJ data")
+        if not (got_axa or got_axj):
+            return pd.DataFrame({"prad_peaking": prad_peaking})
+        a_minor = interp1(efit_time, aminor, self._times)
+        r0 = interp1(efit_time, r0, self._times)
+        z0 = interp1(efit_time, z0, self._times)
+        axa_interp = np.full((bright_axa.shape[0], len(self._times)), np.nan)
+        axj_interp = np.full((bright_axj.shape[0], len(self._times)), np.nan)
+        if got_axa:
+            good_axa = np.where(good_axa > 0)[0]
+            bright_axa = bright_axa[:, good_axa]
+            for i in range(len(bright_axa)):
+                interped = interp1(t_axa, bright_axa[i, :], self._times)
+                indx = np.where(interped < 0)
+                interped[indx] = np.nan
+                axa_interp[i,:] = interped
+        if got_axj:
+            good_axj = np.where(good_axj > 0)[0]
+            bright_axj = bright_axj[:, good_axj]
+            for i in range(len(bright_axj)):
+                interped = interp1(t_axj, bright_axj[:, i], self._times)
+                indx = np.where(interped < 0)
+                interped[indx] = np.nan
+                axj_interp[:, i] = interped
+        for i in range(len(self._times)):
+            core_radiation = np.array([])
+            all_radiation = np.array([])
+            if got_axa:
+                axa_dist = np.sqrt((r_axa - r0[i])**2 + (z0[i]-z_axa)**2)
+                axa_core_index = axa_dist < 0.2*a_minor[i]
+                core_radiation = np.append(core_radiation, axa_interp[axa_core_index, i])
+                all_radiation = np.append(all_radiation, axa_interp[:, i])
+            if got_axj:
+                axj_dist = np.sqrt((r_axj - r0[i])**2 + (z0[i]-z_axj)**2)
+                axj_core_index = axj_dist < 0.2*a_minor[i]
+                core_radiation = np.append(core_radiation, axj_interp[axj_core_index, i])
+                all_radiation = np.append(all_radiation, axj_interp[:, i])
+                prad_peaking[i] = np.nanmean(core_radiation) / np.nanmean(all_radiation)
+        return pd.DataFrame({"prad_peaking": prad_peaking})
+
+    @parameter_method
     def _get_peaking_factors_no_tci(self):
         # Initialize PFs as empty arrarys
         ne_PF = np.full(len(self._times), np.nan)
@@ -1466,7 +1540,7 @@ if __name__ == '__main__':
     # parser.add_argument('--shot', type=int, help='Shot number to test', default=1150922001)
     parser.add_argument('--shot', type=int, help='Shot number to test', default=1090806010)
     # Add parser argument for list of methods to populate
-    parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_H98'])
+    parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_prad_peaking'])
     args = parser.parse_args()
     shot = CModShot(args.shot, disruption_time=None, populate_methods=args.populate_methods)
     # ohmics_parameters = shot._get_ohmic_parameters()

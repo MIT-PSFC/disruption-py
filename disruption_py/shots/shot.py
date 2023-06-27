@@ -239,6 +239,8 @@ class Shot:
                 try:
                     parameters.append(method())
                 except Exception as e:
+                    print(e)
+                    print(traceback.print_exc())
                     self.logger.warning(
                         f"[Shot {self._shot_id}]:Failed to populate {method_name}")
                     self.logger.debug(f"{traceback.format_exc()}")
