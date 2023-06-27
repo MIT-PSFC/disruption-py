@@ -1569,7 +1569,6 @@ class CModShot(Shot):
 
         """
         # Take R = 0.68 [m], A = 2
-        # Take R = 0.68 [m], A = 2
 
         tau_98 = 0.144*n_e**0.41*2**0.19*ip**0.93*R0**1.39 * \
             aminor**0.58*kappa**0.78*BT**0.15*p_input**-0.69
