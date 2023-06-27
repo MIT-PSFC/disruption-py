@@ -796,7 +796,6 @@ class D3DShot(Shot):
         return pd.DataFrame({'n_equal_1_normalized': n_equal_1_normalized, 'n_equal_1_mode': n_equal_1_mode})
 
     @parameter_method
-    @parameter_method
     def get_n1rms_parameters(self):
         self.conn.openTree('d3d', self._shot_id)
         n1rms, t_n1rms = self._get_signal(r'\n1rms', interpolate=False)
@@ -804,14 +803,13 @@ class D3DShot(Shot):
         n1rms = interp1(t_n1rms, n1rms, self._times)
         b_tor = self._get_signal(
             "ptdata('bt', {self._shot_id})")  # [T]
-            "ptdata('bt', {self._shot_id})")  # [T]
         n1rms_norm = n1rms / np.abs(b_tor)
         return pd.DataFrame({'n1rms': n1rms, 'n1rms_normalized': n1rms_norm})
 
     # TODO: Need to test and unblock recalculating peaking factors
     # By default get_peaking_factors should grab the data from MDSPlus as opposed to recalculate. See DPP v4 document for details:
     # https://docs.google.com/document/d/1R7fI7mCOkMQGt8xX2nS6ZmNNkcyvPQ7NmBfRPICFaFs/edit?usp=sharing
-    @parameter_method
+
     @parameter_method
     def get_peaking_factors(self):
         ts_data_type = 'blessed'  # either 'blessed', 'unblessed', or 'ptdata'
@@ -1256,7 +1254,6 @@ if __name__ == '__main__':
     logger = logging.getLogger('disruption_py')
     logger.setLevel(logging.DEBUG)
     shot = D3DShot(D3D_DISRUPTED_SHOT, 'EFIT05',
-                   disruption_time=4.369214483261109)
                    disruption_time=4.369214483261109)
     print(shot.data.columns)
     print(shot.data.head())

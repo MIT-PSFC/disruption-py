@@ -985,11 +985,6 @@ class CModShot(Shot):
                 r'\ts_te').getData().data()*11600  # Get edge TS data
             # Concat core and edge data
             Te = np.concatenate((Te_core, Te_edge))
-                f"{node_ext}:te_rz").getData().data()*1000*11600  # Get core TS data
-            Te_edge = electron_tree.getNode(
-                r'\ts_te').getData().data()*11600  # Get edge TS data
-            # Concat core and edge data
-            Te = np.concatenate((Te_core, Te_edge))
             Te_time = electron_tree.getNode(
                 f"{node_ext}:te_rz").getData().dim_of(0).data()  # Get time associated with
             z_core = electron_tree.getNode(
