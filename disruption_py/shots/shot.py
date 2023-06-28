@@ -217,6 +217,9 @@ class Shot:
         self.data = pd.concat([self.data, local_data], axis=1)
 
     def _init_populate(self, already_populated, methods, tags):
+        # What is the intended logic here? 
+        # This is *incredibly* confusing
+        # TODO: Add comments to explain what is going on here
         if not already_populated:
             if self.data is None:
                 self.data = pd.DataFrame()
@@ -232,8 +235,15 @@ class Shot:
         for method_name in dir(self):
             method = getattr(self, method_name)
             if callable(method) and hasattr(method, 'populate'):
-                if not bool(set(method.tags).intersection(tags)) or (methods is not None and method_name not in methods):
+                if (methods is not None and method_name not in methods):
                     continue
+                try:
+                    # This if statement throws an exception if tags is 'None', which is the default
+                    if not bool(set(method.tags).intersection(tags)):
+                        continue
+                except:
+                    pass
+                
                 try:
                     parameters.append(method())
                 except Exception as e:
