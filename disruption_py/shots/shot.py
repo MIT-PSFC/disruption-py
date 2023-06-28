@@ -238,9 +238,6 @@ class Shot:
         # What is the intended logic here? 
         # This is *incredibly* confusing
         # TODO: Add comments to explain what is going on here
-        # What is the intended logic here? 
-        # This is *incredibly* confusing
-        # TODO: Add comments to explain what is going on here
         if not already_populated:
             if self.data is None:
                 self.data = pd.DataFrame()
