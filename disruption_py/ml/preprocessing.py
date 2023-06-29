@@ -90,7 +90,8 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
     elif data_source == 3:
         shots = []
         timebase_signal = kwargs.get('timebase_signal', None)
-        for shot_id in shot_ids:
+        for idx,shot_id in enumerate(shot_ids):
+            percent_complete = idx/len(shot_ids)*100
             try:
                 if tokamak == 'd3d':
                     if efit_tree is None:
@@ -104,7 +105,7 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
                     shots.append(CModShot(shot_id=shot_id, disruption_time=tokamak_handler.get_disruption_time(shot_id), timebase_signal=timebase_signal, populate_methods=populate_methods, populate_tags=populate_tags))
                 LOGGER.info(f"[Shot {shot_id}]:Generated shot object, {idx} of {len(shot_ids)} ({percent_complete:.1f}% percent complete)' ")
             except Exception as e:
-                LOGGER.info(f"[Shot {shot_id}]:Failed to generate shot object")
+                LOGGER.info(f"[Shot {shot_id}]:Failed to generate shot object, {idx} of {len(shot_ids)} ({percent_complete:.1f}% percent complete)'")
                 # exc_type, exc_obj, exc_tb = sys.exc_info()
                 # fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 LOGGER.debug(f"[Shot {shot_id}]:{e}")

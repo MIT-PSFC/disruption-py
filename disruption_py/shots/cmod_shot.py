@@ -57,7 +57,6 @@ class CModShot(Shot):
                  "ssep": r'\efit_aeqdsk:ssep',
                  "n_over_ncrit": r'\efit_aeqdsk:xnnc',
                  "v_surf": r'\efit_aeqdsk:vsurf',
-                 "R0": r'\efit_aeqdsk:rout',
                  "tritop": r'\efit_aeqdsk:doutu',
                  "tribot":  r'\efit_aeqdsk:doutl',
                  "a_minor": r'\efit_aeqdsk:aminor',
@@ -638,7 +637,6 @@ class CModShot(Shot):
     def get_n_equal_1_amplitude():
         pass
 
-    @parameter_method
     @parameter_method
     def _get_n_equal_1_amplitude(self):
         """ Calculate n=1 amplitude and phase.

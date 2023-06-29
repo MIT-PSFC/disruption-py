@@ -182,9 +182,47 @@ def smooth(arr: np.ndarray, window_size: int) -> np.ndarray:
     end = (np.cumsum(arr[:-window_size:-1])[::2]/b_weights)[::-1]
     return np.concatenate((start, mid, end))
 
+def gauss_smooth(y, smooth_width, ends_type):
+    """
+    Smooth a dataset using a Gaussian window.
+
+    Parameters
+    ----------
+    y : array_like
+        The y coordinates of the dataset.
+    smooth_width : int
+        The width of the smoothing window.
+    ends_type : int
+        Determines how the "ends" of the signal are handled.
+        0 -> ends are "zeroed"
+        1 -> the ends are smoothed with progressively smaller smooths the closer to the end.
+
+    Returns
+    -------
+    array_like
+        The smoothed dataset.
+    """
+    w = np.round(smooth_width)
+    w = int(w)  # Ensure w is an integer
+    l = len(y)
+    s = np.zeros(l)
+
+    for i in range(l):
+        if i < w // 2:
+            if ends_type == 0:
+                s[i] = 0
+            else:
+                s[i] = np.mean(y[:i + w // 2])
+        elif i >= l - w // 2:
+            if ends_type == 0:
+                s[i] = 0
+            else:
+                s[i] = np.mean(y[i - w // 2:])
+        else:
+            s[i] = np.mean(y[i - w // 2:i + w // 2])
+    return s
+
 # Credit to: https://stackoverflow.com/questions/11507028/fit-a-gaussian-function
-
-
 def gaussian_fit(x, y):
     """
     Fits a Gaussian curve to a set of data points (x,y).
