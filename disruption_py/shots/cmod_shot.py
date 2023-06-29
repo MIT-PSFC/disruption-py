@@ -63,7 +63,7 @@ class CModShot(Shot):
                  "tritop": r'\efit_aeqdsk:doutu',
                  "tribot":  r'\efit_aeqdsk:doutl',
                  "a_minor": r'\efit_aeqdsk:aminor',
-                 "R0":r'\efit_aeqdsk:rout',#TODO: Andrew will check that this is right
+                 "rmagx":r'\efit_aeqdsk:rmagx', #TODO: change units to [m] (current [cm])
                  "chisq":r'\efit_aeqdsk:chisq'}
     
     efit_derivs = {'beta_p': 'dbetap_dt', 'li': 'dli_dt', 'Wmhd': 'dWmhd_dt'}
@@ -1554,6 +1554,11 @@ class CModShot(Shot):
         btor = btor - np.mean(btor[baseline_indices])
         btor = np.abs(interp1(t_mag, btor, self._times))
         
+        #For H98 computation, use 
+        R0 = 0.68 #[m] geometric major radius of C-Mod
+        A = 2 #[amu] assume Deuterium, with atomic mass 2
+
+        #Get variables need to comptue confinement time
         ip = np.abs(ip_df.ip)/1e6 # [A] -> [MA]
         n_e = density_df.n_e/1e19 # [m^-3] -> [10^19 m^-3]
         p_input = powers_df.p_input/1.e6 # [W] -> [MW]
@@ -1562,8 +1567,8 @@ class CModShot(Shot):
         #Estimate confinement time
         tau = Wmhd/(p_input - dWmhd_dt)
         
-        #Compute 1998 tau_E scaling, taking A (atomic mass) = 2
-        tau_98 = .0562*(n_e**0.41)*(2**0.19)*(ip**0.93)*(efit_df.R0**1.39) * \
+        #Compute 1998 tau_E scaling
+        tau_98 = .0562*(n_e**0.41)*(A**0.19)*(ip**0.93)*(R0**1.39) * \
                 (efit_df.a_minor**0.58)*(efit_df.kappa**0.78)*(btor**0.15)*(p_input**-0.69)
         H98 = tau/tau_98
 
