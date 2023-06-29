@@ -702,7 +702,7 @@ class CModShot(Shot):
         polarity = np.sign(np.mean(btor))
         btor_magnitude = btor*polarity
         btor_magnitude = interp1(t_mag, btor_magnitude, self._times)
-        btor = interp1(t_mag, btor, self._times) #Interpolate BT with sign
+        BT = interp1(t_mag, btor, self._times) #Interpolate BT with sign, to return this
         # Create the 'design' matrix ('A') for the linear system of equations:
         # Bp(phi) = A1 + A2*sin(phi) + A3*cos(phi)
         ncoeffs = 3
@@ -720,7 +720,7 @@ class CModShot(Shot):
         n_equal_1_normalized = n_equal_1_amplitude / btor_magnitude
         # INFO: Debugging purpose block of code at end of matlab file
         # INFO: n_equal_1_amplitude vs n_equal_1_mode
-        return pd.DataFrame({"n_equal_1_mode": n_equal_1_amplitude, "n_equal_1_normalized": n_equal_1_normalized, "n_equal_1_phase": n_equal_1_phase})
+        return pd.DataFrame({"BT": BT, "n_equal_1_mode": n_equal_1_amplitude, "n_equal_1_normalized": n_equal_1_normalized, "n_equal_1_phase": n_equal_1_phase})
 
     @staticmethod
     def get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
