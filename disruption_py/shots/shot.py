@@ -277,12 +277,12 @@ class Shot:
         method_names = []
         for method_name in dir(self):
             method = getattr(self, method_name)
-            if callable(method) and hasattr(method, 'populate'):          
+            if callable(method) and hasattr(method, 'populate'):
                 if tags is not None and not bool(set(method.tags).intersection(tags)):
-                    self.logger.info(f"[Shot {self._shot_id}]:Skipping {method_name}")
+                    print(f"[Shot {self._shot_id}]:Skipping {method_name}")
                     continue
                 if methods is not None and method_name not in methods:
-                    self.logger.info(f"[Shot {self._shot_id}]:Skipping {method_name}")
+                    print(f"[Shot {self._shot_id}]:Skipping {method_name}")
                     continue
                 method_names.append(method_name)
         if self.multiprocessing:
