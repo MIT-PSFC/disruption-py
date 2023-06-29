@@ -18,17 +18,20 @@ from MDSplus import *
 # For edge parameters
 import sys
 import scipy as sp
-# TODO: Please make these exportable in some way
-"""
+
+# TODO: Somehow link to disruption_py 
+# TODO: Deal with scary missing TRIPpy dependency (please don't break until I fix you)
 try:
-    sys.path.append('/home/sciortino/usr/python3modules/profiletools3')
     sys.path.append('/home/sciortino/usr/python3modules/eqtools3')
-    import profiletools
+    sys.path.append('/home/sciortino/usr/python3modules/profiletools3')
+    sys.path.append('/home/sciortino/usr/python3modules/gptools3')
     import eqtools
+    import profiletools
 except Exception as e:
+    print(e)
     print('Could not import profiletools or eqtools')
     pass
-"""
+
 import warnings
 
 from disruption_py.utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power
@@ -78,6 +81,7 @@ class CModShot(Shot):
         timebase_signal = kwargs.pop('timebase_signal', None)
         populate_methods = kwargs.pop('populate_methods', None)
         populate_tags = kwargs.pop('populate_tags', ['all'])
+        self.interp_scheme = kwargs.pop('interp_scheme', 'linear')
         if self.data is not None and self._times is None:
             try:
                 self._times = self.data['time'].to_numpy()
@@ -404,7 +408,11 @@ class CModShot(Shot):
         # and *divide* by the factor only for the times in the active segment (as
         # determined from start_times and stop_times.
         for i in range(len(active_wire_segments)):
-            segment, start, end = active_wire_segments[i]
+            segment, start = active_wire_segments[i]
+            if i == len(active_wire_segments) - 1:
+                end = pcstime[-1]
+            else:
+                end = active_wire_segments[i+1][1]
             z_factor = hybrid_tree.getNode(
                 fr'\dpcs::top.seg_{i+1:02d}:p_{z_wire_index:02d}:predictor:factor').getData().data()
             z_error_without_ip[np.where((dpcstime >= start) & (
@@ -1572,6 +1580,6 @@ if __name__ == '__main__':
     # Add parser argument for list of methods to populate
     parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_H98', 'get_ip_parameters'])
     args = parser.parse_args()
-    shot = CModShot(args.shot, disruption_time=None, timebase_signal="rampup_and_flattop",populate_methods=args.populate_methods)
+    shot = CModShot(args.shot, disruption_time=None)
     # ohmics_parameters = shot._get_ohmic_parameters()
     print(shot.data)
