@@ -240,7 +240,11 @@ class Shot:
         for method_name in dir(self):
             method = getattr(self, method_name)
             if callable(method) and hasattr(method, 'populate'):
-                if (methods is not None and method_name not in methods):
+                if tags is not None and not bool(set(method.tags).intersection(tags)):
+                    print(f"[Shot {self._shot_id}]:Skipping {method_name}")
+                    continue
+                if methods is not None and method_name not in methods:
+                    print(f"[Shot {self._shot_id}]:Skipping {method_name}")
                     continue
                 try:
                     # This if statement throws an exception if tags is 'None', which is the default
