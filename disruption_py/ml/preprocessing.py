@@ -51,7 +51,7 @@ BLACK_WINDOW_THRESHOLD = 5.e-3
 DEFAULT_RATIO = .2  # Ratio of test data to total data and validation data to train data
 
 LOGGER = logging.getLogger('disruption_py')
-def create_label(time_until_disrupt, threshold, label_type, multiple_thresholds):
+def create_label(time_until_disrupt, threshold=DEFAULT_THRESHOLD, label_type='binary', multiple_thresholds=None):
     if label_type == 'binary':
         print(time_until_disrupt)
         dis = np.where((time_until_disrupt > threshold) &
@@ -62,7 +62,6 @@ def create_label(time_until_disrupt, threshold, label_type, multiple_thresholds)
     else:
         raise NotImplementedError('Only binary labels are implemented')
     return target
-
 
 # TODO: Add support for CMOD
 def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=None, threshold=DEFAULT_THRESHOLD, tokamak='d3d', required_cols=REQUIRED_COLS, label='binary', **kwargs):
@@ -109,7 +108,7 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
                 # exc_type, exc_obj, exc_tb = sys.exc_info()
                 # fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 LOGGER.debug(f"[Shot {shot_id}]:{e}")
-        dataset_df = pd.concat([shot.data for shot in shots])[cols]
+        dataset_df = pd.concat([shot.data for shot in shots])
     else:
         raise ValueError(
             'Datasource must be one of 4 options: 0,1,2,3. See generate_datsets.py -h for more details.')
@@ -129,6 +128,12 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
             dataset_df['time_until_disrupt'].values, threshold, label, False)
     else:
         dataset_df['label'] = np.nan
+    try:
+        dataset_df = dataset_df[cols]
+    except KeyError as e:
+        # TODO: MAke logger statement
+        print(f"KeyError: {e}. Returning entire dataset")
+        print(f"Columns: {cols}")
     return dataset_df
 
 
