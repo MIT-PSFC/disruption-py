@@ -148,9 +148,12 @@ class CModShot(Shot):
         self.set_default_timebase()
         ip_parameters = self._get_ip_parameters()
         ipprog, dipprog_dt = ip_parameters['ip_prog'], ip_parameters['dipprog_dt']
-        indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 1e3)[0]
-        indices_flattop_2 = np.where(np.abs(ipprog) > 1.e5)[0]
-        indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
+        # ip, dip_dt = ip_parameters['ip'], ip_parameters['dip_dt']
+        # Find the time of the flattop
+        #indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 1e3)[0]
+        indices_flattop = np.where(np.abs(dipprog_dt) <= 1e3)[0]
+        #indices_flattop_2 = np.where(np.abs(ipprog) > 1.e5)[0]
+        #indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
         if len(indices_flattop) == 0:
             self.logger.warning(
                 f"[Shot {self._shot_id}]:Could not find flattop timebase. Defaulting to full shot(efit) timebase.")
