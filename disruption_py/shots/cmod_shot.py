@@ -520,7 +520,6 @@ class CModShot(Shot):
         return pd.DataFrame({"p_rad": p_rad, "dprad_dt": dprad, "p_lh": p_lh, "p_icrf": p_icrf, "p_input": p_input, "radiated_fraction": rad_fraction})
 
     @parameter_method
-    @parameter_method
     def _get_power(self):
         """
         NOTE: the timebase for the LH power signal does not extend over the full
@@ -531,7 +530,7 @@ class CModShot(Shot):
             (Not-a-Number) values for times outside the LH timebase, and the NaN's
             will propagate into p_input and rad_fraction, which is not desirable.
         """
-        values = [None]*6
+        values = [None]*6 #List to store the time and values of the LH power, icrf power, and radiated power
         trees = ['LH', 'RF', 'spectroscopy']
         nodes = [r'\LH::TOP.RESULTS:NETPOW',
                  r"\rf::rf_power_net", r"\twopi_diode"]
@@ -543,10 +542,10 @@ class CModShot(Shot):
                 values[2*i + 1] = record.dim_of(0)
             except mdsExceptions.TreeFOPENR as e:
                 continue
+
         return CModShot.get_power(self._times, *values, self._get_ohmic_parameters()['p_oh'])
 
     # TODO: Replace with for loop like in D3D shot class
-    @parameter_method
     @parameter_method
     def _get_EFIT_parameters(self):
 
@@ -575,7 +574,6 @@ class CModShot(Shot):
     def get_kappa_area(times, aminor, area, a_times):
         return pd.DataFrame({"kappa_area": interp1(a_times, area/(np.pi * aminor**2), times)})
 
-    @parameter_method
     @parameter_method
     def _get_kappa_area(self):
         aminor = self._efit_tree.getNode(
@@ -609,7 +607,6 @@ class CModShot(Shot):
         return pd.DataFrame({"v_0": v_0})
 
     # TODO: Calculate v_mid
-    @parameter_method
     @parameter_method
     def _get_rotation_velocity(self):
         with importlib_resources.path(
@@ -745,8 +742,8 @@ class CModShot(Shot):
         try:
             e_tree = Tree('electrons', self._shot_id)
             n_e_record = e_tree.getNode(r'.tci.results:nl_04').getData() #Line integrated density
-            n_e = n_e_record.data().astype('float64', copy=False)/0.6 #Divide by chord length of ~0.6m to get line averaged density. For future refernce, chord length is stored in .01*\analysis::efit_aeqdsk:rco2v[3,*]
-            t_n = n_e_record.dim_of(0)
+            n_e = np.squeeze(n_e_record.data().astype('float64', copy=False))/0.6 #Divide by chord length of ~0.6m to get line averaged density. For future refernce, chord length is stored in .01*\analysis::efit_aeqdsk:rco2v[3,*]
+            t_n = n_e_record.dim_of(0).data()
             mag_tree = Tree('magnetics', self._shot_id)
             ip_record = mag_tree.getNode(r'\ip').getData()
             ip = ip_record.data().astype('float64', copy=False)
@@ -766,7 +763,6 @@ class CModShot(Shot):
     def get_efc_current(times, iefc, t_iefc):
         return pd.DataFrame({"I_efc": interp1(t_iefc, iefc, times, 'linear')})
 
-    @parameter_method
     @parameter_method
     def _get_efc_current(self):
         try:
@@ -795,7 +791,6 @@ class CModShot(Shot):
         te_hwm = interp1(ts_time, te_hwm, times)
         return pd.DataFrame({"Te_width": te_hwm})
 
-    @parameter_method
     @parameter_method
     def _get_Ts_parameters(self):
         # TODO: Guassian vs parabolic fit for te profile
@@ -1435,7 +1430,6 @@ class CModShot(Shot):
         return pd.DataFrame({"Te_edge": Te_edge, "ne_edge": ne_edge})
 
     @parameter_method
-    @parameter_method
     def _get_edge_parameters(self):
 
         # Ignore shots on the blacklist
@@ -1581,10 +1575,10 @@ if __name__ == '__main__':
     ch.setLevel(5)
     parser = argparse.ArgumentParser(description="Test CModShot class")
     # parser.add_argument('--shot', type=int, help='Shot number to test', default=1150922001)
-    parser.add_argument('--shot', type=int, help='Shot number to test', default=1150922001)
+    parser.add_argument('--shot', type=int, help='Shot number to test', default=1030523006)#1150922001)
     # Add parser argument for list of methods to populate
-    parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_H98', 'get_ip_parameters'])
+    parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_densities'])#default=['_get_H98', 'get_ip_parameters'])
     args = parser.parse_args()
-    shot = CModShot(args.shot, disruption_time=None)
+    shot = CModShot(args.shot, disruption_time=None,populate_methods=args.populate_methods)
     # ohmics_parameters = shot._get_ohmic_parameters()
     print(shot.data)
