@@ -735,7 +735,7 @@ class CModShot(Shot):
             try:
                 signal = mag_tree.getNode(path + bp13_names[i]).getData().data()
                 if len(signal) == 1:
-                    self.logger.warning(f"[Shot {self._shot_id}] Only one data point for {bp13_names[i]} Returning nans.")
+                    print("WARNING: Can't fit with signal. Returning nans")
                     return n_equal_1_amplitude, n_equal_1_normalized, n_equal_1_phase
                 baseline = np.mean(signal[baseline_indices])
                 signal = signal - baseline
@@ -1549,7 +1549,7 @@ if __name__ == '__main__':
     # Add parser argument for list of methods to populate
     parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_edge_parameters'])
     args = parser.parse_args()
-    shot = CModShot(args.shot, disruption_time=None)
+    shot = CModShot(args.shot, disruption_time=None, populate_methods=args.populate_methods)
     # ohmics_parameters = shot._get_ohmic_parameters()
     print(shot.data)
     print(shot.data.columns)
