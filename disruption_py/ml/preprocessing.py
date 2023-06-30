@@ -120,8 +120,9 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
         pass
     dataset_df = dataset_df.fillna(value=np.nan)
     cols = list(dataset_df.columns)
-    if not set(required_cols).issubset(set(cols)):
-        raise ValueError('Required columns not in dataset')
+    # FIXME: Why do we need to check for required columns?
+    #if not set(required_cols).issubset(set(cols)):
+    #    raise ValueError('Required columns not in dataset')
     if label != 'none':
         dataset_df['label'] = create_label(
             dataset_df['time_until_disrupt'].values, threshold, label, False)

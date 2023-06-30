@@ -143,9 +143,10 @@ class CModShot(Shot):
         ipprog, dipprog_dt = ip_parameters['ip_prog'], ip_parameters['dipprog_dt']
         # ip, dip_dt = ip_parameters['ip'], ip_parameters['dip_dt']
         # Find the time of the flattop
-        indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 6e4)[0]
-        indices_flattop_2 = np.where(np.abs(ipprog) > 1.e5)[0]
-        indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
+        #indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 1e3)[0]
+        indices_flattop = np.where(np.abs(dipprog_dt) <= 1e3)[0]
+        #indices_flattop_2 = np.where(np.abs(ipprog) > 1.e5)[0]
+        #indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
         if len(indices_flattop) == 0:
             self.logger.warning(
                 f"[Shot {self._shot_id}]:Could not find flattop timebase. Defaulting to full shot(efit) timebase.")
@@ -540,10 +541,10 @@ class CModShot(Shot):
                 record = tree.getNode(nodes[i])
                 values[2*i] = record.data().astype('float64', copy=False)
                 values[2*i + 1] = record.dim_of(0)
-            except mdsExceptions.TreeFOPENR as e:
-                continue
-
-        return CModShot.get_power(self._times, *values, self._get_ohmic_parameters()['p_oh'])
+            except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF) as e:
+                continue 
+        p_oh = self._get_ohmic_parameters()['p_oh']
+        return CModShot.get_power(self._times, *values, p_oh)
 
     # TODO: Replace with for loop like in D3D shot class
     @parameter_method
@@ -641,7 +642,8 @@ class CModShot(Shot):
     @staticmethod
     def get_n_equal_1_amplitude():
         pass
-
+    
+    # TODO: Try catch failure to get BP13 sensors 
     @parameter_method
     def _get_n_equal_1_amplitude(self):
         """ Calculate n=1 amplitude and phase.
@@ -686,38 +688,47 @@ class CModShot(Shot):
         # 1. Subtract baseline offset
         # 2. Subtract btor pickup
         # 3. Interpolate bp onto shot timebase
+
+        # Only calculate n=1 amplitude if all sensors have data
+        valid_sensors = True
         for i in range(len(bp13_names)):
-            signal = mag_tree.getNode(path + bp13_names[i]).getData().data()
-            if len(signal) == 1:
-                print("WARNING: Can't fit with signal. Returning nans")
-                return n_equal_1_amplitude, n_equal_1_normalized, n_equal_1_phase
-            baseline = np.mean(signal[baseline_indices])
-            signal = signal - baseline
-            signal = signal - bp13_btor_pickup_coeffs[i]*btor
-            bp13_signals[:, i] = interp1(t_mag, signal, self._times)
+            try:
+                signal = mag_tree.getNode(path + bp13_names[i]).getData().data()
+                if len(signal) == 1:
+                    print("WARNING: Can't fit with signal. Returning nans")
+                    return n_equal_1_amplitude, n_equal_1_normalized, n_equal_1_phase
+                baseline = np.mean(signal[baseline_indices])
+                signal = signal - baseline
+                signal = signal - bp13_btor_pickup_coeffs[i]*btor
+                bp13_signals[:, i] = interp1(t_mag, signal, self._times)
+            except mdsExceptions.TreeNODATA as e:
+                self.logger.warning(f"[Shot {self._shot_id}] No data for {bp13_names[i]}")
+                self.logger.debug(f"[Shot {self._shot_id}] {e}")
+                valid_sensors = False
         # TODO: Examine edge case behavior of sign
         polarity = np.sign(np.mean(btor))
         btor_magnitude = btor*polarity
         btor_magnitude = interp1(t_mag, btor_magnitude, self._times)
-        BT = interp1(t_mag, btor, self._times) #Interpolate BT with sign, to return this
-        # Create the 'design' matrix ('A') for the linear system of equations:
-        # Bp(phi) = A1 + A2*sin(phi) + A3*cos(phi)
-        ncoeffs = 3
-        A = np.empty((len(bp13_names), ncoeffs))
-        A[:, 0] = np.ones(4)
-        A[:, 1] = np.sin(bp13_phi*np.pi/180.0)
-        A[:, 2] = np.cos(bp13_phi*np.pi/180.0)
-        coeffs = np.linalg.pinv(A) @ bp13_signals.T
-        # The n=1 amplitude at each time is sqrt(A2^2 + A3^2)
-        # The n=1 phase at each time is arctan(-A2/A3), using complex number
-        # phasor formalism, exp(i(phi - delta))
-        n_equal_1_amplitude = np.sqrt(coeffs[1, :]**2 + coeffs[2, :]**2)
-        # TODO: Confirm arctan2 = atan2
-        n_equal_1_phase = np.arctan2(-coeffs[1, :], coeffs[2, :])
-        n_equal_1_normalized = n_equal_1_amplitude / btor_magnitude
-        # INFO: Debugging purpose block of code at end of matlab file
-        # INFO: n_equal_1_amplitude vs n_equal_1_mode
-        return pd.DataFrame({"BT": BT, "n_equal_1_mode": n_equal_1_amplitude, "n_equal_1_normalized": n_equal_1_normalized, "n_equal_1_phase": n_equal_1_phase})
+        btor = interp1(t_mag, btor, self._times) #Interpolate BT with sign
+        if valid_sensors:
+            # Create the 'design' matrix ('A') for the linear system of equations:
+            # Bp(phi) = A1 + A2*sin(phi) + A3*cos(phi)
+            ncoeffs = 3
+            A = np.empty((len(bp13_names), ncoeffs))
+            A[:, 0] = np.ones(4)
+            A[:, 1] = np.sin(bp13_phi*np.pi/180.0)
+            A[:, 2] = np.cos(bp13_phi*np.pi/180.0)
+            coeffs = np.linalg.pinv(A) @ bp13_signals.T
+            # The n=1 amplitude at each time is sqrt(A2^2 + A3^2)
+            # The n=1 phase at each time is arctan(-A2/A3), using complex number
+            # phasor formalism, exp(i(phi - delta))
+            n_equal_1_amplitude = np.sqrt(coeffs[1, :]**2 + coeffs[2, :]**2)
+            # TODO: Confirm arctan2 = atan2
+            n_equal_1_phase = np.arctan2(-coeffs[1, :], coeffs[2, :])
+            n_equal_1_normalized = n_equal_1_amplitude / btor_magnitude
+            # INFO: Debugging purpose block of code at end of matlab file
+            # INFO: n_equal_1_amplitude vs n_equal_1_mode
+        return pd.DataFrame({"n_equal_1_mode": n_equal_1_amplitude, "n_equal_1_normalized": n_equal_1_normalized, "n_equal_1_phase": n_equal_1_phase,'BT':btor})
 
     @staticmethod
     def get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
@@ -725,6 +736,7 @@ class CModShot(Shot):
             nan_arr = np.empty(len(times))
             nan_arr.fill(np.nan)
             return pd.DataFrame({"n_e": nan_arr, "dn_dt": nan_arr.copy(), "Greenwald_fraction": nan_arr.copy()})
+        # get the gradient of n_E
         dn_dt = np.gradient(n_e, t_n)
         n_e = interp1(t_n, n_e, times) 
         dn_dt = interp1(t_n, dn_dt, times)
@@ -747,13 +759,15 @@ class CModShot(Shot):
             mag_tree = Tree('magnetics', self._shot_id)
             ip_record = mag_tree.getNode(r'\ip').getData()
             ip = ip_record.data().astype('float64', copy=False)
-            t_ip = ip_record.dim_of(0)
+            t_ip = ip_record.dim_of(0).data()
             a_tree = Tree('analysis', self._shot_id)
             a_minor_record = a_tree.getNode(
-                r'.efit.results.a_eqdsk:aminor').getData()
-            t_a = a_minor_record.dim_of(0)
+                r'\efit_aeqdsk:aminor').getData()
+            t_a = a_minor_record.dim_of(0).data()
             a_minor = a_minor_record.data().astype('float64', copy=False)
         except Exception as e:
+            self.logger.debug(f"[Shot {self._shot_id}] {e}")
+            self.logger.warning(f"[Shot {self._shot_id}] No density data")
             # TODO: Handle this case
             raise NotImplementedError(
                 "Can't currently handle failure of grabbing density data")
@@ -1575,10 +1589,10 @@ if __name__ == '__main__':
     ch.setLevel(5)
     parser = argparse.ArgumentParser(description="Test CModShot class")
     # parser.add_argument('--shot', type=int, help='Shot number to test', default=1150922001)
-    parser.add_argument('--shot', type=int, help='Shot number to test', default=1030523006)#1150922001)
+    parser.add_argument('--shot', type=int, help='Shot number to test', default=1030523006)
     # Add parser argument for list of methods to populate
-    parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_densities'])#default=['_get_H98', 'get_ip_parameters'])
+    parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_densities'])
     args = parser.parse_args()
-    shot = CModShot(args.shot, disruption_time=None,populate_methods=args.populate_methods)
+    shot = CModShot(args.shot, disruption_time=None, populate_methods=args.populate_methods)
     # ohmics_parameters = shot._get_ohmic_parameters()
     print(shot.data)
