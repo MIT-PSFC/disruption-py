@@ -148,9 +148,12 @@ class CModShot(Shot):
         self.set_default_timebase()
         ip_parameters = self._get_ip_parameters()
         ipprog, dipprog_dt = ip_parameters['ip_prog'], ip_parameters['dipprog_dt']
-        indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 1e3)[0]
-        indices_flattop_2 = np.where(np.abs(ipprog) > 1.e5)[0]
-        indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
+        # ip, dip_dt = ip_parameters['ip'], ip_parameters['dip_dt']
+        # Find the time of the flattop
+        #indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 1e3)[0]
+        indices_flattop = np.where(np.abs(dipprog_dt) <= 1e3)[0]
+        #indices_flattop_2 = np.where(np.abs(ipprog) > 1.e5)[0]
+        #indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
         if len(indices_flattop) == 0:
             self.logger.warning(
                 f"[Shot {self._shot_id}]:Could not find flattop timebase. Defaulting to full shot(efit) timebase.")
@@ -680,7 +683,7 @@ class CModShot(Shot):
         pass
     
     # TODO: Try catch failure to get BP13 sensors 
-    @parameter_method()
+    @parameter_method
     def _get_n_equal_1_amplitude(self):
         """ Calculate n=1 amplitude and phase.
 
@@ -732,7 +735,7 @@ class CModShot(Shot):
             try:
                 signal = mag_tree.getNode(path + bp13_names[i]).getData().data()
                 if len(signal) == 1:
-                    self.logger.warning(f"[Shot {self._shot_id}] Only one data point for {bp13_names[i]} Returning nans.")
+                    print("WARNING: Can't fit with signal. Returning nans")
                     return n_equal_1_amplitude, n_equal_1_normalized, n_equal_1_phase
                 baseline = np.mean(signal[baseline_indices])
                 signal = signal - baseline
@@ -1546,7 +1549,7 @@ if __name__ == '__main__':
     # Add parser argument for list of methods to populate
     parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_edge_parameters'])
     args = parser.parse_args()
-    shot = CModShot(args.shot, disruption_time=None)
+    shot = CModShot(args.shot, disruption_time=None, populate_methods=args.populate_methods)
     # ohmics_parameters = shot._get_ohmic_parameters()
     print(shot.data)
     print(shot.data.columns)
