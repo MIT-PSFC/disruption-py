@@ -222,9 +222,6 @@ class Shot:
         # What is the intended logic here? 
         # This is *incredibly* confusing
         # TODO: Add comments to explain what is going on here
-        # What is the intended logic here? 
-        # This is *incredibly* confusing
-        # TODO: Add comments to explain what is going on here
         if not already_populated:
             if self.data is None:
                 self.data = pd.DataFrame()
@@ -246,13 +243,6 @@ class Shot:
                 if methods is not None and method_name not in methods:
                     print(f"[Shot {self._shot_id}]:Skipping {method_name}")
                     continue
-                try:
-                    # This if statement throws an exception if tags is 'None', which is the default
-                    if not bool(set(method.tags).intersection(tags)):
-                        continue
-                except:
-                    pass
-                
                 try:
                     # This if statement throws an exception if tags is 'None', which is the default
                     if not bool(set(method.tags).intersection(tags)):
