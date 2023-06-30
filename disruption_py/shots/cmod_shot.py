@@ -503,7 +503,7 @@ class CModShot(Shot):
                        bounds_error=False) if p_lh is not None else np.zeros(len(times))
         p_icrf = interp1(t_icrf, p_icrf * 1.0e6, times,
                          bounds_error=False) if p_icrf is not None else np.zeros(len(times))
-        if len(t_rad) == 1 or p_rad is None:
+        if t_rad is None or len(t_rad) == 1 or p_rad is None:
             p_rad = np.array([np.nan]*len(times))  # TODO: Fix
             dprad = p_rad.copy()
         else:
@@ -1589,9 +1589,9 @@ if __name__ == '__main__':
     ch.setLevel(5)
     parser = argparse.ArgumentParser(description="Test CModShot class")
     # parser.add_argument('--shot', type=int, help='Shot number to test', default=1150922001)
-    parser.add_argument('--shot', type=int, help='Shot number to test', default=1030523006)
+    parser.add_argument('--shot', type=int, help='Shot number to test', default=1000620012)
     # Add parser argument for list of methods to populate
-    parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_densities'])
+    parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_power'])
     args = parser.parse_args()
     shot = CModShot(args.shot, disruption_time=None, populate_methods=args.populate_methods)
     # ohmics_parameters = shot._get_ohmic_parameters()
