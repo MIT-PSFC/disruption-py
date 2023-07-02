@@ -14,7 +14,7 @@ import logging
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
 
 
-def parameter_method(tags=["all"]):
+def parameter_method(func, tags=["all"]):
     """
     Tags a function as a parameter method and instantiates its cache. Parameter methods are functions that 
     calculate disruption parameters from the data in the shot.  They are called by the Shot object when
@@ -22,19 +22,18 @@ def parameter_method(tags=["all"]):
     calculated once per shot for a given timebase.
     """
     # TODO: Figure out how to hash _times so that we can use the cache for different timebases
-    def tag_wrapper(func):
-        func.cached_result = {} # For now, just store latest result       
-        def wrapper(*args, **kwargs):
-            if len(args[0]._times) in func.cached_result:
-                return func.cached_result[len(args[0]._times)]
-            else:
-                result = func(*args, **kwargs)
-                func.cached_result = {len(args[0]._times): result}
-                return result
-        wrapper.populate = True
-        wrapper.tags = tags
-        return wrapper
-    return tag_wrapper
+    func.cached_result = {} # For now, just store latest result
+    
+    def wrapper(*args, **kwargs):
+        if len(args[0]._times) in func.cached_result:
+            return func.cached_result[len(args[0]._times)]
+        else:
+            result = func(*args, **kwargs)
+            func.cached_result = {len(args[0]._times): result}
+            return result
+    wrapper.populate = True
+    wrapper.tags = tags
+    return wrapper
 
 
 class Shot:
