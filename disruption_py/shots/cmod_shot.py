@@ -1549,7 +1549,7 @@ if __name__ == '__main__':
     # Add parser argument for list of methods to populate
     parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_edge_parameters'])
     args = parser.parse_args()
-    shot = CModShot(args.shot, disruption_time=None, populate_methods=args.populate_methods)
+    shot = CModShot(args.shot, disruption_time=None)
     # ohmics_parameters = shot._get_ohmic_parameters()
     print(shot.data)
     print(shot.data.columns)
