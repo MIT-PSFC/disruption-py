@@ -14,7 +14,7 @@ import logging
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
 
 
-def parameter_method(func, tags=["all"]):
+def parameter_method(tags=["all"]):
     """
     Tags a function as a parameter method and instantiates its cache. Parameter methods are functions that 
     calculate disruption parameters from the data in the shot.  They are called by the Shot object when
@@ -22,18 +22,19 @@ def parameter_method(func, tags=["all"]):
     calculated once per shot for a given timebase.
     """
     # TODO: Figure out how to hash _times so that we can use the cache for different timebases
-    func.cached_result = {} # For now, just store latest result
-    
-    def wrapper(*args, **kwargs):
-        if len(args[0]._times) in func.cached_result:
-            return func.cached_result[len(args[0]._times)]
-        else:
-            result = func(*args, **kwargs)
-            func.cached_result = {len(args[0]._times): result}
-            return result
-    wrapper.populate = True
-    wrapper.tags = tags
-    return wrapper
+    def tag_wrapper(func):
+        func.cached_result = {} # For now, just store latest result       
+        def wrapper(*args, **kwargs):
+            if len(args[0]._times) in func.cached_result:
+                return func.cached_result[len(args[0]._times)]
+            else:
+                result = func(*args, **kwargs)
+                func.cached_result = {len(args[0]._times): result}
+                return result
+        wrapper.populate = True
+        wrapper.tags = tags
+        return wrapper
+    return tag_wrapper
 
 
 class Shot:
@@ -276,12 +277,12 @@ class Shot:
         method_names = []
         for method_name in dir(self):
             method = getattr(self, method_name)
-            if callable(method) and hasattr(method, 'populate'):
+            if callable(method) and hasattr(method, 'populate'):          
                 if tags is not None and not bool(set(method.tags).intersection(tags)):
-                    print(f"[Shot {self._shot_id}]:Skipping {method_name}")
+                    self.logger.info(f"[Shot {self._shot_id}]:Skipping {method_name}")
                     continue
                 if methods is not None and method_name not in methods:
-                    print(f"[Shot {self._shot_id}]:Skipping {method_name}")
+                    self.logger.info(f"[Shot {self._shot_id}]:Skipping {method_name}")
                     continue
                 method_names.append(method_name)
         if self.multiprocessing:
