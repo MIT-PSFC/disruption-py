@@ -1,9 +1,13 @@
 import pickle
+import os
 
 import pytest
 import numpy as np
 
 from disruption_py.shots import D3DShot, D3D_DISRUPTED_SHOT
+
+# TODO: Come up with a better way to skip tests if not on DIII-D servers
+pytestmark = pytest.mark.skipif(not os.path.isdir("/fusion/projects/disruption_warning/"), reason="Tests can only be run on DIII-D servers")
 
 @pytest.fixture(scope="module")
 def d3d_shot():
