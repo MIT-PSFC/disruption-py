@@ -148,12 +148,9 @@ class CModShot(Shot):
         self.set_default_timebase()
         ip_parameters = self._get_ip_parameters()
         ipprog, dipprog_dt = ip_parameters['ip_prog'], ip_parameters['dipprog_dt']
-        # ip, dip_dt = ip_parameters['ip'], ip_parameters['dip_dt']
-        # Find the time of the flattop
-        #indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 1e3)[0]
-        indices_flattop = np.where(np.abs(dipprog_dt) <= 1e3)[0]
-        #indices_flattop_2 = np.where(np.abs(ipprog) > 1.e5)[0]
-        #indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
+        indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 1e3)[0]
+        indices_flattop_2 = np.where(np.abs(ipprog) > 1.e5)[0]
+        indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
         if len(indices_flattop) == 0:
             self.logger.warning(
                 f"[Shot {self._shot_id}]:Could not find flattop timebase. Defaulting to full shot(efit) timebase.")
@@ -735,7 +732,7 @@ class CModShot(Shot):
             try:
                 signal = mag_tree.getNode(path + bp13_names[i]).getData().data()
                 if len(signal) == 1:
-                    print("WARNING: Can't fit with signal. Returning nans")
+                    self.logger.warning(f"[Shot {self._shot_id}] Only one data point for {bp13_names[i]} Returning nans.")
                     return n_equal_1_amplitude, n_equal_1_normalized, n_equal_1_phase
                 baseline = np.mean(signal[baseline_indices])
                 signal = signal - baseline
