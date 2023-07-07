@@ -5,7 +5,7 @@ setup(
     version='0.1.0a0',
     author='Herbert Turner',
     author_email='hmturner@mit.edu',
-    packages=['disruption_py', 'disruption_py.test'],
+    packages=['disruption_py', 'test'],
     scripts=['scripts/summarize_database.py', 'scripts/train.py',
              'scripts/validate_shots.py', 'scripts/generate_datasets.py'],
     url='http://pypi.python.org/pypi/PackageName/',
