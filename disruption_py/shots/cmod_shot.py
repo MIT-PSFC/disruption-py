@@ -65,6 +65,14 @@ class CModShot(Shot):
                  "rmagx":r'\efit_aeqdsk:rmagx', #TODO: change units to [m] (current [cm])
                  "chisq":r'\efit_aeqdsk:chisq'}
     
+    #EFIT column names for data before 2000 TODO: confirm with Bob that these are the right back-ups and make sure that these are similar to standard EFIT columns
+    efit_cols_pre_2000 = {"a_minor": r'\efit_aeqdsk:aout',
+                          "li": r'\efit_aeqdsk:ali',
+                          "q0": r'\efit_aeqdsk:qqmagx',
+                          "qstar": r'\efit_aeqdsk:qsta',
+                          "q95": r'\efit_aeqdsk:qsib', #Not sure about this one
+                          } 
+    
     efit_derivs = {'beta_p': 'dbetap_dt', 'li': 'dli_dt', 'Wmhd': 'dWmhd_dt'}
 
     # TODO: Populate metadata dict
@@ -556,8 +564,13 @@ class CModShot(Shot):
         #Get data from each of the columns in efit_cols one at a time
         for param in self.efit_cols:
             try:
-                efit_data[param] = self._efit_tree.getNode(
-                    self.efit_cols[param]).data().astype('float64', copy=False)
+                #If shot before 2000 and the param is in efit_cols_pre_2000
+                if self._shot_id <= 1000000000 and param not in self.efit_cols_pre_2000.keys():
+                    efit_data[param] = self._efit_tree.getNode(
+                        self.efit_cols_pre_2000[param]).data().astype('float64', copy=False)
+                else:
+                    efit_data[param] = self._efit_tree.getNode(
+                        self.efit_cols[param]).data().astype('float64', copy=False)
             except:
                 print("unable to get " + str(param))
                 efit_data[param] = np.full(len(efit_time), np.nan)
@@ -579,6 +592,27 @@ class CModShot(Shot):
             print("unable to get V_surf")
             efit_data['V_surf'] = np.full(len(efit_time), np.nan)
             pass 
+
+        #For shots before 2000, adjust units of aminor, compute beta_n and v_loop
+        if self._shot_id <= 1000000000:
+            
+            #Adjust aminor units
+            efit_data['aminor'] = efit_data['aminor']/100 #[cm] to [m]
+            
+            #Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally sure on this one)
+            try: #TODO: confirm this
+                ssimag = self._efit_tree.getNode('\efit_geqdsk:ssimag').data().astype('float64', copy=False)
+                efit_data['v_loop_efit'] = np.gradient(ssimag, efit_time)*2*np.pi
+            except:
+                print("unable to get v_loop_efit")
+                efit_data['v_loop_efit'] = np.full(len(efit_time), np.nan)
+                pass 
+
+            #Compute beta_n
+            beta_t = self._efit_tree.getNode('\efit_aeqdsk:betat').data().astype('float64', copy=False)
+            efit_data['beta_n'] = np.reciprocal( np.reciprocal(beta_t) +  np.reciprocal(efit_data['beta_p']) )
+
+
 
         return pd.DataFrame(efit_data)
 
