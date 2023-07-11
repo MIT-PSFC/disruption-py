@@ -59,7 +59,6 @@ class CModShot(Shot):
                  "Wmhd": r'\efit_aeqdsk:wplasm',
                  "ssep": r'\efit_aeqdsk:ssep',
                  "n_over_ncrit": r'\efit_aeqdsk:xnnc',
-                 "v_surf": r'\efit_aeqdsk:vsurf',
                  "tritop": r'\efit_aeqdsk:doutu',
                  "tribot":  r'\efit_aeqdsk:doutl',
                  "a_minor": r'\efit_aeqdsk:aminor',
@@ -553,6 +552,8 @@ class CModShot(Shot):
         efit_time = self._efit_tree.getNode(r'\efit_aeqdsk:time').data().astype(
             'float64', copy=False) # [s]
         efit_data = dict()
+        
+        #Get data from each of the columns in efit_cols one at a time
         for param in self.efit_cols:
             try:
                 efit_data[param] = self._efit_tree.getNode(
@@ -569,6 +570,16 @@ class CModShot(Shot):
             for param in efit_data:
                 efit_data[param] = interp1(
                     efit_time, efit_data[param], self._times)
+                
+        #Get data for V_surf := deriv(\ANALYSIS::EFIT_SSIBRY)*2*pi
+        try:
+            ssibry = self._efit_tree.getNode('\efit_geqdsk:ssibry').data().astype('float64', copy=False)
+            efit_data['V_surf'] = np.gradient(ssibry, efit_time)*2*np.pi
+        except:
+            print("unable to get V_surf")
+            efit_data['V_surf'] = np.full(len(efit_time), np.nan)
+            pass 
+
         return pd.DataFrame(efit_data)
 
     @staticmethod
@@ -1503,37 +1514,11 @@ class CModShot(Shot):
         return CModShot.get_edge_parameters(self._times, p_Te, p_ne)
 
     @staticmethod
-    def get_H98(times, tau, t_tau, n_e, ip, R0, aminor, kappa, BT, p_input):
-        """Compute H98
-
-        Parameters
-        ----------
-        times : array_like
-            The times at which to calculate the H98.
-        tau : array_like
-            Energy confinement time 
+    def get_H98(times, tau, t_tau):
 
 
-        Returns
-        -------
-        H98 : array_like
-            H98 interpolated on the requested timebase.
+        pass
 
-        Original Authors
-        ----------------
-        Andrew Maris (maris@mit.edu)
-
-        """
-        # Take R = 0.68 [m], A = 2
-
-        tau_98 = 0.144*n_e**0.41*2**0.19*ip**0.93*R0**1.39 * \
-            aminor**0.58*kappa**0.78*BT**0.15*p_input**-0.69
-        tau = interp1(t_tau, tau, times)
-        H98 = tau/tau_98
-
-        return pd.DataFrame({"H98": H98})
-
-    # TODO: Finish
     @parameter_method
     def _get_H98(self):
         """Prepare to compute H98 by getting tau_E
