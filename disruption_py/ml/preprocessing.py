@@ -34,7 +34,7 @@ PAPER_COLS = [
     'li',
     'Wmhd',
     'kappa',
-    # 'squareness'
+    'squareness'
 ]
 DERIVED_PAPER_COLS = [
     'ip-exp-10-none',
@@ -86,6 +86,7 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
         raise NotImplementedError
     elif data_source == 2:
         dataset_df = tokamak_handler.get_shot_data(shot_ids, cols)
+        shots = list(dataset_df['shot'].unique())
     elif data_source == 3:
         shots = []
         timebase_signal = kwargs.get('timebase_signal', None)
@@ -112,17 +113,13 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
     else:
         raise ValueError(
             'Datasource must be one of 4 options: 0,1,2,3. See generate_datsets.py -h for more details.')
-    try:
-        LOGGER.info(f"Successfully processed {len(shots)}/{len(shot_ids)} shots")
-    except:
-        # TODO: implement regression tests so you catch when adding new features breaks workflows
-        # variable 'shots' not defined when using SQL data source
-        pass
+    LOGGER.info(f"Successfully processed {len(shots)}/{len(shot_ids)} shots")
+
     dataset_df = dataset_df.fillna(value=np.nan)
     cols = list(dataset_df.columns)
-    # FIXME: Why do we need to check for required columns?
-    #if not set(required_cols).issubset(set(cols)):
-    #    raise ValueError('Required columns not in dataset')
+    # Without the following columns, the dataset can't be labeled 
+    if not set(required_cols).issubset(set(cols)):
+       raise ValueError('Required columns not in dataset')
     if label != 'none':
         dataset_df['label'] = create_label(
             dataset_df['time_until_disrupt'].values, threshold, label, False)
@@ -160,7 +157,6 @@ def filter_dataset_df(df, **kwargs):
     if exclude_black_window != 0:
         df = df[(df['time_until_disrupt'] > exclude_black_window)
                 | np.isnan(df['time_until_disrupt'])]
-    print(df.head())
     features = list(df.columns)
     if impute:
         df = impute_shot_df_NaNs(df)
@@ -171,6 +167,7 @@ def filter_dataset_df(df, **kwargs):
             subset=[feat for feat in features if feat != 'time_until_disrupt'])
     if write_to_csv:
         df.to_csv(csv_path)
+    print(df.head())
     return df
 
 

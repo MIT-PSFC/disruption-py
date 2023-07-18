@@ -14,6 +14,18 @@ DEFAULT_ORDER = {
     'li': 7,
 }
 
+THESIS_ORDER = {
+    'aminor': 0,
+    'n_e': 1,
+    'ip': 2,
+    'delta': 3,
+    'li': 4,
+    'Wmhd': 5,
+    'kappa': 6,
+    'squareness': 7,
+    'time': 8
+}
+
 
 def eval_shots(df, lower_threshold=.05, disruptivity=.45, window=.025):
     good_warnings = []

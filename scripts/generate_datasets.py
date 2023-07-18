@@ -37,15 +37,10 @@ def main(args):
     dataset_df = get_dataset_df(args.data_source, cols=feature_cols +
                                 REQUIRED_COLS, efit_tree=args.efit_tree, shot_ids=shot_ids, tokamak=args.tokamak, timebase_signal=args.timebase_signal, label=args.label, populate_methods=args.populate_methods, populate_tags=args.populate_tags)
     dataset_df = add_derived_features(dataset_df, derived_feature_cols)
-    dataset_df['label'] = create_label(dataset_df['time_until_disrupt'])
-    if args.filter is True:
-        print(args.filter)
-        try:
-            dataset_df = filter_dataset_df(dataset_df, exclude_non_disruptive=False,
+    if args.filter:
+        dataset_df = filter_dataset_df(dataset_df, exclude_non_disruptive=False,
                                         exclude_black_window=BLACK_WINDOW_THRESHOLD, impute=True)
-        except Exception as e:
-            LOGGER.debug(e)
-            LOGGER.warning("Filtering failed. Continuing without filtering.")
+    dataset_df['label'] = create_label(dataset_df['time_until_disrupt'])
     X_train, X_test, y_train, y_test = create_dataset(
         dataset_df, ratio=DEFAULT_RATIO)
     dataset_df.to_csv(args.output_dir +
@@ -97,6 +92,6 @@ if __name__ == '__main__':
     parser.add_argument('--populate_methods', nargs='*', type=str, default=None)
     parser.add_argument('--populate_tags', nargs='*', type=str, default=None) 
     parser.add_argument(
-        '--filter', type=int, help="Run filter_dataset method on produced dataset. Necessary for generating DPRF datasets", default=1)
+        '--filter', type=bool, help="Run filter_dataset method on produced dataset. Necessary for generating DPRF datasets", default=True)
     args = parser.parse_args()
     main(args)
