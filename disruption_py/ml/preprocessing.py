@@ -54,11 +54,11 @@ LOGGER = logging.getLogger('disruption_py')
 def create_label(time_until_disrupt, threshold=DEFAULT_THRESHOLD, label_type='binary', multiple_thresholds=None):
     if label_type == 'binary':
         print(time_until_disrupt)
-        dis = np.where((time_until_disrupt > threshold) &
-                       (~np.isnan(time_until_disrupt)))[0]
-        ndis = np.where(np.isnan(time_until_disrupt))[0]
+        dis = np.where((time_until_disrupt > threshold) |
+                       np.isnan(time_until_disrupt))[0]
+        # ndis = np.where(np.isnan(time_until_disrupt))[0]
         target = np.ones(np.size(time_until_disrupt), dtype=int)
-        target[np.hstack([dis, ndis])] = 0
+        target[dis] = 0
     else:
         raise NotImplementedError('Only binary labels are implemented')
     return target
@@ -139,7 +139,8 @@ def add_derived_features(df, cols):
         feature, func, *args = col.split('-')
         if func == 'exp':
             w = float(args[0])/100.
-            df[col] = exp_filter(df[feature], w, *args[1:])
+            df = df.sort_values(['shot', 'time']) 
+            df[col] = df.groupby('shot')[feature].transform(lambda x: exp_filter(x.reset_index(drop=True), w, *args[1:]))
         else:
             print(f"{func} is not supported")
     return df
@@ -213,7 +214,7 @@ def parse_feature_cols(feature_str):
 
 # TODO: Clean up this function
 # TODO: Fix issue with None
-def impute_shot_df_NaNs(df, strategy='median', missing_values=np.nan):
+def impute_shot_df_NaNs(df, strategy='median', missing_values=np.nan, cutoff=.5):
     """
     This routine imputes missing values for all columns in a given df.
     Values are imputed on the basis of different shot numbers.
@@ -250,7 +251,7 @@ def impute_shot_df_NaNs(df, strategy='median', missing_values=np.nan):
             nan_original_var = np.where(np.isnan(original_var))[0]
             # if the whole column is NaN or more than 50% are NaNs
             # then the whole shot should be discarded
-            if (np.size(nan_original_var) == np.size(index)) or (np.size(nan_original_var) >= 0.8 * np.size(index)):
+            if (np.size(nan_original_var) == np.size(index)) or (np.size(nan_original_var) >= cutoff * np.size(index)):
                 tmp_var = original_var * np.nan
                 tmp_flag = original_var * np.nan
             else:

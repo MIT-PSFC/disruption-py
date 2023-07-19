@@ -97,6 +97,6 @@ if __name__ == '__main__':
                         help='List of features to use for training. If not provided, all features will be used.', default=None)
     parser.add_argument('--unique_id', type=str,
                         help='Unique identifier for the dataset. Used to name the output files.', default=generate_id())
-    parser.add_argument('--model', type=str, default='RandomForestClassifier',choices=['RandomForestClassifier','LogisticRegression','SupportVectorMachine'], help="Model to use for training. Must be a valid sklearn model.")
+    parser.add_argument('--model', type=str, default='RandomForestClassifier',choices=['RandomForestClassifier','LogisticRegression','SupportVectorMachine','LinearClassifier'], help="Model to use for training. Must be a valid sklearn model.")
     args = parser.parse_args()
     main(args)

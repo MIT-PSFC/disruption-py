@@ -1,5 +1,6 @@
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import SGDClassifier
 from sklearn.svm import SVC
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
 from sklearn.pipeline import make_pipeline
@@ -36,8 +37,8 @@ def train_local(x_train, y_train, x_test, y_test, **kwargs):
     if model == "LogisticRegression":
         C = kwargs.pop('C', 1.0)
         random_state = kwargs.pop('random_state', 0)
-        log_reg= LogisticRegression(C=C, random_state=random_state, max_iter=10000,class_weight='balanced', **kwargs)
-        poly = PolynomialFeatures(degree=4)
+        log_reg= LogisticRegression(C=C, random_state=random_state, max_iter=100,class_weight='balanced', **kwargs)
+        poly = PolynomialFeatures(degree=2)
         scaler = StandardScaler()
         model = make_pipeline(scaler, poly, log_reg)
         model.fit(x_train, y_train)
@@ -46,6 +47,19 @@ def train_local(x_train, y_train, x_test, y_test, **kwargs):
                 'predictions_proba': model.predict_proba(x_train),
                 'features': model.named_steps['logisticregression'].coef_[0],  # If binary classification
                 'score': model.score(x_test, y_test)}
+    elif model == "LinearClassifier":
+        random_state = kwargs.pop('random_state', 0)
+        lin_clf = SGDClassifier(random_state=random_state, class_weight=class_weight, **kwargs)
+        poly = PolynomialFeatures(degree=4)
+        scaler = StandardScaler()
+        model = make_pipeline(scaler, poly, lin_clf)
+        model.fit(x_train, y_train)
+        return {'model': model,
+                'predictions': model.predict(x_train),
+                'predictions_proba': model.predict_proba(x_train) if hasattr(model, "predict_proba") else None,
+                'features': model.named_steps['sgdclassifier'].coef_[0] if hasattr(model.named_steps['sgdclassifier'], 'coef_') else None,
+                'score': model.score(x_test, y_test)}
+    
     elif model == "SupportVectorMachine":
         C = kwargs.pop('C', 1.0)
         random_state = kwargs.pop('random_state', 0)

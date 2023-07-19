@@ -34,7 +34,9 @@ def eval_shots(df, lower_threshold=.05, disruptivity=.45, window=.025):
     warning_times = dict()
     disruptions = []
     non_disruptions = []
+    num_shots = 0
     for _, shot_data in df.groupby(by=['shot']):
+        num_shots += 1
         shot_id = shot_data['shot'].values[0]
         time_until_disrupt = shot_data['time_until_disrupt'].values
         alarm = trigger_alarm(
@@ -46,7 +48,7 @@ def eval_shots(df, lower_threshold=.05, disruptivity=.45, window=.025):
                  label='Disruptivity Score')
         plt.plot(shot_data['time'], alarm, label='Alarm Activated')
         trigger = np.where(np.array(alarm) == 1)[0]
-        disrupted = np.isnan(time_until_disrupt).all()
+        disrupted = ~np.isnan(time_until_disrupt).all()
         if disrupted:
             disruptions.append(shot_id)
             plt.axvline(x=shot_data['time'].values[0] +
@@ -89,22 +91,32 @@ def eval_shots(df, lower_threshold=.05, disruptivity=.45, window=.025):
     results['FP'] = 0
     results['TN'] = 0
     if len(disruptions) > 0:
-        results['TP'] = len(good_warnings) / float(len(disruptions))
-        results['FN'] = len(missed_warnings) / float(len(disruptions))
+        results['TP'] = len(good_warnings) 
+        results['FN'] = len(missed_warnings)
     if len(non_disruptions) > 0:
-        results['FP'] = len(false_alarms) / float(len(non_disruptions))
-        results['TN'] = -(len(good_warnings) + len(false_alarms) +
-                          len(missed_warnings) - len(df) / float(len(non_disruptions)))
+        results['FP'] = len(false_alarms)
+        results['TN'] = num_shots - results['FP'] - results['TP'] - results['FN']
     return results
 
 def predict(model, df, order=DEFAULT_ORDER):
-    arr = np.empty((len(df), len(order)))
-    for col in order:
-        arr[:, order[col]] = df[col].values
-    predictions = model.predict_proba(arr)
+    if order:
+        arr = np.empty((len(df), len(order)))
+        for col in order:
+            arr[:, order[col]] = df[col].values
+    else:
+        cols = df.columns
+        cols = [col for col in cols if col not in ['time_until_disrupt', 'shot', 'label']]
+        arr = np.empty((len(df), len(cols)))
+        for i, col in enumerate(cols):
+            arr[:, i] = df[col].values
+    scores = model.predict_proba(arr)
+    predictions = model.predict(arr)
+    if len(scores.shape) > 1:
+        scores = scores[:,1]
     if len(predictions.shape) > 1:
         predictions = predictions[:,1]
-    df['score'] = predictions
+    df['score'] = scores
+    df['prediction'] = predictions
     return df
 
 def hist_time_th(thL, thH, thA, dt, v, v_old, c_old, a_old):

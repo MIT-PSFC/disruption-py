@@ -4,24 +4,26 @@ import joblib
 import json
 
 import pandas as pd
-from sklearn.metrics import ConfusionMatrixDisplay
+from sklearn.metrics import ConfusionMatrixDisplay, fbeta_score
 
 from disruption_py.utils import *
 from disruption_py.ml.models import load_model 
 from disruption_py.ml.evaluate import eval_shots, predict, DEFAULT_ORDER, THESIS_ORDER
 order_mapping = {
     'DEFAULT_ORDER': DEFAULT_ORDER,
-    'THESIS_ORDER': THESIS_ORDER
+    'THESIS_ORDER': THESIS_ORDER,
+    'DATASET_ORDER': None
 }
 def main(args):
     data = pd.read_csv(args.data_path)
     model = load_model(args.model_path)
     data = predict(model, data,order_mapping[args.order])
     data.to_csv(args.output_dir + f"eval_data_{args.unique_id}.csv")
-    results = eval_shots(data)
-    print(results)
+    results = eval_shots(data, disruptivity=.85)
     conf_mat = np.array([[results['TN'], results['FP']],
                          [results['FN'], results['TP']]])
+    print("Confusion Matrix Percentages", conf_mat/conf_mat.sum())
+    print("F2-Score:", 5*results['TP']/(5*results['TP'] + results['FP'] + 4*results['FN']))
     disp = ConfusionMatrixDisplay(
         confusion_matrix=conf_mat, display_labels=model.classes_)
     disp.plot()
@@ -47,6 +49,6 @@ if __name__ == '__main__':
     parser.add_argument('--visualize', type=bool, default=True)
     parser.add_argument('--unique_id', type=str,
                         help='Unique identifier for the dataset. Used to name the output files.', default=generate_id())
-    parser.add_argument('--order', type=str, default='THESIS_ORDER', choices=['DEFAULT_ORDER', 'THESIS_ORDER'])
+    parser.add_argument('--order', type=str, default='THESIS_ORDER', choices=['DEFAULT_ORDER', 'THESIS_ORDER', 'DATASET_ORDER'])
     args = parser.parse_args()
     main(args)
