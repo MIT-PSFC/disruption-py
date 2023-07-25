@@ -1521,7 +1521,7 @@ class CModShot(Shot):
         p_input = powers_df.p_input/1.e6 # [W] -> [MW]
         dWmhd_dt = efit_df.dWmhd_dt/1.e6 # [W] -> [MW]
         Wmhd = efit_df.Wmhd/1.e6 # [J] -> [MJ]
-        R0 = efit_df.R0/100 # [cm] -> [m]
+        R0 = efit_df.rmagx/100 # [cm] -> [m]
         #Estimate confinement time
         tau = Wmhd/(p_input - dWmhd_dt)
         
