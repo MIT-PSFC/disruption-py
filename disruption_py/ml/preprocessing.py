@@ -95,21 +95,25 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
             try:
                 if tokamak == 'd3d':
                     if efit_tree is None:
-                        shots.append(D3DShot(shot_id, tokamak_handler.get_efit_tree(
-                            shot_id), disruption_time=tokamak_handler.get_disruption_time(shot_id), timebase_signal=timebase_signal, populate_methods=populate_methods, populate_tags=populate_tags))
+                        shot = D3DShot(shot_id, tokamak_handler.get_efit_tree(
+                            shot_id), disruption_time=tokamak_handler.get_disruption_time(shot_id), timebase_signal=timebase_signal, populate_methods=populate_methods, populate_tags=populate_tags)
                     else:
-                        shots.append(D3DShot(shot_id, efit_tree, disruption_time=tokamak_handler.get_disruption_time(shot_id),
-                                             timebase_signal=timebase_signal, populate_methods=populate_methods, populate_tags=populate_tags))
+                        shot = D3DShot(shot_id, efit_tree, disruption_time=tokamak_handler.get_disruption_time(shot_id),
+                                             timebase_signal=timebase_signal, populate_methods=populate_methods, populate_tags=populate_tags)
+                    shots.append(shot.data)
+                    del shot 
                 elif tokamak == 'cmod':
                     #shots.append(CModShot("cmod",shot_id=shot_id))
-                    shots.append(CModShot(shot_id=shot_id, disruption_time=tokamak_handler.get_disruption_time(shot_id), timebase_signal=timebase_signal, populate_methods=populate_methods, populate_tags=populate_tags))
+                    shot = CModShot(shot_id=shot_id, disruption_time=tokamak_handler.get_disruption_time(shot_id), timebase_signal=timebase_signal, populate_methods=populate_methods, populate_tags=populate_tags)
+                    shots.append(shot.data)
+                    del shot
                 LOGGER.info(f"[Shot {shot_id}]:Generated shot object, {idx} of {len(shot_ids)} ({percent_complete:.1f}% percent complete)' ")
             except Exception as e:
                 LOGGER.info(f"[Shot {shot_id}]:Failed to generate shot object, {idx} of {len(shot_ids)} ({percent_complete:.1f}% percent complete)'")
                 # exc_type, exc_obj, exc_tb = sys.exc_info()
                 # fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                 LOGGER.debug(f"[Shot {shot_id}]:{e}")
-        dataset_df = pd.concat([shot.data for shot in shots])
+        dataset_df = pd.concat(shots)
     else:
         raise ValueError(
             'Datasource must be one of 4 options: 0,1,2,3. See generate_datsets.py -h for more details.')
