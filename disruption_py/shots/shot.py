@@ -1,7 +1,7 @@
 from disruption_py.utils import interp1
 import subprocess
 import traceback
-import concurrent 
+import concurrent
 from concurrent.futures import ThreadPoolExecutor
 
 import MDSplus
@@ -14,6 +14,7 @@ import logging
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
 
 
+
 def parameter_method(tags=["all"]):
     """
     Tags a function as a parameter method and instantiates its cache. Parameter methods are functions that 
@@ -23,18 +24,23 @@ def parameter_method(tags=["all"]):
     """
     # TODO: Figure out how to hash _times so that we can use the cache for different timebases
     def tag_wrapper(func):
-        func.cached_result = {} # For now, just store latest result       
-        def wrapper(*args, **kwargs):
-            if len(args[0]._times) in func.cached_result:
-                return func.cached_result[len(args[0]._times)]
+        def wrapper(self, *args, **kwargs):
+            # Create the cache if it doesn't exist
+            if not hasattr(self, '_cached_result'):
+                self._cached_result = {}
+
+            if len(self._times) in self._cached_result:
+                return self._cached_result[len(self._times)]
             else:
-                result = func(*args, **kwargs)
-                func.cached_result = {len(args[0]._times): result}
+                result = func(self, *args, **kwargs)
+                self._cached_result[len(self._times)] = result
                 return result
+
         wrapper.populate = True
         wrapper.tags = tags
         return wrapper
     return tag_wrapper
+
 
 
 class Shot:
@@ -196,7 +202,7 @@ class Shot:
         if interpolation_timebase is None and interpolate:
             interpolation_timebase = self._times
         return type(self).get_signals(signals, conn, interpolate, interpolation_timebase)
-    
+
     def apply_shot_filter(self, shot_filter):
         self.data = self.data.filter(shot_filter)
 
@@ -206,17 +212,19 @@ class Shot:
     def populate_method(self, method_name):
         method = getattr(self, method_name)
         if callable(method) and hasattr(method, 'populate'):
-            self.logger.info(f"[Shot {self._shot_id}]:Populating {method_name}")
+            self.logger.info(
+                f"[Shot {self._shot_id}]:Populating {method_name}")
             try:
                 return method()
             except Exception as e:
-                self.logger.warning(f"[Shot {self._shot_id}]:Failed to populate {method_name}")
+                self.logger.warning(
+                    f"[Shot {self._shot_id}]:Failed to populate {method_name}")
                 self.logger.debug(f"{traceback.format_exc()}")
         else:
             self.logger.warning(
                 f"[Shot {self._shot_id}]:Method {method_name} is not callable or does not have a `populate` attribute set to True")
         return None
-            
+
     def populate_methods(self, method_names):
         """Populate the shot object with data from MDSplus.
 
@@ -250,7 +258,7 @@ class Shot:
     def _init_populate(self, already_populated, methods, tags):
         """
         Internal method to populate the disruption parameters of a shot object. 
-        
+
         This method is called by the constructor and should not be called directly. It loops through all methods of the Shot class and calls the ones that have a `populate` attribute set to True and satisfy the tags and methods arguments.
         """
 
@@ -262,8 +270,8 @@ class Shot:
             self.data['shot'] = self._shot_id
         else:
             self.logger.info(f"[Shot {self._shot_id}]:Already populated")
-            return 
-        
+            return
+
         # If tags or methods are not lists, make them lists.
         if tags is not None and not isinstance(tags, list):
             populate_tags = [populate_tags]
@@ -275,17 +283,20 @@ class Shot:
         method_names = []
         for method_name in dir(self):
             method = getattr(self, method_name)
-            if callable(method) and hasattr(method, 'populate'):          
+            if callable(method) and hasattr(method, 'populate'):
                 if tags is not None and not bool(set(method.tags).intersection(tags)):
-                    self.logger.info(f"[Shot {self._shot_id}]:Skipping {method_name}")
+                    self.logger.info(
+                        f"[Shot {self._shot_id}]:Skipping {method_name}")
                     continue
                 if methods is not None and method_name not in methods:
-                    self.logger.info(f"[Shot {self._shot_id}]:Skipping {method_name}")
+                    self.logger.info(
+                        f"[Shot {self._shot_id}]:Skipping {method_name}")
                     continue
                 method_names.append(method_name)
         if self.multiprocessing:
             with ThreadPoolExecutor(max_workers=8) as executor:
-                futures = [executor.submit(self.populate_method, method_name) for method_name in method_names]
+                futures = [executor.submit(
+                    self.populate_method, method_name) for method_name in method_names]
                 for future in concurrent.futures.as_completed(futures):
                     try:
                         parameter_df = future.result()
@@ -293,13 +304,15 @@ class Shot:
                     except Exception as e:
                         self.logger.warning(
                             f"[Shot {self._shot_id}]:Failed to populate {method_name}")
-                        self.logger.debug(f"[Shot {self._shot_id}: {traceback.format_exc()}")
+                        self.logger.debug(
+                            f"[Shot {self._shot_id}: {traceback.format_exc()}")
         else:
-            parameters = [self.populate_method(method_name) for method_name in method_names]
-        parameters = [parameter for parameter in parameters if parameter is not None]
+            parameters = [self.populate_method(
+                method_name) for method_name in method_names]
+        parameters = [
+            parameter for parameter in parameters if parameter is not None]
         # TODO: This is a hack to get around the fact that some methods return
         #       multiple parameters. This should be fixed in the future.
         local_data = pd.concat(parameters + [self.data], axis=1)
         local_data = local_data.loc[:, ~local_data.columns.duplicated()]
         self.data = local_data
-        
