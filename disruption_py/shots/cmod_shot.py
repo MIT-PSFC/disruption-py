@@ -87,7 +87,7 @@ class CModShot(Shot):
         self.data = data
         timebase_signal = kwargs.pop('timebase_signal', None)
         populate_methods = kwargs.pop('populate_methods', None)
-        populate_tags = kwargs.pop('populate_tags', ['all'])
+        populate_tags = kwargs.pop('populate_tags', ['all'])#kwargs.pop('populate_tags', ['all','experimental']) 
         self.interp_scheme = kwargs.pop('interp_scheme', 'linear')
         if self.data is not None and self._times is None:
             # TODO: Use time interval vs max time to determine if timebase is in ms
@@ -696,6 +696,7 @@ class CModShot(Shot):
 
         N=1 toroidal assymmetry in the magnetic fields
         """
+        print(self._shot_id) #DELETE ME
         n_equal_1_amplitude = np.empty(len(self._times))
         n_equal_1_amplitude.fill(np.nan)
         n_equal_1_normalized = n_equal_1_amplitude.copy()
@@ -1473,9 +1474,9 @@ class CModShot(Shot):
         # points in the pedestal that have x uncertainties larger than 0.1 don't help at all
         # do this filtering here because filtering of err_X only works before time-averaging
         p_ne.remove_points(np.logical_and(
-            p_ne.X[:, 1] > 0.9, p_ne.err_X[:, 1] > 0.1))
+            p_ne.X[:, 1] >= 0.85, p_ne.err_X[:, 1] > 0.1))
         p_Te.remove_points(np.logical_and(
-            p_Te.X[:, 1] > 0.9, p_Te.err_X[:, 1] > 0.1))
+            p_Te.X[:, 1] >= 0.85, p_Te.err_X[:, 1] > 0.1))
 
         # cleanup of low Te values
         # TS Te should be >15 eV inside near SOL
@@ -1507,6 +1508,7 @@ class CModShot(Shot):
         ip_df = self._get_ip_parameters()
         
         #Get BT
+        
         mag_tree = Tree('magnetics', self._shot_id)
         btor_record = mag_tree.getNode(r"\btor").getData()
         btor = btor_record.data()
@@ -1540,9 +1542,9 @@ if __name__ == '__main__':
     # ch.setLevel(5)
     parser = argparse.ArgumentParser(description="Test CModShot class")
     # parser.add_argument('--shot', type=int, help='Shot number to test', default=1150922001)
-    parser.add_argument('--shot', type=int, help='Shot number to test', default=1000620012)
+    parser.add_argument('--shot', type=int, help='Shot number to test', default=1030523028)
     # Add parser argument for list of methods to populate
-    parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_power'])
+    parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_edge_parameters'])
     args = parser.parse_args()
     shot = CModShot(args.shot, disruption_time=None)
     # ohmics_parameters = shot._get_ohmic_parameters()
