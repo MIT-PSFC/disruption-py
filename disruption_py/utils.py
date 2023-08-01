@@ -118,7 +118,7 @@ def exp_filter(x, w, strategy='fragmented'):
     for i in range(1, len(x)):
         filtered_x[i] = w*x[i] + (1-w)*filtered_x[i-1]
         if strategy == 'fragmented':
-            if filtered_x[i-1] == np.nan:
+            if np.isnan(filtered_x[i-1]):
                 filtered_x[i] = x[i]
     return filtered_x
 

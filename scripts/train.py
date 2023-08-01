@@ -8,7 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, fbeta_score
 
-from disruption_py.utils import generate_id
+from disruption_py.utils import generate_id, save_open_plots
 from disruption_py.ml.train import grid_search, train_local
 
 def main(args):
@@ -40,10 +40,10 @@ def main(args):
         return
     else:
         results = [train_local(
-            x_train, y_train, x_test, y_test, features=args.features)]
+            x_train, y_train, x_test, y_test, features=args.features, model=args.model)]
         best_result = results[0]
     model = best_result['model']
-    train['scores'] = best_result['predictions_proba']
+    train['scores'] = best_result['predictions_proba'][:,1]
     test['scores'] = model.predict(x_test)
     print("Train F2-Score:", fbeta_score(y_train,
           best_result['predictions'], beta=2))
@@ -58,9 +58,25 @@ def main(args):
     disp_test.plot()
     disp_train.ax_.set_title('Train Matrix')
     disp_test.ax_.set_title('Test Matrix')
+    # Plot feature importances 
+    plt.figure()
+    if args.model == 'LogisticRegression':
+        feature_names = model.named_steps['polynomialfeatures'].get_feature_names(input_features=x_train.columns)
+    else:
+        feature_names = x_train.columns
+    feature_importances = zip(feature_names, best_result['features'])
+    sorted_features = sorted(feature_importances, key=lambda x: x[1], reverse=True)
+    top_features = sorted_features[:10]
+    top_feature_names, top_importances = zip(*top_features)
+    plt.barh(top_feature_names, top_importances)
+    plt.title('Feature Importances')
+    plt.xlabel('Relative Importance')
+    plt.ylabel('Feature')
     plt.show()
+    # Save plots using ../disruption_py/utils 
+    save_open_plots(f"train_plots_{args.unique_id}.pdf")
     joblib.dump(model, args.output_dir +
-                f"random_forest{date.today()}_{args.unique_id}.joblib")
+                f"{args.model}{date.today()}_{args.unique_id}.joblib")
     with open(args.output_dir + f"train_{args.unique_id}_.json", "w") as f:
         json.dump(vars(args), f)
     print(f"Unique ID for this run: {args.unique_id}")
@@ -81,5 +97,6 @@ if __name__ == '__main__':
                         help='List of features to use for training. If not provided, all features will be used.', default=None)
     parser.add_argument('--unique_id', type=str,
                         help='Unique identifier for the dataset. Used to name the output files.', default=generate_id())
+    parser.add_argument('--model', type=str, default='RandomForestClassifier',choices=['RandomForestClassifier','LogisticRegression','SupportVectorMachine','LinearClassifier'], help="Model to use for training. Must be a valid sklearn model.")
     args = parser.parse_args()
     main(args)
