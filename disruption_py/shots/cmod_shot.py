@@ -87,7 +87,7 @@ class CModShot(Shot):
         self.data = data
         timebase_signal = kwargs.pop('timebase_signal', None)
         populate_methods = kwargs.pop('populate_methods', None)
-        populate_tags = kwargs.pop('populate_tags', ['all'])#kwargs.pop('populate_tags', ['all','experimental']) 
+        populate_tags = kwargs.pop('populate_tags', ['all'])
         self.interp_scheme = kwargs.pop('interp_scheme', 'linear')
         if self.data is not None and self._times is None:
             # TODO: Use time interval vs max time to determine if timebase is in ms
@@ -1542,9 +1542,9 @@ if __name__ == '__main__':
     # ch.setLevel(5)
     parser = argparse.ArgumentParser(description="Test CModShot class")
     # parser.add_argument('--shot', type=int, help='Shot number to test', default=1150922001)
-    parser.add_argument('--shot', type=int, help='Shot number to test', default=1030523028)
+    parser.add_argument('--shot', type=int, help='Shot number to test', default=1030523006)
     # Add parser argument for list of methods to populate
-    parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_edge_parameters'])
+    parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_densities'])
     args = parser.parse_args()
     shot = CModShot(args.shot, disruption_time=None)
     # ohmics_parameters = shot._get_ohmic_parameters()

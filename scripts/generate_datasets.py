@@ -33,19 +33,14 @@ def main(args):
         args.shotlist, header=None).iloc[:, 0].values.tolist()
     print(shot_ids)
     feature_cols, derived_feature_cols = parse_feature_cols(args.feature_cols)
-    print(feature_cols)
+    print(feature_cols, derived_feature_cols)
     dataset_df = get_dataset_df(args.data_source, cols=feature_cols +
                                 REQUIRED_COLS, efit_tree=args.efit_tree, shot_ids=shot_ids, tokamak=args.tokamak, timebase_signal=args.timebase_signal, label=args.label, populate_methods=args.populate_methods, populate_tags=args.populate_tags)
+    if args.filter:
+        dataset_df = filter_dataset_df(dataset_df, exclude_non_disruptive=False,
+                                        exclude_black_window=BLACK_WINDOW_THRESHOLD, impute=True)
     dataset_df = add_derived_features(dataset_df, derived_feature_cols)
     dataset_df['label'] = create_label(dataset_df['time_until_disrupt'])
-    if args.filter is True:
-        print(args.filter)
-        try:
-            dataset_df = filter_dataset_df(dataset_df, exclude_non_disruptive=False,
-                                        exclude_black_window=BLACK_WINDOW_THRESHOLD, impute=True)
-        except Exception as e:
-            LOGGER.debug(e)
-            LOGGER.warning("Filtering failed. Continuing without filtering.")
     X_train, X_test, y_train, y_test = create_dataset(
         dataset_df, ratio=DEFAULT_RATIO)
     dataset_df.to_csv(args.output_dir +
@@ -54,6 +49,8 @@ def main(args):
     # X_train, X_val, y_train, y_val = create_dataset(df_train_val, ratio=.25)
     print(X_train.shape, X_test.shape,
           y_train.shape, y_test.shape)
+    print(f"Shots (Train): {len(pd.unique(X_train['shot']))}")
+    print(f"Shots (Test): {len(pd.unique(X_test['shot']))}")
     df_train = pd.concat([X_train, y_train], axis=1)
     df_train.to_csv(args.output_dir +
                     f"train_{args.unique_id}.csv", sep=',', index=False)
@@ -97,6 +94,6 @@ if __name__ == '__main__':
     parser.add_argument('--populate_methods', nargs='*', type=str, default=None)
     parser.add_argument('--populate_tags', nargs='*', type=str, default=None) 
     parser.add_argument(
-        '--filter', type=int, help="Run filter_dataset method on produced dataset. Necessary for generating DPRF datasets", default=1)
+        '--filter', type=bool, help="Run filter_dataset method on produced dataset. Necessary for generating DPRF datasets", default=True)
     args = parser.parse_args()
     main(args)
