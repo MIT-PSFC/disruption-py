@@ -27,12 +27,12 @@ def parameter_method(tags=["all"]):
             # Create the cache if it doesn't exist
             if not hasattr(self, '_cached_result'):
                 self._cached_result = {}
-
-            if len(self._times) in self._cached_result:
-                return self._cached_result[len(self._times)]
+            cache_key = func.__name__ + str(len(self._times))
+            if cache_key in self._cached_result:
+                return self._cached_result[cache_key]
             else:
                 result = func(self, *args, **kwargs)
-                self._cached_result[len(self._times)] = result
+                self._cached_result[cache_key] = result
                 return result
 
         wrapper.populate = True
