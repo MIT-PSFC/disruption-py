@@ -13,6 +13,8 @@ from pstats import SortKey
 
 from disruption_py.shots import D3DShot, CModShot, get_shot_id_type
 from disruption_py.database import create_d3d_handler, create_cmod_handler
+from disruption_py.shots import D3DShot, CModShot, get_shot_id_type
+from disruption_py.database import create_d3d_handler, create_cmod_handler
 
 TEST_SHOTS = [1150805012,   # Flattop Disruption
             1150805013,     # No Disruption
@@ -60,6 +62,7 @@ def main(args):
         pr.dump_stats(f"shot_{args.shot}_profileX{args.num_calls}")
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Profile a Shot')
     parser = argparse.ArgumentParser(description='Profile a Shot')
     parser.add_argument('--shot', type=int, default=175552)
     parser.add_argument('--efit', type=str, default='EFIT05')

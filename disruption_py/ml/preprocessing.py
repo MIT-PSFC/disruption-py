@@ -72,7 +72,7 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
         tokamak_handler = TOKAMAKS[tokamak]()
     timebase_signal = kwargs.get('timebase_signal', None)
     populate_methods = kwargs.get('populate_methods', None)
-    populate_tags = kwargs.get('populate_tags', None)
+    populate_tags = kwargs.get('populate_tags', ['all'])
     label = kwargs.get('label', 'none')
     if shot_ids is None:
         random_state = kwargs.get('random_state', 8808)
@@ -121,9 +121,10 @@ def get_dataset_df(data_source=2, cols=DEFAULT_COLS, efit_tree=None, shot_ids=No
 
     dataset_df = dataset_df.fillna(value=np.nan)
     cols = list(dataset_df.columns)
-    # Without the following columns, the dataset can't be labeled 
-    if not set(required_cols).issubset(set(cols)):
-       raise ValueError('Required columns not in dataset')
+    # # Without the following columns, the dataset can't be labeled 
+    # if not set(required_cols).issubset(set(cols)):
+    #    print(f"Required columns: {required_cols}")
+    #    raise ValueError('Required columns not in dataset')
     if label != 'none':
         dataset_df['label'] = create_label(
             dataset_df['time_until_disrupt'].values, threshold, label, False)

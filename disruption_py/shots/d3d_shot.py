@@ -25,6 +25,8 @@ D3D_MAX_SHOT_TIME = 7.0  # [s]
 DEFAULT_A_MINOR = 0.56  # [m]
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
 
+DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
+
 """
 Useful Examples:
 https://diii-d.gat.com/diii-d/MDSplusAPI_Python_pg1
@@ -1049,6 +1051,7 @@ class D3DShot(Shot):
         h98 = np.full(len(self._times), np.nan)
         self.conn.openTree('transport', self._shot_id)
         h98, t_h98 = self._get_signal(r'\H_THH98Y2')
+        self.conn.openTree('d3d', self._shot_id)
         self.conn.openTree('d3d', self._shot_id)
         h_alpha, t_h_alpha = self._get_signal(r'\fs04')
         h98 = interp1(t_h98, h98, self._times)

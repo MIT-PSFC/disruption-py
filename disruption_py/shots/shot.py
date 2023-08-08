@@ -1,7 +1,7 @@
 from disruption_py.utils import interp1
 import subprocess
 import traceback
-import concurrent
+import concurrent 
 from concurrent.futures import ThreadPoolExecutor
 
 import MDSplus
@@ -12,7 +12,6 @@ import numpy as np
 import logging
 
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
-
 
 
 def parameter_method(tags=["all"]):
@@ -28,19 +27,18 @@ def parameter_method(tags=["all"]):
             # Create the cache if it doesn't exist
             if not hasattr(self, '_cached_result'):
                 self._cached_result = {}
-
-            if len(self._times) in self._cached_result:
-                return self._cached_result[len(self._times)]
+            cache_key = func.__name__ + str(len(self._times))
+            if cache_key in self._cached_result:
+                return self._cached_result[cache_key]
             else:
                 result = func(self, *args, **kwargs)
-                self._cached_result[len(self._times)] = result
+                self._cached_result[cache_key] = result
                 return result
 
         wrapper.populate = True
         wrapper.tags = tags
         return wrapper
     return tag_wrapper
-
 
 
 class Shot:
@@ -128,8 +126,10 @@ class Shot:
         if isinstance(conn, MDSplus.Tree):
             signal_record = conn.getNode(signal).getData()
             signal_data = signal_record.data()
+            signal_data = signal_record.data()
             orig_timebase = signal_record.dim_of(0)
         elif isinstance(conn, MDSplus.Connection):
+            signal_data = conn.get(signal).data()
             signal_data = conn.get(signal).data()
             orig_timebase = conn.get(
                 f"dim_of({signal})").data()/1.e3  # [ms] -> [s]
@@ -202,7 +202,6 @@ class Shot:
         if interpolation_timebase is None and interpolate:
             interpolation_timebase = self._times
         return type(self).get_signals(signals, conn, interpolate, interpolation_timebase)
-
     def apply_shot_filter(self, shot_filter):
         self.data = self.data.filter(shot_filter)
 
@@ -224,7 +223,6 @@ class Shot:
             self.logger.warning(
                 f"[Shot {self._shot_id}]:Method {method_name} is not callable or does not have a `populate` attribute set to True")
         return None
-
     def populate_methods(self, method_names):
         """Populate the shot object with data from MDSplus.
 
@@ -258,7 +256,6 @@ class Shot:
     def _init_populate(self, already_populated, methods, tags):
         """
         Internal method to populate the disruption parameters of a shot object. 
-
         This method is called by the constructor and should not be called directly. It loops through all methods of the Shot class and calls the ones that have a `populate` attribute set to True and satisfy the tags and methods arguments.
         """
 

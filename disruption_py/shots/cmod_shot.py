@@ -15,7 +15,7 @@ import numpy as np
 import MDSplus
 from MDSplus import *
 
-# For edge paramebers
+# For edge parameters
 import sys
 import scipy as sp
 
@@ -59,13 +59,19 @@ class CModShot(Shot):
                  "Wmhd": r'\efit_aeqdsk:wplasm',
                  "ssep": r'\efit_aeqdsk:ssep',
                  "n_over_ncrit": r'\efit_aeqdsk:xnnc',
-                 "v_surf": r'\efit_aeqdsk:vsurf',
-                 "R0": r'\efit_aeqdsk:rout',
                  "tritop": r'\efit_aeqdsk:doutu',
                  "tribot":  r'\efit_aeqdsk:doutl',
                  "a_minor": r'\efit_aeqdsk:aminor',
-                 "R0":r'\efit_aeqdsk:rout',#TODO: Andrew will check that this is right
+                 "rmagx":r'\efit_aeqdsk:rmagx', #TODO: change units to [m] (current [cm])
                  "chisq":r'\efit_aeqdsk:chisq'}
+    
+    #EFIT column names for data before 2000 TODO: confirm with Bob that these are the right back-ups and make sure that these are similar to standard EFIT columns
+    efit_cols_pre_2000 = {"a_minor": r'\efit_aeqdsk:aout',
+                          "li": r'\efit_aeqdsk:ali',
+                          "q0": r'\efit_aeqdsk:qqmagx',
+                          "qstar": r'\efit_aeqdsk:qsta',
+                          "q95": r'\efit_aeqdsk:qsib', #Not sure about this one
+                          } 
     
     efit_derivs = {'beta_p': 'dbetap_dt', 'li': 'dli_dt', 'Wmhd': 'dWmhd_dt'}
 
@@ -234,6 +240,7 @@ class CModShot(Shot):
         Sources
         -------
         - matlab/cmod_matlab/matlab-core/get_Ip_parameters.m 
+        - matlab/cmod_matlab/matlab-core/get_Ip_parameters.m 
         """
         dip = np.gradient(ip, magtime)
         dip_smoothed = smooth(dip, 11)  # ,ends_type=0)
@@ -333,6 +340,7 @@ class CModShot(Shot):
 
             Sources
             -------
+            - matlab/cmod_matlab/matlab-core/get_Z_parameters.m
             - matlab/cmod_matlab/matlab-core/get_Z_parameters.m
 
         """
@@ -493,7 +501,7 @@ class CModShot(Shot):
                        bounds_error=False) if p_lh is not None else np.zeros(len(times))
         p_icrf = interp1(t_icrf, p_icrf * 1.0e6, times,
                          bounds_error=False) if p_icrf is not None else np.zeros(len(times))
-        if len(t_rad) == 1 or p_rad is None:
+        if t_rad is None or len(t_rad) == 1 or p_rad is None:
             p_rad = np.array([np.nan]*len(times))  # TODO: Fix
             dprad = p_rad.copy()
         else:
@@ -521,7 +529,7 @@ class CModShot(Shot):
             (Not-a-Number) values for times outside the LH timebase, and the NaN's
             will propagate into p_input and rad_fraction, which is not desirable.
         """
-        values = [None]*6
+        values = [None]*6 #List to store the time and values of the LH power, icrf power, and radiated power
         trees = ['LH', 'RF', 'spectroscopy']
         nodes = [r'\LH::TOP.RESULTS:NETPOW',
                  r"\rf::rf_power_net", r"\twopi_diode"]
@@ -542,10 +550,17 @@ class CModShot(Shot):
         efit_time = self._efit_tree.getNode(r'\efit_aeqdsk:time').data().astype(
             'float64', copy=False) # [s]
         efit_data = dict()
+        
+        #Get data from each of the columns in efit_cols one at a time
         for param in self.efit_cols:
             try:
-                efit_data[param] = self._efit_tree.getNode(
-                    self.efit_cols[param]).data().astype('float64', copy=False)
+                #If shot before 2000 and the param is in efit_cols_pre_2000
+                if self._shot_id <= 1000000000 and param not in self.efit_cols_pre_2000.keys():
+                    efit_data[param] = self._efit_tree.getNode(
+                        self.efit_cols_pre_2000[param]).data().astype('float64', copy=False)
+                else:
+                    efit_data[param] = self._efit_tree.getNode(
+                        self.efit_cols[param]).data().astype('float64', copy=False)
             except:
                 self.logger.warning(f"[Shot {self._shot_id}]: Unable to get {param} from EFIT tree")
                 self.logger.debug(f"[Shot {self._shot_id}]: {traceback.format_exc()}")
@@ -559,6 +574,37 @@ class CModShot(Shot):
             for param in efit_data:
                 efit_data[param] = interp1(
                     efit_time, efit_data[param], self._times)
+                
+        #Get data for V_surf := deriv(\ANALYSIS::EFIT_SSIBRY)*2*pi
+        try:
+            ssibry = self._efit_tree.getNode('\efit_geqdsk:ssibry').data().astype('float64', copy=False)
+            efit_data['V_surf'] = np.gradient(ssibry, efit_time)*2*np.pi
+        except:
+            print("unable to get V_surf")
+            efit_data['V_surf'] = np.full(len(efit_time), np.nan)
+            pass 
+
+        #For shots before 2000, adjust units of aminor, compute beta_n and v_loop
+        if self._shot_id <= 1000000000:
+            
+            #Adjust aminor units
+            efit_data['aminor'] = efit_data['aminor']/100 #[cm] to [m]
+            
+            #Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally sure on this one)
+            try: #TODO: confirm this
+                ssimag = self._efit_tree.getNode('\efit_geqdsk:ssimag').data().astype('float64', copy=False)
+                efit_data['v_loop_efit'] = np.gradient(ssimag, efit_time)*2*np.pi
+            except:
+                print("unable to get v_loop_efit")
+                efit_data['v_loop_efit'] = np.full(len(efit_time), np.nan)
+                pass 
+
+            #Compute beta_n
+            beta_t = self._efit_tree.getNode('\efit_aeqdsk:betat').data().astype('float64', copy=False)
+            efit_data['beta_n'] = np.reciprocal( np.reciprocal(beta_t) +  np.reciprocal(efit_data['beta_p']) )
+
+
+
         return pd.DataFrame(efit_data)
 
     @staticmethod
@@ -650,6 +696,7 @@ class CModShot(Shot):
 
         N=1 toroidal assymmetry in the magnetic fields
         """
+        print(self._shot_id) #DELETE ME
         n_equal_1_amplitude = np.empty(len(self._times))
         n_equal_1_amplitude.fill(np.nan)
         n_equal_1_normalized = n_equal_1_amplitude.copy()
@@ -743,8 +790,8 @@ class CModShot(Shot):
     def _get_densities(self):
         try:
             e_tree = Tree('electrons', self._shot_id)
-            n_e_record = e_tree.getNode(r'.tci.results:nl_04').getData()
-            n_e = np.squeeze(n_e_record.data().astype('float64', copy=False))/0.6 # Divid by chord length of ~0.6m to get line averaged dnesity. For future reference, chord length is stored in .01*\analyis::efit_aeqdsk:Rco2v[3,*]
+            n_e_record = e_tree.getNode(r'.tci.results:nl_04').getData() #Line integrated density
+            n_e = np.squeeze(n_e_record.data().astype('float64', copy=False))/0.6 #Divide by chord length of ~0.6m to get line averaged density. For future refernce, chord length is stored in .01*\analysis::efit_aeqdsk:rco2v[3,*]
             t_n = n_e_record.dim_of(0).data()
             mag_tree = Tree('magnetics', self._shot_id)
             ip_record = mag_tree.getNode(r'\ip').getData()
@@ -1274,6 +1321,7 @@ class CModShot(Shot):
     def get_sxr_parameters():
         pass
 
+
     # TODO: get more accurate description of soft x-ray data
     @parameter_method()
     def _get_sxr_data(self):
@@ -1426,9 +1474,9 @@ class CModShot(Shot):
         # points in the pedestal that have x uncertainties larger than 0.1 don't help at all
         # do this filtering here because filtering of err_X only works before time-averaging
         p_ne.remove_points(np.logical_and(
-            p_ne.X[:, 1] > 0.9, p_ne.err_X[:, 1] > 0.1))
+            p_ne.X[:, 1] >= 0.85, p_ne.err_X[:, 1] > 0.1))
         p_Te.remove_points(np.logical_and(
-            p_Te.X[:, 1] > 0.9, p_Te.err_X[:, 1] > 0.1))
+            p_Te.X[:, 1] >= 0.85, p_Te.err_X[:, 1] > 0.1))
 
         # cleanup of low Te values
         # TS Te should be >15 eV inside near SOL
@@ -1437,35 +1485,8 @@ class CModShot(Shot):
         return CModShot.get_edge_parameters(self._times, p_Te, p_ne)
 
     @staticmethod
-    def get_H98(times, tau, t_tau, n_e, ip, R0, aminor, kappa, BT, p_input):
-        """Compute H98
-
-        Parameters
-        ----------
-        times : array_like
-            The times at which to calculate the H98.
-        tau : array_like
-            Energy confinement time 
-
-
-        Returns
-        -------
-        H98 : array_like
-            H98 interpolated on the requested timebase.
-
-        Original Authors
-        ----------------
-        Andrew Maris (maris@mit.edu)
-
-        """
-        # Take R = 0.68 [m], A = 2
-
-        tau_98 = 0.144*n_e**0.41*2**0.19*ip**0.93*R0**1.39 * \
-            aminor**0.58*kappa**0.78*BT**0.15*p_input**-0.69
-        tau = interp1(t_tau, tau, times)
-        H98 = tau/tau_98
-
-        return pd.DataFrame({"H98": H98})
+    def get_H98():
+        pass
 
     # TODO: Finish
     @parameter_method()
@@ -1473,7 +1494,7 @@ class CModShot(Shot):
         """Prepare to compute H98 by getting tau_E
         
         Scaling from eq. 20, ITER Physics Basis Chapter 2 https://iopscience.iop.org/article/10.1088/0029-5515/39/12/302/pdf
-        (in s, MA, T, MW, 1019 m−3, AMU, m)
+        (in s, MA, T, MW, 10^19 m^−3, AMU, m)
         Original Authors
         ----------------
         Andrew Maris (maris@mit.edu)
@@ -1487,6 +1508,7 @@ class CModShot(Shot):
         ip_df = self._get_ip_parameters()
         
         #Get BT
+        
         mag_tree = Tree('magnetics', self._shot_id)
         btor_record = mag_tree.getNode(r"\btor").getData()
         btor = btor_record.data()
@@ -1496,21 +1518,21 @@ class CModShot(Shot):
         btor = btor - np.mean(btor[baseline_indices])
         btor = np.abs(interp1(t_mag, btor, self._times))
         
-        ip = np.abs(ip_df.ip)/1e6 # [A] -> [MA]
-        n_e = density_df.n_e/1e19 # [m^-3] -> [10^19 m^-3]
+        ip = np.abs(ip_df.ip)/1.e6 # [A] -> [MA]
+        n_e = density_df.n_e/1.e19 # [m^-3] -> [10^19 m^-3]
         p_input = powers_df.p_input/1.e6 # [W] -> [MW]
         dWmhd_dt = efit_df.dWmhd_dt/1.e6 # [W] -> [MW]
         Wmhd = efit_df.Wmhd/1.e6 # [J] -> [MJ]
+        R0 = efit_df.rmagx/100 # [cm] -> [m]
         #Estimate confinement time
         tau = Wmhd/(p_input - dWmhd_dt)
         
         #Compute 1998 tau_E scaling, taking A (atomic mass) = 2
-        tau_98 = .0562*(n_e**0.41)*(2**0.19)*(ip**0.93)*(efit_df.R0**1.39) * \
+        tau_98 = .0562*(n_e**0.41)*(2**0.19)*(ip**0.93)*(R0**1.39) * \
                 (efit_df.a_minor**0.58)*(efit_df.kappa**0.78)*(btor**0.15)*(p_input**-0.69)
         H98 = tau/tau_98
 
         return pd.DataFrame({"H98": H98})
-        #return CModShot.get_H98(self._times, tau)
 
 
 if __name__ == '__main__':

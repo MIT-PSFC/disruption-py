@@ -186,6 +186,16 @@ class DatabaseHandler:
         t_disrupt = t_disrupt[0][0]
         return t_disrupt
 
+    def get_disruption_time(self, shot_id):
+        with self.conn.cursor() as curs:
+            curs.execute(
+                f"select t_disrupt from disruptions where shot = {shot_id}")
+            t_disrupt = curs.fetchall()
+        if len(t_disrupt) == 0:
+            return None
+        t_disrupt = t_disrupt[0][0]
+        return t_disrupt
+
     def get_disruption_shotlist(self):
         """ 
         Get pandas dataframe of all disruptive shots and times from the disruption table. Can be sed as a cross-reference to determine whether a given shot is disruptive or not (all shots in this table are disruptive) and contain a t_disrupt.  
@@ -322,6 +332,7 @@ def create_cmod_handler():
         db_driver_path = str(p)  # Absolute path to jar file
     logging.debug(db_driver_path)
     logging.debug(os.getcwd())
+    return CModHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver", db_driver_path, f"jdbc:sqlserver://{db_server}.psfc.mit.edu: 1433", db_username, db_password, shot_class=CModShot)
     return CModHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver", db_driver_path, f"jdbc:sqlserver://{db_server}.psfc.mit.edu: 1433", db_username, db_password, shot_class=CModShot)
 
 
