@@ -824,9 +824,9 @@ class CModShot(Shot):
             ip = ip_record.data().astype('float64', copy=False)
             t_ip = ip_record.dim_of(0).data()
             a_tree = Tree('analysis', self._shot_id)
-            #If the shot is before the year 2000, use the old name for amionr in the tree
+            #If the shot is before the year 2000, use the old name for amionr in the tree. Also divide by 100 to convert [cm] to [m]
             if self._shot_id <= 1000000000:
-                a_minor_record = self._efit_tree.getNode(self.efit_cols_pre_2000['a_minor']).getData()
+                a_minor_record = self._efit_tree.getNode(self.efit_cols_pre_2000['a_minor']).getData()/100
             else:
                 a_minor_record = a_tree.getNode(r'\efit_aeqdsk:aminor').getData()
             t_a = a_minor_record.dim_of(0).data()
