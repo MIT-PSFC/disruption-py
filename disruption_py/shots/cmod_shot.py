@@ -62,7 +62,7 @@ class CModShot(Shot):
                  "tritop": r'\efit_aeqdsk:doutu',
                  "tribot":  r'\efit_aeqdsk:doutl',
                  "a_minor": r'\efit_aeqdsk:aminor',
-                 "rmagx":r'\efit_aeqdsk:rmagx', #TODO: change units to [m] (current [cm])
+                 "R0":r'\efit_aeqdsk:rmagx', #TODO: change units to [m] (current [cm])
                  "chisq":r'\efit_aeqdsk:chisq',
                  "area":r'\efit_aeqdsk:area'}
     
@@ -73,7 +73,7 @@ class CModShot(Shot):
                           "qstar": r'\efit_aeqdsk:qsta',
                           "q95": r'\efit_aeqdsk:qpsib',
                           "chisq": r'\efit_aeqdsk:tsaisq',
-                          "area":r'\efit_aeqdsk:area0'
+                          "area":r'\efit_aeqdsk:areao'
                           } 
     
     #EFIT columns that need to be derived for data before 2000  TODO: confirm with Bob that these are the right back-ups and make sure that these are similar to standard EFIT columns
@@ -588,12 +588,15 @@ class CModShot(Shot):
                 efit_data[param] = interp1(
                     efit_time, efit_data[param], self._times)
                 
+        #Correct units of R0:
+        efit_data['R0'] = efit_data['R0']/100 #[cm] -> [m]
+                
         #Get data for V_surf := deriv(\ANALYSIS::EFIT_SSIBRY)*2*pi
         try:
             ssibry = self._efit_tree.getNode('\efit_geqdsk:ssibry').data().astype('float64', copy=False)
             efit_data['V_surf'] = np.gradient(ssibry, efit_time)*2*np.pi
         except:
-            print("unable to get V_surf")
+            print("Unable to get V_surf")
             efit_data['V_surf'] = np.full(len(efit_time), np.nan)
             pass 
 
@@ -1554,7 +1557,7 @@ class CModShot(Shot):
         p_input = powers_df.p_input/1.e6 # [W] -> [MW]
         dWmhd_dt = efit_df.dWmhd_dt/1.e6 # [W] -> [MW]
         Wmhd = efit_df.Wmhd/1.e6 # [J] -> [MJ]
-        R0 = efit_df.rmagx/100 # [cm] -> [m]
+        R0 = efit_df.R0 # [cm] -> [m]
         #Estimate confinement time
         tau = Wmhd/(p_input - dWmhd_dt)
         
