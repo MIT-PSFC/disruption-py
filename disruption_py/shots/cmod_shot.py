@@ -63,15 +63,21 @@ class CModShot(Shot):
                  "tribot":  r'\efit_aeqdsk:doutl',
                  "a_minor": r'\efit_aeqdsk:aminor',
                  "rmagx":r'\efit_aeqdsk:rmagx', #TODO: change units to [m] (current [cm])
-                 "chisq":r'\efit_aeqdsk:chisq'}
+                 "chisq":r'\efit_aeqdsk:chisq',
+                 "area":r'\efit_aeqdsk:area'}
     
     #EFIT column names for data before 2000 TODO: confirm with Bob that these are the right back-ups and make sure that these are similar to standard EFIT columns
     efit_cols_pre_2000 = {"a_minor": r'\efit_aeqdsk:aout',
                           "li": r'\efit_aeqdsk:ali',
                           "q0": r'\efit_aeqdsk:qqmagx',
                           "qstar": r'\efit_aeqdsk:qsta',
-                          "q95": r'\efit_aeqdsk:qsib', #Not sure about this one
+                          "q95": r'\efit_aeqdsk:qpsib',
+                          "chisq": r'\efit_aeqdsk:tsaisq',
+                          "area":r'\efit_aeqdsk:area0'
                           } 
+    
+    #EFIT columns that need to be derived for data before 2000  TODO: confirm with Bob that these are the right back-ups and make sure that these are similar to standard EFIT columns
+    efit_cols_pre_2000_derived = ['beta_n','v_loop_efit']
     
     efit_derivs = {'beta_p': 'dbetap_dt', 'li': 'dli_dt', 'Wmhd': 'dWmhd_dt'}
 
@@ -489,7 +495,11 @@ class CModShot(Shot):
         v_loop_time = v_loop_record.dim_of(0)
         if len(v_loop_time) <= 1:
             return pd.DataFrame({"p_oh": np.zeros(len(self._times)), "v_loop": np.zeros(len(self._times))})
-        li_record = self._efit_tree.getNode(r"\efit_aeqdsk:li").getData()
+        #If the shot is before the year 2000, use the old name for li in the tree
+        if self._shot_id <= 1000000000:
+            li_record = self._efit_tree.getNode(self.efit_cols_pre_2000['li']).getData()
+        else:
+            li_record = self._efit_tree.getNode(r"\efit_aeqdsk:li").getData()
         li = li_record.data().astype('float64', copy=False)
         efittime = li_record.dim_of(0)
         ip_parameters = self._get_ip_parameters()
@@ -554,11 +564,14 @@ class CModShot(Shot):
         #Get data from each of the columns in efit_cols one at a time
         for param in self.efit_cols:
             try:
-                #If shot before 2000 and the param is in efit_cols_pre_2000
-                if self._shot_id <= 1000000000 and param not in self.efit_cols_pre_2000.keys():
+                #If shot before year 2000 and the param is in efit_cols_pre_2000, use self.efit_cols_pre_2000 mapping 
+                if self._shot_id <= 1000000000 and param in self.efit_cols_pre_2000.keys():
                     efit_data[param] = self._efit_tree.getNode(
                         self.efit_cols_pre_2000[param]).data().astype('float64', copy=False)
-                else:
+                #If shot before year 2000 and the param is one of the derived columns, pass because it is computed later
+                elif self._shot_id <= 1000000000 and param in self.efit_cols_pre_2000_derived:
+                    pass
+                else: 
                     efit_data[param] = self._efit_tree.getNode(
                         self.efit_cols[param]).data().astype('float64', copy=False)
             except:
@@ -588,12 +601,15 @@ class CModShot(Shot):
         if self._shot_id <= 1000000000:
             
             #Adjust aminor units
-            efit_data['aminor'] = efit_data['aminor']/100 #[cm] to [m]
+            efit_data['a_minor'] = efit_data['a_minor']/100.0 #[cm] to [m]
+
+            #Adjust area units
+            efit_data['area'] = efit_data['area']/(100.0**2) #[cm^2] to [m^2]
             
             #Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally sure on this one)
             try: #TODO: confirm this
                 ssimag = self._efit_tree.getNode('\efit_geqdsk:ssimag').data().astype('float64', copy=False)
-                efit_data['v_loop_efit'] = np.gradient(ssimag, efit_time)*2*np.pi
+                efit_data['v_loop_efit'] = np.gradient(ssimag, efit_time)*2.0*np.pi
             except:
                 print("unable to get v_loop_efit")
                 efit_data['v_loop_efit'] = np.full(len(efit_time), np.nan)
@@ -613,16 +629,23 @@ class CModShot(Shot):
 
     @parameter_method()
     def _get_kappa_area(self):
-        aminor = self._efit_tree.getNode(
+        #If the shot is before the year 2000, use the old name for aminor and area in the tree and divide by 100 to convert [cm] -> [m]
+        if self._shot_id <= 1000000000:
+            aminor = self._efit_tree.getNode(
+                self.efit_cols_pre_2000['a_minor']).getData().data().astype('float64', copy=False)/100
+            area = self._efit_tree.getNode(
+                self.efit_cols_pre_2000['area']).getData().data().astype('float64', copy=False)/(100**2)
+        else:
+            aminor = self._efit_tree.getNode(
             r'\efit_aeqdsk:aminor').getData().data().astype('float64', copy=False)
-        area = self._efit_tree.getNode(
-            r'\efit_aeqdsk:area').getData().data().astype('float64', copy=False)
+            area = self._efit_tree.getNode(
+                r'\efit_aeqdsk:area').getData().data().astype('float64', copy=False)
         times = self._efit_tree.getNode(
             r'\efit_aeqdsk:time').getData().data().astype('float64', copy=False)
 
         aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
-        # make sure area is not 0 or less than 0
-        area[area <= 0] = 3.14*0.001**2
+        area[area <= 0] = 3.14*0.001**2 # make sure area is not 0 or less than 0
+
         return CModShot.get_kappa_area(self._times, aminor, area, times)
 
     @staticmethod
@@ -798,10 +821,18 @@ class CModShot(Shot):
             ip = ip_record.data().astype('float64', copy=False)
             t_ip = ip_record.dim_of(0).data()
             a_tree = Tree('analysis', self._shot_id)
-            a_minor_record = a_tree.getNode(
-                r'\efit_aeqdsk:aminor').getData()
+            #If the shot is before the year 2000, use the old name for amionr in the tree
+            if self._shot_id <= 1000000000:
+                a_minor_record = self._efit_tree.getNode(self.efit_cols_pre_2000['a_minor']).getData()
+            else:
+                a_minor_record = a_tree.getNode(r'\efit_aeqdsk:aminor').getData()
             t_a = a_minor_record.dim_of(0).data()
             a_minor = a_minor_record.data().astype('float64', copy=False)
+           
+            #If the shot is before the year 2000, divide aminor by 100 to convert [cm] -> [m]
+            if self._shot_id <= 1000000000:
+                a_minor_record = a_minor_record/100.0
+
         except Exception as e:
             self.logger.debug(f"[Shot {self._shot_id}] {e}")
             self.logger.warning(f"[Shot {self._shot_id}] No density data")
