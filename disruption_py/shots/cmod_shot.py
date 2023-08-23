@@ -620,7 +620,10 @@ class CModShot(Shot):
 
             #Compute beta_n
             beta_t = self._efit_tree.getNode('\efit_aeqdsk:betat').data().astype('float64', copy=False)
-            efit_data['beta_n'] = np.reciprocal( np.reciprocal(beta_t) +  np.reciprocal(efit_data['beta_p']) )
+            BT_efit = self._efit_tree.getNode('\efit_aeqdsk:bcentr').data().astype('float64', copy=False)
+            ip_efit = self._efit_tree.getNode('\efit_aeqdsk:cpasma').data().astype('float64', copy=False)
+            ip_efit = np.abs(ip_efit)/1.e6 #Convert to MA
+            efit_data['beta_n'] = 0.01*beta_t*efit_data['aminor']*BT_efit/ip_efit #Compute beta_n as a percent
 
 
 
