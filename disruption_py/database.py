@@ -72,6 +72,7 @@ class DatabaseHandler:
     def add_shots(self, shot_ids, shots=None, update=False):
         shot_ids = tuple([int(shot) for shot in shot_ids])
         if shots is None:
+            #TODO(lajz): replace with proper shot type
             shots = [Shot(shot_id) for shot_id in shot_ids]
         curr_df = pd.read_sql_query(
             f"select * from disruption_warning where shot in {shot_ids} order by time", self.conn)
@@ -88,6 +89,7 @@ class DatabaseHandler:
         """
         shot_id = int(shot_id)
         if shot is None:
+            #TODO(lajz): replace with proper shot type
             shot = Shot(shot_id)
         curr_df = pd.read_sql_query(
             f"select * from disruption_warning where shot in {shot_id} order by time", self.conn)
@@ -137,10 +139,9 @@ class DatabaseHandler:
         if self.shot_class == CModShot:
             logger.info(f"Grabbed shot: {shot_id}")
             return CModShot('cmod', shot_id, data=data_df)
-        elif self.shot_class == D3DShot:
-            # TODO: Better exception
-            raise Exception("Invalid shot class for this handler")
-        return None
+        # TODO: Better exception
+        raise Exception("Unknown shot class for this handler")
+
 
     def get_shot_data(self, shot_ids=None, cols=["*"], sql_table="disruption_warning"):
         shot_ids = ','.join([str(shot_id) for shot_id in shot_ids])

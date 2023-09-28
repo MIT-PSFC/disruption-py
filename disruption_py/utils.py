@@ -20,6 +20,22 @@ pd.options.mode.chained_assignment = None
 def generate_id(size=8):
     return ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
 
+def without_duplicates(l):
+    """
+    Get list without duplicates maintaining order.
+    
+    Parameters
+    ----------
+    l : list
+        List to get without duplicates.
+    
+    Returns
+    -------
+    _ : list
+        The list l with duplicates removed.
+    """
+    seen = set()
+    return [x for x in l if not (x in seen or seen.add(x))]
 
 def interp1(x, y, new_x, kind='linear', bounds_error=False, fill_value='extrapolate', axis=-1):
     """

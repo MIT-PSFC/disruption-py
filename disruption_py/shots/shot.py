@@ -7,6 +7,8 @@ from concurrent.futures import ThreadPoolExecutor
 import MDSplus
 from MDSplus import *
 
+from disruption_py.mdsplus_integration.tree_manager import TreeManager
+
 import pandas as pd
 import numpy as np
 import logging
@@ -72,6 +74,7 @@ class Shot:
 
     def __init__(self, shot_id, data=None, **kwargs):
         self._shot_id = int(shot_id)
+        self._tree_manager = TreeManager(shot_id)
         self.multiprocessing = kwargs.get('multiprocessing', False)
         try:
             commit_hash = subprocess.check_output(
@@ -202,6 +205,7 @@ class Shot:
         if interpolation_timebase is None and interpolate:
             interpolation_timebase = self._times
         return type(self).get_signals(signals, conn, interpolate, interpolation_timebase)
+    
     def apply_shot_filter(self, shot_filter):
         self.data = self.data.filter(shot_filter)
 
@@ -281,15 +285,15 @@ class Shot:
         for method_name in dir(self):
             method = getattr(self, method_name)
             if callable(method) and hasattr(method, 'populate'):
-                if tags is not None and not bool(set(method.tags).intersection(tags)):
-                    self.logger.info(
-                        f"[Shot {self._shot_id}]:Skipping {method_name}")
+                # If method does not have tag included and name included then skip
+                if tags is not None and bool(set(method.tags).intersection(tags)):
+                    method_names.append(method_name)
                     continue
-                if methods is not None and method_name not in methods:
-                    self.logger.info(
-                        f"[Shot {self._shot_id}]:Skipping {method_name}")
+                if methods is not None and method_name in methods:
+                    method_names.append(method_name)
                     continue
-                method_names.append(method_name)
+                self.logger.info(
+                        f"[Shot {self._shot_id}]:Skipping {method_name}")
         if self.multiprocessing:
             with ThreadPoolExecutor(max_workers=8) as executor:
                 futures = [executor.submit(
