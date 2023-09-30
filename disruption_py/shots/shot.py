@@ -221,7 +221,7 @@ class Shot:
                 return method()
             except Exception as e:
                 self.logger.warning(
-                    f"[Shot {self._shot_id}]:Failed to populate {method_name}")
+                    f"[Shot {self._shot_id}]:Failed to populate {method_name} with error {e}")
                 self.logger.debug(f"{traceback.format_exc()}")
         else:
             self.logger.warning(
@@ -253,7 +253,7 @@ class Shot:
                     local_data.append(method())
                 except Exception as e:
                     self.logger.warning(
-                        f"[Shot {self._shot_id}]:Failed to populate {method_name}")
+                        f"[Shot {self._shot_id}]:Failed to populate {method_name} with error {e}")
                     self.logger.debug(f"{traceback.format_exc()}")
         self.data = pd.concat([self.data, local_data], axis=1)
 
@@ -304,7 +304,7 @@ class Shot:
                         parameters.append(parameter_df)
                     except Exception as e:
                         self.logger.warning(
-                            f"[Shot {self._shot_id}]:Failed to populate {method_name}")
+                            f"[Shot {self._shot_id}]:Failed to populate {method_name} with error {e}")
                         self.logger.debug(
                             f"[Shot {self._shot_id}: {traceback.format_exc()}")
         else:

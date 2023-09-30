@@ -1,6 +1,6 @@
-from MDSplus import Tree
+from MDSplus import Tree, TreeNode
 import logging
-        
+         
 class TreeManager:
     logger = logging.getLogger('disruption_py')
 
@@ -9,14 +9,21 @@ class TreeManager:
         self._open_trees = {}
         self._closed_trees = {}
         self._nicknames = {}
+        self.num_times_opened = {}
     
     def open_tree(self, tree_name: str, nickname=None) -> Tree:
+        self.num_times_opened[tree_name] = self.num_times_opened.get(tree_name, 0) + 1
+        
         if tree_name in self._open_trees:
             return self._open_trees[tree_name]
         if tree_name in self._closed_trees:
             self.logger.info(f"Tree {tree_name} reopened after close for shot {self._shot_id}")
         
-        self._open_trees[tree_name] = TreeWrapper(tree_manager=self, tree=tree_name, shot=self._shot_id, mode="readonly")
+        try:
+            self._open_trees[tree_name] = TreeWrapper(tree_manager=self, tree=tree_name, shot=self._shot_id, mode="readonly")
+        except Exception as e:
+            self.logger.debug(f"Failed to open tree {tree_name} | num trees open {len(self._open_trees)}")
+            raise e
         
         if nickname is not None:
             if nickname in self._nicknames and self._nicknames[nickname] != tree_name:
@@ -37,6 +44,11 @@ class TreeManager:
         
         return self._nicknames[nickname]
     
+    def cleanup(self):
+        print(self.num_times_opened)
+        for tree_name in list(self._open_trees.keys()):
+            self.close_tree(tree_name)
+            
     def close_tree(self, tree_name: str):
         if tree_name in self._open_trees:
             self._open_trees[tree_name].close()
@@ -46,10 +58,11 @@ class TreeManager:
         if tree_name in self._open_trees:
             self._closed_trees[tree_name] = self._open_trees.pop(tree_name)
             
-    def cleanup(self):
-        for tree_name in list(self._open_trees.keys()):
-            self._open_trees[tree_name].close()
-            self.mark_tree_closed(tree_name)
+            
+    ### Tree Nodes
+    # @staticmethod
+    # def get_data_for_tree_node(tree_node: TreeNode):
+        
             
 class TreeWrapper(Tree):
     

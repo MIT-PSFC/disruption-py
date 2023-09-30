@@ -414,6 +414,7 @@ class CModShot(Shot):
         # Read in A_OUT, which is a 16xN matrix of the errors for *all* 16 wires for
         # *all* of the segments. Note that DPCS time is usually taken at 10kHz.
         hybrid_tree = self._tree_manager.open_tree(tree_name='hybrid')
+        dpcs_tree = self._tree_manager.open_tree(tree_name='dpcs')
         wire_errors_record = hybrid_tree.getNode(
             r'\top.hardware.dpcs.signals:a_out').getData()
         wire_errors, dpcstime = wire_errors_record.data(
@@ -432,8 +433,9 @@ class CModShot(Shot):
                 end = pcstime[-1]
             else:
                 end = active_wire_segments[i+1][1]
-            z_factor = hybrid_tree.getNode(
-                fr'\dpcs::top.seg_{i+1:02d}:p_{z_wire_index:02d}:predictor:factor').getData().data()
+            print(fr'\top.seg_{i+1:02d}:p_{z_wire_index:02d}:predictor:factor')
+            z_factor = dpcs_tree.getNode(
+                fr'\top.seg_{i+1:02d}:p_{z_wire_index:02d}:predictor:factor').getData().data()
             z_error_without_ip[np.where((dpcstime >= start) & (
                 dpcstime <= end))] /= z_factor  # [A*m]
         # Next we grab ip, which comes from a_in:input_056. This also requires
@@ -947,7 +949,7 @@ class CModShot(Shot):
         except mdsExceptions.MdsException as e:
             return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
 
-    @parameter_method()
+    @parameter_method(["flagged"])
     def _get_prad_peaking(self):
         prad_peaking = np.full(len(self._times), np.nan)
         cmod_tree = self._tree_manager.open_tree(tree_name='cmod')
@@ -992,19 +994,23 @@ class CModShot(Shot):
         if got_axa:
             good_axa = np.where(good_axa > 0)[0]
             bright_axa = bright_axa[:, good_axa]
-            for i in range(len(bright_axa)):
-                interped = interp1(t_axa, bright_axa[i, :], self._times)
+            r_axa = interp1(t_axa, r_axa, self._times)
+            z_axa = interp1(t_axa, z_axa, self._times)
+            for i in range(bright_axa.shape[1]):
+                interped = interp1(t_axa, bright_axa[:, i], self._times)
                 indx = np.where(interped < 0)
                 interped[indx] = np.nan
                 axa_interp[i,:] = interped
         if got_axj:
             good_axj = np.where(good_axj > 0)[0]
             bright_axj = bright_axj[:, good_axj]
-            for i in range(len(bright_axj)):
+            r_axj = interp1(t_axa, r_axj, self._times)
+            z_axj = interp1(t_axa, z_axj, self._times)
+            for i in range(bright_axj.shape[1]):
                 interped = interp1(t_axj, bright_axj[:, i], self._times)
                 indx = np.where(interped < 0)
                 interped[indx] = np.nan
-                axj_interp[:, i] = interped
+                axj_interp[i, :] = interped
         for i in range(len(self._times)):
             core_radiation = np.array([])
             all_radiation = np.array([])
