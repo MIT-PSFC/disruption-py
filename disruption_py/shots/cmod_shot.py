@@ -11,6 +11,7 @@ except ImportError:
 
 import pandas as pd
 import numpy as np
+import pdb
 
 import MDSplus
 from MDSplus import *
@@ -76,7 +77,7 @@ class CModShot(Shot):
     efit_derivs = {'beta_p': 'dbetap_dt', 'li': 'dli_dt', 'Wmhd': 'dWmhd_dt'}
 
     # TODO: Populate metadata dict
-    def __init__(self, shot_id, efit_tree_name='analysis', data=None, times=None, disruption_time=None, override_cols=True, **kwargs):
+    def __init__(self, shot_id, efit_tree_name='analysis', data=None, times=None, disruption_time=None, override_cols=True, mag_interp=False, **kwargs):
         super().__init__(shot_id, data)
         self._times = times
         self.efit_tree_name = efit_tree_name
@@ -85,6 +86,7 @@ class CModShot(Shot):
         self.disrupted = self.disruption_time is not None
         self.override_cols = override_cols
         self.data = data
+        self.mag_interp = mag_interp
         timebase_signal = kwargs.pop('timebase_signal', None)
         populate_methods = kwargs.pop('populate_methods', None)
         populate_tags = kwargs.pop('populate_tags', ['all'])
@@ -109,16 +111,34 @@ class CModShot(Shot):
         self._efit_tree.close()
 
     def _open_efit_tree(self):
-        try:
-            self._efit_tree = Tree(self.efit_tree_name,
-                                   self._shot_id, mode="readonly")
-        except Exception as e:
-            self.logger.warning(
-                f"[Shot {self._shot_id}]:Failed to open efit tree {self.efit_tree_name}.")
-            if self.efit_tree_name == 'analysis':
-                raise e
-            self._efit_tree = Tree('analysis', self._shot_id, mode="readonly")
+        efit_trees = [
+            "analysis",
+            *[f"efit0{i}" for i in range(1, 10)],
+            *[f"efit{i}" for i in range(10, 19)],
+            self.efit_tree_name,  # default tree name
+        ]
 
+        for efit_tree_name in efit_trees:
+            try:
+                print(f"Trying to open {efit_tree_name}")
+                self._efit_tree = Tree(efit_tree_name, self._shot_id, mode="readonly")
+                self.efit_tree_name = efit_tree_name
+                if efit_tree_name != 'analysis':
+                    self._times = self._efit_tree.getNode(f"\{efit_tree_name}::efit.results.a_eqdsk:time").getData().data().astype('float64', copy=False)
+                else:
+                    try:
+                        self._times = self._efit_tree.getNode(r"\analysis::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
+                    except Exception as e:
+                        self._times = self._efit_tree.getNode(r"\analysis::efit:results:a_eqdsk:time").getData().data().astype('float64', copy=False)
+                if len(self._times) == 0:
+                    logging.error(f"Timebase for {efit_tree_name} is empty.")
+                    continue
+                return
+            except Exception as e:
+                self.logger.warning(f"[Shot {self._shot_id}]:Failed to open efit tree {efit_tree_name}.")
+                # if efit_tree_name == 'analysis':
+                #     raise e
+                
     # TODO: Reinterpolate data if timebase is changed
     def set_timebase(self, timebase_signal):
         if timebase_signal == None:
@@ -135,14 +155,26 @@ class CModShot(Shot):
                 "Non-default timebases are not currently supported")
 
     def set_default_timebase(self):
-        try:
-            self._efit_tree = Tree('analysis', self._shot_id, mode="readonly")
-            self._times = self._efit_tree.getNode(
-                r"\analysis::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
-        except mdsExceptions.TreeFOPENR as e:
-            self._efit_tree = Tree('efit18', self._shot_id, mode="readonly")
-            self._times = self._efit_tree.getNode(
-                r"\efit18::efit.results.a_eqdsk:time").getData().data().astype('float64', copy=False)
+        
+        if self.mag_interp:
+            try:
+                self._times = Tree("magnetics", self._shot_id).getNode('\ip').dim_of().data().astype('float64', copy=False)
+                # # interpolate self._times to be every .004 seconds
+                self._times = np.arange(self._times[0], self._times[-1], .004).astype('float64', copy=False)
+
+                return 
+            
+            except:
+                logging.info("no magnetic timebase")
+
+        # try:
+        #     self._efit_tree = Tree('analysis', self._shot_id, mode="readonly")
+        #     self._times = self._efit_tree.getNode(
+        #         r"\analysis::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
+        # except mdsExceptions.TreeFOPENR as e:
+        #     self._efit_tree = Tree('efit18', self._shot_id, mode="readonly")
+        #     self._times = self._efit_tree.getNode(
+        #         r"\efit18::efit.results.a_eqdsk:time").getData().data().astype('float64', copy=False)
 
     def set_flattop_timebase(self):
         self.set_default_timebase()
@@ -1532,7 +1564,7 @@ class CModShot(Shot):
                 (efit_df.a_minor**0.58)*(efit_df.kappa**0.78)*(btor**0.15)*(p_input**-0.69)
         H98 = tau/tau_98
 
-        return pd.DataFrame({"H98": H98})
+        return pd.DataFrame({"H98": H98, "Wmhd": Wmhd, "btor": btor, "dWmhd_dt": dWmhd_dt, "p_input": p_input})
 
 
 if __name__ == '__main__':
