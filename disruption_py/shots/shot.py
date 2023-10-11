@@ -1,5 +1,8 @@
 from disruption_py.utils import interp1
+from typing import Set
 import subprocess
+import os
+from dataclasses import dataclass
 import traceback
 import concurrent 
 from concurrent.futures import ThreadPoolExecutor
@@ -15,8 +18,13 @@ import logging
 
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
 
+@dataclass
+class ParameterMethod:
+    name: str
+    used_trees: Set[str]
+    contained_parameter_methods: str
 
-def parameter_method(tags=["all"]):
+def parameter_method(tags=["all"], used_trees=None, contained_parameter_methods=None):
     """
     Tags a function as a parameter method and instantiates its cache. Parameter methods are functions that 
     calculate disruption parameters from the data in the shot.  They are called by the Shot object when
@@ -39,6 +47,8 @@ def parameter_method(tags=["all"]):
 
         wrapper.populate = True
         wrapper.tags = tags
+        wrapper.used_trees = used_trees
+        wrapper.contained_parameter_methods = contained_parameter_methods
         return wrapper
     return tag_wrapper
 
@@ -76,16 +86,21 @@ class Shot:
         self._shot_id = int(shot_id)
         self._tree_manager = TreeManager(shot_id)
         self.multiprocessing = kwargs.get('multiprocessing', False)
-        try:
-            commit_hash = subprocess.check_output(
-                ["git", "describe", "--always"]).strip()
-        except Exception as e:
-            commit_hash = 'Unknown'
         if self.logger.level == logging.NOTSET:
             self.logger.setLevel(logging.INFO)
         assert self.logger.level != logging.NOTSET, "Logger level is NOTSET"
         if not self.logger.hasHandlers():
             self.logger.addHandler(logging.StreamHandler())
+            
+        try:
+            commit_hash = subprocess.check_output(
+                ["git", "describe", "--always"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.STDOUT).strip()
+        except Exception as e:
+            # self.logger.warning("Git commit not found")
+            commit_hash = 'Unknown'
+            
         assert self.logger.hasHandlers(), "Logger has no handlers"
         self._metadata = {
             'labels': {},
@@ -212,20 +227,21 @@ class Shot:
     def apply_shot_transform(self, shot_transform):
         self.data = self.data.apply(shot_transform)
 
-    def populate_method(self, method_name):
-        method = getattr(self, method_name)
+    def populate_method(self, param_method : ParameterMethod):
+        method = getattr(self, param_method.name)
         if callable(method) and hasattr(method, 'populate'):
             self.logger.info(
-                f"[Shot {self._shot_id}]:Populating {method_name}")
+                f"[Shot {self._shot_id}]:Populating {param_method.name}")
+            # self._tree_manager.cleanup_not_needed()
             try:
                 return method()
             except Exception as e:
                 self.logger.warning(
-                    f"[Shot {self._shot_id}]:Failed to populate {method_name} with error {e}")
+                    f"[Shot {self._shot_id}]:Failed to populate {param_method.name} with error {e}")
                 self.logger.debug(f"{traceback.format_exc()}")
         else:
             self.logger.warning(
-                f"[Shot {self._shot_id}]:Method {method_name} is not callable or does not have a `populate` attribute set to True")
+                f"[Shot {self._shot_id}]:Method {param_method.name} is not callable or does not have a `populate` attribute set to True")
         return None
     def populate_methods(self, method_names):
         """Populate the shot object with data from MDSplus.
@@ -247,7 +263,7 @@ class Shot:
             method = getattr(self, method_name)
             if callable(method) and hasattr(method, 'populate'):
                 if bool(set(method.tag).intersection(tag)):
-                    print(f"[Shot {self._shot_id}]:Skipping {method_name}")
+                    self.logger.info(f"[Shot {self._shot_id}]:Skipping {method_name}")
                     continue
                 try:
                     local_data.append(method())
@@ -281,23 +297,24 @@ class Shot:
         parameters = []
 
         # Loop through each attribute and find methods that should populate the shot object.
-        method_names = []
+        methods_to_evaluate : list[ParameterMethod] = []
         for method_name in dir(self):
             method = getattr(self, method_name)
             if callable(method) and hasattr(method, 'populate'):
+                param_method = ParameterMethod(name=method_name, used_trees=method.used_trees, contained_parameter_methods=method.contained_parameter_methods)
                 # If method does not have tag included and name included then skip
                 if tags is not None and bool(set(method.tags).intersection(tags)):
-                    method_names.append(method_name)
+                    methods_to_evaluate.append(param_method)
                     continue
                 if methods is not None and method_name in methods:
-                    method_names.append(method_name)
+                    methods_to_evaluate.append(param_method)
                     continue
                 self.logger.info(
                         f"[Shot {self._shot_id}]:Skipping {method_name}")
         if self.multiprocessing:
             with ThreadPoolExecutor(max_workers=8) as executor:
                 futures = [executor.submit(
-                    self.populate_method, method_name) for method_name in method_names]
+                    self.populate_method, method) for method in methods_to_evaluate]
                 for future in concurrent.futures.as_completed(futures):
                     try:
                         parameter_df = future.result()
@@ -309,7 +326,7 @@ class Shot:
                             f"[Shot {self._shot_id}: {traceback.format_exc()}")
         else:
             parameters = [self.populate_method(
-                method_name) for method_name in method_names]
+                method) for method in methods_to_evaluate]
         parameters = [
             parameter for parameter in parameters if parameter is not None]
         # TODO: This is a hack to get around the fact that some methods return

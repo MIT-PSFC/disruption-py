@@ -106,6 +106,7 @@ class CModShot(Shot):
             self.set_timebase(timebase_signal, **kwargs)
 
         self._init_populate(data is not None, populate_methods, populate_tags)
+        
         self._tree_manager.cleanup()
 
     @property
@@ -127,7 +128,7 @@ class CModShot(Shot):
         efit_names_to_test = without_duplicates([self._requested_efit_tree_name, 'analysis', 'efit18'])
         for efit_name in efit_names_to_test:
             try:
-                return self._tree_manager.open_tree(tree_name=efit_name, nickname="efit_tree")
+                return self._tree_manager.try_open_and_nickname(tree_name=efit_name, nickname="efit_tree")
             except Exception as e:
                 self.logger.warning(
                     f"[Shot {self._shot_id}]:Failed to open efit tree {efit_name}, with error {e}")
@@ -414,7 +415,6 @@ class CModShot(Shot):
         # Read in A_OUT, which is a 16xN matrix of the errors for *all* 16 wires for
         # *all* of the segments. Note that DPCS time is usually taken at 10kHz.
         hybrid_tree = self._tree_manager.open_tree(tree_name='hybrid')
-        dpcs_tree = self._tree_manager.open_tree(tree_name='dpcs')
         wire_errors_record = hybrid_tree.getNode(
             r'\top.hardware.dpcs.signals:a_out').getData()
         wire_errors, dpcstime = wire_errors_record.data(
@@ -433,9 +433,8 @@ class CModShot(Shot):
                 end = pcstime[-1]
             else:
                 end = active_wire_segments[i+1][1]
-            print(fr'\top.seg_{i+1:02d}:p_{z_wire_index:02d}:predictor:factor')
-            z_factor = dpcs_tree.getNode(
-                fr'\top.seg_{i+1:02d}:p_{z_wire_index:02d}:predictor:factor').getData().data()
+            z_factor = hybrid_tree.getNode(
+                fr'\dpcs::top.seg_{i+1:02d}:p_{z_wire_index:02d}:predictor:factor').getData().data()
             z_error_without_ip[np.where((dpcstime >= start) & (
                 dpcstime <= end))] /= z_factor  # [A*m]
         # Next we grab ip, which comes from a_in:input_056. This also requires
@@ -714,7 +713,6 @@ class CModShot(Shot):
 
         N=1 toroidal assymmetry in the magnetic fields
         """
-        print(self._shot_id) #DELETE ME
         n_equal_1_amplitude = np.empty(len(self._times))
         n_equal_1_amplitude.fill(np.nan)
         n_equal_1_normalized = n_equal_1_amplitude.copy()
@@ -949,7 +947,7 @@ class CModShot(Shot):
         except mdsExceptions.MdsException as e:
             return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
 
-    @parameter_method(["flagged"])
+    @parameter_method()
     def _get_prad_peaking(self):
         prad_peaking = np.full(len(self._times), np.nan)
         cmod_tree = self._tree_manager.open_tree(tree_name='cmod')
