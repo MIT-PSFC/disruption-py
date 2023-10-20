@@ -2,7 +2,6 @@ from disruption_py.utils import interp1
 from typing import Set
 import subprocess
 import os
-from dataclasses import dataclass
 import traceback
 import concurrent 
 from concurrent.futures import ThreadPoolExecutor
@@ -11,46 +10,13 @@ import MDSplus
 from MDSplus import *
 
 from disruption_py.mdsplus_integration.tree_manager import TreeManager
+from disruption_py.method_caching import MethodOptimizer, CachedMethod
 
 import pandas as pd
 import numpy as np
 import logging
 
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
-
-@dataclass
-class ParameterMethod:
-    name: str
-    used_trees: Set[str]
-    contained_parameter_methods: str
-
-def parameter_method(tags=["all"], used_trees=None, contained_parameter_methods=None):
-    """
-    Tags a function as a parameter method and instantiates its cache. Parameter methods are functions that 
-    calculate disruption parameters from the data in the shot.  They are called by the Shot object when
-    it is instantiated. The cache is used to store the results of the parameter method so that it is only
-    calculated once per shot for a given timebase.
-    """
-    # TODO: Figure out how to hash _times so that we can use the cache for different timebases
-    def tag_wrapper(func):
-        def wrapper(self, *args, **kwargs):
-            # Create the cache if it doesn't exist
-            if not hasattr(self, '_cached_result'):
-                self._cached_result = {}
-            cache_key = func.__name__ + str(len(self._times))
-            if cache_key in self._cached_result:
-                return self._cached_result[cache_key]
-            else:
-                result = func(self, *args, **kwargs)
-                self._cached_result[cache_key] = result
-                return result
-
-        wrapper.populate = True
-        wrapper.tags = tags
-        wrapper.used_trees = used_trees
-        wrapper.contained_parameter_methods = contained_parameter_methods
-        return wrapper
-    return tag_wrapper
 
 
 class Shot:
@@ -227,7 +193,7 @@ class Shot:
     def apply_shot_transform(self, shot_transform):
         self.data = self.data.apply(shot_transform)
 
-    def populate_method(self, param_method : ParameterMethod):
+    def populate_method(self, param_method : CachedMethod):
         method = getattr(self, param_method.name)
         if callable(method) and hasattr(method, 'populate'):
             self.logger.info(
@@ -278,7 +244,7 @@ class Shot:
         Internal method to populate the disruption parameters of a shot object. 
         This method is called by the constructor and should not be called directly. It loops through all methods of the Shot class and calls the ones that have a `populate` attribute set to True and satisfy the tags and methods arguments.
         """
-
+        
         # If the shot object was already passed data in the constructor, use that data. Otherwise, create an empty dataframe.
         if not already_populated:
             if self.data is None:
@@ -297,11 +263,15 @@ class Shot:
         parameters = []
 
         # Loop through each attribute and find methods that should populate the shot object.
-        methods_to_evaluate : list[ParameterMethod] = []
+        methods_to_evaluate : list[CachedMethod] = []
+        all_cached_methods : list[CachedMethod] = []
         for method_name in dir(self):
             method = getattr(self, method_name)
+            if callable(method) and hasattr(method, 'cached'):
+                param_method = CachedMethod(name=method_name, method=method)
+                all_cached_methods.append(param_method)
             if callable(method) and hasattr(method, 'populate'):
-                param_method = ParameterMethod(name=method_name, used_trees=method.used_trees, contained_parameter_methods=method.contained_parameter_methods)
+                param_method = param_method or CachedMethod(name=method_name, method=method)
                 # If method does not have tag included and name included then skip
                 if tags is not None and bool(set(method.tags).intersection(tags)):
                     methods_to_evaluate.append(param_method)
@@ -311,7 +281,9 @@ class Shot:
                     continue
                 self.logger.info(
                         f"[Shot {self._shot_id}]:Skipping {method_name}")
+        method_optimizer : MethodOptimizer = MethodOptimizer(methods_to_evaluate, all_cached_methods)
         if self.multiprocessing:
+            # TODO: using method optimizer
             with ThreadPoolExecutor(max_workers=8) as executor:
                 futures = [executor.submit(
                     self.populate_method, method) for method in methods_to_evaluate]
@@ -325,8 +297,13 @@ class Shot:
                         self.logger.debug(
                             f"[Shot {self._shot_id}: {traceback.format_exc()}")
         else:
-            parameters = [self.populate_method(
-                method) for method in methods_to_evaluate]
+            next_method, _ = method_optimizer.next_method(self._tree_manager.get_open_tree_names())
+            parameters = []
+            while (next_method != None):
+                parameters.append(self.populate_method(
+                    method))
+                method_optimizer.method_complete(next_method.name)
+                next_method, _ = method_optimizer.next_method(self._tree_manager.get_open_tree_names())
         parameters = [
             parameter for parameter in parameters if parameter is not None]
         # TODO: This is a hack to get around the fact that some methods return

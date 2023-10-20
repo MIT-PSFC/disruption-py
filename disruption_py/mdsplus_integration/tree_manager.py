@@ -1,4 +1,5 @@
 from MDSplus import Tree, TreeNode
+from disruption_py.method_caching import MethodOptimizer
 import logging
          
 class TreeManager:
@@ -12,6 +13,10 @@ class TreeManager:
         self.num_times_opened = {}
     
     def try_open_and_nickname(self, tree_name: str, nickname: str) -> Tree:
+        
+        if nickname in self._open_trees and tree_name != nickname:
+            self.logger.error(f"Cannot hide tree_name {nickname} with that nickname for {tree_name}")
+            raise f"Cannot hide tree_name {nickname} with that nickname for {tree_name}"
         
         tree = self.open_tree(tree_name)
         
@@ -49,15 +54,29 @@ class TreeManager:
         except Exception as e:
             self.logger.debug(f"Failed to open tree {tree_name} | num trees open {len(self._open_trees)}")
             raise e
-                    
+        
+        if tree_name in self._nicknames and self._nicknames[tree_name] != tree_name:
+            self._nicknames.pop(tree_name)
+            self.logger.error(f"Nickname {tree_name} removed because tree opened with the same name")
+            
         return self._open_trees[tree_name]
+
+    def get_open_tree_names(self):
+        '''
+        Get a set of all open_tree names including the nicknames of open tree names
+        '''
+        open_tree_names = set(self._open_trees.keys())
+        for nickname, tree_name in self._nicknames.items():
+            if tree_name in open_tree_names:
+                open_tree_names.add(nickname)
+        return open_tree_names
     
-    # close trees early
-    def cleanup_not_needed(self):
-        total_use_estimate = {'analysis': 2, 'LH': 1, 'RF': 1, 'spectroscopy': 1, 'magnetics': 5, 'pcs': 2, 'electrons': 3, 'engineering': 1, 'xtomo': 1, 'hybrid': 1}
-        current_use = [(key, value) for key, value in self.num_times_opened.items()]
-        for tree_name, num_times_used in current_use:
-            if total_use_estimate.get(tree_name, 0) <= num_times_used and tree_name not in self._nicknames.values():
+    def cleanup_not_needed(self, method_optimizer: MethodOptimizer):
+        '''
+        Close trees that are not expected to be used again based on method_optimizer
+        '''
+        for tree_name in self._open_trees:
+            if method_optimizer.can_tree_be_closed(tree_name):
                 self.close_tree(tree_name)
     
     def cleanup(self):

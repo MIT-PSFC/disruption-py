@@ -3,7 +3,8 @@ import logging
 import argparse
 from collections import OrderedDict
 
-from disruption_py.shots.shot import Shot, parameter_method
+from disruption_py.shots.shot import Shot
+from disruption_py.method_caching import parameter_cached_method, cached_method
 try:
     import importlib.resources as importlib_resources
 except ImportError:
@@ -106,8 +107,16 @@ class CModShot(Shot):
             self.set_timebase(timebase_signal, **kwargs)
 
         self._init_populate(data is not None, populate_methods, populate_tags)
-        
+        self.cleanup()
+
+    def cleanup(self):
+        """
+        Remove references to mdsplus resources to prevent data leaks.
+        """
         self._tree_manager.cleanup()
+        self._times = None
+        if hasattr(self, '_cached_result'):
+            self._cached_result.clear()
 
     @property
     def efit_tree(self):
@@ -188,6 +197,7 @@ class CModShot(Shot):
         end_index = np.max(indices_flattop)
         self._times = self._times[:end_index]
 
+    @cached_method(used_trees=["pcs"])
     def get_active_wire_segments(self):
         pcs_tree = self._tree_manager.open_tree(tree_name='pcs')
         segment_nodes = pcs_tree.getNodeWild("\\top.seg_*")
@@ -207,7 +217,7 @@ class CModShot(Shot):
         #     active_segments[i].append(end_times[i])
         return active_segments
 
-    @parameter_method()
+    @parameter_cached_method()
     def _get_time_until_disrupt(self):
         time_until_disrupt = np.full(len(self._times), np.nan)
         if self.disrupted:
@@ -273,7 +283,7 @@ class CModShot(Shot):
         # import pdb; pdb.set_trace()
         return pd.DataFrame({"ip": ip, "dip_dt": dip, "dip_smoothed": dip_smoothed, "ip_prog": ip_prog, "dipprog_dt": dipprog_dt, "ip_error": ip_error})
 
-    @parameter_method()
+    @parameter_cached_method(contained_cached_methods=["get_active_wire_segments"], used_trees=["magnetics"])
     def _get_ip_parameters(self):
         # Automatically generated
         magnetics_tree = self._tree_manager.open_tree(tree_name='magnetics')
@@ -375,7 +385,7 @@ class CModShot(Shot):
                               'linear', False, z_times_v_z[-1])
         return pd.DataFrame({"z_error": z_error, "z_prog": z_prog, "zcur": z_cur, "v_z": v_z, "z_times_v_z": z_times_v_z})
 
-    @parameter_method()
+    @parameter_cached_method(used_trees=["hybrid", "magnetics"], contained_cached_methods=["get_active_wire_segments"])
     def _get_z_parameters(self):
         pcstime = np.array(np.arange(-4, 12.383, .001))
         z_prog = np.empty(pcstime.shape)
@@ -498,7 +508,7 @@ class CModShot(Shot):
         p_ohm = ip * v_resistive
         return pd.DataFrame({"p_oh": p_ohm, "v_loop": v_loop})
 
-    @parameter_method()
+    @parameter_cached_method(used_trees=["efit"], contained_cached_methods=["_get_ip_parameters"])
     def _get_ohmic_parameters(self):
         # <-- this line is the culprit for breaking when analysis tree is set to EFIT18
         v_loop_record = self.efit_tree.getNode(r"\top.mflux:v0").getData()
@@ -535,7 +545,7 @@ class CModShot(Shot):
         rad_fraction[rad_fraction == np.inf] = np.nan
         return pd.DataFrame({"p_rad": p_rad, "dprad_dt": dprad, "p_lh": p_lh, "p_icrf": p_icrf, "p_input": p_input, "radiated_fraction": rad_fraction})
 
-    @parameter_method()
+    @parameter_cached_method(used_trees=['LH', 'RF', 'spectroscopy'], contained_cached_methods=["_get_ohmic_parameters"])
     def _get_power(self):
         """
         NOTE: the timebase for the LH power signal does not extend over the full
@@ -561,7 +571,7 @@ class CModShot(Shot):
         p_oh = self._get_ohmic_parameters()['p_oh']
         return CModShot.get_power(self._times, *values, p_oh)
 
-    @parameter_method()
+    @parameter_cached_method(used_trees=["efit"])
     def _get_EFIT_parameters(self):
 
         efit_time = self.efit_tree.getNode(r'\efit_aeqdsk:time').data().astype(
@@ -628,7 +638,7 @@ class CModShot(Shot):
     def get_kappa_area(times, aminor, area, a_times):
         return pd.DataFrame({"kappa_area": interp1(a_times, area/(np.pi * aminor**2), times)})
 
-    @parameter_method()
+    @parameter_cached_method(used_trees=["efit"])
     def _get_kappa_area(self):
         aminor = self.efit_tree.getNode(
             r'\efit_aeqdsk:aminor').getData().data().astype('float64', copy=False)
@@ -661,7 +671,7 @@ class CModShot(Shot):
         return pd.DataFrame({"v_0": v_0})
 
     # TODO: Calculate v_mid
-    @parameter_method()
+    @parameter_cached_method(used_trees=["spectroscopy"])
     def _get_rotation_velocity(self):
         with importlib_resources.path(
                 disruption_py.data, 'lock_mode_calib_shots.txt') as calib_path:
@@ -697,7 +707,7 @@ class CModShot(Shot):
         pass
     
     # TODO: Try catch failure to get BP13 sensors 
-    @parameter_method()
+    @parameter_cached_method(used_trees=["magnetics"])
     def _get_n_equal_1_amplitude(self):
         """ Calculate n=1 amplitude and phase.
 
@@ -802,7 +812,7 @@ class CModShot(Shot):
         g_f = abs(n_e/n_G)
         return pd.DataFrame({"n_e": n_e, "dn_dt": dn_dt, "Greenwald_fraction": g_f})
 
-    @parameter_method()
+    @parameter_cached_method(used_trees=["electrons", "magnetics", "analysis"])
     def _get_densities(self):
         try:
             e_tree = self._tree_manager.open_tree(tree_name='electrons')
@@ -830,7 +840,7 @@ class CModShot(Shot):
     def get_efc_current(times, iefc, t_iefc):
         return pd.DataFrame({"I_efc": interp1(t_iefc, iefc, times, 'linear')})
 
-    @parameter_method()
+    @parameter_cached_method(used_trees=["engineering"])
     def _get_efc_current(self):
         try:
             eng_tree = self._tree_manager.open_tree(tree_name='engineering')
@@ -858,7 +868,7 @@ class CModShot(Shot):
         te_hwm = interp1(ts_time, te_hwm, times)
         return pd.DataFrame({"Te_width": te_hwm})
 
-    @parameter_method()
+    @parameter_cached_method(used_trees=["electrons"])
     def _get_Ts_parameters(self):
         # TODO: Guassian vs parabolic fit for te profile
         te_hwm = np.empty((len(self._times)))
@@ -888,7 +898,7 @@ class CModShot(Shot):
         # pressure_PF = interp1(TS_time, pressure_PF, times, 'linear')
         pass
 
-    @parameter_method(['experimental'])
+    @parameter_cached_method(used_trees=["cmod", "efit", "electrons"])
     def _get_peaking_factors(self):
         ne_PF = np.full(len(self._times), np.nan)
         Te_PF = ne_PF.copy()
@@ -947,7 +957,7 @@ class CModShot(Shot):
         except mdsExceptions.MdsException as e:
             return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
 
-    @parameter_method()
+    @parameter_cached_method(used_trees=["cmod", "spectroscopy"])
     def _get_prad_peaking(self):
         prad_peaking = np.full(len(self._times), np.nan)
         cmod_tree = self._tree_manager.open_tree(tree_name='cmod')
@@ -1025,7 +1035,7 @@ class CModShot(Shot):
                 prad_peaking[i] = np.nanmean(core_radiation) / np.nanmean(all_radiation)
         return pd.DataFrame({"prad_peaking": prad_peaking})
 
-    @parameter_method(['experimental'])
+    @parameter_cached_method(tags=['experimental'], used_trees=["cmod", "electrons"])
     def _get_peaking_factors_no_tci(self):
         # Initialize PFs as empty arrarys
         ne_PF = np.full(len(self._times), np.nan)
@@ -1343,7 +1353,7 @@ class CModShot(Shot):
 
 
     # TODO: get more accurate description of soft x-ray data
-    @parameter_method()
+    @parameter_cached_method(used_trees=["xtomo"])
     def _get_sxr_data(self):
         """ """
         sxr = np.full(len(self._times), np.nan)
@@ -1447,7 +1457,7 @@ class CModShot(Shot):
 
         return pd.DataFrame({"Te_edge": Te_edge, "ne_edge": ne_edge})
 
-    @parameter_method(['experimental'])
+    @parameter_cached_method(tags=['experimental'], used_trees=["electrons"])
     def _get_edge_parameters(self):
 
         # Ignore shots on the blacklist
@@ -1509,7 +1519,7 @@ class CModShot(Shot):
         pass
 
     # TODO: Finish
-    @parameter_method()
+    @parameter_cached_method(tags=['experimental'], contained_cached_methods=["_get_power", "_get_EFIT_parameters", "_get_densities", "_get_ip_parameters"], used_trees=["magnetics"])
     def _get_H98(self):
         """Prepare to compute H98 by getting tau_E
         
