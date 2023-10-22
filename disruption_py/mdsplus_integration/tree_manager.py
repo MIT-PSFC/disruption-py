@@ -1,6 +1,6 @@
 from MDSplus import Tree, TreeNode
-from disruption_py.method_caching import MethodOptimizer
 import logging
+from typing import Callable
          
 class TreeManager:
     logger = logging.getLogger('disruption_py')
@@ -41,6 +41,9 @@ class TreeManager:
     def tree_name_of_nickname(self, nickname:str) -> str:
         return self._nicknames.get(nickname, None)
     
+    def unique_name(self, for_name: str) -> str:
+        return self.tree_name_of_nickname(for_name) or for_name
+    
     def open_tree(self, tree_name: str) -> Tree:
         self.num_times_opened[tree_name] = self.num_times_opened.get(tree_name, 0) + 1
         
@@ -71,12 +74,12 @@ class TreeManager:
                 open_tree_names.add(nickname)
         return open_tree_names
     
-    def cleanup_not_needed(self, method_optimizer: MethodOptimizer):
+    def cleanup_not_needed(self, can_tree_be_closed : Callable):
         '''
         Close trees that are not expected to be used again based on method_optimizer
         '''
-        for tree_name in self._open_trees:
-            if method_optimizer.can_tree_be_closed(tree_name):
+        for tree_name in list(self._open_trees.keys()):
+            if can_tree_be_closed(tree_name):
                 self.close_tree(tree_name)
     
     def cleanup(self):

@@ -79,7 +79,7 @@ class CModShot(Shot):
 
     # TODO: Populate metadata dict
     def __init__(self, shot_id, efit_tree_name='analysis', data=None, times=None, disruption_time=None, override_cols=True, **kwargs):
-        super().__init__(shot_id, data)
+        super().__init__(shot_id, data, **kwargs)
         self._times = times
         self._requested_efit_tree_name = efit_tree_name
         self.disruption_time = disruption_time
@@ -508,7 +508,7 @@ class CModShot(Shot):
         p_ohm = ip * v_resistive
         return pd.DataFrame({"p_oh": p_ohm, "v_loop": v_loop})
 
-    @parameter_cached_method(used_trees=["efit"], contained_cached_methods=["_get_ip_parameters"])
+    @parameter_cached_method(used_trees=["efit_tree"], contained_cached_methods=["_get_ip_parameters"])
     def _get_ohmic_parameters(self):
         # <-- this line is the culprit for breaking when analysis tree is set to EFIT18
         v_loop_record = self.efit_tree.getNode(r"\top.mflux:v0").getData()
@@ -571,7 +571,7 @@ class CModShot(Shot):
         p_oh = self._get_ohmic_parameters()['p_oh']
         return CModShot.get_power(self._times, *values, p_oh)
 
-    @parameter_cached_method(used_trees=["efit"])
+    @parameter_cached_method(used_trees=["efit_tree"])
     def _get_EFIT_parameters(self):
 
         efit_time = self.efit_tree.getNode(r'\efit_aeqdsk:time').data().astype(
@@ -638,7 +638,7 @@ class CModShot(Shot):
     def get_kappa_area(times, aminor, area, a_times):
         return pd.DataFrame({"kappa_area": interp1(a_times, area/(np.pi * aminor**2), times)})
 
-    @parameter_cached_method(used_trees=["efit"])
+    @parameter_cached_method(used_trees=["efit_tree"])
     def _get_kappa_area(self):
         aminor = self.efit_tree.getNode(
             r'\efit_aeqdsk:aminor').getData().data().astype('float64', copy=False)
@@ -898,7 +898,7 @@ class CModShot(Shot):
         # pressure_PF = interp1(TS_time, pressure_PF, times, 'linear')
         pass
 
-    @parameter_cached_method(used_trees=["cmod", "efit", "electrons"])
+    @parameter_cached_method(used_trees=["cmod", "efit_tree", "electrons"])
     def _get_peaking_factors(self):
         ne_PF = np.full(len(self._times), np.nan)
         Te_PF = ne_PF.copy()

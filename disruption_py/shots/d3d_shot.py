@@ -52,7 +52,7 @@ class D3DShot(Shot):
     duration_before_disruption = 0.10
 
     def __init__(self, shot_id, efit_tree_name, data=None, times=None, disruption_time=None, override_cols=True, **kwargs):
-        super().__init__(shot_id, data)
+        super().__init__(shot_id, data, **kwargs)
         self._times = times
         self.conn = MDSplus.Connection('atlas.gat.com')
         self.efit_tree = str(efit_tree_name)

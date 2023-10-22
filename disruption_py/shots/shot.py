@@ -2,6 +2,7 @@ from disruption_py.utils import interp1
 from typing import Set
 import subprocess
 import os
+import time
 import traceback
 import concurrent 
 from concurrent.futures import ThreadPoolExecutor
@@ -52,6 +53,7 @@ class Shot:
         self._shot_id = int(shot_id)
         self._tree_manager = TreeManager(shot_id)
         self.multiprocessing = kwargs.get('multiprocessing', False)
+        print("We are multiprocessing!" if self.multiprocessing else "We are not multiprocessing")
         if self.logger.level == logging.NOTSET:
             self.logger.setLevel(logging.INFO)
         assert self.logger.level != logging.NOTSET, "Logger level is NOTSET"
@@ -193,22 +195,36 @@ class Shot:
     def apply_shot_transform(self, shot_transform):
         self.data = self.data.apply(shot_transform)
 
-    def populate_method(self, param_method : CachedMethod):
-        method = getattr(self, param_method.name)
+    def populate_method(self, cached_method : CachedMethod, method_optimizer : MethodOptimizer, start_time):
+        method = getattr(self, cached_method.name)
+        result = None
         if callable(method) and hasattr(method, 'populate'):
             self.logger.info(
-                f"[Shot {self._shot_id}]:Populating {param_method.name}")
+                f"[Shot {self._shot_id}]:Populating {cached_method.name}")
             # self._tree_manager.cleanup_not_needed()
             try:
-                return method()
+                result = method()
             except Exception as e:
                 self.logger.warning(
-                    f"[Shot {self._shot_id}]:Failed to populate {param_method.name} with error {e}")
+                    f"[Shot {self._shot_id}]:Failed to populate {cached_method.name} with error {e}")
+                self.logger.debug(f"{traceback.format_exc()}")
+        elif callable(method) and hasattr(method, 'cached'):
+            self.logger.info(
+                f"[Shot {self._shot_id}]:Caching {cached_method.name}")
+            # self._tree_manager.cleanup_not_needed()
+            try:
+                method()
+            except Exception as e:
+                self.logger.warning(
+                    f"[Shot {self._shot_id}]:Failed to cache {cached_method.name} with error {e}")
                 self.logger.debug(f"{traceback.format_exc()}")
         else:
             self.logger.warning(
-                f"[Shot {self._shot_id}]:Method {param_method.name} is not callable or does not have a `populate` attribute set to True")
-        return None
+                f"[Shot {self._shot_id}]:Method {cached_method.name} is not callable or does not have a `populate` attribute set to True")
+            return None
+        
+        print(f"[Shot {self._shot_id}]:Completed {cached_method.name}, time_elapsed: {time.time() - start_time}")
+        return result
     def populate_methods(self, method_names):
         """Populate the shot object with data from MDSplus.
 
@@ -222,22 +238,6 @@ class Shot:
         for method_name in method_names:
             local_data.append(self.populate_method(method_name))
         self.data = pd.concat([self.data, *local_data], axis=1)
-
-    def populate_tag(self, tag):
-        local_data = []
-        for method_name in dir(self):
-            method = getattr(self, method_name)
-            if callable(method) and hasattr(method, 'populate'):
-                if bool(set(method.tag).intersection(tag)):
-                    self.logger.info(f"[Shot {self._shot_id}]:Skipping {method_name}")
-                    continue
-                try:
-                    local_data.append(method())
-                except Exception as e:
-                    self.logger.warning(
-                        f"[Shot {self._shot_id}]:Failed to populate {method_name} with error {e}")
-                    self.logger.debug(f"{traceback.format_exc()}")
-        self.data = pd.concat([self.data, local_data], axis=1)
 
     def _init_populate(self, already_populated, methods, tags):
         """
@@ -281,29 +281,43 @@ class Shot:
                     continue
                 self.logger.info(
                         f"[Shot {self._shot_id}]:Skipping {method_name}")
-        method_optimizer : MethodOptimizer = MethodOptimizer(methods_to_evaluate, all_cached_methods)
+        method_optimizer : MethodOptimizer = MethodOptimizer(self._tree_manager, methods_to_evaluate, all_cached_methods)
+        
         if self.multiprocessing:
             # TODO: using method optimizer
-            with ThreadPoolExecutor(max_workers=8) as executor:
-                futures = [executor.submit(
-                    self.populate_method, method) for method in methods_to_evaluate]
-                for future in concurrent.futures.as_completed(futures):
-                    try:
-                        parameter_df = future.result()
-                        parameters.append(parameter_df)
-                    except Exception as e:
-                        self.logger.warning(
-                            f"[Shot {self._shot_id}]:Failed to populate {method_name} with error {e}")
-                        self.logger.debug(
-                            f"[Shot {self._shot_id}: {traceback.format_exc()}")
+            futures = set()
+            future_method_names = {}
+            def future_for_next(next_method):
+                new_future = executor.submit(self.populate_method, next_method, method_optimizer, start_time)
+                futures.add(new_future)
+                future_method_names[new_future] = next_method.name
+            
+            start_time = time.time()
+            available_methods_runner = method_optimizer.get_async_available_methods_runner(future_for_next)
+            with ThreadPoolExecutor(max_workers=1) as executor: 
+                available_methods_runner()
+                while futures:
+                    done, futures = concurrent.futures.wait(futures, return_when='FIRST_COMPLETED')
+                    for future in done:
+                        try:
+                            parameter_df = future.result()
+                            parameters.append(parameter_df)
+                            method_optimizer.method_complete(future_method_names[future])
+                            self._tree_manager.cleanup_not_needed(method_optimizer.can_tree_be_closed)
+                        except Exception as e:
+                            self.logger.warning(
+                                f"[Shot {self._shot_id}]:Failed to populate {method_name} with future error {e}")
+                            self.logger.debug(
+                                f"[Shot {self._shot_id}: {traceback.format_exc()}")
+                    available_methods_runner()
+                    
         else:
-            next_method, _ = method_optimizer.next_method(self._tree_manager.get_open_tree_names())
             parameters = []
-            while (next_method != None):
-                parameters.append(self.populate_method(
-                    method))
-                method_optimizer.method_complete(next_method.name)
-                next_method, _ = method_optimizer.next_method(self._tree_manager.get_open_tree_names())
+            start_time = time.time()
+            method_optimizer.run_methods_sync(
+                lambda next_method: parameters.append(self.populate_method(next_method, method_optimizer, start_time)),
+                self._tree_manager.get_open_tree_names
+            )
         parameters = [
             parameter for parameter in parameters if parameter is not None]
         # TODO: This is a hack to get around the fact that some methods return
