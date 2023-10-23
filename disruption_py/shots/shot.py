@@ -294,7 +294,7 @@ class Shot:
             
             start_time = time.time()
             available_methods_runner = method_optimizer.get_async_available_methods_runner(future_for_next)
-            with ThreadPoolExecutor(max_workers=1) as executor: 
+            with ThreadPoolExecutor(max_workers=8) as executor: 
                 available_methods_runner()
                 while futures:
                     done, futures = concurrent.futures.wait(futures, return_when='FIRST_COMPLETED')
@@ -315,8 +315,7 @@ class Shot:
             parameters = []
             start_time = time.time()
             method_optimizer.run_methods_sync(
-                lambda next_method: parameters.append(self.populate_method(next_method, method_optimizer, start_time)),
-                self._tree_manager.get_open_tree_names
+                lambda next_method: parameters.append(self.populate_method(next_method, method_optimizer, start_time))
             )
         parameters = [
             parameter for parameter in parameters if parameter is not None]

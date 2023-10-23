@@ -197,7 +197,7 @@ class CModShot(Shot):
         end_index = np.max(indices_flattop)
         self._times = self._times[:end_index]
 
-    @cached_method(used_trees=["pcs"])
+    @cached_method(used_trees=["pcs"], cache_between_threads=False)
     def get_active_wire_segments(self):
         pcs_tree = self._tree_manager.open_tree(tree_name='pcs')
         segment_nodes = pcs_tree.getNodeWild("\\top.seg_*")
@@ -283,7 +283,7 @@ class CModShot(Shot):
         # import pdb; pdb.set_trace()
         return pd.DataFrame({"ip": ip, "dip_dt": dip, "dip_smoothed": dip_smoothed, "ip_prog": ip_prog, "dipprog_dt": dipprog_dt, "ip_error": ip_error})
 
-    @parameter_cached_method(contained_cached_methods=["get_active_wire_segments"], used_trees=["magnetics"])
+    @parameter_cached_method(contained_cached_methods=[], used_trees=["magnetics", "pcs"])
     def _get_ip_parameters(self):
         # Automatically generated
         magnetics_tree = self._tree_manager.open_tree(tree_name='magnetics')
@@ -385,7 +385,7 @@ class CModShot(Shot):
                               'linear', False, z_times_v_z[-1])
         return pd.DataFrame({"z_error": z_error, "z_prog": z_prog, "zcur": z_cur, "v_z": v_z, "z_times_v_z": z_times_v_z})
 
-    @parameter_cached_method(used_trees=["hybrid", "magnetics"], contained_cached_methods=["get_active_wire_segments"])
+    @parameter_cached_method(used_trees=["hybrid", "magnetics", "pcs"], contained_cached_methods=[])
     def _get_z_parameters(self):
         pcstime = np.array(np.arange(-4, 12.383, .001))
         z_prog = np.empty(pcstime.shape)

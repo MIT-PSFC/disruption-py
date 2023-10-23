@@ -1,13 +1,14 @@
 from typing import Callable, Set, List, Dict
 from dataclasses import dataclass, field
 from disruption_py.mdsplus_integration.tree_manager import TreeManager
+import threading
 
 @dataclass
 class CachedMethod:
     name: str
     method: Callable
 
-def parameter_cached_method(tags=["all"], used_trees=None, contained_cached_methods=None):
+def parameter_cached_method(tags=["all"], used_trees=None, contained_cached_methods=None, **kwargs):
     """
     Decorates a function as a parameter method. Parameter methods are functions that 
     calculate disruption parameters from the data in the shot.  They are called by the Shot object when
@@ -15,15 +16,14 @@ def parameter_cached_method(tags=["all"], used_trees=None, contained_cached_meth
     """
     # TODO: Figure out how to hash _times so that we can use the cache for different timebases
     def tag_wrapper(func):
-        wrapper = cached_method(used_trees=used_trees, contained_cached_methods=contained_cached_methods)(func)
-
+        wrapper = cached_method(used_trees=used_trees, contained_cached_methods=contained_cached_methods, **kwargs)(func)
         wrapper.populate = True
         wrapper.tags = tags
         return wrapper
     return tag_wrapper
 
 
-def cached_method(used_trees=None, contained_cached_methods=None, wait_for_callers=True):
+def cached_method(used_trees=None, contained_cached_methods=None, cache_between_threads=True):
     """
     Decorates a function as a cached method and instantiates its cache. Cached methods are functions that 
     run expensive operations on data in the shot and may be reused. The cache is used to store the results 
@@ -37,7 +37,11 @@ def cached_method(used_trees=None, contained_cached_methods=None, wait_for_calle
             # Create the cache if it doesn't exist
             if not hasattr(self, '_cached_result'):
                 self._cached_result = {}
-            cache_key = func.__name__ + str(len(self._times))
+            if cache_between_threads:
+                cache_key = func.__name__ + str(len(self._times))
+            else:
+                current_thread_id = threading.get_ident()
+                cache_key = func.__name__ + str(len(self._times)) + str(current_thread_id)
             if cache_key in self._cached_result:
                 return self._cached_result[cache_key]
             else:
@@ -46,6 +50,7 @@ def cached_method(used_trees=None, contained_cached_methods=None, wait_for_calle
                 return result
 
         wrapper.cached = True
+        wrapper.cache_between_threads = cache_between_threads
         wrapper.used_trees = used_trees
         wrapper.contained_cached_methods = contained_cached_methods
         return wrapper
@@ -129,7 +134,6 @@ class MethodOptimizer:
                 if (next_method == None): 
                     break
                 to_execute.append(next_method)
-            print(f"Executing: {[method.name for method in to_execute]}")
             for method in to_execute:
                 method_executor(method)
         return inner
