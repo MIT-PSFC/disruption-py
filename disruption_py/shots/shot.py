@@ -1,4 +1,4 @@
-from disruption_py.utils import interp1
+from disruption_py.utils.math_utils import interp1
 from typing import Set
 import subprocess
 import os
@@ -11,7 +11,7 @@ import MDSplus
 from MDSplus import *
 
 from disruption_py.mdsplus_integration.tree_manager import TreeManager
-from disruption_py.method_caching import MethodOptimizer, CachedMethod
+from disruption_py.utils.method_caching import MethodOptimizer, CachedMethod
 
 import pandas as pd
 import numpy as np

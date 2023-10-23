@@ -6,7 +6,7 @@ import json
 import pandas as pd
 from sklearn.metrics import ConfusionMatrixDisplay, fbeta_score
 
-from disruption_py.utils import *
+from disruption_py.utils.math_utils import *
 from disruption_py.ml.models import load_model 
 from disruption_py.ml.evaluate import eval_shots, predict, DEFAULT_ORDER, THESIS_ORDER
 order_mapping = {

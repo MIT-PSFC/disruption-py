@@ -4,7 +4,7 @@ import argparse
 from collections import OrderedDict
 
 from disruption_py.shots.shot import Shot
-from disruption_py.method_caching import parameter_cached_method, cached_method
+from disruption_py.utils.method_caching import parameter_cached_method, cached_method
 try:
     import importlib.resources as importlib_resources
 except ImportError:
@@ -36,7 +36,7 @@ except Exception as e:
 
 import warnings
 
-from disruption_py.utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power, without_duplicates
+from disruption_py.utils.math_utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power, without_duplicates
 import disruption_py.data
 
 MAX_SHOT_TIME = 7.0  # [s]

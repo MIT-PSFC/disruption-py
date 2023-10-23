@@ -14,7 +14,7 @@ import jaydebeapi
 import matplotlib.pyplot as plt
 
 from disruption_py.shots import *
-from disruption_py.utils import save_open_plots
+from disruption_py.utils.math_utils import save_open_plots
 import disruption_py.data
 
 # Alter queries for these columns will fail

@@ -1,5 +1,5 @@
 from disruption_py.shots.shot import Shot
-from disruption_py.method_caching import parameter_cached_method
+from disruption_py.utils.method_caching import parameter_cached_method
 
 try:
     import importlib.resources as importlib_resources
@@ -17,7 +17,7 @@ import netCDF4 as nc
 import MDSplus
 from MDSplus import *
 
-from disruption_py.utils import interp1, gsastd, get_bolo, power, efit_rz_interp
+from disruption_py.utils.math_utils import interp1, gsastd, get_bolo, power, efit_rz_interp
 import disruption_py.data
 D3D_DISRUPTED_SHOT = 175552
 # Retrieve efit from EFIT01, Peaking Factor Nodes: dpsrdcva dpsrdxdiv dpstepf dpsnepf

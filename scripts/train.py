@@ -8,7 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, fbeta_score
 
-from disruption_py.utils import generate_id, save_open_plots
+from disruption_py.utils.math_utils import generate_id, save_open_plots
 from disruption_py.ml.train import grid_search, train_local
 
 def main(args):

@@ -9,7 +9,7 @@ from sklearn.impute import SimpleImputer
 
 from disruption_py.database import create_d3d_handler, create_cmod_handler, create_east_handler
 from disruption_py.shots import D3DShot, CModShot
-from disruption_py.utils import generate_id, exp_filter
+from disruption_py.utils.math_utils import generate_id, exp_filter
 
 DEFAULT_COLS = [
     #    'ip_error_frac', Use just need to fix bugs

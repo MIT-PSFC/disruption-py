@@ -10,7 +10,7 @@ except ImportError:
 
 import pandas as pd 
 
-from disruption_py.utils import generate_id
+from disruption_py.utils.math_utils import generate_id
 import disruption_py.data
 from disruption_py.ml.preprocessing import *
 
