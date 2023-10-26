@@ -997,25 +997,23 @@ class CModShot(Shot):
         a_minor = interp1(efit_time, aminor, self._times)
         r0 = interp1(efit_time, r0, self._times)
         z0 = interp1(efit_time, z0, self._times)
-        axa_interp = np.full((bright_axa.shape[0], len(self._times)), np.nan)
-        axj_interp = np.full((bright_axj.shape[0], len(self._times)), np.nan)
         if got_axa:
             good_axa = np.where(good_axa > 0)[0]
             bright_axa = bright_axa[:, good_axa]
-            r_axa = interp1(t_axa, r_axa, self._times)
-            z_axa = interp1(t_axa, z_axa, self._times)
+            axa_interp = np.full((bright_axa.shape[1], len(self._times)), np.nan)
+            r_axa = r_axa[good_axa]
             for i in range(bright_axa.shape[1]):
-                interped = interp1(t_axa, bright_axa[:, i], self._times)
+                interped = interp1(t_axa.T, bright_axa[:, i], self._times.T)
                 indx = np.where(interped < 0)
                 interped[indx] = np.nan
                 axa_interp[i,:] = interped
         if got_axj:
             good_axj = np.where(good_axj > 0)[0]
             bright_axj = bright_axj[:, good_axj]
-            r_axj = interp1(t_axa, r_axj, self._times)
-            z_axj = interp1(t_axa, z_axj, self._times)
+            axj_interp = np.full((bright_axj.shape[1], len(self._times)), np.nan)
+            r_axj = r_axj[good_axj]
             for i in range(bright_axj.shape[1]):
-                interped = interp1(t_axj, bright_axj[:, i], self._times)
+                interped = interp1(t_axj.T, bright_axj[:, i], self._times.T)
                 indx = np.where(interped < 0)
                 interped[indx] = np.nan
                 axj_interp[i, :] = interped
@@ -1032,7 +1030,7 @@ class CModShot(Shot):
                 axj_core_index = axj_dist < 0.2*a_minor[i]
                 core_radiation = np.append(core_radiation, axj_interp[axj_core_index, i])
                 all_radiation = np.append(all_radiation, axj_interp[:, i])
-                prad_peaking[i] = np.nanmean(core_radiation) / np.nanmean(all_radiation)
+            prad_peaking[i] = np.nanmean(core_radiation) / np.nanmean(all_radiation)
         return pd.DataFrame({"prad_peaking": prad_peaking})
 
     @parameter_cached_method(tags=['experimental'], used_trees=["cmod", "electrons"])
