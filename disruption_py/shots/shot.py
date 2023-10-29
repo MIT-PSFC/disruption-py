@@ -239,21 +239,20 @@ class Shot:
             local_data.append(self.populate_method(method_name))
         self.data = pd.concat([self.data, *local_data], axis=1)
 
-    def _init_populate(self, already_populated, methods, tags):
+    def _init_populate(self, existing_data, methods, tags):
         """
         Internal method to populate the disruption parameters of a shot object. 
         This method is called by the constructor and should not be called directly. It loops through all methods of the Shot class and calls the ones that have a `populate` attribute set to True and satisfy the tags and methods arguments.
         """
         
         # If the shot object was already passed data in the constructor, use that data. Otherwise, create an empty dataframe.
-        if not already_populated:
-            if self.data is None:
-                self.data = pd.DataFrame()
+        if self.data is None:
+            self.data = pd.DataFrame() 
+        if 'time' not in self.data:
             self.data['time'] = self._times
+        if 'shot' not in self.data:
             self.data['shot'] = self._shot_id
-        else:
-            self.logger.info(f"[Shot {self._shot_id}]:Already populated")
-            return
+  
 
         # If tags or methods are not lists, make them lists.
         if tags is not None and not isinstance(tags, list):
@@ -281,6 +280,12 @@ class Shot:
                     continue
                 self.logger.info(
                         f"[Shot {self._shot_id}]:Skipping {method_name}")
+                
+        # Remove methods from methods_to_evaluate that already have all of their columns in self.data
+        for method in methods_to_evaluate:
+            if all(col in self.data.columns for col in method.columns):
+                methods_to_evaluate.remove(method)
+        
         method_optimizer : MethodOptimizer = MethodOptimizer(self._tree_manager, methods_to_evaluate, all_cached_methods)
         
         if self.multiprocessing:

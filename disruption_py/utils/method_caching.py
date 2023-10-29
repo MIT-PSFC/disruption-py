@@ -8,7 +8,7 @@ class CachedMethod:
     name: str
     method: Callable
 
-def parameter_cached_method(tags=["all"], used_trees=None, contained_cached_methods=None, **kwargs):
+def parameter_cached_method(tags=["all"], columns=[], used_trees=None, contained_cached_methods=None, **kwargs):
     """
     Decorates a function as a parameter method. Parameter methods are functions that 
     calculate disruption parameters from the data in the shot.  They are called by the Shot object when
@@ -18,6 +18,7 @@ def parameter_cached_method(tags=["all"], used_trees=None, contained_cached_meth
     def tag_wrapper(func):
         wrapper = cached_method(used_trees=used_trees, contained_cached_methods=contained_cached_methods, **kwargs)(func)
         wrapper.populate = True
+        wrapper.columns = columns
         wrapper.tags = tags
         return wrapper
     return tag_wrapper
