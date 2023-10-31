@@ -28,12 +28,12 @@ class Shot:
     ----------
     shot_id : int
         Shot number.
-    data : pandas.DataFrame, optional
+    existing_data : pandas.DataFrame, optional
         Data for the shot. If not provided, an empty DataFrame will be created.
 
     Attributes
     ----------
-    data : pandas.DataFrame
+    existing_data : pandas.DataFrame
         Data for the shot.
     conn : MDSplus.Connection
         MDSplus connection to the shot.
@@ -49,7 +49,7 @@ class Shot:
     # TODO: Add [Shot {self._shot_id}]: to logger format by default
     logger = logging.getLogger('disruption_py')
 
-    def __init__(self, shot_id, data=None, **kwargs):
+    def __init__(self, shot_id, existing_data=None, **kwargs):
         self._shot_id = int(shot_id)
         self._tree_manager = TreeManager(shot_id)
         self.multiprocessing = kwargs.get('multiprocessing', False)
@@ -78,8 +78,8 @@ class Shot:
             'description': "",
             'disrupted': 100  # TODO: Fix
         }
-        self.data = data
-        if data is None:
+        self.data = existing_data
+        if existing_data is None:
             self.data = pd.DataFrame()
 
     @staticmethod
@@ -265,14 +265,14 @@ class Shot:
         methods_to_evaluate : list[CachedMethod] = []
         all_cached_methods : list[CachedMethod] = []
         for method_name in dir(self):
-            method = getattr(self, method_name)
-            if callable(method) and hasattr(method, 'cached'):
-                param_method = CachedMethod(name=method_name, method=method)
-                all_cached_methods.append(param_method)
-            if callable(method) and hasattr(method, 'populate'):
-                param_method = param_method or CachedMethod(name=method_name, method=method)
+            attribute_to_check = getattr(self, method_name)
+            if callable(attribute_to_check) and hasattr(attribute_to_check, 'cached'):
+                cached_method = CachedMethod(name=method_name, method=attribute_to_check)
+                all_cached_methods.append(cached_method)
+            if callable(attribute_to_check) and hasattr(attribute_to_check, 'populate'):
+                param_method = cached_method or CachedMethod(name=method_name, method=attribute_to_check)
                 # If method does not have tag included and name included then skip
-                if tags is not None and bool(set(method.tags).intersection(tags)):
+                if tags is not None and bool(set(attribute_to_check.tags).intersection(tags)):
                     methods_to_evaluate.append(param_method)
                     continue
                 if methods is not None and method_name in methods:
@@ -281,15 +281,20 @@ class Shot:
                 self.logger.info(
                         f"[Shot {self._shot_id}]:Skipping {method_name}")
                 
-        # Remove methods from methods_to_evaluate that already have all of their columns in self.data
-        for method in methods_to_evaluate:
-            if all(col in self.data.columns for col in method.columns):
-                methods_to_evaluate.remove(method)
-        
-        method_optimizer : MethodOptimizer = MethodOptimizer(self._tree_manager, methods_to_evaluate, all_cached_methods)
+        # Manually cache data that has already been retrieved (likely from sql tables)
+        # Methods added to pre_cached_method_names will be skipped by method optimizer 
+        pre_cached_method_names = []
+        for cached_method in all_cached_methods:
+            cache_success = cached_method.method.manually_cache(self, self.data)
+            if cache_success:
+                pre_cached_method_names.append(cached_method.name)
+                if cached_method in methods_to_evaluate:
+                    self.logger.info(
+                        f"[Shot {self._shot_id}]:Skipping {cached_method.name} already populated")
+
+        method_optimizer : MethodOptimizer = MethodOptimizer(self._tree_manager, methods_to_evaluate, all_cached_methods, pre_cached_method_names)
         
         if self.multiprocessing:
-            # TODO: using method optimizer
             futures = set()
             future_method_names = {}
             def future_for_next(next_method):

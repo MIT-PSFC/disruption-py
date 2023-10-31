@@ -2,6 +2,7 @@ from typing import Callable, Set, List, Dict
 from dataclasses import dataclass, field
 from disruption_py.mdsplus_integration.tree_manager import TreeManager
 import threading
+import pandas as pd
 
 @dataclass
 class CachedMethod:
@@ -34,26 +35,47 @@ def cached_method(used_trees=None, contained_cached_methods=None, cache_between_
     """
     # TODO: Figure out how to hash _times so that we can use the cache for different timebases
     def tag_wrapper(func):
+        def get_cache_key(times):
+            if cache_between_threads:
+                return func.__name__ + str(len(times))
+            else:
+                current_thread_id = threading.get_ident()
+                return func.__name__ + str(len(times)) + str(current_thread_id)
+                
         def wrapper(self, *args, **kwargs):
             # Create the cache if it doesn't exist
             if not hasattr(self, '_cached_result'):
                 self._cached_result = {}
-            if cache_between_threads:
-                cache_key = func.__name__ + str(len(self._times))
-            else:
-                current_thread_id = threading.get_ident()
-                cache_key = func.__name__ + str(len(self._times)) + str(current_thread_id)
+            cache_key = get_cache_key(self._times)
             if cache_key in self._cached_result:
                 return self._cached_result[cache_key]
             else:
                 result = func(self, *args, **kwargs)
                 self._cached_result[cache_key] = result
                 return result
+            
+        def manually_cache(shot, data : pd.DataFrame):
+            if not hasattr(wrapper, 'columns'):
+                return False
+            if not hasattr(shot, '_cached_result'):
+                shot._cached_result = {}
+            missing_columns = set(col for col in wrapper.columns if col not in data.columns)
+            if len(missing_columns) == 0:
+                cache_key = get_cache_key(data['time'])
+                shot._cached_result[cache_key] = data[wrapper.columns]
+                shot.logger.debug(
+                        f"[Shot {shot._shot_id}]:Manually caching {func.__name__}")
+                return True
+            else:
+                shot.logger.debug(
+                        f"[Shot {shot._shot_id}]:Can not cache {func.__name__} missing columns {missing_columns}")
+                return False
 
         wrapper.cached = True
         wrapper.cache_between_threads = cache_between_threads
         wrapper.used_trees = used_trees
         wrapper.contained_cached_methods = contained_cached_methods
+        wrapper.manually_cache = manually_cache
         return wrapper
     return tag_wrapper
 
@@ -64,14 +86,17 @@ class _MethodDependecy:
     
 class MethodOptimizer:
     
-    def __init__(self, tree_manager : TreeManager, parameter_methods: List[CachedMethod], all_cached_methods: List[CachedMethod]):
+    def __init__(self, tree_manager : TreeManager, parameter_methods: List[CachedMethod], all_cached_methods: List[CachedMethod], pre_cached_method_names: List[str]):
         self._tree_manager = tree_manager
         self._all_cached_methods : Dict[str, CachedMethod] = {method.name: method for method in all_cached_methods}
         graph: dict[str, _MethodDependecy] = {}
-        visited = set(self._all_cached_methods.keys())
+        visited = {parameter_method.name for parameter_method in parameter_methods}
         cached_methods_stack = parameter_methods.copy()
         while len(cached_methods_stack) != 0:
             cached_method : CachedMethod = cached_methods_stack.pop()
+            # if cached_method.name pre cached we don't want to run it or run any of its contained cached methods
+            if cached_method.name in pre_cached_method_names:
+                continue
             graph.setdefault(cached_method.name, _MethodDependecy())
             # contained cached methods is a list of names of used cached methods
             for contained_cached_method_name in get_or_default(cached_method.method.contained_cached_methods, []):

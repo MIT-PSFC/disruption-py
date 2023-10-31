@@ -45,7 +45,7 @@ class TreeManager:
         tree_name = self.tree_name_of_nickname(nickname)
         
         if tree_name is None:
-            self.logger.info(f"No tree name exists for nickname: {nickname}")
+            self.logger.debug(f"No tree name exists for nickname: {nickname} (expected on first open)")
             return None
         if tree_name not in self.all_opened_tree_names:
             self.logger.debug(f"Tree named {tree_name} for nickname {nickname} not open")
