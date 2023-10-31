@@ -281,8 +281,12 @@ class Shot:
                 self.logger.info(
                         f"[Shot {self._shot_id}]:Skipping {method_name}")
                 
+        # Check that existing data is on the same timebase as the shot object to ensure data consistency
+        if not np.isclose(self.data['time'], self._times, atol=1e-4).all():
+            self.logger.error(f"[Shot {self._shot_id}]: ERROR Computation on different timebase than used existing data")
+            
         # Manually cache data that has already been retrieved (likely from sql tables)
-        # Methods added to pre_cached_method_names will be skipped by method optimizer 
+        # Methods added to pre_cached_method_names will be skipped by method optimizer
         pre_cached_method_names = []
         for cached_method in all_cached_methods:
             cache_success = cached_method.method.manually_cache(self, self.data)

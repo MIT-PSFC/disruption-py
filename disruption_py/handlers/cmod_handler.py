@@ -11,10 +11,13 @@ class CModHandler:
 		else:
 			self.database : CModDatabase = database
   
-	def get_shot(self, shot_id, **kwargs):
+	def get_shot(self, shot_id, use_sql_table=True, **kwargs):
 		"""
 		Get shot data from CMOD.
 		"""
-		shot_data = self.database.get_shot_data(shot_ids=[shot_id])
+		if use_sql_table:
+			sql_shot_data = self.database.get_shot_data(shot_ids=[shot_id])
+		else:
+			sql_shot_data = None
 		disruption_time=self.database.get_disruption_time(shot_id)
-		return CModShot(shot_id=shot_id, existing_data=shot_data, disruption_time=disruption_time, **kwargs)
+		return CModShot(shot_id=shot_id, existing_data=sql_shot_data, disruption_time=disruption_time, **kwargs)
