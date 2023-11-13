@@ -52,14 +52,15 @@ class Shot:
     def __init__(self, shot_id, existing_data=None, **kwargs):
         self._shot_id = int(shot_id)
         self._tree_manager = TreeManager(shot_id)
-        self.multiprocessing = kwargs.get('multiprocessing', False)
-        print("We are multiprocessing!" if self.multiprocessing else "We are not multiprocessing")
+        self.multithreading = kwargs.get('multithreading', False)
         if self.logger.level == logging.NOTSET:
             self.logger.setLevel(logging.INFO)
         assert self.logger.level != logging.NOTSET, "Logger level is NOTSET"
         if not self.logger.hasHandlers():
+            print("Added stream handler")
             self.logger.addHandler(logging.StreamHandler())
-            
+        if self.multithreading:
+            self.logger.info("Multithreading enabled")
         try:
             commit_hash = subprocess.check_output(
                 ["git", "describe", "--always"],
@@ -78,6 +79,7 @@ class Shot:
             'description': "",
             'disrupted': 100  # TODO: Fix
         }
+        self.initialized_with_data = existing_data is not None
         self.data = existing_data
         if existing_data is None:
             self.data = pd.DataFrame()
@@ -223,7 +225,7 @@ class Shot:
                 f"[Shot {self._shot_id}]:Method {cached_method.name} is not callable or does not have a `populate` attribute set to True")
             return None
         
-        print(f"[Shot {self._shot_id}]:Completed {cached_method.name}, time_elapsed: {time.time() - start_time}")
+        self.logger.info(f"[Shot {self._shot_id}]:Completed {cached_method.name}, time_elapsed: {time.time() - start_time}")
         return result
     def populate_methods(self, method_names):
         """Populate the shot object with data from MDSplus.
@@ -288,17 +290,18 @@ class Shot:
         # Manually cache data that has already been retrieved (likely from sql tables)
         # Methods added to pre_cached_method_names will be skipped by method optimizer
         pre_cached_method_names = []
-        for cached_method in all_cached_methods:
-            cache_success = cached_method.method.manually_cache(self, self.data)
-            if cache_success:
-                pre_cached_method_names.append(cached_method.name)
-                if cached_method in methods_to_evaluate:
-                    self.logger.info(
-                        f"[Shot {self._shot_id}]:Skipping {cached_method.name} already populated")
+        if self.initialized_with_data:
+            for cached_method in all_cached_methods:
+                cache_success = cached_method.method.manually_cache(self, self.data)
+                if cache_success:
+                    pre_cached_method_names.append(cached_method.name)
+                    if cached_method in methods_to_evaluate:
+                        self.logger.info(
+                            f"[Shot {self._shot_id}]:Skipping {cached_method.name} already populated")
 
         method_optimizer : MethodOptimizer = MethodOptimizer(self._tree_manager, methods_to_evaluate, all_cached_methods, pre_cached_method_names)
         
-        if self.multiprocessing:
+        if self.multithreading:
             futures = set()
             future_method_names = {}
             def future_for_next(next_method):
@@ -308,7 +311,7 @@ class Shot:
             
             start_time = time.time()
             available_methods_runner = method_optimizer.get_async_available_methods_runner(future_for_next)
-            with ThreadPoolExecutor(max_workers=8) as executor: 
+            with ThreadPoolExecutor(max_workers=3) as executor: 
                 available_methods_runner()
                 while futures:
                     done, futures = concurrent.futures.wait(futures, return_when='FIRST_COMPLETED')

@@ -12,8 +12,10 @@ CMOD_PROTECTED_COLUMNS = ['dbkey', 'shot', 'time', 'time_until_disrupt', 'ip_err
                           'ip', 'zcur', 'n_e', 'dipprog_dt', 'v_loop', 'p_rad', 'p_oh', 'ssep', 'dWmhd_dt', 'dprad_dt', 'Te_width', 'Greenwald_fraction', 'intentional_disruption', 'Te_width_ECE', 'Wmhd', 'n_over_ncrit', 'n_equal_1_mode', 'Mirnov', 'Mirnov_norm_btor', 'Mirnov_norm_bpol', 'Te_peaking', 'ne_peaking', 'Te_peaking_ECE', 'SXR_peaking', 'kappa_area', 'I_efc', 'SXR', 'H_alpha', 'Prad_peaking_CVA', 'commit_hash']
 
 class CModDatabase(ShotDatabase):
-	def __init__(self, driver, driver_file, host, user, passwd, **kwargs):
-		super().__init__(driver, driver_file, host, user, passwd, protected_columns=CMOD_PROTECTED_COLUMNS, **kwargs)
+	logger = logging.getLogger('disruption_py')
+
+	def __init__(self, driver, driver_file, host, db_name, user, passwd, **kwargs):
+		super().__init__(driver, driver_file, host, db_name, user, passwd, protected_columns=CMOD_PROTECTED_COLUMNS, **kwargs)
   
 	def default(**kwargs):
 		USER = os.getenv('USER')
@@ -27,6 +29,14 @@ class CModDatabase(ShotDatabase):
 			db_password = content[3]
 		with importlib_resources.path(disruption_py.data, "sqljdbc4.jar") as p:
 			db_driver_path = str(p)  # Absolute path to jar file
-		logging.debug(db_driver_path)
-		logging.debug(os.getcwd())
-		return CModDatabase("com.microsoft.sqlserver.jdbc.SQLServerDriver", db_driver_path, f"jdbc:sqlserver://{db_server}.psfc.mit.edu: 1433", db_username, db_password, **kwargs)
+		CModDatabase.logger.debug(db_driver_path)
+		CModDatabase.logger.debug(os.getcwd())
+		return CModDatabase(
+      		driver="{ODBC Driver 18 for SQL Server}", 
+        	driver_file=db_driver_path, 
+         	host=db_server,
+        	db_name=db_name,
+        	user=db_username, 
+        	passwd=db_password,
+        	**kwargs
+        )

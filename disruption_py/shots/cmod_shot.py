@@ -85,12 +85,11 @@ class CModShot(Shot):
         self.disruption_time = disruption_time
         self.disrupted = self.disruption_time is not None
         self.override_cols = override_cols
-        self.data = existing_data
         timebase_signal = kwargs.pop('timebase_signal', None)
         populate_methods = kwargs.pop('populate_methods', None)
         populate_tags = kwargs.pop('populate_tags', ['all'])
         self.interp_scheme = kwargs.pop('interp_scheme', 'linear')
-        if self.data is not None and self._times is None:
+        if existing_data is not None and self._times is None:
             # TODO: Use time interval vs max time to determine if timebase is in ms
             try:
                 self._times = self.data['time'].to_numpy()
@@ -142,7 +141,7 @@ class CModShot(Shot):
                 self.logger.warning(
                     f"[Shot {self._shot_id}]:Failed to open efit tree {efit_name}, with error {e}")
         # TODO(lajz): better error handling
-        raise "failed to find a valid efit tree"
+        raise Exception("failed to find a valid efit tree")
 
     # TODO: Reinterpolate data if timebase is changed
     def set_timebase(self, timebase_signal, **kwargs):
@@ -168,7 +167,7 @@ class CModShot(Shot):
                 r"\efit18::efit.results.a_eqdsk:time").getData().data().astype('float64', copy=False)
         else:
             # TODO(lajz): better error handling
-            raise "Efit tree name unknown for setting default timebase"
+            raise Exception("Efit tree name unknown for setting default timebase")
 
     def set_flattop_timebase(self):
         self.set_default_timebase()
