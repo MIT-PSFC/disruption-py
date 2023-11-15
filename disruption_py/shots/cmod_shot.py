@@ -21,6 +21,9 @@ from MDSplus import *
 import sys
 import scipy as sp
 
+import warnings
+warnings.filterwarnings('error', category=RuntimeWarning)
+
 # TODO: Somehow link to disruption_py 
 # TODO: Deal with scary missing TRIPpy dependency (please don't break until I fix you)
 try:
@@ -1054,7 +1057,10 @@ class CModShot(Shot):
                 axj_core_index = axj_dist < 0.2*a_minor[i]
                 core_radiation = np.append(core_radiation, axj_interp[axj_core_index, i])
                 all_radiation = np.append(all_radiation, axj_interp[:, i])
-            prad_peaking[i] = np.nanmean(core_radiation) / np.nanmean(all_radiation)
+            try:
+                prad_peaking[i] = np.nanmean(core_radiation) / np.nanmean(all_radiation)
+            except:
+                prad_peaking[i] = np.nan
         return pd.DataFrame({"prad_peaking": prad_peaking})
 
     @parameter_cached_method(
