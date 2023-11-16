@@ -35,13 +35,20 @@ class CModHandler:
             class_logger.error(f"failed {shot_id} with error {e}")
         return None
 
-    def get_shots_data(self, shot_ids, shot_args={}, multiprocessing=True, use_sql_table=True, output_processor:OutputProcessor = None) -> List[pd.DataFrame]:
+    def get_shots_data(
+        self, 
+        shot_ids, 
+        shot_args={}, 
+        num_processes=1, 
+        use_sql_table=True, 
+        output_processor:OutputProcessor = None
+    ) -> List[pd.DataFrame]:
         """
         Get shot data from CMOD.
         """
-        if multiprocessing:
+        if num_processes > 1:
             shot_retriever = MultiprocessingShotRetriever(
-                num_processes = 6, 
+                num_processes = num_processes, 
                 database_initializer_f=self.database_initializer,
                 output_processor=output_processor
             )

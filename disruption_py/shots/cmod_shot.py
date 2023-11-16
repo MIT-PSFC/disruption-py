@@ -5,6 +5,7 @@ from collections import OrderedDict
 
 from disruption_py.shots.shot import Shot
 from disruption_py.utils.method_caching import parameter_cached_method, cached_method
+from disruption_py.utils.environment_vars import temporary_env_var
 try:
     import importlib.resources as importlib_resources
 except ImportError:
@@ -81,13 +82,26 @@ class CModShot(Shot):
     efit_derivs = {'beta_p': 'dbetap_dt', 'li': 'dli_dt', 'Wmhd': 'dWmhd_dt'}
 
     # TODO: Populate metadata dict
-    def __init__(self, shot_id, efit_tree_name='analysis', existing_data=None, times=None, disruption_time=None, override_cols=True, **kwargs):
+    def __init__(
+        self, 
+        shot_id,
+        efit_tree_name='analysis', 
+        existing_data=None, 
+        times=None, # deprecated
+        disruption_time=None, 
+        override_cols=True,
+        timebase_request=None, # temporary
+        attempt_local_efit_env=None, # temporary pass tuple of (env variable, value)
+        **kwargs
+    ):
         super().__init__(shot_id, existing_data, **kwargs)
         self._times = times
         self._requested_efit_tree_name = efit_tree_name
         self.disruption_time = disruption_time
         self.disrupted = self.disruption_time is not None
         self.override_cols = override_cols
+        self.timebase_request = timebase_request
+        self.attempt_local_efit_env = attempt_local_efit_env
         timebase_signal = kwargs.pop('timebase_signal', None)
         populate_methods = kwargs.pop('populate_methods', None)
         populate_tags = kwargs.pop('populate_tags', ['all'])
@@ -136,13 +150,29 @@ class CModShot(Shot):
         return tree_name
     
     def _open_efit_tree(self):
-        efit_names_to_test = without_duplicates([self._requested_efit_tree_name, 'analysis', 'efit18'])
-        for efit_name in efit_names_to_test:
+        efit_names_to_test = without_duplicates([
+            self._requested_efit_tree_name,
+            "analysis",
+            *[f"efit0{i}" for i in range(1, 10)],
+            *[f"efit{i}" for i in range(10, 19)],
+        ])
+
+        if self.attempt_local_efit_env is not None:
+            with temporary_env_var(self.attempt_local_efit_env[0], self.attempt_local_efit_env[1]):
+                for efit_tree_name in efit_names_to_test:
+                    try:
+                        return self._tree_manager.try_open_and_nickname(tree_name=efit_tree_name, nickname="efit_tree")
+                    except Exception as e:
+                        self.logger.warning(
+                            f"[Shot {self._shot_id}]:Failed to open efit tree locally {efit_tree_name}, with error {e}")
+
+        for efit_tree_name in efit_names_to_test:
             try:
-                return self._tree_manager.try_open_and_nickname(tree_name=efit_name, nickname="efit_tree")
+                return self._tree_manager.try_open_and_nickname(tree_name=efit_tree_name, nickname="efit_tree")
             except Exception as e:
                 self.logger.warning(
-                    f"[Shot {self._shot_id}]:Failed to open efit tree {efit_name}, with error {e}")
+                    f"[Shot {self._shot_id}]:Failed to open efit tree {efit_tree_name}, with error {e}")
+        
         # TODO(lajz): better error handling
         raise Exception("failed to find a valid efit tree")
 
@@ -162,15 +192,26 @@ class CModShot(Shot):
                 "Non-default timebases are not currently supported")
 
     def set_default_timebase(self):
+        if self.timebase_request is not None:
+            if self.timebase_request == "mag004":
+                try:
+                    magnetics_tree = self._tree_manager.open_tree(tree_name='magnetics')
+                    magnetic_times = magnetics_tree.getNode('\ip').dim_of().data().astype('float64', copy=False)
+                    # # interpolate self._times to be every .004 seconds
+                    self._times = np.arange(magnetic_times[0], magnetic_times[-1], .004).astype('float64', copy=False)
+                    return 
+                except:
+                    self.logger.info("Failed to set up magnetic timebase")
+        
         if self.efit_tree_name == 'analysis':
-            self._times = self.efit_tree.getNode(
-                r"\analysis::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
-        elif self.efit_tree_name == 'efit18':
-            self._times = self.efit_tree.getNode(
-                r"\efit18::efit.results.a_eqdsk:time").getData().data().astype('float64', copy=False)
+            try:
+                self._times = self.efit_tree.getNode(r"\analysis::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
+            except Exception as e:
+                self._times = self.efit_tree.getNode(r"\analysis::efit:results:a_eqdsk:time").getData().data().astype('float64', copy=False)
         else:
-            # TODO(lajz): better error handling
-            raise Exception("Efit tree name unknown for setting default timebase")
+            self._times = self.efit_tree.getNode(fr"\{self.efit_tree_name}::efit.results.a_eqdsk:time").getData().data().astype('float64', copy=False)
+        if len(self._times) == 0:
+            self.logger.error(f"Timebase for {self.efit_tree_name} is empty.")
 
     def set_flattop_timebase(self):
         self.set_default_timebase()
@@ -1556,7 +1597,7 @@ class CModShot(Shot):
     # TODO: Finish
     @parameter_cached_method(
         tags=['experimental'],
-        columns=["H98"],
+        columns=["H98", "Wmhd", "btor", "dWmhd_dt", "p_input"],
         contained_cached_methods=["_get_power", "_get_EFIT_parameters", "_get_densities", "_get_ip_parameters"], 
         used_trees=["magnetics"])
     def _get_H98(self):
@@ -1601,7 +1642,7 @@ class CModShot(Shot):
                 (efit_df.a_minor**0.58)*(efit_df.kappa**0.78)*(btor**0.15)*(p_input**-0.69)
         H98 = tau/tau_98
 
-        return pd.DataFrame({"H98": H98})
+        return pd.DataFrame({"H98": H98, "Wmhd": Wmhd, "btor": btor, "dWmhd_dt": dWmhd_dt, "p_input": p_input})
 
 
 if __name__ == '__main__':
