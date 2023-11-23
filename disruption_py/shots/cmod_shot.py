@@ -5,7 +5,8 @@ from collections import OrderedDict
 
 from disruption_py.shots.shot import Shot
 from disruption_py.utils.method_caching import parameter_cached_method, cached_method
-from disruption_py.utils.environment_vars import temporary_env_var
+from disruption_py.utils.mappings.tokemak import Tokemak
+from disruption_py.handlers.requests.timebase_requests.times_requests import timebase_request_runner, SetTimesRequestParams, EFITRequest
 try:
     import importlib.resources as importlib_resources
 except ImportError:
@@ -44,7 +45,6 @@ from disruption_py.utils.math_utils import interp1, interp2, smooth, gaussian_fi
 import disruption_py.data
 
 MAX_SHOT_TIME = 7.0  # [s]
-CMOD_DISRUPTED_SHOT = 1120814006
 
 
 class CModShot(Shot):
@@ -91,21 +91,27 @@ class CModShot(Shot):
         disruption_time=None, 
         override_cols=True,
         timebase_request=None, # temporary
-        attempt_local_efit_env=None, # temporary pass tuple of (env variable, value)
+        attempt_local_efit_env=None, # temporary pass iterable of (env variable, value)
         **kwargs
     ):
         super().__init__(shot_id, existing_data, **kwargs)
-        self._times = times
-        self._requested_efit_tree_name = efit_tree_name
+        # self._times = times
         self.disruption_time = disruption_time
         self.disrupted = self.disruption_time is not None
         self.override_cols = override_cols
+        
         self.timebase_request = timebase_request
+        if self.timebase_request is None:
+            self.timebase_request = EFITRequest()
+        
         self.attempt_local_efit_env = attempt_local_efit_env
         timebase_signal = kwargs.pop('timebase_signal', None)
         populate_methods = kwargs.pop('populate_methods', None)
         populate_tags = kwargs.pop('populate_tags', ['all'])
         self.interp_scheme = kwargs.pop('interp_scheme', 'linear')
+        
+        # Set up tree nicknames
+        self._nickname_efit_tree(efit_tree_name, attempt_local_efit_env)
         if existing_data is not None and self._times is None:
             # TODO: Use time interval vs max time to determine if timebase is in ms
             try:
@@ -119,8 +125,7 @@ class CModShot(Shot):
                 self.logger.debug(
                     f"[Shot {self._shot_id}]:{traceback.format_exc()}")
                 self.set_timebase(timebase_signal, **kwargs)
-        if self._times is None:
-            self.set_timebase(timebase_signal, **kwargs)
+        self.set_timebase(timebase_signal, **kwargs)
 
         self._init_populate(existing_data, populate_methods, populate_tags)
         self.cleanup()
@@ -136,45 +141,21 @@ class CModShot(Shot):
 
     @property
     def efit_tree(self):
-        found_tree = self._tree_manager.tree_from_nickname("efit_tree")
-        if found_tree is None:
-            found_tree = self._open_efit_tree()
-        return found_tree
-    
+        return self._tree_manager.tree_from_nickname("efit_tree")
+        
     @property
     def efit_tree_name(self):
-        tree_name = self._tree_manager.tree_name_of_nickname("efit_tree")
-        if tree_name is None:
-            self._open_efit_tree()
-            tree_name = self._tree_manager.tree_name_of_nickname("efit_tree")
-        return tree_name
+        return self._tree_manager.tree_name_of_nickname("efit_tree")
     
-    def _open_efit_tree(self):
+    def _nickname_efit_tree(self, requested_efit_tree_name, attempt_local_efit_env):
         efit_names_to_test = without_duplicates([
-            self._requested_efit_tree_name,
+            requested_efit_tree_name,
             "analysis",
             *[f"efit0{i}" for i in range(1, 10)],
             *[f"efit{i}" for i in range(10, 19)],
         ])
 
-        if self.attempt_local_efit_env is not None:
-            with temporary_env_var(self.attempt_local_efit_env[0], self.attempt_local_efit_env[1]):
-                for efit_tree_name in efit_names_to_test:
-                    try:
-                        return self._tree_manager.try_open_and_nickname(tree_name=efit_tree_name, nickname="efit_tree")
-                    except Exception as e:
-                        self.logger.warning(
-                            f"[Shot {self._shot_id}]:Failed to open efit tree locally {efit_tree_name}, with error {e}")
-
-        for efit_tree_name in efit_names_to_test:
-            try:
-                return self._tree_manager.try_open_and_nickname(tree_name=efit_tree_name, nickname="efit_tree")
-            except Exception as e:
-                self.logger.warning(
-                    f"[Shot {self._shot_id}]:Failed to open efit tree {efit_tree_name}, with error {e}")
-        
-        # TODO(lajz): better error handling
-        raise Exception("failed to find a valid efit tree")
+        self._tree_manager.nickname('efit', efit_names_to_test, attempt_local_efit_env)
 
     # TODO: Reinterpolate data if timebase is changed
     def set_timebase(self, timebase_signal, **kwargs):
@@ -192,24 +173,9 @@ class CModShot(Shot):
                 "Non-default timebases are not currently supported")
 
     def set_default_timebase(self):
-        if self.timebase_request is not None:
-            if self.timebase_request == "mag004":
-                try:
-                    magnetics_tree = self._tree_manager.open_tree(tree_name='magnetics')
-                    magnetic_times = magnetics_tree.getNode('\ip').dim_of().data().astype('float64', copy=False)
-                    # # interpolate self._times to be every .004 seconds
-                    self._times = np.arange(magnetic_times[0], magnetic_times[-1], .004).astype('float64', copy=False)
-                    return 
-                except:
-                    self.logger.info("Failed to set up magnetic timebase")
-        
-        if self.efit_tree_name == 'analysis':
-            try:
-                self._times = self.efit_tree.getNode(r"\analysis::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
-            except Exception as e:
-                self._times = self.efit_tree.getNode(r"\analysis::efit:results:a_eqdsk:time").getData().data().astype('float64', copy=False)
-        else:
-            self._times = self.efit_tree.getNode(fr"\{self.efit_tree_name}::efit.results.a_eqdsk:time").getData().data().astype('float64', copy=False)
+        request_params = SetTimesRequestParams(tree_manager=self._tree_manager, tokemak=Tokemak.CMOD, logger=self.logger)
+        self._times = timebase_request_runner(self.timebase_request, request_params)
+    
         if len(self._times) == 0:
             self.logger.error(f"Timebase for {self.efit_tree_name} is empty.")
 
