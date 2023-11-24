@@ -6,7 +6,6 @@ from collections import OrderedDict
 from disruption_py.shots.shot import Shot
 from disruption_py.utils.method_caching import parameter_cached_method, cached_method
 from disruption_py.utils.mappings.tokemak import Tokemak
-from disruption_py.handlers.requests.timebase_requests.times_requests import timebase_request_runner, SetTimesRequestParams, EFITRequest
 try:
     import importlib.resources as importlib_resources
 except ImportError:
@@ -87,45 +86,23 @@ class CModShot(Shot):
         shot_id,
         efit_tree_name='analysis', 
         existing_data=None, 
-        times=None, # deprecated
         disruption_time=None, 
-        override_cols=True,
-        timebase_request=None, # temporary
+        timebase_request=None,
         attempt_local_efit_env=None, # temporary pass iterable of (env variable, value)
         **kwargs
     ):
-        super().__init__(shot_id, existing_data, **kwargs)
-        # self._times = times
+        super().__init__(shot_id, Tokemak.CMOD, existing_data, **kwargs)
         self.disruption_time = disruption_time
         self.disrupted = self.disruption_time is not None
-        self.override_cols = override_cols
         
-        self.timebase_request = timebase_request
-        if self.timebase_request is None:
-            self.timebase_request = EFITRequest()
-        
-        self.attempt_local_efit_env = attempt_local_efit_env
-        timebase_signal = kwargs.pop('timebase_signal', None)
         populate_methods = kwargs.pop('populate_methods', None)
         populate_tags = kwargs.pop('populate_tags', ['all'])
-        self.interp_scheme = kwargs.pop('interp_scheme', 'linear')
         
         # Set up tree nicknames
-        self._nickname_efit_tree(efit_tree_name, attempt_local_efit_env)
-        if existing_data is not None and self._times is None:
-            # TODO: Use time interval vs max time to determine if timebase is in ms
-            try:
-                self._times = self.data['time'].to_numpy()
-                # Check if the timebase is in ms instead of s
-                if self._times[-1] > MAX_SHOT_TIME:
-                    self._times /= 1000  # [ms] -> [s]
-            except KeyError as e:
-                self.logger.warning(
-                    f"[Shot {self._shot_id}]: Shot constructor was passed data but no timebase.")
-                self.logger.debug(
-                    f"[Shot {self._shot_id}]:{traceback.format_exc()}")
-                self.set_timebase(timebase_signal, **kwargs)
-        self.set_timebase(timebase_signal, **kwargs)
+        self.setup_nicknames(efit_tree_name, attempt_local_efit_env)
+
+        # must call this method after nicknamed trees setup
+        self._init_timebase(timebase_request, existing_data)
 
         self._init_populate(existing_data, populate_methods, populate_tags)
         self.cleanup()
@@ -139,15 +116,8 @@ class CModShot(Shot):
         if hasattr(self, '_cached_result'):
             self._cached_result.clear()
 
-    @property
-    def efit_tree(self):
-        return self._tree_manager.tree_from_nickname("efit_tree")
-        
-    @property
-    def efit_tree_name(self):
-        return self._tree_manager.tree_name_of_nickname("efit_tree")
-    
-    def _nickname_efit_tree(self, requested_efit_tree_name, attempt_local_efit_env):
+    def setup_nicknames(self, requested_efit_tree_name, attempt_local_efit_env):
+        # nickname efit tree
         efit_names_to_test = without_duplicates([
             requested_efit_tree_name,
             "analysis",
@@ -155,32 +125,17 @@ class CModShot(Shot):
             *[f"efit{i}" for i in range(10, 19)],
         ])
 
-        self._tree_manager.nickname('efit', efit_names_to_test, attempt_local_efit_env)
-
-    # TODO: Reinterpolate data if timebase is changed
-    def set_timebase(self, timebase_signal, **kwargs):
-        if timebase_signal == None:
-            self.set_default_timebase()
-        # Check if timebase_signal is array-like. If so, use it as the timebase
-        elif isinstance(timebase_signal, (list, np.ndarray, pd.Series)):
-            self._times = timebase_signal
-        elif timebase_signal == 'flattop':
-            self.set_flattop_timebase()
-        elif timebase_signal == 'rampup_and_flattop':
-            self.set_rampup_and_flattop_timebase()
-        else:
-            raise NotImplementedError(
-                "Non-default timebases are not currently supported")
-
-    def set_default_timebase(self):
-        request_params = SetTimesRequestParams(tree_manager=self._tree_manager, tokemak=Tokemak.CMOD, logger=self.logger)
-        self._times = timebase_request_runner(self.timebase_request, request_params)
+        self._tree_manager.nickname('efit_tree', efit_names_to_test, attempt_local_efit_env)
     
-        if len(self._times) == 0:
-            self.logger.error(f"Timebase for {self.efit_tree_name} is empty.")
-
+    @property
+    def efit_tree(self):
+        return self._tree_manager.tree_from_nickname("efit_tree")
+        
+    @property
+    def efit_tree_name(self):
+        return self._tree_manager.tree_name_of_nickname("efit_tree")
+            
     def set_flattop_timebase(self):
-        self.set_default_timebase()
         ip_parameters = self._get_ip_parameters()
         ipprog, dipprog_dt = ip_parameters['ip_prog'], ip_parameters['dipprog_dt']
         indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 1e3)[0]
@@ -193,7 +148,6 @@ class CModShot(Shot):
         self._times = self._times[indices_flattop]
 
     def set_rampup_and_flattop_timebase(self):
-        self.set_default_timebase()
         ip_parameters = self._get_ip_parameters()
         ipprog, dipprog_dt = ip_parameters['ip_prog'], ip_parameters['dipprog_dt']
         indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 6e4)[0]

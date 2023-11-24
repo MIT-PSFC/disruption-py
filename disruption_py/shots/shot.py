@@ -1,5 +1,7 @@
+from abc import ABC, abstractmethod
 from disruption_py.utils.math_utils import interp1
-from typing import Set
+from disruption_py.utils.mappings.tokemak import Tokemak
+from typing import Set, Callable
 import subprocess
 import os
 import time
@@ -12,17 +14,19 @@ from MDSplus import *
 
 from disruption_py.mdsplus_integration.tree_manager import TreeManager
 from disruption_py.utils.method_caching import MethodOptimizer, CachedMethod
+from disruption_py.requests.timebase_requests import set_times_subrequest_runner, TimebaseRequest, InterpolationMethod, SignalDomain, SetTimesSubrequestParams, SetTimesSubrequest
 
 import pandas as pd
 import numpy as np
 import logging
 
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
+MAX_SHOT_TIME = 7.0  # [s]
 
 
-class Shot:
+class Shot(ABC):
     """
-    Class for a single shot.
+    Abstract class for a single shot.
 
     Parameters
     ----------
@@ -49,18 +53,33 @@ class Shot:
     # TODO: Add [Shot {self._shot_id}]: to logger format by default
     logger = logging.getLogger('disruption_py')
 
-    def __init__(self, shot_id, existing_data=None, **kwargs):
+    def __init__(
+        self, 
+        shot_id, 
+        tokemak: Tokemak, 
+        existing_data=None, 
+        multithreading=False, 
+        timebase_request: TimebaseRequest=None, 
+        **kwargs
+    ):
         self._shot_id = int(shot_id)
-        self._tree_manager = TreeManager(shot_id)
-        self.multithreading = kwargs.get('multithreading', False)
+        self.tokemak = tokemak
+        self.multithreading = multithreading
+        self._tree_manager = TreeManager(shot_id)        
+        
+        # logger
         if self.logger.level == logging.NOTSET:
             self.logger.setLevel(logging.INFO)
         assert self.logger.level != logging.NOTSET, "Logger level is NOTSET"
         if not self.logger.hasHandlers():
             print("Added stream handler")
             self.logger.addHandler(logging.StreamHandler())
+            
+            
         if self.multithreading:
             self.logger.info("Multithreading enabled")
+        
+        # setup commit hash
         try:
             commit_hash = subprocess.check_output(
                 ["git", "describe", "--always"],
@@ -83,6 +102,47 @@ class Shot:
         self.data = existing_data
         if existing_data is None:
             self.data = pd.DataFrame()
+
+    @abstractmethod
+    def setup_nicknames(self):
+        pass
+    
+    def _init_timebase(self, timebase_request: TimebaseRequest, existing_data):
+        """
+        Initialize the timebase of the shot.
+        """
+        if timebase_request is None:
+            timebase_request = TimebaseRequest()
+        
+        if existing_data is not None and timebase_request.override_exising_data is False:
+            # set timebase to be the timebase of existing data
+            try:
+                self._times = self.data['time'].to_numpy()
+                # Check if the timebase is in ms instead of s
+                if self._times[-1] > MAX_SHOT_TIME:
+                    self._times /= 1000  # [ms] -> [s]
+            except KeyError as e:
+                self.logger.warning(
+                    f"[Shot {self._shot_id}]: Shot constructor was passed data but no timebase.")
+                self.logger.debug(
+                    f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+        else:
+            request_params = SetTimesSubrequestParams(tree_manager=self._tree_manager, tokemak=self.tokemak, logger=self.logger)
+            self._times = set_times_subrequest_runner(timebase_request, request_params)
+        self.interpolation_method : InterpolationMethod  = timebase_request.interpolation_method
+        
+        if timebase_request.signal_domain is SignalDomain.FLATTOP:
+            self.set_flattop_timebase()
+        elif timebase_request.signal_domain is SignalDomain.RAMP_UP_AND_FLATTOP:
+            self.set_rampup_and_flattop_timebase()
+
+    @abstractmethod
+    def set_flattop_timebase(self):
+        pass
+    
+    @abstractmethod
+    def set_rampup_and_flattop_timebase(self):
+        pass
 
     @staticmethod
     def get_signal(signal, conn, interpolate=True, interpolation_timebase=None):

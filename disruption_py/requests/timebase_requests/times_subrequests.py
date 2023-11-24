@@ -11,7 +11,6 @@ class SetTimesSubrequestParams:
     tree_manager : TreeManager
     tokemak : Tokemak
     logger : Logger
-    kwargs : dict
 
 class SetTimesSubrequest(ABC):
             
