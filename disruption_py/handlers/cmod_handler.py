@@ -1,7 +1,9 @@
 
-from typing import List, Callable
+from typing import List, Dict, Callable, Union
 from disruption_py.handlers.multiprocessing_helper import MultiprocessingShotRetriever
-from disruption_py.handlers.requests.output_requests import HDF5OutputProcessor, OutputProcessor, ListOuptutProcessor
+from disruption_py.requests.shot_number_requests import ShotNumberRequest, shot_numbers_request_runner, ShotNumberRequestParams
+from disruption_py.requests.output_requests import OutputProcessor, ListOuptutProcessor
+from disruption_py.utils.mappings.tokemak import Tokemak
 from disruption_py.databases import CModDatabase
 from disruption_py.shots import CModShot
 import pandas as pd
@@ -37,7 +39,7 @@ class CModHandler:
 
     def get_shots_data(
         self, 
-        shot_ids, 
+        shot_number_request : Union[ShotNumberRequest, int, str, List, Dict], 
         shot_args={}, 
         num_processes=1, 
         use_sql_table=True, 
@@ -46,6 +48,10 @@ class CModHandler:
         """
         Get shot data from CMOD.
         """
+        database = self.database_initializer()
+        shot_number_request_params = ShotNumberRequestParams(database, Tokemak.CMOD, self.logger)
+        shot_id_list = shot_numbers_request_runner(shot_number_request, shot_number_request_params)
+        
         if num_processes > 1:
             shot_retriever = MultiprocessingShotRetriever(
                 num_processes = num_processes, 
@@ -54,14 +60,13 @@ class CModHandler:
             )
             results = shot_retriever.run(
                 shot_creator_f=CModHandler.get_shot_data, 
-                shot_id_list=shot_ids,
+                shot_id_list=shot_id_list,
                 shot_args_dict={**shot_args, "use_sql_table": use_sql_table}, 
                 should_finish=True
             )
         else:
             output_processor = output_processor if output_processor is not None else ListOuptutProcessor()
-            for shot_num in shot_ids:
-                database = self.database_initializer()
+            for shot_num in shot_id_list:
                 shot_data = self.get_shot_data(shot_num, sql_database=database, use_sql_table=use_sql_table, **shot_args)
                 output_processor.ouput_shot(shot_data)
             results = output_processor.get_results()
