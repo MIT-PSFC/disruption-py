@@ -1,5 +1,5 @@
 from typing import List, Dict
-from disruption_py.handlers.requests.output_requests import OutputProcessor, ListOuptutProcessor
+from disruption_py.requests.output_requests import OutputProcessor, ListOuptutProcessor
 import multiprocessing
 import threading
 

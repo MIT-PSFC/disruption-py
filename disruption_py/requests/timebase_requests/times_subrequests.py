@@ -73,8 +73,8 @@ class MagneticsSetTimesSubrequest(SetTimesSubrequest):
 
 _set_times_subrequest_mappings: Dict[str, SetTimesSubrequest] = {
     # do not include times list as requires an argument
-    "efit" : EfitSetTimesSubrequest,
-    "magnetics" : MagneticsSetTimesSubrequest
+    "efit" : EfitSetTimesSubrequest(),
+    "magnetics" : MagneticsSetTimesSubrequest(),
 }
 
 def set_times_subrequest_runner(set_times_subrequest, params : SetTimesSubrequestParams):

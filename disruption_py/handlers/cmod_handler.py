@@ -68,7 +68,7 @@ class CModHandler:
             output_processor = output_processor if output_processor is not None else ListOuptutProcessor()
             for shot_num in shot_id_list:
                 shot_data = self.get_shot_data(shot_num, sql_database=database, use_sql_table=use_sql_table, **shot_args)
-                output_processor.ouput_shot(shot_data)
+                output_processor.output_shot(shot_data)
             results = output_processor.get_results()
         return results
      
