@@ -1,5 +1,6 @@
 from typing import List, Dict
-from disruption_py.requests.output_requests import OutputProcessor, ListOuptutProcessor
+from disruption_py.requests.output_requests import OutputTypeRequestParams, output_type_request_runner
+from disruption_py.utils.mappings.tokemak import Tokemak
 import multiprocessing
 import threading
 
@@ -57,12 +58,14 @@ class MultiprocessingShotRetriever:
     A class to run shot retrievals in parallel.
     '''
     
-    def __init__(self, num_processes=8, output_processor:OutputProcessor = None, database_initializer_f = None):
+    def __init__(self, output_type_request, tokemak, logger, num_processes=8, database_initializer_f = None):
         
         self.task_queue = multiprocessing.JoinableQueue()
         self.result_queue = multiprocessing.Queue()
 
-        self.output_processor = output_processor if output_processor is not None else ListOuptutProcessor()
+        self.output_type_request = output_type_request
+        self.tokemak = tokemak
+        self.logger = logger
         self.result_thread = threading.Thread(target=self._result_processor)
 
         self.consumers = [
@@ -75,7 +78,7 @@ class MultiprocessingShotRetriever:
             result = self.result_queue.get()
             if result is None:
                 break
-            self.output_processor.ouput_shot(result)
+            output_type_request_runner(self.output_type_request, OutputTypeRequestParams(result, self.tokemak, self.logger))
 
     def run(self, shot_creator_f, shot_id_list, shot_args_dict, should_finish=True):
         
@@ -105,5 +108,5 @@ class MultiprocessingShotRetriever:
         self.result_queue.put(None)
         self.result_thread.join()
 
-        self.output_processor.stream_output_cleanup()
-        return self.output_processor.get_results()
+        self.output_type_request.stream_output_cleanup()
+        return self.output_type_request.get_results()

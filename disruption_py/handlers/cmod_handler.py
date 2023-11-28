@@ -2,7 +2,7 @@
 from typing import List, Dict, Callable, Union
 from disruption_py.handlers.multiprocessing_helper import MultiprocessingShotRetriever
 from disruption_py.requests.shot_number_requests import ShotNumberRequest, shot_numbers_request_runner, ShotNumberRequestParams
-from disruption_py.requests.output_requests import OutputProcessor, ListOuptutProcessor
+from disruption_py.requests.output_requests import OutputTypeRequest, OutputTypeRequestParams, ListOutputRequest, output_type_request_runner
 from disruption_py.utils.mappings.tokemak import Tokemak
 from disruption_py.databases import CModDatabase
 from disruption_py.shots import CModShot
@@ -43,7 +43,7 @@ class CModHandler:
         shot_args={}, 
         num_processes=1, 
         use_sql_table=True, 
-        output_processor:OutputProcessor = None
+        output_type_request:OutputTypeRequest = None
     ) -> List[pd.DataFrame]:
         """
         Get shot data from CMOD.
@@ -52,11 +52,15 @@ class CModHandler:
         shot_number_request_params = ShotNumberRequestParams(database, Tokemak.CMOD, self.logger)
         shot_id_list = shot_numbers_request_runner(shot_number_request, shot_number_request_params)
         
+        output_type_request = output_type_request if output_type_request is not None else ListOutputRequest()
+        
         if num_processes > 1:
             shot_retriever = MultiprocessingShotRetriever(
                 num_processes = num_processes, 
                 database_initializer_f=self.database_initializer,
-                output_processor=output_processor
+                output_type_request=output_type_request,
+                tokemak = Tokemak.CMOD,
+                logger = self.logger,
             )
             results = shot_retriever.run(
                 shot_creator_f=CModHandler.get_shot_data, 
@@ -65,10 +69,9 @@ class CModHandler:
                 should_finish=True
             )
         else:
-            output_processor = output_processor if output_processor is not None else ListOuptutProcessor()
             for shot_num in shot_id_list:
-                shot_data = self.get_shot_data(shot_num, sql_database=database, use_sql_table=use_sql_table, **shot_args)
-                output_processor.output_shot(shot_data)
-            results = output_processor.get_results()
+                shot_data = CModHandler.get_shot_data(shot_id=shot_num, sql_database=database, use_sql_table=use_sql_table, **shot_args)
+                output_type_request_runner(output_type_request, OutputTypeRequestParams(shot_data, Tokemak.CMOD, self.logger))
+            results = output_type_request.get_results()
         return results
      

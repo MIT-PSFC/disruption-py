@@ -11,6 +11,7 @@ class SetTimesSubrequestParams:
     tree_manager : TreeManager
     tokemak : Tokemak
     logger : Logger
+    disruption_time : float = None
 
 class SetTimesSubrequest(ABC):
             

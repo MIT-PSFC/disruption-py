@@ -1,5 +1,5 @@
 from enum import Enum
-from disruption_py.utils.mappings.tokemak import get_shot_class_for_shot_id, get_database_for_shot_id
+from disruption_py.utils.mappings.tokemak_helpers import get_shot_class_for_shot_id, get_database_for_shot_id
 
 class Handler:
 	

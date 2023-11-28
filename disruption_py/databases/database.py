@@ -10,10 +10,9 @@ import threading
 TIME_CONST = 1e-6
 
 class ShotDatabaseTemplate:
-    def __init__(self, driver, driver_file, host, db_name, user, passwd, protected_columns=[], **kwargs):
+    def __init__(self, driver, host, db_name, user, passwd, protected_columns=[], **kwargs):
         self.database_args = {
             driver: driver, 
-            driver_file:driver_file, 
             host:host, 
             db_name:db_name, 
             user:user, 
@@ -27,11 +26,10 @@ class ShotDatabase:
     """
     logger = logging.getLogger('disruption_py')        
         
-    def __init__(self, driver, driver_file, host, db_name, user, passwd, protected_columns=[], **kwargs):
+    def __init__(self, driver, host, db_name, user, passwd, protected_columns=[], **kwargs):
         self.user = user
         self.passwd = passwd
         self.driver = driver
-        self.driver_file = driver_file
         self.host = host
         self.db_name = db_name
         self.protected_columns = protected_columns

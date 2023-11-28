@@ -65,7 +65,7 @@ def shot_numbers_request_runner(shot_number_request, params : ShotNumberRequestP
     if isinstance(shot_number_request, ShotNumberRequest):
         return shot_number_request.get_shot_numbers(params)
     
-    if isinstance(shot_number_request, int):
+    if isinstance(shot_number_request, int) or (isinstance(shot_number_request, str) and shot_number_request.isdigit()):
         return [shot_number_request]
     
     if isinstance(shot_number_request, str):

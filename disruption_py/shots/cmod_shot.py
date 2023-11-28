@@ -92,8 +92,6 @@ class CModShot(Shot):
         **kwargs
     ):
         super().__init__(shot_id, Tokemak.CMOD, existing_data, **kwargs)
-        self.disruption_time = disruption_time
-        self.disrupted = self.disruption_time is not None
         
         populate_methods = kwargs.pop('populate_methods', None)
         populate_tags = kwargs.pop('populate_tags', ['all'])

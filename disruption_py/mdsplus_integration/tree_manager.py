@@ -105,7 +105,7 @@ class TreeManager:
             if result is None:
                 raise Exception(f"Failed to find a valid tree name for nickname {nickname}")
 
-        self._create_lazy_nickname(self, nickname=nickname, nickname_func=lazy_nickname_func)
+        self._create_lazy_nickname(nickname=nickname, nickname_func=lazy_nickname_func)
         
     def _try_until_success_open_and_nickname(self, tree_names: List[str], nickname: str):
         for tree_name in tree_names:

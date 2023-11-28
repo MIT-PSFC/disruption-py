@@ -2,26 +2,26 @@ import pandas as pd
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import os
-from typing import Dict
+from typing import Dict, Type
 from logging import Logger
 from disruption_py.utils.mappings.tokemak import Tokemak
 
 @dataclass
-class OutputProcessorParams:
+class OutputTypeRequestParams:
     result : pd.DataFrame
     tokemak : Tokemak
     logger : Logger
     
-class OutputProcessor(ABC):
+class OutputTypeRequest(ABC):
     
-    def output_shot(self, params : OutputProcessorParams):
+    def output_shot(self, params : OutputTypeRequestParams):
         if hasattr(self, 'tokemak_overrides'):
             if params.tokemak in self.tokemak_overrides:
                 return self.tokemak_overrides[params.tokemak](params)
-        return self._get_shot_numbers(params)
+        return self._output_shot(params)
     
     @abstractmethod
-    def _output_shot(self, params : OutputProcessorParams):
+    def _output_shot(self, params : OutputTypeRequestParams):
         pass
     
     def stream_output_cleanup(self):
@@ -32,24 +32,24 @@ class OutputProcessor(ABC):
         pass
 
 
-class ListOutputProcessor(OutputProcessor):
+class ListOutputRequest(OutputTypeRequest):
     def __init__(self):
         self.results = []
         
-    def _output_shot(self, params : OutputProcessorParams):
+    def _output_shot(self, params : OutputTypeRequestParams):
         self.results.append(params.result)
     
     def get_results(self):
         return self.results
     
     
-class HDF5OutputProcessor(OutputProcessor):
+class HDF5OutputRequest(OutputTypeRequest):
     def __init__(self, filepath):
         self.filepath = filepath
         self.store = pd.HDFStore(filepath, mode='w')
         self.output_shot_count = 0
 
-    def _output_shot(self, params : OutputProcessorParams):
+    def _output_shot(self, params : OutputTypeRequestParams):
         shot_id = params.result['shot'].iloc[0] if (not params.result.empty and ('shot' in params.result.columns)) else self.output_shot_count
         self.store.append(f'df_{shot_id}', params.result, format='table', data_columns=True)
         self.output_shot_count += 1
@@ -61,13 +61,13 @@ class HDF5OutputProcessor(OutputProcessor):
         return self.output_shot_count
     
     
-class CSVOutputProcessor(OutputProcessor):
+class CSVOutputRequest(OutputTypeRequest):
     def __init__(self, filepath, flexible_columns=False):
         self.filepath = filepath
         self.flexible_columns = flexible_columns
         self.output_shot_count = 0
 
-    def _output_shot(self, params : OutputProcessorParams):
+    def _output_shot(self, params : OutputTypeRequestParams):
         file_exists = os.path.isfile(self.filepath)
         if self.flexible_columns:
             if file_exists:
@@ -84,45 +84,46 @@ class CSVOutputProcessor(OutputProcessor):
     def get_results(self):
         return self.output_shot_count
 
-_output_processor_mappings: Dict[str, OutputProcessor] = {
+_output_type_request_mappings: Dict[str, OutputTypeRequest] = {
     # do not include classes that require initialization arguments
-    "list" : ListOutputProcessor(),
+    "list" : ListOutputRequest(),
 } 
 
-_file_suffix_mappings_to_output_processor = Dict[str, OutputProcessor] = {
-    ".h5" : HDF5OutputProcessor,
-    ".hdf5" : HDF5OutputProcessor,
-    ".csv" : CSVOutputProcessor,
+_file_suffix_to_output_type_request : Dict[str, Type[OutputTypeRequest]] = {
+    ".h5" : HDF5OutputRequest,
+    ".hdf5" : HDF5OutputRequest,
+    ".csv" : CSVOutputRequest,
 } 
 
-def output_processor_runner(output_processor, params : OutputProcessorParams):
-    if isinstance(output_processor, OutputProcessor):
-        return output_processor.output_shot(params)
+def output_type_request_runner(output_type_request, params : OutputTypeRequestParams):
+    if isinstance(output_type_request, OutputTypeRequest):
+        return output_type_request.output_shot(params)
     
-    if isinstance(output_processor, str):
-        output_processor_object = _output_processor_mappings.get(output_processor, None)
-        if output_processor_object is not None:
-            return output_processor_object.output_shot(params)
+    if isinstance(output_type_request, str):
+        output_type_request_object = _output_type_request_mappings.get(output_type_request, None)
+        if output_type_request_object is not None:
+            return output_type_request_object.output_shot(params)
         
-    if isinstance(output_processor, str):
+    if isinstance(output_type_request, str):
         # assume that it is a file path
-       for suffix, output_processor_object in _file_suffix_mappings_to_output_processor.items():
-           if output_processor.endswith(suffix):
-               return _file_suffix_mappings_to_output_processor[output_processor].output_shot(params)       
+       for suffix, output_type_request_type in _file_suffix_to_output_type_request.items():
+           if output_type_request.endswith(suffix):
+               output_type_request_object = output_type_request_type(output_type_request)
+               return output_type_request_type().output_shot(params)       
             
-    if isinstance(output_processor, dict):
-        chosen_request = output_processor.get(params.tokemak, None)
+    if isinstance(output_type_request, dict):
+        chosen_request = output_type_request.get(params.tokemak, None)
         if chosen_request is not None:
-            return output_processor_runner(chosen_request, params)
+            return output_type_request_runner(chosen_request, params)
         
-    if isinstance(output_processor, list):
+    if isinstance(output_type_request, list):
         all_results = []
-        for individual_processor in output_processor:
-            sub_result = output_processor_runner(individual_processor, params)
+        for individual_type_request in output_type_request:
+            sub_result = output_type_request_runner(individual_type_request, params)
             if sub_result is not None:
                 all_results.append(sub_result)
         
         return all_results
     
-    raise ValueError(f"Invalid output processror {output_processor}")
+    raise ValueError(f"Invalid output processror {output_type_request}")
 

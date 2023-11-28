@@ -90,7 +90,7 @@ class DatabaseHandler:
         shot_id = int(shot_id)
         if shot is None:
             #TODO(lajz): replace with proper shot type
-            shot = Shot(shot_id)
+            shot = self.shot_class(shot_id)
         curr_df = pd.read_sql_query(
             f"select * from disruption_warning where shot in {shot_id} order by time", self.conn)
         with self.conn.cursor() as curs:
@@ -157,7 +157,7 @@ class DatabaseHandler:
 
     def get_shots(self, shot_ids=None):
         shot_df = self.get_shot_data(shot_ids)
-        return [Shot('cmod', shot_data['shot'].iloc[0], data=shot_data) for _, shot_data in shot_df.groupby(by=["shot"])]
+        return [Shot('cmod', shot_data['shot'].iloc[0], existing_data=shot_data) for _, shot_data in shot_df.groupby(by=["shot"])]
 
     def add_column(self, col_name, var_type="TEXT", table="disruption_warning"):
         if col_name not in self.data_columns:
@@ -333,7 +333,6 @@ def create_cmod_handler():
         db_driver_path = str(p)  # Absolute path to jar file
     logging.debug(db_driver_path)
     logging.debug(os.getcwd())
-    return CModHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver", db_driver_path, f"jdbc:sqlserver://{db_server}.psfc.mit.edu: 1433", db_username, db_password, shot_class=CModShot)
     return CModHandler("com.microsoft.sqlserver.jdbc.SQLServerDriver", db_driver_path, f"jdbc:sqlserver://{db_server}.psfc.mit.edu: 1433", db_username, db_password, shot_class=CModShot)
 
 
