@@ -1,5 +1,5 @@
 from typing import List, Dict
-from disruption_py.requests.output_requests import OutputTypeRequestParams, output_type_request_runner
+from disruption_py.settings.output_type_requests import OutputTypeRequestParams, output_type_request_runner
 from disruption_py.utils.mappings.tokemak import Tokemak
 import multiprocessing
 import threading

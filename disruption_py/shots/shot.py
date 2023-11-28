@@ -14,7 +14,7 @@ from MDSplus import *
 
 from disruption_py.mdsplus_integration.tree_manager import TreeManager
 from disruption_py.utils.method_caching import MethodOptimizer, CachedMethod
-from disruption_py.requests.timebase_requests import set_times_subrequest_runner, TimebaseRequest, InterpolationMethod, SignalDomain, SetTimesSubrequestParams, SetTimesSubrequest
+from disruption_py.settings.timebase_settings import set_times_request_runner, TimebaseSettings, InterpolationMethod, SignalDomain, SetTimesRequestParams, SetTimesRequest
 
 import pandas as pd
 import numpy as np
@@ -58,13 +58,15 @@ class Shot(ABC):
         shot_id, 
         tokemak: Tokemak, 
         existing_data=None, 
-        multithreading=False, 
-        timebase_request: TimebaseRequest=None, 
+        disruption_time=None,
+        multithreading=False,
         **kwargs
     ):
         self._shot_id = int(shot_id)
         self.tokemak = tokemak
         self.multithreading = multithreading
+        self.disruption_time = disruption_time
+        self.disrupted = self.disruption_time is not None
         self._tree_manager = TreeManager(shot_id)        
         
         # logger
@@ -107,14 +109,14 @@ class Shot(ABC):
     def setup_nicknames(self):
         pass
     
-    def _init_timebase(self, timebase_request: TimebaseRequest, existing_data):
+    def _init_timebase(self, timebase_settings: TimebaseSettings, existing_data):
         """
         Initialize the timebase of the shot.
         """
-        if timebase_request is None:
-            timebase_request = TimebaseRequest()
+        if timebase_settings is None:
+            timebase_settings = TimebaseSettings()
         
-        if existing_data is not None and timebase_request.override_exising_data is False:
+        if existing_data is not None and timebase_settings.override_exising_data is False:
             # set timebase to be the timebase of existing data
             try:
                 self._times = self.data['time'].to_numpy()
@@ -127,13 +129,13 @@ class Shot(ABC):
                 self.logger.debug(
                     f"[Shot {self._shot_id}]:{traceback.format_exc()}")
         else:
-            request_params = SetTimesSubrequestParams(tree_manager=self._tree_manager, tokemak=self.tokemak, logger=self.logger)
-            self._times = set_times_subrequest_runner(timebase_request, request_params)
-        self.interpolation_method : InterpolationMethod  = timebase_request.interpolation_method
+            request_params = SetTimesRequestParams(tree_manager=self._tree_manager, tokemak=self.tokemak, logger=self.logger, disruption_time=self.disruption_time)
+            self._times = set_times_request_runner(timebase_settings.set_times_request, request_params)
+        self.interpolation_method : InterpolationMethod  = timebase_settings.interpolation_method
         
-        if timebase_request.signal_domain is SignalDomain.FLATTOP:
+        if timebase_settings.signal_domain is SignalDomain.FLATTOP:
             self.set_flattop_timebase()
-        elif timebase_request.signal_domain is SignalDomain.RAMP_UP_AND_FLATTOP:
+        elif timebase_settings.signal_domain is SignalDomain.RAMP_UP_AND_FLATTOP:
             self.set_rampup_and_flattop_timebase()
 
     @abstractmethod

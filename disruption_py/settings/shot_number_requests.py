@@ -69,9 +69,9 @@ def shot_numbers_request_runner(shot_number_request, params : ShotNumberRequestP
         return [shot_number_request]
     
     if isinstance(shot_number_request, str):
-        timebase_request_object = _get_shot_numbers_request_mappings.get(shot_number_request, None)
-        if timebase_request_object is not None:
-            return timebase_request_object.get_times(params)
+        shot_number_request_object = _get_shot_numbers_request_mappings.get(shot_number_request, None)
+        if shot_number_request_object is not None:
+            return shot_number_request_object.get_times(params)
         
     if isinstance(shot_number_request, dict):
         chosen_request = shot_number_request.get(params.tokemak, None)

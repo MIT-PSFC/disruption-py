@@ -1,8 +1,8 @@
 
 from typing import List, Dict, Callable, Union
 from disruption_py.handlers.multiprocessing_helper import MultiprocessingShotRetriever
-from disruption_py.requests.shot_number_requests import ShotNumberRequest, shot_numbers_request_runner, ShotNumberRequestParams
-from disruption_py.requests.output_requests import OutputTypeRequest, OutputTypeRequestParams, ListOutputRequest, output_type_request_runner
+from disruption_py.settings.shot_number_requests import ShotNumberRequest, shot_numbers_request_runner, ShotNumberRequestParams
+from disruption_py.settings.output_type_requests import OutputTypeRequest, OutputTypeRequestParams, ListOutputRequest, output_type_request_runner
 from disruption_py.utils.mappings.tokemak import Tokemak
 from disruption_py.databases import CModDatabase
 from disruption_py.shots import CModShot

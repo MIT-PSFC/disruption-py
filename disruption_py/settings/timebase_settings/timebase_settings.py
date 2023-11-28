@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Union, Callable
-from disruption_py.requests.timebase_requests.times_subrequests import SetTimesSubrequest
+from disruption_py.settings.timebase_settings.set_times_requests import SetTimesRequest
 from disruption_py.utils.mappings.mappings_helpers import map_string_attributes_to_enum
 from enum import Enum
 
@@ -20,8 +20,8 @@ class SignalDomain(Enum):
     RAMP_UP_AND_FLATTOP = "rampup_and_flattop"
     
 @dataclass
-class TimebaseRequest:
-    set_times_subrequest : SetTimesSubrequest = "efit"
+class TimebaseSettings:
+    set_times_request : SetTimesRequest = "efit"
     signal_domain : SignalDomain = "full"
     override_exising_data : bool = True
     interpolation_method : Union[str, Callable] = "linear"
