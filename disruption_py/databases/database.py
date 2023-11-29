@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 import pyodbc
 import threading
 
-TIME_CONST = 1e-6
+from disruption_py.utils.constants import TIME_CONST
 
 class ShotDatabaseTemplate:
     def __init__(self, driver, host, db_name, user, passwd, protected_columns=[], **kwargs):

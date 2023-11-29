@@ -1,11 +1,13 @@
 
 from typing import List, Dict, Callable, Union
 from disruption_py.handlers.multiprocessing_helper import MultiprocessingShotRetriever
-from disruption_py.settings.shot_number_requests import ShotNumberRequest, shot_numbers_request_runner, ShotNumberRequestParams
+from disruption_py.settings.shot_number_requests import ShotNumberRequest, ShotNumberRequestParams, shot_numbers_request_runner
 from disruption_py.settings.output_type_requests import OutputTypeRequest, OutputTypeRequestParams, ListOutputRequest, output_type_request_runner
+from disruption_py.settings.shot_run_settings import ShotDataRequest, ShotDataRequestParams, ShotRunSettings
 from disruption_py.utils.mappings.tokemak import Tokemak
 from disruption_py.databases import CModDatabase
 from disruption_py.shots import CModShot
+from disruption_py.shots.populate_shot import populate_shot
 import pandas as pd
 import logging
 
@@ -17,7 +19,7 @@ class CModHandler:
         if self.database_initializer is None:
             self.database_initializer = CModDatabase.default
 
-    def get_shot_data(shot_id, sql_database=None, use_sql_table=True, **shot_args) -> pd.DataFrame:
+    def get_shot_data(shot_id, sql_database=None, use_sql_table=True, shot_run_settings=None, **shot_args) -> pd.DataFrame:
         """
         Get shot data from CMOD.
         """
@@ -31,15 +33,18 @@ class CModHandler:
         disruption_time=sql_database.get_disruption_time(shot_id)
         try:
             shot = CModShot(shot_id=shot_id, existing_data=sql_shot_data, disruption_time=disruption_time, **shot_args)
+            retrieved_data = populate_shot(shot_run_settings=shot_run_settings, params=ShotDataRequestParams(shot, sql_shot_data, Tokemak.CMOD, class_logger))
+            shot.cleanup()
             class_logger.info(f"completed {shot_id}")
-            return shot.data
+            return retrieved_data
         except Exception as e:
             class_logger.error(f"failed {shot_id} with error {e}")
         return None
 
     def get_shots_data(
         self, 
-        shot_number_request : Union[ShotNumberRequest, int, str, List, Dict], 
+        shot_number_request : Union[ShotNumberRequest, int, str, List, Dict],
+        shot_run_settings : ShotRunSettings = None,
         shot_args={}, 
         num_processes=1, 
         use_sql_table=True, 
@@ -52,6 +57,7 @@ class CModHandler:
         shot_number_request_params = ShotNumberRequestParams(database, Tokemak.CMOD, self.logger)
         shot_id_list = shot_numbers_request_runner(shot_number_request, shot_number_request_params)
         
+        shot_run_settings = shot_run_settings if shot_run_settings is not None else ShotRunSettings()
         output_type_request = output_type_request if output_type_request is not None else ListOutputRequest()
         
         if num_processes > 1:
@@ -65,12 +71,12 @@ class CModHandler:
             results = shot_retriever.run(
                 shot_creator_f=CModHandler.get_shot_data, 
                 shot_id_list=shot_id_list,
-                shot_args_dict={**shot_args, "use_sql_table": use_sql_table}, 
+                shot_args_dict={**shot_args, "use_sql_table": use_sql_table, "shot_run_settings": shot_run_settings}, 
                 should_finish=True
             )
         else:
             for shot_num in shot_id_list:
-                shot_data = CModHandler.get_shot_data(shot_id=shot_num, sql_database=database, use_sql_table=use_sql_table, **shot_args)
+                shot_data = CModHandler.get_shot_data(shot_id=shot_num, sql_database=database, use_sql_table=use_sql_table, shot_run_settings=shot_run_settings, **shot_args)
                 output_type_request_runner(output_type_request, OutputTypeRequestParams(shot_data, Tokemak.CMOD, self.logger))
             results = output_type_request.get_results()
         return results

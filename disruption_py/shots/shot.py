@@ -3,18 +3,15 @@ from disruption_py.utils.math_utils import interp1
 from disruption_py.utils.mappings.tokemak import Tokemak
 from typing import Set, Callable
 import subprocess
-import os
-import time
 import traceback
-import concurrent 
-from concurrent.futures import ThreadPoolExecutor
+
 
 import MDSplus
 from MDSplus import *
 
 from disruption_py.mdsplus_integration.tree_manager import TreeManager
-from disruption_py.utils.method_caching import MethodOptimizer, CachedMethod
 from disruption_py.settings.timebase_settings import set_times_request_runner, TimebaseSettings, InterpolationMethod, SignalDomain, SetTimesRequestParams, SetTimesRequest
+from disruption_py.utils.constants import TIME_CONST
 
 import pandas as pd
 import numpy as np
@@ -57,7 +54,6 @@ class Shot(ABC):
         self, 
         shot_id, 
         tokemak: Tokemak, 
-        existing_data=None, 
         disruption_time=None,
         multithreading=False,
         **kwargs
@@ -100,14 +96,31 @@ class Shot(ABC):
             'description': "",
             'disrupted': 100  # TODO: Fix
         }
-        self.initialized_with_data = existing_data is not None
-        self.data = existing_data
-        if existing_data is None:
-            self.data = pd.DataFrame()
-
+        
     @abstractmethod
     def setup_nicknames(self):
         pass
+    
+    @abstractmethod
+    def set_flattop_timebase(self):
+        pass
+    
+    @abstractmethod
+    def set_rampup_and_flattop_timebase(self):
+        pass
+    
+    @abstractmethod
+    def cleanup(self):
+        pass
+
+    def get_times(self):
+        return self._times
+    
+    def get_shot_id(self):
+        return self._shot_id
+    
+    def get_tree_manager(self):
+        return self._tree_manager
     
     def _init_timebase(self, timebase_settings: TimebaseSettings, existing_data):
         """
@@ -119,7 +132,7 @@ class Shot(ABC):
         if existing_data is not None and timebase_settings.override_exising_data is False:
             # set timebase to be the timebase of existing data
             try:
-                self._times = self.data['time'].to_numpy()
+                self._times = existing_data['time'].to_numpy()
                 # Check if the timebase is in ms instead of s
                 if self._times[-1] > MAX_SHOT_TIME:
                     self._times /= 1000  # [ms] -> [s]
@@ -137,14 +150,36 @@ class Shot(ABC):
             self.set_flattop_timebase()
         elif timebase_settings.signal_domain is SignalDomain.RAMP_UP_AND_FLATTOP:
             self.set_rampup_and_flattop_timebase()
-
-    @abstractmethod
-    def set_flattop_timebase(self):
-        pass
     
-    @abstractmethod
-    def set_rampup_and_flattop_timebase(self):
-        pass
+    def _init_with_data (self, existing_data):
+        '''
+        Intialize the shot with data, if existing data matches the shot timebase.
+        '''
+        # Force time base of existing data to match
+        if existing_data is not None:
+            new_rows = []
+            match_for_all_rows = True
+            for shot_time in self._times:
+                dist_value = abs(existing_data['time']-shot_time)
+                update_row = existing_data[dist_value < TIME_CONST]
+                if len(update_row) > 1:
+                    min_dist_index = dist_value.loc[update_row.index].idxmin()
+                    update_row = existing_data.loc[min_dist_index]
+                elif len(update_row) == 0:
+                    match_for_all_rows = False
+                    break
+                update_row['time'] = shot_time
+                new_rows.append(update_row)
+            if match_for_all_rows:
+                existing_data = pd.concat(new_rows, ignore_index=True)
+            else:
+                existing_data = None
+        
+        self.initialized_with_data = existing_data is not None
+        if existing_data is not None:
+            self.data = existing_data
+        else:
+            self.data = pd.DataFrame()
 
     @staticmethod
     def get_signal(signal, conn, interpolate=True, interpolation_timebase=None):
@@ -259,147 +294,4 @@ class Shot(ABC):
     def apply_shot_transform(self, shot_transform):
         self.data = self.data.apply(shot_transform)
 
-    def populate_method(self, cached_method : CachedMethod, method_optimizer : MethodOptimizer, start_time):
-        method = getattr(self, cached_method.name)
-        result = None
-        if callable(method) and hasattr(method, 'populate'):
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Populating {cached_method.name}")
-            # self._tree_manager.cleanup_not_needed()
-            try:
-                result = method()
-            except Exception as e:
-                self.logger.warning(
-                    f"[Shot {self._shot_id}]:Failed to populate {cached_method.name} with error {e}")
-                self.logger.debug(f"{traceback.format_exc()}")
-        elif callable(method) and hasattr(method, 'cached'):
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Caching {cached_method.name}")
-            # self._tree_manager.cleanup_not_needed()
-            try:
-                method()
-            except Exception as e:
-                self.logger.warning(
-                    f"[Shot {self._shot_id}]:Failed to cache {cached_method.name} with error {e}")
-                self.logger.debug(f"{traceback.format_exc()}")
-        else:
-            self.logger.warning(
-                f"[Shot {self._shot_id}]:Method {cached_method.name} is not callable or does not have a `populate` attribute set to True")
-            return None
-        
-        self.logger.info(f"[Shot {self._shot_id}]:Completed {cached_method.name}, time_elapsed: {time.time() - start_time}")
-        return result
-    def populate_methods(self, method_names):
-        """Populate the shot object with data from MDSplus.
-
-        Parameters
-        ----------
-        method_names : list of str
-            List of methods to populate. Each method must be a method of the Shot class
-            and must have a `populate` attribute set to True.
-        """
-        local_data = []
-        for method_name in method_names:
-            local_data.append(self.populate_method(method_name))
-        self.data = pd.concat([self.data, *local_data], axis=1)
-
-    def _init_populate(self, existing_data, methods, tags):
-        """
-        Internal method to populate the disruption parameters of a shot object. 
-        This method is called by the constructor and should not be called directly. It loops through all methods of the Shot class and calls the ones that have a `populate` attribute set to True and satisfy the tags and methods arguments.
-        """
-        
-        # If the shot object was already passed data in the constructor, use that data. Otherwise, create an empty dataframe.
-        if self.data is None:
-            self.data = pd.DataFrame() 
-        if 'time' not in self.data:
-            self.data['time'] = self._times
-        if 'shot' not in self.data:
-            self.data['shot'] = self._shot_id
-  
-
-        # If tags or methods are not lists, make them lists.
-        if tags is not None and not isinstance(tags, list):
-            populate_tags = [populate_tags]
-        if methods is not None and not isinstance(methods, list):
-            populate_methods = [populate_methods]
-        parameters = []
-
-        # Loop through each attribute and find methods that should populate the shot object.
-        methods_to_evaluate : list[CachedMethod] = []
-        all_cached_methods : list[CachedMethod] = []
-        for method_name in dir(self):
-            attribute_to_check = getattr(self, method_name)
-            if callable(attribute_to_check) and hasattr(attribute_to_check, 'cached'):
-                cached_method = CachedMethod(name=method_name, method=attribute_to_check)
-                all_cached_methods.append(cached_method)
-            if callable(attribute_to_check) and hasattr(attribute_to_check, 'populate'):
-                param_method = cached_method or CachedMethod(name=method_name, method=attribute_to_check)
-                # If method does not have tag included and name included then skip
-                if tags is not None and bool(set(attribute_to_check.tags).intersection(tags)):
-                    methods_to_evaluate.append(param_method)
-                    continue
-                if methods is not None and method_name in methods:
-                    methods_to_evaluate.append(param_method)
-                    continue
-                self.logger.info(
-                        f"[Shot {self._shot_id}]:Skipping {method_name}")
-                
-        # Check that existing data is on the same timebase as the shot object to ensure data consistency
-        if not np.isclose(self.data['time'], self._times, atol=1e-4).all():
-            self.logger.error(f"[Shot {self._shot_id}]: ERROR Computation on different timebase than used existing data")
-            
-        # Manually cache data that has already been retrieved (likely from sql tables)
-        # Methods added to pre_cached_method_names will be skipped by method optimizer
-        pre_cached_method_names = []
-        if self.initialized_with_data:
-            for cached_method in all_cached_methods:
-                cache_success = cached_method.method.manually_cache(self, self.data)
-                if cache_success:
-                    pre_cached_method_names.append(cached_method.name)
-                    if cached_method in methods_to_evaluate:
-                        self.logger.info(
-                            f"[Shot {self._shot_id}]:Skipping {cached_method.name} already populated")
-
-        method_optimizer : MethodOptimizer = MethodOptimizer(self._tree_manager, methods_to_evaluate, all_cached_methods, pre_cached_method_names)
-        
-        if self.multithreading:
-            futures = set()
-            future_method_names = {}
-            def future_for_next(next_method):
-                new_future = executor.submit(self.populate_method, next_method, method_optimizer, start_time)
-                futures.add(new_future)
-                future_method_names[new_future] = next_method.name
-            
-            start_time = time.time()
-            available_methods_runner = method_optimizer.get_async_available_methods_runner(future_for_next)
-            with ThreadPoolExecutor(max_workers=3) as executor: 
-                available_methods_runner()
-                while futures:
-                    done, futures = concurrent.futures.wait(futures, return_when='FIRST_COMPLETED')
-                    for future in done:
-                        try:
-                            parameter_df = future.result()
-                            parameters.append(parameter_df)
-                            method_optimizer.method_complete(future_method_names[future])
-                            self._tree_manager.cleanup_not_needed(method_optimizer.can_tree_be_closed)
-                        except Exception as e:
-                            self.logger.warning(
-                                f"[Shot {self._shot_id}]:Failed to populate {method_name} with future error {e}")
-                            self.logger.debug(
-                                f"[Shot {self._shot_id}: {traceback.format_exc()}")
-                    available_methods_runner()
-                    
-        else:
-            parameters = []
-            start_time = time.time()
-            method_optimizer.run_methods_sync(
-                lambda next_method: parameters.append(self.populate_method(next_method, method_optimizer, start_time))
-            )
-        parameters = [
-            parameter for parameter in parameters if parameter is not None]
-        # TODO: This is a hack to get around the fact that some methods return
-        #       multiple parameters. This should be fixed in the future.
-        local_data = pd.concat(parameters + [self.data], axis=1)
-        local_data = local_data.loc[:, ~local_data.columns.duplicated()]
-        self.data = local_data
+    

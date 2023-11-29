@@ -87,7 +87,7 @@ _set_times_request_mappings: Dict[str, SetTimesRequest] = {
     "magnetics" : MagneticsSetTimesRequest(),
 }
 
-def set_times_request_runner(set_times_request, params : SetTimesRequestParams):
+def set_times_request_runner(set_times_request, params : SetTimesRequestParams) -> np.ndarray:
     if isinstance(set_times_request, SetTimesRequest):
         return set_times_request.get_times(params)
     

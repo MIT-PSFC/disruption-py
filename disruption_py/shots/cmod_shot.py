@@ -6,6 +6,7 @@ from collections import OrderedDict
 from disruption_py.shots.shot import Shot
 from disruption_py.utils.method_caching import parameter_cached_method, cached_method
 from disruption_py.utils.mappings.tokemak import Tokemak
+
 try:
     import importlib.resources as importlib_resources
 except ImportError:
@@ -86,24 +87,21 @@ class CModShot(Shot):
         shot_id,
         efit_tree_name='analysis', 
         existing_data=None, 
-        disruption_time=None, 
+        disruption_time=None,
         timebase_settings=None,
         attempt_local_efit_env=None, # temporary pass iterable of (env variable, value)
         **kwargs
     ):
-        super().__init__(shot_id, Tokemak.CMOD, existing_data, disruption_time, **kwargs)
-        
-        populate_methods = kwargs.pop('populate_methods', None)
-        populate_tags = kwargs.pop('populate_tags', ['all'])
+        super().__init__(shot_id, Tokemak.CMOD, disruption_time, **kwargs)
         
         # Set up tree nicknames
         self.setup_nicknames(efit_tree_name, attempt_local_efit_env)
 
         # must call this method after nicknamed trees setup
         self._init_timebase(timebase_settings, existing_data)
+        
+        self._init_with_data(existing_data)
 
-        self._init_populate(existing_data, populate_methods, populate_tags)
-        self.cleanup()
 
     def cleanup(self):
         """
