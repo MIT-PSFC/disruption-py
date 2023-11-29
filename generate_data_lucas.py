@@ -113,15 +113,17 @@ if __name__ == "__main__":
     
     # Define your features for each category
     non_efit_derived_features = [
-        "Greenwald_fraction", "ip_error_frac", "n_equal_1_normalized", "v_loop",
+        "Greenwald_fraction", "n_equal_1_normalized", "v_loop",
         "radiated_fraction", "time", "shot", 'p_lh', 'p_icrf',
-        "ip", "ip_error", "ip_prog", "dip_dt", "p_rad", 
+        "ip", "ip_error", "ip_prog", "dip_dt", "p_rad", "time_until_disrupt",
     ]
     efit_derived_features = [
         "beta_p", "kappa", "li", "lower_gap", "q95", "zcur",
         "Te_width", "time", "shot", 'btor', 'beta_N', 'beta_p',
-        'Wmhd', "dli_dt", "dWmhd_dt", "zmag", "qstar",
-    ]
+        'Wmhd',  "zmag", "qstar",
+    ] 
+
+    # "dli_dt", "dWmhd_dt",
 
     if VAR_TYPE == "nefit":
         feature_group = {"features": non_efit_derived_features,
