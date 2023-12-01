@@ -570,10 +570,6 @@ class CModShot(Shot):
         for param in self.efit_derivs:
             efit_data[self.efit_derivs[param]] = np.gradient(
                 efit_data[param], efit_time)
-        if not np.array_equal(self._times, efit_time):
-            for param in efit_data:
-                efit_data[param] = interp1(
-                    efit_time, efit_data[param], self._times)
                 
         #Get data for V_surf := deriv(\ANALYSIS::EFIT_SSIBRY)*2*pi
         try:
@@ -603,6 +599,11 @@ class CModShot(Shot):
             beta_t = self.efit_tree.getNode('\efit_aeqdsk:betat').data().astype('float64', copy=False)
             efit_data['beta_n'] = np.reciprocal( np.reciprocal(beta_t) +  np.reciprocal(efit_data['beta_p']) )
 
+        if not np.array_equal(self._times, efit_time):
+            for param in efit_data:
+                efit_data[param] = interp1(
+                    efit_time, efit_data[param], self._times)
+                
         return pd.DataFrame(efit_data)
 
     @staticmethod

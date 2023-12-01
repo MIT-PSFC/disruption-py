@@ -57,8 +57,10 @@ class CModHandler:
         shot_number_request_params = ShotNumberRequestParams(database, Tokemak.CMOD, self.logger)
         shot_id_list = shot_numbers_request_runner(shot_number_request, shot_number_request_params)
         
-        shot_run_settings = shot_run_settings if shot_run_settings is not None else ShotRunSettings()
-        output_type_request = output_type_request if output_type_request is not None else ListOutputRequest()
+        if shot_run_settings is None:
+            shot_run_settings = ShotRunSettings()
+        if output_type_request is None:
+            output_type_request = ListOutputRequest()
         
         if num_processes > 1:
             shot_retriever = MultiprocessingShotRetriever(

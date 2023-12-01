@@ -155,25 +155,31 @@ class Shot(ABC):
         '''
         Intialize the shot with data, if existing data matches the shot timebase.
         '''
-        # Force time base of existing data to match
         if existing_data is not None:
-            new_rows = []
-            match_for_all_rows = True
-            for shot_time in self._times:
-                dist_value = abs(existing_data['time']-shot_time)
-                update_row = existing_data[dist_value < TIME_CONST]
-                if len(update_row) > 1:
-                    min_dist_index = dist_value.loc[update_row.index].idxmin()
-                    update_row = existing_data.loc[min_dist_index]
-                elif len(update_row) == 0:
-                    match_for_all_rows = False
-                    break
-                update_row['time'] = shot_time
-                new_rows.append(update_row)
-            if match_for_all_rows:
-                existing_data = pd.concat(new_rows, ignore_index=True)
+            if np.allclose(existing_data['time'], self._times, atol=TIME_CONST):
+                existing_data['time'] = self._times
             else:
                 existing_data = None
+            
+        # Force time base of existing data to match
+        # if existing_data is not None:
+        #     new_rows = []
+        #     match_for_all_rows = True
+        #     for shot_time in self._times:
+        #         dist_value = abs(existing_data['time']-shot_time)
+        #         update_row = existing_data[dist_value < TIME_CONST]
+        #         if len(update_row) > 1:
+        #             min_dist_index = dist_value.loc[update_row.index].idxmin()
+        #             update_row = existing_data.loc[min_dist_index]
+        #         elif len(update_row) == 0:
+        #             match_for_all_rows = False
+        #             break
+        #         update_row['time'] = shot_time
+        #         new_rows.append(update_row)
+        #     if match_for_all_rows:
+        #         existing_data = pd.concat(new_rows, ignore_index=True)
+        #     else:
+        #         existing_data = None
         
         self.initialized_with_data = existing_data is not None
         if existing_data is not None:

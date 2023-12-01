@@ -5,3 +5,5 @@ class Tokemak(Enum):
     CMOD = 'cmod'
     EAST = 'east'
     
+    _ALL = '_all'
+    
