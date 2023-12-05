@@ -18,9 +18,9 @@ SetTimesRequestType = Union['SetTimesRequest', str, Dict[Tokemak, 'SetTimesReque
 
 class SetTimesRequest(ABC):
     '''
-    Represents a request for setting the times of a taimebase for a shot
+    Represents a request for setting the times of a timebase for a shot
     
-    Set tokemak_overrides to override the default behavior for a tokemak.
+    Set tokemak_overrides to override the default behaviour for a tokemak.
     Subclasses must implement _get_times for the default case.
 
     note: Object should not be modified after being passed to a handler, 
@@ -93,7 +93,7 @@ class MagneticsSetTimesRequest(SetTimesRequest):
         try:
             magnetics_tree = params.tree_manager.open_tree(tree_name='magnetics')
             magnetic_times = magnetics_tree.getNode('\ip').dim_of().data().astype('float64', copy=False)
-            # # interpolate self._times to be every [timestep] seconds
+            # interpolate self._times to be every [timestep] seconds
             return np.arange(magnetic_times[0], magnetic_times[-1], self.timestep).astype('float64', copy=False)
         except:
             params.logger.info("Failed to set up magnetic timebase")
@@ -103,7 +103,7 @@ class MagneticsSetTimesRequest(SetTimesRequest):
 _set_times_request_mappings: Dict[str, SetTimesRequest] = {
     # do not include times list as requires an argument
     "efit" : EfitSetTimesRequest(),
-    "magnetics" : MagneticsSetTimesRequest(),
+    "magnetics004" : MagneticsSetTimesRequest(timestep = 0.004),
 }
 
 def resolve_set_times_request(set_times_request : SetTimesRequestType) -> SetTimesRequest:

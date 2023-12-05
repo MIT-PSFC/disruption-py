@@ -30,7 +30,7 @@ def get_method_cache_key(method_name, times):
     current_thread_id = threading.get_ident()
     return method_name + str(len(times)) + str(current_thread_id)
 
-def parameter_cached_method(tags=["all"], columns=[], used_trees=None, contained_cached_methods=None, **kwargs):
+def parameter_cached_method(tags=["all"], columns=[], used_trees=None, contained_cached_methods=None, tokemaks=None, **kwargs):
     """
     Decorates a function as a parameter method. Parameter methods are functions that 
     calculate disruption parameters from the data in the shot.  They are called by the Shot object when
@@ -45,7 +45,7 @@ def parameter_cached_method(tags=["all"], columns=[], used_trees=None, contained
     return tag_wrapper
 
 
-def cached_method(used_trees=None, contained_cached_methods=None, cache_between_threads=True, tokemaks=Tokemak._ALL):
+def cached_method(used_trees=None, contained_cached_methods=None, cache_between_threads=True, tokemaks=None):
     """
     Decorates a function as a cached method and instantiates its cache. Cached methods are functions that 
     run expensive operations on data in the shot and may be reused. The cache is used to store the results 

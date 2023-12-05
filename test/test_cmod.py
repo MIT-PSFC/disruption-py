@@ -95,6 +95,10 @@ def test_all_sql_values(shotlists, fail_early):
                 successful_shot_cols.append((shot_id, col, len(anomalies), len(diff), f"{(len(anomalies)/len(diff)*100):.2f}%"))
                     
     if len(failed_shot_cols) > 0:
+        success_cols = {successful_shot_col[1] for successful_shot_col in successful_shot_cols}
+        failure_cols = {failed_shot_col[1] for failed_shot_col in failed_shot_cols}
+        print(f"Succeeded on columns: {success_cols - failure_cols}")
+
         col_success_percent = len(successful_shot_cols) / (len(successful_shot_cols) + len(failed_shot_cols)) * 100
         col_success_string = f"Succeeded on {col_success_percent:.2f}% of columns\n"
         
@@ -105,7 +109,7 @@ def test_all_sql_values(shotlists, fail_early):
         
         sorted_failed_with_shot_cols = sorted(failed_shot_cols, key=lambda x: (x[2] / x[3]), reverse=True)
         list_of_anomalies_string = f"Failed with anomalies (shot_id, col, num_anomalies, num_differences):\n{sorted_failed_with_shot_cols}"
-        raise AssertionError(col_success_string + entry_success_string + list_of_anomalies_string)
+        raise AssertionError("\n" + col_success_string + entry_success_string + list_of_anomalies_string)
         
 # Other tests for MDSplus
 # TODO: Refactor these tests

@@ -127,10 +127,12 @@ class HDF5OutputRequest(OutputTypeRequest):
     
     
 class CSVOutputRequest(OutputTypeRequest):
-    def __init__(self, filepath, flexible_columns=False):
+    def __init__(self, filepath, flexible_columns=False, clear_file=True):
         self.filepath = filepath
         self.flexible_columns = flexible_columns
         self.output_shot_count = 0
+        if clear_file is True and os.path.exists(filepath):
+            os.remove(filepath)
 
     def _output_shot(self, params : ResultOutputTypeRequestParams):
         file_exists = os.path.isfile(self.filepath)

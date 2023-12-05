@@ -113,7 +113,7 @@ def populate_shot(shot_run_settings: ShotSettings, params: ShotDataRequestParams
     """
 
     shot : Shot = params.shot
-    populated_data = params.existing_data
+    populated_data = shot.data
     
     # If the shot object was already passed data in the constructor, use that data. Otherwise, create an empty dataframe.
     if populated_data is None:
@@ -122,6 +122,7 @@ def populate_shot(shot_run_settings: ShotSettings, params: ShotDataRequestParams
         populated_data['time'] = shot.get_times()
     if 'shot' not in populated_data:
         populated_data['shot'] = shot.get_shot_id()
+    populated_data['commit_hash'] = shot.get_commit_hash()
 
     # Loop through each attribute and find methods that should populate the shot object.
     methods_to_evaluate : list[CachedMethod] = []
@@ -136,7 +137,7 @@ def populate_shot(shot_run_settings: ShotSettings, params: ShotDataRequestParams
         all_cached_methods.extend(req_all_cached_methods)
         
     # Check that existing data is on the same timebase as the shot object to ensure data consistency
-    if not np.isclose(populated_data['time'], shot.get_times(), atol=TIME_CONST).all():
+    if len(populated_data['time']) != len(shot.get_times()) or not np.isclose(populated_data['time'], shot.get_times(), atol=TIME_CONST).all():
         params.logger.error(f"[Shot {shot.get_shot_id()}]: ERROR Computation on different timebase than used existing data")
         
     # Manually cache data that has already been retrieved (likely from sql tables)
@@ -180,7 +181,7 @@ def populate_shot(shot_run_settings: ShotSettings, params: ShotDataRequestParams
                         shot.get_tree_manager().cleanup_not_needed(method_optimizer.can_tree_be_closed)
                     except Exception as e:
                         params.logger.warning(
-                            f"[Shot {shot.get_shot_id()}]:Failed to populate {method_name} with future error {e}")
+                            f"[Shot {shot.get_shot_id()}]:Failed to populate {future_method_names[future]} with future error {e}")
                         params.logger.debug(
                             f"[Shot {shot.get_shot_id()}: {traceback.format_exc()}")
                 available_methods_runner()
@@ -191,6 +192,7 @@ def populate_shot(shot_run_settings: ShotSettings, params: ShotDataRequestParams
         method_optimizer.run_methods_sync(
             lambda next_method: parameters.append(populate_method(params, next_method, method_optimizer, start_time))
         )
+                
     parameters = [
         parameter for parameter in parameters if parameter is not None]
     # TODO: This is a hack to get around the fact that some methods return

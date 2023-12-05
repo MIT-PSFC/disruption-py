@@ -80,7 +80,7 @@ class MultiprocessingShotRetriever:
             result = self.result_queue.get()
             if result is None:
                 break
-            self.shot_settings.output_type_request.get_results(ResultOutputTypeRequestParams(result, self.tokemak, self.logger))
+            self.shot_settings.output_type_request.output_shot(ResultOutputTypeRequestParams(result, self.tokemak, self.logger))
 
     def run(self, shot_creator_f, shot_id_list, should_finish=True):
         
@@ -111,5 +111,5 @@ class MultiprocessingShotRetriever:
         self.result_thread.join()
 
         finish_output_type_request_params = FinishOutputTypeRequestParams(self.tokemak, self.logger)
-        self.output_type_request.stream_output_cleanup(finish_output_type_request_params)
-        return self.output_type_request.get_results(finish_output_type_request_params)
+        self.shot_settings.output_type_request.stream_output_cleanup(finish_output_type_request_params)
+        return self.shot_settings.output_type_request.get_results(finish_output_type_request_params)

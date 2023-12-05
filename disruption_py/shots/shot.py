@@ -119,6 +119,9 @@ class Shot(ABC):
     def get_shot_id(self):
         return self._shot_id
     
+    def get_commit_hash(self):
+        return self._metadata.get('commit_hash', 'Unknown')
+    
     def get_tree_manager(self):
         return self._tree_manager
     
@@ -126,9 +129,6 @@ class Shot(ABC):
         """
         Initialize the timebase of the shot.
         """
-        if shot_settings is None:
-            shot_settings = ShotSettings()
-        
         if existing_data is not None and shot_settings.override_exising_data is False:
             # set timebase to be the timebase of existing data
             try:
@@ -151,21 +151,21 @@ class Shot(ABC):
         elif shot_settings.signal_domain is SignalDomain.RAMP_UP_AND_FLATTOP:
             self.set_rampup_and_flattop_timebase()
     
-    def _init_with_data (self, existing_data):
+    def _init_with_data (self, existing_data : pd.DataFrame):
         '''
         Intialize the shot with data, if existing data matches the shot timebase.
         '''
         if existing_data is not None:
             time_df = pd.DataFrame(self._times, columns=['time'])
-            existing_data = pd.merge_asof(time_df, existing_data, on='time', tolerance=TIME_CONST)
-            if existing_data['time'].isna().any():
+            flagged_existing_data = existing_data.assign(merge_success_flag=1)
+            timed_existing_data = pd.merge_asof(time_df, flagged_existing_data, on='time', direction='nearest', tolerance=TIME_CONST)
+            if timed_existing_data['merge_success_flag'].isna().any():
                 existing_data = None
+            else:
+                existing_data = timed_existing_data.drop(columns=['merge_success_flag'])
         
         self.initialized_with_data = existing_data is not None
-        if existing_data is not None:
-            self.data = existing_data
-        else:
-            self.data = pd.DataFrame()
+        self.data = existing_data
 
     @staticmethod
     def get_signal(signal, conn, interpolate=True, interpolation_timebase=None):
