@@ -1,4 +1,4 @@
-from disruption_py.utils.mappings.tokemak import Tokemak
+from disruption_py.utils.mappings.tokamak import Tokemak
 import threading
 import pandas as pd
 from typing import List, Callable, Union
@@ -9,7 +9,7 @@ class CachedMethodParams:
     cache_between_threads: bool
     used_trees : Union[List[str], Callable]
     contained_cached_methods : Union[List[str], Callable]
-    tokemaks : List[Tokemak]    
+    tokamaks : List[Tokemak]    
     # Only for parameter cached methods
     populate : bool = False
     columns : Union[List[str], Callable] = None
@@ -20,7 +20,7 @@ class CachedMethodParams:
             cache_between_threads=self.cache_between_threads,
             used_trees=self.used_trees, 
             contained_cached_methods=self.contained_cached_methods, 
-            tokemaks=self.tokemaks,
+            tokamaks=self.tokamaks,
             populate=True,
             columns=columns,
             tags=tags,
@@ -30,7 +30,7 @@ def get_method_cache_key(method_name, times):
     current_thread_id = threading.get_ident()
     return method_name + str(len(times)) + str(current_thread_id)
 
-def parameter_cached_method(tags=["all"], columns=[], used_trees=None, contained_cached_methods=None, tokemaks=None, **kwargs):
+def parameter_cached_method(tags=["all"], columns=[], used_trees=None, contained_cached_methods=None, tokamaks=None, **kwargs):
     """
     Decorates a function as a parameter method. Parameter methods are functions that 
     calculate disruption parameters from the data in the shot.  They are called by the Shot object when
@@ -45,7 +45,7 @@ def parameter_cached_method(tags=["all"], columns=[], used_trees=None, contained
     return tag_wrapper
 
 
-def cached_method(used_trees=None, contained_cached_methods=None, cache_between_threads=True, tokemaks=None):
+def cached_method(used_trees=None, contained_cached_methods=None, cache_between_threads=True, tokamaks=None):
     """
     Decorates a function as a cached method and instantiates its cache. Cached methods are functions that 
     run expensive operations on data in the shot and may be reused. The cache is used to store the results 
@@ -81,7 +81,7 @@ def cached_method(used_trees=None, contained_cached_methods=None, cache_between_
             cache_between_threads=cache_between_threads, 
             used_trees=used_trees, 
             contained_cached_methods=contained_cached_methods,
-            tokemaks=tokemaks, 
+            tokamaks=tokamaks, 
         )
         wrapper.cached_method_params = cached_method_params
         return wrapper

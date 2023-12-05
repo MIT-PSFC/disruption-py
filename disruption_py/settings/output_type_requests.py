@@ -4,18 +4,18 @@ from dataclasses import dataclass
 import os
 from typing import Dict, List, Type, Union
 from logging import Logger
-from disruption_py.utils.mappings.tokemak import Tokemak
+from disruption_py.utils.mappings.tokamak import Tokemak
 
 
 @dataclass
 class ResultOutputTypeRequestParams:
     result : pd.DataFrame
-    tokemak : Tokemak
+    tokamak : Tokemak
     logger : Logger
     
 @dataclass
 class FinishOutputTypeRequestParams:
-    tokemak : Tokemak
+    tokamak : Tokemak
     logger : Logger
 
 OutputTypeRequestType = Union['OutputTypeRequest', str, Dict[str, 'OutputTypeRequestType'], List['OutputTypeRequestType']]
@@ -23,9 +23,9 @@ OutputTypeRequestType = Union['OutputTypeRequest', str, Dict[str, 'OutputTypeReq
 class OutputTypeRequest(ABC):
     
     def output_shot(self, params : ResultOutputTypeRequestParams):
-        if hasattr(self, 'tokemak_overrides'):
-            if params.tokemak in self.tokemak_overrides:
-                return self.tokemak_overrides[params.tokemak](params)
+        if hasattr(self, 'tokamak_overrides'):
+            if params.tokamak in self.tokamak_overrides:
+                return self.tokamak_overrides[params.tokamak](params)
         return self._output_shot(params)
     
     @abstractmethod
@@ -68,33 +68,33 @@ class OutputTypeRequestDict(OutputTypeRequest):
     '''
     def __init__(self, output_type_request_dict : Dict[Tokemak, OutputTypeRequestType]):
         resolved_output_type_request_dict = {
-            tokemak: resolve_output_type_request(individual_type_request) 
-            for tokemak, individual_type_request in output_type_request_dict.items()
+            tokamak: resolve_output_type_request(individual_type_request) 
+            for tokamak, individual_type_request in output_type_request_dict.items()
         }
         self.output_type_request_dict = resolved_output_type_request_dict
 
     def _output_shot(self, params : ResultOutputTypeRequestParams):
-        chosen_request = self.output_type_request_dict.get(params.tokemak, None)
+        chosen_request = self.output_type_request_dict.get(params.tokamak, None)
         if chosen_request is not None:
             return chosen_request.output_shot(params)
         else:
-            params.logger.warning(f'No output type request for tokemak {params.tokemak}')
+            params.logger.warning(f'No output type request for tokamak {params.tokamak}')
             return None
     
     def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
-        chosen_request = self.output_type_request_dict.get(params.tokemak, None)
+        chosen_request = self.output_type_request_dict.get(params.tokamak, None)
         if chosen_request is not None:
             return chosen_request.stream_output_cleanup(params)
         else:
-            params.logger.warning(f'No output type request for tokemak {params.tokemak}')
+            params.logger.warning(f'No output type request for tokamak {params.tokamak}')
             return None
             
     def get_results(self, params: FinishOutputTypeRequestParams):
-        chosen_request = self.output_type_request_dict.get(params.tokemak, None)
+        chosen_request = self.output_type_request_dict.get(params.tokamak, None)
         if chosen_request is not None:
-            return chosen_request.stream_output_cleanup(params.tokemak, params.logger)
+            return chosen_request.stream_output_cleanup(params.tokamak, params.logger)
         else:
-            params.logger.warning(f'No output type request for tokemak {params.tokemak}')
+            params.logger.warning(f'No output type request for tokamak {params.tokamak}')
             return None    
 
 class ListOutputRequest(OutputTypeRequest):

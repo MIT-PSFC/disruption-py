@@ -74,7 +74,7 @@ def get_cache_methods_from_object(object_to_search, shot_run_settings: ShotSetti
     if built_in_to_shot:
         methods_to_search = dir(object_to_search)
     elif is_shot_data_request:
-        methods_to_search = object_to_search.get_request_methods_for_tokemak(params.tokemak)
+        methods_to_search = object_to_search.get_request_methods_for_tokamak(params.tokamak)
     
     methods_to_evaluate : list[CachedMethod] = []
     all_cached_methods : list[CachedMethod] = []

@@ -1,7 +1,7 @@
 from typing import List, Dict
 from disruption_py.settings import ShotSettings, ResultOutputTypeRequestParams, FinishOutputTypeRequestParams
 from disruption_py.utils.constants import MAX_PROCESSES
-from disruption_py.utils.mappings.tokemak import Tokemak
+from disruption_py.utils.mappings.tokamak import Tokemak
 import multiprocessing
 import threading
 
@@ -60,13 +60,13 @@ class MultiprocessingShotRetriever:
     A class to run shot retrievals in parallel.
     '''
     
-    def __init__(self, shot_settings: ShotSettings, tokemak, logger, num_processes=8, database_initializer_f = None):
+    def __init__(self, shot_settings: ShotSettings, tokamak, logger, num_processes=8, database_initializer_f = None):
         
         self.task_queue = multiprocessing.JoinableQueue()
         self.result_queue = multiprocessing.Queue()
 
         self.shot_settings = shot_settings
-        self.tokemak = tokemak
+        self.tokamak = tokamak
         self.logger = logger
         self.result_thread = threading.Thread(target=self._result_processor)
 
@@ -80,7 +80,7 @@ class MultiprocessingShotRetriever:
             result = self.result_queue.get()
             if result is None:
                 break
-            self.shot_settings.output_type_request.output_shot(ResultOutputTypeRequestParams(result, self.tokemak, self.logger))
+            self.shot_settings.output_type_request.output_shot(ResultOutputTypeRequestParams(result, self.tokamak, self.logger))
 
     def run(self, shot_creator_f, shot_id_list, should_finish=True):
         
@@ -110,6 +110,6 @@ class MultiprocessingShotRetriever:
         self.result_queue.put(None)
         self.result_thread.join()
 
-        finish_output_type_request_params = FinishOutputTypeRequestParams(self.tokemak, self.logger)
+        finish_output_type_request_params = FinishOutputTypeRequestParams(self.tokamak, self.logger)
         self.shot_settings.output_type_request.stream_output_cleanup(finish_output_type_request_params)
         return self.shot_settings.output_type_request.get_results(finish_output_type_request_params)

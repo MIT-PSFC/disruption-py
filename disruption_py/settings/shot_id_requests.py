@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import List, Dict, Union, Type
 import pandas as pd
 from disruption_py.databases.database import ShotDatabase
-from disruption_py.utils.mappings.tokemak import Tokemak
+from disruption_py.utils.mappings.tokamak import Tokemak
 from logging import Logger
 
 import disruption_py.data
@@ -17,15 +17,15 @@ except ImportError:
 @dataclass
 class ShotIdRequestParams:
     database : ShotDatabase
-    tokemak : Tokemak
+    tokamak : Tokemak
     logger : Logger
 
 class ShotIdRequest(ABC):
     
     def get_shot_ids(self, params : ShotIdRequestParams) -> List:
-        if hasattr(self, 'tokemak_overrides'):
-            if params.tokemak in self.tokemak_overrides:
-                return self.tokemak_overrides[params.tokemak](params)
+        if hasattr(self, 'tokamak_overrides'):
+            if params.tokamak in self.tokamak_overrides:
+                return self.tokamak_overrides[params.tokamak](params)
         return self._get_shot_ids(params)
     
     @abstractmethod
@@ -36,7 +36,7 @@ class ShotIdRequest(ABC):
     def _get_shot_ids(self, params : ShotIdRequestParams) -> List:
         """
         Default implementation of get_shot_ids.
-        Used for any tokemak not in tokemak_overrides.
+        Used for any tokamak not in tokamak_overrides.
         """
         pass
 
@@ -127,7 +127,7 @@ def shot_ids_request_runner(shot_id_request, params : ShotIdRequestParams):
                return shot_id_request_type(shot_id_request).get_shot_ids(params)
         
     if isinstance(shot_id_request, dict):
-        chosen_request = shot_id_request.get(params.tokemak, None)
+        chosen_request = shot_id_request.get(params.tokamak, None)
         if chosen_request is not None:
             return shot_ids_request_runner(chosen_request, params)
         

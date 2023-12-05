@@ -4,13 +4,13 @@ import pandas as pd
 from dataclasses import dataclass
 from typing import Dict, Callable, Union
 from disruption_py.mdsplus_integration.tree_manager import TreeManager
-from disruption_py.utils.mappings.tokemak import Tokemak
+from disruption_py.utils.mappings.tokamak import Tokemak
 from logging import Logger
 
 @dataclass
 class SetTimesRequestParams:
     tree_manager : TreeManager
-    tokemak : Tokemak
+    tokamak : Tokemak
     logger : Logger
     disruption_time : float = None
 
@@ -20,7 +20,7 @@ class SetTimesRequest(ABC):
     '''
     Represents a request for setting the times of a timebase for a shot
     
-    Set tokemak_overrides to override the default behaviour for a tokemak.
+    Set tokamak_overrides to override the default behaviour for a tokamak.
     Subclasses must implement _get_times for the default case.
 
     note: Object should not be modified after being passed to a handler, 
@@ -28,33 +28,33 @@ class SetTimesRequest(ABC):
     '''
             
     def get_times(self, params : SetTimesRequestParams) -> np.ndarray:
-        if hasattr(self, 'tokemak_overrides'):
-            if params.tokemak in self.tokemak_overrides:
-                return self.tokemak_overrides[params.tokemak](params)
+        if hasattr(self, 'tokamak_overrides'):
+            if params.tokamak in self.tokamak_overrides:
+                return self.tokamak_overrides[params.tokamak](params)
         return self._get_times(params)
     
     @abstractmethod
     def _get_times(self, params : SetTimesRequestParams) -> np.ndarray:
         """
         Default implementation of get_timebase.
-        Used for any tokemak not in tokemak_overrides.
+        Used for any tokamak not in tokamak_overrides.
         """
         pass
     
 class SetTimesRequestDict(SetTimesRequest):
     def __init__(self, set_times_request_dict : Dict[Tokemak, SetTimesRequestType]):
         resolved_set_times_request_dict = {
-            tokemak: resolve_set_times_request(individual_request) 
-            for tokemak, individual_request in set_times_request_dict.items()
+            tokamak: resolve_set_times_request(individual_request) 
+            for tokamak, individual_request in set_times_request_dict.items()
         }
         self.resolved_set_times_request_dict = resolved_set_times_request_dict
         
     def _get_times(self, params : SetTimesRequestParams) -> np.ndarray:
-        chosen_request = self.resolved_set_times_request_dict.get(params.tokemak, None)
+        chosen_request = self.resolved_set_times_request_dict.get(params.tokamak, None)
         if chosen_request is not None:
             return chosen_request.get_times(params)
         else:
-            params.logger.warning(f'No get times request for tokemak {params.tokemak}')
+            params.logger.warning(f'No get times request for tokamak {params.tokamak}')
             return None
 
 class ListSetTimesRequest(SetTimesRequest):
@@ -66,7 +66,7 @@ class ListSetTimesRequest(SetTimesRequest):
     
 class EfitSetTimesRequest(SetTimesRequest):
     def __init__(self):
-        self.tokemak_overrides = {
+        self.tokamak_overrides = {
             Tokemak.CMOD: self.cmod_times
         }
 

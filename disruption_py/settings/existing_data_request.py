@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import pandas as pd
 from disruption_py.databases.database import ShotDatabase
-from disruption_py.utils.mappings.tokemak import Tokemak
+from disruption_py.utils.mappings.tokamak import Tokemak
 from typing import Dict, Union, Type
 from logging import Logger
 
@@ -10,7 +10,7 @@ from logging import Logger
 class ExistingDataRequestParams:
     shot_id : str
     database : ShotDatabase
-    tokemak : Tokemak
+    tokamak : Tokemak
     logger : Logger
 
 ExistingDataRequestType = Union['ExistingDataRequest', str, pd.DataFrame, Dict[Tokemak, 'ExistingDataRequestType']]
@@ -18,9 +18,9 @@ ExistingDataRequestType = Union['ExistingDataRequest', str, pd.DataFrame, Dict[T
 class ExistingDataRequest(ABC):
     
     def get_existing_data(self, params : ExistingDataRequestParams) -> pd.DataFrame:
-        if hasattr(self, 'tokemak_overrides'):
-            if params.tokemak in self.tokemak_overrides:
-                return self.tokemak_overrides[params.tokemak](params)
+        if hasattr(self, 'tokamak_overrides'):
+            if params.tokamak in self.tokamak_overrides:
+                return self.tokamak_overrides[params.tokamak](params)
         return self._get_existing_data(params)
     
     @abstractmethod
@@ -30,17 +30,17 @@ class ExistingDataRequest(ABC):
 class ExistingDataRequestDict(ExistingDataRequest):
     def __init__(self, existing_data_request_dict : Dict[Tokemak, ExistingDataRequestType]):
         resolved_existing_data_request_dict = {
-            tokemak: resolve_existing_data_request(individual_request) 
-            for tokemak, individual_request in existing_data_request_dict.items()
+            tokamak: resolve_existing_data_request(individual_request) 
+            for tokamak, individual_request in existing_data_request_dict.items()
         }
         self.resolved_existing_data_request_dict = resolved_existing_data_request_dict
         
     def _get_existing_data(self, params : ExistingDataRequestParams) -> pd.DataFrame:
-        chosen_request = self.resolved_existing_data_request_dict.get(params.tokemak, None)
+        chosen_request = self.resolved_existing_data_request_dict.get(params.tokamak, None)
         if chosen_request is not None:
             return chosen_request.get_existing_data(params)
         else:
-            params.logger.warning(f'No existing data request for tokemak {params.tokemak}')
+            params.logger.warning(f'No existing data request for tokamak {params.tokamak}')
             return None
 
 

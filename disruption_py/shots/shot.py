@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from disruption_py.utils.math_utils import interp1
-from disruption_py.utils.mappings.tokemak import Tokemak
+from disruption_py.utils.mappings.tokamak import Tokemak
 import subprocess
 import traceback
 
@@ -53,13 +53,13 @@ class Shot(ABC):
     def __init__(
         self, 
         shot_id, 
-        tokemak: Tokemak,
+        tokamak: Tokemak,
         disruption_time=None,
         shot_settings : ShotSettings=None,
         **kwargs
     ):
         self._shot_id = int(shot_id)
-        self.tokemak = tokemak
+        self.tokamak = tokamak
         self.num_threads_per_shot = shot_settings.num_threads_per_shot
         self.disruption_time = disruption_time
         self.disrupted = self.disruption_time is not None
@@ -142,7 +142,7 @@ class Shot(ABC):
                 self.logger.debug(
                     f"[Shot {self._shot_id}]:{traceback.format_exc()}")
         else:
-            request_params = SetTimesRequestParams(tree_manager=self._tree_manager, tokemak=self.tokemak, logger=self.logger, disruption_time=self.disruption_time)
+            request_params = SetTimesRequestParams(tree_manager=self._tree_manager, tokamak=self.tokamak, logger=self.logger, disruption_time=self.disruption_time)
             self._times = shot_settings.set_times_request.get_times(request_params)
         self.interpolation_method : InterpolationMethod  = shot_settings.interpolation_method
         

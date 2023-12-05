@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import numpy as np
 from typing import List, Callable, Any
 from logging import Logger
-from disruption_py.utils.mappings.tokemak import Tokemak
+from disruption_py.utils.mappings.tokamak import Tokemak
 from disruption_py.utils.math_utils import interp1
 from disruption_py.utils.method_caching import parameter_cached_method
 
@@ -12,21 +12,21 @@ from disruption_py.utils.method_caching import parameter_cached_method
 class ShotDataRequestParams:
     shot : Any
     existing_data : pd.DataFrame
-    tokemak : Tokemak
+    tokamak : Tokemak
     logger : Logger
     
 class ShotDataRequest(ABC):
     
-    def get_request_methods_for_tokemak(self, tokemak: Tokemak) -> List[Callable]:
+    def get_request_methods_for_tokamak(self, tokamak: Tokemak) -> List[Callable]:
         request_methods = []
         for method in dir(self):
-            if hasattr(method, "tokemaks") and (tokemak in method.tokemaks or tokemak is method.tokemaks):
+            if hasattr(method, "tokamaks") and (tokamak in method.tokamaks or tokamak is method.tokamaks):
                 request_methods.append(method)
         return request_methods
     
 class KappaArea(ShotDataRequest):
     
-    @parameter_cached_method(columns=["kappa_area"], used_trees=["efit_tree"], tokemaks=Tokemak.CMOD)
+    @parameter_cached_method(columns=["kappa_area"], used_trees=["efit_tree"], tokamaks=Tokemak.CMOD)
     def _get_kappa_area(self, params):
         aminor = params.shot.efit_tree.getNode(
             r'\efit_aeqdsk:aminor').getData().data().astype('float64', copy=False)

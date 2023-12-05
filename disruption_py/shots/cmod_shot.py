@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 from disruption_py.shots.shot import Shot
 from disruption_py.utils.method_caching import parameter_cached_method, cached_method
-from disruption_py.utils.mappings.tokemak import Tokemak
+from disruption_py.utils.mappings.tokamak import Tokemak
 
 try:
     import importlib.resources as importlib_resources
