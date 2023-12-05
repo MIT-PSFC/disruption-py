@@ -2,14 +2,13 @@ import pandas as pd
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import os
-from typing import List, Callable
+from typing import List, Callable, Any
 from logging import Logger
 from disruption_py.utils.mappings.tokemak import Tokemak
-from disruption_py.shots import Shot
 
 @dataclass
 class ShotDataRequestParams:
-    shot : Shot
+    shot : Any
     existing_data : pd.DataFrame
     tokemak : Tokemak
     logger : Logger

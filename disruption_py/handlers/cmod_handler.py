@@ -1,9 +1,11 @@
 
-from typing import List, Dict, Callable, Union
+from typing import Callable, Any
+import traceback
 from disruption_py.handlers.multiprocessing_helper import MultiprocessingShotRetriever
-from disruption_py.settings.shot_number_requests import ShotNumberRequest, ShotNumberRequestParams, shot_numbers_request_runner
-from disruption_py.settings.output_type_requests import OutputTypeRequest, OutputTypeRequestParams, ListOutputRequest, output_type_request_runner
-from disruption_py.settings.shot_run_settings import ShotDataRequest, ShotDataRequestParams, ShotRunSettings
+from disruption_py.settings.shot_id_requests import ShotIdRequestParams, ShotIdRequestType, shot_ids_request_runner
+from disruption_py.settings.existing_data_request import ExistingDataRequest, ExistingDataRequestParams
+from disruption_py.settings.output_type_requests import ResultOutputTypeRequestParams, FinishOutputTypeRequestParams
+from disruption_py.settings import ShotDataRequestParams, ShotSettings
 from disruption_py.utils.mappings.tokemak import Tokemak
 from disruption_py.databases import CModDatabase
 from disruption_py.shots import CModShot
@@ -12,6 +14,28 @@ import pandas as pd
 import logging
 
 class CModHandler:
+    """
+    Brief description of the class.
+
+    Parameters
+    ----------
+    database_initializer : Callable[..., CModDatabase]
+        When run returns a new database object for the handler. The function must create a new database 
+        connection instead of reusing an existing one, as the handler may initalize multiple connections 
+        across different processes. Defaults to CModDatabase.default.
+
+    Attributes
+    ----------
+    logger : Logger
+        The logger used for disruption_py.
+
+    Methods
+    -------
+    get_shot_data(shot_id, sql_database=None, shot_settings)
+        Static method used to get data for a single shot from CMOD. May be run across different processes.
+    get_shots_data(shot_id_request, shot_settings, num_processes)
+        Instance method used to get shot data for all shots from shot_id_request from CMOD.
+    """
     logger = logging.getLogger('disruption_py')
     
     def __init__(self, database_initializer : Callable[..., CModDatabase] = None, **kwargs):
@@ -19,67 +43,103 @@ class CModHandler:
         if self.database_initializer is None:
             self.database_initializer = CModDatabase.default
 
-    def get_shot_data(shot_id, sql_database=None, use_sql_table=True, shot_run_settings=None, **shot_args) -> pd.DataFrame:
+    @property
+    def database(self):
         """
-        Get shot data from CMOD.
+        Accessor for the database.
         """
+        if not hasattr(self, '_database'):
+            self._database = self.database_initializer()
+        return self._database
+    
+    @staticmethod
+    def get_shot_data(shot_id, sql_database=None, shot_settings: ShotSettings=None) -> pd.DataFrame:
+        """
+        Get data for a single shot from CMOD. May be run across different processes.
+        """
+        tokemak = Tokemak.CMOD
         class_logger = CModHandler.logger
         class_logger.info(f"starting {shot_id}")
-        if use_sql_table:
-            class_logger.info(f"retrieving sql data for {shot_id}")
-            sql_shot_data = sql_database.get_shot_data(shot_ids=[shot_id])
+        if shot_settings.existing_data_request is not None:
+            existing_data_request_params = ExistingDataRequestParams(
+                shot_id=str(shot_id),
+                database=sql_database,
+                tokemak=tokemak, 
+                logger=class_logger,
+            )
+            existing_data = shot_settings.existing_data_request.get_existing_data(existing_data_request_params)
         else:
-            sql_shot_data = None
+            existing_data = None
         disruption_time=sql_database.get_disruption_time(shot_id)
         try:
-            shot = CModShot(shot_id=shot_id, existing_data=sql_shot_data, disruption_time=disruption_time, **shot_args)
-            retrieved_data = populate_shot(shot_run_settings=shot_run_settings, params=ShotDataRequestParams(shot, sql_shot_data, Tokemak.CMOD, class_logger))
+            shot = CModShot(shot_id=shot_id, existing_data=existing_data, disruption_time=disruption_time, shot_settings=shot_settings)
+            retrieved_data = populate_shot(shot_run_settings=shot_settings, params=ShotDataRequestParams(shot, existing_data, tokemak, class_logger))
             shot.cleanup()
             class_logger.info(f"completed {shot_id}")
             return retrieved_data
         except Exception as e:
+            class_logger.warning(f"[Shot {shot_id}]: fatal error {traceback.format_exc()}")
             class_logger.error(f"failed {shot_id} with error {e}")
         return None
 
     def get_shots_data(
-        self, 
-        shot_number_request : Union[ShotNumberRequest, int, str, List, Dict],
-        shot_run_settings : ShotRunSettings = None,
-        shot_args={}, 
-        num_processes=1, 
-        use_sql_table=True, 
-        output_type_request:OutputTypeRequest = None
-    ) -> List[pd.DataFrame]:
+        self,
+        shot_id_request : ShotIdRequestType,
+        shot_settings : ShotSettings = None,
+        num_processes: int = 1,
+    ) -> Any:
         """
-        Get shot data from CMOD.
-        """
-        database = self.database_initializer()
-        shot_number_request_params = ShotNumberRequestParams(database, Tokemak.CMOD, self.logger)
-        shot_id_list = shot_numbers_request_runner(shot_number_request, shot_number_request_params)
+        Get shot data for all shots from shot_id_request from CMOD.
         
-        if shot_run_settings is None:
-            shot_run_settings = ShotRunSettings()
-        if output_type_request is None:
-            output_type_request = ListOutputRequest()
+        Attributes
+        ----------
+        shot_id_request : ShotIdRequestType
+            Data retrieved for all shot_ids specified by the request. See ShotIdRequest for more details.
+        shot_settings : ShotSettings
+            The settings that each shot uses when retrieving data. See ShotSettings for more details.
+            If None, the default values of each setting in ShotSettings is used.
+        num_processes : int
+            The number of processes to use for data retrieval. If 1, the data is retrieved in serial. 
+            If > 1, the data is retrieved in parallel.
+            
+        Returns
+        -------
+        Any
+            The value of OutputTypeRequest.get_results, where OutputTypeRequest is specified in 
+            shot_settings. See OutputTypeRequest for more details.
+        """
+        tokemak = Tokemak.CMOD
+        
+        if shot_settings is None:
+            shot_settings = ShotSettings()
+        shot_settings.resolve()
+        
+        shot_id_request_params = ShotIdRequestParams(self.database, tokemak, self.logger)
+        shot_id_list = shot_ids_request_runner(shot_id_request, shot_id_request_params)
         
         if num_processes > 1:
             shot_retriever = MultiprocessingShotRetriever(
-                num_processes = num_processes, 
                 database_initializer_f=self.database_initializer,
-                output_type_request=output_type_request,
-                tokemak = Tokemak.CMOD,
+                num_processes=num_processes,
+                shot_settings=shot_settings,
+                tokemak = tokemak,
                 logger = self.logger,
             )
             results = shot_retriever.run(
                 shot_creator_f=CModHandler.get_shot_data, 
                 shot_id_list=shot_id_list,
-                shot_args_dict={**shot_args, "use_sql_table": use_sql_table, "shot_run_settings": shot_run_settings}, 
-                should_finish=True
             )
         else:
-            for shot_num in shot_id_list:
-                shot_data = CModHandler.get_shot_data(shot_id=shot_num, sql_database=database, use_sql_table=use_sql_table, shot_run_settings=shot_run_settings, **shot_args)
-                output_type_request_runner(output_type_request, OutputTypeRequestParams(shot_data, Tokemak.CMOD, self.logger))
-            results = output_type_request.get_results()
+            for shot_id in shot_id_list:
+                shot_data = CModHandler.get_shot_data(
+                    shot_id=shot_id, 
+                    sql_database=self.database, 
+                    shot_settings=shot_settings
+                )
+                shot_settings.output_type_request.output_shot(ResultOutputTypeRequestParams(shot_data, Tokemak.CMOD, self.logger))
+            
+            finish_output_type_request_params = FinishOutputTypeRequestParams(tokemak, self.logger)
+            shot_settings.output_type_request.stream_output_cleanup(finish_output_type_request_params)
+            results = shot_settings.output_type_request.get_results(finish_output_type_request_params)
         return results
      

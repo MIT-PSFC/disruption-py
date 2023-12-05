@@ -2,44 +2,109 @@ import pandas as pd
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import os
-from typing import Dict, Type
+from typing import Dict, List, Type, Union
 from logging import Logger
 from disruption_py.utils.mappings.tokemak import Tokemak
 
+
 @dataclass
-class OutputTypeRequestParams:
+class ResultOutputTypeRequestParams:
     result : pd.DataFrame
     tokemak : Tokemak
     logger : Logger
     
+@dataclass
+class FinishOutputTypeRequestParams:
+    tokemak : Tokemak
+    logger : Logger
+
+OutputTypeRequestType = Union['OutputTypeRequest', str, Dict[str, 'OutputTypeRequestType'], List['OutputTypeRequestType']]
+
 class OutputTypeRequest(ABC):
     
-    def output_shot(self, params : OutputTypeRequestParams):
+    def output_shot(self, params : ResultOutputTypeRequestParams):
         if hasattr(self, 'tokemak_overrides'):
             if params.tokemak in self.tokemak_overrides:
                 return self.tokemak_overrides[params.tokemak](params)
         return self._output_shot(params)
     
     @abstractmethod
-    def _output_shot(self, params : OutputTypeRequestParams):
+    def _output_shot(self, params : ResultOutputTypeRequestParams):
         pass
     
-    def stream_output_cleanup(self):
+    def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
         pass
     
     @abstractmethod
-    def get_results(self):
+    def get_results(self, params: FinishOutputTypeRequestParams):
         pass
 
+class OutputTypeRequestList(OutputTypeRequest):
+    '''
+    List of output type requests
+    '''
+    def __init__(self, output_type_request_list : List[OutputTypeRequestType]):
+        self.output_type_request_list = [resolve_output_type_request(individual_type_request) for individual_type_request in output_type_request_list]
+
+    def _output_shot(self, params : ResultOutputTypeRequestParams):
+        all_results = []
+        for individual_type_request in self.output_type_request_list:
+            sub_result = individual_type_request.output_shot(params)
+            all_results.append(sub_result)
+                
+        return all_results
+    
+    def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
+         for individual_type_request in self.output_type_request_list:
+            individual_type_request.stream_output_cleanup()
+            
+    def get_results(self, params: FinishOutputTypeRequestParams):
+        return [individual_type_request.get_results() for individual_type_request in self.output_type_request_list]
+    
+
+class OutputTypeRequestDict(OutputTypeRequest):
+    '''
+    Dict of output type requests
+    '''
+    def __init__(self, output_type_request_dict : Dict[Tokemak, OutputTypeRequestType]):
+        resolved_output_type_request_dict = {
+            tokemak: resolve_output_type_request(individual_type_request) 
+            for tokemak, individual_type_request in output_type_request_dict.items()
+        }
+        self.output_type_request_dict = resolved_output_type_request_dict
+
+    def _output_shot(self, params : ResultOutputTypeRequestParams):
+        chosen_request = self.output_type_request_dict.get(params.tokemak, None)
+        if chosen_request is not None:
+            return chosen_request.output_shot(params)
+        else:
+            params.logger.warning(f'No output type request for tokemak {params.tokemak}')
+            return None
+    
+    def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
+        chosen_request = self.output_type_request_dict.get(params.tokemak, None)
+        if chosen_request is not None:
+            return chosen_request.stream_output_cleanup(params)
+        else:
+            params.logger.warning(f'No output type request for tokemak {params.tokemak}')
+            return None
+            
+    def get_results(self, params: FinishOutputTypeRequestParams):
+        chosen_request = self.output_type_request_dict.get(params.tokemak, None)
+        if chosen_request is not None:
+            return chosen_request.stream_output_cleanup(params.tokemak, params.logger)
+        else:
+            params.logger.warning(f'No output type request for tokemak {params.tokemak}')
+            return None    
 
 class ListOutputRequest(OutputTypeRequest):
     def __init__(self):
         self.results = []
         
-    def _output_shot(self, params : OutputTypeRequestParams):
+    def _output_shot(self, params : ResultOutputTypeRequestParams):
         self.results.append(params.result)
     
-    def get_results(self):
+    def get_results(self, params: FinishOutputTypeRequestParams):
         return self.results
     
     
@@ -49,15 +114,15 @@ class HDF5OutputRequest(OutputTypeRequest):
         self.store = pd.HDFStore(filepath, mode='w')
         self.output_shot_count = 0
 
-    def _output_shot(self, params : OutputTypeRequestParams):
+    def _output_shot(self, params : ResultOutputTypeRequestParams):
         shot_id = params.result['shot'].iloc[0] if (not params.result.empty and ('shot' in params.result.columns)) else self.output_shot_count
         self.store.append(f'df_{shot_id}', params.result, format='table', data_columns=True)
         self.output_shot_count += 1
     
-    def stream_output_cleanup(self):
+    def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
         self.store.close()
     
-    def get_results(self):
+    def get_results(self, params: FinishOutputTypeRequestParams):
         return self.output_shot_count
     
     
@@ -67,7 +132,7 @@ class CSVOutputRequest(OutputTypeRequest):
         self.flexible_columns = flexible_columns
         self.output_shot_count = 0
 
-    def _output_shot(self, params : OutputTypeRequestParams):
+    def _output_shot(self, params : ResultOutputTypeRequestParams):
         file_exists = os.path.isfile(self.filepath)
         if self.flexible_columns:
             if file_exists:
@@ -81,12 +146,12 @@ class CSVOutputRequest(OutputTypeRequest):
             params.result.to_csv(self.filepath, mode='a', index=False, header=(not file_exists))
         self.output_shot_count += 1
 
-    def get_results(self):
+    def get_results(self, params: FinishOutputTypeRequestParams):
         return self.output_shot_count
 
-_output_type_request_mappings: Dict[str, OutputTypeRequest] = {
+_output_type_request_mappings: Dict[str, Type[OutputTypeRequest]] = {
     # do not include classes that require initialization arguments
-    "list" : ListOutputRequest(),
+    "list" : ListOutputRequest,
 } 
 
 _file_suffix_to_output_type_request : Dict[str, Type[OutputTypeRequest]] = {
@@ -95,35 +160,27 @@ _file_suffix_to_output_type_request : Dict[str, Type[OutputTypeRequest]] = {
     ".csv" : CSVOutputRequest,
 } 
 
-def output_type_request_runner(output_type_request, params : OutputTypeRequestParams):
+def resolve_output_type_request(output_type_request : OutputTypeRequestType) -> OutputTypeRequest:
     if isinstance(output_type_request, OutputTypeRequest):
-        return output_type_request.output_shot(params)
+        return output_type_request
     
     if isinstance(output_type_request, str):
-        output_type_request_object = _output_type_request_mappings.get(output_type_request, None)
-        if output_type_request_object is not None:
-            return output_type_request_object.output_shot(params)
+        output_type_request_type = _output_type_request_mappings.get(output_type_request, None)
+        if output_type_request_type is not None:
+            return output_type_request_type()
         
     if isinstance(output_type_request, str):
         # assume that it is a file path
        for suffix, output_type_request_type in _file_suffix_to_output_type_request.items():
            if output_type_request.endswith(suffix):
-               output_type_request_object = output_type_request_type(output_type_request)
-               return output_type_request_type().output_shot(params)       
+               return output_type_request_type(output_type_request)
             
     if isinstance(output_type_request, dict):
-        chosen_request = output_type_request.get(params.tokemak, None)
-        if chosen_request is not None:
-            return output_type_request_runner(chosen_request, params)
+        return OutputTypeRequestDict(output_type_request)
         
-    if isinstance(output_type_request, list):
-        all_results = []
-        for individual_type_request in output_type_request:
-            sub_result = output_type_request_runner(individual_type_request, params)
-            if sub_result is not None:
-                all_results.append(sub_result)
-        
-        return all_results
+    if isinstance(output_type_request, list):        
+        return OutputTypeRequestList(output_type_request)
     
     raise ValueError(f"Invalid output processror {output_type_request}")
+    
 

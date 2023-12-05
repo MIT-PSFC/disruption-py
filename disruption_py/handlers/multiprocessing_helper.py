@@ -1,5 +1,6 @@
 from typing import List, Dict
-from disruption_py.settings.output_type_requests import OutputTypeRequestParams, output_type_request_runner
+from disruption_py.settings import ShotSettings, ResultOutputTypeRequestParams, FinishOutputTypeRequestParams
+from disruption_py.utils.constants import MAX_PROCESSES
 from disruption_py.utils.mappings.tokemak import Tokemak
 import multiprocessing
 import threading
@@ -41,16 +42,17 @@ class Consumer(multiprocessing.Process):
 
 
 class ShotTask:
-    def __init__(self, shot_creator_f, shot_args: Dict):
+    def __init__(self, shot_creator_f, shot_id, shot_settings):
         self.shot_creator_f = shot_creator_f
-        self.shot_args = shot_args
+        self.shot_id = shot_id
+        self.shot_settings = shot_settings
 
     def __call__(self, task_args: Dict):
-        result = self.shot_creator_f(**task_args, **self.shot_args)
+        result = self.shot_creator_f(shot_id=self.shot_id, shot_settings=self.shot_settings, **task_args)
         return result
 
     def __str__(self):
-        return f'Task for {self.shot_args.get("shot_id", "Unknown shot number")}'
+        return f'Task for {self.shot_id}'
 
 
 class MultiprocessingShotRetriever:
@@ -58,19 +60,19 @@ class MultiprocessingShotRetriever:
     A class to run shot retrievals in parallel.
     '''
     
-    def __init__(self, output_type_request, tokemak, logger, num_processes=8, database_initializer_f = None):
+    def __init__(self, shot_settings: ShotSettings, tokemak, logger, num_processes=8, database_initializer_f = None):
         
         self.task_queue = multiprocessing.JoinableQueue()
         self.result_queue = multiprocessing.Queue()
 
-        self.output_type_request = output_type_request
+        self.shot_settings = shot_settings
         self.tokemak = tokemak
         self.logger = logger
         self.result_thread = threading.Thread(target=self._result_processor)
 
         self.consumers = [
             Consumer(self.task_queue, self.result_queue, database_initializer_f=database_initializer_f) 
-            for _ in range(num_processes)
+            for _ in range(min(num_processes, MAX_PROCESSES))
         ]
   
     def _result_processor(self):
@@ -78,9 +80,9 @@ class MultiprocessingShotRetriever:
             result = self.result_queue.get()
             if result is None:
                 break
-            output_type_request_runner(self.output_type_request, OutputTypeRequestParams(result, self.tokemak, self.logger))
+            self.shot_settings.output_type_request.get_results(ResultOutputTypeRequestParams(result, self.tokemak, self.logger))
 
-    def run(self, shot_creator_f, shot_id_list, shot_args_dict, should_finish=True):
+    def run(self, shot_creator_f, shot_id_list, should_finish=True):
         
         if not self.result_thread.is_alive():
             self.result_thread.start()
@@ -90,7 +92,7 @@ class MultiprocessingShotRetriever:
                 w.start()
         
         for shot_id in shot_id_list:
-            task = ShotTask(shot_creator_f, {**shot_args_dict, 'shot_id': shot_id})
+            task = ShotTask(shot_creator_f=shot_creator_f, shot_id=shot_id, shot_settings=self.shot_settings)
             self.task_queue.put(task)
    
         if should_finish:
@@ -108,5 +110,6 @@ class MultiprocessingShotRetriever:
         self.result_queue.put(None)
         self.result_thread.join()
 
-        self.output_type_request.stream_output_cleanup()
-        return self.output_type_request.get_results()
+        finish_output_type_request_params = FinishOutputTypeRequestParams(self.tokemak, self.logger)
+        self.output_type_request.stream_output_cleanup(finish_output_type_request_params)
+        return self.output_type_request.get_results(finish_output_type_request_params)

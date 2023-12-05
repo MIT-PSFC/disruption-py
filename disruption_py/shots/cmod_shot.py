@@ -42,6 +42,7 @@ except Exception as e:
 import warnings
 
 from disruption_py.utils.math_utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power, without_duplicates
+from disruption_py.settings import ShotSettings
 import disruption_py.data
 
 MAX_SHOT_TIME = 7.0  # [s]
@@ -85,20 +86,18 @@ class CModShot(Shot):
     def __init__(
         self, 
         shot_id,
-        efit_tree_name='analysis', 
-        existing_data=None, 
+        existing_data=None,
         disruption_time=None,
-        timebase_settings=None,
-        attempt_local_efit_env=None, # temporary pass iterable of (env variable, value)
+        shot_settings : ShotSettings=None,
         **kwargs
     ):
-        super().__init__(shot_id, Tokemak.CMOD, disruption_time, **kwargs)
+        super().__init__(shot_id, Tokemak.CMOD, disruption_time, shot_settings)
         
         # Set up tree nicknames
-        self.setup_nicknames(efit_tree_name, attempt_local_efit_env)
+        self.setup_nicknames(shot_settings.efit_tree_name, shot_settings.attempt_local_efit_env)
 
         # must call this method after nicknamed trees setup
-        self._init_timebase(timebase_settings, existing_data)
+        self._init_timebase(shot_settings, existing_data)
         
         self._init_with_data(existing_data)
 
@@ -1568,8 +1567,8 @@ if __name__ == '__main__':
     # ch = logging.StreamHandler(sys.stdout)
     # ch.setLevel(5)
     parser = argparse.ArgumentParser(description="Test CModShot class")
-    # parser.add_argument('--shot', type=int, help='Shot number to test', default=1150922001)
-    parser.add_argument('--shot', type=int, help='Shot number to test', default=1030523006)
+    # parser.add_argument('--shot', type=int, help='Shot id to test', default=1150922001)
+    parser.add_argument('--shot', type=int, help='Shot id to test', default=1030523006)
     # Add parser argument for list of methods to populate
     parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_densities'])
     args = parser.parse_args()

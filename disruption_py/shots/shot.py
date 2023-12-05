@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from disruption_py.utils.math_utils import interp1
 from disruption_py.utils.mappings.tokemak import Tokemak
-from typing import Set, Callable
 import subprocess
 import traceback
 
@@ -10,7 +9,8 @@ import MDSplus
 from MDSplus import *
 
 from disruption_py.mdsplus_integration.tree_manager import TreeManager
-from disruption_py.settings.timebase_settings import set_times_request_runner, TimebaseSettings, InterpolationMethod, SignalDomain, SetTimesRequestParams, SetTimesRequest
+from disruption_py.settings.shot_settings import ShotSettings, InterpolationMethod, SignalDomain
+from disruption_py.settings.set_times_requests import SetTimesRequestParams
 from disruption_py.utils.constants import TIME_CONST
 
 import pandas as pd
@@ -53,14 +53,14 @@ class Shot(ABC):
     def __init__(
         self, 
         shot_id, 
-        tokemak: Tokemak, 
+        tokemak: Tokemak,
         disruption_time=None,
-        multithreading=False,
+        shot_settings : ShotSettings=None,
         **kwargs
     ):
         self._shot_id = int(shot_id)
         self.tokemak = tokemak
-        self.multithreading = multithreading
+        self.num_threads_per_shot = shot_settings.num_threads_per_shot
         self.disruption_time = disruption_time
         self.disrupted = self.disruption_time is not None
         self._tree_manager = TreeManager(shot_id)        
@@ -74,7 +74,7 @@ class Shot(ABC):
             self.logger.addHandler(logging.StreamHandler())
             
             
-        if self.multithreading:
+        if self.num_threads_per_shot > 1:
             self.logger.info("Multithreading enabled")
         
         # setup commit hash
@@ -122,14 +122,14 @@ class Shot(ABC):
     def get_tree_manager(self):
         return self._tree_manager
     
-    def _init_timebase(self, timebase_settings: TimebaseSettings, existing_data):
+    def _init_timebase(self, shot_settings: ShotSettings, existing_data):
         """
         Initialize the timebase of the shot.
         """
-        if timebase_settings is None:
-            timebase_settings = TimebaseSettings()
+        if shot_settings is None:
+            shot_settings = ShotSettings()
         
-        if existing_data is not None and timebase_settings.override_exising_data is False:
+        if existing_data is not None and shot_settings.override_exising_data is False:
             # set timebase to be the timebase of existing data
             try:
                 self._times = existing_data['time'].to_numpy()
@@ -143,12 +143,12 @@ class Shot(ABC):
                     f"[Shot {self._shot_id}]:{traceback.format_exc()}")
         else:
             request_params = SetTimesRequestParams(tree_manager=self._tree_manager, tokemak=self.tokemak, logger=self.logger, disruption_time=self.disruption_time)
-            self._times = set_times_request_runner(timebase_settings.set_times_request, request_params)
-        self.interpolation_method : InterpolationMethod  = timebase_settings.interpolation_method
+            self._times = shot_settings.set_times_request.get_times(request_params)
+        self.interpolation_method : InterpolationMethod  = shot_settings.interpolation_method
         
-        if timebase_settings.signal_domain is SignalDomain.FLATTOP:
+        if shot_settings.signal_domain is SignalDomain.FLATTOP:
             self.set_flattop_timebase()
-        elif timebase_settings.signal_domain is SignalDomain.RAMP_UP_AND_FLATTOP:
+        elif shot_settings.signal_domain is SignalDomain.RAMP_UP_AND_FLATTOP:
             self.set_rampup_and_flattop_timebase()
     
     def _init_with_data (self, existing_data):
@@ -156,30 +156,10 @@ class Shot(ABC):
         Intialize the shot with data, if existing data matches the shot timebase.
         '''
         if existing_data is not None:
-            if np.allclose(existing_data['time'], self._times, atol=TIME_CONST):
-                existing_data['time'] = self._times
-            else:
+            time_df = pd.DataFrame(self._times, columns=['time'])
+            existing_data = pd.merge_asof(time_df, existing_data, on='time', tolerance=TIME_CONST)
+            if existing_data['time'].isna().any():
                 existing_data = None
-            
-        # Force time base of existing data to match
-        # if existing_data is not None:
-        #     new_rows = []
-        #     match_for_all_rows = True
-        #     for shot_time in self._times:
-        #         dist_value = abs(existing_data['time']-shot_time)
-        #         update_row = existing_data[dist_value < TIME_CONST]
-        #         if len(update_row) > 1:
-        #             min_dist_index = dist_value.loc[update_row.index].idxmin()
-        #             update_row = existing_data.loc[min_dist_index]
-        #         elif len(update_row) == 0:
-        #             match_for_all_rows = False
-        #             break
-        #         update_row['time'] = shot_time
-        #         new_rows.append(update_row)
-        #     if match_for_all_rows:
-        #         existing_data = pd.concat(new_rows, ignore_index=True)
-        #     else:
-        #         existing_data = None
         
         self.initialized_with_data = existing_data is not None
         if existing_data is not None:

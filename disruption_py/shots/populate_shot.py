@@ -9,8 +9,8 @@ from concurrent.futures import ThreadPoolExecutor
 from disruption_py.shots.shot import Shot
 from disruption_py.utils.method_optimizer import MethodOptimizer, CachedMethod
 from disruption_py.utils.method_caching import CachedMethodParams, manually_cache
-from disruption_py.settings.shot_run_settings import ShotRunSettings, ShotDataRequest, ShotDataRequestParams
-from disruption_py.utils.constants import TIME_CONST
+from disruption_py.settings import ShotSettings, ShotDataRequest, ShotDataRequestParams
+from disruption_py.utils.constants import MAX_THREADS_PER_SHOT, TIME_CONST
     
 def populate_method(params: ShotDataRequestParams, cached_method : CachedMethod, method_optimizer : MethodOptimizer, start_time):
         
@@ -63,7 +63,7 @@ def compute_cached_method_params(cached_method_params : CachedMethodParams, obje
             new_cached_method_params_dict[field_name] = field_value
     return CachedMethodParams(**new_cached_method_params_dict)
 
-def get_cache_methods_from_object(object_to_search, shot_run_settings: ShotRunSettings, params: ShotDataRequestParams):
+def get_cache_methods_from_object(object_to_search, shot_run_settings: ShotSettings, params: ShotDataRequestParams):
     shot = params.shot
     tags = shot_run_settings.run_tags
     methods = shot_run_settings.run_methods
@@ -106,13 +106,13 @@ def get_cache_methods_from_object(object_to_search, shot_run_settings: ShotRunSe
                     f"[Shot {shot.get_shot_id()}]:Skipping {method_name} in class {object_to_search.__class__.__name__}")
     return methods_to_evaluate, all_cached_methods
             
-def populate_shot(shot_run_settings: ShotRunSettings, params: ShotDataRequestParams):
+def populate_shot(shot_run_settings: ShotSettings, params: ShotDataRequestParams):
     """
     Internal method to populate the disruption parameters of a shot object. 
     This method is called by the constructor and should not be called directly. It loops through all methods of the Shot class and calls the ones that have a `populate` attribute set to True and satisfy the tags and methods arguments.
     """
 
-    shot = params.shot
+    shot : Shot = params.shot
     populated_data = params.existing_data
     
     # If the shot object was already passed data in the constructor, use that data. Otherwise, create an empty dataframe.
@@ -136,7 +136,7 @@ def populate_shot(shot_run_settings: ShotRunSettings, params: ShotDataRequestPar
         all_cached_methods.extend(req_all_cached_methods)
         
     # Check that existing data is on the same timebase as the shot object to ensure data consistency
-    if not np.isclose(shot.data['time'], shot.get_times(), atol=TIME_CONST).all():
+    if not np.isclose(populated_data['time'], shot.get_times(), atol=TIME_CONST).all():
         params.logger.error(f"[Shot {shot.get_shot_id()}]: ERROR Computation on different timebase than used existing data")
         
     # Manually cache data that has already been retrieved (likely from sql tables)
@@ -146,7 +146,7 @@ def populate_shot(shot_run_settings: ShotRunSettings, params: ShotDataRequestPar
         for cached_method in all_cached_methods:
             cache_success = manually_cache(
                 shot=shot, 
-                data=shot.data, 
+                data=populated_data, 
                 method_name=cached_method.name, 
                 method_columns=cached_method.computed_cached_method_params.columns
             )
@@ -158,7 +158,7 @@ def populate_shot(shot_run_settings: ShotRunSettings, params: ShotDataRequestPar
 
     method_optimizer : MethodOptimizer = MethodOptimizer(shot.get_tree_manager(), methods_to_evaluate, all_cached_methods, pre_cached_method_names)
 
-    if shot.multithreading:
+    if shot.num_threads_per_shot > 1:
         futures = set()
         future_method_names = {}
         def future_for_next(next_method):
@@ -168,7 +168,7 @@ def populate_shot(shot_run_settings: ShotRunSettings, params: ShotDataRequestPar
         
         start_time = time.time()
         available_methods_runner = method_optimizer.get_async_available_methods_runner(future_for_next)
-        with ThreadPoolExecutor(max_workers=3) as executor: 
+        with ThreadPoolExecutor(max_workers=min(shot.num_threads_per_shot, MAX_THREADS_PER_SHOT)) as executor: 
             available_methods_runner()
             while futures:
                 done, futures = concurrent.futures.wait(futures, return_when='FIRST_COMPLETED')
@@ -195,7 +195,7 @@ def populate_shot(shot_run_settings: ShotRunSettings, params: ShotDataRequestPar
         parameter for parameter in parameters if parameter is not None]
     # TODO: This is a hack to get around the fact that some methods return
     #       multiple parameters. This should be fixed in the future.
-    local_data = pd.concat(parameters + [shot.data], axis=1)
+    local_data = pd.concat(parameters + [populated_data], axis=1)
     local_data = local_data.loc[:, ~local_data.columns.duplicated()]
     shot.data = local_data
     return local_data

@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 import numpy as np
+import pandas as pd
 from dataclasses import dataclass
-from typing import Dict, Callable
+from typing import Dict, Callable, Union
 from disruption_py.mdsplus_integration.tree_manager import TreeManager
 from disruption_py.utils.mappings.tokemak import Tokemak
 from logging import Logger
@@ -12,6 +13,8 @@ class SetTimesRequestParams:
     tokemak : Tokemak
     logger : Logger
     disruption_time : float = None
+
+SetTimesRequestType = Union['SetTimesRequest', str, Dict[Tokemak, 'SetTimesRequestType']]
 
 class SetTimesRequest(ABC):
     '''
@@ -37,6 +40,22 @@ class SetTimesRequest(ABC):
         Used for any tokemak not in tokemak_overrides.
         """
         pass
+    
+class SetTimesRequestDict(SetTimesRequest):
+    def __init__(self, set_times_request_dict : Dict[Tokemak, SetTimesRequestType]):
+        resolved_set_times_request_dict = {
+            tokemak: resolve_set_times_request(individual_request) 
+            for tokemak, individual_request in set_times_request_dict.items()
+        }
+        self.resolved_set_times_request_dict = resolved_set_times_request_dict
+        
+    def _get_times(self, params : SetTimesRequestParams) -> np.ndarray:
+        chosen_request = self.resolved_set_times_request_dict.get(params.tokemak, None)
+        if chosen_request is not None:
+            return chosen_request.get_times(params)
+        else:
+            params.logger.warning(f'No get times request for tokemak {params.tokemak}')
+            return None
 
 class ListSetTimesRequest(SetTimesRequest):
     def __init__(self, times):
@@ -87,18 +106,22 @@ _set_times_request_mappings: Dict[str, SetTimesRequest] = {
     "magnetics" : MagneticsSetTimesRequest(),
 }
 
-def set_times_request_runner(set_times_request, params : SetTimesRequestParams) -> np.ndarray:
+def resolve_set_times_request(set_times_request : SetTimesRequestType) -> SetTimesRequest:
     if isinstance(set_times_request, SetTimesRequest):
-        return set_times_request.get_times(params)
+        return set_times_request
     
     if isinstance(set_times_request, str):
         set_times_request_object = _set_times_request_mappings.get(set_times_request, None)
         if set_times_request_object is not None:
-            return set_times_request_object.get_times(params)
+            return set_times_request_object
+        
+    if isinstance(set_times_request, np.ndarray):
+        return ListSetTimesRequest(set_times_request)
+    
+    if isinstance(set_times_request, pd.Series):
+        return ListSetTimesRequest(set_times_request.to_numpy())
         
     if isinstance(set_times_request, dict):
-        chosen_request = set_times_request.get(params.tokemak, None)
-        if chosen_request is not None:
-            return set_times_request_runner(chosen_request, params)
+        return SetTimesRequestDict(set_times_request)
     
-    raise ValueError("Invalid timebase request")
+    raise ValueError("Invalid set times request")
