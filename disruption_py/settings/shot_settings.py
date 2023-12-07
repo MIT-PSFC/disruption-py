@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 import pandas as pd
 from typing import List, Union, Callable, Tuple
+from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.existing_data_request import ExistingDataRequest, resolve_existing_data_request
 from disruption_py.settings.shot_data_requests import ShotDataRequest
 from disruption_py.settings.set_times_requests import SetTimesRequest, resolve_set_times_request
@@ -26,7 +27,7 @@ class SignalDomain(Enum):
     
 def default_tags():
     return ["all"]
-    
+
 @dataclass
 class ShotSettings:
     """
@@ -34,6 +35,8 @@ class ShotSettings:
 
     Attributes
     ----------
+    log_settings : LogSettings
+        Settings for logging.
     existing_data_request : ExistingDataRequest
         The existing data request to be used when prefilling data for the shot. Can pass any 
         ExistingDataRequestType that resolves to a ExistingDataRequest. See ExistingDataRequest for more 
@@ -81,6 +84,8 @@ class ShotSettings:
     interpolation_method : InterpolationMethod
         The interpolation method to be used when retrieving data for the shot. CURRENTLY UNIMPLEMENTED.
     """
+    # General Settings
+    log_settings : LogSettings = field(default_factory=LogSettings.default)
     
     # Prefill data settings
     existing_data_request : ExistingDataRequest = None
@@ -119,3 +124,6 @@ class ShotSettings:
             "signal_type": SignalDomain,
             "interpolation_method": InterpolationMethod
         })
+        
+        # we can also setup logging on resolve
+        self.log_settings.setup_logging()

@@ -64,15 +64,6 @@ class Shot(ABC):
         self.disruption_time = disruption_time
         self.disrupted = self.disruption_time is not None
         self._tree_manager = TreeManager(shot_id)        
-        
-        # logger
-        if self.logger.level == logging.NOTSET:
-            self.logger.setLevel(logging.INFO)
-        assert self.logger.level != logging.NOTSET, "Logger level is NOTSET"
-        if not self.logger.hasHandlers():
-            print("Added stream handler")
-            self.logger.addHandler(logging.StreamHandler())
-            
             
         if self.num_threads_per_shot > 1:
             self.logger.info("Multithreading enabled")
@@ -87,7 +78,6 @@ class Shot(ABC):
             # self.logger.warning("Git commit not found")
             commit_hash = 'Unknown'
             
-        assert self.logger.hasHandlers(), "Logger has no handlers"
         self._metadata = {
             'labels': {},
             'commit_hash': commit_hash,
