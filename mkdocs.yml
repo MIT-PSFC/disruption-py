@@ -1,20 +1,93 @@
 site_name: My Docs
 theme:
   name: "material"
-  # features:
-  #   - navigation.instant
-  #   - navigation.tabs
-  #   - navigation.expand
+  features:
+    - announce.dismiss
+    - content.action.edit
+    - content.action.view
+    - content.code.annotate
+    - content.code.copy
+    - content.tooltips
+    - navigation.footer
+    - navigation.indexes
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - toc.follow
+    # features:
+    #   - navigation.instant
+    #   - navigation.tabs
+    #   - navigation.expand
 nav:
   - Home: index.md
   - Installation: installation.md
   - Contributing: contributing.md
+  - Test Reference:
+    - disruption_py: reference/
   - API Reference:
-      - Shots: shots-reference.md
+      - Handlers: api/handlers_reference.md
+      - Settings: api/settings_reference.md
+      - Shots: api/shots_reference.md
       - Scripts:
-          - Generate Datasets: scripts/generate_datasets.md
-          - Profiling: scripts/profile_shots.md
+          - Generate Datasets: api/scripts/generate_datasets.md
+          - Profiling: api/scripts/profile_shots.md
+
+markdown_extensions:
+- attr_list
+- admonition
+- callouts
+- footnotes
+- pymdownx.details
+- pymdownx.emoji:
+    emoji_index: !!python/name:material.extensions.emoji.twemoji
+    emoji_generator: !!python/name:material.extensions.emoji.to_svg
+- pymdownx.magiclink
+- pymdownx.snippets:
+    base_path: [!relative $config_dir]
+    check_paths: true
+- pymdownx.superfences
+- pymdownx.tabbed:
+    alternate_style: true
+    slugify: !!python/object/apply:pymdownx.slugs.slugify
+      kwds:
+        case: lower
+- pymdownx.tasklist:
+    custom_checkbox: true
+- pymdownx.tilde
+- toc:
+    permalink: "¤"
+
 plugins:
   - search
-  - mkdocstrings
+  - autorefs
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            # https://mkdocstrings.github.io/python/usage/configuration/
+            docstring_style: numpy
+            docstring_section_style: spacy
+            show_source: true
+            show_signature_annotations: true
+            docstring_options:
+              ignore_init_summary: true
+            inherited_members: true
+            merge_init_into_class: false
+            separate_signature: true
+
+            #  Heading options
+            heading_level: 2
+            show_root_heading: true
+            show_root_full_path: true
+            show_root_members_full_path: false
+            show_object_full_path: false
+
+            # Premium options (not able to use)
+            # show_symbol_type_heading: true # super useful
+            # show_symbol_type_toc: true # super useful
+            # summary: true # super useful
 #  - argparse_to_md

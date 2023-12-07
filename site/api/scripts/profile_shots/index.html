@@ -9,20 +9,20 @@
       
       
       
+        <link rel="prev" href="../generate_datasets/">
       
-        <link rel="next" href="installation/">
       
       
-      <link rel="icon" href="assets/images/favicon.png">
+      <link rel="icon" href="../../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.4.14">
     
     
       
-        <title>My Docs</title>
+        <title>Profiling - My Docs</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.fad675c6.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.fad675c6.min.css">
       
       
 
@@ -41,9 +41,9 @@
       
     
     
-      <link rel="stylesheet" href="assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -65,7 +65,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#disruptionpy" class="md-skip">
+        <a href="#profiling-shots" class="md-skip">
           Skip to content
         </a>
       
@@ -81,7 +81,7 @@
 
 <header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="My Docs" class="md-header__button md-logo" aria-label="My Docs" data-md-component="logo">
+    <a href="../../.." title="My Docs" class="md-header__button md-logo" aria-label="My Docs" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
@@ -101,7 +101,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Home
+              Profiling
             
           </span>
         </div>
@@ -161,11 +161,9 @@
         
   
   
-    
   
-  
-    <li class="md-tabs__item md-tabs__item--active">
-      <a href="." class="md-tabs__link">
+    <li class="md-tabs__item">
+      <a href="../../.." class="md-tabs__link">
         
   
     
@@ -182,7 +180,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="installation/" class="md-tabs__link">
+      <a href="../../../installation/" class="md-tabs__link">
         
   
     
@@ -199,7 +197,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="contributing/" class="md-tabs__link">
+      <a href="../../../contributing/" class="md-tabs__link">
         
   
     
@@ -218,7 +216,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="reference/" class="md-tabs__link">
+        <a href="../../../reference/" class="md-tabs__link">
           
   
     
@@ -234,11 +232,13 @@
         
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="api/handlers_reference/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../handlers_reference/" class="md-tabs__link">
           
   
     
@@ -279,7 +279,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="My Docs" class="md-nav__button md-logo" aria-label="My Docs" data-md-component="logo">
+    <a href="../../.." title="My Docs" class="md-nav__button md-logo" aria-label="My Docs" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
@@ -294,30 +294,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    Home
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="." class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -326,53 +306,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#background" class="md-nav__link">
-    <span class="md-ellipsis">
-      Background
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#project-layout" class="md-nav__link">
-    <span class="md-ellipsis">
-      Project layout
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#references-and-resources" class="md-nav__link">
-    <span class="md-ellipsis">
-      References and Resources
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -384,7 +317,7 @@
   
   
     <li class="md-nav__item">
-      <a href="installation/" class="md-nav__link">
+      <a href="../../../installation/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -404,7 +337,7 @@
   
   
     <li class="md-nav__item">
-      <a href="contributing/" class="md-nav__link">
+      <a href="../../../contributing/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -468,7 +401,7 @@
   
   
     <li class="md-nav__item">
-      <a href="reference/" class="md-nav__link">
+      <a href="../../../reference/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -493,8 +426,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -513,12 +448,12 @@
       
       
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
@@ -532,7 +467,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             API Reference
@@ -546,7 +481,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/handlers_reference/" class="md-nav__link">
+      <a href="../../handlers_reference/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -567,7 +502,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/settings_reference/" class="md-nav__link">
+      <a href="../../settings_reference/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -588,7 +523,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/shots_reference/" class="md-nav__link">
+      <a href="../../shots_reference/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -606,8 +541,10 @@
                 
   
   
+    
   
   
+  
     
     
       
@@ -622,12 +559,12 @@
       
       
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_4" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_4" checked>
         
           
           <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="">
@@ -641,7 +578,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5_4">
             <span class="md-nav__icon md-icon"></span>
             Scripts
@@ -655,7 +592,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/scripts/generate_datasets/" class="md-nav__link">
+      <a href="../generate_datasets/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -673,10 +610,19 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="api/scripts/profile_shots/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -685,6 +631,7 @@
   
 
       </a>
+      
     </li>
   
 
@@ -725,41 +672,6 @@
     
   
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#background" class="md-nav__link">
-    <span class="md-ellipsis">
-      Background
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#project-layout" class="md-nav__link">
-    <span class="md-ellipsis">
-      Project layout
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#references-and-resources" class="md-nav__link">
-    <span class="md-ellipsis">
-      References and Resources
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -773,26 +685,190 @@
                   
 
 
-<h1 id="disruptionpy">DisruptionPy<a class="headerlink" href="#disruptionpy" title="Permanent link">¤</a></h1>
-<p>An interoperable Python package for plasma disruption analysis and prediction using ML. </p>
-<h2 id="background">Background<a class="headerlink" href="#background" title="Permanent link">¤</a></h2>
-<p>A key element of plasma control systems (PCS) in tokamak reactors is the prediction and avoidance of disruptions, sudden losses of the thermal and magnetic energy stored within the plasma that can occur when tokamaks operate near regions of plasma instability or because of system malfunctions. The energy released during  disruptions can cause severe damage to plasma-facing components, limiting experimental operation or even the device lifetime. This poses a serious challenge to next-step fusion experiments such as SPARC, which will have to operate near some of the limits of plasma stability to achieve its intended performance and will do so at for long and frequent intervals. Previous work has shown the promise of machine-learning (ML) algorithms for disruption prediction in both DIII-D and EAST -- the Experimental Advanced Superconducting Tokamak in China -- PCS. This is also due to the fact that fusion science currently lacks first-principle, theoretical solutions to fully predict and avoid disruptions. </p>
-<p>DisruptionPy is an open-source python package for training, updating, and evaluating algorithms for disruption prediction and avoidance that can be applied to Alcator C-Mod and DIII-D data, and can deploy models in DIII-D and EAST (TBD) PCSs. It is being a developed and maintained by MIT EECS Meng student as part of his thesis "A machine-learning driven framework for plasma disruption detection in tokamaks."</p>
-<h2 id="project-layout">Project layout<a class="headerlink" href="#project-layout" title="Permanent link">¤</a></h2>
-<pre><code>disruption_py # Source code
-docs # Mkdocs generated documentation
-iris_requirements # requirements.txt for D3D iris cluster
-matlab # Original matlab scripts
-ml_log # Tracking thesis experiments 
-notebooks # Example notebooks for analysis and visualization
-requirements # Requirements for locally installed environment
-scripts # Scripts for various disruption_py supported workflows
-</code></pre>
-<h2 id="references-and-resources">References and Resources<a class="headerlink" href="#references-and-resources" title="Permanent link">¤</a></h2>
+<h1 id="profiling-shots">Profiling Shots<a class="headerlink" href="#profiling-shots" title="Permanent link">¤</a></h1>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+
+<h1 id="scripts.profile_shots" class="doc doc-heading">
+          <span class="doc doc-object-name doc-module-name">profile_shots</span>
+
+
+<a href="#scripts.profile_shots" class="headerlink" title="Permanent link">¤</a></h1>
+
+  <div class="doc doc-contents first">
+  
+      <h3 id="scripts.profile_shots--resources">Resources<a class="headerlink" href="#scripts.profile_shots--resources" title="Permanent link">¤</a></h3>
+<p><a href="https://docs.python.org/3/library/profile.html">https://docs.python.org/3/library/profile.html</a></p>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<a id="scripts.test_docs"></a>
+  <div class="doc doc-contents first">
+  
+      <p>This module defines functions to parse Numpy-style docstrings into structured data.</p>
+<p>Based on <a href="https://numpydoc.readthedocs.io/en/latest/format.html">https://numpydoc.readthedocs.io/en/latest/format.html</a>,
+it seems Numpydoc is a superset of RST.
+Since fully parsing RST is a non-goal of this project,
+some things are stripped from the Numpydoc specification.</p>
+<p>Rejected as non particularly Pythonic or useful as sections:</p>
 <ul>
-<li><a href="https://probable-argument-b7b.notion.site/Workflow-Design-Document-a04529032bda4a999f42e75182a43258">Design Document</a></li>
-<li><a href="https://www.overleaf.com/read/xyhqcgvzssqb">Thesis Proposal</a></li>
+<li>See also: this section feels too subjective (specially crafted as a standard for Numpy itself),
+    and there are may ways to reference related items in a docstring, depending on the chosen markup.</li>
 </ul>
+<p>Rejected as naturally handled by the user-chosen markup:</p>
+<ul>
+<li>Warnings: this is just markup.</li>
+<li>Notes: again, just markup.</li>
+<li>References: again, just markup.</li>
+</ul>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+
+
+<h1 id="scripts.test_docs.parse" class="doc doc-heading">
+          <span class="doc doc-object-name doc-function-name">parse</span>
+
+
+<a href="#scripts.test_docs.parse" class="headerlink" title="Permanent link">¤</a></h1>
+<div class="doc-signature highlight"><pre><span></span><code><span class="n">parse</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">ignore_init_summary</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">trim_doctest_flags</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="n">allow_section_blank_line</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">warn_unknown_params</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span>
+</code></pre></div>
+
+  <div class="doc doc-contents ">
+  
+      <p>Parse a Numpydoc-style docstring.</p>
+<p>This function iterates on lines of a docstring to build sections.
+It then returns this list of sections.</p>
+
+
+
+  <p>Parameters:</p>
+  <ul>
+      <li class="field-body">
+        <b><code>docstring</code></b>
+        –
+        <div class="doc-md-description">
+          <p>The docstring to parse.</p>
+        </div>
+      </li>
+      <li class="field-body">
+        <b><code>ignore_init_summary</code></b>
+            (<code>bool</code>, default:
+                <code>False</code>
+)
+        –
+        <div class="doc-md-description">
+          <p>Whether to ignore the summary in <code>__init__</code> methods' docstrings.</p>
+        </div>
+      </li>
+      <li class="field-body">
+        <b><code>trim_doctest_flags</code></b>
+            (<code>bool</code>, default:
+                <code>True</code>
+)
+        –
+        <div class="doc-md-description">
+          <p>Whether to remove doctest flags from Python example blocks.</p>
+        </div>
+      </li>
+      <li class="field-body">
+        <b><code>allow_section_blank_line</code></b>
+            (<code>bool</code>, default:
+                <code>False</code>
+)
+        –
+        <div class="doc-md-description">
+          <p>Whether to continue a section if there's an empty line
+between items in a formatted block, like Parameters or Returns.
+If True, you can still create a new section using two empty lines.</p>
+        </div>
+      </li>
+      <li class="field-body">
+        <b><code>warn_unknown_params</code></b>
+            (<code>bool</code>, default:
+                <code>True</code>
+)
+        –
+        <div class="doc-md-description">
+          <p>Warn about documented parameters not appearing in the signature.</p>
+        </div>
+      </li>
+      <li class="field-body">
+        <b><code>**options</code></b>
+            (<code>bool</code>, default:
+                <code>{}</code>
+)
+        –
+        <div class="doc-md-description">
+          <p>Additional parsing options.</p>
+        </div>
+      </li>
+  </ul>
+
+
+
+  <p>Returns:</p>
+  <ul>
+      <li class="field-body">
+            <code>int</code>
+        –
+        <div class="doc-md-description">
+          <p>A list of docstring sections.</p>
+      </div>
+      </li>
+  </ul>
+
+  </div>
+
+</div>
+
+
+
+  </div>
+
+  </div>
+
+</div>
 
 
 
@@ -819,22 +895,22 @@ scripts # Scripts for various disruption_py supported workflows
       
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
-        
           
-          <a href="installation/" class="md-footer__link md-footer__link--next" aria-label="Next: Installation">
-            <div class="md-footer__title">
-              <span class="md-footer__direction">
-                Next
-              </span>
-              <div class="md-ellipsis">
-                Installation
-              </div>
-            </div>
+          <a href="../generate_datasets/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Generate Datasets">
             <div class="md-footer__button md-icon">
               
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4Z"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Generate Datasets
+              </div>
             </div>
           </a>
+        
         
       </nav>
     
@@ -861,10 +937,10 @@ scripts # Scripts for various disruption_py supported workflows
     </div>
     
     
-    <script id="__config" type="application/json">{"base": ".", "features": ["announce.dismiss", "content.action.edit", "content.action.view", "content.code.annotate", "content.code.copy", "content.tooltips", "navigation.footer", "navigation.indexes", "navigation.sections", "navigation.tabs", "navigation.tabs.sticky", "navigation.top", "search.highlight", "search.suggest", "toc.follow"], "search": "assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../..", "features": ["announce.dismiss", "content.action.edit", "content.action.view", "content.code.annotate", "content.code.copy", "content.tooltips", "navigation.footer", "navigation.indexes", "navigation.sections", "navigation.tabs", "navigation.tabs.sticky", "navigation.top", "search.highlight", "search.suggest", "toc.follow"], "search": "../../../assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="assets/javascripts/bundle.cd18aaf1.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.cd18aaf1.min.js"></script>
       
     
   </body>
