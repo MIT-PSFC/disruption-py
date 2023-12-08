@@ -79,7 +79,7 @@ class EfitSetTimesRequest(SetTimesRequest):
             except Exception as e:
                 return efit_tree.getNode(r"\analysis::efit:results:a_eqdsk:time").getData().data().astype('float64', copy=False)
         else:
-            return efit_tree.getNode(fr"\{efit_tree_name}::efit.results.a_eqdsk:time").getData().data().astype('float64', copy=False)
+            return efit_tree.getNode(fr"\{efit_tree_name}::top.results.a_eqdsk:time").getData().data().astype('float64', copy=False)
             
     def _get_times(self, params : SetTimesRequestParams) -> np.ndarray:
         raise ValueError("EFIT timebase request not implemented")

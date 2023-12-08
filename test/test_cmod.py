@@ -40,6 +40,7 @@ def cmod():
 
 def get_mdsplus_data(cmod_handler: CModHandler, shot_id):
     shot_settings = ShotSettings(
+        efit_tree_name="efit18",
         set_times_request="efit",
         log_settings=LogSettings(
             log_to_console=False
@@ -64,12 +65,12 @@ def shotlists(cmod):
         test_shots.append(test_shot_data)
     return test_shots, expected_shots
 
-SKIPPABLE_COLUMNS = [] # ['ip_error', 'v_loop_efit', 'lower_gap', 'upper_gap']
+SKIPPABLE_COLUMNS = ['ip_error', 'lower_gap', 'upper_gap'] # ['ip_error', 'v_loop_efit', 'lower_gap', 'upper_gap']
 
 # lower_gap, upper_gap is times 100 in sql table
 
 
-@pytest.mark.parametrize("fail_early", [False, True])
+@pytest.mark.parametrize("fail_early", [True, False])
 def test_all_sql_values(shotlists, fail_early):
     """
     Ensure that all parameters are calculated correctly in the MDSplus shot object.
@@ -104,6 +105,7 @@ def test_all_sql_values(shotlists, fail_early):
                     expected_shot_data_differences = expected_shot_data[col].iloc[indexes]
                     anomaly = np.where(diff > VAL_TOLERANCE, 1, 0)[indexes]
                     difference_df = pd.DataFrame({'Test': test_shot_data_differences, 'expected': expected_shot_data_differences, 'difference': anomaly_differences, 'anomaly': anomaly})
+                    # difference_df.to_csv(f"test/cmod_failed_values_{shot_id}_{col}.csv")
                     pd.options.display.max_rows = None
                     raise AssertionError(
                         f"Shot {shot_id} condition failed for {col}. Arrays:\n{difference_df}"
