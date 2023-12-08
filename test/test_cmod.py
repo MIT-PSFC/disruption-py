@@ -12,7 +12,6 @@ import pandas as pd
 from disruption_py.handlers.cmod_handler import CModHandler
 from disruption_py.settings import ShotSettings, LogSettings
 from disruption_py.settings.set_times_requests import ListSetTimesRequest 
-from disruption_py.database import create_cmod_handler
 from disruption_py.utils.constants import TIME_CONST 
 
 # Shot list used for testing
