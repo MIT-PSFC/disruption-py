@@ -3,3 +3,4 @@ from .shot_data_requests import ShotDataRequest, ShotDataRequestParams
 from .shot_settings import ShotSettings, InterpolationMethod, SignalDomain
 from .set_times_requests import SetTimesRequest, SetTimesRequestParams
 from .output_type_requests import OutputTypeRequest, ResultOutputTypeRequestParams, FinishOutputTypeRequestParams
+from .log_settings import LogSettings

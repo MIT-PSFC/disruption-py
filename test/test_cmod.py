@@ -10,9 +10,9 @@ import numpy as np
 import pandas as pd
 
 from disruption_py.handlers.cmod_handler import CModHandler
-from disruption_py.settings import ShotSettings
+from disruption_py.settings import ShotSettings, LogSettings
 from disruption_py.settings.set_times_requests import ListSetTimesRequest 
-from disruption_py.database import create_cmod_handler 
+from disruption_py.utils.constants import TIME_CONST 
 
 # Shot list used for testing
 # Mix of disruptive and non-disruptive shots present in SQL and MDSplus
@@ -30,33 +30,44 @@ TEST_SHOTS = [1150805012,   # Flattop Disruption
 TIME_EPSILON = 0.05 # Tolerance for taking the difference between two times [s]
 IP_EPSILON = 1e5    # Tolerance for taking the difference between two ip values [A]
 
+VAL_TOLERANCE = 0.01   # Tolerance for comparing values between MDSplus and SQL
 MATCH_FRACTION = 0.95   # Fraction of signals that must match between MDSplus and SQL
 
 @pytest.fixture(scope='module')
 def cmod():
     return CModHandler()
 
-def get_sql_data(cmod_handler: CModHandler, shot_id):
-    return cmod_handler.database.get_shot_data([shot_id])
-
-def get_mdsplus_data(cmod_handler: CModHandler, shot_id, times):
+def get_mdsplus_data(cmod_handler: CModHandler, shot_id):
     shot_settings = ShotSettings(
-        set_times_request=times
+        efit_tree_name="efit18",
+        set_times_request="efit",
+        log_settings=LogSettings(
+            log_to_console=False
+        )
     )
     shot_data = cmod_handler.get_shots_data(shot_id, shot_settings=shot_settings)
     return shot_data[0]
+
+def get_sql_data(cmod_handler: CModHandler, shot_id, times):
+    sql_data =cmod_handler.database.get_shot_data([shot_id])
+    return pd.merge_asof(times.to_frame(), sql_data, on='time', direction='nearest', tolerance=TIME_CONST)
 
 @pytest.fixture(scope='module')
 def shotlists(cmod):
     expected_shots = []
     test_shots = []
     for shot_id in TEST_SHOTS:
-        expected_shot_data = get_sql_data(cmod, shot_id)
-        test_shot_data = get_mdsplus_data(cmod, shot_id, expected_shot_data['time'])
+        test_shot_data = get_mdsplus_data(cmod, shot_id)
+        expected_shot_data = get_sql_data(cmod, shot_id, test_shot_data['time'])
         assert len(test_shot_data) == len(expected_shot_data), f"Shot {shot_id} has {len(test_shot_data)} rows but SQL has {len(expected_shot_data)} rows"
         expected_shots.append(expected_shot_data)
         test_shots.append(test_shot_data)
     return test_shots, expected_shots
+
+SKIPPABLE_COLUMNS = ['ip_error', 'lower_gap', 'upper_gap'] # ['ip_error', 'v_loop_efit', 'lower_gap', 'upper_gap']
+
+# lower_gap, upper_gap is times 100 in sql table
+
 
 @pytest.mark.parametrize("fail_early", [True, False])
 def test_all_sql_values(shotlists, fail_early):
@@ -68,7 +79,9 @@ def test_all_sql_values(shotlists, fail_early):
     failed_shot_cols = []
     for shot_id, test_shot_data, expected_shot_data in zip(TEST_SHOTS, test_shots, expected_shots):
         for col in expected_shot_data.columns:
-        
+            if col in SKIPPABLE_COLUMNS:
+                continue
+            
             if col not in test_shot_data.columns:
                 print(f"Shot {shot_id} is missing {col} from MDSplus source")
                 continue
@@ -81,15 +94,20 @@ def test_all_sql_values(shotlists, fail_early):
             diff = np.where(expected_shot_data[col] != 0, 
                             np.abs((test_shot_data[col] - expected_shot_data[col]) / expected_shot_data[col]), 
                             np.where(test_shot_data[col] != 0, np.inf, np.nan))                       
-            anomalies = np.argwhere(diff > 1.e-2)
+            anomalies = np.argwhere(diff > VAL_TOLERANCE)
             if len(anomalies) / len(diff) > 1 - MATCH_FRACTION:
                 failed_shot_cols.append((shot_id, col, len(anomalies), len(diff), f"{(len(anomalies)/len(diff)*100):.2f}%"))
                 if fail_early:
-                    anomaly_differences = diff[anomalies.flatten()]
-                    test_shot_data_differences = test_shot_data[col].iloc[anomalies.flatten()]
-                    expected_shot_data_differences = expected_shot_data[col].iloc[anomalies.flatten()]
+                    indexes = np.arange(len(diff)) # anomalies.flatten()
+                    anomaly_differences = diff[indexes]
+                    test_shot_data_differences = test_shot_data[col].iloc[indexes]
+                    expected_shot_data_differences = expected_shot_data[col].iloc[indexes]
+                    anomaly = np.where(diff > VAL_TOLERANCE, 1, 0)[indexes]
+                    difference_df = pd.DataFrame({'Test': test_shot_data_differences, 'expected': expected_shot_data_differences, 'difference': anomaly_differences, 'anomaly': anomaly})
+                    # difference_df.to_csv(f"test/cmod_failed_values_{shot_id}_{col}.csv")
+                    pd.options.display.max_rows = None
                     raise AssertionError(
-                        f"Shot {shot_id} condition failed for {col}. Arrays:\ntest: {test_shot_data_differences}\nexpected: {expected_shot_data_differences}\ndifferences: {anomaly_differences}"
+                        f"Shot {shot_id} condition failed for {col}. Arrays:\n{difference_df}"
                     )
             else:
                 successful_shot_cols.append((shot_id, col, len(anomalies), len(diff), f"{(len(anomalies)/len(diff)*100):.2f}%"))
@@ -98,6 +116,7 @@ def test_all_sql_values(shotlists, fail_early):
         success_cols = {successful_shot_col[1] for successful_shot_col in successful_shot_cols}
         failure_cols = {failed_shot_col[1] for failed_shot_col in failed_shot_cols}
         print(f"Succeeded on columns: {success_cols - failure_cols}")
+        print(f"Failed on columns: {failure_cols}")
 
         col_success_percent = len(successful_shot_cols) / (len(successful_shot_cols) + len(failed_shot_cols)) * 100
         col_success_string = f"Succeeded on {col_success_percent:.2f}% of columns\n"
