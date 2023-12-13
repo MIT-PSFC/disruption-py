@@ -1,9 +1,9 @@
 from disruption_py.databases import D3DDatabase, CModDatabase
 from disruption_py.shots import D3DShot, CModShot
-from disruption_py.utils.mappings.tokamak import Tokemak
+from disruption_py.utils.mappings.tokamak import Tokamak
 
-DATABASE_HANDLERS = {Tokemak.D3D: D3DDatabase, Tokemak.CMOD: CModDatabase, Tokemak.EAST: None}
-SHOT_CLASSES = {Tokemak.D3D: D3DShot, Tokemak.CMOD: CModShot, Tokemak.EAST: None}
+DATABASE_HANDLERS = {Tokamak.D3D: D3DDatabase, Tokamak.CMOD: CModDatabase, Tokamak.EAST: None}
+SHOT_CLASSES = {Tokamak.D3D: D3DShot, Tokamak.CMOD: CModShot, Tokamak.EAST: None}
 
 def get_tokamak_from_shot_id(shot_id):
     if isinstance(shot_id, str):
@@ -16,9 +16,9 @@ def get_tokamak_from_shot_id(shot_id):
             f"shot_id must be a string or integer, not {type(shot_id)}")
 
     if shot_len == 6:
-        return Tokemak.D3D
+        return Tokamak.D3D
     elif shot_len == 10:
-        return Tokemak.CMOD
+        return Tokamak.CMOD
     else:
         raise NotImplementedError(
             f"Unable to handle shot_id of length {shot_len}")

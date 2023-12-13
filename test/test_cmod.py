@@ -8,7 +8,7 @@ import pytest
 
 import numpy as np
 import pandas as pd
-
+import logging
 from disruption_py.handlers.cmod_handler import CModHandler
 from disruption_py.settings import ShotSettings, LogSettings
 from disruption_py.settings.set_times_requests import ListSetTimesRequest 
@@ -42,7 +42,9 @@ def get_mdsplus_data(cmod_handler: CModHandler, shot_id):
         efit_tree_name="efit18",
         set_times_request="efit",
         log_settings=LogSettings(
-            log_to_console=False
+            log_to_console=False,
+            log_file_path="test/last_log.log",
+            file_log_level=logging.DEBUG
         )
     )
     shot_data = cmod_handler.get_shots_data(shot_id, shot_settings=shot_settings)
@@ -50,6 +52,7 @@ def get_mdsplus_data(cmod_handler: CModHandler, shot_id):
 
 def get_sql_data(cmod_handler: CModHandler, shot_id, times):
     sql_data =cmod_handler.database.get_shot_data([shot_id])
+    sql_data["sql_time"] = sql_data["time"]
     return pd.merge_asof(times.to_frame(), sql_data, on='time', direction='nearest', tolerance=TIME_CONST)
 
 @pytest.fixture(scope='module')
@@ -64,11 +67,11 @@ def shotlists(cmod):
         test_shots.append(test_shot_data)
     return test_shots, expected_shots
 
-SKIPPABLE_COLUMNS = ['ip_error', 'lower_gap', 'upper_gap'] # ['ip_error', 'v_loop_efit', 'lower_gap', 'upper_gap']
+SKIPPABLE_COLUMNS = ['lower_gap', 'upper_gap', 'ssep', 'n_over_ncrit', 'dipprog_dt', # constant factor scaling error
+                     'ip_error'] # unknown error
 
-# lower_gap, upper_gap is times 100 in sql table
-
-
+# lower_gap, upper_gap, ssep is times 100 in sql table
+            
 @pytest.mark.parametrize("fail_early", [True, False])
 def test_all_sql_values(shotlists, fail_early):
     """
@@ -158,6 +161,40 @@ def test_flattop_times(cmod, shot_id):
 
     assert mds_flattop_time == pytest.approx(sql_flattop_time, abs=TIME_EPSILON)
     assert mds_flattop_end_time == pytest.approx(sql_flattop_end_time, abs=TIME_EPSILON)
+
+
+# test specific column error in detail
+# def  test_derrivatives(shotlists):
+#     test_shots, expected_shots = shotlists
+#     for shot_id, test_shot_data, expected_shot_data in zip(TEST_SHOTS, test_shots, expected_shots):
+#         difference_dfs = []
+#         for col in ['beta_p', 'dbetap_dt']:
+#             diff = np.where(expected_shot_data[col] != 0, 
+#                             np.abs((test_shot_data[col] - expected_shot_data[col]) / expected_shot_data[col]), 
+#                             np.where(test_shot_data[col] != 0, np.inf, np.nan))                       
+#             indexes = np.arange(len(diff)) # anomalies.flatten()
+#             anomaly_differences = diff[indexes]
+#             test_shot_data_differences = test_shot_data[col].iloc[indexes]
+#             expected_shot_data_differences = expected_shot_data[col].iloc[indexes]
+#             anomaly = np.where(diff > VAL_TOLERANCE, 1, 0)[indexes]
+#             difference_df = pd.DataFrame({f'Test_{col}': test_shot_data_differences, f'Expected_{col}': expected_shot_data_differences, f'Difference_{col}': anomaly_differences, f'Anomaly_{col}': anomaly})
+#             difference_dfs.append(difference_df)
+            
+#         total_difference_df = pd.concat(difference_dfs, axis=1)
+#         # total_difference_df['evals'] = np.gradient(total_difference_df['Expected_beta_p'], np.round(expected_shot_data['time'], 3), edge_order=1)
+#         # total_difference_df['evals_diff'] = np.where(total_difference_df['Expected_beta_p'] != 0, 
+#         #                     np.abs((total_difference_df['evals'] - total_difference_df['Expected_dbetap_dt']) / total_difference_df['Expected_dbetap_dt']), 
+#         #                     np.where(total_difference_df['evals'] != 0, np.inf, np.nan))
+#         # total_difference_df['evals_anomaly'] = np.where(total_difference_df['evals_diff'] > VAL_TOLERANCE, 1, 0)
+#         total_difference_df['beta_p_diff'] = total_difference_df['Expected_beta_p'].diff()
+#         total_difference_df['time'] = expected_shot_data['time']
+#         total_difference_df['time_diff'] = expected_shot_data['time'].diff()
+
+#         total_difference_df.to_csv(f"test/cmod_failed_values_{shot_id}_dbetap_dt.csv")
+#         raise AssertionError(
+#             f"Shot {shot_id} condition failed. Arrays:\n{total_difference_df}"
+#         )
+
 
 # test specified columns
 

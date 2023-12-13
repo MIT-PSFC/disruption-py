@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import numpy as np
 from typing import List, Callable, Any
 from logging import Logger
-from disruption_py.utils.mappings.tokamak import Tokemak
+from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.math_utils import interp1
 from disruption_py.utils.method_caching import parameter_cached_method
 
@@ -12,12 +12,12 @@ from disruption_py.utils.method_caching import parameter_cached_method
 class ShotDataRequestParams:
     shot : Any
     existing_data : pd.DataFrame
-    tokamak : Tokemak
+    tokamak : Tokamak
     logger : Logger
     
 class ShotDataRequest(ABC):
     
-    def get_request_methods_for_tokamak(self, tokamak: Tokemak) -> List[Callable]:
+    def get_request_methods_for_tokamak(self, tokamak: Tokamak) -> List[Callable]:
         request_methods = []
         for method in dir(self):
             if hasattr(method, "tokamaks") and (tokamak in method.tokamaks or tokamak is method.tokamaks):
@@ -26,7 +26,7 @@ class ShotDataRequest(ABC):
     
 class KappaArea(ShotDataRequest):
     
-    @parameter_cached_method(columns=["kappa_area"], used_trees=["efit_tree"], tokamaks=Tokemak.CMOD)
+    @parameter_cached_method(columns=["kappa_area"], used_trees=["efit_tree"], tokamaks=Tokamak.CMOD)
     def _get_kappa_area(self, params):
         aminor = params.shot.efit_tree.getNode(
             r'\efit_aeqdsk:aminor').getData().data().astype('float64', copy=False)

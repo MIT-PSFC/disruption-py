@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from disruption_py.utils.math_utils import interp1
-from disruption_py.utils.mappings.tokamak import Tokemak
+from disruption_py.utils.mappings.tokamak import Tokamak
 import subprocess
 import traceback
 
@@ -53,7 +53,7 @@ class Shot(ABC):
     def __init__(
         self, 
         shot_id, 
-        tokamak: Tokemak,
+        tokamak: Tokamak,
         disruption_time=None,
         shot_settings : ShotSettings=None,
         **kwargs

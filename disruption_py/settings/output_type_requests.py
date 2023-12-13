@@ -4,18 +4,19 @@ from dataclasses import dataclass
 import os
 from typing import Dict, List, Type, Union
 from logging import Logger
-from disruption_py.utils.mappings.tokamak import Tokemak
+from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 
 
 @dataclass
 class ResultOutputTypeRequestParams:
     result : pd.DataFrame
-    tokamak : Tokemak
+    tokamak : Tokamak
     logger : Logger
     
 @dataclass
 class FinishOutputTypeRequestParams:
-    tokamak : Tokemak
+    tokamak : Tokamak
     logger : Logger
 
 OutputTypeRequestType = Union['OutputTypeRequest', str, Dict[str, 'OutputTypeRequestType'], List['OutputTypeRequestType']]
@@ -66,9 +67,9 @@ class OutputTypeRequestDict(OutputTypeRequest):
     '''
     Dict of output type requests
     '''
-    def __init__(self, output_type_request_dict : Dict[Tokemak, OutputTypeRequestType]):
+    def __init__(self, output_type_request_dict : Dict[Tokamak, OutputTypeRequestType]):
         resolved_output_type_request_dict = {
-            tokamak: resolve_output_type_request(individual_type_request) 
+            map_string_to_enum(tokamak, Tokamak): resolve_output_type_request(individual_type_request) 
             for tokamak, individual_type_request in output_type_request_dict.items()
         }
         self.output_type_request_dict = resolved_output_type_request_dict

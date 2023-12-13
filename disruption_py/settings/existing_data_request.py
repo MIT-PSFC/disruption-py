@@ -2,7 +2,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import pandas as pd
 from disruption_py.databases.database import ShotDatabase
-from disruption_py.utils.mappings.tokamak import Tokemak
+from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from typing import Dict, Union, Type
 from logging import Logger
 
@@ -10,10 +11,10 @@ from logging import Logger
 class ExistingDataRequestParams:
     shot_id : str
     database : ShotDatabase
-    tokamak : Tokemak
+    tokamak : Tokamak
     logger : Logger
 
-ExistingDataRequestType = Union['ExistingDataRequest', str, pd.DataFrame, Dict[Tokemak, 'ExistingDataRequestType']]
+ExistingDataRequestType = Union['ExistingDataRequest', str, pd.DataFrame, Dict[Tokamak, 'ExistingDataRequestType']]
 
 class ExistingDataRequest(ABC):
     
@@ -28,9 +29,9 @@ class ExistingDataRequest(ABC):
         pass
     
 class ExistingDataRequestDict(ExistingDataRequest):
-    def __init__(self, existing_data_request_dict : Dict[Tokemak, ExistingDataRequestType]):
+    def __init__(self, existing_data_request_dict : Dict[Tokamak, ExistingDataRequestType]):
         resolved_existing_data_request_dict = {
-            tokamak: resolve_existing_data_request(individual_request) 
+            map_string_to_enum(tokamak, Tokamak): resolve_existing_data_request(individual_request) 
             for tokamak, individual_request in existing_data_request_dict.items()
         }
         self.resolved_existing_data_request_dict = resolved_existing_data_request_dict

@@ -4,17 +4,18 @@ import pandas as pd
 from dataclasses import dataclass
 from typing import Dict, Callable, Union
 from disruption_py.mdsplus_integration.tree_manager import TreeManager
-from disruption_py.utils.mappings.tokamak import Tokemak
+from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
+from disruption_py.utils.mappings.tokamak import Tokamak
 from logging import Logger
 
 @dataclass
 class SetTimesRequestParams:
     tree_manager : TreeManager
-    tokamak : Tokemak
+    tokamak : Tokamak
     logger : Logger
     disruption_time : float = None
 
-SetTimesRequestType = Union['SetTimesRequest', str, Dict[Tokemak, 'SetTimesRequestType']]
+SetTimesRequestType = Union['SetTimesRequest', str, Dict[Tokamak, 'SetTimesRequestType']]
 
 class SetTimesRequest(ABC):
     '''
@@ -42,9 +43,9 @@ class SetTimesRequest(ABC):
         pass
     
 class SetTimesRequestDict(SetTimesRequest):
-    def __init__(self, set_times_request_dict : Dict[Tokemak, SetTimesRequestType]):
+    def __init__(self, set_times_request_dict : Dict[Tokamak, SetTimesRequestType]):
         resolved_set_times_request_dict = {
-            tokamak: resolve_set_times_request(individual_request) 
+            map_string_to_enum(tokamak, Tokamak): resolve_set_times_request(individual_request) 
             for tokamak, individual_request in set_times_request_dict.items()
         }
         self.resolved_set_times_request_dict = resolved_set_times_request_dict
@@ -67,7 +68,7 @@ class ListSetTimesRequest(SetTimesRequest):
 class EfitSetTimesRequest(SetTimesRequest):
     def __init__(self):
         self.tokamak_overrides = {
-            Tokemak.CMOD: self.cmod_times
+            Tokamak.CMOD: self.cmod_times
         }
 
     def cmod_times(self, params : SetTimesRequestParams):

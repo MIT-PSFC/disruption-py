@@ -1,4 +1,4 @@
-from disruption_py.utils.mappings.tokamak import Tokemak
+from disruption_py.utils.mappings.tokamak import Tokamak
 import threading
 import pandas as pd
 from typing import List, Callable, Union
@@ -9,7 +9,7 @@ class CachedMethodParams:
     cache_between_threads: bool
     used_trees : Union[List[str], Callable]
     contained_cached_methods : Union[List[str], Callable]
-    tokamaks : List[Tokemak]    
+    tokamaks : List[Tokamak]    
     # Only for parameter cached methods
     populate : bool = False
     columns : Union[List[str], Callable] = None

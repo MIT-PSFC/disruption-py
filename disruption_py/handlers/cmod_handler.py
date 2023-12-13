@@ -6,7 +6,7 @@ from disruption_py.settings.shot_id_requests import ShotIdRequestParams, ShotIdR
 from disruption_py.settings.existing_data_request import ExistingDataRequest, ExistingDataRequestParams
 from disruption_py.settings.output_type_requests import ResultOutputTypeRequestParams, FinishOutputTypeRequestParams
 from disruption_py.settings import ShotDataRequestParams, ShotSettings
-from disruption_py.utils.mappings.tokamak import Tokemak
+from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.databases import CModDatabase
 from disruption_py.shots import CModShot
 from disruption_py.shots.populate_shot import populate_shot
@@ -57,7 +57,7 @@ class CModHandler:
         """
         Get data for a single shot from CMOD. May be run across different processes.
         """
-        tokamak = Tokemak.CMOD
+        tokamak = Tokamak.CMOD
         class_logger = CModHandler.logger
         class_logger.info(f"starting {shot_id}")
         if shot_settings.existing_data_request is not None:
@@ -108,7 +108,7 @@ class CModHandler:
             The value of OutputTypeRequest.get_results, where OutputTypeRequest is specified in 
             shot_settings. See OutputTypeRequest for more details.
         """
-        tokamak = Tokemak.CMOD
+        tokamak = Tokamak.CMOD
         
         if shot_settings is None:
             shot_settings = ShotSettings()
@@ -136,7 +136,7 @@ class CModHandler:
                     sql_database=self.database, 
                     shot_settings=shot_settings
                 )
-                shot_settings.output_type_request.output_shot(ResultOutputTypeRequestParams(shot_data, Tokemak.CMOD, self.logger))
+                shot_settings.output_type_request.output_shot(ResultOutputTypeRequestParams(shot_data, Tokamak.CMOD, self.logger))
             
             finish_output_type_request_params = FinishOutputTypeRequestParams(tokamak, self.logger)
             shot_settings.output_type_request.stream_output_cleanup(finish_output_type_request_params)

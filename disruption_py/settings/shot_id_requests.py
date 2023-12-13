@@ -3,7 +3,8 @@ from dataclasses import dataclass
 from typing import List, Dict, Union, Type
 import pandas as pd
 from disruption_py.databases.database import ShotDatabase
-from disruption_py.utils.mappings.tokamak import Tokemak
+from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from logging import Logger
 
 import disruption_py.data
@@ -17,7 +18,7 @@ except ImportError:
 @dataclass
 class ShotIdRequestParams:
     database : ShotDatabase
-    tokamak : Tokemak
+    tokamak : Tokamak
     logger : Logger
 
 class ShotIdRequest(ABC):
@@ -106,7 +107,7 @@ _file_suffix_to_shot_id_request : Dict[str, Type[ShotIdRequest]] = {
     ".csv" : FileShotIdRequest,
 } 
 
-ShotIdRequestType = Union['ShotIdRequest', int, str, Dict[Tokemak, 'ShotIdRequestType'], List['ShotIdRequestType']]
+ShotIdRequestType = Union['ShotIdRequest', int, str, Dict[Tokamak, 'ShotIdRequestType'], List['ShotIdRequestType']]
 
 def shot_ids_request_runner(shot_id_request, params : ShotIdRequestParams):
     if isinstance(shot_id_request, ShotIdRequest):
@@ -127,6 +128,10 @@ def shot_ids_request_runner(shot_id_request, params : ShotIdRequestParams):
                return shot_id_request_type(shot_id_request).get_shot_ids(params)
         
     if isinstance(shot_id_request, dict):
+        shot_id_request = {
+            map_string_to_enum(tokamak, Tokamak): shot_id_request_mapping 
+            for tokamak, shot_id_request_mapping in shot_id_request.items()
+        }
         chosen_request = shot_id_request.get(params.tokamak, None)
         if chosen_request is not None:
             return shot_ids_request_runner(chosen_request, params)

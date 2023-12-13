@@ -5,7 +5,7 @@ from collections import OrderedDict
 
 from disruption_py.shots.shot import Shot
 from disruption_py.utils.method_caching import parameter_cached_method, cached_method
-from disruption_py.utils.mappings.tokamak import Tokemak
+from disruption_py.utils.mappings.tokamak import Tokamak
 
 try:
     import importlib.resources as importlib_resources
@@ -91,7 +91,10 @@ class CModShot(Shot):
         shot_settings : ShotSettings=None,
         **kwargs
     ):
-        super().__init__(shot_id, Tokemak.CMOD, disruption_time, shot_settings)
+        if shot_settings is None:
+            shot_settings = ShotSettings()
+            
+        super().__init__(shot_id, Tokamak.CMOD, disruption_time, shot_settings)
         
         # Set up tree nicknames
         self.setup_nicknames(shot_settings.efit_tree_name, shot_settings.attempt_local_efit_env)
@@ -568,7 +571,7 @@ class CModShot(Shot):
 
         for param in self.efit_derivs:
             efit_data[self.efit_derivs[param]] = np.gradient(
-                efit_data[param], efit_time)
+                efit_data[param], efit_time, edge_order=1)
                 
         #Get data for V_surf := deriv(\ANALYSIS::EFIT_SSIBRY)*2*pi
         try:
@@ -897,8 +900,8 @@ class CModShot(Shot):
             bminor = aminor*kappa
             electron_tree = self._tree_manager.open_tree(tree_name='electrons')
             node_ext = '.yag_new.results.profiles'
-            nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = self.compare_ts_tci(
-                electron_tree, nlnum=4)
+            # nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = self.compare_ts_tci(
+            #     electron_tree, nlnum=4)
             TS_te = electron_tree.getNode(
                 f"{node_ext}:te_rz").getData().data()*1000*11600
             tets_edge = electron_tree.getNode(r'\ts_te').getData().data()*11600
@@ -1308,6 +1311,8 @@ class CModShot(Shot):
 
     # TODO: Move to utils
     def efit_rz2psi(self, r, z, t, tree='analysis'):
+        r = r.flatten()
+        z = z.flatten()
         psi = np.full((len(r), len(t)), np.nan)
         z = z.astype('float32')  # TODO: Ask if this change is necessary
         psi_tree = self._tree_manager.open_tree(tree_name=tree)
@@ -1316,11 +1321,21 @@ class CModShot(Shot):
         rgrid = psi_record.dim_of(0)
         zgrid = psi_record.dim_of(1)
         times = psi_record.dim_of(2)
-        rgrid, zgrid = np.meshgrid(rgrid, zgrid, indexing='ij')
-        for i in range(len(t)):
-            # Select EFIT times closest to the requested times
-            indx = np.argmin(np.abs(times - t[i]))
-            psi[:, i] = interp2(rgrid, zgrid, psirz[:, :, indx], r, z, 'cubic')
+        rgrid, zgrid = np.meshgrid(rgrid, zgrid) #, indexing='ij')
+        
+        points = np.array([rgrid.flatten(), zgrid.flatten()]).T  # This transposes the array to shape (n, 2)
+        for i, time in enumerate(t):
+                # Find the index of the closest time
+                time_idx = np.argmin(np.abs(times - time))
+                # Extract the corresponding Psirz slice and transpose it
+                Psirz = np.transpose(psirz[time_idx, :, :])
+                # Perform cubic interpolation on the Psirz slice
+                values = Psirz.flatten()
+                try:
+                    psi[:, i] = sp.interpolate.griddata(points, values, (r, z), method='cubic')
+                except:
+                    self.logger.warning(f'Interpolation failed for efit_rz2psi time {time}')
+
         return psi
 
     def efit_check(self):

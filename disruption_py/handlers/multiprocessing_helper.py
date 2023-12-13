@@ -1,7 +1,7 @@
 from typing import List, Dict
 from disruption_py.settings import ShotSettings, ResultOutputTypeRequestParams, FinishOutputTypeRequestParams
 from disruption_py.utils.constants import MAX_PROCESSES
-from disruption_py.utils.mappings.tokamak import Tokemak
+from disruption_py.utils.mappings.tokamak import Tokamak
 import multiprocessing
 import threading
 
