@@ -73,6 +73,8 @@ class CModHandler:
                 logger=class_logger,
             )
             existing_data = shot_settings.existing_data_request.get_existing_data(existing_data_request_params)
+            existing_data['shot'] = existing_data['shot'].astype(str)
+            existing_data = existing_data[existing_data['shot'] == str(shot_id)]
         else:
             existing_data = None
         disruption_time=sql_database.get_disruption_time(shot_id)

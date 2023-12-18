@@ -22,18 +22,19 @@ theme:
     #   - navigation.tabs
     #   - navigation.expand
 nav:
-  - Home: index.md
-  - Installation: installation.md
-  - Contributing: contributing.md
-  - Test Reference:
-    - disruption_py: reference/
+  - Home: 
+    - Background: index.md
+    - Installation: installation.md 
   - API Reference:
       - Handlers: api/handlers_reference.md
-      - Settings: api/settings_reference.md
       - Shots: api/shots_reference.md
+      - Settings: 
+        - Settings Classes: api/settings_reference.md
+        - Requests Classes: api/requests_reference.md
       - Scripts:
           - Generate Datasets: api/scripts/generate_datasets.md
           - Profiling: api/scripts/profile_shots.md
+  - Contributing: contributing.md
 
 markdown_extensions:
 - attr_list
@@ -78,6 +79,7 @@ plugins:
             inherited_members: true
             merge_init_into_class: false
             separate_signature: true
+            members_order: source
 
             #  Heading options
             heading_level: 2
