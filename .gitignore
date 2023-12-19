@@ -12,3 +12,4 @@ shot_*profileX*
 scripts/output/*
 scripts/*.txt
 .venv
+site/
