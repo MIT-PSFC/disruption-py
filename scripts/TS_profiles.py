@@ -8,12 +8,18 @@ plt.ion()
 import numpy as np
 import sys
 import scipy as sp
-sys.path.append('/home/sciortino/usr/python3modules/profiletools3')
-sys.path.append('/home/sciortino/usr/python3modules/eqtools3')
-#sys.path.append('/home/millerma/python3modules/profiletools3')
-#sys.path.append('/home/millerma/python3modules/eqtools3')
-import profiletools
-import eqtools
+import traceback
+import logging 
+try:
+    sys.path.append('/home/sciortino/usr/python3modules/eqtools3')
+    sys.path.append('/home/sciortino/usr/python3modules/profiletools3')
+    sys.path.append('/home/sciortino/usr/python3modules/gptools3')
+    import eqtools
+    import profiletools
+except Exception as e:
+    logging.warning('Could not import profiletools or eqtools')
+    logging.debug(traceback.format_exc())
+    pass
 
 shot = 1140515017#1090826016#-->LDL shot #114013018 #1140515017
 timebase=np.arange(0.5,1.06,0.01)

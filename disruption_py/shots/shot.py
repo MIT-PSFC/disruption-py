@@ -1,5 +1,8 @@
-from disruption_py.utils import interp1
+from disruption_py.utils.math_utils import interp1
+from typing import Set
 import subprocess
+import os
+import time
 import traceback
 import concurrent 
 from concurrent.futures import ThreadPoolExecutor
@@ -7,38 +10,14 @@ from concurrent.futures import ThreadPoolExecutor
 import MDSplus
 from MDSplus import *
 
+from disruption_py.mdsplus_integration.tree_manager import TreeManager
+from disruption_py.utils.method_caching import MethodOptimizer, CachedMethod
+
 import pandas as pd
 import numpy as np
 import logging
 
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
-
-
-def parameter_method(tags=["all"]):
-    """
-    Tags a function as a parameter method and instantiates its cache. Parameter methods are functions that 
-    calculate disruption parameters from the data in the shot.  They are called by the Shot object when
-    it is instantiated. The cache is used to store the results of the parameter method so that it is only
-    calculated once per shot for a given timebase.
-    """
-    # TODO: Figure out how to hash _times so that we can use the cache for different timebases
-    def tag_wrapper(func):
-        def wrapper(self, *args, **kwargs):
-            # Create the cache if it doesn't exist
-            if not hasattr(self, '_cached_result'):
-                self._cached_result = {}
-            cache_key = func.__name__ + str(len(self._times))
-            if cache_key in self._cached_result:
-                return self._cached_result[cache_key]
-            else:
-                result = func(self, *args, **kwargs)
-                self._cached_result[cache_key] = result
-                return result
-
-        wrapper.populate = True
-        wrapper.tags = tags
-        return wrapper
-    return tag_wrapper
 
 
 class Shot:
@@ -49,12 +28,12 @@ class Shot:
     ----------
     shot_id : int
         Shot number.
-    data : pandas.DataFrame, optional
+    existing_data : pandas.DataFrame, optional
         Data for the shot. If not provided, an empty DataFrame will be created.
 
     Attributes
     ----------
-    data : pandas.DataFrame
+    existing_data : pandas.DataFrame
         Data for the shot.
     conn : MDSplus.Connection
         MDSplus connection to the shot.
@@ -70,19 +49,27 @@ class Shot:
     # TODO: Add [Shot {self._shot_id}]: to logger format by default
     logger = logging.getLogger('disruption_py')
 
-    def __init__(self, shot_id, data=None, **kwargs):
+    def __init__(self, shot_id, existing_data=None, **kwargs):
         self._shot_id = int(shot_id)
-        self.multiprocessing = kwargs.get('multiprocessing', False)
-        try:
-            commit_hash = subprocess.check_output(
-                ["git", "describe", "--always"]).strip()
-        except Exception as e:
-            commit_hash = 'Unknown'
+        self._tree_manager = TreeManager(shot_id)
+        self.multithreading = kwargs.get('multithreading', False)
         if self.logger.level == logging.NOTSET:
             self.logger.setLevel(logging.INFO)
         assert self.logger.level != logging.NOTSET, "Logger level is NOTSET"
         if not self.logger.hasHandlers():
+            print("Added stream handler")
             self.logger.addHandler(logging.StreamHandler())
+        if self.multithreading:
+            self.logger.info("Multithreading enabled")
+        try:
+            commit_hash = subprocess.check_output(
+                ["git", "describe", "--always"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.STDOUT).strip()
+        except Exception as e:
+            # self.logger.warning("Git commit not found")
+            commit_hash = 'Unknown'
+            
         assert self.logger.hasHandlers(), "Logger has no handlers"
         self._metadata = {
             'labels': {},
@@ -92,8 +79,9 @@ class Shot:
             'description': "",
             'disrupted': 100  # TODO: Fix
         }
-        self.data = data
-        if data is None:
+        self.initialized_with_data = existing_data is not None
+        self.data = existing_data
+        if existing_data is None:
             self.data = pd.DataFrame()
 
     @staticmethod
@@ -202,27 +190,43 @@ class Shot:
         if interpolation_timebase is None and interpolate:
             interpolation_timebase = self._times
         return type(self).get_signals(signals, conn, interpolate, interpolation_timebase)
+    
     def apply_shot_filter(self, shot_filter):
         self.data = self.data.filter(shot_filter)
 
     def apply_shot_transform(self, shot_transform):
         self.data = self.data.apply(shot_transform)
 
-    def populate_method(self, method_name):
-        method = getattr(self, method_name)
+    def populate_method(self, cached_method : CachedMethod, method_optimizer : MethodOptimizer, start_time):
+        method = getattr(self, cached_method.name)
+        result = None
         if callable(method) and hasattr(method, 'populate'):
             self.logger.info(
-                f"[Shot {self._shot_id}]:Populating {method_name}")
+                f"[Shot {self._shot_id}]:Populating {cached_method.name}")
+            # self._tree_manager.cleanup_not_needed()
             try:
-                return method()
+                result = method()
             except Exception as e:
                 self.logger.warning(
-                    f"[Shot {self._shot_id}]:Failed to populate {method_name}")
+                    f"[Shot {self._shot_id}]:Failed to populate {cached_method.name} with error {e}")
+                self.logger.debug(f"{traceback.format_exc()}")
+        elif callable(method) and hasattr(method, 'cached'):
+            self.logger.info(
+                f"[Shot {self._shot_id}]:Caching {cached_method.name}")
+            # self._tree_manager.cleanup_not_needed()
+            try:
+                method()
+            except Exception as e:
+                self.logger.warning(
+                    f"[Shot {self._shot_id}]:Failed to cache {cached_method.name} with error {e}")
                 self.logger.debug(f"{traceback.format_exc()}")
         else:
             self.logger.warning(
-                f"[Shot {self._shot_id}]:Method {method_name} is not callable or does not have a `populate` attribute set to True")
-        return None
+                f"[Shot {self._shot_id}]:Method {cached_method.name} is not callable or does not have a `populate` attribute set to True")
+            return None
+        
+        self.logger.info(f"[Shot {self._shot_id}]:Completed {cached_method.name}, time_elapsed: {time.time() - start_time}")
+        return result
     def populate_methods(self, method_names):
         """Populate the shot object with data from MDSplus.
 
@@ -237,37 +241,20 @@ class Shot:
             local_data.append(self.populate_method(method_name))
         self.data = pd.concat([self.data, *local_data], axis=1)
 
-    def populate_tag(self, tag):
-        local_data = []
-        for method_name in dir(self):
-            method = getattr(self, method_name)
-            if callable(method) and hasattr(method, 'populate'):
-                if bool(set(method.tag).intersection(tag)):
-                    print(f"[Shot {self._shot_id}]:Skipping {method_name}")
-                    continue
-                try:
-                    local_data.append(method())
-                except Exception as e:
-                    self.logger.warning(
-                        f"[Shot {self._shot_id}]:Failed to populate {method_name}")
-                    self.logger.debug(f"{traceback.format_exc()}")
-        self.data = pd.concat([self.data, local_data], axis=1)
-
-    def _init_populate(self, already_populated, methods, tags):
+    def _init_populate(self, existing_data, methods, tags):
         """
         Internal method to populate the disruption parameters of a shot object. 
         This method is called by the constructor and should not be called directly. It loops through all methods of the Shot class and calls the ones that have a `populate` attribute set to True and satisfy the tags and methods arguments.
         """
-
+        
         # If the shot object was already passed data in the constructor, use that data. Otherwise, create an empty dataframe.
-        if not already_populated:
-            if self.data is None:
-                self.data = pd.DataFrame()
+        if self.data is None:
+            self.data = pd.DataFrame() 
+        if 'time' not in self.data:
             self.data['time'] = self._times
+        if 'shot' not in self.data:
             self.data['shot'] = self._shot_id
-        else:
-            self.logger.info(f"[Shot {self._shot_id}]:Already populated")
-            return
+  
 
         # If tags or methods are not lists, make them lists.
         if tags is not None and not isinstance(tags, list):
@@ -277,35 +264,76 @@ class Shot:
         parameters = []
 
         # Loop through each attribute and find methods that should populate the shot object.
-        method_names = []
+        methods_to_evaluate : list[CachedMethod] = []
+        all_cached_methods : list[CachedMethod] = []
         for method_name in dir(self):
-            method = getattr(self, method_name)
-            if callable(method) and hasattr(method, 'populate'):
-                if tags is not None and not bool(set(method.tags).intersection(tags)):
-                    self.logger.info(
-                        f"[Shot {self._shot_id}]:Skipping {method_name}")
+            attribute_to_check = getattr(self, method_name)
+            if callable(attribute_to_check) and hasattr(attribute_to_check, 'cached'):
+                cached_method = CachedMethod(name=method_name, method=attribute_to_check)
+                all_cached_methods.append(cached_method)
+            if callable(attribute_to_check) and hasattr(attribute_to_check, 'populate'):
+                param_method = cached_method or CachedMethod(name=method_name, method=attribute_to_check)
+                # If method does not have tag included and name included then skip
+                if tags is not None and bool(set(attribute_to_check.tags).intersection(tags)):
+                    methods_to_evaluate.append(param_method)
                     continue
-                if methods is not None and method_name not in methods:
-                    self.logger.info(
-                        f"[Shot {self._shot_id}]:Skipping {method_name}")
+                if methods is not None and method_name in methods:
+                    methods_to_evaluate.append(param_method)
                     continue
-                method_names.append(method_name)
-        if self.multiprocessing:
-            with ThreadPoolExecutor(max_workers=8) as executor:
-                futures = [executor.submit(
-                    self.populate_method, method_name) for method_name in method_names]
-                for future in concurrent.futures.as_completed(futures):
-                    try:
-                        parameter_df = future.result()
-                        parameters.append(parameter_df)
-                    except Exception as e:
-                        self.logger.warning(
-                            f"[Shot {self._shot_id}]:Failed to populate {method_name}")
-                        self.logger.debug(
-                            f"[Shot {self._shot_id}: {traceback.format_exc()}")
+                self.logger.info(
+                        f"[Shot {self._shot_id}]:Skipping {method_name}")
+                
+        # Check that existing data is on the same timebase as the shot object to ensure data consistency
+        if not np.isclose(self.data['time'], self._times, atol=1e-4).all():
+            self.logger.error(f"[Shot {self._shot_id}]: ERROR Computation on different timebase than used existing data")
+            
+        # Manually cache data that has already been retrieved (likely from sql tables)
+        # Methods added to pre_cached_method_names will be skipped by method optimizer
+        pre_cached_method_names = []
+        if self.initialized_with_data:
+            for cached_method in all_cached_methods:
+                cache_success = cached_method.method.manually_cache(self, self.data)
+                if cache_success:
+                    pre_cached_method_names.append(cached_method.name)
+                    if cached_method in methods_to_evaluate:
+                        self.logger.info(
+                            f"[Shot {self._shot_id}]:Skipping {cached_method.name} already populated")
+
+        method_optimizer : MethodOptimizer = MethodOptimizer(self._tree_manager, methods_to_evaluate, all_cached_methods, pre_cached_method_names)
+        
+        if self.multithreading:
+            futures = set()
+            future_method_names = {}
+            def future_for_next(next_method):
+                new_future = executor.submit(self.populate_method, next_method, method_optimizer, start_time)
+                futures.add(new_future)
+                future_method_names[new_future] = next_method.name
+            
+            start_time = time.time()
+            available_methods_runner = method_optimizer.get_async_available_methods_runner(future_for_next)
+            with ThreadPoolExecutor(max_workers=3) as executor: 
+                available_methods_runner()
+                while futures:
+                    done, futures = concurrent.futures.wait(futures, return_when='FIRST_COMPLETED')
+                    for future in done:
+                        try:
+                            parameter_df = future.result()
+                            parameters.append(parameter_df)
+                            method_optimizer.method_complete(future_method_names[future])
+                            self._tree_manager.cleanup_not_needed(method_optimizer.can_tree_be_closed)
+                        except Exception as e:
+                            self.logger.warning(
+                                f"[Shot {self._shot_id}]:Failed to populate {method_name} with future error {e}")
+                            self.logger.debug(
+                                f"[Shot {self._shot_id}: {traceback.format_exc()}")
+                    available_methods_runner()
+                    
         else:
-            parameters = [self.populate_method(
-                method_name) for method_name in method_names]
+            parameters = []
+            start_time = time.time()
+            method_optimizer.run_methods_sync(
+                lambda next_method: parameters.append(self.populate_method(next_method, method_optimizer, start_time))
+            )
         parameters = [
             parameter for parameter in parameters if parameter is not None]
         # TODO: This is a hack to get around the fact that some methods return

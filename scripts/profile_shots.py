@@ -11,9 +11,8 @@ import argparse
 import time
 from pstats import SortKey
 
-from disruption_py.shots import D3DShot, CModShot, get_shot_id_type
-from disruption_py.database import create_d3d_handler, create_cmod_handler
-from disruption_py.shots import D3DShot, CModShot, get_shot_id_type
+from disruption_py.shots import D3DShot, CModShot
+from disruption_py.utils.mappings.tokemak import get_shot_class_for_shot_id
 from disruption_py.database import create_d3d_handler, create_cmod_handler
 
 TEST_SHOTS = [1150805012,   # Flattop Disruption
@@ -45,7 +44,7 @@ def main(args):
         times = run_cmod_perf()
         print(times)
     else:
-        shot_type = get_shot_id_type(args.shot)
+        shot_type = get_shot_class_for_shot_id(args.shot)
         pr = profile.Profile()
         pr.bias = calibrate_profiler(pr)
         if shot_type == CModShot:

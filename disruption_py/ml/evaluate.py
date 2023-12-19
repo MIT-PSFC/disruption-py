@@ -1,6 +1,6 @@
 import numpy as np
 
-from disruption_py.utils import *
+from disruption_py.utils.math_utils import *
 from disruption_py.ml.models import load_model_from_hdf5
 
 DEFAULT_ORDER = {

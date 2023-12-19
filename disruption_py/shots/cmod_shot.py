@@ -1,8 +1,11 @@
 import traceback
 import logging 
-import argparse 
+import argparse
+from collections import OrderedDict
 
-from disruption_py.shots.shot import Shot, parameter_method
+from disruption_py.shots.shot import Shot
+from disruption_py.utils.method_caching import parameter_cached_method, cached_method
+from disruption_py.utils.environment_vars import temporary_env_var
 try:
     import importlib.resources as importlib_resources
 except ImportError:
@@ -19,6 +22,9 @@ from MDSplus import *
 import sys
 import scipy as sp
 
+import warnings
+warnings.filterwarnings('error', category=RuntimeWarning)
+
 # TODO: Somehow link to disruption_py 
 # TODO: Deal with scary missing TRIPpy dependency (please don't break until I fix you)
 try:
@@ -34,7 +40,7 @@ except Exception as e:
 
 import warnings
 
-from disruption_py.utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power
+from disruption_py.utils.math_utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power, without_duplicates
 import disruption_py.data
 
 MAX_SHOT_TIME = 7.0  # [s]
@@ -76,20 +82,31 @@ class CModShot(Shot):
     efit_derivs = {'beta_p': 'dbetap_dt', 'li': 'dli_dt', 'Wmhd': 'dWmhd_dt'}
 
     # TODO: Populate metadata dict
-    def __init__(self, shot_id, efit_tree_name='analysis', data=None, times=None, disruption_time=None, override_cols=True, **kwargs):
-        super().__init__(shot_id, data)
+    def __init__(
+        self, 
+        shot_id,
+        efit_tree_name='analysis', 
+        existing_data=None, 
+        times=None, # deprecated
+        disruption_time=None, 
+        override_cols=True,
+        timebase_request=None, # temporary
+        attempt_local_efit_env=None, # temporary pass tuple of (env variable, value)
+        **kwargs
+    ):
+        super().__init__(shot_id, existing_data, **kwargs)
         self._times = times
-        self.efit_tree_name = efit_tree_name
-        self._open_efit_tree()
+        self._requested_efit_tree_name = efit_tree_name
         self.disruption_time = disruption_time
         self.disrupted = self.disruption_time is not None
         self.override_cols = override_cols
-        self.data = data
+        self.timebase_request = timebase_request
+        self.attempt_local_efit_env = attempt_local_efit_env
         timebase_signal = kwargs.pop('timebase_signal', None)
         populate_methods = kwargs.pop('populate_methods', None)
         populate_tags = kwargs.pop('populate_tags', ['all'])
         self.interp_scheme = kwargs.pop('interp_scheme', 'linear')
-        if self.data is not None and self._times is None:
+        if existing_data is not None and self._times is None:
             # TODO: Use time interval vs max time to determine if timebase is in ms
             try:
                 self._times = self.data['time'].to_numpy()
@@ -105,22 +122,62 @@ class CModShot(Shot):
         if self._times is None:
             self.set_timebase(timebase_signal, **kwargs)
 
-        self._init_populate(data is not None, populate_methods, populate_tags)
-        self._efit_tree.close()
+        self._init_populate(existing_data, populate_methods, populate_tags)
+        self.cleanup()
 
+    def cleanup(self):
+        """
+        Remove references to mdsplus resources to prevent data leaks.
+        """
+        self._tree_manager.cleanup()
+        self._times = None
+        if hasattr(self, '_cached_result'):
+            self._cached_result.clear()
+
+    @property
+    def efit_tree(self):
+        found_tree = self._tree_manager.tree_from_nickname("efit_tree")
+        if found_tree is None:
+            found_tree = self._open_efit_tree()
+        return found_tree
+    
+    @property
+    def efit_tree_name(self):
+        tree_name = self._tree_manager.tree_name_of_nickname("efit_tree")
+        if tree_name is None:
+            self._open_efit_tree()
+            tree_name = self._tree_manager.tree_name_of_nickname("efit_tree")
+        return tree_name
+    
     def _open_efit_tree(self):
-        try:
-            self._efit_tree = Tree(self.efit_tree_name,
-                                   self._shot_id, mode="readonly")
-        except Exception as e:
-            self.logger.warning(
-                f"[Shot {self._shot_id}]:Failed to open efit tree {self.efit_tree_name}.")
-            if self.efit_tree_name == 'analysis':
-                raise e
-            self._efit_tree = Tree('analysis', self._shot_id, mode="readonly")
+        efit_names_to_test = without_duplicates([
+            self._requested_efit_tree_name,
+            "analysis",
+            *[f"efit0{i}" for i in range(1, 10)],
+            *[f"efit{i}" for i in range(10, 19)],
+        ])
+
+        if self.attempt_local_efit_env is not None:
+            with temporary_env_var(self.attempt_local_efit_env[0], self.attempt_local_efit_env[1]):
+                for efit_tree_name in efit_names_to_test:
+                    try:
+                        return self._tree_manager.try_open_and_nickname(tree_name=efit_tree_name, nickname="efit_tree")
+                    except Exception as e:
+                        self.logger.warning(
+                            f"[Shot {self._shot_id}]:Failed to open efit tree locally {efit_tree_name}, with error {e}")
+
+        for efit_tree_name in efit_names_to_test:
+            try:
+                return self._tree_manager.try_open_and_nickname(tree_name=efit_tree_name, nickname="efit_tree")
+            except Exception as e:
+                self.logger.warning(
+                    f"[Shot {self._shot_id}]:Failed to open efit tree {efit_tree_name}, with error {e}")
+        
+        # TODO(lajz): better error handling
+        raise Exception("failed to find a valid efit tree")
 
     # TODO: Reinterpolate data if timebase is changed
-    def set_timebase(self, timebase_signal):
+    def set_timebase(self, timebase_signal, **kwargs):
         if timebase_signal == None:
             self.set_default_timebase()
         # Check if timebase_signal is array-like. If so, use it as the timebase
@@ -135,14 +192,26 @@ class CModShot(Shot):
                 "Non-default timebases are not currently supported")
 
     def set_default_timebase(self):
-        try:
-            self._efit_tree = Tree('analysis', self._shot_id, mode="readonly")
-            self._times = self._efit_tree.getNode(
-                r"\analysis::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
-        except mdsExceptions.TreeFOPENR as e:
-            self._efit_tree = Tree('efit18', self._shot_id, mode="readonly")
-            self._times = self._efit_tree.getNode(
-                r"\efit18::efit.results.a_eqdsk:time").getData().data().astype('float64', copy=False)
+        if self.timebase_request is not None:
+            if self.timebase_request == "mag004":
+                try:
+                    magnetics_tree = self._tree_manager.open_tree(tree_name='magnetics')
+                    magnetic_times = magnetics_tree.getNode('\ip').dim_of().data().astype('float64', copy=False)
+                    # # interpolate self._times to be every .004 seconds
+                    self._times = np.arange(magnetic_times[0], magnetic_times[-1], .004).astype('float64', copy=False)
+                    return 
+                except:
+                    self.logger.info("Failed to set up magnetic timebase")
+        
+        if self.efit_tree_name == 'analysis':
+            try:
+                self._times = self.efit_tree.getNode(r"\analysis::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
+            except Exception as e:
+                self._times = self.efit_tree.getNode(r"\analysis::efit:results:a_eqdsk:time").getData().data().astype('float64', copy=False)
+        else:
+            self._times = self.efit_tree.getNode(fr"\{self.efit_tree_name}::efit.results.a_eqdsk:time").getData().data().astype('float64', copy=False)
+        if len(self._times) == 0:
+            self.logger.error(f"Timebase for {self.efit_tree_name} is empty.")
 
     def set_flattop_timebase(self):
         self.set_default_timebase()
@@ -171,8 +240,9 @@ class CModShot(Shot):
         end_index = np.max(indices_flattop)
         self._times = self._times[:end_index]
 
+    @cached_method(used_trees=["pcs"], cache_between_threads=False)
     def get_active_wire_segments(self):
-        pcs_tree = Tree('pcs', self._shot_id)
+        pcs_tree = self._tree_manager.open_tree(tree_name='pcs')
         segment_nodes = pcs_tree.getNodeWild("\\top.seg_*")
         # Collect active segments and their information
         active_segments = []
@@ -190,7 +260,7 @@ class CModShot(Shot):
         #     active_segments[i].append(end_times[i])
         return active_segments
 
-    @parameter_method()
+    @parameter_cached_method(columns=["time_until_disrupt"])
     def _get_time_until_disrupt(self):
         time_until_disrupt = np.full(len(self._times), np.nan)
         if self.disrupted:
@@ -256,10 +326,13 @@ class CModShot(Shot):
         # import pdb; pdb.set_trace()
         return pd.DataFrame({"ip": ip, "dip_dt": dip, "dip_smoothed": dip_smoothed, "ip_prog": ip_prog, "dipprog_dt": dipprog_dt, "ip_error": ip_error})
 
-    @parameter_method()
+    @parameter_cached_method(
+        contained_cached_methods=[], 
+        columns=["ip", "dip_dt", "dip_smoothed", "ip_prog", "dipprog_dt", "ip_error"], 
+        used_trees=["magnetics", "pcs"])
     def _get_ip_parameters(self):
         # Automatically generated
-        magnetics_tree = Tree('magnetics', self._shot_id)
+        magnetics_tree = self._tree_manager.open_tree(tree_name='magnetics')
         active_segments = self.get_active_wire_segments()
         # Default PCS timebase is 1 KHZ
         pcstime = np.array(np.arange(-4, 12.383, .001))
@@ -358,7 +431,10 @@ class CModShot(Shot):
                               'linear', False, z_times_v_z[-1])
         return pd.DataFrame({"z_error": z_error, "z_prog": z_prog, "zcur": z_cur, "v_z": v_z, "z_times_v_z": z_times_v_z})
 
-    @parameter_method()
+    @parameter_cached_method(
+        columns=["z_error", "z_prog", "zcur", "v_z", "z_times_v_z"],
+        contained_cached_methods=[],
+        used_trees=["hybrid", "magnetics", "pcs"])
     def _get_z_parameters(self):
         pcstime = np.array(np.arange(-4, 12.383, .001))
         z_prog = np.empty(pcstime.shape)
@@ -397,7 +473,7 @@ class CModShot(Shot):
             raise ValueError("No ZCUR wire was found")
         # Read in A_OUT, which is a 16xN matrix of the errors for *all* 16 wires for
         # *all* of the segments. Note that DPCS time is usually taken at 10kHz.
-        hybrid_tree = Tree('hybrid', self._shot_id)
+        hybrid_tree = self._tree_manager.open_tree(tree_name='hybrid')
         wire_errors_record = hybrid_tree.getNode(
             r'\top.hardware.dpcs.signals:a_out').getData()
         wire_errors, dpcstime = wire_errors_record.data(
@@ -432,7 +508,7 @@ class CModShot(Shot):
                 r'\hybrid::top.dpcs_config.inputs:input_056:p_to_v_expr').getData().data()
             ip = ip_without_factor*ip_factor  # [A]
         else:
-            magnetics_tree = Tree('magnetics', self._shot_id)
+            magnetics_tree = self._tree_manager.open_tree(tree_name='magnetics')
             ip_record = magnetics_tree.getNode(r'\ip').getData()
             ip = ip_record.data()
             ip_time = ip_record.dim_of(0)
@@ -481,15 +557,18 @@ class CModShot(Shot):
         p_ohm = ip * v_resistive
         return pd.DataFrame({"p_oh": p_ohm, "v_loop": v_loop})
 
-    @parameter_method()
+    @parameter_cached_method(
+        columns=["p_oh", "v_loop"],
+        used_trees=["efit_tree"], 
+        contained_cached_methods=["_get_ip_parameters"])
     def _get_ohmic_parameters(self):
         # <-- this line is the culprit for breaking when analysis tree is set to EFIT18
-        v_loop_record = self._efit_tree.getNode(r"\top.mflux:v0").getData()
+        v_loop_record = self.efit_tree.getNode(r"\top.mflux:v0").getData()
         v_loop = v_loop_record.data().astype('float64', copy=False)
         v_loop_time = v_loop_record.dim_of(0)
         if len(v_loop_time) <= 1:
             return pd.DataFrame({"p_oh": np.zeros(len(self._times)), "v_loop": np.zeros(len(self._times))})
-        li_record = self._efit_tree.getNode(r"\efit_aeqdsk:li").getData()
+        li_record = self.efit_tree.getNode(r"\efit_aeqdsk:li").getData()
         li = li_record.data().astype('float64', copy=False)
         efittime = li_record.dim_of(0)
         ip_parameters = self._get_ip_parameters()
@@ -518,7 +597,10 @@ class CModShot(Shot):
         rad_fraction[rad_fraction == np.inf] = np.nan
         return pd.DataFrame({"p_rad": p_rad, "dprad_dt": dprad, "p_lh": p_lh, "p_icrf": p_icrf, "p_input": p_input, "radiated_fraction": rad_fraction})
 
-    @parameter_method()
+    @parameter_cached_method(
+        columns=["p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", "radiated_fraction"],
+        used_trees=['LH', 'RF', 'spectroscopy'], 
+        contained_cached_methods=["_get_ohmic_parameters"])
     def _get_power(self):
         """
         NOTE: the timebase for the LH power signal does not extend over the full
@@ -535,7 +617,7 @@ class CModShot(Shot):
                  r"\rf::rf_power_net", r"\twopi_diode"]
         for i in range(3):
             try:
-                tree = Tree(trees[i], self._shot_id)
+                tree = self._tree_manager.open_tree(tree_name=trees[i])
                 record = tree.getNode(nodes[i])
                 values[2*i] = record.data().astype('float64', copy=False)
                 values[2*i + 1] = record.dim_of(0)
@@ -544,10 +626,12 @@ class CModShot(Shot):
         p_oh = self._get_ohmic_parameters()['p_oh']
         return CModShot.get_power(self._times, *values, p_oh)
 
-    @parameter_method()
+    @parameter_cached_method(
+        columns=[*efit_cols.keys(), *efit_cols_pre_2000.keys(), *efit_derivs.keys(), 'V_surf', 'v_loop_efit', 'beta_n'],
+        used_trees=["efit_tree"])
     def _get_EFIT_parameters(self):
 
-        efit_time = self._efit_tree.getNode(r'\efit_aeqdsk:time').data().astype(
+        efit_time = self.efit_tree.getNode(r'\efit_aeqdsk:time').data().astype(
             'float64', copy=False) # [s]
         efit_data = dict()
         
@@ -556,10 +640,10 @@ class CModShot(Shot):
             try:
                 #If shot before 2000 and the param is in efit_cols_pre_2000
                 if self._shot_id <= 1000000000 and param not in self.efit_cols_pre_2000.keys():
-                    efit_data[param] = self._efit_tree.getNode(
+                    efit_data[param] = self.efit_tree.getNode(
                         self.efit_cols_pre_2000[param]).data().astype('float64', copy=False)
                 else:
-                    efit_data[param] = self._efit_tree.getNode(
+                    efit_data[param] = self.efit_tree.getNode(
                         self.efit_cols[param]).data().astype('float64', copy=False)
             except:
                 self.logger.warning(f"[Shot {self._shot_id}]: Unable to get {param} from EFIT tree")
@@ -577,7 +661,7 @@ class CModShot(Shot):
                 
         #Get data for V_surf := deriv(\ANALYSIS::EFIT_SSIBRY)*2*pi
         try:
-            ssibry = self._efit_tree.getNode('\efit_geqdsk:ssibry').data().astype('float64', copy=False)
+            ssibry = self.efit_tree.getNode('\efit_geqdsk:ssibry').data().astype('float64', copy=False)
             efit_data['V_surf'] = np.gradient(ssibry, efit_time)*2*np.pi
         except:
             print("unable to get V_surf")
@@ -592,7 +676,7 @@ class CModShot(Shot):
             
             #Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally sure on this one)
             try: #TODO: confirm this
-                ssimag = self._efit_tree.getNode('\efit_geqdsk:ssimag').data().astype('float64', copy=False)
+                ssimag = self.efit_tree.getNode('\efit_geqdsk:ssimag').data().astype('float64', copy=False)
                 efit_data['v_loop_efit'] = np.gradient(ssimag, efit_time)*2*np.pi
             except:
                 print("unable to get v_loop_efit")
@@ -600,10 +684,8 @@ class CModShot(Shot):
                 pass 
 
             #Compute beta_n
-            beta_t = self._efit_tree.getNode('\efit_aeqdsk:betat').data().astype('float64', copy=False)
+            beta_t = self.efit_tree.getNode('\efit_aeqdsk:betat').data().astype('float64', copy=False)
             efit_data['beta_n'] = np.reciprocal( np.reciprocal(beta_t) +  np.reciprocal(efit_data['beta_p']) )
-
-
 
         return pd.DataFrame(efit_data)
 
@@ -611,13 +693,13 @@ class CModShot(Shot):
     def get_kappa_area(times, aminor, area, a_times):
         return pd.DataFrame({"kappa_area": interp1(a_times, area/(np.pi * aminor**2), times)})
 
-    @parameter_method()
+    @parameter_cached_method(columns=["kappa_area"], used_trees=["efit_tree"])
     def _get_kappa_area(self):
-        aminor = self._efit_tree.getNode(
+        aminor = self.efit_tree.getNode(
             r'\efit_aeqdsk:aminor').getData().data().astype('float64', copy=False)
-        area = self._efit_tree.getNode(
+        area = self.efit_tree.getNode(
             r'\efit_aeqdsk:area').getData().data().astype('float64', copy=False)
-        times = self._efit_tree.getNode(
+        times = self.efit_tree.getNode(
             r'\efit_aeqdsk:time').getData().data().astype('float64', copy=False)
 
         aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
@@ -644,7 +726,7 @@ class CModShot(Shot):
         return pd.DataFrame({"v_0": v_0})
 
     # TODO: Calculate v_mid
-    @parameter_method()
+    @parameter_cached_method(columns=["v_0"], used_trees=["spectroscopy"])
     def _get_rotation_velocity(self):
         with importlib_resources.path(
                 disruption_py.data, 'lock_mode_calib_shots.txt') as calib_path:
@@ -657,7 +739,7 @@ class CModShot(Shot):
             v_0.fill(np.nan)
             return pd.DataFrame({"v_0": v_0})
         try:
-            spec_tree = Tree('spectroscopy', self._shot_id)
+            spec_tree = self._tree_manager.open_tree(tree_name='spectroscopy')
             intensity_record = spec_tree.getNode(
                 '.hirex_sr.analysis.a:int').getData()
             intensity = intensity_record.data().astype('float64', copy=False)
@@ -680,7 +762,9 @@ class CModShot(Shot):
         pass
     
     # TODO: Try catch failure to get BP13 sensors 
-    @parameter_method()
+    @parameter_cached_method(
+        columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase", "BT"],
+        used_trees=["magnetics"])
     def _get_n_equal_1_amplitude(self):
         """ Calculate n=1 amplitude and phase.
 
@@ -696,7 +780,6 @@ class CModShot(Shot):
 
         N=1 toroidal assymmetry in the magnetic fields
         """
-        print(self._shot_id) #DELETE ME
         n_equal_1_amplitude = np.empty(len(self._times))
         n_equal_1_amplitude.fill(np.nan)
         n_equal_1_normalized = n_equal_1_amplitude.copy()
@@ -704,7 +787,7 @@ class CModShot(Shot):
         # These sensors are placed toroidally around the machine. Letters refer to the 2 ports the sensors were placed between.
         bp13_names = ['BP13_BC', 'BP13_DE', 'BP13_GH', 'BP13_JK']
         bp13_signals = np.empty((len(self._times), len(bp13_names)))
-        mag_tree = Tree('magnetics', self._shot_id)
+        mag_tree = self._tree_manager.open_tree(tree_name='magnetics')
         path = r"\mag_bp_coils."
         bp_node_names = mag_tree.getNode(path + "nodename").getData().data()
         phi = mag_tree.getNode(path + 'phi').getData().data()
@@ -786,18 +869,21 @@ class CModShot(Shot):
         g_f = abs(n_e/n_G)
         return pd.DataFrame({"n_e": n_e, "dn_dt": dn_dt, "Greenwald_fraction": g_f})
 
-    @parameter_method()
+    @parameter_cached_method(
+        columns=["n_e", "dn_dt", "Greenwald_fraction"],
+        used_trees=["electrons", "magnetics", "analysis"]
+    )
     def _get_densities(self):
         try:
-            e_tree = Tree('electrons', self._shot_id)
+            e_tree = self._tree_manager.open_tree(tree_name='electrons')
             n_e_record = e_tree.getNode(r'.tci.results:nl_04').getData() #Line integrated density
             n_e = np.squeeze(n_e_record.data().astype('float64', copy=False))/0.6 #Divide by chord length of ~0.6m to get line averaged density. For future refernce, chord length is stored in .01*\analysis::efit_aeqdsk:rco2v[3,*]
             t_n = n_e_record.dim_of(0).data()
-            mag_tree = Tree('magnetics', self._shot_id)
+            mag_tree = self._tree_manager.open_tree(tree_name='magnetics')
             ip_record = mag_tree.getNode(r'\ip').getData()
             ip = ip_record.data().astype('float64', copy=False)
             t_ip = ip_record.dim_of(0).data()
-            a_tree = Tree('analysis', self._shot_id)
+            a_tree = self._tree_manager.open_tree(tree_name='analysis')
             a_minor_record = a_tree.getNode(
                 r'\efit_aeqdsk:aminor').getData()
             t_a = a_minor_record.dim_of(0).data()
@@ -814,10 +900,13 @@ class CModShot(Shot):
     def get_efc_current(times, iefc, t_iefc):
         return pd.DataFrame({"I_efc": interp1(t_iefc, iefc, times, 'linear')})
 
-    @parameter_method()
+    @parameter_cached_method(
+        columns=["I_efc"],
+        used_trees=["engineering"]
+    )
     def _get_efc_current(self):
         try:
-            eng_tree = Tree('engineering', self._shot_id)
+            eng_tree = self._tree_manager.open_tree(tree_name='engineering')
             iefc_record = eng_tree.getNode(r"\efc:u_bus_r_cur").getData()
             iefc, t_iefc = iefc_record.data(), iefc_record.dim_of(0)
         except Exception as e:
@@ -842,11 +931,11 @@ class CModShot(Shot):
         te_hwm = interp1(ts_time, te_hwm, times)
         return pd.DataFrame({"Te_width": te_hwm})
 
-    @parameter_method()
+    @parameter_cached_method(columns=["Te_width"], used_trees=["electrons"])
     def _get_Ts_parameters(self):
         # TODO: Guassian vs parabolic fit for te profile
         te_hwm = np.empty((len(self._times)))
-        electron_tree = Tree("electrons", self._shot_id)
+        electron_tree = self._tree_manager.open_tree(tree_name='electrons')
 
         # Read in Thomson core temperature data, which is a 2-D array, with the
         # dependent dimensions being time and z (vertical coordinate)
@@ -872,7 +961,9 @@ class CModShot(Shot):
         # pressure_PF = interp1(TS_time, pressure_PF, times, 'linear')
         pass
 
-    @parameter_method(['experimental'])
+    @parameter_cached_method(
+        columns=["ne_peaking", "Te_peaking", "pressure_peaking"],
+        used_trees=["cmod", "efit_tree", "electrons"])
     def _get_peaking_factors(self):
         ne_PF = np.full(len(self._times), np.nan)
         Te_PF = ne_PF.copy()
@@ -881,14 +972,14 @@ class CModShot(Shot):
             # Ignore shots on the blacklist
             return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
         try:
-            efit_tree = Tree('cmod', self._shot_id)
+            efit_tree = self._tree_manager.open_tree(tree_name='cmod')
             z0 = 0.01*efit_tree.getNode(r'\efit_aeqdsk:zmagx').getData().data()
             aminor = efit_tree.getNode(r'\efit_aeqdsk:aminor').getData().data()
             kappa = efit_tree.getNode(r'\efit_aeqdsk:kappa').getData().data()
             efit_time = efit_tree.getNode(
                 r'\efit_aeqdsk:aminor').getData().dim_of(0)
             bminor = aminor*kappa
-            electron_tree = Tree('electrons', self._shot_id)
+            electron_tree = self._tree_manager.open_tree(tree_name='electrons')
             node_ext = '.yag_new.results.profiles'
             nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = self.compare_ts_tci(
                 electron_tree, nlnum=4)
@@ -927,14 +1018,17 @@ class CModShot(Shot):
                 Te_PF[itimes[i]] = np.mean(Te_arr[core_index])/np.mean(Te_arr)
             Te_PF = interp1(TS_time, Te_PF, self._times)
             calib = np.nan
+            # TODO(lajz): fix
             return CModShot.get_Ts_parameters(self._times, TS_time, ne_PF, Te_PF, pressure_PF)
         except mdsExceptions.MdsException as e:
             return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
 
-    @parameter_method()
+    @parameter_cached_method(
+        columns=["prad_peaking"],
+        used_trees=["cmod", "spectroscopy"])
     def _get_prad_peaking(self):
         prad_peaking = np.full(len(self._times), np.nan)
-        cmod_tree = Tree('cmod', self._shot_id)
+        cmod_tree = self._tree_manager.open_tree(tree_name='cmod')
         try:
             r0 = 0.01* cmod_tree.getNode(r'\efit_aeqdsk:rmagx').getData().data()
             z0 = 0.01 * cmod_tree.getNode(r'\efit_aeqdsk:zmagx').getData().data()
@@ -943,7 +1037,7 @@ class CModShot(Shot):
         except mdsExceptions.MdsException as e:
             self.logger.debug(f"[Shot {self._shot_id}]: Failed to get efit data")
             return pd.DataFrame({"prad_peaking": prad_peaking})
-        spec_tree = Tree('spectroscopy', self._shot_id)
+        spec_tree = self._tree_manager.open_tree(tree_name='spectroscopy')
         got_axa = False 
         try: 
             axa = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.AXA:BRIGHT").getData()
@@ -971,24 +1065,26 @@ class CModShot(Shot):
         a_minor = interp1(efit_time, aminor, self._times)
         r0 = interp1(efit_time, r0, self._times)
         z0 = interp1(efit_time, z0, self._times)
-        axa_interp = np.full((bright_axa.shape[0], len(self._times)), np.nan)
-        axj_interp = np.full((bright_axj.shape[0], len(self._times)), np.nan)
         if got_axa:
             good_axa = np.where(good_axa > 0)[0]
             bright_axa = bright_axa[:, good_axa]
-            for i in range(len(bright_axa)):
-                interped = interp1(t_axa, bright_axa[i, :], self._times)
+            axa_interp = np.full((bright_axa.shape[1], len(self._times)), np.nan)
+            r_axa = r_axa[good_axa]
+            for i in range(bright_axa.shape[1]):
+                interped = interp1(t_axa.T, bright_axa[:, i], self._times.T)
                 indx = np.where(interped < 0)
                 interped[indx] = np.nan
                 axa_interp[i,:] = interped
         if got_axj:
             good_axj = np.where(good_axj > 0)[0]
             bright_axj = bright_axj[:, good_axj]
-            for i in range(len(bright_axj)):
-                interped = interp1(t_axj, bright_axj[:, i], self._times)
+            axj_interp = np.full((bright_axj.shape[1], len(self._times)), np.nan)
+            r_axj = r_axj[good_axj]
+            for i in range(bright_axj.shape[1]):
+                interped = interp1(t_axj.T, bright_axj[:, i], self._times.T)
                 indx = np.where(interped < 0)
                 interped[indx] = np.nan
-                axj_interp[:, i] = interped
+                axj_interp[i, :] = interped
         for i in range(len(self._times)):
             core_radiation = np.array([])
             all_radiation = np.array([])
@@ -1002,10 +1098,16 @@ class CModShot(Shot):
                 axj_core_index = axj_dist < 0.2*a_minor[i]
                 core_radiation = np.append(core_radiation, axj_interp[axj_core_index, i])
                 all_radiation = np.append(all_radiation, axj_interp[:, i])
+            try:
                 prad_peaking[i] = np.nanmean(core_radiation) / np.nanmean(all_radiation)
+            except:
+                prad_peaking[i] = np.nan
         return pd.DataFrame({"prad_peaking": prad_peaking})
 
-    @parameter_method(['experimental'])
+    @parameter_cached_method(
+        columns=["ne_peaking", "Te_peaking", "pressure_peaking"],
+        tags=['experimental'], 
+        used_trees=["cmod", "electrons"])
     def _get_peaking_factors_no_tci(self):
         # Initialize PFs as empty arrarys
         ne_PF = np.full(len(self._times), np.nan)
@@ -1016,7 +1118,7 @@ class CModShot(Shot):
             return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
         try:
             # Get shaping params
-            efit_tree = Tree('cmod', self._shot_id)
+            efit_tree = self._tree_manager.open_tree(tree_name='cmod')
             z0 = 0.01*efit_tree.getNode(r'\efit_aeqdsk:zmagx').getData().data()
             aminor = efit_tree.getNode(r'\efit_aeqdsk:aminor').getData().data()
             kappa = efit_tree.getNode(r'\efit_aeqdsk:kappa').getData().data()
@@ -1024,7 +1126,7 @@ class CModShot(Shot):
                 r'\efit_aeqdsk:aminor').getData().dim_of(0)
             bminor = aminor*kappa  # length of major axis of plasma x-section
             # Get data from TS
-            electron_tree = Tree('electrons', self._shot_id)
+            electron_tree = self._tree_manager.open_tree(tree_name='electrons')
             node_ext = '.yag_new.results.profiles'
             # nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = self.compare_ts_tci(
             #    electron_tree, nlnum=4)
@@ -1048,7 +1150,7 @@ class CModShot(Shot):
                 return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
             Te_PF = Te_PF[:len(Te_time)]  # Reshape Te_PF to length of Te_time
             itimes = np.where((Te_time > 0) & (Te_time < self._times[-1]))
-            electron_tree = Tree("electrons", self._shot_id)
+            electron_tree = self._tree_manager.open_tree(tree_name='electrons')
             node_path = ".yag_new.results.profiles"
             TS_time = electron_tree.getNode(
                 node_path + ":te_rz").getData().dim_of(0).data()
@@ -1075,6 +1177,7 @@ class CModShot(Shot):
                 Te_PF[itimes[i]] = np.mean(Te_arr[core_index])/np.mean(Te_arr)
             Te_PF = interp1(TS_time, Te_PF, self._times)
             calib = np.nan
+            # TODO(lajz): fix
             return CModShot.get_Ts_parameters(self._times, TS_time, ne_PF, Te_PF, pressure_PF)
         except mdsExceptions.MdsException as e:
             self.logger.debug(f"[Shot {self._shot_id}]:{traceback.format_exc()}")
@@ -1125,7 +1228,7 @@ class CModShot(Shot):
         return nl_ts1, nl_ts2, nl_tci1, nl_tci2, time1, time2
 
     def parse_yags(self):
-        electron_tree = Tree('electrons', self._shot_id)
+        electron_tree = self._tree_manager.open_tree(tree_name='electrons')
         nyag1 = electron_tree.getNode(r'\knobs:pulses_q').getData().data()
         nyag2 = electron_tree.getNode(r'\knobs:pulses_q_2').getData().data()
         indices1 = -1
@@ -1199,20 +1302,20 @@ class CModShot(Shot):
         n_e_sig = [1e32]
         flag = 1
         valid_indices, efit_times = self.efit_check()
-        cmod_tree = Tree('cmod', self._shot_id)
+        cmod_tree = self._tree_manager.open_tree(tree_name='cmod')
         ip = cmod_tree.getNode(r'\ip').getData().data()
         if np.mean(ip) > 0:
             flag = 0
-        efit_times = self._efit_tree.getNode(r'\efit_aeqdsk:time').data().astype(
+        efit_times = self.efit_tree.getNode(r'\efit_aeqdsk:time').data().astype(
             'float64', copy=False)
         t1 = np.amin(efit_times)
         t2 = np.amax(efit_times)
-        analysis_tree = Tree('analysis', self._shot_id)
+        analysis_tree = self._tree_manager.open_tree(tree_name='analysis')
         psia = analysis_tree.getNode(r'\efit_aeqdsk:SIBDRY').getData().data()
         psia_t = analysis_tree.getNode(
             r'\efit_aeqdsk:SIBDRY').getData().dim_of(0)
         psi_0 = analysis_tree.getNode(r'\efit_aeqdsk:SIMAGX')
-        electron_tree = Tree('electrons', self._shot_id)
+        electron_tree = self._tree_manager.open_tree(tree_name='electrons')
         nets_core = electron_tree.getNode(
             '.YAG_NEW.RESULTS.PROFILES:NE_RZ').getData().data()
         nets_core_t = electron_tree.getNode(
@@ -1291,7 +1394,7 @@ class CModShot(Shot):
     def efit_rz2psi(self, r, z, t, tree='analysis'):
         psi = np.full((len(r), len(t)), np.nan)
         z = z.astype('float32')  # TODO: Ask if this change is necessary
-        psi_tree = Tree(tree, self._shot_id)
+        psi_tree = self._tree_manager.open_tree(tree_name=tree)
         psi_record = psi_tree.getNode(r'\efit_geqdsk:psirz').getData()
         psirz = psi_record.data()
         rgrid = psi_record.dim_of(0)
@@ -1308,7 +1411,7 @@ class CModShot(Shot):
         """
         # TODO: Get description from Jinxiang
         """
-        analysis_tree = Tree('analysis', self._shot_id)
+        analysis_tree = self._tree_manager.open_tree(tree_name='analysis')
         values = []
         for expr in [r'_lf=\analysis::efit_aeqdsk:lflag', r'_l0=((sum(_lf,1) - _lf[*,20] - _lf[*,1])==0)', r'_n=\analysis::efit_fitout:nitera,(_l0 and (_n>4))']:
             values.append(analysis_tree.tdiExecute(expr))
@@ -1323,12 +1426,12 @@ class CModShot(Shot):
 
 
     # TODO: get more accurate description of soft x-ray data
-    @parameter_method()
+    @parameter_cached_method(columns=["sxr"], used_trees=["xtomo"])
     def _get_sxr_data(self):
         """ """
         sxr = np.full(len(self._times), np.nan)
         try:
-            tree = Tree('xtomo', self._shot_id)
+            tree = self._tree_manager.open_tree(tree_name='xtomo')
             sxr_record = tree.getNode(
                 r'\top.brightnesses.array_1:chord_16').getData()
             sxr = sxr_record.data().astype('float64', copy=False)
@@ -1427,7 +1530,10 @@ class CModShot(Shot):
 
         return pd.DataFrame({"Te_edge": Te_edge, "ne_edge": ne_edge})
 
-    @parameter_method(['experimental'])
+    @parameter_cached_method(
+        tags=['experimental'],
+        columns=["Te_edge", "ne_edge"],
+        used_trees=["electrons"])
     def _get_edge_parameters(self):
 
         # Ignore shots on the blacklist
@@ -1437,7 +1543,7 @@ class CModShot(Shot):
         # Range of rho to interpolate over
         rhobase = np.arange(0, 1, 0.001)
         # Get mina and max time from TS tree
-        electron_tree = Tree("electrons", self._shot_id)
+        electron_tree = self._tree_manager.open_tree(tree_name='electrons')
         node_path = ".yag_new.results.profiles"
         try:
             ts_time = electron_tree.getNode(
@@ -1489,7 +1595,11 @@ class CModShot(Shot):
         pass
 
     # TODO: Finish
-    @parameter_method()
+    @parameter_cached_method(
+        tags=['experimental'],
+        columns=["H98", "Wmhd", "btor", "dWmhd_dt", "p_input"],
+        contained_cached_methods=["_get_power", "_get_EFIT_parameters", "_get_densities", "_get_ip_parameters"], 
+        used_trees=["magnetics"])
     def _get_H98(self):
         """Prepare to compute H98 by getting tau_E
         
@@ -1509,7 +1619,7 @@ class CModShot(Shot):
         
         #Get BT
         
-        mag_tree = Tree('magnetics', self._shot_id)
+        mag_tree = self._tree_manager.open_tree(tree_name='magnetics')
         btor_record = mag_tree.getNode(r"\btor").getData()
         btor = btor_record.data()
         t_mag = btor_record.dim_of(0).data() # [s]
@@ -1532,7 +1642,7 @@ class CModShot(Shot):
                 (efit_df.a_minor**0.58)*(efit_df.kappa**0.78)*(btor**0.15)*(p_input**-0.69)
         H98 = tau/tau_98
 
-        return pd.DataFrame({"H98": H98})
+        return pd.DataFrame({"H98": H98, "Wmhd": Wmhd, "btor": btor, "dWmhd_dt": dWmhd_dt, "p_input": p_input})
 
 
 if __name__ == '__main__':
