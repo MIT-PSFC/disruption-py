@@ -67,8 +67,10 @@ def shotlists(cmod):
         test_shots.append(test_shot_data)
     return test_shots, expected_shots
 
-SKIPPABLE_COLUMNS = ['lower_gap', 'upper_gap', 'ssep', 'n_over_ncrit', 'dipprog_dt', # constant factor scaling error
-                     'ip_error'] # unknown error
+SKIPPABLE_COLUMNS = [
+    'lower_gap', 'upper_gap', 'ssep', 'n_over_ncrit', 'dipprog_dt', # constant factor scaling error
+    'ip_error' # unknown error
+]
 
 # lower_gap, upper_gap, ssep is times 100 in sql table
             
@@ -82,8 +84,9 @@ def test_all_sql_values(shotlists, fail_early):
     failed_shot_cols = []
     for shot_id, test_shot_data, expected_shot_data in zip(TEST_SHOTS, test_shots, expected_shots):
         for col in expected_shot_data.columns:
-            if col in SKIPPABLE_COLUMNS:
-                continue
+            # uncomment to skip columns that are recognized to be broken
+            # if col in SKIPPABLE_COLUMNS:
+            #     continue
             
             if col not in test_shot_data.columns:
                 print(f"Shot {shot_id} is missing {col} from MDSplus source")
