@@ -7,7 +7,11 @@ Installation is cluster-specific:
 ### CMOD:  
 The following command will install the disruption warning package locally in develop mode. In develop mode, changes to the directory used for installation will be reflected in the installed package.   
 ```
-pip3 install --user -e /home/hmturner/disruption_py # No --user needed if installing in a virtual env
+cd ~
+mkdir ~/dpy-experimental
+rm -rf ~/dpy-experimental/disruption-py # if you have already copied this previously
+cp -R /home/joshlor/disruption-py ~/dpy-experimental/disruption-py
+pip3 install --user -e ~/dpy-experimental/disruption-py # No --user needed if installing in a virtual env
 ```
 ### D3D:
 First we need to load the proper modules:

@@ -5,7 +5,8 @@ from collections import OrderedDict
 
 from disruption_py.shots.shot import Shot
 from disruption_py.utils.method_caching import parameter_cached_method, cached_method
-from disruption_py.utils.environment_vars import temporary_env_var
+from disruption_py.utils.mappings.tokamak import Tokamak
+
 try:
     import importlib.resources as importlib_resources
 except ImportError:
@@ -41,10 +42,10 @@ except Exception as e:
 import warnings
 
 from disruption_py.utils.math_utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power, without_duplicates
+from disruption_py.settings import ShotSettings
 import disruption_py.data
 
 MAX_SHOT_TIME = 7.0  # [s]
-CMOD_DISRUPTED_SHOT = 1120814006
 
 
 class CModShot(Shot):
@@ -85,45 +86,24 @@ class CModShot(Shot):
     def __init__(
         self, 
         shot_id,
-        efit_tree_name='analysis', 
-        existing_data=None, 
-        times=None, # deprecated
-        disruption_time=None, 
-        override_cols=True,
-        timebase_request=None, # temporary
-        attempt_local_efit_env=None, # temporary pass tuple of (env variable, value)
+        existing_data=None,
+        disruption_time=None,
+        shot_settings : ShotSettings=None,
         **kwargs
     ):
-        super().__init__(shot_id, existing_data, **kwargs)
-        self._times = times
-        self._requested_efit_tree_name = efit_tree_name
-        self.disruption_time = disruption_time
-        self.disrupted = self.disruption_time is not None
-        self.override_cols = override_cols
-        self.timebase_request = timebase_request
-        self.attempt_local_efit_env = attempt_local_efit_env
-        timebase_signal = kwargs.pop('timebase_signal', None)
-        populate_methods = kwargs.pop('populate_methods', None)
-        populate_tags = kwargs.pop('populate_tags', ['all'])
-        self.interp_scheme = kwargs.pop('interp_scheme', 'linear')
-        if existing_data is not None and self._times is None:
-            # TODO: Use time interval vs max time to determine if timebase is in ms
-            try:
-                self._times = self.data['time'].to_numpy()
-                # Check if the timebase is in ms instead of s
-                if self._times[-1] > MAX_SHOT_TIME:
-                    self._times /= 1000  # [ms] -> [s]
-            except KeyError as e:
-                self.logger.warning(
-                    f"[Shot {self._shot_id}]: Shot constructor was passed data but no timebase.")
-                self.logger.debug(
-                    f"[Shot {self._shot_id}]:{traceback.format_exc()}")
-                self.set_timebase(timebase_signal, **kwargs)
-        if self._times is None:
-            self.set_timebase(timebase_signal, **kwargs)
+        if shot_settings is None:
+            shot_settings = ShotSettings()
+            
+        super().__init__(shot_id, Tokamak.CMOD, disruption_time, shot_settings)
+        
+        # Set up tree nicknames
+        self.setup_nicknames(shot_settings.efit_tree_name, shot_settings.attempt_local_efit_env)
 
-        self._init_populate(existing_data, populate_methods, populate_tags)
-        self.cleanup()
+        # must call this method after nicknamed trees setup
+        self._init_timebase(shot_settings, existing_data)
+        
+        self._init_with_data(existing_data)
+
 
     def cleanup(self):
         """
@@ -134,87 +114,26 @@ class CModShot(Shot):
         if hasattr(self, '_cached_result'):
             self._cached_result.clear()
 
-    @property
-    def efit_tree(self):
-        found_tree = self._tree_manager.tree_from_nickname("efit_tree")
-        if found_tree is None:
-            found_tree = self._open_efit_tree()
-        return found_tree
-    
-    @property
-    def efit_tree_name(self):
-        tree_name = self._tree_manager.tree_name_of_nickname("efit_tree")
-        if tree_name is None:
-            self._open_efit_tree()
-            tree_name = self._tree_manager.tree_name_of_nickname("efit_tree")
-        return tree_name
-    
-    def _open_efit_tree(self):
+    def setup_nicknames(self, requested_efit_tree_name, attempt_local_efit_env):
+        # nickname efit tree
         efit_names_to_test = without_duplicates([
-            self._requested_efit_tree_name,
+            requested_efit_tree_name,
             "analysis",
             *[f"efit0{i}" for i in range(1, 10)],
             *[f"efit{i}" for i in range(10, 19)],
         ])
 
-        if self.attempt_local_efit_env is not None:
-            with temporary_env_var(self.attempt_local_efit_env[0], self.attempt_local_efit_env[1]):
-                for efit_tree_name in efit_names_to_test:
-                    try:
-                        return self._tree_manager.try_open_and_nickname(tree_name=efit_tree_name, nickname="efit_tree")
-                    except Exception as e:
-                        self.logger.warning(
-                            f"[Shot {self._shot_id}]:Failed to open efit tree locally {efit_tree_name}, with error {e}")
-
-        for efit_tree_name in efit_names_to_test:
-            try:
-                return self._tree_manager.try_open_and_nickname(tree_name=efit_tree_name, nickname="efit_tree")
-            except Exception as e:
-                self.logger.warning(
-                    f"[Shot {self._shot_id}]:Failed to open efit tree {efit_tree_name}, with error {e}")
+        self._tree_manager.nickname('efit_tree', efit_names_to_test, attempt_local_efit_env)
+    
+    @property
+    def efit_tree(self):
+        return self._tree_manager.tree_from_nickname("efit_tree")
         
-        # TODO(lajz): better error handling
-        raise Exception("failed to find a valid efit tree")
-
-    # TODO: Reinterpolate data if timebase is changed
-    def set_timebase(self, timebase_signal, **kwargs):
-        if timebase_signal == None:
-            self.set_default_timebase()
-        # Check if timebase_signal is array-like. If so, use it as the timebase
-        elif isinstance(timebase_signal, (list, np.ndarray, pd.Series)):
-            self._times = timebase_signal
-        elif timebase_signal == 'flattop':
-            self.set_flattop_timebase()
-        elif timebase_signal == 'rampup_and_flattop':
-            self.set_rampup_and_flattop_timebase()
-        else:
-            raise NotImplementedError(
-                "Non-default timebases are not currently supported")
-
-    def set_default_timebase(self):
-        if self.timebase_request is not None:
-            if self.timebase_request == "mag004":
-                try:
-                    magnetics_tree = self._tree_manager.open_tree(tree_name='magnetics')
-                    magnetic_times = magnetics_tree.getNode('\ip').dim_of().data().astype('float64', copy=False)
-                    # # interpolate self._times to be every .004 seconds
-                    self._times = np.arange(magnetic_times[0], magnetic_times[-1], .004).astype('float64', copy=False)
-                    return 
-                except:
-                    self.logger.info("Failed to set up magnetic timebase")
-        
-        if self.efit_tree_name == 'analysis':
-            try:
-                self._times = self.efit_tree.getNode(r"\analysis::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
-            except Exception as e:
-                self._times = self.efit_tree.getNode(r"\analysis::efit:results:a_eqdsk:time").getData().data().astype('float64', copy=False)
-        else:
-            self._times = self.efit_tree.getNode(fr"\{self.efit_tree_name}::efit.results.a_eqdsk:time").getData().data().astype('float64', copy=False)
-        if len(self._times) == 0:
-            self.logger.error(f"Timebase for {self.efit_tree_name} is empty.")
-
+    @property
+    def efit_tree_name(self):
+        return self._tree_manager.tree_name_of_nickname("efit_tree")
+            
     def set_flattop_timebase(self):
-        self.set_default_timebase()
         ip_parameters = self._get_ip_parameters()
         ipprog, dipprog_dt = ip_parameters['ip_prog'], ip_parameters['dipprog_dt']
         indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 1e3)[0]
@@ -227,7 +146,6 @@ class CModShot(Shot):
         self._times = self._times[indices_flattop]
 
     def set_rampup_and_flattop_timebase(self):
-        self.set_default_timebase()
         ip_parameters = self._get_ip_parameters()
         ipprog, dipprog_dt = ip_parameters['ip_prog'], ip_parameters['dipprog_dt']
         indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 6e4)[0]
@@ -327,9 +245,9 @@ class CModShot(Shot):
         return pd.DataFrame({"ip": ip, "dip_dt": dip, "dip_smoothed": dip_smoothed, "ip_prog": ip_prog, "dipprog_dt": dipprog_dt, "ip_error": ip_error})
 
     @parameter_cached_method(
-        contained_cached_methods=[], 
         columns=["ip", "dip_dt", "dip_smoothed", "ip_prog", "dipprog_dt", "ip_error"], 
-        used_trees=["magnetics", "pcs"])
+        used_trees=["magnetics", "pcs"],
+        contained_cached_methods=[])
     def _get_ip_parameters(self):
         # Automatically generated
         magnetics_tree = self._tree_manager.open_tree(tree_name='magnetics')
@@ -653,11 +571,7 @@ class CModShot(Shot):
 
         for param in self.efit_derivs:
             efit_data[self.efit_derivs[param]] = np.gradient(
-                efit_data[param], efit_time)
-        if not np.array_equal(self._times, efit_time):
-            for param in efit_data:
-                efit_data[param] = interp1(
-                    efit_time, efit_data[param], self._times)
+                efit_data[param], efit_time, edge_order=1)
                 
         #Get data for V_surf := deriv(\ANALYSIS::EFIT_SSIBRY)*2*pi
         try:
@@ -687,6 +601,11 @@ class CModShot(Shot):
             beta_t = self.efit_tree.getNode('\efit_aeqdsk:betat').data().astype('float64', copy=False)
             efit_data['beta_n'] = np.reciprocal( np.reciprocal(beta_t) +  np.reciprocal(efit_data['beta_p']) )
 
+        if not np.array_equal(self._times, efit_time):
+            for param in efit_data:
+                efit_data[param] = interp1(
+                    efit_time, efit_data[param], self._times)
+                
         return pd.DataFrame(efit_data)
 
     @staticmethod
@@ -981,8 +900,8 @@ class CModShot(Shot):
             bminor = aminor*kappa
             electron_tree = self._tree_manager.open_tree(tree_name='electrons')
             node_ext = '.yag_new.results.profiles'
-            nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = self.compare_ts_tci(
-                electron_tree, nlnum=4)
+            # nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = self.compare_ts_tci(
+            #     electron_tree, nlnum=4)
             TS_te = electron_tree.getNode(
                 f"{node_ext}:te_rz").getData().data()*1000*11600
             tets_edge = electron_tree.getNode(r'\ts_te').getData().data()*11600
@@ -1392,6 +1311,8 @@ class CModShot(Shot):
 
     # TODO: Move to utils
     def efit_rz2psi(self, r, z, t, tree='analysis'):
+        r = r.flatten()
+        z = z.flatten()
         psi = np.full((len(r), len(t)), np.nan)
         z = z.astype('float32')  # TODO: Ask if this change is necessary
         psi_tree = self._tree_manager.open_tree(tree_name=tree)
@@ -1400,11 +1321,21 @@ class CModShot(Shot):
         rgrid = psi_record.dim_of(0)
         zgrid = psi_record.dim_of(1)
         times = psi_record.dim_of(2)
-        rgrid, zgrid = np.meshgrid(rgrid, zgrid, indexing='ij')
-        for i in range(len(t)):
-            # Select EFIT times closest to the requested times
-            indx = np.argmin(np.abs(times - t[i]))
-            psi[:, i] = interp2(rgrid, zgrid, psirz[:, :, indx], r, z, 'cubic')
+        rgrid, zgrid = np.meshgrid(rgrid, zgrid) #, indexing='ij')
+        
+        points = np.array([rgrid.flatten(), zgrid.flatten()]).T  # This transposes the array to shape (n, 2)
+        for i, time in enumerate(t):
+                # Find the index of the closest time
+                time_idx = np.argmin(np.abs(times - time))
+                # Extract the corresponding Psirz slice and transpose it
+                Psirz = np.transpose(psirz[time_idx, :, :])
+                # Perform cubic interpolation on the Psirz slice
+                values = Psirz.flatten()
+                try:
+                    psi[:, i] = sp.interpolate.griddata(points, values, (r, z), method='cubic')
+                except:
+                    self.logger.warning(f'Interpolation failed for efit_rz2psi time {time}')
+
         return psi
 
     def efit_check(self):
@@ -1651,8 +1582,8 @@ if __name__ == '__main__':
     # ch = logging.StreamHandler(sys.stdout)
     # ch.setLevel(5)
     parser = argparse.ArgumentParser(description="Test CModShot class")
-    # parser.add_argument('--shot', type=int, help='Shot number to test', default=1150922001)
-    parser.add_argument('--shot', type=int, help='Shot number to test', default=1030523006)
+    # parser.add_argument('--shot', type=int, help='Shot id to test', default=1150922001)
+    parser.add_argument('--shot', type=int, help='Shot id to test', default=1030523006)
     # Add parser argument for list of methods to populate
     parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_densities'])
     args = parser.parse_args()

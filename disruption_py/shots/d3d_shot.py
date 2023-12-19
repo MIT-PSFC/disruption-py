@@ -1,11 +1,6 @@
 from disruption_py.shots.shot import Shot
 from disruption_py.utils.method_caching import parameter_cached_method
 
-try:
-    import importlib.resources as importlib_resources
-except ImportError:
-    # Try backported to PY<37 `importlib_resources`.
-    import importlib_resources
 import logging
 import traceback
 
