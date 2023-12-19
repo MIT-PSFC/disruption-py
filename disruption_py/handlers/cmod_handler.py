@@ -14,8 +14,7 @@ import pandas as pd
 import logging
 
 class CModHandler:
-    """
-    Brief description of the class.
+    """Class used to retrieve MDSplus and sql data from Alcator C-Mod..
 
     Parameters
     ----------
@@ -28,11 +27,13 @@ class CModHandler:
     ----------
     logger : Logger
         The logger used for disruption_py.
+    database : CModDatabase
+        Reference to the sql shot logbook for CMod.
 
     Methods
     -------
-    get_shot_data(shot_id, sql_database=None, shot_settings)
-        Static method used to get data for a single shot from CMOD. May be run across different processes.
+    _get_shot_data(shot_id, sql_database=None, shot_settings)
+        Static method used to get data for a single shot from CMOD. Used for running across different processes.
     get_shots_data(shot_id_request, shot_settings, num_processes)
         Instance method used to get shot data for all shots from shot_id_request from CMOD.
     """
@@ -44,16 +45,20 @@ class CModHandler:
             self.database_initializer = CModDatabase.default
 
     @property
-    def database(self):
-        """
-        Accessor for the database.
+    def database(self) -> CModDatabase:
+        """Reference to the sql shot logbook for CMod.
+        
+        Returns
+        -------
+        CModDatabase
+            Database object with an open connection to the CMod sql database.
         """
         if not hasattr(self, '_database'):
             self._database = self.database_initializer()
         return self._database
     
     @staticmethod
-    def get_shot_data(shot_id, sql_database=None, shot_settings: ShotSettings=None) -> pd.DataFrame:
+    def _get_shot_data(shot_id, sql_database=None, shot_settings: ShotSettings=None) -> pd.DataFrame:
         """
         Get data for a single shot from CMOD. May be run across different processes.
         """
@@ -68,6 +73,8 @@ class CModHandler:
                 logger=class_logger,
             )
             existing_data = shot_settings.existing_data_request.get_existing_data(existing_data_request_params)
+            existing_data['shot'] = existing_data['shot'].astype(str)
+            existing_data = existing_data[existing_data['shot'] == str(shot_id)]
         else:
             existing_data = None
         disruption_time=sql_database.get_disruption_time(shot_id)
@@ -126,12 +133,12 @@ class CModHandler:
                 logger = self.logger,
             )
             results = shot_retriever.run(
-                shot_creator_f=CModHandler.get_shot_data, 
+                shot_creator_f=CModHandler._get_shot_data, 
                 shot_id_list=shot_id_list,
             )
         else:
             for shot_id in shot_id_list:
-                shot_data = CModHandler.get_shot_data(
+                shot_data = CModHandler._get_shot_data(
                     shot_id=shot_id, 
                     sql_database=self.database, 
                     shot_settings=shot_settings

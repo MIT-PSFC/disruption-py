@@ -1,3 +1,25 @@
+"""
+Classes
+----------
+ExistingDataRequestParams
+    Dataclass to hold parameters for a data request.
+ExistingDataRequest
+    Abstract class that must be subclassed by existing data request classes.
+SQLExistingDataRequest
+    Implementation for using the SQL database as the existing data request.
+DFExistingDataRequest
+    Implementation for passing existing data as a pandas DataFrame.
+
+Attributes
+----------
+_existing_data_request_mappings (Dict[str, ExistingDataRequest]):
+    Contains string mappings for the built-in existing data request classes
+    Currently contains:
+    "sql" : SQLExistingDataRequest
+
+See Also:
+    disruption_py.settings.shot_settings.ShotSettings
+"""
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import pandas as pd
@@ -9,6 +31,20 @@ from logging import Logger
 
 @dataclass
 class ExistingDataRequestParams:
+    """Params passed by disruption_py to _get_existing_data() method.
+
+    Attributes
+    ----------
+    shot_id : str
+        Shot Id for which to get existing data.
+    database : ShotDatabase
+        Database object to use for getting existing data.
+        A different database connection is used by each process.
+    tokamak : Tokemak
+        The tokemak for which the data request is made.
+    logger : Logger
+        Logger object from disruption_py to use for logging.
+    """
     shot_id : str
     database : ShotDatabase
     tokamak : Tokamak
@@ -17,6 +53,13 @@ class ExistingDataRequestParams:
 ExistingDataRequestType = Union['ExistingDataRequest', str, pd.DataFrame, Dict[Tokamak, 'ExistingDataRequestType']]
 
 class ExistingDataRequest(ABC):
+    """ExistingDataRequest abstract class that should be inherited by all existing data request classes.
+    
+    Methods
+    -------
+    _get_existing_data(self, params : ExistingDataRequestParams) -> pd.DataFrame
+        Abstract method implemented by subclasses to get existing data for a given request as a pandas dataframe.
+    """
     
     def get_existing_data(self, params : ExistingDataRequestParams) -> pd.DataFrame:
         if hasattr(self, 'tokamak_overrides'):
@@ -26,6 +69,13 @@ class ExistingDataRequest(ABC):
     
     @abstractmethod
     def _get_existing_data(self, params : ExistingDataRequestParams) -> pd.DataFrame:
+        """Abstract method implemented by subclasses to get existing data for a given request as a pandas dataframe.
+        
+        Attributes
+        ----------
+        params : ExistingDataRequestParams
+            Params that can be used to determine and retrieve existing data.
+        """
         pass
     
 class ExistingDataRequestDict(ExistingDataRequest):
@@ -46,11 +96,21 @@ class ExistingDataRequestDict(ExistingDataRequest):
 
 
 class SQLExistingDataRequest(ExistingDataRequest):
+    """Existing data request for retrieving data from SQL database."""
+    
     def _get_existing_data(self, params : ExistingDataRequestParams) -> pd.DataFrame:
         params.logger.info(f"retrieving sql data for {params.shot_id}")
         return params.database.get_shot_data(shot_ids=[params.shot_id])
     
 class DFExistingDataRequest(ExistingDataRequest):
+    """Existing data request for retrieving data from a pandas dataframe.
+    
+    Parameters
+    ----------
+    existing_data : pd.DataFrame
+        The dataframe to use as the existing data.
+    """
+
     def __init__(self, existing_data: pd.DataFrame):
         self.existing_data = existing_data
         
@@ -59,7 +119,7 @@ class DFExistingDataRequest(ExistingDataRequest):
     
     
 _existing_data_request_mappings: Dict[str, ExistingDataRequest] = {
-    # do not include times list as requires an argument
+    # do not include dataframe as requires an argument
     "sql" : SQLExistingDataRequest(),
 }
 

@@ -9,7 +9,6 @@ from disruption_py.settings.output_type_requests import OutputTypeRequest, resol
 from disruption_py.utils.mappings.mappings_helpers import map_string_attributes_to_enum
 from enum import Enum
 
-
 class InterpolationMethod(Enum):
     LINEAR = "linear"
     LOG = "log"
@@ -30,8 +29,7 @@ def default_tags():
 
 @dataclass
 class ShotSettings:
-    """
-    Settings to be used for retrieving data for a single shot.
+    """Settings to be used for retrieving data for a single shot.
 
     Attributes
     ----------
@@ -41,7 +39,7 @@ class ShotSettings:
         The existing data request to be used when prefilling data for the shot. Can pass any 
         ExistingDataRequestType that resolves to a ExistingDataRequest. See ExistingDataRequest for more 
         details. Set to None if no data should be prefilled. Defaults to None.
-    num_threads_per_shot : int = 1
+    num_threads_per_shot : int
         The number of threads to use for data retrieval from MDSplus for each shot. Default is 1.
     efit_tree_name : str
         The name of the tree to first try for the efit environment. Other tree names will be tried if 
@@ -83,6 +81,12 @@ class ShotSettings:
         Defaults to True.
     interpolation_method : InterpolationMethod
         The interpolation method to be used when retrieving data for the shot. CURRENTLY UNIMPLEMENTED.
+    
+    Methods
+    -------
+    resolve()
+        Resolve all attributes that can be resolved to a class. This primarily refers to passed strings
+        lists and dictinoaries that can be resolved to a specific request type or a specific enum.
     """
     # General Settings
     log_settings : LogSettings = field(default_factory=LogSettings.default)
