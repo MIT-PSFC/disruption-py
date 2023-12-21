@@ -11,7 +11,9 @@ from disruption_py.utils.method_optimizer import MethodOptimizer, CachedMethod
 from disruption_py.utils.method_caching import CachedMethodParams, manually_cache
 from disruption_py.settings import ShotSettings, ShotDataRequest, ShotDataRequestParams
 from disruption_py.utils.constants import MAX_THREADS_PER_SHOT, TIME_CONST
-    
+
+REQUIRED_COLS = {'time', 'time_until_disrupt', 'shot', 'commit_hash'}
+ 
 def populate_method(params: ShotDataRequestParams, cached_method : CachedMethod, method_optimizer : MethodOptimizer, start_time):
         
         shot = params.shot
@@ -63,10 +65,11 @@ def compute_cached_method_params(cached_method_params : CachedMethodParams, obje
             new_cached_method_params_dict[field_name] = field_value
     return CachedMethodParams(**new_cached_method_params_dict)
 
-def get_cache_methods_from_object(object_to_search, shot_run_settings: ShotSettings, params: ShotDataRequestParams):
+def get_cache_methods_from_object(object_to_search, shot_settings: ShotSettings, params: ShotDataRequestParams):
     shot = params.shot
-    tags = shot_run_settings.run_tags
-    methods = shot_run_settings.run_methods
+    tags = shot_settings.run_tags
+    methods = shot_settings.run_methods
+    columns = shot_settings.run_columns
     
     built_in_to_shot = isinstance(object_to_search, Shot)
     is_shot_data_request = isinstance(object_to_search, ShotDataRequest)
@@ -102,11 +105,14 @@ def get_cache_methods_from_object(object_to_search, shot_run_settings: ShotSetti
             if methods is not None and method_name in methods:
                 methods_to_evaluate.append(cached_method)
                 continue
+            if columns is not None and bool(set(computed_cached_method_params.columns).intersection(columns)):
+                methods_to_evaluate.append(cached_method)
+                continue
             params.logger.info(
                     f"[Shot {shot.get_shot_id()}]:Skipping {method_name} in class {object_to_search.__class__.__name__}")
     return methods_to_evaluate, all_cached_methods
             
-def populate_shot(shot_run_settings: ShotSettings, params: ShotDataRequestParams):
+def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams):
     """
     Internal method to populate the disruption parameters of a shot object. 
     This method is called by the constructor and should not be called directly. It loops through all methods of the Shot class and calls the ones that have a `populate` attribute set to True and satisfy the tags and methods arguments.
@@ -128,11 +134,11 @@ def populate_shot(shot_run_settings: ShotSettings, params: ShotDataRequestParams
     methods_to_evaluate : list[CachedMethod] = []
     all_cached_methods : list[CachedMethod] = []
     
-    methods_to_evaluate, all_cached_methods = get_cache_methods_from_object(shot, shot_run_settings, params)
+    methods_to_evaluate, all_cached_methods = get_cache_methods_from_object(shot, shot_settings, params)
     
     # Add the methods gound from the passed ShotDataRequest objects
-    for shot_data_request in shot_run_settings.shot_data_requests:
-        req_methods_to_evaluate, req_all_cached_methods = get_cache_methods_from_object(shot_data_request, shot_run_settings, params)
+    for shot_data_request in shot_settings.shot_data_requests:
+        req_methods_to_evaluate, req_all_cached_methods = get_cache_methods_from_object(shot_data_request, shot_settings, params)
         methods_to_evaluate.extend(req_methods_to_evaluate)
         all_cached_methods.extend(req_all_cached_methods)
         
@@ -199,5 +205,8 @@ def populate_shot(shot_run_settings: ShotSettings, params: ShotDataRequestParams
     #       multiple parameters. This should be fixed in the future.
     local_data = pd.concat(parameters + [populated_data], axis=1)
     local_data = local_data.loc[:, ~local_data.columns.duplicated()]
+    if shot_settings.only_requested_columns:
+        include_columns = REQUIRED_COLS.union(set(shot_settings.run_columns).intersection(set(local_data.columns)))
+        local_data = local_data[include_columns]
     shot.data = local_data
     return local_data

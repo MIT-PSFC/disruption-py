@@ -40,14 +40,17 @@ class LogSettings:
     def default():
         return LogSettings()
 
+    def logger(self, logger_name = 'disruption_py'):
+        return self.setup_logging(logger_name)
+    
     def setup_logging(self, logger_name = 'disruption_py'):
+        
+        logger = logging.getLogger(logger_name)
         if self.use_custom_logging or self._logging_has_been_setup:
-            return
+            return logger
         self._logging_has_been_setup = True
 
         formatter = logging.Formatter('%(asctime)s,%(msecs)d %(name)s %(levelname)s | %(message)s', '%H:%M:%S')
-        
-        logger = logging.getLogger(logger_name)
         logger.propagate = False
         logger.handlers.clear()
         logger.setLevel(logging.DEBUG)
@@ -59,4 +62,6 @@ class LogSettings:
         if self.log_to_console:
             sh = logging.StreamHandler()
             sh.setLevel(self.console_log_level)
+            sh.setFormatter(formatter)
             logger.addHandler(sh)
+        return logger

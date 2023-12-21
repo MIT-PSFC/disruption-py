@@ -17,11 +17,25 @@ except ImportError:
 
 @dataclass
 class ShotIdRequestParams:
+    """Params passed by disruption_py to _get_shot_ids() method.
+
+    Attributes
+    ----------
+    database : ShotDatabase
+        Database object to use for getting shot ids. 
+        A different database connection is used by each process.
+        Defaults to logbook.
+    tokamak : Tokemak
+        The tokemak for which the data request is made.
+    logger : Logger
+        Logger object from disruption_py to use for logging.
+    """
     database : ShotDatabase
     tokamak : Tokamak
     logger : Logger
 
 class ShotIdRequest(ABC):
+    """ShotIdRequest abstract class that should be inherited by all shot id request classes."""
     
     def get_shot_ids(self, params : ShotIdRequestParams) -> List:
         if hasattr(self, 'tokamak_overrides'):
@@ -31,20 +45,31 @@ class ShotIdRequest(ABC):
     
     @abstractmethod
     def does_use_database(self):
-        pass
+        """Abstract method implemented by subclasses to signify whether a database connection is used.
+        This allows disruption_py to only initialize a database connection in the parent process if 
+        it is being used.
+        """
     
     @abstractmethod
     def _get_shot_ids(self, params : ShotIdRequestParams) -> List:
-        """
-        Default implementation of get_shot_ids.
-        Used for any tokamak not in tokamak_overrides.
+        """Abstract method implemented by subclasses to get shot ids for the given request params as a list.
+        
+        Attributes
+        ----------
+        params : ShotIdRequestParams
+            Params that can be used to determine shot ids.
         """
         pass
 
 class IncludedShotIdRequest(ShotIdRequest):
-    '''
-    Use a list of shot IDs from one of the provided data files
-    '''
+    """Use the shot IDs from one of the provided data files.
+    
+    Parameters
+    ----------
+    data_file_name : str
+        The name of the datafile that should be used to retrieve shot_ids.
+    """
+    
     def __init__(self, data_file_name):
         with importlib_resources.path(disruption_py.data, data_file_name) as p:
             data_file_name = str(p)
@@ -57,6 +82,14 @@ class IncludedShotIdRequest(ShotIdRequest):
         return self.shot_ids 
     
 class ListShotIdRequest(ShotIdRequest):
+    """Use the shot IDs from the provided list.
+    
+    Parameters
+    ----------
+    shot_ids : list
+        The list of shot_ids to retrieve data for.
+    """
+
     def __init__(self, shot_ids):
         self.shot_ids = shot_ids
 
@@ -67,9 +100,16 @@ class ListShotIdRequest(ShotIdRequest):
         return self.shot_ids
 
 class FileShotIdRequest(ShotIdRequest):
-    '''
-    Use a list of shot IDs from the provided file name, this may be any file readable by pandas read_csv.
-    '''
+    """Use a list of shot IDs from the provided file name, this may be any file readable by pandas read_csv.
+    
+    Parameters
+    ----------
+    file_path : str
+        The file path of the file that should be used for retrieving shot ids.
+    column_index : int
+        The index of the column that should be read. For text files, this should be 0. Defaults to 0.
+    """
+    
     def __init__(self, file_path, column_index=0):
         self.shot_ids = pd.read_csv(file_path, header=None).iloc[:, column_index].values.tolist()
 
@@ -80,6 +120,16 @@ class FileShotIdRequest(ShotIdRequest):
         return self.shot_ids 
     
 class DatabaseShotIdRequest(ShotIdRequest):
+    """Use an sql query of the database to retrieve the shot ids.
+    
+    Parameters
+    ----------
+    sql_query : str
+        The sql query that should be used for retrieving shot ids.
+    use_pandas : bool
+        Whether Pandas should be used to do the sql query. Defaults to true.
+    """
+
     def __init__(self, sql_query, use_pandas=True):
         self.sql_query = sql_query
         self.use_pandas = use_pandas
