@@ -36,7 +36,7 @@ class ExistingDataRequestParams:
     Attributes
     ----------
     shot_id : str
-        Shot Id for which to get existing data.
+        Shot Id for which to get existing data. Defaults to logbook.
     database : ShotDatabase
         Database object to use for getting existing data.
         A different database connection is used by each process.
@@ -54,11 +54,6 @@ ExistingDataRequestType = Union['ExistingDataRequest', str, pd.DataFrame, Dict[T
 
 class ExistingDataRequest(ABC):
     """ExistingDataRequest abstract class that should be inherited by all existing data request classes.
-    
-    Methods
-    -------
-    _get_existing_data(self, params : ExistingDataRequestParams) -> pd.DataFrame
-        Abstract method implemented by subclasses to get existing data for a given request as a pandas dataframe.
     """
     
     def get_existing_data(self, params : ExistingDataRequestParams) -> pd.DataFrame:

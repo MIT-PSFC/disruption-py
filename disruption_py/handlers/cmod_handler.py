@@ -80,7 +80,7 @@ class CModHandler:
         disruption_time=sql_database.get_disruption_time(shot_id)
         try:
             shot = CModShot(shot_id=shot_id, existing_data=existing_data, disruption_time=disruption_time, shot_settings=shot_settings)
-            retrieved_data = populate_shot(shot_run_settings=shot_settings, params=ShotDataRequestParams(shot, existing_data, tokamak, class_logger))
+            retrieved_data = populate_shot(shot_settings=shot_settings, params=ShotDataRequestParams(shot, existing_data, tokamak, class_logger))
             shot.cleanup()
             class_logger.info(f"completed {shot_id}")
             return retrieved_data

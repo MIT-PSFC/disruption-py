@@ -2,6 +2,12 @@ import json
 import argparse
 import sys
 import logging
+from disruption_py.handlers.cmod_handler import CModHandler
+
+from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
+from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.settings import LogSettings, ShotSettings
+
 try:
     import importlib.resources as importlib_resources
 except ImportError:
@@ -17,52 +23,70 @@ from disruption_py.ml.preprocessing import *
 
 def main(args):
     if args.log:
-        ch = logging.FileHandler(fr'./output/{args.unique_id}.log')
+        log_settigs = LogSettings(log_file_path=fr'./output/{args.unique_id}.log', file_log_level=args.log_level*10)
     else:
-        ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(args.log_level*10)
-    # log_format = '%(asctime)s | %(levelname)s: %(message)s'
-    # ch.setFormatter(logging.Formatter(log_format))
-    LOGGER.addHandler(ch)
-    LOGGER.setLevel(args.log_level*10)
-    print(LOGGER)
-    if args.shotlist is None:
-        with importlib_resources.path(disruption_py.data, "paper_shotlist.txt") as p:
-            args.shotlist = str(p)
-    shot_ids = pd.read_csv(
-        args.shotlist, header=None).iloc[:, 0].values.tolist()
-    print(shot_ids)
+        log_settigs = LogSettings(console_log_level=args.log_level*10)
+    logger = log_settigs.logger()
+
     feature_cols, derived_feature_cols = parse_feature_cols(args.feature_cols)
-    print(feature_cols, derived_feature_cols)
-    dataset_df = get_dataset_df(args.data_source, cols=feature_cols +
-                                REQUIRED_COLS, efit_tree=args.efit_tree, shot_ids=shot_ids, tokamak=args.tokamak, timebase_signal=args.timebase_signal, label=args.label, populate_methods=args.populate_methods, populate_tags=args.populate_tags)
+    logger.info(f"requested feature columns: {feature_cols}")
+    logger.info(f"requested derived feature columns: {derived_feature_cols}")
+    
+    shot_settings = ShotSettings(
+        log_settings=log_settigs, 
+        efit_tree_name=args.efit_tree,
+        set_times_request=args.timebase_signal,
+        run_methods=args.populate_methods,
+        run_tags=args.populate_tags,
+        run_columns=feature_cols,
+        only_requested_columns=args.only_requested_columns,
+        output_type_request="list"
+    )
+        
+    if args.shotlist is None:
+        shot_id_request = "paper"
+    else:
+        shot_id_request = args.shotlist
+    
+    tokemak = map_string_to_enum(args.tokamak, Tokamak)
+    if tokemak == Tokamak.CMOD:
+        handler = CModHandler()
+    else:
+        raise ValueError("Tokamak Not Supported")
+    
+    dataset_df = handler.get_shots_data(
+        shot_id_request=shot_id_request, 
+        shot_settings=shot_settings,
+        num_processes=args.num_processes
+    )
+    
     if args.filter:
         dataset_df = filter_dataset_df(dataset_df, exclude_non_disruptive=False,
                                         exclude_black_window=BLACK_WINDOW_THRESHOLD, impute=True)
+    
     dataset_df = add_derived_features(dataset_df, derived_feature_cols)
     dataset_df['label'] = create_label(dataset_df['time_until_disrupt'])
-    X_train, X_test, y_train, y_test = create_dataset(
-        dataset_df, ratio=DEFAULT_RATIO)
     dataset_df.to_csv(args.output_dir +
                       f"whole_df_{args.unique_id}.csv", sep=',', index=False)
-    # df_train_val = pd.concat([X_train, y_train], axis=1)
-    # X_train, X_val, y_train, y_val = create_dataset(df_train_val, ratio=.25)
-    print(X_train.shape, X_test.shape,
-          y_train.shape, y_test.shape)
-    print(f"Shots (Train): {len(pd.unique(X_train['shot']))}")
-    print(f"Shots (Test): {len(pd.unique(X_test['shot']))}")
-    df_train = pd.concat([X_train, y_train], axis=1)
-    df_train.to_csv(args.output_dir +
-                    f"train_{args.unique_id}.csv", sep=',', index=False)
-    # df_val = pd.concat([X_val, y_val], axis=1)
-    # df_val.to_csv(args.output_dir +
-    # f"val_{args.unique_id}.csv", sep=",", index=False)
-    df_test = pd.concat([X_test, y_test], axis=1)
-    df_test.to_csv(args.output_dir +
-                   f"test_{args.unique_id}.csv", sep=',', index=False)
+    
+    if args.produce_train_test:
+        X_train, X_test, y_train, y_test = create_dataset(
+            dataset_df, ratio=DEFAULT_RATIO)
+        logger.info(f"{X_train.shape}, {X_test.shape},
+            {y_train.shape}, {y_test.shape}")
+        logger.info(f"Shots (Train): {len(pd.unique(X_train['shot']))}")
+        logger.info(f"Shots (Test): {len(pd.unique(X_test['shot']))}")
+        df_train = pd.concat([X_train, y_train], axis=1)
+        df_train.to_csv(args.output_dir +
+                        f"train_{args.unique_id}.csv", sep=',', index=False)
+        
+        df_test = pd.concat([X_test, y_test], axis=1)
+        df_test.to_csv(args.output_dir +
+                    f"test_{args.unique_id}.csv", sep=',', index=False)
+        
     with open(args.output_dir + f"generate_datasets_{args.unique_id}.json", "w") as f:
         json.dump(vars(args), f)
-    print(f"Unique ID for this run: {args.unique_id}")
+    logger.info(f"Unique ID for this run: {args.unique_id}")
 
 
 if __name__ == '__main__':
@@ -72,6 +96,10 @@ if __name__ == '__main__':
                         help='Path to file specifying shotlist', default=None)
     parser.add_argument('--tokamak', type=str,
                         help='Tokamak to use for data source. Currently only supports DIII-D and Alcator C-Mod.', default='d3d')
+    parser.add_argument('--num_processes', type=int,
+                        help='The numberof processes to use for data retrieval.', default=1)
+    parser.add_argument(
+        '--only_requested_columns', type=bool, help="Whether to only create a datset with the requested columns", default=False)
     parser.add_argument('--feature_cols', type=str,
                         help='Either a file or comma-separated list of desired feature columns', default=None)
     parser.add_argument('--output_dir', type=str,
@@ -95,5 +123,7 @@ if __name__ == '__main__':
     parser.add_argument('--populate_tags', nargs='*', type=str, default=None) 
     parser.add_argument(
         '--filter', type=bool, help="Run filter_dataset method on produced dataset. Necessary for generating DPRF datasets", default=True)
+    parser.add_argument(
+        '--produce_train_test', type=bool, help="Whether to proucee train and test datasets", default=False)
     args = parser.parse_args()
     main(args)
