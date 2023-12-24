@@ -1,8 +1,23 @@
+"""
+Classes
+----------
+SetTimesRequestParams
+    Dataclass holding parameters that can be used by set times request.
+SetTimesRequest
+    Abstract class that must be subclassed by set times request classes.
+EfitSetTimesRequest
+    Implementation for using the efit timebase as the timebase.
+MagneticsSetTimesRequest
+    Implementation for using the start and end of the magnetics tree times for the timebase.
+
+See Also:
+    disruption_py.settings.shot_settings.ShotSettings
+"""
 from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass
-from typing import Dict, Callable, Union
+from typing import Dict, Union
 from disruption_py.mdsplus_integration.tree_manager import TreeManager
 from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from disruption_py.utils.mappings.tokamak import Tokamak
@@ -10,6 +25,20 @@ from logging import Logger
 
 @dataclass
 class SetTimesRequestParams:
+    """Params passed by disruption_py to _get_times() method.
+
+    Attributes
+    ----------
+    tree_manager : TreeManager
+        Tree manager which can be used to retrieve data from MDSplus.
+    database : ShotDatabase
+        Database object to use for getting timebase from sql database.
+        A different database connection is used by each process.
+    tokamak : Tokemak
+        The tokemak for which the set times request is made.
+    logger : Logger
+        Logger object from disruption_py to use for logging.
+    """
     tree_manager : TreeManager
     tokamak : Tokamak
     logger : Logger
@@ -18,15 +47,8 @@ class SetTimesRequestParams:
 SetTimesRequestType = Union['SetTimesRequest', str, Dict[Tokamak, 'SetTimesRequestType']]
 
 class SetTimesRequest(ABC):
-    '''
-    Represents a request for setting the times of a timebase for a shot
-    
-    Set tokamak_overrides to override the default behaviour for a tokamak.
-    Subclasses must implement _get_times for the default case.
-
-    note: Object should not be modified after being passed to a handler, 
-    to avoid issues with shared memory when multiprocessing.
-    '''
+    """SetTimesRequest abstract class that should be inherited by all set times request classes.
+    """
             
     def get_times(self, params : SetTimesRequestParams) -> np.ndarray:
         if hasattr(self, 'tokamak_overrides'):
@@ -36,9 +58,19 @@ class SetTimesRequest(ABC):
     
     @abstractmethod
     def _get_times(self, params : SetTimesRequestParams) -> np.ndarray:
-        """
-        Default implementation of get_timebase.
-        Used for any tokamak not in tokamak_overrides.
+        """Abstract method implemented by subclasses to get timebase as list.
+        The timebase can be set to be automatically restricted to a subdomain of the
+        provided times via the signal_domain argument in the ShotSettings object.
+        
+        Attributes
+        ----------
+        params : SetTimesRequestParams
+            Params that can be used to determine and retrieve the timebase.
+        
+        Returns
+        -------
+        np.ndarray
+            Numpy array containing times in the timebase.
         """
         pass
     
@@ -66,6 +98,9 @@ class ListSetTimesRequest(SetTimesRequest):
         return self.times
     
 class EfitSetTimesRequest(SetTimesRequest):
+    """Get times request for using the EFIT timebase.
+    """
+    
     def __init__(self):
         self.tokamak_overrides = {
             Tokamak.CMOD: self.cmod_times
@@ -86,7 +121,14 @@ class EfitSetTimesRequest(SetTimesRequest):
         raise ValueError("EFIT timebase request not implemented")
     
 class MagneticsSetTimesRequest(SetTimesRequest):
+    """Get times request for using the start and end times of the magnetics tree, with a 
+    custom timestep passed in the constructor.
     
+    Parameters
+    ----------
+    timestep : float
+        The timestep to use for the magnetics timebase.
+    """
     def __init__(self, timestep = 0.004):
         self.timestep = timestep
         
@@ -101,11 +143,12 @@ class MagneticsSetTimesRequest(SetTimesRequest):
             return None
         
 
+# --8<-- [start:set_times_request_dict]
 _set_times_request_mappings: Dict[str, SetTimesRequest] = {
-    # do not include times list as requires an argument
     "efit" : EfitSetTimesRequest(),
     "magnetics004" : MagneticsSetTimesRequest(timestep = 0.004),
 }
+# --8<-- [end:set_times_request_dict]
 
 def resolve_set_times_request(set_times_request : SetTimesRequestType) -> SetTimesRequest:
     if isinstance(set_times_request, SetTimesRequest):
@@ -116,7 +159,7 @@ def resolve_set_times_request(set_times_request : SetTimesRequestType) -> SetTim
         if set_times_request_object is not None:
             return set_times_request_object
         
-    if isinstance(set_times_request, np.ndarray):
+    if isinstance(set_times_request, np.ndarray) or isinstance(set_times_request, list):
         return ListSetTimesRequest(set_times_request)
     
     if isinstance(set_times_request, pd.Series):

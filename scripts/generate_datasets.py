@@ -72,8 +72,7 @@ def main(args):
     if args.produce_train_test:
         X_train, X_test, y_train, y_test = create_dataset(
             dataset_df, ratio=DEFAULT_RATIO)
-        logger.info(f"{X_train.shape}, {X_test.shape},
-            {y_train.shape}, {y_test.shape}")
+        logger.info(f"{X_train.shape}, {X_test.shape}, {y_train.shape}, {y_test.shape}")
         logger.info(f"Shots (Train): {len(pd.unique(X_train['shot']))}")
         logger.info(f"Shots (Test): {len(pd.unique(X_test['shot']))}")
         df_train = pd.concat([X_train, y_train], axis=1)

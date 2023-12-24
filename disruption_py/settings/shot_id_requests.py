@@ -1,3 +1,17 @@
+"""
+Classes
+----------
+ShotIdRequestParams
+    Dataclass holding parameters that can be used by shot id request.
+ShotIdRequest
+    Abstract class that must be subclassed by existing data request classes.
+IncludedShotIdRequest
+    Implementation for using and included list of shot ids from the data directory.
+FileShotIdRequest
+    Implementation for providing shot ids in a txt or csv file.
+DatabaseShotIdRequest
+    Implementation for retrieving shot ids with a database query.
+"""
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List, Dict, Union, Type
@@ -8,6 +22,7 @@ from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from logging import Logger
 
 import disruption_py.data
+from disruption_py.utils.math_utils import without_duplicates
 try:
     import importlib.resources as importlib_resources
 except ImportError:
@@ -64,6 +79,9 @@ class ShotIdRequest(ABC):
 class IncludedShotIdRequest(ShotIdRequest):
     """Use the shot IDs from one of the provided data files.
     
+    Directly passing a key from the _get_shot_id_request_mappings dictionary as a string will
+    automatically crete a new IncludedShotIdRequest object with that data_file_name.
+    
     Parameters
     ----------
     data_file_name : str
@@ -80,27 +98,12 @@ class IncludedShotIdRequest(ShotIdRequest):
     
     def _get_shot_ids(self, params : ShotIdRequestParams) -> List:
         return self.shot_ids 
-    
-class ListShotIdRequest(ShotIdRequest):
-    """Use the shot IDs from the provided list.
-    
-    Parameters
-    ----------
-    shot_ids : list
-        The list of shot_ids to retrieve data for.
-    """
-
-    def __init__(self, shot_ids):
-        self.shot_ids = shot_ids
-
-    def does_use_database(self):
-        return False
-    
-    def _get_shot_ids(self, params : ShotIdRequestParams) -> List:
-        return self.shot_ids
 
 class FileShotIdRequest(ShotIdRequest):
-    """Use a list of shot IDs from the provided file name, this may be any file readable by pandas read_csv.
+    """Use a list of shot IDs from the provided file path, this may be any file readable by pandas read_csv.
+    
+    Directly passing a file path as a string to the shot id request with the file name suffixed by txt or csv
+    will automatically create a new FileShotIdRequest object with that file path.
     
     Parameters
     ----------
@@ -144,55 +147,60 @@ class DatabaseShotIdRequest(ShotIdRequest):
         else:
             query_result = params.database.query(query=self.sql_query, use_pandas=False)
             return [row[0] for row in query_result]
-     
+
+# --8<-- [start:get_shot_id_request_dict]
 _get_shot_id_request_mappings: Dict[str, ShotIdRequest] = {
-    # do not include classes that require initialization arguments
     "paper": IncludedShotIdRequest("paper_shotlist.txt"),
     "disr": IncludedShotIdRequest("train_disr.txt"),
     "nondisr": IncludedShotIdRequest("train_nondisr.txt"),
 }
+# --8<-- [end:get_shot_id_request_dict]
 
+# --8<-- [start:file_suffix_to_shot_id_request_dict]
 _file_suffix_to_shot_id_request : Dict[str, Type[ShotIdRequest]] = {
     ".txt" : FileShotIdRequest,
     ".csv" : FileShotIdRequest,
-} 
+}
+# --8<-- [end:file_suffix_to_shot_id_request_dict]
 
 ShotIdRequestType = Union['ShotIdRequest', int, str, Dict[Tokamak, 'ShotIdRequestType'], List['ShotIdRequestType']]
 
 def shot_ids_request_runner(shot_id_request, params : ShotIdRequestParams):
     if isinstance(shot_id_request, ShotIdRequest):
-        return shot_id_request.get_shot_ids(params)
+        shot_ids = shot_id_request.get_shot_ids(params)
     
-    if isinstance(shot_id_request, int) or (isinstance(shot_id_request, str) and shot_id_request.isdigit()):
-        return [shot_id_request]
+    elif isinstance(shot_id_request, int) or (isinstance(shot_id_request, str) and shot_id_request.isdigit()):
+        shot_ids = [shot_id_request]
     
-    if isinstance(shot_id_request, str):
+    elif isinstance(shot_id_request, str):
         shot_id_request_object = _get_shot_id_request_mappings.get(shot_id_request, None)
         if shot_id_request_object is not None:
-            return shot_id_request_object.get_shot_ids(params)
+            shot_ids = shot_id_request_object.get_shot_ids(params)
         
-    if isinstance(shot_id_request, str):
+    elif isinstance(shot_id_request, str):
         # assume that it is a file path
        for suffix, shot_id_request_type in _file_suffix_to_shot_id_request.items():
            if shot_id_request.endswith(suffix):
-               return shot_id_request_type(shot_id_request).get_shot_ids(params)
+               shot_ids = shot_id_request_type(shot_id_request).get_shot_ids(params)
         
-    if isinstance(shot_id_request, dict):
+    elif isinstance(shot_id_request, dict):
         shot_id_request = {
             map_string_to_enum(tokamak, Tokamak): shot_id_request_mapping 
             for tokamak, shot_id_request_mapping in shot_id_request.items()
         }
         chosen_request = shot_id_request.get(params.tokamak, None)
         if chosen_request is not None:
-            return shot_ids_request_runner(chosen_request, params)
+            shot_ids = shot_ids_request_runner(chosen_request, params)
         
-    if isinstance(shot_id_request, list):
+    elif isinstance(shot_id_request, list):
         all_results = []
         for request in shot_id_request:
             sub_result = shot_ids_request_runner(request, params)
             if sub_result is not None:
                 all_results.append(sub_result)
         
-        return [shot_id for sub_list in all_results for shot_id in sub_list]
+        shot_ids = [shot_id for sub_list in all_results for shot_id in sub_list]
+    else:
+        raise ValueError("Invalid shot id request")
     
-    raise ValueError("Invalid shot id request")
+    return without_duplicates(shot_ids)

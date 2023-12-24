@@ -2,20 +2,13 @@
 Classes
 ----------
 ExistingDataRequestParams
-    Dataclass to hold parameters for a data request.
+    Dataclass holding parameters that can be used by existing data request.
 ExistingDataRequest
     Abstract class that must be subclassed by existing data request classes.
 SQLExistingDataRequest
     Implementation for using the SQL database as the existing data request.
 DFExistingDataRequest
     Implementation for passing existing data as a pandas DataFrame.
-
-Attributes
-----------
-_existing_data_request_mappings (Dict[str, ExistingDataRequest]):
-    Contains string mappings for the built-in existing data request classes
-    Currently contains:
-    "sql" : SQLExistingDataRequest
 
 See Also:
     disruption_py.settings.shot_settings.ShotSettings
@@ -70,6 +63,11 @@ class ExistingDataRequest(ABC):
         ----------
         params : ExistingDataRequestParams
             Params that can be used to determine and retrieve existing data.
+        
+        Returns
+        -------
+        pd.DataFrame
+            Pandas dataframe containing existing data.
         """
         pass
     
@@ -111,12 +109,12 @@ class DFExistingDataRequest(ExistingDataRequest):
         
     def _get_existing_data(self, params : ExistingDataRequestParams) -> pd.DataFrame:
         return self.existing_data
-    
-    
+
+# --8<-- [start:existing_data_request_dict]
 _existing_data_request_mappings: Dict[str, ExistingDataRequest] = {
-    # do not include dataframe as requires an argument
     "sql" : SQLExistingDataRequest(),
 }
+# --8<-- [end:existing_data_request_dict]
 
 def resolve_existing_data_request(existing_data_request : ExistingDataRequestType) -> ExistingDataRequest:
     if existing_data_request is None:
