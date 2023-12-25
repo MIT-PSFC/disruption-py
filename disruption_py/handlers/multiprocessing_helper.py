@@ -82,7 +82,7 @@ class MultiprocessingShotRetriever:
                 break
             self.shot_settings.output_type_request.output_shot(ResultOutputTypeRequestParams(result, self.tokamak, self.logger))
 
-    def run(self, shot_creator_f, shot_id_list, should_finish=True):
+    def run(self, shot_creator_f, shot_ids_list, should_finish=True):
         
         if not self.result_thread.is_alive():
             self.result_thread.start()
@@ -91,7 +91,7 @@ class MultiprocessingShotRetriever:
             if not w.is_alive():
                 w.start()
         
-        for shot_id in shot_id_list:
+        for shot_id in shot_ids_list:
             task = ShotTask(shot_creator_f=shot_creator_f, shot_id=shot_id, shot_settings=self.shot_settings)
             self.task_queue.put(task)
    

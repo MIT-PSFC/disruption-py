@@ -1,17 +1,3 @@
-"""
-Classes
-----------
-ShotIdRequestParams
-    Dataclass holding parameters that can be used by shot id request.
-ShotIdRequest
-    Abstract class that must be subclassed by existing data request classes.
-IncludedShotIdRequest
-    Implementation for using and included list of shot ids from the data directory.
-FileShotIdRequest
-    Implementation for providing shot ids in a txt or csv file.
-DatabaseShotIdRequest
-    Implementation for retrieving shot ids with a database query.
-"""
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List, Dict, Union, Type
@@ -31,7 +17,7 @@ except ImportError:
 
 
 @dataclass
-class ShotIdRequestParams:
+class ShotIdsRequestParams:
     """Params passed by disruption_py to _get_shot_ids() method.
 
     Attributes
@@ -49,10 +35,10 @@ class ShotIdRequestParams:
     tokamak : Tokamak
     logger : Logger
 
-class ShotIdRequest(ABC):
-    """ShotIdRequest abstract class that should be inherited by all shot id request classes."""
+class ShotIdsRequest(ABC):
+    """ShotIdsRequest abstract class that should be inherited by all shot id request classes."""
     
-    def get_shot_ids(self, params : ShotIdRequestParams) -> List:
+    def get_shot_ids(self, params : ShotIdsRequestParams) -> List:
         if hasattr(self, 'tokamak_overrides'):
             if params.tokamak in self.tokamak_overrides:
                 return self.tokamak_overrides[params.tokamak](params)
@@ -66,21 +52,21 @@ class ShotIdRequest(ABC):
         """
     
     @abstractmethod
-    def _get_shot_ids(self, params : ShotIdRequestParams) -> List:
+    def _get_shot_ids(self, params : ShotIdsRequestParams) -> List:
         """Abstract method implemented by subclasses to get shot ids for the given request params as a list.
         
         Attributes
         ----------
-        params : ShotIdRequestParams
+        params : ShotIdsRequestParams
             Params that can be used to determine shot ids.
         """
         pass
 
-class IncludedShotIdRequest(ShotIdRequest):
+class IncludedShotIdsRequest(ShotIdsRequest):
     """Use the shot IDs from one of the provided data files.
     
-    Directly passing a key from the _get_shot_id_request_mappings dictionary as a string will
-    automatically crete a new IncludedShotIdRequest object with that data_file_name.
+    Directly passing a key from the _get_shot_ids_request_mappings dictionary as a string will
+    automatically crete a new IncludedShotIdsRequest object with that data_file_name.
     
     Parameters
     ----------
@@ -96,14 +82,14 @@ class IncludedShotIdRequest(ShotIdRequest):
     def does_use_database(self):
         return False
     
-    def _get_shot_ids(self, params : ShotIdRequestParams) -> List:
+    def _get_shot_ids(self, params : ShotIdsRequestParams) -> List:
         return self.shot_ids 
 
-class FileShotIdRequest(ShotIdRequest):
+class FileShotIdsRequest(ShotIdsRequest):
     """Use a list of shot IDs from the provided file path, this may be any file readable by pandas read_csv.
     
     Directly passing a file path as a string to the shot id request with the file name suffixed by txt or csv
-    will automatically create a new FileShotIdRequest object with that file path.
+    will automatically create a new FileShotIdsRequest object with that file path.
     
     Parameters
     ----------
@@ -119,10 +105,10 @@ class FileShotIdRequest(ShotIdRequest):
     def does_use_database(self):
         return False
     
-    def _get_shot_ids(self, params : ShotIdRequestParams) -> List:
+    def _get_shot_ids(self, params : ShotIdsRequestParams) -> List:
         return self.shot_ids 
     
-class DatabaseShotIdRequest(ShotIdRequest):
+class DatabaseShotIdsRequest(ShotIdsRequest):
     """Use an sql query of the database to retrieve the shot ids.
     
     Parameters
@@ -140,7 +126,7 @@ class DatabaseShotIdRequest(ShotIdRequest):
     def does_use_database(self):
         return True
     
-    def _get_shot_ids(self, params : ShotIdRequestParams) -> List:
+    def _get_shot_ids(self, params : ShotIdsRequestParams) -> List:
         if self.use_pandas:
             query_result_df = params.database.query(query=self.sql_query, use_pandas=True)
             return query_result_df.iloc[:, 0].tolist()
@@ -148,53 +134,53 @@ class DatabaseShotIdRequest(ShotIdRequest):
             query_result = params.database.query(query=self.sql_query, use_pandas=False)
             return [row[0] for row in query_result]
 
-# --8<-- [start:get_shot_id_request_dict]
-_get_shot_id_request_mappings: Dict[str, ShotIdRequest] = {
-    "paper": IncludedShotIdRequest("paper_shotlist.txt"),
-    "disr": IncludedShotIdRequest("train_disr.txt"),
-    "nondisr": IncludedShotIdRequest("train_nondisr.txt"),
+# --8<-- [start:get_shot_ids_request_dict]
+_get_shot_ids_request_mappings: Dict[str, ShotIdsRequest] = {
+    "paper": IncludedShotIdsRequest("paper_shotlist.txt"),
+    "disr": IncludedShotIdsRequest("train_disr.txt"),
+    "nondisr": IncludedShotIdsRequest("train_nondisr.txt"),
 }
-# --8<-- [end:get_shot_id_request_dict]
+# --8<-- [end:get_shot_ids_request_dict]
 
-# --8<-- [start:file_suffix_to_shot_id_request_dict]
-_file_suffix_to_shot_id_request : Dict[str, Type[ShotIdRequest]] = {
-    ".txt" : FileShotIdRequest,
-    ".csv" : FileShotIdRequest,
+# --8<-- [start:file_suffix_to_shot_ids_request_dict]
+_file_suffix_to_shot_ids_request : Dict[str, Type[ShotIdsRequest]] = {
+    ".txt" : FileShotIdsRequest,
+    ".csv" : FileShotIdsRequest,
 }
-# --8<-- [end:file_suffix_to_shot_id_request_dict]
+# --8<-- [end:file_suffix_to_shot_ids_request_dict]
 
-ShotIdRequestType = Union['ShotIdRequest', int, str, Dict[Tokamak, 'ShotIdRequestType'], List['ShotIdRequestType']]
+ShotIdsRequestType = Union['ShotIdsRequest', int, str, Dict[Tokamak, 'ShotIdsRequestType'], List['ShotIdsRequestType']]
 
-def shot_ids_request_runner(shot_id_request, params : ShotIdRequestParams):
-    if isinstance(shot_id_request, ShotIdRequest):
-        shot_ids = shot_id_request.get_shot_ids(params)
+def shot_ids_request_runner(shot_ids_request, params : ShotIdsRequestParams):
+    if isinstance(shot_ids_request, ShotIdsRequest):
+        shot_ids = shot_ids_request.get_shot_ids(params)
     
-    elif isinstance(shot_id_request, int) or (isinstance(shot_id_request, str) and shot_id_request.isdigit()):
-        shot_ids = [shot_id_request]
+    elif isinstance(shot_ids_request, int) or (isinstance(shot_ids_request, str) and shot_ids_request.isdigit()):
+        shot_ids = [shot_ids_request]
     
-    elif isinstance(shot_id_request, str):
-        shot_id_request_object = _get_shot_id_request_mappings.get(shot_id_request, None)
-        if shot_id_request_object is not None:
-            shot_ids = shot_id_request_object.get_shot_ids(params)
+    elif isinstance(shot_ids_request, str):
+        shot_ids_request_object = _get_shot_ids_request_mappings.get(shot_ids_request, None)
+        if shot_ids_request_object is not None:
+            shot_ids = shot_ids_request_object.get_shot_ids(params)
         
-    elif isinstance(shot_id_request, str):
+    elif isinstance(shot_ids_request, str):
         # assume that it is a file path
-       for suffix, shot_id_request_type in _file_suffix_to_shot_id_request.items():
-           if shot_id_request.endswith(suffix):
-               shot_ids = shot_id_request_type(shot_id_request).get_shot_ids(params)
+       for suffix, shot_ids_request_type in _file_suffix_to_shot_ids_request.items():
+           if shot_ids_request.endswith(suffix):
+               shot_ids = shot_ids_request_type(shot_ids_request).get_shot_ids(params)
         
-    elif isinstance(shot_id_request, dict):
-        shot_id_request = {
-            map_string_to_enum(tokamak, Tokamak): shot_id_request_mapping 
-            for tokamak, shot_id_request_mapping in shot_id_request.items()
+    elif isinstance(shot_ids_request, dict):
+        shot_ids_request = {
+            map_string_to_enum(tokamak, Tokamak): shot_ids_request_mapping 
+            for tokamak, shot_ids_request_mapping in shot_ids_request.items()
         }
-        chosen_request = shot_id_request.get(params.tokamak, None)
+        chosen_request = shot_ids_request.get(params.tokamak, None)
         if chosen_request is not None:
             shot_ids = shot_ids_request_runner(chosen_request, params)
         
-    elif isinstance(shot_id_request, list):
+    elif isinstance(shot_ids_request, list):
         all_results = []
-        for request in shot_id_request:
+        for request in shot_ids_request:
             sub_result = shot_ids_request_runner(request, params)
             if sub_result is not None:
                 all_results.append(sub_result)

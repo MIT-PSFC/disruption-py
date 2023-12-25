@@ -31,8 +31,8 @@ nav:
       - Settings: 
         - Settings Classes: api/settings_reference.md
         - Requests Classes:
-          - Existing Data Requests: api/requests/existing_data_requests_reference.md
-          - Shot Id Requests: api/requests/shot_id_requests_reference.md
+          - Existing Data Requests: api/requests/existing_data_request_reference.md
+          - Shot Id Requests: api/requests/shot_ids_request_reference.md
       - Scripts:
           - Generate Datasets: api/scripts/generate_datasets.md
           - Profiling: api/scripts/profile_shots.md
@@ -83,9 +83,10 @@ plugins:
             merge_init_into_class: false
             separate_signature: true
             members_order: source
+            filters: []
 
             #  Heading options
-            heading_level: 2
+            heading_level: 3
             show_root_heading: true
             show_root_full_path: true
             show_root_members_full_path: false

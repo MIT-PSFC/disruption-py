@@ -1,4 +1,3 @@
-# Existing Data Requests
 A module for handling existing data requests passed in the [ShotSettings][disruption_py.settings.ShotSettings] class. 
 Existing data requests are used by disruption_py to get the data that has already been retrieved before data is retrieved 
 from MDSplus. E.g. data already exists in the disruption_warnings sql table.
@@ -19,6 +18,8 @@ disruption_py/settings/existing_data_request.py:existing_data_request_dict
 ```
 - A dictionary mapping tokamak type strings to the desired `ExistingDataRequest` for that tokamak.  E.g. `{'cmod': 'sql'}`.
 	--8<-- "disruption_py/utils/mappings/tokamak.py:allowed_tokamak_types_snippet"
+
+The following documents the support for existing data requests:
 
 ::: disruption_py.settings.existing_data_request
     handler: python

@@ -44,9 +44,9 @@ def main(args):
     )
         
     if args.shotlist is None:
-        shot_id_request = "paper"
+        shot_ids_request = "paper"
     else:
-        shot_id_request = args.shotlist
+        shot_ids_request = args.shotlist
     
     tokemak = map_string_to_enum(args.tokamak, Tokamak)
     if tokemak == Tokamak.CMOD:
@@ -55,7 +55,7 @@ def main(args):
         raise ValueError("Tokamak Not Supported")
     
     dataset_df = handler.get_shots_data(
-        shot_id_request=shot_id_request, 
+        shot_ids_request=shot_ids_request, 
         shot_settings=shot_settings,
         num_processes=args.num_processes
     )
