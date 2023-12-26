@@ -1,18 +1,3 @@
-"""
-Classes
-----------
-ExistingDataRequestParams
-    Dataclass holding parameters that can be used by existing data request.
-ExistingDataRequest
-    Abstract class that must be subclassed by existing data request classes.
-SQLExistingDataRequest
-    Implementation for using the SQL database as the existing data request.
-DFExistingDataRequest
-    Implementation for passing existing data as a pandas DataFrame.
-
-See Also:
-    disruption_py.settings.shot_settings.ShotSettings
-"""
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import pandas as pd
