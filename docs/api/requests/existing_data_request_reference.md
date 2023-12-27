@@ -8,7 +8,7 @@ It also provides built_in classes and mappings to easily retrieve existing data 
 
 Currently, these are the options that can be passed to the `existing_data_request` parameter in `ShotSettings`:
 
-- A subclass of `ExistingDataRequest` from the `disruption_py.settings.existing_data_request` module.
+- An instance of a subclass of `ExistingDataRequest`
 - A string identifier in the `_existing_data_request_mappings` dictionary:
 ```python
 --8<--

@@ -7,7 +7,7 @@ It also provides built_in classes and mappings to easily define shot ids for com
 
 Currently, these are the options that can be passed as the `shot_ids_request` argument to `get_shots_data`:
 
-- A subclass of `ShotIdsRequest` from the `disruption_py.settings.shot_ids_requests` module.
+- An isntance of a subclass of `ShotIdsRequest`
 - A single shot id
 - A python list of any other shot id request option listed here
 - A dictionary key as a string from the built-in mappings to data files in the `_get_shot_ids_request_mappings` dictionary: 

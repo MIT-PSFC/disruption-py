@@ -1,18 +1,3 @@
-"""
-Classes
-----------
-SetTimesRequestParams
-    Dataclass holding parameters that can be used by set times request.
-SetTimesRequest
-    Abstract class that must be subclassed by set times request classes.
-EfitSetTimesRequest
-    Implementation for using the efit timebase as the timebase.
-MagneticsSetTimesRequest
-    Implementation for using the start and end of the magnetics tree times for the timebase.
-
-See Also:
-    disruption_py.settings.shot_settings.ShotSettings
-"""
 from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
