@@ -17,7 +17,7 @@ disruption_py/settings/output_type_request.py:output_type_request_dict
 - A file path as a string with its suffix mapped to a `OutputTypeRequest` type in the `_file_suffix_to_output_type_request` dictionary:
 	```python
 	--8<--
-	disruption_py/settings/shot_ids_request.py:file_suffix_to_output_type_request_dict
+	disruption_py/settings/output_type_request.py:file_suffix_to_output_type_request_dict
 	--8<--
 	```
 - A dictionary mapping tokamak type strings to the desired `OutputTypeRequest` for that tokamak.  E.g. `{'cmod': 'efit'}`.
@@ -32,7 +32,8 @@ The following documents the support for output type requests:
 	  heading_level: 2
 	  members:
 	  - OutputTypeRequest
-	  - OutputTypeRequestParams
+	  - ResultOutputTypeRequestParams
+	  - FinishOutputTypeRequestParams
 
 ## Built-in Implemenations { .doc .doc-heading }
 
@@ -43,4 +44,5 @@ The following documents the support for output type requests:
 		show_root_members_full_path: true
 		filters:
 		- "!^OutputTypeRequest$"
-		- "!^OutputTypeRequestParams$"
+		- "!^ResultOutputTypeRequestParams$"
+		- "!^FinishOutputTypeRequestParams$"

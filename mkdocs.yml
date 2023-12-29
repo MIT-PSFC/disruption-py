@@ -32,8 +32,9 @@ nav:
         - Settings Classes: api/settings_reference.md
         - Requests Classes:
           - Existing Data Requests: api/requests/existing_data_request_reference.md
-          - Shot Id Requests: api/requests/shot_ids_request_reference.md
+          - Shot Ids Requests: api/requests/shot_ids_request_reference.md
           - Set Times Request: api/requests/set_times_request_reference.md
+          - Output Type Request: api/requests/output_type_request_reference.md
       - Scripts:
           - Generate Datasets: api/scripts/generate_datasets.md
           - Profiling: api/scripts/profile_shots.md
@@ -80,7 +81,7 @@ plugins:
             show_signature_annotations: true
             docstring_options:
               ignore_init_summary: true
-            inherited_members: true
+            inherited_members: false
             merge_init_into_class: false
             separate_signature: true
             # members_order: source
