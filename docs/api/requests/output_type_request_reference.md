@@ -14,26 +14,33 @@ Currently, these are the options that can be passed to the `output_type_request`
 disruption_py/settings/output_type_request.py:output_type_request_dict
 --8<--
 ```
-- A dictionary mapping tokamak type strings to the desired `SetTimesRequest` for that tokamak.  E.g. `{'cmod': 'efit'}`.
+- A file path as a string with its suffix mapped to a `OutputTypeRequest` type in the `_file_suffix_to_output_type_request` dictionary:
+	```python
+	--8<--
+	disruption_py/settings/shot_ids_request.py:file_suffix_to_output_type_request_dict
+	--8<--
+	```
+- A dictionary mapping tokamak type strings to the desired `OutputTypeRequest` for that tokamak.  E.g. `{'cmod': 'efit'}`.
 	--8<-- "disruption_py/utils/mappings/tokamak.py:allowed_tokamak_types_snippet"
+- A python list of any other output type request option that can be passed as the `output_type_request` parameter in `ShotSettings` (all options listed previously). See [`OutputTypeRequestList`][disruption_py.settings.output_type_request.OutputTypeRequestList] for more details.
 
-The following documents the support for set times requests:
+The following documents the support for output type requests:
 
-::: disruption_py.settings.set_times_request
+::: disruption_py.settings.output_type_request
     handler: python
 	options:
 	  heading_level: 2
 	  members:
-	  - SetTimesRequest
-	  - SetTimesRequestParams
+	  - OutputTypeRequest
+	  - OutputTypeRequestParams
 
 ## Built-in Implemenations { .doc .doc-heading }
 
-::: disruption_py.settings.existing_data_request
+::: disruption_py.settings.output_type_request
 	options:
 		show_root_heading: false
 		show_root_toc_entry: false
 		show_root_members_full_path: true
 		filters:
-		- "!^SetTimesRequest$"
-		- "!^SetTimesRequestParams$"
+		- "!^OutputTypeRequest$"
+		- "!^OutputTypeRequestParams$"

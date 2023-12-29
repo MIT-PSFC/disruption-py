@@ -14,6 +14,7 @@ Currently, these are the options that can be passed to the `set_times_request` p
 disruption_py/settings/set_times_request.py:set_times_request_dict
 --8<--
 ```
+- A python list, numpy array, or pandas series (with the timebase as the values) that should be used as the times for the timebase. See [`ListSetTimesRequest`][disruption_py.settings.set_times_request.ListSetTimesRequest] for more details.
 - A dictionary mapping tokamak type strings to the desired `SetTimesRequest` for that tokamak.  E.g. `{'cmod': 'efit'}`.
 	--8<-- "disruption_py/utils/mappings/tokamak.py:allowed_tokamak_types_snippet"
 

@@ -60,6 +60,15 @@ class SetTimesRequest(ABC):
         pass
     
 class SetTimesRequestDict(SetTimesRequest):
+    """
+    Utility class that is automatically used when a dicationary is passed as the `set_times_request` parameter in `ShotSettings`.
+    
+    Parameters
+    ----------
+    set_times_request_dict : dict[Tokamak, SetTimesRequestType]
+        A dictionary mapping tokamak type strings to the desired set times request for that tokamak.  E.g. `{'cmod': 'efit'}`.
+        Any other option passable to the `set_times_request` parameter in `ShotSettings` may be used.
+    """
     def __init__(self, set_times_request_dict : Dict[Tokamak, SetTimesRequestType]):
         resolved_set_times_request_dict = {
             map_string_to_enum(tokamak, Tokamak): resolve_set_times_request(individual_request) 
@@ -76,6 +85,13 @@ class SetTimesRequestDict(SetTimesRequest):
             return None
 
 class ListSetTimesRequest(SetTimesRequest):
+    """ 
+    A list of times to use as the timebase. 
+    
+    A utility class that is automatically used when a list, numpy array, or pandas series is
+    passed as the `set_times_request` parameter in `ShotSettings`.
+    """
+     
     def __init__(self, times):
         self.times = times
 
@@ -83,8 +99,7 @@ class ListSetTimesRequest(SetTimesRequest):
         return self.times
     
 class EfitSetTimesRequest(SetTimesRequest):
-    """Get times request for using the EFIT timebase.
-    """
+    """ Get times request for using the EFIT timebase.  """
     
     def __init__(self):
         self.tokamak_overrides = {

@@ -95,7 +95,18 @@ class OutputTypeRequest(ABC):
         pass
 
 class OutputTypeRequestList(OutputTypeRequest):
+    """
+    Utility class that is automatically used when a list is passed as the `output_type_request` parameter in `ShotSettings.
     
+    All listed output types will be output to in the order listed.
+    Similarly, results will be returned in the order listed.
+    
+    Parameters
+    ----------
+    output_type_request_list : list[OutputTypeRequestType]
+        A python list of any other output type request option that can be passed as the `output_type_request` parameter in `ShotSettings`.
+        Any other option passable to the `output_type_request` parameter in `ShotSettings` may be used.
+    """
     def __init__(self, output_type_request_list : List[OutputTypeRequestType]):
         self.output_type_request_list = [resolve_output_type_request(individual_type_request) for individual_type_request in output_type_request_list]
 
@@ -116,7 +127,14 @@ class OutputTypeRequestList(OutputTypeRequest):
     
 
 class OutputTypeRequestDict(OutputTypeRequest):
-
+    """
+    Utility class that is automatically used when a dicationary is passed as the `output_type_request` parameter in `ShotSettings.
+    
+    Parameters
+    ----------
+    output_type_request_dict : dict[Tokamak, OutputTypeRequestType]
+        A dictionary mapping tokamak type strings to the desired `OutputTypeRequestType` for that tokamak.  E.g. `{'cmod': 'list'}`.
+    """
     def __init__(self, output_type_request_dict : Dict[Tokamak, OutputTypeRequestType]):
         resolved_output_type_request_dict = {
             map_string_to_enum(tokamak, Tokamak): resolve_output_type_request(individual_type_request) 

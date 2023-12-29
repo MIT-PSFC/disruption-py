@@ -83,7 +83,7 @@ plugins:
             inherited_members: true
             merge_init_into_class: false
             separate_signature: true
-            members_order: source
+            # members_order: source
             filters: []
 
             #  Heading options
