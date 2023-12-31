@@ -12,9 +12,9 @@ class CachedMethodParams:
     tokamaks : List[Tokamak]    
 
 class ParameterCachedMethodParams(CachedMethodParams):
-    populate : bool = False
-    columns : Union[List[str], Callable] = None
-    tags : List[str] = None
+    populate : bool = True
+    columns : Union[List[str], Callable]
+    tags : List[str]
     
     def from_cached_method_params(cached_method_params : CachedMethodParams, columns, tags) -> "ParameterCachedMethodParams":
         return ParameterCachedMethodParams(
@@ -22,7 +22,6 @@ class ParameterCachedMethodParams(CachedMethodParams):
             used_trees=cached_method_params.used_trees, 
             contained_cached_methods=cached_method_params.contained_cached_methods, 
             tokamaks=cached_method_params.tokamaks,
-            populate=True,
             columns=columns,
             tags=tags,
         )
@@ -51,6 +50,7 @@ def parameter_cached_method(tags=["all"], columns=[], **kwargs):
     columns : Union[list[str], Callable]
         The columns that are in the dataframe returned by the parameter method. Alternately, can pass a method that 
         returns the names of used trees at runtime. See `cached_method_params_function` for more details about using functions.
+        Default value is an empty list implying that no columns are returned by the function.
     
     Other Parameters
     ----------
@@ -58,17 +58,18 @@ def parameter_cached_method(tags=["all"], columns=[], **kwargs):
         This list of MDSPlus tree names used by the parameter method, this should be a superset of used tree names.
         This list is used to help determine the optimal execution order of decorated methods. Alternately, can pass a method 
         that returns the names of used trees at runtime. See `cached_method_params_function` for more details about using functions.
+        Default value is no used trees.
     contained_cached_methods : Union[List[str], Callable]
         A list of all methods decorated with the `cached_method` or `parameter_cached_method` decorator. That are used inside of
         this function. This list is used to help determine the optimal execution order of decorated methods. Alternately, can pass a 
         method that returns the names of used decorated methods at runtime. See `cached_method_params_function` for more details 
-        about using functions.
+        about using functions. Default value is no contained cached methods.
     cache_between_threads: bool
         Specifically for methods with the `cached_method` decorator that return objects that are not threadsafe. If True, the cache
-        will be shared between threads. If False, the cache will only be used by the same thread.
+        will be shared between threads. If False, the cache will only be used by the same thread. Default is True.
     tokamaks : List[Tokamak]
         A list of Tokamak objects that represent which tokamks this parameter method may be used for. Specifically for methods inside of
-        `ShotDataRequest` subclasses.
+        `ShotDataRequest` subclasses. Default value of None allows the parameter method to be run for any tokamak.
     """
     # TODO: Figure out how to hash _times so that we can use the cache for different timebases
     def tag_wrapper(func):
@@ -91,17 +92,18 @@ def cached_method(used_trees=None, contained_cached_methods=None, cache_between_
         This list of MDSPlus tree names used by the parameter method, this should be a superset of used tree names.
         This list is used to help determine the optimal execution order of decorated methods. Alternately, can pass a method 
         that returns the names of used trees at runtime. See `cached_method_params_function` for more details about using functions.
+        Default value is no used trees.
     contained_cached_methods : Union[List[str], Callable]
         A list of all methods decorated with the `cached_method` or `parameter_cached_method` decorator. That are used inside of
         this function. This list is used to help determine the optimal execution order of decorated methods. Alternately, can pass a 
         method that returns the names of used decorated methods at runtime. See `cached_method_params_function` for more details 
-        about using functions.
+        about using functions. Default value is no contained cached methods.
     cache_between_threads: bool
         Specifically for methods with the `cached_method` decorator that return objects that are not threadsafe. If True, the cache
-        will be shared between threads. If False, the cache will only be used by the same thread.
+        will be shared between threads. If False, the cache will only be used by the same thread. Default is True.
     tokamaks : List[Tokamak]
         A list of Tokamak objects that represent which tokamks this parameter method may be used for. Specifically for methods inside of
-        `ShotDataRequest` subclasses.
+        `ShotDataRequest` subclasses. Default value of None allows the parameter method to be run for any tokamak.
     """
     # TODO: Figure out how to hash _times so that we can use the cache for different timebases
     def tag_wrapper(func):
