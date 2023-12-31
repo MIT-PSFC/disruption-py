@@ -55,7 +55,7 @@ class ShotIdsRequest(ABC):
     def _get_shot_ids(self, params : ShotIdsRequestParams) -> List:
         """Abstract method implemented by subclasses to get shot ids for the given request params as a list.
         
-        Attributes
+        Parameters
         ----------
         params : ShotIdsRequestParams
             Params that can be used to determine shot ids.

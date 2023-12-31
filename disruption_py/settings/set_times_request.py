@@ -47,7 +47,7 @@ class SetTimesRequest(ABC):
         The timebase can be set to be automatically restricted to a subdomain of the
         provided times via the signal_domain argument in the ShotSettings object.
         
-        Attributes
+        Parameters
         ----------
         params : SetTimesRequestParams
             Params that can be used to determine and retrieve the timebase.

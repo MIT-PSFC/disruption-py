@@ -31,10 +31,11 @@ nav:
       - Settings: 
         - Settings Classes: api/settings_reference.md
         - Requests Classes:
-          - Existing Data Requests: api/requests/existing_data_request_reference.md
-          - Shot Ids Requests: api/requests/shot_ids_request_reference.md
+          - Existing Data Request: api/requests/existing_data_request_reference.md
+          - Shot Ids Request: api/requests/shot_ids_request_reference.md
           - Set Times Request: api/requests/set_times_request_reference.md
           - Output Type Request: api/requests/output_type_request_reference.md
+          - Shot Data Request: api/requests/shot_data_request_reference.md
       - Scripts:
           - Generate Datasets: api/scripts/generate_datasets.md
           - Profiling: api/scripts/profile_shots.md

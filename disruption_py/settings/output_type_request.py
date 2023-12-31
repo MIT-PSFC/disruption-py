@@ -57,7 +57,7 @@ class OutputTypeRequest(ABC):
         This method is called by disruption_py with the shots dataframe in the params object 
         once the data has been retrieved.
         
-        Attributes
+        Parameters
         ----------
         params : ResultOutputTypeRequestParams
             Params containing the data retrieved for a shot in a dataframe and other utility parameters.
@@ -68,7 +68,7 @@ class OutputTypeRequest(ABC):
         """Empty method optionally overriden by subclasses to handle cleanup after all shots have been 
         output. This may include closing files or other cleanup.
         
-        Attributes
+        Parameters
         ----------
         params : FinishOutputTypeRequestParams
             Utility parameters such as the tokamak and logger.
@@ -81,7 +81,7 @@ class OutputTypeRequest(ABC):
         calls to `get_shots_data`. This method is called by disruption_py once `output_shot()` has been
         called for all shots ids in the shot ids request.
         
-        Attributes
+        Parameters
         ----------
         params : FinishOutputTypeRequestParams
             Utility parameters such as the tokamak and logger.

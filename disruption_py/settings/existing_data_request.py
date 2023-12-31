@@ -44,7 +44,7 @@ class ExistingDataRequest(ABC):
     def _get_existing_data(self, params : ExistingDataRequestParams) -> pd.DataFrame:
         """Abstract method implemented by subclasses to get existing data for a given request as a pandas dataframe.
         
-        Attributes
+        Parameters
         ----------
         params : ExistingDataRequestParams
             Params that can be used to determine and retrieve existing data.
