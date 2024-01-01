@@ -30,7 +30,7 @@ The following documents the support for set times requests:
 
 ## Built-in Implemenations { .doc .doc-heading }
 
-::: disruption_py.settings.existing_data_request
+::: disruption_py.settings.set_times_request
 	options:
 		show_root_heading: false
 		show_root_toc_entry: false

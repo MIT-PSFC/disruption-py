@@ -1,12 +1,15 @@
-import pandas as pd
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
-import numpy as np
-from typing import List, Callable, Any
 from logging import Logger
+import pandas as pd
+import numpy as np
+from disruption_py.mdsplus_integration.tree_manager import TreeManager
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.math_utils import interp1
-from disruption_py.utils.method_caching import parameter_cached_method, is_cached_method, get_cached_method_params
+from disruption_py.utils.method_caching import get_cached_method_params, is_cached_method, parameter_cached_method
+
+from abc import ABC
+from typing import Any, Callable, List
+
 
 @dataclass
 class ShotDataRequestParams:
@@ -14,10 +17,14 @@ class ShotDataRequestParams:
 
     Attributes
     ----------
-    shot : Shot
-        An instance of the tokamak's shot class for the shot that data is being retrieved for.
-        This shot object should be used to access the shot's MDSplus trees and timebase using
-        the `get_tree_manager()` and `get_times()` methods respectively.
+    shot : Any
+		A reference to the shot object retrieving data.
+    shot_id : str
+		The shot id ofthe shot being retrieved as a string.
+    tree_manager : TreeManager
+		An instance of the tree manager class for the given shot.
+	shot_times : np.ndarray
+		The timebase for the shot, with each time in the array being in seconds.
     existing_data : pd.DataFrame
         Data provided to disruption_py for the given shot in the `existing_data_request` parameter of `shot_settings`.
     tokamak : Tokemak
@@ -26,17 +33,21 @@ class ShotDataRequestParams:
         Logger object from disruption_py to use for logging.
     """
     shot : Any
+    shot_id : str
+    tree_manager : TreeManager
+    shot_times : np.ndarray
+    disruption_time : float
     existing_data : pd.DataFrame
     tokamak : Tokamak
     logger : Logger
     
 class ShotDataRequest(ABC):
-    
+
     def get_request_methods_for_tokamak(self, tokamak: Tokamak) -> List[Callable]:
         """Method used to determine which methods should be considered for execution given the tokamak.
-        
+
         The default implementation returns all methods that have had the provided tokamak included in the tokamak parameter
-        of there `cached_method` or `parameter_cached_method` decorator. This method may ve overridden by subclasses if an
+        of there `cached_method` or `parameter_cached_method` decorator. This method may be overridden by subclasses if an
         alternate scheme of determining which methods can be executed for each tokamak is required.
 
         Parameters
@@ -55,13 +66,14 @@ class ShotDataRequest(ABC):
                 continue
             cached_method_params = get_cached_method_params(method, should_throw=True)
             if (cached_method_params.tokamaks is None or
-                tokamak in cached_method_params.tokamaks or 
+                tokamak in cached_method_params.tokamaks or
                 tokamak is cached_method_params.tokamaks):
                 request_methods.append(method)
         return request_methods
-    
+
+
 class KappaArea(ShotDataRequest):
-    
+
     @parameter_cached_method(columns=["kappa_area"], used_trees=["efit_tree"], tokamaks=Tokamak.CMOD)
     def _get_kappa_area(self, params):
         aminor = params.shot.efit_tree.getNode(
@@ -75,3 +87,4 @@ class KappaArea(ShotDataRequest):
         # make sure area is not 0 or less than 0
         area[area <= 0] = 3.14*0.001**2
         return pd.DataFrame({"kappa_area": interp1(times, area/(np.pi * aminor**2), params.shot.get_times())})
+

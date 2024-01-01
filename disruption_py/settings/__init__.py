@@ -1,5 +1,5 @@
-from .existing_data_request import ExistingDataRequest, ExistingDataRequestParams
 from .shot_data_request import ShotDataRequest, ShotDataRequestParams
+from .existing_data_request import ExistingDataRequest, ExistingDataRequestParams
 from .shot_settings import ShotSettings, InterpolationMethod, SignalDomain
 from .set_times_request import SetTimesRequest, SetTimesRequestParams
 from .output_type_request import OutputTypeRequest, ResultOutputTypeRequestParams, FinishOutputTypeRequestParams
