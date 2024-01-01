@@ -10,7 +10,7 @@ shot_settings = ShotSettings(
 	output_type_request="ip_data.csv",
 )
 cmod_handler.get_shots_data(
-	shot_id_request=[1160405002, 1140523021, 1140523026, 1160620011],
+	shot_ids_request=[1160405002, 1140523021, 1140523026, 1160620011],
 	shot_settings=shot_settings,
 	num_processes = 4,
 )

@@ -44,9 +44,9 @@ def main(args):
     )
         
     if args.shotlist is None:
-        shot_id_request = "paper"
+        shot_ids_request = "paper"
     else:
-        shot_id_request = args.shotlist
+        shot_ids_request = args.shotlist
     
     tokemak = map_string_to_enum(args.tokamak, Tokamak)
     if tokemak == Tokamak.CMOD:
@@ -55,7 +55,7 @@ def main(args):
         raise ValueError("Tokamak Not Supported")
     
     dataset_df = handler.get_shots_data(
-        shot_id_request=shot_id_request, 
+        shot_ids_request=shot_ids_request, 
         shot_settings=shot_settings,
         num_processes=args.num_processes
     )
@@ -72,8 +72,7 @@ def main(args):
     if args.produce_train_test:
         X_train, X_test, y_train, y_test = create_dataset(
             dataset_df, ratio=DEFAULT_RATIO)
-        logger.info(f"{X_train.shape}, {X_test.shape},
-            {y_train.shape}, {y_test.shape}")
+        logger.info(f"{X_train.shape}, {X_test.shape}, {y_train.shape}, {y_test.shape}")
         logger.info(f"Shots (Train): {len(pd.unique(X_train['shot']))}")
         logger.info(f"Shots (Test): {len(pd.unique(X_test['shot']))}")
         df_train = pd.concat([X_train, y_train], axis=1)

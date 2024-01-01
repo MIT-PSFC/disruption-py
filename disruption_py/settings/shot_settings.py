@@ -3,9 +3,9 @@ import pandas as pd
 from typing import List, Union, Callable, Tuple
 from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.existing_data_request import ExistingDataRequest, resolve_existing_data_request
-from disruption_py.settings.shot_data_requests import ShotDataRequest
-from disruption_py.settings.set_times_requests import SetTimesRequest, resolve_set_times_request
-from disruption_py.settings.output_type_requests import OutputTypeRequest, resolve_output_type_request
+from disruption_py.settings.shot_data_request import ShotDataRequest
+from disruption_py.settings.set_times_request import SetTimesRequest, resolve_set_times_request
+from disruption_py.settings.output_type_request import OutputTypeRequest, resolve_output_type_request
 from disruption_py.utils.mappings.mappings_helpers import map_string_attributes_to_enum
 from enum import Enum
 

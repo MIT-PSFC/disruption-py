@@ -30,7 +30,12 @@ nav:
       - Shots: api/shots_reference.md
       - Settings: 
         - Settings Classes: api/settings_reference.md
-        - Requests Classes: api/requests_reference.md
+        - Requests Classes:
+          - Existing Data Request: api/requests/existing_data_request_reference.md
+          - Shot Ids Request: api/requests/shot_ids_request_reference.md
+          - Set Times Request: api/requests/set_times_request_reference.md
+          - Output Type Request: api/requests/output_type_request_reference.md
+          - Shot Data Request: api/requests/shot_data_request_reference.md
       - Scripts:
           - Generate Datasets: api/scripts/generate_datasets.md
           - Profiling: api/scripts/profile_shots.md
@@ -47,7 +52,8 @@ markdown_extensions:
     emoji_generator: !!python/name:material.extensions.emoji.to_svg
 - pymdownx.magiclink
 - pymdownx.snippets:
-    base_path: [!relative $config_dir]
+    base_path: [""]
+    dedent_subsections: true
     check_paths: true
 - pymdownx.superfences
 - pymdownx.tabbed:
@@ -76,13 +82,14 @@ plugins:
             show_signature_annotations: true
             docstring_options:
               ignore_init_summary: true
-            inherited_members: true
+            inherited_members: false
             merge_init_into_class: false
             separate_signature: true
-            members_order: source
+            # members_order: source
+            filters: []
 
             #  Heading options
-            heading_level: 2
+            heading_level: 3
             show_root_heading: true
             show_root_full_path: true
             show_root_members_full_path: false

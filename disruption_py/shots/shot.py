@@ -10,7 +10,7 @@ from MDSplus import *
 
 from disruption_py.mdsplus_integration.tree_manager import TreeManager
 from disruption_py.settings.shot_settings import ShotSettings, InterpolationMethod, SignalDomain
-from disruption_py.settings.set_times_requests import SetTimesRequestParams
+from disruption_py.settings.set_times_request import SetTimesRequestParams
 from disruption_py.utils.constants import TIME_CONST
 
 import pandas as pd
