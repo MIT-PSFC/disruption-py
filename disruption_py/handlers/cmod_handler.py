@@ -2,10 +2,11 @@
 from typing import Callable, Any
 import traceback
 from disruption_py.handlers.multiprocessing_helper import MultiprocessingShotRetriever
+from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.settings.shot_ids_request import ShotIdsRequestParams, ShotIdsRequestType, shot_ids_request_runner
 from disruption_py.settings.existing_data_request import ExistingDataRequest, ExistingDataRequestParams
 from disruption_py.settings.output_type_request import ResultOutputTypeRequestParams, FinishOutputTypeRequestParams
-from disruption_py.settings import ShotDataRequestParams, ShotSettings
+from disruption_py.settings import ShotSettings
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.databases import CModDatabase
 from disruption_py.shots import CModShot
@@ -65,22 +66,33 @@ class CModHandler:
         tokamak = Tokamak.CMOD
         class_logger = CModHandler.logger
         class_logger.info(f"starting {shot_id}")
+        shot_id = str(shot_id)
         if shot_settings.existing_data_request is not None:
             existing_data_request_params = ExistingDataRequestParams(
-                shot_id=str(shot_id),
+                shot_id=shot_id,
                 database=sql_database,
                 tokamak=tokamak, 
                 logger=class_logger,
             )
             existing_data = shot_settings.existing_data_request.get_existing_data(existing_data_request_params)
             existing_data['shot'] = existing_data['shot'].astype(str)
-            existing_data = existing_data[existing_data['shot'] == str(shot_id)]
+            existing_data = existing_data[existing_data['shot'] == shot_id]
         else:
             existing_data = None
         disruption_time=sql_database.get_disruption_time(shot_id)
         try:
             shot = CModShot(shot_id=shot_id, existing_data=existing_data, disruption_time=disruption_time, shot_settings=shot_settings)
-            retrieved_data = populate_shot(shot_settings=shot_settings, params=ShotDataRequestParams(shot, existing_data, tokamak, class_logger))
+            shot_data_request_params = ShotDataRequestParams(
+                shot=shot, 
+                shot_id=shot_id, 
+                tree_manager=shot.get_tree_manager(), 
+                shot_times=shot.get_times(), 
+                disruption_time=shot.get_disruption_time(), 
+                existing_data=existing_data, 
+                tokamak=tokamak, 
+                logger=class_logger
+            )
+            retrieved_data = populate_shot(shot_settings=shot_settings, params=shot_data_request_params)
             shot.cleanup()
             class_logger.info(f"completed {shot_id}")
             return retrieved_data

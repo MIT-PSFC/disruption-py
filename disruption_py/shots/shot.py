@@ -115,6 +115,9 @@ class Shot(ABC):
     def get_tree_manager(self):
         return self._tree_manager
     
+    def get_disruption_time(self):
+        return self.disruption_time
+    
     def _init_timebase(self, shot_settings: ShotSettings, existing_data):
         """
         Initialize the timebase of the shot.
@@ -134,7 +137,7 @@ class Shot(ABC):
         else:
             request_params = SetTimesRequestParams(tree_manager=self._tree_manager, tokamak=self.tokamak, logger=self.logger, disruption_time=self.disruption_time)
             self._times = shot_settings.set_times_request.get_times(request_params)
-        self.interpolation_method : InterpolationMethod  = shot_settings.interpolation_method
+        self.interpolation_method : InterpolationMethod  = interp1 # TODO: fix
         
         if shot_settings.signal_domain is SignalDomain.FLATTOP:
             self.set_flattop_timebase()

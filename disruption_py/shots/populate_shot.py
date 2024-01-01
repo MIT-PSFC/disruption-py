@@ -8,8 +8,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 from disruption_py.shots.shot import Shot
 from disruption_py.utils.method_optimizer import MethodOptimizer, CachedMethod
+from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.utils.method_caching import CachedMethodParams, manually_cache, is_cached_method, get_cached_method_params
-from disruption_py.settings import ShotSettings, ShotDataRequest, ShotDataRequestParams
+from disruption_py.settings.shot_data_request import ShotDataRequest, ShotDataRequestParams
 from disruption_py.utils.constants import MAX_THREADS_PER_SHOT, TIME_CONST
 
 REQUIRED_COLS = {'time', 'time_until_disrupt', 'shot', 'commit_hash'}
@@ -198,12 +199,20 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams):
         method_optimizer.run_methods_sync(
             lambda next_method: parameters.append(populate_method(params, next_method, method_optimizer, start_time))
         )
-                
-    parameters = [
-        parameter for parameter in parameters if parameter is not None]
+    
+    filtered_parameters = []
+    for parameter in parameters:
+        if parameter is None:
+            continue
+        if len(parameter) != len(populated_data):
+            params.logger.warning(
+                f"[Shot {shot.get_shot_id()}]:Ignoring parameters {parameter.columns} with different length than timebase")
+            continue
+        filtered_parameters.append(parameter)
+
     # TODO: This is a hack to get around the fact that some methods return
     #       multiple parameters. This should be fixed in the future.
-    local_data = pd.concat(parameters + [populated_data], axis=1)
+    local_data = pd.concat(filtered_parameters + [populated_data], axis=1)
     local_data = local_data.loc[:, ~local_data.columns.duplicated()]
     if shot_settings.only_requested_columns:
         include_columns = REQUIRED_COLS.union(set(shot_settings.run_columns).intersection(set(local_data.columns)))

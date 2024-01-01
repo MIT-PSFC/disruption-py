@@ -50,6 +50,7 @@ def parameter_cached_method(tags=["all"], columns=[], **kwargs):
     columns : Union[list[str], Callable]
         The columns that are in the dataframe returned by the parameter method. Alternately, can pass a method that 
         returns the names of used trees at runtime. See `cached_method_params_function` for more details about using functions.
+        These columns are also used to determine which parameter methods to run when calling `get_shots_data` with `run_columns`.
         Default value is an empty list implying that no columns are returned by the function.
     
     Other Parameters
@@ -81,10 +82,10 @@ def parameter_cached_method(tags=["all"], columns=[], **kwargs):
 
 
 def cached_method(used_trees=None, contained_cached_methods=None, cache_between_threads=True, tokamaks=None):
-    """
-    Decorates a function as a cached method and instantiates its cache. Cached methods are functions that 
-    run expensive operations on data in the shot and may be reused. The cache is used to store the results 
-    of the parameter method so that it is only calculated once per shot for a given timebase. 
+    """Decorates a function as a cached method and instantiates its cache. 
+    
+    Cached methods are functions that run expensive operations on data in the shot and may be reused. 
+    The cache is used to store the results of the parameter method so that it is only calculated once per shot for a given timebase. 
     
     Parameters
     ----------
