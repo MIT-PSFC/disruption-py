@@ -8,7 +8,7 @@ from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from logging import Logger
 
 import disruption_py.data
-from disruption_py.utils.math_utils import without_duplicates
+from disruption_py.utils.utils import without_duplicates
 try:
     import importlib.resources as importlib_resources
 except ImportError:

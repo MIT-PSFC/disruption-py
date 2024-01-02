@@ -10,7 +10,7 @@ from disruption_py.shots.shot import Shot
 from disruption_py.utils.method_optimizer import MethodOptimizer, CachedMethod
 from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.utils.method_caching import CachedMethodParams, manually_cache, is_cached_method, get_cached_method_params
-from disruption_py.settings.shot_data_request import ShotDataRequest, ShotDataRequestParams
+from disruption_py.shots.shot_data_request import ShotDataRequest, ShotDataRequestParams
 from disruption_py.utils.constants import MAX_THREADS_PER_SHOT, TIME_CONST
 
 REQUIRED_COLS = {'time', 'time_until_disrupt', 'shot', 'commit_hash'}
@@ -29,29 +29,29 @@ def populate_method(params: ShotDataRequestParams, cached_method : CachedMethod,
         result = None
         if callable(method) and is_cached_method(method):
             params.logger.info(
-                f"[Shot {shot.get_shot_id()}]:Populating {cached_method.name}")
+                f"[Shot {shot.shot_id}]:Populating {cached_method.name}")
             # self._tree_manager.cleanup_not_needed()
             try:
                 result = run_method()
             except Exception as e:
                 params.logger.warning(
-                    f"[Shot {shot.get_shot_id()}]:Failed to populate {cached_method.name} with error {e}")
+                    f"[Shot {shot.shot_id}]:Failed to populate {cached_method.name} with error {e}")
                 params.logger.debug(f"{traceback.format_exc()}")
         elif callable(method) and hasattr(method, 'cached'):
             params.logger.info(
-                f"[Shot {shot.get_shot_id()}]:Caching {cached_method.name}")
+                f"[Shot {shot.shot_id}]:Caching {cached_method.name}")
             try:
                 run_method()
             except Exception as e:
                 params.logger.warning(
-                    f"[Shot {shot.get_shot_id()}]:Failed to cache {cached_method.name} with error {e}")
+                    f"[Shot {shot.shot_id}]:Failed to cache {cached_method.name} with error {e}")
                 params.logger.debug(f"{traceback.format_exc()}")
         else:
             params.logger.warning(
-                f"[Shot {shot.get_shot_id()}]:Method {cached_method.name} is not callable or does not have a `populate` attribute set to True")
+                f"[Shot {shot.shot_id}]:Method {cached_method.name} is not callable or does not have a `populate` attribute set to True")
             return None
         
-        params.logger.info(f"[Shot {shot.get_shot_id()}]:Completed {cached_method.name}, time_elapsed: {time.time() - start_time}")
+        params.logger.info(f"[Shot {shot.shot_id}]:Completed {cached_method.name}, time_elapsed: {time.time() - start_time}")
         return result
 
 
@@ -110,7 +110,7 @@ def get_cached_methods_from_object(object_to_search, shot_settings: ShotSettings
                 methods_to_evaluate.append(cached_method)
                 continue
             params.logger.info(
-                    f"[Shot {shot.get_shot_id()}]:Skipping {method_name} in class {object_to_search.__class__.__name__}")
+                    f"[Shot {shot.shot_id}]:Skipping {method_name} in class {object_to_search.__class__.__name__}")
     return methods_to_evaluate, all_cached_methods
             
 def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams):
@@ -126,10 +126,10 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams):
     if populated_data is None:
         populated_data = pd.DataFrame() 
     if 'time' not in populated_data:
-        populated_data['time'] = shot.get_times()
+        populated_data['time'] = shot.times
     if 'shot' not in populated_data:
-        populated_data['shot'] = shot.get_shot_id()
-    populated_data['commit_hash'] = shot.get_commit_hash()
+        populated_data['shot'] = shot.shot_id
+    populated_data['commit_hash'] = shot.commit_hash
 
     # Loop through each attribute and find methods that should populate the shot object.
     methods_to_evaluate : list[CachedMethod] = []
@@ -144,8 +144,8 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams):
         all_cached_methods.extend(req_all_cached_methods)
         
     # Check that existing data is on the same timebase as the shot object to ensure data consistency
-    if len(populated_data['time']) != len(shot.get_times()) or not np.isclose(populated_data['time'], shot.get_times(), atol=TIME_CONST).all():
-        params.logger.error(f"[Shot {shot.get_shot_id()}]: ERROR Computation on different timebase than used existing data")
+    if len(populated_data['time']) != len(shot.times) or not np.isclose(populated_data['time'], shot.times, atol=TIME_CONST).all():
+        params.logger.error(f"[Shot {shot.shot_id}]: ERROR Computation on different timebase than used existing data")
         
     # Manually cache data that has already been retrieved (likely from sql tables)
     # Methods added to pre_cached_method_names will be skipped by method optimizer
@@ -162,11 +162,11 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams):
                 pre_cached_method_names.append(cached_method.name)
                 if cached_method in methods_to_evaluate:
                     shot.logger.info(
-                        f"[Shot {shot.get_shot_id()}]:Skipping {cached_method.name} already populated")
+                        f"[Shot {shot.shot_id}]:Skipping {cached_method.name} already populated")
 
-    method_optimizer : MethodOptimizer = MethodOptimizer(shot.get_tree_manager(), methods_to_evaluate, all_cached_methods, pre_cached_method_names)
+    method_optimizer : MethodOptimizer = MethodOptimizer(shot.tree_manager, methods_to_evaluate, all_cached_methods, pre_cached_method_names)
 
-    if shot.num_threads_per_shot > 1:
+    if shot._num_threads_per_shot > 1:
         futures = set()
         future_method_names = {}
         def future_for_next(next_method):
@@ -176,7 +176,7 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams):
         
         start_time = time.time()
         available_methods_runner = method_optimizer.get_async_available_methods_runner(future_for_next)
-        with ThreadPoolExecutor(max_workers=min(shot.num_threads_per_shot, MAX_THREADS_PER_SHOT)) as executor: 
+        with ThreadPoolExecutor(max_workers=min(shot._num_threads_per_shot, MAX_THREADS_PER_SHOT)) as executor: 
             available_methods_runner()
             while futures:
                 done, futures = concurrent.futures.wait(futures, return_when='FIRST_COMPLETED')
@@ -185,12 +185,12 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams):
                         parameter_df = future.result()
                         parameters.append(parameter_df)
                         method_optimizer.method_complete(future_method_names[future])
-                        shot.get_tree_manager().cleanup_not_needed(method_optimizer.can_tree_be_closed)
+                        shot.tree_manager.cleanup_not_needed(method_optimizer.can_tree_be_closed)
                     except Exception as e:
                         params.logger.warning(
-                            f"[Shot {shot.get_shot_id()}]:Failed to populate {future_method_names[future]} with future error {e}")
+                            f"[Shot {shot.shot_id}]:Failed to populate {future_method_names[future]} with future error {e}")
                         params.logger.debug(
-                            f"[Shot {shot.get_shot_id()}: {traceback.format_exc()}")
+                            f"[Shot {shot.shot_id}: {traceback.format_exc()}")
                 available_methods_runner()
                 
     else:
@@ -206,7 +206,7 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams):
             continue
         if len(parameter) != len(populated_data):
             params.logger.warning(
-                f"[Shot {shot.get_shot_id()}]:Ignoring parameters {parameter.columns} with different length than timebase")
+                f"[Shot {shot.shot_id}]:Ignoring parameters {parameter.columns} with different length than timebase")
             continue
         filtered_parameters.append(parameter)
 

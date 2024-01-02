@@ -149,11 +149,11 @@ def manually_cache(shot, data : pd.DataFrame, method_name, method_columns : List
         cache_key = get_method_cache_key(method_name, data['time'])
         shot._cached_result[cache_key] = data[method_columns]
         shot.logger.debug(
-                f"[Shot {shot.get_shot_id()}]:Manually caching {method_name}")
+                f"[Shot {shot.shot_id}]:Manually caching {method_name}")
         return True
     else:
         shot.logger.debug(
-                f"[Shot {shot.get_shot_id()}]:Can not cache {method_name} missing columns {missing_columns}")
+                f"[Shot {shot.shot_id}]:Can not cache {method_name} missing columns {missing_columns}")
         return False
 
 # Utility methods for decorated methods

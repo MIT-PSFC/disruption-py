@@ -1,9 +1,11 @@
 from MDSplus import Tree, TreeNode
 import logging
-from typing import Callable, List
+from typing import Callable, List, Tuple
 import threading
 
 from disruption_py.utils.environment_vars import temporary_env_vars
+
+EnvModifications = Tuple[Tuple[str, str]]
 
 class TreeManager:
     logger = logging.getLogger('disruption_py')
@@ -92,28 +94,25 @@ class TreeManager:
         return None
     
     # nicknames
-    def nickname(self, nickname: str, tree_names_to_try: List[str], try_with_env_vars=None):
+    def nickname(self, nickname: str, tree_names_to_try: List[str], env_modifications_to_try: List[EnvModifications]) -> bool:
+        if env_modifications_to_try is None or env_modifications_to_try == []:
+            env_modifications_to_try = [()]
+            
         def lazy_nickname_func():
-            result=None
-            if try_with_env_vars is not None:
-                with temporary_env_vars(try_with_env_vars):
-                    result = self._try_until_success_open_and_nickname(tree_names_to_try, nickname)
             
-            if result is None:
-                result = self._try_until_success_open_and_nickname(tree_names_to_try, nickname)
+            for env_modification in env_modifications_to_try:
+                for tree_name in tree_names_to_try:
+                    try:
+                        with temporary_env_vars(env_modification):
+                            return self._try_open_and_nickname(nickname=nickname, tree_name=tree_name)
+                    except Exception as e:
+                        self.logger.warning(
+                            f"[Shot {self._shot_id}]:Failed to open tree {tree_name} for nickname {nickname}, with error {e}")
             
-            if result is None:
-                raise Exception(f"Failed to find a valid tree name for nickname {nickname}")
+            raise Exception(f"Failed to find a valid tree name for nickname {nickname}")
 
-        self._create_lazy_nickname(nickname=nickname, nickname_func=lazy_nickname_func)
+        return self._create_lazy_nickname(nickname=nickname, nickname_func=lazy_nickname_func)
         
-    def _try_until_success_open_and_nickname(self, tree_names: List[str], nickname: str):
-        for tree_name in tree_names:
-            try:
-                return self._try_open_and_nickname(nickname=nickname, tree_name=tree_name)
-            except Exception as e:
-                self.logger.warning(
-                    f"[Shot {self._shot_id}]:Failed to open tree {tree_name} for nickname {nickname}, with error {e}")
             
     def _try_open_and_nickname(self, nickname: str, tree_name: str) -> Tree:
         
@@ -133,6 +132,9 @@ class TreeManager:
     def _create_lazy_nickname(self, nickname: str, nickname_func: Callable):
         self._lazy_nickname_functions[nickname] = nickname_func
     
+    def is_nickname_created(self, nickname: str) -> bool:
+        return nickname in self._nicknames or nickname in self._lazy_nickname_functions
+        
     def tree_from_nickname(self, nickname:str) -> Tree:
          
         tree_name = self.tree_name_of_nickname(nickname)

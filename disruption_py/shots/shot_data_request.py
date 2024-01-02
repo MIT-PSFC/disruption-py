@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from logging import Logger
 import pandas as pd
 import numpy as np
-from disruption_py.mdsplus_integration.tree_manager import TreeManager
+from disruption_py.shots.shot import Shot
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.math_utils import interp1
 from disruption_py.utils.method_caching import get_cached_method_params, is_cached_method, parameter_cached_method
@@ -19,12 +19,6 @@ class ShotDataRequestParams:
     ----------
     shot : Any
 		A reference to the shot object retrieving data.
-    shot_id : str
-		The shot id ofthe shot being retrieved as a string.
-    tree_manager : TreeManager
-		An instance of the tree manager class for the given shot.
-	shot_times : np.ndarray
-		The timebase for the shot, with each time in the array being in seconds.
     existing_data : pd.DataFrame
         Data provided to disruption_py for the given shot in the `existing_data_request` parameter of `shot_settings`.
     tokamak : Tokemak
@@ -32,17 +26,17 @@ class ShotDataRequestParams:
     logger : Logger
         Logger object from disruption_py to use for logging.
     """
-    shot : Any
-    shot_id : str
-    tree_manager : TreeManager
-    shot_times : np.ndarray
-    disruption_time : float
+    shot : Shot
     existing_data : pd.DataFrame
     tokamak : Tokamak
     logger : Logger
     
 class ShotDataRequest(ABC):
 
+    def setup(self, shot_data_request_params : ShotDataRequestParams):
+        """Do any setup for the shot such as giving """
+        pass
+        
     def get_request_methods_for_tokamak(self, tokamak: Tokamak) -> List[Callable]:
         """Method used to determine which methods should be considered for execution given the tokamak.
 
@@ -86,5 +80,5 @@ class KappaArea(ShotDataRequest):
         aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
         # make sure area is not 0 or less than 0
         area[area <= 0] = 3.14*0.001**2
-        return pd.DataFrame({"kappa_area": interp1(times, area/(np.pi * aminor**2), params.shot.get_times())})
+        return pd.DataFrame({"kappa_area": interp1(times, area/(np.pi * aminor**2), params.shot.times)})
 

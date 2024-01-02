@@ -1,58 +1,18 @@
-import traceback
-import logging 
-import argparse
-from collections import OrderedDict
-
-from disruption_py.shots.shot import Shot
-from disruption_py.utils.method_caching import parameter_cached_method, cached_method
-from disruption_py.utils.mappings.tokamak import Tokamak
-
-try:
-    import importlib.resources as importlib_resources
-except ImportError:
-    # Try backported to PY<37 `importlib_resources`.
-    import importlib_resources
-
-import pandas as pd
 import numpy as np
+import pandas as pd
+from disruption_py.shots.shot_data_request import ShotDataRequest, ShotDataRequestParams
+from disruption_py.utils.utils import without_duplicates
+from disruption_py.utils.method_caching import cached_method, parameter_cached_method
 
-import MDSplus
-from MDSplus import *
+        
+def efit_tree(params : ShotDataRequestParams):
+	return params.shot.tree_manager.tree_from_nickname("efit_tree")
+	
+def efit_tree_name(params : ShotDataRequestParams):
+	return params.shot.tree_manager.tree_name_of_nickname("efit_tree")
 
-# For edge parameters
-import sys
-import scipy as sp
-
-import warnings
-warnings.filterwarnings('error', category=RuntimeWarning)
-
-# TODO: Somehow link to disruption_py 
-# TODO: Deal with scary missing TRIPpy dependency (please don't break until I fix you)
-try:
-    sys.path.append('/home/sciortino/usr/python3modules/eqtools3')
-    sys.path.append('/home/sciortino/usr/python3modules/profiletools3')
-    sys.path.append('/home/sciortino/usr/python3modules/gptools3')
-    import eqtools
-    import profiletools
-except Exception as e:
-    logging.warning('Could not import profiletools or eqtools')
-    logging.debug(traceback.format_exc())
-    pass
-
-import warnings
-
-from disruption_py.utils.math_utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power, without_duplicates
-from disruption_py.settings import ShotSettings
-import disruption_py.data
-
-MAX_SHOT_TIME = 7.0  # [s]
-
-
-class CModShot(Shot):
-    """
-    Class for a single CMod shot.
-
-    """
+class CModEfitRequest(ShotDataRequest):
+    
     efit_cols = {"beta_n": r'\efit_aeqdsk:betan',
                  "beta_p": r'\efit_aeqdsk:betap',
                  "kappa": r'\efit_aeqdsk:eout',
@@ -81,86 +41,10 @@ class CModShot(Shot):
                           } 
     
     efit_derivs = {'beta_p': 'dbetap_dt', 'li': 'dli_dt', 'Wmhd': 'dWmhd_dt'}
-
-    # TODO: Populate metadata dict
-    def __init__(
-        self, 
-        shot_id,
-        existing_data=None,
-        disruption_time=None,
-        shot_settings : ShotSettings=None,
-        **kwargs
-    ):
-        if shot_settings is None:
-            shot_settings = ShotSettings()
-            
-        super().__init__(shot_id, Tokamak.CMOD, disruption_time, shot_settings)
-        
-        # Set up tree nicknames
-        self.setup_nicknames(shot_settings.efit_tree_name, shot_settings.attempt_local_efit_env)
-
-        # must call this method after nicknamed trees setup
-        self._init_timebase(shot_settings, existing_data)
-        
-        self._init_with_data(existing_data)
-
-
-    def cleanup(self):
-        """
-        Remove references to mdsplus resources to prevent data leaks.
-        """
-        self._tree_manager.cleanup()
-        self._times = None
-        if hasattr(self, '_cached_result'):
-            self._cached_result.clear()
-
-    def setup_nicknames(self, requested_efit_tree_name, attempt_local_efit_env):
-        # nickname efit tree
-        efit_names_to_test = without_duplicates([
-            requested_efit_tree_name,
-            "analysis",
-            *[f"efit0{i}" for i in range(1, 10)],
-            *[f"efit{i}" for i in range(10, 19)],
-        ])
-
-        self._tree_manager.nickname('efit_tree', efit_names_to_test, attempt_local_efit_env)
     
-    @property
-    def efit_tree(self):
-        return self._tree_manager.tree_from_nickname("efit_tree")
-        
-    @property
-    def efit_tree_name(self):
-        return self._tree_manager.tree_name_of_nickname("efit_tree")
-            
-    def set_flattop_timebase(self):
-        ip_parameters = self._get_ip_parameters()
-        ipprog, dipprog_dt = ip_parameters['ip_prog'], ip_parameters['dipprog_dt']
-        indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 1e3)[0]
-        indices_flattop_2 = np.where(np.abs(ipprog) > 1.e5)[0]
-        indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
-        if len(indices_flattop) == 0:
-            self.logger.warning(
-                f"[Shot {self._shot_id}]:Could not find flattop timebase. Defaulting to full shot(efit) timebase.")
-            return
-        self._times = self._times[indices_flattop]
-
-    def set_rampup_and_flattop_timebase(self):
-        ip_parameters = self._get_ip_parameters()
-        ipprog, dipprog_dt = ip_parameters['ip_prog'], ip_parameters['dipprog_dt']
-        indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 6e4)[0]
-        indices_flattop_2 = np.where(np.abs(ipprog) > 1.e5)[0]
-        indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
-        if len(indices_flattop) == 0:
-            self.logger.warning(
-                f"[Shot {self._shot_id}]:Could not find flattop timebase. Defaulting to full shot(efit) timebase.")
-            return
-        end_index = np.max(indices_flattop)
-        self._times = self._times[:end_index]
-
     @cached_method(used_trees=["pcs"], cache_between_threads=False)
-    def get_active_wire_segments(self):
-        pcs_tree = self._tree_manager.open_tree(tree_name='pcs')
+    def get_active_wire_segments(params : ShotDataRequestParams):
+        pcs_tree = params.shot.tree_manager.open_tree(tree_name='pcs')
         segment_nodes = pcs_tree.getNodeWild("\\top.seg_*")
         # Collect active segments and their information
         active_segments = []
@@ -179,7 +63,7 @@ class CModShot(Shot):
         return active_segments
 
     @parameter_cached_method(columns=["time_until_disrupt"])
-    def _get_time_until_disrupt(self):
+    def _get_time_until_disrupt(params : ShotDataRequestParams):
         time_until_disrupt = np.full(len(self._times), np.nan)
         if self.disrupted:
             time_until_disrupt = self.disruption_time - self._times
@@ -1574,20 +1458,3 @@ class CModShot(Shot):
         H98 = tau/tau_98
 
         return pd.DataFrame({"H98": H98, "Wmhd": Wmhd, "btor": btor, "dWmhd_dt": dWmhd_dt, "p_input": p_input})
-
-
-if __name__ == '__main__':
-    logger = logging.getLogger('disruption_py')
-    logger.setLevel(logging.DEBUG)
-    # ch = logging.StreamHandler(sys.stdout)
-    # ch.setLevel(5)
-    parser = argparse.ArgumentParser(description="Test CModShot class")
-    # parser.add_argument('--shot', type=int, help='Shot id to test', default=1150922001)
-    parser.add_argument('--shot', type=int, help='Shot id to test', default=1030523006)
-    # Add parser argument for list of methods to populate
-    parser.add_argument('--populate_methods', nargs='+', help='List of methods to populate', default=['_get_densities'])
-    args = parser.parse_args()
-    shot = CModShot(args.shot, disruption_time=None)
-    # ohmics_parameters = shot._get_ohmic_parameters()
-    print(shot.data)
-    print(shot.data.columns)

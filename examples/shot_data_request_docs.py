@@ -1,8 +1,8 @@
 """ Used in the documentation for the shot data request. """
 from typing import List
-from disruption_py.settings.shot_data_request import ShotDataRequest
-from disruption_py.settings.shot_data_request import ShotDataRequestParams
-from disruption_py.settings.shot_data_request import ShotDataRequest
+from disruption_py.shots.shot_data_request import ShotDataRequest
+from disruption_py.shots.shot_data_request import ShotDataRequestParams
+from disruption_py.shots.shot_data_request import ShotDataRequest
 from disruption_py.utils.method_caching import parameter_cached_method
 import pandas as pd
 import numpy as np
@@ -22,7 +22,7 @@ def decorated_shot_data_method(self, params : ShotDataRequestParams) -> pd.DataF
     -------
     pd.DataFrame
         Dataframe containing the results of the decorated method, with each returned parameter being a column.
-        The dataframe should contain the same number of rows as the timebase (`shot_data_request_params.shot.get_times()`).
+        The dataframe should contain the same number of rows as the timebase (`shot_data_request_params.shot.times`).
     """
     pass
 
@@ -50,7 +50,7 @@ def cached_method_params_function(parent_object : ShotDataRequest, shot_data_req
 
 # Paramater cached method example
 # --8<-- [start:kappa_area_request_example]
-from disruption_py.settings.shot_data_request import ShotDataRequestParams
+from disruption_py.shots.shot_data_request import ShotDataRequestParams
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.method_caching import parameter_cached_method
 
@@ -68,5 +68,5 @@ class KappaAreaRequest(ShotDataRequest):
         aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
         # make sure area is not 0 or less than 0
         area[area <= 0] = 3.14*0.001**2
-        return pd.DataFrame({"kappa_area": params.shot.interpolation_method(times, area/(np.pi * aminor**2), params.shot.get_times())})
+        return pd.DataFrame({"kappa_area": params.shot.interpolation_method(times, area/(np.pi * aminor**2), params.shot.times)})
 # --8<-- [start:kappa_area_request_example]

@@ -2,7 +2,7 @@
 from typing import Callable, Any
 import traceback
 from disruption_py.handlers.multiprocessing_helper import MultiprocessingShotRetriever
-from disruption_py.settings.shot_data_request import ShotDataRequestParams
+from disruption_py.shots.shot_data_request import ShotDataRequestParams
 from disruption_py.settings.shot_ids_request import ShotIdsRequestParams, ShotIdsRequestType, shot_ids_request_runner
 from disruption_py.settings.existing_data_request import ExistingDataRequest, ExistingDataRequestParams
 from disruption_py.settings.output_type_request import ResultOutputTypeRequestParams, FinishOutputTypeRequestParams
@@ -81,13 +81,23 @@ class CModHandler:
             existing_data = None
         disruption_time=sql_database.get_disruption_time(shot_id)
         try:
-            shot = CModShot(shot_id=shot_id, existing_data=existing_data, disruption_time=disruption_time, shot_settings=shot_settings)
+            shot = CModShot(
+                shot_id=shot_id, 
+                num_threads_per_shot=shot_settings.num_threads_per_shot,
+                override_exising_data=shot_settings.override_exising_data,
+                set_times_request=shot_settings.set_times_request,
+                signal_domain=shot_settings.signal_domain,
+                existing_data=existing_data, 
+                disruption_time=disruption_time, 
+                efit_tree_name=shot_settings.efit_tree_name,
+                attempt_local_efit_env=shot_settings.attempt_local_efit_env,
+            )
             shot_data_request_params = ShotDataRequestParams(
                 shot=shot, 
                 shot_id=shot_id, 
-                tree_manager=shot.get_tree_manager(), 
-                shot_times=shot.get_times(), 
-                disruption_time=shot.get_disruption_time(), 
+                tree_manager=shot.tree_manager, 
+                shot_times=shot.times, 
+                disruption_time=shot.disruption_time, 
                 existing_data=existing_data, 
                 tokamak=tokamak, 
                 logger=class_logger

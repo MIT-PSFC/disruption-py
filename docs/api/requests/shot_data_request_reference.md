@@ -25,9 +25,9 @@ class MyShotDataRequest(ShotDataRequest):
 ```
 
 3. To retrieve data from MDSplus use the `shot` attribute of the `params` object. The shot object has a number of useful attributes with the most useful being listed below. See the [`Shot`][disruption_py.shots.shot.Shot] class for more details.
-    - `params.shot.get_tree_manager()` returns a reference to the MDSplus tree manager for the shot. This object should be used to open MDSplus trees instead of the regular MDSplus `Tree` class as it ensures that trees are both efficiently reused and closed when they are no longer needed. See ['TreeManager'] for details on how to use the tree manager.
-    - `params.shot.get_shot_id()` returns the shot id of the shot for which data is being retrieved.
-    - `params.shot.get_times()` returns the timebase of the shot for which data is being retrieved as a numpy array of times. A common development pattern is using the `params.shot.interpolation_method` method (defaults to `interp1`) to interpolate the retrieved/computed values to the desired timebase.
+    - `params.shot.tree_manager` returns a reference to the MDSplus tree manager for the shot. This object should be used to open MDSplus trees instead of the regular MDSplus `Tree` class as it ensures that trees are both efficiently reused and closed when they are no longer needed. See ['TreeManager'] for details on how to use the tree manager.
+    - `params.shot.shot_id` returns the shot id of the shot for which data is being retrieved.
+    - `params.shot.times` returns the timebase of the shot for which data is being retrieved as a numpy array of times. A common development pattern is using the `params.shot.interpolation_method` method (defaults to `interp1`) to interpolate the retrieved/computed values to the desired timebase.
 ??? example "Shot Data Request Examples"
 
     === "Kappa Area Parameter in C-Mod"

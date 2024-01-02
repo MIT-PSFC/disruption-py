@@ -1,29 +1,14 @@
-from dataclasses import dataclass, field
+from dataclasses import field
 import pandas as pd
 from typing import List, Union, Callable, Tuple
+from disruption_py.settings.enum_options import InterpolationMethod, SignalDomain
 from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.existing_data_request import ExistingDataRequest, resolve_existing_data_request
-from disruption_py.settings.shot_data_request import ShotDataRequest
+from disruption_py.shots.shot_data_request import ShotDataRequest
 from disruption_py.settings.set_times_request import SetTimesRequest, resolve_set_times_request
 from disruption_py.settings.output_type_request import OutputTypeRequest, resolve_output_type_request
 from disruption_py.utils.mappings.mappings_helpers import map_string_attributes_to_enum
-from enum import Enum
 
-class InterpolationMethod(Enum):
-    LINEAR = "linear"
-    LOG = "log"
-    LOG_LINEAR = "log_linear"
-    EXP = "exp"
-    EXP_LINEAR = "exp_linear"
-    SIN = "sin"
-    SIN_LINEAR = "sin_linear"
-    SIN_EXP = "sin_exp"
-    
-class SignalDomain(Enum):
-    FULL = "full"
-    FLATTOP = "flattop"
-    RAMP_UP_AND_FLATTOP = "rampup_and_flattop"
-    
 def default_tags():
     return ["all"]
 
