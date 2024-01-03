@@ -1,4 +1,4 @@
-from disruption_py.shots.shot_data_request import ShotDataRequestParams
+from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.utils.mappings.tokamak import Tokamak
 import threading
 import pandas as pd

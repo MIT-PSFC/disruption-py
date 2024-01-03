@@ -8,7 +8,6 @@ from typing import Callable, Dict, List, Set
 class CachedMethod:
     name: str
     method: Callable
-    built_in_to_shot: bool
     
     # All functions have been evaluated
     computed_cached_method_params: CachedMethodParams

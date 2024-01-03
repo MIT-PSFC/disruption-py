@@ -2,7 +2,7 @@
 from typing import Callable, Any
 import traceback
 from disruption_py.handlers.multiprocessing_helper import MultiprocessingShotRetriever
-from disruption_py.shots.shot_data_request import ShotDataRequestParams
+from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.settings.shot_ids_request import ShotIdsRequestParams, ShotIdsRequestType, shot_ids_request_runner
 from disruption_py.settings.existing_data_request import ExistingDataRequest, ExistingDataRequestParams
 from disruption_py.settings.output_type_request import ResultOutputTypeRequestParams, FinishOutputTypeRequestParams

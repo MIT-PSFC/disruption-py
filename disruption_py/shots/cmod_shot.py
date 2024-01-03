@@ -3,10 +3,10 @@ import logging
 from disruption_py.mdsplus_integration.tree_manager import EnvModifications
 from disruption_py.settings.enum_options import SignalDomain
 from disruption_py.settings.set_times_request import SetTimesRequest
-from disruption_py.shots.cmod.cmod_data_requests import BasicCmodRequests 
+from disruption_py.shots.parameter_functions.cmod.cmod_data_requests import BasicCmodRequests 
 
 from disruption_py.shots.shot import Shot, ShotSetupParams
-from disruption_py.shots.shot_data_request import ShotDataRequestParams
+from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.utils.method_caching import parameter_cached_method, cached_method
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.utils import without_duplicates

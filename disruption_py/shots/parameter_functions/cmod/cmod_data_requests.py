@@ -3,7 +3,8 @@ import numpy as np
 import pandas as pd
 import scipy as sp
 import disruption_py.data
-from disruption_py.shots.shot_data_request import ShotDataRequest, ShotDataRequestParams
+from disruption_py.settings.shot_data_request import ShotDataRequest, ShotDataRequestParams
+from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.math_utils import gaussian_fit, interp1, smooth
 from disruption_py.utils.utils import without_duplicates
 from disruption_py.utils.method_caching import cached_method, parameter_cached_method
@@ -72,7 +73,7 @@ class CModEfitRequests(ShotDataRequest):
     
     @parameter_cached_method(
         columns=[*efit_cols.keys(), *efit_cols_pre_2000.keys(), *efit_derivs.keys(), 'V_surf', 'v_loop_efit', 'beta_n'],
-        used_trees=["efit_tree"])
+        used_trees=["efit_tree"], tokamak=Tokamak.CMOD)
     def _get_EFIT_parameters(params : ShotDataRequestParams):
 
         efit_tree = efit_tree(params)
@@ -135,7 +136,7 @@ class CModEfitRequests(ShotDataRequest):
         return pd.DataFrame(efit_data)
 
 class BasicCmodRequests(ShotDataRequest):
-    @cached_method(used_trees=["pcs"], cache_between_threads=False)
+    @cached_method(used_trees=["pcs"], cache_between_threads=False, tokamak=Tokamak.CMOD)
     def get_active_wire_segments(params : ShotDataRequestParams):
         pcs_tree = params.shot.tree_manager.open_tree(tree_name='pcs')
         segment_nodes = pcs_tree.getNodeWild("\\top.seg_*")
@@ -155,7 +156,7 @@ class BasicCmodRequests(ShotDataRequest):
         #     active_segments[i].append(end_times[i])
         return active_segments
 
-    @parameter_cached_method(columns=["time_until_disrupt"])
+    @parameter_cached_method(columns=["time_until_disrupt"], , tokamak=Tokamak.CMOD)
     def _get_time_until_disrupt(params : ShotDataRequestParams):
         time_until_disrupt = np.full(len(params.shot.times), np.nan)
         if params.shot.disrupted:
@@ -224,7 +225,7 @@ class BasicCmodRequests(ShotDataRequest):
     @parameter_cached_method(
         columns=["ip", "dip_dt", "dip_smoothed", "ip_prog", "dipprog_dt", "ip_error"], 
         used_trees=["magnetics", "pcs"],
-        contained_cached_methods=[])
+        contained_cached_methods=[], tokamak=Tokamak.CMOD)
     def _get_ip_parameters(params : ShotDataRequestParams):
         # Automatically generated
         magnetics_tree = params.shot.tree_manager.open_tree(tree_name='magnetics')
@@ -329,7 +330,8 @@ class BasicCmodRequests(ShotDataRequest):
     @parameter_cached_method(
         columns=["z_error", "z_prog", "zcur", "v_z", "z_times_v_z"],
         contained_cached_methods=[],
-        used_trees=["hybrid", "magnetics", "pcs"])
+        used_trees=["hybrid", "magnetics", "pcs"],
+        tokamak=Tokamak.CMOD)
     def _get_z_parameters(params : ShotDataRequestParams):
         pcstime = np.array(np.arange(-4, 12.383, .001))
         z_prog = np.empty(pcstime.shape)
@@ -455,7 +457,8 @@ class BasicCmodRequests(ShotDataRequest):
     @parameter_cached_method(
         columns=["p_oh", "v_loop"],
         used_trees=["efit_tree"], 
-        contained_cached_methods=["_get_ip_parameters"])
+        contained_cached_methods=["_get_ip_parameters"],
+        tokamak=Tokamak.CMOD)
     def _get_ohmic_parameters(params : ShotDataRequestParams):
         # <-- this line is the culprit for breaking when analysis tree is set to EFIT18
         efit_tree = efit_tree(params)
@@ -496,7 +499,8 @@ class BasicCmodRequests(ShotDataRequest):
     @parameter_cached_method(
         columns=["p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", "radiated_fraction"],
         used_trees=['LH', 'RF', 'spectroscopy'], 
-        contained_cached_methods=["_get_ohmic_parameters"])
+        contained_cached_methods=["_get_ohmic_parameters"],
+        tokamak=Tokamak.CMOD)
     def _get_power(params : ShotDataRequestParams):
         """
         NOTE: the timebase for the LH power signal does not extend over the full
@@ -526,7 +530,7 @@ class BasicCmodRequests(ShotDataRequest):
     def get_kappa_area(times, aminor, area, a_times):
         return pd.DataFrame({"kappa_area": interp1(a_times, area/(np.pi * aminor**2), times)})
 
-    @parameter_cached_method(columns=["kappa_area"], used_trees=["efit_tree"])
+    @parameter_cached_method(columns=["kappa_area"], used_trees=["efit_tree"], tokamak=Tokamak.CMOD)
     def _get_kappa_area(params : ShotDataRequestParams):
         efit_tree = efit_tree(params)
         aminor = efit_tree.getNode(
@@ -560,7 +564,7 @@ class BasicCmodRequests(ShotDataRequest):
         return pd.DataFrame({"v_0": v_0})
 
     # TODO: Calculate v_mid
-    @parameter_cached_method(columns=["v_0"], used_trees=["spectroscopy"])
+    @parameter_cached_method(columns=["v_0"], used_trees=["spectroscopy"],  tokamak=Tokamak.CMOD)
     def _get_rotation_velocity(params : ShotDataRequestParams):
         with importlib_resources.path(
                 disruption_py.data, 'lock_mode_calib_shots.txt') as calib_path:
@@ -598,7 +602,7 @@ class BasicCmodRequests(ShotDataRequest):
     # TODO: Try catch failure to get BP13 sensors 
     @parameter_cached_method(
         columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase", "BT"],
-        used_trees=["magnetics"])
+        used_trees=["magnetics"],  tokamak=Tokamak.CMOD)
     def _get_n_equal_1_amplitude(params : ShotDataRequestParams):
         """ Calculate n=1 amplitude and phase.
 
@@ -705,7 +709,8 @@ class BasicCmodRequests(ShotDataRequest):
 
     @parameter_cached_method(
         columns=["n_e", "dn_dt", "Greenwald_fraction"],
-        used_trees=["electrons", "magnetics", "analysis"]
+        used_trees=["electrons", "magnetics", "analysis"],
+        tokamak=Tokamak.CMOD
     )
     def _get_densities(params : ShotDataRequestParams):
         try:
@@ -736,7 +741,8 @@ class BasicCmodRequests(ShotDataRequest):
 
     @parameter_cached_method(
         columns=["I_efc"],
-        used_trees=["engineering"]
+        used_trees=["engineering"],
+        tokamak=Tokamak.CMOD
     )
     def _get_efc_current(params : ShotDataRequestParams):
         try:
@@ -765,7 +771,7 @@ class BasicCmodRequests(ShotDataRequest):
         te_hwm = interp1(ts_time, te_hwm, times)
         return pd.DataFrame({"Te_width": te_hwm})
 
-    @parameter_cached_method(columns=["Te_width"], used_trees=["electrons"])
+    @parameter_cached_method(columns=["Te_width"], used_trees=["electrons"], tokamak=Tokamak.CMOD)
     def _get_Ts_parameters(params : ShotDataRequestParams):
         # TODO: Guassian vs parabolic fit for te profile
         te_hwm = np.empty((len(params.shot.times)))
@@ -797,7 +803,8 @@ class BasicCmodRequests(ShotDataRequest):
 
     @parameter_cached_method(
         columns=["ne_peaking", "Te_peaking", "pressure_peaking"],
-        used_trees=["cmod", "efit_tree", "electrons"])
+        used_trees=["cmod", "efit_tree", "electrons"],
+        tokamak=Tokamak.CMOD)
     def _get_peaking_factors(params : ShotDataRequestParams):
         ne_PF = np.full(len(params.shot.times), np.nan)
         Te_PF = ne_PF.copy()
@@ -859,7 +866,8 @@ class BasicCmodRequests(ShotDataRequest):
 
     @parameter_cached_method(
         columns=["prad_peaking"],
-        used_trees=["cmod", "spectroscopy"])
+        used_trees=["cmod", "spectroscopy"],
+        tokamak=Tokamak.CMOD)
     def _get_prad_peaking(params : ShotDataRequestParams):
         prad_peaking = np.full(len(params.shot.times), np.nan)
         cmod_tree = params.shot.tree_manager.open_tree(tree_name='cmod')
@@ -941,7 +949,8 @@ class BasicCmodRequests(ShotDataRequest):
     @parameter_cached_method(
         columns=["ne_peaking", "Te_peaking", "pressure_peaking"],
         tags=['experimental'], 
-        used_trees=["cmod", "electrons"])
+        used_trees=["cmod", "electrons"],
+        tokamak=Tokamak.CMOD)
     def _get_peaking_factors_no_tci(params : ShotDataRequestParams):
         # Initialize PFs as empty arrarys
         ne_PF = np.full(len(params.shot.times), np.nan)
@@ -1120,7 +1129,7 @@ class BasicCmodRequests(ShotDataRequest):
 
 
     # TODO: get more accurate description of soft x-ray data
-    @parameter_cached_method(columns=["sxr"], used_trees=["xtomo"])
+    @parameter_cached_method(columns=["sxr"], used_trees=["xtomo"], tokamak=Tokamak.CMOD)
     def _get_sxr_data(params : ShotDataRequestParams):
         """ """
         sxr = np.full(len(params.shot.times), np.nan)
@@ -1224,7 +1233,8 @@ class BasicCmodRequests(ShotDataRequest):
     @parameter_cached_method(
         tags=['experimental'],
         columns=["Te_edge", "ne_edge"],
-        used_trees=["electrons"])
+        used_trees=["electrons"],
+        tokamak=Tokamak.CMOD)
     def _get_edge_parameters(params : ShotDataRequestParams):
 
         # Ignore shots on the blacklist
@@ -1290,7 +1300,8 @@ class BasicCmodRequests(ShotDataRequest):
         tags=['experimental'],
         columns=["H98", "Wmhd", "btor", "dWmhd_dt", "p_input"],
         contained_cached_methods=["_get_power", "_get_EFIT_parameters", "_get_densities", "_get_ip_parameters"], 
-        used_trees=["magnetics"])
+        used_trees=["magnetics"],
+        tokamak=Tokamak.CMOD)
     def _get_H98(params : ShotDataRequestParams):
         """Prepare to compute H98 by getting tau_E
         

@@ -1,17 +1,22 @@
-from dataclasses import field
+from dataclasses import dataclass, field
 import pandas as pd
 from typing import List, Union, Callable, Tuple
 from disruption_py.settings.enum_options import InterpolationMethod, SignalDomain
 from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.existing_data_request import ExistingDataRequest, resolve_existing_data_request
-from disruption_py.shots.shot_data_request import ShotDataRequest
+from disruption_py.settings.shot_data_request import ShotDataRequest
 from disruption_py.settings.set_times_request import SetTimesRequest, resolve_set_times_request
 from disruption_py.settings.output_type_request import OutputTypeRequest, resolve_output_type_request
 from disruption_py.utils.mappings.mappings_helpers import map_string_attributes_to_enum
+from disruption_py.utils.utils import without_duplicates
 
 def default_tags():
     return ["all"]
 
+def default_shot_data_requests():
+    from disruption_py.shots.parameter_functions.cmod.cmod_data_requests import CModEfitRequests, BasicCmodRequests
+    return [CModEfitRequests(), BasicCmodRequests()]
+    
 @dataclass
 class ShotSettings:
     """Settings to be used for retrieving data for a single shot.
@@ -119,11 +124,13 @@ class ShotSettings:
         self.existing_data_request = resolve_existing_data_request(self.existing_data_request)
         self.output_type_request = resolve_output_type_request(self.output_type_request)
         self.set_times_request = resolve_set_times_request(self.set_times_request)
+        self.shot_data_requests = without_duplicates(self.shot_data_requests + default_shot_data_requests())
         
         map_string_attributes_to_enum(self, {
             "signal_type": SignalDomain,
             "interpolation_method": InterpolationMethod
         })
+        
         
         for idx, (option, value) in enumerate(self.attempt_local_efit_env):
             if not option.endswith("_path"):

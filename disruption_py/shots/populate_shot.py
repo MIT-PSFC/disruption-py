@@ -10,7 +10,7 @@ from disruption_py.shots.shot import Shot
 from disruption_py.utils.method_optimizer import MethodOptimizer, CachedMethod
 from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.utils.method_caching import CachedMethodParams, manually_cache, is_cached_method, get_cached_method_params
-from disruption_py.shots.shot_data_request import ShotDataRequest, ShotDataRequestParams
+from disruption_py.settings.shot_data_request import ShotDataRequest, ShotDataRequestParams
 from disruption_py.utils.constants import MAX_THREADS_PER_SHOT, TIME_CONST
 
 REQUIRED_COLS = {'time', 'time_until_disrupt', 'shot', 'commit_hash'}
@@ -21,10 +21,7 @@ def populate_method(params: ShotDataRequestParams, cached_method : CachedMethod,
         method = cached_method.method
         
         def run_method():
-            if cached_method.built_in_to_shot:
-                return method()
-            else:
-                return method(params=params)
+            return method(params=params)
         
         result = None
         if callable(method) and is_cached_method(method):
@@ -71,14 +68,8 @@ def get_cached_methods_from_object(object_to_search, shot_settings: ShotSettings
     tags = shot_settings.run_tags
     methods = shot_settings.run_methods
     columns = shot_settings.run_columns
-    
-    built_in_to_shot = isinstance(object_to_search, Shot)
-    is_shot_data_request = isinstance(object_to_search, ShotDataRequest)
-        
-    if built_in_to_shot:
-        methods_to_search = dir(object_to_search)
-    elif is_shot_data_request:
-        methods_to_search = object_to_search.get_request_methods_for_tokamak(params.tokamak)
+            
+    methods_to_search = object_to_search.get_request_methods_for_tokamak(params.tokamak)
     
     methods_to_evaluate : list[CachedMethod] = []
     all_cached_methods : list[CachedMethod] = []
@@ -93,7 +84,6 @@ def get_cached_methods_from_object(object_to_search, shot_settings: ShotSettings
         cached_method = CachedMethod(
             name=method_name, 
             method=attribute_to_check, 
-            built_in_to_shot=built_in_to_shot,
             computed_cached_method_params=computed_cached_method_params
         )
         all_cached_methods.append(cached_method)
@@ -134,9 +124,7 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams):
     # Loop through each attribute and find methods that should populate the shot object.
     methods_to_evaluate : list[CachedMethod] = []
     all_cached_methods : list[CachedMethod] = []
-    
-    methods_to_evaluate, all_cached_methods = get_cached_methods_from_object(shot, shot_settings, params)
-    
+        
     # Add the methods gound from the passed ShotDataRequest objects
     for shot_data_request in shot_settings.shot_data_requests:
         req_methods_to_evaluate, req_all_cached_methods = get_cached_methods_from_object(shot_data_request, shot_settings, params)
