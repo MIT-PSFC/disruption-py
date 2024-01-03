@@ -19,15 +19,12 @@ class ShotDataRequestParams:
     ----------
     shot : Any
 		A reference to the shot object retrieving data.
-    existing_data : pd.DataFrame
-        Data provided to disruption_py for the given shot in the `existing_data_request` parameter of `shot_settings`.
     tokamak : Tokemak
         The tokemak for which the set times request is made.
     logger : Logger
         Logger object from disruption_py to use for logging.
     """
     shot : Shot
-    existing_data : pd.DataFrame
     tokamak : Tokamak
     logger : Logger
     

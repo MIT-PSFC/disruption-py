@@ -93,12 +93,7 @@ class CModHandler:
                 attempt_local_efit_env=shot_settings.attempt_local_efit_env,
             )
             shot_data_request_params = ShotDataRequestParams(
-                shot=shot, 
-                shot_id=shot_id, 
-                tree_manager=shot.tree_manager, 
-                shot_times=shot.times, 
-                disruption_time=shot.disruption_time, 
-                existing_data=existing_data, 
+                shot=shot,
                 tokamak=tokamak, 
                 logger=class_logger
             )

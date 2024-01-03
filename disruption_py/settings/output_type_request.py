@@ -205,7 +205,7 @@ class CSVOutputRequest(OutputTypeRequest):
     """
     Stream outputted data to a single csv file.
     """
-    def __init__(self, filepath, flexible_columns=False, clear_file=True):
+    def __init__(self, filepath, flexible_columns=True, clear_file=True):
         self.filepath = filepath
         self.flexible_columns = flexible_columns
         self.output_shot_count = 0

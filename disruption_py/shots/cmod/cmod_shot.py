@@ -2,18 +2,14 @@ import traceback
 import logging
 from disruption_py.mdsplus_integration.tree_manager import EnvModifications
 from disruption_py.settings.enum_options import SignalDomain
-from disruption_py.settings.set_times_request import SetTimesRequest 
+from disruption_py.settings.set_times_request import SetTimesRequest
+from disruption_py.shots.cmod.cmod_data_requests import BasicCmodRequests 
 
 from disruption_py.shots.shot import Shot, ShotSetupParams
+from disruption_py.shots.shot_data_request import ShotDataRequestParams
 from disruption_py.utils.method_caching import parameter_cached_method, cached_method
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.utils import without_duplicates
-
-try:
-    import importlib.resources as importlib_resources
-except ImportError:
-    # Try backported to PY<37 `importlib_resources`.
-    import importlib_resources
 
 import pandas as pd
 import numpy as np
@@ -21,29 +17,6 @@ import numpy as np
 import MDSplus
 from MDSplus import *
 
-# For edge parameters
-import sys
-import scipy as sp
-
-import warnings
-warnings.filterwarnings('error', category=RuntimeWarning)
-
-# TODO: Somehow link to disruption_py 
-# TODO: Deal with scary missing TRIPpy dependency (please don't break until I fix you)
-try:
-    sys.path.append('/home/sciortino/usr/python3modules/eqtools3')
-    sys.path.append('/home/sciortino/usr/python3modules/profiletools3')
-    sys.path.append('/home/sciortino/usr/python3modules/gptools3')
-    import eqtools
-    import profiletools
-except Exception as e:
-    logging.warning('Could not import profiletools or eqtools')
-    logging.debug(traceback.format_exc())
-    pass
-
-import warnings
-
-from disruption_py.utils.math_utils import interp1, interp2, smooth, gaussian_fit, gsastd, get_bolo, power
 
 class CModShot(Shot):
     """
@@ -84,9 +57,12 @@ class CModShot(Shot):
         )
         super().__init__(setup_params=shot_setup_params)
 
-            
+    def get_shot_data_request_params(self):
+        return ShotDataRequestParams(self, self.logger, Tokamak.CMOD)
+
     def set_flattop_timebase(self):
-        ip_parameters = self._get_ip_parameters()
+        shot_data_requests_params = self.get_shot_data_request_params()
+        ip_parameters = BasicCmodRequests._get_ip_parameters(params=shot_data_requests_params)
         ipprog, dipprog_dt = ip_parameters['ip_prog'], ip_parameters['dipprog_dt']
         indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 1e3)[0]
         indices_flattop_2 = np.where(np.abs(ipprog) > 1.e5)[0]
@@ -98,7 +74,8 @@ class CModShot(Shot):
         self._times = self._times[indices_flattop]
 
     def set_rampup_and_flattop_timebase(self):
-        ip_parameters = self._get_ip_parameters()
+        shot_data_requests_params = self.get_shot_data_request_params()
+        ip_parameters = BasicCmodRequests._get_ip_parameters(params=shot_data_requests_params)
         ipprog, dipprog_dt = ip_parameters['ip_prog'], ip_parameters['dipprog_dt']
         indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 6e4)[0]
         indices_flattop_2 = np.where(np.abs(ipprog) > 1.e5)[0]

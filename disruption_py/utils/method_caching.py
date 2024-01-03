@@ -1,3 +1,4 @@
+from disruption_py.shots.shot_data_request import ShotDataRequestParams
 from disruption_py.utils.mappings.tokamak import Tokamak
 import threading
 import pandas as pd
@@ -111,12 +112,8 @@ def cached_method(used_trees=None, contained_cached_methods=None, cache_between_
                 
         def wrapper(self, *args, **kwargs):
             
-            if "params" in kwargs:
-                shot_data_request_params = kwargs["params"]
-                shot = shot_data_request_params.shot
-            else:
-                shot_data_request_params = None
-                shot = self
+            shot_data_request_params : ShotDataRequestParams = kwargs["params"]
+            shot = shot_data_request_params.shot
             
             # Create the cache if it doesn't exist
             if not hasattr(shot, '_cached_result'):

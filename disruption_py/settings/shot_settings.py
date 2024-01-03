@@ -125,5 +125,9 @@ class ShotSettings:
             "interpolation_method": InterpolationMethod
         })
         
+        for idx, (option, value) in enumerate(self.attempt_local_efit_env):
+            if not option.endswith("_path"):
+                self.attempt_local_efit_env[idx] = (option + "_path", value)
+        
         # we can also setup logging on resolve
         self.log_settings.setup_logging()

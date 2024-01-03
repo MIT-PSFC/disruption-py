@@ -51,7 +51,8 @@ class Shot(ABC):
         self._tokamak = setup_params.tokamak
         self._num_threads_per_shot = setup_params.num_threads_per_shot
         self._disruption_time = setup_params.disruption_time
-        self._tree_manager = TreeManager(setup_params.shot_id)        
+        self._tree_manager = TreeManager(setup_params.shot_id)
+        self._initial_existing_data = setup_params.existing_data
             
         if self._num_threads_per_shot > 1:
             self.logger.info("Intra-shot multithreading enabled")
@@ -65,7 +66,7 @@ class Shot(ABC):
             'disrupted': 100  # TODO: Fix
         }
         
-        self.setup_nicknames(setup_params.tree_nicknames)
+        self._setup_nicknames(setup_params.tree_nicknames)
 
         # must call this method after nicknamed trees setup
         self._init_timebase(setup_params, setup_params.existing_data)
@@ -113,6 +114,17 @@ class Shot(ABC):
     @property
     def disruption_time(self):
         return self._disruption_time
+    
+    @property
+    def initial_existing_data(self):
+        return self._initial_existing_data
+    
+    @property
+    def metadata(self):
+        return self._metadata
+    
+    def __getitem__(self, key):
+        return self._metadata if key == 'metadata' else self.data[key]
     
     def _init_timebase(self, setup_params: ShotSetupParams, existing_data):
         """

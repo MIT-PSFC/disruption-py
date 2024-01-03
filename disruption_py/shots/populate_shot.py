@@ -215,7 +215,7 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams):
     local_data = pd.concat(filtered_parameters + [populated_data], axis=1)
     local_data = local_data.loc[:, ~local_data.columns.duplicated()]
     if shot_settings.only_requested_columns:
-        include_columns = REQUIRED_COLS.union(set(shot_settings.run_columns).intersection(set(local_data.columns)))
+        include_columns = list(REQUIRED_COLS.union(set(shot_settings.run_columns).intersection(set(local_data.columns))))
         local_data = local_data[include_columns]
     shot.data = local_data
     return local_data

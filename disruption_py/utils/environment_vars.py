@@ -34,12 +34,13 @@ def temporary_env_vars(env_var_list: Iterable[Tuple[str, str]]):
     """
     original_values = {}
     
-    # Set the new environment variables and store their original values
-    for key, value in env_var_list:
-        original_values[key] = os.environ.get(key)
-        os.environ[key] = value
-
     try:
+        
+        # Set the new environment variables and store their original values
+        for key, value in env_var_list:
+            original_values[key] = os.environ.get(key)
+            os.environ[key] = value
+        
         yield
     finally:
         # Restore the original environment variable values
