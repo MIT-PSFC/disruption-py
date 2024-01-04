@@ -39,7 +39,6 @@ class ShotSetupParams:
     tree_nicknames : Dict[str, Tuple[List[str], List[EnvModifications]]]
 
 class Shot(ABC):
-    # TODO: Add [Shot {self._shot_id}]: to logger format by default
     logger = logging.getLogger('disruption_py')
 
     def __init__(
