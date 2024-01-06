@@ -2,10 +2,10 @@ from dataclasses import dataclass
 from logging import Logger
 import pandas as pd
 import numpy as np
-from disruption_py.shots.shot import Shot
+from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.math_utils import interp1
-from disruption_py.utils.method_caching import get_cached_method_params, is_cached_method, parameter_cached_method
+from disruption_py.shots.helpers.method_caching import get_cached_method_params, is_cached_method, parameter_cached_method
 
 from abc import ABC
 from typing import Any, Callable, List
@@ -24,7 +24,7 @@ class ShotDataRequestParams:
     logger : Logger
         Logger object from disruption_py to use for logging.
     """
-    shot : Shot
+    shot_props : ShotProps
     tokamak : Tokamak
     logger : Logger
     

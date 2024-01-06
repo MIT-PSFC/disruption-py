@@ -30,7 +30,7 @@ class ShotSettings:
         ExistingDataRequestType that resolves to a ExistingDataRequest. See ExistingDataRequest for more 
         details. Set to None if no data should be prefilled. Defaults to None.
     num_threads_per_shot : int
-        The number of threads to use for data retrieval from MDSplus for each shot. Default is 1.
+        Use not recommended. Alternatively, please see num_processes in get_shots_data.
     efit_tree_name : str
         The name of the tree to first try for the efit environment. Other tree names will be tried if 
         opening this tree name fails. Default is 'analysis'.

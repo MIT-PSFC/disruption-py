@@ -1,5 +1,5 @@
 from disruption_py.mdsplus_integration.tree_manager import TreeManager
-from disruption_py.utils.method_caching import CachedMethodParams
+from disruption_py.shots.helpers.method_caching import CachedMethodParams
 from dataclasses import dataclass, field
 
 from typing import Callable, Dict, List, Set

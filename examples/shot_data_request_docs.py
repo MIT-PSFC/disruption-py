@@ -3,7 +3,7 @@ from typing import List
 from disruption_py.settings.shot_data_request import ShotDataRequest
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.settings.shot_data_request import ShotDataRequest
-from disruption_py.utils.method_caching import parameter_cached_method
+from disruption_py.shots.helpers.method_caching import parameter_cached_method
 import pandas as pd
 import numpy as np
 
@@ -52,7 +52,7 @@ def cached_method_params_function(parent_object : ShotDataRequest, shot_data_req
 # --8<-- [start:kappa_area_request_example]
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.method_caching import parameter_cached_method
+from disruption_py.shots.helpers.method_caching import parameter_cached_method
 
 class KappaAreaRequest(ShotDataRequest):
     

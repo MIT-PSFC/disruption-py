@@ -1,4 +1,5 @@
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
+from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.mappings.tokamak import Tokamak
 import threading
 import pandas as pd
@@ -113,17 +114,14 @@ def cached_method(used_trees=None, contained_cached_methods=None, cache_between_
         def wrapper(self, *args, **kwargs):
             
             shot_data_request_params : ShotDataRequestParams = kwargs["params"]
-            shot = shot_data_request_params.shot
+            shot_props = shot_data_request_params.shot_props
             
-            # Create the cache if it doesn't exist
-            if not hasattr(shot, '_cached_result'):
-                shot._cached_result = {}
-            cache_key = get_method_cache_key(func.__name__, shot._times)
-            if cache_key in shot._cached_result:
-                return shot._cached_result[cache_key]
+            cache_key = get_method_cache_key(func.__name__, shot_props.times)
+            if cache_key in shot_props._cached_results:
+                return shot_props._cached_results[cache_key]
             else:
                 result = func(self, *args, **kwargs)
-                shot._cached_result[cache_key] = result
+                shot_props._cached_results[cache_key] = result
                 return result
         
         cached_method_params = CachedMethodParams(
@@ -136,21 +134,21 @@ def cached_method(used_trees=None, contained_cached_methods=None, cache_between_
         return wrapper
     return tag_wrapper
 
-def manually_cache(shot, data : pd.DataFrame, method_name, method_columns : List[str]) -> bool:
+def manually_cache(shot_props : ShotProps, data : pd.DataFrame, method_name, method_columns : List[str]) -> bool:
     if method_columns is None:
         return False
-    if not hasattr(shot, '_cached_result'):
-        shot._cached_result = {}
+    if not hasattr(shot_props, '_cached_results'):
+        shot_props._cached_results = {}
     missing_columns = set(col for col in method_columns if col not in data.columns)
     if len(missing_columns) == 0:
         cache_key = get_method_cache_key(method_name, data['time'])
-        shot._cached_result[cache_key] = data[method_columns]
-        shot.logger.debug(
-                f"[Shot {shot.shot_id}]:Manually caching {method_name}")
+        shot_props._cached_results[cache_key] = data[method_columns]
+        shot_props.logger.debug(
+                f"[Shot {shot_props.shot_id}]:Manually caching {method_name}")
         return True
     else:
-        shot.logger.debug(
-                f"[Shot {shot.shot_id}]:Can not cache {method_name} missing columns {missing_columns}")
+        shot_props.logger.debug(
+                f"[Shot {shot_props.shot_id}]:Can not cache {method_name} missing columns {missing_columns}")
         return False
 
 # Utility methods for decorated methods

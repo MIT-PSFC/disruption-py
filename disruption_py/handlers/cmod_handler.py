@@ -7,10 +7,10 @@ from disruption_py.settings.shot_ids_request import ShotIdsRequestParams, ShotId
 from disruption_py.settings.existing_data_request import ExistingDataRequest, ExistingDataRequestParams
 from disruption_py.settings.output_type_request import ResultOutputTypeRequestParams, FinishOutputTypeRequestParams
 from disruption_py.settings import ShotSettings
+from disruption_py.shots.cmod_shot_manager import CModShotManager
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.databases import CModDatabase
-from disruption_py.shots import CModShot
-from disruption_py.shots.populate_shot import populate_shot
+from disruption_py.shots.helpers.populate_shot import populate_shot
 import pandas as pd
 import logging
 
@@ -59,7 +59,7 @@ class CModHandler:
         return self._database
     
     @staticmethod
-    def _get_shot_data(shot_id, sql_database=None, shot_settings: ShotSettings=None) -> pd.DataFrame:
+    def _get_shot_data(shot_id, sql_database : CModDatabase=None, shot_settings: ShotSettings=None) -> pd.DataFrame:
         """
         Get data for a single shot from CMOD. May be run across different processes.
         """
@@ -81,24 +81,14 @@ class CModHandler:
             existing_data = None
         disruption_time=sql_database.get_disruption_time(shot_id)
         try:
-            shot = CModShot(
+            shot_props = CModShotManager.cmod_setup_shot_props(
                 shot_id=shot_id, 
-                num_threads_per_shot=shot_settings.num_threads_per_shot,
-                override_exising_data=shot_settings.override_exising_data,
-                set_times_request=shot_settings.set_times_request,
-                signal_domain=shot_settings.signal_domain,
                 existing_data=existing_data, 
                 disruption_time=disruption_time, 
-                efit_tree_name=shot_settings.efit_tree_name,
-                attempt_local_efit_env=shot_settings.attempt_local_efit_env,
+                shot_settings=shot_settings,
             )
-            shot_data_request_params = ShotDataRequestParams(
-                shot=shot,
-                tokamak=tokamak, 
-                logger=class_logger
-            )
-            retrieved_data = populate_shot(shot_settings=shot_settings, params=shot_data_request_params)
-            shot.cleanup()
+            retrieved_data = CModShotManager.run_data_retrieval(shot_props)
+            CModShotManager.cleanup(shot_props)
             class_logger.info(f"completed {shot_id}")
             return retrieved_data
         except Exception as e:

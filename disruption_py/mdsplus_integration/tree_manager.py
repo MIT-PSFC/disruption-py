@@ -1,3 +1,4 @@
+from collections import Counter
 from MDSplus import Tree, TreeNode
 import logging
 from typing import Callable, List, Tuple
@@ -23,6 +24,9 @@ class TreeManager:
         
         self._open_trees = {}
         self._closed_trees = {}
+        
+        # count the number of getNode of each type
+        self.counter = Counter()
     
     @property
     def thread_open_trees(self):
@@ -76,6 +80,7 @@ class TreeManager:
                     self.close_tree(tree_name)
     
     def cleanup(self):
+        self.logger.info(f"Node usage counts: {self.counter}")
         for thread in list(self._open_trees.keys()):
             for tree_name in list(self.get_open_trees(thread).keys()):
                 self.close_tree(tree_name, thread)
@@ -169,7 +174,11 @@ class TreeWrapper(Tree):
         self._tree_manager = tree_manager
         super().__init__(*args, **kwargs)
         
-        
+    
+    def getNode(self, name):
+        self._tree_manager.counter[(self.tree, name)] += 1
+        return super().getNode(name)
+
     def close(self, *args, **kwargs):
         if self.tree is not None:
             self._tree_manager.mark_tree_closed(self.tree)

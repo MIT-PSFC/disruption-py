@@ -1,15 +1,52 @@
 import numpy as np
 from dataclasses import replace
+
+import pandas as pd
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
+from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.shots.parameter_functions.cmod.cmod_data_requests import BasicCmodRequests
+from disruption_py.shots.shot_manager import ShotManager
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.utils.utils import without_duplicates
 
 
-def CModShotManager(ShotManager):
+class CModShotManager(ShotManager):
     
     @classmethod
-    def modify_times_flattop_timebase(cls, shot_props : ShotProps, **kwargs):
+    def cmod_setup_shot_props(
+        cls,
+        shot_id : str,
+        existing_data : pd.DataFrame,
+        disruption_time : float,
+        shot_settings : ShotSettings,
+        **kwargs
+    ) -> ShotProps:
+        """
+        Sets up the shot properties for cmod.
+        """
+        
+        efit_names_to_test = without_duplicates([
+            shot_settings.efit_tree_name,
+            "analysis",
+            *[f"efit0{i}" for i in range(1, 10)],
+            *[f"efit{i}" for i in range(10, 19)],
+        ])
+        tree_nicknames = { "efit" : (efit_names_to_test, [shot_settings.attempt_local_efit_env]) }
+        
+        shot_props = cls.setup(
+            shot_id=shot_id,
+            tokamak=Tokamak.CMOD,
+            existing_data=existing_data,
+            disruption_time=disruption_time,
+            tree_nicknames=tree_nicknames,
+            shot_settings=shot_settings,
+            **kwargs
+        )
+        return shot_props
+    
+    @classmethod
+    def _modify_times_flattop_timebase(cls, shot_props : ShotProps, **kwargs):
         shot_data_requests_params = ShotDataRequestParams(shot_props=shot_props, logger=cls.logger, tokamak=Tokamak.CMOD)
         ip_parameters = BasicCmodRequests._get_ip_parameters(params=shot_data_requests_params)
         ipprog, dipprog_dt = ip_parameters['ip_prog'], ip_parameters['dipprog_dt']
@@ -25,7 +62,7 @@ def CModShotManager(ShotManager):
         return shot_props
         
     @classmethod
-    def modify_times_rampup_and_flattop_timebase(cls, shot_props : ShotProps, **kwargs):
+    def _modify_times_rampup_and_flattop_timebase(cls, shot_props : ShotProps, **kwargs):
         shot_data_requests_params = ShotDataRequestParams(shot_props=shot_props, logger=cls.logger, tokamak=Tokamak.CMOD)
         ip_parameters = BasicCmodRequests._get_ip_parameters(params=shot_data_requests_params)
         ipprog, dipprog_dt = ip_parameters['ip_prog'], ip_parameters['dipprog_dt']

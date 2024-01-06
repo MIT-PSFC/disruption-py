@@ -1,5 +1,5 @@
-from disruption_py.shots.shot import Shot
-from disruption_py.utils.method_caching import parameter_cached_method
+from disruption_py.shots.shot_temp import Shot
+from disruption_py.shots.helpers.method_caching import parameter_cached_method
 
 import logging
 import traceback
