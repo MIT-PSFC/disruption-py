@@ -2,15 +2,13 @@
 from typing import Callable, Any
 import traceback
 from disruption_py.handlers.multiprocessing_helper import MultiprocessingShotRetriever
-from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.settings.shot_ids_request import ShotIdsRequestParams, ShotIdsRequestType, shot_ids_request_runner
-from disruption_py.settings.existing_data_request import ExistingDataRequest, ExistingDataRequestParams
+from disruption_py.settings.existing_data_request import ExistingDataRequestParams
 from disruption_py.settings.output_type_request import ResultOutputTypeRequestParams, FinishOutputTypeRequestParams
 from disruption_py.settings import ShotSettings
 from disruption_py.shots.cmod_shot_manager import CModShotManager
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.databases import CModDatabase
-from disruption_py.shots.helpers.populate_shot import populate_shot
 import pandas as pd
 import logging
 
@@ -66,7 +64,7 @@ class CModHandler:
         tokamak = Tokamak.CMOD
         class_logger = CModHandler.logger
         class_logger.info(f"starting {shot_id}")
-        shot_id = str(shot_id)
+        shot_id = int(shot_id)
         if shot_settings.existing_data_request is not None:
             existing_data_request_params = ExistingDataRequestParams(
                 shot_id=shot_id,
@@ -87,7 +85,7 @@ class CModHandler:
                 disruption_time=disruption_time, 
                 shot_settings=shot_settings,
             )
-            retrieved_data = CModShotManager.run_data_retrieval(shot_props)
+            retrieved_data = CModShotManager.run_data_retrieval(shot_props=shot_props, shot_settings=shot_settings)
             CModShotManager.cleanup(shot_props)
             class_logger.info(f"completed {shot_id}")
             return retrieved_data

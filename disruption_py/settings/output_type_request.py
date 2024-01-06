@@ -17,7 +17,7 @@ class ResultOutputTypeRequestParams:
     result : pd.Dataframe
         The dataframe of results for a single shot.
     tokamak : Tokemak
-        The tokemak for which the data request is made.
+        The tokamak for which the data request is made.
     logger : Logger
         Logger object from disruption_py to use for logging.
     """
@@ -32,7 +32,7 @@ class FinishOutputTypeRequestParams:
     Attributes
     ----------
     tokamak : Tokemak
-        The tokemak for which the data request is made.
+        The tokamak for which the data request is made.
     logger : Logger
         Logger object from disruption_py to use for logging.
     """

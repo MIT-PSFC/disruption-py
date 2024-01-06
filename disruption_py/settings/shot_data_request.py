@@ -1,15 +1,12 @@
 from dataclasses import dataclass
 from logging import Logger
-import pandas as pd
-import numpy as np
+from disruption_py.shots.helpers.cached_method_params import is_cached_method
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.math_utils import interp1
-from disruption_py.shots.helpers.method_caching import get_cached_method_params, is_cached_method, parameter_cached_method
+from disruption_py.shots.helpers.cached_method_params import get_cached_method_params
 
 from abc import ABC
 from typing import Any, Callable, List
-
 
 @dataclass
 class ShotDataRequestParams:
@@ -20,7 +17,7 @@ class ShotDataRequestParams:
     shot : Any
 		A reference to the shot object retrieving data.
     tokamak : Tokemak
-        The tokemak for which the set times request is made.
+        The tokamak for which the set times request is made.
     logger : Logger
         Logger object from disruption_py to use for logging.
     """
@@ -52,12 +49,13 @@ class ShotDataRequest(ABC):
             A list of methods that can be considered for execution for the given tokamak.
         """
         request_methods = []
-        for method in dir(self):
-            if not is_cached_method:
+        for method_name in dir(self):
+            method = getattr(self, method_name, None)
+            if method is None or not is_cached_method(method):
                 continue
             cached_method_params = get_cached_method_params(method, should_throw=True)
             if (cached_method_params.tokamaks is None or
-                tokamak in cached_method_params.tokamaks or
-                tokamak is cached_method_params.tokamaks):
-                request_methods.append(method)
+                tokamak is cached_method_params.tokamaks or
+                tokamak in cached_method_params.tokamaks):
+                request_methods.append(method_name)
         return request_methods

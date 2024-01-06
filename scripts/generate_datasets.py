@@ -48,8 +48,8 @@ def main(args):
     else:
         shot_ids_request = args.shotlist
     
-    tokemak = map_string_to_enum(args.tokamak, Tokamak)
-    if tokemak == Tokamak.CMOD:
+    tokamak = map_string_to_enum(args.tokamak, Tokamak)
+    if tokamak == Tokamak.CMOD:
         handler = CModHandler()
     else:
         raise ValueError("Tokamak Not Supported")

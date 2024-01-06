@@ -12,6 +12,7 @@ from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.shots.helpers.populate_shot import populate_shot
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.command_utils import get_commit_hash
+from disruption_py.utils.constants import TIME_CONST
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.math_utils import interp1
 from disruption_py.utils.utils import without_duplicates
@@ -34,7 +35,7 @@ class ShotManager(ABC):
     @classmethod
     def setup(
         cls,
-        shot_id : str,
+        shot_id : int,
         tokamak: Tokamak,
         existing_data : pd.DataFrame,
         disruption_time : float,
@@ -73,10 +74,11 @@ class ShotManager(ABC):
         
         shot_props = ShotProps(
             shot_id=shot_id,
-            tokemak=tokamak,
+            tokamak=tokamak,
             num_threads_per_shot=shot_settings.num_threads_per_shot,
             disruption_time = disruption_time,
             tree_manager = tree_manager,
+            times = times,
             initial_existing_data = existing_data,
             populated_existing_data = populated_existing_data,
             interpolation_method = interpolation_method,
@@ -94,7 +96,7 @@ class ShotManager(ABC):
     
     @classmethod
     def run_data_retrieval(cls, shot_props : ShotProps, shot_settings : ShotSettings):
-        shot_data_request_params = ShotDataRequestParams(shot_props, cls.logger, shot_props.tokamak)
+        shot_data_request_params = ShotDataRequestParams(shot_props=shot_props, logger=cls.logger, tokamak=shot_props.tokamak)
         return populate_shot(shot_settings=shot_settings, params=shot_data_request_params)
     
     @classmethod
@@ -131,7 +133,7 @@ class ShotManager(ABC):
     @classmethod
     def _init_times(
         cls,
-        shot_id : str,
+        shot_id : int,
         existing_data : pd.DataFrame, 
         tree_manager : TreeManager,
         tokamak : Tokamak,
@@ -159,7 +161,7 @@ class ShotManager(ABC):
             return shot_settings.set_times_request.get_times(request_params)
     
     @classmethod
-    def _init_data(times : np.ndarray, existing_data : pd.DataFrame):
+    def _init_data(cls, times : np.ndarray, existing_data : pd.DataFrame):
         '''
         Intialize the shot with data, if existing data matches the shot timebase.
         '''
@@ -172,4 +174,7 @@ class ShotManager(ABC):
             else:
                 populated_existing_data = timed_existing_data.drop(columns=['merge_success_flag'])
         
-        return populated_existing_data
+            return populated_existing_data
+        
+        else:
+            return None

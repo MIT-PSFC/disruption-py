@@ -8,14 +8,10 @@ from disruption_py.settings.shot_data_request import ShotDataRequest
 from disruption_py.settings.set_times_request import SetTimesRequest, resolve_set_times_request
 from disruption_py.settings.output_type_request import OutputTypeRequest, resolve_output_type_request
 from disruption_py.utils.mappings.mappings_helpers import map_string_attributes_to_enum
-from disruption_py.utils.utils import without_duplicates
+from disruption_py.utils.utils import instantiate_classes, without_duplicates
 
 def default_tags():
     return ["all"]
-
-def default_shot_data_requests():
-    from disruption_py.shots.parameter_functions.cmod.cmod_data_requests import CModEfitRequests, BasicCmodRequests
-    return [CModEfitRequests(), BasicCmodRequests()]
     
 @dataclass
 class ShotSettings:
@@ -124,17 +120,16 @@ class ShotSettings:
         self.existing_data_request = resolve_existing_data_request(self.existing_data_request)
         self.output_type_request = resolve_output_type_request(self.output_type_request)
         self.set_times_request = resolve_set_times_request(self.set_times_request)
-        self.shot_data_requests = without_duplicates(self.shot_data_requests + default_shot_data_requests())
         
         map_string_attributes_to_enum(self, {
             "signal_type": SignalDomain,
             "interpolation_method": InterpolationMethod
         })
         
-        
-        for idx, (option, value) in enumerate(self.attempt_local_efit_env):
-            if not option.endswith("_path"):
-                self.attempt_local_efit_env[idx] = (option + "_path", value)
+        if self.attempt_local_efit_env is not None:
+            for idx, (option, value) in enumerate(self.attempt_local_efit_env):
+                if not option.endswith("_path"):
+                    self.attempt_local_efit_env[idx] = (option + "_path", value)
         
         # we can also setup logging on resolve
         self.log_settings.setup_logging()

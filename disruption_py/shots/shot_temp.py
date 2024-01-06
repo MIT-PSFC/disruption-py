@@ -28,7 +28,7 @@ MAX_SHOT_TIME = 7.0  # [s]
 
 @dataclass
 class ShotSetupParams:
-    shot_id : str
+    shot_id : int
     tokamak: Tokamak
     num_threads_per_shot : int
     override_exising_data : bool

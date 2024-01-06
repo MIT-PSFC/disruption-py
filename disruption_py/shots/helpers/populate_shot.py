@@ -5,11 +5,13 @@ import pandas as pd
 import numpy as np
 import concurrent
 from concurrent.futures import ThreadPoolExecutor
+from disruption_py.shots.helpers.cached_method_params import CachedMethodParams, ParameterCachedMethodParams, get_cached_method_params, is_cached_method
+from disruption_py.shots.parameter_functions import DEFAULT_SHOT_DATA_REQUESTS
 
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.shots.helpers.method_optimizer import MethodOptimizer, CachedMethod
 from disruption_py.settings.shot_settings import ShotSettings
-from disruption_py.shots.helpers.method_caching import CachedMethodParams, manually_cache, is_cached_method, get_cached_method_params
+from disruption_py.shots.helpers.method_caching import manually_cache
 from disruption_py.settings.shot_data_request import ShotDataRequest, ShotDataRequestParams
 from disruption_py.utils.constants import MAX_THREADS_PER_SHOT, TIME_CONST
 
@@ -17,38 +19,35 @@ REQUIRED_COLS = {'time', 'time_until_disrupt', 'shot', 'commit_hash'}
  
 def populate_method(params: ShotDataRequestParams, cached_method : CachedMethod, start_time):
         
-        shot = params.shot
+        shot_props = params.shot_props
         method = cached_method.method
-        
-        def run_method():
-            return method(params=params)
         
         result = None
         if callable(method) and is_cached_method(method):
             params.logger.info(
-                f"[Shot {shot.shot_id}]:Populating {cached_method.name}")
+                f"[Shot {shot_props.shot_id}]:Populating {cached_method.name}")
             # self._tree_manager.cleanup_not_needed()
             try:
-                result = run_method()
+                result = method(params=params)
             except Exception as e:
                 params.logger.warning(
-                    f"[Shot {shot.shot_id}]:Failed to populate {cached_method.name} with error {e}")
+                    f"[Shot {shot_props.shot_id}]:Failed to populate {cached_method.name} with error {e}")
                 params.logger.debug(f"{traceback.format_exc()}")
         elif callable(method) and hasattr(method, 'cached'):
             params.logger.info(
-                f"[Shot {shot.shot_id}]:Caching {cached_method.name}")
+                f"[Shot {shot_props.shot_id}]:Caching {cached_method.name}")
             try:
-                run_method()
+                method(params=params)
             except Exception as e:
                 params.logger.warning(
-                    f"[Shot {shot.shot_id}]:Failed to cache {cached_method.name} with error {e}")
+                    f"[Shot {shot_props.shot_id}]:Failed to cache {cached_method.name} with error {e}")
                 params.logger.debug(f"{traceback.format_exc()}")
         else:
             params.logger.warning(
-                f"[Shot {shot.shot_id}]:Method {cached_method.name} is not callable or does not have a `populate` attribute set to True")
+                f"[Shot {shot_props.shot_id}]:Method {cached_method.name} is not callable or does not have a `populate` attribute set to True")
             return None
         
-        params.logger.info(f"[Shot {shot.shot_id}]:Completed {cached_method.name}, time_elapsed: {time.time() - start_time}")
+        params.logger.info(f"[Shot {shot_props.shot_id}]:Completed {cached_method.name}, time_elapsed: {time.time() - start_time}")
         return result
 
 
@@ -61,10 +60,10 @@ def compute_cached_method_params(cached_method_params : CachedMethodParams, obje
             new_cached_method_params_dict[field_name] = field_value(object_to_search, params)
         else:
             new_cached_method_params_dict[field_name] = field_value
-    return CachedMethodParams(**new_cached_method_params_dict)
+    return cached_method_params.__class__(**new_cached_method_params_dict)
 
-def get_cached_methods_from_object(object_to_search, shot_settings: ShotSettings, params: ShotDataRequestParams):
-    shot = params.shot
+def get_cached_methods_from_object(object_to_search : ShotDataRequest, shot_settings: ShotSettings, params: ShotDataRequestParams):
+    shot_props = params.shot_props
     tags = shot_settings.run_tags
     methods = shot_settings.run_methods
     columns = shot_settings.run_columns
@@ -88,7 +87,7 @@ def get_cached_methods_from_object(object_to_search, shot_settings: ShotSettings
         )
         all_cached_methods.append(cached_method)
         
-        if computed_cached_method_params.populate is True:
+        if isinstance(computed_cached_method_params, ParameterCachedMethodParams):
             # If method does not have tag included and name included then skip
             if tags is not None and bool(set(computed_cached_method_params.tags).intersection(tags)):
                 methods_to_evaluate.append(cached_method)
@@ -100,7 +99,7 @@ def get_cached_methods_from_object(object_to_search, shot_settings: ShotSettings
                 methods_to_evaluate.append(cached_method)
                 continue
             params.logger.info(
-                    f"[Shot {shot.shot_id}]:Skipping {method_name} in class {object_to_search.__class__.__name__}")
+                    f"[Shot {shot_props.shot_id}]:Skipping {method_name} in class {object_to_search.__class__.__name__}")
     return methods_to_evaluate, all_cached_methods
             
 def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams):
@@ -118,7 +117,7 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams):
     if 'time' not in populated_data:
         populated_data['time'] = shot_props.times
     if 'shot' not in populated_data:
-        populated_data['shot'] = shot_props.shot_id
+        populated_data['shot'] = int(shot_props.shot_id)
     populated_data['commit_hash'] = shot_props.metadata.get("commit_hash", None)
 
     # Loop through each attribute and find methods that should populate the shot object.
@@ -126,7 +125,8 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams):
     all_cached_methods : list[CachedMethod] = []
         
     # Add the methods gound from the passed ShotDataRequest objects
-    for shot_data_request in shot_settings.shot_data_requests:
+    all_shot_data_request = DEFAULT_SHOT_DATA_REQUESTS + shot_settings.shot_data_requests
+    for shot_data_request in all_shot_data_request:
         req_methods_to_evaluate, req_all_cached_methods = get_cached_methods_from_object(shot_data_request, shot_settings, params)
         methods_to_evaluate.extend(req_methods_to_evaluate)
         all_cached_methods.extend(req_all_cached_methods)
@@ -185,7 +185,7 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams):
         parameters = []
         start_time = time.time()
         method_optimizer.run_methods_sync(
-            lambda next_method: parameters.append(populate_method(params, next_method, method_optimizer, start_time))
+            lambda next_method: parameters.append(populate_method(params, next_method, start_time))
         )
     
     filtered_parameters = []

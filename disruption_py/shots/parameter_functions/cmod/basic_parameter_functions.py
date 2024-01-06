@@ -34,10 +34,10 @@ except Exception as e:
 import warnings
 warnings.filterwarnings('error', category=RuntimeWarning)
 
-def efit_tree(params : ShotDataRequestParams):
+def get_efit_tree(params : ShotDataRequestParams):
 	return params.shot_props.tree_manager.tree_from_nickname("efit_tree")
 	
-def efit_tree_name(params : ShotDataRequestParams):
+def get_efit_tree_name(params : ShotDataRequestParams):
 	return params.shot_props.tree_manager.tree_name_of_nickname("efit_tree")
 
 class CModEfitRequests(ShotDataRequest):
@@ -71,12 +71,13 @@ class CModEfitRequests(ShotDataRequest):
     
     efit_derivs = {'beta_p': 'dbetap_dt', 'li': 'dli_dt', 'Wmhd': 'dWmhd_dt'}
     
+    @staticmethod
     @parameter_cached_method(
         columns=[*efit_cols.keys(), *efit_cols_pre_2000.keys(), *efit_derivs.keys(), 'V_surf', 'v_loop_efit', 'beta_n'],
         used_trees=["efit_tree"], tokamak=Tokamak.CMOD)
     def _get_EFIT_parameters(params : ShotDataRequestParams):
 
-        efit_tree = efit_tree(params)
+        efit_tree = get_efit_tree(params=params)
         efit_time = efit_tree.getNode(r'\efit_aeqdsk:time').data().astype('float64', copy=False) # [s]
         efit_data = dict()
         
@@ -136,6 +137,7 @@ class CModEfitRequests(ShotDataRequest):
         return pd.DataFrame(efit_data)
 
 class BasicCmodRequests(ShotDataRequest):
+    @staticmethod
     @cached_method(used_trees=["pcs"], cache_between_threads=False, tokamak=Tokamak.CMOD)
     def get_active_wire_segments(params : ShotDataRequestParams):
         pcs_tree = params.shot_props.tree_manager.open_tree(tree_name='pcs')
@@ -156,6 +158,7 @@ class BasicCmodRequests(ShotDataRequest):
         #     active_segments[i].append(end_times[i])
         return active_segments
 
+    @staticmethod
     @parameter_cached_method(columns=["time_until_disrupt"], tokamak=Tokamak.CMOD)
     def _get_time_until_disrupt(params : ShotDataRequestParams):
         time_until_disrupt = np.full(len(params.shot_props.times), np.nan)
@@ -222,6 +225,7 @@ class BasicCmodRequests(ShotDataRequest):
         # import pdb; pdb.set_trace()
         return pd.DataFrame({"ip": ip, "dip_dt": dip, "dip_smoothed": dip_smoothed, "ip_prog": ip_prog, "dipprog_dt": dipprog_dt, "ip_error": ip_error})
 
+    @staticmethod
     @parameter_cached_method(
         columns=["ip", "dip_dt", "dip_smoothed", "ip_prog", "dipprog_dt", "ip_error"], 
         used_trees=["magnetics", "pcs"],
@@ -327,6 +331,7 @@ class BasicCmodRequests(ShotDataRequest):
                               'linear', False, z_times_v_z[-1])
         return pd.DataFrame({"z_error": z_error, "z_prog": z_prog, "zcur": z_cur, "v_z": v_z, "z_times_v_z": z_times_v_z})
 
+    @staticmethod
     @parameter_cached_method(
         columns=["z_error", "z_prog", "zcur", "v_z", "z_times_v_z"],
         contained_cached_methods=[],
@@ -454,6 +459,7 @@ class BasicCmodRequests(ShotDataRequest):
         p_ohm = ip * v_resistive
         return pd.DataFrame({"p_oh": p_ohm, "v_loop": v_loop})
 
+    @staticmethod
     @parameter_cached_method(
         columns=["p_oh", "v_loop"],
         used_trees=["efit_tree"], 
@@ -461,7 +467,7 @@ class BasicCmodRequests(ShotDataRequest):
         tokamak=Tokamak.CMOD)
     def _get_ohmic_parameters(params : ShotDataRequestParams):
         # <-- this line is the culprit for breaking when analysis tree is set to EFIT18
-        efit_tree = efit_tree(params)
+        efit_tree = get_efit_tree(params=params)
         v_loop_record = efit_tree.getNode(r"\top.mflux:v0").getData()
         v_loop = v_loop_record.data().astype('float64', copy=False)
         v_loop_time = v_loop_record.dim_of(0)
@@ -470,7 +476,7 @@ class BasicCmodRequests(ShotDataRequest):
         li_record = efit_tree.getNode(r"\efit_aeqdsk:li").getData()
         li = li_record.data().astype('float64', copy=False)
         efittime = li_record.dim_of(0)
-        ip_parameters = BasicCmodRequests._get_ip_parameters(params)
+        ip_parameters = BasicCmodRequests._get_ip_parameters(params=params)
         return BasicCmodRequests.get_ohmic_parameters(params.shot_props.times, v_loop, v_loop_time, li, efittime, ip_parameters['dip_smoothed'], ip_parameters['ip'])
 
     @staticmethod
@@ -495,7 +501,8 @@ class BasicCmodRequests(ShotDataRequest):
         rad_fraction = p_rad/p_input
         rad_fraction[rad_fraction == np.inf] = np.nan
         return pd.DataFrame({"p_rad": p_rad, "dprad_dt": dprad, "p_lh": p_lh, "p_icrf": p_icrf, "p_input": p_input, "radiated_fraction": rad_fraction})
-
+    
+    @staticmethod
     @parameter_cached_method(
         columns=["p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", "radiated_fraction"],
         used_trees=['LH', 'RF', 'spectroscopy'], 
@@ -523,16 +530,17 @@ class BasicCmodRequests(ShotDataRequest):
                 values[2*i + 1] = record.dim_of(0)
             except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF) as e:
                 continue 
-        p_oh = BasicCmodRequests._get_ohmic_parameters(params)['p_oh']
+        p_oh = BasicCmodRequests._get_ohmic_parameters(params=params)['p_oh']
         return BasicCmodRequests.get_power(params.shot_props.times, *values, p_oh)
 
     @staticmethod
     def get_kappa_area(times, aminor, area, a_times):
         return pd.DataFrame({"kappa_area": interp1(a_times, area/(np.pi * aminor**2), times)})
 
+    @staticmethod
     @parameter_cached_method(columns=["kappa_area"], used_trees=["efit_tree"], tokamak=Tokamak.CMOD)
     def _get_kappa_area(params : ShotDataRequestParams):
-        efit_tree = efit_tree(params)
+        efit_tree = get_efit_tree(params=params)
         aminor = efit_tree.getNode(
             r'\efit_aeqdsk:aminor').getData().data().astype('float64', copy=False)
         area = efit_tree.getNode(
@@ -564,6 +572,7 @@ class BasicCmodRequests(ShotDataRequest):
         return pd.DataFrame({"v_0": v_0})
 
     # TODO: Calculate v_mid
+    @staticmethod
     @parameter_cached_method(columns=["v_0"], used_trees=["spectroscopy"],  tokamak=Tokamak.CMOD)
     def _get_rotation_velocity(params : ShotDataRequestParams):
         with importlib_resources.path(
@@ -600,6 +609,7 @@ class BasicCmodRequests(ShotDataRequest):
         pass
     
     # TODO: Try catch failure to get BP13 sensors 
+    @staticmethod
     @parameter_cached_method(
         columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase", "BT"],
         used_trees=["magnetics"],  tokamak=Tokamak.CMOD)
@@ -707,6 +717,7 @@ class BasicCmodRequests(ShotDataRequest):
         g_f = abs(n_e/n_G)
         return pd.DataFrame({"n_e": n_e, "dn_dt": dn_dt, "Greenwald_fraction": g_f})
 
+    @staticmethod
     @parameter_cached_method(
         columns=["n_e", "dn_dt", "Greenwald_fraction"],
         used_trees=["electrons", "magnetics", "analysis"],
@@ -739,6 +750,7 @@ class BasicCmodRequests(ShotDataRequest):
     def get_efc_current(times, iefc, t_iefc):
         return pd.DataFrame({"I_efc": interp1(t_iefc, iefc, times, 'linear')})
 
+    @staticmethod
     @parameter_cached_method(
         columns=["I_efc"],
         used_trees=["engineering"],
@@ -771,6 +783,7 @@ class BasicCmodRequests(ShotDataRequest):
         te_hwm = interp1(ts_time, te_hwm, times)
         return pd.DataFrame({"Te_width": te_hwm})
 
+    @staticmethod
     @parameter_cached_method(columns=["Te_width"], used_trees=["electrons"], tokamak=Tokamak.CMOD)
     def _get_Ts_parameters(params : ShotDataRequestParams):
         # TODO: Guassian vs parabolic fit for te profile
@@ -800,7 +813,8 @@ class BasicCmodRequests(ShotDataRequest):
         # Te_PF = interp1(TS_time, Te_PF, times, 'linear')
         # pressure_PF = interp1(TS_time, pressure_PF, times, 'linear')
         pass
-
+    
+    @staticmethod
     @parameter_cached_method(
         columns=["ne_peaking", "Te_peaking", "pressure_peaking"],
         used_trees=["cmod", "efit_tree", "electrons"],
@@ -864,6 +878,7 @@ class BasicCmodRequests(ShotDataRequest):
         except mdsExceptions.MdsException as e:
             return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
 
+    @staticmethod
     @parameter_cached_method(
         columns=["prad_peaking"],
         used_trees=["cmod", "spectroscopy"],
@@ -946,6 +961,7 @@ class BasicCmodRequests(ShotDataRequest):
                 prad_peaking[i] = np.nan
         return pd.DataFrame({"prad_peaking": prad_peaking})
 
+    @staticmethod
     @parameter_cached_method(
         columns=["ne_peaking", "Te_peaking", "pressure_peaking"],
         tags=['experimental'], 
@@ -1129,6 +1145,7 @@ class BasicCmodRequests(ShotDataRequest):
 
 
     # TODO: get more accurate description of soft x-ray data
+    @staticmethod
     @parameter_cached_method(columns=["sxr"], used_trees=["xtomo"], tokamak=Tokamak.CMOD)
     def _get_sxr_data(params : ShotDataRequestParams):
         """ """
@@ -1230,6 +1247,7 @@ class BasicCmodRequests(ShotDataRequest):
 
         return pd.DataFrame({"Te_edge": Te_edge, "ne_edge": ne_edge})
 
+    @staticmethod
     @parameter_cached_method(
         tags=['experimental'],
         columns=["Te_edge", "ne_edge"],
@@ -1296,6 +1314,7 @@ class BasicCmodRequests(ShotDataRequest):
         pass
 
     # TODO: Finish
+    @staticmethod
     @parameter_cached_method(
         tags=['experimental'],
         columns=["H98", "Wmhd", "btor", "dWmhd_dt", "p_input"],
@@ -1315,7 +1334,7 @@ class BasicCmodRequests(ShotDataRequest):
         
         #Get parameters for calculating confinement time
         powers_df = BasicCmodRequests._get_power(params=params)
-        efit_df = BasicCmodRequests._get_EFIT_parameters(params=params)
+        efit_df = CModEfitRequests._get_EFIT_parameters(params=params)
         density_df = BasicCmodRequests._get_densities(params=params)
         ip_df = BasicCmodRequests._get_ip_parameters(params=params)
         

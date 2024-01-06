@@ -1,33 +1,10 @@
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
+from disruption_py.shots.helpers.cached_method_params import CachedMethodParams, ParameterCachedMethodParams
 from disruption_py.shots.shot_props import ShotProps
-from disruption_py.utils.mappings.tokamak import Tokamak
 import threading
 import pandas as pd
-from typing import Any, List, Callable, Union
-from dataclasses import dataclass
-    
-@dataclass(frozen=True)
-class CachedMethodParams:
-    cache_between_threads: bool
-    used_trees : Union[List[str], Callable]
-    contained_cached_methods : Union[List[str], Callable]
-    tokamaks : List[Tokamak]    
+from typing import List
 
-class ParameterCachedMethodParams(CachedMethodParams):
-    populate : bool = True
-    columns : Union[List[str], Callable]
-    tags : List[str]
-    
-    def from_cached_method_params(cached_method_params : CachedMethodParams, columns, tags) -> "ParameterCachedMethodParams":
-        return ParameterCachedMethodParams(
-            cache_between_threads=cached_method_params.cache_between_threads,
-            used_trees=cached_method_params.used_trees, 
-            contained_cached_methods=cached_method_params.contained_cached_methods, 
-            tokamaks=cached_method_params.tokamaks,
-            columns=columns,
-            tags=tags,
-        )
-        
 def get_method_cache_key(method_name, times):
     current_thread_id = threading.get_ident()
     return method_name + str(len(times)) + str(current_thread_id)
@@ -83,7 +60,7 @@ def parameter_cached_method(tags=["all"], columns=[], **kwargs):
     return tag_wrapper
 
 
-def cached_method(used_trees=None, contained_cached_methods=None, cache_between_threads=True, tokamaks=None):
+def cached_method(used_trees=None, contained_cached_methods=None, cache_between_threads=True, tokamak=None):
     """Decorates a function as a cached method and instantiates its cache. 
     
     Cached methods are functions that run expensive operations on data in the shot and may be reused. 
@@ -109,18 +86,18 @@ def cached_method(used_trees=None, contained_cached_methods=None, cache_between_
         `ShotDataRequest` subclasses. Default value of None allows the parameter method to be run for any tokamak.
     """
     # TODO: Figure out how to hash _times so that we can use the cache for different timebases
-    def tag_wrapper(func):
+    def tag_wrapper(method):
                 
-        def wrapper(self, *args, **kwargs):
-            
-            shot_data_request_params : ShotDataRequestParams = kwargs["params"]
+        def wrapper(*args, **kwargs):
+                        
+            shot_data_request_params : ShotDataRequestParams = kwargs["params"] if "params" in kwargs else args[-1]
             shot_props = shot_data_request_params.shot_props
             
-            cache_key = get_method_cache_key(func.__name__, shot_props.times)
+            cache_key = get_method_cache_key(method.__name__, shot_props.times)
             if cache_key in shot_props._cached_results:
                 return shot_props._cached_results[cache_key]
             else:
-                result = func(self, *args, **kwargs)
+                result = method(*args, **kwargs)
                 shot_props._cached_results[cache_key] = result
                 return result
         
@@ -128,7 +105,7 @@ def cached_method(used_trees=None, contained_cached_methods=None, cache_between_
             cache_between_threads=cache_between_threads, 
             used_trees=used_trees, 
             contained_cached_methods=contained_cached_methods,
-            tokamaks=tokamaks, 
+            tokamaks=tokamak, 
         )
         wrapper.cached_method_params = cached_method_params
         return wrapper
@@ -151,36 +128,3 @@ def manually_cache(shot_props : ShotProps, data : pd.DataFrame, method_name, met
                 f"[Shot {shot_props.shot_id}]:Can not cache {method_name} missing columns {missing_columns}")
         return False
 
-# Utility methods for decorated methods
-
-def is_cached_method(cached_method: Callable) -> bool:
-    """Returns whether the method is decorated with `cached_method` or `parameter_cached_method` decorators
-
-    Parameters
-    ----------
-    cached_method : Callable
-        The method to check if decorated.
-
-    Returns
-    -------
-    bool
-        Whether the passed method is decorated.
-    """
-    return hasattr(cached_method, "cached_method_params")
-
-def get_cached_method_params(cached_method: Callable, should_throw: bool = False) -> CachedMethodParams:
-    """Get cached method params for cached method 
-
-    Parameters
-    ----------
-    cached_method : Callable
-        The method decorated with `cached_method` or `parameter_cached_method` decorators
-    should_throw : bool
-        Throw an error if the method was not decorated with `cached_method` or `parameter_cached_method` decorators
-
-    Returns
-    -------
-    CachedMethodParams
-        The `CachedMethodParams` object holding parameters for the cached method
-    """
-    return getattr(cached_method, "cached_method_params", None)

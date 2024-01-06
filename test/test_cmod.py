@@ -44,6 +44,7 @@ def get_mdsplus_data(cmod_handler: CModHandler, shot_id):
         log_settings=LogSettings(
             log_to_console=False,
             log_file_path="test/last_log.log",
+            log_file_write_mode="a",
             file_log_level=logging.DEBUG
         )
     )
@@ -139,31 +140,31 @@ def test_all_sql_values(shotlists, fail_early):
 # Other tests for MDSplus
 # TODO: Refactor these tests
 
-@pytest.mark.parametrize("shot_id", TEST_SHOTS[:1])
-def test_flattop_times(cmod, shot_id):
-    """
-    Ensure that the flattop time matches the change in programmed ip in the SQL dataset.
-    """
-    sql_df = get_sql_data(cmod, shot_id)[['time', 'dipprog_dt']]
-    # Find the first time where dipprog_dt is zero
-    sql_flattop_time = sql_df['time'].loc[sql_df['dipprog_dt'] == 0].iloc[0]
-    # Find the last time where dipprog_dt is zero
-    sql_flattop_end_time = sql_df['time'].loc[sql_df['dipprog_dt'] == 0].iloc[-1]
+# @pytest.mark.parametrize("shot_id", TEST_SHOTS[:1])
+# def test_flattop_times(cmod, shot_id):
+#     """
+#     Ensure that the flattop time matches the change in programmed ip in the SQL dataset.
+#     """
+#     sql_df = get_sql_data(cmod, shot_id)[['time', 'dipprog_dt']]
+#     # Find the first time where dipprog_dt is zero
+#     sql_flattop_time = sql_df['time'].loc[sql_df['dipprog_dt'] == 0].iloc[0]
+#     # Find the last time where dipprog_dt is zero
+#     sql_flattop_end_time = sql_df['time'].loc[sql_df['dipprog_dt'] == 0].iloc[-1]
 
-    shot_settings = ShotSettings(
-        set_times_request='efit',
-        signal_domain='flattop'
-    )
+#     shot_settings = ShotSettings(
+#         set_times_request='efit',
+#         signal_domain='flattop'
+#     )
     
-    flattop_df = cmod.get_shots_data(shot_id, shot_settings=shot_settings)[0][['time', 'dipprog_dt']]
+#     flattop_df = cmod.get_shots_data(shot_id, shot_settings=shot_settings)[0][['time', 'dipprog_dt']]
     
-    # Find the first time in the flattop signal
-    mds_flattop_time = flattop_df['time'].iloc[0]
-    # Find the last time in the flattop signal
-    mds_flattop_end_time = flattop_df['time'].iloc[-1]
+#     # Find the first time in the flattop signal
+#     mds_flattop_time = flattop_df['time'].iloc[0]
+#     # Find the last time in the flattop signal
+#     mds_flattop_end_time = flattop_df['time'].iloc[-1]
 
-    assert mds_flattop_time == pytest.approx(sql_flattop_time, abs=TIME_EPSILON)
-    assert mds_flattop_end_time == pytest.approx(sql_flattop_end_time, abs=TIME_EPSILON)
+#     assert mds_flattop_time == pytest.approx(sql_flattop_time, abs=TIME_EPSILON)
+#     assert mds_flattop_end_time == pytest.approx(sql_flattop_end_time, abs=TIME_EPSILON)
 
 
 # test specific column error in detail

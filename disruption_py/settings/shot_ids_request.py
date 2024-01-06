@@ -27,7 +27,7 @@ class ShotIdsRequestParams:
         A different database connection is used by each process.
         Defaults to logbook.
     tokamak : Tokemak
-        The tokemak for which the data request is made.
+        The tokamak for which the data request is made.
     logger : Logger
         Logger object from disruption_py to use for logging.
     """

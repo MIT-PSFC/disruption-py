@@ -4,7 +4,7 @@ from dataclasses import replace
 import pandas as pd
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.settings.shot_settings import ShotSettings
-from disruption_py.shots.parameter_functions.cmod.cmod_data_requests import BasicCmodRequests
+from disruption_py.shots.parameter_functions.cmod.basic_parameter_functions import BasicCmodRequests
 from disruption_py.shots.shot_manager import ShotManager
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.mappings.tokamak import Tokamak
@@ -16,7 +16,7 @@ class CModShotManager(ShotManager):
     @classmethod
     def cmod_setup_shot_props(
         cls,
-        shot_id : str,
+        shot_id : int,
         existing_data : pd.DataFrame,
         disruption_time : float,
         shot_settings : ShotSettings,
@@ -32,7 +32,8 @@ class CModShotManager(ShotManager):
             *[f"efit0{i}" for i in range(1, 10)],
             *[f"efit{i}" for i in range(10, 19)],
         ])
-        tree_nicknames = { "efit" : (efit_names_to_test, [shot_settings.attempt_local_efit_env]) }
+        efit_envs_to_test = [shot_settings.attempt_local_efit_env, ()] if shot_settings.attempt_local_efit_env is not None else [()]
+        tree_nicknames = { "efit_tree" : (efit_names_to_test, efit_envs_to_test) }
         
         shot_props = cls.setup(
             shot_id=shot_id,
