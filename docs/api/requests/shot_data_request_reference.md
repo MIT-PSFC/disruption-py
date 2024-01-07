@@ -1,6 +1,6 @@
 ## Custom Parameter Methods { .doc .doc-heading }
 
-Users of disruption_py can create their own custom parameter methods, by adding decorators to methods in a subclass of [`ShotDataRequest`][disruption_py.settings.shot_data_request.ShotDataRequest]. Included methods with the `parameter_cached_method` decorator will have there results output alongside methods predefined in the `shots.parameter_functions.cmod.cmod_data_requests`. See [`parameter_cached_method`][disruption_py.utils.method_caching.parameter_cached_method] for more details.
+Users of disruption_py can create their own custom parameter methods by adding decorators to methods in a subclass of [`ShotDataRequest`][disruption_py.settings.shot_data_request.ShotDataRequest]. Instances of these classes can be passed as the `shot_data_request` parameter in the [`ShotSettings`][disruption_py.settings.ShotSettings] class, and there results will be included alongside the [built-in][built-in-parameters] parameters . See [`parameter_cached_method`][disruption_py.utils.method_caching.parameter_cached_method] for more details on decorators.
 
 The steps for creating a custom parameter method are as follows:
 
@@ -80,3 +80,9 @@ decorators:
 	  members:
 	  - ShotDataRequest
 	  - ShotDataRequestParams
+
+### Built in parameters
+The following file defines the list of 
+--8<--
+disruption_py/shots/parameter_functions/built_in.py
+--8<--

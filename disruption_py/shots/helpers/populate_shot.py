@@ -6,7 +6,7 @@ import numpy as np
 import concurrent
 from concurrent.futures import ThreadPoolExecutor
 from disruption_py.shots.helpers.cached_method_params import CachedMethodParams, ParameterCachedMethodParams, get_cached_method_params, is_cached_method
-from disruption_py.shots.parameter_functions import DEFAULT_SHOT_DATA_REQUESTS
+from disruption_py.shots.parameter_functions.built_in import DEFAULT_SHOT_DATA_REQUESTS
 
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.shots.helpers.method_optimizer import MethodOptimizer, CachedMethod
