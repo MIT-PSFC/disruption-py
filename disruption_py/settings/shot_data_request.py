@@ -14,8 +14,9 @@ class ShotDataRequestParams:
 
     Attributes
     ----------
-    shot : Any
-		A reference to the shot object retrieving data.
+    shot_props : ShotProps
+		A reference to the shot props object containing the setup information, such as the shot id, 
+        timebase, and disruption time, for the shot data retrieval from MDSPlus.
     tokamak : Tokemak
         The tokamak for which the set times request is made.
     logger : Logger
