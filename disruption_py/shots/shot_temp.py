@@ -1,4 +1,8 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from typing import Dict, List, Tuple
+from disruption_py.settings.enum_options import InterpolationMethod
+from disruption_py.utils.command_utils import get_commit_hash
 from disruption_py.utils.math_utils import interp1
 from disruption_py.utils.mappings.tokamak import Tokamak
 import subprocess
@@ -8,88 +12,66 @@ import traceback
 import MDSplus
 from MDSplus import *
 
-from disruption_py.mdsplus_integration.tree_manager import TreeManager
-from disruption_py.settings.shot_settings import ShotSettings, InterpolationMethod, SignalDomain
-from disruption_py.settings.set_times_request import SetTimesRequestParams
+from disruption_py.mdsplus_integration.tree_manager import TreeManager, EnvModifications
+from disruption_py.settings.enum_options import SignalDomain
+from disruption_py.settings.set_times_request import SetTimesRequest, SetTimesRequestParams
 from disruption_py.utils.constants import TIME_CONST
 
 import pandas as pd
 import numpy as np
 import logging
 
+from disruption_py.utils.utils import without_duplicates
+
 DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
 MAX_SHOT_TIME = 7.0  # [s]
 
+@dataclass
+class ShotSetupParams:
+    shot_id : int
+    tokamak: Tokamak
+    num_threads_per_shot : int
+    override_exising_data : bool
+    set_times_request : SetTimesRequest
+    signal_domain : SignalDomain
+    existing_data : pd.DataFrame
+    disruption_time : float
+    tree_nicknames : Dict[str, Tuple[List[str], List[EnvModifications]]]
 
 class Shot(ABC):
-    """
-    Abstract class for a single shot.
-
-    Parameters
-    ----------
-    shot_id : int
-        Shot number.
-    existing_data : pandas.DataFrame, optional
-        Data for the shot. If not provided, an empty DataFrame will be created.
-
-    Attributes
-    ----------
-    existing_data : pandas.DataFrame
-        Data for the shot.
-    conn : MDSplus.Connection
-        MDSplus connection to the shot.
-    tree : MDSplus.Tree
-        MDSplus tree for the shot.
-    logger : logging.Logger
-        Logger for the shot.
-    _shot_id : int
-        Shot number.
-    _metadata : dict
-        Metadata for the shot.
-    """
-    # TODO: Add [Shot {self._shot_id}]: to logger format by default
     logger = logging.getLogger('disruption_py')
 
     def __init__(
         self, 
-        shot_id, 
-        tokamak: Tokamak,
-        disruption_time=None,
-        shot_settings : ShotSettings=None,
+        setup_params : ShotSetupParams=None,
         **kwargs
     ):
-        self._shot_id = int(shot_id)
-        self.tokamak = tokamak
-        self.num_threads_per_shot = shot_settings.num_threads_per_shot
-        self.disruption_time = disruption_time
-        self.disrupted = self.disruption_time is not None
-        self._tree_manager = TreeManager(shot_id)        
+        self._shot_id = setup_params.shot_id
+        self._tokamak = setup_params.tokamak
+        self._num_threads_per_shot = setup_params.num_threads_per_shot
+        self._disruption_time = setup_params.disruption_time
+        self._tree_manager = TreeManager(setup_params.shot_id)
+        self._initial_existing_data = setup_params.existing_data
             
-        if self.num_threads_per_shot > 1:
-            self.logger.info("Multithreading enabled")
-        
-        # setup commit hash
-        try:
-            commit_hash = subprocess.check_output(
-                ["git", "describe", "--always"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.STDOUT).strip()
-        except Exception as e:
-            # self.logger.warning("Git commit not found")
-            commit_hash = 'Unknown'
+        if self._num_threads_per_shot > 1:
+            self.logger.info("Intra-shot multithreading enabled")
             
         self._metadata = {
             'labels': {},
-            'commit_hash': commit_hash,
+            'commit_hash': get_commit_hash(),
             'timestep': {},
             'duration': {},
             'description': "",
             'disrupted': 100  # TODO: Fix
         }
         
-    @abstractmethod
-    def setup_nicknames(self):
-        pass
+        self._setup_nicknames(setup_params.tree_nicknames)
+
+        # must call this method after nicknamed trees setup
+        self._init_timebase(setup_params, setup_params.existing_data)
+        
+        # add existing data
+        self._init_with_data(setup_params.existing_data)
     
     @abstractmethod
     def set_flattop_timebase(self):
@@ -99,30 +81,55 @@ class Shot(ABC):
     def set_rampup_and_flattop_timebase(self):
         pass
     
-    @abstractmethod
     def cleanup(self):
-        pass
+        """
+        Remove references to mdsplus resources to prevent data leaks.
+        """
+        self._tree_manager.cleanup()
+        self._times = None
+        if hasattr(self, '_cached_result'):
+            self._cached_result.clear()
 
-    def get_times(self):
+    @property
+    def times(self):
         return self._times
     
-    def get_shot_id(self):
+    @property
+    def shot_id(self):
         return self._shot_id
     
-    def get_commit_hash(self):
+    @property
+    def commit_hash(self):
         return self._metadata.get('commit_hash', 'Unknown')
     
-    def get_tree_manager(self):
+    @property
+    def tree_manager(self):
         return self._tree_manager
     
-    def get_disruption_time(self):
-        return self.disruption_time
+    @property
+    def disrupted(self):
+        return self._disruption_time is not None
     
-    def _init_timebase(self, shot_settings: ShotSettings, existing_data):
+    @property
+    def disruption_time(self):
+        return self._disruption_time
+    
+    @property
+    def initial_existing_data(self):
+        return self._initial_existing_data
+    
+    @property
+    def metadata(self):
+        return self._metadata
+    
+    def __getitem__(self, key):
+        return self._metadata if key == 'metadata' else self.data[key]
+    
+    def _init_timebase(self, setup_params: ShotSetupParams, existing_data):
         """
         Initialize the timebase of the shot.
         """
-        if existing_data is not None and shot_settings.override_exising_data is False:
+        if existing_data is not None and setup_params.override_exising_data is False:
             # set timebase to be the timebase of existing data
             try:
                 self._times = existing_data['time'].to_numpy()
@@ -135,14 +142,20 @@ class Shot(ABC):
                 self.logger.debug(
                     f"[Shot {self._shot_id}]:{traceback.format_exc()}")
         else:
-            request_params = SetTimesRequestParams(tree_manager=self._tree_manager, tokamak=self.tokamak, logger=self.logger, disruption_time=self.disruption_time)
-            self._times = shot_settings.set_times_request.get_times(request_params)
+            request_params = SetTimesRequestParams(tree_manager=self._tree_manager, tokamak=self._tokamak, logger=self.logger, disruption_time=self._disruption_time)
+            self._times = setup_params.set_times_request.get_times(request_params)
         self.interpolation_method : InterpolationMethod  = interp1 # TODO: fix
         
-        if shot_settings.signal_domain is SignalDomain.FLATTOP:
+        if setup_params.signal_domain is SignalDomain.FLATTOP:
             self.set_flattop_timebase()
-        elif shot_settings.signal_domain is SignalDomain.RAMP_UP_AND_FLATTOP:
+        elif setup_params.signal_domain is SignalDomain.RAMP_UP_AND_FLATTOP:
             self.set_rampup_and_flattop_timebase()
+            
+    def _setup_nicknames(self, tree_nicknames : Dict[str, Tuple[List[str], List[EnvModifications]]]):
+        # nickname efit tree
+        for nickname, (tree_names, env_modifications) in tree_nicknames.items():
+            efit_names_to_test = without_duplicates(tree_names)
+            self._tree_manager.nickname(nickname, efit_names_to_test, env_modifications)
     
     def _init_with_data (self, existing_data : pd.DataFrame):
         '''
@@ -159,6 +172,11 @@ class Shot(ABC):
         
         self.initialized_with_data = existing_data is not None
         self.data = existing_data
+        
+        
+
+
+
 
     @staticmethod
     def get_signal(signal, conn, interpolate=True, interpolation_timebase=None):

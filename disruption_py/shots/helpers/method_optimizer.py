@@ -1,5 +1,5 @@
 from disruption_py.mdsplus_integration.tree_manager import TreeManager
-from disruption_py.utils.method_caching import CachedMethodParams
+from disruption_py.shots.helpers.cached_method_params import CachedMethodParams
 from dataclasses import dataclass, field
 
 from typing import Callable, Dict, List, Set
@@ -8,7 +8,6 @@ from typing import Callable, Dict, List, Set
 class CachedMethod:
     name: str
     method: Callable
-    built_in_to_shot: bool
     
     # All functions have been evaluated
     computed_cached_method_params: CachedMethodParams

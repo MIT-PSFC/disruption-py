@@ -1,32 +1,18 @@
 from dataclasses import dataclass, field
 import pandas as pd
 from typing import List, Union, Callable, Tuple
+from disruption_py.settings.enum_options import InterpolationMethod, SignalDomain
 from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.existing_data_request import ExistingDataRequest, resolve_existing_data_request
 from disruption_py.settings.shot_data_request import ShotDataRequest
 from disruption_py.settings.set_times_request import SetTimesRequest, resolve_set_times_request
 from disruption_py.settings.output_type_request import OutputTypeRequest, resolve_output_type_request
 from disruption_py.utils.mappings.mappings_helpers import map_string_attributes_to_enum
-from enum import Enum
+from disruption_py.utils.utils import instantiate_classes, without_duplicates
 
-class InterpolationMethod(Enum):
-    LINEAR = "linear"
-    LOG = "log"
-    LOG_LINEAR = "log_linear"
-    EXP = "exp"
-    EXP_LINEAR = "exp_linear"
-    SIN = "sin"
-    SIN_LINEAR = "sin_linear"
-    SIN_EXP = "sin_exp"
-    
-class SignalDomain(Enum):
-    FULL = "full"
-    FLATTOP = "flattop"
-    RAMP_UP_AND_FLATTOP = "rampup_and_flattop"
-    
 def default_tags():
     return ["all"]
-
+    
 @dataclass
 class ShotSettings:
     """Settings to be used for retrieving data for a single shot.
@@ -40,7 +26,7 @@ class ShotSettings:
         ExistingDataRequestType that resolves to a ExistingDataRequest. See ExistingDataRequest for more 
         details. Set to None if no data should be prefilled. Defaults to None.
     num_threads_per_shot : int
-        The number of threads to use for data retrieval from MDSplus for each shot. Default is 1.
+        Use not recommended. Alternatively, please see num_processes in get_shots_data.
     efit_tree_name : str
         The name of the tree to first try for the efit environment. Other tree names will be tried if 
         opening this tree name fails. Default is 'analysis'.
@@ -139,6 +125,11 @@ class ShotSettings:
             "signal_type": SignalDomain,
             "interpolation_method": InterpolationMethod
         })
+        
+        if self.attempt_local_efit_env is not None:
+            for idx, (option, value) in enumerate(self.attempt_local_efit_env):
+                if not option.endswith("_path"):
+                    self.attempt_local_efit_env[idx] = (option + "_path", value)
         
         # we can also setup logging on resolve
         self.log_settings.setup_logging()

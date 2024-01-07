@@ -13,17 +13,17 @@ class ExistingDataRequestParams:
 
     Attributes
     ----------
-    shot_id : str
+    shot_id : int
         Shot Id for which to get existing data. Defaults to logbook.
     database : ShotDatabase
         Database object to use for getting existing data.
         A different database connection is used by each process.
     tokamak : Tokemak
-        The tokemak for which the data request is made.
+        The tokamak for which the data request is made.
     logger : Logger
         Logger object from disruption_py to use for logging.
     """
-    shot_id : str
+    shot_id : int
     database : ShotDatabase
     tokamak : Tokamak
     logger : Logger

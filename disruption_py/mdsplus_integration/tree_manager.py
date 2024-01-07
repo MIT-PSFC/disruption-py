@@ -1,9 +1,12 @@
+from collections import Counter
 from MDSplus import Tree, TreeNode
 import logging
-from typing import Callable, List
+from typing import Callable, List, Tuple
 import threading
 
 from disruption_py.utils.environment_vars import temporary_env_vars
+
+EnvModifications = Tuple[Tuple[str, str]]
 
 class TreeManager:
     logger = logging.getLogger('disruption_py')
@@ -11,6 +14,7 @@ class TreeManager:
     def __init__(self, shot_id):
         self._shot_id = int(shot_id)
         self._nicknames = {}
+        self._nickname_environment_modifications = {}
         
         # create tree nickname when nickname first used
         self._lazy_nickname_functions = {}
@@ -20,6 +24,9 @@ class TreeManager:
         
         self._open_trees = {}
         self._closed_trees = {}
+        
+        # count the number of getNode of each type
+        self.counter = Counter()
     
     @property
     def thread_open_trees(self):
@@ -73,6 +80,7 @@ class TreeManager:
                     self.close_tree(tree_name)
     
     def cleanup(self):
+        self.logger.info(f"Node usage counts: {self.counter}")
         for thread in list(self._open_trees.keys()):
             for tree_name in list(self.get_open_trees(thread).keys()):
                 self.close_tree(tree_name, thread)
@@ -92,30 +100,27 @@ class TreeManager:
         return None
     
     # nicknames
-    def nickname(self, nickname: str, tree_names_to_try: List[str], try_with_env_vars=None):
+    def nickname(self, nickname: str, tree_names_to_try: List[str], env_modifications_to_try: List[EnvModifications]) -> bool:
+        if env_modifications_to_try is None or env_modifications_to_try == []:
+            env_modifications_to_try = [()]
+            
         def lazy_nickname_func():
-            result=None
-            if try_with_env_vars is not None:
-                with temporary_env_vars(try_with_env_vars):
-                    result = self._try_until_success_open_and_nickname(tree_names_to_try, nickname)
             
-            if result is None:
-                result = self._try_until_success_open_and_nickname(tree_names_to_try, nickname)
+            for env_modification in env_modifications_to_try:
+                with temporary_env_vars(env_modification):
+                    for tree_name in tree_names_to_try:
+                        try:
+                            return self._try_open_and_nickname(nickname=nickname, tree_name=tree_name, environment_modification=env_modification)
+                        except Exception as e:
+                            self.logger.warning(
+                                f"[Shot {self._shot_id}]:Failed to open tree {tree_name} for nickname {nickname}, with error {e}")
             
-            if result is None:
-                raise Exception(f"Failed to find a valid tree name for nickname {nickname}")
+            raise Exception(f"Failed to find a valid tree name for nickname {nickname}")
 
-        self._create_lazy_nickname(nickname=nickname, nickname_func=lazy_nickname_func)
+        return self._create_lazy_nickname(nickname=nickname, nickname_func=lazy_nickname_func)
         
-    def _try_until_success_open_and_nickname(self, tree_names: List[str], nickname: str):
-        for tree_name in tree_names:
-            try:
-                return self._try_open_and_nickname(nickname=nickname, tree_name=tree_name)
-            except Exception as e:
-                self.logger.warning(
-                    f"[Shot {self._shot_id}]:Failed to open tree {tree_name} for nickname {nickname}, with error {e}")
             
-    def _try_open_and_nickname(self, nickname: str, tree_name: str) -> Tree:
+    def _try_open_and_nickname(self, nickname: str, tree_name: str, environment_modification : EnvModifications = None) -> Tree:
         
         if nickname in self.all_opened_tree_names and tree_name != nickname:
             self.logger.error(f"Cannot hide tree_name {nickname} with that nickname for {tree_name}")
@@ -127,12 +132,15 @@ class TreeManager:
             self.logger.info(f"Nickname {nickname} for tree {self._nicknames[nickname]} replaced with {tree_name}")
         
         self._nicknames[nickname] = tree_name
-        
+        self._nickname_environment_modifications[nickname] = environment_modification
         return tree
     
     def _create_lazy_nickname(self, nickname: str, nickname_func: Callable):
         self._lazy_nickname_functions[nickname] = nickname_func
     
+    def is_nickname_created(self, nickname: str) -> bool:
+        return nickname in self._nicknames or nickname in self._lazy_nickname_functions
+        
     def tree_from_nickname(self, nickname:str) -> Tree:
          
         tree_name = self.tree_name_of_nickname(nickname)
@@ -143,7 +151,11 @@ class TreeManager:
         if tree_name not in self.all_opened_tree_names:
             self.logger.debug(f"Tree named {tree_name} for nickname {nickname} not open")
         
-        return self.open_tree(tree_name)
+        if self._nickname_environment_modifications.get(nickname, None) is not None:
+            with temporary_env_vars(self._nickname_environment_modifications[nickname]):
+                return self.open_tree(tree_name)
+        else:
+            return self.open_tree(tree_name)
     
     def tree_name_of_nickname(self, nickname:str) -> str:
         if nickname not in self._nicknames and nickname in self._lazy_nickname_functions:
@@ -162,7 +174,11 @@ class TreeWrapper(Tree):
         self._tree_manager = tree_manager
         super().__init__(*args, **kwargs)
         
-        
+    
+    def getNode(self, name):
+        self._tree_manager.counter[(self.tree, name)] += 1
+        return super().getNode(name)
+
     def close(self, *args, **kwargs):
         if self.tree is not None:
             self._tree_manager.mark_tree_closed(self.tree)

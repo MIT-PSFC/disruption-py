@@ -8,7 +8,7 @@ from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from logging import Logger
 
 import disruption_py.data
-from disruption_py.utils.math_utils import without_duplicates
+from disruption_py.utils.utils import without_duplicates
 try:
     import importlib.resources as importlib_resources
 except ImportError:
@@ -27,7 +27,7 @@ class ShotIdsRequestParams:
         A different database connection is used by each process.
         Defaults to logbook.
     tokamak : Tokemak
-        The tokemak for which the data request is made.
+        The tokamak for which the data request is made.
     logger : Logger
         Logger object from disruption_py to use for logging.
     """

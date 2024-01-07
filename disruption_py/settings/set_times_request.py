@@ -20,7 +20,7 @@ class SetTimesRequestParams:
         Database object to use for getting timebase from sql database.
         A different database connection is used by each process.
     tokamak : Tokemak
-        The tokemak for which the set times request is made.
+        The tokamak for which the set times request is made.
     logger : Logger
         Logger object from disruption_py to use for logging.
     """

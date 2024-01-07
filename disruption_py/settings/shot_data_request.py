@@ -1,15 +1,12 @@
 from dataclasses import dataclass
 from logging import Logger
-import pandas as pd
-import numpy as np
-from disruption_py.mdsplus_integration.tree_manager import TreeManager
+from disruption_py.shots.helpers.cached_method_params import is_cached_method
+from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.math_utils import interp1
-from disruption_py.utils.method_caching import get_cached_method_params, is_cached_method, parameter_cached_method
+from disruption_py.shots.helpers.cached_method_params import get_cached_method_params
 
 from abc import ABC
 from typing import Any, Callable, List
-
 
 @dataclass
 class ShotDataRequestParams:
@@ -17,32 +14,24 @@ class ShotDataRequestParams:
 
     Attributes
     ----------
-    shot : Any
-		A reference to the shot object retrieving data.
-    shot_id : str
-		The shot id ofthe shot being retrieved as a string.
-    tree_manager : TreeManager
-		An instance of the tree manager class for the given shot.
-	shot_times : np.ndarray
-		The timebase for the shot, with each time in the array being in seconds.
-    existing_data : pd.DataFrame
-        Data provided to disruption_py for the given shot in the `existing_data_request` parameter of `shot_settings`.
+    shot_props : ShotProps
+		A reference to the shot props object containing the setup information, such as the shot id, 
+        timebase, and disruption time, for the shot data retrieval from MDSPlus.
     tokamak : Tokemak
-        The tokemak for which the set times request is made.
+        The tokamak for which the set times request is made.
     logger : Logger
         Logger object from disruption_py to use for logging.
     """
-    shot : Any
-    shot_id : str
-    tree_manager : TreeManager
-    shot_times : np.ndarray
-    disruption_time : float
-    existing_data : pd.DataFrame
+    shot_props : ShotProps
     tokamak : Tokamak
     logger : Logger
     
 class ShotDataRequest(ABC):
 
+    def setup(self, shot_data_request_params : ShotDataRequestParams):
+        """Do any setup for the shot such as giving """
+        pass
+        
     def get_request_methods_for_tokamak(self, tokamak: Tokamak) -> List[Callable]:
         """Method used to determine which methods should be considered for execution given the tokamak.
 
@@ -61,30 +50,13 @@ class ShotDataRequest(ABC):
             A list of methods that can be considered for execution for the given tokamak.
         """
         request_methods = []
-        for method in dir(self):
-            if not is_cached_method:
+        for method_name in dir(self):
+            method = getattr(self, method_name, None)
+            if method is None or not is_cached_method(method):
                 continue
             cached_method_params = get_cached_method_params(method, should_throw=True)
             if (cached_method_params.tokamaks is None or
-                tokamak in cached_method_params.tokamaks or
-                tokamak is cached_method_params.tokamaks):
-                request_methods.append(method)
+                tokamak is cached_method_params.tokamaks or
+                tokamak in cached_method_params.tokamaks):
+                request_methods.append(method_name)
         return request_methods
-
-
-class KappaArea(ShotDataRequest):
-
-    @parameter_cached_method(columns=["kappa_area"], used_trees=["efit_tree"], tokamaks=Tokamak.CMOD)
-    def _get_kappa_area(self, params):
-        aminor = params.shot.efit_tree.getNode(
-            r'\efit_aeqdsk:aminor').getData().data().astype('float64', copy=False)
-        area = params.shot.efit_tree.getNode(
-            r'\efit_aeqdsk:area').getData().data().astype('float64', copy=False)
-        times = params.shot.efit_tree.getNode(
-            r'\efit_aeqdsk:time').getData().data().astype('float64', copy=False)
-
-        aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
-        # make sure area is not 0 or less than 0
-        area[area <= 0] = 3.14*0.001**2
-        return pd.DataFrame({"kappa_area": interp1(times, area/(np.pi * aminor**2), params.shot.get_times())})
-

@@ -27,7 +27,6 @@ nav:
     - Installation: installation.md 
   - API Reference:
       - Handlers: api/handlers_reference.md
-      - Shots: api/shots_reference.md
       - Settings: 
         - Settings Classes: api/settings_reference.md
         - Requests Classes:
