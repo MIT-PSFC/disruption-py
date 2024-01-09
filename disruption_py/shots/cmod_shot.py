@@ -1554,6 +1554,7 @@ class CModShot(Shot):
         baseline_indices = np.where(t_mag <= -1.8)
         btor = btor - np.mean(btor[baseline_indices])
         btor = np.abs(interp1(t_mag, btor, self._times))
+        
         ip = np.abs(ip_df.ip)/1.e6 # [A] -> [MA]
         n_e = density_df.n_e/1.e19 # [m^-3] -> [10^19 m^-3]
         p_input = powers_df.p_input/1.e6 # [W] -> [MW]
