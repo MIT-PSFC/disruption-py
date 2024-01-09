@@ -78,7 +78,6 @@ class CModShot(Shot):
     
     #EFIT columns that need to be derived for data before 2000  TODO: confirm with Bob that these are the right back-ups and make sure that these are similar to standard EFIT columns
     efit_cols_pre_2000_derived = ['beta_n','v_loop_efit']
-    
     efit_derivs = {'beta_p': 'dbetap_dt', 'li': 'dli_dt', 'Wmhd': 'dWmhd_dt'}
 
     # TODO: Populate metadata dict
@@ -651,8 +650,7 @@ class CModShot(Shot):
 
         aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
         # make sure area is not 0 or less than 0
-        area[area <= 0] = 3.14*0.001**2 
-
+        area[area <= 0] = 3.14*0.001**2
         return CModShot.get_kappa_area(self._times, aminor, area, times)
 
     @staticmethod
