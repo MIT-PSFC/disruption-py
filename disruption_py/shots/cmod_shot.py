@@ -64,8 +64,8 @@ class CModShot(Shot):
                  "tribot":  r'\efit_aeqdsk:doutl',
                  "a_minor": r'\efit_aeqdsk:aminor',
                  "R0":r'\efit_aeqdsk:rmagx',
-                 "chisq":r'\efit_aeqdsk:chisq',
-                 "area":r'\efit_aeqdsk:area'}
+                 "area":r'\efit_aeqdsk:area',
+                 "chisq":r'\efit_aeqdsk:chisq'}
     
     #EFIT column names for data before 2000 TODO: confirm with Bob that these are the right back-ups and make sure that these are similar to standard EFIT columns
     efit_cols_pre_2000 = {"a_minor": r'\efit_aeqdsk:aout',
@@ -564,14 +564,14 @@ class CModShot(Shot):
         #Get data from each of the columns in efit_cols one at a time
         for param in self.efit_cols:
             try:
-                #If shot before year 2000 and the param is in efit_cols_pre_2000, use self.efit_cols_pre_2000 mapping 
+                #If shot before year 2000 and the param is in efit_cols_pre_2000, use self.efit_cols_pre_2000 mapping
                 if self._shot_id <= CMOD_YEAR_2000_SHOT_ID_CUTOFF and param in self.efit_cols_pre_2000.keys():
                     efit_data[param] = self._efit_tree.getNode(
                         self.efit_cols_pre_2000[param]).data().astype('float64', copy=False)
                 #If shot before year 2000 and the param is one of the derived columns, pass because it is computed later
                 elif self._shot_id <= CMOD_YEAR_2000_SHOT_ID_CUTOFF and param in self.efit_cols_pre_2000_derived:
                     pass
-                else: 
+                else:
                     efit_data[param] = self._efit_tree.getNode(
                         self.efit_cols[param]).data().astype('float64', copy=False)
             except:
@@ -590,7 +590,7 @@ class CModShot(Shot):
                 
         #Correct units of R0:
         efit_data['R0'] = efit_data['R0']/100 #[cm] -> [m]
-                
+
         #Get data for V_surf := deriv(\ANALYSIS::EFIT_SSIBRY)*2*pi
         try:
             ssibry = self._efit_tree.getNode('\efit_geqdsk:ssibry').data().astype('float64', copy=False)
@@ -834,7 +834,7 @@ class CModShot(Shot):
                 a_minor_record = a_tree.getNode(r'\efit_aeqdsk:aminor').getData()
             t_a = a_minor_record.dim_of(0).data()
             a_minor = a_minor_record.data().astype('float64', copy=False)
-           
+
             #If the shot is before the year 2000, divide aminor by 100 to convert [cm] -> [m]
             if self._shot_id <= CMOD_YEAR_2000_SHOT_ID_CUTOFF:
                 a_minor_record = a_minor_record/100
@@ -1554,13 +1554,12 @@ class CModShot(Shot):
         baseline_indices = np.where(t_mag <= -1.8)
         btor = btor - np.mean(btor[baseline_indices])
         btor = np.abs(interp1(t_mag, btor, self._times))
-        
         ip = np.abs(ip_df.ip)/1.e6 # [A] -> [MA]
         n_e = density_df.n_e/1.e19 # [m^-3] -> [10^19 m^-3]
         p_input = powers_df.p_input/1.e6 # [W] -> [MW]
         dWmhd_dt = efit_df.dWmhd_dt/1.e6 # [W] -> [MW]
         Wmhd = efit_df.Wmhd/1.e6 # [J] -> [MJ]
-        R0 = efit_df.R0 
+        R0 = efit_df.R0
         #Estimate confinement time
         tau = Wmhd/(p_input - dWmhd_dt)
         
