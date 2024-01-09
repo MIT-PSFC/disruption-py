@@ -87,7 +87,7 @@ class EfitSetTimesRequest(SetTimesRequest):
     
 class MagneticsSetTimesRequest(SetTimesRequest):
     
-    def __init__(self, timestep = 0.004):
+    def __init__(self, timestep = 0.005):
         self.timestep = timestep
         
     def _get_times(self, params : SetTimesRequestParams) -> np.ndarray:

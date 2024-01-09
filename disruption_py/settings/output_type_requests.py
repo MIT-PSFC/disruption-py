@@ -145,8 +145,8 @@ class CSVOutputRequest(OutputTypeRequest):
                 combined_df = params.result
 
             combined_df.to_csv(self.filepath, index=False)
-        else: 
-            params.result.to_csv(self.filepath, mode='a', index=False, header=(not file_exists))
+        # else: 
+            # params.result.to_csv(self.filepath, mode='a', index=False, header=(not file_exists))
         self.output_shot_count += 1
 
     def get_results(self, params: FinishOutputTypeRequestParams):

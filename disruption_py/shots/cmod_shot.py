@@ -53,6 +53,10 @@ class CModShot(Shot):
     Class for a single CMod shot.
 
     """
+
+    test_efit_start = r"\top.results.a_eqdsk"
+    
+
     efit_cols = {"beta_n": r'\efit_aeqdsk:betan',
                  "beta_p": r'\efit_aeqdsk:betap',
                  "kappa": r'\efit_aeqdsk:eout',
@@ -74,10 +78,11 @@ class CModShot(Shot):
     
     #EFIT column names for data before 2000 TODO: confirm with Bob that these are the right back-ups and make sure that these are similar to standard EFIT columns
     efit_cols_pre_2000 = {"a_minor": r'\efit_aeqdsk:aout',
+                         "beta_n": r'\top.results.a_eqdsk:betan',
                           "li": r'\efit_aeqdsk:ali',
                           "q0": r'\efit_aeqdsk:qqmagx',
                           "qstar": r'\efit_aeqdsk:qsta',
-                          "q95": r'\efit_aeqdsk:qsib', #Not sure about this one
+                        #   "q95": r'\efit_aeqdsk:qsib', #Not sure about this one
                           } 
     
     efit_derivs = {'beta_p': 'dbetap_dt', 'li': 'dli_dt', 'Wmhd': 'dWmhd_dt'}
@@ -98,6 +103,10 @@ class CModShot(Shot):
         
         # Set up tree nicknames
         self.setup_nicknames(shot_settings.efit_tree_name, shot_settings.attempt_local_efit_env)
+
+        # self.logger.warning("------------------------------------")
+        # self.logger.warning("EFIT tree name: " + str(self.efit_tree_name))
+        # self.logger.warning("------------------------------------")
 
         # must call this method after nicknamed trees setup
         self._init_timebase(shot_settings, existing_data)
@@ -335,18 +344,37 @@ class CModShot(Shot):
             - matlab/cmod_matlab/matlab-core/get_Z_parameters.m
 
         """
-        z_error = z_error_without_ip/ip  # [m]
-        z_prog_dpcs = interp1(pcstime, z_prog, dpcstime)
-        z_cur = z_prog_dpcs + z_error  # [m]
-        v_z = np.gradient(z_cur, dpcstime)  # m/s
-        z_times_v_z = z_cur * v_z  # m^2/s
-        z_prog = interp1(pcstime, z_prog, times, 'linear', False, z_prog[-1])
-        z_error = -interp1(dpcstime, z_error, times,
-                           'linear', False, z_error[-1])
-        z_cur = -interp1(dpcstime, z_cur, times, 'linear', False, z_cur[-1])
-        v_z = interp1(dpcstime, v_z, times, 'linear', False, v_z[-1])
-        z_times_v_z = interp1(dpcstime, z_times_v_z, times,
-                              'linear', False, z_times_v_z[-1])
+
+        try:
+            z_error = z_error_without_ip/ip  # [m]
+        except:
+            z_error = np.divide(
+                z_error_without_ip,
+                ip,
+                out=np.full_like(z_error_without_ip, np.nan),
+                where=(ip != 0))
+        
+        try:
+            z_prog_dpcs = interp1(pcstime, z_prog, dpcstime)
+            z_cur = z_prog_dpcs + z_error  # [m]
+            v_z = np.gradient(z_cur, dpcstime)  # m/s
+            z_times_v_z = z_cur * v_z  # m^2/s
+            z_prog = interp1(pcstime, z_prog, times, 'linear', False, z_prog[-1])
+            z_error = -interp1(dpcstime, z_error, times,
+                            'linear', False, z_error[-1])
+            z_cur = -interp1(dpcstime, z_cur, times, 'linear', False, z_cur[-1])
+            v_z = interp1(dpcstime, v_z, times, 'linear', False, v_z[-1])
+            z_times_v_z = interp1(dpcstime, z_times_v_z, times,
+                                'linear', False, z_times_v_z[-1])
+            
+        # print everything for 
+        except:
+            print("z_error: ", z_error)
+            print("z_prog: ", z_prog)
+            print("z_cur: ", z_cur)
+            print("v_z: ", v_z)
+            print("z_times_v_z: ", z_times_v_z)
+
         return pd.DataFrame({"z_error": z_error, "z_prog": z_prog, "zcur": z_cur, "v_z": v_z, "z_times_v_z": z_times_v_z})
 
     @parameter_cached_method(
@@ -361,9 +389,11 @@ class CModShot(Shot):
         z_wire_index = -1
         active_wire_segments = self.get_active_wire_segments()
         for segment, start in active_wire_segments:
-            for wire_index in range(1, 17):
+            self.logger.debug(f"[Shot {self._shot_id}]: Checking segment {segment.getNodeName()}")
+            for wire_index in range(16, 0, -1):
                 wire_node = segment.getNode(f":P_{wire_index :02d}:name")
                 if wire_node.getData().data() == "ZCUR":
+                    self.logger.debug(f"[Shot {self._shot_id}]: Found ZCUR wire {wire_index}")
                     try:
                         pid_gains = segment.getNode(
                             f":P_{wire_index :02d}:pid_gains").getData().data()
@@ -374,13 +404,20 @@ class CModShot(Shot):
                             end = sigtime[np.argmin(np.abs(sigtime - pcstime[-1])+ .0001)]
                             signal = signal_record.data()
                             z_prog_temp = interp1(
-                                sigtime, signal, pcstime, 'linear', False, fill_value=signal[-1])
+                                sigtime, signal, pcstime, 'nearest', False, fill_value=signal[-1])
                             z_wire_index = wire_index
-                            segment_indices = [
-                                np.where((pcstime >= start) & (pcstime <= end))]
+                            segment_indices = np.where((pcstime >= start) & (pcstime <= end))[0]
                             z_prog[segment_indices] = z_prog_temp[segment_indices]
                             break
                     except mdsExceptions.MdsException as e:
+                        self.logger.warning(
+                            f"[Shot {self._shot_id}]: Error getting PID gains for wire {wire_index}")
+                        self.logger.debug(f"[Shot {self._shot_id}]: {traceback.format_exc()}")
+                        continue  # TODO: Consider raising appropriate error
+                    except Exception as e:
+                        self.logger.warning(e)
+                        self.logger.warning(
+                            f"[Shot {self._shot_id}]: Error getting PID gains for wire {wire_index}")
                         self.logger.debug(f"[Shot {self._shot_id}]: {traceback.format_exc()}")
                         continue  # TODO: Consider raising appropriate error
                 else:
@@ -389,17 +426,39 @@ class CModShot(Shot):
         if z_wire_index == -1:
             # TODO: Make appropriate error
             raise ValueError("No ZCUR wire was found")
+
         # Read in A_OUT, which is a 16xN matrix of the errors for *all* 16 wires for
         # *all* of the segments. Note that DPCS time is usually taken at 10kHz.
         hybrid_tree = self._tree_manager.open_tree(tree_name='hybrid')
-        wire_errors_record = hybrid_tree.getNode(
-            r'\top.hardware.dpcs.signals:a_out').getData()
-        wire_errors, dpcstime = wire_errors_record.data(
-        ), np.array(wire_errors_record.dim_of(1))  # s
-        # The value of Z_error we read is not in the units we want. It must be *divided* by a factor AND *divided* by the plasma current.
-        z_error_without_factor_and_ip = wire_errors[:, z_wire_index]
-        z_error_without_ip = np.empty(z_error_without_factor_and_ip.shape)
-        z_error_without_ip.fill(np.nan)
+        ## TODO: Note: this node doesn't exist in all trees. It's not in shot 1020807022, for example. 
+        try:
+            wire_errors_record = hybrid_tree.getNode(
+                r'\top.hardware.dpcs.signals:a_out').getData()
+            wire_errors, dpcstime = wire_errors_record.data(), np.array(wire_errors_record.dim_of(1))  # s
+            z_error_without_factor_and_ip = wire_errors[:, z_wire_index]
+            self.logger.debug(f"[Shot {self._shot_id}]: Got wire errors from hybrid tree w first path")
+        except Exception as e:
+            self.logger.warning(f"[Shot {self._shot_id}]: Unable to get wire errors from hybrid tree w first path")
+            self.logger.warning(f"[Shot {self._shot_id}]: Trying second path")
+            try:
+                
+                # NOTE: Lucas Spangher: I added this all to help index the wire errors 
+                # from hybrid trees earlier than a certain point in time. 
+                # Note that now wire_errors is not a matrix but a 1D array that is indexed
+                # by the wire_index. Also, note that we don't have to pick wire_index out 
+                # of wire_errors to get z_error_without_factor_and_ip. 
+
+                print("z_wire_index: ", z_wire_index)
+                wire_errors_record = hybrid_tree.getNode(
+                    fr'\top.signals.a_out:output_{z_wire_index:02d}').getData()
+                wire_errors = wire_errors_record.data()
+                dpcstime = np.array(wire_errors_record.dim_of(0))  # s 
+                z_error_without_factor_and_ip = wire_errors
+                self.logger.debug(f"[Shot {self._shot_id}]: Got wire errors from hybrid tree w second path")
+            except Exception as e:
+                self.logger.warning(f"[Shot {self._shot_id}]: Unable to get wire errors from hybrid tree w second path")
+                self.logger.debug(f"[Shot {self._shot_id}]: {traceback.format_exc()}")
+      
         # Also, it turns out that different segments have different factors. So we
         # search through the active segments (determined above), find the factors,
         # and *divide* by the factor only for the times in the active segment (as
@@ -410,10 +469,25 @@ class CModShot(Shot):
                 end = pcstime[-1]
             else:
                 end = active_wire_segments[i+1][1]
-            z_factor = hybrid_tree.getNode(
-                fr'\dpcs::top.seg_{i+1:02d}:p_{z_wire_index:02d}:predictor:factor').getData().data()
-            z_error_without_ip[np.where((dpcstime >= start) & (
-                dpcstime <= end))] /= z_factor  # [A*m]
+            try:
+                z_factor = hybrid_tree.getNode(
+                    fr'\dpcs::top.seg_{i+1:02d}:p_{z_wire_index:02d}:predictor:factor').getData().data()
+            except:
+                z_factor = hybrid_tree.getNode(
+                    fr'\p_{z_wire_index:02d}:predictor:factor').getData().data()
+
+        # Find the indices where dpcstime is between start and end
+        time_indices = np.where((dpcstime >= start) & (dpcstime <= end))#[0]
+
+        # Use these indices to update z_error_without_ip       
+        z_error_without_ip = z_error_without_factor_and_ip.copy()
+        z_error_without_ip /= z_factor # [A*m]
+
+        # why aren't the other variables indexed by time_indices?
+        # ip = ip[time_indices]
+        # z_error_without_ip = z_error_without_factor_and_ip[time_indices] 
+        # z_error_without_ip /= z_factor # [A*m]
+
         # Next we grab ip, which comes from a_in:input_056. This also requires
         # *multiplication* by a factor.
         # NOTE that I can't get the following ip_without_factor to work for shots
@@ -426,9 +500,11 @@ class CModShot(Shot):
                 r'\hybrid::top.dpcs_config.inputs:input_056:p_to_v_expr').getData().data()
             ip = ip_without_factor*ip_factor  # [A]
         else:
+            self.logger.debug("grabbing ip from magnetics tree in z_parameters")
             magnetics_tree = self._tree_manager.open_tree(tree_name='magnetics')
             ip_record = magnetics_tree.getNode(r'\ip').getData()
             ip = ip_record.data()
+            # ip = magnetics_tree.getNode(r"\ip").getData().data().astype('float64', copy=False)
             ip_time = ip_record.dim_of(0)
             ip = interp1(ip_time, ip, dpcstime)
         return CModShot.get_z_parameters(self._times, z_prog, pcstime, z_error_without_ip, ip, dpcstime)
@@ -481,7 +557,10 @@ class CModShot(Shot):
         contained_cached_methods=["_get_ip_parameters"])
     def _get_ohmic_parameters(self):
         # <-- this line is the culprit for breaking when analysis tree is set to EFIT18
-        v_loop_record = self.efit_tree.getNode(r"\top.mflux:v0").getData()
+        if self.efit_tree_name == "analysis":
+            v_loop_record = self.efit_tree.getNode(r"\top.mflux:v0").getData()
+        else:
+            v_loop_record = self.efit_tree.getNode(r"\top.data:vloop").getData()
         v_loop = v_loop_record.data().astype('float64', copy=False)
         v_loop_time = v_loop_record.dim_of(0)
         if len(v_loop_time) <= 1:
@@ -540,6 +619,7 @@ class CModShot(Shot):
                 values[2*i] = record.data().astype('float64', copy=False)
                 values[2*i + 1] = record.dim_of(0)
             except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF) as e:
+                self.logger.warning(f"[Shot {self._shot_id}]: Unable to open {trees[i]} tree")
                 continue 
         p_oh = self._get_ohmic_parameters()['p_oh']
         return CModShot.get_power(self._times, *values, p_oh)
@@ -549,15 +629,19 @@ class CModShot(Shot):
         used_trees=["efit_tree"])
     def _get_EFIT_parameters(self):
 
-        efit_time = self.efit_tree.getNode(r'\efit_aeqdsk:time').data().astype(
-            'float64', copy=False) # [s]
+        if self.efit_tree_name.startswith("efit"):
+            efit_time = self.efit_tree.getNode(r'\top.results.a_eqdsk:time').data().astype(
+                'float64', copy=False)  # [s]
+        else:
+            efit_time = self.efit_tree.getNode(r'\efit_aeqdsk:time').data().astype(
+                'float64', copy=False) # [s]
         efit_data = dict()
         
         #Get data from each of the columns in efit_cols one at a time
         for param in self.efit_cols:
             try:
                 #If shot before 2000 and the param is in efit_cols_pre_2000
-                if self._shot_id <= 1000000000 and param not in self.efit_cols_pre_2000.keys():
+                if self._shot_id <= 1000000000 and param in self.efit_cols_pre_2000.keys(): ## should this be param in self.efit_cols_pre_2000?
                     efit_data[param] = self.efit_tree.getNode(
                         self.efit_cols_pre_2000[param]).data().astype('float64', copy=False)
                 else:
@@ -586,7 +670,7 @@ class CModShot(Shot):
         if self._shot_id <= 1000000000:
             
             #Adjust aminor units
-            efit_data['aminor'] = efit_data['aminor']/100 #[cm] to [m]
+            efit_data['a_minor'] = efit_data['a_minor']/100 #[cm] to [m]
             
             #Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally sure on this one)
             try: #TODO: confirm this
@@ -599,6 +683,11 @@ class CModShot(Shot):
 
             #Compute beta_n
             beta_t = self.efit_tree.getNode('\efit_aeqdsk:betat').data().astype('float64', copy=False)
+
+            # add a small epsilon to 0's for reciprocal
+            beta_t[beta_t == 0] = 1e-10
+            efit_data["beta_p"][efit_data["beta_p"] == 0] = 1e-10
+
             efit_data['beta_n'] = np.reciprocal( np.reciprocal(beta_t) +  np.reciprocal(efit_data['beta_p']) )
 
         if not np.array_equal(self._times, efit_time):
@@ -785,7 +874,19 @@ class CModShot(Shot):
         # make sure aminor is not 0 or less than 0
         a_minor[a_minor <= 0] = 0.001
         n_G = ip/(np.pi*a_minor**2)*1e20  # Greenwald density in m ^-3
-        g_f = abs(n_e/n_G)
+        try:
+            g_f = abs(np.divide(n_e, n_G, out=np.full_like(n_e, np.nan), where=(n_G!=0)))
+        except Exception as e:
+            print("Exception in get_densities")
+            print(e)
+            print("n_e", n_e)
+            print("n_e size", n_e.size)
+            print("n_G", n_G)
+            print("n_G size", n_G.size)
+            print("ip", ip)
+            print("ip size", ip.size)
+            print("a_minor", a_minor)
+            print("a_minor size", a_minor.size)
         return pd.DataFrame({"n_e": n_e, "dn_dt": dn_dt, "Greenwald_fraction": g_f})
 
     @parameter_cached_method(
@@ -802,9 +903,15 @@ class CModShot(Shot):
             ip_record = mag_tree.getNode(r'\ip').getData()
             ip = ip_record.data().astype('float64', copy=False)
             t_ip = ip_record.dim_of(0).data()
-            a_tree = self._tree_manager.open_tree(tree_name='analysis')
-            a_minor_record = a_tree.getNode(
-                r'\efit_aeqdsk:aminor').getData()
+            if self.efit_tree_name == "efitspangher":
+                a_minor_record = self.efit_tree.getNode(
+                    r'\top.results.a_eqdsk:aminor').getData()
+            else:
+                # TODO: Josh, this seems to be the wrong path for many analysis trees.
+                a_tree = self._tree_manager.open_tree(tree_name='analysis')
+                a_minor_record = a_tree.getNode(
+                    r'\efit_aeqdsk:aminor').getData()
+            
             t_a = a_minor_record.dim_of(0).data()
             a_minor = a_minor_record.data().astype('float64', copy=False)
         except Exception as e:
@@ -833,11 +940,11 @@ class CModShot(Shot):
             return pd.DataFrame({"I_efc": np.empty(len(self._times))})
         return CModShot.get_efc_current(self._times, iefc, t_iefc)
 
-    # TODO: Split
     @staticmethod
     def get_Ts_parameters(times, ts_data, ts_time, ts_z):
-        te_hwm = np.full(len(ts_time), np.nan)
-        valid_times = np.where(ts_time > 0)
+        # NOTE: I made a few changes here. (Lucas). 
+        te_hwm = np.full(len(ts_time), 0) # TODO: changed np.nan to 0 because otherwise interp1 returned nans. OK? 
+        valid_times = np.where(ts_time > 0)[0] # Prior, this returned a tuple which was looped over
         # TODO: Vectorize
         for i in range(len(valid_times)):
             y = ts_data[:, valid_times[i]]
@@ -848,6 +955,7 @@ class CModShot(Shot):
                 _, _, sigma = gaussian_fit(z, y)
                 te_hwm[valid_times[i]] = sigma*1.1774  # 50%
         te_hwm = interp1(ts_time, te_hwm, times)
+        print("te_hwm", te_hwm)
         return pd.DataFrame({"Te_width": te_hwm})
 
     @parameter_cached_method(columns=["Te_width"], used_trees=["electrons"])
@@ -866,19 +974,77 @@ class CModShot(Shot):
                 node_path + ":te_rz").getData().dim_of(0)
             ts_z = electron_tree.getNode(
                 node_path + ":z_sorted").getData().data()
-        except mdsExceptions.MdsException as e:
-            self.logger.debug(f"[Shot {self._shot_id}] {traceback.format_exc()}")
-            te_hwm.fill(np.nan)
-            return pd.DataFrame({"Te_width": te_hwm})
+        except Exception as e:
+            self.logger.warning(f"[Shot {self._shot_id}] Failed to get TS data with 2000+ method")
+            try:
+                self.logger.warning(f"[Shot {self._shot_id}] Trying second 2000+ method")
+                ts_data = electron_tree.getNode(
+                    r"\thom_profile:te_rz_t").getData().data()
+                ts_time = electron_tree.getNode(
+                    r"\thom_profile:te_rz_t").getData().dim_of(0)
+                ts_z = electron_tree.getNode(
+                    r"\thom_profile:z_sorted").getData().data()
+            except Exception as e:
+                self.logger.warning(f"[Shot {self._shot_id}] Failed to get TS data with second 2000+ method")
+                self.logger.debug(f"[Shot {self._shot_id}] {traceback.format_exc()}")                
+                te_hwm.fill(np.nan)
+                return pd.DataFrame({"Te_width": te_hwm})
         return CModShot.get_Ts_parameters(self._times, ts_data, ts_time, ts_z)
 
     # TODO: Finish
     @staticmethod
     def get_peaking_factors(times, TS_time, ne_PF, Te_PF, pressure_PF):
-        # ne_PF = interp1(TS_time, ne_PF, times, 'linear')
-        # Te_PF = interp1(TS_time, Te_PF, times, 'linear')
-        # pressure_PF = interp1(TS_time, pressure_PF, times, 'linear')
-        pass
+        print("here")
+        print("ne_PF", ne_PF)
+        print("Te_PF", Te_PF)
+        print("times", times)
+        ne_PF = interp1(TS_time, ne_PF, times, 'linear')
+        Te_PF = interp1(TS_time, Te_PF, times, 'linear')
+        pressure_PF = interp1(TS_time, pressure_PF, times, 'linear')
+        return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
+
+
+    def switch_peaking_between_trees(self):
+        # TODO: Do a ctrl+F for '.yag_new.results.profiles'
+        #  This function would be good to replace those for abstraction. Refactor. 
+
+        electron_tree = self._tree_manager.open_tree(tree_name='electrons')
+        node_ext = '.yag_new.results.profiles'
+            # nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = self.compare_ts_tci(
+            #     electron_tree, nlnum=4)
+        try: 
+            TS_te = electron_tree.getNode(
+                f"{node_ext}:te_rz").getData().data()*1000*11600
+            tets_edge = electron_tree.getNode(r'\ts_te').getData().data()*11600
+            TS_te = np.concatenate((TS_te, tets_edge))
+            TS_time = electron_tree.getNode(
+                f"{node_ext}:te_rz").getData().dim_of(0)
+            TS_z = electron_tree.getNode(
+                f"{node_ext}:z_sorted").getData().data()
+            zts_edge = electron_tree.getNode(r"\fiber_z").getData().data()
+            TS_z = np.concatenate((TS_z, zts_edge))
+        except Exception as e:
+            # self.logger.debug(f"[Shot {self._shot_id}] {traceback.format_exc()}")
+            self.logger.warning(f"[Shot {self._shot_id}] Failed to get TS data with 2000+ method")
+            
+            # if the above didn't work, then there was issues with the names. 
+            try:
+                self.logger.warning(f"[Shot {self._shot_id}] Trying second 2000+ method")
+                TS_te = electron_tree.getNode(
+                    r"\thom_profile:te_rz_t").getData().data()*1000*11600
+                tets_edge = electron_tree.getNode(r'\ts_te').getData().data()*11600
+                TS_te = np.concatenate((TS_te, tets_edge))
+                TS_time = electron_tree.getNode(
+                    r"\thom_profile:te_rz_t").getData().dim_of(0)
+                TS_z = electron_tree.getNode(
+                    r"\thom_profile:z_sorted").getData().data()
+                zts_edge = electron_tree.getNode(r"\top.yag_edgets.data:fiber_z").getData().data()
+                TS_z = np.concatenate((TS_z, zts_edge))
+            except Exception as e:
+                self.logger.debug(f"[Shot {self._shot_id}] {traceback.format_exc()}")
+                self.logger.warning(f"[Shot {self._shot_id}] Failed to get TS data with second 2000+ method")
+        return TS_z, zts_edge, TS_te, tets_edge, TS_time
+
 
     @parameter_cached_method(
         columns=["ne_peaking", "Te_peaking", "pressure_peaking"],
@@ -892,26 +1058,48 @@ class CModShot(Shot):
             return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
         try:
             efit_tree = self._tree_manager.open_tree(tree_name='cmod')
-            z0 = 0.01*efit_tree.getNode(r'\efit_aeqdsk:zmagx').getData().data()
-            aminor = efit_tree.getNode(r'\efit_aeqdsk:aminor').getData().data()
-            kappa = efit_tree.getNode(r'\efit_aeqdsk:kappa').getData().data()
-            efit_time = efit_tree.getNode(
+            z0 = 0.01*self.efit_tree.getNode(r'\efit_aeqdsk:zmagx').getData().data()
+            aminor = self.efit_tree.getNode(r'\efit_aeqdsk:aminor').getData().data()
+            kappa = self.efit_tree.getNode(r'\efit_aeqdsk:kappa').getData().data()
+            efit_time = self.efit_tree.getNode(
                 r'\efit_aeqdsk:aminor').getData().dim_of(0)
             bminor = aminor*kappa
             electron_tree = self._tree_manager.open_tree(tree_name='electrons')
             node_ext = '.yag_new.results.profiles'
             # nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = self.compare_ts_tci(
             #     electron_tree, nlnum=4)
-            TS_te = electron_tree.getNode(
-                f"{node_ext}:te_rz").getData().data()*1000*11600
-            tets_edge = electron_tree.getNode(r'\ts_te').getData().data()*11600
-            TS_te = np.concatenate((TS_te, tets_edge))
-            TS_time = electron_tree.getNode(
-                f"{node_ext}:te_rz").getData().dim_of(0)
-            TS_z = electron_tree.getNode(
-                f"{node_ext}:z_sorted").getData().data()
-            zts_edge = electron_tree.getNode(f"\fiber_z").getData().data()
-            TS_z = np.concatenate((TS_z, zts_edge))
+            try: 
+                TS_te = electron_tree.getNode(
+                    f"{node_ext}:te_rz").getData().data()*1000*11600
+                tets_edge = electron_tree.getNode(r'\ts_te').getData().data()*11600
+                TS_te = np.concatenate((TS_te, tets_edge))
+                TS_time = electron_tree.getNode(
+                    f"{node_ext}:te_rz").getData().dim_of(0)
+                TS_z = electron_tree.getNode(
+                    f"{node_ext}:z_sorted").getData().data()
+                zts_edge = electron_tree.getNode(r"\fiber_z").getData().data()
+                TS_z = np.concatenate((TS_z, zts_edge))
+            except Exception as e:
+                # self.logger.debug(f"[Shot {self._shot_id}] {traceback.format_exc()}")
+                self.logger.warning(f"[Shot {self._shot_id}] Failed to get TS data with 2000+ method")
+                
+                # if the above didn't work, then there was issues with the names. 
+                try:
+                    self.logger.warning(f"[Shot {self._shot_id}] Trying second 2000+ method")
+                    TS_te = electron_tree.getNode(
+                        r"\thom_profile:te_rz_t").getData().data()*1000*11600
+                    tets_edge = electron_tree.getNode(r'\ts_te:at_95').getData().data()*11600
+                    TS_te = np.concatenate((TS_te, tets_edge))
+                    TS_time = electron_tree.getNode(
+                        r"\thom_profile:te_rz_t").getData().dim_of(0)
+                    TS_z = electron_tree.getNode(
+                        r"\thom_profile:z_sorted").getData().data()
+                    zts_edge = electron_tree.getNode(r"\top.yag_edgets.data:fiber_z").getData().data()
+                    TS_z = np.concatenate((TS_z, zts_edge))
+                except Exception as e:
+                    self.logger.debug(f"[Shot {self._shot_id}] {traceback.format_exc()}")
+                    self.logger.warning(f"[Shot {self._shot_id}] Failed to get TS data with second 2000+ method")
+
             if len(zts_edge) != tets_edge.shape[1]:
                 return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
             Te_PF = Te_PF[:len(TS_time)]
@@ -938,8 +1126,17 @@ class CModShot(Shot):
             Te_PF = interp1(TS_time, Te_PF, self._times)
             calib = np.nan
             # TODO(lajz): fix
-            return CModShot.get_Ts_parameters(self._times, TS_time, ne_PF, Te_PF, pressure_PF)
+            print("Ts_time", TS_time)
+            print("TS_te", TS_te)
+            print("TS_z", TS_z)
+            print("zts_edge", zts_edge)
+            print("tets_edge", tets_edge)
+            print("Te_PF", Te_PF)
+            print("pressure_PF", pressure_PF)
+            return CModShot.get_peaking_factors(self._times, TS_time, ne_PF, Te_PF, pressure_PF)
         except mdsExceptions.MdsException as e:
+            self.logger.debug("Failed to get peaking factors")
+            self.logger.debug(e)
             return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
 
     @parameter_cached_method(
@@ -948,36 +1145,41 @@ class CModShot(Shot):
     def _get_prad_peaking(self):
         prad_peaking = np.full(len(self._times), np.nan)
         cmod_tree = self._tree_manager.open_tree(tree_name='cmod')
-        try:
-            r0 = 0.01* cmod_tree.getNode(r'\efit_aeqdsk:rmagx').getData().data()
-            z0 = 0.01 * cmod_tree.getNode(r'\efit_aeqdsk:zmagx').getData().data()
-            aminor = cmod_tree.getNode(r'\efit_aeqdsk:aminor').getData().data()
-            efit_time = cmod_tree.getNode(r'\efit_aeqdsk:aminor').getData().dim_of(0)
+        try: 
+            r0 = 0.01* self.efit_tree.getNode(r'\efit_aeqdsk:rmagx').getData().data()
+            z0 = 0.01 * self.efit_tree.getNode(r'\efit_aeqdsk:zmagx').getData().data()
+            aminor = self.efit_tree.getNode(r'\efit_aeqdsk:aminor').getData().data()
+            efit_time = self.efit_tree.getNode(r'\efit_aeqdsk:aminor').getData().dim_of(0)
         except mdsExceptions.MdsException as e:
             self.logger.debug(f"[Shot {self._shot_id}]: Failed to get efit data")
             return pd.DataFrame({"prad_peaking": prad_peaking})
         spec_tree = self._tree_manager.open_tree(tree_name='spectroscopy')
         got_axa = False 
         try: 
-            axa = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.AXA:BRIGHT").getData()
+            ## TODO: problem, in shots < 2000, diode isn't a branch in bolometer 
+            axa = spec_tree.getNode(r"\TOP.BOLOMETER.RESULTS.DIODE.AXA:BRIGHT").getData()
             t_axa = axa.dim_of(1).data()
             r_axa = axa.dim_of(0).data()
             bright_axa = axa.data()
-            z_axa = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXA:Z_O").getData().data()
-            good_axa = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXA:GOOD").getData().data()
+            z_axa = spec_tree.getNode(r"\TOP.BOLOMETER.DIODE_CALIB.AXA:Z_O").getData().data()
+            good_axa = spec_tree.getNode(r"\TOP.BOLOMETER.DIODE_CALIB.AXA:GOOD").getData().data()
             got_axa = True 
         except mdsExceptions.MdsException as e:
+            self.logger.debug("-----------------")
+            self.logger.debug(e)
             self.logger.debug(f"[Shot {self._shot_id}]: Failed to get AXA data")
-        got_axj = False 
+            got_axj = False 
         try: 
-            axj = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.AXJ:BRIGHT").getData() 
+            axj = spec_tree.getNode(r"\TOP.BOLOMETER.RESULTS.DIODE.AXJ:BRIGHT").getData() 
             t_axj = axj.dim_of(1).data()
             r_axj = axj.dim_of(0).data()
             bright_axj = axj.data()
-            z_axj = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXJ:Z_O").getData().data()
-            good_axj = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXJ:GOOD").getData().data()
+            z_axj = spec_tree.getNode(r"\TOP.BOLOMETER.DIODE_CALIB.AXJ:Z_O").getData().data()
+            good_axj = spec_tree.getNode(r"\TOP.BOLOMETER.DIODE_CALIB.AXJ:GOOD").getData().data()
             got_axj = True
         except mdsExceptions.MdsException as e:
+            self.logger.debug("-----------------")
+            self.logger.debug(e)
             self.logger.debug(f"[Shot {self._shot_id}]: Failed to get AXJ data")
         if not (got_axa or got_axj):
             return pd.DataFrame({"prad_peaking": prad_peaking})
@@ -1363,8 +1565,12 @@ class CModShot(Shot):
         sxr = np.full(len(self._times), np.nan)
         try:
             tree = self._tree_manager.open_tree(tree_name='xtomo')
-            sxr_record = tree.getNode(
-                r'\top.brightnesses.array_1:chord_16').getData()
+            if self._shot_id > 1000000000:
+                sxr_record = tree.getNode(
+                    r'\top.brightnesses.array_1:chord_16').getData()
+            else:
+                sxr_record = tree.getNode(
+                    r'\top.signals.array_1:det_16').getData()
             sxr = sxr_record.data().astype('float64', copy=False)
             t_sxr = sxr_record.dim_of(0)
             sxr = interp1(t_sxr, sxr, self._times)
@@ -1479,8 +1685,21 @@ class CModShot(Shot):
         try:
             ts_time = electron_tree.getNode(
                 node_path + ":te_rz").getData().dim_of(0)
+            self.logger.debug(f"[Shot {self._shot_id}]: Got TS time")
         except:
-            return pd.DataFrame({"Te_edge": np.full(len(self._times), np.nan), "ne_edge": np.full(len(self._times), np.nan)})
+            self.logger.warning(
+                f"[Shot {self._shot_id}]: Failed to get TS time with first path")
+            
+            # Trying a different path for earlier shots.
+            try:
+                node_path = r"\top.yag.results.global.profile"
+                ts_time = electron_tree.getNode(
+                    node_path + ":ne_rz").getData().dim_of(0)
+                self.logger.debug(f"[Shot {self._shot_id}]: Got TS time")
+            except:
+                self.logger.warning(
+                    f"[Shot {self._shot_id}]: Failed to get TS time with second path")
+                return pd.DataFrame({"Te_edge": np.full(len(self._times), np.nan), "ne_edge": np.full(len(self._times), np.nan)})
 
         t_min = np.max([0.1, np.min(ts_time)])
         t_max = np.max(ts_time)

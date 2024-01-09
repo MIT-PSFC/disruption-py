@@ -33,17 +33,23 @@ def temporary_env_vars(env_var_list: Iterable[Tuple[str, str]]):
 
     """
     original_values = {}
-    
-    # Set the new environment variables and store their original values
-    for key, value in env_var_list:
-        original_values[key] = os.environ.get(key)
-        os.environ[key] = value
 
+    # Set the new environment variables and store their original values
     try:
+        for key, value in env_var_list:
+
+            # check if key ends in _path, add _path to value if so
+            if not key.endswith("_path"):
+                key = key + "_path"
+
+            original_values[key] = os.environ.get(key)
+            os.environ[key] = value
         yield
     finally:
         # Restore the original environment variable values
         for key, value in env_var_list:
+            if not key.endswith("_path"):
+                key = key + "_path"
             if original_values[key] is None:
                 del os.environ[key]
             else:
