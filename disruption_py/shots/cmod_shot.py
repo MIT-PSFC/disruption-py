@@ -41,6 +41,7 @@ MAX_SHOT_TIME = 7.0  # [s]
 CMOD_DISRUPTED_SHOT = 1120814006
 CMOD_YEAR_2000_SHOT_ID_CUTOFF = 1000000000
 
+
 class CModShot(Shot):
     """
     Class for a single CMod shot.
