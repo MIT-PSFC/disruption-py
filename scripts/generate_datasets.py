@@ -94,6 +94,6 @@ if __name__ == '__main__':
     parser.add_argument('--populate_methods', nargs='*', type=str, default=None)
     parser.add_argument('--populate_tags', nargs='*', type=str, default=None) 
     parser.add_argument(
-        '--filter', type=bool, help="Run filter_dataset method on produced dataset. Necessary for generating DPRF datasets", default=False)
+        '--filter', type=bool, help="Run filter_dataset method on produced dataset. Necessary for generating DPRF datasets", default=True)
     args = parser.parse_args()
     main(args)
