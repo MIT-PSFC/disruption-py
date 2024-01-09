@@ -596,7 +596,7 @@ class CModShot(Shot):
             ssibry = self._efit_tree.getNode('\efit_geqdsk:ssibry').data().astype('float64', copy=False)
             efit_data['V_surf'] = np.gradient(ssibry, efit_time)*2*np.pi
         except:
-            print("Unable to get V_surf")
+            print("unable to get V_surf")
             efit_data['V_surf'] = np.full(len(efit_time), np.nan)
             pass 
 
@@ -650,7 +650,8 @@ class CModShot(Shot):
             r'\efit_aeqdsk:time').getData().data().astype('float64', copy=False)
 
         aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
-        area[area <= 0] = 3.14*0.001**2 # make sure area is not 0 or less than 0
+        # make sure area is not 0 or less than 0
+        area[area <= 0] = 3.14*0.001**2 
 
         return CModShot.get_kappa_area(self._times, aminor, area, times)
 
