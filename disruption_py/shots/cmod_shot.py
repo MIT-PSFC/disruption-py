@@ -348,6 +348,20 @@ class CModShot(Shot):
         try:
             z_error = z_error_without_ip/ip  # [m]
         except:
+
+            """For reasons that I'm not aware of, sometimes IP returns a 
+            multidimensional array. This is a hack to deal with that.
+            
+            One example is during shot 1031022004:
+
+            z_error_without_ip size:  (135001,)
+            ip size:  (135001, 3)
+            """
+
+            if len(ip.shape) > 1:
+                ip_mean = np.mean(ip, axis=1)
+                ip = ip_mean
+
             z_error = np.divide(
                 z_error_without_ip,
                 ip,
@@ -368,12 +382,11 @@ class CModShot(Shot):
                                 'linear', False, z_times_v_z[-1])
             
         # print everything for 
-        except:
-            print("z_error: ", z_error)
-            print("z_prog: ", z_prog)
-            print("z_cur: ", z_cur)
-            print("v_z: ", v_z)
-            print("z_times_v_z: ", z_times_v_z)
+        except Exception as e:
+            """This function doesn't take in self, not sure why."""
+
+            print(f"Error getting z parameters")
+            print(f"{traceback.format_exc()}")
 
         return pd.DataFrame({"z_error": z_error, "z_prog": z_prog, "zcur": z_cur, "v_z": v_z, "z_times_v_z": z_times_v_z})
 
@@ -682,19 +695,29 @@ class CModShot(Shot):
                 pass 
 
             #Compute beta_n
-            beta_t = self.efit_tree.getNode('\efit_aeqdsk:betat').data().astype('float64', copy=False)
 
-            # add a small epsilon to 0's for reciprocal
-            beta_t[beta_t == 0] = 1e-10
-            efit_data["beta_p"][efit_data["beta_p"] == 0] = 1e-10
+        # check if efit_data["beta_n"] is either nan or does not exist
+        if "beta_n" not in efit_data.keys() or np.any(np.isnan(efit_data["beta_n"])):
+            try:
+                beta_t = self.efit_tree.getNode('\efit_aeqdsk:betat').data().astype('float64', copy=False)
 
-            efit_data['beta_n'] = np.reciprocal( np.reciprocal(beta_t) +  np.reciprocal(efit_data['beta_p']) )
+                # add a small epsilon to 0's for reciprocal
+                beta_t[beta_t == 0] = 1e-10
+                efit_data["beta_p"][efit_data["beta_p"] == 0] = 1e-10
 
+                efit_data['beta_n'] = np.reciprocal( np.reciprocal(beta_t) +  np.reciprocal(efit_data['beta_p']) )
+            except:
+                print("unable to get beta_n")
+                efit_data['beta_n'] = np.full(len(efit_time), np.nan)
+                pass
+            
         if not np.array_equal(self._times, efit_time):
             for param in efit_data:
                 efit_data[param] = interp1(
                     efit_time, efit_data[param], self._times)
                 
+        """Note: not keeping the original uninterpolated may be a bad coding practice."""
+
         return pd.DataFrame(efit_data)
 
     @staticmethod
@@ -874,19 +897,8 @@ class CModShot(Shot):
         # make sure aminor is not 0 or less than 0
         a_minor[a_minor <= 0] = 0.001
         n_G = ip/(np.pi*a_minor**2)*1e20  # Greenwald density in m ^-3
-        try:
-            g_f = abs(np.divide(n_e, n_G, out=np.full_like(n_e, np.nan), where=(n_G!=0)))
-        except Exception as e:
-            print("Exception in get_densities")
-            print(e)
-            print("n_e", n_e)
-            print("n_e size", n_e.size)
-            print("n_G", n_G)
-            print("n_G size", n_G.size)
-            print("ip", ip)
-            print("ip size", ip.size)
-            print("a_minor", a_minor)
-            print("a_minor size", a_minor.size)
+        g_f = abs(np.divide(n_e, n_G, out=np.full_like(n_e, np.nan), where=(n_G!=0)))
+
         return pd.DataFrame({"n_e": n_e, "dn_dt": dn_dt, "Greenwald_fraction": g_f})
 
     @parameter_cached_method(
@@ -940,22 +952,73 @@ class CModShot(Shot):
             return pd.DataFrame({"I_efc": np.empty(len(self._times))})
         return CModShot.get_efc_current(self._times, iefc, t_iefc)
 
+
+    # @staticmethod
+    # def get_Ts_parameters(times, ts_data, ts_time, ts_z):
+    #     # NOTE: I made a few changes here. (Lucas). 
+    #     te_hwm = np.full(len(ts_time), 0) # TODO: changed np.nan to 0 because otherwise interp1 returned nans. OK? 
+    #     valid_times = np.where(ts_time > 0)[0] # Prior, this returned a tuple which was looped over
+    #     # TODO: Vectorize
+    #     for i in range(len(valid_times)):
+    #         y = ts_data[:, valid_times[i]]
+    #         ok_indices = np.where(y != 0)
+    #         if len(ok_indices) > 2:
+    #             y = y[ok_indices]
+    #             z = ts_z[ok_indices]
+    #             _, _, sigma = gaussian_fit(z, y)
+    #             te_hwm[valid_times[i]] = sigma*1.1774  # 50%
+    #     te_hwm = interp1(ts_time, te_hwm, times)
+    #     print("te_hwm", te_hwm)
+    #     return pd.DataFrame({"Te_width": te_hwm})
+
     @staticmethod
     def get_Ts_parameters(times, ts_data, ts_time, ts_z):
         # NOTE: I made a few changes here. (Lucas). 
-        te_hwm = np.full(len(ts_time), 0) # TODO: changed np.nan to 0 because otherwise interp1 returned nans. OK? 
-        valid_times = np.where(ts_time > 0)[0] # Prior, this returned a tuple which was looped over
-        # TODO: Vectorize
-        for i in range(len(valid_times)):
-            y = ts_data[:, valid_times[i]]
-            ok_indices = np.where(y != 0)
+
+        def process_slice(y, z):
+            ok_indices = np.where(y != 0)[0]
             if len(ok_indices) > 2:
-                y = y[ok_indices]
-                z = ts_z[ok_indices]
-                _, _, sigma = gaussian_fit(z, y)
-                te_hwm[valid_times[i]] = sigma*1.1774  # 50%
+                y_ok = y[ok_indices]
+                z_ok = z[ok_indices]
+
+                """ Lucas: This guassian fit didn't work. I fixed a
+                few bugs: first, I replaced the arg *params 
+                with spelled out params _, _, sigma in gauss().
+                Second, I tested and a few times it cannot fit 
+                even with a maximum number of iterations reached. 
+                
+                e.g. 
+                
+                ok_indices [0 4 5]
+                y_ok [0.26547867 0.30715826 0.08474186]
+                z_ok [-0.0762 -0.1346 -0.1693]
+
+                for shot 1040213005 used to fail.
+
+                I will suggest a different measure of width
+                that may be comparable. 
+                """
+                try:
+                    _, _, sigma = gaussian_fit(z_ok, y_ok)
+                except:
+                    sigma = (max(z_ok) - min(z_ok)) / 2
+                return sigma * 1.174
+            else:
+                return 0 
+            
+        te_hwm = np.full(len(ts_time), np.nan, dtype=float) # TODO: changed np.nan to 0 because otherwise interp1 returned nans. OK? 
+        valid_times = np.where(ts_time > 0)[0] # Prior, this returned a tuple which was looped over
+ 
+        for v in valid_times:
+            y = ts_data[:, v]
+            z = ts_z
+            s = process_slice(y, z)
+            te_hwm[v] = s
         te_hwm = interp1(ts_time, te_hwm, times)
-        print("te_hwm", te_hwm)
+
+        # set any negatives to 0. I don't know why but I got this behavior in shot 1160525023.
+        te_hwm[te_hwm < 0] = 0
+
         return pd.DataFrame({"Te_width": te_hwm})
 
     @parameter_cached_method(columns=["Te_width"], used_trees=["electrons"])
