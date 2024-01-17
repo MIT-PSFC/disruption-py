@@ -43,7 +43,8 @@ class CModHandler:
         if self.database_initializer is None:
             self.database_initializer = CModDatabase.default
 
-    def get_database(self) -> CModDatabase:
+    @property
+    def database(self) -> CModDatabase:
         """Reference to the sql shot logbook for CMod.
         
         Returns
@@ -129,13 +130,13 @@ class CModHandler:
             shot_settings = ShotSettings()
         shot_settings.resolve()
         
-        shot_ids_request_params = ShotIdsRequestParams(self.get_database(), tokamak, self.logger)
+        shot_ids_request_params = ShotIdsRequestParams(self.database, tokamak, self.logger)
         shot_ids_list = shot_ids_request_runner(shot_ids_request, shot_ids_request_params)
         
         if num_processes > 1:
             shot_retriever = MultiprocessingShotRetriever(
                 database_initializer_f=self.database_initializer,
-                database=self.get_database(),
+                database=self.database,
                 num_processes=num_processes,
                 shot_settings=shot_settings,
                 tokamak = tokamak,
@@ -149,10 +150,10 @@ class CModHandler:
             for shot_id in shot_ids_list:
                 shot_data = CModHandler._get_shot_data(
                     shot_id=shot_id, 
-                    sql_database=self.get_database(), 
+                    sql_database=self.database, 
                     shot_settings=shot_settings
                 )
-                shot_settings.output_type_request.output_shot(ResultOutputTypeRequestParams(shot_data, self.get_database(), Tokamak.CMOD, self.logger))
+                shot_settings.output_type_request.output_shot(ResultOutputTypeRequestParams(shot_data, self.database, Tokamak.CMOD, self.logger))
             
             finish_output_type_request_params = FinishOutputTypeRequestParams(tokamak, self.logger)
             shot_settings.output_type_request.stream_output_cleanup(finish_output_type_request_params)
