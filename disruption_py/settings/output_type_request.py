@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import os
 from typing import Any, Dict, List, Type, Union
 from logging import Logger
+from disruption_py.databases.database import ShotDatabase
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 
@@ -16,12 +17,16 @@ class ResultOutputTypeRequestParams:
     ----------
     result : pd.Dataframe
         The dataframe of results for a single shot.
+    database : ShotDatabase
+        Database object to use for getting existing data.
+        A different database connection is used by each thread/process.
     tokamak : Tokemak
         The tokamak for which the data request is made.
     logger : Logger
         Logger object from disruption_py to use for logging.
     """
     result : pd.DataFrame
+    database : ShotDatabase
     tokamak : Tokamak
     logger : Logger
     

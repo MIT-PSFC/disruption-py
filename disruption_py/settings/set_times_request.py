@@ -14,20 +14,25 @@ class SetTimesRequestParams:
 
     Attributes
     ----------
+    shot_id : int
+        The shot id for the timebase being created
     tree_manager : TreeManager
         Tree manager which can be used to retrieve data from MDSplus.
-    database : ShotDatabase
-        Database object to use for getting timebase from sql database.
-        A different database connection is used by each process.
+    existing_data : pd.DataFrame
+        Pre-filled data given to disruption_py that can be retrieved from the database.
+    disruption_time : float
+        The time when the shot disrupted or None if no disruption occured.
     tokamak : Tokemak
         The tokamak for which the set times request is made.
     logger : Logger
         Logger object from disruption_py to use for logging.
     """
+    shot_id : int
     tree_manager : TreeManager
+    existing_data : pd.DataFrame
+    disruption_time : float = None
     tokamak : Tokamak
     logger : Logger
-    disruption_time : float = None
 
 SetTimesRequestType = Union['SetTimesRequest', str, Dict[Tokamak, 'SetTimesRequestType']]
 

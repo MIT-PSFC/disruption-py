@@ -17,7 +17,7 @@ class ExistingDataRequestParams:
         Shot Id for which to get existing data. Defaults to logbook.
     database : ShotDatabase
         Database object to use for getting existing data.
-        A different database connection is used by each process.
+        A different database connection is used by each thread/process.
     tokamak : Tokemak
         The tokamak for which the data request is made.
     logger : Logger

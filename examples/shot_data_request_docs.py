@@ -54,6 +54,7 @@ from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.shots.helpers.method_caching import parameter_cached_method
 
+# --8<-- [start:kappa_area_request_example]
 class KappaAreaRequest(ShotDataRequest):
     
     @staticmethod
@@ -71,4 +72,4 @@ class KappaAreaRequest(ShotDataRequest):
         # make sure area is not 0 or less than 0
         area[area <= 0] = 3.14*0.001**2
         return pd.DataFrame({"kappa_area": params.shot_props.interpolation_method(times, area/(np.pi * aminor**2), params.shot_props.times)})
-# --8<-- [start:kappa_area_request_example]
+# --8<-- [end:kappa_area_request_example]

@@ -1,7 +1,7 @@
 from collections import Counter
 from MDSplus import Tree, TreeNode
 import logging
-from typing import Callable, List, Tuple
+from typing import Callable, Dict, List, Set, Tuple
 import threading
 
 from disruption_py.utils.environment_vars import temporary_env_vars
@@ -30,16 +30,32 @@ class TreeManager:
     
     @property
     def thread_open_trees(self):
+        """
+        Get the dictionary of open trees mapping tree_name to MDSplus tree for the current thread.
+        
+        Note: mutating this dictionary affect the tracking of the open trees by the tree manager and 
+        may lead to memory leaks.
+        """
         current_thread = threading.current_thread()
-        return self.get_open_trees(current_thread)
+        return self._get_open_trees(current_thread)
     
-    def get_open_trees(self, thread):
+    @property
+    def thread_open_tree_names(self):
+        """
+        Returns a view of the open tree names
+        """
+        return set(self.thread_open_trees.keys())
+    
+    def _get_open_trees(self, thread) -> Dict:
         return self._open_trees.setdefault(thread, {})
     
-    def get_closed_trees(self, thread):
+    def _get_closed_trees(self, thread) -> Set:
         return self._closed_trees.setdefault(thread, set())
     
     def open_tree(self, tree_name: str) -> Tree:
+        """
+        Open tree with name tree_name from MDSplus, returning the opened tree.
+        """
         self.num_times_opened[tree_name] = self.num_times_opened.get(tree_name, 0) + 1
         
         if tree_name in self.thread_open_trees:
@@ -59,48 +75,75 @@ class TreeManager:
         
         self.all_opened_tree_names.add(tree_name)
         return self.thread_open_trees[tree_name]
-
-    def get_open_tree_names(self):
-        '''
-        Get a set of all open_tree names including the nicknames of open tree names
-        '''
-        open_tree_names = set(self.thread_open_trees.keys())
-        for nickname, tree_name in self._nicknames.items():
-            if tree_name in open_tree_names:
-                open_tree_names.add(nickname)
-        return open_tree_names
     
-    def cleanup_not_needed(self, can_tree_be_closed : Callable):
-        '''
-        Close trees that are not expected to be used again based on method_optimizer
-        '''
+    def cleanup_not_needed(self, can_tree_be_closed : Callable[[str], bool]):
+        """Close trees that are not expected to be used again based on method_optimizer
+
+        Parameters
+        ----------
+        can_tree_be_closed : Callable[[str], bool]
+            Method that returns whether the tree will be needed later based on the tree name. Closed if not needed.
+        """
         for thread in list(self._open_trees.keys()):
-            for tree_name in list(self.get_open_trees(thread).keys()):
+            for tree_name in list(self._get_open_trees(thread).keys()):
                 if can_tree_be_closed(tree_name):
                     self.close_tree(tree_name)
     
     def cleanup(self):
+        """
+        Close all open trees for all threads.
+        """
         self.logger.info(f"Node usage counts: {self.counter}")
         for thread in list(self._open_trees.keys()):
-            for tree_name in list(self.get_open_trees(thread).keys()):
+            for tree_name in list(self._get_open_trees(thread).keys()):
                 self.close_tree(tree_name, thread)
-            self._open_trees.pop(thread)
+            self._open_trees.pop(thread, None)
             
     def close_tree(self, tree_name: str, thread=None):
-        tree_to_close = self.mark_tree_closed(tree_name, thread)
+        """
+        Close tree with tree_name for thread.
+        """
+        tree_to_close = self._mark_tree_closed(tree_name, thread)
         if tree_to_close is not None:
             tree_to_close.close()
             
-    def mark_tree_closed(self, tree_name: str, thread=None):
+    def _mark_tree_closed(self, tree_name: str, thread=None):
+        """
+        Remove tree from open trees dictionary and add to closed trees set for thread.
+        """
         thread = thread or threading.current_thread()
-        if tree_name in self.get_open_trees(thread):
-            tree_to_close = self.get_open_trees(thread).pop(tree_name)
-            self.get_closed_trees(thread).add(tree_name)
+        if tree_name in self._get_open_trees(thread):
+            tree_to_close = self._get_open_trees(thread).pop(tree_name)
+            self._get_closed_trees(thread).add(tree_name)
             return tree_to_close
         return None
     
     # nicknames
-    def nickname(self, nickname: str, tree_names_to_try: List[str], env_modifications_to_try: List[EnvModifications]) -> bool:
+    def nickname(self, nickname: str, tree_names_to_try: List[str], env_modifications_to_try: List[EnvModifications] = None) -> bool:
+        """Lazily create nickname for tree.
+        
+        Upon using the nickname, tests provided tree names and environments until one works and sets the nickname to be for that
+        tree name with that environment.
+
+        Parameters
+        ----------
+        nickname : str
+            The nickname that you would like to set.
+        tree_names_to_try : List[str]
+            _description_
+        env_modifications_to_try : List[EnvModifications]
+            _description_
+
+        Returns
+        -------
+        bool
+            _description_
+
+        Raises
+        ------
+        Exception
+            If none of the provided tree names work with any of the provided environments
+        """
         if env_modifications_to_try is None or env_modifications_to_try == []:
             env_modifications_to_try = [()]
             
@@ -181,6 +224,6 @@ class TreeWrapper(Tree):
 
     def close(self, *args, **kwargs):
         if self.tree is not None:
-            self._tree_manager.mark_tree_closed(self.tree)
+            self._tree_manager._mark_tree_closed(self.tree)
             
     

@@ -52,7 +52,7 @@ def get_mdsplus_data(cmod_handler: CModHandler, shot_id):
     return shot_data[0]
 
 def get_sql_data(cmod_handler: CModHandler, shot_id, times):
-    sql_data =cmod_handler.database.get_shot_data([shot_id])
+    sql_data =cmod_handler.get_database().get_shot_data([shot_id])
     sql_data["sql_time"] = sql_data["time"]
     return pd.merge_asof(times.to_frame(), sql_data, on='time', direction='nearest', tolerance=TIME_CONST)
 
