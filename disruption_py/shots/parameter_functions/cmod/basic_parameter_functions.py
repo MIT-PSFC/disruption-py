@@ -20,6 +20,19 @@ except ImportError:
 # TODO: Deal with scary missing TRIPpy dependency (please don't break until I fix you)
 import sys
 import logging
+
+
+"""When you are ready Greg you're welcome to move this EPSILON into a contants file.
+
+I.e. 
+
+import constants
+constants.EPSILON
+
+"""
+
+EPSILON = 1e-10
+
 try:
     sys.path.append('/home/sciortino/usr/python3modules/eqtools3')
     sys.path.append('/home/sciortino/usr/python3modules/profiletools3')
@@ -125,9 +138,30 @@ class CModEfitRequests(ShotDataRequest):
                 efit_data['v_loop_efit'] = np.full(len(efit_time), np.nan)
                 pass 
 
+        """
+        Note: Lucas is removing these lines and putting the following in because many 
+        EFIT shots >2000 don't pull beta_n either. An example is 1120816019. 
+        
             #Compute beta_n
             beta_t = efit_tree.getNode('\efit_aeqdsk:betat').data().astype('float64', copy=False)
             efit_data['beta_n'] = np.reciprocal( np.reciprocal(beta_t) +  np.reciprocal(efit_data['beta_p']) )
+        
+        Also, I'm adding a small epsilon for the reciprocal 
+        """
+
+        # check if efit_data["beta_n"] is either nan or does not exist
+        if "beta_n" not in efit_data.keys() or np.any(np.isnan(efit_data["beta_n"])):
+            try:
+                beta_t = efit_tree.getNode('\efit_aeqdsk:betat').data().astype('float64', copy=False)
+
+                # add a small epsilon to 0's for reciprocal
+                beta_t[beta_t == 0] = EPSILON
+                efit_data["beta_p"][efit_data["beta_p"] == 0] = EPSILON
+                efit_data['beta_n'] = np.reciprocal( np.reciprocal(beta_t) +  np.reciprocal(efit_data['beta_p']) )
+            except:
+                print("unable to get beta_n")
+                efit_data['beta_n'] = np.full(len(efit_time), np.nan)
+                pass
 
         if not np.array_equal(params.shot_props.times, efit_time):
             for param in efit_data:
@@ -317,18 +351,52 @@ class BasicCmodRequests(ShotDataRequest):
             - matlab/cmod_matlab/matlab-core/get_Z_parameters.m
 
         """
-        z_error = z_error_without_ip/ip  # [m]
-        z_prog_dpcs = interp1(pcstime, z_prog, dpcstime)
-        z_cur = z_prog_dpcs + z_error  # [m]
-        v_z = np.gradient(z_cur, dpcstime)  # m/s
-        z_times_v_z = z_cur * v_z  # m^2/s
-        z_prog = interp1(pcstime, z_prog, times, 'linear', False, z_prog[-1])
-        z_error = -interp1(dpcstime, z_error, times,
-                           'linear', False, z_error[-1])
-        z_cur = -interp1(dpcstime, z_cur, times, 'linear', False, z_cur[-1])
-        v_z = interp1(dpcstime, v_z, times, 'linear', False, v_z[-1])
-        z_times_v_z = interp1(dpcstime, z_times_v_z, times,
-                              'linear', False, z_times_v_z[-1])
+    
+        try:
+            z_error = z_error_without_ip/ip  # [m]
+        except:
+
+            """Note -- Lucas: 
+            
+            For reasons that I'm not aware of, and honestly don't want 
+            to become aware of, sometimes the function that calls this
+            hands it ip as a multidimensional array. This is a way to deal with that.
+            
+            One example is during shot 1031022004:
+
+            z_error_without_ip size:  (135001,)
+            ip size:  (135001, 3)
+            """
+
+            if len(ip.shape) > 1:
+                ip_mean = np.mean(ip, axis=1)
+                ip = ip_mean
+
+            z_error = np.divide(
+                z_error_without_ip,
+                ip,
+                out=np.full_like(z_error_without_ip, np.nan),
+                where=(ip != 0))
+        
+        try:
+            z_prog_dpcs = interp1(pcstime, z_prog, dpcstime)
+            z_cur = z_prog_dpcs + z_error  # [m]
+            v_z = np.gradient(z_cur, dpcstime)  # m/s
+            z_times_v_z = z_cur * v_z  # m^2/s
+            z_prog = interp1(pcstime, z_prog, times, 'linear', False, z_prog[-1])
+            z_error = -interp1(dpcstime, z_error, times,
+                            'linear', False, z_error[-1])
+            z_cur = -interp1(dpcstime, z_cur, times, 'linear', False, z_cur[-1])
+            v_z = interp1(dpcstime, v_z, times, 'linear', False, v_z[-1])
+            z_times_v_z = interp1(dpcstime, z_times_v_z, times,
+                                'linear', False, z_times_v_z[-1])
+            
+        # print everything for 
+        except Exception as e:
+            """This function doesn't take in self, not sure why."""
+
+            print(f"Error getting z parameters")
+            print(f"{traceback.format_exc()}")
         return pd.DataFrame({"z_error": z_error, "z_prog": z_prog, "zcur": z_cur, "v_z": v_z, "z_times_v_z": z_times_v_z})
 
     @staticmethod
@@ -360,8 +428,20 @@ class BasicCmodRequests(ShotDataRequest):
                             z_prog_temp = interp1(
                                 sigtime, signal, pcstime, 'linear', False, fill_value=signal[-1])
                             z_wire_index = wire_index
+
+                            """
+                            NOTE: Lucas: 
+                            
+                            Many times when you call np.where it 
+                            is returning a tuple of (np.array(indices), ), 
+                            so I added the [0] to get the array only. Somtimes the tuple
+                            is fine, like when you are using it to index an array, but
+                            other times it is not, like when you are using it to loop over a 
+                            for-loop or query whether the np.where is returning a list of indices 
+                            that is more than 3."""
+
                             segment_indices = [
-                                np.where((pcstime >= start) & (pcstime <= end))]
+                                np.where((pcstime >= start) & (pcstime <= end))[0]] 
                             z_prog[segment_indices] = z_prog_temp[segment_indices]
                             break
                     except mdsExceptions.MdsException as e:
@@ -375,11 +455,41 @@ class BasicCmodRequests(ShotDataRequest):
             raise ValueError("No ZCUR wire was found")
         # Read in A_OUT, which is a 16xN matrix of the errors for *all* 16 wires for
         # *all* of the segments. Note that DPCS time is usually taken at 10kHz.
+        
         hybrid_tree = params.shot_props.tree_manager.open_tree(tree_name='hybrid')
-        wire_errors_record = hybrid_tree.getNode(
-            r'\top.hardware.dpcs.signals:a_out').getData()
-        wire_errors, dpcstime = wire_errors_record.data(
-        ), np.array(wire_errors_record.dim_of(1))  # s
+        """
+        Note: Lucas:
+        
+        This node doesn't exist in all trees. It's not in shot 1020807022, for example. 
+        """
+        try:
+            wire_errors_record = hybrid_tree.getNode(
+                r'\top.hardware.dpcs.signals:a_out').getData()
+            wire_errors, dpcstime = wire_errors_record.data(), np.array(wire_errors_record.dim_of(1))  # s
+            z_error_without_factor_and_ip = wire_errors[:, z_wire_index]
+            params.logger.debug(f"[Shot {params.shot_prop.shot_id}]: Got wire errors from hybrid tree w first path")
+        except Exception as e:
+            params.logger.warning(f"[Shot {params.shot_prop.shot_id}]: Unable to get wire errors from hybrid tree w first path")
+            params.logger.warning(f"[Shot {params.shot_prop.shot_id}]: Trying second path")
+            try:
+                
+                # NOTE: Lucas Spangher: I added this all to help index the wire errors 
+                # from hybrid trees earlier than a certain point in time. 
+                # Note that now wire_errors is not a matrix but a 1D array that is indexed
+                # by the wire_index. Also, note that we don't have to pick wire_index out 
+                # of wire_errors to get z_error_without_factor_and_ip. 
+
+                print("z_wire_index: ", z_wire_index)
+                wire_errors_record = hybrid_tree.getNode(
+                    fr'\top.signals.a_out:output_{z_wire_index:02d}').getData()
+                wire_errors = wire_errors_record.data()
+                dpcstime = np.array(wire_errors_record.dim_of(0))  # s 
+                z_error_without_factor_and_ip = wire_errors
+                params.logger.debug(f"[Shot {params.shot_prop.shot_id}]: Got wire errors from hybrid tree w second path")
+            except Exception as e:
+                params.logger.warning(f"[Shot {params.shot_prop.shot_id}]: Unable to get wire errors from hybrid tree w second path")
+                params.logger.debug(f"[Shot {params.shot_prop.shot_id}]: {traceback.format_exc()}")
+      
         # The value of Z_error we read is not in the units we want. It must be *divided* by a factor AND *divided* by the plasma current.
         z_error_without_factor_and_ip = wire_errors[:, z_wire_index]
         z_error_without_ip = np.empty(z_error_without_factor_and_ip.shape)
@@ -468,7 +578,19 @@ class BasicCmodRequests(ShotDataRequest):
     def _get_ohmic_parameters(params : ShotDataRequestParams):
         # <-- this line is the culprit for breaking when analysis tree is set to EFIT18
         efit_tree = get_efit_tree(params=params)
-        v_loop_record = efit_tree.getNode(r"\top.mflux:v0").getData()
+        
+        """Different efit tree models have different paths to mflux or vloop.
+        
+        P.S. since the changes were made, I'm not sure how you would retrieve the
+        name of the EFIT tree, hence I'm leaving self.efit_tree_name, 
+        but I'm sure it's easy. 
+        """
+        
+        if self.efit_tree_name == "analysis":
+            v_loop_record = efit_tree.getNode(r"\top.mflux:v0").getData()
+        else:
+            v_loop_record = efit_tree.getNode(r"\top.data:vloop").getData()
+            
         v_loop = v_loop_record.data().astype('float64', copy=False)
         v_loop_time = v_loop_record.dim_of(0)
         if len(v_loop_time) <= 1:
@@ -714,7 +836,7 @@ class BasicCmodRequests(ShotDataRequest):
         # make sure aminor is not 0 or less than 0
         a_minor[a_minor <= 0] = 0.001
         n_G = ip/(np.pi*a_minor**2)*1e20  # Greenwald density in m ^-3
-        g_f = abs(n_e/n_G)
+        g_f = abs(np.divide(n_e, n_G, out=np.full_like(n_e, np.nan), where=(n_G!=0)))
         return pd.DataFrame({"n_e": n_e, "dn_dt": dn_dt, "Greenwald_fraction": g_f})
 
     @staticmethod
@@ -769,26 +891,60 @@ class BasicCmodRequests(ShotDataRequest):
     # TODO: Split
     @staticmethod
     def get_Ts_parameters(times, ts_data, ts_time, ts_z):
-        te_hwm = np.full(len(ts_time), np.nan)
-        valid_times = np.where(ts_time > 0)
-        # TODO: Vectorize
-        for i in range(len(valid_times)):
-            y = ts_data[:, valid_times[i]]
-            ok_indices = np.where(y != 0)
+        # NOTE: I made a few changes here. (Lucas). 
+
+        def process_slice(y, z):
+            ok_indices = np.where(y != 0)[0]
             if len(ok_indices) > 2:
-                y = y[ok_indices]
-                z = ts_z[ok_indices]
-                _, _, sigma = gaussian_fit(z, y)
-                te_hwm[valid_times[i]] = sigma*1.1774  # 50%
+                y_ok = y[ok_indices]
+                z_ok = z[ok_indices]
+
+                """ Lucas: This guassian fit didn't work. I fixed a
+                few bugs: first, I replaced the arg *params 
+                with spelled out params _, _, sigma in gauss().
+                Second, I tested and a few times it cannot fit 
+                even with a maximum number of iterations reached. 
+                
+                e.g. 
+                
+                ok_indices [0 4 5]
+                y_ok [0.26547867 0.30715826 0.08474186]
+                z_ok [-0.0762 -0.1346 -0.1693]
+
+                for shot 1040213005 used to fail.
+
+                So, in those rare cases, I will suggest in the except
+                a different measure of width that may be comparable. 
+                """
+                try:
+                    _, _, sigma = gaussian_fit(z_ok, y_ok)
+                except:
+                    sigma = (max(z_ok) - min(z_ok)) / 2
+                return sigma * 1.174
+            else:
+                return 0 
+            
+        te_hwm = np.full(len(ts_time), np.nan, dtype=float) # TODO: changed np.nan to 0 because otherwise interp1 returned nans. OK? 
+        valid_times = np.where(ts_time > 0)[0] # Prior, this returned a tuple which was looped over
+ 
+        for v in valid_times:
+            y = ts_data[:, v]
+            z = ts_z
+            s = process_slice(y, z)
+            te_hwm[v] = s
         te_hwm = interp1(ts_time, te_hwm, times)
+
+        # set any negatives to 0. I don't know why but I got this behavior in shot 1160525023.
+        te_hwm[te_hwm < 0] = 0
+
         return pd.DataFrame({"Te_width": te_hwm})
 
     @staticmethod
     @parameter_cached_method(columns=["Te_width"], used_trees=["electrons"], tokamak=Tokamak.CMOD)
     def _get_Ts_parameters(params : ShotDataRequestParams):
         # TODO: Guassian vs parabolic fit for te profile
-        te_hwm = np.empty((len(params.shot_props.times)))
-        electron_tree = params.shot_props.tree_manager.open_tree(tree_name='electrons')
+        te_hwm = np.empty((len(self._times)))
+        electron_tree = self._tree_manager.open_tree(tree_name='electrons')
 
         # Read in Thomson core temperature data, which is a 2-D array, with the
         # dependent dimensions being time and z (vertical coordinate)
@@ -800,10 +956,21 @@ class BasicCmodRequests(ShotDataRequest):
                 node_path + ":te_rz").getData().dim_of(0)
             ts_z = electron_tree.getNode(
                 node_path + ":z_sorted").getData().data()
-        except mdsExceptions.MdsException as e:
-            params.logger.debug(f"[Shot {params.shot_props.shot_id}] {traceback.format_exc()}")
-            te_hwm.fill(np.nan)
-            return pd.DataFrame({"Te_width": te_hwm})
+        except Exception as e:
+            params.logger.warning(f"[Shot {params.shot_props.shot_id}] Failed to get TS data with 2000+ method")
+            try:
+                params.logger.warning(f"[Shot {params.shot_props.shot_id}] Trying second 2000+ method")
+                ts_data = electron_tree.getNode(
+                    r"\thom_profile:te_rz_t").getData().data()
+                ts_time = electron_tree.getNode(
+                    r"\thom_profile:te_rz_t").getData().dim_of(0)
+                ts_z = electron_tree.getNode(
+                    r"\thom_profile:z_sorted").getData().data()
+            except Exception as e:
+                params.logger.warning(f"[Shot {params.shot_props.shot_id}] Failed to get TS data with second 2000+ method")
+                params.logger.debug(f"[Shot {params.shot_props.shot_id}] {traceback.format_exc()}")                
+                te_hwm.fill(np.nan)
+                return pd.DataFrame({"Te_width": te_hwm})
         return BasicCmodRequests.get_Ts_parameters(params.shot_props.times, ts_data, ts_time, ts_z)
 
     # TODO: Finish
@@ -838,16 +1005,38 @@ class BasicCmodRequests(ShotDataRequest):
             node_ext = '.yag_new.results.profiles'
             # nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = self.compare_ts_tci(
             #     electron_tree, nlnum=4)
-            TS_te = electron_tree.getNode(
-                f"{node_ext}:te_rz").getData().data()*1000*11600
-            tets_edge = electron_tree.getNode(r'\ts_te').getData().data()*11600
-            TS_te = np.concatenate((TS_te, tets_edge))
-            TS_time = electron_tree.getNode(
-                f"{node_ext}:te_rz").getData().dim_of(0)
-            TS_z = electron_tree.getNode(
-                f"{node_ext}:z_sorted").getData().data()
-            zts_edge = electron_tree.getNode(f"\fiber_z").getData().data()
-            TS_z = np.concatenate((TS_z, zts_edge))
+            try: 
+                TS_te = electron_tree.getNode(
+                    f"{node_ext}:te_rz").getData().data()*1000*11600
+                tets_edge = electron_tree.getNode(r'\ts_te').getData().data()*11600
+                TS_te = np.concatenate((TS_te, tets_edge))
+                TS_time = electron_tree.getNode(
+                    f"{node_ext}:te_rz").getData().dim_of(0)
+                TS_z = electron_tree.getNode(
+                    f"{node_ext}:z_sorted").getData().data()
+                zts_edge = electron_tree.getNode(r"\fiber_z").getData().data()
+                TS_z = np.concatenate((TS_z, zts_edge))
+            except Exception as e:
+                # params.logger.debug(f"[Shot {params.shot_props.shot_id}] {traceback.format_exc()}")
+                params.logger.warning(f"[Shot {params.shot_props.shot_id}] Failed to get TS data with 2000+ method")
+                
+                # if the above didn't work, then there was issues with the names. 
+                try:
+                    params.logger.warning(f"[Shot {params.shot_props.shot_id}] Trying second 2000+ method")
+                    TS_te = electron_tree.getNode(
+                        r"\thom_profile:te_rz_t").getData().data()*1000*11600
+                    tets_edge = electron_tree.getNode(r'\ts_te:at_95').getData().data()*11600
+                    TS_te = np.concatenate((TS_te, tets_edge))
+                    TS_time = electron_tree.getNode(
+                        r"\thom_profile:te_rz_t").getData().dim_of(0)
+                    TS_z = electron_tree.getNode(
+                        r"\thom_profile:z_sorted").getData().data()
+                    zts_edge = electron_tree.getNode(r"\top.yag_edgets.data:fiber_z").getData().data()
+                    TS_z = np.concatenate((TS_z, zts_edge))
+                except Exception as e:
+                    params.logger.debug(f"[Shot {params.shot_props.shot_id}] {traceback.format_exc()}")
+                    params.logger.warning(f"[Shot {params.shot_props.shot_id}] Failed to get TS data with second 2000+ method")
+
             if len(zts_edge) != tets_edge.shape[1]:
                 return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
             Te_PF = Te_PF[:len(TS_time)]
@@ -887,22 +1076,25 @@ class BasicCmodRequests(ShotDataRequest):
         prad_peaking = np.full(len(params.shot_props.times), np.nan)
         cmod_tree = params.shot_props.tree_manager.open_tree(tree_name='cmod')
         try:
-            r0 = 0.01* cmod_tree.getNode(r'\efit_aeqdsk:rmagx').getData().data()
-            z0 = 0.01 * cmod_tree.getNode(r'\efit_aeqdsk:zmagx').getData().data()
-            aminor = cmod_tree.getNode(r'\efit_aeqdsk:aminor').getData().data()
-            efit_time = cmod_tree.getNode(r'\efit_aeqdsk:aminor').getData().dim_of(0)
+            """NOTE: Lucas: cmod tree doesn't have these EFIT variables."""
+            efit_tree = get_efit_tree(params=params)
+            r0 = 0.01* efit_tree.getNode(r'\efit_aeqdsk:rmagx').getData().data()
+            z0 = 0.01 * efit_tree.getNode(r'\efit_aeqdsk:zmagx').getData().data()
+            aminor = efit_tree.getNode(r'\efit_aeqdsk:aminor').getData().data()
+            efit_time = efit_tree.getNode(r'\efit_aeqdsk:aminor').getData().dim_of(0)
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_props.shot_id}]: Failed to get efit data")
             return pd.DataFrame({"prad_peaking": prad_peaking})
         spec_tree = params.shot_props.tree_manager.open_tree(tree_name='spectroscopy')
         got_axa = False 
         try: 
-            axa = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.AXA:BRIGHT").getData()
+             ## TODO: problem, in shots < 2000, diode isn't a branch in bolometer 
+            axa = spec_tree.getNode(r"\TOP.BOLOMETER.RESULTS.DIODE.AXA:BRIGHT").getData()
             t_axa = axa.dim_of(1).data()
             r_axa = axa.dim_of(0).data()
             bright_axa = axa.data()
-            z_axa = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXA:Z_O").getData().data()
-            good_axa = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXA:GOOD").getData().data()
+            z_axa = spec_tree.getNode(r"\TOP.BOLOMETER.DIODE_CALIB.AXA:Z_O").getData().data()
+            good_axa = spec_tree.getNode(r"\TOP.BOLOMETER.DIODE_CALIB.AXA:GOOD").getData().data()
             got_axa = True 
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_props.shot_id}]: Failed to get AXA data")
@@ -1268,6 +1460,18 @@ class BasicCmodRequests(ShotDataRequest):
             ts_time = electron_tree.getNode(
                 node_path + ":te_rz").getData().dim_of(0)
         except:
+            params.logger.warning(
+                f"[Shot {params.shot_props.shot_id}]: Failed to get TS time with first path")
+            
+            # Trying a different path for earlier shots.
+            try:
+                node_path = r"\top.yag.results.global.profile"
+                ts_time = electron_tree.getNode(
+                    node_path + ":ne_rz").getData().dim_of(0)
+                params.logger.debug(f"[Shot {params.shot_props.shot_id}]: Got TS time")
+            except:
+                params.logger.warning(
+                    f"[Shot {params.shot_props.shot_id}]: Failed to get TS time with second path")
             return pd.DataFrame({"Te_edge": np.full(len(params.shot_props.times), np.nan), "ne_edge": np.full(len(params.shot_props.times), np.nan)})
 
         t_min = np.max([0.1, np.min(ts_time)])
@@ -1516,6 +1720,6 @@ class ThomsonDensityMeasure:
                 try:
                     psi[:, i] = sp.interpolate.griddata(points, values, (r, z), method='cubic')
                 except:
-                    self.logger.warning(f'Interpolation failed for efit_rz2psi time {time}')
+                    params.logger.warning(f'Interpolation failed for efit_rz2psi time {time}')
 
         return psi

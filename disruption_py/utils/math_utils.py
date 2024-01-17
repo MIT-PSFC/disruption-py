@@ -245,7 +245,7 @@ def gaussian_fit(x, y):
     return coeffs
 
 
-def gauss(x, *params):
+def gauss(x, z, mu, sigma):
     """ Gaussian function.
 
     Parameters
@@ -260,7 +260,6 @@ def gauss(x, *params):
     _ : array
         The Gaussian function evaluated at the given x-coordinates.
     """
-    z, mu, sigma = params
     return z*np.exp(-(x-mu)**2/(2.0*sigma**2))
 
 # Alessandro Pau (JET & AUG) has given Cristina a robust routine that
