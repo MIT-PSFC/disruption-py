@@ -111,5 +111,6 @@ class MultiprocessingShotRetriever:
         self.result_thread.join()
 
         finish_output_type_request_params = FinishOutputTypeRequestParams(self.tokamak, self.logger)
+        result = self.shot_settings.output_type_request.get_results(finish_output_type_request_params)
         self.shot_settings.output_type_request.stream_output_cleanup(finish_output_type_request_params)
-        return self.shot_settings.output_type_request.get_results(finish_output_type_request_params)
+        return result

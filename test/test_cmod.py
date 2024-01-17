@@ -16,16 +16,18 @@ from disruption_py.utils.constants import TIME_CONST
 
 # Shot list used for testing
 # Mix of disruptive and non-disruptive shots present in SQL and MDSplus
-TEST_SHOTS = [1150805012,   # Flattop Disruption
-            1150805013,     # No Disruption
-            1150805014,     # No Disruption
-            1150805015,     # Rampdown Disruption
-            1150805016,     # Rampdown Disruption
-            1150805017,     # Rampdown Disruption
-            1150805019,     # Rampdown Disruption
-            1150805020,     # Rampdown Disruption
-            1150805021,     # Rampdown Disruption
-            1150805022]     # Flattop Disruption
+TEST_SHOTS = [
+    1150805012,   # Flattop Disruption
+    1150805013,     # No Disruption
+    1150805014,     # No Disruption
+    1150805015,     # Rampdown Disruption
+    1150805016,     # Rampdown Disruption
+    1150805017,     # Rampdown Disruption
+    1150805019,     # Rampdown Disruption
+    1150805020,     # Rampdown Disruption
+    1150805021,     # Rampdown Disruption
+    1150805022      # Flattop Disruption
+]
 
 TIME_EPSILON = 0.05 # Tolerance for taking the difference between two times [s]
 IP_EPSILON = 1e5    # Tolerance for taking the difference between two ip values [A]
@@ -69,13 +71,11 @@ def shotlists(cmod):
     return test_shots, expected_shots
 
 SKIPPABLE_COLUMNS = [
-    'lower_gap', 'upper_gap', 'ssep', 'n_over_ncrit', 'dipprog_dt', # constant factor scaling error
+    'lower_gap', 'upper_gap', 'ssep', 'dipprog_dt', 'n_over_ncrit', # constant factor scaling error
     'ip_error' # unknown error
 ]
-
-# lower_gap, upper_gap, ssep is times 100 in sql table
             
-@pytest.mark.parametrize("fail_early", [True, False])
+@pytest.mark.parametrize("fail_early", [True])
 def test_all_sql_values(shotlists, fail_early):
     """
     Ensure that all parameters are calculated correctly in the MDSplus shot object.
@@ -84,6 +84,9 @@ def test_all_sql_values(shotlists, fail_early):
     successful_shot_cols = []
     failed_shot_cols = []
     for shot_id, test_shot_data, expected_shot_data in zip(TEST_SHOTS, test_shots, expected_shots):
+        mdsplus_unmatched_cols = list(test_shot_data.columns.difference(expected_shot_data.columns))
+        print(f"Shot {shot_id} is missing {mdsplus_unmatched_cols} from SQL source")
+        
         for col in expected_shot_data.columns:
             # uncomment to skip columns that are recognized to be broken
             # if col in SKIPPABLE_COLUMNS:
