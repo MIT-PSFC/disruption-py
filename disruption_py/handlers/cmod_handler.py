@@ -151,7 +151,7 @@ class CModHandler:
                 shot_settings.output_type_request.output_shot(ResultOutputTypeRequestParams(shot_data, Tokamak.CMOD, self.logger))
             
             finish_output_type_request_params = FinishOutputTypeRequestParams(tokamak, self.logger)
-            shot_settings.output_type_request.stream_output_cleanup(finish_output_type_request_params)
             results = shot_settings.output_type_request.get_results(finish_output_type_request_params)
+            shot_settings.output_type_request.stream_output_cleanup(finish_output_type_request_params)
         return results
      

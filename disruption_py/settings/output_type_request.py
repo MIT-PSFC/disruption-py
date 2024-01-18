@@ -161,7 +161,7 @@ class OutputTypeRequestDict(OutputTypeRequest):
     def get_results(self, params: FinishOutputTypeRequestParams):
         chosen_request = self.output_type_request_dict.get(params.tokamak, None)
         if chosen_request is not None:
-            return chosen_request.stream_output_cleanup(params.tokamak, params.logger)
+            return chosen_request.get_results(params.tokamak, params.logger)
         else:
             params.logger.warning(f'No output type request for tokamak {params.tokamak}')
             return None    
@@ -178,6 +178,9 @@ class ListOutputRequest(OutputTypeRequest):
     
     def get_results(self, params: FinishOutputTypeRequestParams):
         return self.results
+    
+    def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
+        self.results = []
     
     
 class HDF5OutputRequest(OutputTypeRequest):
