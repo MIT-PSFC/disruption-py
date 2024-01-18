@@ -75,7 +75,7 @@ SKIPPABLE_COLUMNS = [
     'ip_error' # unknown error
 ]
             
-@pytest.mark.parametrize("fail_early", [True])
+@pytest.mark.parametrize("fail_early", [True, False])
 def test_all_sql_values(shotlists, fail_early):
     """
     Ensure that all parameters are calculated correctly in the MDSplus shot object.
