@@ -40,6 +40,7 @@ import disruption_py.data
 MAX_SHOT_TIME = 7.0  # [s]
 CMOD_DISRUPTED_SHOT = 1120814006
 
+
 class CModShot(Shot):
     """
     Class for a single CMod shot.
@@ -72,7 +73,6 @@ class CModShot(Shot):
         super().__init__(shot_id, data)
         self._times = times
         self.efit_tree_name = efit_tree_name
-        #Use pre-2000 efit column names
         self._open_efit_tree()
         self.disruption_time = disruption_time
         self.disrupted = self.disruption_time is not None
@@ -562,7 +562,7 @@ class CModShot(Shot):
                         temp_denom = (a_efit*BT_efit)                
                         IN_efit = np.divide(ip_efit, temp_denom, out=np.full_like(ip_efit, np.nan), where=(temp_denom!=0))
                         efit_data['beta_n'] = np.divide(beta_t, IN_efit, np.full_like(beta_t), where=(IN_efit!=0))
-                        continue #Skip over error messsage if computing beta_n was successful
+                        continue #Skip over error message if beta_n was successfully computed
                     except:
                         pass
                 self.logger.warning(f"[Shot {self._shot_id}]: Unable to get {param} from EFIT tree")
@@ -790,7 +790,6 @@ class CModShot(Shot):
             a_minor_record = a_tree.getNode(r'\efit_aeqdsk:aout').getData()/100
             t_a = a_minor_record.dim_of(0).data()
             a_minor = a_minor_record.data().astype('float64', copy=False)
-
         except Exception as e:
             self.logger.debug(f"[Shot {self._shot_id}] {e}")
             self.logger.warning(f"[Shot {self._shot_id}] No density data")
