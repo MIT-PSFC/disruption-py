@@ -118,31 +118,27 @@ class TreeManager:
             return tree_to_close
         return None
     
-    # nicknames
-    def nickname(self, nickname: str, tree_names_to_try: List[str], env_modifications_to_try: List[EnvModifications] = None) -> bool:
+    def nickname(self, nickname: str, tree_names_to_try: List[str], env_modifications_to_try: List[EnvModifications] = None):
         """Lazily create nickname for tree.
         
+        Nicknames allow for the use of trees without knowing what the exact name of the tree will be for the given shot. 
         Upon using the nickname, tests provided tree names and environments until one works and sets the nickname to be for that
         tree name with that environment.
-
+        For each environment in env_modifications_to_try tries to open every tree in tree_names_to_try.
+        
         Parameters
         ----------
         nickname : str
             The nickname that you would like to set.
         tree_names_to_try : List[str]
-            _description_
+            The list of tree names to test.
         env_modifications_to_try : List[EnvModifications]
-            _description_
-
-        Returns
-        -------
-        bool
-            _description_
+            The list of environment modifications to test. Default is a single environment with no modifications.
 
         Raises
         ------
         Exception
-            If none of the provided tree names work with any of the provided environments
+            If none of the provided tree names can be opened for any of the provided environments raises exception.
         """
         if env_modifications_to_try is None or env_modifications_to_try == []:
             env_modifications_to_try = [()]
@@ -153,21 +149,43 @@ class TreeManager:
                 with temporary_env_vars(env_modification):
                     for tree_name in tree_names_to_try:
                         try:
-                            return self._try_open_and_nickname(nickname=nickname, tree_name=tree_name, environment_modification=env_modification)
+                            return self._try_open_and_nickname(nickname=nickname, tree_name=tree_name, environment_modifications=env_modification)
                         except Exception as e:
                             self.logger.warning(
                                 f"[Shot {self._shot_id}]:Failed to open tree {tree_name} for nickname {nickname}, with error {e}")
             
             raise Exception(f"Failed to find a valid tree name for nickname {nickname}")
 
-        return self._create_lazy_nickname(nickname=nickname, nickname_func=lazy_nickname_func)
+        self._lazy_nickname_functions[nickname] = lazy_nickname_func
+        return
         
             
-    def _try_open_and_nickname(self, nickname: str, tree_name: str, environment_modification : EnvModifications = None) -> Tree:
-        
+    def _try_open_and_nickname(self, nickname: str, tree_name: str, environment_modifications : EnvModifications = None) -> Tree:
+        """_try_open_and_nickname tries to open the tree with name tree_name, setting the nickname if successful.
+
+        Parameters
+        ----------
+        nickname : str
+            The nickname that should be set
+        tree_name : str
+            The tree name that disruption_py will attempt to be opened.
+        environment_modifications : EnvModifications
+            The environment modifications that will be used.
+
+        Returns
+        -------
+        Tree
+            The opened MDSplus tree.
+
+        Raises
+        ------
+        Exception
+            If the nickname is the name of a tree that is already open.
+            The tree name fails to open.
+        """
         if nickname in self.all_opened_tree_names and tree_name != nickname:
             self.logger.error(f"Cannot hide tree_name {nickname} with that nickname for {tree_name}")
-            raise f"Cannot hide tree_name {nickname} with that nickname for {tree_name}"
+            raise Exception(f"Cannot hide tree_name {nickname} with that nickname for {tree_name}")
         
         tree = self.open_tree(tree_name)
         
@@ -175,17 +193,19 @@ class TreeManager:
             self.logger.info(f"Nickname {nickname} for tree {self._nicknames[nickname]} replaced with {tree_name}")
         
         self._nicknames[nickname] = tree_name
-        self._nickname_environment_modifications[nickname] = environment_modification
+        self._nickname_environment_modifications[nickname] = environment_modifications
         return tree
     
-    def _create_lazy_nickname(self, nickname: str, nickname_func: Callable):
-        self._lazy_nickname_functions[nickname] = nickname_func
-    
     def is_nickname_created(self, nickname: str) -> bool:
+        """
+        Returns whether a nickname has been created.
+        """
         return nickname in self._nicknames or nickname in self._lazy_nickname_functions
         
     def tree_from_nickname(self, nickname:str) -> Tree:
-         
+        """
+        Get the MDSplus tree for the nickname.
+        """
         tree_name = self.tree_name_of_nickname(nickname)
             
         if tree_name is None:
@@ -201,6 +221,9 @@ class TreeManager:
             return self.open_tree(tree_name)
     
     def tree_name_of_nickname(self, nickname:str) -> str:
+        """
+        Get the tree name that the nickname has been set to or None if the nickname was not set.
+        """
         if nickname not in self._nicknames and nickname in self._lazy_nickname_functions:
             self.logger.info(f"Lazy nickname {nickname} creation attempted")
             self._lazy_nickname_functions[nickname]()
@@ -208,6 +231,9 @@ class TreeManager:
         return self._nicknames.get(nickname, None)
     
     def unique_name(self, for_name: str) -> str:
+        """
+        The tree name for for_name, whether it is a nickname or tree name itself
+        """
         return self.tree_name_of_nickname(for_name) or for_name
         
             

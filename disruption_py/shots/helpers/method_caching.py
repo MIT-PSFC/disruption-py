@@ -14,9 +14,10 @@ def parameter_cached_method(tags=["all"], columns=[], **kwargs):
     
     Parameter methods are functions that calculate disruption parameters from MDSplus data for a single shot. 
     They are run if  designated by the run_methods, run_tags, or run_columns attributes of the `ShotSettings` 
-    class. A number of built-in parameter methods are included in the Shot classes, and users can also
-    create there own inside of a subclass of `ShotDatRequest` that is passed as an attribute in `ShotSettings`.
-    The results of all parameter methods are cached, see the `cached_method` decorator for more details.
+    class. A number of built-in parameter methods are included through the shots.parameter_methods.built_in file, 
+    and users can also create there own methods inside of a subclass of `ShotDatRequest` that is passed as an 
+    attribute in `ShotSettings`. The results of all parameter methods are cached, see the `cached_method` decorator 
+    for more details.
     
     A common pattern for parameter methods is first retrieving data from MDSplus using the `TreeManager` and
     then using that retrieved data to compute data to return.

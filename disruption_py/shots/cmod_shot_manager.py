@@ -4,7 +4,7 @@ from dataclasses import replace
 import pandas as pd
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.settings.shot_settings import ShotSettings
-from disruption_py.shots.parameter_functions.cmod.basic_parameter_functions import BasicCmodRequests
+from disruption_py.shots.parameter_methods.cmod.basic_parameter_methods import BasicCmodRequests
 from disruption_py.shots.shot_manager import ShotManager
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.mappings.tokamak import Tokamak
