@@ -699,17 +699,25 @@ class CModShot(Shot):
         # check if efit_data["beta_n"] is either nan or does not exist
         if "beta_n" not in efit_data.keys() or np.any(np.isnan(efit_data["beta_n"])):
             try:
-                beta_t = self.efit_tree.getNode('\efit_aeqdsk:betat').data().astype('float64', copy=False)
-
-                # add a small epsilon to 0's for reciprocal
-                beta_t[beta_t == 0] = 1e-10
-                efit_data["beta_p"][efit_data["beta_p"] == 0] = 1e-10
-
-                efit_data['beta_n'] = np.reciprocal( np.reciprocal(beta_t) +  np.reciprocal(efit_data['beta_p']) )
+                beta_t = self._efit_tree.getNode('\efit_aeqdsk:betat').data().astype('float64', copy=False) # Beta_t [%]
+                BT_efit = self._efit_tree.getNode('\efit_aeqdsk:btaxp').data().astype('float64', copy=False) # BTAXP := Btor on axis [T]
+                ip_efit = self._efit_tree.getNode('\efit_aeqdsk:cpasma').data().astype('float64', copy=False)/1e-6 # Plasma current [MA]
+                a_out = efit_data["a_minor"]
+                temp_denom = (a_out*BT_efit)
+                IN_efit = np.divide(ip_efit, temp_denom, out=np.full(len(efit_time), np.nan), where=(temp_denom != 0))
+                efit_data["beta_n"] = np.divide(beta_t, IN_efit, out=np.full(len(efit_time), np.nan), where=(IN_efit != 0) & (IN_efit != np.nan))
             except:
-                print("unable to get beta_n")
-                efit_data['beta_n'] = np.full(len(efit_time), np.nan)
-                pass
+                try:
+                    beta_t = self.efit_tree.getNode('\efit_aeqdsk:betat').data().astype('float64', copy=False)
+
+                    # add a small epsilon to 0's for reciprocal
+                    beta_t[beta_t == 0] = 1e-10
+                    efit_data["beta_p"][efit_data["beta_p"] == 0] = 1e-10
+                    efit_data['beta_n'] = np.reciprocal( np.reciprocal(beta_t) +  np.reciprocal(efit_data['beta_p']) )
+                except:
+                    print("unable to get beta_n")
+                    efit_data['beta_n'] = np.full(len(efit_time), np.nan)
+                    pass
             
         if not np.array_equal(self._times, efit_time):
             for param in efit_data:
