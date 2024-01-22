@@ -157,7 +157,7 @@ class ShotManager(ABC):
                 cls.logger.debug(
                     f"[Shot {shot_id}]:{traceback.format_exc()}")
         else:
-            request_params = SetTimesRequestParams(shot_id=shot_id, tree_manager=tree_manager, tokamak=tokamak, logger=cls.logger, disruption_time=disruption_time)
+            request_params = SetTimesRequestParams(shot_id=shot_id, tree_manager=tree_manager, existing_data=existing_data, disruption_time=disruption_time, tokamak=tokamak, logger=cls.logger,)
             return shot_settings.set_times_request.get_times(request_params)
     
     @classmethod

@@ -30,7 +30,7 @@ class SetTimesRequestParams:
     shot_id : int
     tree_manager : TreeManager
     existing_data : pd.DataFrame
-    disruption_time : float = None
+    disruption_time : float
     tokamak : Tokamak
     logger : Logger
 

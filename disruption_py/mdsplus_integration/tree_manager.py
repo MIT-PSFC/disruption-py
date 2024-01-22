@@ -93,7 +93,6 @@ class TreeManager:
         """
         Close all open trees for all threads.
         """
-        self.logger.info(f"Node usage counts: {self.counter}")
         for thread in list(self._open_trees.keys()):
             for tree_name in list(self._get_open_trees(thread).keys()):
                 self.close_tree(tree_name, thread)
