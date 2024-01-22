@@ -7,19 +7,6 @@ from sqlalchemy import create_engine
 # import jaydebeapi
 import pyodbc
 import threading
-
-from disruption_py.utils.constants import TIME_CONST
-
-class ShotDatabaseTemplate:
-    def __init__(self, driver, host, db_name, user, passwd, protected_columns=[], **kwargs):
-        self.database_args = {
-            driver: driver, 
-            host:host, 
-            db_name:db_name, 
-            user:user, 
-            passwd:passwd,
-            **kwargs
-        }
         
 class ShotDatabase:
     """
@@ -46,9 +33,9 @@ class ShotDatabase:
         self._thread_connections = {}
         self.logger.info("Database initialized")
         self.engine = create_engine(f"mssql+pyodbc:///?odbc_connect={self.connection_string}")
-        self.data_columns = [q[3] for q in self.query("""SELECT *
-        FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_NAME = N'disruption_warning'""", use_pandas=True)]
+        # self.data_columns = [q[3] for q in self.query("""SELECT *
+        # FROM INFORMATION_SCHEMA.COLUMNS
+        # WHERE TABLE_NAME = N'disruption_warning'""", use_pandas=True)]
 
     @property
     def conn(self):
