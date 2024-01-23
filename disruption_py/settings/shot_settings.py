@@ -75,13 +75,7 @@ class ShotSettings:
         of the timebase from the set_times_request. If true the timebase from the set_times_request is always used.
         Defaults to True.
     interpolation_method : InterpolationMethod
-        The interpolation method to be used when retrieving data for the shot. CURRENTLY UNIMPLEMENTED.
-    
-    Methods
-    -------
-    resolve()
-        Resolve all attributes that can be resolved to a class. This primarily refers to passed strings
-        lists and dictinoaries that can be resolved to a specific request type or a specific enum.
+        The interpolation method to be used when retrieving data for the shot. CURRENTLY UNIMPLEMENTED.   
     """
     # General Settings
     log_settings : LogSettings = field(default_factory=LogSettings.default)
@@ -117,6 +111,11 @@ class ShotSettings:
         self.resolve()
         
     def resolve(self):
+        """
+        Take parameters that are passed preset values, and convert to value usable by disruption_py
+        
+        This primarily refers to passed strings lists and dictinoaries that can be resolved to a specific request type or a specific enum.
+        """
         self.existing_data_request = resolve_existing_data_request(self.existing_data_request)
         self.output_type_request = resolve_output_type_request(self.output_type_request)
         self.set_times_request = resolve_set_times_request(self.set_times_request)
