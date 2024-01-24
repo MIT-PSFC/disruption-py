@@ -78,7 +78,7 @@ class CModHandler:
         else:
             existing_data = None
         try:
-            disruption_time=sql_database.get_disruption_time(shot_id)
+            disruption_time=sql_database.get_disruption_time(shot_id=shot_id)
         except Exception as e:
             disruption_time=None
             class_logger.error(f"Failed to retreive disruption time with error {e}. Continuing as if the shot did not disrupt.")

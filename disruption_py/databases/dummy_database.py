@@ -19,26 +19,26 @@ class DummyDatabase(ShotDatabase):
         pass
     
     @classmethod
-    def default(cls):
+    def default(cls, **kwargs):
         return cls()
     
     @property
-    def conn(self):
+    def conn(self, **kwargs):
         return DummyObject()
     
-    def query(self):
+    def query(self, **kwargs):
         return pd.DataFrame()
     
-    def get_shot_data():
+    def get_shot_data(sefl, **kwargs):
         return pd.DataFrame()
     
-    def get_disruption_time(self):
+    def get_disruption_time(self, **kwargs):
         return None
     
-    def get_disruption_shotlist(self):
+    def get_disruption_shotlist(self, **kwargs):
         return []
     
-    def get_disruption_warning_shotlist(self):
+    def get_disruption_warning_shotlist(self, **kwargs):
         return []
     
 class DummyObject:
