@@ -1,10 +1,12 @@
-A module for handling shot ids requests passed in the [`get_shots_data``][disruption_py.handlers.cmod_handler.CModHandler.get_shots_data] 
+## Overview { .doc .doc-heading }
+A module for handling shot ids requests passed in the [`get_shots_data`][disruption_py.handlers.cmod_handler.CModHandler.get_shots_data] 
 function. Shot ids requests are used by disruption_py to get the shot ids of shots that should have data retrieved from MDSplus.
 
 This module defines the abstract class [`ShotIdsRequest`][disruption_py.settings.shot_ids_request.ShotIdsRequest] that can have subclasses passed as the `shot_ids_request`
 argument to the `get_shots_data` function.
 It also provides built_in classes and mappings to easily define shot ids for common use cases.
 
+### Usage { .doc .doc-heading }
 Currently, these are the options that can be passed as the `shot_ids_request` argument to `get_shots_data`:
 
 - An isntance of a subclass of `ShotIdsRequest`
@@ -26,16 +28,6 @@ Currently, these are the options that can be passed as the `shot_ids_request` ar
 	--8<-- "disruption_py/utils/mappings/tokamak.py:allowed_tokamak_types_snippet"
 - A python list of any other shot id request option that can be passed as the `shot_ids_request` argument to `get_shots_data` (all options listed previously). All designated shot numbers will be concatanated and any duplicates will be removed.
 
-The following documents the support for shot ids requests:
-
-::: disruption_py.settings.shot_ids_request
-    handler: python
-	options:
-	  heading_level: 2
-	  members:
-	  - ShotIdsRequest
-	  - ShotIdsRequestParams
-
 ## Built-in Implemenations { .doc .doc-heading }
 
 ::: disruption_py.settings.shot_ids_request
@@ -46,3 +38,14 @@ The following documents the support for shot ids requests:
 		filters:
 		- "!^ShotIdsRequestParams$"
 		- "!^ShotIdsRequest$"
+
+## Custom Implementations { .doc .doc-heading }
+Custom implementations of shot ids requests must inheiret from the `ShotIdsRequest` abstract class, implementing the abstract methods.
+
+::: disruption_py.settings.shot_ids_request
+    handler: python
+	options:
+	  heading_level: 2
+	  members:
+	  - ShotIdsRequest
+	  - ShotIdsRequestParams

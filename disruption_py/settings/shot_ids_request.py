@@ -44,12 +44,6 @@ class ShotIdsRequest(ABC):
                 return self.tokamak_overrides[params.tokamak](params)
         return self._get_shot_ids(params)
     
-    @abstractmethod
-    def does_use_database(self):
-        """Abstract method implemented by subclasses to signify whether a database connection is used.
-        This allows disruption_py to only initialize a database connection in the parent process if 
-        it is being used.
-        """
     
     @abstractmethod
     def _get_shot_ids(self, params : ShotIdsRequestParams) -> List:
@@ -78,9 +72,6 @@ class IncludedShotIdsRequest(ShotIdsRequest):
         with importlib_resources.path(disruption_py.data, data_file_name) as p:
             data_file_name = str(p)
         self.shot_ids = pd.read_csv(data_file_name, header=None).iloc[:, 0].values.tolist()
-
-    def does_use_database(self):
-        return False
     
     def _get_shot_ids(self, params : ShotIdsRequestParams) -> List:
         return self.shot_ids 
@@ -101,9 +92,6 @@ class FileShotIdsRequest(ShotIdsRequest):
     
     def __init__(self, file_path, column_index=0):
         self.shot_ids = pd.read_csv(file_path, header=None).iloc[:, column_index].values.tolist()
-
-    def does_use_database(self):
-        return False
     
     def _get_shot_ids(self, params : ShotIdsRequestParams) -> List:
         return self.shot_ids 
@@ -122,9 +110,6 @@ class DatabaseShotIdsRequest(ShotIdsRequest):
     def __init__(self, sql_query, use_pandas=True):
         self.sql_query = sql_query
         self.use_pandas = use_pandas
-
-    def does_use_database(self):
-        return True
     
     def _get_shot_ids(self, params : ShotIdsRequestParams) -> List:
         if self.use_pandas:

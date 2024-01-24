@@ -84,5 +84,5 @@ decorators:
 ### Built-in shot data requests
 The following file defines the list of built-in shot data requests. To view the methods in these files, please see the GitHub repository.
 --8<--
-disruption_py/shots/parameter_functions/built_in.py
+disruption_py/shots/parameter_methods/built_in.py
 --8<--

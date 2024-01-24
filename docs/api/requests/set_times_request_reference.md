@@ -1,3 +1,4 @@
+## Overview { .doc .doc-heading }
 A module for handling set times requests passed in the [`ShotSettings`][disruption_py.settings.ShotSettings] class. 
 Set times requests are used by disruption_py to set the timebase for data retrieval from MDSPlus and any sql tables.
 
@@ -5,6 +6,7 @@ This module defines the abstract class [`SetTimesRequest`][disruption_py.setting
 `set_times_request` parameter to the `ShotSettings` class.
 It also provides built_in classes and mappings to easily set the timebase for data retrievel for common use cases.
 
+### Usage { .doc .doc-heading }
 Currently, these are the options that can be passed to the `set_times_request` parameter in `ShotSettings`:
 
 - An instance of a subclass of `SetTimesRequest`
@@ -18,16 +20,6 @@ disruption_py/settings/set_times_request.py:set_times_request_dict
 - A dictionary mapping tokamak type strings to the desired `SetTimesRequest` for that tokamak.  E.g. `{'cmod': 'efit'}`.
 	--8<-- "disruption_py/utils/mappings/tokamak.py:allowed_tokamak_types_snippet"
 
-The following documents the support for set times requests:
-
-::: disruption_py.settings.set_times_request
-    handler: python
-	options:
-	  heading_level: 2
-	  members:
-	  - SetTimesRequest
-	  - SetTimesRequestParams
-
 ## Built-in Implemenations { .doc .doc-heading }
 
 ::: disruption_py.settings.set_times_request
@@ -38,3 +30,15 @@ The following documents the support for set times requests:
 		filters:
 		- "!^SetTimesRequest$"
 		- "!^SetTimesRequestParams$"
+
+## Custom Implementations { .doc .doc-heading }
+Custom implementations of set times requests must inheiret from the `SetTimesRequest` abstract class, implementing the abstract methods.
+
+::: disruption_py.settings.set_times_request
+    handler: python
+	options:
+	  heading_level: 2
+	  members:
+	  - SetTimesRequest
+	  - SetTimesRequestParams
+

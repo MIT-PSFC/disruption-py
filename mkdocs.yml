@@ -24,7 +24,10 @@ theme:
 nav:
   - Home: 
     - Background: index.md
-    - Installation: installation.md 
+    - Installation: installation.md
+    - Quickstart:
+      - Basic Program: quickstart/usage_quickstart.md
+      - Customizing Data Retrieval: quickstart/method_quickstart.md
   - API Reference:
       - Handlers: api/handlers_reference.md
       - Settings: 

@@ -77,7 +77,11 @@ class CModHandler:
             existing_data = existing_data[existing_data['shot'] == shot_id]
         else:
             existing_data = None
-        disruption_time=sql_database.get_disruption_time(shot_id)
+        try:
+            disruption_time=sql_database.get_disruption_time(shot_id=shot_id)
+        except Exception as e:
+            disruption_time=None
+            class_logger.error(f"Failed to retreive disruption time with error {e}. Continuing as if the shot did not disrupt.")
         try:
             shot_props = CModShotManager.cmod_setup_shot_props(
                 shot_id=shot_id, 
@@ -132,6 +136,7 @@ class CModHandler:
         if num_processes > 1:
             shot_retriever = MultiprocessingShotRetriever(
                 database_initializer_f=self.database_initializer,
+                database=self.database,
                 num_processes=num_processes,
                 shot_settings=shot_settings,
                 tokamak = tokamak,
@@ -148,7 +153,7 @@ class CModHandler:
                     sql_database=self.database, 
                     shot_settings=shot_settings
                 )
-                shot_settings.output_type_request.output_shot(ResultOutputTypeRequestParams(shot_data, Tokamak.CMOD, self.logger))
+                shot_settings.output_type_request.output_shot(ResultOutputTypeRequestParams(shot_data, self.database, Tokamak.CMOD, self.logger))
             
             finish_output_type_request_params = FinishOutputTypeRequestParams(tokamak, self.logger)
             results = shot_settings.output_type_request.get_results(finish_output_type_request_params)

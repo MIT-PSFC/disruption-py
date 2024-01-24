@@ -58,7 +58,7 @@ class MethodOptimizer:
             return None, len(self._method_dependencies)
 
         method_tree_counts = []
-        open_tree_names = self._tree_manager.get_open_tree_names()
+        open_tree_names = self._tree_manager.thread_open_tree_names
         for cached_method_name in methods_to_consider:
             used_trees = self.get_used_trees_by_unique_name(cached_method_name)
             remaining_open_tree_count = sum(self._tree_remaining_count[tree_name] for tree_name in used_trees)

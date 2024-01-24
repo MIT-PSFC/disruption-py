@@ -1,12 +1,13 @@
 from dataclasses import fields
 import traceback
 import time
+from typing import List
 import pandas as pd
 import numpy as np
 import concurrent
 from concurrent.futures import ThreadPoolExecutor
 from disruption_py.shots.helpers.cached_method_params import CachedMethodParams, ParameterCachedMethodParams, get_cached_method_params, is_cached_method
-from disruption_py.shots.parameter_functions.built_in import DEFAULT_SHOT_DATA_REQUESTS
+from disruption_py.shots.parameter_methods.built_in import DEFAULT_SHOT_DATA_REQUESTS
 
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.shots.helpers.method_optimizer import MethodOptimizer, CachedMethod
@@ -51,7 +52,27 @@ def populate_method(params: ShotDataRequestParams, cached_method : CachedMethod,
         return result
 
 
-def compute_cached_method_params(cached_method_params : CachedMethodParams, object_to_search, params: ShotDataRequestParams) -> CachedMethodParams:
+def compute_cached_method_params(cached_method_params : CachedMethodParams, object_to_search : ShotDataRequest, params: ShotDataRequestParams) -> CachedMethodParams:
+    """Evaluate arguments to decorators to usable values.
+    
+    Some parameters provided to the cached_method and parameter_cached_method decorators can take method that are evaluated
+    at runtime. `compute_cached_method_params` evaluates all of these methods and returns a new instance of `CachedMethodParams`
+    without functiohn parameters.
+
+    Parameters
+    ----------
+    cached_method_params : CachedMethodParams
+        The parameters that we check for function values, and evaluate them if they exist.
+    object_to_search : ShotDataRequest
+        The ShotDataRequest object that contained the decorated method.
+    params : ShotDataRequestParams
+        Params passed to the fumnction for evaluation. These are the same parameters passed when retrieving data using decorated method.
+
+    Returns
+    -------
+    CachedMethodParams
+        The new instance of cached method params with all of its values having been evaluated.
+    """
     new_cached_method_params_dict = {}
     for field in fields(cached_method_params):
         field_name = field.name
@@ -62,7 +83,23 @@ def compute_cached_method_params(cached_method_params : CachedMethodParams, obje
             new_cached_method_params_dict[field_name] = field_value
     return cached_method_params.__class__(**new_cached_method_params_dict)
 
-def get_cached_methods_from_object(object_to_search : ShotDataRequest, shot_settings: ShotSettings, params: ShotDataRequestParams):
+def _get_cached_methods_from_object(object_to_search : ShotDataRequest, shot_settings: ShotSettings, params: ShotDataRequestParams):
+    """Get methods decorated with cached_method or parameter_cached_method decorator for object, that should be run.
+
+    Parameters
+    ----------
+    object_to_search : ShotDataRequest
+        The object that hsa its properties searched for decorated methods.
+    shot_settings : ShotSettings
+        The shot settings dictating what methods should be run.
+    params : ShotDataRequestParams
+        Parameter that will be passed to methods that are run.
+
+    Returns
+    -------
+    Tuple[List[CachedMethod], List[CachedMethod]]
+        A list of paaneter methods that require evaluation, and a list of all decorated methods
+    """
     shot_props = params.shot_props
     tags = shot_settings.run_tags
     methods = shot_settings.run_methods
@@ -70,8 +107,8 @@ def get_cached_methods_from_object(object_to_search : ShotDataRequest, shot_sett
             
     methods_to_search = object_to_search.get_request_methods_for_tokamak(params.tokamak)
     
-    methods_to_evaluate : list[CachedMethod] = []
-    all_cached_methods : list[CachedMethod] = []
+    methods_to_evaluate : List[CachedMethod] = []
+    all_cached_methods : List[CachedMethod] = []
     for method_name in methods_to_search:
         attribute_to_check = getattr(object_to_search, method_name)
         
@@ -102,12 +139,24 @@ def get_cached_methods_from_object(object_to_search : ShotDataRequest, shot_sett
                     f"[Shot {shot_props.shot_id}]:Skipping {method_name} in class {object_to_search.__class__.__name__}")
     return methods_to_evaluate, all_cached_methods
             
-def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams):
-    """
-    Internal method to populate the disruption parameters of a shot object. 
-    This method is called by the constructor and should not be called directly. It loops through all methods of the Shot class and calls the ones that have a `populate` attribute set to True and satisfy the tags and methods arguments.
-    """
+def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams) -> pd.DataFrame:
+    """populate_shot runs the parameter methods in the shot_data_requests property of shot_settings.
+    
+    Selects methods based on run_mdethods, run_tags, and run_columns in shot_settings.
+    Methods execution is reordered to minimize tree openings and trees opened simultaniously.
 
+    Parameters
+    ----------
+    shot_settings : ShotSettings
+        The shot settings dictating what methods should be run.
+    params : ShotDataRequestParams
+        Parameter that will be passed to methods that are run.
+
+    Returns
+    -------
+    pd.DataFrame
+        A dataframe containing the querried data.
+    """
     shot_props : ShotProps = params.shot_props
     populated_data = shot_props.populated_existing_data
     
@@ -127,7 +176,7 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams):
     # Add the methods gound from the passed ShotDataRequest objects
     all_shot_data_request = DEFAULT_SHOT_DATA_REQUESTS + shot_settings.shot_data_requests
     for shot_data_request in all_shot_data_request:
-        req_methods_to_evaluate, req_all_cached_methods = get_cached_methods_from_object(shot_data_request, shot_settings, params)
+        req_methods_to_evaluate, req_all_cached_methods = _get_cached_methods_from_object(shot_data_request, shot_settings, params)
         methods_to_evaluate.extend(req_methods_to_evaluate)
         all_cached_methods.extend(req_all_cached_methods)
         

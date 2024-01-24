@@ -1,4 +1,5 @@
 from typing import List, Dict
+from disruption_py.databases.database import ShotDatabase
 from disruption_py.settings import ShotSettings, ResultOutputTypeRequestParams, FinishOutputTypeRequestParams
 from disruption_py.utils.constants import MAX_PROCESSES
 from disruption_py.utils.mappings.tokamak import Tokamak
@@ -10,7 +11,7 @@ class Consumer(multiprocessing.Process):
         multiprocessing.Process.__init__(self)
         self.task_queue = task_queue
         self.result_queue = result_queue
-        self._sql_database = None
+        self._consumer_database = None
 
         if initialize_database and database_initializer_f is None:
             raise ValueError("Must provide database_initializer_f if initialize_database is True")
@@ -18,10 +19,10 @@ class Consumer(multiprocessing.Process):
         self.database_initializer_f = database_initializer_f
 
     @property
-    def sql_database(self):
-        if self._sql_database is None:
-            self._sql_database = self.database_initializer_f()
-        return self._sql_database
+    def consumer_database(self):
+        if self._consumer_database is None:
+            self._consumer_database = self.database_initializer_f()
+        return self._consumer_database
 
     def run(self):
         while True:
@@ -33,7 +34,7 @@ class Consumer(multiprocessing.Process):
 
             task_args = {}
             if self.initialize_database:
-                task_args['sql_database'] = self.sql_database
+                task_args['sql_database'] = self.consumer_database
             answer = next_task(task_args)
    
             self.task_queue.task_done()
@@ -60,12 +61,13 @@ class MultiprocessingShotRetriever:
     A class to run shot retrievals in parallel.
     '''
     
-    def __init__(self, shot_settings: ShotSettings, tokamak, logger, num_processes=8, database_initializer_f = None):
+    def __init__(self, shot_settings: ShotSettings, database : ShotDatabase, tokamak, logger, num_processes=8, database_initializer_f = None):
         
         self.task_queue = multiprocessing.JoinableQueue()
         self.result_queue = multiprocessing.Queue()
 
         self.shot_settings = shot_settings
+        self.database = database
         self.tokamak = tokamak
         self.logger = logger
         self.result_thread = threading.Thread(target=self._result_processor)
@@ -80,7 +82,7 @@ class MultiprocessingShotRetriever:
             result = self.result_queue.get()
             if result is None:
                 break
-            self.shot_settings.output_type_request.output_shot(ResultOutputTypeRequestParams(result, self.tokamak, self.logger))
+            self.shot_settings.output_type_request.output_shot(ResultOutputTypeRequestParams(result, self.database, self.tokamak, self.logger))
 
     def run(self, shot_creator_f, shot_ids_list, should_finish=True):
         
