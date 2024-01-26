@@ -238,8 +238,10 @@ class CSVOutputRequest(OutputTypeRequest):
         return self.output_shot_count
 
 
-class DisruptionWarningsRequest(OutputTypeRequest):
-    
+class SQLOutputRequest(OutputTypeRequest):
+    """
+    Stream outputted data to disruption_warning or similar sql table.
+    """
     def __init__(self, should_update=False, should_override_columns : List[str]=None, table_name='disruption_warning'):
         self.should_update = should_update
         self.should_override_columns = should_override_columns

@@ -87,12 +87,28 @@ class ShotDatabase:
         curs.close()
         return output
             
-    def add_shot_data(self, shot_id : int, shot_data : pd.DataFrame, update=False, override_columns=None, table_name="disruption_warning"):
+    def add_shot_data(self, shot_id : int, shot_data : pd.DataFrame, update=False, override_columns:List[str]=None, table_name="disruption_warning"):
         """
-        Upload shot to SQL database. Can include shot object if available to avoid redundant computation.
-        Returns an error if there is at least one row already containing the shot id.
-        """
+        Upload shot to SQL database.
         
+        Either inserts or updates shot data depending on whether shot already exists in database. 
+        If shot exists, then thye timebase of the shot data must match the timebase of the shot in the database.
+        
+        Parameters
+        ----------
+        shot_id : int
+            Shot id of the shot being modified
+        shot_data : pd.DataFrame
+            Dataframe containing shot data for update
+        update : bool
+            Whether to update shot data if the shot already exists in database. Update will happen regardless if
+            the column being updated is all nil. Default value is False.
+        override_columns : List[str]
+            List of protecrted columns that can should still be updated. Update must be true for existing values in the 
+            columns to be changed. Default value is [].
+        table_name : str
+            Name of the table for data insert or update. Default value is "disruption_warning".
+        """
         curr_df = pd.read_sql_query(
             f"select * from {table_name} where shot in {shot_id} order by time", self.engine)
         
@@ -105,6 +121,11 @@ class ShotDatabase:
         return False
 
     def _insert_shot_data(self, curr_df : pd.DataFrame, shot_data : pd.DataFrame, table_name="disruption_warning"):
+        """
+        Insert shot data into SQL table.
+        
+        Assumes that the shot id does not already exist in the database.
+        """
         matching_columns_shot_data = pd.DataFrame()
         for column_name in curr_df.columns:
             if column_name in shot_data.columns:
@@ -117,15 +138,35 @@ class ShotDatabase:
                 f"""insert into {table_name} values""", data_tuples)
         return True
     
-    def _update_shot_data(self, curr_df : pd.DataFrame, shot_data : pd.DataFrame, update : bool, override_update_columns=None, table_name="disruption_warning"):
+    def _update_shot_data(self, curr_df : pd.DataFrame, shot_data : pd.DataFrame, update : bool, override_columns:List[str]=None, table_name="disruption_warning"):
+        """
+        Update shot data into SQL table.
+        
+        Assumes that the shot id already exist in the database and timebase of shot_data is the same as curr_df.
+        
+        Parameters
+        ----------
+        curr_df : pd.DataFrame
+            Data currently in sql database.
+        shot_data : pd.DataFrame
+            Dataframe containing shot data for update.
+        update : bool
+            Whether to update shot data if the shot already exists in database. Update will happen regardless if
+            the column being updated is all nil. Default value is False.
+        override_columns : List[str]
+            List of protecrted columns that can should still be updated. Update must be true for existing values in the 
+            columns to be changed. Default value is [].
+        table_name : str
+            Name of the table for data insert or update. Default value is "disruption_warning".
+        """
         NON_UPDATABLE_COLUMNS = ["shot", "time"]
-        override_update_columns = override_update_columns or []
+        override_columns = override_columns or []
         
         update_columns_shot_data = pd.DataFrame()
         for column_name in curr_df.columns:
             if (
                 column_name in NON_UPDATABLE_COLUMNS or 
-                (column_name in self.protected_columns and column_name not in override_update_columns)
+                (column_name in self.protected_columns and column_name not in override_columns)
             ):
                 continue
             
@@ -143,10 +184,10 @@ class ShotDatabase:
         return True
         
     
-    def remove_shot_data(self, shot_id):
-        """Remove shot from SQL database."""
+    def remove_shot_data(self, shot_id, table_name="disruption_warning"):
+        """Remove shot from SQL table."""
         data_df = pd.read_sql_query(
-            f'''select * from disruption_warning where shot = {shot_id} order by time''', self.engine)
+            f'''select * from {table_name} where shot = {shot_id} order by time''', self.engine)
         if len(data_df) == 0:
             self.logger.info(f"Shot {shot_id} does not exist in database")
             return False
@@ -156,6 +197,7 @@ class ShotDatabase:
         return True
     
     def add_column(self, col_name, var_type="TEXT", table_name="disruption_warning"):
+        """Add column to SQL table without filling in data for column."""
         try:
             self.query(f"alter table {table_name} add {col_name} {var_type};", use_pandas=False)
             return True
@@ -164,6 +206,7 @@ class ShotDatabase:
             return False
 
     def remove_column(self, col_name, table_name="disruption_warning"):
+        """Remove column from SQL table"""
         if col_name in self.protected_columns:
             self.logger.error(f"Failed to drop protected column {col_name}")
             return False
