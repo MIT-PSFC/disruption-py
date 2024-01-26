@@ -237,6 +237,36 @@ class CSVOutputRequest(OutputTypeRequest):
     def get_results(self, params: FinishOutputTypeRequestParams):
         return self.output_shot_count
 
+
+class SQLOutputRequest(OutputTypeRequest):
+    """
+    Stream outputted data to disruption_warning or similar sql table.
+    """
+    def __init__(self, should_update=False, should_override_columns : List[str]=None, table_name='disruption_warning'):
+        self.should_update = should_update
+        self.should_override_columns = should_override_columns
+        self.table_name = table_name
+        self.modifications = 0
+        self.total_shots = 0
+        
+    def _output_shot(self, params : ResultOutputTypeRequestParams):
+        if (not params.result.empty and ('shot' in params.result.columns)):
+            shot_id = params.result['shot'].iloc[0]
+            params.database.add_shot_data(
+                shot_id=shot_id, 
+                shot_data=params.result, 
+                update=self.should_update, 
+                override_columns=self.should_override_columns,
+                table_name=self.table_name,
+            )
+            self.modifications+=1
+        else:
+            params.logger.warning('No shot id found in result dataframe')
+        self.total_shots+=1
+    
+    def get_results(self, params: FinishOutputTypeRequestParams) -> Any:
+        return (self.modifications, self.total_shots)
+
 # --8<-- [start:output_type_request_dict]
 _output_type_request_mappings: Dict[str, OutputTypeRequest] = {
     "list" : ListOutputRequest(),
