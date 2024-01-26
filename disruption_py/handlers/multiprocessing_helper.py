@@ -1,8 +1,7 @@
 from typing import List, Dict
 from disruption_py.databases.database import ShotDatabase
-from disruption_py.settings import ShotSettings, ResultOutputTypeRequestParams, FinishOutputTypeRequestParams
+from disruption_py.settings import ShotSettings, OutputTypeRequest, ResultOutputTypeRequestParams, FinishOutputTypeRequestParams
 from disruption_py.utils.constants import MAX_PROCESSES
-from disruption_py.utils.mappings.tokamak import Tokamak
 import multiprocessing
 import threading
 
@@ -61,12 +60,13 @@ class MultiprocessingShotRetriever:
     A class to run shot retrievals in parallel.
     '''
     
-    def __init__(self, shot_settings: ShotSettings, database : ShotDatabase, tokamak, logger, num_processes=8, database_initializer_f = None):
+    def __init__(self, shot_settings: ShotSettings, database : ShotDatabase, output_type_request: OutputTypeRequest, tokamak, logger, num_processes=8, database_initializer_f = None):
         
         self.task_queue = multiprocessing.JoinableQueue()
         self.result_queue = multiprocessing.Queue()
 
         self.shot_settings = shot_settings
+        self.output_type_request = output_type_request
         self.database = database
         self.tokamak = tokamak
         self.logger = logger
@@ -82,7 +82,7 @@ class MultiprocessingShotRetriever:
             result = self.result_queue.get()
             if result is None:
                 break
-            self.shot_settings.output_type_request.output_shot(ResultOutputTypeRequestParams(result, self.database, self.tokamak, self.logger))
+            self.output_type_request.output_shot(ResultOutputTypeRequestParams(result, self.database, self.tokamak, self.logger))
 
     def run(self, shot_creator_f, shot_ids_list, should_finish=True):
         
@@ -113,6 +113,6 @@ class MultiprocessingShotRetriever:
         self.result_thread.join()
 
         finish_output_type_request_params = FinishOutputTypeRequestParams(self.tokamak, self.logger)
-        result = self.shot_settings.output_type_request.get_results(finish_output_type_request_params)
-        self.shot_settings.output_type_request.stream_output_cleanup(finish_output_type_request_params)
+        result = self.output_type_request.get_results(finish_output_type_request_params)
+        self.output_type_request.stream_output_cleanup(finish_output_type_request_params)
         return result

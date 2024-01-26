@@ -6,9 +6,8 @@ from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.existing_data_request import ExistingDataRequest, resolve_existing_data_request
 from disruption_py.settings.shot_data_request import ShotDataRequest
 from disruption_py.settings.set_times_request import SetTimesRequest, resolve_set_times_request
-from disruption_py.settings.output_type_request import OutputTypeRequest, resolve_output_type_request
+from disruption_py.settings.output_type_request import OutputTypeRequest
 from disruption_py.utils.mappings.mappings_helpers import map_string_attributes_to_enum
-from disruption_py.utils.utils import instantiate_classes, without_duplicates
 
 def default_tags():
     return ["all"]
@@ -59,9 +58,8 @@ class ShotSettings:
         from mdsplus if the method is included through either the run_methods or run_tags setting.
         Defaults to an empty list.
     output_type_request : OutputTypeRequest
-        The output type request to be used when outputting the retrieved data for each shot. Note that data
-        is streamed to the output type request object as it is retrieved. Can pass any OutputTypeRequestType 
-        that resolves to an OutputTypeRequest. See OutputTypeRequest for more details. Defaults to "list".
+        DEPRECTATED. output_type_request has moved to a parameter in the get_shots_data method of the handler class.
+        Will error if used, please set to None.
     set_times_request : SetTimesRequest
         The set times request to be used when setting the timebase for the shot. The retrieved data will
         be interpolated to this timebase. Can pass any SetTimesRequestType that resolves to a SetTimesRequest.
@@ -96,7 +94,7 @@ class ShotSettings:
     shot_data_requests : List[ShotDataRequest] = field(default_factory=list)
     
     # Shot Output settings
-    output_type_request: OutputTypeRequest = "list"
+    output_type_request: OutputTypeRequest = None # DEPRECATED
 
     # Timebase setting
     set_times_request : SetTimesRequest = "efit"
@@ -109,15 +107,35 @@ class ShotSettings:
     
     def __post_init__(self):
         self.resolve()
+    
+    def _check_deprecated_settings(self):
+        """
+        Check that no deprectated settings are set in the shot settings.
+        """
+        DEPRECTATED_SETTINGS = [
+            (
+                "output_type_request", 
+                """
+                output_type_request no longer set in shot_settings. 
+                Please set output_type_request in get_shots_data. 
+                To not throw error please set output_type_request to None.
+                """
+            ),
+        ]
         
+        for setting in DEPRECTATED_SETTINGS:
+            if getattr(self, setting[0]) is not None:
+                raise ValueError(f"{setting[1]}")
+       
     def resolve(self):
         """
         Take parameters that are passed preset values, and convert to value usable by disruption_py
         
         This primarily refers to passed strings lists and dictinoaries that can be resolved to a specific request type or a specific enum.
         """
+        self._check_deprecated_settings()
+        
         self.existing_data_request = resolve_existing_data_request(self.existing_data_request)
-        self.output_type_request = resolve_output_type_request(self.output_type_request)
         self.set_times_request = resolve_set_times_request(self.set_times_request)
         
         map_string_attributes_to_enum(self, {

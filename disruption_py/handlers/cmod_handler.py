@@ -4,7 +4,7 @@ import traceback
 from disruption_py.handlers.multiprocessing_helper import MultiprocessingShotRetriever
 from disruption_py.settings.shot_ids_request import ShotIdsRequestParams, ShotIdsRequestType, shot_ids_request_runner
 from disruption_py.settings.existing_data_request import ExistingDataRequestParams
-from disruption_py.settings.output_type_request import ResultOutputTypeRequestParams, FinishOutputTypeRequestParams
+from disruption_py.settings.output_type_request import OutputTypeRequest, ResultOutputTypeRequestParams, FinishOutputTypeRequestParams, resolve_output_type_request
 from disruption_py.settings import ShotSettings
 from disruption_py.shots.cmod_shot_manager import CModShotManager
 from disruption_py.utils.mappings.tokamak import Tokamak
@@ -102,6 +102,7 @@ class CModHandler:
         self,
         shot_ids_request : ShotIdsRequestType,
         shot_settings : ShotSettings = None,
+        output_type_request: OutputTypeRequest = "list",
         num_processes: int = 1,
     ) -> Any:
         """
@@ -114,6 +115,10 @@ class CModHandler:
         shot_settings : ShotSettings
             The settings that each shot uses when retrieving data. See ShotSettings for more details.
             If None, the default values of each setting in ShotSettings is used.
+        output_type_request : OutputTypeRequest
+            The output type request to be used when outputting the retrieved data for each shot. Note that data
+            is streamed to the output type request object as it is retrieved. Can pass any OutputTypeRequestType 
+            that resolves to an OutputTypeRequest. See OutputTypeRequest for more details. Defaults to "list".
         num_processes : int
             The number of processes to use for data retrieval. If 1, the data is retrieved in serial. 
             If > 1, the data is retrieved in parallel.
@@ -126,9 +131,11 @@ class CModHandler:
         """
         tokamak = Tokamak.CMOD
         
+        # Clean-up parameters
         if shot_settings is None:
             shot_settings = ShotSettings()
         shot_settings.resolve()
+        output_type_request = resolve_output_type_request(output_type_request)
         
         shot_ids_request_params = ShotIdsRequestParams(self.database, tokamak, self.logger)
         shot_ids_list = shot_ids_request_runner(shot_ids_request, shot_ids_request_params)
@@ -139,6 +146,7 @@ class CModHandler:
                 database=self.database,
                 num_processes=num_processes,
                 shot_settings=shot_settings,
+                output_type_request=output_type_request,
                 tokamak = tokamak,
                 logger = self.logger,
             )
@@ -153,10 +161,10 @@ class CModHandler:
                     sql_database=self.database, 
                     shot_settings=shot_settings
                 )
-                shot_settings.output_type_request.output_shot(ResultOutputTypeRequestParams(shot_data, self.database, Tokamak.CMOD, self.logger))
+                output_type_request.output_shot(ResultOutputTypeRequestParams(shot_data, self.database, Tokamak.CMOD, self.logger))
             
             finish_output_type_request_params = FinishOutputTypeRequestParams(tokamak, self.logger)
-            results = shot_settings.output_type_request.get_results(finish_output_type_request_params)
-            shot_settings.output_type_request.stream_output_cleanup(finish_output_type_request_params)
+            results = output_type_request.get_results(finish_output_type_request_params)
+            output_type_request.stream_output_cleanup(finish_output_type_request_params)
         return results
      

@@ -37,9 +37,6 @@ Creating a scripts gives you the full functionality of disruption_py.
 		
 		# run all available methods
 		run_tags=["all"],
-		
-		# stream retrieved data to the csv file
-		output_type_request="ip_data.csv", 
 	)
 	```
 
@@ -60,6 +57,9 @@ Creating a scripts gives you the full functionality of disruption_py.
 
 		# use the created shot_settings
 		shot_settings=shot_settings,
+
+		# stream retrieved data to the csv file
+		output_type_request="ip_data.csv", 
 
 		# use a single process to retrieve the data
 		num_processes = 1,

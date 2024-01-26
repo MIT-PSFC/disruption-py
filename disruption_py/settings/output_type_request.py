@@ -194,16 +194,16 @@ class HDF5OutputRequest(OutputTypeRequest):
     """
     def __init__(self, filepath):
         self.filepath = filepath
-        self.store = pd.HDFStore(filepath, mode='w')
         self.output_shot_count = 0
 
     def _output_shot(self, params : ResultOutputTypeRequestParams):
         shot_id = params.result['shot'].iloc[0] if (not params.result.empty and ('shot' in params.result.columns)) else self.output_shot_count
-        self.store.append(f'df_{shot_id}', params.result, format='table', data_columns=True)
+        mode = 'a' if self.output_shot_count > 0 else 'w'
+        params.result.to_hdf(self.filepath, f'df_{shot_id}', format='table', complib='blosc', mode=mode)
         self.output_shot_count += 1
     
     def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
-        self.store.close()
+        pass
     
     def get_results(self, params: FinishOutputTypeRequestParams):
         return self.output_shot_count
