@@ -240,9 +240,10 @@ class CSVOutputRequest(OutputTypeRequest):
 
 class DisruptionWarningsRequest(OutputTypeRequest):
     
-    def __init__(self, should_update=False, should_override_columns : List[str]=None):
+    def __init__(self, should_update=False, should_override_columns : List[str]=None, table_name='disruption_warning'):
         self.should_update = should_update
         self.should_override_columns = should_override_columns
+        self.table_name = table_name
         self.modifications = 0
         self.total_shots = 0
         
@@ -253,7 +254,8 @@ class DisruptionWarningsRequest(OutputTypeRequest):
                 shot_id=shot_id, 
                 shot_data=params.result, 
                 update=self.should_update, 
-                override_columns=self.should_override_columns
+                override_columns=self.should_override_columns,
+                table_name=self.table_name,
             )
             self.modifications+=1
         else:

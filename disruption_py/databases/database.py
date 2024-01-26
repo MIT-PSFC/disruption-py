@@ -87,14 +87,14 @@ class ShotDatabase:
         curs.close()
         return output
             
-    def add_shot_data(self, shot_id : int, shot_data : pd.DataFrame, update=False, override_columns=None):
+    def add_shot_data(self, shot_id : int, shot_data : pd.DataFrame, update=False, override_columns=None, table_name="disruption_warning"):
         """
         Upload shot to SQL database. Can include shot object if available to avoid redundant computation.
         Returns an error if there is at least one row already containing the shot id.
         """
         
         curr_df = pd.read_sql_query(
-            f"select * from disruption_warning where shot in {shot_id} order by time", self.engine)
+            f"select * from {table_name} where shot in {shot_id} order by time", self.engine)
         
         if len(curr_df == 0):
             return self._insert_shot_data(curr_df, shot_data)
@@ -104,7 +104,7 @@ class ShotDatabase:
         self.logger.error("Invalid timebase for data output")
         return False
 
-    def _insert_shot_data(self, curr_df : pd.DataFrame, shot_data : pd.DataFrame):
+    def _insert_shot_data(self, curr_df : pd.DataFrame, shot_data : pd.DataFrame, table_name="disruption_warning"):
         matching_columns_shot_data = pd.DataFrame()
         for column_name in curr_df.columns:
             if column_name in shot_data.columns:
@@ -114,10 +114,10 @@ class ShotDatabase:
         with self.conn.cursor() as curs:
             data_tuples = list(matching_columns_shot_data.itertuples(index=False, name=None))
             curs.executemany(
-                """insert into disruption_warning values""", data_tuples)
+                f"""insert into {table_name} values""", data_tuples)
         return True
     
-    def _update_shot_data(self, curr_df : pd.DataFrame, shot_data : pd.DataFrame, update : bool, override_update_columns=None):
+    def _update_shot_data(self, curr_df : pd.DataFrame, shot_data : pd.DataFrame, update : bool, override_update_columns=None, table_name="disruption_warning"):
         NON_UPDATABLE_COLUMNS = ["shot", "time"]
         override_update_columns = override_update_columns or []
         
@@ -138,7 +138,7 @@ class ShotDatabase:
         with self.conn.cursor() as curs:
             for index, row in update_columns_shot_data.iterrows():     
                 update_columns = update_columns_shot_data.columns.difference(NON_UPDATABLE_COLUMNS)
-                sql_command = f"UPDATE disruption_warning SET {', '.join([f'{col} = ?' for col in update_columns])} WHERE time = ?;"
+                sql_command = f"UPDATE {table_name} SET {', '.join([f'{col} = ?' for col in update_columns])} WHERE time = ?;"
                 curs.execute(sql_command, row + curr_df['time'][index])
         return True
         
@@ -155,20 +155,23 @@ class ShotDatabase:
                 f"delete from disruption_warning where shot = {shot_id}")
         return True
     
-    def add_column(self, col_name, var_type="TEXT", table="disruption_warning"):
+    def add_column(self, col_name, var_type="TEXT", table_name="disruption_warning"):
         try:
-            self.query(f"alter table {table} add {col_name} {var_type};", use_pandas=False)
+            self.query(f"alter table {table_name} add {col_name} {var_type};", use_pandas=False)
             return True
         except Exception as e:
-            self.logger.error(f"Failed to add column with error {e}")
+            self.logger.error(f"Failed to add column {col_name} with error {e}")
             return False
 
-    def remove_column(self, col_name, table="disruption_warning"):
+    def remove_column(self, col_name, table_name="disruption_warning"):
+        if col_name in self.protected_columns:
+            self.logger.error(f"Failed to drop protected column {col_name}")
+            return False
         try:
-            self.query(f"alter table {table} drop column {col_name};", use_pandas=False)
+            self.query(f"alter table {table_name} drop column {col_name};", use_pandas=False)
             return True
         except Exception as e:
-            self.logger.error(f"Failed to drop column with error {e}")
+            self.logger.error(f"Failed to drop column {col_name} with error {e}")
             return False
 
     def get_shot_data(self, shot_ids : List[int], cols : List[str]=["*"], sql_table="disruption_warning"):
