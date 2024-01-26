@@ -87,7 +87,7 @@ class ShotDatabase:
         curs.close()
         return output
             
-    def add_shot_data(self, shot_id : int, shot_data : pd.DataFrame, update=False, override_update_columns=None):
+    def add_shot_data(self, shot_id : int, shot_data : pd.DataFrame, update=False, override_columns=None):
         """
         Upload shot to SQL database. Can include shot object if available to avoid redundant computation.
         Returns an error if there is at least one row already containing the shot id.
@@ -99,7 +99,7 @@ class ShotDatabase:
         if len(curr_df == 0):
             return self._insert_shot_data(curr_df, shot_data)
         elif len(curr_df) == len(shot_data) and ((curr_df['time']  - shot_data['time']).abs() < TIME_CONST).all():
-            return self._update_shot_data(curr_df, shot_data, update, override_update_columns)
+            return self._update_shot_data(curr_df, shot_data, update, override_columns)
         
         self.logger.error("Invalid timebase for data output")
         return False
