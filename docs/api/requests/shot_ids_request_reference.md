@@ -1,9 +1,8 @@
 ## Overview { .doc .doc-heading }
 A module for handling shot ids requests passed in the [`get_shots_data`][disruption_py.handlers.cmod_handler.CModHandler.get_shots_data] 
-function. Shot ids requests are used by disruption_py to get the shot ids of shots that should have data retrieved from MDSplus.
+method. Shot ids requests are used by disruption_py to get the shot ids of shots that should have data retrieved from MDSplus.
 
-This module defines the abstract class [`ShotIdsRequest`][disruption_py.settings.shot_ids_request.ShotIdsRequest] that can have subclasses passed as the `shot_ids_request`
-argument to the `get_shots_data` function.
+This module defines the abstract class [`ShotIdsRequest`][disruption_py.settings.shot_ids_request.ShotIdsRequest] that can have subclasses passed as the `shot_ids_request` argument to the `get_shots_data` method.
 It also provides built_in classes and mappings to easily define shot ids for common use cases.
 
 ### Usage { .doc .doc-heading }

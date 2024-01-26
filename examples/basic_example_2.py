@@ -15,15 +15,19 @@ shot_settings = ShotSettings(
     # run the get_ip_parameters method
     run_methods=["_get_ip_parameters"],
     run_tags=[],
+    
     # run the method that  returns the ne_peaking column
     run_columns=["ne_peaking"],
+)
+shot_data = cmod_handler.get_shots_data(
+    # use the shot ids listed in the shot_ids_of_interest.txt file
+    shot_ids_request="shot_ids_of_interest.txt",
+    shot_settings=shot_settings,
     
     # automatically stream retrieved data to a csv file by passing in a file path ending in .csv
     # this works by automatically using the CSVOutputRequest preset with the passed filename
     output_type_request="ip_data.csv", 
-)
-shot_data = cmod_handler.get_shots_data(
-    shot_ids_request="shot_ids_of_interest.txt", # use the shot ids listed in the shot_ids_of_interest.txt file
-    shot_settings=shot_settings,
-    num_processes = 4, # retrieve data quickly using 4 processes
+    
+    # retrieve data quickly using 4 processes
+    num_processes = 4,
 )

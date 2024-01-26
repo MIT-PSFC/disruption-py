@@ -1,16 +1,32 @@
+import logging
+import sys
+
+sys.path.append("/home/joshlor/Documents/disruption-py/")
+from disruption_py.settings.log_settings import LogSettings
 from disruption_py.handlers.cmod_handler import CModHandler
-from disruption_py.settings import ShotSettings
+from disruption_py.settings.shot_settings import ShotSettings
 
 cmod_handler = CModHandler()
 shot_settings = ShotSettings(
-	existing_data_request="sql",
-	set_times_request="magnetics004",
-	run_tags=[],
-	run_methods=["_get_ip_parameters"],
-	output_type_request="ip_data.csv",
+    # uses the efit timebase when returning data 
+    set_times_request="efit",
+    
+    # run all available methods
+    run_tags=["all"],
+    
+    efit_tree_name="efit18",
+    
+    log_settings=LogSettings(console_log_level=logging.DEBUG),
+    
 )
-cmod_handler.get_shots_data(
-	shot_ids_request=[1160405002, 1140523021, 1140523026, 1160620011],
-	shot_settings=shot_settings,
-	num_processes = 4,
+
+shot_data = cmod_handler.get_shots_data(
+    shot_ids_request=[1160405002, 1140523021, 1140523026, 1160620011], # Retrieve data for the desired shots
+    shot_settings=shot_settings,
+    
+    # automatically stream retrieved data to a csv file by passing in a file path ending in .csv
+    output_type_request="test/ip_data.hdf5", 
+    
+    num_processes=1,
 )
+

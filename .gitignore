@@ -1,6 +1,8 @@
 data/*
 *.pyc
 *.csv
+*.hdf5
+*.h5
 *~
 *.egg-info/*
 .vscode/*

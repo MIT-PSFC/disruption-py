@@ -15,13 +15,18 @@ class CustomShotIdRequest(ShotIdsRequest):
 
 cmod_handler = CModHandler()
 shot_settings = ShotSettings(
-    set_times_request="efit", # use the efit timebase preset for set_times_request
+    # use the efit timebase preset for set_times_request
+    set_times_request="efit",
     run_tags=[],
-    run_methods=["_get_ip_parameters"], # only run thr get_ip_parameters method
-    output_type_request="ip_data.csv", # automatically uses the CSVOutputRequest preset because of the .csv file descriptor
+    
+    # only run thr get_ip_parameters method
+    run_methods=["_get_ip_parameters"],
 )
 shot_data = cmod_handler.get_shots_data(
     shot_id_request=CustomShotIdRequest(),
     shot_settings=shot_settings,
+    
+    # automatically uses the CSVOutputRequest preset because of the .csv file descriptor
+    output_type_request="ip_data.csv",
     num_processes = 4,
 )
