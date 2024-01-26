@@ -3,10 +3,13 @@ import logging
 from typing import List
 
 import pandas as pd
+import numpy as np
 from sqlalchemy import create_engine
 # import jaydebeapi
 import pyodbc
 import threading
+
+from disruption_py.utils.constants import TIME_CONST
         
 class ShotDatabase:
     """
@@ -33,9 +36,6 @@ class ShotDatabase:
         self._thread_connections = {}
         self.logger.info("Database initialized")
         self.engine = create_engine(f"mssql+pyodbc:///?odbc_connect={self.connection_string}")
-        # self.data_columns = [q[3] for q in self.query("""SELECT *
-        # FROM INFORMATION_SCHEMA.COLUMNS
-        # WHERE TABLE_NAME = N'disruption_warning'""", use_pandas=True)]
 
     @property
     def conn(self):
@@ -70,9 +70,9 @@ class ShotDatabase:
             Result of query
         """
         if "alter" in query.lower():
-            if self._check_protected(query.lower()):
+            if query.lower() in self.protected_columns:
                 return 0
-        if use_pandas:
+        elif use_pandas:
             return pd.read_sql_query(query, self.engine)
         curs = self.conn.cursor()
         output = None
@@ -86,95 +86,90 @@ class ShotDatabase:
             self.logger.error("Query failed, returning None")
         curs.close()
         return output
-    
-    # Removed until decisions made on updating disruption warnings table
-    # def add_shots(self, shots, update=False):
-    #     """add_shots to sql table
-
-    #     Parameters
-    #     ----------
-    #     shots : _type_
-    #         _description_
-    #     update : bool, optional
-    #         _description_, by default False
-    #     """
-    #     for shot in shots:
-    #         self.add_shot(shot=shot, update=update)
             
-    # def add_shot(self, shot, update=False):
-    #     """
-    #     Upload shot to SQL database. Can include shot object if available to avoid redundant computation.
-    #     Returns an error if there is at least one row already containing the shot id.
-    #     """
-    #     if self._check_protected(shot.data.columns):
-    #         return False
-    #     curr_df = pd.read_sql_query(
-    #         f"select * from disruption_warning where shot in {shot.shot_id} order by time", self.engine)
-    #     with self.conn.cursor() as curs:
-    #         if len(curr_df) == 0:
-    #             curs.executemany(
-    #                 """insert into disruption_warning values""", shot.data)
-    #         elif update:
-    #             self._update_shot(shot.data, curr_df, curs)
-    #         else:
-    #             self.logger.warning("Not updating shot")
-    #     return True
+    def add_shot_data(self, shot_id : int, shot_data : pd.DataFrame, update=False, override_update_columns=None):
+        """
+        Upload shot to SQL database. Can include shot object if available to avoid redundant computation.
+        Returns an error if there is at least one row already containing the shot id.
+        """
+        
+        curr_df = pd.read_sql_query(
+            f"select * from disruption_warning where shot in {shot_id} order by time", self.engine)
+        
+        if len(curr_df == 0):
+            return self._insert_shot_data(curr_df, shot_data)
+        elif len(curr_df) == len(shot_data) and ((curr_df['time']  - shot_data['time']).abs() < TIME_CONST).all():
+            return self._update_shot_data(curr_df, shot_data, update, override_update_columns)
+        
+        self.logger.error("Invalid timebase for data output")
+        return False
 
-    # def _update_shot(shot_data, curr_df, curs):
-    #     new_rows = []
-    #     for index, row in shot_data.iterrows():
-    #         update_row = curr_df[abs(curr_df['time']-row['time']) < TIME_CONST]
-    #         if len(update_row) > 1:
-    #             # TODO: Change to update all with a new value
-    #             raise Exception("Too many matches")
-    #         elif len(update_row) == 1:
-    #             curs.execute(
-    #                 f"""insert into disruption_warning values where dbkey""", update_row, update_row['dbkey'])
-    #         else:
-    #             new_rows.append(index)
-    #     curs.executemany(
-    #         f"""insert into disruption_warning values""", curr_df.iloc[new_rows, :])
-
-    # def _check_protected(self, cols_edited):
-    #     edits_protected_column = False
-    #     for col in self.protected_columns:
-    #         if col in cols_edited:
-    #             self.logger.error(f"Attempted to edit PROTECTED COLUMN: {col}")
-    #             edits_protected_column = True
-    #     return not edits_protected_column
+    def _insert_shot_data(self, curr_df : pd.DataFrame, shot_data : pd.DataFrame):
+        matching_columns_shot_data = pd.DataFrame()
+        for column_name in curr_df.columns:
+            if column_name in shot_data.columns:
+                matching_columns_shot_data[column_name] = shot_data[column_name]
+            else:
+                matching_columns_shot_data[column_name] = np.nan
+        with self.conn.cursor() as curs:
+            data_tuples = list(matching_columns_shot_data.itertuples(index=False, name=None))
+            curs.executemany(
+                """insert into disruption_warning values""", data_tuples)
+        return True
+    
+    def _update_shot_data(self, curr_df : pd.DataFrame, shot_data : pd.DataFrame, update : bool, override_update_columns=None):
+        NON_UPDATABLE_COLUMNS = ["shot", "time"]
+        override_update_columns = override_update_columns or []
+        
+        update_columns_shot_data = pd.DataFrame()
+        for column_name in curr_df.columns:
+            if (
+                column_name in NON_UPDATABLE_COLUMNS or 
+                (column_name in self.protected_columns and column_name not in override_update_columns)
+            ):
+                continue
+            
+            if (
+                column_name in shot_data.columns and
+                not shot_data[column_name].isna().all() and
+                (update or curr_df[column_name].isna().all())
+            ):
+                update_columns_shot_data[column_name] = shot_data[column_name]
+        with self.conn.cursor() as curs:
+            for index, row in update_columns_shot_data.iterrows():     
+                update_columns = update_columns_shot_data.columns.difference(NON_UPDATABLE_COLUMNS)
+                sql_command = f"UPDATE disruption_warning SET {', '.join([f'{col} = ?' for col in update_columns])} WHERE time = ?;"
+                curs.execute(sql_command, row + curr_df['time'][index])
+        return True
         
     
-    # # TODO: Protect against injection attacks
-    # def remove_shot(self, shot_id):
-    #     """ Remove shot from SQL database."""
-    #     raise NotImplementedError("Blocking until safety checks are in place")
-    #     data_df = pd.read_sql_query(
-    #         f'''select * from disruption_warning where shot = {shot_id} order by time''', self.engine)
-    #     if len(data_df) == 0:
-    #         self.logger.info(f"Shot {shot_id} does not exist in database")
-    #         return
-    #     with self.conn.cursor() as curs:
-    #         curs.execute(
-    #             f"delete from disruption_warning where shot = {shot_id}")
-    #     return
+    def remove_shot_data(self, shot_id):
+        """Remove shot from SQL database."""
+        data_df = pd.read_sql_query(
+            f'''select * from disruption_warning where shot = {shot_id} order by time''', self.engine)
+        if len(data_df) == 0:
+            self.logger.info(f"Shot {shot_id} does not exist in database")
+            return False
+        with self.conn.cursor() as curs:
+            curs.execute(
+                f"delete from disruption_warning where shot = {shot_id}")
+        return True
     
-    # def add_column(self, col_name, var_type="TEXT", table="disruption_warning"):
-    #     if col_name not in self.data_columns:
-    #         self.query(
-    #             f"alter table {table} add {col_name} {var_type};", use_pandas=False)
-    #         self.data_columns.append(col_name)
-    #         return 1
-    #     self.logger.info("Column already in database table")
-    #     return 0
+    def add_column(self, col_name, var_type="TEXT", table="disruption_warning"):
+        try:
+            self.query(f"alter table {table} add {col_name} {var_type};", use_pandas=False)
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to add column with error {e}")
+            return False
 
-    # def remove_column(self, col_name, table="disruption_warning"):
-    #     if col_name in self.data_columns:
-    #         self.query(
-    #             f"alter table {table} drop column {col_name};", use_pandas=False)
-    #         self.data_columns.remove(col_name)
-    #         return 1
-    #     self.logger.info("Column not in database table")
-    #     return 0
+    def remove_column(self, col_name, table="disruption_warning"):
+        try:
+            self.query(f"alter table {table} drop column {col_name};", use_pandas=False)
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to drop column with error {e}")
+            return False
 
     def get_shot_data(self, shot_ids : List[int], cols : List[str]=["*"], sql_table="disruption_warning"):
         """get_shot_data retrieves columns from sql data for given shot_ids
