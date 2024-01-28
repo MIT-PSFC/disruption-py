@@ -1,23 +1,15 @@
 import json
 import argparse
-from disruption_py.handlers.cmod_handler import CModHandler
+import pandas as pd 
 
+from disruption_py.handlers.cmod_handler import CModHandler
+from disruption_py.utils.constants import BLACK_WINDOW_THRESHOLD, DEFAULT_COLS, DEFAULT_RATIO
 from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.settings import LogSettings, ShotSettings
-
-try:
-    import importlib.resources as importlib_resources
-except ImportError:
-    # Try backported to PY<37 `importlib_resources`.
-    import importlib_resources
-
-import pandas as pd 
-
+from disruption_py.utils.ml.preprocessing import add_derived_features, create_dataset, create_label, filter_dataset_df, parse_feature_cols
+from disruption_py.utils.utils import without_duplicates
 from disruption_py.utils.math_utils import generate_id
-import disruption_py.data
-from disruption_py.ml.preprocessing import *
-
 
 def generate_datasets(args):
     if args.log:
@@ -27,6 +19,7 @@ def generate_datasets(args):
     logger = log_settigs.logger()
 
     feature_cols, derived_feature_cols = parse_feature_cols(args.feature_cols)
+    feature_cols = without_duplicates(DEFAULT_COLS + feature_cols)
     logger.info(f"requested feature columns: {feature_cols}")
     logger.info(f"requested derived feature columns: {derived_feature_cols}")
     
@@ -38,13 +31,7 @@ def generate_datasets(args):
         run_tags=args.populate_tags,
         run_columns=feature_cols,
         only_requested_columns=args.only_requested_columns,
-        output_type_request="list"
     )
-        
-    if args.shotlist is None:
-        shot_ids_request = "paper"
-    else:
-        shot_ids_request = args.shotlist
     
     tokamak = map_string_to_enum(args.tokamak, Tokamak)
     if tokamak == Tokamak.CMOD:
@@ -52,9 +39,16 @@ def generate_datasets(args):
     else:
         raise ValueError("Tokamak Not Supported")
     
+    if args.shotlist is None:
+        if tokamak == Tokamak.D3D:
+            shot_ids_request = "d3d_paper_shotlist"
+        elif tokamak == Tokamak.CMOD:
+            shot_ids_request = "cmod_test"
+    
     dataset_df = handler.get_shots_data(
         shot_ids_request=shot_ids_request, 
         shot_settings=shot_settings,
+        output_type_request="dataframe",
         num_processes=args.num_processes
     )
     
@@ -80,9 +74,13 @@ def generate_datasets(args):
         df_test = pd.concat([X_test, y_test], axis=1)
         df_test.to_csv(args.output_dir +
                     f"test_{args.unique_id}.csv", sep=',', index=False)
-        
     with open(args.output_dir + f"generate_datasets_{args.unique_id}.json", "w") as f:
-        json.dump(vars(args), f)
+        args_dict = vars(args)
+        keys_to_remove = ['func', 'subcommand']
+        for key in keys_to_remove:
+            if key in args_dict:
+                del args_dict[key]
+        json.dump(args_dict, f)
     logger.info(f"Unique ID for this run: {args.unique_id}")
     
 
@@ -90,7 +88,7 @@ def add_generate_datasets_arguments(parser : argparse.ArgumentParser):
     parser.add_argument('--shotlist', type=str,
                         help='Path to file specifying shotlist', default=None)
     parser.add_argument('--tokamak', type=str,
-                        help='Tokamak to use for data source. Currently only supports DIII-D and Alcator C-Mod.', default='d3d')
+                        help='Tokamak to use for data source. Currently only supports DIII-D and Alcator C-Mod.', default='cmod')
     parser.add_argument('--num_processes', type=int,
                         help='The numberof processes to use for data retrieval.', default=1)
     parser.add_argument(
@@ -100,9 +98,9 @@ def add_generate_datasets_arguments(parser : argparse.ArgumentParser):
     parser.add_argument('--output_dir', type=str,
                         help='Path to generated data.', default=r'./output/')
     parser.add_argument('--timebase_signal', type=str,
-                        help='Signal whose timebase will be used as the unifying timebase of the dataset.', default=None)
+                        help='Signal whose timebase will be used as the unifying timebase of the dataset.', default="efit")
     parser.add_argument('--efit_tree', type=str,
-                        help="Name of efit tree to use for each shot. If left as None, the script will use the get_efit_tree method in database.py.", default=None)
+                        help="Name of efit tree to use for each shot. If left as None, the script will use the get_efit_tree method in database.py.", default="analysis")
     parser.add_argument('--data_source', type=int, choices=[
                         0, 1, 2, 3], help=r"0: Default to SQL database then MDSPlus.\n1: Default to MDSPlus then SQL database.\n2: SQL database only.\n3: MDSPlus only.", default=2)
     parser.add_argument('--unique_id', type=str,

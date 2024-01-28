@@ -1,8 +1,7 @@
 import os
 import logging
 from disruption_py.databases import ShotDatabase
-
-D3D_PROTECTED_COLUMNS = []
+from disruption_py.utils.constants import D3D_PROTECTED_COLUMNS
 
 class D3DDatabase(ShotDatabase):
 	logger = logging.getLogger('disruption_py')

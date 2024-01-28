@@ -6,11 +6,11 @@ def setup_cmod():
     print(f"Running setup for cmod")
 
     # add sysbase_login
+    sybase_login_path = os.path.expanduser('~/logbook.sybase_login')
     if os.path.exists(sybase_login_path):
         print("logbook.sybase_login already found in home directory, continuing setup")
     else:
         username = input("What is your username for accessing the CMOD SQL logbook?")
-        sybase_login_path = os.path.expanduser('~/logbook.sybase_login')
         sybase_login_content = "\n".join(["", "alcdb2", "logbook", f"{username}", "pfcworld"])
         with open(sybase_login_path, "w") as file:
             file.write(sybase_login_content)
@@ -42,10 +42,10 @@ def setup_cmod():
             for more information on installation.")
         print("note: the mfe workstations have the driver installed")
         
-def run_setup_helper():
+def run_setup(*args, **kwargs):
     print(f"Welcome to the setup helper script for disruption_py")
-    tokamak_number : int = input("Which tokamak would you like to setup disruption_py for? (1 for cmod, 2 for d3d):")
-    if tokamak_number == 1:
+    tokamak_number : str = input("Which tokamak would you like to setup disruption_py for? (1 for cmod, 2 for d3d):")
+    if int(tokamak_number) == 1:
         setup_cmod()
     else:
         print("This tokamak is not currently supported")

@@ -3,11 +3,11 @@ name = "disruption-py"
 version = "0.8.0"
 description = ""
 authors = ["Joshua Lorincz <26237613+lajz@users.noreply.github.com>"]
+license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.8.10"
-eqtools = "^1.4.0"
 importlib_resources = "^6.1.1"
 matplotlib = "^3.1.2"
 netCDF4 = "^1.5.3"
@@ -26,4 +26,5 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-mycli = "disruption_py.cli.cli:main"
+disruption_py_setup = "disruption_py.cli.setup_script:run_setup"
+disruption_py = "disruption_py.cli.cli:main"

@@ -121,9 +121,11 @@ class DatabaseShotIdsRequest(ShotIdsRequest):
 
 # --8<-- [start:get_shot_ids_request_dict]
 _get_shot_ids_request_mappings: Dict[str, ShotIdsRequest] = {
-    "paper": IncludedShotIdsRequest("paper_shotlist.txt"),
-    "disr": IncludedShotIdsRequest("train_disr.txt"),
-    "nondisr": IncludedShotIdsRequest("train_nondisr.txt"),
+    "d3d_paper_shotlist": IncludedShotIdsRequest("paper_shotlist.txt"),
+    "d3d_train_disr": IncludedShotIdsRequest("train_disr.txt"),
+    "d3d_train_nondisr": IncludedShotIdsRequest("train_nondisr.txt"),
+    "cmod_test": IncludedShotIdsRequest("cmod_test.txt"),
+    "cmod_non_disruptions_ids_not_blacklist": IncludedShotIdsRequest("cmod_non_disruptions_ids_not_blacklist.txt"),
 }
 # --8<-- [end:get_shot_ids_request_dict]
 
