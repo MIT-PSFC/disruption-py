@@ -7,16 +7,25 @@ In order to access the specific clusters, i.e. Alcator C-Mod or DIII-D, a user a
 
 ### Alcator C-Mod  
 
-The following commands will install the DisruptionPy package locally in developer mode. In developer mode, changes to the directory used for installation will be reflected in the installed package.
-
-```
+First copy the project directory to your home directory:
+```bash
 cd ~
 mkdir ~/dpy-experimental
 rm -rf ~/dpy-experimental/disruption-py # if you have already copied this previously
 cp -R /home/joshlor/disruption-py ~/dpy-experimental/disruption-py
-pip3 install --user -e ~/dpy-experimental/disruption-py # No --user needed if installing in a virtual env
 ```
 
+Optionally create a virtual environment and activate it
+```bash
+cd ~/dpy-experimental
+python -m venv dpy-venv
+source dpy-venv/bin/activate
+```
+
+Next install the DisruptionPy package locally in developer mode. In developer mode, changes to the directory used for installation will be reflected in the installed package.
+```bash
+pip install -e ~/dpy-experimental/disruption-py # No --user needed if installing in a virtual env
+```
 
 ## Locally
 TBD
@@ -24,7 +33,7 @@ TBD
 note: if you are having trouble with installation please try to use mferws2.
 
 run `pip install disruption_py`
-run `disruption_py setup`
+run `disruption_py_setup`
 
 
 # Development

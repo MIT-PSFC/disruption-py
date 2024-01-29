@@ -1,6 +1,31 @@
 import site
 import os
 import pyodbc
+from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
+from disruption_py.utils.mappings.tokamak import Tokamak
+
+def cmod_setup_check(func):
+    def inner(args):
+
+        if map_string_to_enum(getattr(args, "tokamak"), Tokamak) == Tokamak.CMOD:
+            sybase_login_path = os.path.expanduser('~/logbook.sybase_login')
+            if not os.path.exists(sybase_login_path):
+                print("disruption_py_setup not complete, no sybase_login file found. Please run disruption_py_setup")
+                return False
+            
+            try:
+                import MDSplus
+            except ImportError:
+                print("disruption_py_setup not complete, MDSplus package not available. Please run disruption_py_setup")
+                return False
+            
+            available_drivers = pyodbc.drivers()
+            desired_driver = 'ODBC Driver 18 for SQL Server'
+            if desired_driver not in available_drivers:
+                print(f"The driver '{desired_driver}' is NOT installed, this may cause issues connection to the SQL database. Please run disruption_py_setup")
+        
+        return func(args)
+    return inner
 
 def setup_cmod():
     print(f"Running setup for cmod")
@@ -44,8 +69,9 @@ def setup_cmod():
         
 def run_setup(*args, **kwargs):
     print(f"Welcome to the setup helper script for disruption_py")
-    tokamak_number : str = input("Which tokamak would you like to setup disruption_py for? (1 for cmod, 2 for d3d):")
-    if int(tokamak_number) == 1:
+    tokamak_string: str = input('Which tokamak would you like to setup disruption_py for? ("cmod" for cmod, "d3d" for d3d):')
+    tokamak = map_string_to_enum(tokamak_string, Tokamak)
+    if tokamak == Tokamak.CMOD:
         setup_cmod()
     else:
         print("This tokamak is not currently supported")
