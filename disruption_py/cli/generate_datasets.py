@@ -8,6 +8,7 @@ from disruption_py.utils.constants import BLACK_WINDOW_THRESHOLD, DEFAULT_COLS, 
 from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.settings import LogSettings, ShotSettings
+from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment
 from disruption_py.utils.ml.preprocessing import add_derived_features, create_dataset, create_label, filter_dataset_df, parse_feature_cols
 from disruption_py.utils.utils import without_duplicates
 from disruption_py.utils.math_utils import generate_id
@@ -35,7 +36,11 @@ def generate_datasets(args):
         only_requested_columns=args.only_requested_columns,
     )
     
-    tokamak = map_string_to_enum(args.tokamak, Tokamak)
+    if args.tokamak is None:
+        tokamak = get_tokamak_from_environment()
+        logger.info(f"No tokamak argument given. Detected tokamak: {tokamak.value}")
+    else:
+        tokamak = map_string_to_enum(args.tokamak, Tokamak)
     if tokamak == Tokamak.CMOD:
         handler = CModHandler()
     else:
@@ -90,7 +95,7 @@ def add_generate_datasets_arguments(parser : argparse.ArgumentParser):
     parser.add_argument('--shotlist', type=str,
                         help='Path to file specifying shotlist', default=None)
     parser.add_argument('--tokamak', type=str,
-                        help='Tokamak to use for data source. Currently only supports DIII-D and Alcator C-Mod ("cmod" for cmod, "d3d" for d3d).')
+                        help='Tokamak to use for data source. Currently only supports DIII-D and Alcator C-Mod ("cmod" for cmod, "d3d" for d3d).', default=None)
     parser.add_argument('--num_processes', type=int,
                         help='The numberof processes to use for data retrieval.', default=1)
     parser.add_argument(

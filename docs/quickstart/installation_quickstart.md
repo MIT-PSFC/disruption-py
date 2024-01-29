@@ -18,13 +18,18 @@ cp -R /home/joshlor/disruption-py ~/dpy-experimental/disruption-py
 Optionally create a virtual environment and activate it
 ```bash
 cd ~/dpy-experimental
-python -m venv dpy-venv
+python -m venv ~/dpy-experimental/dpy-venv
 source dpy-venv/bin/activate
 ```
 
 Next install the DisruptionPy package locally in developer mode. In developer mode, changes to the directory used for installation will be reflected in the installed package.
 ```bash
 pip install -e ~/dpy-experimental/disruption-py # No --user needed if installing in a virtual env
+```
+
+Next install other necessary package contents using the helper script by running:
+```bash
+disruption_py_setup
 ```
 
 ## Locally

@@ -3,6 +3,7 @@ import os
 import pyodbc
 from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment
 
 def cmod_setup_check(func):
     def inner(args):
@@ -69,8 +70,19 @@ def setup_cmod():
         
 def run_setup(*args, **kwargs):
     print(f"Welcome to the setup helper script for disruption_py")
-    tokamak_string: str = input('Which tokamak would you like to setup disruption_py for? ("cmod" for cmod, "d3d" for d3d):')
-    tokamak = map_string_to_enum(tokamak_string, Tokamak)
+    
+    tokamak_string: str = input('Which tokamak would you like to setup disruption_py for? ("cmod" for cmod, "d3d" for d3d, leave blank to auto-detect):') 
+    while True:
+        if tokamak_string == "":
+            tokamak = get_tokamak_from_environment()
+        else:
+            tokamak = map_string_to_enum(tokamak_string, Tokamak, should_raise=False)
+        
+        if tokamak is None:
+            tokamak_string = input('Invalid input, please enter "cmod" for cmod, "d3d" for d3d, or leave blank to auto-detect:')
+        else:
+            break   
+        
     if tokamak == Tokamak.CMOD:
         setup_cmod()
     else:
