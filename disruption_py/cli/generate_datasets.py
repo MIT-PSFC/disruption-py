@@ -1,7 +1,7 @@
 import json
 import argparse
 import pandas as pd
-from disruption_py.cli.setup_script import cmod_setup_check 
+from disruption_py.cli.setup_script import setup_check 
 
 from disruption_py.handlers.cmod_handler import CModHandler
 from disruption_py.utils.constants import BLACK_WINDOW_THRESHOLD, DEFAULT_COLS, DEFAULT_RATIO
@@ -13,7 +13,7 @@ from disruption_py.utils.ml.preprocessing import add_derived_features, create_da
 from disruption_py.utils.utils import without_duplicates
 from disruption_py.utils.math_utils import generate_id
 
-@cmod_setup_check
+@setup_check
 def generate_datasets(args):
     if args.log:
         log_settigs = LogSettings(log_file_path=fr'./output/{args.unique_id}.log', file_log_level=args.log_level*10)

@@ -17,7 +17,7 @@ def map_string_to_enum(value, enum_class, should_raise=True):
             enum_value = enum_class(value)
         except ValueError:
             if should_raise:
-                raise ValueError(f"Cannot convert value '{enum_value}' to enum for '{enum_class}'")
+                raise ValueError(f"Cannot convert value '{value}' to enum for '{enum_class}'")
             else:
                 return None
     return enum_value

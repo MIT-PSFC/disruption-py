@@ -22,9 +22,9 @@ python -m venv ~/dpy-experimental/dpy-venv
 source dpy-venv/bin/activate
 ```
 
-Next install the DisruptionPy package locally in developer mode. In developer mode, changes to the directory used for installation will be reflected in the installed package.
+Next install the DisruptionPy package locally. Note that installation in developer mode with the `-e` flag is now unavailable because of the migration to poetry.
 ```bash
-pip install -e ~/dpy-experimental/disruption-py # No --user needed if installing in a virtual env
+pip install ~/dpy-experimental/disruption-py # No --user needed if installing in a virtual env
 ```
 
 Next install other necessary package contents using the helper script by running:
