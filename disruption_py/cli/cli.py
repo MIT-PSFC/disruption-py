@@ -9,7 +9,7 @@ def main():
     # generate datasets command
     generate_datasets_command = subparsers.add_parser(
         "generate_datasets", 
-        help="Generate DPRF compatible datasets for training and inference. Currently only supports CMod data"
+        help="Generate DPRF compatible datasets for training and inference. Currently only supports CMod data."
     )
     add_generate_datasets_arguments(generate_datasets_command)
     generate_datasets_command.set_defaults(func=generate_datasets)
