@@ -186,6 +186,22 @@ class ListOutputRequest(OutputTypeRequest):
     
     def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
         self.results = []
+        
+class DataFrameOutputRequest(OutputTypeRequest):
+    """
+    Output all retrieved shot data as a list of dataframes, once retrieval complete.
+    """
+    def __init__(self):
+        self.results : pd.DataFrame = pd.DataFrame()
+        
+    def _output_shot(self, params : ResultOutputTypeRequestParams):
+        self.results = pd.concat([self.results, params.result], ignore_index=True)
+    
+    def get_results(self, params: FinishOutputTypeRequestParams):
+        return self.results
+    
+    def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
+        self.results = pd.DataFrame()
     
     
 class HDF5OutputRequest(OutputTypeRequest):
@@ -270,6 +286,7 @@ class SQLOutputRequest(OutputTypeRequest):
 # --8<-- [start:output_type_request_dict]
 _output_type_request_mappings: Dict[str, OutputTypeRequest] = {
     "list" : ListOutputRequest(),
+    "dataframe" : DataFrameOutputRequest(),
 }
 # --8<-- [end:output_type_request_dict]
 

@@ -9,7 +9,7 @@ from sqlalchemy import create_engine
 import pyodbc
 import threading
 
-from disruption_py.utils.constants import TIME_CONST
+from disruption_py.utils.constants import BASE_PROTECTED_COLUMNS, TIME_CONST
         
 class ShotDatabase:
     """
@@ -159,13 +159,12 @@ class ShotDatabase:
         table_name : str
             Name of the table for data insert or update. Default value is "disruption_warning".
         """
-        NON_UPDATABLE_COLUMNS = ["shot", "time"]
         override_columns = override_columns or []
         
         update_columns_shot_data = pd.DataFrame()
         for column_name in curr_df.columns:
             if (
-                column_name in NON_UPDATABLE_COLUMNS or 
+                column_name in BASE_PROTECTED_COLUMNS or 
                 (column_name in self.protected_columns and column_name not in override_columns)
             ):
                 continue
@@ -178,7 +177,7 @@ class ShotDatabase:
                 update_columns_shot_data[column_name] = shot_data[column_name]
         with self.conn.cursor() as curs:
             for index, row in update_columns_shot_data.iterrows():     
-                update_columns = update_columns_shot_data.columns.difference(NON_UPDATABLE_COLUMNS)
+                update_columns = update_columns_shot_data.columns
                 sql_command = f"UPDATE {table_name} SET {', '.join([f'{col} = ?' for col in update_columns])} WHERE time = ?;"
                 curs.execute(sql_command, row + curr_df['time'][index])
         return True
