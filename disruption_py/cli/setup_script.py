@@ -8,24 +8,25 @@ from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_enviro
 def cmod_setup_check():
     sybase_login_path = os.path.expanduser('~/logbook.sybase_login')
     if not os.path.exists(sybase_login_path):
-        print("disruption_py_setup not complete, no sybase_login file found. Please run disruption_py_setup")
+        print("setup not complete, no sybase_login file found. Please run `disruption_py setup`")
         return False
     
     try:
         import MDSplus
     except ImportError:
-        print("disruption_py_setup not complete, MDSplus package not available. Please run disruption_py_setup")
+        print("setup not complete, MDSplus package not available. Please run `disruption_py setup`")
         return False
     
     available_drivers = pyodbc.drivers()
     desired_driver = 'ODBC Driver 18 for SQL Server'
     if desired_driver not in available_drivers:
-        print(f"The driver '{desired_driver}' is NOT installed, this may cause issues connection to the SQL database. Please run disruption_py_setup")
+        print(f"The driver '{desired_driver}' is NOT installed, this may cause issues connection to the SQL database. Please run `disruption_py setup`")
     return True
-    
+
+
 def setup_check(func):
-    def inner(args):
-        if not hasattr(args, "tokamak") or args.tokamak is None:
+    def inner(*args): 
+        if len(args) != 1 or (not hasattr(args[0], "tokamak") or args[0].tokamak is None):
             tokamak = get_tokamak_from_environment()
         else:
             tokamak = map_string_to_enum(args.tokamak, Tokamak, should_raise=False)
@@ -34,7 +35,7 @@ def setup_check(func):
             if not cmod_setup_check():
                 return False
         
-        return func(args)
+        return func(*args)
     return inner
 
 def setup_cmod():
@@ -77,7 +78,7 @@ def setup_cmod():
             for more information on installation.")
         print("note: the mfe workstations have the driver installed")
         
-def run_setup(*args, **kwargs):
+def setup(*args, **kwargs):
     print(f"Welcome to the setup helper script for disruption_py")
     
     tokamak_string: str = input('Which tokamak would you like to setup disruption_py for? ("cmod" for cmod, "d3d" for d3d, leave blank to auto-detect): ') 

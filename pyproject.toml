@@ -37,5 +37,4 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-disruption_py_setup = "disruption_py.cli.setup_script:run_setup"
 disruption_py = "disruption_py.cli.cli:main"

@@ -74,8 +74,8 @@ To use the CLI, simply run `disruption_py **command**` from the command line (pr
 The commands available are listed below. You may also use `disruption_py --help` for more details.
 
 ### generate_datasets
-The standard command for generating a dataset using disruption_py, allow for the generation DPRF compatible datasets for training and inference. Currently only supports CMod data. Run `disruption_py generate_datasets --help` for information on available arguments.
+The standard command for generating a dataset using disruption_py, allow for the generation DPRF compatible datasets for training and inference. Currently only supports CMod data. Run `disruption_py run generate_datasets --help` for information on available arguments.
 To use run:
 ```bash
-disruption_py generate_datasets
+disruption_py run generate_datasets
 ```

@@ -1,7 +1,6 @@
 import json
 import argparse
 import pandas as pd
-from disruption_py.cli.setup_script import setup_check 
 
 from disruption_py.handlers.cmod_handler import CModHandler
 from disruption_py.utils.constants import BLACK_WINDOW_THRESHOLD, DEFAULT_COLS, DEFAULT_RATIO
@@ -9,12 +8,11 @@ from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.settings import LogSettings, ShotSettings
 from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment
+from disruption_py.utils.math_utils import generate_id
 from disruption_py.utils.ml.preprocessing import add_derived_features, create_dataset, create_label, filter_dataset_df, parse_feature_cols
 from disruption_py.utils.utils import without_duplicates
-from disruption_py.utils.math_utils import generate_id
 
-@setup_check
-def generate_datasets(args):
+def main(args):
     if args.log:
         log_settigs = LogSettings(log_file_path=fr'./output/{args.unique_id}.log', file_log_level=args.log_level*10)
     else:
@@ -90,8 +88,8 @@ def generate_datasets(args):
         json.dump(args_dict, f)
     logger.info(f"Unique ID for this run: {args.unique_id}")
     
-
-def add_generate_datasets_arguments(parser : argparse.ArgumentParser):
+def get_parser():
+    parser = argparse.ArgumentParser(description='Generate DPRF compatible datasets for training and inference. Currently only supports CMod data.')
     parser.add_argument('--shotlist', type=str,
                         help='Path to file specifying shotlist', default=None)
     parser.add_argument('--tokamak', type=str,
@@ -125,3 +123,4 @@ def add_generate_datasets_arguments(parser : argparse.ArgumentParser):
         '--filter', type=bool, help="Run filter_dataset method on produced dataset. Necessary for generating DPRF datasets", default=True)
     parser.add_argument(
         '--produce_train_test', type=bool, help="Whether to proucee train and test datasets", default=False)
+    return parser

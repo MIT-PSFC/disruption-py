@@ -29,7 +29,7 @@ In order to access the specific clusters, i.e. Alcator C-Mod or DIII-D, a user a
 
 4. Do other necessary setup tasks using the built-in helper script by running:
 	```bash
-	disruption_py_setup
+	disruption_py setup
 	```
 
 ### Editable installation
@@ -61,7 +61,7 @@ git switch develop
 			```
 		3. Run the setup script:
 			```bash
-			poetry run disruption_py_setup
+			poetry run disruption_py setup
 			```
 
 		Now when using disruption_py prepend commands with `poetry run`. For instance, when running a script use `poetry run python **script.py**`, or when running the cli use `poetry run disruption_py **command**`.
@@ -78,7 +78,7 @@ git switch develop
 			```
 		4. Run the setup script:
 			```bash
-			disruption_py_setup
+			disruption_py setup
 			```
 
 		Now you can use the package as normal as long as your virtual environment is activated (you do not need to prepend commands with `poetry run`)
