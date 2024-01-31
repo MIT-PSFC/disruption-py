@@ -466,12 +466,9 @@ class BasicCmodRequests(ShotDataRequest):
         contained_cached_methods=["_get_ip_parameters"],
         tokamak=Tokamak.CMOD)
     def _get_ohmic_parameters(params : ShotDataRequestParams):
+        # <-- this line is the culprit for breaking when analysis tree is set to EFIT18
         efit_tree = get_efit_tree(params=params)
-        if efit_tree.name.lower() == "analysis":
-            v_loop_node = r"\top.mflux:v0"
-        else:
-            v_loop_node = r"\top.data:vloop"
-        v_loop_record = efit_tree.getNode(v_loop_node).getData()
+        v_loop_record = efit_tree.getNode(r"\top.mflux:v0").getData()
         v_loop = v_loop_record.data().astype('float64', copy=False)
         v_loop_time = v_loop_record.dim_of(0)
         if len(v_loop_time) <= 1:
