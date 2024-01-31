@@ -15,3 +15,4 @@ scripts/output/*
 scripts/*.txt
 .venv
 site/
+.idea
