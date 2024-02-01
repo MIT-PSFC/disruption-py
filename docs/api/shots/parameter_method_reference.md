@@ -12,6 +12,17 @@ disruption_py/shots/parameter_methods/built_in.py
 ## Custom Parameter Methods { .doc .doc-heading }
 Users of disruption_py can create their own custom parameter methods by adding decorators to methods in a subclass of [`ShotDataRequest`][disruption_py.settings.shot_data_request.ShotDataRequest]. Instances of these classes can then be passed as the `shot_data_request` parameter in the [`ShotSettings`][disruption_py.settings.ShotSettings], and there results will be included alongside those returned by the built-in methods. See [`parameter_cached_method`][disruption_py.shots.helpers.method_caching.parameter_cached_method] for more details on decorators.
 
+### Parameter methods structure
+
+::: examples.shot_data_request_docs.decorated_shot_data_method
+    handler: python
+	options:
+	  heading_level: 4
+	  show_source: false
+	  show_root_heading: false
+	  show_root_toc_entry: false
+
+### Walkthrough { .doc .doc-heading }
 The steps for creating a custom parameter method are as follows:
 
 1. Create a subclass of [`ShotDataRequest`][disruption_py.settings.shot_data_request.ShotDataRequest]
@@ -83,3 +94,6 @@ For a parameter method to be run after calling [`get_shots_data`][disruption_py.
     - To be included via `run_methods`, the method name must be listed inside of `run_methods`
 	- To be included via `run_tags`, the method must have a tag listed in the `tags` parameter of the `parameter_cached_method` decorator that is inlcuded in `run_tags`
 	- To be inlcuded via `run_columns`, the method must have a column list in the `columns` parameter of the `parameter_cached_method` decorator that is included in `run_columns`
+
+
+Once all designated methods have been collected, DisruptionPy optimizes there execution order to minimize resource usage by using the information supplied in the `parameter_cached_method` decorator. Once reordering is complete, the methods are run.
