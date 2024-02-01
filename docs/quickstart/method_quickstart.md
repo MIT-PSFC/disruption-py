@@ -3,9 +3,11 @@ In DisruptionPy, Parameter methods are methods that produce tabular data in a st
 
 ## Built-in Parameter Methods { .doc .doc-heading }
 Built-in parameter methods are defined inside of the `disruption_py.shots.parameter_methods` package. All built in methods are listed inside of the `disruption_py.shots.parameter_methods.built_in.DEFAULT_SHOT_DATA_REQUESTS` list, which is shown below. To view the specific methods that are listed please see the repository on GitHub.
+```python
 --8<--
 disruption_py/shots/parameter_methods/built_in.py
 --8<--
+```
 
 ## Custom Parameter Methods { .doc .doc-heading }
 Users of disruption_py can create their own custom parameter methods by adding decorators to methods in a subclass of [`ShotDataRequest`][disruption_py.settings.shot_data_request.ShotDataRequest]. Instances of these classes can then be passed as the `shot_data_request` parameter in the [`ShotSettings`][disruption_py.settings.ShotSettings], and there results will be included alongside those returned by the built-in methods. See [`parameter_cached_method`][disruption_py.shots.helpers.method_caching.parameter_cached_method] for more details on decorators.
@@ -59,23 +61,23 @@ For a parameter method to be run after calling [`get_shots_data`][disruption_py.
 	- included inside of the `disruption_py.shots.parameter_methods.built_in.DEFAULT_SHOT_DATA_REQUESTS` list (built-in method)
 	- included inside of the `shot_data_request` parameter of the shot settings.
 
-??? note "Including multiple instances of the same class"
-	It is possible for multiple instances of the same class with different intitialization arguments to the `shot_data_request` parameter of the shot settings. This can allow for parameter methods to have a wide range in functionality. To prevent all methods with the same name from being run in a request, please see [using functions as decorator arguments][functions-as-decorator-arguments]
+	??? note "Including multiple instances of the same class"
+		It is possible for multiple instances of the same class with different intitialization arguments to the `shot_data_request` parameter of the shot settings. This can allow for parameter methods to have a wide range in functionality. To prevent all methods with the same name from being run in a request, please see [using functions as decorator arguments][functions-as-decorator-arguments]
 
 2. The method must have the `parameter_cached_method` decorator with its `tokamak` parameter either not set or set to the tokamak that you are retrieving data from.
 
-??? example "Example decorator"
-	```python
-	from disruption_py.settings.shot_data_request import ShotDataRequest
-	from disruption_py.shots.helpers.method_caching import parameter_cached_method
-	from disruption_py.utils.mappings.tokamak import Tokamak
+	??? example "Example decorator"
+		```python
+		from disruption_py.settings.shot_data_request import ShotDataRequest
+		from disruption_py.shots.helpers.method_caching import parameter_cached_method
+		from disruption_py.utils.mappings.tokamak import Tokamak
 
-	class MyShotDataRequest(ShotDataRequest):
+		class MyShotDataRequest(ShotDataRequest):
 
-		@parameter_cached_method(tokamak=Tokamak.CMOD, ...)
-		def cmod_retrieve_data(self, params: ShotDataRequestParams) -> pd.Dataframe:
-			...
-	```
+			@parameter_cached_method(tokamak=Tokamak.CMOD, ...)
+			def cmod_retrieve_data(self, params: ShotDataRequestParams) -> pd.Dataframe:
+				...
+		```
 
 3. The method is included to run via either the `run_methods`, `run_tags`, or `run_columns` parameters of the shot settings.
     - To be included via `run_methods`, the method name must be listed inside of `run_methods`

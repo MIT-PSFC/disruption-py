@@ -38,6 +38,8 @@ nav:
           - Set Times Request: api/requests/set_times_request_reference.md
           - Output Type Request: api/requests/output_type_request_reference.md
           - Shot Data Request: api/requests/shot_data_request_reference.md
+      - Shots:
+        - Parameter Method Decorators: api/shots/decorator_reference.md
       - Scripts:
           - Generate Datasets: api/scripts/generate_datasets.md
           - Profiling: api/scripts/profile_shots.md
