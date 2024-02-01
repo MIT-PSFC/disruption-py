@@ -21,7 +21,7 @@ Functions may be passed as some of the parameters of the `parameter_cached_metho
 These functions are called at runtime before the decorated method is run. They allow for the dynamic determination of
 parameters such as `used_trees` that may not be defined before runtime.
 
-??? example "Example"
+!!! example "Example"
 	```python
 	--8<--
 	examples/decorator_functions_docs.py:decorator_functions_example
@@ -30,7 +30,7 @@ parameters such as `used_trees` that may not be defined before runtime.
 
 
 ### Decorators Function structure
-::: examples.decorator_function_docs.cached_method_params_function
+::: examples.decorator_functions_docs.cached_method_params_function
     handler: python
 	options:
 	  heading_level: 4
