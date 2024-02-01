@@ -2,7 +2,7 @@
 In DisruptionPy, Parameter methods are methods that produce tabular data in a standardized time base. Parameter methods must be instance, class, or static methods of a subclass of [`ShotDataRequest`][disruption_py.settings.shot_data_request.ShotDataRequest] and take a single argument params that is an instance of [`ShotDataRequestParams`][disruption_py.settings.shot_data_request.ShotDataRequest].
 
 ## Built-in Parameter Methods { .doc .doc-heading }
-Built-in parameter methods are defined inside of the `disruption_py.shots.parameter_methods` package. All built in methods are listed inside of the `disruption_py.shots.parameter_methods.built_in.DEFAULT_SHOT_DATA_REQUESTS` list, which is shown below. To view the specific methods that are listed please see the repository on GitHub.
+Built-in parameter methods are defined inside of the `disruption_py.shots.parameter_methods` package. All built in methods are included through the built-in shot data requests in the `disruption_py.shots.parameter_methods.built_in.DEFAULT_SHOT_DATA_REQUESTS` list (shown below), where the built-in parameter methods are members of the listed shot data requests. To view the specific methods that are listed please see the [repository](https://github.com/MIT-PSFC/disruption-py) on GitHub.
 ```python
 --8<--
 disruption_py/shots/parameter_methods/built_in.py
