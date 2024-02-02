@@ -481,11 +481,17 @@ class BasicCmodRequests(ShotDataRequest):
 
     @staticmethod
     def get_power(times, p_lh, t_lh, p_icrf, t_icrf, p_rad, t_rad, p_ohm):
-        p_lh = interp1(t_lh, p_lh * 1.0e3, times,
-                       bounds_error=False) if p_lh is not None and t_lh > 0 else np.zeros(len(times))
-        p_icrf = interp1(t_icrf, p_icrf * 1.0e6, times,
-                         bounds_error=False) if p_icrf is not None else np.zeros(len(times))
-        if t_rad is None or len(t_rad) == 1 or p_rad is None:
+        if p_lh is not None and hasattr(t_lh, "__len__") and len(t_lh) > 1:
+            p_lh = interp1(t_lh, p_lh * 1.0e3, times)
+        else:
+            p_lh = np.zeros(len(times))
+            
+        if p_icrf is not None and hasattr(t_icrf, "__len__") and len(t_icrf) > 1:
+            p_icrf = interp1(t_icrf, p_icrf * 1.0e6, times, bounds_error=False)
+        else:
+            p_icrf = np.zeros(len(times))
+        
+        if t_rad is None or p_rad is None or (hasattr(t_rad, "__len__") and len(t_rad) == 1):
             p_rad = np.array([np.nan]*len(times))  # TODO: Fix
             dprad = p_rad.copy()
         else:
