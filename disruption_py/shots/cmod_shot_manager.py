@@ -2,6 +2,7 @@ import numpy as np
 from dataclasses import replace
 
 import pandas as pd
+from disruption_py.mdsplus_integration.tree_manager import TreeManager
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.shots.parameter_methods.cmod.basic_parameter_methods import BasicCmodRequests
@@ -34,17 +35,24 @@ class CModShotManager(ShotManager):
         ])
         efit_envs_to_test = [shot_settings.attempt_local_efit_env, ()] if shot_settings.attempt_local_efit_env is not None else [()]
         tree_nicknames = { "efit_tree" : (efit_names_to_test, efit_envs_to_test) }
-        
-        shot_props = cls.setup(
-            shot_id=shot_id,
-            tokamak=Tokamak.CMOD,
-            existing_data=existing_data,
-            disruption_time=disruption_time,
-            tree_nicknames=tree_nicknames,
-            shot_settings=shot_settings,
-            **kwargs
-        )
-        return shot_props
+            
+        tree_manager = TreeManager(shot_id)
+        try:
+            shot_props = cls.setup(
+                shot_id=shot_id,
+                tree_manager=tree_manager,
+                initial_existing_data=existing_data,
+                disruption_time=disruption_time,
+                tree_nicknames=tree_nicknames,
+                shot_settings=shot_settings,
+                tokamak=Tokamak.CMOD,
+                **kwargs
+            )
+            return shot_props
+        except Exception as e:
+            cls.logger.info(f"[Shot {shot_id}]: Caught failed to setup shot {shot_id}, cleaning up tree manager.")
+            tree_manager.cleanup()
+            raise e
     
     @classmethod
     def _modify_times_flattop_timebase(cls, shot_props : ShotProps, **kwargs):
