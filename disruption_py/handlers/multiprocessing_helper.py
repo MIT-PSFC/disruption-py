@@ -1,9 +1,15 @@
+from enum import Enum
 from typing import List, Dict
 from disruption_py.databases.database import ShotDatabase
 from disruption_py.settings import ShotSettings, OutputTypeRequest, ResultOutputTypeRequestParams, FinishOutputTypeRequestParams
 from disruption_py.utils.constants import MAX_PROCESSES
 import multiprocessing
 import threading
+
+# define a sentinel value for signifying that task queue is complete
+class MarkCompleteEnum(Enum):
+    MarkComplete = 'MarkComplete'
+MARK_COMPLETE = MarkCompleteEnum.MarkComplete
 
 class Consumer(multiprocessing.Process):
     def __init__(self, task_queue, result_queue, initialize_database=True, database_initializer_f = None):
@@ -26,7 +32,7 @@ class Consumer(multiprocessing.Process):
     def run(self):
         while True:
             next_task = self.task_queue.get()
-            if next_task is None:
+            if next_task is MARK_COMPLETE:
                 # Signal that the task is done and exit the loop
                 self.task_queue.task_done()
                 break
@@ -35,7 +41,7 @@ class Consumer(multiprocessing.Process):
             if self.initialize_database:
                 task_args['sql_database'] = self.consumer_database
             answer = next_task(task_args)
-   
+            
             self.task_queue.task_done()
             self.result_queue.put(answer)
         return
@@ -80,8 +86,10 @@ class MultiprocessingShotRetriever:
     def _result_processor(self):
         while True:
             result = self.result_queue.get()
-            if result is None:
+            if result is MARK_COMPLETE:
                 break
+            elif result is None:
+                continue
             self.output_type_request.output_shot(ResultOutputTypeRequestParams(result, self.database, self.tokamak, self.logger))
 
     def run(self, shot_creator_f, shot_ids_list, should_finish=True):
@@ -105,11 +113,11 @@ class MultiprocessingShotRetriever:
     def finish_and_await_results(self):
          # Signal the consumers to stop once completed processing and wait for it to finish
         for _ in self.consumers:
-            self.task_queue.put(None)
+            self.task_queue.put(MARK_COMPLETE)
         self.task_queue.join()
         
         # Signal the result processing thread to stop once completed processing and wait for it to finish
-        self.result_queue.put(None)
+        self.result_queue.put(MARK_COMPLETE)
         self.result_thread.join()
 
         finish_output_type_request_params = FinishOutputTypeRequestParams(self.tokamak, self.logger)

@@ -36,15 +36,15 @@ class ShotManager(ABC):
     def setup(
         cls,
         shot_id : int,
-        tokamak: Tokamak,
-        existing_data : pd.DataFrame,
+        tree_manager : TreeManager,
+        initial_existing_data : pd.DataFrame,
         disruption_time : float,
         tree_nicknames : Dict[str, Tuple[List[str], List[EnvModifications]]],
         shot_settings : ShotSettings,
+        tokamak: Tokamak,
         **kwargs
     ) -> ShotProps:
     
-        tree_manager = TreeManager(shot_id)
         metadata = {
             'labels': {},
             'commit_hash': get_commit_hash(),
@@ -60,7 +60,7 @@ class ShotManager(ABC):
         
         times = cls._init_times(
             shot_id=shot_id, 
-            existing_data=existing_data, 
+            existing_data=initial_existing_data, 
             tree_manager=tree_manager, 
             tokamak=tokamak, 
             disruption_time=disruption_time,
@@ -69,7 +69,7 @@ class ShotManager(ABC):
         
         populated_existing_data = cls._init_data(
             times=times,
-            existing_data=existing_data,
+            existing_data=initial_existing_data,
         )
         
         shot_props = ShotProps(
@@ -79,7 +79,7 @@ class ShotManager(ABC):
             disruption_time = disruption_time,
             tree_manager = tree_manager,
             times = times,
-            initial_existing_data = existing_data,
+            initial_existing_data = initial_existing_data,
             populated_existing_data = populated_existing_data,
             interpolation_method = interpolation_method,
             metadata = metadata,

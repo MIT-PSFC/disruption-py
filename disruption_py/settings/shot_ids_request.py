@@ -126,6 +126,7 @@ _get_shot_ids_request_mappings: Dict[str, ShotIdsRequest] = {
     "d3d_train_nondisr": IncludedShotIdsRequest("train_nondisr.txt"),
     "cmod_test": IncludedShotIdsRequest("cmod_test.txt"),
     "cmod_non_disruptions_ids_not_blacklist": IncludedShotIdsRequest("cmod_non_disruptions_ids_not_blacklist.txt"),
+    "cmod_non_disruptions_ids_not_blacklist_mini": IncludedShotIdsRequest("cmod_non_disruptions_ids_not_blacklist_mini.txt"),
 }
 # --8<-- [end:get_shot_ids_request_dict]
 
