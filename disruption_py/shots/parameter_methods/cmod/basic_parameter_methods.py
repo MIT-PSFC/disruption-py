@@ -481,7 +481,6 @@ class BasicCmodRequests(ShotDataRequest):
 
     @staticmethod
     def get_power(times, p_lh, t_lh, p_icrf, t_icrf, p_rad, t_rad, p_ohm):
-        print("vals", t_lh, "vals2", p_lh)
         p_lh = interp1(t_lh, p_lh * 1.0e3, times,
                        bounds_error=False) if p_lh is not None and t_lh > 0 else np.zeros(len(times))
         p_icrf = interp1(t_icrf, p_icrf * 1.0e6, times,
