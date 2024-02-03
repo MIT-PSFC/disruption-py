@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
+import traceback
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass
 from typing import Dict, Union
+from disruption_py.databases.database import ShotDatabase
 from disruption_py.mdsplus_integration.tree_manager import TreeManager
+from disruption_py.utils.constants import MAX_SHOT_TIME
 from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from disruption_py.utils.mappings.tokamak import Tokamak
 from logging import Logger
@@ -19,7 +22,9 @@ class SetTimesRequestParams:
     tree_manager : TreeManager
         Tree manager which can be used to retrieve data from MDSplus.
     existing_data : pd.DataFrame
-        Pre-filled data given to disruption_py that can be retrieved from the database.
+        Pre-filled data given to disruption_py.
+    database : ShotDatabase
+        Database object with connection to sql database.
     disruption_time : float
         The time when the shot disrupted or None if no disruption occured.
     tokamak : Tokemak
@@ -30,6 +35,7 @@ class SetTimesRequestParams:
     shot_id : int
     tree_manager : TreeManager
     existing_data : pd.DataFrame
+    database : ShotDatabase
     disruption_time : float
     tokamak : Tokamak
     logger : Logger
@@ -102,7 +108,34 @@ class ListSetTimesRequest(SetTimesRequest):
 
     def _get_times(self, params : SetTimesRequestParams) -> np.ndarray:
         return self.times
+
+class ExistingDataSetTimesRequest(SetTimesRequest):
+    """
+    Get times request for using the existing data timebase.
     
+    If no existing data exists for the shot, then the fallback_set_times_request is used.
+    """
+    def __init__(self, fallback_set_times_request : SetTimesRequestType) -> None:
+        self.fallback_set_times_request = resolve_set_times_request(fallback_set_times_request)
+
+    def _get_times(self, params : SetTimesRequestParams) -> np.ndarray:
+        if params.existing_data is not None:
+            # set timebase to be the timebase of existing data
+            try:
+                times = params.existing_data['time'].to_numpy()
+                # Check if the timebase is in ms instead of s
+                if times[-1] > MAX_SHOT_TIME:
+                    times /= 1000  # [ms] -> [s]
+                return times
+            except KeyError as e:
+                params.logger.warning(
+                    f"[Shot {params.shot_id}]: Shot constructor was passed data but no timebase.")
+                params.logger.debug(
+                    f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+        else:
+            return self.fallback_set_times_request.get_times(params)
+        
+        
 class EfitSetTimesRequest(SetTimesRequest):
     """ Get times request for using the EFIT timebase.  """
     

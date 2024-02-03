@@ -5,7 +5,7 @@ from disruption_py.settings.enum_options import InterpolationMethod, SignalDomai
 from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.existing_data_request import ExistingDataRequest, resolve_existing_data_request
 from disruption_py.settings.shot_data_request import ShotDataRequest
-from disruption_py.settings.set_times_request import SetTimesRequest, resolve_set_times_request
+from disruption_py.settings.set_times_request import ExistingDataSetTimesRequest, SetTimesRequest, resolve_set_times_request
 from disruption_py.settings.output_type_request import OutputTypeRequest
 from disruption_py.utils.mappings.mappings_helpers import map_string_attributes_to_enum
 
@@ -68,10 +68,10 @@ class ShotSettings:
         The domain of the timebase that should be used when retrieving data for the shot. Either "full", 
         "flattop", or "rampup_and_flattop". Can pass either a SignalDomain or the associated string. Defaults 
         to "full".
-    override_exising_data : bool
-        If false and existing data exists for the shot, the timebase from the existing data will be used instead
-        of the timebase from the set_times_request. If true the timebase from the set_times_request is always used.
-        Defaults to True.
+    use_existing_data_timebase : bool
+        If true and existing data exists for the shot, the timebase from the existing data will be used instead
+        of the timebase from the set_times_request. Wraps the set_times_request with ExistingDataSetTimesRequest.
+        Defaults to False.
     interpolation_method : InterpolationMethod
         The interpolation method to be used when retrieving data for the shot. CURRENTLY UNIMPLEMENTED.   
     """
@@ -99,7 +99,7 @@ class ShotSettings:
     # Timebase setting
     set_times_request : SetTimesRequest = "efit"
     signal_domain : SignalDomain = "full"
-    override_exising_data : bool = True
+    use_existing_data_timebase : bool = False
     interpolation_method : InterpolationMethod = "linear"
     
     additional_args : dict = field(default_factory=dict)
@@ -142,6 +142,9 @@ class ShotSettings:
             "signal_type": SignalDomain,
             "interpolation_method": InterpolationMethod
         })
+        
+        if self.use_existing_data_timebase and not isinstance(self.set_times_request, ExistingDataSetTimesRequest):
+            self.set_times_request = ExistingDataSetTimesRequest(self.set_times_request)
         
         if self.attempt_local_efit_env is not None:
             for idx, (option, value) in enumerate(self.attempt_local_efit_env):

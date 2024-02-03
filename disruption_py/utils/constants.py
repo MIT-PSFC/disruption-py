@@ -11,6 +11,8 @@ DEFAULT_THRESHOLD = 0.35  # Time until disrupt threshold for binary classificati
 DEFAULT_RATIO = .2  # Ratio of test data to total data and validation data to train data
 BLACK_WINDOW_THRESHOLD = 5.e-3 # A 'black window' threshold [s]; obscures input data from a window in time on disruptive shots during trianing/testing
 
+MAX_SHOT_TIME = 7.0  # [s] <-- used to detect if shot times are using ms
+
 
 DEFAULT_COLS = ['time', 'time_until_disrupt','shot']
 PAPER_COLS = [

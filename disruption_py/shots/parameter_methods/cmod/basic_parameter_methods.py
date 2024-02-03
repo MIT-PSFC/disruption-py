@@ -229,7 +229,7 @@ class BasicCmodRequests(ShotDataRequest):
     @parameter_cached_method(
         columns=["ip", "dip_dt", "dip_smoothed", "ip_prog", "dipprog_dt", "ip_error"], 
         used_trees=["magnetics", "pcs"],
-        contained_cached_methods=[], tokamak=Tokamak.CMOD)
+        contained_cached_methods=["get_active_wire_segments"], tokamak=Tokamak.CMOD)
     def _get_ip_parameters(params : ShotDataRequestParams):
         # Automatically generated
         magnetics_tree = params.shot_props.tree_manager.open_tree(tree_name='magnetics')
@@ -334,7 +334,7 @@ class BasicCmodRequests(ShotDataRequest):
     @staticmethod
     @parameter_cached_method(
         columns=["z_error", "z_prog", "zcur", "v_z", "z_times_v_z"],
-        contained_cached_methods=[],
+        contained_cached_methods=["get_active_wire_segments"],
         used_trees=["hybrid", "magnetics", "pcs"],
         tokamak=Tokamak.CMOD)
     def _get_z_parameters(params : ShotDataRequestParams):

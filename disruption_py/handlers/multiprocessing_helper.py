@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Dict
+from typing import Callable, List, Dict
 from disruption_py.databases.database import ShotDatabase
 from disruption_py.settings import ShotSettings, OutputTypeRequest, ResultOutputTypeRequestParams, FinishOutputTypeRequestParams
 from disruption_py.utils.constants import MAX_PROCESSES
@@ -12,22 +12,11 @@ class MarkCompleteEnum(Enum):
 MARK_COMPLETE = MarkCompleteEnum.MarkComplete
 
 class Consumer(multiprocessing.Process):
-    def __init__(self, task_queue, result_queue, initialize_database=True, database_initializer_f = None):
+    def __init__(self, task_queue, result_queue, process_prop_initializers : Dict[str, Callable]):
         multiprocessing.Process.__init__(self)
         self.task_queue = task_queue
         self.result_queue = result_queue
-        self._consumer_database = None
-
-        if initialize_database and database_initializer_f is None:
-            raise ValueError("Must provide database_initializer_f if initialize_database is True")
-        self.initialize_database = initialize_database
-        self.database_initializer_f = database_initializer_f
-
-    @property
-    def consumer_database(self):
-        if self._consumer_database is None:
-            self._consumer_database = self.database_initializer_f()
-        return self._consumer_database
+        self.initialized_process_props = {prop : initializer() for prop, initializer in process_prop_initializers.items()}
 
     def run(self):
         while True:
@@ -37,10 +26,7 @@ class Consumer(multiprocessing.Process):
                 self.task_queue.task_done()
                 break
 
-            task_args = {}
-            if self.initialize_database:
-                task_args['sql_database'] = self.consumer_database
-            answer = next_task(task_args)
+            answer = next_task(self.initialized_process_props)
             
             self.task_queue.task_done()
             self.result_queue.put(answer)
@@ -53,8 +39,12 @@ class ShotTask:
         self.shot_id = shot_id
         self.shot_settings = shot_settings
 
-    def __call__(self, task_args: Dict):
-        result = self.shot_creator_f(shot_id=self.shot_id, shot_settings=self.shot_settings, **task_args)
+    def __call__(self, initialized_process_props: Dict):
+        result = self.shot_creator_f(
+            shot_id=self.shot_id, 
+            shot_settings=self.shot_settings, 
+            **initialized_process_props
+        )
         return result
 
     def __str__(self):
@@ -66,7 +56,16 @@ class MultiprocessingShotRetriever:
     A class to run shot retrievals in parallel.
     '''
     
-    def __init__(self, shot_settings: ShotSettings, database : ShotDatabase, output_type_request: OutputTypeRequest, tokamak, logger, num_processes=8, database_initializer_f = None):
+    def __init__(
+        self, 
+        shot_settings: ShotSettings, 
+        database : ShotDatabase, 
+        output_type_request: OutputTypeRequest, 
+        process_prop_initializers : Dict[str, Callable],
+        tokamak, 
+        logger, 
+        num_processes=1, 
+    ):
         
         self.task_queue = multiprocessing.JoinableQueue()
         self.result_queue = multiprocessing.Queue()
@@ -79,7 +78,7 @@ class MultiprocessingShotRetriever:
         self.result_thread = threading.Thread(target=self._result_processor)
 
         self.consumers = [
-            Consumer(self.task_queue, self.result_queue, database_initializer_f=database_initializer_f) 
+            Consumer(self.task_queue, self.result_queue, process_prop_initializers=process_prop_initializers) 
             for _ in range(min(num_processes, MAX_PROCESSES))
         ]
   
@@ -92,7 +91,7 @@ class MultiprocessingShotRetriever:
                 continue
             self.output_type_request.output_shot(ResultOutputTypeRequestParams(result, self.database, self.tokamak, self.logger))
 
-    def run(self, shot_creator_f, shot_ids_list, should_finish=True):
+    def run(self, shot_creator_f, shot_ids_list, await_complete=True):
         
         if not self.result_thread.is_alive():
             self.result_thread.start()
@@ -105,12 +104,12 @@ class MultiprocessingShotRetriever:
             task = ShotTask(shot_creator_f=shot_creator_f, shot_id=shot_id, shot_settings=self.shot_settings)
             self.task_queue.put(task)
    
-        if should_finish:
-            return self.finish_and_await_results()
+        if await_complete:
+            self.await_complete()
 
         return True
 
-    def finish_and_await_results(self):
+    def await_complete(self):
          # Signal the consumers to stop once completed processing and wait for it to finish
         for _ in self.consumers:
             self.task_queue.put(MARK_COMPLETE)
@@ -119,8 +118,3 @@ class MultiprocessingShotRetriever:
         # Signal the result processing thread to stop once completed processing and wait for it to finish
         self.result_queue.put(MARK_COMPLETE)
         self.result_thread.join()
-
-        finish_output_type_request_params = FinishOutputTypeRequestParams(self.tokamak, self.logger)
-        result = self.output_type_request.get_results(finish_output_type_request_params)
-        self.output_type_request.stream_output_cleanup(finish_output_type_request_params)
-        return result
