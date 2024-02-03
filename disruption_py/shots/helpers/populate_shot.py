@@ -158,16 +158,16 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams) ->
         A dataframe containing the querried data.
     """
     shot_props : ShotProps = params.shot_props
-    populated_data = shot_props.populated_existing_data
+    pre_filled_shot_data = shot_props.pre_filled_shot_data
     
     # If the shot object was already passed data in the constructor, use that data. Otherwise, create an empty dataframe.
-    if populated_data is None:
-        populated_data = pd.DataFrame() 
-    if 'time' not in populated_data:
-        populated_data['time'] = shot_props.times
-    if 'shot' not in populated_data:
-        populated_data['shot'] = int(shot_props.shot_id)
-    populated_data['commit_hash'] = shot_props.metadata.get("commit_hash", None)
+    if pre_filled_shot_data is None:
+        pre_filled_shot_data = pd.DataFrame() 
+    if 'time' not in pre_filled_shot_data:
+        pre_filled_shot_data['time'] = shot_props.times
+    if 'shot' not in pre_filled_shot_data:
+        pre_filled_shot_data['shot'] = int(shot_props.shot_id)
+    pre_filled_shot_data['commit_hash'] = shot_props.metadata.get("commit_hash", None)
 
     # Loop through each attribute and find methods that should populate the shot object.
     methods_to_evaluate : list[CachedMethod] = []
@@ -180,18 +180,18 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams) ->
         methods_to_evaluate.extend(req_methods_to_evaluate)
         all_cached_methods.extend(req_all_cached_methods)
         
-    # Check that existing data is on the same timebase as the shot object to ensure data consistency
-    if len(populated_data['time']) != len(shot_props.times) or not np.isclose(populated_data['time'], shot_props.times, atol=TIME_CONST).all():
-        params.logger.error(f"[Shot {shot_props.shot_id}]: ERROR Computation on different timebase than used existing data")
+    # Check that pre_filled_shot_data is on the same timebase as the shot object to ensure data consistency
+    if len(pre_filled_shot_data['time']) != len(shot_props.times) or not np.isclose(pre_filled_shot_data['time'], shot_props.times, atol=TIME_CONST).all():
+        params.logger.error(f"[Shot {shot_props.shot_id}]: ERROR Computation on different timebase than pre-filled shot data")
         
     # Manually cache data that has already been retrieved (likely from sql tables)
     # Methods added to pre_cached_method_names will be skipped by method optimizer
     pre_cached_method_names = []
-    if shot_props.populated_existing_data is not None:
+    if shot_props.pre_filled_shot_data is not None:
         for cached_method in all_cached_methods:
             cache_success = manually_cache(
                 shot_props=shot_props, 
-                data=populated_data, 
+                data=pre_filled_shot_data, 
                 method_name=cached_method.name, 
                 method_columns=cached_method.computed_cached_method_params.columns
             )
@@ -203,6 +203,7 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams) ->
 
     method_optimizer : MethodOptimizer = MethodOptimizer(shot_props.tree_manager, methods_to_evaluate, all_cached_methods, pre_cached_method_names)
 
+    parameters = []
     if shot_props.num_threads_per_shot > 1:
         futures = set()
         future_method_names = {}
@@ -231,7 +232,6 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams) ->
                 available_methods_runner()
                 
     else:
-        parameters = []
         start_time = time.time()
         method_optimizer.run_methods_sync(
             lambda next_method: parameters.append(populate_method(params, next_method, start_time))
@@ -241,7 +241,7 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams) ->
     for parameter in parameters:
         if parameter is None:
             continue
-        if len(parameter) != len(populated_data):
+        if len(parameter) != len(pre_filled_shot_data):
             params.logger.warning(
                 f"[Shot {shot_props.shot_id}]:Ignoring parameters {parameter.columns} with different length than timebase")
             continue
@@ -249,7 +249,7 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams) ->
 
     # TODO: This is a hack to get around the fact that some methods return
     #       multiple parameters. This should be fixed in the future.
-    local_data = pd.concat(filtered_parameters + [populated_data], axis=1)
+    local_data = pd.concat(filtered_parameters + [pre_filled_shot_data], axis=1)
     local_data = local_data.loc[:, ~local_data.columns.duplicated()]
     if shot_settings.only_requested_columns:
         include_columns = list(REQUIRED_COLS.union(set(shot_settings.run_columns).intersection(set(local_data.columns))))

@@ -3,9 +3,10 @@ from typing import Dict, Tuple, List
 import pandas as pd
 import numpy as np
 import logging
-import traceback
+from disruption_py.databases.database import ShotDatabase
 from disruption_py.mdsplus_integration.tree_manager import TreeManager, EnvModifications
 from disruption_py.settings.enum_options import InterpolationMethod, SignalDomain
+from disruption_py.settings.existing_data_request import ExistingDataRequestParams
 from disruption_py.settings.set_times_request import SetTimesRequest, SetTimesRequestParams
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.settings.shot_settings import ShotSettings
@@ -17,11 +18,13 @@ from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.math_utils import interp1
 from disruption_py.utils.utils import without_duplicates
 
-MAX_SHOT_TIME = 7.0  # [s]
-
 class ShotManager(ABC):
     logger = logging.getLogger('disruption_py')
     
+    def __init__(self, database : ShotDatabase, mds_connection_manager):
+        self.database = database
+        self.mds_connection_manager = mds_connection_manager
+        
     @classmethod
     @abstractmethod
     def _modify_times_flattop_timebase(cls, shot_props : ShotProps, **kwargs) -> ShotProps:
@@ -32,19 +35,42 @@ class ShotManager(ABC):
     def _modify_times_rampup_and_flattop_timebase(cls, shot_props : ShotProps, **kwargs) -> ShotProps:
         pass
     
-    @classmethod
-    def setup(
-        cls,
+    def shot_setup(
+        self,
         shot_id : int,
         tree_manager : TreeManager,
-        initial_existing_data : pd.DataFrame,
         disruption_time : float,
         tree_nicknames : Dict[str, Tuple[List[str], List[EnvModifications]]],
         shot_settings : ShotSettings,
         tokamak: Tokamak,
         **kwargs
     ) -> ShotProps:
-    
+        
+        
+        self._init_nicknames(tree_manager, tree_nicknames)
+        
+        existing_data = self._retrieve_existing_data(
+            shot_id=shot_id,
+            tokamak=tokamak,
+            shot_settings=shot_settings,
+        )
+
+        interpolation_method  = interp1 # TODO: fix
+        
+        times = self._init_times(
+            shot_id=shot_id, 
+            existing_data=existing_data, 
+            tree_manager=tree_manager, 
+            tokamak=tokamak, 
+            disruption_time=disruption_time,
+            shot_settings=shot_settings
+        )
+        
+        pre_filled_shot_data = self._pre_fill_shot_data(
+            times=times,
+            existing_data=existing_data,
+        )
+        
         metadata = {
             'labels': {},
             'commit_hash': get_commit_hash(),
@@ -54,24 +80,6 @@ class ShotManager(ABC):
             'disrupted': 100  # TODO: Fix
         }
         
-        cls._init_nicknames(tree_manager, tree_nicknames)
-        
-        interpolation_method  = interp1 # TODO: fix
-        
-        times = cls._init_times(
-            shot_id=shot_id, 
-            existing_data=initial_existing_data, 
-            tree_manager=tree_manager, 
-            tokamak=tokamak, 
-            disruption_time=disruption_time,
-            shot_settings=shot_settings
-        )
-        
-        populated_existing_data = cls._init_data(
-            times=times,
-            existing_data=initial_existing_data,
-        )
-        
         shot_props = ShotProps(
             shot_id=shot_id,
             tokamak=tokamak,
@@ -79,14 +87,14 @@ class ShotManager(ABC):
             disruption_time = disruption_time,
             tree_manager = tree_manager,
             times = times,
-            initial_existing_data = initial_existing_data,
-            populated_existing_data = populated_existing_data,
+            existing_data = existing_data,
+            pre_filled_shot_data = pre_filled_shot_data,
             interpolation_method = interpolation_method,
             metadata = metadata,
         )
         
         # modify already existing shot props, such as modifying timebase
-        shot_props = cls._modify_shot_props_for_settings(
+        shot_props = self._modify_shot_props_for_settings(
             shot_props, 
             shot_settings, 
             **kwargs
@@ -95,12 +103,12 @@ class ShotManager(ABC):
         return shot_props
     
     @classmethod
-    def run_data_retrieval(cls, shot_props : ShotProps, shot_settings : ShotSettings):
+    def shot_data_retrieval(cls, shot_props : ShotProps, shot_settings : ShotSettings):
         shot_data_request_params = ShotDataRequestParams(shot_props=shot_props, logger=cls.logger, tokamak=shot_props.tokamak)
         return populate_shot(shot_settings=shot_settings, params=shot_data_request_params)
     
     @classmethod
-    def cleanup(cls, shot_props : ShotProps,):
+    def shot_cleanup(cls, shot_props : ShotProps,):
         shot_props.cleanup()
     
     @classmethod
@@ -129,39 +137,52 @@ class ShotManager(ABC):
         for nickname, (tree_names, env_modifications) in tree_nicknames.items():
             efit_names_to_test = without_duplicates(tree_names)
             tree_manager.nickname(nickname, efit_names_to_test, env_modifications)
+            
+    def _retrieve_existing_data(
+        self,
+        shot_id : int,
+        tokamak : Tokamak,
+        shot_settings : ShotSettings,
+    ) -> pd.DataFrame:
+        if shot_settings.existing_data_request is not None:
+            existing_data_request_params = ExistingDataRequestParams(
+                shot_id=shot_id,
+                database=self.database,
+                tokamak=tokamak, 
+                logger=self.logger,
+            )
+            existing_data = shot_settings.existing_data_request.get_existing_data(existing_data_request_params)
+            existing_data['shot'] = existing_data['shot'].astype(int)
+            existing_data = existing_data[existing_data['shot'] == shot_id]
+        else:
+            existing_data = None
+        return existing_data
     
-    @classmethod
     def _init_times(
-        cls,
+        self,
         shot_id : int,
         existing_data : pd.DataFrame, 
         tree_manager : TreeManager,
         tokamak : Tokamak,
         disruption_time : float,
         shot_settings : ShotSettings,
-    ):
+    ) -> np.ndarray:
         """
         Initialize the timebase of the shot.
         """
-        if existing_data is not None and shot_settings.override_exising_data is False:
-            # set timebase to be the timebase of existing data
-            try:
-                times = existing_data['time'].to_numpy()
-                # Check if the timebase is in ms instead of s
-                if times[-1] > MAX_SHOT_TIME:
-                    times /= 1000  # [ms] -> [s]
-                return times
-            except KeyError as e:
-                cls.logger.warning(
-                    f"[Shot {shot_id}]: Shot constructor was passed data but no timebase.")
-                cls.logger.debug(
-                    f"[Shot {shot_id}]:{traceback.format_exc()}")
-        else:
-            request_params = SetTimesRequestParams(shot_id=shot_id, tree_manager=tree_manager, existing_data=existing_data, disruption_time=disruption_time, tokamak=tokamak, logger=cls.logger,)
-            return shot_settings.set_times_request.get_times(request_params)
+        request_params = SetTimesRequestParams(
+            shot_id=shot_id, 
+            tree_manager=tree_manager, 
+            existing_data=existing_data,
+            database=self.database, 
+            disruption_time=disruption_time, 
+            tokamak=tokamak, 
+            logger=self.logger,
+        )
+        return shot_settings.set_times_request.get_times(request_params)
     
     @classmethod
-    def _init_data(cls, times : np.ndarray, existing_data : pd.DataFrame):
+    def _pre_fill_shot_data(cls, times : np.ndarray, existing_data : pd.DataFrame) -> pd.DataFrame:
         '''
         Intialize the shot with data, if existing data matches the shot timebase.
         '''
@@ -169,12 +190,9 @@ class ShotManager(ABC):
             time_df = pd.DataFrame(times, columns=['time'])
             flagged_existing_data = existing_data.assign(merge_success_flag=1)
             timed_existing_data = pd.merge_asof(time_df, flagged_existing_data, on='time', direction='nearest', tolerance=TIME_CONST)
-            if timed_existing_data['merge_success_flag'].isna().any():
-                populated_existing_data = None
+            if not timed_existing_data['merge_success_flag'].isna().any():
+                return timed_existing_data.drop(columns=['merge_success_flag'])
             else:
-                populated_existing_data = timed_existing_data.drop(columns=['merge_success_flag'])
-        
-            return populated_existing_data
-        
+                return None
         else:
             return None

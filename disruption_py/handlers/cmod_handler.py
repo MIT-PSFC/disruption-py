@@ -57,46 +57,24 @@ class CModHandler:
         return self._database
     
     @staticmethod
-    def _get_shot_data(shot_id, sql_database : CModDatabase=None, shot_settings: ShotSettings=None) -> pd.DataFrame:
+    def _get_shot_data(shot_id, shot_manager : CModShotManager, shot_settings: ShotSettings) -> pd.DataFrame:
         """
         Get data for a single shot from CMOD. May be run across different processes.
         """
-        tokamak = Tokamak.CMOD
-        class_logger = CModHandler.logger
-        class_logger.info(f"starting {shot_id}")
-        shot_id = int(shot_id)
-        if shot_settings.existing_data_request is not None:
-            existing_data_request_params = ExistingDataRequestParams(
-                shot_id=shot_id,
-                database=sql_database,
-                tokamak=tokamak, 
-                logger=class_logger,
-            )
-            existing_data = shot_settings.existing_data_request.get_existing_data(existing_data_request_params)
-            existing_data['shot'] = existing_data['shot'].astype(str)
-            existing_data = existing_data[existing_data['shot'] == shot_id]
-        else:
-            existing_data = None
+        CModHandler.logger.info(f"starting {shot_id}")
         try:
-            disruption_time=sql_database.get_disruption_time(shot_id=shot_id)
-        except Exception as e:
-            disruption_time=None
-            class_logger.error(f"Failed to retreive disruption time with error {e}. Continuing as if the shot did not disrupt.")
-        try:
-            shot_props = CModShotManager.cmod_setup_shot_props(
-                shot_id=shot_id, 
-                existing_data=existing_data, 
-                disruption_time=disruption_time, 
+            shot_props = shot_manager.cmod_setup_shot_props(
+                shot_id=int(shot_id), 
                 shot_settings=shot_settings,
             )
-            retrieved_data = CModShotManager.run_data_retrieval(shot_props=shot_props, shot_settings=shot_settings)
-            CModShotManager.cleanup(shot_props)
-            class_logger.info(f"completed {shot_id}")
+            retrieved_data = shot_manager.shot_data_retrieval(shot_props=shot_props, shot_settings=shot_settings)
+            shot_manager.shot_cleanup(shot_props)
+            CModHandler.logger.info(f"completed {shot_id}")
             return retrieved_data
         except Exception as e:
-            class_logger.warning(f"[Shot {shot_id}]: fatal error {traceback.format_exc()}")
-            class_logger.error(f"failed {shot_id} with error {e}")
-        return None
+            CModHandler.logger.warning(f"[Shot {shot_id}]: fatal error {traceback.format_exc()}")
+            CModHandler.logger.error(f"failed {shot_id} with error {e}")
+            return None
 
     def get_shots_data(
         self,
@@ -129,7 +107,6 @@ class CModHandler:
             The value of OutputTypeRequest.get_results, where OutputTypeRequest is specified in 
             shot_settings. See OutputTypeRequest for more details.
         """
-        tokamak = Tokamak.CMOD
         
         # Clean-up parameters
         if shot_settings is None:
@@ -137,34 +114,50 @@ class CModHandler:
         shot_settings.resolve()
         output_type_request = resolve_output_type_request(output_type_request)
         
-        shot_ids_request_params = ShotIdsRequestParams(self.database, tokamak, self.logger)
+        shot_ids_request_params = ShotIdsRequestParams(self.database, Tokamak.CMOD, self.logger)
         shot_ids_list = shot_ids_request_runner(shot_ids_request, shot_ids_request_params)
+        
+        def cmod_shot_manager_initializer():
+            return CModShotManager(
+                database=self.database_initializer(), 
+                mds_connection_manager=None
+            )
         
         if num_processes > 1:
             shot_retriever = MultiprocessingShotRetriever(
-                database_initializer_f=self.database_initializer,
                 database=self.database,
                 num_processes=num_processes,
                 shot_settings=shot_settings,
                 output_type_request=output_type_request,
-                tokamak = tokamak,
+                process_prop_initializers = {
+                    "shot_manager": cmod_shot_manager_initializer
+                },
+                tokamak = Tokamak.CMOD,
                 logger = self.logger,
             )
-            results = shot_retriever.run(
+            shot_retriever.run(
                 shot_creator_f=CModHandler._get_shot_data, 
                 shot_ids_list=shot_ids_list,
+                await_complete=True,
             )
         else:
             for shot_id in shot_ids_list:
                 shot_data = CModHandler._get_shot_data(
                     shot_id=shot_id, 
-                    sql_database=self.database, 
+                    shot_manager=cmod_shot_manager_initializer(),
                     shot_settings=shot_settings
                 )
-                output_type_request.output_shot(ResultOutputTypeRequestParams(shot_data, self.database, Tokamak.CMOD, self.logger))
+                output_type_request.output_shot(
+                    ResultOutputTypeRequestParams(
+                        result = shot_data, 
+                        database = self.database, 
+                        tokamak = Tokamak.CMOD, 
+                        logger = self.logger
+                    )
+                )
             
-            finish_output_type_request_params = FinishOutputTypeRequestParams(tokamak, self.logger)
-            results = output_type_request.get_results(finish_output_type_request_params)
-            output_type_request.stream_output_cleanup(finish_output_type_request_params)
+        finish_output_type_request_params = FinishOutputTypeRequestParams(tokamak=Tokamak.CMOD, logger=self.logger)    
+        results = output_type_request.get_results(finish_output_type_request_params)
+        output_type_request.stream_output_cleanup(finish_output_type_request_params)
         return results
      

@@ -11,7 +11,7 @@ EnvModifications = Tuple[Tuple[str, str]]
 class TreeManager:
     logger = logging.getLogger('disruption_py')
 
-    def __init__(self, shot_id):
+    def __init__(self, shot_id, **kwargs):
         self._shot_id = int(shot_id)
         self._nicknames = {}
         self._nickname_environment_modifications = {}

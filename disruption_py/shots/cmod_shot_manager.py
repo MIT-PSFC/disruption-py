@@ -2,6 +2,8 @@ import numpy as np
 from dataclasses import replace
 
 import pandas as pd
+from disruption_py.databases.database import ShotDatabase
+from disruption_py.mdsplus_integration.thin_tree_manager import ThinConnectionManager, ThinTreeManager
 from disruption_py.mdsplus_integration.tree_manager import TreeManager
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.settings.shot_settings import ShotSettings
@@ -13,13 +15,10 @@ from disruption_py.utils.utils import without_duplicates
 
 
 class CModShotManager(ShotManager):
-    
-    @classmethod
+        
     def cmod_setup_shot_props(
-        cls,
+        self,
         shot_id : int,
-        existing_data : pd.DataFrame,
-        disruption_time : float,
         shot_settings : ShotSettings,
         **kwargs
     ) -> ShotProps:
@@ -35,13 +34,19 @@ class CModShotManager(ShotManager):
         ])
         efit_envs_to_test = [shot_settings.attempt_local_efit_env, ()] if shot_settings.attempt_local_efit_env is not None else [()]
         tree_nicknames = { "efit_tree" : (efit_names_to_test, efit_envs_to_test) }
-            
+        
+        try:
+            disruption_time=self.database.get_disruption_time(shot_id=shot_id)
+        except Exception as e:
+            disruption_time=None
+            self.logger.error(f"Failed to retreive disruption time with error {e}. Continuing as if the shot did not disrupt.")
+               
         tree_manager = TreeManager(shot_id)
         try:
-            shot_props = cls.setup(
+            shot_props = self.shot_setup(
                 shot_id=shot_id,
                 tree_manager=tree_manager,
-                initial_existing_data=existing_data,
+                database=self.database,
                 disruption_time=disruption_time,
                 tree_nicknames=tree_nicknames,
                 shot_settings=shot_settings,
@@ -50,7 +55,7 @@ class CModShotManager(ShotManager):
             )
             return shot_props
         except Exception as e:
-            cls.logger.info(f"[Shot {shot_id}]: Caught failed to setup shot {shot_id}, cleaning up tree manager.")
+            self.logger.info(f"[Shot {shot_id}]: Caught failed to setup shot {shot_id}, cleaning up tree manager.")
             tree_manager.cleanup()
             raise e
     
