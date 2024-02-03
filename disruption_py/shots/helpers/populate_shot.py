@@ -233,9 +233,12 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams) ->
                 
     else:
         start_time = time.time()
-        method_optimizer.run_methods_sync(
-            lambda next_method: parameters.append(populate_method(params, next_method, start_time))
-        )
+        def next_method_runner(next_method : CachedMethod):
+            if isinstance(next_method.computed_cached_method_params, ParameterCachedMethodParams):
+                parameters.append(populate_method(params, next_method, start_time))
+            else:
+                populate_method(params, next_method, start_time) 
+        method_optimizer.run_methods_sync(next_method_runner)
     
     filtered_parameters = []
     for parameter in parameters:
@@ -243,7 +246,7 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams) ->
             continue
         if len(parameter) != len(pre_filled_shot_data):
             params.logger.warning(
-                f"[Shot {shot_props.shot_id}]:Ignoring parameters {parameter.columns} with different length than timebase")
+                f"[Shot {shot_props.shot_id}]:Ignoring parameter {parameter} with different length than timebase")
             continue
         filtered_parameters.append(parameter)
 
