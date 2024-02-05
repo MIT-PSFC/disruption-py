@@ -13,7 +13,6 @@ class ShotProps:
     
     shot_id : int
     tokamak : Tokamak
-    num_threads_per_shot : int
     disruption_time : float
     tree_manager : TreeManager
     times : np.ndarray

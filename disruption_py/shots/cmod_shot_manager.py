@@ -3,7 +3,6 @@ from dataclasses import replace
 
 import pandas as pd
 from disruption_py.databases.database import ShotDatabase
-from disruption_py.mdsplus_integration.thin_tree_manager import ThinConnectionManager, ThinTreeManager
 from disruption_py.mdsplus_integration.tree_manager import TreeManager
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.settings.shot_settings import ShotSettings

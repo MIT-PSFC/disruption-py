@@ -30,7 +30,6 @@ MAX_SHOT_TIME = 7.0  # [s]
 class ShotSetupParams:
     shot_id : int
     tokamak: Tokamak
-    num_threads_per_shot : int
     override_exising_data : bool
     set_times_request : SetTimesRequest
     signal_domain : SignalDomain
@@ -48,13 +47,9 @@ class Shot(ABC):
     ):
         self._shot_id = setup_params.shot_id
         self._tokamak = setup_params.tokamak
-        self._num_threads_per_shot = setup_params.num_threads_per_shot
         self._disruption_time = setup_params.disruption_time
         self._tree_manager = TreeManager(setup_params.shot_id)
         self._initial_existing_data = setup_params.existing_data
-            
-        if self._num_threads_per_shot > 1:
-            self.logger.info("Intra-shot multithreading enabled")
             
         self._metadata = {
             'labels': {},

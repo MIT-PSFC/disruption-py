@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 from logging import Logger
-from disruption_py.shots.helpers.cached_method_params import is_cached_method
+from disruption_py.shots.helpers.cached_method_props import is_cached_method, get_cached_method_params
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.shots.helpers.cached_method_params import get_cached_method_params
 
 from abc import ABC
 from typing import Any, Callable, List

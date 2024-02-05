@@ -83,7 +83,6 @@ class ShotManager(ABC):
         shot_props = ShotProps(
             shot_id=shot_id,
             tokamak=tokamak,
-            num_threads_per_shot=shot_settings.num_threads_per_shot,
             disruption_time = disruption_time,
             tree_manager = tree_manager,
             times = times,
