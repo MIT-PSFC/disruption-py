@@ -10,7 +10,7 @@ class CachedMethodParams:
     cache_between_threads: bool
     used_trees : Union[List[str], Callable]
     contained_cached_methods : Union[List[str], Callable]
-    tokamaks : List[Tokamak]
+    tokamaks : List[Tokamak]        
     
 @dataclass(frozen=True)
 class ParameterCachedMethodParams(CachedMethodParams):
@@ -26,6 +26,17 @@ class ParameterCachedMethodParams(CachedMethodParams):
             columns=columns,
             tags=tags,
         )
+                
+@dataclass
+class CachedMethodProps:
+    name: str
+    method: Callable
+
+    # All functions have been evaluated
+    computed_cached_method_params: CachedMethodParams
+    
+    def get_param_value(self, field_name : str, default_value : Any = None) -> Any:
+        return getattr(self.computed_cached_method_params, field_name, default_value)
 
 # Utility methods for decorated methods
 
@@ -64,6 +75,7 @@ def get_cached_method_params(cached_method: Callable, should_throw: bool = False
     if should_throw and cached_method_params is None:
         raise ValueError(f"The method {cached_method} was not decorated with cached_method or parameter_cached_method")
     return cached_method_params
+
 
     
     

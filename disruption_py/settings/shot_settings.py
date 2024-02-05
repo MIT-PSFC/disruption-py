@@ -24,8 +24,6 @@ class ShotSettings:
         The existing data request to be used when prefilling data for the shot. Can pass any 
         ExistingDataRequestType that resolves to a ExistingDataRequest. See ExistingDataRequest for more 
         details. Set to None if no data should be prefilled. Defaults to None.
-    num_threads_per_shot : int
-        Use not recommended. Alternatively, please see num_processes in get_shots_data.
     efit_tree_name : str
         The name of the tree to first try for the efit environment. Other tree names will be tried if 
         opening this tree name fails. Default is 'analysis'.
@@ -82,7 +80,6 @@ class ShotSettings:
     existing_data_request : ExistingDataRequest = None
         
     # Shot creation settings
-    num_threads_per_shot: int = 1
     efit_tree_name: str = 'analysis'
     attempt_local_efit_env: Tuple[Tuple[str, str]] = None
     

@@ -76,19 +76,6 @@ class TreeManager:
         self.all_opened_tree_names.add(tree_name)
         return self.thread_open_trees[tree_name]
     
-    def cleanup_not_needed(self, can_tree_be_closed : Callable[[str], bool]):
-        """Close trees that are not expected to be used again based on method_optimizer
-
-        Parameters
-        ----------
-        can_tree_be_closed : Callable[[str], bool]
-            Method that returns whether the tree will be needed later based on the tree name. Closed if not needed.
-        """
-        for thread in list(self._open_trees.keys()):
-            for tree_name in list(self._get_open_trees(thread).keys()):
-                if can_tree_be_closed(tree_name):
-                    self.close_tree(tree_name)
-    
     def cleanup(self):
         """
         Close all open trees for all threads.
