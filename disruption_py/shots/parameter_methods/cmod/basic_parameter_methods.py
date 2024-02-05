@@ -33,12 +33,7 @@ except Exception as e:
     
 import warnings
 warnings.filterwarnings('error', category=RuntimeWarning)
-
-def get_efit_tree(params : ShotDataRequestParams):
-	return params.shot_props.tree_manager.tree_from_nickname("efit_tree")
-	
-def get_efit_tree_name(params : ShotDataRequestParams):
-	return params.shot_props.tree_manager.tree_name_of_nickname("efit_tree")
+    
 
 class CModEfitRequests(ShotDataRequest):
     
@@ -77,8 +72,8 @@ class CModEfitRequests(ShotDataRequest):
         used_trees=["efit_tree"], tokamak=Tokamak.CMOD)
     def _get_EFIT_parameters(params : ShotDataRequestParams):
 
-        efit_tree = get_efit_tree(params=params)
-        efit_time = efit_tree.getNode(r'\efit_aeqdsk:time').data().astype('float64', copy=False) # [s]
+        params.shot_connection.open_tree(tree_name="efit_tree")
+        efit_time = params.shot_connection.get(r'\efit_aeqdsk:time').data().astype('float64', copy=False) # [s]
         efit_data = dict()
         
         #Get data from each of the columns in efit_cols one at a time
@@ -86,10 +81,10 @@ class CModEfitRequests(ShotDataRequest):
             try:
                 #If shot before 2000 and the param is in efit_cols_pre_2000
                 if params.shot_props.shot_id <= 1000000000 and param not in CModEfitRequests.efit_cols_pre_2000.keys():
-                    efit_data[param] = efit_tree.getNode(
+                    efit_data[param] = params.shot_connection.get(
                         CModEfitRequests.efit_cols_pre_2000[param]).data().astype('float64', copy=False)
                 else:
-                    efit_data[param] = efit_tree.getNode(
+                    efit_data[param] = params.shot_connection.get(
                         CModEfitRequests.efit_cols[param]).data().astype('float64', copy=False)
             except:
                 params.logger.warning(f"[Shot {params.shot_props.shot_id}]: Unable to get {param} from EFIT tree")
@@ -103,7 +98,7 @@ class CModEfitRequests(ShotDataRequest):
                 
         #Get data for V_surf := deriv(\ANALYSIS::EFIT_SSIBRY)*2*pi
         try:
-            ssibry = efit_tree.getNode('\efit_geqdsk:ssibry').data().astype('float64', copy=False)
+            ssibry = params.shot_connection.get('\efit_geqdsk:ssibry').data().astype('float64', copy=False)
             efit_data['V_surf'] = np.gradient(ssibry, efit_time)*2*np.pi
         except:
             print("unable to get V_surf")
@@ -118,7 +113,7 @@ class CModEfitRequests(ShotDataRequest):
             
             #Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally sure on this one)
             try: #TODO: confirm this
-                ssimag = efit_tree.getNode('\efit_geqdsk:ssimag').data().astype('float64', copy=False)
+                ssimag = params.shot_connection.get('\efit_geqdsk:ssimag').data().astype('float64', copy=False)
                 efit_data['v_loop_efit'] = np.gradient(ssimag, efit_time)*2*np.pi
             except:
                 print("unable to get v_loop_efit")
@@ -126,7 +121,7 @@ class CModEfitRequests(ShotDataRequest):
                 pass 
 
             #Compute beta_n
-            beta_t = efit_tree.getNode('\efit_aeqdsk:betat').data().astype('float64', copy=False)
+            beta_t = params.shot_connection.get('\efit_aeqdsk:betat').data().astype('float64', copy=False)
             efit_data['beta_n'] = np.reciprocal( np.reciprocal(beta_t) +  np.reciprocal(efit_data['beta_p']) )
 
         if not np.array_equal(params.shot_props.times, efit_time):
@@ -140,14 +135,23 @@ class BasicCmodRequests(ShotDataRequest):
     @staticmethod
     @cached_method(used_trees=["pcs"], cache_between_threads=False, tokamak=Tokamak.CMOD)
     def get_active_wire_segments(params : ShotDataRequestParams):
-        pcs_tree = params.shot_props.tree_manager.open_tree(tree_name='pcs')
-        segment_nodes = pcs_tree.getNodeWild("\\top.seg_*")
+        params.shot_connection.open_tree(tree_name="pcs")
+        
+        root_nid = params.shot_connection.get('GetDefaultNid()')
+        children_nids = params.shot_connection.get('getnci(getnci($, "CHILDREN_NIDS"), "NID_NUMBER")', arguments=root_nid)
+        desired_segments = []
+        for child_nid in children_nids:
+            node_path : str = params.shot_connection.get('getnci($, "FULLPATH")').strip()
+            if node_path.split(".")[-1].startswith("SEG_"):
+                desired_segments.append(child_nid, node_path)
+        
+        
         # Collect active segments and their information
         active_segments = []
-        for node in segment_nodes:
-            if node.isOn():
-                active_segments.append(
-                    [node, node.getNode(":start_time").getData().data()])
+        for nid, node_path  in desired_segments:
+            isOn = params.shot_connection.get(f'getnci($, "STATE")', arguments=nid).data()
+            if isOn == 0: # 0 represents node being on, 1 represents node being off
+                active_segments.append((node_path, params.shot_connection.get(node_path +":start_time").data()))
         active_segments.sort(key=lambda n: n[1])
         # end_times = np.roll(np.asarray([n[1] for n in active_segments]), -1)
         # for i in range(len(end_times)-1):
@@ -232,26 +236,27 @@ class BasicCmodRequests(ShotDataRequest):
         contained_cached_methods=["get_active_wire_segments"], tokamak=Tokamak.CMOD)
     def _get_ip_parameters(params : ShotDataRequestParams):
         # Automatically generated
-        magnetics_tree = params.shot_props.tree_manager.open_tree(tree_name='magnetics')
         active_segments = BasicCmodRequests.get_active_wire_segments(params=params)
+        def get_child_path_record(node_path, child_path):
+            return params.shot_connection.get(node_path + child_path)
+        
         # Default PCS timebase is 1 KHZ
         pcstime = np.array(np.arange(-4, 12.383, .001))
         ip_prog = np.full(pcstime.shape, np.nan)
+        
         # For each activate segment:
         # 1.) Find the wire for IP control and check if it has non-zero PID gains
         # 2.) IF it does, interpolate IP programming onto the PCS timebase
         # 3.) Clip to the start and stop times of PCS timebase
-        for segment, start in active_segments:
+        for node_path, start in active_segments:
             # Ip wire can be one of 16 but is normally no. 16
             for wire_index in range(16, 0, -1):
-                wire_node = segment.getNode(f":P_{wire_index :02d}:name")
-                if wire_node.getData().data() == 'IP':
+                wire_node_name = get_child_path_record(node_path, child_path=f":P_{wire_index :02d}:name").data()
+                if wire_node_name == 'IP':
                     try:
-                        pid_gains = segment.getNode(
-                            f":P_{wire_index :02d}:pid_gains").getData().data()
+                        pid_gains = get_child_path_record(node_path, f":P_{wire_index :02d}:pid_gains").data()
                         if np.any(pid_gains):
-                            sig_node = segment.getNode(f":P_{wire_index :02d}")
-                            signal_record = sig_node.getData()
+                            signal_record = get_child_path_record(node_path, f":P_{wire_index :02d}")
                             sigtime = signal_record.dim_of(0).data()
                             signal = signal_record.data()
                             ip_prog_temp = interp1(
@@ -264,8 +269,9 @@ class BasicCmodRequests(ShotDataRequest):
                         params.logger.warning([f"[Shot {params.shot_props.shot_id}]: Error getting PID gains for wire {wire_index}"])
                         params.logger.debug([f"[Shot {params.shot_props.shot_id}]: {traceback.format_exc()}"])
                     break # Break out of wire_index loop
-        ip = magnetics_tree.getNode(r"\ip").getData().data().astype('float64', copy=False)
-        magtime = magnetics_tree.getNode(r"\ip").getData().dim_of(0)
+        ip_record = params.shot_connection.get(r"\ip", tree_name="magnetics")
+        ip = ip_record.data().astype('float64', copy=False)
+        magtime = ip_record.dim_of(0)
         return BasicCmodRequests.get_ip_parameters(params.shot_props.times, ip, magtime, ip_prog, pcstime)
 
     @staticmethod
@@ -344,16 +350,16 @@ class BasicCmodRequests(ShotDataRequest):
         z_prog_temp = z_prog.copy()
         z_wire_index = -1
         active_wire_segments = BasicCmodRequests.get_active_wire_segments(params=params)
-        for segment, start in active_wire_segments:
+        def get_child_path_record(node_path, child_path):
+            return params.shot_connection.get(node_path + child_path)
+        for node_path, start in active_wire_segments:
             for wire_index in range(1, 17):
-                wire_node = segment.getNode(f":P_{wire_index :02d}:name")
-                if wire_node.getData().data() == "ZCUR":
+                wire_node_name = get_child_path_record(node_path, child_path=f":P_{wire_index :02d}:name").data()
+                if wire_node_name == "ZCUR":
                     try:
-                        pid_gains = segment.getNode(
-                            f":P_{wire_index :02d}:pid_gains").getData().data()
+                        pid_gains = get_child_path_record(node_path, f":P_{wire_index :02d}:pid_gains").data()
                         if np.any(pid_gains):
-                            sig_node = segment.getNode(f":P_{wire_index :02d}")
-                            signal_record = sig_node.getData()
+                            signal_record = get_child_path_record(node_path, f":P_{wire_index :02d}")
                             sigtime = signal_record.dim_of(0).data()
                             end = sigtime[np.argmin(np.abs(sigtime - pcstime[-1])+ .0001)]
                             signal = signal_record.data()
@@ -375,9 +381,8 @@ class BasicCmodRequests(ShotDataRequest):
             raise ValueError("No ZCUR wire was found")
         # Read in A_OUT, which is a 16xN matrix of the errors for *all* 16 wires for
         # *all* of the segments. Note that DPCS time is usually taken at 10kHz.
-        hybrid_tree = params.shot_props.tree_manager.open_tree(tree_name='hybrid')
-        wire_errors_record = hybrid_tree.getNode(
-            r'\top.hardware.dpcs.signals:a_out').getData()
+        wire_errors_record = params.shot_connection.get(
+            r'\top.hardware.dpcs.signals:a_out', tree_name="hybrid")
         wire_errors, dpcstime = wire_errors_record.data(
         ), np.array(wire_errors_record.dim_of(1))  # s
         # The value of Z_error we read is not in the units we want. It must be *divided* by a factor AND *divided* by the plasma current.
@@ -394,8 +399,7 @@ class BasicCmodRequests(ShotDataRequest):
                 end = pcstime[-1]
             else:
                 end = active_wire_segments[i+1][1]
-            z_factor = hybrid_tree.getNode(
-                fr'\dpcs::top.seg_{i+1:02d}:p_{z_wire_index:02d}:predictor:factor').getData().data()
+            z_factor = params.shot_connection.get(fr'\dpcs::top.seg_{i+1:02d}:p_{z_wire_index:02d}:predictor:factor', tree_name="hybrid").data()
             z_error_without_ip[np.where((dpcstime >= start) & (
                 dpcstime <= end))] /= z_factor  # [A*m]
         # Next we grab ip, which comes from a_in:input_056. This also requires
@@ -404,14 +408,13 @@ class BasicCmodRequests(ShotDataRequest):
         # before 2015.
         # TODO: Try to fix this
         if params.shot_props.shot_id > 1150101000:
-            ip_without_factor = hybrid_tree.getNode(
-                r'\hybrid::top.hardware.dpcs.signals.a_in:input_056').getData().data()
-            ip_factor = hybrid_tree.getNode(
-                r'\hybrid::top.dpcs_config.inputs:input_056:p_to_v_expr').getData().data()
+            ip_without_factor = params.shot_connection.get(
+                r'\hybrid::top.hardware.dpcs.signals.a_in:input_056', tree_name="hybrid").data()
+            ip_factor = params.shot_connection.get(
+                r'\hybrid::top.dpcs_config.inputs:input_056:p_to_v_expr', tree_name="hybrid").data()
             ip = ip_without_factor*ip_factor  # [A]
         else:
-            magnetics_tree = params.shot_props.tree_manager.open_tree(tree_name='magnetics')
-            ip_record = magnetics_tree.getNode(r'\ip').getData()
+            ip_record = params.shot_connection.get(r"\ip", tree_name="magnetics")
             ip = ip_record.data()
             ip_time = ip_record.dim_of(0)
             ip = interp1(ip_time, ip, dpcstime)
