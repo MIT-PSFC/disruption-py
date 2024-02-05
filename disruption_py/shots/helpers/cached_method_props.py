@@ -36,7 +36,7 @@ class CachedMethodProps:
     computed_cached_method_params: CachedMethodParams
     
     def get_param_value(self, field_name : str, default_value : Any = None) -> Any:
-        return getattr(self.computed_cached_method_params, field_name, default_value)
+        return getattr(self.computed_cached_method_params, field_name, default_value) or default_value
 
 # Utility methods for decorated methods
 

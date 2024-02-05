@@ -56,15 +56,15 @@ class MethodOptimizer:
                 tree_remaining_count[tree_name] = cur_count + 1
         self._tree_remaining_count = tree_remaining_count
 
-    def next_method(self) -> (CachedMethodProps, int):
+    def next_method(self) -> CachedMethodProps:
         if len(self._method_dependencies) == 0:
-            return None, len(self._method_dependencies)
+            return None
         # get methods that are not dependent on another cached method
         # guranteed to never be empty unless there is a cycle
         methods_to_consider = [cached_method_name for cached_method_name in self._method_dependencies
                                 if len(self._method_dependencies[cached_method_name].dependent_on) == 0]
         if len(methods_to_consider) == 0:
-            return None, len(self._method_dependencies)
+            raise Exception("Cycle detected in cached method dependencies")
 
         method_tree_counts = []
         open_tree_names = self._tree_manager.thread_open_tree_names
@@ -85,12 +85,12 @@ class MethodOptimizer:
 
         next_method = self._cached_method_props_by_name[next_method_name]
 
-        return next_method, len(self._method_dependencies)
+        return next_method
 
     def run_methods_sync(self, method_executor:Callable[[CachedMethodProps], None]):
         while (True):
             # get next method
-            next_method, _ = self.next_method()
+            next_method : CachedMethodProps = self.next_method()
             if (next_method == None):
                 break
             
@@ -100,11 +100,11 @@ class MethodOptimizer:
             # handle method completion
             for method_to_check in self._method_dependencies:
                 # remove method that has compeleted from all methods dependent_on
-                self._method_dependencies[method_to_check].dependent_on.discard(next_method.method_name)
+                self._method_dependencies[method_to_check].dependent_on.discard(next_method.name)
             
             # update self._tree_remaining_count
-            for tree_name in self._get_method_used_trees(next_method.method_name):
-                self._tree_remaining_count.get[tree_name] -= 1
+            for tree_name in self._get_method_used_trees(next_method.name):
+                self._tree_remaining_count[tree_name] -= 1
                 
                 # close trees that are no longer needed
                 if self._tree_remaining_count[tree_name] <= 0:
