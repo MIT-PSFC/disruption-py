@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import logging
 from disruption_py.databases.database import ShotDatabase
+from disruption_py.mdsplus_integration.mds_connection import MDSConnection
 from disruption_py.mdsplus_integration.tree_manager import TreeManager, EnvModifications
 from disruption_py.settings.enum_options import InterpolationMethod, SignalDomain
 from disruption_py.settings.existing_data_request import ExistingDataRequestParams
@@ -21,9 +22,9 @@ from disruption_py.utils.utils import without_duplicates
 class ShotManager(ABC):
     logger = logging.getLogger('disruption_py')
     
-    def __init__(self, database : ShotDatabase, mds_connection_manager):
+    def __init__(self, database : ShotDatabase, mds_conn : MDSConnection):
         self.database = database
-        self.mds_connection_manager = mds_connection_manager
+        self.mds_conn = mds_conn
         
     @classmethod
     @abstractmethod
@@ -101,29 +102,27 @@ class ShotManager(ABC):
         
         return shot_props
     
-    @classmethod
-    def shot_data_retrieval(cls, shot_props : ShotProps, shot_settings : ShotSettings):
-        shot_data_request_params = ShotDataRequestParams(shot_props=shot_props, logger=cls.logger, tokamak=shot_props.tokamak)
+    def shot_data_retrieval(self, shot_props : ShotProps, shot_settings : ShotSettings):
+        shot_data_request_params = ShotDataRequestParams(mds_conn=self.mds_conn, shot_props=shot_props, logger=self.logger, tokamak=shot_props.tokamak)
         return populate_shot(shot_settings=shot_settings, params=shot_data_request_params)
     
     @classmethod
     def shot_cleanup(cls, shot_props : ShotProps,):
         shot_props.cleanup()
     
-    @classmethod
     def _modify_shot_props_for_settings(
-        cls, 
+        self, 
         shot_props : ShotProps,
         shot_settings : ShotSettings,
         **kwargs
     ) -> ShotProps:
         if shot_settings.signal_domain is SignalDomain.FLATTOP:
-            shot_props = cls._modify_times_flattop_timebase(shot_props)
+            shot_props = self._modify_times_flattop_timebase(shot_props)
         elif shot_settings.signal_domain is SignalDomain.RAMP_UP_AND_FLATTOP:
-            shot_props = cls._modify_times_rampup_and_flattop_timebase(shot_props)
+            shot_props = self._modify_times_rampup_and_flattop_timebase(shot_props)
         
         if shot_props is None:
-            cls.logger.error(f"Shot_props set to None in modify_shot_props()")
+            self.logger.error(f"Shot_props set to None in modify_shot_props()")
         
         return shot_props
     

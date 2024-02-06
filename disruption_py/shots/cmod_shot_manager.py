@@ -58,9 +58,8 @@ class CModShotManager(ShotManager):
             tree_manager.cleanup()
             raise e
     
-    @classmethod
-    def _modify_times_flattop_timebase(cls, shot_props : ShotProps, **kwargs):
-        shot_data_requests_params = ShotDataRequestParams(shot_props=shot_props, logger=cls.logger, tokamak=Tokamak.CMOD)
+    def _modify_times_flattop_timebase(self, shot_props : ShotProps, **kwargs):
+        shot_data_requests_params = ShotDataRequestParams(mds_conn=self.mds_conn, shot_props=shot_props, logger=self.logger, tokamak=Tokamak.CMOD)
         ip_parameters = BasicCmodRequests._get_ip_parameters(params=shot_data_requests_params)
         ipprog, dipprog_dt = ip_parameters['ip_prog'], ip_parameters['dipprog_dt']
         indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 1e3)[0]
@@ -74,9 +73,8 @@ class CModShotManager(ShotManager):
         shot_props._cached_results.clear() #TODO: Make this only modify the cached results for new times
         return shot_props
         
-    @classmethod
-    def _modify_times_rampup_and_flattop_timebase(cls, shot_props : ShotProps, **kwargs):
-        shot_data_requests_params = ShotDataRequestParams(shot_props=shot_props, logger=cls.logger, tokamak=Tokamak.CMOD)
+    def _modify_times_rampup_and_flattop_timebase(self, shot_props : ShotProps, **kwargs):
+        shot_data_requests_params = ShotDataRequestParams(mds_conn=self.mds_conn, shot_props=shot_props, logger=self.logger, tokamak=Tokamak.CMOD)
         ip_parameters = BasicCmodRequests._get_ip_parameters(params=shot_data_requests_params)
         ipprog, dipprog_dt = ip_parameters['ip_prog'], ip_parameters['dipprog_dt']
         indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 6e4)[0]

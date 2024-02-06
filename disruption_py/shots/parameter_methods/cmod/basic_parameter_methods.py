@@ -72,8 +72,8 @@ class CModEfitRequests(ShotDataRequest):
         used_trees=["efit_tree"], tokamak=Tokamak.CMOD)
     def _get_EFIT_parameters(params : ShotDataRequestParams):
 
-        params.shot_connection.open_tree(tree_name="efit_tree")
-        efit_time = params.shot_connection.get(r'\efit_aeqdsk:time').data().astype('float64', copy=False) # [s]
+        params.mds_conn.open_tree(tree_name="efit_tree")
+        efit_time = params.mds_conn.get(r'\efit_aeqdsk:time').data().astype('float64', copy=False) # [s]
         efit_data = dict()
         
         #Get data from each of the columns in efit_cols one at a time
@@ -81,10 +81,10 @@ class CModEfitRequests(ShotDataRequest):
             try:
                 #If shot before 2000 and the param is in efit_cols_pre_2000
                 if params.shot_props.shot_id <= 1000000000 and param not in CModEfitRequests.efit_cols_pre_2000.keys():
-                    efit_data[param] = params.shot_connection.get(
+                    efit_data[param] = params.mds_conn.get(
                         CModEfitRequests.efit_cols_pre_2000[param]).data().astype('float64', copy=False)
                 else:
-                    efit_data[param] = params.shot_connection.get(
+                    efit_data[param] = params.mds_conn.get(
                         CModEfitRequests.efit_cols[param]).data().astype('float64', copy=False)
             except:
                 params.logger.warning(f"[Shot {params.shot_props.shot_id}]: Unable to get {param} from EFIT tree")
@@ -98,7 +98,7 @@ class CModEfitRequests(ShotDataRequest):
                 
         #Get data for V_surf := deriv(\ANALYSIS::EFIT_SSIBRY)*2*pi
         try:
-            ssibry = params.shot_connection.get('\efit_geqdsk:ssibry').data().astype('float64', copy=False)
+            ssibry = params.mds_conn.get('\efit_geqdsk:ssibry').data().astype('float64', copy=False)
             efit_data['V_surf'] = np.gradient(ssibry, efit_time)*2*np.pi
         except:
             print("unable to get V_surf")
@@ -113,7 +113,7 @@ class CModEfitRequests(ShotDataRequest):
             
             #Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally sure on this one)
             try: #TODO: confirm this
-                ssimag = params.shot_connection.get('\efit_geqdsk:ssimag').data().astype('float64', copy=False)
+                ssimag = params.mds_conn.get('\efit_geqdsk:ssimag').data().astype('float64', copy=False)
                 efit_data['v_loop_efit'] = np.gradient(ssimag, efit_time)*2*np.pi
             except:
                 print("unable to get v_loop_efit")
@@ -121,7 +121,7 @@ class CModEfitRequests(ShotDataRequest):
                 pass 
 
             #Compute beta_n
-            beta_t = params.shot_connection.get('\efit_aeqdsk:betat').data().astype('float64', copy=False)
+            beta_t = params.mds_conn.get('\efit_aeqdsk:betat').data().astype('float64', copy=False)
             efit_data['beta_n'] = np.reciprocal( np.reciprocal(beta_t) +  np.reciprocal(efit_data['beta_p']) )
 
         if not np.array_equal(params.shot_props.times, efit_time):
@@ -135,13 +135,13 @@ class BasicCmodRequests(ShotDataRequest):
     @staticmethod
     @cached_method(used_trees=["pcs"], cache_between_threads=False, tokamak=Tokamak.CMOD)
     def get_active_wire_segments(params : ShotDataRequestParams):
-        params.shot_connection.open_tree(tree_name="pcs")
+        params.mds_conn.open_tree(tree_name="pcs")
         
-        root_nid = params.shot_connection.get('GetDefaultNid()')
-        children_nids = params.shot_connection.get('getnci(getnci($, "CHILDREN_NIDS"), "NID_NUMBER")', arguments=root_nid)
+        root_nid = params.mds_conn.get('GetDefaultNid()')
+        children_nids = params.mds_conn.get('getnci(getnci($, "CHILDREN_NIDS"), "NID_NUMBER")', arguments=root_nid)
         desired_segments = []
         for child_nid in children_nids:
-            node_path : str = params.shot_connection.get('getnci($, "FULLPATH")').strip()
+            node_path : str = params.mds_conn.get('getnci($, "FULLPATH")').strip()
             if node_path.split(".")[-1].startswith("SEG_"):
                 desired_segments.append(child_nid, node_path)
         
@@ -149,9 +149,9 @@ class BasicCmodRequests(ShotDataRequest):
         # Collect active segments and their information
         active_segments = []
         for nid, node_path  in desired_segments:
-            isOn = params.shot_connection.get(f'getnci($, "STATE")', arguments=nid).data()
+            isOn = params.mds_conn.get(f'getnci($, "STATE")', arguments=nid).data()
             if isOn == 0: # 0 represents node being on, 1 represents node being off
-                active_segments.append((node_path, params.shot_connection.get(node_path +":start_time").data()))
+                active_segments.append((node_path, params.mds_conn.get(node_path +":start_time").data()))
         active_segments.sort(key=lambda n: n[1])
         # end_times = np.roll(np.asarray([n[1] for n in active_segments]), -1)
         # for i in range(len(end_times)-1):
@@ -238,7 +238,7 @@ class BasicCmodRequests(ShotDataRequest):
         # Automatically generated
         active_segments = BasicCmodRequests.get_active_wire_segments(params=params)
         def get_child_path_record(node_path, child_path):
-            return params.shot_connection.get(node_path + child_path)
+            return params.mds_conn.get(node_path + child_path)
         
         # Default PCS timebase is 1 KHZ
         pcstime = np.array(np.arange(-4, 12.383, .001))
@@ -269,7 +269,7 @@ class BasicCmodRequests(ShotDataRequest):
                         params.logger.warning([f"[Shot {params.shot_props.shot_id}]: Error getting PID gains for wire {wire_index}"])
                         params.logger.debug([f"[Shot {params.shot_props.shot_id}]: {traceback.format_exc()}"])
                     break # Break out of wire_index loop
-        ip_record = params.shot_connection.get(r"\ip", tree_name="magnetics")
+        ip_record = params.mds_conn.get(r"\ip", tree_name="magnetics")
         ip = ip_record.data().astype('float64', copy=False)
         magtime = ip_record.dim_of(0)
         return BasicCmodRequests.get_ip_parameters(params.shot_props.times, ip, magtime, ip_prog, pcstime)
@@ -351,7 +351,7 @@ class BasicCmodRequests(ShotDataRequest):
         z_wire_index = -1
         active_wire_segments = BasicCmodRequests.get_active_wire_segments(params=params)
         def get_child_path_record(node_path, child_path):
-            return params.shot_connection.get(node_path + child_path)
+            return params.mds_conn.get(node_path + child_path)
         for node_path, start in active_wire_segments:
             for wire_index in range(1, 17):
                 wire_node_name = get_child_path_record(node_path, child_path=f":P_{wire_index :02d}:name").data()
@@ -381,7 +381,7 @@ class BasicCmodRequests(ShotDataRequest):
             raise ValueError("No ZCUR wire was found")
         # Read in A_OUT, which is a 16xN matrix of the errors for *all* 16 wires for
         # *all* of the segments. Note that DPCS time is usually taken at 10kHz.
-        wire_errors_record = params.shot_connection.get(
+        wire_errors_record = params.mds_conn.get(
             r'\top.hardware.dpcs.signals:a_out', tree_name="hybrid")
         wire_errors, dpcstime = wire_errors_record.data(
         ), np.array(wire_errors_record.dim_of(1))  # s
@@ -399,7 +399,7 @@ class BasicCmodRequests(ShotDataRequest):
                 end = pcstime[-1]
             else:
                 end = active_wire_segments[i+1][1]
-            z_factor = params.shot_connection.get(fr'\dpcs::top.seg_{i+1:02d}:p_{z_wire_index:02d}:predictor:factor', tree_name="hybrid").data()
+            z_factor = params.mds_conn.get(fr'\dpcs::top.seg_{i+1:02d}:p_{z_wire_index:02d}:predictor:factor', tree_name="hybrid").data()
             z_error_without_ip[np.where((dpcstime >= start) & (
                 dpcstime <= end))] /= z_factor  # [A*m]
         # Next we grab ip, which comes from a_in:input_056. This also requires
@@ -408,13 +408,13 @@ class BasicCmodRequests(ShotDataRequest):
         # before 2015.
         # TODO: Try to fix this
         if params.shot_props.shot_id > 1150101000:
-            ip_without_factor = params.shot_connection.get(
+            ip_without_factor = params.mds_conn.get(
                 r'\hybrid::top.hardware.dpcs.signals.a_in:input_056', tree_name="hybrid").data()
-            ip_factor = params.shot_connection.get(
+            ip_factor = params.mds_conn.get(
                 r'\hybrid::top.dpcs_config.inputs:input_056:p_to_v_expr', tree_name="hybrid").data()
             ip = ip_without_factor*ip_factor  # [A]
         else:
-            ip_record = params.shot_connection.get(r"\ip", tree_name="magnetics")
+            ip_record = params.mds_conn.get(r"\ip", tree_name="magnetics")
             ip = ip_record.data()
             ip_time = ip_record.dim_of(0)
             ip = interp1(ip_time, ip, dpcstime)
@@ -469,8 +469,7 @@ class BasicCmodRequests(ShotDataRequest):
         contained_cached_methods=["_get_ip_parameters"],
         tokamak=Tokamak.CMOD)
     def _get_ohmic_parameters(params : ShotDataRequestParams):
-        a_tree = params.shot_props.tree_manager.open_tree(tree_name="analysis")
-        v_loop_record = a_tree.getNode(r"\top.mflux:v0").getData()
+        v_loop_record = params.mds_conn.get(r"\top.mflux:v0", tree_name="analysis").getData()
         v_loop = v_loop_record.data().astype('float64', copy=False)
         v_loop_time = v_loop_record.dim_of(0)
         if len(v_loop_time) <= 1:
