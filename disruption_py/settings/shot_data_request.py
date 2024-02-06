@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from logging import Logger
-from disruption_py.mdsplus_integration.conn import ShotConnection
+from disruption_py.mdsplus_integration.mds_connection import MDSConnection
 from disruption_py.shots.helpers.cached_method_props import is_cached_method, get_cached_method_params
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.mappings.tokamak import Tokamak
@@ -14,7 +14,7 @@ class ShotDataRequestParams:
 
     Attributes
     ----------
-    shot_connection : ShotConnection
+    mds_conn : ShotConnection
         The shot connection object containing the connection to MDSPlus.
     shot_props : ShotProps
 		A reference to the shot props object containing the setup information, such as the shot id, 
@@ -24,7 +24,7 @@ class ShotDataRequestParams:
     logger : Logger
         Logger object from disruption_py to use for logging.
     """
-    shot_connection : ShotConnection
+    mds_conn : MDSConnection
     shot_props : ShotProps
     tokamak : Tokamak
     logger : Logger
