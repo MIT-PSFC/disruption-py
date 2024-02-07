@@ -26,10 +26,10 @@ class Consumer(multiprocessing.Process):
                 self.task_queue.task_done()
                 break
 
-            answer = next_task(self.initialized_process_props)
+            shot_id, answer = next_task(self.initialized_process_props)
             
             self.task_queue.task_done()
-            self.result_queue.put(answer)
+            self.result_queue.put((shot_id, answer))
         return
 
 
@@ -45,7 +45,7 @@ class ShotTask:
             shot_settings=self.shot_settings, 
             **initialized_process_props
         )
-        return result
+        return self.shot_id, result
 
     def __str__(self):
         return f'Task for {self.shot_id}'
@@ -84,10 +84,11 @@ class MultiprocessingShotRetriever:
   
     def _result_processor(self):
         while True:
-            result = self.result_queue.get()
+            shot_id, result = self.result_queue.get()
             if result is MARK_COMPLETE:
                 break
             elif result is None:
+                self.logger.warning(f"Not outputting data for shot {shot_id}, data is None.")
                 continue
             self.output_type_request.output_shot(ResultOutputTypeRequestParams(result, self.database, self.tokamak, self.logger))
 

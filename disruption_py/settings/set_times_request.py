@@ -176,9 +176,23 @@ class MagneticsSetTimesRequest(SetTimesRequest):
             magnetic_times = magnetics_tree.getNode('\ip').dim_of().data().astype('float64', copy=False)
             # interpolate self._times to be every [timestep] seconds
             return np.arange(magnetic_times[0], magnetic_times[-1], self.timestep).astype('float64', copy=False)
-        except:
-            params.logger.info("Failed to set up magnetic timebase")
-            return None
+        except Exception as e:
+            params.logger.error("Failed to set up magnetic timebase")
+            raise Exception(e)
+        
+class SignalSetTimesRequest(SetTimesRequest):
+    def __init__(self, tree_name : str, signal_path : str):
+        self.tree_name = tree_name
+        self.signal_path = signal_path
+        
+    def _get_times(self, params : SetTimesRequestParams) -> np.ndarray:
+        try:
+            signal_tree = params.tree_manager.open_tree(tree_name=self.tree_name)
+            signal_times = signal_tree.getNode(self.signal_path).getData().dim_of(0).data().astype('float64', copy=False)
+            return signal_times
+        except Exception as e:
+            params.logger.error(f"Failed to set up timebase for signal {self.signal_path}")
+            raise Exception(e)
         
 
 # --8<-- [start:set_times_request_dict]

@@ -147,14 +147,17 @@ class CModHandler:
                     shot_manager=cmod_shot_manager_initializer(),
                     shot_settings=shot_settings
                 )
-                output_type_request.output_shot(
-                    ResultOutputTypeRequestParams(
-                        result = shot_data, 
-                        database = self.database, 
-                        tokamak = Tokamak.CMOD, 
-                        logger = self.logger
+                if shot_data is None:
+                    self.logger.warning(f"Not outputting data for shot {shot_id} due, data is None.")
+                else:
+                    output_type_request.output_shot(
+                        ResultOutputTypeRequestParams(
+                            result = shot_data, 
+                            database = self.database, 
+                            tokamak = Tokamak.CMOD, 
+                            logger = self.logger
+                        )
                     )
-                )
             
         finish_output_type_request_params = FinishOutputTypeRequestParams(tokamak=Tokamak.CMOD, logger=self.logger)    
         results = output_type_request.get_results(finish_output_type_request_params)
