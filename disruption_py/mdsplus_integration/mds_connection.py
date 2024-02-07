@@ -17,8 +17,7 @@ class MDSConnection:
             if self.last_open_tree != tree_name:
                 self.conn.openTree(tree_name, self.shot_id)
         else:
-            if not self.manage_tree_opening:
-                self.conn.openTree(tree_name, self.shot_id)
+            self.conn.openTree(tree_name, self.shot_id)
             
         self.last_open_tree = tree_name
     
@@ -26,14 +25,9 @@ class MDSConnection:
         """
         Close the specified tree
         """
-        if self.manage_tree_opening:
-            if self.last_open_tree != tree_name:
-                self.conn.closeTree(tree_name, self.shot_id)
-        else:
-            self.conn.closeTree(tree_name, self.shot_id)
-        
-        self.last_open_tree = None
-            
+        if self.last_open_tree == tree_name:
+            self.last_open_tree = None
+        self.conn.closeTree(tree_name, self.shot_id)
         
     def close_all_trees(self):
         """
