@@ -481,11 +481,17 @@ class BasicCmodRequests(ShotDataRequest):
 
     @staticmethod
     def get_power(times, p_lh, t_lh, p_icrf, t_icrf, p_rad, t_rad, p_ohm):
-        p_lh = interp1(t_lh, p_lh * 1.0e3, times,
-                       bounds_error=False) if p_lh is not None else np.zeros(len(times))
-        p_icrf = interp1(t_icrf, p_icrf * 1.0e6, times,
-                         bounds_error=False) if p_icrf is not None else np.zeros(len(times))
-        if t_rad is None or len(t_rad) == 1 or p_rad is None:
+        if p_lh is not None and isinstance(t_lh, np.ndarray) and len(t_lh) > 1:
+            p_lh = interp1(t_lh, p_lh * 1.0e3, times)
+        else:
+            p_lh = np.zeros(len(times))
+            
+        if p_icrf is not None and isinstance(t_icrf, np.ndarray) and len(t_icrf) > 1:
+            p_icrf = interp1(t_icrf, p_icrf * 1.0e6, times, bounds_error=False)
+        else:
+            p_icrf = np.zeros(len(times))
+        
+        if t_rad is None or p_rad is None or not isinstance(t_rad, np.ndarray) or len(t_rad) <= 1:
             p_rad = np.array([np.nan]*len(times))  # TODO: Fix
             dprad = p_rad.copy()
         else:
@@ -527,7 +533,7 @@ class BasicCmodRequests(ShotDataRequest):
                 tree = params.shot_props.tree_manager.open_tree(tree_name=trees[i])
                 record = tree.getNode(nodes[i])
                 values[2*i] = record.data().astype('float64', copy=False)
-                values[2*i + 1] = record.dim_of(0)
+                values[2*i + 1] = record.dim_of(0).data()
             except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF) as e:
                 continue 
         p_oh = BasicCmodRequests._get_ohmic_parameters(params=params)['p_oh']
