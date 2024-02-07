@@ -13,8 +13,9 @@ from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.shots.helpers.method_caching import manually_cache
 from disruption_py.settings.shot_data_request import ShotDataRequest, ShotDataRequestParams
 from disruption_py.utils.constants import MAX_THREADS_PER_SHOT, TIME_CONST
+from disruption_py.utils.utils import without_duplicates
 
-REQUIRED_COLS = {'time', 'time_until_disrupt', 'shot', 'commit_hash'}
+REQUIRED_COLS = {'time', 'shot', 'commit_hash'}
  
 def populate_method(params: ShotDataRequestParams, cached_method_props : CachedMethodProps, start_time):
         
@@ -101,7 +102,7 @@ def _get_cached_methods_from_object(object_to_search : ShotDataRequest, shot_set
     shot_props = params.shot_props
     tags = shot_settings.run_tags
     methods = shot_settings.run_methods
-    columns = shot_settings.run_columns
+    columns = REQUIRED_COLS.union(shot_settings.run_columns)
             
     methods_to_search = object_to_search.get_request_methods_for_tokamak(params.tokamak)
     
