@@ -125,10 +125,10 @@ class OutputTypeRequestList(OutputTypeRequest):
     
     def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
          for individual_type_request in self.output_type_request_list:
-            individual_type_request.stream_output_cleanup()
+            individual_type_request.stream_output_cleanup(params)
             
     def get_results(self, params: FinishOutputTypeRequestParams):
-        return [individual_type_request.get_results() for individual_type_request in self.output_type_request_list]
+        return [individual_type_request.get_results(params) for individual_type_request in self.output_type_request_list]
     
 
 class OutputTypeRequestDict(OutputTypeRequest):
@@ -166,7 +166,7 @@ class OutputTypeRequestDict(OutputTypeRequest):
     def get_results(self, params: FinishOutputTypeRequestParams):
         chosen_request = self.output_type_request_dict.get(params.tokamak, None)
         if chosen_request is not None:
-            return chosen_request.get_results(params.tokamak, params.logger)
+            return chosen_request.get_results(params)
         else:
             params.logger.warning(f'No output type request for tokamak {params.tokamak}')
             return None    
