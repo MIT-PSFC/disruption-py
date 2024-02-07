@@ -136,30 +136,18 @@ class BasicCmodRequests(ShotDataRequest):
     @cached_method(used_trees=["pcs"], cache_between_threads=False, tokamak=Tokamak.CMOD)
     def get_active_wire_segments(params : ShotDataRequestParams):
         params.mds_conn.open_tree(tree_name="pcs")
-        
         root_nid = params.mds_conn.get('GetDefaultNid()')
         children_nids = params.mds_conn.get('getnci(getnci($, "CHILDREN_NIDS"), "NID_NUMBER")', arguments=root_nid)
-        desired_segments = []
-        for child_nid in children_nids:
-            node_path : str = params.mds_conn.get('getnci($, "FULLPATH")').strip()
-            if node_path.split(".")[-1].startswith("SEG_"):
-                desired_segments.append(child_nid, node_path)
-        
+        children_paths = params.mds_conn.get('getnci($, "FULLPATH")', arguments=children_nids)
+        children_on = params.mds_conn.get(f'getnci($, "STATE")', arguments=children_nids).data() 
         
         # Collect active segments and their information
         active_segments = []
-        for nid, node_path  in desired_segments:
-            isOn = params.mds_conn.get(f'getnci($, "STATE")', arguments=nid).data()
-            if isOn == 0: # 0 represents node being on, 1 represents node being off
+        for node_path, is_on in zip(children_paths, children_on):
+            if node_path.split(".")[-1].startswith("SEG_") and is_on == 0: # 0 represents node being on, 1 represents node being off
                 active_segments.append((node_path, params.mds_conn.get(node_path +":start_time").data()))
+
         active_segments.sort(key=lambda n: n[1])
-        # end_times = np.roll(np.asarray([n[1] for n in active_segments]), -1)
-        # for i in range(len(end_times)-1):
-        #     if active_segments[i+1][1] == end_times[i]:
-        #         end_times[i] = 12.383
-        # end_times[-1] = 12.383  # [s]
-        # for i in range(len(active_segments)):
-        #     active_segments[i].append(end_times[i])
         return active_segments
 
     @staticmethod
@@ -262,8 +250,7 @@ class BasicCmodRequests(ShotDataRequest):
                             ip_prog_temp = interp1(
                                 sigtime, signal, pcstime, bounds_error=False, fill_value=signal[-1])
                             end = pcstime[np.argmin(np.abs(pcstime - sigtime[-1])+ .0001)]
-                            segment_indices = np.where(
-                                (pcstime >= start) & (pcstime <= end))
+                            segment_indices = np.where((pcstime >= start) & (pcstime <= end))
                             ip_prog[segment_indices] = ip_prog_temp[segment_indices]
                     except mdsExceptions.MdsException as e:
                         params.logger.warning([f"[Shot {params.shot_props.shot_id}]: Error getting PID gains for wire {wire_index}"])
@@ -532,8 +519,7 @@ class BasicCmodRequests(ShotDataRequest):
                  r"\rf::rf_power_net", r"\twopi_diode"]
         for i in range(3):
             try:
-                tree = params.shot_props.tree_manager.open_tree(tree_name=trees[i])
-                record = tree.getNode(nodes[i])
+                record = params.mds_conn.get(nodes[i], tree_name=trees[i])
                 values[2*i] = record.data().astype('float64', copy=False)
                 values[2*i + 1] = record.dim_of(0).data()
             except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF) as e:
@@ -594,12 +580,11 @@ class BasicCmodRequests(ShotDataRequest):
             v_0.fill(np.nan)
             return pd.DataFrame({"v_0": v_0})
         try:
-            spec_tree = params.shot_props.tree_manager.open_tree(tree_name='spectroscopy')
-            intensity_record = spec_tree.getNode(
-                '.hirex_sr.analysis.a:int').getData()
+            intensity_record = params.mds_conn.get(
+                '.hirex_sr.analysis.a:int', tree_name='spectroscopy').getData()
             intensity = intensity_record.data().astype('float64', copy=False)
             time = intensity_record.dim_of(0)
-            vel_record = spec_tree.getNode(
+            vel_record = params.mds_conn.get(
                 '.hirex_sr.analysis.a:vel').getData()
             vel = vel_record.data().astype('float64', copy=False)
             hirextime = vel_record.dim_of(0)
@@ -643,17 +628,16 @@ class BasicCmodRequests(ShotDataRequest):
         # These sensors are placed toroidally around the machine. Letters refer to the 2 ports the sensors were placed between.
         bp13_names = ['BP13_BC', 'BP13_DE', 'BP13_GH', 'BP13_JK']
         bp13_signals = np.empty((len(params.shot_props.times), len(bp13_names)))
-        mag_tree = params.shot_props.tree_manager.open_tree(tree_name='magnetics')
+
         path = r"\mag_bp_coils."
-        bp_node_names = mag_tree.getNode(path + "nodename").getData().data()
-        phi = mag_tree.getNode(path + 'phi').getData().data()
-        btor_pickup_coeffs = mag_tree.getNode(
-            path + "btor_pickup").getData().data()
+        bp_node_names = params.mds_conn.get(path + "nodename", tree_name='magnetics').data()
+        phi = params.mds_conn.get(path + 'phi', tree_name='magnetics').data()
+        btor_pickup_coeffs = params.mds_conn.get(path + "btor_pickup", tree_name='magnetics').data()
         _, bp13_indices, _ = np.intersect1d(
             bp_node_names, bp13_names, return_indices=True)
         bp13_phi = phi[bp13_indices] + 360  # INFO
         bp13_btor_pickup_coeffs = btor_pickup_coeffs[bp13_indices]
-        btor_record = mag_tree.getNode(r"\btor").getData()
+        btor_record = params.mds_conn.get(r"\btor", tree_name='magnetics')
         btor = btor_record.data()
         t_mag = btor_record.dim_of(0)
         # Toroidal power supply takes time to turn on, from ~ -1.8 and should be on by t=-1. So pick the time before that to calculate baseline
@@ -669,7 +653,7 @@ class BasicCmodRequests(ShotDataRequest):
         valid_sensors = True
         for i in range(len(bp13_names)):
             try:
-                signal = mag_tree.getNode(path + bp13_names[i]).getData().data()
+                signal = params.mds_conn.get(path + bp13_names[i], tree_name='magnetics').data()
                 if len(signal) == 1:
                     params.logger.warning(f"[Shot {params.shot_props.shot_id}] Only one data point for {bp13_names[i]} Returning nans.")
                     return n_equal_1_amplitude, n_equal_1_normalized, n_equal_1_phase
@@ -733,17 +717,13 @@ class BasicCmodRequests(ShotDataRequest):
     )
     def _get_densities(params : ShotDataRequestParams):
         try:
-            e_tree = params.shot_props.tree_manager.open_tree(tree_name='electrons')
-            n_e_record = e_tree.getNode(r'.tci.results:nl_04').getData() #Line integrated density
+            n_e_record = params.mds_conn.get(r'.tci.results:nl_04', tree_name='electrons') #Line integrated density
             n_e = np.squeeze(n_e_record.data().astype('float64', copy=False))/0.6 #Divide by chord length of ~0.6m to get line averaged density. For future refernce, chord length is stored in .01*\analysis::efit_aeqdsk:rco2v[3,*]
             t_n = n_e_record.dim_of(0).data()
-            mag_tree = params.shot_props.tree_manager.open_tree(tree_name='magnetics')
-            ip_record = mag_tree.getNode(r'\ip').getData()
+            ip_record = params.mds_conn.get(r'\ip', tree_name='electrons')
             ip = ip_record.data().astype('float64', copy=False)
             t_ip = ip_record.dim_of(0).data()
-            a_tree = params.shot_props.tree_manager.open_tree(tree_name='analysis')
-            a_minor_record = a_tree.getNode(
-                r'\efit_aeqdsk:aminor').getData()
+            a_minor_record = params.mds_conn.get(r'\efit_aeqdsk:aminor', tree_name='analysis')
             t_a = a_minor_record.dim_of(0).data()
             a_minor = a_minor_record.data().astype('float64', copy=False)
         except Exception as e:
@@ -766,8 +746,7 @@ class BasicCmodRequests(ShotDataRequest):
     )
     def _get_efc_current(params : ShotDataRequestParams):
         try:
-            eng_tree = params.shot_props.tree_manager.open_tree(tree_name='engineering')
-            iefc_record = eng_tree.getNode(r"\efc:u_bus_r_cur").getData()
+            iefc_record = params.mds_conn.get(r"\efc:u_bus_r_cur", tree_name='engineering')
             iefc, t_iefc = iefc_record.data(), iefc_record.dim_of(0)
         except Exception as e:
             params.logger.debug(f"[Shot {params.shot_props.shot_id}] {traceback.format_exc()}")
@@ -796,18 +775,15 @@ class BasicCmodRequests(ShotDataRequest):
     def _get_Ts_parameters(params : ShotDataRequestParams):
         # TODO: Guassian vs parabolic fit for te profile
         te_hwm = np.empty((len(params.shot_props.times)))
-        electron_tree = params.shot_props.tree_manager.open_tree(tree_name='electrons')
 
         # Read in Thomson core temperature data, which is a 2-D array, with the
         # dependent dimensions being time and z (vertical coordinate)
         node_path = ".yag_new.results.profiles"
         try:
-            ts_data = electron_tree.getNode(
-                node_path + ":te_rz").getData().data()
-            ts_time = electron_tree.getNode(
-                node_path + ":te_rz").getData().dim_of(0)
-            ts_z = electron_tree.getNode(
-                node_path + ":z_sorted").getData().data()
+            ts_record = params.mds_conn.get(node_path + ":te_rz", tree_name='electrons')
+            ts_data = ts_record.data()
+            ts_time = ts_record.dim_of(0)
+            ts_z = params.mds_conn.get(node_path + ":z_sorted", tree_name='electrons').data()
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_props.shot_id}] {traceback.format_exc()}")
             te_hwm.fill(np.nan)
@@ -825,7 +801,7 @@ class BasicCmodRequests(ShotDataRequest):
     @staticmethod
     @parameter_cached_method(
         columns=["ne_peaking", "Te_peaking", "pressure_peaking"],
-        used_trees=["cmod", "efit_tree", "electrons"],
+        used_trees=["efit_tree", "electrons"],
         tokamak=Tokamak.CMOD)
     def _get_peaking_factors(params : ShotDataRequestParams):
         ne_PF = np.full(len(params.shot_props.times), np.nan)
@@ -835,26 +811,20 @@ class BasicCmodRequests(ShotDataRequest):
             # Ignore shots on the blacklist
             return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
         try:
-            efit_tree = params.shot_props.tree_manager.open_tree(tree_name='cmod')
-            z0 = 0.01*efit_tree.getNode(r'\efit_aeqdsk:zmagx').getData().data()
-            aminor = efit_tree.getNode(r'\efit_aeqdsk:aminor').getData().data()
-            kappa = efit_tree.getNode(r'\efit_aeqdsk:kappa').getData().data()
-            efit_time = efit_tree.getNode(
-                r'\efit_aeqdsk:aminor').getData().dim_of(0)
+            z0 = 0.01*params.mds_conn.get(r'\efit_aeqdsk:zmagx', tree_name='efit_tree').data()
+            aminor = params.mds_conn.get(r'\efit_aeqdsk:aminor', tree_name='efit_tree').data()
+            kappa = params.mds_conn.get(r'\efit_aeqdsk:kappa', tree_name='efit_tree').data()
+            efit_time = params.mds_conn.get(r'\efit_aeqdsk:aminor', tree_name='efit_tree').dim_of(0)
             bminor = aminor*kappa
-            electron_tree = params.shot_props.tree_manager.open_tree(tree_name='electrons')
             node_ext = '.yag_new.results.profiles'
             # nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = self.compare_ts_tci(
-            #     electron_tree, nlnum=4)
-            TS_te = electron_tree.getNode(
-                f"{node_ext}:te_rz").getData().data()*1000*11600
-            tets_edge = electron_tree.getNode(r'\ts_te').getData().data()*11600
+            #     electron_tree, nlnum=4) 
+            TS_te = params.mds_conn.get(f"{node_ext}:te_rz", tree_name='electrons').data()*1000*11600
+            tets_edge = params.mds_conn.get(r'\ts_te').data()*11600
             TS_te = np.concatenate((TS_te, tets_edge))
-            TS_time = electron_tree.getNode(
-                f"{node_ext}:te_rz").getData().dim_of(0)
-            TS_z = electron_tree.getNode(
-                f"{node_ext}:z_sorted").getData().data()
-            zts_edge = electron_tree.getNode(f"\fiber_z").getData().data()
+            TS_time = params.mds_conn.get(f"{node_ext}:te_rz", tree_name='electrons').dim_of(0)
+            TS_z = params.mds_conn.get(f"{node_ext}:z_sorted", tree_name='electrons').data()
+            zts_edge = params.mds_conn.get(f"\fiber_z", tree_name='electrons').data()
             TS_z = np.concatenate((TS_z, zts_edge))
             if len(zts_edge) != tets_edge.shape[1]:
                 return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
@@ -893,35 +863,34 @@ class BasicCmodRequests(ShotDataRequest):
         tokamak=Tokamak.CMOD)
     def _get_prad_peaking(params : ShotDataRequestParams):
         prad_peaking = np.full(len(params.shot_props.times), np.nan)
-        cmod_tree = params.shot_props.tree_manager.open_tree(tree_name='cmod')
         try:
-            r0 = 0.01* cmod_tree.getNode(r'\efit_aeqdsk:rmagx').getData().data()
-            z0 = 0.01 * cmod_tree.getNode(r'\efit_aeqdsk:zmagx').getData().data()
-            aminor = cmod_tree.getNode(r'\efit_aeqdsk:aminor').getData().data()
-            efit_time = cmod_tree.getNode(r'\efit_aeqdsk:aminor').getData().dim_of(0)
+            # TODO: why use CMOD here?
+            r0 = 0.01* params.mds_conn.get(r'\efit_aeqdsk:rmagx', tree_name="cmod").data()
+            z0 = 0.01 * params.mds_conn.get(r'\efit_aeqdsk:zmagx', tree_name="cmod").data()
+            aminor = params.mds_conn.get(r'\efit_aeqdsk:aminor', tree_name="cmod").data()
+            efit_time = params.mds_conn.get(r'\efit_aeqdsk:aminor', tree_name="cmod").dim_of(0)
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_props.shot_id}]: Failed to get efit data")
             return pd.DataFrame({"prad_peaking": prad_peaking})
-        spec_tree = params.shot_props.tree_manager.open_tree(tree_name='spectroscopy')
         got_axa = False 
         try: 
-            axa = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.AXA:BRIGHT").getData()
+            axa = params.mds_conn.get(r"\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.AXA:BRIGHT", tree_name='spectroscopy')
             t_axa = axa.dim_of(1).data()
             r_axa = axa.dim_of(0).data()
             bright_axa = axa.data()
-            z_axa = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXA:Z_O").getData().data()
-            good_axa = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXA:GOOD").getData().data()
+            z_axa = params.mds_conn.get(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXA:Z_O", tree_name='spectroscopy').data()
+            good_axa = params.mds_conn.get(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXA:GOOD", tree_name='spectroscopy').data()
             got_axa = True 
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_props.shot_id}]: Failed to get AXA data")
         got_axj = False 
         try: 
-            axj = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.AXJ:BRIGHT").getData() 
+            axj = params.mds_conn.get(r"\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.AXJ:BRIGHT", tree_name='spectroscopy')
             t_axj = axj.dim_of(1).data()
             r_axj = axj.dim_of(0).data()
             bright_axj = axj.data()
-            z_axj = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXJ:Z_O").getData().data()
-            good_axj = spec_tree.getNode(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXJ:GOOD").getData().data()
+            z_axj = params.mds_conn.get(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXJ:Z_O", tree_name='spectroscopy').data()
+            good_axj = params.mds_conn.get(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXJ:GOOD", tree_name='spectroscopy').data()
             got_axj = True
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_props.shot_id}]: Failed to get AXJ data")
@@ -985,30 +954,24 @@ class BasicCmodRequests(ShotDataRequest):
             return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
         try:
             # Get shaping params
-            efit_tree = params.shot_props.tree_manager.open_tree(tree_name='cmod')
-            z0 = 0.01*efit_tree.getNode(r'\efit_aeqdsk:zmagx').getData().data()
-            aminor = efit_tree.getNode(r'\efit_aeqdsk:aminor').getData().data()
-            kappa = efit_tree.getNode(r'\efit_aeqdsk:kappa').getData().data()
-            efit_time = efit_tree.getNode(
-                r'\efit_aeqdsk:aminor').getData().dim_of(0)
+            z0 = 0.01 * params.mds_conn.get(r'\efit_aeqdsk:zmagx', tree_name="cmod").data()
+            aminor = params.mds_conn.get(r'\efit_aeqdsk:aminor', tree_name="cmod").data()
+            kappa = params.mds_conn(r'\efit_aeqdsk:kappa', tree_name="cmod").data()
+            efit_time = params.mds_conn.get(r'\efit_aeqdsk:aminor', tree_name="cmod").dim_of(0)
             bminor = aminor*kappa  # length of major axis of plasma x-section
+            
             # Get data from TS
-            electron_tree = params.shot_props.tree_manager.open_tree(tree_name='electrons')
             node_ext = '.yag_new.results.profiles'
             # nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = self.compare_ts_tci(
             #    electron_tree, nlnum=4)
-            Te_core = electron_tree.getNode(
-                f"{node_ext}:te_rz").getData().data()*1000*11600  # Get core TS data
-            Te_edge = electron_tree.getNode(
-                r'\ts_te').getData().data()*11600  # Get edge TS data
+            Te_core = params.mds_conn.get(f"{node_ext}:te_rz", tree_name="electrons").data()*1000*11600  # Get core TS data
+            Te_edge = params.mds_conn.get(r'\ts_te', tree_name="electrons").getData().data()*11600  # Get edge TS data
             # Concat core and edge data
             Te = np.concatenate((Te_core, Te_edge))
-            Te_time = electron_tree.getNode(
-                f"{node_ext}:te_rz").getData().dim_of(0).data()  # Get time associated with
-            z_core = electron_tree.getNode(
-                f"{node_ext}:z_sorted").getData().data()  # Get z position of core TS points
+            Te_time = params.mds_conn.get(f"{node_ext}:te_rz", tree_name="electrons").dim_of(0).data()  # Get time associated with
+            z_core = params.mds_conn.get(f"{node_ext}:z_sorted", tree_name="electrons").data()  # Get z position of core TS points
             # Get z position of edge TS points
-            z_edge = electron_tree.getNode(r"\fiber_z").getData().data()
+            z_edge = params.mds_conn.get(r"\fiber_z", tree_name="electrons").data()
             z = np.concatenate((z_core, z_edge))  # Concat core and edge data
             # Make sure that there are equal numbers of edge position and edge temperature points
             if len(z_edge) != Te_edge.shape[0]:
@@ -1017,9 +980,8 @@ class BasicCmodRequests(ShotDataRequest):
                 return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
             Te_PF = Te_PF[:len(Te_time)]  # Reshape Te_PF to length of Te_time
             itimes = np.where((Te_time > 0) & (Te_time < params.shot_props.times[-1]))
-            electron_tree = params.shot_props.tree_manager.open_tree(tree_name='electrons')
             node_path = ".yag_new.results.profiles"
-            TS_time = electron_tree.getNode(
+            TS_time = params.mds_conn.get(
                 node_path + ":te_rz").getData().dim_of(0).data()
             # Interpolate bminor onto desired timebase
             bminor = interp1(efit_time, bminor, TS_time)
@@ -1063,9 +1025,9 @@ class BasicCmodRequests(ShotDataRequest):
         nl_tci2 = [1e32]
         ts_time1 = [1e32]
         ts_time2 = [1e32]
-        tci_time = electron_tree.getNode(
+        tci_time = params.mds_conn.get(
             ".YAG_NEW.RESULTS.PROFILES:NE_RZ").getData().dim_of(0)
-        tci_record = electron_tree.getNode(f".TCI.RESULTS:NL_{nlnum:02d}")
+        tci_record = params.mds_conn.get(f".TCI.RESULTS:NL_{nlnum:02d}")
         tci = tci_record.data()
         tci_t = tci_record.dim_of(0)
         nlts, nlts_t = self.integrate_ts_tci(nlnum)
@@ -1095,13 +1057,12 @@ class BasicCmodRequests(ShotDataRequest):
         return nl_ts1, nl_ts2, nl_tci1, nl_tci2, time1, time2
 
     def parse_yags(params : ShotDataRequestParams):
-        electron_tree = params.shot_props.tree_manager.open_tree(tree_name='electrons')
-        nyag1 = electron_tree.getNode(r'\knobs:pulses_q').getData().data()
-        nyag2 = electron_tree.getNode(r'\knobs:pulses_q_2').getData().data()
+        nyag1 = params.mds_conn.get(r'\knobs:pulses_q', tree_name='electrons').data()
+        nyag2 = params.mds_conn.get(r'\knobs:pulses_q_2', tree_name='electrons').data()
         indices1 = -1
         indices2 = -1
-        dark = electron_tree.getNode(r'\n_dark_prior').getData().data()
-        ntotal = electron_tree.getNode(r'\n_total').getData().data()
+        dark = params.mds_conn.get(r'\n_dark_prior', tree_name='electrons').data()
+        ntotal = params.mds_conn.get(r'\n_total', tree_name='electrons').data()
         nt = ntotal-dark
         if nyag1 == 0:
             if nyag2 != 0:
@@ -1138,13 +1099,12 @@ class BasicCmodRequests(ShotDataRequest):
         """
         # TODO: Get description from Jinxiang
         """
-        analysis_tree = params.shot_props.tree_manager.open_tree(tree_name='analysis')
         values = []
         for expr in [r'_lf=\analysis::efit_aeqdsk:lflag', r'_l0=((sum(_lf,1) - _lf[*,20] - _lf[*,1])==0)', r'_n=\analysis::efit_fitout:nitera,(_l0 and (_n>4))']:
-            values.append(analysis_tree.tdiExecute(expr))
+            values.append(params.get(expr, tree_name='analysis'))
         _n = values[2].data()
         valid_indices = np.nonzero(_n)
-        times = analysis_tree.getNode(r'\analysis::efit_aeqdsk:lflag').getData().dim_of(0)
+        times = analysis_tree.getNode(r'\analysis::efit_aeqdsk:lflag').dim_of(0)
         return valid_indices, times[valid_indices]
 
     @staticmethod
@@ -1159,9 +1119,8 @@ class BasicCmodRequests(ShotDataRequest):
         """ """
         sxr = np.full(len(params.shot_props.times), np.nan)
         try:
-            tree = params.shot_props.tree_manager.open_tree(tree_name='xtomo')
-            sxr_record = tree.getNode(
-                r'\top.brightnesses.array_1:chord_16').getData()
+            tree = .open_tree(tree_name='xtomo')
+            sxr_record = params.mds_conn.get(r'\top.brightnesses.array_1:chord_16', tree_name='xtomo').getData()
             sxr = sxr_record.data().astype('float64', copy=False)
             t_sxr = sxr_record.dim_of(0)
             sxr = interp1(t_sxr, sxr, params.shot_props.times)
@@ -1270,11 +1229,10 @@ class BasicCmodRequests(ShotDataRequest):
         # Range of rho to interpolate over
         rhobase = np.arange(0, 1, 0.001)
         # Get mina and max time from TS tree
-        electron_tree = params.shot_props.tree_manager.open_tree(tree_name='electrons')
+        electron_tree = params.mds_conn.get(tree_name='electrons')
         node_path = ".yag_new.results.profiles"
         try:
-            ts_time = electron_tree.getNode(
-                node_path + ":te_rz").getData().dim_of(0)
+            ts_time = params.mds_conn.get(node_path + ":te_rz").getData().dim_of(0)
         except:
             return pd.DataFrame({"Te_edge": np.full(len(params.shot_props.times), np.nan), "ne_edge": np.full(len(params.shot_props.times), np.nan)})
 
@@ -1348,8 +1306,7 @@ class BasicCmodRequests(ShotDataRequest):
         
         #Get BT
         
-        mag_tree = params.shot_props.tree_manager.open_tree(tree_name='magnetics')
-        btor_record = mag_tree.getNode(r"\btor").getData()
+        btor_record = pararams.mds_conn.get(r"\btor", tree_name='magnetics').
         btor = btor_record.data()
         t_mag = btor_record.dim_of(0).data() # [s]
         # Toroidal power supply takes time to turn on, from ~ -1.8 and should be on by t=-1. So pick the time before that to calculate baseline
@@ -1411,8 +1368,8 @@ class ThomsonDensityMeasure:
         n_e_sig = [1e32]
         flag = 1
         valid_indices, efit_times = self.efit_check()
-        cmod_tree = self.tree_manager.open_tree(tree_name='cmod')
-        ip = cmod_tree.getNode(r'\ip').getData().data()
+        cmod_tree = r.open_tree(tree_name='cmod')
+        ip = params.mds_conn.get(r'\ip', "analysis").getData().data()
         if np.mean(ip) > 0:
             flag = 0
         efit_times = self.efit_tree.getNode(r'\efit_aeqdsk:time').data().astype(
@@ -1425,28 +1382,28 @@ class ThomsonDensityMeasure:
             r'\efit_aeqdsk:SIBDRY').getData().dim_of(0)
         psi_0 = analysis_tree.getNode(r'\efit_aeqdsk:SIMAGX')
         electron_tree = self.tree_manager.open_tree(tree_name='electrons')
-        nets_core = electron_tree.getNode(
+        nets_core = params.mds_conn.get(
             '.YAG_NEW.RESULTS.PROFILES:NE_RZ').getData().data()
-        nets_core_t = electron_tree.getNode(
+        nets_core_t = params.mds_conn.get(
             '.YAG_NEW.RESULTS.PROFILES:NE_RZ').getData().dim_of(0).data()
-        nets_core_err = electron_tree.getNode(
+        nets_core_err = params.mds_conn.get(
             '.YAG_NEW.RESULTS.PROFILES:NE_ERR').getData().data()
-        zts_core = electron_tree.getNode(
+        zts_core = params.mds_conn.get(
             '.YAG_NEW.RESULTS.PROFILES:Z_SORTED').getData().data()
         mts_core = len(zts_core)
-        zts_edge = electron_tree.getNode(r'\fiber_z').getData().data()
+        zts_edge = params.mds_conn.get(r'\fiber_z').getData().data()
         mts_edge = len(zts_edge)
         try:
-            nets_edge = electron_tree.getNode(r'\ts_ne').getData().data()
-            nets_edge_err = electron_tree.getNode(
+            nets_edge = params.mds_conn.get(r'\ts_ne').getData().data()
+            nets_edge_err = params.mds_conn.get(
                 r'\ts_ne_err').getData().data()
         except mdsExceptions.mdsException as err:
             nets_edge = np.zeros((len(nets_core[:, 1]), mts_edge))
             nets_edge_err = nets_edge + 1e20
         mts = mts_core + mts_edge
-        rts = electron_tree.getNode(
+        rts = params.mds_conn.get(
             '.YAG.RESULTS.PARAM:R') + np.zeros((1, mts))
-        rtci = electron_tree.getNode('.tci.results:rad').getData().data()
+        rtci = params.mds_conn.get('.tci.results:rad').getData().data()
         nts = len(nets_core_t)
         zts = np.zeros((1, mts))
         zts[:,:mts_core] = zts_core
