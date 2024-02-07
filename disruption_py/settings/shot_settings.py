@@ -136,7 +136,7 @@ class ShotSettings:
         self.set_times_request = resolve_set_times_request(self.set_times_request)
         
         map_string_attributes_to_enum(self, {
-            "signal_type": SignalDomain,
+            "signal_domain": SignalDomain,
             "interpolation_method": InterpolationMethod
         })
         
