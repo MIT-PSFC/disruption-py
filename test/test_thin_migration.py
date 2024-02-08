@@ -80,3 +80,27 @@ print(desired_segment_paths)
 
 segments_is_on = conn.get(f'getnci($, "STATE")', np.array(desired_segment_nids)).data()
 print(segments_is_on)
+
+conn = Connection('alcdata-new')
+
+
+mag_tree = Tree("magnetics", shot_id)
+btor_record = mag_tree.getNode(r"\btor").getData()
+btor = btor_record.data()
+t_mag = btor_record.dim_of(0)
+print(t_mag.data())
+baseline_indices = np.where(t_mag <= -1.8)
+
+#print(baseline_indices)
+
+conn.openTree("magnetics", shot=shot_id)
+btor = conn.get("_sig=" + r"\btor")
+t_mag = conn.get(r"dim_of(_sig,0)")
+baseline_indices = np.where(t_mag <= -1.8)
+
+print(t_mag.data())
+
+t_mag = conn.get(r"dim_of(\btor,0)")
+print(t_mag.data())
+baseline_indices = np.where(t_mag <= -1.8)
+#print(baseline_indices)
