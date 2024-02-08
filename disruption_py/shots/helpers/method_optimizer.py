@@ -1,4 +1,4 @@
-from disruption_py.mdsplus_integration.tree_manager import TreeManager
+from disruption_py.mdsplus_integration.mds_connection import MDSConnection
 from disruption_py.shots.helpers.cached_method_props import CachedMethodProps
 from dataclasses import dataclass, field
 
@@ -13,12 +13,12 @@ class MethodOptimizer:
     
     def __init__(
         self, 
-        tree_manager : TreeManager, 
+        mds_conn : MDSConnection, 
         parameter_cached_method_props: List[CachedMethodProps], 
         all_cached_method_props: List[CachedMethodProps], 
         pre_cached_method_names: List[str]
     ):
-        self._tree_manager = tree_manager
+        self._mds_conn = mds_conn
         self._cached_method_props_by_name : Dict[str, CachedMethodProps] = {method.name: method for method in all_cached_method_props}
         
         # compute method dependency graph
@@ -67,7 +67,7 @@ class MethodOptimizer:
             raise Exception("Cycle detected in cached method dependencies")
 
         method_tree_counts = []
-        open_tree_names = self._tree_manager.thread_open_tree_names
+        open_tree_names = self._mds_conn.open_trees
         for cached_method_name in methods_to_consider:
             used_trees = self._get_method_used_trees(cached_method_name)
             
@@ -109,7 +109,7 @@ class MethodOptimizer:
                 # close trees that are no longer needed
                 if self._tree_remaining_count[tree_name] <= 0:
                     self._tree_remaining_count.pop(tree_name)
-                    self._tree_manager.close_tree(tree_name)
+                    self._mds_conn.close_tree(tree_name)
 
     def _get_method_used_trees(self, method_name):
         """
@@ -118,5 +118,5 @@ class MethodOptimizer:
         Specifies unique name as must treat nicknames as there real tree name.
         """
         used_trees = self._cached_method_props_by_name[method_name].get_param_value("used_trees", [])
-        return [self._tree_manager.unique_name(used_tree) for used_tree in used_trees]
+        return [self._mds_conn.tree_name(used_tree) for used_tree in used_trees]
     

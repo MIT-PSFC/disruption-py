@@ -4,7 +4,6 @@ from dataclasses import replace
 import pandas as pd
 from disruption_py.databases.database import ShotDatabase
 from disruption_py.mdsplus_integration.mds_connection import MDSConnection
-from disruption_py.mdsplus_integration.tree_manager import TreeManager
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.shots.parameter_methods.cmod.basic_parameter_methods import BasicCmodRequests
@@ -26,14 +25,6 @@ class CModShotManager(ShotManager):
         Sets up the shot properties for cmod.
         """
         
-        efit_names_to_test = without_duplicates([
-            shot_settings.efit_tree_name,
-            "analysis",
-            *[f"efit0{i}" for i in range(1, 10)],
-            *[f"efit{i}" for i in range(10, 19)],
-        ])
-        efit_envs_to_test = [shot_settings.attempt_local_efit_env, ()] if shot_settings.attempt_local_efit_env is not None else [()]
-        tree_nicknames = { "efit_tree" : (efit_names_to_test, efit_envs_to_test) }
         
         try:
             disruption_time=self.database.get_disruption_time(shot_id=shot_id)
@@ -41,7 +32,6 @@ class CModShotManager(ShotManager):
             disruption_time=None
             self.logger.error(f"Failed to retreive disruption time with error {e}. Continuing as if the shot did not disrupt.")
                
-        tree_manager = TreeManager(shot_id)
         mds_conn = self.process_mds_conn.get_shot_connection(shot_id=shot_id)
         
         mds_conn.add_tree_nickname_funcs(
@@ -58,11 +48,9 @@ class CModShotManager(ShotManager):
         try:
             shot_props = self.shot_setup(
                 shot_id=shot_id,
-                tree_manager=tree_manager,
                 mds_conn = mds_conn,
                 database=self.database,
                 disruption_time=disruption_time,
-                tree_nicknames=tree_nicknames,
                 shot_settings=shot_settings,
                 tokamak=Tokamak.CMOD,
                 **kwargs
@@ -70,7 +58,6 @@ class CModShotManager(ShotManager):
             return shot_props
         except Exception as e:
             self.logger.info(f"[Shot {shot_id}]: Caught failed to setup shot {shot_id}, cleaning up tree manager.")
-            tree_manager.cleanup()
             mds_conn.close_all_trees()
             raise e
     

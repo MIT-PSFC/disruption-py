@@ -47,7 +47,7 @@ class MyShotDataRequest(ShotDataRequest):
 
 3. To retrieve data from MDSplus use the `shot_props` attribute of the `params` object. The `ShotProps` class has a number of useful attributes with the most useful being listed below. See the `ShotProps` class for more details.
     - `params.shot_props.shot_id`: the shot id of the shot for which data is being retrieved.
-	- `params.shot_props.tree_manager`: a reference to the MDSplus tree manager for the shot. This object should be used to open MDSplus trees instead of the regular MDSplus `Tree` class as it ensures that trees are both efficiently reused and closed when they are no longer needed. See ['TreeManager'] for details on how to use the tree manager.
+	- `params.shot_props.mds_conn`: a wrapper around the MDSplus connection for the process, that makes it easier to get data for a shot. See ['MDSConnection'] for details on how to use an `MDSConnection`.
     - `params.shot_props.times`: the timebase of the shot for which data is being retrieved as a numpy array of times. A common development pattern is using the `params.shot.interpolation_method` method (defaults to `interp1`) to interpolate the retrieved/computed values to the desired timebase.
 ??? example "Shot Data Request Examples"
 

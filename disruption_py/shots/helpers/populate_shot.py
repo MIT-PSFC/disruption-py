@@ -26,7 +26,6 @@ def populate_method(params: ShotDataRequestParams, cached_method_props : CachedM
         if callable(method) and is_cached_method(method):
             params.logger.info(
                 f"[Shot {shot_props.shot_id}]:Populating {cached_method_props.name}")
-            # self._tree_manager.cleanup_not_needed()
             try:
                 result = method(params=params)
             except Exception as e:
@@ -200,7 +199,12 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams) ->
                     shot_props.logger.info(
                         f"[Shot {shot_props.shot_id}]:Skipping {cached_method_props.name} already populated")
 
-    method_optimizer : MethodOptimizer = MethodOptimizer(shot_props.tree_manager, cached_methods_to_evaluate_props, all_cached_methods_props, pre_cached_method_names)
+    method_optimizer : MethodOptimizer = MethodOptimizer(
+        mds_conn=shot_props.mds_conn, 
+        parameter_cached_method_props=cached_methods_to_evaluate_props, 
+        all_cached_method_props=all_cached_methods_props, 
+        pre_cached_method_names=pre_cached_method_names
+    )
 
     parameters = []
     start_time = time.time()

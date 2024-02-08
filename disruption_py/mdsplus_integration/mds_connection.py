@@ -1,3 +1,4 @@
+import logging
 from typing import Callable, Dict, List
 import MDSplus as mds
 
@@ -15,21 +16,15 @@ class ProcessMDSConnection():
         return MDSConnection(self.conn, shot_id)
     
 class MDSConnection:
+    logger = logging.getLogger('disruption_py')
     
     def __init__(self, conn : mds.Connection, shot_id : int):
         self.conn = conn
         self.shot_id = shot_id
         self.tree_nickname_funcs = {}
         self.tree_nicknames = {}
-        self.last_open_tree = None    
-    
-    def add_tree_nickname_funcs(self, tree_nickname_funcs : Dict[str, Callable]):
-        """
-        Add tree nickname functions to the connection.
-        
-        Required because some tree nickname function require the connection to exist.
-        """
-        self.tree_nickname_funcs.update(tree_nickname_funcs)
+        self.open_trees = set()
+        self.last_open_tree = None   
     
     def open_tree(self, tree_name : str):
         """
@@ -45,6 +40,7 @@ class MDSConnection:
             self.conn.openTree(tree_name, self.shot_id)
             
         self.last_open_tree = tree_name
+        self.open_trees.add(tree_name)
     
     def close_tree(self, tree_name : str):
         """
@@ -52,16 +48,24 @@ class MDSConnection:
         """
         if tree_name in self.tree_nicknames:
             tree_name = self.tree_nicknames[tree_name]
-            
+        
+        if tree_name in self.open_trees:
+            try:
+                self.conn.closeTree(tree_name, self.shot_id)
+            except Exception as e:
+                self.logger.warning(f"Error closing tree {tree_name} in shot {self.shot_id}")
+                self.logger.debug(e)
+                
         if self.last_open_tree == tree_name:
             self.last_open_tree = None
-        self.conn.closeTree(tree_name, self.shot_id)
+        self.open_trees.discard(tree_name)
         
     def close_all_trees(self):
         """
         Close all open trees
         """
         self.last_open_tree = None
+        self.open_trees.clear()
         # self.conn.closeAllTrees()
         
     def set_default(self, path : str):
@@ -81,6 +85,8 @@ class MDSConnection:
             self.open_tree(tree_name)
         return self.conn.get(expression, arguments)
     
+    # Added Methods
+    
     def get_record_data(self, path : str, tree_name : str = None, dim_nums : List = None):
         dim_nums = dim_nums or [0]
         
@@ -98,3 +104,28 @@ class MDSConnection:
             self.open_tree(tree_name)
         dims = [self.conn.get(f"dim_of({path},{dim_num})").data() for dim_num in dim_nums]
         return dims
+    
+    # nicknames
+    
+    def add_tree_nickname_funcs(self, tree_nickname_funcs : Dict[str, Callable]):
+        """
+        Add tree nickname functions to the connection.
+        
+        Required because some tree nickname function require the connection to exist.
+        """
+        self.tree_nickname_funcs.update(tree_nickname_funcs)
+    
+    def get_tree_name_of_nickname(self, nickname : str):
+        """
+        Get the tree name that the nickname has been set to or None if the nickname was not set.
+        """
+        if nickname not in self.tree_nicknames and nickname in self.tree_nickname_funcs:
+            self.tree_nicknames[nickname] = self.tree_nickname_funcs[nickname]()
+
+        return self.tree_nicknames.get(nickname, None)
+    
+    def tree_name(self, for_name: str) -> str:
+        """
+        The tree name for for_name, whether it is a nickname or tree name itself
+        """
+        return self.get_tree_name_of_nickname(for_name) or for_name
