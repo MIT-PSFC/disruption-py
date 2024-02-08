@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import logging
 from disruption_py.databases.database import ShotDatabase
-from disruption_py.mdsplus_integration.mds_connection import MDSConnection
+from disruption_py.mdsplus_integration.mds_connection import MDSConnection, ProcessMDSConnection
 from disruption_py.mdsplus_integration.tree_manager import TreeManager, EnvModifications
 from disruption_py.settings.enum_options import InterpolationMethod, SignalDomain
 from disruption_py.settings.existing_data_request import ExistingDataRequestParams
@@ -22,9 +22,9 @@ from disruption_py.utils.utils import without_duplicates
 class ShotManager(ABC):
     logger = logging.getLogger('disruption_py')
     
-    def __init__(self, database : ShotDatabase, mds_conn : MDSConnection):
+    def __init__(self, database : ShotDatabase, process_mds_conn : ProcessMDSConnection):
         self.database = database
-        self.mds_conn = mds_conn
+        self.process_mds_conn = process_mds_conn
         
     @classmethod
     @abstractmethod
@@ -40,6 +40,7 @@ class ShotManager(ABC):
         self,
         shot_id : int,
         tree_manager : TreeManager,
+        mds_conn : MDSConnection,
         disruption_time : float,
         tree_nicknames : Dict[str, Tuple[List[str], List[EnvModifications]]],
         shot_settings : ShotSettings,
@@ -86,6 +87,7 @@ class ShotManager(ABC):
             tokamak=tokamak,
             disruption_time = disruption_time,
             tree_manager = tree_manager,
+            mds_conn = mds_conn,
             times = times,
             existing_data = existing_data,
             pre_filled_shot_data = pre_filled_shot_data,
@@ -103,7 +105,12 @@ class ShotManager(ABC):
         return shot_props
     
     def shot_data_retrieval(self, shot_props : ShotProps, shot_settings : ShotSettings):
-        shot_data_request_params = ShotDataRequestParams(mds_conn=self.mds_conn, shot_props=shot_props, logger=self.logger, tokamak=shot_props.tokamak)
+        shot_data_request_params = ShotDataRequestParams(
+            mds_conn=shot_props.mds_conn, 
+            shot_props=shot_props,
+            logger=self.logger, 
+            tokamak=shot_props.tokamak
+        )
         return populate_shot(shot_settings=shot_settings, params=shot_data_request_params)
     
     @classmethod

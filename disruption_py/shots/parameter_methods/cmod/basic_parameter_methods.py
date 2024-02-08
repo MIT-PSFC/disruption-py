@@ -156,8 +156,9 @@ class BasicCmodRequests(ShotDataRequest):
         # Collect active segments and their information
         active_segments = []
         for node_path, is_on in zip(children_paths, children_on):
+            node_path = node_path.strip()
             if node_path.split(".")[-1].startswith("SEG_") and is_on == 0: # 0 represents node being on, 1 represents node being off
-                active_segments.append((node_path, params.mds_conn.get(node_path +":start_time", tree_name="pcs").data()))
+                active_segments.append((node_path, params.mds_conn.get(node_path+":start_time", tree_name="pcs").data()))
 
         active_segments.sort(key=lambda n: n[1])
         return active_segments
@@ -725,7 +726,7 @@ class BasicCmodRequests(ShotDataRequest):
             n_e_record = params.mds_conn.get(r'.tci.results:nl_04', tree_name='electrons') #Line integrated density
             n_e = np.squeeze(n_e_record.data().astype('float64', copy=False))/0.6 #Divide by chord length of ~0.6m to get line averaged density. For future refernce, chord length is stored in .01*\analysis::efit_aeqdsk:rco2v[3,*]
             t_n = n_e_record.dim_of(0).data()
-            ip_record = params.mds_conn.get(r'\ip', tree_name='electrons')
+            ip_record = params.mds_conn.get(r'\ip', tree_name='magnetics')
             ip = ip_record.data().astype('float64', copy=False)
             t_ip = ip_record.dim_of(0).data()
             a_minor_record = params.mds_conn.get(r'\efit_aeqdsk:aminor', tree_name='analysis')
@@ -1212,7 +1213,7 @@ class BasicCmodRequests(ShotDataRequest):
         
         #Get BT
         
-        btor_record = pararams.mds_conn.get(r"\btor", tree_name='magnetics').
+        btor_record = params.mds_conn.get(r"\btor", tree_name='magnetics')
         btor = btor_record.data()
         t_mag = btor_record.dim_of(0).data() # [s]
         # Toroidal power supply takes time to turn on, from ~ -1.8 and should be on by t=-1. So pick the time before that to calculate baseline

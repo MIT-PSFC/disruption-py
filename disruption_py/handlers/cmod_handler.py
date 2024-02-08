@@ -2,7 +2,7 @@
 from typing import Callable, Any
 import traceback
 from disruption_py.handlers.multiprocessing_helper import MultiprocessingShotRetriever
-from disruption_py.mdsplus_integration.mds_connection import MDSConnection
+from disruption_py.mdsplus_integration.mds_connection import ProcessMDSConnection
 from disruption_py.settings.shot_ids_request import ShotIdsRequestParams, ShotIdsRequestType, shot_ids_request_runner
 from disruption_py.settings.existing_data_request import ExistingDataRequestParams
 from disruption_py.settings.output_type_request import OutputTypeRequest, ResultOutputTypeRequestParams, FinishOutputTypeRequestParams, resolve_output_type_request
@@ -119,9 +119,10 @@ class CModHandler:
         shot_ids_list = shot_ids_request_runner(shot_ids_request, shot_ids_request_params)
         
         def cmod_shot_manager_initializer():
+            # initialize connections for individual processes 
             return CModShotManager(
                 database=self.database_initializer(), 
-                mds_conn=MDSConnection("alcdata-new"),
+                process_mds_conn=ProcessMDSConnection("alcdata-new"),
             )
         
         if num_processes > 1:
