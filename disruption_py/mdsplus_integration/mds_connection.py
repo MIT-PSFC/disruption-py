@@ -80,3 +80,21 @@ class MDSConnection:
         if tree_name is not None:
             self.open_tree(tree_name)
         return self.conn.get(expression, arguments)
+    
+    def get_record_data(self, path : str, tree_name : str = None, dim_nums : List = None):
+        dim_nums = dim_nums or [0]
+        
+        if tree_name is not None:
+            self.open_tree(tree_name)
+        data = self.conn.get("_sig=" + path).data()
+        dims = [self.conn.get(f"dim_of(_sig,{dim_num})").data() for dim_num in dim_nums]
+        return data, *dims
+    
+    
+    def get_dims(self, path : str, tree_name : str = None, dim_nums : List = None):
+        dim_nums = dim_nums or [0]
+
+        if tree_name is not None:
+            self.open_tree(tree_name)
+        dims = [self.conn.get(f"dim_of({path},{dim_num})").data() for dim_num in dim_nums]
+        return dims
