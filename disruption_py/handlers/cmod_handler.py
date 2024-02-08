@@ -22,6 +22,8 @@ class CModHandler:
         When run returns a new database object for the handler. The function must create a new database 
         connection instead of reusing an existing one, as the handler may initalize multiple connections 
         across different processes. Defaults to CModDatabase.default.
+    mds_connection_str : str
+        The string used to connect to MDSplus using the thin client. Defaults to alcdata-new.
 
     Attributes
     ----------
@@ -39,10 +41,16 @@ class CModHandler:
     """
     logger = logging.getLogger('disruption_py')
     
-    def __init__(self, database_initializer : Callable[..., CModDatabase] = None, **kwargs):
-        self.database_initializer = database_initializer
-        if self.database_initializer is None:
-            self.database_initializer = CModDatabase.default
+    def __init__(
+        self, 
+        database_initializer : Callable[..., CModDatabase] = None,
+        mds_connection_str = None,
+        **kwargs
+    ):
+        self.database_initializer = database_initializer or CModDatabase.default
+        mds_connection_str = mds_connection_str or "alcdata-new"
+        self.mds_connection_initializer = lambda: ProcessMDSConnection(mds_connection_str)
+        
 
     @property
     def database(self) -> CModDatabase:
@@ -56,6 +64,19 @@ class CModHandler:
         if not hasattr(self, '_database'):
             self._database = self.database_initializer()
         return self._database
+    
+    @property
+    def mds_connection(self) -> ProcessMDSConnection:
+        """Reference to the MDSplus connection for CMod.
+
+        Returns
+        -------
+        ProcessMDSConnection
+            MDSplus connection object for CMod.
+        """
+        if not hasattr(self, '_mds_connection'):
+            self._mds_connection = self.mds_connection_initializer()
+        return self._mds_connection
     
     @staticmethod
     def _get_shot_data(shot_id, shot_manager : CModShotManager, shot_settings: ShotSettings) -> pd.DataFrame:
@@ -76,7 +97,7 @@ class CModHandler:
             CModHandler.logger.warning(f"[Shot {shot_id}]: fatal error {traceback.format_exc()}")
             CModHandler.logger.error(f"failed {shot_id} with error {e}")
             return None
-
+    
     def get_shots_data(
         self,
         shot_ids_request : ShotIdsRequestType,
@@ -118,13 +139,6 @@ class CModHandler:
         shot_ids_request_params = ShotIdsRequestParams(self.database, Tokamak.CMOD, self.logger)
         shot_ids_list = shot_ids_request_runner(shot_ids_request, shot_ids_request_params)
         
-        def cmod_shot_manager_initializer():
-            # initialize connections for individual processes 
-            return CModShotManager(
-                database=self.database_initializer(), 
-                process_mds_conn=ProcessMDSConnection("alcdata-new"),
-            )
-        
         if num_processes > 1:
             shot_retriever = MultiprocessingShotRetriever(
                 database=self.database,
@@ -132,7 +146,13 @@ class CModHandler:
                 shot_settings=shot_settings,
                 output_type_request=output_type_request,
                 process_prop_initializers = {
-                    "shot_manager": cmod_shot_manager_initializer
+                    # initialize connections for individual processes 
+                    "shot_manager": (
+                        lambda: CModShotManager(
+                            process_database=self.database_initializer(), 
+                            process_mds_conn=self.mds_connection_initializer(),
+                        )
+                    )
                 },
                 tokamak = Tokamak.CMOD,
                 logger = self.logger,
@@ -143,10 +163,14 @@ class CModHandler:
                 await_complete=True,
             )
         else:
+            cmod_shot_manager = CModShotManager(
+                process_database=self.database, 
+                process_mds_conn=self.mds_connection,
+            )
             for shot_id in shot_ids_list:
                 shot_data = CModHandler._get_shot_data(
                     shot_id=shot_id, 
-                    shot_manager=cmod_shot_manager_initializer(),
+                    shot_manager=cmod_shot_manager,
                     shot_settings=shot_settings
                 )
                 if shot_data is None:

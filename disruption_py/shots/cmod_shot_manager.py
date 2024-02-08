@@ -25,9 +25,8 @@ class CModShotManager(ShotManager):
         Sets up the shot properties for cmod.
         """
         
-        
         try:
-            disruption_time=self.database.get_disruption_time(shot_id=shot_id)
+            disruption_time=self.process_database.get_disruption_time(shot_id=shot_id)
         except Exception as e:
             disruption_time=None
             self.logger.error(f"Failed to retreive disruption time with error {e}. Continuing as if the shot did not disrupt.")
@@ -49,7 +48,7 @@ class CModShotManager(ShotManager):
             shot_props = self.shot_setup(
                 shot_id=shot_id,
                 mds_conn = mds_conn,
-                database=self.database,
+                database=self.process_database,
                 disruption_time=disruption_time,
                 shot_settings=shot_settings,
                 tokamak=Tokamak.CMOD,

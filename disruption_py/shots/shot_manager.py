@@ -21,8 +21,8 @@ from disruption_py.utils.utils import without_duplicates
 class ShotManager(ABC):
     logger = logging.getLogger('disruption_py')
     
-    def __init__(self, database : ShotDatabase, process_mds_conn : ProcessMDSConnection):
-        self.database = database
+    def __init__(self, process_database : ShotDatabase, process_mds_conn : ProcessMDSConnection):
+        self.process_database = process_database
         self.process_mds_conn = process_mds_conn
         
     @classmethod
@@ -136,7 +136,7 @@ class ShotManager(ABC):
         if shot_settings.existing_data_request is not None:
             existing_data_request_params = ExistingDataRequestParams(
                 shot_id=shot_id,
-                database=self.database,
+                database=self.process_database,
                 tokamak=tokamak, 
                 logger=self.logger,
             )
@@ -163,7 +163,7 @@ class ShotManager(ABC):
             shot_id=shot_id, 
             mds_conn=mds_conn, 
             existing_data=existing_data,
-            database=self.database, 
+            database=self.process_database, 
             disruption_time=disruption_time, 
             tokamak=tokamak, 
             logger=self.logger,
