@@ -3,7 +3,7 @@ from disruption_py.handlers.handler import Handler
 from disruption_py.shots.cmod_shot_manager import CModShotManager
 from disruption_py.databases import CModDatabase
 
-class CModHandler:
+class CModHandler(Handler):
     """Class used to retrieve MDSplus and sql data from Alcator C-Mod..
 
     Parameters
