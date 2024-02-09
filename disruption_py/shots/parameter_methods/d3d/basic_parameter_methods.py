@@ -1,147 +1,86 @@
-from disruption_py.shots.shot_temp import Shot
-from disruption_py.shots.helpers.method_caching import parameter_cached_method
-
-import logging
 import traceback
-
 import pandas as pd
 import numpy as np
+from MDSplus import MdsException
 import scipy
-import netCDF4 as nc
-
-import MDSplus
-from MDSplus import *
-
-from disruption_py.utils.math_utils import interp1, gsastd, get_bolo, power, efit_rz_interp
-import disruption_py.data
-D3D_DISRUPTED_SHOT = 175552
-# Retrieve efit from EFIT01, Peaking Factor Nodes: dpsrdcva dpsrdxdiv dpstepf dpsnepf
-D3D_PEAKING_FACTORS_SHOT = 180808
-D3D_MAX_SHOT_TIME = 7.0  # [s]
-DEFAULT_A_MINOR = 0.56  # [m]
-DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
-
-DEFAULT_SHOT_COLUMNS = ['time', 'shot', 'time_until_disrupt', 'ip']
-
-"""
-Useful Examples:
-https://diii-d.gat.com/diii-d/MDSplusAPI_Python_pg1
-https://diii-d.gat.com/diii-d/Gadata_py
-"""
+from disruption_py.settings.shot_data_request import ShotDataRequest, ShotDataRequestParams
+from disruption_py.shots.helpers.method_caching import parameter_cached_method
+from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.utils.math_utils import get_bolo, gsastd, interp1, power
 
 
-class D3DShot(Shot):
-    # Tokamak Variables
-    nominal_flattop_radius = 0.59
-    # EFIT Variables
-    efit_cols = {'beta_n': r'\efit_a_eqdsk:betan', 'beta_p': r'\efit_a_eqdsk:betap', 'kappa': r'\efit_a_eqdsk:kappa', 'li': r'\efit_a_eqdsk:li', 'upper_gap': r'\efit_a_eqdsk:gaptop', 'lower_gap': r'\efit_a_eqdsk:gapbot',
-                 'q0': r'\efit_a_eqdsk:q0', 'qstar': r'\efit_a_eqdsk:qstar', 'q95': r'\efit_a_eqdsk:q95', 'Wmhd': r'\efit_a_eqdsk:wmhd', 'chisq': r'\efit_a_eqdsk:chisq'}
-    # 'v_loop_efit': ,r'\efit_a_eqdsk:vsurf', 'bt0': r'\efit_a_eqdsk:bt0'
-    efit_derivs = {'beta_p': 'dbetap_dt', 'li': 'dli_dt', 'Wmhd': 'dWmhd_dt'}
-    rt_efit_cols = {'beta_p_RT': r'\efit_a_eqdsk:betap', 'li_RT': r'\efit_a_eqdsk:li',
-                    'q95_RT': r'\efit_a_eqdsk:q95', 'Wmhd_RT': r'\efit_a_eqdsk:wmhd', 'chisq': r'\efit_a_eqdsk:chisq'}
-    # 'v_loop_efit_RT': r'\efit_a_eqdsk:vsurf',
-
-    # Disruption Variables
-    dt_before_disruption = 0.002
-    duration_before_disruption = 0.10
-
-    def __init__(self, shot_id, efit_tree_name, data=None, times=None, disruption_time=None, override_cols=True, **kwargs):
-        super().__init__(shot_id, data, **kwargs)
-        self._times = times
-        self.conn = MDSplus.Connection('atlas.gat.com')
-        self.efit_tree = str(efit_tree_name)
-        self.disruption_time = disruption_time
-        self.disrupted = self.disruption_time is not None
-        self.override_cols = override_cols
-        self.data = data
-        timebase_signal = kwargs.pop('timebase_signal', None)
-        populate_methods = kwargs.pop('populate_methods', None)
-        populate_tags = kwargs.pop('populate_tags', ['all'])
-        if self.data is not None and self._times is None:
-            try:
-                self._times = self.data['time'].to_numpy()
-                # Check if the timebase is in ms instead of s
-                if self._times[-1] > D3D_MAX_SHOT_TIME:
-                    self._times /= 1000  # [ms] -> [s]
-            except KeyError as e:
-                self.logger.warning(
-                    f"[Shot {self._shot_id}]:Shot constructor was passed data but no timebase.")
-                self.logger.debug(
-                    f"[Shot {self._shot_id}]:{traceback.format_exc()}")
-                self._times = self.get_timebase(timebase_signal, **kwargs)
-        if self._times is None:
-            self._times = self.get_timebase(timebase_signal, **kwargs)
-        self._init_populate(data is not None, populate_methods, populate_tags)
-
-    # TODO: Remove and add "l_mode" tag to relevant methods
-    def _populate_l_mode_data(self):
-        self.data = pd.concat([self.get_efit_parameters(), self.get_density_parameters(
-        ), self.get_peaking_factors(), self.get_kappa_area(), self.get_time_until_disrupt()], axis=1)
-        self.data['time'] = self._times
-        self.data['shot'] = self._shot_id
-
-    def get_timebase(self, timebase_signal, **kwargs):
-        if timebase_signal == None or timebase_signal == 'disruption_timebase':
-            minimum_ip = kwargs.get('minimum_ip', 400.e3)
-            minimum_duration = kwargs.get('minimum_duration', 0.1)
-            return self.get_disruption_timebase(minimum_ip, minimum_duration)
-        elif timebase_signal == 'ip':
-            _, ip_time = self._get_signal(
-                f"ptdata('ip', {self._shot_id})", interpolate=False)
-            return ip_time
-        elif timebase_signal == 'flattop':
-            _, ip_time = self._get_signal(
-                f"ptdata('ip', {self._shot_id})", interpolate=False)
-            return self.get_flattop_timebase(ip_time)
-        else:
-            raise NotImplementedError(
-                "Only 'disruption_timebase' and 'ip' are supported for timebase_signal.")
-
-
-
-    @parameter_cached_method()
-    def get_power_parameters(self):
-        self.conn.openTree('d3d', self._shot_id)
+class BasicD3DRequests(ShotDataRequest):
+    
+    @staticmethod
+    @parameter_cached_method(columns=["time_until_disrupt"], tokamak=Tokamak.D3D)
+    def _get_time_until_disrupt(params : ShotDataRequestParams):
+        if params.shot_props.disrupted:
+            return pd.DataFrame({'time_until_disrupt': params.shot_props.disruption_time - params.shot_props.times})
+        return pd.DataFrame({'time_until_disrupt': np.full(params.shot_props.times.size, np.nan)})
+    
+    @staticmethod
+    @parameter_cached_method(columns=["H98", "H_alpha"], used_trees=["transport", "d3d"], tokamak=Tokamak.D3D)
+    def get_H_parameters(params : ShotDataRequestParams):
+        try:
+            h_98, t_h_98 = params.mds_conn.get_record_data(r'\H_THH98Y2', tree_name='transport')
+            h_98 = interp1(t_h_98, h_98, params.shot_props.times)
+        except ValueError as e:
+            params.logger.info(f"[Shot {params.shot_props.shot_id}]: Failed to get H98 signal. Returning NaNs.")
+            params.logger.debug(f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
+            h_98 = np.full(params.shot_props.times.size, np.nan)
+        try:
+            h_alpha, t_h_alpha = params.mds_conn.get_record_data(r'\fs04', tree_name='d3d')
+            h_alpha = interp1(t_h_alpha, h_alpha, params.shot_props.times)
+        except ValueError as e:
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]: Failed to get H_alpha signal. Returning NaNs.")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
+            h_alpha = np.full(params.shot_props.times.size, np.nan)
+        return pd.DataFrame({'H98': h_98, 'H_alpha': h_alpha})
+    
+    @staticmethod
+    @parameter_cached_method(
+        columns=["p_rad", "p_nbi", "p_ech", "p_ohm", "radiated_fraction", "v_loop"], 
+        used_trees=["d3d", "rf", "bolom"], 
+        tokamak=Tokamak.D3D
+    )
+    def get_power_parameters(params : ShotDataRequestParams):
         # Get neutral beam injected power
         try:
-            p_nbi, t_nbi = self._get_signal(
-                r'\d3d::top.nb:pinj', interpolate=False)
+            p_nbi, t_nbi = params.mds_conn.get_record_data(r'\d3d::top.nb:pinj', tree_name='d3d')
             p_nbi = p_nbi.astype(np.float64)
             p_nbi *= 1.e3  # [KW] -> [W]
             if len(t_nbi) > 2:
-                p_nbi = interp1(t_nbi, p_nbi, self._times,
-                                'linear', bounds_error=False, fill_value=0.)
+                p_nbi = interp1(t_nbi, p_nbi, params.shot_props.times,'linear', bounds_error=False, fill_value=0.)
             else:
-                self.logger.info(
-                    f"[Shot {self._shot_id}]:No NBI power data found in this shot.")
-                p_nbi = np.zeros(len(self._times))
+                params.logger.info(
+                    f"[Shot {params.shot_props.shot_id}]:No NBI power data found in this shot.")
+                p_nbi = np.zeros(len(params.shot_props.times))
         except MdsException as e:
-            p_nbi = np.zeros(len(self._times))
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Failed to open NBI node")
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+            p_nbi = np.zeros(len(params.shot_props.times))
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Failed to open NBI node")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
         # Get electron cycholotrn heating (ECH) power. It's poitn data, so it's not stored in an MDSplus tree
-        self.conn.openTree('rf', self._shot_id)
         try:
-            p_ech, t_ech = self._get_signal(
-                r'\top.ech.total:echpwrc', interpolate=False)
+            p_ech, t_ech = params.mds_conn.get_record_data(r'\top.ech.total:echpwrc', tree_name='rf')
             if len(t_ech) > 2:
-                p_ech = interp1(t_ech, p_ech, self._times,
+                p_ech = interp1(t_ech, p_ech, params.shot_props.times,
                                 'linear', bounds_error=False, fill_value=0.)
             else:
-                self.logger.info(
-                    f"[Shot {self._shot_id}]:No ECH power data found in this shot. Setting to zeros")
-                p_ech = np.zeros(len(self._times))
+                params.logger.info(
+                    f"[Shot {params.shot_props.shot_id}]:No ECH power data found in this shot. Setting to zeros")
+                p_ech = np.zeros(len(params.shot_props.times))
         except MdsException as e:
-            p_ech = np.zeros(len(self._times))
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Failed to open ECH node. Setting to zeros")
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+            p_ech = np.zeros(len(params.shot_props.times))
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Failed to open ECH node. Setting to zeros")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
         # Get ohmic power and loop voltage
-        p_ohm, v_loop = self.get_ohmic_parameters()
+        p_ohm, v_loop = BasicD3DRequests.get_ohmic_parameters(params)
         # Radiated power
         # We had planned to use the standard signal r'\bolom::prad_tot' for this
         # parameter.  However, the processing involved in calculating \prad_tot
@@ -153,36 +92,34 @@ class D3DShot(Shot):
         # analysis so that the smoothing is causal, and uses a shorter window.
         smoothing_window = 0.010  # [s]
         try:
-            self.conn.openTree("bolom", self._shot_id)
+            bol_prm, _ = params.mds_conn.get_record_data(r'\bol_prm', tree_name='bolom')
         except MdsException as e:
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Failed to open bolom tree.")
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
-        bol_prm, _ = self._get_signal(r'\bol_prm', interpolate=False)
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Failed to open bolom tree.")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
         lower_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
         upper_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
         bol_channels = lower_channels + upper_channels
         bol_signals = []
         bol_times = []
         for i in range(48):
-            bol_signal, bol_time = self._get_signal(
-                fr"\top.raw:{bol_channels[i]}", interpolate=False)
+            bol_signal, bol_time = params.mds_conn.get_record_data(fr"\top.raw:{bol_channels[i]}", tree_name='bolom')
             bol_signals.append(bol_signal)
             bol_times.append(bol_time)
-        a_struct = get_bolo(self._shot_id, bol_channels,
+        a_struct = get_bolo(params.shot_props.shot_id, bol_channels,
                             bol_prm, bol_signals, bol_times)
         ier = 0
         for j in range(48):
             # TODO: Ask about how many valid channels are needed for proper calculation
             if a_struct.channels[j].ier == 1:
                 ier = 1
-                p_rad = np.full(len(self._times), np.nan)
+                p_rad = np.full(len(params.shot_props.times), np.nan)
                 break
         if ier == 0:
             b_struct = power(a_struct)
             p_rad = b_struct.pwrmix  # [W]
-            p_rad = interp1(a_struct.time, p_rad, self._times, 'linear')
+            p_rad = interp1(a_struct.time, p_rad, params.shot_props.times, 'linear')
 
         # Remove any negative values from the power data
         p_rad[np.isinf(p_rad)] = np.nan
@@ -199,47 +136,49 @@ class D3DShot(Shot):
 
         return pd.DataFrame({'p_rad': p_rad, 'p_nbi': p_nbi, 'p_ech': p_ech, 'p_ohm': p_ohm, 'radiated_fraction': rad_fraction, 'v_loop': v_loop})
 
-    @parameter_cached_method()
-    def get_ohmic_parameters(self):
-        self.conn.openTree('d3d', self._shot_id)
+
+    @staticmethod
+    @parameter_cached_method(
+        columns=["p_rad", "p_nbi", "p_ech", "p_ohm", "radiated_fraction", "v_loop"], 
+        used_trees=["d3d", "_efit_tree"], 
+        tokamak=Tokamak.D3D
+    )
+    def get_ohmic_parameters(params : ShotDataRequestParams):
         # Get edge loop voltage and smooth it a bit with a median filter
         try:
-            v_loop, t_v_loop = self._get_signal(
-                f'ptdata("vloopb", {self._shot_id})', interpolate=False)
+            v_loop, t_v_loop = params.mds_conn.get_record_data(f'ptdata("vloopb", {params.shot_props.shot_id})', tree_name='d3d')
             v_loop = scipy.signal.medfilt(v_loop, 11)
-            v_loop = interp1(t_v_loop, v_loop, self._times, 'linear')
+            v_loop = interp1(t_v_loop, v_loop, params.shot_props.times, 'linear')
         except MdsException as e:
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Failed to open VLOOPB node. Setting to NaN.")
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
-            v_loop = np.full(len(self._times), np.nan)
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Failed to open VLOOPB node. Setting to NaN.")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
+            v_loop = np.full(len(params.shot_props.times), np.nan)
             t_v_loop = v_loop.copy()
        # Get plasma current
         try:
-            ip = self.conn.get(f"ptdata('ip', {self._shot_id})").data()  # [A]
-            t_ip = self.conn.get(
-                f"dim_of(ptdata('ip', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
+            ip, t_ip = params.mds_conn.get_record_data(f"ptdata('ip', {params.shot_props.shot_id})", tree_name="d3d")
+            t_ip = t_ip/1.e3  # [ms] -> [s]
             # We choose a 20-point width for gsastd. This means a 10ms window for ip smoothing
             dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
-            self.conn.openTree(self.efit_tree, self._shot_id)
-            li, t_li = self._get_signal(r'\efit_a_eqdsk:li', interpolate=False)
-            chisq = self.conn.get(r'\efit_a_eqdsk:chisq').data()
+            li, t_li = params.mds_conn.get_record_data(r'\efit_a_eqdsk:li', tree_name="_efit_tree")
+            chisq = params.mds_conn.get(r'\efit_a_eqdsk:chisq').data()
             # Filter out invalid indices of efit reconstruction
             invalid_indices = None  # TODO: Finish
         except MdsException as e:
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Unable to get plasma current data. p_ohm set to NaN.")
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
-            p_ohm = np.full(len(self._times), np.nan)
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Unable to get plasma current data. p_ohm set to NaN.")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
+            p_ohm = np.full(len(params.shot_props.times), np.nan)
             return pd.DataFrame({'p_ohm': p_ohm, 'v_loop': v_loop})
         # [m] For simplicity, use fixed r_0 = 1.67 for DIII-D major radius
         r_0 = 1.67
         inductance = 4.*np.pi*r_0 * li/2  # [H]
-        inductance = interp1(t_li, inductance, self._times, 'linear')
-        ip = interp1(t_ip, ip, self._times, 'linear')
-        dipdt_smoothed = interp1(t_ip, dipdt_smoothed, self._times, 'linear')
+        inductance = interp1(t_li, inductance, params.shot_props.times, 'linear')
+        ip = interp1(t_ip, ip, params.shot_props.times, 'linear')
+        dipdt_smoothed = interp1(t_ip, dipdt_smoothed, params.shot_props.times, 'linear')
         v_inductive = inductance * dipdt_smoothed  # [V]
         v_resistive = v_loop - v_inductive  # [V]
         p_ohm = ip * v_resistive  # [W]
