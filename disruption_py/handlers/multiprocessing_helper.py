@@ -117,5 +117,5 @@ class MultiprocessingShotRetriever:
         self.task_queue.join()
         
         # Signal the result processing thread to stop once completed processing and wait for it to finish
-        self.result_queue.put(MARK_COMPLETE)
+        self.result_queue.put((None, MARK_COMPLETE))
         self.result_thread.join()
