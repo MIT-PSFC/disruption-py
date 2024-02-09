@@ -90,7 +90,15 @@ class MultiprocessingShotRetriever:
             elif result is None:
                 self.logger.warning(f"Not outputting data for shot {shot_id}, data is None.")
                 continue
-            self.output_type_request.output_shot(ResultOutputTypeRequestParams(result, self.database, self.tokamak, self.logger))
+            self.output_type_request.output_shot(
+                ResultOutputTypeRequestParams(
+                    shot_id=shot_id,
+                    result=result, 
+                    database=self.database, 
+                    tokamak=self.tokamak, 
+                    logger=self.logger,
+                )
+            )
 
     def run(self, shot_creator_f, shot_ids_list, await_complete=True):
         

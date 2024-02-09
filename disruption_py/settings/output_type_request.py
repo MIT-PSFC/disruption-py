@@ -25,6 +25,7 @@ class ResultOutputTypeRequestParams:
     logger : Logger
         Logger object from disruption_py to use for logging.
     """
+    shot_id : int
     result : pd.DataFrame
     database : ShotDatabase
     tokamak : Tokamak
@@ -187,6 +188,22 @@ class ListOutputRequest(OutputTypeRequest):
     def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
         self.results = []
         
+class DictOutputRequest(OutputTypeRequest):
+    """
+    Output all retrieved shot data as a dict of dataframes with the keys being shot numbers.
+    """
+    def __init__(self):
+        self.results = {}
+        
+    def _output_shot(self, params : ResultOutputTypeRequestParams):
+        self.results[params.shot_id] = params.result
+    
+    def get_results(self, params: FinishOutputTypeRequestParams):
+        return self.results
+    
+    def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
+        self.results = []
+        
 class DataFrameOutputRequest(OutputTypeRequest):
     """
     Output all retrieved shot data as a list of dataframes, once retrieval complete.
@@ -213,9 +230,8 @@ class HDF5OutputRequest(OutputTypeRequest):
         self.output_shot_count = 0
 
     def _output_shot(self, params : ResultOutputTypeRequestParams):
-        shot_id = params.result['shot'].iloc[0] if (not params.result.empty and ('shot' in params.result.columns)) else self.output_shot_count
         mode = 'a' if self.output_shot_count > 0 else 'w'
-        params.result.to_hdf(self.filepath, f'df_{shot_id}', format='table', complib='blosc', mode=mode)
+        params.result.to_hdf(self.filepath, f'df_{params.shot_id}', format='table', complib='blosc', mode=mode)
         self.output_shot_count += 1
     
     def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
@@ -287,6 +303,7 @@ class SQLOutputRequest(OutputTypeRequest):
 _output_type_request_mappings: Dict[str, OutputTypeRequest] = {
     "list" : ListOutputRequest(),
     "dataframe" : DataFrameOutputRequest(),
+    "dict": DictOutputRequest(),
 }
 # --8<-- [end:output_type_request_dict]
 

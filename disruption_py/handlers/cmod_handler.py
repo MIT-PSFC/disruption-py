@@ -178,6 +178,7 @@ class CModHandler:
                 else:
                     output_type_request.output_shot(
                         ResultOutputTypeRequestParams(
+                            shot_id = shot_id,
                             result = shot_data, 
                             database = self.database, 
                             tokamak = Tokamak.CMOD, 

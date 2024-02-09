@@ -28,3 +28,17 @@ def mock_numpy_gradient():
     with patch('numpy.gradient', new=matlab_gradient_1d_vectorized):
         # The patch will be in place for the duration of the test session
         yield
+
+
+def pytest_addoption(parser):
+    parser.addoption("--verbose_output", action="store_true", help="More testing information.")
+    parser.addoption("--fail_slow", action="store_true", help="Finish test and report statistics instead of failing fast.")
+
+def pytest_generate_tests(metafunc):
+    verbose_output = metafunc.config.option.verbose
+    if 'verbose_output' in metafunc.fixturenames and verbose_output is not None:
+        metafunc.parametrize("verbose_output", [verbose_output])
+
+    fail_slow = metafunc.config.option.fail_slow
+    if 'fail_slow' in metafunc.fixturenames and fail_slow is not None:
+        metafunc.parametrize("fail_slow", [fail_slow])
