@@ -15,7 +15,7 @@ from disruption_py.utils.utils import without_duplicates
 
 class CModShotManager(ShotManager):
         
-    def cmod_setup_shot_props(
+    def shot_setup(
         self,
         shot_id : int,
         shot_settings : ShotSettings,
@@ -45,7 +45,7 @@ class CModShotManager(ShotManager):
         )
         
         try:
-            shot_props = self.shot_setup(
+            shot_props = self.setup_shot_props(
                 shot_id=shot_id,
                 mds_conn = mds_conn,
                 database=self.process_database,

@@ -20,7 +20,7 @@ class D3DShotManager(ShotManager):
     DT_BEFORE_DISRUPTION = 0.002
     DURATION_BEFORE_DISRUPTION = 0.10
     
-    def cmod_setup_shot_props(
+    def shot_setup(
         self,
         shot_id : int,
         shot_settings : ShotSettings,
@@ -50,7 +50,7 @@ class D3DShotManager(ShotManager):
         )
         
         try:
-            shot_props = self.shot_setup(
+            shot_props = self.setup_shot_props(
                 shot_id=shot_id,
                 mds_conn = mds_conn,
                 database=self.process_database,
