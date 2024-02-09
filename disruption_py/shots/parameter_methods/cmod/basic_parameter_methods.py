@@ -69,10 +69,10 @@ class CModEfitRequests(ShotDataRequest):
     @staticmethod
     @parameter_cached_method(
         columns=[*efit_cols.keys(), *efit_cols_pre_2000.keys(), *efit_derivs.keys(), 'V_surf', 'v_loop_efit', 'beta_n'],
-        used_trees=["efit_tree"], tokamak=Tokamak.CMOD)
+        used_trees=["_efit_tree"], tokamak=Tokamak.CMOD)
     def _get_EFIT_parameters(params : ShotDataRequestParams):
 
-        efit_time = params.mds_conn.get(r'\efit_aeqdsk:time', tree_name="efit_tree").data().astype('float64', copy=False) # [s]
+        efit_time = params.mds_conn.get(r'\efit_aeqdsk:time', tree_name="_efit_tree").data().astype('float64', copy=False) # [s]
         efit_data = dict()
         
         #Get data from each of the columns in efit_cols one at a time
@@ -81,10 +81,10 @@ class CModEfitRequests(ShotDataRequest):
                 #If shot before 2000 and the param is in efit_cols_pre_2000
                 if params.shot_props.shot_id <= 1000000000 and param not in CModEfitRequests.efit_cols_pre_2000.keys():
                     efit_data[param] = params.mds_conn.get(
-                        CModEfitRequests.efit_cols_pre_2000[param], tree_name="efit_tree").data().astype('float64', copy=False)
+                        CModEfitRequests.efit_cols_pre_2000[param], tree_name="_efit_tree").data().astype('float64', copy=False)
                 else:
                     efit_data[param] = params.mds_conn.get(
-                        CModEfitRequests.efit_cols[param], tree_name="efit_tree").data().astype('float64', copy=False)
+                        CModEfitRequests.efit_cols[param], tree_name="_efit_tree").data().astype('float64', copy=False)
             except:
                 params.logger.warning(f"[Shot {params.shot_props.shot_id}]: Unable to get {param} from EFIT tree")
                 params.logger.debug(f"[Shot {params.shot_props.shot_id}]: {traceback.format_exc()}")
@@ -97,7 +97,7 @@ class CModEfitRequests(ShotDataRequest):
                 
         #Get data for V_surf := deriv(\ANALYSIS::EFIT_SSIBRY)*2*pi
         try:
-            ssibry = params.mds_conn.get('\efit_geqdsk:ssibry', tree_name="efit_tree").data().astype('float64', copy=False)
+            ssibry = params.mds_conn.get('\efit_geqdsk:ssibry', tree_name="_efit_tree").data().astype('float64', copy=False)
             efit_data['V_surf'] = np.gradient(ssibry, efit_time)*2*np.pi
         except:
             print("unable to get V_surf")
@@ -112,7 +112,7 @@ class CModEfitRequests(ShotDataRequest):
             
             #Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally sure on this one)
             try: #TODO: confirm this
-                ssimag = params.mds_conn.get('\efit_geqdsk:ssimag', tree_name="efit_tree").data().astype('float64', copy=False)
+                ssimag = params.mds_conn.get('\efit_geqdsk:ssimag', tree_name="_efit_tree").data().astype('float64', copy=False)
                 efit_data['v_loop_efit'] = np.gradient(ssimag, efit_time)*2*np.pi
             except:
                 print("unable to get v_loop_efit")
@@ -120,7 +120,7 @@ class CModEfitRequests(ShotDataRequest):
                 pass 
 
             #Compute beta_n
-            beta_t = params.mds_conn.get('\efit_aeqdsk:betat', tree_name="efit_tree").data().astype('float64', copy=False)
+            beta_t = params.mds_conn.get('\efit_aeqdsk:betat', tree_name="_efit_tree").data().astype('float64', copy=False)
             efit_data['beta_n'] = np.reciprocal( np.reciprocal(beta_t) +  np.reciprocal(efit_data['beta_p']) )
 
         if not np.array_equal(params.shot_props.times, efit_time):
@@ -452,7 +452,7 @@ class BasicCmodRequests(ShotDataRequest):
     @staticmethod
     @parameter_cached_method(
         columns=["p_oh", "v_loop"],
-        used_trees=["analysis", "efit_tree"],
+        used_trees=["analysis", "_efit_tree"],
         contained_cached_methods=["_get_ip_parameters"],
         tokamak=Tokamak.CMOD)
     def _get_ohmic_parameters(params : ShotDataRequestParams):
@@ -460,7 +460,7 @@ class BasicCmodRequests(ShotDataRequest):
         v_loop = v_loop.astype('float64', copy=False)
         if len(v_loop_time) <= 1:
             return pd.DataFrame({"p_oh": np.zeros(len(params.shot_props.times)), "v_loop": np.zeros(len(params.shot_props.times))})
-        li, efittime  = params.mds_conn.get_record_data(r"\efit_aeqdsk:li", tree_name="efit_tree")
+        li, efittime  = params.mds_conn.get_record_data(r"\efit_aeqdsk:li", tree_name="_efit_tree")
         li = li.astype('float64', copy=False)
         ip_parameters = BasicCmodRequests._get_ip_parameters(params=params)
         return BasicCmodRequests.get_ohmic_parameters(params.shot_props.times, v_loop, v_loop_time, li, efittime, ip_parameters['dip_smoothed'], ip_parameters['ip'])
@@ -529,11 +529,11 @@ class BasicCmodRequests(ShotDataRequest):
         return pd.DataFrame({"kappa_area": interp1(a_times, area/(np.pi * aminor**2), times)})
 
     @staticmethod
-    @parameter_cached_method(columns=["kappa_area"], used_trees=["efit_tree"], tokamak=Tokamak.CMOD)
+    @parameter_cached_method(columns=["kappa_area"], used_trees=["_efit_tree"], tokamak=Tokamak.CMOD)
     def _get_kappa_area(params : ShotDataRequestParams):
-        aminor = params.mds_conn.get(r'\efit_aeqdsk:aminor', tree_name="efit_tree").data().astype('float64', copy=False)
-        area = params.mds_conn.get(r'\efit_aeqdsk:area', tree_name="efit_tree").data().astype('float64', copy=False)
-        times = params.mds_conn.get(r'\efit_aeqdsk:time', tree_name="efit_tree").data().astype('float64', copy=False)
+        aminor = params.mds_conn.get(r'\efit_aeqdsk:aminor', tree_name="_efit_tree").data().astype('float64', copy=False)
+        area = params.mds_conn.get(r'\efit_aeqdsk:area', tree_name="_efit_tree").data().astype('float64', copy=False)
+        times = params.mds_conn.get(r'\efit_aeqdsk:time', tree_name="_efit_tree").data().astype('float64', copy=False)
 
         aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
         # make sure area is not 0 or less than 0
@@ -782,7 +782,7 @@ class BasicCmodRequests(ShotDataRequest):
     @staticmethod
     @parameter_cached_method(
         columns=["ne_peaking", "Te_peaking", "pressure_peaking"],
-        used_trees=["efit_tree", "electrons"],
+        used_trees=["_efit_tree", "electrons"],
         tokamak=Tokamak.CMOD)
     def _get_peaking_factors(params : ShotDataRequestParams):
         ne_PF = np.full(len(params.shot_props.times), np.nan)
@@ -792,9 +792,9 @@ class BasicCmodRequests(ShotDataRequest):
             # Ignore shots on the blacklist
             return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
         try:
-            z0 = 0.01*params.mds_conn.get(r'\efit_aeqdsk:zmagx', tree_name='efit_tree').data()
-            kappa = params.mds_conn.get(r'\efit_aeqdsk:kappa', tree_name='efit_tree').data()
-            aminor, efit_time = params.mds_conn.get_record_data(r'\efit_aeqdsk:aminor', tree_name='efit_tree')
+            z0 = 0.01*params.mds_conn.get(r'\efit_aeqdsk:zmagx', tree_name='_efit_tree').data()
+            kappa = params.mds_conn.get(r'\efit_aeqdsk:kappa', tree_name='_efit_tree').data()
+            aminor, efit_time = params.mds_conn.get_record_data(r'\efit_aeqdsk:aminor', tree_name='_efit_tree')
             bminor = aminor*kappa
             node_ext = '.yag_new.results.profiles'
             # nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = ThomsonDensityMeasure.compare_ts_tci(params, nlnum=4) 
@@ -846,7 +846,7 @@ class BasicCmodRequests(ShotDataRequest):
             # TODO: why use CMOD here?
             r0 = 0.01* params.mds_conn.get(r'\efit_aeqdsk:rmagx', tree_name="cmod").data()
             z0 = 0.01 * params.mds_conn.get(r'\efit_aeqdsk:zmagx', tree_name="cmod").data()
-            aminor, efit_time = params.mds_conn.get_record_data(r'\efit_aeqdsk:aminor', tree_name='efit_tree')
+            aminor, efit_time = params.mds_conn.get_record_data(r'\efit_aeqdsk:aminor', tree_name='_efit_tree')
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_props.shot_id}]: Failed to get efit data")
             return pd.DataFrame({"prad_peaking": prad_peaking})
@@ -936,7 +936,7 @@ class BasicCmodRequests(ShotDataRequest):
             # Get shaping params
             z0 = 0.01 * params.mds_conn.get(r'\efit_aeqdsk:zmagx', tree_name="cmod").data()
             kappa = params.mds_conn(r'\efit_aeqdsk:kappa', tree_name="cmod").data()
-            aminor, efit_time = params.mds_conn.get_record_data(r'\efit_aeqdsk:aminor', tree_name='efit_tree')
+            aminor, efit_time = params.mds_conn.get_record_data(r'\efit_aeqdsk:aminor', tree_name='_efit_tree')
             bminor = aminor*kappa  # length of major axis of plasma x-section
             
             # Get data from TS
@@ -1332,12 +1332,12 @@ class ThomsonDensityMeasure:
         ip = params.mds_conn.get(r'\ip', "cmod").data()
         if np.mean(ip) > 0:
             flag = 0
-        efit_times = params.mds_conn.get(r'\efit_aeqdsk:time', tree_name="efit_tree").data().astype(
+        efit_times = params.mds_conn.get(r'\efit_aeqdsk:time', tree_name="_efit_tree").data().astype(
             'float64', copy=False)
         t1 = np.amin(efit_times)
         t2 = np.amax(efit_times)
-        psia, psia_t = params.mds_conn.get_record_data(r'\efit_aeqdsk:SIBDRY', tree_name="efit_tree")
-        psi_0 = params.mds_conn.get(r'\efit_aeqdsk:SIMAGX', tree_name="efit_tree")
+        psia, psia_t = params.mds_conn.get_record_data(r'\efit_aeqdsk:SIBDRY', tree_name="_efit_tree")
+        psi_0 = params.mds_conn.get(r'\efit_aeqdsk:SIMAGX', tree_name="_efit_tree")
         nets_core, nets_core_t = params.mds_conn.get_record_data(
             '.YAG_NEW.RESULTS.PROFILES:NE_RZ', tree_name="electrons")
         nets_core_err = params.mds_conn.get(

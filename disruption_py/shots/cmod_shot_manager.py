@@ -35,7 +35,7 @@ class CModShotManager(ShotManager):
         
         mds_conn.add_tree_nickname_funcs(
             tree_nickname_funcs = { 
-                "efit_tree" : self.get_efit_tree_nickname_func(
+                "_efit_tree" : self.get_efit_tree_nickname_func(
                     shot_id=shot_id, 
                     mds_conn=mds_conn,
                     disruption_time=disruption_time,
