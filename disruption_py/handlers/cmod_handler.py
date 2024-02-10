@@ -13,6 +13,8 @@ from disruption_py.databases import CModDatabase
 import pandas as pd
 import logging
 
+from disruption_py.utils.utils import without_duplicates
+
 class CModHandler:
     """Class used to retrieve MDSplus and sql data from Alcator C-Mod..
 
@@ -137,7 +139,9 @@ class CModHandler:
         output_type_request = resolve_output_type_request(output_type_request)
         
         shot_ids_request_params = ShotIdsRequestParams(self.database, Tokamak.CMOD, self.logger)
-        shot_ids_list = shot_ids_request_runner(shot_ids_request, shot_ids_request_params)
+        shot_ids_list = without_duplicates(shot_ids_request_runner(shot_ids_request, shot_ids_request_params))
+        
+        print(f"Retrieving data for {len(shot_ids_list)} shots from MDSPlus")
         
         if num_processes > 1:
             shot_retriever = MultiprocessingShotRetriever(
