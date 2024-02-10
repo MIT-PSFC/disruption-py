@@ -318,18 +318,50 @@ class BasicCmodRequests(ShotDataRequest):
             - matlab/cmod_matlab/matlab-core/get_Z_parameters.m
 
         """
-        z_error = z_error_without_ip/ip  # [m]
-        z_prog_dpcs = interp1(pcstime, z_prog, dpcstime)
-        z_cur = z_prog_dpcs + z_error  # [m]
-        v_z = np.gradient(z_cur, dpcstime)  # m/s
-        z_times_v_z = z_cur * v_z  # m^2/s
-        z_prog = interp1(pcstime, z_prog, times, 'linear', False, z_prog[-1])
-        z_error = -interp1(dpcstime, z_error, times,
-                           'linear', False, z_error[-1])
-        z_cur = -interp1(dpcstime, z_cur, times, 'linear', False, z_cur[-1])
-        v_z = interp1(dpcstime, v_z, times, 'linear', False, v_z[-1])
-        z_times_v_z = interp1(dpcstime, z_times_v_z, times,
-                              'linear', False, z_times_v_z[-1])
+        try:
+            z_error = z_error_without_ip/ip  # [m]
+        except:
+
+            """Note -- Lucas: 
+            
+            For reasons that I'm not aware of, and honestly don't want 
+            to become aware of, sometimes the function that calls this
+            hands it ip as a multidimensional array. This is a way to deal with that.
+            
+            One example is during shot 1031022004:
+            z_error_without_ip size:  (135001,)
+            ip size:  (135001, 3)
+            """
+
+            if len(ip.shape) > 1:
+                ip_mean = np.mean(ip, axis=1)
+                ip = ip_mean
+
+            z_error = np.divide(
+                z_error_without_ip,
+                ip,
+                out=np.full_like(z_error_without_ip, np.nan),
+                where=(ip != 0))
+
+        try:
+            z_prog_dpcs = interp1(pcstime, z_prog, dpcstime)
+            z_cur = z_prog_dpcs + z_error  # [m]
+            v_z = np.gradient(z_cur, dpcstime)  # m/s
+            z_times_v_z = z_cur * v_z  # m^2/s
+            z_prog = interp1(pcstime, z_prog, times, 'linear', False, z_prog[-1])
+            z_error = -interp1(dpcstime, z_error, times,
+                            'linear', False, z_error[-1])
+            z_cur = -interp1(dpcstime, z_cur, times, 'linear', False, z_cur[-1])
+            v_z = interp1(dpcstime, v_z, times, 'linear', False, v_z[-1])
+            z_times_v_z = interp1(dpcstime, z_times_v_z, times,
+                                'linear', False, z_times_v_z[-1])
+
+        # print everything for 
+        except Exception as e:
+            """This function doesn't take in self, not sure why."""
+
+            print(f"Error getting z parameters")
+            print(f"{traceback.format_exc()}")
         return pd.DataFrame({"z_error": z_error, "z_prog": z_prog, "zcur": z_cur, "v_z": v_z, "z_times_v_z": z_times_v_z})
 
     @staticmethod
@@ -358,8 +390,17 @@ class BasicCmodRequests(ShotDataRequest):
                             z_prog_temp = interp1(
                                 sigtime, signal, pcstime, 'linear', False, fill_value=signal[-1])
                             z_wire_index = wire_index
-                            segment_indices = [
-                                np.where((pcstime >= start) & (pcstime <= end))]
+                            """
+                            NOTE: Lucas: 
+                            Many times when you call np.where it 
+                            is returning a tuple of (np.array(indices), ), 
+                            so I added the [0] to get the array only. Somtimes the tuple
+                            is fine, like when you are using it to index an array, but
+                            other times it is not, like when you are using it to loop over a 
+                            for-loop or query whether the np.where is returning a list of indices 
+                            that is more than 3.
+                            """
+                            segment_indices = [np.where((pcstime >= start) & (pcstime <= end))[0]] 
                             z_prog[segment_indices] = z_prog_temp[segment_indices]
                             break
                     except mdsExceptions.MdsException as e:
@@ -373,9 +414,39 @@ class BasicCmodRequests(ShotDataRequest):
             raise ValueError("No ZCUR wire was found")
         # Read in A_OUT, which is a 16xN matrix of the errors for *all* 16 wires for
         # *all* of the segments. Note that DPCS time is usually taken at 10kHz.
-        wire_errors, dpcstime = params.mds_conn.get_record_data(r'\top.hardware.dpcs.signals:a_out', tree_name="hybrid", dim_nums=[1])
+        
+        
+        """
+        Note: Lucas:
+        
+        This node doesn't exist in all trees. It's not in shot 1020807022, for example. 
+        """
+        try:
+            wire_errors, dpcstime = params.mds_conn.get_record_data(r'\top.hardware.dpcs.signals:a_out', tree_name="hybrid", dim_nums=[1])
+            dpcstime = np.array(dpcstime) # s 
+            z_error_without_factor_and_ip = wire_errors[:, z_wire_index]
+            params.logger.debug(f"[Shot {params.shot_prop.shot_id}]: Got wire errors from hybrid tree w first path")
+        except Exception as e:
+            params.logger.warning(f"[Shot {params.shot_prop.shot_id}]: Unable to get wire errors from hybrid tree w first path")
+            params.logger.warning(f"[Shot {params.shot_prop.shot_id}]: Trying second path")
+            try:
+
+                # NOTE: Lucas Spangher: I added this all to help index the wire errors 
+                # from hybrid trees earlier than a certain point in time. 
+                # Note that now wire_errors is not a matrix but a 1D array that is indexed
+                # by the wire_index. Also, note that we don't have to pick wire_index out 
+                # of wire_errors to get z_error_without_factor_and_ip. 
+
+                wire_errors, dpcstime = params.mds_conn.get_record_data(fr'\top.signals.a_out:output_{z_wire_index:02d}', tree_name="hybrid", dim_nums=[0])
+                dpcstime = np.array(dpcstime) # s 
+                z_error_without_factor_and_ip = wire_errors
+                params.logger.debug(f"[Shot {params.shot_props.shot_id}]: Got wire errors from hybrid tree w second path")
+            except Exception as e:
+                params.logger.warning(f"[Shot {params.shot_props.shot_id}]: Unable to get wire errors from hybrid tree w second path")
+                params.logger.debug(f"[Shot {params.shot_props.shot_id}]: {traceback.format_exc()}")
+        
+        
         # The value of Z_error we read is not in the units we want. It must be *divided* by a factor AND *divided* by the plasma current.
-        z_error_without_factor_and_ip = wire_errors[:, z_wire_index]
         z_error_without_ip = np.empty(z_error_without_factor_and_ip.shape)
         z_error_without_ip.fill(np.nan)
         # Also, it turns out that different segments have different factors. So we
@@ -798,13 +869,34 @@ class BasicCmodRequests(ShotDataRequest):
             bminor = aminor*kappa
             node_ext = '.yag_new.results.profiles'
             # nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = ThomsonDensityMeasure.compare_ts_tci(params, nlnum=4) 
-            TS_te, TS_time = params.mds_conn.get_record_data(f"{node_ext}:te_rz", tree_name='electrons')
-            TS_te = TS_te*1000*11600
-            tets_edge = params.mds_conn.get(r'\ts_te').data()*11600
-            TS_te = np.concatenate((TS_te, tets_edge))
-            TS_z = params.mds_conn.get(f"{node_ext}:z_sorted", tree_name='electrons').data()
-            zts_edge = params.mds_conn.get(f"\fiber_z", tree_name='electrons').data()
-            TS_z = np.concatenate((TS_z, zts_edge))
+            
+            try:
+                TS_te, TS_time = params.mds_conn.get_record_data(f"{node_ext}:te_rz", tree_name='electrons')
+                TS_te = TS_te*1000*11600
+                tets_edge = params.mds_conn.get(r'\ts_te').data()*11600
+                TS_te = np.concatenate((TS_te, tets_edge))
+                TS_z = params.mds_conn.get(f"{node_ext}:z_sorted", tree_name='electrons').data()
+                zts_edge = params.mds_conn.get(f"\fiber_z", tree_name='electrons').data()
+                TS_z = np.concatenate((TS_z, zts_edge))
+            except:
+                # params.logger.debug(f"[Shot {params.shot_props.shot_id}] {traceback.format_exc()}")
+                params.logger.warning(f"[Shot {params.shot_props.shot_id}] Failed to get TS data with 2000+ method")
+
+                # if the above didn't work, then there was issues with the names. 
+                try:
+                    params.logger.warning(f"[Shot {params.shot_props.shot_id}] Trying second 2000+ method")
+                    TS_te, TS_time = params.mds_conn.get_record_data(r"\thom_profile:te_rz_t", tree_name='electrons')
+                    TS_te = TS_te*1000*11600
+                    tets_edge = params.mds_conn.get(r'\ts_te:at_95', tree_name='electrons').data()*11600
+                    TS_te = np.concatenate((TS_te, tets_edge))
+                    TS_z = params.mds_conn.get(r"\thom_profile:z_sorted", tree_name='electrons').data()
+                    zts_edge = params.mds_conn.get(r"\top.yag_edgets.data:fiber_z", tree_name='electrons').data()
+                    TS_z = np.concatenate((TS_z, zts_edge))
+                except Exception as e:
+                    params.logger.debug(f"[Shot {params.shot_props.shot_id}] {traceback.format_exc()}")
+                    params.logger.warning(f"[Shot {params.shot_props.shot_id}] Failed to get TS data with second 2000+ method")
+            
+            
             if len(zts_edge) != tets_edge.shape[1]:
                 return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
             Te_PF = Te_PF[:len(TS_time)]
