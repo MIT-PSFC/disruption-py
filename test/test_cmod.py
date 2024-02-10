@@ -49,7 +49,7 @@ KNOWN_FAILURE_COLUMNS = [
     'ip_error' # constant error
 ]
 
-TEST_COLUMNS = list(set(TEST_COLUMNS).difference(KNOWN_FAILURE_COLUMNS))
+# TEST_COLUMNS = list(set(TEST_COLUMNS).difference(KNOWN_FAILURE_COLUMNS))
 
 TIME_EPSILON = 0.05 # Tolerance for taking the difference between two times [s]
 IP_EPSILON = 1e5    # Tolerance for taking the difference between two ip values [A]
@@ -111,10 +111,6 @@ def test_data_columns(shotlist, mdsplus_data : Dict, sql_data : Dict, data_colum
             print(f"Column {data_column} missing from SQL for shot {shot_id}")
             continue
         
-        # check if the col of the shot is all nan
-        if mdsplus_shot_data[data_column].isna().all() and sql_shot_data[data_column].isna().all():
-            continue
-        
         anomaly_ratio = evaluate_differences(
             shot_id=shot_id,
             sql_shot_data=sql_shot_data,
@@ -173,9 +169,9 @@ def evaluate_differences(shot_id, sql_shot_data, mdsplus_shot_data, data_column,
     )
     numeric_anomalies_mask = (relative_difference > VAL_TOLERANCE)
     
-    sql_is_nan_ = np.isnan(sql_shot_data[data_column])
-    mdsplus_is_nan = np.isnan(mdsplus_shot_data[data_column])
-    nan_anomalies_mask = (~sql_is_nan_ & mdsplus_is_nan)
+    sql_is_nan_ = pd.isnull(sql_shot_data[data_column])
+    mdsplus_is_nan = pd.isnull(mdsplus_shot_data[data_column])
+    nan_anomalies_mask = (sql_is_nan_ != mdsplus_is_nan)
     
     anomalies = np.argwhere(numeric_anomalies_mask | nan_anomalies_mask)
     
