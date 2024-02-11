@@ -425,10 +425,10 @@ class BasicCmodRequests(ShotDataRequest):
             wire_errors, dpcstime = params.mds_conn.get_record_data(r'\top.hardware.dpcs.signals:a_out', tree_name="hybrid", dim_nums=[1])
             dpcstime = np.array(dpcstime) # s 
             z_error_without_factor_and_ip = wire_errors[:, z_wire_index]
-            params.logger.debug(f"[Shot {params.shot_prop.shot_id}]: Got wire errors from hybrid tree w first path")
+            params.logger.debug(f"[Shot {params.shot_props.shot_id}]: Got wire errors from hybrid tree w first path")
         except Exception as e:
-            params.logger.warning(f"[Shot {params.shot_prop.shot_id}]: Unable to get wire errors from hybrid tree w first path")
-            params.logger.warning(f"[Shot {params.shot_prop.shot_id}]: Trying second path")
+            params.logger.warning(f"[Shot {params.shot_props.shot_id}]: Unable to get wire errors from hybrid tree w first path")
+            params.logger.warning(f"[Shot {params.shot_props.shot_id}]: Trying second path")
             try:
 
                 # NOTE: Lucas Spangher: I added this all to help index the wire errors 
@@ -895,6 +895,7 @@ class BasicCmodRequests(ShotDataRequest):
                 except Exception as e:
                     params.logger.debug(f"[Shot {params.shot_props.shot_id}] {traceback.format_exc()}")
                     params.logger.warning(f"[Shot {params.shot_props.shot_id}] Failed to get TS data with second 2000+ method")
+                    raise e
             
             
             if len(zts_edge) != tets_edge.shape[1]:
