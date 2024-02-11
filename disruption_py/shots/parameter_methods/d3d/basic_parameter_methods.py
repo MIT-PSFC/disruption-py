@@ -11,6 +11,9 @@ from disruption_py.utils.math_utils import get_bolo, gsastd, interp1, power
 
 class BasicD3DRequests(ShotDataRequest):
     
+    # Tokamak Variables
+    NOMINAL_FLATTOP_RADIUS = 0.59
+    
     @staticmethod
     @parameter_cached_method(columns=["time_until_disrupt"], tokamak=Tokamak.D3D)
     def _get_time_until_disrupt(params : ShotDataRequestParams):
@@ -184,128 +187,126 @@ class BasicD3DRequests(ShotDataRequest):
         p_ohm = ip * v_resistive  # [W]
         return pd.DataFrame({'p_ohm': p_ohm, 'v_loop': v_loop})
 
-    @parameter_cached_method()
-    def get_density_parameters(self):
-        ne = np.full(len(self._times), np.nan)
+    @staticmethod
+    @parameter_cached_method(
+        columns=["n_e", "Greenwald_fraction", "dn_dt"], 
+        used_trees=["_efit_tree"], 
+        tokamak=Tokamak.D3D
+    )
+    def get_density_parameters(params : ShotDataRequestParams):
+        ne = np.full(len(params.shot_props.times), np.nan)
         g_f = ne.copy()
         dne_dt = ne.copy()
-        self.conn.openTree(self.efit_tree, self._shot_id)
         try:
-            t_ne = self.conn.get(
-                r'dim_of(\density)').data()/1.e3  # [ms] -> [s]
-            ne = self.conn.get(r'\density').data()*1.e6  # [cm^3] -> [m^3]
+            ne, t_ne = params.mds_conn.get_record_data(r'\density', tree_name="_efit_tree")
+            ne = ne*1.e6  # [cm^3] -> [m^3]
+            t_ne = t_ne/1.e3  # [ms] -> [s]
             dne_dt = np.gradient(ne, t_ne)
             # NOTE: t_ne has higher resolution than efit_time so t_ne[0] < efit_time[0] because of rounding, meaning we need to allow extrapolation
-            ne = interp1(t_ne, ne, self._times, 'linear',
-                         bounds_error=False, fill_value='extrapolate')
-            dne_dt = interp1(t_ne, dne_dt, self._times, 'linear',
-                             bounds_error=False, fill_value='extrapolate')
-            t_ip = self.conn.get(
-                f"dim_of(ptdata('ip', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
-            ip = self.conn.get(f"ptdata('ip', {self._shot_id})").data()  # [A]
+            ne = interp1(t_ne, ne, params.shot_props.times, 'linear', bounds_error=False, fill_value='extrapolate')
+            dne_dt = interp1(t_ne, dne_dt, params.shot_props.times, 'linear', bounds_error=False, fill_value='extrapolate')
+            # TODO: CHECK TREE_NAME
+            ip, t_ip = params.mds_conn.get_record_data(f"ptdata('ip', {params.shot_props.shot_id})", tree_name="_efit_tree") # [A], [ms]
+            t_ip = t_ip/1.e3  # [ms] -> [s]
             ipsign = np.sign(np.sum(ip))
-            ip = interp1(t_ip, ip*ipsign, self._times, 'linear')
-            a_minor = self.conn.get(r'\efit_a_eqdsk:aminor').data()  # [m]
-            t_a = self.conn.get(
-                r'\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
-            a_minor = interp1(t_a, a_minor, self._times, 'linear')
+            ip = interp1(t_ip, ip*ipsign, params.shot_props.times, 'linear')
+            a_minor, t_a = params.mds_conn.get_record_data(r'\efit_a_eqdsk:aminor', tree_name="_efit_tree") # [m], [ms]
+            t_a = t_a/1.e3  # [ms] -> [s]
+            a_minor = interp1(t_a, a_minor, params.shot_props.times, 'linear')
             with np.errstate(divide='ignore'):
                 n_g = ip/1.e6 / (np.pi*a_minor**2)  # [MA/m^2]
                 g_f = ne/1.e20 / n_g  # TODO: Fill in units
         except MdsException as e:
             # TODO: Confirm that there is a separate exception if ptdata name doesn't exist
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Failed to get some parameter")
-            self.logger.debug(
-                f"[Shot {self._shot_id}]::{traceback.format_exc()}")
+            params.logger.info(f"[Shot {params.shot_props.shot_id}]:Failed to get some parameter")
+            params.logger.debug(f"[Shot {params.shot_props.shot_id}]::{traceback.format_exc()}")
         return pd.DataFrame({'n_e': ne, 'Greenwald_fraction': g_f, 'dn_dt': dne_dt})
 
-    @parameter_cached_method()
-    def get_rt_density_parameters(self):
-        ne_rt = np.full(len(self._times), np.nan)
+    @staticmethod
+    @parameter_cached_method(
+        columns=["n_e_RT", "Greenwald_fraction_RT"], 
+        used_trees=["efitrt1"], 
+        tokamak=Tokamak.D3D
+    )
+    def get_rt_density_parameters(params : ShotDataRequestParams):
+        ne_rt = np.full(len(params.shot_props.times), np.nan)
         g_f_rt = ne_rt.copy()
         dne_dt_rt = ne_rt.copy()
         try:
-            t_ne_rt = self.conn.get(
-                f"dim_of(ptdata('dssdenest', {self._shot_id}))").data()/1.e3  # [ms] to [s]
-            # [10^19 m^-3] -> [m^-3]
-            ne_rt = self.conn.get(
-                f"ptdata('dssdenest', {self._shot_id})").data()*1.e19
+            # TODO: CHECK TREE_NAME
+            ne_rt, t_ne_rt = params.mds_conn.get_record_data(f"ptdata('dssdenest', {params.shot_props.shot_id})")
+            t_ne_rt = t_ne_rt/1.e3 # [ms] to [s]
+            ne_rt = ne_rt*1.e19 # [10^19 m^-3] -> [m^-3]
             dne_dt_rt = np.gradient(ne_rt, t_ne_rt)  # [m^-3/s]
-            ne_rt = interp1(t_ne_rt, ne_rt, self._times, 'linear')
-            dne_dt_rt = interp1(t_ne_rt, dne_dt_rt, self._times, 'linear')
+            ne_rt = interp1(t_ne_rt, ne_rt, params.shot_props.times, 'linear')
+            dne_dt_rt = interp1(t_ne_rt, dne_dt_rt, params.shot_props.times, 'linear')
             try:
-                t_ip_rt = self.conn.get(
-                    f"dim_of(ptdata('ipsip', {self._shot_id}))").data()/1.e3  # [ms] to [s]
-                ip_rt = self.conn.get(
-                    f"ptdata('ipsip', {self._shot_id})").data()  # [MA]
+                ip_rt, t_ip_rt = params.mds_conn.get_record_data(f"ptdata('ipsip', {params.shot_props.shot_id})") # [MA], [ms]
+                t_ip_rt = t_ip_rt/1.e3  # [ms] to [s]
+                # TODO: look at units of ip_rt (not SA)
             except Exception as e:
-                t_ip_rt = self.conn.get(
-                    f"dim_of(ptdata('ipspr15v', {self._shot_id}))").data()/1.e3  # [ms] to [s]
-                ip_rt = self.conn.get(
-                    f"ptdata('ipspr15v', {self._shot_id})").data()  # [MA]
+                ip_rt, t_ip_rt = params.mds_conn.get_record_data(f"ptdata('ipspr15v', {params.shot_props.shot_id})") # [MA], [ms]
+                t_ip_rt = t_ip_rt/1.e3  # [ms] to [s]
             ip_sign = np.sign(np.sum(ip_rt))
-            ip = interp1(t_ip_rt, ip_rt*ip_sign, self._times, 'linear')
-            self.conn.openTree('efitrt1', self._shot_id)
-            a_minor_rt = self.conn.get(r'\efit_a_eqdsk:aminor').data()  # [m]
-            t_a_rt = self.conn.get(
-                r'\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
-            a_minor_rt = interp1(t_a_rt, a_minor_rt, self._times, 'linear')
+            ip = interp1(t_ip_rt, ip_rt*ip_sign, params.shot_props.times, 'linear')
+            a_minor_rt, t_a_rt = params.mds_conn.get_record_data(r'\efit_a_eqdsk:aminor', tree_name="efitrt1") # [m], [ms]
+            t_a_rt = t_a_rt/1.e3  # [ms] -> [s]
+            a_minor_rt = interp1(t_a_rt, a_minor_rt, params.shot_props.times, 'linear')
             with np.errstate(divide='ignore'):
                 n_g_rt = ip/1.e6 / (np.pi*a_minor_rt**2)  # [MA/m^2]
                 g_f_rt = ne_rt/1.e20 / n_g_rt  # TODO: Fill in units
         except MdsException as e:
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Failed to get some parameter")
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Failed to get some parameter")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
         # ' dne_dt_RT': dne_dt_rt
         return pd.DataFrame({'n_e_RT': ne_rt, 'Greenwald_fraction_RT': g_f_rt})
 
-    @parameter_cached_method()
-    def get_ip_parameters(self):
-        self.conn.openTree('d3d', self._shot_id)
-        ip = np.full(len(self._times), np.nan)
-        ip_prog = np.full(len(self._times), np.nan)
-        ip_error = np.full(len(self._times), np.nan)
-        dip_dt = np.full(len(self._times), np.nan)
-        dipprog_dt = np.full(len(self._times), np.nan)
+    @staticmethod
+    @parameter_cached_method(
+        columns=["ip", "ip_error", "dip_dt", "dipprog_dt", "power_supply_railed"], 
+        used_trees=["d3d"], 
+        tokamak=Tokamak.D3D
+    )
+    def get_ip_parameters(params : ShotDataRequestParams):
+        ip = np.full(len(params.shot_props.times), np.nan)
+        ip_prog = np.full(len(params.shot_props.times), np.nan)
+        ip_error = np.full(len(params.shot_props.times), np.nan)
+        dip_dt = np.full(len(params.shot_props.times), np.nan)
+        dipprog_dt = np.full(len(params.shot_props.times), np.nan)
         # Get measured plasma current parameters
         try:
-            t_ip = self.conn.get(
-                f"dim_of(ptdata('ip', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
-            ip = self.conn.get(f"ptdata('ip', {self._shot_id})").data()  # [A]
+            ip, t_ip = params.mds_conn.get_record_data(f"ptdata('ip', {params.shot_props.shot_id})", tree_name="d3d") # [A], [ms]
+            t_ip = t_ip/1.e3  # [ms] -> [s]
             dip_dt = np.gradient(ip, t_ip)
-            ip = interp1(t_ip, ip, self._times, 'linear')
-            dip_dt = interp1(t_ip, dip_dt, self._times, 'linear')
+            ip = interp1(t_ip, ip, params.shot_props.times, 'linear')
+            dip_dt = interp1(t_ip, dip_dt, params.shot_props.times, 'linear')
         except MdsException as e:
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Failed to get measured plasma current parameters")
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Failed to get measured plasma current parameters")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
         # Get programmed plasma current parameters
         try:
-            t_ip_prog = self.conn.get(
-                f"dim_of(ptdata('iptipp', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
-            ip_prog = self.conn.get(
-                f"ptdata('iptipp', {self._shot_id})").data()  # [A]
-            polarity = np.unique(self.conn.get(
-                f"ptdata('iptdirect', {self._shot_id})").data())
+            ip_prog, t_ip_prog = params.mds_conn.get_record_data(f"ptdata('iptipp', {params.shot_props.shot_id})", tree_name="d3d") # [A], [ms]
+            t_ip_prog = t_ip_prog/1.e3  # [ms] -> [s]
+            polarity = np.unique(params.mds_conn.get(f"ptdata('iptdirect', {params.shot_props.shot_id})", tree_name="d3d").data())
             if len(polarity) > 1:
-                self.logger.info(
-                    f"[Shot {self._shot_id}]:Polarity of Ip target is not constant. Using value at first timestep.")
-                self.logger.debug(
-                    f"[Shot {self._shot_id}]: Polarity array {polarity}")
+                params.logger.info(
+                    f"[Shot {params.shot_props.shot_id}]:Polarity of Ip target is not constant. Using value at first timestep.")
+                params.logger.debug(
+                    f"[Shot {params.shot_props.shot_id}]: Polarity array {polarity}")
                 polarity = polarity[0]
             ip_prog = ip_prog * polarity
             dipprog_dt = np.gradient(ip_prog, t_ip_prog)
-            ip_prog = interp1(t_ip_prog, ip_prog, self._times, 'linear')
-            dipprog_dt = interp1(t_ip_prog, dipprog_dt, self._times, 'linear')
+            ip_prog = interp1(t_ip_prog, ip_prog, params.shot_props.times, 'linear')
+            dipprog_dt = interp1(t_ip_prog, dipprog_dt, params.shot_props.times, 'linear')
         except MdsException as e:
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Failed to get programmed plasma current parameters")
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Failed to get programmed plasma current parameters")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
         # Now get the signal pointname 'ipimode'.  This PCS signal denotes whether
         # or not PCS is actually feedback controlling the plasma current.  There
         # are times when feedback of Ip is purposely turned off, such as during
@@ -316,17 +317,15 @@ class BasicD3DRequests(ShotDataRequest):
         #  Anything else: not in normal Ip feedback mode.  In this case, the
         # 'ip_prog' signal is irrelevant, and therefore 'ip_error' is not defined.
         try:
-            ipimode = self.conn.get(
-                f"ptdata('ipimode', {self._shot_id})").data()
-            t_ipimode = self.conn.get(
-                f"dim_of(ptdata('ipimode', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
-            ipimode = interp1(t_ipimode, ipimode, self._times, 'linear')
+            ipimode, t_ipimode = params.mds_conn.get_record_data(f"ptdata('ipimode', {params.shot_props.shot_id})", tree_name="d3d")
+            t_ipimode = t_ipimode/1.e3  # [ms] -> [s]
+            ipimode = interp1(t_ipimode, ipimode, params.shot_props.times, 'linear')
         except MdsException as e:
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Failed to get ipimode signal. Setting to NaN.")
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
-            ipimode = np.full(len(self._times), np.nan)
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Failed to get ipimode signal. Setting to NaN.")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
+            ipimode = np.full(len(params.shot_props.times), np.nan)
         feedback_on_indices = np.where((ipimode == 0) | (ipimode == 3))
         ip_error[feedback_on_indices] = ip[feedback_on_indices] - \
             ip_prog[feedback_on_indices]
@@ -335,83 +334,82 @@ class BasicD3DRequests(ShotDataRequest):
         # PCS feedback control of Ip is not being applied.  Therefore the
         # 'ip_error' parameter is undefined for these times.
         try:
-            epsoff = self.conn.get(f"ptdata('epsoff', {self._shot_id})").data()
-            t_epsoff = self.conn.get(
-                f"dim_of(ptdata('epsoff', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
+            epsoff, t_epsoff = params.mds_conn.get_record_data(f"ptdata('epsoff', {params.shot_props.shot_id})", tree_name="d3d")
+            t_epsoff = t_epsoff/1.e3  # [ms] -> [s]
             t_epsoff += .001  # Avoid problem with simultaneity of epsoff being triggered exactly on the last time sample
-            epsoff = interp1(t_epsoff, epsoff, self._times, 'linear')
+            epsoff = interp1(t_epsoff, epsoff, params.shot_props.times, 'linear')
             railed_indices = np.where(np.abs(epsoff) > .5)
-            power_supply_railed = np.zeros(len(self._times))
+            power_supply_railed = np.zeros(len(params.shot_props.times))
             power_supply_railed[railed_indices] = 1
             ip_error[railed_indices] = np.nan
         except MdsException as e:
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Failed to get epsoff signal. Setting to NaN.")
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
-            power_supply_railed = np.full(len(self._times), np.nan)
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Failed to get epsoff signal. Setting to NaN.")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
+            power_supply_railed = np.full(len(params.shot_props.times), np.nan)
         # 'ip_prog': ip_prog,
         return pd.DataFrame({'ip': ip, 'ip_error': ip_error, 'dip_dt': dip_dt, 'dipprog_dt': dipprog_dt, 'power_supply_railed': power_supply_railed})
 
-    @parameter_cached_method()
-    def get_rt_ip_parameters(self):
-        self.conn.openTree('d3d', self._shot_id)
-        ip_rt = np.full(len(self._times), np.nan)
-        ip_prog_rt = np.full(len(self._times), np.nan)
-        ip_error_rt = np.full(len(self._times), np.nan)
-        dip_dt_rt = np.full(len(self._times), np.nan)
-        dipprog_dt_rt = np.full(len(self._times), np.nan)
+    @staticmethod
+    @parameter_cached_method(
+        columns=["ip_RT", "ip_error_RT", "dipprog_dt_RT", "dipprog_dt", "power_supply_railed"], 
+        used_trees=["d3d"], 
+        tokamak=Tokamak.D3D
+    )
+    def get_rt_ip_parameters(params : ShotDataRequestParams):
+        params.mds_conn.openTree('d3d', params.shot_props.shot_id)
+        ip_rt = np.full(len(params.shot_props.times), np.nan)
+        ip_prog_rt = np.full(len(params.shot_props.times), np.nan)
+        ip_error_rt = np.full(len(params.shot_props.times), np.nan)
+        dip_dt_rt = np.full(len(params.shot_props.times), np.nan)
+        dipprog_dt_rt = np.full(len(params.shot_props.times), np.nan)
         # Get measured plasma current parameters
+        # TODO: Why open d3d and not the rt efit tree?
         try:
-            t_ip_rt = self.conn.get(
-                f"dim_of(ptdata('ipsip', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
-            ip_rt = self.conn.get(
-                f"ptdata('ipsip', {self._shot_id})").data()*1.e6  # [MA] -> [A]
+            ip_rt, t_ip_rt = params.mds_conn.get_record_data(f"ptdata('ipsip', {params.shot_props.shot_id})", tree_name="d3d") # [MA], [ms]
+            t_ip_rt = t_ip_rt/1.e3  # [ms] -> [s]
+            ip_rt = ip_rt*1.e6  # [MA] -> [A]
             dip_dt_rt = np.gradient(ip_rt, t_ip_rt)
-            ip_rt = interp1(t_ip_rt, ip_rt, self._times, 'linear')
-            dip_dt_rt = interp1(t_ip_rt, dip_dt_rt, self._times, 'linear')
+            ip_rt = interp1(t_ip_rt, ip_rt, params.shot_props.times, 'linear')
+            dip_dt_rt = interp1(t_ip_rt, dip_dt_rt, params.shot_props.times, 'linear')
         except MdsException as e:
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Failed to get measured plasma current parameters")
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Failed to get measured plasma current parameters")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
         # Get programmed plasma current parameters
         try:
-            t_ip_prog_rt = self.conn.get(
-                f"dim_of(ptdata('ipsiptargt', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
-            ip_prog_rt = self.conn.get(
-                f"ptdata('ipsiptargt', {self._shot_id})").data()*1.e6*.5  # [MA] -> [A]
-            polarity = np.unique(self.conn.get(
-                f"ptdata('iptdirect', {self._shot_id})").data())
+            ip_prog_rt, t_ip_prog_rt = params.mds_conn.get_record_data(f"ptdata('ipsiptargt', {params.shot_props.shot_id})", tree_name="d3d") # [MA], [ms]
+            t_ip_prog_rt = t_ip_prog_rt/1.e3  # [ms] -> [s]
+            ip_prog_rt = ip_prog_rt*1.e6*.5  # [MA] -> [A]
+            polarity = np.unique(params.mds_conn.get(f"ptdata('iptdirect', {params.shot_props.shot_id})", tree_name="d3d").data())
             if len(polarity) > 1:
-                self.logger.info(
-                    f"[Shot {self._shot_id}]:Polarity of Ip target is not constant. Setting to first value in array.")
-                self.logger.debug(
-                    f"[Shot {self._shot_id}]: Polarity array: {polarity}")
+                params.logger.info(
+                    f"[Shot {params.shot_props.shot_id}]:Polarity of Ip target is not constant. Setting to first value in array.")
+                params.logger.debug(
+                    f"[Shot {params.shot_props.shot_id}]: Polarity array: {polarity}")
                 polarity = polarity[0]
             ip_prog_rt = ip_prog_rt * polarity
             dipprog_dt_rt = np.gradient(ip_prog_rt, t_ip_prog_rt)
-            ip_prog_rt = interp1(t_ip_prog_rt, ip_prog_rt,
-                                 self._times, 'linear')
-            dipprog_dt_rt = interp1(
-                t_ip_prog_rt, dipprog_dt_rt, self._times, 'linear')
+            ip_prog_rt = interp1(t_ip_prog_rt, ip_prog_rt, params.shot_props.times, 'linear')
+            dipprog_dt_rt = interp1(t_ip_prog_rt, dipprog_dt_rt, params.shot_props.times, 'linear')
         except MdsException as e:
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Failed to get programmed plasma current parameters")
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Failed to get programmed plasma current parameters")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
         try:
-            t_ip_error_rt = self.conn.get(
-                f"dim_of(ptdata('ipeecoil', {self._shot_id}))").data()/1.e3  # [ms] to [s]
-            ip_error_rt = self.conn.get(
-                f"ptdata('ipeecoil', {self._shot_id})").data()*1.e6*.5  # [MA] -> [A]
+            ip_error_rt, t_ip_error_rt = params.mds_conn.get_record_data(f"ptdata('ipeecoil', {params.shot_props.shot_id})", tree_name="d3d") # [MA], [ms]
+            t_ip_error_rt = t_ip_error_rt/1.e3  # [ms] to [s]
+            ip_error_rt = ip_error_rt*1.e6*.5  # [MA] -> [A]
             ip_error_rt = interp1(
-                t_ip_error_rt, ip_error_rt, self._times, 'linear')
+                t_ip_error_rt, ip_error_rt, params.shot_props.times, 'linear')
         except MdsException as e:
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Failed to get ipeecoil signal. Setting to NaN.")
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Failed to get ipeecoil signal. Setting to NaN.")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
         # Now get the signal pointname 'ipimode'.  This PCS signal denotes whether
         # or not PCS is actually feedback controlling the plasma current.  There
         # are times when feedback of Ip is purposely turned off, such as during
@@ -422,17 +420,15 @@ class BasicD3DRequests(ShotDataRequest):
         #  Anything else: not in normal Ip feedback mode.  In this case, the
         # 'ip_prog' signal is irrelevant, and therefore 'ip_error' is not defined.
         try:
-            ipimode = self.conn.get(
-                f"ptdata('ipimode', {self._shot_id})").data()
-            t_ipimode = self.conn.get(
-                f"dim_of(ptdata('ipimode', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
-            ipimode = interp1(t_ipimode, ipimode, self._times, 'linear')
+            ipimode, t_ipimode = params.mds_conn.get_record_data(f"ptdata('ipimode', {params.shot_props.shot_id})", tree_name="d3d")
+            t_ipimode = t_ipimode/1.e3  # [ms] -> [s]
+            ipimode = interp1(t_ipimode, ipimode, params.shot_props.times, 'linear')
         except MdsException as e:
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Failed to get ipimode signal. Setting to NaN.")
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
-            ipimode = np.full(len(self._times), np.nan)
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Failed to get ipimode signal. Setting to NaN.")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
+            ipimode = np.full(len(params.shot_props.times), np.nan)
         feedback_off_indices = np.where((ipimode != 0) & (ipimode == 3))
         ip_error_rt[feedback_off_indices] = np.nan
         # Finally, get 'epsoff' to determine if/when the E-coil power supplies have railed
@@ -440,26 +436,30 @@ class BasicD3DRequests(ShotDataRequest):
         # PCS feedback control of Ip is not being applied.  Therefore the
         # 'ip_error' parameter is undefined for these times.
         try:
-            epsoff = self.conn.get(f"ptdata('epsoff', {self._shot_id})").data()
-            t_epsoff = self.conn.get(
-                f"dim_of(ptdata('epsoff', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
+            epsoff, t_epsoff = params.mds_conn.get_record_data(f"ptdata('epsoff', {params.shot_props.shot_id})", tree_name="d3d")
+            t_epsoff = t_epsoff/1.e3  # [ms] -> [s]
             t_epsoff += .001  # Avoid problem with simultaneity of epsoff being triggered exactly on the last time sample
-            epsoff = interp1(t_epsoff, epsoff, self._times, 'linear')
+            epsoff = interp1(t_epsoff, epsoff, params.shot_props.times, 'linear')
             railed_indices = np.where(np.abs(epsoff) > .5)
-            power_supply_railed = np.zeros(len(self._times))
+            power_supply_railed = np.zeros(len(params.shot_props.times))
             power_supply_railed[railed_indices] = 1
             ip_error_rt[railed_indices] = np.nan
         except MdsException as e:
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Failed to get epsoff signal. power_supply_railed will be NaN.")
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
-            power_supply_railed = np.full(len(self._times), np.nan)
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Failed to get epsoff signal. power_supply_railed will be NaN.")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
+            power_supply_railed = np.full(len(params.shot_props.times), np.nan)
         # 'dip_dt_RT': dip_dt_rt,
         return pd.DataFrame({'ip_RT': ip_rt, 'ip_error_RT': ip_error_rt, 'dipprog_dt_RT': dipprog_dt_rt, 'power_supply_railed': power_supply_railed})
 
-    @parameter_cached_method()
-    def get_z_parameters(self):
+    @staticmethod
+    @parameter_cached_method(
+        columns=["zcur", "zcur_normalized", "z_prog", "z_error", "z_error_normalized"], 
+        used_trees=["d3d", "_efit_tree"], 
+        tokamak=Tokamak.D3D
+    )
+    def get_z_parameters(params : ShotDataRequestParams):
         """
         On DIII-D the plasma control system uses isoflux
         control to control the plasma shape and position.  It does
@@ -468,95 +468,96 @@ class BasicD3DRequests(ShotDataRequest):
         always return an arrays of NaN for z_prog, z_error, and
         z_error_norm.
         """
-        z_cur = np.full(len(self._times), np.nan)
-        z_cur_norm = np.full(len(self._times), np.nan)
-        z_prog = np.full(len(self._times), np.nan)
-        z_error = np.full(len(self._times), np.nan)
-        z_error_norm = np.full(len(self._times), np.nan)
-        self.conn.openTree('d3d', self._shot_id)
+        z_cur = np.full(len(params.shot_props.times), np.nan)
+        z_cur_norm = np.full(len(params.shot_props.times), np.nan)
+        z_prog = np.full(len(params.shot_props.times), np.nan)
+        z_error = np.full(len(params.shot_props.times), np.nan)
+        z_error_norm = np.full(len(params.shot_props.times), np.nan)
         try:
-            t_z_cur = self.conn.get(
-                f"dim_of(ptdata('vpszp', {self._shot_id}))").data()/1.e3  # [ms] -> [s]
-            z_cur = self.conn.get(
-                f"ptdata('vpszp', {self._shot_id})").data()/1.e2  # [cm] -> [m]
-            z_cur = interp1(t_z_cur, z_cur, self._times, 'linear')
-            self.conn.openTree(self.efit_tree, self._shot_id)
+            z_cur, t_z_cur = params.mds_conn.get_record_data(f"ptdata('vpszp', {params.shot_props.shot_id})", tree_name="d3d")
+            t_z_cur = t_z_cur/1.e3  # [ms] -> [s]
+            z_cur = z_cur/1.e2  # [cm] -> [m]
+            z_cur = interp1(t_z_cur, z_cur, params.shot_props.times, 'linear')
             try:
-                t_a = self.conn.get(
-                    r'\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
-                a_minor = self.conn.get(r'\efit_a_eqdsk:aminor').data()  # [m]
-                chisq = self.conn.get(r'\efit_a_eqdsk:chisq').data()
+                a_minor, t_a = params.mds_conn.get_record_data(r'\efit_a_eqdsk:aminor', tree_name="d3d") # [m], [ms]
+                t_a = t_a/1.e3  # [ms] -> [s]
+                chisq = params.mds_conn.get(r'\efit_a_eqdsk:chisq').data()
                 invalid_indices = np.where(chisq > 50)
                 a_minor[invalid_indices] = np.nan
-                a_minor = interp1(t_a, a_minor, self._times, 'linear')
+                a_minor = interp1(t_a, a_minor, params.shot_props.times, 'linear')
                 z_cur_norm = z_cur/a_minor
             except MdsException as e:
-                self.logger.info(
-                    f"[Shot {self._shot_id}]:Failed to get efit parameters")
-                self.logger.debug(
-                    f"[Shot {self._shot_id}]:{traceback.format_exc()}")
-                z_cur_norm = z_cur / self.nominal_flattop_radius
+                params.logger.info(
+                    f"[Shot {params.shot_props.shot_id}]:Failed to get efit parameters")
+                params.logger.debug(
+                    f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
+                z_cur_norm = z_cur / BasicD3DRequests.NOMINAL_FLATTOP_RADIUS
         except MdsException as e:
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Failed to get vpszp signal")
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Failed to get vpszp signal")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
         return pd.DataFrame({'zcur': z_cur, 'zcur_normalized': z_cur_norm, 'z_prog': z_prog, 'z_error': z_error, 'z_error_normalized': z_error_norm})
 
+
+########################
+######################## Below not yet transitioned to thin client
+########################
+
     @parameter_cached_method()
-    def get_n1_bradial_parameters(self):
+    def get_n1_bradial_parameters(params : ShotDataRequestParams):
         # The following shots are missing bradial calculations in MDSplus and must be loaded from a separate datafile
-        if self._shot_id >= 176030 and self._shot_id <= 176912:
+        if params.shot_props.shot_id >= 176030 and params.shot_props.shot_id <= 176912:
             # TODO: Move to a folder like "/fusion/projects/disruption_warning/data"
             filename = '/fusion/projects/disruption_warning/matlab_programs/recalc.nc'
             ncid = nc.Dataset(filename, 'r')
             brad = ncid.variables['dusbradial_calculated'][:]
             t_n1 = ncid.variables['times'][:]*1.e-3  # [ms] -> [s]
             shots = ncid.variables['shots'][:]
-            shot_indices = np.where(shots == self._shot_id)
+            shot_indices = np.where(shots == params.shot_props.shot_id)
             if len(shot_indices) == 1:
                 dusbradial = brad[shot_indices, :]*1.e-4  # [T]
             else:
-                self.logger.info(
-                    f"Shot {self._shot_id} not found in {filename}.  Returning NaN.")
-                dusbradial = np.full(len(self._times), np.nan)
+                params.logger.info(
+                    f"Shot {params.shot_props.shot_id} not found in {filename}.  Returning NaN.")
+                dusbradial = np.full(len(params.shot_props.times), np.nan)
             ncid.close()
         # Check ONFR than DUD(legacy)
         else:
             try:
                 dusbradial, t_n1 = self._get_signal(
-                    f"ptdata('onsbradial',{self._shot_id})")
+                    f"ptdata('onsbradial',{params.shot_props.shot_id})")
                 dusbradial *= 1.e-4  # [T]
             except MdsException as e:
-                self.logger.debug(
-                    f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+                params.logger.debug(
+                    f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
                 try:
                     dusbradial, t_n1 = self._get_signal(
-                        f"ptdata('dusbradial',{self._shot_id})")
+                        f"ptdata('dusbradial',{params.shot_props.shot_id})")
                     dusbradial *= 1.e-4  # [T]
                 except MdsException as e:
-                    self.logger.info(
-                        f"[Shot {self._shot_id}]:Failed to get n1 bradial signal. Returning NaN.")
-                    self.logger.debug(
-                        f"[Shot {self._shot_id}]:{traceback.format_exc()}")
-                    n_equal_1_mode = np.full(len(self._times), np.nan)
-                    n_equal_1_normalized = np.full(len(self._times), np.nan)
+                    params.logger.info(
+                        f"[Shot {params.shot_props.shot_id}]:Failed to get n1 bradial signal. Returning NaN.")
+                    params.logger.debug(
+                        f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
+                    n_equal_1_mode = np.full(len(params.shot_props.times), np.nan)
+                    n_equal_1_normalized = np.full(len(params.shot_props.times), np.nan)
                     return pd.DataFrame({'n_equal_1_normalized': n_equal_1_normalized, 'n_equal_1_mode': n_equal_1_mode})
-        n_equal_1_mode = interp1(dusbradial, t_n1, self._times)
+        n_equal_1_mode = interp1(dusbradial, t_n1, params.shot_props.times)
         # Get toroidal field Btor
         b_tor, _ = self._get_signal(
-            "ptdata('bt',{self._shot_id})")  # [T]
+            "ptdata('bt',{params.shot_props.shot_id})")  # [T]
         n_equal_1_normalized = n_equal_1_mode/b_tor
         return pd.DataFrame({'n_equal_1_normalized': n_equal_1_normalized, 'n_equal_1_mode': n_equal_1_mode})
 
     @parameter_cached_method()
-    def get_n1rms_parameters(self):
-        self.conn.openTree('d3d', self._shot_id)
+    def get_n1rms_parameters(params : ShotDataRequestParams):
+        params.mds_conn.openTree('d3d', params.shot_props.shot_id)
         n1rms, t_n1rms = self._get_signal(r'\n1rms', interpolate=False)
         n1rms *= 1.e-4  # Gauss -> Tesla
-        n1rms = interp1(t_n1rms, n1rms, self._times)
+        n1rms = interp1(t_n1rms, n1rms, params.shot_props.times)
         b_tor = self._get_signal(
-            "ptdata('bt', {self._shot_id})")  # [T]
+            "ptdata('bt', {params.shot_props.shot_id})")  # [T]
         n1rms_norm = n1rms / np.abs(b_tor)
         return pd.DataFrame({'n1rms': n1rms, 'n1rms_normalized': n1rms_norm})
 
@@ -564,7 +565,7 @@ class BasicD3DRequests(ShotDataRequest):
     # By default get_peaking_factors should grab the data from MDSPlus as opposed to recalculate. See DPP v4 document for details:
     # https://docs.google.com/document/d/1R7fI7mCOkMQGt8xX2nS6ZmNNkcyvPQ7NmBfRPICFaFs/edit?usp=sharing
     @parameter_cached_method()
-    def get_peaking_factors(self):
+    def get_peaking_factors(params : ShotDataRequestParams):
         ts_data_type = 'blessed'  # either 'blessed', 'unblessed', or 'ptdata'
         # metric to use for core/edge binning (either 'psin' or 'rhovn')
         ts_radius = 'rhovn'
@@ -587,22 +588,22 @@ class BasicD3DRequests(ShotDataRequest):
         ts_options = ['combined', 'core', 'tangential']
         # vertical range of the DIII-D cross section in meters
         vert_range = 3
-        te_pf = np.full(len(self._times), np.nan)
-        ne_pf = np.full(len(self._times), np.nan)
-        rad_cva = np.full(len(self._times), np.nan)
-        rad_xdiv = np.full(len(self._times), np.nan)
+        te_pf = np.full(len(params.shot_props.times), np.nan)
+        ne_pf = np.full(len(params.shot_props.times), np.nan)
+        rad_cva = np.full(len(params.shot_props.times), np.nan)
+        rad_xdiv = np.full(len(params.shot_props.times), np.nan)
         try:
             rad_cva = self._get_signal(
-                f"ptdata('dpsradcva', {self._shot_id})")
+                f"ptdata('dpsradcva', {params.shot_props.shot_id})")
             rad_xdiv = self._get_signal(
-                f"ptdata('dpsradxdiv', {self._shot_id})")
+                f"ptdata('dpsradxdiv', {params.shot_props.shot_id})")
         except MdsException as e:
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Failed to get CVA and XDIV from MDSPlus. Calculating locally, results may be inaccurate.")
-            rad_cva = np.full(len(self._times), np.nan)
-            rad_xdiv = np.full(len(self._times), np.nan)
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Failed to get CVA and XDIV from MDSPlus. Calculating locally, results may be inaccurate.")
+            rad_cva = np.full(len(params.shot_props.times), np.nan)
+            rad_xdiv = np.full(len(params.shot_props.times), np.nan)
         try:
             ts = self._get_ne_te()
             for option in ts_options:
@@ -610,29 +611,29 @@ class BasicD3DRequests(ShotDataRequest):
                     ts = ts[option]
             efit_dict = self._get_efit_dict()
         except Exception as e:
-            self.logger.info(f"[Shot {self._shot_id}]:Failed to get TS data")
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+            params.logger.info(f"[Shot {params.shot_props.shot_id}]:Failed to get TS data")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
             ts = 0
         try:
             ts['psin'], ts['rhovn'] = efit_rz_interp(ts, efit_dict)
             print(ts['rhovn'].shape)
         except Exception as e:
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Failed to interpolate TS data")
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Failed to interpolate TS data")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
         try:
             p_rad = self._get_p_rad()
         except Exception as e:
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Failed to get bolometer data")
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Failed to get bolometer data")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
             p_rad = 0
         if p_rad == 0 and ts == 0:
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Both TS and bolometer data missing for shot")
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Both TS and bolometer data missing for shot")
         if ts != 0 and ts_radius in ts:
             # Drop data outside of valid range
             invalid_indices = np.where((ts[ts_radius] < ts_radial_range[0]) | (
@@ -679,8 +680,8 @@ class BasicD3DRequests(ShotDataRequest):
                 np.nanmean(p_rad_all_but_div, axis=0)
             rad_xdiv = np.nanmean(p_rad_div, axis=0) / \
                 np.nanmean(p_rad_all_but_core, axis=0)
-            rad_cva = interp1(p_rad['t'], rad_cva, self._times)
-            rad_xdiv = interp1(p_rad['t'], rad_xdiv, self._times)
+            rad_cva = interp1(p_rad['t'], rad_cva, params.shot_props.times)
+            rad_xdiv = interp1(p_rad['t'], rad_xdiv, params.shot_props.times)
         return pd.DataFrame({'te_pf': te_pf, 'ne_pf': ne_pf, 'rad_cva': rad_cva, 'rad_xdiv': rad_xdiv})
 
     # TODO: Finish implementing just in case
@@ -715,7 +716,7 @@ class BasicD3DRequests(ShotDataRequest):
             if efit_dict['r'][right] == r:
                 psin_slice = np.squeeze(efit_dict['psin'][:, right, :])
 
-    def get_core_edge_vals(self):
+    def get_core_edge_vals(params : ShotDataRequestParams):
         ##################################################
         # Settings
         ts_data_type = 'blessed'  # either 'blessed', 'unblessed', or 'ptdata'
@@ -733,23 +734,23 @@ class BasicD3DRequests(ShotDataRequest):
         ###################################################
 
         # Initialize arrays
-        te_core = np.full(len(self._times), np.nan)
-        ne_core = np.full(len(self._times), np.nan)
+        te_core = np.full(len(params.shot_props.times), np.nan)
+        ne_core = np.full(len(params.shot_props.times), np.nan)
         # Averaged over edge region
-        te_edge = np.full(len(self._times), np.nan)
-        ne_edge = np.full(len(self._times), np.nan)
+        te_edge = np.full(len(params.shot_props.times), np.nan)
+        ne_edge = np.full(len(params.shot_props.times), np.nan)
         # Averaged over 85th to 88th surface
-        te_edge_80to85 = np.full(len(self._times), np.nan)
-        ne_edge_80to85 = np.full(len(self._times), np.nan)
-        te_edge_85to90 = np.full(len(self._times), np.nan)
-        ne_edge_85to90 = np.full(len(self._times), np.nan)
-        te_edge_90to95 = np.full(len(self._times), np.nan)
-        ne_edge_90to95 = np.full(len(self._times), np.nan)
-        te_edge_95to100 = np.full(len(self._times), np.nan)
-        ne_edge_95to100 = np.full(len(self._times), np.nan)
+        te_edge_80to85 = np.full(len(params.shot_props.times), np.nan)
+        ne_edge_80to85 = np.full(len(params.shot_props.times), np.nan)
+        te_edge_85to90 = np.full(len(params.shot_props.times), np.nan)
+        ne_edge_85to90 = np.full(len(params.shot_props.times), np.nan)
+        te_edge_90to95 = np.full(len(params.shot_props.times), np.nan)
+        ne_edge_90to95 = np.full(len(params.shot_props.times), np.nan)
+        te_edge_95to100 = np.full(len(params.shot_props.times), np.nan)
+        ne_edge_95to100 = np.full(len(params.shot_props.times), np.nan)
         # Separatrix
-        te_sep = np.full(len(self._times), np.nan)
-        ne_sep = np.full(len(self._times), np.nan)
+        te_sep = np.full(len(params.shot_props.times), np.nan)
+        ne_sep = np.full(len(params.shot_props.times), np.nan)
 
         # Try to get data via _get_ne_te()
         try:
@@ -757,12 +758,12 @@ class BasicD3DRequests(ShotDataRequest):
             efit_dict = self._get_efit_dict
             ts['psin'], ts['rhovn'] = efit_rz_interp(ts, efit_dict)
         except Exception as e:
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
             ts = 0
         if ts == 0:
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Both TS data missing for shot #{self._shot_id}")
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Both TS data missing for shot #{params.shot_props.shot_id}")
         if ts != 0:
             # Drop data outside of valid range #ADM: this looks unfinished
             invalid_indices = np.where((ts[ts_radius] < ts_radial_range[0]) | (
@@ -774,68 +775,68 @@ class BasicD3DRequests(ShotDataRequest):
                              'te_edge_85to90': te_edge_85to90, 'ne_edge_85to90': ne_edge_85to90, 'te_edge_90to95': te_edge_90to95, 'ne_edge_90to95': ne_edge_90to95, 'te_edge_95to100': te_edge_95to100, 'ne_edge_95to100': ne_edge_95to100, 'te_sep': te_sep, 'ne_sep': ne_sep})
 
     @parameter_cached_method()
-    def get_zeff_parameters(self):
-        self.conn.openTree('d3d', self._shot_id)
+    def get_zeff_parameters(params : ShotDataRequestParams):
+        params.mds_conn.openTree('d3d', params.shot_props.shot_id)
         # Get Zeff
         try:
-            zeff = self.conn.get(
+            zeff = params.mds_conn.get(
                 r'\d3d::top.spectroscopy.vb.zeff:zeff').data()
-            # t_nbi = self.conn.get(
+            # t_nbi = params.mds_conn.get(
             # r"dim_of(\d3d::top.nb:pinj)").data()/1.e3  # [ms]->[s]
-            t_zeff = self.conn.get(
+            t_zeff = params.mds_conn.get(
                 r'dim_of(\d3d::top.spectroscopy.vb.zeff:zeff)').data()/1.e3  # [ms] -> [s]
             if len(t_zeff) > 2:
-                zeff = interp1(t_zeff, zeff, self._times,
+                zeff = interp1(t_zeff, zeff, params.shot_props.times,
                                'linear', bounds_error=False, fill_value=0.)
             else:
-                zeff = np.zeros(len(self._times))
-                self.logger.info(
-                    f"[Shot {self._shot_id}]:No zeff data found in this shot.")
+                zeff = np.zeros(len(params.shot_props.times))
+                params.logger.info(
+                    f"[Shot {params.shot_props.shot_id}]:No zeff data found in this shot.")
         except MdsException as e:
-            zeff = np.zeros(len(self._times))
-            self.logger.info(
-                f"[Shot {self._shot_id}]:Failed to open Zeff node")
-            self.logger.debug(
-                f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+            zeff = np.zeros(len(params.shot_props.times))
+            params.logger.info(
+                f"[Shot {params.shot_props.shot_id}]:Failed to open Zeff node")
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
         return pd.DataFrame({'z_eff': zeff})
 
     @parameter_cached_method()
-    def get_kappa_area(self):
-        self.conn.openTree(self.efit_tree, self._shot_id)
-        a_minor = self.conn.get(r'\efit_a_eqdsk:aminor').data()
-        area = self.conn.get(r'\efit_a_eqdsk:area').data()
-        chisq = self.conn.get(r'\efit_a_eqdsk:chisq').data()
-        t = self.conn.get(r'\efit_a_eqdsk:atime')
+    def get_kappa_area(params : ShotDataRequestParams):
+        params.mds_conn.openTree(self.efit_tree, params.shot_props.shot_id)
+        a_minor = params.mds_conn.get(r'\efit_a_eqdsk:aminor').data()
+        area = params.mds_conn.get(r'\efit_a_eqdsk:area').data()
+        chisq = params.mds_conn.get(r'\efit_a_eqdsk:chisq').data()
+        t = params.mds_conn.get(r'\efit_a_eqdsk:atime')
         kappa_area = area / (np.pi * a_minor**2)
         invalid_indices = np.where(chisq > 50)
         kappa_area[invalid_indices] = np.nan
-        kappa_area = interp1(t, kappa_area, self._times)
+        kappa_area = interp1(t, kappa_area, params.shot_props.times)
         return pd.DataFrame({'kappa_area': kappa_area})
 
     @parameter_cached_method()
-    def get_h_parameters(self):
-        h98 = np.full(len(self._times), np.nan)
-        self.conn.openTree('transport', self._shot_id)
+    def get_h_parameters(params : ShotDataRequestParams):
+        h98 = np.full(len(params.shot_props.times), np.nan)
+        params.mds_conn.openTree('transport', params.shot_props.shot_id)
         h98, t_h98 = self._get_signal(r'\H_THH98Y2')
-        self.conn.openTree('d3d', self._shot_id)
-        self.conn.openTree('d3d', self._shot_id)
+        params.mds_conn.openTree('d3d', params.shot_props.shot_id)
+        params.mds_conn.openTree('d3d', params.shot_props.shot_id)
         h_alpha, t_h_alpha = self._get_signal(r'\fs04')
-        h98 = interp1(t_h98, h98, self._times)
-        h_alpha = interp1(t_h_alpha, h_alpha, self._times)
+        h98 = interp1(t_h98, h98, params.shot_props.times)
+        h_alpha = interp1(t_h_alpha, h_alpha, params.shot_props.times)
         return pd.DataFrame({'H98': h98, 'H_alpha': h_alpha})
 
     @parameter_cached_method()
-    def get_shape_parameters(self):
-        self.conn.openTree(self.efit_tree, self._shot_id)
-        efit_time = self.conn.get(
+    def get_shape_parameters(params : ShotDataRequestParams):
+        params.mds_conn.openTree(self.efit_tree, params.shot_props.shot_id)
+        efit_time = params.mds_conn.get(
             r'\efit_a_eqdsk:atime').data()/1.e3  # [ms] -> [s]
-        sqfod = self.conn.get(r'\efit_a_eqdsk:sqfod').data()
-        sqfou = self.conn.get(r'\efit_a_eqdsk:sqfou').data()
-        tritop = self.conn.get(r'\efit_a_eqdsk:tritop').data()  # meters
-        tribot = self.conn.get(r'\efit_a_eqdsk:tribot').data()  # meters
+        sqfod = params.mds_conn.get(r'\efit_a_eqdsk:sqfod').data()
+        sqfou = params.mds_conn.get(r'\efit_a_eqdsk:sqfou').data()
+        tritop = params.mds_conn.get(r'\efit_a_eqdsk:tritop').data()  # meters
+        tribot = params.mds_conn.get(r'\efit_a_eqdsk:tribot').data()  # meters
         # plasma minor radius [m]
-        aminor = self.conn.get(r'\efit_a_eqdsk:aminor').data()
-        chisq = self.conn.get(r'\efit_a_eqdsk:chisq').data()
+        aminor = params.mds_conn.get(r'\efit_a_eqdsk:aminor').data()
+        chisq = params.mds_conn.get(r'\efit_a_eqdsk:chisq').data()
         # Compute triangularity and squareness:
         delta = (tritop+tribot)/2.0
         squareness = (sqfod+sqfou)/2.0
@@ -847,11 +848,11 @@ class BasicD3DRequests(ShotDataRequest):
         aminor[invalid_indices] = np.nan
 
         # Interpolate to desired times
-        delta = interp1(efit_time, delta, self._times, 'linear',
+        delta = interp1(efit_time, delta, params.shot_props.times, 'linear',
                         bounds_error=False, fill_value=np.nan)
-        squareness = interp1(efit_time, squareness, self._times,
+        squareness = interp1(efit_time, squareness, params.shot_props.times,
                              'linear', bounds_error=False, fill_value=np.nan)
-        aminor = interp1(efit_time, aminor, self._times,
+        aminor = interp1(efit_time, aminor, params.shot_props.times,
                          'linear', bounds_error=False, fill_value=np.nan)
         return pd.DataFrame({'delta': delta, 'squareness': squareness, 'aminor': aminor})
 
@@ -868,36 +869,36 @@ class BasicD3DRequests(ShotDataRequest):
             raise ValueError(f"Invalid data_source: {data_source}")
         # Account for pointname formatting change in 2017 (however using ptdata is unimplemented)
         suffix = {'core': 'cor', 'tangential': 'tan'}
-        if self._shot_id < 172749:  # First shot on Sep 19, 2017
+        if params.shot_props.shot_id < 172749:  # First shot on Sep 19, 2017
             suffix['tangential'] = 'hor'
-        self.conn.openTree('electrons', self._shot_id)
+        params.mds_conn.openTree('electrons', params.shot_props.shot_id)
         lasers = dict()
         for laser in ts_systems:
             lasers[laser] = dict()
             sub_tree = f"{mds_path}{laser}"
             try:
-                lasers[laser]['time'] = self.conn.get(
+                lasers[laser]['time'] = params.mds_conn.get(
                     f"dim_of({sub_tree}:temp,0)").data()/1.e3  # [ms] -> [s]
             except MdsException as e:
                 lasers[laser] = None
-                self.logger.info(
-                    f"[Shot {self._shot_id}]: Failed to get {laser} time. Setting laser data to None.")
-                self.logger.debug(
-                    f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+                params.logger.info(
+                    f"[Shot {params.shot_props.shot_id}]: Failed to get {laser} time. Setting laser data to None.")
+                params.logger.debug(
+                    f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
                 continue
             child_nodes = {'r': 'r', 'z': 'z', 'te': 'temp', 'ne': 'density',
                            'time': 'time', 'te_error': 'temp_e', 'ne_error': 'density_e'}
             for node, name in child_nodes.items():
                 try:
-                    lasers[laser][node] = self.conn.get(
+                    lasers[laser][node] = params.mds_conn.get(
                         f"{sub_tree}:{name}").data()
                 except MdsException as e:
                     lasers[laser][node] = np.full(
                         lasers[laser]['time'].shape, np.nan)
-                    self.logger.info(
-                        f"[Shot {self._shot_id}]: Failed to get {laser}:{name}({node}) data, Setting to all NaNs.")
-                    self.logger.debug(
-                        f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+                    params.logger.info(
+                        f"[Shot {params.shot_props.shot_id}]: Failed to get {laser}:{name}({node}) data, Setting to all NaNs.")
+                    params.logger.debug(
+                        f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
             # Place NaNs for broken channels
             lasers[laser]['te'][np.where(
                 lasers[laser]['te'] == 0)] = np.nan
@@ -934,7 +935,7 @@ class BasicD3DRequests(ShotDataRequest):
                 [3, 4, 5, 6, 7, 8, 9, 12, 14, 15, 16, 22]) + 24
 
         # Get bolometry data
-        self.conn.openTree("bolom", self._shot_id)
+        params.mds_conn.openTree("bolom", params.shot_props.shot_id)
         bol_prm, _ = self._get_signal(r'\bol_prm', interpolate=False)
         lower_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
         upper_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
@@ -946,10 +947,10 @@ class BasicD3DRequests(ShotDataRequest):
                 fr"\top.raw:{bol_channels[i]}", interpolate=False)
             bol_signals.append(bol_signal)
             bol_times.append(bol_time)
-        a_struct = get_bolo(self._shot_id, bol_channels,
+        a_struct = get_bolo(params.shot_props.shot_id, bol_channels,
                             bol_prm, bol_signals, bol_times[0])
         b_struct = power(a_struct)
-        self.conn.openTree(self.efit_tree, self._shot_id)
+        params.mds_conn.openTree(self.efit_tree, params.shot_props.shot_id)
         r_major_axis, efit_time = self._get_signal(
             r'\top.results.geqdsk:rmaxis', interpolate=False)
         data_dict = {'ch_avail': [], 'z': [], 'brightness': [],
@@ -971,22 +972,22 @@ class BasicD3DRequests(ShotDataRequest):
         return data_dict
 
     # TODO: Replace all instances of efit_dict with a dataclass
-    def _get_efit_dict(self):
-        self.conn.openTree(self.efit_tree, self._shot_id)
+    def _get_efit_dict(params : ShotDataRequestParams):
+        params.mds_conn.openTree(self.efit_tree, params.shot_props.shot_id)
         efit_dict = dict()
         path = r'\top.results.geqdsk:'
         nodes = ['z', 'r', 'rhovn', 'psirz', 'zmaxis', 'ssimag', 'ssibry']
-        efit_dict['time'] = self.conn.get(
+        efit_dict['time'] = params.mds_conn.get(
             f"dim_of({path}psirz,2)").data()/1.e3  # [ms] -> [s]
         for node in nodes:
             try:
-                efit_dict[node] = self.conn.get(f"{path}{node}").data()
+                efit_dict[node] = params.mds_conn.get(f"{path}{node}").data()
             except MdsException as e:
                 efit_dict[node] = np.full(efit_dict['time'].shape, np.nan)
-                self.logger.info(
-                    f"[Shot {self._shot_id}]: Failed to get {node} from efit, Setting to all NaNs.")
-                self.logger.debug(
-                    f"[Shot {self._shot_id}]:{traceback.format_exc()}")
+                params.logger.info(
+                    f"[Shot {params.shot_props.shot_id}]: Failed to get {node} from efit, Setting to all NaNs.")
+                params.logger.debug(
+                    f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
         # Normalize the poloidal flux grid (0=magnetic axis, 1=boundary)
         # [Translated from D. Eldon's OMFITeqdsk read_basic_eq_from_mds() function]
         psi_norm_f = efit_dict['ssibry'] - efit_dict['ssimag']
