@@ -879,12 +879,12 @@ class BasicCmodRequests(ShotDataRequest):
                 zts_edge = params.mds_conn.get(f"\fiber_z", tree_name='electrons').data()
                 TS_z = np.concatenate((TS_z, zts_edge))
             except:
-                # params.logger.debug(f"[Shot {params.shot_props.shot_id}] {traceback.format_exc()}")
-                params.logger.warning(f"[Shot {params.shot_props.shot_id}] Failed to get TS data with 2000+ method")
+                params.logger.debug(f"[Shot {params.shot_props.shot_id}] {traceback.format_exc()}")
+                params.logger.info(f"[Shot {params.shot_props.shot_id}] Failed to get TS data with 2000+ method")
 
                 # if the above didn't work, then there was issues with the names. 
                 try:
-                    params.logger.warning(f"[Shot {params.shot_props.shot_id}] Trying second 2000+ method")
+                    params.logger.debug(f"[Shot {params.shot_props.shot_id}] Trying second 2000+ method")
                     TS_te, TS_time = params.mds_conn.get_record_data(r"\thom_profile:te_rz_t", tree_name='electrons')
                     TS_te = TS_te*1000*11600
                     tets_edge = params.mds_conn.get(r'\ts_te:at_95', tree_name='electrons').data()*11600
@@ -894,7 +894,7 @@ class BasicCmodRequests(ShotDataRequest):
                     TS_z = np.concatenate((TS_z, zts_edge))
                 except Exception as e:
                     params.logger.debug(f"[Shot {params.shot_props.shot_id}] {traceback.format_exc()}")
-                    params.logger.warning(f"[Shot {params.shot_props.shot_id}] Failed to get TS data with second 2000+ method")
+                    params.logger.info(f"[Shot {params.shot_props.shot_id}] Failed to get TS data with second 2000+ method")
                     raise e
             
             
