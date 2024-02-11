@@ -155,13 +155,13 @@ def shot_ids_request_runner(shot_ids_request, params : ShotIdsRequestParams):
         if shot_ids_request_object is not None:
             return shot_ids_request_object.get_shot_ids(params)
         
-    elif isinstance(shot_ids_request, str):
+    if isinstance(shot_ids_request, str):
         # assume that it is a file path
        for suffix, shot_ids_request_type in _file_suffix_to_shot_ids_request.items():
            if shot_ids_request.endswith(suffix):
                return shot_ids_request_type(shot_ids_request).get_shot_ids(params)
         
-    elif isinstance(shot_ids_request, dict):
+    if isinstance(shot_ids_request, dict):
         shot_ids_request = {
             map_string_to_enum(tokamak, Tokamak): shot_ids_request_mapping 
             for tokamak, shot_ids_request_mapping in shot_ids_request.items()
@@ -170,7 +170,7 @@ def shot_ids_request_runner(shot_ids_request, params : ShotIdsRequestParams):
         if chosen_request is not None:
             return shot_ids_request_runner(chosen_request, params)
         
-    elif isinstance(shot_ids_request, list):
+    if isinstance(shot_ids_request, list):
         all_results = []
         for request in shot_ids_request:
             sub_result = shot_ids_request_runner(request, params)
