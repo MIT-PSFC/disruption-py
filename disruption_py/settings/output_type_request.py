@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import os
@@ -225,13 +226,20 @@ class HDF5OutputRequest(OutputTypeRequest):
     """
     Stream outputted data to an HDF5 file.
     """
-    def __init__(self, filepath):
+    def __init__(self, filepath, only_output_numeric=True):
         self.filepath = filepath
         self.output_shot_count = 0
+        self.only_output_numeric = only_output_numeric
 
     def _output_shot(self, params : ResultOutputTypeRequestParams):
         mode = 'a' if self.output_shot_count > 0 else 'w'
-        params.result.to_hdf(self.filepath, f'df_{params.shot_id}', format='table', complib='blosc', mode=mode)
+        
+        if self.only_output_numeric:
+            outuput_result = params.result.select_dtypes([np.number])
+        else:
+            outuput_result = params.result
+            
+        outuput_result.to_hdf(self.filepath, f'df_{params.shot_id}', format='table', complib='blosc', mode=mode)
         self.output_shot_count += 1
     
     def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
