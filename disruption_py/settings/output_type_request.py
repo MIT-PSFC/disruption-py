@@ -270,6 +270,66 @@ class CSVOutputRequest(OutputTypeRequest):
         return self.output_shot_count
 
 
+class BatchedCSVOutputRequest(OutputTypeRequest):
+    """
+    Stream outputted data to a single csv file in batches.
+    """
+    def __init__(self, filepath, batch_size=10, flexible_columns=True, clear_file=True):
+        self.filepath = filepath
+        self.batch_size = batch_size
+        self.flexible_columns = flexible_columns
+        self.clear_file = clear_file
+        self.batch_data = []  # Initialize an empty list to hold batched data
+        self.output_shot_count = 0
+
+        # Clear the file at the beginning if required
+        if self.clear_file and os.path.exists(filepath):
+            os.remove(filepath)
+
+    def _output_shot(self, params : ResultOutputTypeRequestParams):
+        # Append the current result to the batch data list
+        self.batch_data.append(params.result)
+        
+        # Check if the batch size has been reached
+        if len(self.batch_data) >= self.batch_size:
+            self._write_batch_to_csv()
+
+        self.output_shot_count += 1
+
+    def _write_batch_to_csv(self):
+        # Concatenate all DataFrame objects in the batch_data list
+        combined_df = pd.concat(self.batch_data, ignore_index=True, sort=False)
+        self.batch_data = []  # Reset the batch data list
+
+        file_exists = os.path.isfile(self.filepath)
+        if self.flexible_columns and file_exists:
+            # If flexible_columns is True and the file exists, read the existing content and combine
+            existing_df = pd.read_csv(self.filepath)
+            combined_df = pd.concat([existing_df, combined_df], ignore_index=True, sort=False)
+
+        # Write the combined DataFrame to CSV
+        combined_df.to_csv(self.filepath, mode='a', index=False, header=(not file_exists and self.clear_file))
+        
+        combined_df = pd.concat(self.batch_data, ignore_index=True, sort=False)
+        file_exists = os.path.isfile(self.filepath)
+        if self.flexible_columns:
+            if file_exists:
+                existing_df = pd.read_csv(self.filepath)
+                combined_df = pd.concat([existing_df, combined_df], ignore_index=True, sort=False)
+            else:
+                combined_df = combined_df
+
+            combined_df.to_csv(self.filepath, index=False)
+        else: 
+            combined_df.to_csv(self.filepath, mode='a', index=False, header=(not file_exists))
+
+    def get_results(self, params: FinishOutputTypeRequestParams):
+        # Write any remaining batched data to the CSV file before returning results
+        if self.batch_data:
+            self._write_batch_to_csv()
+        return self.output_shot_count
+
+
 class SQLOutputRequest(OutputTypeRequest):
     """
     Stream outputted data to disruption_warning or similar sql table.
@@ -311,7 +371,7 @@ _output_type_request_mappings: Dict[str, OutputTypeRequest] = {
 _file_suffix_to_output_type_request : Dict[str, Type[OutputTypeRequest]] = {
     ".h5" : HDF5OutputRequest,
     ".hdf5" : HDF5OutputRequest,
-    ".csv" : CSVOutputRequest,
+    ".csv" : BatchedCSVOutputRequest,
 } 
 # --8<-- [end:file_suffix_to_output_type_request_dict]
 

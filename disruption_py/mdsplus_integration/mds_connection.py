@@ -64,6 +64,8 @@ class MDSConnection:
         """
         Close all open trees
         """
+        for open_tree in self.open_trees:
+            self.close_tree(open_tree)
         self.last_open_tree = None
         self.open_trees.clear()
         # self.conn.closeAllTrees()
