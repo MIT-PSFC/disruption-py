@@ -1,7 +1,34 @@
 import logging
 from typing import Callable, Dict, List
 import MDSplus as mds
+class Connection(mds.Connection):
+    def __init__(self, *args, **kwargs):
+         self.expressions = []
+         self.tree = None
+         self.shot = None
+         self.node = None
+         super().__init__(*args, **kwargs)
 
+    def get(self, expression : str, *args):
+        expr = expression
+        if expression == 'TreeOpen($,$)' and len(args) == 2:
+            self.tree = args[0]
+            self.shot = int(args[1])
+        else:
+            if expression.startswith("_sig="):
+                parts = expression.split("=")
+                self.node = parts[1].split(",")[0]
+                expr = self.node
+            else:
+                if expression.startswith("dim_of") and self.node is not None:
+                    expr = expression.replace("_sig", self.node)
+
+            self.expressions.append({"tree":self.tree, "shot": self.shot, "expr":expr, "args":args})
+        return super().get(expression, *args)
+
+    def get_saved_expressions(self):
+        return self.expressions
+    
 class ProcessMDSConnection():
     """
     Abstract class for connecting to MDSplus.
@@ -10,7 +37,7 @@ class ProcessMDSConnection():
     """
     
     def __init__(self, conn_string : str):
-        self.conn = mds.Connection(conn_string)
+        self.conn = Connection(conn_string)
     
     def get_shot_connection(self, shot_id : int):
         return MDSConnection(self.conn, shot_id)
@@ -18,13 +45,14 @@ class ProcessMDSConnection():
 class MDSConnection:
     logger = logging.getLogger('disruption_py')
     
-    def __init__(self, conn : mds.Connection, shot_id : int):
+    def __init__(self, conn : Connection, shot_id : int):
         self.conn = conn
         self.shot_id = shot_id
         self.tree_nickname_funcs = {}
         self.tree_nicknames = {}
         self.open_trees = set()
         self.last_open_tree = None   
+        self.expressions = []
     
     def open_tree(self, tree_name : str):
         """
@@ -89,6 +117,9 @@ class MDSConnection:
     
     # Added Methods
     
+    def get_saved_expressions(self):
+        return self.expressions
+
     def get_record_data(self, path : str, tree_name : str = None, dim_nums : List = None):
         dim_nums = dim_nums or [0]
         
