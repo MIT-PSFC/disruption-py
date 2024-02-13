@@ -1,5 +1,5 @@
 
-
+## Built-in Methods For CMod { .doc .doc-heading }
 ::: disruption_py.shots.parameter_methods.cmod.basic_parameter_methods
     handler: python
 	options:

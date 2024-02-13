@@ -14,7 +14,7 @@ For more information on available methods please see the built-in method documen
 - [CMod][disruption_py.shots.parameter_methods.cmod.basic_parameter_methods.BasicCmodRequests]
 
 ### Looking at the accuracy and reliability of built-in parameter methods
-DisruptionPy provides the [`disruption_py run`][disruption_py-evaluate] command to provide insight on the current accuracy of DisruptionPy methods.
+DisruptionPy provides the [`disruption_py run evaluate`][disruption_py-run-evaluate] command to provide insight on the current accuracy of DisruptionPy methods.
 
 ## Custom Parameter Methods { .doc .doc-heading }
 Users of disruption_py can create their own custom parameter methods by adding decorators to methods in a subclass of [`ShotDataRequest`][disruption_py.settings.shot_data_request.ShotDataRequest]. Instances of these classes can then be passed as the `shot_data_request` parameter in the [`ShotSettings`][disruption_py.settings.ShotSettings], and there results will be included alongside those returned by the built-in methods. See [`parameter_cached_method`][disruption_py.shots.helpers.method_caching.parameter_cached_method] for more details on decorators.

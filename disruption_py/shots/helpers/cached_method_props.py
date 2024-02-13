@@ -10,7 +10,7 @@ class CachedMethodParams:
     cache_between_threads: bool
     used_trees : Union[List[str], Callable]
     contained_cached_methods : Union[List[str], Callable]
-    tokamaks : List[Tokamak]        
+    tokamaks : Union[Tokamak, List[Tokamak]]      
     
 @dataclass(frozen=True)
 class ParameterCachedMethodParams(CachedMethodParams):

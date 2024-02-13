@@ -1019,7 +1019,7 @@ class BasicCmodRequests(ShotDataRequest):
             The times at which to calculate the edge parameters.
         p_Te : BivariatePlasmaProfile
             The Te measurements [keV] in terms of the time and rho of the measurment.
-        ne : BivariatePlasmaProfile
+        p_ne : BivariatePlasmaProfile
             The ne measurements [keV] in terms of the time and rho of the measurment.
         edge_rho_min : float [0,1]
             The rho that defines the minimum of the "edge" region

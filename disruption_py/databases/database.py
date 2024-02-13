@@ -226,7 +226,7 @@ class ShotDatabase:
         cols : List[str]
             List of columns to retrieve. Default value is ["*"], meaning all columns. 
         sql_table : str, optional
-           The sql_table to retrieve data from. Default value is "disruption_warning".
+            The sql_table to retrieve data from. Default value is "disruption_warning".
 
         Returns
         -------

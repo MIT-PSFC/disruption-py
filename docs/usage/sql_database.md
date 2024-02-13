@@ -1,8 +1,10 @@
 DisruptionPy uses access to logbook sql databses for convenience when retrieving data from MDSPlus. Users may also use DisruptionPy to directly retrieve data from the logbook database and specifically the `disruption_warning` table.
 
 ## The `disruption_warning` table { .doc .doc-heading }
-The `disruption_warning` sql tables for CMod and D3D are databases containing important disruption paramaters for a large number of shots from the respective tokamaks.
+The `disruption_warning` sql tables for CMod and D3D are datasets containing important disruption paramaters for a large number of shots from the respective tokamaks.
 
+### CMod Dataset
+The dataset contains unique plasma discharges from MIT's Alcator C-Mod tokamak, from the 2012 to 2016 experimental campaigns, plus additional discharges from 2005.
 ??? info "Available columns on CMod"
 
 	```
@@ -20,6 +22,8 @@ The `disruption_warning` sql tables for CMod and D3D are databases containing im
 	'kappa_area', 'I_efc', 'SXR', 'H_alpha', 'Prad_peaking_CVA',
 	'commit_hash'
 	```
+
+	For more details on computed values please see [parameter reference][disruption-parameter-descriptions].
 
 ## Retrieving data from the SQL database { .doc .doc-heading }
 Here is an example that uses disruption_py to get shot data from the `disruption_warning` table
