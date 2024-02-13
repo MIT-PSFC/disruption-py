@@ -44,8 +44,18 @@ def main():
     
     run_subparsers = run_parser.add_subparsers(title="run commands", dest="script")
     
-    generate_datasets_parser = run_subparsers.add_parser("generate_datasets")
+    generate_datasets_parser = run_subparsers.add_parser(
+        "generate_datasets", 
+        help="A basic interface with DisruptionPy"
+    )
     setup_lazy_load_script(generate_datasets_parser, "disruption_py.cli.generate_datasets")
+    
+    evaluate_parser = run_subparsers.add_parser(
+        "evaluate", 
+        help="Evaluate accuracy of parameter methods in DisruptionPy"
+    )
+    setup_lazy_load_script(evaluate_parser, "disruption_py.cli.evaluate_methods")
+    
     
     args, remaining_args = parser.parse_known_args()
         
