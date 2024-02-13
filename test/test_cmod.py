@@ -44,7 +44,7 @@ TEST_COLUMNS = [
     'shot', 'commit_hash'
 ]
 
-KNOWN_FAILURE_COLUMNS = [
+KNOWN_NUMERIC_FAILURE_COLUMNS = [
     'lower_gap', 'upper_gap', 'ssep', 'dipprog_dt', 'n_over_ncrit', # constant factor scaling error
     'ip_error' # constant error
 ]
