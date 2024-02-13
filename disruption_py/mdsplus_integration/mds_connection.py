@@ -23,7 +23,8 @@ class Connection(mds.Connection):
                 if expression.startswith("dim_of") and self.node is not None:
                     expr = expression.replace("_sig", self.node)
 
-            self.expressions.append({"tree":self.tree, "shot": self.shot, "expr":expr, "args":args})
+#            self.expressions.append({"tree":self.tree, "shot": int(self.shot), "expr":expr, "args":args})
+            self.expressions.append({"tree":self.tree, "shot": int(self.shot), "expr":expr})
         return super().get(expression, *args)
 
     def get_saved_expressions(self):

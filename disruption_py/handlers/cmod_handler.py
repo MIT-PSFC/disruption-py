@@ -193,6 +193,9 @@ class CModHandler:
                 with open(f'nodes_{shot_id}.log', 'w') as f:
                     for term in cmod_shot_manager.process_mds_conn.conn.get_saved_expressions():
                         f.write(f'{str(term)}\n')
+                with open(f'nodes_{shot_id}.json', 'w') as f:
+                    json.dump(cmod_shot_manager.process_mds_conn.conn.get_saved_expressions(), f)
+    
         finish_output_type_request_params = FinishOutputTypeRequestParams(tokamak=Tokamak.CMOD, logger=self.logger)    
         results = output_type_request.get_results(finish_output_type_request_params)
         output_type_request.stream_output_cleanup(finish_output_type_request_params)
