@@ -12,9 +12,9 @@ To use the CLI, simply run `disruption_py **command**` from the command line (pr
 		show_signature: false
         filters: ["!^_[^_]"]
 
-## `disruption_py evaluate` { .doc .doc-heading }
+## `disruption_py run evaluate` { .doc .doc-heading }
 
-The `disruption_py evaluate` command evaluates the accuracy of parameter methods in DisruptionPy. It runs all parameter methods with the all tag that are included in `disruption_py` by comparing values retrieved from MDSplus using DisruptionPy to ground truth values.
+The `disruption_py run evaluate` command evaluates the accuracy of parameter methods in DisruptionPy. It runs all parameter methods with the all tag that are included in `disruption_py` by comparing values retrieved from MDSplus using DisruptionPy to ground truth values.
 
 When complete, the command prints a short report on the methods that have suceeded and failed. Success criteria is having more that 95% of results within 1% of the ground truth. 
 

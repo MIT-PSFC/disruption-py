@@ -70,6 +70,10 @@ class MyShotDataRequest(ShotDataRequest):
 
         No more examples yet, please share your shot_data_requests if you are willing!
 
+!!! warning
+
+	When two output columns have the same name, the column that appears in the final dataset is not guranteed. This issue will be fixed in the near future.
+
 ## Running Parameter Methods { .doc .doc-heading }
 Users can use a number of built-in parameter methods and/or create their own methods.
 
