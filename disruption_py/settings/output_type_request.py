@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import os
@@ -225,13 +226,20 @@ class HDF5OutputRequest(OutputTypeRequest):
     """
     Stream outputted data to an HDF5 file.
     """
-    def __init__(self, filepath):
+    def __init__(self, filepath, only_output_numeric=True):
         self.filepath = filepath
         self.output_shot_count = 0
+        self.only_output_numeric = only_output_numeric
 
     def _output_shot(self, params : ResultOutputTypeRequestParams):
         mode = 'a' if self.output_shot_count > 0 else 'w'
-        params.result.to_hdf(self.filepath, f'df_{params.shot_id}', format='table', complib='blosc', mode=mode)
+        
+        if self.only_output_numeric:
+            output_result = params.result.select_dtypes([np.number])
+        else:
+            output_result = params.result
+            
+        output_result.to_hdf(self.filepath, f'df_{params.shot_id}', format='table', complib='blosc', mode=mode)
         self.output_shot_count += 1
     
     def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
@@ -244,6 +252,8 @@ class HDF5OutputRequest(OutputTypeRequest):
 class CSVOutputRequest(OutputTypeRequest):
     """
     Stream outputted data to a single csv file.
+    
+    Not recommended when retrieving a large number of shots. 
     """
     def __init__(self, filepath, flexible_columns=True, clear_file=True):
         self.filepath = filepath
@@ -274,10 +284,9 @@ class BatchedCSVOutputRequest(OutputTypeRequest):
     """
     Stream outputted data to a single csv file in batches.
     """
-    def __init__(self, filepath, batch_size=10, flexible_columns=True, clear_file=True):
+    def __init__(self, filepath, batch_size=100, clear_file=True):
         self.filepath = filepath
         self.batch_size = batch_size
-        self.flexible_columns = flexible_columns
         self.clear_file = clear_file
         self.batch_data = []  # Initialize an empty list to hold batched data
         self.output_shot_count = 0
@@ -297,31 +306,10 @@ class BatchedCSVOutputRequest(OutputTypeRequest):
         self.output_shot_count += 1
 
     def _write_batch_to_csv(self):
-        # Concatenate all DataFrame objects in the batch_data list
-        combined_df = pd.concat(self.batch_data, ignore_index=True, sort=False)
-        self.batch_data = []  # Reset the batch data list
-
         file_exists = os.path.isfile(self.filepath)
-        if self.flexible_columns and file_exists:
-            # If flexible_columns is True and the file exists, read the existing content and combine
-            existing_df = pd.read_csv(self.filepath)
-            combined_df = pd.concat([existing_df, combined_df], ignore_index=True, sort=False)
-
-        # Write the combined DataFrame to CSV
-        combined_df.to_csv(self.filepath, mode='a', index=False, header=(not file_exists and self.clear_file))
-        
-        combined_df = pd.concat(self.batch_data, ignore_index=True, sort=False)
-        file_exists = os.path.isfile(self.filepath)
-        if self.flexible_columns:
-            if file_exists:
-                existing_df = pd.read_csv(self.filepath)
-                combined_df = pd.concat([existing_df, combined_df], ignore_index=True, sort=False)
-            else:
-                combined_df = combined_df
-
-            combined_df.to_csv(self.filepath, index=False)
-        else: 
-            combined_df.to_csv(self.filepath, mode='a', index=False, header=(not file_exists))
+        combined_df = pd.concat(self.batch_data, ignore_index=True, sort=False)        
+        combined_df.to_csv(self.filepath, mode='a', index=False, header=(not file_exists))
+        self.batch_data.clear()
 
     def get_results(self, params: FinishOutputTypeRequestParams):
         # Write any remaining batched data to the CSV file before returning results
