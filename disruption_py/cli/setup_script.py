@@ -6,6 +6,15 @@ from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment
 
 def cmod_setup_check():
+    """
+    Run on any call to `disruption_py run ***script_name***` when using CMod.
+    
+    Ensures that the following setup has been completed:
+    
+    - The user has a logbook.sybase_login file in their home directory
+    - MDSPlus is installed in the active python environment
+    - The necessary ODBC Driver is installed (ODBC Driver 18 for SQL Server)
+    """
     sybase_login_path = os.path.expanduser('~/logbook.sybase_login')
     if not os.path.exists(sybase_login_path):
         print("setup not complete, no sybase_login file found. Please run `disruption_py setup`")
@@ -39,6 +48,15 @@ def setup_check(func):
     return inner
 
 def setup_cmod():
+    """
+    Interactive CLI program run by calling `disruption_py setup` and selecting CMod.
+    
+    Walks the user through the following setup steps:
+    
+    - Adding a logbook.sybase_login file to their home directory
+    - Adding MDSPlus to the active python environment
+    - Checking that the necessary ODBC Driver is installed (ODBC Driver 18 for SQL Server)
+    """
     print(f"Running setup for cmod")
 
     # add sysbase_login

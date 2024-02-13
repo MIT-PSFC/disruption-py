@@ -22,29 +22,26 @@ theme:
     #   - navigation.tabs
     #   - navigation.expand
 nav:
-  - Home: 
+  - Overview: 
     - Background: index.md
-    - Quickstart:
-      - Installation: quickstart/installation_quickstart.md
-      - Basic Program: quickstart/usage_quickstart.md
-  - API Reference:
-      - Handlers: api/handlers_reference.md
+    - Installation: quickstart/installation_quickstart.md
+    - Quickstart: quickstart/usage_quickstart.md
+  - Usage:
+      - Handlers: usage/handlers_reference.md
       - Settings: 
-        - Settings Classes: api/settings_reference.md
+        - Settings Classes: usage/settings_reference.md
         - Requests Classes:
-          - Existing Data Request: api/requests/existing_data_request_reference.md
-          - Shot Ids Request: api/requests/shot_ids_request_reference.md
-          - Set Times Request: api/requests/set_times_request_reference.md
-          - Output Type Request: api/requests/output_type_request_reference.md
-          - Shot Data Request: api/requests/shot_data_request_reference.md
+          - Existing Data Request: usage/requests/existing_data_request_reference.md
+          - Shot Ids Request: usage/requests/shot_ids_request_reference.md
+          - Set Times Request: usage/requests/set_times_request_reference.md
+          - Output Type Request: usage/requests/output_type_request_reference.md
+          - Shot Data Request: usage/requests/shot_data_request_reference.md
       - Shots:
-        - Parameter Methods: api/shots/parameter_method_reference.md
-        - Parameter Method Decorators: api/shots/decorator_reference.md
-        - CMod Built-in Methods: api/shots/cmod_method_reference.md
-      - Scripts:
-          - Generate Datasets: api/scripts/generate_datasets.md
-          - Profiling: api/scripts/profile_shots.md
-  - Contributing: contributing.md
+        - Parameter Methods: usage/shots/parameter_method_reference.md
+        - Parameter Method Decorators: usage/shots/decorator_reference.md
+        - CMod Built-in Methods: usage/shots/cmod_method_reference.md
+      - Command Line: usage/command_line.md
+  - GitHub: https://github.com/MIT-PSFC/disruption-py
 
 markdown_extensions:
 - attr_list
