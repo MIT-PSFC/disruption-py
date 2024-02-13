@@ -49,7 +49,7 @@ KNOWN_NUMERIC_FAILURE_COLUMNS = [
     'ip_error' # constant error
 ]
 
-# TEST_COLUMNS = list(set(TEST_COLUMNS).difference(KNOWN_FAILURE_COLUMNS))
+# TEST_COLUMNS = list(set(TEST_COLUMNS).difference(KNOWN_NUMERIC_FAILURE_COLUMNS))
 
 TIME_EPSILON = 0.05 # Tolerance for taking the difference between two times [s]
 IP_EPSILON = 1e5    # Tolerance for taking the difference between two ip values [A]
