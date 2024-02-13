@@ -40,6 +40,7 @@ nav:
         - Parameter Methods: usage/shots/parameter_method_reference.md
         - Parameter Method Decorators: usage/shots/decorator_reference.md
         - CMod Built-in Methods: usage/shots/cmod_method_reference.md
+      - SQL Database: usage/sql_database.md
       - Command Line: usage/command_line.md
   - FAQ: faq.md
   - GitHub: https://github.com/MIT-PSFC/disruption-py
