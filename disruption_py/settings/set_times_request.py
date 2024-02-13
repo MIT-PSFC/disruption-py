@@ -5,7 +5,7 @@ import pandas as pd
 from dataclasses import dataclass
 from typing import Dict, Union
 from disruption_py.databases.database import ShotDatabase
-from disruption_py.mdsplus_integration.tree_manager import TreeManager
+from disruption_py.mdsplus_integration.mds_connection import MDSConnection
 from disruption_py.utils.constants import MAX_SHOT_TIME
 from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from disruption_py.utils.mappings.tokamak import Tokamak
@@ -19,8 +19,8 @@ class SetTimesRequestParams:
     ----------
     shot_id : int
         The shot id for the timebase being created
-    tree_manager : TreeManager
-        Tree manager which can be used to retrieve data from MDSplus.
+    mds_conn : MDSConnection
+        The connection to MDSplus, that can be used to retrieve MDSplus data.
     existing_data : pd.DataFrame
         Pre-filled data given to disruption_py.
     database : ShotDatabase
@@ -33,7 +33,7 @@ class SetTimesRequestParams:
         Logger object from disruption_py to use for logging.
     """
     shot_id : int
-    tree_manager : TreeManager
+    mds_conn : MDSConnection
     existing_data : pd.DataFrame
     database : ShotDatabase
     disruption_time : float
@@ -145,40 +145,18 @@ class EfitSetTimesRequest(SetTimesRequest):
         }
 
     def cmod_times(self, params : SetTimesRequestParams):
-        efit_tree = params.tree_manager.tree_from_nickname("efit_tree")
-        efit_tree_name = params.tree_manager.tree_name_of_nickname("efit_tree")
+        efit_tree_name = params.mds_conn.get_tree_name_of_nickname("_efit_tree")
         if efit_tree_name == 'analysis':
             try:
-                return efit_tree.getNode(r"\analysis::efit_aeqdsk:time").getData().data().astype('float64', copy=False)
+                return params.mds_conn.get(r"\analysis::efit_aeqdsk:time", tree_name="_efit_tree").data().astype('float64', copy=False)
             except Exception as e:
-                return efit_tree.getNode(r"\analysis::efit:results:a_eqdsk:time").getData().data().astype('float64', copy=False)
+                return params.mds_conn.get(r"\analysis::efit:results:a_eqdsk:time", tree_name="_efit_tree").data().astype('float64', copy=False)
         else:
-            return efit_tree.getNode(fr"\{efit_tree_name}::top.results.a_eqdsk:time").getData().data().astype('float64', copy=False)
+            return params.mds_conn.get(fr"\{efit_tree_name}::top.results.a_eqdsk:time", tree_name="_efit_tree").data().astype('float64', copy=False)
             
     def _get_times(self, params : SetTimesRequestParams) -> np.ndarray:
         raise ValueError("EFIT timebase request not implemented")
     
-class MagneticsSetTimesRequest(SetTimesRequest):
-    """Get times request for using the start and end times of the magnetics tree, with a 
-    custom timestep passed in the constructor.
-    
-    Parameters
-    ----------
-    timestep : float
-        The timestep to use for the magnetics timebase.
-    """
-    def __init__(self, timestep = 0.004):
-        self.timestep = timestep
-        
-    def _get_times(self, params : SetTimesRequestParams) -> np.ndarray:
-        try:
-            magnetics_tree = params.tree_manager.open_tree(tree_name='magnetics')
-            magnetic_times = magnetics_tree.getNode('\ip').dim_of().data().astype('float64', copy=False)
-            # interpolate self._times to be every [timestep] seconds
-            return np.arange(magnetic_times[0], magnetic_times[-1], self.timestep).astype('float64', copy=False)
-        except Exception as e:
-            params.logger.error("Failed to set up magnetic timebase")
-            raise Exception(e)
         
 class SignalSetTimesRequest(SetTimesRequest):
     def __init__(self, tree_name : str, signal_path : str):
@@ -187,9 +165,8 @@ class SignalSetTimesRequest(SetTimesRequest):
         
     def _get_times(self, params : SetTimesRequestParams) -> np.ndarray:
         try:
-            signal_tree = params.tree_manager.open_tree(tree_name=self.tree_name)
-            signal_times = signal_tree.getNode(self.signal_path).getData().dim_of(0).data().astype('float64', copy=False)
-            return signal_times
+            signal_time, = params.mds_conn.get_dims(self.signal_path, tree_name=self.tree_name)
+            return signal_time.astype('float64', copy=False)
         except Exception as e:
             params.logger.error(f"Failed to set up timebase for signal {self.signal_path}")
             raise Exception(e)
@@ -198,7 +175,6 @@ class SignalSetTimesRequest(SetTimesRequest):
 # --8<-- [start:set_times_request_dict]
 _set_times_request_mappings: Dict[str, SetTimesRequest] = {
     "efit" : EfitSetTimesRequest(),
-    "magnetics004" : MagneticsSetTimesRequest(timestep = 0.004),
 }
 # --8<-- [end:set_times_request_dict]
 

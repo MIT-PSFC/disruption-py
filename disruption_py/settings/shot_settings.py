@@ -27,11 +27,6 @@ class ShotSettings:
     efit_tree_name : str
         The name of the tree to first try for the efit environment. Other tree names will be tried if 
         opening this tree name fails. Default is 'analysis'.
-    attempt_local_efit_env : Tuple[Tuple[str, str]]
-        A list of tuples of the form (efit_env_name, efit_env_path) that will be used to set the 
-        environment variables when trying to open the efit tree. If opening the efit tree with the 
-        local environment variables fails, will try to open the efit tree with the  regular environment 
-        variables. Default is None.
     run_methods : List[str]
         A list of parameter method names to be run. Named methods will be run when retrieving data 
         from  mdsplus for the shot. Named methods must have with the parameter_cached_method 
@@ -55,9 +50,6 @@ class ShotSettings:
         A list of ShotDataRequest objects. Methods from these objects are run when retrieving data 
         from mdsplus if the method is included through either the run_methods or run_tags setting.
         Defaults to an empty list.
-    output_type_request : OutputTypeRequest
-        DEPRECTATED. output_type_request has moved to a parameter in the get_shots_data method of the handler class.
-        Will error if used, please set to None.
     set_times_request : SetTimesRequest
         The set times request to be used when setting the timebase for the shot. The retrieved data will
         be interpolated to this timebase. Can pass any SetTimesRequestType that resolves to a SetTimesRequest.
@@ -71,7 +63,16 @@ class ShotSettings:
         of the timebase from the set_times_request. Wraps the set_times_request with ExistingDataSetTimesRequest.
         Defaults to False.
     interpolation_method : InterpolationMethod
-        The interpolation method to be used when retrieving data for the shot. CURRENTLY UNIMPLEMENTED.   
+        The interpolation method to be used when retrieving data for the shot. CURRENTLY UNIMPLEMENTED.
+    output_type_request : OutputTypeRequest
+        DEPRECTATED. output_type_request has moved to a parameter in the get_shots_data method of the handler class.
+        Will error if used, please set to None.
+    attempt_local_efit_env : Tuple[Tuple[str, str]]
+        DEPRECTATED. Support no longer exists. Please reach out to maintainers with questions.
+        A list of tuples of the form (efit_env_name, efit_env_path) that will be used to set the 
+        environment variables when trying to open the efit tree. If opening the efit tree with the 
+        local environment variables fails, will try to open the efit tree with the  regular environment 
+        variables. Default is None.   
     """
     # General Settings
     log_settings : LogSettings = field(default_factory=LogSettings.default)
@@ -81,7 +82,6 @@ class ShotSettings:
         
     # Shot creation settings
     efit_tree_name: str = 'analysis'
-    attempt_local_efit_env: Tuple[Tuple[str, str]] = None
     
     # Shot run settings
     run_methods : List[str] = field(default_factory=list)
@@ -89,9 +89,6 @@ class ShotSettings:
     run_columns : List[str] = field(default_factory=list)
     only_requested_columns : bool = False
     shot_data_requests : List[ShotDataRequest] = field(default_factory=list)
-    
-    # Shot Output settings
-    output_type_request: OutputTypeRequest = None # DEPRECATED
 
     # Timebase setting
     set_times_request : SetTimesRequest = "efit"
@@ -101,6 +98,10 @@ class ShotSettings:
     
     additional_args : dict = field(default_factory=dict)
     
+    
+    # DEPRECATED
+    output_type_request: OutputTypeRequest = None # moved to get_shots_data
+    attempt_local_efit_env: Tuple[Tuple[str, str]] = None # support removed
     
     def __post_init__(self):
         self.resolve()
@@ -116,6 +117,10 @@ class ShotSettings:
                 output_type_request no longer set in shot_settings. 
                 Please set output_type_request in get_shots_data. 
                 To not throw error please set output_type_request to None.
+                """
+                "attempt_local_efit_env",
+                """
+                attempt_local_efit_env support no longer exists. Please reach out to maintainers with questions.
                 """
             ),
         ]

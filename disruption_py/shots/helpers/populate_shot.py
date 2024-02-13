@@ -26,7 +26,6 @@ def populate_method(params: ShotDataRequestParams, cached_method_props : CachedM
         if callable(method) and is_cached_method(method):
             params.logger.info(
                 f"[Shot {shot_props.shot_id}]:Populating {cached_method_props.name}")
-            # self._tree_manager.cleanup_not_needed()
             try:
                 result = method(params=params)
             except Exception as e:
@@ -200,7 +199,12 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams) ->
                     shot_props.logger.info(
                         f"[Shot {shot_props.shot_id}]:Skipping {cached_method_props.name} already populated")
 
-    method_optimizer : MethodOptimizer = MethodOptimizer(shot_props.tree_manager, cached_methods_to_evaluate_props, all_cached_methods_props, pre_cached_method_names)
+    method_optimizer : MethodOptimizer = MethodOptimizer(
+        mds_conn=shot_props.mds_conn, 
+        parameter_cached_method_props=cached_methods_to_evaluate_props, 
+        all_cached_method_props=all_cached_methods_props, 
+        pre_cached_method_names=pre_cached_method_names
+    )
 
     parameters = []
     start_time = time.time()
@@ -218,14 +222,14 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams) ->
         if parameter is None:
             continue
         if len(parameter) != len(pre_filled_shot_data):
-            params.logger.warning(
-                f"[Shot {shot_props.shot_id}]:Ignoring parameter {parameter} with different length than timebase")
+            params.logger.error(
+                f"[Shot {shot_props.shot_id}]:Ignoring parameter {parameter} with different length than timebase") 
             continue
         filtered_parameters.append(parameter)
 
     # TODO: This is a hack to get around the fact that some methods return
     #       multiple parameters. This should be fixed in the future.
-    local_data = pd.concat(filtered_parameters + [pre_filled_shot_data], axis=1)
+    local_data = pd.concat([pre_filled_shot_data] + filtered_parameters, axis=1)
     local_data = local_data.loc[:, ~local_data.columns.duplicated()]
     if shot_settings.only_requested_columns:
         include_columns = list(REQUIRED_COLS.union(set(shot_settings.run_columns).intersection(set(local_data.columns))))

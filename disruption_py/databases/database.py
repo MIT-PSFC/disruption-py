@@ -216,8 +216,8 @@ class ShotDatabase:
             self.logger.error(f"Failed to drop column {col_name} with error {e}")
             return False
 
-    def get_shot_data(self, shot_ids : List[int], cols : List[str]=["*"], sql_table="disruption_warning"):
-        """get_shot_data retrieves columns from sql data for given shot_ids
+    def get_shots_data(self, shot_ids : List[int], cols : List[str]=["*"], sql_table="disruption_warning"):
+        """get_shots_data retrieves columns from sql data for given shot_ids
 
         Parameters
         ----------

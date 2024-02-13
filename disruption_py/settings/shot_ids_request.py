@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List, Dict, Union, Type
+import numpy as np
 import pandas as pd
 from disruption_py.databases.database import ShotDatabase
 from disruption_py.utils.mappings.tokamak import Tokamak
@@ -141,40 +142,43 @@ ShotIdsRequestType = Union['ShotIdsRequest', int, str, Dict[Tokamak, 'ShotIdsReq
 
 def shot_ids_request_runner(shot_ids_request, params : ShotIdsRequestParams):
     if isinstance(shot_ids_request, ShotIdsRequest):
-        shot_ids = shot_ids_request.get_shot_ids(params)
+        return shot_ids_request.get_shot_ids(params)
     
-    elif isinstance(shot_ids_request, int) or (isinstance(shot_ids_request, str) and shot_ids_request.isdigit()):
-        shot_ids = [shot_ids_request]
+    if isinstance(shot_ids_request, int) or (isinstance(shot_ids_request, str) and shot_ids_request.isdigit()):
+        return [shot_ids_request]
     
-    elif isinstance(shot_ids_request, str):
+    if isinstance(shot_ids_request, np.ndarray):
+        return shot_ids_request
+    
+    if isinstance(shot_ids_request, str):
         shot_ids_request_object = _get_shot_ids_request_mappings.get(shot_ids_request, None)
         if shot_ids_request_object is not None:
-            shot_ids = shot_ids_request_object.get_shot_ids(params)
+            return shot_ids_request_object.get_shot_ids(params)
         
-    elif isinstance(shot_ids_request, str):
+    if isinstance(shot_ids_request, str):
         # assume that it is a file path
        for suffix, shot_ids_request_type in _file_suffix_to_shot_ids_request.items():
            if shot_ids_request.endswith(suffix):
-               shot_ids = shot_ids_request_type(shot_ids_request).get_shot_ids(params)
+               return shot_ids_request_type(shot_ids_request).get_shot_ids(params)
         
-    elif isinstance(shot_ids_request, dict):
+    if isinstance(shot_ids_request, dict):
         shot_ids_request = {
             map_string_to_enum(tokamak, Tokamak): shot_ids_request_mapping 
             for tokamak, shot_ids_request_mapping in shot_ids_request.items()
         }
         chosen_request = shot_ids_request.get(params.tokamak, None)
         if chosen_request is not None:
-            shot_ids = shot_ids_request_runner(chosen_request, params)
+            return shot_ids_request_runner(chosen_request, params)
         
-    elif isinstance(shot_ids_request, list):
+    if isinstance(shot_ids_request, list):
         all_results = []
         for request in shot_ids_request:
             sub_result = shot_ids_request_runner(request, params)
             if sub_result is not None:
                 all_results.append(sub_result)
         
-        shot_ids = [shot_id for sub_list in all_results for shot_id in sub_list]
-    else:
-        raise ValueError("Invalid shot id request")
+        return [shot_id for sub_list in all_results for shot_id in sub_list]
     
-    return without_duplicates(shot_ids)
+    raise ValueError("Invalid shot id request")
+
+    

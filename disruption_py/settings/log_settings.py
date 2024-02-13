@@ -27,11 +27,11 @@ class LogSettings:
         Whether to use custom logging. If set to true, no logging setup will be done. Default is False.
     """
     log_file_path: str = None
-    file_log_level: int = logging.INFO
+    file_log_level: int = logging.WARNING
     log_file_write_mode: str = "w"
     
     log_to_console: bool = True
-    console_log_level: int = logging.INFO
+    console_log_level: int = logging.WARNING
     
     use_custom_logging: bool = False
     

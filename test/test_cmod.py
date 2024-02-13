@@ -4,6 +4,7 @@ Expects to be run on the MFE workstations.
 Expects MDSplus to be installed and configured.
 Expects SQL credentials to be configured.
 """
+from typing import Dict
 import pytest
 
 import numpy as np
@@ -29,6 +30,27 @@ TEST_SHOTS = [
     1150805022      # Flattop Disruption
 ]
 
+TEST_COLUMNS = [
+    'I_efc', 'sxr', 'time_until_disrupt', 'beta_n', 'beta_p', 'kappa', 'li',
+    'upper_gap', 'lower_gap', 'q0', 'qstar', 'q95', 'v_loop_efit', 'Wmhd',
+    'ssep', 'n_over_ncrit', 'tritop', 'tribot', 'a_minor', 'rmagx', 'chisq',
+    'dbetap_dt', 'dli_dt', 'dWmhd_dt', 'V_surf', 'kappa_area', 'Te_width',
+    'ne_peaking', 'Te_peaking', 'pressure_peaking', 'n_e', 'dn_dt',
+    'Greenwald_fraction', 'n_equal_1_mode', 'n_equal_1_normalized',
+    'n_equal_1_phase', 'BT', 'prad_peaking', 'v_0', 'ip', 'dip_dt',
+    'dip_smoothed', 'ip_prog', 'dipprog_dt', 'ip_error', 'z_error',
+    'z_prog', 'zcur', 'v_z', 'z_times_v_z', 'p_oh', 'v_loop', 'p_rad',
+    'dprad_dt', 'p_lh', 'p_icrf', 'p_input', 'radiated_fraction', 'time',
+    'shot', 'commit_hash'
+]
+
+KNOWN_NUMERIC_FAILURE_COLUMNS = [
+    'lower_gap', 'upper_gap', 'ssep', 'dipprog_dt', 'n_over_ncrit', # constant factor scaling error
+    'ip_error' # constant error
+]
+
+# TEST_COLUMNS = list(set(TEST_COLUMNS).difference(KNOWN_NUMERIC_FAILURE_COLUMNS))
+
 TIME_EPSILON = 0.05 # Tolerance for taking the difference between two times [s]
 IP_EPSILON = 1e5    # Tolerance for taking the difference between two ip values [A]
 
@@ -36,110 +58,176 @@ VAL_TOLERANCE = 0.01   # Tolerance for comparing values between MDSplus and SQL
 MATCH_FRACTION = 0.95   # Fraction of signals that must match between MDSplus and SQL
 
 @pytest.fixture(scope='module')
-def cmod():
+def cmod_handler():
     return CModHandler()
 
-def get_mdsplus_data(cmod_handler: CModHandler, shot_id):
+@pytest.fixture(scope='module')
+def shotlist():
+    return TEST_SHOTS
+
+@pytest.fixture(scope='module')
+def mdsplus_data(cmod_handler : CModHandler, shotlist) -> Dict:
     shot_settings = ShotSettings(
         efit_tree_name="efit18",
         set_times_request="efit",
         log_settings=LogSettings(
             log_to_console=False,
             log_file_path="test/last_log.log",
-            log_file_write_mode="a",
+            log_file_write_mode="w",
             file_log_level=logging.DEBUG
         )
     )
-    shot_data = cmod_handler.get_shots_data(shot_id, shot_settings=shot_settings)
-    return shot_data[0]
-
-def get_sql_data(cmod_handler: CModHandler, shot_id, times):
-    sql_data =cmod_handler.database.get_shot_data([shot_id])
-    sql_data["sql_time"] = sql_data["time"]
-    return pd.merge_asof(times.to_frame(), sql_data, on='time', direction='nearest', tolerance=TIME_CONST)
+    shot_data = cmod_handler.get_shots_data(
+        shot_ids_request=shotlist, 
+        shot_settings=shot_settings,
+        output_type_request="dict",
+    )
+    return shot_data
 
 @pytest.fixture(scope='module')
-def shotlists(cmod):
-    expected_shots = []
-    test_shots = []
-    for shot_id in TEST_SHOTS:
-        test_shot_data = get_mdsplus_data(cmod, shot_id)
-        expected_shot_data = get_sql_data(cmod, shot_id, test_shot_data['time'])
-        assert len(test_shot_data) == len(expected_shot_data), f"Shot {shot_id} has {len(test_shot_data)} rows but SQL has {len(expected_shot_data)} rows"
-        expected_shots.append(expected_shot_data)
-        test_shots.append(test_shot_data)
-    return test_shots, expected_shots
+def sql_data(cmod_handler : CModHandler, shotlist, mdsplus_data : Dict):
+    shot_data = {}
+    for shot_id in shotlist:
+        times = mdsplus_data[shot_id]['time']
+        sql_data =cmod_handler.database.get_shots_data([shot_id])
+        shot_data[shot_id] = pd.merge_asof(times.to_frame(), sql_data, on='time', direction='nearest', tolerance=TIME_CONST)
+        assert (
+            len(times) == len(shot_data[shot_id]), 
+            f"Shot {shot_id} has {len(times)} rows but SQL has {len(shot_data[shot_id])} rows"
+        )
+    return shot_data
 
-SKIPPABLE_COLUMNS = [
-    'lower_gap', 'upper_gap', 'ssep', 'dipprog_dt', 'n_over_ncrit', # constant factor scaling error
-    'ip_error' # unknown error
-]
-            
-@pytest.mark.parametrize("fail_early", [True, False])
-def test_all_sql_values(shotlists, fail_early):
+@pytest.mark.parametrize("data_column", TEST_COLUMNS)
+def test_data_columns(shotlist, mdsplus_data : Dict, sql_data : Dict, data_column, verbose_output, fail_slow):
+    anomaly_ratios = []
+    for shot_id in shotlist:
+        mdsplus_shot_data, sql_shot_data = mdsplus_data[shot_id], sql_data[shot_id]
+        
+        if data_column not in mdsplus_shot_data:
+            raise ValueError(f"Column {data_column} missing from MDSPlus for shot {shot_id}")
+        
+        if data_column not in sql_shot_data:
+            print(f"Column {data_column} missing from SQL for shot {shot_id}")
+            continue
+        
+        anomaly_ratio = evaluate_differences(
+            shot_id=shot_id,
+            sql_shot_data=sql_shot_data,
+            mdsplus_shot_data=mdsplus_shot_data,
+            data_column=data_column,
+            verbose_output=verbose_output,
+            fail_slow=fail_slow,
+        )
+        anomaly_ratios.append(anomaly_ratio)
+    
+    if any(anomaly_ratio['failed'] for anomaly_ratio in anomaly_ratios):
+        raise ValueError(get_failure_statistics_string(anomaly_ratios, verbose_output, data_column=data_column))
+    
+def test_other_values(shotlist, mdsplus_data : Dict, sql_data : Dict, verbose_output, fail_slow):
     """
     Ensure that all parameters are calculated correctly in the MDSplus shot object.
     """
-    test_shots, expected_shots = shotlists
-    successful_shot_cols = []
-    failed_shot_cols = []
-    for shot_id, test_shot_data, expected_shot_data in zip(TEST_SHOTS, test_shots, expected_shots):
-        mdsplus_unmatched_cols = list(test_shot_data.columns.difference(expected_shot_data.columns))
+    anomaly_ratios = []
+    for shot_id in shotlist:
+        mdsplus_shot_data, sql_shot_data = mdsplus_data[shot_id], sql_data[shot_id]
+        mdsplus_unmatched_cols = list(mdsplus_shot_data.columns.difference(sql_shot_data.columns))
         print(f"Shot {shot_id} is missing {mdsplus_unmatched_cols} from SQL source")
-        
-        for col in expected_shot_data.columns:
-            # uncomment to skip columns that are recognized to be broken
-            # if col in SKIPPABLE_COLUMNS:
-            #     continue
+        sql_unmatched_cols = list(sql_shot_data.columns.difference(mdsplus_shot_data.columns))
+        print(f"Shot {shot_id} is missing {sql_unmatched_cols} from MDSPlus source")
+
+        for data_column in sql_shot_data.columns.intersection(mdsplus_shot_data.columns):
             
-            if col not in test_shot_data.columns:
-                print(f"Shot {shot_id} is missing {col} from MDSplus source")
+            if data_column in TEST_COLUMNS:
                 continue
             
             # check if the col of the shot is all nan
-            if test_shot_data[col].isna().all() and expected_shot_data[col].isna().all():
+            if mdsplus_shot_data[data_column].isna().all() and sql_shot_data[data_column].isna().all():
                 continue
             
-            # Compare percentage diff between MDSplus and SQL. In the case that the SQL value is 0, inf should be the diff if the MDSplus value is non-zero and nan if the MDSplus value is 0
-            diff = np.where(expected_shot_data[col] != 0, 
-                            np.abs((test_shot_data[col] - expected_shot_data[col]) / expected_shot_data[col]), 
-                            np.where(test_shot_data[col] != 0, np.inf, np.nan))                       
-            anomalies = np.argwhere(diff > VAL_TOLERANCE)
-            if len(anomalies) / len(diff) > 1 - MATCH_FRACTION:
-                failed_shot_cols.append((shot_id, col, len(anomalies), len(diff), f"{(len(anomalies)/len(diff)*100):.2f}%"))
-                if fail_early:
-                    indexes = np.arange(len(diff)) # anomalies.flatten()
-                    anomaly_differences = diff[indexes]
-                    test_shot_data_differences = test_shot_data[col].iloc[indexes]
-                    expected_shot_data_differences = expected_shot_data[col].iloc[indexes]
-                    anomaly = np.where(diff > VAL_TOLERANCE, 1, 0)[indexes]
-                    difference_df = pd.DataFrame({'Test': test_shot_data_differences, 'expected': expected_shot_data_differences, 'difference': anomaly_differences, 'anomaly': anomaly})
-                    # difference_df.to_csv(f"test/cmod_failed_values_{shot_id}_{col}.csv")
-                    pd.options.display.max_rows = None
-                    raise AssertionError(
-                        f"Shot {shot_id} condition failed for {col}. Arrays:\n{difference_df}"
-                    )
-            else:
-                successful_shot_cols.append((shot_id, col, len(anomalies), len(diff), f"{(len(anomalies)/len(diff)*100):.2f}%"))
-                    
-    if len(failed_shot_cols) > 0:
-        success_cols = {successful_shot_col[1] for successful_shot_col in successful_shot_cols}
-        failure_cols = {failed_shot_col[1] for failed_shot_col in failed_shot_cols}
-        print(f"Succeeded on columns: {success_cols - failure_cols}")
-        print(f"Failed on columns: {failure_cols}")
+            anomaly_ratio = evaluate_differences(
+                shot_id=shot_id,
+                sql_shot_data=sql_shot_data,
+                mdsplus_shot_data=mdsplus_shot_data,
+                data_column=data_column,
+                verbose_output=verbose_output,
+                fail_slow=fail_slow,
+            )
+            anomaly_ratios.append(anomaly_ratio)
 
-        col_success_percent = len(successful_shot_cols) / (len(successful_shot_cols) + len(failed_shot_cols)) * 100
-        col_success_string = f"Succeeded on {col_success_percent:.2f}% of columns\n"
+                    
+    if any(anomaly_ratio['failed'] for anomaly_ratio in anomaly_ratios):
         
-        total_anomalies = sum([x[2] for x in failed_shot_cols]) + sum([x[2] for x in successful_shot_cols])
-        total_values = sum([x[3] for x in failed_shot_cols]) + sum([x[3] for x in successful_shot_cols])
-        entry_success_percent = (total_values - total_anomalies) / total_values * 100
-        entry_success_string = f"Succeeded on {entry_success_percent:.2f}% of entries\n"
-        
-        sorted_failed_with_shot_cols = sorted(failed_shot_cols, key=lambda x: (x[2] / x[3]), reverse=True)
-        list_of_anomalies_string = f"Failed with anomalies (shot_id, col, num_anomalies, num_differences):\n{sorted_failed_with_shot_cols}"
-        raise AssertionError("\n" + col_success_string + entry_success_string + list_of_anomalies_string)
-        
+        raise AssertionError(get_failure_statistics_string(anomaly_ratios, verbose_output))
+
+def evaluate_differences(shot_id, sql_shot_data, mdsplus_shot_data, data_column, verbose_output, fail_slow):
+    # Compare percentage diff between MDSplus and SQL. In the case that the SQL value is 0, inf should be the diff if the MDSplus value is non-zero and nan if the MDSplus value is 0
+    relative_difference = np.where(
+        sql_shot_data[data_column] != 0, 
+        np.abs((mdsplus_shot_data[data_column] - sql_shot_data[data_column]) / sql_shot_data[data_column]), 
+        np.where(mdsplus_shot_data[data_column] != 0, np.inf, np.nan)
+    )
+    numeric_anomalies_mask = (relative_difference > VAL_TOLERANCE)
+    
+    sql_is_nan_ = pd.isnull(sql_shot_data[data_column])
+    mdsplus_is_nan = pd.isnull(mdsplus_shot_data[data_column])
+    nan_anomalies_mask = (sql_is_nan_ != mdsplus_is_nan)
+    
+    anomalies = np.argwhere(numeric_anomalies_mask | nan_anomalies_mask)
+    
+    if len(anomalies) / len(relative_difference) > 1 - MATCH_FRACTION:
+        if fail_slow:
+            failed = True
+        else:
+            indexes = np.arange(len(relative_difference)) if verbose_output else anomalies.flatten()
+            anomaly = np.where(relative_difference > VAL_TOLERANCE, 1, 0)[indexes]
+            difference_df = pd.DataFrame({
+                'MDSplus Data': mdsplus_shot_data[data_column].iloc[indexes], 
+                'Reference Data (SQL)': sql_shot_data[data_column].iloc[indexes], 
+                'Relative difference': relative_difference[indexes], 
+                'Anomaly': anomaly
+            })
+            pd.options.display.max_rows = None if verbose_output else 10
+            raise AssertionError(f"Shot {shot_id} column {data_column} failed for arrays:\n{difference_df}")
+    else:
+        failed = False
+    
+    anomaly_ratio = {
+        'failed': failed,
+        'shot': shot_id,
+        'data_column': data_column,
+        'anomalies': len(anomalies), 
+        'timebase_length': len(relative_difference),
+        'failure_percentage' : f"{len(anomalies) / len(relative_difference*100):.2f}",
+    }
+    return anomaly_ratio
+
+def get_failure_statistics_string(anomaly_ratios, verbose_output, data_column=None):
+    anomaly_ratio_by_column = {}
+    for anomaly_ratio in anomaly_ratios:
+        anomaly_ratio_by_column.setdefault(anomaly_ratio['data_column'], []).append(anomaly_ratio)
+    
+    failure_strings = {}
+    for ratio_data_column, column_anomaly_ratios in anomaly_ratio_by_column.items():
+        failures = [anomaly_ratio['shot'] for anomaly_ratio in column_anomaly_ratios if anomaly_ratio['failed']]
+        failed = len(failures) > 0
+        if not verbose_output and not failed:
+            continue
+        successes = [anomaly_ratio['shot'] for anomaly_ratio in column_anomaly_ratios if not anomaly_ratio['failed']]
+        anomaly_count = sum([anomaly_ratio['anomalies'] for anomaly_ratio in column_anomaly_ratios])
+        timebase_count = sum([anomaly_ratio['timebase_length'] for anomaly_ratio in column_anomaly_ratios])
+        failure_strings[ratio_data_column] = f"""
+        Column {ratio_data_column} {"FAILED" if failed else "SUCCEEDED"} for shot {anomaly_ratio['shot']}
+        Failed for {len(failures)} shots: {failures}
+        Succeeded for {len(successes)} shots: {successes}
+        Total Entry Failure Rate: {anomaly_count / timebase_count * 100:.2f}%
+        """
+    
+    if data_column is not None:
+        return failure_strings.get(data_column, "")
+    else:
+        return '\n'.join(failure_strings.values())
+    
+
 # Other tests for MDSplus
 # TODO: Refactor these tests
 

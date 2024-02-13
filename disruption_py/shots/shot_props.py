@@ -3,7 +3,7 @@ from typing import Dict, Any
 import pandas as pd
 import numpy as np
 from dataclasses import dataclass, field
-from disruption_py.mdsplus_integration.tree_manager import TreeManager
+from disruption_py.mdsplus_integration.mds_connection import MDSConnection
 from disruption_py.utils.mappings.tokamak import Tokamak
 
 
@@ -14,7 +14,7 @@ class ShotProps:
     shot_id : int
     tokamak : Tokamak
     disruption_time : float
-    tree_manager : TreeManager
+    mds_conn : MDSConnection
     times : np.ndarray
     existing_data : pd.DataFrame # existing data passed to shot class
     pre_filled_shot_data : pd.DataFrame # existing data after changed to times domain
@@ -28,7 +28,7 @@ class ShotProps:
         return self.disruption_time is not None
     
     def cleanup(self):
-        self.tree_manager.cleanup()
+        self.mds_conn.close_all_trees()
         self.times = None
         self._cached_results.clear()
         

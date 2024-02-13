@@ -11,8 +11,7 @@ cmod_handler = CModHandler()
 
 class PRadTime(SetTimesRequest): 
     def _get_times(self, params : SetTimesRequestParams):
-        spec_tree = params.tree_manager.open_tree(tree_name='spectroscopy')
-        time_array = spec_tree.getNode(r"\twopi_diode").getData().dim_of(0).data()
+        time_array, = params.mds_conn.get_dims(r"\twopi_diode", tree_name='spectroscopy')
         time_array = time_array[time_array > 0]
         return time_array
 

@@ -85,12 +85,21 @@ class MultiprocessingShotRetriever:
     def _result_processor(self):
         while True:
             shot_id, result = self.result_queue.get()
+            self.logger.info(f"Processing result for shot: {shot_id}")
             if result is MARK_COMPLETE:
                 break
             elif result is None:
                 self.logger.warning(f"Not outputting data for shot {shot_id}, data is None.")
                 continue
-            self.output_type_request.output_shot(ResultOutputTypeRequestParams(result, self.database, self.tokamak, self.logger))
+            self.output_type_request.output_shot(
+                ResultOutputTypeRequestParams(
+                    shot_id=shot_id,
+                    result=result, 
+                    database=self.database, 
+                    tokamak=self.tokamak, 
+                    logger=self.logger,
+                )
+            )
 
     def run(self, shot_creator_f, shot_ids_list, await_complete=True):
         
@@ -117,5 +126,5 @@ class MultiprocessingShotRetriever:
         self.task_queue.join()
         
         # Signal the result processing thread to stop once completed processing and wait for it to finish
-        self.result_queue.put(MARK_COMPLETE)
+        self.result_queue.put((None, MARK_COMPLETE))
         self.result_thread.join()

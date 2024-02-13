@@ -35,15 +35,11 @@ from disruption_py.shots.helpers.method_caching import parameter_cached_method
 class KappaAreaRequest(ShotDataRequest):
     
     @staticmethod
-    @parameter_cached_method(columns=["kappa_area"], used_trees=["efit_tree"], tokamak=Tokamak.CMOD)
+    @parameter_cached_method(columns=["kappa_area"], used_trees=["_efit_tree"], tokamak=Tokamak.CMOD)
     def _get_kappa_area(params : ShotDataRequestParams):
-        efit_tree = params.shot_props.tree_manager.tree_from_nickname("efit_tree")
-        aminor = efit_tree.getNode(
-            r'\efit_aeqdsk:aminor').getData().data().astype('float64', copy=False)
-        area = efit_tree.getNode(
-            r'\efit_aeqdsk:area').getData().data().astype('float64', copy=False)
-        times = efit_tree.getNode(
-            r'\efit_aeqdsk:time').getData().data().astype('float64', copy=False)
+        aminor = params.shot_props.mds_conn.get(r'\efit_aeqdsk:aminor', tree_name="_efit_tree").data().astype('float64', copy=False)
+        area = params.shot_props.mds_conn.get(r'\efit_aeqdsk:area', tree_name="_efit_tree").data().astype('float64', copy=False)
+        times = params.shot_props.mds_conn.get(r'\efit_aeqdsk:time', tree_name="_efit_tree").data().astype('float64', copy=False)
 
         aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
         # make sure area is not 0 or less than 0

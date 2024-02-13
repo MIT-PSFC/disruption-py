@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import logging
 from disruption_py.databases.database import ShotDatabase
-from disruption_py.mdsplus_integration.tree_manager import TreeManager, EnvModifications
+from disruption_py.mdsplus_integration.mds_connection import MDSConnection, ProcessMDSConnection
 from disruption_py.settings.enum_options import InterpolationMethod, SignalDomain
 from disruption_py.settings.existing_data_request import ExistingDataRequestParams
 from disruption_py.settings.set_times_request import SetTimesRequest, SetTimesRequestParams
@@ -21,9 +21,9 @@ from disruption_py.utils.utils import without_duplicates
 class ShotManager(ABC):
     logger = logging.getLogger('disruption_py')
     
-    def __init__(self, database : ShotDatabase, mds_connection_manager):
-        self.database = database
-        self.mds_connection_manager = mds_connection_manager
+    def __init__(self, process_database : ShotDatabase, process_mds_conn : ProcessMDSConnection):
+        self.process_database = process_database
+        self.process_mds_conn = process_mds_conn
         
     @classmethod
     @abstractmethod
@@ -38,17 +38,14 @@ class ShotManager(ABC):
     def shot_setup(
         self,
         shot_id : int,
-        tree_manager : TreeManager,
+        mds_conn : MDSConnection,
         disruption_time : float,
-        tree_nicknames : Dict[str, Tuple[List[str], List[EnvModifications]]],
         shot_settings : ShotSettings,
         tokamak: Tokamak,
         **kwargs
     ) -> ShotProps:
         
-        
-        self._init_nicknames(tree_manager, tree_nicknames)
-        
+                
         existing_data = self._retrieve_existing_data(
             shot_id=shot_id,
             tokamak=tokamak,
@@ -60,7 +57,7 @@ class ShotManager(ABC):
         times = self._init_times(
             shot_id=shot_id, 
             existing_data=existing_data, 
-            tree_manager=tree_manager, 
+            mds_conn=mds_conn, 
             tokamak=tokamak, 
             disruption_time=disruption_time,
             shot_settings=shot_settings
@@ -84,7 +81,7 @@ class ShotManager(ABC):
             shot_id=shot_id,
             tokamak=tokamak,
             disruption_time = disruption_time,
-            tree_manager = tree_manager,
+            mds_conn = mds_conn,
             times = times,
             existing_data = existing_data,
             pre_filled_shot_data = pre_filled_shot_data,
@@ -101,41 +98,34 @@ class ShotManager(ABC):
         
         return shot_props
     
-    @classmethod
-    def shot_data_retrieval(cls, shot_props : ShotProps, shot_settings : ShotSettings):
-        shot_data_request_params = ShotDataRequestParams(shot_props=shot_props, logger=cls.logger, tokamak=shot_props.tokamak)
+    def shot_data_retrieval(self, shot_props : ShotProps, shot_settings : ShotSettings):
+        shot_data_request_params = ShotDataRequestParams(
+            mds_conn=shot_props.mds_conn, 
+            shot_props=shot_props,
+            logger=self.logger, 
+            tokamak=shot_props.tokamak
+        )
         return populate_shot(shot_settings=shot_settings, params=shot_data_request_params)
     
     @classmethod
     def shot_cleanup(cls, shot_props : ShotProps,):
         shot_props.cleanup()
     
-    @classmethod
     def _modify_shot_props_for_settings(
-        cls, 
+        self, 
         shot_props : ShotProps,
         shot_settings : ShotSettings,
         **kwargs
     ) -> ShotProps:
         if shot_settings.signal_domain is SignalDomain.FLATTOP:
-            shot_props = cls._modify_times_flattop_timebase(shot_props)
+            shot_props = self._modify_times_flattop_timebase(shot_props)
         elif shot_settings.signal_domain is SignalDomain.RAMP_UP_AND_FLATTOP:
-            shot_props = cls._modify_times_rampup_and_flattop_timebase(shot_props)
+            shot_props = self._modify_times_rampup_and_flattop_timebase(shot_props)
         
         if shot_props is None:
-            cls.logger.error(f"Shot_props set to None in modify_shot_props()")
+            self.logger.error(f"Shot_props set to None in modify_shot_props()")
         
         return shot_props
-    
-    @classmethod
-    def _init_nicknames(
-        cls, 
-        tree_manager : TreeManager, 
-        tree_nicknames : Dict[str, Tuple[List[str], List[EnvModifications]]],
-    ):
-        for nickname, (tree_names, env_modifications) in tree_nicknames.items():
-            efit_names_to_test = without_duplicates(tree_names)
-            tree_manager.nickname(nickname, efit_names_to_test, env_modifications)
             
     def _retrieve_existing_data(
         self,
@@ -146,7 +136,7 @@ class ShotManager(ABC):
         if shot_settings.existing_data_request is not None:
             existing_data_request_params = ExistingDataRequestParams(
                 shot_id=shot_id,
-                database=self.database,
+                database=self.process_database,
                 tokamak=tokamak, 
                 logger=self.logger,
             )
@@ -161,7 +151,7 @@ class ShotManager(ABC):
         self,
         shot_id : int,
         existing_data : pd.DataFrame, 
-        tree_manager : TreeManager,
+        mds_conn : MDSConnection,
         tokamak : Tokamak,
         disruption_time : float,
         shot_settings : ShotSettings,
@@ -171,9 +161,9 @@ class ShotManager(ABC):
         """
         request_params = SetTimesRequestParams(
             shot_id=shot_id, 
-            tree_manager=tree_manager, 
+            mds_conn=mds_conn, 
             existing_data=existing_data,
-            database=self.database, 
+            database=self.process_database, 
             disruption_time=disruption_time, 
             tokamak=tokamak, 
             logger=self.logger,
