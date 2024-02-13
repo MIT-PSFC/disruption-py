@@ -12,6 +12,7 @@ from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.databases import CModDatabase
 import pandas as pd
 import logging
+import json
 
 from disruption_py.utils.utils import without_duplicates
 
@@ -189,7 +190,9 @@ class CModHandler:
                             logger = self.logger
                         )
                     )
-            
+                with open(f'nodes_{shot_id}.log', 'w') as f:
+                    for term in cmod_shot_manager.process_mds_conn.conn.get_saved_expressions():
+                        f.write(f'{str(term)}\n')
         finish_output_type_request_params = FinishOutputTypeRequestParams(tokamak=Tokamak.CMOD, logger=self.logger)    
         results = output_type_request.get_results(finish_output_type_request_params)
         output_type_request.stream_output_cleanup(finish_output_type_request_params)
