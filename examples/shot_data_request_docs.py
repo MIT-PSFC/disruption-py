@@ -14,7 +14,7 @@ def decorated_shot_data_method(self, params : ShotDataRequestParams) -> pd.DataF
 
     Parameters
     ----------
-    shot_data_request_params : ShotDataRequest
+    params : ShotDataRequest
         Parameters passed by disruption_py to the decorated method that should be used to help retrieve the shot data from MDSplus.
 
     Returns

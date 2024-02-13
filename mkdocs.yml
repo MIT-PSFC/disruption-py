@@ -27,7 +27,9 @@ nav:
     - Installation: quickstart/installation_quickstart.md
     - Quickstart: quickstart/usage_quickstart.md
   - Usage:
-      - Handlers: usage/handlers_reference.md
+      - Entry points:
+        - Handlers: usage/handlers_reference.md
+        - Command Line: usage/command_line.md
       - Settings: 
         - Settings Classes: usage/settings_reference.md
         - Requests Classes:
@@ -37,11 +39,12 @@ nav:
           - Output Type Request: usage/requests/output_type_request_reference.md
           - Shot Data Request: usage/requests/shot_data_request_reference.md
       - Shots:
-        - Parameter Methods: usage/shots/parameter_method_reference.md
-        - Parameter Method Decorators: usage/shots/decorator_reference.md
-        - CMod Built-in Methods: usage/shots/cmod_method_reference.md
+        - Parameter Methods: 
+          - Overview: usage/shots/parameter_method_reference.md
+          - Built-in Methods: usage/shots/built_in_method_reference.md
+          - Parameter Method Decorators: usage/shots/decorator_reference.md
+        - Parameter Reference: usage/shots/disruption_parameters_reference.md
       - SQL Database: usage/sql_database.md
-      - Command Line: usage/command_line.md
   - FAQ: faq.md
   - GitHub: https://github.com/MIT-PSFC/disruption-py
 
