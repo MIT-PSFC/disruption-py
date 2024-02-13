@@ -16,3 +16,4 @@ scripts/*.txt
 .venv
 site/
 .idea
+.nfs*
