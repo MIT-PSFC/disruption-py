@@ -73,7 +73,7 @@ def mdsplus_data(cmod_handler : CModHandler, shotlist) -> Dict:
         log_settings=LogSettings(
             log_to_console=False,
             log_file_path="test/last_log.log",
-            log_file_write_mode="a",
+            log_file_write_mode="w",
             file_log_level=logging.DEBUG
         )
     )
@@ -104,8 +104,7 @@ def test_data_columns(shotlist, mdsplus_data : Dict, sql_data : Dict, data_colum
         mdsplus_shot_data, sql_shot_data = mdsplus_data[shot_id], sql_data[shot_id]
         
         if data_column not in mdsplus_shot_data:
-            print(f"Column {data_column} missing from MDSPlus for shot {shot_id}")
-            continue
+            raise ValueError(f"Column {data_column} missing from MDSPlus for shot {shot_id}")
         
         if data_column not in sql_shot_data:
             print(f"Column {data_column} missing from SQL for shot {shot_id}")
@@ -122,7 +121,7 @@ def test_data_columns(shotlist, mdsplus_data : Dict, sql_data : Dict, data_colum
         anomaly_ratios.append(anomaly_ratio)
     
     if any(anomaly_ratio['failed'] for anomaly_ratio in anomaly_ratios):
-        raise AssertionError(get_failure_statistics_string(anomaly_ratios, verbose_output, data_column=data_column))
+        raise ValueError(get_failure_statistics_string(anomaly_ratios, verbose_output, data_column=data_column))
     
 def test_other_values(shotlist, mdsplus_data : Dict, sql_data : Dict, verbose_output, fail_slow):
     """

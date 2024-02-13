@@ -34,11 +34,10 @@ def pytest_addoption(parser):
     parser.addoption("--verbose_output", action="store_true", help="More testing information.")
     parser.addoption("--fail_slow", action="store_true", help="Finish test and report statistics instead of failing fast.")
 
-def pytest_generate_tests(metafunc):
-    verbose_output = metafunc.config.option.verbose
-    if 'verbose_output' in metafunc.fixturenames and verbose_output is not None:
-        metafunc.parametrize("verbose_output", [verbose_output])
+@pytest.fixture(scope="session")
+def verbose_output(pytestconfig):
+    return pytestconfig.getoption("verbose_output")
 
-    fail_slow = metafunc.config.option.fail_slow
-    if 'fail_slow' in metafunc.fixturenames and fail_slow is not None:
-        metafunc.parametrize("fail_slow", [fail_slow])
+@pytest.fixture(scope="session")
+def fail_slow(pytestconfig):
+    return pytestconfig.getoption("fail_slow")
