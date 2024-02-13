@@ -41,6 +41,7 @@ nav:
         - Parameter Method Decorators: usage/shots/decorator_reference.md
         - CMod Built-in Methods: usage/shots/cmod_method_reference.md
       - Command Line: usage/command_line.md
+  - FAQ: faq.md
   - GitHub: https://github.com/MIT-PSFC/disruption-py
 
 markdown_extensions:

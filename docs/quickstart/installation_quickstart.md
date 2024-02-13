@@ -86,7 +86,7 @@ git switch develop
 ## Troubleshooting
 
 ### Trouble accessing GitHub
-If you are unable to access the GitHub repository you can manually install the package.
+If you are unable to access the GitHub repository you can manually install the package. Note that you may be installing an older version of DisruptionPy.
 
 #### On CMod
 You can do this by running:

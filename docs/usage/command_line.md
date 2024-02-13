@@ -1,4 +1,7 @@
 
+DisruptionPy offers a number of built-in scripts through its CLI to make the process of retrieving data from MDSplus easier.
+To use the CLI, simply run `disruption_py **command**` from the command line (prepend `poetry run` to the command if you are inside of an environment managed by poetry).
+
 ## `disruption_py setup` { .doc .doc-heading }
 ::: disruption_py.cli.setup_script.setup_cmod
     handler: python
@@ -9,6 +12,15 @@
 		show_signature: false
         filters: ["!^_[^_]"]
 
+## `disruption_py evaluate` { .doc .doc-heading }
+
+The `disruption_py evaluate` command evaluates the accuracy of parameter methods in DisruptionPy. It runs all parameter methods with the all tag that are included in `disruption_py` by comparing values retrieved from MDSplus using DisruptionPy to ground truth values.
+
+When complete, the command prints a short report on the methods that have suceeded and failed. Success criteria is having more that 95% of results within 1% of the ground truth. 
+
+!!! note
+
+	For some tokamaks, ground truth values were generated using MatLab. As MATLAB, uses different numeric gradient methods than numpy there will always be numeric differences between generated data and ground truth data. For this command, the numpy method `np.gradient` is replaced with the equivelant method from MATLAB to provide more insightful results.
 
 ## `disruption_py run generate_datasets` { .doc .doc-heading }
 The `disruption_py run generate_datasets` command provides a basic interface for using `disruption_py` from the command line.
@@ -33,7 +45,7 @@ disruption_py run generate_datasets \
 
 !!! note
 
-	You can also run the generate datasets command from the `scripts/generate_datasets.py` script. For example,
+	You can also run the generate datasets command from the `scripts/generate_datasets.py` script if you have cloned DisruptionPy. For example,
 	Run `python scripts/generate_datasets.py ***arguments**`
 
 ### Argument List
