@@ -16,7 +16,6 @@ def parameter_cached_method(
     contained_cached_methods=None, 
     cache_between_threads=True, 
     tokamak=None, 
-    **kwargs
 ):
     """Decorates a function as a parameter method. 
     
@@ -62,7 +61,12 @@ def parameter_cached_method(
     """
     # TODO: Figure out how to hash _times so that we can use the cache for different timebases
     def tag_wrapper(func):
-        wrapper = cached_method(**kwargs)(func)
+        wrapper = cached_method(
+            used_trees=used_trees, 
+            contained_cached_methods=contained_cached_methods, 
+            cache_between_threads=cache_between_threads, 
+            tokamak=tokamak,
+        )(func)
         wrapper.cached_method_params = ParameterCachedMethodParams.from_cached_method_params(wrapper.cached_method_params, columns, tags)
         
         return wrapper
