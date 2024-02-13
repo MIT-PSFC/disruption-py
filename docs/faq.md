@@ -44,4 +44,4 @@ You may have a corrupted shot inside of your request. Please try to remove the s
 
 
 ### Why does DisruptionPy continue to log `Processing result for shot: ***shot id***` after having retrieved all data? { .doc .doc-heading }
-This is likeley a result of 
+This is likeley a result of you `output_type_request` being slow. You should try to use a different `output_type_request` or batch the output of your current request.
