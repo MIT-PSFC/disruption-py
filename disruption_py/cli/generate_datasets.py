@@ -28,10 +28,11 @@ def main(args):
         log_settings=log_settigs, 
         efit_tree_name=args.efit_tree,
         set_times_request=args.timebase_signal,
-        run_methods=args.populate_methods,
-        run_tags=args.populate_tags,
+        run_methods=args.run_methods,
+        run_tags=args.run_tags,
         run_columns=feature_cols,
         only_requested_columns=args.only_requested_columns,
+        existing_data_request="sql" if args.data_source == 0 else None
     )
     
     if args.tokamak is None:
@@ -93,21 +94,20 @@ def get_parser():
     parser.add_argument('--shotlist', type=str,
                         help='Path to file specifying shotlist', default=None)
     parser.add_argument('--tokamak', type=str,
-                        help='Tokamak to use for data source. Currently only supports DIII-D and Alcator C-Mod ("cmod" for cmod, "d3d" for d3d).', default=None)
+                        help='Tokamak to use for data source. Currently only supports Alcator C-Mod ("cmod" for cmod).', default=None)
     parser.add_argument('--num_processes', type=int,
                         help='The numberof processes to use for data retrieval.', default=1)
     parser.add_argument(
         '--only_requested_columns', type=bool, help="Whether to only create a datset with the requested columns", default=False)
     parser.add_argument('--feature_cols', type=str,
-                        help='Either a file or comma-separated list of desired feature columns', default=None)
+                        help='Either a file or comma-separated list of desired feature columns. Similar to run columns in `ShotSettings`', default=None)
     parser.add_argument('--output_dir', type=str,
                         help='Path to generated data.', default=r'./output/')
     parser.add_argument('--timebase_signal', type=str,
                         help='Signal whose timebase will be used as the unifying timebase of the dataset.', default="efit")
     parser.add_argument('--efit_tree', type=str,
-                        help="Name of efit tree to use for each shot. If left as None, the script will use the get_efit_tree method in database.py.", default="analysis")
-    parser.add_argument('--data_source', type=int, choices=[
-                        0, 1, 2, 3], help=r"0: Default to SQL database then MDSPlus.\n1: Default to MDSPlus then SQL database.\n2: SQL database only.\n3: MDSPlus only.", default=2)
+                        help="Name of efit tree to use for each shot.", default="analysis")
+    parser.add_argument('--data_source', type=int, choices=[0, 1], help=r"0: Default to SQL database then MDSPlus.\n1: MDSPlus only.", default=1)
     parser.add_argument('--unique_id', type=str,
                         help='Unique identifier for the dataset. Used to name the output files.', default=generate_id())
     parser.add_argument(
@@ -117,8 +117,8 @@ def get_parser():
     parser.add_argument('--label', type=str, choices=[
                         'binary', 'none'], help="Timestep disruption label. Currently only supports binary labels", default='binary')
     # Two argparse arguments. populate_methods which is a list of strings but defaults to None and populate_tags which is a list of strings that also defaults to None
-    parser.add_argument('--populate_methods', nargs='*', type=str, default=None)
-    parser.add_argument('--populate_tags', nargs='*', type=str, default=None) 
+    parser.add_argument('--run_methods', nargs='*', type=str, default=None)
+    parser.add_argument('--run_tags', nargs='*', type=str, default=None) 
     parser.add_argument(
         '--filter', type=bool, help="Run filter_dataset method on produced dataset. Necessary for generating DPRF datasets", default=True)
     parser.add_argument(
