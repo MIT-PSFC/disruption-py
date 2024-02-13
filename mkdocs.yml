@@ -40,6 +40,7 @@ nav:
       - Shots:
         - Parameter Methods: api/shots/parameter_method_reference.md
         - Parameter Method Decorators: api/shots/decorator_reference.md
+        - CMod Built-in Methods: api/shots/cmod_method_reference.md
       - Scripts:
           - Generate Datasets: api/scripts/generate_datasets.md
           - Profiling: api/scripts/profile_shots.md
