@@ -28,7 +28,7 @@ def decorated_shot_data_method(self, params : ShotDataRequestParams) -> pd.DataF
 
 # Paramater cached method example
 # --8<-- [start:kappa_area_request_example]
-from disruption_py.settings.shot_data_request import ShotDataRequestParams
+from disruption_py.settings import ShotDataRequestParams
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.shots.helpers.method_caching import parameter_cached_method
 

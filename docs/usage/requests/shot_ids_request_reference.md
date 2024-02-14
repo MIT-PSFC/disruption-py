@@ -8,7 +8,7 @@ It also provides built_in classes and mappings to easily define shot ids for com
 ### Usage { .doc .doc-heading }
 Currently, these are the options that can be passed as the `shot_ids_request` argument to `get_shots_data`:
 
-- An isntance of a subclass of `ShotIdsRequest`
+- An instance of a subclass of `ShotIdsRequest`
 - A single shot id as an `int` or `str`
 - A python list of shot ids as any combination of `int` or `str`
 - A dictionary key as a string from the built-in mappings to data files in the `_get_shot_ids_request_mappings` dictionary: 
