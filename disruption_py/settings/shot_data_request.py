@@ -15,7 +15,7 @@ class ShotDataRequestParams:
     Attributes
     ----------
     mds_conn : ShotConnection
-        The shot connection object containing the connection to MDSPlus.
+        The shot connection object containing the connection to MDSPlus. The same as shot_props.mds_conn.
     shot_props : ShotProps
 		A reference to the shot props object containing the setup information, such as the shot id, 
         timebase, and disruption time, for the shot data retrieval from MDSPlus.

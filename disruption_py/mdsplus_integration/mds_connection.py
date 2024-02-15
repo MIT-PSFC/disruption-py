@@ -1,21 +1,26 @@
 import logging
-from typing import Callable, Dict, List
+from typing import Any, Callable, Dict, List, Tuple
 import MDSplus as mds
 
 class ProcessMDSConnection():
     """
     Abstract class for connecting to MDSplus.
     
-    Remove need to import mdsplus in handlers.
+    Ensure that a single MDSPlus connection is used by each process for all shots retrieved by that process.
     """
     
     def __init__(self, conn_string : str):
         self.conn = mds.Connection(conn_string)
     
     def get_shot_connection(self, shot_id : int):
+        """ Get MDSPlus Connection wrapper for individual shot. """
         return MDSConnection(self.conn, shot_id)
     
 class MDSConnection:
+    """ 
+    Wrapper class for MDSPlus Connection class used for handling individual shots. 
+    """
+    
     logger = logging.getLogger('disruption_py')
     
     def __init__(self, conn : mds.Connection, shot_id : int):
@@ -28,7 +33,10 @@ class MDSConnection:
     
     def open_tree(self, tree_name : str):
         """
-        Open the specified tree
+        Open the specified _name.
+        
+        If the specified tree_name is nickname for a tree_name, will open the tree
+        that it is a nickname for.
         """
         if tree_name not in self.tree_nicknames and tree_name in self.tree_nickname_funcs:
             self.tree_nicknames[tree_name] = self.tree_nickname_funcs[tree_name]()
@@ -44,7 +52,7 @@ class MDSConnection:
     
     def close_tree(self, tree_name : str):
         """
-        Close the specified tree
+        Close the specified tree_name.
         """
         if tree_name in self.tree_nicknames:
             tree_name = self.tree_nicknames[tree_name]
@@ -70,18 +78,24 @@ class MDSConnection:
         self.open_trees.clear()
         # self.conn.closeAllTrees()
         
-    def set_default(self, path : str):
-        """
-        Set the default position in the currently open tree
-        """
-        self.conn.setDefault(path)
-        
-    def get(self, expression : str, arguments = None, tree_name : str = None):
-        """
-        Eevaluate the specified expression
+    def get(self, expression : str, arguments : Any = None, tree_name : str = None) -> Any:
+        """Evaluate the specified expression.
         
         The expression is passed as string argument, but may contain optional arguments. 
         These arguments are then passed as an array of Data objects.
+
+        Parameters
+        ----------
+        expression : str
+            MDSplus TDI expression. Please see MDSplus documentation for more information.
+        arguments : Any, optional
+            Arguments for MDSplus TDI Expression. Please see MDSplus documentation for more information. Default None.
+        tree_name : str, optional
+
+        Returns
+        -------
+        Any
+            Result of evaluating TDI expression from MDSplus.
         """
         if tree_name is not None:
             self.open_tree(tree_name)
@@ -89,7 +103,23 @@ class MDSConnection:
     
     # Added Methods
     
-    def get_record_data(self, path : str, tree_name : str = None, dim_nums : List = None):
+    def get_record_data(self, path : str, tree_name : str = None, dim_nums : List = None) -> Tuple:
+        """Get data and dimension for record at specified path
+
+        Parameters
+        ----------
+        path : str
+            MDSplus path to record.
+        tree_name : str, optional
+            The name of the tree that must be open for retrieval.
+        dim_nums : List, optional
+            A list of dimensions that should have their size retrieved. Default [0].
+            
+        Returns
+        -------
+        Tuple
+            Returns the node data, followed by the requested dimensions
+        """
         dim_nums = dim_nums or [0]
         
         if tree_name is not None:
@@ -99,7 +129,22 @@ class MDSConnection:
         return data, *dims
     
     
-    def get_dims(self, path : str, tree_name : str = None, dim_nums : List = None):
+    def get_dims(self, path : str, tree_name : str = None, dim_nums : List = None) -> Tuple:
+        """Get the size of specified dimensions for record at specified path
+        Parameters
+        ----------
+        path : str
+            MDSplus path to record.
+        tree_name : str, optional
+            The name of the tree that must be open for retrieval.
+        dim_nums : List, optional
+            A list of dimensions that should have their size retrieved. Default [0].
+
+        Returns
+        -------
+        Tuple
+            Returns the requested dimensions as a tuple.
+        """
         dim_nums = dim_nums or [0]
 
         if tree_name is not None:
