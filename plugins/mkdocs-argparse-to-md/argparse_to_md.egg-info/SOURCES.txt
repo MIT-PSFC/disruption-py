@@ -1,9 +1,0 @@
-setup.py
-argparse_to_md.egg-info/PKG-INFO
-argparse_to_md.egg-info/SOURCES.txt
-argparse_to_md.egg-info/dependency_links.txt
-argparse_to_md.egg-info/entry_points.txt
-argparse_to_md.egg-info/requires.txt
-argparse_to_md.egg-info/top_level.txt
-src/__init__.py
-src/plugin.py

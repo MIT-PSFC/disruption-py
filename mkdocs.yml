@@ -1,20 +1,109 @@
 site_name: My Docs
 theme:
   name: "material"
-  # features:
-  #   - navigation.instant
-  #   - navigation.tabs
-  #   - navigation.expand
+  features:
+    - announce.dismiss
+    - content.action.edit
+    - content.action.view
+    - content.code.annotate
+    - content.code.copy
+    - content.tooltips
+    - navigation.footer
+    - navigation.indexes
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - toc.follow
+    # features:
+    #   - navigation.instant
+    #   - navigation.tabs
+    #   - navigation.expand
 nav:
-  - Home: index.md
-  - Installation: installation.md
-  - Contributing: contributing.md
-  - API Reference:
-      - Shots: shots-reference.md
-      - Scripts:
-          - Generate Datasets: scripts/generate_datasets.md
-          - Profiling: scripts/profile_shots.md
+  - Overview: 
+    - Background: index.md
+    - Installation: installation.md
+    - Quickstart: quickstart/usage_quickstart.md
+  - Usage:
+      - Entry points:
+        - Handlers: usage/handlers_reference.md
+        - Command Line: usage/command_line.md
+      - Settings: 
+        - Settings Classes: usage/settings_reference.md
+        - Requests Classes:
+          - Existing Data Request: usage/requests/existing_data_request_reference.md
+          - Shot Ids Request: usage/requests/shot_ids_request_reference.md
+          - Set Times Request: usage/requests/set_times_request_reference.md
+          - Output Type Request: usage/requests/output_type_request_reference.md
+          - Shot Data Request: usage/requests/shot_data_request_reference.md
+      - Shots:
+        - Parameter Methods: 
+          - Overview: usage/shots/parameter_method_reference.md
+          - Built-in Methods: usage/shots/built_in_method_reference.md
+          - Parameter Method Decorators: usage/shots/decorator_reference.md
+        - Parameter Reference: usage/shots/disruption_parameters_reference.md
+      - SQL Database: usage/sql_database.md
+      - MDSplus Connection: usage/mds_connection_reference.md
+  - FAQ: faq.md
+  - GitHub: https://github.com/MIT-PSFC/disruption-py
+
+markdown_extensions:
+- attr_list
+- admonition
+- footnotes
+- pymdownx.details
+- pymdownx.emoji:
+    emoji_index: !!python/name:material.extensions.emoji.twemoji
+    emoji_generator: !!python/name:material.extensions.emoji.to_svg
+- pymdownx.magiclink
+- pymdownx.snippets:
+    base_path: [""]
+    dedent_subsections: true
+    check_paths: true
+- pymdownx.superfences
+- pymdownx.tabbed:
+    alternate_style: true
+    slugify: !!python/object/apply:pymdownx.slugs.slugify
+      kwds:
+        case: lower
+- pymdownx.tasklist:
+    custom_checkbox: true
+- pymdownx.tilde
+- toc:
+    permalink: "¤"
+
 plugins:
   - search
-  - mkdocstrings
+  - autorefs
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            # https://mkdocstrings.github.io/python/usage/configuration/
+            docstring_style: numpy
+            docstring_section_style: spacy
+            show_source: true
+            show_signature_annotations: true
+            docstring_options:
+              ignore_init_summary: true
+            inherited_members: false
+            merge_init_into_class: false
+            separate_signature: true
+            # members_order: source
+            filters: []
+
+            #  Heading options
+            heading_level: 3
+            show_root_heading: true
+            show_root_full_path: true
+            show_root_members_full_path: false
+            show_object_full_path: false
+
+            # Premium options (not able to use)
+            # show_symbol_type_heading: true # super useful
+            # show_symbol_type_toc: true # super useful
+            # summary: true # super useful
 #  - argparse_to_md

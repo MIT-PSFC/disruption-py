@@ -1,6 +1,8 @@
 data/*
 *.pyc
 *.csv
+*.hdf5
+*.h5
 *~
 *.egg-info/*
 .vscode/*
@@ -12,3 +14,6 @@ shot_*profileX*
 scripts/output/*
 scripts/*.txt
 .venv
+site/
+.idea
+.nfs*
