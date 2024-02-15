@@ -1,4 +1,3 @@
-## Installation  
 
 ### Pre-requirements
 In order to access the specific clusters, i.e. Alcator C-Mod or DIII-D, a user agreement must first be signed. A local host must be identified, Cristina Rea (<crea@psfc.mit.edu>) will assist with the logistics.
