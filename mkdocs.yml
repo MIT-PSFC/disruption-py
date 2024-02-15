@@ -45,6 +45,7 @@ nav:
           - Parameter Method Decorators: usage/shots/decorator_reference.md
         - Parameter Reference: usage/shots/disruption_parameters_reference.md
       - SQL Database: usage/sql_database.md
+      - MDSplus Connection: usage/mds_connection_reference.md
   - FAQ: faq.md
   - GitHub: https://github.com/MIT-PSFC/disruption-py
 
