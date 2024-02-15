@@ -85,6 +85,12 @@ git switch develop
 
 ## Troubleshooting
 
+### Issues with package versioning
+If the machine that you are working on has an outdated version of python, you may be unable to install.
+
+#### On CMod
+On the mfe workstations use mferws02 or mferws03
+
 ### Trouble accessing GitHub
 If you are unable to access the GitHub repository you can manually install the package. Note that you may be installing an older version of DisruptionPy.
 
@@ -96,5 +102,6 @@ pip install /home/joshlor/disruption-py
 
 ### Stuck on Poetry Install
 In terminal run one of:
+
 - `export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring`
 - `pyenv shell system` and then `python3 -m keyring --disable`

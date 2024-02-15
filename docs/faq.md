@@ -1,3 +1,10 @@
+## Installation { .doc .doc-heading }
+
+### Issues with package versioning { .doc .doc-heading }
+If the machine that you are working on has an outdated version of python, you may be unable to install.
+
+#### On CMod { .doc .doc-heading }
+On the mfe workstations use mferws02 or mferws03
 
 ### How can I use disruption_py if I don't have access to the GitHub Repository? { .doc .doc-heading }
 If you are unable to access the GitHub repository you can manually install the package. Note that you may be installing an older version of DisruptionPy.
@@ -10,6 +17,7 @@ pip install /home/joshlor/disruption-py
 
 ### Stuck on Poetry Install { .doc .doc-heading }
 In terminal run one of:
+
 - `export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring`
 - `pyenv shell system` and then `python3 -m keyring --disable`
 
@@ -36,7 +44,7 @@ ShotSettings(
 )
 ```
 
-### How can I get information on data accuracy?
+### How can I get information on data accuracy? { .doc .doc-heading }
 DisruptionPy provides the [`disruption_py run evaluate`][disruption_py-run-evaluate] command to provide insight on the current accuracy of DisruptionPy methods.
 
 ### Why does DisruptionPy log `%MDSPLUS-E-ERROR` for all shots after a certain shot number? { .doc .doc-heading }

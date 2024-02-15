@@ -24,7 +24,7 @@ theme:
 nav:
   - Overview: 
     - Background: index.md
-    - Installation: quickstart/installation_quickstart.md
+    - Installation: installation.md
     - Quickstart: quickstart/usage_quickstart.md
   - Usage:
       - Entry points:

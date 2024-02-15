@@ -47,14 +47,14 @@ In order to access the specific clusters, i.e. Alcator C-Mod or DIII-D, a user a
 	```bash
 	pip install git+ssh://git@github.com/MIT-PSFC/disruption-py.git@develop#egg=disruption_py
 	```
-	If you are unable to access the project on GitHub, please see [troubleshooting](https://mit-psfc.github.io/disruption-py/quickstart/installation_quickstart/#troubleshooting).
+	If you are unable to access the project on GitHub, please see [troubleshooting](https://mit-psfc.github.io/disruption-py/installation/#troubleshooting).
 
 4. Do other necessary setup tasks using the built-in helper script by running:
 	```bash
 	disruption_py setup
 	```
 
-For more information and alternate installation methods please see the [project site](https://mit-psfc.github.io/disruption-py/quickstart/installation_quickstart/).
+For more information and alternate installation methods please see the [project site](https://mit-psfc.github.io/disruption-py/installation/).
 
 ## Getting Started
 Please see the project [quickstart](https://mit-psfc.github.io/disruption-py/quickstart/usage_quickstart/).
