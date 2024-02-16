@@ -113,3 +113,7 @@ class CModShotManager(ShotManager):
         shot_props.times = shot_props.times[:end_index]
         shot_props._cached_results.clear() #TODO: Make this only modify the cached results for new times
         return shot_props
+    
+    @classmethod
+    def _modify_times_disruption_timebase(cls, shot_props : ShotProps, **kwargs) -> ShotProps:
+        raise NotImplementedError("Disruption timebase not implemented for CMod")

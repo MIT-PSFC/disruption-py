@@ -144,7 +144,7 @@ class D3DShotManager(ShotManager):
     
     @classmethod  
     def _modify_times_rampup_and_flattop_timebase(cls, shot_props : ShotProps, **kwargs):
-        raise NotImplementedError()
+        raise NotImplementedError("Rampup and flattop not implemented for D3D")
     
     @classmethod
     def _get_end_of_shot(cls, signal, signal_time, threshold=1.e5):
