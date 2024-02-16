@@ -1370,7 +1370,7 @@ def match_pressure(ne_TS, Te_TS, ne_SP, Te_SP, plot=False):
     
 #     # find ion grad(B)-drift direction (determined by B field dir, since radial grad(B) is always inwards )
 #     magTree = MDSplus.Tree('magnetics',shot)
-#     nodeBt = magTree.getNode('\magnetics::Bt')
+#     nodeBt = magTree.getNode(r'\magnetics::Bt')
 #     Bt = nodeBt.data()
 #     time_Bt = nodeBt.dim_of().data()
 #     tidx = np.argmin(np.abs(time_Bt - time)) 

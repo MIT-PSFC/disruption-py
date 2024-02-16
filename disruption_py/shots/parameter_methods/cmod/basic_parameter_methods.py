@@ -97,7 +97,7 @@ class CModEfitRequests(ShotDataRequest):
                 
         #Get data for V_surf := deriv(\ANALYSIS::EFIT_SSIBRY)*2*pi
         try:
-            ssibry = params.mds_conn.get('\efit_geqdsk:ssibry', tree_name="_efit_tree").data().astype('float64', copy=False)
+            ssibry = params.mds_conn.get(r'\efit_geqdsk:ssibry', tree_name="_efit_tree").data().astype('float64', copy=False)
             efit_data['V_surf'] = np.gradient(ssibry, efit_time)*2*np.pi
         except:
             print("unable to get V_surf")
@@ -112,7 +112,7 @@ class CModEfitRequests(ShotDataRequest):
             
             #Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally sure on this one)
             try: #TODO: confirm this
-                ssimag = params.mds_conn.get('\efit_geqdsk:ssimag', tree_name="_efit_tree").data().astype('float64', copy=False)
+                ssimag = params.mds_conn.get(r'\efit_geqdsk:ssimag', tree_name="_efit_tree").data().astype('float64', copy=False)
                 efit_data['v_loop_efit'] = np.gradient(ssimag, efit_time)*2*np.pi
             except:
                 print("unable to get v_loop_efit")
@@ -120,7 +120,7 @@ class CModEfitRequests(ShotDataRequest):
                 pass 
 
             #Compute beta_n
-            beta_t = params.mds_conn.get('\efit_aeqdsk:betat', tree_name="_efit_tree").data().astype('float64', copy=False)
+            beta_t = params.mds_conn.get(r'\efit_aeqdsk:betat', tree_name="_efit_tree").data().astype('float64', copy=False)
             efit_data['beta_n'] = np.reciprocal( np.reciprocal(beta_t) +  np.reciprocal(efit_data['beta_p']) )
 
         if not np.array_equal(params.shot_props.times, efit_time):
