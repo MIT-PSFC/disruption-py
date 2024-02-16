@@ -20,8 +20,10 @@ SQLAlchemy = "^2.0.23"
 tables = "^3.8.0"
 
 [tool.poetry.group.dev.dependencies]
+black = "^23.11.0"
+pylint = "^3.0.3"
 pytest = "^7.4.2"
-
+yamllint = "^1.35.1"
 
 [tool.poetry.group.docs]
 optional = true
