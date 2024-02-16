@@ -1,13 +1,15 @@
 import traceback
 import pandas as pd
 import numpy as np
-import netCDF4 as nc
-from MDSplus import MdsException
+try:
+    import netCDF4 as nc
+except ImportError:
+    pass  # TODO: Contact DIII-D about thisfrom MDSplus import MdsException
 import scipy
 from disruption_py.settings.shot_data_request import ShotDataRequest, ShotDataRequestParams
 from disruption_py.shots.helpers.method_caching import cached_method, parameter_cached_method
 from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.math_utils import efit_rz_interp, get_bolo, gsastd, interp1, power
+from disruption_py.utils.math_utils import get_bolo, gsastd, interp1, power
 
 
 class BasicD3DRequests(ShotDataRequest):
@@ -600,7 +602,7 @@ class BasicD3DRequests(ShotDataRequest):
         # Ts options
         ts_options = ['combined', 'core', 'tangential']
         # vertical range of the DIII-D cross section in meters
-        vert_range = 3
+        vert_range = 3.0
         te_pf = np.full(len(params.shot_props.times), np.nan)
         ne_pf = np.full(len(params.shot_props.times), np.nan)
         rad_cva = np.full(len(params.shot_props.times), np.nan)
@@ -631,7 +633,9 @@ class BasicD3DRequests(ShotDataRequest):
                 f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
             ts = 0
         try:
-            ts['psin'], ts['rhovn'] = efit_rz_interp(ts, efit_dict)
+            ts['psin'], ts['rhovn'] = BasicD3DRequests.efit_rz_interp(ts, efit_dict)
+            ts['rhovn'] = ts['rhovn'].T
+            ts['psin'] = ts['psin'].T
             params.logger.info(ts['rhovn'].shape)
         except Exception as e:
             params.logger.info(
@@ -649,11 +653,12 @@ class BasicD3DRequests(ShotDataRequest):
         if p_rad == 0 and ts == 0:
             params.logger.info(
                 f"[Shot {params.shot_props.shot_id}]:Both TS and bolometer data missing for shot")
+        
+        # if ts_equispaced:
         if ts != 0 and ts_radius in ts:
             # Drop data outside of valid range
             invalid_indices = np.where((ts[ts_radius] < ts_radial_range[0]) | (
                 ts[ts_radius] > ts_radial_range[1]))
-            print(ts['te'].shape)
             ts['te'][invalid_indices] = np.nan
             ts['ne'][invalid_indices] = np.nan
             ts['te'][np.isnan(ts[ts_radius])] = np.nan
@@ -667,15 +672,17 @@ class BasicD3DRequests(ShotDataRequest):
             te_core[~core_mask] = np.nan
             ne_core = ts['ne']
             ne_core[~core_mask] = np.nan
-            te_pf = np.nanmean(te_core, axis=1)/np.nanmean(ts['te'], axis=1)
-            ne_pf = np.nanmean(ne_core, axis=1)/np.nanmean(ts['ne'], axis=1)
+            te_pf = np.nanmean(te_core, axis=0)/np.nanmean(ts['te'], axis=0)
+            ne_pf = np.nanmean(ne_core, axis=0)/np.nanmean(ts['ne'], axis=0)
+            te_pf = interp1(ts['time'], te_pf, params.shot_props.times)
+            ne_pf = interp1(ts['time'], ne_pf, params.shot_props.times)
             # Calculate Prad CVA, X-DIV Peaking Factors
             # # Interpolate zmaxis and channel intersects x onto the bolometer timebase
             z_m_axis = interp1(efit_dict['time'],
-                               efit_dict['zmaxis'], ts['time'])
+                               efit_dict['zmaxis'], p_rad['t'])
             z_m_axis = np.repeat(
                 z_m_axis[:, np.newaxis], p_rad['x'].shape[1], axis=1)
-            p_rad['xinterp'] = interp1(p_rad['xtime'], p_rad['x'], p_rad['t'])
+            p_rad['xinterp'] = interp1(p_rad['xtime'], p_rad['x'], p_rad['t'], axis=0)
             # # Determine the bolometer channels falling in the 'core' bin
             core_indices = (p_rad['xinterp'] < z_m_axis + p_rad_core_def*vert_range) & (
                 p_rad['xinterp'] > z_m_axis - p_rad_core_def*vert_range)
@@ -683,20 +690,22 @@ class BasicD3DRequests(ShotDataRequest):
             div_indices = np.searchsorted(p_rad['ch_avail'], div_channels)
             other_indices = ~div_indices
             # # Grab p_rad measurements for each needed set of channels
-            p_rad_core = p_rad[p_rad_metric]
+            p_rad_core = np.array(p_rad[p_rad_metric]).T
             p_rad_all_but_core = p_rad_core.copy()
+            p_rad_div = p_rad_core.copy()
+            p_rad_all_but_div = p_rad_core.copy()
             # QUESTION: Why fill with nans for core but just keep valid indices for divertor
             p_rad_core[~core_indices] = np.nan
             p_rad_all_but_core[core_indices] = np.nan
-            p_rad_div = p_rad[p_rad_metric][div_indices, :]
-            p_rad_all_but_div = p_rad[p_rad_metric][other_indices, :]
+            p_rad_div = p_rad_div[:, div_indices]
+            p_rad_all_but_div = p_rad_all_but_div[:, other_indices]
             # # Calculate the peaking factors
-            rad_cva = np.nanmean(p_rad_core, axis=0) / \
-                np.nanmean(p_rad_all_but_div, axis=0)
-            rad_xdiv = np.nanmean(p_rad_div, axis=0) / \
-                np.nanmean(p_rad_all_but_core, axis=0)
-            rad_cva = interp1(p_rad['t'], rad_cva, params.shot_props.times)
-            rad_xdiv = interp1(p_rad['t'], rad_xdiv, params.shot_props.times)
+            rad_cva = np.nanmean(p_rad_core, axis=1) / \
+                np.nanmean(p_rad_all_but_div, axis=1)
+            rad_xdiv = np.nanmean(p_rad_div, axis=1) / \
+                np.nanmean(p_rad_all_but_core, axis=1)
+            rad_cva = interp1(p_rad['t'], rad_cva.T, params.shot_props.times)
+            rad_xdiv = interp1(p_rad['t'], rad_xdiv.T, params.shot_props.times)
         return pd.DataFrame({'te_pf': te_pf, 'ne_pf': ne_pf, 'rad_cva': rad_cva, 'rad_xdiv': rad_xdiv})
 
     # TODO: Finish implementing just in case
@@ -730,6 +739,42 @@ class BasicD3DRequests(ShotDataRequest):
             left = right - 1
             if efit_dict['r'][right] == r:
                 psin_slice = np.squeeze(efit_dict['psin'][:, right, :])
+    
+    @staticmethod            
+    def efit_rz_interp(ts, efit_dict):
+        """
+        Interpolate the efit data to the given timebase and project onto the
+        poloidal plane.
+        Parameters
+        ----------
+        times: np.ndarray
+            Timebase to interpolate to
+        efit_dict: dict
+            Dictionary with the efit data. Keys are 'time', 'r', 'z', 'psin', 'rhovn'
+        Returns
+        -------
+        psin: np.ndarray
+            Array of plasma normalized flux
+        rho_vn_diag: np.ndarray
+            Array of normalized minor radius
+        """
+        times = ts['time']/1.e3
+        interp = scipy.interpolate.RegularGridInterpolator(
+            [efit_dict['time'], efit_dict['r'], efit_dict['z']], efit_dict['psin'], method='linear', bounds_error=False, fill_value=np.nan)
+        # T,R,Z = np.meshgrid(times, efit_dict['r'], efit_dict['z'],indexing='ij')
+        T, R, Z = np.meshgrid(times, ts['r'], ts['z'], indexing='ij')
+        print('EFIT rhovn shape:', efit_dict['rhovn'].shape)
+        # print(np.stack((T,R,Z),axis=1).shape)
+        psin = interp((T, R, Z))
+        rho_vn_diag_almost = interp1(
+            efit_dict['time'], efit_dict['rhovn'], times, axis=0)
+        print('Rho_vn_diag_almost shape', rho_vn_diag_almost.shape)
+        rho_vn_diag = np.empty(psin.shape[:2])
+        psin_timebase = np.linspace(0, 1, efit_dict['rhovn'].shape[1])
+        for i in range(psin.shape[0]):
+            rho_vn_diag[i] = interp1(
+                psin_timebase, rho_vn_diag_almost[i,], psin[i, :]).diagonal()
+        return psin, rho_vn_diag
 
     @staticmethod
     @parameter_cached_method(
@@ -782,7 +827,7 @@ class BasicD3DRequests(ShotDataRequest):
         try:
             ts = BasicD3DRequests._get_ne_te(params)
             efit_dict = BasicD3DRequests._get_efit_dict(params)
-            ts['psin'], ts['rhovn'] = efit_rz_interp(ts, efit_dict)
+            ts['psin'], ts['rhovn'] = BasicD3DRequests.efit_rz_interp(ts, efit_dict)
         except Exception as e:
             params.logger.debug(
                 f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
@@ -940,10 +985,10 @@ class BasicD3DRequests(ShotDataRequest):
                     params.logger.debug(
                         f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
             # Place NaNs for broken channels
-            lasers[laser]['te'][np.where(
-                lasers[laser]['te'] == 0)] = np.nan
-            lasers[laser]['ne'][np.where(
-                lasers[laser]['ne'] == 0)] = np.nan
+            lasers[laser]['te'][lasers[laser]['te'] == 0] = np.nan
+            lasers[laser]['ne'][np.where(lasers[laser]['ne'] == 0)] = np.nan
+            params.logger.debug("_get_ne_te: Core bins", lasers['core']['te'].shape)
+            params.logger.debug("_get_ne_te: Tangential bins", lasers['tangential']['te'].shape)
         # If both systems/lasers available, combine them and interpolate the data
         # from the tangential system onto the finer (core) timebase
         if 'tangential' in lasers and lasers['tangential'] is not None:
@@ -962,6 +1007,8 @@ class BasicD3DRequests(ShotDataRequest):
                     (lasers['core']['r'], lasers['tangential']['r']))
                 lasers['combined']['z'] = np.concatenate(
                     (lasers['core']['z'], lasers['tangential']['z']))
+        params.logger.debug("_get_ne_te: R Bins:", len(lasers['combined']['r']))
+        params.logger.debug("_get_ne_te: Z Bins:", len(lasers['combined']['z']))
         return lasers
 
     @staticmethod
