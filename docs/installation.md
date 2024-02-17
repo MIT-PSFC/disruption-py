@@ -4,6 +4,8 @@ In order to access the specific clusters, i.e. Alcator C-Mod or DIII-D, a user a
 
 ### Standard installation 
 
+**For CMod, if you are on the mfe workstations, it is highly recommended to be on mferws02, mferws03, or mferws04.**
+
 1. [Optional] Create a new project directory
 	```bash
 	mkdir ~/dpy-projects
