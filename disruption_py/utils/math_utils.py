@@ -9,11 +9,9 @@ import string
 import random
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d, interp2d, RegularGridInterpolator
 from scipy.optimize import curve_fit
 from scipy.signal import medfilt
-from matplotlib.backends.backend_pdf import PdfPages
 
 pd.options.mode.chained_assignment = None
 
@@ -609,6 +607,8 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
 
 
 def save_open_plots(filename):
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_pdf import PdfPages
     pp = PdfPages(filename)
     fig_nums = plt.get_fignums()
     figs = [plt.figure(n) for n in fig_nums]
