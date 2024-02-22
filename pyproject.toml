@@ -9,9 +9,8 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.8.10"
 importlib_resources = "^6.1.1"
-matplotlib = "^3.1.2"
 netCDF4 = "^1.5.3"
-numpy = "^1.24.4"
+numpy = "<1.24"
 pandas = "^2.0.3"
 pyodbc = "^5.0.1"
 scikit_learn = "^1.3.0"
@@ -19,19 +18,33 @@ scipy = "^1.3.3"
 SQLAlchemy = "^2.0.23"
 tables = "^3.8.0"
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.4.2"
+[tool.poetry.group.dev]
+optional = true
 
+[tool.poetry.group.dev.dependencies]
+black = "^23.11.0"
+pylint = "^3.0.3"
+pytest = "^7.4.2"
+shellcheck-py = "^0.9.0.6"
+yamllint = "^1.35.1"
 
 [tool.poetry.group.docs]
 optional = true
 
 [tool.poetry.group.docs.dependencies]
+black = "^23.11.0"
 mkdocs = "^1.5.3"
+mkdocs-literate-nav = "^0.6.1"
 mkdocs-material = "^9.4.14"
 mkdocstrings = {extras = ["python"], version = "^0.24.0"}
-black = "^23.11.0"
-mkdocs-literate-nav = "^0.6.1"
+
+[tool.poetry.group.lab]
+optional = true
+
+[tool.poetry.group.lab.dependencies]
+ipympl = "^0.9.3"
+jupyterlab = "^4.1.1"
+matplotlib = "^3.1.2"
 
 [build-system]
 requires = ["poetry-core"]
