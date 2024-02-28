@@ -21,7 +21,7 @@ class D3DDatabase(ShotDatabase):
       		driver="{ODBC Driver 18 for SQL Server}", 
         	driver_file="UNKNOWN", # TODO
          	host= "UNKNOWN" + "database=code_rundb", # TODO
-        	db_name= "UNKNOWN", # TODO
+        	db_name= "D3DRDB", # TODO
         	user=db_username, 
         	passwd=db_password,
         	**kwargs
