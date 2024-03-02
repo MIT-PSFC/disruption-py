@@ -35,11 +35,6 @@ class ShotManager(ABC):
     def _modify_times_rampup_and_flattop_timebase(cls, shot_props : ShotProps, **kwargs) -> ShotProps:
         pass
     
-    @classmethod
-    @abstractmethod
-    def _modify_times_disruption_timebase(cls, shot_props : ShotProps, **kwargs) -> ShotProps:
-        pass
-    
     @abstractmethod
     def shot_setup(self, shot_id : int, shot_settings : ShotSettings, **kwargs) -> ShotProps:
         pass
@@ -130,8 +125,6 @@ class ShotManager(ABC):
             shot_props = self._modify_times_flattop_timebase(shot_props)
         elif shot_settings.signal_domain is SignalDomain.RAMP_UP_AND_FLATTOP:
             shot_props = self._modify_times_rampup_and_flattop_timebase(shot_props)
-        elif shot_settings.signal_domain is SignalDomain.DISRUPTION:
-            shot_props = self._modify_times_disruption_timebase(shot_props)
         if shot_props is None:
             raise ValueError(f"Shot_props set to None in modify_shot_props()")
         

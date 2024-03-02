@@ -39,6 +39,11 @@ class SetTimesRequestParams:
     disruption_time : float
     tokamak : Tokamak
     logger : Logger
+    
+    @property
+    def disrupted(self) -> bool:
+        """Returns true if the shot disrupted."""
+        return self.disruption_time is not None
 
 SetTimesRequestType = Union['SetTimesRequest', str, Dict[Tokamak, 'SetTimesRequestType']]
 
@@ -157,7 +162,92 @@ class EfitSetTimesRequest(SetTimesRequest):
     def _get_times(self, params : SetTimesRequestParams) -> np.ndarray:
         raise ValueError("EFIT timebase request not implemented")
     
+
+class DisruptionSetTimesRequest(SetTimesRequest):
+    """
+    Get times request for using the disruption timebase.
+
+    The disruption timebase is the timebase of the shot that was disrupted.
+    """
+    # Disruption Variables
+    DT_BEFORE_DISRUPTION = 0.002
+    DURATION_BEFORE_DISRUPTION = 0.10
+    
+    def __init__(self, minimum_ip=400.e3, minimum_duration=0.100):
+        self.tokamak_overrides = {
+            Tokamak.D3D: self.d3d_times
+        }
+        self.minimum_ip = minimum_ip
+        self.minimum_duration = minimum_duration
         
+    def d3d_times(self, params : SetTimesRequestParams):
+        raw_ip, ip_time = params.mds_conn.get_record_data(f"ptdata('ip', {params.shot_id})", tree_name='d3d')
+        ip_time = ip_time/1.e3
+        baseline = np.mean(raw_ip[0:10])
+        ip = raw_ip - baseline
+        duration, ip_max = self._get_end_of_shot(ip, ip_time, 100e3)
+        if duration < self.minimum_duration or np.abs(ip_max) < self.minimum_ip:
+            raise NotImplementedError()
+        
+        if params.disrupted:
+            times = np.arange(0.100, duration+0.025, 0.025)
+            additional_times = np.arange(
+                params.disruption_time-self.DURATION_BEFORE_DISRUPTION, 
+                params.disruption_time + self.DT_BEFORE_DISRUPTION, 
+                self.DT_BEFORE_DISRUPTION
+            )
+            times = times[np.where(times < (params.disruption_time - self.DURATION_BEFORE_DISRUPTION))]
+            times = np.concatenate((times, additional_times))
+        else:
+            ip_start = np.argmax(ip_time <= .1)
+            ip_end = np.argmax(raw_ip[ip_start:] <= 100000) + ip_start
+            times = ip_time[ip_start:ip_end]  # [ms] -> [s]
+        return times
+    
+    @classmethod
+    def _get_end_of_shot(cls, signal, signal_time, threshold=1.e5):
+        duration = 0
+        signal_max = 0
+        if threshold < 0:
+            raise Warning("Threshold is negative.")
+        base_indices = np.where(signal_time <= 0.0)
+        if len(base_indices) > 0:
+            baseline = np.mean(signal[base_indices])
+        else:
+            baseline = 0
+        signal = signal - baseline
+        # Check if there was a finite signal otherwise consider the shot a "no plasma" shot
+        finite_indices = np.where(
+            (signal_time >= 0.0) & (np.abs(signal) > threshold))
+        if len(finite_indices) == 0:
+            return duration, signal_max
+        else:
+            dt = np.diff(signal_time)
+            duration = np.sum(dt[finite_indices[:-1]])
+            if duration < 0.1:  # Assuming < 100 ms is not a bona fide plasma
+                duration = 0
+                return duration, signal_max
+        polarity = np.sign(
+            np.trapz(signal[finite_indices], signal_time[finite_indices]))
+        polarized_signal = polarity * signal
+        valid_indices = np.where(
+            (polarized_signal >= threshold) & (signal_time > 0.0))
+        duration = signal_time[np.max(valid_indices)]
+        if len(valid_indices) == signal_time.size:
+            duration = - duration
+        signal_max = np.max(polarized_signal)*polarity
+        return duration, signal_max
+
+class IpSetTimesRequest(SetTimesRequest):
+    def __init__(self):
+        self.tokamak_overrides = {
+            Tokamak.D3D: self.d3d_times
+        }
+    
+    def d3d_times(self, params : SetTimesRequestParams):
+        ip_time, = params.mds_conn.get_dims(f"ptdata('ip', {params.shot_id})", tree_name='d3d')
+        return ip_time
+
 class SignalSetTimesRequest(SetTimesRequest):
     def __init__(self, tree_name : str, signal_path : str):
         self.tree_name = tree_name
@@ -175,6 +265,8 @@ class SignalSetTimesRequest(SetTimesRequest):
 # --8<-- [start:set_times_request_dict]
 _set_times_request_mappings: Dict[str, SetTimesRequest] = {
     "efit" : EfitSetTimesRequest(),
+    "disruption" : DisruptionSetTimesRequest(),
+    "ip" : IpSetTimesRequest(),
 }
 # --8<-- [end:set_times_request_dict]
 

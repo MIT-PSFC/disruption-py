@@ -16,10 +16,6 @@ from disruption_py.utils.utils import without_duplicates
 
 class D3DShotManager(ShotManager):
     
-    # Disruption Variables
-    DT_BEFORE_DISRUPTION = 0.002
-    DURATION_BEFORE_DISRUPTION = 0.10
-    
     def shot_setup(
         self,
         shot_id : int,
@@ -85,32 +81,6 @@ class D3DShotManager(ShotManager):
             
             raise Exception(f"Failed to find efit tree with name {shot_settings.efit_tree_name} in shot {shot_id}.")
         return efit_tree_nickname_func
-    
-    
-    @classmethod
-    def _modify_times_disruption_timebase(cls, shot_props : ShotProps, **kwargs):
-        raw_ip, ip_time = shot_props.mds_conn.get_record_data(f"ptdata('ip', {shot_props.shot_id})", tree_name='d3d')
-        ip_time = ip_time/1.e3
-        baseline = np.mean(raw_ip[0:10])
-        ip = raw_ip - baseline
-        duration, ip_max = cls._get_end_of_shot(ip, ip_time, 100e3)
-        if duration < 0.1 or np.abs(ip_max) < 400.e3:
-            raise NotImplementedError()
-        times = np.arange(0.100, duration+0.025, 0.025)
-        if shot_props.disrupted:
-            additional_times = np.arange(
-                shot_props.disruption_time-cls.DURATION_BEFORE_DISRUPTION, 
-                shot_props.disruption_time + cls.DT_BEFORE_DISRUPTION, 
-                cls.DT_BEFORE_DISRUPTION
-            )
-            times = times[np.where(times < (shot_props.disruption_time - cls.DURATION_BEFORE_DISRUPTION))]
-            times = np.concatenate((times, additional_times))
-        else:
-            ip_start = np.argmax(ip_time <= .1)
-            ip_end = np.argmax(raw_ip[ip_start:] <= 100000) + ip_start
-            return ip_time[ip_start:ip_end]  # [ms] -> [s]
-        shot_props.times = times
-        return shot_props
         
     @classmethod
     def _modify_times_flattop_timebase(cls, shot_props : ShotProps, **kwargs):
@@ -145,37 +115,3 @@ class D3DShotManager(ShotManager):
     @classmethod  
     def _modify_times_rampup_and_flattop_timebase(cls, shot_props : ShotProps, **kwargs):
         raise NotImplementedError("Rampup and flattop not implemented for D3D")
-    
-    @classmethod
-    def _get_end_of_shot(cls, signal, signal_time, threshold=1.e5):
-        duration = 0
-        signal_max = 0
-        if threshold < 0:
-            raise Warning("Threshold is negative.")
-        base_indices = np.where(signal_time <= 0.0)
-        if len(base_indices) > 0:
-            baseline = np.mean(signal[base_indices])
-        else:
-            baseline = 0
-        signal = signal - baseline
-        # Check if there was a finite signal otherwise consider the shot a "no plasma" shot
-        finite_indices = np.where(
-            (signal_time >= 0.0) & (np.abs(signal) > threshold))
-        if len(finite_indices) == 0:
-            return duration, signal_max
-        else:
-            dt = np.diff(signal_time)
-            duration = np.sum(dt[finite_indices[:-1]])
-            if duration < 0.1:  # Assuming < 100 ms is not a bona fide plasma
-                duration = 0
-                return duration, signal_max
-        polarity = np.sign(
-            np.trapz(signal[finite_indices], signal_time[finite_indices]))
-        polarized_signal = polarity * signal
-        valid_indices = np.where(
-            (polarized_signal >= threshold) & (signal_time > 0.0))
-        duration = signal_time[np.max(valid_indices)]
-        if len(valid_indices) == signal_time.size:
-            duration = - duration
-        signal_max = np.max(polarized_signal)*polarity
-        return duration, signal_max
