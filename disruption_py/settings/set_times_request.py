@@ -179,7 +179,10 @@ class DisruptionSetTimesRequest(SetTimesRequest):
         }
         self.minimum_ip = minimum_ip
         self.minimum_duration = minimum_duration
-        
+    
+    def _get_times(self, params : SetTimesRequestParams) -> np.ndarray:
+        raise ValueError("Disruption timebase request not implemented")
+    
     def d3d_times(self, params : SetTimesRequestParams):
         raw_ip, ip_time = params.mds_conn.get_record_data(f"ptdata('ip', {params.shot_id})", tree_name='d3d')
         ip_time = ip_time/1.e3
@@ -243,6 +246,9 @@ class IpSetTimesRequest(SetTimesRequest):
         self.tokamak_overrides = {
             Tokamak.D3D: self.d3d_times
         }
+    
+    def _get_times(self, params : SetTimesRequestParams) -> np.ndarray:
+        raise ValueError("Ip timebase request not implemented")
     
     def d3d_times(self, params : SetTimesRequestParams):
         ip_time, = params.mds_conn.get_dims(f"ptdata('ip', {params.shot_id})", tree_name='d3d')
