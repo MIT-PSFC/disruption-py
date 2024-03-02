@@ -1,4 +1,6 @@
 import sys
+import logging
+from disruption_py.settings.log_settings import LogSettings
 sys.path.append("/home/lorinczj/disruption-py")
 
 from disruption_py.handlers.d3d_handler import D3DHandler
@@ -13,6 +15,10 @@ shot_settings = ShotSettings(
     
     # run all available methods
     run_tags=["all"],
+    
+    log_settings=LogSettings(
+        console_log_level=logging.DEBUG,
+	),
 )
 shot_data = cmod_handler.get_shots_data(
     # Retrieve data for the desired shots
