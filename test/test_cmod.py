@@ -44,13 +44,6 @@ TEST_COLUMNS = [
     'shot', 'commit_hash'
 ]
 
-KNOWN_NUMERIC_FAILURE_COLUMNS = [
-    'lower_gap', 'upper_gap', 'ssep', 'dipprog_dt', 'n_over_ncrit', # constant factor scaling error
-    'ip_error' # constant error
-]
-
-# TEST_COLUMNS = list(set(TEST_COLUMNS).difference(KNOWN_NUMERIC_FAILURE_COLUMNS))
-
 TIME_EPSILON = 0.05 # Tolerance for taking the difference between two times [s]
 IP_EPSILON = 1e5    # Tolerance for taking the difference between two ip values [A]
 
