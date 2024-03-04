@@ -49,7 +49,7 @@ class CModEfitRequests(ShotDataRequest):
                  "v_loop_efit": r'\efit_aeqdsk:vloopt',
                  "Wmhd": r'\efit_aeqdsk:wplasm',
                  "ssep": r'\efit_aeqdsk:ssep',
-                 "n_over_ncrit": r'\efit_aeqdsk:xnnc',
+                 "n_over_ncrit": r'-\efit_aeqdsk:xnnc',
                  "tritop": r'\efit_aeqdsk:doutu',
                  "tribot":  r'\efit_aeqdsk:doutl',
                  "a_minor": r'\efit_aeqdsk:aminor',
