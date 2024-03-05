@@ -8,7 +8,7 @@ from disruption_py.databases.dummy_database import DummyDatabase
 from disruption_py.settings.shot_settings import ShotSettings
 
 
-cmod_handler = D3DHandler(DummyDatabase())
+cmod_handler = D3DHandler(database_initializer=DummyDatabase.default)
 shot_settings = ShotSettings(
     # uses the efit timebase when returning data 
     set_times_request="ip",
