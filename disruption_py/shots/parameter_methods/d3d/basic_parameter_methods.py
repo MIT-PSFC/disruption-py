@@ -2,6 +2,11 @@ import traceback
 import pandas as pd
 import numpy as np
 try:
+    from MDSplus import MdsException
+except ImportError:
+    class MdsException(Exception):
+        __getattr__ = lambda self, name: Exception
+try:
     import netCDF4 as nc
 except ImportError:
     pass  # TODO: Contact DIII-D about thisfrom MDSplus import MdsException
