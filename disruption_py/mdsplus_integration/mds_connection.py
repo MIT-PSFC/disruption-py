@@ -83,7 +83,10 @@ class MDSConnection:
         """
         if tree_name is not None:
             self.open_tree(tree_name)
-        return self.conn.get(expression, arguments)
+        if arguments is None:
+            return self.conn.get(expression)
+        else:
+            return self.conn.get(expression, arguments)
     
     # Added Methods
     
