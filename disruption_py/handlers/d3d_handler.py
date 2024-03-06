@@ -47,6 +47,6 @@ class D3DHandler(Handler):
             **kwargs
         )
 
-    def shot_manager_cls():
+    def get_shot_manager_cls(self):
         return D3DShotManager
      

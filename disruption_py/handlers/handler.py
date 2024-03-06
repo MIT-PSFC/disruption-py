@@ -24,9 +24,8 @@ class Handler(ABC):
         self.mds_connection_initializer = lambda: ProcessMDSConnection(mds_connection_str)
         self.kwargs = kwargs
     
-    @property
     @abstractmethod
-    def shot_manager_cls(self):
+    def get_shot_manager_cls(self):
         pass
     
     @property
@@ -125,7 +124,7 @@ class Handler(ABC):
                 process_prop_initializers = {
                     # initialize connections for individual processes 
                     "shot_manager": (
-                        lambda: self.shot_manager_cls(
+                        lambda: self.get_shot_manager_cls()(
                             process_database=self.database_initializer(), 
                             process_mds_conn=self.mds_connection_initializer(),
                         )
@@ -140,7 +139,7 @@ class Handler(ABC):
                 await_complete=True,
             )
         else:
-            shot_manager = self.shot_manager_cls(
+            shot_manager = self.get_shot_manager_cls()(
                 process_database=self.database, 
                 process_mds_conn=self.mds_connection,
             )
@@ -155,6 +154,7 @@ class Handler(ABC):
                 else:
                     output_type_request.output_shot(
                         ResultOutputTypeRequestParams(
+                            shot_id=shot_id,
                             result = shot_data, 
                             database = self.database, 
                             tokamak = Tokamak.CMOD, 

@@ -45,6 +45,6 @@ class CModHandler(Handler):
             **kwargs
         )
 
-    def shot_manager_cls():
+    def get_shot_manager_cls(self):
         return CModShotManager
      
