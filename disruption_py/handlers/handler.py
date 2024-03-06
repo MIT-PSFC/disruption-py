@@ -21,7 +21,7 @@ class Handler(ABC):
     
     def __init__(self, database_initializer : Callable[..., ShotDatabase], mds_connection_str, **kwargs):
         self.database_initializer = database_initializer
-        self.mds_connection_initializer = mds_connection_str
+        self.mds_connection_initializer = lambda: ProcessMDSConnection(mds_connection_str)
         self.kwargs = kwargs
     
     @property
