@@ -783,7 +783,7 @@ class BasicD3DRequests(ShotDataRequest):
 
     @staticmethod
     @parameter_cached_method(
-        contained_cached_method=["_get_ne_te", "_get_efit_dict"],
+        contained_cached_methods=["_get_ne_te", "_get_efit_dict"],
         tags=["unfinished"],
         tokamak=Tokamak.D3D,
         columns=[
