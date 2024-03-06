@@ -335,9 +335,9 @@ def fastsmooth(y, w, smooth_type=1, ends_type=0):
     array_like
         The smoothed dataset.
     """
-    smoothed_y = smooth(y, w, ends_type)
+    smoothed_y = smooth(y, w)
     for i in range(smooth_type-1):
-        smoothed_y = smooth(smoothed_y, w, ends_type)
+        smoothed_y = smooth(smoothed_y, w)
     return smoothed_y
 
 

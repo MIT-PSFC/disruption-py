@@ -367,7 +367,7 @@ class BasicD3DRequests(ShotDataRequest):
         tokamak=Tokamak.D3D
     )
     def get_rt_ip_parameters(params : ShotDataRequestParams):
-        params.mds_conn.openTree('d3d', params.shot_props.shot_id)
+        params.mds_conn.open_tree('d3d', params.shot_props.shot_id)
         ip_rt = np.full(len(params.shot_props.times), np.nan)
         ip_prog_rt = np.full(len(params.shot_props.times), np.nan)
         ip_error_rt = np.full(len(params.shot_props.times), np.nan)
