@@ -5,7 +5,6 @@ from typing import List
 import pandas as pd
 import numpy as np
 from disruption_py.shots.helpers.cached_method_props import CachedMethodProps, CachedMethodParams, ParameterCachedMethodParams, get_cached_method_params, is_cached_method
-from disruption_py.shots.parameter_methods.built_in import DEFAULT_SHOT_DATA_REQUESTS
 
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.shots.helpers.method_optimizer import MethodOptimizer
@@ -13,9 +12,20 @@ from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.shots.helpers.method_caching import manually_cache
 from disruption_py.settings.shot_data_request import ShotDataRequest, ShotDataRequestParams
 from disruption_py.utils.constants import MAX_THREADS_PER_SHOT, TIME_CONST
+from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.utils import without_duplicates
 
 REQUIRED_COLS = {'time', 'shot', 'commit_hash'}
+
+def built_in_method_factory(tokamak : Tokamak):
+    if tokamak is Tokamak.D3D:
+        from disruption_py.shots.parameter_methods.d3d.built_in import D3D_DEFAULT_SHOT_DATA_REQUESTS
+        return D3D_DEFAULT_SHOT_DATA_REQUESTS
+    elif tokamak is Tokamak.CMOD:
+        from disruption_py.shots.parameter_methods.cmod.built_in import CMOD_DEFAULT_SHOT_DATA_REQUESTS
+        return CMOD_DEFAULT_SHOT_DATA_REQUESTS
+    else:
+        raise ValueError(f"Invalid tokamak for built-ins {tokamak}")
  
 def populate_method(params: ShotDataRequestParams, cached_method_props : CachedMethodProps, start_time):
         
@@ -172,7 +182,7 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams) ->
     all_cached_methods_props : list[CachedMethodProps] = []
         
     # Add the methods gound from the passed ShotDataRequest objects
-    all_shot_data_request = DEFAULT_SHOT_DATA_REQUESTS + shot_settings.shot_data_requests
+    all_shot_data_request = built_in_method_factory(params.tokamak) + shot_settings.shot_data_requests
     for shot_data_request in all_shot_data_request:
         req_methods_to_evaluate, req_all_cached_methods = _get_cached_methods_from_object(shot_data_request, shot_settings, params)
         cached_methods_to_evaluate_props.extend(req_methods_to_evaluate)
