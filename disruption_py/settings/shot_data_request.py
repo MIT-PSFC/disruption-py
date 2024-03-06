@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from dataclasses import dataclass
 from logging import Logger
 from disruption_py.mdsplus_integration.mds_connection import MDSConnection
@@ -58,8 +59,10 @@ class ShotDataRequest(ABC):
             if method is None or not is_cached_method(method):
                 continue
             cached_method_params = get_cached_method_params(method, should_throw=True)
-            if (cached_method_params.tokamaks is None or
+            if (
+                cached_method_params.tokamaks is None or
                 tokamak is cached_method_params.tokamaks or
-                tokamak in cached_method_params.tokamaks):
+                (isinstance(cached_method_params.tokamaks, Iterable) and tokamak in cached_method_params.tokamaks)
+            ):
                 request_methods.append(method_name)
         return request_methods
