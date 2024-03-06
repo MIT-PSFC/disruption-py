@@ -2,6 +2,7 @@ from typing import Callable, Any
 from disruption_py.handlers.handler import Handler
 from disruption_py.shots.cmod_shot_manager import CModShotManager
 from disruption_py.databases import CModDatabase
+from disruption_py.utils.mappings.tokamak import Tokamak
 
 class CModHandler(Handler):
     """Class used to retrieve MDSplus and sql data from Alcator C-Mod..
@@ -47,4 +48,7 @@ class CModHandler(Handler):
 
     def get_shot_manager_cls(self):
         return CModShotManager
+    
+    def get_tokamak(self):
+        return Tokamak.CMOD
      

@@ -52,7 +52,7 @@ class D3DShotManager(ShotManager):
                 database=self.process_database,
                 disruption_time=disruption_time,
                 shot_settings=shot_settings,
-                tokamak=Tokamak.CMOD,
+                tokamak=Tokamak.D3D,
                 **kwargs
             )
             return shot_props

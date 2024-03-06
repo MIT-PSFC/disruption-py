@@ -28,6 +28,11 @@ class Handler(ABC):
     def get_shot_manager_cls(self):
         pass
     
+    
+    @abstractmethod
+    def get_tokamak(self):
+        pass
+    
     @property
     def database(self) -> ShotDatabase:
         """Reference to the sql shot logbook.
@@ -130,7 +135,7 @@ class Handler(ABC):
                         )
                     )
                 },
-                tokamak = Tokamak.CMOD,
+                tokamak = self.get_tokamak(),
                 logger = self.logger,
             )
             shot_retriever.run(
@@ -157,12 +162,12 @@ class Handler(ABC):
                             shot_id=shot_id,
                             result = shot_data, 
                             database = self.database, 
-                            tokamak = Tokamak.CMOD, 
+                            tokamak = self.get_tokamak(), 
                             logger = self.logger
                         )
                     )
             
-        finish_output_type_request_params = FinishOutputTypeRequestParams(tokamak=Tokamak.CMOD, logger=self.logger)    
+        finish_output_type_request_params = FinishOutputTypeRequestParams(tokamak=self.get_tokamak(), logger=self.logger)    
         results = output_type_request.get_results(finish_output_type_request_params)
         output_type_request.stream_output_cleanup(finish_output_type_request_params)
         return results
