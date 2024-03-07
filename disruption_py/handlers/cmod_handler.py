@@ -50,7 +50,7 @@ class CModHandler:
         **kwargs
     ):
         self.database_initializer = database_initializer or CModDatabase.default
-        mds_connection_str = mds_connection_str or "alcdata-new"
+        mds_connection_str = mds_connection_str or "alcdata-archives"
         self.mds_connection_initializer = lambda: ProcessMDSConnection(mds_connection_str)
         
 
