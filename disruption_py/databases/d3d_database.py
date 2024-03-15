@@ -23,7 +23,7 @@ class D3DDatabase(ShotDatabase):
         return D3DDatabase(
             driver="FreeTDS", 
             host= "d3drdb.gat.com:8001",
-            db_name= "D3DRDB",
+            db_name= "d3drdb",
             user=db_username, 
             passwd=db_password,
             **kwargs
