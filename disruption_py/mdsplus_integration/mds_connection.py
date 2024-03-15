@@ -17,6 +17,33 @@ class ProcessMDSConnection():
         """ Get MDSPlus Connection wrapper for individual shot. """
         return MDSConnection(self.conn, shot_id)
     
+class HDF:
+    """
+    Class to fill hsds cache with answers
+    """
+    def __init__(self):
+        self.file = None
+        self.shot_id = None
+        self.endpoints = [ 'http://localhost:5101', 'http://localhost:5102' ]
+
+    def add_cache(self, tree, shot, expression, args, value):
+        import h5pyd as h5py
+        import random
+        if self.shot_id != shot:
+            self.file = h5py.File(f'/cmod/{shot}', 'a', use_cache=False, end_point=random.choice(self.endpoints))
+            self.shot_id = shot
+        if tree not in self.file:
+            root = self.file.create_group(tree)
+        else:
+            root = self.file[tree]
+        if args is None:
+            key = f'{expression}'
+        else:
+            key = f'{expression}_{args}'
+        if key in root:
+            del root[key]
+        root.create_dataset(key, data=value)
+     
 class MDSConnection:
     """ 
     Wrapper class for MDSPlus Connection class used for handling individual shots. 
@@ -31,7 +58,8 @@ class MDSConnection:
         self.tree_nicknames = {}
         self.open_trees = set()
         self.last_open_tree = None   
-    
+        self.hdf = HDF()
+ 
     def open_tree(self, tree_name : str):
         """
         Open the specified _name.
@@ -100,7 +128,9 @@ class MDSConnection:
         """
         if tree_name is not None:
             self.open_tree(tree_name)
-        return self.conn.get(expression, arguments)
+        ans = self.conn.get(expression, arguments)
+        self.hdf.add_cache(tree_name, self.shot_id, expression, arguments, ans)
+        return ans
     
     # Added Methods
     
@@ -127,6 +157,10 @@ class MDSConnection:
             self.open_tree(tree_name)
         data = self.conn.get("_sig=" + path).data()
         dims = [self.conn.get(f"dim_of(_sig,{dim_num})").data() for dim_num in dim_nums]
+        self.hdf.add_cache(tree_name, self.shot_id, path, None, data)
+        for count,d in enumerate(dims):
+            print(f"ADDING DIM {count}")
+            self.hdf.add_cache(tree_name, self.shot_id, f'dim_of({path}, {count})', None)
         return data, *dims
     
     
@@ -151,6 +185,8 @@ class MDSConnection:
         if tree_name is not None:
             self.open_tree(tree_name)
         dims = [self.conn.get(f"dim_of({path},{dim_num})").data() for dim_num in dim_nums]
+        for count,d in enumerate(dims):
+            self.hdf.add_cache(tree_name, self.shot_id, f'dim_of({path}, {count})', None)
         return dims
     
     # nicknames
