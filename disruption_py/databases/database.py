@@ -113,9 +113,9 @@ class ShotDatabase:
             f"select * from {table_name} where shot={shot_id} order by time", self.engine)
         
         if len(curr_df) == 0:
-            return self._insert_shot_data(curr_df, shot_data)
+            return self._insert_shot_data(curr_df, shot_data, table_name=table_name)
         elif len(curr_df) == len(shot_data) and ((curr_df['time']  - shot_data['time']).abs() < TIME_CONST).all():
-            return self._update_shot_data(curr_df, shot_data, update, override_columns)
+            return self._update_shot_data(curr_df, shot_data, update, override_columns, table_name=table_name)
         
         self.logger.error("Invalid timebase for data output")
         return False
