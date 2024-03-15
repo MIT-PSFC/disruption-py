@@ -21,8 +21,8 @@ class D3DDatabase(ShotDatabase):
             assert db_username == USER, f"db_username:{db_username};user:{USER}"
             db_password = content[1]
         return D3DDatabase(
-              driver="MySQL", 
-             host= "d3drdb.gat.com",
+            driver="FreeTDS", 
+            host= "d3drdb.gat.com:8001",
             db_name= "D3DRDB",
             user=db_username, 
             passwd=db_password,
