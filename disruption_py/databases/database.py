@@ -24,19 +24,22 @@ class ShotDatabase:
         self.host = host
         self.db_name = db_name
         self.protected_columns = protected_columns
-        self.connection_string = (
+        self.connection_string = self._get_connection_string(self.db_name)
+        self._thread_connections = {}
+        self.logger.info("Database initialized")
+        self.engine = create_engine(f"mssql+pyodbc:///?odbc_connect={self.connection_string}")
+
+    def _get_connection_string(self, db_name):
+        return (
             f"DRIVER={self.driver};"
             f"SERVER={self.host};"
-            f"DATABASE={self.db_name};"
+            f"DATABASE={db_name};"
             f"UID={self.user};"
             f"PWD={self.passwd};"
             "TrustServerCertificate=yes;"
             "Connection Timeout=60"
         )
-        self._thread_connections = {}
-        self.logger.info("Database initialized")
-        self.engine = create_engine(f"mssql+pyodbc:///?odbc_connect={self.connection_string}")
-
+    
     @property
     def conn(self):
         """Property returning a connection to sql database.
