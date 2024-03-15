@@ -97,7 +97,7 @@ class MDSConnection:
             self.open_tree(tree_name)
         data = self.conn.get("_sig=" + path).data()
         dims = [self.conn.get(f"dim_of(_sig,{dim_num})").data() for dim_num in dim_nums]
-        return data, *dims
+        return tuple([data] + dims)
     
     
     def get_dims(self, path : str, tree_name : str = None, dim_nums : List = None):
