@@ -207,6 +207,8 @@ class ShotDatabase:
     
     def remove_shot_data(self, shot_id, table_name="disruption_warning"):
         """Remove shot from SQL table."""
+        if table_name == "disruption_warning":
+            raise ValueError("Please do not delete from the disruption_warning database")
         data_df = pd.read_sql_query(
             f'''select * from {table_name} where shot = {shot_id} order by time''', self.engine)
         if len(data_df) == 0:
@@ -214,7 +216,7 @@ class ShotDatabase:
             return False
         with self.conn.cursor() as curs:
             curs.execute(
-                f"delete from disruption_warning where shot = {shot_id}")
+                f"delete from {table_name} where shot = {shot_id}")
         return True
     
     def add_column(self, col_name, var_type="TEXT", table_name="disruption_warning"):
