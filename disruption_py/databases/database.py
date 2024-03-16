@@ -115,7 +115,7 @@ class ShotDatabase:
         if len(curr_df) == 0:
             return self._insert_shot_data(curr_df, shot_data, table_name=table_name)
         elif len(curr_df) == len(shot_data) and ((curr_df['time']  - shot_data['time']).abs() < TIME_CONST).all():
-            return self._update_shot_data(curr_df, shot_data, update, override_columns, table_name=table_name)
+            return self._update_shot_data(shot_id, curr_df, shot_data, update, override_columns, table_name=table_name)
         
         self.logger.error("Invalid timebase for data output")
         return False
@@ -147,7 +147,7 @@ class ShotDatabase:
             curs.executemany(f"insert into {table_name} ({sql_column_names}) values {parameter_markers}", data_tuples)
         return True
     
-    def _update_shot_data(self, curr_df : pd.DataFrame, shot_data : pd.DataFrame, update : bool, override_columns:List[str]=None, table_name="disruption_warning"):
+    def _update_shot_data(self, shot_id : int, curr_df : pd.DataFrame, shot_data : pd.DataFrame, update : bool, override_columns:List[str]=None, table_name="disruption_warning"):
         """
         Update shot data into SQL table.
         
@@ -163,7 +163,7 @@ class ShotDatabase:
             Whether to update shot data if the shot already exists in database. Update will happen regardless if
             the column being updated is all nil. Default value is False.
         override_columns : List[str]
-            List of protecrted columns that can should still be updated. Update must be true for existing values in the 
+            List of columns that can should still be updated. Update must be true for existing values in the 
             columns to be changed. Default value is [].
         table_name : str
             Name of the table for data insert or update. Default value is "disruption_warning".
@@ -185,11 +185,11 @@ class ShotDatabase:
             ):
                 update_columns_shot_data[column_name] = shot_data[column_name]
         with self.conn.cursor() as curs:
-            for index, row in update_columns_shot_data.iterrows():     
+            for index, row in enumerate(update_columns_shot_data.itertuples(index=False, name=None)):     
                 update_column_names = list(update_columns_shot_data.columns)
                 sql_set_string = ', '.join([f'{col} = ?' for col in update_column_names])
-                sql_command = f"UPDATE {table_name} SET {sql_set_string} WHERE time = ?;"
-                curs.execute(sql_command, row + curr_df['time'][index])
+                sql_command = f"UPDATE {table_name} SET {sql_set_string} WHERE time = ? AND shot = ?;"
+                curs.execute(sql_command, row + (curr_df['time'][index], str(shot_id)))
         return True
     
     def _get_identity_column_names(self, table_name="disruption_warning"):
