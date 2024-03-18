@@ -73,6 +73,18 @@ class ShotSettings:
         environment variables when trying to open the efit tree. If opening the efit tree with the 
         local environment variables fails, will try to open the efit tree with the  regular environment 
         variables. Default is None.   
+    fill_hsds : extra behavior enable
+        Directs disruption-py to fill an hsds based cache when reading data.  Creates one domain per shot
+        and one group per tree. With datasets named by the expressions asked for.
+    fill_mongodb : extra behavior enable
+        Directs disruption-py to fill a mongodb based cache when reading data.
+    use_hsds : data source
+        Directs disruption-py to read data from hsds instead of directly from MDSplus
+    use_mongo : data source
+        Directs disruption-py to read data from mongodb instead of directly from MDSplus
+    cache_miss_enable: data source
+        Directs disruption-py to attempt to retrieve any records that are not found in the cache(s) from
+        their original source (MDSplus)
     """
     # General Settings
     log_settings : LogSettings = field(default_factory=LogSettings.default)
@@ -95,6 +107,12 @@ class ShotSettings:
     signal_domain : SignalDomain = "full"
     use_existing_data_timebase : bool = False
     interpolation_method : InterpolationMethod = "linear"
+
+    fill_hsds : bool = False
+    fill_mongodb : bool = False
+    use_hsds : bool = False
+    use_mongo : bool = False
+    cache_miss_enable : bool = False
     
     additional_args : dict = field(default_factory=dict)
     
