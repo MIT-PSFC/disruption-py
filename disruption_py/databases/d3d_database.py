@@ -8,8 +8,17 @@ from disruption_py.utils.constants import D3D_PROTECTED_COLUMNS
 class D3DDatabase(ShotDatabase):
     logger = logging.getLogger('disruption_py')
 
-    def __init__(self, driver, host, db_name, user, passwd, **kwargs):
-        super().__init__(driver, host, db_name, user, passwd, protected_columns=D3D_PROTECTED_COLUMNS, **kwargs)
+    def __init__(self, driver, host, port, db_name, user, passwd, **kwargs):
+        super().__init__(
+            driver=driver, 
+            host=host,
+            port=port,
+            db_name=db_name, 
+            user=user,
+            passwd=passwd, 
+            protected_columns=D3D_PROTECTED_COLUMNS,
+            **kwargs
+        )
         self.tree_connection_string = self._get_connection_string("code_rundb")
   
     def default(**kwargs):
@@ -21,8 +30,9 @@ class D3DDatabase(ShotDatabase):
             assert db_username == USER, f"db_username:{db_username};user:{USER}"
             db_password = content[1]
         return D3DDatabase(
-            driver="FreeTDS", 
-            host= "d3drdb.gat.com:8001",
+            driver="{FreeTDS}", 
+            host= "d3drdb.gat.com",
+            port= 8001,
             db_name= "d3drdb",
             user=db_username, 
             passwd=db_password,

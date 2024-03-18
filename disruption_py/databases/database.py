@@ -17,12 +17,13 @@ class ShotDatabase:
     """
     logger = logging.getLogger('disruption_py')        
         
-    def __init__(self, driver, host, db_name, user, passwd, protected_columns=[], **kwargs):
-        self.user = user
-        self.passwd = passwd
+    def __init__(self, driver, host, port, db_name, user, passwd, protected_columns=[], **kwargs):
         self.driver = driver
         self.host = host
+        self.port = port
         self.db_name = db_name
+        self.user = user
+        self.passwd = passwd
         self.protected_columns = protected_columns
         self.connection_string = self._get_connection_string(self.db_name)
         self._thread_connections = {}
@@ -30,15 +31,17 @@ class ShotDatabase:
         self.engine = create_engine(f"mssql+pyodbc:///?odbc_connect={self.connection_string}")
 
     def _get_connection_string(self, db_name):
-        return (
+        connection_str = (
             f"DRIVER={self.driver};"
             f"SERVER={self.host};"
+            f"PORT={self.port};"
             f"DATABASE={db_name};"
             f"UID={self.user};"
             f"PWD={self.passwd};"
             "TrustServerCertificate=yes;"
-            "Connection Timeout=60"
+            "Connection Timeout=60;"
         )
+        return connection_str
     
     @property
     def conn(self):

@@ -6,8 +6,17 @@ from disruption_py.utils.constants import CMOD_PROTECTED_COLUMNS
 class CModDatabase(ShotDatabase):
 	logger = logging.getLogger('disruption_py')
 
-	def __init__(self, driver, host, db_name, user, passwd, **kwargs):
-		super().__init__(driver, host, db_name, user, passwd, protected_columns=CMOD_PROTECTED_COLUMNS, **kwargs)
+	def __init__(self, driver, host, port, db_name, user, passwd, **kwargs):
+		super().__init__(
+            driver=driver, 
+            host=host,
+            port=port,
+            db_name=db_name, 
+            user=user, 
+            passwd=passwd, 
+            protected_columns=CMOD_PROTECTED_COLUMNS, 
+            **kwargs
+        )
   
 	def default(**kwargs):
 		USER = os.getenv('USER')
@@ -22,6 +31,7 @@ class CModDatabase(ShotDatabase):
 		return CModDatabase(
       		driver="{ODBC Driver 18 for SQL Server}", 
          	host=db_server,
+          	port=1433,
         	db_name=db_name,
         	user=db_username, 
         	passwd=db_password,
