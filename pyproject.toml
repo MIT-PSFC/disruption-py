@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "disruption-py"
-version = "0.8.0"
+version = "0.4.0"
 description = ""
 authors = ["Joshua Lorincz <26237613+lajz@users.noreply.github.com>"]
 license = "MIT"
