@@ -1,6 +1,8 @@
 import logging
 from typing import Any, Callable, Dict, List, Tuple
 import MDSplus as mds
+import h5pyd as h5py
+import random
 
 class ProcessMDSConnection():
     """
@@ -16,7 +18,7 @@ class ProcessMDSConnection():
     def get_shot_connection(self, shot_id : int):
         """ Get MDSPlus Connection wrapper for individual shot. """
         return MDSConnection(self.conn, shot_id)
-    
+
 class HDF:
     """
     Class to fill hsds cache with answers
@@ -57,7 +59,13 @@ class MDSConnection:
         self.tree_nickname_funcs = {}
         self.tree_nicknames = {}
         self.open_trees = set()
-        self.last_open_tree = None   
+        self.last_open_tree = None
+        self.fill_hsds = False 
+        self.fill_mongodb = False 
+        self.use_hsds = False 
+        self.use_mongo = False
+        self.cache_miss_enable = False 
+        self.endpoints = [ 'http://localhost:5101', 'http://localhost:5102' ]  
         self.hdf = HDF()
  
     def open_tree(self, tree_name : str):
@@ -69,10 +77,20 @@ class MDSConnection:
         """
         if tree_name not in self.tree_nicknames and tree_name in self.tree_nickname_funcs:
             self.tree_nicknames[tree_name] = self.tree_nickname_funcs[tree_name]()
-            
         if tree_name in self.tree_nicknames:
+            print("two")
             tree_name = self.tree_nicknames[tree_name]
-        
+        if not self.use_hsds and not self.use_mongo or self.cache_miss_enable:
+            self.conn.openTree(tree_name, self.shot_id)
+        if self.use_hsds:
+            try:
+                self.hdf.file = h5py.File(f'/cmod/{self.shot_id}', 'a', use_cache=False, end_point=random.choice(self.endpoints))
+            except:
+                pass
+        elif self.use_mongo:
+            pass
+    
+
         if self.last_open_tree != tree_name:
             self.conn.openTree(tree_name, self.shot_id)
             
@@ -87,11 +105,12 @@ class MDSConnection:
             tree_name = self.tree_nicknames[tree_name]
         
         if tree_name in self.open_trees:
-            try:
-                self.conn.closeTree(tree_name, self.shot_id)
-            except Exception as e:
-                self.logger.warning(f"Error closing tree {tree_name} in shot {self.shot_id}")
-                self.logger.debug(e)
+            if not self.use_hsds and not self.use_mongo or self.cache_miss_enable:
+                try:
+                    self.conn.closeTree(tree_name, self.shot_id)
+                except Exception as e:
+                    self.logger.warning(f"Error closing tree {tree_name} in shot {self.shot_id}")
+                    self.logger.debug(e)
                 
         if self.last_open_tree == tree_name:
             self.last_open_tree = None
@@ -107,7 +126,8 @@ class MDSConnection:
         self.open_trees.clear()
         # self.conn.closeAllTrees()
         
-    def get(self, expression : str, arguments : Any = None, tree_name : str = None) -> Any:
+      
+    def _get(self, expression : str, arguments : Any = None, tree_name : str = None) -> Any:
         """Evaluate the specified expression.
         
         The expression is passed as string argument, but may contain optional arguments. 
@@ -128,11 +148,51 @@ class MDSConnection:
         """
         if tree_name is not None:
             self.open_tree(tree_name)
-        ans = self.conn.get(expression, arguments)
-        self.hdf.add_cache(tree_name, self.shot_id, expression, arguments, ans)
+        if not self.use_hsds and not self.use_mongo:
+            ans = self.conn.get(expression, arguments).data()
+        if self.use_hsds:
+            try:
+                ans = self.hdf.file[tree_name][f'{expression}'].value
+            except:
+                try:
+                    if self.cache_miss_enable:
+                        ans = self.conn.get(expression, arguments).data()
+                    else:
+                        ans = None
+                except:
+                    ans = None
+        elif self.use_mongo:
+            ans = None
         return ans
     
     # Added Methods
+    def get(self, expression : str, arguments : Any = None, tree_name : str = None) -> Any:
+        """Evaluate the specified expression.
+        
+        The expression is passed as string argument, but may contain optional arguments. 
+        These arguments are then passed as an array of Data objects.
+
+        Parameters
+        ----------
+        expression : str
+            MDSplus TDI expression. Please see MDSplus documentation for more information.
+        arguments : Any, optional
+            Arguments for MDSplus TDI Expression. Please see MDSplus documentation for more information. Default None.
+        tree_name : str, optional
+
+        Returns
+        -------
+        Any
+            Result of evaluating TDI expression from MDSplus.
+        """
+
+        ans = self._get(expression, arguments, tree_name)
+        if ans is not None:
+            if self.fill_hsds:
+                self.hdf.add_cache(tree_name, self.shot_id, expression, arguments, ans)
+            if self.fill_mongodb:
+                pass        
+        return ans
     
     def get_record_data(self, path : str, tree_name : str = None, dim_nums : List = None) -> Tuple:
         """Get data and dimension for record at specified path
@@ -153,14 +213,17 @@ class MDSConnection:
         """
         dim_nums = dim_nums or [0]
         
-        if tree_name is not None:
-            self.open_tree(tree_name)
-        data = self.conn.get("_sig=" + path).data()
-        dims = [self.conn.get(f"dim_of(_sig,{dim_num})").data() for dim_num in dim_nums]
-        self.hdf.add_cache(tree_name, self.shot_id, path, None, data)
-        for count,d in enumerate(dims):
-            print(f"ADDING DIM {count}")
-            self.hdf.add_cache(tree_name, self.shot_id, f'dim_of({path}, {count})', None)
+        data = self._get("_sig=" + path)
+        dims = [self._get(f"dim_of(_sig,{dim_num})") for dim_num in dim_nums]
+        if self.fill_hsds:
+            self.hdf.add_cache(tree_name, self.shot_id, path, None, data)
+        if self.fill_mongodb:
+            pass
+        if self.fill_hsds:
+            for count,d in enumerate(dims):
+                self.hdf.add_cache(tree_name, self.shot_id, f'dim_of({path}, {count})', None, d)
+        if self.fill_mongodb:
+            pass
         return data, *dims
     
     
@@ -184,11 +247,22 @@ class MDSConnection:
 
         if tree_name is not None:
             self.open_tree(tree_name)
-        dims = [self.conn.get(f"dim_of({path},{dim_num})").data() for dim_num in dim_nums]
-        for count,d in enumerate(dims):
-            self.hdf.add_cache(tree_name, self.shot_id, f'dim_of({path}, {count})', None)
+        dims = [self.conn._get(f"dim_of({path},{dim_num})").data() for dim_num in dim_nums]
+        if self.fill_hsds:
+            for count,d in enumerate(dims):
+                self.hdf.add_cache(tree_name, self.shot_id, f'dim_of({path}, {count})', None, d)
+        if self.fill_mongodb:
+            pass
         return dims
     
+    # MDSplusML cache population and use
+    def set_aux_cache_parameters(self, fill_hsds : bool, fill_mongodb : bool, use_hsds : bool, use_mongo : bool, cache_miss_enable : bool):
+        self.fill_hsds = fill_hsds
+        self.fill_mongodb = fill_mongodb
+        self.use_hsds = use_hsds
+        self.use_mongo = use_mongo
+        self.cache_miss_enable = cache_miss_enable
+
     # nicknames
     
     def add_tree_nickname_funcs(self, tree_nickname_funcs : Dict[str, Callable]):

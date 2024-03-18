@@ -78,6 +78,7 @@ class CModHandler:
         """
         if not hasattr(self, '_mds_connection'):
             self._mds_connection = self.mds_connection_initializer()
+            self._mds_connection.conn.get('shorten_path()')
         return self._mds_connection
     
     @staticmethod
