@@ -15,6 +15,9 @@ from disruption_py.settings import ShotSettings, LogSettings
 from disruption_py.settings.set_times_request import ListSetTimesRequest 
 from disruption_py.utils.constants import TIME_CONST 
 
+# maximum number of processes
+MAX_PROCS = 8
+
 # Shot list used for testing
 # Mix of disruptive and non-disruptive shots present in SQL and MDSplus
 TEST_SHOTS = [
@@ -81,6 +84,7 @@ def mdsplus_data(cmod_handler : CModHandler, shotlist) -> Dict:
         shot_ids_request=shotlist, 
         shot_settings=shot_settings,
         output_type_request="dict",
+        num_processes=min(MAX_PROCS, len(shotlist)),
     )
     return shot_data
 
