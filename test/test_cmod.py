@@ -90,11 +90,9 @@ def sql_data(cmod_handler : CModHandler, shotlist, mdsplus_data : Dict):
     for shot_id in shotlist:
         times = mdsplus_data[shot_id]['time']
         sql_data =cmod_handler.database.get_shots_data([shot_id])
+        assert len(times) == len(sql_data), f"Shot {shot_id} has {len(times)} rows but SQL has {len(sql_data)} rows"
         shot_data[shot_id] = pd.merge_asof(times.to_frame(), sql_data, on='time', direction='nearest', tolerance=TIME_CONST)
-        assert (
-            len(times) == len(shot_data[shot_id]), 
-            f"Shot {shot_id} has {len(times)} rows but SQL has {len(shot_data[shot_id])} rows"
-        )
+        
     return shot_data
 
 @pytest.mark.parametrize("data_column", TEST_COLUMNS)
@@ -104,11 +102,10 @@ def test_data_columns(shotlist, mdsplus_data : Dict, sql_data : Dict, data_colum
         mdsplus_shot_data, sql_shot_data = mdsplus_data[shot_id], sql_data[shot_id]
         
         if data_column not in mdsplus_shot_data:
-            raise ValueError(f"Column {data_column} missing from MDSPlus for shot {shot_id}")
+            raise AssertionError(f"Column {data_column} missing from MDSPlus for shot {shot_id}")
         
         if data_column not in sql_shot_data:
-            print(f"Column {data_column} missing from SQL for shot {shot_id}")
-            continue
+            raise AssertionError(f"Column {data_column} missing from SQL for shot {shot_id}")
         
         anomaly_ratio = evaluate_differences(
             shot_id=shot_id,
@@ -121,7 +118,7 @@ def test_data_columns(shotlist, mdsplus_data : Dict, sql_data : Dict, data_colum
         anomaly_ratios.append(anomaly_ratio)
     
     if any(anomaly_ratio['failed'] for anomaly_ratio in anomaly_ratios):
-        raise ValueError(get_failure_statistics_string(anomaly_ratios, verbose_output, data_column=data_column))
+        raise AssertionError(get_failure_statistics_string(anomaly_ratios, verbose_output, data_column=data_column))
     
 def test_other_values(shotlist, mdsplus_data : Dict, sql_data : Dict, verbose_output, fail_slow):
     """
