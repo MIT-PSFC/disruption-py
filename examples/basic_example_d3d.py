@@ -1,5 +1,8 @@
+import os
+USER = os.getenv('USER')
+
 import sys
-sys.path.append("/home/lorinczj/disruption-py")
+sys.path.append(f"/home/{USER}/disruption-py")
 
 import logging
 import os
