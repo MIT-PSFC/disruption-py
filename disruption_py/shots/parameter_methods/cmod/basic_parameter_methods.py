@@ -764,7 +764,10 @@ class BasicCmodRequests(ShotDataRequest):
             # actual fit
             _, _, psigma = gaussian_fit(z, y, guess)
             # store output
-            te_hwm[idx] = np.abs(psigma) * 1.1774 # 50%
+            te_hwm[idx] = np.abs(psigma)
+        # rescale from sigma to HWHM
+        # https://en.wikipedia.org/wiki/Full_width_at_half_maximum
+        te_hwm *= np.sqrt(2 * np.log(2))
         # time interpolation
         te_hwm = interp1(ts_time, te_hwm, times)
         return pd.DataFrame({"Te_width": te_hwm})
