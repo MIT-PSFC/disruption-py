@@ -2,8 +2,8 @@ import traceback
 import numpy as np
 
 import pandas as pd
-from disruption_py.databases.database import ShotDatabase
-from disruption_py.mdsplus_integration.mds_connection import MDSConnection
+from disruption_py.databases.d3d_database import D3DDatabase
+from disruption_py.mdsplus_integration.mds_connection import MDSConnection, ProcessMDSConnection
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.shots.parameter_methods.cmod.basic_parameter_methods import BasicCmodRequests
@@ -16,6 +16,9 @@ from disruption_py.utils.utils import without_duplicates
 
 class D3DShotManager(ShotManager):
     
+    def __init__(self, process_database : D3DDatabase, process_mds_conn : ProcessMDSConnection):
+        super().__init__(process_database=process_database, process_mds_conn=process_mds_conn)
+        
     def shot_setup(
         self,
         shot_id : int,
@@ -34,14 +37,12 @@ class D3DShotManager(ShotManager):
                
         mds_conn = self.process_mds_conn.get_shot_connection(shot_id=shot_id)
         
+        
+        efit_tree_name = self.process_database.get_efit_tree(shot_id)
+        
         mds_conn.add_tree_nickname_funcs(
             tree_nickname_funcs = { 
-                "_efit_tree" : self.get_efit_tree_nickname_func(
-                    shot_id=shot_id, 
-                    mds_conn=mds_conn,
-                    disruption_time=disruption_time,
-                    shot_settings=shot_settings,
-                )
+                "_efit_tree" : lambda: efit_tree_name
             }
         )
         

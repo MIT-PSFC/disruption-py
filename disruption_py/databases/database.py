@@ -1,6 +1,7 @@
 import os
 import logging
 from typing import List
+from urllib.parse import quote_plus
 
 import pandas as pd
 import numpy as np
@@ -28,7 +29,9 @@ class ShotDatabase:
         self.connection_string = self._get_connection_string(self.db_name)
         self._thread_connections = {}
         self.logger.info("Database initialized")
-        self.engine = create_engine(f"mssql+pyodbc:///?odbc_connect={self.connection_string}")
+        
+        quoted_connection_string = quote_plus(self.connection_string)
+        self.engine = create_engine(f"mssql+pyodbc:///?odbc_connect={quoted_connection_string}")
 
     def _get_connection_string(self, db_name):
         connection_str = (

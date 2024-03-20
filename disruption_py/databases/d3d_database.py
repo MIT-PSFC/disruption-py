@@ -19,6 +19,7 @@ class D3DDatabase(ShotDatabase):
             protected_columns=D3D_PROTECTED_COLUMNS,
             **kwargs
         )
+        self._tree_thread_connections = {}
         self.tree_connection_string = self._get_connection_string("code_rundb")
   
     def default(**kwargs):
@@ -51,10 +52,10 @@ class D3DDatabase(ShotDatabase):
             Database connection
         """
         current_thread = threading.current_thread()
-        if current_thread not in self._thread_connections:
-            self.logger.info(f"Connecting to database for thread {current_thread}")
-            self._thread_connections[current_thread] = pyodbc.connect(self.connection_string)
-        return self._thread_connections[current_thread]
+        if current_thread not in self._tree_thread_connections:
+            self.logger.info(f"Connecting to code_rundb database for thread {current_thread}")
+            self._tree_thread_connections[current_thread] = pyodbc.connect(self.tree_connection_string)
+        return self._tree_thread_connections[current_thread]
 
     def get_efit_tree(self, shot_id):
         with self.tree_conn.cursor() as curs:
