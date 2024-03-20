@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Dict, Union
 from disruption_py.databases.database import ShotDatabase
 from disruption_py.mdsplus_integration.mds_connection import MDSConnection
-from disruption_py.utils.constants import MAX_SHOT_TIME
+from disruption_py.utils.constants import MAX_SHOT_TIME, TIME_CONST
 from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from disruption_py.utils.mappings.tokamak import Tokamak
 from logging import Logger
@@ -192,19 +192,19 @@ class DisruptionSetTimesRequest(SetTimesRequest):
         if duration < self.minimum_duration or np.abs(ip_max) < self.minimum_ip:
             raise NotImplementedError()
         
+        times = np.arange(0.100, duration+TIME_CONST, 0.025)
         if params.disrupted:
-            times = np.arange(0.100, duration+0.025, 0.025)
             additional_times = np.arange(
                 params.disruption_time-self.DURATION_BEFORE_DISRUPTION, 
-                params.disruption_time + self.DT_BEFORE_DISRUPTION, 
+                params.disruption_time+TIME_CONST, 
                 self.DT_BEFORE_DISRUPTION
             )
-            times = times[np.where(times < (params.disruption_time - self.DURATION_BEFORE_DISRUPTION))]
+            times = times[np.where(times < (params.disruption_time - self.DURATION_BEFORE_DISRUPTION - TIME_CONST))]
             times = np.concatenate((times, additional_times))
-        else:
-            ip_start = np.argmax(ip_time <= .1)
-            ip_end = np.argmax(raw_ip[ip_start:] <= 100000) + ip_start
-            times = ip_time[ip_start:ip_end]  # [ms] -> [s]
+        # else:
+        #     ip_start = np.argmax(ip_time <= .1)
+        #     ip_end = np.argmax(raw_ip[ip_start:] <= 100000) + ip_start
+        #     times = ip_time[ip_start:ip_end]  # [ms] -> [s]
         return times
     
     @classmethod

@@ -22,9 +22,9 @@ USER = os.getenv('USER')
 # Shot list used for testing
 # Mix of disruptive and non-disruptive shots present in SQL and MDSplus
 TEST_SHOTS = [
-    # 161228, 
-    # 161237, 
-    166177, 
+    161228, # disruptive
+    # 161237, # disruptive
+    # 166177, # non disruptive 
     # 166253
 ]
 
