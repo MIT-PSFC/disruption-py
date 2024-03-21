@@ -762,7 +762,13 @@ class BasicCmodRequests(ShotDataRequest):
             i = y.argmax()
             guess = [y[i], z[i], (z.max()-z.min())/3]
             # actual fit
-            _, _, psigma = gaussian_fit(z, y, guess)
+            try:
+                _, _, psigma = gaussian_fit(z, y, guess)
+            except RuntimeError as exc:
+                if str(exc).startswith("Optimal parameters not found"):
+                    psigma = np.nan
+                else:
+                    raise exc
             # store output
             te_hwm[idx] = np.abs(psigma)
         # rescale from sigma to HWHM
