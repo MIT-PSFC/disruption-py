@@ -747,6 +747,8 @@ class BasicCmodRequests(ShotDataRequest):
         te_hwm = np.full(len(ts_time), np.nan)
         # select valid times
         valid_times, = np.where(ts_time > 0)
+        # zero out nan values
+        ts_data = np.nan_to_num(ts_data, copy=False, nan=0)
         # for each valid time
         for idx in valid_times:
             # select non-zero indices
@@ -766,9 +768,8 @@ class BasicCmodRequests(ShotDataRequest):
                 _, _, psigma = gaussian_fit(z, y, guess)
             except RuntimeError as exc:
                 if str(exc).startswith("Optimal parameters not found"):
-                    psigma = np.nan
-                else:
-                    raise exc
+                    continue
+                raise exc
             # store output
             te_hwm[idx] = np.abs(psigma)
         # rescale from sigma to HWHM
