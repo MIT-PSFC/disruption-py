@@ -514,6 +514,7 @@ class BasicCmodRequests(ShotDataRequest):
         for i in range(3):
             try:
                 sig, sig_time = params.mds_conn.get_data_with_dims(nodes[i], tree_name=trees[i], astype="float64")
+                values[2*i] = sig
                 values[2*i + 1] = sig_time
             except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF) as e:
                 continue 
