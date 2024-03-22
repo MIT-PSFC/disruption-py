@@ -265,8 +265,7 @@ class BasicCmodRequests(ShotDataRequest):
                         params.logger.warning([f"[Shot {params.shot_props.shot_id}]: Error getting PID gains for wire {wire_index}"])
                         params.logger.debug([f"[Shot {params.shot_props.shot_id}]: {traceback.format_exc()}"])
                     break # Break out of wire_index loop
-        ip, magtime = params.mds_conn.get_data_with_dims(r"\ip", tree_name="magnetics")
-        ip = ip.astype('float64', copy=False)
+        ip, magtime = params.mds_conn.get_data_with_dims(r"\ip", tree_name="magnetics", astype="float64")
         return BasicCmodRequests.get_ip_parameters(params.shot_props.times, ip, magtime, ip_prog, pcstime)
 
     @staticmethod
@@ -456,12 +455,10 @@ class BasicCmodRequests(ShotDataRequest):
         contained_cached_methods=["_get_ip_parameters"],
         tokamak=Tokamak.CMOD)
     def _get_ohmic_parameters(params : ShotDataRequestParams):
-        v_loop, v_loop_time = params.mds_conn.get_data_with_dims(r"\top.mflux:v0", tree_name="analysis")
-        v_loop = v_loop.astype('float64', copy=False)
+        v_loop, v_loop_time = params.mds_conn.get_data_with_dims(r"\top.mflux:v0", tree_name="analysis", astype="float64")
         if len(v_loop_time) <= 1:
             return pd.DataFrame({"p_oh": np.zeros(len(params.shot_props.times)), "v_loop": np.zeros(len(params.shot_props.times))})
-        li, efittime  = params.mds_conn.get_data_with_dims(r"\efit_aeqdsk:li", tree_name="_efit_tree")
-        li = li.astype('float64', copy=False)
+        li, efittime  = params.mds_conn.get_data_with_dims(r"\efit_aeqdsk:li", tree_name="_efit_tree", astype="float64")
         ip_parameters = BasicCmodRequests._get_ip_parameters(params=params)
         return BasicCmodRequests.get_ohmic_parameters(params.shot_props.times, v_loop, v_loop_time, li, efittime, ip_parameters['dip_smoothed'], ip_parameters['ip'])
 
@@ -516,8 +513,7 @@ class BasicCmodRequests(ShotDataRequest):
                  r"\rf::rf_power_net", r"\twopi_diode"]
         for i in range(3):
             try:
-                sig, sig_time = params.mds_conn.get_data_with_dims(nodes[i], tree_name=trees[i])
-                values[2*i] = sig.astype('float64', copy=False)
+                sig, sig_time = params.mds_conn.get_data_with_dims(nodes[i], tree_name=trees[i], astype="float64")
                 values[2*i + 1] = sig_time
             except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF) as e:
                 continue 
@@ -573,10 +569,8 @@ class BasicCmodRequests(ShotDataRequest):
             v_0.fill(np.nan)
             return pd.DataFrame({"v_0": v_0})
         try:
-            intensity, time = params.mds_conn.get_data_with_dims('.hirex_sr.analysis.a:int', tree_name='spectroscopy')
-            intensity = intensity.astype('float64', copy=False)
-            vel, hirextime = params.mds_conn.get_data_with_dims('.hirex_sr.analysis.a:vel', tree_name='spectroscopy')
-            vel = vel.astype('float64', copy=False)
+            intensity, time = params.mds_conn.get_data_with_dims('.hirex_sr.analysis.a:int', tree_name='spectroscopy', astype="float64")
+            vel, hirextime = params.mds_conn.get_data_with_dims('.hirex_sr.analysis.a:vel', tree_name='spectroscopy', astype="float64")
         except mdsExceptions.TreeFOPENR as e:
             params.logger.warning(f"[Shot {params.shot_props.shot_id}]: Failed to open necessary tress for rotational velocity calculations.")
             params.logger.debug(f"[Shot {params.shot_props.shot_id}]: {traceback.format_exc()}")
@@ -704,12 +698,13 @@ class BasicCmodRequests(ShotDataRequest):
     )
     def _get_densities(params : ShotDataRequestParams):
         try:
-            n_e, t_n = params.mds_conn.get_data_with_dims(r'.tci.results:nl_04', tree_name='electrons') #Line integrated density
-            n_e = np.squeeze(n_e.astype('float64', copy=False))/0.6 #Divide by chord length of ~0.6m to get line averaged density. For future refernce, chord length is stored in .01*\analysis::efit_aeqdsk:rco2v[3,*]
-            ip, t_ip = params.mds_conn.get_data_with_dims(r'\ip', tree_name='magnetics')
-            ip = ip.astype('float64', copy=False)
-            a_minor, t_a = params.mds_conn.get_data_with_dims(r'\efit_aeqdsk:aminor', tree_name='analysis')
-            a_minor = a_minor.astype('float64', copy=False)
+            # Line-integrated density
+            n_e, t_n = params.mds_conn.get_data_with_dims(r".tci.results:nl_04", tree_name="electrons", astype="float64")
+            # Divide by chord length of ~0.6m to get line averaged density.
+            # For future refernce, chord length is stored in .01*\analysis::efit_aeqdsk:rco2v[3,*]
+            n_e = np.squeeze(n_e)/0.6
+            ip, t_ip = params.mds_conn.get_data_with_dims(r"\ip", tree_name="magnetics", astype="float64")
+            a_minor, t_a = params.mds_conn.get_data_with_dims(r"\efit_aeqdsk:aminor", tree_name="analysis", astype="float64")
         except Exception as e:
             params.logger.debug(f"[Shot {params.shot_props.shot_id}] {e}")
             params.logger.warning(f"[Shot {params.shot_props.shot_id}] No density data")
@@ -1001,8 +996,7 @@ class BasicCmodRequests(ShotDataRequest):
         """ """
         sxr = np.full(len(params.shot_props.times), np.nan)
         try:
-            sxr, t_sxr = params.mds_conn.get_data_with_dims(r'\top.brightnesses.array_1:chord_16', tree_name='xtomo')
-            sxr = sxr.astype('float64', copy=False)
+            sxr, t_sxr = params.mds_conn.get_data_with_dims(r"\top.brightnesses.array_1:chord_16", tree_name="xtomo", astype="float64")
             sxr = interp1(t_sxr, sxr, params.shot_props.times)
         except mdsExceptions.TreeFOPENR as e:
             params.logger.warning(f"[Shot {params.shot_props.shot_id}]: Failed to get SXR data returning NaNs")
@@ -1332,8 +1326,7 @@ class ThomsonDensityMeasure:
         ip = params.mds_conn.get_data(r'\ip', "cmod")
         if np.mean(ip) > 0:
             flag = 0
-        efit_times = params.mds_conn.get_data(r'\efit_aeqdsk:time', tree_name="_efit_tree").astype(
-            'float64', copy=False)
+        efit_times = params.mds_conn.get_data(r"\efit_aeqdsk:time", tree_name="_efit_tree", astype="float64")
         t1 = np.amin(efit_times)
         t2 = np.amax(efit_times)
         psia, psia_t = params.mds_conn.get_data_with_dims(r'\efit_aeqdsk:SIBDRY', tree_name="_efit_tree")

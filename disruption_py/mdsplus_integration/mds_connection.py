@@ -141,6 +141,7 @@ class MDSConnection:
         tree_name: str = None,
         dim_nums: List = None,
         astype: str = None,
+        cast_all: bool = False,
     ) -> Tuple:
         """
         Get data and dimension(s) for record at specified path.
@@ -155,6 +156,8 @@ class MDSConnection:
             A list of dimensions that should have their size retrieved. Default [0].
         astype : str, optional
             The data type for explicit casting.
+        cast_all : bool, optional. Default False.
+            Whether to cast both data and dims, or only data.
 
         Returns
         -------
@@ -172,7 +175,8 @@ class MDSConnection:
 
         if astype:
             data = data.astype(astype, copy=False)
-            dims = [dim.astype(astype, copy=False) for dim in dims]
+            if cast_all:
+                dims = [dim.astype(astype, copy=False) for dim in dims]
 
         return data, *dims
 
