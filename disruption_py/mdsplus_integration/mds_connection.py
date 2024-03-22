@@ -1,5 +1,6 @@
 import logging
 from typing import Any, Callable, Dict, List, Tuple
+import numpy as np
 import MDSplus as mds
 
 class ProcessMDSConnection():
@@ -102,10 +103,47 @@ class MDSConnection:
             self.open_tree(tree_name)
         return self.conn.get(expression, arguments)
     
-    # Added Methods
-    
-    def get_record_data(self, path : str, tree_name : str = None, dim_nums : List = None) -> Tuple:
-        """Get data and dimension for record at specified path
+    # Convenience methods
+
+    def get_data(
+        self, path: str, tree_name: str = None, astype: str = None
+    ) -> np.ndarray:
+        """
+        Get data for record at specified path.
+
+        Parameters
+        ----------
+        path : str
+            MDSplus path to record.
+        tree_name : str, optional
+            The name of the tree that must be open for retrieval.
+        astype : str, optional
+            The data type for explicit casting.
+
+        Returns
+        -------
+        np.ndarray
+            Returns the node data.
+        """
+
+        if tree_name is not None:
+            self.open_tree(tree_name)
+
+        data = self.conn.get("_sig=" + path).data()
+        if astype:
+            data = data.astype(astype, copy=False)
+
+        return data
+
+    def get_data_with_dims(
+        self,
+        path: str,
+        tree_name: str = None,
+        dim_nums: List = None,
+        astype: str = None,
+    ) -> Tuple:
+        """
+        Get data and dimension(s) for record at specified path.
 
         Parameters
         ----------
@@ -115,23 +153,39 @@ class MDSConnection:
             The name of the tree that must be open for retrieval.
         dim_nums : List, optional
             A list of dimensions that should have their size retrieved. Default [0].
-            
+        astype : str, optional
+            The data type for explicit casting.
+
         Returns
         -------
         Tuple
-            Returns the node data, followed by the requested dimensions
+            Returns the node data, followed by the requested dimensions.
         """
+
         dim_nums = dim_nums or [0]
-        
+
         if tree_name is not None:
             self.open_tree(tree_name)
+
         data = self.conn.get("_sig=" + path).data()
         dims = [self.conn.get(f"dim_of(_sig,{dim_num})").data() for dim_num in dim_nums]
+
+        if astype:
+            data = data.astype(astype, copy=False)
+            dims = [dim.astype(astype, copy=False) for dim in dims]
+
         return data, *dims
-    
-    
-    def get_dims(self, path : str, tree_name : str = None, dim_nums : List = None) -> Tuple:
-        """Get the size of specified dimensions for record at specified path
+
+    def get_dims(
+        self,
+        path: str,
+        tree_name: str = None,
+        dim_nums: List = None,
+        astype: str = None,
+    ) -> Tuple:
+        """
+        Get the specified dimensions for record at specified path.
+
         Parameters
         ----------
         path : str
@@ -140,17 +194,25 @@ class MDSConnection:
             The name of the tree that must be open for retrieval.
         dim_nums : List, optional
             A list of dimensions that should have their size retrieved. Default [0].
+        astype : str, optional
+            The data type for explicit casting.
 
         Returns
         -------
         Tuple
             Returns the requested dimensions as a tuple.
         """
+
         dim_nums = dim_nums or [0]
 
         if tree_name is not None:
             self.open_tree(tree_name)
-        dims = [self.conn.get(f"dim_of({path},{dim_num})").data() for dim_num in dim_nums]
+
+        dims = [self.conn.get(f"dim_of({path},{d})").data() for d in dim_nums]
+
+        if astype:
+            dims = [dim.astype(astype, copy=False) for dim in dims]
+
         return dims
     
     # nicknames
