@@ -1,49 +1,46 @@
 import os
-import logging
 import threading
 import pyodbc
 from disruption_py.databases import ShotDatabase
 from disruption_py.utils.constants import D3D_PROTECTED_COLUMNS
 
+
 class D3DDatabase(ShotDatabase):
-    logger = logging.getLogger('disruption_py')
 
     def __init__(self, driver, host, port, db_name, user, passwd, **kwargs):
         super().__init__(
-            driver=driver, 
+            driver=driver,
             host=host,
             port=port,
-            db_name=db_name, 
+            db_name=db_name,
             user=user,
-            passwd=passwd, 
+            passwd=passwd,
             protected_columns=D3D_PROTECTED_COLUMNS,
-            **kwargs
+            **kwargs,
         )
         self._tree_thread_connections = {}
         self.tree_connection_string = self._get_connection_string("code_rundb")
-  
+
     def default(**kwargs):
-        USER = os.getenv('USER')
-        # TODO: Catch error if file not found and output helpful error message
-        with open(f"/home/{USER}/D3DRDB.sybase_login", "r") as profile:
-            content = profile.read().splitlines()
-            db_username = content[0]
-            assert db_username == USER, f"db_username:{db_username};user:{USER}"
-            db_password = content[1]
-        return D3DDatabase(
-            driver="{FreeTDS}", 
-            host= "d3drdb.gat.com",
-            port= 8001,
-            db_name= "d3drdb",
-            user=db_username, 
-            passwd=db_password,
-            **kwargs
+        profile = os.path.expanduser("~/D3DRDB.sybase_login")
+        with open(profile, "r") as fio:
+            db_user, db_pass = fio.read().split()
+        kw = dict(
+            driver="{FreeTDS}",
+            host="d3drdb.gat.com",
+            port=8001,
+            db_name="d3drdb",
+            user=db_user,
+            passwd=db_pass,
         )
-  
+        kw.update(kwargs)
+        db = D3DDatabase(**kw)
+        return db
+
     @property
     def tree_conn(self):
         """Property returning a connection to sql database.
-        
+
         If a connection exists for the given thread returns that connection, otherwise creates a new connection
 
         Returns
