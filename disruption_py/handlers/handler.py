@@ -119,7 +119,10 @@ class Handler(ABC):
         
         shot_ids_request_params = ShotIdsRequestParams(self.database, Tokamak.D3D, self.logger)
         shot_ids_list = without_duplicates(shot_ids_request_runner(shot_ids_request, shot_ids_request_params))
-        
+
+        # do not spawn unnecessary processes
+        num_processes = min(num_processes, len(shot_ids_list))
+
         if num_processes > 1:
             shot_retriever = MultiprocessingShotRetriever(
                 database=self.database,
