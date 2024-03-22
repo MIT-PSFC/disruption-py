@@ -77,7 +77,7 @@ def mdsplus_data(cmod_handler : CModHandler, shotlist) -> Dict:
         shot_ids_request=shotlist, 
         shot_settings=shot_settings,
         output_type_request="dict",
-        num_processes=min(MAX_PROCS, len(shotlist)),
+        num_processes=MAX_PROCS,
     )
     return shot_data
 
