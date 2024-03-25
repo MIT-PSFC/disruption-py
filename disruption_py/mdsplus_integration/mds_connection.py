@@ -106,7 +106,7 @@ class MDSConnection:
     # Convenience methods
 
     def get_data(
-        self, path: str, tree_name: str = None, astype: str = None
+        self, path: str, tree_name: str = None, astype: str = None, arguments: Any = None
     ) -> np.ndarray:
         """
         Get data for record at specified path.
@@ -119,6 +119,9 @@ class MDSConnection:
             The name of the tree that must be open for retrieval.
         astype : str, optional
             The data type for explicit casting.
+        arguments : Any, optional
+            Arguments for MDSplus TDI Expression. Default None.
+            Please see MDSplus documentation for more information.
 
         Returns
         -------
@@ -129,7 +132,7 @@ class MDSConnection:
         if tree_name is not None:
             self.open_tree(tree_name)
 
-        data = self.conn.get("_sig=" + path).data()
+        data = self.conn.get("_sig=" + path, arguments).data()
         if astype:
             data = data.astype(astype, copy=False)
 

@@ -151,7 +151,7 @@ class BasicCmodRequests(ShotDataRequest):
         root_nid = params.mds_conn.get('GetDefaultNid()')
         children_nids = params.mds_conn.get('getnci(getnci($, "CHILDREN_NIDS"), "NID_NUMBER")', arguments=root_nid)
         children_paths = params.mds_conn.get('getnci($, "FULLPATH")', arguments=children_nids)
-        children_on = params.mds_conn.get(f'getnci($, "STATE")', arguments=children_nids).data() 
+        children_on = params.mds_conn.get_data(f'getnci($, "STATE")', arguments=children_nids)
         
         # Collect active segments and their information
         active_segments = []
