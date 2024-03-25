@@ -219,13 +219,12 @@ def gauss_smooth(y, smooth_width, ends_type):
             s[i] = np.mean(y[i - w // 2:i + w // 2])
     return s
 
-# Credit to: https://stackoverflow.com/questions/11507028/fit-a-gaussian-function
-def gaussian_fit(x, y):
+def gaussian_fit(*args):
     """
     Fits a Gaussian curve to a set of data points (x,y).
     Returns an array of coefficients, c, that describe the fit.
 
-    Credit to: https://stackoverflow.com/questions/11507028/fit-a-gaussian-function
+    Reference: https://stackoverflow.com/q/11507028
 
     Parameters
     ----------
@@ -233,33 +232,38 @@ def gaussian_fit(x, y):
         The x-coordinates of the data points.
     y : array
         The y-coordinates of the data points.
+    p0 : array
+        The initial values of the parameters.
 
     Returns
     -------
     coeffs : array
         The coefficients of the fit.
     """
-    coeffs, var_matrix = curve_fit(gauss, x, y)
+
+    coeffs, var_matrix = curve_fit(gauss, *args)
     return coeffs
 
-
 def gauss(x, *params):
-    """ Gaussian function.
+    """
+    Gaussian function.
 
     Parameters
     ----------
     x : array
         The x-coordinates of the data points.
     params : array
-        The parameters of the Gaussian function.
+        The 3 parameters of the Gaussian function.
 
     Returns
     -------
-    _ : array
+    out : array
         The Gaussian function evaluated at the given x-coordinates.
     """
-    z, mu, sigma = params
-    return z*np.exp(-(x-mu)**2/(2.0*sigma**2))
+
+    a, mu, sigma = params
+    out = a * np.exp(-((x - mu) ** 2) / (2.0 * sigma**2))
+    return out
 
 # Alessandro Pau (JET & AUG) has given Cristina a robust routine that
 # performs time differentiation with smoothing, while preserving causality.
