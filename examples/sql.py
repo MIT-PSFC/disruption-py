@@ -36,6 +36,9 @@ while queries:
         print()
         continue
 
+    if not __debug__:
+        break
+
     try:
         query = input("\n> ")
         if query:
