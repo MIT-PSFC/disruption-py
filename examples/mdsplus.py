@@ -11,9 +11,11 @@ from disruption_py.handlers.d3d_handler import D3DHandler
 if os.path.exists("/fusion/projects/disruption_warning"):
     handler = D3DHandler()
     shot = 161228
+    shape = (196,)
 else:
     handler = CModHandler()
     shot = 1150805012
+    shape = (2400,)
 mds = handler.mds_connection.conn
 print(f"Initialized MDSplus: {mds.hostspec}")
 
@@ -26,3 +28,5 @@ print(">", node)
 out = mds.get(node).data()
 print("=", out.shape)
 print(out)
+
+assert out.shape == shape

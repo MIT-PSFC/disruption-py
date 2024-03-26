@@ -18,8 +18,10 @@ queries = [
 
 if os.path.exists("/fusion/projects/disruption_warning"):
     db = D3DDatabase.default()
+    vals = [13245, 8055, 5190, 24219]
 else:
     db = CModDatabase.default()
+    vals = [10435, 6640, 3795, 13785]
 print(f"Initialized DB: {db.user}@{db.host}/{db.db_name}")
 
 while queries:
@@ -31,6 +33,8 @@ while queries:
     print("=", out.shape)
 
     print(out.iloc[0] if out.shape[0] == 1 else out)
+    if vals:
+        assert out.iloc[0, 0] == vals.pop(0)
 
     if queries:
         print()
