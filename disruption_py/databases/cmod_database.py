@@ -5,17 +5,9 @@ from disruption_py.utils.constants import CMOD_PROTECTED_COLUMNS
 
 class CModDatabase(ShotDatabase):
 
-    def __init__(self, driver, host, port, db_name, user, passwd, **kwargs):
-        super().__init__(
-            driver=driver,
-            host=host,
-            port=port,
-            db_name=db_name,
-            user=user,
-            passwd=passwd,
-            protected_columns=CMOD_PROTECTED_COLUMNS,
-            **kwargs
-        )
+    def __init__(self, *args, **kwargs):
+        kwargs["protected_columns"] = CMOD_PROTECTED_COLUMNS
+        super().__init__(*args, **kwargs)
 
     def default(**kwargs):
         profile = os.path.expanduser("~/logbook.sybase_login")

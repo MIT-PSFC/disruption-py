@@ -7,17 +7,9 @@ from disruption_py.utils.constants import D3D_PROTECTED_COLUMNS
 
 class D3DDatabase(ShotDatabase):
 
-    def __init__(self, driver, host, port, db_name, user, passwd, **kwargs):
-        super().__init__(
-            driver=driver,
-            host=host,
-            port=port,
-            db_name=db_name,
-            user=user,
-            passwd=passwd,
-            protected_columns=D3D_PROTECTED_COLUMNS,
-            **kwargs,
-        )
+    def __init__(self, *args, **kwargs):
+        kwargs["protected_columns"] = D3D_PROTECTED_COLUMNS
+        super().__init__(*args, **kwargs)
         self._tree_thread_connections = {}
         self.tree_connection_string = self._get_connection_string("code_rundb")
 
