@@ -9,6 +9,7 @@ class CModDatabase(ShotDatabase):
         kwargs["protected_columns"] = CMOD_PROTECTED_COLUMNS
         super().__init__(*args, **kwargs)
 
+    @staticmethod
     def default(**kwargs):
         profile = os.path.expanduser("~/logbook.sybase_login")
         with open(profile, "r") as fio:

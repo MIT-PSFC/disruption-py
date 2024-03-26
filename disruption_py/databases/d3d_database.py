@@ -13,6 +13,7 @@ class D3DDatabase(ShotDatabase):
         self._tree_thread_connections = {}
         self.tree_connection_string = self._get_connection_string("code_rundb")
 
+    @staticmethod
     def default(**kwargs):
         profile = os.path.expanduser("~/D3DRDB.sybase_login")
         with open(profile, "r") as fio:
