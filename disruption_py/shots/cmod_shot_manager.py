@@ -70,6 +70,9 @@ class CModShotManager(ShotManager):
                 *[f"efit{i}" for i in range(10, 19)],
             ])
             
+            if "efit18" in efit_names_to_test and disruption_time is None:
+                efit_names_to_test.remove("efit18")
+            
             for efit_name in efit_names_to_test:
                 try:
                     mds_conn.open_tree(efit_name)
