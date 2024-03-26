@@ -34,17 +34,20 @@ class ShotDatabase:
         self.engine = create_engine(f"mssql+pyodbc:///?odbc_connect={quoted_connection_string}")
 
     def _get_connection_string(self, db_name):
-        connection_str = (
-            f"DRIVER={self.driver};"
-            f"SERVER={self.host};"
-            f"PORT={self.port};"
-            f"DATABASE={db_name};"
-            f"UID={self.user};"
-            f"PWD={self.passwd};"
-            "TrustServerCertificate=yes;"
-            "Connection Timeout=60;"
-        )
-        return connection_str
+        params = {
+            "DRIVER": self.driver,
+            "SERVER": self.host,
+            "PORT": self.port,
+            "DATABASE": db_name,
+            "UID": self.user,
+            "PWD": self.passwd,
+            "TrustServerCertificate": "yes",
+            "Connection Timeout": 60,
+        }
+        if "ODBC" in self.driver:
+            params["SERVER"] += f",{params.pop('PORT')}"
+        conn_str = ";".join([f"{k}={v}" for k, v in params.items()])
+        return conn_str
     
     @property
     def conn(self):
