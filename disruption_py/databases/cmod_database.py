@@ -17,7 +17,7 @@ class CModDatabase(ShotDatabase):
         kw = dict(
             driver="{ODBC Driver 18 for SQL Server}",
             host=db_server,
-            port=8001,
+            port=1433,
             db_name=db_name,
             user=db_user,
             passwd=db_pass,
