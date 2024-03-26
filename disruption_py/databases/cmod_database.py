@@ -15,7 +15,7 @@ class CModDatabase(ShotDatabase):
         with open(profile, "r") as fio:
             db_server, db_name, db_user, db_pass = fio.read().split()
         kw = dict(
-            driver="{ODBC Driver 18 for SQL Server}",
+            driver="ODBC Driver 18 for SQL Server",
             host=db_server,
             port=1433,
             db_name=db_name,

@@ -19,7 +19,13 @@ class ShotDatabase:
     logger = logging.getLogger('disruption_py')        
         
     def __init__(self, driver, host, port, db_name, user, passwd, protected_columns=[], **kwargs):
-        self.driver = driver
+        self.logger.info(f"Database initialization: {user}@{host}/{db_name}")
+        drivers = pyodbc.drivers()
+        if driver in drivers:
+            self.driver = driver
+        else:
+            self.driver = drivers[0]
+            self.logger.warning(f"Database driver fallback: '{driver}' -> '{self.driver}'")
         self.host = host
         self.port = port
         self.db_name = db_name
@@ -28,8 +34,6 @@ class ShotDatabase:
         self.protected_columns = protected_columns
         self.connection_string = self._get_connection_string(self.db_name)
         self._thread_connections = {}
-        self.logger.info("Database initialized")
-        
         quoted_connection_string = quote_plus(self.connection_string)
         self.engine = create_engine(f"mssql+pyodbc:///?odbc_connect={quoted_connection_string}")
 
