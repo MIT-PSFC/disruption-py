@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # parameters
-export DISPY_PYVERS=${DISPY_PYVERS:+3.10}
-export DISPY_BRANCH=${DISPY_BRANCH:+main}
+export DISPY_PYVERS=${DISPY_PYVERS:=3.10}
+export DISPY_BRANCH=${DISPY_BRANCH:=main}
 
 # reset
 if [[ -d /usr/local/mfe/disruptions ]]
