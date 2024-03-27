@@ -27,6 +27,8 @@ else
 
 fi
 
+unset PYTHONPATH
+
 # mdsplus
 export PATH=$PATH:$MDSPLUS_DIR/bin
 export PYTHONPATH=$MDSPLUS_DIR/python:$PYTHONPATH
