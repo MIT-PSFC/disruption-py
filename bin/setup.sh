@@ -44,8 +44,3 @@ export DISPY_BRANCH_DIR=$DISPY_DIR/repo/$DISPY_BRANCH
 export DISPY_PYVERS_DIR=$DISPY_DIR/venv/$DISPY_BRANCH-py$DISPY_PYVERS
 export PYTHONPATH=$DISPY_BRANCH_DIR/disruption_py:$PYTHONPATH
 
-# virtual environment
-# shellcheck source=/dev/null
-source "$DISPY_PYVERS_DIR/bin/activate"
-export PS1="(DisPy:${PS1#(}"
-
