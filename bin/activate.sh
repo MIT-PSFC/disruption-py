@@ -2,7 +2,7 @@
 
 # setup
 # shellcheck source=/dev/null
-source "$(dirname "$0")/setup.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/setup.sh"
 
 # virtual environment
 # shellcheck source=/dev/null
