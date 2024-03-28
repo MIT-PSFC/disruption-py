@@ -40,7 +40,7 @@ while queries:
         print()
         continue
 
-    if not __debug__:
+    if not __debug__ or "PYTEST_CURRENT_TEST" in os.environ:
         break
 
     try:
