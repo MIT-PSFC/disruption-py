@@ -5,19 +5,14 @@ Expects MDSplus to be installed and configured.
 Expects SQL credentials to be configured.
 """
 from typing import Dict
-from disruption_py.handlers.d3d_handler import D3DHandler
 import pytest
 
 import numpy as np
 import pandas as pd
 import logging
-import os
 from disruption_py.handlers.d3d_handler import D3DHandler
 from disruption_py.settings import ShotSettings, LogSettings
-from disruption_py.settings.set_times_request import ListSetTimesRequest 
 from disruption_py.utils.constants import TIME_CONST 
-
-USER = os.getenv('USER')
 
 # Shot list used for testing
 # Mix of disruptive and non-disruptive shots present in SQL and MDSplus
@@ -70,7 +65,7 @@ def mdsplus_data(d3d_handler : D3DHandler, shotlist) -> Dict:
         set_times_request="disruption",
         log_settings=LogSettings(
             log_to_console=False,
-            log_file_path=f"/cscratch/{USER}/last_test_log.log",
+            log_file_path="test/d3d.log",
             log_file_write_mode="w",
             file_log_level=logging.DEBUG
         )
@@ -223,47 +218,3 @@ def get_failure_statistics_string(anomaly_ratios, verbose_output, data_column=No
         return failure_strings.get(data_column, "")
     else:
         return '\n'.join(failure_strings.values())
-    
-
-# 41 33, 57 17
-# FAILED test/test_d3d.py::test_data_columns[0-False-n_equal_1_mode_IRLM] - AssertionError: Column n_equal_1_mode_IRLM missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-v_z] - AssertionError: Column v_z missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-H98] - AssertionError: Shot 161228 column H98 failed for arrays:
-# FAILED test/test_d3d.py::test_data_columns[0-False-radiated_fraction] - AssertionError: Column radiated_fraction missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-zcur] - AssertionError: Shot 161228 column zcur failed for arrays:
-# FAILED test/test_d3d.py::test_data_columns[0-False-v_loop] - AssertionError: Column v_loop missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-p_rad] - AssertionError: Column p_rad missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-dprad_dt] - AssertionError: Column dprad_dt missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-p_nbi] - AssertionError: Column p_nbi missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-p_ech] - AssertionError: Column p_ech missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-p_ohm] - AssertionError: Column p_ohm missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-intentional_disruption] - AssertionError: Column intentional_disruption missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-Te_HWHM] - AssertionError: Column Te_HWHM missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-other_hardware_failure] - AssertionError: Column other_hardware_failure missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-Te_HWHM_RT] - AssertionError: Column Te_HWHM_RT missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-v_loop_RT] - AssertionError: Column v_loop_RT missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-Greenwald_fraction_RT] - AssertionError: Shot 161228 column Greenwald_fraction_RT failed for arrays:
-# FAILED test/test_d3d.py::test_data_columns[0-False-dipprog_dt_RT] - AssertionError: Shot 161228 column dipprog_dt_RT failed for arrays:
-# FAILED test/test_d3d.py::test_data_columns[0-False-n_equal_1_mode] - AssertionError: Shot 161228 column n_equal_1_mode failed for arrays:
-# FAILED test/test_d3d.py::test_data_columns[0-False-n_equal_1_normalized] - AssertionError: Shot 161228 column n_equal_1_normalized failed for arrays:
-# FAILED test/test_d3d.py::test_data_columns[0-False-Te_width_normalized] - AssertionError: Column Te_width_normalized missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-Te_width_normalized_RT] - AssertionError: Column Te_width_normalized_RT missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-q95_RT] - AssertionError: Shot 161228 column q95_RT failed for arrays:
-# FAILED test/test_d3d.py::test_data_columns[0-False-li_RT] - AssertionError: Shot 161228 column li_RT failed for arrays:
-# FAILED test/test_d3d.py::test_data_columns[0-False-beta_p_RT] - AssertionError: Shot 161228 column beta_p_RT failed for arrays:
-# FAILED test/test_d3d.py::test_data_columns[0-False-oeamp1em] - AssertionError: Column oeamp1em missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-oeamp1om] - AssertionError: Column oeamp1om missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-oefrq1em] - AssertionError: Column oefrq1em missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-oefrq1om] - AssertionError: Column oefrq1om missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-oeamp1e] - AssertionError: Column oeamp1e missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-oeamp1o] - AssertionError: Column oeamp1o missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-oefrq1e] - AssertionError: Column oefrq1e missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-oefrq1o] - AssertionError: Column oefrq1o missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-zcur_normalized] - AssertionError: Shot 161228 column zcur_normalized failed for arrays:
-# FAILED test/test_d3d.py::test_data_columns[0-False-n1rms_normalized] - AssertionError: Shot 161228 column n1rms_normalized failed for arrays:
-# FAILED test/test_d3d.py::test_data_columns[0-False-kappa_area] - AssertionError: Shot 161228 column kappa_area failed for arrays:
-# FAILED test/test_d3d.py::test_data_columns[0-False-Te_peaking_CVA_RT] - AssertionError: Column Te_peaking_CVA_RT missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-ne_peaking_CVA_RT] - AssertionError: Column ne_peaking_CVA_RT missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-Prad_peaking_CVA_RT] - AssertionError: Column Prad_peaking_CVA_RT missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-Prad_peaking_XDIV_RT] - AssertionError: Column Prad_peaking_XDIV_RT missing from MDSPlus for shot 161228
-# FAILED test/test_d3d.py::test_data_columns[0-False-H_alpha] - AssertionError: Shot 161228 column H_alpha failed for arrays:

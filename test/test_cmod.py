@@ -12,7 +12,6 @@ import pandas as pd
 import logging
 from disruption_py.handlers.cmod_handler import CModHandler
 from disruption_py.settings import ShotSettings, LogSettings
-from disruption_py.settings.set_times_request import ListSetTimesRequest 
 from disruption_py.utils.constants import TIME_CONST 
 
 # Shot list used for testing
@@ -72,8 +71,8 @@ def mdsplus_data(cmod_handler : CModHandler, shotlist) -> Dict:
         set_times_request="efit",
         log_settings=LogSettings(
             log_to_console=False,
-            log_file_path="test/last_log.log",
-            log_file_write_mode="a",
+            log_file_path="test/cmod.log",
+            log_file_write_mode="w",
             file_log_level=logging.DEBUG
         )
     )
