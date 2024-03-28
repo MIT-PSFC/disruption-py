@@ -14,7 +14,7 @@ shot_*profileX*
 scripts/output/*
 scripts/*.txt
 .venv
-venv
-site/
+site
+_site
 .idea
-.pytest_cache
+.nfs*
