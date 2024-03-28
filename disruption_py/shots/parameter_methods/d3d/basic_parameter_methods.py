@@ -6,10 +6,6 @@ try:
 except ImportError:
     class MdsException(Exception):
         __getattr__ = lambda self, name: Exception
-try:
-    import netCDF4 as nc
-except ImportError:
-    pass  # TODO: Contact DIII-D about thisfrom MDSplus import MdsException
 import scipy
 from disruption_py.settings.shot_data_request import ShotDataRequest, ShotDataRequestParams
 from disruption_py.shots.helpers.method_caching import cached_method, parameter_cached_method
@@ -517,6 +513,7 @@ class BasicD3DRequests(ShotDataRequest):
     def get_n1_bradial_parameters(params : ShotDataRequestParams):
         # The following shots are missing bradial calculations in MDSplus and must be loaded from a separate datafile
         if params.shot_props.shot_id >= 176030 and params.shot_props.shot_id <= 176912:
+            import netCDF4 as nc
             # TODO: Move to a folder like "/fusion/projects/disruption_warning/data"
             filename = '/fusion/projects/disruption_warning/matlab_programs/recalc.nc'
             ncid = nc.Dataset(filename, 'r')
