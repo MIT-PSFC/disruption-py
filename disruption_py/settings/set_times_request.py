@@ -148,11 +148,11 @@ class EfitSetTimesRequest(SetTimesRequest):
         efit_tree_name = params.mds_conn.get_tree_name_of_nickname("_efit_tree")
         if efit_tree_name == 'analysis':
             try:
-                return params.mds_conn.get(r"\analysis::efit_aeqdsk:time", tree_name="_efit_tree").data().astype('float64', copy=False)
+                return params.mds_conn.get_data(r"\analysis::efit_aeqdsk:time", tree_name="_efit_tree", astype="float64")
             except Exception as e:
-                return params.mds_conn.get(r"\analysis::efit:results:a_eqdsk:time", tree_name="_efit_tree").data().astype('float64', copy=False)
+                return params.mds_conn.get_data(r"\analysis::efit:results:a_eqdsk:time", tree_name="_efit_tree", astype="float64")
         else:
-            return params.mds_conn.get(fr"\{efit_tree_name}::top.results.a_eqdsk:time", tree_name="_efit_tree").data().astype('float64', copy=False)
+            return params.mds_conn.get_data(fr"\{efit_tree_name}::top.results.a_eqdsk:time", tree_name="_efit_tree", astype="float64")
             
     def _get_times(self, params : SetTimesRequestParams) -> np.ndarray:
         raise ValueError("EFIT timebase request not implemented")
