@@ -41,15 +41,15 @@ class CModEfitRequests(ShotDataRequest):
                  "beta_p": r'\efit_aeqdsk:betap',
                  "kappa": r'\efit_aeqdsk:eout',
                  "li": r'\efit_aeqdsk:li',
-                 "upper_gap": r'\efit_aeqdsk:otop',
-                 "lower_gap": r'\efit_aeqdsk:obott',
+                 "upper_gap": r'\efit_aeqdsk:otop/100',
+                 "lower_gap": r'\efit_aeqdsk:obott/100',
                  "q0": r'\efit_aeqdsk:q0',
                  "qstar": r'\efit_aeqdsk:qstar',
                  "q95": r'\efit_aeqdsk:q95',
                  "v_loop_efit": r'\efit_aeqdsk:vloopt',
                  "Wmhd": r'\efit_aeqdsk:wplasm',
-                 "ssep": r'\efit_aeqdsk:ssep',
-                 "n_over_ncrit": r'\efit_aeqdsk:xnnc',
+                 "ssep": r'\efit_aeqdsk:ssep/100',
+                 "n_over_ncrit": r'-\efit_aeqdsk:xnnc',
                  "tritop": r'\efit_aeqdsk:doutu',
                  "tribot":  r'\efit_aeqdsk:doutl',
                  "a_minor": r'\efit_aeqdsk:aminor',
@@ -736,20 +736,46 @@ class BasicCmodRequests(ShotDataRequest):
             return pd.DataFrame({"I_efc": np.empty(len(params.shot_props.times))})
         return BasicCmodRequests.get_efc_current(params.shot_props.times, iefc, t_iefc)
 
-    # TODO: Split
     @staticmethod
-    def get_Ts_parameters(times, ts_data, ts_time, ts_z):
+    def get_Ts_parameters(times, ts_data, ts_time, ts_z, z_sorted=False):
+        # sort z array
+        if not z_sorted:
+            idx = np.argsort(ts_z)
+            ts_z = ts_z[idx]
+            ts_data = ts_data[idx]
+        # init output
         te_hwm = np.full(len(ts_time), np.nan)
-        valid_times = np.where(ts_time > 0)
-        # TODO: Vectorize
-        for i in range(len(valid_times)):
-            y = ts_data[:, valid_times[i]]
-            ok_indices = np.where(y != 0)
-            if len(ok_indices) > 2:
-                y = y[ok_indices]
-                z = ts_z[ok_indices]
-                _, _, sigma = gaussian_fit(z, y)
-                te_hwm[valid_times[i]] = sigma*1.1774  # 50%
+        # select valid times
+        valid_times, = np.where(ts_time > 0)
+        # zero out nan values
+        ts_data = np.nan_to_num(ts_data, copy=False, nan=0)
+        # for each valid time
+        for idx in valid_times:
+            # select non-zero indices
+            y = ts_data[:, idx]
+            ok_indices, = np.where(y != 0)
+            # skip if not enough points
+            if len(ok_indices) < 3:
+                continue
+            # working arrays
+            y = y[ok_indices]
+            z = ts_z[ok_indices]
+            # initial guess
+            i = y.argmax()
+            guess = [y[i], z[i], (z.max()-z.min())/3]
+            # actual fit
+            try:
+                _, _, psigma = gaussian_fit(z, y, guess)
+            except RuntimeError as exc:
+                if str(exc).startswith("Optimal parameters not found"):
+                    continue
+                raise exc
+            # store output
+            te_hwm[idx] = np.abs(psigma)
+        # rescale from sigma to HWHM
+        # https://en.wikipedia.org/wiki/Full_width_at_half_maximum
+        te_hwm *= np.sqrt(2 * np.log(2))
+        # time interpolation
         te_hwm = interp1(ts_time, te_hwm, times)
         return pd.DataFrame({"Te_width": te_hwm})
 

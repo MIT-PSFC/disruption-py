@@ -16,10 +16,11 @@ pip install /home/joshlor/disruption-py
 ```
 
 ### Stuck on Poetry Install { .doc .doc-heading }
-In terminal run one of:
-
-- `export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring`
-- `pyenv shell system` and then `python3 -m keyring --disable`
+Poetry might hang instead of asking to unlock the keyring, which is a [known bug](https://github.com/python-poetry/poetry/issues/8623).
+As a temporary workaround while the bug is addressed, please set:
+```bash
+export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring
+```
 
 ## Usage { .doc .doc-heading }
 

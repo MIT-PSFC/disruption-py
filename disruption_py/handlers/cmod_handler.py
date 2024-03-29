@@ -50,7 +50,7 @@ class CModHandler:
         **kwargs
     ):
         self.database_initializer = database_initializer or CModDatabase.default
-        mds_connection_str = mds_connection_str or "alcdata-new"
+        mds_connection_str = mds_connection_str or "alcdata-archives"
         self.mds_connection_initializer = lambda: ProcessMDSConnection(mds_connection_str)
         
 
@@ -140,7 +140,10 @@ class CModHandler:
         
         shot_ids_request_params = ShotIdsRequestParams(self.database, Tokamak.CMOD, self.logger)
         shot_ids_list = without_duplicates(shot_ids_request_runner(shot_ids_request, shot_ids_request_params))
-        
+
+        # do not spawn unnecessary processes
+        num_processes = min(num_processes, len(shot_ids_list))
+
         print(f"Retrieving data for {len(shot_ids_list)} shots from MDSPlus")
         
         if num_processes > 1:

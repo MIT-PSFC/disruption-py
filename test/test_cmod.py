@@ -15,6 +15,9 @@ from disruption_py.settings import ShotSettings, LogSettings
 from disruption_py.settings.set_times_request import ListSetTimesRequest 
 from disruption_py.utils.constants import TIME_CONST 
 
+# maximum number of processes
+MAX_PROCS = 8
+
 # Shot list used for testing
 # Mix of disruptive and non-disruptive shots present in SQL and MDSplus
 TEST_SHOTS = [
@@ -43,13 +46,6 @@ TEST_COLUMNS = [
     'dprad_dt', 'p_lh', 'p_icrf', 'p_input', 'radiated_fraction', 'time',
     'shot', 'commit_hash'
 ]
-
-KNOWN_NUMERIC_FAILURE_COLUMNS = [
-    'lower_gap', 'upper_gap', 'ssep', 'dipprog_dt', 'n_over_ncrit', # constant factor scaling error
-    'ip_error' # constant error
-]
-
-# TEST_COLUMNS = list(set(TEST_COLUMNS).difference(KNOWN_NUMERIC_FAILURE_COLUMNS))
 
 TIME_EPSILON = 0.05 # Tolerance for taking the difference between two times [s]
 IP_EPSILON = 1e5    # Tolerance for taking the difference between two ip values [A]
@@ -81,6 +77,7 @@ def mdsplus_data(cmod_handler : CModHandler, shotlist) -> Dict:
         shot_ids_request=shotlist, 
         shot_settings=shot_settings,
         output_type_request="dict",
+        num_processes=MAX_PROCS,
     )
     return shot_data
 
