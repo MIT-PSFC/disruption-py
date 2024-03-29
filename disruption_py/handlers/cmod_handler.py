@@ -42,7 +42,7 @@ class CModHandler(Handler):
     ):
         super().__init__(
             database_initializer=database_initializer or CModDatabase.default,
-            mds_connection_str = mds_connection_str or "alcdata-new",
+            mds_connection_str = mds_connection_str or "alcdata-archives",
             **kwargs
         )
 

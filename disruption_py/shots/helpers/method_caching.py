@@ -9,7 +9,14 @@ def get_method_cache_key(method_name, times):
     current_thread_id = threading.get_ident()
     return method_name + str(len(times)) + str(current_thread_id)
 
-def parameter_cached_method(tags=["all"], columns=[], **kwargs):
+def parameter_cached_method(
+    tags=["all"], 
+    columns=[], 
+    used_trees=None, 
+    contained_cached_methods=None, 
+    cache_between_threads=True, 
+    tokamak=None, 
+):
     """Decorates a function as a parameter method. 
     
     Parameter methods are functions that calculate disruption parameters from MDSplus data for a single shot. 
@@ -48,20 +55,30 @@ def parameter_cached_method(tags=["all"], columns=[], **kwargs):
     cache_between_threads: bool
         Specifically for methods with the `cached_method` decorator that return objects that are not threadsafe. If True, the cache
         will be shared between threads. If False, the cache will only be used by the same thread. Default is True.
-    tokamaks : List[Tokamak]
+    tokamak : Union[Tokamak, List[Tokamak]] 
         A list of Tokamak objects that represent which tokamks this parameter method may be used for. Specifically for methods inside of
         `ShotDataRequest` subclasses. Default value of None allows the parameter method to be run for any tokamak.
     """
     # TODO: Figure out how to hash _times so that we can use the cache for different timebases
     def tag_wrapper(func):
-        wrapper = cached_method(**kwargs)(func)
+        wrapper = cached_method(
+            used_trees=used_trees, 
+            contained_cached_methods=contained_cached_methods, 
+            cache_between_threads=cache_between_threads, 
+            tokamak=tokamak,
+        )(func)
         wrapper.cached_method_params = ParameterCachedMethodParams.from_cached_method_params(wrapper.cached_method_params, columns, tags)
         
         return wrapper
     return tag_wrapper
 
 
-def cached_method(used_trees=None, contained_cached_methods=None, cache_between_threads=True, tokamak=None):
+def cached_method(
+    used_trees=None, 
+    contained_cached_methods=None, 
+    cache_between_threads=True, 
+    tokamak=None
+):
     """Decorates a function as a cached method and instantiates its cache. 
     
     Cached methods are functions that run expensive operations on data in the shot and may be reused. 
@@ -82,7 +99,7 @@ def cached_method(used_trees=None, contained_cached_methods=None, cache_between_
     cache_between_threads: bool
         Specifically for methods with the `cached_method` decorator that return objects that are not threadsafe. If True, the cache
         will be shared between threads. If False, the cache will only be used by the same thread. Default is True.
-    tokamaks : List[Tokamak]
+    tokamak : Union[Tokamak, List[Tokamak]] 
         A list of Tokamak objects that represent which tokamks this parameter method may be used for. Specifically for methods inside of
         `ShotDataRequest` subclasses. Default value of None allows the parameter method to be run for any tokamak.
     """

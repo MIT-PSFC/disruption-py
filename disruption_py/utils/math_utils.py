@@ -9,11 +9,9 @@ import string
 import random
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d, interp2d, RegularGridInterpolator
 from scipy.optimize import curve_fit
 from scipy.signal import medfilt
-from matplotlib.backends.backend_pdf import PdfPages
 
 pd.options.mode.chained_assignment = None
 
@@ -574,9 +572,33 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
 
 
 def save_open_plots(filename):
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_pdf import PdfPages
     pp = PdfPages(filename)
     fig_nums = plt.get_fignums()
     figs = [plt.figure(n) for n in fig_nums]
     for fig in figs:
         fig.savefig(pp, format='pdf')
     pp.close()
+
+
+def matlab_gradient_1d_vectorized(f, h, **kwargs):
+    """
+    Compute the gradient for a 1D array using vectorized operations.
+
+    :param f: Input 1D array
+    :param h: Spacing array with the same length as f
+    :return: Gradient of f
+    """
+    f = np.array(f)
+    h = np.array(h)
+
+    h_diff = np.diff(h)
+    f_diff = np.diff(f)
+    # Combine into a single gradient array
+    g = np.empty_like(f)
+    g[0] = f_diff[0] / h_diff[0]
+    g[-1] = f_diff[-1] / h_diff[-1]
+    g[1:-1] = (f[2:] - f[0:-2]) / (h[2:] - h[0:-2])
+
+    return g

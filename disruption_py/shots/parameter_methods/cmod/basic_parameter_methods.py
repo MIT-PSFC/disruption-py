@@ -45,15 +45,15 @@ class CModEfitRequests(ShotDataRequest):
                  "beta_p": r'\efit_aeqdsk:betap',
                  "kappa": r'\efit_aeqdsk:eout',
                  "li": r'\efit_aeqdsk:li',
-                 "upper_gap": r'\efit_aeqdsk:otop',
-                 "lower_gap": r'\efit_aeqdsk:obott',
+                 "upper_gap": r'\efit_aeqdsk:otop/100',
+                 "lower_gap": r'\efit_aeqdsk:obott/100',
                  "q0": r'\efit_aeqdsk:q0',
                  "qstar": r'\efit_aeqdsk:qstar',
                  "q95": r'\efit_aeqdsk:q95',
                  "v_loop_efit": r'\efit_aeqdsk:vloopt',
                  "Wmhd": r'\efit_aeqdsk:wplasm',
-                 "ssep": r'\efit_aeqdsk:ssep',
-                 "n_over_ncrit": r'\efit_aeqdsk:xnnc',
+                 "ssep": r'\efit_aeqdsk:ssep/100',
+                 "n_over_ncrit": r'-\efit_aeqdsk:xnnc',
                  "tritop": r'\efit_aeqdsk:doutu',
                  "tribot":  r'\efit_aeqdsk:doutl',
                  "a_minor": r'\efit_aeqdsk:aminor',
@@ -101,7 +101,7 @@ class CModEfitRequests(ShotDataRequest):
                 
         #Get data for V_surf := deriv(\ANALYSIS::EFIT_SSIBRY)*2*pi
         try:
-            ssibry = params.mds_conn.get('\efit_geqdsk:ssibry', tree_name="_efit_tree").data().astype('float64', copy=False)
+            ssibry = params.mds_conn.get(r'\efit_geqdsk:ssibry', tree_name="_efit_tree").data().astype('float64', copy=False)
             efit_data['V_surf'] = np.gradient(ssibry, efit_time)*2*np.pi
         except:
             print("unable to get V_surf")
@@ -116,7 +116,7 @@ class CModEfitRequests(ShotDataRequest):
             
             #Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally sure on this one)
             try: #TODO: confirm this
-                ssimag = params.mds_conn.get('\efit_geqdsk:ssimag', tree_name="_efit_tree").data().astype('float64', copy=False)
+                ssimag = params.mds_conn.get(r'\efit_geqdsk:ssimag', tree_name="_efit_tree").data().astype('float64', copy=False)
                 efit_data['v_loop_efit'] = np.gradient(ssimag, efit_time)*2*np.pi
             except:
                 print("unable to get v_loop_efit")
@@ -124,7 +124,7 @@ class CModEfitRequests(ShotDataRequest):
                 pass 
 
             #Compute beta_n
-            beta_t = params.mds_conn.get('\efit_aeqdsk:betat', tree_name="_efit_tree").data().astype('float64', copy=False)
+            beta_t = params.mds_conn.get(r'\efit_aeqdsk:betat', tree_name="_efit_tree").data().astype('float64', copy=False)
             efit_data['beta_n'] = np.reciprocal( np.reciprocal(beta_t) +  np.reciprocal(efit_data['beta_p']) )
 
         if not np.array_equal(params.shot_props.times, efit_time):
@@ -1023,7 +1023,7 @@ class BasicCmodRequests(ShotDataRequest):
             The times at which to calculate the edge parameters.
         p_Te : BivariatePlasmaProfile
             The Te measurements [keV] in terms of the time and rho of the measurment.
-        ne : BivariatePlasmaProfile
+        p_ne : BivariatePlasmaProfile
             The ne measurements [keV] in terms of the time and rho of the measurment.
         edge_rho_min : float [0,1]
             The rho that defines the minimum of the "edge" region

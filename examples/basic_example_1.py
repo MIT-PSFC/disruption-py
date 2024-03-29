@@ -16,7 +16,7 @@ shot_data = cmod_handler.get_shots_data(
     shot_settings=shot_settings,
     
     # automatically stream retrieved data to a csv file by passing in a file path ending in .csv
-    output_type_request="ip_data.csv",
+    output_type_request="data.csv",
     
     num_processes = 1
 )

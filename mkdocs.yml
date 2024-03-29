@@ -1,6 +1,7 @@
-site_name: My Docs
+---
+site_name: DisruptionPy Documentation
 theme:
-  name: "material"
+  name: material
   features:
     - announce.dismiss
     - content.action.edit
@@ -22,54 +23,58 @@ theme:
     #   - navigation.tabs
     #   - navigation.expand
 nav:
-  - Home: 
-    - Background: index.md
-    - Quickstart:
-      - Installation: quickstart/installation_quickstart.md
-      - Basic Program: quickstart/usage_quickstart.md
-  - API Reference:
-      - Handlers: api/handlers_reference.md
-      - Settings: 
-        - Settings Classes: api/settings_reference.md
-        - Requests Classes:
-          - Existing Data Request: api/requests/existing_data_request_reference.md
-          - Shot Ids Request: api/requests/shot_ids_request_reference.md
-          - Set Times Request: api/requests/set_times_request_reference.md
-          - Output Type Request: api/requests/output_type_request_reference.md
-          - Shot Data Request: api/requests/shot_data_request_reference.md
+  - Overview:
+      - Background: index.md
+      - Installation: installation.md
+      - Quickstart: quickstart/usage_quickstart.md
+  - Usage:
+      - Entry points:
+          - Handlers: usage/handlers_reference.md
+          - Command Line: usage/command_line.md
+      - Settings:
+          - Settings Classes: usage/settings_reference.md
+          - Requests Classes:
+              - Existing Data Request: >-
+                  usage/requests/existing_data_request_reference.md
+              - Shot Ids Request: usage/requests/shot_ids_request_reference.md
+              - Set Times Request: usage/requests/set_times_request_reference.md
+              - Output Type Request: >-
+                  usage/requests/output_type_request_reference.md
+              - Shot Data Request: usage/requests/shot_data_request_reference.md
       - Shots:
-        - Parameter Methods: api/shots/parameter_method_reference.md
-        - Parameter Method Decorators: api/shots/decorator_reference.md
-      - Scripts:
-          - Generate Datasets: api/scripts/generate_datasets.md
-          - Profiling: api/scripts/profile_shots.md
-  - Contributing: contributing.md
-
+          - Parameter Methods:
+              - Overview: usage/shots/parameter_method_reference.md
+              - Built-in Methods: usage/shots/built_in_method_reference.md
+              - Parameter Method Decorators: usage/shots/decorator_reference.md
+          - Parameter Reference: usage/shots/disruption_parameters_reference.md
+      - SQL Database: usage/sql_database.md
+      - MDSplus Connection: usage/mds_connection_reference.md
+  - FAQ: faq.md
+  - GitHub: https://github.com/MIT-PSFC/disruption-py
 markdown_extensions:
-- attr_list
-- admonition
-- footnotes
-- pymdownx.details
-- pymdownx.emoji:
-    emoji_index: !!python/name:material.extensions.emoji.twemoji
-    emoji_generator: !!python/name:material.extensions.emoji.to_svg
-- pymdownx.magiclink
-- pymdownx.snippets:
-    base_path: [""]
-    dedent_subsections: true
-    check_paths: true
-- pymdownx.superfences
-- pymdownx.tabbed:
-    alternate_style: true
-    slugify: !!python/object/apply:pymdownx.slugs.slugify
-      kwds:
-        case: lower
-- pymdownx.tasklist:
-    custom_checkbox: true
-- pymdownx.tilde
-- toc:
-    permalink: "¤"
-
+  - attr_list
+  - admonition
+  - footnotes
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.magiclink
+  - pymdownx.snippets:
+      base_path: ['']
+      dedent_subsections: true
+      check_paths: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - toc:
+      permalink: ¤
 plugins:
   - search
   - autorefs
@@ -97,9 +102,3 @@ plugins:
             show_root_full_path: true
             show_root_members_full_path: false
             show_object_full_path: false
-
-            # Premium options (not able to use)
-            # show_symbol_type_heading: true # super useful
-            # show_symbol_type_toc: true # super useful
-            # summary: true # super useful
-#  - argparse_to_md

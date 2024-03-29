@@ -14,7 +14,7 @@ def decorated_shot_data_method(self, params : ShotDataRequestParams) -> pd.DataF
 
     Parameters
     ----------
-    shot_data_request_params : ShotDataRequest
+    params : ShotDataRequest
         Parameters passed by disruption_py to the decorated method that should be used to help retrieve the shot data from MDSplus.
 
     Returns
@@ -28,7 +28,7 @@ def decorated_shot_data_method(self, params : ShotDataRequestParams) -> pd.DataF
 
 # Paramater cached method example
 # --8<-- [start:kappa_area_request_example]
-from disruption_py.settings.shot_data_request import ShotDataRequestParams
+from disruption_py.settings import ShotDataRequestParams
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.shots.helpers.method_caching import parameter_cached_method
 

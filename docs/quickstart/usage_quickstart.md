@@ -66,12 +66,12 @@ Creating a scripts gives you the full functionality of disruption_py.
 	)
 	```
 
-## Command Line
+## Command Line Support
 
 DisruptionPy offers a number of built-in scripts through its CLI to make the process of retrieving data from MDSplus easier.
 To use the CLI, simply run `disruption_py **command**` from the command line (prepend `poetry run` to the command if you are inside of an environment managed by poetry).
 
-The commands available are listed below. You may also use `disruption_py --help` for more details.
+A few available commands are listed below. Please see the documentation on the [command line][disruption_py-run-generate_datasets] for more details.
 
 ### generate_datasets
 The standard command for generating a dataset using disruption_py, allow for the generation DPRF compatible datasets for training and inference. Currently only supports CMod data. Run `disruption_py run generate_datasets --help` for information on available arguments.

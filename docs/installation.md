@@ -1,56 +1,108 @@
-# Installation  
-
-## Locally
-
-TBD
-
-## On Specfic Clusters
 
 ### Pre-requirements
-
 In order to access the specific clusters, i.e. Alcator C-Mod or DIII-D, a user agreement must first be signed. A local host must be identified, Cristina Rea (<crea@psfc.mit.edu>) will assist with the logistics.
 
-### Alcator C-Mod  
+### Standard installation 
 
-The following command will install the DisruptionPy package locally in developer mode. In developer mode, changes to the directory used for installation will be reflected in the installed package.
+**For CMod, if you are on the mfe workstations, it is highly recommended to be on mferws02, mferws03, or mferws04.**
 
+1. [Optional] Create a new project directory
+	```bash
+	mkdir ~/dpy-projects
+	cd ~/dpy-projects
+	```
+
+2. [Optional, but recommended] Create a virtual environment
+
+	Create a new folder and virtual environment and activate it
+	```bash
+	python -m venv ~/dpy-projects/dpy-venv
+	source ~/dpy-projects/dpy-venv/bin/activate
+	```
+
+3. Install DisruptionPy
+
+	Run:
+	```bash
+	pip install git+ssh://git@github.com/MIT-PSFC/disruption-py.git@develop#egg=disruption_py
+	```
+	If you are unable to access the project on GitHub, please see [troubleshooting][trouble-accessing-github].
+
+4. Do other necessary setup tasks using the built-in helper script by running:
+	```bash
+	disruption_py setup
+	```
+
+### Editable installation
+
+1. Check that you have poetry installed by running
+```bash
+poetry -V
 ```
-cd ~
-mkdir ~/dpy-experimental
-rm -rf ~/dpy-experimental/disruption-py # if you have already copied this previously
-cp -R /home/joshlor/disruption-py ~/dpy-experimental/disruption-py
-pip3 install --user -e ~/dpy-experimental/disruption-py # No --user needed if installing in a virtual env
+If you do not have poetry installed, please follow the instructions [here](https://python-poetry.org/docs/#installation).
+
+2. Clone DisruptionPy:
+```bash
+git clone git@github.com:MIT-PSFC/disruption-py.git
+git switch develop
 ```
 
-### DIII-D
+3. Install DisruptionPy
+	
+	You may follow any of the following options depending on the use case:
 
-DIII-D computational clusters are accessed via gateway server `cybele.gat.com`.
-`iris` and more recently `saga` are DIII-D computational clusters. Directories are shared across the different clusters, but unix environment are different.
-When working on `iris`, first we need to load the proper modules (ignore on `saga`):
+	1. Work within the DisruptionPy package and let poetry manage the environment (easier)
 
+		Steps:
+
+		1. Navigate to the root of the project directory of DisruptionPy
+		2. Install the package and poetry will automatically setup a python environment:
+			```bash
+			poetry install
+			```
+		3. Run the setup script:
+			```bash
+			poetry run disruption_py setup
+			```
+
+		Now when using disruption_py prepend commands with `poetry run`. For instance, when running a script use `poetry run python **script.py**`, or when running the cli use `poetry run disruption_py **command**`.
+
+	2. Use your own environment (gives more control)
+
+		Steps:
+
+		1. Activate your virtual environment
+		2. Navigate to the root of the project directory of DisruptionPy
+		3. Install DisruptionPy and other required dependencies by running:
+			```bash
+			poetry install
+			```
+		4. Run the setup script:
+			```bash
+			disruption_py setup
+			```
+
+		Now you can use the package as normal as long as your virtual environment is activated (you do not need to prepend commands with `poetry run`)
+
+## Troubleshooting
+
+### Issues with package versioning
+If the machine that you are working on has an outdated version of python, you may be unable to install.
+
+#### On CMod
+On the mfe workstations use mferws02 or mferws03
+
+### Trouble accessing GitHub
+If you are unable to access the GitHub repository you can manually install the package. Note that you may be installing an older version of DisruptionPy.
+
+#### On CMod
+You can do this by running:
+```bash
+pip install /home/joshlor/disruption-py
 ```
-module load python/3
-module unload gcc-4.9.2
-module load gcc7/default
-```
 
-(OPTIONAL) Create and activate a new virtual env. In the example below it is named "disruptions", but feel free to name it whatever you want.
+### Stuck on Poetry Install
+In terminal run one of:
 
-```
-python3 -m venv disruptions
-source disruptions/bin/activate
-```
-
-Next, because of the age of the `iris` cluster, we install a special list of dependency packages and their versions.
-
-```
-pip3 install -r iris_requirements.txt
-```
-
-Finally, we'll install the package. The following command will install the DisruptionPy package locally in developer mode. In developer mode, changes to the directory used for installation will be reflected in the installed package.
-
-```
-pip3 install --user -e /fusion/projects/disruption_warning/disruption-warning-db-workflow/ # Don't use user tag if in virtualenv
-```
-
-NOTE: The directory used for installation is not the one dedicated to daily development. Developers will only push changes to it that have been tested.
+- `export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring`
+- `pyenv shell system` and then `python3 -m keyring --disable`

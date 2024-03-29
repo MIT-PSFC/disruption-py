@@ -232,14 +232,14 @@ def populate_shot(shot_settings: ShotSettings, params: ShotDataRequestParams) ->
         if parameter is None:
             continue
         if len(parameter) != len(pre_filled_shot_data):
-            params.logger.warning(
-                f"[Shot {shot_props.shot_id}]:Ignoring parameter {parameter} with different length than timebase")
+            params.logger.error(
+                f"[Shot {shot_props.shot_id}]:Ignoring parameter {parameter} with different length than timebase") 
             continue
         filtered_parameters.append(parameter)
 
     # TODO: This is a hack to get around the fact that some methods return
     #       multiple parameters. This should be fixed in the future.
-    local_data = pd.concat(filtered_parameters + [pre_filled_shot_data], axis=1)
+    local_data = pd.concat([pre_filled_shot_data] + filtered_parameters, axis=1)
     local_data = local_data.loc[:, ~local_data.columns.duplicated()]
     if shot_settings.only_requested_columns:
         include_columns = list(REQUIRED_COLS.union(set(shot_settings.run_columns).intersection(set(local_data.columns))))
