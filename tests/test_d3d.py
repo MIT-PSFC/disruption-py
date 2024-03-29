@@ -65,7 +65,7 @@ def mdsplus_data(d3d_handler : D3DHandler, shotlist) -> Dict:
         set_times_request="disruption",
         log_settings=LogSettings(
             log_to_console=False,
-            log_file_path="test/d3d.log",
+            log_file_path="tests/d3d.log",
             log_file_write_mode="w",
             file_log_level=logging.DEBUG
         )

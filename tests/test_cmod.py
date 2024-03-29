@@ -71,7 +71,7 @@ def mdsplus_data(cmod_handler : CModHandler, shotlist) -> Dict:
         set_times_request="efit",
         log_settings=LogSettings(
             log_to_console=False,
-            log_file_path="test/cmod.log",
+            log_file_path="tests/cmod.log",
             log_file_write_mode="w",
             file_log_level=logging.DEBUG
         )
@@ -285,7 +285,7 @@ def get_failure_statistics_string(anomaly_ratios, verbose_output, data_column=No
 #         total_difference_df['time'] = expected_shot_data['time']
 #         total_difference_df['time_diff'] = expected_shot_data['time'].diff()
 
-#         total_difference_df.to_csv(f"test/cmod_failed_values_{shot_id}_dbetap_dt.csv")
+#         total_difference_df.to_csv(f"tests/cmod_failed_values_{shot_id}_dbetap_dt.csv")
 #         raise AssertionError(
 #             f"Shot {shot_id} condition failed. Arrays:\n{total_difference_df}"
 #         )
