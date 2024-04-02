@@ -29,14 +29,14 @@ class BasicD3DRequests(ShotDataRequest):
     @parameter_cached_method(columns=["H98", "H_alpha"], used_trees=["transport", "d3d"], tokamak=Tokamak.D3D)
     def get_H_parameters(params : ShotDataRequestParams):
         try:
-            h_98, t_h_98 = params.mds_conn.get_record_data(r'\H_THH98Y2', tree_name='transport')
+            h_98, t_h_98 = params.mds_conn.get_data_with_dims(r'\H_THH98Y2', tree_name='transport')
             h_98 = interp1(t_h_98, h_98, params.shot_props.times)
         except ValueError as e:
             params.logger.info(f"[Shot {params.shot_props.shot_id}]: Failed to get H98 signal. Returning NaNs.")
             params.logger.debug(f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
             h_98 = np.full(params.shot_props.times.size, np.nan)
         try:
-            h_alpha, t_h_alpha = params.mds_conn.get_record_data(r'\fs04', tree_name='d3d')
+            h_alpha, t_h_alpha = params.mds_conn.get_data_with_dims(r'\fs04', tree_name='d3d')
             h_alpha = interp1(t_h_alpha, h_alpha, params.shot_props.times)
         except ValueError as e:
             params.logger.info(
@@ -56,7 +56,7 @@ class BasicD3DRequests(ShotDataRequest):
     def get_power_parameters(params : ShotDataRequestParams):
         # Get neutral beam injected power
         try:
-            p_nbi, t_nbi = params.mds_conn.get_record_data(r'\d3d::top.nb:pinj', tree_name='d3d')
+            p_nbi, t_nbi = params.mds_conn.get_data_with_dims(r'\d3d::top.nb:pinj', tree_name='d3d')
             p_nbi = p_nbi.astype(np.float64)
             p_nbi *= 1.e3  # [KW] -> [W]
             if len(t_nbi) > 2:
@@ -73,7 +73,7 @@ class BasicD3DRequests(ShotDataRequest):
                 f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
         # Get electron cycholotrn heating (ECH) power. It's poitn data, so it's not stored in an MDSplus tree
         try:
-            p_ech, t_ech = params.mds_conn.get_record_data(r'\top.ech.total:echpwrc', tree_name='rf')
+            p_ech, t_ech = params.mds_conn.get_data_with_dims(r'\top.ech.total:echpwrc', tree_name='rf')
             if len(t_ech) > 2:
                 p_ech = interp1(t_ech, p_ech, params.shot_props.times,
                                 'linear', bounds_error=False, fill_value=0.)
@@ -100,7 +100,7 @@ class BasicD3DRequests(ShotDataRequest):
         # analysis so that the smoothing is causal, and uses a shorter window.
         smoothing_window = 0.010  # [s]
         try:
-            bol_prm, _ = params.mds_conn.get_record_data(r'\bol_prm', tree_name='bolom')
+            bol_prm, _ = params.mds_conn.get_data_with_dims(r'\bol_prm', tree_name='bolom')
         except MdsException as e:
             params.logger.info(
                 f"[Shot {params.shot_props.shot_id}]:Failed to open bolom tree.")
@@ -112,7 +112,7 @@ class BasicD3DRequests(ShotDataRequest):
         bol_signals = []
         bol_times = []
         for i in range(48):
-            bol_signal, bol_time = params.mds_conn.get_record_data(fr"\top.raw:{bol_channels[i]}", tree_name='bolom')
+            bol_signal, bol_time = params.mds_conn.get_data_with_dims(fr"\top.raw:{bol_channels[i]}", tree_name='bolom')
             bol_signals.append(bol_signal)
             bol_times.append(bol_time)
         a_struct = get_bolo(params.shot_props.shot_id, bol_channels,
@@ -154,7 +154,7 @@ class BasicD3DRequests(ShotDataRequest):
     def get_ohmic_parameters(params : ShotDataRequestParams):
         # Get edge loop voltage and smooth it a bit with a median filter
         try:
-            v_loop, t_v_loop = params.mds_conn.get_record_data(f'ptdata("vloopb", {params.shot_props.shot_id})', tree_name='d3d')
+            v_loop, t_v_loop = params.mds_conn.get_data_with_dims(f'ptdata("vloopb", {params.shot_props.shot_id})', tree_name='d3d')
             v_loop = scipy.signal.medfilt(v_loop, 11)
             v_loop = interp1(t_v_loop, v_loop, params.shot_props.times, 'linear')
         except MdsException as e:
@@ -166,11 +166,11 @@ class BasicD3DRequests(ShotDataRequest):
             t_v_loop = v_loop.copy()
        # Get plasma current
         try:
-            ip, t_ip = params.mds_conn.get_record_data(f"ptdata('ip', {params.shot_props.shot_id})", tree_name="d3d")
+            ip, t_ip = params.mds_conn.get_data_with_dims(f"ptdata('ip', {params.shot_props.shot_id})", tree_name="d3d")
             t_ip = t_ip/1.e3  # [ms] -> [s]
             # We choose a 20-point width for gsastd. This means a 10ms window for ip smoothing
             dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
-            li, t_li = params.mds_conn.get_record_data(r'\efit_a_eqdsk:li', tree_name="_efit_tree")
+            li, t_li = params.mds_conn.get_data_with_dims(r'\efit_a_eqdsk:li', tree_name="_efit_tree")
             chisq = params.mds_conn.get(r'\efit_a_eqdsk:chisq').data()
             # Filter out invalid indices of efit reconstruction
             invalid_indices = None  # TODO: Finish
@@ -203,7 +203,7 @@ class BasicD3DRequests(ShotDataRequest):
         g_f = ne.copy()
         dne_dt = ne.copy()
         try:
-            ne, t_ne = params.mds_conn.get_record_data(r'\density', tree_name="_efit_tree")
+            ne, t_ne = params.mds_conn.get_data_with_dims(r'\density', tree_name="_efit_tree")
             ne = ne*1.e6  # [cm^3] -> [m^3]
             t_ne = t_ne/1.e3  # [ms] -> [s]
             dne_dt = np.gradient(ne, t_ne)
@@ -211,11 +211,11 @@ class BasicD3DRequests(ShotDataRequest):
             ne = interp1(t_ne, ne, params.shot_props.times, 'linear', bounds_error=False, fill_value='extrapolate')
             dne_dt = interp1(t_ne, dne_dt, params.shot_props.times, 'linear', bounds_error=False, fill_value='extrapolate')
             # TODO: CHECK TREE_NAME
-            ip, t_ip = params.mds_conn.get_record_data(f"ptdata('ip', {params.shot_props.shot_id})", tree_name="_efit_tree") # [A], [ms]
+            ip, t_ip = params.mds_conn.get_data_with_dims(f"ptdata('ip', {params.shot_props.shot_id})", tree_name="_efit_tree") # [A], [ms]
             t_ip = t_ip/1.e3  # [ms] -> [s]
             ipsign = np.sign(np.sum(ip))
             ip = interp1(t_ip, ip*ipsign, params.shot_props.times, 'linear')
-            a_minor, t_a = params.mds_conn.get_record_data(r'\efit_a_eqdsk:aminor', tree_name="_efit_tree") # [m], [ms]
+            a_minor, t_a = params.mds_conn.get_data_with_dims(r'\efit_a_eqdsk:aminor', tree_name="_efit_tree") # [m], [ms]
             t_a = t_a/1.e3  # [ms] -> [s]
             a_minor = interp1(t_a, a_minor, params.shot_props.times, 'linear')
             with np.errstate(divide='ignore'):
@@ -239,22 +239,22 @@ class BasicD3DRequests(ShotDataRequest):
         dne_dt_rt = ne_rt.copy()
         try:
             # TODO: CHECK TREE_NAME
-            ne_rt, t_ne_rt = params.mds_conn.get_record_data(f"ptdata('dssdenest', {params.shot_props.shot_id})")
+            ne_rt, t_ne_rt = params.mds_conn.get_data_with_dims(f"ptdata('dssdenest', {params.shot_props.shot_id})")
             t_ne_rt = t_ne_rt/1.e3 # [ms] to [s]
             ne_rt = ne_rt*1.e19 # [10^19 m^-3] -> [m^-3]
             dne_dt_rt = np.gradient(ne_rt, t_ne_rt)  # [m^-3/s]
             ne_rt = interp1(t_ne_rt, ne_rt, params.shot_props.times, 'linear')
             dne_dt_rt = interp1(t_ne_rt, dne_dt_rt, params.shot_props.times, 'linear')
             try:
-                ip_rt, t_ip_rt = params.mds_conn.get_record_data(f"ptdata('ipsip', {params.shot_props.shot_id})") # [MA], [ms]
+                ip_rt, t_ip_rt = params.mds_conn.get_data_with_dims(f"ptdata('ipsip', {params.shot_props.shot_id})") # [MA], [ms]
                 t_ip_rt = t_ip_rt/1.e3  # [ms] to [s]
                 # TODO: look at units of ip_rt (not SA)
             except Exception as e:
-                ip_rt, t_ip_rt = params.mds_conn.get_record_data(f"ptdata('ipspr15v', {params.shot_props.shot_id})") # [MA], [ms]
+                ip_rt, t_ip_rt = params.mds_conn.get_data_with_dims(f"ptdata('ipspr15v', {params.shot_props.shot_id})") # [MA], [ms]
                 t_ip_rt = t_ip_rt/1.e3  # [ms] to [s]
             ip_sign = np.sign(np.sum(ip_rt))
             ip = interp1(t_ip_rt, ip_rt*ip_sign, params.shot_props.times, 'linear')
-            a_minor_rt, t_a_rt = params.mds_conn.get_record_data(r'\efit_a_eqdsk:aminor', tree_name="efitrt1") # [m], [ms]
+            a_minor_rt, t_a_rt = params.mds_conn.get_data_with_dims(r'\efit_a_eqdsk:aminor', tree_name="efitrt1") # [m], [ms]
             t_a_rt = t_a_rt/1.e3  # [ms] -> [s]
             a_minor_rt = interp1(t_a_rt, a_minor_rt, params.shot_props.times, 'linear')
             with np.errstate(divide='ignore'):
@@ -282,7 +282,7 @@ class BasicD3DRequests(ShotDataRequest):
         dipprog_dt = np.full(len(params.shot_props.times), np.nan)
         # Get measured plasma current parameters
         try:
-            ip, t_ip = params.mds_conn.get_record_data(f"ptdata('ip', {params.shot_props.shot_id})", tree_name="d3d") # [A], [ms]
+            ip, t_ip = params.mds_conn.get_data_with_dims(f"ptdata('ip', {params.shot_props.shot_id})", tree_name="d3d") # [A], [ms]
             t_ip = t_ip/1.e3  # [ms] -> [s]
             dip_dt = np.gradient(ip, t_ip)
             ip = interp1(t_ip, ip, params.shot_props.times, 'linear')
@@ -294,7 +294,7 @@ class BasicD3DRequests(ShotDataRequest):
                 f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
         # Get programmed plasma current parameters
         try:
-            ip_prog, t_ip_prog = params.mds_conn.get_record_data(f"ptdata('iptipp', {params.shot_props.shot_id})", tree_name="d3d") # [A], [ms]
+            ip_prog, t_ip_prog = params.mds_conn.get_data_with_dims(f"ptdata('iptipp', {params.shot_props.shot_id})", tree_name="d3d") # [A], [ms]
             t_ip_prog = t_ip_prog/1.e3  # [ms] -> [s]
             polarity = np.unique(params.mds_conn.get(f"ptdata('iptdirect', {params.shot_props.shot_id})", tree_name="d3d").data())
             if len(polarity) > 1:
@@ -322,7 +322,7 @@ class BasicD3DRequests(ShotDataRequest):
         #  Anything else: not in normal Ip feedback mode.  In this case, the
         # 'ip_prog' signal is irrelevant, and therefore 'ip_error' is not defined.
         try:
-            ipimode, t_ipimode = params.mds_conn.get_record_data(f"ptdata('ipimode', {params.shot_props.shot_id})", tree_name="d3d")
+            ipimode, t_ipimode = params.mds_conn.get_data_with_dims(f"ptdata('ipimode', {params.shot_props.shot_id})", tree_name="d3d")
             t_ipimode = t_ipimode/1.e3  # [ms] -> [s]
             ipimode = interp1(t_ipimode, ipimode, params.shot_props.times, 'linear')
         except MdsException as e:
@@ -339,7 +339,7 @@ class BasicD3DRequests(ShotDataRequest):
         # PCS feedback control of Ip is not being applied.  Therefore the
         # 'ip_error' parameter is undefined for these times.
         try:
-            epsoff, t_epsoff = params.mds_conn.get_record_data(f"ptdata('epsoff', {params.shot_props.shot_id})", tree_name="d3d")
+            epsoff, t_epsoff = params.mds_conn.get_data_with_dims(f"ptdata('epsoff', {params.shot_props.shot_id})", tree_name="d3d")
             t_epsoff = t_epsoff/1.e3  # [ms] -> [s]
             t_epsoff += .001  # Avoid problem with simultaneity of epsoff being triggered exactly on the last time sample
             epsoff = interp1(t_epsoff, epsoff, params.shot_props.times, 'linear')
@@ -372,7 +372,7 @@ class BasicD3DRequests(ShotDataRequest):
         # Get measured plasma current parameters
         # TODO: Why open d3d and not the rt efit tree?
         try:
-            ip_rt, t_ip_rt = params.mds_conn.get_record_data(f"ptdata('ipsip', {params.shot_props.shot_id})", tree_name="d3d") # [MA], [ms]
+            ip_rt, t_ip_rt = params.mds_conn.get_data_with_dims(f"ptdata('ipsip', {params.shot_props.shot_id})", tree_name="d3d") # [MA], [ms]
             t_ip_rt = t_ip_rt/1.e3  # [ms] -> [s]
             ip_rt = ip_rt*1.e6  # [MA] -> [A]
             dip_dt_rt = np.gradient(ip_rt, t_ip_rt)
@@ -385,7 +385,7 @@ class BasicD3DRequests(ShotDataRequest):
                 f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
         # Get programmed plasma current parameters
         try:
-            ip_prog_rt, t_ip_prog_rt = params.mds_conn.get_record_data(f"ptdata('ipsiptargt', {params.shot_props.shot_id})", tree_name="d3d") # [MA], [ms]
+            ip_prog_rt, t_ip_prog_rt = params.mds_conn.get_data_with_dims(f"ptdata('ipsiptargt', {params.shot_props.shot_id})", tree_name="d3d") # [MA], [ms]
             t_ip_prog_rt = t_ip_prog_rt/1.e3  # [ms] -> [s]
             ip_prog_rt = ip_prog_rt*1.e6*.5  # [MA] -> [A]
             polarity = np.unique(params.mds_conn.get(f"ptdata('iptdirect', {params.shot_props.shot_id})", tree_name="d3d").data())
@@ -405,7 +405,7 @@ class BasicD3DRequests(ShotDataRequest):
             params.logger.debug(
                 f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
         try:
-            ip_error_rt, t_ip_error_rt = params.mds_conn.get_record_data(f"ptdata('ipeecoil', {params.shot_props.shot_id})", tree_name="d3d") # [MA], [ms]
+            ip_error_rt, t_ip_error_rt = params.mds_conn.get_data_with_dims(f"ptdata('ipeecoil', {params.shot_props.shot_id})", tree_name="d3d") # [MA], [ms]
             t_ip_error_rt = t_ip_error_rt/1.e3  # [ms] to [s]
             ip_error_rt = ip_error_rt*1.e6*.5  # [MA] -> [A]
             ip_error_rt = interp1(
@@ -425,7 +425,7 @@ class BasicD3DRequests(ShotDataRequest):
         #  Anything else: not in normal Ip feedback mode.  In this case, the
         # 'ip_prog' signal is irrelevant, and therefore 'ip_error' is not defined.
         try:
-            ipimode, t_ipimode = params.mds_conn.get_record_data(f"ptdata('ipimode', {params.shot_props.shot_id})", tree_name="d3d")
+            ipimode, t_ipimode = params.mds_conn.get_data_with_dims(f"ptdata('ipimode', {params.shot_props.shot_id})", tree_name="d3d")
             t_ipimode = t_ipimode/1.e3  # [ms] -> [s]
             ipimode = interp1(t_ipimode, ipimode, params.shot_props.times, 'linear')
         except MdsException as e:
@@ -441,7 +441,7 @@ class BasicD3DRequests(ShotDataRequest):
         # PCS feedback control of Ip is not being applied.  Therefore the
         # 'ip_error' parameter is undefined for these times.
         try:
-            epsoff, t_epsoff = params.mds_conn.get_record_data(f"ptdata('epsoff', {params.shot_props.shot_id})", tree_name="d3d")
+            epsoff, t_epsoff = params.mds_conn.get_data_with_dims(f"ptdata('epsoff', {params.shot_props.shot_id})", tree_name="d3d")
             t_epsoff = t_epsoff/1.e3  # [ms] -> [s]
             t_epsoff += .001  # Avoid problem with simultaneity of epsoff being triggered exactly on the last time sample
             epsoff = interp1(t_epsoff, epsoff, params.shot_props.times, 'linear')
@@ -479,12 +479,12 @@ class BasicD3DRequests(ShotDataRequest):
         z_error = np.full(len(params.shot_props.times), np.nan)
         z_error_norm = np.full(len(params.shot_props.times), np.nan)
         try:
-            z_cur, t_z_cur = params.mds_conn.get_record_data(f"ptdata('vpszp', {params.shot_props.shot_id})", tree_name="d3d")
+            z_cur, t_z_cur = params.mds_conn.get_data_with_dims(f"ptdata('vpszp', {params.shot_props.shot_id})", tree_name="d3d")
             t_z_cur = t_z_cur/1.e3  # [ms] -> [s]
             z_cur = z_cur/1.e2  # [cm] -> [m]
             z_cur = interp1(t_z_cur, z_cur, params.shot_props.times, 'linear')
             try:
-                a_minor, t_a = params.mds_conn.get_record_data(r'\efit_a_eqdsk:aminor', tree_name="d3d") # [m], [ms]
+                a_minor, t_a = params.mds_conn.get_data_with_dims(r'\efit_a_eqdsk:aminor', tree_name="d3d") # [m], [ms]
                 t_a = t_a/1.e3  # [ms] -> [s]
                 chisq = params.mds_conn.get(r'\efit_a_eqdsk:chisq').data()
                 invalid_indices = np.where(chisq > 50)
@@ -532,14 +532,14 @@ class BasicD3DRequests(ShotDataRequest):
         else:
             try:
                 # TODO: TREE NAME?
-                dusbradial, t_n1 = params.mds_conn.get_record_data(f"ptdata('onsbradial', {params.shot_props.shot_id})", tree_name="d3d")
+                dusbradial, t_n1 = params.mds_conn.get_data_with_dims(f"ptdata('onsbradial', {params.shot_props.shot_id})", tree_name="d3d")
                 dusbradial = interp1(t_n1, dusbradial, params.shot_props.times)
                 dusbradial *= 1.e-4  # [T]
             except MdsException as e:
                 params.logger.debug(
                     f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
                 try:                    
-                    dusbradial, t_n1 = params.mds_conn.get_record_data(f"ptdata('dusbradial', {params.shot_props.shot_id})", tree_name="d3d")
+                    dusbradial, t_n1 = params.mds_conn.get_data_with_dims(f"ptdata('dusbradial', {params.shot_props.shot_id})", tree_name="d3d")
                     dusbradial = interp1(t_n1, dusbradial, params.shot_props.times)
                     dusbradial *= 1.e-4  # [T]
                 except MdsException as e:
@@ -552,7 +552,7 @@ class BasicD3DRequests(ShotDataRequest):
                     return pd.DataFrame({'n_equal_1_normalized': n_equal_1_normalized, 'n_equal_1_mode': n_equal_1_mode})
         n_equal_1_mode = interp1(dusbradial, t_n1, params.shot_props.times)
         # Get toroidal field Btor
-        b_tor, t_b_tor = params.mds_conn.get_record_data(f"ptdata('bt', {params.shot_props.shot_id})", tree_name="d3d")
+        b_tor, t_b_tor = params.mds_conn.get_data_with_dims(f"ptdata('bt', {params.shot_props.shot_id})", tree_name="d3d")
         b_tor = interp1(t_b_tor, b_tor, params.shot_props.times)   # [T]
         n_equal_1_normalized = n_equal_1_mode/b_tor
         return pd.DataFrame({'n_equal_1_normalized': n_equal_1_normalized, 'n_equal_1_mode': n_equal_1_mode})
@@ -564,10 +564,10 @@ class BasicD3DRequests(ShotDataRequest):
         tokamak=Tokamak.D3D
     )
     def get_n1rms_parameters(params : ShotDataRequestParams):
-        n1rms, t_n1rms = params.mds_conn.get_record_data(r'\n1rms', tree_name="d3d")
+        n1rms, t_n1rms = params.mds_conn.get_data_with_dims(r'\n1rms', tree_name="d3d")
         n1rms *= 1.e-4  # Gauss -> Tesla
         n1rms = interp1(t_n1rms, n1rms, params.shot_props.times)
-        b_tor, t_b_tor = params.mds_conn.get_record_data(f"ptdata('bt', {params.shot_props.shot_id})", tree_name="d3d")
+        b_tor, t_b_tor = params.mds_conn.get_data_with_dims(f"ptdata('bt', {params.shot_props.shot_id})", tree_name="d3d")
         b_tor = interp1(t_b_tor, b_tor, params.shot_props.times)   # [T]
         n1rms_norm = n1rms / np.abs(b_tor)
         return pd.DataFrame({'n1rms': n1rms, 'n1rms_normalized': n1rms_norm})
@@ -611,10 +611,10 @@ class BasicD3DRequests(ShotDataRequest):
         rad_xdiv = np.full(len(params.shot_props.times), np.nan)
         try:
             # TODO: TREE NAME
-            rad_cva, t_rad_cva = params.mds_conn.get_record_data(f"ptdata('dpsradcva', {params.shot_props.shot_id})", tree_name="d3d")
+            rad_cva, t_rad_cva = params.mds_conn.get_data_with_dims(f"ptdata('dpsradcva', {params.shot_props.shot_id})", tree_name="d3d")
             rad_cva = interp1(t_rad_cva, rad_cva, params.shot_props.times)   # [T]
 
-            rad_xdiv, t_rad_xdiv = params.mds_conn.get_record_data(f"ptdata('dpsradxdiv', {params.shot_props.shot_id})", tree_name="d3d")
+            rad_xdiv, t_rad_xdiv = params.mds_conn.get_data_with_dims(f"ptdata('dpsradxdiv', {params.shot_props.shot_id})", tree_name="d3d")
             rad_xdiv = interp1(t_rad_xdiv, rad_xdiv, params.shot_props.times)   # [T]
         except MdsException as e:
             params.logger.debug(
@@ -856,7 +856,7 @@ class BasicD3DRequests(ShotDataRequest):
     def get_zeff_parameters(params : ShotDataRequestParams):
         # Get Zeff
         try:
-            zeff, t_zeff = params.mds_conn.get_record_data(r'\d3d::top.spectroscopy.vb.zeff:zeff', tree_name="d3d")
+            zeff, t_zeff = params.mds_conn.get_data_with_dims(r'\d3d::top.spectroscopy.vb.zeff:zeff', tree_name="d3d")
             t_zeff = t_zeff/1.e3  # [ms] -> [s]
             # t_nbi = params.mds_conn.get(
             # r"dim_of(\d3d::top.nb:pinj)").data()/1.e3  # [ms]->[s]
@@ -900,10 +900,10 @@ class BasicD3DRequests(ShotDataRequest):
     )
     def get_h_parameters(params : ShotDataRequestParams):
         h98 = np.full(len(params.shot_props.times), np.nan)        
-        h98, t_h98 = params.mds_conn.get_record_data(r'\H_THH98Y2', tree_name="transport")
+        h98, t_h98 = params.mds_conn.get_data_with_dims(r'\H_THH98Y2', tree_name="transport")
         h98 = interp1(t_h98, h98, params.shot_props.times)
         
-        h_alpha, t_h_alpha = params.mds_conn.get_record_data(r'\fs04', tree_name="d3d")
+        h_alpha, t_h_alpha = params.mds_conn.get_data_with_dims(r'\fs04', tree_name="d3d")
         h_alpha = interp1(t_h_alpha, h_alpha, params.shot_props.times)
         return pd.DataFrame({'H98': h98, 'H_alpha': h_alpha})
 
@@ -1028,20 +1028,20 @@ class BasicD3DRequests(ShotDataRequest):
                 [3, 4, 5, 6, 7, 8, 9, 12, 14, 15, 16, 22]) + 24
 
         # Get bolometry data
-        bol_prm, _ = params.mds_conn.get_record_data(r'\bol_prm', tree_name="bolom")
+        bol_prm, _ = params.mds_conn.get_data_with_dims(r'\bol_prm', tree_name="bolom")
         lower_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
         upper_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
         bol_channels = lower_channels + upper_channels
         bol_signals = []
         bol_times = []  # TODO: Decide whether to actually use all bol_times instead of just first one
         for i in range(48):
-            bol_signal, bol_time =params.mds_conn.get_record_data(fr"\top.raw:{bol_channels[i]}", tree_name="bolom")
+            bol_signal, bol_time =params.mds_conn.get_data_with_dims(fr"\top.raw:{bol_channels[i]}", tree_name="bolom")
             bol_signals.append(bol_signal)
             bol_times.append(bol_time)
         a_struct = get_bolo(params.shot_props.shot_id, bol_channels,
                             bol_prm, bol_signals, bol_times[0])
         b_struct = power(a_struct)
-        r_major_axis, efit_time = params.mds_conn.get_record_data(r'\top.results.geqdsk:rmaxis', tree_name="_efit_tree")
+        r_major_axis, efit_time = params.mds_conn.get_data_with_dims(r'\top.results.geqdsk:rmaxis', tree_name="_efit_tree")
         data_dict = {'ch_avail': [], 'z': [], 'brightness': [],
                      'power': [], 'x': np.full((len(efit_time), len(fan_chans)), np.nan), 'xtime': efit_time, 't': a_struct.raw_time}
         for i in range(len(fan_chans)):

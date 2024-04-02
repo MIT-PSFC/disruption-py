@@ -86,7 +86,7 @@ class D3DShotManager(ShotManager):
     @classmethod
     def _modify_times_flattop_timebase(cls, shot_props : ShotProps, **kwargs):
         try:
-            ip_prog, t_ip_prog, = shot_props.mds_conn.get_record_data(f"ptdata('iptipp', {shot_props.shot_id})", tree_name='d3d')
+            ip_prog, t_ip_prog, = shot_props.mds_conn.get_data_with_dims(f"ptdata('iptipp', {shot_props.shot_id})", tree_name='d3d')
             t_ip_prog = t_ip_prog/1.e3  # [ms] -> [s]
             polarity = np.unique(shot_props.mds_conn.get(f"ptdata('iptdirect', {shot_props.shot_id})", tree_name='d3d').data())
             if len(polarity) > 1:
@@ -102,7 +102,7 @@ class D3DShotManager(ShotManager):
                 f"[Shot {shot_props.shot_id}]:Failed to get programmed plasma current parameters")
             cls.logger.debug(
                 f"[Shot {shot_props.shot_id}]:{traceback.format_exc()}")
-        epsoff, t_epsoff = shot_props.mds_conn.get_record_data(f"ptdata('epsoff', {shot_props.shot_id})", tree_name='d3d')
+        epsoff, t_epsoff = shot_props.mds_conn.get_data_with_dims(f"ptdata('epsoff', {shot_props.shot_id})", tree_name='d3d')
         t_epsoff =t_epsoff/1.e3 + .001  # [ms] -> [s] # Avoid problem with simultaneity of epsoff being triggered exactly on the last time sample
         epsoff = interp1(t_epsoff, epsoff, shot_props.times, 'linear')
         railed_indices = np.where(np.abs(epsoff) > .5)

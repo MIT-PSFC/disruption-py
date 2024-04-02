@@ -184,7 +184,7 @@ class DisruptionSetTimesRequest(SetTimesRequest):
         raise ValueError("Disruption timebase request not implemented")
     
     def d3d_times(self, params : SetTimesRequestParams):
-        raw_ip, ip_time = params.mds_conn.get_record_data(f"ptdata('ip', {params.shot_id})", tree_name='d3d')
+        raw_ip, ip_time = params.mds_conn.get_data_with_dims(f"ptdata('ip', {params.shot_id})", tree_name='d3d')
         ip_time = ip_time/1.e3
         baseline = np.mean(raw_ip[0:10])
         ip = raw_ip - baseline
