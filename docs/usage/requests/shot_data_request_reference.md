@@ -4,7 +4,8 @@
 The following file defines the list of built-in shot data requests. Built-in parameter methods are members of these objects. To view the methods in these files, please see the [GitHub repository](https://github.com/MIT-PSFC/disruption-py).
 ```python
 --8<--
-disruption_py/shots/parameter_methods/built_in.py
+disruption_py/shots/parameter_methods/cmod/built_in.py
+disruption_py/shots/parameter_methods/d3d/built_in.py
 --8<--
 ```
 

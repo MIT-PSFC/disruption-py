@@ -35,7 +35,24 @@ class ShotManager(ABC):
     def _modify_times_rampup_and_flattop_timebase(cls, shot_props : ShotProps, **kwargs) -> ShotProps:
         pass
     
-    def shot_setup(
+    @abstractmethod
+    def shot_setup(self, shot_id : int, shot_settings : ShotSettings, **kwargs) -> ShotProps:
+        pass
+        
+    def shot_data_retrieval(self, shot_props : ShotProps, shot_settings : ShotSettings):
+        shot_data_request_params = ShotDataRequestParams(
+            mds_conn=shot_props.mds_conn, 
+            shot_props=shot_props,
+            logger=self.logger, 
+            tokamak=shot_props.tokamak
+        )
+        return populate_shot(shot_settings=shot_settings, params=shot_data_request_params)
+    
+    @classmethod
+    def shot_cleanup(cls, shot_props : ShotProps,):
+        shot_props.cleanup()
+        
+    def setup_shot_props(
         self,
         shot_id : int,
         mds_conn : MDSConnection,
@@ -98,19 +115,6 @@ class ShotManager(ABC):
         
         return shot_props
     
-    def shot_data_retrieval(self, shot_props : ShotProps, shot_settings : ShotSettings):
-        shot_data_request_params = ShotDataRequestParams(
-            mds_conn=shot_props.mds_conn, 
-            shot_props=shot_props,
-            logger=self.logger, 
-            tokamak=shot_props.tokamak
-        )
-        return populate_shot(shot_settings=shot_settings, params=shot_data_request_params)
-    
-    @classmethod
-    def shot_cleanup(cls, shot_props : ShotProps,):
-        shot_props.cleanup()
-    
     def _modify_shot_props_for_settings(
         self, 
         shot_props : ShotProps,
@@ -121,9 +125,8 @@ class ShotManager(ABC):
             shot_props = self._modify_times_flattop_timebase(shot_props)
         elif shot_settings.signal_domain is SignalDomain.RAMP_UP_AND_FLATTOP:
             shot_props = self._modify_times_rampup_and_flattop_timebase(shot_props)
-        
         if shot_props is None:
-            self.logger.error(f"Shot_props set to None in modify_shot_props()")
+            raise ValueError(f"Shot_props set to None in modify_shot_props()")
         
         return shot_props
             

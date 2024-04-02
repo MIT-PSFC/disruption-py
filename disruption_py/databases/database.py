@@ -1,6 +1,7 @@
 import os
 import logging
 from typing import List
+from urllib.parse import quote_plus
 
 import pandas as pd
 import numpy as np
@@ -17,26 +18,41 @@ class ShotDatabase:
     """
     logger = logging.getLogger('disruption_py')        
         
-    def __init__(self, driver, host, db_name, user, passwd, protected_columns=[], **kwargs):
+    def __init__(self, driver, host, port, db_name, user, passwd, protected_columns=[], **kwargs):
+        self.logger.info(f"Database initialization: {user}@{host}/{db_name}")
+        drivers = pyodbc.drivers()
+        if driver in drivers:
+            self.driver = driver
+        else:
+            self.driver = drivers[0]
+            self.logger.warning(f"Database driver fallback: '{driver}' -> '{self.driver}'")
+        self.host = host
+        self.port = port
+        self.db_name = db_name
         self.user = user
         self.passwd = passwd
-        self.driver = driver
-        self.host = host
-        self.db_name = db_name
         self.protected_columns = protected_columns
-        self.connection_string = (
-            f"DRIVER={self.driver};"
-            f"SERVER={self.host};"
-            f"DATABASE={self.db_name};"
-            f"UID={self.user};"
-            f"PWD={self.passwd};"
-            "TrustServerCertificate=yes;"
-            "Connection Timeout=60"
-        )
+        self.connection_string = self._get_connection_string(self.db_name)
         self._thread_connections = {}
-        self.logger.info("Database initialized")
-        self.engine = create_engine(f"mssql+pyodbc:///?odbc_connect={self.connection_string}")
+        quoted_connection_string = quote_plus(self.connection_string)
+        self.engine = create_engine(f"mssql+pyodbc:///?odbc_connect={quoted_connection_string}")
 
+    def _get_connection_string(self, db_name):
+        params = {
+            "DRIVER": self.driver,
+            "SERVER": self.host,
+            "PORT": self.port,
+            "DATABASE": db_name,
+            "UID": self.user,
+            "PWD": self.passwd,
+            "TrustServerCertificate": "yes",
+            "Connection Timeout": 60,
+        }
+        if "ODBC" in self.driver:
+            params["SERVER"] += f",{params.pop('PORT')}"
+        conn_str = ";".join([f"{k}={v}" for k, v in params.items()])
+        return conn_str
+    
     @property
     def conn(self):
         """Property returning a connection to sql database.

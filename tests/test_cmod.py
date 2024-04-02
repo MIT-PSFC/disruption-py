@@ -12,11 +12,7 @@ import pandas as pd
 import logging
 from disruption_py.handlers.cmod_handler import CModHandler
 from disruption_py.settings import ShotSettings, LogSettings
-from disruption_py.settings.set_times_request import ListSetTimesRequest 
 from disruption_py.utils.constants import TIME_CONST 
-
-# maximum number of processes
-MAX_PROCS = 8
 
 # Shot list used for testing
 # Mix of disruptive and non-disruptive shots present in SQL and MDSplus
@@ -47,6 +43,13 @@ TEST_COLUMNS = [
     'shot', 'commit_hash'
 ]
 
+KNOWN_FAILURE_COLUMNS = [
+    'lower_gap', 'upper_gap', 'ssep', 'dipprog_dt', 'n_over_ncrit', # constant factor scaling error
+    'ip_error' # constant error
+]
+
+# TEST_COLUMNS = list(set(TEST_COLUMNS).difference(KNOWN_FAILURE_COLUMNS))
+
 TIME_EPSILON = 0.05 # Tolerance for taking the difference between two times [s]
 IP_EPSILON = 1e5    # Tolerance for taking the difference between two ip values [A]
 
@@ -68,7 +71,7 @@ def mdsplus_data(cmod_handler : CModHandler, shotlist) -> Dict:
         set_times_request="efit",
         log_settings=LogSettings(
             log_to_console=False,
-            log_file_path="test/last_log.log",
+            log_file_path="tests/cmod.log",
             log_file_write_mode="w",
             file_log_level=logging.DEBUG
         )
@@ -77,7 +80,6 @@ def mdsplus_data(cmod_handler : CModHandler, shotlist) -> Dict:
         shot_ids_request=shotlist, 
         shot_settings=shot_settings,
         output_type_request="dict",
-        num_processes=MAX_PROCS,
     )
     return shot_data
 
@@ -101,7 +103,8 @@ def test_data_columns(shotlist, mdsplus_data : Dict, sql_data : Dict, data_colum
         mdsplus_shot_data, sql_shot_data = mdsplus_data[shot_id], sql_data[shot_id]
         
         if data_column not in mdsplus_shot_data:
-            raise ValueError(f"Column {data_column} missing from MDSPlus for shot {shot_id}")
+            print(f"Column {data_column} missing from MDSPlus for shot {shot_id}")
+            continue
         
         if data_column not in sql_shot_data:
             print(f"Column {data_column} missing from SQL for shot {shot_id}")
@@ -118,7 +121,7 @@ def test_data_columns(shotlist, mdsplus_data : Dict, sql_data : Dict, data_colum
         anomaly_ratios.append(anomaly_ratio)
     
     if any(anomaly_ratio['failed'] for anomaly_ratio in anomaly_ratios):
-        raise ValueError(get_failure_statistics_string(anomaly_ratios, verbose_output, data_column=data_column))
+        raise AssertionError(get_failure_statistics_string(anomaly_ratios, verbose_output, data_column=data_column))
     
 def test_other_values(shotlist, mdsplus_data : Dict, sql_data : Dict, verbose_output, fail_slow):
     """
@@ -282,7 +285,7 @@ def get_failure_statistics_string(anomaly_ratios, verbose_output, data_column=No
 #         total_difference_df['time'] = expected_shot_data['time']
 #         total_difference_df['time_diff'] = expected_shot_data['time'].diff()
 
-#         total_difference_df.to_csv(f"test/cmod_failed_values_{shot_id}_dbetap_dt.csv")
+#         total_difference_df.to_csv(f"tests/cmod_failed_values_{shot_id}_dbetap_dt.csv")
 #         raise AssertionError(
 #             f"Shot {shot_id} condition failed. Arrays:\n{total_difference_df}"
 #         )

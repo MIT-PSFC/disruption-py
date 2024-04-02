@@ -111,7 +111,9 @@ def cached_method(
             shot_data_request_params : ShotDataRequestParams = kwargs["params"] if "params" in kwargs else args[-1]
             shot_props = shot_data_request_params.shot_props
             
-            cache_key = get_method_cache_key(method.__name__, shot_props.times)
+            other_params = {k: v for k, v in kwargs.items() if k != "params"}
+            
+            cache_key = get_method_cache_key(method.__name__, shot_props.times) + str(other_params)
             if cache_key in shot_props._cached_results:
                 return shot_props._cached_results[cache_key]
             else:

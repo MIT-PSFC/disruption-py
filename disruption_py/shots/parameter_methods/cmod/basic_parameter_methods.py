@@ -8,7 +8,11 @@ from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.math_utils import gaussian_fit, interp1, smooth
 from disruption_py.utils.utils import without_duplicates
 from disruption_py.shots.helpers.method_caching import cached_method, parameter_cached_method
-from MDSplus import mdsExceptions
+try:
+    from MDSplus import mdsExceptions
+except ImportError:
+    class mdsExceptions(Exception):
+        __getattr__ = lambda self, name: Exception
 
 try:
     import importlib.resources as importlib_resources

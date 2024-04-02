@@ -1,7 +1,7 @@
 import logging
 from typing import Any, Callable, Dict, List, Tuple
 import numpy as np
-import MDSplus as mds
+import MDSplus
 
 class ProcessMDSConnection():
     """
@@ -9,10 +9,15 @@ class ProcessMDSConnection():
     
     Ensure that a single MDSPlus connection is used by each process for all shots retrieved by that process.
     """
-    
+
+    logger = logging.getLogger('disruption_py')
+
     def __init__(self, conn_string : str):
-        self.conn = mds.Connection(conn_string)
-        self.conn.get('shorten_path()')
+        self.conn = MDSplus.Connection(conn_string)
+        try:
+            self.conn.get("shorten_path()")
+        except MDSplus.mdsExceptions.TdiUNKNOWN_VAR:
+            self.logger.debug("MDSplus does not support the `shorten_path()` method.")
     
     def get_shot_connection(self, shot_id : int):
         """ Get MDSPlus Connection wrapper for individual shot. """
@@ -25,7 +30,7 @@ class MDSConnection:
     
     logger = logging.getLogger('disruption_py')
     
-    def __init__(self, conn : mds.Connection, shot_id : int):
+    def __init__(self, conn : MDSplus.Connection, shot_id : int):
         self.conn = conn
         self.shot_id = shot_id
         self.tree_nickname_funcs = {}
@@ -101,7 +106,10 @@ class MDSConnection:
         """
         if tree_name is not None:
             self.open_tree(tree_name)
-        return self.conn.get(expression, arguments)
+        if arguments is None:
+            return self.conn.get(expression)
+        else:
+            return self.conn.get(expression, arguments)
     
     # Convenience methods
 

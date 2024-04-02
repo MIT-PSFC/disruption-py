@@ -1,19 +1,23 @@
+import traceback
 import numpy as np
-from dataclasses import replace
 
 import pandas as pd
-from disruption_py.databases.database import ShotDatabase
-from disruption_py.mdsplus_integration.mds_connection import MDSConnection
+from disruption_py.databases.d3d_database import D3DDatabase
+from disruption_py.mdsplus_integration.mds_connection import MDSConnection, ProcessMDSConnection
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.shots.parameter_methods.cmod.basic_parameter_methods import BasicCmodRequests
 from disruption_py.shots.shot_manager import ShotManager
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.utils.math_utils import interp1
 from disruption_py.utils.utils import without_duplicates
 
 
-class CModShotManager(ShotManager):
+class D3DShotManager(ShotManager):
+    
+    def __init__(self, process_database : D3DDatabase, process_mds_conn : ProcessMDSConnection):
+        super().__init__(process_database=process_database, process_mds_conn=process_mds_conn)
         
     def shot_setup(
         self,
@@ -33,14 +37,12 @@ class CModShotManager(ShotManager):
                
         mds_conn = self.process_mds_conn.get_shot_connection(shot_id=shot_id)
         
+        
+        efit_tree_name = self.process_database.get_efit_tree(shot_id)
+        
         mds_conn.add_tree_nickname_funcs(
             tree_nickname_funcs = { 
-                "_efit_tree" : self.get_efit_tree_nickname_func(
-                    shot_id=shot_id, 
-                    mds_conn=mds_conn,
-                    disruption_time=disruption_time,
-                    shot_settings=shot_settings,
-                )
+                "_efit_tree" : lambda: efit_tree_name
             }
         )
         
@@ -51,7 +53,7 @@ class CModShotManager(ShotManager):
                 database=self.process_database,
                 disruption_time=disruption_time,
                 shot_settings=shot_settings,
-                tokamak=Tokamak.CMOD,
+                tokamak=Tokamak.D3D,
                 **kwargs
             )
             return shot_props
@@ -70,9 +72,6 @@ class CModShotManager(ShotManager):
                 *[f"efit{i}" for i in range(10, 19)],
             ])
             
-            if "efit18" in efit_names_to_test and disruption_time is None:
-                efit_names_to_test.remove("efit18")
-            
             for efit_name in efit_names_to_test:
                 try:
                     mds_conn.open_tree(efit_name)
@@ -86,34 +85,34 @@ class CModShotManager(ShotManager):
         
     @classmethod
     def _modify_times_flattop_timebase(cls, shot_props : ShotProps, **kwargs):
-        shot_data_requests_params = ShotDataRequestParams(mds_conn=shot_props.mds_conn, shot_props=shot_props, logger=cls.logger, tokamak=Tokamak.CMOD)
-        ip_parameters = BasicCmodRequests._get_ip_parameters(params=shot_data_requests_params)
-        ipprog, dipprog_dt = ip_parameters['ip_prog'], ip_parameters['dipprog_dt']
-        indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 1e3)[0]
-        indices_flattop_2 = np.where(np.abs(ipprog) > 1.e5)[0]
-        indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
-        if len(indices_flattop) == 0:
-            cls.logger.warning(
-                f"[Shot {shot_props.shot_id}]:Could not find flattop timebase. Defaulting to full shot(efit) timebase.")
-            return
+        try:
+            ip_prog, t_ip_prog, = shot_props.mds_conn.get_data_with_dims(f"ptdata('iptipp', {shot_props.shot_id})", tree_name='d3d')
+            t_ip_prog = t_ip_prog/1.e3  # [ms] -> [s]
+            polarity = np.unique(shot_props.mds_conn.get_data(f"ptdata('iptdirect', {shot_props.shot_id})", tree_name='d3d'))
+            if len(polarity) > 1:
+                cls.logger.info(f"[Shot {shot_props.shot_id}]:Polarity of Ip target is not constant. Using value at first timestep.")
+                cls.logger.debug(f"[Shot {shot_props.shot_id}]: Polarity array {polarity}")
+                polarity = polarity[0]
+            ip_prog = ip_prog * polarity
+            dipprog_dt = np.gradient(ip_prog, t_ip_prog)
+            ip_prog = interp1(t_ip_prog, ip_prog, shot_props.times, 'linear')
+            dipprog_dt = interp1(t_ip_prog, dipprog_dt, shot_props.times, 'linear')
+        except Exception as e:
+            cls.logger.info(
+                f"[Shot {shot_props.shot_id}]:Failed to get programmed plasma current parameters")
+            cls.logger.debug(
+                f"[Shot {shot_props.shot_id}]:{traceback.format_exc()}")
+        epsoff, t_epsoff = shot_props.mds_conn.get_data_with_dims(f"ptdata('epsoff', {shot_props.shot_id})", tree_name='d3d')
+        t_epsoff =t_epsoff/1.e3 + .001  # [ms] -> [s] # Avoid problem with simultaneity of epsoff being triggered exactly on the last time sample
+        epsoff = interp1(t_epsoff, epsoff, shot_props.times, 'linear')
+        railed_indices = np.where(np.abs(epsoff) > .5)
+        power_supply_railed = np.zeros(len(shot_props.times))
+        power_supply_railed[railed_indices] = 1
+        indices_flattop = np.where((np.abs(dipprog_dt) <= 2.e3) & (
+            np.abs(ip_prog) > 100e3) & (power_supply_railed != 1))
         shot_props.times = shot_props.times[indices_flattop]
-        shot_props._cached_results.clear() #TODO: Make this only modify the cached results for new times
         return shot_props
     
     @classmethod  
     def _modify_times_rampup_and_flattop_timebase(cls, shot_props : ShotProps, **kwargs):
-        shot_data_requests_params = ShotDataRequestParams(mds_conn=shot_props.mds_conn, shot_props=shot_props, logger=cls.logger, tokamak=Tokamak.CMOD)
-        ip_parameters = BasicCmodRequests._get_ip_parameters(params=shot_data_requests_params)
-        ipprog, dipprog_dt = ip_parameters['ip_prog'], ip_parameters['dipprog_dt']
-        indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 6e4)[0]
-        indices_flattop_2 = np.where(np.abs(ipprog) > 1.e5)[0]
-        indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
-        if len(indices_flattop) == 0:
-            cls.logger.warning(
-                f"[Shot {shot_props.shot_id}]:Could not find flattop timebase. Defaulting to full shot(efit) timebase.")
-            return
-        end_index = np.max(indices_flattop)
-        shot_props.times = shot_props.times[:end_index]
-        shot_props._cached_results.clear() #TODO: Make this only modify the cached results for new times
-        return shot_props
-    
+        raise NotImplementedError("Rampup and flattop not implemented for D3D")

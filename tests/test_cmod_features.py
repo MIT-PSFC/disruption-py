@@ -51,7 +51,7 @@ def shot_settings_list():
         ShotSettings(
             # logging
             log_settings=LogSettings(
-                log_file_path="test/temp/test_log.log",
+                log_file_path="tests/temp/test_log.log",
                 file_log_level=logging.WARNING,
                 log_file_write_mode="a",
                 log_to_console=False,
@@ -73,7 +73,7 @@ def test_features(cmod_handler, shot_settings_list, shot_settings_index, multipr
     list_output, df_output, num_processed, num_processed = cmod_handler.get_shots_data(
         shot_ids_request=TEST_SHOTS,
         shot_settings=shot_settings_list[shot_settings_index],
-        output_type_request=["list", "dataframe", "test/temp/test_output.csv", "test/temp/test_output.hdf5"],
+        output_type_request=["list", "dataframe", "tests/temp/test_output.csv", "tests/temp/test_output.hdf5"],
         num_processes=4 if multiprocessing else 1
     )
     assert isinstance(list_output, list)
@@ -83,7 +83,7 @@ def test_features(cmod_handler, shot_settings_list, shot_settings_index, multipr
 def cleanup_after_tests(request):
     yield
     # Teardown code: delete files after all tests are done
-    delete_file_paths = ["test/temp/test_log.log", "test/temp/test_output.csv", "test/temp/test_output.hdf5"]
+    delete_file_paths = ["tests/temp/test_log.log", "tests/temp/test_output.csv", "tests/temp/test_output.hdf5"]
     for delete_file_path in delete_file_paths:
         if os.path.exists(delete_file_path):
             os.remove(delete_file_path)

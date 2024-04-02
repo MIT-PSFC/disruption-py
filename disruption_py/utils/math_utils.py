@@ -119,41 +119,6 @@ def exp_filter(x, w, strategy='fragmented'):
                 filtered_x[i] = x[i]
     return filtered_x
 
-def efit_rz_interp(ts, efit_dict: dict) -> tuple:
-    """
-    Interpolate the efit data to the given timebase and project onto the
-    poloidal plane.
-
-    Parameters
-    ----------
-    times: np.ndarray
-        Timebase to interpolate to
-
-    efit_dict: dict
-        Dictionary with the efit data. Keys are 'time', 'r', 'z', 'psin', 'rhovn'
-
-    Returns
-    -------
-    psin: np.ndarray
-        Array of plasma normalized flux
-
-    rho_vn_diag: np.ndarray
-        Array of normalized minor radius
-
-    """
-    times = ts['time']/1.e3
-    interp = RegularGridInterpolator(
-        [efit_dict['time'], efit_dict['r'], efit_dict['z']], efit_dict['psin'],method='linear',bounds_error=False,fill_value=np.nan)
-    T,R,Z = np.meshgrid(times, efit_dict['r'], efit_dict['z'],indexing='ij')
-    # print(np.stack((T,R,Z),axis=1).shape)
-    psin = interp((T,R,Z))
-    rho_vn_diag_almost = interp1(efit_dict['time'], efit_dict['rhovn'], times,axis=0)
-    rho_vn_diag = np.empty(psin.shape)
-    psin_timebase = np.linspace(0, 1, efit_dict['rhovn'].shape[1])
-    for i in range(psin.shape[0]):
-        rho_vn_diag[i] = interp1(psin_timebase, rho_vn_diag_almost[i,:], psin[i,:])
-    return psin, rho_vn_diag
-
 
 def smooth(arr: np.ndarray, window_size: int) -> np.ndarray:
     """
@@ -372,9 +337,9 @@ def fastsmooth(y, w, smooth_type=1, ends_type=0):
     array_like
         The smoothed dataset.
     """
-    smoothed_y = smooth(y, w, ends_type)
+    smoothed_y = smooth(y, w)
     for i in range(smooth_type-1):
-        smoothed_y = smooth(smoothed_y, w, ends_type)
+        smoothed_y = smooth(smoothed_y, w)
     return smoothed_y
 
 
