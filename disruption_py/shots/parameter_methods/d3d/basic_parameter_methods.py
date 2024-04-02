@@ -56,8 +56,7 @@ class BasicD3DRequests(ShotDataRequest):
     def get_power_parameters(params : ShotDataRequestParams):
         # Get neutral beam injected power
         try:
-            p_nbi, t_nbi = params.mds_conn.get_data_with_dims(r'\d3d::top.nb:pinj', tree_name='d3d')
-            p_nbi = p_nbi.astype(np.float64)
+            p_nbi, t_nbi = params.mds_conn.get_data_with_dims(r"\d3d::top.nb:pinj", tree_name="d3d", astype="float64")
             p_nbi *= 1.e3  # [KW] -> [W]
             if len(t_nbi) > 2:
                 p_nbi = interp1(t_nbi, p_nbi, params.shot_props.times,'linear', bounds_error=False, fill_value=0.)
@@ -171,7 +170,7 @@ class BasicD3DRequests(ShotDataRequest):
             # We choose a 20-point width for gsastd. This means a 10ms window for ip smoothing
             dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
             li, t_li = params.mds_conn.get_data_with_dims(r'\efit_a_eqdsk:li', tree_name="_efit_tree")
-            chisq = params.mds_conn.get(r'\efit_a_eqdsk:chisq').data()
+            chisq = params.mds_conn.get_data(r'\efit_a_eqdsk:chisq')
             # Filter out invalid indices of efit reconstruction
             invalid_indices = None  # TODO: Finish
         except MdsException as e:
@@ -296,7 +295,7 @@ class BasicD3DRequests(ShotDataRequest):
         try:
             ip_prog, t_ip_prog = params.mds_conn.get_data_with_dims(f"ptdata('iptipp', {params.shot_props.shot_id})", tree_name="d3d") # [A], [ms]
             t_ip_prog = t_ip_prog/1.e3  # [ms] -> [s]
-            polarity = np.unique(params.mds_conn.get(f"ptdata('iptdirect', {params.shot_props.shot_id})", tree_name="d3d").data())
+            polarity = np.unique(params.mds_conn.get_data(f"ptdata('iptdirect', {params.shot_props.shot_id})", tree_name="d3d"))
             if len(polarity) > 1:
                 params.logger.info(
                     f"[Shot {params.shot_props.shot_id}]:Polarity of Ip target is not constant. Using value at first timestep.")
@@ -388,7 +387,7 @@ class BasicD3DRequests(ShotDataRequest):
             ip_prog_rt, t_ip_prog_rt = params.mds_conn.get_data_with_dims(f"ptdata('ipsiptargt', {params.shot_props.shot_id})", tree_name="d3d") # [MA], [ms]
             t_ip_prog_rt = t_ip_prog_rt/1.e3  # [ms] -> [s]
             ip_prog_rt = ip_prog_rt*1.e6*.5  # [MA] -> [A]
-            polarity = np.unique(params.mds_conn.get(f"ptdata('iptdirect', {params.shot_props.shot_id})", tree_name="d3d").data())
+            polarity = np.unique(params.mds_conn.get_data(f"ptdata('iptdirect', {params.shot_props.shot_id})", tree_name="d3d"))
             if len(polarity) > 1:
                 params.logger.info(
                     f"[Shot {params.shot_props.shot_id}]:Polarity of Ip target is not constant. Setting to first value in array.")
@@ -486,7 +485,7 @@ class BasicD3DRequests(ShotDataRequest):
             try:
                 a_minor, t_a = params.mds_conn.get_data_with_dims(r'\efit_a_eqdsk:aminor', tree_name="d3d") # [m], [ms]
                 t_a = t_a/1.e3  # [ms] -> [s]
-                chisq = params.mds_conn.get(r'\efit_a_eqdsk:chisq').data()
+                chisq = params.mds_conn.get_data(r'\efit_a_eqdsk:chisq')
                 invalid_indices = np.where(chisq > 50)
                 a_minor[invalid_indices] = np.nan
                 a_minor = interp1(t_a, a_minor, params.shot_props.times, 'linear')
@@ -882,9 +881,9 @@ class BasicD3DRequests(ShotDataRequest):
         tokamak=Tokamak.D3D
     )
     def get_kappa_area(params : ShotDataRequestParams):
-        a_minor = params.mds_conn.get(r'\efit_a_eqdsk:aminor', tree_name="_efit_tree").data()
-        area = params.mds_conn.get(r'\efit_a_eqdsk:area', tree_name="_efit_tree").data()
-        chisq = params.mds_conn.get(r'\efit_a_eqdsk:chisq', tree_name="_efit_tree").data()
+        a_minor = params.mds_conn.get_data(r'\efit_a_eqdsk:aminor', tree_name="_efit_tree")
+        area = params.mds_conn.get_data(r'\efit_a_eqdsk:area', tree_name="_efit_tree")
+        chisq = params.mds_conn.get_data(r'\efit_a_eqdsk:chisq', tree_name="_efit_tree")
         t = params.mds_conn.get(r'\efit_a_eqdsk:atime', tree_name="_efit_tree")
         kappa_area = area / (np.pi * a_minor**2)
         invalid_indices = np.where(chisq > 50)
@@ -914,14 +913,14 @@ class BasicD3DRequests(ShotDataRequest):
         tokamak=Tokamak.D3D
     )
     def get_shape_parameters(params : ShotDataRequestParams):
-        efit_time = params.mds_conn.get(r'\efit_a_eqdsk:atime', tree_name="_efit_tree").data()/1.e3  # [ms] -> [s]
-        sqfod = params.mds_conn.get(r'\efit_a_eqdsk:sqfod', tree_name="_efit_tree").data()
-        sqfou = params.mds_conn.get(r'\efit_a_eqdsk:sqfou', tree_name="_efit_tree").data()
-        tritop = params.mds_conn.get(r'\efit_a_eqdsk:tritop', tree_name="_efit_tree").data()  # meters
-        tribot = params.mds_conn.get(r'\efit_a_eqdsk:tribot', tree_name="_efit_tree").data()  # meters
+        efit_time = params.mds_conn.get_data(r'\efit_a_eqdsk:atime', tree_name="_efit_tree")/1.e3  # [ms] -> [s]
+        sqfod = params.mds_conn.get_data(r'\efit_a_eqdsk:sqfod', tree_name="_efit_tree")
+        sqfou = params.mds_conn.get_data(r'\efit_a_eqdsk:sqfou', tree_name="_efit_tree")
+        tritop = params.mds_conn.get_data(r'\efit_a_eqdsk:tritop', tree_name="_efit_tree")  # meters
+        tribot = params.mds_conn.get_data(r'\efit_a_eqdsk:tribot', tree_name="_efit_tree")  # meters
         # plasma minor radius [m]
-        aminor = params.mds_conn.get(r'\efit_a_eqdsk:aminor', tree_name="_efit_tree").data()
-        chisq = params.mds_conn.get(r'\efit_a_eqdsk:chisq', tree_name="_efit_tree").data()
+        aminor = params.mds_conn.get_data(r'\efit_a_eqdsk:aminor', tree_name="_efit_tree")
+        chisq = params.mds_conn.get_data(r'\efit_a_eqdsk:chisq', tree_name="_efit_tree")
         # Compute triangularity and squareness:
         delta = (tritop+tribot)/2.0
         squareness = (sqfod+sqfou)/2.0
@@ -978,7 +977,7 @@ class BasicD3DRequests(ShotDataRequest):
                            'time': 'time', 'te_error': 'temp_e', 'ne_error': 'density_e'}
             for node, name in child_nodes.items():
                 try:
-                    lasers[laser][node] = params.mds_conn.get(f"{sub_tree}:{name}", tree_name="electrons").data()
+                    lasers[laser][node] = params.mds_conn.get_data(f"{sub_tree}:{name}", tree_name="electrons")
                 except MdsException as e:
                     lasers[laser][node] = np.full(
                         lasers[laser]['time'].shape, np.nan)
@@ -1073,7 +1072,7 @@ class BasicD3DRequests(ShotDataRequest):
         efit_dict['time'] = efit_dict_time/1.e3  # [ms] -> [s]
         for node in nodes:
             try:
-                efit_dict[node] = params.mds_conn.get(f"{path}{node}", tree_name="_efit_tree").data()
+                efit_dict[node] = params.mds_conn.get_data(f"{path}{node}", tree_name="_efit_tree")
             except MdsException as e:
                 efit_dict[node] = np.full(efit_dict['time'].shape, np.nan)
                 params.logger.info(

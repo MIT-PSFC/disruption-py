@@ -88,7 +88,7 @@ class D3DShotManager(ShotManager):
         try:
             ip_prog, t_ip_prog, = shot_props.mds_conn.get_data_with_dims(f"ptdata('iptipp', {shot_props.shot_id})", tree_name='d3d')
             t_ip_prog = t_ip_prog/1.e3  # [ms] -> [s]
-            polarity = np.unique(shot_props.mds_conn.get(f"ptdata('iptdirect', {shot_props.shot_id})", tree_name='d3d').data())
+            polarity = np.unique(shot_props.mds_conn.get_data(f"ptdata('iptdirect', {shot_props.shot_id})", tree_name='d3d'))
             if len(polarity) > 1:
                 cls.logger.info(f"[Shot {shot_props.shot_id}]:Polarity of Ip target is not constant. Using value at first timestep.")
                 cls.logger.debug(f"[Shot {shot_props.shot_id}]: Polarity array {polarity}")

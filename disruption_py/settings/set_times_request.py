@@ -261,8 +261,8 @@ class SignalSetTimesRequest(SetTimesRequest):
         
     def _get_times(self, params : SetTimesRequestParams) -> np.ndarray:
         try:
-            signal_time, = params.mds_conn.get_dims(self.signal_path, tree_name=self.tree_name)
-            return signal_time.astype('float64', copy=False)
+            signal_time, = params.mds_conn.get_dims(self.signal_path, tree_name=self.tree_name, astype="float64")
+            return signal_time
         except Exception as e:
             params.logger.error(f"Failed to set up timebase for signal {self.signal_path}")
             raise Exception(e)

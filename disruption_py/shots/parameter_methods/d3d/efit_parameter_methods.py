@@ -24,9 +24,9 @@ class D3DEfitRequests(ShotDataRequest):
         tokamak=Tokamak.D3D,
     )
     def _get_efit_parameters(params : ShotDataRequestParams):
-        efit_data = {k: params.mds_conn.get(v, tree_name="_efit_tree").data()
+        efit_data = {k: params.mds_conn.get_data(v, tree_name="_efit_tree")
                      for k, v in D3DEfitRequests.efit_cols.items()}
-        efit_time = params.mds_conn.get(r'\efit_a_eqdsk:atime', tree_name="_efit_tree").data()/1.e3  # [ms] -> [s]
+        efit_time = params.mds_conn.get_data(r'\efit_a_eqdsk:atime', tree_name="_efit_tree")/1.e3  # [ms] -> [s]
 
         # EFIT reconstructions are sometimes invalid, particularly when very close
         # to a disruption.  There are a number of EFIT parameters that can indicate
@@ -51,9 +51,9 @@ class D3DEfitRequests(ShotDataRequest):
         tokamak=Tokamak.D3D,
     )
     def _get_rt_efit_parameters(params : ShotDataRequestParams):
-        efit_data = {k: params.mds_conn.get(v, tree_name="efitrt1").data()
+        efit_data = {k: params.mds_conn.get_data(v, tree_name="efitrt1")
                      for k, v in D3DEfitRequests.rt_efit_cols.items()}
-        efit_time = params.mds_conn.get(r'\efit_a_eqdsk:atime', tree_name="efitrt1").data()/1.e3  # [ms] -> [s]
+        efit_time = params.mds_conn.get_data(r'\efit_a_eqdsk:atime', tree_name="efitrt1")/1.e3  # [ms] -> [s]
         # EFIT reconstructions are sometimes invalid, particularly when very close
         # to a disruption.  There are a number of EFIT parameters that can indicate
         # invalid reconstructions, such as 'terror' and 'chisq'.  Here we use
