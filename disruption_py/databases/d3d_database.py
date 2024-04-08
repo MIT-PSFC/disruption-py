@@ -20,7 +20,7 @@ class D3DDatabase(ShotDatabase):
             db_user, db_pass = fio.read().split()
         kw = dict(
             driver="FreeTDS",
-            host="d3drdb.gat.com",
+            host="d3drdb",
             port=8001,
             db_name="d3drdb",
             user=db_user,
