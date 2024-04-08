@@ -16,7 +16,7 @@ queries = [
     "select count(distinct shot) from disruptions",
 ]
 
-if os.path.exists("/fusion/projects/disruption_warning"):
+if os.getenv("DIIID_TEST", False) or os.path.exists("/fusion/projects/disruption_warning"):
     db = D3DDatabase.default()
     vals = [13245, 8055, 5190, 24219]
 else:

@@ -10,7 +10,7 @@ from disruption_py.handlers.d3d_handler import D3DHandler
 from disruption_py.settings import ShotSettings, LogSettings
 
 
-if os.path.exists("/fusion/projects/disruption_warning"):
+if os.getenv("DIIID_TEST", False) or os.path.exists("/fusion/projects/disruption_warning"):
     handler = D3DHandler()
     shot_ids_request = [161228]
     set_times_request = "disruption"
