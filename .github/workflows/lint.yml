@@ -1,9 +1,10 @@
 ---
 
-name: lint
+name: Lint
 # yamllint disable-line rule:truthy
 on:
   push:
+  pull_request:
 jobs:
 
 
@@ -22,7 +23,8 @@ jobs:
 
       - name: Run yamllint
         run: |
-          find -type f -name '*.yml' \
+          yamllint --version
+          find -type f -iname '*.yml' -or -iname '*.yaml' \
           | while read -r FILE
           do
              echo "--> $FILE"
@@ -36,7 +38,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install shellcheck
-        run: sudo apt-get install shellcheck -y
+        run: sudo apt-get install shellcheck
 
       - name: Run shellcheck
         run: |
