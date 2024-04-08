@@ -1,5 +1,6 @@
 import os
 from disruption_py.databases import D3DDatabase, CModDatabase
+from disruption_py.handlers.cmod_handler import CModHandler
 from disruption_py.utils.mappings.tokamak import Tokamak
 
 DATABASE_HANDLERS = {Tokamak.D3D: D3DDatabase, Tokamak.CMOD: CModDatabase, Tokamak.EAST: None}
@@ -25,6 +26,15 @@ def get_tokamak_from_shot_id(shot_id):
 def get_tokamak_from_environment():
     if os.environ.get('CMOD_MONITOR') is not None:
         return Tokamak.CMOD
+    else:
+        return None
+    
+def get_handler_from_environment(**kwargs):
+    tokamak = get_tokamak_from_environment()
+    if tokamak is Tokamak.CMOD:
+        return CModHandler(**kwargs)
+    elif tokamak is Tokamak.D3D:
+        return D3DDatabase(**kwargs)
     else:
         return None
 

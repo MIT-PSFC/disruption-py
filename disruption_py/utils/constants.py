@@ -13,6 +13,10 @@ BLACK_WINDOW_THRESHOLD = 5.e-3 # A 'black window' threshold [s]; obscures input 
 
 MAX_SHOT_TIME = 7.0  # [s] <-- used to detect if shot times are using ms
 
+# Used for testing
+VAL_TOLERANCE = 0.01   # Tolerance for comparing values between MDSplus and SQL
+MATCH_FRACTION = 0.95   # Fraction of signals that must match between MDSplus and SQL
+VERBOSE_OUTPUT = False
 
 DEFAULT_COLS = ['time', 'time_until_disrupt','shot']
 PAPER_COLS = [
