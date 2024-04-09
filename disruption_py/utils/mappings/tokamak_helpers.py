@@ -1,6 +1,5 @@
 import os
 from disruption_py.databases import D3DDatabase, CModDatabase
-from disruption_py.handlers.cmod_handler import CModHandler
 from disruption_py.utils.mappings.tokamak import Tokamak
 
 DATABASE_HANDLERS = {Tokamak.D3D: D3DDatabase, Tokamak.CMOD: CModDatabase, Tokamak.EAST: None}
