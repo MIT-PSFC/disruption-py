@@ -1,1 +1,1 @@
-from .cmod_handler import CModHandler
+from .handler import Handler
