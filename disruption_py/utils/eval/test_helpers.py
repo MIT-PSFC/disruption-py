@@ -1,4 +1,4 @@
-from disruption_py.handlers.cmod_handler import CModHandler
+from disruption_py.handlers import Handler
 from disruption_py.settings import LogSettings, ShotSettings
 
 
@@ -9,9 +9,10 @@ import logging
 from typing import Dict, List
 
 from disruption_py.utils.constants import TIME_CONST
+from disruption_py.utils.eval.data_difference import DataDifference
 
 
-def get_mdsplus_data(cmod_handler : CModHandler, shot_ids : List[int]) -> Dict[int, pd.DataFrame]:
+def get_mdsplus_data(handler : Handler, shot_ids : List[int]) -> Dict[int, pd.DataFrame]:
     """
     Get MDSplus data for a list of shots.
 
@@ -30,7 +31,7 @@ def get_mdsplus_data(cmod_handler : CModHandler, shot_ids : List[int]) -> Dict[i
             file_log_level=logging.DEBUG
         )
     )
-    shot_data = cmod_handler.get_shots_data(
+    shot_data = handler.get_shots_data(
         shot_ids_request=shot_ids,
         shot_settings=shot_settings,
         output_type_request="dict",
@@ -38,7 +39,7 @@ def get_mdsplus_data(cmod_handler : CModHandler, shot_ids : List[int]) -> Dict[i
     return shot_data
 
 
-def get_sql_data_for_mdsplus(cmod_handler : CModHandler, shot_ids : List[int], mdsplus_data : Dict[int, pd.DataFrame]) -> Dict[int, pd.DataFrame]:
+def get_sql_data_for_mdsplus(handler : Handler, shot_ids : List[int], mdsplus_data : Dict[int, pd.DataFrame]) -> Dict[int, pd.DataFrame]:
     """
     Get SQL data for a list of shots and map onto the timebase of the supplied MDSplus data.
 
@@ -50,6 +51,19 @@ def get_sql_data_for_mdsplus(cmod_handler : CModHandler, shot_ids : List[int], m
     shot_data = {}
     for shot_id in shot_ids:
         times = mdsplus_data[shot_id]['time']
-        sql_data = cmod_handler.database.get_shots_data([shot_id])
+        sql_data = handler.database.get_shots_data([shot_id])
         shot_data[shot_id] = pd.merge_asof(times.to_frame(), sql_data, on='time', direction='nearest', tolerance=TIME_CONST)
     return shot_data
+
+
+def tes_against_sql(handler : Handler, shot_ids : List[int]) -> Dict[int, pd.DataFrame]:
+    mdsplus_data = get_mdsplus_data(handler, shot_ids)
+    sql_data = get_sql_data_for_mdsplus(handler, shot_ids, mdsplus_data)
+    
+    mdsplus_columns = set().union(*(df.columns for df in mdsplus_data.values()))
+    sql_columns = set().union(*(df.columns for df in sql_data.values()))
+    test_columns = mdsplus_columns.intersection(sql_columns)
+    
+    data_differences = DataDifference.test_shots(shot_ids, mdsplus_data, sql_data, test_columns)
+    
+    return data_differences

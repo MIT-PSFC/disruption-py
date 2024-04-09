@@ -36,3 +36,57 @@ DERIVED_PAPER_COLS = [
     'ip-exp-10-none',
     'ip-exp-50-none',
 ]
+
+
+# Shot list used for testing
+# Mix of disruptive and non-disruptive shots present in SQL and MDSplus
+CMOD_TEST_SHOTS = [
+    1150805012,   # Flattop Disruption
+    1150805013,     # No Disruption
+    1150805014,     # No Disruption
+    1150805015,     # Rampdown Disruption
+    1150805016,     # Rampdown Disruption
+    1150805017,     # Rampdown Disruption
+    1150805019,     # Rampdown Disruption
+    1150805020,     # Rampdown Disruption
+    1150805021,     # Rampdown Disruption
+    1150805022      # Flattop Disruption
+]
+CMOD_TEST_COLUMNS = [
+    'I_efc', 'sxr', 'time_until_disrupt', 'beta_n', 'beta_p', 'kappa', 'li',
+    'upper_gap', 'lower_gap', 'q0', 'qstar', 'q95', 'v_loop_efit', 'Wmhd',
+    'ssep', 'n_over_ncrit', 'tritop', 'tribot', 'a_minor', 'rmagx', 'chisq',
+    'dbetap_dt', 'dli_dt', 'dWmhd_dt', 'V_surf', 'kappa_area', 'Te_width',
+    'ne_peaking', 'Te_peaking', 'pressure_peaking', 'n_e', 'dn_dt',
+    'Greenwald_fraction', 'n_equal_1_mode', 'n_equal_1_normalized',
+    'n_equal_1_phase', 'BT', 'prad_peaking', 'v_0', 'ip', 'dip_dt',
+    'dip_smoothed', 'ip_prog', 'dipprog_dt', 'ip_error', 'z_error',
+    'z_prog', 'zcur', 'v_z', 'z_times_v_z', 'p_oh', 'v_loop', 'p_rad',
+    'dprad_dt', 'p_lh', 'p_icrf', 'p_input', 'radiated_fraction', 'time',
+    'shot', 'commit_hash'
+]
+
+
+D3D_TEST_SHOTS = [
+    161228, # disruptive
+    161237, # disruptive
+    166177, # non disruptive 
+    166253
+]
+D3D_TEST_COLUMNS = [
+    'shot', 'time', 'time_until_disrupt', 'ip_error', 'dip_dt',
+    'beta_p', 'beta_n', 'li', 'n_equal_1_mode_IRLM', 'z_error', 'v_z',
+    'kappa', 'H98', 'q0', 'qstar', 'q95', 'dn_dt', 'radiated_fraction',
+    'power_supply_railed', 'lower_gap', 'upper_gap', 'dbetap_dt', 'dli_dt',
+    'ip', 'zcur', 'n_e', 'dipprog_dt', 'v_loop', 'p_rad', 'dWmhd_dt',
+    'dprad_dt', 'p_nbi', 'p_ech', 'p_ohm', 'intentional_disruption',
+    'Greenwald_fraction', 'Te_HWHM', 'other_hardware_failure', 'Te_HWHM_RT',
+    'v_loop_RT', 'n_e_RT', 'Greenwald_fraction_RT', 'ip_error_RT', 'ip_RT',
+    'dipprog_dt_RT', 'Wmhd_RT', 'Wmhd', 'n_equal_1_mode',
+    'n_equal_1_normalized', 'Te_width_normalized', 'Te_width_normalized_RT',
+    'q95_RT', 'li_RT', 'beta_p_RT', 'oeamp1em', 'oeamp1om', 'oefrq1em',
+    'oefrq1om', 'oeamp1e', 'oeamp1o', 'oefrq1e', 'oefrq1o', 'delta',
+    'squareness', 'zcur_normalized', 'aminor', 'n1rms_normalized',
+    'kappa_area', 'Te_peaking_CVA_RT', 'ne_peaking_CVA_RT',
+    'Prad_peaking_CVA_RT', 'Prad_peaking_XDIV_RT', 'H_alpha',
+]
