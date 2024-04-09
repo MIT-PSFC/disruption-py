@@ -12,7 +12,8 @@ import pandas as pd
 import logging
 from disruption_py.handlers.cmod_handler import CModHandler
 from disruption_py.settings import ShotSettings, LogSettings
-from disruption_py.utils.constants import TIME_CONST 
+from disruption_py.utils.constants import TIME_CONST
+from disruption_py.utils.constants import CMOD_TEST_COLUMNS 
 
 # Shot list used for testing
 # Mix of disruptive and non-disruptive shots present in SQL and MDSplus
@@ -27,20 +28,6 @@ TEST_SHOTS = [
     1150805020,     # Rampdown Disruption
     1150805021,     # Rampdown Disruption
     1150805022      # Flattop Disruption
-]
-
-TEST_COLUMNS = [
-    'I_efc', 'sxr', 'time_until_disrupt', 'beta_n', 'beta_p', 'kappa', 'li',
-    'upper_gap', 'lower_gap', 'q0', 'qstar', 'q95', 'v_loop_efit', 'Wmhd',
-    'ssep', 'n_over_ncrit', 'tritop', 'tribot', 'a_minor', 'rmagx', 'chisq',
-    'dbetap_dt', 'dli_dt', 'dWmhd_dt', 'V_surf', 'kappa_area', 'Te_width',
-    'ne_peaking', 'Te_peaking', 'pressure_peaking', 'n_e', 'dn_dt',
-    'Greenwald_fraction', 'n_equal_1_mode', 'n_equal_1_normalized',
-    'n_equal_1_phase', 'BT', 'prad_peaking', 'v_0', 'ip', 'dip_dt',
-    'dip_smoothed', 'ip_prog', 'dipprog_dt', 'ip_error', 'z_error',
-    'z_prog', 'zcur', 'v_z', 'z_times_v_z', 'p_oh', 'v_loop', 'p_rad',
-    'dprad_dt', 'p_lh', 'p_icrf', 'p_input', 'radiated_fraction', 'time',
-    'shot', 'commit_hash'
 ]
 
 KNOWN_FAILURE_COLUMNS = [
@@ -96,7 +83,7 @@ def sql_data(cmod_handler : CModHandler, shotlist, mdsplus_data : Dict):
         )
     return shot_data
 
-@pytest.mark.parametrize("data_column", TEST_COLUMNS)
+@pytest.mark.parametrize("data_column", CMOD_TEST_COLUMNS)
 def test_data_columns(shotlist, mdsplus_data : Dict, sql_data : Dict, data_column, verbose_output, fail_slow):
     anomaly_ratios = []
     for shot_id in shotlist:
@@ -137,7 +124,7 @@ def test_other_values(shotlist, mdsplus_data : Dict, sql_data : Dict, verbose_ou
 
         for data_column in sql_shot_data.columns.intersection(mdsplus_shot_data.columns):
             
-            if data_column in TEST_COLUMNS:
+            if data_column in CMOD_TEST_COLUMNS:
                 continue
             
             # check if the col of the shot is all nan

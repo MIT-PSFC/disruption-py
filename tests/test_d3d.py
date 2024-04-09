@@ -12,7 +12,8 @@ import pandas as pd
 import logging
 from disruption_py.handlers.d3d_handler import D3DHandler
 from disruption_py.settings import ShotSettings, LogSettings
-from disruption_py.utils.constants import TIME_CONST 
+from disruption_py.utils.constants import TIME_CONST
+from disruption_py.utils.constants import D3D_TEST_COLUMNS 
 
 # Shot list used for testing
 # Mix of disruptive and non-disruptive shots present in SQL and MDSplus
@@ -21,24 +22,6 @@ TEST_SHOTS = [
     # 161237, # disruptive
     # 166177, # non disruptive 
     # 166253
-]
-
-TEST_COLUMNS = [
-    'shot', 'time', 'time_until_disrupt', 'ip_error', 'dip_dt',
-    'beta_p', 'beta_n', 'li', 'n_equal_1_mode_IRLM', 'z_error', 'v_z',
-    'kappa', 'H98', 'q0', 'qstar', 'q95', 'dn_dt', 'radiated_fraction',
-    'power_supply_railed', 'lower_gap', 'upper_gap', 'dbetap_dt', 'dli_dt',
-    'ip', 'zcur', 'n_e', 'dipprog_dt', 'v_loop', 'p_rad', 'dWmhd_dt',
-    'dprad_dt', 'p_nbi', 'p_ech', 'p_ohm', 'intentional_disruption',
-    'Greenwald_fraction', 'Te_HWHM', 'other_hardware_failure', 'Te_HWHM_RT',
-    'v_loop_RT', 'n_e_RT', 'Greenwald_fraction_RT', 'ip_error_RT', 'ip_RT',
-    'dipprog_dt_RT', 'Wmhd_RT', 'Wmhd', 'n_equal_1_mode',
-    'n_equal_1_normalized', 'Te_width_normalized', 'Te_width_normalized_RT',
-    'q95_RT', 'li_RT', 'beta_p_RT', 'oeamp1em', 'oeamp1om', 'oefrq1em',
-    'oefrq1om', 'oeamp1e', 'oeamp1o', 'oefrq1e', 'oefrq1o', 'delta',
-    'squareness', 'zcur_normalized', 'aminor', 'n1rms_normalized',
-    'kappa_area', 'Te_peaking_CVA_RT', 'ne_peaking_CVA_RT',
-    'Prad_peaking_CVA_RT', 'Prad_peaking_XDIV_RT', 'H_alpha',
 ]
 
 KNOWN_FAILURE_COLUMNS = []
@@ -90,7 +73,7 @@ def sql_data(d3d_handler : D3DHandler, shotlist, mdsplus_data : Dict):
         
     return shot_data
 
-@pytest.mark.parametrize("data_column", TEST_COLUMNS)
+@pytest.mark.parametrize("data_column", D3D_TEST_COLUMNS)
 def test_data_columns(shotlist, mdsplus_data : Dict, sql_data : Dict, data_column, verbose_output, fail_slow):
     anomaly_ratios = []
     for shot_id in shotlist:
@@ -129,7 +112,7 @@ def test_other_values(shotlist, mdsplus_data : Dict, sql_data : Dict, verbose_ou
 
         for data_column in sql_shot_data.columns.intersection(mdsplus_shot_data.columns):
             
-            if data_column in TEST_COLUMNS:
+            if data_column in D3D_TEST_COLUMNS:
                 continue
             
             # check if the col of the shot is all nan
