@@ -9,7 +9,6 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.8.10"
 importlib_resources = "^6.1.1"
-netCDF4 = "^1.5.3"
 numpy = "<1.24"
 pandas = "^2.0.3"
 pyodbc = "^5.0.1"
