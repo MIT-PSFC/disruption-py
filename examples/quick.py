@@ -13,6 +13,9 @@ shot_settings = ShotSettings(
     log_settings=LogSettings(console_log_level=0),
     run_tags=[],
     run_methods=["_get_EFIT_parameters"],
+    use_hsds=True,
+    use_mongo=False,
+    cache_miss_enable=False, 
 )
 
 result = handler.get_shots_data(

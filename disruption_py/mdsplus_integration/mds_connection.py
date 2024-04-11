@@ -17,43 +17,36 @@ class ProcessMDSConnection():
     logger = logging.getLogger('disruption_py')
 
     def __init__(self, conn_string : str):
-        self.conn = MDSplus.Connection(conn_string)
-        try:
-            self.conn.get("shorten_path()")
-        except MDSplus.mdsExceptions.TdiUNKNOWN_VAR:
-            self.logger.debug("MDSplus does not support the `shorten_path()` method.")
 
+        self.conn = None
+        if conn_string != 'DoNotConnect':
+            self.conn = MDSplus.Connection(conn_string)
+            try:
+                self.conn.get("shorten_path()")
+            except MDSplus.mdsExceptions.TdiUNKNOWN_VAR:
+                self.logger.debug("MDSplus does not support the `shorten_path()` method.")
+            
     def get_shot_connection(self, shot_id : int):
         """ Get MDSPlus Connection wrapper for individual shot. """
         return MDSConnection(self.conn, shot_id)
 
 class HDF:
     """
-    Class to handle the HSDS connection
+    Class to fill hsds cache with answers
     """
-    def __init__(self, shot_id : int):
+    def __init__(self, shot_id : int, filling : bool):
         import h5pyd as h5py
         import random
 
         self.shot_id = shot_id
 
-        endpoints = [ 'http://mfedata-archives:5101', 'http://mfedata-archives:5102' ]
-        self.file = h5py.File(f'/cmod/{self.shot_id}', 'a', use_cache=False, endpoint=random.choice(endpoints))
+        if os.environ.get('HSDS_ENDPOINTS') is not None:
+            self.endpoints = os.environ['HSDS_ENDPOINTS'].split(',')
+        else:
+            self.endpoints = [ 'http://mfedata-archives:5101', 'http://mfedata-archives:5102' ]
 
-    def get(self, tree, expression, args):
-        try:
-            if args is None:
-                key = f'{expression}'
-            else:
-                key = f'{expression}_{args}'
-
-            key.replace('/', '\\/')
-
-            print(tree, key)
-            return self.file[tree][key].value
-
-        except:
-            return None
+        self.mode = 'a' if filling else 'r'
+        self.file = h5py.File(f'/cmod/{self.shot_id}', self.mode, use_cache=(not filling), endpoint=random.choice(self.endpoints))
 
     def add_cache(self, tree, expression, args, value):
         if tree not in self.file:
@@ -72,6 +65,21 @@ class HDF:
         if value.__class__ == np.str_:
             value = str(value)
         root.create_dataset(key, data=value)
+     
+    def get(self, tree, expression, args):
+        try:
+            if args is None:
+                key = f'{expression}'
+            else:
+                key = f'{expression}_{args}'
+
+            key.replace('/', '\\/')
+
+            print(tree, key)
+            return self.file[tree][key].value
+
+        except:
+            return None
 
 class Mongo:
     """
@@ -469,7 +477,7 @@ class MDSConnection:
         self.use_mdsplus = self.cache_miss_enable or (not self.use_hsds and not self.use_mongo)
 
         if self.use_hsds or self.fill_hsds:
-            self.hdf = HDF(self.shot_id)
+            self.hdf = HDF(self.shot_id, self.fill_hsds)
 
         if self.use_mongo or self.fill_mongo:
             self.mongo = Mongo(self.shot_id)
@@ -498,3 +506,4 @@ class MDSConnection:
         The tree name for for_name, whether it is a nickname or tree name itself
         """
         return self.get_tree_name_of_nickname(for_name) or for_name
+
