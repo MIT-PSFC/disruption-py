@@ -12,9 +12,10 @@ class ProcessMDSConnection():
     """
     
     def __init__(self, conn_string : str):
-        self.conn = mds.Connection(conn_string)
-        self.conn.get('shorten_path()')
-    
+        self.conn = None
+        if conn_string != 'DoNotConnect':
+            self.conn = mds.Connection(conn_string)
+            
     def get_shot_connection(self, shot_id : int):
         """ Get MDSPlus Connection wrapper for individual shot. """
         return MDSConnection(self.conn, shot_id)

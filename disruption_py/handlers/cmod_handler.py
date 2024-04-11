@@ -50,9 +50,9 @@ class CModHandler:
         **kwargs
     ):
         self.database_initializer = database_initializer or CModDatabase.default
-        mds_connection_str = mds_connection_str or "alcdata-archives"
+
+        self.mds_connection_str = mds_connection_str or "alcdata-archives"
         self.mds_connection_initializer = lambda: ProcessMDSConnection(mds_connection_str)
-        
 
     @property
     def database(self) -> CModDatabase:
@@ -76,9 +76,12 @@ class CModHandler:
         ProcessMDSConnection
             MDSplus connection object for CMod.
         """
-        if not hasattr(self, '_mds_connection'):
+        self._mds_connection = None
+        
+        if self.mds_connection_initializer:
             self._mds_connection = self.mds_connection_initializer()
-            self._mds_connection.conn.get('shorten_path()')
+            if self.mds_connection_str != 'DoNotConnect': 
+                self._mds_connection.conn.get('shorten_path()')
         return self._mds_connection
     
     @staticmethod
