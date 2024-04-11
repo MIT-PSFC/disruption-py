@@ -6,7 +6,10 @@ import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
 # import jaydebeapi
-import pyodbc
+try:
+  import pyodbc
+except:
+    pyodbc = None
 import threading
 
 from disruption_py.utils.constants import BASE_PROTECTED_COLUMNS, TIME_CONST
