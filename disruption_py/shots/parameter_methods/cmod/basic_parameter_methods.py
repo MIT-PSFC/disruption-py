@@ -1,7 +1,7 @@
 import traceback
 import numpy as np
 import pandas as pd
-import scipy as sp
+#import scipy as sp
 import disruption_py.data
 from disruption_py.settings.shot_data_request import ShotDataRequest, ShotDataRequestParams
 from disruption_py.utils.mappings.tokamak import Tokamak
