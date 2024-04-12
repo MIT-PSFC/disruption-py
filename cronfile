@@ -1,0 +1,4 @@
+
+# pull repos and update venvs
+42 3 * * *	bash "$DISPY_DIR/repo/auto/pull.sh" &> /dev/null
+
