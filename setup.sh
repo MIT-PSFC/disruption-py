@@ -38,8 +38,7 @@ export LD_LIBRARY_PATH=$MDSPLUS_DIR/lib:$LD_LIBRARY_PATH
 export PATH=$DISPY_DIR/poetry/bin:$PATH
 
 # disruption-py
-export PATH=$DISPY_DIR/poetry/bin:$PATH
-export PATH=$DISPY_DIR/repo/auto/bin:$PATH
+export PATH=$DISPY_DIR/repo/auto:$PATH
 export DISPY_BRANCH_DIR=$DISPY_DIR/repo/$DISPY_BRANCH
 export DISPY_PYVERS_DIR=$DISPY_DIR/venv/$DISPY_BRANCH-py$DISPY_PYVERS
 export PYTHONPATH=$DISPY_BRANCH_DIR/disruption_py:$PYTHONPATH

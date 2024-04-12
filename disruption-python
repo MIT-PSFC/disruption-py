@@ -1,14 +1,16 @@
 #!/bin/bash
 
-# setup/activate
+# activate
 # shellcheck source=/dev/null
 source "$(dirname "$0")/activate.sh"
 
 # info
-if [[ $DEBUG ]]
+if [[ $DISPY_DEBUG ]]
 then
 {
-   env | grep -i disruption
+   env | grep -e ^DISPY_ -e PYTHONPATH
+   which python
+   pip list | grep disruption.py
    git -C "$DISPY_BRANCH_DIR" log -1
 } 1>&2
 fi
