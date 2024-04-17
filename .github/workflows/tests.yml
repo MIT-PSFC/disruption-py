@@ -61,16 +61,6 @@ jobs:
           } \
           | tee -a "$GITHUB_ENV"
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install requirements
-        run: |
-          pip install -r .pip/main.txt -r .pip/dev.txt
-          pip install -e .
-
       - name: Setup SSH key
         run: |
           mkdir ~/.ssh
@@ -119,16 +109,20 @@ jobs:
           echo DIIID_TEST=1 \
           | tee -a "$GITHUB_ENV"
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install requirements
+        run: |
+          pip install -r .pip/main.txt -r .pip/dev.txt
+          pip install -e .
+
       - name: Check tunnel
         run: |
           xargs -a ssh.pid ps -p
-          for S in {1..10}
-          do
-             grep -q 'Authenticated.*publickey' ssh.log && break || date
-             sleep 1
-          done
-          grep 'Authenticated.*publickey' ssh.log || RC=1
-          if [[ $RC -eq 1 ]]
+          if ! grep 'Authenticated.*publickey' ssh.log
           then
              curl ipinfo.io
              cat -n ssh.log
