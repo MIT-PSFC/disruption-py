@@ -6,12 +6,12 @@ name: Tests
 on:
   push:
     branches:
-      - main
-      - develop
+      - 'main*'
+      - 'dev*'
   pull_request:
     branches:
-      - main
-      - develop
+      - 'main*'
+      - 'dev*'
   workflow_dispatch:
 
 jobs:
@@ -24,7 +24,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        tokamak: [C-MOD, DIII-D]
+        tokamak:
+          - C-MOD
+          - DIII-D
     steps:
 
       - name: Checkout
@@ -74,7 +76,7 @@ jobs:
           mkdir ~/.ssh
           echo "${{ secrets.SSH_TUNNEL }}" \
           | tee ~/.ssh/id_rsa \
-          | wc -l
+          | sha256sum
           chmod 600 ~/.ssh/id_rsa
 
       - name: Setup C-MOD
@@ -128,6 +130,7 @@ jobs:
           grep 'Authenticated.*publickey' ssh.log || RC=1
           if [[ $RC -eq 1 ]]
           then
+             curl ipinfo.io
              cat -n ssh.log
              false
           fi
