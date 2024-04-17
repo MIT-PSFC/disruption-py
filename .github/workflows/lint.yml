@@ -1,21 +1,26 @@
 ---
 
 name: Lint
+
 # yamllint disable-line rule:truthy
 on:
   push:
     branches:
-      - main
+      - 'main*'
       - 'dev*'
   pull_request:
     branches:
-      - main
+      - 'main*'
       - 'dev*'
+
 jobs:
 
 
   yamllint:
     runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      github.event.pull_request.draft == false
     steps:
 
       - uses: actions/checkout@v4
@@ -37,8 +42,12 @@ jobs:
              yamllint "$FILE"
           done
 
+
   shellcheck:
     runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      github.event.pull_request.draft == false
     steps:
 
       - uses: actions/checkout@v4
