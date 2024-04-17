@@ -65,6 +65,10 @@ CMOD_TEST_COLUMNS = [
     'dprad_dt', 'p_lh', 'p_icrf', 'p_input', 'radiated_fraction', 'time',
     'shot', 'commit_hash'
 ]
+CMOD_EXPECTED_FAILURE_COLUMNS = [
+    'lower_gap', 'upper_gap', 'ssep', 'dipprog_dt', 'n_over_ncrit', # constant factor scaling error
+    'ip_error' # constant error
+]
 
 
 D3D_TEST_SHOTS = [
@@ -90,3 +94,4 @@ D3D_TEST_COLUMNS = [
     'kappa_area', 'Te_peaking_CVA_RT', 'ne_peaking_CVA_RT',
     'Prad_peaking_CVA_RT', 'Prad_peaking_XDIV_RT', 'H_alpha',
 ]
+D3D_EXPECTED_FAILURE_COLUMNS = []
