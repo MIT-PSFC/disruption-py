@@ -37,7 +37,7 @@ class DataDifference:
     
     @property
     def column_mismatch_string(self) -> str:
-        return f"Shot {self.shot_id} column {self.data_column} failed for arrays:\n{self.difference_df}"
+        return f"Shot {self.shot_id} column {self.data_column} with arrays:\n{self.difference_df}"
     
     @property
     def difference_df(self) -> Dict[str, pd.DataFrame]:
@@ -56,15 +56,27 @@ class DataDifference:
         mdsplus_data : Dict[int, pd.DataFrame],
         sql_data : Dict[int, pd.DataFrame],
         data_columns : List[str],
+        fail_quick : bool = False,
+        expected_failure_columns : List[str] = None,
     ) -> List["DataDifference"]:
         """
         Test if the difference between the two data is within tolerance.
         """
+        if expected_failure_columns is None:
+            expected_failure_columns = []
+        
         data_differences : List[DataDifference] = []
         for data_column in data_columns:
             for shot_id in shot_ids:
                 mdsplus_shot_data, sql_shot_data = mdsplus_data[shot_id], sql_data[shot_id]
-                data_difference = DataDifference.test_shot(shot_id, mdsplus_shot_data, sql_shot_data, data_column)
+                data_difference = DataDifference.test_shot(
+                    shot_id=shot_id, 
+                    mdsplus_shot_data=mdsplus_shot_data, 
+                    sql_shot_data=sql_shot_data, 
+                    data_column=data_column,
+                    fail_quick = fail_quick,
+                    expect_failure = data_column in expected_failure_columns
+                )
                 data_differences.append(data_difference)
         return data_differences
            
@@ -74,6 +86,8 @@ class DataDifference:
         mdsplus_shot_data : pd.DataFrame,
         sql_shot_data : pd.DataFrame,
         data_column : str,
+        fail_quick : bool = False,
+        expect_failure : bool = False,
     ) -> "DataDifference":
         """
         Test if the difference between the two data is within tolerance.
@@ -91,7 +105,11 @@ class DataDifference:
             sql_column_data=sql_shot_data[data_column],
         )
         
-        assert not data_difference.failed, data_difference.column_mismatch_string
+        if fail_quick:
+            if expect_failure:
+                assert data_difference.failed, "Expected failure but succeeded: {}".format(data_difference.column_mismatch_string)
+            else:
+                assert not data_difference.failed, "Expected failure but failed: {}".format(data_difference.column_mismatch_string)
         
         return data_difference
 

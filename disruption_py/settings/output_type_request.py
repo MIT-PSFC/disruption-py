@@ -203,7 +203,7 @@ class DictOutputRequest(OutputTypeRequest):
         return self.results
     
     def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
-        self.results = []
+        self.results = {}
         
 class DataFrameOutputRequest(OutputTypeRequest):
     """
