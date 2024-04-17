@@ -1,0 +1,19 @@
+---
+
+version: 2
+updates:
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    versioning-strategy: increase-if-necessary
+    schedule:
+      interval: "monthly"
+    reviewers:
+      - gtrevisan
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    reviewers:
+      - gtrevisan
