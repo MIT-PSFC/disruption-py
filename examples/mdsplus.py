@@ -8,7 +8,7 @@ import os
 from disruption_py.handlers.cmod_handler import CModHandler
 from disruption_py.handlers.d3d_handler import D3DHandler
 
-if os.path.exists("/fusion/projects/disruption_warning"):
+if os.getenv("DIIID_TEST", False) or os.path.exists("/fusion/projects/disruption_warning"):
     handler = D3DHandler()
     shot = 161228
     shape = (196,)

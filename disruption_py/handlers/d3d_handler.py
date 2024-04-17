@@ -44,7 +44,7 @@ class D3DHandler(Handler):
     ):
         super().__init__(
             database_initializer=database_initializer or D3DDatabase.default,
-            mds_connection_str = mds_connection_str or "atlas.gat.com",
+            mds_connection_str = mds_connection_str or "atlas",
             **kwargs
         )
 
