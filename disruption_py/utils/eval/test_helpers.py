@@ -56,14 +56,24 @@ def get_sql_data_for_mdsplus(handler : Handler, shot_ids : List[int], mdsplus_da
     return shot_data
 
 
-def tes_against_sql(handler : Handler, shot_ids : List[int]) -> Dict[int, pd.DataFrame]:
+def test_against_sql(handler : Handler, shot_ids : List[int], expected_failure_columns : list[str], fail_quick : bool, test_columns = None,) -> Dict[int, pd.DataFrame]:    
     mdsplus_data = get_mdsplus_data(handler, shot_ids)
     sql_data = get_sql_data_for_mdsplus(handler, shot_ids, mdsplus_data)
     
-    mdsplus_columns = set().union(*(df.columns for df in mdsplus_data.values()))
-    sql_columns = set().union(*(df.columns for df in sql_data.values()))
-    test_columns = mdsplus_columns.intersection(sql_columns)
+    if test_columns is None:
+        mdsplus_columns = set().union(*(df.columns for df in mdsplus_data.values()))
+        sql_columns = set().union(*(df.columns for df in sql_data.values()))
+        test_columns = mdsplus_columns.intersection(sql_columns)
     
-    data_differences = DataDifference.test_shots(shot_ids, mdsplus_data, sql_data, test_columns)
+    data_differences = DataDifference.test_shots(
+        shot_ids=shot_ids, 
+        mdsplus_data=mdsplus_data, 
+        sql_data=sql_data, 
+        data_columns=test_columns,
+        fail_quick=fail_quick,
+        expected_failure_columns=expected_failure_columns,
+    )
     
     return data_differences
+
+
