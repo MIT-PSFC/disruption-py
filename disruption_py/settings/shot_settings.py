@@ -76,7 +76,7 @@ class ShotSettings:
     fill_hsds : extra behavior enable
         Directs disruption-py to fill an hsds based cache when reading data.  Creates one domain per shot
         and one group per tree. With datasets named by the expressions asked for.
-    fill_mongodb : extra behavior enable
+    fill_mongo : extra behavior enable
         Directs disruption-py to fill a mongodb based cache when reading data.
     use_hsds : data source
         Directs disruption-py to read data from hsds instead of directly from MDSplus
@@ -109,7 +109,7 @@ class ShotSettings:
     interpolation_method : InterpolationMethod = "linear"
 
     fill_hsds : bool = False
-    fill_mongodb : bool = False
+    fill_mongo : bool = False
     use_hsds : bool = False
     use_mongo : bool = False
     cache_miss_enable : bool = False

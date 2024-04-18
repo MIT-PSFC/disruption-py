@@ -165,9 +165,31 @@ class BasicCmodRequests(ShotDataRequest):
         #     node_path = node_path.strip()
         #     if node_path.split(".")[-1].startswith("SEG_") and is_on == 0: # 0 represents node being on, 1 represents node being off
         #         active_segments.append((node_path, params.mds_conn.get(node_path+":start_time", tree_name="pcs")))
+        # (slw) TODO: This needs to be rewritten for MongoDB
 
-        active_segments.sort(key=lambda n: n[1])
+        # active_segments = []
+        # for i in range(1, 5):
+        #     data = params.mds_conn.get(f"\\pcs::top.seg_0{i}:start_time", tree_name='pcs')
+        #     if data is not None:
+        #         active_segments.append((f"seg_0{i}", data))
+
         return active_segments
+
+        # params.mds_conn.open_tree(tree_name="pcs")
+        # root_nid = params.mds_conn.get('GetDefaultNid()')
+        # children_nids = params.mds_conn.get('getnci(getnci($, "CHILDREN_NIDS"), "NID_NUMBER")', arguments=root_nid)
+        # children_paths = params.mds_conn.get('getnci($, "FULLPATH")', arguments=children_nids)
+        # children_on = params.mds_conn.get(f'getnci($, "STATE")', arguments=children_nids)
+        
+        # # Collect active segments and their information
+        # active_segments = []
+        # for node_path, is_on in zip(children_paths, children_on):
+        #     node_path = node_path.strip()
+        #     if node_path.split(".")[-1].startswith("SEG_") and is_on == 0: # 0 represents node being on, 1 represents node being off
+        #         active_segments.append((node_path, params.mds_conn.get(node_path+":start_time", tree_name="pcs")))
+
+        # active_segments.sort(key=lambda n: n[1])
+        # return active_segments
 
     @staticmethod
     @parameter_cached_method(columns=["time_until_disrupt"], tokamak=Tokamak.CMOD)
@@ -835,7 +857,7 @@ class BasicCmodRequests(ShotDataRequest):
             tets_edge = params.mds_conn.get(r'\ts_te')*11600
             TS_te = np.concatenate((TS_te, tets_edge))
             TS_z = params.mds_conn.get(f"{node_ext}:z_sorted", tree_name='electrons')
-            zts_edge = params.mds_conn.get(f"\fiber_z", tree_name='electrons')
+            zts_edge = params.mds_conn.get(r"\fiber_z", tree_name='electrons')
             TS_z = np.concatenate((TS_z, zts_edge))
             if len(zts_edge) != tets_edge.shape[1]:
                 return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
