@@ -72,7 +72,7 @@ class CModEfitRequests(ShotDataRequest):
         used_trees=["_efit_tree"], tokamak=Tokamak.CMOD)
     def _get_EFIT_parameters(params : ShotDataRequestParams):
 
-        efit_time = params.mds_conn.get(r'\efit_aeqdsk:time', tree_name="_efit_tree").astype('float64', copy=False) # [s]
+        efit_time = params.mds_conn.get(r'\efit_aeqdsk:time', tree_name="_efit_tree").astype('float64') # [s]
         efit_data = dict()
         
         #Get data from each of the columns in efit_cols one at a time
@@ -81,10 +81,10 @@ class CModEfitRequests(ShotDataRequest):
                 #If shot before 2000 and the param is in efit_cols_pre_2000
                 if params.shot_props.shot_id <= 1000000000 and param not in CModEfitRequests.efit_cols_pre_2000.keys():
                     efit_data[param] = params.mds_conn.get(
-                        CModEfitRequests.efit_cols_pre_2000[param], tree_name="_efit_tree").astype('float64', copy=False)
+                        CModEfitRequests.efit_cols_pre_2000[param], tree_name="_efit_tree").astype('float64')
                 else:
                     efit_data[param] = params.mds_conn.get(
-                        CModEfitRequests.efit_cols[param], tree_name="_efit_tree").astype('float64', copy=False)
+                        CModEfitRequests.efit_cols[param], tree_name="_efit_tree").astype('float64')
             except:
                 params.logger.warning(f"[Shot {params.shot_props.shot_id}]: Unable to get {param} from EFIT tree")
                 params.logger.debug(f"[Shot {params.shot_props.shot_id}]: {traceback.format_exc()}")
@@ -97,7 +97,7 @@ class CModEfitRequests(ShotDataRequest):
                 
         #Get data for V_surf := deriv(\ANALYSIS::EFIT_SSIBRY)*2*pi
         try:
-            ssibry = params.mds_conn.get(r'\efit_geqdsk:ssibry', tree_name="_efit_tree").astype('float64', copy=False)
+            ssibry = params.mds_conn.get(r'\efit_geqdsk:ssibry', tree_name="_efit_tree").astype('float64')
             efit_data['V_surf'] = np.gradient(ssibry, efit_time)*2*np.pi
         except:
             print("unable to get V_surf")
@@ -112,7 +112,7 @@ class CModEfitRequests(ShotDataRequest):
             
             #Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally sure on this one)
             try: #TODO: confirm this
-                ssimag = params.mds_conn.get(r'\efit_geqdsk:ssimag', tree_name="_efit_tree").astype('float64', copy=False)
+                ssimag = params.mds_conn.get(r'\efit_geqdsk:ssimag', tree_name="_efit_tree").astype('float64')
                 efit_data['v_loop_efit'] = np.gradient(ssimag, efit_time)*2*np.pi
             except:
                 print("unable to get v_loop_efit")
@@ -120,7 +120,7 @@ class CModEfitRequests(ShotDataRequest):
                 pass 
 
             #Compute beta_n
-            beta_t = params.mds_conn.get(r'\efit_aeqdsk:betat', tree_name="_efit_tree").astype('float64', copy=False)
+            beta_t = params.mds_conn.get(r'\efit_aeqdsk:betat', tree_name="_efit_tree").astype('float64')
             efit_data['beta_n'] = np.reciprocal( np.reciprocal(beta_t) +  np.reciprocal(efit_data['beta_p']) )
 
         if not np.array_equal(params.shot_props.times, efit_time):
@@ -294,7 +294,7 @@ class BasicCmodRequests(ShotDataRequest):
                         params.logger.debug([f"[Shot {params.shot_props.shot_id}]: {traceback.format_exc()}"])
                     break # Break out of wire_index loop
         ip, magtime = params.mds_conn.get_record_data(r"\ip", tree_name="magnetics")
-        ip = ip.astype('float64', copy=False)
+        ip = ip.astype('float64')
         return BasicCmodRequests.get_ip_parameters(params.shot_props.times, ip, magtime, ip_prog, pcstime)
 
     @staticmethod
@@ -485,11 +485,11 @@ class BasicCmodRequests(ShotDataRequest):
         tokamak=Tokamak.CMOD)
     def _get_ohmic_parameters(params : ShotDataRequestParams):
         v_loop, v_loop_time = params.mds_conn.get_record_data(r"\top.mflux:v0", tree_name="analysis")
-        v_loop = v_loop.astype('float64', copy=False)
+        v_loop = v_loop.astype('float64')
         if len(v_loop_time) <= 1:
             return pd.DataFrame({"p_oh": np.zeros(len(params.shot_props.times)), "v_loop": np.zeros(len(params.shot_props.times))})
         li, efittime  = params.mds_conn.get_record_data(r"\efit_aeqdsk:li", tree_name="_efit_tree")
-        li = li.astype('float64', copy=False)
+        li = li.astype('float64')
         ip_parameters = BasicCmodRequests._get_ip_parameters(params=params)
         return BasicCmodRequests.get_ohmic_parameters(params.shot_props.times, v_loop, v_loop_time, li, efittime, ip_parameters['dip_smoothed'], ip_parameters['ip'])
 
@@ -545,7 +545,7 @@ class BasicCmodRequests(ShotDataRequest):
         for i in range(3):
             try:
                 sig, sig_time = params.mds_conn.get_record_data(nodes[i], tree_name=trees[i])
-                values[2*i] = sig.astype('float64', copy=False)
+                values[2*i] = sig.astype('float64')
                 values[2*i + 1] = sig_time
             except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF) as e:
                 continue 
@@ -559,9 +559,9 @@ class BasicCmodRequests(ShotDataRequest):
     @staticmethod
     @parameter_cached_method(columns=["kappa_area"], used_trees=["_efit_tree"], tokamak=Tokamak.CMOD)
     def _get_kappa_area(params : ShotDataRequestParams):
-        aminor = params.mds_conn.get(r'\efit_aeqdsk:aminor', tree_name="_efit_tree").astype('float64', copy=False)
-        area = params.mds_conn.get(r'\efit_aeqdsk:area', tree_name="_efit_tree").astype('float64', copy=False)
-        times = params.mds_conn.get(r'\efit_aeqdsk:time', tree_name="_efit_tree").astype('float64', copy=False)
+        aminor = params.mds_conn.get(r'\efit_aeqdsk:aminor', tree_name="_efit_tree").astype('float64')
+        area = params.mds_conn.get(r'\efit_aeqdsk:area', tree_name="_efit_tree").astype('float64')
+        times = params.mds_conn.get(r'\efit_aeqdsk:time', tree_name="_efit_tree").astype('float64')
 
         aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
         # make sure area is not 0 or less than 0
@@ -602,9 +602,9 @@ class BasicCmodRequests(ShotDataRequest):
             return pd.DataFrame({"v_0": v_0})
         try:
             intensity, time = params.mds_conn.get_record_data('.hirex_sr.analysis.a:int', tree_name='spectroscopy')
-            intensity = intensity.astype('float64', copy=False)
+            intensity = intensity.astype('float64')
             vel, hirextime = params.mds_conn.get_record_data('.hirex_sr.analysis.a:vel', tree_name='spectroscopy')
-            vel = vel.astype('float64', copy=False)
+            vel = vel.astype('float64')
         except mdsExceptions.TreeFOPENR as e:
             params.logger.warning(f"[Shot {params.shot_props.shot_id}]: Failed to open necessary tress for rotational velocity calculations.")
             params.logger.debug(f"[Shot {params.shot_props.shot_id}]: {traceback.format_exc()}")
@@ -733,11 +733,11 @@ class BasicCmodRequests(ShotDataRequest):
     def _get_densities(params : ShotDataRequestParams):
         try:
             n_e, t_n = params.mds_conn.get_record_data(r'.tci.results:nl_04', tree_name='electrons') #Line integrated density
-            n_e = np.squeeze(n_e.astype('float64', copy=False))/0.6 #Divide by chord length of ~0.6m to get line averaged density. For future refernce, chord length is stored in .01*\analysis::efit_aeqdsk:rco2v[3,*]
+            n_e = np.squeeze(n_e.astype('float64'))/0.6 #Divide by chord length of ~0.6m to get line averaged density. For future refernce, chord length is stored in .01*\analysis::efit_aeqdsk:rco2v[3,*]
             ip, t_ip = params.mds_conn.get_record_data(r'\ip', tree_name='magnetics')
-            ip = ip.astype('float64', copy=False)
+            ip = ip.astype('float64')
             a_minor, t_a = params.mds_conn.get_record_data(r'\efit_aeqdsk:aminor', tree_name='analysis')
-            a_minor = a_minor.astype('float64', copy=False)
+            a_minor = a_minor.astype('float64')
         except Exception as e:
             params.logger.debug(f"[Shot {params.shot_props.shot_id}] {e}")
             params.logger.warning(f"[Shot {params.shot_props.shot_id}] No density data")
@@ -776,7 +776,7 @@ class BasicCmodRequests(ShotDataRequest):
         # select valid times
         valid_times, = np.where(ts_time > 0)
         # zero out nan values
-        ts_data = np.nan_to_num(ts_data, copy=False, nan=0)
+        ts_data = np.nan_to_num(ts_data, nan=0)
         # for each valid time
         for idx in valid_times:
             # select non-zero indices
@@ -1056,7 +1056,7 @@ class BasicCmodRequests(ShotDataRequest):
         sxr = np.full(len(params.shot_props.times), np.nan)
         try:
             sxr, t_sxr = params.mds_conn.get_record_data(r'\top.brightnesses.array_1:chord_16', tree_name='xtomo')
-            sxr = sxr.astype('float64', copy=False)
+            sxr = sxr.astype('float64')
             sxr = interp1(t_sxr, sxr, params.shot_props.times)
         except mdsExceptions.TreeFOPENR as e:
             params.logger.warning(f"[Shot {params.shot_props.shot_id}]: Failed to get SXR data returning NaNs")
@@ -1387,7 +1387,7 @@ class ThomsonDensityMeasure:
         if np.mean(ip) > 0:
             flag = 0
         efit_times = params.mds_conn.get(r'\efit_aeqdsk:time', tree_name="_efit_tree").astype(
-            'float64', copy=False)
+            'float64')
         t1 = np.amin(efit_times)
         t2 = np.amax(efit_times)
         psia, psia_t = params.mds_conn.get_record_data(r'\efit_aeqdsk:SIBDRY', tree_name="_efit_tree")
