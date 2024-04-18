@@ -50,7 +50,7 @@ class HDF:
             return None
 
     def add_cache(self, tree, expression, args, value):
-
+        import numpy as np
         if tree not in self.file:
             root = self.file.create_group(tree)
         else:
@@ -61,9 +61,11 @@ class HDF:
             key = f'{expression}_{args}'
 
         key.replace('/', '\\/')
-
+        key = str(key)
         if key in root:
             del root[key]
+        if value.__class__ == np.str_:
+            value = str(value)
         root.create_dataset(key, data=value)
 
 class Mongo:
