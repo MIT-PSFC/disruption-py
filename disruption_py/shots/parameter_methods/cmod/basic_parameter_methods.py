@@ -138,7 +138,7 @@ class CModEfitRequests(ShotDataRequest):
         values = []
         for expr in [r'_lf=\analysis::efit_aeqdsk:lflag', r'_l0=((sum(_lf,1) - _lf[*,20] - _lf[*,1])==0)', r'_n=\analysis::efit_fitout:nitera,(_l0 and (_n>4))']:
             values.append(params.mds_conn.get(expr, tree_name='analysis'))
-        _n = values[2].data()
+        _n = values[2]
         valid_indices = np.nonzero(_n)
         times, = params.mds_conn.get_dims(r'\analysis::efit_aeqdsk:lflag', tree_name='analysis')
         return valid_indices, times[valid_indices]
@@ -148,17 +148,23 @@ class BasicCmodRequests(ShotDataRequest):
     @cached_method(used_trees=["pcs"], cache_between_threads=False, tokamak=Tokamak.CMOD)
     def get_active_wire_segments(params : ShotDataRequestParams):
         params.mds_conn.open_tree(tree_name="pcs")
-        root_nid = params.mds_conn.get('GetDefaultNid()')
-        children_nids = params.mds_conn.get('getnci(getnci($, "CHILDREN_NIDS"), "NID_NUMBER")', arguments=root_nid)
-        children_paths = params.mds_conn.get('getnci($, "FULLPATH")', arguments=children_nids)
-        children_on = params.mds_conn.get_data(f'getnci($, "STATE")', arguments=children_nids)
+        # root_nid = params.mds_conn.get('GetDefaultNid()')
+        # children_nids = params.mds_conn.get('getnci(getnci($, "CHILDREN_NIDS"), "NID_NUMBER")', arguments=root_nid)
+        # children_paths = params.mds_conn.get('getnci($, "FULLPATH")', arguments=children_nids)
+        # children_on = params.mds_conn.get(f'getnci($, "STATE")', arguments=children_nids) 
         
         # Collect active segments and their information
         active_segments = []
-        for node_path, is_on in zip(children_paths, children_on):
-            node_path = node_path.strip()
-            if node_path.split(".")[-1].startswith("SEG_") and is_on == 0: # 0 represents node being on, 1 represents node being off
-                active_segments.append((node_path, params.mds_conn.get_data(node_path+":start_time", tree_name="pcs")))
+        children_paths = ['SEG_01', 'SEG_02', 'SEG_03', 'SEG_04', ]
+        on = params.mds_conn.get(f'getnci({children_paths}, "STATE")', tree_name='pcs' )
+        for path, is_on in zip(children_paths, on):
+            if not is_on:
+                active_segments.append((path, params.mds_conn.get(path+":start_time", tree_name="pcs")))
+
+        # for node_path, is_on in zip(children_paths, children_on):
+        #     node_path = node_path.strip()
+        #     if node_path.split(".")[-1].startswith("SEG_") and is_on == 0: # 0 represents node being on, 1 represents node being off
+        #         active_segments.append((node_path, params.mds_conn.get(node_path+":start_time", tree_name="pcs")))
 
         active_segments.sort(key=lambda n: n[1])
         return active_segments
