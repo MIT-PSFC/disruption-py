@@ -470,3 +470,4 @@ class MDSConnection:
         The tree name for for_name, whether it is a nickname or tree name itself
         """
         return self.get_tree_name_of_nickname(for_name) or for_name
+
