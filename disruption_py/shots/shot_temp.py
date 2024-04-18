@@ -202,14 +202,14 @@ class Shot(ABC):
         """
         if isinstance(conn, MDSplus.Tree):
             signal_record = conn.getNode(signal).getData()
-            signal_data = signal_record.data()
-            signal_data = signal_record.data()
+            signal_data = signal_record
+            signal_data = signal_record
             orig_timebase = signal_record.dim_of(0)
         elif isinstance(conn, MDSplus.Connection):
-            signal_data = conn.get(signal).data()
-            signal_data = conn.get(signal).data()
+            signal_data = conn.get(signal)
+            signal_data = conn.get(signal)
             orig_timebase = conn.get(
-                f"dim_of({signal})").data()/1.e3  # [ms] -> [s]
+                f"dim_of({signal})")/1.e3  # [ms] -> [s]
         else:
             raise TypeError(
                 "conn must be either MDSplus.Connection or MDSplus.Tree")
@@ -270,8 +270,8 @@ class Shot(ABC):
                     raise ValueError(
                         "interpolation_timebase must be provided if interpolate is True")
                 results[i] = interp1(result.dim_of(
-                    0).data(), result.data(), interpolation_timebase)
-        return [result.data() for result in results], [result.dim_of(0).data() for result in results]
+                    0), result, interpolation_timebase)
+        return [result for result in results], [result.dim_of(0) for result in results]
 
     def _get_signals(self, signals, conn=None, interpolate=False, interpolation_timebase=None):
         if conn is None:
