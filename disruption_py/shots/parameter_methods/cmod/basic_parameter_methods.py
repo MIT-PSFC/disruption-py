@@ -165,9 +165,31 @@ class BasicCmodRequests(ShotDataRequest):
         #     node_path = node_path.strip()
         #     if node_path.split(".")[-1].startswith("SEG_") and is_on == 0: # 0 represents node being on, 1 represents node being off
         #         active_segments.append((node_path, params.mds_conn.get(node_path+":start_time", tree_name="pcs")))
+        # (slw) TODO: This needs to be rewritten for MongoDB
 
-        active_segments.sort(key=lambda n: n[1])
+        # active_segments = []
+        # for i in range(1, 5):
+        #     data = params.mds_conn.get(f"\\pcs::top.seg_0{i}:start_time", tree_name='pcs')
+        #     if data is not None:
+        #         active_segments.append((f"seg_0{i}", data))
+
         return active_segments
+
+        # params.mds_conn.open_tree(tree_name="pcs")
+        # root_nid = params.mds_conn.get('GetDefaultNid()')
+        # children_nids = params.mds_conn.get('getnci(getnci($, "CHILDREN_NIDS"), "NID_NUMBER")', arguments=root_nid)
+        # children_paths = params.mds_conn.get('getnci($, "FULLPATH")', arguments=children_nids)
+        # children_on = params.mds_conn.get(f'getnci($, "STATE")', arguments=children_nids)
+        
+        # # Collect active segments and their information
+        # active_segments = []
+        # for node_path, is_on in zip(children_paths, children_on):
+        #     node_path = node_path.strip()
+        #     if node_path.split(".")[-1].startswith("SEG_") and is_on == 0: # 0 represents node being on, 1 represents node being off
+        #         active_segments.append((node_path, params.mds_conn.get(node_path+":start_time", tree_name="pcs")))
+
+        # active_segments.sort(key=lambda n: n[1])
+        # return active_segments
 
     @staticmethod
     @parameter_cached_method(columns=["time_until_disrupt"], tokamak=Tokamak.CMOD)
@@ -750,7 +772,7 @@ class BasicCmodRequests(ShotDataRequest):
         # select valid times
         valid_times, = np.where(ts_time > 0)
         # zero out nan values
-        ts_data = np.nan_to_num(ts_data, copy=False, nan=0)
+        ts_data = np.nan_to_num(ts_data, nan=0)
         # for each valid time
         for idx in valid_times:
             # select non-zero indices

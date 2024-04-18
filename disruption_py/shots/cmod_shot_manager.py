@@ -43,6 +43,23 @@ class CModShotManager(ShotManager):
                 )
             }
         )
+        '''
+           There are an additional set of ShotSettings that are used to control the poplulation and use of MDSplusML caches:
+
+        fill_hsds : extra behavior enable
+            Directs disruption-py to fill an hsds based cache when reading data.  Creates one domain per shot
+            and one group per tree. With datasets named by the expressions asked for.
+        fill_mongo : extra behavior enable
+            Directs disruption-py to fill a mongodb based cache when reading data.
+        use_hsds : data source
+            Directs disruption-py to read data from hsds instead of directly from MDSplus
+        use_mongo : data source
+            Directs disruption-py to read data from mongodb instead of directly from MDSplus
+        cache_miss_enable: data source
+            Directs disruption-py to attempt to retrieve any records that are not found in the cache(s) from
+            their original source (MDSplus)
+        '''
+        mds_conn.set_aux_cache_parameters(shot_settings.fill_hsds, shot_settings.fill_mongo, shot_settings.use_hsds, shot_settings.use_mongo, shot_settings.cache_miss_enable)
         
         try:
             shot_props = self.setup_shot_props(
@@ -78,6 +95,7 @@ class CModShotManager(ShotManager):
                     mds_conn.open_tree(efit_name)
                     return efit_name
                 except Exception as e:
+                    print(e)
                     cls.logger.info(f"[Shot {shot_id}]: Failed to open efit tree {efit_name} with error {e}.")
                     continue
             
