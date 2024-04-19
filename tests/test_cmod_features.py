@@ -67,6 +67,7 @@ def shot_settings_list():
     ]
 
 
+@pytest.mark.skipif(os.path.exists("/fusion/projects/disruption_warning"), reason="on DIII-D")
 @pytest.mark.parametrize('multiprocessing', [True, False])
 @pytest.mark.parametrize('shot_settings_index', list(range(7)))
 def test_features(cmod_handler, shot_settings_list, shot_settings_index, multiprocessing):
