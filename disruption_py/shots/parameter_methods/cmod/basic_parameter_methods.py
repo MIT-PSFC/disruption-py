@@ -829,7 +829,7 @@ class BasicCmodRequests(ShotDataRequest):
             tets_edge = params.mds_conn.get_data(r'\ts_te')*11600
             TS_te = np.concatenate((TS_te, tets_edge))
             TS_z = params.mds_conn.get_data(f"{node_ext}:z_sorted", tree_name='electrons')
-            zts_edge = params.mds_conn.get_data(f"\fiber_z", tree_name='electrons')
+            zts_edge = params.mds_conn.get_data(r"\fiber_z", tree_name="electrons")
             TS_z = np.concatenate((TS_z, zts_edge))
             if len(zts_edge) != tets_edge.shape[1]:
                 return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
