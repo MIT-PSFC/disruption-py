@@ -278,6 +278,9 @@ class MDSConnection:
             self.close_tree(open_tree)
         self.last_open_tree = None
         self.open_trees.clear()
+        if self.conn:
+            del self.conn
+            self.conn = None
 
         # if self.use_mdsplus:
         #     self.conn.closeAllTrees()
@@ -440,7 +443,7 @@ class MDSConnection:
         if self.use_hsds or self.fill_hsds:
             self.hdf = HDF(self.shot_id)
 
-        if self.use_mongo:
+        if self.use_mongo or self.fill_mongo:
             self.mongo = Mongo(self.shot_id)
 
     # nicknames
