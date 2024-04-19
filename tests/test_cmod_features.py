@@ -51,7 +51,7 @@ def shot_settings_list():
         ShotSettings(
             # logging
             log_settings=LogSettings(
-                log_file_path="tests/temp/test_log.log",
+                log_file_path=f"{__file__}.log",
                 file_log_level=logging.WARNING,
                 log_file_write_mode="a",
                 log_to_console=False,
@@ -70,20 +70,21 @@ def shot_settings_list():
 @pytest.mark.parametrize('multiprocessing', [True, False])
 @pytest.mark.parametrize('shot_settings_index', list(range(7)))
 def test_features(cmod_handler, shot_settings_list, shot_settings_index, multiprocessing):
-    list_output, df_output, num_processed, num_processed = cmod_handler.get_shots_data(
+    list_output, df_output, csv_processed, hdf_processed = cmod_handler.get_shots_data(
         shot_ids_request=TEST_SHOTS,
         shot_settings=shot_settings_list[shot_settings_index],
-        output_type_request=["list", "dataframe", "tests/temp/test_output.csv", "tests/temp/test_output.hdf5"],
+        output_type_request=["list", "dataframe", f"{__file__}.csv", f"{__file__}.hdf5"],
         num_processes=4 if multiprocessing else 1
     )
     assert isinstance(list_output, list)
     assert isinstance(df_output, pd.DataFrame)
+    assert csv_processed == hdf_processed == len(TEST_SHOTS)
     
 @pytest.fixture(scope="session", autouse=True)
 def cleanup_after_tests(request):
     yield
     # Teardown code: delete files after all tests are done
-    delete_file_paths = ["tests/temp/test_log.log", "tests/temp/test_output.csv", "tests/temp/test_output.hdf5"]
-    for delete_file_path in delete_file_paths:
+    for ext in ["log", "csv", "hdf5"]:
+        delete_file_path = f"{__file__}.{ext}"
         if os.path.exists(delete_file_path):
             os.remove(delete_file_path)
