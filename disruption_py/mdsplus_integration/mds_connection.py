@@ -28,10 +28,14 @@ class HDF:
     def __init__(self, shot_id : int):
         import h5pyd as h5py
         import random
+        import os
 
         self.shot_id = shot_id
 
-        endpoints = [ 'http://mfedata-archives:5101', 'http://mfedata-archives:5102' ]
+        if os.environ.get('HSDS_ENDPOINTS') is not None:
+            endpoints = os.environ['HSDS_ENDPOINTS'].split(',')
+        else:
+            endpoints = [ 'http://mfedata-archives:5101', 'http://mfedata-archives:5102' ]  
         self.file = h5py.File(f'/cmod/{self.shot_id}', 'a', use_cache=False, endpoint=random.choice(endpoints))
 
     def get(self, tree, expression, args):
@@ -305,7 +309,7 @@ class MDSConnection:
             if self.fill_hsds:
                 self.hdf.add_cache(tree_name, expression, arguments, ans)
 
-            elif self.fill_mongo:
+            if self.fill_mongo:
                 self.mongo.add_cache(tree_name, expression, arguments, ans)
 
         if ans is None:
