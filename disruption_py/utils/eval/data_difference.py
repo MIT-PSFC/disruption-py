@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 import inspect
 from disruption_py.utils.constants import MATCH_FRACTION, VAL_TOLERANCE, VERBOSE_OUTPUT
-from typing import Dict, List
+from typing import Callable, Dict, List
 import numpy as np
 import pandas as pd
 
@@ -16,6 +16,7 @@ class DataDifference:
     relative_difference : np.ndarray = field(init=False)
     mdsplus_column_data : pd.Series
     sql_column_data : pd.Series
+    expect_failure : bool
     
     def __post_init__(self):
         self.anomalies, self.relative_difference = self.compute_numeric_anomalies()
@@ -104,6 +105,7 @@ class DataDifference:
             data_column=data_column,
             mdsplus_column_data=mdsplus_shot_data[data_column],
             sql_column_data=sql_shot_data[data_column],
+            expect_failure=expect_failure,
         )
         
         if fail_quick:
@@ -126,14 +128,30 @@ class DataDifference:
             failures = [data_difference.shot_id for data_difference in data_differences if data_difference.failed]
             failed = len(failures) > 0
             
-            successes = [data_difference.shot_id for data_difference in data_differences if not data_difference.failed]
             anomaly_count = sum([data_difference.num_anomalies for data_difference in data_differences])
             timebase_count = sum([data_difference.timebase_length for data_difference in data_differences])
             
+            matches_expected_failures = all([data_difference.expect_failure == data_difference.failed for data_difference in data_differences])
+            
+            
+            conditions : Dict[str, Callable[[DataDifference], bool]] = {
+                "Shots expected to fail that failed": lambda data_difference: data_difference.expect_failure and data_difference.failed,
+                "Shots expected to succeed that failed": lambda data_difference: not data_difference.expect_failure and data_difference.failed,
+                "Shots expected to fail that succeeded": lambda data_difference: data_difference.expect_failure and not data_difference.failed,
+                "Shots expected to succeed that succeeded": lambda data_difference: not data_difference.expect_failure and not data_difference.failed,
+            }
+            condition_results = {}
+            for condition_name, condition in conditions.items():
+                shot_ids = [data_difference.shot_id for data_difference in data_differences if condition(data_difference)]
+                if len(shot_ids) > 0:
+                    condition_results[condition_name] = shot_ids
+            condition_string = "\n".join([f"{condition_name} ({len(condition_result)} shots): {condition_result}" for condition_name, condition_result in condition_results.items()])
+            
+            
             failure_string = f"""\
             Column {ratio_data_column} {"FAILED" if failed else "SUCCEEDED"}
-            Failed for {len(failures)} shots: {failures}
-            Succeeded for {len(successes)} shots: {successes}
+            Matches expected failures: {matches_expected_failures}
+            {condition_string}
             Total Entry Failure Rate: {anomaly_count / timebase_count * 100:.2f}%
             """
             failure_strings[ratio_data_column] = inspect.cleandoc(failure_string)
@@ -155,9 +173,7 @@ class DataDifference:
             {", ".join(succeeded_columns)}
             """
             return '\n\n'.join(failure_strings.values()) + '\n\n' + inspect.cleandoc(summary_string)
-        
-        return inspect.cleandoc(output_string)
-        
+                
     def compute_numeric_anomalies(self):
         """
         Get the indices of the data where numeric differences exist between the sql and mdsplus data.
