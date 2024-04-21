@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+import inspect
 from disruption_py.utils.constants import MATCH_FRACTION, VAL_TOLERANCE, VERBOSE_OUTPUT
 from typing import Dict, List
 import numpy as np
@@ -37,10 +38,10 @@ class DataDifference:
     
     @property
     def column_mismatch_string(self) -> str:
-        return f"Shot {self.shot_id} column {self.data_column} with arrays:\n{self.difference_df}"
+        return f"Shot {self.shot_id} column {self.data_column} with arrays:\n{self.difference_df.to_string()}"
     
     @property
-    def difference_df(self) -> Dict[str, pd.DataFrame]:
+    def difference_df(self) -> pd.DataFrame:
         indexes = np.arange(self.timebase_length) if VERBOSE_OUTPUT else self.anomalies.flatten()
         anomaly = self.anomalies[indexes]
         return pd.DataFrame({
@@ -107,9 +108,9 @@ class DataDifference:
         
         if fail_quick:
             if expect_failure:
-                assert data_difference.failed, "Expected failure but succeeded: {}".format(data_difference.column_mismatch_string)
+                assert data_difference.failed, "Expected failure but succeeded:\n{}".format(data_difference.column_mismatch_string)
             else:
-                assert not data_difference.failed, "Expected failure but failed: {}".format(data_difference.column_mismatch_string)
+                assert not data_difference.failed, "Expected success but failed:\n{}".format(data_difference.column_mismatch_string)
         
         return data_difference
 
@@ -120,6 +121,7 @@ class DataDifference:
             data_difference_by_column.setdefault(data_difference.data_column, []).append(data_difference)
         
         failure_strings = {}
+        failed_columns, succeeded_columns = set(), set()
         for ratio_data_column, data_differences in data_difference_by_column.items():
             failures = [data_difference.shot_id for data_difference in data_differences if data_difference.failed]
             failed = len(failures) > 0
@@ -127,33 +129,56 @@ class DataDifference:
             successes = [data_difference.shot_id for data_difference in data_differences if not data_difference.failed]
             anomaly_count = sum([data_difference.num_anomalies for data_difference in data_differences])
             timebase_count = sum([data_difference.timebase_length for data_difference in data_differences])
-            failure_strings[ratio_data_column] = f"""\
+            
+            failure_string = f"""\
             Column {ratio_data_column} {"FAILED" if failed else "SUCCEEDED"}
             Failed for {len(failures)} shots: {failures}
             Succeeded for {len(successes)} shots: {successes}
             Total Entry Failure Rate: {anomaly_count / timebase_count * 100:.2f}%
             """
+            failure_strings[ratio_data_column] = inspect.cleandoc(failure_string)
+            
+            if failed:
+                failed_columns.add(ratio_data_column)
+            else:
+                succeeded_columns.add(ratio_data_column)
         
         if data_column is not None:
             return failure_strings.get(data_column, "")
         else:
-            return '\n'.join(failure_strings.values())
+            summary_string = f"""\
+            SUMMARY
+            Columns with a failure:
+            {", ".join(failed_columns)}
+            
+            Columns without a failure :
+            {", ".join(succeeded_columns)}
+            """
+            return '\n\n'.join(failure_strings.values()) + '\n\n' + inspect.cleandoc(summary_string)
+        
+        return inspect.cleandoc(output_string)
         
     def compute_numeric_anomalies(self):
         """
         Get the indices of the data where numeric differences exist between the sql and mdsplus data.
         """
+        
+        # handle case where both arrays are all null
+        if pd.isnull(self.sql_column_data).all() and pd.isnull(self.mdsplus_column_data).all():
+            return np.zeros(len(self.mdsplus_column_data), dtype=bool), np.zeros(len(self.mdsplus_column_data))
+        
         relative_difference = np.where(
             self.sql_column_data != 0, 
             np.abs((self.mdsplus_column_data - self.sql_column_data) / self.sql_column_data), 
             np.where(self.mdsplus_column_data != 0, np.inf, np.nan)
         )
+        
         numeric_anomalies_mask = (relative_difference > VAL_TOLERANCE)
         
         sql_is_nan_ = pd.isnull(self.sql_column_data)
         mdsplus_is_nan = pd.isnull(self.mdsplus_column_data)
         nan_anomalies_mask = (sql_is_nan_ != mdsplus_is_nan)
         
-        anomalies = numeric_anomalies_mask | nan_anomalies_mask
+        anomalies : pd.Series = numeric_anomalies_mask | nan_anomalies_mask
         
-        return anomalies, relative_difference 
+        return anomalies.to_numpy(), relative_difference 
