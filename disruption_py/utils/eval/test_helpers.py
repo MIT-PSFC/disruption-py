@@ -63,7 +63,7 @@ def test_against_sql(handler : Handler, shot_ids : List[int], expected_failure_c
     if test_columns is None:
         mdsplus_columns = set().union(*(df.columns for df in mdsplus_data.values()))
         sql_columns = set().union(*(df.columns for df in sql_data.values()))
-        test_columns = mdsplus_columns.intersection(sql_columns)
+        test_columns = sorted(mdsplus_columns.intersection(sql_columns))
     
     data_differences = DataDifference.test_shots(
         shot_ids=shot_ids, 

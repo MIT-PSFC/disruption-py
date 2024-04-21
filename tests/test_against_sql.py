@@ -86,6 +86,13 @@ if __name__ == '__main__':
     shot_ids = get_test_shot_ids(tokamak)
     expected_failure_columns = get_test_expected_failure_columns(tokamak)
     
+    data_differences = test_against_sql(
+        handler=handler, 
+        shot_ids=shot_ids, 
+        expected_failure_columns=expected_failure_columns, 
+        fail_quick=fail_quick, 
+        test_columns=data_columns
+    )
     
-    test_against_sql(handler=handler, shot_ids=shot_ids, expected_failure_columns=expected_failure_columns, fail_quick=fail_quick, test_columns=data_columns)
+    print(DataDifference.get_failure_statistics_string(data_differences))
 
