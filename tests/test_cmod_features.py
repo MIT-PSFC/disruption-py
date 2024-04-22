@@ -11,14 +11,14 @@ TEST_SHOTS = {
     "flattop_fast": 1150805012,
     "nodisrup_fast": 1150805013,
     "nodisrup_full": 1150805014,
-    "rampdown_fast": 1150805015,
+    "rampdown_full": 1150805015,
     "rampdown_full": 1150805016,
 }
 
 TEST_SETTINGS = {
     "default_fast": ShotSettings(),
     "sqlcache_full": ShotSettings(existing_data_request="sql"),
-    "timebase_fast": ShotSettings(
+    "timebase_full": ShotSettings(
         existing_data_request="sql",
         use_existing_data_timebase=True,
         efit_tree_name="analysis",
