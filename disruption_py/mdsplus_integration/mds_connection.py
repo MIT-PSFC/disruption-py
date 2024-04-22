@@ -99,19 +99,40 @@ class Mongo:
             "shot": self.shot_id,
         }
 
+        multidoc = {}
+
         self.cache = {}
         for doc in self.cache_table.find(query):
             if doc['count'] > 1:
-                # Is this even working?
-                raise Exception('Freak Out')
 
-            answer = pickle.loads(doc['answer'])
+                if doc['tree'] not in multidoc:
+                    multidoc[doc['tree']] = {}
 
-            if doc['tree'] not in self.cache:
-                self.cache[doc['tree']] = {}
+                if doc['expr'] not in multidoc[doc['tree']]:
+                    multidoc[doc['tree']][doc['expr']] = [None] * doc['count']
 
-            if answer is not None:
-                self.cache[doc['tree']][doc['expr'].lower()] = answer
+                multidoc[doc['tree']][doc['expr']][doc['index']] = doc['answer']
+            
+            else:
+
+                answer = pickle.loads(doc['answer'])
+
+                if doc['tree'] not in self.cache:
+                    self.cache[doc['tree']] = {}
+
+                if answer is not None:
+                    self.cache[doc['tree']][doc['expr'].lower()] = answer
+
+        for tree, exprs in multidoc.items():
+            for expr, parts in exprs.items():
+
+                if None in parts:
+                    raise Exception('Freak out')
+                
+                answer = b''.join(parts)
+                answer = pickle.loads(answer)
+
+                self.cache[tree][expr] = answer
 
         # for tree, signals in self.cache.items():
         #     for signal in signals.keys():
