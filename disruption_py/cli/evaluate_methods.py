@@ -91,6 +91,7 @@ def main(args):
     
     data_columns = [args.data_column] if args.data_column else None
     
+    print("Running evaluation...")
     evaluate_accuracy(tokamak=tokamak, shot_ids=all_shot_ids, fail_quick=args.fail_quick, data_columns=data_columns)
         
 
