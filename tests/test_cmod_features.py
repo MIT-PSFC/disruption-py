@@ -9,10 +9,10 @@ from disruption_py.settings.shot_settings import ShotSettings
 
 TEST_SHOTS = {
     "flattop_fast": 1150805012,
-    "nodisrup_fast": 1150805013,
-    "nodisrup_full": 1150805014,
-    "rampdown_full": 1150805015,
-    "rampdown_full": 1150805016,
+    "nodisrup1_full": 1150805013,
+    "nodisrup2_full": 1150805014,
+    "rampdown1_full": 1150805015,
+    "rampdown2_full": 1150805016,
 }
 
 TEST_SETTINGS = {
