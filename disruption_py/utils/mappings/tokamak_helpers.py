@@ -27,6 +27,8 @@ def get_tokamak_from_environment():
         return Tokamak.CMOD
     if os.path.exists("/fusion/projects/disruption_warning"):
         return Tokamak.D3D
+    if "DISPY_TOKAMAK" in os.environ:
+        return Tokamak[os.environ["DISPY_TOKAMAK"]]
     return None
 
 def get_database_for_shot_id(shot_id : int):
