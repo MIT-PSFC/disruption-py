@@ -45,7 +45,7 @@ jobs:
 
       - name: Check lock files
         run: |
-          poetry check
+          poetry lock --no-update
           bash .pip/lock.sh
           git diff --exit-code
 
