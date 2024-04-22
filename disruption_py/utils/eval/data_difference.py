@@ -12,6 +12,10 @@ class DataDifference:
     """
     shot_id : int
     data_column : str
+    
+    missing_sql_data : bool
+    missing_mdsplus_data : bool
+    
     anomalies : np.ndarray = field(init=False) # 1 if anomaly, 0 o.w.
     relative_difference : np.ndarray = field(init=False)
     mdsplus_column_data : pd.Series
@@ -30,7 +34,13 @@ class DataDifference:
         return len(self.anomalies)
     
     @property
+    def missing_data(self) -> bool:
+        return self.missing_sql_data or self.missing_mdsplus_data
+    
+    @property
     def failed(self) -> str:
+        if self.missing_data:
+            return True
         return self.num_anomalies / self.timebase_length > 1 - MATCH_FRACTION
     
     @property
@@ -94,21 +104,19 @@ class DataDifference:
         """
         Test if the difference between the two data is within tolerance.
         """
-        if data_column not in mdsplus_shot_data:
-            raise ValueError(f"Column {data_column} missing from MDSPlus for shot {shot_id}")
-
-        if data_column not in sql_shot_data:
-            raise ValueError(f"Column {data_column} missing from SQL for shot {shot_id}")
-            
+        missing_mdsplus_data = (data_column not in mdsplus_shot_data)
+        missing_sql_data = (data_column not in sql_shot_data)
         data_difference = DataDifference(
             shot_id=shot_id,
             data_column=data_column,
-            mdsplus_column_data=mdsplus_shot_data[data_column],
-            sql_column_data=sql_shot_data[data_column],
+            mdsplus_column_data=mdsplus_shot_data.get(data_column, None),
+            sql_column_data=sql_shot_data.get(data_column, None),
+            missing_mdsplus_data=missing_mdsplus_data,
+            missing_sql_data=missing_sql_data,
             expect_failure=expect_failure,
         )
         
-        if fail_quick:
+        if fail_quick and not (missing_mdsplus_data or missing_sql_data):
             if expect_failure:
                 assert data_difference.failed, "Expected failure but succeeded:\n{}".format(data_difference.column_mismatch_string)
             else:
@@ -123,22 +131,25 @@ class DataDifference:
             data_difference_by_column.setdefault(data_difference.data_column, []).append(data_difference)
         
         failure_strings = {}
-        failed_columns, succeeded_columns = set(), set()
+        failed_columns, succeeded_columns, missing_data_columns = set(), set(), set()
         for ratio_data_column, data_differences in data_difference_by_column.items():
             failures = [data_difference.shot_id for data_difference in data_differences if data_difference.failed]
             failed = len(failures) > 0
+            
+            all_missing_data = all([data_difference.missing_data for data_difference in data_differences])
             
             anomaly_count = sum([data_difference.num_anomalies for data_difference in data_differences])
             timebase_count = sum([data_difference.timebase_length for data_difference in data_differences])
             
             matches_expected_failures = all([data_difference.expect_failure == data_difference.failed for data_difference in data_differences])
             
-            
             conditions : Dict[str, Callable[[DataDifference], bool]] = {
                 "Shots expected to fail that failed": lambda data_difference: data_difference.expect_failure and data_difference.failed,
                 "Shots expected to succeed that failed": lambda data_difference: not data_difference.expect_failure and data_difference.failed,
                 "Shots expected to fail that succeeded": lambda data_difference: data_difference.expect_failure and not data_difference.failed,
                 "Shots expected to succeed that succeeded": lambda data_difference: not data_difference.expect_failure and not data_difference.failed,
+                "Shots missing sql data": lambda data_difference: data_difference.missing_sql_data,
+                "Shots missing mdsplus data": lambda data_difference: data_difference.missing_mdsplus_data,
             }
             condition_results = {}
             for condition_name, condition in conditions.items():
@@ -156,7 +167,9 @@ class DataDifference:
             """
             failure_strings[ratio_data_column] = inspect.cleandoc(failure_string)
             
-            if failed:
+            if all_missing_data:
+                missing_data_columns.add(ratio_data_column)
+            elif failed:
                 failed_columns.add(ratio_data_column)
             else:
                 succeeded_columns.add(ratio_data_column)
@@ -166,11 +179,14 @@ class DataDifference:
         else:
             summary_string = f"""\
             SUMMARY
-            Columns with a failure:
+            Columns with a failure: {"None" if len(failed_columns) == 0 else ""}
             {", ".join(failed_columns)}
             
-            Columns without a failure :
+            Columns without a failure : {"None" if len(succeeded_columns) == 0 else ""}
             {", ".join(succeeded_columns)}
+            
+            Columns lacking data for comparison from sql or mdsplus sources: {"None" if len(missing_data_columns) == 0 else ""}
+            {", ".join(missing_data_columns)}
             """
             return '\n\n'.join(failure_strings.values()) + '\n\n' + inspect.cleandoc(summary_string)
                 
@@ -178,6 +194,10 @@ class DataDifference:
         """
         Get the indices of the data where numeric differences exist between the sql and mdsplus data.
         """
+        
+        # handle missing data case
+        if self.missing_mdsplus_data or self.missing_sql_data:
+            return np.ones(len(self.mdsplus_column_data), dtype=bool), np.zeros(len(self.mdsplus_column_data))
         
         # handle case where both arrays are all null
         if pd.isnull(self.sql_column_data).all() and pd.isnull(self.mdsplus_column_data).all():
