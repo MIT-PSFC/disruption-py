@@ -10,11 +10,7 @@ from logging import Logger
 
 import disruption_py.data
 from disruption_py.utils.utils import without_duplicates
-try:
-    import importlib.resources as importlib_resources
-except ImportError:
-    # Try backported to PY<37 `importlib_resources`.
-    import importlib_resources
+from importlib import resources
 
 
 @dataclass
@@ -69,10 +65,11 @@ class IncludedShotIdsRequest(ShotIdsRequest):
         The name of the datafile that should be used to retrieve shot_ids.
     """
     
-    def __init__(self, data_file_name):
-        with importlib_resources.path(disruption_py.data, data_file_name) as p:
-            data_file_name = str(p)
-        self.shot_ids = pd.read_csv(data_file_name, header=None).iloc[:, 0].values.tolist()
+    def __init__(self, data_file_name: str) -> List:
+        with resources.path(disruption_py.data, data_file_name) as data_file:
+            df = pd.read_csv(data_file, header=None)
+            lst = df.values[:, 0].tolist()
+            self.shot_ids = lst
     
     def _get_shot_ids(self, params : ShotIdsRequestParams) -> List:
         return self.shot_ids 

@@ -14,11 +14,7 @@ except ImportError:
     class mdsExceptions(Exception):
         __getattr__ = lambda self, name: Exception
 
-try:
-    import importlib.resources as importlib_resources
-except ImportError:
-    # Try backported to PY<37 `importlib_resources`.
-    import importlib_resources
+from importlib import resources
 
 # TODO: Somehow link to disruption_py 
 # TODO: Deal with scary missing TRIPpy dependency (please don't break until I fix you)
@@ -563,9 +559,8 @@ class BasicCmodRequests(ShotDataRequest):
     @staticmethod
     @parameter_cached_method(columns=["v_0"], used_trees=["spectroscopy"],  tokamak=Tokamak.CMOD)
     def _get_rotation_velocity(params : ShotDataRequestParams):
-        with importlib_resources.path(
-                disruption_py.data, 'lock_mode_calib_shots.txt') as calib_path:
-            calibrated = pd.read_csv(calib_path)
+        with resources.path(disruption_py.data, "lock_mode_calib_shots.txt") as fio:
+            calibrated = pd.read_csv(fio)
         # Check to see if shot was done on a day where there was a locked
         # mode HIREX calibration by cross checking with list of calibrated
         # runs. If not calibrated, return NaN outputs.
