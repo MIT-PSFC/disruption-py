@@ -125,7 +125,7 @@ jobs:
           xargs -a ssh.pid ps -p
           if ! grep 'Authenticated.*publickey' ssh.log
           then
-             curl ipinfo.io
+             curl -s ipinfo.io && echo
              cat -n ssh.log
              false
           fi
