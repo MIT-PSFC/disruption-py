@@ -1,10 +1,11 @@
 [tool.poetry]
-name = "disruption-py"
-version = "0.5.0"
-description = ""
-authors = ["Joshua Lorincz <26237613+lajz@users.noreply.github.com>"]
+authors = ["Gregorio L. Trevisan <gtrevisan@psfc.mit.edu>"]
+description = "Data Framework for the MIT PSFC Disruption Studies Group"
+homepage = "https://disruptions.mit.edu/"
 license = "MIT"
+name = "disruption-py"
 readme = "README.md"
+version = "0.5.0"
 
 [tool.poetry.dependencies]
 python = "^3.8.10"
