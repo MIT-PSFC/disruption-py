@@ -239,7 +239,7 @@ class HDF5OutputRequest(OutputTypeRequest):
         else:
             output_result = params.result
             
-        output_result.to_hdf(self.filepath, f'df_{params.shot_id}', format='table', complib='blosc', mode=mode)
+        output_result.to_hdf(self.filepath, key=f"df_{params.shot_id}", format="table", complib="blosc", mode=mode)
         self.output_shot_count += 1
     
     def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
