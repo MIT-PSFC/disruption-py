@@ -1,7 +1,7 @@
 import traceback
 import numpy as np
 import pandas as pd
-import scipy as sp
+#import scipy as sp
 import disruption_py.data
 from disruption_py.settings.shot_data_request import ShotDataRequest, ShotDataRequestParams
 from disruption_py.utils.mappings.tokamak import Tokamak
@@ -1386,8 +1386,7 @@ class ThomsonDensityMeasure:
         ip = params.mds_conn.get(r'\ip', "cmod")
         if np.mean(ip) > 0:
             flag = 0
-        efit_times = params.mds_conn.get(r'\efit_aeqdsk:time', tree_name="_efit_tree").astype(
-            'float64')
+        efit_times = params.mds_conn.get(r'\efit_aeqdsk:time', tree_name="_efit_tree").astype('float64')
         t1 = np.amin(efit_times)
         t2 = np.amax(efit_times)
         psia, psia_t = params.mds_conn.get_record_data(r'\efit_aeqdsk:SIBDRY', tree_name="_efit_tree")

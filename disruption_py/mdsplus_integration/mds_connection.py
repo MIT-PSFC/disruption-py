@@ -14,16 +14,44 @@ class ProcessMDSConnection():
     """
 
     def __init__(self, conn_string : str):
-        self.conn = mds.Connection(conn_string)
-        self.conn.get('shorten_path()')
-
+        self.conn = None
+        if conn_string != 'DoNotConnect':
+            self.conn = mds.Connection(conn_string)
+            
     def get_shot_connection(self, shot_id : int):
         """ Get MDSPlus Connection wrapper for individual shot. """
         return MDSConnection(self.conn, shot_id)
 
 class HDF:
     """
-    Class to handle the HSDS connection
+    Class to fill hsds cache with answers
+    """
+    def __init__(self):
+        self.file = None
+        self.shot_id = None
+        self.endpoints = [ 'http://localhost:5101', 'http://localhost:5102' ]
+
+    def add_cache(self, tree, shot, expression, args, value):
+        import h5pyd as h5py
+        import random
+        if self.shot_id != shot:
+            self.file = h5py.File(f'/cmod/{shot}', 'a', use_cache=False, end_point=random.choice(self.endpoints))
+            self.shot_id = shot
+        if tree not in self.file:
+            root = self.file.create_group(tree)
+        else:
+            root = self.file[tree]
+        if args is None:
+            key = f'{expression}'
+        else:
+            key = f'{expression}_{args}'
+        if key in root:
+            del root[key]
+        root.create_dataset(key, data=value)
+     
+class MDSConnection:
+    """ 
+    Wrapper class for MDSPlus Connection class used for handling individual shots. 
     """
     def __init__(self, shot_id : int):
         import h5pyd as h5py
@@ -241,7 +269,6 @@ class MDSConnection:
             self.tree_nicknames[tree_name] = self.tree_nickname_funcs[tree_name]()
 
         if tree_name in self.tree_nicknames:
-            print("two")
             tree_name = self.tree_nicknames[tree_name]
 
         if self.use_mdsplus:
@@ -265,7 +292,6 @@ class MDSConnection:
                 except Exception as e:
                     self.logger.warning(f"Error closing tree {tree_name} in shot {self.shot_id}")
                     self.logger.debug(e)
-
         if self.last_open_tree == tree_name:
             self.last_open_tree = None
         self.open_trees.discard(tree_name)
@@ -421,7 +447,6 @@ class MDSConnection:
             self.open_tree(tree_name)
 
         dims = [ self.get(f'dim_of({path}, {dim_num})') for dim_num in dim_nums]
-
         return dims
 
     # MDSplusML cache population and use
