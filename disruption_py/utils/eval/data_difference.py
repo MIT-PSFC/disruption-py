@@ -197,7 +197,13 @@ class DataDifference:
         
         # handle missing data case
         if self.missing_mdsplus_data or self.missing_sql_data:
-            return np.ones(len(self.mdsplus_column_data), dtype=bool), np.zeros(len(self.mdsplus_column_data))
+            if self.missing_mdsplus_data and self.missing_sql_data:
+                missing_timebase_length = 0
+            elif self.missing_mdsplus_data:
+                missing_timebase_length = len(self.sql_column_data)
+            elif self.missing_sql_data:
+                missing_timebase_length = len(self.mdsplus_column_data)
+            return np.ones(missing_timebase_length, dtype=bool), np.zeros(missing_timebase_length)
         
         # handle case where both arrays are all null
         if pd.isnull(self.sql_column_data).all() and pd.isnull(self.mdsplus_column_data).all():
