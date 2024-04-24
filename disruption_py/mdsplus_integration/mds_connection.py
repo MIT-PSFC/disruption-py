@@ -26,34 +26,7 @@ class HDF:
     """
     Class to fill hsds cache with answers
     """
-    def __init__(self):
-        self.file = None
-        self.shot_id = None
-        self.endpoints = [ 'http://localhost:5101', 'http://localhost:5102' ]
-
-    def add_cache(self, tree, shot, expression, args, value):
-        import h5pyd as h5py
-        import random
-        if self.shot_id != shot:
-            self.file = h5py.File(f'/cmod/{shot}', 'a', use_cache=False, end_point=random.choice(self.endpoints))
-            self.shot_id = shot
-        if tree not in self.file:
-            root = self.file.create_group(tree)
-        else:
-            root = self.file[tree]
-        if args is None:
-            key = f'{expression}'
-        else:
-            key = f'{expression}_{args}'
-        if key in root:
-            del root[key]
-        root.create_dataset(key, data=value)
-     
-class MDSConnection:
-    """ 
-    Wrapper class for MDSPlus Connection class used for handling individual shots. 
-    """
-    def __init__(self, shot_id : int):
+    def __init__(self, shot_id : int, filling : bool):
         import h5pyd as h5py
         import random
         import os
@@ -61,25 +34,12 @@ class MDSConnection:
         self.shot_id = shot_id
 
         if os.environ.get('HSDS_ENDPOINTS') is not None:
-            endpoints = os.environ['HSDS_ENDPOINTS'].split(',')
+            self.endpoints = os.environ['HSDS_ENDPOINTS'].split(',')
         else:
-            endpoints = [ 'http://mfedata-archives:5101', 'http://mfedata-archives:5102' ]  
-        self.file = h5py.File(f'/cmod/{self.shot_id}', 'a', use_cache=False, endpoint=random.choice(endpoints))
+            self.endpoints = [ 'http://mfedata-archives:5101', 'http://mfedata-archives:5102' ]
 
-    def get(self, tree, expression, args):
-        try:
-            if args is None:
-                key = f'{expression}'
-            else:
-                key = f'{expression}_{args}'
-
-            key.replace('/', '\\/')
-
-            print(tree, key)
-            return self.file[tree][key].value
-
-        except:
-            return None
+        self.mode = 'a' if filling else 'r'
+        self.file = h5py.File(f'/cmod/{self.shot_id}', self.mode, use_cache=(not filling), endpoint=random.choice(self.endpoints))
 
     def add_cache(self, tree, expression, args, value):
         import numpy as np
@@ -99,6 +59,21 @@ class MDSConnection:
         if value.__class__ == np.str_:
             value = str(value)
         root.create_dataset(key, data=value)
+     
+    def get(self, tree, expression, args):
+        try:
+            if args is None:
+                key = f'{expression}'
+            else:
+                key = f'{expression}_{args}'
+
+            key.replace('/', '\\/')
+
+            print(tree, key)
+            return self.file[tree][key].value
+
+        except:
+            return None
 
 class Mongo:
     """
