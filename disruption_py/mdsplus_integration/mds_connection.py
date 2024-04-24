@@ -66,7 +66,8 @@ class MDSConnection:
         self.use_hsds = False 
         self.use_mongo = False
         self.cache_miss_enable = False 
-        self.endpoints = [ 'http://localhost:5101', 'http://localhost:5102' ]  
+#        self.endpoints = [ 'http://localhost:5101', 'http://localhost:5102' ]
+        self.endpoints = ['http://a00b48dc37a994baaad23bc7e01aefba-924539795.us-east-1.elb.amazonaws.com/']
         self.hdf = HDF()
  
     def open_tree(self, tree_name : str):
@@ -85,14 +86,14 @@ class MDSConnection:
             self.conn.openTree(tree_name, self.shot_id)
         if self.use_hsds:
             try:
-                self.hdf.file = h5py.File(f'/cmod/{self.shot_id}', 'a', use_cache=False, end_point=random.choice(self.endpoints))
-            except:
-                pass
+                self.hdf.file = h5py.File(f'/cmod/{self.shot_id}', 'r', use_cache=False, end_point=random.choice(self.endpoints))
+            except Exception as e:
+                print(e)
         elif self.use_mongo:
             pass
     
 
-        if self.last_open_tree != tree_name:
+        if self.conn and self.last_open_tree != tree_name:
             self.conn.openTree(tree_name, self.shot_id)
             
         self.last_open_tree = tree_name
@@ -153,6 +154,11 @@ class MDSConnection:
             ans = self.conn.get(expression, arguments).data()
         if self.use_hsds:
             try:
+                if expression.startswith('_sig='):
+                    expression = expression[6:]
+                    self.sig_expression = expression
+                elif expression.startswith('dim_of(_sig)'):
+                    expression = f"dim_of({self.sig_expression}{expression[12:]}"
                 ans = self.hdf.file[tree_name][f'{expression}'].value
             except:
                 try:
@@ -214,8 +220,8 @@ class MDSConnection:
         """
         dim_nums = dim_nums or [0]
         
-        data = self._get("_sig=" + path)
-        dims = [self._get(f"dim_of(_sig,{dim_num})") for dim_num in dim_nums]
+        data = self._get("_sig=" + path, treename=tree_name)
+        dims = [self._get(f"dim_of(_sig,{dim_num})", treename=tree_name) for dim_num in dim_nums]
         if self.fill_hsds:
             self.hdf.add_cache(tree_name, self.shot_id, path, None, data)
         if self.fill_mongodb:
