@@ -142,5 +142,9 @@ jobs:
       - name: Test quick
         run: pytest -v tests/test_quick.py
 
+      - name: Test features
+        if: ${{ matrix.tokamak == 'C-MOD' }}
+        run: pytest -v --durations=0 tests/test_cmod_features.py
+
       - name: Close tunnel
         run: xargs -a ssh.pid kill -TERM
