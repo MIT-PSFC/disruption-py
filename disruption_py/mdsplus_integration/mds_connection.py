@@ -441,7 +441,7 @@ class MDSConnection:
         self.use_mdsplus = self.cache_miss_enable or (not self.use_hsds and not self.use_mongo)
 
         if self.use_hsds or self.fill_hsds:
-            self.hdf = HDF(self.shot_id)
+            self.hdf = HDF(self.shot_id, self.fill_hsds)
 
         if self.use_mongo or self.fill_mongo:
             self.mongo = Mongo(self.shot_id)
