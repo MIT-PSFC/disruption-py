@@ -143,6 +143,15 @@ class DataDifference:
             
             matches_expected_failures = all([data_difference.expect_failure == data_difference.failed for data_difference in data_differences])
             
+            # failure string
+            failure_string_lines = [
+                f"Column {ratio_data_column} {'FAILED' if failed else 'SUCCEEDED'}",
+                f"Matches expected failures: {matches_expected_failures}",
+                f"Total Entry Failure Rate: {anomaly_count / timebase_count * 100:.2f}%",
+            ]
+            failure_string = "\n".join(failure_string_lines)
+            
+            # condition string
             conditions : Dict[str, Callable[[DataDifference], bool]] = {
                 "Shots expected to fail that failed": lambda data_difference: data_difference.expect_failure and data_difference.failed,
                 "Shots expected to succeed that failed": lambda data_difference: not data_difference.expect_failure and data_difference.failed,
@@ -158,14 +167,8 @@ class DataDifference:
                     condition_results[condition_name] = shot_ids
             condition_string = "\n".join([f"{condition_name} ({len(condition_result)} shots): {condition_result}" for condition_name, condition_result in condition_results.items()])
             
-            
-            failure_string = f"""\
-            Column {ratio_data_column} {"FAILED" if failed else "SUCCEEDED"}
-            Matches expected failures: {matches_expected_failures}
-            {condition_string}
-            Total Entry Failure Rate: {anomaly_count / timebase_count * 100:.2f}%
-            """
-            failure_strings[ratio_data_column] = inspect.cleandoc(failure_string)
+            # combine the string parts together
+            failure_strings[ratio_data_column] = failure_string + "\n" + condition_string
             
             if all_missing_data:
                 missing_data_columns.add(ratio_data_column)
