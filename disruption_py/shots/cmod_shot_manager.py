@@ -98,7 +98,8 @@ class CModShotManager(ShotManager):
                     cls.logger.info(f"[Shot {shot_id}]: Failed to open efit tree {efit_name} with error {e}.")
                     continue
             
-            raise Exception(f"Failed to find efit tree with name {shot_settings.efit_tree_name} in shot {shot_id}.")
+            msg = f"Failed to find efit tree with name {shot_settings.efit_tree_name} in shot {shot_id}."
+            raise Exception(msg)
         return efit_tree_nickname_func
         
     @classmethod
