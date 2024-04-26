@@ -14,6 +14,10 @@ which poetry
 poetry self update \
 > "$DISPY_LOG/poetry.log"
 
+# API token
+GAPI="https://api.github.com/repos/mit-psfc/disruption-py"
+AUTH="$(cat "/home/$USER/.gh_pat")"
+
 # for each repo folder
 for FOLDER in "$DISPY_DIR"/repo/*
 do
@@ -42,11 +46,31 @@ do
    # check pyproject
    [[ -s pyproject.toml ]] || continue
 
+   # read statuses
+   SHA=$(git rev-parse HEAD)
+   if [[ -n "$SHA" ]]
+   then
+      curl -s \
+      -H "$AUTH" \
+      -D "$LOG/sha.txt" \
+      -o "$LOG/sha.json" \
+      "$GAPI/commits/$SHA/statuses" \
+      2>&1 \
+      > "$LOG/curl.log"
+   fi
+
    # for each python version
    for VENV in "$DISPY_DIR/venv/$DISPY_BRANCH-py"*
    do
 
       {
+
+      # read status
+      STATUS="Install / py${VENV##*py} @ ${HOSTNAME%-*}"
+      if [[ -s "$LOG/sha.json" ]]
+      then
+         STATE=$(jq -r ".[]|select(.context==\"$STATUS\").state" "$LOG/sha.json")
+      fi
 
       # activate
       export DISPY_PYVERS="${VENV##*py}"
@@ -55,7 +79,10 @@ do
       # log
       export LOG="$LOG/py$DISPY_PYVERS"
       mkdir -p "$LOG"
-      echo -e "$(date) :: $DISPY_BRANCH @ py$DISPY_PYVERS"
+      echo -e "$(date) :: $DISPY_BRANCH @ py$DISPY_PYVERS${STATE:+ = }$STATE"
+
+      # done
+      [[ "$STATE" = "success" ]] && exit 0
 
       # env
       env \
@@ -84,12 +111,41 @@ do
       > "$LOG/after.log"
 
       # run
-      poetry run python examples/efit.py \
-      1> "$LOG/efit.out" \
-      2> "$LOG/efit.err"
+      if [[ -s examples/efit.py ]]
+      then
+         poetry run python examples/efit.py \
+         1> "$LOG/efit.out" \
+         2> "$LOG/efit.err"
+      elif [[ -s examples/quick.py ]]
+      then
+         poetry run python examples/quick.py \
+         1> "$LOG/quick.out" \
+         2> "$LOG/quick.err"
+      else
+         poetry run python -c "import disruption_py as dpy; print(dpy.__file__)" \
+         1> "$LOG/import.out" \
+         2> "$LOG/import.err"
+      fi
+
+      # rc
+      RC=${PIPESTATUS[0]}
+      [[ $RC -eq 0 ]] && STATE=success || STATE=failure
 
       # log
-      echo -e "$(date) :: $DISPY_BRANCH @ py$DISPY_PYVERS = rc ${PIPESTATUS[0]}"
+      echo -e "$(date) :: $DISPY_BRANCH @ py$DISPY_PYVERS = rc $RC"
+
+      # status
+      echo "{\"state\":\"$STATE\",\"description\":\"Updated in ${SECONDS} s\",\"context\":\"$STATUS\"}" \
+      | tee "$LOG/data.json" \
+      | curl -s \
+         -X POST \
+         -H "$AUTH" \
+         -D "$LOG/write.txt" \
+         -o "$LOG/write.json" \
+         "$GAPI/commits/$SHA/statuses" \
+         -d @- \
+         2>&1 \
+         >> "$LOG/git.log"
 
       # deactivate
       deactivate
