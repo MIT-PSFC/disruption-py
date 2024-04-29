@@ -16,7 +16,9 @@ shot_settings = ShotSettings(
     
     # run all available methods
     run_tags=[],
-    run_columns=["zcur","lower_gap","upper_gap","z_error","ip"],
+    run_columns=["zcur","lower_gap","upper_gap","z_error","ip",
+                 "z_prog"],
+    only_requested_columns=True,
 )
 shot_data = cmod_handler.get_shots_data(
     # Retrieve data for the desired shots
@@ -30,7 +32,7 @@ shot_data = cmod_handler.get_shots_data(
 )
 
 print(shot_data.head())
-print(np.shape(shot_data["zcur"]))
+#print(np.shape(shot_data["zcur"]))
 
 for shot in shot_list:
     shot_indx = np.where(shot_data["shot"] == shot)[0]
