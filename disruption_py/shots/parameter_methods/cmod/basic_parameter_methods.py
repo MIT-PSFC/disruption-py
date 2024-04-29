@@ -16,6 +16,9 @@ except ImportError:
 
 from importlib import resources
 
+# (Saperstein - Apr 2024)
+import matplotlib.pyplot as plt
+
 # TODO: Somehow link to disruption_py 
 # TODO: Deal with scary missing TRIPpy dependency (please don't break until I fix you)
 import sys
@@ -317,15 +320,27 @@ class BasicCmodRequests(ShotDataRequest):
             - matlab/cmod_matlab/matlab-core/get_Z_parameters.m
 
         """
-        z_error = z_error_without_ip/ip  # [m]
+        # (Saperstein - Apr 2024)
+        # --------------
+        divsafe_ip = np.empty(ip.shape)
+        divsafe_ip.fill(np.nan)
+        safe_indx = np.where(ip != 0)
+        divsafe_ip[safe_indx] = ip[safe_indx]
+        #z_error = z_error_without_ip/ip  # [m]
+        z_error = z_error_without_ip/np.abs(divsafe_ip)  # [m] not sure why this never caused issues in matlab? Also no |ip| before?
+        # --------------
         z_prog_dpcs = interp1(pcstime, z_prog, dpcstime)
         z_cur = z_prog_dpcs + z_error  # [m]
         v_z = np.gradient(z_cur, dpcstime)  # m/s
         z_times_v_z = z_cur * v_z  # m^2/s
         z_prog = interp1(pcstime, z_prog, times, 'linear', False, z_prog[-1])
-        z_error = -interp1(dpcstime, z_error, times,
+        # (Saperstein - Apr 2024)
+        # - for some reason, z_error and z_prog had random -1's in front of their interpolations...
+        # --------------
+        z_error = interp1(dpcstime, z_error, times,
                            'linear', False, z_error[-1])
-        z_cur = -interp1(dpcstime, z_cur, times, 'linear', False, z_cur[-1])
+        z_cur = interp1(dpcstime, z_cur, times, 'linear', False, z_cur[-1])
+        # --------------
         v_z = interp1(dpcstime, v_z, times, 'linear', False, v_z[-1])
         z_times_v_z = interp1(dpcstime, z_times_v_z, times,
                               'linear', False, z_times_v_z[-1])
@@ -388,8 +403,13 @@ class BasicCmodRequests(ShotDataRequest):
             else:
                 end = active_wire_segments[i+1][1]
             z_factor = params.mds_conn.get_data(fr'\dpcs::top.seg_{i+1:02d}:p_{z_wire_index:02d}:predictor:factor', tree_name="hybrid")
-            z_error_without_ip[np.where((dpcstime >= start) & (
-                dpcstime <= end))] /= z_factor  # [A*m]
+            '''z_error_without_ip[np.where((dpcstime >= start) & (
+                dpcstime <= end))] /= z_factor  # [A*m]'''
+            # (Saperstein - Apr 2024)
+            # --------------
+            temp_indx = np.where((dpcstime >= start) & ( dpcstime <= end))
+            z_error_without_ip[temp_indx] = z_error_without_factor_and_ip[temp_indx] / z_factor # [A*m]
+            # --------------
         # Next we grab ip, which comes from a_in:input_056. This also requires
         # *multiplication* by a factor.
         # NOTE that I can't get the following ip_without_factor to work for shots
