@@ -7,7 +7,7 @@ quick test: fetch efit parameters from established shot, and check array shape.
 from disruption_py.handlers import CModHandler
 from disruption_py.settings import ShotSettings, LogSettings
 
-handler = CModHandler()
+handler = CModHandler(mds_connection_str='DoNotConnect')
 
 shot_settings = ShotSettings(
     log_settings=LogSettings(console_log_level=0),
