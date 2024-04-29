@@ -16,9 +16,6 @@ except ImportError:
 
 from importlib import resources
 
-# (Saperstein - Apr 2024)
-import matplotlib.pyplot as plt
-
 # TODO: Somehow link to disruption_py 
 # TODO: Deal with scary missing TRIPpy dependency (please don't break until I fix you)
 import sys
@@ -320,10 +317,7 @@ class BasicCmodRequests(ShotDataRequest):
             - matlab/cmod_matlab/matlab-core/get_Z_parameters.m
 
         """
-        divsafe_ip = np.empty(ip.shape)
-        divsafe_ip.fill(np.nan)
-        safe_indx = np.where(ip != 0)
-        divsafe_ip[safe_indx] = ip[safe_indx]
+        divsafe_ip = np.where(ip != 0, ip, np.nan)
         z_error = z_error_without_ip/np.abs(divsafe_ip)  # [m] not sure why this never caused issues in matlab? Also no |ip| before?
         z_prog_dpcs = interp1(pcstime, z_prog, dpcstime)
         z_cur = z_prog_dpcs + z_error  # [m]
@@ -395,8 +389,6 @@ class BasicCmodRequests(ShotDataRequest):
             else:
                 end = active_wire_segments[i+1][1]
             z_factor = params.mds_conn.get_data(fr'\dpcs::top.seg_{i+1:02d}:p_{z_wire_index:02d}:predictor:factor', tree_name="hybrid")
-            '''z_error_without_ip[np.where((dpcstime >= start) & (
-                dpcstime <= end))] /= z_factor  # [A*m]'''
             temp_indx = np.where((dpcstime >= start) & ( dpcstime <= end))
             z_error_without_ip[temp_indx] = z_error_without_factor_and_ip[temp_indx] / z_factor # [A*m]
         # Next we grab ip, which comes from a_in:input_056. This also requires
