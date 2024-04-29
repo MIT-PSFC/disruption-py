@@ -47,9 +47,10 @@ do
    [[ -s pyproject.toml ]] || continue
 
    # read statuses
-   SHA=$(git rev-parse HEAD)
-   if [[ -n "$SHA" ]]
+   SHA=
+   if [[ $DISPY_BRANCH =~ ^main ]] || [[ $DISPY_BRANCH =~ ^dev ]]
    then
+      SHA=$(git rev-parse HEAD)
       curl -s \
       -H "$AUTH" \
       -D "$LOG/sha.txt" \
@@ -67,9 +68,10 @@ do
 
       # read status
       STATUS="Install / py${VENV##*py} @ ${HOSTNAME%-*}"
-      if [[ -s "$LOG/sha.json" ]]
+      STATE=
+      if [[ -n "$SHA" ]] && [[ -s "$LOG/sha.json" ]]
       then
-         STATE=$(jq -r ".[]|select(.context==\"$STATUS\").state" "$LOG/sha.json")
+         STATE=$(jq -r ".[]|select(.context==\"$STATUS\").state" "$LOG/sha.json" &> /dev/null)
       fi
 
       # activate
@@ -136,7 +138,11 @@ do
       # log
       echo -e "$(date) :: $DISPY_BRANCH @ py$DISPY_PYVERS = rc $RC"
 
+      # deactivate
+      deactivate
+
       # status
+      [[ -z "$SHA" ]] && exit 0
       echo "{\"state\":\"$STATE\",\"description\":\"Updated in ${SECONDS} s\",\"context\":\"$STATUS\"}" \
       | tee "$LOG/data.json" \
       | curl -s \
@@ -147,10 +153,7 @@ do
          "$GAPI/commits/$SHA/statuses" \
          -d @- \
          2>&1 \
-         >> "$LOG/git.log"
-
-      # deactivate
-      deactivate
+         >> "$LOG/curl.log"
 
       } &
 
