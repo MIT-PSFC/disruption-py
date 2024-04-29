@@ -5,7 +5,8 @@
 source "$(dirname "${BASH_SOURCE[0]}")/setup.sh"
 
 # folder
-DISPY_LOG="$DISPY_DIR/logs/$(basename "${0%.sh}").$(date +%F)"
+TODAY=$(date +%F)
+DISPY_LOG="$DISPY_DIR/logs/$(basename "${0%.sh}").$TODAY"
 export DISPY_LOG=$DISPY_LOG
 mkdir -p "$DISPY_LOG"
 
@@ -143,7 +144,7 @@ do
 
       # status
       [[ -z "$SHA" ]] && exit 0
-      echo "{\"state\":\"$STATE\",\"description\":\"Updated in ${SECONDS} s\",\"context\":\"$STATUS\"}" \
+      echo "{\"state\":\"$STATE\",\"description\":\"Updated on $TODAY in ${SECONDS} s\",\"context\":\"$STATUS\"}" \
       | tee "$LOG/data.json" \
       | curl -s \
          -X POST \
