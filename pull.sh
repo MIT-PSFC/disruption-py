@@ -71,7 +71,7 @@ do
       STATE=
       if [[ -n "$SHA" ]] && [[ -s "$LOG/sha.json" ]]
       then
-         STATE=$(jq -r ".[]|select(.context==\"$STATUS\").state" "$LOG/sha.json" &> /dev/null)
+         STATE=$(jq -r ".[]|select(.context==\"$STATUS\").state" "$LOG/sha.json" 2> /dev/null)
       fi
 
       # activate
