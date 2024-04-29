@@ -67,7 +67,7 @@ do
       {
 
       # read status
-      STATUS="Install / py${VENV##*py} @ ${HOSTNAME%-*}"
+      STATUS="Install / $(basename "$VENV") @ ${HOSTNAME%-*}"
       STATE=
       if [[ -n "$SHA" ]] && [[ -s "$LOG/sha.json" ]]
       then
