@@ -16,6 +16,26 @@ on:
 jobs:
 
 
+  black:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      github.event.pull_request.draft == false
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - name: Install black
+        run: |
+          grep -oP 'black.*?\ ' .pip/dev.txt \
+          | xargs pip install
+
+      - name: Run black
+        run: |
+          black --version
+          black --check .
+
+
   pylint:
     runs-on: ubuntu-latest
     if: |
