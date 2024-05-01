@@ -16,6 +16,30 @@ on:
 jobs:
 
 
+  shellcheck:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      github.event.pull_request.draft == false
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get install shellcheck
+
+      - name: Run shellcheck
+        run: |
+          shellcheck --version
+          find -type f -not -path '*/.git/*' \
+          | xargs grep -l '^#!/bin/bash' \
+          | while read -r FILE
+          do
+             echo "--> $FILE"
+             shellcheck -x "$FILE"
+          done
+
+
   yamllint:
     runs-on: ubuntu-latest
     if: |
@@ -40,28 +64,4 @@ jobs:
           do
              echo "--> $FILE"
              yamllint "$FILE"
-          done
-
-
-  shellcheck:
-    runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'push' ||
-      github.event.pull_request.draft == false
-    steps:
-
-      - uses: actions/checkout@v4
-
-      - name: Install shellcheck
-        run: sudo apt-get install shellcheck
-
-      - name: Run shellcheck
-        run: |
-          shellcheck --version
-          find -type f -not -path '*/.git/*' \
-          | xargs grep -l '^#!/bin/bash' \
-          | while read -r FILE
-          do
-             echo "--> $FILE"
-             shellcheck -x "$FILE"
           done
