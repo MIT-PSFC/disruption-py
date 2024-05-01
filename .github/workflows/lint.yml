@@ -16,6 +16,47 @@ on:
 jobs:
 
 
+  pylint:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      github.event.pull_request.draft == false
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - name: Install requirements
+        run: |
+          pip install -r .pip/main.txt -r .pip/dev.txt -r .pip/lab.txt
+          pip install -e .
+
+      - name: Run pylint
+        run: |
+          pylint --version
+          pylint disruption_py examples tests \
+          --msg-template='{path}:{line}:{column}: |{msg_id} {symbol}| {msg}' \
+          | tee pylint.log \
+          | grep -F '*****'
+
+      - name: Compute statistics
+        run: |
+          cut -s -d '|' -f 2 pylint.log \
+          | sort \
+          | uniq -c \
+          | sort -n \
+          | tee stats.log
+
+      - name: Extract worst offender
+        run: |
+          WORST=$(tail -n1 stats.log | grep -o '[IRCWEF][0-9]*')
+          grep "|$WORST" pylint.log
+
+      - name: Print final summary
+        run: |
+          tail pylint.log \
+          | grep '^Your code has been rated'
+
+
   shellcheck:
     runs-on: ubuntu-latest
     if: |
