@@ -115,7 +115,9 @@ jobs:
           python-version: '3.10'
 
       - name: Install yamllint
-        run: pip3 install yamllint
+        run: |
+          grep -oP 'yamllint.*?\ ' .pip/dev.txt \
+          | xargs pip install
 
       - name: Run yamllint
         run: |
