@@ -318,7 +318,7 @@ class BasicCmodRequests(ShotDataRequest):
 
         """
         divsafe_ip = np.where(ip != 0, ip, np.nan)
-        z_error = z_error_without_ip/np.abs(divsafe_ip)  # [m] not sure why this never caused issues in matlab? Also no |ip| before?
+        z_error = z_error_without_ip/np.abs(divsafe_ip)  # [m]
         z_prog_dpcs = interp1(pcstime, z_prog, dpcstime)
         z_cur = z_prog_dpcs + z_error  # [m]
         v_z = np.gradient(z_cur, dpcstime)  # m/s
