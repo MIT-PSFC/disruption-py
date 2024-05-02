@@ -11,17 +11,20 @@ import numpy as np
 import time
 import matplotlib.pyplot as plt
 import pickle
+import json
 
 # load all possile feature-sets and shot-lists
-# - try xarray instead
-with open('shot_lists.pkl', 'rb') as f:
-	shot_lists = pickle.load(f)
-with open('feature_sets.pkl', 'rb') as f:
-	feature_sets = pickle.load(f)
+with open("feature_sets.json","r") as f:
+    feature_sets = json.load(f)
+
+with open("shot_lists.json","r") as f:
+    shot_lists = json.load(f)
 
 # choose feature-set and shot-list
 shot_list = np.array(shot_lists['random100'])
 features = feature_sets['mhd']
+
+print(shot_list)
 
 # pull data
 
