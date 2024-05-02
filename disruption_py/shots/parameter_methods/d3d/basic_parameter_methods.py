@@ -988,8 +988,8 @@ class BasicD3DRequests(ShotDataRequest):
             # Place NaNs for broken channels
             lasers[laser]['te'][lasers[laser]['te'] == 0] = np.nan
             lasers[laser]['ne'][np.where(lasers[laser]['ne'] == 0)] = np.nan
-            params.logger.debug("_get_ne_te: Core bins", lasers['core']['te'].shape)
-            params.logger.debug("_get_ne_te: Tangential bins", lasers['tangential']['te'].shape)
+            params.logger.debug("_get_ne_te: Core bins {}".format(lasers['core']['te'].shape))
+            params.logger.debug("_get_ne_te: Tangential bins {}".format(lasers['tangential']['te'].shape))
         # If both systems/lasers available, combine them and interpolate the data
         # from the tangential system onto the finer (core) timebase
         if 'tangential' in lasers and lasers['tangential'] is not None:

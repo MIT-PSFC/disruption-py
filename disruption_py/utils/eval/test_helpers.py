@@ -23,7 +23,7 @@ def get_mdsplus_data(handler : Handler, shot_ids : List[int]) -> Dict[int, pd.Da
       """
     shot_settings = ShotSettings(
         efit_tree_name="efit18",
-        set_times_request="efit",
+        set_times_request="disruption_warning",
         log_settings=LogSettings(
             log_to_console=False,
             log_file_path="tests/cmod.log",

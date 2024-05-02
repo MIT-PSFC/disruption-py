@@ -272,6 +272,7 @@ class SignalSetTimesRequest(SetTimesRequest):
 _set_times_request_mappings: Dict[str, SetTimesRequest] = {
     "efit" : EfitSetTimesRequest(),
     "disruption" : DisruptionSetTimesRequest(),
+    "disruption_warning": {Tokamak.CMOD: EfitSetTimesRequest(), Tokamak.D3D: DisruptionSetTimesRequest()},
     "ip" : IpSetTimesRequest(),
 }
 # --8<-- [end:set_times_request_dict]

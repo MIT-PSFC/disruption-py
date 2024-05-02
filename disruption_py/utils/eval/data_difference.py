@@ -208,22 +208,22 @@ class DataDifference:
                 missing_timebase_length = len(self.mdsplus_column_data)
             return np.ones(missing_timebase_length, dtype=bool), np.zeros(missing_timebase_length)
         
+        
+        sql_is_nan = pd.isnull(self.sql_column_data)
+        mdsplus_is_nan = pd.isnull(self.mdsplus_column_data)
+        
         # handle case where both arrays are all null
-        if pd.isnull(self.sql_column_data).all() and pd.isnull(self.mdsplus_column_data).all():
+        if sql_is_nan.all() and mdsplus_is_nan.all():
             return np.zeros(len(self.mdsplus_column_data), dtype=bool), np.zeros(len(self.mdsplus_column_data))
         
         relative_difference = np.where(
             self.sql_column_data != 0, 
             np.abs((self.mdsplus_column_data - self.sql_column_data) / self.sql_column_data), 
-            np.where(self.mdsplus_column_data != 0, np.inf, np.nan)
-        )
+            np.where(self.mdsplus_column_data != 0, np.inf, np.nan), 
+        ).astype('float64') # necessary in case all produced values are nan
         
-        numeric_anomalies_mask = (relative_difference > VAL_TOLERANCE)
-        
-        sql_is_nan_ = pd.isnull(self.sql_column_data)
-        mdsplus_is_nan = pd.isnull(self.mdsplus_column_data)
-        nan_anomalies_mask = (sql_is_nan_ != mdsplus_is_nan)
-        
+        numeric_anomalies_mask = np.where(np.isnan(relative_difference), False, relative_difference > VAL_TOLERANCE)
+        nan_anomalies_mask = (sql_is_nan != mdsplus_is_nan)
         anomalies : pd.Series = numeric_anomalies_mask | nan_anomalies_mask
         
         return anomalies.to_numpy(), relative_difference 
