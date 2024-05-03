@@ -12,7 +12,7 @@ import pandas as pd
 from disruption_py.handlers.cmod_handler import Handler
 from disruption_py.utils.eval.data_difference import DataDifference
 from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment
-from disruption_py.utils.eval.eval_against_sql import get_mdsplus_data, get_sql_data_for_mdsplus, eval_against_sql
+from disruption_py.utils.eval.eval_against_sql import eval_shots_against_sql, get_failure_statistics_string, get_mdsplus_data, get_sql_data_for_mdsplus, eval_against_sql
 from disruption_py.utils.eval.environment_constants import get_test_handler, get_test_expected_failure_columns, get_test_shot_ids
 
 @pytest.fixture(scope='module')
@@ -32,7 +32,7 @@ def test_data_columns(shotlist : List[int], mdsplus_data : Dict[int, pd.DataFram
     if data_column in expected_failure_columns:
         pytest.xfail(f"Known failure for {data_column}")
     
-    data_differences = DataDifference.test_shots(
+    data_differences = eval_shots_against_sql(
         shot_ids=shotlist,
         mdsplus_data=mdsplus_data, 
         sql_data=sql_data, 
@@ -42,7 +42,7 @@ def test_data_columns(shotlist : List[int], mdsplus_data : Dict[int, pd.DataFram
     )
     
     if not fail_quick:
-        assert all((not data_difference.failed) for data_difference in data_differences), DataDifference.get_failure_statistics_string(
+        assert all((not data_difference.failed) for data_difference in data_differences), get_failure_statistics_string(
         data_differences, data_column=data_column)
     
     
@@ -56,7 +56,7 @@ def test_other_values(shotlist : List[int], mdsplus_data : Dict[int, pd.DataFram
     
     test_columns = mdsplus_columns.intersection(sql_columns).difference(data_columns)
     
-    data_differences = DataDifference.test_shots(
+    data_differences = eval_shots_against_sql(
         shot_ids=shotlist, 
         mdsplus_data=mdsplus_data, 
         sql_data=sql_data, 
@@ -69,7 +69,7 @@ def test_other_values(shotlist : List[int], mdsplus_data : Dict[int, pd.DataFram
         if any(data_column in expected_failure_columns for data_column in test_columns):
             pytest.xfail(f"Known failure for at least one column")
         
-        assert all((not data_difference.failed) for data_difference in data_differences), DataDifference.get_failure_statistics_string(data_differences)
+        assert all((not data_difference.failed) for data_difference in data_differences), get_failure_statistics_string(data_differences)
 
 
 if __name__ == '__main__':
@@ -94,5 +94,5 @@ if __name__ == '__main__':
         test_columns=data_columns
     )
     
-    print(DataDifference.get_failure_statistics_string(data_differences))
+    print(get_failure_statistics_string(data_differences))
 
