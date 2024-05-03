@@ -66,6 +66,7 @@ CMOD_TEST_COLUMNS = [
     'shot', 'commit_hash'
 ]
 CMOD_EXPECTED_FAILURE_COLUMNS = [
+    "Te_width",
     "z_error",
     "z_prog",
     "zcur",
