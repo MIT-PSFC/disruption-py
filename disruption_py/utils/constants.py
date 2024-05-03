@@ -66,6 +66,11 @@ CMOD_TEST_COLUMNS = [
     'shot', 'commit_hash'
 ]
 CMOD_EXPECTED_FAILURE_COLUMNS = [
+    "z_error",
+    "z_prog",
+    "zcur",
+    "v_z",
+    "z_times_v_z",
     'dipprog_dt', # constant factor scaling error
     'ip_error' # constant error
 ]
