@@ -1,6 +1,5 @@
 
 import logging
-import MDSplus
 import os
 import random
 import numpy as np
@@ -20,6 +19,7 @@ class ProcessMDSConnection():
 
         self.conn = None
         if conn_string != 'DoNotConnect':
+            import MDSplus
             self.conn = MDSplus.Connection(conn_string)
             try:
                 self.conn.get("shorten_path()")
@@ -225,8 +225,8 @@ class MDSConnection:
     """
 
     logger = logging.getLogger('disruption_py')
-    
-    def __init__(self, conn : MDSplus.Connection, shot_id : int):
+
+    def __init__(self, conn, shot_id : int):
         self.conn = conn
         self.shot_id = shot_id
         self.tree_nickname_funcs = {}
@@ -350,9 +350,6 @@ class MDSConnection:
             if self.fill_mongo:
                 self.mongo.add_cache(tree_name, path, arguments, ans)
 
-        if ans is None:
-            raise MDSplus.TreeNNF()
-
         return ans
 
     def get_data_with_dims(
@@ -401,13 +398,8 @@ class MDSConnection:
         dims = []
 
         if self.use_hsds or self.use_mongo:
-            try:
-                data = self.get(path)
-                dims = [ self.get(f'dim_of({path}, {dim_num})') for dim_num in dim_nums]
-            
-            except MDSplus.TreeNNF:
-                data = None
-                dims = []
+            data = self.get(path)
+            dims = [ self.get(f'dim_of({path}, {dim_num})') for dim_num in dim_nums]
 
         if self.use_mdsplus and (data is None or len(dims) < len(dim_nums)):
             # Avoid self.get() to avoid caching _sig
@@ -415,7 +407,7 @@ class MDSConnection:
             dims = [self.conn.get(f"dim_of(_sig,{dim_num})") for dim_num in dim_nums]
 
         if data is None or len(dims) < len(dim_nums):
-            raise MDSplus.TreeNNF()
+            return None, []
 
         return data, *dims
 
