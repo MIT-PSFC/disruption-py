@@ -31,7 +31,7 @@ def pytest_generate_tests(metafunc):
         test_columns = get_test_columns(tokamak)
         metafunc.parametrize("data_columns", [test_columns])
         
-    if "shotlist" in metafunc.fixturenames:
+    if "expected_failure_columns" in metafunc.fixturenames:
         test_expected_failure_columns = get_test_expected_failure_columns(tokamak)
         metafunc.parametrize("expected_failure_columns", [test_expected_failure_columns], scope="module")
 

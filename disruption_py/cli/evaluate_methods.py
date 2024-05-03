@@ -5,7 +5,7 @@ import logging
 from disruption_py.settings.shot_ids_request import ShotIdsRequestParams, shot_ids_request_runner
 from disruption_py.utils.eval.data_difference import DataDifference
 from disruption_py.utils.eval.environment_constants import get_test_expected_failure_columns, get_test_handler, get_test_shot_ids
-from disruption_py.utils.eval.test_helpers import test_against_sql
+from disruption_py.utils.eval.eval_against_sql import eval_against_sql
 from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment
@@ -31,7 +31,7 @@ def evaluate_accuracy(tokamak : Tokamak, shot_ids : list[int], fail_quick : bool
             np.gradient = original_function
     
     with monkey_patch_numpy_gradient():
-        data_differences = test_against_sql(
+        data_differences = eval_against_sql(
             handler=handler, 
             shot_ids=shot_ids, 
             expected_failure_columns=expected_failure_columns, 

@@ -56,7 +56,7 @@ def get_sql_data_for_mdsplus(handler : Handler, shot_ids : List[int], mdsplus_da
     return shot_data
 
 
-def test_against_sql(handler : Handler, shot_ids : List[int], expected_failure_columns : list[str], fail_quick : bool, test_columns = None,) -> Dict[int, pd.DataFrame]:    
+def eval_against_sql(handler : Handler, shot_ids : List[int], expected_failure_columns : list[str], fail_quick : bool, test_columns = None,) -> Dict[int, pd.DataFrame]:    
     mdsplus_data = get_mdsplus_data(handler, shot_ids)
     sql_data = get_sql_data_for_mdsplus(handler, shot_ids, mdsplus_data)
     

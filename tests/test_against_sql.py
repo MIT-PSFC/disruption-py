@@ -12,7 +12,7 @@ import pandas as pd
 from disruption_py.handlers.cmod_handler import Handler
 from disruption_py.utils.eval.data_difference import DataDifference
 from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment
-from disruption_py.utils.eval.test_helpers import get_mdsplus_data, get_sql_data_for_mdsplus, test_against_sql
+from disruption_py.utils.eval.eval_against_sql import get_mdsplus_data, get_sql_data_for_mdsplus, eval_against_sql
 from disruption_py.utils.eval.environment_constants import get_test_handler, get_test_expected_failure_columns, get_test_shot_ids
 
 @pytest.fixture(scope='module')
@@ -46,7 +46,7 @@ def test_data_columns(shotlist : List[int], mdsplus_data : Dict[int, pd.DataFram
         data_differences, data_column=data_column)
     
     
-def test_other_values(shotlist : List[int], mdsplus_data : Dict[int, pd.DataFrame], sql_data : Dict[int, pd.DataFrame], tested_data_columns : List[str], expected_failure_columns : List[str], fail_quick : bool):
+def test_other_values(shotlist : List[int], mdsplus_data : Dict[int, pd.DataFrame], sql_data : Dict[int, pd.DataFrame], data_columns : List[str], expected_failure_columns : List[str], fail_quick : bool):
     """
     Ensure that all parameters are calculated correctly in the MDSplus shot object.
     """
@@ -54,7 +54,7 @@ def test_other_values(shotlist : List[int], mdsplus_data : Dict[int, pd.DataFram
     mdsplus_columns = set().union(*(df.columns for df in mdsplus_data.values()))
     sql_columns = set().union(*(df.columns for df in sql_data.values()))
     
-    test_columns = mdsplus_columns.intersection(sql_columns).difference(tested_data_columns)
+    test_columns = mdsplus_columns.intersection(sql_columns).difference(data_columns)
     
     data_differences = DataDifference.test_shots(
         shot_ids=shotlist, 
@@ -86,7 +86,7 @@ if __name__ == '__main__':
     shot_ids = get_test_shot_ids(tokamak)
     expected_failure_columns = get_test_expected_failure_columns(tokamak)
     
-    data_differences = test_against_sql(
+    data_differences = eval_against_sql(
         handler=handler, 
         shot_ids=shot_ids, 
         expected_failure_columns=expected_failure_columns, 
