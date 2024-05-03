@@ -1,6 +1,5 @@
 
 import logging
-import MDSplus as mds
 import os
 import random
 
@@ -16,6 +15,7 @@ class ProcessMDSConnection():
     def __init__(self, conn_string : str):
         self.conn = None
         if conn_string != 'DoNotConnect':
+            import MDSplus as mds
             self.conn = mds.Connection(conn_string)
             
     def get_shot_connection(self, shot_id : int):
@@ -220,7 +220,7 @@ class MDSConnection:
 
     logger = logging.getLogger('disruption_py')
 
-    def __init__(self, conn : mds.Connection, shot_id : int):
+    def __init__(self, conn, shot_id : int):
         self.conn = conn
         self.shot_id = shot_id
         self.tree_nickname_funcs = {}
@@ -337,9 +337,6 @@ class MDSConnection:
             if self.fill_mongo:
                 self.mongo.add_cache(tree_name, expression, arguments, ans)
 
-        if ans is None:
-            raise mds.TreeNNF()
-
         return ans
 
     def get_record_data(self, path : str, tree_name : str = None, dim_nums : List = None) -> Tuple:
@@ -376,13 +373,8 @@ class MDSConnection:
         dims = []
 
         if self.use_hsds or self.use_mongo:
-            try:
-                data = self.get(path)
-                dims = [ self.get(f'dim_of({path}, {dim_num})') for dim_num in dim_nums]
-            
-            except mds.TreeNNF:
-                data = None
-                dims = []
+            data = self.get(path)
+            dims = [ self.get(f'dim_of({path}, {dim_num})') for dim_num in dim_nums]
 
         if self.use_mdsplus and (data is None or len(dims) < len(dim_nums)):
             # Avoid self.get() to avoid caching _sig
@@ -390,7 +382,7 @@ class MDSConnection:
             dims = [self.conn.get(f"dim_of(_sig,{dim_num})") for dim_num in dim_nums]
 
         if data is None or len(dims) < len(dim_nums):
-            raise mds.TreeNNF()
+            return None, []
 
         return data, *dims
 

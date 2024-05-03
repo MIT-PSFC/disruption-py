@@ -8,7 +8,7 @@ from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.math_utils import gaussian_fit, interp1, smooth
 from disruption_py.utils.utils import without_duplicates
 from disruption_py.shots.helpers.method_caching import cached_method, parameter_cached_method
-from MDSplus import mdsExceptions
+# from MDSplus import mdsExceptions
 
 try:
     import importlib.resources as importlib_resources
@@ -543,12 +543,11 @@ class BasicCmodRequests(ShotDataRequest):
         nodes = [r'\LH::TOP.RESULTS:NETPOW',
                  r"\rf::rf_power_net", r"\twopi_diode"]
         for i in range(3):
-            try:
-                sig, sig_time = params.mds_conn.get_record_data(nodes[i], tree_name=trees[i])
-                values[2*i] = sig.astype('float64')
-                values[2*i + 1] = sig_time
-            except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF) as e:
-                continue 
+            sig, sig_time = params.mds_conn.get_record_data(nodes[i], tree_name=trees[i])
+            if sig is None:
+                continue
+            values[2*i] = sig.astype('float64')
+            values[2*i + 1] = sig_time
         p_oh = BasicCmodRequests._get_ohmic_parameters(params=params)['p_oh']
         return BasicCmodRequests.get_power(params.shot_props.times, *values, p_oh)
 
