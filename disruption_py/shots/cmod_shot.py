@@ -713,7 +713,7 @@ class CModShot(Shot):
                     # add a small epsilon to 0's for reciprocal
                     beta_t[beta_t == 0] = 1e-10
                     efit_data["beta_p"][efit_data["beta_p"] == 0] = 1e-10
-                    efit_data['beta_n'] = np.reciprocal( np.reciprocal(beta_t) +  np.reciprocal(efit_data['beta_p']) )
+                    efit_data['beta_n'] = np.reciprocal( np.reciprocal(beta_t) + np.reciprocal(efit_data['beta_p']) )
                 except:
                     print("unable to get beta_n")
                     efit_data['beta_n'] = np.full(len(efit_time), np.nan)
@@ -1001,8 +1001,7 @@ class CModShot(Shot):
                 y_ok [0.26547867 0.30715826 0.08474186]
                 z_ok [-0.0762 -0.1346 -0.1693]
 
-                for shot 1040213005 used to fail.
-
+                for shot 1040213005 used to fail
                 I will suggest a different measure of width
                 that may be comparable. 
                 """
@@ -1042,9 +1041,10 @@ class CModShot(Shot):
             ts_data = electron_tree.getNode(
                 node_path + ":te_rz").getData().data()
             ts_time = electron_tree.getNode(
-                node_path + ":te_rz").getData().dim_of(0)
+                    node_path + ":te_rz").getData().dim_of(0)
             ts_z = electron_tree.getNode(
                 node_path + ":z_sorted").getData().data()
+            ts_rho =  electron_tree.getNode(f"{node_path}:rho_t").getData().data()
         except Exception as e:
             self.logger.warning(f"[Shot {self._shot_id}] Failed to get TS data with 2000+ method")
             try:
@@ -1055,11 +1055,35 @@ class CModShot(Shot):
                     r"\thom_profile:te_rz_t").getData().dim_of(0)
                 ts_z = electron_tree.getNode(
                     r"\thom_profile:z_sorted").getData().data()
+                ts_rho =  electron_tree.getNode(r"\thom_profile:rho_t").getData().data()
             except Exception as e:
                 self.logger.warning(f"[Shot {self._shot_id}] Failed to get TS data with second 2000+ method")
                 self.logger.debug(f"[Shot {self._shot_id}] {traceback.format_exc()}")                
                 te_hwm.fill(np.nan)
                 return pd.DataFrame({"Te_width": te_hwm})
+                # Create a list of column names
+        columns = [f"ts_{i}" for i in range(ts_data.shape[0])]
+
+        # Convert numpy array to pandas DataFrame
+        ts_df = pd.DataFrame(ts_data.T, columns=columns)
+        ts_rho_df = pd.DataFrame(ts_rho.T, columns=columns)
+        ts_z_df = pd.DataFrame(ts_z.reshape(1, -1), columns=columns)
+
+        columns_to_add = 20 - ts_data.shape[0]
+        
+        if columns_to_add > 0:
+            for i in range(columns_to_add):
+                ts_df[f"ts_{ts_data.shape[0] + i}"] = np.nan
+                ts_rho_df[f"ts_{ts_data.shape[0] + i}"] = np.nan
+                ts_z_df[f"ts_{ts_data.shape[0] + i}"] = np.nan
+
+        ts_df["time"] = ts_time.data()
+        ts_rho_df["time"] = ts_time.data()
+
+        ts_df.to_csv(f"ts_data_{self._shot_id}.csv")
+        ts_rho_df.to_csv(f"ts_rho_{self._shot_id}.csv")
+        ts_z_df.to_csv(f"ts_z_{self._shot_id}.csv")
+
         return CModShot.get_Ts_parameters(self._times, ts_data, ts_time, ts_z)
 
     # TODO: Finish
@@ -1467,6 +1491,7 @@ class CModShot(Shot):
         nlts = 1e32
         nlts_t = 1e32
         t, z, n_e, n_e_sig = self.map_ts2tci(nlnum)
+
         if z[0, 0] == 1e32:
             return None, None  # TODO: Log and maybe return nan arrs
         nts = len(t)
@@ -1698,6 +1723,9 @@ class CModShot(Shot):
         Te_interp = Te_interpolator(timebase_mesh, rhobase_mesh)
         ne_interp = ne_interpolator(timebase_mesh, rhobase_mesh)
 
+
+        # What Allen wants: p_Te and n_te, and EFIT Volume 
+
         plotting = False
         if plotting:
             import matplotlib.pyplot as plt
@@ -1816,7 +1844,7 @@ class CModShot(Shot):
         pass
 
     # TODO: Finish
-    @parameter_cached_method(
+    @parameter_cached_method( # Allen wants: H98, Wmhd, btor, dWmhd_dt, p_input, tritop, tribot, 
         tags=['experimental'],
         columns=["H98", "Wmhd", "btor", "dWmhd_dt", "p_input"],
         contained_cached_methods=["_get_power", "_get_EFIT_parameters", "_get_densities", "_get_ip_parameters"], 
