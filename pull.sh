@@ -67,6 +67,8 @@ do
 
       {
 
+      TSTART=$SECONDS
+
       # read status
       STATUS="Install / $(basename "$VENV") @ ${HOSTNAME%-*}"
       STATE=
@@ -145,7 +147,7 @@ do
 
       # status
       [[ -z "$SHA" ]] && exit 0
-      echo "{\"state\":\"$STATE\",\"description\":\"Updated on $TODAY in ${SECONDS} s\",\"context\":\"$STATUS\"}" \
+      echo "{\"state\":\"$STATE\",\"description\":\"Updated on $TODAY in $((SECONDS-TSTART)) s\",\"context\":\"$STATUS\"}" \
       | tee "$LOG/data.json" \
       | curl -s \
          -X POST \
