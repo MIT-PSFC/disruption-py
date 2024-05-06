@@ -73,6 +73,7 @@ do
       if [[ -n "$SHA" ]] && [[ -s "$LOG/sha.json" ]]
       then
          STATE=$(jq -r "sort_by(.updated_at) | map(select(.context == \"$STATUS\")) | last.state" "$LOG/sha.json" 2> /dev/null)
+         [[ "$STATE" = "null" ]] && STATE=
       fi
 
       # activate
