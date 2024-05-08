@@ -74,11 +74,11 @@ def test_other_values(shotlist : List[int], mdsplus_data : Dict[int, pd.DataFram
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--fail-quick', action='store_true')
+    parser.add_argument('--fail-slow', action='store_true', help="Get summary of column failures, for specified column(s)")
     parser.add_argument('--data-column', default=None, help='Data column to test, use all data columns if not specified')
     args = parser.parse_args()
     
-    fail_quick = args.fail_quick
+    fail_quick = not args.fail_slow
     data_columns = [args.data_column] if args.data_column else None
     tokamak = get_tokamak_from_environment()
     
