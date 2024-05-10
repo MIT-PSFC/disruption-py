@@ -3,17 +3,11 @@ import pytest
 import os
 import pandas as pd
 
-from disruption_py.handlers.cmod_handler import CModHandler
+from disruption_py.handlers.handler import Handler
 from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.shot_settings import ShotSettings
 
-TEST_SHOTS = {
-    "flattop_fast": 1150805012,
-    "nodisrup1_full": 1150805013,
-    "nodisrup2_full": 1150805014,
-    "rampdown1_full": 1150805015,
-    "rampdown2_full": 1150805016,
-}
+FAST_SHOT_COUNT = 1
 
 TEST_SETTINGS = {
     "default_fast": ShotSettings(),
@@ -55,15 +49,10 @@ TEST_SETTINGS = {
 
 
 @pytest.fixture(scope="module")
-def cmod_handler():
-    return CModHandler()
-
-
-@pytest.fixture(scope="module")
-def shot_list():
+def testing_shotlist(shotlist):
     if "GITHUB_ACTIONS" in os.environ:
-        return [v for k, v in TEST_SHOTS.items() if k.endswith("_fast")]
-    return list(TEST_SHOTS.values())
+        return shotlist[:FAST_SHOT_COUNT]
+    return shotlist
 
 
 @pytest.fixture(scope="module")
@@ -78,12 +67,12 @@ def shot_settings_keys():
 )
 @pytest.mark.parametrize("shot_settings_key", TEST_SETTINGS.keys())
 def test_features_serial(
-    cmod_handler, shot_list, shot_settings_key, shot_settings_keys
+    handler : Handler, testing_shotlist, shot_settings_key, shot_settings_keys
 ):
     if shot_settings_key not in shot_settings_keys:
         pytest.skip("fast execution")
-    results = cmod_handler.get_shots_data(
-        shot_ids_request=shot_list,
+    results = handler.get_shots_data(
+        shot_ids_request=testing_shotlist,
         shot_settings=TEST_SETTINGS[shot_settings_key],
         output_type_request=[
             "list",
@@ -96,15 +85,15 @@ def test_features_serial(
     list_output, df_output, csv_processed, hdf_processed = results
     assert isinstance(list_output, list)
     assert isinstance(df_output, pd.DataFrame)
-    assert csv_processed == hdf_processed == len(shot_list)
+    assert csv_processed == hdf_processed == len(testing_shotlist)
 
 
 @pytest.mark.skipif(
     os.path.exists("/fusion/projects/disruption_warning"), reason="on DIII-D"
 )
-def test_features_parallel(cmod_handler, shot_list):
-    results = cmod_handler.get_shots_data(
-        shot_ids_request=shot_list,
+def test_features_parallel(handler : Handler, testing_shotlist):
+    results = handler.get_shots_data(
+        shot_ids_request=testing_shotlist,
         shot_settings=TEST_SETTINGS["default_fast"],
         output_type_request=[
             "list",
@@ -117,7 +106,7 @@ def test_features_parallel(cmod_handler, shot_list):
     list_output, df_output, csv_processed, hdf_processed = results
     assert isinstance(list_output, list)
     assert isinstance(df_output, pd.DataFrame)
-    assert csv_processed == hdf_processed == len(shot_list)
+    assert csv_processed == hdf_processed == len(testing_shotlist)
 
 
 @pytest.fixture(scope="session", autouse=True)
