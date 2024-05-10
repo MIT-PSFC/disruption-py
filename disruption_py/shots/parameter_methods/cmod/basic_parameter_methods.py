@@ -8,6 +8,7 @@ from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.math_utils import gaussian_fit, interp1, smooth
 from disruption_py.utils.utils import without_duplicates
 from disruption_py.shots.helpers.method_caching import cached_method, parameter_cached_method
+from disruption_py.mdsplus_integration.mds_connection import MDSplusException
 # from MDSplus import mdsExceptions
 
 try:
@@ -139,7 +140,7 @@ class CModEfitRequests(ShotDataRequest):
         """
         values = []
         for expr in [r'_lf=\analysis::efit_aeqdsk:lflag', r'_l0=((sum(_lf,1) - _lf[*,20] - _lf[*,1])==0)', r'_n=\analysis::efit_fitout:nitera,(_l0 and (_n>4))']:
-            values.append(params.mds_conn.get(expr, tree_name='analysis'))
+            values.append(params.mds_conn.get_data(expr, tree_name='analysis'))
         _n = values[2]
         valid_indices = np.nonzero(_n)
         times, = params.mds_conn.get_dims(r'\analysis::efit_aeqdsk:lflag', tree_name='analysis')
@@ -150,45 +151,45 @@ class BasicCmodRequests(ShotDataRequest):
     @cached_method(used_trees=["pcs"], cache_between_threads=False, tokamak=Tokamak.CMOD)
     def get_active_wire_segments(params : ShotDataRequestParams):
         params.mds_conn.open_tree(tree_name="pcs")
-        # root_nid = params.mds_conn.get('GetDefaultNid()')
-        # children_nids = params.mds_conn.get('getnci(getnci($, "CHILDREN_NIDS"), "NID_NUMBER")', arguments=root_nid)
-        # children_paths = params.mds_conn.get('getnci($, "FULLPATH")', arguments=children_nids)
-        # children_on = params.mds_conn.get(f'getnci($, "STATE")', arguments=children_nids) 
+        # root_nid = params.mds_conn.get_data('GetDefaultNid()')
+        # children_nids = params.mds_conn.get_data('getnci(getnci($, "CHILDREN_NIDS"), "NID_NUMBER")', arguments=root_nid)
+        # children_paths = params.mds_conn.get_data('getnci($, "FULLPATH")', arguments=children_nids)
+        # children_on = params.mds_conn.get_data(f'getnci($, "STATE")', arguments=children_nids) 
         
         # Collect active segments and their information
         active_segments = []
         children_paths = ['SEG_01', 'SEG_02', 'SEG_03', 'SEG_04', ]
-        on = params.mds_conn.get(f'getnci({children_paths}, "STATE")', tree_name='pcs' )
+        on = params.mds_conn.get_data(f'getnci({children_paths}, "STATE")', tree_name='pcs' )
         for path, is_on in zip(children_paths, on):
             if not is_on:
-                active_segments.append((path, params.mds_conn.get(path+":start_time", tree_name="pcs")))
+                active_segments.append((path, params.mds_conn.get_data(path+":start_time", tree_name="pcs")))
 
         # for node_path, is_on in zip(children_paths, children_on):
         #     node_path = node_path.strip()
         #     if node_path.split(".")[-1].startswith("SEG_") and is_on == 0: # 0 represents node being on, 1 represents node being off
-        #         active_segments.append((node_path, params.mds_conn.get(node_path+":start_time", tree_name="pcs")))
+        #         active_segments.append((node_path, params.mds_conn.get_data(node_path+":start_time", tree_name="pcs")))
         # (slw) TODO: This needs to be rewritten for MongoDB
 
         # active_segments = []
         # for i in range(1, 5):
-        #     data = params.mds_conn.get(f"\\pcs::top.seg_0{i}:start_time", tree_name='pcs')
+        #     data = params.mds_conn.get_data(f"\\pcs::top.seg_0{i}:start_time", tree_name='pcs')
         #     if data is not None:
         #         active_segments.append((f"seg_0{i}", data))
 
         return active_segments
 
         # params.mds_conn.open_tree(tree_name="pcs")
-        # root_nid = params.mds_conn.get('GetDefaultNid()')
-        # children_nids = params.mds_conn.get('getnci(getnci($, "CHILDREN_NIDS"), "NID_NUMBER")', arguments=root_nid)
-        # children_paths = params.mds_conn.get('getnci($, "FULLPATH")', arguments=children_nids)
-        # children_on = params.mds_conn.get(f'getnci($, "STATE")', arguments=children_nids)
+        # root_nid = params.mds_conn.get_data('GetDefaultNid()')
+        # children_nids = params.mds_conn.get_data('getnci(getnci($, "CHILDREN_NIDS"), "NID_NUMBER")', arguments=root_nid)
+        # children_paths = params.mds_conn.get_data('getnci($, "FULLPATH")', arguments=children_nids)
+        # children_on = params.mds_conn.get_data(f'getnci($, "STATE")', arguments=children_nids)
         
         # # Collect active segments and their information
         # active_segments = []
         # for node_path, is_on in zip(children_paths, children_on):
         #     node_path = node_path.strip()
         #     if node_path.split(".")[-1].startswith("SEG_") and is_on == 0: # 0 represents node being on, 1 represents node being off
-        #         active_segments.append((node_path, params.mds_conn.get(node_path+":start_time", tree_name="pcs")))
+        #         active_segments.append((node_path, params.mds_conn.get_data(node_path+":start_time", tree_name="pcs")))
 
         # active_segments.sort(key=lambda n: n[1])
         # return active_segments
@@ -291,7 +292,7 @@ class BasicCmodRequests(ShotDataRequest):
                             end = pcstime[np.argmin(np.abs(pcstime - sigtime[-1])+ .0001)]
                             segment_indices = np.where((pcstime >= start) & (pcstime <= end))
                             ip_prog[segment_indices] = ip_prog_temp[segment_indices]
-                    except mdsExceptions.MdsException as e:
+                    except MDSplusException as e:
                         params.logger.warning([f"[Shot {params.shot_props.shot_id}]: Error getting PID gains for wire {wire_index}"])
                         params.logger.debug([f"[Shot {params.shot_props.shot_id}]: {traceback.format_exc()}"])
                     break # Break out of wire_index loop
@@ -392,7 +393,7 @@ class BasicCmodRequests(ShotDataRequest):
                                 np.where((pcstime >= start) & (pcstime <= end))]
                             z_prog[segment_indices] = z_prog_temp[segment_indices]
                             break
-                    except mdsExceptions.MdsException as e:
+                    except MDSplusException as e:
                         params.logger.debug(f"[Shot {params.shot_props.shot_id}]: {traceback.format_exc()}")
                         continue  # TODO: Consider raising appropriate error
                 else:
@@ -817,7 +818,7 @@ class BasicCmodRequests(ShotDataRequest):
         try:
             ts_data, ts_time = params.mds_conn.get_data_with_dims(node_path + ":te_rz", tree_name='electrons')
             ts_z = params.mds_conn.get_data(node_path + ":z_sorted", tree_name='electrons')
-        except mdsExceptions.MdsException as e:
+        except MDSplusException as e:
             params.logger.debug(f"[Shot {params.shot_props.shot_id}] {traceback.format_exc()}")
             te_hwm.fill(np.nan)
             return pd.DataFrame({"Te_width": te_hwm})
@@ -884,7 +885,7 @@ class BasicCmodRequests(ShotDataRequest):
             calib = np.nan
             # TODO(lajz): fix
             return BasicCmodRequests.get_Ts_parameters(params.shot_props.times, TS_time, ne_PF, Te_PF, pressure_PF)
-        except mdsExceptions.MdsException as e:
+        except MDSplusException as e:
             return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
 
     @staticmethod
@@ -899,7 +900,7 @@ class BasicCmodRequests(ShotDataRequest):
             r0 = 0.01* params.mds_conn.get_data(r'\efit_aeqdsk:rmagx', tree_name="cmod")
             z0 = 0.01 * params.mds_conn.get_data(r'\efit_aeqdsk:zmagx', tree_name="cmod")
             aminor, efit_time = params.mds_conn.get_data_with_dims(r'\efit_aeqdsk:aminor', tree_name='_efit_tree')
-        except mdsExceptions.MdsException as e:
+        except MDSplusException as e:
             params.logger.debug(f"[Shot {params.shot_props.shot_id}]: Failed to get efit data")
             return pd.DataFrame({"prad_peaking": prad_peaking})
         got_axa = False 
@@ -912,7 +913,7 @@ class BasicCmodRequests(ShotDataRequest):
             z_axa = params.mds_conn.get_data(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXA:Z_O", tree_name='spectroscopy')
             good_axa = params.mds_conn.get_data(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXA:GOOD", tree_name='spectroscopy')
             got_axa = True 
-        except mdsExceptions.MdsException as e:
+        except MDSplusException as e:
             params.logger.debug(f"[Shot {params.shot_props.shot_id}]: Failed to get AXA data")
         got_axj = False 
         try: 
@@ -924,7 +925,7 @@ class BasicCmodRequests(ShotDataRequest):
             z_axj = params.mds_conn.get_data(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXJ:Z_O", tree_name='spectroscopy')
             good_axj = params.mds_conn.get_data(r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXJ:GOOD", tree_name='spectroscopy')
             got_axj = True
-        except mdsExceptions.MdsException as e:
+        except MDSplusException as e:
             params.logger.debug(f"[Shot {params.shot_props.shot_id}]: Failed to get AXJ data")
         if not (got_axa or got_axj):
             return pd.DataFrame({"prad_peaking": prad_peaking})
@@ -1037,7 +1038,7 @@ class BasicCmodRequests(ShotDataRequest):
             calib = np.nan
             # TODO(lajz): fix
             return BasicCmodRequests.get_Ts_parameters(params.shot_props.times, TS_time, ne_PF, Te_PF, pressure_PF)
-        except mdsExceptions.MdsException as e:
+        except MDSplusException as e:
             params.logger.debug(f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}")
             return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking": Te_PF, "pressure_peaking": pressure_PF})
 
@@ -1387,7 +1388,7 @@ class ThomsonDensityMeasure:
         t1 = np.amin(efit_times)
         t2 = np.amax(efit_times)
         psia, psia_t = params.mds_conn.get_data_with_dims(r'\efit_aeqdsk:SIBDRY', tree_name="_efit_tree")
-        psi_0 = params.mds_conn.get(r'\efit_aeqdsk:SIMAGX', tree_name="_efit_tree")
+        psi_0 = params.mds_conn.get_data(r'\efit_aeqdsk:SIMAGX', tree_name="_efit_tree")
         nets_core, nets_core_t = params.mds_conn.get_data_with_dims(
             '.YAG_NEW.RESULTS.PROFILES:NE_RZ', tree_name="electrons")
         nets_core_err = params.mds_conn.get_data(
@@ -1400,11 +1401,11 @@ class ThomsonDensityMeasure:
         try:
             nets_edge = params.mds_conn.get_data(r'\ts_ne')
             nets_edge_err = params.mds_conn.get_data(r'\ts_ne_err')
-        except mdsExceptions.mdsException as err:
+        except MDSplusException as err:
             nets_edge = np.zeros((len(nets_core[:, 1]), mts_edge))
             nets_edge_err = nets_edge + 1e20
         mts = mts_core + mts_edge
-        rts = params.mds_conn.get(
+        rts = params.mds_conn.get_data(
             '.YAG.RESULTS.PARAM:R') + np.zeros((1, mts))
         rtci = params.mds_conn.get_data('.tci.results:rad')
         nts = len(nets_core_t)

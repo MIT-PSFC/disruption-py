@@ -13,7 +13,9 @@ class CModDatabase(ShotDatabase):
     def default(**kwargs):
         profile = os.path.expanduser("~/logbook.sybase_login")
         with open(profile, "r") as fio:
-            db_server, db_name, db_user, db_pass = fio.read().split()
+            config = [line.strip() for line in fio.readlines()]
+            # TODO: Account for the optional proxy server on the first line
+            _, db_server, db_name, db_user, db_pass = config
         kw = dict(
             driver="ODBC Driver 18 for SQL Server",
             host=db_server,

@@ -857,7 +857,7 @@ class BasicD3DRequests(ShotDataRequest):
         try:
             zeff, t_zeff = params.mds_conn.get_data_with_dims(r'\d3d::top.spectroscopy.vb.zeff:zeff', tree_name="d3d")
             t_zeff = t_zeff/1.e3  # [ms] -> [s]
-            # t_nbi = params.mds_conn.get(
+            # t_nbi = params.mds_conn.get_data(
             # r"dim_of(\d3d::top.nb:pinj)").data()/1.e3  # [ms]->[s]
             if len(t_zeff) > 2:
                 zeff = interp1(t_zeff, zeff, params.shot_props.times,
@@ -884,7 +884,7 @@ class BasicD3DRequests(ShotDataRequest):
         a_minor = params.mds_conn.get_data(r'\efit_a_eqdsk:aminor', tree_name="_efit_tree")
         area = params.mds_conn.get_data(r'\efit_a_eqdsk:area', tree_name="_efit_tree")
         chisq = params.mds_conn.get_data(r'\efit_a_eqdsk:chisq', tree_name="_efit_tree")
-        t = params.mds_conn.get(r'\efit_a_eqdsk:atime', tree_name="_efit_tree")
+        t = params.mds_conn.get_data(r'\efit_a_eqdsk:atime', tree_name="_efit_tree")
         kappa_area = area / (np.pi * a_minor**2)
         invalid_indices = np.where(chisq > 50)
         kappa_area[invalid_indices] = np.nan
