@@ -53,7 +53,7 @@ class ShotSettings:
     set_times_request : SetTimesRequest
         The set times request to be used when setting the timebase for the shot. The retrieved data will
         be interpolated to this timebase. Can pass any SetTimesRequestType that resolves to a SetTimesRequest.
-        See SetTimesRequest for more details. Defaults to "efit".
+        See SetTimesRequest for more details. Defaults to "disruption_warning".
     signal_domain : SignalDomain
         The domain of the timebase that should be used when retrieving data for the shot. Either "full", 
         "flattop", or "rampup_and_flattop". Can pass either a SignalDomain or the associated string. Defaults 
@@ -91,7 +91,7 @@ class ShotSettings:
     shot_data_requests : List[ShotDataRequest] = field(default_factory=list)
 
     # Timebase setting
-    set_times_request : SetTimesRequest = "efit"
+    set_times_request : SetTimesRequest = "disruption_warning"
     signal_domain : SignalDomain = "full"
     use_existing_data_timebase : bool = False
     interpolation_method : InterpolationMethod = "linear"

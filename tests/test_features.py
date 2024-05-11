@@ -29,10 +29,12 @@ TEST_SETTINGS = {
         run_tags=[],
         run_methods=["_get_ip_parameters"],
     ),
-    "rampup_fast": ShotSettings(
-        efit_tree_name="analysis",
-        signal_domain="rampup_and_flattop",
-    ),
+    "rampup_fast": {
+        "cmod": ShotSettings(
+            efit_tree_name="analysis",
+            signal_domain="rampup_and_flattop",
+        )
+    },
     "logging_full": ShotSettings(
         log_settings=LogSettings(
             log_file_path=f"{__file__}.log",
@@ -54,23 +56,20 @@ def testing_shotlist(shotlist):
         return shotlist[:FAST_SHOT_COUNT]
     return shotlist
 
-
-@pytest.fixture(scope="module")
-def shot_settings_keys():
-    if "GITHUB_ACTIONS" in os.environ:
-        return [k for k in TEST_SETTINGS if k.endswith("_fast")]
-    return TEST_SETTINGS.keys()
-
-
-@pytest.mark.skipif(
-    os.path.exists("/fusion/projects/disruption_warning"), reason="on DIII-D"
-)
 @pytest.mark.parametrize("shot_settings_key", TEST_SETTINGS.keys())
 def test_features_serial(
-    handler : Handler, testing_shotlist, shot_settings_key, shot_settings_keys
+    handler : Handler, tokamak, testing_shotlist, shot_settings_key
 ):
-    if shot_settings_key not in shot_settings_keys:
+    if "GITHUB_ACTIONS" in os.environ and "_fast" in shot_settings_key:
         pytest.skip("fast execution")
+    
+    test_setting = TEST_SETTINGS[shot_settings_key]
+    if isinstance(test_setting, dict):
+        if tokamak.value in test_setting:
+            test_setting[tokamak.value]
+        else:
+            pytest.skip(f"not tested for tokamak {tokamak.value}") 
+    
     results = handler.get_shots_data(
         shot_ids_request=testing_shotlist,
         shot_settings=TEST_SETTINGS[shot_settings_key],
@@ -88,9 +87,6 @@ def test_features_serial(
     assert csv_processed == hdf_processed == len(testing_shotlist)
 
 
-@pytest.mark.skipif(
-    os.path.exists("/fusion/projects/disruption_warning"), reason="on DIII-D"
-)
 def test_features_parallel(handler : Handler, testing_shotlist):
     results = handler.get_shots_data(
         shot_ids_request=testing_shotlist,
