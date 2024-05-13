@@ -78,11 +78,10 @@ CMOD_EXPECTED_FAILURE_COLUMNS = [
 
 
 D3D_TEST_SHOTS = {
-    "flattop_fast": 1150805012,
-    "nodisrup1_full": 1150805013,
-    "nodisrup2_full": 1150805014,
-    "rampdown1_full": 1150805015,
-    "rampdown2_full": 1150805016,
+    "disrup1_fast": 161228,
+    "disrup2_full": 161237,
+    "no_disrup1_full": 166177,
+    "no_disrup2_full": 166253,
 }
 D3D_TEST_COLUMNS = [
     'shot', 'time', 'time_until_disrupt', 'ip_error', 'dip_dt',

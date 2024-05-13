@@ -32,7 +32,7 @@ def get_test_shot_ids(tokamak : Tokamak) -> list[int]:
         raise ValueError("Tokamak {} not supported for this test".format(tokamak))
     
     if "GITHUB_ACTIONS" in os.environ:
-        shot_id_dict = dict(filter(lambda key, _: "_fast" in key, shot_id_dict))
+        shot_id_dict = {key: value for key, value in shot_id_dict.items() if "_fast" in key}
         
     return list(shot_id_dict.values())
 
