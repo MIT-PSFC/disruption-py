@@ -40,18 +40,18 @@ DERIVED_PAPER_COLS = [
 
 # Shot list used for testing
 # Mix of disruptive and non-disruptive shots present in SQL and MDSplus
-CMOD_TEST_SHOTS = [
-    1150805012,   # Flattop Disruption
-    1150805013,     # No Disruption
-    1150805014,     # No Disruption
-    1150805015,     # Rampdown Disruption
-    1150805016,     # Rampdown Disruption
-    1150805017,     # Rampdown Disruption
-    1150805019,     # Rampdown Disruption
-    1150805020,     # Rampdown Disruption
-    1150805021,     # Rampdown Disruption
-    1150805022      # Flattop Disruption
-]
+CMOD_TEST_SHOTS = {
+    "flattop1_fast": 1150805012,
+    "no_disrup1_full": 1150805013,
+    "no_disrup2_full": 1150805014,
+    "rampdown1_full": 1150805015,
+    "rampdown2_full": 1150805016,
+    "rampdown3_full": 1150805017,
+    "rampdown4_full": 1150805019,
+    "rampdown5_full": 1150805020,
+    "rampdown6_full": 1150805021,
+    "flattop2_full": 1150805022,
+}
 CMOD_TEST_COLUMNS = [
     'I_efc', 'sxr', 'time_until_disrupt', 'beta_n', 'beta_p', 'kappa', 'li',
     'upper_gap', 'lower_gap', 'q0', 'qstar', 'q95', 'v_loop_efit', 'Wmhd',
@@ -77,12 +77,13 @@ CMOD_EXPECTED_FAILURE_COLUMNS = [
 ]
 
 
-D3D_TEST_SHOTS = [
-    161228, # disruptive
-    161237, # disruptive
-    166177, # non disruptive 
-    166253
-]
+D3D_TEST_SHOTS = {
+    "flattop_fast": 1150805012,
+    "nodisrup1_full": 1150805013,
+    "nodisrup2_full": 1150805014,
+    "rampdown1_full": 1150805015,
+    "rampdown2_full": 1150805016,
+}
 D3D_TEST_COLUMNS = [
     'shot', 'time', 'time_until_disrupt', 'ip_error', 'dip_dt',
     'beta_p', 'beta_n', 'li', 'n_equal_1_mode_IRLM', 'z_error', 'v_z',

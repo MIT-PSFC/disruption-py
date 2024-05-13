@@ -1,3 +1,4 @@
+import os
 from disruption_py.handlers.cmod_handler import CModHandler
 from disruption_py.handlers.d3d_handler import D3DHandler
 from disruption_py.utils.constants import CMOD_EXPECTED_FAILURE_COLUMNS, CMOD_TEST_COLUMNS, CMOD_TEST_SHOTS, D3D_EXPECTED_FAILURE_COLUMNS, D3D_TEST_COLUMNS, D3D_TEST_SHOTS
@@ -22,13 +23,18 @@ def get_test_handler(tokamak : Tokamak):
         raise ValueError("Tokamak {} not supported for this test".format(tokamak))
 
 
-def get_test_shot_ids(tokamak : Tokamak):
+def get_test_shot_ids(tokamak : Tokamak) -> list[int]:
     if tokamak == Tokamak.CMOD:
-        return CMOD_TEST_SHOTS
+        shot_id_dict = CMOD_TEST_SHOTS
     elif tokamak == Tokamak.D3D:
-        return D3D_TEST_SHOTS
+        shot_id_dict =  D3D_TEST_SHOTS
     else:
         raise ValueError("Tokamak {} not supported for this test".format(tokamak))
+    
+    if "GITHUB_ACTIONS" in os.environ:
+        shot_id_dict = dict(filter(lambda key, _: "_fast" in key, shot_id_dict))
+        
+    return list(shot_id_dict.values())
 
 
 def get_test_columns(tokamak : Tokamak):

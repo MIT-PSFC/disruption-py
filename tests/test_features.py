@@ -7,8 +7,6 @@ from disruption_py.handlers.handler import Handler
 from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.shot_settings import ShotSettings
 
-FAST_SHOT_COUNT = 1
-
 TEST_SETTINGS = {
     "default_fast": ShotSettings(),
     "sqlcache_full": ShotSettings(existing_data_request="sql"),
@@ -49,16 +47,9 @@ TEST_SETTINGS = {
     ),
 }
 
-
-@pytest.fixture(scope="module")
-def testing_shotlist(shotlist):
-    if "GITHUB_ACTIONS" in os.environ:
-        return shotlist[:FAST_SHOT_COUNT]
-    return shotlist
-
 @pytest.mark.parametrize("shot_settings_key", TEST_SETTINGS.keys())
 def test_features_serial(
-    handler : Handler, tokamak, testing_shotlist, shot_settings_key
+    handler : Handler, tokamak, shotlist, shot_settings_key
 ):
     if "GITHUB_ACTIONS" in os.environ and "_fast" in shot_settings_key:
         pytest.skip("fast execution")
@@ -66,13 +57,13 @@ def test_features_serial(
     test_setting = TEST_SETTINGS[shot_settings_key]
     if isinstance(test_setting, dict):
         if tokamak.value in test_setting:
-            test_setting[tokamak.value]
+            test_setting = test_setting[tokamak.value]
         else:
             pytest.skip(f"not tested for tokamak {tokamak.value}") 
     
     results = handler.get_shots_data(
-        shot_ids_request=testing_shotlist,
-        shot_settings=TEST_SETTINGS[shot_settings_key],
+        shot_ids_request=shotlist,
+        shot_settings=test_setting,
         output_type_request=[
             "list",
             "dataframe",
@@ -84,12 +75,12 @@ def test_features_serial(
     list_output, df_output, csv_processed, hdf_processed = results
     assert isinstance(list_output, list)
     assert isinstance(df_output, pd.DataFrame)
-    assert csv_processed == hdf_processed == len(testing_shotlist)
+    assert csv_processed == hdf_processed == len(shotlist)
 
 
-def test_features_parallel(handler : Handler, testing_shotlist):
+def test_features_parallel(handler : Handler, shotlist):
     results = handler.get_shots_data(
-        shot_ids_request=testing_shotlist,
+        shot_ids_request=shotlist,
         shot_settings=TEST_SETTINGS["default_fast"],
         output_type_request=[
             "list",
@@ -102,7 +93,7 @@ def test_features_parallel(handler : Handler, testing_shotlist):
     list_output, df_output, csv_processed, hdf_processed = results
     assert isinstance(list_output, list)
     assert isinstance(df_output, pd.DataFrame)
-    assert csv_processed == hdf_processed == len(testing_shotlist)
+    assert csv_processed == hdf_processed == len(shotlist)
 
 
 @pytest.fixture(scope="session", autouse=True)
