@@ -5,15 +5,14 @@ execute a simple fetch to test MDSplus connection.
 """
 
 import os
-from disruption_py.handlers.cmod_handler import CModHandler
-from disruption_py.handlers.d3d_handler import D3DHandler
+from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment, get_test_handler
 
+tokamak = get_tokamak_from_environment()
+handler = get_test_handler(tokamak)
 if os.getenv("DIIID_TEST", False) or os.path.exists("/fusion/projects/disruption_warning"):
-    handler = D3DHandler()
     shot = 161228
     shape = (196,)
 else:
-    handler = CModHandler()
     shot = 1150805012
     shape = (2400,)
 mds = handler.mds_connection.conn

@@ -1,8 +1,7 @@
 from unittest.mock import patch
 import pytest
 
-from disruption_py.utils.eval.environment_constants import get_test_expected_failure_columns, get_test_handler, get_test_shot_ids, get_test_columns
-from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment
+from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment, get_test_expected_failure_columns, get_test_handler, get_test_shot_ids, get_test_columns
 from disruption_py.utils.math_utils import matlab_gradient_1d_vectorized
 
 def pytest_addoption(parser):

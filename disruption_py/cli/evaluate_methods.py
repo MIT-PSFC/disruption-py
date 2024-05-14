@@ -3,11 +3,10 @@ from contextlib import contextmanager
 import numpy as np
 import logging
 from disruption_py.settings.shot_ids_request import ShotIdsRequestParams, shot_ids_request_runner
-from disruption_py.utils.eval.environment_constants import get_test_expected_failure_columns, get_test_handler, get_test_shot_ids
 from disruption_py.utils.eval.eval_against_sql import eval_against_sql, get_failure_statistics_string
 from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment
+from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment, get_test_expected_failure_columns, get_test_handler, get_test_shot_ids
 
 
 def evaluate_accuracy(tokamak : Tokamak, shot_ids : list[int], fail_quick : bool = False, data_columns : list[str] = None):

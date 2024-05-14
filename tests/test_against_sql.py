@@ -10,10 +10,8 @@ import pytest
 
 import pandas as pd
 from disruption_py.handlers.cmod_handler import Handler
-from disruption_py.utils.eval.data_difference import DataDifference
-from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment
+from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment, get_test_handler, get_test_expected_failure_columns, get_test_shot_ids
 from disruption_py.utils.eval.eval_against_sql import eval_shots_against_sql, get_failure_statistics_string, get_mdsplus_data, get_sql_data_for_mdsplus, eval_against_sql
-from disruption_py.utils.eval.environment_constants import get_test_handler, get_test_expected_failure_columns, get_test_shot_ids
 
 @pytest.fixture(scope='module')
 def mdsplus_data(handler : Handler, shotlist : List[int]) -> Dict[int, pd.DataFrame]:

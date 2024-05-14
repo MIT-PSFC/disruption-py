@@ -4,24 +4,25 @@
 execute a simple workflow to fetch EFIT parameters.
 """
 
-import os
-from disruption_py.handlers.cmod_handler import CModHandler
-from disruption_py.handlers.d3d_handler import D3DHandler
 from disruption_py.settings import ShotSettings, LogSettings
+from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment, get_test_handler
 
+tokamak = get_tokamak_from_environment()
+handler = get_test_handler(tokamak)
+set_times_request = "disruption_warning"
 
-if os.getenv("DIIID_TEST", False) or os.path.exists("/fusion/projects/disruption_warning"):
-    handler = D3DHandler()
+if tokamak is Tokamak.D3D:
     shot_ids_request = [161228]
-    set_times_request = "disruption"
     run_methods = ["_get_efit_parameters"]
     shape = (247, 16)
-else:
-    handler = CModHandler()
+elif tokamak is Tokamak.CMOD:
     shot_ids_request = [1150805012]
-    set_times_request = "efit"
     run_methods = ["_get_EFIT_parameters"]
     shape = (62, 25)
+else:
+    raise ValueError(f"Tokamak {tokamak} not supported for this example")
+
 print(f"Initialized handler: {handler.get_tokamak().value}")
 
 shot_settings = ShotSettings(
