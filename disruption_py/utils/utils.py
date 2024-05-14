@@ -1,4 +1,7 @@
 from typing import Callable, List
+import warnings
+
+import numpy as np
 
 def instantiate_classes(l : List):
     """
@@ -33,3 +36,8 @@ def without_duplicates(l : List):
     """
     seen = set()
     return [x for x in l if not (x in seen or seen.add(x))]
+
+def safe_cast(array : np.ndarray, dtype, copy = False):
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=RuntimeWarning)
+        return array.astype(dtype, copy = copy)

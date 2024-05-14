@@ -72,7 +72,8 @@ CMOD_EXPECTED_FAILURE_COLUMNS = {
     'ip_error': [-1], # constant error
     'sxr': [-1], 'tritop': [-1], 'tribot': [-1], 'a_minor': [-1], 
     'rmagx': [-1], 'chisq': [-1], 'V_surf': [-1], 'ne_peaking': [-1], 
-    'Te_peaking': [-1], 'pressure_peaking': [-1], 'Greenwald_fraction': [-1], 
+    'Te_peaking': [-1], 'pressure_peaking': [-1], 
+    'Greenwald_fraction': [1150805012, 1150805016, 1150805017, 1150805019, 1150805020, 1150805021, 1150805022], 
     'n_equal_1_phase': [-1], 'BT': [-1], 'prad_peaking': [-1], 
     'dip_smoothed': [-1], 'ip_prog': [-1], 'p_input': [-1]
 }

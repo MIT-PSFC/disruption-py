@@ -184,21 +184,23 @@ def get_failure_statistics_string(data_differences : list["DataDifference"], dat
         return failure_strings.get(data_column, "")
     else:
         summary_string = f"""\
+        ___________________________________________________________________________________________________
         SUMMARY
-        Columns with a failure: {"None" if len(failed_columns) == 0 else ""}
-        {", ".join(failed_columns)}
+        Columns with a failure:
+        {"None" if len(failed_columns) == 0 else ""}{", ".join(failed_columns)}
         
-        Columns without a failure : {"None" if len(succeeded_columns) == 0 else ""}
-        {", ".join(succeeded_columns)}
+        Columns without a failure:
+        {"None" if len(succeeded_columns) == 0 else ""}{", ".join(succeeded_columns)}
         
-        Columns lacking data for comparison from sql or mdsplus sources: {"None" if len(missing_data_columns) == 0 else ""}
-        {", ".join(missing_data_columns)}
+        Columns lacking data for comparison from sql or mdsplus sources:
+        {"None" if len(missing_data_columns) == 0 else ""}{", ".join(missing_data_columns)}
+        ___________________________________________________________________________________________________
         
-        Columns that match expected failures: {"None" if len(matches_expected_failures_columns) == 0 else ""}
-        {", ".join(matches_expected_failures_columns)}
+        Columns that match expected failures:
+        {"None" if len(matches_expected_failures_columns) == 0 else ""}{", ".join(matches_expected_failures_columns)}
         
-        Columns that do not match expected failures: {"None" if len(not_matches_expected_failures_columns) == 0 else ""}
-        {", ".join(not_matches_expected_failures_columns)}
+        Columns that do not match expected failures:
+        {"None" if len(not_matches_expected_failures_columns) == 0 else ""}{", ".join(not_matches_expected_failures_columns)}
         """
         return '\n\n'.join(failure_strings.values()) + '\n\n' + inspect.cleandoc(summary_string)
 

@@ -3,6 +3,8 @@ from typing import Any, Callable, Dict, List, Tuple
 import numpy as np
 import MDSplus
 
+from disruption_py.utils.utils import safe_cast
+
 class ProcessMDSConnection():
     """
     Abstract class for connecting to MDSplus.
@@ -142,7 +144,7 @@ class MDSConnection:
 
         data = self.conn.get("_sig=" + path, arguments).data()
         if astype:
-            data = data.astype(astype, copy=False)
+            data = safe_cast(data, astype)
 
         return data
 
@@ -185,9 +187,9 @@ class MDSConnection:
         dims = [self.conn.get(f"dim_of(_sig,{dim_num})").data() for dim_num in dim_nums]
 
         if astype:
-            data = data.astype(astype, copy=False)
+            data = safe_cast(data, astype)
             if cast_all:
-                dims = [dim.astype(astype, copy=False) for dim in dims]
+                dims = [safe_cast(dim, astype) for dim in dims]
 
         return data, *dims
 
@@ -226,7 +228,7 @@ class MDSConnection:
         dims = [self.conn.get(f"dim_of({path},{d})").data() for d in dim_nums]
 
         if astype:
-            dims = [dim.astype(astype, copy=False) for dim in dims]
+            dims = [safe_cast(dim, astype) for dim in dims]
 
         return dims
     

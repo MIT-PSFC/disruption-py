@@ -6,7 +6,7 @@ import disruption_py.data
 from disruption_py.settings.shot_data_request import ShotDataRequest, ShotDataRequestParams
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.math_utils import gaussian_fit, interp1, smooth
-from disruption_py.utils.utils import without_duplicates
+from disruption_py.utils.utils import safe_cast, without_duplicates
 from disruption_py.shots.helpers.method_caching import cached_method, parameter_cached_method
 try:
     from MDSplus import mdsExceptions
@@ -1434,7 +1434,7 @@ class ThomsonDensityMeasure:
         r = r.flatten()
         z = z.flatten()
         psi = np.full((len(r), len(t)), np.nan)
-        z = z.astype('float32')  # TODO: Ask if this change is necessary
+        z = safe_cast(z, 'float32')  # TODO: Ask if this change is necessary
         psirz, rgrid, zgrid, times = params.mds_conn.get_data_with_dims(r'\efit_geqdsk:psirz', tree_name=tree, dim_nums=[0, 1, 2])
         rgrid, zgrid = np.meshgrid(rgrid, zgrid) #, indexing='ij')
         

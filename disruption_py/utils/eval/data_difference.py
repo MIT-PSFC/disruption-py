@@ -3,6 +3,8 @@ from disruption_py.utils.constants import MATCH_FRACTION, VAL_TOLERANCE, VERBOSE
 import numpy as np
 import pandas as pd
 
+from disruption_py.utils.utils import safe_cast
+
 @dataclass
 class DataDifference:
     """
@@ -87,11 +89,11 @@ class DataDifference:
         if sql_is_nan.all() and mdsplus_is_nan.all():
             return np.zeros(len(self.mdsplus_column_data), dtype=bool), np.zeros(len(self.mdsplus_column_data))
         
-        relative_difference = np.where(
+        relative_difference = safe_cast(np.where(
             self.sql_column_data != 0, 
             np.abs((self.mdsplus_column_data - self.sql_column_data) / self.sql_column_data), 
             np.where(self.mdsplus_column_data != 0, np.inf, np.nan), 
-        ).astype('float64') # necessary in case all produced values are nan
+        ), 'float64') # necessary in case all produced values are nan
         
         numeric_anomalies_mask = np.where(np.isnan(relative_difference), False, relative_difference > VAL_TOLERANCE)
         nan_anomalies_mask = (sql_is_nan != mdsplus_is_nan)
