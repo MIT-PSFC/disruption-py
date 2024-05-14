@@ -55,8 +55,10 @@ class HDF:
 
         if os.environ.get('HSDS_ENDPOINTS') is not None:
             self.endpoints = os.environ['HSDS_ENDPOINTS'].split(',')
-        else:
+        elif os.path.exists("/usr/local/mfe/disruptions"):
             self.endpoints = [ 'http://mfedata-archives:5101', 'http://mfedata-archives:5102' ]
+        else:
+            self.endpoints = [ 'http://hsds.hsds.svc.cluster.local/' ]
 
         self.mode = 'a' if filling else 'r'
         self.file = h5py.File(f'/cmod/{self.shot_id}', self.mode, use_cache=(not filling), endpoint=random.choice(self.endpoints))
