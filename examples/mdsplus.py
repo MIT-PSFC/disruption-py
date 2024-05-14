@@ -16,7 +16,7 @@ elif tokamak == Tokamak.CMOD:
     shot = 1150805012
     shape = (2400,)
 else:
-    raise RuntimeError("Unspecified or unsupported tokamak.")
+    raise ValueError("Unspecified or unsupported tokamak.")
 
 handler = get_test_handler(tokamak)
 mds = handler.mds_connection.conn

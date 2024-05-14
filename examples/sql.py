@@ -26,7 +26,7 @@ elif tokamak == Tokamak.CMOD:
     db = CModDatabase.default()
     vals = [10435, 6640, 3795, 13785]
 else:
-    raise RuntimeError("Unspecified or unsupported tokamak.")
+    raise ValueError("Unspecified or unsupported tokamak.")
 
 print(f"Initialized DB: {db.user}@{db.host}/{db.db_name}")
 
