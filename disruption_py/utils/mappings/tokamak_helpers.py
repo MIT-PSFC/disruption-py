@@ -23,12 +23,12 @@ def get_tokamak_from_shot_id(shot_id):
             f"Unable to handle shot_id of length {shot_len}")
 
 def get_tokamak_from_environment():
+    if "DISPY_TOKAMAK" in os.environ:
+        return Tokamak[os.environ["DISPY_TOKAMAK"]]
     if os.path.exists("/usr/local/mfe/disruptions"):
         return Tokamak.CMOD
     if os.path.exists("/fusion/projects/disruption_warning"):
         return Tokamak.D3D
-    if "DISPY_TOKAMAK" in os.environ:
-        return Tokamak[os.environ["DISPY_TOKAMAK"]]
     return None
 
 def get_database_for_shot_id(shot_id : int):
