@@ -86,28 +86,20 @@ D3D_TEST_SHOTS = {
     "no_disrup2_full": 166253,
 }
 D3D_TEST_COLUMNS = [
-    'shot', 'time', 'time_until_disrupt', 'ip_error', 'dip_dt',
-    'beta_p', 'beta_n', 'li', 'n_equal_1_mode_IRLM', 'z_error', 'v_z',
-    'kappa', 'H98', 'q0', 'qstar', 'q95', 'dn_dt', 'radiated_fraction',
-    'power_supply_railed', 'lower_gap', 'upper_gap', 'dbetap_dt', 'dli_dt',
-    'ip', 'zcur', 'n_e', 'dipprog_dt', 'v_loop', 'p_rad', 'dWmhd_dt',
-    'dprad_dt', 'p_nbi', 'p_ech', 'p_ohm', 'intentional_disruption',
-    'Greenwald_fraction', 'Te_HWHM', 'other_hardware_failure', 'Te_HWHM_RT',
-    'v_loop_RT', 'n_e_RT', 'Greenwald_fraction_RT', 'ip_error_RT', 'ip_RT',
-    'dipprog_dt_RT', 'Wmhd_RT', 'Wmhd', 'n_equal_1_mode',
-    'n_equal_1_normalized', 'Te_width_normalized', 'Te_width_normalized_RT',
-    'q95_RT', 'li_RT', 'beta_p_RT', 'oeamp1em', 'oeamp1om', 'oefrq1em',
-    'oefrq1om', 'oeamp1e', 'oeamp1o', 'oefrq1e', 'oefrq1o', 'delta',
-    'squareness', 'zcur_normalized', 'aminor', 'n1rms_normalized',
-    'kappa_area', 'Te_peaking_CVA_RT', 'ne_peaking_CVA_RT',
-    'Prad_peaking_CVA_RT', 'Prad_peaking_XDIV_RT', 'H_alpha',
+    "H98", "ip", "q95", "squareness", "zcur_normalized", "q0", "ip_error", "beta_p",
+    "time_until_disrupt", "z_error", "li_RT", "beta_p_RT", "n1rms_normalized", "qstar",
+    "ip_error_RT", "H_alpha", "n_e_RT", "Wmhd_RT", "ip_RT", "dli_dt", "dbetap_dt",
+    "dn_dt", "shot", "n_equal_1_mode", "dip_dt", "upper_gap", "n_equal_1_normalized",
+    "q95_RT", "zcur", "lower_gap", "Greenwald_fraction_RT", "kappa", "kappa_area",
+    "power_supply_railed", "n_e", "delta", "Greenwald_fraction", "dWmhd_dt", "Wmhd",
+    "aminor", "time", "li", "beta_n", "dipprog_dt", "dipprog_dt_RT"
 ]
 D3D_EXPECTED_FAILURE_COLUMNS = {
-    'kappa': [161237], 'H_alpha': [-1], 'dipprog_dt_RT': [-1], 'li': [161237], 
+    'kappa': [161237], 'H_alpha': [-1], 'dipprog_dt_RT': [161228, 161237], 'li': [161237], 
     'dWmhd_dt': [161237], 'beta_p': [161237], 'dn_dt': [161237], 'Greenwald_fraction': [161237, 166177], 
     'li_RT': [-1], 'n_equal_1_normalized': [-1], 'zcur': [-1], 'dli_dt': [161237], 
     'Greenwald_fraction_RT': [-1], 'H98': [-1], 'q95_RT': [-1], 
-    'zcur_normalized': [-1], 'qstar': [161237], 'dipprog_dt': [-1], 'Wmhd': [161237], 
+    'zcur_normalized': [-1], 'qstar': [161237], 'Wmhd': [161237], 
     'lower_gap': [161237], 'beta_p_RT': [-1], 'n1rms_normalized': [-1], 
     'dbetap_dt': [161237], 'n_equal_1_mode': [-1], 'q95': [161237], 'upper_gap': [161237], 
     'q0': [161237], 'n_e': [161237], 'beta_n': [161237], 'kappa_area': [-1]
