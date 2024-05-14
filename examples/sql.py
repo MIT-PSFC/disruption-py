@@ -6,7 +6,7 @@ execute a few meaningful queries to test DB connection.
 
 import os
 from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment, get_test_database
+from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment, get_tokamak_database
 
 queries = [
     "select count(distinct shot) from disruption_warning",
@@ -17,7 +17,7 @@ queries = [
     "select count(distinct shot) from disruptions",
 ]
 tokamak = get_tokamak_from_environment()
-db = get_test_database(tokamak)
+db = get_tokamak_database(tokamak)
 
 if tokamak is Tokamak.D3D:
     vals = [13245, 8055, 5190, 24219]

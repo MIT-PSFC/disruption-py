@@ -5,10 +5,10 @@ execute a simple fetch to test MDSplus connection.
 """
 
 import os
-from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment, get_test_handler
+from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment, get_tokamak_handler
 
 tokamak = get_tokamak_from_environment()
-handler = get_test_handler(tokamak)
+handler = get_tokamak_handler(tokamak)
 if os.getenv("DIIID_TEST", False) or os.path.exists("/fusion/projects/disruption_warning"):
     shot = 161228
     shape = (196,)
