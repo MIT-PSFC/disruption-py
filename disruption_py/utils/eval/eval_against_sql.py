@@ -1,7 +1,10 @@
+from contextlib import contextmanager
 import inspect
+
+import numpy as np
 from disruption_py.handlers import Handler
 from disruption_py.settings import LogSettings, ShotSettings
-
+from disruption_py.utils.math_utils import matlab_gradient_1d_vectorized
 
 import pandas as pd
 
@@ -200,7 +203,17 @@ def get_failure_statistics_string(data_differences : list["DataDifference"], dat
         return '\n\n'.join(failure_strings.values()) + '\n\n' + inspect.cleandoc(summary_string)
 
 def eval_against_sql(handler : Handler, shot_ids : List[int], expected_failure_columns : Dict[str, list], fail_quick : bool, test_columns = None,) -> Dict[int, pd.DataFrame]:    
-    mdsplus_data = get_mdsplus_data(handler, shot_ids)
+    @contextmanager
+    def monkey_patch_numpy_gradient():
+        original_function = np.gradient
+        np.gradient = matlab_gradient_1d_vectorized
+        try:
+            yield
+        finally:
+            np.gradient = original_function
+    
+    with monkey_patch_numpy_gradient():
+        mdsplus_data = get_mdsplus_data(handler, shot_ids)
     sql_data = get_sql_data_for_mdsplus(handler, shot_ids, mdsplus_data)
     
     if test_columns is None:

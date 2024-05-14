@@ -65,7 +65,7 @@ CMOD_TEST_COLUMNS = [
     'dprad_dt', 'p_lh', 'p_icrf', 'p_input', 'radiated_fraction', 'time',
     'shot', 'commit_hash'
 ]
-CMOD_EXPECTED_FAILURE_COLUMNS = CMOD_EXPECTED_FAILURE_COLUMNS_DICT = {
+CMOD_EXPECTED_FAILURE_COLUMNS = {
     'Te_width': [-1], 'z_error': [-1], 'z_prog': [-1], 'zcur': [-1], 
     'v_z': [-1], 'z_times_v_z': [-1], 
     'dipprog_dt': [-1], # constant factor scaling error

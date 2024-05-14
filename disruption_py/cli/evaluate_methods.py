@@ -3,13 +3,11 @@ from contextlib import contextmanager
 import numpy as np
 import logging
 from disruption_py.settings.shot_ids_request import ShotIdsRequestParams, shot_ids_request_runner
-from disruption_py.utils.eval.data_difference import DataDifference
 from disruption_py.utils.eval.environment_constants import get_test_expected_failure_columns, get_test_handler, get_test_shot_ids
 from disruption_py.utils.eval.eval_against_sql import eval_against_sql, get_failure_statistics_string
 from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment
-from disruption_py.utils.math_utils import matlab_gradient_1d_vectorized
 
 
 def evaluate_accuracy(tokamak : Tokamak, shot_ids : list[int], fail_quick : bool = False, data_columns : list[str] = None):
@@ -21,24 +19,13 @@ def evaluate_accuracy(tokamak : Tokamak, shot_ids : list[int], fail_quick : bool
         
     expected_failure_columns = get_test_expected_failure_columns(tokamak)
     
-    @contextmanager
-    def monkey_patch_numpy_gradient():
-        original_function = np.gradient
-        np.gradient = matlab_gradient_1d_vectorized
-        try:
-            yield
-        finally:
-            np.gradient = original_function
-    
-    with monkey_patch_numpy_gradient():
-        data_differences = eval_against_sql(
-            handler=handler, 
-            shot_ids=shot_ids, 
-            expected_failure_columns=expected_failure_columns, 
-            fail_quick=fail_quick, 
-            test_columns=data_columns
-        )
-    
+    data_differences = eval_against_sql(
+        handler=handler, 
+        shot_ids=shot_ids, 
+        expected_failure_columns=expected_failure_columns, 
+        fail_quick=fail_quick, 
+        test_columns=data_columns
+    )
     
     print(get_failure_statistics_string(data_differences))
 
