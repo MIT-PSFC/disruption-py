@@ -6,6 +6,8 @@ execute a few meaningful queries to test DB connection.
 
 import os
 from disruption_py.databases import CModDatabase, D3DDatabase
+from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment
 
 queries = [
     "select count(distinct shot) from disruption_warning",
@@ -16,12 +18,16 @@ queries = [
     "select count(distinct shot) from disruptions",
 ]
 
-if os.getenv("DIIID_TEST", False) or os.path.exists("/fusion/projects/disruption_warning"):
+tokamak = get_tokamak_from_environment()
+if tokamak == Tokamak.D3D:
     db = D3DDatabase.default()
     vals = [13245, 8055, 5190, 24219]
-else:
+elif tokamak == Tokamak.CMOD:
     db = CModDatabase.default()
     vals = [10435, 6640, 3795, 13785]
+else:
+    raise RuntimeError("Unspecified or unsupported tokamak.")
+
 print(f"Initialized DB: {db.user}@{db.host}/{db.db_name}")
 
 while queries:
