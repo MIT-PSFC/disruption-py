@@ -15,6 +15,10 @@ if os.getenv("DIIID_TEST", False) or os.path.exists("/fusion/projects/disruption
 else:
     shot = 1150805012
     shape = (2400,)
+else:
+    raise ValueError("Unspecified or unsupported tokamak.")
+
+handler = get_test_handler(tokamak)
 mds = handler.mds_connection.conn
 print(f"Initialized MDSplus: {mds.hostspec}")
 
