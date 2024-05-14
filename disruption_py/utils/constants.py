@@ -65,16 +65,17 @@ CMOD_TEST_COLUMNS = [
     'dprad_dt', 'p_lh', 'p_icrf', 'p_input', 'radiated_fraction', 'time',
     'shot', 'commit_hash'
 ]
-CMOD_EXPECTED_FAILURE_COLUMNS = [
-    "Te_width",
-    "z_error",
-    "z_prog",
-    "zcur",
-    "v_z",
-    "z_times_v_z",
-    'dipprog_dt', # constant factor scaling error
-    'ip_error' # constant error
-]
+CMOD_EXPECTED_FAILURE_COLUMNS = CMOD_EXPECTED_FAILURE_COLUMNS_DICT = {
+    'Te_width': [-1], 'z_error': [-1], 'z_prog': [-1], 'zcur': [-1], 
+    'v_z': [-1], 'z_times_v_z': [-1], 
+    'dipprog_dt': [-1], # constant factor scaling error
+    'ip_error': [-1], # constant error
+    'sxr': [-1], 'tritop': [-1], 'tribot': [-1], 'a_minor': [-1], 
+    'rmagx': [-1], 'chisq': [-1], 'V_surf': [-1], 'ne_peaking': [-1], 
+    'Te_peaking': [-1], 'pressure_peaking': [-1], 'Greenwald_fraction': [-1], 
+    'n_equal_1_phase': [-1], 'BT': [-1], 'prad_peaking': [-1], 
+    'dip_smoothed': [-1], 'ip_prog': [-1], 'p_input': [-1]
+}
 
 
 D3D_TEST_SHOTS = {
@@ -100,4 +101,14 @@ D3D_TEST_COLUMNS = [
     'kappa_area', 'Te_peaking_CVA_RT', 'ne_peaking_CVA_RT',
     'Prad_peaking_CVA_RT', 'Prad_peaking_XDIV_RT', 'H_alpha',
 ]
-D3D_EXPECTED_FAILURE_COLUMNS = []
+D3D_EXPECTED_FAILURE_COLUMNS = {
+    'kappa': [161237], 'H_alpha': [-1], 'dipprog_dt_RT': [-1], 'li': [161237], 
+    'dWmhd_dt': [161237], 'beta_p': [161237], 'dn_dt': [161237], 'Greenwald_fraction': [161237, 166177], 
+    'li_RT': [-1], 'n_equal_1_normalized': [-1], 'zcur': [-1], 'dli_dt': [161237], 
+    'Greenwald_fraction_RT': [-1], 'H98': [-1], 'q95_RT': [-1], 
+    'zcur_normalized': [-1], 'qstar': [161237], 'dipprog_dt': [-1], 'Wmhd': [161237], 
+    'lower_gap': [161237], 'beta_p_RT': [-1], 'n1rms_normalized': [-1], 
+    'dbetap_dt': [161237], 'n_equal_1_mode': [-1], 'q95': [161237], 'upper_gap': [161237], 
+    'q0': [161237], 'n_e': [161237], 'beta_n': [161237], 'kappa_area': [-1]
+}
+

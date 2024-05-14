@@ -62,7 +62,7 @@ def eval_shots_against_sql(
     sql_data : Dict[int, pd.DataFrame],
     data_columns : List[str],
     fail_quick : bool = False,
-    expected_failure_columns : List[str] = None,
+    expected_failure_columns : Dict[str, list] = None,
 ) -> List["DataDifference"]:
     """
     Test if the difference between the two data is within tolerance.
@@ -74,13 +74,16 @@ def eval_shots_against_sql(
     for data_column in data_columns:
         for shot_id in shot_ids:
             mdsplus_shot_data, sql_shot_data = mdsplus_data[shot_id], sql_data[shot_id]
+            expected_failure_shots_for_column = expected_failure_columns.get(data_column, [])
+            expect_failure = -1 in expected_failure_shots_for_column or shot_id in expected_failure_shots_for_column
+            
             data_difference = eval_shot_against_sql(
                 shot_id=shot_id, 
                 mdsplus_shot_data=mdsplus_shot_data, 
                 sql_shot_data=sql_shot_data, 
                 data_column=data_column,
                 fail_quick = fail_quick,
-                expect_failure = data_column in expected_failure_columns
+                expect_failure = expect_failure
             )
             data_differences.append(data_difference)
     return data_differences
@@ -123,6 +126,7 @@ def get_failure_statistics_string(data_differences : list["DataDifference"], dat
     
     failure_strings = {}
     failed_columns, succeeded_columns, missing_data_columns = set(), set(), set()
+    matches_expected_failures_columns, not_matches_expected_failures_columns = set(), set()
     for ratio_data_column, data_differences in data_difference_by_column.items():
         failures = [data_difference.shot_id for data_difference in data_differences if data_difference.failed]
         failed = len(failures) > 0
@@ -167,6 +171,11 @@ def get_failure_statistics_string(data_differences : list["DataDifference"], dat
             failed_columns.add(ratio_data_column)
         else:
             succeeded_columns.add(ratio_data_column)
+            
+        if matches_expected_failures:
+            matches_expected_failures_columns.add(ratio_data_column)
+        else:
+            not_matches_expected_failures_columns.add(ratio_data_column)
     
     if data_column is not None:
         return failure_strings.get(data_column, "")
@@ -181,10 +190,16 @@ def get_failure_statistics_string(data_differences : list["DataDifference"], dat
         
         Columns lacking data for comparison from sql or mdsplus sources: {"None" if len(missing_data_columns) == 0 else ""}
         {", ".join(missing_data_columns)}
+        
+        Columns that match expected failures: {"None" if len(matches_expected_failures_columns) == 0 else ""}
+        {", ".join(matches_expected_failures_columns)}
+        
+        Columns that do not match expected failures: {"None" if len(not_matches_expected_failures_columns) == 0 else ""}
+        {", ".join(not_matches_expected_failures_columns)}
         """
         return '\n\n'.join(failure_strings.values()) + '\n\n' + inspect.cleandoc(summary_string)
 
-def eval_against_sql(handler : Handler, shot_ids : List[int], expected_failure_columns : list[str], fail_quick : bool, test_columns = None,) -> Dict[int, pd.DataFrame]:    
+def eval_against_sql(handler : Handler, shot_ids : List[int], expected_failure_columns : Dict[str, list], fail_quick : bool, test_columns = None,) -> Dict[int, pd.DataFrame]:    
     mdsplus_data = get_mdsplus_data(handler, shot_ids)
     sql_data = get_sql_data_for_mdsplus(handler, shot_ids, mdsplus_data)
     
