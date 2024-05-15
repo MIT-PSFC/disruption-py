@@ -6,7 +6,10 @@ execute a few meaningful queries to test DB connection.
 
 import os
 from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment, get_tokamak_database
+from disruption_py.utils.mappings.tokamak_helpers import (
+    get_tokamak_from_environment,
+    get_tokamak_database,
+)
 
 queries = [
     "select count(distinct shot) from disruption_warning",
@@ -24,7 +27,7 @@ if tokamak is Tokamak.D3D:
 elif tokamak is Tokamak.CMOD:
     vals = [10435, 6640, 3795, 13785]
 else:
-    raise ValueError(f"Tokamak {tokamak} not supported for this example")
+    raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 
 print(f"Initialized DB: {db.user}@{db.host}/{db.db_name}")
 
@@ -44,7 +47,9 @@ while queries:
         print()
         continue
 
-    if not __debug__ or "PYTEST_CURRENT_TEST" in os.environ:
+    if not __debug__ or any(
+        k in os.environ for k in ["PYTEST_CURRENT_TEST", "GITHUB_ACTIONS"]
+    ):
         break
 
     try:

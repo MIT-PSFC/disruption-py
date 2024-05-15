@@ -6,7 +6,10 @@ execute a simple workflow to fetch EFIT parameters.
 
 from disruption_py.settings import ShotSettings, LogSettings
 from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment, get_tokamak_handler
+from disruption_py.utils.mappings.tokamak_helpers import (
+    get_tokamak_from_environment,
+    get_tokamak_handler,
+)
 
 tokamak = get_tokamak_from_environment()
 handler = get_tokamak_handler(tokamak)
@@ -21,7 +24,7 @@ elif tokamak is Tokamak.CMOD:
     run_methods = ["_get_EFIT_parameters"]
     shape = (62, 25)
 else:
-    raise ValueError(f"Tokamak {tokamak} not supported for this example")
+    raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 
 print(f"Initialized handler: {handler.get_tokamak().value}")
 
