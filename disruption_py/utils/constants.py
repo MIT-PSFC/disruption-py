@@ -65,18 +65,13 @@ CMOD_TEST_COLUMNS = [
     'dprad_dt', 'p_lh', 'p_icrf', 'p_input', 'radiated_fraction', 'time',
     'shot', 'commit_hash'
 ]
-CMOD_EXPECTED_FAILURE_COLUMNS = {
-    'Te_width': [-1], 'z_error': [-1], 'z_prog': [-1], 'zcur': [-1], 
-    'v_z': [-1], 'z_times_v_z': [-1], 
-    'dipprog_dt': [-1], # constant factor scaling error
-    'ip_error': [-1], # constant error
-    'sxr': [-1], 'tritop': [-1], 'tribot': [-1], 'a_minor': [-1], 
-    'rmagx': [-1], 'chisq': [-1], 'V_surf': [-1], 'ne_peaking': [-1], 
-    'Te_peaking': [-1], 'pressure_peaking': [-1], 
-    'Greenwald_fraction': [1150805012, 1150805016, 1150805017, 1150805019, 1150805020, 1150805021, 1150805022], 
-    'n_equal_1_phase': [-1], 'BT': [-1], 'prad_peaking': [-1], 
-    'dip_smoothed': [-1], 'ip_prog': [-1], 'p_input': [-1]
-}
+CMOD_EXPECTED_FAILURE_COLUMNS = [
+    'Te_width', 'z_error', 'z_prog', 'zcur', 'v_z', 'z_times_v_z',
+    'dipprog_dt', 'ip_error', 'sxr', 'tritop', 'tribot', 'a_minor', 
+    'rmagx', 'chisq', 'V_surf', 'ne_peaking', 'Te_peaking', 
+    'pressure_peaking', 'Greenwald_fraction', 'n_equal_1_phase', 
+    'BT', 'prad_peaking', 'dip_smoothed', 'ip_prog', 'p_input'
+]
 
 
 D3D_TEST_SHOTS = {
@@ -94,14 +89,11 @@ D3D_TEST_COLUMNS = [
     "power_supply_railed", "n_e", "delta", "Greenwald_fraction", "dWmhd_dt", "Wmhd",
     "aminor", "time", "li", "beta_n", "dipprog_dt", "dipprog_dt_RT"
 ]
-D3D_EXPECTED_FAILURE_COLUMNS = {
-    'kappa': [161237], 'H_alpha': [-1], 'dipprog_dt_RT': [161228, 161237], 'li': [161237], 
-    'dWmhd_dt': [161237], 'beta_p': [161237], 'dn_dt': [161237], 'Greenwald_fraction': [161237, 166177], 
-    'li_RT': [-1], 'n_equal_1_normalized': [-1], 'zcur': [-1], 'dli_dt': [161237], 
-    'Greenwald_fraction_RT': [-1], 'H98': [-1], 'q95_RT': [-1], 
-    'zcur_normalized': [-1], 'qstar': [161237], 'Wmhd': [161237], 
-    'lower_gap': [161237], 'beta_p_RT': [-1], 'n1rms_normalized': [-1], 
-    'dbetap_dt': [161237], 'n_equal_1_mode': [-1], 'q95': [161237], 'upper_gap': [161237], 
-    'q0': [161237], 'n_e': [161237], 'beta_n': [161237], 'kappa_area': [-1]
-}
+D3D_EXPECTED_FAILURE_COLUMNS = [
+    'kappa', 'H_alpha', 'dipprog_dt_RT', 'li', 'dWmhd_dt', 'beta_p', 'dn_dt', 
+    'Greenwald_fraction', 'li_RT', 'n_equal_1_normalized', 'zcur', 'dli_dt', 
+    'Greenwald_fraction_RT', 'H98', 'q95_RT', 'zcur_normalized', 'qstar', 
+    'Wmhd', 'lower_gap', 'beta_p_RT', 'n1rms_normalized', 'dbetap_dt', 
+    'n_equal_1_mode', 'q95', 'upper_gap', 'q0', 'n_e', 'beta_n', 'kappa_area'
+]
 

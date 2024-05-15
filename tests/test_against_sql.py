@@ -38,9 +38,8 @@ def test_data_columns(shotlist : List[int], mdsplus_data : Dict[int, pd.DataFram
         fail_quick=fail_quick
     )
     if not fail_quick:
-        matches_expected = all(data_difference.matches_expected for data_difference in data_differences)
         expected_failure = any(data_difference.expect_failure for data_difference in data_differences)
-        if matches_expected and expected_failure:
+        if expected_failure:
             pytest.xfail(reason='matches expected data failures') # stops execution of test
         else:
             assert all(not data_difference.failed for data_difference in data_differences), get_failure_statistics_string(

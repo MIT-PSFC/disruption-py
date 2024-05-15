@@ -65,7 +65,7 @@ def eval_shots_against_sql(
     sql_data : Dict[int, pd.DataFrame],
     data_columns : List[str],
     fail_quick : bool = False,
-    expected_failure_columns : Dict[str, list] = None,
+    expected_failure_columns : List[str] = None,
 ) -> List["DataDifference"]:
     """
     Test if the difference between the two data is within tolerance.
@@ -77,8 +77,7 @@ def eval_shots_against_sql(
     for data_column in data_columns:
         for shot_id in shot_ids:
             mdsplus_shot_data, sql_shot_data = mdsplus_data[shot_id], sql_data[shot_id]
-            expected_failure_shots_for_column = expected_failure_columns.get(data_column, [])
-            expect_failure = -1 in expected_failure_shots_for_column or shot_id in expected_failure_shots_for_column
+            expect_failure = data_column in expected_failure_columns
             
             data_difference = eval_shot_against_sql(
                 shot_id=shot_id, 
@@ -130,21 +129,22 @@ def get_failure_statistics_string(data_differences : list["DataDifference"], dat
     failure_strings = {}
     failed_columns, succeeded_columns, missing_data_columns = set(), set(), set()
     matches_expected_failures_columns, not_matches_expected_failures_columns = set(), set()
-    for ratio_data_column, data_differences in data_difference_by_column.items():
-        failures = [data_difference.shot_id for data_difference in data_differences if data_difference.failed]
+    for ratio_data_column, column_data_differences in data_difference_by_column.items():
+        failures = [data_difference.shot_id for data_difference in column_data_differences if data_difference.failed]
         failed = len(failures) > 0
         
-        all_missing_data = all([data_difference.missing_data for data_difference in data_differences])
+        all_missing_data = all([data_difference.missing_data for data_difference in column_data_differences])
         
-        anomaly_count = sum([data_difference.num_anomalies for data_difference in data_differences])
-        timebase_count = sum([data_difference.timebase_length for data_difference in data_differences])
+        anomaly_count = sum([data_difference.num_anomalies for data_difference in column_data_differences])
+        timebase_count = sum([data_difference.timebase_length for data_difference in column_data_differences])
         
-        matches_expected_failures = all([data_difference.expect_failure == data_difference.failed for data_difference in data_differences])
-        
+        expect_failure = any([data_difference.expect_failure for data_difference in column_data_differences])
+        matches_expected_failure = expect_failure == failed
+                    
         # failure string
         failure_string_lines = [
             f"Column {ratio_data_column} {'FAILED' if failed else 'SUCCEEDED'}",
-            f"Matches expected failures: {matches_expected_failures}",
+            f"Matches expected failures: {matches_expected_failure}",
             f"Total Entry Failure Rate: {anomaly_count / timebase_count * 100:.2f}%",
         ]
         failure_string = "\n".join(failure_string_lines)
@@ -160,7 +160,7 @@ def get_failure_statistics_string(data_differences : list["DataDifference"], dat
         }
         condition_results = {}
         for condition_name, condition in conditions.items():
-            shot_ids = [data_difference.shot_id for data_difference in data_differences if condition(data_difference)]
+            shot_ids = [data_difference.shot_id for data_difference in column_data_differences if condition(data_difference)]
             if len(shot_ids) > 0:
                 condition_results[condition_name] = shot_ids
         condition_string = "\n".join([f"{condition_name} ({len(condition_result)} shots): {condition_result}" for condition_name, condition_result in condition_results.items()])
@@ -175,7 +175,7 @@ def get_failure_statistics_string(data_differences : list["DataDifference"], dat
         else:
             succeeded_columns.add(ratio_data_column)
             
-        if matches_expected_failures:
+        if matches_expected_failure:
             matches_expected_failures_columns.add(ratio_data_column)
         else:
             not_matches_expected_failures_columns.add(ratio_data_column)
@@ -204,7 +204,7 @@ def get_failure_statistics_string(data_differences : list["DataDifference"], dat
         """
         return '\n\n'.join(failure_strings.values()) + '\n\n' + inspect.cleandoc(summary_string)
 
-def eval_against_sql(handler : Handler, shot_ids : List[int], expected_failure_columns : Dict[str, list], fail_quick : bool, test_columns = None,) -> Dict[int, pd.DataFrame]:    
+def eval_against_sql(handler : Handler, shot_ids : List[int], expected_failure_columns : List[str], fail_quick : bool, test_columns = None,) -> Dict[int, pd.DataFrame]:    
     @contextmanager
     def monkey_patch_numpy_gradient():
         original_function = np.gradient

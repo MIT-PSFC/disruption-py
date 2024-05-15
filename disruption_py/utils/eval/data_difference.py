@@ -44,10 +44,6 @@ class DataDifference:
         return self.num_anomalies / self.timebase_length > 1 - MATCH_FRACTION
     
     @property
-    def matches_expected(self) -> bool:
-        return self.failed == self.expect_failure
-    
-    @property
     def failure_ratio_string(self) -> str:
         return f"{self.num_anomalies / self.timebase_length:.4f}"
     
