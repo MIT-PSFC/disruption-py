@@ -16,9 +16,8 @@ shot_settings = ShotSettings(
     log_settings=LogSettings(console_log_level=0),
     run_tags=[],
     run_methods=["_get_EFIT_parameters"],
+    efit_tree_name="efit18",
     use_hsds=True,
-    use_mongo=False,
-    cache_miss_enable=False,
 )
 
 result = handler.get_shots_data(
@@ -29,4 +28,4 @@ result = handler.get_shots_data(
 
 print(result)
 
-assert result.shape == (62, 25)
+assert result.shape == (83, 25)

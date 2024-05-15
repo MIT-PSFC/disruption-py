@@ -18,6 +18,8 @@ class MDSplusNodeNotFound(MDSplusException):
     "A replacement for MDSplus.TreeNNF"
 
 
+diff_log = open('hsds-diff.csv', 'a')
+
 
 class ProcessMDSConnection():
     """
@@ -63,6 +65,32 @@ class HDF:
         self.mode = 'a' if filling else 'r'
         self.file = h5py.File(f'/cmod/{self.shot_id}', self.mode, use_cache=(not filling), endpoint=random.choice(self.endpoints))
 
+        self.nicknames = {}
+        if 'nicknames' in self.file:
+            for name in self.file['nicknames'].keys():
+                nickname = self.file['nicknames'][name].value
+
+                if type(nickname) is bytes:
+                    nickname = nickname.decode()
+
+                self.nicknames[nickname] = name
+        
+    def add_tree_nickname(self, tree_name, tree_nickname):
+        if tree_nickname not in self.nicknames:
+            self.nicknames[tree_nickname] = tree_name
+            
+            if 'nicknames' not in self.file:
+                self.file.create_group('nicknames')
+
+            if tree_nickname not in self.file['nicknames']:
+                self.file['nicknames'].create_dataset(tree_nickname, data=str(tree_name))
+
+    def resolve_tree_nickname(self, tree):
+        if tree in self.nicknames:
+            return self.nicknames[tree]
+        
+        return tree
+
     def add_cache(self, tree, expression, args, value):
         if tree not in self.file:
             root = self.file.create_group(tree)
@@ -73,12 +101,19 @@ class HDF:
         else:
             key = f'{expression}_{args}'
 
-        key.replace('/', '\\/')
         key = str(key)
-        if key in root:
-            del root[key]
+        key.replace('/', '\\/')
+
         if value.__class__ == np.str_:
             value = str(value)
+
+        if key in root:
+            # del root[key]
+            return
+        else:
+            diff_log.write(f"{self.shot_id},\"{tree}\",\"{key}\"\n")
+            diff_log.flush()
+
         root.create_dataset(key, data=value)
      
     def get(self, tree, expression, args):
@@ -172,6 +207,12 @@ class Mongo:
         # after = datetime.now()
         # self.logger.warning(f"Fetching {count} signals for shot {self.shot_id} took {after - before}")
 
+    def add_tree_nickname(self, tree_name, tree_nickname):
+        pass
+
+    def resolve_tree_nickname(self, tree):
+        return tree
+    
     def get(self, tree, expression, args):
         tree = tree.lower()
         expression = expression.lower()
@@ -261,15 +302,30 @@ class MDSConnection:
         If the specified tree_name is nickname for a tree_name, will open the tree
         that it is a nickname for.
         """
+
         if self.use_mdsplus:
             if tree_name not in self.tree_nicknames and tree_name in self.tree_nickname_funcs:
                 self.tree_nicknames[tree_name] = self.tree_nickname_funcs[tree_name]()
 
             if tree_name in self.tree_nicknames:
+                if self.fill_hsds:
+                    self.hdf.add_tree_nickname(tree_name, self.tree_nicknames[tree_name])
+
+                if self.fill_mongo:
+                    self.mongo.add_tree_nickname(tree_name, self.tree_nicknames[tree_name])
+
                 tree_name = self.tree_nicknames[tree_name]
+
 
             if self.last_open_tree != tree_name:
                 self.conn.openTree(tree_name, self.shot_id)
+        
+        else:
+            if self.use_hsds:
+                tree_name = self.hdf.resolve_tree_nickname(tree_name)
+
+            if self.use_mongo:
+                tree_name = self.mongo.resolve_tree_nickname(tree_name)
 
         self.last_open_tree = tree_name
         self.open_trees.add(tree_name)
@@ -346,29 +402,22 @@ class MDSConnection:
             self.open_tree(tree_name)
 
         if self.use_hsds:
-            data = self.hdf.get(tree_name, path, arguments)
+            data = self.hdf.get(self.last_open_tree, path, arguments)
 
         elif self.use_mongo:
-            if tree_name in self.tree_nicknames:
-                tree_name = self.tree_nicknames[tree_name]
-
-            data = self.mongo.get(tree_name, path, arguments)
+            data = self.mongo.get(self.last_open_tree, path, arguments)
 
         if data is None and self.use_mdsplus:
-
-            if tree_name in self.tree_nicknames:
-                tree_name = self.tree_nicknames[tree_name]
-
             data = self.conn.get(path, arguments).data()
 
         if data is None:
             raise MDSplusNoData
 
         if self.fill_hsds:
-            self.hdf.add_cache(tree_name, path, arguments, data)
+            self.hdf.add_cache(self.last_open_tree, path, arguments, data)
 
         if self.fill_mongo:
-            self.mongo.add_cache(tree_name, path, arguments, data)
+            self.mongo.add_cache(self.last_open_tree, path, arguments, data)
 
         if astype:
             data = data.astype(astype, copy=False)
@@ -417,17 +466,14 @@ class MDSConnection:
         dims = []
 
         if self.use_hsds or self.use_mongo:
-            data = self.get_data(path, tree_name=tree_name)
-            dims = [ self.get_data(f'dim_of({path}, {dim_num})', tree_name=tree_name) for dim_num in dim_nums]
+            data = self.get_data(path)
+            dims = [ self.get_data(f'dim_of({path}, {dim_num})') for dim_num in dim_nums]
 
         if self.use_mdsplus and (data is None or len(dims) < len(dim_nums)):
             
-            if tree_name in self.tree_nicknames:
-                tree_name = self.tree_nicknames[tree_name]
-
-            # Avoid self.get() to avoid caching _sig
-            data = self.conn.get("_sig=" + path, astype)
-            dims = [self.conn.get(f"dim_of(_sig,{dim_num})") for dim_num in dim_nums]
+            # Avoid self.get_data() to avoid caching _sig
+            data = self.conn.get("_sig=" + path, astype).data()
+            dims = [self.conn.get(f"dim_of(_sig,{dim_num})").data() for dim_num in dim_nums]
 
         if data is None or any(dim is None for dim in dims):
             raise MDSplusNoData
@@ -474,7 +520,7 @@ class MDSConnection:
 
         dim_nums = dim_nums or [0]
 
-        dims = [ self.get_data(f'dim_of({path}, {dim_num})', tree_name=tree_name) for dim_num in dim_nums]
+        dims = [ self.get_data(f'dim_of({path}, {dim_num})') for dim_num in dim_nums]
 
         if any(dim is None for dim in dims):
             raise MDSplusNoData
@@ -502,9 +548,11 @@ class MDSConnection:
 
         if self.use_hsds or self.fill_hsds:
             self.hdf = HDF(self.shot_id, self.fill_hsds)
+            self.tree_nicknames = self.hdf.nicknames
 
         if self.use_mongo or self.fill_mongo:
             self.mongo = Mongo(self.shot_id)
+            # self.tree_nicknames = self.mongo.nicknames
 
     # nicknames
 
@@ -520,11 +568,9 @@ class MDSConnection:
         """
         Get the tree name that the nickname has been set to or None if the nickname was not set.
         """
-        if not self.use_mdsplus:
-            return nickname
-
-        if nickname not in self.tree_nicknames and nickname in self.tree_nickname_funcs:
-            self.tree_nicknames[nickname] = self.tree_nickname_funcs[nickname]()
+        if self.use_mdsplus:
+            if nickname not in self.tree_nicknames and nickname in self.tree_nickname_funcs:
+                self.tree_nicknames[nickname] = self.tree_nickname_funcs[nickname]()
 
         return self.tree_nicknames.get(nickname, None)
 
