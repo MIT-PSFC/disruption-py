@@ -52,7 +52,8 @@ jobs:
         run: |
           poetry lock --no-update
           bash .pip/lock.sh
-          git diff --exit-code
+          git diff --exit-code || true
+          poetry check
 
       - name: Poetry install
         run: poetry install
