@@ -2,10 +2,11 @@
 In DisruptionPy, Parameter methods are methods that produce tabular data in a standardized time base. Parameter methods must be instance, class, or static methods of a subclass of [`ShotDataRequest`][disruption_py.settings.shot_data_request.ShotDataRequest] and take a single argument params that is an instance of [`ShotDataRequestParams`][disruption_py.settings.shot_data_request.ShotDataRequest].
 
 ## Built-in Parameter Methods { .doc .doc-heading }
-Built-in parameter methods are defined inside of the `disruption_py.shots.parameter_methods` package. All built in methods are included through the built-in shot data requests in the `disruption_py.shots.parameter_methods.built_in.DEFAULT_SHOT_DATA_REQUESTS` list, where the built-in parameter methods are members of the listed shot data requests:
+Built-in parameter methods are defined inside of the `disruption_py.shots.parameter_methods` package. All built in methods are included through the built-in shot data requests files in `disruption_py.shots.parameter_methods.**tokamak name**.built_in.py` for each supported tokamak respectively, where the built-in parameter methods are members of the listed shot data requests in each file (see file contents below). To view the specific methods that are listed please see the [repository](https://github.com/MIT-PSFC/disruption-py) on GitHub.
 ```python
 --8<--
-disruption_py/shots/parameter_methods/built_in.py
+disruption_py/shots/parameter_methods/cmod/built_in.py
+disruption_py/shots/parameter_methods/d3d/built_in.py
 --8<--
 ```
 
@@ -80,7 +81,7 @@ Users can use a number of built-in parameter methods and/or create their own met
 For a parameter method to be run after calling [`get_shots_data`][disruption_py.handlers.cmod_handler.CModHandler.get_shots_data] it must meet the following conditions:
 
 1. The method must be a member of an instance of a subclass of `ShotDatRequest` that is either:
-	- included inside of the `disruption_py.shots.parameter_methods.built_in.DEFAULT_SHOT_DATA_REQUESTS` list (built-in method)
+	- included inside of the `disruption_py.shots.parameter_methods.**tokamak name**.built_in.py` list (built-in method)
 	- included inside of the `shot_data_request` parameter of the shot settings.
 
 	??? note "Including multiple instances of the same class"

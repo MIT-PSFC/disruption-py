@@ -1,9 +1,13 @@
 from typing import Callable, List
+import warnings
 
-def instantiate_classes(l : List):
+import numpy as np
+
+
+def instantiate_classes(l: List):
     """
     Instantiate all classes in a list of classes and objects.
-    
+
     Parameters
     ----------
     l : List
@@ -15,9 +19,9 @@ def instantiate_classes(l : List):
         The list with all classes instantiated.
     """
     return [x() for x in l if isinstance(x, type)]
-    
 
-def without_duplicates(l : List):
+
+def without_duplicates(l: List):
     """
     Get list without duplicates maintaining order.
 
@@ -33,3 +37,9 @@ def without_duplicates(l : List):
     """
     seen = set()
     return [x for x in l if not (x in seen or seen.add(x))]
+
+
+def safe_cast(array: np.ndarray, dtype, copy=False):
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=RuntimeWarning)
+        return array.astype(dtype, copy=copy)

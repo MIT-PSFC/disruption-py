@@ -26,31 +26,34 @@ class LogSettings:
     use_custom_logging : bool
         Whether to use custom logging. If set to true, no logging setup will be done. Default is False.
     """
+
     log_file_path: str = None
     file_log_level: int = logging.WARNING
     log_file_write_mode: str = "w"
-    
+
     log_to_console: bool = True
     console_log_level: int = logging.WARNING
-    
+
     use_custom_logging: bool = False
-    
+
     _logging_has_been_setup: bool = False
 
     def default():
         return LogSettings()
 
-    def logger(self, logger_name = 'disruption_py'):
+    def logger(self, logger_name="disruption_py"):
         return self.setup_logging(logger_name)
-    
-    def setup_logging(self, logger_name = 'disruption_py'):
-        
+
+    def setup_logging(self, logger_name="disruption_py"):
+
         logger = logging.getLogger(logger_name)
         if self.use_custom_logging or self._logging_has_been_setup:
             return logger
         self._logging_has_been_setup = True
 
-        formatter = logging.Formatter('%(asctime)s,%(msecs)d %(name)s %(levelname)s | %(message)s', '%H:%M:%S')
+        formatter = logging.Formatter(
+            "%(asctime)s,%(msecs)d %(name)s %(levelname)s | %(message)s", "%H:%M:%S"
+        )
         logger.propagate = False
         logger.handlers.clear()
         logger.setLevel(logging.DEBUG)

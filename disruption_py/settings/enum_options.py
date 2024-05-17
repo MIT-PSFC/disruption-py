@@ -16,3 +16,4 @@ class SignalDomain(Enum):
     FULL = "full"
     FLATTOP = "flattop"
     RAMP_UP_AND_FLATTOP = "rampup_and_flattop"
+    DISRUPTION = "disruption"

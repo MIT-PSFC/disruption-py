@@ -1,0 +1,148 @@
+---
+
+name: Tests
+
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches:
+      - 'main*'
+      - 'dev*'
+  pull_request:
+    branches:
+      - 'main*'
+      - 'dev*'
+  workflow_dispatch:
+
+jobs:
+
+
+  pytest:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      github.event.pull_request.draft == false
+    strategy:
+      fail-fast: false
+      matrix:
+        tokamak:
+          - C-MOD
+          - DIII-D
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Add MDSplus sources
+        env:
+          GPG: http://www.mdsplus.org/dist/mdsplus.gpg.key
+          KEY: /usr/share/keyrings/mdsplus.asc
+          REPO: http://www.mdsplus.org/dist/Ubuntu22/repo
+          APT: /etc/apt/sources.list.d/mdsplus.list
+        run: |
+          curl -fsSL "$GPG" \
+          | sudo tee "$KEY"
+          echo "deb [arch=amd64 signed-by=$KEY] $REPO MDSplus alpha" \
+          | sudo tee "$APT"
+
+      - name: Update sources
+        run: sudo apt-get update
+
+      - name: Install prerequisites
+        run: |
+          sudo apt-get install msodbcsql17 # pre-installed
+          sudo apt-get install tdsodbc unixodbc # freetds
+          sudo apt-get install mdsplus-alpha-python # mdsplus
+
+      - name: Configure MDSplus
+        run: |
+          {
+             echo PYTHONPATH=/usr/local/mdsplus/python
+             echo LD_LIBRARY_PATH=/usr/local/mdsplus/lib
+          } \
+          | tee -a "$GITHUB_ENV"
+
+      - name: Setup SSH key
+        run: |
+          mkdir ~/.ssh
+          echo "${{ secrets.SSH_TUNNEL }}" \
+          | tee ~/.ssh/id_rsa \
+          | sha256sum
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: Setup C-MOD
+        if: ${{ matrix.tokamak == 'C-MOD' }}
+        run: |
+          ssh "${{ secrets.CMOD_USER }}@${{ secrets.CMOD_HOST }}" \
+            -p "${{ secrets.CMOD_PORT }}" \
+            -L 8000:alcdata-archives:8000 \
+            -L 1433:alcdb2:1433 \
+            -o StrictHostKeyChecking=no \
+            -N -v 2> ssh.log &
+          echo "$!" \
+          | tee ssh.pid
+          echo "127.0.0.1 alcdata-archives alcdb2" \
+          | sudo tee -a /etc/hosts
+          echo "${{ secrets.CMOD_LOGIN }}" \
+          | tee ~/logbook.sybase_login \
+          | sha256sum
+          echo DISPY_TOKAMAK=CMOD \
+          | tee -a "$GITHUB_ENV"
+
+      - name: Setup DIII-D
+        if: ${{ matrix.tokamak == 'DIII-D' }}
+        env:
+          TDS: /usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so
+        run: |
+          ssh "${{ secrets.DIIID_USER }}@${{ secrets.DIIID_HOST }}" \
+            -p "${{ secrets.DIIID_PORT }}" \
+            -L 8000:atlas:8000 \
+            -L 8001:d3drdb:8001 \
+            -o StrictHostKeyChecking=no \
+            -N -v 2> ssh.log &
+          echo "$!" \
+          | tee ssh.pid
+          echo "127.0.0.1 atlas d3drdb" \
+          | sudo tee -a /etc/hosts
+          echo "${{ secrets.DIIID_LOGIN }}" \
+          | tee ~/D3DRDB.sybase_login \
+          | sha256sum
+          echo -e "[FreeTDS]\nDescription = FreeTDS\nDriver = $TDS" \
+          | sudo tee -a /etc/odbcinst.ini
+          echo DISPY_TOKAMAK=D3D \
+          | tee -a "$GITHUB_ENV"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install requirements
+        run: |
+          pip install -r .pip/main.txt -r .pip/dev.txt
+          pip install -e .
+
+      - name: Check tunnel
+        run: |
+          xargs -a ssh.pid ps -p
+          if ! grep 'Authenticated.*publickey' ssh.log
+          then
+             curl -s ipinfo.io && echo
+             cat -n ssh.log
+             false
+          fi
+
+      - name: Test SQL
+        run: python -O examples/sql.py
+
+      - name: Test MDSplus
+        run: python examples/mdsplus.py
+
+      - name: Test EFIT
+        run: python examples/efit.py
+
+      - name: Run all tests
+        run: pytest -v --durations=0 tests
+
+      - name: Close tunnel
+        run: xargs -a ssh.pid kill -TERM
