@@ -51,7 +51,7 @@ TEST_SETTINGS = {
 def test_features_serial(
     handler : Handler, tokamak, shotlist, shot_settings_key
 ):
-    if "GITHUB_ACTIONS" in os.environ and "_fast" in shot_settings_key:
+    if "GITHUB_ACTIONS" in os.environ and "_fast" not in shot_settings_key:
         pytest.skip("fast execution")
     
     test_setting = TEST_SETTINGS[shot_settings_key]
