@@ -116,25 +116,11 @@ do
       2>&1 \
       > "$LOG/after.log"
 
-      # run
-      if [[ -s examples/efit.py ]]
-      then
-         poetry run python examples/efit.py \
-         1> "$LOG/efit.out" \
-         2> "$LOG/efit.err"
-         RC=${PIPESTATUS[0]}
-      elif [[ -s examples/quick.py ]]
-      then
-         poetry run python examples/quick.py \
-         1> "$LOG/quick.out" \
-         2> "$LOG/quick.err"
-         RC=${PIPESTATUS[0]}
-      else
-         poetry run python -c "import disruption_py as dpy; print(dpy.__file__)" \
-         1> "$LOG/import.out" \
-         2> "$LOG/import.err"
-         RC=${PIPESTATUS[0]}
-      fi
+      # test
+      poetry run pytest -v tests \
+      1> "$LOG/test.out" \
+      2> "$LOG/test.err"
+      RC=${PIPESTATUS[0]}
 
       # return code
       [[ $RC -eq 0 ]] && STATE=success || STATE=failure
