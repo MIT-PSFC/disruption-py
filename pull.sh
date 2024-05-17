@@ -27,6 +27,12 @@ do
    DISPY_BRANCH=$(basename "$FOLDER")
    export DISPY_BRANCH=$DISPY_BRANCH
 
+   # args
+   if [[ $# -ge 1 ]] && [[ "$1" != "$DISPY_BRANCH" ]]
+   then
+      continue
+   fi
+
    # log
    echo -e "\n$(date) :: $DISPY_BRANCH = $FOLDER"
    export LOG="$DISPY_LOG/$DISPY_BRANCH"
@@ -64,6 +70,12 @@ do
    # for each python version
    for VENV in "$DISPY_DIR/venv/$DISPY_BRANCH-py"*
    do
+
+      # args
+      if [[ $# -ge 2 ]] && [[ "$2" != "${VENV##*py}" ]]
+      then
+         continue
+      fi
 
       {
 
@@ -116,7 +128,8 @@ do
       2>&1 \
       > "$LOG/after.log"
 
-      # test
+      # fast test
+      export GITHUB_ACTIONS=1
       poetry run pytest -v tests \
       1> "$LOG/test.out" \
       2> "$LOG/test.err"
