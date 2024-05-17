@@ -43,19 +43,24 @@ class D3DDatabase(ShotDatabase):
         """
         current_thread = threading.current_thread()
         if current_thread not in self._tree_thread_connections:
-            self.logger.info(f"Connecting to code_rundb database for thread {current_thread}")
-            self._tree_thread_connections[current_thread] = pyodbc.connect(self.tree_connection_string)
+            self.logger.info(
+                f"Connecting to code_rundb database for thread {current_thread}"
+            )
+            self._tree_thread_connections[current_thread] = pyodbc.connect(
+                self.tree_connection_string
+            )
         return self._tree_thread_connections[current_thread]
 
     def get_efit_tree(self, shot_id):
         with self.tree_conn.cursor() as curs:
             curs.execute(
-                f"select tree from plasmas where shot = {shot_id} and runtag = 'DIS' and deleted = 0 order by idx")
+                f"select tree from plasmas where shot = {shot_id} and runtag = 'DIS' and deleted = 0 order by idx"
+            )
             efit_trees = curs.fetchall()
         if len(efit_trees) == 0:
-            efit_trees = [('EFIT01',)]
+            efit_trees = [("EFIT01",)]
             # with self.tree_conn.cursor() as curs:
-                # curs.execute(f"select tree from plasmas where shot = {shot_id} and deleted = 0 order by idx")
-                # efit_trees = curs.fetchall()
+            # curs.execute(f"select tree from plasmas where shot = {shot_id} and deleted = 0 order by idx")
+            # efit_trees = curs.fetchall()
         efit_tree = efit_trees[-1][0]
         return efit_tree

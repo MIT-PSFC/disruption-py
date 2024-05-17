@@ -4,10 +4,16 @@ import pandas as pd
 import numpy as np
 import logging
 from disruption_py.databases.database import ShotDatabase
-from disruption_py.mdsplus_integration.mds_connection import MDSConnection, ProcessMDSConnection
+from disruption_py.mdsplus_integration.mds_connection import (
+    MDSConnection,
+    ProcessMDSConnection,
+)
 from disruption_py.settings.enum_options import InterpolationMethod, SignalDomain
 from disruption_py.settings.existing_data_request import ExistingDataRequestParams
-from disruption_py.settings.set_times_request import SetTimesRequest, SetTimesRequestParams
+from disruption_py.settings.set_times_request import (
+    SetTimesRequest,
+    SetTimesRequestParams,
+)
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.shots.helpers.populate_shot import populate_shot
@@ -18,108 +24,116 @@ from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.math_utils import interp1
 from disruption_py.utils.utils import without_duplicates
 
+
 class ShotManager(ABC):
-    logger = logging.getLogger('disruption_py')
-    
-    def __init__(self, process_database : ShotDatabase, process_mds_conn : ProcessMDSConnection):
+    logger = logging.getLogger("disruption_py")
+
+    def __init__(
+        self, process_database: ShotDatabase, process_mds_conn: ProcessMDSConnection
+    ):
         self.process_database = process_database
         self.process_mds_conn = process_mds_conn
-        
+
     @classmethod
     @abstractmethod
-    def _modify_times_flattop_timebase(cls, shot_props : ShotProps, **kwargs) -> ShotProps:
+    def _modify_times_flattop_timebase(
+        cls, shot_props: ShotProps, **kwargs
+    ) -> ShotProps:
         pass
-    
+
     @classmethod
     @abstractmethod
-    def _modify_times_rampup_and_flattop_timebase(cls, shot_props : ShotProps, **kwargs) -> ShotProps:
+    def _modify_times_rampup_and_flattop_timebase(
+        cls, shot_props: ShotProps, **kwargs
+    ) -> ShotProps:
         pass
-    
+
     @abstractmethod
-    def shot_setup(self, shot_id : int, shot_settings : ShotSettings, **kwargs) -> ShotProps:
+    def shot_setup(
+        self, shot_id: int, shot_settings: ShotSettings, **kwargs
+    ) -> ShotProps:
         pass
-        
-    def shot_data_retrieval(self, shot_props : ShotProps, shot_settings : ShotSettings):
+
+    def shot_data_retrieval(self, shot_props: ShotProps, shot_settings: ShotSettings):
         shot_data_request_params = ShotDataRequestParams(
-            mds_conn=shot_props.mds_conn, 
+            mds_conn=shot_props.mds_conn,
             shot_props=shot_props,
-            logger=self.logger, 
-            tokamak=shot_props.tokamak
+            logger=self.logger,
+            tokamak=shot_props.tokamak,
         )
-        return populate_shot(shot_settings=shot_settings, params=shot_data_request_params)
-    
+        return populate_shot(
+            shot_settings=shot_settings, params=shot_data_request_params
+        )
+
     @classmethod
-    def shot_cleanup(cls, shot_props : ShotProps,):
+    def shot_cleanup(
+        cls,
+        shot_props: ShotProps,
+    ):
         shot_props.cleanup()
-        
+
     def setup_shot_props(
         self,
-        shot_id : int,
-        mds_conn : MDSConnection,
-        disruption_time : float,
-        shot_settings : ShotSettings,
+        shot_id: int,
+        mds_conn: MDSConnection,
+        disruption_time: float,
+        shot_settings: ShotSettings,
         tokamak: Tokamak,
-        **kwargs
+        **kwargs,
     ) -> ShotProps:
-        
-                
+
         existing_data = self._retrieve_existing_data(
             shot_id=shot_id,
             tokamak=tokamak,
             shot_settings=shot_settings,
         )
 
-        interpolation_method  = interp1 # TODO: fix
-        
+        interpolation_method = interp1  # TODO: fix
+
         times = self._init_times(
-            shot_id=shot_id, 
-            existing_data=existing_data, 
-            mds_conn=mds_conn, 
-            tokamak=tokamak, 
+            shot_id=shot_id,
+            existing_data=existing_data,
+            mds_conn=mds_conn,
+            tokamak=tokamak,
             disruption_time=disruption_time,
-            shot_settings=shot_settings
+            shot_settings=shot_settings,
         )
-        
+
         pre_filled_shot_data = self._pre_fill_shot_data(
             times=times,
             existing_data=existing_data,
         )
-        
+
         metadata = {
-            'labels': {},
-            'commit_hash': get_commit_hash(),
-            'timestep': {},
-            'duration': {},
-            'description': "",
-            'disrupted': 100  # TODO: Fix
+            "labels": {},
+            "commit_hash": get_commit_hash(),
+            "timestep": {},
+            "duration": {},
+            "description": "",
+            "disrupted": 100,  # TODO: Fix
         }
-        
+
         shot_props = ShotProps(
             shot_id=shot_id,
             tokamak=tokamak,
-            disruption_time = disruption_time,
-            mds_conn = mds_conn,
-            times = times,
-            existing_data = existing_data,
-            pre_filled_shot_data = pre_filled_shot_data,
-            interpolation_method = interpolation_method,
-            metadata = metadata,
+            disruption_time=disruption_time,
+            mds_conn=mds_conn,
+            times=times,
+            existing_data=existing_data,
+            pre_filled_shot_data=pre_filled_shot_data,
+            interpolation_method=interpolation_method,
+            metadata=metadata,
         )
-        
+
         # modify already existing shot props, such as modifying timebase
         shot_props = self._modify_shot_props_for_settings(
-            shot_props, 
-            shot_settings, 
-            **kwargs
+            shot_props, shot_settings, **kwargs
         )
-        
+
         return shot_props
-    
+
     def _modify_shot_props_for_settings(
-        self, 
-        shot_props : ShotProps,
-        shot_settings : ShotSettings,
-        **kwargs
+        self, shot_props: ShotProps, shot_settings: ShotSettings, **kwargs
     ) -> ShotProps:
         if shot_settings.signal_domain is SignalDomain.FLATTOP:
             shot_props = self._modify_times_flattop_timebase(shot_props)
@@ -127,63 +141,73 @@ class ShotManager(ABC):
             shot_props = self._modify_times_rampup_and_flattop_timebase(shot_props)
         if shot_props is None:
             raise ValueError(f"Shot_props set to None in modify_shot_props()")
-        
+
         return shot_props
-            
+
     def _retrieve_existing_data(
         self,
-        shot_id : int,
-        tokamak : Tokamak,
-        shot_settings : ShotSettings,
+        shot_id: int,
+        tokamak: Tokamak,
+        shot_settings: ShotSettings,
     ) -> pd.DataFrame:
         if shot_settings.existing_data_request is not None:
             existing_data_request_params = ExistingDataRequestParams(
                 shot_id=shot_id,
                 database=self.process_database,
-                tokamak=tokamak, 
+                tokamak=tokamak,
                 logger=self.logger,
             )
-            existing_data = shot_settings.existing_data_request.get_existing_data(existing_data_request_params)
-            existing_data['shot'] = existing_data['shot'].astype(int)
-            existing_data = existing_data[existing_data['shot'] == shot_id]
+            existing_data = shot_settings.existing_data_request.get_existing_data(
+                existing_data_request_params
+            )
+            existing_data["shot"] = existing_data["shot"].astype(int)
+            existing_data = existing_data[existing_data["shot"] == shot_id]
         else:
             existing_data = None
         return existing_data
-    
+
     def _init_times(
         self,
-        shot_id : int,
-        existing_data : pd.DataFrame, 
-        mds_conn : MDSConnection,
-        tokamak : Tokamak,
-        disruption_time : float,
-        shot_settings : ShotSettings,
+        shot_id: int,
+        existing_data: pd.DataFrame,
+        mds_conn: MDSConnection,
+        tokamak: Tokamak,
+        disruption_time: float,
+        shot_settings: ShotSettings,
     ) -> np.ndarray:
         """
         Initialize the timebase of the shot.
         """
         request_params = SetTimesRequestParams(
-            shot_id=shot_id, 
-            mds_conn=mds_conn, 
+            shot_id=shot_id,
+            mds_conn=mds_conn,
             existing_data=existing_data,
-            database=self.process_database, 
-            disruption_time=disruption_time, 
-            tokamak=tokamak, 
+            database=self.process_database,
+            disruption_time=disruption_time,
+            tokamak=tokamak,
             logger=self.logger,
         )
         return shot_settings.set_times_request.get_times(request_params)
-    
+
     @classmethod
-    def _pre_fill_shot_data(cls, times : np.ndarray, existing_data : pd.DataFrame) -> pd.DataFrame:
-        '''
+    def _pre_fill_shot_data(
+        cls, times: np.ndarray, existing_data: pd.DataFrame
+    ) -> pd.DataFrame:
+        """
         Intialize the shot with data, if existing data matches the shot timebase.
-        '''
+        """
         if existing_data is not None:
-            time_df = pd.DataFrame(times, columns=['time'])
+            time_df = pd.DataFrame(times, columns=["time"])
             flagged_existing_data = existing_data.assign(merge_success_flag=1)
-            timed_existing_data = pd.merge_asof(time_df, flagged_existing_data, on='time', direction='nearest', tolerance=TIME_CONST)
-            if not timed_existing_data['merge_success_flag'].isna().any():
-                return timed_existing_data.drop(columns=['merge_success_flag'])
+            timed_existing_data = pd.merge_asof(
+                time_df,
+                flagged_existing_data,
+                on="time",
+                direction="nearest",
+                tolerance=TIME_CONST,
+            )
+            if not timed_existing_data["merge_success_flag"].isna().any():
+                return timed_existing_data.drop(columns=["merge_success_flag"])
             else:
                 return None
         else:
