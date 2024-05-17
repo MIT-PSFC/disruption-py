@@ -138,7 +138,7 @@ class MethodOptimizer:
         while True:
             # get next method
             next_method: CachedMethodProps = self.next_method()
-            if next_method == None:
+            if next_method is None:
                 break
 
             # run method
