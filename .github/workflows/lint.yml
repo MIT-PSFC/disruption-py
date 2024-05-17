@@ -53,7 +53,9 @@ jobs:
           pip install -e .
 
       - name: Pre-run pylint
-        if: github.event.pull_request.draft == false
+        if: |
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.draft == false
         run: |
           git reset --hard "${{ github.event.pull_request.base.sha }}"
           git log -1
