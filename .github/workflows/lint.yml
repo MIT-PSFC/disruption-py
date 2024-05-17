@@ -58,7 +58,7 @@ jobs:
           git reset --hard "${{ github.event.pull_request.base.sha }}"
           git log -1
           pylint disruption_py examples tests \
-          --msg-template='{path}:{line}:{column}: |{msg_id} {symbol}| {msg}'
+          | grep '^Your code has been rated'
           git reset --hard "${{ github.event.pull_request.head.sha }}"
           git log -1
 
