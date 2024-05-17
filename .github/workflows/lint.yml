@@ -86,7 +86,8 @@ jobs:
       - name: Print final summary
         run: |
           tail pylint.log \
-          | grep '^Your code has been rated'
+          | grep '^Your code has been rated' \
+          | tee -a "$GITHUB_STEP_SUMMARY"
 
 
   shellcheck:
