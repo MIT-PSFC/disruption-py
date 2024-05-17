@@ -203,7 +203,7 @@ class DictOutputRequest(OutputTypeRequest):
         return self.results
     
     def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
-        self.results = []
+        self.results = {}
         
 class DataFrameOutputRequest(OutputTypeRequest):
     """
@@ -213,7 +213,8 @@ class DataFrameOutputRequest(OutputTypeRequest):
         self.results : pd.DataFrame = pd.DataFrame()
         
     def _output_shot(self, params : ResultOutputTypeRequestParams):
-        self.results = pd.concat([self.results, params.result], ignore_index=True)
+        if not params.result.empty and not params.result.isna().all().all():
+            self.results = pd.concat([self.results, params.result], ignore_index=True)
     
     def get_results(self, params: FinishOutputTypeRequestParams):
         return self.results
