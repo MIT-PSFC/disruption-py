@@ -47,20 +47,19 @@ TEST_SETTINGS = {
     ),
 }
 
+
 @pytest.mark.parametrize("shot_settings_key", TEST_SETTINGS.keys())
-def test_features_serial(
-    handler : Handler, tokamak, shotlist, shot_settings_key
-):
+def test_features_serial(handler: Handler, tokamak, shotlist, shot_settings_key):
     if "GITHUB_ACTIONS" in os.environ and "_fast" not in shot_settings_key:
         pytest.skip("fast execution")
-    
+
     test_setting = TEST_SETTINGS[shot_settings_key]
     if isinstance(test_setting, dict):
         if tokamak.value in test_setting:
             test_setting = test_setting[tokamak.value]
         else:
-            pytest.skip(f"not tested for tokamak {tokamak.value}") 
-    
+            pytest.skip(f"not tested for tokamak {tokamak.value}")
+
     results = handler.get_shots_data(
         shot_ids_request=shotlist,
         shot_settings=test_setting,
@@ -78,7 +77,7 @@ def test_features_serial(
     assert csv_processed == hdf_processed == len(shotlist)
 
 
-def test_features_parallel(handler : Handler, shotlist):
+def test_features_parallel(handler: Handler, shotlist):
     results = handler.get_shots_data(
         shot_ids_request=shotlist,
         shot_settings=TEST_SETTINGS["default_fast"],
