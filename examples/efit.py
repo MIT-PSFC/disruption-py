@@ -13,7 +13,6 @@ from disruption_py.utils.mappings.tokamak_helpers import (
 
 tokamak = get_tokamak_from_environment()
 handler = get_tokamak_handler(tokamak)
-set_times_request = "disruption_warning"
 
 if tokamak is Tokamak.D3D:
     shot_ids_request = [161228]
@@ -29,7 +28,6 @@ else:
 print(f"Initialized handler: {handler.get_tokamak().value}")
 
 shot_settings = ShotSettings(
-    set_times_request=set_times_request,
     log_settings=LogSettings(console_log_level=0),
     run_tags=[],
     run_methods=run_methods,
