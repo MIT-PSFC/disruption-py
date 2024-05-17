@@ -5,7 +5,7 @@ homepage = "https://disruptions.mit.edu/"
 license = "MIT"
 name = "disruption-py"
 readme = "README.md"
-version = "0.5.0"
+version = "0.5.1"
 
 [tool.poetry.dependencies]
 python = "^3.9"
@@ -21,8 +21,8 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.4.0"
-pylint = "^3.1.0"
-pytest = "^8.1.0"
+pylint = "^3.2.0"
+pytest = "^8.2.0"
 yamllint = "^1.35.0"
 
 [tool.poetry.group.docs]
@@ -42,7 +42,7 @@ optional = true
 ipykernel = "^6.29.0"
 ipympl = "^0.9.0"
 jupyterlab = "^4.1.0"
-matplotlib = "^3.8.0"
+matplotlib = "^3.9.0"
 
 [build-system]
 requires = ["poetry-core"]
