@@ -147,6 +147,8 @@ do
 
       } &
 
+      wait # DEBUG
+
    done
 
    wait
