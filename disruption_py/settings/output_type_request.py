@@ -245,7 +245,9 @@ class DataFrameOutputRequest(OutputTypeRequest):
         self.results: pd.DataFrame = pd.DataFrame()
 
     def _output_shot(self, params: ResultOutputTypeRequestParams):
-        if not params.result.empty and not params.result.isna().all().all():
+        if self.results.empty:
+            self.results = params.result
+        elif not params.result.empty and not params.result.isna().all().all():
             self.results = pd.concat([self.results, params.result], ignore_index=True)
 
     def get_results(self, params: FinishOutputTypeRequestParams):
