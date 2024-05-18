@@ -48,6 +48,7 @@ TEST_SETTINGS = {
     ),
 }
 
+
 @pytest.fixture(scope="session", autouse=True)
 def cleanup_after_tests(request):
     # delete log file from previous test runs
@@ -104,4 +105,3 @@ def test_features_parallel(handler: Handler, shotlist):
         assert isinstance(list_output, list)
         assert isinstance(df_output, pd.DataFrame)
         assert csv_processed == hdf_processed == len(shotlist)
-
