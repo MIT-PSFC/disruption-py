@@ -24,6 +24,7 @@ black = "^24.4.0"
 pylint = "^3.2.0"
 pytest = "^8.2.0"
 yamllint = "^1.35.0"
+pre-commit = "^3.7.1"
 
 [tool.poetry.group.docs]
 optional = true
