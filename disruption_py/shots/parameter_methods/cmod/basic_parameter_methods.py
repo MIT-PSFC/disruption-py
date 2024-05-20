@@ -30,17 +30,6 @@ from importlib import resources
 import sys
 import logging
 
-try:
-    sys.path.append("/home/sciortino/usr/python3modules/eqtools3")
-    sys.path.append("/home/sciortino/usr/python3modules/profiletools3")
-    sys.path.append("/home/sciortino/usr/python3modules/gptools3")
-    import eqtools
-    import profiletools
-except Exception as e:
-    logging.warning("Could not import profiletools or eqtools")
-    logging.debug(traceback.format_exc())
-    pass
-
 import warnings
 
 warnings.filterwarnings("error", category=RuntimeWarning)
@@ -1541,6 +1530,17 @@ class BasicCmodRequests(ShotDataRequest):
         tokamak=Tokamak.CMOD,
     )
     def _get_edge_parameters(params: ShotDataRequestParams):
+
+        try:
+            sys.path.append("/home/sciortino/usr/python3modules/eqtools3")
+            sys.path.append("/home/sciortino/usr/python3modules/profiletools3")
+            sys.path.append("/home/sciortino/usr/python3modules/gptools3")
+            import eqtools
+            import profiletools
+        except Exception as e:
+            logging.warning("Could not import profiletools or eqtools")
+            logging.debug(traceback.format_exc())
+            pass
 
         # Ignore shots on the blacklist
         if (
