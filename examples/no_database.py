@@ -1,11 +1,3 @@
-import os
-
-USER = os.getenv("USER")
-
-import sys
-
-sys.path.append(f"/home/{USER}/disruption-py")
-
 import logging
 
 from disruption_py.databases.dummy_database import DummyDatabase

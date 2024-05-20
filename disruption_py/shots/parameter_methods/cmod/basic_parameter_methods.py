@@ -1,8 +1,13 @@
+import logging
+import sys
 import traceback
+import warnings
+from importlib import resources
 
 import numpy as np
 import pandas as pd
 import scipy as sp
+from MDSplus import mdsExceptions
 
 import disruption_py.data
 from disruption_py.settings.shot_data_request import (
@@ -16,22 +21,6 @@ from disruption_py.shots.helpers.method_caching import (
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.math_utils import gaussian_fit, interp1, smooth
 from disruption_py.utils.utils import safe_cast
-
-try:
-    from MDSplus import mdsExceptions
-except ImportError:
-
-    class mdsExceptions(Exception):
-        __getattr__ = lambda self, name: Exception
-
-
-import logging
-
-# TODO: Somehow link to disruption_py
-# TODO: Deal with scary missing TRIPpy dependency (please don't break until I fix you)
-import sys
-import warnings
-from importlib import resources
 
 warnings.filterwarnings("error", category=RuntimeWarning)
 
