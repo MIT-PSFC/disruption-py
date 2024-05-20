@@ -1,7 +1,7 @@
 from disruption_py.utils.mappings.tokamak import Tokamak
 
 
-from dataclasses import dataclass, fields
+from dataclasses import dataclass
 from typing import Callable, List, Union, Any
 
 

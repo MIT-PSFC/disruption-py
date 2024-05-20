@@ -1,6 +1,4 @@
 import argparse
-from contextlib import contextmanager
-import numpy as np
 import logging
 from disruption_py.settings.shot_ids_request import (
     ShotIdsRequestParams,

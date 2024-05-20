@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
-import pandas as pd
-from typing import List, Union, Callable, Tuple
+from typing import List, Tuple
 from disruption_py.settings.enum_options import InterpolationMethod, SignalDomain
 from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.existing_data_request import (

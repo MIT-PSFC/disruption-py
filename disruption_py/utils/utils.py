@@ -1,4 +1,4 @@
-from typing import Callable, List
+from typing import List
 import warnings
 
 import numpy as np

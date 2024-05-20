@@ -9,7 +9,6 @@ from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from logging import Logger
 
 import disruption_py.data
-from disruption_py.utils.utils import without_duplicates
 from importlib import resources
 
 

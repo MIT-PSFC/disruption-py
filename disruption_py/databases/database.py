@@ -1,4 +1,3 @@
-import os
 import logging
 from typing import List
 from urllib.parse import quote_plus
@@ -7,7 +6,6 @@ import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
 
-# import jaydebeapi
 import pyodbc
 import threading
 

@@ -10,7 +10,7 @@ from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.mappings.tokamak import Tokamak
 
 from abc import ABC
-from typing import Any, Callable, List
+from typing import Callable, List
 
 
 @dataclass

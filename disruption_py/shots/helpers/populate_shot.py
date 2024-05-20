@@ -20,9 +20,8 @@ from disruption_py.settings.shot_data_request import (
     ShotDataRequest,
     ShotDataRequestParams,
 )
-from disruption_py.utils.constants import MAX_THREADS_PER_SHOT, TIME_CONST
+from disruption_py.utils.constants import TIME_CONST
 from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.utils import without_duplicates
 
 REQUIRED_COLS = {"time", "shot", "commit_hash"}
 

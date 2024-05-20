@@ -1,4 +1,4 @@
-from typing import Callable, Any
+from typing import Callable
 from disruption_py.handlers.handler import Handler
 from disruption_py.shots.cmod_shot_manager import CModShotManager
 from disruption_py.databases import CModDatabase

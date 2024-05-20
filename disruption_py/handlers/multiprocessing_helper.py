@@ -1,11 +1,10 @@
 from enum import Enum
-from typing import Callable, List, Dict
+from typing import Callable, Dict
 from disruption_py.databases.database import ShotDatabase
 from disruption_py.settings import (
     ShotSettings,
     OutputTypeRequest,
     ResultOutputTypeRequestParams,
-    FinishOutputTypeRequestParams,
 )
 from disruption_py.utils.constants import MAX_PROCESSES
 import multiprocessing

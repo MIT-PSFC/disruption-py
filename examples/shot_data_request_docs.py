@@ -1,6 +1,5 @@
 """ Used in the documentation for the shot data request. """
 
-from typing import List
 from disruption_py.settings.shot_data_request import ShotDataRequest
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.shots.helpers.method_caching import parameter_cached_method
