@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-import pandas as pd
-from disruption_py.databases.database import ShotDatabase
-from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
-from typing import Dict, Union
 from logging import Logger
+from typing import Dict, Union
+
+import pandas as pd
+
+from disruption_py.databases.database import ShotDatabase
+from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
+from disruption_py.utils.mappings.tokamak import Tokamak
 
 
 @dataclass

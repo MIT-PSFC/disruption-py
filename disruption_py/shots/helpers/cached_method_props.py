@@ -1,8 +1,7 @@
-from disruption_py.utils.mappings.tokamak import Tokamak
-
-
 from dataclasses import dataclass
-from typing import Callable, List, Union, Any
+from typing import Any, Callable, List, Union
+
+from disruption_py.utils.mappings.tokamak import Tokamak
 
 
 @dataclass(frozen=True)

@@ -1,19 +1,21 @@
 import traceback
+
 import numpy as np
 import pandas as pd
 import scipy as sp
+
 import disruption_py.data
 from disruption_py.settings.shot_data_request import (
     ShotDataRequest,
     ShotDataRequestParams,
 )
-from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.math_utils import gaussian_fit, interp1, smooth
-from disruption_py.utils.utils import safe_cast
 from disruption_py.shots.helpers.method_caching import (
     cached_method,
     parameter_cached_method,
 )
+from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.utils.math_utils import gaussian_fit, interp1, smooth
+from disruption_py.utils.utils import safe_cast
 
 try:
     from MDSplus import mdsExceptions
@@ -23,14 +25,13 @@ except ImportError:
         __getattr__ = lambda self, name: Exception
 
 
-from importlib import resources
+import logging
 
 # TODO: Somehow link to disruption_py
 # TODO: Deal with scary missing TRIPpy dependency (please don't break until I fix you)
 import sys
-import logging
-
 import warnings
+from importlib import resources
 
 warnings.filterwarnings("error", category=RuntimeWarning)
 

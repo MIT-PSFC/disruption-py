@@ -7,11 +7,12 @@ maris, May 2023 (based on sciortino, August 2020)
 import matplotlib.pyplot as plt
 
 plt.ion()
-import numpy as np
-import sys
-import scipy as sp
-import traceback
 import logging
+import sys
+import traceback
+
+import numpy as np
+import scipy as sp
 
 try:
     sys.path.append("/home/sciortino/usr/python3modules/eqtools3")

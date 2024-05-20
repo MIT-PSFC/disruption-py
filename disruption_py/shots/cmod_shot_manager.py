@@ -1,4 +1,5 @@
 import numpy as np
+
 from disruption_py.mdsplus_integration.mds_connection import MDSConnection
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.settings.shot_settings import ShotSettings

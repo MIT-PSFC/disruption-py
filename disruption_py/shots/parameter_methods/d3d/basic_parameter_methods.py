@@ -1,6 +1,7 @@
 import traceback
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 
 try:
     from MDSplus import MdsException
@@ -11,6 +12,7 @@ except ImportError:
 
 
 import scipy
+
 from disruption_py.settings.shot_data_request import (
     ShotDataRequest,
     ShotDataRequestParams,

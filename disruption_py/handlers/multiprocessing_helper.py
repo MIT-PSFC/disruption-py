@@ -1,14 +1,15 @@
-from enum import Enum
-from typing import Callable, Dict
-from disruption_py.databases.database import ShotDatabase
-from disruption_py.settings import (
-    ShotSettings,
-    OutputTypeRequest,
-    ResultOutputTypeRequestParams,
-)
-from disruption_py.utils.constants import MAX_PROCESSES
 import multiprocessing
 import threading
+from enum import Enum
+from typing import Callable, Dict
+
+from disruption_py.databases.database import ShotDatabase
+from disruption_py.settings import (
+    OutputTypeRequest,
+    ResultOutputTypeRequestParams,
+    ShotSettings,
+)
+from disruption_py.utils.constants import MAX_PROCESSES
 
 
 # define a sentinel value for signifying that task queue is complete

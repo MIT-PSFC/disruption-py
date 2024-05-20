@@ -1,19 +1,16 @@
-from contextlib import contextmanager
 import inspect
-
-import numpy as np
-from disruption_py.handlers import Handler
-from disruption_py.settings import LogSettings, ShotSettings
-from disruption_py.utils.math_utils import matlab_gradient_1d_vectorized
-
-import pandas as pd
-
-
 import logging
+from contextlib import contextmanager
 from typing import Callable, Dict, List
 
+import numpy as np
+import pandas as pd
+
+from disruption_py.handlers import Handler
+from disruption_py.settings import LogSettings, ShotSettings
 from disruption_py.utils.constants import TIME_CONST
 from disruption_py.utils.eval.data_difference import DataDifference
+from disruption_py.utils.math_utils import matlab_gradient_1d_vectorized
 
 
 def get_mdsplus_data(handler: Handler, shot_ids: List[int]) -> Dict[int, pd.DataFrame]:

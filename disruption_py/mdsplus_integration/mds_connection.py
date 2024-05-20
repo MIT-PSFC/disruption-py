@@ -1,7 +1,8 @@
 import logging
 from typing import Any, Callable, Dict, List, Tuple
-import numpy as np
+
 import MDSplus
+import numpy as np
 
 from disruption_py.utils.utils import safe_cast
 

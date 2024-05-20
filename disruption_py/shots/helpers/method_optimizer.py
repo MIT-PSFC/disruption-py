@@ -1,8 +1,8 @@
+from dataclasses import dataclass, field
+from typing import Callable, Dict, List, Set
+
 from disruption_py.mdsplus_integration.mds_connection import MDSConnection
 from disruption_py.shots.helpers.cached_method_props import CachedMethodProps
-from dataclasses import dataclass, field
-
-from typing import Callable, Dict, List, Set
 
 
 class MethodOptimizer:

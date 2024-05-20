@@ -1,7 +1,9 @@
-from abc import ABC, abstractmethod
-import pandas as pd
-import numpy as np
 import logging
+from abc import ABC, abstractmethod
+
+import numpy as np
+import pandas as pd
+
 from disruption_py.databases.database import ShotDatabase
 from disruption_py.mdsplus_integration.mds_connection import (
     MDSConnection,
@@ -9,9 +11,7 @@ from disruption_py.mdsplus_integration.mds_connection import (
 )
 from disruption_py.settings.enum_options import SignalDomain
 from disruption_py.settings.existing_data_request import ExistingDataRequestParams
-from disruption_py.settings.set_times_request import (
-    SetTimesRequestParams,
-)
+from disruption_py.settings.set_times_request import SetTimesRequestParams
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.shots.helpers.populate_shot import populate_shot

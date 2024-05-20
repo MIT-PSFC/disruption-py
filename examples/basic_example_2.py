@@ -1,7 +1,6 @@
 from disruption_py.handlers.cmod_handler import CModHandler
 from disruption_py.settings.shot_settings import ShotSettings
 
-
 cmod_handler = CModHandler()
 shot_settings = ShotSettings(
     # retrieve existing data from the disruption_warnings table use it to prepopulate queries

@@ -1,26 +1,27 @@
-from abc import ABC, abstractmethod
-from typing import Callable, Any
+import logging
 import traceback
+from abc import ABC, abstractmethod
+from typing import Any, Callable
+
+import pandas as pd
+
 from disruption_py.databases.database import ShotDatabase
 from disruption_py.handlers.multiprocessing_helper import MultiprocessingShotRetriever
 from disruption_py.mdsplus_integration.mds_connection import ProcessMDSConnection
+from disruption_py.settings import ShotSettings
+from disruption_py.settings.output_type_request import (
+    FinishOutputTypeRequestParams,
+    OutputTypeRequest,
+    ResultOutputTypeRequestParams,
+    resolve_output_type_request,
+)
 from disruption_py.settings.shot_ids_request import (
     ShotIdsRequestParams,
     ShotIdsRequestType,
     shot_ids_request_runner,
 )
-from disruption_py.settings.output_type_request import (
-    OutputTypeRequest,
-    ResultOutputTypeRequestParams,
-    FinishOutputTypeRequestParams,
-    resolve_output_type_request,
-)
-from disruption_py.settings import ShotSettings
 from disruption_py.shots.shot_manager import ShotManager
 from disruption_py.utils.mappings.tokamak import Tokamak
-import pandas as pd
-import logging
-
 from disruption_py.utils.utils import without_duplicates
 
 

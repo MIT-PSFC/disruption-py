@@ -1,3 +1,6 @@
+import numpy as np
+import pandas as pd
+
 from disruption_py.settings.shot_data_request import (
     ShotDataRequest,
     ShotDataRequestParams,
@@ -5,8 +8,6 @@ from disruption_py.settings.shot_data_request import (
 from disruption_py.shots.helpers.method_caching import parameter_cached_method
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.math_utils import gaussian_fit, interp1, smooth
-import numpy as np
-import pandas as pd
 
 
 class D3DEfitRequests(ShotDataRequest):

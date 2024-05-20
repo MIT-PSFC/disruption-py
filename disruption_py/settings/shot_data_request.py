@@ -1,16 +1,16 @@
+from abc import ABC
 from collections.abc import Iterable
 from dataclasses import dataclass
 from logging import Logger
+from typing import Callable, List
+
 from disruption_py.mdsplus_integration.mds_connection import MDSConnection
 from disruption_py.shots.helpers.cached_method_props import (
-    is_cached_method,
     get_cached_method_params,
+    is_cached_method,
 )
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.mappings.tokamak import Tokamak
-
-from abc import ABC
-from typing import Callable, List
 
 
 @dataclass

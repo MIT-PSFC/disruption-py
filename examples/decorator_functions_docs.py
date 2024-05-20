@@ -1,8 +1,11 @@
 from typing import List
-import pandas as pd
-from disruption_py.settings.shot_data_request import ShotDataRequest
-from disruption_py.settings.shot_data_request import ShotDataRequestParams
 
+import pandas as pd
+
+from disruption_py.settings.shot_data_request import (
+    ShotDataRequest,
+    ShotDataRequestParams,
+)
 from disruption_py.shots.helpers.method_caching import parameter_cached_method
 
 
