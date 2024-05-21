@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import numpy as np
 
 from disruption_py.mdsplus_integration.mds_connection import MDSConnection

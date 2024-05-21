@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import logging
 
 from disruption_py.databases.dummy_database import DummyDatabase

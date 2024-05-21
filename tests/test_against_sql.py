@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """Unit tests for workflows involving get_dataset_df() for obtaining CMOD data.
 
 Expects to be run on the MFE workstations.

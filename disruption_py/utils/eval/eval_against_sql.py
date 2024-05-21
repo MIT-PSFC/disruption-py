@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import inspect
 import logging
 from contextlib import contextmanager

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass

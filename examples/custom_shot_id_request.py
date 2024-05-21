@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from typing import List
 
 from disruption_py.handlers.cmod_handler import CModHandler

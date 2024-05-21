@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from typing import Callable
 
 from disruption_py.databases import D3DDatabase

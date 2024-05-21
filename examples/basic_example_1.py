@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from disruption_py.handlers.cmod_handler import CModHandler
 from disruption_py.settings.shot_settings import ShotSettings
 

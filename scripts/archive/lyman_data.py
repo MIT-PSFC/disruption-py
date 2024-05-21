@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 Methods to load and plot C-Mod Ly-alpha data.
 

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from abc import ABC
 from collections.abc import Iterable
 from dataclasses import dataclass

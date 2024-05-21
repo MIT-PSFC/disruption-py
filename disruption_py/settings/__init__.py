@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from .enum_options import InterpolationMethod, SignalDomain
 from .existing_data_request import ExistingDataRequest, ExistingDataRequestParams
 from .log_settings import LogSettings

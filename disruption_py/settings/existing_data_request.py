@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from logging import Logger

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import logging
 import traceback
 from abc import ABC, abstractmethod

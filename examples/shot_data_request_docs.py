@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """ Used in the documentation for the shot data request. """
 
 import numpy as np
