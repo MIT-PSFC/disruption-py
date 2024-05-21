@@ -3,7 +3,7 @@ import threading
 
 import pyodbc
 
-from disruption_py.databases import ShotDatabase
+from disruption_py.databases.database import ShotDatabase
 from disruption_py.utils.constants import D3D_PROTECTED_COLUMNS
 
 
