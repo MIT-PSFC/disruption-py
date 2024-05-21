@@ -41,10 +41,16 @@ do
 
    # reset
    {
-      git status
-      git reset --hard # "$DISPY_BRANCH"
-      git clean -ffdx # -e .venv
-      git pull
+      for N in {0..9}
+      do
+         git status
+         git reset --hard
+         git clean -ffdx
+         git pull && break
+         REV=$((1+N*2))
+         echo "reset: HEAD~$REV"
+         git reset --hard "HEAD~$REV"
+      done
       git status
    } \
    2>&1 \
