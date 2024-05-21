@@ -34,6 +34,7 @@ def cmod_setup_check():
             "setup not complete, MDSplus package not available. Please run `disruption_py setup`"
         )
         return False
+    print("Installed: MDSplus", MDSplus.__version__)
 
     available_drivers = pyodbc.drivers()
     desired_driver = "ODBC Driver 18 for SQL Server"
@@ -92,7 +93,7 @@ def setup_cmod():
         import MDSplus
 
         print(
-            "MDSplus is already available in the current environment, continuing setup"
+            f"MDSplus {MDSplus.__version__} is already available in the current environment, continuing setup"
         )
         should_add_mdsplus = "n"
     except ImportError:

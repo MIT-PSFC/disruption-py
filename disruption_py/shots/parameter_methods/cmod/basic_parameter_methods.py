@@ -1524,10 +1524,10 @@ class BasicCmodRequests(ShotDataRequest):
     def _get_edge_parameters(params: ShotDataRequestParams):
 
         try:
-            sys.path.append("/home/sciortino/usr/python3modules/eqtools3")
+            # sys.path.append("/home/sciortino/usr/python3modules/eqtools3")
             sys.path.append("/home/sciortino/usr/python3modules/profiletools3")
             sys.path.append("/home/sciortino/usr/python3modules/gptools3")
-            import eqtools
+            # import eqtools
             import profiletools
         except Exception as e:
             logging.warning("Could not import profiletools or eqtools")
