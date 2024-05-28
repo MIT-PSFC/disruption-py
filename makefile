@@ -13,13 +13,15 @@ fetch:
 
 # poetry #
 
-.PHONY: install uninstall lock update show
+.PHONY: install uninstall reinstall lock update show
 
 install:
 	poetry install --with dev
 
 uninstall:
 	poetry env list | cut -d' ' -f1 | xargs poetry env remove
+
+reinstall: uninstall install
 
 lock:
 	poetry lock --no-update
