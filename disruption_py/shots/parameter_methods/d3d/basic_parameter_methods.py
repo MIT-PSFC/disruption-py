@@ -4,10 +4,8 @@ import traceback
 
 import numpy as np
 import pandas as pd
-
-from MDSplus import mdsExceptions
-
 import scipy
+from MDSplus import mdsExceptions
 
 from disruption_py.settings.shot_data_request import (
     ShotDataRequest,
