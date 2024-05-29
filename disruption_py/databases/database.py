@@ -1,15 +1,14 @@
-import os
+#!/usr/bin/env python3
+
 import logging
+import threading
 from typing import List
 from urllib.parse import quote_plus
 
-import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine
-
-# import jaydebeapi
+import pandas as pd
 import pyodbc
-import threading
+from sqlalchemy import create_engine
 
 from disruption_py.utils.constants import BASE_PROTECTED_COLUMNS, TIME_CONST
 

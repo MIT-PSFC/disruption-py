@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 TIME_CONST = 1e-6
 MAX_THREADS_PER_SHOT = 10
 MAX_PROCESSES = 10

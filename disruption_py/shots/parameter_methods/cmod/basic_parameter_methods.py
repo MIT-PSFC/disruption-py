@@ -1,47 +1,28 @@
+#!/usr/bin/env python3
+
+import logging
+import sys
 import traceback
+import warnings
+from importlib import resources
+
 import numpy as np
 import pandas as pd
 import scipy as sp
+from MDSplus import mdsExceptions
+
 import disruption_py.data
 from disruption_py.settings.shot_data_request import (
     ShotDataRequest,
     ShotDataRequestParams,
 )
-from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.math_utils import gaussian_fit, interp1, smooth
-from disruption_py.utils.utils import safe_cast, without_duplicates
 from disruption_py.shots.helpers.method_caching import (
     cached_method,
     parameter_cached_method,
 )
-
-try:
-    from MDSplus import mdsExceptions
-except ImportError:
-
-    class mdsExceptions(Exception):
-        __getattr__ = lambda self, name: Exception
-
-
-from importlib import resources
-
-# TODO: Somehow link to disruption_py
-# TODO: Deal with scary missing TRIPpy dependency (please don't break until I fix you)
-import sys
-import logging
-
-try:
-    sys.path.append("/home/sciortino/usr/python3modules/eqtools3")
-    sys.path.append("/home/sciortino/usr/python3modules/profiletools3")
-    sys.path.append("/home/sciortino/usr/python3modules/gptools3")
-    import eqtools
-    import profiletools
-except Exception as e:
-    logging.warning("Could not import profiletools or eqtools")
-    logging.debug(traceback.format_exc())
-    pass
-
-import warnings
+from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.utils.math_utils import gaussian_fit, interp1, smooth
+from disruption_py.utils.utils import safe_cast
 
 warnings.filterwarnings("error", category=RuntimeWarning)
 
@@ -1541,6 +1522,17 @@ class BasicCmodRequests(ShotDataRequest):
         tokamak=Tokamak.CMOD,
     )
     def _get_edge_parameters(params: ShotDataRequestParams):
+
+        try:
+            # sys.path.append("/home/sciortino/usr/python3modules/eqtools3")
+            sys.path.append("/home/sciortino/usr/python3modules/profiletools3")
+            sys.path.append("/home/sciortino/usr/python3modules/gptools3")
+            # import eqtools
+            import profiletools
+        except Exception as e:
+            logging.warning("Could not import profiletools or eqtools")
+            logging.debug(traceback.format_exc())
+            pass
 
         # Ignore shots on the blacklist
         if (

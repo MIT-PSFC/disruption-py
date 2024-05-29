@@ -1,6 +1,9 @@
+#!/usr/bin/env python3
+
 import os
-from treelib import Node, Tree
+
 from graphviz import Digraph
+from treelib import Node, Tree
 
 tree = Tree()
 dot = Digraph(graph_attr={"rankdir": "LR"})

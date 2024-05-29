@@ -1,5 +1,7 @@
-from typing import Callable, List
+#!/usr/bin/env python3
+
 import warnings
+from typing import List
 
 import numpy as np
 
