@@ -21,7 +21,7 @@ if tokamak is Tokamak.D3D:
 elif tokamak is Tokamak.CMOD:
     shot_ids_request = [1150805012]
     run_methods = ["_get_EFIT_parameters"]
-    shape = (62, 25)
+    shape = (62, 24)
 else:
     raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 

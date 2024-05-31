@@ -250,7 +250,7 @@ class DataFrameOutputRequest(OutputTypeRequest):
         self.results: pd.DataFrame = pd.DataFrame()
 
     def _output_shot(self, params: ResultOutputTypeRequestParams):
-        return safe_df_concat(self.results, [params.result])
+        self.results = safe_df_concat(self.results, [params.result])
 
     def get_results(self, params: FinishOutputTypeRequestParams):
         return self.results
