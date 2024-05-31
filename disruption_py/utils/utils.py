@@ -47,18 +47,22 @@ def safe_cast(array: np.ndarray, dtype, copy=False):
         warnings.filterwarnings("ignore", category=RuntimeWarning)
         return array.astype(dtype, copy=copy)
 
-def safe_df_concat(base_df : pd.DataFrame, new_dfs : List[pd.DataFrame]):
+
+def safe_df_concat(base_df: pd.DataFrame, new_dfs: List[pd.DataFrame]):
     if isinstance(new_dfs, pd.DataFrame):
         new_dfs = [new_dfs]
-    
-    new_dfs = [new_df.dropna(axis=1, how='all') for new_df in new_dfs]
-    new_dfs = [new_df for new_df in new_dfs if not new_df.empty and not new_df.isna().all().all()]
-    
+
+    new_dfs = [new_df.dropna(axis=1, how="all") for new_df in new_dfs]
+    new_dfs = [
+        new_df
+        for new_df in new_dfs
+        if not new_df.empty and not new_df.isna().all().all()
+    ]
+
     if len(new_dfs) == 0:
         return base_df
-    
+
     if base_df.empty:
         return pd.concat(new_dfs, axis=1, ignore_index=True, sort=False)
     else:
         return pd.concat([base_df] + new_dfs, axis=1, ignore_index=True, sort=False)
-    
