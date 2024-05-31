@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 from contextlib import contextmanager
 from typing import Iterable, Tuple

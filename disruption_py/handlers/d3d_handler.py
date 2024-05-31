@@ -1,7 +1,10 @@
+#!/usr/bin/env python3
+
 from typing import Callable
+
+from disruption_py.databases import D3DDatabase
 from disruption_py.handlers.handler import Handler
 from disruption_py.shots.d3d_shot_manager import D3DShotManager
-from disruption_py.databases import D3DDatabase
 from disruption_py.utils.mappings.tokamak import Tokamak
 
 

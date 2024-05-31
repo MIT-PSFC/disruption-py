@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+
 import logging
 
 import pandas as pd
+
 import disruption_py
 from disruption_py.database import create_d3d_handler
 from disruption_py.shots import D3DShot

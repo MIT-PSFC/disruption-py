@@ -1,16 +1,12 @@
+#!/usr/bin/env python3
+
 import traceback
-import pandas as pd
+
 import numpy as np
-
-try:
-    from MDSplus import MdsException
-except ImportError:
-
-    class MdsException(Exception):
-        __getattr__ = lambda self, name: Exception
-
-
+import pandas as pd
 import scipy
+from MDSplus import mdsExceptions
+
 from disruption_py.settings.shot_data_request import (
     ShotDataRequest,
     ShotDataRequestParams,
@@ -103,7 +99,7 @@ class BasicD3DRequests(ShotDataRequest):
                     f"[Shot {params.shot_props.shot_id}]:No NBI power data found in this shot."
                 )
                 p_nbi = np.zeros(len(params.shot_props.times))
-        except MdsException as e:
+        except mdsExceptions.MdsException as e:
             p_nbi = np.zeros(len(params.shot_props.times))
             params.logger.info(
                 f"[Shot {params.shot_props.shot_id}]:Failed to open NBI node"
@@ -130,7 +126,7 @@ class BasicD3DRequests(ShotDataRequest):
                     f"[Shot {params.shot_props.shot_id}]:No ECH power data found in this shot. Setting to zeros"
                 )
                 p_ech = np.zeros(len(params.shot_props.times))
-        except MdsException as e:
+        except mdsExceptions.MdsException as e:
             p_ech = np.zeros(len(params.shot_props.times))
             params.logger.info(
                 f"[Shot {params.shot_props.shot_id}]:Failed to open ECH node. Setting to zeros"
@@ -154,7 +150,7 @@ class BasicD3DRequests(ShotDataRequest):
             bol_prm, _ = params.mds_conn.get_data_with_dims(
                 r"\bol_prm", tree_name="bolom"
             )
-        except MdsException as e:
+        except mdsExceptions.MdsException as e:
             params.logger.info(
                 f"[Shot {params.shot_props.shot_id}]:Failed to open bolom tree."
             )
@@ -225,7 +221,7 @@ class BasicD3DRequests(ShotDataRequest):
             )
             v_loop = scipy.signal.medfilt(v_loop, 11)
             v_loop = interp1(t_v_loop, v_loop, params.shot_props.times, "linear")
-        except MdsException as e:
+        except mdsExceptions.MdsException as e:
             params.logger.info(
                 f"[Shot {params.shot_props.shot_id}]:Failed to open VLOOPB node. Setting to NaN."
             )
@@ -248,7 +244,7 @@ class BasicD3DRequests(ShotDataRequest):
             chisq = params.mds_conn.get_data(r"\efit_a_eqdsk:chisq")
             # Filter out invalid indices of efit reconstruction
             invalid_indices = None  # TODO: Finish
-        except MdsException as e:
+        except mdsExceptions.MdsException as e:
             params.logger.info(
                 f"[Shot {params.shot_props.shot_id}]:Unable to get plasma current data. p_ohm set to NaN."
             )
@@ -319,7 +315,7 @@ class BasicD3DRequests(ShotDataRequest):
             with np.errstate(divide="ignore"):
                 n_g = ip / 1.0e6 / (np.pi * a_minor**2)  # [MA/m^2]
                 g_f = ne / 1.0e20 / n_g  # TODO: Fill in units
-        except MdsException as e:
+        except mdsExceptions.MdsException as e:
             # TODO: Confirm that there is a separate exception if ptdata name doesn't exist
             params.logger.info(
                 f"[Shot {params.shot_props.shot_id}]:Failed to get some parameter"
@@ -370,7 +366,7 @@ class BasicD3DRequests(ShotDataRequest):
             with np.errstate(divide="ignore"):
                 n_g_rt = ip / 1.0e6 / (np.pi * a_minor_rt**2)  # [MA/m^2]
                 g_f_rt = ne_rt / 1.0e20 / n_g_rt  # TODO: Fill in units
-        except MdsException as e:
+        except mdsExceptions.MdsException as e:
             params.logger.info(
                 f"[Shot {params.shot_props.shot_id}]:Failed to get some parameter"
             )
@@ -401,7 +397,7 @@ class BasicD3DRequests(ShotDataRequest):
             dip_dt = np.gradient(ip, t_ip)
             ip = interp1(t_ip, ip, params.shot_props.times, "linear")
             dip_dt = interp1(t_ip, dip_dt, params.shot_props.times, "linear")
-        except MdsException as e:
+        except mdsExceptions.MdsException as e:
             params.logger.info(
                 f"[Shot {params.shot_props.shot_id}]:Failed to get measured plasma current parameters"
             )
@@ -433,7 +429,7 @@ class BasicD3DRequests(ShotDataRequest):
             dipprog_dt = interp1(
                 t_ip_prog, dipprog_dt, params.shot_props.times, "linear"
             )
-        except MdsException as e:
+        except mdsExceptions.MdsException as e:
             params.logger.info(
                 f"[Shot {params.shot_props.shot_id}]:Failed to get programmed plasma current parameters"
             )
@@ -455,7 +451,7 @@ class BasicD3DRequests(ShotDataRequest):
             )
             t_ipimode = t_ipimode / 1.0e3  # [ms] -> [s]
             ipimode = interp1(t_ipimode, ipimode, params.shot_props.times, "linear")
-        except MdsException as e:
+        except mdsExceptions.MdsException as e:
             params.logger.info(
                 f"[Shot {params.shot_props.shot_id}]:Failed to get ipimode signal. Setting to NaN."
             )
@@ -482,7 +478,7 @@ class BasicD3DRequests(ShotDataRequest):
             power_supply_railed = np.zeros(len(params.shot_props.times))
             power_supply_railed[railed_indices] = 1
             ip_error[railed_indices] = np.nan
-        except MdsException as e:
+        except mdsExceptions.MdsException as e:
             params.logger.info(
                 f"[Shot {params.shot_props.shot_id}]:Failed to get epsoff signal. Setting to NaN."
             )
@@ -531,7 +527,7 @@ class BasicD3DRequests(ShotDataRequest):
             dip_dt_rt = np.gradient(ip_rt, t_ip_rt)
             ip_rt = interp1(t_ip_rt, ip_rt, params.shot_props.times, "linear")
             dip_dt_rt = interp1(t_ip_rt, dip_dt_rt, params.shot_props.times, "linear")
-        except MdsException as e:
+        except mdsExceptions.MdsException as e:
             params.logger.info(
                 f"[Shot {params.shot_props.shot_id}]:Failed to get measured plasma current parameters"
             )
@@ -566,7 +562,7 @@ class BasicD3DRequests(ShotDataRequest):
             dipprog_dt_rt = interp1(
                 t_ip_prog_rt, dipprog_dt_rt, params.shot_props.times, "linear"
             )
-        except MdsException as e:
+        except mdsExceptions.MdsException as e:
             params.logger.info(
                 f"[Shot {params.shot_props.shot_id}]:Failed to get programmed plasma current parameters"
             )
@@ -582,7 +578,7 @@ class BasicD3DRequests(ShotDataRequest):
             ip_error_rt = interp1(
                 t_ip_error_rt, ip_error_rt, params.shot_props.times, "linear"
             )
-        except MdsException as e:
+        except mdsExceptions.MdsException as e:
             params.logger.info(
                 f"[Shot {params.shot_props.shot_id}]:Failed to get ipeecoil signal. Setting to NaN."
             )
@@ -604,7 +600,7 @@ class BasicD3DRequests(ShotDataRequest):
             )
             t_ipimode = t_ipimode / 1.0e3  # [ms] -> [s]
             ipimode = interp1(t_ipimode, ipimode, params.shot_props.times, "linear")
-        except MdsException as e:
+        except mdsExceptions.MdsException as e:
             params.logger.info(
                 f"[Shot {params.shot_props.shot_id}]:Failed to get ipimode signal. Setting to NaN."
             )
@@ -629,7 +625,7 @@ class BasicD3DRequests(ShotDataRequest):
             power_supply_railed = np.zeros(len(params.shot_props.times))
             power_supply_railed[railed_indices] = 1
             ip_error_rt[railed_indices] = np.nan
-        except MdsException as e:
+        except mdsExceptions.MdsException as e:
             params.logger.info(
                 f"[Shot {params.shot_props.shot_id}]:Failed to get epsoff signal. power_supply_railed will be NaN."
             )
@@ -684,7 +680,7 @@ class BasicD3DRequests(ShotDataRequest):
                 a_minor[invalid_indices] = np.nan
                 a_minor = interp1(t_a, a_minor, params.shot_props.times, "linear")
                 z_cur_norm = z_cur / a_minor
-            except MdsException as e:
+            except mdsExceptions.MdsException as e:
                 params.logger.info(
                     f"[Shot {params.shot_props.shot_id}]:Failed to get efit parameters"
                 )
@@ -692,7 +688,7 @@ class BasicD3DRequests(ShotDataRequest):
                     f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}"
                 )
                 z_cur_norm = z_cur / BasicD3DRequests.NOMINAL_FLATTOP_RADIUS
-        except MdsException as e:
+        except mdsExceptions.MdsException as e:
             params.logger.info(
                 f"[Shot {params.shot_props.shot_id}]:Failed to get vpszp signal"
             )
@@ -744,7 +740,7 @@ class BasicD3DRequests(ShotDataRequest):
                 )
                 dusbradial = interp1(t_n1, dusbradial, params.shot_props.times)
                 dusbradial *= 1.0e-4  # [T]
-            except MdsException as e:
+            except mdsExceptions.MdsException as e:
                 params.logger.debug(
                     f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}"
                 )
@@ -755,7 +751,7 @@ class BasicD3DRequests(ShotDataRequest):
                     )
                     dusbradial = interp1(t_n1, dusbradial, params.shot_props.times)
                     dusbradial *= 1.0e-4  # [T]
-                except MdsException as e:
+                except mdsExceptions.MdsException as e:
                     params.logger.info(
                         f"[Shot {params.shot_props.shot_id}]:Failed to get n1 bradial signal. Returning NaN."
                     )
@@ -849,7 +845,7 @@ class BasicD3DRequests(ShotDataRequest):
                 f"ptdata('dpsradxdiv', {params.shot_props.shot_id})", tree_name="d3d"
             )
             rad_xdiv = interp1(t_rad_xdiv, rad_xdiv, params.shot_props.times)  # [T]
-        except MdsException as e:
+        except mdsExceptions.MdsException as e:
             params.logger.debug(
                 f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}"
             )
@@ -1158,7 +1154,7 @@ class BasicD3DRequests(ShotDataRequest):
                 params.logger.info(
                     f"[Shot {params.shot_props.shot_id}]:No zeff data found in this shot."
                 )
-        except MdsException as e:
+        except mdsExceptions.MdsException as e:
             zeff = np.zeros(len(params.shot_props.times))
             params.logger.info(
                 f"[Shot {params.shot_props.shot_id}]:Failed to open Zeff node"
@@ -1296,7 +1292,7 @@ class BasicD3DRequests(ShotDataRequest):
                     f"{sub_tree}:temp", tree_name="electrons"
                 )
                 lasers[laser]["time"] = t_sub_tree / 1.0e3  # [ms] -> [s]
-            except MdsException as e:
+            except mdsExceptions.MdsException as e:
                 lasers[laser] = None
                 params.logger.info(
                     f"[Shot {params.shot_props.shot_id}]: Failed to get {laser} time. Setting laser data to None."
@@ -1319,7 +1315,7 @@ class BasicD3DRequests(ShotDataRequest):
                     lasers[laser][node] = params.mds_conn.get_data(
                         f"{sub_tree}:{name}", tree_name="electrons"
                     )
-                except MdsException as e:
+                except mdsExceptions.MdsException as e:
                     lasers[laser][node] = np.full(lasers[laser]["time"].shape, np.nan)
                     params.logger.info(
                         f"[Shot {params.shot_props.shot_id}]: Failed to get {laser}:{name}({node}) data, Setting to all NaNs."
@@ -1444,7 +1440,7 @@ class BasicD3DRequests(ShotDataRequest):
                 efit_dict[node] = params.mds_conn.get_data(
                     f"{path}{node}", tree_name="_efit_tree"
                 )
-            except MdsException as e:
+            except mdsExceptions.MdsException as e:
                 efit_dict[node] = np.full(efit_dict["time"].shape, np.nan)
                 params.logger.info(
                     f"[Shot {params.shot_props.shot_id}]: Failed to get {node} from efit, Setting to all NaNs."

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """Unit tests for workflows involving get_dataset_df() for obtaining CMOD data.
 
 Expects to be run on the MFE workstations.
@@ -7,22 +9,23 @@ Expects SQL credentials to be configured.
 
 import argparse
 from typing import Dict, List
-import pytest
 
 import pandas as pd
+import pytest
+
 from disruption_py.handlers.cmod_handler import Handler
+from disruption_py.utils.eval.eval_against_sql import (
+    eval_against_sql,
+    eval_shots_against_sql,
+    get_failure_statistics_string,
+    get_mdsplus_data,
+    get_sql_data_for_mdsplus,
+)
 from disruption_py.utils.mappings.tokamak_helpers import (
     get_tokamak_from_environment,
     get_tokamak_handler,
     get_tokamak_test_expected_failure_columns,
     get_tokamak_test_shot_ids,
-)
-from disruption_py.utils.eval.eval_against_sql import (
-    eval_shots_against_sql,
-    get_failure_statistics_string,
-    get_mdsplus_data,
-    get_sql_data_for_mdsplus,
-    eval_against_sql,
 )
 
 

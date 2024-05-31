@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 Methods to load and plot C-Mod Ly-alpha data.
 
@@ -7,32 +9,37 @@ sciortino, August 2020
 import matplotlib.pyplot as plt
 
 plt.ion()
+import copy
+import os
+import shutil
+import sys
+
+import aurora
+import MDSplus
 import numpy as np
+import scipy
 import xarray
-from scipy.interpolate import interp1d, interp2d
+from IPython import embed
 
 # sys.path.append('/home/millerma/OMFIT-source/omfit')
 from omfit_classes import omfit_eqdsk, omfit_mds
-import shutil, os, scipy, copy
-from IPython import embed
-import MDSplus
 from omfit_classes.omfit_mds import OMFITmdsValue
-
-from scipy.constants import Boltzmann as kB, e as q_electron
+from scipy.constants import Boltzmann as kB
+from scipy.constants import e as q_electron
+from scipy.interpolate import interp1d, interp2d
 from scipy.optimize import curve_fit
-import aurora
-import sys
 
 sys.path.append("/home/sciortino/usr/python3modules/profiletools3")
 sys.path.append("/home/sciortino/usr/python3modules/eqtools3")
-# sys.path.append('/home/millerma/python3modules/profiletools3')
-# sys.path.append('/home/millerma/python3modules/eqtools3')
-import profiletools
 import eqtools
+import fit_2D
 
 # from mitlya repo
 import mtanh_fitting
-import fit_2D
+
+# sys.path.append('/home/millerma/python3modules/profiletools3')
+# sys.path.append('/home/millerma/python3modules/eqtools3')
+import profiletools
 import tomographic_inversion as tomo
 
 
@@ -3430,7 +3437,7 @@ def get_dWdt(shot, tmin=None, tmax=None, plot=False):
     def powerlaw(x, a, b):
         return a * x**b
 
-    from scipy.interpolate import interp1d, UnivariateSpline
+    from scipy.interpolate import UnivariateSpline, interp1d
     from scipy.optimize import curve_fit
 
     if tmin is not None and tmax is not None:

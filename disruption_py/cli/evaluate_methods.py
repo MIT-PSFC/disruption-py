@@ -1,7 +1,8 @@
+#!/usr/bin/env python3
+
 import argparse
-from contextlib import contextmanager
-import numpy as np
 import logging
+
 from disruption_py.settings.shot_ids_request import (
     ShotIdsRequestParams,
     shot_ids_request_runner,
@@ -14,8 +15,8 @@ from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.mappings.tokamak_helpers import (
     get_tokamak_from_environment,
-    get_tokamak_test_expected_failure_columns,
     get_tokamak_handler,
+    get_tokamak_test_expected_failure_columns,
     get_tokamak_test_shot_ids,
 )
 
