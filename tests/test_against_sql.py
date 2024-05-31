@@ -27,8 +27,8 @@ from disruption_py.utils.eval.eval_against_sql import (
 
 
 @pytest.fixture(scope="module")
-def mdsplus_data(handler: Handler, shotlist: List[int]) -> Dict[int, pd.DataFrame]:
-    return get_mdsplus_data(handler, shotlist)
+def mdsplus_data(handler: Handler, shotlist: List[int], module_file_path_f) -> Dict[int, pd.DataFrame]:
+    return get_mdsplus_data(handler, shotlist, log_file_path=module_file_path_f(".log"))
 
 
 @pytest.fixture(scope="module")

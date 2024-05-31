@@ -16,7 +16,7 @@ from disruption_py.utils.constants import TIME_CONST
 from disruption_py.utils.eval.data_difference import DataDifference
 
 
-def get_mdsplus_data(handler: Handler, shot_ids: List[int]) -> Dict[int, pd.DataFrame]:
+def get_mdsplus_data(handler: Handler, shot_ids: List[int], log_file_path="tests/eval_against_sql.log") -> Dict[int, pd.DataFrame]:
     """
     Get MDSplus data for a list of shots.
 
@@ -30,7 +30,7 @@ def get_mdsplus_data(handler: Handler, shot_ids: List[int]) -> Dict[int, pd.Data
         set_times_request="disruption_warning",
         log_settings=LogSettings(
             log_to_console=False,
-            log_file_path="tests/cmod.log",
+            log_file_path=log_file_path,
             log_file_write_mode="w",
             file_log_level=logging.DEBUG,
         ),
