@@ -51,8 +51,11 @@ TEST_SETTINGS = {
     ),
 }
 
+
 @pytest.mark.parametrize("shot_settings_key", TEST_SETTINGS.keys())
-def test_features_serial(handler: Handler, tokamak, shotlist, shot_settings_key, test_file_path_f):
+def test_features_serial(
+    handler: Handler, tokamak, shotlist, shot_settings_key, test_file_path_f
+):
     if "GITHUB_ACTIONS" in os.environ and "_fast" not in shot_settings_key:
         pytest.skip("fast execution")
 

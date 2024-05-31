@@ -89,21 +89,28 @@ def mock_numpy_gradient():
         # The patch will be in place for the duration of the test session
         yield
 
+
 @pytest.fixture(scope="session")
 def tmpdir(keep_logs):
-    tmpdir_path = mkdtemp(dir="tests", prefix=f"tmp-{time.strftime('%y%m%d-%H:%M:%S')}-")
+    tmpdir_path = mkdtemp(
+        dir="tests", prefix=f"tmp-{time.strftime('%y%m%d-%H:%M:%S')}-"
+    )
     yield tmpdir_path
     if not keep_logs and os.path.exists(tmpdir_path):
         shutil.rmtree(tmpdir_path)
+
 
 @pytest.fixture(scope="module")
 def module_file_path_f(request, tmpdir):
     def inner(suffix):
         return os.path.join(tmpdir, f"{request.node.name}{suffix}")
+
     return inner
+
 
 @pytest.fixture(scope="function")
 def test_file_path_f(request, tmpdir):
     def inner(suffix):
         return os.path.join(tmpdir, f"{request.node.name}{suffix}")
+
     return inner

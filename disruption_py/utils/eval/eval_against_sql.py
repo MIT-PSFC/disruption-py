@@ -15,7 +15,9 @@ from disruption_py.utils.eval.data_difference import DataDifference
 from disruption_py.utils.math_utils import matlab_gradient_1d_vectorized
 
 
-def get_mdsplus_data(handler: Handler, shot_ids: List[int], log_file_path="tests/eval_against_sql.log") -> Dict[int, pd.DataFrame]:
+def get_mdsplus_data(
+    handler: Handler, shot_ids: List[int], log_file_path="tests/eval_against_sql.log"
+) -> Dict[int, pd.DataFrame]:
     """
     Get MDSplus data for a list of shots.
 

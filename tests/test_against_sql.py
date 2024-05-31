@@ -30,7 +30,9 @@ from disruption_py.utils.mappings.tokamak_helpers import (
 
 
 @pytest.fixture(scope="module")
-def mdsplus_data(handler: Handler, shotlist: List[int], module_file_path_f) -> Dict[int, pd.DataFrame]:
+def mdsplus_data(
+    handler: Handler, shotlist: List[int], module_file_path_f
+) -> Dict[int, pd.DataFrame]:
     return get_mdsplus_data(handler, shotlist, log_file_path=module_file_path_f(".log"))
 
 
