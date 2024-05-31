@@ -1,7 +1,10 @@
-from typing import Callable, Any
+#!/usr/bin/env python3
+
+from typing import Callable
+
+from disruption_py.databases import CModDatabase
 from disruption_py.handlers.handler import Handler
 from disruption_py.shots.cmod_shot_manager import CModShotManager
-from disruption_py.databases import CModDatabase
 from disruption_py.utils.mappings.tokamak import Tokamak
 
 

@@ -1,4 +1,7 @@
+#!/usr/bin/env python3
+
 from typing import List
+
 from disruption_py.handlers.cmod_handler import CModHandler
 from disruption_py.settings.shot_ids_request import ShotIdsRequest, ShotIdsRequestParams
 from disruption_py.settings.shot_settings import ShotSettings

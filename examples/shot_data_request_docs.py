@@ -1,11 +1,16 @@
+#!/usr/bin/env python3
+
 """ Used in the documentation for the shot data request. """
 
-from typing import List
-from disruption_py.settings.shot_data_request import ShotDataRequest
-from disruption_py.settings.shot_data_request import ShotDataRequestParams
-from disruption_py.shots.helpers.method_caching import parameter_cached_method
-import pandas as pd
 import numpy as np
+import pandas as pd
+
+from disruption_py.settings.shot_data_request import (
+    ShotDataRequest,
+    ShotDataRequestParams,
+)
+from disruption_py.shots.helpers.method_caching import parameter_cached_method
+from disruption_py.utils.mappings.tokamak import Tokamak
 
 
 @parameter_cached_method(used_trees=["tree_1", "tree_2"])
@@ -30,9 +35,6 @@ def decorated_shot_data_method(self, params: ShotDataRequestParams) -> pd.DataFr
 
 # Paramater cached method example
 # --8<-- [start:kappa_area_request_example]
-from disruption_py.settings import ShotDataRequestParams
-from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.shots.helpers.method_caching import parameter_cached_method
 
 
 class KappaAreaRequest(ShotDataRequest):

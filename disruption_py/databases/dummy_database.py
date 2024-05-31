@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import pandas as pd
 
 from disruption_py.databases.database import ShotDatabase

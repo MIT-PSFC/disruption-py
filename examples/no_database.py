@@ -1,15 +1,10 @@
-import os
-
-USER = os.getenv("USER")
-
-import sys
-
-sys.path.append(f"/home/{USER}/disruption-py")
+#!/usr/bin/env python3
 
 import logging
-from disruption_py.settings.log_settings import LogSettings
-from disruption_py.handlers.d3d_handler import D3DHandler
+
 from disruption_py.databases.dummy_database import DummyDatabase
+from disruption_py.handlers.d3d_handler import D3DHandler
+from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.shot_settings import ShotSettings
 
 cmod_handler = D3DHandler(database_initializer=DummyDatabase.default)

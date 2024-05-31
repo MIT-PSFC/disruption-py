@@ -5,10 +5,11 @@ execute a few meaningful queries to test DB connection.
 """
 
 import os
+
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.mappings.tokamak_helpers import (
-    get_tokamak_from_environment,
     get_tokamak_database,
+    get_tokamak_from_environment,
 )
 
 queries = [

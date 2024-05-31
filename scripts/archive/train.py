@@ -1,15 +1,17 @@
+#!/usr/bin/env python3
+
 import argparse
-import pickle
-import joblib
 import json
+import pickle
 from datetime import date
 
-import pandas as pd
+import joblib
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, fbeta_score
+import pandas as pd
+from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix, fbeta_score
 
-from disruption_py.utils.math_utils import generate_id, save_open_plots
 from disruption_py.ml.train import grid_search, train_local
+from disruption_py.utils.math_utils import generate_id, save_open_plots
 
 
 def main(args):

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from disruption_py.cli.generate_datasets import get_parser, main
 
 if __name__ == "__main__":

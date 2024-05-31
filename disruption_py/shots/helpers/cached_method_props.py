@@ -1,8 +1,9 @@
+#!/usr/bin/env python3
+
+from dataclasses import dataclass
+from typing import Any, Callable, List, Union
+
 from disruption_py.utils.mappings.tokamak import Tokamak
-
-
-from dataclasses import dataclass, fields
-from typing import Callable, List, Union, Any
 
 
 @dataclass(frozen=True)

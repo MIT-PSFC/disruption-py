@@ -1,8 +1,12 @@
+#!/usr/bin/env python3
+
 import logging
-from typing import Dict, Any
-import pandas as pd
-import numpy as np
 from dataclasses import dataclass, field
+from typing import Any, Dict
+
+import numpy as np
+import pandas as pd
+
 from disruption_py.mdsplus_integration.mds_connection import MDSConnection
 from disruption_py.utils.mappings.tokamak import Tokamak
 

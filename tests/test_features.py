@@ -1,7 +1,10 @@
+#!/usr/bin/env python3
+
 import logging
-import pytest
 import os
+
 import pandas as pd
+import pytest
 
 from tempfile import TemporaryDirectory
 from disruption_py.handlers.handler import Handler
