@@ -17,7 +17,7 @@ handler = get_tokamak_handler(tokamak)
 if tokamak is Tokamak.D3D:
     shot_ids_request = [161228]
     run_methods = ["_get_efit_parameters"]
-    shape = (247, 16)
+    shape = (247, 15)
 elif tokamak is Tokamak.CMOD:
     shot_ids_request = [1150805012]
     run_methods = ["_get_EFIT_parameters"]
