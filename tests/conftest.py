@@ -1,9 +1,5 @@
-<<<<<<< jlorincz/temp_files
-from tempfile import mkdtemp
-=======
 #!/usr/bin/env python3
-
->>>>>>> dev
+from tempfile import mkdtemp
 from unittest.mock import patch
 
 import pytest
