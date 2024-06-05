@@ -10,6 +10,7 @@ updates:
       interval: "monthly"
     reviewers:
       - gtrevisan
+    open-pull-requests-limit: 10
 
   - package-ecosystem: "github-actions"
     directory: "/"
