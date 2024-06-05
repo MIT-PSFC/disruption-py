@@ -224,15 +224,15 @@ mkdocs-material==9.5.25 ; python_version >= "3.9" and python_version < "4.0" \
 mkdocs==1.6.0 ; python_version >= "3.9" and python_version < "4.0" \
     --hash=sha256:1eb5cb7676b7d89323e62b56235010216319217d4af5ddc543a91beb8d125ea7 \
     --hash=sha256:a73f735824ef83a4f3bcb7a231dcab23f5a838f88b7efc54a0eef5fbdbc3c512
-mkdocstrings-python==1.10.0 ; python_version >= "3.9" and python_version < "4.0" \
-    --hash=sha256:71678fac657d4d2bb301eed4e4d2d91499c095fd1f8a90fa76422a87a5693828 \
-    --hash=sha256:ba833fbd9d178a4b9d5cb2553a4df06e51dc1f51e41559a4d2398c16a6f69ecc
-mkdocstrings==0.24.3 ; python_version >= "3.9" and python_version < "4.0" \
-    --hash=sha256:5c9cf2a32958cd161d5428699b79c8b0988856b0d4a8c5baf8395fc1bf4087c3 \
-    --hash=sha256:f327b234eb8d2551a306735436e157d0a22d45f79963c60a8b585d5f7a94c1d2
-mkdocstrings[python]==0.24.3 ; python_version >= "3.9" and python_version < "4.0" \
-    --hash=sha256:5c9cf2a32958cd161d5428699b79c8b0988856b0d4a8c5baf8395fc1bf4087c3 \
-    --hash=sha256:f327b234eb8d2551a306735436e157d0a22d45f79963c60a8b585d5f7a94c1d2
+mkdocstrings-python==1.10.3 ; python_version >= "3.9" and python_version < "4.0" \
+    --hash=sha256:11ff6d21d3818fb03af82c3ea6225b1534837e17f790aa5f09626524171f949b \
+    --hash=sha256:321cf9c732907ab2b1fedaafa28765eaa089d89320f35f7206d00ea266889d03
+mkdocstrings==0.25.1 ; python_version >= "3.9" and python_version < "4.0" \
+    --hash=sha256:c3a2515f31577f311a9ee58d089e4c51fc6046dbd9e9b4c3de4c3194667fe9bf \
+    --hash=sha256:da01fcc2670ad61888e8fe5b60afe9fee5781017d67431996832d63e887c2e51
+mkdocstrings[python]==0.25.1 ; python_version >= "3.9" and python_version < "4.0" \
+    --hash=sha256:c3a2515f31577f311a9ee58d089e4c51fc6046dbd9e9b4c3de4c3194667fe9bf \
+    --hash=sha256:da01fcc2670ad61888e8fe5b60afe9fee5781017d67431996832d63e887c2e51
 mypy-extensions==1.0.0 ; python_version >= "3.9" and python_version < "4.0" \
     --hash=sha256:4392f6c0eb8a5668a69e23d168ffa70f0be9ccfd32b5cc2d26a34ae5b844552d \
     --hash=sha256:75dbf8955dc00442a438fc4d0666508a9a97b6bd41aa2f0ffe9d2f2725af0782
