@@ -6,7 +6,7 @@ import os
 import pandas as pd
 import pytest
 
-from disruption_py.handlers.handler import Handler
+from disruption_py.handler import Handler
 from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.shot_settings import ShotSettings
 

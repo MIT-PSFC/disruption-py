@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 
 import os
+from typing import Callable
 
 from disruption_py.databases import CModDatabase, D3DDatabase
 from disruption_py.handlers.cmod_handler import CModHandler
 from disruption_py.handlers.d3d_handler import D3DHandler
+from disruption_py.shots.cmod_shot_manager import CModShotManager
+from disruption_py.shots.d3d_shot_manager import D3DShotManager
 from disruption_py.utils.constants import (
     EXPECTED_FAILURE_COLUMNS,
     TEST_COLUMNS,
@@ -53,6 +56,33 @@ def get_tokamak_handler(tokamak: Tokamak):
     else:
         raise ValueError("Tokamak {} not supported for this test".format(tokamak))
 
+def get_tokamak_shot_manager(tokamak: Tokamak):
+    if tokamak == Tokamak.CMOD:
+        return CModShotManager
+    elif tokamak == Tokamak.D3D:
+        return D3DShotManager
+    else:
+        raise ValueError("No shot manager for tokamak {}".format(tokamak))
+    
+def get_database_initializer_for_tokamak(tokamak: Tokamak, database_initializer: Callable[..., CModDatabase] = None,):
+    if tokamak == Tokamak.CMOD:
+        return database_initializer or CModDatabase.default()
+    elif tokamak == Tokamak.D3D:
+        return database_initializer or D3DDatabase.default()
+    else:
+        if database_initializer is None:
+            raise ValueError("No database initializer for tokamak {}".format(tokamak))
+        return database_initializer
+    
+def get_mds_connection_str_for_tokamak(tokamak: Tokamak, mds_connection_str: str = None,):
+    if tokamak == Tokamak.CMOD:
+        return mds_connection_str or CModDatabase.default()
+    elif tokamak == Tokamak.D3D:
+        return mds_connection_str or D3DDatabase.default()
+    else:
+        if mds_connection_str is None:
+            raise ValueError("No mds connection str initializer for tokamak {}".format(tokamak))
+        return mds_connection_str
 
 def get_tokamak_database(tokamak: Tokamak):
     if tokamak == Tokamak.CMOD:
@@ -61,7 +91,6 @@ def get_tokamak_database(tokamak: Tokamak):
         return D3DDatabase.default()
     else:
         raise ValueError("Tokamak {} not supported for this test".format(tokamak))
-
 
 def get_tokamak_test_expected_failure_columns(tokamak: Tokamak):
     return EXPECTED_FAILURE_COLUMNS.get(tokamak.value)
