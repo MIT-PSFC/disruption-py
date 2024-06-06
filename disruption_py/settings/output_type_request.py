@@ -355,7 +355,7 @@ class BatchedCSVOutputRequest(OutputTypeRequest):
 
     def _write_batch_to_csv(self):
         file_exists = os.path.isfile(self.filepath)
-        combined_df = safe_df_concat(pd.DataFrame, self.batch_data)
+        combined_df = safe_df_concat(pd.DataFrame(), self.batch_data)
         combined_df.to_csv(
             self.filepath, mode="a", index=False, header=(not file_exists)
         )

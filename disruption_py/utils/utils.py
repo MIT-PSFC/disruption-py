@@ -49,6 +49,7 @@ def safe_cast(array: np.ndarray, dtype, copy=False):
 
 
 def safe_df_concat(base_df: pd.DataFrame, new_dfs: List[pd.DataFrame]):
+
     if isinstance(new_dfs, pd.DataFrame):
         new_dfs = [new_dfs]
 
@@ -65,10 +66,10 @@ def safe_df_concat(base_df: pd.DataFrame, new_dfs: List[pd.DataFrame]):
         return base_df
 
     if base_df.empty:
-        concat_df = pd.concat(new_dfs, axis=1, ignore_index=True, sort=False)
+        concat_df = pd.concat(new_dfs, axis=0, ignore_index=True, sort=False)
     else:
         concat_df = pd.concat(
-            [base_df] + new_dfs, axis=1, ignore_index=True, sort=False
+            [base_df] + new_dfs, axis=0, ignore_index=True, sort=False
         )
 
     missing_cols = all_cols - set(concat_df.columns)
