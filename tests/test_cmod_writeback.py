@@ -22,33 +22,12 @@ ALL_ITERATION_COLUMNS = without_duplicates(
     FIRST_ITERATION_COLUMNS + SECOND_ITERATION_COLUMNS
 )
 
-
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="class")
 def cmod_handler():
     return CModHandler()
 
-
-@pytest.fixture(scope="module")
-def shotlist(cmod_handler: CModHandler):
-    shot_ids_list = TEST_SHOTS
-    cmod_database = cmod_handler.database
-    for shot_id in shot_ids_list:
-        cmod_database.remove_shot_data(shot_id, TABLE_NAME)
-
-    starting_shot_data = cmod_database.get_shots_data(
-        shot_ids_list, sql_table=TABLE_NAME
-    )
-    assert (
-        starting_shot_data.empty
-    ), "Found existing data in sql table for shotlist with {} rows".format(
-        len(starting_shot_data)
-    )
-
-    return TEST_SHOTS
-
-
-@pytest.fixture(scope="module")
-def mdsplus_data(cmod_handler: CModHandler, shotlist) -> Dict:
+@pytest.fixture(scope="class")
+def initial_mdsplus_data(cmod_handler: CModHandler, shotlist) -> Dict:
     shot_settings = ShotSettings(
         set_times_request="efit",
         efit_tree_name="efit18",
@@ -75,12 +54,12 @@ def assert_frame_equal_unordered(df1: pd.DataFrame, df2: pd.DataFrame):
 @pytest.mark.skipif(
     os.path.exists("/fusion/projects/disruption_warning"), reason="on DIII-D"
 )
-def test_update_data(cmod_handler: CModHandler, shotlist, mdsplus_data) -> Dict:
+def test_update_data(cmod_handler: CModHandler, shotlist, initial_mdsplus_data) -> Dict:
     # Test initial database readback
     cmod_database = cmod_handler.database
     result = cmod_database.get_shots_data(shotlist, sql_table=TABLE_NAME)
     assert_frame_equal_unordered(
-        result[FIRST_ITERATION_COLUMNS], mdsplus_data[FIRST_ITERATION_COLUMNS]
+        result[FIRST_ITERATION_COLUMNS], initial_mdsplus_data[FIRST_ITERATION_COLUMNS]
     )
 
     # do second request that updates the data for the columns
