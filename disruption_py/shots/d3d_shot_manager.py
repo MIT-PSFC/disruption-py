@@ -68,40 +68,6 @@ class D3DShotManager(ShotManager):
             raise e
 
     @classmethod
-    def get_efit_tree_nickname_func(
-        cls,
-        shot_id: int,
-        mds_conn: MDSConnection,
-        disruption_time: float,
-        shot_settings: ShotSettings,
-    ) -> None:
-        def efit_tree_nickname_func():
-            efit_names_to_test = without_duplicates(
-                [
-                    shot_settings.efit_tree_name,
-                    "analysis",
-                    *[f"efit0{i}" for i in range(1, 10)],
-                    *[f"efit{i}" for i in range(10, 19)],
-                ]
-            )
-
-            for efit_name in efit_names_to_test:
-                try:
-                    mds_conn.open_tree(efit_name)
-                    return efit_name
-                except Exception as e:
-                    cls.logger.info(
-                        f"[Shot {shot_id}]: Failed to open efit tree {efit_name} with error {e}."
-                    )
-                    continue
-
-            raise Exception(
-                f"Failed to find efit tree with name {shot_settings.efit_tree_name} in shot {shot_id}."
-            )
-
-        return efit_tree_nickname_func
-
-    @classmethod
     def _modify_times_flattop_timebase(cls, shot_props: ShotProps, **kwargs):
         try:
             (
