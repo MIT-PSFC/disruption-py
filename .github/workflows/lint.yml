@@ -1,0 +1,145 @@
+---
+
+name: Lint
+
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches:
+      - 'main*'
+      - 'dev*'
+  pull_request:
+    branches:
+      - 'main*'
+      - 'dev*'
+
+jobs:
+
+
+  black:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      github.event.pull_request.draft == false
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - name: Install black
+        run: |
+          grep -oP 'black.*?\ ' .pip/dev.txt \
+          | xargs pip install
+
+      - name: Run black
+        run: |
+          black --version
+          black --check .
+
+
+  pylint:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      github.event.pull_request.draft == false
+    steps:
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install requirements
+        run: |
+          pip install -r .pip/main.txt -r .pip/dev.txt -r .pip/lab.txt
+          pip install -e .
+
+      - name: Pre-run pylint
+        if: |
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.draft == false
+        run: |
+          git reset --hard "${{ github.event.pull_request.base.sha }}"
+          git log -1
+          pylint disruption_py examples tests \
+          | grep '^Your code has been rated'
+          git reset --hard "${{ github.event.pull_request.head.sha }}"
+          git log -1
+
+      - name: Run pylint
+        run: |
+          pylint --version
+          pylint disruption_py examples tests \
+          --msg-template='{path}:{line}:{column}: |{msg_id} {symbol}| {msg}' \
+          | tee pylint.log \
+          | grep -F '*****'
+
+      - name: Compute statistics
+        run: |
+          cut -s -d '|' -f 2 pylint.log \
+          | sort \
+          | uniq -c \
+          | sort -n \
+          | tee stats.log
+
+      - name: Extract worst offender
+        run: |
+          WORST=$(tail -n1 stats.log | grep -o '[IRCWEF][0-9]*')
+          grep "|$WORST" pylint.log
+
+      - name: Print final summary
+        run: |
+          tail pylint.log \
+          | grep '^Your code has been rated' \
+          | tee -a "$GITHUB_STEP_SUMMARY"
+
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      github.event.pull_request.draft == false
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get install shellcheck
+
+      - name: Run shellcheck
+        run: |
+          shellcheck --version
+          find -type f -not -path '*/.git/*' \
+          | xargs grep -l '^#!/bin/bash' \
+          | while read -r FILE
+          do
+             echo "--> $FILE"
+             shellcheck -x "$FILE"
+          done
+
+
+  yamllint:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      github.event.pull_request.draft == false
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install yamllint
+        run: |
+          grep -oP 'yamllint.*?\ ' .pip/dev.txt \
+          | xargs pip install
+
+      - name: Run yamllint
+        run: |
+          yamllint --version
+          find -type f -iname '*.yml' -or -iname '*.yaml' \
+          | while read -r FILE
+          do
+             echo "--> $FILE"
+             yamllint "$FILE"
+          done

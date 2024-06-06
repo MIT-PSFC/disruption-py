@@ -10,13 +10,13 @@
 | beta_n | Normalized beta, ratio between plasma kinetic energy and magnetic energy | - | [0, 2] |
 | dipprog_dt | Time derivative of the programmed plasma current | A/s | - |
 | intentional_disruption | Whether a disruption was unintentional (0), intentional (1), or non-disrupted (NaN) | - | [0,1,NaN] |
-| ip | Plasma current | Ampere | - |
-| ip_error | Error on the plasma current (ip-ipprog) | - | - |
-| kappa | Plasma elongation | m | [0.8, 2] |
+| ip | Plasma current | A | - |
+| ip_error | Error on the plasma current (ip-ipprog) | A | - |
+| kappa | Plasma elongation | - | [0.8, 2] |
 | li | Plasma normalized internal inductance | - | [0.2, 4.5] |
 | lower_gap | Lower gap | m | [0.025, 0.3] |
 | n_e | Line-averaged electron density of the plasma core | m^-3 | - |
-| n_equal_1_mode | n=1 component of the perturbed magnetic field | Tesla | - |
+| n_equal_1_mode | n=1 component of the perturbed magnetic field | T | - |
 | n_over_ncrit | Vertical stability parameter | - | [-0.5, 2] |
 | p_icrf | Ion cyclotron power | W | [0, 6e6] |
 | p_lh | Lower hybrid power | W | [0, 1e6] |
@@ -34,4 +34,4 @@
 | v_loop | Edge loop voltage; time derivative of a weighted average of flux loops obtained from MFLUXloop voltage | V | [-7, 26] |
 | z_error | Difference between the actual position of the current centroid and the requested one (Z_prog) | m | - |
 | zcur | Actual vertical position of the current centroid, z_error - Z_prog | m | - |
-| Mirnov | Fluctuation amplitude of one magnetic probe. Measurement of MHD activity and plasma instability | Tesla/s | [0, 50] |
+| Mirnov | Fluctuation amplitude of one magnetic probe. Measurement of MHD activity and plasma instability | T/s | [0, 50] |

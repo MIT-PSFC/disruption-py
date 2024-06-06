@@ -1,23 +1,27 @@
+#!/usr/bin/env python3
+
+from dataclasses import dataclass
+from typing import Any, Callable, List, Union
+
 from disruption_py.utils.mappings.tokamak import Tokamak
-
-
-from dataclasses import dataclass, fields
-from typing import Callable, List, Union, Any
 
 
 @dataclass(frozen=True)
 class CachedMethodParams:
     cache_between_threads: bool
-    used_trees : Union[List[str], Callable]
-    contained_cached_methods : Union[List[str], Callable]
-    tokamaks : Union[Tokamak, List[Tokamak]]      
-    
+    used_trees: Union[List[str], Callable]
+    contained_cached_methods: Union[List[str], Callable]
+    tokamaks: Union[Tokamak, List[Tokamak]]
+
+
 @dataclass(frozen=True)
 class ParameterCachedMethodParams(CachedMethodParams):
-    columns : Union[List[str], Callable]
-    tags : List[str]
+    columns: Union[List[str], Callable]
+    tags: List[str]
 
-    def from_cached_method_params(cached_method_params : CachedMethodParams, columns, tags) -> "ParameterCachedMethodParams":
+    def from_cached_method_params(
+        cached_method_params: CachedMethodParams, columns, tags
+    ) -> "ParameterCachedMethodParams":
         return ParameterCachedMethodParams(
             cache_between_threads=cached_method_params.cache_between_threads,
             used_trees=cached_method_params.used_trees,
@@ -26,7 +30,8 @@ class ParameterCachedMethodParams(CachedMethodParams):
             columns=columns,
             tags=tags,
         )
-                
+
+
 @dataclass
 class CachedMethodProps:
     name: str
@@ -34,11 +39,16 @@ class CachedMethodProps:
 
     # All functions have been evaluated
     computed_cached_method_params: CachedMethodParams
-    
-    def get_param_value(self, field_name : str, default_value : Any = None) -> Any:
-        return getattr(self.computed_cached_method_params, field_name, default_value) or default_value
+
+    def get_param_value(self, field_name: str, default_value: Any = None) -> Any:
+        return (
+            getattr(self.computed_cached_method_params, field_name, default_value)
+            or default_value
+        )
+
 
 # Utility methods for decorated methods
+
 
 def is_cached_method(cached_method: Callable) -> bool:
     """Returns whether the method is decorated with `cached_method` or `parameter_cached_method` decorators
@@ -56,8 +66,10 @@ def is_cached_method(cached_method: Callable) -> bool:
     return hasattr(cached_method, "cached_method_params")
 
 
-def get_cached_method_params(cached_method: Callable, should_throw: bool = False) -> CachedMethodParams:
-    """Get cached method params for cached method 
+def get_cached_method_params(
+    cached_method: Callable, should_throw: bool = False
+) -> CachedMethodParams:
+    """Get cached method params for cached method
 
     Parameters
     ----------
@@ -73,9 +85,7 @@ def get_cached_method_params(cached_method: Callable, should_throw: bool = False
     """
     cached_method_params = getattr(cached_method, "cached_method_params", None)
     if should_throw and cached_method_params is None:
-        raise ValueError(f"The method {cached_method} was not decorated with cached_method or parameter_cached_method")
+        raise ValueError(
+            f"The method {cached_method} was not decorated with cached_method or parameter_cached_method"
+        )
     return cached_method_params
-
-
-    
-    

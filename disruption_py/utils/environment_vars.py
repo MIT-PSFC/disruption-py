@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 from contextlib import contextmanager
 from typing import Iterable, Tuple
@@ -33,14 +35,14 @@ def temporary_env_vars(env_var_list: Iterable[Tuple[str, str]]):
 
     """
     original_values = {}
-    
+
     try:
-        
+
         # Set the new environment variables and store their original values
         for key, value in env_var_list:
             original_values[key] = os.environ.get(key)
             os.environ[key] = value
-        
+
         yield
     finally:
         # Restore the original environment variable values

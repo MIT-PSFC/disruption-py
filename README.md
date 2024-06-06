@@ -13,10 +13,9 @@ DisruptionPy makes it easy to retrieve tabular data from MDSplus databases effic
 ```python
 disruption_py # Source code
 docs # Mkdocs generated documentation
-iris_requirements # requirements.txt for D3D iris cluster
 examples # Example usage of DisruptionPy
 scripts # Scripts for various disruption_py supported workflows
-test # Automated testing for DisruptionPy
+tests # Automated testing for DisruptionPy
 ```
 
 The original Matlab scripts are now stored in the `matlab` [protected branch](https://github.com/MIT-PSFC/disruption-py/tree/matlab).

@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from enum import Enum
 
 
@@ -16,3 +18,4 @@ class SignalDomain(Enum):
     FULL = "full"
     FLATTOP = "flattop"
     RAMP_UP_AND_FLATTOP = "rampup_and_flattop"
+    DISRUPTION = "disruption"

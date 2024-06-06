@@ -1,11 +1,21 @@
-from typing import List
-import pandas as pd
-from disruption_py.settings.shot_data_request import ShotDataRequest
-from disruption_py.settings.shot_data_request import ShotDataRequestParams
+#!/usr/bin/env python3
 
+from typing import List
+
+import pandas as pd
+
+from disruption_py.settings.shot_data_request import (
+    ShotDataRequest,
+    ShotDataRequestParams,
+)
 from disruption_py.shots.helpers.method_caching import parameter_cached_method
 
-def cached_method_params_function(parent_object : ShotDataRequest, shot_data_request_params : ShotDataRequestParams, **kwargs) -> List[str]:
+
+def cached_method_params_function(
+    parent_object: ShotDataRequest,
+    shot_data_request_params: ShotDataRequestParams,
+    **kwargs
+) -> List[str]:
     """
     Parameters
     ----------
@@ -23,15 +33,23 @@ def cached_method_params_function(parent_object : ShotDataRequest, shot_data_req
     """
     pass
 
+
 # --8<-- [start:decorator_functions_example]
-def used_trees_by_shot_id(parent_object : ShotDataRequest, shot_data_request_params : ShotDataRequestParams, **kwargs) -> List[str]:
+def used_trees_by_shot_id(
+    parent_object: ShotDataRequest,
+    shot_data_request_params: ShotDataRequestParams,
+    **kwargs
+) -> List[str]:
     # any properties of the `ShotProps` can be used to compute returned values
     if shot_data_request_params.shot_props.shot_id > 10000000:
-        return ['tree_1', 'tree_2']
+        return ["tree_1", "tree_2"]
     else:
-        return ['tree_1', 'tree_3']
+        return ["tree_1", "tree_3"]
 
-@parameter_cached_method(used_trees=['tree_1', 'tree_2'])
-def decorated_shot_data_method(self, params : ShotDataRequestParams) -> pd.DataFrame:
+
+@parameter_cached_method(used_trees=["tree_1", "tree_2"])
+def decorated_shot_data_method(self, params: ShotDataRequestParams) -> pd.DataFrame:
     pass
+
+
 # --8<-- [end:decorator_functions_example]
