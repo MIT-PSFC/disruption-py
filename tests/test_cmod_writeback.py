@@ -22,9 +22,11 @@ ALL_ITERATION_COLUMNS = without_duplicates(
     FIRST_ITERATION_COLUMNS + SECOND_ITERATION_COLUMNS
 )
 
+
 @pytest.fixture(scope="class")
 def cmod_handler():
     return CModHandler()
+
 
 @pytest.fixture(scope="class")
 def initial_mdsplus_data(cmod_handler: CModHandler, shotlist) -> Dict:
