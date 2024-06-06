@@ -2,6 +2,7 @@
 
 import logging
 from abc import ABC, abstractmethod
+import traceback
 
 import numpy as np
 import pandas as pd
@@ -33,6 +34,32 @@ class ShotManager(ABC):
         self.process_database = process_database
         self.process_mds_conn = process_mds_conn
 
+    @classmethod
+    def get_shot_data(
+	    cls, shot_id, shot_manager: 'ShotManager', shot_settings: ShotSettings
+    ) -> pd.DataFrame:
+        """
+        Get data for a single shot. May be run across different processes.
+        """
+        cls.logger.info(f"starting {shot_id}")
+        try:
+            shot_props = shot_manager.shot_setup(
+                shot_id=int(shot_id),
+                shot_settings=shot_settings,
+            )
+            retrieved_data = shot_manager.shot_data_retrieval(
+                shot_props=shot_props, shot_settings=shot_settings
+            )
+            shot_manager.shot_cleanup(shot_props)
+            cls.logger.info(f"completed {shot_id}")
+            return retrieved_data
+        except Exception as e:
+            cls.logger.warning(
+                f"[Shot {shot_id}]: fatal error {traceback.format_exc()}"
+            )
+            cls.logger.error(f"failed {shot_id} with error {e}")
+            return None
+    
     @classmethod
     @abstractmethod
     def _modify_times_flattop_timebase(
