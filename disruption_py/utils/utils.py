@@ -52,6 +52,8 @@ def safe_df_concat(base_df: pd.DataFrame, new_dfs: List[pd.DataFrame]):
     if isinstance(new_dfs, pd.DataFrame):
         new_dfs = [new_dfs]
 
+    all_cols = set(base_df.columns).union(*[set(new_df.columns) for new_df in new_dfs])
+
     new_dfs = [new_df.dropna(axis=1, how="all") for new_df in new_dfs]
     new_dfs = [
         new_df
@@ -63,6 +65,13 @@ def safe_df_concat(base_df: pd.DataFrame, new_dfs: List[pd.DataFrame]):
         return base_df
 
     if base_df.empty:
-        return pd.concat(new_dfs, axis=1, ignore_index=True, sort=False)
+        concat_df = pd.concat(new_dfs, axis=1, ignore_index=True, sort=False)
     else:
-        return pd.concat([base_df] + new_dfs, axis=1, ignore_index=True, sort=False)
+        concat_df = pd.concat(
+            [base_df] + new_dfs, axis=1, ignore_index=True, sort=False
+        )
+
+    missing_cols = all_cols - set(concat_df.columns)
+    for col in missing_cols:
+        concat_df[col] = np.nan
+    return concat_df
