@@ -1,3 +1,4 @@
+import os
 from typing import Dict
 
 import pandas as pd
@@ -71,6 +72,9 @@ def assert_frame_equal_unordered(df1: pd.DataFrame, df2: pd.DataFrame):
     pd.testing.assert_frame_equal(df1_sorted, df2_sorted, check_like=True)
 
 
+@pytest.mark.skipif(
+    os.path.exists("/fusion/projects/disruption_warning"), reason="on DIII-D"
+)
 def test_update_data(cmod_handler: CModHandler, shotlist, mdsplus_data) -> Dict:
     # Test initial database readback
     cmod_database = cmod_handler.database
