@@ -18,4 +18,3 @@ site
 _site
 .idea
 .nfs*
-tests/tmp/*

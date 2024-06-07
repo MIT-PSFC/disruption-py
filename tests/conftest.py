@@ -82,11 +82,10 @@ def mock_numpy_gradient():
 
 @pytest.fixture(scope="session")
 def tmpdir():
-    base_tmp_dir = os.path.join("/tmp", f"{os.environ['USER']}")
-    os.makedirs(base_tmp_dir, exist_ok=True)
     tmpdir_path = mkdtemp(
-        dir=base_tmp_dir, prefix=f"tmp-{time.strftime('%y%m%d-%H:%M:%S')}-"
+        prefix=f"dpy-{time.strftime('%y%m%d-%H:%M:%S')}-"
     )
+    print(f"Using temporary directory: {tmpdir_path} for file output")
     yield tmpdir_path
 
 
