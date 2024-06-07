@@ -1265,10 +1265,9 @@ class BasicCmodRequests(ShotDataRequest):
                     core_radiation, axj_interp[axj_core_index, i]
                 )
                 all_radiation = np.append(all_radiation, axj_interp[:, i])
-            try:
+            with warnings.catch_warnings():
+                warnings.filterwarnings(action="ignore", message="Mean of empty slice")
                 prad_peaking[i] = np.nanmean(core_radiation) / np.nanmean(all_radiation)
-            except:
-                prad_peaking[i] = np.nan
         return pd.DataFrame({"prad_peaking": prad_peaking})
 
     @staticmethod
