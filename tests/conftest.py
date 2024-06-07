@@ -8,9 +8,12 @@ from unittest.mock import patch
 import pytest
 
 from disruption_py.utils.mappings.tokamak_helpers import (
-    get_tokamak_from_environment, get_tokamak_handler,
-    get_tokamak_test_columns, get_tokamak_test_expected_failure_columns,
-    get_tokamak_test_shot_ids)
+    get_tokamak_from_environment,
+    get_tokamak_handler,
+    get_tokamak_test_columns,
+    get_tokamak_test_expected_failure_columns,
+    get_tokamak_test_shot_ids,
+)
 from disruption_py.utils.math_utils import matlab_gradient_1d_vectorized
 
 
