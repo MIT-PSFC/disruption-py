@@ -76,9 +76,9 @@ def get_database_initializer_for_tokamak(tokamak: Tokamak, database_initializer:
     
 def get_mds_connection_str_for_tokamak(tokamak: Tokamak, mds_connection_str: str = None,):
     if tokamak == Tokamak.CMOD:
-        return mds_connection_str or CModDatabase.default()
+        return mds_connection_str or "alcdata-archives"
     elif tokamak == Tokamak.D3D:
-        return mds_connection_str or D3DDatabase.default()
+        return mds_connection_str or "atlas"
     else:
         if mds_connection_str is None:
             raise ValueError("No mds connection str initializer for tokamak {}".format(tokamak))
