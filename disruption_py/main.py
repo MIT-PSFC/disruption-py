@@ -174,37 +174,3 @@ def get_shots_data(
     results = output_type_request.get_results(finish_output_type_request_params)
     output_type_request.stream_output_cleanup(finish_output_type_request_params)
     return results
-
-
-# def get_shots_data(
-#     shot_ids_request: ShotIdsRequestType,
-#     num_processes: int = 1,
-#     output_type_request: OutputTypeRequest = "list",
-#     # General Settings
-#     log_settings: LogSettings = None,
-
-#     # Prefill data settings
-#     existing_data_request: ExistingDataRequest = None,
-
-#     # Shot creation settings
-#     efit_tree_name: str = "analysis",
-
-#     # Shot run settings
-#     run_methods: list[str] = None,
-#     run_tags: list[str] = None,
-#     run_columns: list[str] = None,
-#     only_requested_columns: bool = False,
-#     shot_data_requests: list[ShotDataRequest] = None,
-
-#     # Timebase setting
-#     set_times_request: SetTimesRequest = "disruption_warning",
-#     signal_domain: SignalDomain = "full",
-#     use_existing_data_timebase: bool = False,
-#     interpolation_method: InterpolationMethod = "linear",
-
-#     additional_args: dict = None,
-# ) -> Any:
-#     """
-#     Instance method used to get shot data for all shots from shot_ids_request from CMod.
-#     """
-#     pass
