@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
+import os
+import shutil
+import time
 from tempfile import mkdtemp
 from unittest.mock import patch
 
 import pytest
-import os
-import shutil
-import time
 
 from disruption_py.utils.mappings.tokamak_helpers import (
-    get_tokamak_from_environment,
-    get_tokamak_handler,
-    get_tokamak_test_columns,
-    get_tokamak_test_expected_failure_columns,
-    get_tokamak_test_shot_ids,
-)
+    get_tokamak_from_environment, get_tokamak_handler,
+    get_tokamak_test_columns, get_tokamak_test_expected_failure_columns,
+    get_tokamak_test_shot_ids)
 from disruption_py.utils.math_utils import matlab_gradient_1d_vectorized
 
 
@@ -26,11 +23,6 @@ def pytest_addoption(parser):
         action="store_true",
         help="Finish test and report statistics instead of failing fast.",
     )
-    parser.addoption(
-        "--keep-logs",
-        action="store_true",
-        help="Whether to delete logs directory.",
-    )
 
 
 @pytest.fixture(scope="session")
@@ -41,11 +33,6 @@ def verbose_output(pytestconfig):
 @pytest.fixture(scope="session")
 def fail_quick(pytestconfig):
     return pytestconfig.getoption("fail_quick")
-
-
-@pytest.fixture(scope="session")
-def keep_logs(pytestconfig):
-    return pytestconfig.getoption("keep_logs")
 
 
 def pytest_generate_tests(metafunc):
@@ -91,13 +78,13 @@ def mock_numpy_gradient():
 
 
 @pytest.fixture(scope="session")
-def tmpdir(keep_logs):
+def tmpdir():
+    base_tmp_dir = os.path.join("/tmp", f"{os.environ['USER']}")
+    os.makedirs(base_tmp_dir, exist_ok=True)
     tmpdir_path = mkdtemp(
-        dir="tests", prefix=f"tmp-{time.strftime('%y%m%d-%H:%M:%S')}-"
+        dir=base_tmp_dir, prefix=f"tmp-{time.strftime('%y%m%d-%H:%M:%S')}-"
     )
     yield tmpdir_path
-    if not keep_logs and os.path.exists(tmpdir_path):
-        shutil.rmtree(tmpdir_path)
 
 
 @pytest.fixture(scope="module")
