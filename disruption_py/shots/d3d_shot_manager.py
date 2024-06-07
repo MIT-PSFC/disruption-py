@@ -14,7 +14,6 @@ from disruption_py.shots.shot_manager import ShotManager
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.math_utils import interp1
-from disruption_py.utils.utils import without_duplicates
 
 
 class D3DShotManager(ShotManager):
@@ -43,10 +42,13 @@ class D3DShotManager(ShotManager):
 
         mds_conn = self.process_mds_conn.get_shot_connection(shot_id=shot_id)
 
-        efit_tree_name = self.process_database.get_efit_tree(shot_id)
-
         mds_conn.add_tree_nickname_funcs(
-            tree_nickname_funcs={"_efit_tree": lambda: efit_tree_name}
+            tree_nickname_funcs=self.get_efit_tree_nickname_func(
+                shot_id=shot_id,
+                mds_conn=mds_conn,
+                disruption_time=disruption_time,
+                shot_settings=shot_settings,
+            )
         )
 
         try:
@@ -66,6 +68,31 @@ class D3DShotManager(ShotManager):
             )
             mds_conn.close_all_trees()
             raise e
+    
+    
+    @classmethod
+    def get_efit_tree_nickname_func(
+        cls,
+        shot_id: int,
+        mds_conn: MDSConnection,
+        disruption_time: float,
+        shot_settings: ShotSettings,
+    ) -> None:
+        def efit_tree_nickname_func():
+            if shot_settings.efit_tree_name != "analysis":
+                return shot_settings.efit_tree_name
+            
+            mds_conn.query(
+                f"select * from plasmas where shot = {shot_id} and runtag = 'DIS' and deleted = 0 order by idx", 
+                use_pandas=False, 
+                db_name="code_rundb"
+            )
+            if len(efit_trees) == 0:
+                efit_trees = [("EFIT01",)]
+            efit_tree = efit_trees[-1][0]
+            return efit_tree
+
+        return efit_tree_nickname_func 
 
     @classmethod
     def _modify_times_flattop_timebase(cls, shot_props: ShotProps, **kwargs):

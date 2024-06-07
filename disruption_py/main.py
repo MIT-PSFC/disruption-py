@@ -4,8 +4,8 @@
 import logging
 from typing import Any, Callable
 
-from disruption_py.databases.database import ShotDatabase
-from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_shot_manager, get_database_initializer_for_tokamak, get_mds_connection_str_for_tokamak
+from disruption_py.database import ShotDatabase
+from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_shot_manager, get_mds_connection_str_for_tokamak
 from disruption_py.utils.multiprocessing_helper import MultiprocessingShotRetriever
 from disruption_py.mdsplus_integration.mds_connection import ProcessMDSConnection
 from disruption_py.settings import ShotSettings
@@ -36,10 +36,8 @@ class ConnectionHandler():
         database_initializer: Callable[..., ShotDatabase],
         mds_connection_str,
     ):
-        self.database_initializer = get_database_initializer_for_tokamak(tokamak, database_initializer)
-        self.mds_connection_initializer = lambda: ProcessMDSConnection(
-            get_mds_connection_str_for_tokamak(tokamak, mds_connection_str)
-        )
+        self.database_initializer = database_initializer or (lambda: ShotDatabase.from_config(tokamak=Tokamak))
+        self.mds_connection_initializer = mds_connection_str or (lambda: ProcessMDSConnection.from_config(tokamak=Tokamak))
 
     @property
     def database(self) -> ShotDatabase:

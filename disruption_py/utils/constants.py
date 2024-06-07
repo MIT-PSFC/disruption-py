@@ -102,6 +102,30 @@ DERIVED_PAPER_COLS = [
     "ip-exp-50-none",
 ]
 
+DATABASE_CONSTANTS = {
+    "cmod": {
+        "profile_path": "~/D3DRDB.sybase_login",
+        "driver": "ODBC Driver 18 for SQL Server",
+        "host": "alcdb2",
+        "port": 1433,
+        "db_name": "logbook",
+        "protected_columns": CMOD_PROTECTED_COLUMNS,
+    },
+    "d3d": {
+        "profile_path": "~/logbook.sybase_login",
+        "driver": "FreeTDS",
+        "host": "d3drdb",
+        "port": 8001,
+        "db_names": ["d3drdb", "code_rundb"],
+        "default_db": "d3drdb",
+        "protected_columns": D3D_PROTECTED_COLUMNS,
+    }
+}
+
+MDSPLUS_CONNECTION_STRING_CONSTANTS = {
+    "cmod": "alcdata-archives",
+    "d3d": "atlas",
+}
 
 TEST_SHOTS = {
     "cmod": {
