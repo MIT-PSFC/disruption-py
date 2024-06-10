@@ -82,7 +82,7 @@ def mock_numpy_gradient():
 
 @pytest.fixture(scope="session")
 def tmpdir():
-    tmpdir_path = mkdtemp(prefix=f"dpy-{time.strftime('%y%m%d-%H:%M:%S')}-")
+    tmpdir_path = mkdtemp(prefix=f"disruptionpy-{time.strftime('%y%m%d-%H%M%S')}-")
     print(f"Using temporary directory: {tmpdir_path} for file output")
     yield tmpdir_path
 
