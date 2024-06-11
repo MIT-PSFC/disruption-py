@@ -1,12 +1,9 @@
-
 #!/usr/bin/env python3
 
 import logging
 from typing import Any, Callable
 
 from disruption_py.databases.database import ShotDatabase
-from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_shot_manager, get_database_initializer_for_tokamak, get_mds_connection_str_for_tokamak
-from disruption_py.utils.multiprocessing_helper import MultiprocessingShotRetriever
 from disruption_py.mdsplus_integration.mds_connection import ProcessMDSConnection
 from disruption_py.settings import ShotSettings
 from disruption_py.settings.output_type_request import (
@@ -22,57 +19,22 @@ from disruption_py.settings.shot_ids_request import (
 )
 from disruption_py.shots.shot_manager import ShotManager
 from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.utils.mappings.tokamak_helpers import (
+    get_database_initializer_for_tokamak,
+    get_mds_connection_str_for_tokamak,
+    get_tokamak_shot_manager,
+)
+from disruption_py.utils.multiprocessing_helper import MultiprocessingShotRetriever
 from disruption_py.utils.utils import without_duplicates
 
 logger = logging.getLogger("disruption_py")
-
-class ConnectionHandler():
-    """
-    Class used to handle the connection to the MDSplus server.
-    """
-    def __init__(
-        self,
-        tokamak: Tokamak,
-        database_initializer: Callable[..., ShotDatabase],
-        mds_connection_str,
-    ):
-        self.database_initializer = get_database_initializer_for_tokamak(tokamak, database_initializer)
-        self.mds_connection_initializer = lambda: ProcessMDSConnection(
-            get_mds_connection_str_for_tokamak(tokamak, mds_connection_str)
-        )
-
-    @property
-    def database(self) -> ShotDatabase:
-        """Reference to the sql shot logbook.
-
-        Returns
-        -------
-        D3DDatabase
-            Database object with an open connection to the D3D sql database.
-        """
-        if not hasattr(self, "_database"):
-            self._database = self.database_initializer()
-        return self._database
-
-    @property
-    def mds_connection(self) -> ProcessMDSConnection:
-        """Reference to the MDSplus connection.
-
-        Returns
-        -------
-        ProcessMDSConnection
-            MDSplus connection object for D3D.
-        """
-        if not hasattr(self, "_mds_connection"):
-            self._mds_connection = self.mds_connection_initializer()
-        return self._mds_connection
 
 
 def get_shots_data(
     tokamak: Tokamak,
     shot_ids_request: ShotIdsRequestType,
     database_initializer: Callable[..., ShotDatabase] = None,
-    mds_connection_str : str = None,
+    mds_connection_str: str = None,
     shot_settings: ShotSettings = None,
     output_type_request: OutputTypeRequest = "list",
     num_processes: int = 1,
@@ -102,26 +64,34 @@ def get_shots_data(
         shot_settings. See OutputTypeRequest for more details.
     """
 
+    database_initializer = get_database_initializer_for_tokamak(
+        tokamak, database_initializer
+    )
+    database = database_initializer()
+    mds_connection_initializer = lambda: ProcessMDSConnection(
+        get_mds_connection_str_for_tokamak(tokamak, mds_connection_str)
+    )
+    mds_connection = mds_connection_initializer()
+
     # Clean-up parameters
     if shot_settings is None:
         shot_settings = ShotSettings()
-  
+
     shot_settings.resolve()
     output_type_request = resolve_output_type_request(output_type_request)
-    connection_manager = ConnectionHandler(tokamak, database_initializer, mds_connection_str)
 
     # do not spawn unnecessary processes
     num_processes = min(num_processes, len(shot_ids_list))
     shot_manager_cls = get_tokamak_shot_manager(tokamak)
-    
-    shot_ids_request_params = ShotIdsRequestParams(connection_manager.database, tokamak, logger)
+
+    shot_ids_request_params = ShotIdsRequestParams(database, tokamak, logger)
     shot_ids_list = without_duplicates(
         shot_ids_request_runner(shot_ids_request, shot_ids_request_params)
     )
-    
+
     if num_processes > 1:
         shot_retriever = MultiprocessingShotRetriever(
-            database=connection_manager.database,
+            database=database,
             num_processes=num_processes,
             shot_settings=shot_settings,
             output_type_request=output_type_request,
@@ -129,8 +99,8 @@ def get_shots_data(
                 # initialize connections for individual processes
                 "shot_manager": (
                     lambda: shot_manager_cls(
-                        process_database=connection_manager.database_initializer(),
-                        process_mds_conn=connection_manager.mds_connection_initializer(),
+                        process_database=database_initializer(),
+                        process_mds_conn=mds_connection_initializer(),
                     )
                 )
             },
@@ -144,8 +114,8 @@ def get_shots_data(
         )
     else:
         shot_manager = shot_manager_cls(
-            process_database=connection_manager.database,
-            process_mds_conn=connection_manager.mds_connection,
+            process_database=database,
+            process_mds_conn=mds_connection,
         )
         for shot_id in shot_ids_list:
             shot_data = shot_manager.get_shot_data(
@@ -162,7 +132,7 @@ def get_shots_data(
                     ResultOutputTypeRequestParams(
                         shot_id=shot_id,
                         result=shot_data,
-                        database=connection_manager.database,
+                        database=database,
                         tokamak=tokamak,
                         logger=logger,
                     )
