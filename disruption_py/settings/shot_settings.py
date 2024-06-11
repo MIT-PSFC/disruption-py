@@ -16,7 +16,9 @@ from disruption_py.settings.set_times_request import (
     resolve_set_times_request,
 )
 from disruption_py.settings.shot_data_request import ShotDataRequest
+from disruption_py.utils.exceptions import TokamakNotSupportedError
 from disruption_py.utils.mappings.mappings_helpers import map_string_attributes_to_enum
+from disruption_py.utils.mappings.tokamak import Tokamak, is_tokamak_indexed
 
 
 def default_tags():
@@ -139,6 +141,25 @@ class ShotSettings:
         for setting in DEPRECTATED_SETTINGS:
             if getattr(self, setting[0]) is not None:
                 raise ValueError(f"{setting[1]}")
+
+    @classmethod
+    def from_dict(cls, prop_dict, tokamak: Tokamak):
+        """
+        Create a ShotSettings object from a dictionary.
+        """
+        if is_tokamak_indexed(prop_dict):
+            if tokamak.value not in prop_dict:
+                raise TokamakNotSupportedError(
+                    tokamak=tokamak,
+                    use_case=f"when generating shot settings from dict with keys {list(prop_dict.keys())}",
+                )
+
+            prop_dict = prop_dict[tokamak.value]
+
+        if "log_settings" in prop_dict:
+            prop_dict["log_settings"] = LogSettings(**prop_dict["log_settings"])
+
+        return cls(**prop_dict)
 
     def resolve(self):
         """
