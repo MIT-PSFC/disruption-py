@@ -75,12 +75,9 @@ def test_features_serial(
 
 
 def test_features_parallel(handler: Handler, tokamak, shotlist, test_file_path_f):
-    try:
-        test_setting = ShotSettings.from_dict(
-            TEST_SETTINGS["default_fast"], tokamak=tokamak
-        )
-    except TokamakNotSupportedError:
-        pytest.skip(f"not tested for tokamak {tokamak.value}")
+    test_setting = ShotSettings.from_dict(
+        TEST_SETTINGS["default_fast"], tokamak=tokamak
+    )
 
     results = handler.get_shots_data(
         shot_ids_request=shotlist,
