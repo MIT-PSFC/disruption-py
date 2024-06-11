@@ -56,6 +56,7 @@ def get_tokamak_handler(tokamak: Tokamak):
     else:
         raise ValueError("Tokamak {} not supported for this test".format(tokamak))
 
+
 def get_tokamak_shot_manager(tokamak: Tokamak):
     if tokamak == Tokamak.CMOD:
         return CModShotManager
@@ -63,26 +64,37 @@ def get_tokamak_shot_manager(tokamak: Tokamak):
         return D3DShotManager
     else:
         raise ValueError("No shot manager for tokamak {}".format(tokamak))
-    
-def get_database_initializer_for_tokamak(tokamak: Tokamak, database_initializer: Callable[..., CModDatabase] = None,):
+
+
+def get_database_initializer_for_tokamak(
+    tokamak: Tokamak,
+    database_initializer: Callable[..., CModDatabase] = None,
+):
     if tokamak == Tokamak.CMOD:
-        return database_initializer or CModDatabase.default()
+        return database_initializer or CModDatabase.default
     elif tokamak == Tokamak.D3D:
-        return database_initializer or D3DDatabase.default()
+        return database_initializer or D3DDatabase.default
     else:
         if database_initializer is None:
             raise ValueError("No database initializer for tokamak {}".format(tokamak))
         return database_initializer
-    
-def get_mds_connection_str_for_tokamak(tokamak: Tokamak, mds_connection_str: str = None,):
+
+
+def get_mds_connection_str_for_tokamak(
+    tokamak: Tokamak,
+    mds_connection_str: str = None,
+):
     if tokamak == Tokamak.CMOD:
         return mds_connection_str or "alcdata-archives"
     elif tokamak == Tokamak.D3D:
         return mds_connection_str or "atlas"
     else:
         if mds_connection_str is None:
-            raise ValueError("No mds connection str initializer for tokamak {}".format(tokamak))
+            raise ValueError(
+                "No mds connection str initializer for tokamak {}".format(tokamak)
+            )
         return mds_connection_str
+
 
 def get_tokamak_database(tokamak: Tokamak):
     if tokamak == Tokamak.CMOD:
@@ -91,6 +103,7 @@ def get_tokamak_database(tokamak: Tokamak):
         return D3DDatabase.default()
     else:
         raise ValueError("Tokamak {} not supported for this test".format(tokamak))
+
 
 def get_tokamak_test_expected_failure_columns(tokamak: Tokamak):
     return EXPECTED_FAILURE_COLUMNS.get(tokamak.value)
