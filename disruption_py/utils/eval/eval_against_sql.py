@@ -121,18 +121,16 @@ def eval_shot_against_sql(
         missing_sql_data=missing_sql_data,
         expect_failure=expect_failure,
     )
-
     if fail_quick and not (missing_mdsplus_data or missing_sql_data):
-        if expect_failure:
-            assert data_difference.failed, "Expected failure but succeeded:\n{}".format(
-                data_difference.column_mismatch_string
-            )
-        else:
-            assert (
-                not data_difference.failed
-            ), "Expected success but failed:\n{}".format(
-                data_difference.column_mismatch_string
-            )
+        expectation = "failure" if expect_failure else "success"
+        failure = "failed" if data_difference.failed else "succeeded"
+        assert (
+            not data_difference.failed
+        ), "Expected {expectation} and {failure}:\n{report}".format(
+            expectation=expectation,
+            failure=failure,
+            report=data_difference.column_mismatch_string,
+        )
 
     return data_difference
 
