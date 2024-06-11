@@ -2,9 +2,6 @@
 
 import logging
 from dataclasses import dataclass
-import os
-from tempfile import mkstemp
-from time import time
 
 
 @dataclass
