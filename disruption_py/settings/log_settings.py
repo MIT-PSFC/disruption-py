@@ -14,8 +14,6 @@ class LogSettings:
 
     Attributes
     ----------
-    log_to_file : bool
-        Whether to log to a file. Default is False.
     log_file_path : str
         The path of the log file. Set to None if no log file should be created. Default is None.
     file_log_level : int
@@ -34,7 +32,6 @@ class LogSettings:
         Whether to use custom logging. If set to true, no logging setup will be done. Default is False.
     """
 
-    log_to_file: bool = False
     log_file_path: str = None
     file_log_level: int = logging.WARNING
     log_file_write_mode: str = "w"
@@ -65,18 +62,8 @@ class LogSettings:
         logger.propagate = False
         logger.handlers.clear()
         logger.setLevel(logging.DEBUG)
-        if self.log_to_file or self.log_file_path is not None:
-            env_file_log_path = os.getenv("FILE_LOG_PATH", None)
-            if self.log_file_path is None and env_file_log_path is not None:
-                log_file_path = env_file_log_path
-            elif self.log_file_path is not None:
-                log_file_path = self.log_file_path.format(env_file_log_path)
-            else:
-                user = os.getenv("USER", "")
-                log_file_path = mkstemp(
-                    prefix=f"disruptionpy-{user}-{time.strftime('%y%m%d-%H%M%S')}-"
-                )
-            fh = logging.FileHandler(log_file_path, mode=self.log_file_write_mode)
+        if self.log_file_path is not None:
+            fh = logging.FileHandler(self.log_file_path, mode=self.log_file_write_mode)
             fh.setFormatter(formatter)
             fh.setLevel(self.file_log_level)
             logger.addHandler(fh)
