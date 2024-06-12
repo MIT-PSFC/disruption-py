@@ -2,7 +2,7 @@
 
 import logging
 
-from disruption_py.databases.dummy_database import DummyDatabase
+from disruption_py.database import DummyDatabase
 from disruption_py.handlers.d3d_handler import D3DHandler
 from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.shot_settings import ShotSettings

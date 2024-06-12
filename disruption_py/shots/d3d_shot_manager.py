@@ -4,8 +4,7 @@ import traceback
 
 import numpy as np
 
-from disruption_py.databases.d3d_database import D3DDatabase
-from disruption_py.databases.database import ShotDatabase
+from disruption_py.database import ShotDatabase
 from disruption_py.mdsplus_integration.mds_connection import (
     MDSConnection,
     ProcessMDSConnection,
@@ -21,7 +20,7 @@ from disruption_py.utils.utils import without_duplicates
 class D3DShotManager(ShotManager):
 
     def __init__(
-        self, process_database: D3DDatabase, process_mds_conn: ProcessMDSConnection
+        self, process_database: ShotDatabase, process_mds_conn: ProcessMDSConnection
     ):
         super().__init__(
             process_database=process_database, process_mds_conn=process_mds_conn
