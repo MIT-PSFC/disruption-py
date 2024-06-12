@@ -16,7 +16,6 @@ from disruption_py.settings.set_times_request import (
     resolve_set_times_request,
 )
 from disruption_py.settings.shot_data_request import ShotDataRequest
-from disruption_py.utils.exceptions import TokamakNotSupportedError
 from disruption_py.utils.mappings.mappings_helpers import map_string_attributes_to_enum
 from disruption_py.utils.mappings.tokamak import Tokamak, is_tokamak_indexed
 
@@ -149,9 +148,8 @@ class ShotSettings:
         """
         if is_tokamak_indexed(prop_dict):
             if tokamak.value not in prop_dict:
-                raise TokamakNotSupportedError(
-                    tokamak=tokamak,
-                    use_case=f"when generating shot settings from dict with keys {list(prop_dict.keys())}",
+                raise ValueError(
+                    f"Tokamak {tokamak.value} not found in shot settings. Available tokamaks are {prop_dict.keys()}"
                 )
 
             prop_dict = prop_dict[tokamak.value]

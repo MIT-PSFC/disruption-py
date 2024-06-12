@@ -9,7 +9,7 @@ import pytest
 from disruption_py.handlers.handler import Handler
 from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.utils.environment_vars import temporary_env_vars
-from disruption_py.utils.exceptions import TokamakNotSupportedError
+from disruption_py.utils.mappings.tokamak import is_tokamak_indexed
 
 TEST_SETTINGS = {
     "default_fast": {},
@@ -47,12 +47,12 @@ def test_features_serial(
     if "GITHUB_ACTIONS" in os.environ and "_fast" not in shot_settings_key:
         pytest.skip("fast execution")
 
-    try:
-        test_setting = ShotSettings.from_dict(
-            TEST_SETTINGS[shot_settings_key], tokamak=tokamak
-        )
-    except TokamakNotSupportedError:
-        pytest.skip(f"not tested for tokamak {tokamak.value}")
+    test_setting = TEST_SETTINGS[shot_settings_key]
+    if is_tokamak_indexed(test_setting):
+        if tokamak.value not in test_setting:
+            pytest.skip(f"not tested for tokamak {tokamak.value}")
+
+    test_setting = ShotSettings.from_dict(test_setting, tokamak=tokamak)
 
     results = handler.get_shots_data(
         shot_ids_request=shotlist,
