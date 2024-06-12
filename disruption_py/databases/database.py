@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import logging
+import os
 import threading
 from typing import List
 from urllib.parse import quote_plus
@@ -10,7 +11,13 @@ import pandas as pd
 import pyodbc
 from sqlalchemy import create_engine
 
-from disruption_py.utils.constants import BASE_PROTECTED_COLUMNS, TIME_CONST
+from disruption_py.utils.constants import (
+    BASE_PROTECTED_COLUMNS,
+    DATABASE_CONSTANTS,
+    TIME_CONST,
+)
+from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.utils.utils import without_duplicates
 
 
 class ShotDatabase:
@@ -21,8 +28,24 @@ class ShotDatabase:
     logger = logging.getLogger("disruption_py")
 
     def __init__(
-        self, driver, host, port, db_name, user, passwd, protected_columns=[], **kwargs
+        self,
+        driver,
+        host,
+        port,
+        db_name,
+        user,
+        passwd,
+        protected_columns=None,
+        additional_dbs=None,
+        **kwargs,
     ):
+
+        if protected_columns is None:
+            protected_columns = []
+
+        if additional_dbs is None:
+            additional_dbs = {}
+
         self.logger.info(f"Database initialization: {user}@{host}/{db_name}")
         drivers = pyodbc.drivers()
         if driver in drivers:
@@ -38,11 +61,49 @@ class ShotDatabase:
         self.user = user
         self.passwd = passwd
         self.protected_columns = protected_columns
+        self.additional_dbs = additional_dbs
+
         self.connection_string = self._get_connection_string(self.db_name)
         self._thread_connections = {}
         quoted_connection_string = quote_plus(self.connection_string)
         self.engine = create_engine(
             f"mssql+pyodbc:///?odbc_connect={quoted_connection_string}"
+        )
+
+    @classmethod
+    def from_dict(cls, database_dict: dict, tokamak: Tokamak):
+        """
+        Initialize database from config file.
+        """
+        if tokamak in database_dict:
+            database_dict = database_dict[tokamak]
+
+        constants = DATABASE_CONSTANTS[tokamak.value]
+
+        additional_dbs = {
+            cls.from_dict(additonal_db_dict, tokamak): db_key
+            for db_key, additonal_db_dict in constants.get(
+                "additional_databases", {}
+            ).items()
+        }
+
+        # read profile
+        profile_path = constants["profile_path"]
+        profile = os.path.expanduser(profile_path)
+        with open(profile, "r") as fio:
+            db_user, db_pass = fio.read().split()[-2:]
+
+        return ShotDatabase(
+            driver=constants["driver"],
+            host=constants["host"],
+            port=constants["port"],
+            db_name=constants["db_name"],
+            user=db_user,
+            passwd=db_pass,
+            protected_columns=without_duplicates(
+                BASE_PROTECTED_COLUMNS + constants["protected_columns"]
+            ),
+            additional_dbs=additional_dbs,
         )
 
     def _get_connection_string(self, db_name):

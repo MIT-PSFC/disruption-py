@@ -5,6 +5,7 @@ import traceback
 import numpy as np
 
 from disruption_py.databases.d3d_database import D3DDatabase
+from disruption_py.databases.database import ShotDatabase
 from disruption_py.mdsplus_integration.mds_connection import (
     MDSConnection,
     ProcessMDSConnection,
@@ -26,46 +27,29 @@ class D3DShotManager(ShotManager):
             process_database=process_database, process_mds_conn=process_mds_conn
         )
 
-    def shot_setup(
-        self, shot_id: int, shot_settings: ShotSettings, **kwargs
-    ) -> ShotProps:
-        """
-        Sets up the shot properties for cmod.
-        """
+    @classmethod
+    def get_efit_tree_nickname_func(
+        cls,
+        shot_id: int,
+        mds_conn: MDSConnection,
+        database: ShotDatabase,
+        disruption_time: float,
+        shot_settings: ShotSettings,
+    ) -> None:
+        def efit_tree_nickname_func():
+            if shot_settings.efit_tree_name != "analysis":
+                return shot_settings.efit_tree_name
 
-        try:
-            disruption_time = self.process_database.get_disruption_time(shot_id=shot_id)
-        except Exception as e:
-            disruption_time = None
-            self.logger.error(
-                f"Failed to retreive disruption time with error {e}. Continuing as if the shot did not disrupt."
+            database.additional_dbs["code_rundb"].query(
+                f"select * from plasmas where shot = {shot_id} and runtag = 'DIS' and deleted = 0 order by idx",
+                use_pandas=False,
             )
+            if len(efit_trees) == 0:
+                efit_trees = [("EFIT01",)]
+            efit_tree = efit_trees[-1][0]
+            return efit_tree
 
-        mds_conn = self.process_mds_conn.get_shot_connection(shot_id=shot_id)
-
-        efit_tree_name = self.process_database.get_efit_tree(shot_id)
-
-        mds_conn.add_tree_nickname_funcs(
-            tree_nickname_funcs={"_efit_tree": lambda: efit_tree_name}
-        )
-
-        try:
-            shot_props = self.setup_shot_props(
-                shot_id=shot_id,
-                mds_conn=mds_conn,
-                database=self.process_database,
-                disruption_time=disruption_time,
-                shot_settings=shot_settings,
-                tokamak=Tokamak.D3D,
-                **kwargs,
-            )
-            return shot_props
-        except Exception as e:
-            self.logger.info(
-                f"[Shot {shot_id}]: Caught failed to setup shot {shot_id}, cleaning up tree manager."
-            )
-            mds_conn.close_all_trees()
-            raise e
+        return efit_tree_nickname_func
 
     @classmethod
     def _modify_times_flattop_timebase(cls, shot_props: ShotProps, **kwargs):
