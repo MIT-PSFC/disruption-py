@@ -72,17 +72,17 @@ class ShotDatabase:
         )
 
     @classmethod
-    def from_dict(cls, database_dict: dict, tokamak: Tokamak):
+    def from_config(cls, database_dict: dict, tokamak: Tokamak):
         """
         Initialize database from config file.
         """
-        if tokamak in database_dict:
-            database_dict = database_dict[tokamak]
+        if tokamak.value in database_dict:
+            database_dict = database_dict[tokamak.value]
 
         constants = DATABASE_CONSTANTS[tokamak.value]
 
         additional_dbs = {
-            cls.from_dict(additonal_db_dict, tokamak): db_key
+            cls.from_config(additonal_db_dict, tokamak): db_key
             for db_key, additonal_db_dict in constants.get(
                 "additional_databases", {}
             ).items()
@@ -437,3 +437,53 @@ class ShotDatabase:
         Get pandas dataframe of all shots in the disruption_warning table. NOTE: The disruption_warning table contains ONLY a subset of shots in this table
         """
         return self.query("select distinct shot from disruption_warning order by shot")
+
+
+class DummyObject:
+    def __getattr__(self, name):
+        # Return self for any attribute or method call
+        return self
+
+    def __call__(self, *args, **kwargs):
+        # Return self for any method call
+        return self
+
+
+class DummyDatabase(ShotDatabase):
+    """
+    A database class that does not require connecting to an SQL server but returns no data.
+
+    Note: On CMod, disruption time data and any derrivative values will not be correct
+
+    Examples
+    --------
+    >>> cmod_handler = CModHandler(database_initializer=DummyDatabase.default)
+    >>> shot_data = cmod_handler.get_shots_data(shot_ids_request=[1150805012])
+    <pd.DataFrame>
+    """
+
+    def __init__(self, **kwargs):
+        pass
+
+    @classmethod
+    def default(cls, **kwargs):
+        return cls()
+
+    @property
+    def conn(self, **kwargs):
+        return DummyObject()
+
+    def query(self, **kwargs):
+        return pd.DataFrame()
+
+    def get_shots_data(sefl, **kwargs):
+        return pd.DataFrame()
+
+    def get_disruption_time(self, **kwargs):
+        return None
+
+    def get_disruption_shotlist(self, **kwargs):
+        return []
+
+    def get_disruption_warning_shotlist(self, **kwargs):
+        return []

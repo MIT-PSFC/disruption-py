@@ -7,7 +7,7 @@ import traceback
 import numpy as np
 import pandas as pd
 
-from disruption_py.databases.database import ShotDatabase
+from disruption_py.database import ShotDatabase
 from disruption_py.mdsplus_integration.mds_connection import (
     MDSConnection,
     ProcessMDSConnection,

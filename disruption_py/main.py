@@ -3,7 +3,7 @@
 import logging
 from typing import Any, Callable
 
-from disruption_py.databases.database import ShotDatabase
+from disruption_py.database import ShotDatabase
 from disruption_py.mdsplus_integration.mds_connection import ProcessMDSConnection
 from disruption_py.settings import ShotSettings
 from disruption_py.settings.output_type_request import (
@@ -18,10 +18,12 @@ from disruption_py.settings.shot_ids_request import (
     shot_ids_request_runner,
 )
 from disruption_py.shots.shot_manager import ShotManager
+from disruption_py.utils.constants import (
+    DATABASE_CONSTANTS,
+    MDSPLUS_CONNECTION_STRING_CONSTANTS,
+)
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.mappings.tokamak_helpers import (
-    get_database_initializer_for_tokamak,
-    get_mds_connection_str_for_tokamak,
     get_tokamak_shot_manager,
 )
 from disruption_py.utils.multiprocessing_helper import MultiprocessingShotRetriever
@@ -64,13 +66,16 @@ def get_shots_data(
         shot_settings. See OutputTypeRequest for more details.
     """
 
-    database_initializer = get_database_initializer_for_tokamak(
-        tokamak, database_initializer
+    database_initializer = database_initializer or (
+        lambda: ShotDatabase.from_config(DATABASE_CONSTANTS, tokamak=Tokamak)
     )
     database = database_initializer()
-    mds_connection_initializer = lambda: ProcessMDSConnection(
-        get_mds_connection_str_for_tokamak(tokamak, mds_connection_str)
-    )
+    if mds_connection_str is not None:
+        mds_connection_initializer = lambda: ProcessMDSConnection(mds_connection_str)
+    else:
+        mds_connection_initializer = lambda: ProcessMDSConnection.from_config(
+            MDSPLUS_CONNECTION_STRING_CONSTANTS, tokamak=Tokamak
+        )
     mds_connection = mds_connection_initializer()
 
     # Clean-up parameters
