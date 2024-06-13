@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-
+import os
+import shutil
+import time
+from tempfile import mkdtemp
 from unittest.mock import patch
 
 import pytest
@@ -75,3 +78,26 @@ def mock_numpy_gradient():
     with patch("numpy.gradient", new=matlab_gradient_1d_vectorized):
         # The patch will be in place for the duration of the test session
         yield
+
+
+@pytest.fixture(scope="session")
+def tmpdir():
+    tmpdir_path = mkdtemp(prefix=f"disruptionpy-{time.strftime('%y%m%d-%H%M%S')}-")
+    print(f"Using temporary directory: {tmpdir_path} for file output")
+    yield tmpdir_path
+
+
+@pytest.fixture(scope="module")
+def module_file_path_f(request, tmpdir):
+    def inner(suffix):
+        return os.path.join(tmpdir, f"{request.node.name}{suffix}")
+
+    return inner
+
+
+@pytest.fixture(scope="function")
+def test_file_path_f(request, tmpdir):
+    def inner(suffix):
+        return os.path.join(tmpdir, f"{request.node.name}{suffix}")
+
+    return inner

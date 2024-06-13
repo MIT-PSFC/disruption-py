@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 
+import os
+import time
 import inspect
 import logging
 from contextlib import contextmanager
+from tempfile import mkdtemp
 from typing import Callable, Dict, List
 
 import numpy as np
@@ -15,7 +18,9 @@ from disruption_py.utils.eval.data_difference import DataDifference
 from disruption_py.utils.math_utils import matlab_gradient_1d_vectorized
 
 
-def get_mdsplus_data(handler: Handler, shot_ids: List[int]) -> Dict[int, pd.DataFrame]:
+def get_mdsplus_data(
+    handler: Handler, shot_ids: List[int], log_file_path: str
+) -> Dict[int, pd.DataFrame]:
     """
     Get MDSplus data for a list of shots.
 
@@ -29,7 +34,7 @@ def get_mdsplus_data(handler: Handler, shot_ids: List[int]) -> Dict[int, pd.Data
         set_times_request="disruption_warning",
         log_settings=LogSettings(
             log_to_console=False,
-            log_file_path="tests/cmod.log",
+            log_file_path=log_file_path,
             log_file_write_mode="w",
             file_log_level=logging.DEBUG,
         ),
@@ -274,6 +279,9 @@ def eval_against_sql(
     fail_quick: bool,
     test_columns=None,
 ) -> Dict[int, pd.DataFrame]:
+
+    tempfolder = mkdtemp(prefix=f"disruptionpy-{time.strftime('%y%m%d-%H%M%S')}-")
+
     @contextmanager
     def monkey_patch_numpy_gradient():
         original_function = np.gradient
@@ -284,7 +292,9 @@ def eval_against_sql(
             np.gradient = original_function
 
     with monkey_patch_numpy_gradient():
-        mdsplus_data = get_mdsplus_data(handler, shot_ids)
+        mdsplus_data = get_mdsplus_data(
+            handler, shot_ids, os.path.join(tempfolder, "data_retrieval.log")
+        )
     sql_data = get_sql_data_for_mdsplus(handler, shot_ids, mdsplus_data)
 
     if test_columns is None:
