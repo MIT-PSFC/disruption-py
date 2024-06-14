@@ -10,7 +10,11 @@ import pandas as pd
 import pyodbc
 from sqlalchemy import create_engine
 
-from disruption_py.utils.constants import BASE_PROTECTED_COLUMNS, TIME_CONST
+from disruption_py.utils.constants import (
+    BASE_PROTECTED_COLUMNS,
+    TIME_CONST,
+    WRITE_DATABASE_TABLE_NAME,
+)
 
 
 class ShotDatabase:
@@ -119,7 +123,6 @@ class ShotDatabase:
         shot_data: pd.DataFrame,
         update=False,
         override_columns: List[str] = None,
-        table_name="disruption_warning",
     ):
         """
         Upload shot to SQL database.
@@ -142,24 +145,27 @@ class ShotDatabase:
         table_name : str
             Name of the table for data insert or update. Default value is "disruption_warning".
         """
+        table_name = WRITE_DATABASE_TABLE_NAME
         curr_df = pd.read_sql_query(
             f"select * from {table_name} where shot={shot_id} order by time",
             self.engine,
         )
 
         if len(curr_df) == 0:
-            return self._insert_shot_data(curr_df, shot_data, table_name=table_name)
+            return self._insert_shot_data(
+                curr_df=curr_df, shot_data=shot_data, table_name=table_name
+            )
         elif (
             len(curr_df) == len(shot_data)
             and ((curr_df["time"] - shot_data["time"]).abs() < TIME_CONST).all()
         ):
             return self._update_shot_data(
-                shot_id,
-                curr_df,
-                shot_data,
-                update,
-                override_columns,
+                shot_id=shot_id,
+                curr_df=curr_df,
+                shot_data=shot_data,
+                update=update,
                 table_name=table_name,
+                override_columns=override_columns,
             )
 
         self.logger.error("Invalid timebase for data output")
@@ -169,7 +175,7 @@ class ShotDatabase:
         self,
         curr_df: pd.DataFrame,
         shot_data: pd.DataFrame,
-        table_name="disruption_warning",
+        table_name: str,
     ):
         """
         Insert shot data into SQL table.
@@ -208,8 +214,8 @@ class ShotDatabase:
         curr_df: pd.DataFrame,
         shot_data: pd.DataFrame,
         update: bool,
+        table_name: str,
         override_columns: List[str] = None,
-        table_name="disruption_warning",
     ):
         """
         Update shot data into SQL table.
@@ -259,7 +265,7 @@ class ShotDatabase:
                 curs.execute(sql_command, row + (curr_df["time"][index], str(shot_id)))
         return True
 
-    def _get_identity_column_names(self, table_name="disruption_warning"):
+    def _get_identity_column_names(self, table_name: str):
         """Get which column names are identity columns in table."""
         with self.conn.cursor() as curs:
             query = f"""\
@@ -272,8 +278,9 @@ class ShotDatabase:
             curs.execute(query)
             return [row[0] for row in curs.fetchall()]
 
-    def remove_shot_data(self, shot_id, table_name="disruption_warning"):
+    def remove_shot_data(self, shot_id):
         """Remove shot from SQL table."""
+        table_name = WRITE_DATABASE_TABLE_NAME
         if table_name == "disruption_warning":
             raise ValueError(
                 "Please do not delete from the disruption_warning database"
@@ -289,8 +296,9 @@ class ShotDatabase:
             curs.execute(f"delete from {table_name} where shot = {shot_id}")
         return True
 
-    def add_column(self, col_name, var_type="TEXT", table_name="disruption_warning"):
+    def add_column(self, col_name, var_type="TEXT"):
         """Add column to SQL table without filling in data for column."""
+        table_name = WRITE_DATABASE_TABLE_NAME
         try:
             self.query(
                 f"alter table {table_name} add {col_name} {var_type};", use_pandas=False
@@ -300,8 +308,9 @@ class ShotDatabase:
             self.logger.error(f"Failed to add column {col_name} with error {e}")
             return False
 
-    def remove_column(self, col_name, table_name="disruption_warning"):
+    def remove_column(self, col_name):
         """Remove column from SQL table"""
+        table_name = WRITE_DATABASE_TABLE_NAME
         if col_name in self.protected_columns:
             self.logger.error(f"Failed to drop protected column {col_name}")
             return False

@@ -299,3 +299,5 @@ EXPECTED_FAILURE_COLUMNS = {
         "commit_hash",
     ],
 }
+
+WRITE_DATABASE_TABLE_NAME = "disruption_warning_test"

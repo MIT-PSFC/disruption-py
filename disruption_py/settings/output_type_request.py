@@ -395,7 +395,6 @@ class SQLOutputRequest(OutputTypeRequest):
                 shot_data=params.result,
                 update=self.should_update,
                 override_columns=self.should_override_columns,
-                table_name=self.table_name,
             )
             self.modifications += 1
         else:
