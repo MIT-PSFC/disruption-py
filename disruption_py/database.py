@@ -79,30 +79,28 @@ class ShotDatabase:
         if tokamak.value in database_dict:
             database_dict = database_dict[tokamak.value]
 
-        constants = DATABASE_CONSTANTS[tokamak.value]
-
         additional_dbs = {
             cls.from_config(additonal_db_dict, tokamak): db_key
-            for db_key, additonal_db_dict in constants.get(
+            for db_key, additonal_db_dict in database_dict.get(
                 "additional_databases", {}
             ).items()
         }
 
         # read profile
-        profile_path = constants["profile_path"]
+        profile_path = database_dict["profile_path"]
         profile = os.path.expanduser(profile_path)
         with open(profile, "r") as fio:
             db_user, db_pass = fio.read().split()[-2:]
 
         return ShotDatabase(
-            driver=constants["driver"],
-            host=constants["host"],
-            port=constants["port"],
-            db_name=constants["db_name"],
+            driver=database_dict["driver"],
+            host=database_dict["host"],
+            port=database_dict["port"],
+            db_name=database_dict["db_name"],
             user=db_user,
             passwd=db_pass,
             protected_columns=without_duplicates(
-                BASE_PROTECTED_COLUMNS + constants["protected_columns"]
+                BASE_PROTECTED_COLUMNS + database_dict["protected_columns"]
             ),
             additional_dbs=additional_dbs,
         )
