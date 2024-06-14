@@ -264,6 +264,7 @@ EXPECTED_FAILURE_COLUMNS = {
         "dip_smoothed",
         "ip_prog",
         "p_input",
+        "commit_hash",
     ],
     "d3d": [
         "kappa",
@@ -295,5 +296,8 @@ EXPECTED_FAILURE_COLUMNS = {
         "n_e",
         "beta_n",
         "kappa_area",
+        "commit_hash",
     ],
 }
+
+WRITE_DATABASE_TABLE_NAME = "disruption_warning_test"
