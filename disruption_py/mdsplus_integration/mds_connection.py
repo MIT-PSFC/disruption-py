@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import logging
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple, Hashable
 
 import MDSplus
 import numpy as np
@@ -45,6 +45,61 @@ class MDSConnection:
         self.open_trees = set()
         self.last_open_tree = None
 
+        self.data_cache = {}
+
+    def get_from_cache(
+        self,
+        node_path: str,
+        tree_name: str = None,
+        arguments: Any = None,
+        get_data: bool = False,
+        get_dims: list = None,
+        astype: str = None,
+        cast_all: bool = False,
+    ):
+        if tree_name is not None:
+            # if tree_name is originally a nickname gets set to the underlying tree name
+            tree_name = self.open_tree(tree_name)
+        else:
+            tree_name = self.last_open_tree
+
+        get_dims = get_dims or []
+
+        ret_data = None
+        ret_dims = [None for _ in get_dims]
+
+        cache_key = (node_path, tree_name, arguments)
+        if isinstance(cache_key, Hashable) and cache_key in self.data_cache:
+            cached: dict = self.data_cache[cache_key]
+            if "data" in cached:
+                ret_data = cached["data"]
+            for i, dim in enumerate(get_dims):
+                if dim in cached:
+                    ret_dims[i] = cached[dim]
+
+        retrieving_data = get_data and ret_data is None
+        if retrieving_data:
+            ret_data = self.conn.get("_sig=" + node_path, arguments).data()
+
+        if any(dim is None for dim in ret_dims):
+            if retrieving_data:
+                ret_dims = [
+                    self.conn.get(f"dim_of(_sig,{dim_num})").data()
+                    for dim_num in get_dims
+                ]
+            else:
+                ret_dims = [
+                    self.conn.get(f"dim_of({node_path},{dim_num})").data()
+                    for dim_num in get_dims
+                ]
+
+        if astype:
+            ret_data = safe_cast(ret_data, astype)
+            if cast_all:
+                ret_dims = [safe_cast(ret_dim, astype) for ret_dim in ret_dims]
+
+        return ret_data, *ret_dims
+
     def open_tree(self, tree_name: str):
         """
         Open the specified _name.
@@ -66,6 +121,7 @@ class MDSConnection:
 
         self.last_open_tree = tree_name
         self.open_trees.add(tree_name)
+        return tree_name
 
     def close_tree(self, tree_name: str):
         """
@@ -86,6 +142,7 @@ class MDSConnection:
         if self.last_open_tree == tree_name:
             self.last_open_tree = None
         self.open_trees.discard(tree_name)
+        return tree_name
 
     def close_all_trees(self):
         """
