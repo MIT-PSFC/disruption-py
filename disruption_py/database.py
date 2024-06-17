@@ -17,7 +17,7 @@ from disruption_py.utils.constants import (
     WRITE_DATABASE_TABLE_NAME,
     DATABASE_CONSTANTS,
 )
-from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.utils.mappings.tokamak import Tokamak, is_tokamak_indexed
 from disruption_py.utils.utils import without_duplicates
 
 
@@ -455,8 +455,7 @@ class DummyDatabase(ShotDatabase):
 
     Examples
     --------
-    >>> cmod_handler = CModHandler(database_initializer=DummyDatabase.default)
-    >>> shot_data = cmod_handler.get_shots_data(shot_ids_request=[1150805012])
+    >>> get_shots_data(shot_ids_request=[1150805012], database_initializer=DummyDatabase.initializer)
     <pd.DataFrame>
     """
 
@@ -464,7 +463,7 @@ class DummyDatabase(ShotDatabase):
         pass
 
     @classmethod
-    def default(cls, **kwargs):
+    def initializer(cls, **kwargs):
         return cls()
 
     @property

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
+from logging import Logger
 import os
 from typing import Callable
 
-from disruption_py.databases import CModDatabase, D3DDatabase
 from disruption_py.shots.cmod_shot_manager import CModShotManager
 from disruption_py.shots.d3d_shot_manager import D3DShotManager
 from disruption_py.utils.constants import (
@@ -11,6 +11,7 @@ from disruption_py.utils.constants import (
     TEST_COLUMNS,
     TEST_SHOTS,
 )
+from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from disruption_py.utils.mappings.tokamak import Tokamak
 
 
@@ -41,18 +42,19 @@ def get_tokamak_from_environment():
     return None
 
 
+def resolve_tokamak(tokamak: Tokamak, logger: Logger = None):
+    if tokamak is None:
+        tokamak = get_tokamak_from_environment()
+        if logger:
+            logger.info(f"No tokamak argument given. Detected tokamak: {tokamak.value}")
+        return tokamak
+    else:
+        return map_string_to_enum(tokamak, Tokamak)
+
+
 def get_database_for_shot_id(shot_id: int):
     tokamak = get_tokamak_from_shot_id(shot_id)
     return get_tokamak_database(tokamak)
-
-
-def get_tokamak_handler(tokamak: Tokamak):
-    if tokamak is Tokamak.CMOD:
-        return CModHandler()
-    elif tokamak is Tokamak.D3D:
-        return D3DHandler()
-    else:
-        raise ValueError("Tokamak {} not supported for this test".format(tokamak))
 
 
 def get_tokamak_shot_manager(tokamak: Tokamak):

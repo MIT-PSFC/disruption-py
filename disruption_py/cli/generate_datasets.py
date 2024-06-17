@@ -5,7 +5,7 @@ import json
 
 import pandas as pd
 
-from disruption_py.handlers.cmod_handler import CModHandler
+from disruption_py.main import get_shots_data
 from disruption_py.settings import LogSettings, ShotSettings
 from disruption_py.utils.constants import (
     BLACK_WINDOW_THRESHOLD,
@@ -14,7 +14,10 @@ from disruption_py.utils.constants import (
 )
 from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment
+from disruption_py.utils.mappings.tokamak_helpers import (
+    get_tokamak_from_environment,
+    resolve_tokamak,
+)
 from disruption_py.utils.math_utils import generate_id
 from disruption_py.utils.ml.preprocessing import (
     add_derived_features,
@@ -52,15 +55,7 @@ def main(args):
         existing_data_request="sql" if args.data_source == 0 else None,
     )
 
-    if args.tokamak is None:
-        tokamak = get_tokamak_from_environment()
-        logger.info(f"No tokamak argument given. Detected tokamak: {tokamak.value}")
-    else:
-        tokamak = map_string_to_enum(args.tokamak, Tokamak)
-    if tokamak == Tokamak.CMOD:
-        handler = CModHandler()
-    else:
-        raise ValueError("Tokamak Not Supported")
+    tokamak = resolve_tokamak(args)
 
     if args.shotlist is None:
         if tokamak == Tokamak.D3D:
@@ -68,7 +63,8 @@ def main(args):
         elif tokamak == Tokamak.CMOD:
             shot_ids_request = "cmod_test"
 
-    dataset_df = handler.get_shots_data(
+    dataset_df = get_shots_data(
+        tokamak=tokamak,
         shot_ids_request=shot_ids_request,
         shot_settings=shot_settings,
         output_type_request="dataframe",

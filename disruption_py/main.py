@@ -25,6 +25,7 @@ from disruption_py.utils.constants import (
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.mappings.tokamak_helpers import (
     get_tokamak_shot_manager,
+    resolve_tokamak,
 )
 from disruption_py.utils.multiprocessing_helper import MultiprocessingShotRetriever
 from disruption_py.utils.utils import without_duplicates
@@ -33,8 +34,8 @@ logger = logging.getLogger("disruption_py")
 
 
 def get_shots_data(
-    tokamak: Tokamak,
     shot_ids_request: ShotIdsRequestType,
+    tokamak: Tokamak = None,
     database_initializer: Callable[..., ShotDatabase] = None,
     mds_connection_str: str = None,
     shot_settings: ShotSettings = None,
@@ -65,6 +66,7 @@ def get_shots_data(
         The value of OutputTypeRequest.get_results, where OutputTypeRequest is specified in
         shot_settings. See OutputTypeRequest for more details.
     """
+    tokamak = resolve_tokamak(tokamak)
 
     database_initializer = database_initializer or (
         lambda: ShotDatabase.from_config(DATABASE_CONSTANTS, tokamak=Tokamak)
