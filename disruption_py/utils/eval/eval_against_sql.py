@@ -11,15 +11,21 @@ from typing import Callable, Dict, List
 import numpy as np
 import pandas as pd
 
-from disruption_py.handlers import Handler
+from disruption_py.database import ShotDatabase
+from disruption_py.main import get_shots_data
 from disruption_py.settings import LogSettings, ShotSettings
-from disruption_py.utils.constants import TIME_CONST
+from disruption_py.utils.constants import (
+    MDSPLUS_CONNECTION_STRING_CONSTANTS,
+    TIME_CONST,
+)
 from disruption_py.utils.eval.data_difference import DataDifference
+from disruption_py.utils.mappings import tokamak
+from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.math_utils import matlab_gradient_1d_vectorized
 
 
 def get_mdsplus_data(
-    handler: Handler, shot_ids: List[int], log_file_path: str
+    tokamak: Tokamak, shot_ids: List[int], log_file_path: str
 ) -> Dict[int, pd.DataFrame]:
     """
     Get MDSplus data for a list of shots.
@@ -39,7 +45,8 @@ def get_mdsplus_data(
             file_log_level=logging.DEBUG,
         ),
     )
-    shot_data = handler.get_shots_data(
+    shot_data = get_shots_data(
+        tokamak=tokamak,
         shot_ids_request=shot_ids,
         shot_settings=shot_settings,
         output_type_request="dict",
@@ -48,7 +55,7 @@ def get_mdsplus_data(
 
 
 def get_sql_data_for_mdsplus(
-    handler: Handler, shot_ids: List[int], mdsplus_data: Dict[int, pd.DataFrame]
+    tokamak: Tokamak, shot_ids: List[int], mdsplus_data: Dict[int, pd.DataFrame]
 ) -> Dict[int, pd.DataFrame]:
     """
     Get SQL data for a list of shots and map onto the timebase of the supplied MDSplus data.
@@ -58,10 +65,14 @@ def get_sql_data_for_mdsplus(
     Dict[int, pd.DataFrame]
         Dictionary mapping shot IDs to retrieved SQL data.
     """
+    db = ShotDatabase.from_config(
+        MDSPLUS_CONNECTION_STRING_CONSTANTS,
+        tokamak=tokamak,
+    )
     shot_data = {}
     for shot_id in shot_ids:
         times = mdsplus_data[shot_id]["time"]
-        sql_data = handler.database.get_shots_data([shot_id])
+        sql_data = db.get_shots_data([shot_id])
         shot_data[shot_id] = pd.merge_asof(
             times.to_frame(),
             sql_data,
@@ -273,7 +284,7 @@ def get_failure_statistics_string(
 
 
 def eval_against_sql(
-    handler: Handler,
+    tokamak: Tokamak,
     shot_ids: List[int],
     expected_failure_columns: List[str],
     fail_quick: bool,
@@ -293,9 +304,9 @@ def eval_against_sql(
 
     with monkey_patch_numpy_gradient():
         mdsplus_data = get_mdsplus_data(
-            handler, shot_ids, os.path.join(tempfolder, "data_retrieval.log")
+            tokamak, shot_ids, os.path.join(tempfolder, "data_retrieval.log")
         )
-    sql_data = get_sql_data_for_mdsplus(handler, shot_ids, mdsplus_data)
+    sql_data = get_sql_data_for_mdsplus(tokamak, shot_ids, mdsplus_data)
 
     if test_columns is None:
         mdsplus_columns = set().union(*(df.columns for df in mdsplus_data.values()))

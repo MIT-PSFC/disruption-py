@@ -6,9 +6,10 @@ execute a few meaningful queries to test DB connection.
 
 import os
 
+from disruption_py.database import ShotDatabase
+from disruption_py.utils.constants import MDSPLUS_CONNECTION_STRING_CONSTANTS
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.mappings.tokamak_helpers import (
-    get_tokamak_database,
     get_tokamak_from_environment,
 )
 
@@ -21,7 +22,10 @@ queries = [
     "select count(distinct shot) from disruptions",
 ]
 tokamak = get_tokamak_from_environment()
-db = get_tokamak_database(tokamak)
+db = ShotDatabase.from_config(
+    MDSPLUS_CONNECTION_STRING_CONSTANTS,
+    tokamak=tokamak,
+)
 
 if tokamak is Tokamak.D3D:
     vals = [13245, 8055, 5190, 24219]

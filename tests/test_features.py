@@ -6,7 +6,7 @@ import os
 import pandas as pd
 import pytest
 
-from disruption_py.handler import Handler
+from disruption_py.main import get_shots_data
 from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.utils.environment_vars import temporary_env_vars
@@ -42,9 +42,7 @@ TEST_SETTINGS = {
 
 
 @pytest.mark.parametrize("shot_settings_key", TEST_SETTINGS.keys())
-def test_features_serial(
-    handler: Handler, tokamak, shotlist, shot_settings_key, test_file_path_f
-):
+def test_features_serial(tokamak, shotlist, shot_settings_key, test_file_path_f):
     if "GITHUB_ACTIONS" in os.environ and "_fast" not in shot_settings_key:
         pytest.skip("fast execution")
 
@@ -55,7 +53,8 @@ def test_features_serial(
 
     test_setting = ShotSettings.from_dict(test_setting, tokamak=tokamak)
 
-    results = handler.get_shots_data(
+    results = get_shots_data(
+        tokamak=tokamak,
         shot_ids_request=shotlist,
         shot_settings=test_setting,
         output_type_request=[
@@ -75,12 +74,13 @@ def test_features_serial(
     assert os.path.exists(test_file_path_f(".hdf5"))
 
 
-def test_features_parallel(handler: Handler, tokamak, shotlist, test_file_path_f):
+def test_features_parallel(tokamak, shotlist, test_file_path_f):
     test_setting = ShotSettings.from_dict(
         TEST_SETTINGS["default_fast"], tokamak=tokamak
     )
 
-    results = handler.get_shots_data(
+    results = get_shots_data(
+        tokamak=tokamak,
         shot_ids_request=shotlist,
         shot_settings=test_setting,
         output_type_request=[

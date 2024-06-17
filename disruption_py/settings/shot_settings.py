@@ -77,7 +77,7 @@ class ShotSettings:
     interpolation_method : InterpolationMethod
         The interpolation method to be used when retrieving data for the shot. CURRENTLY UNIMPLEMENTED.
     output_type_request : OutputTypeRequest
-        DEPRECTATED. output_type_request has moved to a parameter in the get_shots_data method of the handler class.
+        DEPRECTATED. output_type_request has moved to a parameter in the get_shots_data method.
         Will error if used, please set to None.
     attempt_local_efit_env : Tuple[Tuple[str, str]]
         DEPRECTATED. Support no longer exists. Please reach out to maintainers with questions.

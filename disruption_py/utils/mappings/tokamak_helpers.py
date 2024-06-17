@@ -52,11 +52,6 @@ def resolve_tokamak(tokamak: Tokamak, logger: Logger = None):
         return map_string_to_enum(tokamak, Tokamak)
 
 
-def get_database_for_shot_id(shot_id: int):
-    tokamak = get_tokamak_from_shot_id(shot_id)
-    return get_tokamak_database(tokamak)
-
-
 def get_tokamak_shot_manager(tokamak: Tokamak):
     if tokamak == Tokamak.CMOD:
         return CModShotManager
@@ -64,15 +59,6 @@ def get_tokamak_shot_manager(tokamak: Tokamak):
         return D3DShotManager
     else:
         raise ValueError("No shot manager for tokamak {}".format(tokamak))
-
-
-def get_tokamak_database(tokamak: Tokamak):
-    if tokamak == Tokamak.CMOD:
-        return CModDatabase.default()
-    elif tokamak == Tokamak.D3D:
-        return D3DDatabase.default()
-    else:
-        raise ValueError("Tokamak {} not supported for this test".format(tokamak))
 
 
 def get_tokamak_test_expected_failure_columns(tokamak: Tokamak):
