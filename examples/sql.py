@@ -22,10 +22,7 @@ queries = [
     "select count(distinct shot) from disruptions",
 ]
 tokamak = get_tokamak_from_environment()
-db = ShotDatabase.from_config(
-    MDSPLUS_CONNECTION_STRING_CONSTANTS,
-    tokamak=tokamak,
-)
+db = ShotDatabase.from_config(tokamak=tokamak)
 
 if tokamak is Tokamak.D3D:
     vals = [13245, 8055, 5190, 24219]

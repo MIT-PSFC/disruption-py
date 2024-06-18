@@ -22,9 +22,7 @@ elif tokamak is Tokamak.CMOD:
 else:
     raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 
-mds = ProcessMDSConnection.from_config(
-    MDSPLUS_CONNECTION_STRING_CONSTANTS, tokamak=Tokamak
-)
+mds = ProcessMDSConnection.from_config(tokamak=Tokamak)
 print(f"Initialized MDSplus: {mds.hostspec}")
 
 mds.openTree("EFIT01", shot)

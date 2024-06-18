@@ -65,10 +65,7 @@ def get_sql_data_for_mdsplus(
     Dict[int, pd.DataFrame]
         Dictionary mapping shot IDs to retrieved SQL data.
     """
-    db = ShotDatabase.from_config(
-        MDSPLUS_CONNECTION_STRING_CONSTANTS,
-        tokamak=tokamak,
-    )
+    db = ShotDatabase.from_config(tokamak=tokamak)
     shot_data = {}
     for shot_id in shot_ids:
         times = mdsplus_data[shot_id]["time"]

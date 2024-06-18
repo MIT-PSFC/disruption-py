@@ -45,9 +45,7 @@ def initial_mdsplus_data(shotlist, tokamak) -> Dict:
 
 @pytest.fixture(scope="class")
 def shot_database(tokamak) -> ShotDatabase:
-    return ShotDatabase.from_config(
-        MDSPLUS_CONNECTION_STRING_CONSTANTS, tokamak=tokamak
-    )
+    return ShotDatabase.from_config(tokamak=tokamak)
 
 
 def assert_frame_equal_unordered(df1: pd.DataFrame, df2: pd.DataFrame):

@@ -23,8 +23,6 @@ shot_data = get_shots_data(
 )
 
 
-cmod_database = ShotDatabase.from_config(
-    MDSPLUS_CONNECTION_STRING_CONSTANTS, tokamak=Tokamak.CMOD
-)
+cmod_database = ShotDatabase.from_config(tokamak="cmod")
 result = cmod_database.get_shots_data(shot_ids, sql_table="disruption_warning_test")
 print(result)

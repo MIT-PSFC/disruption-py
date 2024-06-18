@@ -18,6 +18,7 @@ from disruption_py.utils.constants import (
     DATABASE_CONSTANTS,
 )
 from disruption_py.utils.mappings.tokamak import Tokamak, is_tokamak_indexed
+from disruption_py.utils.mappings.tokamak_helpers import resolve_tokamak
 from disruption_py.utils.utils import without_duplicates
 
 
@@ -72,15 +73,24 @@ class ShotDatabase:
         )
 
     @classmethod
-    def from_config(cls, database_dict: dict, tokamak: Tokamak):
+    def from_config(cls, tokamak: Tokamak):
         """
         Initialize database from config file.
         """
+        return cls._from_dict(DATABASE_CONSTANTS, tokamak)
+
+    @classmethod
+    def _from_dict(cls, database_dict: dict, tokamak: Tokamak):
+        """
+        Initialize database from config file.
+        """
+        tokamak = resolve_tokamak(tokamak)
+
         if tokamak.value in database_dict:
             database_dict = database_dict[tokamak.value]
 
         additional_dbs = {
-            cls.from_config(additonal_db_dict, tokamak): db_key
+            db_key: cls._from_dict(additonal_db_dict, tokamak)
             for db_key, additonal_db_dict in database_dict.get(
                 "additional_databases", {}
             ).items()

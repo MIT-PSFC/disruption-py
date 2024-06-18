@@ -37,7 +37,7 @@ def get_shots_data(
     shot_ids_request: ShotIdsRequestType,
     tokamak: Tokamak = None,
     database_initializer: Callable[..., ShotDatabase] = None,
-    mds_connection_str: str = None,
+    mds_connection_initializer: Callable[..., ProcessMDSConnection] = None,
     shot_settings: ShotSettings = None,
     output_type_request: OutputTypeRequest = "list",
     num_processes: int = 1,
@@ -69,15 +69,12 @@ def get_shots_data(
     tokamak = resolve_tokamak(tokamak)
 
     database_initializer = database_initializer or (
-        lambda: ShotDatabase.from_config(DATABASE_CONSTANTS, tokamak=Tokamak)
+        lambda: ShotDatabase.from_config(tokamak=Tokamak)
     )
     database = database_initializer()
-    if mds_connection_str is not None:
-        mds_connection_initializer = lambda: ProcessMDSConnection(mds_connection_str)
-    else:
-        mds_connection_initializer = lambda: ProcessMDSConnection.from_config(
-            MDSPLUS_CONNECTION_STRING_CONSTANTS, tokamak=Tokamak
-        )
+    mds_connection_initializer = mds_connection_initializer or (
+        lambda: ProcessMDSConnection.from_config(tokamak=Tokamak)
+    )
     mds_connection = mds_connection_initializer()
 
     # Clean-up parameters
