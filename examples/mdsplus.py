@@ -7,7 +7,7 @@ execute a simple fetch to test MDSplus connection.
 from disruption_py.mdsplus_integration.mds_connection import ProcessMDSConnection
 from disruption_py.utils.constants import MDSPLUS_CONNECTION_STRING_CONSTANTS
 from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.mappings.tokamak_helpers import (
+from disruption_py.utils.mappings.tokamak import (
     get_tokamak_from_environment,
 )
 
@@ -22,7 +22,7 @@ elif tokamak is Tokamak.CMOD:
 else:
     raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 
-mds = ProcessMDSConnection.from_config(tokamak=Tokamak)
+mds = ProcessMDSConnection.from_config(tokamak=tokamak).conn
 print(f"Initialized MDSplus: {mds.hostspec}")
 
 mds.openTree("EFIT01", shot)

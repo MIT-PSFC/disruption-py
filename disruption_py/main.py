@@ -17,15 +17,9 @@ from disruption_py.settings.shot_ids_request import (
     ShotIdsRequestType,
     shot_ids_request_runner,
 )
-from disruption_py.shots.shot_manager import ShotManager
-from disruption_py.utils.constants import (
-    DATABASE_CONSTANTS,
-    MDSPLUS_CONNECTION_STRING_CONSTANTS,
-)
-from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.utils.mappings.tokamak import Tokamak, resolve_tokamak
 from disruption_py.utils.mappings.tokamak_helpers import (
     get_tokamak_shot_manager,
-    resolve_tokamak,
 )
 from disruption_py.utils.multiprocessing_helper import MultiprocessingShotRetriever
 from disruption_py.utils.utils import without_duplicates
@@ -69,14 +63,12 @@ def get_shots_data(
     tokamak = resolve_tokamak(tokamak)
 
     database_initializer = database_initializer or (
-        lambda: ShotDatabase.from_config(tokamak=Tokamak)
+        lambda: ShotDatabase.from_config(tokamak=tokamak)
     )
     database = database_initializer()
     mds_connection_initializer = mds_connection_initializer or (
-        lambda: ProcessMDSConnection.from_config(tokamak=Tokamak)
+        lambda: ProcessMDSConnection.from_config(tokamak=tokamak)
     )
-    mds_connection = mds_connection_initializer()
-
     # Clean-up parameters
     if shot_settings is None:
         shot_settings = ShotSettings()
@@ -85,13 +77,14 @@ def get_shots_data(
     output_type_request = resolve_output_type_request(output_type_request)
 
     # do not spawn unnecessary processes
-    num_processes = min(num_processes, len(shot_ids_list))
     shot_manager_cls = get_tokamak_shot_manager(tokamak)
 
     shot_ids_request_params = ShotIdsRequestParams(database, tokamak, logger)
     shot_ids_list = without_duplicates(
         shot_ids_request_runner(shot_ids_request, shot_ids_request_params)
     )
+
+    num_processes = min(num_processes, len(shot_ids_list))
 
     if num_processes > 1:
         shot_retriever = MultiprocessingShotRetriever(
@@ -103,6 +96,7 @@ def get_shots_data(
                 # initialize connections for individual processes
                 "shot_manager": (
                     lambda: shot_manager_cls(
+                        tokamak=tokamak,
                         process_database=database_initializer(),
                         process_mds_conn=mds_connection_initializer(),
                     )
@@ -117,7 +111,9 @@ def get_shots_data(
             await_complete=True,
         )
     else:
+        mds_connection = mds_connection_initializer()
         shot_manager = shot_manager_cls(
+            tokamak=tokamak,
             process_database=database,
             process_mds_conn=mds_connection,
         )

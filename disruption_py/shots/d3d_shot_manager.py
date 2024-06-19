@@ -19,12 +19,9 @@ from disruption_py.utils.utils import without_duplicates
 
 class D3DShotManager(ShotManager):
 
-    def __init__(
-        self, process_database: ShotDatabase, process_mds_conn: ProcessMDSConnection
-    ):
-        super().__init__(
-            process_database=process_database, process_mds_conn=process_mds_conn
-        )
+    @property
+    def tokamak(self) -> Tokamak:
+        return Tokamak.D3D
 
     @classmethod
     def get_efit_tree_nickname_func(

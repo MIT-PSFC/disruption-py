@@ -29,8 +29,12 @@ class ShotManager(ABC):
     logger = logging.getLogger("disruption_py")
 
     def __init__(
-        self, process_database: ShotDatabase, process_mds_conn: ProcessMDSConnection
+        self,
+        tokamak: Tokamak,
+        process_database: ShotDatabase,
+        process_mds_conn: ProcessMDSConnection,
     ):
+        self.tokamak = tokamak
         self.process_database = process_database
         self.process_mds_conn = process_mds_conn
 
@@ -92,22 +96,22 @@ class ShotManager(ABC):
         mds_conn = self.process_mds_conn.get_shot_connection(shot_id=shot_id)
 
         mds_conn.add_tree_nickname_funcs(
-            tree_nickname_funcs=self.get_efit_tree_nickname_func(
-                shot_id=shot_id,
-                mds_conn=mds_conn,
-                disruption_time=disruption_time,
-                shot_settings=shot_settings,
-            )
+            tree_nickname_funcs={
+                "_efit_tree": self.get_efit_tree_nickname_func(
+                    shot_id=shot_id,
+                    mds_conn=mds_conn,
+                    disruption_time=disruption_time,
+                    shot_settings=shot_settings,
+                )
+            }
         )
 
         try:
             shot_props = self.setup_shot_props(
                 shot_id=shot_id,
                 mds_conn=mds_conn,
-                database=self.process_database,
                 disruption_time=disruption_time,
                 shot_settings=shot_settings,
-                tokamak=Tokamak.D3D,
                 **kwargs,
             )
             return shot_props
@@ -123,7 +127,7 @@ class ShotManager(ABC):
             mds_conn=shot_props.mds_conn,
             shot_props=shot_props,
             logger=self.logger,
-            tokamak=shot_props.tokamak,
+            tokamak=self.tokamak,
         )
         return populate_shot(
             shot_settings=shot_settings, params=shot_data_request_params
@@ -142,13 +146,11 @@ class ShotManager(ABC):
         mds_conn: MDSConnection,
         disruption_time: float,
         shot_settings: ShotSettings,
-        tokamak: Tokamak,
         **kwargs,
     ) -> ShotProps:
 
         existing_data = self._retrieve_existing_data(
             shot_id=shot_id,
-            tokamak=tokamak,
             shot_settings=shot_settings,
         )
 
@@ -158,7 +160,6 @@ class ShotManager(ABC):
             shot_id=shot_id,
             existing_data=existing_data,
             mds_conn=mds_conn,
-            tokamak=tokamak,
             disruption_time=disruption_time,
             shot_settings=shot_settings,
         )
@@ -179,7 +180,7 @@ class ShotManager(ABC):
 
         shot_props = ShotProps(
             shot_id=shot_id,
-            tokamak=tokamak,
+            tokamak=self.tokamak,
             disruption_time=disruption_time,
             mds_conn=mds_conn,
             times=times,
@@ -211,14 +212,13 @@ class ShotManager(ABC):
     def _retrieve_existing_data(
         self,
         shot_id: int,
-        tokamak: Tokamak,
         shot_settings: ShotSettings,
     ) -> pd.DataFrame:
         if shot_settings.existing_data_request is not None:
             existing_data_request_params = ExistingDataRequestParams(
                 shot_id=shot_id,
                 database=self.process_database,
-                tokamak=tokamak,
+                tokamak=self.tokamak,
                 logger=self.logger,
             )
             existing_data = shot_settings.existing_data_request.get_existing_data(
@@ -235,7 +235,6 @@ class ShotManager(ABC):
         shot_id: int,
         existing_data: pd.DataFrame,
         mds_conn: MDSConnection,
-        tokamak: Tokamak,
         disruption_time: float,
         shot_settings: ShotSettings,
     ) -> np.ndarray:
@@ -248,7 +247,7 @@ class ShotManager(ABC):
             existing_data=existing_data,
             database=self.process_database,
             disruption_time=disruption_time,
-            tokamak=tokamak,
+            tokamak=self.tokamak,
             logger=self.logger,
         )
         return shot_settings.set_times_request.get_times(request_params)

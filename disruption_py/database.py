@@ -18,7 +18,7 @@ from disruption_py.utils.constants import (
     DATABASE_CONSTANTS,
 )
 from disruption_py.utils.mappings.tokamak import Tokamak, is_tokamak_indexed
-from disruption_py.utils.mappings.tokamak_helpers import resolve_tokamak
+from disruption_py.utils.mappings.tokamak import resolve_tokamak
 from disruption_py.utils.utils import without_duplicates
 
 

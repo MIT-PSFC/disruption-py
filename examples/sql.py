@@ -9,7 +9,7 @@ import os
 from disruption_py.database import ShotDatabase
 from disruption_py.utils.constants import MDSPLUS_CONNECTION_STRING_CONSTANTS
 from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.mappings.tokamak_helpers import (
+from disruption_py.utils.mappings.tokamak import (
     get_tokamak_from_environment,
 )
 

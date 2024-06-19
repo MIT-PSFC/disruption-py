@@ -27,7 +27,8 @@ class ProcessMDSConnection:
         except MDSplus.mdsExceptions.TdiUNKNOWN_VAR:
             self.logger.debug("MDSplus does not support the `shorten_path()` method.")
 
-    def from_config(self, tokamak: Tokamak):
+    @classmethod
+    def from_config(cls, tokamak: Tokamak):
         conn_string_configs = MDSPLUS_CONNECTION_STRING_CONSTANTS
         if tokamak.value not in conn_string_configs:
             raise ValueError(f"No connection string found for {tokamak.value}")

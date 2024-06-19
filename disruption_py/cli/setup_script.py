@@ -7,7 +7,7 @@ import pyodbc
 
 from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.mappings.tokamak_helpers import get_tokamak_from_environment
+from disruption_py.utils.mappings.tokamak import get_tokamak_from_environment
 
 
 def cmod_setup_check():

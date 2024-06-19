@@ -7,7 +7,7 @@ execute a simple workflow to fetch EFIT parameters.
 from disruption_py.main import get_shots_data
 from disruption_py.settings import LogSettings, ShotSettings
 from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.mappings.tokamak_helpers import (
+from disruption_py.utils.mappings.tokamak import (
     get_tokamak_from_environment,
 )
 
