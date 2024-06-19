@@ -9,8 +9,8 @@ from disruption_py.database import ShotDatabase
 from disruption_py.settings import (
     OutputTypeRequest,
     ResultOutputTypeRequestParams,
-    ShotSettings,
 )
+from disruption_py.shots.shot_manager import ShotManager
 from disruption_py.utils.constants import MAX_PROCESSES
 
 
@@ -24,15 +24,15 @@ MARK_COMPLETE = MarkCompleteEnum.MarkComplete
 
 class Consumer(multiprocessing.Process):
     def __init__(
-        self, task_queue, result_queue, process_prop_initializers: Dict[str, Callable]
+        self,
+        task_queue,
+        result_queue,
+        shot_manager_initializer: Callable[..., ShotManager],
     ):
         multiprocessing.Process.__init__(self)
         self.task_queue = task_queue
         self.result_queue = result_queue
-        self.initialized_process_props = {
-            prop: initializer()
-            for prop, initializer in process_prop_initializers.items()
-        }
+        self.shot_manager: ShotManager = shot_manager_initializer()
 
     def run(self):
         while True:
@@ -42,7 +42,7 @@ class Consumer(multiprocessing.Process):
                 self.task_queue.task_done()
                 break
 
-            shot_id, answer = next_task(self.initialized_process_props)
+            shot_id, answer = next_task(self.shot_manager)
 
             self.task_queue.task_done()
             self.result_queue.put((shot_id, answer))
@@ -50,16 +50,14 @@ class Consumer(multiprocessing.Process):
 
 
 class ShotTask:
-    def __init__(self, shot_creator_f, shot_id, shot_settings):
-        self.shot_creator_f = shot_creator_f
+    def __init__(self, shot_id, shot_settings):
         self.shot_id = shot_id
         self.shot_settings = shot_settings
 
-    def __call__(self, initialized_process_props: Dict):
-        result = self.shot_creator_f(
+    def __call__(self, shot_manager: ShotManager):
+        result = shot_manager.get_shot_data(
             shot_id=self.shot_id,
             shot_settings=self.shot_settings,
-            **initialized_process_props,
         )
         return self.shot_id, result
 
@@ -74,10 +72,9 @@ class MultiprocessingShotRetriever:
 
     def __init__(
         self,
-        shot_settings: ShotSettings,
         database: ShotDatabase,
         output_type_request: OutputTypeRequest,
-        process_prop_initializers: Dict[str, Callable],
+        shot_manager_initializer: Callable[..., ShotManager],
         tokamak,
         logger,
         num_processes=1,
@@ -86,7 +83,6 @@ class MultiprocessingShotRetriever:
         self.task_queue = multiprocessing.JoinableQueue()
         self.result_queue = multiprocessing.Queue()
 
-        self.shot_settings = shot_settings
         self.output_type_request = output_type_request
         self.database = database
         self.tokamak = tokamak
@@ -95,9 +91,9 @@ class MultiprocessingShotRetriever:
 
         self.consumers = [
             Consumer(
-                self.task_queue,
-                self.result_queue,
-                process_prop_initializers=process_prop_initializers,
+                task_queue=self.task_queue,
+                result_queue=self.result_queue,
+                shot_manager_initializer=shot_manager_initializer,
             )
             for _ in range(min(num_processes, MAX_PROCESSES))
         ]
@@ -123,7 +119,7 @@ class MultiprocessingShotRetriever:
                 )
             )
 
-    def run(self, shot_creator_f, shot_ids_list, await_complete=True):
+    def run(self, shot_ids_list, shot_settings, await_complete=True):
 
         if not self.result_thread.is_alive():
             self.result_thread.start()
@@ -134,9 +130,8 @@ class MultiprocessingShotRetriever:
 
         for shot_id in shot_ids_list:
             task = ShotTask(
-                shot_creator_f=shot_creator_f,
                 shot_id=shot_id,
-                shot_settings=self.shot_settings,
+                shot_settings=shot_settings,
             )
             self.task_queue.put(task)
 

@@ -90,24 +90,18 @@ def get_shots_data(
         shot_retriever = MultiprocessingShotRetriever(
             database=database,
             num_processes=num_processes,
-            shot_settings=shot_settings,
             output_type_request=output_type_request,
-            process_prop_initializers={
-                # initialize connections for individual processes
-                "shot_manager": (
-                    lambda: shot_manager_cls(
-                        tokamak=tokamak,
-                        process_database=database_initializer(),
-                        process_mds_conn=mds_connection_initializer(),
-                    )
-                )
-            },
+            shot_manager_initializer=lambda: shot_manager_cls(
+                tokamak=tokamak,
+                process_database=database_initializer(),
+                process_mds_conn=mds_connection_initializer(),
+            ),
             tokamak=tokamak,
             logger=logger,
         )
         shot_retriever.run(
-            shot_creator_f=shot_manager_cls.get_shot_data,
             shot_ids_list=shot_ids_list,
+            shot_settings=shot_settings,
             await_complete=True,
         )
     else:
@@ -120,7 +114,6 @@ def get_shots_data(
         for shot_id in shot_ids_list:
             shot_data = shot_manager.get_shot_data(
                 shot_id=shot_id,
-                shot_manager=shot_manager,
                 shot_settings=shot_settings,
             )
             if shot_data is None:

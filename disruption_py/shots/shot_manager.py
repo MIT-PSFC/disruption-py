@@ -38,30 +38,27 @@ class ShotManager(ABC):
         self.process_database = process_database
         self.process_mds_conn = process_mds_conn
 
-    @classmethod
-    def get_shot_data(
-        cls, shot_id, shot_manager: "ShotManager", shot_settings: ShotSettings
-    ) -> pd.DataFrame:
+    def get_shot_data(self, shot_id, shot_settings: ShotSettings) -> pd.DataFrame:
         """
         Get data for a single shot. May be run across different processes.
         """
-        cls.logger.info(f"starting {shot_id}")
+        self.logger.info(f"starting {shot_id}")
         try:
-            shot_props = shot_manager.shot_setup(
+            shot_props = self.shot_setup(
                 shot_id=int(shot_id),
                 shot_settings=shot_settings,
             )
-            retrieved_data = shot_manager.shot_data_retrieval(
+            retrieved_data = self.shot_data_retrieval(
                 shot_props=shot_props, shot_settings=shot_settings
             )
-            shot_manager.shot_cleanup(shot_props)
-            cls.logger.info(f"completed {shot_id}")
+            self.shot_cleanup(shot_props)
+            self.logger.info(f"completed {shot_id}")
             return retrieved_data
         except Exception as e:
-            cls.logger.warning(
+            self.logger.warning(
                 f"[Shot {shot_id}]: fatal error {traceback.format_exc()}"
             )
-            cls.logger.error(f"failed {shot_id} with error {e}")
+            self.logger.error(f"failed {shot_id} with error {e}")
             return None
 
     @classmethod
