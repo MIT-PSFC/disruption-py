@@ -8,6 +8,7 @@ import numpy as np
 
 from disruption_py.utils.constants import MDSPLUS_CONNECTION_STRING_CONSTANTS
 from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.utils.shared_instance import SharedInstanceFactory
 from disruption_py.utils.utils import safe_cast
 
 
@@ -33,7 +34,9 @@ class ProcessMDSConnection:
         if tokamak.value not in conn_string_configs:
             raise ValueError(f"No connection string found for {tokamak.value}")
 
-        return ProcessMDSConnection(conn_string_configs[tokamak.value])
+        return SharedInstanceFactory(ProcessMDSConnection).get_instance(
+            conn_string_configs[tokamak.value]
+        )
 
     def get_shot_connection(self, shot_id: int):
         """Get MDSPlus Connection wrapper for individual shot."""

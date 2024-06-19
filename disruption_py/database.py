@@ -18,7 +18,7 @@ from disruption_py.utils.constants import (
     DATABASE_CONSTANTS,
 )
 from disruption_py.utils.mappings.tokamak import Tokamak, is_tokamak_indexed
-from disruption_py.utils.mappings.tokamak import resolve_tokamak
+from disruption_py.utils.shared_instance import SharedInstanceFactory
 from disruption_py.utils.utils import without_duplicates
 
 
@@ -84,7 +84,6 @@ class ShotDatabase:
         """
         Initialize database from config file.
         """
-        tokamak = resolve_tokamak(tokamak)
 
         if tokamak.value in database_dict:
             database_dict = database_dict[tokamak.value]
@@ -102,7 +101,7 @@ class ShotDatabase:
         with open(profile, "r") as fio:
             db_user, db_pass = fio.read().split()[-2:]
 
-        return ShotDatabase(
+        return SharedInstanceFactory(ShotDatabase).get_instance(
             driver=database_dict["driver"],
             host=database_dict["host"],
             port=database_dict["port"],

@@ -63,11 +63,11 @@ def get_shots_data(
     tokamak = resolve_tokamak(tokamak)
 
     database_initializer = database_initializer or (
-        lambda: ShotDatabase.from_config(tokamak=tokamak)
+        lambda: get_database(tokamak=tokamak)
     )
     database = database_initializer()
     mds_connection_initializer = mds_connection_initializer or (
-        lambda: ProcessMDSConnection.from_config(tokamak=tokamak)
+        lambda: get_mdsplus_class(tokamak=tokamak)
     )
     # Clean-up parameters
     if shot_settings is None:
@@ -137,3 +137,23 @@ def get_shots_data(
     results = output_type_request.get_results(finish_output_type_request_params)
     output_type_request.stream_output_cleanup(finish_output_type_request_params)
     return results
+
+
+def get_database(
+    tokamak: Tokamak = None,
+) -> ShotDatabase:
+    """
+    Get the shot database for the tokamak.
+    """
+    tokamak = resolve_tokamak(tokamak)
+    return ShotDatabase.from_config(tokamak=tokamak)
+
+
+def get_mdsplus_class(
+    tokamak: Tokamak = None,
+) -> ProcessMDSConnection:
+    """
+    Get the MDSplus connection for the tokamak.
+    """
+    tokamak = resolve_tokamak(tokamak)
+    return ProcessMDSConnection.from_config(tokamak=tokamak)

@@ -1,9 +1,6 @@
-from disruption_py.database import ShotDatabase
-from disruption_py.main import get_shots_data
+from disruption_py.main import get_database, get_shots_data
 from disruption_py.settings.output_type_request import SQLOutputRequest
 from disruption_py.settings.shot_settings import ShotSettings
-from disruption_py.utils.constants import MDSPLUS_CONNECTION_STRING_CONSTANTS
-from disruption_py.utils.mappings.tokamak import Tokamak
 
 shot_settings = ShotSettings(
     # uses the efit timebase when returning data
@@ -23,6 +20,6 @@ shot_data = get_shots_data(
 )
 
 
-cmod_database = ShotDatabase.from_config(tokamak="cmod")
+cmod_database = get_database(tokamak="cmod")
 result = cmod_database.get_shots_data(shot_ids, sql_table="disruption_warning_test")
 print(result)

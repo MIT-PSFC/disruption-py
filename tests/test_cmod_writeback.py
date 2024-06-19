@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from disruption_py.database import ShotDatabase
-from disruption_py.main import get_shots_data
+from disruption_py.main import get_database, get_shots_data
 from disruption_py.settings.output_type_request import SQLOutputRequest
 from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.utils.constants import (
@@ -45,7 +45,7 @@ def initial_mdsplus_data(shotlist, tokamak) -> Dict:
 
 @pytest.fixture(scope="class")
 def shot_database(tokamak) -> ShotDatabase:
-    return ShotDatabase.from_config(tokamak=tokamak)
+    return get_database(tokamak=tokamak)
 
 
 def assert_frame_equal_unordered(df1: pd.DataFrame, df2: pd.DataFrame):
