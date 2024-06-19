@@ -4,14 +4,15 @@
 execute a simple fetch to test MDSplus connection.
 """
 
+from disruption_py.main import get_mdsplus_class
+from disruption_py.mdsplus_integration.mds_connection import ProcessMDSConnection
+from disruption_py.utils.constants import MDSPLUS_CONNECTION_STRING_CONSTANTS
 from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.mappings.tokamak_helpers import (
+from disruption_py.utils.mappings.tokamak import (
     get_tokamak_from_environment,
-    get_tokamak_handler,
 )
 
 tokamak = get_tokamak_from_environment()
-handler = get_tokamak_handler(tokamak)
 
 if tokamak is Tokamak.D3D:
     shot = 161228
@@ -22,7 +23,7 @@ elif tokamak is Tokamak.CMOD:
 else:
     raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 
-mds = handler.mds_connection.conn
+mds = get_mdsplus_class.conn
 print(f"Initialized MDSplus: {mds.hostspec}")
 
 mds.openTree("EFIT01", shot)

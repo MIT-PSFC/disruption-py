@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 
-from disruption_py.handlers import CModHandler
+from disruption_py.main import get_shots_data
 from disruption_py.settings import (
     LogSettings,
     SetTimesRequest,
     SetTimesRequestParams,
     ShotSettings,
 )
-
-cmod_handler = CModHandler()
 
 
 class PRadTime(SetTimesRequest):
@@ -32,7 +30,8 @@ shot_settings = ShotSettings(
     ),
 )
 
-shot_data = cmod_handler.get_shots_data(
+shot_data = get_shots_data(
+    tokamak="cmod",
     shot_ids_request="cmod_non_disruptions_ids_not_blacklist_mini",
     shot_settings=shot_settings,
     output_type_request="examples/p_rad.csv",

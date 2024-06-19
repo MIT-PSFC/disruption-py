@@ -2,9 +2,8 @@
 
 import os
 
-from disruption_py.databases import CModDatabase, D3DDatabase
-from disruption_py.handlers.cmod_handler import CModHandler
-from disruption_py.handlers.d3d_handler import D3DHandler
+from disruption_py.shots.cmod_shot_manager import CModShotManager
+from disruption_py.shots.d3d_shot_manager import D3DShotManager
 from disruption_py.utils.constants import (
     EXPECTED_FAILURE_COLUMNS,
     TEST_COLUMNS,
@@ -30,37 +29,13 @@ def get_tokamak_from_shot_id(shot_id):
         raise NotImplementedError(f"Unable to handle shot_id of length {shot_len}")
 
 
-def get_tokamak_from_environment():
-    if "DISPY_TOKAMAK" in os.environ:
-        return Tokamak[os.environ["DISPY_TOKAMAK"]]
-    if os.path.exists("/usr/local/mfe/disruptions"):
-        return Tokamak.CMOD
-    if os.path.exists("/fusion/projects/disruption_warning"):
-        return Tokamak.D3D
-    return None
-
-
-def get_database_for_shot_id(shot_id: int):
-    tokamak = get_tokamak_from_shot_id(shot_id)
-    return get_tokamak_database(tokamak)
-
-
-def get_tokamak_handler(tokamak: Tokamak):
-    if tokamak is Tokamak.CMOD:
-        return CModHandler()
-    elif tokamak is Tokamak.D3D:
-        return D3DHandler()
-    else:
-        raise ValueError("Tokamak {} not supported for this test".format(tokamak))
-
-
-def get_tokamak_database(tokamak: Tokamak):
+def get_tokamak_shot_manager(tokamak: Tokamak):
     if tokamak == Tokamak.CMOD:
-        return CModDatabase.default()
+        return CModShotManager
     elif tokamak == Tokamak.D3D:
-        return D3DDatabase.default()
+        return D3DShotManager
     else:
-        raise ValueError("Tokamak {} not supported for this test".format(tokamak))
+        raise ValueError("No shot manager for tokamak {}".format(tokamak))
 
 
 def get_tokamak_test_expected_failure_columns(tokamak: Tokamak):

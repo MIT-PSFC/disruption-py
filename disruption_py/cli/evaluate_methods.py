@@ -12,10 +12,8 @@ from disruption_py.utils.eval.eval_against_sql import (
     get_failure_statistics_string,
 )
 from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
-from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.utils.mappings.tokamak import Tokamak, get_tokamak_from_environment
 from disruption_py.utils.mappings.tokamak_helpers import (
-    get_tokamak_from_environment,
-    get_tokamak_handler,
     get_tokamak_test_expected_failure_columns,
     get_tokamak_test_shot_ids,
 )
@@ -27,7 +25,6 @@ def evaluate_accuracy(
     fail_quick: bool = False,
     data_columns: list[str] = None,
 ):
-    handler = get_tokamak_handler(tokamak)
     if shot_ids is None or len(shot_ids) == 0:
         shot_ids = get_tokamak_test_shot_ids(tokamak)
     else:
@@ -36,7 +33,7 @@ def evaluate_accuracy(
     expected_failure_columns = get_tokamak_test_expected_failure_columns(tokamak)
 
     data_differences = eval_against_sql(
-        handler=handler,
+        tokamak=tokamak,
         shot_ids=shot_ids,
         expected_failure_columns=expected_failure_columns,
         fail_quick=fail_quick,

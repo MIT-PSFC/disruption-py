@@ -16,52 +16,6 @@ from disruption_py.utils.utils import without_duplicates
 
 class CModShotManager(ShotManager):
 
-    def shot_setup(
-        self, shot_id: int, shot_settings: ShotSettings, **kwargs
-    ) -> ShotProps:
-        """
-        Sets up the shot properties for cmod.
-        """
-
-        try:
-            disruption_time = self.process_database.get_disruption_time(shot_id=shot_id)
-        except Exception as e:
-            disruption_time = None
-            self.logger.error(
-                f"Failed to retreive disruption time with error {e}. Continuing as if the shot did not disrupt."
-            )
-
-        mds_conn = self.process_mds_conn.get_shot_connection(shot_id=shot_id)
-
-        mds_conn.add_tree_nickname_funcs(
-            tree_nickname_funcs={
-                "_efit_tree": self.get_efit_tree_nickname_func(
-                    shot_id=shot_id,
-                    mds_conn=mds_conn,
-                    disruption_time=disruption_time,
-                    shot_settings=shot_settings,
-                )
-            }
-        )
-
-        try:
-            shot_props = self.setup_shot_props(
-                shot_id=shot_id,
-                mds_conn=mds_conn,
-                database=self.process_database,
-                disruption_time=disruption_time,
-                shot_settings=shot_settings,
-                tokamak=Tokamak.CMOD,
-                **kwargs,
-            )
-            return shot_props
-        except Exception as e:
-            self.logger.info(
-                f"[Shot {shot_id}]: Caught failed to setup shot {shot_id}, cleaning up tree manager."
-            )
-            mds_conn.close_all_trees()
-            raise e
-
     @classmethod
     def get_efit_tree_nickname_func(
         cls,

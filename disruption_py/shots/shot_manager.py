@@ -2,11 +2,12 @@
 
 import logging
 from abc import ABC, abstractmethod
+import traceback
 
 import numpy as np
 import pandas as pd
 
-from disruption_py.databases.database import ShotDatabase
+from disruption_py.database import ShotDatabase
 from disruption_py.mdsplus_integration.mds_connection import (
     MDSConnection,
     ProcessMDSConnection,
@@ -28,10 +29,37 @@ class ShotManager(ABC):
     logger = logging.getLogger("disruption_py")
 
     def __init__(
-        self, process_database: ShotDatabase, process_mds_conn: ProcessMDSConnection
+        self,
+        tokamak: Tokamak,
+        process_database: ShotDatabase,
+        process_mds_conn: ProcessMDSConnection,
     ):
+        self.tokamak = tokamak
         self.process_database = process_database
         self.process_mds_conn = process_mds_conn
+
+    def get_shot_data(self, shot_id, shot_settings: ShotSettings) -> pd.DataFrame:
+        """
+        Get data for a single shot. May be run across different processes.
+        """
+        self.logger.info(f"starting {shot_id}")
+        try:
+            shot_props = self.shot_setup(
+                shot_id=int(shot_id),
+                shot_settings=shot_settings,
+            )
+            retrieved_data = self.shot_data_retrieval(
+                shot_props=shot_props, shot_settings=shot_settings
+            )
+            self.shot_cleanup(shot_props)
+            self.logger.info(f"completed {shot_id}")
+            return retrieved_data
+        except Exception as e:
+            self.logger.warning(
+                f"[Shot {shot_id}]: fatal error {traceback.format_exc()}"
+            )
+            self.logger.error(f"failed {shot_id} with error {e}")
+            return None
 
     @classmethod
     @abstractmethod
@@ -47,18 +75,56 @@ class ShotManager(ABC):
     ) -> ShotProps:
         pass
 
-    @abstractmethod
     def shot_setup(
         self, shot_id: int, shot_settings: ShotSettings, **kwargs
     ) -> ShotProps:
-        pass
+        """
+        Sets up the shot properties for cmod.
+        """
+
+        try:
+            disruption_time = self.process_database.get_disruption_time(shot_id=shot_id)
+        except Exception as e:
+            disruption_time = None
+            self.logger.error(
+                f"Failed to retreive disruption time with error {e}. Continuing as if the shot did not disrupt."
+            )
+
+        mds_conn = self.process_mds_conn.get_shot_connection(shot_id=shot_id)
+
+        mds_conn.add_tree_nickname_funcs(
+            tree_nickname_funcs={
+                "_efit_tree": self.get_efit_tree_nickname_func(
+                    shot_id=shot_id,
+                    mds_conn=mds_conn,
+                    disruption_time=disruption_time,
+                    shot_settings=shot_settings,
+                )
+            }
+        )
+
+        try:
+            shot_props = self.setup_shot_props(
+                shot_id=shot_id,
+                mds_conn=mds_conn,
+                disruption_time=disruption_time,
+                shot_settings=shot_settings,
+                **kwargs,
+            )
+            return shot_props
+        except Exception as e:
+            self.logger.info(
+                f"[Shot {shot_id}]: Caught failed to setup shot {shot_id}, cleaning up tree manager."
+            )
+            mds_conn.close_all_trees()
+            raise e
 
     def shot_data_retrieval(self, shot_props: ShotProps, shot_settings: ShotSettings):
         shot_data_request_params = ShotDataRequestParams(
             mds_conn=shot_props.mds_conn,
             shot_props=shot_props,
             logger=self.logger,
-            tokamak=shot_props.tokamak,
+            tokamak=self.tokamak,
         )
         return populate_shot(
             shot_settings=shot_settings, params=shot_data_request_params
@@ -77,13 +143,11 @@ class ShotManager(ABC):
         mds_conn: MDSConnection,
         disruption_time: float,
         shot_settings: ShotSettings,
-        tokamak: Tokamak,
         **kwargs,
     ) -> ShotProps:
 
         existing_data = self._retrieve_existing_data(
             shot_id=shot_id,
-            tokamak=tokamak,
             shot_settings=shot_settings,
         )
 
@@ -93,7 +157,6 @@ class ShotManager(ABC):
             shot_id=shot_id,
             existing_data=existing_data,
             mds_conn=mds_conn,
-            tokamak=tokamak,
             disruption_time=disruption_time,
             shot_settings=shot_settings,
         )
@@ -114,7 +177,7 @@ class ShotManager(ABC):
 
         shot_props = ShotProps(
             shot_id=shot_id,
-            tokamak=tokamak,
+            tokamak=self.tokamak,
             disruption_time=disruption_time,
             mds_conn=mds_conn,
             times=times,
@@ -146,14 +209,13 @@ class ShotManager(ABC):
     def _retrieve_existing_data(
         self,
         shot_id: int,
-        tokamak: Tokamak,
         shot_settings: ShotSettings,
     ) -> pd.DataFrame:
         if shot_settings.existing_data_request is not None:
             existing_data_request_params = ExistingDataRequestParams(
                 shot_id=shot_id,
                 database=self.process_database,
-                tokamak=tokamak,
+                tokamak=self.tokamak,
                 logger=self.logger,
             )
             existing_data = shot_settings.existing_data_request.get_existing_data(
@@ -170,7 +232,6 @@ class ShotManager(ABC):
         shot_id: int,
         existing_data: pd.DataFrame,
         mds_conn: MDSConnection,
-        tokamak: Tokamak,
         disruption_time: float,
         shot_settings: ShotSettings,
     ) -> np.ndarray:
@@ -183,7 +244,7 @@ class ShotManager(ABC):
             existing_data=existing_data,
             database=self.process_database,
             disruption_time=disruption_time,
-            tokamak=tokamak,
+            tokamak=self.tokamak,
             logger=self.logger,
         )
         return shot_settings.set_times_request.get_times(request_params)

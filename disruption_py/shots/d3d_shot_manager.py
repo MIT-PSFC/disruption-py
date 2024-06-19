@@ -4,7 +4,7 @@ import traceback
 
 import numpy as np
 
-from disruption_py.databases.d3d_database import D3DDatabase
+from disruption_py.database import ShotDatabase
 from disruption_py.mdsplus_integration.mds_connection import (
     MDSConnection,
     ProcessMDSConnection,
@@ -19,85 +19,31 @@ from disruption_py.utils.utils import without_duplicates
 
 class D3DShotManager(ShotManager):
 
-    def __init__(
-        self, process_database: D3DDatabase, process_mds_conn: ProcessMDSConnection
-    ):
-        super().__init__(
-            process_database=process_database, process_mds_conn=process_mds_conn
-        )
-
-    def shot_setup(
-        self, shot_id: int, shot_settings: ShotSettings, **kwargs
-    ) -> ShotProps:
-        """
-        Sets up the shot properties for cmod.
-        """
-
-        try:
-            disruption_time = self.process_database.get_disruption_time(shot_id=shot_id)
-        except Exception as e:
-            disruption_time = None
-            self.logger.error(
-                f"Failed to retreive disruption time with error {e}. Continuing as if the shot did not disrupt."
-            )
-
-        mds_conn = self.process_mds_conn.get_shot_connection(shot_id=shot_id)
-
-        efit_tree_name = self.process_database.get_efit_tree(shot_id)
-
-        mds_conn.add_tree_nickname_funcs(
-            tree_nickname_funcs={"_efit_tree": lambda: efit_tree_name}
-        )
-
-        try:
-            shot_props = self.setup_shot_props(
-                shot_id=shot_id,
-                mds_conn=mds_conn,
-                database=self.process_database,
-                disruption_time=disruption_time,
-                shot_settings=shot_settings,
-                tokamak=Tokamak.D3D,
-                **kwargs,
-            )
-            return shot_props
-        except Exception as e:
-            self.logger.info(
-                f"[Shot {shot_id}]: Caught failed to setup shot {shot_id}, cleaning up tree manager."
-            )
-            mds_conn.close_all_trees()
-            raise e
+    @property
+    def tokamak(self) -> Tokamak:
+        return Tokamak.D3D
 
     @classmethod
     def get_efit_tree_nickname_func(
         cls,
         shot_id: int,
         mds_conn: MDSConnection,
+        database: ShotDatabase,
         disruption_time: float,
         shot_settings: ShotSettings,
     ) -> None:
         def efit_tree_nickname_func():
-            efit_names_to_test = without_duplicates(
-                [
-                    shot_settings.efit_tree_name,
-                    "analysis",
-                    *[f"efit0{i}" for i in range(1, 10)],
-                    *[f"efit{i}" for i in range(10, 19)],
-                ]
-            )
+            if shot_settings.efit_tree_name != "analysis":
+                return shot_settings.efit_tree_name
 
-            for efit_name in efit_names_to_test:
-                try:
-                    mds_conn.open_tree(efit_name)
-                    return efit_name
-                except Exception as e:
-                    cls.logger.info(
-                        f"[Shot {shot_id}]: Failed to open efit tree {efit_name} with error {e}."
-                    )
-                    continue
-
-            raise Exception(
-                f"Failed to find efit tree with name {shot_settings.efit_tree_name} in shot {shot_id}."
+            database.additional_dbs["code_rundb"].query(
+                f"select * from plasmas where shot = {shot_id} and runtag = 'DIS' and deleted = 0 order by idx",
+                use_pandas=False,
             )
+            if len(efit_trees) == 0:
+                efit_trees = [("EFIT01",)]
+            efit_tree = efit_trees[-1][0]
+            return efit_tree
 
         return efit_tree_nickname_func
 

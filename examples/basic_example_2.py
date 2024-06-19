@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
-from disruption_py.handlers.cmod_handler import CModHandler
+from disruption_py.main import get_shots_data
 from disruption_py.settings.shot_settings import ShotSettings
 
-cmod_handler = CModHandler()
 shot_settings = ShotSettings(
     # retrieve existing data from the disruption_warnings table use it to prepopulate queries
     existing_data_request="sql",
@@ -16,7 +15,8 @@ shot_settings = ShotSettings(
     # run the method that  returns the ne_peaking column
     run_columns=["ne_peaking"],
 )
-shot_data = cmod_handler.get_shots_data(
+shot_data = get_shots_data(
+    tokamak="cmod",
     # use the shot ids listed in the shot_ids_of_interest.txt file
     shot_ids_request="shot_ids_of_interest.txt",
     shot_settings=shot_settings,

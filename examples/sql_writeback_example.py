@@ -1,8 +1,7 @@
-from disruption_py.handlers.cmod_handler import CModHandler
+from disruption_py.main import get_database, get_shots_data
 from disruption_py.settings.output_type_request import SQLOutputRequest
 from disruption_py.settings.shot_settings import ShotSettings
 
-cmod_handler = CModHandler()
 shot_settings = ShotSettings(
     # uses the efit timebase when returning data
     set_times_request="efit",
@@ -11,7 +10,7 @@ shot_settings = ShotSettings(
     run_tags=["all"],
 )
 shot_ids = [1140819005, 1140819009]
-shot_data = cmod_handler.get_shots_data(
+shot_data = get_shots_data(
     # Retrieve data for the desired shots
     shot_ids_request=shot_ids,
     shot_settings=shot_settings,
@@ -21,6 +20,6 @@ shot_data = cmod_handler.get_shots_data(
 )
 
 
-cmod_database = cmod_handler.database
+cmod_database = get_database(tokamak="cmod")
 result = cmod_database.get_shots_data(shot_ids, sql_table="disruption_warning_test")
 print(result)

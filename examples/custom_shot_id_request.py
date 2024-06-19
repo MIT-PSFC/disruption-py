@@ -2,7 +2,7 @@
 
 from typing import List
 
-from disruption_py.handlers.cmod_handler import CModHandler
+from disruption_py.main import get_shots_data
 from disruption_py.settings.shot_ids_request import ShotIdsRequest, ShotIdsRequestParams
 from disruption_py.settings.shot_settings import ShotSettings
 
@@ -19,7 +19,6 @@ class CustomShotIdRequest(ShotIdsRequest):
         return sql_shot_nums + [1160405002, 1140523021, 1140523026, 1160620011]
 
 
-cmod_handler = CModHandler()
 shot_settings = ShotSettings(
     # use the efit timebase preset for set_times_request
     set_times_request="efit",
@@ -27,7 +26,8 @@ shot_settings = ShotSettings(
     # only run thr get_ip_parameters method
     run_methods=["_get_ip_parameters"],
 )
-shot_data = cmod_handler.get_shots_data(
+shot_data = get_shots_data(
+    tokamak="cmod",
     shot_id_request=CustomShotIdRequest(),
     shot_settings=shot_settings,
     # automatically uses the CSVOutputRequest preset because of the .csv file descriptor

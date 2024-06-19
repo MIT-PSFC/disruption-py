@@ -13,7 +13,6 @@ from typing import Dict, List
 import pandas as pd
 import pytest
 
-from disruption_py.handlers.cmod_handler import Handler
 from disruption_py.utils.eval.eval_against_sql import (
     eval_against_sql,
     eval_shots_against_sql,
@@ -21,9 +20,8 @@ from disruption_py.utils.eval.eval_against_sql import (
     get_mdsplus_data,
     get_sql_data_for_mdsplus,
 )
+from disruption_py.utils.mappings.tokamak import Tokamak, get_tokamak_from_environment
 from disruption_py.utils.mappings.tokamak_helpers import (
-    get_tokamak_from_environment,
-    get_tokamak_handler,
     get_tokamak_test_expected_failure_columns,
     get_tokamak_test_shot_ids,
 )
@@ -31,16 +29,20 @@ from disruption_py.utils.mappings.tokamak_helpers import (
 
 @pytest.fixture(scope="module")
 def mdsplus_data(
-    handler: Handler, shotlist: List[int], module_file_path_f
+    tokamak: Tokamak, shotlist: List[int], module_file_path_f
 ) -> Dict[int, pd.DataFrame]:
-    return get_mdsplus_data(handler, shotlist, log_file_path=module_file_path_f(".log"))
+    return get_mdsplus_data(
+        tokamak=tokamak, shot_ids=shotlist, log_file_path=module_file_path_f(".log")
+    )
 
 
 @pytest.fixture(scope="module")
 def sql_data(
-    handler: Handler, shotlist: List[int], mdsplus_data: Dict[int, pd.DataFrame]
+    tokamak: Tokamak, shotlist: List[int], mdsplus_data: Dict[int, pd.DataFrame]
 ) -> Dict[int, pd.DataFrame]:
-    return get_sql_data_for_mdsplus(handler, shotlist, mdsplus_data)
+    return get_sql_data_for_mdsplus(
+        tokamak=tokamak, shot_ids=shotlist, mdsplus_data=mdsplus_data
+    )
 
 
 def test_data_columns(
@@ -141,12 +143,11 @@ if __name__ == "__main__":
     data_columns = [args.data_column] if args.data_column else None
     tokamak = get_tokamak_from_environment()
 
-    handler = get_tokamak_handler(tokamak)
     shot_ids = get_tokamak_test_shot_ids(tokamak)
     expected_failure_columns = get_tokamak_test_expected_failure_columns(tokamak)
 
     data_differences = eval_against_sql(
-        handler=handler,
+        tokamak=tokamak,
         shot_ids=shot_ids,
         expected_failure_columns=expected_failure_columns,
         fail_quick=fail_quick,

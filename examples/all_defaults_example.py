@@ -2,14 +2,8 @@
 
 import logging
 
-from disruption_py.databases.cmod_database import CModDatabase
-from disruption_py.handlers import CModHandler
+from disruption_py.main import get_shots_data
 from disruption_py.settings import LogSettings, ShotSettings
-
-handler = CModHandler(
-    database_initializer=CModDatabase.default,
-    mds_connection_str="alcdata-new",
-)
 
 shot_settings = ShotSettings(
     # logging
@@ -31,14 +25,17 @@ shot_settings = ShotSettings(
     only_requested_columns=False,
     shot_data_requests=[],
     # timebase settings
-    set_times_request="efit",  # use efit timebase
+    set_times_request="disruption_warning",  # use efit timebase
     signal_domain="full",
     use_existing_data_timebase=False,
     interpolation_method="linear",
 )
 
-shot_data = handler.get_shots_data(
+shot_data = get_shots_data(
+    tokamak=None,  # defaults to tokamak value detected from environement
     shot_ids_request=-1,  # no default value
+    database_initializer=None,  # defaults to connection for tokamak
+    mds_connection_str=None,  # defaults to mds plus server string for tokamak
     shot_settings=shot_settings,
     output_type_request="list",  # output a list of dataframes
     num_processes=1,

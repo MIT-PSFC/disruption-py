@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 
 import logging
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple, Union
 
 import MDSplus
 import numpy as np
 
+from disruption_py.utils.constants import MDSPLUS_CONNECTION_STRING_CONSTANTS
+from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.utils.shared_instance import SharedInstanceFactory
 from disruption_py.utils.utils import safe_cast
 
 
@@ -24,6 +27,16 @@ class ProcessMDSConnection:
             self.conn.get("shorten_path()")
         except MDSplus.mdsExceptions.TdiUNKNOWN_VAR:
             self.logger.debug("MDSplus does not support the `shorten_path()` method.")
+
+    @classmethod
+    def from_config(cls, tokamak: Tokamak):
+        conn_string_configs = MDSPLUS_CONNECTION_STRING_CONSTANTS
+        if tokamak.value not in conn_string_configs:
+            raise ValueError(f"No connection string found for {tokamak.value}")
+
+        return SharedInstanceFactory(ProcessMDSConnection).get_instance(
+            conn_string_configs[tokamak.value]
+        )
 
     def get_shot_connection(self, shot_id: int):
         """Get MDSPlus Connection wrapper for individual shot."""

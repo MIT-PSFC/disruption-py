@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import logging
+import os
 import threading
 from typing import List
 from urllib.parse import quote_plus
@@ -14,7 +15,11 @@ from disruption_py.utils.constants import (
     BASE_PROTECTED_COLUMNS,
     TIME_CONST,
     WRITE_DATABASE_TABLE_NAME,
+    DATABASE_CONSTANTS,
 )
+from disruption_py.utils.mappings.tokamak import Tokamak, is_tokamak_indexed
+from disruption_py.utils.shared_instance import SharedInstanceFactory
+from disruption_py.utils.utils import without_duplicates
 
 
 class ShotDatabase:
@@ -25,8 +30,24 @@ class ShotDatabase:
     logger = logging.getLogger("disruption_py")
 
     def __init__(
-        self, driver, host, port, db_name, user, passwd, protected_columns=[], **kwargs
+        self,
+        driver,
+        host,
+        port,
+        db_name,
+        user,
+        passwd,
+        protected_columns=None,
+        additional_dbs=None,
+        **kwargs,
     ):
+
+        if protected_columns is None:
+            protected_columns = []
+
+        if additional_dbs is None:
+            additional_dbs = {}
+
         self.logger.info(f"Database initialization: {user}@{host}/{db_name}")
         drivers = pyodbc.drivers()
         if driver in drivers:
@@ -42,11 +63,55 @@ class ShotDatabase:
         self.user = user
         self.passwd = passwd
         self.protected_columns = protected_columns
+        self.additional_dbs = additional_dbs
+
         self.connection_string = self._get_connection_string(self.db_name)
         self._thread_connections = {}
         quoted_connection_string = quote_plus(self.connection_string)
         self.engine = create_engine(
             f"mssql+pyodbc:///?odbc_connect={quoted_connection_string}"
+        )
+
+    @classmethod
+    def from_config(cls, tokamak: Tokamak):
+        """
+        Initialize database from config file.
+        """
+        return cls._from_dict(DATABASE_CONSTANTS, tokamak)
+
+    @classmethod
+    def _from_dict(cls, database_dict: dict, tokamak: Tokamak):
+        """
+        Initialize database from config file.
+        """
+
+        if tokamak.value in database_dict:
+            database_dict = database_dict[tokamak.value]
+
+        additional_dbs = {
+            db_key: cls._from_dict(additonal_db_dict, tokamak)
+            for db_key, additonal_db_dict in database_dict.get(
+                "additional_databases", {}
+            ).items()
+        }
+
+        # read profile
+        profile_path = database_dict["profile_path"]
+        profile = os.path.expanduser(profile_path)
+        with open(profile, "r") as fio:
+            db_user, db_pass = fio.read().split()[-2:]
+
+        return SharedInstanceFactory(ShotDatabase).get_instance(
+            driver=database_dict["driver"],
+            host=database_dict["host"],
+            port=database_dict["port"],
+            db_name=database_dict["db_name"],
+            user=db_user,
+            passwd=db_pass,
+            protected_columns=without_duplicates(
+                BASE_PROTECTED_COLUMNS + database_dict["protected_columns"]
+            ),
+            additional_dbs=additional_dbs,
         )
 
     def _get_connection_string(self, db_name):
@@ -379,3 +444,52 @@ class ShotDatabase:
         Get pandas dataframe of all shots in the disruption_warning table. NOTE: The disruption_warning table contains ONLY a subset of shots in this table
         """
         return self.query("select distinct shot from disruption_warning order by shot")
+
+
+class DummyObject:
+    def __getattr__(self, name):
+        # Return self for any attribute or method call
+        return self
+
+    def __call__(self, *args, **kwargs):
+        # Return self for any method call
+        return self
+
+
+class DummyDatabase(ShotDatabase):
+    """
+    A database class that does not require connecting to an SQL server but returns no data.
+
+    Note: On CMod, disruption time data and any derrivative values will not be correct
+
+    Examples
+    --------
+    >>> get_shots_data(shot_ids_request=[1150805012], database_initializer=DummyDatabase.initializer)
+    <pd.DataFrame>
+    """
+
+    def __init__(self, **kwargs):
+        pass
+
+    @classmethod
+    def initializer(cls, **kwargs):
+        return cls()
+
+    @property
+    def conn(self, **kwargs):
+        return DummyObject()
+
+    def query(self, **kwargs):
+        return pd.DataFrame()
+
+    def get_shots_data(sefl, **kwargs):
+        return pd.DataFrame()
+
+    def get_disruption_time(self, **kwargs):
+        return None
+
+    def get_disruption_shotlist(self, **kwargs):
+        return []
+
+    def get_disruption_warning_shotlist(self, **kwargs):
+        return []
