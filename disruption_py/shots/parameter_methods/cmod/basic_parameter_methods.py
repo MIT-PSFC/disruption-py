@@ -368,9 +368,9 @@ class BasicCmodRequests(ShotDataRequest):
                             ### WEI - DEBUG ###
                             # The end times are also wrong
                             #print(sigtime[-1])
-                            print(np.abs(pcstime - sigtime[-1]) + 0.0001)
-                            print(np.argmin(np.abs(pcstime - sigtime[-1]) + 0.0001))
-                            print(pcstime[np.argmin(np.abs(pcstime - sigtime[-1]) + 0.0001)])
+                            # print(np.abs(pcstime - sigtime[-1]) + 0.0001)
+                            # print(np.argmin(np.abs(pcstime - sigtime[-1]) + 0.0001))
+                            # print(pcstime[np.argmin(np.abs(pcstime - sigtime[-1]) + 0.0001)])
                             print(end)
                             ######
 
