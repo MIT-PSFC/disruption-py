@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from collections import defaultdict
+from collections.abc import Iterable
 import time
 import traceback
 from dataclasses import fields
@@ -14,36 +16,20 @@ from disruption_py.settings.shot_data_request import (
 )
 from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.shots.helpers.cached_method_props import (
-    CachedMethodParams,
+    BoundMethodMetadata,
+    MethodMetadata,
     CachedMethodProps,
-    ParameterCachedMethodParams,
-    get_cached_method_params,
-    is_cached_method,
+    get_method_metadata,
+    is_registered_method,
 )
 from disruption_py.shots.helpers.method_caching import manually_cache
 from disruption_py.shots.helpers.method_optimizer import MethodOptimizer
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.constants import TIME_CONST
 from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.utils.mappings.tokamak_helpers import built_in_method_factory
 
 REQUIRED_COLS = {"time", "shot", "commit_hash"}
-
-
-def built_in_method_factory(tokamak: Tokamak):
-    if tokamak is Tokamak.D3D:
-        from disruption_py.shots.parameter_methods.d3d.built_in import (
-            D3D_DEFAULT_SHOT_DATA_REQUESTS,
-        )
-
-        return D3D_DEFAULT_SHOT_DATA_REQUESTS
-    elif tokamak is Tokamak.CMOD:
-        from disruption_py.shots.parameter_methods.cmod.built_in import (
-            CMOD_DEFAULT_SHOT_DATA_REQUESTS,
-        )
-
-        return CMOD_DEFAULT_SHOT_DATA_REQUESTS
-    else:
-        raise ValueError(f"Invalid tokamak for built-ins {tokamak}")
 
 
 def populate_method(
@@ -54,7 +40,7 @@ def populate_method(
     method = cached_method_props.method
 
     result = None
-    if callable(method) and is_cached_method(method):
+    if callable(method) and is_registered_method(method):
         params.logger.info(
             f"[Shot {shot_props.shot_id}]:Populating {cached_method_props.name}"
         )
@@ -88,112 +74,70 @@ def populate_method(
     return result
 
 
-def compute_cached_method_params(
-    cached_method_params: CachedMethodParams,
-    object_to_search: ShotDataRequest,
-    params: ShotDataRequestParams,
-) -> CachedMethodParams:
-    """Evaluate arguments to decorators to usable values.
+def get_all_registered_methods(all_passed: list):
+    registered_methods = set()
+    for passed in all_passed:
+        if callable(passed) and is_registered_method(passed):
+            registered_methods.add(passed)
 
-    Some parameters provided to the cached_method and parameter_cached_method decorators can take method that are evaluated
-    at runtime. `compute_cached_method_params` evaluates all of these methods and returns a new instance of `CachedMethodParams`
-    without functiohn parameters.
-
-    Parameters
-    ----------
-    cached_method_params : CachedMethodParams
-        The parameters that we check for function values, and evaluate them if they exist.
-    object_to_search : ShotDataRequest
-        The ShotDataRequest object that contained the decorated method.
-    params : ShotDataRequestParams
-        Params passed to the fumnction for evaluation. These are the same parameters passed when retrieving data using decorated method.
-
-    Returns
-    -------
-    CachedMethodParams
-        The new instance of cached method params with all of its values having been evaluated.
-    """
-    new_cached_method_params_dict = {}
-    for field in fields(cached_method_params):
-        field_name = field.name
-        field_value = getattr(cached_method_params, field_name)
-        if callable(field_value):
-            new_cached_method_params_dict[field_name] = field_value(
-                object_to_search, params
-            )
-        else:
-            new_cached_method_params_dict[field_name] = field_value
-    return cached_method_params.__class__(**new_cached_method_params_dict)
+        for method_name in dir(passed):
+            method = getattr(passed, method_name, None)
+            if method is None or not is_registered_method(method):
+                continue
+            registered_methods.add(method)
+    return registered_methods
 
 
-def _get_cached_methods_from_object(
-    object_to_search: ShotDataRequest,
+def bind_method_metadata(registered_methods: set, params: ShotDataRequestParams):
+    all_bound_method_metadata = []
+    for method in registered_methods:
+        method_metadata = get_method_metadata(method, should_throw=True)
+        bound_method_metadata = BoundMethodMetadata.bind(
+            method_metadata=method_metadata,
+            bound_method=method,
+            params=params,
+        )
+        all_bound_method_metadata.append(bound_method_metadata)
+    return all_bound_method_metadata
+
+
+def filter_methods_to_run(
+    all_bound_method_metadata: list[BoundMethodMetadata],
     shot_settings: ShotSettings,
     params: ShotDataRequestParams,
 ):
-    """Get methods decorated with cached_method or parameter_cached_method decorator for object, that should be run.
-
-    Parameters
-    ----------
-    object_to_search : ShotDataRequest
-        The object that hsa its properties searched for decorated methods.
-    shot_settings : ShotSettings
-        The shot settings dictating what methods should be run.
-    params : ShotDataRequestParams
-        Parameter that will be passed to methods that are run.
-
-    Returns
-    -------
-    Tuple[List[CachedMethod], List[CachedMethod]]
-        A list of paaneter methods that require evaluation, and a list of all decorated methods
-    """
     shot_props = params.shot_props
     tags = shot_settings.run_tags
     methods = shot_settings.run_methods
     columns = REQUIRED_COLS.union(shot_settings.run_columns)
 
-    methods_to_search = object_to_search.get_request_methods_for_tokamak(params.tokamak)
-
-    cached_methods_to_evaluate_props: List[CachedMethodProps] = []
-    all_cached_methods_props: List[CachedMethodProps] = []
-    for method_name in methods_to_search:
-        attribute_to_check = getattr(object_to_search, method_name)
-
-        if not callable(attribute_to_check) or not is_cached_method(attribute_to_check):
+    methods_to_run = []
+    for bound_method_metadata in all_bound_method_metadata:
+        if not (
+            bound_method_metadata.tokamaks is None
+            or params.tokamak is bound_method_metadata.tokamaks
+            or (
+                isinstance(bound_method_metadata.tokamaks, Iterable)
+                and params.tokamak in bound_method_metadata.tokamaks
+            )
+        ):
             continue
 
-        cached_method_params: CachedMethodParams = get_cached_method_params(
-            attribute_to_check, should_throw=True
-        )
-        computed_cached_method_params = compute_cached_method_params(
-            cached_method_params, object_to_search, params
-        )
-        cached_method_props = CachedMethodProps(
-            name=method_name,
-            method=attribute_to_check,
-            computed_cached_method_params=computed_cached_method_params,
-        )
-        all_cached_methods_props.append(cached_method_props)
-
-        if isinstance(computed_cached_method_params, ParameterCachedMethodParams):
-            # If method does not have tag included and name included then skip
-            if tags is not None and bool(
-                set(computed_cached_method_params.tags).intersection(tags)
-            ):
-                cached_methods_to_evaluate_props.append(cached_method_props)
-                continue
-            if methods is not None and method_name in methods:
-                cached_methods_to_evaluate_props.append(cached_method_props)
-                continue
-            if columns is not None and bool(
-                set(computed_cached_method_params.columns).intersection(columns)
-            ):
-                cached_methods_to_evaluate_props.append(cached_method_props)
-                continue
+        if tags is not None and bool(
+            set(bound_method_metadata.tags).intersection(tags)
+        ):
+            methods_to_run.append(bound_method_metadata)
+        elif methods is not None and bound_method_metadata.name in methods:
+            methods_to_run.append(bound_method_metadata)
+        elif columns is not None and bool(
+            set(bound_method_metadata.columns).intersection(columns)
+        ):
+            methods_to_run.append(bound_method_metadata)
+        else:
             params.logger.info(
-                f"[Shot {shot_props.shot_id}]:Skipping {method_name} in class {object_to_search.__class__.__name__}"
+                f"[Shot {shot_props.shot_id}]:Skipping {bound_method_metadata.name} in class {bound_method_metadata.bound_method}"
             )
-    return cached_methods_to_evaluate_props, all_cached_methods_props
+    return methods_to_run
 
 
 def populate_shot(
@@ -228,21 +172,19 @@ def populate_shot(
         pre_filled_shot_data["shot"] = int(shot_props.shot_id)
     pre_filled_shot_data["commit_hash"] = shot_props.metadata.get("commit_hash", None)
 
-    # Loop through each attribute and find methods that should populate the shot object.
-    cached_methods_to_evaluate_props: list[CachedMethodProps] = []
-    all_cached_methods_props: list[CachedMethodProps] = []
-
     # Add the methods gound from the passed ShotDataRequest objects
     all_shot_data_request = (
         built_in_method_factory(params.tokamak) + shot_settings.shot_data_requests
     )
-    for shot_data_request in all_shot_data_request:
-        req_methods_to_evaluate, req_all_cached_methods = (
-            _get_cached_methods_from_object(shot_data_request, shot_settings, params)
-        )
-        cached_methods_to_evaluate_props.extend(req_methods_to_evaluate)
-        all_cached_methods_props.extend(req_all_cached_methods)
+    all_registered_methods = get_all_registered_methods(all_shot_data_request)
+    all_bound_method_metadata = bind_method_metadata(all_registered_methods, params)
+    methods_to_run = filter_methods_to_run(
+        all_bound_method_metadata, shot_settings, params
+    )
 
+    # Loop through each attribute and find methods that should populate the shot object.
+    cached_methods_to_evaluate_props: list[CachedMethodProps] = []
+    all_cached_methods_props: list[CachedMethodProps] = []
     # Check that pre_filled_shot_data is on the same timebase as the shot object to ensure data consistency
     if (
         len(pre_filled_shot_data["time"]) != len(shot_props.times)
@@ -283,9 +225,7 @@ def populate_shot(
     start_time = time.time()
 
     def next_method_runner(next_method: CachedMethodProps):
-        if isinstance(
-            next_method.computed_cached_method_params, ParameterCachedMethodParams
-        ):
+        if isinstance(next_method.computed_method_metadata, RunnableMethodMetadata):
             parameters.append(populate_method(params, next_method, start_time))
         else:
             # if methods are cached_methods (meaning not parameter methods) we don't return their data

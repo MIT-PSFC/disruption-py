@@ -8,8 +8,8 @@ from typing import Callable, List
 
 from disruption_py.mdsplus_integration.mds_connection import MDSConnection
 from disruption_py.shots.helpers.cached_method_props import (
-    get_cached_method_params,
-    is_cached_method,
+    get_method_metadata,
+    is_registered_method,
 )
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.mappings.tokamak import Tokamak
@@ -64,15 +64,15 @@ class ShotDataRequest(ABC):
         request_methods = []
         for method_name in dir(self):
             method = getattr(self, method_name, None)
-            if method is None or not is_cached_method(method):
+            if method is None or not is_registered_method(method):
                 continue
-            cached_method_params = get_cached_method_params(method, should_throw=True)
+            method_metadata = get_method_metadata(method, should_throw=True)
             if (
-                cached_method_params.tokamaks is None
-                or tokamak is cached_method_params.tokamaks
+                method_metadata.tokamaks is None
+                or tokamak is method_metadata.tokamaks
                 or (
-                    isinstance(cached_method_params.tokamaks, Iterable)
-                    and tokamak in cached_method_params.tokamaks
+                    isinstance(method_metadata.tokamaks, Iterable)
+                    and tokamak in method_metadata.tokamaks
                 )
             ):
                 request_methods.append(method_name)

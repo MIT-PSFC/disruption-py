@@ -11,7 +11,7 @@ from disruption_py.settings.shot_data_request import (
 from disruption_py.shots.helpers.method_caching import parameter_cached_method
 
 
-def cached_method_params_function(
+def method_metadata_function(
     parent_object: ShotDataRequest,
     shot_data_request_params: ShotDataRequestParams,
     **kwargs

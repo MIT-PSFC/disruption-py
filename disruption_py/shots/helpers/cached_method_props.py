@@ -1,35 +1,69 @@
 #!/usr/bin/env python3
 
-from dataclasses import dataclass
+from dataclasses import Field, dataclass
 from typing import Any, Callable, List, Union
 
+from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.utils.mappings.tokamak import Tokamak
 
 
 @dataclass(frozen=True)
-class CachedMethodParams:
+class MethodMetadata:
+    name: str
+    populate: bool
+
     cache_between_threads: bool
     used_trees: Union[List[str], Callable]
     contained_cached_methods: Union[List[str], Callable]
     tokamaks: Union[Tokamak, List[Tokamak]]
+    columns: Union[List[str], Callable] = None
+    tags: List[str] = None
+
+    ALLOWED_UNRESOLVED = [
+        "used_trees",
+        "contained_cached_methods",
+        "tokamaks",
+    ]
+
+    def __post_init__(self):
+        if self.populate:
+            self.tags = self.tags or ["all"]
+            self.columns = self.columns or []
 
 
 @dataclass(frozen=True)
-class ParameterCachedMethodParams(CachedMethodParams):
-    columns: Union[List[str], Callable]
-    tags: List[str]
+class BoundMethodMetadata(MethodMetadata):
+    bound_method: Callable
 
-    def from_cached_method_params(
-        cached_method_params: CachedMethodParams, columns, tags
-    ) -> "ParameterCachedMethodParams":
-        return ParameterCachedMethodParams(
-            cache_between_threads=cached_method_params.cache_between_threads,
-            used_trees=cached_method_params.used_trees,
-            contained_cached_methods=cached_method_params.contained_cached_methods,
-            tokamaks=cached_method_params.tokamaks,
-            columns=columns,
-            tags=tags,
-        )
+    @classmethod
+    def bind(
+        cls,
+        method_metadata: MethodMetadata,
+        bound_method: Callable,
+        params: ShotDataRequestParams,
+    ):
+        """
+        Evaluate arguments to decorators to usable values.
+
+        Some parameters provided to the cached_method and parameter_cached_method decorators can take method that are evaluated
+        at runtime. `resolve_for` evaluates all of these methods and returns a new instance of `MethodMetadata`
+        without function parameters.
+        """
+        new_method_metadata_params = {}
+        bind_to = (getattr(bound_method, "__self__", None),)
+        for field_name in method_metadata.ALLOWED_UNRESOLVED:
+            field_value = getattr(method_metadata, field_name)
+            if callable(field_value):
+                new_val = (
+                    field_value(params)
+                    if bind_to is None
+                    else field_value(bind_to, params)
+                )
+                new_method_metadata_params[field_name] = new_val
+            else:
+                new_method_metadata_params[field_name] = field_value
+
+        return cls(bound_method=bound_method, **new_method_metadata_params)
 
 
 @dataclass
@@ -38,11 +72,11 @@ class CachedMethodProps:
     method: Callable
 
     # All functions have been evaluated
-    computed_cached_method_params: CachedMethodParams
+    computed_method_metadata: MethodMetadata
 
     def get_param_value(self, field_name: str, default_value: Any = None) -> Any:
         return (
-            getattr(self.computed_cached_method_params, field_name, default_value)
+            getattr(self.computed_method_metadata, field_name, default_value)
             or default_value
         )
 
@@ -50,12 +84,12 @@ class CachedMethodProps:
 # Utility methods for decorated methods
 
 
-def is_cached_method(cached_method: Callable) -> bool:
-    """Returns whether the method is decorated with `cached_method` or `parameter_cached_method` decorators
+def is_registered_method(method: Callable) -> bool:
+    """Returns whether the method is decorated with `register_method` decorator
 
     Parameters
     ----------
-    cached_method : Callable
+    method : Callable
         The method to check if decorated.
 
     Returns
@@ -63,29 +97,27 @@ def is_cached_method(cached_method: Callable) -> bool:
     bool
         Whether the passed method is decorated.
     """
-    return hasattr(cached_method, "cached_method_params")
+    return hasattr(method, "method_metadata")
 
 
-def get_cached_method_params(
-    cached_method: Callable, should_throw: bool = False
-) -> CachedMethodParams:
-    """Get cached method params for cached method
+def get_method_metadata(method: Callable, should_throw: bool = False) -> MethodMetadata:
+    """Get method metadata for method
 
     Parameters
     ----------
     cached_method : Callable
-        The method decorated with `cached_method` or `parameter_cached_method` decorators
+        The method decorated with the `register_method` decorator
     should_throw : bool
-        Throw an error if the method was not decorated with `cached_method` or `parameter_cached_method` decorators
+        Throw an error if the method was not decorated with the `register_method` decorator
 
     Returns
     -------
-    CachedMethodParams
-        The `CachedMethodParams` object holding parameters for the cached method
+    MethodMetadata
+        The `MethodMetadata` object holding parameters for the cached method
     """
-    cached_method_params = getattr(cached_method, "cached_method_params", None)
-    if should_throw and cached_method_params is None:
+    method_metadata = getattr(method, "method_metadata", None)
+    if should_throw and method_metadata is None:
         raise ValueError(
-            f"The method {cached_method} was not decorated with cached_method or parameter_cached_method"
+            f"The method {method} was not decorated with cached_method or parameter_cached_method"
         )
-    return cached_method_params
+    return method_metadata
