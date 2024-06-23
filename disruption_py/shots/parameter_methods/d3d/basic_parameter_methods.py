@@ -74,7 +74,7 @@ class BasicD3DRequests(ShotDataRequest):
     @staticmethod
     @parameter_cached_method(
         columns=["p_rad", "p_nbi", "p_ech", "p_ohm", "radiated_fraction", "v_loop"],
-        contained_cached_methods=["get_ohmic_parameters"],
+        contained_registered_methods=["get_ohmic_parameters"],
         used_trees=["d3d", "rf", "bolom"],
         tokamak=Tokamak.D3D,
     )
@@ -801,7 +801,7 @@ class BasicD3DRequests(ShotDataRequest):
     @staticmethod
     @parameter_cached_method(
         columns=["te_pf", "ne_pf", "rad_cva", "rad_xdiv"],
-        contained_cached_methods=["_get_ne_te", "_get_efit_dict", "_get_p_rad"],
+        contained_registered_methods=["_get_ne_te", "_get_efit_dict", "_get_p_rad"],
         used_trees=["d3d"],
         tokamak=Tokamak.D3D,
     )
@@ -1031,7 +1031,7 @@ class BasicD3DRequests(ShotDataRequest):
 
     @staticmethod
     @parameter_cached_method(
-        contained_cached_methods=["_get_ne_te", "_get_efit_dict"],
+        contained_registered_methods=["_get_ne_te", "_get_efit_dict"],
         tags=["unfinished"],
         tokamak=Tokamak.D3D,
         columns=[

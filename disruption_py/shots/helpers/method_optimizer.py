@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Set
 
 from disruption_py.mdsplus_integration.mds_connection import MDSConnection
-from disruption_py.shots.helpers.cached_method_props import CachedMethodProps
+from disruption_py.shots.helpers.cached_method_props import BoundMethodMetadata
 
 
 class MethodOptimizer:
@@ -17,58 +17,47 @@ class MethodOptimizer:
     def __init__(
         self,
         mds_conn: MDSConnection,
-        parameter_cached_method_props: List[CachedMethodProps],
-        all_cached_method_props: List[CachedMethodProps],
+        run_method_metadata: List[BoundMethodMetadata],
+        all_method_metadata: List[BoundMethodMetadata],
         pre_cached_method_names: List[str],
     ):
         self._mds_conn = mds_conn
-        self._cached_method_props_by_name: Dict[str, CachedMethodProps] = {
-            method.name: method for method in all_cached_method_props
+        self._method_metadata_by_name: Dict[str, BoundMethodMetadata] = {
+            method.name: method for method in all_method_metadata
         }
 
         # compute method dependency graph
         graph: dict[str, MethodOptimizer.MethodDependecy] = {}
         visited_method_names = {
-            parameter_method.name for parameter_method in parameter_cached_method_props
+            method_metadata.name for method_metadata in run_method_metadata
         }
-        parameter_cached_method_props_stack = parameter_cached_method_props.copy()
-        while len(parameter_cached_method_props_stack) != 0:
-            cached_method_props: CachedMethodProps = (
-                parameter_cached_method_props_stack.pop()
-            )
+        all_run_method_metadata_stack = run_method_metadata.copy()
+        while len(all_run_method_metadata_stack) != 0:
+            method_metadata: BoundMethodMetadata = all_run_method_metadata_stack.pop()
             # if cached_method.name pre cached we don't want to run it or run any of its contained cached methods
-            if cached_method_props.name in pre_cached_method_names:
+            if method_metadata.name in pre_cached_method_names:
                 continue
-            graph.setdefault(
-                cached_method_props.name, MethodOptimizer.MethodDependecy()
-            )
+            graph.setdefault(method_metadata.name, MethodOptimizer.MethodDependecy())
             # contained cached methods is a list of names of used cached methods
-            for contained_cached_method_name in cached_method_props.get_param_value(
-                "contained_cached_methods", []
-            ):
-                if (
-                    contained_cached_method_name
-                    not in self._cached_method_props_by_name
-                ):
+            for contained_method_name in method_metadata.contained_registered_methods:
+                if contained_method_name not in self._method_metadata_by_name:
                     continue
-                if contained_cached_method_name not in visited_method_names:
-                    visited_method_names.add(contained_cached_method_name)
-                    parameter_cached_method_props_stack.append(
-                        self._cached_method_props_by_name[contained_cached_method_name]
+                if contained_method_name not in visited_method_names:
+                    visited_method_names.add(contained_method_name)
+                    all_run_method_metadata_stack.append(
+                        self._method_metadata_by_name[contained_method_name]
                     )
                 # get method dependencies for contained cached method, creating one if it does not already exist
                 contained_cached_method_dependency = graph.setdefault(
-                    contained_cached_method_name, MethodOptimizer.MethodDependecy()
+                    contained_method_name, MethodOptimizer.MethodDependecy()
                 )
                 # add in contained cached method that cached method is dependent on it
                 contained_cached_method_dependency.dependencies.add(
-                    cached_method_props.name
+                    method_metadata.name
                 )
                 # add that cached method is dependent on contained cached method
                 # (contained cached method must complete before it can run)
-                graph[cached_method_props.name].dependent_on.add(
-                    contained_cached_method_name
-                )
+                graph[method_metadata.name].dependent_on.add(contained_method_name)
         self._method_dependencies = graph
 
         # compute used trees by all methods
@@ -82,7 +71,7 @@ class MethodOptimizer:
                 tree_remaining_count[tree_name] = cur_count + 1
         self._tree_remaining_count = tree_remaining_count
 
-    def next_method(self) -> CachedMethodProps:
+    def next_method(self) -> BoundMethodMetadata:
         if len(self._method_dependencies) == 0:
             return None
         # get methods that are not dependent on another cached method
@@ -132,14 +121,14 @@ class MethodOptimizer:
         # update self._method_dependencies for method removal
         self._method_dependencies.pop(next_method_name)
 
-        next_method = self._cached_method_props_by_name[next_method_name]
+        next_method = self._method_metadata_by_name[next_method_name]
 
         return next_method
 
-    def run_methods_sync(self, method_executor: Callable[[CachedMethodProps], None]):
+    def run_methods_sync(self, method_executor: Callable[[BoundMethodMetadata], None]):
         while True:
             # get next method
-            next_method: CachedMethodProps = self.next_method()
+            next_method: BoundMethodMetadata = self.next_method()
             if next_method is None:
                 break
 
@@ -168,7 +157,5 @@ class MethodOptimizer:
 
         Specifies unique name as must treat nicknames as there real tree name.
         """
-        used_trees = self._cached_method_props_by_name[method_name].get_param_value(
-            "used_trees", []
-        )
+        used_trees = self._method_metadata_by_name[method_name].used_trees
         return [self._mds_conn.tree_name(used_tree) for used_tree in used_trees]

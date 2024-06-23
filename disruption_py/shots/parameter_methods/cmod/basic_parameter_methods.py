@@ -299,7 +299,7 @@ class BasicCmodRequests(ShotDataRequest):
     @parameter_cached_method(
         columns=["ip", "dip_dt", "dip_smoothed", "ip_prog", "dipprog_dt", "ip_error"],
         used_trees=["magnetics", "pcs"],
-        contained_cached_methods=["get_active_wire_segments"],
+        contained_registered_methods=["get_active_wire_segments"],
         tokamak=Tokamak.CMOD,
     )
     def _get_ip_parameters(params: ShotDataRequestParams):
@@ -438,7 +438,7 @@ class BasicCmodRequests(ShotDataRequest):
     @staticmethod
     @parameter_cached_method(
         columns=["z_error", "z_prog", "zcur", "v_z", "z_times_v_z"],
-        contained_cached_methods=["get_active_wire_segments"],
+        contained_registered_methods=["get_active_wire_segments"],
         used_trees=["hybrid", "magnetics", "pcs"],
         tokamak=Tokamak.CMOD,
     )
@@ -591,7 +591,7 @@ class BasicCmodRequests(ShotDataRequest):
     @parameter_cached_method(
         columns=["p_oh", "v_loop"],
         used_trees=["analysis", "_efit_tree"],
-        contained_cached_methods=["_get_ip_parameters"],
+        contained_registered_methods=["_get_ip_parameters"],
         tokamak=Tokamak.CMOD,
     )
     def _get_ohmic_parameters(params: ShotDataRequestParams):
@@ -666,7 +666,7 @@ class BasicCmodRequests(ShotDataRequest):
     @parameter_cached_method(
         columns=["p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", "radiated_fraction"],
         used_trees=["LH", "RF", "spectroscopy"],
-        contained_cached_methods=["_get_ohmic_parameters"],
+        contained_registered_methods=["_get_ohmic_parameters"],
         tokamak=Tokamak.CMOD,
     )
     def _get_power(params: ShotDataRequestParams):
@@ -1636,7 +1636,7 @@ class BasicCmodRequests(ShotDataRequest):
     @parameter_cached_method(
         tags=["experimental"],
         columns=["H98", "Wmhd", "btor", "dWmhd_dt", "p_input"],
-        contained_cached_methods=[
+        contained_registered_methods=[
             "_get_power",
             "_get_EFIT_parameters",
             "_get_densities",

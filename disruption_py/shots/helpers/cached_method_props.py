@@ -14,14 +14,14 @@ class MethodMetadata:
 
     cache_between_threads: bool
     used_trees: Union[List[str], Callable]
-    contained_cached_methods: Union[List[str], Callable]
+    contained_registered_methods: Union[List[str], Callable]
     tokamaks: Union[Tokamak, List[Tokamak]]
     columns: Union[List[str], Callable] = None
     tags: List[str] = None
 
     ALLOWED_UNRESOLVED = [
         "used_trees",
-        "contained_cached_methods",
+        "contained_registered_methods",
         "tokamaks",
     ]
 
@@ -29,6 +29,10 @@ class MethodMetadata:
         if self.populate:
             self.tags = self.tags or ["all"]
             self.columns = self.columns or []
+
+        self.used_trees = self.used_trees or []
+        self.contained_registered_methods = self.contained_registered_methods or []
+        self.tokamaks = self.tokamaks or []
 
 
 @dataclass(frozen=True)
@@ -64,21 +68,6 @@ class BoundMethodMetadata(MethodMetadata):
                 new_method_metadata_params[field_name] = field_value
 
         return cls(bound_method=bound_method, **new_method_metadata_params)
-
-
-@dataclass
-class CachedMethodProps:
-    name: str
-    method: Callable
-
-    # All functions have been evaluated
-    computed_method_metadata: MethodMetadata
-
-    def get_param_value(self, field_name: str, default_value: Any = None) -> Any:
-        return (
-            getattr(self.computed_method_metadata, field_name, default_value)
-            or default_value
-        )
 
 
 # Utility methods for decorated methods

@@ -20,7 +20,7 @@ global_instances_registry = defaultdict(list)
 def register_method(
     populate=True,
     used_trees=None,
-    contained_cached_methods=None,
+    contained_registered_methods=None,
     cache_between_threads=True,
     tokamak=None,
     tags=None,
@@ -56,7 +56,7 @@ def register_method(
         This list is used to help determine the optimal execution order of decorated methods. Alternately, can pass a method
         that returns the names of used trees at runtime. See `method_metadata_function` for more details about using functions.
         Default value is no used trees.
-    contained_cached_methods : Union[List[str], Callable]
+    contained_registered_methods : Union[List[str], Callable]
         A list of all methods decorated with the `cached_method` or `parameter_cached_method` decorator. That are used inside of
         this function. This list is used to help determine the optimal execution order of decorated methods. Alternately, can pass a
         method that returns the names of used decorated methods at runtime. See `method_metadata_function` for more details
@@ -79,7 +79,7 @@ def register_method(
             populate=populate,
             cache_between_threads=cache_between_threads,
             used_trees=used_trees,
-            contained_cached_methods=contained_cached_methods,
+            contained_registered_methods=contained_registered_methods,
             tokamaks=tokamak,
             columns=columns,
             tags=tags,
