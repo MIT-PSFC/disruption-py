@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
 from dataclasses import dataclass, field
+import time
 from typing import Callable, Dict, List, Set
 
 from disruption_py.mdsplus_integration.mds_connection import MDSConnection
+from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.shots.helpers.cached_method_props import BoundMethodMetadata
 
 
@@ -19,7 +21,7 @@ class MethodOptimizer:
         mds_conn: MDSConnection,
         run_method_metadata: List[BoundMethodMetadata],
         all_method_metadata: List[BoundMethodMetadata],
-        pre_cached_method_names: List[str],
+        cached_method_metadata: List[BoundMethodMetadata],
     ):
         self._mds_conn = mds_conn
         self._method_metadata_by_name: Dict[str, BoundMethodMetadata] = {
@@ -35,7 +37,7 @@ class MethodOptimizer:
         while len(all_run_method_metadata_stack) != 0:
             method_metadata: BoundMethodMetadata = all_run_method_metadata_stack.pop()
             # if cached_method.name pre cached we don't want to run it or run any of its contained cached methods
-            if method_metadata.name in pre_cached_method_names:
+            if method_metadata.name in cached_method_metadata:
                 continue
             graph.setdefault(method_metadata.name, MethodOptimizer.MethodDependecy())
             # contained cached methods is a list of names of used cached methods
@@ -62,9 +64,7 @@ class MethodOptimizer:
 
         # compute used trees by all methods
         tree_remaining_count = {}
-        for cached_method_name in set(self._method_dependencies.keys()) | getattr(
-            self, "_methods_in_progress", set()
-        ):
+        for cached_method_name in set(self._method_dependencies.keys()):
             for tree_name in self._get_method_used_trees(cached_method_name):
                 # count initialized to 0, as represents remaining count after chosen method completed
                 cur_count = tree_remaining_count.get(tree_name, 0)
@@ -125,7 +125,7 @@ class MethodOptimizer:
 
         return next_method
 
-    def run_methods_sync(self, method_executor: Callable[[BoundMethodMetadata], None]):
+    def run_methods_async(self, method_executor: Callable[[BoundMethodMetadata], None]):
         while True:
             # get next method
             next_method: BoundMethodMetadata = self.next_method()
@@ -159,3 +159,36 @@ class MethodOptimizer:
         """
         used_trees = self._method_metadata_by_name[method_name].used_trees
         return [self._mds_conn.tree_name(used_tree) for used_tree in used_trees]
+
+    @staticmethod
+    def retrieve_method_data(
+        mds_conn: MDSConnection,
+        params: ShotDataRequestParams,
+        run_method_metadata: list[BoundMethodMetadata],
+        all_method_metadata: list[BoundMethodMetadata],
+        cached_method_metadata: List[BoundMethodMetadata],
+        populate_method_f: Callable,
+    ):
+        start_time = time.time()
+
+        method_optimizer: MethodOptimizer = MethodOptimizer(
+            mds_conn=mds_conn,
+            run_method_metadata=run_method_metadata,
+            all_method_metadata=all_method_metadata,
+            cached_method_metadata=cached_method_metadata,
+        )
+
+        parameters = []
+
+        def next_method_runner(next_method_metadata: BoundMethodMetadata):
+            if next_method_metadata.populate:
+                parameters.append(
+                    populate_method_f(params, next_method_metadata, start_time)
+                )
+            else:
+                # if methods are cached_methods (meaning not parameter methods) we don't return their data
+                populate_method_f(params, next_method_metadata, start_time)
+
+        method_optimizer.run_methods_async(next_method_runner)
+
+        return parameters

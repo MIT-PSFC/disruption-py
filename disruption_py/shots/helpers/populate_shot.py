@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 from collections.abc import Iterable
+from logging import Logger
 import time
 import traceback
 from dataclasses import fields
@@ -31,45 +32,29 @@ from disruption_py.utils.mappings.tokamak_helpers import built_in_method_factory
 REQUIRED_COLS = {"time", "shot", "commit_hash"}
 
 
-def populate_method(
-    params: ShotDataRequestParams,
-    bound_method_metadata: BoundMethodMetadata,
-    start_time,
-):
+def get_prefilled_shot_data(shot_props: ShotProps):
+    pre_filled_shot_data = shot_props.pre_filled_shot_data
 
-    shot_props = params.shot_props
-    method = bound_method_metadata.bound_method
-    name = bound_method_metadata.name
+    # If the shot object was already passed data in the constructor, use that data. Otherwise, create an empty dataframe.
+    if pre_filled_shot_data is None:
+        pre_filled_shot_data = pd.DataFrame()
+    if "time" not in pre_filled_shot_data:
+        pre_filled_shot_data["time"] = shot_props.times
+    if "shot" not in pre_filled_shot_data:
+        pre_filled_shot_data["shot"] = int(shot_props.shot_id)
+    pre_filled_shot_data["commit_hash"] = shot_props.metadata.get("commit_hash", None)
 
-    result = None
-    if callable(method) and is_registered_method(method):
-        params.logger.info(f"[Shot {shot_props.shot_id}]:Populating {name}")
-        try:
-            result = method(params=params)
-        except Exception as e:
-            params.logger.warning(
-                f"[Shot {shot_props.shot_id}]:Failed to populate {name} with error {e}"
-            )
-            params.logger.debug(f"{traceback.format_exc()}")
-    elif callable(method) and hasattr(method, "cached"):
-        params.logger.info(f"[Shot {shot_props.shot_id}]:Caching {name}")
-        try:
-            method(params=params)
-        except Exception as e:
-            params.logger.warning(
-                f"[Shot {shot_props.shot_id}]:Failed to cache {name} with error {e}"
-            )
-            params.logger.debug(f"{traceback.format_exc()}")
-    else:
-        params.logger.warning(
-            f"[Shot {shot_props.shot_id}]:Method {name} is not callable or does not have a `populate` attribute set to True"
+    # Check that pre_filled_shot_data is on the same timebase as the shot object to ensure data consistency
+    if (
+        len(pre_filled_shot_data["time"]) != len(shot_props.times)
+        or not np.isclose(
+            pre_filled_shot_data["time"], shot_props.times, atol=TIME_CONST
+        ).all()
+    ):
+        shot_props.logger.error(
+            f"[Shot {shot_props.shot_id}]: ERROR Computation on different timebase than pre-filled shot data"
         )
-        return None
-
-    params.logger.info(
-        f"[Shot {shot_props.shot_id}]:Completed {name}, time_elapsed: {time.time() - start_time}"
-    )
-    return result
+    return pre_filled_shot_data
 
 
 def get_all_registered_methods(all_passed: list):
@@ -142,8 +127,46 @@ def filter_methods_to_run(
     return methods_to_run
 
 
+def populate_method(
+    params: ShotDataRequestParams,
+    bound_method_metadata: BoundMethodMetadata,
+    start_time,
+):
+
+    shot_props = params.shot_props
+    method = bound_method_metadata.bound_method
+    name = bound_method_metadata.name
+
+    if bound_method_metadata.populate:
+        params.logger.info(f"[Shot {shot_props.shot_id}]:Populating {name}")
+        try:
+            result = method(params=params)
+        except Exception as e:
+            params.logger.warning(
+                f"[Shot {shot_props.shot_id}]:Failed to populate {name} with error {e}"
+            )
+            params.logger.debug(f"{traceback.format_exc()}")
+    else:
+        params.logger.info(f"[Shot {shot_props.shot_id}]:Caching {name}")
+        try:
+            method(params=params)
+            result = None
+        except Exception as e:
+            params.logger.warning(
+                f"[Shot {shot_props.shot_id}]:Failed to cache {name} with error {e}"
+            )
+            params.logger.debug(f"{traceback.format_exc()}")
+
+    params.logger.info(
+        f"[Shot {shot_props.shot_id}]:Completed {name}, time_elapsed: {time.time() - start_time}"
+    )
+    return result
+
+
 def populate_shot(
-    shot_settings: ShotSettings, params: ShotDataRequestParams
+    shot_settings: ShotSettings,
+    params: ShotDataRequestParams,
+    use_optimizer: bool = True,
 ) -> pd.DataFrame:
     """populate_shot runs the parameter methods in the shot_data_requests property of shot_settings.
 
@@ -163,16 +186,8 @@ def populate_shot(
         A dataframe containing the querried data.
     """
     shot_props: ShotProps = params.shot_props
-    pre_filled_shot_data = shot_props.pre_filled_shot_data
 
-    # If the shot object was already passed data in the constructor, use that data. Otherwise, create an empty dataframe.
-    if pre_filled_shot_data is None:
-        pre_filled_shot_data = pd.DataFrame()
-    if "time" not in pre_filled_shot_data:
-        pre_filled_shot_data["time"] = shot_props.times
-    if "shot" not in pre_filled_shot_data:
-        pre_filled_shot_data["shot"] = int(shot_props.shot_id)
-    pre_filled_shot_data["commit_hash"] = shot_props.metadata.get("commit_hash", None)
+    pre_filled_shot_data = get_prefilled_shot_data(shot_props)
 
     # Add the methods gound from the passed ShotDataRequest objects
     all_shot_data_request = (
@@ -186,20 +201,9 @@ def populate_shot(
         all_bound_method_metadata, shot_settings, params
     )
 
-    # Check that pre_filled_shot_data is on the same timebase as the shot object to ensure data consistency
-    if (
-        len(pre_filled_shot_data["time"]) != len(shot_props.times)
-        or not np.isclose(
-            pre_filled_shot_data["time"], shot_props.times, atol=TIME_CONST
-        ).all()
-    ):
-        params.logger.error(
-            f"[Shot {shot_props.shot_id}]: ERROR Computation on different timebase than pre-filled shot data"
-        )
-
     # Manually cache data that has already been retrieved (likely from sql tables)
     # Methods added to pre_cached_method_names will be skipped by method optimizer
-    pre_cached_method_names = []
+    cached_method_metadata = []
     if shot_props.pre_filled_shot_data is not None:
         for method_metadata in all_bound_method_metadata:
             cache_success = manually_cache(
@@ -209,30 +213,34 @@ def populate_shot(
                 method_columns=method_metadata.columns,
             )
             if cache_success:
-                pre_cached_method_names.append(method_metadata.name)
+                cached_method_metadata.append(method_metadata)
                 if method_metadata in run_bound_method_metadata:
                     shot_props.logger.info(
                         f"[Shot {shot_props.shot_id}]:Skipping {method_metadata.name} already populated"
                     )
 
-    method_optimizer: MethodOptimizer = MethodOptimizer(
-        mds_conn=shot_props.mds_conn,
-        run_method_metadata=run_bound_method_metadata,
-        all_method_metadata=all_bound_method_metadata,
-        pre_cached_method_names=pre_cached_method_names,
-    )
-
-    parameters = []
-    start_time = time.time()
-
-    def next_method_runner(next_method_metadata: BoundMethodMetadata):
-        if next_method_metadata.populate:
-            parameters.append(populate_method(params, next_method_metadata, start_time))
-        else:
-            # if methods are cached_methods (meaning not parameter methods) we don't return their data
-            populate_method(params, next_method_metadata, start_time)
-
-    method_optimizer.run_methods_sync(next_method_runner)
+    if use_optimizer:
+        parameters = MethodOptimizer.retrieve_method_data(
+            mds_conn=shot_props.mds_conn,
+            params=params,
+            run_method_metadata=run_bound_method_metadata,
+            all_method_metadata=all_bound_method_metadata,
+            cached_method_metadata=cached_method_metadata,
+            populate_method_f=populate_method,
+        )
+    else:
+        start_time = time.time()
+        parameters = []
+        for bound_method_metadata in run_bound_method_metadata:
+            if bound_method_metadata in cached_method_metadata:
+                continue
+            parameters.append(
+                populate_method(
+                    params=params,
+                    bound_method_metadata=bound_method_metadata,
+                    start_time=start_time,
+                )
+            )
 
     filtered_parameters = []
     for parameter in parameters:
