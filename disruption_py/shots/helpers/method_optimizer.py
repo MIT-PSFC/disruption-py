@@ -6,7 +6,7 @@ from typing import Callable, Dict, List, Set
 
 from disruption_py.mdsplus_integration.mds_connection import MDSConnection
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
-from disruption_py.shots.helpers.cached_method_props import BoundMethodMetadata
+from disruption_py.shots.helpers.method_metadata import BoundMethodMetadata
 
 
 class MethodOptimizer:

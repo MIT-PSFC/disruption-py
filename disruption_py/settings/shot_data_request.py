@@ -7,7 +7,7 @@ from logging import Logger
 from typing import Callable, List
 
 from disruption_py.mdsplus_integration.mds_connection import MDSConnection
-from disruption_py.shots.helpers.cached_method_props import (
+from disruption_py.shots.helpers.method_metadata import (
     get_method_metadata,
     is_registered_method,
 )

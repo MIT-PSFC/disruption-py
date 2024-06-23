@@ -8,7 +8,7 @@ from typing import Callable, List
 import pandas as pd
 
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
-from disruption_py.shots.helpers.cached_method_props import (
+from disruption_py.shots.helpers.method_metadata import (
     MethodMetadata,
 )
 from disruption_py.shots.shot_props import ShotProps
