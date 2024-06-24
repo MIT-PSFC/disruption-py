@@ -135,6 +135,14 @@ if __name__ == "__main__":
         default=None,
         help="Data column to test, use all data columns if not specified",
     )
+
+    parser.add_argument(
+        "--shot-id",
+        action="store",
+        default=None,
+        help="Shot number to test, uses the default shot list if not specified",
+    )
+
     args = parser.parse_args()
 
     fail_quick = not args.fail_slow
@@ -142,7 +150,12 @@ if __name__ == "__main__":
     tokamak = get_tokamak_from_environment()
 
     handler = get_tokamak_handler(tokamak)
-    shot_ids = get_tokamak_test_shot_ids(tokamak)
+
+    if args.shot_id is None:
+        shot_ids = get_tokamak_test_shot_ids(tokamak)
+    else:
+        shot_ids = [args.shot_id]
+
     expected_failure_columns = get_tokamak_test_expected_failure_columns(tokamak)
 
     data_differences = eval_against_sql(
