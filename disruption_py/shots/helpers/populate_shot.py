@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
 
-from collections import defaultdict
 from collections.abc import Iterable
-from logging import Logger
 import time
 import traceback
-from dataclasses import fields
-from typing import List
 
 import numpy as np
 import pandas as pd
@@ -17,7 +13,6 @@ from disruption_py.settings.shot_data_request import (
 from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.shots.helpers.method_metadata import (
     BoundMethodMetadata,
-    MethodMetadata,
     get_method_metadata,
     is_registered_method,
 )
@@ -25,9 +20,25 @@ from disruption_py.shots.helpers.method_caching import manually_cache
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.constants import TIME_CONST
 from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.mappings.tokamak_helpers import built_in_method_factory
 
 REQUIRED_COLS = {"time", "shot", "commit_hash"}
+
+
+def built_in_method_factory(tokamak: Tokamak):
+    if tokamak is Tokamak.D3D:
+        from disruption_py.shots.parameter_methods.d3d.built_in import (
+            D3D_DEFAULT_SHOT_DATA_REQUESTS,
+        )
+
+        return D3D_DEFAULT_SHOT_DATA_REQUESTS
+    elif tokamak is Tokamak.CMOD:
+        from disruption_py.shots.parameter_methods.cmod.built_in import (
+            CMOD_DEFAULT_SHOT_DATA_REQUESTS,
+        )
+
+        return CMOD_DEFAULT_SHOT_DATA_REQUESTS
+    else:
+        raise ValueError(f"Invalid tokamak for built-ins {tokamak}")
 
 
 def get_prefilled_shot_data(shot_props: ShotProps):
@@ -135,6 +146,7 @@ def populate_method(
     method = bound_method_metadata.bound_method
     name = bound_method_metadata.name
 
+    result = None
     if bound_method_metadata.populate:
         params.logger.info(f"[Shot {shot_props.shot_id}]:Populating {name}")
         try:
@@ -148,7 +160,6 @@ def populate_method(
         params.logger.info(f"[Shot {shot_props.shot_id}]:Caching {name}")
         try:
             method(params=params)
-            result = None
         except Exception as e:
             params.logger.warning(
                 f"[Shot {shot_props.shot_id}]:Failed to cache {name} with error {e}"
@@ -164,7 +175,6 @@ def populate_method(
 def populate_shot(
     shot_settings: ShotSettings,
     params: ShotDataRequestParams,
-    use_optimizer: bool = True,
 ) -> pd.DataFrame:
     """populate_shot runs the parameter methods in the shot_data_requests property of shot_settings.
 
@@ -184,9 +194,6 @@ def populate_shot(
         A dataframe containing the querried data.
     """
     shot_props: ShotProps = params.shot_props
-
-    pre_filled_shot_data = get_prefilled_shot_data(shot_props)
-
     # Concatanate built in clases containing registred methods, with user provided classes/methods
     all_shot_data_request = (
         built_in_method_factory(params.tokamak) + shot_settings.shot_data_requests
@@ -199,6 +206,7 @@ def populate_shot(
         all_bound_method_metadata, shot_settings, params
     )
 
+    pre_filled_shot_data = get_prefilled_shot_data(shot_props)
     # Manually cache data that has already been retrieved (likely from sql tables)
     # Methods added to pre_cached_method_names will be skipped by method optimizer
     cached_method_metadata = []

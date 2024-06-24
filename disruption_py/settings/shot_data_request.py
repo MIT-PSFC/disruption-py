@@ -1,16 +1,9 @@
 #!/usr/bin/env python3
 
-from abc import ABC
-from collections.abc import Iterable
 from dataclasses import dataclass
 from logging import Logger
-from typing import Callable, List
 
 from disruption_py.mdsplus_integration.mds_connection import MDSConnection
-from disruption_py.shots.helpers.method_metadata import (
-    get_method_metadata,
-    is_registered_method,
-)
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.mappings.tokamak import Tokamak
 

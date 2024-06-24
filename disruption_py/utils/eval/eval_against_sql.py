@@ -15,7 +15,6 @@ from disruption_py.database import ShotDatabase
 from disruption_py.main import get_shots_data
 from disruption_py.settings import LogSettings, ShotSettings
 from disruption_py.utils.constants import (
-    MDSPLUS_CONNECTION_STRING_CONSTANTS,
     TIME_CONST,
 )
 from disruption_py.utils.eval.data_difference import DataDifference
@@ -289,6 +288,7 @@ def eval_against_sql(
 ) -> Dict[int, pd.DataFrame]:
 
     tempfolder = mkdtemp(prefix=f"disruptionpy-{time.strftime('%y%m%d-%H%M%S')}-")
+    print(f"Outputting to temporary folder: {tempfolder}")
 
     @contextmanager
     def monkey_patch_numpy_gradient():

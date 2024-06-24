@@ -23,7 +23,7 @@ elif tokamak is Tokamak.CMOD:
 else:
     raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 
-mds = get_mdsplus_class.conn
+mds = get_mdsplus_class(tokamak).conn
 print(f"Initialized MDSplus: {mds.hostspec}")
 
 mds.openTree("EFIT01", shot)

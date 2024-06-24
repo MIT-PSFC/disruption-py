@@ -48,8 +48,14 @@ class ShotManager(ABC):
                 shot_id=int(shot_id),
                 shot_settings=shot_settings,
             )
-            retrieved_data = self.shot_data_retrieval(
-                shot_props=shot_props, shot_settings=shot_settings
+            retrieved_data = populate_shot(
+                shot_settings=shot_settings,
+                params=ShotDataRequestParams(
+                    mds_conn=shot_props.mds_conn,
+                    shot_props=shot_props,
+                    logger=self.logger,
+                    tokamak=self.tokamak,
+                ),
             )
             self.shot_cleanup(shot_props)
             self.logger.info(f"completed {shot_id}")
@@ -118,17 +124,6 @@ class ShotManager(ABC):
             )
             mds_conn.close_all_trees()
             raise e
-
-    def shot_data_retrieval(self, shot_props: ShotProps, shot_settings: ShotSettings):
-        shot_data_request_params = ShotDataRequestParams(
-            mds_conn=shot_props.mds_conn,
-            shot_props=shot_props,
-            logger=self.logger,
-            tokamak=self.tokamak,
-        )
-        return populate_shot(
-            shot_settings=shot_settings, params=shot_data_request_params
-        )
 
     @classmethod
     def shot_cleanup(

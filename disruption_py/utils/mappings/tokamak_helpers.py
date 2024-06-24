@@ -55,20 +55,3 @@ def get_tokamak_test_shot_ids(tokamak: Tokamak) -> list[int]:
 
 def get_tokamak_test_columns(tokamak: Tokamak):
     return TEST_COLUMNS.get(tokamak.value)
-
-
-def built_in_method_factory(tokamak: Tokamak):
-    if tokamak is Tokamak.D3D:
-        from disruption_py.shots.parameter_methods.d3d.built_in import (
-            D3D_DEFAULT_SHOT_DATA_REQUESTS,
-        )
-
-        return D3D_DEFAULT_SHOT_DATA_REQUESTS
-    elif tokamak is Tokamak.CMOD:
-        from disruption_py.shots.parameter_methods.cmod.built_in import (
-            CMOD_DEFAULT_SHOT_DATA_REQUESTS,
-        )
-
-        return CMOD_DEFAULT_SHOT_DATA_REQUESTS
-    else:
-        raise ValueError(f"Invalid tokamak for built-ins {tokamak}")

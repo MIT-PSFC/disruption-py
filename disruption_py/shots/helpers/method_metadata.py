@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from dataclasses import Field, dataclass
+from dataclasses import Field, dataclass, fields
 from typing import Any, Callable, List, Union
 
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
@@ -16,8 +16,8 @@ class MethodMetadata:
     used_trees: Union[List[str], Callable]
     contained_registered_methods: Union[List[str], Callable]
     tokamaks: Union[Tokamak, List[Tokamak]]
-    columns: Union[List[str], Callable] = None
-    tags: List[str] = None
+    columns: Union[List[str], Callable]
+    tags: List[str]
 
     ALLOWED_UNRESOLVED = [
         "used_trees",
@@ -27,12 +27,11 @@ class MethodMetadata:
 
     def __post_init__(self):
         if self.populate:
-            self.tags = self.tags or ["all"]
-            self.columns = self.columns or []
-
-        self.used_trees = self.used_trees or []
-        self.contained_registered_methods = self.contained_registered_methods or []
-        self.tokamaks = self.tokamaks or []
+            object.__setattr__(self, "tags", self.tags or ["all"])
+            object.__setattr__(self, "columns", self.columns or [])
+        object.__setattr__(self, "used_trees", self.used_trees or [])
+        object.__setattr__(self, "contained_registered_methods", [])
+        object.__setattr__(self, "tokamaks", self.tokamaks or [])
 
 
 @dataclass(frozen=True)
@@ -55,17 +54,19 @@ class BoundMethodMetadata(MethodMetadata):
         """
         new_method_metadata_params = {}
         bind_to = (getattr(bound_method, "__self__", None),)
-        for field_name in method_metadata.ALLOWED_UNRESOLVED:
-            field_value = getattr(method_metadata, field_name)
-            if callable(field_value):
+        for field in fields(method_metadata):
+            field_value = getattr(method_metadata, field.name)
+            if field.name in method_metadata.ALLOWED_UNRESOLVED and callable(
+                field_value
+            ):
                 new_val = (
                     field_value(params)
                     if bind_to is None
                     else field_value(bind_to, params)
                 )
-                new_method_metadata_params[field_name] = new_val
+                new_method_metadata_params[field.name] = new_val
             else:
-                new_method_metadata_params[field_name] = field_value
+                new_method_metadata_params[field.name] = field_value
 
         return cls(bound_method=bound_method, **new_method_metadata_params)
 
