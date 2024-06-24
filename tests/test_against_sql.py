@@ -140,6 +140,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--shot-id",
+        type=int,
         action="store",
         default=None,
         help="Shot number to test, uses the default shot list if not specified",
