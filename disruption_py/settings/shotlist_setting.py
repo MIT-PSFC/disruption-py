@@ -159,47 +159,50 @@ ShotlistSettingType = Union[
 ]
 
 
+
+
 def shotlist_setting_runner(shotlist_setting, params: ShotlistSettingParams):
     """
     Retrieve list of shot ids for the given shotlist setting.
     """
-    if isinstance(shotlist_setting, ShotlistSetting):
-        return shotlist_setting.get_shotlist(params)
+    if isinstance(shot_ids_request, ShotlistSetting):
+        # Do not immediately return the list because it may be multidimensional 
+        # and would need to be handled as such below
+        shot_ids_request = shot_ids_request.get_shot_ids(params)
 
-    if isinstance(shotlist_setting, int) or (
-        isinstance(shotlist_setting, str) and shotlist_setting.isdigit()
-    ):
-        return [shotlist_setting]
+    if (isinstance(shot_ids_request, int) or 
+        isinstance(shot_ids_request, np.int64)) or (
+        isinstance(shot_ids_request, str) and shot_ids_request.isdigit()
+        ):
+        return [shot_ids_request]
 
-    if isinstance(shotlist_setting, np.ndarray):
-        return shotlist_setting
-
-    if isinstance(shotlist_setting, str):
-        shotlist_setting_object = _get_shotlist_setting_mappings.get(
-            shotlist_setting, None
+    if isinstance(shot_ids_request, str):
+        shot_ids_request_object = _get_shotlist_setting_mappings.get(
+            shot_ids_request, None
         )
-        if shotlist_setting_object is not None:
-            return shotlist_setting_object.get_shotlist(params)
+        if shot_ids_request_object is not None:
+            return shot_ids_request_object.get_shot_ids(params)
 
-    if isinstance(shotlist_setting, str):
+    if isinstance(shot_ids_request, str):
         # assume that it is a file path
-        for suffix, shotlist_setting_type in _file_suffix_to_shotlist_setting.items():
-            if shotlist_setting.endswith(suffix):
-                return shotlist_setting_type(shotlist_setting).get_shotlist(params)
+        for suffix, shot_ids_request_type in _file_suffix_to_shotlist_setting.items():
+            if shot_ids_request.endswith(suffix):
+                return shot_ids_request_type(shot_ids_request).get_shot_ids(params)
 
-    if isinstance(shotlist_setting, dict):
-        shotlist_setting = {
-            map_string_to_enum(tokamak, Tokamak): shotlist_setting_mapping
-            for tokamak, shotlist_setting_mapping in shotlist_setting.items()
+    if isinstance(shot_ids_request, dict):
+        shot_ids_request = {
+            map_string_to_enum(tokamak, Tokamak): shot_ids_request_mapping
+            for tokamak, shot_ids_request_mapping in shot_ids_request.items()
         }
-        chosen_setting = shotlist_setting.get(params.tokamak, None)
-        if chosen_setting is not None:
-            return shotlist_setting_runner(chosen_setting, params)
+        chosen_request = shot_ids_request.get(params.tokamak, None)
+        if chosen_request is not None:
+            return shotlist_setting_runner(chosen_request, params)
 
-    if isinstance(shotlist_setting, list):
+    if (isinstance(shot_ids_request, list) or 
+        isinstance(shot_ids_request, np.ndarray)):
         all_results = []
-        for setting in shotlist_setting:
-            sub_result = shotlist_setting_runner(setting, params)
+        for request in shot_ids_request:
+            sub_result = shotlist_setting_runner(request, params)
             if sub_result is not None:
                 all_results.append(sub_result)
 
