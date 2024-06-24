@@ -200,10 +200,10 @@ class BasicCmodRequests(ShotDataRequest):
         # WEI - DEBUG
         # children_on always gives array of zeros
         print(f"{children_nids}, {children_paths}, {children_on}")
-        a = params.mds_conn.get_data(
-            f'getnci($, "STATUS")', arguments=children_nids
-        )
-        print(f"{a}")
+        # a = params.mds_conn.get_data(
+        #     f'getnci($, "STATUS")', arguments=children_nids
+        # )
+        # print(f"{a}")
         #
 
         # Collect active segments and their information
@@ -324,7 +324,7 @@ class BasicCmodRequests(ShotDataRequest):
         ### WEI - DEBUG ###
         # Looks like BasicCmodRequests.get_active_wire_segments is returning more segments than the MATLAB script
         # The start times are actually correct
-        print(active_segments)
+        print(f'active_segments: {active_segments}')
         ######
 
         # Default PCS timebase is 1 KHZ
@@ -378,6 +378,13 @@ class BasicCmodRequests(ShotDataRequest):
                                 (pcstime >= start) & (pcstime <= end)
                             )
                             ip_prog[segment_indices] = ip_prog_temp[segment_indices]
+
+                            import matplotlib.pyplot as plt
+                            plt.plot(pcstime, ip_prog)
+                            plt.title('ip_prog')
+                            plt.show()
+
+
                     except mdsExceptions.MdsException as e:
                         params.logger.warning(
                             [
