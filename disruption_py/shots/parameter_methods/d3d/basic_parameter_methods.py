@@ -8,24 +8,22 @@ import scipy
 from MDSplus import mdsExceptions
 
 from disruption_py.settings.shot_data_request import (
-    ShotDataRequest,
     ShotDataRequestParams,
 )
 from disruption_py.shots.helpers.method_caching import (
-    cached_method,
-    parameter_cached_method,
+    register_method,
 )
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.math_utils import get_bolo, gsastd, interp1, power
 
 
-class BasicD3DRequests(ShotDataRequest):
+class BasicD3DRequests:
 
     # Tokamak Variables
     NOMINAL_FLATTOP_RADIUS = 0.59
 
     @staticmethod
-    @parameter_cached_method(columns=["time_until_disrupt"], tokamak=Tokamak.D3D)
+    @register_method(columns=["time_until_disrupt"], tokamak=Tokamak.D3D)
     def _get_time_until_disrupt(params: ShotDataRequestParams):
         if params.shot_props.disrupted:
             return pd.DataFrame(
@@ -39,7 +37,7 @@ class BasicD3DRequests(ShotDataRequest):
         )
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["H98", "H_alpha"], used_trees=["transport", "d3d"], tokamak=Tokamak.D3D
     )
     def get_H_parameters(params: ShotDataRequestParams):
@@ -72,7 +70,7 @@ class BasicD3DRequests(ShotDataRequest):
         return pd.DataFrame({"H98": h_98, "H_alpha": h_alpha})
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["p_rad", "p_nbi", "p_ech", "p_ohm", "radiated_fraction", "v_loop"],
         contained_registered_methods=["get_ohmic_parameters"],
         used_trees=["d3d", "rf", "bolom"],
@@ -208,7 +206,7 @@ class BasicD3DRequests(ShotDataRequest):
         )
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["p_rad", "p_nbi", "p_ech", "p_ohm", "radiated_fraction", "v_loop"],
         used_trees=["d3d", "_efit_tree"],
         tokamak=Tokamak.D3D,
@@ -267,7 +265,7 @@ class BasicD3DRequests(ShotDataRequest):
         return pd.DataFrame({"p_ohm": p_ohm, "v_loop": v_loop})
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["n_e", "Greenwald_fraction", "dn_dt"],
         used_trees=["_efit_tree"],
         tokamak=Tokamak.D3D,
@@ -326,7 +324,7 @@ class BasicD3DRequests(ShotDataRequest):
         return pd.DataFrame({"n_e": ne, "Greenwald_fraction": g_f, "dn_dt": dne_dt})
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["n_e_RT", "Greenwald_fraction_RT"],
         used_trees=["efitrt1"],
         tokamak=Tokamak.D3D,
@@ -377,7 +375,7 @@ class BasicD3DRequests(ShotDataRequest):
         return pd.DataFrame({"n_e_RT": ne_rt, "Greenwald_fraction_RT": g_f_rt})
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["ip", "ip_error", "dip_dt", "dipprog_dt", "power_supply_railed"],
         used_trees=["d3d"],
         tokamak=Tokamak.D3D,
@@ -498,7 +496,7 @@ class BasicD3DRequests(ShotDataRequest):
         )
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=[
             "ip_RT",
             "ip_error_RT",
@@ -644,7 +642,7 @@ class BasicD3DRequests(ShotDataRequest):
         )
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["zcur", "zcur_normalized", "z_prog", "z_error", "z_error_normalized"],
         used_trees=["d3d", "_efit_tree"],
         tokamak=Tokamak.D3D,
@@ -706,7 +704,7 @@ class BasicD3DRequests(ShotDataRequest):
         )
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["n_equal_1_normalized", "n_equal_1_mode"],
         used_trees=["d3d"],
         tokamak=Tokamak.D3D,
@@ -781,7 +779,7 @@ class BasicD3DRequests(ShotDataRequest):
         )
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["n1rms", "n1rms_normalized"], used_trees=["d3d"], tokamak=Tokamak.D3D
     )
     def get_n1rms_parameters(params: ShotDataRequestParams):
@@ -799,7 +797,7 @@ class BasicD3DRequests(ShotDataRequest):
     # By default get_peaking_factors should grab the data from MDSPlus as opposed to recalculate. See DPP v4 document for details:
     # https://docs.google.com/document/d/1R7fI7mCOkMQGt8xX2nS6ZmNNkcyvPQ7NmBfRPICFaFs/edit?usp=sharing
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["te_pf", "ne_pf", "rad_cva", "rad_xdiv"],
         contained_registered_methods=["_get_ne_te", "_get_efit_dict", "_get_p_rad"],
         used_trees=["d3d"],
@@ -1030,7 +1028,7 @@ class BasicD3DRequests(ShotDataRequest):
         return psin, rho_vn_diag
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         contained_registered_methods=["_get_ne_te", "_get_efit_dict"],
         tags=["unfinished"],
         tokamak=Tokamak.D3D,
@@ -1130,7 +1128,7 @@ class BasicD3DRequests(ShotDataRequest):
         )
 
     @staticmethod
-    @parameter_cached_method(columns=["z_eff"], used_trees=["d3d"], tokamak=Tokamak.D3D)
+    @register_method(columns=["z_eff"], used_trees=["d3d"], tokamak=Tokamak.D3D)
     def get_zeff_parameters(params: ShotDataRequestParams):
         # Get Zeff
         try:
@@ -1165,7 +1163,7 @@ class BasicD3DRequests(ShotDataRequest):
         return pd.DataFrame({"z_eff": zeff})
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["kappa_area"], used_trees=["_efit_tree"], tokamak=Tokamak.D3D
     )
     def get_kappa_area(params: ShotDataRequestParams):
@@ -1182,7 +1180,7 @@ class BasicD3DRequests(ShotDataRequest):
         return pd.DataFrame({"kappa_area": kappa_area})
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["H98", "H_alpha"], used_trees=["transport", "d3d"], tokamak=Tokamak.D3D
     )
     def get_h_parameters(params: ShotDataRequestParams):
@@ -1199,7 +1197,7 @@ class BasicD3DRequests(ShotDataRequest):
         return pd.DataFrame({"H98": h98, "H_alpha": h_alpha})
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["delta", "squareness", "aminor"],
         used_trees=["_efit_tree"],
         tokamak=Tokamak.D3D,
@@ -1262,7 +1260,8 @@ class BasicD3DRequests(ShotDataRequest):
         )
 
     @staticmethod
-    @cached_method(
+    @register_method(
+        populate=False,
         used_trees=["electrons"],
     )
     def _get_ne_te(
@@ -1363,7 +1362,8 @@ class BasicD3DRequests(ShotDataRequest):
         return lasers
 
     @staticmethod
-    @cached_method(
+    @register_method(
+        populate=False,
         used_trees=["bolom", "_efit_tree"],
     )
     def _get_p_rad(params: ShotDataRequestParams, fan="custom"):
@@ -1424,7 +1424,8 @@ class BasicD3DRequests(ShotDataRequest):
 
     # TODO: Replace all instances of efit_dict with a dataclass
     @staticmethod
-    @cached_method(
+    @register_method(
+        populate=False,
         used_trees=["_efit_tree"],
     )
     def _get_efit_dict(params: ShotDataRequestParams):

@@ -26,14 +26,15 @@ def register_method(
     tags=None,
     columns=None,
 ):
-    """Decorates a function as a parameter method.
+    """Registers a method to be run by DisruptionPy.
 
-    Parameter methods are functions that calculate disruption parameters from MDSplus data for a single shot.
-    They are run if  designated by the run_methods, run_tags, or run_columns attributes of the `ShotSettings`
-    class. A number of built-in parameter methods are included through the shots.parameter_methods.built_in file,
-    and users can also create there own methods inside of a subclass of `ShotDatRequest` that is passed as an
-    attribute in `ShotSettings`. The results of all parameter methods are cached, see the `cached_method` decorator
-    for more details.
+    All registered methods have their results cached, to avoid excess computation.
+    If populate is True, the function should calculate disruption parameters and return a pandas DataFrame.
+    A registered method with populate set to true is run if  designated by the run_methods, run_tags, or
+    run_columns attributes of the `ShotSettings` class. A number of built-in methods are included
+    through the shots.parameter_methods.built_in file. Users can also create there own methods
+    using the register_method , and passing either the method itself, or an object containing the method
+    as and attribute in `ShotSettings`.
 
     A common pattern for parameter methods is first retrieving data from MDSplus using the `TreeManager` and
     then using that retrieved data to compute data to return.
@@ -41,32 +42,32 @@ def register_method(
     Parameters
     ----------
     populate : bool
-        Whether this parameter method should be run when calling `get_shots_data`. If True the method must return a dictionary of
+        Whether this method should be run when calling `get_shots_data`. If True the method must return a dictionary of
         column name to data. Default is True.
     tags : list[str]
-        The list of tags to help identify this parameter method. Tags can be used when calling `get_shots_data` to
+        The list of tags to help identify this method. Tags can be used when calling `get_shots_data` to
         have disruption_py use multiple functions at the same time. Default is ["all"].
     columns : Union[list[str], Callable]
-        The columns that are in the dataframe returned by the parameter method. Alternately, can pass a method that
+        The columns that are in the dataframe returned by the method. Alternately, can pass a method that
         returns the names of used trees at runtime. See `method_metadata_function` for more details about using functions.
-        These columns are also used to determine which parameter methods to run when calling `get_shots_data` with `run_columns`.
+        These columns are also used to determine which methods to run when calling `get_shots_data` with `run_columns`.
         Default value is an empty list implying that no columns are returned by the function.
     used_trees : Union[List[str], Callable]
-        This list of MDSPlus tree names used by the parameter method, this should be a superset of used tree names.
+        This list of MDSPlus tree names used by the method, this should be a superset of used tree names.
         This list is used to help determine the optimal execution order of decorated methods. Alternately, can pass a method
         that returns the names of used trees at runtime. See `method_metadata_function` for more details about using functions.
         Default value is no used trees.
     contained_registered_methods : Union[List[str], Callable]
-        A list of all methods decorated with the `cached_method` or `parameter_cached_method` decorator. That are used inside of
+        A list of all methods decorated with the `register_method` decorator. That are used inside of
         this function. This list is used to help determine the optimal execution order of decorated methods. Alternately, can pass a
         method that returns the names of used decorated methods at runtime. See `method_metadata_function` for more details
         about using functions. Default value is no contained cached methods.
     cache_between_threads: bool
-        Specifically for methods with the `cached_method` decorator that return objects that are not threadsafe. If True, the cache
+        Specifically for methods with the `register_method` decorator that return objects that are not threadsafe. If True, the cache
         will be shared between threads. If False, the cache will only be used by the same thread. Default is True.
     tokamak : Union[Tokamak, List[Tokamak]]
-        A list of Tokamak objects that represent which tokamks this parameter method may be used for. Specifically for methods inside of
-        `ShotDataRequest` subclasses. Default value of None allows the parameter method to be run for any tokamak.
+        A list of Tokamak objects that represent which tokamaks this method may be used for. Default value of None allows the method
+        to be run for any tokamak.
     """
 
     def outer_wrapper(method):

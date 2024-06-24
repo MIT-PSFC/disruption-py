@@ -12,7 +12,6 @@ import numpy as np
 import pandas as pd
 
 from disruption_py.settings.shot_data_request import (
-    ShotDataRequest,
     ShotDataRequestParams,
 )
 from disruption_py.settings.shot_settings import ShotSettings
@@ -23,7 +22,6 @@ from disruption_py.shots.helpers.method_metadata import (
     is_registered_method,
 )
 from disruption_py.shots.helpers.method_caching import manually_cache
-from disruption_py.shots.helpers.method_optimizer import MethodOptimizer
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.constants import TIME_CONST
 from disruption_py.utils.mappings.tokamak import Tokamak
@@ -189,7 +187,7 @@ def populate_shot(
 
     pre_filled_shot_data = get_prefilled_shot_data(shot_props)
 
-    # Add the methods gound from the passed ShotDataRequest objects
+    # Concatanate built in clases containing registred methods, with user provided classes/methods
     all_shot_data_request = (
         built_in_method_factory(params.tokamak) + shot_settings.shot_data_requests
     )
@@ -219,28 +217,18 @@ def populate_shot(
                         f"[Shot {shot_props.shot_id}]:Skipping {method_metadata.name} already populated"
                     )
 
-    if use_optimizer:
-        parameters = MethodOptimizer.retrieve_method_data(
-            mds_conn=shot_props.mds_conn,
-            params=params,
-            run_method_metadata=run_bound_method_metadata,
-            all_method_metadata=all_bound_method_metadata,
-            cached_method_metadata=cached_method_metadata,
-            populate_method_f=populate_method,
-        )
-    else:
-        start_time = time.time()
-        parameters = []
-        for bound_method_metadata in run_bound_method_metadata:
-            if bound_method_metadata in cached_method_metadata:
-                continue
-            parameters.append(
-                populate_method(
-                    params=params,
-                    bound_method_metadata=bound_method_metadata,
-                    start_time=start_time,
-                )
+    start_time = time.time()
+    parameters = []
+    for bound_method_metadata in run_bound_method_metadata:
+        if bound_method_metadata in cached_method_metadata:
+            continue
+        parameters.append(
+            populate_method(
+                params=params,
+                bound_method_metadata=bound_method_metadata,
+                start_time=start_time,
             )
+        )
 
     filtered_parameters = []
     for parameter in parameters:

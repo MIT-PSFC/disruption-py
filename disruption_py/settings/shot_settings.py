@@ -15,7 +15,6 @@ from disruption_py.settings.set_times_request import (
     SetTimesRequest,
     resolve_set_times_request,
 )
-from disruption_py.settings.shot_data_request import ShotDataRequest
 from disruption_py.utils.mappings.mappings_helpers import map_string_attributes_to_enum
 from disruption_py.utils.mappings.tokamak import Tokamak, is_tokamak_indexed
 
@@ -41,16 +40,16 @@ class ShotSettings:
         opening this tree name fails. Default is 'analysis'.
     run_methods : List[str]
         A list of parameter method names to be run. Named methods will be run when retrieving data
-        from  mdsplus for the shot. Named methods must have with the parameter_cached_method
+        from  mdsplus for the shot. Named methods must have with the register_method
         decorator and can either be located in the shot object or in a shot_data_request. Defaults
         to an empty list.
     run_tags : List[str]
         A list of parameter method tags to be run. Methods used for retrieving data from mdsplus can be
-        tagged with the parameter_cached_method decorator and can be located in either the shot
+        tagged with the register_method decorator and can be located in either the shot
         class or in an included shot_data_request. All methods with at least one included tag will
         be run. Defaults to ["all"].
     run_columns : List[str]
-        A list of columns to be retrieved. All methods with parameter_cached_method decorator referenced
+        A list of columns to be retrieved. All methods with register_method decorator referenced
         as containing an included column will be run and all columns returned by those methods will be used.
         Methods can either be located in the shot class or in an included shot_data_request. If you wish to
         only return the requested columns, set only_requested_columns to true in the shot_settings.
@@ -58,10 +57,10 @@ class ShotSettings:
         Whether only columns requested in run_columns should be included in the produced dataframe.
         Even if not all requested columns exist in the produced dataframe only the requested columns will
         be produced. Otherwise all columns returned by all methods run will be included. Default false.
-    shot_data_requests : List[ShotDataRequest]
-        A list of ShotDataRequest objects. Methods from these objects are run when retrieving data
-        from mdsplus if the method is included through either the run_methods or run_tags setting.
-        Defaults to an empty list.
+    shot_data_requests : list
+        A list of registered methods and objects containing registred methods. The Methods are
+        collected and run when retrieving data from mdsplus if the method is included through
+        either the run_methods, run_tags, run_columns setting. Defaults to an empty list.
     set_times_request : SetTimesRequest
         The set times request to be used when setting the timebase for the shot. The retrieved data will
         be interpolated to this timebase. Can pass any SetTimesRequestType that resolves to a SetTimesRequest.
@@ -101,7 +100,7 @@ class ShotSettings:
     run_tags: List[str] = field(default_factory=default_tags)
     run_columns: List[str] = field(default_factory=list)
     only_requested_columns: bool = False
-    shot_data_requests: List[ShotDataRequest] = field(default_factory=list)
+    shot_data_requests: list = field(default_factory=list)
 
     # Timebase setting
     set_times_request: SetTimesRequest = "disruption_warning"

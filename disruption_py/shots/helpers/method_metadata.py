@@ -49,7 +49,7 @@ class BoundMethodMetadata(MethodMetadata):
         """
         Evaluate arguments to decorators to usable values.
 
-        Some parameters provided to the cached_method and parameter_cached_method decorators can take method that are evaluated
+        Some parameters provided to the register_method decorators can take method that are evaluated
         at runtime. `resolve_for` evaluates all of these methods and returns a new instance of `MethodMetadata`
         without function parameters.
         """
@@ -94,7 +94,7 @@ def get_method_metadata(method: Callable, should_throw: bool = False) -> MethodM
 
     Parameters
     ----------
-    cached_method : Callable
+    method : Callable
         The method decorated with the `register_method` decorator
     should_throw : bool
         Throw an error if the method was not decorated with the `register_method` decorator
@@ -106,7 +106,5 @@ def get_method_metadata(method: Callable, should_throw: bool = False) -> MethodM
     """
     method_metadata = getattr(method, "method_metadata", None)
     if should_throw and method_metadata is None:
-        raise ValueError(
-            f"The method {method} was not decorated with cached_method or parameter_cached_method"
-        )
+        raise ValueError(f"The method {method} was not decorated with register_method")
     return method_metadata
