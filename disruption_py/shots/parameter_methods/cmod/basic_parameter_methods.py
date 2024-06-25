@@ -187,7 +187,6 @@ class BasicCmodRequests(ShotDataRequest):
     def get_active_wire_segments(params: ShotDataRequestParams):
         params.mds_conn.open_tree(tree_name="pcs")
         root_nid = params.mds_conn.get("GetDefaultNid()") 
-        
         children_nids = params.mds_conn.get(
             'getnci(getnci($, "CHILDREN_NIDS"), "NID_NUMBER")', arguments=root_nid
         )
