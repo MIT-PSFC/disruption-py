@@ -186,7 +186,7 @@ class BasicCmodRequests(ShotDataRequest):
     )
     def get_active_wire_segments(params: ShotDataRequestParams):
         params.mds_conn.open_tree(tree_name="pcs")
-        root_nid = params.mds_conn.get("GetDefaultNid()")
+        root_nid = params.mds_conn.get("GetDefaultNid()")   # Technically all we need is to get the root path; not sure why it was done this way
         
         children_nids = params.mds_conn.get(
             'getnci(getnci($, "CHILDREN_NIDS"), "NID_NUMBER")', arguments=root_nid
@@ -194,27 +194,20 @@ class BasicCmodRequests(ShotDataRequest):
         children_paths = params.mds_conn.get(
             'getnci($, "FULLPATH")', arguments=children_nids
         )
-        children_on = params.mds_conn.get_data(
-            f'getnci($, "STATE")', arguments=children_nids
-        )
-        # WEI - DEBUG
-        # children_on always gives array of zeros
-        print(f"{children_nids}, {children_paths}, {children_on}")
-        # a = params.mds_conn.get_data(
-        #     f'getnci($, "STATUS")', arguments=children_nids
-        # )
-        # print(f"{a}")
-        #
 
+        # children_on = params.mds_conn.get_data(
+        #     f'getnci($, "STATE")', arguments=children_nids
+        # )   
+        '''
+        Segment states are stored in 'SEG_*:SEG_NUM' instead of 'SEG_*'
+        Don't need to get children_on here; both children_paths & children_on are iterated together
+        '''
+
+        '''
         # Collect active segments and their information
         active_segments = []
         for node_path, is_on in zip(children_paths, children_on):
             node_path = node_path.strip()
-
-            ### WEI - DEBUG ###
-            # print(node_path)
-            # print(is_on) # for some reason is_on is always 0
-            ######
 
             if (
                 node_path.split(".")[-1].startswith("SEG_") and is_on == 0
@@ -227,6 +220,22 @@ class BasicCmodRequests(ShotDataRequest):
                         ),
                     )
                 )
+        '''
+        # Collect active segments and their information
+        active_segments = []
+        for node_path in children_paths:
+            node_path = node_path.strip()
+            if node_path.split(".")[-1].startswith("SEG_"):
+                is_on = params.mds_conn.get_data(f'getnci($, "STATE")', arguments=node_path + ':SEG_NUM')
+                if is_on == 0: # 0 represents node being on, 1 represents node being off
+                    active_segments.append(
+                        (
+                            node_path,
+                            params.mds_conn.get_data(
+                                node_path + ":start_time", tree_name='pcs'
+                            )
+                        )
+                    )
 
         active_segments.sort(key=lambda n: n[1])
         return active_segments
@@ -321,12 +330,6 @@ class BasicCmodRequests(ShotDataRequest):
         # Automatically generated
         active_segments = BasicCmodRequests.get_active_wire_segments(params=params)
 
-        ### WEI - DEBUG ###
-        # Looks like BasicCmodRequests.get_active_wire_segments is returning more segments than the MATLAB script
-        # The start times are actually correct
-        print(f'active_segments: {active_segments}')
-        ######
-
         # Default PCS timebase is 1 KHZ
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
         ip_prog = np.full(pcstime.shape, np.nan)
@@ -336,7 +339,7 @@ class BasicCmodRequests(ShotDataRequest):
         # 2.) IF it does, interpolate IP programming onto the PCS timebase
         # 3.) Clip to the start and stop times of PCS timebase
         for node_path, start in active_segments:
-            # Ip wire can be one of 16 but is normally no. 16
+            # Ip wire can be one of 16 but is normally no. 16 ('P_16')
             for wire_index in range(16, 0, -1):
                 wire_node_name = params.mds_conn.get_data(
                     node_path + f":P_{wire_index :02d}:name", tree_name="pcs"
@@ -348,9 +351,6 @@ class BasicCmodRequests(ShotDataRequest):
                             tree_name="pcs",
                         )
                         if np.any(pid_gains):
-                            ### WEI - DEBUG ###
-                            print(f"{node_path}, {start}") # Got \PCS::TOP.SEG_02, 0.07999999821186066 and \PCS::TOP.SEG_03, 0.07999999821186066
-                            ###
                             signal, sigtime = params.mds_conn.get_data_with_dims(
                                 node_path + f":P_{wire_index :02d}", tree_name="pcs"
                             )
@@ -365,25 +365,10 @@ class BasicCmodRequests(ShotDataRequest):
                                 np.argmin(np.abs(pcstime - sigtime[-1]) + 0.0001)
                             ]
 
-                            ### WEI - DEBUG ###
-                            # The end times are also wrong
-                            #print(sigtime[-1])
-                            # print(np.abs(pcstime - sigtime[-1]) + 0.0001)
-                            # print(np.argmin(np.abs(pcstime - sigtime[-1]) + 0.0001))
-                            # print(pcstime[np.argmin(np.abs(pcstime - sigtime[-1]) + 0.0001)])
-                            print(end)
-                            ######
-
                             segment_indices = np.where(
                                 (pcstime >= start) & (pcstime <= end)
                             )
                             ip_prog[segment_indices] = ip_prog_temp[segment_indices]
-
-                            import matplotlib.pyplot as plt
-                            plt.plot(pcstime, ip_prog)
-                            plt.title('ip_prog')
-                            plt.show()
-
 
                     except mdsExceptions.MdsException as e:
                         params.logger.warning(
