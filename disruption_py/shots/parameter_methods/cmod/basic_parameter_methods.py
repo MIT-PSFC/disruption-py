@@ -203,15 +203,16 @@ class BasicCmodRequests(ShotDataRequest):
                     f'getnci($, "STATE")', arguments=node_path + ":SEG_NUM"
                 )
                 # 0 represents node being on, 1 represents node being off
-                if is_on == 0:
-                    active_segments.append(
-                        (
-                            node_path,
-                            params.mds_conn.get_data(
-                                node_path + ":start_time", tree_name="pcs"
-                            ),
-                        )
+                if is_on != 0:
+                    continue
+                active_segments.append(
+                    (
+                        node_path,
+                        params.mds_conn.get_data(
+                            node_path + ":start_time", tree_name="pcs"
+                        ),
                     )
+                )
 
         active_segments.sort(key=lambda n: n[1])
         return active_segments
@@ -315,7 +316,7 @@ class BasicCmodRequests(ShotDataRequest):
         # 2.) IF it does, interpolate IP programming onto the PCS timebase
         # 3.) Clip to the start and stop times of PCS timebase
         for node_path, start in active_segments:
-            # Ip wire can be one of 16 but is normally no. 16 ('P_16')
+            # Ip wire can be one of 16 but is normally no. 16
             for wire_index in range(16, 0, -1):
                 wire_node_name = params.mds_conn.get_data(
                     node_path + f":P_{wire_index :02d}:name", tree_name="pcs"
