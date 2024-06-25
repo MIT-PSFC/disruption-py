@@ -186,7 +186,7 @@ class BasicCmodRequests(ShotDataRequest):
     )
     def get_active_wire_segments(params: ShotDataRequestParams):
         params.mds_conn.open_tree(tree_name="pcs")
-        root_nid = params.mds_conn.get("GetDefaultNid()")   # Technically all we need is to get the root path; not sure why it was done this way
+        root_nid = params.mds_conn.get("GetDefaultNid()") 
         
         children_nids = params.mds_conn.get(
             'getnci(getnci($, "CHILDREN_NIDS"), "NID_NUMBER")', arguments=root_nid
@@ -195,32 +195,6 @@ class BasicCmodRequests(ShotDataRequest):
             'getnci($, "FULLPATH")', arguments=children_nids
         )
 
-        # children_on = params.mds_conn.get_data(
-        #     f'getnci($, "STATE")', arguments=children_nids
-        # )   
-        '''
-        Segment states are stored in 'SEG_*:SEG_NUM' instead of 'SEG_*'
-        Don't need to get children_on here; both children_paths & children_on are iterated together
-        '''
-
-        '''
-        # Collect active segments and their information
-        active_segments = []
-        for node_path, is_on in zip(children_paths, children_on):
-            node_path = node_path.strip()
-
-            if (
-                node_path.split(".")[-1].startswith("SEG_") and is_on == 0
-            ):  # 0 represents node being on, 1 represents node being off
-                active_segments.append(
-                    (
-                        node_path,
-                        params.mds_conn.get_data(
-                            node_path + ":start_time", tree_name="pcs"
-                        ),
-                    )
-                )
-        '''
         # Collect active segments and their information
         active_segments = []
         for node_path in children_paths:
@@ -364,12 +338,10 @@ class BasicCmodRequests(ShotDataRequest):
                             end = pcstime[
                                 np.argmin(np.abs(pcstime - sigtime[-1]) + 0.0001)
                             ]
-
                             segment_indices = np.where(
                                 (pcstime >= start) & (pcstime <= end)
                             )
                             ip_prog[segment_indices] = ip_prog_temp[segment_indices]
-
                     except mdsExceptions.MdsException as e:
                         params.logger.warning(
                             [
