@@ -186,7 +186,7 @@ class BasicCmodRequests(ShotDataRequest):
     )
     def get_active_wire_segments(params: ShotDataRequestParams):
         params.mds_conn.open_tree(tree_name="pcs")
-        root_nid = params.mds_conn.get("GetDefaultNid()") 
+        root_nid = params.mds_conn.get("GetDefaultNid()")
         children_nids = params.mds_conn.get(
             'getnci(getnci($, "CHILDREN_NIDS"), "NID_NUMBER")', arguments=root_nid
         )
@@ -199,14 +199,17 @@ class BasicCmodRequests(ShotDataRequest):
         for node_path in children_paths:
             node_path = node_path.strip()
             if node_path.split(".")[-1].startswith("SEG_"):
-                is_on = params.mds_conn.get_data(f'getnci($, "STATE")', arguments=node_path + ':SEG_NUM')
-                if is_on == 0: # 0 represents node being on, 1 represents node being off
+                is_on = params.mds_conn.get_data(
+                    f'getnci($, "STATE")', arguments=node_path + ":SEG_NUM"
+                )
+                # 0 represents node being on, 1 represents node being off
+                if is_on == 0:
                     active_segments.append(
                         (
                             node_path,
                             params.mds_conn.get_data(
-                                node_path + ":start_time", tree_name='pcs'
-                            )
+                                node_path + ":start_time", tree_name="pcs"
+                            ),
                         )
                     )
 
