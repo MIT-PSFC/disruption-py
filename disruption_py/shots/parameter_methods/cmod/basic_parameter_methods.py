@@ -193,17 +193,18 @@ class BasicCmodRequests(ShotDataRequest):
         children_paths = params.mds_conn.get(
             'getnci($, "FULLPATH")', arguments=children_nids
         )
-        children_on = params.mds_conn.get_data(
-            f'getnci($, "STATE")', arguments=children_nids
-        )
 
         # Collect active segments and their information
         active_segments = []
-        for node_path, is_on in zip(children_paths, children_on):
+        for node_path in children_paths:
             node_path = node_path.strip()
-            if (
-                node_path.split(".")[-1].startswith("SEG_") and is_on == 0
-            ):  # 0 represents node being on, 1 represents node being off
+            if node_path.split(".")[-1].startswith("SEG_"):
+                is_on = params.mds_conn.get_data(
+                    f'getnci($, "STATE")', arguments=node_path + ":SEG_NUM"
+                )
+                # 0 represents node being on, 1 represents node being off
+                if is_on != 0:
+                    continue
                 active_segments.append(
                     (
                         node_path,
