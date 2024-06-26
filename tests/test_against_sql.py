@@ -156,6 +156,7 @@ if __name__ == "__main__":
         shot_ids = get_tokamak_test_shot_ids(tokamak)
     else:
         shot_ids = [args.shot_id]
+
     expected_failure_columns = get_tokamak_test_expected_failure_columns(tokamak)
 
     data_differences = eval_against_sql(

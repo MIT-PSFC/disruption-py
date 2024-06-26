@@ -245,8 +245,6 @@ EXPECTED_FAILURE_COLUMNS = {
         "zcur",
         "v_z",
         "z_times_v_z",
-        "dipprog_dt",
-        "ip_error",
         "sxr",
         "tritop",
         "tribot",
