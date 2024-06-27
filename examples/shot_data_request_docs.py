@@ -6,22 +6,21 @@ import numpy as np
 import pandas as pd
 
 from disruption_py.settings.shot_data_request import (
-    ShotDataRequest,
     ShotDataRequestParams,
 )
-from disruption_py.shots.helpers.method_caching import parameter_cached_method
+from disruption_py.shots.helpers.method_caching import register_method
 from disruption_py.utils.mappings.tokamak import Tokamak
 
 
-@parameter_cached_method(used_trees=["tree_1", "tree_2"])
+@register_method(used_trees=["tree_1", "tree_2"])
 def decorated_shot_data_method(self, params: ShotDataRequestParams) -> pd.DataFrame:
-    """All decorated methods in subclasses of `ShotDataRequest` will be called once for every shot retrieved.
+    """All registered methods passed to `get_shots_data` will be called once for every shot retrieved.
     Decorated methods may call other decorated methods, however, execution order is not guranteed as calls
-    will be reordered to minimize resource usage based on the `parameter_cached_method` decorator.
+    will be reordered to minimize resource usage based on the `register_method` decorator.
 
     Parameters
     ----------
-    params : ShotDataRequest
+    params : ShotDataRequestParams
         Parameters passed by disruption_py to the decorated method that should be used to help retrieve the shot data from MDSplus.
 
     Returns
@@ -37,10 +36,10 @@ def decorated_shot_data_method(self, params: ShotDataRequestParams) -> pd.DataFr
 # --8<-- [start:kappa_area_request_example]
 
 
-class KappaAreaRequest(ShotDataRequest):
+class KappaAreaRequest:
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["kappa_area"], used_trees=["_efit_tree"], tokamak=Tokamak.CMOD
     )
     def _get_kappa_area(params: ShotDataRequestParams):

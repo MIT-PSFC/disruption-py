@@ -32,9 +32,10 @@ class Consumer(multiprocessing.Process):
         multiprocessing.Process.__init__(self)
         self.task_queue = task_queue
         self.result_queue = result_queue
-        self.shot_manager: ShotManager = shot_manager_initializer()
+        self.shot_manager_initializer = shot_manager_initializer
 
     def run(self):
+        shot_manager: ShotManager = self.shot_manager_initializer()
         while True:
             next_task = self.task_queue.get()
             if next_task is MARK_COMPLETE:
@@ -42,7 +43,7 @@ class Consumer(multiprocessing.Process):
                 self.task_queue.task_done()
                 break
 
-            shot_id, answer = next_task(self.shot_manager)
+            shot_id, answer = next_task(shot_manager)
 
             self.task_queue.task_done()
             self.result_queue.put((shot_id, answer))

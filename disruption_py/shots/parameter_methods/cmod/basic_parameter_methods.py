@@ -13,12 +13,10 @@ from MDSplus import mdsExceptions
 
 import disruption_py.data
 from disruption_py.settings.shot_data_request import (
-    ShotDataRequest,
     ShotDataRequestParams,
 )
 from disruption_py.shots.helpers.method_caching import (
-    cached_method,
-    parameter_cached_method,
+    register_method,
 )
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.math_utils import gaussian_fit, interp1, smooth
@@ -27,7 +25,7 @@ from disruption_py.utils.utils import safe_cast
 warnings.filterwarnings("error", category=RuntimeWarning)
 
 
-class CModEfitRequests(ShotDataRequest):
+class CModEfitRequests:
 
     efit_cols = {
         "beta_n": r"\efit_aeqdsk:betan",
@@ -62,7 +60,7 @@ class CModEfitRequests(ShotDataRequest):
     efit_derivs = {"beta_p": "dbetap_dt", "li": "dli_dt", "Wmhd": "dWmhd_dt"}
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=[
             *efit_cols.keys(),
             *efit_cols_pre_2000.keys(),
@@ -179,10 +177,13 @@ class CModEfitRequests(ShotDataRequest):
         return valid_indices, times[valid_indices]
 
 
-class BasicCmodRequests(ShotDataRequest):
+class BasicCmodRequests:
     @staticmethod
-    @cached_method(
-        used_trees=["pcs"], cache_between_threads=False, tokamak=Tokamak.CMOD
+    @register_method(
+        populate=False,
+        used_trees=["pcs"],
+        cache_between_threads=False,
+        tokamak=Tokamak.CMOD,
     )
     def get_active_wire_segments(params: ShotDataRequestParams):
         params.mds_conn.open_tree(tree_name="pcs")
@@ -218,7 +219,7 @@ class BasicCmodRequests(ShotDataRequest):
         return active_segments
 
     @staticmethod
-    @parameter_cached_method(columns=["time_until_disrupt"], tokamak=Tokamak.CMOD)
+    @register_method(columns=["time_until_disrupt"], tokamak=Tokamak.CMOD)
     def _get_time_until_disrupt(params: ShotDataRequestParams):
         time_until_disrupt = np.full(len(params.shot_props.times), np.nan)
         if params.shot_props.disrupted:
@@ -297,10 +298,10 @@ class BasicCmodRequests(ShotDataRequest):
         )
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["ip", "dip_dt", "dip_smoothed", "ip_prog", "dipprog_dt", "ip_error"],
         used_trees=["magnetics", "pcs"],
-        contained_cached_methods=["get_active_wire_segments"],
+        contained_registered_methods=["get_active_wire_segments"],
         tokamak=Tokamak.CMOD,
     )
     def _get_ip_parameters(params: ShotDataRequestParams):
@@ -437,9 +438,9 @@ class BasicCmodRequests(ShotDataRequest):
         )
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["z_error", "z_prog", "zcur", "v_z", "z_times_v_z"],
-        contained_cached_methods=["get_active_wire_segments"],
+        contained_registered_methods=["get_active_wire_segments"],
         used_trees=["hybrid", "magnetics", "pcs"],
         tokamak=Tokamak.CMOD,
     )
@@ -589,10 +590,10 @@ class BasicCmodRequests(ShotDataRequest):
         return pd.DataFrame({"p_oh": p_ohm, "v_loop": v_loop})
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["p_oh", "v_loop"],
         used_trees=["analysis", "_efit_tree"],
-        contained_cached_methods=["_get_ip_parameters"],
+        contained_registered_methods=["_get_ip_parameters"],
         tokamak=Tokamak.CMOD,
     )
     def _get_ohmic_parameters(params: ShotDataRequestParams):
@@ -664,10 +665,10 @@ class BasicCmodRequests(ShotDataRequest):
         )
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", "radiated_fraction"],
         used_trees=["LH", "RF", "spectroscopy"],
-        contained_cached_methods=["_get_ohmic_parameters"],
+        contained_registered_methods=["_get_ohmic_parameters"],
         tokamak=Tokamak.CMOD,
     )
     def _get_power(params: ShotDataRequestParams):
@@ -704,7 +705,7 @@ class BasicCmodRequests(ShotDataRequest):
         )
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["kappa_area"], used_trees=["_efit_tree"], tokamak=Tokamak.CMOD
     )
     def _get_kappa_area(params: ShotDataRequestParams):
@@ -745,9 +746,7 @@ class BasicCmodRequests(ShotDataRequest):
 
     # TODO: Calculate v_mid
     @staticmethod
-    @parameter_cached_method(
-        columns=["v_0"], used_trees=["spectroscopy"], tokamak=Tokamak.CMOD
-    )
+    @register_method(columns=["v_0"], used_trees=["spectroscopy"], tokamak=Tokamak.CMOD)
     def _get_rotation_velocity(params: ShotDataRequestParams):
         with resources.path(disruption_py.data, "lock_mode_calib_shots.txt") as fio:
             calibrated = pd.read_csv(fio)
@@ -786,7 +785,7 @@ class BasicCmodRequests(ShotDataRequest):
 
     # TODO: Try catch failure to get BP13 sensors
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase", "BT"],
         used_trees=["magnetics"],
         tokamak=Tokamak.CMOD,
@@ -919,7 +918,7 @@ class BasicCmodRequests(ShotDataRequest):
         return pd.DataFrame({"n_e": n_e, "dn_dt": dn_dt, "Greenwald_fraction": g_f})
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["n_e", "dn_dt", "Greenwald_fraction"],
         used_trees=["electrons", "magnetics", "analysis"],
         tokamak=Tokamak.CMOD,
@@ -955,7 +954,7 @@ class BasicCmodRequests(ShotDataRequest):
         return pd.DataFrame({"I_efc": interp1(t_iefc, iefc, times, "linear")})
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["I_efc"], used_trees=["engineering"], tokamak=Tokamak.CMOD
     )
     def _get_efc_current(params: ShotDataRequestParams):
@@ -1014,7 +1013,7 @@ class BasicCmodRequests(ShotDataRequest):
         return pd.DataFrame({"Te_width": te_hwm})
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["Te_width"], used_trees=["electrons"], tokamak=Tokamak.CMOD
     )
     def _get_Ts_parameters(params: ShotDataRequestParams):
@@ -1050,7 +1049,7 @@ class BasicCmodRequests(ShotDataRequest):
         pass
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["ne_peaking", "Te_peaking", "pressure_peaking"],
         used_trees=["_efit_tree", "electrons"],
         tokamak=Tokamak.CMOD,
@@ -1157,7 +1156,7 @@ class BasicCmodRequests(ShotDataRequest):
             )
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["prad_peaking"],
         used_trees=["cmod", "spectroscopy"],
         tokamak=Tokamak.CMOD,
@@ -1273,7 +1272,7 @@ class BasicCmodRequests(ShotDataRequest):
         return pd.DataFrame({"prad_peaking": prad_peaking})
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=["ne_peaking", "Te_peaking", "pressure_peaking"],
         tags=["experimental"],
         used_trees=["cmod", "electrons"],
@@ -1405,9 +1404,7 @@ class BasicCmodRequests(ShotDataRequest):
 
     # TODO: get more accurate description of soft x-ray data
     @staticmethod
-    @parameter_cached_method(
-        columns=["sxr"], used_trees=["xtomo"], tokamak=Tokamak.CMOD
-    )
+    @register_method(columns=["sxr"], used_trees=["xtomo"], tokamak=Tokamak.CMOD)
     def _get_sxr_data(params: ShotDataRequestParams):
         """ """
         sxr = np.full(len(params.shot_props.times), np.nan)
@@ -1516,7 +1513,7 @@ class BasicCmodRequests(ShotDataRequest):
         return pd.DataFrame({"Te_edge": Te_edge, "ne_edge": ne_edge})
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         tags=["experimental"],
         columns=["Te_edge", "ne_edge"],
         used_trees=["electrons"],
@@ -1634,10 +1631,10 @@ class BasicCmodRequests(ShotDataRequest):
 
     # TODO: Finish
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         tags=["experimental"],
         columns=["H98", "Wmhd", "btor", "dWmhd_dt", "p_input"],
-        contained_cached_methods=[
+        contained_registered_methods=[
             "_get_power",
             "_get_EFIT_parameters",
             "_get_densities",

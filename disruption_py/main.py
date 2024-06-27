@@ -67,7 +67,7 @@ def get_shots_data(
     )
     database = database_initializer()
     mds_connection_initializer = mds_connection_initializer or (
-        lambda: get_mdsplus_class(tokamak=tokamak)
+        lambda: ProcessMDSConnection.from_config(tokamak=tokamak)
     )
     # Clean-up parameters
     if shot_settings is None:
@@ -91,10 +91,12 @@ def get_shots_data(
             database=database,
             num_processes=num_processes,
             output_type_request=output_type_request,
-            shot_manager_initializer=lambda: shot_manager_cls(
-                tokamak=tokamak,
-                process_database=database_initializer(),
-                process_mds_conn=mds_connection_initializer(),
+            shot_manager_initializer=(
+                lambda: shot_manager_cls(
+                    tokamak=tokamak,
+                    process_database=database_initializer(),
+                    process_mds_conn=mds_connection_initializer(),
+                )
             ),
             tokamak=tokamak,
             logger=logger,

@@ -4,15 +4,14 @@ import numpy as np
 import pandas as pd
 
 from disruption_py.settings.shot_data_request import (
-    ShotDataRequest,
     ShotDataRequestParams,
 )
-from disruption_py.shots.helpers.method_caching import parameter_cached_method
+from disruption_py.shots.helpers.method_caching import register_method
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.math_utils import interp1
 
 
-class D3DEfitRequests(ShotDataRequest):
+class D3DEfitRequests:
 
     # EFIT Variables
     efit_cols = {
@@ -40,7 +39,7 @@ class D3DEfitRequests(ShotDataRequest):
     # 'v_loop_efit_RT': r'\efit_a_eqdsk:vsurf',
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=[*efit_cols.keys(), *efit_derivs.keys()],
         used_trees=["_efit_tree"],
         tokamak=Tokamak.D3D,
@@ -76,7 +75,7 @@ class D3DEfitRequests(ShotDataRequest):
         return pd.DataFrame(efit_data)
 
     @staticmethod
-    @parameter_cached_method(
+    @register_method(
         columns=[*rt_efit_cols.keys()],
         used_trees=["efitrt1"],
         tokamak=Tokamak.D3D,
