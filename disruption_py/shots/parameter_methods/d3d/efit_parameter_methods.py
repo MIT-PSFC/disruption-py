@@ -41,7 +41,6 @@ class D3DEfitRequests:
     @staticmethod
     @register_method(
         columns=[*efit_cols.keys(), *efit_derivs.keys()],
-        used_trees=["_efit_tree"],
         tokamak=Tokamak.D3D,
     )
     def _get_efit_parameters(params: ShotDataRequestParams):
@@ -77,7 +76,6 @@ class D3DEfitRequests:
     @staticmethod
     @register_method(
         columns=[*rt_efit_cols.keys()],
-        used_trees=["efitrt1"],
         tokamak=Tokamak.D3D,
     )
     def _get_rt_efit_parameters(params: ShotDataRequestParams):

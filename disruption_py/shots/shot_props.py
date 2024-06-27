@@ -32,6 +32,6 @@ class ShotProps:
         return self.disruption_time is not None
 
     def cleanup(self):
-        self.mds_conn.close_all_trees()
+        self.mds_conn.cleanup()
         self.times = None
         self._cached_results.clear()

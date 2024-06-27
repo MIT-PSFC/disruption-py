@@ -37,9 +37,7 @@ class BasicD3DRequests:
         )
 
     @staticmethod
-    @register_method(
-        columns=["H98", "H_alpha"], used_trees=["transport", "d3d"], tokamak=Tokamak.D3D
-    )
+    @register_method(columns=["H98", "H_alpha"], tokamak=Tokamak.D3D)
     def get_H_parameters(params: ShotDataRequestParams):
         try:
             h_98, t_h_98 = params.mds_conn.get_data_with_dims(
@@ -72,8 +70,6 @@ class BasicD3DRequests:
     @staticmethod
     @register_method(
         columns=["p_rad", "p_nbi", "p_ech", "p_ohm", "radiated_fraction", "v_loop"],
-        contained_registered_methods=["get_ohmic_parameters"],
-        used_trees=["d3d", "rf", "bolom"],
         tokamak=Tokamak.D3D,
     )
     def get_power_parameters(params: ShotDataRequestParams):
@@ -208,7 +204,6 @@ class BasicD3DRequests:
     @staticmethod
     @register_method(
         columns=["p_rad", "p_nbi", "p_ech", "p_ohm", "radiated_fraction", "v_loop"],
-        used_trees=["d3d", "_efit_tree"],
         tokamak=Tokamak.D3D,
     )
     def get_ohmic_parameters(params: ShotDataRequestParams):
@@ -267,7 +262,6 @@ class BasicD3DRequests:
     @staticmethod
     @register_method(
         columns=["n_e", "Greenwald_fraction", "dn_dt"],
-        used_trees=["_efit_tree"],
         tokamak=Tokamak.D3D,
     )
     def get_density_parameters(params: ShotDataRequestParams):
@@ -326,7 +320,6 @@ class BasicD3DRequests:
     @staticmethod
     @register_method(
         columns=["n_e_RT", "Greenwald_fraction_RT"],
-        used_trees=["efitrt1"],
         tokamak=Tokamak.D3D,
     )
     def get_rt_density_parameters(params: ShotDataRequestParams):
@@ -377,7 +370,6 @@ class BasicD3DRequests:
     @staticmethod
     @register_method(
         columns=["ip", "ip_error", "dip_dt", "dipprog_dt", "power_supply_railed"],
-        used_trees=["d3d"],
         tokamak=Tokamak.D3D,
     )
     def get_ip_parameters(params: ShotDataRequestParams):
@@ -504,7 +496,6 @@ class BasicD3DRequests:
             "dipprog_dt",
             "power_supply_railed",
         ],
-        used_trees=["d3d"],
         tokamak=Tokamak.D3D,
     )
     def get_rt_ip_parameters(params: ShotDataRequestParams):
@@ -644,7 +635,6 @@ class BasicD3DRequests:
     @staticmethod
     @register_method(
         columns=["zcur", "zcur_normalized", "z_prog", "z_error", "z_error_normalized"],
-        used_trees=["d3d", "_efit_tree"],
         tokamak=Tokamak.D3D,
     )
     def get_z_parameters(params: ShotDataRequestParams):
@@ -706,7 +696,6 @@ class BasicD3DRequests:
     @staticmethod
     @register_method(
         columns=["n_equal_1_normalized", "n_equal_1_mode"],
-        used_trees=["d3d"],
         tokamak=Tokamak.D3D,
     )
     def get_n1_bradial_parameters(params: ShotDataRequestParams):
@@ -779,9 +768,7 @@ class BasicD3DRequests:
         )
 
     @staticmethod
-    @register_method(
-        columns=["n1rms", "n1rms_normalized"], used_trees=["d3d"], tokamak=Tokamak.D3D
-    )
+    @register_method(columns=["n1rms", "n1rms_normalized"], tokamak=Tokamak.D3D)
     def get_n1rms_parameters(params: ShotDataRequestParams):
         n1rms, t_n1rms = params.mds_conn.get_data_with_dims(r"\n1rms", tree_name="d3d")
         n1rms *= 1.0e-4  # Gauss -> Tesla
@@ -799,8 +786,6 @@ class BasicD3DRequests:
     @staticmethod
     @register_method(
         columns=["te_pf", "ne_pf", "rad_cva", "rad_xdiv"],
-        contained_registered_methods=["_get_ne_te", "_get_efit_dict", "_get_p_rad"],
-        used_trees=["d3d"],
         tokamak=Tokamak.D3D,
     )
     def get_peaking_factors(params: ShotDataRequestParams):
@@ -1029,7 +1014,6 @@ class BasicD3DRequests:
 
     @staticmethod
     @register_method(
-        contained_registered_methods=["_get_ne_te", "_get_efit_dict"],
         tags=["unfinished"],
         tokamak=Tokamak.D3D,
         columns=[
@@ -1128,7 +1112,7 @@ class BasicD3DRequests:
         )
 
     @staticmethod
-    @register_method(columns=["z_eff"], used_trees=["d3d"], tokamak=Tokamak.D3D)
+    @register_method(columns=["z_eff"], tokamak=Tokamak.D3D)
     def get_zeff_parameters(params: ShotDataRequestParams):
         # Get Zeff
         try:
@@ -1163,9 +1147,7 @@ class BasicD3DRequests:
         return pd.DataFrame({"z_eff": zeff})
 
     @staticmethod
-    @register_method(
-        columns=["kappa_area"], used_trees=["_efit_tree"], tokamak=Tokamak.D3D
-    )
+    @register_method(columns=["kappa_area"], tokamak=Tokamak.D3D)
     def get_kappa_area(params: ShotDataRequestParams):
         a_minor = params.mds_conn.get_data(
             r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
@@ -1180,9 +1162,7 @@ class BasicD3DRequests:
         return pd.DataFrame({"kappa_area": kappa_area})
 
     @staticmethod
-    @register_method(
-        columns=["H98", "H_alpha"], used_trees=["transport", "d3d"], tokamak=Tokamak.D3D
-    )
+    @register_method(columns=["H98", "H_alpha"], tokamak=Tokamak.D3D)
     def get_h_parameters(params: ShotDataRequestParams):
         h98 = np.full(len(params.shot_props.times), np.nan)
         h98, t_h98 = params.mds_conn.get_data_with_dims(
@@ -1199,7 +1179,6 @@ class BasicD3DRequests:
     @staticmethod
     @register_method(
         columns=["delta", "squareness", "aminor"],
-        used_trees=["_efit_tree"],
         tokamak=Tokamak.D3D,
     )
     def get_shape_parameters(params: ShotDataRequestParams):
@@ -1262,7 +1241,6 @@ class BasicD3DRequests:
     @staticmethod
     @register_method(
         populate=False,
-        used_trees=["electrons"],
     )
     def _get_ne_te(
         params: ShotDataRequestParams,
@@ -1364,7 +1342,6 @@ class BasicD3DRequests:
     @staticmethod
     @register_method(
         populate=False,
-        used_trees=["bolom", "_efit_tree"],
     )
     def _get_p_rad(params: ShotDataRequestParams, fan="custom"):
         if fan == "upper":
@@ -1426,7 +1403,6 @@ class BasicD3DRequests:
     @staticmethod
     @register_method(
         populate=False,
-        used_trees=["_efit_tree"],
     )
     def _get_efit_dict(params: ShotDataRequestParams):
         efit_dict = dict()
