@@ -14,14 +14,12 @@ class MethodMetadata:
 
     cache_between_threads: bool
     used_trees: Union[List[str], Callable]
-    contained_registered_methods: Union[List[str], Callable]
     tokamaks: Union[Tokamak, List[Tokamak]]
     columns: Union[List[str], Callable]
     tags: List[str]
 
     ALLOWED_UNRESOLVED = [
-        "used_trees",
-        "contained_registered_methods",
+        "columns",
         "tokamaks",
     ]
 
@@ -30,7 +28,6 @@ class MethodMetadata:
             object.__setattr__(self, "tags", self.tags or ["all"])
             object.__setattr__(self, "columns", self.columns or [])
         object.__setattr__(self, "used_trees", self.used_trees or [])
-        object.__setattr__(self, "contained_registered_methods", [])
         object.__setattr__(self, "tokamaks", self.tokamaks or [])
 
 
