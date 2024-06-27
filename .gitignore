@@ -18,4 +18,6 @@ site
 _site
 .idea
 .nfs*
+.coverage
+htmlcov/*
 local

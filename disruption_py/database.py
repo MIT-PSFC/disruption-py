@@ -207,8 +207,6 @@ class ShotDatabase:
         override_columns : List[str]
             List of protecrted columns that can should still be updated. Update must be true for existing values in the
             columns to be changed. Default value is [].
-        table_name : str
-            Name of the table for data insert or update. Default value is "disruption_warning".
         """
         table_name = WRITE_DATABASE_TABLE_NAME
         curr_df = pd.read_sql_query(
