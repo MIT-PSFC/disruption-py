@@ -19,7 +19,7 @@ global_instances_registry = defaultdict(list)
 
 def register_method(
     populate=True,
-    cache_between_threads=True,
+    cache=True,
     tokamak=None,
     tags=None,
     columns=None,
@@ -50,9 +50,8 @@ def register_method(
         returns the names of used trees at runtime. See `method_metadata_function` for more details about using functions.
         These columns are also used to determine which methods to run when calling `get_shots_data` with `run_columns`.
         Default value is an empty list implying that no columns are returned by the function.
-    cache_between_threads: bool
-        Specifically for methods with the `register_method` decorator that return objects that are not threadsafe. If True, the cache
-        will be shared between threads. If False, the cache will only be used by the same thread. Default is True.
+    cache: bool
+        Whether to cache the result of the method. Default is True.
     tokamak : Union[Tokamak, List[Tokamak]]
         A list of Tokamak objects that represent which tokamaks this method may be used for. Default value of None allows the method
         to be run for any tokamak.
@@ -60,27 +59,30 @@ def register_method(
 
     def outer_wrapper(method):
         @functools.wraps(method)
-        def cached_wrapper(*args, **kwargs):
-            return cache_or_compute(method, args, kwargs)
+        def wrapper(*args, **kwargs):
+            if cache:
+                return cache_or_compute(method, args, kwargs)
+            else:
+                return method(*args, **kwargs)
 
         method_metadata = MethodMetadata(
             name=method.__name__,
+            cache=cache,
             populate=populate,
-            cache_between_threads=cache_between_threads,
             tokamaks=tokamak,
             columns=columns,
             tags=tags,
         )
 
-        cached_wrapper.method_metadata = method_metadata
+        wrapper.method_metadata = method_metadata
 
         # Register the method in the global registry
         if isinstance(method, staticmethod):
-            return staticmethod(cached_wrapper)
+            return staticmethod(wrapper)
         elif isinstance(method, classmethod):
-            return classmethod(cached_wrapper)
+            return classmethod(wrapper)
         else:
-            return cached_wrapper
+            return wrapper
 
     return outer_wrapper
 

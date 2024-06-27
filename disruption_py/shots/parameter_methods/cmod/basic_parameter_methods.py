@@ -180,7 +180,6 @@ class BasicCmodRequests:
     @staticmethod
     @register_method(
         populate=False,
-        cache_between_threads=False,
         tokamak=Tokamak.CMOD,
     )
     def get_active_wire_segments(params: ShotDataRequestParams):

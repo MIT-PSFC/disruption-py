@@ -12,7 +12,7 @@ class MethodMetadata:
     name: str
     populate: bool
 
-    cache_between_threads: bool
+    cache: bool
     tokamaks: Union[Tokamak, List[Tokamak]]
     columns: Union[List[str], Callable]
     tags: List[str]
