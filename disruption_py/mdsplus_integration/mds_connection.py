@@ -55,7 +55,6 @@ class MDSConnection:
         self.shot_id = shot_id
         self.tree_nickname_funcs = {}
         self.tree_nicknames = {}
-        self.open_trees = set()
         self.last_open_tree = None
 
     def open_tree(self, tree_name: str):
@@ -78,37 +77,12 @@ class MDSConnection:
             self.conn.openTree(tree_name, self.shot_id)
 
         self.last_open_tree = tree_name
-        self.open_trees.add(tree_name)
 
-    def close_tree(self, tree_name: str):
-        """
-        Close the specified tree_name.
-        """
-        if tree_name in self.tree_nicknames:
-            tree_name = self.tree_nicknames[tree_name]
-
-        if tree_name in self.open_trees:
-            try:
-                self.conn.closeTree(tree_name, self.shot_id)
-            except Exception as e:
-                self.logger.warning(
-                    f"Error closing tree {tree_name} in shot {self.shot_id}"
-                )
-                self.logger.debug(e)
-
-        if self.last_open_tree == tree_name:
-            self.last_open_tree = None
-        self.open_trees.discard(tree_name)
-
-    def close_all_trees(self):
+    def cleanup(self):
         """
         Close all open trees
         """
-        for open_tree in self.open_trees.copy():
-            self.close_tree(open_tree)
         self.last_open_tree = None
-        self.open_trees.clear()
-        # self.conn.closeAllTrees()
 
     def get(self, expression: str, arguments: Any = None, tree_name: str = None) -> Any:
         """Evaluate the specified expression.

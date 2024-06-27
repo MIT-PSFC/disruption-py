@@ -122,7 +122,7 @@ class ShotManager(ABC):
             self.logger.info(
                 f"[Shot {shot_id}]: Caught failed to setup shot {shot_id}, cleaning up tree manager."
             )
-            mds_conn.close_all_trees()
+            mds_conn.cleanup()
             raise e
 
     @classmethod
