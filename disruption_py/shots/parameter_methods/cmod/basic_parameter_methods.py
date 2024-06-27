@@ -69,7 +69,6 @@ class CModEfitRequests:
             "v_loop_efit",
             "beta_n",
         ],
-        used_trees=["_efit_tree"],
         tokamak=Tokamak.CMOD,
     )
     def _get_EFIT_parameters(params: ShotDataRequestParams):
@@ -181,7 +180,6 @@ class BasicCmodRequests:
     @staticmethod
     @register_method(
         populate=False,
-        used_trees=["pcs"],
         cache_between_threads=False,
         tokamak=Tokamak.CMOD,
     )
@@ -300,7 +298,6 @@ class BasicCmodRequests:
     @staticmethod
     @register_method(
         columns=["ip", "dip_dt", "dip_smoothed", "ip_prog", "dipprog_dt", "ip_error"],
-        used_trees=["magnetics", "pcs"],
         tokamak=Tokamak.CMOD,
     )
     def _get_ip_parameters(params: ShotDataRequestParams):
@@ -439,7 +436,6 @@ class BasicCmodRequests:
     @staticmethod
     @register_method(
         columns=["z_error", "z_prog", "zcur", "v_z", "z_times_v_z"],
-        used_trees=["hybrid", "magnetics", "pcs"],
         tokamak=Tokamak.CMOD,
     )
     def _get_z_parameters(params: ShotDataRequestParams):
@@ -590,7 +586,6 @@ class BasicCmodRequests:
     @staticmethod
     @register_method(
         columns=["p_oh", "v_loop"],
-        used_trees=["analysis", "_efit_tree"],
         tokamak=Tokamak.CMOD,
     )
     def _get_ohmic_parameters(params: ShotDataRequestParams):
@@ -664,7 +659,6 @@ class BasicCmodRequests:
     @staticmethod
     @register_method(
         columns=["p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", "radiated_fraction"],
-        used_trees=["LH", "RF", "spectroscopy"],
         tokamak=Tokamak.CMOD,
     )
     def _get_power(params: ShotDataRequestParams):
@@ -701,9 +695,7 @@ class BasicCmodRequests:
         )
 
     @staticmethod
-    @register_method(
-        columns=["kappa_area"], used_trees=["_efit_tree"], tokamak=Tokamak.CMOD
-    )
+    @register_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
     def _get_kappa_area(params: ShotDataRequestParams):
         aminor = params.mds_conn.get_data(
             r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
@@ -742,7 +734,7 @@ class BasicCmodRequests:
 
     # TODO: Calculate v_mid
     @staticmethod
-    @register_method(columns=["v_0"], used_trees=["spectroscopy"], tokamak=Tokamak.CMOD)
+    @register_method(columns=["v_0"], tokamak=Tokamak.CMOD)
     def _get_rotation_velocity(params: ShotDataRequestParams):
         with resources.path(disruption_py.data, "lock_mode_calib_shots.txt") as fio:
             calibrated = pd.read_csv(fio)
@@ -783,7 +775,6 @@ class BasicCmodRequests:
     @staticmethod
     @register_method(
         columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase", "BT"],
-        used_trees=["magnetics"],
         tokamak=Tokamak.CMOD,
     )
     def _get_n_equal_1_amplitude(params: ShotDataRequestParams):
@@ -916,7 +907,6 @@ class BasicCmodRequests:
     @staticmethod
     @register_method(
         columns=["n_e", "dn_dt", "Greenwald_fraction"],
-        used_trees=["electrons", "magnetics", "analysis"],
         tokamak=Tokamak.CMOD,
     )
     def _get_densities(params: ShotDataRequestParams):
@@ -950,9 +940,7 @@ class BasicCmodRequests:
         return pd.DataFrame({"I_efc": interp1(t_iefc, iefc, times, "linear")})
 
     @staticmethod
-    @register_method(
-        columns=["I_efc"], used_trees=["engineering"], tokamak=Tokamak.CMOD
-    )
+    @register_method(columns=["I_efc"], tokamak=Tokamak.CMOD)
     def _get_efc_current(params: ShotDataRequestParams):
         try:
             iefc, t_iefc = params.mds_conn.get_data_with_dims(
@@ -1009,9 +997,7 @@ class BasicCmodRequests:
         return pd.DataFrame({"Te_width": te_hwm})
 
     @staticmethod
-    @register_method(
-        columns=["Te_width"], used_trees=["electrons"], tokamak=Tokamak.CMOD
-    )
+    @register_method(columns=["Te_width"], tokamak=Tokamak.CMOD)
     def _get_Ts_parameters(params: ShotDataRequestParams):
         # TODO: Guassian vs parabolic fit for te profile
         te_hwm = np.empty((len(params.shot_props.times)))
@@ -1047,7 +1033,6 @@ class BasicCmodRequests:
     @staticmethod
     @register_method(
         columns=["ne_peaking", "Te_peaking", "pressure_peaking"],
-        used_trees=["_efit_tree", "electrons"],
         tokamak=Tokamak.CMOD,
     )
     def _get_peaking_factors(params: ShotDataRequestParams):
@@ -1154,7 +1139,6 @@ class BasicCmodRequests:
     @staticmethod
     @register_method(
         columns=["prad_peaking"],
-        used_trees=["cmod", "spectroscopy"],
         tokamak=Tokamak.CMOD,
     )
     def _get_prad_peaking(params: ShotDataRequestParams):
@@ -1271,7 +1255,6 @@ class BasicCmodRequests:
     @register_method(
         columns=["ne_peaking", "Te_peaking", "pressure_peaking"],
         tags=["experimental"],
-        used_trees=["cmod", "electrons"],
         tokamak=Tokamak.CMOD,
     )
     def _get_peaking_factors_no_tci(params: ShotDataRequestParams):
@@ -1400,7 +1383,7 @@ class BasicCmodRequests:
 
     # TODO: get more accurate description of soft x-ray data
     @staticmethod
-    @register_method(columns=["sxr"], used_trees=["xtomo"], tokamak=Tokamak.CMOD)
+    @register_method(columns=["sxr"], tokamak=Tokamak.CMOD)
     def _get_sxr_data(params: ShotDataRequestParams):
         """ """
         sxr = np.full(len(params.shot_props.times), np.nan)
@@ -1512,7 +1495,6 @@ class BasicCmodRequests:
     @register_method(
         tags=["experimental"],
         columns=["Te_edge", "ne_edge"],
-        used_trees=["electrons"],
         tokamak=Tokamak.CMOD,
     )
     def _get_edge_parameters(params: ShotDataRequestParams):
@@ -1630,7 +1612,6 @@ class BasicCmodRequests:
     @register_method(
         tags=["experimental"],
         columns=["H98", "Wmhd", "btor", "dWmhd_dt", "p_input"],
-        used_trees=["magnetics"],
         tokamak=Tokamak.CMOD,
     )
     def _get_H98(params: ShotDataRequestParams):

@@ -19,8 +19,6 @@ global_instances_registry = defaultdict(list)
 
 def register_method(
     populate=True,
-    used_trees=None,
-    contained_registered_methods=None,
     cache_between_threads=True,
     tokamak=None,
     tags=None,
@@ -52,16 +50,6 @@ def register_method(
         returns the names of used trees at runtime. See `method_metadata_function` for more details about using functions.
         These columns are also used to determine which methods to run when calling `get_shots_data` with `run_columns`.
         Default value is an empty list implying that no columns are returned by the function.
-    used_trees : Union[List[str], Callable]
-        This list of MDSPlus tree names used by the method, this should be a superset of used tree names.
-        This list is used to help determine the optimal execution order of decorated methods. Alternately, can pass a method
-        that returns the names of used trees at runtime. See `method_metadata_function` for more details about using functions.
-        Default value is no used trees.
-    contained_registered_methods : Union[List[str], Callable]
-        A list of all methods decorated with the `register_method` decorator. That are used inside of
-        this function. This list is used to help determine the optimal execution order of decorated methods. Alternately, can pass a
-        method that returns the names of used decorated methods at runtime. See `method_metadata_function` for more details
-        about using functions. Default value is no contained cached methods.
     cache_between_threads: bool
         Specifically for methods with the `register_method` decorator that return objects that are not threadsafe. If True, the cache
         will be shared between threads. If False, the cache will only be used by the same thread. Default is True.
@@ -79,8 +67,6 @@ def register_method(
             name=method.__name__,
             populate=populate,
             cache_between_threads=cache_between_threads,
-            used_trees=used_trees,
-            contained_registered_methods=contained_registered_methods,
             tokamaks=tokamak,
             columns=columns,
             tags=tags,

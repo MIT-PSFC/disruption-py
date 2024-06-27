@@ -32,17 +32,17 @@ def method_metadata_function(
 
 
 # --8<-- [start:decorator_functions_example]
-def used_trees_by_shot_id(
+def used_columns_by_shot_id(
     parent_object, shot_data_request_params: ShotDataRequestParams, **kwargs
 ) -> List[str]:
     # any properties of the `ShotProps` can be used to compute returned values
     if shot_data_request_params.shot_props.shot_id > 10000000:
-        return ["tree_1", "tree_2"]
+        return ["kappa_area", "q0"]
     else:
-        return ["tree_1", "tree_3"]
+        return ["kappa_area"]
 
 
-@register_method(used_trees=["tree_1", "tree_2"])
+@register_method(columns=["kappa_area"])
 def decorated_shot_data_method(self, params: ShotDataRequestParams) -> pd.DataFrame:
     pass
 

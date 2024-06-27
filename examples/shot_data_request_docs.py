@@ -12,7 +12,7 @@ from disruption_py.shots.helpers.method_caching import register_method
 from disruption_py.utils.mappings.tokamak import Tokamak
 
 
-@register_method(used_trees=["tree_1", "tree_2"])
+@register_method(columns=["upper_gap", "lower_gap"], tokamak=Tokamak.D3D)
 def decorated_shot_data_method(self, params: ShotDataRequestParams) -> pd.DataFrame:
     """All registered methods passed to `get_shots_data` will be called once for every shot retrieved.
     Decorated methods may call other decorated methods, however, execution order is not guranteed as calls
@@ -39,9 +39,7 @@ def decorated_shot_data_method(self, params: ShotDataRequestParams) -> pd.DataFr
 class KappaAreaRequest:
 
     @staticmethod
-    @register_method(
-        columns=["kappa_area"], used_trees=["_efit_tree"], tokamak=Tokamak.CMOD
-    )
+    @register_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
     def _get_kappa_area(params: ShotDataRequestParams):
         aminor = params.shot_props.mds_conn.get_data(
             r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
