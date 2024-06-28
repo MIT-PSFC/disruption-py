@@ -14,9 +14,6 @@ from disruption_py.shots.helpers.method_metadata import (
 )
 from disruption_py.shots.shot_props import ShotProps
 
-global_methods_registry: dict[str, list[MethodMetadata]] = defaultdict(list)
-global_instances_registry = defaultdict(list)
-
 
 def parameter_method(
     populate=True,
