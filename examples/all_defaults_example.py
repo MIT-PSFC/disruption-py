@@ -23,7 +23,7 @@ shot_settings = ShotSettings(
     run_tags=["all"],
     run_columns=[],
     only_requested_columns=False,
-    shot_data_requests=[],
+    custom_parameter_methods=[],
     # timebase settings
     set_times_request="disruption_warning",  # use efit timebase
     signal_domain="full",

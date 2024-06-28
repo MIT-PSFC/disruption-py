@@ -55,14 +55,14 @@ class CModShotManager(ShotManager):
 
     @classmethod
     def _modify_times_flattop_timebase(cls, shot_props: ShotProps, **kwargs):
-        shot_data_requests_params = ParameterMethodParams(
+        parameter_method_params = ParameterMethodParams(
             mds_conn=shot_props.mds_conn,
             shot_props=shot_props,
             logger=cls.logger,
             tokamak=Tokamak.CMOD,
         )
         ip_parameters = BasicCmodRequests._get_ip_parameters(
-            params=shot_data_requests_params
+            params=parameter_method_params
         )
         ipprog, dipprog_dt = ip_parameters["ip_prog"], ip_parameters["dipprog_dt"]
         indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 1e3)[0]
@@ -79,14 +79,14 @@ class CModShotManager(ShotManager):
 
     @classmethod
     def _modify_times_rampup_and_flattop_timebase(cls, shot_props: ShotProps, **kwargs):
-        shot_data_requests_params = ParameterMethodParams(
+        parameter_method_params = ParameterMethodParams(
             mds_conn=shot_props.mds_conn,
             shot_props=shot_props,
             logger=cls.logger,
             tokamak=Tokamak.CMOD,
         )
         ip_parameters = BasicCmodRequests._get_ip_parameters(
-            params=shot_data_requests_params
+            params=parameter_method_params
         )
         ipprog, dipprog_dt = ip_parameters["ip_prog"], ip_parameters["dipprog_dt"]
         indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 6e4)[0]

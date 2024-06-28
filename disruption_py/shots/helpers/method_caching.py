@@ -109,10 +109,10 @@ def cache_or_compute(
     args: tuple,
     kwargs: dict,
 ):
-    shot_data_request_params: ParameterMethodParams = (
+    parameter_method_params: ParameterMethodParams = (
         kwargs["params"] if "params" in kwargs else args[-1]
     )
-    shot_props = shot_data_request_params.shot_props
+    shot_props = parameter_method_params.shot_props
 
     other_params = {k: v for k, v in kwargs.items() if k != "params"}
 

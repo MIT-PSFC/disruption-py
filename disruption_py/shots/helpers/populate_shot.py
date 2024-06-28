@@ -27,16 +27,16 @@ REQUIRED_COLS = {"time", "shot", "commit_hash"}
 def built_in_method_factory(tokamak: Tokamak):
     if tokamak is Tokamak.D3D:
         from disruption_py.shots.parameter_methods.d3d.built_in import (
-            D3D_DEFAULT_SHOT_DATA_REQUESTS,
+            D3D_DEFAULT_PARAMETER_METHODS,
         )
 
-        return D3D_DEFAULT_SHOT_DATA_REQUESTS
+        return D3D_DEFAULT_PARAMETER_METHODS
     elif tokamak is Tokamak.CMOD:
         from disruption_py.shots.parameter_methods.cmod.built_in import (
-            CMOD_DEFAULT_SHOT_DATA_REQUESTS,
+            CMOD_DEFAULT_PARAMETER_METHODS,
         )
 
-        return CMOD_DEFAULT_SHOT_DATA_REQUESTS
+        return CMOD_DEFAULT_PARAMETER_METHODS
     else:
         raise ValueError(f"Invalid tokamak for built-ins {tokamak}")
 
@@ -66,7 +66,7 @@ def get_prefilled_shot_data(shot_props: ShotProps):
     return pre_filled_shot_data
 
 
-def get_all_parametered_methods(all_passed: list):
+def get_all_parameter_methods(all_passed: list):
     parametered_methods = set()
     for passed in all_passed:
         if callable(passed) and is_parametered_method(passed):
@@ -176,9 +176,10 @@ def populate_shot(
     shot_settings: ShotSettings,
     params: ParameterMethodParams,
 ) -> pd.DataFrame:
-    """populate_shot runs the parameter methods in the shot_data_requests property of shot_settings.
+    """populate_shot runs the parameter methods either included through the `custom_parameter_methods`
+    property of shot_settings or in the built-in list of methods.
 
-    Selects methods based on run_mdethods, run_tags, and run_columns in shot_settings.
+    Selects methods based on run_methods, run_tags, and run_columns in shot_settings.
     Methods execution is reordered to minimize tree openings and trees opened simultaniously.
 
     Parameters
@@ -195,12 +196,12 @@ def populate_shot(
     """
     shot_props: ShotProps = params.shot_props
     # Concatanate built in clases containing registred methods, with user provided classes/methods
-    all_shot_data_request = (
-        built_in_method_factory(params.tokamak) + shot_settings.shot_data_requests
+    all_parameter_method_holders = (
+        built_in_method_factory(params.tokamak) + shot_settings.custom_parameter_methods
     )
-    all_parametered_methods = get_all_parametered_methods(all_shot_data_request)
+    all_parameter_methods = get_all_parameter_methods(all_parameter_method_holders)
     all_bound_method_metadata: list[BoundMethodMetadata] = bind_method_metadata(
-        all_parametered_methods, params
+        all_parameter_methods, params
     )
     run_bound_method_metadata: list[BoundMethodMetadata] = filter_methods_to_run(
         all_bound_method_metadata, shot_settings, params

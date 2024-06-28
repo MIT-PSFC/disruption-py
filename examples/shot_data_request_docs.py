@@ -27,7 +27,7 @@ def decorated_shot_data_method(self, params: ParameterMethodParams) -> pd.DataFr
     -------
     pd.DataFrame
         Dataframe containing the results of the decorated method, with each returned parameter being a column.
-        The dataframe should contain the same number of rows as the timebase (`shot_data_request_params.shot.times`).
+        The dataframe should contain the same number of rows as the timebase (`parameter_method_params.shot.times`).
     """
     pass
 
