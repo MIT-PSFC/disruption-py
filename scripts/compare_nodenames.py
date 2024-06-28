@@ -2,15 +2,15 @@
 
 import argparse
 from multiprocessing import Pool
-import numpy as np
-import pandas as pd
 import sys
 import warnings
 
-from disruption_py.handlers.cmod_handler import CModHandler
-from disruption_py.utils.constants import MAX_PROCESSES
+import numpy as np
+import pandas as pd
+
 import MDSplus as mds
 from MDSplus.tree import TreeNode
+from disruption_py.utils.constants import MAX_PROCESSES
 
 NODENAMES_SHOT_LIST_PATH = "disruption_py/data/compare_nodenames_default.txt"
 
@@ -53,7 +53,7 @@ class NodeNameComparer:
         self.num_processes = min([len(self.shots), num_processes, MAX_PROCESSES])
 
     @staticmethod
-    def get_default_shot_list(use_default_list=True) -> list[int]:
+    def get_default_shot_list() -> list[int]:
         """Return 20 new and 20 old shots ids."""
         with open(NODENAMES_SHOT_LIST_PATH, "r") as f:
             return [int(s) for s in f.readlines()]
@@ -166,7 +166,7 @@ class NodeNameComparer:
         """Convert values in table to percents, add column and row labels."""
         comparison_table = self.get_comparison_table()
         comparison_table = np.vectorize(
-            lambda item: f"{item / len(self.shots) * 100:.0f}% {item:.0f}"
+            lambda item: f"{item:.0f} ({item / len(self.shots) * 100:.0f}%)"
         )(comparison_table)
         comparison_table = pd.DataFrame(comparison_table)
         comparison_table.columns = self.columns
@@ -210,25 +210,18 @@ if __name__ == "__main__":
     shot_ids = None
 
     # Grab from stdin
-    if len(args.shot_ids) == 0:
-        if not sys.stdin.isatty():
-            shot_ids = [int(s.strip()) for s in sys.stdin.readlines()]
-        else:
-            shot_ids = None
+    if args.shot_ids is None and not sys.stdin.isatty():
+        shot_ids = [int(s.strip()) for s in sys.stdin.read().split()]
     # Parse list of shot ids
     elif args.shot_ids[0].isdigit():
         shot_ids = [int(s) for s in args.shot_ids]
-    # Parse list of txt files
+    # Parse txt files
     elif args.shot_ids[0].endswith(".txt"):
-        shot_ids = []
-        for file in args.shot_ids:
-            with open(file, "r") as f:
-                shot_ids += [int(s) for s in f.readlines()]
-    else:
-        shot_ids = None
+        with open(args.shot_ids[0], "r") as f:
+            shot_ids = [int(s) for s in f.readlines()]
 
     compare = NodeNameComparer(shot_ids, args.ref, args.new, args.num_processes)
     table = compare.get_pretty_table()
-    print(f"ref -> \t {compare.parent_name}:{args.ref}")
+    print("ref:" + " " * 6 + f"{compare.parent_name}:{args.ref}")
     print(table)
     print(f"{compare.parent_name}:{args.new}")
