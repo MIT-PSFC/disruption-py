@@ -5,6 +5,7 @@ import functools
 import threading
 from typing import Callable, List
 
+import numpy as np
 import pandas as pd
 
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
@@ -87,13 +88,23 @@ def parameter_method(
     return outer_wrapper
 
 
-def get_method_cache_key(method_name, times):
+def get_method_cache_key(
+    method: Callable, times: np.ndarray, other_params: dict = None
+):
     current_thread_id = threading.get_ident()
-    return method_name + str(len(times)) + str(current_thread_id)
+    hashable_other_params = frozenset((other_params or {}).items())
+    return (
+        current_thread_id,
+        method,
+        times[0],
+        times[-1],
+        len(times),
+        hashable_other_params,
+    )
 
 
 def cache_or_compute(
-    func: Callable,
+    method: Callable,
     args: tuple,
     kwargs: dict,
 ):
@@ -104,19 +115,22 @@ def cache_or_compute(
 
     other_params = {k: v for k, v in kwargs.items() if k != "params"}
 
-    cache_key = get_method_cache_key(func.__name__, shot_props.times) + str(
-        other_params
-    )
+    cache_key = get_method_cache_key(method, shot_props.times, other_params)
+
     if cache_key in shot_props._cached_results:
         return shot_props._cached_results[cache_key]
     else:
-        result = func(*args, **kwargs)
+        result = method(*args, **kwargs)
         shot_props._cached_results[cache_key] = result
         return result
 
 
 def manually_cache(
-    shot_props: ShotProps, data: pd.DataFrame, method_name, method_columns: List[str]
+    shot_props: ShotProps,
+    data: pd.DataFrame,
+    method: Callable,
+    method_name: str,
+    method_columns: List[str],
 ) -> bool:
     if method_columns is None:
         return False
@@ -124,7 +138,7 @@ def manually_cache(
         shot_props._cached_results = {}
     missing_columns = set(col for col in method_columns if col not in data.columns)
     if len(missing_columns) == 0:
-        cache_key = get_method_cache_key(method_name, data["time"])
+        cache_key = get_method_cache_key(method, data["time"].values)
         shot_props._cached_results[cache_key] = data[method_columns]
         shot_props.logger.debug(
             f"[Shot {shot_props.shot_id}]:Manually caching {method_name}"

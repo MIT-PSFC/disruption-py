@@ -215,6 +215,7 @@ def populate_shot(
             cache_success = manually_cache(
                 shot_props=shot_props,
                 data=pre_filled_shot_data,
+                method=method_metadata.bound_method,
                 method_name=method_metadata.name,
                 method_columns=method_metadata.columns,
             )
