@@ -1,15 +1,14 @@
-#!/usr/bin/env python3
-
-from dataclasses import dataclass
-from logging import Logger
-
 from disruption_py.mdsplus_integration.mds_connection import MDSConnection
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.mappings.tokamak import Tokamak
 
 
+from dataclasses import dataclass
+from logging import Logger
+
+
 @dataclass
-class ShotDataRequestParams:
+class ParameterMethodParams:
     """Params passed by disruption_py to decorated methods.
 
     Attributes

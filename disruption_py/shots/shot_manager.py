@@ -15,7 +15,7 @@ from disruption_py.mdsplus_integration.mds_connection import (
 from disruption_py.settings.enum_options import SignalDomain
 from disruption_py.settings.existing_data_request import ExistingDataRequestParams
 from disruption_py.settings.set_times_request import SetTimesRequestParams
-from disruption_py.settings.shot_data_request import ShotDataRequestParams
+from disruption_py.shots.helpers.parameter_method_params import ParameterMethodParams
 from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.shots.helpers.populate_shot import populate_shot
 from disruption_py.shots.shot_props import ShotProps
@@ -50,7 +50,7 @@ class ShotManager(ABC):
             )
             retrieved_data = populate_shot(
                 shot_settings=shot_settings,
-                params=ShotDataRequestParams(
+                params=ParameterMethodParams(
                     mds_conn=shot_props.mds_conn,
                     shot_props=shot_props,
                     logger=self.logger,

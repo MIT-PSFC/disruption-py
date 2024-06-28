@@ -9,5 +9,4 @@ from .output_type_request import (
     ResultOutputTypeRequestParams,
 )
 from .set_times_request import SetTimesRequest, SetTimesRequestParams
-from .shot_data_request import ShotDataRequestParams
 from .shot_settings import ShotSettings

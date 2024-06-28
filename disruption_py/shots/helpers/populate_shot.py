@@ -7,8 +7,8 @@ import os
 import numpy as np
 import pandas as pd
 
-from disruption_py.settings.shot_data_request import (
-    ShotDataRequestParams,
+from disruption_py.shots.helpers.parameter_method_params import (
+    ParameterMethodParams,
 )
 from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.shots.helpers.method_metadata import (
@@ -80,7 +80,7 @@ def get_all_parametered_methods(all_passed: list):
     return parametered_methods
 
 
-def bind_method_metadata(parametered_methods: set, params: ShotDataRequestParams):
+def bind_method_metadata(parametered_methods: set, params: ParameterMethodParams):
     all_bound_method_metadata = []
     for method in parametered_methods:
         method_metadata = get_method_metadata(method, should_throw=True)
@@ -96,7 +96,7 @@ def bind_method_metadata(parametered_methods: set, params: ShotDataRequestParams
 def filter_methods_to_run(
     all_bound_method_metadata: list[BoundMethodMetadata],
     shot_settings: ShotSettings,
-    params: ShotDataRequestParams,
+    params: ParameterMethodParams,
 ):
     shot_props = params.shot_props
     tags = shot_settings.run_tags
@@ -137,7 +137,7 @@ def filter_methods_to_run(
 
 
 def populate_method(
-    params: ShotDataRequestParams,
+    params: ParameterMethodParams,
     bound_method_metadata: BoundMethodMetadata,
     start_time,
 ):
@@ -174,7 +174,7 @@ def populate_method(
 
 def populate_shot(
     shot_settings: ShotSettings,
-    params: ShotDataRequestParams,
+    params: ParameterMethodParams,
 ) -> pd.DataFrame:
     """populate_shot runs the parameter methods in the shot_data_requests property of shot_settings.
 
@@ -185,7 +185,7 @@ def populate_shot(
     ----------
     shot_settings : ShotSettings
         The shot settings dictating what methods should be run.
-    params : ShotDataRequestParams
+    params : ParameterMethodParams
         Parameter that will be passed to methods that are run.
 
     Returns

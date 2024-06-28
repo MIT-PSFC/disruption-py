@@ -3,7 +3,7 @@
 from dataclasses import Field, dataclass, fields
 from typing import Any, Callable, List, Union
 
-from disruption_py.settings.shot_data_request import ShotDataRequestParams
+from disruption_py.shots.helpers.parameter_method_params import ParameterMethodParams
 from disruption_py.utils.mappings.tokamak import Tokamak
 
 
@@ -38,7 +38,7 @@ class BoundMethodMetadata(MethodMetadata):
         cls,
         method_metadata: MethodMetadata,
         bound_method: Callable,
-        params: ShotDataRequestParams,
+        params: ParameterMethodParams,
     ):
         """
         Evaluate arguments to decorators to usable values.

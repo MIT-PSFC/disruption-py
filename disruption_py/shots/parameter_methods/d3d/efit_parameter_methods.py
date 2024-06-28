@@ -3,8 +3,8 @@
 import numpy as np
 import pandas as pd
 
-from disruption_py.settings.shot_data_request import (
-    ShotDataRequestParams,
+from disruption_py.shots.helpers.parameter_method_params import (
+    ParameterMethodParams,
 )
 from disruption_py.shots.helpers.method_caching import parameter_method
 from disruption_py.utils.mappings.tokamak import Tokamak
@@ -43,7 +43,7 @@ class D3DEfitRequests:
         columns=[*efit_cols.keys(), *efit_derivs.keys()],
         tokamak=Tokamak.D3D,
     )
-    def _get_efit_parameters(params: ShotDataRequestParams):
+    def _get_efit_parameters(params: ParameterMethodParams):
         efit_data = {
             k: params.mds_conn.get_data(v, tree_name="_efit_tree")
             for k, v in D3DEfitRequests.efit_cols.items()
@@ -78,7 +78,7 @@ class D3DEfitRequests:
         columns=[*rt_efit_cols.keys()],
         tokamak=Tokamak.D3D,
     )
-    def _get_rt_efit_parameters(params: ShotDataRequestParams):
+    def _get_rt_efit_parameters(params: ParameterMethodParams):
         efit_data = {
             k: params.mds_conn.get_data(v, tree_name="efitrt1")
             for k, v in D3DEfitRequests.rt_efit_cols.items()

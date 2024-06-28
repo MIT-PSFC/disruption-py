@@ -1,88 +1,92 @@
 #!/usr/bin/env python3
 
-from collections import defaultdict
 import functools
 import threading
-from typing import Callable, List
+from typing import Callable, List, Union
 
 import numpy as np
 import pandas as pd
 
-from disruption_py.settings.shot_data_request import ShotDataRequestParams
+from disruption_py.shots.helpers.parameter_method_params import ParameterMethodParams
 from disruption_py.shots.helpers.method_metadata import (
     MethodMetadata,
 )
 from disruption_py.shots.shot_props import ShotProps
+from disruption_py.utils.mappings.tokamak import Tokamak
 
 
 def parameter_method(
-    populate=True,
-    cache=True,
-    tokamak=None,
-    tags=None,
-    columns=None,
-):
-    """parameters a method to be run by DisruptionPy.
+    cache: bool = True,
+    tokamak: Union[Tokamak, List[Tokamak]] = None,
+    tags: List[str] = None,
+    columns: Union[List[str], Callable] = None,
+) -> Callable:
+    """
+    Decorator to signify a method to be run by DisruptionPy.
 
-    All parametered methods have their results cached, to avoid excess computation.
-    If populate is True, the function should calculate disruption parameters and return a pandas DataFrame.
-    A parametered method with populate set to true is run if  designated by the run_methods, run_tags, or
-    run_columns attributes of the `ShotSettings` class. A number of built-in methods are included
-    through the shots.parameter_methods.built_in file. Users can also create there own methods
-    using the parameter_method , and passing either the method itself, or an object containing the method
-    as and attribute in `ShotSettings`.
+    The decorated method calculates disruption paramaters and returns a pandas DataFrame. All decorated methods must take
+    the single argument params of type `ParameterMethodParams`. The decorated method will be run if designated by the
+    `run_methods`, `run_tags`, or `run_columns` attributes of the `ShotSettings` class, and if included inside of the
+    `parameter_methods` argument of the `shot_settings` or in the built-in method list. If run the result of the decorated
+    method will be output to the `output_type_request`.
 
-    A common pattern for parameter methods is first retrieving data from MDSplus using the `TreeManager` and
+    A common pattern for parameterized methods is first retrieving data from MDSplus using the `TreeManager` and
     then using that retrieved data to compute data to return.
 
     Parameters
     ----------
-    populate : bool
-        Whether this method should be run when calling `get_shots_data`. If True the method must return a dictionary of
-        column name to data. Default is True.
-    tags : list[str]
+    cache : bool, optional
+        Whether to cache the result of the method, by default True.
+    tokamak : Union['Tokamak', List['Tokamak']], optional
+        A list of Tokamak objects that represent which tokamaks this method may be used for, by default None
+        allows the method to be run for any tokamak.
+    tags : List[str], optional
         The list of tags to help identify this method. Tags can be used when calling `get_shots_data` to
         have disruption_py use multiple functions at the same time. Default is ["all"].
-    columns : Union[list[str], Callable]
-        The columns that are in the dataframe returned by the method. Alternately, can pass a method that
-        returns the names of used trees at runtime. See `method_metadata_function` for more details about using functions.
-        These columns are also used to determine which methods to run when calling `get_shots_data` with `run_columns`.
-        Default value is an empty list implying that no columns are returned by the function.
-    cache: bool
-        Whether to cache the result of the method. Default is True.
-    tokamak : Union[Tokamak, List[Tokamak]]
-        A list of Tokamak objects that represent which tokamaks this method may be used for. Default value of None allows the method
-        to be run for any tokamak.
+    columns : Union[List[str], Callable], optional
+        The columns that are in the DataFrame returned by the method. Alternately, can pass a method that
+        returns the names of used trees at runtime. Default value is an empty list implying that no columns
+        are returned by the function.
+
+    Returns
+    -------
+    Callable
+        A decorated method with caching and metadata attributes.
     """
 
-    def outer_wrapper(method):
-        @functools.wraps(method)
-        def wrapper(*args, **kwargs):
-            if cache:
-                return cache_or_compute(method, args, kwargs)
-            else:
-                return method(*args, **kwargs)
+    def outer_wrapper(method: Callable) -> Callable:
+        if cache:
+            wrapper = cache_method(method)
+        else:
+            wrapper = method
 
         method_metadata = MethodMetadata(
             name=method.__name__,
             cache=cache,
-            populate=populate,
+            populate=True,
             tokamaks=tokamak,
             columns=columns,
             tags=tags,
         )
 
         wrapper.method_metadata = method_metadata
-
-        # parameter the method in the global registry
-        if isinstance(method, staticmethod):
-            return staticmethod(wrapper)
-        elif isinstance(method, classmethod):
-            return classmethod(wrapper)
-        else:
-            return wrapper
+        return wrapper
 
     return outer_wrapper
+
+
+def cache_method(method: Callable) -> Callable:
+    @functools.wraps(method)
+    def wrapper(*args, **kwargs):
+        return cache_or_compute(method, args, kwargs)
+
+    # parameter the method in the global registry
+    if isinstance(method, staticmethod):
+        return staticmethod(wrapper)
+    elif isinstance(method, classmethod):
+        return classmethod(wrapper)
+    else:
+        return wrapper
 
 
 def get_method_cache_key(
@@ -105,7 +109,7 @@ def cache_or_compute(
     args: tuple,
     kwargs: dict,
 ):
-    shot_data_request_params: ShotDataRequestParams = (
+    shot_data_request_params: ParameterMethodParams = (
         kwargs["params"] if "params" in kwargs else args[-1]
     )
     shot_props = shot_data_request_params.shot_props

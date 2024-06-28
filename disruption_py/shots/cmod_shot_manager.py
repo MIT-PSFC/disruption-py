@@ -3,7 +3,7 @@
 import numpy as np
 
 from disruption_py.mdsplus_integration.mds_connection import MDSConnection
-from disruption_py.settings.shot_data_request import ShotDataRequestParams
+from disruption_py.shots.helpers.parameter_method_params import ParameterMethodParams
 from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.shots.parameter_methods.cmod.basic_parameter_methods import (
     BasicCmodRequests,
@@ -55,7 +55,7 @@ class CModShotManager(ShotManager):
 
     @classmethod
     def _modify_times_flattop_timebase(cls, shot_props: ShotProps, **kwargs):
-        shot_data_requests_params = ShotDataRequestParams(
+        shot_data_requests_params = ParameterMethodParams(
             mds_conn=shot_props.mds_conn,
             shot_props=shot_props,
             logger=cls.logger,
@@ -79,7 +79,7 @@ class CModShotManager(ShotManager):
 
     @classmethod
     def _modify_times_rampup_and_flattop_timebase(cls, shot_props: ShotProps, **kwargs):
-        shot_data_requests_params = ShotDataRequestParams(
+        shot_data_requests_params = ParameterMethodParams(
             mds_conn=shot_props.mds_conn,
             shot_props=shot_props,
             logger=cls.logger,

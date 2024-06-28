@@ -12,10 +12,11 @@ import scipy as sp
 from MDSplus import mdsExceptions
 
 import disruption_py.data
-from disruption_py.settings.shot_data_request import (
-    ShotDataRequestParams,
+from disruption_py.shots.helpers.parameter_method_params import (
+    ParameterMethodParams,
 )
 from disruption_py.shots.helpers.method_caching import (
+    cache_method,
     parameter_method,
 )
 from disruption_py.utils.mappings.tokamak import Tokamak
@@ -71,7 +72,7 @@ class CModEfitRequests:
         ],
         tokamak=Tokamak.CMOD,
     )
-    def _get_EFIT_parameters(params: ShotDataRequestParams):
+    def _get_EFIT_parameters(params: ParameterMethodParams):
 
         efit_time = params.mds_conn.get_data(
             r"\efit_aeqdsk:time", tree_name="_efit_tree", astype="float64"
@@ -157,7 +158,7 @@ class CModEfitRequests:
         return pd.DataFrame(efit_data)
 
     @staticmethod
-    def efit_check(params: ShotDataRequestParams):
+    def efit_check(params: ParameterMethodParams):
         """
         # TODO: Get description from Jinxiang
         """
@@ -178,11 +179,8 @@ class CModEfitRequests:
 
 class BasicCmodRequests:
     @staticmethod
-    @parameter_method(
-        populate=False,
-        tokamak=Tokamak.CMOD,
-    )
-    def get_active_wire_segments(params: ShotDataRequestParams):
+    @cache_method
+    def get_active_wire_segments(params: ParameterMethodParams):
         params.mds_conn.open_tree(tree_name="pcs")
         root_nid = params.mds_conn.get("GetDefaultNid()")
         children_nids = params.mds_conn.get(
@@ -217,7 +215,7 @@ class BasicCmodRequests:
 
     @staticmethod
     @parameter_method(columns=["time_until_disrupt"], tokamak=Tokamak.CMOD)
-    def _get_time_until_disrupt(params: ShotDataRequestParams):
+    def _get_time_until_disrupt(params: ParameterMethodParams):
         time_until_disrupt = np.full(len(params.shot_props.times), np.nan)
         if params.shot_props.disrupted:
             time_until_disrupt = (
@@ -299,7 +297,7 @@ class BasicCmodRequests:
         columns=["ip", "dip_dt", "dip_smoothed", "ip_prog", "dipprog_dt", "ip_error"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_ip_parameters(params: ShotDataRequestParams):
+    def _get_ip_parameters(params: ParameterMethodParams):
         # Automatically generated
         active_segments = BasicCmodRequests.get_active_wire_segments(params=params)
 
@@ -437,7 +435,7 @@ class BasicCmodRequests:
         columns=["z_error", "z_prog", "zcur", "v_z", "z_times_v_z"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_z_parameters(params: ShotDataRequestParams):
+    def _get_z_parameters(params: ParameterMethodParams):
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
         z_prog = np.empty(pcstime.shape)
         z_prog.fill(np.nan)
@@ -587,7 +585,7 @@ class BasicCmodRequests:
         columns=["p_oh", "v_loop"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_ohmic_parameters(params: ShotDataRequestParams):
+    def _get_ohmic_parameters(params: ParameterMethodParams):
         v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
             r"\top.mflux:v0", tree_name="analysis", astype="float64"
         )
@@ -660,7 +658,7 @@ class BasicCmodRequests:
         columns=["p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", "radiated_fraction"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_power(params: ShotDataRequestParams):
+    def _get_power(params: ParameterMethodParams):
         """
         NOTE: the timebase for the LH power signal does not extend over the full
             time span of the discharge.  Therefore, when interpolating the LH power
@@ -695,7 +693,7 @@ class BasicCmodRequests:
 
     @staticmethod
     @parameter_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
-    def _get_kappa_area(params: ShotDataRequestParams):
+    def _get_kappa_area(params: ParameterMethodParams):
         aminor = params.mds_conn.get_data(
             r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
         )
@@ -734,7 +732,7 @@ class BasicCmodRequests:
     # TODO: Calculate v_mid
     @staticmethod
     @parameter_method(columns=["v_0"], tokamak=Tokamak.CMOD)
-    def _get_rotation_velocity(params: ShotDataRequestParams):
+    def _get_rotation_velocity(params: ParameterMethodParams):
         with resources.path(disruption_py.data, "lock_mode_calib_shots.txt") as fio:
             calibrated = pd.read_csv(fio)
         # Check to see if shot was done on a day where there was a locked
@@ -776,7 +774,7 @@ class BasicCmodRequests:
         columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase", "BT"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_n_equal_1_amplitude(params: ShotDataRequestParams):
+    def _get_n_equal_1_amplitude(params: ParameterMethodParams):
         """Calculate n=1 amplitude and phase.
 
         This method uses the four BP13 Bp sensors near the midplane on the outboard vessel
@@ -908,7 +906,7 @@ class BasicCmodRequests:
         columns=["n_e", "dn_dt", "Greenwald_fraction"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_densities(params: ShotDataRequestParams):
+    def _get_densities(params: ParameterMethodParams):
         try:
             # Line-integrated density
             n_e, t_n = params.mds_conn.get_data_with_dims(
@@ -940,7 +938,7 @@ class BasicCmodRequests:
 
     @staticmethod
     @parameter_method(columns=["I_efc"], tokamak=Tokamak.CMOD)
-    def _get_efc_current(params: ShotDataRequestParams):
+    def _get_efc_current(params: ParameterMethodParams):
         try:
             iefc, t_iefc = params.mds_conn.get_data_with_dims(
                 r"\efc:u_bus_r_cur", tree_name="engineering"
@@ -997,7 +995,7 @@ class BasicCmodRequests:
 
     @staticmethod
     @parameter_method(columns=["Te_width"], tokamak=Tokamak.CMOD)
-    def _get_Ts_parameters(params: ShotDataRequestParams):
+    def _get_Ts_parameters(params: ParameterMethodParams):
         # TODO: Guassian vs parabolic fit for te profile
         te_hwm = np.empty((len(params.shot_props.times)))
 
@@ -1034,7 +1032,7 @@ class BasicCmodRequests:
         columns=["ne_peaking", "Te_peaking", "pressure_peaking"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_peaking_factors(params: ShotDataRequestParams):
+    def _get_peaking_factors(params: ParameterMethodParams):
         ne_PF = np.full(len(params.shot_props.times), np.nan)
         Te_PF = ne_PF.copy()
         pressure_PF = ne_PF.copy()
@@ -1140,7 +1138,7 @@ class BasicCmodRequests:
         columns=["prad_peaking"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_prad_peaking(params: ShotDataRequestParams):
+    def _get_prad_peaking(params: ParameterMethodParams):
         prad_peaking = np.full(len(params.shot_props.times), np.nan)
         try:
             # TODO: why use CMOD here?
@@ -1256,7 +1254,7 @@ class BasicCmodRequests:
         tags=["experimental"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_peaking_factors_no_tci(params: ShotDataRequestParams):
+    def _get_peaking_factors_no_tci(params: ParameterMethodParams):
         # Initialize PFs as empty arrarys
         ne_PF = np.full(len(params.shot_props.times), np.nan)
         Te_PF = ne_PF.copy()
@@ -1383,7 +1381,7 @@ class BasicCmodRequests:
     # TODO: get more accurate description of soft x-ray data
     @staticmethod
     @parameter_method(columns=["sxr"], tokamak=Tokamak.CMOD)
-    def _get_sxr_data(params: ShotDataRequestParams):
+    def _get_sxr_data(params: ParameterMethodParams):
         """ """
         sxr = np.full(len(params.shot_props.times), np.nan)
         try:
@@ -1496,7 +1494,7 @@ class BasicCmodRequests:
         columns=["Te_edge", "ne_edge"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_edge_parameters(params: ShotDataRequestParams):
+    def _get_edge_parameters(params: ParameterMethodParams):
 
         try:
             # sys.path.append("/home/sciortino/usr/python3modules/eqtools3")
@@ -1613,7 +1611,7 @@ class BasicCmodRequests:
         columns=["H98", "Wmhd", "btor", "dWmhd_dt", "p_input"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_H98(params: ShotDataRequestParams):
+    def _get_H98(params: ParameterMethodParams):
         """Prepare to compute H98 by getting tau_E
 
         Scaling from eq. 20, ITER Physics Basis Chapter 2 https://iopscience.iop.org/article/10.1088/0029-5515/39/12/302/pdf
@@ -1679,7 +1677,7 @@ class ThomsonDensityMeasure:
 
     # The following methods are translated from IDL code.
     @staticmethod
-    def compare_ts_tci(params: ShotDataRequestParams, nlnum=4):
+    def compare_ts_tci(params: ParameterMethodParams, nlnum=4):
         """
         Comparison between chord integrated Thomson electron density and TCI results.
         """
@@ -1724,7 +1722,7 @@ class ThomsonDensityMeasure:
         return nl_ts1, nl_ts2, nl_tci1, nl_tci2, time1, time2
 
     @staticmethod
-    def parse_yags(params: ShotDataRequestParams):
+    def parse_yags(params: ParameterMethodParams):
         nyag1 = params.mds_conn.get_data(r"\knobs:pulses_q", tree_name="electrons")
         nyag2 = params.mds_conn.get_data(r"\knobs:pulses_q_2", tree_name="electrons")
         indices1 = -1
@@ -1767,7 +1765,7 @@ class ThomsonDensityMeasure:
         return nyag1, nyag2, indices1, indices2
 
     @staticmethod
-    def integrate_ts_tci(params: ShotDataRequestParams, nlnum):
+    def integrate_ts_tci(params: ParameterMethodParams, nlnum):
         """
         Integrate Thomson electron density measurement to the line integrated electron density for comparison with two color interferometer (TCI) measurement results
         """
@@ -1800,7 +1798,7 @@ class ThomsonDensityMeasure:
         return nlts, nlts_t
 
     @staticmethod
-    def map_ts2tci(params: ShotDataRequestParams, nlnum):
+    def map_ts2tci(params: ParameterMethodParams, nlnum):
         core_mult = 1.0
         edge_mult = 1.0
         t = [1e32]
@@ -1896,7 +1894,7 @@ class ThomsonDensityMeasure:
 
     # TODO: Move to utils
     @staticmethod
-    def efit_rz2psi(params: ShotDataRequestParams, r, z, t, tree="analysis"):
+    def efit_rz2psi(params: ParameterMethodParams, r, z, t, tree="analysis"):
         r = r.flatten()
         z = z.flatten()
         psi = np.full((len(r), len(t)), np.nan)

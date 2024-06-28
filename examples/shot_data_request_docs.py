@@ -5,22 +5,22 @@
 import numpy as np
 import pandas as pd
 
-from disruption_py.settings.shot_data_request import (
-    ShotDataRequestParams,
+from disruption_py.shots.helpers.parameter_method_params import (
+    ParameterMethodParams,
 )
 from disruption_py.shots.helpers.method_caching import parameter_method
 from disruption_py.utils.mappings.tokamak import Tokamak
 
 
 @parameter_method(columns=["upper_gap", "lower_gap"], tokamak=Tokamak.D3D)
-def decorated_shot_data_method(self, params: ShotDataRequestParams) -> pd.DataFrame:
+def decorated_shot_data_method(self, params: ParameterMethodParams) -> pd.DataFrame:
     """All parametered methods passed to `get_shots_data` will be called once for every shot retrieved.
     Decorated methods may call other decorated methods, however, execution order is not guranteed as calls
     will be reordered to minimize resource usage based on the `parameter_method` decorator.
 
     Parameters
     ----------
-    params : ShotDataRequestParams
+    params : ParameterMethodParams
         Parameters passed by disruption_py to the decorated method that should be used to help retrieve the shot data from MDSplus.
 
     Returns
@@ -40,7 +40,7 @@ class KappaAreaRequest:
 
     @staticmethod
     @parameter_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
-    def _get_kappa_area(params: ShotDataRequestParams):
+    def _get_kappa_area(params: ParameterMethodParams):
         aminor = params.shot_props.mds_conn.get_data(
             r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
         )
