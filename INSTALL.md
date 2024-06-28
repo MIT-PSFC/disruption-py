@@ -131,6 +131,11 @@ MDSplus can be installed using their [installation guide](https://www.mdsplus.or
 
 On Ubuntu-based systems, SQL drivers might be installed for example through the [Microsoft ODBC Driver](https://learn.microsoft.com/en-us/sql/connect/odbc/linux-mac/installing-the-microsoft-odbc-driver-for-sql-server?view=sql-server-ver16) `msodbcsql18` package, or [FreeTDS](https://www.freetds.org/) `{tds,unix}odbc` packages.
 
+Note:
+On C-MOD workstations, MDSplus is pre-installed system-wide but its configuration is only set up for the system python through a small path file (e.g.: `/usr/lib/python3/dist-packages/mdsplus.pth`).
+For virtual environments, even those created off the system python, this small path file needs to be copied over in the `site-packages` folder (e.g.: `venv/lib/python3.10/site-packages/`) as it is _not inherited_ upon creation of the virtual environment.
+Alternatively, one might adopt the more standard and more obvious solution of adding the equivalent path to the `PYTHONPATH` environment variable, which does get read by virtual environments and inherited by subshells.
+
 ### Requirements
 
 Python is obviously a requirement for disruption-py -- please make sure you are running the desired Python version before creating a new installation, e.g.:
