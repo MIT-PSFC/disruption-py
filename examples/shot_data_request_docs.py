@@ -8,15 +8,15 @@ import pandas as pd
 from disruption_py.settings.shot_data_request import (
     ShotDataRequestParams,
 )
-from disruption_py.shots.helpers.method_caching import register_method
+from disruption_py.shots.helpers.method_caching import parameter_method
 from disruption_py.utils.mappings.tokamak import Tokamak
 
 
-@register_method(columns=["upper_gap", "lower_gap"], tokamak=Tokamak.D3D)
+@parameter_method(columns=["upper_gap", "lower_gap"], tokamak=Tokamak.D3D)
 def decorated_shot_data_method(self, params: ShotDataRequestParams) -> pd.DataFrame:
-    """All registered methods passed to `get_shots_data` will be called once for every shot retrieved.
+    """All parametered methods passed to `get_shots_data` will be called once for every shot retrieved.
     Decorated methods may call other decorated methods, however, execution order is not guranteed as calls
-    will be reordered to minimize resource usage based on the `register_method` decorator.
+    will be reordered to minimize resource usage based on the `parameter_method` decorator.
 
     Parameters
     ----------
@@ -39,7 +39,7 @@ def decorated_shot_data_method(self, params: ShotDataRequestParams) -> pd.DataFr
 class KappaAreaRequest:
 
     @staticmethod
-    @register_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
+    @parameter_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
     def _get_kappa_area(params: ShotDataRequestParams):
         aminor = params.shot_props.mds_conn.get_data(
             r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"

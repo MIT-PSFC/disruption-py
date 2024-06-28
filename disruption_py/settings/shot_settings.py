@@ -40,16 +40,16 @@ class ShotSettings:
         opening this tree name fails. Default is 'analysis'.
     run_methods : List[str]
         A list of parameter method names to be run. Named methods will be run when retrieving data
-        from  mdsplus for the shot. Named methods must have with the register_method
+        from  mdsplus for the shot. Named methods must have with the parameter_method
         decorator and can either be located in the shot object or in a shot_data_request. Defaults
         to an empty list.
     run_tags : List[str]
         A list of parameter method tags to be run. Methods used for retrieving data from mdsplus can be
-        tagged with the register_method decorator and can be located in either the shot
+        tagged with the parameter_method decorator and can be located in either the shot
         class or in an included shot_data_request. All methods with at least one included tag will
         be run. Defaults to ["all"].
     run_columns : List[str]
-        A list of columns to be retrieved. All methods with register_method decorator referenced
+        A list of columns to be retrieved. All methods with parameter_method decorator referenced
         as containing an included column will be run and all columns returned by those methods will be used.
         Methods can either be located in the shot class or in an included shot_data_request. If you wish to
         only return the requested columns, set only_requested_columns to true in the shot_settings.
@@ -58,7 +58,7 @@ class ShotSettings:
         Even if not all requested columns exist in the produced dataframe only the requested columns will
         be produced. Otherwise all columns returned by all methods run will be included. Default false.
     shot_data_requests : list
-        A list of registered methods and objects containing registred methods. The Methods are
+        A list of parametered methods and objects containing registred methods. The Methods are
         collected and run when retrieving data from mdsplus if the method is included through
         either the run_methods, run_tags, run_columns setting. Defaults to an empty list.
     set_times_request : SetTimesRequest

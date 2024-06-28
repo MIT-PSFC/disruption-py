@@ -7,7 +7,7 @@ import pandas as pd
 from disruption_py.settings.shot_data_request import (
     ShotDataRequestParams,
 )
-from disruption_py.shots.helpers.method_caching import register_method
+from disruption_py.shots.helpers.method_caching import parameter_method
 
 
 def method_metadata_function(
@@ -42,7 +42,7 @@ def used_columns_by_shot_id(
         return ["kappa_area"]
 
 
-@register_method(columns=["kappa_area"])
+@parameter_method(columns=["kappa_area"])
 def decorated_shot_data_method(self, params: ShotDataRequestParams) -> pd.DataFrame:
     pass
 

@@ -17,21 +17,21 @@ global_methods_registry: dict[str, list[MethodMetadata]] = defaultdict(list)
 global_instances_registry = defaultdict(list)
 
 
-def register_method(
+def parameter_method(
     populate=True,
     cache=True,
     tokamak=None,
     tags=None,
     columns=None,
 ):
-    """Registers a method to be run by DisruptionPy.
+    """parameters a method to be run by DisruptionPy.
 
-    All registered methods have their results cached, to avoid excess computation.
+    All parametered methods have their results cached, to avoid excess computation.
     If populate is True, the function should calculate disruption parameters and return a pandas DataFrame.
-    A registered method with populate set to true is run if  designated by the run_methods, run_tags, or
+    A parametered method with populate set to true is run if  designated by the run_methods, run_tags, or
     run_columns attributes of the `ShotSettings` class. A number of built-in methods are included
     through the shots.parameter_methods.built_in file. Users can also create there own methods
-    using the register_method , and passing either the method itself, or an object containing the method
+    using the parameter_method , and passing either the method itself, or an object containing the method
     as and attribute in `ShotSettings`.
 
     A common pattern for parameter methods is first retrieving data from MDSplus using the `TreeManager` and
@@ -76,7 +76,7 @@ def register_method(
 
         wrapper.method_metadata = method_metadata
 
-        # Register the method in the global registry
+        # parameter the method in the global registry
         if isinstance(method, staticmethod):
             return staticmethod(wrapper)
         elif isinstance(method, classmethod):

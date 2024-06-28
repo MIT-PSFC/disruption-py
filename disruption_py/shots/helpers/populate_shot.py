@@ -14,7 +14,7 @@ from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.shots.helpers.method_metadata import (
     BoundMethodMetadata,
     get_method_metadata,
-    is_registered_method,
+    is_parametered_method,
 )
 from disruption_py.shots.helpers.method_caching import manually_cache
 from disruption_py.shots.shot_props import ShotProps
@@ -66,23 +66,23 @@ def get_prefilled_shot_data(shot_props: ShotProps):
     return pre_filled_shot_data
 
 
-def get_all_registered_methods(all_passed: list):
-    registered_methods = set()
+def get_all_parametered_methods(all_passed: list):
+    parametered_methods = set()
     for passed in all_passed:
-        if callable(passed) and is_registered_method(passed):
-            registered_methods.add(passed)
+        if callable(passed) and is_parametered_method(passed):
+            parametered_methods.add(passed)
 
         for method_name in dir(passed):
             method = getattr(passed, method_name, None)
-            if method is None or not is_registered_method(method):
+            if method is None or not is_parametered_method(method):
                 continue
-            registered_methods.add(method)
-    return registered_methods
+            parametered_methods.add(method)
+    return parametered_methods
 
 
-def bind_method_metadata(registered_methods: set, params: ShotDataRequestParams):
+def bind_method_metadata(parametered_methods: set, params: ShotDataRequestParams):
     all_bound_method_metadata = []
-    for method in registered_methods:
+    for method in parametered_methods:
         method_metadata = get_method_metadata(method, should_throw=True)
         bound_method_metadata = BoundMethodMetadata.bind(
             method_metadata=method_metadata,
@@ -198,9 +198,9 @@ def populate_shot(
     all_shot_data_request = (
         built_in_method_factory(params.tokamak) + shot_settings.shot_data_requests
     )
-    all_registered_methods = get_all_registered_methods(all_shot_data_request)
+    all_parametered_methods = get_all_parametered_methods(all_shot_data_request)
     all_bound_method_metadata: list[BoundMethodMetadata] = bind_method_metadata(
-        all_registered_methods, params
+        all_parametered_methods, params
     )
     run_bound_method_metadata: list[BoundMethodMetadata] = filter_methods_to_run(
         all_bound_method_metadata, shot_settings, params
