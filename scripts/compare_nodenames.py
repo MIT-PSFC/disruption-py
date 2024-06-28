@@ -1,14 +1,18 @@
+#!/usr/bin/env python3
+
 import argparse
 from multiprocessing import Pool
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
+import sys
 import warnings
 
 from disruption_py.handlers.cmod_handler import CModHandler
 from disruption_py.utils.constants import MAX_PROCESSES
 import MDSplus as mds
 from MDSplus.tree import TreeNode
+
+NODENAMES_SHOT_LIST_PATH = "disruption_py/data/compare_nodenames_default.txt"
 
 
 class NodeNameComparer:
@@ -29,8 +33,8 @@ class NodeNameComparer:
     def __init__(self, shots: list[int], ref: str, new: str = None, num_processes=1):
         """
         Params:
-            shots: List of shot ids. If None, then one out of every 1000 shots from the
-                disruptions table is used.
+            shots: List of shot ids. If None, then the default is 20 old shots
+                and 20 new shots
             ref: Referent node name
             new: (optional) New, alias, node name
             num_processes: number of processes with which to open MDSPlus trees
@@ -38,22 +42,21 @@ class NodeNameComparer:
         if ref is None:
             raise ValueError("ref must be specified")
 
-        if shots is None:
-            self.shots = np.random.choice(NodeNameComparer.get_shot_list(), 100)
-        else:
+        if isinstance(shots, list):
             self.shots = shots
-
+        else:
+            self.shots = NodeNameComparer.get_default_shot_list()
         self.ref = ref
         self.new = new
-        self.columns = ["Has data", "Alias", "No Data"]
+        self.columns = ["values", "alias", "empty"]
+        self.parent_name = r"\efit_aeqdsk"
         self.num_processes = min([len(self.shots), num_processes, MAX_PROCESSES])
 
     @staticmethod
-    def get_shot_list() -> list[int]:
-        """Return all shots numbers from the disruptions sql table."""
-        handler = CModHandler()
-        shots = handler.database.query(f"select shot from disruptions")
-        return shots["shot"]
+    def get_default_shot_list(use_default_list=True) -> list[int]:
+        """Return 20 new and 20 old shots ids."""
+        with open(NODENAMES_SHOT_LIST_PATH, "r") as f:
+            return [int(s) for s in f.readlines()]
 
     @staticmethod
     def is_alias(node: TreeNode) -> bool:
@@ -74,9 +77,13 @@ class NodeNameComparer:
             return None
 
     def compare_names_one_shot(self, shot: int) -> tuple[int, int]:
-        """Return the indices of the comparison table representing a relationship between ref and node."""
-        tree = mds.Tree("cmod", shot)
-        parent = tree.getNode("mhd.analysis.efit.results.a_eqdsk")
+        """Return the indices of the comparison table representing a relationship
+        between ref and node."""
+        try:
+            tree = mds.Tree("analysis", shot)
+        except mds.mdsExceptions.TreeFOPENR:
+            return None
+        parent = tree.getNode(self.parent_name)
         ref_node, new_node = None, None
 
         ref_node = NodeNameComparer.get_node(self.ref, parent)
@@ -98,12 +105,14 @@ class NodeNameComparer:
         elif NodeNameComparer.is_alias(ref_node):
             if new_node is None:
                 warnings.warn(
-                    f"ref '{self.ref}' is an alias, but new '{self.new}' has no data, shot: {shot}"
+                    f"ref '{self.ref}' is an alias, but new '{self.new}' has no "
+                    + f"data, shot: {shot}"
                 )
                 return (2, 1)
             elif NodeNameComparer.is_alias(new_node):
-                raise Exception(
-                    f"No data found: ref '{self.ref}' is an alias and new '{self.new}' is an alias, shot: {shot}"
+                raise ValueError(
+                    f"No data found: ref '{self.ref}' is an alias and new '{self.new}'"
+                    + f" is an alias, shot: {shot}"
                 )
             else:
                 # ref is an alias for new data
@@ -111,8 +120,9 @@ class NodeNameComparer:
                     return (0, 1)
                 # ref is an alias, new is data, but ref does not point to new
                 else:
-                    raise Exception(
-                        f"No connection: ref '{self.ref}' does not point to new '{self.new}', shot: {shot}"
+                    raise ValueError(
+                        f"No connection: ref '{self.ref}' does not point to new "
+                        + f"'{self.new}', shot: {shot}"
                     )
         # ref has data
         else:
@@ -124,13 +134,15 @@ class NodeNameComparer:
                     return (1, 0)
                 # new is an alias, but not for ref
                 else:
-                    raise Exception(
-                        f"No connection: new '{self.new}' does not point to ref '{self.ref}', shot: {shot}"
+                    raise ValueError(
+                        f"No connection: new '{self.new}' does not point to ref "
+                        + f"'{self.ref}', shot: {shot}"
                     )
             # new has data
             else:
-                raise Exception(
-                    f"No connection: new '{self.new}' and ref '{self.ref}' both have data, shot: {shot}"
+                raise ValueError(
+                    f"No connection: new '{self.new}' and ref '{self.ref}' both "
+                    + f"have data, shot: {shot}"
                 )
 
     def get_comparison_table(self) -> np.ndarray:
@@ -138,12 +150,14 @@ class NodeNameComparer:
         Create a Numpy array for the comparison matrix.
 
         The columns and rows, for ref and new respectively, are
-        | Has Data | Alias | No data |
+        | values | alias | empty |
         """
         comparison_table = np.zeros(shape=(3, 3))
         with Pool(self.num_processes) as p:
-            indices = tqdm(p.imap(self.compare_names_one_shot, self.shots), total=len(self.shots))
+            indices = p.map(self.compare_names_one_shot, self.shots)
             for idx in indices:
+                if idx is None:
+                    continue
                 comparison_table[idx] += 1
 
         return comparison_table
@@ -151,8 +165,9 @@ class NodeNameComparer:
     def get_pretty_table(self) -> pd.DataFrame:
         """Convert values in table to percents, add column and row labels."""
         comparison_table = self.get_comparison_table()
-        comparison_table = np.round(comparison_table / len(self.shots) * 100, 2)
-        comparison_table = np.vectorize(lambda item: str(item) + "%")(comparison_table)
+        comparison_table = np.vectorize(
+            lambda item: f"{item / len(self.shots) * 100:.0f}% {item:.0f}"
+        )(comparison_table)
         comparison_table = pd.DataFrame(comparison_table)
         comparison_table.columns = self.columns
         comparison_table.index = self.columns
@@ -163,11 +178,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--shot-ids",
-        type=int,
         nargs="*",
         action="store",
         default=None,
-        help="Shot number(s) to test, uses 10 random shots if not specified",
+        help="Shot number(s) to test, txt file(s) containing the shots, or pipe "
+        + "shot numbers from stdin. If not specified, use 20 new and 20 old shots.",
     )
     parser.add_argument(
         "--ref",
@@ -192,7 +207,28 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    compare = NodeNameComparer(args.shot_ids, args.ref, args.new, args.num_processes)
+    shot_ids = None
+
+    # Grab from stdin
+    if len(args.shot_ids) == 0:
+        if not sys.stdin.isatty():
+            shot_ids = [int(s.strip()) for s in sys.stdin.readlines()]
+        else:
+            shot_ids = None
+    # Parse list of shot ids
+    elif args.shot_ids[0].isdigit():
+        shot_ids = [int(s) for s in args.shot_ids]
+    # Parse list of txt files
+    elif args.shot_ids[0].endswith(".txt"):
+        shot_ids = []
+        for file in args.shot_ids:
+            with open(file, "r") as f:
+                shot_ids += [int(s) for s in f.readlines()]
+    else:
+        shot_ids = None
+
+    compare = NodeNameComparer(shot_ids, args.ref, args.new, args.num_processes)
     table = compare.get_pretty_table()
-    print(f"New '{args.new}' \\ \tRef '{args.ref}'")
+    print(f"ref -> \t {compare.parent_name}:{args.ref}")
     print(table)
+    print(f"{compare.parent_name}:{args.new}")
