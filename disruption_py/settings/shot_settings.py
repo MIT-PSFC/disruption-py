@@ -8,7 +8,6 @@ from disruption_py.settings.existing_data_request import (
     ExistingDataRequest,
     resolve_existing_data_request,
 )
-from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.output_type_request import OutputTypeRequest
 from disruption_py.settings.set_times_request import (
     ExistingDataSetTimesRequest,
@@ -29,8 +28,6 @@ class ShotSettings:
 
     Attributes
     ----------
-    log_settings : LogSettings
-        Settings for logging.
     existing_data_request : ExistingDataRequest
         The existing data request to be used when prefilling data for the shot. Can pass any
         ExistingDataRequestType that resolves to a ExistingDataRequest. See ExistingDataRequest for more
@@ -86,9 +83,6 @@ class ShotSettings:
         local environment variables fails, will try to open the efit tree with the  regular environment
         variables. Default is None.
     """
-
-    # General Settings
-    log_settings: LogSettings = field(default_factory=LogSettings.default)
 
     # Prefill data settings
     existing_data_request: ExistingDataRequest = None
@@ -154,9 +148,6 @@ class ShotSettings:
 
             prop_dict = prop_dict[tokamak.value]
 
-        if "log_settings" in prop_dict:
-            prop_dict["log_settings"] = LogSettings(**prop_dict["log_settings"])
-
         return cls(**prop_dict)
 
     def resolve(self):
@@ -189,6 +180,3 @@ class ShotSettings:
             for idx, (option, value) in enumerate(self.attempt_local_efit_env):
                 if not option.endswith("_path"):
                     self.attempt_local_efit_env[idx] = (option + "_path", value)
-
-        # we can also setup logging on resolve
-        self.log_settings.setup_logging()

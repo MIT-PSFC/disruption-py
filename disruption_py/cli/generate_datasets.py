@@ -44,7 +44,6 @@ def main(args):
     logger.info(f"requested derived feature columns: {derived_feature_cols}")
 
     shot_settings = ShotSettings(
-        log_settings=log_settigs,
         efit_tree_name=args.efit_tree,
         set_times_request=args.timebase_signal,
         run_methods=args.run_methods,
@@ -68,6 +67,7 @@ def main(args):
         shot_settings=shot_settings,
         output_type_request="dataframe",
         num_processes=args.num_processes,
+        log_settings=log_settigs,
     )
 
     if args.filter:

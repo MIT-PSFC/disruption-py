@@ -6,15 +6,6 @@ from disruption_py.main import get_shots_data
 from disruption_py.settings import LogSettings, ShotSettings
 
 shot_settings = ShotSettings(
-    # logging
-    log_settings=LogSettings(
-        log_file_path=None,
-        file_log_level=logging.WARNING,
-        log_file_write_mode="w",
-        log_to_console=True,
-        console_log_level=logging.WARNING,
-        use_custom_logging=False,
-    ),
     # data settings
     existing_data_request=None,
     efit_tree_name="analysis",
@@ -39,4 +30,12 @@ shot_data = get_shots_data(
     shot_settings=shot_settings,
     output_type_request="list",  # output a list of dataframes
     num_processes=1,
+    log_settings=LogSettings(  # logging
+        log_file_path=None,
+        file_log_level=logging.WARNING,
+        log_file_write_mode="w",
+        log_to_console=True,
+        console_log_level=logging.WARNING,
+        use_custom_logging=False,
+    ),
 )

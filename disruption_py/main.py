@@ -6,6 +6,7 @@ from typing import Any, Callable
 from disruption_py.database import ShotDatabase
 from disruption_py.mdsplus_integration.mds_connection import ProcessMDSConnection
 from disruption_py.settings import ShotSettings
+from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.output_type_request import (
     FinishOutputTypeRequestParams,
     OutputTypeRequest,
@@ -35,6 +36,7 @@ def get_shots_data(
     shot_settings: ShotSettings = None,
     output_type_request: OutputTypeRequest = "list",
     num_processes: int = 1,
+    log_settings: LogSettings = None,
 ) -> Any:
     """
     Get shot data for all shots from shot_ids_request from CMOD.
@@ -53,13 +55,16 @@ def get_shots_data(
     num_processes : int
         The number of processes to use for data retrieval. If 1, the data is retrieved in serial.
         If > 1, the data is retrieved in parallel.
-
+    log_settings : LogSettings
+        Settings for logging.
     Returns
     -------
     Any
         The value of OutputTypeRequest.get_results, where OutputTypeRequest is specified in
         shot_settings. See OutputTypeRequest for more details.
     """
+    (log_settings or LogSettings.default()).setup_logging()
+
     tokamak = resolve_tokamak(tokamak)
 
     database_initializer = database_initializer or (

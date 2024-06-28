@@ -27,7 +27,6 @@ else:
 print(f"Initialized for tokamak: {tokamak.value}")
 
 shot_settings = ShotSettings(
-    log_settings=LogSettings(console_log_level=0),
     run_tags=[],
     run_methods=run_methods,
 )
@@ -37,6 +36,7 @@ result = get_shots_data(
     shot_ids_request=shot_ids_request,
     shot_settings=shot_settings,
     output_type_request="dataframe",
+    log_settings=LogSettings(console_log_level=0),
 )
 
 print(result)

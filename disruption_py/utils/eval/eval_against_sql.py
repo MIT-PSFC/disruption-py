@@ -37,18 +37,18 @@ def get_mdsplus_data(
     shot_settings = ShotSettings(
         efit_tree_name="efit18",
         set_times_request="disruption_warning",
-        log_settings=LogSettings(
-            log_to_console=False,
-            log_file_path=log_file_path,
-            log_file_write_mode="w",
-            file_log_level=logging.DEBUG,
-        ),
     )
     shot_data = get_shots_data(
         tokamak=tokamak,
         shot_ids_request=shot_ids,
         shot_settings=shot_settings,
         output_type_request="dict",
+        log_settings=LogSettings(
+            log_to_console=False,
+            log_file_path=log_file_path,
+            log_file_write_mode="w",
+            file_log_level=logging.DEBUG,
+        ),
     )
     return shot_data
 
