@@ -43,7 +43,7 @@ def used_columns_by_shot_id(
 
 
 @parameter_method(columns=["kappa_area"])
-def decorated_shot_data_method(self, params: ParameterMethodParams) -> pd.DataFrame:
+def decorated_parameter_method(self, params: ParameterMethodParams) -> pd.DataFrame:
     pass
 
 

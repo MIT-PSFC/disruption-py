@@ -13,7 +13,7 @@ from disruption_py.utils.mappings.tokamak import Tokamak
 
 
 @parameter_method(columns=["upper_gap", "lower_gap"], tokamak=Tokamak.D3D)
-def decorated_shot_data_method(self, params: ParameterMethodParams) -> pd.DataFrame:
+def decorated_parameter_method(self, params: ParameterMethodParams) -> pd.DataFrame:
     """All parametered methods passed to `get_shots_data` will be called once for every shot retrieved.
     Decorated methods may call other decorated methods, however, execution order is not guranteed as calls
     will be reordered to minimize resource usage based on the `parameter_method` decorator.
