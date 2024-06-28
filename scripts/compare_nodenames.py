@@ -1,60 +1,198 @@
+import argparse
+from multiprocessing import Pool
+import numpy as np
+import pandas as pd
+from tqdm import tqdm
+import warnings
+
+from disruption_py.handlers.cmod_handler import CModHandler
+from disruption_py.utils.constants import MAX_PROCESSES
 import MDSplus as mds
-from pprint import pprint
+from MDSplus.tree import TreeNode
 
-shot = 1150805022
 
-tree = mds.Tree("cmod", shot)
+class NodeNameComparer:
+    """Compare two node names in MDSPlus to determine which one you should rely
+    on for fetching data and which one is an alias that may have only been created
+    for newer shots.
 
-efit_cols = {
-    "beta_n": r'\efit_aeqdsk:betan',
-    "beta_p": r'\efit_aeqdsk:betap',
-    "kappa": r'\efit_aeqdsk:eout',
-    "li": r'\efit_aeqdsk:ali',
-    "upper_gap": r'\efit_aeqdsk:otop',
-    "lower_gap": r'\efit_aeqdsk:obott',
-    "q0": r'\efit_aeqdsk:qqmagx',
-    "qstar": r'\efit_aeqdsk:qsta',
-    "q95": r'\efit_aeqdsk:qpsib',
-    "v_loop_efit": r'\efit_aeqdsk:vloopt',
-    "Wmhd": r'\efit_aeqdsk:wplasm',
-    "ssep": r'\efit_aeqdsk:ssep',
-    "n_over_ncrit": r'\efit_aeqdsk:xnnc',
-    "tritop": r'\efit_aeqdsk:doutu',
-    "tribot":  r'\efit_aeqdsk:doutl',
-    "a_minor": r'\efit_aeqdsk:aout',
-    "R0":r'\efit_aeqdsk:rmagx',
-    "chisq":r'\efit_aeqdsk:tsaisq',
-    "area":r'\efit_aeqdsk:areao',
-    }
+    Terminology in this class:
+    - A 'ref' node is one that contains data or an expression, and not merely a
+    pointer to another node.
+    - A 'new' node is an alias pointing to another node.
 
-def get_original(node_name: str, parent=tree.getNode("mhd.analysis.efit.results.a_eqdsk")):
+    E.g. creating a comparison table for `ali` as ref and `li` as new shows `ali`
+    has data for all shots and `li` is an alias for only a fraction of shots because
+    it was added only to new shots.
     """
-    Get the original column name for an alias in MDSPlus.
 
-    E.g. after 2000 people started using `li` to refer to `ali`.
-    `get_original('li', parent)` --> `'ali'`
-    
-    Params:
-        node_name: str, node name to get the original of
-        parent: TreeNode, MDSPlus parent node under which is the original
-            and alias. E.g. 
-    Returns:
-        the original name or expression if node_name exists in the parent, otherwise False.
-    """
-    try:
-        node = parent.getNode(node_name)
-        node_name_is_alias = type(node.getRecord()) != mds.compound.Signal
-        if node_name_is_alias:
-            return node.getRecord()
+    def __init__(self, shots: list[int], ref: str, new: str = None, num_processes=1):
+        """
+        Params:
+            shots: List of shot ids. If None, then one out of every 1000 shots from the
+                disruptions table is used.
+            ref: Referent node name
+            new: (optional) New, alias, node name
+            num_processes: number of processes with which to open MDSPlus trees
+        """
+        if ref is None:
+            raise ValueError("ref must be specified")
+
+        if shots is None:
+            self.shots = np.random.choice(NodeNameComparer.get_shot_list(), 100)
         else:
-            return node_name
-    except mds.mdsExceptions.TreeNNF:
+            self.shots = shots
+
+        self.ref = ref
+        self.new = new
+        self.columns = ["Has data", "Alias", "No Data"]
+        self.num_processes = min([len(self.shots), num_processes, MAX_PROCESSES])
+
+    @staticmethod
+    def get_shot_list() -> list[int]:
+        """Return all shots numbers from the disruptions sql table."""
+        handler = CModHandler()
+        shots = handler.database.query(f"select shot from disruptions")
+        return shots["shot"]
+
+    @staticmethod
+    def is_alias(node: TreeNode) -> bool:
+        """Return True if the node points to another record that has data."""
+        try:
+            node.getRecord().getNid()
+            return True
+        except (mds.mdsExceptions.TreeNODATA, AttributeError):
+            pass
         return False
 
-all_node_names = list(efit_cols.keys()) + list(efit_cols.values())
+    @staticmethod
+    def get_node(node_name: str, parent: TreeNode) -> TreeNode:
+        """Return the MDSPlus node off of the parent node."""
+        try:
+            return parent.getNode(node_name)
+        except mds.mdsExceptions.TreeNNF:
+            return None
 
-alias_to_original = {}
-for node_name in all_node_names:
-    alias_to_original[node_name] = get_original(node_name)
-    
-pprint(alias_to_original)
+    def compare_names_one_shot(self, shot: int) -> tuple[int, int]:
+        """Return the indices of the comparison table representing a relationship between ref and node."""
+        tree = mds.Tree("cmod", shot)
+        parent = tree.getNode("mhd.analysis.efit.results.a_eqdsk")
+        ref_node, new_node = None, None
+
+        ref_node = NodeNameComparer.get_node(self.ref, parent)
+        new_node = NodeNameComparer.get_node(self.new, parent)
+
+        # ref has no data
+        if ref_node is None:
+            warnings.warn(f"ref node '{self.ref}' not found, shot: {shot}")
+            # new has no data
+            if new_node is None:
+                return (2, 2)
+            # new is an alias
+            elif NodeNameComparer.is_alias(new_node):
+                return (2, 1)
+            # new has data
+            else:
+                return (0, 2)
+        # ref is an alias
+        elif NodeNameComparer.is_alias(ref_node):
+            if new_node is None:
+                warnings.warn(
+                    f"ref '{self.ref}' is an alias, but new '{self.new}' has no data, shot: {shot}"
+                )
+                return (2, 1)
+            elif NodeNameComparer.is_alias(new_node):
+                raise Exception(
+                    f"No data found: ref '{self.ref}' is an alias and new '{self.new}' is an alias, shot: {shot}"
+                )
+            else:
+                # ref is an alias for new data
+                if ref_node.getRecord().getNid() == new_node.getNid():
+                    return (0, 1)
+                # ref is an alias, new is data, but ref does not point to new
+                else:
+                    raise Exception(
+                        f"No connection: ref '{self.ref}' does not point to new '{self.new}', shot: {shot}"
+                    )
+        # ref has data
+        else:
+            if new_node is None:
+                return (2, 0)
+            elif NodeNameComparer.is_alias(new_node):
+                # new is an alias for ref
+                if new_node.getRecord().getNid() == ref_node.getNid():
+                    return (1, 0)
+                # new is an alias, but not for ref
+                else:
+                    raise Exception(
+                        f"No connection: new '{self.new}' does not point to ref '{self.ref}', shot: {shot}"
+                    )
+            # new has data
+            else:
+                raise Exception(
+                    f"No connection: new '{self.new}' and ref '{self.ref}' both have data, shot: {shot}"
+                )
+
+    def get_comparison_table(self) -> np.ndarray:
+        """
+        Create a Numpy array for the comparison matrix.
+
+        The columns and rows, for ref and new respectively, are
+        | Has Data | Alias | No data |
+        """
+        comparison_table = np.zeros(shape=(3, 3))
+        with Pool(self.num_processes) as p:
+            indices = tqdm(p.imap(self.compare_names_one_shot, self.shots), total=len(self.shots))
+            for idx in indices:
+                comparison_table[idx] += 1
+
+        return comparison_table
+
+    def get_pretty_table(self) -> pd.DataFrame:
+        """Convert values in table to percents, add column and row labels."""
+        comparison_table = self.get_comparison_table()
+        comparison_table = np.round(comparison_table / len(self.shots) * 100, 2)
+        comparison_table = np.vectorize(lambda item: str(item) + "%")(comparison_table)
+        comparison_table = pd.DataFrame(comparison_table)
+        comparison_table.columns = self.columns
+        comparison_table.index = self.columns
+        return comparison_table
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--shot-ids",
+        type=int,
+        nargs="*",
+        action="store",
+        default=None,
+        help="Shot number(s) to test, uses 10 random shots if not specified",
+    )
+    parser.add_argument(
+        "--ref",
+        type=str,
+        action="store",
+        required=True,
+        help="Referent node name",
+    )
+    parser.add_argument(
+        "--new",
+        type=str,
+        action="store",
+        required=True,
+        help="New (alias) node name",
+    )
+    parser.add_argument(
+        "--num-processes",
+        type=int,
+        action="store",
+        default=1,
+        help="Number of processes in which to open MDSPlus trees (default=1)",
+    )
+
+    args = parser.parse_args()
+    compare = NodeNameComparer(args.shot_ids, args.ref, args.new, args.num_processes)
+    table = compare.get_pretty_table()
+    print(f"New '{args.new}' \\ \tRef '{args.ref}'")
+    print(table)
