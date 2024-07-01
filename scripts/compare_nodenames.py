@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import json
 from multiprocessing import Pool
 import re
 import sys
@@ -149,7 +150,7 @@ class NodeNameComparer:
                 )
                 return (self.EMPTY_IDX, self.ALIAS_IDX)
             elif NodeNameComparer.is_alias(new_record):
-                raise ValueError(
+                warnings.warn(
                     f"No data found: ref '{self.ref}' is an alias and new '{self.new}'"
                     + f" is an alias, shot: {shot}"
                 )
@@ -161,7 +162,7 @@ class NodeNameComparer:
                     return (self.VALUES_IDX, self.ALIAS_IDX)
                 # ref is an alias, new is data, but ref does not point to new
                 else:
-                    raise ValueError(
+                    warnings.warn(
                         f"No connection: ref '{self.ref}' does not point to new "
                         + f"'{self.new}', shot: {shot}"
                     )
@@ -175,7 +176,7 @@ class NodeNameComparer:
                     return (self.ALIAS_IDX, self.EXPRESSION_IDX)
                 # new is an alias, but not for ref
                 else:
-                    raise ValueError(
+                    warnings.warn(
                         f"No connection: new '{self.new}' does not point to ref "
                         + f"'{self.ref}', shot: {shot}"
                     )
@@ -192,7 +193,7 @@ class NodeNameComparer:
                     return (self.ALIAS_IDX, self.VALUES_IDX)
                 # new is an alias, but not for ref
                 else:
-                    raise ValueError(
+                    warnings.warn(
                         f"No connection: new '{self.new}' does not point to ref "
                         + f"'{self.ref}', shot: {shot}"
                     )
@@ -200,26 +201,55 @@ class NodeNameComparer:
                 return (self.EXPRESSION_IDX, self.VALUES_IDX)
             # new has data
             else:
-                raise ValueError(
+                warnings.warn(
                     f"No connection: new '{self.new}' and ref '{self.ref}' both "
                     + f"have data, shot: {shot}"
                 )
 
     def get_comparison_table(self) -> np.ndarray:
         """
-        Create a Numpy array for the comparison matrix.
+        Create a Numpy array for the comparison matrix and saves a json of the shots.
 
         The columns and rows, for ref and new respectively, are
         | values | alias | expression | empty |
         """
+        json_keys = {
+            (self.VALUES_IDX, self.VALUES_IDX): "vv",
+            (self.VALUES_IDX, self.ALIAS_IDX): "va",
+            (self.VALUES_IDX, self.EXPRESSION_IDX): "vx",
+            (self.VALUES_IDX, self.EMPTY_IDX): "ve",
+
+            (self.ALIAS_IDX, self.VALUES_IDX): "av",
+            (self.ALIAS_IDX, self.ALIAS_IDX): "aa",
+            (self.ALIAS_IDX, self.EXPRESSION_IDX): "ax",
+            (self.ALIAS_IDX, self.EMPTY_IDX): "ae",
+            
+            (self.EXPRESSION_IDX, self.VALUES_IDX): "xv",
+            (self.EXPRESSION_IDX, self.ALIAS_IDX): "xa",
+            (self.EXPRESSION_IDX, self.EXPRESSION_IDX): "xx",
+            (self.EXPRESSION_IDX, self.EMPTY_IDX): "xe",
+            
+            (self.EMPTY_IDX, self.VALUES_IDX): "ev",
+            (self.EMPTY_IDX, self.ALIAS_IDX): "ea",
+            (self.EMPTY_IDX, self.EXPRESSION_IDX): "ex",
+            (self.EMPTY_IDX, self.EMPTY_IDX): "ee",
+        }
+        shot_log = {}
         comparison_table = np.zeros(shape=(len(self.labels), len(self.labels)))
         with Pool(self.num_processes) as p:
-            indices = p.map(self.compare_names_one_shot, self.shots)
-            for idx in indices:
+            table_indices = p.map(self.compare_names_one_shot, self.shots)
+            for i in range(len(table_indices)):
+                idx = table_indices[i]
                 if idx is None:
                     continue
                 comparison_table[idx] += 1
 
+                if json_keys[idx] not in shot_log:
+                    shot_log[json_keys[idx]] = []
+                shot_log[json_keys[idx]].append(self.shots[i])
+
+        with open(f"{self.ref}-{self.new}.json", "w") as f:
+            f.write(json.dumps(shot_log))
         return comparison_table
 
     def get_pretty_table(self) -> pd.DataFrame:
