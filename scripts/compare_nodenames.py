@@ -115,14 +115,14 @@ class NodeNameComparer:
         if ref_node is not None:
             try:
                 ref_record = ref_node.getRecord()
-            except TreeNODATA:
+            except (TreeNODATA, TreeFOPENR, AttributeError):
                 pass
 
         new_node = NodeNameComparer.get_node(f"{self.parent_name}:{self.new}", tree)
         if new_node is not None:
             try:
                 new_record = new_node.getRecord()
-            except TreeNODATA:
+            except (TreeNODATA, TreeFOPENR, AttributeError):
                 pass
 
         # ref has no data
