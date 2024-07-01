@@ -1829,7 +1829,7 @@ class ThomsonDensityMeasure:
                 y = n_e[i, ind]
                 values_uniq, ind_uniq = np.unique(x, return_index=True)
                 y = y[ind_uniq]
-                nlts[i] = np.trapz(y, x)
+                nlts[i] = np.trapezoid(y, x)
         return nlts, nlts_t
 
     @staticmethod

@@ -268,7 +268,7 @@ class DisruptionSetTimesRequest(SetTimesRequest):
                 duration = 0
                 return duration, signal_max
         polarity = np.sign(
-            np.trapz(signal[finite_indices], signal_time[finite_indices])
+            np.trapezoid(signal[finite_indices], signal_time[finite_indices])
         )
         polarized_signal = polarity * signal
         valid_indices = np.where((polarized_signal >= threshold) & (signal_time > 0.0))
