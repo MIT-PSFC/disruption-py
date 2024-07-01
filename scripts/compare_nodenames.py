@@ -19,9 +19,10 @@ class NodeNameComparer:
     for newer shots.
 
     Terminology in this class:
-    - A 'ref' node is one that contains data or an expression, and not merely a
-    pointer to another node.
-    - A 'new' node is an alias pointing to another node.
+    - A 'ref' node is the one that we want to exist for as many shots as possible
+    so that we can count on using it for all shots.
+    - A 'new' node is the node that may not exist for all shots. It could be that
+    the new node is an alias that was created for new shots for convenience.
 
     E.g. creating a comparison table for `ali` as ref and `li` as new shows `ali`
     has data for all shots and `li` is an alias for only a fraction of shots because
