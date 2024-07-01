@@ -12,8 +12,6 @@ import MDSplus as mds
 from MDSplus.tree import TreeNode
 from disruption_py.utils.constants import MAX_PROCESSES
 
-NODENAMES_SHOT_LIST_PATH = "disruption_py/data/compare_nodenames_default.txt"
-
 
 class NodeNameComparer:
     """Compare two node names in MDSPlus to determine which one you should rely
@@ -45,18 +43,23 @@ class NodeNameComparer:
         if isinstance(shots, list):
             self.shots = shots
         else:
-            self.shots = NodeNameComparer.get_default_shot_list()
+            self.shots = [
+                941130004,
+                941130006,
+                941130007,
+                941130009,
+                941130010,
+                1010626011,
+                1010626012,
+                1010627003,
+                1010627006,
+                1010627007,
+            ]
         self.ref = ref
         self.new = new
         self.columns = ["values", "alias", "empty"]
         self.parent_name = r"\efit_aeqdsk"
         self.num_processes = min([len(self.shots), num_processes, MAX_PROCESSES])
-
-    @staticmethod
-    def get_default_shot_list() -> list[int]:
-        """Return 20 new and 20 old shots ids."""
-        with open(NODENAMES_SHOT_LIST_PATH, "r") as f:
-            return [int(s) for s in f.readlines()]
 
     @staticmethod
     def is_alias(node: TreeNode) -> bool:
@@ -213,15 +216,15 @@ if __name__ == "__main__":
     if args.shot_ids is None and not sys.stdin.isatty():
         shot_ids = [int(s.strip()) for s in sys.stdin.read().split()]
     # Parse list of shot ids
-    elif args.shot_ids[0].isdigit():
+    elif args.shot_ids and len(args.shot_ids) > 0 and args.shot_ids[0].isdigit():
         shot_ids = [int(s) for s in args.shot_ids]
     # Parse txt files
-    elif args.shot_ids[0].endswith(".txt"):
+    elif args.shot_ids and args.shot_ids[0].endswith(".txt"):
         with open(args.shot_ids[0], "r") as f:
             shot_ids = [int(s) for s in f.readlines()]
 
     compare = NodeNameComparer(shot_ids, args.ref, args.new, args.num_processes)
     table = compare.get_pretty_table()
-    print("ref:" + " " * 6 + f"{compare.parent_name}:{args.ref}")
+    print("      ref:" + f"{compare.parent_name}:{args.ref}")
     print(table)
     print(f"{compare.parent_name}:{args.new}")
