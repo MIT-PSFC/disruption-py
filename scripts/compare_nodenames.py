@@ -87,7 +87,9 @@ class NodeNameComparer:
         node_str = str(record)
         match = re.search(r"Build_Signal\(([^,]+),", node_str)
         for op in operators:
-            if (match is None and op in node_str) or (op in match.group(1)):
+            if (match is None and op in node_str) or (
+                match is not None and op in match.group(1)
+            ):
                 return True
         return False
 
@@ -106,16 +108,22 @@ class NodeNameComparer:
             tree = mds.Tree("analysis", shot)
         except mds.mdsExceptions.TreeFOPENR:
             return None
-        
+
         ref_record, new_record = None, None
 
         ref_node = NodeNameComparer.get_node(f"{self.parent_name}:{self.ref}", tree)
         if ref_node is not None:
-            ref_record = ref_node.getRecord()
+            try:
+                ref_record = ref_node.getRecord()
+            except TreeNODATA:
+                pass
 
         new_node = NodeNameComparer.get_node(f"{self.parent_name}:{self.new}", tree)
         if new_node is not None:
-            new_record = new_node.getRecord()
+            try:
+                new_record = new_node.getRecord()
+            except TreeNODATA:
+                pass
 
         # ref has no data
         if ref_node is None:
