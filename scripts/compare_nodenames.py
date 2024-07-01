@@ -2,6 +2,7 @@
 
 import argparse
 from multiprocessing import Pool
+import re
 import sys
 import warnings
 
@@ -10,7 +11,8 @@ import pandas as pd
 
 import MDSplus as mds
 from MDSplus.tree import TreeNode
-from disruption_py.utils.constants import MAX_PROCESSES
+from MDSplus.compound import Signal
+from MDSplus.mdsExceptions import TreeNODATA, TreeFOPENR
 
 
 class NodeNameComparer:
@@ -58,18 +60,35 @@ class NodeNameComparer:
             ]
         self.ref = ref
         self.new = new
-        self.columns = ["values", "alias", "empty"]
+
+        self.labels = ["values", "alias", "expression", "empty"]
+        self.VALUES_IDX = 0
+        self.ALIAS_IDX = 1
+        self.EXPRESSION_IDX = 2
+        self.EMPTY_IDX = 3
+
         self.parent_name = r"\efit_aeqdsk"
-        self.num_processes = min([len(self.shots), num_processes, MAX_PROCESSES])
+        self.num_processes = min(len(self.shots), num_processes)
 
     @staticmethod
-    def is_alias(node: TreeNode) -> bool:
+    def is_alias(record: Signal) -> bool:
         """Return True if the node points to another record that has data."""
         try:
-            node.getRecord().getNid()
+            record.getNid()
             return True
-        except (mds.mdsExceptions.TreeNODATA, AttributeError):
+        except (TreeNODATA, TreeFOPENR, AttributeError):
             pass
+        return False
+
+    @staticmethod
+    def is_expression(record: Signal) -> bool:
+        """Return True if the node is an expression made of other nodes."""
+        operators = ["/", "*", "+", "-"]
+        node_str = str(record)
+        match = re.search(r"Build_Signal\(([^,]+),", node_str)
+        for op in operators:
+            if (match is None and op in node_str) or (op in match.group(1)):
+                return True
         return False
 
     @staticmethod
@@ -87,61 +106,90 @@ class NodeNameComparer:
             tree = mds.Tree("analysis", shot)
         except mds.mdsExceptions.TreeFOPENR:
             return None
-        parent = tree.getNode(self.parent_name)
-        ref_node, new_node = None, None
+        
+        ref_record, new_record = None, None
 
-        ref_node = NodeNameComparer.get_node(self.ref, parent)
-        new_node = NodeNameComparer.get_node(self.new, parent)
+        ref_node = NodeNameComparer.get_node(f"{self.parent_name}:{self.ref}", tree)
+        if ref_node is not None:
+            ref_record = ref_node.getRecord()
+
+        new_node = NodeNameComparer.get_node(f"{self.parent_name}:{self.new}", tree)
+        if new_node is not None:
+            new_record = new_node.getRecord()
 
         # ref has no data
         if ref_node is None:
             warnings.warn(f"ref node '{self.ref}' not found, shot: {shot}")
             # new has no data
             if new_node is None:
-                return (2, 2)
+                return (self.EMPTY_IDX, self.EMPTY_IDX)
             # new is an alias
-            elif NodeNameComparer.is_alias(new_node):
-                return (2, 1)
+            elif NodeNameComparer.is_alias(new_record):
+                return (self.ALIAS_IDX, self.EMPTY_IDX)
+            # new is an expression
+            elif NodeNameComparer.is_expression(new_record):
+                return (self.EXPRESSION_IDX, self.EMPTY_IDX)
             # new has data
             else:
-                return (0, 2)
+                return (self.VALUES_IDX, self.EMPTY_IDX)
         # ref is an alias
-        elif NodeNameComparer.is_alias(ref_node):
+        elif NodeNameComparer.is_alias(ref_record):
             if new_node is None:
                 warnings.warn(
                     f"ref '{self.ref}' is an alias, but new '{self.new}' has no "
                     + f"data, shot: {shot}"
                 )
-                return (2, 1)
-            elif NodeNameComparer.is_alias(new_node):
+                return (self.EMPTY_IDX, self.ALIAS_IDX)
+            elif NodeNameComparer.is_alias(new_record):
                 raise ValueError(
                     f"No data found: ref '{self.ref}' is an alias and new '{self.new}'"
                     + f" is an alias, shot: {shot}"
                 )
+            elif NodeNameComparer.is_expression(new_record):
+                return (self.EXPRESSION_IDX, self.ALIAS_IDX)
             else:
                 # ref is an alias for new data
-                if ref_node.getRecord().getNid() == new_node.getNid():
-                    return (0, 1)
+                if ref_record.getNid() == new_node.getNid():
+                    return (self.VALUES_IDX, self.ALIAS_IDX)
                 # ref is an alias, new is data, but ref does not point to new
                 else:
                     raise ValueError(
                         f"No connection: ref '{self.ref}' does not point to new "
                         + f"'{self.new}', shot: {shot}"
                     )
-        # ref has data
-        else:
+        # ref is expression
+        elif NodeNameComparer.is_expression(ref_record):
             if new_node is None:
-                return (2, 0)
-            elif NodeNameComparer.is_alias(new_node):
+                return (self.EMPTY_IDX, self.EXPRESSION_IDX)
+            elif NodeNameComparer.is_alias(new_record):
                 # new is an alias for ref
-                if new_node.getRecord().getNid() == ref_node.getNid():
-                    return (1, 0)
+                if new_record.getNid() == ref_node.getNid():
+                    return (self.ALIAS_IDX, self.EXPRESSION_IDX)
                 # new is an alias, but not for ref
                 else:
                     raise ValueError(
                         f"No connection: new '{self.new}' does not point to ref "
                         + f"'{self.ref}', shot: {shot}"
                     )
+            # new has data
+            else:
+                return (self.VALUES_IDX, self.EXPRESSION_IDX)
+        # ref has data
+        else:
+            if new_node is None:
+                return (self.EMPTY_IDX, self.VALUES_IDX)
+            elif NodeNameComparer.is_alias(new_record):
+                # new is an alias for ref
+                if new_record.getNid() == ref_node.getNid():
+                    return (self.ALIAS_IDX, self.VALUES_IDX)
+                # new is an alias, but not for ref
+                else:
+                    raise ValueError(
+                        f"No connection: new '{self.new}' does not point to ref "
+                        + f"'{self.ref}', shot: {shot}"
+                    )
+            elif NodeNameComparer.is_expression(new_record):
+                return (self.EXPRESSION_IDX, self.VALUES_IDX)
             # new has data
             else:
                 raise ValueError(
@@ -154,9 +202,9 @@ class NodeNameComparer:
         Create a Numpy array for the comparison matrix.
 
         The columns and rows, for ref and new respectively, are
-        | values | alias | empty |
+        | values | alias | expression | empty |
         """
-        comparison_table = np.zeros(shape=(3, 3))
+        comparison_table = np.zeros(shape=(len(self.labels), len(self.labels)))
         with Pool(self.num_processes) as p:
             indices = p.map(self.compare_names_one_shot, self.shots)
             for idx in indices:
@@ -173,8 +221,8 @@ class NodeNameComparer:
             lambda item: f"{item:.0f} ({item / len(self.shots) * 100:.0f}%)"
         )(comparison_table)
         comparison_table = pd.DataFrame(comparison_table)
-        comparison_table.columns = self.columns
-        comparison_table.index = self.columns
+        comparison_table.columns = self.labels
+        comparison_table.index = self.labels
         return comparison_table
 
 
