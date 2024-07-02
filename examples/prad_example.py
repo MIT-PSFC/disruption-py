@@ -24,10 +24,6 @@ shot_settings = ShotSettings(
     run_columns=["p_rad"],  # run parameter methods
     only_requested_columns=True,  # only return the column data for run_columns
     signal_domain="flattop",  # retrieve data from the flattop time domain
-    log_settings=LogSettings(
-        log_to_console=False,  # don't log to the console
-        log_file_path="examples/last_log.log",  # instead log to this file
-    ),
 )
 
 shot_data = get_shots_data(
@@ -36,4 +32,8 @@ shot_data = get_shots_data(
     shot_settings=shot_settings,
     output_type_request="examples/p_rad.csv",
     num_processes=4,
+    log_settings=LogSettings(
+        log_to_console=False,  # don't log to the console
+        log_file_path="examples/last_log.log",  # instead log to this file
+    ),
 )

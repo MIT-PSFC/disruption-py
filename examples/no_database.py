@@ -13,9 +13,6 @@ shot_settings = ShotSettings(
     set_times_request="ip",
     # run all available methods
     run_tags=["all"],
-    log_settings=LogSettings(
-        console_log_level=logging.DEBUG,
-    ),
 )
 shot_data = get_shots_data(
     tokamak="d3d",
@@ -26,4 +23,7 @@ shot_data = get_shots_data(
     output_type_request=f"/tmp/{os.environ['USER']}/data.csv",
     num_processes=1,
     database_initializer=DummyDatabase.initializer,  # use dummy database
+    log_settings=LogSettings(
+        console_log_level=logging.DEBUG,
+    ),
 )
