@@ -22,16 +22,14 @@ def generate_id(size=8):
     return "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
 
 
-def interp1(
-    x, y, new_x, kind="linear", bounds_error=False, fill_value=np.nan, axis=-1
-):
+def interp1(x, y, new_x, kind="linear", bounds_error=False, fill_value=np.nan, axis=-1):
     """
     Interpolate a 1-D array.
 
-    This function uses scipy.interpolate.interp1d to interpolate a 1-D array 
-    using the given x and y values and interpolation method. It also allows 
-    the user to specify the value of the new_x array, and whether or not to 
-    raise an error if the new x-values are outside the range of the original 
+    This function uses scipy.interpolate.interp1d to interpolate a 1-D array
+    using the given x and y values and interpolation method. It also allows
+    the user to specify the value of the new_x array, and whether or not to
+    raise an error if the new x-values are outside the range of the original
     x-values.
 
     Parameters
