@@ -914,14 +914,14 @@ class BasicCmodRequests(ShotDataRequest):
         a_minor = interp1(t_a, a_minor, times)
         # make sure aminor is not 0 or less than 0
         a_minor[a_minor <= 0] = 0.001
-        n_G = ip / (np.pi * a_minor**2) * 1e20  # Greenwald density in m ^-3
-        g_f = abs(n_e / n_G)
+        n_G = abs(ip) / (np.pi * a_minor**2) * 1e20  # Greenwald density in m ^-3
+        g_f = n_e / n_G
         return pd.DataFrame({"n_e": n_e, "dn_dt": dn_dt, "Greenwald_fraction": g_f})
 
     @staticmethod
     @parameter_cached_method(
         columns=["n_e", "dn_dt", "Greenwald_fraction"],
-        used_trees=["electrons", "magnetics", "analysis"],
+        used_trees=["electrons", "magnetics", "_efit_tree"],
         tokamak=Tokamak.CMOD,
     )
     def _get_densities(params: ShotDataRequestParams):
@@ -937,7 +937,7 @@ class BasicCmodRequests(ShotDataRequest):
                 r"\ip", tree_name="magnetics", astype="float64"
             )
             a_minor, t_a = params.mds_conn.get_data_with_dims(
-                r"\efit_aeqdsk:aminor", tree_name="analysis", astype="float64"
+                r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
             )
         except Exception as e:
             params.logger.debug(f"[Shot {params.shot_props.shot_id}] {e}")
