@@ -21,10 +21,10 @@ from disruption_py.utils.eval.eval_against_sql import (
     get_sql_data_for_mdsplus,
 )
 from disruption_py.machine.tokamak import Tokamak, get_tokamak_from_environment
-from disruption_py.utils.mappings.tokamak_helpers import (
-    get_tokamak_test_expected_failure_columns,
+from tests.utils.factory import (
     get_tokamak_test_shot_ids,
 )
+from tests.utils.factory import get_tokamak_test_expected_failure_columns
 
 
 @pytest.fixture(scope="module")
