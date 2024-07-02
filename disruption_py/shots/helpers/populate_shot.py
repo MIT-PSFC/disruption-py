@@ -7,6 +7,7 @@ import os
 import numpy as np
 import pandas as pd
 
+from disruption_py.machine.builtin import built_in_method_factory
 from disruption_py.shots.helpers.parameter_method_params import (
     ParameterMethodParams,
 )
@@ -19,26 +20,8 @@ from disruption_py.shots.helpers.method_metadata import (
 from disruption_py.shots.helpers.method_caching import manually_cache
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.constants import TIME_CONST
-from disruption_py.utils.mappings.tokamak import Tokamak
 
 REQUIRED_COLS = {"time", "shot", "commit_hash"}
-
-
-def built_in_method_factory(tokamak: Tokamak):
-    if tokamak is Tokamak.D3D:
-        from disruption_py.shots.parameter_methods.d3d.built_in import (
-            D3D_DEFAULT_PARAMETER_METHODS,
-        )
-
-        return D3D_DEFAULT_PARAMETER_METHODS
-    elif tokamak is Tokamak.CMOD:
-        from disruption_py.shots.parameter_methods.cmod.built_in import (
-            CMOD_DEFAULT_PARAMETER_METHODS,
-        )
-
-        return CMOD_DEFAULT_PARAMETER_METHODS
-    else:
-        raise ValueError(f"Invalid tokamak for built-ins {tokamak}")
 
 
 def get_prefilled_shot_data(shot_props: ShotProps):
