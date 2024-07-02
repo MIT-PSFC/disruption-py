@@ -9,10 +9,10 @@ from disruption_py.settings.existing_data_request import (
     resolve_existing_data_request,
 )
 from disruption_py.settings.output_type_request import OutputTypeRequest
-from disruption_py.settings.set_times_request import (
-    ExistingDataSetTimesRequest,
-    SetTimesRequest,
-    resolve_set_times_request,
+from disruption_py.settings.time_setting import (
+    ExistingDataTimeSetting,
+    TimeSetting,
+    resolve_time_setting,
 )
 from disruption_py.utils.mappings.mappings_helpers import map_string_attributes_to_enum
 from disruption_py.machine.tokamak import Tokamak, is_tokamak_indexed
@@ -116,7 +116,7 @@ class Settings:
     custom_parameter_methods: list = field(default_factory=list)
 
     # Timebase setting
-    set_times_request: SetTimesRequest = "disruption_warning"
+    set_times_request: TimeSetting = "disruption_warning"
     signal_domain: SignalDomain = "full"
     use_existing_data_timebase: bool = False
     interpolation_method: InterpolationMethod = "linear"
@@ -179,7 +179,7 @@ class Settings:
         self.existing_data_request = resolve_existing_data_request(
             self.existing_data_request
         )
-        self.set_times_request = resolve_set_times_request(self.set_times_request)
+        self.set_times_request = resolve_time_setting(self.set_times_request)
 
         map_string_attributes_to_enum(
             self,
@@ -190,9 +190,9 @@ class Settings:
         )
 
         if self.use_existing_data_timebase and not isinstance(
-            self.set_times_request, ExistingDataSetTimesRequest
+            self.set_times_request, ExistingDataTimeSetting
         ):
-            self.set_times_request = ExistingDataSetTimesRequest(self.set_times_request)
+            self.set_times_request = ExistingDataTimeSetting(self.set_times_request)
 
         if self.attempt_local_efit_env is not None:
             for idx, (option, value) in enumerate(self.attempt_local_efit_env):

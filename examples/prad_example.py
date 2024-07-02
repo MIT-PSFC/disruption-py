@@ -3,14 +3,14 @@
 from disruption_py.workflow import get_shots_data
 from disruption_py.settings import (
     LogSettings,
-    SetTimesRequest,
-    SetTimesRequestParams,
+    TimeSetting,
+    TimeSettingParams,
     Settings,
 )
 
 
-class PRadTime(SetTimesRequest):
-    def _get_times(self, params: SetTimesRequestParams):
+class PRadTime(TimeSetting):
+    def _get_times(self, params: TimeSettingParams):
         (time_array,) = params.mds_conn.get_dims(
             r"\twopi_diode", tree_name="spectroscopy"
         )

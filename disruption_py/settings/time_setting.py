@@ -17,7 +17,7 @@ from disruption_py.machine.tokamak import Tokamak
 
 
 @dataclass
-class SetTimesRequestParams:
+class TimeSettingParams:
     """Params passed by disruption_py to _get_times() method.
 
     Attributes
@@ -33,7 +33,7 @@ class SetTimesRequestParams:
     disruption_time : float
         The time when the shot disrupted or None if no disruption occured.
     tokamak : Tokemak
-        The tokamak for which the set times request is made.
+        The tokamak using the time setting.
     logger : Logger
         Logger object from disruption_py to use for logging.
     """
@@ -52,29 +52,27 @@ class SetTimesRequestParams:
         return self.disruption_time is not None
 
 
-SetTimesRequestType = Union[
-    "SetTimesRequest", str, Dict[Tokamak, "SetTimesRequestType"]
-]
+TimeSettingType = Union["TimeSetting", str, Dict[Tokamak, "TimeSettingType"]]
 
 
-class SetTimesRequest(ABC):
-    """SetTimesRequest abstract class that should be inherited by all set times request classes."""
+class TimeSetting(ABC):
+    """TimeSetting abstract class that should be inherited by all time setting classes."""
 
-    def get_times(self, params: SetTimesRequestParams) -> np.ndarray:
+    def get_times(self, params: TimeSettingParams) -> np.ndarray:
         if hasattr(self, "tokamak_overrides"):
             if params.tokamak in self.tokamak_overrides:
                 return self.tokamak_overrides[params.tokamak](params)
         return self._get_times(params)
 
     @abstractmethod
-    def _get_times(self, params: SetTimesRequestParams) -> np.ndarray:
+    def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         """Abstract method implemented by subclasses to get timebase as list.
         The timebase can be set to be automatically restricted to a subdomain of the
         provided times via the signal_domain argument in the ShotSettings object.
 
         Parameters
         ----------
-        params : SetTimesRequestParams
+        params : TimeSettingParams
             Params that can be used to determine and retrieve the timebase.
 
         Returns
@@ -85,63 +83,61 @@ class SetTimesRequest(ABC):
         pass
 
 
-class SetTimesRequestDict(SetTimesRequest):
+class TimeSettingDict(TimeSetting):
     """
-    Utility class that is automatically used when a dicationary is passed as the `set_times_request` parameter in `ShotSettings`.
+    Utility class that is automatically used when a dicationary is passed as the `time_setting` parameter in `ShotSettings`.
 
     Parameters
     ----------
-    set_times_request_dict : dict[Tokamak, SetTimesRequestType]
-        A dictionary mapping tokamak type strings to the desired set times request for that tokamak.  E.g. `{'cmod': 'efit'}`.
-        Any other option passable to the `set_times_request` parameter in `ShotSettings` may be used.
+    time_setting_dict : dict[Tokamak, TimeSettingType]
+        A dictionary mapping tokamak type strings to the desired time setting for that tokamak.  E.g. `{'cmod': 'efit'}`.
+        Any other option passable to the `time_setting` parameter in `ShotSettings` may be used.
     """
 
-    def __init__(self, set_times_request_dict: Dict[Tokamak, SetTimesRequestType]):
-        resolved_set_times_request_dict = {
-            map_string_to_enum(tokamak, Tokamak): resolve_set_times_request(
-                individual_request
+    def __init__(self, time_setting_dict: Dict[Tokamak, TimeSettingType]):
+        resolved_time_setting_dict = {
+            map_string_to_enum(tokamak, Tokamak): resolve_time_setting(
+                individual_setting
             )
-            for tokamak, individual_request in set_times_request_dict.items()
+            for tokamak, individual_setting in time_setting_dict.items()
         }
-        self.resolved_set_times_request_dict = resolved_set_times_request_dict
+        self.resolved_time_setting_dict = resolved_time_setting_dict
 
-    def _get_times(self, params: SetTimesRequestParams) -> np.ndarray:
-        chosen_request = self.resolved_set_times_request_dict.get(params.tokamak, None)
-        if chosen_request is not None:
-            return chosen_request.get_times(params)
+    def _get_times(self, params: TimeSettingParams) -> np.ndarray:
+        chosen_setting = self.resolved_time_setting_dict.get(params.tokamak, None)
+        if chosen_setting is not None:
+            return chosen_setting.get_times(params)
         else:
-            params.logger.warning(f"No get times request for tokamak {params.tokamak}")
+            params.logger.warning(f"No time setting for tokamak {params.tokamak}")
             return None
 
 
-class ListSetTimesRequest(SetTimesRequest):
+class ListTimeSetting(TimeSetting):
     """
     A list of times to use as the timebase.
 
     A utility class that is automatically used when a list, numpy array, or pandas series is
-    passed as the `set_times_request` parameter in `ShotSettings`.
+    passed as the `time_setting` parameter in `ShotSettings`.
     """
 
     def __init__(self, times):
         self.times = times
 
-    def _get_times(self, params: SetTimesRequestParams) -> np.ndarray:
+    def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         return self.times
 
 
-class ExistingDataSetTimesRequest(SetTimesRequest):
+class ExistingDataTimeSetting(TimeSetting):
     """
-    Get times request for using the existing data timebase.
+    Time setting for using the existing data timebase.
 
-    If no existing data exists for the shot, then the fallback_set_times_request is used.
+    If no existing data exists for the shot, then the fallback_time_setting is used.
     """
 
-    def __init__(self, fallback_set_times_request: SetTimesRequestType) -> None:
-        self.fallback_set_times_request = resolve_set_times_request(
-            fallback_set_times_request
-        )
+    def __init__(self, fallback_time_setting: TimeSettingType) -> None:
+        self.fallback_time_setting = resolve_time_setting(fallback_time_setting)
 
-    def _get_times(self, params: SetTimesRequestParams) -> np.ndarray:
+    def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         if params.existing_data is not None:
             # set timebase to be the timebase of existing data
             try:
@@ -156,16 +152,16 @@ class ExistingDataSetTimesRequest(SetTimesRequest):
                 )
                 params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
         else:
-            return self.fallback_set_times_request.get_times(params)
+            return self.fallback_time_setting.get_times(params)
 
 
-class EfitSetTimesRequest(SetTimesRequest):
-    """Get times request for using the EFIT timebase."""
+class EfitTimeSetting(TimeSetting):
+    """Time setting for using the EFIT timebase."""
 
     def __init__(self):
         self.tokamak_overrides = {Tokamak.CMOD: self.cmod_times}
 
-    def cmod_times(self, params: SetTimesRequestParams):
+    def cmod_times(self, params: TimeSettingParams):
         efit_tree_name = params.mds_conn.get_tree_name_of_nickname("_efit_tree")
         if efit_tree_name == "analysis":
             try:
@@ -187,13 +183,13 @@ class EfitSetTimesRequest(SetTimesRequest):
                 astype="float64",
             )
 
-    def _get_times(self, params: SetTimesRequestParams) -> np.ndarray:
-        raise ValueError("EFIT timebase request not implemented")
+    def _get_times(self, params: TimeSettingParams) -> np.ndarray:
+        raise ValueError("EFIT timebase setting not implemented")
 
 
-class DisruptionSetTimesRequest(SetTimesRequest):
+class DisruptionTimeSetting(TimeSetting):
     """
-    Get times request for using the disruption timebase.
+    Time setting for using the disruption timebase.
 
     The disruption timebase is the timebase of the shot that was disrupted.
     """
@@ -207,10 +203,10 @@ class DisruptionSetTimesRequest(SetTimesRequest):
         self.minimum_ip = minimum_ip
         self.minimum_duration = minimum_duration
 
-    def _get_times(self, params: SetTimesRequestParams) -> np.ndarray:
-        raise ValueError("Disruption timebase request not implemented")
+    def _get_times(self, params: TimeSettingParams) -> np.ndarray:
+        raise ValueError("Disruption time setting not implemented")
 
-    def d3d_times(self, params: SetTimesRequestParams):
+    def d3d_times(self, params: TimeSettingParams):
         raw_ip, ip_time = params.mds_conn.get_data_with_dims(
             f"ptdata('ip', {params.shot_id})", tree_name="d3d"
         )
@@ -279,26 +275,26 @@ class DisruptionSetTimesRequest(SetTimesRequest):
         return duration, signal_max
 
 
-class IpSetTimesRequest(SetTimesRequest):
+class IpTimeSetting(TimeSetting):
     def __init__(self):
         self.tokamak_overrides = {Tokamak.D3D: self.d3d_times}
 
-    def _get_times(self, params: SetTimesRequestParams) -> np.ndarray:
-        raise ValueError("Ip timebase request not implemented")
+    def _get_times(self, params: TimeSettingParams) -> np.ndarray:
+        raise ValueError("Ip time setting not implemented")
 
-    def d3d_times(self, params: SetTimesRequestParams):
+    def d3d_times(self, params: TimeSettingParams):
         (ip_time,) = params.mds_conn.get_dims(
             f"ptdata('ip', {params.shot_id})", tree_name="d3d"
         )
         return ip_time
 
 
-class SignalSetTimesRequest(SetTimesRequest):
+class SignalTimeSetting(TimeSetting):
     def __init__(self, tree_name: str, signal_path: str):
         self.tree_name = tree_name
         self.signal_path = signal_path
 
-    def _get_times(self, params: SetTimesRequestParams) -> np.ndarray:
+    def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         try:
             (signal_time,) = params.mds_conn.get_dims(
                 self.signal_path, tree_name=self.tree_name, astype="float64"
@@ -311,39 +307,37 @@ class SignalSetTimesRequest(SetTimesRequest):
             raise Exception(e)
 
 
-# --8<-- [start:set_times_request_dict]
-_set_times_request_mappings: Dict[str, SetTimesRequest] = {
-    "efit": EfitSetTimesRequest(),
-    "disruption": DisruptionSetTimesRequest(),
+# --8<-- [start:time_setting_dict]
+_time_setting_mappings: Dict[str, TimeSetting] = {
+    "efit": EfitTimeSetting(),
+    "disruption": DisruptionTimeSetting(),
     "disruption_warning": {
-        Tokamak.CMOD: EfitSetTimesRequest(),
-        Tokamak.D3D: DisruptionSetTimesRequest(),
+        Tokamak.CMOD: EfitTimeSetting(),
+        Tokamak.D3D: DisruptionTimeSetting(),
     },
-    "ip": IpSetTimesRequest(),
+    "ip": IpTimeSetting(),
 }
-# --8<-- [end:set_times_request_dict]
+# --8<-- [end:time_setting_dict]
 
 
-def resolve_set_times_request(
-    set_times_request: SetTimesRequestType,
-) -> SetTimesRequest:
-    if isinstance(set_times_request, SetTimesRequest):
-        return set_times_request
+def resolve_time_setting(
+    time_setting: TimeSettingType,
+) -> TimeSetting:
+    if isinstance(time_setting, TimeSetting):
+        return time_setting
 
-    if isinstance(set_times_request, str):
-        set_times_request_object = _set_times_request_mappings.get(
-            set_times_request, None
-        )
-        if set_times_request_object is not None:
-            return set_times_request_object
+    if isinstance(time_setting, str):
+        time_setting_object = _time_setting_mappings.get(time_setting, None)
+        if time_setting_object is not None:
+            return time_setting_object
 
-    if isinstance(set_times_request, np.ndarray) or isinstance(set_times_request, list):
-        return ListSetTimesRequest(set_times_request)
+    if isinstance(time_setting, np.ndarray) or isinstance(time_setting, list):
+        return ListTimeSetting(time_setting)
 
-    if isinstance(set_times_request, pd.Series):
-        return ListSetTimesRequest(set_times_request.to_numpy())
+    if isinstance(time_setting, pd.Series):
+        return ListTimeSetting(time_setting.to_numpy())
 
-    if isinstance(set_times_request, dict):
-        return SetTimesRequestDict(set_times_request)
+    if isinstance(time_setting, dict):
+        return TimeSettingDict(time_setting)
 
-    raise ValueError("Invalid set times request")
+    raise ValueError("Invalid time setting")

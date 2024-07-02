@@ -8,5 +8,5 @@ from .output_type_request import (
     OutputTypeRequest,
     ResultOutputTypeRequestParams,
 )
-from .set_times_request import SetTimesRequest, SetTimesRequestParams
+from .time_setting import TimeSetting, TimeSettingParams
 from .settings import InterpolationMethod, Settings

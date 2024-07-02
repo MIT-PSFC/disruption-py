@@ -14,7 +14,7 @@ from disruption_py.io.mds import (
 )
 from disruption_py.settings.settings import SignalDomain
 from disruption_py.settings.existing_data_request import ExistingDataRequestParams
-from disruption_py.settings.set_times_request import SetTimesRequestParams
+from disruption_py.settings.time_setting import TimeSettingParams
 from disruption_py.shots.helpers.parameter_method_params import ParameterMethodParams
 from disruption_py.settings.settings import Settings
 from disruption_py.shots.helpers.populate_shot import populate_shot
@@ -231,7 +231,7 @@ class ShotManager(ABC):
         """
         Initialize the timebase of the shot.
         """
-        request_params = SetTimesRequestParams(
+        request_params = TimeSettingParams(
             shot_id=shot_id,
             mds_conn=mds_conn,
             existing_data=existing_data,
