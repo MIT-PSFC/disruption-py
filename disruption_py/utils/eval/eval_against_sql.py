@@ -11,7 +11,7 @@ from typing import Callable, Dict, List
 import numpy as np
 import pandas as pd
 
-from disruption_py.database import ShotDatabase
+from disruption_py.io.sql import ShotDatabase
 from disruption_py.workflow import get_shots_data
 from disruption_py.settings import LogSettings, ShotSettings
 from disruption_py.utils.constants import (

@@ -3,8 +3,8 @@
 import logging
 from typing import Any, Callable
 
-from disruption_py.database import ShotDatabase
-from disruption_py.mdsplus_integration.mds_connection import ProcessMDSConnection
+from disruption_py.io.sql import ShotDatabase
+from disruption_py.io.mds import ProcessMDSConnection
 from disruption_py.settings import ShotSettings
 from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.output_type_request import (

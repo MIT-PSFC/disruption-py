@@ -5,7 +5,7 @@ import threading
 from enum import Enum
 from typing import Callable, Dict
 
-from disruption_py.database import ShotDatabase
+from disruption_py.io.sql import ShotDatabase
 from disruption_py.settings import (
     OutputTypeRequest,
     ResultOutputTypeRequestParams,

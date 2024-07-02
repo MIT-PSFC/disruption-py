@@ -4,8 +4,8 @@ import traceback
 
 import numpy as np
 
-from disruption_py.database import ShotDatabase
-from disruption_py.mdsplus_integration.mds_connection import (
+from disruption_py.io.sql import ShotDatabase
+from disruption_py.io.mds import (
     MDSConnection,
     ProcessMDSConnection,
 )

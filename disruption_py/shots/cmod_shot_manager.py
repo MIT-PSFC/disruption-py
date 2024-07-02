@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from disruption_py.mdsplus_integration.mds_connection import MDSConnection
+from disruption_py.io.mds import MDSConnection
 from disruption_py.shots.helpers.parameter_method_params import ParameterMethodParams
 from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.machine.cmod.basic import (

@@ -4,7 +4,7 @@ from typing import Dict
 import pandas as pd
 import pytest
 
-from disruption_py.database import ShotDatabase
+from disruption_py.io.sql import ShotDatabase
 from disruption_py.workflow import get_database, get_shots_data
 from disruption_py.settings.output_type_request import SQLOutputRequest
 from disruption_py.settings.shot_settings import ShotSettings
