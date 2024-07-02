@@ -5,7 +5,7 @@ from disruption_py.shots.parameter_methods.cmod.basic_parameter_methods import (
     CModEfitRequests,
 )
 
-CMOD_DEFAULT_SHOT_DATA_REQUESTS = [
+CMOD_DEFAULT_PARAMETER_METHODS = [
     CModEfitRequests(),
     BasicCmodRequests(),
 ]

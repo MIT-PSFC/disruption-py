@@ -7,14 +7,14 @@ import os
 import numpy as np
 import pandas as pd
 
-from disruption_py.settings.shot_data_request import (
-    ShotDataRequestParams,
+from disruption_py.shots.helpers.parameter_method_params import (
+    ParameterMethodParams,
 )
 from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.shots.helpers.method_metadata import (
     BoundMethodMetadata,
     get_method_metadata,
-    is_registered_method,
+    is_parametered_method,
 )
 from disruption_py.shots.helpers.method_caching import manually_cache
 from disruption_py.shots.shot_props import ShotProps
@@ -27,16 +27,16 @@ REQUIRED_COLS = {"time", "shot", "commit_hash"}
 def built_in_method_factory(tokamak: Tokamak):
     if tokamak is Tokamak.D3D:
         from disruption_py.shots.parameter_methods.d3d.built_in import (
-            D3D_DEFAULT_SHOT_DATA_REQUESTS,
+            D3D_DEFAULT_PARAMETER_METHODS,
         )
 
-        return D3D_DEFAULT_SHOT_DATA_REQUESTS
+        return D3D_DEFAULT_PARAMETER_METHODS
     elif tokamak is Tokamak.CMOD:
         from disruption_py.shots.parameter_methods.cmod.built_in import (
-            CMOD_DEFAULT_SHOT_DATA_REQUESTS,
+            CMOD_DEFAULT_PARAMETER_METHODS,
         )
 
-        return CMOD_DEFAULT_SHOT_DATA_REQUESTS
+        return CMOD_DEFAULT_PARAMETER_METHODS
     else:
         raise ValueError(f"Invalid tokamak for built-ins {tokamak}")
 
@@ -66,23 +66,23 @@ def get_prefilled_shot_data(shot_props: ShotProps):
     return pre_filled_shot_data
 
 
-def get_all_registered_methods(all_passed: list):
-    registered_methods = set()
+def get_all_parameter_methods(all_passed: list):
+    parametered_methods = set()
     for passed in all_passed:
-        if callable(passed) and is_registered_method(passed):
-            registered_methods.add(passed)
+        if callable(passed) and is_parametered_method(passed):
+            parametered_methods.add(passed)
 
         for method_name in dir(passed):
             method = getattr(passed, method_name, None)
-            if method is None or not is_registered_method(method):
+            if method is None or not is_parametered_method(method):
                 continue
-            registered_methods.add(method)
-    return registered_methods
+            parametered_methods.add(method)
+    return parametered_methods
 
 
-def bind_method_metadata(registered_methods: set, params: ShotDataRequestParams):
+def bind_method_metadata(parametered_methods: set, params: ParameterMethodParams):
     all_bound_method_metadata = []
-    for method in registered_methods:
+    for method in parametered_methods:
         method_metadata = get_method_metadata(method, should_throw=True)
         bound_method_metadata = BoundMethodMetadata.bind(
             method_metadata=method_metadata,
@@ -96,7 +96,7 @@ def bind_method_metadata(registered_methods: set, params: ShotDataRequestParams)
 def filter_methods_to_run(
     all_bound_method_metadata: list[BoundMethodMetadata],
     shot_settings: ShotSettings,
-    params: ShotDataRequestParams,
+    params: ParameterMethodParams,
 ):
     shot_props = params.shot_props
     tags = shot_settings.run_tags
@@ -137,7 +137,7 @@ def filter_methods_to_run(
 
 
 def populate_method(
-    params: ShotDataRequestParams,
+    params: ParameterMethodParams,
     bound_method_metadata: BoundMethodMetadata,
     start_time,
 ):
@@ -174,18 +174,19 @@ def populate_method(
 
 def populate_shot(
     shot_settings: ShotSettings,
-    params: ShotDataRequestParams,
+    params: ParameterMethodParams,
 ) -> pd.DataFrame:
-    """populate_shot runs the parameter methods in the shot_data_requests property of shot_settings.
+    """populate_shot runs the parameter methods either included through the `custom_parameter_methods`
+    property of shot_settings or in the built-in list of methods.
 
-    Selects methods based on run_mdethods, run_tags, and run_columns in shot_settings.
+    Selects methods based on run_methods, run_tags, and run_columns in shot_settings.
     Methods execution is reordered to minimize tree openings and trees opened simultaniously.
 
     Parameters
     ----------
     shot_settings : ShotSettings
         The shot settings dictating what methods should be run.
-    params : ShotDataRequestParams
+    params : ParameterMethodParams
         Parameter that will be passed to methods that are run.
 
     Returns
@@ -195,12 +196,12 @@ def populate_shot(
     """
     shot_props: ShotProps = params.shot_props
     # Concatanate built in clases containing registred methods, with user provided classes/methods
-    all_shot_data_request = (
-        built_in_method_factory(params.tokamak) + shot_settings.shot_data_requests
+    all_parameter_method_holders = (
+        built_in_method_factory(params.tokamak) + shot_settings.custom_parameter_methods
     )
-    all_registered_methods = get_all_registered_methods(all_shot_data_request)
+    all_parameter_methods = get_all_parameter_methods(all_parameter_method_holders)
     all_bound_method_metadata: list[BoundMethodMetadata] = bind_method_metadata(
-        all_registered_methods, params
+        all_parameter_methods, params
     )
     run_bound_method_metadata: list[BoundMethodMetadata] = filter_methods_to_run(
         all_bound_method_metadata, shot_settings, params
@@ -215,6 +216,7 @@ def populate_shot(
             cache_success = manually_cache(
                 shot_props=shot_props,
                 data=pre_filled_shot_data,
+                method=method_metadata.bound_method,
                 method_name=method_metadata.name,
                 method_columns=method_metadata.columns,
             )

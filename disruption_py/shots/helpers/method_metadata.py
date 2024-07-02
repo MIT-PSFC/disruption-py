@@ -3,7 +3,7 @@
 from dataclasses import Field, dataclass, fields
 from typing import Any, Callable, List, Union
 
-from disruption_py.settings.shot_data_request import ShotDataRequestParams
+from disruption_py.shots.helpers.parameter_method_params import ParameterMethodParams
 from disruption_py.utils.mappings.tokamak import Tokamak
 
 
@@ -12,7 +12,7 @@ class MethodMetadata:
     name: str
     populate: bool
 
-    cache_between_threads: bool
+    cache: bool
     tokamaks: Union[Tokamak, List[Tokamak]]
     columns: Union[List[str], Callable]
     tags: List[str]
@@ -38,12 +38,12 @@ class BoundMethodMetadata(MethodMetadata):
         cls,
         method_metadata: MethodMetadata,
         bound_method: Callable,
-        params: ShotDataRequestParams,
+        params: ParameterMethodParams,
     ):
         """
         Evaluate arguments to decorators to usable values.
 
-        Some parameters provided to the register_method decorators can take method that are evaluated
+        Some parameters provided to the parameter_method decorators can take method that are evaluated
         at runtime. `resolve_for` evaluates all of these methods and returns a new instance of `MethodMetadata`
         without function parameters.
         """
@@ -69,8 +69,8 @@ class BoundMethodMetadata(MethodMetadata):
 # Utility methods for decorated methods
 
 
-def is_registered_method(method: Callable) -> bool:
-    """Returns whether the method is decorated with `register_method` decorator
+def is_parametered_method(method: Callable) -> bool:
+    """Returns whether the method is decorated with `parameter_method` decorator
 
     Parameters
     ----------
@@ -91,9 +91,9 @@ def get_method_metadata(method: Callable, should_throw: bool = False) -> MethodM
     Parameters
     ----------
     method : Callable
-        The method decorated with the `register_method` decorator
+        The method decorated with the `parameter_method` decorator
     should_throw : bool
-        Throw an error if the method was not decorated with the `register_method` decorator
+        Throw an error if the method was not decorated with the `parameter_method` decorator
 
     Returns
     -------
@@ -102,5 +102,5 @@ def get_method_metadata(method: Callable, should_throw: bool = False) -> MethodM
     """
     method_metadata = getattr(method, "method_metadata", None)
     if should_throw and method_metadata is None:
-        raise ValueError(f"The method {method} was not decorated with register_method")
+        raise ValueError(f"The method {method} was not decorated with parameter_method")
     return method_metadata

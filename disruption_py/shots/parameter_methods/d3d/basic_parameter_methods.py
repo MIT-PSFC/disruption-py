@@ -7,11 +7,12 @@ import pandas as pd
 import scipy
 from MDSplus import mdsExceptions
 
-from disruption_py.settings.shot_data_request import (
-    ShotDataRequestParams,
+from disruption_py.shots.helpers.parameter_method_params import (
+    ParameterMethodParams,
 )
 from disruption_py.shots.helpers.method_caching import (
-    register_method,
+    cache_method,
+    parameter_method,
 )
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.math_utils import get_bolo, gsastd, interp1, power
@@ -23,8 +24,8 @@ class BasicD3DRequests:
     NOMINAL_FLATTOP_RADIUS = 0.59
 
     @staticmethod
-    @register_method(columns=["time_until_disrupt"], tokamak=Tokamak.D3D)
-    def _get_time_until_disrupt(params: ShotDataRequestParams):
+    @parameter_method(columns=["time_until_disrupt"], tokamak=Tokamak.D3D)
+    def _get_time_until_disrupt(params: ParameterMethodParams):
         if params.shot_props.disrupted:
             return pd.DataFrame(
                 {
@@ -37,8 +38,8 @@ class BasicD3DRequests:
         )
 
     @staticmethod
-    @register_method(columns=["H98", "H_alpha"], tokamak=Tokamak.D3D)
-    def get_H_parameters(params: ShotDataRequestParams):
+    @parameter_method(columns=["H98", "H_alpha"], tokamak=Tokamak.D3D)
+    def get_H_parameters(params: ParameterMethodParams):
         try:
             h_98, t_h_98 = params.mds_conn.get_data_with_dims(
                 r"\H_THH98Y2", tree_name="transport"
@@ -68,11 +69,11 @@ class BasicD3DRequests:
         return pd.DataFrame({"H98": h_98, "H_alpha": h_alpha})
 
     @staticmethod
-    @register_method(
+    @parameter_method(
         columns=["p_rad", "p_nbi", "p_ech", "p_ohm", "radiated_fraction", "v_loop"],
         tokamak=Tokamak.D3D,
     )
-    def get_power_parameters(params: ShotDataRequestParams):
+    def get_power_parameters(params: ParameterMethodParams):
         # Get neutral beam injected power
         try:
             p_nbi, t_nbi = params.mds_conn.get_data_with_dims(
@@ -202,11 +203,11 @@ class BasicD3DRequests:
         )
 
     @staticmethod
-    @register_method(
+    @parameter_method(
         columns=["p_rad", "p_nbi", "p_ech", "p_ohm", "radiated_fraction", "v_loop"],
         tokamak=Tokamak.D3D,
     )
-    def get_ohmic_parameters(params: ShotDataRequestParams):
+    def get_ohmic_parameters(params: ParameterMethodParams):
         # Get edge loop voltage and smooth it a bit with a median filter
         try:
             v_loop, t_v_loop = params.mds_conn.get_data_with_dims(
@@ -260,11 +261,11 @@ class BasicD3DRequests:
         return pd.DataFrame({"p_ohm": p_ohm, "v_loop": v_loop})
 
     @staticmethod
-    @register_method(
+    @parameter_method(
         columns=["n_e", "Greenwald_fraction", "dn_dt"],
         tokamak=Tokamak.D3D,
     )
-    def get_density_parameters(params: ShotDataRequestParams):
+    def get_density_parameters(params: ParameterMethodParams):
         ne = np.full(len(params.shot_props.times), np.nan)
         g_f = ne.copy()
         dne_dt = ne.copy()
@@ -318,11 +319,11 @@ class BasicD3DRequests:
         return pd.DataFrame({"n_e": ne, "Greenwald_fraction": g_f, "dn_dt": dne_dt})
 
     @staticmethod
-    @register_method(
+    @parameter_method(
         columns=["n_e_RT", "Greenwald_fraction_RT"],
         tokamak=Tokamak.D3D,
     )
-    def get_rt_density_parameters(params: ShotDataRequestParams):
+    def get_rt_density_parameters(params: ParameterMethodParams):
         ne_rt = np.full(len(params.shot_props.times), np.nan)
         g_f_rt = ne_rt.copy()
         dne_dt_rt = ne_rt.copy()
@@ -368,11 +369,11 @@ class BasicD3DRequests:
         return pd.DataFrame({"n_e_RT": ne_rt, "Greenwald_fraction_RT": g_f_rt})
 
     @staticmethod
-    @register_method(
+    @parameter_method(
         columns=["ip", "ip_error", "dip_dt", "dipprog_dt", "power_supply_railed"],
         tokamak=Tokamak.D3D,
     )
-    def get_ip_parameters(params: ShotDataRequestParams):
+    def get_ip_parameters(params: ParameterMethodParams):
         ip = np.full(len(params.shot_props.times), np.nan)
         ip_prog = np.full(len(params.shot_props.times), np.nan)
         ip_error = np.full(len(params.shot_props.times), np.nan)
@@ -488,7 +489,7 @@ class BasicD3DRequests:
         )
 
     @staticmethod
-    @register_method(
+    @parameter_method(
         columns=[
             "ip_RT",
             "ip_error_RT",
@@ -498,7 +499,7 @@ class BasicD3DRequests:
         ],
         tokamak=Tokamak.D3D,
     )
-    def get_rt_ip_parameters(params: ShotDataRequestParams):
+    def get_rt_ip_parameters(params: ParameterMethodParams):
         params.mds_conn.open_tree("d3d")
         ip_rt = np.full(len(params.shot_props.times), np.nan)
         ip_prog_rt = np.full(len(params.shot_props.times), np.nan)
@@ -633,11 +634,11 @@ class BasicD3DRequests:
         )
 
     @staticmethod
-    @register_method(
+    @parameter_method(
         columns=["zcur", "zcur_normalized", "z_prog", "z_error", "z_error_normalized"],
         tokamak=Tokamak.D3D,
     )
-    def get_z_parameters(params: ShotDataRequestParams):
+    def get_z_parameters(params: ParameterMethodParams):
         """
         On DIII-D the plasma control system uses isoflux
         control to control the plasma shape and position.  It does
@@ -694,11 +695,11 @@ class BasicD3DRequests:
         )
 
     @staticmethod
-    @register_method(
+    @parameter_method(
         columns=["n_equal_1_normalized", "n_equal_1_mode"],
         tokamak=Tokamak.D3D,
     )
-    def get_n1_bradial_parameters(params: ShotDataRequestParams):
+    def get_n1_bradial_parameters(params: ParameterMethodParams):
         # The following shots are missing bradial calculations in MDSplus and must be loaded from a separate datafile
         if params.shot_props.shot_id >= 176030 and params.shot_props.shot_id <= 176912:
             raise NotImplementedError
@@ -768,8 +769,8 @@ class BasicD3DRequests:
         )
 
     @staticmethod
-    @register_method(columns=["n1rms", "n1rms_normalized"], tokamak=Tokamak.D3D)
-    def get_n1rms_parameters(params: ShotDataRequestParams):
+    @parameter_method(columns=["n1rms", "n1rms_normalized"], tokamak=Tokamak.D3D)
+    def get_n1rms_parameters(params: ParameterMethodParams):
         n1rms, t_n1rms = params.mds_conn.get_data_with_dims(r"\n1rms", tree_name="d3d")
         n1rms *= 1.0e-4  # Gauss -> Tesla
         n1rms = interp1(t_n1rms, n1rms, params.shot_props.times)
@@ -784,11 +785,11 @@ class BasicD3DRequests:
     # By default get_peaking_factors should grab the data from MDSPlus as opposed to recalculate. See DPP v4 document for details:
     # https://docs.google.com/document/d/1R7fI7mCOkMQGt8xX2nS6ZmNNkcyvPQ7NmBfRPICFaFs/edit?usp=sharing
     @staticmethod
-    @register_method(
+    @parameter_method(
         columns=["te_pf", "ne_pf", "rad_cva", "rad_xdiv"],
         tokamak=Tokamak.D3D,
     )
-    def get_peaking_factors(params: ShotDataRequestParams):
+    def get_peaking_factors(params: ParameterMethodParams):
         ts_data_type = "blessed"  # either 'blessed', 'unblessed', or 'ptdata'
         # metric to use for core/edge binning (either 'psin' or 'rhovn')
         ts_radius = "rhovn"
@@ -939,7 +940,7 @@ class BasicD3DRequests:
         )
 
     # TODO: Finish implementing just in case
-    def _efit_map_rz_to_rho_original(params: ShotDataRequestParams, ts_dict, efit_dict):
+    def _efit_map_rz_to_rho_original(params: ParameterMethodParams, ts_dict, efit_dict):
         slices = np.zeros(ts_dict["time"].shape)
         # If thomson starts before EFIT (often does), then use the first valid EFIT slice for early Thomson data.
         early_indices = np.where(ts_dict["time"] < efit_dict["time"])
@@ -1013,7 +1014,7 @@ class BasicD3DRequests:
         return psin, rho_vn_diag
 
     @staticmethod
-    @register_method(
+    @parameter_method(
         tags=["unfinished"],
         tokamak=Tokamak.D3D,
         columns=[
@@ -1033,7 +1034,7 @@ class BasicD3DRequests:
             "ne_sep",
         ],
     )
-    def get_core_edge_vals(params: ShotDataRequestParams):
+    def get_core_edge_vals(params: ParameterMethodParams):
         ##################################################
         # Settings
         ts_data_type = "blessed"  # either 'blessed', 'unblessed', or 'ptdata'
@@ -1112,8 +1113,8 @@ class BasicD3DRequests:
         )
 
     @staticmethod
-    @register_method(columns=["z_eff"], tokamak=Tokamak.D3D)
-    def get_zeff_parameters(params: ShotDataRequestParams):
+    @parameter_method(columns=["z_eff"], tokamak=Tokamak.D3D)
+    def get_zeff_parameters(params: ParameterMethodParams):
         # Get Zeff
         try:
             zeff, t_zeff = params.mds_conn.get_data_with_dims(
@@ -1147,8 +1148,8 @@ class BasicD3DRequests:
         return pd.DataFrame({"z_eff": zeff})
 
     @staticmethod
-    @register_method(columns=["kappa_area"], tokamak=Tokamak.D3D)
-    def get_kappa_area(params: ShotDataRequestParams):
+    @parameter_method(columns=["kappa_area"], tokamak=Tokamak.D3D)
+    def get_kappa_area(params: ParameterMethodParams):
         a_minor = params.mds_conn.get_data(
             r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
         )
@@ -1162,8 +1163,8 @@ class BasicD3DRequests:
         return pd.DataFrame({"kappa_area": kappa_area})
 
     @staticmethod
-    @register_method(columns=["H98", "H_alpha"], tokamak=Tokamak.D3D)
-    def get_h_parameters(params: ShotDataRequestParams):
+    @parameter_method(columns=["H98", "H_alpha"], tokamak=Tokamak.D3D)
+    def get_h_parameters(params: ParameterMethodParams):
         h98 = np.full(len(params.shot_props.times), np.nan)
         h98, t_h98 = params.mds_conn.get_data_with_dims(
             r"\H_THH98Y2", tree_name="transport"
@@ -1177,11 +1178,11 @@ class BasicD3DRequests:
         return pd.DataFrame({"H98": h98, "H_alpha": h_alpha})
 
     @staticmethod
-    @register_method(
+    @parameter_method(
         columns=["delta", "squareness", "aminor"],
         tokamak=Tokamak.D3D,
     )
-    def get_shape_parameters(params: ShotDataRequestParams):
+    def get_shape_parameters(params: ParameterMethodParams):
         efit_time = (
             params.mds_conn.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree")
             / 1.0e3
@@ -1239,11 +1240,9 @@ class BasicD3DRequests:
         )
 
     @staticmethod
-    @register_method(
-        populate=False,
-    )
+    @cache_method
     def _get_ne_te(
-        params: ShotDataRequestParams,
+        params: ParameterMethodParams,
         data_source="blessed",
         ts_systems=["core", "tangential"],
     ):
@@ -1340,10 +1339,8 @@ class BasicD3DRequests:
         return lasers
 
     @staticmethod
-    @register_method(
-        populate=False,
-    )
-    def _get_p_rad(params: ShotDataRequestParams, fan="custom"):
+    @cache_method
+    def _get_p_rad(params: ParameterMethodParams, fan="custom"):
         if fan == "upper":
             fan_chans = np.arange(0, 24)
         elif fan == "lower":
@@ -1401,10 +1398,8 @@ class BasicD3DRequests:
 
     # TODO: Replace all instances of efit_dict with a dataclass
     @staticmethod
-    @register_method(
-        populate=False,
-    )
-    def _get_efit_dict(params: ShotDataRequestParams):
+    @cache_method
+    def _get_efit_dict(params: ParameterMethodParams):
         efit_dict = dict()
         path = r"\top.results.geqdsk:"
         nodes = ["z", "r", "rhovn", "psirz", "zmaxis", "ssimag", "ssibry"]
