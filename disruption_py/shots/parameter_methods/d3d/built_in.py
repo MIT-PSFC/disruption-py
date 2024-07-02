@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-from disruption_py.shots.parameter_methods.d3d.basic_parameter_methods import (
+from disruption_py.machine.d3d.basic import (
     BasicD3DRequests,
 )
-from disruption_py.shots.parameter_methods.d3d.efit_parameter_methods import (
+from disruption_py.machine.d3d.efit import (
     D3DEfitRequests,
 )
 
