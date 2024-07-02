@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from disruption_py.utils.mappings.tokamak import get_tokamak_from_environment
+from disruption_py.machine.tokamak import get_tokamak_from_environment
 from disruption_py.utils.mappings.tokamak_helpers import (
     get_tokamak_test_columns,
     get_tokamak_test_expected_failure_columns,

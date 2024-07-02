@@ -12,7 +12,7 @@ from disruption_py.mdsplus_integration.mds_connection import (
 from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.shots.shot_manager import ShotManager
 from disruption_py.shots.shot_props import ShotProps
-from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.machine.tokamak import Tokamak
 from disruption_py.utils.math_utils import interp1
 from disruption_py.utils.utils import without_duplicates
 

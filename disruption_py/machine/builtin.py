@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.machine.tokamak import Tokamak
 
 
 def built_in_method_factory(tokamak: Tokamak):

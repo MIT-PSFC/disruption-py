@@ -13,8 +13,8 @@ from disruption_py.utils.constants import (
     DEFAULT_RATIO,
 )
 from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
-from disruption_py.utils.mappings.tokamak import Tokamak, get_tokamak_from_environment
-from disruption_py.utils.mappings.tokamak import (
+from disruption_py.machine.tokamak import Tokamak, get_tokamak_from_environment
+from disruption_py.machine.tokamak import (
     resolve_tokamak,
 )
 from disruption_py.utils.math_utils import generate_id

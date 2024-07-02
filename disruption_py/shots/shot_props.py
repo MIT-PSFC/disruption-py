@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from disruption_py.mdsplus_integration.mds_connection import MDSConnection
-from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.machine.tokamak import Tokamak
 
 
 @dataclass

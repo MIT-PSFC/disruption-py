@@ -15,7 +15,7 @@ from disruption_py.settings.set_times_request import (
     resolve_set_times_request,
 )
 from disruption_py.utils.mappings.mappings_helpers import map_string_attributes_to_enum
-from disruption_py.utils.mappings.tokamak import Tokamak, is_tokamak_indexed
+from disruption_py.machine.tokamak import Tokamak, is_tokamak_indexed
 
 
 def default_tags():

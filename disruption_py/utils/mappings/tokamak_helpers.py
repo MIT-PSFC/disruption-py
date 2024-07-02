@@ -9,7 +9,7 @@ from disruption_py.utils.constants import (
     TEST_COLUMNS,
     TEST_SHOTS,
 )
-from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.machine.tokamak import Tokamak
 
 
 def get_tokamak_from_shot_id(shot_id):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from disruption_py.workflow import get_database
-from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.machine.tokamak import Tokamak
 
 
 cmod_database = get_database(tokamak="cmod")

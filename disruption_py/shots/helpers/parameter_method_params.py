@@ -1,6 +1,6 @@
 from disruption_py.mdsplus_integration.mds_connection import MDSConnection
 from disruption_py.shots.shot_props import ShotProps
-from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.machine.tokamak import Tokamak
 
 
 from dataclasses import dataclass

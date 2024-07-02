@@ -17,7 +17,7 @@ from disruption_py.utils.constants import (
     WRITE_DATABASE_TABLE_NAME,
     DATABASE_CONSTANTS,
 )
-from disruption_py.utils.mappings.tokamak import Tokamak, is_tokamak_indexed
+from disruption_py.machine.tokamak import Tokamak, is_tokamak_indexed
 from disruption_py.utils.shared_instance import SharedInstanceFactory
 from disruption_py.utils.utils import without_duplicates
 

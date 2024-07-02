@@ -4,7 +4,7 @@ from dataclasses import Field, dataclass, fields
 from typing import Any, Callable, List, Union
 
 from disruption_py.shots.helpers.parameter_method_params import ParameterMethodParams
-from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.machine.tokamak import Tokamak
 
 
 @dataclass(frozen=True)

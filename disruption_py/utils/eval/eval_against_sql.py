@@ -18,8 +18,8 @@ from disruption_py.utils.constants import (
     TIME_CONST,
 )
 from disruption_py.utils.eval.data_difference import DataDifference
-from disruption_py.utils.mappings import tokamak
-from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.machine import tokamak
+from disruption_py.machine.tokamak import Tokamak
 from disruption_py.utils.math_utils import matlab_gradient_1d_vectorized
 
 

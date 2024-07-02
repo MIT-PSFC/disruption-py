@@ -12,7 +12,7 @@ from disruption_py.shots.helpers.method_metadata import (
     MethodMetadata,
 )
 from disruption_py.shots.shot_props import ShotProps
-from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.machine.tokamak import Tokamak
 
 
 def parameter_method(

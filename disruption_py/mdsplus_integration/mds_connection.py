@@ -7,7 +7,7 @@ import MDSplus
 import numpy as np
 
 from disruption_py.utils.constants import MDSPLUS_CONNECTION_STRING_CONSTANTS
-from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.machine.tokamak import Tokamak
 from disruption_py.utils.shared_instance import SharedInstanceFactory
 from disruption_py.utils.utils import safe_cast
 

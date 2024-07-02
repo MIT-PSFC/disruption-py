@@ -11,7 +11,7 @@ import pandas as pd
 
 from disruption_py.database import ShotDatabase
 from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
-from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.machine.tokamak import Tokamak
 from disruption_py.utils.utils import safe_df_concat
 
 

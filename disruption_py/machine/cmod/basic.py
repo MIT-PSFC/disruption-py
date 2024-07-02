@@ -19,7 +19,7 @@ from disruption_py.shots.helpers.method_caching import (
     cache_method,
     parameter_method,
 )
-from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.machine.tokamak import Tokamak
 from disruption_py.utils.math_utils import gaussian_fit, interp1, smooth
 from disruption_py.utils.utils import safe_cast
 

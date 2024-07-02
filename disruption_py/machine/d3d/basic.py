@@ -14,7 +14,7 @@ from disruption_py.shots.helpers.method_caching import (
     cache_method,
     parameter_method,
 )
-from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.machine.tokamak import Tokamak
 from disruption_py.utils.math_utils import get_bolo, gsastd, interp1, power
 
 

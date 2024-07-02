@@ -11,7 +11,7 @@ from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.utils.constants import (
     BASE_PROTECTED_COLUMNS,
 )
-from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.machine.tokamak import Tokamak
 from disruption_py.utils.utils import without_duplicates
 
 WRITE_DATABASE_TABLE_NAME = "disruption_warning_test"  # overwrite value in constants

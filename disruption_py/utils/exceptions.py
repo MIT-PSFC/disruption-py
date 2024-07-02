@@ -1,4 +1,4 @@
-from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.machine.tokamak import Tokamak
 
 
 class TokamakNotSupportedError(Exception):

@@ -18,7 +18,7 @@ from disruption_py.settings.shot_ids_request import (
     ShotIdsRequestType,
     shot_ids_request_runner,
 )
-from disruption_py.utils.mappings.tokamak import Tokamak, resolve_tokamak
+from disruption_py.machine.tokamak import Tokamak, resolve_tokamak
 from disruption_py.utils.mappings.tokamak_helpers import (
     get_tokamak_shot_manager,
 )
