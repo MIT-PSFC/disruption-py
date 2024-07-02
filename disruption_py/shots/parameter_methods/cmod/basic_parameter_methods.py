@@ -1159,13 +1159,12 @@ class BasicCmodRequests(ShotDataRequest):
     @staticmethod
     @parameter_cached_method(
         columns=["prad_peaking"],
-        used_trees=["cmod", "spectroscopy"],
+        used_trees=["_efit_tree", "spectroscopy"],
         tokamak=Tokamak.CMOD,
     )
     def _get_prad_peaking(params: ShotDataRequestParams):
         prad_peaking = np.full(len(params.shot_props.times), np.nan)
         try:
-            # TODO: why use CMOD here?
             r0 = 0.01 * params.mds_conn.get_data(
                 r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
             )
