@@ -1,4 +1,4 @@
-from disruption_py.main import get_database, get_shots_data
+from disruption_py.workflow import get_database, get_shots_data
 from disruption_py.settings.output_type_request import SQLOutputRequest
 from disruption_py.settings.shot_settings import ShotSettings
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from disruption_py.main import get_shots_data
+from disruption_py.workflow import get_shots_data
 from disruption_py.settings.shot_settings import ShotSettings
 
 shot_settings = ShotSettings(

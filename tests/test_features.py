@@ -6,7 +6,7 @@ import os
 import pandas as pd
 import pytest
 
-from disruption_py.main import get_shots_data
+from disruption_py.workflow import get_shots_data
 from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.utils.environment_vars import temporary_env_vars
 from disruption_py.utils.mappings.tokamak import is_tokamak_indexed

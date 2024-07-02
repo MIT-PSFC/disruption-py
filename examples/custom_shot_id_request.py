@@ -2,7 +2,7 @@
 
 from typing import List
 
-from disruption_py.main import get_shots_data
+from disruption_py.workflow import get_shots_data
 from disruption_py.settings.shot_ids_request import ShotIdsRequest, ShotIdsRequestParams
 from disruption_py.settings.shot_settings import ShotSettings
 

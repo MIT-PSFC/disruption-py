@@ -5,7 +5,7 @@ import json
 
 import pandas as pd
 
-from disruption_py.main import get_shots_data
+from disruption_py.workflow import get_shots_data
 from disruption_py.settings import LogSettings, ShotSettings
 from disruption_py.utils.constants import (
     BLACK_WINDOW_THRESHOLD,

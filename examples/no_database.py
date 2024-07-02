@@ -4,7 +4,7 @@ import logging
 import os
 
 from disruption_py.database import DummyDatabase
-from disruption_py.main import get_shots_data
+from disruption_py.workflow import get_shots_data
 from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.shot_settings import ShotSettings
 
