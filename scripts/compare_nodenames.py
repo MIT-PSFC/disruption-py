@@ -32,7 +32,7 @@ class NodeNameComparer:
     it was added only to new shots.
     """
 
-    def __init__(self, shots: list[int], ref: str, new: str = None, num_processes=1):
+    def __init__(self, shots: list[int], ref: str, new: str = None, num_processes=1, expression:str=None):
         """
         Params:
             shots: List of shot ids. If None, then the default is 20 old shots
@@ -40,6 +40,7 @@ class NodeNameComparer:
             ref: Referent node name
             new: (optional) New, alias, node name
             num_processes: number of processes with which to open MDSPlus trees
+            expression: str, the expected expression (if applicable)
         """
         if ref is None:
             raise ValueError("ref must be specified")
@@ -71,6 +72,8 @@ class NodeNameComparer:
         self.parent_name = r"\efit_aeqdsk"
         self.num_processes = min(len(self.shots), num_processes)
 
+        self.expression = expression
+
     @staticmethod
     def is_alias(record: Signal) -> bool:
         """Return True if the node points to another record that has data."""
@@ -81,16 +84,16 @@ class NodeNameComparer:
             pass
         return False
 
-    @staticmethod
-    def is_expression(record: Signal) -> bool:
+    def is_expression(self, record: Signal) -> bool:
         """Return True if the node is an expression made of other nodes."""
         operators = ["/", "*", "+", "-"]
         node_str = str(record)
         match = re.search(r"Build_Signal\(([^,]+),", node_str)
+        expression = match.group(1) if match is not None else node_str 
         for op in operators:
-            if (match is None and op in node_str) or (
-                match is not None and op in match.group(1)
-            ):
+            if op in expression:
+                if self.expression != expression:
+                    warnings.warn(f"expression does not match expected '{expression}' != '{self.expression}'")
                 return True
         return False
 
@@ -136,7 +139,7 @@ class NodeNameComparer:
             elif NodeNameComparer.is_alias(new_record):
                 return (self.ALIAS_IDX, self.EMPTY_IDX)
             # new is an expression
-            elif NodeNameComparer.is_expression(new_record):
+            elif self.is_expression(new_record):
                 return (self.EXPRESSION_IDX, self.EMPTY_IDX)
             # new has data
             else:
@@ -154,7 +157,7 @@ class NodeNameComparer:
                     f"No data found: ref '{self.ref}' is an alias and new '{self.new}'"
                     + f" is an alias, shot: {shot}"
                 )
-            elif NodeNameComparer.is_expression(new_record):
+            elif self.is_expression(new_record):
                 return (self.EXPRESSION_IDX, self.ALIAS_IDX)
             else:
                 # ref is an alias for new data
@@ -167,7 +170,7 @@ class NodeNameComparer:
                         + f"'{self.new}', shot: {shot}"
                     )
         # ref is expression
-        elif NodeNameComparer.is_expression(ref_record):
+        elif self.is_expression(ref_record):
             if new_node is None:
                 return (self.EMPTY_IDX, self.EXPRESSION_IDX)
             elif NodeNameComparer.is_alias(new_record):
@@ -197,7 +200,7 @@ class NodeNameComparer:
                         f"No connection: new '{self.new}' does not point to ref "
                         + f"'{self.ref}', shot: {shot}"
                     )
-            elif NodeNameComparer.is_expression(new_record):
+            elif self.is_expression(new_record):
                 return (self.EXPRESSION_IDX, self.VALUES_IDX)
             # new has data
             else:
@@ -296,6 +299,13 @@ if __name__ == "__main__":
         help="Number of processes in which to open MDSPlus trees (default=1)",
     )
 
+    parser.add_argument(
+        "--expr",
+        type=str,
+        action="store",
+        help="Expected expression, e.g. '\\EFIT_AEQDSK:AOUT / 100.'",
+    )
+
     args = parser.parse_args()
     shot_ids = None
 
@@ -310,7 +320,7 @@ if __name__ == "__main__":
         with open(args.shot_ids[0], "r") as f:
             shot_ids = [int(s) for s in f.readlines()]
 
-    compare = NodeNameComparer(shot_ids, args.ref, args.new, args.num_processes)
+    compare = NodeNameComparer(shot_ids, args.ref, args.new, args.num_processes, args.expr)
     table = compare.get_pretty_table()
     print("      ref:" + f"{compare.parent_name}:{args.ref}")
     print(table)
