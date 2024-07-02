@@ -1167,10 +1167,10 @@ class BasicCmodRequests(ShotDataRequest):
         try:
             # TODO: why use CMOD here?
             r0 = 0.01 * params.mds_conn.get_data(
-                r"\efit_aeqdsk:rmagx", tree_name="cmod"
+                r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
             )
             z0 = 0.01 * params.mds_conn.get_data(
-                r"\efit_aeqdsk:zmagx", tree_name="cmod"
+                r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
             )
             aminor, efit_time = params.mds_conn.get_data_with_dims(
                 r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
