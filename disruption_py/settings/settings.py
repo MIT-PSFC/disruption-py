@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import List, Tuple
 
-from disruption_py.settings.enum_options import InterpolationMethod, SignalDomain
 from disruption_py.settings.existing_data_request import (
     ExistingDataRequest,
     resolve_existing_data_request,
@@ -22,8 +22,26 @@ def default_tags():
     return ["all"]
 
 
+class InterpolationMethod(Enum):
+    LINEAR = "linear"
+    LOG = "log"
+    LOG_LINEAR = "log_linear"
+    EXP = "exp"
+    EXP_LINEAR = "exp_linear"
+    SIN = "sin"
+    SIN_LINEAR = "sin_linear"
+    SIN_EXP = "sin_exp"
+
+
+class SignalDomain(Enum):
+    FULL = "full"
+    FLATTOP = "flattop"
+    RAMP_UP_AND_FLATTOP = "rampup_and_flattop"
+    DISRUPTION = "disruption"
+
+
 @dataclass
-class ShotSettings:
+class Settings:
     """Settings to be used for retrieving data for a single shot.
 
     Attributes

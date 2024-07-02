@@ -1,8 +1,8 @@
 from disruption_py.workflow import get_database, get_shots_data
 from disruption_py.settings.output_type_request import SQLOutputRequest
-from disruption_py.settings.shot_settings import ShotSettings
+from disruption_py.settings.settings import Settings
 
-shot_settings = ShotSettings(
+shot_settings = Settings(
     # uses the efit timebase when returning data
     set_times_request="efit",
     efit_tree_name="efit18",

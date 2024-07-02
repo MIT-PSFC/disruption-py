@@ -11,7 +11,7 @@ from disruption_py.machine.builtin import built_in_method_factory
 from disruption_py.shots.helpers.parameter_method_params import (
     ParameterMethodParams,
 )
-from disruption_py.settings.shot_settings import ShotSettings
+from disruption_py.settings.settings import Settings
 from disruption_py.shots.helpers.method_metadata import (
     BoundMethodMetadata,
     get_method_metadata,
@@ -78,7 +78,7 @@ def bind_method_metadata(parametered_methods: set, params: ParameterMethodParams
 
 def filter_methods_to_run(
     all_bound_method_metadata: list[BoundMethodMetadata],
-    shot_settings: ShotSettings,
+    shot_settings: Settings,
     params: ParameterMethodParams,
 ):
     shot_props = params.shot_props
@@ -156,7 +156,7 @@ def populate_method(
 
 
 def populate_shot(
-    shot_settings: ShotSettings,
+    shot_settings: Settings,
     params: ParameterMethodParams,
 ) -> pd.DataFrame:
     """populate_shot runs the parameter methods either included through the `custom_parameter_methods`

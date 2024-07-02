@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 from disruption_py.workflow import get_shots_data
-from disruption_py.settings.shot_settings import ShotSettings
+from disruption_py.settings.settings import Settings
 
-shot_settings = ShotSettings(
+shot_settings = Settings(
     # retrieve existing data from the disruption_warnings table use it to prepopulate queries
     existing_data_request="sql",
     # use the efit timebase preset for set_times_request

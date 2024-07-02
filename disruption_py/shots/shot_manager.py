@@ -12,11 +12,11 @@ from disruption_py.io.mds import (
     MDSConnection,
     ProcessMDSConnection,
 )
-from disruption_py.settings.enum_options import SignalDomain
+from disruption_py.settings.settings import SignalDomain
 from disruption_py.settings.existing_data_request import ExistingDataRequestParams
 from disruption_py.settings.set_times_request import SetTimesRequestParams
 from disruption_py.shots.helpers.parameter_method_params import ParameterMethodParams
-from disruption_py.settings.shot_settings import ShotSettings
+from disruption_py.settings.settings import Settings
 from disruption_py.shots.helpers.populate_shot import populate_shot
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.utils.command_utils import get_commit_hash
@@ -38,7 +38,7 @@ class ShotManager(ABC):
         self.process_database = process_database
         self.process_mds_conn = process_mds_conn
 
-    def get_shot_data(self, shot_id, shot_settings: ShotSettings) -> pd.DataFrame:
+    def get_shot_data(self, shot_id, shot_settings: Settings) -> pd.DataFrame:
         """
         Get data for a single shot. May be run across different processes.
         """
@@ -81,9 +81,7 @@ class ShotManager(ABC):
     ) -> ShotProps:
         pass
 
-    def shot_setup(
-        self, shot_id: int, shot_settings: ShotSettings, **kwargs
-    ) -> ShotProps:
+    def shot_setup(self, shot_id: int, shot_settings: Settings, **kwargs) -> ShotProps:
         """
         Sets up the shot properties for cmod.
         """
@@ -137,7 +135,7 @@ class ShotManager(ABC):
         shot_id: int,
         mds_conn: MDSConnection,
         disruption_time: float,
-        shot_settings: ShotSettings,
+        shot_settings: Settings,
         **kwargs,
     ) -> ShotProps:
 
@@ -190,7 +188,7 @@ class ShotManager(ABC):
         return shot_props
 
     def _modify_shot_props_for_settings(
-        self, shot_props: ShotProps, shot_settings: ShotSettings, **kwargs
+        self, shot_props: ShotProps, shot_settings: Settings, **kwargs
     ) -> ShotProps:
         if shot_settings.signal_domain is SignalDomain.FLATTOP:
             shot_props = self._modify_times_flattop_timebase(shot_props)
@@ -204,7 +202,7 @@ class ShotManager(ABC):
     def _retrieve_existing_data(
         self,
         shot_id: int,
-        shot_settings: ShotSettings,
+        shot_settings: Settings,
     ) -> pd.DataFrame:
         if shot_settings.existing_data_request is not None:
             existing_data_request_params = ExistingDataRequestParams(
@@ -228,7 +226,7 @@ class ShotManager(ABC):
         existing_data: pd.DataFrame,
         mds_conn: MDSConnection,
         disruption_time: float,
-        shot_settings: ShotSettings,
+        shot_settings: Settings,
     ) -> np.ndarray:
         """
         Initialize the timebase of the shot.

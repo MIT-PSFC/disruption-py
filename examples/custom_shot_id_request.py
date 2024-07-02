@@ -4,7 +4,7 @@ from typing import List
 
 from disruption_py.workflow import get_shots_data
 from disruption_py.settings.shot_ids_request import ShotIdsRequest, ShotIdsRequestParams
-from disruption_py.settings.shot_settings import ShotSettings
+from disruption_py.settings.settings import Settings
 
 
 # Create the ShotIdsRequest class that handles getting the shot numbers for the request
@@ -19,7 +19,7 @@ class CustomShotIdRequest(ShotIdsRequest):
         return sql_shot_nums + [1160405002, 1140523021, 1140523026, 1160620011]
 
 
-shot_settings = ShotSettings(
+shot_settings = Settings(
     # use the efit timebase preset for set_times_request
     set_times_request="efit",
     run_tags=[],

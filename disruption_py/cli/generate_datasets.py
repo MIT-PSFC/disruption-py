@@ -6,7 +6,7 @@ import json
 import pandas as pd
 
 from disruption_py.workflow import get_shots_data
-from disruption_py.settings import LogSettings, ShotSettings
+from disruption_py.settings import LogSettings, Settings
 from disruption_py.utils.constants import (
     BLACK_WINDOW_THRESHOLD,
     DEFAULT_COLS,
@@ -43,7 +43,7 @@ def main(args):
     logger.info(f"requested feature columns: {feature_cols}")
     logger.info(f"requested derived feature columns: {derived_feature_cols}")
 
-    shot_settings = ShotSettings(
+    shot_settings = Settings(
         efit_tree_name=args.efit_tree,
         set_times_request=args.timebase_signal,
         run_methods=args.run_methods,
