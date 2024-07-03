@@ -8,7 +8,7 @@ import pandas as pd
 from disruption_py.shots.helpers.parameter_method_params import (
     ParameterMethodParams,
 )
-from disruption_py.shots.helpers.method_caching import parameter_method
+from disruption_py.core.physics_method.decorator import parameter_method
 from disruption_py.machine.tokamak import Tokamak
 
 

@@ -12,13 +12,13 @@ from disruption_py.shots.helpers.parameter_method_params import (
     ParameterMethodParams,
 )
 from disruption_py.settings.settings import Settings
-from disruption_py.shots.helpers.method_metadata import (
+from disruption_py.core.physics_method.metadata import (
     BoundMethodMetadata,
     get_method_metadata,
     is_parametered_method,
 )
-from disruption_py.shots.helpers.method_caching import manually_cache
-from disruption_py.shots.shot_props import ShotProps
+from disruption_py.core.physics_method.caching import manually_cache
+from disruption_py.core.physics_method.params import ShotProps
 from disruption_py.utils.constants import TIME_CONST
 
 REQUIRED_COLS = {"time", "shot", "commit_hash"}

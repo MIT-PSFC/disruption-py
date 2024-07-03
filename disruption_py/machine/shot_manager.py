@@ -17,8 +17,8 @@ from disruption_py.settings.input_setting import InputSettingParams
 from disruption_py.settings.time_setting import TimeSettingParams
 from disruption_py.shots.helpers.parameter_method_params import ParameterMethodParams
 from disruption_py.settings.settings import Settings
-from disruption_py.shots.helpers.populate_shot import populate_shot
-from disruption_py.shots.shot_props import ShotProps
+from disruption_py.core.physics_method.runner import populate_shot
+from disruption_py.core.physics_method.params import ShotProps
 from disruption_py.utils.command_utils import get_commit_hash
 from disruption_py.utils.constants import TIME_CONST
 from disruption_py.machine.tokamak import Tokamak

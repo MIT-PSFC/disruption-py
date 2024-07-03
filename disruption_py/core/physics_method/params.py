@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 
-import logging
-from dataclasses import dataclass, field
-from typing import Any, Dict
+from disruption_py.io.mds import MDSConnection
+from disruption_py.machine.tokamak import Tokamak
+
 
 import numpy as np
 import pandas as pd
 
-from disruption_py.io.mds import MDSConnection
-from disruption_py.machine.tokamak import Tokamak
+
+import logging
+from dataclasses import dataclass, field
+from typing import Any, Dict
 
 
 @dataclass

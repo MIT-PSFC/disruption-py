@@ -1,5 +1,5 @@
 from disruption_py.io.mds import MDSConnection
-from disruption_py.shots.shot_props import ShotProps
+from disruption_py.core.physics_method.params import ShotProps
 from disruption_py.machine.tokamak import Tokamak
 
 

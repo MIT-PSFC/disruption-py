@@ -7,12 +7,12 @@ import pandas as pd
 import scipy
 from MDSplus import mdsExceptions
 
+from disruption_py.core.physics_method.decorator import parameter_method
 from disruption_py.shots.helpers.parameter_method_params import (
     ParameterMethodParams,
 )
-from disruption_py.shots.helpers.method_caching import (
+from disruption_py.core.physics_method.caching import (
     cache_method,
-    parameter_method,
 )
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.utils.math_utils import get_bolo, gsastd, interp1, power

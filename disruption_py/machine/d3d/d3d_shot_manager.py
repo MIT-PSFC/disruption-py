@@ -11,7 +11,7 @@ from disruption_py.io.mds import (
 )
 from disruption_py.settings.settings import Settings
 from disruption_py.machine.shot_manager import ShotManager
-from disruption_py.shots.shot_props import ShotProps
+from disruption_py.core.physics_method.params import ShotProps
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.utils.math_utils import interp1
 from disruption_py.utils.utils import without_duplicates
