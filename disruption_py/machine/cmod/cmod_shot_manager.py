@@ -8,7 +8,7 @@ from disruption_py.settings.settings import Settings
 from disruption_py.machine.cmod.basic import (
     BasicCmodRequests,
 )
-from disruption_py.shots.shot_manager import ShotManager
+from disruption_py.machine.shot_manager import ShotManager
 from disruption_py.shots.shot_props import ShotProps
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.utils.utils import without_duplicates

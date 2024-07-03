@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 
-from disruption_py.shots.cmod_shot_manager import CModShotManager
-from disruption_py.shots.d3d_shot_manager import D3DShotManager
+from disruption_py.machine.cmod.cmod_shot_manager import CModShotManager
+from disruption_py.machine.d3d.d3d_shot_manager import D3DShotManager
 from disruption_py.machine.tokamak import Tokamak
 
 
