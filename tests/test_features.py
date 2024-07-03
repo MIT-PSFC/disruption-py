@@ -8,7 +8,7 @@ import pytest
 
 from disruption_py.workflow import get_shots_data
 from disruption_py.settings.settings import Settings
-from disruption_py.utils.environment_vars import temporary_env_vars
+from tests.utils.environment_vars import temporary_env_vars
 from disruption_py.machine.tokamak import is_tokamak_indexed
 
 TEST_SETTINGS = {
