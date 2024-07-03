@@ -5,7 +5,7 @@ from disruption_py.settings.settings import Settings
 
 shot_settings = Settings(
     # retrieve existing data from the disruption_warnings table use it to prepopulate queries
-    existing_data_request="sql",
+    input_setting="sql",
     # use the efit timebase preset for set_times_request
     # uses the efit timebase when returning data
     set_times_request="efit",

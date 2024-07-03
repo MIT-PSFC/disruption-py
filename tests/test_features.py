@@ -13,14 +13,14 @@ from disruption_py.machine.tokamak import is_tokamak_indexed
 
 TEST_SETTINGS = {
     "default_fast": {},
-    "sqlcache_full": {"existing_data_request": "sql"},
+    "sqlcache_full": {"input_setting": "sql"},
     "timebase_full": {
-        "existing_data_request": "sql",
-        "use_existing_data_timebase": True,
+        "input_setting": "sql",
+        "use_input_setting_timebase": True,
         "efit_tree_name": "analysis",
     },
     "columns_full": {
-        "existing_data_request": "sql",
+        "input_setting": "sql",
         "run_columns": ["v_loop", "q95"],
         "run_tags": [],
         "only_requested_columns": True,

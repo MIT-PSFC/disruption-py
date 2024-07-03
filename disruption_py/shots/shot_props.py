@@ -20,8 +20,8 @@ class ShotProps:
     disruption_time: float
     mds_conn: MDSConnection
     times: np.ndarray
-    existing_data: pd.DataFrame  # existing data passed to shot class
-    pre_filled_shot_data: pd.DataFrame  # existing data after changed to times domain
+    input_data: pd.DataFrame  # input data passed to shot class
+    pre_filled_shot_data: pd.DataFrame  # input data after changed to times domain
     interpolation_method: Any  # Fix
     metadata: dict
 

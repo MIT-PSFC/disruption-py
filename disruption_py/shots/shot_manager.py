@@ -13,7 +13,7 @@ from disruption_py.io.mds import (
     ProcessMDSConnection,
 )
 from disruption_py.settings.settings import SignalDomain
-from disruption_py.settings.existing_data_request import ExistingDataRequestParams
+from disruption_py.settings.existing_data_request import InputSettingParams
 from disruption_py.settings.time_setting import TimeSettingParams
 from disruption_py.shots.helpers.parameter_method_params import ParameterMethodParams
 from disruption_py.settings.settings import Settings
@@ -139,7 +139,7 @@ class ShotManager(ABC):
         **kwargs,
     ) -> ShotProps:
 
-        existing_data = self._retrieve_existing_data(
+        input_data = self._retrieve_input_data(
             shot_id=shot_id,
             shot_settings=shot_settings,
         )
@@ -148,7 +148,7 @@ class ShotManager(ABC):
 
         times = self._init_times(
             shot_id=shot_id,
-            existing_data=existing_data,
+            input_data=input_data,
             mds_conn=mds_conn,
             disruption_time=disruption_time,
             shot_settings=shot_settings,
@@ -156,7 +156,7 @@ class ShotManager(ABC):
 
         pre_filled_shot_data = self._pre_fill_shot_data(
             times=times,
-            existing_data=existing_data,
+            input_data=input_data,
         )
 
         metadata = {
@@ -174,7 +174,7 @@ class ShotManager(ABC):
             disruption_time=disruption_time,
             mds_conn=mds_conn,
             times=times,
-            existing_data=existing_data,
+            input_data=input_data,
             pre_filled_shot_data=pre_filled_shot_data,
             interpolation_method=interpolation_method,
             metadata=metadata,
@@ -199,31 +199,31 @@ class ShotManager(ABC):
 
         return shot_props
 
-    def _retrieve_existing_data(
+    def _retrieve_input_data(
         self,
         shot_id: int,
         shot_settings: Settings,
     ) -> pd.DataFrame:
-        if shot_settings.existing_data_request is not None:
-            existing_data_request_params = ExistingDataRequestParams(
+        if shot_settings.input_setting is not None:
+            input_setting_params = InputSettingParams(
                 shot_id=shot_id,
                 database=self.process_database,
                 tokamak=self.tokamak,
                 logger=self.logger,
             )
-            existing_data = shot_settings.existing_data_request.get_existing_data(
-                existing_data_request_params
+            input_data = shot_settings.input_setting.get_input_data(
+                input_setting_params
             )
-            existing_data["shot"] = existing_data["shot"].astype(int)
-            existing_data = existing_data[existing_data["shot"] == shot_id]
+            input_data["shot"] = input_data["shot"].astype(int)
+            input_data = input_data[input_data["shot"] == shot_id]
         else:
-            existing_data = None
-        return existing_data
+            input_data = None
+        return input_data
 
     def _init_times(
         self,
         shot_id: int,
-        existing_data: pd.DataFrame,
+        input_data: pd.DataFrame,
         mds_conn: MDSConnection,
         disruption_time: float,
         shot_settings: Settings,
@@ -234,7 +234,7 @@ class ShotManager(ABC):
         request_params = TimeSettingParams(
             shot_id=shot_id,
             mds_conn=mds_conn,
-            existing_data=existing_data,
+            input_data=input_data,
             database=self.process_database,
             disruption_time=disruption_time,
             tokamak=self.tokamak,
@@ -244,23 +244,23 @@ class ShotManager(ABC):
 
     @classmethod
     def _pre_fill_shot_data(
-        cls, times: np.ndarray, existing_data: pd.DataFrame
+        cls, times: np.ndarray, input_data: pd.DataFrame
     ) -> pd.DataFrame:
         """
-        Intialize the shot with data, if existing data matches the shot timebase.
+        Intialize the shot with data, if input data matches the shot timebase.
         """
-        if existing_data is not None:
+        if input_data is not None:
             time_df = pd.DataFrame(times, columns=["time"])
-            flagged_existing_data = existing_data.assign(merge_success_flag=1)
-            timed_existing_data = pd.merge_asof(
+            flagged_input_data = input_data.assign(merge_success_flag=1)
+            timed_input_data = pd.merge_asof(
                 time_df,
-                flagged_existing_data,
+                flagged_input_data,
                 on="time",
                 direction="nearest",
                 tolerance=TIME_CONST,
             )
-            if not timed_existing_data["merge_success_flag"].isna().any():
-                return timed_existing_data.drop(columns=["merge_success_flag"])
+            if not timed_input_data["merge_success_flag"].isna().any():
+                return timed_input_data.drop(columns=["merge_success_flag"])
             else:
                 return None
         else:

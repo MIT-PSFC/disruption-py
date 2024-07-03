@@ -7,7 +7,7 @@ from disruption_py.settings import LogSettings, Settings
 
 shot_settings = Settings(
     # data settings
-    existing_data_request=None,
+    input_setting=None,
     efit_tree_name="analysis",
     # method selection
     run_methods=[],
@@ -18,7 +18,7 @@ shot_settings = Settings(
     # timebase settings
     set_times_request="disruption_warning",  # use efit timebase
     signal_domain="full",
-    use_existing_data_timebase=False,
+    use_input_setting_timebase=False,
     interpolation_method="linear",
 )
 

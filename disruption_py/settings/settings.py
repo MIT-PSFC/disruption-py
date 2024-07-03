@@ -5,8 +5,8 @@ from enum import Enum
 from typing import List, Tuple
 
 from disruption_py.settings.existing_data_request import (
-    ExistingDataRequest,
-    resolve_existing_data_request,
+    InputSetting,
+    resolve_input_setting,
 )
 from disruption_py.settings.output_setting import OutputSetting
 from disruption_py.settings.time_setting import (
@@ -46,8 +46,8 @@ class Settings:
 
     Attributes
     ----------
-    existing_data_request : ExistingDataRequest
-        The existing data request to be used when prefilling data for the shot. Can pass any
+    input_setting : ExistingDataRequest
+        The input setting to be used when prefilling data for the shot. Can pass any
         ExistingDataRequestType that resolves to a ExistingDataRequest. See ExistingDataRequest for more
         details. Set to None if no data should be prefilled. Defaults to None.
     efit_tree_name : str
@@ -85,8 +85,8 @@ class Settings:
         The domain of the timebase that should be used when retrieving data for the shot. Either "full",
         "flattop", or "rampup_and_flattop". Can pass either a SignalDomain or the associated string. Defaults
         to "full".
-    use_existing_data_timebase : bool
-        If true and existing data exists for the shot, the timebase from the existing data will be used instead
+    use_input_setting_timebase : bool
+        If true and input data exists for the shot, the timebase from the input data will be used instead
         of the timebase from the set_times_request. Wraps the set_times_request with ExistingDataSetTimesRequest.
         Defaults to False.
     interpolation_method : InterpolationMethod
@@ -103,7 +103,7 @@ class Settings:
     """
 
     # Prefill data settings
-    existing_data_request: ExistingDataRequest = None
+    input_setting: InputSetting = None
 
     # Shot creation settings
     efit_tree_name: str = "analysis"
@@ -118,7 +118,7 @@ class Settings:
     # Timebase setting
     set_times_request: TimeSetting = "disruption_warning"
     signal_domain: SignalDomain = "full"
-    use_existing_data_timebase: bool = False
+    use_input_setting_timebase: bool = False
     interpolation_method: InterpolationMethod = "linear"
 
     additional_args: dict = field(default_factory=dict)
@@ -176,9 +176,7 @@ class Settings:
         """
         self._check_deprecated_settings()
 
-        self.existing_data_request = resolve_existing_data_request(
-            self.existing_data_request
-        )
+        self.input_setting = resolve_input_setting(self.input_setting)
         self.set_times_request = resolve_time_setting(self.set_times_request)
 
         map_string_attributes_to_enum(
@@ -189,7 +187,7 @@ class Settings:
             },
         )
 
-        if self.use_existing_data_timebase and not isinstance(
+        if self.use_input_setting_timebase and not isinstance(
             self.set_times_request, ExistingDataTimeSetting
         ):
             self.set_times_request = ExistingDataTimeSetting(self.set_times_request)

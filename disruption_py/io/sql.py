@@ -205,7 +205,7 @@ class ShotDatabase:
             Whether to update shot data if the shot already exists in database. Update will happen regardless if
             the column being updated is all nil. Default value is False.
         override_columns : List[str]
-            List of protecrted columns that can should still be updated. Update must be true for existing values in the
+            List of protecrted columns that can should still be updated. Update must be true for input values in the
             columns to be changed. Default value is [].
         """
         table_name = WRITE_DATABASE_TABLE_NAME
@@ -295,7 +295,7 @@ class ShotDatabase:
             Whether to update shot data if the shot already exists in database. Update will happen regardless if
             the column being updated is all nil. Default value is False.
         override_columns : List[str]
-            List of columns that can should still be updated. Update must be true for existing values in the
+            List of columns that can should still be updated. Update must be true for input values in the
             columns to be changed. Default value is [].
         table_name : str
             Name of the table for data insert or update. Default value is "disruption_warning".
