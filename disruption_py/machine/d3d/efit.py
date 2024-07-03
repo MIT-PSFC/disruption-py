@@ -3,9 +3,6 @@
 import numpy as np
 import pandas as pd
 
-from disruption_py.shots.helpers.parameter_method_params import (
-    ParameterMethodParams,
-)
 from disruption_py.core.physics_method.decorator import parameter_method
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.utils.math_utils import interp1
@@ -43,7 +40,7 @@ class D3DEfitRequests:
         columns=[*efit_cols.keys(), *efit_derivs.keys()],
         tokamak=Tokamak.D3D,
     )
-    def _get_efit_parameters(params: ParameterMethodParams):
+    def _get_efit_parameters(params: PhysicsMethodParams):
         efit_data = {
             k: params.mds_conn.get_data(v, tree_name="_efit_tree")
             for k, v in D3DEfitRequests.efit_cols.items()
@@ -66,11 +63,9 @@ class D3DEfitRequests:
             efit_data[D3DEfitRequests.efit_derivs[param]] = np.gradient(
                 efit_data[param], efit_time
             )
-        if not np.array_equal(params.shot_props.times, efit_time):
+        if not np.array_equal(params.times, efit_time):
             for param in efit_data:
-                efit_data[param] = interp1(
-                    efit_time, efit_data[param], params.shot_props.times
-                )
+                efit_data[param] = interp1(efit_time, efit_data[param], params.times)
         return pd.DataFrame(efit_data)
 
     @staticmethod
@@ -78,7 +73,7 @@ class D3DEfitRequests:
         columns=[*rt_efit_cols.keys()],
         tokamak=Tokamak.D3D,
     )
-    def _get_rt_efit_parameters(params: ParameterMethodParams):
+    def _get_rt_efit_parameters(params: PhysicsMethodParams):
         efit_data = {
             k: params.mds_conn.get_data(v, tree_name="efitrt1")
             for k, v in D3DEfitRequests.rt_efit_cols.items()
@@ -96,9 +91,7 @@ class D3DEfitRequests:
         del efit_data["chisq"]
         for param in efit_data:
             efit_data[param][invalid_indices] = np.nan
-        if not np.array_equal(params.shot_props.times, efit_time):
+        if not np.array_equal(params.times, efit_time):
             for param in efit_data:
-                efit_data[param] = interp1(
-                    efit_time, efit_data[param], params.shot_props.times
-                )
+                efit_data[param] = interp1(efit_time, efit_data[param], params.times)
         return pd.DataFrame(efit_data)

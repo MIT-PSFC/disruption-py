@@ -3,7 +3,7 @@
 from dataclasses import Field, dataclass, fields
 from typing import Any, Callable, List, Union
 
-from disruption_py.shots.helpers.parameter_method_params import ParameterMethodParams
+from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -38,7 +38,7 @@ class BoundMethodMetadata(MethodMetadata):
         cls,
         method_metadata: MethodMetadata,
         bound_method: Callable,
-        params: ParameterMethodParams,
+        physics_method_params: PhysicsMethodParams,
     ):
         """
         Evaluate arguments to decorators to usable values.
@@ -55,9 +55,9 @@ class BoundMethodMetadata(MethodMetadata):
                 field_value
             ):
                 new_val = (
-                    field_value(params)
+                    field_value(physics_method_params)
                     if bind_to is None
-                    else field_value(bind_to, params)
+                    else field_value(bind_to, physics_method_params)
                 )
                 new_method_metadata_params[field.name] = new_val
             else:

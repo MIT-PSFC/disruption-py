@@ -14,7 +14,7 @@ from typing import Any, Dict
 
 
 @dataclass
-class ShotProps:
+class PhysicsMethodParams:
     logger = logging.getLogger("disruption_py")
 
     shot_id: int

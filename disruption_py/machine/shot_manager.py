@@ -15,10 +15,9 @@ from disruption_py.io.mds import (
 from disruption_py.settings.settings import SignalDomain
 from disruption_py.settings.input_setting import InputSettingParams
 from disruption_py.settings.time_setting import TimeSettingParams
-from disruption_py.shots.helpers.parameter_method_params import ParameterMethodParams
 from disruption_py.settings.settings import Settings
 from disruption_py.core.physics_method.runner import populate_shot
-from disruption_py.core.physics_method.params import ShotProps
+from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.utils.command_utils import get_commit_hash
 from disruption_py.utils.constants import TIME_CONST
 from disruption_py.machine.tokamak import Tokamak
@@ -44,20 +43,15 @@ class ShotManager(ABC):
         """
         self.logger.info(f"starting {shot_id}")
         try:
-            shot_props = self.shot_setup(
+            physics_method_params = self.shot_setup(
                 shot_id=int(shot_id),
                 shot_settings=shot_settings,
             )
             retrieved_data = populate_shot(
                 shot_settings=shot_settings,
-                params=ParameterMethodParams(
-                    mds_conn=shot_props.mds_conn,
-                    shot_props=shot_props,
-                    logger=self.logger,
-                    tokamak=self.tokamak,
-                ),
+                physics_method_params=physics_method_params,
             )
-            self.shot_cleanup(shot_props)
+            self.shot_cleanup(physics_method_params)
             self.logger.info(f"completed {shot_id}")
             return retrieved_data
         except Exception as e:
@@ -70,18 +64,20 @@ class ShotManager(ABC):
     @classmethod
     @abstractmethod
     def _modify_times_flattop_timebase(
-        cls, shot_props: ShotProps, **kwargs
-    ) -> ShotProps:
+        cls, physics_method_params: PhysicsMethodParams, **kwargs
+    ) -> PhysicsMethodParams:
         pass
 
     @classmethod
     @abstractmethod
     def _modify_times_rampup_and_flattop_timebase(
-        cls, shot_props: ShotProps, **kwargs
-    ) -> ShotProps:
+        cls, physics_method_params: PhysicsMethodParams, **kwargs
+    ) -> PhysicsMethodParams:
         pass
 
-    def shot_setup(self, shot_id: int, shot_settings: Settings, **kwargs) -> ShotProps:
+    def shot_setup(
+        self, shot_id: int, shot_settings: Settings, **kwargs
+    ) -> PhysicsMethodParams:
         """
         Sets up the shot properties for cmod.
         """
@@ -108,14 +104,14 @@ class ShotManager(ABC):
         )
 
         try:
-            shot_props = self.setup_shot_props(
+            physics_method_params = self.setup_physics_method_params(
                 shot_id=shot_id,
                 mds_conn=mds_conn,
                 disruption_time=disruption_time,
                 shot_settings=shot_settings,
                 **kwargs,
             )
-            return shot_props
+            return physics_method_params
         except Exception as e:
             self.logger.info(
                 f"[Shot {shot_id}]: Caught failed to setup shot {shot_id}, cleaning up tree manager."
@@ -126,18 +122,18 @@ class ShotManager(ABC):
     @classmethod
     def shot_cleanup(
         cls,
-        shot_props: ShotProps,
+        physics_method_params: PhysicsMethodParams,
     ):
-        shot_props.cleanup()
+        physics_method_params.cleanup()
 
-    def setup_shot_props(
+    def setup_physics_method_params(
         self,
         shot_id: int,
         mds_conn: MDSConnection,
         disruption_time: float,
         shot_settings: Settings,
         **kwargs,
-    ) -> ShotProps:
+    ) -> PhysicsMethodParams:
 
         input_data = self._retrieve_input_data(
             shot_id=shot_id,
@@ -168,7 +164,7 @@ class ShotManager(ABC):
             "disrupted": 100,  # TODO: Fix
         }
 
-        shot_props = ShotProps(
+        physics_method_params = PhysicsMethodParams(
             shot_id=shot_id,
             tokamak=self.tokamak,
             disruption_time=disruption_time,
@@ -181,23 +177,32 @@ class ShotManager(ABC):
         )
 
         # modify already existing shot props, such as modifying timebase
-        shot_props = self._modify_shot_props_for_settings(
-            shot_props, shot_settings, **kwargs
+        physics_method_params = self._modify_method_params_for_settings(
+            physics_method_params, shot_settings, **kwargs
         )
 
-        return shot_props
+        return physics_method_params
 
-    def _modify_shot_props_for_settings(
-        self, shot_props: ShotProps, shot_settings: Settings, **kwargs
-    ) -> ShotProps:
+    def _modify_method_params_for_settings(
+        self,
+        physics_method_params: PhysicsMethodParams,
+        shot_settings: Settings,
+        **kwargs,
+    ) -> PhysicsMethodParams:
         if shot_settings.signal_domain is SignalDomain.FLATTOP:
-            shot_props = self._modify_times_flattop_timebase(shot_props)
+            physics_method_params = self._modify_times_flattop_timebase(
+                physics_method_params
+            )
         elif shot_settings.signal_domain is SignalDomain.RAMP_UP_AND_FLATTOP:
-            shot_props = self._modify_times_rampup_and_flattop_timebase(shot_props)
-        if shot_props is None:
-            raise ValueError(f"Shot_props set to None in modify_shot_props()")
+            physics_method_params = self._modify_times_rampup_and_flattop_timebase(
+                physics_method_params
+            )
+        if physics_method_params is None:
+            raise ValueError(
+                f"physics_method_params set to None in _modify_method_params_for_settings()"
+            )
 
-        return shot_props
+        return physics_method_params
 
     def _retrieve_input_data(
         self,

@@ -7,8 +7,7 @@ from typing import Callable, List
 import numpy as np
 import pandas as pd
 
-from disruption_py.shots.helpers.parameter_method_params import ParameterMethodParams
-from disruption_py.core.physics_method.params import ShotProps
+from disruption_py.core.physics_method.params import PhysicsMethodParams
 
 
 def cache_method(method: Callable) -> Callable:
@@ -45,25 +44,24 @@ def cache_or_compute(
     args: tuple,
     kwargs: dict,
 ):
-    parameter_method_params: ParameterMethodParams = (
+    physics_method_params: PhysicsMethodParams = (
         kwargs["params"] if "params" in kwargs else args[-1]
     )
-    shot_props = parameter_method_params.shot_props
 
     other_params = {k: v for k, v in kwargs.items() if k != "params"}
 
-    cache_key = get_method_cache_key(method, shot_props.times, other_params)
+    cache_key = get_method_cache_key(method, physics_method_params.times, other_params)
 
-    if cache_key in shot_props._cached_results:
-        return shot_props._cached_results[cache_key]
+    if cache_key in physics_method_params._cached_results:
+        return physics_method_params._cached_results[cache_key]
     else:
         result = method(*args, **kwargs)
-        shot_props._cached_results[cache_key] = result
+        physics_method_params._cached_results[cache_key] = result
         return result
 
 
 def manually_cache(
-    shot_props: ShotProps,
+    physics_method_params: PhysicsMethodParams,
     data: pd.DataFrame,
     method: Callable,
     method_name: str,
@@ -71,18 +69,18 @@ def manually_cache(
 ) -> bool:
     if method_columns is None:
         return False
-    if not hasattr(shot_props, "_cached_results"):
-        shot_props._cached_results = {}
+    if not hasattr(physics_method_params, "_cached_results"):
+        physics_method_params._cached_results = {}
     missing_columns = set(col for col in method_columns if col not in data.columns)
     if len(missing_columns) == 0:
         cache_key = get_method_cache_key(method, data["time"].values)
-        shot_props._cached_results[cache_key] = data[method_columns]
-        shot_props.logger.debug(
-            f"[Shot {shot_props.shot_id}]:Manually caching {method_name}"
+        physics_method_params._cached_results[cache_key] = data[method_columns]
+        physics_method_params.logger.debug(
+            f"[Shot {physics_method_params.shot_id}]:Manually caching {method_name}"
         )
         return True
     else:
-        shot_props.logger.debug(
-            f"[Shot {shot_props.shot_id}]:Can not cache {method_name} missing columns {missing_columns}"
+        physics_method_params.logger.debug(
+            f"[Shot {physics_method_params.shot_id}]:Can not cache {method_name} missing columns {missing_columns}"
         )
         return False

@@ -8,9 +8,6 @@ import numpy as np
 import pandas as pd
 
 from disruption_py.machine.builtin import built_in_method_factory
-from disruption_py.shots.helpers.parameter_method_params import (
-    ParameterMethodParams,
-)
 from disruption_py.settings.settings import Settings
 from disruption_py.core.physics_method.metadata import (
     BoundMethodMetadata,
@@ -18,33 +15,35 @@ from disruption_py.core.physics_method.metadata import (
     is_parametered_method,
 )
 from disruption_py.core.physics_method.caching import manually_cache
-from disruption_py.core.physics_method.params import ShotProps
+from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.utils.constants import TIME_CONST
 
 REQUIRED_COLS = {"time", "shot", "commit_hash"}
 
 
-def get_prefilled_shot_data(shot_props: ShotProps):
-    pre_filled_shot_data = shot_props.pre_filled_shot_data
+def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams):
+    pre_filled_shot_data = physics_method_params.pre_filled_shot_data
 
     # If the shot object was already passed data in the constructor, use that data. Otherwise, create an empty dataframe.
     if pre_filled_shot_data is None:
         pre_filled_shot_data = pd.DataFrame()
     if "time" not in pre_filled_shot_data:
-        pre_filled_shot_data["time"] = shot_props.times
+        pre_filled_shot_data["time"] = physics_method_params.times
     if "shot" not in pre_filled_shot_data:
-        pre_filled_shot_data["shot"] = int(shot_props.shot_id)
-    pre_filled_shot_data["commit_hash"] = shot_props.metadata.get("commit_hash", None)
+        pre_filled_shot_data["shot"] = int(physics_method_params.shot_id)
+    pre_filled_shot_data["commit_hash"] = physics_method_params.metadata.get(
+        "commit_hash", None
+    )
 
     # Check that pre_filled_shot_data is on the same timebase as the shot object to ensure data consistency
     if (
-        len(pre_filled_shot_data["time"]) != len(shot_props.times)
+        len(pre_filled_shot_data["time"]) != len(physics_method_params.times)
         or not np.isclose(
-            pre_filled_shot_data["time"], shot_props.times, atol=TIME_CONST
+            pre_filled_shot_data["time"], physics_method_params.times, atol=TIME_CONST
         ).all()
     ):
-        shot_props.logger.error(
-            f"[Shot {shot_props.shot_id}]: ERROR Computation on different timebase than pre-filled shot data"
+        physics_method_params.logger.error(
+            f"[Shot {physics_method_params.shot_id}]: ERROR Computation on different timebase than pre-filled shot data"
         )
     return pre_filled_shot_data
 
@@ -63,14 +62,17 @@ def get_all_parameter_methods(all_passed: list):
     return parametered_methods
 
 
-def bind_method_metadata(parametered_methods: set, params: ParameterMethodParams):
+def bind_method_metadata(
+    parametered_methods: set,
+    physics_method_params: PhysicsMethodParams,
+):
     all_bound_method_metadata = []
     for method in parametered_methods:
         method_metadata = get_method_metadata(method, should_throw=True)
         bound_method_metadata = BoundMethodMetadata.bind(
             method_metadata=method_metadata,
             bound_method=method,
-            params=params,
+            physics_method_params=physics_method_params,
         )
         all_bound_method_metadata.append(bound_method_metadata)
     return all_bound_method_metadata
@@ -79,9 +81,8 @@ def bind_method_metadata(parametered_methods: set, params: ParameterMethodParams
 def filter_methods_to_run(
     all_bound_method_metadata: list[BoundMethodMetadata],
     shot_settings: Settings,
-    params: ParameterMethodParams,
+    physics_method_params: PhysicsMethodParams,
 ):
-    shot_props = params.shot_props
     tags = shot_settings.run_tags
     methods = shot_settings.run_methods
     columns = REQUIRED_COLS.union(shot_settings.run_columns)
@@ -94,10 +95,10 @@ def filter_methods_to_run(
         # exclude if tokamak does not match
         if not (
             bound_method_metadata.tokamaks is None
-            or params.tokamak is bound_method_metadata.tokamaks
+            or physics_method_params.tokamak is bound_method_metadata.tokamaks
             or (
                 isinstance(bound_method_metadata.tokamaks, Iterable)
-                and params.tokamak in bound_method_metadata.tokamaks
+                and physics_method_params.tokamak in bound_method_metadata.tokamaks
             )
         ):
             continue
@@ -113,51 +114,54 @@ def filter_methods_to_run(
         ):
             methods_to_run.append(bound_method_metadata)
         else:
-            params.logger.info(
-                f"[Shot {shot_props.shot_id}]:Skipping {bound_method_metadata.name} in class {bound_method_metadata.bound_method}"
+            physics_method_params.logger.info(
+                f"[Shot {physics_method_params.shot_id}]:Skipping {bound_method_metadata.name} in class {bound_method_metadata.bound_method}"
             )
     return methods_to_run
 
 
 def populate_method(
-    params: ParameterMethodParams,
+    physics_method_params: PhysicsMethodParams,
     bound_method_metadata: BoundMethodMetadata,
     start_time,
 ):
 
-    shot_props = params.shot_props
     method = bound_method_metadata.bound_method
     name = bound_method_metadata.name
 
     result = None
     if bound_method_metadata.populate:
-        params.logger.info(f"[Shot {shot_props.shot_id}]:Populating {name}")
+        physics_method_params.logger.info(
+            f"[Shot {physics_method_params.shot_id}]:Populating {name}"
+        )
         try:
-            result = method(params=params)
+            result = method(params=physics_method_params)
         except Exception as e:
-            params.logger.warning(
-                f"[Shot {shot_props.shot_id}]:Failed to populate {name} with error {e}"
+            physics_method_params.logger.warning(
+                f"[Shot {physics_method_params.shot_id}]:Failed to populate {name} with error {e}"
             )
-            params.logger.debug(f"{traceback.format_exc()}")
+            physics_method_params.logger.debug(f"{traceback.format_exc()}")
     else:
-        params.logger.info(f"[Shot {shot_props.shot_id}]:Caching {name}")
+        physics_method_params.logger.info(
+            f"[Shot {physics_method_params.shot_id}]:Caching {name}"
+        )
         try:
-            method(params=params)
+            method(params=physics_method_params)
         except Exception as e:
-            params.logger.warning(
-                f"[Shot {shot_props.shot_id}]:Failed to cache {name} with error {e}"
+            physics_method_params.logger.warning(
+                f"[Shot {physics_method_params.shot_id}]:Failed to cache {name} with error {e}"
             )
-            params.logger.debug(f"{traceback.format_exc()}")
+            physics_method_params.logger.debug(f"{traceback.format_exc()}")
 
-    params.logger.info(
-        f"[Shot {shot_props.shot_id}]:Completed {name}, time_elapsed: {time.time() - start_time}"
+    physics_method_params.logger.info(
+        f"[Shot {physics_method_params.shot_id}]:Completed {name}, time_elapsed: {time.time() - start_time}"
     )
     return result
 
 
 def populate_shot(
     shot_settings: Settings,
-    params: ParameterMethodParams,
+    physics_method_params: PhysicsMethodParams,
 ) -> pd.DataFrame:
     """populate_shot runs the parameter methods either included through the `custom_parameter_methods`
     property of shot_settings or in the built-in list of methods.
@@ -169,7 +173,7 @@ def populate_shot(
     ----------
     shot_settings : ShotSettings
         The shot settings dictating what methods should be run.
-    params : ParameterMethodParams
+    physics_method_params : PhysicsMethodParams
         Parameter that will be passed to methods that are run.
 
     Returns
@@ -177,27 +181,27 @@ def populate_shot(
     pd.DataFrame
         A dataframe containing the querried data.
     """
-    shot_props: ShotProps = params.shot_props
     # Concatanate built in clases containing registred methods, with user provided classes/methods
     all_parameter_method_holders = (
-        built_in_method_factory(params.tokamak) + shot_settings.custom_parameter_methods
+        built_in_method_factory(physics_method_params.tokamak)
+        + shot_settings.custom_parameter_methods
     )
     all_parameter_methods = get_all_parameter_methods(all_parameter_method_holders)
     all_bound_method_metadata: list[BoundMethodMetadata] = bind_method_metadata(
-        all_parameter_methods, params
+        all_parameter_methods, physics_method_params
     )
     run_bound_method_metadata: list[BoundMethodMetadata] = filter_methods_to_run(
-        all_bound_method_metadata, shot_settings, params
+        all_bound_method_metadata, shot_settings, physics_method_params
     )
 
-    pre_filled_shot_data = get_prefilled_shot_data(shot_props)
+    pre_filled_shot_data = get_prefilled_shot_data(physics_method_params)
     # Manually cache data that has already been retrieved (likely from sql tables)
     # Methods added to pre_cached_method_names will be skipped by method optimizer
     cached_method_metadata = []
-    if shot_props.pre_filled_shot_data is not None:
+    if physics_method_params.pre_filled_shot_data is not None:
         for method_metadata in all_bound_method_metadata:
             cache_success = manually_cache(
-                shot_props=shot_props,
+                physics_method_params=physics_method_params,
                 data=pre_filled_shot_data,
                 method=method_metadata.bound_method,
                 method_name=method_metadata.name,
@@ -206,8 +210,8 @@ def populate_shot(
             if cache_success:
                 cached_method_metadata.append(method_metadata)
                 if method_metadata in run_bound_method_metadata:
-                    shot_props.logger.info(
-                        f"[Shot {shot_props.shot_id}]:Skipping {method_metadata.name} already populated"
+                    physics_method_params.logger.info(
+                        f"[Shot {physics_method_params.shot_id}]:Skipping {method_metadata.name} already populated"
                     )
 
     start_time = time.time()
@@ -217,7 +221,7 @@ def populate_shot(
             continue
         parameters.append(
             populate_method(
-                params=params,
+                physics_method_params=physics_method_params,
                 bound_method_metadata=bound_method_metadata,
                 start_time=start_time,
             )
@@ -228,8 +232,8 @@ def populate_shot(
         if parameter is None:
             continue
         if len(parameter) != len(pre_filled_shot_data):
-            params.logger.error(
-                f"[Shot {shot_props.shot_id}]:Ignoring parameter {parameter} with different length than timebase"
+            physics_method_params.logger.error(
+                f"[Shot {physics_method_params.shot_id}]:Ignoring parameter {parameter} with different length than timebase"
             )
             continue
         filtered_parameters.append(parameter)
