@@ -3,16 +3,19 @@
 from typing import List
 
 from disruption_py.workflow import get_shots_data
-from disruption_py.settings.shot_ids_request import ShotIdsRequest, ShotIdsRequestParams
+from disruption_py.settings.shotlist_setting import (
+    ShotlistSetting,
+    ShotlistSettingParams,
+)
 from disruption_py.settings.settings import Settings
 
 
 # Create the ShotIdsRequest class that handles getting the shot numbers for the request
 # Shot
-class CustomShotIdRequest(ShotIdsRequest):
+class CustomShotIdRequest(ShotlistSetting):
 
-    # the _get_shot_ids function takes a set of parameters including a reference to the sql database and returns a list of shot numbers
-    def _get_shot_ids(self, params: ShotIdsRequestParams) -> List:
+    # the _get_shotlist function takes a set of parameters including a reference to the sql database and returns a list of shot numbers
+    def _get_shotlist(self, params: ShotlistSettingParams) -> List:
         sql_shot_nums = params.database.query(
             "SELECT shot FROM good_shots WHERE EXTRACT(YEAR FROM entered) BETWEEN 2019 AND 2021;"
         )["shot"]

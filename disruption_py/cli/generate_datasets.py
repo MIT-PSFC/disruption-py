@@ -57,13 +57,13 @@ def main(args):
 
     if args.shotlist is None:
         if tokamak == Tokamak.D3D:
-            shot_ids_request = "d3d_paper_shotlist"
+            shotlist_request = "d3d_paper_shotlist"
         elif tokamak == Tokamak.CMOD:
-            shot_ids_request = "cmod_test"
+            shotlist_request = "cmod_test"
 
     dataset_df = get_shots_data(
         tokamak=tokamak,
-        shot_ids_request=shot_ids_request,
+        shotlist_request=shotlist_request,
         shot_settings=shot_settings,
         output_type_request="dataframe",
         num_processes=args.num_processes,

@@ -96,7 +96,7 @@ class SQLExistingDataRequest(ExistingDataRequest):
 
     def _get_existing_data(self, params: ExistingDataRequestParams) -> pd.DataFrame:
         params.logger.info(f"retrieving sql data for {params.shot_id}")
-        return params.database.get_shots_data(shot_ids=[params.shot_id])
+        return params.database.get_shots_data(shotlist=[params.shot_id])
 
 
 class DFExistingDataRequest(ExistingDataRequest):

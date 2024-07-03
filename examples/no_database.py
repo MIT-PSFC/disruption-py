@@ -17,7 +17,7 @@ shot_settings = Settings(
 shot_data = get_shots_data(
     tokamak="d3d",
     # Retrieve data for the desired shots
-    shot_ids_request=[161228, 161237, 166177, 166253],
+    shotlist_request=[161228, 161237, 166177, 166253],
     shot_settings=shot_settings,
     # automatically stream retrieved data to a csv file by passing in a file path ending in .csv
     output_type_request=f"/tmp/{os.environ['USER']}/data.csv",

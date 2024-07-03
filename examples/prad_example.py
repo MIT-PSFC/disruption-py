@@ -28,7 +28,7 @@ shot_settings = Settings(
 
 shot_data = get_shots_data(
     tokamak="cmod",
-    shot_ids_request="cmod_non_disruptions_ids_not_blacklist_mini",
+    shotlist_request="cmod_non_disruptions_ids_not_blacklist_mini",
     shot_settings=shot_settings,
     output_type_request="examples/p_rad.csv",
     num_processes=4,

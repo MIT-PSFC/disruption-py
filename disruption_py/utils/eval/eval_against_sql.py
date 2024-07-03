@@ -24,7 +24,7 @@ from disruption_py.utils.math_utils import matlab_gradient_1d_vectorized
 
 
 def get_mdsplus_data(
-    tokamak: Tokamak, shot_ids: List[int], log_file_path: str
+    tokamak: Tokamak, shotlist: List[int], log_file_path: str
 ) -> Dict[int, pd.DataFrame]:
     """
     Get MDSplus data for a list of shots.
@@ -40,7 +40,7 @@ def get_mdsplus_data(
     )
     shot_data = get_shots_data(
         tokamak=tokamak,
-        shot_ids_request=shot_ids,
+        shotlist_request=shotlist,
         shot_settings=shot_settings,
         output_type_request="dict",
         log_settings=LogSettings(
@@ -54,7 +54,7 @@ def get_mdsplus_data(
 
 
 def get_sql_data_for_mdsplus(
-    tokamak: Tokamak, shot_ids: List[int], mdsplus_data: Dict[int, pd.DataFrame]
+    tokamak: Tokamak, shotlist: List[int], mdsplus_data: Dict[int, pd.DataFrame]
 ) -> Dict[int, pd.DataFrame]:
     """
     Get SQL data for a list of shots and map onto the timebase of the supplied MDSplus data.
@@ -66,7 +66,7 @@ def get_sql_data_for_mdsplus(
     """
     db = ShotDatabase.from_config(tokamak=tokamak)
     shot_data = {}
-    for shot_id in shot_ids:
+    for shot_id in shotlist:
         times = mdsplus_data[shot_id]["time"]
         sql_data = db.get_shots_data([shot_id])
         shot_data[shot_id] = pd.merge_asof(
@@ -80,7 +80,7 @@ def get_sql_data_for_mdsplus(
 
 
 def eval_shots_against_sql(
-    shot_ids: List[int],
+    shotlist: List[int],
     mdsplus_data: Dict[int, pd.DataFrame],
     sql_data: Dict[int, pd.DataFrame],
     data_columns: List[str],
@@ -95,7 +95,7 @@ def eval_shots_against_sql(
 
     data_differences: List[DataDifference] = []
     for data_column in data_columns:
-        for shot_id in shot_ids:
+        for shot_id in shotlist:
             mdsplus_shot_data, sql_shot_data = mdsplus_data[shot_id], sql_data[shot_id]
             expect_failure = data_column in expected_failure_columns
 
@@ -221,13 +221,13 @@ def get_failure_statistics_string(
         }
         condition_results = {}
         for condition_name, condition in conditions.items():
-            shot_ids = [
+            shotlist = [
                 data_difference.shot_id
                 for data_difference in column_data_differences
                 if condition(data_difference)
             ]
-            if len(shot_ids) > 0:
-                condition_results[condition_name] = shot_ids
+            if len(shotlist) > 0:
+                condition_results[condition_name] = shotlist
         condition_string = "\n".join(
             [
                 f"{condition_name} ({len(condition_result)} shots): {condition_result}"
@@ -281,7 +281,7 @@ def get_failure_statistics_string(
 
 def eval_against_sql(
     tokamak: Tokamak,
-    shot_ids: List[int],
+    shotlist: List[int],
     expected_failure_columns: List[str],
     fail_quick: bool,
     test_columns=None,
@@ -301,9 +301,9 @@ def eval_against_sql(
 
     with monkey_patch_numpy_gradient():
         mdsplus_data = get_mdsplus_data(
-            tokamak, shot_ids, os.path.join(tempfolder, "data_retrieval.log")
+            tokamak, shotlist, os.path.join(tempfolder, "data_retrieval.log")
         )
-    sql_data = get_sql_data_for_mdsplus(tokamak, shot_ids, mdsplus_data)
+    sql_data = get_sql_data_for_mdsplus(tokamak, shotlist, mdsplus_data)
 
     if test_columns is None:
         mdsplus_columns = set().union(*(df.columns for df in mdsplus_data.values()))
@@ -311,7 +311,7 @@ def eval_against_sql(
         test_columns = sorted(mdsplus_columns.intersection(sql_columns))
 
     data_differences = eval_shots_against_sql(
-        shot_ids=shot_ids,
+        shotlist=shotlist,
         mdsplus_data=mdsplus_data,
         sql_data=sql_data,
         data_columns=test_columns,

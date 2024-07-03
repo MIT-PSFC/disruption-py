@@ -120,7 +120,7 @@ class MultiprocessingShotRetriever:
                 )
             )
 
-    def run(self, shot_ids_list, shot_settings, await_complete=True):
+    def run(self, shotlist_list, shot_settings, await_complete=True):
 
         if not self.result_thread.is_alive():
             self.result_thread.start()
@@ -129,7 +129,7 @@ class MultiprocessingShotRetriever:
             if not w.is_alive():
                 w.start()
 
-        for shot_id in shot_ids_list:
+        for shot_id in shotlist_list:
             task = ShotTask(
                 shot_id=shot_id,
                 shot_settings=shot_settings,

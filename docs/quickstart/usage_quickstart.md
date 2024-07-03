@@ -53,7 +53,7 @@ Creating a scripts gives you the full functionality of disruption_py.
 
 	shot_data = cmod_handler.get_shots_data(
 		# retrieve data for the list of provided shot numbers
-		shot_ids_request=[1150805012, 1150805013, 1150805014,],
+		shotlist_request=[1150805012, 1150805013, 1150805014,],
 
 		# use the created shot_settings
 		shot_settings=shot_settings,

@@ -14,7 +14,7 @@ FEATURE_COLUMNS = ["time", "n_e", "ip", "g_f", "z_eff", "bt0"]  # Shot columns w
 def generate_full_dataset():
     # Create database handler for grabbing shots from SQL database
     handler = create_d3d_handler()
-    # Get all shots from database (you can pass a list of shot_ids to get a subset)
+    # Get all shots from database (you can pass a list of shotlist to get a subset)
     shots = handler.get_shots(efit_tree="EFIT01")
     # Combine into one dataframe
     df = pd.concat([shot.data[FEATURE_COLUMNS] for shot in shots])
@@ -23,9 +23,9 @@ def generate_full_dataset():
 
 
 # Same as generate_full_dataset but for a subset of shots
-def generate_subset_dataset(shot_ids):
+def generate_subset_dataset(shotlist):
     handler = create_d3d_handler()
-    shots = handler.get_shots(shot_ids, "EFIT01")
+    shots = handler.get_shots(shotlist, "EFIT01")
     df = pd.concat([shot.data[FEATURE_COLUMNS] for shot in shots])
     df.to_csv("dl_example_data.csv")
 

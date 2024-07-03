@@ -11,7 +11,7 @@ def get_tokamak_test_expected_failure_columns(tokamak: Tokamak):
     return EXPECTED_FAILURE_COLUMNS.get(tokamak.value)
 
 
-def get_tokamak_test_shot_ids(tokamak: Tokamak) -> list[int]:
+def get_tokamak_test_shotlist(tokamak: Tokamak) -> list[int]:
     shot_id_dict = TEST_SHOTS.get(tokamak.value)
 
     if "GITHUB_ACTIONS" in os.environ:

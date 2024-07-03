@@ -13,10 +13,10 @@ from disruption_py.settings.output_setting import (
     OutputSettingParams,
     resolve_output_setting,
 )
-from disruption_py.settings.shot_ids_request import (
-    ShotIdsRequestParams,
-    ShotIdsRequestType,
-    shot_ids_request_runner,
+from disruption_py.settings.shotlist_setting import (
+    ShotlistSettingParams,
+    ShotlistSettingType,
+    shotlist_setting_runner,
 )
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak
 from disruption_py.machine.factory import (
@@ -29,7 +29,7 @@ logger = logging.getLogger("disruption_py")
 
 
 def get_shots_data(
-    shot_ids_request: ShotIdsRequestType,
+    shotlist_request: ShotlistSettingType,
     tokamak: Tokamak = None,
     database_initializer: Callable[..., ShotDatabase] = None,
     mds_connection_initializer: Callable[..., ProcessMDSConnection] = None,
@@ -39,12 +39,12 @@ def get_shots_data(
     log_settings: LogSettings = None,
 ) -> Any:
     """
-    Get shot data for all shots from shot_ids_request from CMOD.
+    Get shot data for all shots from shotlist_request from CMOD.
 
     Attributes
     ----------
-    shot_ids_request : ShotIdsRequestType
-        Data retrieved for all shot_ids specified by the request. See ShotIdsRequest for more details.
+    shotlist_request : ShotIdsRequestType
+        Data retrieved for all shotlist specified by the request. See ShotIdsRequest for more details.
     shot_settings : ShotSettings
         The settings that each shot uses when retrieving data. See ShotSettings for more details.
         If None, the default values of each setting in ShotSettings is used.
@@ -84,12 +84,12 @@ def get_shots_data(
     # do not spawn unnecessary processes
     shot_manager_cls = get_tokamak_shot_manager(tokamak)
 
-    shot_ids_request_params = ShotIdsRequestParams(database, tokamak, logger)
-    shot_ids_list = without_duplicates(
-        shot_ids_request_runner(shot_ids_request, shot_ids_request_params)
+    shotlist_request_params = ShotlistSettingParams(database, tokamak, logger)
+    shotlist_list = without_duplicates(
+        shotlist_setting_runner(shotlist_request, shotlist_request_params)
     )
 
-    num_processes = min(num_processes, len(shot_ids_list))
+    num_processes = min(num_processes, len(shotlist_list))
 
     if num_processes > 1:
         shot_retriever = MultiprocessingShotRetriever(
@@ -107,7 +107,7 @@ def get_shots_data(
             logger=logger,
         )
         shot_retriever.run(
-            shot_ids_list=shot_ids_list,
+            shotlist_list=shotlist_list,
             shot_settings=shot_settings,
             await_complete=True,
         )
@@ -118,7 +118,7 @@ def get_shots_data(
             process_database=database,
             process_mds_conn=mds_connection,
         )
-        for shot_id in shot_ids_list:
+        for shot_id in shotlist_list:
             shot_data = shot_manager.get_shot_data(
                 shot_id=shot_id,
                 shot_settings=shot_settings,

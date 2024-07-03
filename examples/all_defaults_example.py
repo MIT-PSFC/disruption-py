@@ -24,7 +24,7 @@ shot_settings = Settings(
 
 shot_data = get_shots_data(
     tokamak=None,  # defaults to tokamak value detected from environement
-    shot_ids_request=-1,  # no default value
+    shotlist_request=-1,  # no default value
     database_initializer=None,  # defaults to connection for tokamak
     mds_connection_initializer=None,  # defaults to mds plus server string for tokamak
     shot_settings=shot_settings,

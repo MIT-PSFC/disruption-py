@@ -9,10 +9,10 @@ shot_settings = Settings(
     # run all available methods
     run_tags=["all"],
 )
-shot_ids = [1140819005, 1140819009]
+shotlist = [1140819005, 1140819009]
 shot_data = get_shots_data(
     # Retrieve data for the desired shots
-    shot_ids_request=shot_ids,
+    shotlist_request=shotlist,
     shot_settings=shot_settings,
     # automatically stream retrieved data to a csv file by passing in a file path ending in .csv
     output_type_request=SQLOutputSetting(table_name="disruption_warning_test"),
@@ -21,5 +21,5 @@ shot_data = get_shots_data(
 
 
 cmod_database = get_database(tokamak="cmod")
-result = cmod_database.get_shots_data(shot_ids, sql_table="disruption_warning_test")
+result = cmod_database.get_shots_data(shotlist, sql_table="disruption_warning_test")
 print(result)

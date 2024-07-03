@@ -3,9 +3,9 @@
 import argparse
 import logging
 
-from disruption_py.settings.shot_ids_request import (
-    ShotIdsRequestParams,
-    shot_ids_request_runner,
+from disruption_py.settings.shotlist_setting import (
+    ShotlistSettingParams,
+    shotlist_setting_runner,
 )
 from disruption_py.utils.eval.eval_against_sql import (
     eval_against_sql,
@@ -14,27 +14,27 @@ from disruption_py.utils.eval.eval_against_sql import (
 from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from disruption_py.machine.tokamak import Tokamak, get_tokamak_from_environment
 from tests.utils.factory import (
-    get_tokamak_test_shot_ids,
+    get_tokamak_test_shotlist,
 )
 from tests.utils.factory import get_tokamak_test_expected_failure_columns
 
 
 def evaluate_accuracy(
     tokamak: Tokamak,
-    shot_ids: list[int],
+    shotlist: list[int],
     fail_quick: bool = False,
     data_columns: list[str] = None,
 ):
-    if shot_ids is None or len(shot_ids) == 0:
-        shot_ids = get_tokamak_test_shot_ids(tokamak)
+    if shotlist is None or len(shotlist) == 0:
+        shotlist = get_tokamak_test_shotlist(tokamak)
     else:
-        shot_ids = [int(shot_id) for shot_id in shot_ids]
+        shotlist = [int(shot_id) for shot_id in shotlist]
 
     expected_failure_columns = get_tokamak_test_expected_failure_columns(tokamak)
 
     data_differences = eval_against_sql(
         tokamak=tokamak,
-        shot_ids=shot_ids,
+        shotlist=shotlist,
         expected_failure_columns=expected_failure_columns,
         fail_quick=fail_quick,
         test_columns=data_columns,
@@ -77,34 +77,34 @@ def main(args):
         print(
             "To finish please leave a blank line (if no shots are entered a short default shot list will be used)"
         )
-        all_shot_ids = []
+        all_shotlist = []
         while True:
-            shot_ids: str = input()
-            if shot_ids == "":
+            shotlist: str = input()
+            if shotlist == "":
                 break
 
-            shot_ids_to_add = [feature.strip() for feature in shot_ids.split(",")]
-            for shot_id in shot_ids_to_add:
+            shotlist_to_add = [feature.strip() for feature in shotlist.split(",")]
+            for shot_id in shotlist_to_add:
                 try:
-                    all_shot_ids.append(int(shot_id))
+                    all_shotlist.append(int(shot_id))
                 except ValueError:
                     print(
                         f"Shot id {shot_id} does not appear to be an integer, skipping"
                     )
     else:
-        shot_ids_request_params = ShotIdsRequestParams(
+        shotlist_request_params = ShotlistSettingParams(
             database=None,
             tokamak=tokamak,
             logger=logging.getLogger("test_accuracy_logger"),
         )
-        all_shot_ids = shot_ids_request_runner(args.shotlist, shot_ids_request_params)
+        all_shotlist = shotlist_setting_runner(args.shotlist, shotlist_request_params)
 
     data_columns = [args.data_column] if args.data_column else None
 
     print("Running evaluation...")
     evaluate_accuracy(
         tokamak=tokamak,
-        shot_ids=all_shot_ids,
+        shotlist=all_shotlist,
         fail_quick=args.fail_quick,
         data_columns=data_columns,
     )

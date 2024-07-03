@@ -45,7 +45,7 @@ def initial_mdsplus_data(shotlist, tokamak, setup_shot_database) -> Dict:
     )
     shot_data, _ = get_shots_data(
         tokamak=tokamak,
-        shot_ids_request=shotlist,
+        shotlist_request=shotlist,
         shot_settings=shot_settings,
         output_type_request=[
             "dataframe",
@@ -83,7 +83,7 @@ def test_update_data(
         only_requested_columns=True,
     )
     shot_data, _ = get_shots_data(
-        shot_ids_request=shotlist,
+        shotlist_request=shotlist,
         shot_settings=shot_settings,
         output_type_request=[
             "dataframe",

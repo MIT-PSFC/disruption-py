@@ -388,15 +388,15 @@ class ShotDatabase:
 
     def get_shots_data(
         self,
-        shot_ids: List[int],
+        shotlist: List[int],
         cols: List[str] = ["*"],
         sql_table="disruption_warning",
     ):
-        """get_shots_data retrieves columns from sql data for given shot_ids
+        """get_shots_data retrieves columns from sql data for given shotlist
 
         Parameters
         ----------
-        shot_ids : List[int]
+        shotlist : List[int]
             List of shot ids to get data for.
         cols : List[str]
             List of columns to retrieve. Default value is ["*"], meaning all columns.
@@ -408,14 +408,14 @@ class ShotDatabase:
         pd.Dataframe
             Dataframe containing querried data
         """
-        shot_ids = ",".join([str(shot_id) for shot_id in shot_ids])
+        shotlist = ",".join([str(shot_id) for shot_id in shotlist])
         selected_cols = f"{cols[0]}"
         if len(cols) > 1:
             selected_cols += "".join([f", {col}" for col in cols[1:]])
-        if shot_ids is None:
+        if shotlist is None:
             query = f"select {selected_cols} from {sql_table} order by time"
         else:
-            query = f"select {selected_cols} from {sql_table} where shot in ({shot_ids}) order by time"
+            query = f"select {selected_cols} from {sql_table} where shot in ({shotlist}) order by time"
         shot_df = pd.read_sql_query(query, self.engine)
         return shot_df
 
@@ -462,7 +462,7 @@ class DummyDatabase(ShotDatabase):
 
     Examples
     --------
-    >>> get_shots_data(shot_ids_request=[1150805012], database_initializer=DummyDatabase.initializer)
+    >>> get_shots_data(shotlist_request=[1150805012], database_initializer=DummyDatabase.initializer)
     <pd.DataFrame>
     """
 

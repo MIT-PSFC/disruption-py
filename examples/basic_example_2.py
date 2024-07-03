@@ -17,8 +17,8 @@ shot_settings = Settings(
 )
 shot_data = get_shots_data(
     tokamak="cmod",
-    # use the shot ids listed in the shot_ids_of_interest.txt file
-    shot_ids_request="shot_ids_of_interest.txt",
+    # use the shotlist listed in the shotlist_of_interest.txt file
+    shotlist_request="shotlist_of_interest.txt",
     shot_settings=shot_settings,
     # automatically stream retrieved data to a csv file by passing in a file path ending in .csv
     # this works by automatically using the CSVOutputRequest preset with the passed filename

@@ -14,11 +14,11 @@ from disruption_py.machine.tokamak import (
 tokamak = get_tokamak_from_environment()
 
 if tokamak is Tokamak.D3D:
-    shot_ids_request = [161228]
+    shotlist_request = [161228]
     run_methods = ["_get_efit_parameters"]
     shape = (247, 16)
 elif tokamak is Tokamak.CMOD:
-    shot_ids_request = [1150805012]
+    shotlist_request = [1150805012]
     run_methods = ["_get_EFIT_parameters"]
     shape = (62, 25)
 else:
@@ -33,7 +33,7 @@ shot_settings = Settings(
 
 result = get_shots_data(
     tokamak=tokamak,
-    shot_ids_request=shot_ids_request,
+    shotlist_request=shotlist_request,
     shot_settings=shot_settings,
     output_type_request="dataframe",
     log_settings=LogSettings(console_log_level=0),
