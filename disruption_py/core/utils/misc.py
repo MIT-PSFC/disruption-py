@@ -76,3 +76,16 @@ def safe_df_concat(base_df: pd.DataFrame, new_dfs: List[pd.DataFrame]):
     for col in missing_cols:
         concat_df[col] = np.nan
     return concat_df
+
+
+def get_commit_hash():
+    # setup commit hash
+    try:
+        commit_hash = (
+            subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])
+            .decode("ascii")
+            .strip()
+        )
+    except Exception as e:
+        commit_hash = None
+    return commit_hash
