@@ -41,8 +41,8 @@ class SignalDomain(Enum):
 
 
 @dataclass
-class Settings:
-    """Settings to be used for retrieving data for a single shot.
+class RetrievalSettings:
+    """RetrievalSettings to be used for retrieving data for a single shot.
 
     Attributes
     ----------

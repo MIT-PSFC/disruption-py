@@ -6,9 +6,9 @@ import os
 from disruption_py.io.sql import DummyDatabase
 from disruption_py.workflow import get_shots_data
 from disruption_py.settings.log_settings import LogSettings
-from disruption_py.settings.settings import Settings
+from disruption_py.settings.retrieval_settings import RetrievalSettings
 
-shot_settings = Settings(
+shot_settings = RetrievalSettings(
     # uses the efit timebase when returning data
     time_setting="ip",
     # run all available methods

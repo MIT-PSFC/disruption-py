@@ -3,9 +3,9 @@
 import logging
 
 from disruption_py.workflow import get_shots_data
-from disruption_py.settings import LogSettings, Settings
+from disruption_py.settings import LogSettings, RetrievalSettings
 
-shot_settings = Settings(
+shot_settings = RetrievalSettings(
     # data settings
     input_setting=None,
     efit_tree_name="analysis",

@@ -13,7 +13,7 @@ import pandas as pd
 
 from disruption_py.io.sql import ShotDatabase
 from disruption_py.workflow import get_shots_data
-from disruption_py.settings import LogSettings, Settings
+from disruption_py.settings import LogSettings, RetrievalSettings
 from disruption_py.constants import (
     TIME_CONST,
 )
@@ -34,7 +34,7 @@ def get_mdsplus_data(
     Dict[int, pd.DataFrame]
         Dictionary mapping shot IDs to retrieved MDSplus data.
     """
-    shot_settings = Settings(
+    shot_settings = RetrievalSettings(
         efit_tree_name="efit18",
         time_setting="disruption_warning",
     )

@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 
 from disruption_py.workflow import get_shots_data
-from disruption_py.settings.settings import Settings
+from disruption_py.settings.retrieval_settings import RetrievalSettings
 from tests.utils.environment_vars import temporary_env_vars
 from disruption_py.machine.tokamak import is_tokamak_indexed
 
@@ -50,7 +50,7 @@ def test_features_serial(tokamak, shotlist, shot_settings_key, test_file_path_f)
         if tokamak.value not in test_setting:
             pytest.skip(f"not tested for tokamak {tokamak.value}")
 
-    test_setting = Settings.from_dict(test_setting, tokamak=tokamak)
+    test_setting = RetrievalSettings.from_dict(test_setting, tokamak=tokamak)
 
     results = get_shots_data(
         tokamak=tokamak,
@@ -74,7 +74,9 @@ def test_features_serial(tokamak, shotlist, shot_settings_key, test_file_path_f)
 
 
 def test_features_parallel(tokamak, shotlist, test_file_path_f):
-    test_setting = Settings.from_dict(TEST_SETTINGS["default_fast"], tokamak=tokamak)
+    test_setting = RetrievalSettings.from_dict(
+        TEST_SETTINGS["default_fast"], tokamak=tokamak
+    )
 
     results = get_shots_data(
         tokamak=tokamak,

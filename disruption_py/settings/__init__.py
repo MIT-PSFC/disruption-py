@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from .settings import SignalDomain
+from .retrieval_settings import SignalDomain
 from .input_setting import InputSetting, InputSettingParams
 from .log_settings import LogSettings
 from .output_setting import (
@@ -9,4 +9,4 @@ from .output_setting import (
     OutputSettingParams,
 )
 from .time_setting import TimeSetting, TimeSettingParams
-from .settings import InterpolationMethod, Settings
+from .retrieval_settings import InterpolationMethod, RetrievalSettings

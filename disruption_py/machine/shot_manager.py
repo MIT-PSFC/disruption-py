@@ -12,10 +12,10 @@ from disruption_py.io.mds import (
     MDSConnection,
     ProcessMDSConnection,
 )
-from disruption_py.settings.settings import SignalDomain
+from disruption_py.settings.retrieval_settings import SignalDomain
 from disruption_py.settings.input_setting import InputSettingParams
 from disruption_py.settings.time_setting import TimeSettingParams
-from disruption_py.settings.settings import Settings
+from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.core.physics_method.runner import populate_shot
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.misc import get_commit_hash
@@ -37,7 +37,7 @@ class ShotManager(ABC):
         self.process_database = process_database
         self.process_mds_conn = process_mds_conn
 
-    def get_shot_data(self, shot_id, shot_settings: Settings) -> pd.DataFrame:
+    def get_shot_data(self, shot_id, shot_settings: RetrievalSettings) -> pd.DataFrame:
         """
         Get data for a single shot. May be run across different processes.
         """
@@ -76,7 +76,7 @@ class ShotManager(ABC):
         pass
 
     def shot_setup(
-        self, shot_id: int, shot_settings: Settings, **kwargs
+        self, shot_id: int, shot_settings: RetrievalSettings, **kwargs
     ) -> PhysicsMethodParams:
         """
         Sets up the shot properties for cmod.
@@ -131,7 +131,7 @@ class ShotManager(ABC):
         shot_id: int,
         mds_conn: MDSConnection,
         disruption_time: float,
-        shot_settings: Settings,
+        shot_settings: RetrievalSettings,
         **kwargs,
     ) -> PhysicsMethodParams:
 
@@ -186,7 +186,7 @@ class ShotManager(ABC):
     def _modify_method_params_for_settings(
         self,
         physics_method_params: PhysicsMethodParams,
-        shot_settings: Settings,
+        shot_settings: RetrievalSettings,
         **kwargs,
     ) -> PhysicsMethodParams:
         if shot_settings.signal_domain is SignalDomain.FLATTOP:
@@ -207,7 +207,7 @@ class ShotManager(ABC):
     def _retrieve_input_data(
         self,
         shot_id: int,
-        shot_settings: Settings,
+        shot_settings: RetrievalSettings,
     ) -> pd.DataFrame:
         if shot_settings.input_setting is not None:
             input_setting_params = InputSettingParams(
@@ -231,7 +231,7 @@ class ShotManager(ABC):
         input_data: pd.DataFrame,
         mds_conn: MDSConnection,
         disruption_time: float,
-        shot_settings: Settings,
+        shot_settings: RetrievalSettings,
     ) -> np.ndarray:
         """
         Initialize the timebase of the shot.

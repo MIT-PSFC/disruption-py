@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from disruption_py.machine.builtin import built_in_method_factory
-from disruption_py.settings.settings import Settings
+from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.core.physics_method.metadata import (
     BoundMethodMetadata,
     get_method_metadata,
@@ -80,7 +80,7 @@ def bind_method_metadata(
 
 def filter_methods_to_run(
     all_bound_method_metadata: list[BoundMethodMetadata],
-    shot_settings: Settings,
+    shot_settings: RetrievalSettings,
     physics_method_params: PhysicsMethodParams,
 ):
     tags = shot_settings.run_tags
@@ -160,7 +160,7 @@ def populate_method(
 
 
 def populate_shot(
-    shot_settings: Settings,
+    shot_settings: RetrievalSettings,
     physics_method_params: PhysicsMethodParams,
 ) -> pd.DataFrame:
     """populate_shot runs the parameter methods either included through the `custom_parameter_methods`

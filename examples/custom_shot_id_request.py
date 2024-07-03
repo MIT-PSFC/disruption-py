@@ -7,7 +7,7 @@ from disruption_py.settings.shotlist_setting import (
     ShotlistSetting,
     ShotlistSettingParams,
 )
-from disruption_py.settings.settings import Settings
+from disruption_py.settings.retrieval_settings import RetrievalSettings
 
 
 # Create the ShotlistSetting class that handles getting the needed shotlist
@@ -21,7 +21,7 @@ class CustomShotlistSetting(ShotlistSetting):
         return sql_shot_nums + [1160405002, 1140523021, 1140523026, 1160620011]
 
 
-shot_settings = Settings(
+shot_settings = RetrievalSettings(
     # use the efit timebase preset for time_setting
     time_setting="efit",
     run_tags=[],

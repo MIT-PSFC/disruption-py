@@ -3,7 +3,7 @@
 import numpy as np
 
 from disruption_py.io.mds import MDSConnection
-from disruption_py.settings.settings import Settings
+from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.machine.cmod.basic import (
     BasicCmodRequests,
 )
@@ -21,7 +21,7 @@ class CModShotManager(ShotManager):
         shot_id: int,
         mds_conn: MDSConnection,
         disruption_time: float,
-        shot_settings: Settings,
+        shot_settings: RetrievalSettings,
     ) -> None:
         def efit_tree_nickname_func():
             efit_names_to_test = without_duplicates(

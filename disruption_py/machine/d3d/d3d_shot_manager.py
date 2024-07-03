@@ -9,7 +9,7 @@ from disruption_py.io.mds import (
     MDSConnection,
     ProcessMDSConnection,
 )
-from disruption_py.settings.settings import Settings
+from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.machine.shot_manager import ShotManager
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.machine.tokamak import Tokamak
@@ -30,7 +30,7 @@ class D3DShotManager(ShotManager):
         mds_conn: MDSConnection,
         database: ShotDatabase,
         disruption_time: float,
-        shot_settings: Settings,
+        shot_settings: RetrievalSettings,
     ) -> None:
         def efit_tree_nickname_func():
             if shot_settings.efit_tree_name != "analysis":

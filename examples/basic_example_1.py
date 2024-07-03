@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 from disruption_py.workflow import get_shots_data
-from disruption_py.settings.settings import Settings
+from disruption_py.settings.retrieval_settings import RetrievalSettings
 
-shot_settings = Settings(
+shot_settings = RetrievalSettings(
     # uses the efit timebase when returning data
     time_setting="efit",
     # run all available methods

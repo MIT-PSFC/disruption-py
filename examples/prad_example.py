@@ -5,7 +5,7 @@ from disruption_py.settings import (
     LogSettings,
     TimeSetting,
     TimeSettingParams,
-    Settings,
+    RetrievalSettings,
 )
 
 
@@ -18,7 +18,7 @@ class PRadTime(TimeSetting):
         return time_array
 
 
-shot_settings = Settings(
+shot_settings = RetrievalSettings(
     time_setting=PRadTime(),
     run_tags=[],  # default is all, so if you do not want all data must set to an empty list
     run_columns=["p_rad"],  # run parameter methods

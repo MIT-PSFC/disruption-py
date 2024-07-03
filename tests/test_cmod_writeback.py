@@ -7,7 +7,7 @@ import pytest
 from disruption_py.io.sql import ShotDatabase
 from disruption_py.workflow import get_database, get_shots_data
 from disruption_py.settings.output_setting import SQLOutputSetting
-from disruption_py.settings.settings import Settings
+from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.constants import (
     BASE_PROTECTED_COLUMNS,
 )
@@ -37,7 +37,7 @@ def setup_shot_database(shotlist, shot_database):
 def initial_mdsplus_data(shotlist, tokamak, setup_shot_database) -> Dict:
     if tokamak is Tokamak.D3D:
         pytest.skip("Skipping test on DIII-D")
-    shot_settings = Settings(
+    shot_settings = RetrievalSettings(
         time_setting="efit",
         efit_tree_name="efit18",
         run_columns=FIRST_ITERATION_COLUMNS,
@@ -76,7 +76,7 @@ def test_update_data(
     )
 
     # do second retrieval that updates the data for the columns
-    shot_settings = Settings(
+    shot_settings = RetrievalSettings(
         time_setting="efit",
         efit_tree_name="efit18",
         run_columns=ALL_ITERATION_COLUMNS,

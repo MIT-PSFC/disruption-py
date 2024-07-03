@@ -5,7 +5,7 @@ from typing import Any, Callable
 
 from disruption_py.io.sql import ShotDatabase
 from disruption_py.io.mds import ProcessMDSConnection
-from disruption_py.settings import Settings
+from disruption_py.settings import RetrievalSettings
 from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.output_setting import (
     CompleteOutputSettingParams,
@@ -33,7 +33,7 @@ def get_shots_data(
     tokamak: Tokamak = None,
     database_initializer: Callable[..., ShotDatabase] = None,
     mds_connection_initializer: Callable[..., ProcessMDSConnection] = None,
-    shot_settings: Settings = None,
+    shot_settings: RetrievalSettings = None,
     output_setting: OutputSetting = "list",
     num_processes: int = 1,
     log_settings: LogSettings = None,
@@ -75,7 +75,7 @@ def get_shots_data(
     )
     # Clean-up parameters
     if shot_settings is None:
-        shot_settings = Settings()
+        shot_settings = RetrievalSettings()
 
     shot_settings.resolve()
     output_setting = resolve_output_setting(output_setting)
