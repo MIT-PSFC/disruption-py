@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Tuple
 
-from disruption_py.settings.existing_data_request import (
+from disruption_py.settings.input_setting import (
     InputSetting,
     resolve_input_setting,
 )
@@ -46,9 +46,9 @@ class Settings:
 
     Attributes
     ----------
-    input_setting : ExistingDataRequest
+    input_setting : InputSetting
         The input setting to be used when prefilling data for the shot. Can pass any
-        ExistingDataRequestType that resolves to a ExistingDataRequest. See ExistingDataRequest for more
+        InputSettingType that resolves to a InputSetting. See InputSetting for more
         details. Set to None if no data should be prefilled. Defaults to None.
     efit_tree_name : str
         The name of the tree to first try for the efit environment. Other tree names will be tried if
@@ -77,22 +77,22 @@ class Settings:
         A list of parametered methods and objects containing registred methods. The Methods are
         collected and run when retrieving data from mdsplus if the method is included through
         either the run_methods, run_tags, run_columns setting. Defaults to an empty list.
-    set_times_request : SetTimesRequest
-        The set times request to be used when setting the timebase for the shot. The retrieved data will
-        be interpolated to this timebase. Can pass any SetTimesRequestType that resolves to a SetTimesRequest.
-        See SetTimesRequest for more details. Defaults to "disruption_warning".
+    time_setting : TimeSetting
+        The time setting to be used when setting the timebase for the shot. The retrieved data will
+        be interpolated to this timebase. Can pass any TimeSettingType that resolves to a TimeSetting.
+        See TimeSetting for more details. Defaults to "disruption_warning".
     signal_domain : SignalDomain
         The domain of the timebase that should be used when retrieving data for the shot. Either "full",
         "flattop", or "rampup_and_flattop". Can pass either a SignalDomain or the associated string. Defaults
         to "full".
     use_input_setting_timebase : bool
         If true and input data exists for the shot, the timebase from the input data will be used instead
-        of the timebase from the set_times_request. Wraps the set_times_request with ExistingDataSetTimesRequest.
+        of the timebase from the time_setting. Wraps the time_setting with ExistingDataTimeSetting.
         Defaults to False.
     interpolation_method : InterpolationMethod
         The interpolation method to be used when retrieving data for the shot. CURRENTLY UNIMPLEMENTED.
-    output_type_request : OutputTypeRequest
-        DEPRECTATED. output_type_request has moved to a parameter in the get_shots_data method.
+    output_setting : OutputSetting
+        DEPRECTATED. output_setting has moved to a parameter in the get_shots_data method.
         Will error if used, please set to None.
     attempt_local_efit_env : Tuple[Tuple[str, str]]
         DEPRECTATED. Support no longer exists. Please reach out to maintainers with questions.
@@ -116,7 +116,7 @@ class Settings:
     custom_parameter_methods: list = field(default_factory=list)
 
     # Timebase setting
-    set_times_request: TimeSetting = "disruption_warning"
+    time_setting: TimeSetting = "disruption_warning"
     signal_domain: SignalDomain = "full"
     use_input_setting_timebase: bool = False
     interpolation_method: InterpolationMethod = "linear"
@@ -124,7 +124,7 @@ class Settings:
     additional_args: dict = field(default_factory=dict)
 
     # DEPRECATED
-    output_type_request: OutputSetting = None  # moved to get_shots_data
+    output_setting: OutputSetting = None  # moved to get_shots_data
     attempt_local_efit_env: Tuple[Tuple[str, str]] = None  # support removed
 
     def __post_init__(self):
@@ -136,11 +136,11 @@ class Settings:
         """
         DEPRECTATED_SETTINGS = [
             (
-                "output_type_request",
+                "output_setting",
                 """
-                output_type_request no longer set in shot_settings. 
-                Please set output_type_request in get_shots_data. 
-                To not throw error please set output_type_request to None.
+                output_setting no longer set in shot_settings. 
+                Please set output_setting in get_shots_data. 
+                To not throw error please set output_setting to None.
                 """
                 "attempt_local_efit_env",
                 """
@@ -177,7 +177,7 @@ class Settings:
         self._check_deprecated_settings()
 
         self.input_setting = resolve_input_setting(self.input_setting)
-        self.set_times_request = resolve_time_setting(self.set_times_request)
+        self.time_setting = resolve_time_setting(self.time_setting)
 
         map_string_attributes_to_enum(
             self,
@@ -188,9 +188,9 @@ class Settings:
         )
 
         if self.use_input_setting_timebase and not isinstance(
-            self.set_times_request, ExistingDataTimeSetting
+            self.time_setting, ExistingDataTimeSetting
         ):
-            self.set_times_request = ExistingDataTimeSetting(self.set_times_request)
+            self.time_setting = ExistingDataTimeSetting(self.time_setting)
 
         if self.attempt_local_efit_env is not None:
             for idx, (option, value) in enumerate(self.attempt_local_efit_env):

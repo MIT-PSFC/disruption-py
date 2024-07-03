@@ -19,7 +19,7 @@ class PRadTime(TimeSetting):
 
 
 shot_settings = Settings(
-    set_times_request=PRadTime(),
+    time_setting=PRadTime(),
     run_tags=[],  # default is all, so if you do not want all data must set to an empty list
     run_columns=["p_rad"],  # run parameter methods
     only_requested_columns=True,  # only return the column data for run_columns
@@ -28,9 +28,9 @@ shot_settings = Settings(
 
 shot_data = get_shots_data(
     tokamak="cmod",
-    shotlist_request="cmod_non_disruptions_ids_not_blacklist_mini",
+    shotlist_setting="cmod_non_disruptions_ids_not_blacklist_mini",
     shot_settings=shot_settings,
-    output_type_request="examples/p_rad.csv",
+    output_setting="examples/p_rad.csv",
     num_processes=4,
     log_settings=LogSettings(
         log_to_console=False,  # don't log to the console

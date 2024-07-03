@@ -45,7 +45,7 @@ def main(args):
 
     shot_settings = Settings(
         efit_tree_name=args.efit_tree,
-        set_times_request=args.timebase_signal,
+        time_setting=args.timebase_signal,
         run_methods=args.run_methods,
         run_tags=args.run_tags,
         run_columns=feature_cols,
@@ -57,15 +57,15 @@ def main(args):
 
     if args.shotlist is None:
         if tokamak == Tokamak.D3D:
-            shotlist_request = "d3d_paper_shotlist"
+            shotlist_setting = "d3d_paper_shotlist"
         elif tokamak == Tokamak.CMOD:
-            shotlist_request = "cmod_test"
+            shotlist_setting = "cmod_test"
 
     dataset_df = get_shots_data(
         tokamak=tokamak,
-        shotlist_request=shotlist_request,
+        shotlist_setting=shotlist_setting,
         shot_settings=shot_settings,
-        output_type_request="dataframe",
+        output_setting="dataframe",
         num_processes=args.num_processes,
         log_settings=log_settigs,
     )

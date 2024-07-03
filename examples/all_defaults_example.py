@@ -16,7 +16,7 @@ shot_settings = Settings(
     only_requested_columns=False,
     custom_parameter_methods=[],
     # timebase settings
-    set_times_request="disruption_warning",  # use efit timebase
+    time_setting="disruption_warning",  # use efit timebase
     signal_domain="full",
     use_input_setting_timebase=False,
     interpolation_method="linear",
@@ -24,11 +24,11 @@ shot_settings = Settings(
 
 shot_data = get_shots_data(
     tokamak=None,  # defaults to tokamak value detected from environement
-    shotlist_request=-1,  # no default value
+    shotlist_setting=-1,  # no default value
     database_initializer=None,  # defaults to connection for tokamak
     mds_connection_initializer=None,  # defaults to mds plus server string for tokamak
     shot_settings=shot_settings,
-    output_type_request="list",  # output a list of dataframes
+    output_setting="list",  # output a list of dataframes
     num_processes=1,
     log_settings=LogSettings(  # logging
         log_file_path=None,

@@ -38,16 +38,16 @@ def initial_mdsplus_data(shotlist, tokamak, setup_shot_database) -> Dict:
     if tokamak is Tokamak.D3D:
         pytest.skip("Skipping test on DIII-D")
     shot_settings = Settings(
-        set_times_request="efit",
+        time_setting="efit",
         efit_tree_name="efit18",
         run_columns=FIRST_ITERATION_COLUMNS,
         only_requested_columns=True,
     )
     shot_data, _ = get_shots_data(
         tokamak=tokamak,
-        shotlist_request=shotlist,
+        shotlist_setting=shotlist,
         shot_settings=shot_settings,
-        output_type_request=[
+        output_setting=[
             "dataframe",
             SQLOutputSetting(table_name=WRITE_DATABASE_TABLE_NAME),
         ],
@@ -75,17 +75,17 @@ def test_update_data(
         result[FIRST_ITERATION_COLUMNS], initial_mdsplus_data[FIRST_ITERATION_COLUMNS]
     )
 
-    # do second request that updates the data for the columns
+    # do second retrieval that updates the data for the columns
     shot_settings = Settings(
-        set_times_request="efit",
+        time_setting="efit",
         efit_tree_name="efit18",
         run_columns=ALL_ITERATION_COLUMNS,
         only_requested_columns=True,
     )
     shot_data, _ = get_shots_data(
-        shotlist_request=shotlist,
+        shotlist_setting=shotlist,
         shot_settings=shot_settings,
-        output_type_request=[
+        output_setting=[
             "dataframe",
             SQLOutputSetting(
                 table_name=WRITE_DATABASE_TABLE_NAME,

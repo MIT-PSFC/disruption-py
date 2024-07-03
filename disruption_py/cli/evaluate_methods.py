@@ -92,12 +92,12 @@ def main(args):
                         f"Shot id {shot_id} does not appear to be an integer, skipping"
                     )
     else:
-        shotlist_request_params = ShotlistSettingParams(
+        shotlist_setting_params = ShotlistSettingParams(
             database=None,
             tokamak=tokamak,
             logger=logging.getLogger("test_accuracy_logger"),
         )
-        all_shotlist = shotlist_setting_runner(args.shotlist, shotlist_request_params)
+        all_shotlist = shotlist_setting_runner(args.shotlist, shotlist_setting_params)
 
     data_columns = [args.data_column] if args.data_column else None
 

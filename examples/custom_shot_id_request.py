@@ -10,9 +10,8 @@ from disruption_py.settings.shotlist_setting import (
 from disruption_py.settings.settings import Settings
 
 
-# Create the ShotIdsRequest class that handles getting the shot numbers for the request
-# Shot
-class CustomShotIdRequest(ShotlistSetting):
+# Create the ShotlistSetting class that handles getting the needed shotlist
+class CustomShotlistSetting(ShotlistSetting):
 
     # the _get_shotlist function takes a set of parameters including a reference to the sql database and returns a list of shot numbers
     def _get_shotlist(self, params: ShotlistSettingParams) -> List:
@@ -23,17 +22,17 @@ class CustomShotIdRequest(ShotlistSetting):
 
 
 shot_settings = Settings(
-    # use the efit timebase preset for set_times_request
-    set_times_request="efit",
+    # use the efit timebase preset for time_setting
+    time_setting="efit",
     run_tags=[],
     # only run thr get_ip_parameters method
     run_methods=["_get_ip_parameters"],
 )
 shot_data = get_shots_data(
     tokamak="cmod",
-    shot_id_request=CustomShotIdRequest(),
+    shotlist_setting=CustomShotlistSetting(),
     shot_settings=shot_settings,
-    # automatically uses the CSVOutputRequest preset because of the .csv file descriptor
-    output_type_request="ip_data.csv",
+    # automatically uses the CSVOutputSetting preset because of the .csv file descriptor
+    output_setting="ip_data.csv",
     num_processes=4,
 )

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" Used in the documentation for the shot data request. """
+""" Used in the documentation for the physics methods. """
 
 import numpy as np
 import pandas as pd

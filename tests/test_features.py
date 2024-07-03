@@ -54,9 +54,9 @@ def test_features_serial(tokamak, shotlist, shot_settings_key, test_file_path_f)
 
     results = get_shots_data(
         tokamak=tokamak,
-        shotlist_request=shotlist,
+        shotlist_setting=shotlist,
         shot_settings=test_setting,
-        output_type_request=[
+        output_setting=[
             "list",
             "dataframe",
             test_file_path_f(".csv"),
@@ -78,9 +78,9 @@ def test_features_parallel(tokamak, shotlist, test_file_path_f):
 
     results = get_shots_data(
         tokamak=tokamak,
-        shotlist_request=shotlist,
+        shotlist_setting=shotlist,
         shot_settings=test_setting,
-        output_type_request=[
+        output_setting=[
             "list",
             "dataframe",
             test_file_path_f(".csv"),

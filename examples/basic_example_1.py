@@ -5,16 +5,16 @@ from disruption_py.settings.settings import Settings
 
 shot_settings = Settings(
     # uses the efit timebase when returning data
-    set_times_request="efit",
+    time_setting="efit",
     # run all available methods
     run_tags=["all"],
 )
 shot_data = get_shots_data(
     tokamak="cmod",
     # Retrieve data for the desired shots
-    shotlist_request=[1150805012, 1150805013, 1150805014],
+    shotlist_setting=[1150805012, 1150805013, 1150805014],
     shot_settings=shot_settings,
     # automatically stream retrieved data to a csv file by passing in a file path ending in .csv
-    output_type_request="data.csv",
+    output_setting="data.csv",
     num_processes=1,
 )

@@ -74,7 +74,7 @@ class MultiprocessingShotRetriever:
     def __init__(
         self,
         database: ShotDatabase,
-        output_type_request: OutputSetting,
+        output_setting: OutputSetting,
         shot_manager_initializer: Callable[..., ShotManager],
         tokamak,
         logger,
@@ -84,7 +84,7 @@ class MultiprocessingShotRetriever:
         self.task_queue = multiprocessing.JoinableQueue()
         self.result_queue = multiprocessing.Queue()
 
-        self.output_type_request = output_type_request
+        self.output_setting = output_setting
         self.database = database
         self.tokamak = tokamak
         self.logger = logger
@@ -110,7 +110,7 @@ class MultiprocessingShotRetriever:
                     f"Not outputting data for shot {shot_id}, data is None."
                 )
                 continue
-            self.output_type_request.output_shot(
+            self.output_setting.output_shot(
                 OutputSettingParams(
                     shot_id=shot_id,
                     result=result,

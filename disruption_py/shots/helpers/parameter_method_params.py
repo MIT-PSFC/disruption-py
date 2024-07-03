@@ -19,7 +19,7 @@ class ParameterMethodParams:
                 A reference to the shot props object containing the setup information, such as the shot id,
         timebase, and disruption time, for the shot data retrieval from MDSPlus.
     tokamak : Tokemak
-        The tokamak for which the set times request is made.
+        The tokamak for which data is being retrieved.
     logger : Logger
         Logger object from disruption_py to use for logging.
     """

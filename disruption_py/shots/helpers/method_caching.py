@@ -28,7 +28,7 @@ def parameter_method(
     the single argument params of type `ParameterMethodParams`. The decorated method will be run if designated by the
     `run_methods`, `run_tags`, or `run_columns` attributes of the `ShotSettings` class, and if included inside of the
     `parameter_methods` argument of the `shot_settings` or in the built-in method list. If run the result of the decorated
-    method will be output to the `output_type_request`.
+    method will be output to the `output_setting`.
 
     A common pattern for parameterized methods is first retrieving data from MDSplus using the `TreeManager` and
     then using that retrieved data to compute data to return.

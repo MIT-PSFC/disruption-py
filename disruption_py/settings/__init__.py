@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from .settings import SignalDomain
-from .existing_data_request import InputSetting, InputSettingParams
+from .input_setting import InputSetting, InputSettingParams
 from .log_settings import LogSettings
 from .output_setting import (
     CompleteOutputSettingParams,

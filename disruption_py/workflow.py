@@ -29,29 +29,29 @@ logger = logging.getLogger("disruption_py")
 
 
 def get_shots_data(
-    shotlist_request: ShotlistSettingType,
+    shotlist_setting: ShotlistSettingType,
     tokamak: Tokamak = None,
     database_initializer: Callable[..., ShotDatabase] = None,
     mds_connection_initializer: Callable[..., ProcessMDSConnection] = None,
     shot_settings: Settings = None,
-    output_type_request: OutputSetting = "list",
+    output_setting: OutputSetting = "list",
     num_processes: int = 1,
     log_settings: LogSettings = None,
 ) -> Any:
     """
-    Get shot data for all shots from shotlist_request from CMOD.
+    Get shot data for all shots from shotlist_setting from CMOD.
 
     Attributes
     ----------
-    shotlist_request : ShotIdsRequestType
-        Data retrieved for all shotlist specified by the request. See ShotIdsRequest for more details.
+    shotlist_setting : ShotlistSettingType
+        Data retrieved for all shotlist specified by the setting. See ShotlistSetting for more details.
     shot_settings : ShotSettings
         The settings that each shot uses when retrieving data. See ShotSettings for more details.
         If None, the default values of each setting in ShotSettings is used.
-    output_type_request : OutputTypeRequest
-        The output type request to be used when outputting the retrieved data for each shot. Note that data
-        is streamed to the output type request object as it is retrieved. Can pass any OutputTypeRequestType
-        that resolves to an OutputTypeRequest. See OutputTypeRequest for more details. Defaults to "list".
+    output_setting : OutputSetting
+        The output type setting to be used when outputting the retrieved data for each shot. Note that data
+        is streamed to the output type setting object as it is retrieved. Can pass any OutputSettingType
+        that resolves to an OutputSetting. See OutputSetting for more details. Defaults to "list".
     num_processes : int
         The number of processes to use for data retrieval. If 1, the data is retrieved in serial.
         If > 1, the data is retrieved in parallel.
@@ -60,8 +60,7 @@ def get_shots_data(
     Returns
     -------
     Any
-        The value of OutputTypeRequest.get_results, where OutputTypeRequest is specified in
-        shot_settings. See OutputTypeRequest for more details.
+        The value of OutputSetting.get_results. See OutputSetting for more details.
     """
     (log_settings or LogSettings.default()).setup_logging()
 
@@ -79,14 +78,14 @@ def get_shots_data(
         shot_settings = Settings()
 
     shot_settings.resolve()
-    output_type_request = resolve_output_setting(output_type_request)
+    output_setting = resolve_output_setting(output_setting)
 
     # do not spawn unnecessary processes
     shot_manager_cls = get_tokamak_shot_manager(tokamak)
 
-    shotlist_request_params = ShotlistSettingParams(database, tokamak, logger)
+    shotlist_setting_params = ShotlistSettingParams(database, tokamak, logger)
     shotlist_list = without_duplicates(
-        shotlist_setting_runner(shotlist_request, shotlist_request_params)
+        shotlist_setting_runner(shotlist_setting, shotlist_setting_params)
     )
 
     num_processes = min(num_processes, len(shotlist_list))
@@ -95,7 +94,7 @@ def get_shots_data(
         shot_retriever = MultiprocessingShotRetriever(
             database=database,
             num_processes=num_processes,
-            output_type_request=output_type_request,
+            output_setting=output_setting,
             shot_manager_initializer=(
                 lambda: shot_manager_cls(
                     tokamak=tokamak,
@@ -128,7 +127,7 @@ def get_shots_data(
                     f"Not outputting data for shot {shot_id} due, data is None."
                 )
             else:
-                output_type_request.output_shot(
+                output_setting.output_shot(
                     OutputSettingParams(
                         shot_id=shot_id,
                         result=shot_data,
@@ -138,11 +137,11 @@ def get_shots_data(
                     )
                 )
 
-    finish_output_type_request_params = CompleteOutputSettingParams(
+    finish_output_type_setting_params = CompleteOutputSettingParams(
         tokamak=tokamak, logger=logger
     )
-    results = output_type_request.get_results(finish_output_type_request_params)
-    output_type_request.stream_output_cleanup(finish_output_type_request_params)
+    results = output_setting.get_results(finish_output_type_setting_params)
+    output_setting.stream_output_cleanup(finish_output_type_setting_params)
     return results
 
 

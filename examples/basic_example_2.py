@@ -6,9 +6,9 @@ from disruption_py.settings.settings import Settings
 shot_settings = Settings(
     # retrieve existing data from the disruption_warnings table use it to prepopulate queries
     input_setting="sql",
-    # use the efit timebase preset for set_times_request
+    # use the efit timebase preset for the time_setting
     # uses the efit timebase when returning data
-    set_times_request="efit",
+    time_setting="efit",
     # run the get_ip_parameters method
     run_methods=["_get_ip_parameters"],
     run_tags=[],
@@ -18,11 +18,11 @@ shot_settings = Settings(
 shot_data = get_shots_data(
     tokamak="cmod",
     # use the shotlist listed in the shotlist_of_interest.txt file
-    shotlist_request="shotlist_of_interest.txt",
+    shotlist_setting="shotlist_of_interest.txt",
     shot_settings=shot_settings,
     # automatically stream retrieved data to a csv file by passing in a file path ending in .csv
-    # this works by automatically using the CSVOutputRequest preset with the passed filename
-    output_type_request="ip_data.csv",
+    # this works by automatically using the CSVOutputSetting preset with the passed filename
+    output_setting="ip_data.csv",
     # retrieve data quickly using 4 processes
     num_processes=4,
 )

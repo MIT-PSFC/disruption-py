@@ -24,7 +24,7 @@ class InputSettingParams:
         Database object to use for getting input data.
         A different database connection is used by each thread/process.
     tokamak : Tokemak
-        The tokamak for which the data request is made.
+        The tokamak being run.
     logger : Logger
         Logger object from disruption_py to use for logging.
     """
@@ -41,7 +41,7 @@ InputSettingType = Union[
 
 
 class InputSetting(ABC):
-    """InputSetting abstract class that should be inherited by all input data request classes."""
+    """InputSetting abstract class that should be inherited by all input setting classes."""
 
     def get_input_data(self, params: InputSettingParams) -> pd.DataFrame:
         if hasattr(self, "tokamak_overrides"):
@@ -51,11 +51,11 @@ class InputSetting(ABC):
 
     @abstractmethod
     def _get_input_data(self, params: InputSettingParams) -> pd.DataFrame:
-        """Abstract method implemented by subclasses to get input data for a given request as a pandas dataframe.
+        """Abstract method implemented by subclasses to get input data for a given set of params as a pandas dataframe.
 
         Parameters
         ----------
-        params : ExistingDataRequestParams
+        params : InputSettingParams
             Params that can be used to determine and retrieve input data.
 
         Returns
@@ -70,23 +70,23 @@ class InputSettingDict(InputSetting):
     def __init__(self, input_setting_dict: Dict[Tokamak, InputSettingType]):
         resolved_input_setting_dict = {
             map_string_to_enum(tokamak, Tokamak): resolve_input_setting(
-                individual_request
+                individual_setting
             )
-            for tokamak, individual_request in input_setting_dict.items()
+            for tokamak, individual_setting in input_setting_dict.items()
         }
         self.resolved_input_setting_dict = resolved_input_setting_dict
 
     def _get_input_data(self, params: InputSettingParams) -> pd.DataFrame:
-        chosen_request = self.resolved_input_setting_dict.get(params.tokamak, None)
-        if chosen_request is not None:
-            return chosen_request.get_input_data(params)
+        chosen_setting = self.resolved_input_setting_dict.get(params.tokamak, None)
+        if chosen_setting is not None:
+            return chosen_setting.get_input_data(params)
         else:
-            params.logger.warning(f"No input data request for tokamak {params.tokamak}")
+            params.logger.warning(f"No input setting for tokamak {params.tokamak}")
             return None
 
 
 class SQLInputSetting(InputSetting):
-    """Existing data request for retrieving data from SQL database."""
+    """Input setting for retrieving data from SQL database."""
 
     def _get_input_data(self, params: InputSettingParams) -> pd.DataFrame:
         params.logger.info(f"retrieving sql data for {params.shot_id}")
@@ -94,7 +94,7 @@ class SQLInputSetting(InputSetting):
 
 
 class DFInputSetting(InputSetting):
-    """Existing data request for retrieving data from a pandas dataframe.
+    """Input setting for retrieving data from a pandas dataframe.
 
     Parameters
     ----------
@@ -136,4 +136,4 @@ def resolve_input_setting(
     if isinstance(input_setting, dict):
         return InputSettingDict(input_setting)
 
-    raise ValueError("Invalid set times request")
+    raise ValueError("Invalid input setting")

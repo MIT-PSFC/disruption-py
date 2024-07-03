@@ -462,7 +462,7 @@ class DummyDatabase(ShotDatabase):
 
     Examples
     --------
-    >>> get_shots_data(shotlist_request=[1150805012], database_initializer=DummyDatabase.initializer)
+    >>> get_shots_data(shotlist_setting=[1150805012], database_initializer=DummyDatabase.initializer)
     <pd.DataFrame>
     """
 

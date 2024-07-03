@@ -26,7 +26,7 @@ class ShotlistSettingParams:
         A different database connection is used by each process.
         Defaults to logbook.
     tokamak : Tokemak
-        The tokamak for which the data request is made.
+        The tokamak that is data is being retrieved for.
     logger : Logger
         Logger object from disruption_py to use for logging.
     """
@@ -37,7 +37,7 @@ class ShotlistSettingParams:
 
 
 class ShotlistSetting(ABC):
-    """ShotIdsRequest abstract class that should be inherited by all shot id request classes."""
+    """ShotlistSetting abstract class that should be inherited by all shotlist setting classes."""
 
     def get_shotlist(self, params: ShotlistSettingParams) -> List:
         if hasattr(self, "tokamak_overrides"):
@@ -47,7 +47,7 @@ class ShotlistSetting(ABC):
 
     @abstractmethod
     def _get_shotlist(self, params: ShotlistSettingParams) -> List:
-        """Abstract method implemented by subclasses to get shotlist for the given request params.
+        """Abstract method implemented by subclasses to get shotlist for the given setting params.
 
         Parameters
         ----------
@@ -60,8 +60,8 @@ class ShotlistSetting(ABC):
 class IncludedShotlistSetting(ShotlistSetting):
     """Use the shotlist from one of the provided data files.
 
-    Directly passing a key from the _get_shotlist_request_mappings dictionary as a string will
-    automatically crete a new IncludedShotIdsRequest object with that data_file_name.
+    Directly passing a key from the _get_shotlist_setting_mappings dictionary as a string will
+    automatically create a new IncludedShotlistSetting object with that data_file_name.
 
     Parameters
     ----------
@@ -82,7 +82,7 @@ class IncludedShotlistSetting(ShotlistSetting):
 class FileShotlistSetting(ShotlistSetting):
     """Use a shotlist from the provided file path, this may be any file readable by pandas read_csv.
 
-    Directly passing a file path as a string to the shot id request with the file name suffixed by txt or csv
+    Directly passing a file path as a string to the shotlist setting with the file name suffixed by txt or csv
     will automatically create a new FileShotlistSetting object with that file path.
 
     Parameters
@@ -128,7 +128,7 @@ class DatabaseShotlistSetting(ShotlistSetting):
             return [row[0] for row in query_result]
 
 
-# --8<-- [start:get_shotlist_request_dict]
+# --8<-- [start:get_shotlist_setting_dict]
 _get_shotlist_setting_mappings: Dict[str, ShotlistSetting] = {
     "d3d_paper_shotlist": IncludedShotlistSetting("paper_shotlist.txt"),
     "d3d_train_disr": IncludedShotlistSetting("train_disr.txt"),
@@ -141,14 +141,14 @@ _get_shotlist_setting_mappings: Dict[str, ShotlistSetting] = {
         "cmod_non_disruptions_ids_not_blacklist_mini.txt"
     ),
 }
-# --8<-- [end:get_shotlist_request_dict]
+# --8<-- [end:get_shotlist_setting_dict]
 
-# --8<-- [start:file_suffix_to_shotlist_request_dict]
-_file_suffix_to_shotlist_request: Dict[str, Type[ShotlistSetting]] = {
+# --8<-- [start:file_suffix_to_shotlist_setting_dict]
+_file_suffix_to_shotlist_setting: Dict[str, Type[ShotlistSetting]] = {
     ".txt": FileShotlistSetting,
     ".csv": FileShotlistSetting,
 }
-# --8<-- [end:file_suffix_to_shotlist_request_dict]
+# --8<-- [end:file_suffix_to_shotlist_setting_dict]
 
 ShotlistSettingType = Union[
     "ShotlistSetting",
@@ -175,34 +175,34 @@ def shotlist_setting_runner(shotlist_setting, params: ShotlistSettingParams):
         return shotlist_setting
 
     if isinstance(shotlist_setting, str):
-        shotlist_request_object = _get_shotlist_setting_mappings.get(
+        shotlist_setting_object = _get_shotlist_setting_mappings.get(
             shotlist_setting, None
         )
-        if shotlist_request_object is not None:
-            return shotlist_request_object.get_shotlist(params)
+        if shotlist_setting_object is not None:
+            return shotlist_setting_object.get_shotlist(params)
 
     if isinstance(shotlist_setting, str):
         # assume that it is a file path
-        for suffix, shotlist_request_type in _file_suffix_to_shotlist_request.items():
+        for suffix, shotlist_setting_type in _file_suffix_to_shotlist_setting.items():
             if shotlist_setting.endswith(suffix):
-                return shotlist_request_type(shotlist_setting).get_shotlist(params)
+                return shotlist_setting_type(shotlist_setting).get_shotlist(params)
 
     if isinstance(shotlist_setting, dict):
         shotlist_setting = {
-            map_string_to_enum(tokamak, Tokamak): shotlist_request_mapping
-            for tokamak, shotlist_request_mapping in shotlist_setting.items()
+            map_string_to_enum(tokamak, Tokamak): shotlist_setting_mapping
+            for tokamak, shotlist_setting_mapping in shotlist_setting.items()
         }
-        chosen_request = shotlist_setting.get(params.tokamak, None)
-        if chosen_request is not None:
-            return shotlist_setting_runner(chosen_request, params)
+        chosen_setting = shotlist_setting.get(params.tokamak, None)
+        if chosen_setting is not None:
+            return shotlist_setting_runner(chosen_setting, params)
 
     if isinstance(shotlist_setting, list):
         all_results = []
-        for request in shotlist_setting:
-            sub_result = shotlist_setting_runner(request, params)
+        for setting in shotlist_setting:
+            sub_result = shotlist_setting_runner(setting, params)
             if sub_result is not None:
                 all_results.append(sub_result)
 
         return [shot_id for sub_list in all_results for shot_id in sub_list]
 
-    raise ValueError("Invalid shot id request")
+    raise ValueError("Invalid shot id setting")

@@ -13,7 +13,7 @@ from disruption_py.io.mds import (
     ProcessMDSConnection,
 )
 from disruption_py.settings.settings import SignalDomain
-from disruption_py.settings.existing_data_request import InputSettingParams
+from disruption_py.settings.input_setting import InputSettingParams
 from disruption_py.settings.time_setting import TimeSettingParams
 from disruption_py.shots.helpers.parameter_method_params import ParameterMethodParams
 from disruption_py.settings.settings import Settings
@@ -231,7 +231,7 @@ class ShotManager(ABC):
         """
         Initialize the timebase of the shot.
         """
-        request_params = TimeSettingParams(
+        setting_params = TimeSettingParams(
             shot_id=shot_id,
             mds_conn=mds_conn,
             input_data=input_data,
@@ -240,7 +240,7 @@ class ShotManager(ABC):
             tokamak=self.tokamak,
             logger=self.logger,
         )
-        return shot_settings.set_times_request.get_times(request_params)
+        return shot_settings.time_setting.get_times(setting_params)
 
     @classmethod
     def _pre_fill_shot_data(
