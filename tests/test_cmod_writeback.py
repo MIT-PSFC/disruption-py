@@ -6,7 +6,7 @@ import pytest
 
 from disruption_py.io.sql import ShotDatabase
 from disruption_py.workflow import get_database, get_shots_data
-from disruption_py.settings.output_type_request import SQLOutputRequest
+from disruption_py.settings.output_setting import SQLOutputSetting
 from disruption_py.settings.settings import Settings
 from disruption_py.utils.constants import (
     BASE_PROTECTED_COLUMNS,
@@ -49,7 +49,7 @@ def initial_mdsplus_data(shotlist, tokamak, setup_shot_database) -> Dict:
         shot_settings=shot_settings,
         output_type_request=[
             "dataframe",
-            SQLOutputRequest(table_name=WRITE_DATABASE_TABLE_NAME),
+            SQLOutputSetting(table_name=WRITE_DATABASE_TABLE_NAME),
         ],
         num_processes=1,
     )
@@ -87,7 +87,7 @@ def test_update_data(
         shot_settings=shot_settings,
         output_type_request=[
             "dataframe",
-            SQLOutputRequest(
+            SQLOutputSetting(
                 table_name=WRITE_DATABASE_TABLE_NAME,
                 should_override_columns=SECOND_ITERATION_COLUMNS,
             ),

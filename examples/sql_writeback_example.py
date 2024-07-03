@@ -1,5 +1,5 @@
 from disruption_py.workflow import get_database, get_shots_data
-from disruption_py.settings.output_type_request import SQLOutputRequest
+from disruption_py.settings.output_setting import SQLOutputSetting
 from disruption_py.settings.settings import Settings
 
 shot_settings = Settings(
@@ -15,7 +15,7 @@ shot_data = get_shots_data(
     shot_ids_request=shot_ids,
     shot_settings=shot_settings,
     # automatically stream retrieved data to a csv file by passing in a file path ending in .csv
-    output_type_request=SQLOutputRequest(table_name="disruption_warning_test"),
+    output_type_request=SQLOutputSetting(table_name="disruption_warning_test"),
     num_processes=1,
 )
 

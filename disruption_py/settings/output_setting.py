@@ -16,7 +16,7 @@ from disruption_py.utils.utils import safe_df_concat
 
 
 @dataclass
-class ResultOutputTypeRequestParams:
+class OutputSettingParams:
     """Params passed by disruption_py to _output_shot() method.
 
     Attributes
@@ -27,7 +27,7 @@ class ResultOutputTypeRequestParams:
         Database object to use for getting existing data.
         A different database connection is used by each thread/process.
     tokamak : Tokemak
-        The tokamak for which the data request is made.
+        The tokamak for which results are being output.
     logger : Logger
         Logger object from disruption_py to use for logging.
     """
@@ -40,13 +40,13 @@ class ResultOutputTypeRequestParams:
 
 
 @dataclass
-class FinishOutputTypeRequestParams:
+class CompleteOutputSettingParams:
     """Params passed by disruption_py to stream_output_cleanup() and get_results methods.
 
     Attributes
     ----------
     tokamak : Tokemak
-        The tokamak for which the data request is made.
+        The tokamak for which results are being output.
     logger : Logger
         Logger object from disruption_py to use for logging.
     """
@@ -55,56 +55,56 @@ class FinishOutputTypeRequestParams:
     logger: Logger
 
 
-OutputTypeRequestType = Union[
-    "OutputTypeRequest",
+OutputSettingType = Union[
+    "OutputSetting",
     str,
-    Dict[str, "OutputTypeRequestType"],
-    List["OutputTypeRequestType"],
+    Dict[str, "OutputSettingType"],
+    List["OutputSettingType"],
 ]
 
 
-class OutputTypeRequest(ABC):
-    """OutputTypeRequest abstract class that should be inherited by all output type request classes."""
+class OutputSetting(ABC):
+    """OutputSetting abstract class that should be inherited by all output setting classes."""
 
-    def output_shot(self, params: ResultOutputTypeRequestParams):
+    def output_shot(self, params: OutputSettingParams):
         if hasattr(self, "tokamak_overrides"):
             if params.tokamak in self.tokamak_overrides:
                 return self.tokamak_overrides[params.tokamak](params)
         return self._output_shot(params)
 
     @abstractmethod
-    def _output_shot(self, params: ResultOutputTypeRequestParams):
+    def _output_shot(self, params: OutputSettingParams):
         """Abstract method implemented by subclasses to handle data output for a single shot.
         This method is called by disruption_py with the shots dataframe in the params object
         once the data has been retrieved.
 
         Parameters
         ----------
-        params : ResultOutputTypeRequestParams
+        params : OutputSettingParams
             Params containing the data retrieved for a shot in a dataframe and other utility parameters.
         """
         pass
 
-    def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
+    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
         """Empty method optionally overriden by subclasses to handle cleanup after all shots have been
         output. This may include closing files or other cleanup.
 
         Parameters
         ----------
-        params : FinishOutputTypeRequestParams
+        params : CompleteOutputSettingParams
             Utility parameters such as the tokamak and logger.
         """
         pass
 
     @abstractmethod
-    def get_results(self, params: FinishOutputTypeRequestParams) -> Any:
+    def get_results(self, params: CompleteOutputSettingParams) -> Any:
         """Abstract method implemented by subclasses to handle the output of the data from
         calls to `get_shots_data`. This method is called by disruption_py once `output_shot()` has been
-        called for all shots ids in the shot ids request.
+        called for all shots ids.
 
         Parameters
         ----------
-        params : FinishOutputTypeRequestParams
+        params : CompleteOutputSettingParams
             Utility parameters such as the tokamak and logger.
 
         Returns
@@ -116,96 +116,90 @@ class OutputTypeRequest(ABC):
         pass
 
 
-class OutputTypeRequestList(OutputTypeRequest):
+class OutputSettingList(OutputSetting):
     """
-    Utility class that is automatically used when a list is passed as the `output_type_request` parameter in `ShotSettings.
+    Utility class that is automatically used when a list is passed as the `output_setting` parameter in `ShotSettings.
 
     All listed output types will be output to in the order listed.
     Similarly, results will be returned in the order listed.
 
     Parameters
     ----------
-    output_type_request_list : list[OutputTypeRequestType]
-        A python list of any other output type request option that can be passed as the `output_type_request` parameter in `ShotSettings`.
-        Any other option passable to the `output_type_request` parameter in `ShotSettings` may be used.
+    output_setting_list : list[OutputSettingType]
+        A python list of any other output setting option that can be passed as the `output_setting` parameter in `ShotSettings`.
+        Any other option passable to the `output_setting` parameter in `ShotSettings` may be used.
     """
 
-    def __init__(self, output_type_request_list: List[OutputTypeRequestType]):
-        self.output_type_request_list = [
-            resolve_output_type_request(individual_type_request)
-            for individual_type_request in output_type_request_list
+    def __init__(self, output_setting_list: List[OutputSettingType]):
+        self.output_setting_list = [
+            resolve_output_setting(individual_setting)
+            for individual_setting in output_setting_list
         ]
 
-    def _output_shot(self, params: ResultOutputTypeRequestParams):
+    def _output_shot(self, params: OutputSettingParams):
         all_results = []
-        for individual_type_request in self.output_type_request_list:
-            sub_result = individual_type_request.output_shot(params)
+        for individual_setting in self.output_setting_list:
+            sub_result = individual_setting.output_shot(params)
             all_results.append(sub_result)
 
         return all_results
 
-    def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
-        for individual_type_request in self.output_type_request_list:
-            individual_type_request.stream_output_cleanup(params)
+    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
+        for individual_setting in self.output_setting_list:
+            individual_setting.stream_output_cleanup(params)
 
-    def get_results(self, params: FinishOutputTypeRequestParams):
+    def get_results(self, params: CompleteOutputSettingParams):
         return [
-            individual_type_request.get_results(params)
-            for individual_type_request in self.output_type_request_list
+            individual_setting.get_results(params)
+            for individual_setting in self.output_setting_list
         ]
 
 
-class OutputTypeRequestDict(OutputTypeRequest):
+class OutputSettingDict(OutputSetting):
     """
-    Utility class that is automatically used when a dicationary is passed as the `output_type_request` parameter in `ShotSettings.
+    Utility class that is automatically used when a dicationary is passed as the `output_setting` parameter in `ShotSettings.
 
     Parameters
     ----------
-    output_type_request_dict : dict[Tokamak, OutputTypeRequestType]
-        A dictionary mapping tokamak type strings to the desired `OutputTypeRequestType` for that tokamak.  E.g. `{'cmod': 'list'}`.
+    output_setting_dict : dict[Tokamak, OutputSettingType]
+        A dictionary mapping tokamak type strings to the desired `OutputSettingType` for that tokamak.  E.g. `{'cmod': 'list'}`.
     """
 
-    def __init__(self, output_type_request_dict: Dict[Tokamak, OutputTypeRequestType]):
-        resolved_output_type_request_dict = {
-            map_string_to_enum(tokamak, Tokamak): resolve_output_type_request(
-                individual_type_request
+    def __init__(self, output_setting_dict: Dict[Tokamak, OutputSettingType]):
+        resolved_output_setting_dict = {
+            map_string_to_enum(tokamak, Tokamak): resolve_output_setting(
+                individual_setting
             )
-            for tokamak, individual_type_request in output_type_request_dict.items()
+            for tokamak, individual_setting in output_setting_dict.items()
         }
-        self.output_type_request_dict = resolved_output_type_request_dict
+        self.output_setting_dict = resolved_output_setting_dict
 
-    def _output_shot(self, params: ResultOutputTypeRequestParams):
-        chosen_request = self.output_type_request_dict.get(params.tokamak, None)
-        if chosen_request is not None:
-            return chosen_request.output_shot(params)
+    def _output_shot(self, params: OutputSettingParams):
+        chosen_setting = self.output_setting_dict.get(params.tokamak, None)
+        if chosen_setting is not None:
+            return chosen_setting.output_shot(params)
         else:
-            params.logger.warning(
-                f"No output type request for tokamak {params.tokamak}"
-            )
+            params.logger.warning(f"No output setting for tokamak {params.tokamak}")
             return None
 
-    def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
-        chosen_request = self.output_type_request_dict.get(params.tokamak, None)
-        if chosen_request is not None:
-            return chosen_request.stream_output_cleanup(params)
+    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
+        chosen_setting = self.output_setting_dict.get(params.tokamak, None)
+        if chosen_setting is not None:
+            return chosen_setting.stream_output_cleanup(params)
         else:
-            params.logger.warning(
-                f"No output type request for tokamak {params.tokamak}"
-            )
+            params.logger.warning(f"No output setting for tokamak {params.tokamak}")
             return None
 
-    def get_results(self, params: FinishOutputTypeRequestParams):
-        chosen_request = self.output_type_request_dict.get(params.tokamak, None)
-        if chosen_request is not None:
-            return chosen_request.get_results(params)
+    def get_results(self, params: CompleteOutputSettingParams):
+        chosen_setting = self.output_setting_dict.get(params.tokamak, None)
+        if chosen_setting is not None:
+            return chosen_setting.get_results(params)
         else:
-            params.logger.warning(
-                f"No output type request for tokamak {params.tokamak}"
-            )
+            params.logger.warning(f"No output setting for tokamak {params.tokamak}")
             return None
 
 
-class ListOutputRequest(OutputTypeRequest):
+class ListOutputSetting(OutputSetting):
     """
     Output all retrieved shot data as a list of dataframes, once retrieval complete.
     """
@@ -213,17 +207,17 @@ class ListOutputRequest(OutputTypeRequest):
     def __init__(self):
         self.results = []
 
-    def _output_shot(self, params: ResultOutputTypeRequestParams):
+    def _output_shot(self, params: OutputSettingParams):
         self.results.append(params.result)
 
-    def get_results(self, params: FinishOutputTypeRequestParams):
+    def get_results(self, params: CompleteOutputSettingParams):
         return self.results
 
-    def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
+    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
         self.results = []
 
 
-class DictOutputRequest(OutputTypeRequest):
+class DictOutputSetting(OutputSetting):
     """
     Output all retrieved shot data as a dict of dataframes with the keys being shot numbers.
     """
@@ -231,17 +225,17 @@ class DictOutputRequest(OutputTypeRequest):
     def __init__(self):
         self.results = {}
 
-    def _output_shot(self, params: ResultOutputTypeRequestParams):
+    def _output_shot(self, params: OutputSettingParams):
         self.results[params.shot_id] = params.result
 
-    def get_results(self, params: FinishOutputTypeRequestParams):
+    def get_results(self, params: CompleteOutputSettingParams):
         return self.results
 
-    def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
+    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
         self.results = {}
 
 
-class DataFrameOutputRequest(OutputTypeRequest):
+class DataFrameOutputSetting(OutputSetting):
     """
     Output all retrieved shot data as a list of dataframes, once retrieval complete.
     """
@@ -249,17 +243,17 @@ class DataFrameOutputRequest(OutputTypeRequest):
     def __init__(self):
         self.results: pd.DataFrame = pd.DataFrame()
 
-    def _output_shot(self, params: ResultOutputTypeRequestParams):
+    def _output_shot(self, params: OutputSettingParams):
         self.results = safe_df_concat(self.results, [params.result])
 
-    def get_results(self, params: FinishOutputTypeRequestParams):
+    def get_results(self, params: CompleteOutputSettingParams):
         return self.results
 
-    def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
+    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
         self.results = pd.DataFrame()
 
 
-class HDF5OutputRequest(OutputTypeRequest):
+class HDF5OutputSetting(OutputSetting):
     """
     Stream outputted data to an HDF5 file.
     """
@@ -269,7 +263,7 @@ class HDF5OutputRequest(OutputTypeRequest):
         self.output_shot_count = 0
         self.only_output_numeric = only_output_numeric
 
-    def _output_shot(self, params: ResultOutputTypeRequestParams):
+    def _output_shot(self, params: OutputSettingParams):
         mode = "a" if self.output_shot_count > 0 else "w"
 
         if self.only_output_numeric:
@@ -286,14 +280,14 @@ class HDF5OutputRequest(OutputTypeRequest):
         )
         self.output_shot_count += 1
 
-    def stream_output_cleanup(self, params: FinishOutputTypeRequestParams):
+    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
         pass
 
-    def get_results(self, params: FinishOutputTypeRequestParams):
+    def get_results(self, params: CompleteOutputSettingParams):
         return self.output_shot_count
 
 
-class CSVOutputRequest(OutputTypeRequest):
+class CSVOutputSetting(OutputSetting):
     """
     Stream outputted data to a single csv file.
 
@@ -307,7 +301,7 @@ class CSVOutputRequest(OutputTypeRequest):
         if clear_file is True and os.path.exists(filepath):
             os.remove(filepath)
 
-    def _output_shot(self, params: ResultOutputTypeRequestParams):
+    def _output_shot(self, params: OutputSettingParams):
         file_exists = os.path.isfile(self.filepath)
         if self.flexible_columns:
             if file_exists:
@@ -323,11 +317,11 @@ class CSVOutputRequest(OutputTypeRequest):
             )
         self.output_shot_count += 1
 
-    def get_results(self, params: FinishOutputTypeRequestParams):
+    def get_results(self, params: CompleteOutputSettingParams):
         return self.output_shot_count
 
 
-class BatchedCSVOutputRequest(OutputTypeRequest):
+class BatchedCSVOutputSetting(OutputSetting):
     """
     Stream outputted data to a single csv file in batches.
     """
@@ -343,7 +337,7 @@ class BatchedCSVOutputRequest(OutputTypeRequest):
         if self.clear_file and os.path.exists(filepath):
             os.remove(filepath)
 
-    def _output_shot(self, params: ResultOutputTypeRequestParams):
+    def _output_shot(self, params: OutputSettingParams):
         # Append the current result to the batch data list
         self.batch_data.append(params.result)
 
@@ -361,14 +355,14 @@ class BatchedCSVOutputRequest(OutputTypeRequest):
         )
         self.batch_data.clear()
 
-    def get_results(self, params: FinishOutputTypeRequestParams):
+    def get_results(self, params: CompleteOutputSettingParams):
         # Write any remaining batched data to the CSV file before returning results
         if self.batch_data:
             self._write_batch_to_csv()
         return self.output_shot_count
 
 
-class SQLOutputRequest(OutputTypeRequest):
+class SQLOutputSetting(OutputSetting):
     """
     Stream outputted data to disruption_warning or similar sql table.
     """
@@ -385,7 +379,7 @@ class SQLOutputRequest(OutputTypeRequest):
         self.modifications = 0
         self.total_shots = 0
 
-    def _output_shot(self, params: ResultOutputTypeRequestParams):
+    def _output_shot(self, params: OutputSettingParams):
         if not params.result.empty and ("shot" in params.result.columns):
             shot_id = params.result["shot"].iloc[0]
             params.database.add_shot_data(
@@ -399,53 +393,51 @@ class SQLOutputRequest(OutputTypeRequest):
             params.logger.warning("No shot id found in result dataframe")
         self.total_shots += 1
 
-    def get_results(self, params: FinishOutputTypeRequestParams) -> Any:
+    def get_results(self, params: CompleteOutputSettingParams) -> Any:
         return (self.modifications, self.total_shots)
 
 
-# --8<-- [start:output_type_request_dict]
-_output_type_request_mappings: Dict[str, OutputTypeRequest] = {
-    "list": ListOutputRequest(),
-    "dataframe": DataFrameOutputRequest(),
-    "dict": DictOutputRequest(),
+# --8<-- [start:output_setting_dict]
+_output_setting_mappings: Dict[str, OutputSetting] = {
+    "list": ListOutputSetting(),
+    "dataframe": DataFrameOutputSetting(),
+    "dict": DictOutputSetting(),
 }
-# --8<-- [end:output_type_request_dict]
+# --8<-- [end:output_setting_dict]
 
-# --8<-- [start:file_suffix_to_output_type_request_dict]
-_file_suffix_to_output_type_request: Dict[str, Type[OutputTypeRequest]] = {
-    ".h5": HDF5OutputRequest,
-    ".hdf5": HDF5OutputRequest,
-    ".csv": BatchedCSVOutputRequest,
+# --8<-- [start:file_suffix_to_output_setting_dict]
+_file_suffix_to_output_setting: Dict[str, Type[OutputSetting]] = {
+    ".h5": HDF5OutputSetting,
+    ".hdf5": HDF5OutputSetting,
+    ".csv": BatchedCSVOutputSetting,
 }
-# --8<-- [end:file_suffix_to_output_type_request_dict]
+# --8<-- [end:file_suffix_to_output_setting_dict]
 
 
-def resolve_output_type_request(
-    output_type_request: OutputTypeRequestType,
-) -> OutputTypeRequest:
-    if isinstance(output_type_request, OutputTypeRequest):
-        return output_type_request
+def resolve_output_setting(
+    output_setting: OutputSettingType,
+) -> OutputSetting:
+    if isinstance(output_setting, OutputSetting):
+        return output_setting
 
-    if isinstance(output_type_request, str):
-        output_type_request_object = _output_type_request_mappings.get(
-            output_type_request, None
-        )
-        if output_type_request_object is not None:
-            return output_type_request_object
+    if isinstance(output_setting, str):
+        output_setting_object = _output_setting_mappings.get(output_setting, None)
+        if output_setting_object is not None:
+            return output_setting_object
 
-    if isinstance(output_type_request, str):
+    if isinstance(output_setting, str):
         # assume that it is a file path
         for (
             suffix,
-            output_type_request_type,
-        ) in _file_suffix_to_output_type_request.items():
-            if output_type_request.endswith(suffix):
-                return output_type_request_type(output_type_request)
+            output_setting_type,
+        ) in _file_suffix_to_output_setting.items():
+            if output_setting.endswith(suffix):
+                return output_setting_type(output_setting)
 
-    if isinstance(output_type_request, dict):
-        return OutputTypeRequestDict(output_type_request)
+    if isinstance(output_setting, dict):
+        return OutputSettingDict(output_setting)
 
-    if isinstance(output_type_request, list):
-        return OutputTypeRequestList(output_type_request)
+    if isinstance(output_setting, list):
+        return OutputSettingList(output_setting)
 
-    raise ValueError(f"Invalid output processror {output_type_request}")
+    raise ValueError(f"Invalid output processror {output_setting}")

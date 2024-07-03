@@ -7,8 +7,8 @@ from typing import Callable, Dict
 
 from disruption_py.io.sql import ShotDatabase
 from disruption_py.settings import (
-    OutputTypeRequest,
-    ResultOutputTypeRequestParams,
+    OutputSetting,
+    OutputSettingParams,
 )
 from disruption_py.shots.shot_manager import ShotManager
 from disruption_py.utils.constants import MAX_PROCESSES
@@ -74,7 +74,7 @@ class MultiprocessingShotRetriever:
     def __init__(
         self,
         database: ShotDatabase,
-        output_type_request: OutputTypeRequest,
+        output_type_request: OutputSetting,
         shot_manager_initializer: Callable[..., ShotManager],
         tokamak,
         logger,
@@ -111,7 +111,7 @@ class MultiprocessingShotRetriever:
                 )
                 continue
             self.output_type_request.output_shot(
-                ResultOutputTypeRequestParams(
+                OutputSettingParams(
                     shot_id=shot_id,
                     result=result,
                     database=self.database,

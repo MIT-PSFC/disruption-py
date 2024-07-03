@@ -8,7 +8,7 @@ from disruption_py.settings.existing_data_request import (
     ExistingDataRequest,
     resolve_existing_data_request,
 )
-from disruption_py.settings.output_type_request import OutputTypeRequest
+from disruption_py.settings.output_setting import OutputSetting
 from disruption_py.settings.time_setting import (
     ExistingDataTimeSetting,
     TimeSetting,
@@ -124,7 +124,7 @@ class Settings:
     additional_args: dict = field(default_factory=dict)
 
     # DEPRECATED
-    output_type_request: OutputTypeRequest = None  # moved to get_shots_data
+    output_type_request: OutputSetting = None  # moved to get_shots_data
     attempt_local_efit_env: Tuple[Tuple[str, str]] = None  # support removed
 
     def __post_init__(self):

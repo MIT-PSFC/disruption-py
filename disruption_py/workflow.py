@@ -7,11 +7,11 @@ from disruption_py.io.sql import ShotDatabase
 from disruption_py.io.mds import ProcessMDSConnection
 from disruption_py.settings import Settings
 from disruption_py.settings.log_settings import LogSettings
-from disruption_py.settings.output_type_request import (
-    FinishOutputTypeRequestParams,
-    OutputTypeRequest,
-    ResultOutputTypeRequestParams,
-    resolve_output_type_request,
+from disruption_py.settings.output_setting import (
+    CompleteOutputSettingParams,
+    OutputSetting,
+    OutputSettingParams,
+    resolve_output_setting,
 )
 from disruption_py.settings.shot_ids_request import (
     ShotIdsRequestParams,
@@ -34,7 +34,7 @@ def get_shots_data(
     database_initializer: Callable[..., ShotDatabase] = None,
     mds_connection_initializer: Callable[..., ProcessMDSConnection] = None,
     shot_settings: Settings = None,
-    output_type_request: OutputTypeRequest = "list",
+    output_type_request: OutputSetting = "list",
     num_processes: int = 1,
     log_settings: LogSettings = None,
 ) -> Any:
@@ -79,7 +79,7 @@ def get_shots_data(
         shot_settings = Settings()
 
     shot_settings.resolve()
-    output_type_request = resolve_output_type_request(output_type_request)
+    output_type_request = resolve_output_setting(output_type_request)
 
     # do not spawn unnecessary processes
     shot_manager_cls = get_tokamak_shot_manager(tokamak)
@@ -129,7 +129,7 @@ def get_shots_data(
                 )
             else:
                 output_type_request.output_shot(
-                    ResultOutputTypeRequestParams(
+                    OutputSettingParams(
                         shot_id=shot_id,
                         result=shot_data,
                         database=database,
@@ -138,7 +138,7 @@ def get_shots_data(
                     )
                 )
 
-    finish_output_type_request_params = FinishOutputTypeRequestParams(
+    finish_output_type_request_params = CompleteOutputSettingParams(
         tokamak=tokamak, logger=logger
     )
     results = output_type_request.get_results(finish_output_type_request_params)
