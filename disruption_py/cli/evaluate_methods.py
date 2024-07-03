@@ -7,7 +7,7 @@ from disruption_py.settings.shotlist_setting import (
     ShotlistSettingParams,
     shotlist_setting_runner,
 )
-from disruption_py.utils.eval.eval_against_sql import (
+from disruption_py.cli.eval.eval_against_sql import (
     eval_against_sql,
     get_failure_statistics_string,
 )

@@ -13,7 +13,7 @@ from typing import Dict, List
 import pandas as pd
 import pytest
 
-from disruption_py.utils.eval.eval_against_sql import (
+from disruption_py.cli.eval.eval_against_sql import (
     eval_against_sql,
     eval_shots_against_sql,
     get_failure_statistics_string,

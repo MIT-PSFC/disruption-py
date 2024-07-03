@@ -19,9 +19,9 @@ from disruption_py.settings.settings import Settings
 from disruption_py.core.physics_method.runner import populate_shot
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.misc import get_commit_hash
-from disruption_py.utils.constants import TIME_CONST
+from disruption_py.constants import TIME_CONST
 from disruption_py.machine.tokamak import Tokamak
-from disruption_py.utils.math_utils import interp1
+from disruption_py.core.utils.math import interp1
 
 
 class ShotManager(ABC):

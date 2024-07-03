@@ -6,9 +6,9 @@ from typing import Any, Callable, Dict, List, Tuple, Union
 import MDSplus
 import numpy as np
 
-from disruption_py.utils.constants import MDSPLUS_CONNECTION_STRING_CONSTANTS
+from disruption_py.constants import MDSPLUS_CONNECTION_STRING_CONSTANTS
 from disruption_py.machine.tokamak import Tokamak
-from disruption_py.utils.shared_instance import SharedInstanceFactory
+from disruption_py.core.utils.shared_instance import SharedInstanceFactory
 from disruption_py.core.utils.misc import safe_cast
 
 

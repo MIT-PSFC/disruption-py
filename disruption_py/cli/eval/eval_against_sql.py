@@ -14,13 +14,13 @@ import pandas as pd
 from disruption_py.io.sql import ShotDatabase
 from disruption_py.workflow import get_shots_data
 from disruption_py.settings import LogSettings, Settings
-from disruption_py.utils.constants import (
+from disruption_py.constants import (
     TIME_CONST,
 )
-from disruption_py.utils.eval.data_difference import DataDifference
+from disruption_py.cli.eval.data_difference import DataDifference
 from disruption_py.machine import tokamak
 from disruption_py.machine.tokamak import Tokamak
-from disruption_py.utils.math_utils import matlab_gradient_1d_vectorized
+from disruption_py.core.utils.math import matlab_gradient_1d_vectorized
 
 
 def get_mdsplus_data(

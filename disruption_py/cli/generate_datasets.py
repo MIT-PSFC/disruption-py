@@ -7,7 +7,7 @@ import pandas as pd
 
 from disruption_py.workflow import get_shots_data
 from disruption_py.settings import LogSettings, Settings
-from disruption_py.utils.constants import (
+from disruption_py.constants import (
     BLACK_WINDOW_THRESHOLD,
     DEFAULT_COLS,
     DEFAULT_RATIO,
@@ -17,8 +17,8 @@ from disruption_py.machine.tokamak import Tokamak, get_tokamak_from_environment
 from disruption_py.machine.tokamak import (
     resolve_tokamak,
 )
-from disruption_py.utils.math_utils import generate_id
-from disruption_py.utils.ml.preprocessing import (
+from disruption_py.core.utils.math import generate_id
+from disruption_py.cli.ml.preprocessing import (
     add_derived_features,
     create_dataset,
     create_label,

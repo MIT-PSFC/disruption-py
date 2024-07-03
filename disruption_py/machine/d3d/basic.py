@@ -13,7 +13,7 @@ from disruption_py.core.physics_method.caching import (
     cache_method,
 )
 from disruption_py.machine.tokamak import Tokamak
-from disruption_py.utils.math_utils import get_bolo, gsastd, interp1, power
+from disruption_py.core.utils.math import get_bolo, gsastd, interp1, power
 
 
 class BasicD3DRequests:

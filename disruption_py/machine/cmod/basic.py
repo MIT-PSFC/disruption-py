@@ -18,7 +18,7 @@ from disruption_py.core.physics_method.caching import (
     cache_method,
 )
 from disruption_py.machine.tokamak import Tokamak
-from disruption_py.utils.math_utils import gaussian_fit, interp1, smooth
+from disruption_py.core.utils.math import gaussian_fit, interp1, smooth
 from disruption_py.core.utils.misc import safe_cast
 
 warnings.filterwarnings("error", category=RuntimeWarning)

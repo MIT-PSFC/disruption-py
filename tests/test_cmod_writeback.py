@@ -8,7 +8,7 @@ from disruption_py.io.sql import ShotDatabase
 from disruption_py.workflow import get_database, get_shots_data
 from disruption_py.settings.output_setting import SQLOutputSetting
 from disruption_py.settings.settings import Settings
-from disruption_py.utils.constants import (
+from disruption_py.constants import (
     BASE_PROTECTED_COLUMNS,
 )
 from disruption_py.machine.tokamak import Tokamak

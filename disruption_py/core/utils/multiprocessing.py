@@ -11,7 +11,7 @@ from disruption_py.settings import (
     OutputSettingParams,
 )
 from disruption_py.machine.shot_manager import ShotManager
-from disruption_py.utils.constants import MAX_PROCESSES
+from disruption_py.constants import MAX_PROCESSES
 
 
 # define a sentinel value for signifying that task queue is complete

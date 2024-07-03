@@ -1,6 +1,6 @@
 import os
 from disruption_py.machine.tokamak import Tokamak
-from disruption_py.utils.constants import (
+from disruption_py.constants import (
     EXPECTED_FAILURE_COLUMNS,
     TEST_COLUMNS,
     TEST_SHOTS,

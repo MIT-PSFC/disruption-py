@@ -8,8 +8,8 @@ import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
 
-from disruption_py.utils.constants import DEFAULT_RATIO, DEFAULT_THRESHOLD, PAPER_COLS
-from disruption_py.utils.math_utils import exp_filter
+from disruption_py.constants import DEFAULT_RATIO, DEFAULT_THRESHOLD, PAPER_COLS
+from disruption_py.core.utils.math import exp_filter
 
 
 def parse_feature_cols(feature_str):

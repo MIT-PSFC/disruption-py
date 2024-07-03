@@ -16,7 +16,7 @@ from disruption_py.core.physics_method.metadata import (
 )
 from disruption_py.core.physics_method.caching import manually_cache
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.utils.constants import TIME_CONST
+from disruption_py.constants import TIME_CONST
 
 REQUIRED_COLS = {"time", "shot", "commit_hash"}
 
