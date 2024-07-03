@@ -91,15 +91,6 @@ class RetrievalSettings:
         Defaults to False.
     interpolation_method : InterpolationMethod
         The interpolation method to be used when retrieving data for the shot. CURRENTLY UNIMPLEMENTED.
-    output_setting : OutputSetting
-        DEPRECTATED. output_setting has moved to a parameter in the get_shots_data method.
-        Will error if used, please set to None.
-    attempt_local_efit_env : Tuple[Tuple[str, str]]
-        DEPRECTATED. Support no longer exists. Please reach out to maintainers with questions.
-        A list of tuples of the form (efit_env_name, efit_env_path) that will be used to set the
-        environment variables when trying to open the efit tree. If opening the efit tree with the
-        local environment variables fails, will try to open the efit tree with the  regular environment
-        variables. Default is None.
     """
 
     # Prefill data settings
@@ -123,35 +114,8 @@ class RetrievalSettings:
 
     additional_args: dict = field(default_factory=dict)
 
-    # DEPRECATED
-    output_setting: OutputSetting = None  # moved to get_shots_data
-    attempt_local_efit_env: Tuple[Tuple[str, str]] = None  # support removed
-
     def __post_init__(self):
         self.resolve()
-
-    def _check_deprecated_settings(self):
-        """
-        Check that no deprectated settings are set in the shot settings.
-        """
-        DEPRECTATED_SETTINGS = [
-            (
-                "output_setting",
-                """
-                output_setting no longer set in retrieval_settings. 
-                Please set output_setting in get_shots_data. 
-                To not throw error please set output_setting to None.
-                """
-                "attempt_local_efit_env",
-                """
-                attempt_local_efit_env support no longer exists. Please reach out to maintainers with questions.
-                """,
-            ),
-        ]
-
-        for setting in DEPRECTATED_SETTINGS:
-            if getattr(self, setting[0]) is not None:
-                raise ValueError(f"{setting[1]}")
 
     @classmethod
     def from_dict(cls, prop_dict, tokamak: Tokamak):
@@ -174,7 +138,6 @@ class RetrievalSettings:
 
         This primarily refers to passed strings lists and dictinoaries that can be resolved to a specific request type or a specific enum.
         """
-        self._check_deprecated_settings()
 
         self.input_setting = resolve_input_setting(self.input_setting)
         self.time_setting = resolve_time_setting(self.time_setting)
