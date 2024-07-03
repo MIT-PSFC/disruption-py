@@ -19,7 +19,7 @@ from disruption_py.utils.constants import (
 )
 from disruption_py.machine.tokamak import Tokamak, is_tokamak_indexed
 from disruption_py.utils.shared_instance import SharedInstanceFactory
-from disruption_py.utils.utils import without_duplicates
+from disruption_py.core.utils.misc import without_duplicates
 
 
 class ShotDatabase:

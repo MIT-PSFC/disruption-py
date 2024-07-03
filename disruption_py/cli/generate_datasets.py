@@ -12,7 +12,7 @@ from disruption_py.utils.constants import (
     DEFAULT_COLS,
     DEFAULT_RATIO,
 )
-from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
+from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.machine.tokamak import Tokamak, get_tokamak_from_environment
 from disruption_py.machine.tokamak import (
     resolve_tokamak,
@@ -25,7 +25,7 @@ from disruption_py.utils.ml.preprocessing import (
     filter_dataset_df,
     parse_feature_cols,
 )
-from disruption_py.utils.utils import without_duplicates
+from disruption_py.core.utils.misc import without_duplicates
 
 
 def main(args):

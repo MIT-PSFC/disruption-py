@@ -12,7 +12,7 @@ from disruption_py.utils.constants import (
     BASE_PROTECTED_COLUMNS,
 )
 from disruption_py.machine.tokamak import Tokamak
-from disruption_py.utils.utils import without_duplicates
+from disruption_py.core.utils.misc import without_duplicates
 
 WRITE_DATABASE_TABLE_NAME = "disruption_warning_test"  # overwrite value in constants
 FIRST_ITERATION_COLUMNS = BASE_PROTECTED_COLUMNS + ["beta_p"]

@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from disruption_py.utils.constants import MATCH_FRACTION, VAL_TOLERANCE, VERBOSE_OUTPUT
-from disruption_py.utils.utils import safe_cast
+from disruption_py.core.utils.misc import safe_cast
 
 
 @dataclass

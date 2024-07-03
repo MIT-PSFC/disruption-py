@@ -11,7 +11,7 @@ from disruption_py.utils.eval.eval_against_sql import (
     eval_against_sql,
     get_failure_statistics_string,
 )
-from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
+from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.machine.tokamak import Tokamak, get_tokamak_from_environment
 from tests.utils.factory import (
     get_tokamak_test_shotlist,

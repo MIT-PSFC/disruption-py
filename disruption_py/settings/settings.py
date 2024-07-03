@@ -14,7 +14,7 @@ from disruption_py.settings.time_setting import (
     TimeSetting,
     resolve_time_setting,
 )
-from disruption_py.utils.mappings.mappings_helpers import map_string_attributes_to_enum
+from disruption_py.core.utils.enums import map_string_attributes_to_enum
 from disruption_py.machine.tokamak import Tokamak, is_tokamak_indexed
 
 

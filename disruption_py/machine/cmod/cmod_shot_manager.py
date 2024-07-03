@@ -10,7 +10,7 @@ from disruption_py.machine.cmod.basic import (
 from disruption_py.machine.shot_manager import ShotManager
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.machine.tokamak import Tokamak
-from disruption_py.utils.utils import without_duplicates
+from disruption_py.core.utils.misc import without_duplicates
 
 
 class CModShotManager(ShotManager):

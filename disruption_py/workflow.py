@@ -23,7 +23,7 @@ from disruption_py.machine.factory import (
     get_tokamak_shot_manager,
 )
 from disruption_py.utils.multiprocessing_helper import MultiprocessingShotRetriever
-from disruption_py.utils.utils import without_duplicates
+from disruption_py.core.utils.misc import without_duplicates
 
 logger = logging.getLogger("disruption_py")
 

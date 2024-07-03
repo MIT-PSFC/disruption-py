@@ -4,7 +4,7 @@ import os
 from enum import Enum
 from logging import Logger
 
-from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
+from disruption_py.core.utils.enums import map_string_to_enum
 
 """
 For documentation of supported tokamaks:

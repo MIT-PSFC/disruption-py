@@ -12,7 +12,7 @@ import pandas as pd
 from disruption_py.io.sql import ShotDatabase
 from disruption_py.io.mds import MDSConnection
 from disruption_py.utils.constants import MAX_SHOT_TIME, TIME_CONST
-from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
+from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.machine.tokamak import Tokamak
 
 
