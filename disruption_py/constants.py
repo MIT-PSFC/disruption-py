@@ -317,7 +317,7 @@ DATABASE_CONSTANTS = {
         "protected_columns": D3D_PROTECTED_COLUMNS,
         "additional_databases": {
             "code_rundb": {
-                "profile_path": "~/logbook.sybase_login",
+                "profile_path": "~/D3DRDB.sybase_login",
                 "driver": "FreeTDS",
                 "host": "d3drdb",
                 "port": 8001,
