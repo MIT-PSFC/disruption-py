@@ -21,12 +21,12 @@ class CModShotManager(ShotManager):
         shot_id: int,
         mds_conn: MDSConnection,
         disruption_time: float,
-        shot_settings: RetrievalSettings,
+        retrieval_settings: RetrievalSettings,
     ) -> None:
         def efit_tree_nickname_func():
             efit_names_to_test = without_duplicates(
                 [
-                    shot_settings.efit_tree_name,
+                    retrieval_settings.efit_tree_name,
                     "analysis",
                     *[f"efit0{i}" for i in range(1, 10)],
                     *[f"efit{i}" for i in range(10, 19)],
@@ -47,7 +47,7 @@ class CModShotManager(ShotManager):
                     continue
 
             raise Exception(
-                f"Failed to find efit tree with name {shot_settings.efit_tree_name} in shot {shot_id}."
+                f"Failed to find efit tree with name {retrieval_settings.efit_tree_name} in shot {shot_id}."
             )
 
         return efit_tree_nickname_func

@@ -30,11 +30,11 @@ class D3DShotManager(ShotManager):
         mds_conn: MDSConnection,
         database: ShotDatabase,
         disruption_time: float,
-        shot_settings: RetrievalSettings,
+        retrieval_settings: RetrievalSettings,
     ) -> None:
         def efit_tree_nickname_func():
-            if shot_settings.efit_tree_name != "analysis":
-                return shot_settings.efit_tree_name
+            if retrieval_settings.efit_tree_name != "analysis":
+                return retrieval_settings.efit_tree_name
 
             database.additional_dbs["code_rundb"].query(
                 f"select * from plasmas where shot = {shot_id} and runtag = 'DIS' and deleted = 0 order by idx",

@@ -25,11 +25,11 @@ export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring
 ## Usage { .doc .doc-heading }
 
 ### How do I debug issues with DisruptionPy? { .doc .doc-heading }
-To better understand the issue that you are seeing in DisruptionPy you can enable more detailed logging by passing `log_settings` to the `shot_settings` for your program. For more information on customizing logging, please see [`LogSettings`][disruption_py.settings.log_settings.LogSettings].
+To better understand the issue that you are seeing in DisruptionPy you can enable more detailed logging by passing `log_settings` to the `retrieval_settings` for your program. For more information on customizing logging, please see [`LogSettings`][disruption_py.settings.log_settings.LogSettings].
 
 ```python
 import logging
-from disruption_py.settings.shot_settings import ShotSettings
+from disruption_py.settings.retrieval_settings import ShotSettings
 from disruption_py.settings.log_settings import LogSettings
 
 ShotSettings(

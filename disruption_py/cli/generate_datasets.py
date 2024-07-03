@@ -43,7 +43,7 @@ def main(args):
     logger.info(f"requested feature columns: {feature_cols}")
     logger.info(f"requested derived feature columns: {derived_feature_cols}")
 
-    shot_settings = RetrievalSettings(
+    retrieval_settings = RetrievalSettings(
         efit_tree_name=args.efit_tree,
         time_setting=args.timebase_signal,
         run_methods=args.run_methods,
@@ -64,7 +64,7 @@ def main(args):
     dataset_df = get_shots_data(
         tokamak=tokamak,
         shotlist_setting=shotlist_setting,
-        shot_settings=shot_settings,
+        retrieval_settings=retrieval_settings,
         output_setting="dataframe",
         num_processes=args.num_processes,
         log_settings=log_settigs,

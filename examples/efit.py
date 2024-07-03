@@ -26,7 +26,7 @@ else:
 
 print(f"Initialized for tokamak: {tokamak.value}")
 
-shot_settings = RetrievalSettings(
+retrieval_settings = RetrievalSettings(
     run_tags=[],
     run_methods=run_methods,
 )
@@ -34,7 +34,7 @@ shot_settings = RetrievalSettings(
 result = get_shots_data(
     tokamak=tokamak,
     shotlist_setting=shotlist,
-    shot_settings=shot_settings,
+    retrieval_settings=retrieval_settings,
     output_setting="dataframe",
     log_settings=LogSettings(console_log_level=0),
 )

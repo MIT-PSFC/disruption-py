@@ -68,7 +68,7 @@ class RetrievalSettings:
         as containing an included column will be run and all columns returned by those methods will be used.
         Methods can either be passed in the `custom_parameter_methods` argument or included in the built-in
         list. If you wish to only return the requested columns, set only_requested_columns to true in the
-        shot_settings.
+        retrieval_settings.
     only_requested_columns : bool
         Whether only columns requested in run_columns should be included in the produced dataframe.
         Even if not all requested columns exist in the produced dataframe only the requested columns will
@@ -138,7 +138,7 @@ class RetrievalSettings:
             (
                 "output_setting",
                 """
-                output_setting no longer set in shot_settings. 
+                output_setting no longer set in retrieval_settings. 
                 Please set output_setting in get_shots_data. 
                 To not throw error please set output_setting to None.
                 """

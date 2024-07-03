@@ -5,7 +5,7 @@ import logging
 from disruption_py.workflow import get_shots_data
 from disruption_py.settings import LogSettings, RetrievalSettings
 
-shot_settings = RetrievalSettings(
+retrieval_settings = RetrievalSettings(
     # data settings
     input_setting=None,
     efit_tree_name="analysis",
@@ -27,7 +27,7 @@ shot_data = get_shots_data(
     shotlist_setting=-1,  # no default value
     database_initializer=None,  # defaults to connection for tokamak
     mds_connection_initializer=None,  # defaults to mds plus server string for tokamak
-    shot_settings=shot_settings,
+    retrieval_settings=retrieval_settings,
     output_setting="list",  # output a list of dataframes
     num_processes=1,
     log_settings=LogSettings(  # logging

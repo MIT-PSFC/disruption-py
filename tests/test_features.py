@@ -40,12 +40,12 @@ TEST_SETTINGS = {
 }
 
 
-@pytest.mark.parametrize("shot_settings_key", TEST_SETTINGS.keys())
-def test_features_serial(tokamak, shotlist, shot_settings_key, test_file_path_f):
-    if "GITHUB_ACTIONS" in os.environ and "_fast" not in shot_settings_key:
+@pytest.mark.parametrize("retrieval_settings_key", TEST_SETTINGS.keys())
+def test_features_serial(tokamak, shotlist, retrieval_settings_key, test_file_path_f):
+    if "GITHUB_ACTIONS" in os.environ and "_fast" not in retrieval_settings_key:
         pytest.skip("fast execution")
 
-    test_setting = TEST_SETTINGS[shot_settings_key]
+    test_setting = TEST_SETTINGS[retrieval_settings_key]
     if is_tokamak_indexed(test_setting):
         if tokamak.value not in test_setting:
             pytest.skip(f"not tested for tokamak {tokamak.value}")
@@ -55,7 +55,7 @@ def test_features_serial(tokamak, shotlist, shot_settings_key, test_file_path_f)
     results = get_shots_data(
         tokamak=tokamak,
         shotlist_setting=shotlist,
-        shot_settings=test_setting,
+        retrieval_settings=test_setting,
         output_setting=[
             "list",
             "dataframe",
@@ -79,9 +79,9 @@ def test_features_parallel(tokamak, shotlist, test_file_path_f):
     )
 
     results = get_shots_data(
-        tokamak=tokamak,
+        retrieval_settingsak,
         shotlist_setting=shotlist,
-        shot_settings=test_setting,
+        retrieval_settings=test_setting,
         output_setting=[
             "list",
             "dataframe",

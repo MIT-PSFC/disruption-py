@@ -80,12 +80,12 @@ def bind_method_metadata(
 
 def filter_methods_to_run(
     all_bound_method_metadata: list[BoundMethodMetadata],
-    shot_settings: RetrievalSettings,
+    retrieval_settings: RetrievalSettings,
     physics_method_params: PhysicsMethodParams,
 ):
-    tags = shot_settings.run_tags
-    methods = shot_settings.run_methods
-    columns = REQUIRED_COLS.union(shot_settings.run_columns)
+    tags = retrieval_settings.run_tags
+    methods = retrieval_settings.run_methods
+    columns = REQUIRED_COLS.union(retrieval_settings.run_columns)
 
     methods_to_run = []
     for bound_method_metadata in all_bound_method_metadata:
@@ -160,18 +160,18 @@ def populate_method(
 
 
 def populate_shot(
-    shot_settings: RetrievalSettings,
+    retrieval_settings: RetrievalSettings,
     physics_method_params: PhysicsMethodParams,
 ) -> pd.DataFrame:
     """populate_shot runs the parameter methods either included through the `custom_parameter_methods`
-    property of shot_settings or in the built-in list of methods.
+    property of retrieval_settings or in the built-in list of methods.
 
-    Selects methods based on run_methods, run_tags, and run_columns in shot_settings.
+    Selects methods based on run_methods, run_tags, and run_columns in retrieval_settings.
     Methods execution is reordered to minimize tree openings and trees opened simultaniously.
 
     Parameters
     ----------
-    shot_settings : ShotSettings
+    retrieval_settings : ShotSettings
         The shot settings dictating what methods should be run.
     physics_method_params : PhysicsMethodParams
         Parameter that will be passed to methods that are run.
@@ -184,14 +184,14 @@ def populate_shot(
     # Concatanate built in clases containing registred methods, with user provided classes/methods
     all_parameter_method_holders = (
         built_in_method_factory(physics_method_params.tokamak)
-        + shot_settings.custom_parameter_methods
+        + retrieval_settings.custom_parameter_methods
     )
     all_parameter_methods = get_all_parameter_methods(all_parameter_method_holders)
     all_bound_method_metadata: list[BoundMethodMetadata] = bind_method_metadata(
         all_parameter_methods, physics_method_params
     )
     run_bound_method_metadata: list[BoundMethodMetadata] = filter_methods_to_run(
-        all_bound_method_metadata, shot_settings, physics_method_params
+        all_bound_method_metadata, retrieval_settings, physics_method_params
     )
 
     pre_filled_shot_data = get_prefilled_shot_data(physics_method_params)
@@ -242,10 +242,12 @@ def populate_shot(
     #       multiple parameters. This should be fixed in the future.
     local_data = pd.concat([pre_filled_shot_data] + filtered_parameters, axis=1)
     local_data = local_data.loc[:, ~local_data.columns.duplicated()]
-    if shot_settings.only_requested_columns:
+    if retrieval_settings.only_requested_columns:
         include_columns = list(
             REQUIRED_COLS.union(
-                set(shot_settings.run_columns).intersection(set(local_data.columns))
+                set(retrieval_settings.run_columns).intersection(
+                    set(local_data.columns)
+                )
             )
         )
         local_data = local_data[include_columns]

@@ -1,4 +1,4 @@
-::: disruption_py.settings.shot_settings.ShotSettings
+::: disruption_py.settings.retrieval_settings.ShotSettings
     handler: python
     options:
         filters:

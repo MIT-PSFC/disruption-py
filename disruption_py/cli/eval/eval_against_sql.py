@@ -34,14 +34,14 @@ def get_mdsplus_data(
     Dict[int, pd.DataFrame]
         Dictionary mapping shot IDs to retrieved MDSplus data.
     """
-    shot_settings = RetrievalSettings(
+    retrieval_settings = RetrievalSettings(
         efit_tree_name="efit18",
         time_setting="disruption_warning",
     )
     shot_data = get_shots_data(
         tokamak=tokamak,
         shotlist_setting=shotlist,
-        shot_settings=shot_settings,
+        retrieval_settings=retrieval_settings,
         output_setting="dict",
         log_settings=LogSettings(
             log_to_console=False,

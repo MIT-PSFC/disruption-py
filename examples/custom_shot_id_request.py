@@ -21,7 +21,7 @@ class CustomShotlistSetting(ShotlistSetting):
         return sql_shot_nums + [1160405002, 1140523021, 1140523026, 1160620011]
 
 
-shot_settings = RetrievalSettings(
+retrieval_settings = RetrievalSettings(
     # use the efit timebase preset for time_setting
     time_setting="efit",
     run_tags=[],
@@ -31,7 +31,7 @@ shot_settings = RetrievalSettings(
 shot_data = get_shots_data(
     tokamak="cmod",
     shotlist_setting=CustomShotlistSetting(),
-    shot_settings=shot_settings,
+    retrieval_settings=retrieval_settings,
     # automatically uses the CSVOutputSetting preset because of the .csv file descriptor
     output_setting="ip_data.csv",
     num_processes=4,

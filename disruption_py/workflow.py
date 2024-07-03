@@ -33,7 +33,7 @@ def get_shots_data(
     tokamak: Tokamak = None,
     database_initializer: Callable[..., ShotDatabase] = None,
     mds_connection_initializer: Callable[..., ProcessMDSConnection] = None,
-    shot_settings: RetrievalSettings = None,
+    retrieval_settings: RetrievalSettings = None,
     output_setting: OutputSetting = "list",
     num_processes: int = 1,
     log_settings: LogSettings = None,
@@ -45,7 +45,7 @@ def get_shots_data(
     ----------
     shotlist_setting : ShotlistSettingType
         Data retrieved for all shotlist specified by the setting. See ShotlistSetting for more details.
-    shot_settings : ShotSettings
+    retrieval_settings : ShotSettings
         The settings that each shot uses when retrieving data. See ShotSettings for more details.
         If None, the default values of each setting in ShotSettings is used.
     output_setting : OutputSetting
@@ -74,10 +74,10 @@ def get_shots_data(
         lambda: ProcessMDSConnection.from_config(tokamak=tokamak)
     )
     # Clean-up parameters
-    if shot_settings is None:
-        shot_settings = RetrievalSettings()
+    if retrieval_settings is None:
+        retrieval_settings = RetrievalSettings()
 
-    shot_settings.resolve()
+    retrieval_settings.resolve()
     output_setting = resolve_output_setting(output_setting)
 
     # do not spawn unnecessary processes
@@ -107,7 +107,7 @@ def get_shots_data(
         )
         shot_retriever.run(
             shotlist_list=shotlist_list,
-            shot_settings=shot_settings,
+            retrieval_settings=retrieval_settings,
             await_complete=True,
         )
     else:
@@ -120,7 +120,7 @@ def get_shots_data(
         for shot_id in shotlist_list:
             shot_data = shot_manager.get_shot_data(
                 shot_id=shot_id,
-                shot_settings=shot_settings,
+                retrieval_settings=retrieval_settings,
             )
             if shot_data is None:
                 logger.warning(

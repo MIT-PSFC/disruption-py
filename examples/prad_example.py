@@ -18,7 +18,7 @@ class PRadTime(TimeSetting):
         return time_array
 
 
-shot_settings = RetrievalSettings(
+retrieval_settings = RetrievalSettings(
     time_setting=PRadTime(),
     run_tags=[],  # default is all, so if you do not want all data must set to an empty list
     run_columns=["p_rad"],  # run parameter methods
@@ -29,7 +29,7 @@ shot_settings = RetrievalSettings(
 shot_data = get_shots_data(
     tokamak="cmod",
     shotlist_setting="cmod_non_disruptions_ids_not_blacklist_mini",
-    shot_settings=shot_settings,
+    retrieval_settings=retrieval_settings,
     output_setting="examples/p_rad.csv",
     num_processes=4,
     log_settings=LogSettings(

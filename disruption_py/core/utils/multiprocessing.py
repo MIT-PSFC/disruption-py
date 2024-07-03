@@ -51,14 +51,14 @@ class Consumer(multiprocessing.Process):
 
 
 class ShotTask:
-    def __init__(self, shot_id, shot_settings):
+    def __init__(self, shot_id, retrieval_settings):
         self.shot_id = shot_id
-        self.shot_settings = shot_settings
+        self.retrieval_settings = retrieval_settings
 
     def __call__(self, shot_manager: ShotManager):
         result = shot_manager.get_shot_data(
             shot_id=self.shot_id,
-            shot_settings=self.shot_settings,
+            retrieval_settings=self.retrieval_settings,
         )
         return self.shot_id, result
 
@@ -120,7 +120,7 @@ class MultiprocessingShotRetriever:
                 )
             )
 
-    def run(self, shotlist_list, shot_settings, await_complete=True):
+    def run(self, shotlist_list, retrieval_settings, await_complete=True):
 
         if not self.result_thread.is_alive():
             self.result_thread.start()
@@ -132,7 +132,7 @@ class MultiprocessingShotRetriever:
         for shot_id in shotlist_list:
             task = ShotTask(
                 shot_id=shot_id,
-                shot_settings=shot_settings,
+                retrieval_settings=retrieval_settings,
             )
             self.task_queue.put(task)
 
