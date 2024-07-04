@@ -10,7 +10,7 @@ from disruption_py.settings import (
     OutputSetting,
     OutputSettingParams,
 )
-from disruption_py.machine.shot_manager import ShotManager
+from disruption_py.core.retrieval_manager import ShotManager
 from disruption_py.constants import MAX_PROCESSES
 
 

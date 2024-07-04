@@ -3,6 +3,7 @@
 import logging
 from typing import Any, Callable
 
+from disruption_py.core.retrieval_manager import ShotManager
 from disruption_py.io.sql import ShotDatabase
 from disruption_py.io.mds import ProcessMDSConnection
 from disruption_py.settings import RetrievalSettings
@@ -19,9 +20,6 @@ from disruption_py.settings.shotlist_setting import (
     shotlist_setting_runner,
 )
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak
-from disruption_py.machine.factory import (
-    get_tokamak_shot_manager,
-)
 from disruption_py.core.utils.multiprocessing import MultiprocessingShotRetriever
 from disruption_py.core.utils.misc import without_duplicates
 
@@ -81,8 +79,6 @@ def get_shots_data(
     output_setting = resolve_output_setting(output_setting)
 
     # do not spawn unnecessary processes
-    shot_manager_cls = get_tokamak_shot_manager(tokamak)
-
     shotlist_setting_params = ShotlistSettingParams(database, tokamak, logger)
     shotlist_list = without_duplicates(
         shotlist_setting_runner(shotlist_setting, shotlist_setting_params)
@@ -96,7 +92,7 @@ def get_shots_data(
             num_processes=num_processes,
             output_setting=output_setting,
             shot_manager_initializer=(
-                lambda: shot_manager_cls(
+                lambda: ShotManager(
                     tokamak=tokamak,
                     process_database=database_initializer(),
                     process_mds_conn=mds_connection_initializer(),

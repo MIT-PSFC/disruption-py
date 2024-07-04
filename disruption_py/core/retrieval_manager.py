@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import logging
-from abc import ABC, abstractmethod
 import traceback
 
 import numpy as np
@@ -25,7 +24,7 @@ from disruption_py.machine.tokamak import Tokamak
 from disruption_py.core.utils.math import interp1
 
 
-class ShotManager(ABC):
+class ShotManager:
     logger = logging.getLogger("disruption_py")
 
     def __init__(
@@ -63,20 +62,6 @@ class ShotManager(ABC):
             )
             self.logger.error(f"failed {shot_id} with error {e}")
             return None
-
-    @classmethod
-    @abstractmethod
-    def _modify_times_flattop_timebase(
-        cls, physics_method_params: PhysicsMethodParams, **kwargs
-    ) -> PhysicsMethodParams:
-        pass
-
-    @classmethod
-    @abstractmethod
-    def _modify_times_rampup_and_flattop_timebase(
-        cls, physics_method_params: PhysicsMethodParams, **kwargs
-    ) -> PhysicsMethodParams:
-        pass
 
     def shot_setup(
         self, shot_id: int, retrieval_settings: RetrievalSettings, **kwargs
