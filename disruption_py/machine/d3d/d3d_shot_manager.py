@@ -24,30 +24,6 @@ class D3DShotManager(ShotManager):
         return Tokamak.D3D
 
     @classmethod
-    def get_efit_tree_nickname_func(
-        cls,
-        shot_id: int,
-        mds_conn: MDSConnection,
-        database: ShotDatabase,
-        disruption_time: float,
-        retrieval_settings: RetrievalSettings,
-    ) -> None:
-        def efit_tree_nickname_func():
-            if retrieval_settings.efit_tree_name != "analysis":
-                return retrieval_settings.efit_tree_name
-
-            database.additional_dbs["code_rundb"].query(
-                f"select * from plasmas where shot = {shot_id} and runtag = 'DIS' and deleted = 0 order by idx",
-                use_pandas=False,
-            )
-            if len(efit_trees) == 0:
-                efit_trees = [("EFIT01",)]
-            efit_tree = efit_trees[-1][0]
-            return efit_tree
-
-        return efit_tree_nickname_func
-
-    @classmethod
     def _modify_times_flattop_timebase(
         cls, physics_method_params: PhysicsMethodParams, **kwargs
     ):

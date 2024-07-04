@@ -25,7 +25,7 @@ class ShotlistSettingParams:
         Database object to use for getting shotlist.
         A different database connection is used by each process.
         Defaults to logbook.
-    tokamak : Tokemak
+    tokamak : Tokamak
         The tokamak that is data is being retrieved for.
     logger : Logger
         Logger object from disruption_py to use for logging.

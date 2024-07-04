@@ -23,7 +23,7 @@ class InputSettingParams:
     database : ShotDatabase
         Database object to use for getting input data.
         A different database connection is used by each thread/process.
-    tokamak : Tokemak
+    tokamak : Tokamak
         The tokamak being run.
     logger : Logger
         Logger object from disruption_py to use for logging.

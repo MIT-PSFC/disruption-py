@@ -26,7 +26,7 @@ class OutputSettingParams:
     database : ShotDatabase
         Database object to use for getting input data.
         A different database connection is used by each thread/process.
-    tokamak : Tokemak
+    tokamak : Tokamak
         The tokamak for which results are being output.
     logger : Logger
         Logger object from disruption_py to use for logging.
@@ -45,7 +45,7 @@ class CompleteOutputSettingParams:
 
     Attributes
     ----------
-    tokamak : Tokemak
+    tokamak : Tokamak
         The tokamak for which results are being output.
     logger : Logger
         Logger object from disruption_py to use for logging.

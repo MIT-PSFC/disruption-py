@@ -8,6 +8,7 @@ from disruption_py.settings.input_setting import (
     InputSetting,
     resolve_input_setting,
 )
+from disruption_py.settings.nickname_setting import NicknameSetting
 from disruption_py.settings.output_setting import OutputSetting
 from disruption_py.settings.time_setting import (
     ExistingDataTimeSetting,
@@ -98,6 +99,7 @@ class RetrievalSettings:
 
     # Shot creation settings
     efit_tree_name: str = "analysis"
+    nickname_setting: NicknameSetting = field(default_factory=NicknameSetting)
 
     # Shot run settings
     run_methods: List[str] = field(default_factory=list)

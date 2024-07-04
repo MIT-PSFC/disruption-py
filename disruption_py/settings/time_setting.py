@@ -32,7 +32,7 @@ class TimeSettingParams:
         Database object with connection to sql database.
     disruption_time : float
         The time when the shot disrupted or None if no disruption occured.
-    tokamak : Tokemak
+    tokamak : Tokamak
         The tokamak using the time setting.
     logger : Logger
         Logger object from disruption_py to use for logging.

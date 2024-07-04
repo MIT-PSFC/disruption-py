@@ -12,6 +12,7 @@ from disruption_py.io.mds import (
     MDSConnection,
     ProcessMDSConnection,
 )
+from disruption_py.settings.nickname_setting import NicknameSettingParams
 from disruption_py.settings.retrieval_settings import SignalDomain
 from disruption_py.settings.input_setting import InputSettingParams
 from disruption_py.settings.time_setting import TimeSettingParams
@@ -95,14 +96,17 @@ class ShotManager(ABC):
         mds_conn = self.process_mds_conn.get_shot_connection(shot_id=shot_id)
 
         mds_conn.add_tree_nickname_funcs(
-            tree_nickname_funcs={
-                "_efit_tree": self.get_efit_tree_nickname_func(
+            tree_nickname_funcs=retrieval_settings.nickname_setting.get_nickname_funcs(
+                NicknameSettingParams(
                     shot_id=shot_id,
                     mds_conn=mds_conn,
+                    database=self.process_database,
                     disruption_time=disruption_time,
-                    retrieval_settings=retrieval_settings,
+                    efit_tree_name=retrieval_settings.efit_tree_name,
+                    tokamak=self.tokamak,
+                    logger=self.logger,
                 )
-            }
+            )
         )
 
         try:
