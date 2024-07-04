@@ -27,14 +27,14 @@ TEST_SETTINGS = {
     },
     "flattop_full": {
         "efit_tree_name": "analysis",
-        "signal_domain": "flattop",
+        "domain_setting": "flattop",
         "run_tags": [],
         "run_methods": ["_get_ip_parameters"],
     },
     "rampup_fast": {
         "cmod": {
             "efit_tree_name": "analysis",
-            "signal_domain": "rampup_and_flattop",
+            "domain_setting": "rampup_and_flattop",
         }
     },
 }

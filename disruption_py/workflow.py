@@ -108,7 +108,7 @@ def get_shots_data(
         )
     else:
         mds_connection = mds_connection_initializer()
-        shot_manager = shot_manager_cls(
+        shot_manager = ShotManager(
             tokamak=tokamak,
             process_database=database,
             process_mds_conn=mds_connection,

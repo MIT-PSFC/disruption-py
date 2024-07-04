@@ -68,7 +68,7 @@ class TimeSetting(ABC):
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         """Abstract method implemented by subclasses to get timebase as list.
         The timebase can be set to be automatically restricted to a subdomain of the
-        provided times via the signal_domain argument in the RetrievalSettings object.
+        provided times via the domain_setting argument in the RetrievalSettings object.
 
         Parameters
         ----------

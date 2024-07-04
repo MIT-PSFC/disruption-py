@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from logging import Logger
 import traceback
 from typing import Dict, Union
@@ -15,6 +16,7 @@ from disruption_py.machine.tokamak import Tokamak
 DomainSettingType = Union["DomainSetting", str, Dict[Tokamak, "DomainSettingType"]]
 
 
+@dataclass
 class DomainSettingParams:
     """
     Params passed by disruption_py to get_domain() method.

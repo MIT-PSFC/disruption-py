@@ -23,7 +23,7 @@ retrieval_settings = RetrievalSettings(
     run_tags=[],  # default is all, so if you do not want all data must set to an empty list
     run_columns=["p_rad"],  # run parameter methods
     only_requested_columns=True,  # only return the column data for run_columns
-    signal_domain="flattop",  # retrieve data from the flattop time domain
+    domain_setting="flattop",  # retrieve data from the flattop time domain
 )
 
 shot_data = get_shots_data(

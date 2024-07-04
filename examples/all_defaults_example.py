@@ -17,7 +17,7 @@ retrieval_settings = RetrievalSettings(
     custom_parameter_methods=[],
     # timebase settings
     time_setting="disruption_warning",  # use efit timebase
-    signal_domain="full",
+    domain_setting="full",
     use_input_setting_timebase=False,
     interpolation_method="linear",
 )
