@@ -79,7 +79,6 @@ def test_features_parallel(tokamak, shotlist, test_file_path_f):
     )
 
     results = get_shots_data(
-        retrieval_settingsak,
         shotlist_setting=shotlist,
         retrieval_settings=test_setting,
         output_setting=[

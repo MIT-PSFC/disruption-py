@@ -154,8 +154,3 @@ class RetrievalSettings:
             self.time_setting, ExistingDataTimeSetting
         ):
             self.time_setting = ExistingDataTimeSetting(self.time_setting)
-
-        if self.attempt_local_efit_env is not None:
-            for idx, (option, value) in enumerate(self.attempt_local_efit_env):
-                if not option.endswith("_path"):
-                    self.attempt_local_efit_env[idx] = (option + "_path", value)
