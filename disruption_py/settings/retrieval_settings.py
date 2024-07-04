@@ -53,27 +53,27 @@ class RetrievalSettings:
         should be created for referring to MDSplus trees. See `NicknameSetting` for more details.
         Defaults to NicknameSetting().
     run_methods : List[str]
-        A list of parameter method names to be run. Named methods will be run when retrieving data
-        from  mdsplus for the shot. Named methods must have the parameter_method decorator and either
-        be passed in the `custom_parameter_methods` argument or included in the built-in list. Defaults
+        A list of physics method names to be run. Named methods will be run when retrieving data
+        from  mdsplus for the shot. Named methods must have the physics_method decorator and either
+        be passed in the `custom_physics_methods` argument or included in the built-in list. Defaults
         to an empty list.
     run_tags : List[str]
-        A list of parameter method tags to be run. Methods used for retrieving data from mdsplus can be
-        tagged with the parameter_method decorator and can either be passed in the `custom_parameter_methods`
+        A list of physics method tags to be run. Methods used for retrieving data from mdsplus can be
+        tagged with the physics_method decorator and can either be passed in the `custom_physics_methods`
         argument or included in the built-in list. All methods with at least one included tag will be run.
         Defaults to ["all"].
     run_columns : List[str]
-        A list of columns to be retrieved. All methods with the parameter_method decorator referenced
+        A list of columns to be retrieved. All methods with the physics_method decorator referenced
         as containing an included column will be run and all columns returned by those methods will be used.
-        Methods can either be passed in the `custom_parameter_methods` argument or included in the built-in
+        Methods can either be passed in the `custom_physics_methods` argument or included in the built-in
         list. If you wish to only return the requested columns, set only_requested_columns to true in the
         retrieval_settings.
     only_requested_columns : bool
         Whether only columns requested in run_columns should be included in the produced dataframe.
         Even if not all requested columns exist in the produced dataframe only the requested columns will
         be produced. Otherwise all columns returned by all methods run will be included. Default false.
-    custom_parameter_methods : list
-        A list of parametered methods and objects containing registred methods. The Methods are
+    custom_physics_methods : list
+        A list of physics methods and objects containing physics methods. The Methods are
         collected and run when retrieving data from mdsplus if the method is included through
         either the run_methods, run_tags, run_columns setting. Defaults to an empty list.
     time_setting : TimeSetting
@@ -104,7 +104,7 @@ class RetrievalSettings:
     run_tags: List[str] = field(default_factory=default_tags)
     run_columns: List[str] = field(default_factory=list)
     only_requested_columns: bool = False
-    custom_parameter_methods: list = field(default_factory=list)
+    custom_physics_methods: list = field(default_factory=list)
 
     # Timebase setting
     time_setting: TimeSetting = "disruption_warning"

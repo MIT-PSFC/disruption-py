@@ -13,9 +13,23 @@ from disruption_py.core.physics_method.params import PhysicsMethodParams
 def cache_method(method: Callable) -> Callable:
     @functools.wraps(method)
     def wrapper(*args, **kwargs):
-        return cache_or_compute(method, args, kwargs)
+        physics_method_params: PhysicsMethodParams = (
+            kwargs["params"] if "params" in kwargs else args[-1]
+        )
 
-    # parameter the method in the global registry
+        other_params = {k: v for k, v in kwargs.items() if k != "params"}
+
+        cache_key = get_method_cache_key(
+            method, physics_method_params.times, other_params
+        )
+
+        if cache_key in physics_method_params._cached_results:
+            return physics_method_params._cached_results[cache_key]
+        else:
+            result = method(*args, **kwargs)
+            physics_method_params._cached_results[cache_key] = result
+            return result
+
     if isinstance(method, staticmethod):
         return staticmethod(wrapper)
     elif isinstance(method, classmethod):
@@ -37,27 +51,6 @@ def get_method_cache_key(
         len(times),
         hashable_other_params,
     )
-
-
-def cache_or_compute(
-    method: Callable,
-    args: tuple,
-    kwargs: dict,
-):
-    physics_method_params: PhysicsMethodParams = (
-        kwargs["params"] if "params" in kwargs else args[-1]
-    )
-
-    other_params = {k: v for k, v in kwargs.items() if k != "params"}
-
-    cache_key = get_method_cache_key(method, physics_method_params.times, other_params)
-
-    if cache_key in physics_method_params._cached_results:
-        return physics_method_params._cached_results[cache_key]
-    else:
-        result = method(*args, **kwargs)
-        physics_method_params._cached_results[cache_key] = result
-        return result
 
 
 def manually_cache(

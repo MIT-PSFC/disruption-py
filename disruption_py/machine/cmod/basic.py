@@ -11,7 +11,7 @@ import pandas as pd
 import scipy as sp
 from MDSplus import mdsExceptions
 
-from disruption_py.core.physics_method.decorator import parameter_method
+from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 import disruption_py.data
 from disruption_py.core.physics_method.caching import (
@@ -59,7 +59,7 @@ class CModEfitRequests:
     efit_derivs = {"beta_p": "dbetap_dt", "li": "dli_dt", "Wmhd": "dWmhd_dt"}
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=[
             *efit_cols.keys(),
             *efit_cols_pre_2000.keys(),
@@ -210,7 +210,7 @@ class BasicCmodRequests:
         return active_segments
 
     @staticmethod
-    @parameter_method(columns=["time_until_disrupt"], tokamak=Tokamak.CMOD)
+    @physics_method(columns=["time_until_disrupt"], tokamak=Tokamak.CMOD)
     def _get_time_until_disrupt(params: PhysicsMethodParams):
         time_until_disrupt = np.full(len(params.times), np.nan)
         if params.disrupted:
@@ -287,7 +287,7 @@ class BasicCmodRequests:
         )
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=["ip", "dip_dt", "dip_smoothed", "ip_prog", "dipprog_dt", "ip_error"],
         tokamak=Tokamak.CMOD,
     )
@@ -423,7 +423,7 @@ class BasicCmodRequests:
         )
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=["z_error", "z_prog", "zcur", "v_z", "z_times_v_z"],
         tokamak=Tokamak.CMOD,
     )
@@ -573,7 +573,7 @@ class BasicCmodRequests:
         return pd.DataFrame({"p_oh": p_ohm, "v_loop": v_loop})
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=["p_oh", "v_loop"],
         tokamak=Tokamak.CMOD,
     )
@@ -646,7 +646,7 @@ class BasicCmodRequests:
         )
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=["p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", "radiated_fraction"],
         tokamak=Tokamak.CMOD,
     )
@@ -684,7 +684,7 @@ class BasicCmodRequests:
         )
 
     @staticmethod
-    @parameter_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
+    @physics_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
     def _get_kappa_area(params: PhysicsMethodParams):
         aminor = params.mds_conn.get_data(
             r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
@@ -721,7 +721,7 @@ class BasicCmodRequests:
 
     # TODO: Calculate v_mid
     @staticmethod
-    @parameter_method(columns=["v_0"], tokamak=Tokamak.CMOD)
+    @physics_method(columns=["v_0"], tokamak=Tokamak.CMOD)
     def _get_rotation_velocity(params: PhysicsMethodParams):
         with resources.path(disruption_py.data, "lock_mode_calib_shots.txt") as fio:
             calibrated = pd.read_csv(fio)
@@ -758,7 +758,7 @@ class BasicCmodRequests:
 
     # TODO: Try catch failure to get BP13 sensors
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase", "BT"],
         tokamak=Tokamak.CMOD,
     )
@@ -890,7 +890,7 @@ class BasicCmodRequests:
         return pd.DataFrame({"n_e": n_e, "dn_dt": dn_dt, "Greenwald_fraction": g_f})
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=["n_e", "dn_dt", "Greenwald_fraction"],
         tokamak=Tokamak.CMOD,
     )
@@ -925,7 +925,7 @@ class BasicCmodRequests:
         return pd.DataFrame({"I_efc": interp1(t_iefc, iefc, times, "linear")})
 
     @staticmethod
-    @parameter_method(columns=["I_efc"], tokamak=Tokamak.CMOD)
+    @physics_method(columns=["I_efc"], tokamak=Tokamak.CMOD)
     def _get_efc_current(params: PhysicsMethodParams):
         try:
             iefc, t_iefc = params.mds_conn.get_data_with_dims(
@@ -980,7 +980,7 @@ class BasicCmodRequests:
         return pd.DataFrame({"Te_width": te_hwm})
 
     @staticmethod
-    @parameter_method(columns=["Te_width"], tokamak=Tokamak.CMOD)
+    @physics_method(columns=["Te_width"], tokamak=Tokamak.CMOD)
     def _get_Ts_parameters(params: PhysicsMethodParams):
         # TODO: Guassian vs parabolic fit for te profile
         te_hwm = np.empty((len(params.times)))
@@ -1010,7 +1010,7 @@ class BasicCmodRequests:
         pass
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=["ne_peaking", "Te_peaking", "pressure_peaking"],
         tokamak=Tokamak.CMOD,
     )
@@ -1104,7 +1104,7 @@ class BasicCmodRequests:
             )
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=["prad_peaking"],
         tokamak=Tokamak.CMOD,
     )
@@ -1209,7 +1209,7 @@ class BasicCmodRequests:
         return pd.DataFrame({"prad_peaking": prad_peaking})
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=["ne_peaking", "Te_peaking", "pressure_peaking"],
         tags=["experimental"],
         tokamak=Tokamak.CMOD,
@@ -1326,7 +1326,7 @@ class BasicCmodRequests:
 
     # TODO: get more accurate description of soft x-ray data
     @staticmethod
-    @parameter_method(columns=["sxr"], tokamak=Tokamak.CMOD)
+    @physics_method(columns=["sxr"], tokamak=Tokamak.CMOD)
     def _get_sxr_data(params: PhysicsMethodParams):
         """ """
         sxr = np.full(len(params.times), np.nan)
@@ -1433,7 +1433,7 @@ class BasicCmodRequests:
         return pd.DataFrame({"Te_edge": Te_edge, "ne_edge": ne_edge})
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         tags=["experimental"],
         columns=["Te_edge", "ne_edge"],
         tokamak=Tokamak.CMOD,
@@ -1536,7 +1536,7 @@ class BasicCmodRequests:
 
     # TODO: Finish
     @staticmethod
-    @parameter_method(
+    @physics_method(
         tags=["experimental"],
         columns=["H98", "Wmhd", "btor", "dWmhd_dt", "p_input"],
         tokamak=Tokamak.CMOD,

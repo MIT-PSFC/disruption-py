@@ -14,7 +14,7 @@ retrieval_settings = RetrievalSettings(
     run_tags=["all"],
     run_columns=[],
     only_requested_columns=False,
-    custom_parameter_methods=[],
+    custom_physics_methods=[],
     # timebase settings
     time_setting="disruption_warning",  # use efit timebase
     domain_setting="full",

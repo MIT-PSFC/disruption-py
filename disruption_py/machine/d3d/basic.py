@@ -7,7 +7,7 @@ import pandas as pd
 import scipy
 from MDSplus import mdsExceptions
 
-from disruption_py.core.physics_method.decorator import parameter_method
+from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.physics_method.caching import (
     cache_method,
@@ -22,7 +22,7 @@ class BasicD3DRequests:
     NOMINAL_FLATTOP_RADIUS = 0.59
 
     @staticmethod
-    @parameter_method(columns=["time_until_disrupt"], tokamak=Tokamak.D3D)
+    @physics_method(columns=["time_until_disrupt"], tokamak=Tokamak.D3D)
     def _get_time_until_disrupt(params: PhysicsMethodParams):
         if params.disrupted:
             return pd.DataFrame(
@@ -31,7 +31,7 @@ class BasicD3DRequests:
         return pd.DataFrame({"time_until_disrupt": np.full(params.times.size, np.nan)})
 
     @staticmethod
-    @parameter_method(columns=["H98", "H_alpha"], tokamak=Tokamak.D3D)
+    @physics_method(columns=["H98", "H_alpha"], tokamak=Tokamak.D3D)
     def get_H_parameters(params: PhysicsMethodParams):
         try:
             h_98, t_h_98 = params.mds_conn.get_data_with_dims(
@@ -58,7 +58,7 @@ class BasicD3DRequests:
         return pd.DataFrame({"H98": h_98, "H_alpha": h_alpha})
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=["p_rad", "p_nbi", "p_ech", "p_ohm", "radiated_fraction", "v_loop"],
         tokamak=Tokamak.D3D,
     )
@@ -182,7 +182,7 @@ class BasicD3DRequests:
         )
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=["p_rad", "p_nbi", "p_ech", "p_ohm", "radiated_fraction", "v_loop"],
         tokamak=Tokamak.D3D,
     )
@@ -234,7 +234,7 @@ class BasicD3DRequests:
         return pd.DataFrame({"p_ohm": p_ohm, "v_loop": v_loop})
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=["n_e", "Greenwald_fraction", "dn_dt"],
         tokamak=Tokamak.D3D,
     )
@@ -288,7 +288,7 @@ class BasicD3DRequests:
         return pd.DataFrame({"n_e": ne, "Greenwald_fraction": g_f, "dn_dt": dne_dt})
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=["n_e_RT", "Greenwald_fraction_RT"],
         tokamak=Tokamak.D3D,
     )
@@ -334,7 +334,7 @@ class BasicD3DRequests:
         return pd.DataFrame({"n_e_RT": ne_rt, "Greenwald_fraction_RT": g_f_rt})
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=["ip", "ip_error", "dip_dt", "dipprog_dt", "power_supply_railed"],
         tokamak=Tokamak.D3D,
     )
@@ -444,7 +444,7 @@ class BasicD3DRequests:
         )
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=[
             "ip_RT",
             "ip_error_RT",
@@ -573,7 +573,7 @@ class BasicD3DRequests:
         )
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=["zcur", "zcur_normalized", "z_prog", "z_error", "z_error_normalized"],
         tokamak=Tokamak.D3D,
     )
@@ -628,7 +628,7 @@ class BasicD3DRequests:
         )
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=["n_equal_1_normalized", "n_equal_1_mode"],
         tokamak=Tokamak.D3D,
     )
@@ -700,7 +700,7 @@ class BasicD3DRequests:
         )
 
     @staticmethod
-    @parameter_method(columns=["n1rms", "n1rms_normalized"], tokamak=Tokamak.D3D)
+    @physics_method(columns=["n1rms", "n1rms_normalized"], tokamak=Tokamak.D3D)
     def get_n1rms_parameters(params: PhysicsMethodParams):
         n1rms, t_n1rms = params.mds_conn.get_data_with_dims(r"\n1rms", tree_name="d3d")
         n1rms *= 1.0e-4  # Gauss -> Tesla
@@ -716,7 +716,7 @@ class BasicD3DRequests:
     # By default get_peaking_factors should grab the data from MDSPlus as opposed to recalculate. See DPP v4 document for details:
     # https://docs.google.com/document/d/1R7fI7mCOkMQGt8xX2nS6ZmNNkcyvPQ7NmBfRPICFaFs/edit?usp=sharing
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=["te_pf", "ne_pf", "rad_cva", "rad_xdiv"],
         tokamak=Tokamak.D3D,
     )
@@ -931,7 +931,7 @@ class BasicD3DRequests:
         return psin, rho_vn_diag
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         tags=["unfinished"],
         tokamak=Tokamak.D3D,
         columns=[
@@ -1028,7 +1028,7 @@ class BasicD3DRequests:
         )
 
     @staticmethod
-    @parameter_method(columns=["z_eff"], tokamak=Tokamak.D3D)
+    @physics_method(columns=["z_eff"], tokamak=Tokamak.D3D)
     def get_zeff_parameters(params: PhysicsMethodParams):
         # Get Zeff
         try:
@@ -1059,7 +1059,7 @@ class BasicD3DRequests:
         return pd.DataFrame({"z_eff": zeff})
 
     @staticmethod
-    @parameter_method(columns=["kappa_area"], tokamak=Tokamak.D3D)
+    @physics_method(columns=["kappa_area"], tokamak=Tokamak.D3D)
     def get_kappa_area(params: PhysicsMethodParams):
         a_minor = params.mds_conn.get_data(
             r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
@@ -1074,7 +1074,7 @@ class BasicD3DRequests:
         return pd.DataFrame({"kappa_area": kappa_area})
 
     @staticmethod
-    @parameter_method(columns=["H98", "H_alpha"], tokamak=Tokamak.D3D)
+    @physics_method(columns=["H98", "H_alpha"], tokamak=Tokamak.D3D)
     def get_h_parameters(params: PhysicsMethodParams):
         h98 = np.full(len(params.times), np.nan)
         h98, t_h98 = params.mds_conn.get_data_with_dims(
@@ -1089,7 +1089,7 @@ class BasicD3DRequests:
         return pd.DataFrame({"H98": h98, "H_alpha": h_alpha})
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=["delta", "squareness", "aminor"],
         tokamak=Tokamak.D3D,
     )

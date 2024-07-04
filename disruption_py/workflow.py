@@ -20,7 +20,7 @@ from disruption_py.settings.shotlist_setting import (
     shotlist_setting_runner,
 )
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak
-from disruption_py.core.utils.multiprocessing import MultiprocessingShotRetriever
+from disruption_py.core.multiprocessing import MultiprocessingShotRetriever
 from disruption_py.core.utils.misc import without_duplicates
 
 logger = logging.getLogger("disruption_py")

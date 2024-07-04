@@ -21,7 +21,7 @@ class PRadTime(TimeSetting):
 retrieval_settings = RetrievalSettings(
     time_setting=PRadTime(),
     run_tags=[],  # default is all, so if you do not want all data must set to an empty list
-    run_columns=["p_rad"],  # run parameter methods
+    run_columns=["p_rad"],  # run physics methods
     only_requested_columns=True,  # only return the column data for run_columns
     domain_setting="flattop",  # retrieve data from the flattop time domain
 )

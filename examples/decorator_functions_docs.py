@@ -5,7 +5,7 @@ from typing import List
 import pandas as pd
 
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.physics_method.decorator import parameter_method
+from disruption_py.core.physics_method.decorator import physics_method
 
 
 def method_metadata_function(
@@ -40,8 +40,8 @@ def used_columns_by_shot_id(
         return ["kappa_area"]
 
 
-@parameter_method(columns=["kappa_area"])
-def decorated_parameter_method(self, params: PhysicsMethodParams) -> pd.DataFrame:
+@physics_method(columns=["kappa_area"])
+def decorated_physics_method(self, params: PhysicsMethodParams) -> pd.DataFrame:
     pass
 
 

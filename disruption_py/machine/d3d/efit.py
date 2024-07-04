@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 
-from disruption_py.core.physics_method.decorator import parameter_method
+from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.core.utils.math import interp1
 
@@ -36,7 +36,7 @@ class D3DEfitRequests:
     # 'v_loop_efit_RT': r'\efit_a_eqdsk:vsurf',
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=[*efit_cols.keys(), *efit_derivs.keys()],
         tokamak=Tokamak.D3D,
     )
@@ -69,7 +69,7 @@ class D3DEfitRequests:
         return pd.DataFrame(efit_data)
 
     @staticmethod
-    @parameter_method(
+    @physics_method(
         columns=[*rt_efit_cols.keys()],
         tokamak=Tokamak.D3D,
     )

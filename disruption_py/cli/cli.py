@@ -59,7 +59,7 @@ def main():
     )
 
     evaluate_parser = run_subparsers.add_parser(
-        "evaluate", help="Evaluate accuracy of parameter methods in DisruptionPy"
+        "evaluate", help="Evaluate accuracy of physics methods in DisruptionPy"
     )
     setup_lazy_load_script(evaluate_parser, "disruption_py.cli.evaluate_methods")
 

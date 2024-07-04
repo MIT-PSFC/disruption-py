@@ -43,7 +43,7 @@ class BoundMethodMetadata(MethodMetadata):
         """
         Evaluate arguments to decorators to usable values.
 
-        Some parameters provided to the parameter_method decorators can take method that are evaluated
+        Some parameters provided to the physics_method decorators can take method that are evaluated
         at runtime. `resolve_for` evaluates all of these methods and returns a new instance of `MethodMetadata`
         without function parameters.
         """
@@ -70,7 +70,7 @@ class BoundMethodMetadata(MethodMetadata):
 
 
 def is_parametered_method(method: Callable) -> bool:
-    """Returns whether the method is decorated with `parameter_method` decorator
+    """Returns whether the method is decorated with `physics_method` decorator
 
     Parameters
     ----------
@@ -91,9 +91,9 @@ def get_method_metadata(method: Callable, should_throw: bool = False) -> MethodM
     Parameters
     ----------
     method : Callable
-        The method decorated with the `parameter_method` decorator
+        The method decorated with the `physics_method` decorator
     should_throw : bool
-        Throw an error if the method was not decorated with the `parameter_method` decorator
+        Throw an error if the method was not decorated with the `physics_method` decorator
 
     Returns
     -------
@@ -102,5 +102,5 @@ def get_method_metadata(method: Callable, should_throw: bool = False) -> MethodM
     """
     method_metadata = getattr(method, "method_metadata", None)
     if should_throw and method_metadata is None:
-        raise ValueError(f"The method {method} was not decorated with parameter_method")
+        raise ValueError(f"The method {method} was not decorated with physics_method")
     return method_metadata

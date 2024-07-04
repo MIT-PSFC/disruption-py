@@ -48,26 +48,26 @@ def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams):
     return pre_filled_shot_data
 
 
-def get_all_parameter_methods(all_passed: list):
-    parametered_methods = set()
+def get_all_physics_methods(all_passed: list):
+    physics_methods = set()
     for passed in all_passed:
         if callable(passed) and is_parametered_method(passed):
-            parametered_methods.add(passed)
+            physics_methods.add(passed)
 
         for method_name in dir(passed):
             method = getattr(passed, method_name, None)
             if method is None or not is_parametered_method(method):
                 continue
-            parametered_methods.add(method)
-    return parametered_methods
+            physics_methods.add(method)
+    return physics_methods
 
 
 def bind_method_metadata(
-    parametered_methods: set,
+    physics_methods: set,
     physics_method_params: PhysicsMethodParams,
 ):
     all_bound_method_metadata = []
-    for method in parametered_methods:
+    for method in physics_methods:
         method_metadata = get_method_metadata(method, should_throw=True)
         bound_method_metadata = BoundMethodMetadata.bind(
             method_metadata=method_metadata,
@@ -163,7 +163,7 @@ def populate_shot(
     retrieval_settings: RetrievalSettings,
     physics_method_params: PhysicsMethodParams,
 ) -> pd.DataFrame:
-    """populate_shot runs the parameter methods either included through the `custom_parameter_methods`
+    """populate_shot runs the physics methods either included through the `custom_physics_methods`
     property of retrieval_settings or in the built-in list of methods.
 
     Selects methods based on run_methods, run_tags, and run_columns in retrieval_settings.
@@ -182,13 +182,13 @@ def populate_shot(
         A dataframe containing the querried data.
     """
     # Concatanate built in clases containing registred methods, with user provided classes/methods
-    all_parameter_method_holders = (
+    all_physics_method_holders = (
         built_in_method_factory(physics_method_params.tokamak)
-        + retrieval_settings.custom_parameter_methods
+        + retrieval_settings.custom_physics_methods
     )
-    all_parameter_methods = get_all_parameter_methods(all_parameter_method_holders)
+    all_physics_methods = get_all_physics_methods(all_physics_method_holders)
     all_bound_method_metadata: list[BoundMethodMetadata] = bind_method_metadata(
-        all_parameter_methods, physics_method_params
+        all_physics_methods, physics_method_params
     )
     run_bound_method_metadata: list[BoundMethodMetadata] = filter_methods_to_run(
         all_bound_method_metadata, retrieval_settings, physics_method_params
