@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-from .retrieval_settings import SignalDomain
 from .input_setting import InputSetting, InputSettingParams
 from .log_settings import LogSettings
 from .output_setting import (

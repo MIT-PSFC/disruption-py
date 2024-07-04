@@ -57,7 +57,9 @@ class NicknameSetting:
             func_name = cls.NICKNAME_FUNC_RETRIEVERS[params.tokamak]
             return getattr(cls, func_name)(params)
 
-        return {}
+        raise ValueError(
+            f"No nickname function retriever for tokamak {params.tokamak}."
+        )
 
     @classmethod
     def _cmod_nickname_funcs(cls, params: NicknameSettingParams):

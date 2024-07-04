@@ -12,8 +12,8 @@ from disruption_py.io.mds import (
     MDSConnection,
     ProcessMDSConnection,
 )
+from disruption_py.settings.domain_setting import DomainSettingParams
 from disruption_py.settings.nickname_setting import NicknameSettingParams
-from disruption_py.settings.retrieval_settings import SignalDomain
 from disruption_py.settings.input_setting import InputSettingParams
 from disruption_py.settings.time_setting import TimeSettingParams
 from disruption_py.settings.retrieval_settings import RetrievalSettings
@@ -195,18 +195,17 @@ class ShotManager(ABC):
         retrieval_settings: RetrievalSettings,
         **kwargs,
     ) -> PhysicsMethodParams:
-        if retrieval_settings.signal_domain is SignalDomain.FLATTOP:
-            physics_method_params = self._modify_times_flattop_timebase(
-                physics_method_params
+
+        new_timebase = retrieval_settings.domain_setting.get_domain(
+            DomainSettingParams(
+                physics_method_params=physics_method_params,
+                tokamak=self.tokamak,
+                logger=self.logger,
             )
-        elif retrieval_settings.signal_domain is SignalDomain.RAMP_UP_AND_FLATTOP:
-            physics_method_params = self._modify_times_rampup_and_flattop_timebase(
-                physics_method_params
-            )
-        if physics_method_params is None:
-            raise ValueError(
-                f"physics_method_params set to None in _modify_method_params_for_settings()"
-            )
+        )
+        if new_timebase is not None:
+            physics_method_params.times = new_timebase
+            physics_method_params._cached_results.clear()  # TODO: Make this only modify the cached results for new times
 
         return physics_method_params
 

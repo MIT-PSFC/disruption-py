@@ -85,13 +85,13 @@ class TimeSetting(ABC):
 
 class TimeSettingDict(TimeSetting):
     """
-    Utility class that is automatically used when a dicationary is passed as the `time_setting` parameter in `ShotSettings`.
+    Utility class that is automatically used when a dicationary is passed as the `time_setting` parameter in `RetrievalSettings`.
 
     Parameters
     ----------
     time_setting_dict : dict[Tokamak, TimeSettingType]
         A dictionary mapping tokamak type strings to the desired time setting for that tokamak.  E.g. `{'cmod': 'efit'}`.
-        Any other option passable to the `time_setting` parameter in `ShotSettings` may be used.
+        Any other option passable to the `time_setting` parameter in `RetrievalSettings` may be used.
     """
 
     def __init__(self, time_setting_dict: Dict[Tokamak, TimeSettingType]):

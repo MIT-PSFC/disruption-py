@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Tuple
 
+from disruption_py.settings.domain_setting import DomainSetting, resolve_domain_setting
 from disruption_py.settings.input_setting import (
     InputSetting,
     resolve_input_setting,
@@ -34,13 +35,6 @@ class InterpolationMethod(Enum):
     SIN_EXP = "sin_exp"
 
 
-class SignalDomain(Enum):
-    FULL = "full"
-    FLATTOP = "flattop"
-    RAMP_UP_AND_FLATTOP = "rampup_and_flattop"
-    DISRUPTION = "disruption"
-
-
 @dataclass
 class RetrievalSettings:
     """RetrievalSettings to be used for retrieving data for a single shot.
@@ -54,6 +48,10 @@ class RetrievalSettings:
     efit_tree_name : str
         The name of the tree to first try for the efit environment. Other tree names will be tried if
         opening this tree name fails. Default is 'analysis'.
+    nickname_setting : NicknameSetting
+        The nickname setting to be used when retrieving data for the shot. Defines the nicknames that
+        should be created for referring to MDSplus trees. See `NicknameSetting` for more details.
+        Defaults to NicknameSetting().
     run_methods : List[str]
         A list of parameter method names to be run. Named methods will be run when retrieving data
         from  mdsplus for the shot. Named methods must have the parameter_method decorator and either
@@ -80,12 +78,12 @@ class RetrievalSettings:
         either the run_methods, run_tags, run_columns setting. Defaults to an empty list.
     time_setting : TimeSetting
         The time setting to be used when setting the timebase for the shot. The retrieved data will
-        be interpolated to this timebase. Can pass any TimeSettingType that resolves to a TimeSetting.
+        be interpolated to this timebase. Can pass any `TimeSettingType` that resolves to a TimeSetting.
         See TimeSetting for more details. Defaults to "disruption_warning".
-    signal_domain : SignalDomain
+    domain_setting : DomainSetting
         The domain of the timebase that should be used when retrieving data for the shot. Either "full",
-        "flattop", or "rampup_and_flattop". Can pass either a SignalDomain or the associated string. Defaults
-        to "full".
+        "flattop", or "rampup_and_flattop". Can pass any `DomainSettingType` that resolves to a `DomainSetting`
+        such as the listed strings. Defaults to "full".
     use_input_setting_timebase : bool
         If true and input data exists for the shot, the timebase from the input data will be used instead
         of the timebase from the time_setting. Wraps the time_setting with ExistingDataTimeSetting.
@@ -110,7 +108,7 @@ class RetrievalSettings:
 
     # Timebase setting
     time_setting: TimeSetting = "disruption_warning"
-    signal_domain: SignalDomain = "full"
+    domain_setting: DomainSetting = "full"
     use_input_setting_timebase: bool = False
     interpolation_method: InterpolationMethod = "linear"
 
@@ -143,11 +141,11 @@ class RetrievalSettings:
 
         self.input_setting = resolve_input_setting(self.input_setting)
         self.time_setting = resolve_time_setting(self.time_setting)
+        self.domain_setting = resolve_domain_setting(self.domain_setting)
 
         map_string_attributes_to_enum(
             self,
             {
-                "signal_domain": SignalDomain,
                 "interpolation_method": InterpolationMethod,
             },
         )
