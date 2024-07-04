@@ -118,7 +118,7 @@ class OutputSetting(ABC):
 
 class OutputSettingList(OutputSetting):
     """
-    Utility class that is automatically used when a list is passed as the `output_setting` parameter in `ShotSettings.
+    Utility class that is automatically used when a list is passed as the `output_setting` parameter in `RetrievalSettings.
 
     All listed output types will be output to in the order listed.
     Similarly, results will be returned in the order listed.
@@ -126,8 +126,8 @@ class OutputSettingList(OutputSetting):
     Parameters
     ----------
     output_setting_list : list[OutputSettingType]
-        A python list of any other output setting option that can be passed as the `output_setting` parameter in `ShotSettings`.
-        Any other option passable to the `output_setting` parameter in `ShotSettings` may be used.
+        A python list of any other output setting option that can be passed as the `output_setting` parameter in `RetrievalSettings`.
+        Any other option passable to the `output_setting` parameter in `RetrievalSettings` may be used.
     """
 
     def __init__(self, output_setting_list: List[OutputSettingType]):
@@ -157,7 +157,7 @@ class OutputSettingList(OutputSetting):
 
 class OutputSettingDict(OutputSetting):
     """
-    Utility class that is automatically used when a dicationary is passed as the `output_setting` parameter in `ShotSettings.
+    Utility class that is automatically used when a dicationary is passed as the `output_setting` parameter in `RetrievalSettings.
 
     Parameters
     ----------

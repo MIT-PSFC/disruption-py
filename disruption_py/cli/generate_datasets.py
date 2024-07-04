@@ -138,7 +138,7 @@ def get_parser():
     parser.add_argument(
         "--feature_cols",
         type=str,
-        help="Either a file or comma-separated list of desired feature columns. Similar to run columns in `ShotSettings`",
+        help="Either a file or comma-separated list of desired feature columns. Similar to run columns in `RetrievalSettings`",
         default=None,
     )
     parser.add_argument(

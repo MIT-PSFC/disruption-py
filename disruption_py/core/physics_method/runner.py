@@ -171,7 +171,7 @@ def populate_shot(
 
     Parameters
     ----------
-    retrieval_settings : ShotSettings
+    retrieval_settings : RetrievalSettings
         The shot settings dictating what methods should be run.
     physics_method_params : PhysicsMethodParams
         Parameter that will be passed to methods that are run.

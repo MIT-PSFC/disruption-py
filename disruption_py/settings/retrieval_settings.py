@@ -120,7 +120,7 @@ class RetrievalSettings:
     @classmethod
     def from_dict(cls, prop_dict, tokamak: Tokamak):
         """
-        Create a ShotSettings object from a dictionary.
+        Create a RetrievalSettings object from a dictionary.
         """
         if is_tokamak_indexed(prop_dict):
             if tokamak.value not in prop_dict:

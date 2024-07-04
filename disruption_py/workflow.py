@@ -45,9 +45,9 @@ def get_shots_data(
     ----------
     shotlist_setting : ShotlistSettingType
         Data retrieved for all shotlist specified by the setting. See ShotlistSetting for more details.
-    retrieval_settings : ShotSettings
-        The settings that each shot uses when retrieving data. See ShotSettings for more details.
-        If None, the default values of each setting in ShotSettings is used.
+    retrieval_settings : RetrievalSettings
+        The settings that each shot uses when retrieving data. See RetrievalSettings for more details.
+        If None, the default values of each setting in RetrievalSettings is used.
     output_setting : OutputSetting
         The output type setting to be used when outputting the retrieved data for each shot. Note that data
         is streamed to the output type setting object as it is retrieved. Can pass any OutputSettingType

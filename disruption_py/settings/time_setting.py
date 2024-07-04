@@ -68,7 +68,7 @@ class TimeSetting(ABC):
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         """Abstract method implemented by subclasses to get timebase as list.
         The timebase can be set to be automatically restricted to a subdomain of the
-        provided times via the signal_domain argument in the ShotSettings object.
+        provided times via the signal_domain argument in the RetrievalSettings object.
 
         Parameters
         ----------
@@ -117,7 +117,7 @@ class ListTimeSetting(TimeSetting):
     A list of times to use as the timebase.
 
     A utility class that is automatically used when a list, numpy array, or pandas series is
-    passed as the `time_setting` parameter in `ShotSettings`.
+    passed as the `time_setting` parameter in `RetrievalSettings`.
     """
 
     def __init__(self, times):
