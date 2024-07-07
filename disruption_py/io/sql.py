@@ -72,7 +72,7 @@ class ShotDatabase:
         """
         Initialize database from config file.
         """
-        return cls._from_dict(config(tokamak).database, tokamak)
+        return cls._from_dict(config(tokamak).database)
 
     @classmethod
     def _from_dict(cls, database_dict: dict):

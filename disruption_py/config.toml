@@ -13,7 +13,7 @@ MATCH_FRACTION = 0.95  # Fraction of signals that must match between MDSplus and
 VERBOSE_OUTPUT = true
 
 [cmod]
-MDSPLUS_CONNECTION_STRING = "atlas"
+MDSPLUS_CONNECTION_STRING = "alcdata-archives"
 
 [cmod.database]
 profile_path= "~/logbook.sybase_login"
