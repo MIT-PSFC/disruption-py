@@ -11,12 +11,10 @@ from typing import Callable, Dict, List
 import numpy as np
 import pandas as pd
 
+from disruption_py.config import config
 from disruption_py.io.sql import ShotDatabase
 from disruption_py.workflow import get_shots_data
 from disruption_py.settings import LogSettings, RetrievalSettings
-from disruption_py.constants import (
-    TIME_CONST,
-)
 from disruption_py.cli.eval.data_difference import DataDifference
 from disruption_py.machine import tokamak
 from disruption_py.machine.tokamak import Tokamak
@@ -74,7 +72,7 @@ def get_sql_data_for_mdsplus(
             sql_data,
             on="time",
             direction="nearest",
-            tolerance=TIME_CONST,
+            tolerance=config().TIME_CONST,
         )
     return shot_data
 

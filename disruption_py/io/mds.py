@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict, List, Tuple, Union
 import MDSplus
 import numpy as np
 
-from disruption_py.constants import MDSPLUS_CONNECTION_STRING_CONSTANTS
+from disruption_py.config import config
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.core.utils.shared_instance import SharedInstanceFactory
 from disruption_py.core.utils.misc import safe_cast
@@ -30,12 +30,8 @@ class ProcessMDSConnection:
 
     @classmethod
     def from_config(cls, tokamak: Tokamak):
-        conn_string_configs = MDSPLUS_CONNECTION_STRING_CONSTANTS
-        if tokamak.value not in conn_string_configs:
-            raise ValueError(f"No connection string found for {tokamak.value}")
-
         return SharedInstanceFactory(ProcessMDSConnection).get_instance(
-            conn_string_configs[tokamak.value]
+            config(tokamak).MDSPLUS_CONNECTION_STRING
         )
 
     def get_shot_connection(self, shot_id: int):

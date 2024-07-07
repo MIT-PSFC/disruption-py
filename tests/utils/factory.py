@@ -1,18 +1,14 @@
 import os
+from disruption_py.config import config
 from disruption_py.machine.tokamak import Tokamak
-from disruption_py.constants import (
-    EXPECTED_FAILURE_COLUMNS,
-    TEST_COLUMNS,
-    TEST_SHOTS,
-)
 
 
 def get_tokamak_test_expected_failure_columns(tokamak: Tokamak):
-    return EXPECTED_FAILURE_COLUMNS.get(tokamak.value)
+    return config(tokamak).testing.EXPECTED_FAILURE_COLUMNS
 
 
 def get_tokamak_test_shotlist(tokamak: Tokamak) -> list[int]:
-    shot_id_dict = TEST_SHOTS.get(tokamak.value)
+    shot_id_dict = config(tokamak).testing.TEST_SHOTS
 
     if "GITHUB_ACTIONS" in os.environ:
         shot_id_dict = {
@@ -23,4 +19,4 @@ def get_tokamak_test_shotlist(tokamak: Tokamak) -> list[int]:
 
 
 def get_tokamak_test_columns(tokamak: Tokamak):
-    return TEST_COLUMNS.get(tokamak.value)
+    return config(tokamak).testing.TEST_COLUMNS

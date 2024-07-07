@@ -15,6 +15,7 @@ pyodbc = "^5.1.0"
 scikit_learn = "^1.5.0"
 scipy = "^1.13.0"
 SQLAlchemy = "^2.0.0"
+dynaconf = "^3.2.5"
 
 [tool.poetry.group.dev]
 optional = true

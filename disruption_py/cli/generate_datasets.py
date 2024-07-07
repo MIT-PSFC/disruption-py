@@ -5,12 +5,11 @@ import json
 
 import pandas as pd
 
+from disruption_py.cli.ml.constants import BLACK_WINDOW_THRESHOLD, DEFAULT_RATIO
 from disruption_py.workflow import get_shots_data
 from disruption_py.settings import LogSettings, RetrievalSettings
-from disruption_py.constants import (
-    BLACK_WINDOW_THRESHOLD,
+from disruption_py.cli.ml.constants import (
     DEFAULT_COLS,
-    DEFAULT_RATIO,
 )
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.machine.tokamak import Tokamak, get_tokamak_from_environment

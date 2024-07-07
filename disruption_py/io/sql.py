@@ -11,12 +11,7 @@ import pandas as pd
 import pyodbc
 from sqlalchemy import create_engine
 
-from disruption_py.constants import (
-    BASE_PROTECTED_COLUMNS,
-    TIME_CONST,
-    WRITE_DATABASE_TABLE_NAME,
-    DATABASE_CONSTANTS,
-)
+from disruption_py.config import config
 from disruption_py.machine.tokamak import Tokamak, is_tokamak_indexed
 from disruption_py.core.utils.shared_instance import SharedInstanceFactory
 from disruption_py.core.utils.misc import without_duplicates
@@ -77,19 +72,16 @@ class ShotDatabase:
         """
         Initialize database from config file.
         """
-        return cls._from_dict(DATABASE_CONSTANTS, tokamak)
+        return cls._from_dict(config(tokamak).database, tokamak)
 
     @classmethod
-    def _from_dict(cls, database_dict: dict, tokamak: Tokamak):
+    def _from_dict(cls, database_dict: dict):
         """
         Initialize database from config file.
         """
 
-        if tokamak.value in database_dict:
-            database_dict = database_dict[tokamak.value]
-
         additional_dbs = {
-            db_key: cls._from_dict(additonal_db_dict, tokamak)
+            db_key: cls._from_dict(additonal_db_dict)
             for db_key, additonal_db_dict in database_dict.get(
                 "additional_databases", {}
             ).items()
@@ -108,9 +100,7 @@ class ShotDatabase:
             db_name=database_dict["db_name"],
             user=db_user,
             passwd=db_pass,
-            protected_columns=without_duplicates(
-                BASE_PROTECTED_COLUMNS + database_dict["protected_columns"]
-            ),
+            protected_columns=without_duplicates(database_dict["protected_columns"]),
             additional_dbs=additional_dbs,
         )
 
@@ -208,7 +198,7 @@ class ShotDatabase:
             List of protecrted columns that can should still be updated. Update must be true for input values in the
             columns to be changed. Default value is [].
         """
-        table_name = WRITE_DATABASE_TABLE_NAME
+        table_name = config().database.WRITE_DATABASE_TABLE_NAME
         curr_df = pd.read_sql_query(
             f"select * from {table_name} where shot={shot_id} order by time",
             self.engine,
@@ -220,7 +210,9 @@ class ShotDatabase:
             )
         elif (
             len(curr_df) == len(shot_data)
-            and ((curr_df["time"] - shot_data["time"]).abs() < TIME_CONST).all()
+            and (
+                (curr_df["time"] - shot_data["time"]).abs() < config().TIME_CONST
+            ).all()
         ):
             return self._update_shot_data(
                 shot_id=shot_id,
@@ -304,7 +296,7 @@ class ShotDatabase:
 
         update_columns_shot_data = pd.DataFrame()
         for column_name in curr_df.columns:
-            if column_name in BASE_PROTECTED_COLUMNS or (
+            if column_name in config().database.protected_columns or (
                 column_name in self.protected_columns
                 and column_name not in override_columns
             ):
@@ -343,7 +335,7 @@ class ShotDatabase:
 
     def remove_shot_data(self, shot_id):
         """Remove shot from SQL table."""
-        table_name = WRITE_DATABASE_TABLE_NAME
+        table_name = config().database.WRITE_DATABASE_TABLE_NAME
         if table_name == "disruption_warning":
             raise ValueError(
                 "Please do not delete from the disruption_warning database"
@@ -361,7 +353,7 @@ class ShotDatabase:
 
     def add_column(self, col_name, var_type="TEXT"):
         """Add column to SQL table without filling in data for column."""
-        table_name = WRITE_DATABASE_TABLE_NAME
+        table_name = config().database.WRITE_DATABASE_TABLE_NAME
         try:
             self.query(
                 f"alter table {table_name} add {col_name} {var_type};", use_pandas=False
@@ -373,7 +365,7 @@ class ShotDatabase:
 
     def remove_column(self, col_name):
         """Remove column from SQL table"""
-        table_name = WRITE_DATABASE_TABLE_NAME
+        table_name = config().database.WRITE_DATABASE_TABLE_NAME
         if col_name in self.protected_columns:
             self.logger.error(f"Failed to drop protected column {col_name}")
             return False

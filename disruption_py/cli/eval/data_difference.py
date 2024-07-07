@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
 
-from disruption_py.constants import MATCH_FRACTION, VAL_TOLERANCE, VERBOSE_OUTPUT
+from disruption_py.config import config
 from disruption_py.core.utils.misc import safe_cast
 
 
@@ -46,7 +46,7 @@ class DataDifference:
     def failed(self) -> str:
         if self.missing_data:
             return True
-        return self.num_anomalies / self.timebase_length > 1 - MATCH_FRACTION
+        return self.num_anomalies / self.timebase_length > 1 - config().MATCH_FRACTION
 
     @property
     def failure_ratio_string(self) -> str:
@@ -60,7 +60,7 @@ class DataDifference:
     def difference_df(self) -> pd.DataFrame:
         indexes = (
             np.arange(self.timebase_length)
-            if VERBOSE_OUTPUT
+            if config().VERBOSE_OUTPUT
             else self.anomalies.flatten()
         )
         anomaly = self.anomalies[indexes]
@@ -112,7 +112,9 @@ class DataDifference:
         )  # necessary in case all produced values are nan
 
         numeric_anomalies_mask = np.where(
-            np.isnan(relative_difference), False, relative_difference > VAL_TOLERANCE
+            np.isnan(relative_difference),
+            False,
+            relative_difference > config().VAL_TOLERANCE,
         )
         nan_anomalies_mask = sql_is_nan != mdsplus_is_nan
         anomalies: pd.Series = numeric_anomalies_mask | nan_anomalies_mask

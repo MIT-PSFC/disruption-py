@@ -5,13 +5,13 @@ import threading
 from enum import Enum
 from typing import Callable, Dict
 
+from disruption_py.config import config
 from disruption_py.io.sql import ShotDatabase
 from disruption_py.settings import (
     OutputSetting,
     OutputSettingParams,
 )
 from disruption_py.core.retrieval_manager import ShotManager
-from disruption_py.constants import MAX_PROCESSES
 
 
 # define a sentinel value for signifying that task queue is complete
@@ -96,7 +96,7 @@ class MultiprocessingShotRetriever:
                 result_queue=self.result_queue,
                 shot_manager_initializer=shot_manager_initializer,
             )
-            for _ in range(min(num_processes, MAX_PROCESSES))
+            for _ in range(min(num_processes, config().MAX_PROCESSES))
         ]
 
     def _result_processor(self):

@@ -6,6 +6,7 @@ import traceback
 import numpy as np
 import pandas as pd
 
+from disruption_py.config import config
 from disruption_py.io.sql import ShotDatabase
 from disruption_py.io.mds import (
     MDSConnection,
@@ -19,7 +20,6 @@ from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.core.physics_method.runner import populate_shot
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.misc import get_commit_hash
-from disruption_py.constants import TIME_CONST
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.core.utils.math import interp1
 
@@ -252,7 +252,7 @@ class ShotManager:
                 flagged_input_data,
                 on="time",
                 direction="nearest",
-                tolerance=TIME_CONST,
+                tolerance=config().TIME_CONST,
             )
             if not timed_input_data["merge_success_flag"].isna().any():
                 return timed_input_data.drop(columns=["merge_success_flag"])

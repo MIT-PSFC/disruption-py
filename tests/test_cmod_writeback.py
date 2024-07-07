@@ -4,18 +4,16 @@ from typing import Dict
 import pandas as pd
 import pytest
 
+from disruption_py.config import config
 from disruption_py.io.sql import ShotDatabase
 from disruption_py.workflow import get_database, get_shots_data
 from disruption_py.settings.output_setting import SQLOutputSetting
 from disruption_py.settings.retrieval_settings import RetrievalSettings
-from disruption_py.constants import (
-    BASE_PROTECTED_COLUMNS,
-)
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.core.utils.misc import without_duplicates
 
 WRITE_DATABASE_TABLE_NAME = "disruption_warning_test"  # overwrite value in constants
-FIRST_ITERATION_COLUMNS = BASE_PROTECTED_COLUMNS + ["beta_p"]
+FIRST_ITERATION_COLUMNS = config().database.protected_columns + ["beta_p"]
 SECOND_ITERATION_COLUMNS = ["kappa"]
 ALL_ITERATION_COLUMNS = without_duplicates(
     FIRST_ITERATION_COLUMNS + SECOND_ITERATION_COLUMNS

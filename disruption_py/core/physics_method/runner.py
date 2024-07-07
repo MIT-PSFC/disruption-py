@@ -7,6 +7,7 @@ import os
 import numpy as np
 import pandas as pd
 
+from disruption_py.config import config
 from disruption_py.machine.builtin import built_in_method_factory
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.core.physics_method.metadata import (
@@ -16,7 +17,6 @@ from disruption_py.core.physics_method.metadata import (
 )
 from disruption_py.core.physics_method.caching import manually_cache
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.constants import TIME_CONST
 
 REQUIRED_COLS = {"time", "shot", "commit_hash"}
 
@@ -39,7 +39,9 @@ def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams):
     if (
         len(pre_filled_shot_data["time"]) != len(physics_method_params.times)
         or not np.isclose(
-            pre_filled_shot_data["time"], physics_method_params.times, atol=TIME_CONST
+            pre_filled_shot_data["time"],
+            physics_method_params.times,
+            atol=config().TIME_CONST,
         ).all()
     ):
         physics_method_params.logger.error(
