@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 DEFAULT_THRESHOLD = 0.35  # Time until disrupt threshold for binary classification
 DEFAULT_RATIO = (
     0.2  # Ratio of test data to total data and validation data to train data

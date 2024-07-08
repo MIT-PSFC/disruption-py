@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from enum import Enum
 from typing import Union
 from dynaconf import Dynaconf

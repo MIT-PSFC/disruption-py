@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 from disruption_py.config import config
 from disruption_py.machine.tokamak import Tokamak

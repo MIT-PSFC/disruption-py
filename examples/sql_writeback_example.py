@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from disruption_py.workflow import get_database, get_shots_data
 from disruption_py.settings.output_setting import SQLOutputSetting
 from disruption_py.settings.retrieval_settings import RetrievalSettings
