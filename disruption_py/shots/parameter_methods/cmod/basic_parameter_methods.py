@@ -1,47 +1,28 @@
+#!/usr/bin/env python3
+
+import logging
+import sys
 import traceback
+import warnings
+from importlib import resources
+
 import numpy as np
 import pandas as pd
 import scipy as sp
+from MDSplus import mdsExceptions
+
 import disruption_py.data
 from disruption_py.settings.shot_data_request import (
     ShotDataRequest,
     ShotDataRequestParams,
 )
-from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.math_utils import gaussian_fit, interp1, smooth
-from disruption_py.utils.utils import safe_cast, without_duplicates
 from disruption_py.shots.helpers.method_caching import (
     cached_method,
     parameter_cached_method,
 )
-
-try:
-    from MDSplus import mdsExceptions
-except ImportError:
-
-    class mdsExceptions(Exception):
-        __getattr__ = lambda self, name: Exception
-
-
-from importlib import resources
-
-# TODO: Somehow link to disruption_py
-# TODO: Deal with scary missing TRIPpy dependency (please don't break until I fix you)
-import sys
-import logging
-
-try:
-    sys.path.append("/home/sciortino/usr/python3modules/eqtools3")
-    sys.path.append("/home/sciortino/usr/python3modules/profiletools3")
-    sys.path.append("/home/sciortino/usr/python3modules/gptools3")
-    import eqtools
-    import profiletools
-except Exception as e:
-    logging.warning("Could not import profiletools or eqtools")
-    logging.debug(traceback.format_exc())
-    pass
-
-import warnings
+from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.utils.math_utils import gaussian_fit, interp1, smooth
+from disruption_py.utils.utils import safe_cast
 
 warnings.filterwarnings("error", category=RuntimeWarning)
 
@@ -212,17 +193,18 @@ class BasicCmodRequests(ShotDataRequest):
         children_paths = params.mds_conn.get(
             'getnci($, "FULLPATH")', arguments=children_nids
         )
-        children_on = params.mds_conn.get_data(
-            f'getnci($, "STATE")', arguments=children_nids
-        )
 
         # Collect active segments and their information
         active_segments = []
-        for node_path, is_on in zip(children_paths, children_on):
+        for node_path in children_paths:
             node_path = node_path.strip()
-            if (
-                node_path.split(".")[-1].startswith("SEG_") and is_on == 0
-            ):  # 0 represents node being on, 1 represents node being off
+            if node_path.split(".")[-1].startswith("SEG_"):
+                is_on = params.mds_conn.get_data(
+                    f'getnci($, "STATE")', arguments=node_path + ":SEG_NUM"
+                )
+                # 0 represents node being on, 1 represents node being off
+                if is_on != 0:
+                    continue
                 active_segments.append(
                     (
                         node_path,
@@ -929,17 +911,17 @@ class BasicCmodRequests(ShotDataRequest):
         dn_dt = interp1(t_n, dn_dt, times)
         ip = -ip / 1e6  # Convert from A to MA and take positive value
         ip = interp1(t_ip, ip, times)
-        a_minor = interp1(t_a, a_minor, times)
+        a_minor = interp1(t_a, a_minor, times, bounds_error=False, fill_value=np.nan)
         # make sure aminor is not 0 or less than 0
         a_minor[a_minor <= 0] = 0.001
-        n_G = ip / (np.pi * a_minor**2) * 1e20  # Greenwald density in m ^-3
-        g_f = abs(n_e / n_G)
+        n_G = abs(ip) / (np.pi * a_minor**2) * 1e20  # Greenwald density in m ^-3
+        g_f = n_e / n_G
         return pd.DataFrame({"n_e": n_e, "dn_dt": dn_dt, "Greenwald_fraction": g_f})
 
     @staticmethod
     @parameter_cached_method(
         columns=["n_e", "dn_dt", "Greenwald_fraction"],
-        used_trees=["electrons", "magnetics", "analysis"],
+        used_trees=["electrons", "magnetics", "_efit_tree"],
         tokamak=Tokamak.CMOD,
     )
     def _get_densities(params: ShotDataRequestParams):
@@ -955,7 +937,7 @@ class BasicCmodRequests(ShotDataRequest):
                 r"\ip", tree_name="magnetics", astype="float64"
             )
             a_minor, t_a = params.mds_conn.get_data_with_dims(
-                r"\efit_aeqdsk:aminor", tree_name="analysis", astype="float64"
+                r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
             )
         except Exception as e:
             params.logger.debug(f"[Shot {params.shot_props.shot_id}] {e}")
@@ -1177,18 +1159,17 @@ class BasicCmodRequests(ShotDataRequest):
     @staticmethod
     @parameter_cached_method(
         columns=["prad_peaking"],
-        used_trees=["cmod", "spectroscopy"],
+        used_trees=["_efit_tree", "spectroscopy"],
         tokamak=Tokamak.CMOD,
     )
     def _get_prad_peaking(params: ShotDataRequestParams):
         prad_peaking = np.full(len(params.shot_props.times), np.nan)
         try:
-            # TODO: why use CMOD here?
             r0 = 0.01 * params.mds_conn.get_data(
-                r"\efit_aeqdsk:rmagx", tree_name="cmod"
+                r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
             )
             z0 = 0.01 * params.mds_conn.get_data(
-                r"\efit_aeqdsk:zmagx", tree_name="cmod"
+                r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
             )
             aminor, efit_time = params.mds_conn.get_data_with_dims(
                 r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
@@ -1541,6 +1522,17 @@ class BasicCmodRequests(ShotDataRequest):
         tokamak=Tokamak.CMOD,
     )
     def _get_edge_parameters(params: ShotDataRequestParams):
+
+        try:
+            # sys.path.append("/home/sciortino/usr/python3modules/eqtools3")
+            sys.path.append("/home/sciortino/usr/python3modules/profiletools3")
+            sys.path.append("/home/sciortino/usr/python3modules/gptools3")
+            # import eqtools
+            import profiletools
+        except Exception as e:
+            logging.warning("Could not import profiletools or eqtools")
+            logging.debug(traceback.format_exc())
+            pass
 
         # Ignore shots on the blacklist
         if (

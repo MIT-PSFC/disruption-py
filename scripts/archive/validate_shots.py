@@ -1,9 +1,10 @@
+#!/usr/bin/env python3
+
 import argparse
 import random
 
-from disruption_py.shots import *
 from disruption_py.database import *
-
+from disruption_py.shots import *
 
 TEST_D3D_SHOT_LIST = [175552, 175553, 175554, 191914, "191786"]
 

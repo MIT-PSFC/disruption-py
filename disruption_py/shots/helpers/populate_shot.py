@@ -1,28 +1,30 @@
-from dataclasses import fields
-import traceback
-import time
-from typing import List
-import pandas as pd
-import numpy as np
-from disruption_py.shots.helpers.cached_method_props import (
-    CachedMethodProps,
-    CachedMethodParams,
-    ParameterCachedMethodParams,
-    get_cached_method_params,
-    is_cached_method,
-)
+#!/usr/bin/env python3
 
-from disruption_py.shots.shot_props import ShotProps
-from disruption_py.shots.helpers.method_optimizer import MethodOptimizer
-from disruption_py.settings.shot_settings import ShotSettings
-from disruption_py.shots.helpers.method_caching import manually_cache
+import time
+import traceback
+from dataclasses import fields
+from typing import List
+
+import numpy as np
+import pandas as pd
+
 from disruption_py.settings.shot_data_request import (
     ShotDataRequest,
     ShotDataRequestParams,
 )
-from disruption_py.utils.constants import MAX_THREADS_PER_SHOT, TIME_CONST
+from disruption_py.settings.shot_settings import ShotSettings
+from disruption_py.shots.helpers.cached_method_props import (
+    CachedMethodParams,
+    CachedMethodProps,
+    ParameterCachedMethodParams,
+    get_cached_method_params,
+    is_cached_method,
+)
+from disruption_py.shots.helpers.method_caching import manually_cache
+from disruption_py.shots.helpers.method_optimizer import MethodOptimizer
+from disruption_py.shots.shot_props import ShotProps
+from disruption_py.utils.constants import TIME_CONST
 from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.utils import without_duplicates
 
 REQUIRED_COLS = {"time", "shot", "commit_hash"}
 

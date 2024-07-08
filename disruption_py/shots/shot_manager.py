@@ -1,19 +1,19 @@
-from abc import ABC, abstractmethod
-from typing import Dict, Tuple, List
-import pandas as pd
-import numpy as np
+#!/usr/bin/env python3
+
 import logging
+from abc import ABC, abstractmethod
+
+import numpy as np
+import pandas as pd
+
 from disruption_py.databases.database import ShotDatabase
 from disruption_py.mdsplus_integration.mds_connection import (
     MDSConnection,
     ProcessMDSConnection,
 )
-from disruption_py.settings.enum_options import InterpolationMethod, SignalDomain
+from disruption_py.settings.enum_options import SignalDomain
 from disruption_py.settings.existing_data_request import ExistingDataRequestParams
-from disruption_py.settings.set_times_request import (
-    SetTimesRequest,
-    SetTimesRequestParams,
-)
+from disruption_py.settings.set_times_request import SetTimesRequestParams
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.settings.shot_settings import ShotSettings
 from disruption_py.shots.helpers.populate_shot import populate_shot
@@ -22,7 +22,6 @@ from disruption_py.utils.command_utils import get_commit_hash
 from disruption_py.utils.constants import TIME_CONST
 from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.math_utils import interp1
-from disruption_py.utils.utils import without_duplicates
 
 
 class ShotManager(ABC):

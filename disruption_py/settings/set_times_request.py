@@ -1,15 +1,19 @@
-from abc import ABC, abstractmethod
+#!/usr/bin/env python3
+
 import traceback
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from logging import Logger
+from typing import Dict, Union
+
 import numpy as np
 import pandas as pd
-from dataclasses import dataclass
-from typing import Dict, Union
+
 from disruption_py.databases.database import ShotDatabase
 from disruption_py.mdsplus_integration.mds_connection import MDSConnection
 from disruption_py.utils.constants import MAX_SHOT_TIME, TIME_CONST
 from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
 from disruption_py.utils.mappings.tokamak import Tokamak
-from logging import Logger
 
 
 @dataclass

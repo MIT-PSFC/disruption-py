@@ -1,7 +1,10 @@
+#!/usr/bin/env python3
+
+import logging
+
 from disruption_py.databases.cmod_database import CModDatabase
 from disruption_py.handlers import CModHandler
-from disruption_py.settings import ShotSettings, LogSettings
-import logging
+from disruption_py.settings import LogSettings, ShotSettings
 
 handler = CModHandler(
     database_initializer=CModDatabase.default,

@@ -1,14 +1,16 @@
-import argparse
-import pickle
-import joblib
-import json
+#!/usr/bin/env python3
 
+import argparse
+import json
+import pickle
+
+import joblib
 import pandas as pd
 from sklearn.metrics import ConfusionMatrixDisplay, fbeta_score
 
-from disruption_py.utils.math_utils import *
+from disruption_py.ml.evaluate import DEFAULT_ORDER, THESIS_ORDER, eval_shots, predict
 from disruption_py.ml.models import load_model
-from disruption_py.ml.evaluate import eval_shots, predict, DEFAULT_ORDER, THESIS_ORDER
+from disruption_py.utils.math_utils import *
 
 order_mapping = {
     "DEFAULT_ORDER": DEFAULT_ORDER,

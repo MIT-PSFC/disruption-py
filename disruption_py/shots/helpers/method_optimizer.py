@@ -1,8 +1,10 @@
+#!/usr/bin/env python3
+
+from dataclasses import dataclass, field
+from typing import Callable, Dict, List, Set
+
 from disruption_py.mdsplus_integration.mds_connection import MDSConnection
 from disruption_py.shots.helpers.cached_method_props import CachedMethodProps
-from dataclasses import dataclass, field
-
-from typing import Callable, Dict, List, Set
 
 
 class MethodOptimizer:
@@ -138,7 +140,7 @@ class MethodOptimizer:
         while True:
             # get next method
             next_method: CachedMethodProps = self.next_method()
-            if next_method == None:
+            if next_method is None:
                 break
 
             # run method

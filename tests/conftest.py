@@ -1,12 +1,18 @@
+#!/usr/bin/env python3
+import os
+import shutil
+import time
+from tempfile import mkdtemp
 from unittest.mock import patch
+
 import pytest
 
 from disruption_py.utils.mappings.tokamak_helpers import (
     get_tokamak_from_environment,
-    get_tokamak_test_expected_failure_columns,
     get_tokamak_handler,
-    get_tokamak_test_shot_ids,
     get_tokamak_test_columns,
+    get_tokamak_test_expected_failure_columns,
+    get_tokamak_test_shot_ids,
 )
 from disruption_py.utils.math_utils import matlab_gradient_1d_vectorized
 
@@ -72,3 +78,26 @@ def mock_numpy_gradient():
     with patch("numpy.gradient", new=matlab_gradient_1d_vectorized):
         # The patch will be in place for the duration of the test session
         yield
+
+
+@pytest.fixture(scope="session")
+def tmpdir():
+    tmpdir_path = mkdtemp(prefix=f"disruptionpy-{time.strftime('%y%m%d-%H%M%S')}-")
+    print(f"Using temporary directory: {tmpdir_path} for file output")
+    yield tmpdir_path
+
+
+@pytest.fixture(scope="module")
+def module_file_path_f(request, tmpdir):
+    def inner(suffix):
+        return os.path.join(tmpdir, f"{request.node.name}{suffix}")
+
+    return inner
+
+
+@pytest.fixture(scope="function")
+def test_file_path_f(request, tmpdir):
+    def inner(suffix):
+        return os.path.join(tmpdir, f"{request.node.name}{suffix}")
+
+    return inner

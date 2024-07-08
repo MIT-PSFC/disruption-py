@@ -1,9 +1,11 @@
+#!/usr/bin/env python3
+
 from disruption_py.handlers import CModHandler
 from disruption_py.settings import (
-    ShotSettings,
     LogSettings,
     SetTimesRequest,
     SetTimesRequestParams,
+    ShotSettings,
 )
 
 cmod_handler = CModHandler()

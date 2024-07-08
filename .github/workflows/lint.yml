@@ -44,11 +44,25 @@ jobs:
     steps:
 
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install requirements
         run: |
           pip install -r .pip/main.txt -r .pip/dev.txt -r .pip/lab.txt
           pip install -e .
+
+      - name: Pre-run pylint
+        if: |
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.draft == false
+        run: |
+          git reset --hard "${{ github.event.pull_request.base.sha }}"
+          git log -1
+          pylint disruption_py examples tests \
+          | grep '^Your code has been rated'
+          git reset --hard "${{ github.event.pull_request.head.sha }}"
+          git log -1
 
       - name: Run pylint
         run: |
@@ -74,7 +88,8 @@ jobs:
       - name: Print final summary
         run: |
           tail pylint.log \
-          | grep '^Your code has been rated'
+          | grep '^Your code has been rated' \
+          | tee -a "$GITHUB_STEP_SUMMARY"
 
 
   shellcheck:

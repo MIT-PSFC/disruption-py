@@ -1,5 +1,8 @@
+#!/usr/bin/env python3
+
 import argparse
 import importlib
+
 from disruption_py.cli.setup_script import setup, setup_check
 
 

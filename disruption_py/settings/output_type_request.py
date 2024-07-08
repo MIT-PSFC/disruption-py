@@ -1,13 +1,18 @@
-import pandas as pd
-import numpy as np
+#!/usr/bin/env python3
+
+import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-import os
-from typing import Any, Dict, List, Type, Union
 from logging import Logger
+from typing import Any, Dict, List, Type, Union
+
+import numpy as np
+import pandas as pd
+
 from disruption_py.databases.database import ShotDatabase
-from disruption_py.utils.mappings.tokamak import Tokamak
 from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
+from disruption_py.utils.mappings.tokamak import Tokamak
+from disruption_py.utils.utils import safe_df_concat
 
 
 @dataclass
@@ -245,8 +250,7 @@ class DataFrameOutputRequest(OutputTypeRequest):
         self.results: pd.DataFrame = pd.DataFrame()
 
     def _output_shot(self, params: ResultOutputTypeRequestParams):
-        if not params.result.empty and not params.result.isna().all().all():
-            self.results = pd.concat([self.results, params.result], ignore_index=True)
+        self.results = safe_df_concat(self.results, [params.result])
 
     def get_results(self, params: FinishOutputTypeRequestParams):
         return self.results
@@ -308,9 +312,7 @@ class CSVOutputRequest(OutputTypeRequest):
         if self.flexible_columns:
             if file_exists:
                 existing_df = pd.read_csv(self.filepath)
-                combined_df = pd.concat(
-                    [existing_df, params.result], ignore_index=True, sort=False
-                )
+                combined_df = safe_df_concat(existing_df, [params.result])
             else:
                 combined_df = params.result
 
@@ -353,7 +355,7 @@ class BatchedCSVOutputRequest(OutputTypeRequest):
 
     def _write_batch_to_csv(self):
         file_exists = os.path.isfile(self.filepath)
-        combined_df = pd.concat(self.batch_data, ignore_index=True, sort=False)
+        combined_df = safe_df_concat(pd.DataFrame(), self.batch_data)
         combined_df.to_csv(
             self.filepath, mode="a", index=False, header=(not file_exists)
         )
@@ -391,7 +393,6 @@ class SQLOutputRequest(OutputTypeRequest):
                 shot_data=params.result,
                 update=self.should_update,
                 override_columns=self.should_override_columns,
-                table_name=self.table_name,
             )
             self.modifications += 1
         else:

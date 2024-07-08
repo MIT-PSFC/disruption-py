@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from disruption_py.database import create_cmod_handler
 
 data_handler = create_cmod_handler()

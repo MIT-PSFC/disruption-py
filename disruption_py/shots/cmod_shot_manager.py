@@ -1,8 +1,7 @@
-import numpy as np
-from dataclasses import replace
+#!/usr/bin/env python3
 
-import pandas as pd
-from disruption_py.databases.database import ShotDatabase
+import numpy as np
+
 from disruption_py.mdsplus_integration.mds_connection import MDSConnection
 from disruption_py.settings.shot_data_request import ShotDataRequestParams
 from disruption_py.settings.shot_settings import ShotSettings

@@ -1,10 +1,7 @@
-from disruption_py.handlers.cmod_handler import CModHandler
-from disruption_py.settings.set_times_request import (
-    SetTimesRequest,
-    SetTimesRequestParams,
-)
-from disruption_py.settings.shot_settings import ShotSettings
+#!/usr/bin/env python3
 
+from disruption_py.handlers.cmod_handler import CModHandler
+from disruption_py.settings.shot_settings import ShotSettings
 
 cmod_handler = CModHandler()
 shot_settings = ShotSettings(

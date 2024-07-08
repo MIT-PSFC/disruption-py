@@ -1,6 +1,8 @@
+#!/usr/bin/env python3
+
 import os
-from disruption_py.databases import D3DDatabase, CModDatabase
-from disruption_py.utils.mappings.tokamak import Tokamak
+
+from disruption_py.databases import CModDatabase, D3DDatabase
 from disruption_py.handlers.cmod_handler import CModHandler
 from disruption_py.handlers.d3d_handler import D3DHandler
 from disruption_py.utils.constants import (
@@ -8,6 +10,7 @@ from disruption_py.utils.constants import (
     TEST_COLUMNS,
     TEST_SHOTS,
 )
+from disruption_py.utils.mappings.tokamak import Tokamak
 
 
 def get_tokamak_from_shot_id(shot_id):
