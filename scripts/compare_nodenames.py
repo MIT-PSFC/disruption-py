@@ -86,16 +86,22 @@ class NodeNameComparer:
 
     def is_expression(self, record: Signal) -> bool:
         """Return True if the node is an expression made of other nodes."""
-        operators = ["/", "*", "+", "-"]
         node_str = str(record)
+        # Find the expression inside of build signal
         match = re.search(r"Build_Signal\(([^,]+),", node_str)
         expression = match.group(1) if match is not None else node_str 
-        for op in operators:
-            if op in expression:
-                if self.expression != expression:
-                    warnings.warn(f"expression does not match expected '{expression}' != '{self.expression}'")
-                return True
-        return False
+        if self.expression is not None and self.expression != expression:
+            warnings.warn(f"expression does not match expected '{expression}' != '{self.expression}'")
+            return False
+        
+        # Only match if there is not a comma, [, or E followed by an operator because  
+        # that could indicate a list of negative numbers or number raised to an exponent
+        # which is not an expression
+        m = re.search(r"(?<![,\[E])[\-\*\/\+]", expression)
+        if m is None:
+            return False
+        
+        return True
 
     @staticmethod
     def get_node(node_name: str, parent: TreeNode) -> TreeNode:
