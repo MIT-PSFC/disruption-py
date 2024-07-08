@@ -9,13 +9,13 @@ version = "0.6.0"
 
 [tool.poetry.dependencies]
 python = "^3.9"
+dynaconf = "^3.2.0"
 numpy = "^1.26.0"
 pandas = {extras = ["hdf5"], version = "^2.2.0"}
 pyodbc = "^5.1.0"
 scikit_learn = "^1.5.0"
 scipy = "^1.13.0"
 SQLAlchemy = "^2.0.0"
-dynaconf = "^3.2.5"
 
 [tool.poetry.group.dev]
 optional = true
