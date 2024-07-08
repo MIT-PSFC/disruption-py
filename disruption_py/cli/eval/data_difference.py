@@ -46,7 +46,10 @@ class DataDifference:
     def failed(self) -> str:
         if self.missing_data:
             return True
-        return self.num_anomalies / self.timebase_length > 1 - config().MATCH_FRACTION
+        return (
+            self.num_anomalies / self.timebase_length
+            > 1 - config().testing.MATCH_FRACTION
+        )
 
     @property
     def failure_ratio_string(self) -> str:
@@ -114,7 +117,7 @@ class DataDifference:
         numeric_anomalies_mask = np.where(
             np.isnan(relative_difference),
             False,
-            relative_difference > config().VAL_TOLERANCE,
+            relative_difference > config().testing.VAL_TOLERANCE,
         )
         nan_anomalies_mask = sql_is_nan != mdsplus_is_nan
         anomalies: pd.Series = numeric_anomalies_mask | nan_anomalies_mask

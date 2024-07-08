@@ -12,7 +12,7 @@ from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.core.utils.misc import without_duplicates
 
-WRITE_DATABASE_TABLE_NAME = "disruption_warning_test"  # overwrite value in constants
+WRITE_DATABASE_TABLE_NAME = config().database.write_database_table_name
 FIRST_ITERATION_COLUMNS = config().database.protected_columns + ["beta_p"]
 SECOND_ITERATION_COLUMNS = ["kappa"]
 ALL_ITERATION_COLUMNS = without_duplicates(
@@ -55,10 +55,12 @@ def initial_mdsplus_data(shotlist, tokamak, setup_shot_database) -> Dict:
 
 
 def assert_frame_equal_unordered(df1: pd.DataFrame, df2: pd.DataFrame):
-    df1_sorted = df1.sort_values(by=BASE_PROTECTED_COLUMNS).reset_index(drop=True)
-    df2_sorted = df2.sort_values(by=BASE_PROTECTED_COLUMNS).reset_index(drop=True)
-    print(df1_sorted)
-    print(df2_sorted)
+    df1_sorted = df1.sort_values(by=config().database.protected_columns).reset_index(
+        drop=True
+    )
+    df2_sorted = df2.sort_values(by=config().database.protected_columns).reset_index(
+        drop=True
+    )
     pd.testing.assert_frame_equal(df1_sorted, df2_sorted, check_like=True)
 
 

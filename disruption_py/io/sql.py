@@ -33,6 +33,7 @@ class ShotDatabase:
         user,
         passwd,
         protected_columns=None,
+        write_database_table_name=None,
         additional_dbs=None,
         **kwargs,
     ):
@@ -58,6 +59,7 @@ class ShotDatabase:
         self.user = user
         self.passwd = passwd
         self.protected_columns = protected_columns
+        self.write_database_table_name = write_database_table_name
         self.additional_dbs = additional_dbs
 
         self.connection_string = self._get_connection_string(self.db_name)
@@ -102,6 +104,7 @@ class ShotDatabase:
             passwd=db_pass,
             protected_columns=without_duplicates(database_dict["protected_columns"]),
             additional_dbs=additional_dbs,
+            write_database_table_name=database_dict.get("write_database_table_name"),
         )
 
     def _get_connection_string(self, db_name):
@@ -198,15 +201,20 @@ class ShotDatabase:
             List of protecrted columns that can should still be updated. Update must be true for input values in the
             columns to be changed. Default value is [].
         """
-        table_name = config().database.WRITE_DATABASE_TABLE_NAME
+        if self.write_database_table_name is None:
+            raise ValueError(
+                "specify write_database_table_name in the configuration before adding shot data"
+            )
         curr_df = pd.read_sql_query(
-            f"select * from {table_name} where shot={shot_id} order by time",
+            f"select * from {self.write_database_table_name} where shot={shot_id} order by time",
             self.engine,
         )
 
         if len(curr_df) == 0:
             return self._insert_shot_data(
-                curr_df=curr_df, shot_data=shot_data, table_name=table_name
+                curr_df=curr_df,
+                shot_data=shot_data,
+                table_name=self.write_database_table_name,
             )
         elif (
             len(curr_df) == len(shot_data)
@@ -219,7 +227,7 @@ class ShotDatabase:
                 curr_df=curr_df,
                 shot_data=shot_data,
                 update=update,
-                table_name=table_name,
+                table_name=self.write_database_table_name,
                 override_columns=override_columns,
             )
 
@@ -335,28 +343,37 @@ class ShotDatabase:
 
     def remove_shot_data(self, shot_id):
         """Remove shot from SQL table."""
-        table_name = config().database.WRITE_DATABASE_TABLE_NAME
-        if table_name == "disruption_warning":
+        if self.write_database_table_name is None:
+            raise ValueError(
+                "specify write_database_table_name in the configuration before adding shot data"
+            )
+        if self.write_database_table_name == "disruption_warning":
             raise ValueError(
                 "Please do not delete from the disruption_warning database"
             )
         data_df = pd.read_sql_query(
-            f"""select * from {table_name} where shot = {shot_id} order by time""",
+            f"""select * from {self.write_database_table_name} where shot = {shot_id} order by time""",
             self.engine,
         )
         if len(data_df) == 0:
             self.logger.info(f"Shot {shot_id} does not exist in database")
             return False
         with self.conn.cursor() as curs:
-            curs.execute(f"delete from {table_name} where shot = {shot_id}")
+            curs.execute(
+                f"delete from {self.write_database_table_name} where shot = {shot_id}"
+            )
         return True
 
     def add_column(self, col_name, var_type="TEXT"):
         """Add column to SQL table without filling in data for column."""
-        table_name = config().database.WRITE_DATABASE_TABLE_NAME
+        if self.write_database_table_name is None:
+            raise ValueError(
+                "specify write_database_table_name in the configuration before adding shot data"
+            )
         try:
             self.query(
-                f"alter table {table_name} add {col_name} {var_type};", use_pandas=False
+                f"alter table {self.write_database_table_name} add {col_name} {var_type};",
+                use_pandas=False,
             )
             return True
         except Exception as e:
@@ -365,13 +382,17 @@ class ShotDatabase:
 
     def remove_column(self, col_name):
         """Remove column from SQL table"""
-        table_name = config().database.WRITE_DATABASE_TABLE_NAME
+        if self.write_database_table_name is None:
+            raise ValueError(
+                "specify write_database_table_name in the configuration before adding shot data"
+            )
         if col_name in self.protected_columns:
             self.logger.error(f"Failed to drop protected column {col_name}")
             return False
         try:
             self.query(
-                f"alter table {table_name} drop column {col_name};", use_pandas=False
+                f"alter table {self.write_database_table_name} drop column {col_name};",
+                use_pandas=False,
             )
             return True
         except Exception as e:

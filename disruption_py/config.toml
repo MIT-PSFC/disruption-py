@@ -4,8 +4,8 @@ MAX_PROCESSES = 10
 MAX_SHOT_TIME = 7.0
 
 [default.database]
-WRITE_DATABASE_TABLE_NAME = "disruption_warning_test"
-protected_columns = ["dbkey", "time", "shot"]
+write_database_table_name = "disruption_warning_test"
+protected_columns = ["time", "shot"]
 
 [default.testing]
 VAL_TOLERANCE = 0.01  # Tolerance for comparing values between MDSplus and SQL
@@ -21,9 +21,7 @@ driver= "ODBC Driver 18 for SQL Server"
 host= "alcdb2"
 port= 1433
 db_name= "logbook"
-
-[cmod.database.protected_columns]
-dynaconf_merge = [
+protected_columns = [
     "time_until_disrupt",
     "ip_error",
     "dip_dt",

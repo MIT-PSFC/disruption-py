@@ -17,5 +17,6 @@ def config(tokamak: Union[Enum, str] = None):
             environments=True,
             default_env="default",
             env=tokamak,
+            merge_enabled=True,
         )
     return configs[tokamak]
