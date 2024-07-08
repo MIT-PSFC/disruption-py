@@ -47,7 +47,7 @@ class CModEfitRequests(ShotDataRequest):
         "tribot": r"\efit_aeqdsk:doutl",
         "a_minor": r"\efit_aeqdsk:aminor",
         "rmagx": r"\efit_aeqdsk:rmagx",  # TODO: change units to [m] (current [cm])
-        "zmagx": r"\efit_aeqdsk:zmagx", 
+        "zmagx": r"\efit_aeqdsk:zmagx",  # TODO: change units to [m] (current [cm])
         "chisq": r"\efit_aeqdsk:chisq",
     }
 
