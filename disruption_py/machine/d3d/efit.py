@@ -21,16 +21,16 @@ class D3DEfitMethods:
         "q0": r"\efit_a_eqdsk:q0",
         "qstar": r"\efit_a_eqdsk:qstar",
         "q95": r"\efit_a_eqdsk:q95",
-        "Wmhd": r"\efit_a_eqdsk:wmhd",
+        "wmhd": r"\efit_a_eqdsk:wmhd",
         "chisq": r"\efit_a_eqdsk:chisq",
     }
     # 'v_loop_efit': ,r'\efit_a_eqdsk:vsurf', 'bt0': r'\efit_a_eqdsk:bt0'
-    efit_derivs = {"beta_p": "dbetap_dt", "li": "dli_dt", "Wmhd": "dWmhd_dt"}
+    efit_derivs = {"beta_p": "dbetap_dt", "li": "dli_dt", "wmhd": "dwmhd_dt"}
     rt_efit_cols = {
-        "beta_p_RT": r"\efit_a_eqdsk:betap",
-        "li_RT": r"\efit_a_eqdsk:li",
-        "q95_RT": r"\efit_a_eqdsk:q95",
-        "Wmhd_RT": r"\efit_a_eqdsk:wmhd",
+        "beta_p_rt": r"\efit_a_eqdsk:betap",
+        "li_rt": r"\efit_a_eqdsk:li",
+        "q95_rt": r"\efit_a_eqdsk:q95",
+        "wmhd_rt": r"\efit_a_eqdsk:wmhd",
         "chisq": r"\efit_a_eqdsk:chisq",
     }
     # 'v_loop_efit_RT': r'\efit_a_eqdsk:vsurf',
