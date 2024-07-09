@@ -63,7 +63,7 @@ class DataDifference:
     def difference_df(self) -> pd.DataFrame:
         indexes = (
             np.arange(self.timebase_length)
-            if config().VERBOSE_OUTPUT
+            if config().testing.VERBOSE_OUTPUT
             else self.anomalies.flatten()
         )
         anomaly = self.anomalies[indexes]
