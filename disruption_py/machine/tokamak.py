@@ -44,4 +44,6 @@ def resolve_tokamak_from_environment():
         return Tokamak.CMOD
     if os.path.exists("/fusion/projects/disruption_warning"):
         return Tokamak.D3D
-    raise ValueError("Tokamak is unspecified and could not be determined from the environment.")
+    raise ValueError(
+        "Tokamak is unspecified and could not be determined from the environment."
+    )
