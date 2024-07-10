@@ -880,11 +880,11 @@ class BasicCmodRequests:
         dn_dt = interp1(t_n, dn_dt, times)
         ip = -ip / 1e6  # Convert from A to MA and take positive value
         ip = interp1(t_ip, ip, times)
-        a_minor = interp1(t_a, a_minor, times)
+        a_minor = interp1(t_a, a_minor, times, bounds_error=False, fill_value=np.nan)
         # make sure aminor is not 0 or less than 0
         a_minor[a_minor <= 0] = 0.001
-        n_G = ip / (np.pi * a_minor**2) * 1e20  # Greenwald density in m ^-3
-        g_f = abs(n_e / n_G)
+        n_G = abs(ip) / (np.pi * a_minor**2) * 1e20  # Greenwald density in m ^-3
+        g_f = n_e / n_G
         return pd.DataFrame({"n_e": n_e, "dn_dt": dn_dt, "Greenwald_fraction": g_f})
 
     @staticmethod
@@ -905,7 +905,7 @@ class BasicCmodRequests:
                 r"\ip", tree_name="magnetics", astype="float64"
             )
             a_minor, t_a = params.mds_conn.get_data_with_dims(
-                r"\efit_aeqdsk:aminor", tree_name="analysis", astype="float64"
+                r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
             )
         except Exception as e:
             params.logger.debug(f"[Shot {params.shot_id}] {e}")
@@ -1109,12 +1109,11 @@ class BasicCmodRequests:
     def _get_prad_peaking(params: PhysicsMethodParams):
         prad_peaking = np.full(len(params.times), np.nan)
         try:
-            # TODO: why use CMOD here?
             r0 = 0.01 * params.mds_conn.get_data(
-                r"\efit_aeqdsk:rmagx", tree_name="cmod"
+                r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
             )
             z0 = 0.01 * params.mds_conn.get_data(
-                r"\efit_aeqdsk:zmagx", tree_name="cmod"
+                r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
             )
             aminor, efit_time = params.mds_conn.get_data_with_dims(
                 r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
