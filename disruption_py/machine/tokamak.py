@@ -2,7 +2,6 @@
 
 import os
 from enum import Enum
-from logging import Logger
 
 from disruption_py.config import config
 from disruption_py.core.utils.enums import map_string_to_enum
