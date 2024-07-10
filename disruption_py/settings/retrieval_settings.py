@@ -108,8 +108,6 @@ class RetrievalSettings:
     use_cache_setting_timebase: bool = False
     interpolation_method: InterpolationMethod = "linear"
 
-    additional_args: dict = field(default_factory=dict)
-
     def __post_init__(self):
         self.resolve()
 

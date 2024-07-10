@@ -34,15 +34,11 @@ class ShotDatabase:
         passwd,
         protected_columns=None,
         write_database_table_name=None,
-        additional_dbs=None,
         **kwargs,
     ):
 
         if protected_columns is None:
             protected_columns = []
-
-        if additional_dbs is None:
-            additional_dbs = {}
 
         self.logger.info(f"Database initialization: {user}@{host}/{db_name}")
         drivers = pyodbc.drivers()
@@ -60,7 +56,6 @@ class ShotDatabase:
         self.passwd = passwd
         self.protected_columns = protected_columns
         self.write_database_table_name = write_database_table_name
-        self.additional_dbs = additional_dbs
 
         self.connection_string = self._get_connection_string(self.db_name)
         self._thread_connections = {}
@@ -82,13 +77,6 @@ class ShotDatabase:
         Initialize database from config file.
         """
 
-        additional_dbs = {
-            db_key: cls._from_dict(additonal_db_dict)
-            for db_key, additonal_db_dict in database_dict.get(
-                "additional_databases", {}
-            ).items()
-        }
-
         # read profile
         profile_path = database_dict["profile_path"]
         profile = os.path.expanduser(profile_path)
@@ -103,7 +91,6 @@ class ShotDatabase:
             user=db_user,
             passwd=db_pass,
             protected_columns=without_duplicates(database_dict["protected_columns"]),
-            additional_dbs=additional_dbs,
             write_database_table_name=database_dict.get("write_database_table_name"),
         )
 

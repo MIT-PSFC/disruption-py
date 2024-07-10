@@ -198,14 +198,6 @@ db_name= "d3drdb"
 [d3d.database.protected_columns]
 dynaconf_merge = []
 
-[d3d.database.additional_databases.code_rundb]
-profile_path="~/D3DRDB.sybase_login"
-driver="FreeTDS"
-host="d3drdb"
-port=8001
-db_name="d3drdb"
-protected_columns = []
-
 [d3d.testing]
 TEST_COLUMNS = [
 	"H98",

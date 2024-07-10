@@ -98,8 +98,9 @@ class NicknameSetting:
             if params.efit_tree_name != "analysis":
                 return params.efit_tree_name
 
-            params.database.additional_dbs["code_rundb"].query(
-                f"select * from plasmas where shot = {params.shot_id} and runtag = 'DIS' and deleted = 0 order by idx",
+            efit_trees = params.database.query(
+                "select tree from code_rundb.dbo.plasmas where "
+                f"shot = {params.shot_id} and runtag = 'DIS' and deleted = 0 order by idx",
                 use_pandas=False,
             )
             if len(efit_trees) == 0:
