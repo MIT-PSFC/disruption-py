@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
+
 import os
-import shutil
 import time
 from tempfile import mkdtemp
 from unittest.mock import patch

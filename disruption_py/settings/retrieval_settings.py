@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Tuple
+from typing import List
 
 from disruption_py.settings.domain_setting import DomainSetting, resolve_domain_setting
 from disruption_py.settings.cache_setting import (
@@ -10,7 +10,6 @@ from disruption_py.settings.cache_setting import (
     resolve_cache_setting,
 )
 from disruption_py.settings.nickname_setting import NicknameSetting
-from disruption_py.settings.output_setting import OutputSetting
 from disruption_py.settings.time_setting import (
     CacheTimeSetting,
     TimeSetting,

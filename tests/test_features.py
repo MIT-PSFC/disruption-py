@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import logging
 import os
 
 import pandas as pd
@@ -8,7 +7,6 @@ import pytest
 
 from disruption_py.workflow import get_shots_data
 from disruption_py.settings.retrieval_settings import RetrievalSettings
-from tests.utils.environment_vars import temporary_env_vars
 from disruption_py.machine.tokamak import is_tokamak_indexed
 
 TEST_SETTINGS = {
