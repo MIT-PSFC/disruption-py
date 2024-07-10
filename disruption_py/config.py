@@ -15,6 +15,7 @@ def config(tokamak: Union[Enum, str] = None):
 
     if tokamak not in configs:
         configs[tokamak] = Dynaconf(
+            envvar_prefix="DISPY",
             settings_file="disruption_py/config.toml",
             environments=True,
             default_env="default",

@@ -4,6 +4,7 @@ import os
 from enum import Enum
 from logging import Logger
 
+from disruption_py.config import config
 from disruption_py.core.utils.enums import map_string_to_enum
 
 """
@@ -32,8 +33,9 @@ def is_tokamak_indexed(check_dict: dict):
 
 
 def get_tokamak_from_environment():
-    if "DISPY_TOKAMAK" in os.environ:
-        return Tokamak[os.environ["DISPY_TOKAMAK"]]
+    tokamak = config().get("tokamak")
+    if tokamak:
+        return map_string_to_enum(tokamak, Tokamak)
     if os.path.exists("/usr/local/mfe/disruptions"):
         return Tokamak.CMOD
     if os.path.exists("/fusion/projects/disruption_warning"):
