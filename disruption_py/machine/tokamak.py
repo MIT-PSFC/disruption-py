@@ -2,6 +2,7 @@
 
 import os
 from enum import Enum
+from typing import Union
 
 from disruption_py.config import config
 from disruption_py.core.utils.enums import map_string_to_enum
@@ -31,19 +32,33 @@ def is_tokamak_indexed(check_dict: dict):
     return False
 
 
-def resolve_tokamak_from_environment():
+def resolve_tokamak_from_environment(tokamak: Union[Tokamak, str] = None):
     """
-    Method to resolve the tokamak.
-    First, try reading from the configuration, then try looking for specific folders that will
-    indicate presence on a given machine, and thus infer the tokamak from the cluster.
+    Method to resolve the tokamak:
+    1. return if it's already a tokamak;
+    2. read the argument, and overwrite the config;
+    3. read the config;
+    4. look for specific folders that will indicate presence on a given machine,
+       and thus infer the tokamak from the cluster;
+    5. raise exception.
     """
-    tokamak = config().get("tokamak")
+    if isinstance(tokamak, Tokamak):
+        # case 1
+        return tokamak
+    if tokamak:
+        # case 2
+        config().tokamak = tokamak
+    else:
+        # case 3
+        tokamak = config().get("tokamak")
     if tokamak:
         return map_string_to_enum(tokamak, Tokamak)
+    # case 4
     if os.path.exists("/usr/local/mfe/disruptions"):
         return Tokamak.CMOD
     if os.path.exists("/fusion/projects/disruption_warning"):
         return Tokamak.D3D
+    # case 5
     raise ValueError(
         "Tokamak is unspecified and could not be determined from the environment."
     )
