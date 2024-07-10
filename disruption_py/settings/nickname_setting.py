@@ -95,7 +95,9 @@ class NicknameSetting:
     @classmethod
     def _d3d_nickname_funcs(cls, params: NicknameSettingParams):
         def efit_tree_nickname_func():
-            if params.efit_tree_name != "analysis":
+            if params.efit_tree_name == "analysis":
+                return "EFIT01"
+            if params.efit_tree_name != "efit18":
                 return params.efit_tree_name
 
             efit_trees = params.database.query(
