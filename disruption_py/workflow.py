@@ -8,7 +8,7 @@ from disruption_py.core.retrieval_manager import RetrievalManager
 from disruption_py.core.utils.misc import without_duplicates
 from disruption_py.io.mds import ProcessMDSConnection
 from disruption_py.io.sql import ShotDatabase
-from disruption_py.machine.tokamak import Tokamak, resolve_tokamak
+from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.settings import RetrievalSettings
 from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.output_setting import (
@@ -62,7 +62,7 @@ def get_shots_data(
     """
     (log_settings or LogSettings.default()).setup_logging()
 
-    tokamak = resolve_tokamak(tokamak)
+    tokamak = resolve_tokamak_from_environment(tokamak)
 
     database_initializer = database_initializer or (
         lambda: get_database(tokamak=tokamak)
@@ -147,7 +147,7 @@ def get_database(
     """
     Get the shot database for the tokamak.
     """
-    tokamak = resolve_tokamak(tokamak)
+    tokamak = resolve_tokamak_from_environment(tokamak)
     return ShotDatabase.from_config(tokamak=tokamak)
 
 
@@ -157,5 +157,5 @@ def get_mdsplus_class(
     """
     Get the MDSplus connection for the tokamak.
     """
-    tokamak = resolve_tokamak(tokamak)
+    tokamak = resolve_tokamak_from_environment(tokamak)
     return ProcessMDSConnection.from_config(tokamak=tokamak)

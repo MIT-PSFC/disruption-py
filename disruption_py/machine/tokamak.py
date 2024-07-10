@@ -32,7 +32,12 @@ def is_tokamak_indexed(check_dict: dict):
     return False
 
 
-def get_tokamak_from_environment():
+def resolve_tokamak_from_environment():
+    """
+    Method to resolve the tokamak.
+    First, try reading from the configuration, then try looking for specific folders that will
+    indicate presence on a given machine, and thus infer the tokamak from the cluster.
+    """
     tokamak = config().get("tokamak")
     if tokamak:
         return map_string_to_enum(tokamak, Tokamak)
@@ -40,14 +45,4 @@ def get_tokamak_from_environment():
         return Tokamak.CMOD
     if os.path.exists("/fusion/projects/disruption_warning"):
         return Tokamak.D3D
-    return None
-
-
-def resolve_tokamak(tokamak: Tokamak, logger: Logger = None):
-    if tokamak is None:
-        tokamak = get_tokamak_from_environment()
-        if logger:
-            logger.info(f"No tokamak argument given. Detected tokamak: {tokamak.value}")
-        return tokamak
-    else:
-        return map_string_to_enum(tokamak, Tokamak)
+    raise ValueError("Tokamak is unspecified and could not be determined from the environment.")

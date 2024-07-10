@@ -4,10 +4,10 @@
 execute a simple fetch to test MDSplus connection.
 """
 
-from disruption_py.machine.tokamak import Tokamak, get_tokamak_from_environment
+from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.workflow import get_mdsplus_class
 
-tokamak = get_tokamak_from_environment()
+tokamak = resolve_tokamak_from_environment()
 
 if tokamak is Tokamak.D3D:
     shot = 161228

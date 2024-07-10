@@ -6,7 +6,7 @@ import site
 import pyodbc
 
 from disruption_py.core.utils.enums import map_string_to_enum
-from disruption_py.machine.tokamak import Tokamak, get_tokamak_from_environment
+from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 
 
 def cmod_setup_check():
@@ -49,7 +49,7 @@ def setup_check(func):
         if len(args) != 1 or (
             not hasattr(args[0], "tokamak") or args[0].tokamak is None
         ):
-            tokamak = get_tokamak_from_environment()
+            tokamak = resolve_tokamak_from_environment()
         else:
             tokamak = map_string_to_enum(args.tokamak, Tokamak, should_raise=False)
 
@@ -133,7 +133,7 @@ def setup(*args, **kwargs):
     )
     while True:
         if tokamak_string == "":
-            tokamak = get_tokamak_from_environment()
+            tokamak = resolve_tokamak_from_environment()
         else:
             tokamak = map_string_to_enum(tokamak_string, Tokamak, should_raise=False)
 

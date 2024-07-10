@@ -20,7 +20,7 @@ from disruption_py.cli.eval.eval_against_sql import (
     get_mdsplus_data,
     get_sql_data_for_mdsplus,
 )
-from disruption_py.machine.tokamak import Tokamak, get_tokamak_from_environment
+from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from tests.utils.factory import (
     get_tokamak_test_expected_failure_columns,
     get_tokamak_test_shotlist,
@@ -150,7 +150,7 @@ if __name__ == "__main__":
 
     fail_quick = not args.fail_slow
     data_columns = [args.data_column] if args.data_column else None
-    tokamak = get_tokamak_from_environment()
+    tokamak = resolve_tokamak_from_environment()
 
     if args.shot_id is None:
         shotlist = get_tokamak_test_shotlist(tokamak)

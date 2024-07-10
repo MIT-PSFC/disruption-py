@@ -19,7 +19,7 @@ from disruption_py.cli.ml.preprocessing import (
 )
 from disruption_py.core.utils.math import generate_id
 from disruption_py.core.utils.misc import without_duplicates
-from disruption_py.machine.tokamak import Tokamak, resolve_tokamak
+from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.settings import LogSettings, RetrievalSettings
 from disruption_py.workflow import get_shots_data
 
@@ -49,7 +49,7 @@ def main(args):
         cache_setting="sql" if args.data_source == 0 else None,
     )
 
-    tokamak = resolve_tokamak(args)
+    tokamak = resolve_tokamak_from_environment(args)
 
     if args.shotlist is None:
         if tokamak == Tokamak.D3D:

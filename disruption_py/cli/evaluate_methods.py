@@ -8,7 +8,7 @@ from disruption_py.cli.eval.eval_against_sql import (
     get_failure_statistics_string,
 )
 from disruption_py.core.utils.enums import map_string_to_enum
-from disruption_py.machine.tokamak import Tokamak, get_tokamak_from_environment
+from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.settings.shotlist_setting import (
     ShotlistSettingParams,
     shotlist_setting_runner,
@@ -57,7 +57,7 @@ def main(args):
     )
     while True:
         if tokamak_string == "":
-            tokamak = get_tokamak_from_environment()
+            tokamak = resolve_tokamak_from_environment()
         else:
             tokamak = map_string_to_enum(tokamak_string, Tokamak, should_raise=False)
 

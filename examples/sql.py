@@ -6,7 +6,7 @@ execute a few meaningful queries to test DB connection.
 
 import os
 
-from disruption_py.machine.tokamak import Tokamak, get_tokamak_from_environment
+from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.workflow import get_database
 
 queries = [
@@ -17,7 +17,7 @@ queries = [
     + " where shot in (select shot from disruptions)",
     "select count(distinct shot) from disruptions",
 ]
-tokamak = get_tokamak_from_environment()
+tokamak = resolve_tokamak_from_environment()
 db = get_database(tokamak=tokamak)
 
 if tokamak is Tokamak.D3D:
