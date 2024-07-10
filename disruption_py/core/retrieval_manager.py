@@ -24,7 +24,7 @@ from disruption_py.machine.tokamak import Tokamak
 from disruption_py.core.utils.math import interp1
 
 
-class ShotManager:
+class RetrievalManager:
     logger = logging.getLogger("disruption_py")
 
     def __init__(

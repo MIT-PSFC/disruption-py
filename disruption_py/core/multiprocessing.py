@@ -11,7 +11,7 @@ from disruption_py.settings import (
     OutputSetting,
     OutputSettingParams,
 )
-from disruption_py.core.retrieval_manager import ShotManager
+from disruption_py.core.retrieval_manager import RetrievalManager
 
 
 # define a sentinel value for signifying that task queue is complete
@@ -27,15 +27,15 @@ class Consumer(multiprocessing.Process):
         self,
         task_queue,
         result_queue,
-        shot_manager_initializer: Callable[..., ShotManager],
+        retrieval_manager_initializer: Callable[..., RetrievalManager],
     ):
         multiprocessing.Process.__init__(self)
         self.task_queue = task_queue
         self.result_queue = result_queue
-        self.shot_manager_initializer = shot_manager_initializer
+        self.retrieval_manager_initializer = retrieval_manager_initializer
 
     def run(self):
-        shot_manager: ShotManager = self.shot_manager_initializer()
+        retrieval_manager: RetrievalManager = self.retrieval_manager_initializer()
         while True:
             next_task = self.task_queue.get()
             if next_task is MARK_COMPLETE:
@@ -43,7 +43,7 @@ class Consumer(multiprocessing.Process):
                 self.task_queue.task_done()
                 break
 
-            shot_id, answer = next_task(shot_manager)
+            shot_id, answer = next_task(retrieval_manager)
 
             self.task_queue.task_done()
             self.result_queue.put((shot_id, answer))
@@ -55,8 +55,8 @@ class ShotTask:
         self.shot_id = shot_id
         self.retrieval_settings = retrieval_settings
 
-    def __call__(self, shot_manager: ShotManager):
-        result = shot_manager.get_shot_data(
+    def __call__(self, retrieval_manager: RetrievalManager):
+        result = retrieval_manager.get_shot_data(
             shot_id=self.shot_id,
             retrieval_settings=self.retrieval_settings,
         )
@@ -75,7 +75,7 @@ class MultiprocessingShotRetriever:
         self,
         database: ShotDatabase,
         output_setting: OutputSetting,
-        shot_manager_initializer: Callable[..., ShotManager],
+        retrieval_manager_initializer: Callable[..., RetrievalManager],
         tokamak,
         logger,
         num_processes=1,
@@ -94,7 +94,7 @@ class MultiprocessingShotRetriever:
             Consumer(
                 task_queue=self.task_queue,
                 result_queue=self.result_queue,
-                shot_manager_initializer=shot_manager_initializer,
+                retrieval_manager_initializer=retrieval_manager_initializer,
             )
             for _ in range(min(num_processes, config().MAX_PROCESSES))
         ]

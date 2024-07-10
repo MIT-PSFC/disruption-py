@@ -3,7 +3,7 @@
 import logging
 from typing import Any, Callable
 
-from disruption_py.core.retrieval_manager import ShotManager
+from disruption_py.core.retrieval_manager import RetrievalManager
 from disruption_py.io.sql import ShotDatabase
 from disruption_py.io.mds import ProcessMDSConnection
 from disruption_py.settings import RetrievalSettings
@@ -91,8 +91,8 @@ def get_shots_data(
             database=database,
             num_processes=num_processes,
             output_setting=output_setting,
-            shot_manager_initializer=(
-                lambda: ShotManager(
+            retrieval_manager_initializer=(
+                lambda: RetrievalManager(
                     tokamak=tokamak,
                     process_database=database_initializer(),
                     process_mds_conn=mds_connection_initializer(),
@@ -108,13 +108,13 @@ def get_shots_data(
         )
     else:
         mds_connection = mds_connection_initializer()
-        shot_manager = ShotManager(
+        retrieval_manager = RetrievalManager(
             tokamak=tokamak,
             process_database=database,
             process_mds_conn=mds_connection,
         )
         for shot_id in shotlist_list:
-            shot_data = shot_manager.get_shot_data(
+            shot_data = retrieval_manager.get_shot_data(
                 shot_id=shot_id,
                 retrieval_settings=retrieval_settings,
             )
