@@ -4,12 +4,9 @@
 execute a simple workflow to fetch EFIT parameters.
 """
 
-from disruption_py.workflow import get_shots_data
+from disruption_py.machine.tokamak import Tokamak, get_tokamak_from_environment
 from disruption_py.settings import LogSettings, RetrievalSettings
-from disruption_py.machine.tokamak import Tokamak
-from disruption_py.machine.tokamak import (
-    get_tokamak_from_environment,
-)
+from disruption_py.workflow import get_shots_data
 
 tokamak = get_tokamak_from_environment()
 

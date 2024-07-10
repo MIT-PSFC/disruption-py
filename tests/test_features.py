@@ -5,9 +5,9 @@ import os
 import pandas as pd
 import pytest
 
-from disruption_py.workflow import get_shots_data
-from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.machine.tokamak import is_tokamak_indexed
+from disruption_py.settings.retrieval_settings import RetrievalSettings
+from disruption_py.workflow import get_shots_data
 
 TEST_SETTINGS = {
     "default_fast": {},

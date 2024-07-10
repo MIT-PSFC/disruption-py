@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 
-from disruption_py.io.mds import MDSConnection
-from disruption_py.machine.tokamak import Tokamak
-
+import logging
+from dataclasses import dataclass, field
+from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
 
-
-import logging
-from dataclasses import dataclass, field
-from typing import Any, Dict
+from disruption_py.io.mds import MDSConnection
+from disruption_py.machine.tokamak import Tokamak
 
 
 @dataclass
@@ -24,7 +22,7 @@ class PhysicsMethodParams:
     times: np.ndarray
     cache_data: pd.DataFrame
     pre_filled_shot_data: pd.DataFrame
-    interpolation_method: Any # Fix
+    interpolation_method: Any  # Fix
     metadata: dict
 
     _cached_results: Dict[str, Any] = field(default_factory=dict)

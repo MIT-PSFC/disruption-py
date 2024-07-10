@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
-from disruption_py.workflow import get_shots_data
 from disruption_py.settings import (
     LogSettings,
+    RetrievalSettings,
     TimeSetting,
     TimeSettingParams,
-    RetrievalSettings,
 )
+from disruption_py.workflow import get_shots_data
 
 
 class PRadTime(TimeSetting):

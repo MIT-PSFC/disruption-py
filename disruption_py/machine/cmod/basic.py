@@ -11,15 +11,13 @@ import pandas as pd
 import scipy as sp
 from MDSplus import mdsExceptions
 
+import disruption_py.data
+from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-import disruption_py.data
-from disruption_py.core.physics_method.caching import (
-    cache_method,
-)
-from disruption_py.machine.tokamak import Tokamak
 from disruption_py.core.utils.math import gaussian_fit, interp1, smooth
 from disruption_py.core.utils.misc import safe_cast
+from disruption_py.machine.tokamak import Tokamak
 
 warnings.filterwarnings("error", category=RuntimeWarning)
 

@@ -4,8 +4,8 @@ from typing import List
 
 import pandas as pd
 
-from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.physics_method.decorator import physics_method
+from disruption_py.core.physics_method.params import PhysicsMethodParams
 
 
 def method_metadata_function(

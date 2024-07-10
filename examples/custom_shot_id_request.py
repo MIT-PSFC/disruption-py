@@ -2,12 +2,12 @@
 
 from typing import List
 
-from disruption_py.workflow import get_shots_data
+from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.settings.shotlist_setting import (
     ShotlistSetting,
     ShotlistSettingParams,
 )
-from disruption_py.settings.retrieval_settings import RetrievalSettings
+from disruption_py.workflow import get_shots_data
 
 
 # Create the ShotlistSetting class that handles getting the needed shotlist

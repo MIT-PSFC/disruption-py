@@ -22,9 +22,9 @@ from disruption_py.cli.eval.eval_against_sql import (
 )
 from disruption_py.machine.tokamak import Tokamak, get_tokamak_from_environment
 from tests.utils.factory import (
+    get_tokamak_test_expected_failure_columns,
     get_tokamak_test_shotlist,
 )
-from tests.utils.factory import get_tokamak_test_expected_failure_columns
 
 
 @pytest.fixture(scope="module")

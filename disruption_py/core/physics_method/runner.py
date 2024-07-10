@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
 
-from collections.abc import Iterable
+import os
 import time
 import traceback
-import os
+from collections.abc import Iterable
+
 import numpy as np
 import pandas as pd
 
 from disruption_py.config import config
-from disruption_py.machine.builtin import built_in_method_factory
-from disruption_py.settings.retrieval_settings import RetrievalSettings
+from disruption_py.core.physics_method.caching import manually_cache
 from disruption_py.core.physics_method.metadata import (
     BoundMethodMetadata,
     get_method_metadata,
     is_parametered_method,
 )
-from disruption_py.core.physics_method.caching import manually_cache
 from disruption_py.core.physics_method.params import PhysicsMethodParams
+from disruption_py.machine.builtin import built_in_method_factory
+from disruption_py.settings.retrieval_settings import RetrievalSettings
 
 REQUIRED_COLS = {"time", "shot", "commit_hash"}
 

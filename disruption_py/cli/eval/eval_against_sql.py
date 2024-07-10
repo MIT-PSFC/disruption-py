@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-import os
-import time
 import inspect
 import logging
+import os
+import time
 from contextlib import contextmanager
 from tempfile import mkdtemp
 from typing import Callable, Dict, List
@@ -11,14 +11,14 @@ from typing import Callable, Dict, List
 import numpy as np
 import pandas as pd
 
-from disruption_py.config import config
-from disruption_py.io.sql import ShotDatabase
-from disruption_py.workflow import get_shots_data
-from disruption_py.settings import LogSettings, RetrievalSettings
 from disruption_py.cli.eval.data_difference import DataDifference
+from disruption_py.config import config
+from disruption_py.core.utils.math import matlab_gradient_1d_vectorized
+from disruption_py.io.sql import ShotDatabase
 from disruption_py.machine import tokamak
 from disruption_py.machine.tokamak import Tokamak
-from disruption_py.core.utils.math import matlab_gradient_1d_vectorized
+from disruption_py.settings import LogSettings, RetrievalSettings
+from disruption_py.workflow import get_shots_data
 
 
 def get_mdsplus_data(

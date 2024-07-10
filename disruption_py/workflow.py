@@ -3,9 +3,12 @@
 import logging
 from typing import Any, Callable
 
+from disruption_py.core.multiprocessing import MultiprocessingShotRetriever
 from disruption_py.core.retrieval_manager import RetrievalManager
-from disruption_py.io.sql import ShotDatabase
+from disruption_py.core.utils.misc import without_duplicates
 from disruption_py.io.mds import ProcessMDSConnection
+from disruption_py.io.sql import ShotDatabase
+from disruption_py.machine.tokamak import Tokamak, resolve_tokamak
 from disruption_py.settings import RetrievalSettings
 from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.output_setting import (
@@ -19,9 +22,6 @@ from disruption_py.settings.shotlist_setting import (
     ShotlistSettingType,
     shotlist_setting_runner,
 )
-from disruption_py.machine.tokamak import Tokamak, resolve_tokamak
-from disruption_py.core.multiprocessing import MultiprocessingShotRetriever
-from disruption_py.core.utils.misc import without_duplicates
 
 logger = logging.getLogger("disruption_py")
 

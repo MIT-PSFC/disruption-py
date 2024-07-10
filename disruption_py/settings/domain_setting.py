@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
+import traceback
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from logging import Logger
-import traceback
 from typing import Dict, Union
 
 import numpy as np
+
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.math import interp1

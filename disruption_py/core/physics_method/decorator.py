@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
-from disruption_py.core.physics_method.caching import cache_method
-from disruption_py.machine.tokamak import Tokamak
-from disruption_py.core.physics_method.metadata import MethodMetadata
-
-
 from typing import Callable, List, Union
+
+from disruption_py.core.physics_method.caching import cache_method
+from disruption_py.core.physics_method.metadata import MethodMetadata
+from disruption_py.machine.tokamak import Tokamak
 
 
 def physics_method(

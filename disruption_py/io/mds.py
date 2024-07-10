@@ -7,9 +7,9 @@ import MDSplus
 import numpy as np
 
 from disruption_py.config import config
-from disruption_py.machine.tokamak import Tokamak
-from disruption_py.core.utils.shared_instance import SharedInstanceFactory
 from disruption_py.core.utils.misc import safe_cast
+from disruption_py.core.utils.shared_instance import SharedInstanceFactory
+from disruption_py.machine.tokamak import Tokamak
 
 
 class ProcessMDSConnection:

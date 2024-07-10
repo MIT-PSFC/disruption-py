@@ -5,15 +5,11 @@ import json
 
 import pandas as pd
 
-from disruption_py.cli.ml.constants import BLACK_WINDOW_THRESHOLD, DEFAULT_RATIO
-from disruption_py.workflow import get_shots_data
-from disruption_py.settings import LogSettings, RetrievalSettings
 from disruption_py.cli.ml.constants import (
+    BLACK_WINDOW_THRESHOLD,
     DEFAULT_COLS,
+    DEFAULT_RATIO,
 )
-from disruption_py.machine.tokamak import Tokamak
-from disruption_py.machine.tokamak import resolve_tokamak
-from disruption_py.core.utils.math import generate_id
 from disruption_py.cli.ml.preprocessing import (
     add_derived_features,
     create_dataset,
@@ -21,7 +17,11 @@ from disruption_py.cli.ml.preprocessing import (
     filter_dataset_df,
     parse_feature_cols,
 )
+from disruption_py.core.utils.math import generate_id
 from disruption_py.core.utils.misc import without_duplicates
+from disruption_py.machine.tokamak import Tokamak, resolve_tokamak
+from disruption_py.settings import LogSettings, RetrievalSettings
+from disruption_py.workflow import get_shots_data
 
 
 def main(args):

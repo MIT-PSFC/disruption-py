@@ -2,6 +2,7 @@
 
 from enum import Enum
 from typing import Union
+
 from dynaconf import Dynaconf
 
 configs = {}

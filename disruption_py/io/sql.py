@@ -12,9 +12,9 @@ import pyodbc
 from sqlalchemy import create_engine
 
 from disruption_py.config import config
-from disruption_py.machine.tokamak import Tokamak, is_tokamak_indexed
-from disruption_py.core.utils.shared_instance import SharedInstanceFactory
 from disruption_py.core.utils.misc import without_duplicates
+from disruption_py.core.utils.shared_instance import SharedInstanceFactory
+from disruption_py.machine.tokamak import Tokamak, is_tokamak_indexed
 
 
 class ShotDatabase:

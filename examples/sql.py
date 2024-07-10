@@ -6,11 +6,8 @@ execute a few meaningful queries to test DB connection.
 
 import os
 
+from disruption_py.machine.tokamak import Tokamak, get_tokamak_from_environment
 from disruption_py.workflow import get_database
-from disruption_py.machine.tokamak import Tokamak
-from disruption_py.machine.tokamak import (
-    get_tokamak_from_environment,
-)
 
 queries = [
     "select count(distinct shot) from disruption_warning",

@@ -3,20 +3,20 @@
 import argparse
 import logging
 
-from disruption_py.settings.shotlist_setting import (
-    ShotlistSettingParams,
-    shotlist_setting_runner,
-)
 from disruption_py.cli.eval.eval_against_sql import (
     eval_against_sql,
     get_failure_statistics_string,
 )
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.machine.tokamak import Tokamak, get_tokamak_from_environment
+from disruption_py.settings.shotlist_setting import (
+    ShotlistSettingParams,
+    shotlist_setting_runner,
+)
 from tests.utils.factory import (
+    get_tokamak_test_expected_failure_columns,
     get_tokamak_test_shotlist,
 )
-from tests.utils.factory import get_tokamak_test_expected_failure_columns
 
 
 def evaluate_accuracy(

@@ -8,9 +8,9 @@ import joblib
 import pandas as pd
 from sklearn.metrics import ConfusionMatrixDisplay, fbeta_score
 
+from disruption_py.core.utils.math import *
 from disruption_py.ml.evaluate import DEFAULT_ORDER, THESIS_ORDER, eval_shots, predict
 from disruption_py.ml.models import load_model
-from disruption_py.core.utils.math import *
 
 order_mapping = {
     "DEFAULT_ORDER": DEFAULT_ORDER,

@@ -6,12 +6,12 @@ import pandas as pd
 import pytest
 
 from disruption_py.config import config
+from disruption_py.core.utils.misc import without_duplicates
 from disruption_py.io.sql import ShotDatabase
-from disruption_py.workflow import get_database, get_shots_data
+from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings.output_setting import SQLOutputSetting
 from disruption_py.settings.retrieval_settings import RetrievalSettings
-from disruption_py.machine.tokamak import Tokamak
-from disruption_py.core.utils.misc import without_duplicates
+from disruption_py.workflow import get_database, get_shots_data
 
 WRITE_DATABASE_TABLE_NAME = config().database.write_database_table_name
 FIRST_ITERATION_COLUMNS = config().database.protected_columns + ["beta_p"]

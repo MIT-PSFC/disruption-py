@@ -4,11 +4,8 @@
 execute a simple fetch to test MDSplus connection.
 """
 
+from disruption_py.machine.tokamak import Tokamak, get_tokamak_from_environment
 from disruption_py.workflow import get_mdsplus_class
-from disruption_py.machine.tokamak import Tokamak
-from disruption_py.machine.tokamak import (
-    get_tokamak_from_environment,
-)
 
 tokamak = get_tokamak_from_environment()
 

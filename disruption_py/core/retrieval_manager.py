@@ -7,21 +7,18 @@ import numpy as np
 import pandas as pd
 
 from disruption_py.config import config
+from disruption_py.core.physics_method.params import PhysicsMethodParams
+from disruption_py.core.physics_method.runner import populate_shot
+from disruption_py.core.utils.math import interp1
+from disruption_py.core.utils.misc import get_commit_hash
+from disruption_py.io.mds import MDSConnection, ProcessMDSConnection
 from disruption_py.io.sql import ShotDatabase
-from disruption_py.io.mds import (
-    MDSConnection,
-    ProcessMDSConnection,
-)
+from disruption_py.machine.tokamak import Tokamak
+from disruption_py.settings.cache_setting import CacheSettingParams
 from disruption_py.settings.domain_setting import DomainSettingParams
 from disruption_py.settings.nickname_setting import NicknameSettingParams
-from disruption_py.settings.cache_setting import CacheSettingParams
-from disruption_py.settings.time_setting import TimeSettingParams
 from disruption_py.settings.retrieval_settings import RetrievalSettings
-from disruption_py.core.physics_method.runner import populate_shot
-from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.misc import get_commit_hash
-from disruption_py.machine.tokamak import Tokamak
-from disruption_py.core.utils.math import interp1
+from disruption_py.settings.time_setting import TimeSettingParams
 
 
 class RetrievalManager:

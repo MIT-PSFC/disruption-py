@@ -7,5 +7,5 @@ from .output_setting import (
     OutputSetting,
     OutputSettingParams,
 )
-from .time_setting import TimeSetting, TimeSettingParams
 from .retrieval_settings import InterpolationMethod, RetrievalSettings
+from .time_setting import TimeSetting, TimeSettingParams

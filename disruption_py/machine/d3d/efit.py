@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 
 from disruption_py.core.physics_method.decorator import physics_method
-from disruption_py.machine.tokamak import Tokamak
 from disruption_py.core.utils.math import interp1
+from disruption_py.machine.tokamak import Tokamak
 
 
 class D3DEfitRequests:

@@ -6,12 +6,9 @@ from enum import Enum
 from typing import Callable, Dict
 
 from disruption_py.config import config
-from disruption_py.io.sql import ShotDatabase
-from disruption_py.settings import (
-    OutputSetting,
-    OutputSettingParams,
-)
 from disruption_py.core.retrieval_manager import RetrievalManager
+from disruption_py.io.sql import ShotDatabase
+from disruption_py.settings import OutputSetting, OutputSettingParams
 
 
 # define a sentinel value for signifying that task queue is complete

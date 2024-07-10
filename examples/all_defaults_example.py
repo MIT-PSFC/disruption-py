@@ -2,8 +2,8 @@
 
 import logging
 
-from disruption_py.workflow import get_shots_data
 from disruption_py.settings import LogSettings, RetrievalSettings
+from disruption_py.workflow import get_shots_data
 
 retrieval_settings = RetrievalSettings(
     # data settings

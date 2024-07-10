@@ -4,19 +4,16 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import List
 
+from disruption_py.core.utils.enums import map_string_attributes_to_enum
+from disruption_py.machine.tokamak import Tokamak, is_tokamak_indexed
+from disruption_py.settings.cache_setting import CacheSetting, resolve_cache_setting
 from disruption_py.settings.domain_setting import DomainSetting, resolve_domain_setting
-from disruption_py.settings.cache_setting import (
-    CacheSetting,
-    resolve_cache_setting,
-)
 from disruption_py.settings.nickname_setting import NicknameSetting
 from disruption_py.settings.time_setting import (
     CacheTimeSetting,
     TimeSetting,
     resolve_time_setting,
 )
-from disruption_py.core.utils.enums import map_string_attributes_to_enum
-from disruption_py.machine.tokamak import Tokamak, is_tokamak_indexed
 
 
 def default_tags():
