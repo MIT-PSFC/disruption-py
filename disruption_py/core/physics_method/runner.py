@@ -236,16 +236,24 @@ def populate_shot(
     for parameter in parameters:
         if parameter is None:
             continue
-        if len(parameter) != len(pre_filled_shot_data):
-            physics_method_params.logger.error(
-                f"[Shot {physics_method_params.shot_id}]:Ignoring parameter {parameter} with different length than timebase"
-            )
+        different_length = False
+        for col in parameter:
+            if len(parameter[col]) != len(pre_filled_shot_data):
+                physics_method_params.logger.error(
+                    f"[Shot {physics_method_params.shot_id}]:Ignoring parameter {parameter} with different length than timebase"
+                )
+                different_length = True
+                break
+        if different_length:
             continue
         filtered_parameters.append(parameter)
 
     # TODO: This is a hack to get around the fact that some methods return
     #       multiple parameters. This should be fixed in the future.
-    local_data = pd.concat([pre_filled_shot_data] + filtered_parameters, axis=1)
+
+    local_data = pd.concat(
+        [pre_filled_shot_data] + [pd.DataFrame(d) for d in filtered_parameters], axis=1
+    )
     local_data = local_data.loc[:, ~local_data.columns.duplicated()]
     if retrieval_settings.only_requested_columns:
         include_columns = list(

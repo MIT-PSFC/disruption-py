@@ -23,10 +23,8 @@ class BasicD3DRequests:
     @physics_method(columns=["time_until_disrupt"], tokamak=Tokamak.D3D)
     def _get_time_until_disrupt(params: PhysicsMethodParams):
         if params.disrupted:
-            return pd.DataFrame(
-                {"time_until_disrupt": params.disruption_time - params.times}
-            )
-        return pd.DataFrame({"time_until_disrupt": np.full(params.times.size, np.nan)})
+            return {"time_until_disrupt": params.disruption_time - params.times}
+        return {"time_until_disrupt": np.full(params.times.size, np.nan)}
 
     @staticmethod
     @physics_method(columns=["H98", "H_alpha"], tokamak=Tokamak.D3D)
@@ -53,7 +51,7 @@ class BasicD3DRequests:
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
             h_alpha = np.full(params.times.size, np.nan)
-        return pd.DataFrame({"H98": h_98, "H_alpha": h_alpha})
+        return {"H98": h_98, "H_alpha": h_alpha}
 
     @staticmethod
     @physics_method(
@@ -168,16 +166,14 @@ class BasicD3DRequests:
         # Computer P_sol, defined as P_in - P_rad
         p_sol = p_input - p_rad
 
-        return pd.DataFrame(
-            {
-                "p_rad": p_rad,
-                "p_nbi": p_nbi,
-                "p_ech": p_ech,
-                "p_ohm": p_ohm,
-                "radiated_fraction": rad_fraction,
-                "v_loop": v_loop,
-            }
-        )
+        return {
+            "p_rad": p_rad,
+            "p_nbi": p_nbi,
+            "p_ech": p_ech,
+            "p_ohm": p_ohm,
+            "radiated_fraction": rad_fraction,
+            "v_loop": v_loop,
+        }
 
     @staticmethod
     @physics_method(
@@ -219,7 +215,7 @@ class BasicD3DRequests:
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
             p_ohm = np.full(len(params.times), np.nan)
-            return pd.DataFrame({"p_ohm": p_ohm, "v_loop": v_loop})
+            return {"p_ohm": p_ohm, "v_loop": v_loop}
         # [m] For simplicity, use fixed r_0 = 1.67 for DIII-D major radius
         r_0 = 1.67
         inductance = 4.0 * np.pi * r_0 * li / 2  # [H]
@@ -229,7 +225,7 @@ class BasicD3DRequests:
         v_inductive = inductance * dipdt_smoothed  # [V]
         v_resistive = v_loop - v_inductive  # [V]
         p_ohm = ip * v_resistive  # [W]
-        return pd.DataFrame({"p_ohm": p_ohm, "v_loop": v_loop})
+        return {"p_ohm": p_ohm, "v_loop": v_loop}
 
     @staticmethod
     @physics_method(
@@ -283,7 +279,7 @@ class BasicD3DRequests:
             # TODO: Confirm that there is a separate exception if ptdata name doesn't exist
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get some parameter")
             params.logger.debug(f"[Shot {params.shot_id}]::{traceback.format_exc()}")
-        return pd.DataFrame({"n_e": ne, "Greenwald_fraction": g_f, "dn_dt": dne_dt})
+        return {"n_e": ne, "Greenwald_fraction": g_f, "dn_dt": dne_dt}
 
     @staticmethod
     @physics_method(
@@ -329,7 +325,7 @@ class BasicD3DRequests:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get some parameter")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
         # ' dne_dt_RT': dne_dt_rt
-        return pd.DataFrame({"n_e_RT": ne_rt, "Greenwald_fraction_RT": g_f_rt})
+        return {"n_e_RT": ne_rt, "Greenwald_fraction_RT": g_f_rt}
 
     @staticmethod
     @physics_method(
@@ -431,15 +427,13 @@ class BasicD3DRequests:
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
             power_supply_railed = np.full(len(params.times), np.nan)
         # 'ip_prog': ip_prog,
-        return pd.DataFrame(
-            {
-                "ip": ip,
-                "ip_error": ip_error,
-                "dip_dt": dip_dt,
-                "dipprog_dt": dipprog_dt,
-                "power_supply_railed": power_supply_railed,
-            }
-        )
+        return {
+            "ip": ip,
+            "ip_error": ip_error,
+            "dip_dt": dip_dt,
+            "dipprog_dt": dipprog_dt,
+            "power_supply_railed": power_supply_railed,
+        }
 
     @staticmethod
     @physics_method(
@@ -561,14 +555,12 @@ class BasicD3DRequests:
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
             power_supply_railed = np.full(len(params.times), np.nan)
         # 'dip_dt_RT': dip_dt_rt,
-        return pd.DataFrame(
-            {
-                "ip_RT": ip_rt,
-                "ip_error_RT": ip_error_rt,
-                "dipprog_dt_RT": dipprog_dt_rt,
-                "power_supply_railed": power_supply_railed,
-            }
-        )
+        return {
+            "ip_RT": ip_rt,
+            "ip_error_RT": ip_error_rt,
+            "dipprog_dt_RT": dipprog_dt_rt,
+            "power_supply_railed": power_supply_railed,
+        }
 
     @staticmethod
     @physics_method(
@@ -615,15 +607,13 @@ class BasicD3DRequests:
         except mdsExceptions.MdsException as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get vpszp signal")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-        return pd.DataFrame(
-            {
-                "zcur": z_cur,
-                "zcur_normalized": z_cur_norm,
-                "z_prog": z_prog,
-                "z_error": z_error,
-                "z_error_normalized": z_error_norm,
-            }
-        )
+        return {
+            "zcur": z_cur,
+            "zcur_normalized": z_cur_norm,
+            "z_prog": z_prog,
+            "z_error": z_error,
+            "z_error_normalized": z_error_norm,
+        }
 
     @staticmethod
     @physics_method(
@@ -677,12 +667,10 @@ class BasicD3DRequests:
                     )
                     n_equal_1_mode = np.full(len(params.times), np.nan)
                     n_equal_1_normalized = np.full(len(params.times), np.nan)
-                    return pd.DataFrame(
-                        {
-                            "n_equal_1_normalized": n_equal_1_normalized,
-                            "n_equal_1_mode": n_equal_1_mode,
-                        }
-                    )
+                    return {
+                        "n_equal_1_normalized": n_equal_1_normalized,
+                        "n_equal_1_mode": n_equal_1_mode,
+                    }
         n_equal_1_mode = interp1(dusbradial, t_n1, params.times)
         # Get toroidal field Btor
         b_tor, t_b_tor = params.mds_conn.get_data_with_dims(
@@ -690,12 +678,10 @@ class BasicD3DRequests:
         )
         b_tor = interp1(t_b_tor, b_tor, params.times)  # [T]
         n_equal_1_normalized = n_equal_1_mode / b_tor
-        return pd.DataFrame(
-            {
-                "n_equal_1_normalized": n_equal_1_normalized,
-                "n_equal_1_mode": n_equal_1_mode,
-            }
-        )
+        return {
+            "n_equal_1_normalized": n_equal_1_normalized,
+            "n_equal_1_mode": n_equal_1_mode,
+        }
 
     @staticmethod
     @physics_method(columns=["n1rms", "n1rms_normalized"], tokamak=Tokamak.D3D)
@@ -708,7 +694,7 @@ class BasicD3DRequests:
         )
         b_tor = interp1(t_b_tor, b_tor, params.times)  # [T]
         n1rms_norm = n1rms / np.abs(b_tor)
-        return pd.DataFrame({"n1rms": n1rms, "n1rms_normalized": n1rms_norm})
+        return {"n1rms": n1rms, "n1rms_normalized": n1rms_norm}
 
     # TODO: Need to test and unblock recalculating peaking factors
     # By default get_peaking_factors should grab the data from MDSPlus as opposed to recalculate. See DPP v4 document for details:
@@ -850,9 +836,12 @@ class BasicD3DRequests:
             )
             rad_cva = interp1(p_rad["t"], rad_cva.T, params.times)
             rad_xdiv = interp1(p_rad["t"], rad_xdiv.T, params.times)
-        return pd.DataFrame(
-            {"te_pf": te_pf, "ne_pf": ne_pf, "rad_cva": rad_cva, "rad_xdiv": rad_xdiv}
-        )
+        return {
+            "te_pf": te_pf,
+            "ne_pf": ne_pf,
+            "rad_cva": rad_cva,
+            "rad_xdiv": rad_xdiv,
+        }
 
     # TODO: Finish implementing just in case
     def _efit_map_rz_to_rho_original(params: PhysicsMethodParams, ts_dict, efit_dict):
@@ -1006,24 +995,22 @@ class BasicD3DRequests:
 
         # TODO: 1) Interpolate in core and edge regions, 2) compute average in these regions and store in respective array. Note that we may need to expand the available indices beyond 1
 
-        return pd.DataFrame(
-            {
-                "te_core": te_core,
-                "ne_core": ne_core,
-                "te_core": te_edge,
-                "ne_edge": ne_edge,
-                "te_edge_80to85": te_edge_80to85,
-                "ne_edge_80to85": ne_edge_80to85,
-                "te_edge_85to90": te_edge_85to90,
-                "ne_edge_85to90": ne_edge_85to90,
-                "te_edge_90to95": te_edge_90to95,
-                "ne_edge_90to95": ne_edge_90to95,
-                "te_edge_95to100": te_edge_95to100,
-                "ne_edge_95to100": ne_edge_95to100,
-                "te_sep": te_sep,
-                "ne_sep": ne_sep,
-            }
-        )
+        return {
+            "te_core": te_core,
+            "ne_core": ne_core,
+            "te_core": te_edge,
+            "ne_edge": ne_edge,
+            "te_edge_80to85": te_edge_80to85,
+            "ne_edge_80to85": ne_edge_80to85,
+            "te_edge_85to90": te_edge_85to90,
+            "ne_edge_85to90": ne_edge_85to90,
+            "te_edge_90to95": te_edge_90to95,
+            "ne_edge_90to95": ne_edge_90to95,
+            "te_edge_95to100": te_edge_95to100,
+            "ne_edge_95to100": ne_edge_95to100,
+            "te_sep": te_sep,
+            "ne_sep": ne_sep,
+        }
 
     @staticmethod
     @physics_method(columns=["z_eff"], tokamak=Tokamak.D3D)
@@ -1054,7 +1041,7 @@ class BasicD3DRequests:
             zeff = np.zeros(len(params.times))
             params.logger.info(f"[Shot {params.shot_id}]:Failed to open Zeff node")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-        return pd.DataFrame({"z_eff": zeff})
+        return {"z_eff": zeff}
 
     @staticmethod
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.D3D)
@@ -1069,7 +1056,7 @@ class BasicD3DRequests:
         invalid_indices = np.where(chisq > 50)
         kappa_area[invalid_indices] = np.nan
         kappa_area = interp1(t, kappa_area, params.times)
-        return pd.DataFrame({"kappa_area": kappa_area})
+        return {"kappa_area": kappa_area}
 
     @staticmethod
     @physics_method(columns=["H98", "H_alpha"], tokamak=Tokamak.D3D)
@@ -1084,7 +1071,7 @@ class BasicD3DRequests:
             r"\fs04", tree_name="d3d"
         )
         h_alpha = interp1(t_h_alpha, h_alpha, params.times)
-        return pd.DataFrame({"H98": h98, "H_alpha": h_alpha})
+        return {"H98": h98, "H_alpha": h_alpha}
 
     @staticmethod
     @physics_method(
@@ -1144,9 +1131,7 @@ class BasicD3DRequests:
             bounds_error=False,
             fill_value=np.nan,
         )
-        return pd.DataFrame(
-            {"delta": delta, "squareness": squareness, "aminor": aminor}
-        )
+        return {"delta": delta, "squareness": squareness, "aminor": aminor}
 
     @staticmethod
     @cache_method

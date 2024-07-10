@@ -67,7 +67,7 @@ class D3DEfitRequests:
         if not np.array_equal(params.times, efit_time):
             for param in efit_data:
                 efit_data[param] = interp1(efit_time, efit_data[param], params.times)
-        return pd.DataFrame(efit_data)
+        return efit_data
 
     @staticmethod
     @physics_method(
@@ -95,4 +95,4 @@ class D3DEfitRequests:
         if not np.array_equal(params.times, efit_time):
             for param in efit_data:
                 efit_data[param] = interp1(efit_time, efit_data[param], params.times)
-        return pd.DataFrame(efit_data)
+        return efit_data

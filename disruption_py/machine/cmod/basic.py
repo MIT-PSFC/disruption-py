@@ -149,7 +149,7 @@ class CModEfitRequests:
             for param in efit_data:
                 efit_data[param] = interp1(efit_time, efit_data[param], params.times)
 
-        return pd.DataFrame(efit_data)
+        return efit_data
 
     @staticmethod
     def efit_check(params: PhysicsMethodParams):
@@ -213,7 +213,7 @@ class BasicCmodRequests:
         time_until_disrupt = np.full(len(params.times), np.nan)
         if params.disrupted:
             time_until_disrupt = params.disruption_time - params.times
-        return pd.DataFrame({"time_until_disrupt": time_until_disrupt})
+        return {"time_until_disrupt": time_until_disrupt}
 
     @staticmethod
     def get_ip_parameters(times, ip, magtime, ip_prog, pcstime):
@@ -273,16 +273,14 @@ class BasicCmodRequests:
 
         ip_error = (np.abs(ip) - np.abs(ip_prog)) * np.sign(ip)
         # import pdb; pdb.set_trace()
-        return pd.DataFrame(
-            {
-                "ip": ip,
-                "dip_dt": dip,
-                "dip_smoothed": dip_smoothed,
-                "ip_prog": ip_prog,
-                "dipprog_dt": dipprog_dt,
-                "ip_error": ip_error,
-            }
-        )
+        return {
+            "ip": ip,
+            "dip_dt": dip,
+            "dip_smoothed": dip_smoothed,
+            "ip_prog": ip_prog,
+            "dipprog_dt": dipprog_dt,
+            "ip_error": ip_error,
+        }
 
     @staticmethod
     @physics_method(
@@ -410,15 +408,13 @@ class BasicCmodRequests:
         z_times_v_z = interp1(
             dpcstime, z_times_v_z, times, "linear", False, z_times_v_z[-1]
         )
-        return pd.DataFrame(
-            {
-                "z_error": z_error,
-                "z_prog": z_prog,
-                "zcur": z_cur,
-                "v_z": v_z,
-                "z_times_v_z": z_times_v_z,
-            }
-        )
+        return {
+            "z_error": z_error,
+            "z_prog": z_prog,
+            "zcur": z_cur,
+            "v_z": v_z,
+            "z_times_v_z": z_times_v_z,
+        }
 
     @staticmethod
     @physics_method(
@@ -568,7 +564,7 @@ class BasicCmodRequests:
         v_inductive = inductance * dip_smoothed
         v_resistive = v_loop - v_inductive
         p_ohm = ip * v_resistive
-        return pd.DataFrame({"p_oh": p_ohm, "v_loop": v_loop})
+        return {"p_oh": p_ohm, "v_loop": v_loop}
 
     @staticmethod
     @physics_method(
@@ -580,12 +576,10 @@ class BasicCmodRequests:
             r"\top.mflux:v0", tree_name="analysis", astype="float64"
         )
         if len(v_loop_time) <= 1:
-            return pd.DataFrame(
-                {
-                    "p_oh": np.zeros(len(params.times)),
-                    "v_loop": np.zeros(len(params.times)),
-                }
-            )
+            return {
+                "p_oh": np.zeros(len(params.times)),
+                "v_loop": np.zeros(len(params.times)),
+            }
         li, efittime = params.mds_conn.get_data_with_dims(
             r"\efit_aeqdsk:li", tree_name="_efit_tree", astype="float64"
         )
@@ -632,16 +626,14 @@ class BasicCmodRequests:
         p_input = p_ohm + p_lh + p_icrf
         rad_fraction = p_rad / p_input
         rad_fraction[rad_fraction == np.inf] = np.nan
-        return pd.DataFrame(
-            {
-                "p_rad": p_rad,
-                "dprad_dt": dprad,
-                "p_lh": p_lh,
-                "p_icrf": p_icrf,
-                "p_input": p_input,
-                "radiated_fraction": rad_fraction,
-            }
-        )
+        return {
+            "p_rad": p_rad,
+            "dprad_dt": dprad,
+            "p_lh": p_lh,
+            "p_icrf": p_icrf,
+            "p_input": p_input,
+            "radiated_fraction": rad_fraction,
+        }
 
     @staticmethod
     @physics_method(
@@ -677,9 +669,7 @@ class BasicCmodRequests:
 
     @staticmethod
     def get_kappa_area(times, aminor, area, a_times):
-        return pd.DataFrame(
-            {"kappa_area": interp1(a_times, area / (np.pi * aminor**2), times)}
-        )
+        return {"kappa_area": interp1(a_times, area / (np.pi * aminor**2), times)}
 
     @staticmethod
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
@@ -715,7 +705,7 @@ class BasicCmodRequests:
             v_0[np.where(abs(v_0) > 200)] = np.nan
             v_0 *= 1000.0
         v_0 = interp1(time, v_0, times)
-        return pd.DataFrame({"v_0": v_0})
+        return {"v_0": v_0}
 
     # TODO: Calculate v_mid
     @staticmethod
@@ -729,7 +719,7 @@ class BasicCmodRequests:
         if params.shot_id not in calibrated:
             v_0 = np.empty(len(params.times))
             v_0.fill(np.nan)
-            return pd.DataFrame({"v_0": v_0})
+            return {"v_0": v_0}
         try:
             intensity, time = params.mds_conn.get_data_with_dims(
                 ".hirex_sr.analysis.a:int", tree_name="spectroscopy", astype="float64"
@@ -744,7 +734,7 @@ class BasicCmodRequests:
             params.logger.debug(f"[Shot {params.shot_id}]: {traceback.format_exc()}")
             v_0 = np.empty(len(params.times))
             v_0.fill(np.nan)
-            return pd.DataFrame({"v_0": v_0})
+            return {"v_0": v_0}
         return BasicCmodRequests.get_rotation_velocity(
             params.times, intensity, time, vel, hirextime
         )
@@ -853,27 +843,23 @@ class BasicCmodRequests:
             n_equal_1_normalized = n_equal_1_amplitude / btor_magnitude
             # INFO: Debugging purpose block of code at end of matlab file
             # INFO: n_equal_1_amplitude vs n_equal_1_mode
-        return pd.DataFrame(
-            {
-                "n_equal_1_mode": n_equal_1_amplitude,
-                "n_equal_1_normalized": n_equal_1_normalized,
-                "n_equal_1_phase": n_equal_1_phase,
-                "BT": btor,
-            }
-        )
+        return {
+            "n_equal_1_mode": n_equal_1_amplitude,
+            "n_equal_1_normalized": n_equal_1_normalized,
+            "n_equal_1_phase": n_equal_1_phase,
+            "BT": btor,
+        }
 
     @staticmethod
     def get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
         if len(n_e) != len(t_n):
             nan_arr = np.empty(len(times))
             nan_arr.fill(np.nan)
-            return pd.DataFrame(
-                {
-                    "n_e": nan_arr,
-                    "dn_dt": nan_arr.copy(),
-                    "Greenwald_fraction": nan_arr.copy(),
-                }
-            )
+            return {
+                "n_e": nan_arr,
+                "dn_dt": nan_arr.copy(),
+                "Greenwald_fraction": nan_arr.copy(),
+            }
         # get the gradient of n_E
         dn_dt = np.gradient(n_e, t_n)
         n_e = interp1(t_n, n_e, times)
@@ -885,7 +871,7 @@ class BasicCmodRequests:
         a_minor[a_minor <= 0] = 0.001
         n_G = abs(ip) / (np.pi * a_minor**2) * 1e20  # Greenwald density in m ^-3
         g_f = n_e / n_G
-        return pd.DataFrame({"n_e": n_e, "dn_dt": dn_dt, "Greenwald_fraction": g_f})
+        return {"n_e": n_e, "dn_dt": dn_dt, "Greenwald_fraction": g_f}
 
     @staticmethod
     @physics_method(
@@ -920,7 +906,7 @@ class BasicCmodRequests:
 
     @staticmethod
     def get_efc_current(times, iefc, t_iefc):
-        return pd.DataFrame({"I_efc": interp1(t_iefc, iefc, times, "linear")})
+        return {"I_efc": interp1(t_iefc, iefc, times, "linear")}
 
     @staticmethod
     @physics_method(columns=["I_efc"], tokamak=Tokamak.CMOD)
@@ -931,7 +917,7 @@ class BasicCmodRequests:
             )
         except Exception as e:
             params.logger.debug(f"[Shot {params.shot_id}] {traceback.format_exc()}")
-            return pd.DataFrame({"I_efc": np.empty(len(params.times))})
+            return {"I_efc": np.empty(len(params.times))}
         return BasicCmodRequests.get_efc_current(params.times, iefc, t_iefc)
 
     @staticmethod
@@ -975,7 +961,7 @@ class BasicCmodRequests:
         te_hwm *= np.sqrt(2 * np.log(2))
         # time interpolation
         te_hwm = interp1(ts_time, te_hwm, times)
-        return pd.DataFrame({"Te_width": te_hwm})
+        return {"Te_width": te_hwm}
 
     @staticmethod
     @physics_method(columns=["Te_width"], tokamak=Tokamak.CMOD)
@@ -996,7 +982,7 @@ class BasicCmodRequests:
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}] {traceback.format_exc()}")
             te_hwm.fill(np.nan)
-            return pd.DataFrame({"Te_width": te_hwm})
+            return {"Te_width": te_hwm}
         return BasicCmodRequests.get_Ts_parameters(params.times, ts_data, ts_time, ts_z)
 
     # TODO: Finish
@@ -1023,13 +1009,11 @@ class BasicCmodRequests:
             or (params.shot_id > 1160000000 and params.shot_id < 1160303000)
         ):
             # Ignore shots on the blacklist
-            return pd.DataFrame(
-                {
-                    "ne_peaking": ne_PF,
-                    "Te_peaking": Te_PF,
-                    "pressure_peaking": pressure_PF,
-                }
-            )
+            return {
+                "ne_peaking": ne_PF,
+                "Te_peaking": Te_PF,
+                "pressure_peaking": pressure_PF,
+            }
         try:
             z0 = 0.01 * params.mds_conn.get_data(
                 r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
@@ -1055,13 +1039,11 @@ class BasicCmodRequests:
             zts_edge = params.mds_conn.get_data(r"\fiber_z", tree_name="electrons")
             TS_z = np.concatenate((TS_z, zts_edge))
             if len(zts_edge) != tets_edge.shape[1]:
-                return pd.DataFrame(
-                    {
-                        "ne_peaking": ne_PF,
-                        "Te_peaking": Te_PF,
-                        "pressure_peaking": pressure_PF,
-                    }
-                )
+                return {
+                    "ne_peaking": ne_PF,
+                    "Te_peaking": Te_PF,
+                    "pressure_peaking": pressure_PF,
+                }
             Te_PF = Te_PF[: len(TS_time)]
             itimes = np.where(TS_time > 0 & TS_time < params.times[-1])
             bminor = interp1(efit_time, bminor, TS_time)
@@ -1093,13 +1075,11 @@ class BasicCmodRequests:
                 params.times, TS_time, ne_PF, Te_PF, pressure_PF
             )
         except mdsExceptions.MdsException as e:
-            return pd.DataFrame(
-                {
-                    "ne_peaking": ne_PF,
-                    "Te_peaking": Te_PF,
-                    "pressure_peaking": pressure_PF,
-                }
-            )
+            return {
+                "ne_peaking": ne_PF,
+                "Te_peaking": Te_PF,
+                "pressure_peaking": pressure_PF,
+            }
 
     @staticmethod
     @physics_method(
@@ -1120,7 +1100,7 @@ class BasicCmodRequests:
             )
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}]: Failed to get efit data")
-            return pd.DataFrame({"prad_peaking": prad_peaking})
+            return {"prad_peaking": prad_peaking}
         got_axa = False
         try:
             bright_axa, t_axa, r_axa = params.mds_conn.get_data_with_dims(
@@ -1158,7 +1138,7 @@ class BasicCmodRequests:
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}]: Failed to get AXJ data")
         if not (got_axa or got_axj):
-            return pd.DataFrame({"prad_peaking": prad_peaking})
+            return {"prad_peaking": prad_peaking}
         a_minor = interp1(efit_time, aminor, params.times)
         r0 = interp1(efit_time, r0, params.times)
         z0 = interp1(efit_time, z0, params.times)
@@ -1203,7 +1183,7 @@ class BasicCmodRequests:
                 prad_peaking[i] = np.nanmean(core_radiation) / np.nanmean(all_radiation)
             except:
                 prad_peaking[i] = np.nan
-        return pd.DataFrame({"prad_peaking": prad_peaking})
+        return {"prad_peaking": prad_peaking}
 
     @staticmethod
     @physics_method(
@@ -1223,13 +1203,11 @@ class BasicCmodRequests:
             or (params.shot_id > 1150000000 and params.shot_id < 1150610000)
             or (params.shot_id > 1160000000 and params.shot_id < 1160303000)
         ):
-            return pd.DataFrame(
-                {
-                    "ne_peaking": ne_PF,
-                    "Te_peaking": Te_PF,
-                    "pressure_peaking": pressure_PF,
-                }
-            )
+            return {
+                "ne_peaking": ne_PF,
+                "Te_peaking": Te_PF,
+                "pressure_peaking": pressure_PF,
+            }
         try:
             # Get shaping params
             z0 = 0.01 * params.mds_conn.get_data(
@@ -1264,13 +1242,11 @@ class BasicCmodRequests:
                 params.logger.warning(
                     f"[Shot {params.shot_id}]: TS edge data and z positions are not the same length for shot"
                 )
-                return pd.DataFrame(
-                    {
-                        "ne_peaking": ne_PF,
-                        "Te_peaking": Te_PF,
-                        "pressure_peaking": pressure_PF,
-                    }
-                )
+                return {
+                    "ne_peaking": ne_PF,
+                    "Te_peaking": Te_PF,
+                    "pressure_peaking": pressure_PF,
+                }
             Te_PF = Te_PF[: len(Te_time)]  # Reshape Te_PF to length of Te_time
             itimes = np.where((Te_time > 0) & (Te_time < params.times[-1]))
             node_path = ".yag_new.results.profiles"
@@ -1309,13 +1285,11 @@ class BasicCmodRequests:
             )
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            return pd.DataFrame(
-                {
-                    "ne_peaking": ne_PF,
-                    "Te_peaking": Te_PF,
-                    "pressure_peaking": pressure_PF,
-                }
-            )
+            return {
+                "ne_peaking": ne_PF,
+                "Te_peaking": Te_PF,
+                "pressure_peaking": pressure_PF,
+            }
 
     @staticmethod
     def get_sxr_parameters():
@@ -1339,7 +1313,7 @@ class BasicCmodRequests:
                 f"[Shot {params.shot_id}]: Failed to get SXR data returning NaNs"
             )
             params.logger.debug(f"[Shot {params.shot_id}]: {traceback.format_exc()}")
-        return pd.DataFrame({"sxr": sxr})
+        return {"sxr": sxr}
 
     @staticmethod
     def get_edge_parameters(times, p_Te, p_ne, edge_rho_min=0.85, edge_rho_max=0.95):
@@ -1427,7 +1401,7 @@ class BasicCmodRequests:
             plt.legend()
             plt.show(block=True)
 
-        return pd.DataFrame({"Te_edge": Te_edge, "ne_edge": ne_edge})
+        return {"Te_edge": Te_edge, "ne_edge": ne_edge}
 
     @staticmethod
     @physics_method(
@@ -1455,12 +1429,10 @@ class BasicCmodRequests:
             or (params.shot_id > 1150000000 and params.shot_id < 1150610000)
             or (params.shot_id > 1160000000 and params.shot_id < 1160303000)
         ):
-            return pd.DataFrame(
-                {
-                    "Te_edge": np.full(len(params.times), np.nan),
-                    "ne_edge": np.full(len(params.times), np.nan),
-                }
-            )
+            return {
+                "Te_edge": np.full(len(params.times), np.nan),
+                "ne_edge": np.full(len(params.times), np.nan),
+            }
 
         # Range of rho to interpolate over
         rhobase = np.arange(0, 1, 0.001)
@@ -1471,12 +1443,10 @@ class BasicCmodRequests:
                 node_path + ":te_rz", tree_name="electrons"
             )
         except:
-            return pd.DataFrame(
-                {
-                    "Te_edge": np.full(len(params.times), np.nan),
-                    "ne_edge": np.full(len(params.times), np.nan),
-                }
-            )
+            return {
+                "Te_edge": np.full(len(params.times), np.nan),
+                "ne_edge": np.full(len(params.times), np.nan),
+            }
 
         t_min = np.max([0.1, np.min(ts_time)])
         t_max = np.max(ts_time)
@@ -1588,15 +1558,13 @@ class BasicCmodRequests:
         )
         H98 = tau / tau_98
 
-        return pd.DataFrame(
-            {
-                "H98": H98,
-                "Wmhd": Wmhd,
-                "btor": btor,
-                "dWmhd_dt": dWmhd_dt,
-                "p_input": p_input,
-            }
-        )
+        return {
+            "H98": H98,
+            "Wmhd": Wmhd,
+            "btor": btor,
+            "dWmhd_dt": dWmhd_dt,
+            "p_input": p_input,
+        }
 
 
 # helper class holding functions for thomson density measures
