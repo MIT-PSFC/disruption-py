@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from disruption_py.database import create_cmod_handler
+from disruption_py.io.sql import create_cmod_handler
 
 data_handler = create_cmod_handler()
 disruptions_df = data_handler.query(

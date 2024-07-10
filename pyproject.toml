@@ -9,6 +9,7 @@ version = "0.7.0"
 
 [tool.poetry.dependencies]
 python = "^3.9"
+dynaconf = "^3.2.0"
 numpy = "^1.26.0"
 pandas = {extras = ["hdf5"], version = "^2.2.0"}
 pyodbc = "^5.1.0"

@@ -7,13 +7,15 @@ from unittest.mock import patch
 
 import pytest
 
-from disruption_py.utils.mappings.tokamak import get_tokamak_from_environment
-from disruption_py.utils.mappings.tokamak_helpers import (
+from disruption_py.machine.tokamak import get_tokamak_from_environment
+from tests.utils.factory import (
     get_tokamak_test_columns,
-    get_tokamak_test_expected_failure_columns,
-    get_tokamak_test_shot_ids,
 )
-from disruption_py.utils.math_utils import matlab_gradient_1d_vectorized
+from disruption_py.core.utils.math import matlab_gradient_1d_vectorized
+from tests.utils.factory import (
+    get_tokamak_test_expected_failure_columns,
+    get_tokamak_test_shotlist,
+)
 
 
 def pytest_addoption(parser):
@@ -53,7 +55,7 @@ def tokamak():
 
 @pytest.fixture(scope="module")
 def shotlist(tokamak):
-    return get_tokamak_test_shot_ids(tokamak)
+    return get_tokamak_test_shotlist(tokamak)
 
 
 @pytest.fixture(scope="module")

@@ -5,27 +5,26 @@ import json
 
 import pandas as pd
 
-from disruption_py.main import get_shots_data
-from disruption_py.settings import LogSettings, ShotSettings
-from disruption_py.utils.constants import (
-    BLACK_WINDOW_THRESHOLD,
+from disruption_py.cli.ml.constants import BLACK_WINDOW_THRESHOLD, DEFAULT_RATIO
+from disruption_py.workflow import get_shots_data
+from disruption_py.settings import LogSettings, RetrievalSettings
+from disruption_py.cli.ml.constants import (
     DEFAULT_COLS,
-    DEFAULT_RATIO,
 )
-from disruption_py.utils.mappings.mappings_helpers import map_string_to_enum
-from disruption_py.utils.mappings.tokamak import Tokamak, get_tokamak_from_environment
-from disruption_py.utils.mappings.tokamak import (
+from disruption_py.core.utils.enums import map_string_to_enum
+from disruption_py.machine.tokamak import Tokamak, get_tokamak_from_environment
+from disruption_py.machine.tokamak import (
     resolve_tokamak,
 )
-from disruption_py.utils.math_utils import generate_id
-from disruption_py.utils.ml.preprocessing import (
+from disruption_py.core.utils.math import generate_id
+from disruption_py.cli.ml.preprocessing import (
     add_derived_features,
     create_dataset,
     create_label,
     filter_dataset_df,
     parse_feature_cols,
 )
-from disruption_py.utils.utils import without_duplicates
+from disruption_py.core.utils.misc import without_duplicates
 
 
 def main(args):
@@ -43,29 +42,29 @@ def main(args):
     logger.info(f"requested feature columns: {feature_cols}")
     logger.info(f"requested derived feature columns: {derived_feature_cols}")
 
-    shot_settings = ShotSettings(
+    retrieval_settings = RetrievalSettings(
         efit_tree_name=args.efit_tree,
-        set_times_request=args.timebase_signal,
+        time_setting=args.timebase_signal,
         run_methods=args.run_methods,
         run_tags=args.run_tags,
         run_columns=feature_cols,
         only_requested_columns=args.only_requested_columns,
-        existing_data_request="sql" if args.data_source == 0 else None,
+        input_setting="sql" if args.data_source == 0 else None,
     )
 
     tokamak = resolve_tokamak(args)
 
     if args.shotlist is None:
         if tokamak == Tokamak.D3D:
-            shot_ids_request = "d3d_paper_shotlist"
+            shotlist_setting = "d3d_paper_shotlist"
         elif tokamak == Tokamak.CMOD:
-            shot_ids_request = "cmod_test"
+            shotlist_setting = "cmod_test"
 
     dataset_df = get_shots_data(
         tokamak=tokamak,
-        shot_ids_request=shot_ids_request,
-        shot_settings=shot_settings,
-        output_type_request="dataframe",
+        shotlist_setting=shotlist_setting,
+        retrieval_settings=retrieval_settings,
+        output_setting="dataframe",
         num_processes=args.num_processes,
         log_settings=log_settigs,
     )
@@ -138,7 +137,7 @@ def get_parser():
     parser.add_argument(
         "--feature_cols",
         type=str,
-        help="Either a file or comma-separated list of desired feature columns. Similar to run columns in `ShotSettings`",
+        help="Either a file or comma-separated list of desired feature columns. Similar to run columns in `RetrievalSettings`",
         default=None,
     )
     parser.add_argument(

@@ -2,33 +2,33 @@
 
 import logging
 
-from disruption_py.main import get_shots_data
-from disruption_py.settings import LogSettings, ShotSettings
+from disruption_py.workflow import get_shots_data
+from disruption_py.settings import LogSettings, RetrievalSettings
 
-shot_settings = ShotSettings(
+retrieval_settings = RetrievalSettings(
     # data settings
-    existing_data_request=None,
+    input_setting=None,
     efit_tree_name="analysis",
     # method selection
     run_methods=[],
     run_tags=["all"],
     run_columns=[],
     only_requested_columns=False,
-    custom_parameter_methods=[],
+    custom_physics_methods=[],
     # timebase settings
-    set_times_request="disruption_warning",  # use efit timebase
-    signal_domain="full",
-    use_existing_data_timebase=False,
+    time_setting="disruption_warning",  # use efit timebase
+    domain_setting="full",
+    use_input_setting_timebase=False,
     interpolation_method="linear",
 )
 
 shot_data = get_shots_data(
     tokamak=None,  # defaults to tokamak value detected from environement
-    shot_ids_request=-1,  # no default value
+    shotlist_setting=-1,  # no default value
     database_initializer=None,  # defaults to connection for tokamak
     mds_connection_initializer=None,  # defaults to mds plus server string for tokamak
-    shot_settings=shot_settings,
-    output_type_request="list",  # output a list of dataframes
+    retrieval_settings=retrieval_settings,
+    output_setting="list",  # output a list of dataframes
     num_processes=1,
     log_settings=LogSettings(  # logging
         log_file_path=None,

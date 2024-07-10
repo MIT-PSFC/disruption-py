@@ -13,9 +13,9 @@ import pstats
 import time
 from pstats import SortKey
 
-from disruption_py.database import create_cmod_handler, create_d3d_handler
+from disruption_py.io.sql import create_cmod_handler, create_d3d_handler
 from disruption_py.shots import CModShot, D3DShot
-from disruption_py.utils.mappings.tokamak_helpers import get_shot_class_for_shot_id
+from disruption_py.machine.factory import get_shot_class_for_shot_id
 
 TEST_SHOTS = [
     1150805012,  # Flattop Disruption

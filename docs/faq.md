@@ -25,11 +25,11 @@ export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring
 ## Usage { .doc .doc-heading }
 
 ### How do I debug issues with DisruptionPy? { .doc .doc-heading }
-To better understand the issue that you are seeing in DisruptionPy you can enable more detailed logging by passing `log_settings` to the `shot_settings` for your program. For more information on customizing logging, please see [`LogSettings`][disruption_py.settings.log_settings.LogSettings].
+To better understand the issue that you are seeing in DisruptionPy you can enable more detailed logging by passing `log_settings` to the `retrieval_settings` for your program. For more information on customizing logging, please see [`LogSettings`][disruption_py.settings.log_settings.LogSettings].
 
 ```python
 import logging
-from disruption_py.settings.shot_settings import ShotSettings
+from disruption_py.settings.retrieval_settings import ShotSettings
 from disruption_py.settings.log_settings import LogSettings
 
 ShotSettings(
@@ -49,7 +49,7 @@ ShotSettings(
 DisruptionPy provides the [`disruption_py run evaluate`][disruption_py-run-evaluate] command to provide insight on the current accuracy of DisruptionPy methods.
 
 ### Why does DisruptionPy log `%MDSPLUS-E-ERROR` for all shots after a certain shot number? { .doc .doc-heading }
-You may have a corrupted shot inside of your request. Please try to remove the shot id for which the error first occurs from your `shot_ids_request` and run DisruptionPy again. If the problem persists, please create an issue on the GitHub.
+You may have a corrupted shot inside of your request. Please try to remove the shot id for which the error first occurs from your `shotlist_request` and run DisruptionPy again. If the problem persists, please create an issue on the GitHub.
 
 
 ### Why does DisruptionPy continue to log `Processing result for shot: ***shot id***` after having retrieved all data? { .doc .doc-heading }

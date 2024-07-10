@@ -24,14 +24,14 @@ Creating a scripts gives you the full functionality of disruption_py.
 		```
 
 2. **Create the shot settings.** 
-	The shot settings help to define the desired data retrieval methods and the desired output type for data retrieval for each shot. See [`ShotSettings`][disruption_py.settings.shot_settings.ShotSettings] for more details and a complete list of settings options.
+	The shot settings help to define the desired data retrieval methods and the desired output type for data retrieval for each shot. See [`ShotSettings`][disruption_py.settings.retrieval_settings.ShotSettings] for more details and a complete list of settings options.
 	```python
 	from disruption_py.handlers.cmod_handler import CModHandler
-	from disruption_py.settings.shot_settings import ShotSettings
+	from disruption_py.settings.retrieval_settings import ShotSettings
 
 	cmod_handler = CModHandler()
 
-	shot_settings = ShotSettings(
+	retrieval_settings = ShotSettings(
 		# use the efit timebase when returning data 
 		set_times_request="efit",
 		
@@ -44,19 +44,19 @@ Creating a scripts gives you the full functionality of disruption_py.
 	The `get_shots_data` method is the main entry point for retrieving data from DisruptionPy. See [`get_shots_data`][disruption_py.handlers.cmod_handler.CModHandler.get_shots_data] for more details.
 	```python
 	from disruption_py.handlers.cmod_handler import CModHandler
-	from disruption_py.settings.shot_settings import ShotSettings
+	from disruption_py.settings.retrieval_settings import ShotSettings
 
 	cmod_handler = CModHandler()
-	shot_settings = ShotSettings(
+	retrieval_settings = ShotSettings(
 		... 
 	)
 
 	shot_data = cmod_handler.get_shots_data(
 		# retrieve data for the list of provided shot numbers
-		shot_ids_request=[1150805012, 1150805013, 1150805014,],
+		shotlist_request=[1150805012, 1150805013, 1150805014,],
 
-		# use the created shot_settings
-		shot_settings=shot_settings,
+		# use the created retrieval_settings
+		retrieval_settings=retrieval_settings,
 
 		# stream retrieved data to the csv file
 		output_type_request="ip_data.csv", 

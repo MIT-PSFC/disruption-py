@@ -6,9 +6,9 @@ execute a few meaningful queries to test DB connection.
 
 import os
 
-from disruption_py.main import get_database
-from disruption_py.utils.mappings.tokamak import Tokamak
-from disruption_py.utils.mappings.tokamak import (
+from disruption_py.workflow import get_database
+from disruption_py.machine.tokamak import Tokamak
+from disruption_py.machine.tokamak import (
     get_tokamak_from_environment,
 )
 
