@@ -5,7 +5,7 @@ from disruption_py.settings.retrieval_settings import RetrievalSettings
 
 retrieval_settings = RetrievalSettings(
     # retrieve existing data from the disruption_warnings table use it to prepopulate queries
-    input_setting="sql",
+    cache_setting="sql",
     # use the efit timebase preset for the time_setting
     # uses the efit timebase when returning data
     time_setting="efit",

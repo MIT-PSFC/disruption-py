@@ -14,7 +14,7 @@ from disruption_py.io.mds import (
 )
 from disruption_py.settings.domain_setting import DomainSettingParams
 from disruption_py.settings.nickname_setting import NicknameSettingParams
-from disruption_py.settings.input_setting import InputSettingParams
+from disruption_py.settings.cache_setting import CacheSettingParams
 from disruption_py.settings.time_setting import TimeSettingParams
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.core.physics_method.runner import populate_shot
@@ -126,7 +126,7 @@ class ShotManager:
         **kwargs,
     ) -> PhysicsMethodParams:
 
-        input_data = self._retrieve_input_data(
+        cache_data = self._retrieve_cache_data(
             shot_id=shot_id,
             retrieval_settings=retrieval_settings,
         )
@@ -135,7 +135,7 @@ class ShotManager:
 
         times = self._init_times(
             shot_id=shot_id,
-            input_data=input_data,
+            cache_data=cache_data,
             mds_conn=mds_conn,
             disruption_time=disruption_time,
             retrieval_settings=retrieval_settings,
@@ -143,7 +143,7 @@ class ShotManager:
 
         pre_filled_shot_data = self._pre_fill_shot_data(
             times=times,
-            input_data=input_data,
+            cache_data=cache_data,
         )
 
         metadata = {
@@ -161,7 +161,7 @@ class ShotManager:
             disruption_time=disruption_time,
             mds_conn=mds_conn,
             times=times,
-            input_data=input_data,
+            cache_data=cache_data,
             pre_filled_shot_data=pre_filled_shot_data,
             interpolation_method=interpolation_method,
             metadata=metadata,
@@ -194,31 +194,31 @@ class ShotManager:
 
         return physics_method_params
 
-    def _retrieve_input_data(
+    def _retrieve_cache_data(
         self,
         shot_id: int,
         retrieval_settings: RetrievalSettings,
     ) -> pd.DataFrame:
-        if retrieval_settings.input_setting is not None:
-            input_setting_params = InputSettingParams(
+        if retrieval_settings.cache_setting is not None:
+            cache_setting_params = CacheSettingParams(
                 shot_id=shot_id,
                 database=self.process_database,
                 tokamak=self.tokamak,
                 logger=self.logger,
             )
-            input_data = retrieval_settings.input_setting.get_input_data(
-                input_setting_params
+            cache_data = retrieval_settings.cache_setting.get_cache_data(
+                cache_setting_params
             )
-            input_data["shot"] = input_data["shot"].astype(int)
-            input_data = input_data[input_data["shot"] == shot_id]
+            cache_data["shot"] = cache_data["shot"].astype(int)
+            cache_data = cache_data[cache_data["shot"] == shot_id]
         else:
-            input_data = None
-        return input_data
+            cache_data = None
+        return cache_data
 
     def _init_times(
         self,
         shot_id: int,
-        input_data: pd.DataFrame,
+        cache_data: pd.DataFrame,
         mds_conn: MDSConnection,
         disruption_time: float,
         retrieval_settings: RetrievalSettings,
@@ -229,7 +229,7 @@ class ShotManager:
         setting_params = TimeSettingParams(
             shot_id=shot_id,
             mds_conn=mds_conn,
-            input_data=input_data,
+            cache_data=cache_data,
             database=self.process_database,
             disruption_time=disruption_time,
             tokamak=self.tokamak,
@@ -239,23 +239,23 @@ class ShotManager:
 
     @classmethod
     def _pre_fill_shot_data(
-        cls, times: np.ndarray, input_data: pd.DataFrame
+        cls, times: np.ndarray, cache_data: pd.DataFrame
     ) -> pd.DataFrame:
         """
-        Intialize the shot with data, if input data matches the shot timebase.
+        Initialize the shot with data, if cached data matches the shot timebase.
         """
-        if input_data is not None:
+        if cache_data is not None:
             time_df = pd.DataFrame(times, columns=["time"])
-            flagged_input_data = input_data.assign(merge_success_flag=1)
-            timed_input_data = pd.merge_asof(
+            flagged_cache_data = cache_data.assign(merge_success_flag=1)
+            timed_cache_data = pd.merge_asof(
                 time_df,
-                flagged_input_data,
+                flagged_cache_data,
                 on="time",
                 direction="nearest",
                 tolerance=config().TIME_CONST,
             )
-            if not timed_input_data["merge_success_flag"].isna().any():
-                return timed_input_data.drop(columns=["merge_success_flag"])
+            if not timed_cache_data["merge_success_flag"].isna().any():
+                return timed_cache_data.drop(columns=["merge_success_flag"])
             else:
                 return None
         else:

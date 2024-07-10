@@ -5,14 +5,14 @@ from enum import Enum
 from typing import List, Tuple
 
 from disruption_py.settings.domain_setting import DomainSetting, resolve_domain_setting
-from disruption_py.settings.input_setting import (
-    InputSetting,
-    resolve_input_setting,
+from disruption_py.settings.cache_setting import (
+    CacheSetting,
+    resolve_cache_setting,
 )
 from disruption_py.settings.nickname_setting import NicknameSetting
 from disruption_py.settings.output_setting import OutputSetting
 from disruption_py.settings.time_setting import (
-    ExistingDataTimeSetting,
+    CacheTimeSetting,
     TimeSetting,
     resolve_time_setting,
 )
@@ -41,9 +41,9 @@ class RetrievalSettings:
 
     Attributes
     ----------
-    input_setting : InputSetting
-        The input setting to be used when prefilling data for the shot. Can pass any
-        InputSettingType that resolves to a InputSetting. See InputSetting for more
+    cache_setting : CacheSetting
+        The cache setting to be used when prefilling data for the shot. Can pass any
+        CacheSettingType that resolves to a CacheSetting. See CacheSetting for more
         details. Set to None if no data should be prefilled. Defaults to None.
     efit_tree_name : str
         The name of the tree to first try for the efit environment. Other tree names will be tried if
@@ -84,16 +84,16 @@ class RetrievalSettings:
         The domain of the timebase that should be used when retrieving data for the shot. Either "full",
         "flattop", or "rampup_and_flattop". Can pass any `DomainSettingType` that resolves to a `DomainSetting`
         such as the listed strings. Defaults to "full".
-    use_input_setting_timebase : bool
-        If true and input data exists for the shot, the timebase from the input data will be used instead
-        of the timebase from the time_setting. Wraps the time_setting with ExistingDataTimeSetting.
+    use_cache_setting_timebase : bool
+        If true and cache data exists for the shot, the timebase from the cached data will be used instead
+        of the timebase from the time_setting. Wraps the time_setting with CacheTimeSetting.
         Defaults to False.
     interpolation_method : InterpolationMethod
         The interpolation method to be used when retrieving data for the shot. CURRENTLY UNIMPLEMENTED.
     """
 
     # Prefill data settings
-    input_setting: InputSetting = None
+    cache_setting: CacheSetting = None
 
     # Shot creation settings
     efit_tree_name: str = "analysis"
@@ -109,7 +109,7 @@ class RetrievalSettings:
     # Timebase setting
     time_setting: TimeSetting = "disruption_warning"
     domain_setting: DomainSetting = "full"
-    use_input_setting_timebase: bool = False
+    use_cache_setting_timebase: bool = False
     interpolation_method: InterpolationMethod = "linear"
 
     additional_args: dict = field(default_factory=dict)
@@ -139,7 +139,7 @@ class RetrievalSettings:
         This primarily refers to passed strings lists and dictinoaries that can be resolved to a specific request type or a specific enum.
         """
 
-        self.input_setting = resolve_input_setting(self.input_setting)
+        self.cache_setting = resolve_cache_setting(self.cache_setting)
         self.time_setting = resolve_time_setting(self.time_setting)
         self.domain_setting = resolve_domain_setting(self.domain_setting)
 
@@ -150,7 +150,7 @@ class RetrievalSettings:
             },
         )
 
-        if self.use_input_setting_timebase and not isinstance(
-            self.time_setting, ExistingDataTimeSetting
+        if self.use_cache_setting_timebase and not isinstance(
+            self.time_setting, CacheTimeSetting
         ):
-            self.time_setting = ExistingDataTimeSetting(self.time_setting)
+            self.time_setting = CacheTimeSetting(self.time_setting)

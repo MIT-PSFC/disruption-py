@@ -22,9 +22,9 @@ class PhysicsMethodParams:
     disruption_time: float
     mds_conn: MDSConnection
     times: np.ndarray
-    input_data: pd.DataFrame  # input data passed to shot class
-    pre_filled_shot_data: pd.DataFrame  # input data after changed to times domain
-    interpolation_method: Any  # Fix
+    cache_data: pd.DataFrame
+    pre_filled_shot_data: pd.DataFrame
+    interpolation_method: Any # Fix
     metadata: dict
 
     _cached_results: Dict[str, Any] = field(default_factory=dict)

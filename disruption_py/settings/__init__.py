@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from .input_setting import InputSetting, InputSettingParams
+from .cache_setting import CacheSetting, CacheSettingParams
 from .log_settings import LogSettings
 from .output_setting import (
     CompleteOutputSettingParams,

@@ -26,7 +26,7 @@ class TimeSettingParams:
         The shot id for the timebase being created
     mds_conn : MDSConnection
         The connection to MDSplus, that can be used to retrieve MDSplus data.
-    input_data : pd.DataFrame
+    cache_data : pd.DataFrame
         Pre-filled data given to disruption_py.
     database : ShotDatabase
         Database object with connection to sql database.
@@ -40,7 +40,7 @@ class TimeSettingParams:
 
     shot_id: int
     mds_conn: MDSConnection
-    input_data: pd.DataFrame
+    cache_data: pd.DataFrame
     database: ShotDatabase
     disruption_time: float
     tokamak: Tokamak
@@ -127,21 +127,21 @@ class ListTimeSetting(TimeSetting):
         return self.times
 
 
-class ExistingDataTimeSetting(TimeSetting):
+class CacheTimeSetting(TimeSetting):
     """
-    Time setting for using the input data timebase.
+    Time setting for using the cached data timebase.
 
-    If no input data exists for the shot, then the fallback_time_setting is used.
+    If no cached data exists for the shot, then the fallback_time_setting is used.
     """
 
     def __init__(self, fallback_time_setting: TimeSettingType) -> None:
         self.fallback_time_setting = resolve_time_setting(fallback_time_setting)
 
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
-        if params.input_data is not None:
-            # set timebase to be the timebase of input data
+        if params.cache_data is not None:
+            # set timebase to be the timebase of cached data
             try:
-                times = params.input_data["time"].to_numpy()
+                times = params.cache_data["time"].to_numpy()
                 # Check if the timebase is in ms instead of s
                 if times[-1] > config(params.tokamak).MAX_SHOT_TIME:
                     times /= 1000  # [ms] -> [s]

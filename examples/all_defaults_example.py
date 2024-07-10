@@ -7,7 +7,7 @@ from disruption_py.settings import LogSettings, RetrievalSettings
 
 retrieval_settings = RetrievalSettings(
     # data settings
-    input_setting=None,
+    cache_setting=None,
     efit_tree_name="analysis",
     # method selection
     run_methods=[],
@@ -18,7 +18,7 @@ retrieval_settings = RetrievalSettings(
     # timebase settings
     time_setting="disruption_warning",  # use efit timebase
     domain_setting="full",
-    use_input_setting_timebase=False,
+    use_cache_setting_timebase=False,
     interpolation_method="linear",
 )
 

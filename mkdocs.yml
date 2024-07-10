@@ -34,8 +34,7 @@ nav:
       - Settings:
           - Settings Classes: usage/settings_reference.md
           - Requests Classes:
-              - Existing Data Request: >-
-                  usage/requests/input_setting_reference.md
+              - Cache Setting: usage/requests/cache_setting_reference.md
               - Shot Ids Request: usage/requests/shotlist_request_reference.md
               - Set Times Request: usage/requests/set_times_request_reference.md
               - Output Type Request: >-

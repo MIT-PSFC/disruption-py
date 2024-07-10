@@ -24,7 +24,7 @@ class OutputSettingParams:
     result : pd.Dataframe
         The dataframe of results for a single shot.
     database : ShotDatabase
-        Database object to use for getting input data.
+        Database object to use for getting cache data.
         A different database connection is used by each thread/process.
     tokamak : Tokamak
         The tokamak for which results are being output.

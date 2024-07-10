@@ -49,7 +49,7 @@ def main(args):
         run_tags=args.run_tags,
         run_columns=feature_cols,
         only_requested_columns=args.only_requested_columns,
-        input_setting="sql" if args.data_source == 0 else None,
+        cache_setting="sql" if args.data_source == 0 else None,
     )
 
     tokamak = resolve_tokamak(args)
