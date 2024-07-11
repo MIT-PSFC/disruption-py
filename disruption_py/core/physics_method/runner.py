@@ -15,10 +15,7 @@ from disruption_py.core.physics_method.metadata import (
     is_parametered_method,
 )
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.machine.d3d.basic import BasicD3DRequests
-from disruption_py.machine.d3d.efit import D3DEfitRequests
-from disruption_py.machine.cmod.basic import BasicCmodRequests, CModEfitRequests
-from disruption_py.machine.tokamak import Tokamak
+from disruption_py.machine.builtin import get_physics_method_holders
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 
 REQUIRED_COLS = {"time", "shot", "commit_hash"}
@@ -265,19 +262,3 @@ def populate_shot(
         )
         local_data = local_data[include_columns]
     return local_data
-
-
-def get_physics_method_holders(tokamak: Tokamak):
-    if tokamak is Tokamak.D3D:
-        return [
-            D3DEfitRequests(),
-            BasicD3DRequests(),
-        ]
-    elif tokamak is Tokamak.CMOD:
-
-        return [
-            CModEfitRequests(),
-            BasicCmodRequests(),
-        ]
-    else:
-        raise ValueError(f"Invalid tokamak for physics methods {tokamak}")
