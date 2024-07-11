@@ -1069,11 +1069,7 @@ class BasicCmodRequests:
                 params.times, TS_time, ne_PF, Te_PF, pressure_PF
             )
         except mdsExceptions.MdsException as e:
-            return {
-                "ne_peaking": ne_PF,
-                "Te_peaking": Te_PF,
-                "pressure_peaking": pressure_PF,
-            }
+            return nan_output
 
     @staticmethod
     @physics_method(
