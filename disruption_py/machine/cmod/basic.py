@@ -711,15 +711,14 @@ class BasicCmodRequests:
     @staticmethod
     @physics_method(columns=["v_0"], tokamak=Tokamak.CMOD)
     def _get_rotation_velocity(params: PhysicsMethodParams):
+        nan_output = {"v_0": np.full(len(params.times), np.nan)}
         with resources.path(disruption_py.data, "lock_mode_calib_shots.txt") as fio:
             calibrated = pd.read_csv(fio)
         # Check to see if shot was done on a day where there was a locked
         # mode HIREX calibration by cross checking with list of calibrated
         # runs. If not calibrated, return NaN outputs.
         if params.shot_id not in calibrated:
-            v_0 = np.empty(len(params.times))
-            v_0.fill(np.nan)
-            return {"v_0": v_0}
+            return nan_output
         try:
             intensity, time = params.mds_conn.get_data_with_dims(
                 ".hirex_sr.analysis.a:int", tree_name="spectroscopy", astype="float64"
@@ -732,9 +731,7 @@ class BasicCmodRequests:
                 f"[Shot {params.shot_id}]: Failed to open necessary tress for rotational velocity calculations."
             )
             params.logger.debug(f"[Shot {params.shot_id}]: {traceback.format_exc()}")
-            v_0 = np.empty(len(params.times))
-            v_0.fill(np.nan)
-            return {"v_0": v_0}
+            return nan_output
         return BasicCmodRequests.get_rotation_velocity(
             params.times, intensity, time, vel, hirextime
         )
@@ -765,10 +762,6 @@ class BasicCmodRequests:
 
         N=1 toroidal assymmetry in the magnetic fields
         """
-        n_equal_1_amplitude = np.empty(len(params.times))
-        n_equal_1_amplitude.fill(np.nan)
-        n_equal_1_normalized = n_equal_1_amplitude.copy()
-        n_equal_1_phase = n_equal_1_amplitude.copy()
         # These sensors are placed toroidally around the machine. Letters refer to the 2 ports the sensors were placed between.
         bp13_names = ["BP13_BC", "BP13_DE", "BP13_GH", "BP13_JK"]
         bp13_signals = np.empty((len(params.times), len(bp13_names)))
@@ -809,7 +802,13 @@ class BasicCmodRequests:
                     params.logger.warning(
                         f"[Shot {params.shot_id}] Only one data point for {bp13_names[i]} Returning nans."
                     )
-                    return n_equal_1_amplitude, n_equal_1_normalized, n_equal_1_phase
+                    nan_arr = np.full(len(params.times), np.nan)
+                    return {
+                        "n_equal_1_mode": nan_arr,
+                        "n_equal_1_normalized": nan_arr.copy(),
+                        "n_equal_1_phase": nan_arr.copy(),
+                        "BT": nan_arr.copy(),
+                    }
                 baseline = np.mean(signal[baseline_indices])
                 signal = signal - baseline
                 signal = signal - bp13_btor_pickup_coeffs[i] * btor
@@ -853,8 +852,7 @@ class BasicCmodRequests:
     @staticmethod
     def get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
         if len(n_e) != len(t_n):
-            nan_arr = np.empty(len(times))
-            nan_arr.fill(np.nan)
+            nan_arr = np.full(len(times), np.nan)
             return {
                 "n_e": nan_arr,
                 "dn_dt": nan_arr.copy(),
@@ -917,7 +915,7 @@ class BasicCmodRequests:
             )
         except Exception as e:
             params.logger.debug(f"[Shot {params.shot_id}] {traceback.format_exc()}")
-            return {"I_efc": np.empty(len(params.times))}
+            return {"I_efc": np.full(len(params.times), np.nan)}
         return BasicCmodRequests.get_efc_current(params.times, iefc, t_iefc)
 
     @staticmethod
@@ -967,7 +965,6 @@ class BasicCmodRequests:
     @physics_method(columns=["Te_width"], tokamak=Tokamak.CMOD)
     def _get_Ts_parameters(params: PhysicsMethodParams):
         # TODO: Guassian vs parabolic fit for te profile
-        te_hwm = np.empty((len(params.times)))
 
         # Read in Thomson core temperature data, which is a 2-D array, with the
         # dependent dimensions being time and z (vertical coordinate)
@@ -981,8 +978,7 @@ class BasicCmodRequests:
             )
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}] {traceback.format_exc()}")
-            te_hwm.fill(np.nan)
-            return {"Te_width": te_hwm}
+            return {"Te_width": np.full(len(params.times), np.nan)}
         return BasicCmodRequests.get_Ts_parameters(params.times, ts_data, ts_time, ts_z)
 
     # TODO: Finish
@@ -999,9 +995,15 @@ class BasicCmodRequests:
         tokamak=Tokamak.CMOD,
     )
     def _get_peaking_factors(params: PhysicsMethodParams):
-        ne_PF = np.full(len(params.times), np.nan)
-        Te_PF = ne_PF.copy()
-        pressure_PF = ne_PF.copy()
+        nan_arr = np.full(len(params.times), np.nan)
+        ne_PF = nan_arr.copy()
+        Te_PF = nan_arr.copy()
+        pressure_PF = nan_arr.copy()
+        nan_output = {
+            "ne_peaking": ne_PF,
+            "Te_peaking": Te_PF,
+            "pressure_peaking": pressure_PF,
+        }
         if (
             (params.shot_id > 1120000000 and params.shot_id < 1120213000)
             or (params.shot_id > 1140000000 and params.shot_id < 1140227000)
@@ -1009,11 +1011,7 @@ class BasicCmodRequests:
             or (params.shot_id > 1160000000 and params.shot_id < 1160303000)
         ):
             # Ignore shots on the blacklist
-            return {
-                "ne_peaking": ne_PF,
-                "Te_peaking": Te_PF,
-                "pressure_peaking": pressure_PF,
-            }
+            return nan_output
         try:
             z0 = 0.01 * params.mds_conn.get_data(
                 r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
@@ -1039,11 +1037,7 @@ class BasicCmodRequests:
             zts_edge = params.mds_conn.get_data(r"\fiber_z", tree_name="electrons")
             TS_z = np.concatenate((TS_z, zts_edge))
             if len(zts_edge) != tets_edge.shape[1]:
-                return {
-                    "ne_peaking": ne_PF,
-                    "Te_peaking": Te_PF,
-                    "pressure_peaking": pressure_PF,
-                }
+                return nan_output
             Te_PF = Te_PF[: len(TS_time)]
             itimes = np.where(TS_time > 0 & TS_time < params.times[-1])
             bminor = interp1(efit_time, bminor, TS_time)
@@ -1088,6 +1082,7 @@ class BasicCmodRequests:
     )
     def _get_prad_peaking(params: PhysicsMethodParams):
         prad_peaking = np.full(len(params.times), np.nan)
+        nan_output = {"prad_peaking", prad_peaking}
         try:
             r0 = 0.01 * params.mds_conn.get_data(
                 r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
@@ -1100,7 +1095,7 @@ class BasicCmodRequests:
             )
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}]: Failed to get efit data")
-            return {"prad_peaking": prad_peaking}
+            return nan_output
         got_axa = False
         try:
             bright_axa, t_axa, r_axa = params.mds_conn.get_data_with_dims(
@@ -1138,7 +1133,7 @@ class BasicCmodRequests:
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}]: Failed to get AXJ data")
         if not (got_axa or got_axj):
-            return {"prad_peaking": prad_peaking}
+            return nan_output
         a_minor = interp1(efit_time, aminor, params.times)
         r0 = interp1(efit_time, r0, params.times)
         z0 = interp1(efit_time, z0, params.times)
@@ -1193,9 +1188,15 @@ class BasicCmodRequests:
     )
     def _get_peaking_factors_no_tci(params: PhysicsMethodParams):
         # Initialize PFs as empty arrarys
-        ne_PF = np.full(len(params.times), np.nan)
-        Te_PF = ne_PF.copy()
-        pressure_PF = ne_PF.copy()
+        nan_arr = np.full(len(params.times), np.nan)
+        ne_PF = nan_arr.copy()
+        Te_PF = nan_arr.copy()
+        pressure_PF = nan_arr.copy()
+        nan_output = {
+            "ne_peaking": ne_PF,
+            "Te_peaking": Te_PF,
+            "pressure_peaking": pressure_PF,
+            }
         # Ignore shots on the blacklist
         if (
             (params.shot_id > 1120000000 and params.shot_id < 1120213000)
@@ -1203,11 +1204,7 @@ class BasicCmodRequests:
             or (params.shot_id > 1150000000 and params.shot_id < 1150610000)
             or (params.shot_id > 1160000000 and params.shot_id < 1160303000)
         ):
-            return {
-                "ne_peaking": ne_PF,
-                "Te_peaking": Te_PF,
-                "pressure_peaking": pressure_PF,
-            }
+            return nan_output
         try:
             # Get shaping params
             z0 = 0.01 * params.mds_conn.get_data(
@@ -1242,11 +1239,7 @@ class BasicCmodRequests:
                 params.logger.warning(
                     f"[Shot {params.shot_id}]: TS edge data and z positions are not the same length for shot"
                 )
-                return {
-                    "ne_peaking": ne_PF,
-                    "Te_peaking": Te_PF,
-                    "pressure_peaking": pressure_PF,
-                }
+                return nan_output
             Te_PF = Te_PF[: len(Te_time)]  # Reshape Te_PF to length of Te_time
             itimes = np.where((Te_time > 0) & (Te_time < params.times[-1]))
             node_path = ".yag_new.results.profiles"
@@ -1410,7 +1403,11 @@ class BasicCmodRequests:
         tokamak=Tokamak.CMOD,
     )
     def _get_edge_parameters(params: PhysicsMethodParams):
-
+        nan_arr = np.full(len(params.times), np.nan)
+        nan_output = {
+            "Te_edge": nan_arr,
+            "ne_edge": nan_arr.copy(),
+            }
         try:
             # sys.path.append("/home/sciortino/usr/python3modules/eqtools3")
             sys.path.append("/home/sciortino/usr/python3modules/profiletools3")
@@ -1429,11 +1426,7 @@ class BasicCmodRequests:
             or (params.shot_id > 1150000000 and params.shot_id < 1150610000)
             or (params.shot_id > 1160000000 and params.shot_id < 1160303000)
         ):
-            return {
-                "Te_edge": np.full(len(params.times), np.nan),
-                "ne_edge": np.full(len(params.times), np.nan),
-            }
-
+            return nan_output
         # Range of rho to interpolate over
         rhobase = np.arange(0, 1, 0.001)
         # Get mina and max time from TS tree
@@ -1443,10 +1436,7 @@ class BasicCmodRequests:
                 node_path + ":te_rz", tree_name="electrons"
             )
         except:
-            return {
-                "Te_edge": np.full(len(params.times), np.nan),
-                "ne_edge": np.full(len(params.times), np.nan),
-            }
+            return nan_output
 
         t_min = np.max([0.1, np.min(ts_time)])
         t_max = np.max(ts_time)
