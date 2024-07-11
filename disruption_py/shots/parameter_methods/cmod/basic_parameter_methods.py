@@ -1044,10 +1044,11 @@ class BasicCmodRequests(ShotDataRequest):
     # TODO: Finish
     @staticmethod
     def get_peaking_factors(times, TS_time, ne_PF, Te_PF, pressure_PF):
-        # ne_PF = interp1(TS_time, ne_PF, times, 'linear')
-        # Te_PF = interp1(TS_time, Te_PF, times, 'linear')
-        # pressure_PF = interp1(TS_time, pressure_PF, times, 'linear')
-        pass
+        # TODO: this should be a computation function
+        ne_PF = interp1(TS_time, ne_PF, times, 'linear')
+        Te_PF = interp1(TS_time, Te_PF, times, 'linear')
+        pressure_PF = interp1(TS_time, pressure_PF, times, 'linear')
+        return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking":Te_PF, "pressure_peaking":pressure_PF})
 
     @staticmethod
     @parameter_cached_method(
@@ -1056,6 +1057,7 @@ class BasicCmodRequests(ShotDataRequest):
         tokamak=Tokamak.CMOD,
     )
     def _get_peaking_factors(params: ShotDataRequestParams):
+        # TODO: this should be a data fetching function
         ne_PF = np.full(len(params.shot_props.times), np.nan)
         Te_PF = ne_PF.copy()
         pressure_PF = ne_PF.copy()
@@ -1078,6 +1080,7 @@ class BasicCmodRequests(ShotDataRequest):
             )
         ):
             # Ignore shots on the blacklist
+            # TODO: what is this?
             return pd.DataFrame(
                 {
                     "ne_peaking": ne_PF,
@@ -1097,7 +1100,6 @@ class BasicCmodRequests(ShotDataRequest):
             )
             bminor = aminor * kappa
             node_ext = ".yag_new.results.profiles"
-            # nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = ThomsonDensityMeasure.compare_ts_tci(params, nlnum=4)
             TS_te, TS_time = params.mds_conn.get_data_with_dims(
                 f"{node_ext}:te_rz", tree_name="electrons"
             )
@@ -1109,7 +1111,7 @@ class BasicCmodRequests(ShotDataRequest):
             )
             zts_edge = params.mds_conn.get_data(r"\fiber_z", tree_name="electrons")
             TS_z = np.concatenate((TS_z, zts_edge))
-            if len(zts_edge) != tets_edge.shape[1]:
+            if len(zts_edge) != tets_edge.shape[0]:
                 return pd.DataFrame(
                     {
                         "ne_peaking": ne_PF,
@@ -1118,12 +1120,13 @@ class BasicCmodRequests(ShotDataRequest):
                     }
                 )
             Te_PF = Te_PF[: len(TS_time)]
-            itimes = np.where(TS_time > 0 & TS_time < params.shot_props.times[-1])
+            itimes, = np.where((TS_time > 0) & (TS_time < params.shot_props.times[-1]))
             bminor = interp1(efit_time, bminor, TS_time)
             z0 = interp1(efit_time, z0, TS_time)
-            for i in range(len(itimes)):
-                Te_arr = TS_te[itimes[i], :]
-                indx = np.where(Te_arr > 0)
+            for itime in itimes:
+                # TODO: which is the proper axis for slicing?
+                Te_arr = TS_te[:, itime]
+                indx, = np.where(Te_arr > 0)
                 if len(indx) < 10:
                     continue
                 Te_arr = Te_arr[indx]
@@ -1131,19 +1134,17 @@ class BasicCmodRequests(ShotDataRequest):
                 sorted_indx = np.argsort(TS_z_arr)
                 Ts_z_arr = Ts_z_arr[sorted_indx]
                 Te_arr = Te_arr[sorted_indx]
-                z_arr = np.linspace(z0[itimes[i]], TS_z_arr[-1], len(Ts_z_arr))
+                z_arr = np.linspace(z0[itime], TS_z_arr[-1], len(Ts_z_arr))
                 Te_arr = interp1(TS_z_arr, Te_arr, z_arr)
-                core_index = np.where(
+                core_index, = np.where(
                     z_arr
-                    < (z0[itimes[i]] + 0.2 * bminor[itimes[i]]) & z_arr
-                    > (z0[itimes[i]] - 0.2 * bminor[itimes[i]])
+                    < (z0[itime] + 0.2 * bminor[itime]) & z_arr
+                    > (z0[itime] - 0.2 * bminor[itime])
                 )
                 if len(core_index) < 2:
                     continue
-                Te_PF[itimes[i]] = np.mean(Te_arr[core_index]) / np.mean(Te_arr)
+                Te_PF[itime] = np.mean(Te_arr[core_index]) / np.mean(Te_arr)
             Te_PF = interp1(TS_time, Te_PF, params.shot_props.times)
-            calib = np.nan
-            # TODO(lajz): fix
             return BasicCmodRequests.get_Ts_parameters(
                 params.shot_props.times, TS_time, ne_PF, Te_PF, pressure_PF
             )
@@ -1270,133 +1271,6 @@ class BasicCmodRequests(ShotDataRequest):
             except:
                 prad_peaking[i] = np.nan
         return pd.DataFrame({"prad_peaking": prad_peaking})
-
-    @staticmethod
-    @parameter_cached_method(
-        columns=["ne_peaking", "Te_peaking", "pressure_peaking"],
-        tags=["experimental"],
-        used_trees=["cmod", "electrons"],
-        tokamak=Tokamak.CMOD,
-    )
-    def _get_peaking_factors_no_tci(params: ShotDataRequestParams):
-        # Initialize PFs as empty arrarys
-        ne_PF = np.full(len(params.shot_props.times), np.nan)
-        Te_PF = ne_PF.copy()
-        pressure_PF = ne_PF.copy()
-        # Ignore shots on the blacklist
-        if (
-            (
-                params.shot_props.shot_id > 1120000000
-                and params.shot_props.shot_id < 1120213000
-            )
-            or (
-                params.shot_props.shot_id > 1140000000
-                and params.shot_props.shot_id < 1140227000
-            )
-            or (
-                params.shot_props.shot_id > 1150000000
-                and params.shot_props.shot_id < 1150610000
-            )
-            or (
-                params.shot_props.shot_id > 1160000000
-                and params.shot_props.shot_id < 1160303000
-            )
-        ):
-            return pd.DataFrame(
-                {
-                    "ne_peaking": ne_PF,
-                    "Te_peaking": Te_PF,
-                    "pressure_peaking": pressure_PF,
-                }
-            )
-        try:
-            # Get shaping params
-            z0 = 0.01 * params.mds_conn.get_data(
-                r"\efit_aeqdsk:zmagx", tree_name="cmod"
-            )
-            kappa = params.mds_conn.get_data(r"\efit_aeqdsk:kappa", tree_name="cmod")
-            aminor, efit_time = params.mds_conn.get_data_with_dims(
-                r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
-            )
-            bminor = aminor * kappa  # length of major axis of plasma x-section
-
-            # Get data from TS
-            node_ext = ".yag_new.results.profiles"
-            # nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = ThomsonDensityMeasure.compare_ts_tci(params, nlnum=4)
-            Te_core, Te_time = params.mds_conn.get_data_with_dims(
-                f"{node_ext}:te_rz", tree_name="electrons"
-            )
-            Te_core = Te_core * 1000 * 11600  # Get core TS data
-            Te_edge = (
-                params.mds_conn.get_data(r"\ts_te", tree_name="electrons") * 11600
-            )  # Get edge TS data
-            # Concat core and edge data
-            Te = np.concatenate((Te_core, Te_edge))
-            z_core = params.mds_conn.get_data(
-                f"{node_ext}:z_sorted", tree_name="electrons"
-            )  # Get z position of core TS points
-            # Get z position of edge TS points
-            z_edge = params.mds_conn.get_data(r"\fiber_z", tree_name="electrons")
-            z = np.concatenate((z_core, z_edge))  # Concat core and edge data
-            # Make sure that there are equal numbers of edge position and edge temperature points
-            if len(z_edge) != Te_edge.shape[0]:
-                params.logger.warning(
-                    f"[Shot {params.shot_props.shot_id}]: TS edge data and z positions are not the same length for shot"
-                )
-                return pd.DataFrame(
-                    {
-                        "ne_peaking": ne_PF,
-                        "Te_peaking": Te_PF,
-                        "pressure_peaking": pressure_PF,
-                    }
-                )
-            Te_PF = Te_PF[: len(Te_time)]  # Reshape Te_PF to length of Te_time
-            itimes = np.where((Te_time > 0) & (Te_time < params.shot_props.times[-1]))
-            node_path = ".yag_new.results.profiles"
-            (TS_time,) = params.mds_conn.get_dims(
-                node_path + ":te_rz", tree_name="electrons"
-            )
-            # Interpolate bminor onto desired timebase
-            bminor = interp1(efit_time, bminor, TS_time)
-            # Interpolate z0 onto desired timebase
-            z0 = interp1(efit_time, z0, TS_time)
-            for i in range(len(itimes)):
-                Te_arr = Te[itimes[i], :]
-                indx = np.where(Te_arr > 0)
-                if len(indx) < 10:
-                    continue
-                Te_arr = Te_arr[indx]
-                TS_z_arr = z[indx]
-                sorted_indx = np.argsort(TS_z_arr)  # Sort by z
-                Ts_z_arr = Ts_z_arr[sorted_indx]
-                Te_arr = Te_arr[sorted_indx]  # Sort by z
-                z_arr = np.linspace(z0[itimes[i]], TS_z_arr[-1], len(Ts_z_arr))
-                Te_arr = interp1(TS_z_arr, Te_arr, z_arr)
-                core_index = np.where(
-                    z_arr
-                    < (z0[itimes[i]] + 0.2 * bminor[itimes[i]]) & z_arr
-                    > (z0[itimes[i]] - 0.2 * bminor[itimes[i]])
-                )
-                if len(core_index) < 2:
-                    continue
-                Te_PF[itimes[i]] = np.mean(Te_arr[core_index]) / np.mean(Te_arr)
-            Te_PF = interp1(TS_time, Te_PF, params.shot_props.times)
-            calib = np.nan
-            # TODO(lajz): fix
-            return BasicCmodRequests.get_Ts_parameters(
-                params.shot_props.times, TS_time, ne_PF, Te_PF, pressure_PF
-            )
-        except mdsExceptions.MdsException as e:
-            params.logger.debug(
-                f"[Shot {params.shot_props.shot_id}]:{traceback.format_exc()}"
-            )
-            return pd.DataFrame(
-                {
-                    "ne_peaking": ne_PF,
-                    "Te_peaking": Te_PF,
-                    "pressure_peaking": pressure_PF,
-                }
-            )
 
     @staticmethod
     def get_sxr_parameters():
