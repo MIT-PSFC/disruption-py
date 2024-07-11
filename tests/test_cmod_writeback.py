@@ -38,7 +38,7 @@ def initial_mdsplus_data(shotlist, tokamak, setup_shot_database) -> Dict:
         pytest.skip("Skipping test on DIII-D")
     retrieval_settings = RetrievalSettings(
         time_setting="efit",
-        efit_tree_name="efit18",
+        efit_nickname_setting="disruption_warning",
         run_columns=FIRST_ITERATION_COLUMNS,
         only_requested_columns=True,
     )
@@ -79,7 +79,7 @@ def test_update_data(
     # do second retrieval that updates the data for the columns
     retrieval_settings = RetrievalSettings(
         time_setting="efit",
-        efit_tree_name="efit18",
+        efit_nickname_setting="disruption_warning",
         run_columns=ALL_ITERATION_COLUMNS,
         only_requested_columns=True,
     )

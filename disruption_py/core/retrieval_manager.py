@@ -78,17 +78,19 @@ class RetrievalManager:
         mds_conn = self.process_mds_conn.get_shot_connection(shot_id=shot_id)
 
         mds_conn.add_tree_nickname_funcs(
-            tree_nickname_funcs=retrieval_settings.nickname_setting.get_nickname_funcs(
-                NicknameSettingParams(
-                    shot_id=shot_id,
-                    mds_conn=mds_conn,
-                    database=self.process_database,
-                    disruption_time=disruption_time,
-                    efit_tree_name=retrieval_settings.efit_tree_name,
-                    tokamak=self.tokamak,
-                    logger=self.logger,
+            # if more nicknames are desired in the future add an additional_nicknames argument that is a dictionary of nickname settings
+            tree_nickname_funcs={
+                "_efit_tree": retrieval_settings.efit_nickname_setting.get_nickname_func(
+                    NicknameSettingParams(
+                        shot_id=shot_id,
+                        mds_conn=mds_conn,
+                        database=self.process_database,
+                        disruption_time=disruption_time,
+                        tokamak=self.tokamak,
+                        logger=self.logger,
+                    )
                 )
-            )
+            }
         )
 
         try:

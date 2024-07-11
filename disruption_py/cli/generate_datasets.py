@@ -40,7 +40,6 @@ def main(args):
     logger.info(f"requested derived feature columns: {derived_feature_cols}")
 
     retrieval_settings = RetrievalSettings(
-        efit_tree_name=args.efit_tree,
         time_setting=args.timebase_signal,
         run_methods=args.run_methods,
         run_tags=args.run_tags,
@@ -145,12 +144,6 @@ def get_parser():
         type=str,
         help="Signal whose timebase will be used as the unifying timebase of the dataset.",
         default="efit",
-    )
-    parser.add_argument(
-        "--efit_tree",
-        type=str,
-        help="Name of efit tree to use for each shot.",
-        default="analysis",
     )
     parser.add_argument(
         "--data_source",

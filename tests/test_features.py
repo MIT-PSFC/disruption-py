@@ -15,7 +15,7 @@ TEST_SETTINGS = {
     "timebase_full": {
         "cache_setting": "sql",
         "use_cache_setting_timebase": True,
-        "efit_tree_name": "analysis",
+        "efit_nickname_setting": "analysis",
     },
     "columns_full": {
         "cache_setting": "sql",
@@ -24,14 +24,14 @@ TEST_SETTINGS = {
         "only_requested_columns": True,
     },
     "flattop_full": {
-        "efit_tree_name": "analysis",
+        "efit_nickname_setting": "analysis",
         "domain_setting": "flattop",
         "run_tags": [],
         "run_methods": ["_get_ip_parameters"],
     },
     "rampup_fast": {
         "cmod": {
-            "efit_tree_name": "analysis",
+            "efit_nickname_setting": "analysis",
             "domain_setting": "rampup_and_flattop",
         }
     },

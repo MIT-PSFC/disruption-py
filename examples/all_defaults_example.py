@@ -8,7 +8,7 @@ from disruption_py.workflow import get_shots_data
 retrieval_settings = RetrievalSettings(
     # data settings
     cache_setting=None,
-    efit_tree_name="analysis",
+    efit_nickname_setting="disruption_warning",
     # method selection
     run_methods=[],
     run_tags=["all"],
