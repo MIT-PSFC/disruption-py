@@ -15,7 +15,7 @@ from disruption_py.core.physics_method.metadata import (
     is_parametered_method,
 )
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.machine.physics_method_holders import get_physics_method_holders
+from disruption_py.machine.method_holders import get_physics_method_holders
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 
 REQUIRED_COLS = {"time", "shot", "commit_hash"}
