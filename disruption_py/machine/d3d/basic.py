@@ -3,7 +3,6 @@
 import traceback
 
 import numpy as np
-import pandas as pd
 import scipy
 from MDSplus import mdsExceptions
 
@@ -24,34 +23,35 @@ class BasicD3DRequests:
     def _get_time_until_disrupt(params: PhysicsMethodParams):
         if params.disrupted:
             return {"time_until_disrupt": params.disruption_time - params.times}
-        return {"time_until_disrupt": np.full(params.times.size, np.nan)}
+        return {"time_until_disrupt": np.nan}
 
     @staticmethod
     @physics_method(columns=["H98", "H_alpha"], tokamak=Tokamak.D3D)
     def get_H_parameters(params: PhysicsMethodParams):
+        output = {"H98": np.nan, "H_alpha": np.nan}
         try:
             h_98, t_h_98 = params.mds_conn.get_data_with_dims(
                 r"\H_THH98Y2", tree_name="transport"
             )
             h_98 = interp1(t_h_98, h_98, params.times)
+            output["h_98"] = h_98
         except ValueError as e:
             params.logger.info(
                 f"[Shot {params.shot_id}]: Failed to get H98 signal. Returning NaNs."
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            h_98 = np.full(params.times.size, np.nan)
         try:
             h_alpha, t_h_alpha = params.mds_conn.get_data_with_dims(
                 r"\fs04", tree_name="d3d"
             )
             h_alpha = interp1(t_h_alpha, h_alpha, params.times)
+            output["H_alpha"] = h_alpha
         except ValueError as e:
             params.logger.info(
                 f"[Shot {params.shot_id}]: Failed to get H_alpha signal. Returning NaNs."
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            h_alpha = np.full(params.times.size, np.nan)
-        return {"H98": h_98, "H_alpha": h_alpha}
+        return output
 
     @staticmethod
     @physics_method(
@@ -165,8 +165,7 @@ class BasicD3DRequests:
 
         # Computer P_sol, defined as P_in - P_rad
         p_sol = p_input - p_rad
-
-        return {
+        output = {
             "p_rad": p_rad,
             "p_nbi": p_nbi,
             "p_ech": p_ech,
@@ -174,6 +173,7 @@ class BasicD3DRequests:
             "radiated_fraction": rad_fraction,
             "v_loop": v_loop,
         }
+        return output
 
     @staticmethod
     @physics_method(
@@ -181,6 +181,10 @@ class BasicD3DRequests:
         tokamak=Tokamak.D3D,
     )
     def get_ohmic_parameters(params: PhysicsMethodParams):
+        output = {
+            "p_ohm": np.nan,
+            "v_loop": np.nan,
+        }
         # Get edge loop voltage and smooth it a bit with a median filter
         try:
             v_loop, t_v_loop = params.mds_conn.get_data_with_dims(
@@ -193,8 +197,6 @@ class BasicD3DRequests:
                 f"[Shot {params.shot_id}]:Failed to open VLOOPB node. Setting to NaN."
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            v_loop = np.full(len(params.times), np.nan)
-            t_v_loop = v_loop.copy()
         # Get plasma current
         try:
             ip, t_ip = params.mds_conn.get_data_with_dims(
@@ -214,8 +216,7 @@ class BasicD3DRequests:
                 f"[Shot {params.shot_id}]:Unable to get plasma current data. p_ohm set to NaN."
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            p_ohm = np.full(len(params.times), np.nan)
-            return {"p_ohm": p_ohm, "v_loop": v_loop}
+            return output
         # [m] For simplicity, use fixed r_0 = 1.67 for DIII-D major radius
         r_0 = 1.67
         inductance = 4.0 * np.pi * r_0 * li / 2  # [H]
@@ -225,7 +226,8 @@ class BasicD3DRequests:
         v_inductive = inductance * dipdt_smoothed  # [V]
         v_resistive = v_loop - v_inductive  # [V]
         p_ohm = ip * v_resistive  # [W]
-        return {"p_ohm": p_ohm, "v_loop": v_loop}
+        output = {"p_ohm": p_ohm, "v_loop": v_loop}
+        return output
 
     @staticmethod
     @physics_method(
@@ -233,9 +235,7 @@ class BasicD3DRequests:
         tokamak=Tokamak.D3D,
     )
     def get_density_parameters(params: PhysicsMethodParams):
-        ne = np.full(len(params.times), np.nan)
-        g_f = ne.copy()
-        dne_dt = ne.copy()
+        ne, g_f, dne_dt = np.nan, np.nan, np.nan
         try:
             ne, t_ne = params.mds_conn.get_data_with_dims(
                 r"\density", tree_name="_efit_tree"
@@ -243,7 +243,8 @@ class BasicD3DRequests:
             ne = ne * 1.0e6  # [cm^3] -> [m^3]
             t_ne = t_ne / 1.0e3  # [ms] -> [s]
             dne_dt = np.gradient(ne, t_ne)
-            # NOTE: t_ne has higher resolution than efit_time so t_ne[0] < efit_time[0] because of rounding, meaning we need to allow extrapolation
+            # NOTE: t_ne has higher resolution than efit_time so t_ne[0] < efit_time[0]
+            # because of rounding, meaning we need to allow extrapolation
             ne = interp1(
                 t_ne,
                 ne,
@@ -279,7 +280,8 @@ class BasicD3DRequests:
             # TODO: Confirm that there is a separate exception if ptdata name doesn't exist
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get some parameter")
             params.logger.debug(f"[Shot {params.shot_id}]::{traceback.format_exc()}")
-        return {"n_e": ne, "Greenwald_fraction": g_f, "dn_dt": dne_dt}
+        output = {"n_e": ne, "Greenwald_fraction": g_f, "dn_dt": dne_dt}
+        return output
 
     @staticmethod
     @physics_method(
@@ -287,9 +289,9 @@ class BasicD3DRequests:
         tokamak=Tokamak.D3D,
     )
     def get_rt_density_parameters(params: PhysicsMethodParams):
-        ne_rt = np.full(len(params.times), np.nan)
-        g_f_rt = ne_rt.copy()
-        dne_dt_rt = ne_rt.copy()
+        ne_rt = np.nan
+        g_f_rt = np.nan
+        dne_dt_rt = np.nan
         try:
             # TODO: CHECK TREE_NAME
             ne_rt, t_ne_rt = params.mds_conn.get_data_with_dims(
@@ -333,11 +335,12 @@ class BasicD3DRequests:
         tokamak=Tokamak.D3D,
     )
     def get_ip_parameters(params: PhysicsMethodParams):
-        ip = np.full(len(params.times), np.nan)
-        ip_prog = np.full(len(params.times), np.nan)
+        ip = np.nan
+        ip_prog = np.nan
+        dip_dt = np.nan
+        dipprog_dt = np.nan
+        # Fill with nans instead of using a single nan because indices are used
         ip_error = np.full(len(params.times), np.nan)
-        dip_dt = np.full(len(params.times), np.nan)
-        dipprog_dt = np.full(len(params.times), np.nan)
         # Get measured plasma current parameters
         try:
             ip, t_ip = params.mds_conn.get_data_with_dims(
@@ -425,15 +428,16 @@ class BasicD3DRequests:
                 f"[Shot {params.shot_id}]:Failed to get epsoff signal. Setting to NaN."
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            power_supply_railed = np.full(len(params.times), np.nan)
+            power_supply_railed = np.nan
         # 'ip_prog': ip_prog,
-        return {
+        output = {
             "ip": ip,
             "ip_error": ip_error,
             "dip_dt": dip_dt,
             "dipprog_dt": dipprog_dt,
             "power_supply_railed": power_supply_railed,
         }
+        return output
 
     @staticmethod
     @physics_method(
@@ -448,11 +452,11 @@ class BasicD3DRequests:
     )
     def get_rt_ip_parameters(params: PhysicsMethodParams):
         params.mds_conn.open_tree("d3d")
-        ip_rt = np.full(len(params.times), np.nan)
-        ip_prog_rt = np.full(len(params.times), np.nan)
-        ip_error_rt = np.full(len(params.times), np.nan)
-        dip_dt_rt = np.full(len(params.times), np.nan)
-        dipprog_dt_rt = np.full(len(params.times), np.nan)
+        ip_rt = np.nan
+        ip_prog_rt = np.nan
+        ip_error_rt = np.nan
+        dip_dt_rt = np.nan
+        dipprog_dt_rt = np.nan
         # Get measured plasma current parameters
         # TODO: Why open d3d and not the rt efit tree?
         try:
@@ -553,14 +557,15 @@ class BasicD3DRequests:
                 f"[Shot {params.shot_id}]:Failed to get epsoff signal. power_supply_railed will be NaN."
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            power_supply_railed = np.full(len(params.times), np.nan)
+            power_supply_railed = np.nan
         # 'dip_dt_RT': dip_dt_rt,
-        return {
+        output = {
             "ip_RT": ip_rt,
             "ip_error_RT": ip_error_rt,
             "dipprog_dt_RT": dipprog_dt_rt,
             "power_supply_railed": power_supply_railed,
         }
+        return output
 
     @staticmethod
     @physics_method(
@@ -572,15 +577,15 @@ class BasicD3DRequests:
         On DIII-D the plasma control system uses isoflux
         control to control the plasma shape and position.  It does
         NOT use zcur control.  Therefore, the PCS does not have a
-        programmed vertical position.  This this routine will now
+        programmed vertical position.  This routine will now
         always return an arrays of NaN for z_prog, z_error, and
         z_error_norm.
         """
-        z_cur = np.full(len(params.times), np.nan)
-        z_cur_norm = np.full(len(params.times), np.nan)
-        z_prog = np.full(len(params.times), np.nan)
-        z_error = np.full(len(params.times), np.nan)
-        z_error_norm = np.full(len(params.times), np.nan)
+        z_cur = np.nan
+        z_cur_norm = np.nan
+        z_prog = np.nan
+        z_error = np.nan
+        z_error_norm = np.nan
         try:
             z_cur, t_z_cur = params.mds_conn.get_data_with_dims(
                 f"ptdata('vpszp', {params.shot_id})", tree_name="d3d"
@@ -607,13 +612,14 @@ class BasicD3DRequests:
         except mdsExceptions.MdsException as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get vpszp signal")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-        return {
+        output = {
             "zcur": z_cur,
             "zcur_normalized": z_cur_norm,
             "z_prog": z_prog,
             "z_error": z_error,
             "z_error_normalized": z_error_norm,
         }
+        return output
 
     @staticmethod
     @physics_method(
@@ -621,6 +627,10 @@ class BasicD3DRequests:
         tokamak=Tokamak.D3D,
     )
     def get_n1_bradial_parameters(params: PhysicsMethodParams):
+        output = {
+            "n_equal_1_normalized": np.nan,
+            "n_equal_1_mode": np.nan,
+        }
         # The following shots are missing bradial calculations in MDSplus and must be loaded from a separate datafile
         if params.shot_id >= 176030 and params.shot_id <= 176912:
             raise NotImplementedError
@@ -665,12 +675,7 @@ class BasicD3DRequests:
                     params.logger.debug(
                         f"[Shot {params.shot_id}]:{traceback.format_exc()}"
                     )
-                    n_equal_1_mode = np.full(len(params.times), np.nan)
-                    n_equal_1_normalized = np.full(len(params.times), np.nan)
-                    return {
-                        "n_equal_1_normalized": n_equal_1_normalized,
-                        "n_equal_1_mode": n_equal_1_mode,
-                    }
+                    return output
         n_equal_1_mode = interp1(dusbradial, t_n1, params.times)
         # Get toroidal field Btor
         b_tor, t_b_tor = params.mds_conn.get_data_with_dims(
@@ -678,10 +683,11 @@ class BasicD3DRequests:
         )
         b_tor = interp1(t_b_tor, b_tor, params.times)  # [T]
         n_equal_1_normalized = n_equal_1_mode / b_tor
-        return {
+        output = {
             "n_equal_1_normalized": n_equal_1_normalized,
             "n_equal_1_mode": n_equal_1_mode,
         }
+        return output
 
     @staticmethod
     @physics_method(columns=["n1rms", "n1rms_normalized"], tokamak=Tokamak.D3D)
@@ -694,7 +700,8 @@ class BasicD3DRequests:
         )
         b_tor = interp1(t_b_tor, b_tor, params.times)  # [T]
         n1rms_norm = n1rms / np.abs(b_tor)
-        return {"n1rms": n1rms, "n1rms_normalized": n1rms_norm}
+        output = {"n1rms": n1rms, "n1rms_normalized": n1rms_norm}
+        return output
 
     # TODO: Need to test and unblock recalculating peaking factors
     # By default get_peaking_factors should grab the data from MDSPlus as opposed to recalculate. See DPP v4 document for details:
@@ -729,10 +736,10 @@ class BasicD3DRequests:
         ts_options = ["combined", "core", "tangential"]
         # vertical range of the DIII-D cross section in meters
         vert_range = 3.0
-        te_pf = np.full(len(params.times), np.nan)
-        ne_pf = np.full(len(params.times), np.nan)
-        rad_cva = np.full(len(params.times), np.nan)
-        rad_xdiv = np.full(len(params.times), np.nan)
+        ne_pf = np.nan
+        te_pf = np.nan
+        rad_cva = np.nan
+        rad_xdiv = np.nan
         try:
             # TODO: TREE NAME
             rad_cva, t_rad_cva = params.mds_conn.get_data_with_dims(
@@ -749,8 +756,7 @@ class BasicD3DRequests:
             params.logger.info(
                 f"[Shot {params.shot_id}]:Failed to get CVA and XDIV from MDSPlus. Calculating locally, results may be inaccurate."
             )
-            rad_cva = np.full(len(params.times), np.nan)
-            rad_xdiv = np.full(len(params.times), np.nan)
+            rad_cva = rad_xdiv = np.nan
         try:
             ts = BasicD3DRequests._get_ne_te(params)
             for option in ts_options:
@@ -836,12 +842,13 @@ class BasicD3DRequests:
             )
             rad_cva = interp1(p_rad["t"], rad_cva.T, params.times)
             rad_xdiv = interp1(p_rad["t"], rad_xdiv.T, params.times)
-        return {
+        output = {
             "te_pf": te_pf,
             "ne_pf": ne_pf,
             "rad_cva": rad_cva,
             "rad_xdiv": rad_xdiv,
         }
+        return output
 
     # TODO: Finish implementing just in case
     def _efit_map_rz_to_rho_original(params: PhysicsMethodParams, ts_dict, efit_dict):
@@ -1061,7 +1068,6 @@ class BasicD3DRequests:
     @staticmethod
     @physics_method(columns=["H98", "H_alpha"], tokamak=Tokamak.D3D)
     def get_h_parameters(params: PhysicsMethodParams):
-        h98 = np.full(len(params.times), np.nan)
         h98, t_h98 = params.mds_conn.get_data_with_dims(
             r"\H_THH98Y2", tree_name="transport"
         )
@@ -1071,7 +1077,8 @@ class BasicD3DRequests:
             r"\fs04", tree_name="d3d"
         )
         h_alpha = interp1(t_h_alpha, h_alpha, params.times)
-        return {"H98": h98, "H_alpha": h_alpha}
+        output = {"H98": h98, "H_alpha": h_alpha}
+        return output
 
     @staticmethod
     @physics_method(
@@ -1131,7 +1138,8 @@ class BasicD3DRequests:
             bounds_error=False,
             fill_value=np.nan,
         )
-        return {"delta": delta, "squareness": squareness, "aminor": aminor}
+        output = {"delta": delta, "squareness": squareness, "aminor": aminor}
+        return output
 
     @staticmethod
     @cache_method
@@ -1263,7 +1271,7 @@ class BasicD3DRequests:
         r_major_axis, efit_time = params.mds_conn.get_data_with_dims(
             r"\top.results.geqdsk:rmaxis", tree_name="_efit_tree"
         )
-        data_dict = {
+        output = {
             "ch_avail": [],
             "z": [],
             "brightness": [],
@@ -1274,19 +1282,19 @@ class BasicD3DRequests:
         }
         for i in range(len(fan_chans)):
             chan = fan_chans[i]
-            data_dict["power"].append(b_struct.chan[chan].chanpwr)
+            output["power"].append(b_struct.chan[chan].chanpwr)
             if a_struct.channels[chan].ier == 0:
-                data_dict["ch_avail"].append(chan)
-            data_dict["x"][:, i] = a_struct.channels[chan].Z + np.tan(
+                output["ch_avail"].append(chan)
+            output["x"][:, i] = a_struct.channels[chan].Z + np.tan(
                 a_struct.channels[chan].angle * np.pi / 180.0
             ) * (r_major_axis - a_struct.channels[chan].R)
             b_struct.chan[chan].chanpwr[np.where(b_struct.chan[chan].chanpwr < 0)] = 0
             b_struct.chan[chan].brightness[
                 np.where(b_struct.chan[chan].brightness < 0)
             ] = 0
-            data_dict["z"].append(b_struct.chan[i].chanpwr)
-            data_dict["brightness"].append(b_struct.chan[i].brightness)
-        return data_dict
+            output["z"].append(b_struct.chan[i].chanpwr)
+            output["brightness"].append(b_struct.chan[i].brightness)
+        return output
 
     # TODO: Replace all instances of efit_dict with a dataclass
     @staticmethod
@@ -1305,7 +1313,7 @@ class BasicD3DRequests:
                     f"{path}{node}", tree_name="_efit_tree"
                 )
             except mdsExceptions.MdsException as e:
-                efit_dict[node] = np.full(efit_dict["time"].shape, np.nan)
+                efit_dict[node] = np.nan
                 params.logger.info(
                     f"[Shot {params.shot_id}]: Failed to get {node} from efit, Setting to all NaNs."
                 )

@@ -273,7 +273,7 @@ class BasicCmodRequests:
 
         ip_error = (np.abs(ip) - np.abs(ip_prog)) * np.sign(ip)
         # import pdb; pdb.set_trace()
-        return {
+        output = {
             "ip": ip,
             "dip_dt": dip,
             "dip_smoothed": dip_smoothed,
@@ -281,6 +281,7 @@ class BasicCmodRequests:
             "dipprog_dt": dipprog_dt,
             "ip_error": ip_error,
         }
+        return output
 
     @staticmethod
     @physics_method(
@@ -342,9 +343,10 @@ class BasicCmodRequests:
         ip, magtime = params.mds_conn.get_data_with_dims(
             r"\ip", tree_name="magnetics", astype="float64"
         )
-        return BasicCmodRequests.get_ip_parameters(
+        output = BasicCmodRequests.get_ip_parameters(
             params.times, ip, magtime, ip_prog, pcstime
         )
+        return output
 
     @staticmethod
     def get_z_parameters(times, z_prog, pcstime, z_error_without_ip, ip, dpcstime):
@@ -408,13 +410,14 @@ class BasicCmodRequests:
         z_times_v_z = interp1(
             dpcstime, z_times_v_z, times, "linear", False, z_times_v_z[-1]
         )
-        return {
+        output = {
             "z_error": z_error,
             "z_prog": z_prog,
             "zcur": z_cur,
             "v_z": v_z,
             "z_times_v_z": z_times_v_z,
         }
+        return output
 
     @staticmethod
     @physics_method(
@@ -564,7 +567,8 @@ class BasicCmodRequests:
         v_inductive = inductance * dip_smoothed
         v_resistive = v_loop - v_inductive
         p_ohm = ip * v_resistive
-        return {"p_oh": p_ohm, "v_loop": v_loop}
+        output = {"p_oh": p_ohm, "v_loop": v_loop}
+        return output
 
     @staticmethod
     @physics_method(
@@ -584,7 +588,7 @@ class BasicCmodRequests:
             r"\efit_aeqdsk:li", tree_name="_efit_tree", astype="float64"
         )
         ip_parameters = BasicCmodRequests._get_ip_parameters(params=params)
-        return BasicCmodRequests.get_ohmic_parameters(
+        output = BasicCmodRequests.get_ohmic_parameters(
             params.times,
             v_loop,
             v_loop_time,
@@ -593,6 +597,7 @@ class BasicCmodRequests:
             ip_parameters["dip_smoothed"],
             ip_parameters["ip"],
         )
+        return output
 
     @staticmethod
     def get_power(times, p_lh, t_lh, p_icrf, t_icrf, p_rad, t_rad, p_ohm):
@@ -626,7 +631,7 @@ class BasicCmodRequests:
         p_input = p_ohm + p_lh + p_icrf
         rad_fraction = p_rad / p_input
         rad_fraction[rad_fraction == np.inf] = np.nan
-        return {
+        output = {
             "p_rad": p_rad,
             "dprad_dt": dprad,
             "p_lh": p_lh,
@@ -634,6 +639,7 @@ class BasicCmodRequests:
             "p_input": p_input,
             "radiated_fraction": rad_fraction,
         }
+        return output
 
     @staticmethod
     @physics_method(
@@ -665,11 +671,13 @@ class BasicCmodRequests:
             except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF) as e:
                 continue
         p_oh = BasicCmodRequests._get_ohmic_parameters(params=params)["p_oh"]
-        return BasicCmodRequests.get_power(params.times, *values, p_oh)
+        output = BasicCmodRequests.get_power(params.times, *values, p_oh)
+        return output
 
     @staticmethod
     def get_kappa_area(times, aminor, area, a_times):
-        return {"kappa_area": interp1(a_times, area / (np.pi * aminor**2), times)}
+        output = {"kappa_area": interp1(a_times, area / (np.pi * aminor**2), times)}
+        return output
 
     @staticmethod
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
@@ -687,7 +695,8 @@ class BasicCmodRequests:
         aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
         # make sure area is not 0 or less than 0
         area[area <= 0] = 3.14 * 0.001**2
-        return BasicCmodRequests.get_kappa_area(params.times, aminor, area, times)
+        output = BasicCmodRequests.get_kappa_area(params.times, aminor, area, times)
+        return output
 
     @staticmethod
     def get_rotation_velocity(times, intensity, time, vel, hirextime):
@@ -732,9 +741,10 @@ class BasicCmodRequests:
             )
             params.logger.debug(f"[Shot {params.shot_id}]: {traceback.format_exc()}")
             return nan_output
-        return BasicCmodRequests.get_rotation_velocity(
+        output = BasicCmodRequests.get_rotation_velocity(
             params.times, intensity, time, vel, hirextime
         )
+        return output
 
     # TODO: Split into static and instance method
     @staticmethod
@@ -802,12 +812,11 @@ class BasicCmodRequests:
                     params.logger.warning(
                         f"[Shot {params.shot_id}] Only one data point for {bp13_names[i]} Returning nans."
                     )
-                    nan_arr = np.full(len(params.times), np.nan)
                     return {
-                        "n_equal_1_mode": nan_arr,
-                        "n_equal_1_normalized": nan_arr.copy(),
-                        "n_equal_1_phase": nan_arr.copy(),
-                        "BT": nan_arr.copy(),
+                        "n_equal_1_mode": np.nan,
+                        "n_equal_1_normalized": np.nan,
+                        "n_equal_1_phase": np.nan,
+                        "BT": np.nan,
                     }
                 baseline = np.mean(signal[baseline_indices])
                 signal = signal - baseline
@@ -842,21 +851,21 @@ class BasicCmodRequests:
             n_equal_1_normalized = n_equal_1_amplitude / btor_magnitude
             # INFO: Debugging purpose block of code at end of matlab file
             # INFO: n_equal_1_amplitude vs n_equal_1_mode
-        return {
+        output = {
             "n_equal_1_mode": n_equal_1_amplitude,
             "n_equal_1_normalized": n_equal_1_normalized,
             "n_equal_1_phase": n_equal_1_phase,
             "BT": btor,
         }
+        return output
 
     @staticmethod
     def get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
         if len(n_e) != len(t_n):
-            nan_arr = np.full(len(times), np.nan)
             return {
-                "n_e": nan_arr,
-                "dn_dt": nan_arr.copy(),
-                "Greenwald_fraction": nan_arr.copy(),
+                "n_e": np.nan,
+                "dn_dt": np.nan,
+                "Greenwald_fraction": np.nan,
             }
         # get the gradient of n_E
         dn_dt = np.gradient(n_e, t_n)
@@ -869,7 +878,8 @@ class BasicCmodRequests:
         a_minor[a_minor <= 0] = 0.001
         n_G = abs(ip) / (np.pi * a_minor**2) * 1e20  # Greenwald density in m ^-3
         g_f = n_e / n_G
-        return {"n_e": n_e, "dn_dt": dn_dt, "Greenwald_fraction": g_f}
+        output = {"n_e": n_e, "dn_dt": dn_dt, "Greenwald_fraction": g_f}
+        return output
 
     @staticmethod
     @physics_method(
@@ -898,13 +908,15 @@ class BasicCmodRequests:
             raise NotImplementedError(
                 "Can't currently handle failure of grabbing density data"
             )
-        return BasicCmodRequests.get_densities(
+        output = BasicCmodRequests.get_densities(
             params.times, n_e, t_n, ip, t_ip, a_minor, t_a
         )
+        return output
 
     @staticmethod
     def get_efc_current(times, iefc, t_iefc):
-        return {"I_efc": interp1(t_iefc, iefc, times, "linear")}
+        output = {"I_efc": interp1(t_iefc, iefc, times, "linear")}
+        return output
 
     @staticmethod
     @physics_method(columns=["I_efc"], tokamak=Tokamak.CMOD)
@@ -915,8 +927,9 @@ class BasicCmodRequests:
             )
         except Exception as e:
             params.logger.debug(f"[Shot {params.shot_id}] {traceback.format_exc()}")
-            return {"I_efc": np.full(len(params.times), np.nan)}
-        return BasicCmodRequests.get_efc_current(params.times, iefc, t_iefc)
+            return {"I_efc": np.nan}
+        output = BasicCmodRequests.get_efc_current(params.times, iefc, t_iefc)
+        return output
 
     @staticmethod
     def get_Ts_parameters(times, ts_data, ts_time, ts_z, z_sorted=False):
@@ -978,8 +991,11 @@ class BasicCmodRequests:
             )
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}] {traceback.format_exc()}")
-            return {"Te_width": np.full(len(params.times), np.nan)}
-        return BasicCmodRequests.get_Ts_parameters(params.times, ts_data, ts_time, ts_z)
+            return {"Te_width": np.nan}
+        output = BasicCmodRequests.get_Ts_parameters(
+            params.times, ts_data, ts_time, ts_z
+        )
+        return output
 
     # TODO: Finish
     @staticmethod
@@ -995,6 +1011,8 @@ class BasicCmodRequests:
         tokamak=Tokamak.CMOD,
     )
     def _get_peaking_factors(params: PhysicsMethodParams):
+        # Initialize to nans because they are either passed as parameters or their
+        # indexed values are updated
         nan_arr = np.full(len(params.times), np.nan)
         ne_PF = nan_arr.copy()
         Te_PF = nan_arr.copy()
@@ -1004,13 +1022,8 @@ class BasicCmodRequests:
             "Te_peaking": Te_PF,
             "pressure_peaking": pressure_PF,
         }
-        if (
-            (params.shot_id > 1120000000 and params.shot_id < 1120213000)
-            or (params.shot_id > 1140000000 and params.shot_id < 1140227000)
-            or (params.shot_id > 1150000000 and params.shot_id < 1150610000)
-            or (params.shot_id > 1160000000 and params.shot_id < 1160303000)
-        ):
-            # Ignore shots on the blacklist
+        # Ignore shots on the blacklist
+        if BasicCmodRequests.is_on_blacklist(params.shot_id):
             return nan_output
         try:
             z0 = 0.01 * params.mds_conn.get_data(
@@ -1192,14 +1205,9 @@ class BasicCmodRequests:
             "ne_peaking": ne_PF,
             "Te_peaking": Te_PF,
             "pressure_peaking": pressure_PF,
-            }
+        }
         # Ignore shots on the blacklist
-        if (
-            (params.shot_id > 1120000000 and params.shot_id < 1120213000)
-            or (params.shot_id > 1140000000 and params.shot_id < 1140227000)
-            or (params.shot_id > 1150000000 and params.shot_id < 1150610000)
-            or (params.shot_id > 1160000000 and params.shot_id < 1160303000)
-        ):
+        if BasicCmodRequests.is_on_blacklist(params.shot_id):
             return nan_output
         try:
             # Get shaping params
@@ -1275,6 +1283,7 @@ class BasicCmodRequests:
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
             return nan_output
+
     @staticmethod
     def get_sxr_parameters():
         pass
@@ -1283,20 +1292,19 @@ class BasicCmodRequests:
     @staticmethod
     @physics_method(columns=["sxr"], tokamak=Tokamak.CMOD)
     def _get_sxr_data(params: PhysicsMethodParams):
-        """ """
-        sxr = np.full(len(params.times), np.nan)
         try:
             sxr, t_sxr = params.mds_conn.get_data_with_dims(
                 r"\top.brightnesses.array_1:chord_16",
                 tree_name="xtomo",
                 astype="float64",
             )
-            sxr = interp1(t_sxr, sxr, params.times)
         except mdsExceptions.TreeFOPENR as e:
             params.logger.warning(
                 f"[Shot {params.shot_id}]: Failed to get SXR data returning NaNs"
             )
             params.logger.debug(f"[Shot {params.shot_id}]: {traceback.format_exc()}")
+            return {"sxr": np.nan}
+        sxr = interp1(t_sxr, sxr, params.times)
         return {"sxr": sxr}
 
     @staticmethod
@@ -1385,7 +1393,8 @@ class BasicCmodRequests:
             plt.legend()
             plt.show(block=True)
 
-        return {"Te_edge": Te_edge, "ne_edge": ne_edge}
+        output = {"Te_edge": Te_edge, "ne_edge": ne_edge}
+        return output
 
     @staticmethod
     @physics_method(
@@ -1394,11 +1403,10 @@ class BasicCmodRequests:
         tokamak=Tokamak.CMOD,
     )
     def _get_edge_parameters(params: PhysicsMethodParams):
-        nan_arr = np.full(len(params.times), np.nan)
         nan_output = {
-            "Te_edge": nan_arr,
-            "ne_edge": nan_arr.copy(),
-            }
+            "Te_edge": np.nan,
+            "ne_edge": np.nan,
+        }
         try:
             # sys.path.append("/home/sciortino/usr/python3modules/eqtools3")
             sys.path.append("/home/sciortino/usr/python3modules/profiletools3")
@@ -1411,12 +1419,7 @@ class BasicCmodRequests:
             pass
 
         # Ignore shots on the blacklist
-        if (
-            (params.shot_id > 1120000000 and params.shot_id < 1120213000)
-            or (params.shot_id > 1140000000 and params.shot_id < 1140227000)
-            or (params.shot_id > 1150000000 and params.shot_id < 1150610000)
-            or (params.shot_id > 1160000000 and params.shot_id < 1160303000)
-        ):
+        if BasicCmodRequests.is_on_blacklist(params.shot_id):
             return nan_output
         # Range of rho to interpolate over
         rhobase = np.arange(0, 1, 0.001)
@@ -1476,7 +1479,8 @@ class BasicCmodRequests:
         # TS Te should be >15 eV inside near SOL
         p_Te.remove_points(np.logical_and(p_Te.X[:, 0] < 1.03, p_Te.y < 0.015))
 
-        return BasicCmodRequests.get_edge_parameters(params.times, p_Te, p_ne)
+        output = BasicCmodRequests.get_edge_parameters(params.times, p_Te, p_ne)
+        return output
 
     @staticmethod
     def get_H98():
@@ -1538,14 +1542,28 @@ class BasicCmodRequests:
             * (p_input**-0.69)
         )
         H98 = tau / tau_98
-
-        return {
+        output = {
             "H98": H98,
             "Wmhd": Wmhd,
             "btor": btor,
             "dWmhd_dt": dWmhd_dt,
             "p_input": p_input,
         }
+        return output
+
+    @staticmethod
+    def is_on_blacklist(shot_id: int) -> bool:
+        """TODO why will these shots cause `_get_peaking_factors`,
+        `_get_peaking_factors_no_tci`, and `_get_edge_parameters` to fail?
+        """
+        if (
+            (shot_id > 1120000000 and shot_id < 1120213000)
+            or (shot_id > 1140000000 and shot_id < 1140227000)
+            or (shot_id > 1150000000 and shot_id < 1150610000)
+            or (shot_id > 1160000000 and shot_id < 1160303000)
+        ):
+            return True
+        return False
 
 
 # helper class holding functions for thomson density measures
