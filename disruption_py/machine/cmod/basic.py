@@ -1274,12 +1274,7 @@ class BasicCmodRequests:
             )
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            return {
-                "ne_peaking": ne_PF,
-                "Te_peaking": Te_PF,
-                "pressure_peaking": pressure_PF,
-            }
-
+            return nan_output
     @staticmethod
     def get_sxr_parameters():
         pass
