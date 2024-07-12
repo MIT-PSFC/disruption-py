@@ -11,7 +11,7 @@ import numpy as np
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.math import interp1
-from disruption_py.machine.cmod.physics import BasicCmodRequests
+from disruption_py.machine.cmod.physics import CmodPhysicsMethods
 from disruption_py.machine.tokamak import Tokamak
 
 DomainSettingType = Union["DomainSetting", str, Dict[Tokamak, "DomainSettingType"]]
@@ -102,7 +102,7 @@ class FlattopDomainSetting(DomainSetting):
         raise ValueError(f"flattop domain not defined for tokamak: {params.tokamak}")
 
     def _get_domain_cmod(self, params: DomainSettingParams) -> np.ndarray:
-        ip_parameters = BasicCmodRequests._get_ip_parameters(
+        ip_parameters = CmodPhysicsMethods._get_ip_parameters(
             params=params.physics_method_params
         )
         ipprog, dipprog_dt = ip_parameters["ip_prog"], ip_parameters["dipprog_dt"]
@@ -190,7 +190,7 @@ class RampupAndFlattopDomainSetting(DomainSetting):
         )
 
     def _get_domain_cmod(self, params: DomainSettingParams) -> np.ndarray:
-        ip_parameters = BasicCmodRequests._get_ip_parameters(
+        ip_parameters = CmodPhysicsMethods._get_ip_parameters(
             params=params.physics_method_params
         )
         ipprog, dipprog_dt = ip_parameters["ip_prog"], ip_parameters["dipprog_dt"]

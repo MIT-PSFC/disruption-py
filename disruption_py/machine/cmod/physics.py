@@ -23,7 +23,7 @@ from disruption_py.machine.tokamak import Tokamak
 warnings.filterwarnings("error", category=RuntimeWarning)
 
 
-class BasicCmodRequests:
+class CmodPhysicsMethods:
     @staticmethod
     @cache_method
     def get_active_wire_segments(params: PhysicsMethodParams):
@@ -142,7 +142,7 @@ class BasicCmodRequests:
     )
     def _get_ip_parameters(params: PhysicsMethodParams):
         # Automatically generated
-        active_segments = BasicCmodRequests.get_active_wire_segments(params=params)
+        active_segments = CmodPhysicsMethods.get_active_wire_segments(params=params)
 
         # Default PCS timebase is 1 KHZ
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
@@ -195,7 +195,7 @@ class BasicCmodRequests:
         ip, magtime = params.mds_conn.get_data_with_dims(
             r"\ip", tree_name="magnetics", astype="float64"
         )
-        output = BasicCmodRequests.get_ip_parameters(
+        output = CmodPhysicsMethods.get_ip_parameters(
             params.times, ip, magtime, ip_prog, pcstime
         )
         return output
@@ -282,7 +282,7 @@ class BasicCmodRequests:
         z_prog.fill(np.nan)
         z_prog_temp = z_prog.copy()
         z_wire_index = -1
-        active_wire_segments = BasicCmodRequests.get_active_wire_segments(params=params)
+        active_wire_segments = CmodPhysicsMethods.get_active_wire_segments(params=params)
 
         for node_path, start in active_wire_segments:
             for wire_index in range(1, 17):
@@ -373,7 +373,7 @@ class BasicCmodRequests:
                 r"\ip", tree_name="magnetics"
             )
             ip = interp1(ip_time, ip, dpcstime)
-        return BasicCmodRequests.get_z_parameters(
+        return CmodPhysicsMethods.get_z_parameters(
             params.times, z_prog, pcstime, z_error_without_ip, ip, dpcstime
         )
 
@@ -439,8 +439,8 @@ class BasicCmodRequests:
         li, efittime = params.mds_conn.get_data_with_dims(
             r"\efit_aeqdsk:li", tree_name="_efit_tree", astype="float64"
         )
-        ip_parameters = BasicCmodRequests._get_ip_parameters(params=params)
-        output = BasicCmodRequests.get_ohmic_parameters(
+        ip_parameters = CmodPhysicsMethods._get_ip_parameters(params=params)
+        output = CmodPhysicsMethods.get_ohmic_parameters(
             params.times,
             v_loop,
             v_loop_time,
@@ -522,8 +522,8 @@ class BasicCmodRequests:
                 values[2 * i + 1] = sig_time
             except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF) as e:
                 continue
-        p_oh = BasicCmodRequests._get_ohmic_parameters(params=params)["p_oh"]
-        output = BasicCmodRequests.get_power(params.times, *values, p_oh)
+        p_oh = CmodPhysicsMethods._get_ohmic_parameters(params=params)["p_oh"]
+        output = CmodPhysicsMethods.get_power(params.times, *values, p_oh)
         return output
 
     @staticmethod
@@ -547,7 +547,7 @@ class BasicCmodRequests:
         aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
         # make sure area is not 0 or less than 0
         area[area <= 0] = 3.14 * 0.001**2
-        output = BasicCmodRequests.get_kappa_area(params.times, aminor, area, times)
+        output = CmodPhysicsMethods.get_kappa_area(params.times, aminor, area, times)
         return output
 
     @staticmethod
@@ -593,7 +593,7 @@ class BasicCmodRequests:
             )
             params.logger.debug(f"[Shot {params.shot_id}]: {traceback.format_exc()}")
             return nan_output
-        output = BasicCmodRequests.get_rotation_velocity(
+        output = CmodPhysicsMethods.get_rotation_velocity(
             params.times, intensity, time, vel, hirextime
         )
         return output
@@ -760,7 +760,7 @@ class BasicCmodRequests:
             raise NotImplementedError(
                 "Can't currently handle failure of grabbing density data"
             )
-        output = BasicCmodRequests.get_densities(
+        output = CmodPhysicsMethods.get_densities(
             params.times, n_e, t_n, ip, t_ip, a_minor, t_a
         )
         return output
@@ -780,7 +780,7 @@ class BasicCmodRequests:
         except Exception as e:
             params.logger.debug(f"[Shot {params.shot_id}] {traceback.format_exc()}")
             return {"I_efc": np.nan}
-        output = BasicCmodRequests.get_efc_current(params.times, iefc, t_iefc)
+        output = CmodPhysicsMethods.get_efc_current(params.times, iefc, t_iefc)
         return output
 
     @staticmethod
@@ -844,7 +844,7 @@ class BasicCmodRequests:
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}] {traceback.format_exc()}")
             return {"Te_width": np.nan}
-        output = BasicCmodRequests.get_Ts_parameters(
+        output = CmodPhysicsMethods.get_Ts_parameters(
             params.times, ts_data, ts_time, ts_z
         )
         return output
@@ -875,7 +875,7 @@ class BasicCmodRequests:
             "pressure_peaking": pressure_PF,
         }
         # Ignore shots on the blacklist
-        if BasicCmodRequests.is_on_blacklist(params.shot_id):
+        if CmodPhysicsMethods.is_on_blacklist(params.shot_id):
             return nan_output
         try:
             z0 = 0.01 * params.mds_conn.get_data(
@@ -930,7 +930,7 @@ class BasicCmodRequests:
             Te_PF = interp1(TS_time, Te_PF, params.times)
             calib = np.nan
             # TODO(lajz): fix
-            return BasicCmodRequests.get_Ts_parameters(
+            return CmodPhysicsMethods.get_Ts_parameters(
                 params.times, TS_time, ne_PF, Te_PF, pressure_PF
             )
         except mdsExceptions.MdsException as e:
@@ -1059,7 +1059,7 @@ class BasicCmodRequests:
             "pressure_peaking": pressure_PF,
         }
         # Ignore shots on the blacklist
-        if BasicCmodRequests.is_on_blacklist(params.shot_id):
+        if CmodPhysicsMethods.is_on_blacklist(params.shot_id):
             return nan_output
         try:
             # Get shaping params
@@ -1129,7 +1129,7 @@ class BasicCmodRequests:
             Te_PF = interp1(TS_time, Te_PF, params.times)
             calib = np.nan
             # TODO(lajz): fix
-            return BasicCmodRequests.get_Ts_parameters(
+            return CmodPhysicsMethods.get_Ts_parameters(
                 params.times, TS_time, ne_PF, Te_PF, pressure_PF
             )
         except mdsExceptions.MdsException as e:
@@ -1271,7 +1271,7 @@ class BasicCmodRequests:
             pass
 
         # Ignore shots on the blacklist
-        if BasicCmodRequests.is_on_blacklist(params.shot_id):
+        if CmodPhysicsMethods.is_on_blacklist(params.shot_id):
             return nan_output
         # Range of rho to interpolate over
         rhobase = np.arange(0, 1, 0.001)
@@ -1331,7 +1331,7 @@ class BasicCmodRequests:
         # TS Te should be >15 eV inside near SOL
         p_Te.remove_points(np.logical_and(p_Te.X[:, 0] < 1.03, p_Te.y < 0.015))
 
-        output = BasicCmodRequests.get_edge_parameters(params.times, p_Te, p_ne)
+        output = CmodPhysicsMethods.get_edge_parameters(params.times, p_Te, p_ne)
         return output
 
     @staticmethod
@@ -1357,10 +1357,10 @@ class BasicCmodRequests:
         """
 
         # Get parameters for calculating confinement time
-        powers_df = BasicCmodRequests._get_power(params=params)
+        powers_df = CmodPhysicsMethods._get_power(params=params)
         efit_df = CmodEfitMethods._get_EFIT_parameters(params=params)
-        density_df = BasicCmodRequests._get_densities(params=params)
-        ip_df = BasicCmodRequests._get_ip_parameters(params=params)
+        density_df = CmodPhysicsMethods._get_densities(params=params)
+        ip_df = CmodPhysicsMethods._get_ip_parameters(params=params)
 
         # Get BT
 
