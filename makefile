@@ -59,10 +59,10 @@ black:
 
 pylint:
 	poetry run pylint --version
-	poetry run pylint $(PYLINT_DIRS)
+	poetry run pylint --recursive=y $(PYLINT_DIRS)
 
 pylint-only:
-	poetry run pylint --disable=all --enable=$(CODE) $(PYLINT_DIRS)
+	poetry run pylint --recursive=y --disable=all --enable=$(CODE) $(PYLINT_DIRS)
 
 shellcheck:
 	poetry run shellcheck --version
