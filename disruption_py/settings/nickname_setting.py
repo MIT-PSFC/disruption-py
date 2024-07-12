@@ -6,7 +6,6 @@ from abc import ABC, abstractmethod
 from typing import Dict, Union
 
 from disruption_py.core.utils.enums import map_string_to_enum
-from disruption_py.core.utils.misc import without_duplicates
 from disruption_py.io.mds import MDSConnection
 from disruption_py.io.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
@@ -22,8 +21,8 @@ class NicknameSettingParams:
 
     Attributes
     ----------
-    sho_id : int
-        the shot id for which nicknames are set
+    shot_id : int
+        the shot id for which to resolve nicknames.
     mds_conn: MDSConnection
         MDSConnection object to access MDSPlus data.
     database : ShotDatabase
@@ -70,18 +69,18 @@ class NicknameSetting(ABC):
         str
             The MDSplus tree name.
         """
-        pass
 
 
 class NicknameSettingDict(NicknameSetting):
     """
-    Utility class that is automatically used when a dicationary is passed as the a nickanme setting.
+    Utility class that is automatically used when a dictionary is passed the nickname setting.
 
     Parameters
     ----------
     nickname_setting_dict : dict[Tokamak, NicknameSettingType]
-        A dictionary mapping tokamak type strings to the desired nickname setting for that tokamak.  E.g. `{'cmod': 'efit'}`.
-        Any other option passable as a value in the `nickname_setting_dict` dictionary parameter in `RetrievalSettings` may be used.
+        A dictionary mapping tokamaks to a nickname setting, e.g. `{'cmod': 'efit'}`.
+        Any other option passable as a value in the `nickname_setting_dict` dictionary parameter
+        in `RetrievalSettings` may be used.
     """
 
     def __init__(self, nickname_setting_dict: Dict[Tokamak, NicknameSettingType]):
@@ -140,20 +139,20 @@ class DisruptionNicknameSetting(NicknameSetting):
 
     def _d3d_nickname(self, params: NicknameSettingParams) -> str:
         if params.disruption_time is None:
-            return DefaultNicknameSetting(NicknameSettingParams)._resolve_nickname()
+            return DefaultNicknameSetting(params)._resolve_nickname()
         efit_trees = params.database.query(
             "select tree from code_rundb.dbo.plasmas where "
             f"shot = {params.shot_id} and runtag = 'DIS' and deleted = 0 order by idx",
             use_pandas=False,
         )
         if len(efit_trees) == 0:
-            return DefaultNicknameSetting(NicknameSettingParams)._resolve_nickname()
+            return DefaultNicknameSetting(params)._resolve_nickname()
         efit_tree = efit_trees[-1][0]
         return efit_tree
 
     def _cmod_nickname(self, params: NicknameSettingParams) -> str:
         if params.disruption_time is None:
-            return DefaultNicknameSetting(NicknameSettingParams)._resolve_nickname()
+            return DefaultNicknameSetting(params)._resolve_nickname()
         return "efit18"
 
     def _resolve_nickname(self, params: NicknameSettingParams) -> str:
