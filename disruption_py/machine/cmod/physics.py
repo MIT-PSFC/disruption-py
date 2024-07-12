@@ -17,7 +17,7 @@ from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import gaussian_fit, interp1, smooth
 from disruption_py.core.utils.misc import safe_cast
-from disruption_py.machine.cmod.efit import CModEfitRequests
+from disruption_py.machine.cmod.efit import CmodEfitMethods
 from disruption_py.machine.tokamak import Tokamak
 
 warnings.filterwarnings("error", category=RuntimeWarning)
@@ -1358,7 +1358,7 @@ class BasicCmodRequests:
 
         # Get parameters for calculating confinement time
         powers_df = BasicCmodRequests._get_power(params=params)
-        efit_df = CModEfitRequests._get_EFIT_parameters(params=params)
+        efit_df = CmodEfitMethods._get_EFIT_parameters(params=params)
         density_df = BasicCmodRequests._get_densities(params=params)
         ip_df = BasicCmodRequests._get_ip_parameters(params=params)
 
@@ -1552,7 +1552,7 @@ class ThomsonDensityMeasure:
         n_e = [1e32]
         n_e_sig = [1e32]
         flag = 1
-        valid_indices, efit_times = CModEfitRequests.efit_check()
+        valid_indices, efit_times = CmodEfitMethods.efit_check()
         ip = params.mds_conn.get_data(r"\ip", "cmod")
         if np.mean(ip) > 0:
             flag = 0

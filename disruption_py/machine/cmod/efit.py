@@ -8,7 +8,7 @@ from disruption_py.core.utils.math import interp1
 from disruption_py.machine.tokamak import Tokamak
 
 
-class CModEfitRequests:
+class CmodEfitMethods:
 
     efit_cols = {
         "beta_n": r"\efit_aeqdsk:betan",
@@ -62,21 +62,21 @@ class CModEfitRequests:
         efit_data = dict()
 
         # Get data from each of the columns in efit_cols one at a time
-        for param in CModEfitRequests.efit_cols:
+        for param in CmodEfitMethods.efit_cols:
             try:
                 # If shot before 2000 and the param is in efit_cols_pre_2000
                 if (
                     params.shot_id <= 1000000000
-                    and param not in CModEfitRequests.efit_cols_pre_2000.keys()
+                    and param not in CmodEfitMethods.efit_cols_pre_2000.keys()
                 ):
                     efit_data[param] = params.mds_conn.get_data(
-                        CModEfitRequests.efit_cols_pre_2000[param],
+                        CmodEfitMethods.efit_cols_pre_2000[param],
                         tree_name="_efit_tree",
                         astype="float64",
                     )
                 else:
                     efit_data[param] = params.mds_conn.get_data(
-                        CModEfitRequests.efit_cols[param],
+                        CmodEfitMethods.efit_cols[param],
                         tree_name="_efit_tree",
                         astype="float64",
                     )
@@ -90,8 +90,8 @@ class CModEfitRequests:
                 efit_data[param] = np.full(len(efit_time), np.nan)
                 pass
 
-        for param in CModEfitRequests.efit_derivs:
-            efit_data[CModEfitRequests.efit_derivs[param]] = np.gradient(
+        for param in CmodEfitMethods.efit_derivs:
+            efit_data[CmodEfitMethods.efit_derivs[param]] = np.gradient(
                 efit_data[param], efit_time, edge_order=1
             )
 
