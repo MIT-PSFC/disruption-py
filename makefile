@@ -1,5 +1,6 @@
 
 PYLINT_DIRS := disruption_py examples tests
+DELETE_OBJS := __pycache__ .pytest_cache
 
 # git #
 
@@ -10,6 +11,18 @@ status: fetch
 
 fetch:
 	git fetch -p -a
+
+# clean #
+
+.PHONY: clean-list clean-delete
+
+clean-list:
+	echo $(DELETE_OBJS) | xargs -n1 find -name
+	find -type d -empty
+
+clean-delete:
+	echo $(DELETE_OBJS) | xargs -n1 find -name | xargs rm -rfv
+	find -type d -empty -delete
 
 # poetry #
 
@@ -49,7 +62,7 @@ test-fast:
 
 # lint #
 
-.PHONY: lint black pylint shellcheck yamllint
+.PHONY: lint black isort pylint shellcheck yamllint
 
 lint: black pylint shellcheck yamllint
 
@@ -57,12 +70,16 @@ black:
 	poetry run black --version
 	poetry run black --check .
 
+isort:
+	poetry run isort --version
+	poetry run isort --check --profile black .
+
 pylint:
 	poetry run pylint --version
-	poetry run pylint $(PYLINT_DIRS)
+	poetry run pylint --recursive=y $(PYLINT_DIRS)
 
 pylint-only:
-	poetry run pylint --disable=all --enable=$(CODE) $(PYLINT_DIRS)
+	poetry run pylint --recursive=y --disable=all --enable=$(CODE) $(PYLINT_DIRS)
 
 shellcheck:
 	poetry run shellcheck --version
