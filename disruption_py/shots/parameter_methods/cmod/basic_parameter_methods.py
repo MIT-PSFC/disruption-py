@@ -1045,10 +1045,16 @@ class BasicCmodRequests(ShotDataRequest):
     @staticmethod
     def get_peaking_factors(times, TS_time, ne_PF, Te_PF, pressure_PF):
         # TODO: this should be a computation function
-        ne_PF = interp1(TS_time, ne_PF, times, 'linear')
-        Te_PF = interp1(TS_time, Te_PF, times, 'linear')
-        pressure_PF = interp1(TS_time, pressure_PF, times, 'linear')
-        return pd.DataFrame({"ne_peaking": ne_PF, "Te_peaking":Te_PF, "pressure_peaking":pressure_PF})
+        ne_PF = interp1(TS_time, ne_PF, times, "linear")
+        Te_PF = interp1(TS_time, Te_PF, times, "linear")
+        pressure_PF = interp1(TS_time, pressure_PF, times, "linear")
+        return pd.DataFrame(
+            {
+                "ne_peaking": ne_PF,
+                "Te_peaking": Te_PF,
+                "pressure_peaking": pressure_PF,
+            }
+        )
 
     @staticmethod
     @parameter_cached_method(
@@ -1058,9 +1064,15 @@ class BasicCmodRequests(ShotDataRequest):
     )
     def _get_peaking_factors(params: ShotDataRequestParams):
         # TODO: this should be a data fetching function
-        ne_PF = np.full(len(params.shot_props.times), np.nan)
-        Te_PF = ne_PF.copy()
-        pressure_PF = ne_PF.copy()
+        empty_df = pd.DataFrame(
+            {
+                "ne_peaking": np.full(len(params.shot_props.times), np.nan),
+                "Te_peaking": np.full(len(params.shot_props.times), np.nan),
+                "pressure_peaking": np.full(len(params.shot_props.times), np.nan),
+            }
+        )
+        # Exclude all shots in the blacklist
+        # TODO: What is the blacklist?
         if (
             (
                 params.shot_props.shot_id > 1120000000
@@ -1079,16 +1091,11 @@ class BasicCmodRequests(ShotDataRequest):
                 and params.shot_props.shot_id < 1160303000
             )
         ):
-            # Ignore shots on the blacklist
-            # TODO: what is this?
-            return pd.DataFrame(
-                {
-                    "ne_peaking": ne_PF,
-                    "Te_peaking": Te_PF,
-                    "pressure_peaking": pressure_PF,
-                }
-            )
+            return empty_df
+        # Fetch data
         try:
+            # Get EFIT geometry data
+            # TODO: Move this to the main function
             z0 = 0.01 * params.mds_conn.get_data(
                 r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
             )
@@ -1099,63 +1106,72 @@ class BasicCmodRequests(ShotDataRequest):
                 r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
             )
             bminor = aminor * kappa
+            # Get TS data
             node_ext = ".yag_new.results.profiles"
-            TS_te, TS_time = params.mds_conn.get_data_with_dims(
+            TS_Te_core, TS_time = params.mds_conn.get_data_with_dims(
                 f"{node_ext}:te_rz", tree_name="electrons"
             )
-            TS_te = TS_te * 1000 * 11600
-            tets_edge = params.mds_conn.get_data(r"\ts_te") * 11600
-            TS_te = np.concatenate((TS_te, tets_edge))
-            TS_z = params.mds_conn.get_data(
+            TS_Te_core = TS_Te_core * 1000 * 11600
+            TS_Te_edge = params.mds_conn.get_data(r"\ts_te") * 11600
+            TS_Te = np.concatenate((TS_Te_core, TS_Te_edge))
+            TS_z_core = params.mds_conn.get_data(
                 f"{node_ext}:z_sorted", tree_name="electrons"
             )
-            zts_edge = params.mds_conn.get_data(r"\fiber_z", tree_name="electrons")
-            TS_z = np.concatenate((TS_z, zts_edge))
-            if len(zts_edge) != tets_edge.shape[0]:
-                return pd.DataFrame(
-                    {
-                        "ne_peaking": ne_PF,
-                        "Te_peaking": Te_PF,
-                        "pressure_peaking": pressure_PF,
-                    }
+            TS_z_edge = params.mds_conn.get_data(r"\fiber_z", tree_name="electrons")
+            TS_z = np.concatenate((TS_z_core, TS_z_edge))
+            # Make sure that there are equal numbers of edge position and edge temperature points
+            if len(TS_z_edge) != TS_Te_edge.shape[0]:
+                params.logger.warning(
+                    f"[Shot {params.shot_props.shot_id}]: TS edge data and z positions are not the same length for shot"
                 )
-            Te_PF = Te_PF[: len(TS_time)]
-            itimes, = np.where((TS_time > 0) & (TS_time < params.shot_props.times[-1]))
-            bminor = interp1(efit_time, bminor, TS_time)
-            z0 = interp1(efit_time, z0, TS_time)
-            for itime in itimes:
-                # TODO: which is the proper axis for slicing?
-                Te_arr = TS_te[:, itime]
-                indx, = np.where(Te_arr > 0)
-                if len(indx) < 10:
-                    continue
-                Te_arr = Te_arr[indx]
-                TS_z_arr = TS_z[indx]
-                sorted_indx = np.argsort(TS_z_arr)
-                Ts_z_arr = Ts_z_arr[sorted_indx]
-                Te_arr = Te_arr[sorted_indx]
-                z_arr = np.linspace(z0[itime], TS_z_arr[-1], len(Ts_z_arr))
-                Te_arr = interp1(TS_z_arr, Te_arr, z_arr)
-                core_index, = np.where(
-                    z_arr
-                    < (z0[itime] + 0.2 * bminor[itime]) & z_arr
-                    > (z0[itime] - 0.2 * bminor[itime])
-                )
-                if len(core_index) < 2:
-                    continue
-                Te_PF[itime] = np.mean(Te_arr[core_index]) / np.mean(Te_arr)
-            Te_PF = interp1(TS_time, Te_PF, params.shot_props.times)
-            return BasicCmodRequests.get_Ts_parameters(
-                params.shot_props.times, TS_time, ne_PF, Te_PF, pressure_PF
-            )
+                return empty_df
         except mdsExceptions.MdsException as e:
-            return pd.DataFrame(
-                {
-                    "ne_peaking": ne_PF,
-                    "Te_peaking": Te_PF,
-                    "pressure_peaking": pressure_PF,
-                }
+            return empty_df
+
+        # TODO: Move following to get_peaking_factors() after debugging
+        # Interpolate EFIT signals to TS time basis
+        bminor = interp1(efit_time, bminor, TS_time)
+        z0 = interp1(efit_time, z0, TS_time)
+        # Calculate Te peaking factor
+        Te_PF = np.full(len(TS_time), np.nan)
+        (itimes,) = np.where((TS_time > 0) & (TS_time < params.shot_props.times[-1]))
+        for itime in itimes:
+            # TODO: which is the proper axis for slicing?
+            # Slice TS_Te and TS_z profiles at time TS_time[itime]
+            TS_Te_arr = TS_Te[:, itime]
+            (indx,) = np.where(TS_Te_arr > 0)
+            if len(indx) < 10:
+                continue
+            TS_Te_arr = TS_Te_arr[indx]
+            TS_z_arr = TS_z[indx]
+            sorted_indx = np.argsort(TS_z_arr)
+            TS_z_arr = TS_z_arr[sorted_indx]
+            TS_Te_arr = TS_Te_arr[sorted_indx]
+            # Create equal-spacing array of TS_z_arr and interpolate TS_Te_arr on it
+            if np.isnan(z0[itime]):  # Skip if there's no EFIT zmagx data
+                continue
+            z_arr_equal_spacing = np.linspace(z0[itime], TS_z_arr[-1], len(TS_z_arr))
+            Te_arr_equal_spacing = interp1(TS_z_arr, TS_Te_arr, z_arr_equal_spacing)
+            # Calculate Te_PF
+            (core_index,) = np.where(
+                np.array(z_arr_equal_spacing < (z0[itime] + 0.2 * bminor[itime]))
+                & np.array(z_arr_equal_spacing > (z0[itime] - 0.2 * bminor[itime]))
             )
+            if len(core_index) < 2:
+                continue
+            Te_PF[itime] = np.mean(Te_arr_equal_spacing[core_index]) / np.mean(
+                Te_arr_equal_spacing
+            )
+
+        # TODO: Calculate ne peaking factor
+        ne_PF = np.full(len(TS_time), np.nan)
+
+        # TODO: Calculate pressure peaking factor
+        pressure_PF = np.full(len(TS_time), np.nan)
+
+        return BasicCmodRequests.get_peaking_factors(
+            params.shot_props.times, TS_time, ne_PF, Te_PF, pressure_PF
+        )
 
     @staticmethod
     @parameter_cached_method(
