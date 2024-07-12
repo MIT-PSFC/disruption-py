@@ -56,13 +56,17 @@ test-fast:
 
 # lint #
 
-.PHONY: lint black pylint shellcheck yamllint
+.PHONY: lint black isort pylint shellcheck yamllint
 
 lint: black pylint shellcheck yamllint
 
 black:
 	poetry run black --version
 	poetry run black --check .
+
+isort:
+	poetry run isort --version
+	poetry run isort --check --profile black .
 
 pylint:
 	poetry run pylint --version
