@@ -282,7 +282,9 @@ class CmodPhysicsMethods:
         z_prog.fill(np.nan)
         z_prog_temp = z_prog.copy()
         z_wire_index = -1
-        active_wire_segments = CmodPhysicsMethods.get_active_wire_segments(params=params)
+        active_wire_segments = CmodPhysicsMethods.get_active_wire_segments(
+            params=params
+        )
 
         for node_path, start in active_wire_segments:
             for wire_index in range(1, 17):
