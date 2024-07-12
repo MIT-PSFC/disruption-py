@@ -97,9 +97,9 @@ class NicknameSettingDict(NicknameSetting):
         chosen_setting = self.resolved_nickname_setting_dict.get(params.tokamak, None)
         if chosen_setting is not None:
             return chosen_setting.get_times(params)
-        else:
-            params.logger.warning(f"No nickname setting for tokamak {params.tokamak}")
-            return None
+        raise NotImplementedError(
+            f"{self.__class__.__name__} is not implemented for tokamak {params.tokamak}."
+        )
 
 
 class StaticNicknameSetting(NicknameSetting):
@@ -142,7 +142,7 @@ class DisruptionNicknameSetting(NicknameSetting):
 
     def _resolve_nickname(self, params: NicknameSettingParams) -> str:
         raise NotImplementedError(
-            "Disruption warning nickname setting not implemented for tokamak."
+            f"{self.__class__.__name__} is not implemented for tokamak {params.tokamak}."
         )
 
 
