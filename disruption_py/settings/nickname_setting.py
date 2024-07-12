@@ -116,8 +116,8 @@ class DefaultNicknameSetting(NicknameSetting):
 
     def __init__(self):
         self.tokamak_overrides = {
-            Tokamak.CMOD: StaticNicknameSetting("analysis")._resolve_nickname,
-            Tokamak.D3D: StaticNicknameSetting("efit01")._resolve_nickname,
+            Tokamak.CMOD: lambda params: "analysis",
+            Tokamak.D3D: lambda params: "efit01",
         }
 
     def _resolve_nickname(self, params: NicknameSettingParams) -> str:
@@ -139,20 +139,20 @@ class DisruptionNicknameSetting(NicknameSetting):
 
     def _d3d_nickname(self, params: NicknameSettingParams) -> str:
         if params.disruption_time is None:
-            return DefaultNicknameSetting(params)._resolve_nickname()
+            return DefaultNicknameSetting().resolve_nickname_func(params)
         efit_trees = params.database.query(
             "select tree from code_rundb.dbo.plasmas where "
             f"shot = {params.shot_id} and runtag = 'DIS' and deleted = 0 order by idx",
             use_pandas=False,
         )
         if len(efit_trees) == 0:
-            return DefaultNicknameSetting(params)._resolve_nickname()
+            return DefaultNicknameSetting().resolve_nickname_func(params)
         efit_tree = efit_trees[-1][0]
         return efit_tree
 
     def _cmod_nickname(self, params: NicknameSettingParams) -> str:
         if params.disruption_time is None:
-            return DefaultNicknameSetting(params)._resolve_nickname()
+            return DefaultNicknameSetting().resolve_nickname_func(params)
         return "efit18"
 
     def _resolve_nickname(self, params: NicknameSettingParams) -> str:
