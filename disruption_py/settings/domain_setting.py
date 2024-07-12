@@ -11,7 +11,7 @@ import numpy as np
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.math import interp1
-from disruption_py.machine.cmod.basic import BasicCmodRequests
+from disruption_py.machine.cmod.physics import BasicCmodRequests
 from disruption_py.machine.tokamak import Tokamak
 
 DomainSettingType = Union["DomainSetting", str, Dict[Tokamak, "DomainSettingType"]]
