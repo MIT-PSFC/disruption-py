@@ -11,6 +11,13 @@ status: fetch
 fetch:
 	git fetch -p -a
 
+# clean #
+
+.PHONY: clean
+
+clean:
+	find -name __pycache__ -or -name .pytest_cache | xargs rm -rfv
+
 # poetry #
 
 .PHONY: install uninstall reinstall lock update show
