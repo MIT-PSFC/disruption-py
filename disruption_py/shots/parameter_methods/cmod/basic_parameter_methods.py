@@ -1043,8 +1043,47 @@ class BasicCmodRequests(ShotDataRequest):
 
     # TODO: Finish
     @staticmethod
-    def get_peaking_factors(times, TS_time, ne_PF, Te_PF, pressure_PF):
-        # TODO: this should be a computation function
+    def get_peaking_factors(times, TS_time, TS_Te, TS_ne, TS_z, efit_time, bminor, z0):
+        # Interpolate EFIT signals to TS time basis
+        bminor = interp1(efit_time, bminor, TS_time)
+        z0 = interp1(efit_time, z0, TS_time)
+        
+        # Calculate Te peaking factor
+        Te_PF = np.full(len(TS_time), np.nan)
+        (itimes,) = np.where((TS_time > 0) & (TS_time < times[-1]))
+        for itime in itimes:
+            # Slice TS_Te and TS_z profiles at time TS_time[itime]
+            TS_Te_arr = TS_Te[:, itime]
+            (indx,) = np.where(TS_Te_arr > 0)
+            if len(indx) < 10:
+                continue
+            TS_Te_arr = TS_Te_arr[indx]
+            TS_z_arr = TS_z[indx]
+            sorted_indx = np.argsort(TS_z_arr)
+            TS_z_arr = TS_z_arr[sorted_indx]
+            TS_Te_arr = TS_Te_arr[sorted_indx]
+            # Create equal-spacing array of TS_z_arr and interpolate TS_Te_arr on it
+            # Skip if there's no EFIT zmagx data
+            if np.isnan(z0[itime]):  
+                continue
+            z_arr_equal_spacing = np.linspace(z0[itime], TS_z_arr[-1], len(TS_z_arr))
+            Te_arr_equal_spacing = interp1(TS_z_arr, TS_Te_arr, z_arr_equal_spacing)
+            # Calculate Te_PF
+            (core_index,) = np.where(
+                np.array(z_arr_equal_spacing < (z0[itime] + 0.2 * bminor[itime]))
+                & np.array(z_arr_equal_spacing > (z0[itime] - 0.2 * bminor[itime]))
+            )
+            if len(core_index) < 2:
+                continue
+            Te_PF[itime] = np.mean(Te_arr_equal_spacing[core_index]) / np.mean(
+                Te_arr_equal_spacing
+            )
+
+        # TODO: Calculate ne and pressure peaking factors
+        ne_PF = np.full(len(TS_time), np.nan)
+        pressure_PF = np.full(len(TS_time), np.nan)
+        
+        # Interpolate peaking factors to the requested time basis
         ne_PF = interp1(TS_time, ne_PF, times, "linear")
         Te_PF = interp1(TS_time, Te_PF, times, "linear")
         pressure_PF = interp1(TS_time, pressure_PF, times, "linear")
@@ -1106,7 +1145,7 @@ class BasicCmodRequests(ShotDataRequest):
                 r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
             )
             bminor = aminor * kappa
-            # Get TS data
+            # Get Te data and TS time basis
             node_ext = ".yag_new.results.profiles"
             TS_Te_core, TS_time = params.mds_conn.get_data_with_dims(
                 f"{node_ext}:te_rz", tree_name="electrons"
@@ -1125,52 +1164,14 @@ class BasicCmodRequests(ShotDataRequest):
                     f"[Shot {params.shot_props.shot_id}]: TS edge data and z positions are not the same length for shot"
                 )
                 return empty_df
+            
+            # TODO: Get ne data
+            TS_ne = np.full(len(params.shot_props.times), np.nan)
+            
         except mdsExceptions.MdsException as e:
             return empty_df
-
-        # TODO: Move following to get_peaking_factors() after debugging
-        # Interpolate EFIT signals to TS time basis
-        bminor = interp1(efit_time, bminor, TS_time)
-        z0 = interp1(efit_time, z0, TS_time)
-        # Calculate Te peaking factor
-        Te_PF = np.full(len(TS_time), np.nan)
-        (itimes,) = np.where((TS_time > 0) & (TS_time < params.shot_props.times[-1]))
-        for itime in itimes:
-            # TODO: which is the proper axis for slicing?
-            # Slice TS_Te and TS_z profiles at time TS_time[itime]
-            TS_Te_arr = TS_Te[:, itime]
-            (indx,) = np.where(TS_Te_arr > 0)
-            if len(indx) < 10:
-                continue
-            TS_Te_arr = TS_Te_arr[indx]
-            TS_z_arr = TS_z[indx]
-            sorted_indx = np.argsort(TS_z_arr)
-            TS_z_arr = TS_z_arr[sorted_indx]
-            TS_Te_arr = TS_Te_arr[sorted_indx]
-            # Create equal-spacing array of TS_z_arr and interpolate TS_Te_arr on it
-            if np.isnan(z0[itime]):  # Skip if there's no EFIT zmagx data
-                continue
-            z_arr_equal_spacing = np.linspace(z0[itime], TS_z_arr[-1], len(TS_z_arr))
-            Te_arr_equal_spacing = interp1(TS_z_arr, TS_Te_arr, z_arr_equal_spacing)
-            # Calculate Te_PF
-            (core_index,) = np.where(
-                np.array(z_arr_equal_spacing < (z0[itime] + 0.2 * bminor[itime]))
-                & np.array(z_arr_equal_spacing > (z0[itime] - 0.2 * bminor[itime]))
-            )
-            if len(core_index) < 2:
-                continue
-            Te_PF[itime] = np.mean(Te_arr_equal_spacing[core_index]) / np.mean(
-                Te_arr_equal_spacing
-            )
-
-        # TODO: Calculate ne peaking factor
-        ne_PF = np.full(len(TS_time), np.nan)
-
-        # TODO: Calculate pressure peaking factor
-        pressure_PF = np.full(len(TS_time), np.nan)
-
         return BasicCmodRequests.get_peaking_factors(
-            params.shot_props.times, TS_time, ne_PF, Te_PF, pressure_PF
+            params.shot_props.times, TS_time, TS_Te, TS_ne, TS_z, efit_time, bminor, z0
         )
 
     @staticmethod
