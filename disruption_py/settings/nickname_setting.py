@@ -50,14 +50,14 @@ class NicknameSetting(ABC):
     A setting for getting tree nicknames.
     """
 
-    def get_nickname_func(self, params: NicknameSettingParams):
+    def resolve_nickname_func(self, params: NicknameSettingParams):
         if hasattr(self, "tokamak_overrides"):
             if params.tokamak in self.tokamak_overrides:
                 return lambda: self.tokamak_overrides[params.tokamak](params)
-        return lambda: self._get_nickname(params)
+        return lambda: self._resolve_nickname(params)
 
     @abstractmethod
-    def _get_nickname(self, params: NicknameSettingParams) -> str:
+    def _resolve_nickname(self, params: NicknameSettingParams) -> str:
         """Abstract method implemented by subclasses to determine an MDSplus tree name.
 
         Parameters
@@ -93,7 +93,7 @@ class NicknameSettingDict(NicknameSetting):
         }
         self.resolved_nickname_setting_dict = resolved_nickname_setting_dict
 
-    def _get_nickname(self, params: NicknameSettingParams) -> str:
+    def _resolve_nickname(self, params: NicknameSettingParams) -> str:
         chosen_setting = self.resolved_nickname_setting_dict.get(params.tokamak, None)
         if chosen_setting is not None:
             return chosen_setting.get_times(params)
@@ -106,7 +106,7 @@ class StaticNicknameSetting(NicknameSetting):
     def __init__(self, tree_name: str):
         self.tree_name = tree_name
 
-    def _get_nickname(self, params: NicknameSettingParams) -> str:
+    def _resolve_nickname(self, params: NicknameSettingParams) -> str:
         return self.tree_name
 
 
@@ -140,7 +140,7 @@ class DisruptionWarningNicknameSetting(NicknameSetting):
         else:
             return "efit18"
 
-    def _get_nickname(self, params: NicknameSettingParams) -> str:
+    def _resolve_nickname(self, params: NicknameSettingParams) -> str:
         raise NotImplementedError(
             "Disruption warning nickname setting not implemented for tokamak."
         )
