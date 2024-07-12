@@ -110,17 +110,31 @@ class StaticNicknameSetting(NicknameSetting):
         return self.tree_name
 
 
+class DefaultNicknameSetting(NicknameSetting):
+    """
+    A setting to resolve the '_efit_tree' nickname to the default EFIT tree.
+    """
+
+    def __init__(self):
+        self.tokamak_overrides = {
+            Tokamak.CMOD: StaticNicknameSetting("analysis")._resolve_nickname,
+            Tokamak.D3D: StaticNicknameSetting("efit01")._resolve_nickname,
+        }
+
+    def _resolve_nickname(self, params: NicknameSettingParams) -> str:
+        raise NotImplementedError(
+            f"{self.__class__.__name__} is not implemented for tokamak {params.tokamak}."
+        )
 class DisruptionNicknameSetting(NicknameSetting):
     """
-    For _efit_tree tree nicknames.
-    A setting for getting "_efit_tree" tree nicknames as they were used in the disruption_warning sql table.
+    A setting to resolve the '_efit_tree' nickname to the disruption EFIT tree.
     """
 
     def __init__(self, cmod_non_disruption_tree_name: str = "analysis"):
         self.cmod_non_disruption_tree_name = cmod_non_disruption_tree_name
         self.tokamak_overrides = {
-            Tokamak.D3D: self._d3d_nickname,
             Tokamak.CMOD: self._cmod_nickname,
+            Tokamak.D3D: self._d3d_nickname,
         }
 
     def _d3d_nickname(self, params: NicknameSettingParams) -> str:
@@ -148,8 +162,10 @@ class DisruptionNicknameSetting(NicknameSetting):
 
 # --8<-- [start:nickname_setting_keys]
 _nickname_setting_mappings: Dict[str, NicknameSetting] = {
+    "default": DefaultNicknameSetting(),
     "disruption": DisruptionNicknameSetting(),
     # deprecated
+    "analysis": DefaultNicknameSetting(),
     "disruption_warning": DisruptionNicknameSetting(),
 }
 # --8<-- [end:nickname_setting_keys]
