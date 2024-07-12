@@ -91,7 +91,7 @@ class RetrievalSettings:
     cache_setting: CacheSetting = None
 
     # Shot creation settings
-    efit_nickname_setting: NicknameSetting = "disruption_warning"
+    efit_nickname_setting: NicknameSetting = "disruption"
 
     # Shot run settings
     run_methods: List[str] = field(default_factory=list)

@@ -110,7 +110,7 @@ class StaticNicknameSetting(NicknameSetting):
         return self.tree_name
 
 
-class DisruptionWarningNicknameSetting(NicknameSetting):
+class DisruptionNicknameSetting(NicknameSetting):
     """
     For _efit_tree tree nicknames.
     A setting for getting "_efit_tree" tree nicknames as they were used in the disruption_warning sql table.
@@ -148,7 +148,9 @@ class DisruptionWarningNicknameSetting(NicknameSetting):
 
 # --8<-- [start:nickname_setting_keys]
 _nickname_setting_mappings: Dict[str, NicknameSetting] = {
-    "disruption_warning": DisruptionWarningNicknameSetting(),
+    "disruption": DisruptionNicknameSetting(),
+    # deprecated
+    "disruption_warning": DisruptionNicknameSetting(),
 }
 # --8<-- [end:nickname_setting_keys]
 
