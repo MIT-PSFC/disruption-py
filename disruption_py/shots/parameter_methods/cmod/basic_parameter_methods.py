@@ -1047,7 +1047,7 @@ class BasicCmodRequests(ShotDataRequest):
         # Interpolate EFIT signals to TS time basis
         bminor = interp1(efit_time, bminor, TS_time)
         z0 = interp1(efit_time, z0, TS_time)
-        
+
         # Calculate Te peaking factor
         Te_PF = np.full(len(TS_time), np.nan)
         (itimes,) = np.where((TS_time > 0) & (TS_time < times[-1]))
@@ -1064,7 +1064,7 @@ class BasicCmodRequests(ShotDataRequest):
             TS_Te_arr = TS_Te_arr[sorted_indx]
             # Create equal-spacing array of TS_z_arr and interpolate TS_Te_arr on it
             # Skip if there's no EFIT zmagx data
-            if np.isnan(z0[itime]):  
+            if np.isnan(z0[itime]):
                 continue
             z_arr_equal_spacing = np.linspace(z0[itime], TS_z_arr[-1], len(TS_z_arr))
             Te_arr_equal_spacing = interp1(TS_z_arr, TS_Te_arr, z_arr_equal_spacing)
@@ -1082,7 +1082,7 @@ class BasicCmodRequests(ShotDataRequest):
         # TODO: Calculate ne and pressure peaking factors
         ne_PF = np.full(len(TS_time), np.nan)
         pressure_PF = np.full(len(TS_time), np.nan)
-        
+
         # Interpolate peaking factors to the requested time basis
         ne_PF = interp1(TS_time, ne_PF, times, "linear")
         Te_PF = interp1(TS_time, Te_PF, times, "linear")
@@ -1164,10 +1164,10 @@ class BasicCmodRequests(ShotDataRequest):
                     f"[Shot {params.shot_props.shot_id}]: TS edge data and z positions are not the same length for shot"
                 )
                 return empty_df
-            
+
             # TODO: Get ne data
             TS_ne = np.full(len(params.shot_props.times), np.nan)
-            
+
         except mdsExceptions.MdsException as e:
             return empty_df
         return BasicCmodRequests.get_peaking_factors(
