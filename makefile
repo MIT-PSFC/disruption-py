@@ -18,9 +18,11 @@ fetch:
 
 clean-list:
 	echo $(DELETE_OBJS) | xargs -n1 find -name
+	find -type d -empty
 
 clean-delete:
 	echo $(DELETE_OBJS) | xargs -n1 find -name | xargs rm -rfv
+	find -type d -empty -delete
 
 # poetry #
 
