@@ -69,9 +69,11 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def get_ip_parameters(times, ip, magtime, ip_prog, pcstime):
-        """Calculates actual and programmed current as well as their derivatives and difference.
+        """Calculates actual and programmed current as well as their derivatives
+        and difference.
 
-        The time derivatives are useful for discriminating between rampup, flattop, and rampdown.
+        The time derivatives are useful for discriminating between rampup, flattop,
+        and rampdown.
 
         Parameters
         ----------
@@ -185,7 +187,8 @@ class CmodPhysicsMethods:
                     except mdsExceptions.MdsException as e:
                         params.logger.warning(
                             [
-                                f"[Shot {params.shot_id}]: Error getting PID gains for wire {wire_index}"
+                                f"[Shot {params.shot_id}]: Error getting PID gains"
+                                + f" for wire {wire_index}"
                             ]
                         )
                         params.logger.debug(
@@ -202,13 +205,14 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def get_z_parameters(times, z_prog, pcstime, z_error_without_ip, ip, dpcstime):
-        """Get values of Z_error, Z_prog, and derived signals from plasma control system (PCS).
+        """Get values of Z_error, Z_prog, and derived signals from plasma control
+        system (PCS).
 
-        Z_prog is the programmed vertical position of the plasma current centroid, and Z_error is the difference
-        between the actual position and that requested (Z_error = Z_cur -
-        Z_prog). Thus, the actual (estimated) position, Z_cur, can be calculated.
-        And the vertical velocity, v_z, can be taken from the time derivative,
-        and the product z_times_v_z ( = Z_cur * v_z) is also calculated.
+        Z_prog is the programmed vertical position of the plasma current centroid,
+        and Z_error is the difference between the actual position and that requested
+        (Z_error = Z_cur - Z_prog). Thus, the actual (estimated) position, Z_cur,
+        can be calculated. And the vertical velocity, v_z, can be taken from the
+        time derivative, and the product z_times_v_z ( = Z_cur * v_z) is also calculated.
 
         Parameters
         ----------
@@ -217,9 +221,11 @@ class CmodPhysicsMethods:
         z_prog : array_like
             Programmed vertical position of the plasma current centroid.
         pcstime : array_like
-            Time array for the programmed vertical position of the plasma current centroid.
+            Time array for the programmed vertical position of the plasma current
+            centroid.
         z_error_without_ip : array_like
-            Difference between the actual and programmed vertical position of the plasma current centroid.
+            Difference between the actual and programmed vertical position of the
+            plasma current centroid.
         ip : array_like
             Actual plasma current.
         dpcstime : array_like
@@ -228,7 +234,8 @@ class CmodPhysicsMethods:
         Returns
         -------
         z_error : array_like
-            Difference between the actual and programmed vertical position of the plasma current centroid.
+            Difference between the actual and programmed vertical position of the
+            plasma current centroid.
         z_prog : array_like
             Programmed vertical position of the plasma current centroid.
         z_cur : array_like
@@ -334,7 +341,8 @@ class CmodPhysicsMethods:
         wire_errors, dpcstime = params.mds_conn.get_data_with_dims(
             r"\top.hardware.dpcs.signals:a_out", tree_name="hybrid", dim_nums=[1]
         )
-        # The value of Z_error we read is not in the units we want. It must be *divided* by a factor AND *divided* by the plasma current.
+        # The value of Z_error we read is not in the units we want. It must be *divided*
+        #  by a factor AND *divided* by the plasma current.
         z_error_without_factor_and_ip = wire_errors[:, z_wire_index]
         z_error_without_ip = np.empty(z_error_without_factor_and_ip.shape)
         z_error_without_ip.fill(np.nan)
@@ -383,7 +391,8 @@ class CmodPhysicsMethods:
     def get_ohmic_parameters(
         times, v_loop, v_loop_time, li, efittime, dip_smoothed, ip
     ):
-        """Calculate the ohmic power from the loop voltage, inductive voltage, and plasma current.
+        """Calculate the ohmic power from the loop voltage, inductive voltage, and
+        plasma current.
 
         Parameters
         ----------
@@ -414,7 +423,8 @@ class CmodPhysicsMethods:
 
 
         """
-        R0 = 0.68  # For simplicity, we use R0 = 0.68 m, but we could use \efit_aeqdsk:rmagx
+        # For simplicity, we use R0 = 0.68 m, but we could use \efit_aeqdsk:rmagx
+        R0 = 0.68
         inductance = 4.0 * np.pi * 1.0e-7 * R0 * li / 2.0
         v_loop = interp1(v_loop_time, v_loop, times)
         inductance = interp1(efittime, inductance, times)
@@ -555,13 +565,17 @@ class CmodPhysicsMethods:
     @staticmethod
     def get_rotation_velocity(times, intensity, time, vel, hirextime):
         """
-        Uses spectroscopy graphs of ionized(to hydrogen and helium levels) Argon to calculate velocity. Because of the heat profile of the plasma, suitable measurements are only found near the center
+        Uses spectroscopy graphs of ionized(to hydrogen and helium levels) Argon
+        to calculate velocity. Because of the heat profile of the plasma, suitable
+        measurements are only found near the center
         """
         v_0 = np.empty(len(time))
-        # Check that the argon intensity pulse has a minimum count and duration threshold
+        # Check that the argon intensity pulse has a minimum count and duration
+        # threshold
         valid_indices = np.where(intensity > 1000 & intensity < 10000)
-        # Matlab code just multiplies by time delta but that doesn't work in the case where we have different time deltas
-        # Instead we sum the time deltas for all valid indices to check the total duration
+        # Matlab code just multiplies by time delta but that doesn't work in the
+        # case where we have different time deltas. Instead we sum the time deltas
+        # for all valid indices to check the total duration
         if np.sum(time[valid_indices + 1] - time[valid_indices]) >= 0.2:
             v_0 = interp1(hirextime, vel, time)
             # TODO: Determine better threshold
@@ -591,7 +605,8 @@ class CmodPhysicsMethods:
             )
         except mdsExceptions.TreeFOPENR as e:
             params.logger.warning(
-                f"[Shot {params.shot_id}]: Failed to open necessary tress for rotational velocity calculations."
+                f"[Shot {params.shot_id}]: Failed to open necessary tress for "
+                + f"rotational velocity calculations."
             )
             params.logger.debug(f"[Shot {params.shot_id}]: {traceback.format_exc()}")
             return nan_output
@@ -614,8 +629,8 @@ class CmodPhysicsMethods:
     def _get_n_equal_1_amplitude(params: PhysicsMethodParams):
         """Calculate n=1 amplitude and phase.
 
-        This method uses the four BP13 Bp sensors near the midplane on the outboard vessel
-        wall.  The calculation is done by using a least squares fit to an
+        This method uses the four BP13 Bp sensors near the midplane on the outboard
+        vessel wall.  The calculation is done by using a least squares fit to an
         expansion in terms of n = 0 & 1 toroidal harmonics.  The BP13 sensors are
         part of the set used for plasma control and equilibrium reconstruction,
         and their signals have been analog integrated (units: tesla), so they
@@ -626,7 +641,8 @@ class CmodPhysicsMethods:
 
         N=1 toroidal assymmetry in the magnetic fields
         """
-        # These sensors are placed toroidally around the machine. Letters refer to the 2 ports the sensors were placed between.
+        # These sensors are placed toroidally around the machine. Letters refer to
+        # the 2 ports the sensors were placed between.
         bp13_names = ["BP13_BC", "BP13_DE", "BP13_GH", "BP13_JK"]
         bp13_signals = np.empty((len(params.times), len(bp13_names)))
 
@@ -646,7 +662,8 @@ class CmodPhysicsMethods:
         btor, t_mag = params.mds_conn.get_data_with_dims(
             r"\btor", tree_name="magnetics"
         )
-        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be on by t=-1. So pick the time before that to calculate baseline
+        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
+        # on by t=-1. So pick the time before that to calculate baseline
         baseline_indices = np.where(t_mag <= -1.8)
         btor = btor - np.mean(btor[baseline_indices])
         path = r"\mag_bp_coils.signals."
@@ -664,7 +681,8 @@ class CmodPhysicsMethods:
                 )
                 if len(signal) == 1:
                     params.logger.warning(
-                        f"[Shot {params.shot_id}] Only one data point for {bp13_names[i]} Returning nans."
+                        f"[Shot {params.shot_id}] Only one data point for "
+                        + f"{bp13_names[i]} Returning nans."
                     )
                     return {
                         "n_equal_1_mode": np.nan,
@@ -747,7 +765,8 @@ class CmodPhysicsMethods:
                 r".tci.results:nl_04", tree_name="electrons", astype="float64"
             )
             # Divide by chord length of ~0.6m to get line averaged density.
-            # For future refernce, chord length is stored in .01*\analysis::efit_aeqdsk:rco2v[3,*]
+            # For future refernce, chord length is stored in
+            # .01*\analysis::efit_aeqdsk:rco2v[3,*]
             n_e = np.squeeze(n_e) / 0.6
             ip, t_ip = params.mds_conn.get_data_with_dims(
                 r"\ip", tree_name="magnetics", astype="float64"
@@ -1095,7 +1114,8 @@ class CmodPhysicsMethods:
             # Make sure that there are equal numbers of edge position and edge temperature points
             if len(z_edge) != Te_edge.shape[0]:
                 params.logger.warning(
-                    f"[Shot {params.shot_id}]: TS edge data and z positions are not the same length for shot"
+                    f"[Shot {params.shot_id}]: TS edge data and z positions are "
+                    + "not the same length for shot"
                 )
                 return nan_output
             Te_PF = Te_PF[: len(Te_time)]  # Reshape Te_PF to length of Te_time
@@ -1181,7 +1201,8 @@ class CmodPhysicsMethods:
         Returns
         -------
         Te_edge : array_like
-            The edge temperature (averaged over the edge region) on the requested timebase.
+            The edge temperature (averaged over the edge region) on the requested
+            timebase.
         ne_edge : array_like
             The edge density (averaged over the edge region) on the requested timebase.
 
@@ -1234,7 +1255,9 @@ class CmodPhysicsMethods:
         ne_interp_edge = np.where(rhobase_mesh_mask, ne_interp, np.nan)
 
         # Compute edge quantities
-        with warnings.catch_warnings():  # Carch warning about taking nanmean of an empty array. This is ok because we want it to return nan for empty arrays
+        # Catch warning about taking nanmean of an empty array. This is ok because
+        # we want it to return nan for empty arrays
+        with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=RuntimeWarning)
             Te_edge = np.nanmean(Te_interp_edge, axis=0)
             ne_edge = np.nanmean(ne_interp_edge, axis=0)
@@ -1314,11 +1337,13 @@ class CmodPhysicsMethods:
         #    raise ValueError('Edge Thomson rhobase differs between ne and Te')
         #    return None, None
 
-        # consider only flux surface on which points were measured, regardless of LFS or HFS
+        # consider only flux surface on which points were measured, regardless of
+        # LFS or HFS
         p_Te.X = np.abs(p_Te.X)
         p_ne.X = np.abs(p_ne.X)
 
-        # set some minimum uncertainties. Recall that units in objects are 1e20m^{-3} and keV
+        # set some minimum uncertainties. Recall that units in objects are 1e20m^{-3}
+        # and keV
         p_ne.y[p_ne.y <= 0.0] = 0.01  # 10^18 m^-3
         p_Te.y[p_Te.y <= 0.01] = 0.01  # 10 eV
         p_ne.err_y[p_ne.err_y <= 0.01] = 0.01  # 10^18 m^-3
@@ -1350,7 +1375,8 @@ class CmodPhysicsMethods:
     def _get_H98(params: PhysicsMethodParams):
         """Prepare to compute H98 by getting tau_E
 
-        Scaling from eq. 20, ITER Physics Basis Chapter 2 https://iopscience.iop.org/article/10.1088/0029-5515/39/12/302/pdf
+        Scaling from eq. 20, ITER Physics Basis Chapter 2
+        https://iopscience.iop.org/article/10.1088/0029-5515/39/12/302/pdf
         (in s, MA, T, MW, 10^19 m^−3, AMU, m)
         Original Authors
         ----------------
@@ -1369,7 +1395,8 @@ class CmodPhysicsMethods:
         btor, t_mag = params.mds_conn.get_data_with_dims(
             r"\btor", tree_name="magnetics"
         )  # tmag: [s]
-        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be on by t=-1. So pick the time before that to calculate baseline
+        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
+        # on by t=-1. So pick the time before that to calculate baseline
         baseline_indices = np.where(t_mag <= -1.8)
         btor = btor - np.mean(btor[baseline_indices])
         btor = np.abs(interp1(t_mag, btor, params.times))
@@ -1515,7 +1542,8 @@ class ThomsonDensityMeasure:
     @staticmethod
     def integrate_ts_tci(params: PhysicsMethodParams, nlnum):
         """
-        Integrate Thomson electron density measurement to the line integrated electron density for comparison with two color interferometer (TCI) measurement results
+        Integrate Thomson electron density measurement to the line integrated electron
+        density for comparison with two color interferometer (TCI) measurement results
         """
         core_mult = 1.0
         edge_mult = 1.0

@@ -33,7 +33,8 @@ class CmodEfitMethods:
         "chisq": r"\efit_aeqdsk:chisq",
     }
 
-    # EFIT column names for data before 2000 TODO: confirm with Bob that these are the right back-ups and make sure that these are similar to standard EFIT columns
+    # EFIT column names for data before 2000 TODO: confirm with Bob that these are
+    # the right back-ups and make sure that these are similar to standard EFIT columns
     efit_cols_pre_2000 = {
         "a_minor": r"\efit_aeqdsk:aout",
         "li": r"\efit_aeqdsk:ali",
@@ -114,7 +115,8 @@ class CmodEfitMethods:
             # Adjust aminor units
             efit_data["aminor"] = efit_data["aminor"] / 100  # [cm] to [m]
 
-            # Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally sure on this one)
+            # Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally
+            #  sure on this one)
             try:  # TODO: confirm this
                 ssimag = params.mds_conn.get_data(
                     r"\efit_geqdsk:ssimag", tree_name="_efit_tree", astype="float64"

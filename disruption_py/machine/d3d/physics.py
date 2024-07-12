@@ -83,7 +83,8 @@ class D3DPhysicsMethods:
             p_nbi = np.zeros(len(params.times))
             params.logger.info(f"[Shot {params.shot_id}]:Failed to open NBI node")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-        # Get electron cycholotrn heating (ECH) power. It's poitn data, so it's not stored in an MDSplus tree
+        # Get electron cycholotrn heating (ECH) power. It's poitn data, so it's not
+        #  stored in an MDSplus tree
         try:
             p_ech, t_ech = params.mds_conn.get_data_with_dims(
                 r"\top.ech.total:echpwrc", tree_name="rf"
@@ -99,7 +100,8 @@ class D3DPhysicsMethods:
                 )
             else:
                 params.logger.info(
-                    f"[Shot {params.shot_id}]:No ECH power data found in this shot. Setting to zeros"
+                    f"[Shot {params.shot_id}]:No ECH power data found in this "
+                    + "shot. Setting to zeros"
                 )
                 p_ech = np.zeros(len(params.times))
         except mdsExceptions.MdsException as e:
@@ -203,7 +205,8 @@ class D3DPhysicsMethods:
                 f"ptdata('ip', {params.shot_id})", tree_name="d3d"
             )
             t_ip = t_ip / 1.0e3  # [ms] -> [s]
-            # We choose a 20-point width for gsastd. This means a 10ms window for ip smoothing
+            # We choose a 20-point width for gsastd. This means a 10ms window for
+            #  ip smoothing
             dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
             li, t_li = params.mds_conn.get_data_with_dims(
                 r"\efit_a_eqdsk:li", tree_name="_efit_tree"
@@ -368,7 +371,8 @@ class D3DPhysicsMethods:
             )
             if len(polarity) > 1:
                 params.logger.info(
-                    f"[Shot {params.shot_id}]:Polarity of Ip target is not constant. Using value at first timestep."
+                    f"[Shot {params.shot_id}]:Polarity of Ip target is not constant."
+                    + "Using value at first timestep."
                 )
                 params.logger.debug(
                     f"[Shot {params.shot_id}]: Polarity array {polarity}"
@@ -417,7 +421,9 @@ class D3DPhysicsMethods:
                 f"ptdata('epsoff', {params.shot_id})", tree_name="d3d"
             )
             t_epsoff = t_epsoff / 1.0e3  # [ms] -> [s]
-            t_epsoff += 0.001  # Avoid problem with simultaneity of epsoff being triggered exactly on the last time sample
+            # Avoid problem with simultaneity of epsoff being triggered exactly
+            # on the last time sample
+            t_epsoff += 0.001
             epsoff = interp1(t_epsoff, epsoff, params.times, "linear")
             railed_indices = np.where(np.abs(epsoff) > 0.5)
             power_supply_railed = np.zeros(len(params.times))
@@ -487,7 +493,8 @@ class D3DPhysicsMethods:
             )
             if len(polarity) > 1:
                 params.logger.info(
-                    f"[Shot {params.shot_id}]:Polarity of Ip target is not constant. Setting to first value in array."
+                    f"[Shot {params.shot_id}]:Polarity of Ip target is not constant."
+                    + f" Setting to first value in array."
                 )
                 params.logger.debug(
                     f"[Shot {params.shot_id}]: Polarity array: {polarity}"
@@ -546,7 +553,9 @@ class D3DPhysicsMethods:
                 f"ptdata('epsoff', {params.shot_id})", tree_name="d3d"
             )
             t_epsoff = t_epsoff / 1.0e3  # [ms] -> [s]
-            t_epsoff += 0.001  # Avoid problem with simultaneity of epsoff being triggered exactly on the last time sample
+            # Avoid problem with simultaneity of epsoff being triggered exactly on
+            # the last time sample
+            t_epsoff += 0.001
             epsoff = interp1(t_epsoff, epsoff, params.times, "linear")
             railed_indices = np.where(np.abs(epsoff) > 0.5)
             power_supply_railed = np.zeros(len(params.times))
@@ -554,7 +563,8 @@ class D3DPhysicsMethods:
             ip_error_rt[railed_indices] = np.nan
         except mdsExceptions.MdsException as e:
             params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to get epsoff signal. power_supply_railed will be NaN."
+                f"[Shot {params.shot_id}]:Failed to get epsoff signal. "
+                + "power_supply_railed will be NaN."
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
             power_supply_railed = np.nan
@@ -631,7 +641,8 @@ class D3DPhysicsMethods:
             "n_equal_1_normalized": np.nan,
             "n_equal_1_mode": np.nan,
         }
-        # The following shots are missing bradial calculations in MDSplus and must be loaded from a separate datafile
+        # The following shots are missing bradial calculations in MDSplus and
+        # must be loaded from a separate datafile
         if params.shot_id >= 176030 and params.shot_id <= 176912:
             raise NotImplementedError
             # TODO: Move to a folder like "/fusion/projects/disruption_warning/data"
@@ -704,7 +715,8 @@ class D3DPhysicsMethods:
         return output
 
     # TODO: Need to test and unblock recalculating peaking factors
-    # By default get_peaking_factors should grab the data from MDSPlus as opposed to recalculate. See DPP v4 document for details:
+    # By default get_peaking_factors should grab the data from MDSPlus as opposed
+    # to recalculate. See DPP v4 document for details:
     # https://docs.google.com/document/d/1R7fI7mCOkMQGt8xX2nS6ZmNNkcyvPQ7NmBfRPICFaFs/edit?usp=sharing
     @staticmethod
     @physics_method(
@@ -717,13 +729,15 @@ class D3DPhysicsMethods:
         ts_radius = "rhovn"
         # ts_radius value defining boundary of 'core' region (between 0 and 1)
         ts_core_margin = 0.3
-        # All data outside this range excluded. For example, psin=0 at magnetic axis and 1 at separatrix.
+        # All data outside this range excluded. For example, psin=0 at magnetic axis
+        # and 1 at separatrix.
         ts_radial_range = (0, 1)
         # set to true to interpolate ts_channel data onto equispaced radial grid
         ts_equispaced = False
         # fan to use for P_rad peaking factors (either 'lower', 'upper', or 'custom')
         bolometer_fan = "custom"
-        # array of bolometer fan channel numbers covering divertor (upper fan: 1->24, lower fan: 25:48)
+        # array of bolometer fan channel numbers covering divertor
+        # (upper fan: 1->24, lower fan: 25:48)
         div_channels = np.arange(3, 8) + 24
         # time window for filtering raw bolometer signal in [ms]
         smoothing_window = 40
@@ -754,7 +768,8 @@ class D3DPhysicsMethods:
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
             params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to get CVA and XDIV from MDSPlus. Calculating locally, results may be inaccurate."
+                f"[Shot {params.shot_id}]:Failed to get CVA and XDIV from MDSPlus."
+                + " Calculating locally, results may be inaccurate."
             )
             rad_cva = rad_xdiv = np.nan
         try:
@@ -853,14 +868,16 @@ class D3DPhysicsMethods:
     # TODO: Finish implementing just in case
     def _efit_map_rz_to_rho_original(params: PhysicsMethodParams, ts_dict, efit_dict):
         slices = np.zeros(ts_dict["time"].shape)
-        # If thomson starts before EFIT (often does), then use the first valid EFIT slice for early Thomson data.
+        # If thomson starts before EFIT (often does), then use the first valid EFIT
+        # slice for early Thomson data.
         early_indices = np.where(ts_dict["time"] < efit_dict["time"])
         if len(early_indices[0]) > 0:
             slices[early_indices] = 1
             first_ts = early_indices[0][-1]
         else:
             first_ts = 0
-        # If Thomson ends after EFIT (also often happens), then use the last valid EFIT slice for late Thomson data.
+        # If Thomson ends after EFIT (also often happens), then use the last valid EFIT
+        # slice for late Thomson data.
         late_indices = np.where(ts_dict["time"] >= efit_dict["time"])
         if len(late_indices[0]) > 0:
             slices[late_indices] = len(efit_dict["time"])
@@ -868,7 +885,8 @@ class D3DPhysicsMethods:
         else:
             last_ts = len(ts_dict["time"]) - 1
         diag_slices = np.arange(first_ts, last_ts + 1, 1)
-        # Acquire list of diag time slices w/in EFIT time range; Should find closest EFIT for each one
+        # Acquire list of diag time slices w/in EFIT time range; Should find closest EFIT
+        # for each one
         for i in diag_slices:
             slices[i] = np.argmin(np.abs(efit_dict["time"] - ts_dict["time"][i]))
         # Interpolate EFIT data onto Thomson time slices
@@ -953,10 +971,12 @@ class D3DPhysicsMethods:
         ts_radius = "rhovn"
         # ts_radius value defining boundary of 'core' region (between 0 and 1)
         ts_core_margin = 0.3
-        # ts_radius value defining inner and outer side of 'edge' region (between ts_core_margin and 1)
+        # ts_radius value defining inner and outer side of 'edge' region
+        # (between ts_core_margin and 1)
         ts_edge_inner = 0.85
         ts_edge_outer = 0.95
-        # All data outside this range excluded. For example, psin=0 at magnetic axis and 1 at separatrix.
+        # All data outside this range excluded. For example, psin=0 at magnetic axis
+        # and 1 at separatrix.
         ts_radial_range = (0, 1)
         # set to true to interpolate ts_channel data onto equispaced radial grid
         ts_equispaced = True
@@ -1000,7 +1020,9 @@ class D3DPhysicsMethods:
                 | (ts[ts_radius] > ts_radial_range[1])
             )
 
-        # TODO: 1) Interpolate in core and edge regions, 2) compute average in these regions and store in respective array. Note that we may need to expand the available indices beyond 1
+        # TODO: 1) Interpolate in core and edge regions, 2) compute average in
+        # these regions and store in respective array. Note that we may need to
+        # expand the available indices beyond 1
 
         return {
             "te_core": te_core,
@@ -1194,7 +1216,8 @@ class D3DPhysicsMethods:
                 except mdsExceptions.MdsException as e:
                     lasers[laser][node] = np.full(lasers[laser]["time"].shape, np.nan)
                     params.logger.info(
-                        f"[Shot {params.shot_id}]: Failed to get {laser}:{name}({node}) data, Setting to all NaNs."
+                        f"[Shot {params.shot_id}]: Failed to get {laser}:{name}({node})"
+                        + " data, Setting to all NaNs."
                     )
                     params.logger.debug(
                         f"[Shot {params.shot_id}]:{traceback.format_exc()}"
