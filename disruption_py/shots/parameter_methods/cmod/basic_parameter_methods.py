@@ -1078,6 +1078,7 @@ class BasicCmodRequests(ShotDataRequest):
         ----------
         - https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_peaking_factor_cmod.m
         - https://github.com/MIT-PSFC/disruption-py/issues/210
+        - https://github.com/MIT-PSFC/disruption-py/pull/216
 
         Last major update by: William Wei on 7/12/2024
 
