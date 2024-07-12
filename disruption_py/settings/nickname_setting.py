@@ -130,29 +130,29 @@ class DisruptionNicknameSetting(NicknameSetting):
     A setting to resolve the '_efit_tree' nickname to the disruption EFIT tree.
     """
 
-    def __init__(self, cmod_non_disruption_tree_name: str = "analysis"):
-        self.cmod_non_disruption_tree_name = cmod_non_disruption_tree_name
+    def __init__(self):
         self.tokamak_overrides = {
             Tokamak.CMOD: self._cmod_nickname,
             Tokamak.D3D: self._d3d_nickname,
         }
 
     def _d3d_nickname(self, params: NicknameSettingParams) -> str:
+        if params.disruption_time is None:
+            return DefaultNicknameSetting(NicknameSettingParams)._resolve_nickname()
         efit_trees = params.database.query(
             "select tree from code_rundb.dbo.plasmas where "
             f"shot = {params.shot_id} and runtag = 'DIS' and deleted = 0 order by idx",
             use_pandas=False,
         )
         if len(efit_trees) == 0:
-            efit_trees = [("EFIT01",)]
+            return DefaultNicknameSetting(NicknameSettingParams)._resolve_nickname()
         efit_tree = efit_trees[-1][0]
         return efit_tree
 
     def _cmod_nickname(self, params: NicknameSettingParams) -> str:
         if params.disruption_time is None:
-            return self.cmod_non_disruption_tree_name
-        else:
-            return "efit18"
+            return DefaultNicknameSetting(NicknameSettingParams)._resolve_nickname()
+        return "efit18"
 
     def _resolve_nickname(self, params: NicknameSettingParams) -> str:
         raise NotImplementedError(
