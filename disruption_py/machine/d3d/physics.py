@@ -13,7 +13,7 @@ from disruption_py.core.utils.math import get_bolo, gsastd, interp1, power
 from disruption_py.machine.tokamak import Tokamak
 
 
-class BasicD3DRequests:
+class D3DPhysicsMethods:
 
     # Tokamak Variables
     NOMINAL_FLATTOP_RADIUS = 0.59
@@ -109,7 +109,7 @@ class BasicD3DRequests:
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
         # Get ohmic power and loop voltage
-        p_ohm, v_loop = BasicD3DRequests.get_ohmic_parameters(params)
+        p_ohm, v_loop = D3DPhysicsMethods.get_ohmic_parameters(params)
         # Radiated power
         # We had planned to use the standard signal r'\bolom::prad_tot' for this
         # parameter.  However, the processing involved in calculating \prad_tot
@@ -608,7 +608,7 @@ class BasicD3DRequests:
                     f"[Shot {params.shot_id}]:Failed to get efit parameters"
                 )
                 params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-                z_cur_norm = z_cur / BasicD3DRequests.NOMINAL_FLATTOP_RADIUS
+                z_cur_norm = z_cur / D3DPhysicsMethods.NOMINAL_FLATTOP_RADIUS
         except mdsExceptions.MdsException as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get vpszp signal")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
@@ -758,17 +758,17 @@ class BasicD3DRequests:
             )
             rad_cva = rad_xdiv = np.nan
         try:
-            ts = BasicD3DRequests._get_ne_te(params)
+            ts = D3DPhysicsMethods._get_ne_te(params)
             for option in ts_options:
                 if option in ts:
                     ts = ts[option]
-            efit_dict = BasicD3DRequests._get_efit_dict(params)
+            efit_dict = D3DPhysicsMethods._get_efit_dict(params)
         except Exception as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get TS data")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
             ts = 0
         try:
-            ts["psin"], ts["rhovn"] = BasicD3DRequests.efit_rz_interp(ts, efit_dict)
+            ts["psin"], ts["rhovn"] = D3DPhysicsMethods.efit_rz_interp(ts, efit_dict)
             ts["rhovn"] = ts["rhovn"].T
             ts["psin"] = ts["psin"].T
             params.logger.info(ts["rhovn"].shape)
@@ -776,7 +776,7 @@ class BasicD3DRequests:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to interpolate TS data")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
         try:
-            p_rad = BasicD3DRequests._get_p_rad(params)
+            p_rad = D3DPhysicsMethods._get_p_rad(params)
         except Exception as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get bolometer data")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
@@ -983,9 +983,9 @@ class BasicD3DRequests:
 
         # Try to get data via _get_ne_te()
         try:
-            ts = BasicD3DRequests._get_ne_te(params)
-            efit_dict = BasicD3DRequests._get_efit_dict(params)
-            ts["psin"], ts["rhovn"] = BasicD3DRequests.efit_rz_interp(ts, efit_dict)
+            ts = D3DPhysicsMethods._get_ne_te(params)
+            efit_dict = D3DPhysicsMethods._get_efit_dict(params)
+            ts["psin"], ts["rhovn"] = D3DPhysicsMethods.efit_rz_interp(ts, efit_dict)
         except Exception as e:
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
             ts = 0
