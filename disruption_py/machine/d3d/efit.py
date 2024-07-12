@@ -9,7 +9,7 @@ from disruption_py.core.utils.math import interp1
 from disruption_py.machine.tokamak import Tokamak
 
 
-class D3DEfitRequests:
+class D3DEfitMethods:
 
     # EFIT Variables
     efit_cols = {
@@ -44,7 +44,7 @@ class D3DEfitRequests:
     def _get_efit_parameters(params: PhysicsMethodParams):
         efit_data = {
             k: params.mds_conn.get_data(v, tree_name="_efit_tree")
-            for k, v in D3DEfitRequests.efit_cols.items()
+            for k, v in D3DEfitMethods.efit_cols.items()
         }
         efit_time = (
             params.mds_conn.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree")
@@ -60,8 +60,8 @@ class D3DEfitRequests:
         del efit_data["chisq"]
         for param in efit_data:
             efit_data[param][invalid_indices] = np.nan
-        for param in D3DEfitRequests.efit_derivs:
-            efit_data[D3DEfitRequests.efit_derivs[param]] = np.gradient(
+        for param in D3DEfitMethods.efit_derivs:
+            efit_data[D3DEfitMethods.efit_derivs[param]] = np.gradient(
                 efit_data[param], efit_time
             )
         if not np.array_equal(params.times, efit_time):
@@ -77,7 +77,7 @@ class D3DEfitRequests:
     def _get_rt_efit_parameters(params: PhysicsMethodParams):
         efit_data = {
             k: params.mds_conn.get_data(v, tree_name="efitrt1")
-            for k, v in D3DEfitRequests.rt_efit_cols.items()
+            for k, v in D3DEfitMethods.rt_efit_cols.items()
         }
         efit_time = (
             params.mds_conn.get_data(r"\efit_a_eqdsk:atime", tree_name="efitrt1")
