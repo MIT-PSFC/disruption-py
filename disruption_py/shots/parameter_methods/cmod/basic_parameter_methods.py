@@ -1041,9 +1041,47 @@ class BasicCmodRequests(ShotDataRequest):
             params.shot_props.times, ts_data, ts_time, ts_z
         )
 
-    # TODO: Finish
     @staticmethod
     def get_peaking_factors(times, TS_time, TS_Te, TS_ne, TS_z, efit_time, bminor, z0):
+        """
+        Calculate Te, ne, and pressure peaking factors given Thomson Scattering Te and ne measurements.
+
+        Because the TS chords have uneven spacings, measurements are first interpolated to an array of
+        equally spaced vertical positions and then used to calculate the peaking factors.
+
+        Currently, only the Te_peaking feature has been implemented.
+
+        Parameters:
+        ----------
+        times : array_like
+            Requested time basis
+        TS_time : array_like
+            Time basis of the Thomson Scattering diagnostic
+        TS_Te : array_like
+            Core and edge Te measurements from TS
+        TS_ne : array_like
+            Core and edge ne measurements from TS
+        TS_z : array_like
+            Vertical position of the core and edge TS chords
+        efit_time : array_like
+            Time basis of '_efit_tree'
+        bminor : array_like
+            Vertical minor radius from EFIT
+        z0 : array_like
+            Vertical position of the magnetic axis from EFIT
+
+        Returns:
+        ----------
+        DataFrame of ne_peaking, Te_peaking, and pressure_peaking
+
+        References:
+        ----------
+        - https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_peaking_factor_cmod.m
+        - https://github.com/MIT-PSFC/disruption-py/issues/210
+
+        Last major update by: William Wei on 7/12/2024
+
+        """
         # Interpolate EFIT signals to TS time basis
         bminor = interp1(efit_time, bminor, TS_time)
         z0 = interp1(efit_time, z0, TS_time)
@@ -1052,7 +1090,6 @@ class BasicCmodRequests(ShotDataRequest):
         Te_PF = np.full(len(TS_time), np.nan)
         (itimes,) = np.where((TS_time > 0) & (TS_time < times[-1]))
         for itime in itimes:
-            # Slice TS_Te and TS_z profiles at time TS_time[itime]
             TS_Te_arr = TS_Te[:, itime]
             (indx,) = np.where(TS_Te_arr > 0)
             if len(indx) < 10:
@@ -1070,8 +1107,7 @@ class BasicCmodRequests(ShotDataRequest):
             Te_arr_equal_spacing = interp1(TS_z_arr, TS_Te_arr, z_arr_equal_spacing)
             # Calculate Te_PF
             (core_index,) = np.where(
-                np.array(z_arr_equal_spacing < (z0[itime] + 0.2 * bminor[itime]))
-                & np.array(z_arr_equal_spacing > (z0[itime] - 0.2 * bminor[itime]))
+                np.array((z_arr_equal_spacing - z0[itime]) < 0.2 * abs(bminor[itime]))
             )
             if len(core_index) < 2:
                 continue
@@ -1102,7 +1138,6 @@ class BasicCmodRequests(ShotDataRequest):
         tokamak=Tokamak.CMOD,
     )
     def _get_peaking_factors(params: ShotDataRequestParams):
-        # TODO: this should be a data fetching function
         empty_df = pd.DataFrame(
             {
                 "ne_peaking": np.full(len(params.shot_props.times), np.nan),
@@ -1134,7 +1169,6 @@ class BasicCmodRequests(ShotDataRequest):
         # Fetch data
         try:
             # Get EFIT geometry data
-            # TODO: Move this to the main function
             z0 = 0.01 * params.mds_conn.get_data(
                 r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
             )
@@ -1150,9 +1184,11 @@ class BasicCmodRequests(ShotDataRequest):
             TS_Te_core, TS_time = params.mds_conn.get_data_with_dims(
                 f"{node_ext}:te_rz", tree_name="electrons"
             )
-            TS_Te_core = TS_Te_core * 1000 * 11600
-            TS_Te_edge = params.mds_conn.get_data(r"\ts_te") * 11600
-            TS_Te = np.concatenate((TS_Te_core, TS_Te_edge))
+            # Convert keV to eV
+            TS_Te_core = TS_Te_core * 1000
+            TS_Te_edge = params.mds_conn.get_data(r"\ts_te")
+            # Convert eV to Kelvin
+            TS_Te = np.concatenate((TS_Te_core, TS_Te_edge)) * 11600
             TS_z_core = params.mds_conn.get_data(
                 f"{node_ext}:z_sorted", tree_name="electrons"
             )
