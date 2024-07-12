@@ -125,6 +125,8 @@ class DefaultNicknameSetting(NicknameSetting):
         raise NotImplementedError(
             f"{self.__class__.__name__} is not implemented for tokamak {params.tokamak}."
         )
+
+
 class DisruptionNicknameSetting(NicknameSetting):
     """
     A setting to resolve the '_efit_tree' nickname to the disruption EFIT tree.
