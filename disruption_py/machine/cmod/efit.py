@@ -23,7 +23,7 @@ class CmodEfitMethods:
         "qstar": r"\efit_aeqdsk:qstar",
         "q95": r"\efit_aeqdsk:q95",
         "v_loop_efit": r"\efit_aeqdsk:vloopt",
-        "Wmhd": r"\efit_aeqdsk:wplasm",
+        "wmhd": r"\efit_aeqdsk:wplasm",
         "ssep": r"\efit_aeqdsk:ssep/100",
         "n_over_ncrit": r"-\efit_aeqdsk:xnnc",
         "tritop": r"\efit_aeqdsk:doutu",
@@ -43,7 +43,7 @@ class CmodEfitMethods:
         "q95": r"\efit_aeqdsk:qsib",  # Not sure about this one
     }
 
-    efit_derivs = {"beta_p": "dbetap_dt", "li": "dli_dt", "Wmhd": "dWmhd_dt"}
+    efit_derivs = {"beta_p": "dbetap_dt", "li": "dli_dt", "wmhd": "dwmhd_dt"}
 
     @staticmethod
     @physics_method(
