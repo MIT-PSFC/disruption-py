@@ -1,5 +1,6 @@
 
 PYLINT_DIRS := disruption_py examples tests
+DELETE_OBJS := __pycache__ .pytest_cache
 
 # git #
 
@@ -13,10 +14,13 @@ fetch:
 
 # clean #
 
-.PHONY: clean
+.PHONY: clean-list clean-delete
 
-clean:
-	find -name __pycache__ -or -name .pytest_cache | xargs rm -rfv
+clean-list:
+	echo $(DELETE_OBJS) | xargs -n1 find -name
+
+clean-delete:
+	echo $(DELETE_OBJS) | xargs -n1 find -name | xargs rm -rfv
 
 # poetry #
 
