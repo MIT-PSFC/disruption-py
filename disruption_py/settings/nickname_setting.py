@@ -95,7 +95,7 @@ class NicknameSettingDict(NicknameSetting):
     def _resolve_nickname(self, params: NicknameSettingParams) -> str:
         chosen_setting = self.resolved_nickname_setting_dict.get(params.tokamak, None)
         if chosen_setting is not None:
-            return chosen_setting.get_times(params)
+            return chosen_setting.resolve_nickname(params)
         raise NotImplementedError(
             f"{self.__class__.__name__} is not implemented for tokamak {params.tokamak}."
         )
@@ -165,9 +165,6 @@ class DisruptionNicknameSetting(NicknameSetting):
 _nickname_setting_mappings: Dict[str, NicknameSetting] = {
     "default": DefaultNicknameSetting(),
     "disruption": DisruptionNicknameSetting(),
-    # deprecated
-    "analysis": DefaultNicknameSetting(),
-    "disruption_warning": DisruptionNicknameSetting(),
 }
 # --8<-- [end:nickname_setting_keys]
 

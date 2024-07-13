@@ -15,7 +15,10 @@ TEST_SETTINGS = {
     "timebase_full": {
         "cache_setting": "sql",
         "use_cache_setting_timebase": True,
-        "efit_nickname_setting": "analysis",
+        "efit_nickname_setting": {
+            "cmod": "analysis",
+            "d3d": "efit01",
+        },
     },
     "columns_full": {
         "cache_setting": "sql",
@@ -24,7 +27,7 @@ TEST_SETTINGS = {
         "only_requested_columns": True,
     },
     "flattop_full": {
-        "efit_nickname_setting": "analysis",
+        "efit_nickname_setting": "default",
         "domain_setting": "flattop",
         "run_tags": [],
         "run_methods": ["_get_ip_parameters"],
