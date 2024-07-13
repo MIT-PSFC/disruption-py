@@ -49,11 +49,11 @@ class NicknameSetting(ABC):
     A setting for getting tree nicknames.
     """
 
-    def resolve_nickname_func(self, params: NicknameSettingParams):
+    def resolve_nickname(self, params: NicknameSettingParams):
         if hasattr(self, "tokamak_overrides"):
             if params.tokamak in self.tokamak_overrides:
-                return lambda: self.tokamak_overrides[params.tokamak](params)
-        return lambda: self._resolve_nickname(params)
+                return self.tokamak_overrides[params.tokamak](params)
+        return self._resolve_nickname(params)
 
     @abstractmethod
     def _resolve_nickname(self, params: NicknameSettingParams) -> str:
@@ -139,20 +139,20 @@ class DisruptionNicknameSetting(NicknameSetting):
 
     def _d3d_nickname(self, params: NicknameSettingParams) -> str:
         if params.disruption_time is None:
-            return DefaultNicknameSetting().resolve_nickname_func(params)
+            return DefaultNicknameSetting().resolve_nickname(params)
         efit_trees = params.database.query(
             "select tree from code_rundb.dbo.plasmas where "
             f"shot = {params.shot_id} and runtag = 'DIS' and deleted = 0 order by idx",
             use_pandas=False,
         )
         if len(efit_trees) == 0:
-            return DefaultNicknameSetting().resolve_nickname_func(params)
+            return DefaultNicknameSetting().resolve_nickname(params)
         efit_tree = efit_trees[-1][0]
         return efit_tree
 
     def _cmod_nickname(self, params: NicknameSettingParams) -> str:
         if params.disruption_time is None:
-            return DefaultNicknameSetting().resolve_nickname_func(params)
+            return DefaultNicknameSetting().resolve_nickname(params)
         return "efit18"
 
     def _resolve_nickname(self, params: NicknameSettingParams) -> str:
