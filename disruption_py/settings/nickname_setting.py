@@ -49,14 +49,14 @@ class NicknameSetting(ABC):
     A setting for getting tree nicknames.
     """
 
-    def resolve_nickname(self, params: NicknameSettingParams):
+    def get_tree_name(self, params: NicknameSettingParams):
         if hasattr(self, "tokamak_overrides"):
             if params.tokamak in self.tokamak_overrides:
                 return self.tokamak_overrides[params.tokamak](params)
-        return self._resolve_nickname(params)
+        return self._get_tree_name(params)
 
     @abstractmethod
-    def _resolve_nickname(self, params: NicknameSettingParams) -> str:
+    def _get_tree_name(self, params: NicknameSettingParams) -> str:
         """Abstract method implemented by subclasses to determine an MDSplus tree name.
 
         Parameters
@@ -92,10 +92,10 @@ class NicknameSettingDict(NicknameSetting):
         }
         self.resolved_nickname_setting_dict = resolved_nickname_setting_dict
 
-    def _resolve_nickname(self, params: NicknameSettingParams) -> str:
+    def _get_tree_name(self, params: NicknameSettingParams) -> str:
         chosen_setting = self.resolved_nickname_setting_dict.get(params.tokamak, None)
         if chosen_setting is not None:
-            return chosen_setting.resolve_nickname(params)
+            return chosen_setting.get_tree_name(params)
         raise NotImplementedError(
             f"{self.__class__.__name__} is not implemented for tokamak {params.tokamak}."
         )
@@ -105,7 +105,7 @@ class StaticNicknameSetting(NicknameSetting):
     def __init__(self, tree_name: str):
         self.tree_name = tree_name
 
-    def _resolve_nickname(self, params: NicknameSettingParams) -> str:
+    def _get_tree_name(self, params: NicknameSettingParams) -> str:
         return self.tree_name
 
 
@@ -120,7 +120,7 @@ class DefaultNicknameSetting(NicknameSetting):
             Tokamak.D3D: lambda params: "efit01",
         }
 
-    def _resolve_nickname(self, params: NicknameSettingParams) -> str:
+    def _get_tree_name(self, params: NicknameSettingParams) -> str:
         raise NotImplementedError(
             f"{self.__class__.__name__} is not implemented for tokamak {params.tokamak}."
         )
@@ -139,23 +139,23 @@ class DisruptionNicknameSetting(NicknameSetting):
 
     def _d3d_nickname(self, params: NicknameSettingParams) -> str:
         if params.disruption_time is None:
-            return DefaultNicknameSetting().resolve_nickname(params)
+            return DefaultNicknameSetting().get_tree_name(params)
         efit_trees = params.database.query(
             "select tree from code_rundb.dbo.plasmas where "
             f"shot = {params.shot_id} and runtag = 'DIS' and deleted = 0 order by idx",
             use_pandas=False,
         )
         if len(efit_trees) == 0:
-            return DefaultNicknameSetting().resolve_nickname(params)
+            return DefaultNicknameSetting().get_tree_name(params)
         efit_tree = efit_trees[-1][0]
         return efit_tree
 
     def _cmod_nickname(self, params: NicknameSettingParams) -> str:
         if params.disruption_time is None:
-            return DefaultNicknameSetting().resolve_nickname(params)
+            return DefaultNicknameSetting().get_tree_name(params)
         return "efit18"
 
-    def _resolve_nickname(self, params: NicknameSettingParams) -> str:
+    def _get_tree_name(self, params: NicknameSettingParams) -> str:
         raise NotImplementedError(
             f"{self.__class__.__name__} is not implemented for tokamak {params.tokamak}."
         )
