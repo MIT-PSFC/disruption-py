@@ -229,11 +229,11 @@ def populate_shot(
                     )
 
     start_time = time.time()
-    parameters = []
+    methods = []
     for bound_method_metadata in run_bound_method_metadata:
         if bound_method_metadata in cached_method_metadata:
             continue
-        parameters.append(
+        methods.append(
             populate_method(
                 physics_method_params=physics_method_params,
                 bound_method_metadata=bound_method_metadata,
@@ -241,28 +241,28 @@ def populate_shot(
             )
         )
 
-    filtered_parameters = []
-    for parameter in parameters:
-        if parameter is None:
+    filtered_methods = []
+    for method in methods:
+        if method is None:
             continue
-        different_length = False
-        for col in parameter:
-            if len(parameter[col]) != len(pre_filled_shot_data):
-                physics_method_params.logger.error(
-                    f"[Shot {physics_method_params.shot_id}]:Ignoring parameter "
-                    + f"{parameter} with different length than timebase"
-                )
-                different_length = True
-                break
-        if different_length:
+        # Pad all parameters that are only nans to an array in order to create
+        # a DataFrame for easy comparison with cached data.
+        for parameter in method:
+            if np.all(np.isnan(method[parameter])):
+                method[parameter] = np.full(len(pre_filled_shot_data), np.nan)
+        if len(pd.DataFrame(method)) != len(pre_filled_shot_data):
+            physics_method_params.logger.error(
+                f"[Shot {physics_method_params.shot_id}]:Ignoring parameter "
+                + f"{method} with different length than timebase"
+            )
             continue
-        filtered_parameters.append(parameter)
+        filtered_methods.append(method)
 
     # TODO: This is a hack to get around the fact that some methods return
     #       multiple parameters. This should be fixed in the future.
 
     local_data = pd.concat(
-        [pre_filled_shot_data] + [pd.DataFrame(d) for d in filtered_parameters], axis=1
+        [pre_filled_shot_data] + [pd.DataFrame(d) for d in filtered_methods], axis=1
     )
     local_data = local_data.loc[:, ~local_data.columns.duplicated()]
     if retrieval_settings.only_requested_columns:
