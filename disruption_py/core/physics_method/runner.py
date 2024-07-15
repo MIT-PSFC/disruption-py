@@ -229,11 +229,11 @@ def populate_shot(
                     )
 
     start_time = time.time()
-    methods = []
+    methods_data = []
     for bound_method_metadata in run_bound_method_metadata:
         if bound_method_metadata in cached_method_metadata:
             continue
-        methods.append(
+        methods_data.append(
             populate_method(
                 physics_method_params=physics_method_params,
                 bound_method_metadata=bound_method_metadata,
@@ -242,23 +242,25 @@ def populate_shot(
         )
 
     filtered_methods = []
-    for method in methods:
-        if method is None:
+    for method_dict in methods_data:
+        if method_dict is None:
             continue
-        # Pad all parameters that are only nans to an array in order to create
-        # a DataFrame for easy comparison with cached data.
-        df = pd.DataFrame(method)
-        if np.all(np.isnan(df)):
-            cols = df.columns
-            df = pd.DataFrame(np.full((len(pre_filled_shot_data), df.shape[1]), np.nan))
-            df.columns = cols
-        if len(df) != len(pre_filled_shot_data):
+        # Pad parameters which are only a single nan (from our error outputs) in
+        # order to create a DataFrame for easy comparison with cached data.
+        method_df = pd.DataFrame(method_dict)
+        if np.all(np.isnan(method_df)) and len(method_df) == 1:
+            cols = method_df.columns
+            method_df = pd.DataFrame(np.full((len(pre_filled_shot_data), method_df.shape[1]), np.nan))
+            method_df.columns = cols
+        if len(method_df) != len(pre_filled_shot_data):
             physics_method_params.logger.error(
                 f"[Shot {physics_method_params.shot_id}]:Ignoring parameter "
-                + f"{method} with different length than timebase"
+                + f"{method_dict} with different length than timebase"
             )
+            # TODO, should we drop the columns, or is it better to raise an
+            # exception when the data do not match?
             continue
-        filtered_methods.append(method)
+        filtered_methods.append(method_dict)
 
     # TODO: This is a hack to get around the fact that some methods return
     #       multiple parameters. This should be fixed in the future.
