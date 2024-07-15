@@ -62,7 +62,7 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(columns=["time_until_disrupt"], tokamak=Tokamak.CMOD)
     def _get_time_until_disrupt(params: PhysicsMethodParams):
-        time_until_disrupt = np.full(len(params.times), np.nan)
+        time_until_disrupt = np.nan
         if params.disrupted:
             time_until_disrupt = params.disruption_time - params.times
         return {"time_until_disrupt": time_until_disrupt}
@@ -588,7 +588,7 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(columns=["v_0"], tokamak=Tokamak.CMOD)
     def _get_rotation_velocity(params: PhysicsMethodParams):
-        nan_output = {"v_0": np.full(len(params.times), np.nan)}
+        nan_output = {"v_0": np.nan}
         with resources.path(disruption_py.data, "lock_mode_calib_shots.txt") as fio:
             calibrated = pd.read_csv(fio)
         # Check to see if shot was done on a day where there was a locked
