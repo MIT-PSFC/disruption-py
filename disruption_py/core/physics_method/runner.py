@@ -247,10 +247,12 @@ def populate_shot(
             continue
         # Pad all parameters that are only nans to an array in order to create
         # a DataFrame for easy comparison with cached data.
-        for parameter in method:
-            if np.all(np.isnan(method[parameter])):
-                method[parameter] = np.full(len(pre_filled_shot_data), np.nan)
-        if len(pd.DataFrame(method)) != len(pre_filled_shot_data):
+        df = pd.DataFrame(method)
+        if np.all(np.isnan(df)):
+            cols = df.columns
+            df = pd.DataFrame(np.full((len(pre_filled_shot_data), df.shape[1]), np.nan))
+            df.columns = cols
+        if len(df) != len(pre_filled_shot_data):
             physics_method_params.logger.error(
                 f"[Shot {physics_method_params.shot_id}]:Ignoring parameter "
                 + f"{method} with different length than timebase"
