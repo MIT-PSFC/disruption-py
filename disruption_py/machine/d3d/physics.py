@@ -23,18 +23,18 @@ class D3DPhysicsMethods:
     def _get_time_until_disrupt(params: PhysicsMethodParams):
         if params.disrupted:
             return {"time_until_disrupt": params.disruption_time - params.times}
-        return {"time_until_disrupt": np.nan}
+        return {"time_until_disrupt": np.full(params.times.size, np.nan)}
 
     @staticmethod
     @physics_method(columns=["H98", "H_alpha"], tokamak=Tokamak.D3D)
     def get_H_parameters(params: PhysicsMethodParams):
-        output = {"H98": np.nan, "H_alpha": np.nan}
+        output = {"H98": np.full(params.times.size, np.nan), "H_alpha": np.full(params.times.size, np.nan)}
         try:
             h_98, t_h_98 = params.mds_conn.get_data_with_dims(
                 r"\H_THH98Y2", tree_name="transport"
             )
             h_98 = interp1(t_h_98, h_98, params.times)
-            output["h_98"] = h_98
+            output["H98"] = h_98
         except ValueError as e:
             params.logger.info(
                 f"[Shot {params.shot_id}]: Failed to get H98 signal. Returning NaNs."
@@ -184,8 +184,8 @@ class D3DPhysicsMethods:
     )
     def get_ohmic_parameters(params: PhysicsMethodParams):
         output = {
-            "p_ohm": np.nan,
-            "v_loop": np.nan,
+            "p_ohm": np.full(params.times.size, np.nan),
+            "v_loop": np.full(params.times.size, np.nan),
         }
         # Get edge loop voltage and smooth it a bit with a median filter
         try:
@@ -292,9 +292,9 @@ class D3DPhysicsMethods:
         tokamak=Tokamak.D3D,
     )
     def get_rt_density_parameters(params: PhysicsMethodParams):
-        ne_rt = np.nan
-        g_f_rt = np.nan
-        dne_dt_rt = np.nan
+        ne_rt = np.full(params.times.size, np.nan)
+        g_f_rt = np.full(params.times.size, np.nan)
+        dne_dt_rt = np.full(params.times.size, np.nan)
         try:
             # TODO: CHECK TREE_NAME
             ne_rt, t_ne_rt = params.mds_conn.get_data_with_dims(
@@ -338,10 +338,10 @@ class D3DPhysicsMethods:
         tokamak=Tokamak.D3D,
     )
     def get_ip_parameters(params: PhysicsMethodParams):
-        ip = np.nan
-        ip_prog = np.nan
-        dip_dt = np.nan
-        dipprog_dt = np.nan
+        ip = np.full(params.times.size, np.nan)
+        ip_prog = np.full(params.times.size, np.nan)
+        dip_dt = np.full(params.times.size, np.nan)
+        dipprog_dt = np.full(params.times.size, np.nan)
         # Fill with nans instead of using a single nan because indices are used
         ip_error = np.full(len(params.times), np.nan)
         # Get measured plasma current parameters
@@ -434,7 +434,7 @@ class D3DPhysicsMethods:
                 f"[Shot {params.shot_id}]:Failed to get epsoff signal. Setting to NaN."
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            power_supply_railed = np.nan
+            power_supply_railed = np.full(params.times.size, np.nan)
         # 'ip_prog': ip_prog,
         output = {
             "ip": ip,
@@ -458,11 +458,11 @@ class D3DPhysicsMethods:
     )
     def get_rt_ip_parameters(params: PhysicsMethodParams):
         params.mds_conn.open_tree("d3d")
-        ip_rt = np.nan
-        ip_prog_rt = np.nan
-        ip_error_rt = np.nan
-        dip_dt_rt = np.nan
-        dipprog_dt_rt = np.nan
+        ip_rt = np.full(params.times.size, np.nan)
+        ip_prog_rt = np.full(params.times.size, np.nan)
+        ip_error_rt = np.full(params.times.size, np.nan)
+        dip_dt_rt = np.full(params.times.size, np.nan)
+        dipprog_dt_rt = np.full(params.times.size, np.nan)
         # Get measured plasma current parameters
         # TODO: Why open d3d and not the rt efit tree?
         try:
@@ -567,7 +567,7 @@ class D3DPhysicsMethods:
                 + "power_supply_railed will be NaN."
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            power_supply_railed = np.nan
+            power_supply_railed = np.full(params.times.size, np.nan)
         # 'dip_dt_RT': dip_dt_rt,
         output = {
             "ip_RT": ip_rt,
@@ -591,11 +591,11 @@ class D3DPhysicsMethods:
         always return an arrays of NaN for z_prog, z_error, and
         z_error_norm.
         """
-        z_cur = np.nan
-        z_cur_norm = np.nan
-        z_prog = np.nan
-        z_error = np.nan
-        z_error_norm = np.nan
+        z_cur = np.full(params.times.size, np.nan)
+        z_cur_norm = np.full(params.times.size, np.nan)
+        z_prog = np.full(params.times.size, np.nan)
+        z_error = np.full(params.times.size, np.nan)
+        z_error_norm = np.full(params.times.size, np.nan)
         try:
             z_cur, t_z_cur = params.mds_conn.get_data_with_dims(
                 f"ptdata('vpszp', {params.shot_id})", tree_name="d3d"
@@ -638,8 +638,8 @@ class D3DPhysicsMethods:
     )
     def get_n1_bradial_parameters(params: PhysicsMethodParams):
         output = {
-            "n_equal_1_normalized": np.nan,
-            "n_equal_1_mode": np.nan,
+            "n_equal_1_normalized": np.full(params.times.size, np.nan),
+            "n_equal_1_mode": np.full(params.times.size, np.nan),
         }
         # The following shots are missing bradial calculations in MDSplus and
         # must be loaded from a separate datafile
@@ -750,10 +750,10 @@ class D3DPhysicsMethods:
         ts_options = ["combined", "core", "tangential"]
         # vertical range of the DIII-D cross section in meters
         vert_range = 3.0
-        ne_pf = np.nan
-        te_pf = np.nan
-        rad_cva = np.nan
-        rad_xdiv = np.nan
+        ne_pf = np.full(params.times.size, np.nan)
+        te_pf = np.full(params.times.size, np.nan)
+        rad_cva = np.full(params.times.size, np.nan)
+        rad_xdiv = np.full(params.times.size, np.nan)
         try:
             # TODO: TREE NAME
             rad_cva, t_rad_cva = params.mds_conn.get_data_with_dims(
@@ -771,7 +771,8 @@ class D3DPhysicsMethods:
                 f"[Shot {params.shot_id}]:Failed to get CVA and XDIV from MDSPlus."
                 + " Calculating locally, results may be inaccurate."
             )
-            rad_cva = rad_xdiv = np.nan
+            rad_cva = np.full(params.times.size, np.nan)
+            rad_xdiv = np.full(params.times.size, np.nan)
         try:
             ts = D3DPhysicsMethods._get_ne_te(params)
             for option in ts_options:
@@ -1336,7 +1337,7 @@ class D3DPhysicsMethods:
                     f"{path}{node}", tree_name="_efit_tree"
                 )
             except mdsExceptions.MdsException as e:
-                efit_dict[node] = np.nan
+                efit_dict[node] = np.full(params.times.size, np.nan)
                 params.logger.info(
                     f"[Shot {params.shot_id}]: Failed to get {node} from efit, Setting to all NaNs."
                 )
