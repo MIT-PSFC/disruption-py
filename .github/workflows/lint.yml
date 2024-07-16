@@ -92,6 +92,14 @@ jobs:
         run: |
           ! grep \|E pylint.log
 
+      - name: Enforce score improvement
+        if: |
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.draft == false
+        run: |
+          tail pylint.log \
+          | grep 'previous run: .*, +'
+
 
   shellcheck:
     runs-on: ubuntu-latest
