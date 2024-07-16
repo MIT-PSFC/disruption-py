@@ -248,7 +248,10 @@ def populate_shot(
         # Pad parameters which are only a single nan (from our error outputs) in
         # order to create a DataFrame for easy comparison with cached data.
         for parameter in method_dict:
-            if np.all(np.isnan(method_dict[parameter])) and len(method_dict[parameter]) == 1:
+            if (
+                np.all(np.isnan(method_dict[parameter]))
+                and len(method_dict[parameter]) == 1
+            ):
                 method_dict[parameter] = np.full(len(pre_filled_shot_data), np.nan)
         method_df = pd.DataFrame(method_dict)
         if len(method_df) != len(pre_filled_shot_data):
@@ -264,9 +267,7 @@ def populate_shot(
     # TODO: This is a hack to get around the fact that some methods return
     #       multiple parameters. This should be fixed in the future.
 
-    local_data = pd.concat(
-        [pre_filled_shot_data] + filtered_methods, axis=1
-    )
+    local_data = pd.concat([pre_filled_shot_data] + filtered_methods, axis=1)
     local_data = local_data.loc[:, ~local_data.columns.duplicated()]
     if retrieval_settings.only_requested_columns:
         include_columns = list(
