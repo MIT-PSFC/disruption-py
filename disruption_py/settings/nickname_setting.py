@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from logging import Logger
-from abc import ABC, abstractmethod
 from typing import Dict, Union
 
 from disruption_py.core.utils.enums import map_string_to_enum

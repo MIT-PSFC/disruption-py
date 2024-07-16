@@ -38,4 +38,5 @@ result = get_shots_data(
 )
 
 print(result)
+
 assert result.shape == shape
