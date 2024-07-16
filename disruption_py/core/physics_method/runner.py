@@ -247,11 +247,10 @@ def populate_shot(
             continue
         # Pad parameters which are only a single nan (from our error outputs) in
         # order to create a DataFrame for easy comparison with cached data.
-        method_df = pd.concat([pd.DataFrame({k:v}) for k, v in method_dict.items()])
-        if np.all(np.isnan(method_df)) and len(method_df) == 1:
-            cols = method_df.columns
-            method_df = pd.DataFrame(np.full((len(pre_filled_shot_data), method_df.shape[1]), np.nan))
-            method_df.columns = cols
+        for parameter in method_dict:
+            if np.all(np.isnan(method_dict[parameter])) and len(method_dict[parameter]) == 1:
+                method_dict[parameter] = np.full(len(pre_filled_shot_data), np.nan)
+        method_df = pd.DataFrame(method_dict)
         if len(method_df) != len(pre_filled_shot_data):
             physics_method_params.logger.error(
                 f"[Shot {physics_method_params.shot_id}]:Ignoring parameter "
