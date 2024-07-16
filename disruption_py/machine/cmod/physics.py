@@ -688,7 +688,7 @@ class CmodPhysicsMethods:
                         "n_equal_1_mode": [np.nan],
                         "n_equal_1_normalized": [np.nan],
                         "n_equal_1_phase": [np.nan],
-                        "BT": [np.nan],
+                        "bt": [np.nan],
                     }
                 baseline = np.mean(signal[baseline_indices])
                 signal = signal - baseline
@@ -1270,18 +1270,18 @@ class CmodPhysicsMethods:
             plt.legend()
             plt.show(block=True)
 
-        output = {"Te_edge": Te_edge, "ne_edge": ne_edge}
+        output = {"te_edge": Te_edge, "ne_edge": ne_edge}
         return output
 
     @staticmethod
     @physics_method(
         tags=["experimental"],
-        columns=["Te_edge", "ne_edge"],
+        columns=["te_edge", "ne_edge"],
         tokamak=Tokamak.CMOD,
     )
     def _get_edge_parameters(params: PhysicsMethodParams):
         nan_output = {
-            "Te_edge": [np.nan],
+            "te_edge": [np.nan],
             "ne_edge": [np.nan],
         }
         try:

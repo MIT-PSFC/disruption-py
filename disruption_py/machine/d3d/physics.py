@@ -29,15 +29,15 @@ class D3DPhysicsMethods:
     @physics_method(columns=["h98", "h_alpha"], tokamak=Tokamak.D3D)
     def get_H_parameters(params: PhysicsMethodParams):
         output = {
-            "H98": [np.nan],
-            "H_alpha": [np.nan],
+            "h98": [np.nan],
+            "h_alpha": [np.nan],
         }
         try:
             h_98, t_h_98 = params.mds_conn.get_data_with_dims(
                 r"\H_THH98Y2", tree_name="transport"
             )
             h_98 = interp1(t_h_98, h_98, params.times)
-            output["H98"] = h_98
+            output["h98"] = h_98
         except ValueError as e:
             params.logger.info(
                 f"[Shot {params.shot_id}]: Failed to get H98 signal. Returning NaNs."
@@ -48,7 +48,7 @@ class D3DPhysicsMethods:
                 r"\fs04", tree_name="d3d"
             )
             h_alpha = interp1(t_h_alpha, h_alpha, params.times)
-            output["H_alpha"] = h_alpha
+            output["h_alpha"] = h_alpha
         except ValueError as e:
             params.logger.info(
                 f"[Shot {params.shot_id}]: Failed to get H_alpha signal. Returning NaNs."
@@ -293,7 +293,7 @@ class D3DPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["n_e_rt", "greenwald_fraction_RT"],
+        columns=["n_e_rt", "greenwald_fraction_rt"],
         tokamak=Tokamak.D3D,
     )
     def get_rt_density_parameters(params: PhysicsMethodParams):
@@ -335,7 +335,7 @@ class D3DPhysicsMethods:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get some parameter")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
         # ' dne_dt_RT': dne_dt_rt
-        return {"n_e_rt": ne_rt, "greenwald_fraction_RT": g_f_rt}
+        return {"n_e_rt": ne_rt, "greenwald_fraction_rt": g_f_rt}
 
     @staticmethod
     @physics_method(
