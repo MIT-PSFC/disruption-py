@@ -62,7 +62,7 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(columns=["time_until_disrupt"], tokamak=Tokamak.CMOD)
     def _get_time_until_disrupt(params: PhysicsMethodParams):
-        time_until_disrupt = np.full(len(params.times), np.nan)
+        time_until_disrupt = [np.nan]
         if params.disrupted:
             time_until_disrupt = params.disruption_time - params.times
         return {"time_until_disrupt": time_until_disrupt}
@@ -588,7 +588,7 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(columns=["v_0"], tokamak=Tokamak.CMOD)
     def _get_rotation_velocity(params: PhysicsMethodParams):
-        nan_output = {"v_0": np.full(len(params.times), np.nan)}
+        nan_output = {"v_0": [np.nan]}
         with resources.path(disruption_py.data, "lock_mode_calib_shots.txt") as fio:
             calibrated = pd.read_csv(fio)
         # Check to see if shot was done on a day where there was a locked
@@ -685,10 +685,10 @@ class CmodPhysicsMethods:
                         + f"{bp13_names[i]} Returning nans."
                     )
                     return {
-                        "n_equal_1_mode": np.nan,
-                        "n_equal_1_normalized": np.nan,
-                        "n_equal_1_phase": np.nan,
-                        "BT": np.nan,
+                        "n_equal_1_mode": [np.nan],
+                        "n_equal_1_normalized": [np.nan],
+                        "n_equal_1_phase": [np.nan],
+                        "BT": [np.nan],
                     }
                 baseline = np.mean(signal[baseline_indices])
                 signal = signal - baseline
@@ -735,9 +735,9 @@ class CmodPhysicsMethods:
     def get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
         if len(n_e) != len(t_n):
             return {
-                "n_e": np.nan,
-                "dn_dt": np.nan,
-                "Greenwald_fraction": np.nan,
+                "n_e": [np.nan],
+                "dn_dt": [np.nan],
+                "Greenwald_fraction": [np.nan],
             }
         # get the gradient of n_E
         dn_dt = np.gradient(n_e, t_n)
@@ -800,7 +800,7 @@ class CmodPhysicsMethods:
             )
         except Exception as e:
             params.logger.debug(f"[Shot {params.shot_id}] {traceback.format_exc()}")
-            return {"I_efc": np.nan}
+            return {"I_efc": [np.nan]}
         output = CmodPhysicsMethods.get_efc_current(params.times, iefc, t_iefc)
         return output
 
@@ -864,7 +864,7 @@ class CmodPhysicsMethods:
             )
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}] {traceback.format_exc()}")
-            return {"Te_width": np.nan}
+            return {"Te_width": [np.nan]}
         output = CmodPhysicsMethods.get_Ts_parameters(
             params.times, ts_data, ts_time, ts_z
         )
@@ -1177,7 +1177,7 @@ class CmodPhysicsMethods:
                 f"[Shot {params.shot_id}]: Failed to get SXR data returning NaNs"
             )
             params.logger.debug(f"[Shot {params.shot_id}]: {traceback.format_exc()}")
-            return {"sxr": np.nan}
+            return {"sxr": [np.nan]}
         sxr = interp1(t_sxr, sxr, params.times)
         return {"sxr": sxr}
 
@@ -1281,8 +1281,8 @@ class CmodPhysicsMethods:
     )
     def _get_edge_parameters(params: PhysicsMethodParams):
         nan_output = {
-            "Te_edge": np.nan,
-            "ne_edge": np.nan,
+            "Te_edge": [np.nan],
+            "ne_edge": [np.nan],
         }
         try:
             # sys.path.append("/home/sciortino/usr/python3modules/eqtools3")

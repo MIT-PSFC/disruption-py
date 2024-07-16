@@ -229,11 +229,11 @@ def populate_shot(
                     )
 
     start_time = time.time()
-    parameters = []
+    methods_data = []
     for bound_method_metadata in run_bound_method_metadata:
         if bound_method_metadata in cached_method_metadata:
             continue
-        parameters.append(
+        methods_data.append(
             populate_method(
                 physics_method_params=physics_method_params,
                 bound_method_metadata=bound_method_metadata,
@@ -241,29 +241,33 @@ def populate_shot(
             )
         )
 
-    filtered_parameters = []
-    for parameter in parameters:
-        if parameter is None:
+    filtered_methods = []
+    for method_dict in methods_data:
+        if method_dict is None:
             continue
-        different_length = False
-        for col in parameter:
-            if len(parameter[col]) != len(pre_filled_shot_data):
-                physics_method_params.logger.error(
-                    f"[Shot {physics_method_params.shot_id}]:Ignoring parameter "
-                    + f"{parameter} with different length than timebase"
-                )
-                different_length = True
-                break
-        if different_length:
+        # Pad parameters which are only a single nan (from our error outputs) in
+        # order to create a DataFrame for easy comparison with cached data.
+        for parameter in method_dict:
+            if (
+                np.all(np.isnan(method_dict[parameter]))
+                and len(method_dict[parameter]) == 1
+            ):
+                method_dict[parameter] = np.full(len(pre_filled_shot_data), np.nan)
+        method_df = pd.DataFrame(method_dict)
+        if len(method_df) != len(pre_filled_shot_data):
+            physics_method_params.logger.error(
+                f"[Shot {physics_method_params.shot_id}]:Ignoring parameter "
+                + f"{method_dict} with different length than timebase"
+            )
+            # TODO, should we drop the columns, or is it better to raise an
+            # exception when the data do not match?
             continue
-        filtered_parameters.append(parameter)
+        filtered_methods.append(method_df)
 
     # TODO: This is a hack to get around the fact that some methods return
     #       multiple parameters. This should be fixed in the future.
 
-    local_data = pd.concat(
-        [pre_filled_shot_data] + [pd.DataFrame(d) for d in filtered_parameters], axis=1
-    )
+    local_data = pd.concat([pre_filled_shot_data] + filtered_methods, axis=1)
     local_data = local_data.loc[:, ~local_data.columns.duplicated()]
     if retrieval_settings.only_requested_columns:
         include_columns = list(
