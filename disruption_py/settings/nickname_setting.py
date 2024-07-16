@@ -165,6 +165,9 @@ class DisruptionNicknameSetting(NicknameSetting):
 _nickname_setting_mappings: Dict[str, NicknameSetting] = {
     "default": DefaultNicknameSetting(),
     "disruption": DisruptionNicknameSetting(),
+    # deprecated
+    "analysis": DefaultNicknameSetting(),
+    "disruption_warning": DisruptionNicknameSetting(),
 }
 # --8<-- [end:nickname_setting_keys]
 
