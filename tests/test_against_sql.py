@@ -134,6 +134,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--data-column",
+        type=str.lower,
         default=None,
         help="Data column to test, use all data columns if not specified",
     )

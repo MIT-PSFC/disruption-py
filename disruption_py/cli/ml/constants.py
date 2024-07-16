@@ -12,7 +12,7 @@ PAPER_COLS = [
     "ip",
     "delta",
     "li",
-    "Wmhd",
+    "wmhd",
     "kappa",
     "squareness",
     "shot",

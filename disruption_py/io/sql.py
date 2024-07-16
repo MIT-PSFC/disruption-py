@@ -417,6 +417,7 @@ class ShotDatabase:
         else:
             query = f"select {selected_cols} from {sql_table} where shot in ({shotlist}) order by time"
         shot_df = pd.read_sql_query(query, self.engine)
+        shot_df.columns = shot_df.columns.str.lower()
         return shot_df
 
     def get_disruption_time(self, shot_id):
