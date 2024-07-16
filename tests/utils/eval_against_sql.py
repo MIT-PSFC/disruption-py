@@ -127,6 +127,8 @@ def eval_shot_against_sql(
         data_column=data_column,
         mdsplus_column_data=mdsplus_shot_data.get(data_column, None),
         sql_column_data=sql_shot_data.get(data_column, None),
+        mds_time=mdsplus_shot_data["time"],
+        sql_time=sql_shot_data["time"],
         missing_mdsplus_data=missing_mdsplus_data,
         missing_sql_data=missing_sql_data,
         expect_failure=expect_failure,
