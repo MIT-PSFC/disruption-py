@@ -260,13 +260,13 @@ def populate_shot(
             # TODO, should we drop the columns, or is it better to raise an
             # exception when the data do not match?
             continue
-        filtered_methods.append(method_dict)
+        filtered_methods.append(method_df)
 
     # TODO: This is a hack to get around the fact that some methods return
     #       multiple parameters. This should be fixed in the future.
 
     local_data = pd.concat(
-        [pre_filled_shot_data] + [pd.DataFrame(d) for d in filtered_methods], axis=1
+        [pre_filled_shot_data] + filtered_methods, axis=1
     )
     local_data = local_data.loc[:, ~local_data.columns.duplicated()]
     if retrieval_settings.only_requested_columns:
