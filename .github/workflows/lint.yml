@@ -90,8 +90,7 @@ jobs:
 
       - name: Enforce absence of errors
         run: |
-          grep \|E pylint.log \
-          && false
+          ! grep \|E pylint.log
 
 
   shellcheck:
