@@ -15,10 +15,7 @@ TEST_SETTINGS = {
     "timebase_full": {
         "cache_setting": "sql",
         "use_cache_setting_timebase": True,
-        "efit_nickname_setting": {
-            "cmod": "analysis",
-            "d3d": "efit01",
-        },
+        "efit_nickname_setting": "default",
     },
     "columns_full": {
         "cache_setting": "sql",
@@ -34,7 +31,7 @@ TEST_SETTINGS = {
     },
     "rampup_fast": {
         "cmod": {
-            "efit_nickname_setting": "analysis",
+            "efit_nickname_setting": "default",
             "domain_setting": "rampup_and_flattop",
         }
     },
