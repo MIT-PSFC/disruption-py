@@ -139,6 +139,7 @@ class DisruptionNicknameSetting(NicknameSetting):
 
     def _d3d_nickname(self, params: NicknameSettingParams) -> str:
         if params.disruption_time is None:
+            # TODO: some DIII-D shots have a disruption efit tree, but no disruption time.
             return DefaultNicknameSetting().get_tree_name(params)
         efit_trees = params.database.query(
             "select tree from code_rundb.dbo.plasmas where "
