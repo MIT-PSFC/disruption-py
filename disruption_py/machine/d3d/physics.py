@@ -26,18 +26,18 @@ class D3DPhysicsMethods:
         return {"time_until_disrupt": [np.nan]}
 
     @staticmethod
-    @physics_method(columns=["H98", "H_alpha"], tokamak=Tokamak.D3D)
+    @physics_method(columns=["h98", "h_alpha"], tokamak=Tokamak.D3D)
     def get_H_parameters(params: PhysicsMethodParams):
         output = {
-            "H98": [np.nan],
-            "H_alpha": [np.nan],
+            "h98": [np.nan],
+            "h_alpha": [np.nan],
         }
         try:
             h_98, t_h_98 = params.mds_conn.get_data_with_dims(
                 r"\H_THH98Y2", tree_name="transport"
             )
             h_98 = interp1(t_h_98, h_98, params.times)
-            output["H98"] = h_98
+            output["h98"] = h_98
         except ValueError as e:
             params.logger.info(
                 f"[Shot {params.shot_id}]: Failed to get H98 signal. Returning NaNs."
@@ -48,7 +48,7 @@ class D3DPhysicsMethods:
                 r"\fs04", tree_name="d3d"
             )
             h_alpha = interp1(t_h_alpha, h_alpha, params.times)
-            output["H_alpha"] = h_alpha
+            output["h_alpha"] = h_alpha
         except ValueError as e:
             params.logger.info(
                 f"[Shot {params.shot_id}]: Failed to get H_alpha signal. Returning NaNs."
@@ -237,7 +237,7 @@ class D3DPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["n_e", "Greenwald_fraction", "dn_dt"],
+        columns=["n_e", "greenwald_fraction", "dn_dt"],
         tokamak=Tokamak.D3D,
     )
     def get_density_parameters(params: PhysicsMethodParams):
@@ -288,12 +288,12 @@ class D3DPhysicsMethods:
             # TODO: Confirm that there is a separate exception if ptdata name doesn't exist
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get some parameter")
             params.logger.debug(f"[Shot {params.shot_id}]::{traceback.format_exc()}")
-        output = {"n_e": ne, "Greenwald_fraction": g_f, "dn_dt": dne_dt}
+        output = {"n_e": ne, "greenwald_fraction": g_f, "dn_dt": dne_dt}
         return output
 
     @staticmethod
     @physics_method(
-        columns=["n_e_RT", "Greenwald_fraction_RT"],
+        columns=["n_e_rt", "greenwald_fraction_rt"],
         tokamak=Tokamak.D3D,
     )
     def get_rt_density_parameters(params: PhysicsMethodParams):
@@ -335,7 +335,7 @@ class D3DPhysicsMethods:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get some parameter")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
         # ' dne_dt_RT': dne_dt_rt
-        return {"n_e_RT": ne_rt, "Greenwald_fraction_RT": g_f_rt}
+        return {"n_e_rt": ne_rt, "greenwald_fraction_rt": g_f_rt}
 
     @staticmethod
     @physics_method(
@@ -453,9 +453,9 @@ class D3DPhysicsMethods:
     @staticmethod
     @physics_method(
         columns=[
-            "ip_RT",
-            "ip_error_RT",
-            "dipprog_dt_RT",
+            "ip_rt",
+            "ip_error_rt",
+            "dipprog_dt_rt",
             "dipprog_dt",
             "power_supply_railed",
         ],
@@ -575,9 +575,9 @@ class D3DPhysicsMethods:
             power_supply_railed = [np.nan]
         # 'dip_dt_RT': dip_dt_rt,
         output = {
-            "ip_RT": ip_rt,
-            "ip_error_RT": ip_error_rt,
-            "dipprog_dt_RT": dipprog_dt_rt,
+            "ip_rt": ip_rt,
+            "ip_error_rt": ip_error_rt,
+            "dipprog_dt_rt": dipprog_dt_rt,
             "power_supply_railed": power_supply_railed,
         }
         return output
@@ -1094,7 +1094,7 @@ class D3DPhysicsMethods:
         return {"kappa_area": kappa_area}
 
     @staticmethod
-    @physics_method(columns=["H98", "H_alpha"], tokamak=Tokamak.D3D)
+    @physics_method(columns=["h98", "h_alpha"], tokamak=Tokamak.D3D)
     def get_h_parameters(params: PhysicsMethodParams):
         h98, t_h98 = params.mds_conn.get_data_with_dims(
             r"\H_THH98Y2", tree_name="transport"
@@ -1105,7 +1105,7 @@ class D3DPhysicsMethods:
             r"\fs04", tree_name="d3d"
         )
         h_alpha = interp1(t_h_alpha, h_alpha, params.times)
-        output = {"H98": h98, "H_alpha": h_alpha}
+        output = {"h98": h98, "h_alpha": h_alpha}
         return output
 
     @staticmethod

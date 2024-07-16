@@ -623,7 +623,7 @@ class CmodPhysicsMethods:
     # TODO: Try catch failure to get BP13 sensors
     @staticmethod
     @physics_method(
-        columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase", "BT"],
+        columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase", "bt"],
         tokamak=Tokamak.CMOD,
     )
     def _get_n_equal_1_amplitude(params: PhysicsMethodParams):
@@ -688,7 +688,7 @@ class CmodPhysicsMethods:
                         "n_equal_1_mode": [np.nan],
                         "n_equal_1_normalized": [np.nan],
                         "n_equal_1_phase": [np.nan],
-                        "BT": [np.nan],
+                        "bt": [np.nan],
                     }
                 baseline = np.mean(signal[baseline_indices])
                 signal = signal - baseline
@@ -727,7 +727,7 @@ class CmodPhysicsMethods:
             "n_equal_1_mode": n_equal_1_amplitude,
             "n_equal_1_normalized": n_equal_1_normalized,
             "n_equal_1_phase": n_equal_1_phase,
-            "BT": btor,
+            "bt": btor,
         }
         return output
 
@@ -737,7 +737,7 @@ class CmodPhysicsMethods:
             return {
                 "n_e": [np.nan],
                 "dn_dt": [np.nan],
-                "Greenwald_fraction": [np.nan],
+                "greenwald_fraction": [np.nan],
             }
         # get the gradient of n_E
         dn_dt = np.gradient(n_e, t_n)
@@ -750,12 +750,12 @@ class CmodPhysicsMethods:
         a_minor[a_minor <= 0] = 0.001
         n_G = abs(ip) / (np.pi * a_minor**2) * 1e20  # Greenwald density in m ^-3
         g_f = n_e / n_G
-        output = {"n_e": n_e, "dn_dt": dn_dt, "Greenwald_fraction": g_f}
+        output = {"n_e": n_e, "dn_dt": dn_dt, "greenwald_fraction": g_f}
         return output
 
     @staticmethod
     @physics_method(
-        columns=["n_e", "dn_dt", "Greenwald_fraction"],
+        columns=["n_e", "dn_dt", "greenwald_fraction"],
         tokamak=Tokamak.CMOD,
     )
     def _get_densities(params: PhysicsMethodParams):
@@ -788,11 +788,11 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def get_efc_current(times, iefc, t_iefc):
-        output = {"I_efc": interp1(t_iefc, iefc, times, "linear")}
+        output = {"i_efc": interp1(t_iefc, iefc, times, "linear")}
         return output
 
     @staticmethod
-    @physics_method(columns=["I_efc"], tokamak=Tokamak.CMOD)
+    @physics_method(columns=["i_efc"], tokamak=Tokamak.CMOD)
     def _get_efc_current(params: PhysicsMethodParams):
         try:
             iefc, t_iefc = params.mds_conn.get_data_with_dims(
@@ -800,7 +800,7 @@ class CmodPhysicsMethods:
             )
         except Exception as e:
             params.logger.debug(f"[Shot {params.shot_id}] {traceback.format_exc()}")
-            return {"I_efc": [np.nan]}
+            return {"i_efc": [np.nan]}
         output = CmodPhysicsMethods.get_efc_current(params.times, iefc, t_iefc)
         return output
 
@@ -845,10 +845,10 @@ class CmodPhysicsMethods:
         te_hwm *= np.sqrt(2 * np.log(2))
         # time interpolation
         te_hwm = interp1(ts_time, te_hwm, times)
-        return {"Te_width": te_hwm}
+        return {"te_width": te_hwm}
 
     @staticmethod
-    @physics_method(columns=["Te_width"], tokamak=Tokamak.CMOD)
+    @physics_method(columns=["te_width"], tokamak=Tokamak.CMOD)
     def _get_Ts_parameters(params: PhysicsMethodParams):
         # TODO: Guassian vs parabolic fit for te profile
 
@@ -864,7 +864,7 @@ class CmodPhysicsMethods:
             )
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}] {traceback.format_exc()}")
-            return {"Te_width": [np.nan]}
+            return {"te_width": [np.nan]}
         output = CmodPhysicsMethods.get_Ts_parameters(
             params.times, ts_data, ts_time, ts_z
         )
@@ -880,7 +880,7 @@ class CmodPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["ne_peaking", "Te_peaking", "pressure_peaking"],
+        columns=["ne_peaking", "te_peaking", "pressure_peaking"],
         tokamak=Tokamak.CMOD,
     )
     def _get_peaking_factors(params: PhysicsMethodParams):
@@ -892,7 +892,7 @@ class CmodPhysicsMethods:
         pressure_PF = nan_arr.copy()
         nan_output = {
             "ne_peaking": ne_PF,
-            "Te_peaking": Te_PF,
+            "te_peaking": Te_PF,
             "pressure_peaking": pressure_PF,
         }
         # Ignore shots on the blacklist
@@ -1064,7 +1064,7 @@ class CmodPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["ne_peaking", "Te_peaking", "pressure_peaking"],
+        columns=["ne_peaking", "te_peaking", "pressure_peaking"],
         tags=["experimental"],
         tokamak=Tokamak.CMOD,
     )
@@ -1076,7 +1076,7 @@ class CmodPhysicsMethods:
         pressure_PF = nan_arr.copy()
         nan_output = {
             "ne_peaking": ne_PF,
-            "Te_peaking": Te_PF,
+            "te_peaking": Te_PF,
             "pressure_peaking": pressure_PF,
         }
         # Ignore shots on the blacklist
@@ -1270,18 +1270,18 @@ class CmodPhysicsMethods:
             plt.legend()
             plt.show(block=True)
 
-        output = {"Te_edge": Te_edge, "ne_edge": ne_edge}
+        output = {"te_edge": Te_edge, "ne_edge": ne_edge}
         return output
 
     @staticmethod
     @physics_method(
         tags=["experimental"],
-        columns=["Te_edge", "ne_edge"],
+        columns=["te_edge", "ne_edge"],
         tokamak=Tokamak.CMOD,
     )
     def _get_edge_parameters(params: PhysicsMethodParams):
         nan_output = {
-            "Te_edge": [np.nan],
+            "te_edge": [np.nan],
             "ne_edge": [np.nan],
         }
         try:
@@ -1369,7 +1369,7 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(
         tags=["experimental"],
-        columns=["H98", "Wmhd", "btor", "dWmhd_dt", "p_input"],
+        columns=["h98", "wmhd", "btor", "dwmhd_dt", "p_input"],
         tokamak=Tokamak.CMOD,
     )
     def _get_H98(params: PhysicsMethodParams):
@@ -1404,11 +1404,11 @@ class CmodPhysicsMethods:
         ip = np.abs(ip_df.ip) / 1.0e6  # [A] -> [MA]
         n_e = density_df.n_e / 1.0e19  # [m^-3] -> [10^19 m^-3]
         p_input = powers_df.p_input / 1.0e6  # [W] -> [MW]
-        dWmhd_dt = efit_df.dWmhd_dt / 1.0e6  # [W] -> [MW]
-        Wmhd = efit_df.Wmhd / 1.0e6  # [J] -> [MJ]
+        dwmhd_dt = efit_df.dwmhd_dt / 1.0e6  # [W] -> [MW]
+        wmhd = efit_df.wmhd / 1.0e6  # [J] -> [MJ]
         R0 = efit_df.rmagx / 100  # [cm] -> [m]
         # Estimate confinement time
-        tau = Wmhd / (p_input - dWmhd_dt)
+        tau = wmhd / (p_input - dwmhd_dt)
 
         # Compute 1998 tau_E scaling, taking A (atomic mass) = 2
         tau_98 = (
@@ -1424,10 +1424,10 @@ class CmodPhysicsMethods:
         )
         H98 = tau / tau_98
         output = {
-            "H98": H98,
-            "Wmhd": Wmhd,
+            "h98": H98,
+            "wmhd": wmhd,
             "btor": btor,
-            "dWmhd_dt": dWmhd_dt,
+            "dwmhd_dt": dwmhd_dt,
             "p_input": p_input,
         }
         return output
