@@ -1342,7 +1342,7 @@ class D3DPhysicsMethods:
                     f"{path}{node}", tree_name="_efit_tree"
                 )
             except mdsExceptions.MdsException as e:
-                efit_dict[node] = [np.nan]
+                efit_dict[node] = np.full(len(efit_dict["time"]), np.nan)
                 params.logger.info(
                     f"[Shot {params.shot_id}]: Failed to get {node} from efit, Setting to all NaNs."
                 )
