@@ -247,7 +247,7 @@ def populate_shot(
             continue
         # Pad parameters which are only a single nan (from our error outputs) in
         # order to create a DataFrame for easy comparison with cached data.
-        method_df = pd.DataFrame(method_dict)
+        method_df = pd.concat([pd.DataFrame({k:v}) for k, v in method_dict.items()])
         if np.all(np.isnan(method_df)) and len(method_df) == 1:
             cols = method_df.columns
             method_df = pd.DataFrame(np.full((len(pre_filled_shot_data), method_df.shape[1]), np.nan))
