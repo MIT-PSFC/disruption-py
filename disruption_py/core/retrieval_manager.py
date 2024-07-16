@@ -78,7 +78,6 @@ class RetrievalManager:
         mds_conn = self.process_mds_conn.get_shot_connection(shot_id=shot_id)
 
         mds_conn.add_tree_nickname_funcs(
-            # if more nicknames are desired in the future add an additional_nicknames argument that is a dictionary of nickname settings
             tree_nickname_funcs={
                 "_efit_tree": lambda: retrieval_settings.efit_nickname_setting.get_tree_name(
                     NicknameSettingParams(
