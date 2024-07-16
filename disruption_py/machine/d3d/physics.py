@@ -241,7 +241,9 @@ class D3DPhysicsMethods:
         tokamak=Tokamak.D3D,
     )
     def get_density_parameters(params: PhysicsMethodParams):
-        ne, g_f, dne_dt = [np.nan], [np.nan], [np.nan]
+        ne = [np.nan]
+        g_f = [np.nan]
+        dne_dt = [np.nan]
         try:
             ne, t_ne = params.mds_conn.get_data_with_dims(
                 r"\density", tree_name="_efit_tree"
@@ -594,11 +596,11 @@ class D3DPhysicsMethods:
         always return an arrays of NaN for z_prog, z_error, and
         z_error_norm.
         """
-        z_cur = np.full(params.times.size, np.nan)
-        z_cur_norm = np.full(params.times.size, np.nan)
-        z_prog = np.full(params.times.size, np.nan)
-        z_error = np.full(params.times.size, np.nan)
-        z_error_norm = np.full(params.times.size, np.nan)
+        z_cur = [np.nan]
+        z_cur_norm = [np.nan]
+        z_prog = [np.nan]
+        z_error = [np.nan]
+        z_error_norm = [np.nan]
         try:
             z_cur, t_z_cur = params.mds_conn.get_data_with_dims(
                 f"ptdata('vpszp', {params.shot_id})", tree_name="d3d"
