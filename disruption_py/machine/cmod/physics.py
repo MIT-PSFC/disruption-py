@@ -17,161 +17,13 @@ from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import gaussian_fit, interp1, smooth
 from disruption_py.core.utils.misc import safe_cast
+from disruption_py.machine.cmod.efit import CmodEfitMethods
 from disruption_py.machine.tokamak import Tokamak
 
 warnings.filterwarnings("error", category=RuntimeWarning)
 
 
-class CModEfitRequests:
-
-    efit_cols = {
-        "beta_n": r"\efit_aeqdsk:betan",
-        "beta_p": r"\efit_aeqdsk:betap",
-        "kappa": r"\efit_aeqdsk:eout",
-        "li": r"\efit_aeqdsk:li",
-        "upper_gap": r"\efit_aeqdsk:otop/100",
-        "lower_gap": r"\efit_aeqdsk:obott/100",
-        "q0": r"\efit_aeqdsk:q0",
-        "qstar": r"\efit_aeqdsk:qstar",
-        "q95": r"\efit_aeqdsk:q95",
-        "v_loop_efit": r"\efit_aeqdsk:vloopt",
-        "Wmhd": r"\efit_aeqdsk:wplasm",
-        "ssep": r"\efit_aeqdsk:ssep/100",
-        "n_over_ncrit": r"-\efit_aeqdsk:xnnc",
-        "tritop": r"\efit_aeqdsk:doutu",
-        "tribot": r"\efit_aeqdsk:doutl",
-        "a_minor": r"\efit_aeqdsk:aminor",
-        "rmagx": r"\efit_aeqdsk:rmagx",  # TODO: change units to [m] (current [cm])
-        "chisq": r"\efit_aeqdsk:chisq",
-    }
-
-    # EFIT column names for data before 2000 TODO: confirm with Bob that these are the right back-ups and make sure that these are similar to standard EFIT columns
-    efit_cols_pre_2000 = {
-        "a_minor": r"\efit_aeqdsk:aout",
-        "li": r"\efit_aeqdsk:ali",
-        "q0": r"\efit_aeqdsk:qqmagx",
-        "qstar": r"\efit_aeqdsk:qsta",
-        "q95": r"\efit_aeqdsk:qsib",  # Not sure about this one
-    }
-
-    efit_derivs = {"beta_p": "dbetap_dt", "li": "dli_dt", "Wmhd": "dWmhd_dt"}
-
-    @staticmethod
-    @physics_method(
-        columns=[
-            *efit_cols.keys(),
-            *efit_cols_pre_2000.keys(),
-            *efit_derivs.keys(),
-            "V_surf",
-            "v_loop_efit",
-            "beta_n",
-        ],
-        tokamak=Tokamak.CMOD,
-    )
-    def _get_EFIT_parameters(params: PhysicsMethodParams):
-
-        efit_time = params.mds_conn.get_data(
-            r"\efit_aeqdsk:time", tree_name="_efit_tree", astype="float64"
-        )  # [s]
-        efit_data = dict()
-
-        # Get data from each of the columns in efit_cols one at a time
-        for param in CModEfitRequests.efit_cols:
-            try:
-                # If shot before 2000 and the param is in efit_cols_pre_2000
-                if (
-                    params.shot_id <= 1000000000
-                    and param not in CModEfitRequests.efit_cols_pre_2000.keys()
-                ):
-                    efit_data[param] = params.mds_conn.get_data(
-                        CModEfitRequests.efit_cols_pre_2000[param],
-                        tree_name="_efit_tree",
-                        astype="float64",
-                    )
-                else:
-                    efit_data[param] = params.mds_conn.get_data(
-                        CModEfitRequests.efit_cols[param],
-                        tree_name="_efit_tree",
-                        astype="float64",
-                    )
-            except:
-                params.logger.warning(
-                    f"[Shot {params.shot_id}]: Unable to get {param} from EFIT tree"
-                )
-                params.logger.debug(
-                    f"[Shot {params.shot_id}]: {traceback.format_exc()}"
-                )
-                efit_data[param] = np.full(len(efit_time), np.nan)
-                pass
-
-        for param in CModEfitRequests.efit_derivs:
-            efit_data[CModEfitRequests.efit_derivs[param]] = np.gradient(
-                efit_data[param], efit_time, edge_order=1
-            )
-
-        # Get data for V_surf := deriv(\ANALYSIS::EFIT_SSIBRY)*2*pi
-        try:
-            ssibry = params.mds_conn.get_data(
-                r"\efit_geqdsk:ssibry", tree_name="_efit_tree", astype="float64"
-            )
-            efit_data["V_surf"] = np.gradient(ssibry, efit_time) * 2 * np.pi
-        except:
-            print("unable to get V_surf")
-            efit_data["V_surf"] = np.full(len(efit_time), np.nan)
-            pass
-
-        # For shots before 2000, adjust units of aminor, compute beta_n and v_loop
-        if params.shot_id <= 1000000000:
-
-            # Adjust aminor units
-            efit_data["aminor"] = efit_data["aminor"] / 100  # [cm] to [m]
-
-            # Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally sure on this one)
-            try:  # TODO: confirm this
-                ssimag = params.mds_conn.get_data(
-                    r"\efit_geqdsk:ssimag", tree_name="_efit_tree", astype="float64"
-                )
-                efit_data["v_loop_efit"] = np.gradient(ssimag, efit_time) * 2 * np.pi
-            except:
-                print("unable to get v_loop_efit")
-                efit_data["v_loop_efit"] = np.full(len(efit_time), np.nan)
-                pass
-
-            # Compute beta_n
-            beta_t = params.mds_conn.get_data(
-                r"\efit_aeqdsk:betat", tree_name="_efit_tree", astype="float64"
-            )
-            efit_data["beta_n"] = np.reciprocal(
-                np.reciprocal(beta_t) + np.reciprocal(efit_data["beta_p"])
-            )
-
-        if not np.array_equal(params.times, efit_time):
-            for param in efit_data:
-                efit_data[param] = interp1(efit_time, efit_data[param], params.times)
-
-        return pd.DataFrame(efit_data)
-
-    @staticmethod
-    def efit_check(params: PhysicsMethodParams):
-        """
-        # TODO: Get description from Jinxiang
-        """
-        values = []
-        for expr in [
-            r"_lf=\analysis::efit_aeqdsk:lflag",
-            r"_l0=((sum(_lf,1) - _lf[*,20] - _lf[*,1])==0)",
-            r"_n=\analysis::efit_fitout:nitera,(_l0 and (_n>4))",
-        ]:
-            values.append(params.mds_conn.get(expr, tree_name="analysis"))
-        _n = values[2].data()
-        valid_indices = np.nonzero(_n)
-        (times,) = params.mds_conn.get_dims(
-            r"\analysis::efit_aeqdsk:lflag", tree_name="analysis"
-        )
-        return valid_indices, times[valid_indices]
-
-
-class BasicCmodRequests:
+class CmodPhysicsMethods:
     @staticmethod
     @cache_method
     def get_active_wire_segments(params: PhysicsMethodParams):
@@ -210,16 +62,18 @@ class BasicCmodRequests:
     @staticmethod
     @physics_method(columns=["time_until_disrupt"], tokamak=Tokamak.CMOD)
     def _get_time_until_disrupt(params: PhysicsMethodParams):
-        time_until_disrupt = np.full(len(params.times), np.nan)
+        time_until_disrupt = [np.nan]
         if params.disrupted:
             time_until_disrupt = params.disruption_time - params.times
-        return pd.DataFrame({"time_until_disrupt": time_until_disrupt})
+        return {"time_until_disrupt": time_until_disrupt}
 
     @staticmethod
     def get_ip_parameters(times, ip, magtime, ip_prog, pcstime):
-        """Calculates actual and programmed current as well as their derivatives and difference.
+        """Calculates actual and programmed current as well as their derivatives
+        and difference.
 
-        The time derivatives are useful for discriminating between rampup, flattop, and rampdown.
+        The time derivatives are useful for discriminating between rampup, flattop,
+        and rampdown.
 
         Parameters
         ----------
@@ -273,16 +127,15 @@ class BasicCmodRequests:
 
         ip_error = (np.abs(ip) - np.abs(ip_prog)) * np.sign(ip)
         # import pdb; pdb.set_trace()
-        return pd.DataFrame(
-            {
-                "ip": ip,
-                "dip_dt": dip,
-                "dip_smoothed": dip_smoothed,
-                "ip_prog": ip_prog,
-                "dipprog_dt": dipprog_dt,
-                "ip_error": ip_error,
-            }
-        )
+        output = {
+            "ip": ip,
+            "dip_dt": dip,
+            "dip_smoothed": dip_smoothed,
+            "ip_prog": ip_prog,
+            "dipprog_dt": dipprog_dt,
+            "ip_error": ip_error,
+        }
+        return output
 
     @staticmethod
     @physics_method(
@@ -291,7 +144,7 @@ class BasicCmodRequests:
     )
     def _get_ip_parameters(params: PhysicsMethodParams):
         # Automatically generated
-        active_segments = BasicCmodRequests.get_active_wire_segments(params=params)
+        active_segments = CmodPhysicsMethods.get_active_wire_segments(params=params)
 
         # Default PCS timebase is 1 KHZ
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
@@ -334,7 +187,8 @@ class BasicCmodRequests:
                     except mdsExceptions.MdsException as e:
                         params.logger.warning(
                             [
-                                f"[Shot {params.shot_id}]: Error getting PID gains for wire {wire_index}"
+                                f"[Shot {params.shot_id}]: Error getting PID gains"
+                                + f" for wire {wire_index}"
                             ]
                         )
                         params.logger.debug(
@@ -344,19 +198,21 @@ class BasicCmodRequests:
         ip, magtime = params.mds_conn.get_data_with_dims(
             r"\ip", tree_name="magnetics", astype="float64"
         )
-        return BasicCmodRequests.get_ip_parameters(
+        output = CmodPhysicsMethods.get_ip_parameters(
             params.times, ip, magtime, ip_prog, pcstime
         )
+        return output
 
     @staticmethod
     def get_z_parameters(times, z_prog, pcstime, z_error_without_ip, ip, dpcstime):
-        """Get values of Z_error, Z_prog, and derived signals from plasma control system (PCS).
+        """Get values of Z_error, Z_prog, and derived signals from plasma control
+        system (PCS).
 
-        Z_prog is the programmed vertical position of the plasma current centroid, and Z_error is the difference
-        between the actual position and that requested (Z_error = Z_cur -
-        Z_prog). Thus, the actual (estimated) position, Z_cur, can be calculated.
-        And the vertical velocity, v_z, can be taken from the time derivative,
-        and the product z_times_v_z ( = Z_cur * v_z) is also calculated.
+        Z_prog is the programmed vertical position of the plasma current centroid,
+        and Z_error is the difference between the actual position and that requested
+        (Z_error = Z_cur - Z_prog). Thus, the actual (estimated) position, Z_cur,
+        can be calculated. And the vertical velocity, v_z, can be taken from the
+        time derivative, and the product z_times_v_z ( = Z_cur * v_z) is also calculated.
 
         Parameters
         ----------
@@ -365,9 +221,11 @@ class BasicCmodRequests:
         z_prog : array_like
             Programmed vertical position of the plasma current centroid.
         pcstime : array_like
-            Time array for the programmed vertical position of the plasma current centroid.
+            Time array for the programmed vertical position of the plasma current
+            centroid.
         z_error_without_ip : array_like
-            Difference between the actual and programmed vertical position of the plasma current centroid.
+            Difference between the actual and programmed vertical position of the
+            plasma current centroid.
         ip : array_like
             Actual plasma current.
         dpcstime : array_like
@@ -376,7 +234,8 @@ class BasicCmodRequests:
         Returns
         -------
         z_error : array_like
-            Difference between the actual and programmed vertical position of the plasma current centroid.
+            Difference between the actual and programmed vertical position of the
+            plasma current centroid.
         z_prog : array_like
             Programmed vertical position of the plasma current centroid.
         z_cur : array_like
@@ -410,15 +269,14 @@ class BasicCmodRequests:
         z_times_v_z = interp1(
             dpcstime, z_times_v_z, times, "linear", False, z_times_v_z[-1]
         )
-        return pd.DataFrame(
-            {
-                "z_error": z_error,
-                "z_prog": z_prog,
-                "zcur": z_cur,
-                "v_z": v_z,
-                "z_times_v_z": z_times_v_z,
-            }
-        )
+        output = {
+            "z_error": z_error,
+            "z_prog": z_prog,
+            "zcur": z_cur,
+            "v_z": v_z,
+            "z_times_v_z": z_times_v_z,
+        }
+        return output
 
     @staticmethod
     @physics_method(
@@ -431,7 +289,9 @@ class BasicCmodRequests:
         z_prog.fill(np.nan)
         z_prog_temp = z_prog.copy()
         z_wire_index = -1
-        active_wire_segments = BasicCmodRequests.get_active_wire_segments(params=params)
+        active_wire_segments = CmodPhysicsMethods.get_active_wire_segments(
+            params=params
+        )
 
         for node_path, start in active_wire_segments:
             for wire_index in range(1, 17):
@@ -481,7 +341,8 @@ class BasicCmodRequests:
         wire_errors, dpcstime = params.mds_conn.get_data_with_dims(
             r"\top.hardware.dpcs.signals:a_out", tree_name="hybrid", dim_nums=[1]
         )
-        # The value of Z_error we read is not in the units we want. It must be *divided* by a factor AND *divided* by the plasma current.
+        # The value of Z_error we read is not in the units we want. It must be *divided*
+        #  by a factor AND *divided* by the plasma current.
         z_error_without_factor_and_ip = wire_errors[:, z_wire_index]
         z_error_without_ip = np.empty(z_error_without_factor_and_ip.shape)
         z_error_without_ip.fill(np.nan)
@@ -522,7 +383,7 @@ class BasicCmodRequests:
                 r"\ip", tree_name="magnetics"
             )
             ip = interp1(ip_time, ip, dpcstime)
-        return BasicCmodRequests.get_z_parameters(
+        return CmodPhysicsMethods.get_z_parameters(
             params.times, z_prog, pcstime, z_error_without_ip, ip, dpcstime
         )
 
@@ -530,7 +391,8 @@ class BasicCmodRequests:
     def get_ohmic_parameters(
         times, v_loop, v_loop_time, li, efittime, dip_smoothed, ip
     ):
-        """Calculate the ohmic power from the loop voltage, inductive voltage, and plasma current.
+        """Calculate the ohmic power from the loop voltage, inductive voltage, and
+        plasma current.
 
         Parameters
         ----------
@@ -561,14 +423,16 @@ class BasicCmodRequests:
 
 
         """
-        R0 = 0.68  # For simplicity, we use R0 = 0.68 m, but we could use \efit_aeqdsk:rmagx
+        # For simplicity, we use R0 = 0.68 m, but we could use \efit_aeqdsk:rmagx
+        R0 = 0.68
         inductance = 4.0 * np.pi * 1.0e-7 * R0 * li / 2.0
         v_loop = interp1(v_loop_time, v_loop, times)
         inductance = interp1(efittime, inductance, times)
         v_inductive = inductance * dip_smoothed
         v_resistive = v_loop - v_inductive
         p_ohm = ip * v_resistive
-        return pd.DataFrame({"p_oh": p_ohm, "v_loop": v_loop})
+        output = {"p_oh": p_ohm, "v_loop": v_loop}
+        return output
 
     @staticmethod
     @physics_method(
@@ -580,17 +444,15 @@ class BasicCmodRequests:
             r"\top.mflux:v0", tree_name="analysis", astype="float64"
         )
         if len(v_loop_time) <= 1:
-            return pd.DataFrame(
-                {
-                    "p_oh": np.zeros(len(params.times)),
-                    "v_loop": np.zeros(len(params.times)),
-                }
-            )
+            return {
+                "p_oh": np.zeros(len(params.times)),
+                "v_loop": np.zeros(len(params.times)),
+            }
         li, efittime = params.mds_conn.get_data_with_dims(
             r"\efit_aeqdsk:li", tree_name="_efit_tree", astype="float64"
         )
-        ip_parameters = BasicCmodRequests._get_ip_parameters(params=params)
-        return BasicCmodRequests.get_ohmic_parameters(
+        ip_parameters = CmodPhysicsMethods._get_ip_parameters(params=params)
+        output = CmodPhysicsMethods.get_ohmic_parameters(
             params.times,
             v_loop,
             v_loop_time,
@@ -599,6 +461,7 @@ class BasicCmodRequests:
             ip_parameters["dip_smoothed"],
             ip_parameters["ip"],
         )
+        return output
 
     @staticmethod
     def get_power(times, p_lh, t_lh, p_icrf, t_icrf, p_rad, t_rad, p_ohm):
@@ -632,16 +495,15 @@ class BasicCmodRequests:
         p_input = p_ohm + p_lh + p_icrf
         rad_fraction = p_rad / p_input
         rad_fraction[rad_fraction == np.inf] = np.nan
-        return pd.DataFrame(
-            {
-                "p_rad": p_rad,
-                "dprad_dt": dprad,
-                "p_lh": p_lh,
-                "p_icrf": p_icrf,
-                "p_input": p_input,
-                "radiated_fraction": rad_fraction,
-            }
-        )
+        output = {
+            "p_rad": p_rad,
+            "dprad_dt": dprad,
+            "p_lh": p_lh,
+            "p_icrf": p_icrf,
+            "p_input": p_input,
+            "radiated_fraction": rad_fraction,
+        }
+        return output
 
     @staticmethod
     @physics_method(
@@ -672,14 +534,14 @@ class BasicCmodRequests:
                 values[2 * i + 1] = sig_time
             except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF) as e:
                 continue
-        p_oh = BasicCmodRequests._get_ohmic_parameters(params=params)["p_oh"]
-        return BasicCmodRequests.get_power(params.times, *values, p_oh)
+        p_oh = CmodPhysicsMethods._get_ohmic_parameters(params=params)["p_oh"]
+        output = CmodPhysicsMethods.get_power(params.times, *values, p_oh)
+        return output
 
     @staticmethod
     def get_kappa_area(times, aminor, area, a_times):
-        return pd.DataFrame(
-            {"kappa_area": interp1(a_times, area / (np.pi * aminor**2), times)}
-        )
+        output = {"kappa_area": interp1(a_times, area / (np.pi * aminor**2), times)}
+        return output
 
     @staticmethod
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
@@ -697,39 +559,43 @@ class BasicCmodRequests:
         aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
         # make sure area is not 0 or less than 0
         area[area <= 0] = 3.14 * 0.001**2
-        return BasicCmodRequests.get_kappa_area(params.times, aminor, area, times)
+        output = CmodPhysicsMethods.get_kappa_area(params.times, aminor, area, times)
+        return output
 
     @staticmethod
     def get_rotation_velocity(times, intensity, time, vel, hirextime):
         """
-        Uses spectroscopy graphs of ionized(to hydrogen and helium levels) Argon to calculate velocity. Because of the heat profile of the plasma, suitable measurements are only found near the center
+        Uses spectroscopy graphs of ionized(to hydrogen and helium levels) Argon
+        to calculate velocity. Because of the heat profile of the plasma, suitable
+        measurements are only found near the center
         """
         v_0 = np.empty(len(time))
-        # Check that the argon intensity pulse has a minimum count and duration threshold
+        # Check that the argon intensity pulse has a minimum count and duration
+        # threshold
         valid_indices = np.where(intensity > 1000 & intensity < 10000)
-        # Matlab code just multiplies by time delta but that doesn't work in the case where we have different time deltas
-        # Instead we sum the time deltas for all valid indices to check the total duration
+        # Matlab code just multiplies by time delta but that doesn't work in the
+        # case where we have different time deltas. Instead we sum the time deltas
+        # for all valid indices to check the total duration
         if np.sum(time[valid_indices + 1] - time[valid_indices]) >= 0.2:
             v_0 = interp1(hirextime, vel, time)
             # TODO: Determine better threshold
             v_0[np.where(abs(v_0) > 200)] = np.nan
             v_0 *= 1000.0
         v_0 = interp1(time, v_0, times)
-        return pd.DataFrame({"v_0": v_0})
+        return {"v_0": v_0}
 
     # TODO: Calculate v_mid
     @staticmethod
     @physics_method(columns=["v_0"], tokamak=Tokamak.CMOD)
     def _get_rotation_velocity(params: PhysicsMethodParams):
+        nan_output = {"v_0": [np.nan]}
         with resources.path(disruption_py.data, "lock_mode_calib_shots.txt") as fio:
             calibrated = pd.read_csv(fio)
         # Check to see if shot was done on a day where there was a locked
         # mode HIREX calibration by cross checking with list of calibrated
         # runs. If not calibrated, return NaN outputs.
         if params.shot_id not in calibrated:
-            v_0 = np.empty(len(params.times))
-            v_0.fill(np.nan)
-            return pd.DataFrame({"v_0": v_0})
+            return nan_output
         try:
             intensity, time = params.mds_conn.get_data_with_dims(
                 ".hirex_sr.analysis.a:int", tree_name="spectroscopy", astype="float64"
@@ -739,15 +605,15 @@ class BasicCmodRequests:
             )
         except mdsExceptions.TreeFOPENR as e:
             params.logger.warning(
-                f"[Shot {params.shot_id}]: Failed to open necessary tress for rotational velocity calculations."
+                f"[Shot {params.shot_id}]: Failed to open necessary tress for "
+                + f"rotational velocity calculations."
             )
             params.logger.debug(f"[Shot {params.shot_id}]: {traceback.format_exc()}")
-            v_0 = np.empty(len(params.times))
-            v_0.fill(np.nan)
-            return pd.DataFrame({"v_0": v_0})
-        return BasicCmodRequests.get_rotation_velocity(
+            return nan_output
+        output = CmodPhysicsMethods.get_rotation_velocity(
             params.times, intensity, time, vel, hirextime
         )
+        return output
 
     # TODO: Split into static and instance method
     @staticmethod
@@ -757,14 +623,14 @@ class BasicCmodRequests:
     # TODO: Try catch failure to get BP13 sensors
     @staticmethod
     @physics_method(
-        columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase", "BT"],
+        columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase", "bt"],
         tokamak=Tokamak.CMOD,
     )
     def _get_n_equal_1_amplitude(params: PhysicsMethodParams):
         """Calculate n=1 amplitude and phase.
 
-        This method uses the four BP13 Bp sensors near the midplane on the outboard vessel
-        wall.  The calculation is done by using a least squares fit to an
+        This method uses the four BP13 Bp sensors near the midplane on the outboard
+        vessel wall.  The calculation is done by using a least squares fit to an
         expansion in terms of n = 0 & 1 toroidal harmonics.  The BP13 sensors are
         part of the set used for plasma control and equilibrium reconstruction,
         and their signals have been analog integrated (units: tesla), so they
@@ -775,11 +641,8 @@ class BasicCmodRequests:
 
         N=1 toroidal assymmetry in the magnetic fields
         """
-        n_equal_1_amplitude = np.empty(len(params.times))
-        n_equal_1_amplitude.fill(np.nan)
-        n_equal_1_normalized = n_equal_1_amplitude.copy()
-        n_equal_1_phase = n_equal_1_amplitude.copy()
-        # These sensors are placed toroidally around the machine. Letters refer to the 2 ports the sensors were placed between.
+        # These sensors are placed toroidally around the machine. Letters refer to
+        # the 2 ports the sensors were placed between.
         bp13_names = ["BP13_BC", "BP13_DE", "BP13_GH", "BP13_JK"]
         bp13_signals = np.empty((len(params.times), len(bp13_names)))
 
@@ -799,7 +662,8 @@ class BasicCmodRequests:
         btor, t_mag = params.mds_conn.get_data_with_dims(
             r"\btor", tree_name="magnetics"
         )
-        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be on by t=-1. So pick the time before that to calculate baseline
+        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
+        # on by t=-1. So pick the time before that to calculate baseline
         baseline_indices = np.where(t_mag <= -1.8)
         btor = btor - np.mean(btor[baseline_indices])
         path = r"\mag_bp_coils.signals."
@@ -817,9 +681,15 @@ class BasicCmodRequests:
                 )
                 if len(signal) == 1:
                     params.logger.warning(
-                        f"[Shot {params.shot_id}] Only one data point for {bp13_names[i]} Returning nans."
+                        f"[Shot {params.shot_id}] Only one data point for "
+                        + f"{bp13_names[i]} Returning nans."
                     )
-                    return n_equal_1_amplitude, n_equal_1_normalized, n_equal_1_phase
+                    return {
+                        "n_equal_1_mode": [np.nan],
+                        "n_equal_1_normalized": [np.nan],
+                        "n_equal_1_phase": [np.nan],
+                        "bt": [np.nan],
+                    }
                 baseline = np.mean(signal[baseline_indices])
                 signal = signal - baseline
                 signal = signal - bp13_btor_pickup_coeffs[i] * btor
@@ -853,27 +723,22 @@ class BasicCmodRequests:
             n_equal_1_normalized = n_equal_1_amplitude / btor_magnitude
             # INFO: Debugging purpose block of code at end of matlab file
             # INFO: n_equal_1_amplitude vs n_equal_1_mode
-        return pd.DataFrame(
-            {
-                "n_equal_1_mode": n_equal_1_amplitude,
-                "n_equal_1_normalized": n_equal_1_normalized,
-                "n_equal_1_phase": n_equal_1_phase,
-                "BT": btor,
-            }
-        )
+        output = {
+            "n_equal_1_mode": n_equal_1_amplitude,
+            "n_equal_1_normalized": n_equal_1_normalized,
+            "n_equal_1_phase": n_equal_1_phase,
+            "bt": btor,
+        }
+        return output
 
     @staticmethod
     def get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
         if len(n_e) != len(t_n):
-            nan_arr = np.empty(len(times))
-            nan_arr.fill(np.nan)
-            return pd.DataFrame(
-                {
-                    "n_e": nan_arr,
-                    "dn_dt": nan_arr.copy(),
-                    "Greenwald_fraction": nan_arr.copy(),
-                }
-            )
+            return {
+                "n_e": [np.nan],
+                "dn_dt": [np.nan],
+                "greenwald_fraction": [np.nan],
+            }
         # get the gradient of n_E
         dn_dt = np.gradient(n_e, t_n)
         n_e = interp1(t_n, n_e, times)
@@ -885,11 +750,12 @@ class BasicCmodRequests:
         a_minor[a_minor <= 0] = 0.001
         n_G = abs(ip) / (np.pi * a_minor**2) * 1e20  # Greenwald density in m ^-3
         g_f = n_e / n_G
-        return pd.DataFrame({"n_e": n_e, "dn_dt": dn_dt, "Greenwald_fraction": g_f})
+        output = {"n_e": n_e, "dn_dt": dn_dt, "greenwald_fraction": g_f}
+        return output
 
     @staticmethod
     @physics_method(
-        columns=["n_e", "dn_dt", "Greenwald_fraction"],
+        columns=["n_e", "dn_dt", "greenwald_fraction"],
         tokamak=Tokamak.CMOD,
     )
     def _get_densities(params: PhysicsMethodParams):
@@ -899,7 +765,8 @@ class BasicCmodRequests:
                 r".tci.results:nl_04", tree_name="electrons", astype="float64"
             )
             # Divide by chord length of ~0.6m to get line averaged density.
-            # For future refernce, chord length is stored in .01*\analysis::efit_aeqdsk:rco2v[3,*]
+            # For future refernce, chord length is stored in
+            # .01*\analysis::efit_aeqdsk:rco2v[3,*]
             n_e = np.squeeze(n_e) / 0.6
             ip, t_ip = params.mds_conn.get_data_with_dims(
                 r"\ip", tree_name="magnetics", astype="float64"
@@ -914,16 +781,18 @@ class BasicCmodRequests:
             raise NotImplementedError(
                 "Can't currently handle failure of grabbing density data"
             )
-        return BasicCmodRequests.get_densities(
+        output = CmodPhysicsMethods.get_densities(
             params.times, n_e, t_n, ip, t_ip, a_minor, t_a
         )
+        return output
 
     @staticmethod
     def get_efc_current(times, iefc, t_iefc):
-        return pd.DataFrame({"I_efc": interp1(t_iefc, iefc, times, "linear")})
+        output = {"i_efc": interp1(t_iefc, iefc, times, "linear")}
+        return output
 
     @staticmethod
-    @physics_method(columns=["I_efc"], tokamak=Tokamak.CMOD)
+    @physics_method(columns=["i_efc"], tokamak=Tokamak.CMOD)
     def _get_efc_current(params: PhysicsMethodParams):
         try:
             iefc, t_iefc = params.mds_conn.get_data_with_dims(
@@ -931,8 +800,9 @@ class BasicCmodRequests:
             )
         except Exception as e:
             params.logger.debug(f"[Shot {params.shot_id}] {traceback.format_exc()}")
-            return pd.DataFrame({"I_efc": np.empty(len(params.times))})
-        return BasicCmodRequests.get_efc_current(params.times, iefc, t_iefc)
+            return {"i_efc": [np.nan]}
+        output = CmodPhysicsMethods.get_efc_current(params.times, iefc, t_iefc)
+        return output
 
     @staticmethod
     def get_Ts_parameters(times, ts_data, ts_time, ts_z, z_sorted=False):
@@ -975,13 +845,12 @@ class BasicCmodRequests:
         te_hwm *= np.sqrt(2 * np.log(2))
         # time interpolation
         te_hwm = interp1(ts_time, te_hwm, times)
-        return pd.DataFrame({"Te_width": te_hwm})
+        return {"te_width": te_hwm}
 
     @staticmethod
-    @physics_method(columns=["Te_width"], tokamak=Tokamak.CMOD)
+    @physics_method(columns=["te_width"], tokamak=Tokamak.CMOD)
     def _get_Ts_parameters(params: PhysicsMethodParams):
         # TODO: Guassian vs parabolic fit for te profile
-        te_hwm = np.empty((len(params.times)))
 
         # Read in Thomson core temperature data, which is a 2-D array, with the
         # dependent dimensions being time and z (vertical coordinate)
@@ -995,9 +864,11 @@ class BasicCmodRequests:
             )
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}] {traceback.format_exc()}")
-            te_hwm.fill(np.nan)
-            return pd.DataFrame({"Te_width": te_hwm})
-        return BasicCmodRequests.get_Ts_parameters(params.times, ts_data, ts_time, ts_z)
+            return {"te_width": [np.nan]}
+        output = CmodPhysicsMethods.get_Ts_parameters(
+            params.times, ts_data, ts_time, ts_z
+        )
+        return output
 
     # TODO: Finish
     @staticmethod
@@ -1009,27 +880,24 @@ class BasicCmodRequests:
 
     @staticmethod
     @physics_method(
-        columns=["ne_peaking", "Te_peaking", "pressure_peaking"],
+        columns=["ne_peaking", "te_peaking", "pressure_peaking"],
         tokamak=Tokamak.CMOD,
     )
     def _get_peaking_factors(params: PhysicsMethodParams):
-        ne_PF = np.full(len(params.times), np.nan)
-        Te_PF = ne_PF.copy()
-        pressure_PF = ne_PF.copy()
-        if (
-            (params.shot_id > 1120000000 and params.shot_id < 1120213000)
-            or (params.shot_id > 1140000000 and params.shot_id < 1140227000)
-            or (params.shot_id > 1150000000 and params.shot_id < 1150610000)
-            or (params.shot_id > 1160000000 and params.shot_id < 1160303000)
-        ):
-            # Ignore shots on the blacklist
-            return pd.DataFrame(
-                {
-                    "ne_peaking": ne_PF,
-                    "Te_peaking": Te_PF,
-                    "pressure_peaking": pressure_PF,
-                }
-            )
+        # Initialize to nans because they are either passed as parameters or their
+        # indexed values are updated
+        nan_arr = np.full(len(params.times), np.nan)
+        ne_PF = nan_arr.copy()
+        Te_PF = nan_arr.copy()
+        pressure_PF = nan_arr.copy()
+        nan_output = {
+            "ne_peaking": ne_PF,
+            "te_peaking": Te_PF,
+            "pressure_peaking": pressure_PF,
+        }
+        # Ignore shots on the blacklist
+        if CmodPhysicsMethods.is_on_blacklist(params.shot_id):
+            return nan_output
         try:
             z0 = 0.01 * params.mds_conn.get_data(
                 r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
@@ -1055,13 +923,7 @@ class BasicCmodRequests:
             zts_edge = params.mds_conn.get_data(r"\fiber_z", tree_name="electrons")
             TS_z = np.concatenate((TS_z, zts_edge))
             if len(zts_edge) != tets_edge.shape[1]:
-                return pd.DataFrame(
-                    {
-                        "ne_peaking": ne_PF,
-                        "Te_peaking": Te_PF,
-                        "pressure_peaking": pressure_PF,
-                    }
-                )
+                return nan_output
             Te_PF = Te_PF[: len(TS_time)]
             itimes = np.where(TS_time > 0 & TS_time < params.times[-1])
             bminor = interp1(efit_time, bminor, TS_time)
@@ -1089,17 +951,11 @@ class BasicCmodRequests:
             Te_PF = interp1(TS_time, Te_PF, params.times)
             calib = np.nan
             # TODO(lajz): fix
-            return BasicCmodRequests.get_Ts_parameters(
+            return CmodPhysicsMethods.get_Ts_parameters(
                 params.times, TS_time, ne_PF, Te_PF, pressure_PF
             )
         except mdsExceptions.MdsException as e:
-            return pd.DataFrame(
-                {
-                    "ne_peaking": ne_PF,
-                    "Te_peaking": Te_PF,
-                    "pressure_peaking": pressure_PF,
-                }
-            )
+            return nan_output
 
     @staticmethod
     @physics_method(
@@ -1108,6 +964,7 @@ class BasicCmodRequests:
     )
     def _get_prad_peaking(params: PhysicsMethodParams):
         prad_peaking = np.full(len(params.times), np.nan)
+        nan_output = {"prad_peaking", prad_peaking}
         try:
             r0 = 0.01 * params.mds_conn.get_data(
                 r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
@@ -1120,7 +977,7 @@ class BasicCmodRequests:
             )
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}]: Failed to get efit data")
-            return pd.DataFrame({"prad_peaking": prad_peaking})
+            return nan_output
         got_axa = False
         try:
             bright_axa, t_axa, r_axa = params.mds_conn.get_data_with_dims(
@@ -1158,7 +1015,7 @@ class BasicCmodRequests:
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}]: Failed to get AXJ data")
         if not (got_axa or got_axj):
-            return pd.DataFrame({"prad_peaking": prad_peaking})
+            return nan_output
         a_minor = interp1(efit_time, aminor, params.times)
         r0 = interp1(efit_time, r0, params.times)
         z0 = interp1(efit_time, z0, params.times)
@@ -1203,33 +1060,28 @@ class BasicCmodRequests:
                 prad_peaking[i] = np.nanmean(core_radiation) / np.nanmean(all_radiation)
             except:
                 prad_peaking[i] = np.nan
-        return pd.DataFrame({"prad_peaking": prad_peaking})
+        return {"prad_peaking": prad_peaking}
 
     @staticmethod
     @physics_method(
-        columns=["ne_peaking", "Te_peaking", "pressure_peaking"],
+        columns=["ne_peaking", "te_peaking", "pressure_peaking"],
         tags=["experimental"],
         tokamak=Tokamak.CMOD,
     )
     def _get_peaking_factors_no_tci(params: PhysicsMethodParams):
         # Initialize PFs as empty arrarys
-        ne_PF = np.full(len(params.times), np.nan)
-        Te_PF = ne_PF.copy()
-        pressure_PF = ne_PF.copy()
+        nan_arr = np.full(len(params.times), np.nan)
+        ne_PF = nan_arr.copy()
+        Te_PF = nan_arr.copy()
+        pressure_PF = nan_arr.copy()
+        nan_output = {
+            "ne_peaking": ne_PF,
+            "te_peaking": Te_PF,
+            "pressure_peaking": pressure_PF,
+        }
         # Ignore shots on the blacklist
-        if (
-            (params.shot_id > 1120000000 and params.shot_id < 1120213000)
-            or (params.shot_id > 1140000000 and params.shot_id < 1140227000)
-            or (params.shot_id > 1150000000 and params.shot_id < 1150610000)
-            or (params.shot_id > 1160000000 and params.shot_id < 1160303000)
-        ):
-            return pd.DataFrame(
-                {
-                    "ne_peaking": ne_PF,
-                    "Te_peaking": Te_PF,
-                    "pressure_peaking": pressure_PF,
-                }
-            )
+        if CmodPhysicsMethods.is_on_blacklist(params.shot_id):
+            return nan_output
         try:
             # Get shaping params
             z0 = 0.01 * params.mds_conn.get_data(
@@ -1262,15 +1114,10 @@ class BasicCmodRequests:
             # Make sure that there are equal numbers of edge position and edge temperature points
             if len(z_edge) != Te_edge.shape[0]:
                 params.logger.warning(
-                    f"[Shot {params.shot_id}]: TS edge data and z positions are not the same length for shot"
+                    f"[Shot {params.shot_id}]: TS edge data and z positions are "
+                    + "not the same length for shot"
                 )
-                return pd.DataFrame(
-                    {
-                        "ne_peaking": ne_PF,
-                        "Te_peaking": Te_PF,
-                        "pressure_peaking": pressure_PF,
-                    }
-                )
+                return nan_output
             Te_PF = Te_PF[: len(Te_time)]  # Reshape Te_PF to length of Te_time
             itimes = np.where((Te_time > 0) & (Te_time < params.times[-1]))
             node_path = ".yag_new.results.profiles"
@@ -1304,18 +1151,12 @@ class BasicCmodRequests:
             Te_PF = interp1(TS_time, Te_PF, params.times)
             calib = np.nan
             # TODO(lajz): fix
-            return BasicCmodRequests.get_Ts_parameters(
+            return CmodPhysicsMethods.get_Ts_parameters(
                 params.times, TS_time, ne_PF, Te_PF, pressure_PF
             )
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            return pd.DataFrame(
-                {
-                    "ne_peaking": ne_PF,
-                    "Te_peaking": Te_PF,
-                    "pressure_peaking": pressure_PF,
-                }
-            )
+            return nan_output
 
     @staticmethod
     def get_sxr_parameters():
@@ -1325,21 +1166,20 @@ class BasicCmodRequests:
     @staticmethod
     @physics_method(columns=["sxr"], tokamak=Tokamak.CMOD)
     def _get_sxr_data(params: PhysicsMethodParams):
-        """ """
-        sxr = np.full(len(params.times), np.nan)
         try:
             sxr, t_sxr = params.mds_conn.get_data_with_dims(
                 r"\top.brightnesses.array_1:chord_16",
                 tree_name="xtomo",
                 astype="float64",
             )
-            sxr = interp1(t_sxr, sxr, params.times)
         except mdsExceptions.TreeFOPENR as e:
             params.logger.warning(
                 f"[Shot {params.shot_id}]: Failed to get SXR data returning NaNs"
             )
             params.logger.debug(f"[Shot {params.shot_id}]: {traceback.format_exc()}")
-        return pd.DataFrame({"sxr": sxr})
+            return {"sxr": [np.nan]}
+        sxr = interp1(t_sxr, sxr, params.times)
+        return {"sxr": sxr}
 
     @staticmethod
     def get_edge_parameters(times, p_Te, p_ne, edge_rho_min=0.85, edge_rho_max=0.95):
@@ -1361,7 +1201,8 @@ class BasicCmodRequests:
         Returns
         -------
         Te_edge : array_like
-            The edge temperature (averaged over the edge region) on the requested timebase.
+            The edge temperature (averaged over the edge region) on the requested
+            timebase.
         ne_edge : array_like
             The edge density (averaged over the edge region) on the requested timebase.
 
@@ -1414,7 +1255,9 @@ class BasicCmodRequests:
         ne_interp_edge = np.where(rhobase_mesh_mask, ne_interp, np.nan)
 
         # Compute edge quantities
-        with warnings.catch_warnings():  # Carch warning about taking nanmean of an empty array. This is ok because we want it to return nan for empty arrays
+        # Catch warning about taking nanmean of an empty array. This is ok because
+        # we want it to return nan for empty arrays
+        with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=RuntimeWarning)
             Te_edge = np.nanmean(Te_interp_edge, axis=0)
             ne_edge = np.nanmean(ne_interp_edge, axis=0)
@@ -1427,16 +1270,20 @@ class BasicCmodRequests:
             plt.legend()
             plt.show(block=True)
 
-        return pd.DataFrame({"Te_edge": Te_edge, "ne_edge": ne_edge})
+        output = {"te_edge": Te_edge, "ne_edge": ne_edge}
+        return output
 
     @staticmethod
     @physics_method(
         tags=["experimental"],
-        columns=["Te_edge", "ne_edge"],
+        columns=["te_edge", "ne_edge"],
         tokamak=Tokamak.CMOD,
     )
     def _get_edge_parameters(params: PhysicsMethodParams):
-
+        nan_output = {
+            "te_edge": [np.nan],
+            "ne_edge": [np.nan],
+        }
         try:
             # sys.path.append("/home/sciortino/usr/python3modules/eqtools3")
             sys.path.append("/home/sciortino/usr/python3modules/profiletools3")
@@ -1449,19 +1296,8 @@ class BasicCmodRequests:
             pass
 
         # Ignore shots on the blacklist
-        if (
-            (params.shot_id > 1120000000 and params.shot_id < 1120213000)
-            or (params.shot_id > 1140000000 and params.shot_id < 1140227000)
-            or (params.shot_id > 1150000000 and params.shot_id < 1150610000)
-            or (params.shot_id > 1160000000 and params.shot_id < 1160303000)
-        ):
-            return pd.DataFrame(
-                {
-                    "Te_edge": np.full(len(params.times), np.nan),
-                    "ne_edge": np.full(len(params.times), np.nan),
-                }
-            )
-
+        if CmodPhysicsMethods.is_on_blacklist(params.shot_id):
+            return nan_output
         # Range of rho to interpolate over
         rhobase = np.arange(0, 1, 0.001)
         # Get mina and max time from TS tree
@@ -1471,12 +1307,7 @@ class BasicCmodRequests:
                 node_path + ":te_rz", tree_name="electrons"
             )
         except:
-            return pd.DataFrame(
-                {
-                    "Te_edge": np.full(len(params.times), np.nan),
-                    "ne_edge": np.full(len(params.times), np.nan),
-                }
-            )
+            return nan_output
 
         t_min = np.max([0.1, np.min(ts_time)])
         t_max = np.max(ts_time)
@@ -1506,11 +1337,13 @@ class BasicCmodRequests:
         #    raise ValueError('Edge Thomson rhobase differs between ne and Te')
         #    return None, None
 
-        # consider only flux surface on which points were measured, regardless of LFS or HFS
+        # consider only flux surface on which points were measured, regardless of
+        # LFS or HFS
         p_Te.X = np.abs(p_Te.X)
         p_ne.X = np.abs(p_ne.X)
 
-        # set some minimum uncertainties. Recall that units in objects are 1e20m^{-3} and keV
+        # set some minimum uncertainties. Recall that units in objects are 1e20m^{-3}
+        # and keV
         p_ne.y[p_ne.y <= 0.0] = 0.01  # 10^18 m^-3
         p_Te.y[p_Te.y <= 0.01] = 0.01  # 10 eV
         p_ne.err_y[p_ne.err_y <= 0.01] = 0.01  # 10^18 m^-3
@@ -1525,7 +1358,8 @@ class BasicCmodRequests:
         # TS Te should be >15 eV inside near SOL
         p_Te.remove_points(np.logical_and(p_Te.X[:, 0] < 1.03, p_Te.y < 0.015))
 
-        return BasicCmodRequests.get_edge_parameters(params.times, p_Te, p_ne)
+        output = CmodPhysicsMethods.get_edge_parameters(params.times, p_Te, p_ne)
+        return output
 
     @staticmethod
     def get_H98():
@@ -1535,13 +1369,14 @@ class BasicCmodRequests:
     @staticmethod
     @physics_method(
         tags=["experimental"],
-        columns=["H98", "Wmhd", "btor", "dWmhd_dt", "p_input"],
+        columns=["h98", "wmhd", "btor", "dwmhd_dt", "p_input"],
         tokamak=Tokamak.CMOD,
     )
     def _get_H98(params: PhysicsMethodParams):
         """Prepare to compute H98 by getting tau_E
 
-        Scaling from eq. 20, ITER Physics Basis Chapter 2 https://iopscience.iop.org/article/10.1088/0029-5515/39/12/302/pdf
+        Scaling from eq. 20, ITER Physics Basis Chapter 2
+        https://iopscience.iop.org/article/10.1088/0029-5515/39/12/302/pdf
         (in s, MA, T, MW, 10^19 m^−3, AMU, m)
         Original Authors
         ----------------
@@ -1550,17 +1385,18 @@ class BasicCmodRequests:
         """
 
         # Get parameters for calculating confinement time
-        powers_df = BasicCmodRequests._get_power(params=params)
-        efit_df = CModEfitRequests._get_EFIT_parameters(params=params)
-        density_df = BasicCmodRequests._get_densities(params=params)
-        ip_df = BasicCmodRequests._get_ip_parameters(params=params)
+        powers_df = CmodPhysicsMethods._get_power(params=params)
+        efit_df = CmodEfitMethods._get_EFIT_parameters(params=params)
+        density_df = CmodPhysicsMethods._get_densities(params=params)
+        ip_df = CmodPhysicsMethods._get_ip_parameters(params=params)
 
         # Get BT
 
         btor, t_mag = params.mds_conn.get_data_with_dims(
             r"\btor", tree_name="magnetics"
         )  # tmag: [s]
-        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be on by t=-1. So pick the time before that to calculate baseline
+        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
+        # on by t=-1. So pick the time before that to calculate baseline
         baseline_indices = np.where(t_mag <= -1.8)
         btor = btor - np.mean(btor[baseline_indices])
         btor = np.abs(interp1(t_mag, btor, params.times))
@@ -1568,11 +1404,11 @@ class BasicCmodRequests:
         ip = np.abs(ip_df.ip) / 1.0e6  # [A] -> [MA]
         n_e = density_df.n_e / 1.0e19  # [m^-3] -> [10^19 m^-3]
         p_input = powers_df.p_input / 1.0e6  # [W] -> [MW]
-        dWmhd_dt = efit_df.dWmhd_dt / 1.0e6  # [W] -> [MW]
-        Wmhd = efit_df.Wmhd / 1.0e6  # [J] -> [MJ]
+        dwmhd_dt = efit_df.dwmhd_dt / 1.0e6  # [W] -> [MW]
+        wmhd = efit_df.wmhd / 1.0e6  # [J] -> [MJ]
         R0 = efit_df.rmagx / 100  # [cm] -> [m]
         # Estimate confinement time
-        tau = Wmhd / (p_input - dWmhd_dt)
+        tau = wmhd / (p_input - dwmhd_dt)
 
         # Compute 1998 tau_E scaling, taking A (atomic mass) = 2
         tau_98 = (
@@ -1587,16 +1423,28 @@ class BasicCmodRequests:
             * (p_input**-0.69)
         )
         H98 = tau / tau_98
+        output = {
+            "h98": H98,
+            "wmhd": wmhd,
+            "btor": btor,
+            "dwmhd_dt": dwmhd_dt,
+            "p_input": p_input,
+        }
+        return output
 
-        return pd.DataFrame(
-            {
-                "H98": H98,
-                "Wmhd": Wmhd,
-                "btor": btor,
-                "dWmhd_dt": dWmhd_dt,
-                "p_input": p_input,
-            }
-        )
+    @staticmethod
+    def is_on_blacklist(shot_id: int) -> bool:
+        """TODO why will these shots cause `_get_peaking_factors`,
+        `_get_peaking_factors_no_tci`, and `_get_edge_parameters` to fail?
+        """
+        if (
+            (shot_id > 1120000000 and shot_id < 1120213000)
+            or (shot_id > 1140000000 and shot_id < 1140227000)
+            or (shot_id > 1150000000 and shot_id < 1150610000)
+            or (shot_id > 1160000000 and shot_id < 1160303000)
+        ):
+            return True
+        return False
 
 
 # helper class holding functions for thomson density measures
@@ -1694,7 +1542,8 @@ class ThomsonDensityMeasure:
     @staticmethod
     def integrate_ts_tci(params: PhysicsMethodParams, nlnum):
         """
-        Integrate Thomson electron density measurement to the line integrated electron density for comparison with two color interferometer (TCI) measurement results
+        Integrate Thomson electron density measurement to the line integrated electron
+        density for comparison with two color interferometer (TCI) measurement results
         """
         core_mult = 1.0
         edge_mult = 1.0
@@ -1733,7 +1582,7 @@ class ThomsonDensityMeasure:
         n_e = [1e32]
         n_e_sig = [1e32]
         flag = 1
-        valid_indices, efit_times = CModEfitRequests.efit_check()
+        valid_indices, efit_times = CmodEfitMethods.efit_check()
         ip = params.mds_conn.get_data(r"\ip", "cmod")
         if np.mean(ip) > 0:
             flag = 0

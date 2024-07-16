@@ -12,8 +12,8 @@ disruption_py/shots/parameter_methods/d3d/built_in.py
 
 For more information on available methods please see the built-in method documentation pages:
 
-- [CMod][disruption_py.shots.parameter_methods.cmod.basic_parameter_methods.BasicCmodRequests]
-- [D3D][disruption_py.shots.parameter_methods.d3d.basic_parameter_methods.BasicD3DRequests]
+- [CMod][disruption_py.shots.parameter_methods.cmod.basic_parameter_methods.CmodPhysicsMethods]
+- [D3D][disruption_py.shots.parameter_methods.d3d.basic_parameter_methods.D3DPhysicsMethods]
 
 ### Looking at the accuracy and reliability of built-in parameter methods
 DisruptionPy provides the [`disruption_py run evaluate`][disruption_py-run-evaluate] command to provide insight on the current accuracy of DisruptionPy methods.

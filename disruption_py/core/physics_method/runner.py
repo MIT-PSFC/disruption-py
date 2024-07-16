@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import os
 import time
 import traceback
 from collections.abc import Iterable
@@ -16,7 +15,7 @@ from disruption_py.core.physics_method.metadata import (
     is_parametered_method,
 )
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.machine.builtin import built_in_method_factory
+from disruption_py.machine.method_holders import get_method_holders
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 
 REQUIRED_COLS = {"time", "shot", "commit_hash"}
@@ -25,7 +24,8 @@ REQUIRED_COLS = {"time", "shot", "commit_hash"}
 def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams):
     pre_filled_shot_data = physics_method_params.pre_filled_shot_data
 
-    # If the shot object was already passed data in the constructor, use that data. Otherwise, create an empty dataframe.
+    # If the shot object was already passed data in the constructor, use that data.
+    # Otherwise, create an empty dataframe.
     if pre_filled_shot_data is None:
         pre_filled_shot_data = pd.DataFrame()
     if "time" not in pre_filled_shot_data:
@@ -36,7 +36,8 @@ def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams):
         "commit_hash", None
     )
 
-    # Check that pre_filled_shot_data is on the same timebase as the shot object to ensure data consistency
+    # Check that pre_filled_shot_data is on the same timebase as the shot object
+    # to ensure data consistency
     if (
         len(pre_filled_shot_data["time"]) != len(physics_method_params.times)
         or not np.isclose(
@@ -46,7 +47,8 @@ def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams):
         ).all()
     ):
         physics_method_params.logger.error(
-            f"[Shot {physics_method_params.shot_id}]: ERROR Computation on different timebase than pre-filled shot data"
+            f"[Shot {physics_method_params.shot_id}]: ERROR Computation on different"
+            + " timebase than pre-filled shot data"
         )
     return pre_filled_shot_data
 
@@ -118,7 +120,9 @@ def filter_methods_to_run(
             methods_to_run.append(bound_method_metadata)
         else:
             physics_method_params.logger.info(
-                f"[Shot {physics_method_params.shot_id}]:Skipping {bound_method_metadata.name} in class {bound_method_metadata.bound_method}"
+                f"[Shot {physics_method_params.shot_id}]:Skipping "
+                + f"{bound_method_metadata.name} in class "
+                + f"{bound_method_metadata.bound_method}"
             )
     return methods_to_run
 
@@ -141,7 +145,8 @@ def populate_method(
             result = method(params=physics_method_params)
         except Exception as e:
             physics_method_params.logger.warning(
-                f"[Shot {physics_method_params.shot_id}]:Failed to populate {name} with error {e}"
+                f"[Shot {physics_method_params.shot_id}]:Failed to populate {name}"
+                + f"with error {e}"
             )
             physics_method_params.logger.debug(f"{traceback.format_exc()}")
     else:
@@ -152,12 +157,14 @@ def populate_method(
             method(params=physics_method_params)
         except Exception as e:
             physics_method_params.logger.warning(
-                f"[Shot {physics_method_params.shot_id}]:Failed to cache {name} with error {e}"
+                f"[Shot {physics_method_params.shot_id}]:Failed to cache {name} "
+                + f"with error {e}"
             )
             physics_method_params.logger.debug(f"{traceback.format_exc()}")
 
     physics_method_params.logger.info(
-        f"[Shot {physics_method_params.shot_id}]:Completed {name}, time_elapsed: {time.time() - start_time}"
+        f"[Shot {physics_method_params.shot_id}]:Completed {name}, time_elapsed: "
+        + f"{time.time() - start_time}"
     )
     return result
 
@@ -166,11 +173,13 @@ def populate_shot(
     retrieval_settings: RetrievalSettings,
     physics_method_params: PhysicsMethodParams,
 ) -> pd.DataFrame:
-    """populate_shot runs the physics methods either included through the `custom_physics_methods`
-    property of retrieval_settings or in the built-in list of methods.
+    """populate_shot runs the physics methods either included through the
+    `custom_physics_methods` property of retrieval_settings or in the built-in list
+    of methods.
 
-    Selects methods based on run_methods, run_tags, and run_columns in retrieval_settings.
-    Methods execution is reordered to minimize tree openings and trees opened simultaniously.
+    Selects methods based on run_methods, run_tags, and run_columns in
+    retrieval_settings. Methods execution is reordered to minimize tree openings
+    and trees opened simultaniously.
 
     Parameters
     ----------
@@ -182,11 +191,12 @@ def populate_shot(
     Returns
     -------
     pd.DataFrame
-        A dataframe containing the querried data.
+        A dataframe containing the queried data.
     """
-    # Concatanate built in clases containing registred methods, with user provided classes/methods
+    # Concatanate built in clases containing registred methods, with user provided
+    # classes/methods
     all_physics_method_holders = (
-        built_in_method_factory(physics_method_params.tokamak)
+        get_method_holders(physics_method_params.tokamak)
         + retrieval_settings.custom_physics_methods
     )
     all_physics_methods = get_all_physics_methods(all_physics_method_holders)
@@ -214,15 +224,16 @@ def populate_shot(
                 cached_method_metadata.append(method_metadata)
                 if method_metadata in run_bound_method_metadata:
                     physics_method_params.logger.info(
-                        f"[Shot {physics_method_params.shot_id}]:Skipping {method_metadata.name} already populated"
+                        f"[Shot {physics_method_params.shot_id}]:Skipping "
+                        + f"{method_metadata.name} already populated"
                     )
 
     start_time = time.time()
-    parameters = []
+    methods_data = []
     for bound_method_metadata in run_bound_method_metadata:
         if bound_method_metadata in cached_method_metadata:
             continue
-        parameters.append(
+        methods_data.append(
             populate_method(
                 physics_method_params=physics_method_params,
                 bound_method_metadata=bound_method_metadata,
@@ -230,20 +241,33 @@ def populate_shot(
             )
         )
 
-    filtered_parameters = []
-    for parameter in parameters:
-        if parameter is None:
+    filtered_methods = []
+    for method_dict in methods_data:
+        if method_dict is None:
             continue
-        if len(parameter) != len(pre_filled_shot_data):
+        # Pad parameters which are only a single nan (from our error outputs) in
+        # order to create a DataFrame for easy comparison with cached data.
+        for parameter in method_dict:
+            if (
+                np.all(np.isnan(method_dict[parameter]))
+                and len(method_dict[parameter]) == 1
+            ):
+                method_dict[parameter] = np.full(len(pre_filled_shot_data), np.nan)
+        method_df = pd.DataFrame(method_dict)
+        if len(method_df) != len(pre_filled_shot_data):
             physics_method_params.logger.error(
-                f"[Shot {physics_method_params.shot_id}]:Ignoring parameter {parameter} with different length than timebase"
+                f"[Shot {physics_method_params.shot_id}]:Ignoring parameter "
+                + f"{method_dict} with different length than timebase"
             )
+            # TODO, should we drop the columns, or is it better to raise an
+            # exception when the data do not match?
             continue
-        filtered_parameters.append(parameter)
+        filtered_methods.append(method_df)
 
     # TODO: This is a hack to get around the fact that some methods return
     #       multiple parameters. This should be fixed in the future.
-    local_data = pd.concat([pre_filled_shot_data] + filtered_parameters, axis=1)
+
+    local_data = pd.concat([pre_filled_shot_data] + filtered_methods, axis=1)
     local_data = local_data.loc[:, ~local_data.columns.duplicated()]
     if retrieval_settings.only_requested_columns:
         include_columns = list(

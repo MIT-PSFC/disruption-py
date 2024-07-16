@@ -126,9 +126,11 @@ class RetrievalSettings:
 
     def resolve(self):
         """
-        Take parameters that are passed preset values, and convert to value usable by disruption_py
+        Take parameters that are passed preset values, and convert to value usable
+        by disruption_py.
 
-        This primarily refers to passed strings lists and dictinoaries that can be resolved to a specific request type or a specific enum.
+        This primarily refers to passed strings, lists, and dictionaries that can
+        be resolved to a specific request type or a specific enum.
         """
 
         self.cache_setting = resolve_cache_setting(self.cache_setting)
@@ -149,3 +151,4 @@ class RetrievalSettings:
             self.time_setting, CacheTimeSetting
         ):
             self.time_setting = CacheTimeSetting(self.time_setting)
+        self.run_columns = [col.lower() for col in self.run_columns]
