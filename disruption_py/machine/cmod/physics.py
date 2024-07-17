@@ -870,13 +870,94 @@ class CmodPhysicsMethods:
         )
         return output
 
-    # TODO: Finish
     @staticmethod
-    def get_peaking_factors(times, TS_time, ne_PF, Te_PF, pressure_PF):
-        # ne_PF = interp1(TS_time, ne_PF, times, 'linear')
-        # Te_PF = interp1(TS_time, Te_PF, times, 'linear')
-        # pressure_PF = interp1(TS_time, pressure_PF, times, 'linear')
-        pass
+    def get_peaking_factors(times, TS_time, TS_Te, TS_ne, TS_z, efit_time, bminor, z0):
+        """
+        Calculate Te, ne, and pressure peaking factors given Thomson Scattering Te and ne measurements.
+
+        Because the TS chords have uneven spacings, measurements are first interpolated to an array of
+        equally spaced vertical positions and then used to calculate the peaking factors.
+
+        Currently, only the Te_peaking feature has been implemented.
+
+        Parameters:
+        ----------
+        times : array_like
+            Requested time basis
+        TS_time : array_like
+            Time basis of the Thomson Scattering diagnostic
+        TS_Te : array_like
+            Core and edge Te measurements from TS
+        TS_ne : array_like
+            Core and edge ne measurements from TS
+        TS_z : array_like
+            Vertical position of the core and edge TS chords
+        efit_time : array_like
+            Time basis of '_efit_tree'
+        bminor : array_like
+            Vertical minor radius from EFIT
+        z0 : array_like
+            Vertical position of the magnetic axis from EFIT
+
+        Returns:
+        ----------
+        DataFrame of ne_peaking, Te_peaking, and pressure_peaking
+
+        References:
+        ----------
+        - https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_peaking_factor_cmod.m
+        - https://github.com/MIT-PSFC/disruption-py/issues/210
+        - https://github.com/MIT-PSFC/disruption-py/pull/216
+
+        Last major update by: William Wei on 7/12/2024
+
+        """
+        # Interpolate EFIT signals to TS time basis
+        bminor = interp1(efit_time, bminor, TS_time)
+        z0 = interp1(efit_time, z0, TS_time)
+
+        # Calculate Te peaking factor
+        Te_PF = np.full(len(TS_time), np.nan)
+        (itimes,) = np.where((TS_time > 0) & (TS_time < times[-1]))
+        for itime in itimes:
+            TS_Te_arr = TS_Te[:, itime]
+            (indx,) = np.where(TS_Te_arr > 0)
+            if len(indx) < 10:
+                continue
+            TS_Te_arr = TS_Te_arr[indx]
+            TS_z_arr = TS_z[indx]
+            sorted_indx = np.argsort(TS_z_arr)
+            TS_z_arr = TS_z_arr[sorted_indx]
+            TS_Te_arr = TS_Te_arr[sorted_indx]
+            # Create equal-spacing array of TS_z_arr and interpolate TS_Te_arr on it
+            # Skip if there's no EFIT zmagx data
+            if np.isnan(z0[itime]):
+                continue
+            z_arr_equal_spacing = np.linspace(z0[itime], TS_z_arr[-1], len(TS_z_arr))
+            Te_arr_equal_spacing = interp1(TS_z_arr, TS_Te_arr, z_arr_equal_spacing)
+            # Calculate Te_PF
+            (core_index,) = np.where(
+                np.array((z_arr_equal_spacing - z0[itime]) < 0.2 * abs(bminor[itime]))
+            )
+            if len(core_index) < 2:
+                continue
+            Te_PF[itime] = np.mean(Te_arr_equal_spacing[core_index]) / np.mean(
+                Te_arr_equal_spacing
+            )
+
+        # TODO: Calculate ne and pressure peaking factors
+        ne_PF = np.full(len(TS_time), np.nan)
+        pressure_PF = np.full(len(TS_time), np.nan)
+
+        # Interpolate peaking factors to the requested time basis
+        ne_PF = interp1(TS_time, ne_PF, times, "linear")
+        Te_PF = interp1(TS_time, Te_PF, times, "linear")
+        pressure_PF = interp1(TS_time, pressure_PF, times, "linear")
+        return {
+            "ne_peaking": ne_PF,
+            "te_peaking": Te_PF,
+            "pressure_peaking": pressure_PF,
+        }
 
     @staticmethod
     @physics_method(
