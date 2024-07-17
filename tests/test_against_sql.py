@@ -161,7 +161,5 @@ if __name__ == "__main__":
         test_columns=data_columns,
     )
 
-    columns = set()
-    for data_difference in data_differences:
-        columns.add(data_difference.data_column)
+    columns = {dd.data_column for dd in data_differences}
     print(f"Python tests complete. Checked {len(shotlist)} shots with {len(columns)} columns.")
