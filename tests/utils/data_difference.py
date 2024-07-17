@@ -87,7 +87,7 @@ class DataDifference:
                 missing_timebase_length = 0
             elif self.missing_mdsplus_data:
                 missing_timebase_length = len(self.sql_column_data)
-            elif self.missing_sql_data:
+            else:
                 missing_timebase_length = len(self.mdsplus_column_data)
             return np.ones(missing_timebase_length, dtype=bool), np.zeros(
                 missing_timebase_length

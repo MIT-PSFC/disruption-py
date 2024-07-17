@@ -6,12 +6,12 @@ name: Tests
 on:
   push:
     branches:
-      - 'main*'
-      - 'dev*'
+      - main
+      - dev
   pull_request:
     branches:
-      - 'main*'
-      - 'dev*'
+      - main
+      - dev
   workflow_dispatch:
 
 jobs:

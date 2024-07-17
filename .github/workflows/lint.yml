@@ -6,12 +6,13 @@ name: Lint
 on:
   push:
     branches:
-      - 'main*'
-      - 'dev*'
+      - main
+      - dev
   pull_request:
     branches:
-      - 'main*'
-      - 'dev*'
+      - main
+      - dev
+  workflow_dispatch:
 
 jobs:
 
@@ -60,6 +61,7 @@ jobs:
           git reset --hard "${{ github.event.pull_request.base.sha }}"
           git log -1
           pylint disruption_py examples tests \
+          --recursive=y \
           | grep '^Your code has been rated'
           git reset --hard "${{ github.event.pull_request.head.sha }}"
           git log -1
@@ -68,9 +70,9 @@ jobs:
         run: |
           pylint --version
           pylint disruption_py examples tests \
+          --recursive=y \
           --msg-template='{path}:{line}:{column}: |{msg_id} {symbol}| {msg}' \
-          | tee pylint.log \
-          | grep -F '*****'
+          | tee pylint.log
 
       - name: Compute statistics
         run: |
@@ -80,16 +82,22 @@ jobs:
           | sort -n \
           | tee stats.log
 
-      - name: Extract worst offender
-        run: |
-          WORST=$(tail -n1 stats.log | grep -o '[IRCWEF][0-9]*')
-          grep "|$WORST" pylint.log
-
-      - name: Print final summary
+      - name: Print summary
         run: |
           tail pylint.log \
           | grep '^Your code has been rated' \
           | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Prohibit errors
+        run: |
+          ! grep \|E pylint.log
+
+      - name: Prohibit score decrease
+        if: |
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.draft == false
+        run: |
+          ! grep 'previous run: .*, -' <( tail pylint.log )
 
 
   shellcheck:
