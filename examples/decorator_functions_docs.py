@@ -4,25 +4,20 @@ from typing import List
 
 import pandas as pd
 
-from disruption_py.settings.shot_data_request import (
-    ShotDataRequest,
-    ShotDataRequestParams,
-)
-from disruption_py.shots.helpers.method_caching import parameter_cached_method
+from disruption_py.core.physics_method.decorator import physics_method
+from disruption_py.core.physics_method.params import PhysicsMethodParams
 
 
-def cached_method_params_function(
-    parent_object: ShotDataRequest,
-    shot_data_request_params: ShotDataRequestParams,
-    **kwargs
+def method_metadata_function(
+    parent_object, physics_method_params: PhysicsMethodParams, **kwargs
 ) -> List[str]:
     """
     Parameters
     ----------
-    parent_object : ShotDataRequest
+    parent_object : Any
         The object that contains the decorated method.
-    shot_data_request_params : ShotDataRequestParams
-        The ShotDataRequestParams used when calling the decorated method.
+    physics_method_params : PhysicsMethodParams
+        The PhysicsMethodParams used when calling the decorated method.
     kwargs : dict
         For future compatability.
 
@@ -35,20 +30,18 @@ def cached_method_params_function(
 
 
 # --8<-- [start:decorator_functions_example]
-def used_trees_by_shot_id(
-    parent_object: ShotDataRequest,
-    shot_data_request_params: ShotDataRequestParams,
-    **kwargs
+def used_columns_by_shot_id(
+    parent_object, physics_method_params: PhysicsMethodParams, **kwargs
 ) -> List[str]:
     # any properties of the `ShotProps` can be used to compute returned values
-    if shot_data_request_params.shot_props.shot_id > 10000000:
-        return ["tree_1", "tree_2"]
+    if physics_method_params.shot_id > 10000000:
+        return ["kappa_area", "q0"]
     else:
-        return ["tree_1", "tree_3"]
+        return ["kappa_area"]
 
 
-@parameter_cached_method(used_trees=["tree_1", "tree_2"])
-def decorated_shot_data_method(self, params: ShotDataRequestParams) -> pd.DataFrame:
+@physics_method(columns=["kappa_area"])
+def decorated_physics_method(self, params: PhysicsMethodParams) -> pd.DataFrame:
     pass
 
 

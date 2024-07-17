@@ -5,7 +5,7 @@ import logging
 import pandas as pd
 
 import disruption_py
-from disruption_py.database import create_d3d_handler
+from disruption_py.io.sql import create_d3d_handler
 from disruption_py.shots import D3DShot
 
 """
@@ -18,7 +18,7 @@ FEATURE_COLUMNS = ["time", "ip"]  # Shot columns we want
 def generate_full_dataset():
     # Create database handler for grabbing shots from SQL database
     handler = create_d3d_handler()
-    # Get all shots from database (you can pass a list of shot_ids to get a subset)
+    # Get all shots from database (you can pass a list of shotlist to get a subset)
     shots = handler.get_shots()
     # Combine into one dataframe
     df = pd.concat([shot.data[FEATURE_COLUMNS] for shot in shots])
@@ -26,12 +26,12 @@ def generate_full_dataset():
     df.to_csv("d3d_shot_data.csv")
 
 
-def generate_subset_dataset(shot_ids):
+def generate_subset_dataset(shotlist):
     """
     Same as generate_full_dataset but for a subset of shots
     """
     handler = create_d3d_handler()
-    shots = handler.get_shots(shot_ids)
+    shots = handler.get_shots(shotlist)
     df = pd.concat([shot.data[FEATURE_COLUMNS] for shot in shots])
     df.to_csv("d3d_shot_data.csv")
 
@@ -48,9 +48,9 @@ if __name__ == "__main__":
     logger.addHandler(ch)
 
     # generate_subset_dataset(['175552','175553'])
-    shot_ids = ["191914", "191786"]
+    shotlist = ["191914", "191786"]
     shots = []
-    for shot_id in shot_ids:
+    for shot_id in shotlist:
         shots.append(D3DShot(shot_id, "efit01"))
     df = pd.concat([shot.data[FEATURE_COLUMNS] for shot in shots])
     df.to_csv("d3d_shot_data_local.csv")

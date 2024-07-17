@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
+
 import os
-import shutil
 import time
 from tempfile import mkdtemp
 from unittest.mock import patch
 
 import pytest
 
-from disruption_py.utils.mappings.tokamak_helpers import (
-    get_tokamak_from_environment,
-    get_tokamak_handler,
+from disruption_py.core.utils.math import matlab_gradient_1d_vectorized
+from disruption_py.machine.tokamak import resolve_tokamak_from_environment
+from tests.utils.factory import (
     get_tokamak_test_columns,
     get_tokamak_test_expected_failure_columns,
-    get_tokamak_test_shot_ids,
+    get_tokamak_test_shotlist,
 )
-from disruption_py.utils.math_utils import matlab_gradient_1d_vectorized
 
 
 def pytest_addoption(parser):
@@ -39,7 +38,7 @@ def fail_quick(pytestconfig):
 
 
 def pytest_generate_tests(metafunc):
-    tokamak = get_tokamak_from_environment()
+    tokamak = resolve_tokamak_from_environment()
 
     # parameterized across tests
     if "data_column" in metafunc.fixturenames:
@@ -49,17 +48,12 @@ def pytest_generate_tests(metafunc):
 
 @pytest.fixture(scope="session")
 def tokamak():
-    return get_tokamak_from_environment()
-
-
-@pytest.fixture(scope="module")
-def handler(tokamak):
-    return get_tokamak_handler(tokamak)
+    return resolve_tokamak_from_environment()
 
 
 @pytest.fixture(scope="module")
 def shotlist(tokamak):
-    return get_tokamak_test_shot_ids(tokamak)
+    return get_tokamak_test_shotlist(tokamak)
 
 
 @pytest.fixture(scope="module")

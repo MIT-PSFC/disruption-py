@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-from disruption_py.handlers.cmod_handler import CModHandler
+from disruption_py.workflow import get_database
 
-cmod_database = CModHandler().database
-shod_ids = cmod_database.get_disruption_warning_shotlist()["shot"][0:8].tolist()
-result = cmod_database.get_shots_data(shod_ids, sql_table="disruption_warning")
+cmod_database = get_database(tokamak="cmod")
+shotlist = cmod_database.get_disruption_warning_shotlist()["shot"][0:8].tolist()
+result = cmod_database.get_shots_data(shotlist, sql_table="disruption_warning")

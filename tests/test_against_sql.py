@@ -13,34 +13,36 @@ from typing import Dict, List
 import pandas as pd
 import pytest
 
-from disruption_py.handlers.cmod_handler import Handler
-from disruption_py.utils.eval.eval_against_sql import (
+from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
+from tests.utils.eval_against_sql import (
     eval_against_sql,
     eval_shots_against_sql,
     get_failure_statistics_string,
     get_mdsplus_data,
     get_sql_data_for_mdsplus,
 )
-from disruption_py.utils.mappings.tokamak_helpers import (
-    get_tokamak_from_environment,
-    get_tokamak_handler,
+from tests.utils.factory import (
     get_tokamak_test_expected_failure_columns,
-    get_tokamak_test_shot_ids,
+    get_tokamak_test_shotlist,
 )
 
 
 @pytest.fixture(scope="module")
 def mdsplus_data(
-    handler: Handler, shotlist: List[int], module_file_path_f
+    tokamak: Tokamak, shotlist: List[int], module_file_path_f
 ) -> Dict[int, pd.DataFrame]:
-    return get_mdsplus_data(handler, shotlist, log_file_path=module_file_path_f(".log"))
+    return get_mdsplus_data(
+        tokamak=tokamak, shotlist=shotlist, log_file_path=module_file_path_f(".log")
+    )
 
 
 @pytest.fixture(scope="module")
 def sql_data(
-    handler: Handler, shotlist: List[int], mdsplus_data: Dict[int, pd.DataFrame]
+    tokamak: Tokamak, shotlist: List[int], mdsplus_data: Dict[int, pd.DataFrame]
 ) -> Dict[int, pd.DataFrame]:
-    return get_sql_data_for_mdsplus(handler, shotlist, mdsplus_data)
+    return get_sql_data_for_mdsplus(
+        tokamak=tokamak, shotlist=shotlist, mdsplus_data=mdsplus_data
+    )
 
 
 def test_data_columns(
@@ -59,7 +61,7 @@ def test_data_columns(
     # if data_column in expected_failure_columns:
     #     request.node.add_marker(pytest.mark.xfail(reason='column expected failure'))
     data_differences = eval_shots_against_sql(
-        shot_ids=shotlist,
+        shotlist=shotlist,
         mdsplus_data=mdsplus_data,
         sql_data=sql_data,
         data_columns=[data_column],
@@ -98,7 +100,7 @@ def test_other_values(
     test_columns = mdsplus_columns.intersection(sql_columns).difference(data_columns)
 
     data_differences = eval_shots_against_sql(
-        shot_ids=shotlist,
+        shotlist=shotlist,
         mdsplus_data=mdsplus_data,
         sql_data=sql_data,
         data_columns=test_columns,
@@ -132,6 +134,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--data-column",
+        type=str.lower,
         default=None,
         help="Data column to test, use all data columns if not specified",
     )
@@ -148,20 +151,18 @@ if __name__ == "__main__":
 
     fail_quick = not args.fail_slow
     data_columns = [args.data_column] if args.data_column else None
-    tokamak = get_tokamak_from_environment()
-
-    handler = get_tokamak_handler(tokamak)
+    tokamak = resolve_tokamak_from_environment()
 
     if args.shot_id is None:
-        shot_ids = get_tokamak_test_shot_ids(tokamak)
+        shotlist = get_tokamak_test_shotlist(tokamak)
     else:
-        shot_ids = [args.shot_id]
+        shotlist = [args.shot_id]
 
     expected_failure_columns = get_tokamak_test_expected_failure_columns(tokamak)
 
     data_differences = eval_against_sql(
-        handler=handler,
-        shot_ids=shot_ids,
+        tokamak=tokamak,
+        shotlist=shotlist,
         expected_failure_columns=expected_failure_columns,
         fail_quick=fail_quick,
         test_columns=data_columns,

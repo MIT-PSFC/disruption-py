@@ -1,27 +1,29 @@
 #!/usr/bin/env python3
 
 import logging
+import os
 
-from disruption_py.databases.dummy_database import DummyDatabase
-from disruption_py.handlers.d3d_handler import D3DHandler
+from disruption_py.io.sql import DummyDatabase
 from disruption_py.settings.log_settings import LogSettings
-from disruption_py.settings.shot_settings import ShotSettings
+from disruption_py.settings.retrieval_settings import RetrievalSettings
+from disruption_py.workflow import get_shots_data
 
-cmod_handler = D3DHandler(database_initializer=DummyDatabase.default)
-shot_settings = ShotSettings(
+retrieval_settings = RetrievalSettings(
     # uses the efit timebase when returning data
-    set_times_request="ip",
+    time_setting="ip",
     # run all available methods
     run_tags=["all"],
+)
+shot_data = get_shots_data(
+    tokamak="d3d",
+    # Retrieve data for the desired shots
+    shotlist_setting=[161228, 161237, 166177, 166253],
+    retrieval_settings=retrieval_settings,
+    # automatically stream retrieved data to a csv file by passing in a file path ending in .csv
+    output_setting=f"/tmp/{os.environ['USER']}/data.csv",
+    num_processes=1,
+    database_initializer=DummyDatabase.initializer,  # use dummy database
     log_settings=LogSettings(
         console_log_level=logging.DEBUG,
     ),
-)
-shot_data = cmod_handler.get_shots_data(
-    # Retrieve data for the desired shots
-    shot_ids_request=[161228, 161237, 166177, 166253],
-    shot_settings=shot_settings,
-    # automatically stream retrieved data to a csv file by passing in a file path ending in .csv
-    output_type_request=f"/cscratch/{USER}/data.csv",
-    num_processes=1,
 )

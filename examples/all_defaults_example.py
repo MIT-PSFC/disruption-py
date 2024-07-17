@@ -2,18 +2,35 @@
 
 import logging
 
-from disruption_py.databases.cmod_database import CModDatabase
-from disruption_py.handlers import CModHandler
-from disruption_py.settings import LogSettings, ShotSettings
+from disruption_py.settings import LogSettings, RetrievalSettings
+from disruption_py.workflow import get_shots_data
 
-handler = CModHandler(
-    database_initializer=CModDatabase.default,
-    mds_connection_str="alcdata-new",
+retrieval_settings = RetrievalSettings(
+    # data settings
+    cache_setting=None,
+    efit_nickname_setting="disruption",
+    # method selection
+    run_methods=[],
+    run_tags=["all"],
+    run_columns=[],
+    only_requested_columns=False,
+    custom_physics_methods=[],
+    # timebase settings
+    time_setting="disruption_warning",  # use efit timebase
+    domain_setting="full",
+    use_cache_setting_timebase=False,
+    interpolation_method="linear",
 )
 
-shot_settings = ShotSettings(
-    # logging
-    log_settings=LogSettings(
+shot_data = get_shots_data(
+    tokamak=None,  # defaults to tokamak value detected from environement
+    shotlist_setting=-1,  # no default value
+    database_initializer=None,  # defaults to connection for tokamak
+    mds_connection_initializer=None,  # defaults to mds plus server string for tokamak
+    retrieval_settings=retrieval_settings,
+    output_setting="list",  # output a list of dataframes
+    num_processes=1,
+    log_settings=LogSettings(  # logging
         log_file_path=None,
         file_log_level=logging.WARNING,
         log_file_write_mode="w",
@@ -21,25 +38,4 @@ shot_settings = ShotSettings(
         console_log_level=logging.WARNING,
         use_custom_logging=False,
     ),
-    # data settings
-    existing_data_request=None,
-    efit_tree_name="analysis",
-    # method selection
-    run_methods=[],
-    run_tags=["all"],
-    run_columns=[],
-    only_requested_columns=False,
-    shot_data_requests=[],
-    # timebase settings
-    set_times_request="efit",  # use efit timebase
-    signal_domain="full",
-    use_existing_data_timebase=False,
-    interpolation_method="linear",
-)
-
-shot_data = handler.get_shots_data(
-    shot_ids_request=-1,  # no default value
-    shot_settings=shot_settings,
-    output_type_request="list",  # output a list of dataframes
-    num_processes=1,
 )
