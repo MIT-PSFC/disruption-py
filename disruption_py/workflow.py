@@ -60,7 +60,7 @@ def get_shots_data(
     Any
         The value of OutputSetting.get_results. See OutputSetting for more details.
     """
-    (log_settings or LogSettings.default()).setup_logging()
+    (log_settings or LogSettings()).setup_logging()
 
     tokamak = resolve_tokamak_from_environment(tokamak)
 
