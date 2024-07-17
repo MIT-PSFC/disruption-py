@@ -82,23 +82,22 @@ jobs:
           | sort -n \
           | tee stats.log
 
-      - name: Print final summary
+      - name: Print summary
         run: |
           tail pylint.log \
           | grep '^Your code has been rated' \
           | tee -a "$GITHUB_STEP_SUMMARY"
 
-      - name: Enforce absence of errors
+      - name: Prohibit errors
         run: |
           ! grep \|E pylint.log
 
-      - name: Enforce score improvement
+      - name: Prohibit score decrease
         if: |
           github.event_name == 'pull_request' &&
           github.event.pull_request.draft == false
         run: |
-          tail pylint.log \
-          | grep 'previous run: .*, +'
+          ! grep 'previous run: .*, -' <( tail pylint.log )
 
 
   shellcheck:
