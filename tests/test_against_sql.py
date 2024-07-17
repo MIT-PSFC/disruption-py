@@ -17,7 +17,6 @@ from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environm
 from tests.utils.eval_against_sql import (
     eval_against_sql,
     eval_shots_against_sql,
-    get_failure_statistics_string,
     get_mdsplus_data,
     get_sql_data_for_mdsplus,
 )
@@ -79,7 +78,7 @@ def test_data_columns(
         else:
             assert all(
                 not data_difference.failed for data_difference in data_differences
-            ), get_failure_statistics_string(data_differences, data_column=data_column)
+            ), "Comparison failed"
 
 
 def test_other_values(
@@ -122,16 +121,11 @@ def test_other_values(
         else:
             assert all(
                 not data_difference.failed for data_difference in data_differences
-            ), get_failure_statistics_string(data_differences)
+            ), "Comparison failed"
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--fail-slow",
-        action="store_true",
-        help="Get summary of column failures, for specified column(s)",
-    )
     parser.add_argument(
         "--data-column",
         type=str.lower,
@@ -149,7 +143,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    fail_quick = not args.fail_slow
     data_columns = [args.data_column] if args.data_column else None
     tokamak = resolve_tokamak_from_environment()
 
@@ -164,8 +157,11 @@ if __name__ == "__main__":
         tokamak=tokamak,
         shotlist=shotlist,
         expected_failure_columns=expected_failure_columns,
-        fail_quick=fail_quick,
+        fail_quick=True,
         test_columns=data_columns,
     )
 
-    print(get_failure_statistics_string(data_differences))
+    columns = set()
+    for data_difference in data_differences:
+        columns.add(data_difference.data_column)
+    print(f"Python tests complete. Checked {len(shotlist)} shots with {len(columns)} columns.")
