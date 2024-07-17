@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from logging import Logger
+from typing import Dict, Union
 
-from disruption_py.core.utils.misc import without_duplicates
+from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.io.mds import MDSConnection
 from disruption_py.io.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
+
+NicknameSettingType = Union[
+    "NicknameSettingType", str, Dict[Tokamak, "NicknameSettingType"]
+]
 
 
 @dataclass
@@ -15,8 +21,8 @@ class NicknameSettingParams:
 
     Attributes
     ----------
-    sho_id : int
-        the shot id for which nicknames are set
+    shot_id : int
+        the shot id for which to resolve nicknames.
     mds_conn: MDSConnection
         MDSConnection object to access MDSPlus data.
     database : ShotDatabase
@@ -24,8 +30,6 @@ class NicknameSettingParams:
         A different database connection is used by each thread/process.
     disruption_time : float
         The time of the disruption in seconds.
-    efit_tree_name : str
-        The name of the efit tree requested by the user.
     tokamak : Tokamak
         The tokamak for which results are being output.
     logger : Logger
@@ -36,78 +40,154 @@ class NicknameSettingParams:
     mds_conn: MDSConnection
     database: ShotDatabase
     disruption_time: float
-    efit_tree_name: str
     tokamak: Tokamak
     logger: Logger
 
 
-class NicknameSetting:
+class NicknameSetting(ABC):
     """
     A setting for getting tree nicknames.
     """
 
-    NICKNAME_FUNC_RETRIEVERS = {
-        Tokamak.D3D: "_d3d_nickname_funcs",
-        Tokamak.CMOD: "_cmod_nickname_funcs",
-    }
+    def get_tree_name(self, params: NicknameSettingParams):
+        if hasattr(self, "tokamak_overrides"):
+            if params.tokamak in self.tokamak_overrides:
+                return self.tokamak_overrides[params.tokamak](params)
+        return self._get_tree_name(params)
 
-    @classmethod
-    def get_nickname_funcs(cls, params: NicknameSettingParams):
-        if params.tokamak in cls.NICKNAME_FUNC_RETRIEVERS:
-            func_name = cls.NICKNAME_FUNC_RETRIEVERS[params.tokamak]
-            return getattr(cls, func_name)(params)
+    @abstractmethod
+    def _get_tree_name(self, params: NicknameSettingParams) -> str:
+        """Abstract method implemented by subclasses to determine an MDSplus tree name.
 
-        raise ValueError(
-            f"No nickname function retriever for tokamak {params.tokamak}."
+        Parameters
+        ----------
+        params : NicknameSettingParams
+            Params that can be used to determine and retrieve the MDSplus tree name.
+
+        Returns
+        -------
+        str
+            The MDSplus tree name.
+        """
+
+
+class NicknameSettingDict(NicknameSetting):
+    """
+    Utility class that is automatically used when a dictionary is passed the nickname setting.
+
+    Parameters
+    ----------
+    nickname_setting_dict : dict[Tokamak, NicknameSettingType]
+        A dictionary mapping tokamaks to a nickname setting, e.g. `{'cmod': 'efit'}`.
+        Any other option passable as a value in the `nickname_setting_dict` dictionary parameter
+        in `RetrievalSettings` may be used.
+    """
+
+    def __init__(self, nickname_setting_dict: Dict[Tokamak, NicknameSettingType]):
+        resolved_nickname_setting_dict = {
+            map_string_to_enum(tokamak, Tokamak): resolve_nickname_setting(
+                individual_setting
+            )
+            for tokamak, individual_setting in nickname_setting_dict.items()
+        }
+        self.resolved_nickname_setting_dict = resolved_nickname_setting_dict
+
+    def _get_tree_name(self, params: NicknameSettingParams) -> str:
+        chosen_setting = self.resolved_nickname_setting_dict.get(params.tokamak, None)
+        if chosen_setting is not None:
+            return chosen_setting.get_tree_name(params)
+        raise NotImplementedError(
+            f"{self.__class__.__name__} is not implemented for tokamak {params.tokamak}."
         )
 
-    @classmethod
-    def _cmod_nickname_funcs(cls, params: NicknameSettingParams):
-        def efit_tree_nickname_func():
-            efit_names_to_test = without_duplicates(
-                [
-                    params.efit_tree_name,
-                    "analysis",
-                    *[f"efit0{i}" for i in range(1, 10)],
-                    *[f"efit{i}" for i in range(10, 19)],
-                ]
-            )
 
-            if "efit18" in efit_names_to_test and params.disruption_time is None:
-                efit_names_to_test.remove("efit18")
+class StaticNicknameSetting(NicknameSetting):
+    def __init__(self, tree_name: str):
+        self.tree_name = tree_name
 
-            for efit_name in efit_names_to_test:
-                try:
-                    params.mds_conn.open_tree(efit_name)
-                    return efit_name
-                except Exception as e:
-                    cls.logger.info(
-                        f"[Shot {params.shot_id}]: Failed to open efit tree {efit_name} with error {e}."
-                    )
-                    continue
+    def _get_tree_name(self, params: NicknameSettingParams) -> str:
+        return self.tree_name
 
-            raise Exception(
-                f"Failed to find efit tree with name {params.efit_tree_name} in shot {params.shot_id}."
-            )
 
-        return {"_efit_tree": efit_tree_nickname_func}
+class DefaultNicknameSetting(NicknameSetting):
+    """
+    A setting to resolve the '_efit_tree' nickname to the default EFIT tree.
+    """
 
-    @classmethod
-    def _d3d_nickname_funcs(cls, params: NicknameSettingParams):
-        def efit_tree_nickname_func():
-            if params.efit_tree_name == "analysis":
-                return "EFIT01"
-            if params.efit_tree_name != "efit18":
-                return params.efit_tree_name
+    def __init__(self):
+        self.tokamak_overrides = {
+            Tokamak.CMOD: lambda params: "analysis",
+            Tokamak.D3D: lambda params: "efit01",
+        }
 
-            efit_trees = params.database.query(
-                "select tree from code_rundb.dbo.plasmas where "
-                f"shot = {params.shot_id} and runtag = 'DIS' and deleted = 0 order by idx",
-                use_pandas=False,
-            )
-            if len(efit_trees) == 0:
-                efit_trees = [("EFIT01",)]
-            efit_tree = efit_trees[-1][0]
-            return efit_tree
+    def _get_tree_name(self, params: NicknameSettingParams) -> str:
+        raise NotImplementedError(
+            f"{self.__class__.__name__} is not implemented for tokamak {params.tokamak}."
+        )
 
-        return {"_efit_tree": efit_tree_nickname_func}
+
+class DisruptionNicknameSetting(NicknameSetting):
+    """
+    A setting to resolve the '_efit_tree' nickname to the disruption EFIT tree.
+    """
+
+    def __init__(self):
+        self.tokamak_overrides = {
+            Tokamak.CMOD: self._cmod_nickname,
+            Tokamak.D3D: self._d3d_nickname,
+        }
+
+    def _d3d_nickname(self, params: NicknameSettingParams) -> str:
+        if params.disruption_time is None:
+            # TODO: some DIII-D shots have a disruption efit tree, but no disruption time.
+            return DefaultNicknameSetting().get_tree_name(params)
+        efit_trees = params.database.query(
+            "select tree from code_rundb.dbo.plasmas where "
+            f"shot = {params.shot_id} and runtag = 'DIS' and deleted = 0 order by idx",
+            use_pandas=False,
+        )
+        if len(efit_trees) == 0:
+            return DefaultNicknameSetting().get_tree_name(params)
+        efit_tree = efit_trees[-1][0]
+        return efit_tree
+
+    def _cmod_nickname(self, params: NicknameSettingParams) -> str:
+        if params.disruption_time is None:
+            return DefaultNicknameSetting().get_tree_name(params)
+        return "efit18"
+
+    def _get_tree_name(self, params: NicknameSettingParams) -> str:
+        raise NotImplementedError(
+            f"{self.__class__.__name__} is not implemented for tokamak {params.tokamak}."
+        )
+
+
+# --8<-- [start:nickname_setting_keys]
+_nickname_setting_mappings: Dict[str, NicknameSetting] = {
+    "default": DefaultNicknameSetting(),
+    "disruption": DisruptionNicknameSetting(),
+    # deprecated
+    "analysis": DefaultNicknameSetting(),
+    "disruption_warning": DisruptionNicknameSetting(),
+}
+# --8<-- [end:nickname_setting_keys]
+
+
+def resolve_nickname_setting(nickname_setting: NicknameSettingType) -> NicknameSetting:
+    """
+    Resolve a nickname setting to a nickname function.
+    """
+    if isinstance(nickname_setting, NicknameSetting):
+        return nickname_setting
+    if isinstance(nickname_setting, dict):
+        return NicknameSettingDict(nickname_setting)
+    if (
+        isinstance(nickname_setting, str)
+        and nickname_setting in _nickname_setting_mappings
+    ):
+        return _nickname_setting_mappings[nickname_setting]
+
+    if isinstance(nickname_setting, str):
+        return StaticNicknameSetting(nickname_setting)
+
+    raise ValueError(f"Invalid nickname setting type {type(nickname_setting)}.")

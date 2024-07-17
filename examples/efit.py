@@ -26,6 +26,7 @@ print(f"Initialized for tokamak: {tokamak.value}")
 retrieval_settings = RetrievalSettings(
     run_tags=[],
     run_methods=run_methods,
+    efit_nickname_setting="default",
 )
 
 result = get_shots_data(

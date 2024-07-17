@@ -8,7 +8,10 @@ from disruption_py.core.utils.enums import map_string_attributes_to_enum
 from disruption_py.machine.tokamak import Tokamak, is_tokamak_indexed
 from disruption_py.settings.cache_setting import CacheSetting, resolve_cache_setting
 from disruption_py.settings.domain_setting import DomainSetting, resolve_domain_setting
-from disruption_py.settings.nickname_setting import NicknameSetting
+from disruption_py.settings.nickname_setting import (
+    NicknameSetting,
+    resolve_nickname_setting,
+)
 from disruption_py.settings.time_setting import (
     CacheTimeSetting,
     TimeSetting,
@@ -41,13 +44,9 @@ class RetrievalSettings:
         The cache setting to be used when prefilling data for the shot. Can pass any
         CacheSettingType that resolves to a CacheSetting. See CacheSetting for more
         details. Set to None if no data should be prefilled. Defaults to None.
-    efit_tree_name : str
-        The name of the tree to first try for the efit environment. Other tree names will be tried if
-        opening this tree name fails. Default is 'analysis'.
-    nickname_setting : NicknameSetting
+    efit_nickname_setting : NicknameSetting
         The nickname setting to be used when retrieving data for the shot. Defines the nicknames that
-        should be created for referring to MDSplus trees. See `NicknameSetting` for more details.
-        Defaults to NicknameSetting().
+        should be created for the efit_tree.
     run_methods : List[str]
         A list of physics method names to be run. Named methods will be run when retrieving data
         from  mdsplus for the shot. Named methods must have the physics_method decorator and either
@@ -92,8 +91,7 @@ class RetrievalSettings:
     cache_setting: CacheSetting = None
 
     # Shot creation settings
-    efit_tree_name: str = "analysis"
-    nickname_setting: NicknameSetting = field(default_factory=NicknameSetting)
+    efit_nickname_setting: NicknameSetting = "disruption"
 
     # Shot run settings
     run_methods: List[str] = field(default_factory=list)
@@ -138,6 +136,9 @@ class RetrievalSettings:
         self.cache_setting = resolve_cache_setting(self.cache_setting)
         self.time_setting = resolve_time_setting(self.time_setting)
         self.domain_setting = resolve_domain_setting(self.domain_setting)
+        self.efit_nickname_setting = resolve_nickname_setting(
+            self.efit_nickname_setting
+        )
 
         map_string_attributes_to_enum(
             self,

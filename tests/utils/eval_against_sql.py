@@ -33,7 +33,7 @@ def get_mdsplus_data(
         Dictionary mapping shot IDs to retrieved MDSplus data.
     """
     retrieval_settings = RetrievalSettings(
-        efit_tree_name="efit18",
+        efit_nickname_setting="disruption",
         time_setting="disruption_warning",
     )
     shot_data = get_shots_data(
