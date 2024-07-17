@@ -968,18 +968,17 @@ class CmodPhysicsMethods:
         # Initialize to nans because they are either passed as parameters or their
         # indexed values are updated
         nan_arr = np.full(len(params.times), np.nan)
-        ne_PF = nan_arr.copy()
-        Te_PF = nan_arr.copy()
-        pressure_PF = nan_arr.copy()
         nan_output = {
-            "ne_peaking": ne_PF,
-            "te_peaking": Te_PF,
-            "pressure_peaking": pressure_PF,
+            "ne_peaking": nan_arr,
+            "te_peaking": nan_arr,
+            "pressure_peaking": nan_arr,
         }
         # Ignore shots on the blacklist
         if CmodPhysicsMethods.is_on_blacklist(params.shot_id):
             return nan_output
+        # Fetch data
         try:
+            # Get EFIT geometry data
             z0 = 0.01 * params.mds_conn.get_data(
                 r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
             )
@@ -990,53 +989,34 @@ class CmodPhysicsMethods:
                 r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
             )
             bminor = aminor * kappa
+            # Get Te data and TS time basis
             node_ext = ".yag_new.results.profiles"
-            # nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = ThomsonDensityMeasure.compare_ts_tci(params, nlnum=4)
-            TS_te, TS_time = params.mds_conn.get_data_with_dims(
+            TS_Te_core, TS_time = params.mds_conn.get_data_with_dims(
                 f"{node_ext}:te_rz", tree_name="electrons"
             )
-            TS_te = TS_te * 1000 * 11600
-            tets_edge = params.mds_conn.get_data(r"\ts_te") * 11600
-            TS_te = np.concatenate((TS_te, tets_edge))
-            TS_z = params.mds_conn.get_data(
+            # Convert keV to eV
+            TS_Te_core = TS_Te_core * 1000
+            TS_Te_edge = params.mds_conn.get_data(r"\ts_te")
+            # Convert eV to Kelvin
+            TS_Te = np.concatenate((TS_Te_core, TS_Te_edge)) * 11600
+            TS_z_core = params.mds_conn.get_data(
                 f"{node_ext}:z_sorted", tree_name="electrons"
             )
-            zts_edge = params.mds_conn.get_data(r"\fiber_z", tree_name="electrons")
-            TS_z = np.concatenate((TS_z, zts_edge))
-            if len(zts_edge) != tets_edge.shape[1]:
-                return nan_output
-            Te_PF = Te_PF[: len(TS_time)]
-            itimes = np.where(TS_time > 0 & TS_time < params.times[-1])
-            bminor = interp1(efit_time, bminor, TS_time)
-            z0 = interp1(efit_time, z0, TS_time)
-            for i in range(len(itimes)):
-                Te_arr = TS_te[itimes[i], :]
-                indx = np.where(Te_arr > 0)
-                if len(indx) < 10:
-                    continue
-                Te_arr = Te_arr[indx]
-                TS_z_arr = TS_z[indx]
-                sorted_indx = np.argsort(TS_z_arr)
-                Ts_z_arr = Ts_z_arr[sorted_indx]
-                Te_arr = Te_arr[sorted_indx]
-                z_arr = np.linspace(z0[itimes[i]], TS_z_arr[-1], len(Ts_z_arr))
-                Te_arr = interp1(TS_z_arr, Te_arr, z_arr)
-                core_index = np.where(
-                    z_arr
-                    < (z0[itimes[i]] + 0.2 * bminor[itimes[i]]) & z_arr
-                    > (z0[itimes[i]] - 0.2 * bminor[itimes[i]])
+            TS_z_edge = params.mds_conn.get_data(r"\fiber_z", tree_name="electrons")
+            TS_z = np.concatenate((TS_z_core, TS_z_edge))
+            # Make sure that there are equal numbers of edge position and edge temperature points
+            if len(TS_z_edge) != TS_Te_edge.shape[0]:
+                params.logger.warning(
+                    f"[Shot {params.shot_id}]: TS edge data and z positions are not the same length for shot"
                 )
-                if len(core_index) < 2:
-                    continue
-                Te_PF[itimes[i]] = np.mean(Te_arr[core_index]) / np.mean(Te_arr)
-            Te_PF = interp1(TS_time, Te_PF, params.times)
-            calib = np.nan
-            # TODO(lajz): fix
-            return CmodPhysicsMethods.get_Ts_parameters(
-                params.times, TS_time, ne_PF, Te_PF, pressure_PF
-            )
+                return nan_output
+            # TODO: Get ne data
+            TS_ne = np.full(len(params.times), np.nan)
         except mdsExceptions.MdsException as e:
             return nan_output
+        return CmodPhysicsMethods.get_peaking_factors(
+            params.times, TS_time, TS_Te, TS_ne, TS_z, efit_time, bminor, z0
+        )
 
     @staticmethod
     @physics_method(
@@ -1142,102 +1122,6 @@ class CmodPhysicsMethods:
             except:
                 prad_peaking[i] = np.nan
         return {"prad_peaking": prad_peaking}
-
-    @staticmethod
-    @physics_method(
-        columns=["ne_peaking", "te_peaking", "pressure_peaking"],
-        tags=["experimental"],
-        tokamak=Tokamak.CMOD,
-    )
-    def _get_peaking_factors_no_tci(params: PhysicsMethodParams):
-        # Initialize PFs as empty arrarys
-        nan_arr = np.full(len(params.times), np.nan)
-        ne_PF = nan_arr.copy()
-        Te_PF = nan_arr.copy()
-        pressure_PF = nan_arr.copy()
-        nan_output = {
-            "ne_peaking": ne_PF,
-            "te_peaking": Te_PF,
-            "pressure_peaking": pressure_PF,
-        }
-        # Ignore shots on the blacklist
-        if CmodPhysicsMethods.is_on_blacklist(params.shot_id):
-            return nan_output
-        try:
-            # Get shaping params
-            z0 = 0.01 * params.mds_conn.get_data(
-                r"\efit_aeqdsk:zmagx", tree_name="cmod"
-            )
-            kappa = params.mds_conn.get_data(r"\efit_aeqdsk:kappa", tree_name="cmod")
-            aminor, efit_time = params.mds_conn.get_data_with_dims(
-                r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
-            )
-            bminor = aminor * kappa  # length of major axis of plasma x-section
-
-            # Get data from TS
-            node_ext = ".yag_new.results.profiles"
-            # nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = ThomsonDensityMeasure.compare_ts_tci(params, nlnum=4)
-            Te_core, Te_time = params.mds_conn.get_data_with_dims(
-                f"{node_ext}:te_rz", tree_name="electrons"
-            )
-            Te_core = Te_core * 1000 * 11600  # Get core TS data
-            Te_edge = (
-                params.mds_conn.get_data(r"\ts_te", tree_name="electrons") * 11600
-            )  # Get edge TS data
-            # Concat core and edge data
-            Te = np.concatenate((Te_core, Te_edge))
-            z_core = params.mds_conn.get_data(
-                f"{node_ext}:z_sorted", tree_name="electrons"
-            )  # Get z position of core TS points
-            # Get z position of edge TS points
-            z_edge = params.mds_conn.get_data(r"\fiber_z", tree_name="electrons")
-            z = np.concatenate((z_core, z_edge))  # Concat core and edge data
-            # Make sure that there are equal numbers of edge position and edge temperature points
-            if len(z_edge) != Te_edge.shape[0]:
-                params.logger.warning(
-                    f"[Shot {params.shot_id}]: TS edge data and z positions are "
-                    + "not the same length for shot"
-                )
-                return nan_output
-            Te_PF = Te_PF[: len(Te_time)]  # Reshape Te_PF to length of Te_time
-            itimes = np.where((Te_time > 0) & (Te_time < params.times[-1]))
-            node_path = ".yag_new.results.profiles"
-            (TS_time,) = params.mds_conn.get_dims(
-                node_path + ":te_rz", tree_name="electrons"
-            )
-            # Interpolate bminor onto desired timebase
-            bminor = interp1(efit_time, bminor, TS_time)
-            # Interpolate z0 onto desired timebase
-            z0 = interp1(efit_time, z0, TS_time)
-            for i in range(len(itimes)):
-                Te_arr = Te[itimes[i], :]
-                indx = np.where(Te_arr > 0)
-                if len(indx) < 10:
-                    continue
-                Te_arr = Te_arr[indx]
-                TS_z_arr = z[indx]
-                sorted_indx = np.argsort(TS_z_arr)  # Sort by z
-                Ts_z_arr = Ts_z_arr[sorted_indx]
-                Te_arr = Te_arr[sorted_indx]  # Sort by z
-                z_arr = np.linspace(z0[itimes[i]], TS_z_arr[-1], len(Ts_z_arr))
-                Te_arr = interp1(TS_z_arr, Te_arr, z_arr)
-                core_index = np.where(
-                    z_arr
-                    < (z0[itimes[i]] + 0.2 * bminor[itimes[i]]) & z_arr
-                    > (z0[itimes[i]] - 0.2 * bminor[itimes[i]])
-                )
-                if len(core_index) < 2:
-                    continue
-                Te_PF[itimes[i]] = np.mean(Te_arr[core_index]) / np.mean(Te_arr)
-            Te_PF = interp1(TS_time, Te_PF, params.times)
-            calib = np.nan
-            # TODO(lajz): fix
-            return CmodPhysicsMethods.get_Ts_parameters(
-                params.times, TS_time, ne_PF, Te_PF, pressure_PF
-            )
-        except mdsExceptions.MdsException as e:
-            params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            return nan_output
 
     @staticmethod
     def get_sxr_parameters():
