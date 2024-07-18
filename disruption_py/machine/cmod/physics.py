@@ -946,17 +946,13 @@ class CmodPhysicsMethods:
             )
 
         # TODO: Calculate ne and pressure peaking factors
-        ne_PF = np.full(len(TS_time), np.nan)
-        pressure_PF = np.full(len(TS_time), np.nan)
 
         # Interpolate peaking factors to the requested time basis
-        ne_PF = interp1(TS_time, ne_PF, times, "linear")
         Te_PF = interp1(TS_time, Te_PF, times, "linear")
-        pressure_PF = interp1(TS_time, pressure_PF, times, "linear")
         return {
-            "ne_peaking": ne_PF,
+            "ne_peaking": [np.nan],
             "te_peaking": Te_PF,
-            "pressure_peaking": pressure_PF,
+            "pressure_peaking": [np.nan],
         }
 
     @staticmethod
@@ -965,11 +961,10 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def _get_peaking_factors(params: PhysicsMethodParams):
-        nan_arr = np.full(len(params.times), np.nan)
         nan_output = {
-            "ne_peaking": nan_arr,
-            "te_peaking": nan_arr,
-            "pressure_peaking": nan_arr,
+            "ne_peaking": [np.nan],
+            "te_peaking": [np.nan],
+            "pressure_peaking": [np.nan],
         }
         # Ignore shots on the blacklist
         if CmodPhysicsMethods.is_on_blacklist(params.shot_id):
