@@ -19,9 +19,7 @@ from disruption_py.settings import LogSettings, RetrievalSettings
 from disruption_py.workflow import get_shots_data
 from tests.utils.data_difference import DataDifference
 
-LOGGER_NAME = "disruption_py_test"
-logger = logging.getLogger(LOGGER_NAME)
-
+logger = logging.getLogger("disruption_py")
 
 def get_mdsplus_data(
     tokamak: Tokamak, shotlist: List[int], log_file_path: str
@@ -44,10 +42,11 @@ def get_mdsplus_data(
         retrieval_settings=retrieval_settings,
         output_setting="dict",
         log_settings=LogSettings(
-            log_to_console=False,
+            log_to_console=True,
             log_file_path=log_file_path,
             log_file_write_mode="w",
             file_log_level=logging.DEBUG,
+            console_log_level=logging.DEBUG,
         ),
     )
     return shot_data
@@ -161,15 +160,6 @@ def eval_against_sql(
 
     tempfolder = mkdtemp(prefix=f"disruptionpy-{time.strftime('%y%m%d-%H%M%S')}-")
     print(f"Outputting to temporary folder: {tempfolder}")
-
-    log_settings = LogSettings(
-        log_to_console=True,
-        log_file_path=os.path.join(tempfolder, "data_comparison.log"),
-        log_file_write_mode="w",
-        file_log_level=logging.DEBUG,
-        console_log_level=logging.DEBUG,
-    )
-    log_settings.setup_logging(LOGGER_NAME)
 
     @contextmanager
     def monkey_patch_numpy_gradient():
