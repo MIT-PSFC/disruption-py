@@ -151,6 +151,7 @@ if __name__ == "__main__":
 
     fail_quick = not args.fail_slow
     data_columns = [args.data_column] if args.data_column else None
+    data_columns = ["ip"]
     tokamak = resolve_tokamak_from_environment()
 
     if args.shot_id is None:
