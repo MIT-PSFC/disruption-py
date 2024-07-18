@@ -21,6 +21,7 @@ from tests.utils.data_difference import DataDifference
 
 logger = logging.getLogger("disruption_py")
 
+
 def get_mdsplus_data(
     tokamak: Tokamak, shotlist: List[int], log_file_path: str
 ) -> Dict[int, pd.DataFrame]:

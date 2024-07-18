@@ -162,4 +162,6 @@ if __name__ == "__main__":
     )
 
     columns = {dd.data_column for dd in data_differences}
-    print(f"Python tests complete. Checked {len(shotlist)} shots with {len(columns)} columns.")
+    print(
+        f"Python tests complete. Checked {len(shotlist)} shots with {len(columns)} columns."
+    )
