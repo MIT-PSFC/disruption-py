@@ -1013,7 +1013,7 @@ class CmodPhysicsMethods:
     )
     def _get_prad_peaking(params: PhysicsMethodParams):
         prad_peaking = np.full(len(params.times), np.nan)
-        nan_output = {"prad_peaking", prad_peaking}
+        nan_output = {"prad_peaking": prad_peaking}
         try:
             r0 = 0.01 * params.mds_conn.get_data(
                 r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
