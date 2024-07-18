@@ -54,7 +54,10 @@ def get_mdsplus_data(
 
 
 def get_sql_data_for_mdsplus(
-    tokamak: Tokamak, shotlist: List[int], mdsplus_data: Dict[int, pd.DataFrame], test_columns=["*"]
+    tokamak: Tokamak,
+    shotlist: List[int],
+    mdsplus_data: Dict[int, pd.DataFrame],
+    test_columns=None,
 ) -> Dict[int, pd.DataFrame]:
     """
     Get SQL data for a list of shots and map onto the timebase of the supplied MDSplus data.
@@ -66,9 +69,11 @@ def get_sql_data_for_mdsplus(
     """
     # Mapping SQL data onto the MDSplus timebase means SQL data needs time data
     merge_col = "time"
-    if merge_col not in test_columns:
+    if test_columns is None:
+        test_columns = ["*"]
+    elif merge_col not in test_columns:
         test_columns.append(merge_col)
-        
+
     db = ShotDatabase.from_config(tokamak=tokamak)
     shot_data = {}
     for shot_id in shotlist:
@@ -306,8 +311,10 @@ def eval_against_sql(
 
     with monkey_patch_numpy_gradient():
         mdsplus_data = get_mdsplus_data(
-            tokamak, shotlist, os.path.join(tempfolder, "data_retrieval.log"),
-            test_columns=test_columns
+            tokamak,
+            shotlist,
+            os.path.join(tempfolder, "data_retrieval.log"),
+            test_columns=test_columns,
         )
     sql_data = get_sql_data_for_mdsplus(tokamak, shotlist, mdsplus_data, test_columns)
 
