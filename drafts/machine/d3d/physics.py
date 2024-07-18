@@ -9,7 +9,7 @@ from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.machine.tokamak import Tokamak
 
 
-class D3DNewPhysicsMethods:
+class D3DDraftPhysicsMethods:
 
     @staticmethod
     @physics_method(

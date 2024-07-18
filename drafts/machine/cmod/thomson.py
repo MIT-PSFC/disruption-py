@@ -11,7 +11,7 @@ from disruption_py.machine.cmod import CmodEfitMethods
 
 
 # helper class holding functions for thomson density measures
-class ThomsonDensityMeasure:
+class CmodDraftThomsonDensityMeasure:
 
     # The following methods are translated from IDL code.
     @staticmethod
