@@ -314,9 +314,9 @@ def eval_against_sql(
 
     with monkey_patch_numpy_gradient():
         mdsplus_data = get_mdsplus_data(
-            tokamak,
-            shotlist,
-            os.path.join(tempfolder, "data_retrieval.log"),
+            tokamak=tokamak,
+            shotlist=shotlist,
+            log_file_path=os.path.join(tempfolder, "data_retrieval.log"),
             test_columns=test_columns,
         )
     sql_data = get_sql_data_for_mdsplus(tokamak, shotlist, mdsplus_data, test_columns)
