@@ -1013,7 +1013,7 @@ class CmodPhysicsMethods:
     )
     def _get_prad_peaking(params: PhysicsMethodParams):
         prad_peaking = np.full(len(params.times), np.nan)
-        nan_output = {"prad_peaking", prad_peaking}
+        nan_output = {"prad_peaking": prad_peaking}
         try:
             r0 = 0.01 * params.mds_conn.get_data(
                 r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
@@ -1105,10 +1105,9 @@ class CmodPhysicsMethods:
                     core_radiation, axj_interp[axj_core_index, i]
                 )
                 all_radiation = np.append(all_radiation, axj_interp[:, i])
-            try:
+            with warnings.catch_warnings():
+                warnings.filterwarnings(action="ignore", message="Mean of empty slice")
                 prad_peaking[i] = np.nanmean(core_radiation) / np.nanmean(all_radiation)
-            except:
-                prad_peaking[i] = np.nan
         return {"prad_peaking": prad_peaking}
 
     @staticmethod
