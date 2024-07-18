@@ -21,6 +21,7 @@ from tests.utils.data_difference import DataDifference
 
 logger = logging.getLogger("disruption_py")
 
+
 def get_mdsplus_data(
     tokamak: Tokamak, shotlist: List[int], log_file_path: str
 ) -> Dict[int, pd.DataFrame]:
@@ -83,7 +84,6 @@ def eval_shots_against_sql(
     mdsplus_data: Dict[int, pd.DataFrame],
     sql_data: Dict[int, pd.DataFrame],
     data_columns: List[str],
-    fail_quick: bool = False,
     expected_failure_columns: List[str] = None,
 ) -> List["DataDifference"]:
     """
@@ -103,7 +103,6 @@ def eval_shots_against_sql(
                 mdsplus_shot_data=mdsplus_shot_data,
                 sql_shot_data=sql_shot_data,
                 data_column=data_column,
-                fail_quick=fail_quick,
                 expect_failure=expect_failure,
             )
             data_differences.append(data_difference)
@@ -115,7 +114,6 @@ def eval_shot_against_sql(
     mdsplus_shot_data: pd.DataFrame,
     sql_shot_data: pd.DataFrame,
     data_column: str,
-    fail_quick: bool = False,
     expect_failure: bool = False,
 ) -> "DataDifference":
     """
@@ -134,10 +132,15 @@ def eval_shot_against_sql(
         missing_sql_data=missing_sql_data,
         expect_failure=expect_failure,
     )
-    if fail_quick and not (missing_mdsplus_data or missing_sql_data):
-        expectation = "failure" if expect_failure else "success"
-        failure = "failed" if data_difference.failed else "succeeded"
+
+    # When pytest runs, it sets this environment varible. Tests should only
+    # fail here when run via Python, not pytest
+    if "PYTEST_CURRENT_TEST" not in os.environ and not (
+        missing_mdsplus_data or missing_sql_data
+    ):
         if data_difference.failed:
+            expectation = "failure" if expect_failure else "success"
+            failure = "failed" if data_difference.failed else "succeeded"
             logger.debug(
                 "Expected {expectation} and {failure}:\n{report}".format(
                     expectation=expectation,
@@ -154,7 +157,6 @@ def eval_against_sql(
     tokamak: Tokamak,
     shotlist: List[int],
     expected_failure_columns: List[str],
-    fail_quick: bool,
     test_columns=None,
 ) -> Dict[int, pd.DataFrame]:
 
@@ -186,7 +188,6 @@ def eval_against_sql(
         mdsplus_data=mdsplus_data,
         sql_data=sql_data,
         data_columns=test_columns,
-        fail_quick=fail_quick,
         expected_failure_columns=expected_failure_columns,
     )
 

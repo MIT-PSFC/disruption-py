@@ -50,7 +50,6 @@ def test_data_columns(
     sql_data: Dict[int, pd.DataFrame],
     data_column,
     expected_failure_columns: List[str],
-    fail_quick: bool,
 ):
     """
     Test that the data columns are the same between MDSplus and SQL across specified data columns.
@@ -65,20 +64,16 @@ def test_data_columns(
         sql_data=sql_data,
         data_columns=[data_column],
         expected_failure_columns=expected_failure_columns,  # we use xfail instead of manually expecting for column failures
-        fail_quick=fail_quick,
     )
-    if not fail_quick:
-        expected_failure = any(
-            data_difference.expect_failure for data_difference in data_differences
-        )
-        if expected_failure:
-            pytest.xfail(
-                reason="matches expected data failures"
-            )  # stops execution of test
-        else:
-            assert all(
-                not data_difference.failed for data_difference in data_differences
-            ), "Comparison failed"
+    expected_failure = any(
+        data_difference.expect_failure for data_difference in data_differences
+    )
+    if expected_failure:
+        pytest.xfail(reason="matches expected data failures")  # stops execution of test
+    else:
+        assert all(
+            not data_difference.failed for data_difference in data_differences
+        ), "Comparison failed"
 
 
 def test_other_values(
@@ -87,7 +82,6 @@ def test_other_values(
     sql_data: Dict[int, pd.DataFrame],
     data_columns: List[str],
     expected_failure_columns: List[str],
-    fail_quick: bool,
 ):
     """
     Ensure that all parameters are calculated correctly in the MDSplus shot object.
@@ -103,25 +97,21 @@ def test_other_values(
         mdsplus_data=mdsplus_data,
         sql_data=sql_data,
         data_columns=test_columns,
-        fail_quick=fail_quick,
         expected_failure_columns=expected_failure_columns,
     )
 
-    if not fail_quick:
-        matches_expected = all(
-            data_difference.matches_expected for data_difference in data_differences
-        )
-        expected_failure = any(
-            data_difference.expect_failure for data_difference in data_differences
-        )
-        if matches_expected and expected_failure:
-            pytest.xfail(
-                reason="matches expected data failures"
-            )  # stops execution of test
-        else:
-            assert all(
-                not data_difference.failed for data_difference in data_differences
-            ), "Comparison failed"
+    matches_expected = all(
+        data_difference.matches_expected for data_difference in data_differences
+    )
+    expected_failure = any(
+        data_difference.expect_failure for data_difference in data_differences
+    )
+    if matches_expected and expected_failure:
+        pytest.xfail(reason="matches expected data failures")  # stops execution of test
+    else:
+        assert all(
+            not data_difference.failed for data_difference in data_differences
+        ), "Comparison failed"
 
 
 if __name__ == "__main__":
@@ -157,9 +147,10 @@ if __name__ == "__main__":
         tokamak=tokamak,
         shotlist=shotlist,
         expected_failure_columns=expected_failure_columns,
-        fail_quick=True,
         test_columns=data_columns,
     )
 
     columns = {dd.data_column for dd in data_differences}
-    print(f"Python tests complete. Checked {len(shotlist)} shots with {len(columns)} columns.")
+    print(
+        f"Python tests complete. Checked {len(shotlist)} shots with {len(columns)} columns."
+    )
