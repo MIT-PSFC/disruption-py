@@ -22,7 +22,10 @@ from tests.utils.data_difference import DataDifference
 
 
 def get_mdsplus_data(
-    tokamak: Tokamak, shotlist: List[int], log_file_path: str, test_columns=None
+    tokamak: Tokamak,
+    shotlist: List[int],
+    log_file_path: str,
+    test_columns: List[str] = None,
 ) -> Dict[int, pd.DataFrame]:
     """
     Get MDSplus data for a list of shots.
@@ -57,7 +60,7 @@ def get_sql_data_for_mdsplus(
     tokamak: Tokamak,
     shotlist: List[int],
     mdsplus_data: Dict[int, pd.DataFrame],
-    test_columns=None,
+    test_columns: List[str] = None,
 ) -> Dict[int, pd.DataFrame]:
     """
     Get SQL data for a list of shots and map onto the timebase of the supplied MDSplus data.
