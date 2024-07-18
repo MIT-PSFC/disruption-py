@@ -38,8 +38,9 @@ def get_mdsplus_data(
     retrieval_settings = RetrievalSettings(
         efit_nickname_setting="disruption",
         time_setting="disruption_warning",
-        run_columns=test_columns if test_columns is not None else [],
-        only_requested_columns=test_columns is not None,
+        run_tags=[] if test_columns else None,
+        run_columns=test_columns if test_columns else [],
+        only_requested_columns=test_columns,
     )
     shot_data = get_shots_data(
         tokamak=tokamak,
