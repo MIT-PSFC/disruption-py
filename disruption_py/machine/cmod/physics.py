@@ -965,8 +965,6 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def _get_peaking_factors(params: PhysicsMethodParams):
-        # Initialize to nans because they are either passed as parameters or their
-        # indexed values are updated
         nan_arr = np.full(len(params.times), np.nan)
         nan_output = {
             "ne_peaking": nan_arr,
