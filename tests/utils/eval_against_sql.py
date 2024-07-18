@@ -71,11 +71,11 @@ def get_sql_data_for_mdsplus(
         Dictionary mapping shot IDs to retrieved SQL data.
     """
     # Mapping SQL data onto the MDSplus timebase means SQL data needs time data
-    merge_col = "time"
+    MERGE_COL = "time"
     if test_columns is None:
         test_columns = ["*"]
-    elif merge_col not in test_columns:
-        test_columns.append(merge_col)
+    elif MERGE_COL not in test_columns:
+        test_columns.append(MERGE_COL)
 
     db = ShotDatabase.from_config(tokamak=tokamak)
     shot_data = {}
@@ -85,7 +85,7 @@ def get_sql_data_for_mdsplus(
         shot_data[shot_id] = pd.merge_asof(
             times.to_frame(),
             sql_data,
-            on=merge_col,
+            on=MERGE_COL,
             direction="nearest",
             tolerance=config().TIME_CONST,
         )
