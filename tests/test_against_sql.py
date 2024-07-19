@@ -56,8 +56,6 @@ def test_data_columns(
 
     Data column is parameterized in pytest_generate_tests.
     """
-    # if data_column in expected_failure_columns:
-    #     request.node.add_marker(pytest.mark.xfail(reason='column expected failure'))
     data_differences = eval_shots_against_sql(
         shotlist=shotlist,
         mdsplus_data=mdsplus_data,
@@ -65,15 +63,6 @@ def test_data_columns(
         data_columns=[data_column],
         expected_failure_columns=expected_failure_columns,  # we use xfail instead of manually expecting for column failures
     )
-    expected_failure = any(
-        data_difference.expect_failure for data_difference in data_differences
-    )
-    if expected_failure:
-        pytest.xfail(reason="matches expected data failures")  # stops execution of test
-    else:
-        assert all(
-            not data_difference.failed for data_difference in data_differences
-        ), "Comparison failed"
 
 
 def test_other_values(
@@ -99,19 +88,6 @@ def test_other_values(
         data_columns=test_columns,
         expected_failure_columns=expected_failure_columns,
     )
-
-    matches_expected = all(
-        data_difference.matches_expected for data_difference in data_differences
-    )
-    expected_failure = any(
-        data_difference.expect_failure for data_difference in data_differences
-    )
-    if matches_expected and expected_failure:
-        pytest.xfail(reason="matches expected data failures")  # stops execution of test
-    else:
-        assert all(
-            not data_difference.failed for data_difference in data_differences
-        ), "Comparison failed"
 
 
 if __name__ == "__main__":

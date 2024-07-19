@@ -60,7 +60,15 @@ class DataDifference:
 
     @property
     def column_mismatch_string(self) -> str:
-        return f"Shot {self.shot_id} column {self.data_column} with arrays:\n{self.difference_df.to_string()}"
+        # Missing data handled here because difference_df expects data to exist
+        s = f"Shot {self.shot_id} column {self.data_column}"
+        if self.missing_sql_data or self.missing_mdsplus_data:
+            mds_str = (
+                "MDS missing data" if self.missing_mdsplus_data else "MDS has data"
+            )
+            sql_str = "SQL missing data" if self.missing_sql_data else "SQL has data"
+            return f"{s}: {mds_str} and {sql_str}"
+        return s + f" with arrays:\n{self.difference_df.to_string()}"
 
     @property
     def difference_df(self) -> pd.DataFrame:

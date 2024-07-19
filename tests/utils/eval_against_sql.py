@@ -10,6 +10,7 @@ from typing import Dict, List
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from disruption_py.config import config
 from disruption_py.core.utils.math import matlab_gradient_1d_vectorized
@@ -133,22 +134,22 @@ def eval_shot_against_sql(
         expect_failure=expect_failure,
     )
 
-    # When pytest runs, it sets this environment varible. Tests should only
-    # fail here when run via Python, not pytest
-    if "PYTEST_CURRENT_TEST" not in os.environ and not (
-        missing_mdsplus_data or missing_sql_data
-    ):
-        if data_difference.failed:
-            expectation = "failure" if expect_failure else "success"
-            failure = "failed" if data_difference.failed else "succeeded"
-            logger.debug(
-                "Expected {expectation} and {failure}:\n{report}".format(
-                    expectation=expectation,
-                    failure=failure,
-                    report=data_difference.column_mismatch_string,
-                )
+    # Condition on both failing and expecting to fail to log expected & unexpected
+    # failures and unexpected successes
+    if data_difference.failed or data_difference.expect_failure:
+        expectation = "failure" if expect_failure else "success"
+        failure = "failed" if data_difference.failed else "succeeded"
+        logger.debug(
+            "Expected {expectation} and {failure}:\n{report}".format(
+                expectation=expectation,
+                failure=failure,
+                report=data_difference.column_mismatch_string,
             )
-        assert not data_difference.failed, "Comparison failed"
+        )
+        if data_difference.expect_failure:
+            # stops execution of test
+            pytest.xfail(reason="matches expected data failures")
+    assert not data_difference.failed, "Comparison failed"
 
     return data_difference
 
