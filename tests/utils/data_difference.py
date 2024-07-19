@@ -82,8 +82,7 @@ class DataDifference:
         sql_data = self.sql_column_data.iloc[indices]
         return pd.DataFrame(
             {
-                "MDS Time": self.mds_time[indices],
-                "SQL Time": self.sql_time[indices],
+                "Time": self.mds_time[indices],
                 "MDSplus Data": mds_data,
                 "Reference Data (SQL)": sql_data,
                 "MDS/SQL": mds_data / sql_data,
