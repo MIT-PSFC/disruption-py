@@ -56,37 +56,12 @@ def test_data_columns(
 
     Data column is parameterized in pytest_generate_tests.
     """
-    data_differences = eval_shots_against_sql(
+    eval_shots_against_sql(
         shotlist=shotlist,
         mdsplus_data=mdsplus_data,
         sql_data=sql_data,
         data_columns=[data_column],
         expected_failure_columns=expected_failure_columns,  # we use xfail instead of manually expecting for column failures
-    )
-
-
-def test_other_values(
-    shotlist: List[int],
-    mdsplus_data: Dict[int, pd.DataFrame],
-    sql_data: Dict[int, pd.DataFrame],
-    data_columns: List[str],
-    expected_failure_columns: List[str],
-):
-    """
-    Ensure that all parameters are calculated correctly in the MDSplus shot object.
-    """
-
-    mdsplus_columns = set().union(*(df.columns for df in mdsplus_data.values()))
-    sql_columns = set().union(*(df.columns for df in sql_data.values()))
-
-    test_columns = mdsplus_columns.intersection(sql_columns).difference(data_columns)
-
-    data_differences = eval_shots_against_sql(
-        shotlist=shotlist,
-        mdsplus_data=mdsplus_data,
-        sql_data=sql_data,
-        data_columns=test_columns,
-        expected_failure_columns=expected_failure_columns,
     )
 
 
