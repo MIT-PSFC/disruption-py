@@ -60,8 +60,8 @@ jobs:
         run: |
           git reset --hard "${{ github.event.pull_request.base.sha }}"
           git log -1
-          pylint disruption_py examples tests \
-          --recursive=y \
+          find disruption_py examples tests -type f -name '*.py' \
+          | xargs pylint \
           | grep '^Your code has been rated'
           git reset --hard "${{ github.event.pull_request.head.sha }}"
           git log -1
@@ -69,8 +69,8 @@ jobs:
       - name: Run pylint
         run: |
           pylint --version
-          pylint disruption_py examples tests \
-          --recursive=y \
+          find disruption_py examples tests -type f -name '*.py' \
+          | xargs pylint \
           --msg-template='{path}:{line}:{column}: |{msg_id} {symbol}| {msg}' \
           | tee pylint.log
 
