@@ -24,7 +24,10 @@ logger = logging.getLogger("disruption_py")
 
 
 def get_mdsplus_data(
-    tokamak: Tokamak, shotlist: List[int], log_file_path: str
+    tokamak: Tokamak,
+    shotlist: List[int],
+    log_file_path: str,
+    test_columns: List[str] = None,
 ) -> Dict[int, pd.DataFrame]:
     """
     Get MDSplus data for a list of shots.
@@ -37,6 +40,9 @@ def get_mdsplus_data(
     retrieval_settings = RetrievalSettings(
         efit_nickname_setting="disruption",
         time_setting="disruption_warning",
+        run_tags=[] if test_columns else ["all"],
+        run_columns=test_columns if test_columns else [],
+        only_requested_columns=test_columns,
     )
     shot_data = get_shots_data(
         tokamak=tokamak,
@@ -55,7 +61,10 @@ def get_mdsplus_data(
 
 
 def get_sql_data_for_mdsplus(
-    tokamak: Tokamak, shotlist: List[int], mdsplus_data: Dict[int, pd.DataFrame]
+    tokamak: Tokamak,
+    shotlist: List[int],
+    mdsplus_data: Dict[int, pd.DataFrame],
+    test_columns: List[str] = None,
 ) -> Dict[int, pd.DataFrame]:
     """
     Get SQL data for a list of shots and map onto the timebase of the supplied MDSplus data.
@@ -65,15 +74,22 @@ def get_sql_data_for_mdsplus(
     Dict[int, pd.DataFrame]
         Dictionary mapping shot IDs to retrieved SQL data.
     """
+    # Mapping SQL data onto the MDSplus timebase means SQL data needs time data
+    MERGE_COL = "time"
+    if test_columns is None:
+        test_columns = ["*"]
+    elif MERGE_COL not in test_columns:
+        test_columns.append(MERGE_COL)
+
     db = ShotDatabase.from_config(tokamak=tokamak)
     shot_data = {}
     for shot_id in shotlist:
         times = mdsplus_data[shot_id]["time"]
-        sql_data = db.get_shots_data([shot_id])
+        sql_data = db.get_shots_data([shot_id], cols=test_columns)
         shot_data[shot_id] = pd.merge_asof(
             times.to_frame(),
             sql_data,
-            on="time",
+            on=MERGE_COL,
             direction="nearest",
             tolerance=config().TIME_CONST,
         )
@@ -175,9 +191,12 @@ def eval_against_sql(
 
     with monkey_patch_numpy_gradient():
         mdsplus_data = get_mdsplus_data(
-            tokamak, shotlist, os.path.join(tempfolder, "data_retrieval.log")
+            tokamak=tokamak,
+            shotlist=shotlist,
+            log_file_path=os.path.join(tempfolder, "data_retrieval.log"),
+            test_columns=test_columns,
         )
-    sql_data = get_sql_data_for_mdsplus(tokamak, shotlist, mdsplus_data)
+    sql_data = get_sql_data_for_mdsplus(tokamak, shotlist, mdsplus_data, test_columns)
 
     if test_columns is None:
         mdsplus_columns = set().union(*(df.columns for df in mdsplus_data.values()))

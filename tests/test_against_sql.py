@@ -25,15 +25,21 @@ from tests.utils.factory import (
     get_tokamak_test_shotlist,
 )
 
-from tests.utils.pytest_helper import save_to_csv
+from tests.utils.pytest_helper import extract_param, save_to_csv
 
 
 @pytest.fixture(scope="module")
 def mdsplus_data(
-    tokamak: Tokamak, shotlist: List[int], module_file_path_f
+    tokamak: Tokamak,
+    shotlist: List[int],
+    module_file_path_f,
+    pytestconfig,
 ) -> Dict[int, pd.DataFrame]:
     mds = get_mdsplus_data(
-        tokamak=tokamak, shotlist=shotlist, log_file_path=module_file_path_f(".log")
+        tokamak=tokamak,
+        shotlist=shotlist,
+        log_file_path=module_file_path_f(".log"),
+        test_columns=extract_param(pytestconfig),
     )
     save_to_csv(data=mds, module_file_path_f=module_file_path_f, data_source_name="mds")
     return mds
@@ -45,12 +51,15 @@ def sql_data(
     shotlist: List[int],
     mdsplus_data: Dict[int, pd.DataFrame],
     module_file_path_f,
+    pytestconfig,
 ) -> Dict[int, pd.DataFrame]:
     sql = get_sql_data_for_mdsplus(
-        tokamak=tokamak, shotlist=shotlist, mdsplus_data=mdsplus_data
+        tokamak=tokamak,
+        shotlist=shotlist,
+        mdsplus_data=mdsplus_data,
+        test_columns=extract_param(pytestconfig),
     )
     save_to_csv(data=sql, module_file_path_f=module_file_path_f, data_source_name="sql")
-
     return sql
 
 
