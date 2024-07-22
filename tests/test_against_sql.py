@@ -8,6 +8,7 @@ Expects SQL credentials to be configured.
 """
 
 import argparse
+import re
 from typing import Dict, List
 
 import pandas as pd
@@ -27,21 +28,48 @@ from tests.utils.factory import (
 )
 
 
+def extract_param(config):
+    """Extract the data column from the pytest command.
+
+    E.g. will return ip given
+    `pytest -s tests/test_against_sql.py -k test_data_columns[ip]`
+
+    Params:
+        config: pytestconfig fixture
+
+    Returns:
+        List[str], the data column if it exists, otherwise None.
+    """
+    args = config.invocation_params.args
+    m = re.search(r"\[(.+)\]$", args[-1])
+    param = [m.group(1)] if m is not None else None
+    return param
+
+
 @pytest.fixture(scope="module")
 def mdsplus_data(
-    tokamak: Tokamak, shotlist: List[int], module_file_path_f
+    tokamak: Tokamak, shotlist: List[int], module_file_path_f, pytestconfig
 ) -> Dict[int, pd.DataFrame]:
     return get_mdsplus_data(
-        tokamak=tokamak, shotlist=shotlist, log_file_path=module_file_path_f(".log")
+        tokamak=tokamak,
+        shotlist=shotlist,
+        log_file_path=module_file_path_f(".log"),
+        test_columns=extract_param(pytestconfig),
     )
 
 
 @pytest.fixture(scope="module")
 def sql_data(
-    tokamak: Tokamak, shotlist: List[int], mdsplus_data: Dict[int, pd.DataFrame]
+    tokamak: Tokamak,
+    shotlist: List[int],
+    mdsplus_data: Dict[int, pd.DataFrame],
+    pytestconfig,
 ) -> Dict[int, pd.DataFrame]:
     return get_sql_data_for_mdsplus(
-        tokamak=tokamak, shotlist=shotlist, mdsplus_data=mdsplus_data
+        tokamak=tokamak,
+        shotlist=shotlist,
+        mdsplus_data=mdsplus_data,
+        test_columns=extract_param(pytestconfig),
     )
 
 
