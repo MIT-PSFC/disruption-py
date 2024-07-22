@@ -8,7 +8,6 @@ Expects SQL credentials to be configured.
 """
 
 import argparse
-import re
 from typing import Dict, List
 
 import pandas as pd

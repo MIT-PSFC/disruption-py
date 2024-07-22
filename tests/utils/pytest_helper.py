@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import re
+
 
 def extract_param(config):
     """Extract the data column from the pytest command.
