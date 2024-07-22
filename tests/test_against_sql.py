@@ -30,7 +30,10 @@ from tests.utils.pytest_helper import extract_param, save_to_csv
 
 @pytest.fixture(scope="module")
 def mdsplus_data(
-    tokamak: Tokamak, shotlist: List[int], module_file_path_f, pytestconfig,
+    tokamak: Tokamak,
+    shotlist: List[int],
+    module_file_path_f,
+    pytestconfig,
 ) -> Dict[int, pd.DataFrame]:
     mds = get_mdsplus_data(
         tokamak=tokamak,
