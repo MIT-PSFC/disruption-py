@@ -162,9 +162,6 @@ def eval_shot_against_sql(
                 report=data_difference.column_mismatch_string,
             )
         )
-        if data_difference.expect_failure:
-            # stops execution of test
-            pytest.xfail(reason="matches expected data failures")
     assert not data_difference.failed, "Comparison failed"
 
     return data_difference
