@@ -25,23 +25,33 @@ from tests.utils.factory import (
     get_tokamak_test_shotlist,
 )
 
+from tests.utils.pytest_helper import save_to_csv
+
 
 @pytest.fixture(scope="module")
 def mdsplus_data(
     tokamak: Tokamak, shotlist: List[int], module_file_path_f
 ) -> Dict[int, pd.DataFrame]:
-    return get_mdsplus_data(
+    mds = get_mdsplus_data(
         tokamak=tokamak, shotlist=shotlist, log_file_path=module_file_path_f(".log")
     )
+    save_to_csv(data=mds, module_file_path_f=module_file_path_f, data_source_name="mds")
+    return mds
 
 
 @pytest.fixture(scope="module")
 def sql_data(
-    tokamak: Tokamak, shotlist: List[int], mdsplus_data: Dict[int, pd.DataFrame]
+    tokamak: Tokamak,
+    shotlist: List[int],
+    mdsplus_data: Dict[int, pd.DataFrame],
+    module_file_path_f,
 ) -> Dict[int, pd.DataFrame]:
-    return get_sql_data_for_mdsplus(
+    sql = get_sql_data_for_mdsplus(
         tokamak=tokamak, shotlist=shotlist, mdsplus_data=mdsplus_data
     )
+    save_to_csv(data=sql, module_file_path_f=module_file_path_f, data_source_name="sql")
+
+    return sql
 
 
 def test_data_columns(

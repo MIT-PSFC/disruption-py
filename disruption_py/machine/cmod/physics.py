@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 
-import logging
-import sys
 import traceback
 import warnings
 from importlib import resources
 
 import numpy as np
 import pandas as pd
-import scipy as sp
 from MDSplus import mdsExceptions
 
 import disruption_py.data
@@ -16,8 +13,6 @@ from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import gaussian_fit, interp1, smooth
-from disruption_py.core.utils.misc import safe_cast
-from disruption_py.machine.cmod.efit import CmodEfitMethods
 from disruption_py.machine.tokamak import Tokamak
 
 warnings.filterwarnings("error", category=RuntimeWarning)
@@ -870,13 +865,90 @@ class CmodPhysicsMethods:
         )
         return output
 
-    # TODO: Finish
     @staticmethod
-    def get_peaking_factors(times, TS_time, ne_PF, Te_PF, pressure_PF):
-        # ne_PF = interp1(TS_time, ne_PF, times, 'linear')
-        # Te_PF = interp1(TS_time, Te_PF, times, 'linear')
-        # pressure_PF = interp1(TS_time, pressure_PF, times, 'linear')
-        pass
+    def get_peaking_factors(times, TS_time, TS_Te, TS_ne, TS_z, efit_time, bminor, z0):
+        """
+        Calculate Te, ne, and pressure peaking factors given Thomson Scattering Te and ne measurements.
+
+        Because the TS chords have uneven spacings, measurements are first interpolated to an array of
+        equally spaced vertical positions and then used to calculate the peaking factors.
+
+        Currently, only the Te_peaking feature has been implemented.
+
+        Parameters:
+        ----------
+        times : array_like
+            Requested time basis
+        TS_time : array_like
+            Time basis of the Thomson Scattering diagnostic
+        TS_Te : array_like
+            Core and edge Te measurements from TS
+        TS_ne : array_like
+            Core and edge ne measurements from TS
+        TS_z : array_like
+            Vertical position of the core and edge TS chords
+        efit_time : array_like
+            Time basis of '_efit_tree'
+        bminor : array_like
+            Vertical minor radius from EFIT
+        z0 : array_like
+            Vertical position of the magnetic axis from EFIT
+
+        Returns:
+        ----------
+        DataFrame of ne_peaking, Te_peaking, and pressure_peaking
+
+        References:
+        ----------
+        - https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_peaking_factor_cmod.m
+        - https://github.com/MIT-PSFC/disruption-py/issues/210
+        - https://github.com/MIT-PSFC/disruption-py/pull/216
+
+        Last major update by: William Wei on 7/12/2024
+
+        """
+        # Interpolate EFIT signals to TS time basis
+        bminor = interp1(efit_time, bminor, TS_time)
+        z0 = interp1(efit_time, z0, TS_time)
+
+        # Calculate Te peaking factor
+        Te_PF = np.full(len(TS_time), np.nan)
+        (itimes,) = np.where((TS_time > 0) & (TS_time < times[-1]))
+        for itime in itimes:
+            TS_Te_arr = TS_Te[:, itime]
+            (indx,) = np.where(TS_Te_arr > 0)
+            if len(indx) < 10:
+                continue
+            TS_Te_arr = TS_Te_arr[indx]
+            TS_z_arr = TS_z[indx]
+            sorted_indx = np.argsort(TS_z_arr)
+            TS_z_arr = TS_z_arr[sorted_indx]
+            TS_Te_arr = TS_Te_arr[sorted_indx]
+            # Create equal-spacing array of TS_z_arr and interpolate TS_Te_arr on it
+            # Skip if there's no EFIT zmagx data
+            if np.isnan(z0[itime]):
+                continue
+            z_arr_equal_spacing = np.linspace(z0[itime], TS_z_arr[-1], len(TS_z_arr))
+            Te_arr_equal_spacing = interp1(TS_z_arr, TS_Te_arr, z_arr_equal_spacing)
+            # Calculate Te_PF
+            (core_index,) = np.where(
+                np.array((z_arr_equal_spacing - z0[itime]) < 0.2 * abs(bminor[itime]))
+            )
+            if len(core_index) < 2:
+                continue
+            Te_PF[itime] = np.mean(Te_arr_equal_spacing[core_index]) / np.mean(
+                Te_arr_equal_spacing
+            )
+
+        # TODO: Calculate ne and pressure peaking factors
+
+        # Interpolate peaking factors to the requested time basis
+        Te_PF = interp1(TS_time, Te_PF, times, "linear")
+        return {
+            "ne_peaking": [np.nan],
+            "te_peaking": Te_PF,
+            "pressure_peaking": [np.nan],
+        }
 
     @staticmethod
     @physics_method(
@@ -884,21 +956,17 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def _get_peaking_factors(params: PhysicsMethodParams):
-        # Initialize to nans because they are either passed as parameters or their
-        # indexed values are updated
-        nan_arr = np.full(len(params.times), np.nan)
-        ne_PF = nan_arr.copy()
-        Te_PF = nan_arr.copy()
-        pressure_PF = nan_arr.copy()
         nan_output = {
-            "ne_peaking": ne_PF,
-            "te_peaking": Te_PF,
-            "pressure_peaking": pressure_PF,
+            "ne_peaking": [np.nan],
+            "te_peaking": [np.nan],
+            "pressure_peaking": [np.nan],
         }
         # Ignore shots on the blacklist
         if CmodPhysicsMethods.is_on_blacklist(params.shot_id):
             return nan_output
+        # Fetch data
         try:
+            # Get EFIT geometry data
             z0 = 0.01 * params.mds_conn.get_data(
                 r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
             )
@@ -909,53 +977,34 @@ class CmodPhysicsMethods:
                 r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
             )
             bminor = aminor * kappa
+            # Get Te data and TS time basis
             node_ext = ".yag_new.results.profiles"
-            # nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = ThomsonDensityMeasure.compare_ts_tci(params, nlnum=4)
-            TS_te, TS_time = params.mds_conn.get_data_with_dims(
+            TS_Te_core, TS_time = params.mds_conn.get_data_with_dims(
                 f"{node_ext}:te_rz", tree_name="electrons"
             )
-            TS_te = TS_te * 1000 * 11600
-            tets_edge = params.mds_conn.get_data(r"\ts_te") * 11600
-            TS_te = np.concatenate((TS_te, tets_edge))
-            TS_z = params.mds_conn.get_data(
+            # Convert keV to eV
+            TS_Te_core = TS_Te_core * 1000
+            TS_Te_edge = params.mds_conn.get_data(r"\ts_te")
+            # Convert eV to Kelvin
+            TS_Te = np.concatenate((TS_Te_core, TS_Te_edge)) * 11600
+            TS_z_core = params.mds_conn.get_data(
                 f"{node_ext}:z_sorted", tree_name="electrons"
             )
-            zts_edge = params.mds_conn.get_data(r"\fiber_z", tree_name="electrons")
-            TS_z = np.concatenate((TS_z, zts_edge))
-            if len(zts_edge) != tets_edge.shape[1]:
-                return nan_output
-            Te_PF = Te_PF[: len(TS_time)]
-            itimes = np.where(TS_time > 0 & TS_time < params.times[-1])
-            bminor = interp1(efit_time, bminor, TS_time)
-            z0 = interp1(efit_time, z0, TS_time)
-            for i in range(len(itimes)):
-                Te_arr = TS_te[itimes[i], :]
-                indx = np.where(Te_arr > 0)
-                if len(indx) < 10:
-                    continue
-                Te_arr = Te_arr[indx]
-                TS_z_arr = TS_z[indx]
-                sorted_indx = np.argsort(TS_z_arr)
-                Ts_z_arr = Ts_z_arr[sorted_indx]
-                Te_arr = Te_arr[sorted_indx]
-                z_arr = np.linspace(z0[itimes[i]], TS_z_arr[-1], len(Ts_z_arr))
-                Te_arr = interp1(TS_z_arr, Te_arr, z_arr)
-                core_index = np.where(
-                    z_arr
-                    < (z0[itimes[i]] + 0.2 * bminor[itimes[i]]) & z_arr
-                    > (z0[itimes[i]] - 0.2 * bminor[itimes[i]])
+            TS_z_edge = params.mds_conn.get_data(r"\fiber_z", tree_name="electrons")
+            TS_z = np.concatenate((TS_z_core, TS_z_edge))
+            # Make sure that there are equal numbers of edge position and edge temperature points
+            if len(TS_z_edge) != TS_Te_edge.shape[0]:
+                params.logger.warning(
+                    f"[Shot {params.shot_id}]: TS edge data and z positions are not the same length for shot"
                 )
-                if len(core_index) < 2:
-                    continue
-                Te_PF[itimes[i]] = np.mean(Te_arr[core_index]) / np.mean(Te_arr)
-            Te_PF = interp1(TS_time, Te_PF, params.times)
-            calib = np.nan
-            # TODO(lajz): fix
-            return CmodPhysicsMethods.get_Ts_parameters(
-                params.times, TS_time, ne_PF, Te_PF, pressure_PF
-            )
+                return nan_output
+            # TODO: Get ne data
+            TS_ne = np.full(len(params.times), np.nan)
         except mdsExceptions.MdsException as e:
             return nan_output
+        return CmodPhysicsMethods.get_peaking_factors(
+            params.times, TS_time, TS_Te, TS_ne, TS_z, efit_time, bminor, z0
+        )
 
     @staticmethod
     @physics_method(
@@ -964,7 +1013,7 @@ class CmodPhysicsMethods:
     )
     def _get_prad_peaking(params: PhysicsMethodParams):
         prad_peaking = np.full(len(params.times), np.nan)
-        nan_output = {"prad_peaking", prad_peaking}
+        nan_output = {"prad_peaking": prad_peaking}
         try:
             r0 = 0.01 * params.mds_conn.get_data(
                 r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
@@ -1056,107 +1105,10 @@ class CmodPhysicsMethods:
                     core_radiation, axj_interp[axj_core_index, i]
                 )
                 all_radiation = np.append(all_radiation, axj_interp[:, i])
-            try:
+            with warnings.catch_warnings():
+                warnings.filterwarnings(action="ignore", message="Mean of empty slice")
                 prad_peaking[i] = np.nanmean(core_radiation) / np.nanmean(all_radiation)
-            except:
-                prad_peaking[i] = np.nan
         return {"prad_peaking": prad_peaking}
-
-    @staticmethod
-    @physics_method(
-        columns=["ne_peaking", "te_peaking", "pressure_peaking"],
-        tags=["experimental"],
-        tokamak=Tokamak.CMOD,
-    )
-    def _get_peaking_factors_no_tci(params: PhysicsMethodParams):
-        # Initialize PFs as empty arrarys
-        nan_arr = np.full(len(params.times), np.nan)
-        ne_PF = nan_arr.copy()
-        Te_PF = nan_arr.copy()
-        pressure_PF = nan_arr.copy()
-        nan_output = {
-            "ne_peaking": ne_PF,
-            "te_peaking": Te_PF,
-            "pressure_peaking": pressure_PF,
-        }
-        # Ignore shots on the blacklist
-        if CmodPhysicsMethods.is_on_blacklist(params.shot_id):
-            return nan_output
-        try:
-            # Get shaping params
-            z0 = 0.01 * params.mds_conn.get_data(
-                r"\efit_aeqdsk:zmagx", tree_name="cmod"
-            )
-            kappa = params.mds_conn.get_data(r"\efit_aeqdsk:kappa", tree_name="cmod")
-            aminor, efit_time = params.mds_conn.get_data_with_dims(
-                r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
-            )
-            bminor = aminor * kappa  # length of major axis of plasma x-section
-
-            # Get data from TS
-            node_ext = ".yag_new.results.profiles"
-            # nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = ThomsonDensityMeasure.compare_ts_tci(params, nlnum=4)
-            Te_core, Te_time = params.mds_conn.get_data_with_dims(
-                f"{node_ext}:te_rz", tree_name="electrons"
-            )
-            Te_core = Te_core * 1000 * 11600  # Get core TS data
-            Te_edge = (
-                params.mds_conn.get_data(r"\ts_te", tree_name="electrons") * 11600
-            )  # Get edge TS data
-            # Concat core and edge data
-            Te = np.concatenate((Te_core, Te_edge))
-            z_core = params.mds_conn.get_data(
-                f"{node_ext}:z_sorted", tree_name="electrons"
-            )  # Get z position of core TS points
-            # Get z position of edge TS points
-            z_edge = params.mds_conn.get_data(r"\fiber_z", tree_name="electrons")
-            z = np.concatenate((z_core, z_edge))  # Concat core and edge data
-            # Make sure that there are equal numbers of edge position and edge temperature points
-            if len(z_edge) != Te_edge.shape[0]:
-                params.logger.warning(
-                    f"[Shot {params.shot_id}]: TS edge data and z positions are "
-                    + "not the same length for shot"
-                )
-                return nan_output
-            Te_PF = Te_PF[: len(Te_time)]  # Reshape Te_PF to length of Te_time
-            itimes = np.where((Te_time > 0) & (Te_time < params.times[-1]))
-            node_path = ".yag_new.results.profiles"
-            (TS_time,) = params.mds_conn.get_dims(
-                node_path + ":te_rz", tree_name="electrons"
-            )
-            # Interpolate bminor onto desired timebase
-            bminor = interp1(efit_time, bminor, TS_time)
-            # Interpolate z0 onto desired timebase
-            z0 = interp1(efit_time, z0, TS_time)
-            for i in range(len(itimes)):
-                Te_arr = Te[itimes[i], :]
-                indx = np.where(Te_arr > 0)
-                if len(indx) < 10:
-                    continue
-                Te_arr = Te_arr[indx]
-                TS_z_arr = z[indx]
-                sorted_indx = np.argsort(TS_z_arr)  # Sort by z
-                Ts_z_arr = Ts_z_arr[sorted_indx]
-                Te_arr = Te_arr[sorted_indx]  # Sort by z
-                z_arr = np.linspace(z0[itimes[i]], TS_z_arr[-1], len(Ts_z_arr))
-                Te_arr = interp1(TS_z_arr, Te_arr, z_arr)
-                core_index = np.where(
-                    z_arr
-                    < (z0[itimes[i]] + 0.2 * bminor[itimes[i]]) & z_arr
-                    > (z0[itimes[i]] - 0.2 * bminor[itimes[i]])
-                )
-                if len(core_index) < 2:
-                    continue
-                Te_PF[itimes[i]] = np.mean(Te_arr[core_index]) / np.mean(Te_arr)
-            Te_PF = interp1(TS_time, Te_PF, params.times)
-            calib = np.nan
-            # TODO(lajz): fix
-            return CmodPhysicsMethods.get_Ts_parameters(
-                params.times, TS_time, ne_PF, Te_PF, pressure_PF
-            )
-        except mdsExceptions.MdsException as e:
-            params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            return nan_output
 
     @staticmethod
     def get_sxr_parameters():
@@ -1182,257 +1134,6 @@ class CmodPhysicsMethods:
         return {"sxr": sxr}
 
     @staticmethod
-    def get_edge_parameters(times, p_Te, p_ne, edge_rho_min=0.85, edge_rho_max=0.95):
-        """Compute the edge Temperature and edge Density signal from the TS.
-
-        Parameters
-        ----------
-        times : array_like
-            The times at which to calculate the edge parameters.
-        p_Te : BivariatePlasmaProfile
-            The Te measurements [keV] in terms of the time and rho of the measurment.
-        p_ne : BivariatePlasmaProfile
-            The ne measurements [keV] in terms of the time and rho of the measurment.
-        edge_rho_min : float [0,1]
-            The rho that defines the minimum of the "edge" region
-        edge_rho_max : float [0,1]
-            The rho that defines the maximum of the "edge" region
-
-        Returns
-        -------
-        Te_edge : array_like
-            The edge temperature (averaged over the edge region) on the requested
-            timebase.
-        ne_edge : array_like
-            The edge density (averaged over the edge region) on the requested timebase.
-
-        Original Authors
-        ----------------
-        Andrew Maris (maris@mit.edu)
-
-
-        """
-        # Base of rho to interpolate onto
-        rhobase = np.arange(0, 1, 0.001)
-
-        # Linear interpolate on time and rho
-        Te_interpolator = sp.interpolate.LinearNDInterpolator(
-            (p_Te.X[:, 0], p_Te.X[:, 1]), p_Te.y
-        )
-        ne_interpolator = sp.interpolate.LinearNDInterpolator(
-            (p_ne.X[:, 0], p_ne.X[:, 1]), p_ne.y
-        )
-
-        # Create mesh to compute interpolation over
-        timebase_mesh, rhobase_mesh = np.meshgrid(times, rhobase)
-        # Compute interpolated values
-        Te_interp = Te_interpolator(timebase_mesh, rhobase_mesh)
-        ne_interp = ne_interpolator(timebase_mesh, rhobase_mesh)
-
-        plotting = False
-        if plotting:
-            import matplotlib.pyplot as plt
-
-            plt.ion()
-            plt.pcolormesh(timebase_mesh, rhobase_mesh, Te_interp, shading="auto")
-            plt.plot(p_Te.X[:, 0], p_Te.X[:, 1], "ok", label="input point")
-            plt.legend()
-            plt.colorbar()
-            plt.show(block=True)
-
-        # Compute Te_edge
-        # Make mask for rho in edge region
-        rhobase_mesh_mask = (rhobase_mesh >= edge_rho_min) & (
-            rhobase_mesh <= edge_rho_max
-        )
-
-        # Assert that rho values are indeed in desired range
-        assert np.all(rhobase_mesh[rhobase_mesh_mask] >= edge_rho_min)
-        assert np.all(rhobase_mesh[rhobase_mesh_mask] <= edge_rho_max)
-
-        # Use mask to get only edge values
-        Te_interp_edge = np.where(rhobase_mesh_mask, Te_interp, np.nan)
-        ne_interp_edge = np.where(rhobase_mesh_mask, ne_interp, np.nan)
-
-        # Compute edge quantities
-        # Catch warning about taking nanmean of an empty array. This is ok because
-        # we want it to return nan for empty arrays
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=RuntimeWarning)
-            Te_edge = np.nanmean(Te_interp_edge, axis=0)
-            ne_edge = np.nanmean(ne_interp_edge, axis=0)
-        assert len(Te_edge) == len(times)
-        assert len(ne_edge) == len(times)
-
-        if plotting:
-            plt.plot(times, Te_edge, label="Te_edge")
-            plt.plot(times, ne_edge, label="ne_edge")
-            plt.legend()
-            plt.show(block=True)
-
-        output = {"te_edge": Te_edge, "ne_edge": ne_edge}
-        return output
-
-    @staticmethod
-    @physics_method(
-        tags=["experimental"],
-        columns=["te_edge", "ne_edge"],
-        tokamak=Tokamak.CMOD,
-    )
-    def _get_edge_parameters(params: PhysicsMethodParams):
-        nan_output = {
-            "te_edge": [np.nan],
-            "ne_edge": [np.nan],
-        }
-        try:
-            # sys.path.append("/home/sciortino/usr/python3modules/eqtools3")
-            sys.path.append("/home/sciortino/usr/python3modules/profiletools3")
-            sys.path.append("/home/sciortino/usr/python3modules/gptools3")
-            # import eqtools
-            import profiletools
-        except Exception as e:
-            logging.warning("Could not import profiletools or eqtools")
-            logging.debug(traceback.format_exc())
-            pass
-
-        # Ignore shots on the blacklist
-        if CmodPhysicsMethods.is_on_blacklist(params.shot_id):
-            return nan_output
-        # Range of rho to interpolate over
-        rhobase = np.arange(0, 1, 0.001)
-        # Get mina and max time from TS tree
-        node_path = ".yag_new.results.profiles"
-        try:
-            (ts_time,) = params.mds_conn.get_dims(
-                node_path + ":te_rz", tree_name="electrons"
-            )
-        except:
-            return nan_output
-
-        t_min = np.max([0.1, np.min(ts_time)])
-        t_max = np.max(ts_time)
-
-        # Get core and edge Thomson profiles over rho := sqrtpsinorm
-        p_Te = profiletools.Te(
-            params.shot_id,
-            include=["CTS", "ETS"],
-            abscissa="sqrtpsinorm",
-            t_min=t_min,
-            t_max=t_max,
-            remove_zeros=True,
-        )
-        p_ne = profiletools.ne(
-            params.shot_id,
-            include=["CTS", "ETS"],
-            abscissa="sqrtpsinorm",
-            t_min=t_min,
-            t_max=t_max,
-            remove_zeros=True,
-        )
-
-        # try:
-        #    equal_R = p_ne.X[:,1] == p_Te.X[:,1]
-        #    assert np.sum(equal_R) == len(p_ne.X[:,1])
-        # except:
-        #    raise ValueError('Edge Thomson rhobase differs between ne and Te')
-        #    return None, None
-
-        # consider only flux surface on which points were measured, regardless of
-        # LFS or HFS
-        p_Te.X = np.abs(p_Te.X)
-        p_ne.X = np.abs(p_ne.X)
-
-        # set some minimum uncertainties. Recall that units in objects are 1e20m^{-3}
-        # and keV
-        p_ne.y[p_ne.y <= 0.0] = 0.01  # 10^18 m^-3
-        p_Te.y[p_Te.y <= 0.01] = 0.01  # 10 eV
-        p_ne.err_y[p_ne.err_y <= 0.01] = 0.01  # 10^18 m^-3
-        p_Te.err_y[p_Te.err_y <= 0.02] = 0.02  # 20 eV
-
-        # points in the pedestal that have x uncertainties larger than 0.1 don't help at all
-        # do this filtering here because filtering of err_X only works before time-averaging
-        p_ne.remove_points(np.logical_and(p_ne.X[:, 1] >= 0.85, p_ne.err_X[:, 1] > 0.1))
-        p_Te.remove_points(np.logical_and(p_Te.X[:, 1] >= 0.85, p_Te.err_X[:, 1] > 0.1))
-
-        # cleanup of low Te values
-        # TS Te should be >15 eV inside near SOL
-        p_Te.remove_points(np.logical_and(p_Te.X[:, 0] < 1.03, p_Te.y < 0.015))
-
-        output = CmodPhysicsMethods.get_edge_parameters(params.times, p_Te, p_ne)
-        return output
-
-    @staticmethod
-    def get_H98():
-        pass
-
-    # TODO: Finish
-    @staticmethod
-    @physics_method(
-        tags=["experimental"],
-        columns=["h98", "wmhd", "btor", "dwmhd_dt", "p_input"],
-        tokamak=Tokamak.CMOD,
-    )
-    def _get_H98(params: PhysicsMethodParams):
-        """Prepare to compute H98 by getting tau_E
-
-        Scaling from eq. 20, ITER Physics Basis Chapter 2
-        https://iopscience.iop.org/article/10.1088/0029-5515/39/12/302/pdf
-        (in s, MA, T, MW, 10^19 m^−3, AMU, m)
-        Original Authors
-        ----------------
-        Andrew Maris (maris@mit.edu)
-
-        """
-
-        # Get parameters for calculating confinement time
-        powers_df = CmodPhysicsMethods._get_power(params=params)
-        efit_df = CmodEfitMethods._get_EFIT_parameters(params=params)
-        density_df = CmodPhysicsMethods._get_densities(params=params)
-        ip_df = CmodPhysicsMethods._get_ip_parameters(params=params)
-
-        # Get BT
-
-        btor, t_mag = params.mds_conn.get_data_with_dims(
-            r"\btor", tree_name="magnetics"
-        )  # tmag: [s]
-        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
-        # on by t=-1. So pick the time before that to calculate baseline
-        baseline_indices = np.where(t_mag <= -1.8)
-        btor = btor - np.mean(btor[baseline_indices])
-        btor = np.abs(interp1(t_mag, btor, params.times))
-
-        ip = np.abs(ip_df.ip) / 1.0e6  # [A] -> [MA]
-        n_e = density_df.n_e / 1.0e19  # [m^-3] -> [10^19 m^-3]
-        p_input = powers_df.p_input / 1.0e6  # [W] -> [MW]
-        dwmhd_dt = efit_df.dwmhd_dt / 1.0e6  # [W] -> [MW]
-        wmhd = efit_df.wmhd / 1.0e6  # [J] -> [MJ]
-        R0 = efit_df.rmagx / 100  # [cm] -> [m]
-        # Estimate confinement time
-        tau = wmhd / (p_input - dwmhd_dt)
-
-        # Compute 1998 tau_E scaling, taking A (atomic mass) = 2
-        tau_98 = (
-            0.0562
-            * (n_e**0.41)
-            * (2**0.19)
-            * (ip**0.93)
-            * (R0**1.39)
-            * (efit_df.a_minor**0.58)
-            * (efit_df.kappa**0.78)
-            * (btor**0.15)
-            * (p_input**-0.69)
-        )
-        H98 = tau / tau_98
-        output = {
-            "h98": H98,
-            "wmhd": wmhd,
-            "btor": btor,
-            "dwmhd_dt": dwmhd_dt,
-            "p_input": p_input,
-        }
-        return output
-
-    @staticmethod
     def is_on_blacklist(shot_id: int) -> bool:
         """TODO why will these shots cause `_get_peaking_factors`,
         `_get_peaking_factors_no_tci`, and `_get_edge_parameters` to fail?
@@ -1445,258 +1146,3 @@ class CmodPhysicsMethods:
         ):
             return True
         return False
-
-
-# helper class holding functions for thomson density measures
-class ThomsonDensityMeasure:
-
-    # The following methods are translated from IDL code.
-    @staticmethod
-    def compare_ts_tci(params: PhysicsMethodParams, nlnum=4):
-        """
-        Comparison between chord integrated Thomson electron density and TCI results.
-        """
-        core_mult = 1.0
-        edge_mult = 1.0
-        nl_ts1 = [1e32]
-        nl_ts2 = [1e32]
-        nl_tci1 = [1e32]
-        nl_tci2 = [1e32]
-        ts_time1 = [1e32]
-        ts_time2 = [1e32]
-        (tci_time,) = params.mds_conn.get_dims(
-            ".YAG_NEW.RESULTS.PROFILES:NE_RZ", tree_name="electrons"
-        )
-        tci, tci_t = params.mds_conn.get_data_with_dims(
-            f".TCI.RESULTS:NL_{nlnum:02d}", tree_name="electrons"
-        )
-        nlts, nlts_t = ThomsonDensityMeasure.integrate_ts_tci(nlnum)
-        t0 = np.amin(nlts_t)
-        t1 = np.amax(nlts_t)
-        nyag1, nyag2, indices1, indices2 = ThomsonDensityMeasure.parse_yags(params)
-        if nyag1 > 0:
-            indices1 += 1
-            ts_time1 = tci_time[indices1]
-            valid_indices = np.where(ts_time1 >= t0 & ts_time1 <= t1)
-            if valid_indices.size > 0:
-                nl_tci1 = interp1(tci_t, tci, ts_time1[valid_indices])
-                nl_ts1 = interp1(nlts_t, nlts, ts_time1[valid_indices])
-                time1 = ts_time1[valid_indices]
-        else:
-            time1 = -1
-        if nyag2 > 0:
-            indices2 += 1
-            ts_time2 = tci_time[indices2]
-            valid_indices = np.where(ts_time2 >= t0 & ts_time2 <= t1)
-            if valid_indices.size > 0:
-                nl_tci1 = interp1(tci_t, tci, ts_time2[valid_indices])
-                nl_ts1 = interp1(nlts_t, nlts, ts_time2[valid_indices])
-                time2 = ts_time2[valid_indices]
-        else:
-            time2 = -1
-        return nl_ts1, nl_ts2, nl_tci1, nl_tci2, time1, time2
-
-    @staticmethod
-    def parse_yags(params: PhysicsMethodParams):
-        nyag1 = params.mds_conn.get_data(r"\knobs:pulses_q", tree_name="electrons")
-        nyag2 = params.mds_conn.get_data(r"\knobs:pulses_q_2", tree_name="electrons")
-        indices1 = -1
-        indices2 = -1
-        dark = params.mds_conn.get_data(r"\n_dark_prior", tree_name="electrons")
-        ntotal = params.mds_conn.get_data(r"\n_total", tree_name="electrons")
-        nt = ntotal - dark
-        if nyag1 == 0:
-            if nyag2 != 0:
-                indices2 = np.arange(nyag2)
-        else:
-            if nyag2 == 0:
-                indices1 = np.arange(nyag1)
-            else:
-                if nyag1 == nyag2:
-                    indices1 = 2 * np.arange(nyag1)
-                    indices2 = indices1 + 1
-                else:
-                    if nyag1 == nyag2:
-                        indices1 = 2 * np.arange(nyag1)
-                        indices2 = indices1 + 1
-                    else:
-                        indices1 = 2 * np.arange(nyag1) + (nyag1 > nyag2)
-                        indices2 = np.concatenate(
-                            (
-                                2 * np.arange(nyag2) + (nyag1 < nyag2),
-                                2 * nyag2 + np.arange(nyag1 - nyag2 - 1),
-                            )
-                        )
-        v_ind1 = np.where(indices1 < nt)
-        if nyag1 > 0 and v_ind1.size > 0:
-            indices1 = indices1[v_ind1]
-        else:
-            indices1 = -1
-        v_ind2 = np.where(indices2 < nt)
-        if nyag2 > 0 and v_ind2.size > 0:
-            indices2 = indices2[v_ind2]
-        else:
-            indices2 = -1
-        return nyag1, nyag2, indices1, indices2
-
-    @staticmethod
-    def integrate_ts_tci(params: PhysicsMethodParams, nlnum):
-        """
-        Integrate Thomson electron density measurement to the line integrated electron
-        density for comparison with two color interferometer (TCI) measurement results
-        """
-        core_mult = 1.0
-        edge_mult = 1.0
-        nlts = 1e32
-        nlts_t = 1e32
-        t, z, n_e, n_e_sig = ThomsonDensityMeasure.map_ts2tci(params, nlnum)
-        if z[0, 0] == 1e32:
-            return None, None  # TODO: Log and maybe return nan arrs
-        nts = len(t)
-        nlts_t = t
-        nlts = np.full(t.shape, np.nan)
-        for i in range(len(nts)):
-            ind = np.where(
-                np.abs(z[i, :])
-                < 0.5 & n_e[i, :]
-                > 0 & n_e[i, :]
-                < 1e21 & n_e[i, :] / n_e_sig[i, :]
-                > 2
-            )
-            if len(ind) < 3:
-                nlts[i] = 0
-            else:
-                x = z[i, ind]
-                y = n_e[i, ind]
-                values_uniq, ind_uniq = np.unique(x, return_index=True)
-                y = y[ind_uniq]
-                nlts[i] = np.trapz(y, x)
-        return nlts, nlts_t
-
-    @staticmethod
-    def map_ts2tci(params: PhysicsMethodParams, nlnum):
-        core_mult = 1.0
-        edge_mult = 1.0
-        t = [1e32]
-        z = [1e32]
-        n_e = [1e32]
-        n_e_sig = [1e32]
-        flag = 1
-        valid_indices, efit_times = CmodEfitMethods.efit_check()
-        ip = params.mds_conn.get_data(r"\ip", "cmod")
-        if np.mean(ip) > 0:
-            flag = 0
-        efit_times = params.mds_conn.get_data(
-            r"\efit_aeqdsk:time", tree_name="_efit_tree", astype="float64"
-        )
-        t1 = np.amin(efit_times)
-        t2 = np.amax(efit_times)
-        psia, psia_t = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:SIBDRY", tree_name="_efit_tree"
-        )
-        psi_0 = params.mds_conn.get(r"\efit_aeqdsk:SIMAGX", tree_name="_efit_tree")
-        nets_core, nets_core_t = params.mds_conn.get_data_with_dims(
-            ".YAG_NEW.RESULTS.PROFILES:NE_RZ", tree_name="electrons"
-        )
-        nets_core_err = params.mds_conn.get_data(
-            ".YAG_NEW.RESULTS.PROFILES:NE_ERR", tree_name="electrons"
-        )
-        zts_core = params.mds_conn.get_data(
-            ".YAG_NEW.RESULTS.PROFILES:Z_SORTED", tree_name="electrons"
-        )
-        mts_core = len(zts_core)
-        zts_edge = params.mds_conn.get_data(r"\fiber_z")
-        mts_edge = len(zts_edge)
-        try:
-            nets_edge = params.mds_conn.get_data(r"\ts_ne")
-            nets_edge_err = params.mds_conn.get_data(r"\ts_ne_err")
-        except mdsExceptions.mdsException as err:
-            nets_edge = np.zeros((len(nets_core[:, 1]), mts_edge))
-            nets_edge_err = nets_edge + 1e20
-        mts = mts_core + mts_edge
-        rts = params.mds_conn.get(".YAG.RESULTS.PARAM:R") + np.zeros((1, mts))
-        rtci = params.mds_conn.get_data(".tci.results:rad")
-        nts = len(nets_core_t)
-        zts = np.zeros((1, mts))
-        zts[:, :mts_core] = zts_core
-        zts[:, mts_core:] = zts_edge
-        nets = np.zeros((nts, mts))
-        nets_err = np.zeros((nts, mts))
-        nets[:, :mts_core] = (nets_core * core_mult).T
-        nets_err[:, :mts_core] = (nets_core_err * core_mult).T
-        nets[:, mts_core:] = (nets_edge * edge_mult).T
-        nets_err[:, mts_core:] = (nets_edge_err * edge_mult).T
-        valid_indices = np.where((nets_core_t >= t1) & (nets_core_t <= t2))
-        if len(valid_indices) == 0:
-            return t, z, n_e, n_e_sig
-        nets_core_t = nets_core_t[valid_indices]
-        nets = nets[valid_indices]
-        nets_err = nets_err[valid_indices]
-        psits = ThomsonDensityMeasure.efit_rz2psi(rts, zts, nets_core_t)
-        mtci = 101
-        ztci = -0.4 + 0.8 * np.arange(0, mtci) / (mtci - 1)
-        rtci = rtci[nlnum] + np.zeros((1, mtci))
-        psitci = ThomsonDensityMeasure.efit_rz2psi(rtci, ztci, nets_core_t)
-        psia = interp1(psia_t, psia, nets_core_t)
-        psi_0 = interp1(psia_t, psi_0, nets_core_t)
-        nts = len(nets_core_t)
-        for i in range(nts):
-            psits[i, :] = (psits[i, :] - psi_0[i]) / (psia[i] - psi_0[i])
-            psitci[i, :] = (psitci[i, :] - psi_0[i]) / (psia[i] - psi_0[i])
-        zmapped = np.zeros((nts, 2 * mts)) + 1e32
-        nemapped = zmapped.copy()
-        nemapped_err = zmapped.copy()
-        for i in range(nts):
-            index = np.argmin(psitci[i, :]) if flag else np.argmax(psitci[i, :])
-            psi_val = psitci[i, index]
-            for j in range(len(mts)):
-                if (flag and psits[i, j] >= psi_val) or (
-                    not flag and psits[i, j] <= psi_val
-                ):
-                    a1 = interp1(psitci[i, :index], ztci[:index], psits[i, j])
-                    a2 = interp1(psitci[i, index:], ztci[index:], psits[i, j])
-                    zmapped[i, np.arange(j, j + mts + 1)] = np.arange(a1, a2)
-                    nemapped[i, np.arange(j, j + mts + 1)] = nets[i, j]
-                    nemapped_err[i, np.arange(j, j + mts + 1)] = nets_err[i, j]
-            sorted_indices = np.argsort(zmapped[i, :])
-            zmapped[i, :] = zmapped[i, sorted_indices]
-            nemapped[i, :] = nemapped[i, sorted_indices]
-            nemapped_err[i, :] = nemapped_err[i, sorted_indices]
-        z = zmapped
-        n_e = nemapped
-        n_e_sig = nemapped_err
-        t = nets_core_t
-        return t, z, n_e, n_e_sig
-
-    # TODO: Move to utils
-    @staticmethod
-    def efit_rz2psi(params: PhysicsMethodParams, r, z, t, tree="analysis"):
-        r = r.flatten()
-        z = z.flatten()
-        psi = np.full((len(r), len(t)), np.nan)
-        z = safe_cast(z, "float32")  # TODO: Ask if this change is necessary
-        psirz, rgrid, zgrid, times = params.mds_conn.get_data_with_dims(
-            r"\efit_geqdsk:psirz", tree_name=tree, dim_nums=[0, 1, 2]
-        )
-        rgrid, zgrid = np.meshgrid(rgrid, zgrid)  # , indexing='ij')
-
-        points = np.array(
-            [rgrid.flatten(), zgrid.flatten()]
-        ).T  # This transposes the array to shape (n, 2)
-        for i, time in enumerate(t):
-            # Find the index of the closest time
-            time_idx = np.argmin(np.abs(times - time))
-            # Extract the corresponding Psirz slice and transpose it
-            Psirz = np.transpose(psirz[time_idx, :, :])
-            # Perform cubic interpolation on the Psirz slice
-            values = Psirz.flatten()
-            try:
-                psi[:, i] = sp.interpolate.griddata(
-                    points, values, (r, z), method="cubic"
-                )
-            except:
-                params.logger.warning(
-                    f"Interpolation failed for efit_rz2psi time {time}"
-                )
-
-        return psi
