@@ -1176,7 +1176,8 @@ class D3DPhysicsMethods:
             fan_chans = np.arange(0, 24)
         elif fan == "lower":
             fan_chans = np.arange(24, 48)
-        elif fan == "custom":
+        # Default is fan="custom"
+        else:
             # 1st choice (heavily cover divertor and core)
             fan_chans = np.array([3, 4, 5, 6, 7, 8, 9, 12, 14, 15, 16, 22]) + 24
 
