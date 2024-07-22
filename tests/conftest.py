@@ -28,12 +28,22 @@ def verbose_output(pytestconfig):
 
 
 def pytest_generate_tests(metafunc):
+    """Parameterize `data_column` and mark expected failure columns. Marked columns
+    will xfail on assert False and xpass on assert True."""
     tokamak = resolve_tokamak_from_environment()
 
     # parameterized across tests
     if "data_column" in metafunc.fixturenames:
         test_columns = get_tokamak_test_columns(tokamak)
-        metafunc.parametrize("data_column", test_columns)
+        xfail_columns = get_tokamak_test_expected_failure_columns(tokamak)
+        data_columns = []
+        for test_col in test_columns:
+            if test_col in xfail_columns:
+                data_columns.append(pytest.param(test_col, marks=pytest.mark.xfail))
+            else:
+                data_columns.append(test_col)
+        metafunc.parametrize("data_column", data_columns)
+
 
 
 @pytest.fixture(scope="session")
