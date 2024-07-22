@@ -20,21 +20,11 @@ def pytest_addoption(parser):
     parser.addoption(
         "--verbose_output", action="store_true", help="More testing information."
     )
-    parser.addoption(
-        "--fail_quick",
-        action="store_true",
-        help="Finish test and report statistics instead of failing fast.",
-    )
 
 
 @pytest.fixture(scope="session")
 def verbose_output(pytestconfig):
     return pytestconfig.getoption("verbose_output")
-
-
-@pytest.fixture(scope="session")
-def fail_quick(pytestconfig):
-    return pytestconfig.getoption("fail_quick")
 
 
 def pytest_generate_tests(metafunc):
