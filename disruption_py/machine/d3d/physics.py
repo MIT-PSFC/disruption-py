@@ -871,6 +871,7 @@ class D3DPhysicsMethods:
         }
         return output
 
+    @staticmethod
     # TODO: Finish implementing just in case
     def _efit_map_rz_to_rho_original(params: PhysicsMethodParams, ts_dict, efit_dict):
         slices = np.zeros(ts_dict["time"].shape)

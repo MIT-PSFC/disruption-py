@@ -636,6 +636,8 @@ class CmodPhysicsMethods:
 
         N=1 toroidal assymmetry in the magnetic fields
         """
+        n_equal_1_normalized, n_equal_1_phase = [np.nan]
+        n_equal_1_phase = [np.nan]
         # These sensors are placed toroidally around the machine. Letters refer to
         # the 2 ports the sensors were placed between.
         bp13_names = ["BP13_BC", "BP13_DE", "BP13_GH", "BP13_JK"]
@@ -681,8 +683,8 @@ class CmodPhysicsMethods:
                     )
                     return {
                         "n_equal_1_mode": [np.nan],
-                        "n_equal_1_normalized": [np.nan],
-                        "n_equal_1_phase": [np.nan],
+                        "n_equal_1_normalized": n_equal_1_normalized,
+                        "n_equal_1_phase": n_equal_1_phase,
                         "bt": [np.nan],
                     }
                 baseline = np.mean(signal[baseline_indices])
