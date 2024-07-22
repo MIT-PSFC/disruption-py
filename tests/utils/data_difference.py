@@ -27,6 +27,9 @@ class DataDifference:
     sql_column_data: pd.Series
     expect_failure: bool
 
+    mds_time: pd.Series
+    sql_time: pd.Series
+
     def __post_init__(self):
         self.anomalies, self.relative_difference = self.compute_numeric_anomalies()
 
@@ -57,21 +60,34 @@ class DataDifference:
 
     @property
     def column_mismatch_string(self) -> str:
-        return f"Shot {self.shot_id} column {self.data_column} with arrays:\n{self.difference_df.to_string()}"
+        # Missing data handled here because difference_df expects data to exist
+        s = f"Shot {self.shot_id} column {self.data_column}"
+        if self.missing_sql_data or self.missing_mdsplus_data:
+            mds_str = (
+                "MDS missing data" if self.missing_mdsplus_data else "MDS has data"
+            )
+            sql_str = "SQL missing data" if self.missing_sql_data else "SQL has data"
+            return f"{s}: {mds_str} and {sql_str}"
+        return s + f" with arrays:\n{self.difference_df.to_string()}"
 
     @property
     def difference_df(self) -> pd.DataFrame:
-        indexes = (
+        indices = (
             np.arange(self.timebase_length)
             if config().testing.VERBOSE_OUTPUT
             else self.anomalies.flatten()
         )
-        anomaly = self.anomalies[indexes]
+        anomaly = self.anomalies[indices]
+        mds_data = self.mdsplus_column_data.iloc[indices]
+        sql_data = self.sql_column_data.iloc[indices]
         return pd.DataFrame(
             {
-                "MDSplus Data": self.mdsplus_column_data.iloc[indexes],
-                "Reference Data (SQL)": self.sql_column_data.iloc[indexes],
-                "Relative difference": self.relative_difference[indexes],
+                "Time": self.mds_time[indices],
+                "MDSplus Data": mds_data,
+                "Reference Data (SQL)": sql_data,
+                "MDS/SQL": mds_data / sql_data,
+                "Absolute difference": abs(mds_data - sql_data),
+                "Relative difference": self.relative_difference[indices],
                 "Anomaly": anomaly,
             }
         )
