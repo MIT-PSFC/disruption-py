@@ -1146,3 +1146,235 @@ class CmodPhysicsMethods:
         ):
             return True
         return False
+
+class CmodTearingMethods:
+
+    @staticmethod
+    @physics_method(
+        columns=["n_equal_1_std"],
+        used_trees=["magnetics"],
+        tokamak=Tokamak.CMOD,
+    )
+    def _get_n_equal_1_std(params: PhysicsMethodParams):
+        """ Calculate n=1 STD from magnetics data.
+
+        This uses the set of Mirnov coils that are not integrated
+        (Those that end in k)
+        These are distributed in a grid on the outboard side of a limiter.
+
+        At the moment just testing with GH array,
+        but there is one on AB as well.
+        """
+
+        # Get a single bit of Mirnov coil data
+        # Mirnov coils are on a very fast timebase
+        # Using the GH signals since that's what Bob did
+        # Also have option to use 
+        mirnov_names = ["BP02_GHK"]
+
+        # path = r".rf_lim_coils."
+        # mirnov_node_names = params.mds_conn.get_data(
+        #     path + "nodename", tree_name = "magnetics"
+        # )
+        # phi = params.mds_conn.get_data(
+        #     path + "phi_gh", tree_name = "magnetics"
+        # )
+        # mirnov_pickup_coeffs = params.mds_conn.get_data(
+        #     path + "pickup_coeff", tree_name = "magnetics"
+        # )
+        # # Only use the coils in mirnov_names
+        # _, mirnov_indices, _ = np.intersect1d(
+        #     mirnov_node_names, mirnov_names, return_indices=True
+        # )
+        # mirnov_phi = phi + 360
+        # mirnov_pickup_coeffs = mirnov_pickup_coeffs[mirnov_indices]
+
+        # signal = params.mds_conn.get_data(
+        #     path + mirnov_names[0], tree_name = "magnetics"
+        # )
+
+        path = r"\magnetics::top.active_mhd.signals"
+        mirnov_signal, mirnov_times = params.mds_conn.get_data_with_dims(
+            path=f"{path}:{mirnov_names[0]}", tree_name="magnetics"
+        )
+
+        # Implementation of finding the standard deviation is based on
+        # the matlap script get_Mirnov_std.m
+        # For each time in the target timebase,
+        # Sample the previous 0.001 seconds of the fast mirnov signal
+        # and obtain the standard deviation
+        # Mirnov is ~5 MHz, so 0.001 seconds has plenty of samples
+
+        target_times = params.shot_props.times
+        time_window = 0.001
+        n_equal_1_std = np.zeros(len(target_times))
+
+        for i, time in enumerate(target_times):
+            window_indices = np.where(
+                (mirnov_times > time - time_window) & (mirnov_times < time)
+            )
+            # Compute standard deviation ignoring nans
+            n_equal_1_std[i] = np.nanstd(mirnov_signal[window_indices])
+
+        return pd.DataFrame(
+            {
+                "n_equal_1_std": n_equal_1_std,
+            }
+        )
+
+    @staticmethod
+    @physics_method(
+        columns=["mirnov_freqs", "mirnov_bins"],
+        used_trees=["magnetics"],
+        tokamak=Tokamak.CMOD,
+    )
+    def _get_mirnov_freqs(params: PhysicsMethodParams):
+        """Obtain the FFT of the Mirnov coil signals."""
+
+        mirnov_names = ["BP02_GHK"]
+        path = r"\magnetics::top.active_mhd.signals"
+        mirnov_signal, mirnov_times = params.mds_conn.get_data_with_dims(
+            path=f"{path}:{mirnov_names[0]}", tree_name="magnetics"
+        )
+        
+        # Assuming mirnov sample frequency of 5Mhz, and the target timebase is 1 kHz, 
+        # we should be able to get 5e6 / 1e3 = 5000 samples per target time
+        # This gives us really large frequency bins though,
+        # and we're mostly interested in the low frequency range
+        # So we'll use a larger number of samples per target time
+        mirnov_sample_freq = 5e6 # 5 MHz
+        nperseg = 2**15 # 32768 samples per segment
+
+        f, t, Sxx = sp.signal.spectrogram(mirnov_signal, fs=mirnov_sample_freq, nperseg=nperseg)
+        # spectrogram thinks time starts at 0
+        # so we need to shift the spectrogram timebase to match the mirnov timebase
+        t += (mirnov_times[0])
+
+        # Interpolate the spectrogram onto the target timebase
+        # Sxx_interp still has time for columns and frequency for rows
+        target_times = params.shot_props.times
+        Sxx_interp = np.zeros((len(f), len(target_times)))
+        for i in range(len(f)):
+            Sxx_interp[i] = interp1(t, Sxx[i], target_times)
+
+        # Convert the interpolated spectrogram into
+        # a dataframe with two columns
+        # containing series of the spectrogram data and the frequencies
+        
+        # TODO: While each row of the dataframe has new data (as intended),
+        # the frequencies for each row will be the same
+        # This means there's a lot of data redundancy
+        # However, by doing this, we always ensure the frequencies
+        # are attached to the spectrogram data in some way
+        # Also, memory is cheap so it shouldn't be *that* big of a deal
+        # Investigate better ways to do this at some point
+
+        spectrogram_data = pd.DataFrame(columns=["mirnov_spectrogram", "mirnov_spectrogram_frequencies"])
+        for i in range(len(target_times)):
+            timeslice_data = np.array(Sxx_interp[:, i])
+            timeslice_df = pd.DataFrame([[timeslice_data, f]], columns=spectrogram_data.columns)
+            spectrogram_data = pd.concat([spectrogram_data, timeslice_df], ignore_index=True)
+
+        return spectrogram_data
+
+        # TODO: get more accurate description of soft x-ray data
+    
+    @staticmethod
+    @physics_method(
+        columns=[f"sxr_array_1_chord_{chord}" for chord in range(40)], used_trees=["xtomo"], tokamak=Tokamak.CMOD
+    )
+    def _get_sxr_chord_data(params: PhysicsMethodParams):
+        """ """
+        sxr_dataframe = pd.DataFrame()
+        for chord in range(0,40):
+            try:
+                path = f"\\top.brightnesses.array_1:chord_{chord}"
+                sxr, t_sxr = params.mds_conn.get_data_with_dims(
+                    r"{}".format(path),
+                    tree_name="xtomo",
+                    astype="float64",
+                )
+                sxr = interp1(t_sxr, sxr, params.shot_props.times)
+            except:
+                sxr = np.full(len(params.shot_props.times), np.nan)
+
+            sxr_dataframe[f"sxr_array_1_chord_{chord}"] = sxr
+        return sxr_dataframe
+
+    @staticmethod
+    @physics_method(
+        columns=["sxr_emiss", "sxr_array2_bright", "sxr_array4_bright"], used_trees=["xtomo"], tokamak=Tokamak.CMOD
+    )
+    def _get_sxr_profile_data(params: PhysicsMethodParams):
+        """ """
+        try:
+            sxr_emiss, t_sxr = params.mds_conn.get_data_with_dims(
+                r"\top.results.core:emiss",
+                tree_name="xtomo",
+                astype="float64",
+            )
+            sxr_emiss = interp1(t_sxr, sxr_emiss, params.shot_props.times)
+        except mdsExceptions.TreeFOPENR as e:
+            params.logger.warning(
+                f"[Shot {params.shot_props.shot_id}]: Failed to get SXR EMISS data returning NaNs"
+            )
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]: {traceback.format_exc()}"
+            )
+            sxr_emiss = np.full(len(params.shot_props.times), np.nan)
+
+        try:
+            sxr_array2_bright, t_sxr = params.mds_conn.get_data_with_dims(
+                r"\top.results.array_2:bright",
+                tree_name="xtomo",
+                astype="float64",
+            )
+            sxr_array2_bright = interp1(t_sxr, sxr_array2_bright, params.shot_props.times)
+        except mdsExceptions.TreeFOPENR as e:
+            params.logger.warning(
+                f"[Shot {params.shot_props.shot_id}]: Failed to get SXR ARRAY 2 BRIGHT data returning NaNs"
+            )
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]: {traceback.format_exc()}"
+            )
+            sxr_array2_bright = np.full(len(params.shot_props.times), np.nan)
+
+        try:
+            sxr_array4_bright, t_sxr = params.mds_conn.get_data_with_dims(
+                r"\top.results.array_4:bright",
+                tree_name="xtomo",
+                astype="float64",
+            )
+            sxr_array4_bright = interp1(t_sxr, sxr_array4_bright, params.shot_props.times)
+        except mdsExceptions.TreeFOPENR as e:
+            params.logger.warning(
+                f"[Shot {params.shot_props.shot_id}]: Failed to get SXR ARRAY 4 BRIGHT data returning NaNs"
+            )
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]: {traceback.format_exc()}"
+            )
+            sxr_array4_bright = np.full(len(params.shot_props.times), np.nan)
+        return pd.DataFrame({"sxr_emiss": sxr_emiss, "sxr_array2_bright": sxr_array2_bright, "sxr_array4_bright": sxr_array4_bright})  
+
+
+    @staticmethod
+    @physics_method(
+        columns=[f"ece_te_{number}" for number in range(1,10)], used_trees=["electrons"], tokamak=Tokamak.CMOD
+    )
+    def _get_ece_te_data(params: PhysicsMethodParams):
+        ece_dataframe = pd.DataFrame()
+        for number in range(1, 10):
+            try:
+                path = f"\\top.ece.gpc_results.te:te{number}"
+                ece, t_ece = params.mds_conn.get_data_with_dims(
+                    r"{}".format(path),
+                    tree_name="electrons",
+                    astype="float64",
+                )
+                ece = interp1(t_ece, ece, params.shot_props.times)
+            except:
+                ece = np.full(len(params.shot_props.times), np.nan)
+
+            ece_dataframe[f"ece_te_{number}"] = ece
+
+        return ece_dataframe
