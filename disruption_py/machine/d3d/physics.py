@@ -195,7 +195,6 @@ class D3DPhysicsMethods:
             v_loop, t_v_loop = params.mds_conn.get_data_with_dims(
                 f'ptdata("vloopb", {params.shot_id})', tree_name="d3d"
             )
-            # TODO: Why do medfilt?
             v_loop = scipy.signal.medfilt(v_loop, 11)
             v_loop = interp1(t_v_loop, v_loop, params.times, "linear")
         except mdsExceptions.MdsException as e:
@@ -211,7 +210,7 @@ class D3DPhysicsMethods:
             t_ip = t_ip / 1.0e3  # [ms] -> [s]
             # We choose a 20-point width for gsastd. This means a 10ms window for
             #  ip smoothing
-            dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
+            dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)   # -- THIS FAILED!
             # TODO: Why do we need li & chisq?
             li, t_li = params.mds_conn.get_data_with_dims(
                 r"\efit_a_eqdsk:li", tree_name="_efit_tree"

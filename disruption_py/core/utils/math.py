@@ -130,6 +130,11 @@ def smooth(arr: np.ndarray, window_size: int) -> np.ndarray:
     """
     Implements Matlab's smooth function https://www.mathworks.com/help/curvefit/smooth.html.
 
+    NOTE: This function was referenced in 2 functions:
+        1. cmod get_ip_parameters() which is used to calculate dip_smoothed (which doesn't have a corresponding method in MATLAB)
+        2. d3d gsastd() which is used to imitate sa(Y,smoothwidth,ends) but returns an error for even window_size
+        I replaced the reference in gsastd() to a new function called sa() which imitates the function with the same name in MATLAB script
+
     Parameters
     ----------
     arr: np.ndarray
@@ -146,7 +151,7 @@ def smooth(arr: np.ndarray, window_size: int) -> np.ndarray:
     mid = np.convolve(arr, np.ones(window_size, dtype=int), "valid") / window_size
     b_weights = np.arange(1, window_size - 1, 2)
     start = np.cumsum(arr[: window_size - 1][::2] / b_weights)
-    end = (np.cumsum(arr[:-window_size:-1])[::2] / b_weights)[::-1]
+    end = (np.cumsum(arr[:-window_size:-1])[::2] / b_weights)[::-1] 
     return np.concatenate((start, mid, end))
 
 
@@ -333,6 +338,9 @@ def fastsmooth(y, w, smooth_type=1, ends_type=0):
     smooth_type : int, optional
         Determines the type of smoothing to use.
         0 -> no smoothing.
+            -- NOTE: In the original MATLAB function, smooth_type = 0 will still cause the function to smoooth the array once.
+            -- (i.e. it's identical to smooth_type = 1).
+            -- We keep the same behavior in this python implementation.
         1 -> rectangular (sliding-average or boxcar)
         2 -> triangular (2 passes of sliding-average)
         3 -> pseudo-Gaussian (3 passes of sliding-average)
@@ -346,43 +354,59 @@ def fastsmooth(y, w, smooth_type=1, ends_type=0):
     array_like
         The smoothed dataset.
     """
-    smoothed_y = smooth(y, w)
+    # smooth(y, w) corresponds to sa(Y,w,ends) in GSASTD.m
+    # smoothed_y = smooth(y, w)
+    # for i in range(smooth_type - 1):
+    #     smoothed_y = smooth(smoothed_y, w)
+    # return smoothed_y
+    smoothed_y = sa(y, w, ends_type)
     for i in range(smooth_type - 1):
-        smoothed_y = smooth(smoothed_y, w)
-    return smoothed_y
+        smoothed_y = sa(smoothed_y, w, ends_type)
+    return smoothed_y    
 
 
-# def smooth(y, smooth_width, ends_type):
-#    """
-#    Smooth a dataset using a Gaussian window.
-#
-#    Parameters
-#    ----------
-#    y : array_like
-#        The y coordinates of the dataset.
-#    smooth_width : int
-#        The width of the smoothing window.
-#    ends_type : int
-#        Determines how the "ends" of the signal are handled.
-#        0 -> ends are "zeroed"
-#        1 -> the ends are smoothed with progressively smaller smooths the closer to the end.
-#
-#    Returns
-#    -------
-#    array_like
-#        The smoothed dataset.
-#    """
-# NOTE: numpy behaviour is different than matlab and will round X.5 to nearest even value instead of value farther away from 0
-#    w = np.round(smooth_width)
-#    sum_points = np.sum(y[:w])
-#    s = np.zeros(y.shape)
-#    half_w = int(np.round(w/2.0))
-#    l = len(y)
-#    for i in range(l-w):
-#        s[i+half_w-1] = sum_points
-#        sum_points = sum_points - y[i]
-#    s[i+half_w] = np.sum(y[l-w:l])
-#    return s/w
+def sa(y, smooth_width, ends_type=0):
+    """
+    Compute the centered moving average of y
+
+    Parameters
+    ----------
+    y : array_like
+        The y coordinates of the dataset.
+    smooth_width : int
+        The width of the smoothing window.
+    ends_type : int
+        Determines how the "ends" of the signal are handled.
+        0 -> ends are "zeroed"
+        1 -> the ends are smoothed with progressively smaller smooths the closer to the end.
+        NOTE: This variable isn't used in the function
+
+    Returns
+    -------
+    array_like
+        The smoothed dataset.
+    """
+    # NOTE: numpy behaviour is different than matlab and will round X.5 to nearest even value instead of value farther away from 0
+
+    def matlab_round_int(x):
+        # Custom rounding function. Round x.5 to the nearest integer with larger magnitude
+        sign = np.sign(x)
+        x = abs(x)
+        if x % 1 == 0.5:
+            return int(sign * np.ceil(x))
+        return int(sign * round(x))
+
+    w = matlab_round_int(smooth_width)
+    sum_points = np.sum(y[:w])
+    s = np.zeros(y.shape)
+    half_w = matlab_round_int(w/2.0)
+    l = len(y)
+    for i in range(l-w):
+        s[i+half_w-1] = sum_points
+        sum_points = sum_points - y[i]
+        sum_points = sum_points + y[i+w]
+    s[i+half_w] = np.sum(y[l-w:l])
+    return s/w
 
 
 # TODO: Cover documentation with Cristina
