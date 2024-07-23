@@ -11,29 +11,25 @@ Currently, these are the options that can be passed to the `set_times_request` p
 
 - An instance of a subclass of `SetTimesRequest`
 - A string identifier in the `_set_times_request_mappings` dictionary:
-```python
---8<--
-disruption_py/settings/set_times_request.py:set_times_request_dict
---8<--
+
 ```
 - A python list, numpy array, or pandas series (with the timebase as the values) that should be used as the times for the timebase. See [`ListSetTimesRequest`][disruption_py.settings.set_times_request.ListSetTimesRequest] for more details.
 - A dictionary mapping tokamak type strings to the desired `SetTimesRequest` for that tokamak.  E.g. `{'cmod': 'efit'}`.
-	--8<-- "disruption_py/utils/mappings/tokamak.py:allowed_tokamak_types_snippet"
 
 ## Built-in Implemenations { .doc .doc-heading }
 
-::: disruption_py.settings.set_times_request
+<!-- ::: disruption_py.settings.set_times_request
 	options:
 		show_root_heading: false
 		show_root_toc_entry: false
 		show_root_members_full_path: true
 		filters:
 		- "!^SetTimesRequest$"
-		- "!^SetTimesRequestParams$"
+		- "!^SetTimesRequestParams$" -->
 
 ## Custom Implementations { .doc .doc-heading }
 Custom implementations of set times requests must inheiret from the `SetTimesRequest` abstract class, implementing the abstract methods.
-
+<!-- 
 ::: disruption_py.settings.set_times_request
     handler: python
 	options:
@@ -41,4 +37,4 @@ Custom implementations of set times requests must inheiret from the `SetTimesReq
 	  members:
 	  - SetTimesRequest
 	  - SetTimesRequestParams
-
+ -->

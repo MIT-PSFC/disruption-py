@@ -18,7 +18,7 @@ disruption_py/settings/cache_setting.py:cache_setting_dict
 --8<--
 ```
 - A dictionary mapping tokamak type strings to the desired `CacheSetting` for that tokamak.  E.g. `{'cmod': 'sql'}`.
-	--8<-- "disruption_py/utils/mappings/tokamak.py:allowed_tokamak_types_snippet"
+	<!-- --8<-- "disruption_py/utils/mappings/tokamak.py:allowed_tokamak_types_snippet" -->
 
 ## Built-in Implemenations { .doc .doc-heading }
 ::: disruption_py.settings.cache_setting

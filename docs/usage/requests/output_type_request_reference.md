@@ -11,23 +11,15 @@ Currently, these are the options that can be passed as the `output_type_request`
 
 - An instance of a subclass of `OutputTypeRequest`
 - A string identifier in the `_output_type_request_mappings` dictionary:
-```python
---8<--
-disruption_py/settings/output_type_request.py:output_type_request_dict
---8<--
-```
+
 - A file path as a string with its suffix mapped to a `OutputTypeRequest` type in the `_file_suffix_to_output_type_request` dictionary:
-	```python
-	--8<--
-	disruption_py/settings/output_type_request.py:file_suffix_to_output_type_request_dict
-	--8<--
-	```
+
 - A dictionary mapping tokamak type strings to the desired `OutputTypeRequest` for that tokamak.  E.g. `{'cmod': 'efit'}`.
-	--8<-- "disruption_py/utils/mappings/tokamak.py:allowed_tokamak_types_snippet"
+
 - A python list of any other output type request option that can be passed as the `output_type_request` argument to `get_shots_data` (all options listed previously). See [`OutputTypeRequestList`][disruption_py.settings.output_type_request.OutputTypeRequestList] for more details.
 
 ## Built-in Implemenations { .doc .doc-heading }
-::: disruption_py.settings.output_type_request
+<!-- ::: disruption_py.settings.output_type_request
 	options:
 		show_root_heading: false
 		show_root_toc_entry: false
@@ -35,11 +27,11 @@ disruption_py/settings/output_type_request.py:output_type_request_dict
 		filters:
 		- "!^OutputTypeRequest$"
 		- "!^ResultOutputTypeRequestParams$"
-		- "!^FinishOutputTypeRequestParams$"
+		- "!^FinishOutputTypeRequestParams$" -->
 
 ## Custom Implementations { .doc .doc-heading }
 Custom implementations of output type requests must inheiret from the `OutputTypeRequest` abstract class, implementing the abstract methods.
-
+<!-- 
 ::: disruption_py.settings.output_type_request
     handler: python
 	options:
@@ -49,5 +41,5 @@ Custom implementations of output type requests must inheiret from the `OutputTyp
 		members:
 		- OutputTypeRequest
 		- ResultOutputTypeRequestParams
-		- FinishOutputTypeRequestParams
+		- FinishOutputTypeRequestParams -->
 

@@ -36,11 +36,11 @@ examples/database_example.py
 
 ## Database Class Reference { .doc .doc-heading }
 
-::: disruption_py.databases.database
+<!-- ::: disruption_py.databases.database
     handler: python
 	options:
 	  heading_level: 2
 	  show_root_heading: false
 	  show_root_toc_entry: false
-	  filters: ["!^_[^_]"]
+	  filters: ["!^_[^_]"] -->
         

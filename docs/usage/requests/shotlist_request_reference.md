@@ -14,37 +14,34 @@ Currently, these are the options that can be passed as the `shotlist_request` ar
 - A dictionary key as a string from the built-in mappings to data files in the `_get_shotlist_request_mappings` dictionary: 
 	```python
 	--8<--
-	disruption_py/settings/shotlist_request.py:get_shotlist_request_dict
 	--8<--
 	```
 - A file path as a string with its suffix mapped to a `ShotIdsRequest` type in the `_file_suffix_to_shotlist_request` dictionary:
 	```python
 	--8<--
-	disruption_py/settings/shotlist_request.py:file_suffix_to_shotlist_request_dict
 	--8<--
 	```
 - A dictionary mapping tokamak type strings to the desired shot ids request option for that tokamak.  E.g. `{'cmod': 'paper'}`.
-	--8<-- "disruption_py/utils/mappings/tokamak.py:allowed_tokamak_types_snippet"
 - A python list of any other shot id request option that can be passed as the `shotlist_request` argument to `get_shots_data` (all options listed previously). All designated shot numbers will be concatanated and any duplicates will be removed.
 
 ## Built-in Implemenations { .doc .doc-heading }
 
-::: disruption_py.settings.shotlist_request
+<!-- ::: disruption_py.settings.shotlist_request
 	options:
 		show_root_heading: false
 		show_root_toc_entry: false
 		show_root_members_full_path: true
 		filters:
 		- "!^ShotIdsRequestParams$"
-		- "!^ShotIdsRequest$"
+		- "!^ShotIdsRequest$" -->
 
 ## Custom Implementations { .doc .doc-heading }
 Custom implementations of shot ids requests must inheiret from the `ShotIdsRequest` abstract class, implementing the abstract methods.
 
-::: disruption_py.settings.shotlist_request
+<!-- ::: disruption_py.settings.shotlist_request
     handler: python
 	options:
 	  heading_level: 2
 	  members:
 	  - ShotIdsRequest
-	  - ShotIdsRequestParams
+	  - ShotIdsRequestParams -->

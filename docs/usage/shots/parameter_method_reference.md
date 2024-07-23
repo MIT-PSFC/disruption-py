@@ -5,8 +5,6 @@ In DisruptionPy, Parameter methods are methods that produce tabular data in a st
 Built-in parameter methods are defined inside of the `disruption_py.shots.parameter_methods` package. All built in methods are included through the built-in shot data requests files in `disruption_py.shots.parameter_methods.**tokamak name**.built_in.py` for each supported tokamak respectively, where the built-in parameter methods are members of the listed shot data requests in each file (see file contents below). To view the specific methods that are listed please see the [repository](https://github.com/MIT-PSFC/disruption-py) on GitHub.
 ```python
 --8<--
-disruption_py/shots/parameter_methods/cmod/built_in.py
-disruption_py/shots/parameter_methods/d3d/built_in.py
 --8<--
 ```
 
@@ -23,13 +21,13 @@ Users of disruption_py can create their own custom parameter methods by adding d
 
 ### Parameter methods structure
 
-::: examples.shot_data_request_docs.decorated_shot_data_method
+<!-- ::: examples.shot_data_request_docs.decorated_shot_data_method
     handler: python
 	options:
 	  heading_level: 4
 	  show_source: false
 	  show_root_heading: false
-	  show_root_toc_entry: false
+	  show_root_toc_entry: false -->
 
 ### Walkthrough { .doc .doc-heading }
 The steps for creating a custom parameter method are as follows:
@@ -64,7 +62,6 @@ class MyShotDataRequest(ShotDataRequest):
 
         ```python
         --8<--
-        examples/shot_data_request_docs.py:kappa_area_request_example
         --8<--
         ```
 

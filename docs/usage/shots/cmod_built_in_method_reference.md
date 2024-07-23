@@ -1,6 +1,6 @@
 
 ## Built-in Methods For CMod { .doc .doc-heading }
-::: disruption_py.shots.parameter_methods.cmod.basic_parameter_methods
+<!-- ::: disruption_py.shots.parameter_methods.cmod.basic_parameter_methods
     handler: python
 	options:
 	  heading_level: 2
@@ -14,4 +14,4 @@
 		- "^__"
 		- "!compare_ts_tci"
 		- "!efit_check"
-		- "!ThomsonDensityMeasure"
+		- "!ThomsonDensityMeasure" -->

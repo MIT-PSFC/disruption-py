@@ -1,8 +1,8 @@
-::: disruption_py.settings.retrieval_settings.ShotSettings
+<!-- ::: disruption_py.settings.retrieval_settings.ShotSettings
     handler: python
     options:
         filters:
-		- "!^resolve$"
+		- "!^resolve$" -->
 
 
 ::: disruption_py.settings.log_settings.LogSettings

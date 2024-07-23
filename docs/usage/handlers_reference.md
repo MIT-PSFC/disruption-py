@@ -1,4 +1,4 @@
-::: disruption_py.handlers.cmod_handler.CModHandler
+<!-- ::: disruption_py.handlers.cmod_handler.CModHandler
     handler: python
     options:
-        filters: ["!^_[^_]"]
+        filters: ["!^_[^_]"] -->

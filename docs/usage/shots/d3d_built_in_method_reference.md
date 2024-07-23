@@ -1,6 +1,6 @@
 
 ## Built-in Methods For D3D { .doc .doc-heading }
-::: disruption_py.shots.parameter_methods.d3d.efit_parameter_methods
+<!-- ::: disruption_py.shots.parameter_methods.d3d.efit_parameter_methods
     handler: python
 	options:
 	  heading_level: 2
@@ -26,4 +26,4 @@
 		- "!^_"
 		- "^__"
 		- "!MdsException"
-		- "!NOMINAL_FLATTOP_RADIUS"
+		- "!NOMINAL_FLATTOP_RADIUS" -->
