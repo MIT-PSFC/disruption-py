@@ -22,6 +22,7 @@ class ProcessMDSConnection:
     logger = logging.getLogger("disruption_py")
 
     def __init__(self, conn_string: str):
+        # pylint: disable=no-member
         self.conn = MDSplus.Connection(conn_string)
         try:
             self.conn.get("shorten_path()")
@@ -46,7 +47,9 @@ class MDSConnection:
 
     logger = logging.getLogger("disruption_py")
 
-    def __init__(self, conn: MDSplus.Connection, shot_id: int):
+    def __init__(
+        self, conn: MDSplus.Connection, shot_id: int  # pylint: disable=no-member
+    ):
         self.conn = conn
         self.shot_id = shot_id
         self.tree_nickname_funcs = {}
