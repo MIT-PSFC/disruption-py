@@ -1152,7 +1152,6 @@ class CmodTearingMethods:
     @staticmethod
     @physics_method(
         columns=["n_equal_1_std"],
-        used_trees=["magnetics"],
         tokamak=Tokamak.CMOD,
     )
     def _get_n_equal_1_std(params: PhysicsMethodParams):
@@ -1225,7 +1224,6 @@ class CmodTearingMethods:
     @staticmethod
     @physics_method(
         columns=["mirnov_freqs", "mirnov_bins"],
-        used_trees=["magnetics"],
         tokamak=Tokamak.CMOD,
     )
     def _get_mirnov_freqs(params: PhysicsMethodParams):
@@ -1281,7 +1279,7 @@ class CmodTearingMethods:
     
     @staticmethod
     @physics_method(
-        columns=[f"sxr_array_1_chord_{chord}" for chord in range(40)], used_trees=["xtomo"], tokamak=Tokamak.CMOD
+        columns=[f"sxr_array_1_chord_{chord}" for chord in range(40)], tokamak=Tokamak.CMOD
     )
     def _get_sxr_chord_data(params: PhysicsMethodParams):
         """ """
@@ -1303,7 +1301,7 @@ class CmodTearingMethods:
 
     @staticmethod
     @physics_method(
-        columns=["sxr_emiss", "sxr_array2_bright", "sxr_array4_bright"], used_trees=["xtomo"], tokamak=Tokamak.CMOD
+        columns=["sxr_emiss", "sxr_array2_bright", "sxr_array4_bright"], tokamak=Tokamak.CMOD
     )
     def _get_sxr_profile_data(params: PhysicsMethodParams):
         """ """
@@ -1359,7 +1357,7 @@ class CmodTearingMethods:
 
     @staticmethod
     @physics_method(
-        columns=[f"ece_te_{number}" for number in range(1,10)], used_trees=["electrons"], tokamak=Tokamak.CMOD
+        columns=[f"ece_te_{number}" for number in range(1,10)], tokamak=Tokamak.CMOD
     )
     def _get_ece_te_data(params: PhysicsMethodParams):
         ece_dataframe = pd.DataFrame()
