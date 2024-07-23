@@ -151,7 +151,7 @@ def smooth(arr: np.ndarray, window_size: int) -> np.ndarray:
     mid = np.convolve(arr, np.ones(window_size, dtype=int), "valid") / window_size
     b_weights = np.arange(1, window_size - 1, 2)
     start = np.cumsum(arr[: window_size - 1][::2] / b_weights)
-    end = (np.cumsum(arr[:-window_size:-1])[::2] / b_weights)[::-1] 
+    end = (np.cumsum(arr[:-window_size:-1])[::2] / b_weights)[::-1]
     return np.concatenate((start, mid, end))
 
 
@@ -354,11 +354,6 @@ def fastsmooth(y, w, smooth_type=1, ends_type=0):
     array_like
         The smoothed dataset.
     """
-    # smooth(y, w) corresponds to sa(Y,w,ends) in GSASTD.m
-    # smoothed_y = smooth(y, w)
-    # for i in range(smooth_type - 1):
-    #     smoothed_y = smooth(smoothed_y, w)
-    # return smoothed_y
     smoothed_y = sa(y, w, ends_type)
     for i in range(smooth_type - 1):
         smoothed_y = sa(smoothed_y, w, ends_type)
