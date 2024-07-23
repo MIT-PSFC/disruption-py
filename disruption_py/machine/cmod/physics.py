@@ -1069,9 +1069,16 @@ class CmodPhysicsMethods:
         Te = np.concatenate((gpc1_te, gpc2_te), axis=0)
         radii = np.concatenate((gpc1_rad, gpc2_rad), axis=0)
 
+        # Extend the last radii measurement up until the last EFIT.
+        # Radii depend on B, which depends on the current profile, so there could 
+        # be error near the disruption, but these are reduced when we average core vs. all
+        indx_last_rad = np.argmax(efit_time > gpc2_rad_time[-1]) - 1
+        for i in range(len(radii)):
+            radii[i, indx_last_rad+1:] = radii[i, indx_last_rad]
+
         # Compute core average Te and total average Te
         Te_PF = np.full(len(efit_time), np.nan)
-        test_time = 0.4
+        test_time = 0.8315
         itest = np.argmin(np.abs(efit_time - test_time))
         for i in range(len(efit_time)):
             okay_indices = ( (Te[:, i] > 0) & (np.abs(radii[:, i] - r0[i]) < aminor[i]) )
