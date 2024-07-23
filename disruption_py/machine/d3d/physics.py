@@ -195,6 +195,7 @@ class D3DPhysicsMethods:
             v_loop, t_v_loop = params.mds_conn.get_data_with_dims(
                 f'ptdata("vloopb", {params.shot_id})', tree_name="d3d"
             )
+            t_v_loop /= 1e3 # [ms] -> [s]
             v_loop = scipy.signal.medfilt(v_loop, 11)
             v_loop = interp1(t_v_loop, v_loop, params.times, "linear")
         except mdsExceptions.MdsException as e:
@@ -207,14 +208,14 @@ class D3DPhysicsMethods:
             ip, t_ip = params.mds_conn.get_data_with_dims(
                 f"ptdata('ip', {params.shot_id})", tree_name="d3d"
             )
-            t_ip = t_ip / 1.0e3  # [ms] -> [s]
+            t_ip /= 1.0e3  # [ms] -> [s]
             # We choose a 20-point width for gsastd. This means a 10ms window for
             #  ip smoothing
-            dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)   # -- THIS FAILED!
-            # TODO: Why do we need li & chisq?
+            dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0) 
             li, t_li = params.mds_conn.get_data_with_dims(
                 r"\efit_a_eqdsk:li", tree_name="_efit_tree"
             )
+            t_li /= 1.0e3
             chisq = params.mds_conn.get_data(r"\efit_a_eqdsk:chisq", tree_name="_efit_tree")
             # Filter out invalid indices of efit reconstruction
             invalid_indices = None  # TODO: Finish
