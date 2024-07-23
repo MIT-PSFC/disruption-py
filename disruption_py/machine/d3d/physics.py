@@ -58,7 +58,7 @@ class D3DPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["p_rad", "p_nbi", "p_ech", "p_ohm", "radiated_fraction", "v_loop"],
+        columns=["p_rad", "p_nbi", "p_ech", "radiated_fraction"],
         tokamak=Tokamak.D3D,
     )
     def get_power_parameters(params: PhysicsMethodParams):
@@ -164,25 +164,24 @@ class D3DPhysicsMethods:
         p_nbi[p_nbi < 0] = 0
         p_ech[p_ech < 0] = 0
 
-        p_input = p_rad + p_nbi + p_ech  # [W]
+        p_input = p_ohm + p_nbi + p_ech  # [W]
         rad_fraction = p_rad / p_input
         rad_fraction[np.isinf(rad_fraction)] = np.nan
 
         # Computer P_sol, defined as P_in - P_rad
+        # TODO: Why calculate p_sol?
         p_sol = p_input - p_rad
         output = {
             "p_rad": p_rad,
             "p_nbi": p_nbi,
             "p_ech": p_ech,
-            "p_ohm": p_ohm,
             "radiated_fraction": rad_fraction,
-            "v_loop": v_loop,
         }
         return output
 
     @staticmethod
     @physics_method(
-        columns=["p_rad", "p_nbi", "p_ech", "p_ohm", "radiated_fraction", "v_loop"],
+        columns=["p_ohm", "v_loop"],
         tokamak=Tokamak.D3D,
     )
     def get_ohmic_parameters(params: PhysicsMethodParams):
@@ -191,10 +190,12 @@ class D3DPhysicsMethods:
             "v_loop": [np.nan],
         }
         # Get edge loop voltage and smooth it a bit with a median filter
+        # TODO: should we use tree_name = 'd3d' or the equivalent of '_efit_tree'?
         try:
             v_loop, t_v_loop = params.mds_conn.get_data_with_dims(
                 f'ptdata("vloopb", {params.shot_id})', tree_name="d3d"
             )
+            # TODO: Why do medfilt?
             v_loop = scipy.signal.medfilt(v_loop, 11)
             v_loop = interp1(t_v_loop, v_loop, params.times, "linear")
         except mdsExceptions.MdsException as e:
@@ -211,10 +212,11 @@ class D3DPhysicsMethods:
             # We choose a 20-point width for gsastd. This means a 10ms window for
             #  ip smoothing
             dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
+            # TODO: Why do we need li & chisq?
             li, t_li = params.mds_conn.get_data_with_dims(
                 r"\efit_a_eqdsk:li", tree_name="_efit_tree"
             )
-            chisq = params.mds_conn.get_data(r"\efit_a_eqdsk:chisq")
+            chisq = params.mds_conn.get_data(r"\efit_a_eqdsk:chisq", tree_name="_efit_tree")
             # Filter out invalid indices of efit reconstruction
             invalid_indices = None  # TODO: Finish
         except mdsExceptions.MdsException as e:
