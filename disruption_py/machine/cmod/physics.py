@@ -6,6 +6,7 @@ from importlib import resources
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from MDSplus import mdsExceptions
 
 import disruption_py.data
@@ -949,6 +950,8 @@ class CmodPhysicsMethods:
             "te_peaking": Te_PF,
             "pressure_peaking": [np.nan],
         }
+    
+    
 
     @staticmethod
     @physics_method(
@@ -1005,6 +1008,92 @@ class CmodPhysicsMethods:
         return CmodPhysicsMethods.get_peaking_factors(
             params.times, TS_time, TS_Te, TS_ne, TS_z, efit_time, bminor, z0
         )
+    
+    @staticmethod
+    @physics_method(
+        columns=["te_peaking_ece"],
+        tokamak=Tokamak.CMOD,
+    )
+    def _get_peaking_factors_ece(params: PhysicsMethodParams):
+        nan_output = {
+            "te_peaking_ece": np.full(len(params.times), np.nan)
+        }
+        # Get magnetic axis data from EFIT
+        try:
+            r0 = 0.01 * params.mds_conn.get_data(
+                r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
+            )
+            aminor, efit_time = params.mds_conn.get_data_with_dims(
+                r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
+            )
+        except mdsExceptions.MdsException as e:
+            params.logger.debug(f"[Shot {params.shot_id}]: Failed to get efit data")
+            return nan_output
+        
+        # Read in Te profile measurements from 9 GPC1 channels and interpolate onto efit timebase
+        node_path = '.ece.gpc_results'
+        n_channels = 9
+        gpc1_te = np.full((n_channels, len(efit_time)), np.nan)
+        gpc1_rad = np.full((n_channels, len(efit_time)), np.nan)
+        for i in range(n_channels):
+            try:
+                gpc1_te_data, gpc1_te_time = params.mds_conn.get_data_with_dims(
+                    node_path + ".te:te" + str(i+1), tree_name="electrons"
+                )
+                gpc1_rad_data, gpc1_rad_time = params.mds_conn.get_data_with_dims(
+                    node_path + ".rad:r" + str(i+1), tree_name="electrons"
+                )
+            except:
+                print("Couldn't get channel " + str(i+1))
+                continue
+            gpc1_te[i, :] = interp1(gpc1_te_time, gpc1_te_data, efit_time)
+            gpc1_rad[i, :] = interp1(gpc1_rad_time, gpc1_rad_data, efit_time)
+
+        # Read in Te profile measurements from GPC2
+        node_path = '.gpc_2.results'
+        try:
+            gpc2_te, gpc2_te_time = params.mds_conn.get_data_with_dims(
+                    node_path + ":gpc2_te", tree_name="electrons"
+                )
+            gpc2_rad, gpc2_rad_time = params.mds_conn.get_data_with_dims(
+                    node_path + ":radii", tree_name="electrons"
+                )
+        except mdsExceptions.MdsException as e:
+            params.logger.debug(f"[Shot {params.shot_id}]: Failed to get GPC2 data")
+            return nan_output
+        print(gpc2_rad)
+        gpc2_te = interp1(gpc2_te_time, gpc2_te, efit_time)
+        gpc2_rad = interp1(gpc2_rad_time, gpc2_rad, efit_time)
+        
+        # Combine GPC systems
+        Te = np.concatenate((gpc1_te, gpc2_te), axis=0)
+        radii = np.concatenate((gpc1_rad, gpc2_rad), axis=0)
+
+        # Compute core average Te and total average Te
+        Te_PF = np.full(len(efit_time), np.nan)
+        test_time = 0.4
+        itest = np.argmin(np.abs(efit_time - test_time))
+        for i in range(len(efit_time)):
+            okay_indices = ( (Te[:, i] > 0) & (np.abs(radii[:, i] - r0[i]) < aminor[i]) )
+            if (np.sum(okay_indices) > 0):
+                # Iterpolate onto equal spaced radial basis to not bias changes in radial sampling over time
+                r_equal_spaced = np.linspace(np.min(radii[okay_indices, i]), np.max(radii[okay_indices, i]), np.sum(okay_indices))
+                te_equal_spaced = interp1(radii[okay_indices, i], Te[okay_indices, i], r_equal_spaced)
+                core_indices = (np.abs(r_equal_spaced - r0[i]) < 0.2 * aminor[i])
+                if (np.sum(core_indices) > 0):
+                    Te_PF[i] = np.nanmean(te_equal_spaced[core_indices]) / np.nanmean(te_equal_spaced)
+                    if (i == itest):
+                        plt.scatter(radii[:, itest], Te[:, itest], c='b', marker='o')
+                        plt.scatter(r_equal_spaced, te_equal_spaced, c='g', marker='o')
+                        plt.scatter(r_equal_spaced[core_indices], te_equal_spaced[core_indices], c='r', marker='.')
+                        plt.axvline(r0[i] - 0.2 * aminor[i], c='black', linestyle='--')
+                        plt.axvline(r0[i] + 0.2 * aminor[i], c='black', linestyle='--')
+                        plt.axvline(r0[i] + 1.0 * aminor[i], c='black', linestyle='--')
+                        plt.show()
+
+        Te_PF = interp1(efit_time, Te_PF, params.times)
+        return pd.DataFrame({"te_peaking_ece": Te_PF})
+        
 
     @staticmethod
     @physics_method(
