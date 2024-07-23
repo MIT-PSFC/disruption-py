@@ -29,7 +29,7 @@ nav:
       - Quickstart: quickstart/usage_quickstart.md
   - Usage:
       - Entry points:
-          - Handlers: usage/handlers_reference.md
+          - Workflow: usage/workflow_reference.md
           - Command Line: usage/command_line.md
       - Settings:
           - Settings Classes: usage/settings_reference.md

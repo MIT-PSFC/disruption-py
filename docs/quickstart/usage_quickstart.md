@@ -21,7 +21,7 @@ Use [`basic_example_1.py`](https://github.com/MIT-PSFC/disruption-py/blob/main/e
 	```
 
 2. **Call `get_shots_data`.** 
-	The `get_shots_data` method is the main entry point for retrieving data from DisruptionPy as well as setting up connections to the SQL database and the MDSplus server. See [`get_shots_data`](disruption_py.workflow.py) for more details.
+	The [`get_shots_data`](/usage/workflow_reference#disruption_py.workflow.get_shots_data) method is the main entry point for retrieving data from DisruptionPy as well as setting up connections to the SQL database and the MDSplus server. See [`get_shots_data`](/usage/workflow_reference#disruption_py.workflow.get_shots_data) for more details.
 	```python
 	from disruption_py.settings.retrieval_settings import RetrievalSettings
 	from disruption_py.workflow import get_shots_data
