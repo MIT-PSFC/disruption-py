@@ -213,15 +213,15 @@ class D3DPhysicsMethods:
             #  ip smoothing
             dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0) 
             # dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
-            ip_smoothed = gsastd(t_ip, ip, 0, 20, 3, 1, 0)
+            # ip_smoothed = gsastd(t_ip, ip, 0, 20, 3, 1, 0)
 
-            import matplotlib.pyplot as plt
-            plt.plot(t_ip, dipdt_smoothed, label='dipdt_smoothed')
-            plt.plot(t_ip, ip, label='ip')
-            plt.plot(t_ip, ip_smoothed, label='ip_smoothed')
-            plt.ylim(-1e3, 2e6)
-            plt.legend()
-            plt.show()
+            # import matplotlib.pyplot as plt
+            # plt.plot(t_ip, dipdt_smoothed, label='dipdt_smoothed')
+            # plt.plot(t_ip, ip, label='ip')
+            # plt.plot(t_ip, ip_smoothed, label='ip_smoothed')
+            # plt.ylim(-1e3, 2e6)
+            # plt.legend()
+            # plt.show()
 
             li, t_li = params.mds_conn.get_data_with_dims(
                 r"\efit_a_eqdsk:li", tree_name="_efit_tree"
@@ -240,10 +240,11 @@ class D3DPhysicsMethods:
             return nan_output
         # [m] For simplicity, use fixed r_0 = 1.67 for DIII-D major radius
         r_0 = 1.67
-        inductance = 4.0 * np.pi * r_0 * li / 2  # [H]
+        inductance = 4.0 * np.pi * 1e-7 * r_0 * li / 2  # [H]
         inductance = interp1(t_li, inductance, params.times, "linear")
         ip = interp1(t_ip, ip, params.times, "linear")
         dipdt_smoothed = interp1(t_ip, dipdt_smoothed, params.times, "linear")
+
         v_inductive = inductance * dipdt_smoothed  # [V]
         v_resistive = v_loop - v_inductive  # [V]
         p_ohm = ip * v_resistive  # [W]
