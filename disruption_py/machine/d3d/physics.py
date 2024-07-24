@@ -194,7 +194,7 @@ class D3DPhysicsMethods:
             v_loop, t_v_loop = params.mds_conn.get_data_with_dims(
                 f'ptdata("vloopb", {params.shot_id})', tree_name="d3d"
             )
-            t_v_loop /= 1e3 # [ms] -> [s]
+            t_v_loop /= 1e3  # [ms] -> [s]
             v_loop = scipy.signal.medfilt(v_loop, 11)
             v_loop = interp1(t_v_loop, v_loop, params.times, "linear")
         except mdsExceptions.MdsException as e:
@@ -211,26 +211,30 @@ class D3DPhysicsMethods:
             t_ip /= 1.0e3  # [ms] -> [s]
             # We choose a 20-point width for gsastd. This means a 10ms window for
             #  ip smoothing
-            dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0) 
-            # dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
-            ip_smoothed = gsastd(t_ip, ip, 0, 20, 3, 1, 0)
+            dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
 
+            # TODO: To be removed in final commit
+            ip_smoothed = gsastd(t_ip, ip, 0, 20, 3, 1, 0)
             import matplotlib.pyplot as plt
-            plt.plot(t_ip, dipdt_smoothed, label='dipdt_smoothed')
-            plt.plot(t_ip, ip, label='ip')
-            plt.plot(t_ip, ip_smoothed, label='ip_smoothed')
+
+            plt.plot(t_ip, dipdt_smoothed, label="dipdt_smoothed")
+            plt.plot(t_ip, ip, label="ip")
+            plt.plot(t_ip, ip_smoothed, label="ip_smoothed")
             plt.ylim(-1e3, 2e6)
             plt.legend()
             plt.show()
+            ######
 
             li, t_li = params.mds_conn.get_data_with_dims(
                 r"\efit_a_eqdsk:li", tree_name="_efit_tree"
             )
             t_li /= 1.0e3
             # Use chisq to determine which time slices are invalid
-            chisq = params.mds_conn.get_data(r"\efit_a_eqdsk:chisq", tree_name="_efit_tree")
+            chisq = params.mds_conn.get_data(
+                r"\efit_a_eqdsk:chisq", tree_name="_efit_tree"
+            )
             # Filter out invalid indices of efit reconstruction
-            invalid_indices, = np.where(chisq > 50)
+            (invalid_indices,) = np.where(chisq > 50)
             li[invalid_indices] = np.nan
         except mdsExceptions.MdsException as e:
             params.logger.info(

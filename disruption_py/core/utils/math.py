@@ -321,7 +321,7 @@ def deriv(x, y):
     d = np.zeros(y.shape)
     d[0] = (y[1] - y[0]) / (x[1] - x[0])
     d[n - 1] = (y[n - 1] - y[n - 2]) / (x[n - 1] - x[n - 2])
-    for i in range(1, n-1):
+    for i in range(1, n - 1):
         d[i] = (y[i + 1] - y[i - 1]) / (x[i + 1] - x[i - 1])
     return d
 
@@ -358,7 +358,7 @@ def fastsmooth(y, w, smooth_type=1, ends_type=0):
     smoothed_y = sa(y, w, ends_type)
     for i in range(smooth_type - 1):
         smoothed_y = sa(smoothed_y, w, ends_type)
-    return smoothed_y    
+    return smoothed_y
 
 
 def sa(y, smooth_width, ends_type=0):
@@ -395,22 +395,22 @@ def sa(y, smooth_width, ends_type=0):
     w = matlab_round_int(smooth_width)
     sum_points = np.sum(y[:w])
     s = np.zeros(y.shape)
-    half_w = matlab_round_int(w/2.0)
+    half_w = matlab_round_int(w / 2.0)
     l = len(y)
-    for i in range(l-w):
-        s[i+half_w-1] = sum_points
+    for i in range(l - w):
+        s[i + half_w - 1] = sum_points
         sum_points = sum_points - y[i]
-        sum_points = sum_points + y[i+w]
-    s[i+half_w] = np.sum(y[l-w:l])
-    y_smooth = s/w
+        sum_points = sum_points + y[i + w]
+    s[i + half_w] = np.sum(y[l - w : l])
+    y_smooth = s / w
 
     if ends_type == 1:
-        start_point = matlab_round_int((smooth_width + 1)/2)
-        y_smooth[0] = (y[0] + y[1])/2
+        start_point = matlab_round_int((smooth_width + 1) / 2)
+        y_smooth[0] = (y[0] + y[1]) / 2
         for i in range(1, start_point):
-            y_smooth[i] = np.mean(y[0: 2*i+1])
-            y_smooth[l-i-1] = np.mean(y[l-2*i-1: l])
-        y_smooth[l-1] = (y[l-1] + y[l-2])/2
+            y_smooth[i] = np.mean(y[0 : 2 * i + 1])
+            y_smooth[l - i - 1] = np.mean(y[l - 2 * i - 1 : l])
+        y_smooth[l - 1] = (y[l - 1] + y[l - 2]) / 2
 
     return y_smooth
 
