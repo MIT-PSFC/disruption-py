@@ -30,9 +30,16 @@ nav:
   - Usage:
       - Entry points:
           - Workflow: usage/workflow_reference.md
-          - Command Line: usage/command_line.md
       - Settings:
-          - Settings Classes: usage/settings_reference.md
+          - Settings Classes:
+              - usage/settings/cache_setting.md
+              - usage/settings/domain_setting.md
+              - usage/settings/log_settings.md
+              - usage/settings/nickname_setting.md
+              - usage/settings/output_setting.md
+              - usage/settings/retrieval_settings.md
+              - usage/settings/shotlist_setting.md
+              - usage/settings/time_setting.md
           - Requests Classes:
               - Cache Setting: usage/requests/cache_setting_reference.md
               - Shot Ids Request: usage/requests/shotlist_request_reference.md
