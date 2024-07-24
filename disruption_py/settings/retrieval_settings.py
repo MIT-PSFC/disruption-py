@@ -49,11 +49,11 @@ class RetrievalSettings:
         should be created for the efit_tree.
     run_methods : List[str]
         A list of physics method names to be run. Named methods will be run when retrieving data
-        from  mdsplus for the shot. Named methods must have the physics_method decorator and either
+        from  MDSplus for the shot. Named methods must have the physics_method decorator and either
         be passed in the `custom_physics_methods` argument or included in the built-in list. Defaults
         to an empty list.
     run_tags : List[str]
-        A list of physics method tags to be run. Methods used for retrieving data from mdsplus can be
+        A list of physics method tags to be run. Methods used for retrieving data from MDSplus can be
         tagged with the physics_method decorator and can either be passed in the `custom_physics_methods`
         argument or included in the built-in list. All methods with at least one included tag will be run.
         Defaults to ["all"].
@@ -64,12 +64,12 @@ class RetrievalSettings:
         list. If you wish to only return the requested columns, set only_requested_columns to true in the
         retrieval_settings.
     only_requested_columns : bool
-        Whether only columns requested in run_columns should be included in the produced dataframe.
-        Even if not all requested columns exist in the produced dataframe only the requested columns will
+        Whether only columns requested in run_columns should be included in the produced DataFrame.
+        Even if not all requested columns exist in the produced DataFrame only the requested columns will
         be produced. Otherwise all columns returned by all methods run will be included. Default false.
     custom_physics_methods : list
         A list of physics methods and objects containing physics methods. The Methods are
-        collected and run when retrieving data from mdsplus if the method is included through
+        collected and run when retrieving data from MDSplus if the method is included through
         either the run_methods, run_tags, run_columns setting. Defaults to an empty list.
     time_setting : TimeSetting
         The time setting to be used when setting the timebase for the shot. The retrieved data will
