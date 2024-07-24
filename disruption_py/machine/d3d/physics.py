@@ -223,14 +223,15 @@ class D3DPhysicsMethods:
             plt.legend()
             plt.show()
 
-
             li, t_li = params.mds_conn.get_data_with_dims(
                 r"\efit_a_eqdsk:li", tree_name="_efit_tree"
             )
             t_li /= 1.0e3
+            # Use chisq to determine which time slices are invalid
             chisq = params.mds_conn.get_data(r"\efit_a_eqdsk:chisq", tree_name="_efit_tree")
             # Filter out invalid indices of efit reconstruction
-            invalid_indices = None  # TODO: Finish
+            invalid_indices, = np.where(chisq > 50)
+            li[invalid_indices] = np.nan
         except mdsExceptions.MdsException as e:
             params.logger.info(
                 f"[Shot {params.shot_id}]:Unable to get plasma current data. p_ohm set to NaN."
