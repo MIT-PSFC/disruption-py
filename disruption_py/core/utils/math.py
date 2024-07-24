@@ -251,7 +251,7 @@ def gauss(x, *params):
 # 'gradient' and smoothing/filtering routines for certain signals.
 
 
-def gsastd(x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=None):
+def gsastd(x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=0):
     """
     Fast non-causal differentiation of noisy data.
 
@@ -286,17 +286,18 @@ def gsastd(x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=N
     array_like
         Smoothed dataset.
     """
-    if slew_rate is not None:
-        for i in range(1, len(y) - 1):
-            diff = y[i + 1] - y[i]
+    y_arr = y.copy()
+    if slew_rate:
+        for i in range(0, len(y_arr) - 1):
+            diff = y_arr[i + 1] - y_arr[i]
             if abs(diff) > slew_rate:
-                y[i + 1] = y[i] + np.sign(diff) * slew_rate
+                y_arr[i + 1] = y_arr[i] + np.sign(diff) * slew_rate
     if smooth_type == 0:
-        width = 0
+        width = 1
     if derivative_mode == 0:
-        return fastsmooth(y, width, smooth_type, ends_type)
+        return fastsmooth(y_arr, width, smooth_type, ends_type)
     elif derivative_mode == 1:
-        return fastsmooth(deriv(x, y), width, smooth_type, ends_type)
+        return fastsmooth(deriv(x, y_arr), width, smooth_type, ends_type)
     raise ValueError("derivative_mode only takes 0 or 1 as input")
 
 
@@ -316,11 +317,11 @@ def deriv(x, y):
     d: array
         The derivative of the dataset.
     """
-    n = len(y) - 1
+    n = len(y)
     d = np.zeros(y.shape)
     d[0] = (y[1] - y[0]) / (x[1] - x[0])
-    d[n] = (y[n] - y[n - 1]) / (x[n] - x[n - 1])
-    for i in range(1, n):
+    d[n - 1] = (y[n - 1] - y[n - 2]) / (x[n - 1] - x[n - 2])
+    for i in range(1, n-1):
         d[i] = (y[i + 1] - y[i - 1]) / (x[i + 1] - x[i - 1])
     return d
 
@@ -374,7 +375,7 @@ def sa(y, smooth_width, ends_type=0):
         Determines how the "ends" of the signal are handled.
         0 -> ends are "zeroed"
         1 -> the ends are smoothed with progressively smaller smooths the closer to the end.
-        NOTE: This variable isn't used in the function
+        NOTE: This variable isn't used in the computation
 
     Returns
     -------

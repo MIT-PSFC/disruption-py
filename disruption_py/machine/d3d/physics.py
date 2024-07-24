@@ -185,12 +185,11 @@ class D3DPhysicsMethods:
         tokamak=Tokamak.D3D,
     )
     def get_ohmic_parameters(params: PhysicsMethodParams):
-        output = {
+        nan_output = {
             "p_ohm": [np.nan],
             "v_loop": [np.nan],
         }
         # Get edge loop voltage and smooth it a bit with a median filter
-        # TODO: should we use tree_name = 'd3d' or the equivalent of '_efit_tree'?
         try:
             v_loop, t_v_loop = params.mds_conn.get_data_with_dims(
                 f'ptdata("vloopb", {params.shot_id})', tree_name="d3d"
@@ -203,6 +202,7 @@ class D3DPhysicsMethods:
                 f"[Shot {params.shot_id}]:Failed to open VLOOPB node. Setting to NaN."
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+            return nan_output
         # Get plasma current
         try:
             ip, t_ip = params.mds_conn.get_data_with_dims(
@@ -212,6 +212,18 @@ class D3DPhysicsMethods:
             # We choose a 20-point width for gsastd. This means a 10ms window for
             #  ip smoothing
             dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0) 
+            # dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
+            ip_smoothed = gsastd(t_ip, ip, 0, 20, 3, 1, 0)
+
+            import matplotlib.pyplot as plt
+            plt.plot(t_ip, dipdt_smoothed, label='dipdt_smoothed')
+            plt.plot(t_ip, ip, label='ip')
+            plt.plot(t_ip, ip_smoothed, label='ip_smoothed')
+            plt.ylim(-1e3, 2e6)
+            plt.legend()
+            plt.show()
+
+
             li, t_li = params.mds_conn.get_data_with_dims(
                 r"\efit_a_eqdsk:li", tree_name="_efit_tree"
             )
@@ -224,7 +236,7 @@ class D3DPhysicsMethods:
                 f"[Shot {params.shot_id}]:Unable to get plasma current data. p_ohm set to NaN."
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            return output
+            return nan_output
         # [m] For simplicity, use fixed r_0 = 1.67 for DIII-D major radius
         r_0 = 1.67
         inductance = 4.0 * np.pi * r_0 * li / 2  # [H]
