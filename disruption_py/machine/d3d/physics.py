@@ -213,15 +213,15 @@ class D3DPhysicsMethods:
             #  ip smoothing
             dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0) 
             # dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
-            # ip_smoothed = gsastd(t_ip, ip, 0, 20, 3, 1, 0)
+            ip_smoothed = gsastd(t_ip, ip, 0, 20, 3, 1, 0)
 
-            # import matplotlib.pyplot as plt
-            # plt.plot(t_ip, dipdt_smoothed, label='dipdt_smoothed')
-            # plt.plot(t_ip, ip, label='ip')
-            # plt.plot(t_ip, ip_smoothed, label='ip_smoothed')
-            # plt.ylim(-1e3, 2e6)
-            # plt.legend()
-            # plt.show()
+            import matplotlib.pyplot as plt
+            plt.plot(t_ip, dipdt_smoothed, label='dipdt_smoothed')
+            plt.plot(t_ip, ip, label='ip')
+            plt.plot(t_ip, ip_smoothed, label='ip_smoothed')
+            plt.ylim(-1e3, 2e6)
+            plt.legend()
+            plt.show()
 
             li, t_li = params.mds_conn.get_data_with_dims(
                 r"\efit_a_eqdsk:li", tree_name="_efit_tree"

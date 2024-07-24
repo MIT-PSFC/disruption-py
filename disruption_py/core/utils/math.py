@@ -402,7 +402,17 @@ def sa(y, smooth_width, ends_type=0):
         sum_points = sum_points - y[i]
         sum_points = sum_points + y[i+w]
     s[i+half_w] = np.sum(y[l-w:l])
-    return s/w
+    y_smooth = s/w
+
+    if ends_type == 1:
+        start_point = matlab_round_int((smooth_width + 1)/2)
+        y_smooth[0] = (y[0] + y[1])/2
+        for i in range(1, start_point):
+            y_smooth[i] = np.mean(y[0: 2*i+1])
+            y_smooth[l-i-1] = np.mean(y[l-2*i-1: l])
+        y_smooth[l-1] = (y[l-1] + y[l-2])/2
+
+    return y_smooth
 
 
 # TODO: Cover documentation with Cristina
