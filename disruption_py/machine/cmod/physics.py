@@ -636,8 +636,12 @@ class CmodPhysicsMethods:
 
         N=1 toroidal assymmetry in the magnetic fields
         """
-        n_equal_1_normalized, n_equal_1_phase = [np.nan]
-        n_equal_1_phase = [np.nan]
+        nan_output = {
+            "n_equal_1_mode": [np.nan],
+            "n_equal_1_normalized": [np.nan],
+            "n_equal_1_phase": [np.nan],
+            "bt": [np.nan],
+        }
         # These sensors are placed toroidally around the machine. Letters refer to
         # the 2 ports the sensors were placed between.
         bp13_names = ["BP13_BC", "BP13_DE", "BP13_GH", "BP13_JK"]
@@ -681,12 +685,7 @@ class CmodPhysicsMethods:
                         f"[Shot {params.shot_id}] Only one data point for "
                         + f"{bp13_names[i]} Returning nans."
                     )
-                    return {
-                        "n_equal_1_mode": [np.nan],
-                        "n_equal_1_normalized": n_equal_1_normalized,
-                        "n_equal_1_phase": n_equal_1_phase,
-                        "bt": [np.nan],
-                    }
+                    return nan_output
                 baseline = np.mean(signal[baseline_indices])
                 signal = signal - baseline
                 signal = signal - bp13_btor_pickup_coeffs[i] * btor
@@ -702,24 +701,27 @@ class CmodPhysicsMethods:
         btor_magnitude = btor * polarity
         btor_magnitude = interp1(t_mag, btor_magnitude, params.times)
         btor = interp1(t_mag, btor, params.times)  # Interpolate BT with sign
-        if valid_sensors:
-            # Create the 'design' matrix ('A') for the linear system of equations:
-            # Bp(phi) = A1 + A2*sin(phi) + A3*cos(phi)
-            ncoeffs = 3
-            A = np.empty((len(bp13_names), ncoeffs))
-            A[:, 0] = np.ones(4)
-            A[:, 1] = np.sin(bp13_phi * np.pi / 180.0)
-            A[:, 2] = np.cos(bp13_phi * np.pi / 180.0)
-            coeffs = np.linalg.pinv(A) @ bp13_signals.T
-            # The n=1 amplitude at each time is sqrt(A2^2 + A3^2)
-            # The n=1 phase at each time is arctan(-A2/A3), using complex number
-            # phasor formalism, exp(i(phi - delta))
-            n_equal_1_amplitude = np.sqrt(coeffs[1, :] ** 2 + coeffs[2, :] ** 2)
-            # TODO: Confirm arctan2 = atan2
-            n_equal_1_phase = np.arctan2(-coeffs[1, :], coeffs[2, :])
-            n_equal_1_normalized = n_equal_1_amplitude / btor_magnitude
-            # INFO: Debugging purpose block of code at end of matlab file
-            # INFO: n_equal_1_amplitude vs n_equal_1_mode
+
+        if not valid_sensors:
+            return nan_output
+
+        # Create the 'design' matrix ('A') for the linear system of equations:
+        # Bp(phi) = A1 + A2*sin(phi) + A3*cos(phi)
+        ncoeffs = 3
+        A = np.empty((len(bp13_names), ncoeffs))
+        A[:, 0] = np.ones(4)
+        A[:, 1] = np.sin(bp13_phi * np.pi / 180.0)
+        A[:, 2] = np.cos(bp13_phi * np.pi / 180.0)
+        coeffs = np.linalg.pinv(A) @ bp13_signals.T
+        # The n=1 amplitude at each time is sqrt(A2^2 + A3^2)
+        # The n=1 phase at each time is arctan(-A2/A3), using complex number
+        # phasor formalism, exp(i(phi - delta))
+        n_equal_1_amplitude = np.sqrt(coeffs[1, :] ** 2 + coeffs[2, :] ** 2)
+        # TODO: Confirm arctan2 = atan2
+        n_equal_1_phase = np.arctan2(-coeffs[1, :], coeffs[2, :])
+        n_equal_1_normalized = n_equal_1_amplitude / btor_magnitude
+        # INFO: Debugging purpose block of code at end of matlab file
+        # INFO: n_equal_1_amplitude vs n_equal_1_mode
         output = {
             "n_equal_1_mode": n_equal_1_amplitude,
             "n_equal_1_normalized": n_equal_1_normalized,
