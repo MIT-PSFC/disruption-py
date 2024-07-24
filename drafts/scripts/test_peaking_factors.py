@@ -4,8 +4,8 @@ from disruption_py.workflow import get_shots_data
 import matplotlib.pyplot as plt
 import MDSplus as mds
 
-shotno = 1160929009
-signals = ['ip', 'te_peaking', 'te_peaking_ece', 'prad_peaking']
+shotno = 1120830026
+signals = ['ip', 'kappa', 'te_peaking', 'te_peaking_ece', 'prad_peaking']
 
 # default method for pulling disruption-py data
 retrieval_settings = RetrievalSettings(
@@ -32,12 +32,13 @@ te0_data = mds.Tree('cmod', shotno).getNode('\\gpc2_te0').getData()
 te0 = te0_data.data()
 te0_time = te0_data.dim_of().data()
 
-fig, axs = plt.subplots(4, 1, sharex=True)
+fig, axs = plt.subplots(5, 1, sharex=True)
 axs[0].plot(data['time'], data['ip'], label='ip')
-axs[1].scatter(te0_time, te0, marker='.', s=1, label='Te0 ECE')
-axs[2].scatter(data['time'], data['prad_peaking'], marker='.', label='Prad PF')
-axs[3].scatter(data['time'], data['te_peaking_ece'], c='b', marker='o', label='Te PF ECE')
-axs[3].scatter(data['time'], data['te_peaking'], c='r', marker='.', label='Te PF TS')
+axs[1].plot(data['time'], data['kappa'], label='$\kappa$')
+axs[2].scatter(te0_time, te0, marker='.', s=1, label='Te0 ECE')
+axs[3].scatter(data['time'], data['prad_peaking'], marker='.', label='Prad PF')
+axs[4].scatter(data['time'], data['te_peaking_ece'], c='b', marker='o', label='Te PF ECE')
+axs[4].scatter(data['time'], data['te_peaking'], c='r', marker='.', label='Te PF TS')
 for ax in axs:
     ax.legend()
 plt.show()

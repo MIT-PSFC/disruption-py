@@ -915,6 +915,8 @@ class CmodPhysicsMethods:
         # Calculate Te peaking factor
         Te_PF = np.full(len(TS_time), np.nan)
         (itimes,) = np.where((TS_time > 0) & (TS_time < times[-1]))
+        test_time = 0.5
+        itest = np.argmin(np.abs(TS_time - test_time))
         for itime in itimes:
             TS_Te_arr = TS_Te[:, itime]
             (indx,) = np.where(TS_Te_arr > 0)
@@ -940,6 +942,12 @@ class CmodPhysicsMethods:
             Te_PF[itime] = np.mean(Te_arr_equal_spacing[core_index]) / np.mean(
                 Te_arr_equal_spacing
             )
+            # if (itime == itest):
+            #     plt.scatter(TS_z_arr, TS_Te_arr, c='black', marker='x')
+            #     plt.scatter(z_arr_equal_spacing, Te_arr_equal_spacing, c='b', marker='o')
+            #     plt.scatter(z_arr_equal_spacing[core_index], Te_arr_equal_spacing[core_index], c='r', marker='.')
+            #     plt.axvline(z0[itime], c='gray', linestyle='--')
+            #     plt.show()
 
         # TODO: Calculate ne and pressure peaking factors
 
@@ -1015,10 +1023,27 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def _get_peaking_factors_ece(params: PhysicsMethodParams):
+        """
+        Calculates Te PF from ECE data using the two GPC diagnostic systems.
+        GPC diagnostics look at the mid-plane, and each channel detects a different
+        emitted frequency, which depends on B and therefore R. Core bins
+        are defined as those w/in 0.2 * aminor of the magnetic axis and the 
+        Te PF is defined as mean(core)/mean(all).
+        Source: https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_ECE_data_cmod.m
+        Author: Henry Wietfeldt (7/24/24)
+        To adress: 
+        1) Interpolated basis varies significantly from shot to shot. Some shots
+           contain half a profile, some contain the full profile
+        2) Is it okay to extend the last ECE radial measurements to the 1ms EFIT time basis
+           before the disruption? -- Seems okay when comparing Te PF to Te0 sawteeth crashes
+        3) Strictly speaking we should perform this computation in flux coordinates not R,
+           but I don't think this is a significant source of error.
+
+        """
         nan_output = {
             "te_peaking_ece": np.full(len(params.times), np.nan)
         }
-        # Get magnetic axis data from EFIT
+        # Get magnetic axis data from EFIT (in units of m)
         try:
             r0 = 0.01 * params.mds_conn.get_data(
                 r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
@@ -1031,6 +1056,7 @@ class CmodPhysicsMethods:
             return nan_output
         
         # Read in Te profile measurements from 9 GPC1 channels and interpolate onto efit timebase
+        # Note the timebase for radial measurements is much slower than the timebasis for Te measurements.
         node_path = '.ece.gpc_results'
         n_channels = 9
         gpc1_te = np.full((n_channels, len(efit_time)), np.nan)
@@ -1061,7 +1087,6 @@ class CmodPhysicsMethods:
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}]: Failed to get GPC2 data")
             return nan_output
-        print(gpc2_rad)
         gpc2_te = interp1(gpc2_te_time, gpc2_te, efit_time)
         gpc2_rad = interp1(gpc2_rad_time, gpc2_rad, efit_time)
         
@@ -1076,27 +1101,45 @@ class CmodPhysicsMethods:
         for i in range(len(radii)):
             radii[i, indx_last_rad+1:] = radii[i, indx_last_rad]
 
+        # Because radial positions change over time, the proportion of core vs. edge sampling
+        # can change over time affecting biasing the denominator of the peaking factor.
+        # Find a uniform R basis over which we can interpolate all usable time slices.
+        # rmin-- max of most inboard usable point. rmax-- min of most outboard usable point
+        r_inboard = 0
+        r_outboard = np.inf
+        npoints = 28    # Max GPC channels
+        for i in range(len(efit_time)):
+            okay_indices = ( (Te[:, i] > 0) & (np.abs(radii[:, i] - r0[i]) < 0.95*aminor[i]) )
+            if (np.sum(okay_indices) > 9):
+                core_indices = (np.abs(radii[okay_indices, i] - r0[i]) < 0.2 * aminor[i])
+                if (np.sum(core_indices) > 0):
+                    rsorted = np.sort(radii[okay_indices, i])
+                    if (rsorted[0] > r_inboard): r_inboard = rsorted[0]
+                    if (rsorted[-1] < r_outboard): r_outboard = rsorted[-1]
+                    if (len(rsorted) < npoints): npoints = len(rsorted)  
+
         # Compute core average Te and total average Te
         Te_PF = np.full(len(efit_time), np.nan)
-        test_time = 0.8315
+        test_time = 0.5
         itest = np.argmin(np.abs(efit_time - test_time))
         for i in range(len(efit_time)):
-            okay_indices = ( (Te[:, i] > 0) & (np.abs(radii[:, i] - r0[i]) < aminor[i]) )
-            if (np.sum(okay_indices) > 0):
-                # Iterpolate onto equal spaced radial basis to not bias changes in radial sampling over time
-                r_equal_spaced = np.linspace(np.min(radii[okay_indices, i]), np.max(radii[okay_indices, i]), np.sum(okay_indices))
+            okay_indices = ( (Te[:, i] > 0) & (np.abs(radii[:, i] - r0[i]) < 0.95*aminor[i]) )
+            if (np.sum(okay_indices) > 9):
+                # Iterpolate onto equal spaced radial basis to reduce bias in changes in radial sampling over time
+                r_equal_spaced = np.linspace(r_inboard, r_outboard, npoints)
                 te_equal_spaced = interp1(radii[okay_indices, i], Te[okay_indices, i], r_equal_spaced)
                 core_indices = (np.abs(r_equal_spaced - r0[i]) < 0.2 * aminor[i])
                 if (np.sum(core_indices) > 0):
                     Te_PF[i] = np.nanmean(te_equal_spaced[core_indices]) / np.nanmean(te_equal_spaced)
-                    if (i == itest):
-                        plt.scatter(radii[:, itest], Te[:, itest], c='b', marker='o')
-                        plt.scatter(r_equal_spaced, te_equal_spaced, c='g', marker='o')
-                        plt.scatter(r_equal_spaced[core_indices], te_equal_spaced[core_indices], c='r', marker='.')
-                        plt.axvline(r0[i] - 0.2 * aminor[i], c='black', linestyle='--')
-                        plt.axvline(r0[i] + 0.2 * aminor[i], c='black', linestyle='--')
-                        plt.axvline(r0[i] + 1.0 * aminor[i], c='black', linestyle='--')
-                        plt.show()
+                    # if (i == itest):
+                    #     plt.scatter(radii[:, itest], Te[:, itest], c='k', marker='x', s=40)
+                    #     plt.scatter(r_equal_spaced, te_equal_spaced, c='g', marker='o', s=20)
+                    #     plt.scatter(r_equal_spaced[core_indices], te_equal_spaced[core_indices], c='r', marker='.')
+                    #     plt.axvline(r0[i] - 0.2 * aminor[i], c='r', linestyle='--')
+                    #     plt.axvline(r0[i] + 0.2 * aminor[i], c='r', linestyle='--')
+                    #     plt.axvline(r0[i] + 0.95 * aminor[i], c='k', linestyle='--')
+                    #     plt.axvline(r0[i] - 0.95 * aminor[i], c='k', linestyle='--')
+                    #     plt.show()
 
         Te_PF = interp1(efit_time, Te_PF, params.times)
         return pd.DataFrame({"te_peaking_ece": Te_PF})
