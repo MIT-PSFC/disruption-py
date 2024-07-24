@@ -1204,7 +1204,7 @@ class CmodTearingMethods:
         # and obtain the standard deviation
         # Mirnov is ~5 MHz, so 0.001 seconds has plenty of samples
 
-        target_times = params.shot_props.times
+        target_times = params.times
         time_window = 0.001
         n_equal_1_std = np.zeros(len(target_times))
 
