@@ -41,13 +41,13 @@ nav:
               - usage/settings/shotlist_setting.md
               - usage/settings/time_setting.md
       - Shots:
-          - Parameter Methods:
-              - Overview: usage/shots/parameter_method_reference.md
+          - Physics Methods:
+              - Overview: usage/shots/physics_method_reference.md
               - C-Mod Built-in Methods: >-
                   usage/shots/cmod_built_in_method_reference.md
               - D3D Built-in Methods: >-
                   usage/shots/d3d_built_in_method_reference.md
-              - Parameter Method Decorators: usage/shots/decorator_reference.md
+              - Physics Method Decorators: usage/shots/decorator_reference.md
           - Parameter Reference: usage/shots/disruption_parameters_reference.md
       - SQL Database: usage/sql_database.md
       - MDSplus Connection: usage/mds_connection_reference.md
