@@ -6,6 +6,7 @@ from importlib import resources
 
 import numpy as np
 import pandas as pd
+import scipy as sp
 from MDSplus import mdsExceptions
 
 import disruption_py.data
@@ -1223,7 +1224,7 @@ class CmodTearingMethods:
 
     @staticmethod
     @physics_method(
-        columns=["mirnov_freqs", "mirnov_bins"],
+        tags=["mirnov_spectrogram"],
         tokamak=Tokamak.CMOD,
     )
     def _get_mirnov_freqs(params: PhysicsMethodParams):
@@ -1250,36 +1251,19 @@ class CmodTearingMethods:
 
         # Interpolate the spectrogram onto the target timebase
         # Sxx_interp still has time for columns and frequency for rows
-        target_times = params.shot_props.times
+        target_times = params.times
         Sxx_interp = np.zeros((len(f), len(target_times)))
         for i in range(len(f)):
             Sxx_interp[i] = interp1(t, Sxx[i], target_times)
 
-        # Convert the interpolated spectrogram into
-        # a dataframe with two columns
-        # containing series of the spectrogram data and the frequencies
-        
-        # TODO: While each row of the dataframe has new data (as intended),
-        # the frequencies for each row will be the same
-        # This means there's a lot of data redundancy
-        # However, by doing this, we always ensure the frequencies
-        # are attached to the spectrogram data in some way
-        # Also, memory is cheap so it shouldn't be *that* big of a deal
-        # Investigate better ways to do this at some point
-
-        spectrogram_data = pd.DataFrame(columns=["mirnov_spectrogram", "mirnov_spectrogram_frequencies"])
-        for i in range(len(target_times)):
-            timeslice_data = np.array(Sxx_interp[:, i])
-            timeslice_df = pd.DataFrame([[timeslice_data, f]], columns=spectrogram_data.columns)
-            spectrogram_data = pd.concat([spectrogram_data, timeslice_df], ignore_index=True)
+        # Use multi-indexing to store the spectrogram data
+        spectrogram_data = pd.DataFrame(Sxx_interp.T, columns=pd.MultiIndex.from_product([["mirnov_spectrogram"], f], names=["", "frequencies"]))
 
         return spectrogram_data
-
-        # TODO: get more accurate description of soft x-ray data
     
     @staticmethod
     @physics_method(
-        columns=[f"sxr_array_1_chord_{chord}" for chord in range(40)], tokamak=Tokamak.CMOD
+        tags="sxr_array_1", tokamak=Tokamak.CMOD
     )
     def _get_sxr_chord_data(params: PhysicsMethodParams):
         """ """
@@ -1296,7 +1280,7 @@ class CmodTearingMethods:
             except:
                 sxr = np.full(len(params.shot_props.times), np.nan)
 
-            sxr_dataframe[f"sxr_array_1_chord_{chord}"] = sxr
+            sxr_dataframe[f"sxr_array_1", chord] = sxr
         return sxr_dataframe
 
     @staticmethod
@@ -1357,22 +1341,22 @@ class CmodTearingMethods:
 
     @staticmethod
     @physics_method(
-        columns=[f"ece_te_{number}" for number in range(1,10)], tokamak=Tokamak.CMOD
+        tags=["ece_te"], tokamak=Tokamak.CMOD
     )
     def _get_ece_te_data(params: PhysicsMethodParams):
         ece_dataframe = pd.DataFrame()
-        for number in range(1, 10):
+        for channel_number in range(1, 10):
             try:
-                path = f"\\top.ece.gpc_results.te:te{number}"
+                path = f"\\top.ece.gpc_results.te:te{channel_number}"
                 ece, t_ece = params.mds_conn.get_data_with_dims(
                     r"{}".format(path),
                     tree_name="electrons",
                     astype="float64",
                 )
-                ece = interp1(t_ece, ece, params.shot_props.times)
+                ece = interp1(t_ece, ece, params.times)
             except:
-                ece = np.full(len(params.shot_props.times), np.nan)
+                ece = np.full(len(params.times), np.nan)
 
-            ece_dataframe[f"ece_te_{number}"] = ece
+            ece_dataframe["ece_te", channel_number] = ece
 
         return ece_dataframe
