@@ -87,19 +87,19 @@ class D3DPhysicsMethods:
             p_nbi = np.zeros(len(params.times))
             params.logger.info(f"[Shot {params.shot_id}]:Failed to open NBI node")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            
-        # Get electron cycholotrn heating (ECH) power. It's point data, so it's not
+
+        # Get electron cyclotron heating (ECH) power. It's point data, so it's not
         # stored in an MDSplus tree
         try:
             p_ech, t_ech = params.mds_conn.get_data_with_dims(
                 r"\top.ech.total:echpwrc", tree_name="rf"
             )
-            import matplotlib.pyplot as plt
-            plt.plot(t_ech, p_ech)
-            plt.show()
-
             t_ech /= 1e3    # [ms] -> [s]
             if len(t_ech) > 2:
+                # Sometimes, t_ech has an extra "0" value tacked on to the end. 
+                # This must be removed before the interpolation.
+                if t_ech[-1] == 0:
+                    t_ech, p_ech = t_ech[:-1], p_ech[:-1]
                 p_ech = interp1(
                     t_ech,
                     p_ech,
