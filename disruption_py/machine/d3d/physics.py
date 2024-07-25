@@ -67,6 +67,7 @@ class D3DPhysicsMethods:
             p_nbi, t_nbi = params.mds_conn.get_data_with_dims(
                 r"\d3d::top.nb:pinj", tree_name="d3d", astype="float64"
             )
+            t_nbi /= 1e3    # [ms] -> [s]
             p_nbi *= 1.0e3  # [KW] -> [W]
             if len(t_nbi) > 2:
                 p_nbi = interp1(
@@ -86,12 +87,18 @@ class D3DPhysicsMethods:
             p_nbi = np.zeros(len(params.times))
             params.logger.info(f"[Shot {params.shot_id}]:Failed to open NBI node")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-        # Get electron cycholotrn heating (ECH) power. It's poitn data, so it's not
-        #  stored in an MDSplus tree
+            
+        # Get electron cycholotrn heating (ECH) power. It's point data, so it's not
+        # stored in an MDSplus tree
         try:
             p_ech, t_ech = params.mds_conn.get_data_with_dims(
                 r"\top.ech.total:echpwrc", tree_name="rf"
             )
+            import matplotlib.pyplot as plt
+            plt.plot(t_ech, p_ech)
+            plt.show()
+
+            t_ech /= 1e3    # [ms] -> [s]
             if len(t_ech) > 2:
                 p_ech = interp1(
                     t_ech,
@@ -113,8 +120,11 @@ class D3DPhysicsMethods:
                 f"[Shot {params.shot_id}]:Failed to open ECH node. Setting to zeros"
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+
         # Get ohmic power and loop voltage
-        p_ohm, v_loop = D3DPhysicsMethods.get_ohmic_parameters(params)
+        ohmic_parameters = D3DPhysicsMethods.get_ohmic_parameters(params)
+        p_ohm, v_loop = ohmic_parameters['p_ohm'], ohmic_parameters['v_loop']
+
         # Radiated power
         # We had planned to use the standard signal r'\bolom::prad_tot' for this
         # parameter.  However, the processing involved in calculating \prad_tot
@@ -171,6 +181,17 @@ class D3DPhysicsMethods:
         # Computer P_sol, defined as P_in - P_rad
         # TODO: Why calculate p_sol?
         p_sol = p_input - p_rad
+
+        ### DEBUG ###
+        import matplotlib.pyplot as plt
+        plt.plot(params.times, p_nbi, label='nbi')
+        plt.plot(params.times, p_ech, label='ech')
+        plt.plot(params.times, p_ohm, label='ohm')
+        plt.plot(params.times, p_rad, label='rad')
+        plt.legend()
+        plt.show()
+        ######
+
         output = {
             "p_rad": p_rad,
             "p_nbi": p_nbi,
@@ -213,7 +234,8 @@ class D3DPhysicsMethods:
             #  ip smoothing
             dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
 
-            # TODO: To be removed in final commit
+            ### TODO: To be removed in final commit ###
+            '''
             ip_smoothed = gsastd(t_ip, ip, 0, 20, 3, 1, 0)
             import matplotlib.pyplot as plt
 
@@ -223,6 +245,7 @@ class D3DPhysicsMethods:
             plt.ylim(-1e3, 2e6)
             plt.legend()
             plt.show()
+            '''
             ######
 
             li, t_li = params.mds_conn.get_data_with_dims(
