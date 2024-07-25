@@ -135,6 +135,8 @@ class D3DPhysicsMethods:
         # and powers.pro).  I converted them into Matlab routines, and modified the
         # analysis so that the smoothing is causal, and uses a shorter window.
         smoothing_window = 0.010  # [s]
+
+        ### DEBUG: MATLAB DIII-D/get_power_d3d.m line 138
         try:
             bol_prm, _ = params.mds_conn.get_data_with_dims(
                 r"\bol_prm", tree_name="bolom"
@@ -144,29 +146,40 @@ class D3DPhysicsMethods:
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
         lower_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
         upper_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
-        bol_channels = lower_channels + upper_channels
+        bol_channels = lower_channels + upper_channels      # NOTE: getbolo_new.m line 85-89 has [bol_u, bol_l]; make sure this doesn't cause any error
         bol_signals = []
-        bol_times = []
-        for i in range(48):
-            bol_signal, bol_time = params.mds_conn.get_data_with_dims(
-                rf"\top.raw:{bol_channels[i]}", tree_name="bolom"
-            )
+        # bol_times = []          # NOTE: Why store 48 identical bol_time?
+        for i in range(48):        # NOTE: don't need to get bol_time 48 times
+            # bol_signal, bol_time = params.mds_conn.get_data_with_dims(
+            #     rf"\top.raw:{bol_channels[i]}", tree_name="bolom"
+            # )
+            bol_signal = params.mds_conn.get_data(rf"\top.raw:{bol_channels[i]}", tree_name="bolom")
+            # bol_time /= 1e3 # [ms] -> [s]
             bol_signals.append(bol_signal)
-            bol_times.append(bol_time)
+            # bol_times.append(bol_time)
+        bol_time = params.mds_conn.get_dims(rf"\top.raw:{bol_channels[0]}", tree_name="bolom")[0]
+        bol_time /= 1e3 # [ms] -> [s]
+        # a_struct = get_bolo(
+        #     params.shot_id, bol_channels, bol_prm, bol_signals, bol_times, smoothing_window*1e3
+        # )
         a_struct = get_bolo(
-            params.shot_id, bol_channels, bol_prm, bol_signals, bol_times
+            params.shot_id, bol_channels, bol_prm, bol_signals, bol_time, smoothing_window*1e3
         )
-        ier = 0
+
+        ### DEBUG: MATLAB DIII-D/get_power_d3d.m line 143
+        ier = 0     # NOTE: ier is unnecessary; use for...if...break; do...
         for j in range(48):
             # TODO: Ask about how many valid channels are needed for proper calculation
             if a_struct.channels[j].ier == 1:
                 ier = 1
-                p_rad = np.full(len(params.times), np.nan)
+                p_rad = np.full(len(params.times), np.nan)      # TODO: replace with [np.nan] in the last commit
                 break
         if ier == 0:
+            ### DEBUG: MATLAB DIII-D/get_power_d3d.m line 152
             b_struct = power(a_struct)
             p_rad = b_struct.pwrmix  # [W]
-            p_rad = interp1(a_struct.time, p_rad, params.times, "linear")
+            # p_rad = interp1(a_struct.time, p_rad, params.times, "linear")       # BUG: len(a_struct.time)=4096, len(p_rad)=16384
+            p_rad = interp1(a_struct.raw_time, p_rad, params.times, "linear")
 
         # Remove any negative values from the power data
         p_rad[np.isinf(p_rad)] = np.nan

@@ -384,14 +384,6 @@ def sa(y, smooth_width, ends_type=0):
     """
     # NOTE: numpy behaviour is different than matlab and will round X.5 to nearest even value instead of value farther away from 0
 
-    def matlab_round_int(x):
-        # Custom rounding function. Round x.5 to the nearest integer with larger magnitude
-        sign = np.sign(x)
-        x = abs(x)
-        if x % 1 == 0.5:
-            return int(sign * np.ceil(x))
-        return int(sign * round(x))
-
     w = matlab_round_int(smooth_width)
     sum_points = np.sum(y[:w])
     s = np.zeros(y.shape)
@@ -414,6 +406,14 @@ def sa(y, smooth_width, ends_type=0):
 
     return y_smooth
 
+def matlab_round_int(x):
+    # Custom rounding function. Round x.5 to the nearest integer with larger magnitude
+    # numpy behaviour is different than matlab and will round X.5 to nearest even value instead of value farther away from 0
+    sign = np.sign(x)
+    x = abs(x)
+    if x % 1 == 0.5:
+        return int(sign * np.ceil(x))
+    return int(sign * round(x))
 
 # TODO: Cover documentation with Cristina
 def power(a):
@@ -557,7 +557,7 @@ def power(a):
     c = Channel("", np.zeros((4096)), np.zeros((4096)), 0.0, 0.0, 0.0)
     b = Power(np.zeros((4096)), np.zeros((4096)), np.zeros((4096)), np.tile(c, (48)))
     for i in range(48):
-        b.chan[i].chanpwr = kappa[i] * a.channels[i].pwr
+        b.chan[i].chanpwr = kappa[i] * a.channels[i].pwr    # BUG: len = 16384
         b.chan[i].brightness = etendu[i] * a.channels[i].pwr
         b.chan[i].R = a.channels[i].R
         b.chan[i].Z = a.channels[i].Z
@@ -566,6 +566,9 @@ def power(a):
     b.divl = 0.0
     b.divu = 0.0
     # Calculate power radiated from lower divertor region
+    # NOTE: are we sure these indices are correct? 
+    # In python: bol_channels = lower_channels + upper_channels 
+    # In MATLAB: getbolo_new.m line 85-89 has [bol_u, bol_l]
     for i in range(24, 31):
         b.divl = b.divl + b.chan[i].chanpwr
     # Calculate power radiated from upper divertor region
@@ -656,6 +659,7 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
             1.3993e8,
             1.5376e8,
         ]
+        # transmission factor through ECH screen
         # improved ECH screen
         scrfact = [
             0.7990,
@@ -934,11 +938,14 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         for i in range(48):
             bolo_shot.channels[i].ier = 1
         return bolo_shot
-    time = np.linspace(np.min(bol_time[0]), np.min(bol_time[-1]), 16384)
+
+    # time = np.linspace(np.min(bol_time[0]), np.min(bol_time[-1]), 16384)
+    time = np.linspace(min(bol_time), max(bol_time), 16384)
     dt = time[1] - time[0]
-    window_size = int(np.around(drtau / dt))
+    window_size = matlab_round_int(drtau / dt)
     smoothing_kernel = (1.0 / window_size) * np.ones(window_size)
-    bolo_shot.ntimes = int(len(time) / 4)
+
+    bolo_shot.ntimes = int(len(time) / 4)       # NOTE: Downsample bolo from (bolo_shot.raw_time) 16384 to (bolo_shot.time) 4096!
     bolo_shot.time = np.linspace(np.min(time), np.max(time), bolo_shot.ntimes)
     t_del = bolo_shot.time[1] - bolo_shot.time[0]
     bolo_shot.raw_time = time
@@ -947,9 +954,11 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
     nzer = np.where(k != 0)
     k[nzer] = 1.0 / k[nzer]
     k = k / t_del / (np.fix(m / 2) * 2)
+    
+    ### DEBUG: getbolo_new.m line 138 ###
     for i in range(48):
         bolo_shot.channels[i].label = bol_channels[i]
-        data = interp1(bol_time, bol_top[i], bolo_shot.raw_time)
+        data = interp1(bol_time, bol_top[i], bolo_shot.raw_time)    # len(data)=16384
         bolo_shot.channels[i].ier = 0
         bolo_shot.channels[i].raw = data
         bolo_shot.channels[i].gam = gam[i + 1]
@@ -958,6 +967,7 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         bolo_shot.channels[i].R = aperx[i]
         bolo_shot.channels[i].Z = apery[i]
         bolo_shot.channels[i].angle = angle[i]
+
         # Subtract baseline offset
         temp = data - np.mean(data[:20])
         # Filter signal using causal moving average filter (i.e. boxcar)
