@@ -1249,6 +1249,12 @@ class CmodTearingMethods:
         # so we need to shift the spectrogram timebase to match the mirnov timebase
         t += (mirnov_times[0])
 
+        # Cut the spectrogram to be max 50 kHz
+        f_max = 50e3
+        f_indices = np.where(f < f_max)
+        f = f[f_indices]
+        Sxx = Sxx[f_indices]
+
         # Interpolate the spectrogram onto the target timebase
         # Sxx_interp still has time for columns and frequency for rows
         target_times = params.times
@@ -1360,3 +1366,5 @@ class CmodTearingMethods:
             ece_dataframe["ece_te", channel_number] = ece
 
         return ece_dataframe
+    
+    
