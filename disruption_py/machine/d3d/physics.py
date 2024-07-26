@@ -193,6 +193,7 @@ class D3DPhysicsMethods:
         p_rad[p_rad < 0] = 0
         p_nbi[p_nbi < 0] = 0
         p_ech[p_ech < 0] = 0
+        # NOTE: Could p_ohm be negative?
 
         p_input = p_ohm + p_nbi + p_ech  # [W]
         rad_fraction = p_rad / p_input
@@ -296,6 +297,24 @@ class D3DPhysicsMethods:
         v_resistive = v_loop - v_inductive  # [V]
         p_ohm = ip * v_resistive  # [W]
         output = {"p_ohm": p_ohm, "v_loop": v_loop}
+
+        # NOTE: what if ip is negative?
+        import matplotlib.pyplot as plt
+        fig, axes = plt.subplots(6)
+        axes[0].plot(params.times, ip)
+        axes[0].set_ylabel('ip')
+        axes[1].plot(params.times, dipdt_smoothed)
+        axes[1].set_ylabel('dipdt_smoothed')
+        axes[2].plot(params.times, inductance)
+        axes[2].set_ylabel('inductance')
+        axes[3].plot(params.times, v_inductive)
+        axes[3].set_ylabel('v_inductive')
+        axes[4].plot(params.times, v_resistive)
+        axes[4].set_ylabel('v_resistive')
+        axes[5].plot(params.times, p_ohm)
+        axes[5].set_ylabel('p_ohm')
+        plt.show()
+
         return output
 
     @staticmethod
