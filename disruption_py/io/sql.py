@@ -14,7 +14,7 @@ from sqlalchemy import create_engine
 from disruption_py.config import config
 from disruption_py.core.utils.misc import without_duplicates
 from disruption_py.core.utils.shared_instance import SharedInstanceFactory
-from disruption_py.machine.tokamak import Tokamak, is_tokamak_indexed
+from disruption_py.machine.tokamak import Tokamak
 
 
 class ShotDatabase:
@@ -114,7 +114,8 @@ class ShotDatabase:
     def conn(self):
         """Property returning a connection to sql database.
 
-        If a connection exists for the given thread returns that connection, otherwise creates a new connection
+        If a connection exists for the given thread returns that connection,
+        otherwise creates a new connection
 
         Returns
         -------
@@ -137,7 +138,8 @@ class ShotDatabase:
         query : str
             The query string
         use_pandas : bool, optional
-            Whether pd.read_sql_query should be used to run the query. Default value is true.
+            Whether pd.read_sql_query should be used to run the query. Default value
+            is true.
 
         Returns
         -------
@@ -172,8 +174,9 @@ class ShotDatabase:
         """
         Upload shot to SQL database.
 
-        Either inserts or updates shot data depending on whether shot already exists in database.
-        If shot exists, then thye timebase of the shot data must match the timebase of the shot in the database.
+        Either inserts or updates shot data depending on whether a shot already exists
+        in database. If shot exists, then the timebase of the shot data must match
+        the timebase of the shot in the database.
 
         Parameters
         ----------
@@ -182,18 +185,21 @@ class ShotDatabase:
         shot_data : pd.DataFrame
             Dataframe containing shot data for update
         update : bool
-            Whether to update shot data if the shot already exists in database. Update will happen regardless if
-            the column being updated is all nil. Default value is False.
+            Whether to update shot data if the shot already exists in database.
+            Update will happen regardless of whether the column being updated is
+            all nil. Default value is False.
         override_columns : List[str]
-            List of protecrted columns that can should still be updated. Update must be true for input values in the
-            columns to be changed. Default value is [].
+            List of protected columns that can still be updated. Update must be
+            true for input values in the columns to be changed. Default value is [].
         """
         if self.write_database_table_name is None:
             raise ValueError(
-                "specify write_database_table_name in the configuration before adding shot data"
+                "specify write_database_table_name in the configuration before "
+                + "adding shot data"
             )
         curr_df = pd.read_sql_query(
-            f"select * from {self.write_database_table_name} where shot={shot_id} order by time",
+            f"select * from {self.write_database_table_name} where shot={shot_id} "
+            + "order by time",
             self.engine,
         )
 
@@ -253,7 +259,8 @@ class ShotDatabase:
                 matching_columns_shot_data.itertuples(index=False, name=None)
             )
             curs.executemany(
-                f"insert into {table_name} ({sql_column_names}) values {parameter_markers}",
+                f"insert into {table_name} ({sql_column_names}) values "
+                + f"{parameter_markers}",
                 data_tuples,
             )
         return True
@@ -270,7 +277,8 @@ class ShotDatabase:
         """
         Update shot data into SQL table.
 
-        Assumes that the shot id already exist in the database and timebase of shot_data is the same as curr_df.
+        Assumes that the shot id already exist in the database and the timebase of
+        shot_data is the same as curr_df.
 
         Parameters
         ----------
@@ -279,13 +287,15 @@ class ShotDatabase:
         shot_data : pd.DataFrame
             Dataframe containing shot data for update.
         update : bool
-            Whether to update shot data if the shot already exists in database. Update will happen regardless if
-            the column being updated is all nil. Default value is False.
+            Whether to update shot data if the shot already exists in database.
+            Update will happen regardless of whether the column being updated is
+            all nil. Default value is False.
         override_columns : List[str]
-            List of columns that can should still be updated. Update must be true for input values in the
-            columns to be changed. Default value is [].
+            List of columns that can should still be updated. Update must be true
+            for input values in the columns to be changed. Default value is [].
         table_name : str
-            Name of the table for data insert or update. Default value is "disruption_warning".
+            Name of the table for data insert or update. Default value is
+            "disruption_warning".
         """
         override_columns = override_columns or []
 
@@ -311,7 +321,10 @@ class ShotDatabase:
                 sql_set_string = ", ".join(
                     [f"{col} = ?" for col in update_column_names]
                 )
-                sql_command = f"UPDATE {table_name} SET {sql_set_string} WHERE time = ? AND shot = ?;"
+                sql_command = (
+                    f"UPDATE {table_name} SET {sql_set_string} "
+                    + "WHERE time = ? AND shot = ?;"
+                )
                 curs.execute(sql_command, row + (curr_df["time"][index], str(shot_id)))
         return True
 
@@ -332,14 +345,16 @@ class ShotDatabase:
         """Remove shot from SQL table."""
         if self.write_database_table_name is None:
             raise ValueError(
-                "specify write_database_table_name in the configuration before adding shot data"
+                "specify write_database_table_name in the configuration before "
+                + "adding shot data"
             )
         if self.write_database_table_name == "disruption_warning":
             raise ValueError(
                 "Please do not delete from the disruption_warning database"
             )
         data_df = pd.read_sql_query(
-            f"""select * from {self.write_database_table_name} where shot = {shot_id} order by time""",
+            f"""select * from {self.write_database_table_name} where shot = """
+            + f"""{shot_id} order by time""",
             self.engine,
         )
         if len(data_df) == 0:
@@ -355,7 +370,8 @@ class ShotDatabase:
         """Add column to SQL table without filling in data for column."""
         if self.write_database_table_name is None:
             raise ValueError(
-                "specify write_database_table_name in the configuration before adding shot data"
+                "specify write_database_table_name in the configuration before "
+                + "adding shot data"
             )
         try:
             self.query(
@@ -371,7 +387,8 @@ class ShotDatabase:
         """Remove column from SQL table"""
         if self.write_database_table_name is None:
             raise ValueError(
-                "specify write_database_table_name in the configuration before adding shot data"
+                "specify write_database_table_name in the configuration before "
+                + "adding shot data"
             )
         if col_name in self.protected_columns:
             self.logger.error(f"Failed to drop protected column {col_name}")
@@ -406,7 +423,7 @@ class ShotDatabase:
         Returns
         -------
         pd.Dataframe
-            Dataframe containing querried data
+            Dataframe containing queried data
         """
         shotlist = ",".join([str(shot_id) for shot_id in shotlist])
         selected_cols = f"{cols[0]}"
@@ -415,7 +432,10 @@ class ShotDatabase:
         if shotlist is None:
             query = f"select {selected_cols} from {sql_table} order by time"
         else:
-            query = f"select {selected_cols} from {sql_table} where shot in ({shotlist}) order by time"
+            query = (
+                f"select {selected_cols} from {sql_table} where shot in "
+                + f"({shotlist}) order by time"
+            )
         shot_df = pd.read_sql_query(query, self.engine)
         shot_df.columns = shot_df.columns.str.lower()
         return shot_df
@@ -434,13 +454,17 @@ class ShotDatabase:
 
     def get_disruption_shotlist(self):
         """
-        Get pandas dataframe of all disruptive shots and times from the disruption table. Can be sed as a cross-reference to determine whether a given shot is disruptive or not (all shots in this table are disruptive) and contain a t_disrupt.
+        Get Pandas DataFrame of all disruptive shots and times from the disruption
+        table. Can be set as a cross-reference to determine whether a given shot
+        is disruptive or not (all shots in this table are disruptive) and contain
+        a t_disrupt.
         """
         return self.query("select distinct shot from disruptions order by shot")
 
     def get_disruption_warning_shotlist(self):
         """
-        Get pandas dataframe of all shots in the disruption_warning table. NOTE: The disruption_warning table contains ONLY a subset of shots in this table
+        Get Pandas DataFrame of all shots in the disruption_warning table. NOTE:
+        The disruption_warning table contains ONLY a subset of shots in this table
         """
         return self.query("select distinct shot from disruption_warning order by shot")
 
@@ -457,9 +481,10 @@ class DummyObject:
 
 class DummyDatabase(ShotDatabase):
     """
-    A database class that does not require connecting to an SQL server but returns no data.
+    A database class that does not require connecting to an SQL server but returns
+    no data.
 
-    Note: On CMod, disruption time data and any derrivative values will not be correct
+    Note: On CMod, disruption time data and any derrivative values will not be correct.
 
     Examples
     --------

@@ -15,9 +15,6 @@ from disruption_py.machine.tokamak import Tokamak
 
 class D3DPhysicsMethods:
 
-    # Tokamak Variables
-    NOMINAL_FLATTOP_RADIUS = 0.59
-
     @staticmethod
     @physics_method(columns=["time_until_disrupt"], tokamak=Tokamak.D3D)
     def _get_time_until_disrupt(params: PhysicsMethodParams):
@@ -596,6 +593,7 @@ class D3DPhysicsMethods:
         always return an arrays of NaN for z_prog, z_error, and
         z_error_norm.
         """
+        NOMINAL_FLATTOP_RADIUS = 0.59
         z_cur = [np.nan]
         z_cur_norm = [np.nan]
         z_prog = [np.nan]
@@ -912,7 +910,7 @@ class D3DPhysicsMethods:
         poloidal plane.
         Parameters
         ----------
-        times: np.ndarray
+        ts: np.ndarray
             Timebase to interpolate to
         efit_dict: dict
             Dictionary with the efit data. Keys are 'time', 'r', 'z', 'psin', 'rhovn'
