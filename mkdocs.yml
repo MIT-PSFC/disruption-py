@@ -18,37 +18,38 @@ theme:
     - search.highlight
     - search.suggest
     - toc.follow
-    # features:
-    #   - navigation.instant
-    #   - navigation.tabs
-    #   - navigation.expand
+  palette:
+    scheme: slate
+    primary: custom
+    accent: custom
+extra_css:
+  - stylesheets/disruptions.css
 nav:
   - Overview:
-      - Background: index.md
-      - Installation: installation.md
-      - Quickstart: quickstart/usage_quickstart.md
+    - Background: index.md
+    - Installation: installation.md
+    - Quickstart: quickstart/usage_quickstart.md
   - Usage:
-      - Entry points:
-          - Workflow: usage/workflow_reference.md
-      - Settings:
-          - Settings Classes:
-              - usage/settings/cache_setting.md
-              - usage/settings/domain_setting.md
-              - usage/settings/log_settings.md
-              - usage/settings/nickname_setting.md
-              - usage/settings/output_setting.md
-              - usage/settings/retrieval_settings.md
-              - usage/settings/shotlist_setting.md
-              - usage/settings/time_setting.md
-      - Shots:
-          - Physics Methods:
-              - Overview: usage/shots/physics_method_reference.md
-              - C-Mod Built-in Methods: >-
-                  usage/shots/cmod_built_in_method_reference.md
-              - D3D Built-in Methods: >-
-                  usage/shots/d3d_built_in_method_reference.md
-              - Physics Method Decorators: usage/shots/decorator_reference.md
-          - Parameter Reference: usage/shots/disruption_parameters_reference.md
+    - Entry points:
+      - Workflow: usage/workflow_reference.md
+    - Settings:
+      - Settings Classes:
+        - Cache Setting: usage/settings/cache_setting.md
+        - Domain Setting: usage/settings/domain_setting.md
+        - Log Settings: usage/settings/log_settings.md
+        - Nickname Setting: usage/settings/nickname_setting.md
+        - Output Setting: usage/settings/output_setting.md
+        - Retrieval Settings: usage/settings/retrieval_settings.md
+        - Shotlist Setting: usage/settings/shotlist_setting.md
+        - Time Setting: usage/settings/time_setting.md
+    - Calculated Parameters:
+      - Physics Methods:
+        - Overview: usage/physics_methods/physics_method_reference.md
+        - C-Mod Built-in Methods: usage/physics_methods/cmod_built_in_method_reference.md
+        - D3D Built-in Methods: usage/physics_methods/d3d_built_in_method_reference.md
+        - Physics Method Decorators: usage/physics_methods/decorator_reference.md
+      - Parameter Reference: usage/physics_methods/disruption_parameters_reference.md
+    - Data I/O:
       - SQL Database: usage/sql_database.md
       - MDSplus Connection: usage/mds_connection_reference.md
   - FAQ: faq.md

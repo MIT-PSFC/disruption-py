@@ -1,13 +1,13 @@
 ## Overview { .doc .doc-heading }
-A module for handling time settings passed in the `RetrievalSettings` class. 
+A module for handling time settings passed in the [`RetrievalSettings`][disruption_py.settings.retrieval_settings] class. 
 Set time settings used by DisruptionPy to set the timebase for data retrieval from MDSPlus and any SQL tables.
 
 This module defines the abstract class [`TimeSetting`][disruption_py.settings.time_setting.TimeSetting] that can have subclasses passed as the
-`time_setting` parameter to the `RetrievalSettings` class.
+`time_setting` parameter to the [`RetrievalSettings`][disruption_py.settings.retrieval_settings] class.
 It also provides built-in classes and mappings to easily set the timebase for data retrievel for common use cases.
 
 ### Usage { .doc .doc-heading }
-Currently, these are the options that can be passed to the `time_setting` parameter in `RetrievalSettings`:
+Currently, these are the options that can be passed to the `time_setting` parameter in [`RetrievalSettings`][disruption_py.settings.retrieval_settings]:
 
 - An instance of a subclass of `TimeSetting`
 - A string identifier in the `_time_setting_mappings` dictionary:

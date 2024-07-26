@@ -1,8 +1,8 @@
 
-A simple wrapper for the MDSplus thin client. The [`MDSConnection` class ][disruption_py.mdsplus_integration.mds_connection.MDSConnection] should be used for all data retrieval tasks from MDSplus.
+The [`MDSConnection`][disruption_py.io.mds.MDSConnection] class should be used for all data retrieval tasks from MDSplus. It is a simple wrapper for the MDSplus thin client. 
 
-<!-- ::: disruption_py.mdsplus_integration.mds_connection
+::: disruption_py.io.mds
     handler: python
     options:
         filters: ["!^_[^_]"]
-		members_order: "source" -->
+		members_order: "source"

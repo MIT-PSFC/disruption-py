@@ -1,13 +1,13 @@
 ## Overview { .doc .doc-heading }
-A module for handling the EFIT tree nickname passed in the `RetrievalSettings` class. 
+A module for handling the EFIT tree nickname passed in the [`RetrievalSettings`][disruption_py.settings.retrieval_settings] class. 
 DisruptionPy uses the nickname setting to determine which MDSplus EFIT tree to get data from.
 
 This module defines the abstract class `NicknameSetting` that can have subclasses passed as the
-`efit_nickname_setting` parameter to the `RetrievalSettings` class.
+`efit_nickname_setting` parameter to the [`RetrievalSettings`][disruption_py.settings.retrieval_settings] class.
 It also provides built-in classes and mappings to easily set the nickname for data retrieval for common use cases.
 
 ### Usage { .doc .doc-heading }
-Currently, these are the options that can be passed to the `efit_nickname_setting` parameter in `RetrievalSettings`:
+Currently, these are the options that can be passed to the `efit_nickname_setting` parameter in [`RetrievalSettings`][disruption_py.settings.retrieval_settings]:
 
 - An instance of a subclass of `NicknameSetting`
 - A string identifier in the `_nickname_setting_mappings` dictionary:

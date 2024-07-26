@@ -7,7 +7,7 @@ Use [`basic_example_1.py`](https://github.com/MIT-PSFC/disruption-py/blob/main/e
 
 ### Creating a DisruptionPy script
 1. **Create the shot data retrieval settings**
-	The retrieval settings allow you to specify the settings for retrieving data for a single shot. You can specify details like the columns you want filled by the physics methods and the timebase domain you want used. See [`RetrievalSettings`](disruption_py.settings.retrieval_settings.RetrievalSettings) for more information and a complete list of settings options.
+	The retrieval settings allow you to specify the settings for retrieving data for a single shot. You can specify details like the columns you want filled by the physics methods and the timebase domain you want used. See [`RetrievalSettings`][disruption_py.settings.retrieval_settings] for more information and a complete list of settings options.
 
 	```python
 	from disruption_py.settings.retrieval_settings import RetrievalSettings
@@ -21,7 +21,7 @@ Use [`basic_example_1.py`](https://github.com/MIT-PSFC/disruption-py/blob/main/e
 	```
 
 2. **Call `get_shots_data`.** 
-	The [`get_shots_data`](/usage/workflow_reference#disruption_py.workflow.get_shots_data) method is the main entry point for retrieving data from DisruptionPy as well as setting up connections to the SQL database and the MDSplus server. See [`get_shots_data`](/usage/workflow_reference#disruption_py.workflow.get_shots_data) for more details.
+	[`workflow.py`][disruption_py.workflow] is the main entrypoint for retrieving data from DisruptionPy. The [`get_shots_data`][disruption_py.workflow.get_shots_data] method will be the primary method you use to get data, but [`workflow.py`][disruption_py.workflow] can also help you set up connections to the SQL database and the MDSplus server. See [`workflow.py`][disruption_py.workflow] for more details.
 	```python
 	from disruption_py.settings.retrieval_settings import RetrievalSettings
 	from disruption_py.workflow import get_shots_data
@@ -48,11 +48,7 @@ Use [`basic_example_1.py`](https://github.com/MIT-PSFC/disruption-py/blob/main/e
 		note: this will result in data retrieval being incorrect for parameter methods that depend on 
 		data retrieved from the SQL table eg. `time_until_disrupt`
 		```python
-		from disruption_py.io.sql import DummyDatabase
-		from disruption_py.workflow import get_shots_data
-			shot_data = get_shots_data(
-				...
-				DummyDatabase.initializer
-				...
-			)
+		--8<--
+		examples/no_database.py
+		--8<--
 		```

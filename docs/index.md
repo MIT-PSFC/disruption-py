@@ -1,5 +1,5 @@
 # DisruptionPy
-An interoperable Python package for plasma disruption analysis and prediction using ML. 
+DisruptionPy is an interoperable Python package for plasma disruption analysis and prediction using ML. 
 
 ## Background
 A key element of plasma control systems (PCS) in tokamak reactors is the prediction and avoidance of disruptions, sudden losses of the thermal and magnetic energy stored within the plasma that can occur when tokamaks operate near regions of plasma instability or because of system malfunctions. The energy released during disruptions can cause severe damage to plasma-facing components, limiting experimental operation or even the device's lifetime. This poses a serious challenge to next-step fusion experiments such as SPARC, which will have to operate near some of the limits of plasma stability to achieve its intended performance and will do so for long and frequent intervals. Previous work has shown the promise of machine learning (ML) algorithms for disruption prediction in both DIII-D and EAST -- the Experimental Advanced Superconducting Tokamak in China -- PCS. ML algorithms are also promising because fusion science currently lacks first-principle, theoretical solutions to fully predict and avoid disruptions. 
