@@ -566,9 +566,6 @@ def power(a):
     b.divl = 0.0
     b.divu = 0.0
     # Calculate power radiated from lower divertor region
-    # NOTE: are we sure these indices are correct? 
-    # In python: bol_channels = lower_channels + upper_channels 
-    # In MATLAB: getbolo_new.m line 85-89 has [bol_u, bol_l]
     for i in range(24, 31):
         b.divl = b.divl + b.chan[i].chanpwr
     # Calculate power radiated from upper divertor region
@@ -579,12 +576,13 @@ def power(a):
         b.pwrmix = b.pwrmix + b.chan[i].chanpwr
     for i in range(5, 12):
         b.pwrmix = b.pwrmix - kappa[i] * b.divl / 7.0 / kappa[i + 43]
-    b.pwrmix = b.pwrmix + b.divl + b.divu
+    b.pwrmix = b.pwrmix + b.divu + b.divl
     return b
 
 
 def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
     drtau /= 1.0e3
+    # NOTE: why set gam, tau & scrfact as 2D arrays?
     gam = np.zeros((1, 49))
     tau = np.zeros((1, 49))
     kappa = [
@@ -889,6 +887,7 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         tau: float
         scrfact: float
 
+    # NOTE: Channel.raw has zeros(1,16384) in MATLAB (getbolo_new.m line 66)
     one_channel = Channel(
         "", 0.0, 0.0, 0.0, 0, np.zeros((1, 4096)), np.zeros((1, 4096)), 0.0, 0.0, 0.0
     )
@@ -951,7 +950,7 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
     bolo_shot.raw_time = time
     m = 2 * np.fix(np.fix(1000 * drtau) / np.fix(1000 * t_del) / 2) + 1
     k = np.arange(0, m) - np.fix((m - 1) / 2)
-    nzer = np.where(k != 0)
+    nzer = np.where(k != 0)[0]
     k[nzer] = 1.0 / k[nzer]
     k = k / t_del / (np.fix(m / 2) * 2)
     
@@ -959,6 +958,7 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
     for i in range(48):
         bolo_shot.channels[i].label = bol_channels[i]
         data = interp1(bol_time, bol_top[i], bolo_shot.raw_time)    # len(data)=16384
+        
         bolo_shot.channels[i].ier = 0
         bolo_shot.channels[i].raw = data
         bolo_shot.channels[i].gam = gam[i + 1]
@@ -973,12 +973,19 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         # Filter signal using causal moving average filter (i.e. boxcar)
         temp_filtered = np.convolve(temp, smoothing_kernel, "same")
         # temp_filtered = lfilter(smoothing_kernel, 1, temp)
-        dr_dt = np.gradient(temp_filtered, dt)
+
+        # NOTE: dr_dt is incredibly noisy
+        # dr_dt = np.gradient(temp_filtered, dt)  # BUG: This fails in testing because np.gradient is replaced with matlab_gradient_1d_vectorized
+        dr_dt = np.gradient(temp_filtered, time)
+
         # Calculate power on each detector, P_d(t) [as given in Leonard et al, Rev. Sci. Instr. (1995)]
+        # NOTE: MATLAB's medfilt1 function does not require window_size to be odd. 
+        # This could introduce discrepancy with this python implementation  
         bolo_shot.channels[i].pwr = medfilt(
             (gam[i + 1] * temp_filtered + tau[i + 1] * dr_dt) / scrfact[i],
             window_size + (not window_size % 2),
         )
+
     return bolo_shot
 
 

@@ -144,9 +144,14 @@ class D3DPhysicsMethods:
         except mdsExceptions.MdsException as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to open bolom tree.")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-        lower_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
-        upper_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
-        bol_channels = lower_channels + upper_channels      # NOTE: getbolo_new.m line 85-89 has [bol_u, bol_l]; make sure this doesn't cause any error
+        # TODO: why "lower_channels" call "bol_u" and "upper_channels" call "bol_l"?
+        # NOTE: getbolo_new.m line 85-89 has [bol_u, bol_l]; make sure this doesn't cause any error
+        # lower_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
+        # upper_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
+        # bol_channels = lower_channels + upper_channels
+        upper_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
+        lower_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
+        bol_channels = upper_channels + lower_channels
         bol_signals = []
         # bol_times = []          # NOTE: Why store 48 identical bol_time?
         for i in range(48):        # NOTE: don't need to get bol_time 48 times
@@ -165,6 +170,7 @@ class D3DPhysicsMethods:
         a_struct = get_bolo(
             params.shot_id, bol_channels, bol_prm, bol_signals, bol_time, smoothing_window*1e3
         )
+        # NOTE: debugged get_bolo twice; it appears to be correct without comparing with MATLAB outputs
 
         ### DEBUG: MATLAB DIII-D/get_power_d3d.m line 143
         ier = 0     # NOTE: ier is unnecessary; use for...if...break; do...
@@ -176,9 +182,10 @@ class D3DPhysicsMethods:
                 break
         if ier == 0:
             ### DEBUG: MATLAB DIII-D/get_power_d3d.m line 152
+            # NOTE: debugged power() twice. matches matlab script without comparing outputs
             b_struct = power(a_struct)
             p_rad = b_struct.pwrmix  # [W]
-            # p_rad = interp1(a_struct.time, p_rad, params.times, "linear")       # BUG: len(a_struct.time)=4096, len(p_rad)=16384
+            # p_rad = interp1(a_struct.time, p_rad, params.times, "linear")       # NOTE: len(a_struct.time)=4096, len(p_rad)=16384
             p_rad = interp1(a_struct.raw_time, p_rad, params.times, "linear")
 
         # Remove any negative values from the power data
