@@ -1373,14 +1373,19 @@ class CmodTearingMethods:
     )
     def _get_mirnov_spectra(params: PhysicsMethodParams):
 
-        mirnov_names = ["BP02_GHK", "BP02_ABK"]
+        mirnov_names = ["BP02_GHK", "BP02_ABK", "BP14_ABK"]
         path = r"\magnetics::top.active_mhd.signals"
         mirnov_signal_0, mirnov_times = params.mds_conn.get_data_with_dims(
             path=f"{path}:{mirnov_names[0]}", tree_name="magnetics"
         )
-        mirnov_signal_1, mirnov_times = params.mds_conn.get_data_with_dims(
-            path=f"{path}:{mirnov_names[1]}", tree_name="magnetics"
-        )
+        try:
+            mirnov_signal_1, mirnov_times = params.mds_conn.get_data_with_dims(
+                path=f"{path}:{mirnov_names[1]}", tree_name="magnetics"
+            )
+        except:
+            mirnov_signal_1, mirnov_times = params.mds_conn.get_data_with_dims(
+                path=f"{path}:{mirnov_names[2]}", tree_name="magnetics"
+            )
 
         # Assuming mirnov sample frequency of 5Mhz
         mirnov_sample_freq = 5e6
@@ -1389,7 +1394,7 @@ class CmodTearingMethods:
         # First, need the short time fourier transform of the signals
         from scipy.signal import ShortTimeFFT
         from scipy.signal.windows import gaussian
-        window = gaussian(2**15, std=256) # TODO(ZanderKeith), need to make sure sampling window is only in the past
+        window = gaussian(2**12, std=2**10) # TODO(ZanderKeith), need to make sure sampling window is only in the past
         SFT = ShortTimeFFT(window, hop=2048, fs=mirnov_sample_freq, scale_to="magnitude")
         mirnov_signal_0_fft = SFT.stft(mirnov_signal_0)
         mirnov_signal_1_fft = SFT.stft(mirnov_signal_1)
@@ -1442,3 +1447,24 @@ class CmodTearingMethods:
 
         return pd.concat([cross_spectrum_data, cross_power_data, cross_phase_data, cross_coherence_data], axis=1)
 
+    @staticmethod
+    @physics_method(
+        tags=["partial_flux"], tokamak=Tokamak.CMOD
+    )
+    def _get_partial_flux(params: PhysicsMethodParams):
+        partial_flux_names = ["F08", "F13", "F14", "F15", "F20", "F27", "F28", "F29", "LM_CD", "LM_EF", "LM_HJ", "LM_KA"]
+        path = r"\magnetics::top.flux_partial.signals"
+
+        partial_flux_dataframe = pd.DataFrame()
+        for partial_flux_coil in partial_flux_names:
+            try:
+                partial_flux_signal, partial_flux_times = params.mds_conn.get_data_with_dims(
+                    path=f"{path}:{partial_flux_coil}", tree_name="magnetics"
+                )
+            except:
+                partial_flux_signal = np.full(len(params.times), np.nan)
+
+            # Interpolate the partial flux onto the target timebase
+            partial_flux_dataframe[partial_flux_coil] = interp1(partial_flux_times, partial_flux_signal, params.times)
+
+        return partial_flux_dataframe
