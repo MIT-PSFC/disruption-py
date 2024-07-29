@@ -673,8 +673,6 @@ class CmodPhysicsMethods:
         # 2. Subtract btor pickup
         # 3. Interpolate bp onto shot timebase
 
-        # Only calculate n=1 amplitude if all sensors have data
-        valid_sensors = True
         for i in range(len(bp13_names)):
             try:
                 signal = params.mds_conn.get_data(
@@ -695,15 +693,13 @@ class CmodPhysicsMethods:
                     f"[Shot {params.shot_id}] No data for {bp13_names[i]}"
                 )
                 params.logger.debug(f"[Shot {params.shot_id}] {e}")
-                valid_sensors = False
+                # Only calculate n=1 amplitude if all sensors have data
+                return nan_output
         # TODO: Examine edge case behavior of sign
         polarity = np.sign(np.mean(btor))
         btor_magnitude = btor * polarity
         btor_magnitude = interp1(t_mag, btor_magnitude, params.times)
         btor = interp1(t_mag, btor, params.times)  # Interpolate BT with sign
-
-        if not valid_sensors:
-            return nan_output
 
         # Create the 'design' matrix ('A') for the linear system of equations:
         # Bp(phi) = A1 + A2*sin(phi) + A3*cos(phi)
