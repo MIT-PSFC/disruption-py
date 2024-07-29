@@ -652,6 +652,7 @@ class D3DPhysicsMethods:
             raise NotImplementedError
             # TODO: Move to a folder like "/fusion/projects/disruption_warning/data"
             filename = "/fusion/projects/disruption_warning/matlab_programs/recalc.nc"
+            # pylint: disable=undefined-variable
             ncid = nc.Dataset(filename, "r")
             brad = ncid.variables["dusbradial_calculated"][:]
             t_n1 = ncid.variables["times"][:] * 1.0e-3  # [ms] -> [s]

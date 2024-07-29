@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import subprocess
-from typing import List
 import warnings
+from typing import List
 
 import numpy as np
 import pandas as pd
