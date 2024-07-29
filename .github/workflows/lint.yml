@@ -90,7 +90,7 @@ jobs:
 
       - name: Prohibit errors
         run: |
-          ! grep \|E pylint.log
+          ! grep \|E <( grep -v "Unable to import 'MDSplus'" pylint.log )
 
       - name: Prohibit score decrease
         if: |
