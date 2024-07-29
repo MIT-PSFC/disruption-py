@@ -62,6 +62,27 @@ class D3DPhysicsMethods:
         tokamak=Tokamak.D3D,
     )
     def get_power_parameters(params: PhysicsMethodParams):
+        """
+        Compute the input NBI, ECH powers, radiated power measured by the bolometer array,
+        and the radiated fraction for a DIII-D shot.
+
+        Parameters
+        ----------
+        y : array_like
+            The y coordinates of the dataset.
+
+        Returns
+        -------
+        array_like
+        The smoothed dataset.
+        
+        References:
+        -------
+        - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_power_d3d.m
+
+        Last major update by William Wei on DATE
+        """
+        
         # Get neutral beam injected power
         try:
             p_nbi, t_nbi = params.mds_conn.get_data_with_dims(
@@ -168,7 +189,8 @@ class D3DPhysicsMethods:
         #     params.shot_id, bol_channels, bol_prm, bol_signals, bol_times, smoothing_window*1e3
         # )
         a_struct = get_bolo(
-            params.shot_id, bol_channels, bol_prm, bol_signals, bol_time, smoothing_window*1e3
+            shot_id=params.shot_id, bol_channels=bol_channels, bol_prm=bol_prm, 
+            bol_top=bol_signals, bol_time=bol_time, drtau=smoothing_window*1e3
         )
         # NOTE: debugged get_bolo twice; it appears to be correct without comparing with MATLAB outputs
 
@@ -227,6 +249,25 @@ class D3DPhysicsMethods:
         tokamak=Tokamak.D3D,
     )
     def get_ohmic_parameters(params: PhysicsMethodParams):
+        """
+        Compute ohmic heating power and loop voltage for a DIII-D shot
+
+        Parameters
+        ----------
+        y : array_like
+            The y coordinates of the dataset.
+
+        Returns
+        -------
+        array_like
+        The smoothed dataset.
+        
+        References:
+        -------
+        - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_P_ohm_d3d.m
+
+        Last major update by William Wei on DATE
+        """
         nan_output = {
             "p_ohm": [np.nan],
             "v_loop": [np.nan],
@@ -253,8 +294,11 @@ class D3DPhysicsMethods:
             t_ip /= 1.0e3  # [ms] -> [s]
             # We choose a 20-point width for gsastd. This means a 10ms window for
             #  ip smoothing
-            dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
-
+            dipdt_smoothed = gsastd(
+                x=t_ip, y=ip, derivative_mode=1, width=20, smooth_type=3, 
+                ends_type=1, slew_rate=0
+            )
+                
             ### TODO: To be removed in final commit ###
             '''
             ip_smoothed = gsastd(t_ip, ip, 0, 20, 3, 1, 0)
@@ -1333,7 +1377,7 @@ class D3DPhysicsMethods:
         # Normalize the poloidal flux grid (0=magnetic axis, 1=boundary)
         # [Translated from D. Eldon's OMFITeqdsk read_basic_eq_from_mds() function]
         psi_norm_f = efit_dict["ssibry"] - efit_dict["ssimag"]
-        problems = np.where(psi_norm_f == 0)[0]
+        (problems,) = np.where(psi_norm_f == 0)
         # Prevent divide by 0 error by replacing 0s in the denominator
         psi_norm_f[problems] = 1
         efit_dict["psin"] = (

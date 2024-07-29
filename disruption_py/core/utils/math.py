@@ -124,16 +124,11 @@ def exp_filter(x, w, strategy="fragmented"):
             if np.isnan(filtered_x[i - 1]):
                 filtered_x[i] = x[i]
     return filtered_x
-
+5
 
 def smooth(arr: np.ndarray, window_size: int) -> np.ndarray:
     """
     Implements Matlab's smooth function https://www.mathworks.com/help/curvefit/smooth.html.
-
-    NOTE: This function was referenced in 2 functions:
-        1. cmod get_ip_parameters() which is used to calculate dip_smoothed (which doesn't have a corresponding method in MATLAB)
-        2. d3d gsastd() which is used to imitate sa(Y,smoothwidth,ends) but returns an error for even window_size
-        I replaced the reference in gsastd() to a new function called sa() which imitates the function with the same name in MATLAB script
 
     Parameters
     ----------
@@ -253,6 +248,8 @@ def gauss(x, *params):
 
 def gsastd(x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=0):
     """
+    Python reimplementation of the GSASTD routine originally by Alessandro Pau
+
     Fast non-causal differentiation of noisy data.
 
     Parameters
@@ -285,6 +282,12 @@ def gsastd(x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=0
     -------
     array_like
         Smoothed dataset.
+
+    References
+    -------
+    - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_P_ohm_d3d.m
+    
+    Last major update by: William Wei on 7/24/2024
     """
     y_arr = y.copy()
     if slew_rate:
@@ -303,7 +306,7 @@ def gsastd(x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=0
 
 def deriv(x, y):
     """
-    Calculate the derivative of a dataset.
+    Calculate the derivative of a dataset. Used by GSASTD.
 
     Parameters
     ----------
@@ -316,6 +319,10 @@ def deriv(x, y):
     -------
     d: array
         The derivative of the dataset.
+
+    References:
+    -------
+    - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/GSASTD.m
     """
     n = len(y)
     d = np.zeros(y.shape)
@@ -329,6 +336,7 @@ def deriv(x, y):
 def fastsmooth(y, w, smooth_type=1, ends_type=0):
     """
     Wrapper for looping over the dataset using the smooth function.
+    Used by GSASTD.
 
     Parameters
     ----------
@@ -354,6 +362,12 @@ def fastsmooth(y, w, smooth_type=1, ends_type=0):
     -------
     array_like
         The smoothed dataset.
+
+    References:
+    -------
+    - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/GSASTD.m
+
+    Last major update by William Wei on 7/24/2024
     """
     smoothed_y = sa(y, w, ends_type)
     for i in range(smooth_type - 1):
@@ -364,6 +378,7 @@ def fastsmooth(y, w, smooth_type=1, ends_type=0):
 def sa(y, smooth_width, ends_type=0):
     """
     Compute the centered moving average of y
+    Used by GSASTD
 
     Parameters
     ----------
@@ -375,12 +390,17 @@ def sa(y, smooth_width, ends_type=0):
         Determines how the "ends" of the signal are handled.
         0 -> ends are "zeroed"
         1 -> the ends are smoothed with progressively smaller smooths the closer to the end.
-        NOTE: This variable isn't used in the computation
 
     Returns
     -------
     array_like
         The smoothed dataset.
+
+    References:
+    -------
+    - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/GSASTD.
+
+    Last major update by William Wei on 7/24/2024
     """
     # NOTE: numpy behaviour is different than matlab and will round X.5 to nearest even value instead of value farther away from 0
 
@@ -407,8 +427,11 @@ def sa(y, smooth_width, ends_type=0):
     return y_smooth
 
 def matlab_round_int(x):
-    # Custom rounding function. Round x.5 to the nearest integer with larger magnitude
-    # numpy behaviour is different than matlab and will round X.5 to nearest even value instead of value farther away from 0
+    '''
+    Custom rounding function. Round x.5 to the nearest integer with larger magnitude
+    numpy behaviour is different than matlab and will round X.5 to nearest even value 
+    instead of value farther away from 0
+    '''
     sign = np.sign(x)
     x = abs(x)
     if x % 1 == 0.5:
@@ -417,6 +440,17 @@ def matlab_round_int(x):
 
 # TODO: Cover documentation with Cristina
 def power(a):
+    '''
+    Python reimplementation of powers_new.m 
+    Used for calculating the total radiated power from the bolometer array.
+
+    -------
+    References:
+    - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/powers_new.m
+
+    Last major update by William Wei on 7/26/2024
+    '''
+
     # Multiplicative constants (kappa) to get the power radiating in the i^th viewing chord
     kappa = np.array(
         [
@@ -581,6 +615,16 @@ def power(a):
 
 
 def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
+    '''
+    Python reimplementation of getbolo_new.m. 
+    Used for calculating the total radiated power from the bolometer array.
+
+    -------
+    References:
+    - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/getbolo_new.m
+    
+    Last major update by William Wei on 7/26/24
+    '''
     drtau /= 1.0e3
     # NOTE: why set gam, tau & scrfact as 2D arrays?
     gam = np.zeros((1, 49))
@@ -944,20 +988,20 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
     window_size = matlab_round_int(drtau / dt)
     smoothing_kernel = (1.0 / window_size) * np.ones(window_size)
 
-    bolo_shot.ntimes = int(len(time) / 4)       # NOTE: Downsample bolo from (bolo_shot.raw_time) 16384 to (bolo_shot.time) 4096!
+    bolo_shot.ntimes = int(len(time) / 4)
     bolo_shot.time = np.linspace(np.min(time), np.max(time), bolo_shot.ntimes)
     t_del = bolo_shot.time[1] - bolo_shot.time[0]
     bolo_shot.raw_time = time
     m = 2 * np.fix(np.fix(1000 * drtau) / np.fix(1000 * t_del) / 2) + 1
     k = np.arange(0, m) - np.fix((m - 1) / 2)
-    nzer = np.where(k != 0)[0]
+    (nzer,) = np.where(k != 0)
     k[nzer] = 1.0 / k[nzer]
     k = k / t_del / (np.fix(m / 2) * 2)
     
     ### DEBUG: getbolo_new.m line 138 ###
     for i in range(48):
         bolo_shot.channels[i].label = bol_channels[i]
-        data = interp1(bol_time, bol_top[i], bolo_shot.raw_time)    # len(data)=16384
+        data = interp1(bol_time, bol_top[i], bolo_shot.raw_time)
         
         bolo_shot.channels[i].ier = 0
         bolo_shot.channels[i].raw = data
