@@ -3,7 +3,7 @@
 import logging
 from typing import Any, Callable
 
-from disruption_py.core.multiprocessing import MultiprocessingShotRetriever
+from disruption_py.core.multiprocess import MultiprocessingShotRetriever
 from disruption_py.core.retrieval_manager import RetrievalManager
 from disruption_py.core.utils.misc import without_duplicates
 from disruption_py.io.mds import ProcessMDSConnection

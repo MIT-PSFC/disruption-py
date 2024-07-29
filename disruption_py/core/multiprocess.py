@@ -3,7 +3,7 @@
 import multiprocessing
 import threading
 from enum import Enum
-from typing import Callable, Dict
+from typing import Callable
 
 from disruption_py.config import config
 from disruption_py.core.retrieval_manager import RetrievalManager
