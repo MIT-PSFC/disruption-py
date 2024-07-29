@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import inspect
 import logging
 import os
 import time
@@ -10,7 +9,6 @@ from typing import Dict, List
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from disruption_py.config import config
 from disruption_py.core.utils.math import matlab_gradient_1d_vectorized
@@ -23,19 +21,19 @@ from tests.utils.data_difference import DataDifference
 logger = logging.getLogger("disruption_py")
 
 
-def get_mdsplus_data(
+def get_fresh_data(
     tokamak: Tokamak,
     shotlist: List[int],
     log_file_path: str,
     test_columns: List[str] = None,
 ) -> Dict[int, pd.DataFrame]:
     """
-    Get MDSplus data for a list of shots.
+    Get fresh data for a list of shots.
 
      Returns
     -------
     Dict[int, pd.DataFrame]
-        Dictionary mapping shot IDs to retrieved MDSplus data.
+        Dictionary mapping shot IDs to retrieved fresh data.
     """
     retrieval_settings = RetrievalSettings(
         efit_nickname_setting="disruption",
@@ -60,14 +58,15 @@ def get_mdsplus_data(
     return shot_data
 
 
-def get_sql_data_for_mdsplus(
+def get_cached_from_fresh(
     tokamak: Tokamak,
     shotlist: List[int],
-    mdsplus_data: Dict[int, pd.DataFrame],
+    fresh_data: Dict[int, pd.DataFrame],
     test_columns: List[str] = None,
 ) -> Dict[int, pd.DataFrame]:
     """
-    Get SQL data for a list of shots and map onto the timebase of the supplied MDSplus data.
+    Get cached SQL data for a list of shots and map onto the timebase of the supplied
+    fresh MDSplus data.
 
     Returns
     -------
@@ -84,7 +83,7 @@ def get_sql_data_for_mdsplus(
     db = ShotDatabase.from_config(tokamak=tokamak)
     shot_data = {}
     for shot_id in shotlist:
-        times = mdsplus_data[shot_id]["time"]
+        times = fresh_data[shot_id]["time"]
         sql_data = db.get_shots_data([shot_id], cols=test_columns)
         shot_data[shot_id] = pd.merge_asof(
             times.to_frame(),
@@ -96,15 +95,15 @@ def get_sql_data_for_mdsplus(
     return shot_data
 
 
-def eval_shots_against_sql(
+def eval_shots_against_cache(
     shotlist: List[int],
-    mdsplus_data: Dict[int, pd.DataFrame],
-    sql_data: Dict[int, pd.DataFrame],
+    fresh_data: Dict[int, pd.DataFrame],
+    cache_data: Dict[int, pd.DataFrame],
     data_columns: List[str],
     expected_failure_columns: List[str] = None,
 ) -> List["DataDifference"]:
     """
-    Test if the difference between the two data is within tolerance.
+    Test if the difference between the two data sources is within tolerance.
     """
     if expected_failure_columns is None:
         expected_failure_columns = []
@@ -112,13 +111,13 @@ def eval_shots_against_sql(
     data_differences: List[DataDifference] = []
     for data_column in data_columns:
         for shot_id in shotlist:
-            mdsplus_shot_data, sql_shot_data = mdsplus_data[shot_id], sql_data[shot_id]
+            fresh_shot_data, cache_shot_data = fresh_data[shot_id], cache_data[shot_id]
             expect_failure = data_column in expected_failure_columns
 
-            data_difference = eval_shot_against_sql(
+            data_difference = eval_shot_against_cache(
                 shot_id=shot_id,
-                mdsplus_shot_data=mdsplus_shot_data,
-                sql_shot_data=sql_shot_data,
+                fresh_shot_data=fresh_shot_data,
+                cache_shot_data=cache_shot_data,
                 data_column=data_column,
                 expect_failure=expect_failure,
             )
@@ -126,27 +125,27 @@ def eval_shots_against_sql(
     return data_differences
 
 
-def eval_shot_against_sql(
+def eval_shot_against_cache(
     shot_id: int,
-    mdsplus_shot_data: pd.DataFrame,
-    sql_shot_data: pd.DataFrame,
+    fresh_shot_data: pd.DataFrame,
+    cache_shot_data: pd.DataFrame,
     data_column: str,
     expect_failure: bool = False,
 ) -> "DataDifference":
     """
     Test if the difference between the two data is within tolerance.
     """
-    missing_mdsplus_data = data_column not in mdsplus_shot_data
-    missing_sql_data = data_column not in sql_shot_data
+    missing_fresh_data = data_column not in fresh_shot_data
+    missing_cache_data = data_column not in cache_shot_data
     data_difference = DataDifference(
         shot_id=shot_id,
         data_column=data_column,
-        mdsplus_column_data=mdsplus_shot_data.get(data_column, None),
-        sql_column_data=sql_shot_data.get(data_column, None),
-        mds_time=mdsplus_shot_data["time"],
-        sql_time=sql_shot_data["time"],
-        missing_mdsplus_data=missing_mdsplus_data,
-        missing_sql_data=missing_sql_data,
+        fresh_column_data=fresh_shot_data.get(data_column, None),
+        cache_column_data=cache_shot_data.get(data_column, None),
+        fresh_time=fresh_shot_data["time"],
+        cache_time=cache_shot_data["time"],
+        missing_fresh_data=missing_fresh_data,
+        missing_cache_data=missing_cache_data,
         expect_failure=expect_failure,
     )
 
@@ -167,7 +166,7 @@ def eval_shot_against_sql(
     return data_difference
 
 
-def eval_against_sql(
+def eval_against_cache(
     tokamak: Tokamak,
     shotlist: List[int],
     expected_failure_columns: List[str],
@@ -187,23 +186,23 @@ def eval_against_sql(
             np.gradient = original_function
 
     with monkey_patch_numpy_gradient():
-        mdsplus_data = get_mdsplus_data(
+        fresh_data = get_fresh_data(
             tokamak=tokamak,
             shotlist=shotlist,
             log_file_path=os.path.join(tempfolder, "data_retrieval.log"),
             test_columns=test_columns,
         )
-    sql_data = get_sql_data_for_mdsplus(tokamak, shotlist, mdsplus_data, test_columns)
+    cache_data = get_cached_from_fresh(tokamak, shotlist, fresh_data, test_columns)
 
     if test_columns is None:
-        mdsplus_columns = set().union(*(df.columns for df in mdsplus_data.values()))
-        sql_columns = set().union(*(df.columns for df in sql_data.values()))
-        test_columns = sorted(mdsplus_columns.intersection(sql_columns))
+        fresh_columns = set().union(*(df.columns for df in fresh_data.values()))
+        cache_columns = set().union(*(df.columns for df in cache_data.values()))
+        test_columns = sorted(fresh_columns.intersection(cache_columns))
 
-    data_differences = eval_shots_against_sql(
+    data_differences = eval_shots_against_cache(
         shotlist=shotlist,
-        mdsplus_data=mdsplus_data,
-        sql_data=sql_data,
+        fresh_data=fresh_data,
+        cache_data=cache_data,
         data_columns=test_columns,
         expected_failure_columns=expected_failure_columns,
     )
