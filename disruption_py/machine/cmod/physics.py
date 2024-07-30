@@ -1249,9 +1249,8 @@ class CmodTearingMethods:
         # so we need to shift the spectrogram timebase to match the mirnov timebase
         t += (mirnov_times[0])
 
-        # Cut the spectrogram to be max 50 kHz
-        f_max = 50e3
-        f_indices = np.where(f < f_max)
+        # Cut the spectrogram to maximum frequency
+        f_indices = np.where(f < 150e3)
         f = f[f_indices]
         Sxx = Sxx[f_indices]
 
@@ -1369,7 +1368,7 @@ class CmodTearingMethods:
     
     @staticmethod
     @physics_method(
-        tags=["cross_spectrum", "cross_power", "cross_phase", "cross_coherence"], tokamak=Tokamak.CMOD
+        tags=["cross_spectrum_real", "cross_spectrum_imag", "cross_power", "cross_phase", "cross_coherence"], tokamak=Tokamak.CMOD
     )
     def _get_mirnov_spectra(params: PhysicsMethodParams):
 
@@ -1402,8 +1401,8 @@ class CmodTearingMethods:
         freqs = SFT.f
         fft_times = (SFT.delta_t * np.arange(mirnov_signal_0_fft.shape[1])) + mirnov_times[0]
     
-        # Cut the fft to be max 50 kHz
-        f_max = 50e3
+        # Cut the fft to be max 150 kHz
+        f_max = 150e3
         f_indices = np.where(freqs < f_max)
         freqs = freqs[f_indices]
         mirnov_signal_0_fft = mirnov_signal_0_fft[f_indices]
@@ -1440,12 +1439,14 @@ class CmodTearingMethods:
             cross_coherence[i] = result
 
         # Use multi-indexing to store the cross spectrum data
-        cross_spectrum_data = pd.DataFrame(Cxy.T, columns=pd.MultiIndex.from_product([["cross_spectrum"], freqs], names=["", "frequencies"]))
-        cross_power_data = pd.DataFrame(cross_power.T, columns=pd.MultiIndex.from_product([["cross_power"], freqs], names=["", "frequencies"]))
-        cross_phase_data = pd.DataFrame(cross_phase.T, columns=pd.MultiIndex.from_product([["cross_phase"], freqs], names=["", "frequencies"]))
-        cross_coherence_data = pd.DataFrame(cross_coherence.T, columns=pd.MultiIndex.from_product([["cross_coherence"], freqs], names=["", "frequencies"]))
+        cross_spectrum_real_data = pd.DataFrame(Cxy.T.real, columns=pd.MultiIndex.from_product([["cross_spectrum_real"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        cross_spectrum_imag_data = pd.DataFrame(Cxy.T.imag, columns=pd.MultiIndex.from_product([["cross_spectrum_imag"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        cross_power_data = pd.DataFrame(cross_power.T, columns=pd.MultiIndex.from_product([["cross_power"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        cross_phase_data = pd.DataFrame(cross_phase.T, columns=pd.MultiIndex.from_product([["cross_phase"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        cross_coherence_data = pd.DataFrame(cross_coherence.T, columns=pd.MultiIndex.from_product([["cross_coherence"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        mirnov_spectrum_data = pd.DataFrame(mirnov_signal_0_fft_interp.T.real, columns=pd.MultiIndex.from_product([["mirnov_spectrum_fourier"], freqs], names=["", "frequencies"]), dtype=np.float64)
 
-        return pd.concat([cross_spectrum_data, cross_power_data, cross_phase_data, cross_coherence_data], axis=1)
+        return pd.concat([cross_spectrum_real_data, cross_spectrum_imag_data, cross_power_data, cross_phase_data, cross_coherence_data, mirnov_spectrum_data], axis=1)
 
     @staticmethod
     @physics_method(
