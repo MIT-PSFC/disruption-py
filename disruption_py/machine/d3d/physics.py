@@ -621,7 +621,7 @@ class D3DPhysicsMethods:
                     f"[Shot {params.shot_id}]:Failed to get efit parameters"
                 )
                 params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-                z_cur_norm = z_cur / D3DPhysicsMethods.NOMINAL_FLATTOP_RADIUS
+                z_cur_norm = z_cur / NOMINAL_FLATTOP_RADIUS
         except mdsExceptions.MdsException as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get vpszp signal")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
