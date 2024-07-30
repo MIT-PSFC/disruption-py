@@ -506,7 +506,7 @@ class DummyDatabase(ShotDatabase):
     def query(self, **kwargs):
         return pd.DataFrame()
 
-    def get_shots_data(sefl, **kwargs):
+    def get_shots_data(self, **kwargs):
         return pd.DataFrame()
 
     def get_disruption_time(self, **kwargs):

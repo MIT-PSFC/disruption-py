@@ -76,10 +76,12 @@ isort:
 
 pylint:
 	poetry run pylint --version
-	poetry run pylint --recursive=y $(PYLINT_DIRS)
+	find $(PYLINT_DIRS) -type f -name '*.py' \
+	| xargs poetry run pylint
 
 pylint-only:
-	poetry run pylint --recursive=y --disable=all --enable=$(CODE) $(PYLINT_DIRS)
+	find $(PYLINT_DIRS) -type f -name '*.py' \
+	| xargs poetry run pylint --disable=all --enable=$(CODE)
 
 shellcheck:
 	poetry run shellcheck --version

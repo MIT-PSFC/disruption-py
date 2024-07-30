@@ -12,23 +12,23 @@ from disruption_py.core.utils.misc import safe_cast
 @dataclass
 class DataDifference:
     """
-    Data difference between MDSplus and SQL.
+    Data difference between fresh MDSplus data and cached SQL data.
     """
 
     shot_id: int
     data_column: str
 
-    missing_sql_data: bool
-    missing_mdsplus_data: bool
+    missing_cache_data: bool
+    missing_fresh_data: bool
 
     anomalies: np.ndarray = field(init=False)  # 1 if anomaly, 0 o.w.
     relative_difference: np.ndarray = field(init=False)
-    mdsplus_column_data: pd.Series
-    sql_column_data: pd.Series
+    fresh_column_data: pd.Series
+    cache_column_data: pd.Series
     expect_failure: bool
 
-    mds_time: pd.Series
-    sql_time: pd.Series
+    fresh_time: pd.Series
+    cache_time: pd.Series
 
     def __post_init__(self):
         self.anomalies, self.relative_difference = self.compute_numeric_anomalies()
@@ -43,7 +43,7 @@ class DataDifference:
 
     @property
     def missing_data(self) -> bool:
-        return self.missing_sql_data or self.missing_mdsplus_data
+        return self.missing_cache_data or self.missing_fresh_data
 
     @property
     def failed(self) -> str:
@@ -62,12 +62,14 @@ class DataDifference:
     def column_mismatch_string(self) -> str:
         # Missing data handled here because difference_df expects data to exist
         s = f"Shot {self.shot_id} column {self.data_column}"
-        if self.missing_sql_data or self.missing_mdsplus_data:
-            mds_str = (
-                "MDS missing data" if self.missing_mdsplus_data else "MDS has data"
+        if self.missing_cache_data or self.missing_fresh_data:
+            fresh_str = (
+                "Missing fresh data" if self.missing_fresh_data else "Have fresh data"
             )
-            sql_str = "SQL missing data" if self.missing_sql_data else "SQL has data"
-            return f"{s}: {mds_str} and {sql_str}"
+            cache_str = (
+                "Missing cache data" if self.missing_cache_data else "Have cache data"
+            )
+            return f"{s}: {fresh_str} and {cache_str}"
         return s + f" with arrays:\n{self.difference_df.to_string()}"
 
     @property
@@ -78,15 +80,15 @@ class DataDifference:
             else self.anomalies.flatten()
         )
         anomaly = self.anomalies[indices]
-        mds_data = self.mdsplus_column_data.iloc[indices]
-        sql_data = self.sql_column_data.iloc[indices]
+        fresh_data = self.fresh_column_data.iloc[indices]
+        cache_data = self.cache_column_data.iloc[indices]
         return pd.DataFrame(
             {
-                "Time": self.mds_time[indices],
-                "MDSplus Data": mds_data,
-                "Reference Data (SQL)": sql_data,
-                "MDS/SQL": mds_data / sql_data,
-                "Absolute difference": abs(mds_data - sql_data),
+                "Time": self.fresh_time[indices],
+                "Fresh Data": fresh_data,
+                "Cache Data": cache_data,
+                "Fresh/Cache": fresh_data / cache_data,
+                "Absolute difference": abs(fresh_data - cache_data),
                 "Relative difference": self.relative_difference[indices],
                 "Anomaly": anomaly,
             }
@@ -94,38 +96,39 @@ class DataDifference:
 
     def compute_numeric_anomalies(self):
         """
-        Get the indices of the data where numeric differences exist between the sql and mdsplus data.
+        Get the indices of the data where numeric differences exist between the
+        cached and fresh data.
         """
 
         # handle missing data case
-        if self.missing_mdsplus_data or self.missing_sql_data:
-            if self.missing_mdsplus_data and self.missing_sql_data:
+        if self.missing_fresh_data or self.missing_cache_data:
+            if self.missing_fresh_data and self.missing_cache_data:
                 missing_timebase_length = 0
-            elif self.missing_mdsplus_data:
-                missing_timebase_length = len(self.sql_column_data)
+            elif self.missing_fresh_data:
+                missing_timebase_length = len(self.cache_column_data)
             else:
-                missing_timebase_length = len(self.mdsplus_column_data)
+                missing_timebase_length = len(self.fresh_column_data)
             return np.ones(missing_timebase_length, dtype=bool), np.zeros(
                 missing_timebase_length
             )
 
-        sql_is_nan = pd.isnull(self.sql_column_data)
-        mdsplus_is_nan = pd.isnull(self.mdsplus_column_data)
+        cache_is_nan = pd.isnull(self.cache_column_data)
+        fresh_is_nan = pd.isnull(self.fresh_column_data)
 
         # handle case where both arrays are all null
-        if sql_is_nan.all() and mdsplus_is_nan.all():
-            return np.zeros(len(self.mdsplus_column_data), dtype=bool), np.zeros(
-                len(self.mdsplus_column_data)
+        if cache_is_nan.all() and fresh_is_nan.all():
+            return np.zeros(len(self.fresh_column_data), dtype=bool), np.zeros(
+                len(self.fresh_column_data)
             )
 
         relative_difference = safe_cast(
             np.where(
-                self.sql_column_data != 0,
+                self.cache_column_data != 0,
                 np.abs(
-                    (self.mdsplus_column_data - self.sql_column_data)
-                    / self.sql_column_data
+                    (self.fresh_column_data - self.cache_column_data)
+                    / self.cache_column_data
                 ),
-                np.where(self.mdsplus_column_data != 0, np.inf, np.nan),
+                np.where(self.fresh_column_data != 0, np.inf, np.nan),
             ),
             "float64",
         )  # necessary in case all produced values are nan
@@ -135,7 +138,7 @@ class DataDifference:
             False,
             relative_difference > config().testing.VAL_TOLERANCE,
         )
-        nan_anomalies_mask = sql_is_nan != mdsplus_is_nan
+        nan_anomalies_mask = cache_is_nan != fresh_is_nan
         anomalies: pd.Series = numeric_anomalies_mask | nan_anomalies_mask
 
         return anomalies.to_numpy(), relative_difference

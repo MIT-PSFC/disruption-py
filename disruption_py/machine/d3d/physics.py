@@ -650,6 +650,7 @@ class D3DPhysicsMethods:
             raise NotImplementedError
             # TODO: Move to a folder like "/fusion/projects/disruption_warning/data"
             filename = "/fusion/projects/disruption_warning/matlab_programs/recalc.nc"
+            # pylint: disable=undefined-variable
             ncid = nc.Dataset(filename, "r")
             brad = ncid.variables["dusbradial_calculated"][:]
             t_n1 = ncid.variables["times"][:] * 1.0e-3  # [ms] -> [s]
@@ -869,6 +870,7 @@ class D3DPhysicsMethods:
         }
         return output
 
+    @staticmethod
     # TODO: Finish implementing just in case
     def _efit_map_rz_to_rho_original(params: PhysicsMethodParams, ts_dict, efit_dict):
         slices = np.zeros(ts_dict["time"].shape)
@@ -1173,7 +1175,8 @@ class D3DPhysicsMethods:
             fan_chans = np.arange(0, 24)
         elif fan == "lower":
             fan_chans = np.arange(24, 48)
-        elif fan == "custom":
+        # Default is fan="custom"
+        else:
             # 1st choice (heavily cover divertor and core)
             fan_chans = np.array([3, 4, 5, 6, 7, 8, 9, 12, 14, 15, 16, 22]) + 24
 
