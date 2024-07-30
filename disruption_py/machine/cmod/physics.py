@@ -1452,19 +1452,27 @@ class CmodTearingMethods:
         tags=["partial_flux"], tokamak=Tokamak.CMOD
     )
     def _get_partial_flux(params: PhysicsMethodParams):
+        # TODO: look into calibration stuff. The commented out things don't seem to do anything
+        #calibration_path = r"\magnetics::top.flux_partial.btor_pickup"
+        #calibration_signal = params.mds_conn.get_data(path=calibration_path, tree_name="magnetics")
+        
         partial_flux_names = ["F08", "F13", "F14", "F15", "F20", "F27", "F28", "F29", "LM_CD", "LM_EF", "LM_HJ", "LM_KA"]
         path = r"\magnetics::top.flux_partial.signals"
 
         partial_flux_dataframe = pd.DataFrame()
-        for partial_flux_coil in partial_flux_names:
+        for i, partial_flux_coil in enumerate(partial_flux_names):
             try:
                 partial_flux_signal, partial_flux_times = params.mds_conn.get_data_with_dims(
                     path=f"{path}:{partial_flux_coil}", tree_name="magnetics"
                 )
+                #partial_flux_signal = partial_flux_signal - calibration_signal[i]
+                partial_flux_signal_interp = interp1(partial_flux_times, partial_flux_signal, params.times)
             except:
-                partial_flux_signal = np.full(len(params.times), np.nan)
+                partial_flux_signal_interp = np.full(len(params.times), np.nan)
+
+            partial_flux_name = "partial_flux_" + partial_flux_coil
 
             # Interpolate the partial flux onto the target timebase
-            partial_flux_dataframe[partial_flux_coil] = interp1(partial_flux_times, partial_flux_signal, params.times)
+            partial_flux_dataframe[partial_flux_name] = partial_flux_signal_interp
 
         return partial_flux_dataframe
