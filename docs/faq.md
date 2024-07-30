@@ -46,9 +46,6 @@ get_shots_data(
 )
 ```
 
-### How can I get information on data accuracy? { .doc .doc-heading }
-DisruptionPy has a testing framework `pytest tests/test_against_sql.py` to provide insight into the current differences between MDSplus data with Python physics methods computations and the SQL table populated by Matlab methods.
-
 ### Why does DisruptionPy log `%MDSPLUS-E-ERROR` for all shots after a certain shot number? { .doc .doc-heading }
 You may have a corrupted shot inside of your request. Please try to remove the shot id for which the error first occurs from your `shotlist_request` and run DisruptionPy again. If the problem persists, please create an issue on the GitHub.
 
