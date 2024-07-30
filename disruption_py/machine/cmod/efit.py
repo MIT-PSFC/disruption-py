@@ -50,7 +50,7 @@ class CmodEfitMethods:
         columns=[
             *efit_cols.keys(),
             *efit_cols_pre_2000.keys(),
-            *efit_derivs.keys(),
+            *efit_derivs.values(),
             "v_surf",
             "v_loop_efit",
             "beta_n",

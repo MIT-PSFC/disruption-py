@@ -37,7 +37,7 @@ class D3DEfitMethods:
 
     @staticmethod
     @physics_method(
-        columns=[*efit_cols.keys(), *efit_derivs.keys()],
+        columns=[*efit_cols.keys(), *efit_derivs.values()],
         tokamak=Tokamak.D3D,
     )
     def _get_efit_parameters(params: PhysicsMethodParams):
