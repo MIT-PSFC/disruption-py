@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+The main entrypoint for retrieving DisruptionPy data. 
+"""
+
 import logging
 from typing import Any, Callable
 

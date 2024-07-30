@@ -212,11 +212,13 @@ class RampupAndFlattopDomainSetting(DomainSetting):
         return params.physics_method_params.times[:end_index]
 
 
+# --8<-- [start:domain_setting_dict]
 _domain_setting_mappings: Dict[str, DomainSetting] = {
     "full": FullDomainSetting(),
     "flattop": FlattopDomainSetting(),
     "rampup_and_flattop": RampupAndFlattopDomainSetting(),
 }
+# --8<-- [end:domain_setting_dict]
 
 
 def resolve_domain_setting(

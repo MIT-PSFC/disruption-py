@@ -13,6 +13,9 @@ from disruption_py.machine.tokamak import Tokamak
 
 @dataclass
 class PhysicsMethodParams:
+    """Holder for useful variables for the physics methods like an MDSplus connection
+    and the timebase for the data."""
+
     logger = logging.getLogger("disruption_py")
 
     shot_id: int

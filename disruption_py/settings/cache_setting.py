@@ -94,12 +94,12 @@ class SQLCacheSetting(CacheSetting):
 
 
 class DFCacheSetting(CacheSetting):
-    """Cache setting for retrieving data from a pandas dataframe.
+    """Cache setting for retrieving data from a Pandas DataFrame.
 
     Parameters
     ----------
     cache_data : pd.DataFrame
-        The dataframe to use as the cached data.
+        The DataFrame to use as the cached data.
     """
 
     def __init__(self, cache_data: pd.DataFrame):

@@ -60,7 +60,7 @@ class MDSConnection:
         """
         Open the specified _name.
 
-        If the specified tree_name is nickname for a tree_name, will open the tree
+        If the specified tree_name is a nickname for a tree_name, will open the tree
         that it is a nickname for.
         """
         if (
@@ -92,9 +92,11 @@ class MDSConnection:
         Parameters
         ----------
         expression : str
-            MDSplus TDI expression. Please see MDSplus documentation for more information.
+            MDSplus TDI expression. Please see MDSplus documentation for more
+            information.
         arguments : Any, optional
-            Arguments for MDSplus TDI Expression. Please see MDSplus documentation for more information. Default None.
+            Arguments for MDSplus TDI Expression. Please see MDSplus documentation
+            for more information. Default None.
         tree_name : str, optional
 
         Returns
@@ -238,13 +240,14 @@ class MDSConnection:
         """
         Add tree nickname functions to the connection.
 
-        Required because some tree nickname function require the connection to exist.
+        Required because some tree nickname functions require the connection to exist.
         """
         self.tree_nickname_funcs.update(tree_nickname_funcs)
 
     def get_tree_name_of_nickname(self, nickname: str):
         """
-        Get the tree name that the nickname has been set to or None if the nickname was not set.
+        Get the tree name that the nickname has been set to or None if the nickname
+        was not set.
         """
         if nickname not in self.tree_nicknames and nickname in self.tree_nickname_funcs:
             self.tree_nicknames[nickname] = self.tree_nickname_funcs[nickname]()
