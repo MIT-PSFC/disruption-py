@@ -24,7 +24,7 @@ class D3DPhysicsMethods:
 
     @staticmethod
     @physics_method(columns=["h98"], tokamak=Tokamak.D3D)
-    def get_h_98(params: PhysicsMethodParams):
+    def get_h98(params: PhysicsMethodParams):
         output = {
             "h98": [np.nan],
         }
