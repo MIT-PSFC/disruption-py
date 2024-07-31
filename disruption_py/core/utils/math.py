@@ -249,7 +249,6 @@ def gauss(x, *params):
 def gsastd(x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=0):
     """
     Python reimplementation of the GSASTD routine originally by Alessandro Pau
-
     Fast non-causal differentiation of noisy data.
 
     Parameters
@@ -430,7 +429,7 @@ def matlab_round_int(x):
     '''
     Custom rounding function. Round x.5 to the nearest integer with larger magnitude
     numpy behaviour is different than matlab and will round X.5 to nearest even value 
-    instead of value farther away from 0
+    instead of value farther away from 0.
     '''
     sign = np.sign(x)
     x = abs(x)

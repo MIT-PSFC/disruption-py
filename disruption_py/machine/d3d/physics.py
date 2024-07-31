@@ -89,7 +89,7 @@ class D3DPhysicsMethods:
                 r"\d3d::top.nb:pinj", tree_name="d3d", astype="float64"
             )
             t_nbi /= 1e3    # [ms] -> [s]
-            p_nbi *= 1.0e3  # [KW] -> [W]
+            p_nbi *= 1e3  # [KW] -> [W]
             if len(t_nbi) > 2:
                 p_nbi = interp1(
                     t_nbi,
@@ -144,7 +144,7 @@ class D3DPhysicsMethods:
 
         # Get ohmic power and loop voltage
         ohmic_parameters = D3DPhysicsMethods.get_ohmic_parameters(params)
-        p_ohm, v_loop = ohmic_parameters['p_ohm'], ohmic_parameters['v_loop']
+        p_ohm = ohmic_parameters['p_ohm']
 
         # Radiated power
         # We had planned to use the standard signal r'\bolom::prad_tot' for this
@@ -225,16 +225,6 @@ class D3DPhysicsMethods:
         # TODO: Why calculate p_sol?
         p_sol = p_input - p_rad
 
-        ### DEBUG ###
-        import matplotlib.pyplot as plt
-        plt.plot(params.times, p_nbi, label='nbi')
-        plt.plot(params.times, p_ech, label='ech')
-        plt.plot(params.times, p_ohm, label='ohm')
-        plt.plot(params.times, p_rad, label='rad')
-        plt.legend()
-        plt.show()
-        ######
-
         output = {
             "p_rad": p_rad,
             "p_nbi": p_nbi,
@@ -291,32 +281,17 @@ class D3DPhysicsMethods:
             ip, t_ip = params.mds_conn.get_data_with_dims(
                 f"ptdata('ip', {params.shot_id})", tree_name="d3d"
             )
-            t_ip /= 1.0e3  # [ms] -> [s]
+            t_ip /= 1e3  # [ms] -> [s]
             # We choose a 20-point width for gsastd. This means a 10ms window for
-            #  ip smoothing
+            # ip smoothing
             dipdt_smoothed = gsastd(
                 x=t_ip, y=ip, derivative_mode=1, width=20, smooth_type=3, 
                 ends_type=1, slew_rate=0
             )
-                
-            ### TODO: To be removed in final commit ###
-            '''
-            ip_smoothed = gsastd(t_ip, ip, 0, 20, 3, 1, 0)
-            import matplotlib.pyplot as plt
-
-            plt.plot(t_ip, dipdt_smoothed, label="dipdt_smoothed")
-            plt.plot(t_ip, ip, label="ip")
-            plt.plot(t_ip, ip_smoothed, label="ip_smoothed")
-            plt.ylim(-1e3, 2e6)
-            plt.legend()
-            plt.show()
-            '''
-            ######
-
             li, t_li = params.mds_conn.get_data_with_dims(
                 r"\efit_a_eqdsk:li", tree_name="_efit_tree"
             )
-            t_li /= 1.0e3
+            t_li /= 1e3
             # Use chisq to determine which time slices are invalid
             chisq = params.mds_conn.get_data(
                 r"\efit_a_eqdsk:chisq", tree_name="_efit_tree"
@@ -341,24 +316,6 @@ class D3DPhysicsMethods:
         v_resistive = v_loop - v_inductive  # [V]
         p_ohm = ip * v_resistive  # [W]
         output = {"p_ohm": p_ohm, "v_loop": v_loop}
-
-        # NOTE: what if ip is negative?
-        import matplotlib.pyplot as plt
-        fig, axes = plt.subplots(6)
-        axes[0].plot(params.times, ip)
-        axes[0].set_ylabel('ip')
-        axes[1].plot(params.times, dipdt_smoothed)
-        axes[1].set_ylabel('dipdt_smoothed')
-        axes[2].plot(params.times, inductance)
-        axes[2].set_ylabel('inductance')
-        axes[3].plot(params.times, v_inductive)
-        axes[3].set_ylabel('v_inductive')
-        axes[4].plot(params.times, v_resistive)
-        axes[4].set_ylabel('v_resistive')
-        axes[5].plot(params.times, p_ohm)
-        axes[5].set_ylabel('p_ohm')
-        plt.show()
-
         return output
 
     @staticmethod
