@@ -32,7 +32,7 @@ class D3DPhysicsMethods:
             h_98, t_h_98 = params.mds_conn.get_data_with_dims(
                 r"\H_THH98Y2", tree_name="transport"
             )
-            t_h_98 /= 1e3   # [ms] -> [s]
+            t_h_98 /= 1e3  # [ms] -> [s]
             h_98 = interp1(t_h_98, h_98, params.times, "linear")
             output["h98"] = h_98
         except ValueError as e:
@@ -52,7 +52,7 @@ class D3DPhysicsMethods:
             h_alpha, t_h_alpha = params.mds_conn.get_data_with_dims(
                 r"\fs04", tree_name="d3d"
             )
-            t_h_alpha /= 1e3 # [ms] -> [s]
+            t_h_alpha /= 1e3  # [ms] -> [s]
             h_alpha = interp1(t_h_alpha, h_alpha, params.times, "linear")
             output["h_alpha"] = h_alpha
         except ValueError as e:
