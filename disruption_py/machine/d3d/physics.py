@@ -25,6 +25,15 @@ class D3DPhysicsMethods:
     @staticmethod
     @physics_method(columns=["h98"], tokamak=Tokamak.D3D)
     def get_h98(params: PhysicsMethodParams):
+        """
+        Get the H98y2 energy confinement time parameter
+
+        Reference
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_H98_d3d.m
+
+        Last major update by William Wei on 7/31/2024
+        """
         output = {
             "h98": [np.nan],
         }
@@ -45,6 +54,15 @@ class D3DPhysicsMethods:
     @staticmethod
     @physics_method(columns=["h_alpha"], tokamak=Tokamak.D3D)
     def get_h_alpha(params: PhysicsMethodParams):
+        """
+        Get the H_alpha line emission intensity.
+
+        Reference
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_H98_d3d.m
+
+        Last major update by William Wei on 7/31/2024
+        """
         output = {
             "h_alpha": [np.nan],
         }
