@@ -23,28 +23,37 @@ class D3DPhysicsMethods:
         return {"time_until_disrupt": [np.nan]}
 
     @staticmethod
-    @physics_method(columns=["h98", "h_alpha"], tokamak=Tokamak.D3D)
-    def get_H_parameters(params: PhysicsMethodParams):
+    @physics_method(columns=["h98"], tokamak=Tokamak.D3D)
+    def get_h_98(params: PhysicsMethodParams):
         output = {
             "h98": [np.nan],
-            "h_alpha": [np.nan],
         }
         try:
             h_98, t_h_98 = params.mds_conn.get_data_with_dims(
                 r"\H_THH98Y2", tree_name="transport"
             )
-            h_98 = interp1(t_h_98, h_98, params.times)
+            t_h_98 /= 1e3   # [ms] -> [s]
+            h_98 = interp1(t_h_98, h_98, params.times, "linear")
             output["h98"] = h_98
         except ValueError as e:
             params.logger.info(
                 f"[Shot {params.shot_id}]: Failed to get H98 signal. Returning NaNs."
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+        return output
+
+    @staticmethod
+    @physics_method(columns=["h_alpha"], tokamak=Tokamak.D3D)
+    def get_h_alpha(params: PhysicsMethodParams):
+        output = {
+            "h_alpha": [np.nan],
+        }
         try:
             h_alpha, t_h_alpha = params.mds_conn.get_data_with_dims(
                 r"\fs04", tree_name="d3d"
             )
-            h_alpha = interp1(t_h_alpha, h_alpha, params.times)
+            t_h_alpha /= 1e3 # [ms] -> [s]
+            h_alpha = interp1(t_h_alpha, h_alpha, params.times, "linear")
             output["h_alpha"] = h_alpha
         except ValueError as e:
             params.logger.info(
@@ -993,21 +1002,6 @@ class D3DPhysicsMethods:
         kappa_area[invalid_indices] = np.nan
         kappa_area = interp1(t, kappa_area, params.times)
         return {"kappa_area": kappa_area}
-
-    @staticmethod
-    @physics_method(columns=["h98", "h_alpha"], tokamak=Tokamak.D3D)
-    def get_h_parameters(params: PhysicsMethodParams):
-        h98, t_h98 = params.mds_conn.get_data_with_dims(
-            r"\H_THH98Y2", tree_name="transport"
-        )
-        h98 = interp1(t_h98, h98, params.times)
-
-        h_alpha, t_h_alpha = params.mds_conn.get_data_with_dims(
-            r"\fs04", tree_name="d3d"
-        )
-        h_alpha = interp1(t_h_alpha, h_alpha, params.times)
-        output = {"h98": h98, "h_alpha": h_alpha}
-        return output
 
     @staticmethod
     @physics_method(
