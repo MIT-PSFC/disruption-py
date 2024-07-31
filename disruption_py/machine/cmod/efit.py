@@ -43,7 +43,7 @@ class CmodEfitMethods:
         "q95": r"\efit_aeqdsk:qsib",  # Not sure about this one
     }
 
-    efit_derivs = {"beta_p": "dbetap_dt", "li": "dli_dt", "wmhd": "dwmhd_dt"}
+    efit_derivs = {"dbetap_dt": "beta_p", "dli_dt": "li", "dwmhd_dt": "wmhd"}
 
     @staticmethod
     @physics_method(
@@ -93,9 +93,11 @@ class CmodEfitMethods:
                 efit_data[param] = np.full(len(efit_time), np.nan)
                 pass
 
-        for param in CmodEfitMethods.efit_derivs:
-            efit_data[CmodEfitMethods.efit_derivs[param]] = np.gradient(
-                efit_data[param], efit_time, edge_order=1
+        for deriv_param, param in CmodEfitMethods.efit_derivs.items():
+            efit_data[deriv_param] = np.gradient(
+                efit_data[param],
+                efit_time,
+                edge_order=1,
             )
 
         # Get data for V_surf := deriv(\ANALYSIS::EFIT_SSIBRY)*2*pi
