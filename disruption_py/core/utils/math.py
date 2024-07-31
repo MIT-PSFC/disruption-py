@@ -124,7 +124,7 @@ def exp_filter(x, w, strategy="fragmented"):
             if np.isnan(filtered_x[i - 1]):
                 filtered_x[i] = x[i]
     return filtered_x
-5
+
 
 def smooth(arr: np.ndarray, window_size: int) -> np.ndarray:
     """
