@@ -36,7 +36,7 @@ examples/database_example.py
 
 ## Database Class Reference { .doc .doc-heading }
 
-::: disruption_py.io.sql
+::: disruption_py.inout.sql
     handler: python
 	options:
 	  heading_level: 3

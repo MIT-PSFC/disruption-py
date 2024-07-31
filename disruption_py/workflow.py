@@ -10,8 +10,8 @@ from typing import Any, Callable
 from disruption_py.core.multiprocess import MultiprocessingShotRetriever
 from disruption_py.core.retrieval_manager import RetrievalManager
 from disruption_py.core.utils.misc import without_duplicates
-from disruption_py.io.mds import ProcessMDSConnection
-from disruption_py.io.sql import ShotDatabase
+from disruption_py.inout.mds import ProcessMDSConnection
+from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.settings import RetrievalSettings
 from disruption_py.settings.log_settings import LogSettings

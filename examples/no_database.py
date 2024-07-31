@@ -3,7 +3,7 @@
 import logging
 import os
 
-from disruption_py.io.sql import DummyDatabase
+from disruption_py.inout.sql import DummyDatabase
 from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.workflow import get_shots_data

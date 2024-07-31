@@ -7,7 +7,7 @@ from typing import Any, Dict
 import numpy as np
 import pandas as pd
 
-from disruption_py.io.mds import MDSConnection
+from disruption_py.inout.mds import MDSConnection
 from disruption_py.machine.tokamak import Tokamak
 
 
