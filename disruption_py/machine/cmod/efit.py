@@ -93,9 +93,9 @@ class CmodEfitMethods:
                 efit_data[param] = np.full(len(efit_time), np.nan)
                 pass
 
-        for deriv_param in CmodEfitMethods.efit_derivs:
+        for deriv_param, param in CmodEfitMethods.efit_derivs.items():
             efit_data[deriv_param] = np.gradient(
-                efit_data[CmodEfitMethods.efit_derivs[deriv_param]],
+                efit_data[param],
                 efit_time,
                 edge_order=1,
             )

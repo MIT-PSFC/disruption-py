@@ -59,10 +59,8 @@ class D3DEfitMethods:
         del efit_data["chisq"]
         for param in efit_data:
             efit_data[param][invalid_indices] = np.nan
-        for deriv_param in D3DEfitMethods.efit_derivs:
-            efit_data[deriv_param] = np.gradient(
-                efit_data[D3DEfitMethods.efit_derivs[deriv_param]], efit_time
-            )
+        for deriv_param, param in D3DEfitMethods.efit_derivs.items():
+            efit_data[deriv_param] = np.gradient(efit_data[param], efit_time)
         if not np.array_equal(params.times, efit_time):
             for param in efit_data:
                 efit_data[param] = interp1(efit_time, efit_data[param], params.times)
