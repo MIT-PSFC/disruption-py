@@ -25,7 +25,7 @@ class D3DEfitMethods:
         "chisq": r"\efit_a_eqdsk:chisq",
     }
     # 'v_loop_efit': ,r'\efit_a_eqdsk:vsurf', 'bt0': r'\efit_a_eqdsk:bt0'
-    efit_derivs = {"beta_p": "dbetap_dt", "li": "dli_dt", "wmhd": "dwmhd_dt"}
+    efit_derivs = {"dbetap_dt": "beta_p", "dli_dt": "li", "dwmhd_dt": "wmhd"}
     rt_efit_cols = {
         "beta_p_rt": r"\efit_a_eqdsk:betap",
         "li_rt": r"\efit_a_eqdsk:li",
@@ -37,7 +37,7 @@ class D3DEfitMethods:
 
     @staticmethod
     @physics_method(
-        columns=[*efit_cols.keys(), *efit_derivs.values()],
+        columns=[*efit_cols.keys(), *efit_derivs.keys()],
         tokamak=Tokamak.D3D,
     )
     def _get_efit_parameters(params: PhysicsMethodParams):
@@ -59,9 +59,9 @@ class D3DEfitMethods:
         del efit_data["chisq"]
         for param in efit_data:
             efit_data[param][invalid_indices] = np.nan
-        for param in D3DEfitMethods.efit_derivs:
-            efit_data[D3DEfitMethods.efit_derivs[param]] = np.gradient(
-                efit_data[param], efit_time
+        for deriv_param in D3DEfitMethods.efit_derivs:
+            efit_data[deriv_param] = np.gradient(
+                efit_data[D3DEfitMethods.efit_derivs[deriv_param]], efit_time
             )
         if not np.array_equal(params.times, efit_time):
             for param in efit_data:
