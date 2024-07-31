@@ -11,8 +11,8 @@ from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.physics_method.runner import populate_shot
 from disruption_py.core.utils.math import interp1
 from disruption_py.core.utils.misc import get_commit_hash
-from disruption_py.io.mds import MDSConnection, ProcessMDSConnection
-from disruption_py.io.sql import ShotDatabase
+from disruption_py.inout.mds import MDSConnection, ProcessMDSConnection
+from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings.cache_setting import CacheSettingParams
 from disruption_py.settings.domain_setting import DomainSettingParams

@@ -7,7 +7,7 @@ from typing import Callable
 
 from disruption_py.config import config
 from disruption_py.core.retrieval_manager import RetrievalManager
-from disruption_py.io.sql import ShotDatabase
+from disruption_py.inout.sql import ShotDatabase
 from disruption_py.settings import OutputSetting, OutputSettingParams
 
 
