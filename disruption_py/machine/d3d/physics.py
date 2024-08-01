@@ -265,7 +265,7 @@ class D3DPhysicsMethods:
         tokamak=Tokamak.D3D,
     )
     def get_density_parameters(params: PhysicsMethodParams):
-        '''
+        """
         Get electron density from EFIT, then compute dn_dt and Greenwald_fraction.
 
         References
@@ -275,7 +275,7 @@ class D3DPhysicsMethods:
         https://github.com/MIT-PSFC/disruption-py/pull/249
 
         Last major update by William Wei on [FINAL MERGE DATE]
-        '''
+        """
         ne = [np.nan]
         g_f = [np.nan]
         dne_dt = [np.nan]
@@ -316,7 +316,8 @@ class D3DPhysicsMethods:
             a_minor = interp1(t_a, a_minor, params.times, "linear")
             with np.errstate(divide="ignore"):
                 n_g = ip / 1.0e6 / (np.pi * a_minor**2)  # [MA/m^2]
-                g_f = ne / 1.0e20 / n_g  # TODO: Fill in units -- Greenwald fraction is unit-less
+                # TODO: Fill in units -- Greenwald fraction is unit-less
+                g_f = ne / 1.0e20 / n_g
         except mdsExceptions.MdsException as e:
             # TODO: Confirm that there is a separate exception if ptdata name doesn't exist
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get some parameter")
