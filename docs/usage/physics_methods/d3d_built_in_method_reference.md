@@ -1,6 +1,6 @@
 
-## Built-in Methods For CMod { .doc .doc-heading }
-::: disruption_py.shots.parameter_methods.cmod.basic_parameter_methods
+## Built-in Methods For D3D { .doc .doc-heading }
+::: disruption_py.machine.d3d.physics
     handler: python
 	options:
 	  heading_level: 2
@@ -11,7 +11,3 @@
 	  show_root_members_full_path: false
 	  filters:
 		- "!^_"
-		- "^__"
-		- "!compare_ts_tci"
-		- "!efit_check"
-		- "!ThomsonDensityMeasure"

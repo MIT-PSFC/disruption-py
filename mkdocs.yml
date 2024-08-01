@@ -18,39 +18,44 @@ theme:
     - search.highlight
     - search.suggest
     - toc.follow
-    # features:
-    #   - navigation.instant
-    #   - navigation.tabs
-    #   - navigation.expand
+  palette:
+    scheme: slate
+    primary: custom
+    accent: custom
+extra_css:
+  - stylesheets/disruptions.css
 nav:
   - Overview:
       - Background: index.md
-      - Installation: installation.md
+      - Installation: INSTALL.md
       - Quickstart: quickstart/usage_quickstart.md
   - Usage:
       - Entry points:
-          - Handlers: usage/handlers_reference.md
-          - Command Line: usage/command_line.md
+          - Workflow: usage/workflow_reference.md
       - Settings:
-          - Settings Classes: usage/settings_reference.md
-          - Requests Classes:
-              - Cache Setting: usage/requests/cache_setting_reference.md
-              - Shot Ids Request: usage/requests/shotlist_request_reference.md
-              - Set Times Request: usage/requests/set_times_request_reference.md
-              - Output Type Request: >-
-                  usage/requests/output_type_request_reference.md
-              - Shot Data Request: usage/requests/shot_data_request_reference.md
-      - Shots:
-          - Parameter Methods:
-              - Overview: usage/shots/parameter_method_reference.md
-              - C-Mod Built-in Methods: >-
-                  usage/shots/cmod_built_in_method_reference.md
-              - D3D Built-in Methods: >-
-                  usage/shots/d3d_built_in_method_reference.md
-              - Parameter Method Decorators: usage/shots/decorator_reference.md
-          - Parameter Reference: usage/shots/disruption_parameters_reference.md
-      - SQL Database: usage/sql_database.md
-      - MDSplus Connection: usage/mds_connection_reference.md
+          - Settings Classes:
+              - Cache Setting: usage/settings/cache_setting.md
+              - Domain Setting: usage/settings/domain_setting.md
+              - Log Settings: usage/settings/log_settings.md
+              - Nickname Setting: usage/settings/nickname_setting.md
+              - Output Setting: usage/settings/output_setting.md
+              - Retrieval Settings: usage/settings/retrieval_settings.md
+              - Shotlist Setting: usage/settings/shotlist_setting.md
+              - Time Setting: usage/settings/time_setting.md
+      - Calculated Parameters:
+          - Physics Methods:
+              - Overview: usage/physics_methods/physics_method_reference.md
+              - C-Mod Built-in Methods: >
+                  usage/physics_methods/cmod_built_in_method_reference.md
+              - D3D Built-in Methods: >
+                  usage/physics_methods/d3d_built_in_method_reference.md
+              - Physics Method Decorators: >
+                  usage/physics_methods/decorator_reference.md
+          - Parameter Reference: >
+              usage/physics_methods/disruption_parameters_reference.md
+      - Data I/O:
+          - SQL Database: usage/sql_database.md
+          - MDSplus Connection: usage/mds_connection_reference.md
   - FAQ: faq.md
   - GitHub: https://github.com/MIT-PSFC/disruption-py
 markdown_extensions:

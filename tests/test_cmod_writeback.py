@@ -7,7 +7,7 @@ import pytest
 
 from disruption_py.config import config
 from disruption_py.core.utils.misc import without_duplicates
-from disruption_py.io.sql import ShotDatabase
+from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings.output_setting import SQLOutputSetting
 from disruption_py.settings.retrieval_settings import RetrievalSettings

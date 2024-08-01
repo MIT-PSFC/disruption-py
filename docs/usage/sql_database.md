@@ -1,7 +1,7 @@
-DisruptionPy uses access to logbook sql databses for convenience when retrieving data from MDSPlus. Users may also use DisruptionPy to directly retrieve data from the logbook database and specifically the `disruption_warning` table.
+DisruptionPy uses logbook sql databases for convenience when retrieving data from MDSPlus. Users may also use DisruptionPy to directly retrieve data from the logbook database's `disruption_warning` tables.
 
 ## The `disruption_warning` table { .doc .doc-heading }
-The `disruption_warning` sql tables for CMod and D3D are datasets containing important disruption paramaters for a large number of shots from the respective tokamaks.
+The `disruption_warning` sql tables for CMod and DIII-D contain important disruption parameters for a large number of shots.
 
 ### CMod Dataset
 The dataset contains unique plasma discharges from MIT's Alcator C-Mod tokamak, from the 2012 to 2016 experimental campaigns, plus additional discharges from 2005.
@@ -26,7 +26,7 @@ The dataset contains unique plasma discharges from MIT's Alcator C-Mod tokamak, 
 	For more details on computed values please see [parameter reference][disruption-parameter-descriptions].
 
 ## Retrieving data from the SQL database { .doc .doc-heading }
-Here is an example that uses disruption_py to get shot data from the `disruption_warning` table
+Here is an example that uses DisruptionPy to get shot data from the `disruption_warning` table
 for eight shots from the disruption warning shotlist:
 ```python
 --8<--
@@ -36,10 +36,10 @@ examples/database_example.py
 
 ## Database Class Reference { .doc .doc-heading }
 
-::: disruption_py.databases.database
+::: disruption_py.inout.sql
     handler: python
 	options:
-	  heading_level: 2
+	  heading_level: 3
 	  show_root_heading: false
 	  show_root_toc_entry: false
 	  filters: ["!^_[^_]"]

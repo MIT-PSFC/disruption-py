@@ -7,12 +7,15 @@ from typing import Any, Dict
 import numpy as np
 import pandas as pd
 
-from disruption_py.io.mds import MDSConnection
+from disruption_py.inout.mds import MDSConnection
 from disruption_py.machine.tokamak import Tokamak
 
 
 @dataclass
 class PhysicsMethodParams:
+    """Holder for useful variables for the physics methods like an MDSplus connection
+    and the timebase for the data."""
+
     logger = logging.getLogger("disruption_py")
 
     shot_id: int
