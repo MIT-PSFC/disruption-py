@@ -238,7 +238,10 @@ def gauss(x, *params):
     out = a * np.exp(-((x - mu) ** 2) / (2.0 * sigma**2))
     return out
 
-def matlab_gsastd(x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=0):
+
+def matlab_gsastd(
+    x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=0
+):
     """
     Python reimplementation of the GSASTD routine originally by Alessandro Pau
     Fast non-causal differentiation of noisy data.
@@ -277,7 +280,7 @@ def matlab_gsastd(x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew
     References
     -------
     - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_P_ohm_d3d.m
-    
+
     Last major update by: William Wei on 7/24/2024
     """
     y_arr = y.copy()
@@ -417,22 +420,24 @@ def matlab_sa(y, smooth_width, ends_type=0):
 
     return y_smooth
 
+
 def matlab_round_int(x):
-    '''
+    """
     Custom rounding function. Round x.5 to the nearest integer with larger magnitude
-    numpy behaviour is different than matlab and will round X.5 to nearest even value 
+    numpy behaviour is different than matlab and will round X.5 to nearest even value
     instead of value farther away from 0.
-    '''
+    """
     sign = np.sign(x)
     x = abs(x)
     if x % 1 == 0.5:
         return int(sign * np.ceil(x))
     return int(sign * round(x))
 
+
 # TODO: Cover documentation with Cristina
 def matlab_power(a):
-    '''
-    Python reimplementation of powers_new.m 
+    """
+    Python reimplementation of powers_new.m
     Used for calculating the total radiated power from the bolometer array.
 
     -------
@@ -440,7 +445,7 @@ def matlab_power(a):
     - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/powers_new.m
 
     Last major update by William Wei on 7/26/2024
-    '''
+    """
 
     # Multiplicative constants (kappa) to get the power radiating in the i^th viewing chord
     kappa = np.array(
@@ -579,8 +584,20 @@ def matlab_power(a):
         divu: np.ndarray
         chan: np.ndarray
 
-    c = Channel(label="", chanpwr=np.zeros((4096)), brightness=np.zeros((4096)), R=0.0, Z=0.0, angle=0.0)
-    b = Power(pwrmix=np.zeros((4096)), divl=np.zeros((4096)), divu=np.zeros((4096)), chan=np.tile(c, (48)))
+    c = Channel(
+        label="",
+        chanpwr=np.zeros((4096)),
+        brightness=np.zeros((4096)),
+        R=0.0,
+        Z=0.0,
+        angle=0.0,
+    )
+    b = Power(
+        pwrmix=np.zeros((4096)),
+        divl=np.zeros((4096)),
+        divu=np.zeros((4096)),
+        chan=np.tile(c, (48)),
+    )
     for i in range(48):
         b.chan[i].chanpwr = kappa[i] * a.channels[i].pwr
         b.chan[i].brightness = etendu[i] * a.channels[i].pwr
@@ -606,17 +623,17 @@ def matlab_power(a):
 
 
 def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
-    '''
-    Python reimplementation of getbolo_new.m. 
+    """
+    Python reimplementation of getbolo_new.m.
     Used for calculating the total radiated power from the bolometer array.
 
     -------
     References:
     - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/getbolo_new.m
-    
-    Last major update by William Wei on 7/26/24
-    '''
-    drtau /= 1.0e3
+
+    Last major update by William Wei on 7/26/2024
+    """
+    drtau /= 1e3
     # NOTE: why set gam, tau & scrfact as 2D arrays?
     gam = np.zeros((1, 49))
     tau = np.zeros((1, 49))
@@ -923,7 +940,16 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
         scrfact: float
 
     one_channel = Channel(
-        label="", R=0.0, Z=0.0, angle=0.0, ier=0, pwr=np.zeros((1, 4096)), raw=np.zeros((1, 16384)), gam=0.0, tau=0.0, scrfact=0.0
+        label="",
+        R=0.0,
+        Z=0.0,
+        angle=0.0,
+        ier=0,
+        pwr=np.zeros((1, 4096)),
+        raw=np.zeros((1, 16384)),
+        gam=0.0,
+        tau=0.0,
+        scrfact=0.0,
     )
     channels = [copy.deepcopy(one_channel) for i in range(48)]
 
@@ -988,11 +1014,11 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
     (nzer,) = np.where(k != 0)
     k[nzer] = 1.0 / k[nzer]
     k = k / t_del / (np.fix(m / 2) * 2)
-    
+
     for i in range(48):
         bolo_shot.channels[i].label = bol_channels[i]
         data = interp1(bol_time, bol_top[i], bolo_shot.raw_time)
-        
+
         bolo_shot.channels[i].ier = 0
         bolo_shot.channels[i].raw = data
         bolo_shot.channels[i].gam = gam[i + 1]

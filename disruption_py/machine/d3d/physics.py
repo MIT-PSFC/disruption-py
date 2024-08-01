@@ -9,7 +9,12 @@ from MDSplus import mdsExceptions
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.math import matlab_get_bolo, matlab_gsastd, interp1, matlab_power
+from disruption_py.core.utils.math import (
+    matlab_get_bolo,
+    matlab_gsastd,
+    interp1,
+    matlab_power,
+)
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -65,20 +70,20 @@ class D3DPhysicsMethods:
         """
         Compute the input NBI, ECH powers, radiated power measured by the bolometer array,
         and the radiated fraction for a DIII-D shot.
-        
+
         References:
         -------
         - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_power_d3d.m
 
         Last major update by William Wei on 8/1/2024
         """
-        
+
         # Get neutral beam injected power
         try:
             p_nbi, t_nbi = params.mds_conn.get_data_with_dims(
                 r"\d3d::top.nb:pinj", tree_name="d3d", astype="float64"
             )
-            t_nbi /= 1e3    # [ms] -> [s]
+            t_nbi /= 1e3  # [ms] -> [s]
             p_nbi *= 1e3  # [KW] -> [W]
             if len(t_nbi) > 2:
                 p_nbi = interp1(
@@ -105,9 +110,9 @@ class D3DPhysicsMethods:
             p_ech, t_ech = params.mds_conn.get_data_with_dims(
                 r"\top.ech.total:echpwrc", tree_name="rf"
             )
-            t_ech /= 1e3    # [ms] -> [s]
+            t_ech /= 1e3  # [ms] -> [s]
             if len(t_ech) > 2:
-                # Sometimes, t_ech has an extra "0" value tacked on to the end. 
+                # Sometimes, t_ech has an extra "0" value tacked on to the end.
                 # This must be removed before the interpolation.
                 if t_ech[-1] == 0:
                     t_ech, p_ech = t_ech[:-1], p_ech[:-1]
@@ -134,7 +139,7 @@ class D3DPhysicsMethods:
 
         # Get ohmic power and loop voltage
         ohmic_parameters = D3DPhysicsMethods.get_ohmic_parameters(params)
-        p_ohm = ohmic_parameters['p_ohm']
+        p_ohm = ohmic_parameters["p_ohm"]
 
         # Radiated power
         # We had planned to use the standard signal r'\bolom::prad_tot' for this
@@ -159,13 +164,21 @@ class D3DPhysicsMethods:
         bol_channels = upper_channels + lower_channels
         bol_signals = []
         for i in range(48):
-            bol_signal = params.mds_conn.get_data(rf"\top.raw:{bol_channels[i]}", tree_name="bolom")
+            bol_signal = params.mds_conn.get_data(
+                rf"\top.raw:{bol_channels[i]}", tree_name="bolom"
+            )
             bol_signals.append(bol_signal)
-        bol_time = params.mds_conn.get_dims(rf"\top.raw:{bol_channels[0]}", tree_name="bolom")[0]
-        bol_time /= 1e3 # [ms] -> [s]
+        bol_time = params.mds_conn.get_dims(
+            rf"\top.raw:{bol_channels[0]}", tree_name="bolom"
+        )[0]
+        bol_time /= 1e3  # [ms] -> [s]
         a_struct = matlab_get_bolo(
-            shot_id=params.shot_id, bol_channels=bol_channels, bol_prm=bol_prm, 
-            bol_top=bol_signals, bol_time=bol_time, drtau=smoothing_window*1e3
+            shot_id=params.shot_id,
+            bol_channels=bol_channels,
+            bol_prm=bol_prm,
+            bol_top=bol_signals,
+            bol_time=bol_time,
+            drtau=smoothing_window * 1e3,
         )
         ier = 0
         for j in range(48):
@@ -185,7 +198,7 @@ class D3DPhysicsMethods:
         p_rad[p_rad < 0] = 0
         p_nbi[p_nbi < 0] = 0
         p_ech[p_ech < 0] = 0
-        
+
         p_input = p_ohm + p_nbi + p_ech  # [W]
         rad_fraction = p_rad / p_input
         rad_fraction[np.isinf(rad_fraction)] = np.nan
@@ -210,7 +223,7 @@ class D3DPhysicsMethods:
     def get_ohmic_parameters(params: PhysicsMethodParams):
         """
         Compute ohmic heating power and loop voltage for a DIII-D shot
-        
+
         References:
         -------
         - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_P_ohm_d3d.m
@@ -247,12 +260,17 @@ class D3DPhysicsMethods:
             # It can be useful for differentiating numerous signals such as Ip, Vloop,
             # etc.  It is called 'GSASTD'. We will use this routine in place of Matlab's
             # 'gradient' and smoothing/filtering routines for certain signals.
-        
+
             # We choose a 20-point width for gsastd. This means a 10ms window for
             # ip smoothing
             dipdt_smoothed = matlab_gsastd(
-                x=t_ip, y=ip, derivative_mode=1, width=20, smooth_type=3, 
-                ends_type=1, slew_rate=0
+                x=t_ip,
+                y=ip,
+                derivative_mode=1,
+                width=20,
+                smooth_type=3,
+                ends_type=1,
+                slew_rate=0,
             )
             li, t_li = params.mds_conn.get_data_with_dims(
                 r"\efit_a_eqdsk:li", tree_name="_efit_tree"
