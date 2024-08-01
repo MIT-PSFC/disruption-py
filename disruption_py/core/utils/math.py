@@ -238,7 +238,7 @@ def gauss(x, *params):
     out = a * np.exp(-((x - mu) ** 2) / (2.0 * sigma**2))
     return out
 
-def gsastd(x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=0):
+def matlab_gsastd(x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=0):
     """
     Python reimplementation of the GSASTD routine originally by Alessandro Pau
     Fast non-causal differentiation of noisy data.
@@ -289,13 +289,13 @@ def gsastd(x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=0
     if smooth_type == 0:
         width = 1
     if derivative_mode == 0:
-        return fastsmooth(y_arr, width, smooth_type, ends_type)
+        return matlab_fastsmooth(y_arr, width, smooth_type, ends_type)
     elif derivative_mode == 1:
-        return fastsmooth(deriv(x, y_arr), width, smooth_type, ends_type)
+        return matlab_fastsmooth(matlab_deriv(x, y_arr), width, smooth_type, ends_type)
     raise ValueError("derivative_mode only takes 0 or 1 as input")
 
 
-def deriv(x, y):
+def matlab_deriv(x, y):
     """
     Calculate the derivative of a dataset. Used by GSASTD.
 
@@ -324,7 +324,7 @@ def deriv(x, y):
     return d
 
 
-def fastsmooth(y, w, smooth_type=1, ends_type=0):
+def matlab_fastsmooth(y, w, smooth_type=1, ends_type=0):
     """
     Wrapper for looping over the dataset using the smooth function.
     Used by GSASTD.
@@ -360,13 +360,13 @@ def fastsmooth(y, w, smooth_type=1, ends_type=0):
 
     Last major update by William Wei on 7/24/2024
     """
-    smoothed_y = sa(y, w, ends_type)
+    smoothed_y = matlab_sa(y, w, ends_type)
     for i in range(smooth_type - 1):
-        smoothed_y = sa(smoothed_y, w, ends_type)
+        smoothed_y = matlab_sa(smoothed_y, w, ends_type)
     return smoothed_y
 
 
-def sa(y, smooth_width, ends_type=0):
+def matlab_sa(y, smooth_width, ends_type=0):
     """
     Compute the centered moving average of y
     Used by GSASTD
@@ -430,7 +430,7 @@ def matlab_round_int(x):
     return int(sign * round(x))
 
 # TODO: Cover documentation with Cristina
-def power(a):
+def matlab_power(a):
     '''
     Python reimplementation of powers_new.m 
     Used for calculating the total radiated power from the bolometer array.
@@ -605,7 +605,7 @@ def power(a):
     return b
 
 
-def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
+def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
     '''
     Python reimplementation of getbolo_new.m. 
     Used for calculating the total radiated power from the bolometer array.

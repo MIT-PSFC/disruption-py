@@ -9,7 +9,7 @@ from MDSplus import mdsExceptions
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.math import get_bolo, gsastd, interp1, power
+from disruption_py.core.utils.math import matlab_get_bolo, matlab_gsastd, interp1, matlab_power
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -163,7 +163,7 @@ class D3DPhysicsMethods:
             bol_signals.append(bol_signal)
         bol_time = params.mds_conn.get_dims(rf"\top.raw:{bol_channels[0]}", tree_name="bolom")[0]
         bol_time /= 1e3 # [ms] -> [s]
-        a_struct = get_bolo(
+        a_struct = matlab_get_bolo(
             shot_id=params.shot_id, bol_channels=bol_channels, bol_prm=bol_prm, 
             bol_top=bol_signals, bol_time=bol_time, drtau=smoothing_window*1e3
         )
@@ -175,7 +175,7 @@ class D3DPhysicsMethods:
                 p_rad = np.full(len(params.times), np.nan)
                 break
         if ier == 0:
-            b_struct = power(a_struct)
+            b_struct = matlab_power(a_struct)
             p_rad = b_struct.pwrmix  # [W]
             p_rad = interp1(a_struct.raw_time, p_rad, params.times, "linear")
 
@@ -250,7 +250,7 @@ class D3DPhysicsMethods:
         
             # We choose a 20-point width for gsastd. This means a 10ms window for
             # ip smoothing
-            dipdt_smoothed = gsastd(
+            dipdt_smoothed = matlab_gsastd(
                 x=t_ip, y=ip, derivative_mode=1, width=20, smooth_type=3, 
                 ends_type=1, slew_rate=0
             )
@@ -1243,10 +1243,10 @@ class D3DPhysicsMethods:
             )
             bol_signals.append(bol_signal)
             bol_times.append(bol_time)
-        a_struct = get_bolo(
+        a_struct = matlab_get_bolo(
             params.shot_id, bol_channels, bol_prm, bol_signals, bol_times[0]
         )
-        b_struct = power(a_struct)
+        b_struct = matlab_power(a_struct)
         r_major_axis, efit_time = params.mds_conn.get_data_with_dims(
             r"\top.results.geqdsk:rmaxis", tree_name="_efit_tree"
         )
