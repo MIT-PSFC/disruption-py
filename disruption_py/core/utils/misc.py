@@ -13,6 +13,7 @@ from pathlib import Path
 from tempfile import mkdtemp
 from typing import List
 
+import MDSplus
 import numpy as np
 import pandas as pd
 
@@ -138,6 +139,16 @@ def get_commit_hash() -> str:
     except subprocess.CalledProcessError:
         commit_hash = None
     return commit_hash
+
+
+def make_hashable(item):
+    """Create hashable objects by converting lists to tuples and MDSplus scalars
+    into NumPy scalars."""
+    if isinstance(item, (list, MDSplus.mdsarray.Int32Array)):
+        return tuple(make_hashable(e) for e in item)
+    if isinstance(item, MDSplus.mdsscalar.Int32):
+        return np.int32(item)
+    return item
 
 
 @lru_cache

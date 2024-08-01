@@ -11,7 +11,7 @@ import numpy as np
 from loguru import logger
 
 from disruption_py.config import config
-from disruption_py.core.utils.misc import safe_cast
+from disruption_py.core.utils.misc import make_hashable, safe_cast
 from disruption_py.core.utils.shared_instance import SharedInstance
 from disruption_py.machine.tokamak import Tokamak
 
@@ -99,6 +99,7 @@ class MDSConnection:
         self.tree_nickname_funcs = {}
         self.tree_nicknames = {}
         self.last_open_tree = None
+        self.data_cache = {}
 
     @_better_mds_exceptions
     def open_tree(self, tree_name: str):
@@ -152,11 +153,28 @@ class MDSConnection:
         Any
             Result of evaluating TDI expression from MDSplus.
         """
-        if tree_name is not None:
-            self.open_tree(tree_name)
-        if arguments is None:
-            return self.conn.get(expression)
-        return self.conn.get(expression, arguments)
+        # Try to retrieve evaluated expression from cache
+        cache_key = make_hashable([expression, tree_name, arguments])
+        eval_expr = None
+
+        if cache_key in self.data_cache:
+            eval_expr = self.data_cache[cache_key]
+
+        # Retrieve evaluated expression from MDSplus
+        if eval_expr is None:
+            if tree_name is not None:
+                self.open_tree(tree_name)
+            if arguments is None:
+                eval_expr = self.conn.get(expression)
+            else:
+                eval_expr = self.conn.get(expression, arguments)
+
+            # Cache evaluated expression
+            if cache_key not in self.data_cache:
+                self.data_cache[cache_key] = {}
+            self.data_cache[cache_key] = eval_expr
+
+        return eval_expr
 
     # Convenience methods
 
@@ -188,12 +206,26 @@ class MDSConnection:
         np.ndarray
             Returns the node data.
         """
+        # Try to retrieve data from cache
+        cache_key = make_hashable([path, tree_name, arguments])
 
-        if tree_name is not None:
-            self.open_tree(tree_name)
+        data = None
+        if cache_key in self.data_cache:
+            data = self.data_cache[cache_key].get("data")
 
-        logger.trace("Getting data: {path}", path=path)
-        data = self.conn.get("_sig=" + path, arguments).data()
+        if data is None:
+            # Retrieve data from MDSplus
+            if tree_name is not None:
+                self.open_tree(tree_name)
+
+            logger.trace("Getting data: {path}", path=path)
+            data = self.conn.get(path, arguments).data()
+
+            # Cache data
+            if cache_key not in self.data_cache:
+                self.data_cache[cache_key] = {}
+            self.data_cache[cache_key]["data"] = data
+
         if astype:
             data = safe_cast(data, astype)
 
@@ -236,13 +268,13 @@ class MDSConnection:
             self.open_tree(tree_name)
 
         logger.trace("Getting data and dims: {path}", path=path)
-        data = self.conn.get("_sig=" + path).data()
-        dims = [self.conn.get(f"dim_of(_sig,{dim_num})").data() for dim_num in dim_nums]
-
-        if astype:
-            data = safe_cast(data, astype)
-            if cast_all:
-                dims = [safe_cast(dim, astype) for dim in dims]
+        data = self.get_data(path=path, tree_name=tree_name, astype=astype)
+        dims = self.get_dims(
+            path=path,
+            tree_name=tree_name,
+            dim_nums=dim_nums,
+            astype=astype if cast_all else None,
+        )
 
         return data, *dims
 
@@ -255,7 +287,7 @@ class MDSConnection:
         astype: str = None,
     ) -> Tuple:
         """
-        Get the specified dimensions for record at specified path.
+        Get the specified dimensions (e.g. timebase) for record at specified path.
 
         Parameters
         ----------
@@ -273,15 +305,31 @@ class MDSConnection:
         Tuple
             Returns the requested dimensions as a tuple.
         """
-
         dim_nums = dim_nums or [0]
+        dims = [None for _ in dim_nums]
 
-        if tree_name is not None:
-            self.open_tree(tree_name)
+        # Try to retrieve dimensions of data from cache.
+        cache_key = make_hashable([path, tree_name])
+        if cache_key in self.data_cache:
+            cached: dict = self.data_cache[cache_key]
+            for i, dim_num in enumerate(dim_nums):
+                if dim_num in cached:
+                    dims[i] = cached[dim_num]
 
-        logger.trace("Getting dims: {path}", path=path)
-        dims = [self.conn.get(f"dim_of({path},{d})").data() for d in dim_nums]
+        # Retrieve from MDSplus
+        retrieved_from_cache = any(d is not None for d in dims)
+        if not retrieved_from_cache:
+            if tree_name is not None:
+                self.open_tree(tree_name)
 
+            logger.trace("Getting dims: {path}", path=path)
+            dims = [self.conn.get(f"dim_of({path},{d})").data() for d in dim_nums]
+
+            # Cache dims
+            if cache_key not in self.data_cache:
+                self.data_cache[cache_key] = {}
+            for i, dim_num in enumerate(dim_nums):
+                self.data_cache[cache_key][dim_num] = dims[i]
         if astype:
             dims = [safe_cast(dim, astype) for dim in dims]
 
