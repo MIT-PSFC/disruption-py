@@ -4,7 +4,8 @@ from disruption_py.workflow import get_shots_data
 import matplotlib.pyplot as plt
 import MDSplus as mds
 
-shotno = 1120830026
+shotno = 1150928025
+#shotno = 1120621021
 signals = ['ip', 'kappa', 'te_peaking', 'te_peaking_ece', 'prad_peaking']
 
 # default method for pulling disruption-py data
