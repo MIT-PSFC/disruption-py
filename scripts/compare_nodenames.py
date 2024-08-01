@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 import MDSplus as mds
-from MDSplus.tree import TreeNode
+from MDSplus.tree import Tree, TreeNode
 from MDSplus.compound import Signal
 from MDSplus.mdsExceptions import TreeNODATA, TreeFOPENR
 
@@ -32,7 +32,14 @@ class NodeNameComparer:
     it was added only to new shots.
     """
 
-    def __init__(self, shots: list[int], ref: str, new: str = None, num_processes=1, expression:str=None):
+    def __init__(
+        self,
+        shots: list[int],
+        ref: str,
+        new: str = None,
+        num_processes=1,
+        expression: str = None,
+    ):
         """
         Params:
             shots: List of shot ids. If None, then the default is 20 old shots
@@ -89,18 +96,20 @@ class NodeNameComparer:
         node_str = str(record)
         # Find the expression inside of build signal
         match = re.search(r"Build_Signal\(([^,]+),", node_str)
-        expression = match.group(1) if match is not None else node_str 
+        expression = match.group(1) if match is not None else node_str
         if self.expression is not None and self.expression != expression:
-            warnings.warn(f"expression does not match expected '{expression}' != '{self.expression}'")
+            warnings.warn(
+                f"expression does not match expected '{expression}' != '{self.expression}'"
+            )
             return False
-        
-        # Only match if there is not a comma, [, or E followed by an operator because  
+
+        # Only match if there is not a comma, [, or E followed by an operator because
         # that could indicate a list of negative numbers or number raised to an exponent
         # which is not an expression
         m = re.search(r"(?<![,\[E])[\-\*\/\+]", expression)
         if m is None:
             return False
-        
+
         return True
 
     @staticmethod
@@ -115,7 +124,7 @@ class NodeNameComparer:
         """Return the indices of the comparison table representing a relationship
         between ref and node."""
         try:
-            tree = mds.Tree("analysis", shot)
+            tree = Tree("analysis", shot)
         except mds.mdsExceptions.TreeFOPENR:
             return None
 
@@ -227,17 +236,14 @@ class NodeNameComparer:
             (self.VALUES_IDX, self.ALIAS_IDX): "va",
             (self.VALUES_IDX, self.EXPRESSION_IDX): "vx",
             (self.VALUES_IDX, self.EMPTY_IDX): "ve",
-
             (self.ALIAS_IDX, self.VALUES_IDX): "av",
             (self.ALIAS_IDX, self.ALIAS_IDX): "aa",
             (self.ALIAS_IDX, self.EXPRESSION_IDX): "ax",
             (self.ALIAS_IDX, self.EMPTY_IDX): "ae",
-            
             (self.EXPRESSION_IDX, self.VALUES_IDX): "xv",
             (self.EXPRESSION_IDX, self.ALIAS_IDX): "xa",
             (self.EXPRESSION_IDX, self.EXPRESSION_IDX): "xx",
             (self.EXPRESSION_IDX, self.EMPTY_IDX): "xe",
-            
             (self.EMPTY_IDX, self.VALUES_IDX): "ev",
             (self.EMPTY_IDX, self.ALIAS_IDX): "ea",
             (self.EMPTY_IDX, self.EXPRESSION_IDX): "ex",
@@ -326,7 +332,9 @@ if __name__ == "__main__":
         with open(args.shot_ids[0], "r") as f:
             shot_ids = [int(s) for s in f.readlines()]
 
-    compare = NodeNameComparer(shot_ids, args.ref, args.new, args.num_processes, args.expr)
+    compare = NodeNameComparer(
+        shot_ids, args.ref, args.new, args.num_processes, args.expr
+    )
     table = compare.get_pretty_table()
     print("      ref:" + f"{compare.parent_name}:{args.ref}")
     print(table)
