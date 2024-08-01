@@ -317,7 +317,7 @@ class D3DPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["n_e_rt", "greenwald_fraction_rt"],
+        columns=["n_e_rt", "greenwald_fraction_rt", "dn_dt_rt"],
         tokamak=Tokamak.D3D,
     )
     def get_rt_density_parameters(params: PhysicsMethodParams):
@@ -334,6 +334,8 @@ class D3DPhysicsMethods:
             dne_dt_rt = np.gradient(ne_rt, t_ne_rt)  # [m^-3/s]
             ne_rt = interp1(t_ne_rt, ne_rt, params.times, "linear")
             dne_dt_rt = interp1(t_ne_rt, dne_dt_rt, params.times, "linear")
+
+            # TODO: reimplement this section -- MATLAB line 64--78
             try:
                 ip_rt, t_ip_rt = params.mds_conn.get_data_with_dims(
                     f"ptdata('ipsip', {params.shot_id})"
@@ -345,6 +347,8 @@ class D3DPhysicsMethods:
                     f"ptdata('ipspr15v', {params.shot_id})"
                 )  # [MA], [ms]
                 t_ip_rt = t_ip_rt / 1.0e3  # [ms] to [s]
+
+            # TODO: Reimplement this section -- MATLAB line 92--106
             ip_sign = np.sign(np.sum(ip_rt))
             ip = interp1(t_ip_rt, ip_rt * ip_sign, params.times, "linear")
             a_minor_rt, t_a_rt = params.mds_conn.get_data_with_dims(
@@ -352,14 +356,14 @@ class D3DPhysicsMethods:
             )  # [m], [ms]
             t_a_rt = t_a_rt / 1.0e3  # [ms] -> [s]
             a_minor_rt = interp1(t_a_rt, a_minor_rt, params.times, "linear")
+
             with np.errstate(divide="ignore"):
-                n_g_rt = ip / 1.0e6 / (np.pi * a_minor_rt**2)  # [MA/m^2]
+                n_g_rt = ip / (np.pi * a_minor_rt**2)  # [MA/m^2]
                 g_f_rt = ne_rt / 1.0e20 / n_g_rt  # TODO: Fill in units
         except mdsExceptions.MdsException as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get some parameter")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-        # ' dne_dt_RT': dne_dt_rt
-        return {"n_e_rt": ne_rt, "greenwald_fraction_rt": g_f_rt}
+        return {"n_e_rt": ne_rt, "greenwald_fraction_rt": g_f_rt, "dn_dt_rt": dne_dt_rt}
 
     @staticmethod
     @physics_method(
