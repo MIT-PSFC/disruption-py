@@ -268,12 +268,13 @@ class D3DPhysicsMethods:
         '''
         Get electron density from EFIT, then compute dn_dt and Greenwald_fraction.
 
-        Reference
+        References
         -------
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_density_parameters.m
         https://github.com/MIT-PSFC/disruption-py/issues/238
+        https://github.com/MIT-PSFC/disruption-py/pull/249
 
-        Last major update by William Wei on [FINAL PR DATE]
+        Last major update by William Wei on [FINAL MERGE DATE]
         '''
         ne = [np.nan]
         g_f = [np.nan]
