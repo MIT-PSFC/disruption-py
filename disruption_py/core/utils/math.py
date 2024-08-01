@@ -930,9 +930,8 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         tau: float
         scrfact: float
 
-    # NOTE: Channel.raw has zeros(1,16384) in MATLAB (getbolo_new.m line 66)
     one_channel = Channel(
-        "", 0.0, 0.0, 0.0, 0, np.zeros((1, 4096)), np.zeros((1, 4096)), 0.0, 0.0, 0.0
+        label="", R=0.0, Z=0.0, angle=0.0, ier=0, pwr=np.zeros((1, 4096)), raw=np.zeros((1, 4096)), gam=0.0, tau=0.0, scrfact=0.0
     )
     channels = [copy.deepcopy(one_channel) for i in range(48)]
 

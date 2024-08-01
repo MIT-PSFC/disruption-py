@@ -63,6 +63,8 @@ class D3DPhysicsMethods:
     )
     def get_power_parameters(params: PhysicsMethodParams):
         """
+        #TODO: Complete docstring
+
         Compute the input NBI, ECH powers, radiated power measured by the bolometer array,
         and the radiated fraction for a DIII-D shot.
 
@@ -157,7 +159,6 @@ class D3DPhysicsMethods:
         # analysis so that the smoothing is causal, and uses a shorter window.
         smoothing_window = 0.010  # [s]
 
-        ### DEBUG: MATLAB DIII-D/get_power_d3d.m line 138
         try:
             bol_prm, _ = params.mds_conn.get_data_with_dims(
                 r"\bol_prm", tree_name="bolom"
@@ -165,58 +166,38 @@ class D3DPhysicsMethods:
         except mdsExceptions.MdsException as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to open bolom tree.")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-        # TODO: why "lower_channels" call "bol_u" and "upper_channels" call "bol_l"?
-        # NOTE: getbolo_new.m line 85-89 has [bol_u, bol_l]; make sure this doesn't cause any error
-        # lower_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
-        # upper_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
-        # bol_channels = lower_channels + upper_channels
         upper_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
         lower_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
         bol_channels = upper_channels + lower_channels
         bol_signals = []
-        # bol_times = []          # NOTE: Why store 48 identical bol_time?
-        for i in range(48):        # NOTE: don't need to get bol_time 48 times
-            # bol_signal, bol_time = params.mds_conn.get_data_with_dims(
-            #     rf"\top.raw:{bol_channels[i]}", tree_name="bolom"
-            # )
+        for i in range(48):
             bol_signal = params.mds_conn.get_data(rf"\top.raw:{bol_channels[i]}", tree_name="bolom")
-            # bol_time /= 1e3 # [ms] -> [s]
             bol_signals.append(bol_signal)
-            # bol_times.append(bol_time)
         bol_time = params.mds_conn.get_dims(rf"\top.raw:{bol_channels[0]}", tree_name="bolom")[0]
         bol_time /= 1e3 # [ms] -> [s]
-        # a_struct = get_bolo(
-        #     params.shot_id, bol_channels, bol_prm, bol_signals, bol_times, smoothing_window*1e3
-        # )
         a_struct = get_bolo(
             shot_id=params.shot_id, bol_channels=bol_channels, bol_prm=bol_prm, 
             bol_top=bol_signals, bol_time=bol_time, drtau=smoothing_window*1e3
         )
-        # NOTE: debugged get_bolo twice; it appears to be correct without comparing with MATLAB outputs
-
-        ### DEBUG: MATLAB DIII-D/get_power_d3d.m line 143
-        ier = 0     # NOTE: ier is unnecessary; use for...if...break; do...
+        ier = 0
         for j in range(48):
             # TODO: Ask about how many valid channels are needed for proper calculation
             if a_struct.channels[j].ier == 1:
                 ier = 1
-                p_rad = np.full(len(params.times), np.nan)      # TODO: replace with [np.nan] in the last commit
+                p_rad = np.full(len(params.times), np.nan)
                 break
         if ier == 0:
-            ### DEBUG: MATLAB DIII-D/get_power_d3d.m line 152
-            # NOTE: debugged power() twice. matches matlab script without comparing outputs
             b_struct = power(a_struct)
             p_rad = b_struct.pwrmix  # [W]
-            # p_rad = interp1(a_struct.time, p_rad, params.times, "linear")       # NOTE: len(a_struct.time)=4096, len(p_rad)=16384
             p_rad = interp1(a_struct.raw_time, p_rad, params.times, "linear")
 
         # Remove any negative values from the power data
+        # TODO: Could p_ohm be negative?
         p_rad[np.isinf(p_rad)] = np.nan
         p_rad[p_rad < 0] = 0
         p_nbi[p_nbi < 0] = 0
         p_ech[p_ech < 0] = 0
-        # NOTE: Could p_ohm be negative?
-
+        
         p_input = p_ohm + p_nbi + p_ech  # [W]
         rad_fraction = p_rad / p_input
         rad_fraction[np.isinf(rad_fraction)] = np.nan
@@ -240,6 +221,8 @@ class D3DPhysicsMethods:
     )
     def get_ohmic_parameters(params: PhysicsMethodParams):
         """
+        #TODO: Complete docstring
+
         Compute ohmic heating power and loop voltage for a DIII-D shot
 
         Parameters
