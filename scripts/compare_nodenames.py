@@ -151,23 +151,22 @@ class NodeNameComparer:
             if new_node is None:
                 return (self.EMPTY_IDX, self.EMPTY_IDX)
             # new is an alias
-            elif NodeNameComparer.is_alias(new_record):
+            if NodeNameComparer.is_alias(new_record):
                 return (self.ALIAS_IDX, self.EMPTY_IDX)
             # new is an expression
-            elif self.is_expression(new_record):
+            if self.is_expression(new_record):
                 return (self.EXPRESSION_IDX, self.EMPTY_IDX)
             # new has data
-            else:
-                return (self.VALUES_IDX, self.EMPTY_IDX)
+            return (self.VALUES_IDX, self.EMPTY_IDX)
         # ref is an alias
-        elif NodeNameComparer.is_alias(ref_record):
+        if NodeNameComparer.is_alias(ref_record):
             if new_node is None:
                 warnings.warn(
                     f"ref '{self.ref}' is an alias, but new '{self.new}' has no "
                     + f"data, shot: {shot}"
                 )
                 return (self.EMPTY_IDX, self.ALIAS_IDX)
-            elif NodeNameComparer.is_alias(new_record):
+            if NodeNameComparer.is_alias(new_record):
                 warnings.warn(
                     f"No data found: ref '{self.ref}' is an alias and new '{self.new}'"
                     + f" is an alias, shot: {shot}"
@@ -179,25 +178,23 @@ class NodeNameComparer:
                 if ref_record.getNid() == new_node.getNid():
                     return (self.VALUES_IDX, self.ALIAS_IDX)
                 # ref is an alias, new is data, but ref does not point to new
-                else:
-                    warnings.warn(
-                        f"No connection: ref '{self.ref}' does not point to new "
-                        + f"'{self.new}', shot: {shot}"
-                    )
+                warnings.warn(
+                    f"No connection: ref '{self.ref}' does not point to new "
+                    + f"'{self.new}', shot: {shot}"
+                )
         # ref is expression
         elif self.is_expression(ref_record):
             if new_node is None:
                 return (self.EMPTY_IDX, self.EXPRESSION_IDX)
-            elif NodeNameComparer.is_alias(new_record):
+            if NodeNameComparer.is_alias(new_record):
                 # new is an alias for ref
                 if new_record.getNid() == ref_node.getNid():
                     return (self.ALIAS_IDX, self.EXPRESSION_IDX)
                 # new is an alias, but not for ref
-                else:
-                    warnings.warn(
-                        f"No connection: new '{self.new}' does not point to ref "
-                        + f"'{self.ref}', shot: {shot}"
-                    )
+                warnings.warn(
+                    f"No connection: new '{self.new}' does not point to ref "
+                    + f"'{self.ref}', shot: {shot}"
+                )
             # new has data
             else:
                 return (self.VALUES_IDX, self.EXPRESSION_IDX)
@@ -205,16 +202,15 @@ class NodeNameComparer:
         else:
             if new_node is None:
                 return (self.EMPTY_IDX, self.VALUES_IDX)
-            elif NodeNameComparer.is_alias(new_record):
+            if NodeNameComparer.is_alias(new_record):
                 # new is an alias for ref
                 if new_record.getNid() == ref_node.getNid():
                     return (self.ALIAS_IDX, self.VALUES_IDX)
                 # new is an alias, but not for ref
-                else:
-                    warnings.warn(
-                        f"No connection: new '{self.new}' does not point to ref "
-                        + f"'{self.ref}', shot: {shot}"
-                    )
+                warnings.warn(
+                    f"No connection: new '{self.new}' does not point to ref "
+                    + f"'{self.ref}', shot: {shot}"
+                )
             elif self.is_expression(new_record):
                 return (self.EXPRESSION_IDX, self.VALUES_IDX)
             # new has data
@@ -253,17 +249,16 @@ class NodeNameComparer:
         comparison_table = np.zeros(shape=(len(self.labels), len(self.labels)))
         with Pool(self.num_processes) as p:
             table_indices = p.map(self.compare_names_one_shot, self.shots)
-            for i in range(len(table_indices)):
-                idx = table_indices[i]
-                if idx is None:
+            for shot_idx, table_idx in enumerate(table_indices):
+                if table_idx is None:
                     continue
-                comparison_table[idx] += 1
+                comparison_table[table_idx] += 1
 
-                if json_keys[idx] not in shot_log:
-                    shot_log[json_keys[idx]] = []
-                shot_log[json_keys[idx]].append(self.shots[i])
+                if json_keys[table_idx] not in shot_log:
+                    shot_log[json_keys[table_idx]] = []
+                shot_log[json_keys[table_idx]].append(self.shots[shot_idx])
 
-        with open(f"{self.ref}-{self.new}.json", "w") as f:
+        with open(f"{self.ref}-{self.new}.json", "w", encoding="utf8") as f:
             f.write(json.dumps(shot_log))
         return comparison_table
 
@@ -329,7 +324,7 @@ if __name__ == "__main__":
         shot_ids = [int(s) for s in args.shot_ids]
     # Parse txt files
     elif args.shot_ids and args.shot_ids[0].endswith(".txt"):
-        with open(args.shot_ids[0], "r") as f:
+        with open(args.shot_ids[0], "r", encoding="utf8") as f:
             shot_ids = [int(s) for s in f.readlines()]
 
     compare = NodeNameComparer(
