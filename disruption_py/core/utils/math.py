@@ -998,9 +998,8 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
             bolo_shot.channels[i].ier = 1
         return bolo_shot
 
-    # TODO: fix this
     # time = np.linspace(np.min(bol_time[0]), np.min(bol_time[-1]), 16384)
-    time = np.linspace(min(bol_time), max(bol_time), 16384)
+    time = np.linspace(bol_time[0], bol_time[-1], 16384)
     dt = time[1] - time[0]
     window_size = matlab_round_int(drtau / dt)
     smoothing_kernel = (1.0 / window_size) * np.ones(window_size)
