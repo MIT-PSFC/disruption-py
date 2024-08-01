@@ -283,7 +283,6 @@ class D3DPhysicsMethods:
                 params.times,
                 "linear",
                 bounds_error=False,
-                fill_value="extrapolate",
             )
             dne_dt = interp1(
                 t_ne,
@@ -291,7 +290,6 @@ class D3DPhysicsMethods:
                 params.times,
                 "linear",
                 bounds_error=False,
-                fill_value="extrapolate",
             )
             # TODO: CHECK TREE_NAME
             ip, t_ip = params.mds_conn.get_data_with_dims(
