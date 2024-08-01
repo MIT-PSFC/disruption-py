@@ -302,7 +302,9 @@ class D3DPhysicsMethods:
                 "linear",
                 bounds_error=False,
             )
-            # TODO: CHECK TREE_NAME
+
+            # TODO: CHECK TREE_NAME; Implement MATLAB line 87-109
+
             ip, t_ip = params.mds_conn.get_data_with_dims(
                 f"ptdata('ip', {params.shot_id})", tree_name="_efit_tree"
             )  # [A], [ms]
