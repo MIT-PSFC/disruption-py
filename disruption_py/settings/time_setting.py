@@ -297,6 +297,17 @@ class PCSTimeSetting(TimeSetting):
 
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         return self.tokamak_overrides[params.tokamak](params)
+    
+class OfflineTimeSetting(TimeSetting):
+    """Plasma Control System Time Setting, runs at 1 kHz"""
+    def __init__(self):
+        self.tokamak_overrides = {Tokamak.CMOD: self.cmod_times}
+
+    def cmod_times(self, params: TimeSettingParams):
+        return np.array(np.arange(0.4, 1.2, 0.0001)) # TODO(ZanderKeith) Just hardcoded start and stop time for now
+
+    def _get_times(self, params: TimeSettingParams) -> np.ndarray:
+        return self.tokamak_overrides[params.tokamak](params)
 
 class SignalTimeSetting(TimeSetting):
     def __init__(self, tree_name: str, signal_path: str):
@@ -326,6 +337,7 @@ _time_setting_mappings: Dict[str, TimeSetting] = {
     },
     "ip": IpTimeSetting(),
     "pcs": PCSTimeSetting(),
+    "offline": OfflineTimeSetting(),
 }
 # --8<-- [end:time_setting_dict]
 

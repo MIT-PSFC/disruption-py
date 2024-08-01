@@ -6,7 +6,8 @@ from importlib import resources
 
 import numpy as np
 import pandas as pd
-import scipy as sp
+from scipy.signal import ShortTimeFFT
+from scipy.signal.windows import kaiser
 from MDSplus import mdsExceptions
 
 import disruption_py.data
@@ -1221,50 +1222,6 @@ class CmodTearingMethods:
                 "n_equal_1_std": n_equal_1_std,
             }
         )
-
-    @staticmethod
-    @physics_method(
-        tags=["mirnov_spectrogram"],
-        tokamak=Tokamak.CMOD,
-    )
-    def _get_mirnov_freqs(params: PhysicsMethodParams):
-        """Obtain the FFT of the Mirnov coil signals."""
-
-        mirnov_names = ["BP02_GHK"]
-        path = r"\magnetics::top.active_mhd.signals"
-        mirnov_signal, mirnov_times = params.mds_conn.get_data_with_dims(
-            path=f"{path}:{mirnov_names[0]}", tree_name="magnetics"
-        )
-        
-        # Assuming mirnov sample frequency of 5Mhz, and the target timebase is 1 kHz, 
-        # we should be able to get 5e6 / 1e3 = 5000 samples per target time
-        # This gives us really large frequency bins though,
-        # and we're mostly interested in the low frequency range
-        # So we'll use a larger number of samples per target time
-        mirnov_sample_freq = 5e6 # 5 MHz
-        nperseg = 2**15 # 32768 samples per segment
-
-        f, t, Sxx = sp.signal.spectrogram(mirnov_signal, fs=mirnov_sample_freq, nperseg=nperseg)
-        # spectrogram thinks time starts at 0
-        # so we need to shift the spectrogram timebase to match the mirnov timebase
-        t += (mirnov_times[0])
-
-        # Cut the spectrogram to maximum frequency
-        f_indices = np.where(f < 150e3)
-        f = f[f_indices]
-        Sxx = Sxx[f_indices]
-
-        # Interpolate the spectrogram onto the target timebase
-        # Sxx_interp still has time for columns and frequency for rows
-        target_times = params.times
-        Sxx_interp = np.zeros((len(f), len(target_times)))
-        for i in range(len(f)):
-            Sxx_interp[i] = interp1(t, Sxx[i], target_times)
-
-        # Use multi-indexing to store the spectrogram data
-        spectrogram_data = pd.DataFrame(Sxx_interp.T, columns=pd.MultiIndex.from_product([["mirnov_spectrogram"], f], names=["", "frequencies"]))
-
-        return spectrogram_data
     
     @staticmethod
     @physics_method(
@@ -1368,7 +1325,7 @@ class CmodTearingMethods:
     
     @staticmethod
     @physics_method(
-        tags=["cross_spectrum_real", "cross_spectrum_imag", "cross_power", "cross_phase", "cross_coherence"], tokamak=Tokamak.CMOD
+        tags=["mirnov_spectrogram", "cross_spectrum_real", "cross_spectrum_imag", "cross_power", "cross_phase", "cross_coherence"], tokamak=Tokamak.CMOD
     )
     def _get_mirnov_spectra(params: PhysicsMethodParams):
 
@@ -1387,66 +1344,68 @@ class CmodTearingMethods:
             )
 
         # Assuming mirnov sample frequency of 5Mhz
-        mirnov_sample_freq = 5e6
+        mirnov_sample_freq = 5e6    # 5 MHz sampling rate
+        tearing_mode_max_f = 150e3  # Don't care about rotations faster than 150kHz in C-Mod
 
-        # Get the complex cross spectrum
-        # First, need the short time fourier transform of the signals
-        from scipy.signal import ShortTimeFFT
-        from scipy.signal.windows import gaussian
-        window = gaussian(2**12, std=2**10) # TODO(ZanderKeith), need to make sure sampling window is only in the past
-        SFT = ShortTimeFFT(window, hop=2048, fs=mirnov_sample_freq, scale_to="magnitude")
+        # This is a tradeoff. Cannot have freq_resolution * temporal_resolution > mirnov_sample_freq
+        temporal_resolution = 1 / (params.times[1] - params.times[0]) # however fast the timebase is
+        freq_resolution = int(mirnov_sample_freq / temporal_resolution) # get the maximum frequency resolution possible
+
+        # Window size is the number of samples in the window
+        # Think of how many samples you need to measure the minimum frequency you care about
+        window_size = int(mirnov_sample_freq / freq_resolution)
+        # Hop is how much the window is slid.
+        # Slide the window based on the temporal resolution so interpolation is minimized
+        hop = int(mirnov_sample_freq / temporal_resolution)
+        window = kaiser(window_size, beta=14)
+        SFT = ShortTimeFFT(window, hop=hop, fs=mirnov_sample_freq)
         mirnov_signal_0_fft = SFT.stft(mirnov_signal_0)
         mirnov_signal_1_fft = SFT.stft(mirnov_signal_1)
 
-        freqs = SFT.f
-        fft_times = (SFT.delta_t * np.arange(mirnov_signal_0_fft.shape[1])) + mirnov_times[0]
-    
-        # Cut the fft to be max 150 kHz
-        f_max = 150e3
-        f_indices = np.where(freqs < f_max)
-        freqs = freqs[f_indices]
+        Sx2 = SFT.spectrogram(mirnov_signal_0)
+
+        # Cut the fft to the maximum value we care about
+        f_indices = np.where(SFT.f < tearing_mode_max_f)
+        freqs = SFT.f[f_indices]
         mirnov_signal_0_fft = mirnov_signal_0_fft[f_indices]
         mirnov_signal_1_fft = mirnov_signal_1_fft[f_indices]
+        Sx2 = Sx2[f_indices]
 
         # Interpolate the fft's onto the target timebase
-        mirnov_signal_0_fft_interp = np.zeros((len(freqs), len(params.times)), dtype=np.complex128)
-        mirnov_signal_1_fft_interp = np.zeros((len(freqs), len(params.times)), dtype=np.complex128)
-        for i in range(len(freqs)):
-            mirnov_signal_0_fft_interp[i] = interp1(fft_times, mirnov_signal_0_fft[i], params.times)
-            mirnov_signal_1_fft_interp[i] = interp1(fft_times, mirnov_signal_1_fft[i], params.times)
+        fft_times = (SFT.delta_t * np.arange(mirnov_signal_0_fft.shape[1])) + mirnov_times[0]
+        mirnov_signal_0_fft_interp = interp1(fft_times, mirnov_signal_0_fft, params.times)
+        mirnov_signal_1_fft_interp = interp1(fft_times, mirnov_signal_1_fft, params.times)
+        Sx2_interp = interp1(fft_times, Sx2, params.times)
 
         # Get the complex cross spectrum
-        Cxy = np.zeros((len(freqs), len(params.times)), dtype=np.complex128)
-        for i in range(len(freqs)):
-                Cxy[i] = mirnov_signal_0_fft_interp[i]*np.conj(mirnov_signal_1_fft_interp[i])
+        Cxy = mirnov_signal_0_fft_interp*np.conj(mirnov_signal_1_fft_interp)
 
         # Get the cross power
         # TODO(ZanderKeith): There is a dedicated scipy function for cross power, should compare results
-        #f, Pxy = sp.signal.csd(mirnov_signal_0, mirnov_signal_1, fs=mirnov_sample_freq, nperseg=nperseg)
+        #f, Pxy = sp.signal.csd(mirnov_signal_0, mirnov_signal_1, fs=mirnov_sample_freq)
         cross_power = np.abs(Cxy)
 
         # Get the cross phase
         cross_phase = np.angle(Cxy)
 
-        # Get the cross coherence
-        cross_coherence = np.zeros((len(freqs), len(params.times)))
-        for i in range(len(freqs)):
-            a = cross_power[i]**2
-            b = (np.abs(mirnov_signal_0_fft_interp[i])**2 * np.abs(mirnov_signal_1_fft_interp[i])**2)
-            mask = b != 0
-            result = np.true_divide(a, b, where=mask)
-            result[~mask] = np.nan
-            cross_coherence[i] = result
+        mirnov_0_power = np.abs(mirnov_signal_0_fft_interp)
+        mirnov_1_power = np.abs(mirnov_signal_1_fft_interp)
+        cross_coherence = cross_power / (mirnov_0_power * mirnov_1_power)
 
-        # Use multi-indexing to store the cross spectrum data
+        # Use multi-indexing to store the frequency data
+        mirnov_0_real_data = pd.DataFrame(mirnov_signal_0_fft_interp.T.real, columns=pd.MultiIndex.from_product([["mirnov_0_real"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        mirnov_0_imag_data = pd.DataFrame(mirnov_signal_0_fft_interp.T.imag, columns=pd.MultiIndex.from_product([["mirnov_0_imag"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        mirnov_1_real_data = pd.DataFrame(mirnov_signal_1_fft_interp.T.real, columns=pd.MultiIndex.from_product([["mirnov_1_real"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        mirnov_1_imag_data = pd.DataFrame(mirnov_signal_1_fft_interp.T.imag, columns=pd.MultiIndex.from_product([["mirnov_1_imag"], freqs], names=["", "frequencies"]), dtype=np.float64)
         cross_spectrum_real_data = pd.DataFrame(Cxy.T.real, columns=pd.MultiIndex.from_product([["cross_spectrum_real"], freqs], names=["", "frequencies"]), dtype=np.float64)
         cross_spectrum_imag_data = pd.DataFrame(Cxy.T.imag, columns=pd.MultiIndex.from_product([["cross_spectrum_imag"], freqs], names=["", "frequencies"]), dtype=np.float64)
         cross_power_data = pd.DataFrame(cross_power.T, columns=pd.MultiIndex.from_product([["cross_power"], freqs], names=["", "frequencies"]), dtype=np.float64)
         cross_phase_data = pd.DataFrame(cross_phase.T, columns=pd.MultiIndex.from_product([["cross_phase"], freqs], names=["", "frequencies"]), dtype=np.float64)
         cross_coherence_data = pd.DataFrame(cross_coherence.T, columns=pd.MultiIndex.from_product([["cross_coherence"], freqs], names=["", "frequencies"]), dtype=np.float64)
-        mirnov_spectrum_data = pd.DataFrame(mirnov_signal_0_fft_interp.T.real, columns=pd.MultiIndex.from_product([["mirnov_spectrum_fourier"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        mirnov_spectrum_data = pd.DataFrame(Sx2_interp.T, columns=pd.MultiIndex.from_product([["mirnov_spectrogram"], freqs], names=["", "frequencies"]), dtype=np.float64)
 
-        return pd.concat([cross_spectrum_real_data, cross_spectrum_imag_data, cross_power_data, cross_phase_data, cross_coherence_data, mirnov_spectrum_data], axis=1)
+        return pd.concat([cross_spectrum_real_data, cross_spectrum_imag_data, cross_power_data, cross_phase_data, cross_coherence_data, mirnov_spectrum_data,
+                          mirnov_0_real_data, mirnov_0_imag_data, mirnov_1_real_data, mirnov_1_imag_data], axis=1)
 
     @staticmethod
     @physics_method(
