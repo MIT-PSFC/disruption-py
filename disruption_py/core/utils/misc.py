@@ -7,6 +7,8 @@ from typing import List
 import numpy as np
 import pandas as pd
 
+import MDSplus
+
 
 def instantiate_classes(l: List):
     """
@@ -90,3 +92,14 @@ def get_commit_hash():
     except Exception as e:
         commit_hash = None
     return commit_hash
+
+
+def make_hashable(item):
+    """Create hashable objects by converting lists to tuples and MDSplus scalars
+    into NumPy scalars."""
+    if isinstance(item, list) or isinstance(item, MDSplus.mdsarray.Int32Array):
+        return tuple(make_hashable(e) for e in item)
+    elif isinstance(item, MDSplus.mdsscalar.Int32):
+        return np.int32(item)
+    else:
+        return item
