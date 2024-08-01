@@ -63,26 +63,14 @@ class D3DPhysicsMethods:
     )
     def get_power_parameters(params: PhysicsMethodParams):
         """
-        #TODO: Complete docstring
-
         Compute the input NBI, ECH powers, radiated power measured by the bolometer array,
         and the radiated fraction for a DIII-D shot.
-
-        Parameters
-        ----------
-        y : array_like
-            The y coordinates of the dataset.
-
-        Returns
-        -------
-        array_like
-        The smoothed dataset.
         
         References:
         -------
         - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_power_d3d.m
 
-        Last major update by William Wei on DATE
+        Last major update by William Wei on 8/1/2024
         """
         
         # Get neutral beam injected power
@@ -221,25 +209,13 @@ class D3DPhysicsMethods:
     )
     def get_ohmic_parameters(params: PhysicsMethodParams):
         """
-        #TODO: Complete docstring
-
         Compute ohmic heating power and loop voltage for a DIII-D shot
-
-        Parameters
-        ----------
-        y : array_like
-            The y coordinates of the dataset.
-
-        Returns
-        -------
-        array_like
-        The smoothed dataset.
         
         References:
         -------
         - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_P_ohm_d3d.m
 
-        Last major update by William Wei on DATE
+        Last major update by William Wei on 8/1/2024
         """
         nan_output = {
             "p_ohm": [np.nan],
@@ -265,6 +241,13 @@ class D3DPhysicsMethods:
                 f"ptdata('ip', {params.shot_id})", tree_name="d3d"
             )
             t_ip /= 1e3  # [ms] -> [s]
+
+            # Alessandro Pau (JET & AUG) has given Cristina a robust routine that
+            # performs time differentiation with smoothing, while preserving causality.
+            # It can be useful for differentiating numerous signals such as Ip, Vloop,
+            # etc.  It is called 'GSASTD'. We will use this routine in place of Matlab's
+            # 'gradient' and smoothing/filtering routines for certain signals.
+        
             # We choose a 20-point width for gsastd. This means a 10ms window for
             # ip smoothing
             dipdt_smoothed = gsastd(

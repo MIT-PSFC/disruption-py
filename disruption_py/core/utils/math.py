@@ -238,14 +238,6 @@ def gauss(x, *params):
     out = a * np.exp(-((x - mu) ** 2) / (2.0 * sigma**2))
     return out
 
-
-# Alessandro Pau (JET & AUG) has given Cristina a robust routine that
-# performs time differentiation with smoothing, while preserving causality.
-# It can be useful for differentiating numerous signals such as Ip, Vloop,
-# etc.  It is called 'GSASTD'. We will use this routine in place of Matlab's
-# 'gradient' and smoothing/filtering routines for certain signals.
-
-
 def gsastd(x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=0):
     """
     Python reimplementation of the GSASTD routine originally by Alessandro Pau
@@ -587,10 +579,10 @@ def power(a):
         divu: np.ndarray
         chan: np.ndarray
 
-    c = Channel("", np.zeros((4096)), np.zeros((4096)), 0.0, 0.0, 0.0)
-    b = Power(np.zeros((4096)), np.zeros((4096)), np.zeros((4096)), np.tile(c, (48)))
+    c = Channel(label="", chanpwr=np.zeros((4096)), brightness=np.zeros((4096)), R=0.0, Z=0.0, angle=0.0)
+    b = Power(pwrmix=np.zeros((4096)), divl=np.zeros((4096)), divu=np.zeros((4096)), chan=np.tile(c, (48)))
     for i in range(48):
-        b.chan[i].chanpwr = kappa[i] * a.channels[i].pwr    # BUG: len = 16384
+        b.chan[i].chanpwr = kappa[i] * a.channels[i].pwr
         b.chan[i].brightness = etendu[i] * a.channels[i].pwr
         b.chan[i].R = a.channels[i].R
         b.chan[i].Z = a.channels[i].Z
@@ -931,7 +923,7 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         scrfact: float
 
     one_channel = Channel(
-        label="", R=0.0, Z=0.0, angle=0.0, ier=0, pwr=np.zeros((1, 4096)), raw=np.zeros((1, 4096)), gam=0.0, tau=0.0, scrfact=0.0
+        label="", R=0.0, Z=0.0, angle=0.0, ier=0, pwr=np.zeros((1, 4096)), raw=np.zeros((1, 16384)), gam=0.0, tau=0.0, scrfact=0.0
     )
     channels = [copy.deepcopy(one_channel) for i in range(48)]
 
@@ -946,13 +938,13 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         channels: list
 
     bolo_shot = Bolo(
-        shot_id,
-        kappa,
-        np.zeros((1, 4096)),
-        np.zeros((1, 16384)),
-        0,
-        np.zeros((1, 4096)),
-        channels,
+        shot_id=shot_id,
+        kappa=kappa,
+        time=np.zeros((1, 4096)),
+        raw_time=np.zeros((1, 16384)),
+        ntimes=0,
+        tot_pwr=np.zeros((1, 4096)),
+        channels=channels,
     )
     # TODO: Find explanation for this
     if shot_id > 79400:
@@ -980,6 +972,7 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
             bolo_shot.channels[i].ier = 1
         return bolo_shot
 
+    # TODO: fix this
     # time = np.linspace(np.min(bol_time[0]), np.min(bol_time[-1]), 16384)
     time = np.linspace(min(bol_time), max(bol_time), 16384)
     dt = time[1] - time[0]
@@ -996,7 +989,6 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
     k[nzer] = 1.0 / k[nzer]
     k = k / t_del / (np.fix(m / 2) * 2)
     
-    ### DEBUG: getbolo_new.m line 138 ###
     for i in range(48):
         bolo_shot.channels[i].label = bol_channels[i]
         data = interp1(bol_time, bol_top[i], bolo_shot.raw_time)
@@ -1016,13 +1008,11 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         temp_filtered = np.convolve(temp, smoothing_kernel, "same")
         # temp_filtered = lfilter(smoothing_kernel, 1, temp)
 
-        # NOTE: dr_dt is incredibly noisy
         # dr_dt = np.gradient(temp_filtered, dt)  # BUG: This fails in testing because np.gradient is replaced with matlab_gradient_1d_vectorized
         dr_dt = np.gradient(temp_filtered, time)
 
         # Calculate power on each detector, P_d(t) [as given in Leonard et al, Rev. Sci. Instr. (1995)]
-        # NOTE: MATLAB's medfilt1 function does not require window_size to be odd. 
-        # This could introduce discrepancy with this python implementation  
+        # BUG: MATLAB's medfilt1 function does not require window_size to be odd. This could introduce discrepancy with this python implementation.
         bolo_shot.channels[i].pwr = medfilt(
             (gam[i + 1] * temp_filtered + tau[i + 1] * dr_dt) / scrfact[i],
             window_size + (not window_size % 2),
