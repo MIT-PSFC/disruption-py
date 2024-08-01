@@ -165,20 +165,19 @@ def shotlist_setting_runner(shotlist_setting, params: ShotlistSettingParams):
     """
     Retrieve list of shot ids for the given shotlist setting.
     """
-    if isinstance(shot_ids_request, ShotlistSetting):
-        # Do not immediately return the list because it may be multidimensional 
+    if isinstance(shotlist_setting, ShotlistSetting):
+        # Do not immediately return the list because it may be multidimensional
         # and would need to be handled as such below
-        shot_ids_request = shot_ids_request.get_shot_ids(params)
+        shotlist_setting = shotlist_setting.get_shotlist(params)
 
-    if (isinstance(shot_ids_request, int) or 
-        isinstance(shot_ids_request, np.int64)) or (
-        isinstance(shot_ids_request, str) and shot_ids_request.isdigit()
-        ):
-        return [shot_ids_request]
+    if isinstance(shotlist_setting, (int, np.int64)) or (
+        isinstance(shotlist_setting, str) and shotlist_setting.isdigit()
+    ):
+        return [shotlist_setting]
 
-    if isinstance(shot_ids_request, str):
-        shot_ids_request_object = _get_shotlist_setting_mappings.get(
-            shot_ids_request, None
+    if isinstance(shotlist_setting, str):
+        shotlist_setting_object = _get_shotlist_setting_mappings.get(
+            shotlist_setting, None
         )
         if shot_ids_request_object is not None:
             return shot_ids_request_object.get_shot_ids(params)
@@ -198,8 +197,7 @@ def shotlist_setting_runner(shotlist_setting, params: ShotlistSettingParams):
         if chosen_request is not None:
             return shotlist_setting_runner(chosen_request, params)
 
-    if (isinstance(shot_ids_request, list) or 
-        isinstance(shot_ids_request, np.ndarray)):
+    if isinstance(shotlist_setting, (list, np.ndarray)):
         all_results = []
         for request in shot_ids_request:
             sub_result = shotlist_setting_runner(request, params)

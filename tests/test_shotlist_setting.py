@@ -1,35 +1,49 @@
 #!/usr/bin/env python3
 
 import numpy as np
+import pytest
 
-from disruption_py.settings.shotlist_setting import ShotlistSetting, ShotlistSettingParams, shotlist_setting_runner
+from disruption_py.settings.shotlist_setting import (
+    ShotlistSetting,
+    ShotlistSettingParams,
+    shotlist_setting_runner,
+)
+
+# Use a few integers instead of reasonable shot ids because there's nothing
+# grabbing actual shot data here
+REFERENCE_SHOTLIST = list(range(5))
 
 
-def test_shotlist_setting_runner():
+def get_shotlists():
     """
-    Test custom shotlist, along with 1, 2, and 3 dimensional Python lists
-    and Numpy arrays to ensure they all get flattened to a single dimensional
-    list.
+    Generate custom shot requests, along with 1, 2, and 3 dimensional Python lists
+    and Numpy arrays.
     """
 
     class CustomShotlistSetting(ShotlistSetting):
-        def _get_shot_ids(self, params):
-            return np.array([[1160405002, 1140523021, 1140523026, 1160620011]])
+        def _get_shotlist(self, params: ShotlistSettingParams):
+            return np.array([REFERENCE_SHOTLIST])
 
     shot_lists = [
         CustomShotlistSetting(),
-        np.array([1160405002, 1140523021, 1140523026, 1160620011]),
-        np.array([[1160405002, 1140523021, 1140523026, 1160620011]]),
-        np.array([[[1160405002], [1140523021], [1140523026], [1160620011]]]),
-        [1160405002, 1140523021, 1140523026, 1160620011],
-        [[1160405002, 1140523021, 1140523026, 1160620011]],
-        [[[1160405002], [1140523021], [1140523026], [1160620011]]],
+        np.array(REFERENCE_SHOTLIST),
+        np.array([REFERENCE_SHOTLIST]),
+        np.array([[[i] for i in REFERENCE_SHOTLIST]]),
+        REFERENCE_SHOTLIST,
+        [REFERENCE_SHOTLIST],
+        [[[i] for i in REFERENCE_SHOTLIST]],
     ]
-    expected = [1160405002, 1140523021, 1140523026, 1160620011]
+    return shot_lists
 
+
+@pytest.mark.parametrize("shotlist", get_shotlists())
+def test_shotlist_setting_runner(shotlist):
+    """
+    Ensure all variations of shotlist_settings get flattened to a single dimensional
+    list.
+    """
     shot_ids_request_params = ShotlistSettingParams(
         database=None, tokamak=None, logger=None
     )
-    for shot_ids_request in shot_lists:
-        result = shotlist_setting_runner(shot_ids_request, shot_ids_request_params)
-        assert expected == result
+    result = shotlist_setting_runner(shotlist, shot_ids_request_params)
+    assert REFERENCE_SHOTLIST == result
