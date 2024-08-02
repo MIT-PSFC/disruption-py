@@ -25,7 +25,6 @@ def test_tokamak_parameter(tokamak):
         custom_physics_methods=[my_physics_method],
     )
     shot_data = get_shots_data(
-        tokamak="cmod",
         shotlist_setting=[1150805012],
         retrieval_settings=retrieval_settings,
         output_setting="list",
