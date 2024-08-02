@@ -274,43 +274,55 @@ class D3DPhysicsMethods:
         https://github.com/MIT-PSFC/disruption-py/issues/238
         https://github.com/MIT-PSFC/disruption-py/pull/249
 
-        Last major update by William Wei on [FINAL MERGE DATE]
+        Last major update by William Wei on 8/2/2024
         """
-        ne = [np.nan]
-        g_f = [np.nan]
-        dne_dt = [np.nan]
+        nan_output = {
+            "n_e": [np.nan],
+            "greenwald_fraction": [np.nan],
+            "dn_dt": [np.nan],
+        }
         try:
             ne, t_ne = params.mds_conn.get_data_with_dims(
                 r"\density", tree_name="_efit_tree"
             )
-            ne = ne * 1.0e6  # [cm^3] -> [m^3]
-            t_ne = t_ne / 1.0e3  # [ms] -> [s]
-            dne_dt = np.gradient(ne, t_ne)
-            # NOTE: t_ne has higher resolution than efit_time so t_ne[0] < efit_time[0]
-            # because of rounding, meaning we need to allow extrapolation
-            ne = interp1(
-                t_ne,
-                ne,
-                params.times,
-                "linear",
-                bounds_error=False,
-            )
-            dne_dt = interp1(
-                t_ne,
-                dne_dt,
-                params.times,
-                "linear",
-                bounds_error=False,
-            )
+            # If EFIT disruption tree does not contain density data,
+            # then read density from BCI subtree of D3D main tree
+            # TODO: Find a shot to test this logic
+            if len(~np.isnan(ne)) == 0:
+                ne, t_ne = params.mds_conn.get_data_with_dims(
+                    r"\denv2", tree_name="d3d"
+                )
+        except mdsExceptions.MdsException as e:
+            params.logger.info(f"[Shot {params.shot_id}]:Failed to get ne data.")
+            params.logger.debug(f"[Shot {params.shot_id}]::{traceback.format_exc()}")
+            return nan_output
 
-            # TODO: CHECK TREE_NAME; Implement MATLAB line 87-109
-
+        ne = ne * 1.0e6  # [cm^3] -> [m^3]
+        t_ne = t_ne / 1.0e3  # [ms] -> [s]
+        dne_dt = np.gradient(ne, t_ne)
+        # NOTE: t_ne has higher resolution than efit_time so t_ne[0] < efit_time[0]
+        # because of rounding, meaning we need to allow extrapolation
+        ne = interp1(
+            t_ne,
+            ne,
+            params.times,
+            "linear",
+            bounds_error=False,
+        )
+        dne_dt = interp1(
+            t_ne,
+            dne_dt,
+            params.times,
+            "linear",
+            bounds_error=False,
+        )
+        try:
             ip, t_ip = params.mds_conn.get_data_with_dims(
                 f"ptdata('ip', {params.shot_id})", tree_name="_efit_tree"
             )  # [A], [ms]
             t_ip = t_ip / 1.0e3  # [ms] -> [s]
             ipsign = np.sign(np.sum(ip))
-            ip = interp1(t_ip, ip * ipsign, params.times, "linear")
+            ip = interp1(t_ip, ip * ipsign, params.times, "linear")  # positive definite
             a_minor, t_a = params.mds_conn.get_data_with_dims(
                 r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
             )  # [m], [ms]
@@ -318,14 +330,19 @@ class D3DPhysicsMethods:
             a_minor = interp1(t_a, a_minor, params.times, "linear")
             with np.errstate(divide="ignore"):
                 n_g = ip / 1.0e6 / (np.pi * a_minor**2)  # [MA/m^2]
-                # TODO: Fill in units -- Greenwald fraction is unit-less
                 g_f = ne / 1.0e20 / n_g
         except mdsExceptions.MdsException as e:
             # TODO: Confirm that there is a separate exception if ptdata name doesn't exist
-            params.logger.info(f"[Shot {params.shot_id}]:Failed to get some parameter")
+            params.logger.info(
+                f"[Shot {params.shot_id}]:Failed to compute Greenwald fraction."
+            )
             params.logger.debug(f"[Shot {params.shot_id}]::{traceback.format_exc()}")
-        output = {"n_e": ne, "greenwald_fraction": g_f, "dn_dt": dne_dt}
-        return output
+            g_f = [np.nan]
+        return {
+            "n_e": ne,
+            "greenwald_fraction": g_f,
+            "dn_dt": dne_dt,
+        }
 
     @staticmethod
     @physics_method(
