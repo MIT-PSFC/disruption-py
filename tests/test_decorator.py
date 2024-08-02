@@ -8,13 +8,13 @@ from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.workflow import get_shots_data
 
 
-@pytest.mark.parametrize("tokamak", [None, resolve_tokamak_from_environment()])
-def test_tokamak_parameter(tokamak):
+@pytest.mark.parametrize("tok", [None, resolve_tokamak_from_environment()])
+def test_tokamak_parameter(shotlist, tok):
     """Ensure physics methods run when the tokamak parameter is set as either
     `None` or a specific tokamak."""
     col_name = "x"
 
-    @physics_method(columns=[col_name], tokamak=tokamak)
+    @physics_method(columns=[col_name], tokamak=tok)
     def my_physics_method(params: PhysicsMethodParams):
         return {col_name: np.ones(shape=len(params.times))}
 
@@ -25,7 +25,7 @@ def test_tokamak_parameter(tokamak):
         custom_physics_methods=[my_physics_method],
     )
     shot_data = get_shots_data(
-        shotlist_setting=[1150805012],
+        shotlist_setting=shotlist[:1],
         retrieval_settings=retrieval_settings,
         output_setting="list",
         num_processes=1,
