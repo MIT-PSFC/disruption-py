@@ -478,9 +478,10 @@ class D3DPhysicsMethods:
     @physics_method(
         columns=[
             "ip_rt",
+            "ip_prog_rt",
             "ip_error_rt",
+            "dip_dt_rt",
             "dipprog_dt_rt",
-            "dipprog_dt",
             "power_supply_railed",
         ],
         tokamak=Tokamak.D3D,
@@ -600,7 +601,9 @@ class D3DPhysicsMethods:
         # 'dip_dt_RT': dip_dt_rt,
         output = {
             "ip_rt": ip_rt,
+            "ip_prog_rt": ip_prog_rt,
             "ip_error_rt": ip_error_rt,
+            "dip_dt_rt": dip_dt_rt,
             "dipprog_dt_rt": dipprog_dt_rt,
             "power_supply_railed": power_supply_railed,
         }
