@@ -26,7 +26,6 @@ class MethodMetadata:
         if self.populate:
             object.__setattr__(self, "tags", self.tags or ["all"])
             object.__setattr__(self, "columns", self.columns or [])
-        object.__setattr__(self, "tokamaks", self.tokamaks or [])
 
 
 @dataclass(frozen=True)

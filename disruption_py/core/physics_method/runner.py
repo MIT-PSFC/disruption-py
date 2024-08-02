@@ -99,7 +99,7 @@ def filter_methods_to_run(
 
         # exclude if tokamak does not match
         if not (
-            bound_method_metadata.tokamaks == []
+            bound_method_metadata.tokamaks is None
             or physics_method_params.tokamak is bound_method_metadata.tokamaks
             or (
                 isinstance(bound_method_metadata.tokamaks, Iterable)
