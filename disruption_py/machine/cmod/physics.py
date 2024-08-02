@@ -1328,24 +1328,62 @@ class CmodTearingMethods:
         tags=["mirnov_spectrogram", "cross_spectrum_real", "cross_spectrum_imag", "cross_power", "cross_phase", "cross_coherence"], tokamak=Tokamak.CMOD
     )
     def _get_mirnov_spectra(params: PhysicsMethodParams):
-
-        mirnov_names = ["BP02_GHK", "BP02_ABK", "BP14_ABK"]
+        # Give me two mirnov probes that work PLEASE
+        # BP02_GHK *should* be fairly constistent at least, so that one goes up front
+        # All the others, who knows man. Just try them all and pick the first that exists. TODO(ZanderKeith)
+        gh_mirnov_names = ["BP02_GHK"] + [f"BP0{p}_GHK" for p in [1] + [i for i in range(3, 10)]] + [f"BP{p}_GHK" for p in range(10, 19)]
+        ab_mirnov_names = [f"BP0{p}_ABK" for p in range(1, 10)] + [f"BP{p}_ABK" for p in range(10, 19)]
         path = r"\magnetics::top.active_mhd.signals"
-        mirnov_signal_0, mirnov_times = params.mds_conn.get_data_with_dims(
-            path=f"{path}:{mirnov_names[0]}", tree_name="magnetics"
-        )
-        try:
-            mirnov_signal_1, mirnov_times = params.mds_conn.get_data_with_dims(
-                path=f"{path}:{mirnov_names[1]}", tree_name="magnetics"
-            )
-        except:
-            mirnov_signal_1, mirnov_times = params.mds_conn.get_data_with_dims(
-                path=f"{path}:{mirnov_names[2]}", tree_name="magnetics"
-            )
 
-        # Assuming mirnov sample frequency of 5Mhz
-        mirnov_sample_freq = 5e6    # 5 MHz sampling rate
-        tearing_mode_max_f = 150e3  # Don't care about rotations faster than 150kHz in C-Mod
+        mirnov_signal_0 = None
+        mirnov_signal_1 = None
+        mirnov_times = None # This will be set by the first probe that is found
+
+        for mirnov_name in gh_mirnov_names:
+            if mirnov_signal_0 is None:
+                try:
+                    mirnov_signal_0, mirnov_times = params.mds_conn.get_data_with_dims(
+                        path=f"{path}:{mirnov_name}", tree_name="magnetics"
+                    )
+                    gh_mirnov_names.remove(mirnov_name)
+                except:
+                    continue
+            else:
+                break
+        for mirnov_name in ab_mirnov_names:
+            if mirnov_signal_1 is None:
+                try:
+                    mirnov_signal_1, _ = params.mds_conn.get_data_with_dims(
+                        path=f"{path}:{mirnov_name}", tree_name="magnetics"
+                    )
+                except:
+                    continue
+            else:
+                break
+        # If we ran through the whole thing without finding a second toroidally spaced probe, just use a probe that's nearby
+        if mirnov_signal_1 is None:
+            for mirnov_name in gh_mirnov_names:
+                if mirnov_signal_1 is None:
+                    try:
+                        mirnov_signal_1, mirnov_times = params.mds_conn.get_data_with_dims(
+                            path=f"{path}:{mirnov_name}", tree_name="magnetics"
+                        )
+                    except:
+                        continue
+                else:
+                    break
+        # If we went through all our probes and couldn't find a second one, just return NaNs
+        if mirnov_signal_0 is None:
+            mirnov_signal_0 = np.full(len(params.times), np.nan)
+        if mirnov_signal_1 is None:
+            mirnov_signal_1 = np.full(len(params.times), np.nan)
+
+        # Test to make sure the sampling frequency is consistent
+        mirnov_sample_freq = 2.5e6
+        actual_mirnov_sample_freq = 1 / (mirnov_times[1] - mirnov_times[0])    # Mirnov sampling rate
+        if actual_mirnov_sample_freq < 2.4e6 or actual_mirnov_sample_freq > 2.6e6:
+            print("Mirnov sample frequency is not 2.5 MHz. Be warned!!!")
+            mirnov_sample_freq = actual_mirnov_sample_freq
 
         # This is a tradeoff. Cannot have freq_resolution * temporal_resolution > mirnov_sample_freq
         temporal_resolution = 1 / (params.times[1] - params.times[0]) # however fast the timebase is
@@ -1354,7 +1392,7 @@ class CmodTearingMethods:
         # Window size is the number of samples in the window
         # Think of how many samples you need to measure the minimum frequency you care about
         window_size = int(mirnov_sample_freq / freq_resolution)
-        # Hop is how much the window is slid.
+        # Hop is how much the window is slid between timesteps.
         # Slide the window based on the temporal resolution so interpolation is minimized
         hop = int(mirnov_sample_freq / temporal_resolution)
         window = kaiser(window_size, beta=14)
@@ -1365,7 +1403,8 @@ class CmodTearingMethods:
         Sx2 = SFT.spectrogram(mirnov_signal_0)
 
         # Cut the fft to the maximum value we care about
-        f_indices = np.where(SFT.f < tearing_mode_max_f)
+        # Don't care about rotations faster than 80kHz in C-Mod
+        f_indices = np.where(SFT.f < 80e3)
         freqs = SFT.f[f_indices]
         mirnov_signal_0_fft = mirnov_signal_0_fft[f_indices]
         mirnov_signal_1_fft = mirnov_signal_1_fft[f_indices]

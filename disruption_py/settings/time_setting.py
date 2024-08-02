@@ -304,8 +304,8 @@ class OfflineTimeSetting(TimeSetting):
         self.tokamak_overrides = {Tokamak.CMOD: self.cmod_times}
 
     def cmod_times(self, params: TimeSettingParams):
-        return np.array(np.arange(0.4, 1.2, 0.0001)) # TODO(ZanderKeith) Just hardcoded start and stop time for now
-
+        return np.array(np.arange(0.6, 1.6, 0.0001)) # TODO(ZanderKeith) Just hardcoded start and stop time for now
+        
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         return self.tokamak_overrides[params.tokamak](params)
 
