@@ -321,6 +321,18 @@ class D3DPhysicsMethods:
         tokamak=Tokamak.D3D,
     )
     def get_rt_density_parameters(params: PhysicsMethodParams):
+        """
+        Get real-time electron density from EFIT, then compute the
+        real-time dn_dt and Greenwald_fraction.
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_density_parameters_RT.m
+        https://github.com/MIT-PSFC/disruption-py/pull/251
+
+        Last major update by William Wei on 8/2/2024
+        """
+
         nan_output = {
             "n_e_rt": [np.nan],
             "greenwald_fraction_rt": [np.nan],
