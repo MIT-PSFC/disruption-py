@@ -915,7 +915,7 @@ class CmodPhysicsMethods:
         # Calculate Te peaking factor
         Te_PF = np.full(len(TS_time), np.nan)
         (itimes,) = np.where((TS_time > 0) & (TS_time < times[-1]))
-        test_time = 0.766
+        test_time = 0.98
         itest = np.argmin(np.abs(TS_time - test_time))
         for itime in itimes:
             TS_Te_arr = TS_Te[:, itime]
@@ -943,16 +943,17 @@ class CmodPhysicsMethods:
                 Te_arr_equal_spacing
             )
             if (itime == itest):
-                plt.scatter(TS_z_arr, TS_Te_arr/ (11600*1e3), c='black', marker='o')
-                # plt.scatter(z_arr_equal_spacing, Te_arr_equal_spacing, c='b', marker='o')
+                plt.scatter(TS_z_arr, TS_Te_arr/ (11600*1e3), c='k', marker='x', label='TS Raw')
+                plt.scatter(z_arr_equal_spacing, Te_arr_equal_spacing, c='r', marker='o')
                 # plt.scatter(z_arr_equal_spacing[core_index], Te_arr_equal_spacing[core_index], c='r', marker='.')
-                plt.axvline(z0[itime], c='k', linestyle='--', label='$Z_0$')
-                plt.axvline(z0[itime] + bminor[itime], c='gray', linestyle='--', label='$Z_0 + \kappa a$')
-                plt.ylim(0, 2.5)
-                plt.xlabel("Z [m]")
-                plt.ylabel("Te [keV]")
-                plt.title("Te Profile from Thomson Scattering\n C-Mod Shot " + str(1160929009) + " at time " + 
-                          str(TS_time[itime].round(3)) + " s")
+                #plt.axvline(z0[itime], c='k', linestyle='--', label='$Z_0$')
+                plt.axvline(z0[itime] + 0.2*bminor[itime], c='gray', linestyle='--', label="'Core' Boundary")
+                plt.axvline(z0[itime] - 0.2*bminor[itime], c='gray', linestyle='--', label="'Core' Boundary")
+                plt.ylim(0, 1.7)
+                plt.xlabel("Z [m]", fontsize=14)
+                plt.ylabel("Te [keV]", fontsize=14)
+                plt.title("Te Profile from Thomson Scattering\n C-Mod Shot " + str(1140523015) + " at time " + 
+                          str(TS_time[itime].round(1)) + " s", fontsize=14)
                 plt.legend()
                 plt.show()
 
@@ -1050,7 +1051,8 @@ class CmodPhysicsMethods:
         nan_output = {
             "te_peaking_ece": np.full(len(params.times), np.nan)
         }
-        # Shots with low Btor are unreliable
+        # Shots with low Btor are unreliable because gratings are often not aligned to field,
+        # signal is low, and there are frequent density cutoffs
         try:
             btor, t_mag = params.mds_conn.get_data_with_dims(
                 r"\btor", tree_name="magnetics"
@@ -1063,6 +1065,17 @@ class CmodPhysicsMethods:
         if (ftop_btor < 3.5):
             print("ECE unreliable for low Bt shots.")
             return nan_output
+        # Shots with LH heating are unreliable because direct heating of electrons leads to nonthermal emission
+        # so ECE emission is not black-body
+        try:
+            lh_power, lh_time = params.mds_conn.get_data_with_dims(
+                '.results:netpow', tree_name='lh'
+            )
+            # LH Power units in kW
+            if (np.max(lh_power[(lh_time > 0) & (lh_time < params.disruption_time)]) > 1.):
+                return nan_output
+        except:
+            pass
         
         # Get magnetic axis data from EFIT (in units of m)
         try:
@@ -1141,7 +1154,7 @@ class CmodPhysicsMethods:
         for i in range(len(radii)):
             radii[i, indx_last_rad+1:] = radii[i, indx_last_rad]
 
-        test_time = 0.766
+        test_time = 0.997
         itest = np.argmin(np.abs(efit_time - test_time))
         for i in range(len(efit_time)):
             sorted_index = np.argsort(radii[:,i])
@@ -1219,13 +1232,15 @@ class CmodPhysicsMethods:
                 if (np.sum(core_indices) > 0):
                     Te_PF[i] = np.nanmean(te_equal_spaced[core_indices]) / np.nanmean(te_equal_spaced)
                     if (i == itest):
-                        plt.scatter(radii[:, itest], Te[:, itest], c='k', marker='x', s=40)
-                        plt.scatter(r_equal_spaced, te_equal_spaced, c='g', marker='o', s=20)
-                        plt.scatter(r_equal_spaced[core_indices], te_equal_spaced[core_indices], c='r', marker='.')
-                        plt.axvline(r0[i] - 0.2 * aminor[i], c='r', linestyle='--')
-                        plt.axvline(r0[i] + 0.2 * aminor[i], c='r', linestyle='--')
-                        plt.axvline(r0[i] + 0.95 * aminor[i], c='k', linestyle='--')
-                        plt.axvline(r0[i] - 0.95 * aminor[i], c='k', linestyle='--')
+                        plt.scatter(radii[:, itest], Te[:, itest], c='k', marker='x', s=35, label='GPC Raw')
+                        plt.scatter(r_equal_spaced, te_equal_spaced, c='b', marker='o', s=30, label='GPC Uniform Radial Basis')
+                        #plt.scatter(r_equal_spaced[core_indices], te_equal_spaced[core_indices], c='r', marker='.')
+                        plt.axvline(r0[i]+0.2*aminor[i], c='gray', linestyle='--', label="'Core' Boundary")
+                        plt.axvline(r0[i]-0.2*aminor[i], c='gray', linestyle='--')
+                        plt.legend()
+                        plt.xlabel("R [m]", fontsize=14)
+                        plt.ylabel("Te [keV]", fontsize=14)
+                        plt.title("Te Profile from ECE\nC-Mod Shot " + str(params.shot_id) + " at time " + str(test_time) + " s", fontsize=14)
                         plt.show()
 
         Te_PF = interp1(efit_time, Te_PF, params.times)

@@ -4,8 +4,8 @@ from disruption_py.workflow import get_shots_data
 import matplotlib.pyplot as plt
 import MDSplus as mds
 
-shotno = 1150928025
-#shotno = 1120621021
+shotno = 1140523015
+#shotno = 1140523015
 signals = ['ip', 'kappa', 'te_peaking', 'te_peaking_ece', 'prad_peaking']
 
 # default method for pulling disruption-py data
@@ -33,13 +33,18 @@ te0_data = mds.Tree('cmod', shotno).getNode('\\gpc2_te0').getData()
 te0 = te0_data.data()
 te0_time = te0_data.dim_of().data()
 
-fig, axs = plt.subplots(5, 1, sharex=True)
-axs[0].plot(data['time'], data['ip'], label='ip')
-axs[1].plot(data['time'], data['kappa'], label='$\kappa$')
-axs[2].scatter(te0_time, te0, marker='.', s=1, label='Te0 ECE')
-axs[3].scatter(data['time'], data['prad_peaking'], marker='.', label='Prad PF')
-axs[4].scatter(data['time'], data['te_peaking_ece'], c='b', marker='o', label='Te PF ECE')
-axs[4].scatter(data['time'], data['te_peaking'], c='r', marker='.', label='Te PF TS')
-for ax in axs:
-    ax.legend()
+fig, axs = plt.subplots(4, 1, sharex=True)
+axs[0].plot(data['time'], data['ip'], label='ip', c='k')
+#axs[1].plot(data['time'], data['kappa'], label='$\kappa$')
+axs[1].plot(te0_time, te0, marker='.', ms=1, label='Te0 ECE', c='k')
+axs[2].plot(data['time'], data['prad_peaking'], marker='.', label='Prad PF', c='k')
+axs[3].plot(data['time'], data['te_peaking_ece'], c='b', marker='o', label='ECE')
+axs[3].plot(data['time'], data['te_peaking'] / data['kappa'], c='r', marker='.', label='TS')
+axs[3].set_xlabel('Time [s]', fontsize=14)
+axs[0].set_ylabel("Ip [MA]")
+axs[1].set_ylabel("Te0 [keV]")
+axs[2].set_ylabel("Prad PF")
+axs[3].set_ylabel("Te PF")
+axs[3].legend()
+fig.suptitle('Cmod Shot ' + str(shotno))
 plt.show()
