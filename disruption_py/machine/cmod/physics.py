@@ -944,20 +944,20 @@ class CmodPhysicsMethods:
             Te_PF[itime] = np.mean(Te_arr_equal_spacing[core_index]) / np.mean(
                 Te_arr_equal_spacing
             )
-            if (itime == itest):
-                plt.scatter(TS_z_arr/kappa[itime]+r0[itime], TS_Te_arr/ (11600*1e3), c='r', marker='x', 
-                            label='TS Raw ('+str(TS_time[itime].round(3)) + ' s)')
-                #plt.scatter(z_arr_equal_spacing/kappa[itime]+r0[itime], Te_arr_equal_spacing/(11600*1e3), c='r', marker='o')
-                # plt.scatter(z_arr_equal_spacing[core_index], Te_arr_equal_spacing[core_index], c='r', marker='.')
-                #plt.axvline(z0[itime], c='k', linestyle='--', label='$Z_0$')
-                # plt.axvline(z0[itime] + 0.2*bminor[itime], c='gray', linestyle='--', label="'Core' Boundary")
-                # plt.axvline(z0[itime] - 0.2*bminor[itime], c='gray', linestyle='--', label="'Core' Boundary")
-                # plt.ylim(0, 1.7)
-                plt.xlabel("R (GPC) or Z/$\kappa$+R0 (TS) [m]", fontsize=14)
-                plt.ylabel("Te [keV]", fontsize=14)
-                plt.title("Te Profile\nC-Mod Shot " + str(1140523015))
-                plt.legend()
-                plt.show()
+            # if (itime == itest):
+            #     plt.scatter(TS_z_arr/kappa[itime]+r0[itime], TS_Te_arr/ (11600*1e3), c='r', marker='x', 
+            #                 label='TS Raw ('+str(TS_time[itime].round(3)) + ' s)')
+            #     #plt.scatter(z_arr_equal_spacing/kappa[itime]+r0[itime], Te_arr_equal_spacing/(11600*1e3), c='r', marker='o')
+            #     # plt.scatter(z_arr_equal_spacing[core_index], Te_arr_equal_spacing[core_index], c='r', marker='.')
+            #     #plt.axvline(z0[itime], c='k', linestyle='--', label='$Z_0$')
+            #     # plt.axvline(z0[itime] + 0.2*bminor[itime], c='gray', linestyle='--', label="'Core' Boundary")
+            #     # plt.axvline(z0[itime] - 0.2*bminor[itime], c='gray', linestyle='--', label="'Core' Boundary")
+            #     # plt.ylim(0, 1.7)
+            #     plt.xlabel("R (GPC) or Z/$\kappa$+R0 (TS) [m]", fontsize=14)
+            #     plt.ylabel("Te [keV]", fontsize=14)
+            #     plt.title("Te Profile\nC-Mod Shot " + str(1140523015))
+            #     plt.legend()
+            #     plt.show()
 
         # TODO: Calculate ne and pressure peaking factors
 
@@ -1159,19 +1159,17 @@ class CmodPhysicsMethods:
         for i in range(len(radii)):
             radii[i, indx_last_rad+1:] = radii[i, indx_last_rad]
 
+        # The rest of the calculations will loop over time then radius so transpose data for efficient caching
+        Te = Te.T
+        radii = radii.T
+
         test_time = 1.0
         itest = np.argmin(np.abs(efit_time - test_time))
         for i in range(len(efit_time)):
-            sorted_index = np.argsort(radii[:,i])
-            radii[:,i] = radii[sorted_index, i]
-            Te[:, i] = Te[sorted_index, i]
+            sorted_index = np.argsort(radii[i,:])
+            radii[i,:] = radii[i,sorted_index]
+            Te[i,:] = Te[i,sorted_index]
 
-        # Check edge for positive gradient
-        # Take gradient of points
-        # Starting at outermost edge, exclude points associated with positive gradients
-
-
-        # select okay times as times without LH heating to avoid high non-thermal emission
 
         # Because radial positions change over time, the proportion of core vs. edge sampling
         # can change over time affecting biasing the denominator of the peaking factor.
@@ -1184,50 +1182,44 @@ class CmodPhysicsMethods:
         r_outboard = np.inf
         npoints = 28    # Max GPC channels
         okay_indices = np.full(Te.shape, False)
-        count = np.zeros(len(efit_time))
         for i in range(len(efit_time)):
-            calib_indices = (Te[:, i] > 0.01) & (radii[:,i] > 0)
+            calib_indices = (Te[i,:] > 0.01) & (radii[i,:] > 0)
             if (np.sum(calib_indices) <= min_points):
                 continue
-            harmonic_overlap_indices = (radii[:,i] < 0.6) 
+            harmonic_overlap_indices = (radii[i,:] < 0.6) 
             # A rising low-field tail is often from 
             # overlap with nonthermal emission from the core
-            nonthermal_overlap_indices = np.full(len(radii[:, i]), False)
-            r_calib = radii[calib_indices, i]
+            nonthermal_overlap_indices = np.full(len(radii[i,:]), False)
+            r_calib = radii[i,calib_indices]
             # Choosing point slightly inside r0 + a and checking outwards seems to do well
             r_edge = r_calib[np.argmax(r_calib > r0[i] + aminor[i]) - 2]
-            indx_edge = np.searchsorted(radii[:, i], r_edge)
-            for j in range(indx_edge + 1, len(radii[:, i])):
-                if Te[j,i] > 1.2 * Te[indx_edge,i]:
+            indx_edge = np.searchsorted(radii[i,:], r_edge)
+            for j in range(indx_edge + 1, len(radii[i,:])):
+                if Te[i,j] > 1.2 * Te[i,indx_edge]:
                     nonthermal_overlap_indices[j] = True
-            if (i == itest): print(count[i])
 
-            okay_indices[:, i] = calib_indices & (~harmonic_overlap_indices) & (~nonthermal_overlap_indices)
+            okay_indices[i,:] = calib_indices & (~harmonic_overlap_indices) & (~nonthermal_overlap_indices)
             # Now use all but the last 5 EFITs to determine the uniform radial basis since the
             # last 5 EFITs might have weird ECE data
-            if ( i < len(efit_time) - 5 and np.sum(okay_indices[:, i]) >= min_points):
-                core_indices = (np.abs(radii[okay_indices[:, i], i] - r0[i]) < 0.2 * aminor[i])
+            if ( i < len(efit_time) - 5 and np.sum(okay_indices[i,:]) >= min_points):
+                core_indices = (np.abs(radii[i,okay_indices[i,:]] - r0[i]) < 0.2 * aminor[i])
                 if (np.sum(core_indices) > 0):
-                    rsorted = np.sort(radii[okay_indices[:,i], i])
+                    rsorted = np.sort(radii[i,okay_indices[i,:]])
                     if (rsorted[0] > r_inboard): r_inboard = rsorted[0]
                     if (rsorted[-1] < r_outboard): r_outboard = rsorted[-1]
                     if (len(rsorted) < npoints): 
                         npoints = len(rsorted)
-                        ilimit = i  
-        print(r_inboard)
-        print(r_outboard)
-        print(npoints)
 
         # Compute PF and width
         Te_PF = np.full(len(efit_time), np.nan)
         Te_hwhm = np.full(len(efit_time), np.nan)
         itest = np.argmin(np.abs(efit_time - test_time))
         for i in range(len(efit_time)):
-            if (np.sum(okay_indices[:,i]) > min_points):
+            if (np.sum(okay_indices[i,:]) > min_points):
 
                 # Perform Gaussian fit to extract Te width
-                r = radii[okay_indices[:, i], i]
-                y = Te[okay_indices[:, i], i]
+                r = radii[i,okay_indices[i,:]]
+                y = Te[i,okay_indices[i,:]]
                 ipeak = y.argmax()
                 guess = [r0[i], y.max(), (y.max() - y.min()) / 3]
                 # actual fit
@@ -1244,28 +1236,28 @@ class CmodPhysicsMethods:
 
                 # Compute PF using equal spaced radial basis to reduce bias in changes in radial sampling over time
                 r_equal_spaced = np.linspace(r_inboard, r_outboard, npoints)
-                te_equal_spaced = interp1(radii[okay_indices[:,i], i], Te[okay_indices[:,i], i], r_equal_spaced)
+                te_equal_spaced = interp1(radii[i,okay_indices[i,:]], Te[i,okay_indices[i,:]], r_equal_spaced)
                 # Note during last 5 EFITs te_equal_space could contain nans
                 core_indices = ((np.abs(r_equal_spaced - r0[i]) < 0.2 * aminor[i]) & (~np.isnan(te_equal_spaced)))
                 if (np.sum(core_indices) > 0):
                     Te_PF[i] = np.nanmean(te_equal_spaced[core_indices]) / np.nanmean(te_equal_spaced)
-                    if (i == itest):
-                        print(Te_hwhm[i])
-                        plt.scatter(radii[:, itest], Te[:, itest], c='k', marker='x', s=35, label='GPC Raw')
-                        rsample = np.linspace(r.min(), r.max(), 100)
-                        plt.plot(rsample, gauss(rsample, pa, pmu, np.abs(psigma)), c='k', linestyle='--', label='Fit of GPC Raw')
-                        plt.scatter(r_equal_spaced, te_equal_spaced, c='b', marker='o', s=30, label='GPC Uniform Radial Basis')
-                        #plt.scatter(r_equal_spaced[core_indices], te_equal_spaced[core_indices], c='r', marker='.')
-                        plt.axvline(r0[i]+0.2*aminor[i], c='gray', linestyle='--', label="'Core' Boundary")
-                        plt.axvline(r0[i]-0.2*aminor[i], c='gray', linestyle='--')
-                        plt.axvline(r0[i] + aminor[i], linestyle='--')
-                        plt.legend()
-                        plt.xlabel("R [m]", fontsize=14)
-                        plt.ylabel("Te [keV]", fontsize=14)
-                        plt.title("Te Profile from ECE\nC-Mod Shot " + str(params.shot_id) + " at time " + str(test_time) + " s", fontsize=14)
-                        plt.show()
-                        plt.scatter(radii[:, itest], Te[:, itest], c='k', marker='x', s=35, 
-                            label='GPC Raw ('+str(efit_time[i].round(3)) + ' s)')
+                    # if (i == itest):
+                    #     print(Te_hwhm[i])
+                    #     plt.scatter(radii[itest,:], Te[itest,:], c='k', marker='x', s=35, label='GPC Raw')
+                    #     rsample = np.linspace(r.min(), r.max(), 100)
+                    #     plt.plot(rsample, gauss(rsample, pa, pmu, np.abs(psigma)), c='k', linestyle='--', label='Fit of GPC Raw')
+                    #     plt.scatter(r_equal_spaced, te_equal_spaced, c='b', marker='o', s=30, label='GPC Uniform Radial Basis')
+                    #     #plt.scatter(r_equal_spaced[core_indices], te_equal_spaced[core_indices], c='r', marker='.')
+                    #     plt.axvline(r0[i]+0.2*aminor[i], c='gray', linestyle='--', label="'Core' Boundary")
+                    #     plt.axvline(r0[i]-0.2*aminor[i], c='gray', linestyle='--')
+                    #     plt.axvline(r0[i] + aminor[i], linestyle='--')
+                    #     plt.legend()
+                    #     plt.xlabel("R [m]", fontsize=14)
+                    #     plt.ylabel("Te [keV]", fontsize=14)
+                    #     plt.title("Te Profile from ECE\nC-Mod Shot " + str(params.shot_id) + " at time " + str(test_time) + " s", fontsize=14)
+                    #     plt.show()
+                    #     plt.scatter(radii[itest,:], Te[itest,:], c='k', marker='x', s=35, 
+                    #         label='GPC Raw ('+str(efit_time[i].round(3)) + ' s)')
         Te_PF = interp1(efit_time, Te_PF, params.times)
         Te_hwhm = interp1(efit_time, Te_hwhm, params.times)
         return pd.DataFrame({"te_peaking_ece": Te_PF, "te_width_ece": Te_hwhm})
