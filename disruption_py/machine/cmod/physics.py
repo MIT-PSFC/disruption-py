@@ -944,20 +944,20 @@ class CmodPhysicsMethods:
             Te_PF[itime] = np.mean(Te_arr_equal_spacing[core_index]) / np.mean(
                 Te_arr_equal_spacing
             )
-            # if (itime == itest):
-            #     plt.scatter(TS_z_arr/kappa[itime]+r0[itime], TS_Te_arr/ (11600*1e3), c='r', marker='x', 
-            #                 label='TS Raw ('+str(TS_time[itime].round(3)) + ' s)')
-            #     #plt.scatter(z_arr_equal_spacing/kappa[itime]+r0[itime], Te_arr_equal_spacing/(11600*1e3), c='r', marker='o')
-            #     # plt.scatter(z_arr_equal_spacing[core_index], Te_arr_equal_spacing[core_index], c='r', marker='.')
-            #     #plt.axvline(z0[itime], c='k', linestyle='--', label='$Z_0$')
-            #     # plt.axvline(z0[itime] + 0.2*bminor[itime], c='gray', linestyle='--', label="'Core' Boundary")
-            #     # plt.axvline(z0[itime] - 0.2*bminor[itime], c='gray', linestyle='--', label="'Core' Boundary")
-            #     # plt.ylim(0, 1.7)
-            #     plt.xlabel("R (GPC) or Z/$\kappa$+R0 (TS) [m]", fontsize=14)
-            #     plt.ylabel("Te [keV]", fontsize=14)
-            #     plt.title("Te Profile\nC-Mod Shot " + str(1140523015))
-            #     plt.legend()
-            #     plt.show()
+            if (itime == itest):
+                plt.scatter(TS_z_arr/kappa[itime]+r0[itime], TS_Te_arr/ (11600*1e3), c='r', marker='x', 
+                            label='TS Raw ('+str(TS_time[itime].round(3)) + ' s)')
+                #plt.scatter(z_arr_equal_spacing/kappa[itime]+r0[itime], Te_arr_equal_spacing/(11600*1e3), c='r', marker='o')
+                # plt.scatter(z_arr_equal_spacing[core_index], Te_arr_equal_spacing[core_index], c='r', marker='.')
+                #plt.axvline(z0[itime], c='k', linestyle='--', label='$Z_0$')
+                # plt.axvline(z0[itime] + 0.2*bminor[itime], c='gray', linestyle='--', label="'Core' Boundary")
+                # plt.axvline(z0[itime] - 0.2*bminor[itime], c='gray', linestyle='--', label="'Core' Boundary")
+                # plt.ylim(0, 1.7)
+                plt.xlabel("R (GPC) or Z/$\kappa$+R0 (TS) [m]", fontsize=14)
+                plt.ylabel("Te [keV]", fontsize=14)
+                plt.title("Te Profile\nC-Mod Shot " + str(1140523015))
+                plt.legend()
+                plt.show()
 
         # TODO: Calculate ne and pressure peaking factors
 
@@ -1031,101 +1031,48 @@ class CmodPhysicsMethods:
         )
     
     @staticmethod
-    @physics_method(
-        columns=["te_peaking_ece", "te_width_ece"],
-        tokamak=Tokamak.CMOD,
-    )
-    def _get_peaking_factors_ece(params: PhysicsMethodParams):
+    def get_te_profile_params_ece(times, gpc1_te_data, gpc1_te_time, gpc1_rad_data, gpc1_rad_time, 
+                gpc2_te_data, gpc2_te_time, gpc2_rad_data, gpc2_rad_time, efit_time, r0, aminor):
         """
-        Calculates Te PF from ECE data using the two GPC diagnostic systems.
+        Calculates Te PF and width from ECE data using the two GPC diagnostic systems.
         GPC diagnostics look at the mid-plane, and each channel detects a different
-        emitted frequency, which depends on B and therefore R. Core bins
-        are defined as those w/in 0.2 * aminor of the magnetic axis and the 
-        Te PF is defined as mean(core)/mean(all).
+        emitted frequency associated with the second harmonic, which depends on B and therefore R. 
+        - Te PF is defined as mean(core)/mean(all) where core bins are defined as
+          those w/in 0.2 * aminor of the magnetic axis.
+        - Te width is the half-width at half-max of a Gaussian fit of the Te profile
+        ECE as a Te profile diagnostic can suffer from several artifacts:
+        Artifacts currently NOT checked for
+        - Density cutoffs: High ne plasmas (typically H-modes) can have an ECE cutoff. According to
+          Amanda Hubbard, "what you wil see is a section of profile which is much LOWER than Thomson Scattering,
+          for some portion of the LFS profile (typically starting around r/a 0.8?).  In this case ECE cannot be used."
+          Henry Wietfeldt: I don't have any examples of this issue yet.
+        Artifacts currently checked for
+        - Non-aligned grating: The gratings were usually aligned for radial coverage assuming 
+          Bt=5.4T. For low Bt shots (like 2.8T), sometimes the gratings were adjusted, sometimes not.
+          Low Bt shots also tend to have low signal and often experience density cutoffs.
+          Therefore, ECE should be avoided in automated calculations for low Bt shots.
+        - Nonthermal emission. The calculation of Te vs. r assumes that the second harmonic emission can
+          be modeled as black-body emission, which assumes the electrons are in thermal equilibrium.
+          On C-Mod, nonthermal emission results in an apparent Te that goes UP towards the edge and in the SOL.
+          which is actually downshifted non-thermal emission from deeper in the core. Significant runaway
+          populations and LHCD lead to nonthermal artifacts. Occassionally low ne shots also had nonthermal artifacts.
+        - Harmonic overlap: Certain channels can pick up emission from different harmonics from other regions
+          of the plasma. Generally channels with R < 0.6 m suffer from overlap with 3rd harmonic emission from the core.
+          This leads to an apparently higher Te for R < 0.6 m than in reality. The gratings were usually
+          aligned to measure the profile from the core outwards for this reason.
         Source: https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_ECE_data_cmod.m
-        Author: Henry Wietfeldt (7/24/24)
-        To adress: 
-        1) Interpolated basis varies significantly from shot to shot. Some shots
-           contain half a profile, some contain the full profile
-        2) Is it okay to extend the last ECE radial measurements to the 1ms EFIT time basis
-           before the disruption? -- Seems okay when comparing Te PF to Te0 sawteeth crashes
-        3) Strictly speaking we should perform this computation in flux coordinates not R,
-           but I don't think this is a significant source of error.
-
+        Author: Henry Wietfeldt (08/05/24)
         """
-        nan_output = {
-            "te_peaking_ece": np.full(len(params.times), np.nan)
-        }
-        # Shots with low Btor are unreliable because gratings are often not aligned to field,
-        # signal is low, and there are frequent density cutoffs
-        try:
-            btor, t_mag = params.mds_conn.get_data_with_dims(
-                r"\btor", tree_name="magnetics"
-        )
-        except:
-            return nan_output
-        # Is there an easy way to select flattop period?
-        ftop_btor = np.min(np.abs(btor[(t_mag > 0.8*params.disruption_time) & (t_mag < 0.9*params.disruption_time)]))
-        print("Bt = " + str(ftop_btor))
-        if (ftop_btor < 3.5):
-            print("ECE unreliable for low Bt shots.")
-            return nan_output
-        # Shots with LH heating are unreliable because direct heating of electrons leads to nonthermal emission
-        # so ECE emission is not black-body
-        try:
-            lh_power, lh_time = params.mds_conn.get_data_with_dims(
-                '.results:netpow', tree_name='lh'
-            )
-            # LH Power units in kW
-            if (np.max(lh_power[(lh_time > 0) & (lh_time < params.disruption_time)]) > 1.):
-                return nan_output
-        except:
-            pass
         
-        # Get magnetic axis data from EFIT (in units of m)
-        try:
-            r0 = 0.01 * params.mds_conn.get_data(
-                r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
-            )
-            aminor, efit_time = params.mds_conn.get_data_with_dims(
-                r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
-            )
-        except mdsExceptions.MdsException as e:
-            params.logger.debug(f"[Shot {params.shot_id}]: Failed to get efit data")
-            return nan_output
-        
-        # Read in Te profile measurements from 9 GPC1 channels and interpolate onto efit timebase
-        # Note the timebase for radial measurements is much slower than the timebasis for Te measurements.
-        node_path = '.ece.gpc_results'
-        n_channels = 9
+        # Interpolate GPC data onto efit timebase. Note the timebase for radial measurements is much slower
+        # than the timebasis for Te measurements.
+        n_channels = gpc1_te_data.shape[0]
         gpc1_te = np.full((n_channels, len(efit_time)), np.nan)
         gpc1_rad = np.full((n_channels, len(efit_time)), np.nan)
         for i in range(n_channels):
-            try:
-                gpc1_te_data, gpc1_te_time = params.mds_conn.get_data_with_dims(
-                    node_path + ".te:te" + str(i+1), tree_name="electrons"
-                )
-                gpc1_rad_data, gpc1_rad_time = params.mds_conn.get_data_with_dims(
-                    node_path + ".rad:r" + str(i+1), tree_name="electrons"
-                )
-            except:
-                print("Couldn't get channel " + str(i+1))
-                continue
-            gpc1_te[i, :] = interp1(gpc1_te_time, gpc1_te_data, efit_time)
-            gpc1_rad[i, :] = interp1(gpc1_rad_time, gpc1_rad_data, efit_time)
+            gpc1_te[i, :] = interp1(gpc1_te_time[i,:], gpc1_te_data[i,:], efit_time)
+            gpc1_rad[i, :] = interp1(gpc1_rad_time[i,:], gpc1_rad_data[i,:], efit_time)
 
-        # Read in Te profile measurements from GPC2
-        node_path = '.gpc_2.results'
-        try:
-            gpc2_te_data, gpc2_te_time = params.mds_conn.get_data_with_dims(
-                    node_path + ":gpc2_te", tree_name="electrons"
-                )
-            gpc2_rad_data, gpc2_rad_time = params.mds_conn.get_data_with_dims(
-                    node_path + ":radii", tree_name="electrons"
-                )
-        except mdsExceptions.MdsException as e:
-            params.logger.debug(f"[Shot {params.shot_id}]: Failed to get GPC2 data")
-            return nan_output
         n_channels = gpc2_te_data.shape[0]
         gpc2_te = np.full((n_channels, len(efit_time)), np.nan)
         gpc2_rad = np.full((n_channels, len(efit_time)), np.nan)
@@ -1133,7 +1080,7 @@ class CmodPhysicsMethods:
             gpc2_te[i, :] = interp1(gpc2_te_time, gpc2_te_data[i,:], efit_time)
             gpc2_rad[i, :] = interp1(gpc2_rad_time, gpc2_rad_data[i,:], efit_time)
 
-        # # Plot for Amanda
+        # Plot for Amanda
         # test_time = 1.343
         # itest = np.argmin(np.abs(efit_time - test_time))
         # print(gpc2_rad[:, itest])
@@ -1153,8 +1100,8 @@ class CmodPhysicsMethods:
         radii = np.concatenate((gpc1_rad, gpc2_rad), axis=0)
 
         # Extend the last radii measurement up until the last EFIT.
-        # Radii depend on B, which depends on the current profile, so there could 
-        # be error near the disruption, but these are reduced when we average core vs. all
+        # Radii depend on B, which depends on the current, so there could 
+        # be small error near the disruption, but these are reduced when we average/fit
         indx_last_rad = np.argmax(efit_time > gpc2_rad_time[-1]) - 1
         for i in range(len(radii)):
             radii[i, indx_last_rad+1:] = radii[i, indx_last_rad]
@@ -1170,13 +1117,9 @@ class CmodPhysicsMethods:
             radii[i,:] = radii[i,sorted_index]
             Te[i,:] = Te[i,sorted_index]
 
-
         # Because radial positions change over time, the proportion of core vs. edge sampling
         # can change over time affecting biasing the denominator of the peaking factor.
         # Find a uniform R basis over which we can interpolate all usable time slices.
-        # rmin-- max of most inboard usable point. rmax-- min of most outboard usable point
-        # Points with R < 0.6 usually suffer from harmonic overlap so exclude
-        # We won't use the last 5 efits
         min_points = 7 # Minimum number of points for calculations
         r_inboard = 0
         r_outboard = np.inf
@@ -1191,7 +1134,7 @@ class CmodPhysicsMethods:
             # overlap with nonthermal emission from the core
             nonthermal_overlap_indices = np.full(len(radii[i,:]), False)
             r_calib = radii[i,calib_indices]
-            # Choosing point slightly inside r0 + a and checking outwards seems to do well
+            # Choosing point slightly inside r0 + a and checking outwards seems to do reasonably well
             r_edge = r_calib[np.argmax(r_calib > r0[i] + aminor[i]) - 2]
             indx_edge = np.searchsorted(radii[i,:], r_edge)
             for j in range(indx_edge + 1, len(radii[i,:])):
@@ -1210,24 +1153,19 @@ class CmodPhysicsMethods:
                     if (len(rsorted) < npoints): 
                         npoints = len(rsorted)
 
-        # Compute PF and width
+        # Compute peaking factor and width
         Te_PF = np.full(len(efit_time), np.nan)
         Te_hwhm = np.full(len(efit_time), np.nan)
-        itest = np.argmin(np.abs(efit_time - test_time))
         for i in range(len(efit_time)):
             if (np.sum(okay_indices[i,:]) > min_points):
-
                 # Perform Gaussian fit to extract Te width
                 r = radii[i,okay_indices[i,:]]
                 y = Te[i,okay_indices[i,:]]
-                ipeak = y.argmax()
                 guess = [r0[i], y.max(), (y.max() - y.min()) / 3]
-                # actual fit
                 try:
                     pa, pmu, psigma = gaussian_fit(r, y, guess)
                 except RuntimeError as exc:
                     if str(exc).startswith("Optimal parameters not found"):
-                        print(i)
                         continue
                     raise exc
                 # rescale from sigma to HWHM
@@ -1241,26 +1179,118 @@ class CmodPhysicsMethods:
                 core_indices = ((np.abs(r_equal_spaced - r0[i]) < 0.2 * aminor[i]) & (~np.isnan(te_equal_spaced)))
                 if (np.sum(core_indices) > 0):
                     Te_PF[i] = np.nanmean(te_equal_spaced[core_indices]) / np.nanmean(te_equal_spaced)
-                    # if (i == itest):
-                    #     print(Te_hwhm[i])
-                    #     plt.scatter(radii[itest,:], Te[itest,:], c='k', marker='x', s=35, label='GPC Raw')
-                    #     rsample = np.linspace(r.min(), r.max(), 100)
-                    #     plt.plot(rsample, gauss(rsample, pa, pmu, np.abs(psigma)), c='k', linestyle='--', label='Fit of GPC Raw')
-                    #     plt.scatter(r_equal_spaced, te_equal_spaced, c='b', marker='o', s=30, label='GPC Uniform Radial Basis')
-                    #     #plt.scatter(r_equal_spaced[core_indices], te_equal_spaced[core_indices], c='r', marker='.')
-                    #     plt.axvline(r0[i]+0.2*aminor[i], c='gray', linestyle='--', label="'Core' Boundary")
-                    #     plt.axvline(r0[i]-0.2*aminor[i], c='gray', linestyle='--')
-                    #     plt.axvline(r0[i] + aminor[i], linestyle='--')
-                    #     plt.legend()
-                    #     plt.xlabel("R [m]", fontsize=14)
-                    #     plt.ylabel("Te [keV]", fontsize=14)
-                    #     plt.title("Te Profile from ECE\nC-Mod Shot " + str(params.shot_id) + " at time " + str(test_time) + " s", fontsize=14)
-                    #     plt.show()
-                    #     plt.scatter(radii[itest,:], Te[itest,:], c='k', marker='x', s=35, 
-                    #         label='GPC Raw ('+str(efit_time[i].round(3)) + ' s)')
-        Te_PF = interp1(efit_time, Te_PF, params.times)
-        Te_hwhm = interp1(efit_time, Te_hwhm, params.times)
+                    if (i == itest):
+                        plt.scatter(radii[itest,:], Te[itest,:], c='k', marker='x', s=35, label='GPC Raw')
+                        rsample = np.linspace(r.min(), r.max(), 100)
+                        plt.plot(rsample, gauss(rsample, pa, pmu, np.abs(psigma)), c='k', linestyle='--', label='Fit of GPC Raw')
+                        plt.scatter(r_equal_spaced, te_equal_spaced, c='b', marker='o', s=30, label='GPC Uniform Radial Basis')
+                        #plt.scatter(r_equal_spaced[core_indices], te_equal_spaced[core_indices], c='r', marker='.')
+                        plt.axvline(r0[i]+0.2*aminor[i], c='gray', linestyle='--', label="'Core' Boundary")
+                        plt.axvline(r0[i]-0.2*aminor[i], c='gray', linestyle='--')
+                        plt.axvline(r0[i] + aminor[i], linestyle='--')
+                        plt.legend()
+                        plt.xlabel("R [m]", fontsize=14)
+                        plt.ylabel("Te [keV]", fontsize=14)
+                        plt.title("Te Profile from ECE\nC-Mod Shot " + str(1120830012) + " at time " + str(test_time) + " s", fontsize=14)
+                        plt.show()
+                        plt.scatter(radii[itest,:], Te[itest,:], c='k', marker='x', s=35, 
+                            label='GPC Raw ('+str(efit_time[i].round(3)) + ' s)')
+        Te_PF = interp1(efit_time, Te_PF, times)
+        Te_hwhm = interp1(efit_time, Te_hwhm, times)
         return pd.DataFrame({"te_peaking_ece": Te_PF, "te_width_ece": Te_hwhm})
+    
+    @staticmethod
+    @physics_method(
+        columns=["te_peaking_ece", "te_width_ece"],
+        tokamak=Tokamak.CMOD,
+    )
+    def _get_te_profile_params_ece(params: PhysicsMethodParams):
+        nan_output = {
+            "te_peaking_ece": np.full(len(params.times), np.nan),
+            "te_width_ece": np.full(len(params.times), np.nan)
+        }
+        # Shots with low Btor are unreliable because gratings are often not aligned to field,
+        # signal is low, and there are frequent density cutoffs
+        try:
+            btor, t_mag = params.mds_conn.get_data_with_dims(
+                r"\btor", tree_name="magnetics"
+        )
+        except mdsExceptions.MdsException as e:
+            params.logger.debug(f"[Shot {params.shot_id}] {traceback.format_exc()}")
+            return nan_output
+        # Is there an easy way to select flattop period?
+        ftop_btor = np.min(np.abs(btor[(t_mag > 0.8*params.disruption_time) & (t_mag < 0.9*params.disruption_time)]))
+        if (ftop_btor < 3.5):
+            params.logger.warning(
+                f"[Shot {params.shot_id}]:ECE unreliable for low Bt shots (Bt = {ftop_btor} T)."
+            )
+            return nan_output
+        # Shots with LH heating are unreliable because direct heating of electrons leads to nonthermal emission
+        try:
+            lh_power, lh_time = params.mds_conn.get_data_with_dims(
+                '.results:netpow', tree_name='lh'
+            )
+            # LH Power units in kW
+            if (np.max(lh_power[(lh_time > 0) & (lh_time < params.disruption_time)]) > 1.):
+                params.logger.warning(
+                    f"[Shot {params.shot_id}]:ECE unreliable for shots with LH heathing."
+                )
+                return nan_output
+        except:
+            pass
+        # Get magnetic axis data from EFIT (in units of m)
+        try:
+            r0 = 0.01 * params.mds_conn.get_data(
+                r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
+            )
+            aminor, efit_time = params.mds_conn.get_data_with_dims(
+                r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
+            )
+        except mdsExceptions.MdsException as e:
+            params.logger.debug(f"[Shot {params.shot_id}]: Failed to get efit data")
+            return nan_output
+        # Read in Te profile measurements from 9 GPC1 channels
+        node_path = '.ece.gpc_results'
+        n_channels = 9
+        gpc1_te_data = []
+        gpc1_te_time = []
+        gpc1_rad_data = []
+        gpc1_rad_time = []
+        for i in range(n_channels):
+            try:
+                te_data, te_time = params.mds_conn.get_data_with_dims(
+                    node_path + ".te:te" + str(i+1), tree_name="electrons"
+                )
+                rad_data, rad_time = params.mds_conn.get_data_with_dims(
+                    node_path + ".rad:r" + str(i+1), tree_name="electrons"
+                )
+                gpc1_te_data.append(te_data)
+                gpc1_te_time.append(te_time)
+                gpc1_rad_data.append(rad_data)
+                gpc1_rad_time.append(rad_data)
+            except:
+                print("Couldn't get channel " + str(i+1))
+                continue
+        gpc1_te_data = np.array(gpc1_te_data)
+        gpc1_te_time = np.array(gpc1_te_time)
+        gpc1_rad_data = np.array(gpc1_rad_data)
+        gpc1_rad_time = np.array(gpc1_rad_time)
+        # Read in Te profile measurements from GPC2 (19 channels)
+        node_path = '.gpc_2.results'
+        try:
+            gpc2_te_data, gpc2_te_time = params.mds_conn.get_data_with_dims(
+                    node_path + ":gpc2_te", tree_name="electrons"
+                )
+            gpc2_rad_data, gpc2_rad_time = params.mds_conn.get_data_with_dims(
+                    node_path + ":radii", tree_name="electrons"
+                )
+        except mdsExceptions.MdsException as e:
+            params.logger.debug(f"[Shot {params.shot_id}]: Failed to get GPC2 data")
+            return nan_output
+        return CmodPhysicsMethods.get_te_profile_params_ece(
+                    params.times, gpc1_te_data, gpc1_te_time, gpc1_rad_data, gpc1_rad_time,
+                    gpc2_te_data, gpc2_te_time, gpc2_rad_data, gpc2_rad_time, efit_time, r0, aminor
+        )
         
 
     @staticmethod

@@ -14,7 +14,7 @@ retrieval_settings = RetrievalSettings(
     time_setting="disruption_warning",	# use the set efit's timebase
     efit_nickname_setting="efit18",	# set the efit
     run_tags=[],
-    run_methods=["_get_peaking_factors_ece"],
+    run_methods=["_get_te_profile_params_ece"],
     run_columns=signals,
     only_requested_columns=True
 )
