@@ -613,10 +613,10 @@ class D3DPhysicsMethods:
     )
     def get_z_parameters(params: PhysicsMethodParams):
         """
-        Get the vertical position of the plasma current centroid, then 
+        Get the vertical position of the plasma current centroid, then
         compute the normalized signal with respect to the plasma minor radius.
 
-        z_prog, z_error, and z_error_normalized will always be returned as 
+        z_prog, z_error, and z_error_normalized will always be returned as
         arrays of NaN (see note below) .
 
         From get_Z_error_d3d.m:
@@ -636,8 +636,8 @@ class D3DPhysicsMethods:
         """
         NOMINAL_FLATTOP_RADIUS = 0.59
         nan_output = {
-            'zcur': [np.nan],
-            'zcur_norm': [np.nan],
+            "zcur": [np.nan],
+            "zcur_norm": [np.nan],
             "z_prog": [np.nan],
             "z_error": [np.nan],
             "z_error_normalized": [np.nan],
@@ -668,9 +668,7 @@ class D3DPhysicsMethods:
             a_minor = interp1(t_a, a_minor, params.times, "linear")
             z_cur_norm = z_cur / a_minor
         except mdsExceptions.MdsException as e:
-            params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to get efit parameters"
-            )
+            params.logger.info(f"[Shot {params.shot_id}]:Failed to get efit parameters")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
             z_cur_norm = z_cur / NOMINAL_FLATTOP_RADIUS
         output = {
