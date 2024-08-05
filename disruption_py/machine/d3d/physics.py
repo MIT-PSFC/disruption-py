@@ -494,7 +494,14 @@ class D3DPhysicsMethods:
     )
     def get_rt_ip_parameters(params: PhysicsMethodParams):
         """
-        TODO: Add docstring
+        Get real-time plasma current and programmed plasma current from EFIT, 
+        then compute the real-time ip_error and the derivatives of all of the above signals.
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_Ip_parameters_RT.m
+
+        Last major update by William Wei on 8/5/2024
         """
         ip_rt = [np.nan]
         ip_prog_rt = [np.nan]
