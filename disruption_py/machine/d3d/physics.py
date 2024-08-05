@@ -487,12 +487,19 @@ class D3DPhysicsMethods:
         tokamak=Tokamak.D3D,
     )
     def get_rt_ip_parameters(params: PhysicsMethodParams):
+        '''
+        TODO: Add docstring
+        '''
         params.mds_conn.open_tree("d3d")
         ip_rt = [np.nan]
         ip_prog_rt = [np.nan]
         ip_error_rt = [np.nan]
         dip_dt_rt = [np.nan]
         dipprog_dt_rt = [np.nan]
+        # TODO: use nan_output
+        nan_output = {
+            '_parameter': [np.nan]
+        }
         # Get measured plasma current parameters
         # TODO: Why open d3d and not the rt efit tree?
         try:
