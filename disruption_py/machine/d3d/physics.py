@@ -9,7 +9,13 @@ from MDSplus import mdsExceptions
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.math import get_bolo, gsastd, interp1, power
+from disruption_py.core.utils.math import (
+    get_bolo,
+    gsastd,
+    interp1,
+    power,
+    matlab_gradient_1d_vectorized,
+)
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -487,19 +493,15 @@ class D3DPhysicsMethods:
         tokamak=Tokamak.D3D,
     )
     def get_rt_ip_parameters(params: PhysicsMethodParams):
-        '''
+        """
         TODO: Add docstring
-        '''
-        params.mds_conn.open_tree("d3d")
+        """
         ip_rt = [np.nan]
         ip_prog_rt = [np.nan]
         ip_error_rt = [np.nan]
         dip_dt_rt = [np.nan]
         dipprog_dt_rt = [np.nan]
-        # TODO: use nan_output
-        nan_output = {
-            '_parameter': [np.nan]
-        }
+        power_supply_railed = [np.nan]
         # Get measured plasma current parameters
         # TODO: Why open d3d and not the rt efit tree?
         try:
@@ -538,7 +540,7 @@ class D3DPhysicsMethods:
                 )
                 polarity = polarity[0]
             ip_prog_rt = ip_prog_rt * polarity
-            dipprog_dt_rt = np.gradient(ip_prog_rt, t_ip_prog_rt)
+            dipprog_dt_rt = matlab_gradient_1d_vectorized(ip_prog_rt, t_ip_prog_rt)
             ip_prog_rt = interp1(t_ip_prog_rt, ip_prog_rt, params.times, "linear")
             dipprog_dt_rt = interp1(t_ip_prog_rt, dipprog_dt_rt, params.times, "linear")
         except mdsExceptions.MdsException as e:
@@ -579,7 +581,7 @@ class D3DPhysicsMethods:
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
             ipimode = np.full(len(params.times), np.nan)
-        feedback_off_indices = np.where((ipimode != 0) & (ipimode == 3))
+        (feedback_off_indices,) = np.where((ipimode != 0) & (ipimode == 3))
         ip_error_rt[feedback_off_indices] = np.nan
         # Finally, get 'epsoff' to determine if/when the E-coil power supplies have railed
         # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
@@ -594,17 +596,20 @@ class D3DPhysicsMethods:
             # the last time sample
             t_epsoff += 0.001
             epsoff = interp1(t_epsoff, epsoff, params.times, "linear")
-            railed_indices = np.where(np.abs(epsoff) > 0.5)
             power_supply_railed = np.zeros(len(params.times))
+            (railed_indices,) = np.where(np.abs(epsoff) > 0.5)
             power_supply_railed[railed_indices] = 1
-            ip_error_rt[railed_indices] = np.nan
+            # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
+            # PCS feedback control of Ip is not being applied.  Therefore the
+            # 'ip_error' parameter is undefined for these times.
+            (ps_railed_indices,) = np.where(power_supply_railed != 0)
+            ip_error_rt[ps_railed_indices] = np.nan
         except mdsExceptions.MdsException as e:
             params.logger.info(
                 f"[Shot {params.shot_id}]:Failed to get epsoff signal. "
                 + "power_supply_railed will be NaN."
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            power_supply_railed = [np.nan]
         # 'dip_dt_RT': dip_dt_rt,
         output = {
             "ip_rt": ip_rt,
