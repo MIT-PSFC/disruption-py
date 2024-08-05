@@ -614,7 +614,7 @@ class D3DPhysicsMethods:
     def get_z_parameters(params: PhysicsMethodParams):
         """
         Get the vertical position of the plasma current centroid, then
-        compute the normalized signal with respect to the plasma minor radius.
+        compute the normalized values with respect to the plasma minor radius.
 
         z_prog, z_error, and z_error_normalized will always be returned as
         arrays of NaN (see note below) .
@@ -631,7 +631,8 @@ class D3DPhysicsMethods:
         References
         -------
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_Z_error_d3d.m
-
+        https://github.com/MIT-PSFC/disruption-py/pull/255
+        
         Last major update by William Wei on 8/5/2024
         """
         NOMINAL_FLATTOP_RADIUS = 0.59
