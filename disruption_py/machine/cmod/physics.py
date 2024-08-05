@@ -13,7 +13,7 @@ import disruption_py.data
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.math import gaussian_fit, interp1, interp2, smooth
+from disruption_py.core.utils.math import gaussian_fit, gauss, interp1, smooth
 from disruption_py.machine.tokamak import Tokamak
 
 warnings.filterwarnings("error", category=RuntimeWarning)
@@ -867,7 +867,7 @@ class CmodPhysicsMethods:
         return output
 
     @staticmethod
-    def get_peaking_factors(times, TS_time, TS_Te, TS_ne, TS_z, efit_time, bminor, z0):
+    def get_peaking_factors(times, TS_time, TS_Te, TS_ne, TS_z, efit_time, bminor, z0, kappa, r0):
         """
         Calculate Te, ne, and pressure peaking factors given Thomson Scattering Te and ne measurements.
 
@@ -909,13 +909,15 @@ class CmodPhysicsMethods:
 
         """
         # Interpolate EFIT signals to TS time basis
+        kappa = interp1(efit_time, kappa, TS_time)
+        r0 = interp1(efit_time, r0, TS_time)
         bminor = interp1(efit_time, bminor, TS_time)
         z0 = interp1(efit_time, z0, TS_time)
 
         # Calculate Te peaking factor
         Te_PF = np.full(len(TS_time), np.nan)
         (itimes,) = np.where((TS_time > 0) & (TS_time < times[-1]))
-        test_time = 0.98
+        test_time = 1.0
         itest = np.argmin(np.abs(TS_time - test_time))
         for itime in itimes:
             TS_Te_arr = TS_Te[:, itime]
@@ -943,17 +945,17 @@ class CmodPhysicsMethods:
                 Te_arr_equal_spacing
             )
             if (itime == itest):
-                plt.scatter(TS_z_arr, TS_Te_arr/ (11600*1e3), c='k', marker='x', label='TS Raw')
-                plt.scatter(z_arr_equal_spacing, Te_arr_equal_spacing, c='r', marker='o')
+                plt.scatter(TS_z_arr/kappa[itime]+r0[itime], TS_Te_arr/ (11600*1e3), c='r', marker='x', 
+                            label='TS Raw ('+str(TS_time[itime].round(3)) + ' s)')
+                #plt.scatter(z_arr_equal_spacing/kappa[itime]+r0[itime], Te_arr_equal_spacing/(11600*1e3), c='r', marker='o')
                 # plt.scatter(z_arr_equal_spacing[core_index], Te_arr_equal_spacing[core_index], c='r', marker='.')
                 #plt.axvline(z0[itime], c='k', linestyle='--', label='$Z_0$')
-                plt.axvline(z0[itime] + 0.2*bminor[itime], c='gray', linestyle='--', label="'Core' Boundary")
-                plt.axvline(z0[itime] - 0.2*bminor[itime], c='gray', linestyle='--', label="'Core' Boundary")
-                plt.ylim(0, 1.7)
-                plt.xlabel("Z [m]", fontsize=14)
+                # plt.axvline(z0[itime] + 0.2*bminor[itime], c='gray', linestyle='--', label="'Core' Boundary")
+                # plt.axvline(z0[itime] - 0.2*bminor[itime], c='gray', linestyle='--', label="'Core' Boundary")
+                # plt.ylim(0, 1.7)
+                plt.xlabel("R (GPC) or Z/$\kappa$+R0 (TS) [m]", fontsize=14)
                 plt.ylabel("Te [keV]", fontsize=14)
-                plt.title("Te Profile from Thomson Scattering\n C-Mod Shot " + str(1140523015) + " at time " + 
-                          str(TS_time[itime].round(1)) + " s", fontsize=14)
+                plt.title("Te Profile\nC-Mod Shot " + str(1140523015))
                 plt.legend()
                 plt.show()
 
@@ -989,6 +991,9 @@ class CmodPhysicsMethods:
             z0 = 0.01 * params.mds_conn.get_data(
                 r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
             )
+            r0 = 0.01 * params.mds_conn.get_data(
+                r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
+            )
             kappa = params.mds_conn.get_data(
                 r"\efit_aeqdsk:kappa", tree_name="_efit_tree"
             )
@@ -1022,12 +1027,12 @@ class CmodPhysicsMethods:
         except mdsExceptions.MdsException as e:
             return nan_output
         return CmodPhysicsMethods.get_peaking_factors(
-            params.times, TS_time, TS_Te, TS_ne, TS_z, efit_time, bminor, z0
+            params.times, TS_time, TS_Te, TS_ne, TS_z, efit_time, bminor, z0, kappa, r0
         )
     
     @staticmethod
     @physics_method(
-        columns=["te_peaking_ece"],
+        columns=["te_peaking_ece", "te_width_ece"],
         tokamak=Tokamak.CMOD,
     )
     def _get_peaking_factors_ece(params: PhysicsMethodParams):
@@ -1154,17 +1159,12 @@ class CmodPhysicsMethods:
         for i in range(len(radii)):
             radii[i, indx_last_rad+1:] = radii[i, indx_last_rad]
 
-        test_time = 0.997
+        test_time = 1.0
         itest = np.argmin(np.abs(efit_time - test_time))
         for i in range(len(efit_time)):
             sorted_index = np.argsort(radii[:,i])
             radii[:,i] = radii[sorted_index, i]
             Te[:, i] = Te[sorted_index, i]
-
-        # Separately interpolate ECE onto TS timebase and get TS profile
-        # Compare profiles at R > 0.75 by interpolating ECE onto TS radial basis.
-        # Differences with ECE lower than TS 50% (need to find what actual cutoff shots look like) indicate
-        # a likely density cutoff. Remove times during this range from okay times
 
         # Check edge for positive gradient
         # Take gradient of points
@@ -1190,17 +1190,16 @@ class CmodPhysicsMethods:
             if (np.sum(calib_indices) <= min_points):
                 continue
             harmonic_overlap_indices = (radii[:,i] < 0.6) 
-            # A rising low-field tail typically means those points suffer from 
+            # A rising low-field tail is often from 
             # overlap with nonthermal emission from the core
             nonthermal_overlap_indices = np.full(len(radii[:, i]), False)
-            for j in reversed(range(len(nonthermal_overlap_indices))):
-                if (not (calib_indices[j] and calib_indices[j-1]) ):
-                    continue
-                elif (Te[j,i] - Te[j-1,i] > 0.05*Te[j-1,i]):
+            r_calib = radii[calib_indices, i]
+            # Choosing point slightly inside r0 + a and checking outwards seems to do well
+            r_edge = r_calib[np.argmax(r_calib > r0[i] + aminor[i]) - 2]
+            indx_edge = np.searchsorted(radii[:, i], r_edge)
+            for j in range(indx_edge + 1, len(radii[:, i])):
+                if Te[j,i] > 1.2 * Te[indx_edge,i]:
                     nonthermal_overlap_indices[j] = True
-                    count[i] += 1
-                else:
-                    break
             if (i == itest): print(count[i])
 
             okay_indices[:, i] = calib_indices & (~harmonic_overlap_indices) & (~nonthermal_overlap_indices)
@@ -1219,12 +1218,31 @@ class CmodPhysicsMethods:
         print(r_outboard)
         print(npoints)
 
-        # Compute core average Te and total average Te
+        # Compute PF and width
         Te_PF = np.full(len(efit_time), np.nan)
+        Te_hwhm = np.full(len(efit_time), np.nan)
         itest = np.argmin(np.abs(efit_time - test_time))
         for i in range(len(efit_time)):
             if (np.sum(okay_indices[:,i]) > min_points):
-                # Iterpolate onto equal spaced radial basis to reduce bias in changes in radial sampling over time
+
+                # Perform Gaussian fit to extract Te width
+                r = radii[okay_indices[:, i], i]
+                y = Te[okay_indices[:, i], i]
+                ipeak = y.argmax()
+                guess = [r0[i], y.max(), (y.max() - y.min()) / 3]
+                # actual fit
+                try:
+                    pa, pmu, psigma = gaussian_fit(r, y, guess)
+                except RuntimeError as exc:
+                    if str(exc).startswith("Optimal parameters not found"):
+                        print(i)
+                        continue
+                    raise exc
+                # rescale from sigma to HWHM
+                # https://en.wikipedia.org/wiki/Full_width_at_half_maximum
+                Te_hwhm[i] = np.abs(psigma) * np.sqrt(2 * np.log(2))
+
+                # Compute PF using equal spaced radial basis to reduce bias in changes in radial sampling over time
                 r_equal_spaced = np.linspace(r_inboard, r_outboard, npoints)
                 te_equal_spaced = interp1(radii[okay_indices[:,i], i], Te[okay_indices[:,i], i], r_equal_spaced)
                 # Note during last 5 EFITs te_equal_space could contain nans
@@ -1232,19 +1250,25 @@ class CmodPhysicsMethods:
                 if (np.sum(core_indices) > 0):
                     Te_PF[i] = np.nanmean(te_equal_spaced[core_indices]) / np.nanmean(te_equal_spaced)
                     if (i == itest):
+                        print(Te_hwhm[i])
                         plt.scatter(radii[:, itest], Te[:, itest], c='k', marker='x', s=35, label='GPC Raw')
+                        rsample = np.linspace(r.min(), r.max(), 100)
+                        plt.plot(rsample, gauss(rsample, pa, pmu, np.abs(psigma)), c='k', linestyle='--', label='Fit of GPC Raw')
                         plt.scatter(r_equal_spaced, te_equal_spaced, c='b', marker='o', s=30, label='GPC Uniform Radial Basis')
                         #plt.scatter(r_equal_spaced[core_indices], te_equal_spaced[core_indices], c='r', marker='.')
                         plt.axvline(r0[i]+0.2*aminor[i], c='gray', linestyle='--', label="'Core' Boundary")
                         plt.axvline(r0[i]-0.2*aminor[i], c='gray', linestyle='--')
+                        plt.axvline(r0[i] + aminor[i], linestyle='--')
                         plt.legend()
                         plt.xlabel("R [m]", fontsize=14)
                         plt.ylabel("Te [keV]", fontsize=14)
                         plt.title("Te Profile from ECE\nC-Mod Shot " + str(params.shot_id) + " at time " + str(test_time) + " s", fontsize=14)
                         plt.show()
-
+                        plt.scatter(radii[:, itest], Te[:, itest], c='k', marker='x', s=35, 
+                            label='GPC Raw ('+str(efit_time[i].round(3)) + ' s)')
         Te_PF = interp1(efit_time, Te_PF, params.times)
-        return pd.DataFrame({"te_peaking_ece": Te_PF})
+        Te_hwhm = interp1(efit_time, Te_hwhm, params.times)
+        return pd.DataFrame({"te_peaking_ece": Te_PF, "te_width_ece": Te_hwhm})
         
 
     @staticmethod
