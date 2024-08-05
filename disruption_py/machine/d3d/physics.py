@@ -500,7 +500,8 @@ class D3DPhysicsMethods:
         References
         -------
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_Ip_parameters_RT.m
-
+        https://github.com/MIT-PSFC/disruption-py/pull/254
+        
         Last major update by William Wei on 8/5/2024
         """
         ip_rt = [np.nan]
