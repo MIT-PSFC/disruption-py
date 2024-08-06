@@ -116,9 +116,15 @@ class DefaultNicknameSetting(NicknameSetting):
 
     def __init__(self):
         self.tokamak_overrides = {
-            Tokamak.CMOD: lambda params: "analysis",
-            Tokamak.D3D: lambda params: "efit01",
+            Tokamak.CMOD: self._cmod_nickname,
+            Tokamak.D3D: self._d3d_nickname,
         }
+
+    def _d3d_nickname(self, params: NicknameSettingParams):
+        return "analysis"
+
+    def _cmod_nickname(self, params: NicknameSettingParams):
+        return "efit01"
 
     def _get_tree_name(self, params: NicknameSettingParams) -> str:
         raise NotImplementedError(
