@@ -1071,9 +1071,6 @@ class D3DPhysicsMethods:
             sqfou = params.mds_conn.get_data(
                 r"\efit_a_eqdsk:sqfou", tree_name="_efit_tree"
             )
-            aminor = params.mds_conn.get_data(
-                r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
-            )
             squareness = (sqfod + sqfou) / 2.0
             squareness = interp1(efit_time, squareness, params.times, "linear")
         except mdsExceptions.MdsException as e:
@@ -1093,7 +1090,7 @@ class D3DPhysicsMethods:
                 f"[Shot {params.shot_id}]:Failed to obtain aminor signals"
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            squareness = [np.nan]
+            aminor = [np.nan]
         # Remove invalid indices
         try:
             chisq = params.mds_conn.get_data(
