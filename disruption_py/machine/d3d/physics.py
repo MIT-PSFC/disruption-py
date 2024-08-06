@@ -1033,6 +1033,7 @@ class D3DPhysicsMethods:
         References
         -------
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_shape_parameters.m
+        https://github.com/MIT-PSFC/disruption-py/pull/258
 
         Last major update by William Wei on 8/6/2024
         """
