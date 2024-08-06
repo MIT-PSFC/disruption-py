@@ -1110,7 +1110,6 @@ class D3DPhysicsMethods:
                 f"[Shot {params.shot_id}]:Failed to obtain chisq to remove unreliable time points."
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            squareness = [np.nan]
         return {"delta": delta, "squareness": squareness, "aminor": aminor}
 
     @staticmethod
