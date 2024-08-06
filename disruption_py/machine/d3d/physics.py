@@ -741,7 +741,7 @@ class D3DPhysicsMethods:
         -------
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_n1rms_d3d.m
         https://github.com/MIT-PSFC/disruption-py/pull/257
-        
+
         Last major update by William Wei on 8/6/2024
         """
         # Get n1rms signal from d3d tree
