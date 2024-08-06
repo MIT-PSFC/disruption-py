@@ -734,16 +734,42 @@ class D3DPhysicsMethods:
     @staticmethod
     @physics_method(columns=["n1rms", "n1rms_normalized"], tokamak=Tokamak.D3D)
     def get_n1rms_parameters(params: PhysicsMethodParams):
-        n1rms, t_n1rms = params.mds_conn.get_data_with_dims(r"\n1rms", tree_name="d3d")
-        n1rms *= 1.0e-4  # Gauss -> Tesla
-        n1rms = interp1(t_n1rms, n1rms, params.times)
-        b_tor, t_b_tor = params.mds_conn.get_data_with_dims(
-            f"ptdata('bt', {params.shot_id})", tree_name="d3d"
-        )
-        b_tor = interp1(t_b_tor, b_tor, params.times)  # [T]
-        n1rms_norm = n1rms / np.abs(b_tor)
-        output = {"n1rms": n1rms, "n1rms_normalized": n1rms_norm}
-        return output
+        """
+        Get n1rms data, then compute n1rms_normalized = n1rms / btor
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_n1rms_d3d.m
+
+        Last major update by William Wei on 8/6/2024
+        """
+        # Get n1rms signal from d3d tree
+        try:
+            n1rms, t_n1rms = params.mds_conn.get_data_with_dims(
+                r"\n1rms", tree_name="d3d"
+            )
+            n1rms *= 1.0e-4  # Gauss -> Tesla
+            t_n1rms /= 1e3  # [ms] -> [s]
+            n1rms = interp1(t_n1rms, n1rms, params.times)
+        except mdsExceptions.MdsException as e:
+            params.logger.info(f"[Shot {params.shot_id}]:Failed to get n1rms signal")
+            params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+            return {"n1rms": [np.nan], "n1rms_normalized": [np.nan]}
+        # Calculate n1rms_norm
+        try:
+            b_tor, t_b_tor = params.mds_conn.get_data_with_dims(
+                f"ptdata('bt', {params.shot_id})", tree_name="d3d"
+            )
+            t_b_tor /= 1e3  # [ms] -> [s]
+            b_tor = interp1(t_b_tor, b_tor, params.times)  # [T]
+            n1rms_norm = n1rms / np.abs(b_tor)
+        except mdsExceptions.MdsException as e:
+            params.logger.info(
+                f"[Shot {params.shot_id}]:Failed to get b_tor signal to compute n1rms_normalized"
+            )
+            params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+            n1rms_norm = [np.nan]
+        return {"n1rms": n1rms, "n1rms_normalized": n1rms_norm}
 
     # TODO: Need to test and unblock recalculating peaking factors
     # By default get_peaking_factors should grab the data from MDSPlus as opposed
