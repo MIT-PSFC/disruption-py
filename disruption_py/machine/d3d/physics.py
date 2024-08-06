@@ -1018,7 +1018,7 @@ class D3DPhysicsMethods:
         References
         -------
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_kappa_area.m
-
+        https://github.com/MIT-PSFC/disruption-py/pull/256
 
         Last major update by William Wei on 8/6/2024
         """
@@ -1033,7 +1033,7 @@ class D3DPhysicsMethods:
         invalid_indices = np.where(chisq > 50)
         kappa_area[invalid_indices] = np.nan
         kappa_area = interp1(t, kappa_area, params.times)
-        return {"kappa_area": kappa_areas}
+        return {"kappa_area": kappa_area}
 
     @staticmethod
     @physics_method(
