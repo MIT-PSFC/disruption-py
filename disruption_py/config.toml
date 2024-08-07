@@ -134,7 +134,6 @@ TEST_COLUMNS=[
 ]
 EXPECTED_FAILURE_COLUMNS= [
 	"te_width",
-	"z_error",
 	"zcur",
 	"v_z",
 	"z_times_v_z",
