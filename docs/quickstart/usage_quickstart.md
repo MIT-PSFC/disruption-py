@@ -1,81 +1,54 @@
 
 ## Scripts (Recommended)
-Creating a scripts gives you the full functionality of disruption_py. 
-### Creating a disruption-py script
-1. **Create an instance of the desired handler class.** 
-	The handler class manages the main entry points for data retrieval as well as setting up connections to the SQL database. See [`CModHandler`][disruption_py.handlers.cmod_handler.CModHandler] for more details.
+Creating a script gives you the full functionality of DisruptionPy. 
+
+### Examples
+Use [`basic_example_1.py`](https://github.com/MIT-PSFC/disruption-py/blob/main/examples/basic_example_1.py) or [`basic_example_2.py`](https://github.com/MIT-PSFC/disruption-py/blob/main/examples/basic_example_2.py) for a simple way to get started. Check out [`all_defaults_example.py`](https://github.com/MIT-PSFC/disruption-py/blob/main/examples/all_defaults_example.py) to see the all the default settings for retrieving data. 
+
+### Creating a DisruptionPy script
+1. **Create the shot data retrieval settings**
+	The retrieval settings allow you to specify the settings for retrieving data for a single shot. You can specify details like the columns you want filled by the physics methods and the timebase domain you want used. See [`RetrievalSettings`][disruption_py.settings.retrieval_settings] for more information and a complete list of settings options.
+
 	```python
-	from disruption_py.handlers.cmod_handler import CModHandler
+	from disruption_py.settings.retrieval_settings import RetrievalSettings
 
-	cmod_handler = CModHandler()
-	```
-
-	??? question "I don't want to connect to the SQL database."
-		DisruptionPy provides a dummy database class that allows users to retrieve data from MDSplus
-		without having to connect to the associated SQL database. Simply change the code above to pass
-		the dummy database's default inititalizer as the database initializer to the handler class.
-		note: this will result in data retrieval being incorrect for parameter methods that depend on 
-		data retrieved from the SQL table eg. `time_until_disrupt`
-		```python
-		from disruption_py.databases.dummy_database import DummyDatabase
-		from disruption_py.handlers.cmod_handler import CModHandler
-
-		cmod_handler = CModHandler(database_initializer=DummyDatabase.default)
-		```
-
-2. **Create the shot settings.** 
-	The shot settings help to define the desired data retrieval methods and the desired output type for data retrieval for each shot. See [`ShotSettings`][disruption_py.settings.shot_settings.ShotSettings] for more details and a complete list of settings options.
-	```python
-	from disruption_py.handlers.cmod_handler import CModHandler
-	from disruption_py.settings.shot_settings import ShotSettings
-
-	cmod_handler = CModHandler()
-
-	shot_settings = ShotSettings(
-		# use the efit timebase when returning data 
-		set_times_request="efit",
-		
-		# run all available methods
+	retrieval_settings = RetrievalSettings(
+		# Use the efit timebase when returning data
+		time_setting="efit",
+		# Run all available methods
 		run_tags=["all"],
 	)
 	```
 
-3. **Call `get_shots_data`.** 
-	The `get_shots_data` method is the main entry point for retrieving data from DisruptionPy. See [`get_shots_data`][disruption_py.handlers.cmod_handler.CModHandler.get_shots_data] for more details.
+2. **Call `get_shots_data`.** 
+	[`workflow.py`][disruption_py.workflow] is the main entrypoint for retrieving data from DisruptionPy. The [`get_shots_data`][disruption_py.workflow.get_shots_data] method will be the primary method you use to get data, but [`workflow.py`][disruption_py.workflow] can also help you set up connections to the SQL database and the MDSplus server. See [`workflow.py`][disruption_py.workflow] for more details.
 	```python
-	from disruption_py.handlers.cmod_handler import CModHandler
-	from disruption_py.settings.shot_settings import ShotSettings
-
-	cmod_handler = CModHandler()
-	shot_settings = ShotSettings(
-		... 
+	from disruption_py.settings.retrieval_settings import RetrievalSettings
+	from disruption_py.workflow import get_shots_data
+	retrieval_settings = RetrievalSettings(
+		...
 	)
-
-	shot_data = cmod_handler.get_shots_data(
-		# retrieve data for the list of provided shot numbers
-		shot_ids_request=[1150805012, 1150805013, 1150805014,],
-
-		# use the created shot_settings
-		shot_settings=shot_settings,
-
-		# stream retrieved data to the csv file
-		output_type_request="ip_data.csv", 
-
-		# use a single process to retrieve the data
-		num_processes = 1,
+	shot_data = get_shots_data(
+		tokamak="cmod",
+		# Retrieve data for the desired shots
+		shotlist_setting=[1150805012, 1150805013, 1150805014],
+		# Use the created retrieval_settings
+		retrieval_settings=retrieval_settings,
+		# Automatically stream retrieved data to a csv file by passing in a file path ending in .csv
+		output_setting="data.csv",
+		# Use a single process to retrieve the data
+		num_processes=1,
 	)
 	```
 
-## Command Line Support
-
-DisruptionPy offers a number of built-in scripts through its CLI to make the process of retrieving data from MDSplus easier.
-To use the CLI, simply run `disruption_py **command**` from the command line (prepend `poetry run` to the command if you are inside of an environment managed by poetry).
-
-A few available commands are listed below. Please see the documentation on the [command line][disruption_py-run-generate_datasets] for more details.
-
-### generate_datasets
-The standard command for generating a dataset using disruption_py, allow for the generation DPRF compatible datasets for training and inference. Currently only supports CMod data. Run `disruption_py run generate_datasets --help` for information on available arguments.
-To use run:
-```bash
-disruption_py run generate_datasets
-```
+	??? question "I don't want to connect to the SQL database."
+		DisruptionPy provides a dummy database class that allows users to retrieve data from MDSplus
+		without having to connect to the associated SQL database. See the [example](https://github.com/MIT-PSFC/disruption-py/blob/main/examples/no_database.py) or simply change the code above to pass
+		the dummy database's default inititalizer as the database initializer to the handler class.
+		note: this will result in data retrieval being incorrect for parameter methods that depend on 
+		data retrieved from the SQL table eg. `time_until_disrupt`
+		```python
+		--8<--
+		examples/no_database.py
+		--8<--
+		```

@@ -1,30 +1,24 @@
 #!/usr/bin/env python3
+
 import os
-import shutil
 import time
 from tempfile import mkdtemp
 from unittest.mock import patch
 
 import pytest
 
-from disruption_py.utils.mappings.tokamak_helpers import (
-    get_tokamak_from_environment,
-    get_tokamak_handler,
+from disruption_py.core.utils.math import matlab_gradient_1d_vectorized
+from disruption_py.machine.tokamak import resolve_tokamak_from_environment
+from tests.utils.factory import (
     get_tokamak_test_columns,
     get_tokamak_test_expected_failure_columns,
-    get_tokamak_test_shot_ids,
+    get_tokamak_test_shotlist,
 )
-from disruption_py.utils.math_utils import matlab_gradient_1d_vectorized
 
 
 def pytest_addoption(parser):
     parser.addoption(
         "--verbose_output", action="store_true", help="More testing information."
-    )
-    parser.addoption(
-        "--fail_quick",
-        action="store_true",
-        help="Finish test and report statistics instead of failing fast.",
     )
 
 
@@ -33,33 +27,32 @@ def verbose_output(pytestconfig):
     return pytestconfig.getoption("verbose_output")
 
 
-@pytest.fixture(scope="session")
-def fail_quick(pytestconfig):
-    return pytestconfig.getoption("fail_quick")
-
-
 def pytest_generate_tests(metafunc):
-    tokamak = get_tokamak_from_environment()
+    """Parametrize `data_column` and mark expected failure columns. Marked columns
+    will xfail on assert False and xpass on assert True."""
+    tokamak = resolve_tokamak_from_environment()
 
     # parameterized across tests
     if "data_column" in metafunc.fixturenames:
         test_columns = get_tokamak_test_columns(tokamak)
-        metafunc.parametrize("data_column", test_columns)
+        xfail_columns = get_tokamak_test_expected_failure_columns(tokamak)
+        data_columns = []
+        for test_col in test_columns:
+            if test_col in xfail_columns:
+                data_columns.append(pytest.param(test_col, marks=pytest.mark.xfail))
+            else:
+                data_columns.append(test_col)
+        metafunc.parametrize("data_column", data_columns)
 
 
 @pytest.fixture(scope="session")
 def tokamak():
-    return get_tokamak_from_environment()
-
-
-@pytest.fixture(scope="module")
-def handler(tokamak):
-    return get_tokamak_handler(tokamak)
+    return resolve_tokamak_from_environment()
 
 
 @pytest.fixture(scope="module")
 def shotlist(tokamak):
-    return get_tokamak_test_shot_ids(tokamak)
+    return get_tokamak_test_shotlist(tokamak)
 
 
 @pytest.fixture(scope="module")

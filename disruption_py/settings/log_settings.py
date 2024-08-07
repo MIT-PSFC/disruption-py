@@ -40,9 +40,6 @@ class LogSettings:
 
     _logging_has_been_setup: bool = False
 
-    def default():
-        return LogSettings()
-
     def logger(self, logger_name="disruption_py"):
         return self.setup_logging(logger_name)
 

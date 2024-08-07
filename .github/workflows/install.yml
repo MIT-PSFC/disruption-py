@@ -6,20 +6,21 @@ name: Install
 on:
   push:
     branches:
-      - 'main*'
-      - 'dev*'
+      - main
+      - dev
     paths:
       - "pyproject.toml"
       - "poetry.lock"
       - ".pip/*"
   pull_request:
     branches:
-      - 'main*'
-      - 'dev*'
+      - main
+      - dev
     paths:
       - "pyproject.toml"
       - "poetry.lock"
       - ".pip/*"
+  workflow_dispatch:
 
 
 jobs:

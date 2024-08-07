@@ -6,12 +6,12 @@ name: Tests
 on:
   push:
     branches:
-      - 'main*'
-      - 'dev*'
+      - main
+      - dev
   pull_request:
     branches:
-      - 'main*'
-      - 'dev*'
+      - main
+      - dev
   workflow_dispatch:
 
 jobs:
@@ -86,7 +86,7 @@ jobs:
           echo "${{ secrets.CMOD_LOGIN }}" \
           | tee ~/logbook.sybase_login \
           | sha256sum
-          echo DISPY_TOKAMAK=CMOD \
+          echo DISPY_TOKAMAK=cmod \
           | tee -a "$GITHUB_ENV"
 
       - name: Setup DIII-D
@@ -109,7 +109,7 @@ jobs:
           | sha256sum
           echo -e "[FreeTDS]\nDescription = FreeTDS\nDriver = $TDS" \
           | sudo tee -a /etc/odbcinst.ini
-          echo DISPY_TOKAMAK=D3D \
+          echo DISPY_TOKAMAK=d3d \
           | tee -a "$GITHUB_ENV"
 
       - name: Setup Python
