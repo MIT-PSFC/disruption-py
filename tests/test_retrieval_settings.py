@@ -21,6 +21,20 @@ def skip_on_fast_execution(method):
     return method
 
 
+@pytest.fixture(scope="module")
+def full_time_domain_data(tokamak, shotlist):
+    retrieval_settings = RetrievalSettings(
+        efit_nickname_setting="default", domain_setting="full"
+    )
+    results = get_shots_data(
+        tokamak=tokamak,
+        shotlist_setting=shotlist,
+        retrieval_settings=retrieval_settings,
+        num_processes=2,
+    )
+    return results
+
+
 @pytest.mark.parametrize("num_processes", [1, 2])
 def test_sql_cache(tokamak, shotlist, num_processes):
     """
@@ -78,20 +92,6 @@ def test_only_requested_columns(tokamak, shotlist, num_processes):
     )
     for res in results:
         assert set(res.columns) == {"v_loop", "q95", "shot", "time", "commit_hash"}
-
-
-@pytest.fixture(scope="module")
-def full_time_domain_data(tokamak, shotlist):
-    retrieval_settings = RetrievalSettings(
-        efit_nickname_setting="default", domain_setting="full"
-    )
-    results = get_shots_data(
-        tokamak=tokamak,
-        shotlist_setting=shotlist,
-        retrieval_settings=retrieval_settings,
-        num_processes=2,
-    )
-    return results
 
 
 @skip_on_fast_execution
