@@ -755,6 +755,36 @@ class D3DPhysicsMethods:
         tokamak=Tokamak.D3D,
     )
     def get_peaking_factors(params: PhysicsMethodParams):
+        '''
+        TODO: Add docstring
+
+        Notes:
+
+        This function calculates peaking factors for the shot number
+        given by the user corresponding to the times in the given timebase.
+        Electron temperature (Te_PF) and density (ne_PF) profile peaking 
+        factors are taken from Thomson scattering measurements, and the peaking
+        factors describing radiated power distributions (Rad_CVA and Rad_XDIV)
+        are taken from the 2pi foil bolometer system. 
+
+        - Te_PF: core Te vs. all Te peaking factor from Thomson scattering
+        - ne_PF: core ne vs. all ne peaking factor from Thomson scattering
+        - Rad_CVA: core vs. all brightness/P_rad metric from bolometer
+        - Rad_XDIV: divertor vs. all brightness/P_rad metric from bolometer
+
+        2020/05/22 - CR;  Repopulate the database with peaking factors data
+		                  The new columns are for Te, ne, Prad (CVA and XDIV)
+		                  for the control experiments in 2020. The new columns
+		                  have _RT tags to identify their purpose.
+
+        From disruption_warning_database_d3d.m:
+        These signals have the postfix "_RT" 
+        - Te_peaking_CVA_RT
+        - ne_peaking_CVA_RT
+        - Prad_peaking_CVA_RT
+        - Prad_peaking_XDIV_RT
+        Check these signals in the SQL DB.
+        '''
         ts_data_type = "blessed"  # either 'blessed', 'unblessed', or 'ptdata'
         # metric to use for core/edge binning (either 'psin' or 'rhovn')
         ts_radius = "rhovn"
