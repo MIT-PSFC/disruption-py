@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-from dataclasses import Field, dataclass, fields
-from typing import Any, Callable, List, Union
+from dataclasses import dataclass, fields
+from typing import Callable, List, Union
 
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.machine.tokamak import Tokamak
@@ -9,6 +9,10 @@ from disruption_py.machine.tokamak import Tokamak
 
 @dataclass(frozen=True)
 class MethodMetadata:
+    """
+    Holder for the arguments to the decorator.
+    """
+
     name: str
     populate: bool
 
@@ -42,9 +46,9 @@ class BoundMethodMetadata(MethodMetadata):
         """
         Evaluate arguments to decorators to usable values.
 
-        Some parameters provided to the physics_method decorators can take method that are evaluated
-        at runtime. `resolve_for` evaluates all of these methods and returns a new instance of `MethodMetadata`
-        without function parameters.
+        Some parameters provided to the physics_method decorators can take method
+        that are evaluated at runtime. `resolve_for` evaluates all of these methods
+        and returns a new instance of `MethodMetadata`without function parameters.
         """
         new_method_metadata_params = {}
         bind_to = (getattr(bound_method, "__self__", None),)
