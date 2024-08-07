@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 from typing import Dict
 
 import pandas as pd
@@ -21,38 +22,49 @@ ALL_ITERATION_COLUMNS = without_duplicates(
 )
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="module")
 def shot_database(tokamak) -> ShotDatabase:
     return get_database(tokamak=tokamak)
 
 
-@pytest.fixture(autouse=True, scope="class")
+@pytest.fixture(autouse=True, scope="module")
 def setup_shot_database(shotlist, shot_database):
     for shot in shotlist:
         shot_database.remove_shot_data(shot)
 
 
-@pytest.fixture(scope="class")
-def initial_mdsplus_data(shotlist, tokamak, setup_shot_database) -> Dict:
-    if tokamak is Tokamak.D3D:
-        pytest.skip("Skipping test on DIII-D")
+@pytest.fixture(scope="module")
+def initial_mdsplus_data(shotlist, tokamak, test_file_path_f) -> Dict:
+    output_settings = [
+        "dataframe",
+        "list",
+        "dict",
+        test_file_path_f(".csv"),
+        test_file_path_f(".hdf5"),
+    ]
+    if tokamak is Tokamak.CMOD:
+        output_settings.append(SQLOutputSetting(table_name=WRITE_DATABASE_TABLE_NAME))
+
     retrieval_settings = RetrievalSettings(
         time_setting="efit",
         efit_nickname_setting="disruption",
         run_columns=FIRST_ITERATION_COLUMNS,
+        run_tags=[],
         only_requested_columns=True,
     )
-    shot_data, _ = get_shots_data(
+    all_outputs = get_shots_data(
         tokamak=tokamak,
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
-        output_setting=[
-            "dataframe",
-            SQLOutputSetting(table_name=WRITE_DATABASE_TABLE_NAME),
-        ],
-        num_processes=1,
+        output_setting=output_settings,
+        num_processes=2,
     )
-    return shot_data
+    return all_outputs
+
+
+@pytest.fixture(scope="module")
+def initial_mdsplus_data_df(initial_mdsplus_data):
+    return initial_mdsplus_data[0]
 
 
 def assert_frame_equal_unordered(df1: pd.DataFrame, df2: pd.DataFrame):
@@ -65,22 +77,51 @@ def assert_frame_equal_unordered(df1: pd.DataFrame, df2: pd.DataFrame):
     pd.testing.assert_frame_equal(df1_sorted, df2_sorted, check_like=True)
 
 
-def test_update_data(
-    shotlist, initial_mdsplus_data, tokamak, shot_database: ShotDatabase
-) -> Dict:
+def test_output_exists(initial_mdsplus_data, shotlist, test_file_path_f, tokamak):
+    """
+    Test creation of all output formats except SQL.
+    """
+    # There is no SQL output for DIII-D
+    if tokamak is Tokamak.CMOD:
+        df_output, list_output, dict_output, csv_processed, hdf_processed, _ = (
+            initial_mdsplus_data
+        )
+    else:
+        df_output, list_output, dict_output, csv_processed, hdf_processed = (
+            initial_mdsplus_data
+        )
+
+    assert isinstance(df_output, pd.DataFrame), "DataFrame output does not exist"
+    assert isinstance(list_output, list), "List output does not exist"
+    assert isinstance(dict_output, dict), "Dict output does not exist"
+    assert (
+        csv_processed == hdf_processed == len(list_output) == len(shotlist)
+    ), "Number of shots does not match"
+    assert os.path.exists(test_file_path_f(".csv")), ".csv output does not exist"
+    assert os.path.exists(test_file_path_f(".hdf5")), ".hdf5 output does not exist"
+
+
+def test_sql_output_setting(shotlist, tokamak, shot_database: ShotDatabase) -> Dict:
+    """
+    Ensure SQL output setting works by reading from an initial writeback to
+    SQL, then by updating the SQL with another writeback, and making sure data from
+    MDSplus matches the data from SQL for both retrievals.
+    """
     if tokamak is Tokamak.D3D:
         pytest.skip("Skipping test on DIII-D")
     # Test initial database readback
     result = shot_database.get_shots_data(shotlist, sql_table=WRITE_DATABASE_TABLE_NAME)
     assert_frame_equal_unordered(
-        result[FIRST_ITERATION_COLUMNS], initial_mdsplus_data[FIRST_ITERATION_COLUMNS]
+        result[FIRST_ITERATION_COLUMNS],
+        initial_mdsplus_data_df[FIRST_ITERATION_COLUMNS],
     )
 
-    # do second retrieval that updates the data for the columns
+    # Do second retrieval that updates the data for the columns
     retrieval_settings = RetrievalSettings(
         time_setting="efit",
         efit_nickname_setting="disruption",
         run_columns=ALL_ITERATION_COLUMNS,
+        run_tags=[],
         only_requested_columns=True,
     )
     shot_data, _ = get_shots_data(
@@ -93,7 +134,7 @@ def test_update_data(
                 should_override_columns=SECOND_ITERATION_COLUMNS,
             ),
         ],
-        num_processes=1,
+        num_processes=2,
     )
     result = shot_database.get_shots_data(shotlist, sql_table=WRITE_DATABASE_TABLE_NAME)
     assert_frame_equal_unordered(
