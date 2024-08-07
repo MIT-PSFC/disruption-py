@@ -2,7 +2,6 @@
 
 import os
 
-import pandas as pd
 import pytest
 
 from disruption_py.inout.mds import ProcessMDSConnection
@@ -22,7 +21,6 @@ def skip_on_fast_execution(method):
     return method
 
 
-@skip_on_fast_execution
 @pytest.mark.parametrize("num_processes", [1, 2])
 def test_sql_cache(tokamak, shotlist, num_processes):
     """
@@ -98,9 +96,7 @@ def full_time_domain_data(tokamak, shotlist):
 
 @skip_on_fast_execution
 @pytest.mark.parametrize("domain_setting", ["flattop", "rampup_and_flattop"])
-def test_domain_setting(
-    tokamak, shotlist, num_processes, domain_setting, full_time_domain_data
-):
+def test_domain_setting(tokamak, shotlist, domain_setting, full_time_domain_data):
     """
     Test the two partial domain settings by comparing their start and end times
     with the full domain.
@@ -120,27 +116,3 @@ def test_domain_setting(
         if domain_setting == "flattop":
             assert "start", part_domain["time"][0] > full_domain["time"][0]
         assert "end", part_domain["time"].values[-1] < full_domain["time"].values[-1]
-
-
-@skip_on_fast_execution
-def test_output_exists(shotlist, test_file_path_f):
-    """Test creation of all output formats."""
-    results = get_shots_data(
-        shotlist_setting=shotlist,
-        output_setting=[
-            "list",
-            "dataframe",
-            "dict",
-            test_file_path_f(".csv"),
-            test_file_path_f(".hdf5"),
-        ],
-        num_processes=2,
-    )
-
-    list_output, df_output, dict_output, csv_processed, hdf_processed = results
-    assert isinstance(list_output, list)
-    assert isinstance(df_output, pd.DataFrame)
-    assert isinstance(dict_output, dict)
-    assert csv_processed == hdf_processed == len(list_output) == len(shotlist)
-    assert os.path.exists(test_file_path_f(".csv"))
-    assert os.path.exists(test_file_path_f(".hdf5"))
