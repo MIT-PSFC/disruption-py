@@ -917,7 +917,7 @@ class CmodPhysicsMethods:
         # Calculate Te peaking factor
         Te_PF = np.full(len(TS_time), np.nan)
         (itimes,) = np.where((TS_time > 0) & (TS_time < times[-1]))
-        test_time = 1.0
+        test_time = 0.578
         itest = np.argmin(np.abs(TS_time - test_time))
         for itime in itimes:
             TS_Te_arr = TS_Te[:, itime]
@@ -1110,7 +1110,7 @@ class CmodPhysicsMethods:
         Te = Te.T
         radii = radii.T
 
-        test_time = 1.0
+        test_time = 0.578
         itest = np.argmin(np.abs(efit_time - test_time))
         for i in range(len(efit_time)):
             sorted_index = np.argsort(radii[i,:])
@@ -1135,8 +1135,9 @@ class CmodPhysicsMethods:
             nonthermal_overlap_indices = np.full(len(radii[i,:]), False)
             r_calib = radii[i,calib_indices]
             # Choosing point slightly inside r0 + a and checking outwards seems to do reasonably well
-            r_edge = r_calib[np.argmax(r_calib > r0[i] + aminor[i]) - 2]
-            indx_edge = np.searchsorted(radii[i,:], r_edge)
+            calib_edge = calib_indices & (radii[i,:] > r0[i] + 0.85*aminor[i])
+            te_edge = np.min(Te[i,calib_edge])
+            indx_edge = np.argmin(np.abs(Te[i,:] - te_edge))
             for j in range(indx_edge + 1, len(radii[i,:])):
                 if Te[i,j] > 1.2 * Te[i,indx_edge]:
                     nonthermal_overlap_indices[j] = True
@@ -1148,10 +1149,16 @@ class CmodPhysicsMethods:
                 core_indices = (np.abs(radii[i,okay_indices[i,:]] - r0[i]) < 0.2 * aminor[i])
                 if (np.sum(core_indices) > 0):
                     rsorted = np.sort(radii[i,okay_indices[i,:]])
-                    if (rsorted[0] > r_inboard): r_inboard = rsorted[0]
+                    if (rsorted[0] > r_inboard):
+                        print(efit_time[i])
+                        print(rsorted[0])
+                        r_inboard = rsorted[0]
                     if (rsorted[-1] < r_outboard): r_outboard = rsorted[-1]
                     if (len(rsorted) < npoints): 
                         npoints = len(rsorted)
+        print(r_inboard)
+        print(r_outboard)
+        print(npoints)
 
         # Compute peaking factor and width
         Te_PF = np.full(len(efit_time), np.nan)
@@ -1180,14 +1187,13 @@ class CmodPhysicsMethods:
                 if (np.sum(core_indices) > 0):
                     Te_PF[i] = np.nanmean(te_equal_spaced[core_indices]) / np.nanmean(te_equal_spaced)
                     if (i == itest):
-                        plt.scatter(radii[itest,:], Te[itest,:], c='k', marker='x', s=35, label='GPC Raw')
+                        plt.scatter(radii[itest,:], Te[itest,:], c='k', marker='x', s=45, label='GPC Raw')
                         rsample = np.linspace(r.min(), r.max(), 100)
                         plt.plot(rsample, gauss(rsample, pa, pmu, np.abs(psigma)), c='k', linestyle='--', label='Fit of GPC Raw')
                         plt.scatter(r_equal_spaced, te_equal_spaced, c='b', marker='o', s=30, label='GPC Uniform Radial Basis')
                         #plt.scatter(r_equal_spaced[core_indices], te_equal_spaced[core_indices], c='r', marker='.')
                         plt.axvline(r0[i]+0.2*aminor[i], c='gray', linestyle='--', label="'Core' Boundary")
                         plt.axvline(r0[i]-0.2*aminor[i], c='gray', linestyle='--')
-                        plt.axvline(r0[i] + aminor[i], linestyle='--')
                         plt.legend()
                         plt.xlabel("R [m]", fontsize=14)
                         plt.ylabel("Te [keV]", fontsize=14)
