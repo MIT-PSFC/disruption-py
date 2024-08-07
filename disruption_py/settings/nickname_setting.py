@@ -121,10 +121,10 @@ class DefaultNicknameSetting(NicknameSetting):
         }
 
     def _d3d_nickname(self, params: NicknameSettingParams):
-        return "analysis"
+        return "efit01"
 
     def _cmod_nickname(self, params: NicknameSettingParams):
-        return "efit01"
+        return "analysis"
 
     def _get_tree_name(self, params: NicknameSettingParams) -> str:
         raise NotImplementedError(
