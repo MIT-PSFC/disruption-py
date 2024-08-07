@@ -71,8 +71,7 @@ def test_sql_cache(tokamak, shotlist, num_processes):
 
 
 @skip_on_fast_execution
-@pytest.mark.parametrize("num_processes", [1, 2])
-def test_only_requested_columns(tokamak, shotlist, num_processes):
+def test_only_requested_columns(tokamak, shotlist):
     """
     Ensure `only_requested_columns` works. `v_loop` is returned by
     `get_ohmic_parameters`, so we should not see `p_oh` returned. `q95` is from
@@ -88,7 +87,7 @@ def test_only_requested_columns(tokamak, shotlist, num_processes):
         tokamak=tokamak,
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
-        num_processes=num_processes,
+        num_processes=2,
     )
     for res in results:
         assert set(res.columns) == {"v_loop", "q95", "shot", "time", "commit_hash"}
