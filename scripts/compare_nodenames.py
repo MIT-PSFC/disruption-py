@@ -2,22 +2,22 @@
 
 import argparse
 import json
-from multiprocessing import Pool
 import re
 import sys
 import warnings
-
-import numpy as np
-import pandas as pd
+from multiprocessing import Pool
 
 import MDSplus as mds
-from MDSplus.tree import Tree, TreeNode
+import numpy as np
+import pandas as pd
 from MDSplus.compound import Signal
-from MDSplus.mdsExceptions import TreeNODATA, TreeFOPENR
+from MDSplus.mdsExceptions import TreeFOPENR, TreeNODATA
+from MDSplus.tree import Tree, TreeNode
 
 
 class NodeNameComparer:
-    """Compare two node names in MDSPlus to determine which one you should rely
+    """
+    Compare two node names in MDSPlus to determine which one you should rely
     on for fetching data and which one is an alias that may have only been created
     for newer shots.
 
@@ -32,6 +32,11 @@ class NodeNameComparer:
     it was added only to new shots.
     """
 
+    VALUES_IDX = 0
+    ALIAS_IDX = 1
+    EXPRESSION_IDX = 2
+    EMPTY_IDX = 3
+
     def __init__(
         self,
         shots: list[int],
@@ -42,9 +47,9 @@ class NodeNameComparer:
     ):
         """
         Params:
-            shots: List of shot ids. If None, then the default is 20 old shots
-                and 20 new shots
-            ref: Referent node name
+            shots: List of shot ids. If None, then the default is 5 old shots
+                and 5 new shots
+            ref: Reference node name
             new: (optional) New, alias, node name
             num_processes: number of processes with which to open MDSPlus trees
             expression: str, the expected expression (if applicable)
@@ -71,10 +76,6 @@ class NodeNameComparer:
         self.new = new
 
         self.labels = ["values", "alias", "expression", "empty"]
-        self.VALUES_IDX = 0
-        self.ALIAS_IDX = 1
-        self.EXPRESSION_IDX = 2
-        self.EMPTY_IDX = 3
 
         self.parent_name = r"\efit_aeqdsk"
         self.num_processes = min(len(self.shots), num_processes)
@@ -83,7 +84,9 @@ class NodeNameComparer:
 
     @staticmethod
     def is_alias(record: Signal) -> bool:
-        """Return True if the node points to another record that has data."""
+        """
+        Return True if the node points to another record that has data.
+        """
         try:
             record.getNid()
             return True
@@ -92,7 +95,9 @@ class NodeNameComparer:
         return False
 
     def is_expression(self, record: Signal) -> bool:
-        """Return True if the node is an expression made of other nodes."""
+        """
+        Return True if the node is an expression made of other nodes.
+        """
         node_str = str(record)
         # Find the expression inside of build signal
         match = re.search(r"Build_Signal\(([^,]+),", node_str)
@@ -114,15 +119,19 @@ class NodeNameComparer:
 
     @staticmethod
     def get_node(node_name: str, parent: TreeNode) -> TreeNode:
-        """Return the MDSPlus node off of the parent node."""
+        """
+        Return the MDSPlus node off of the parent node.
+        """
         try:
             return parent.getNode(node_name)
         except mds.mdsExceptions.TreeNNF:
             return None
 
     def compare_names_one_shot(self, shot: int) -> tuple[int, int]:
-        """Return the indices of the comparison table representing a relationship
-        between ref and node."""
+        """
+        Return the indices of the comparison table representing a relationship
+        between ref and node.
+        """
         try:
             tree = Tree("analysis", shot)
         except mds.mdsExceptions.TreeFOPENR:
@@ -149,15 +158,15 @@ class NodeNameComparer:
             warnings.warn(f"ref node '{self.ref}' not found, shot: {shot}")
             # new has no data
             if new_node is None:
-                return (self.EMPTY_IDX, self.EMPTY_IDX)
+                return (NodeNameComparer.EMPTY_IDX, NodeNameComparer.EMPTY_IDX)
             # new is an alias
             if NodeNameComparer.is_alias(new_record):
-                return (self.ALIAS_IDX, self.EMPTY_IDX)
+                return (NodeNameComparer.ALIAS_IDX, NodeNameComparer.EMPTY_IDX)
             # new is an expression
             if self.is_expression(new_record):
-                return (self.EXPRESSION_IDX, self.EMPTY_IDX)
+                return (NodeNameComparer.EXPRESSION_IDX, NodeNameComparer.EMPTY_IDX)
             # new has data
-            return (self.VALUES_IDX, self.EMPTY_IDX)
+            return (NodeNameComparer.VALUES_IDX, NodeNameComparer.EMPTY_IDX)
         # ref is an alias
         if NodeNameComparer.is_alias(ref_record):
             if new_node is None:
@@ -165,18 +174,18 @@ class NodeNameComparer:
                     f"ref '{self.ref}' is an alias, but new '{self.new}' has no "
                     + f"data, shot: {shot}"
                 )
-                return (self.EMPTY_IDX, self.ALIAS_IDX)
+                return (NodeNameComparer.EMPTY_IDX, NodeNameComparer.ALIAS_IDX)
             if NodeNameComparer.is_alias(new_record):
                 warnings.warn(
                     f"No data found: ref '{self.ref}' is an alias and new '{self.new}'"
                     + f" is an alias, shot: {shot}"
                 )
             elif self.is_expression(new_record):
-                return (self.EXPRESSION_IDX, self.ALIAS_IDX)
+                return (NodeNameComparer.EXPRESSION_IDX, NodeNameComparer.ALIAS_IDX)
             else:
                 # ref is an alias for new data
                 if ref_record.getNid() == new_node.getNid():
-                    return (self.VALUES_IDX, self.ALIAS_IDX)
+                    return (NodeNameComparer.VALUES_IDX, NodeNameComparer.ALIAS_IDX)
                 # ref is an alias, new is data, but ref does not point to new
                 warnings.warn(
                     f"No connection: ref '{self.ref}' does not point to new "
@@ -185,11 +194,11 @@ class NodeNameComparer:
         # ref is expression
         elif self.is_expression(ref_record):
             if new_node is None:
-                return (self.EMPTY_IDX, self.EXPRESSION_IDX)
+                return (NodeNameComparer.EMPTY_IDX, NodeNameComparer.EXPRESSION_IDX)
             if NodeNameComparer.is_alias(new_record):
                 # new is an alias for ref
                 if new_record.getNid() == ref_node.getNid():
-                    return (self.ALIAS_IDX, self.EXPRESSION_IDX)
+                    return (NodeNameComparer.ALIAS_IDX, NodeNameComparer.EXPRESSION_IDX)
                 # new is an alias, but not for ref
                 warnings.warn(
                     f"No connection: new '{self.new}' does not point to ref "
@@ -197,22 +206,22 @@ class NodeNameComparer:
                 )
             # new has data
             else:
-                return (self.VALUES_IDX, self.EXPRESSION_IDX)
+                return (NodeNameComparer.VALUES_IDX, NodeNameComparer.EXPRESSION_IDX)
         # ref has data
         else:
             if new_node is None:
-                return (self.EMPTY_IDX, self.VALUES_IDX)
+                return (NodeNameComparer.EMPTY_IDX, NodeNameComparer.VALUES_IDX)
             if NodeNameComparer.is_alias(new_record):
                 # new is an alias for ref
                 if new_record.getNid() == ref_node.getNid():
-                    return (self.ALIAS_IDX, self.VALUES_IDX)
+                    return (NodeNameComparer.ALIAS_IDX, NodeNameComparer.VALUES_IDX)
                 # new is an alias, but not for ref
                 warnings.warn(
                     f"No connection: new '{self.new}' does not point to ref "
                     + f"'{self.ref}', shot: {shot}"
                 )
             elif self.is_expression(new_record):
-                return (self.EXPRESSION_IDX, self.VALUES_IDX)
+                return (NodeNameComparer.EXPRESSION_IDX, self.VALUES_IDX)
             # new has data
             else:
                 warnings.warn(
@@ -227,23 +236,11 @@ class NodeNameComparer:
         The columns and rows, for ref and new respectively, are
         | values | alias | expression | empty |
         """
-        json_keys = {
-            (self.VALUES_IDX, self.VALUES_IDX): "vv",
-            (self.VALUES_IDX, self.ALIAS_IDX): "va",
-            (self.VALUES_IDX, self.EXPRESSION_IDX): "vx",
-            (self.VALUES_IDX, self.EMPTY_IDX): "ve",
-            (self.ALIAS_IDX, self.VALUES_IDX): "av",
-            (self.ALIAS_IDX, self.ALIAS_IDX): "aa",
-            (self.ALIAS_IDX, self.EXPRESSION_IDX): "ax",
-            (self.ALIAS_IDX, self.EMPTY_IDX): "ae",
-            (self.EXPRESSION_IDX, self.VALUES_IDX): "xv",
-            (self.EXPRESSION_IDX, self.ALIAS_IDX): "xa",
-            (self.EXPRESSION_IDX, self.EXPRESSION_IDX): "xx",
-            (self.EXPRESSION_IDX, self.EMPTY_IDX): "xe",
-            (self.EMPTY_IDX, self.VALUES_IDX): "ev",
-            (self.EMPTY_IDX, self.ALIAS_IDX): "ea",
-            (self.EMPTY_IDX, self.EXPRESSION_IDX): "ex",
-            (self.EMPTY_IDX, self.EMPTY_IDX): "ee",
+        char_map = {
+            NodeNameComparer.VALUES_IDX: "v",
+            NodeNameComparer.ALIAS_IDX: "a",
+            NodeNameComparer.EXPRESSION_IDX: "x",
+            NodeNameComparer.EMPTY_IDX: "e",
         }
         shot_log = {}
         comparison_table = np.zeros(shape=(len(self.labels), len(self.labels)))
@@ -254,16 +251,19 @@ class NodeNameComparer:
                     continue
                 comparison_table[table_idx] += 1
 
-                if json_keys[table_idx] not in shot_log:
-                    shot_log[json_keys[table_idx]] = []
-                shot_log[json_keys[table_idx]].append(self.shots[shot_idx])
+                log_chars = char_map[table_idx[0]] + char_map[table_idx[1]]
+                if log_chars not in shot_log:
+                    shot_log[log_chars] = []
+                shot_log[log_chars].append(self.shots[shot_idx])
 
         with open(f"{self.ref}-{self.new}.json", "w", encoding="utf8") as f:
             f.write(json.dumps(shot_log))
         return comparison_table
 
     def get_pretty_table(self) -> pd.DataFrame:
-        """Convert values in table to percents, add column and row labels."""
+        """
+        Convert values in table to percents, add column and row labels.
+        """
         comparison_table = self.get_comparison_table()
         comparison_table = np.vectorize(
             lambda item: f"{item:.0f} ({item / len(self.shots) * 100:.0f}%)"
@@ -282,14 +282,14 @@ if __name__ == "__main__":
         action="store",
         default=None,
         help="Shot number(s) to test, txt file(s) containing the shots, or pipe "
-        + "shot numbers from stdin. If not specified, use 20 new and 20 old shots.",
+        + "shot numbers from stdin. If not specified, use 5 new and 5 old shots.",
     )
     parser.add_argument(
         "--ref",
         type=str,
         action="store",
         required=True,
-        help="Referent node name",
+        help="reference node name",
     )
     parser.add_argument(
         "--new",
