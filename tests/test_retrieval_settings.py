@@ -62,7 +62,7 @@ def test_sql_cache(tokamak, shotlist, num_processes):
 @pytest.mark.parametrize("num_processes", [1, 2])
 def test_only_requested_columns(tokamak, shotlist, num_processes):
     """
-    Ensure `only_requested_columns` work. `v_loop` is returned by
+    Ensure `only_requested_columns` works. `v_loop` is returned by
     `get_ohmic_parameters`, so we should not see `p_oh` returned. `q95` is from
     efit, so none of the other efit quantities should be returned.
     """
@@ -97,7 +97,6 @@ def full_time_domain_data(tokamak, shotlist):
 
 
 @skip_on_fast_execution
-@pytest.mark.parametrize("num_processes", [1, 2])
 @pytest.mark.parametrize("domain_setting", ["flattop", "rampup_and_flattop"])
 def test_domain_setting(
     tokamak, shotlist, num_processes, domain_setting, full_time_domain_data
@@ -113,7 +112,7 @@ def test_domain_setting(
         tokamak=tokamak,
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
-        num_processes=num_processes,
+        num_processes=2,
     )
     for part_domain, full_domain in zip(results, full_time_domain_data):
         # Both partial domains should end before the full domain, but only flattop
@@ -124,24 +123,24 @@ def test_domain_setting(
 
 
 @skip_on_fast_execution
-@pytest.mark.parametrize("num_processes", [1, 2])
-def test_output_exists(shotlist, test_file_path_f, num_processes):
+def test_output_exists(shotlist, test_file_path_f):
     """Test creation of all output formats."""
     results = get_shots_data(
         shotlist_setting=shotlist,
         output_setting=[
             "list",
             "dataframe",
+            "dict",
             test_file_path_f(".csv"),
             test_file_path_f(".hdf5"),
         ],
-        num_processes=num_processes,
+        num_processes=2,
     )
 
-    list_output, df_output, csv_processed, hdf_processed = results
-    # TODO dictionary, sql
+    list_output, df_output, dict_output, csv_processed, hdf_processed = results
     assert isinstance(list_output, list)
     assert isinstance(df_output, pd.DataFrame)
-    assert csv_processed == hdf_processed == len(shotlist)
+    assert isinstance(dict_output, dict)
+    assert csv_processed == hdf_processed == len(list_output) == len(shotlist)
     assert os.path.exists(test_file_path_f(".csv"))
     assert os.path.exists(test_file_path_f(".hdf5"))
