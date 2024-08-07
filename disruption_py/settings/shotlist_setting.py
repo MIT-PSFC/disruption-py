@@ -159,8 +159,6 @@ ShotlistSettingType = Union[
 ]
 
 
-
-
 def shotlist_setting_runner(shotlist_setting, params: ShotlistSettingParams):
     """
     Retrieve list of shot ids for the given shotlist setting.
@@ -179,28 +177,28 @@ def shotlist_setting_runner(shotlist_setting, params: ShotlistSettingParams):
         shotlist_setting_object = _get_shotlist_setting_mappings.get(
             shotlist_setting, None
         )
-        if shot_ids_request_object is not None:
-            return shot_ids_request_object.get_shot_ids(params)
+        if shotlist_setting_object is not None:
+            return shotlist_setting_object.get_shotlist(params)
 
-    if isinstance(shot_ids_request, str):
+    if isinstance(shotlist_setting, str):
         # assume that it is a file path
-        for suffix, shot_ids_request_type in _file_suffix_to_shotlist_setting.items():
-            if shot_ids_request.endswith(suffix):
-                return shot_ids_request_type(shot_ids_request).get_shot_ids(params)
+        for suffix, shotlist_setting_type in _file_suffix_to_shotlist_setting.items():
+            if shotlist_setting.endswith(suffix):
+                return shotlist_setting_type(shotlist_setting).get_shotlist(params)
 
-    if isinstance(shot_ids_request, dict):
-        shot_ids_request = {
-            map_string_to_enum(tokamak, Tokamak): shot_ids_request_mapping
-            for tokamak, shot_ids_request_mapping in shot_ids_request.items()
+    if isinstance(shotlist_setting, dict):
+        shotlist_setting = {
+            map_string_to_enum(tokamak, Tokamak): shotlist_setting_mapping
+            for tokamak, shotlist_setting_mapping in shotlist_setting.items()
         }
-        chosen_request = shot_ids_request.get(params.tokamak, None)
-        if chosen_request is not None:
-            return shotlist_setting_runner(chosen_request, params)
+        chosen_setting = shotlist_setting.get(params.tokamak, None)
+        if chosen_setting is not None:
+            return shotlist_setting_runner(chosen_setting, params)
 
     if isinstance(shotlist_setting, (list, np.ndarray)):
         all_results = []
-        for request in shot_ids_request:
-            sub_result = shotlist_setting_runner(request, params)
+        for setting in shotlist_setting:
+            sub_result = shotlist_setting_runner(setting, params)
             if sub_result is not None:
                 all_results.append(sub_result)
 
