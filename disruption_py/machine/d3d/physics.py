@@ -751,7 +751,8 @@ class D3DPhysicsMethods:
     # https://docs.google.com/document/d/1R7fI7mCOkMQGt8xX2nS6ZmNNkcyvPQ7NmBfRPICFaFs/edit?usp=sharing
     @staticmethod
     @physics_method(
-        columns=["te_pf", "ne_pf", "rad_cva", "rad_xdiv"],
+        # columns=["te_pf", "ne_pf", "rad_cva", "rad_xdiv"],
+        columns=['te_peaking_cva_rt', "ne_peaking_cva_rt", "prad_peaking_cva_rt", "prad_peaking_xdiv_rt"],
         tokamak=Tokamak.D3D,
     )
     def get_peaking_factors(params: PhysicsMethodParams):
@@ -919,11 +920,17 @@ class D3DPhysicsMethods:
             )
             rad_cva = interp1(p_rad["t"], rad_cva.T, params.times)
             rad_xdiv = interp1(p_rad["t"], rad_xdiv.T, params.times)
+        # output = {
+        #     "te_pf": te_pf,
+        #     "ne_pf": ne_pf,
+        #     "rad_cva": rad_cva,
+        #     "rad_xdiv": rad_xdiv,
+        # }
         output = {
-            "te_pf": te_pf,
-            "ne_pf": ne_pf,
-            "rad_cva": rad_cva,
-            "rad_xdiv": rad_xdiv,
+            "te_peaking_cva_rt": te_pf, 
+            "ne_peaking_cva_rt": ne_pf, 
+            "prad_peaking_cva_rt": rad_cva, 
+            "prad_peaking_xdiv_rt": rad_xdiv,
         }
         return output
 
