@@ -2,6 +2,7 @@
 # Installation
 
 Two _public_ installations are currently maintained automatically:
+
 - on the C-MOD MFE Workstations, and
 - on the DIII-D Omega cluster.
 
@@ -17,6 +18,7 @@ Snippets for quick addition to a user's `.bashrc` file are provided in the subse
 #### Python
 
 Four Python versions are installed as [miniconda](https://docs.anaconda.com/free/miniconda/) distributions:
+
 - Python 3.9
 - Python 3.10
 - Python 3.11
@@ -28,13 +30,14 @@ They may also be used directly from the `"$DISPY_DIR"/miniconda` folder.
 #### Poetry
 
 We use [Poetry](https://python-poetry.org/) for dependency management.
-The helper scripts automatically activate the appropriate virtual environment, so direct Poetry usage is not needed.
 
+The helper scripts automatically activate the appropriate virtual environment, so direct Poetry usage is not needed.
 It may be used directly from the `"$DISPY_DIR"/poetry` folder.
 
 #### Branches
 
 Two branches are installed publicly and kept up to date:
+
 - `main`, for stable workflows;
 - `dev`, for fresh features.
 
@@ -124,6 +127,7 @@ We currently provide an installation guide for Ubuntu-based boxes, but generic U
 ### Pre-requisites
 
 Disruption-py currently needs non-python software to be installed as a pre-requisite:
+
 1. [MDSplus](https://www.mdsplus.org/): to connect to MDSplus data servers,
 2. SQL drivers: to connect to SQL database servers.
 
@@ -132,8 +136,11 @@ MDSplus can be installed using their [installation guide](https://www.mdsplus.or
 On Ubuntu-based systems, SQL drivers might be installed for example through the [Microsoft ODBC Driver](https://learn.microsoft.com/en-us/sql/connect/odbc/linux-mac/installing-the-microsoft-odbc-driver-for-sql-server?view=sql-server-ver16) `msodbcsql18` package, or [FreeTDS](https://www.freetds.org/) `{tds,unix}odbc` packages.
 
 Note:
+
+
 On C-MOD workstations, MDSplus is pre-installed system-wide but its configuration is only set up for the system python through a small path file (e.g.: `/usr/lib/python3/dist-packages/mdsplus.pth`).
 For virtual environments, even those created off the system python, this small path file needs to be copied over in the `site-packages` folder (e.g.: `venv/lib/python3.10/site-packages/`) as it is _not inherited_ upon creation of the virtual environment.
+
 Alternatively, one might adopt the more standard and more obvious solution of adding the equivalent path to the `PYTHONPATH` environment variable, which does get read by virtual environments and inherited by subshells.
 
 ### Requirements

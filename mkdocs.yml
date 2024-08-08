@@ -27,7 +27,7 @@ extra_css:
 nav:
   - Overview:
       - Background: index.md
-      - Installation: INSTALL.md
+      - Installation: install.md
       - Quickstart: quickstart/usage_quickstart.md
   - Usage:
       - Entry points:
