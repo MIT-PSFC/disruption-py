@@ -4,18 +4,17 @@ import traceback
 import warnings
 from importlib import resources
 
+import disruption_py.data
 import numpy as np
 import pandas as pd
-from scipy.signal import ShortTimeFFT
-from scipy.signal.windows import kaiser
-from MDSplus import mdsExceptions
-
-import disruption_py.data
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import gaussian_fit, interp1, smooth
 from disruption_py.machine.tokamak import Tokamak
+from MDSplus import mdsExceptions
+from scipy.signal import ShortTimeFFT
+from scipy.signal.windows import kaiser
 
 warnings.filterwarnings("error", category=RuntimeWarning)
 
@@ -1322,7 +1321,70 @@ class CmodTearingMethods:
             ece_dataframe["ece_te", channel_number] = ece
 
         return ece_dataframe
-    
+
+    def setup_stfft(f_mirnov=2.5e6, f_target=1e3, frequency_resolution=None) -> ShortTimeFFT:
+        """Set up the Short Time Fast Fourier Transform object for the mirnov signals
+
+        Parameters
+        ----------
+        f_mirnov : float, optional (default=2.5e6)
+            The sampling frequency of the mirnov signals
+        f_target : float, optional (default=1e3)
+            The sampling frequency of the target timebase
+        frequency_resolution : float, optional (default=None)
+            The width of the frequency bins in the FFT. If None, will be set to 250 Hz
+
+        Returns
+        -------
+        SFT : scipy.signal.ShortTimeFFT
+            The ShortTimeFFT object
+        """
+        # Frequency resolution is the minimum frequency of interest, the size of the bins
+        if frequency_resolution is None:
+            frequency_resolution = 250
+
+        # Window size is the number of samples in the window
+        # Think of how many samples you need to measure the minimum frequency you care about
+        window_size = int(f_mirnov / frequency_resolution)
+        # Hop is how much the window is slid between timesteps.
+        # Slide the window based on the target frequency so interpolation is minimized
+        hop = int(f_mirnov / f_target)
+        # Something something kaiser window is optimal, just pick a beta that works
+        window = kaiser(window_size, beta=14)
+        SFT = ShortTimeFFT(win=window, hop=hop, fs=f_mirnov)
+        return SFT
+
+    def get_expected_cross_phase(mode: tuple[int, int], theta_1: float, phi_1: float, theta_2: float, phi_2: float):
+        """Calculate the expected cross phase between two mirnov probes if there were an m/n mode present
+        This cross phase will match if it is calculated like so:
+        cross_spectrum = probe_1_fft * np.conj(probe_2_fft)
+        cross_phase = np.angle(cross_spectrum) % (2 * np.pi)
+
+        Parameters:
+        ----------
+        mode : tuple[int, int]
+            The m/n mode that is expected to be present
+        theta_1 : float
+            The poloidal angle of the first mirnov probe [rad]
+        phi_1 : float
+            The toroidal angle of the first mirnov probe [rad]
+        theta_2 : float
+            The poloidal angle of the second mirnov probe [rad]
+        phi_2 : float
+            The toroidal angle of the second mirnov probe [rad]
+
+        Returns:
+        ----------
+        expected_cross_phase : float
+            The expected cross phase between the two probes.
+        """
+
+        poloidal_phase = mode[0] * (theta_2 - theta_1)
+        toroidal_phase = mode[1] * (phi_2 - phi_1)
+        expected_cross_phase = (poloidal_phase + toroidal_phase) % (2 * np.pi)
+
+        return expected_cross_phase
+
     @staticmethod
     @physics_method(
         tags=["mirnov_spectrogram", "cross_spectrum_real", "cross_spectrum_imag", "cross_power", "cross_phase", "cross_coherence"], tokamak=Tokamak.CMOD
@@ -1379,24 +1441,17 @@ class CmodTearingMethods:
             mirnov_signal_1 = np.full(len(params.times), np.nan)
 
         # Test to make sure the sampling frequency is consistent
-        mirnov_sample_freq = 2.5e6
         actual_mirnov_sample_freq = 1 / (mirnov_times[1] - mirnov_times[0])    # Mirnov sampling rate
         if actual_mirnov_sample_freq < 2.4e6 or actual_mirnov_sample_freq > 2.6e6:
             print("Mirnov sample frequency is not 2.5 MHz. Be warned!!!")
-            mirnov_sample_freq = actual_mirnov_sample_freq
+            f_mirnov = actual_mirnov_sample_freq
+        else:
+            f_mirnov = 2.5e6
 
-        # This is a tradeoff. Cannot have freq_resolution * temporal_resolution > mirnov_sample_freq
-        temporal_resolution = 1 / (params.times[1] - params.times[0]) # however fast the timebase is
-        freq_resolution = int(mirnov_sample_freq / temporal_resolution) # get the maximum frequency resolution possible
+        f_timebase = 1 / (params.times[1] - params.times[0]) # however fast the timebase is
 
-        # Window size is the number of samples in the window
-        # Think of how many samples you need to measure the minimum frequency you care about
-        window_size = int(mirnov_sample_freq / freq_resolution)
-        # Hop is how much the window is slid between timesteps.
-        # Slide the window based on the temporal resolution so interpolation is minimized
-        hop = int(mirnov_sample_freq / temporal_resolution)
-        window = kaiser(window_size, beta=14)
-        SFT = ShortTimeFFT(window, hop=hop, fs=mirnov_sample_freq)
+        SFT = CmodPhysicsMethods.setup_stfft(f_mirnov=f_mirnov, f_target=f_timebase)
+
         mirnov_signal_0_fft = SFT.stft(mirnov_signal_0)
         mirnov_signal_1_fft = SFT.stft(mirnov_signal_1)
 
