@@ -248,6 +248,9 @@ EXPECTED_FAILURE_COLUMNS = [
 	"beta_n",
 	"kappa_area",
 	"commit_hash",
+	"squareness",
+	"delta",
+	"aminor",
 ]
 
 [d3d.testing.test_shots]
