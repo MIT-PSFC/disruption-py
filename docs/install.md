@@ -137,7 +137,6 @@ On Ubuntu-based systems, SQL drivers might be installed for example through the 
 
 Note:
 
-
 On C-MOD workstations, MDSplus is pre-installed system-wide but its configuration is only set up for the system python through a small path file (e.g.: `/usr/lib/python3/dist-packages/mdsplus.pth`).
 For virtual environments, even those created off the system python, this small path file needs to be copied over in the `site-packages` folder (e.g.: `venv/lib/python3.10/site-packages/`) as it is _not inherited_ upon creation of the virtual environment.
 
