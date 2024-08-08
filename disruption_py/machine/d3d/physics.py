@@ -778,12 +778,12 @@ class D3DPhysicsMethods:
 		                  have _RT tags to identify their purpose.
 
         From disruption_warning_database_d3d.m:
-        These signals have the postfix "_RT" 
+        The correct column names are:
         - Te_peaking_CVA_RT
         - ne_peaking_CVA_RT
         - Prad_peaking_CVA_RT
         - Prad_peaking_XDIV_RT
-        Check these signals in the SQL DB.
+        SQL table data are available for all 4 testing shots
         '''
         ts_data_type = "blessed"  # either 'blessed', 'unblessed', or 'ptdata'
         # metric to use for core/edge binning (either 'psin' or 'rhovn')
