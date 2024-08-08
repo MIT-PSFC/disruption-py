@@ -5,7 +5,7 @@ homepage = "https://disruptions.mit.edu/"
 license = "MIT"
 name = "disruption-py"
 readme = "README.md"
-version = "0.7.0"
+version = "0.8.0"
 
 [tool.poetry.dependencies]
 python = "^3.9"
