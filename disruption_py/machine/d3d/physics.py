@@ -837,6 +837,7 @@ class D3DPhysicsMethods:
             rad_cva = [np.nan]
             rad_xdiv = [np.nan]
         try:
+            # BUG: te, ne = arrays of nans
             ts = D3DPhysicsMethods._get_ne_te(params)
             # NOTE: what's' this loop doing?
             for option in ts_options:
@@ -980,8 +981,8 @@ class D3DPhysicsMethods:
         poloidal plane.
         Parameters
         ----------
-        ts: np.ndarray
-            Timebase to interpolate to
+        ts: dict
+            Thomson scattering data returned by D3DPhysicsMethods._get_ne_te(...)
         efit_dict: dict
             Dictionary with the efit data. Keys are 'time', 'r', 'z', 'psin', 'rhovn'
         Returns
@@ -1212,7 +1213,7 @@ class D3DPhysicsMethods:
                     )
             # Place NaNs for broken channels
             lasers[laser]["te"][lasers[laser]["te"] == 0] = np.nan
-            lasers[laser]["ne"][np.where(lasers[laser]["ne"] == 0)] = np.nan
+            lasers[laser]["ne"][lasers[laser]["ne"] == 0] = np.nan
         # NOTE: Why use these debug commands?
         if 'core' in lasers.keys():
             params.logger.debug(
