@@ -752,7 +752,7 @@ class D3DPhysicsMethods:
     @staticmethod
     @physics_method(
         # columns=["te_pf", "ne_pf", "rad_cva", "rad_xdiv"],
-        columns=['te_peaking_cva_rt', "ne_peaking_cva_rt", "prad_peaking_cva_rt", "prad_peaking_xdiv_rt"],
+        columns=["te_peaking_cva_rt", "ne_peaking_cva_rt", "prad_peaking_cva_rt", "prad_peaking_xdiv_rt"],
         tokamak=Tokamak.D3D,
     )
     def get_peaking_factors(params: PhysicsMethodParams):
@@ -818,6 +818,7 @@ class D3DPhysicsMethods:
         rad_xdiv = [np.nan]
         try:
             # TODO: TREE NAME
+            # BUG: MDSplus.mdsExceptions.TdiABORT: %TDI-E-ABORT, Program requested abort
             rad_cva, t_rad_cva = params.mds_conn.get_data_with_dims(
                 f"ptdata('dpsradcva', {params.shot_id})", tree_name="d3d"
             )
@@ -837,9 +838,11 @@ class D3DPhysicsMethods:
             rad_xdiv = [np.nan]
         try:
             ts = D3DPhysicsMethods._get_ne_te(params)
+            # NOTE: what's' this loop doing?
             for option in ts_options:
                 if option in ts:
                     ts = ts[option]
+                    break
             efit_dict = D3DPhysicsMethods._get_efit_dict(params)
         except Exception as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get TS data")
@@ -854,6 +857,7 @@ class D3DPhysicsMethods:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to interpolate TS data")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
         try:
+            # BUG
             p_rad = D3DPhysicsMethods._get_p_rad(params)
         except Exception as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get bolometer data")
@@ -1126,6 +1130,31 @@ class D3DPhysicsMethods:
         data_source="blessed",
         ts_systems=["core", "tangential"],
     ):
+        '''
+        Retrieves DIII-D Thomson scattering data
+
+        Inputs
+        -------
+        data_source: string
+            "blessed", "unblessed", or "ptdata'
+            ("blessed" by Thomson group)
+        ts_systems: list
+            default: ["core", "tangential"]
+
+        Returns
+        -------
+        lasers: dict
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/utils/load_ne_Te.m
+
+        NOTE: data_source="ptdata" has not been fully implemented; however, for now this
+        option isn't used in any of the methods.
+
+        Original method by Kevin Montes on March 2019
+        Last major update by William Wei on 8/8/2024
+        '''
         if data_source == "blessed":  # 'blessed' by Thomson group
             mds_path = r"\top.ts.blessed."
         elif data_source == "unblessed":
@@ -1135,10 +1164,13 @@ class D3DPhysicsMethods:
             raise NotImplementedError("ptdata case not fully implemented yet")  # TODO
         else:
             raise ValueError(f"Invalid data_source: {data_source}")
+        
         # Account for pointname formatting change in 2017 (however using ptdata is unimplemented)
+        # NOTE: "suffix" is only used if data_source="ptdata" which isn't implemetned yet
         suffix = {"core": "cor", "tangential": "tan"}
         if params.shot_id < 172749:  # First shot on Sep 19, 2017
             suffix["tangential"] = "hor"
+
         lasers = dict()
         for laser in ts_systems:
             lasers[laser] = dict()
@@ -1181,9 +1213,12 @@ class D3DPhysicsMethods:
             # Place NaNs for broken channels
             lasers[laser]["te"][lasers[laser]["te"] == 0] = np.nan
             lasers[laser]["ne"][np.where(lasers[laser]["ne"] == 0)] = np.nan
+        # NOTE: Why use these debug commands?
+        if 'core' in lasers.keys():
             params.logger.debug(
                 "_get_ne_te: Core bins {}".format(lasers["core"]["te"].shape)
             )
+        if 'tangential' in lasers.keys():
             params.logger.debug(
                 "_get_ne_te: Tangential bins {}".format(
                     lasers["tangential"]["te"].shape
@@ -1213,8 +1248,8 @@ class D3DPhysicsMethods:
                 lasers["combined"]["z"] = np.concatenate(
                     (lasers["core"]["z"], lasers["tangential"]["z"])
                 )
-        params.logger.debug("_get_ne_te: R Bins:", len(lasers["combined"]["r"]))
-        params.logger.debug("_get_ne_te: Z Bins:", len(lasers["combined"]["z"]))
+        params.logger.debug("_get_ne_te: R Bins: {}".format(len(lasers["combined"]["r"])))
+        params.logger.debug("_get_ne_te: Z Bins: {}".format(len(lasers["combined"]["z"])))
         return lasers
 
     @staticmethod
