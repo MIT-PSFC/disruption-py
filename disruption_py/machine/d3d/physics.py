@@ -837,8 +837,7 @@ class D3DPhysicsMethods:
             rad_cva = [np.nan]
             rad_xdiv = [np.nan]
         try:
-            # BUG: te, ne = arrays of nans
-            ts = D3DPhysicsMethods._get_ne_te(params)
+            ts = D3DPhysicsMethods._get_ne_te(params)   # -- DEBUGGED
             # NOTE: what's' this loop doing?
             for option in ts_options:
                 if option in ts:
@@ -850,6 +849,7 @@ class D3DPhysicsMethods:
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
             ts = 0
         try:
+            # NOTE: didn't debug efit_rz_interp; assume it works
             ts["psin"], ts["rhovn"] = D3DPhysicsMethods.efit_rz_interp(ts, efit_dict)
             ts["rhovn"] = ts["rhovn"].T
             ts["psin"] = ts["psin"].T
@@ -871,60 +871,85 @@ class D3DPhysicsMethods:
 
         # if ts_equispaced:
         if ts != 0 and ts_radius in ts:
-            # Drop data outside of valid range
-            invalid_indices = np.where(
-                (ts[ts_radius] < ts_radial_range[0])
-                | (ts[ts_radius] > ts_radial_range[1])
-            )
-            ts["te"][invalid_indices] = np.nan
-            ts["ne"][invalid_indices] = np.nan
-            ts["te"][np.isnan(ts[ts_radius])] = np.nan
-            ts["ne"][np.isnan(ts[ts_radius])] = np.nan
-            if ts_equispaced:
-                raise NotImplementedError(
-                    "Equispaced is currently assumed to be false"
-                )  # TODO
-            # Find core bin for Thomson and calculate Te, ne peaking factors
-            core_mask = ts[ts_radius] < ts_core_margin
-            te_core = ts["te"]
-            te_core[~core_mask] = np.nan
-            ne_core = ts["ne"]
-            ne_core[~core_mask] = np.nan
-            te_pf = np.nanmean(te_core, axis=0) / np.nanmean(ts["te"], axis=0)
-            ne_pf = np.nanmean(ne_core, axis=0) / np.nanmean(ts["ne"], axis=0)
-            te_pf = interp1(ts["time"], te_pf, params.times)
-            ne_pf = interp1(ts["time"], ne_pf, params.times)
+            # Calculate te_pf & ne_pf
+            try:
+                # Drop data outside of valid range
+                invalid_indices = np.where(
+                    (ts[ts_radius] < ts_radial_range[0])
+                    | (ts[ts_radius] > ts_radial_range[1])
+                )
+                ts["te"][invalid_indices] = np.nan
+                ts["ne"][invalid_indices] = np.nan
+                ts["te"][np.isnan(ts[ts_radius])] = np.nan
+                ts["ne"][np.isnan(ts[ts_radius])] = np.nan
+                if ts_equispaced:
+                    raise NotImplementedError(
+                        "Equispaced is currently assumed to be false"
+                    )  # TODO
+                # Find core bin for Thomson and calculate Te, ne peaking factors
+                core_mask = ts[ts_radius] < ts_core_margin
+                te_core = ts["te"].copy()
+                te_core[~core_mask] = np.nan
+                ne_core = ts["ne"].copy()
+                ne_core[~core_mask] = np.nan
+                # BUG: RuntimeWarning: Mean of empty slice
+                # te_pf = np.nanmean(te_core, axis=0) / np.nanmean(ts["te"], axis=0)
+                # ne_pf = np.nanmean(ne_core, axis=0) / np.nanmean(ts["ne"], axis=0)
+                #
+                te_pf = np.full(len(ts['time']), np.nan)
+                ne_pf = np.full(len(ts['time']), np.nan)
+                for i in range(len(te_pf)):
+                    if (
+                        ~np.isnan(te_core[:,i]).all() 
+                        and ~np.isnan(ts["te"][:,i]).all() 
+                        and np.nanmean(ts["te"][:,i]) != 0
+                    ):
+                        te_pf[i] = np.nanmean(te_core[:,i]) / np.nanmean(ts["te"][:,i])
+                    if (
+                        ~np.isnan(ne_core[:,i]).all() 
+                        and ~np.isnan(ts["ne"][:,i]).all()
+                        and np.nanmean(ts["ne"][:,i]) != 0
+                    ): 
+                        ne_pf[i] = np.nanmean(ne_core[:,i]) / np.nanmean(ts["ne"][:,i])
+                te_pf = interp1(ts["time"], te_pf, params.times)
+                ne_pf = interp1(ts["time"], ne_pf, params.times)
+            except:
+                pass
+
             # Calculate Prad CVA, X-DIV Peaking Factors
-            # # Interpolate zmaxis and channel intersects x onto the bolometer timebase
-            z_m_axis = interp1(efit_dict["time"], efit_dict["zmaxis"], p_rad["t"])
-            z_m_axis = np.repeat(z_m_axis[:, np.newaxis], p_rad["x"].shape[1], axis=1)
-            p_rad["xinterp"] = interp1(p_rad["xtime"], p_rad["x"], p_rad["t"], axis=0)
-            # # Determine the bolometer channels falling in the 'core' bin
-            core_indices = (
-                p_rad["xinterp"] < z_m_axis + p_rad_core_def * vert_range
-            ) & (p_rad["xinterp"] > z_m_axis - p_rad_core_def * vert_range)
-            # # Designate the divertor bin and find all 'other' channels not in that bin
-            div_indices = np.searchsorted(p_rad["ch_avail"], div_channels)
-            other_indices = ~div_indices
-            # # Grab p_rad measurements for each needed set of channels
-            p_rad_core = np.array(p_rad[p_rad_metric]).T
-            p_rad_all_but_core = p_rad_core.copy()
-            p_rad_div = p_rad_core.copy()
-            p_rad_all_but_div = p_rad_core.copy()
-            # QUESTION: Why fill with nans for core but just keep valid indices for divertor
-            p_rad_core[~core_indices] = np.nan
-            p_rad_all_but_core[core_indices] = np.nan
-            p_rad_div = p_rad_div[:, div_indices]
-            p_rad_all_but_div = p_rad_all_but_div[:, other_indices]
-            # # Calculate the peaking factors
-            rad_cva = np.nanmean(p_rad_core, axis=1) / np.nanmean(
-                p_rad_all_but_div, axis=1
-            )
-            rad_xdiv = np.nanmean(p_rad_div, axis=1) / np.nanmean(
-                p_rad_all_but_core, axis=1
-            )
-            rad_cva = interp1(p_rad["t"], rad_cva.T, params.times)
-            rad_xdiv = interp1(p_rad["t"], rad_xdiv.T, params.times)
+            try:
+                # # Interpolate zmaxis and channel intersects x onto the bolometer timebase
+                z_m_axis = interp1(efit_dict["time"], efit_dict["zmaxis"], p_rad["t"])
+                z_m_axis = np.repeat(z_m_axis[:, np.newaxis], p_rad["x"].shape[1], axis=1)
+                p_rad["xinterp"] = interp1(p_rad["xtime"], p_rad["x"], p_rad["t"], axis=0)
+                # # Determine the bolometer channels falling in the 'core' bin
+                core_indices = (
+                    p_rad["xinterp"] < z_m_axis + p_rad_core_def * vert_range
+                ) & (p_rad["xinterp"] > z_m_axis - p_rad_core_def * vert_range)
+                # # Designate the divertor bin and find all 'other' channels not in that bin
+                div_indices = np.searchsorted(p_rad["ch_avail"], div_channels)
+                other_indices = ~div_indices
+                # # Grab p_rad measurements for each needed set of channels
+                p_rad_core = np.array(p_rad[p_rad_metric]).T
+                p_rad_all_but_core = p_rad_core.copy()
+                p_rad_div = p_rad_core.copy()
+                p_rad_all_but_div = p_rad_core.copy()
+                # QUESTION: Why fill with nans for core but just keep valid indices for divertor
+                p_rad_core[~core_indices] = np.nan
+                p_rad_all_but_core[core_indices] = np.nan
+                p_rad_div = p_rad_div[:, div_indices]
+                p_rad_all_but_div = p_rad_all_but_div[:, other_indices]
+                # # Calculate the peaking factors
+                rad_cva = np.nanmean(p_rad_core, axis=1) / np.nanmean(
+                    p_rad_all_but_div, axis=1
+                )
+                rad_xdiv = np.nanmean(p_rad_div, axis=1) / np.nanmean(
+                    p_rad_all_but_core, axis=1
+                )
+                rad_cva = interp1(p_rad["t"], rad_cva.T, params.times)
+                rad_xdiv = interp1(p_rad["t"], rad_xdiv.T, params.times)
+            except:
+                pass
         # output = {
         #     "te_pf": te_pf,
         #     "ne_pf": ne_pf,
@@ -992,7 +1017,7 @@ class D3DPhysicsMethods:
         rho_vn_diag: np.ndarray
             Array of normalized minor radius
         """
-        times = ts["time"] / 1.0e3
+        times = ts["time"]  # [s]
         interp = scipy.interpolate.RegularGridInterpolator(
             [efit_dict["time"], efit_dict["r"], efit_dict["z"]],
             efit_dict["psin"],
@@ -1214,6 +1239,8 @@ class D3DPhysicsMethods:
             # Place NaNs for broken channels
             lasers[laser]["te"][lasers[laser]["te"] == 0] = np.nan
             lasers[laser]["ne"][lasers[laser]["ne"] == 0] = np.nan
+            # Change time unit from [ms] to [s]
+            lasers[laser]['time'] /= 1e3
         # NOTE: Why use these debug commands?
         if 'core' in lasers.keys():
             params.logger.debug(
@@ -1322,7 +1349,7 @@ class D3DPhysicsMethods:
         (efit_dict_time,) = params.mds_conn.get_dims(
             f"{path}psirz", tree_name="_efit_tree", dim_nums=[2]
         )
-        efit_dict["time"] = efit_dict_time / 1.0e3  # [ms] -> [s]
+        efit_dict["time"] = efit_dict_time / 1e3  # [ms] -> [s]
         for node in nodes:
             try:
                 efit_dict[node] = params.mds_conn.get_data(
