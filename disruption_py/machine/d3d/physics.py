@@ -971,16 +971,6 @@ class D3DPhysicsMethods:
 
                 # # Grab p_rad measurements for each needed set of channels
                 p_rad_core = np.array(p_rad[p_rad_metric]).T
-
-                # DEBUG
-                # BUG: all channel signals are the same
-                import matplotlib.pyplot as plt
-                for i in range(12):
-                    plt.figure(0)
-                    plt.plot(p_rad_core[:,i])
-                    plt.title(f"{i}")
-                    plt.show()
-                
                 p_rad_all_but_core = p_rad_core.copy()
                 p_rad_div = p_rad_core.copy()
                 p_rad_all_but_div = p_rad_core.copy()
@@ -993,9 +983,8 @@ class D3DPhysicsMethods:
                 p_rad_all_but_div[:, div_indices] = np.nan
 
                 # DEBUG
-                # BUG: all p_rad data are identical
                 import matplotlib.pyplot as plt
-                for i in range(5000, 1200, 1000):
+                for i in range(5000, 12000, 1000):
                     print(i)
                     try:
                         plt.figure()
@@ -1027,7 +1016,6 @@ class D3DPhysicsMethods:
                     ):
                         # How is this div vs all?
                         rad_xdiv[i] = np.nanmean(p_rad_div[i,:]) / np.nanmean(p_rad_all_but_core[i,:])
-
                 # BUG: divide by nan
                 # rad_cva = np.nanmean(p_rad_core, axis=1) / np.nanmean(
                 #     p_rad_all_but_div, axis=1
@@ -1035,11 +1023,6 @@ class D3DPhysicsMethods:
                 # rad_xdiv = np.nanmean(p_rad_div, axis=1) / np.nanmean(
                 #     p_rad_all_but_core, axis=1
                 # )
-                import matplotlib.pyplot as plt
-                plt.plot(p_rad["t"], rad_cva, label = 'rad_cvs')
-                plt.plot(p_rad['t'], rad_xdiv, label = 'rad_xdiv')
-                plt.show()
-
                 rad_cva = interp1(p_rad["t"], rad_cva, params.times)
                 rad_xdiv = interp1(p_rad["t"], rad_xdiv, params.times)
             except:
