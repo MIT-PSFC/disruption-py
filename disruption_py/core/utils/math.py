@@ -522,16 +522,21 @@ def power(a):
         pwrmix: np.ndarray
         divl: np.ndarray
         divu: np.ndarray
-        chan: np.ndarray
+        chan: list
 
-    c = Channel("", np.zeros((4096)), np.zeros((4096)), 0.0, 0.0, 0.0)
-    b = Power(np.zeros((4096)), np.zeros((4096)), np.zeros((4096)), np.tile(c, (48)))
+    # c = Channel("", np.zeros((4096)), np.zeros((4096)), 0.0, 0.0, 0.0)
+    # b = Power(np.zeros((4096)), np.zeros((4096)), np.zeros((4096)), np.tile(c, (48)))
+    b = Power(np.zeros((4096)), np.zeros((4096)), np.zeros((4096)), [])
+    for i in range(48):
+        b.chan.append(Channel("", np.zeros((4096)), np.zeros((4096)), 0.0, 0.0, 0.0))
+    # BUG: all b.chan[i].chanpwr & brightness updates together at every iteration
     for i in range(48):
         b.chan[i].chanpwr = kappa[i] * a.channels[i].pwr
         b.chan[i].brightness = etendu[i] * a.channels[i].pwr
         b.chan[i].R = a.channels[i].R
         b.chan[i].Z = a.channels[i].Z
         b.chan[i].angle = a.channels[i].angle
+    # BUG: all channels' brightness are the same
     b.pwrmix = 0.0
     b.divl = 0.0
     b.divu = 0.0

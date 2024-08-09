@@ -820,19 +820,20 @@ class D3DPhysicsMethods:
         te_pf = [np.nan]
         rad_cva = [np.nan]
         rad_xdiv = [np.nan]
-        # Get precomputed rad_cva & rad_xdiv data
+        # Get precomputed rad_cva & rad_xdiv data stored in ptdata tree
         try:
             # TODO: TREE NAME
             # BUG: MDSplus.mdsExceptions.TdiABORT: %TDI-E-ABORT, Program requested abort
             rad_cva, t_rad_cva = params.mds_conn.get_data_with_dims(
                 f"ptdata('dpsradcva', {params.shot_id})", tree_name="d3d"
             )
-            rad_cva = interp1(t_rad_cva, rad_cva, params.times)  # [T]
+            rad_cva = interp1(t_rad_cva, rad_cva, params.times)
 
+            # BUG: MDSplus.mdsExceptions.TdiABORT: %TDI-E-ABORT, Program requested abort
             rad_xdiv, t_rad_xdiv = params.mds_conn.get_data_with_dims(
                 f"ptdata('dpsradxdiv', {params.shot_id})", tree_name="d3d"
             )
-            rad_xdiv = interp1(t_rad_xdiv, rad_xdiv, params.times)  # [T]
+            rad_xdiv = interp1(t_rad_xdiv, rad_xdiv, params.times)
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
             params.logger.info(
@@ -866,7 +867,7 @@ class D3DPhysicsMethods:
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
         # Get raw bolometer data 
         try:
-            # BUG
+            # BUG: all channels have the same p_rad['brightness']
             p_rad = D3DPhysicsMethods._get_p_rad(params)
         except Exception as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get bolometer data")
@@ -910,24 +911,24 @@ class D3DPhysicsMethods:
                 #
 
                 # DEBUG
-                import matplotlib.pyplot as plt
-                for i in range(400, 1500, 100):
-                    pf = np.nan
-                    try:
-                        pf = np.nanmean(te_core[:,i]) / np.nanmean(ts['te'][:,i])
-                    except:
-                        pf = np.nan
-                    plt.figure()
-                    plt.plot(ts[ts_radius][:,i], ts['te'][:,i])
-                    plt.scatter(ts[ts_radius][:,i], ts['te'][:,i], c='b', label='all')
-                    plt.scatter(ts[ts_radius][:,i], te_core[:,i], c='r', label='core')
-                    plt.axvline(0.3, c='r')
-                    plt.xlabel('rhovn')
-                    plt.ylabel('te')
-                    plt.legend()
-                    plt.title(f"i={i}, t={ts['time'][i]}, pf={pf}")
-                    plt.show()
-                ###
+                # import matplotlib.pyplot as plt
+                # for i in range(400, 1500, 100):
+                #     pf = np.nan
+                #     try:
+                #         pf = np.nanmean(te_core[:,i]) / np.nanmean(ts['te'][:,i])
+                #     except:
+                #         pf = np.nan
+                #     plt.figure()
+                #     plt.plot(ts[ts_radius][:,i], ts['te'][:,i])
+                #     plt.scatter(ts[ts_radius][:,i], ts['te'][:,i], c='b', label='all')
+                #     plt.scatter(ts[ts_radius][:,i], te_core[:,i], c='r', label='core')
+                #     plt.axvline(0.3, c='r')
+                #     plt.xlabel('rhovn')
+                #     plt.ylabel('te')
+                #     plt.legend()
+                #     plt.title(f"i={i}, t={ts['time'][i]}, pf={pf}")
+                #     plt.show()
+                # ###
 
                 te_pf = np.full(len(ts['time']), np.nan)
                 ne_pf = np.full(len(ts['time']), np.nan)
@@ -960,27 +961,87 @@ class D3DPhysicsMethods:
                     p_rad["xinterp"] < z_m_axis + p_rad_core_def * vert_range
                 ) & (p_rad["xinterp"] > z_m_axis - p_rad_core_def * vert_range)
                 # # Designate the divertor bin and find all 'other' channels not in that bin
-                div_indices = np.searchsorted(p_rad["ch_avail"], div_channels)
-                other_indices = ~div_indices
+                # BUG: div_indices = np.array([0,1,2,3,4])
+                #      other_indices = np.array([-1,-2,-3,-4,-5])
+                # div_indices = np.searchsorted(p_rad["ch_avail"], div_channels)
+                # other_indices = ~div_indices
+                div_indices = np.full(len(p_rad["ch_avail"]), False)
+                for div_channel in div_channels:
+                    div_indices[p_rad["ch_avail"].index(div_channel)] = True
+
                 # # Grab p_rad measurements for each needed set of channels
                 p_rad_core = np.array(p_rad[p_rad_metric]).T
+
+                # DEBUG
+                # BUG: all channel signals are the same
+                import matplotlib.pyplot as plt
+                for i in range(12):
+                    plt.figure(0)
+                    plt.plot(p_rad_core[:,i])
+                    plt.title(f"{i}")
+                    plt.show()
+                
                 p_rad_all_but_core = p_rad_core.copy()
                 p_rad_div = p_rad_core.copy()
                 p_rad_all_but_div = p_rad_core.copy()
                 # QUESTION: Why fill with nans for core but just keep valid indices for divertor
                 p_rad_core[~core_indices] = np.nan
                 p_rad_all_but_core[core_indices] = np.nan
-                p_rad_div = p_rad_div[:, div_indices]
-                p_rad_all_but_div = p_rad_all_but_div[:, other_indices]
+                # p_rad_div = p_rad_div[:, div_indices]
+                # p_rad_all_but_div = p_rad_all_but_div[:, other_indices]
+                p_rad_div[:, ~div_indices] = np.nan
+                p_rad_all_but_div[:, div_indices] = np.nan
+
+                # DEBUG
+                # BUG: all p_rad data are identical
+                import matplotlib.pyplot as plt
+                for i in range(5000, 1200, 1000):
+                    print(i)
+                    try:
+                        plt.figure()
+                        plt.scatter(p_rad["xinterp"][i], p_rad_core[i], label='core')
+                        plt.scatter(p_rad["xinterp"][i], p_rad_div[i], label='div')
+                        plt.legend()
+                        plt.xlabel('xinterp')
+                        plt.title(f"i={i}, t={p_rad['t'][i]}")
+                        plt.show()
+                    except:
+                        continue
+                ######
+
                 # # Calculate the peaking factors
-                rad_cva = np.nanmean(p_rad_core, axis=1) / np.nanmean(
-                    p_rad_all_but_div, axis=1
-                )
-                rad_xdiv = np.nanmean(p_rad_div, axis=1) / np.nanmean(
-                    p_rad_all_but_core, axis=1
-                )
-                rad_cva = interp1(p_rad["t"], rad_cva.T, params.times)
-                rad_xdiv = interp1(p_rad["t"], rad_xdiv.T, params.times)
+                rad_cva = np.full(len(p_rad['t']), np.nan)
+                rad_xdiv = np.full(len(p_rad['t']), np.nan)
+                for i in range(len(rad_cva)):
+                    if (
+                        ~np.isnan(p_rad_core[i,:]).all() 
+                        and ~np.isnan(p_rad_all_but_div[i,:]).all() 
+                        and np.nanmean(p_rad_all_but_div[i,:]) != 0
+                    ):
+                        # How is this core vs all?
+                        rad_cva[i] = np.nanmean(p_rad_core[i,:]) / np.nanmean(p_rad_all_but_div[i,:])
+                    if (
+                        ~np.isnan(p_rad_div[i,:]).all() 
+                        and ~np.isnan(p_rad_all_but_core[i,:]).all() 
+                        and np.nanmean(p_rad_all_but_core[i,:]) != 0
+                    ):
+                        # How is this div vs all?
+                        rad_xdiv[i] = np.nanmean(p_rad_div[i,:]) / np.nanmean(p_rad_all_but_core[i,:])
+
+                # BUG: divide by nan
+                # rad_cva = np.nanmean(p_rad_core, axis=1) / np.nanmean(
+                #     p_rad_all_but_div, axis=1
+                # )
+                # rad_xdiv = np.nanmean(p_rad_div, axis=1) / np.nanmean(
+                #     p_rad_all_but_core, axis=1
+                # )
+                import matplotlib.pyplot as plt
+                plt.plot(p_rad["t"], rad_cva, label = 'rad_cvs')
+                plt.plot(p_rad['t'], rad_xdiv, label = 'rad_xdiv')
+                plt.show()
+
+                rad_cva = interp1(p_rad["t"], rad_cva, params.times)
+                rad_xdiv = interp1(p_rad["t"], rad_xdiv, params.times)
             except:
                 pass
         # output = {
@@ -1323,14 +1384,30 @@ class D3DPhysicsMethods:
     @staticmethod
     @cache_method
     def _get_p_rad(params: PhysicsMethodParams, fan="custom"):
+        '''
+        Retrieves DIII-D radiation data from the bolometer MDSplus tree
+
+        Inputs:
+        -------
+        fan: str
+            'upper', 'lower', or 'custom' (default)
+
+        References:
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/sorting/load_Prad.m
+
+        Original author: Kevin Montes. Date: March 2019
+        '''
         if fan == "upper":
             fan_chans = np.arange(0, 24)
         elif fan == "lower":
             fan_chans = np.arange(24, 48)
         # Default is fan="custom"
-        else:
+        elif fan == 'custom':
             # 1st choice (heavily cover divertor and core)
             fan_chans = np.array([3, 4, 5, 6, 7, 8, 9, 12, 14, 15, 16, 22]) + 24
+        else:
+            return False
 
         # Get bolometry data
         bol_prm, _ = params.mds_conn.get_data_with_dims(r"\bol_prm", tree_name="bolom")
@@ -1345,6 +1422,7 @@ class D3DPhysicsMethods:
             bol_signal, bol_time = params.mds_conn.get_data_with_dims(
                 rf"\top.raw:{bol_channels[i]}", tree_name="bolom"
             )
+            bol_time /= 1e3 # [ms] -> [s]
             bol_signals.append(bol_signal)
             bol_times.append(bol_time)
         a_struct = get_bolo(
@@ -1354,6 +1432,7 @@ class D3DPhysicsMethods:
         r_major_axis, efit_time = params.mds_conn.get_data_with_dims(
             r"\top.results.geqdsk:rmaxis", tree_name="_efit_tree"
         )
+        efit_time /= 1e3    # [ms] -> [s]
         output = {
             "ch_avail": [],
             "z": [],
@@ -1377,6 +1456,7 @@ class D3DPhysicsMethods:
             ] = 0
             output["z"].append(b_struct.chan[i].chanpwr)
             output["brightness"].append(b_struct.chan[i].brightness)
+        # BUG: all output["brightness"] channels are identical
         return output
 
     # TODO: Replace all instances of efit_dict with a dataclass
