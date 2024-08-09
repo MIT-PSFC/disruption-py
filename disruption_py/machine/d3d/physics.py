@@ -761,6 +761,10 @@ class D3DPhysicsMethods:
 
         Notes:
 
+        rhovn: Normalized rho
+        psin:: Normalized poloidal flux
+
+
         This function calculates peaking factors for the shot number
         given by the user corresponding to the times in the given timebase.
         Electron temperature (Te_PF) and density (ne_PF) profile peaking 
@@ -816,6 +820,7 @@ class D3DPhysicsMethods:
         te_pf = [np.nan]
         rad_cva = [np.nan]
         rad_xdiv = [np.nan]
+        # Get precomputed rad_cva & rad_xdiv data
         try:
             # TODO: TREE NAME
             # BUG: MDSplus.mdsExceptions.TdiABORT: %TDI-E-ABORT, Program requested abort
@@ -836,13 +841,15 @@ class D3DPhysicsMethods:
             )
             rad_cva = [np.nan]
             rad_xdiv = [np.nan]
+        # Get Thomson data
         try:
             ts = D3DPhysicsMethods._get_ne_te(params)   # -- DEBUGGED
-            # NOTE: what's' this loop doing?
+            # TODO: needs better way to do this
             for option in ts_options:
                 if option in ts:
                     ts = ts[option]
                     break
+            # NOTE: didn't throughly debug efit_rz_interp; it appears to match MATLAB script
             efit_dict = D3DPhysicsMethods._get_efit_dict(params)
         except Exception as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get TS data")
@@ -853,10 +860,11 @@ class D3DPhysicsMethods:
             ts["psin"], ts["rhovn"] = D3DPhysicsMethods.efit_rz_interp(ts, efit_dict)
             ts["rhovn"] = ts["rhovn"].T
             ts["psin"] = ts["psin"].T
-            params.logger.info(ts["rhovn"].shape)
+            params.logger.info(f"ts['rhovn'].shape: {ts["rhovn"].shape}")
         except Exception as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to interpolate TS data")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+        # Get raw bolometer data 
         try:
             # BUG
             p_rad = D3DPhysicsMethods._get_p_rad(params)
@@ -882,10 +890,14 @@ class D3DPhysicsMethods:
                 ts["ne"][invalid_indices] = np.nan
                 ts["te"][np.isnan(ts[ts_radius])] = np.nan
                 ts["ne"][np.isnan(ts[ts_radius])] = np.nan
+
+                # Interpolate onto uniform radial base if needed
+                # ts_equispaced = False by default
                 if ts_equispaced:
                     raise NotImplementedError(
                         "Equispaced is currently assumed to be false"
                     )  # TODO
+                
                 # Find core bin for Thomson and calculate Te, ne peaking factors
                 core_mask = ts[ts_radius] < ts_core_margin
                 te_core = ts["te"].copy()
@@ -896,6 +908,27 @@ class D3DPhysicsMethods:
                 # te_pf = np.nanmean(te_core, axis=0) / np.nanmean(ts["te"], axis=0)
                 # ne_pf = np.nanmean(ne_core, axis=0) / np.nanmean(ts["ne"], axis=0)
                 #
+
+                # DEBUG
+                import matplotlib.pyplot as plt
+                for i in range(400, 1500, 100):
+                    pf = np.nan
+                    try:
+                        pf = np.nanmean(te_core[:,i]) / np.nanmean(ts['te'][:,i])
+                    except:
+                        pf = np.nan
+                    plt.figure()
+                    plt.plot(ts[ts_radius][:,i], ts['te'][:,i])
+                    plt.scatter(ts[ts_radius][:,i], ts['te'][:,i], c='b', label='all')
+                    plt.scatter(ts[ts_radius][:,i], te_core[:,i], c='r', label='core')
+                    plt.axvline(0.3, c='r')
+                    plt.xlabel('rhovn')
+                    plt.ylabel('te')
+                    plt.legend()
+                    plt.title(f"i={i}, t={ts['time'][i]}, pf={pf}")
+                    plt.show()
+                ###
+
                 te_pf = np.full(len(ts['time']), np.nan)
                 ne_pf = np.full(len(ts['time']), np.nan)
                 for i in range(len(te_pf)):
@@ -1010,12 +1043,17 @@ class D3DPhysicsMethods:
             Thomson scattering data returned by D3DPhysicsMethods._get_ne_te(...)
         efit_dict: dict
             Dictionary with the efit data. Keys are 'time', 'r', 'z', 'psin', 'rhovn'
+        
         Returns
         -------
         psin: np.ndarray
             Array of plasma normalized flux
         rho_vn_diag: np.ndarray
             Array of normalized minor radius
+
+        Reference
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/sorting/efit_Rz_interp.m
         """
         times = ts["time"]  # [s]
         interp = scipy.interpolate.RegularGridInterpolator(
@@ -1192,7 +1230,7 @@ class D3DPhysicsMethods:
             raise ValueError(f"Invalid data_source: {data_source}")
         
         # Account for pointname formatting change in 2017 (however using ptdata is unimplemented)
-        # NOTE: "suffix" is only used if data_source="ptdata" which isn't implemetned yet
+        # NOTE: "suffix" is only used if data_source="ptdata" which isn't implemented yet
         suffix = {"core": "cor", "tangential": "tan"}
         if params.shot_id < 172749:  # First shot on Sep 19, 2017
             suffix["tangential"] = "hor"
@@ -1205,6 +1243,7 @@ class D3DPhysicsMethods:
                 (t_sub_tree,) = params.mds_conn.get_dims(
                     f"{sub_tree}:temp", tree_name="electrons"
                 )
+                # lasers[laser]['time'] gets overwritten in the loop later
                 lasers[laser]["time"] = t_sub_tree / 1.0e3  # [ms] -> [s]
             except mdsExceptions.MdsException as e:
                 lasers[laser] = None
@@ -1242,6 +1281,7 @@ class D3DPhysicsMethods:
             # Change time unit from [ms] to [s]
             lasers[laser]['time'] /= 1e3
         # NOTE: Why use these debug commands?
+        # NOTE: why does core have 41 bins in the edge, and tangential has 6 bins in the core?
         if 'core' in lasers.keys():
             params.logger.debug(
                 "_get_ne_te: Core bins {}".format(lasers["core"]["te"].shape)
