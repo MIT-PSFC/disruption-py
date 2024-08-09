@@ -36,11 +36,11 @@ def full_time_domain_data(tokamak, shotlist):
 
 
 @pytest.mark.parametrize("num_processes", [1, 2])
-def test_sql_cache(tokamak, shotlist, num_processes):
+def test_cache_setting_sql(tokamak, shotlist, num_processes):
     """
     Use `i_efc` to test retrieving cached data from SQL. `i_efc` exists in SQL and
     it is the only parameter returned from its physics method, so the physics
-    method will not to run. This test uses a dummy MDSconnection to ensure we don't
+    method will not run. This test uses a dummy MDSconnection to ensure we don't
     call MDSplus.
     """
     # `i_efc` does not exist on DIII-D
@@ -57,7 +57,7 @@ def test_sql_cache(tokamak, shotlist, num_processes):
     )
 
     def dummy_mds_initializer():
-        return ProcessMDSConnection(ProcessMDSConnection.DUMMY_CONNECTION_STRING)
+        return ProcessMDSConnection(None)
 
     results = get_shots_data(
         tokamak=tokamak,
@@ -66,6 +66,12 @@ def test_sql_cache(tokamak, shotlist, num_processes):
         num_processes=num_processes,
         mds_connection_initializer=dummy_mds_initializer,
     )
+
+    # Ensure there is a connection to SQL -- if there is a dummy MDS connection,
+    # but no cache data is retrieved from SQL, then results=[]
+    assert len(shotlist) == len(results)
+
+    # Verify the correct columns were retrieved from SQL
     for res in results:
         assert set(res.columns) == {"i_efc", "shot", "time", "commit_hash"}
 
