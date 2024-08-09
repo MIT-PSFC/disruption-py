@@ -582,23 +582,16 @@ def matlab_power(a):
         pwrmix: np.ndarray
         divl: np.ndarray
         divu: np.ndarray
-        chan: np.ndarray
+        chan: list
 
-    c = Channel(
-        label="",
-        chanpwr=np.zeros((4096)),
-        brightness=np.zeros((4096)),
-        R=0.0,
-        Z=0.0,
-        angle=0.0,
-    )
     b = Power(
         pwrmix=np.zeros((4096)),
         divl=np.zeros((4096)),
         divu=np.zeros((4096)),
-        chan=np.tile(c, (48)),
+        chan=[],
     )
     for i in range(48):
+        b.chan.append(Channel("", np.zeros((4096)), np.zeros((4096)), 0.0, 0.0, 0.0))
         b.chan[i].chanpwr = kappa[i] * a.channels[i].pwr
         b.chan[i].brightness = etendu[i] * a.channels[i].pwr
         b.chan[i].R = a.channels[i].R
