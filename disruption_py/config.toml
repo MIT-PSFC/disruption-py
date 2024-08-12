@@ -216,6 +216,12 @@ TEST_COLUMNS = [
 	"beta_n",
 	"dipprog_dt",
 	"dipprog_dt_rt",
+	"p_ohm",
+	"v_loop",
+	"p_nbi",
+	"p_ech",
+	"p_rad",
+	"radiated_fraction",
 ]
 EXPECTED_FAILURE_COLUMNS = [
 	"kappa",
@@ -248,6 +254,9 @@ EXPECTED_FAILURE_COLUMNS = [
 	"beta_n",
 	"kappa_area",
 	"commit_hash",
+	"p_ohm",
+	"p_rad",
+	"radiated_fraction",
 	"squareness",
 	"delta",
 	"aminor",
