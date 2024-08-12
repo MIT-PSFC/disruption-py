@@ -30,8 +30,11 @@ def full_time_domain_data(tokamak, shotlist):
         tokamak=tokamak,
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
+        output_setting="dict",
         num_processes=2,
     )
+    # Output data in the order shots were given
+    results = [results[shot] for shot in shotlist]
     return results
 
 
@@ -113,11 +116,17 @@ def test_domain_setting(tokamak, shotlist, domain_setting, full_time_domain_data
         tokamak=tokamak,
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
+        output_setting="dict",
         num_processes=2,
     )
+    results = [results[shot] for shot in shotlist]
+
+    assert len(shotlist) == len(results) == len(full_time_domain_data)
     for part_domain, full_domain in zip(results, full_time_domain_data):
-        # Both partial domains should end before the full domain, but only flattop
-        # starts after
+        p_start, p_end = part_domain["time"].values[0], part_domain["time"].values[-1]
+        f_start, f_end = full_domain["time"].values[0], full_domain["time"].values[-1]
         if domain_setting == "flattop":
-            assert "start", part_domain["time"][0] > full_domain["time"][0]
-        assert "end", part_domain["time"].values[-1] < full_domain["time"].values[-1]
+            # Use <= because a shot may end during the flattop,
+            assert f_start < p_start < p_end <= f_end
+        else:
+            assert f_start == p_start < p_end < f_end
