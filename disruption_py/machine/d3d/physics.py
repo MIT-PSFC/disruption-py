@@ -330,7 +330,7 @@ class D3DPhysicsMethods:
             a_minor = interp1(t_a, a_minor, params.times, "linear")
             with np.errstate(divide="ignore"):
                 n_g = ip / 1.0e6 / (np.pi * a_minor**2)  # [MA/m^2]
-                g_f = ne / 1.0e20 / n_g
+                g_f = ne / n_g * 1e-20
         except mdsExceptions.MdsException as e:
             # TODO: Confirm that there is a separate exception if ptdata name doesn't exist
             params.logger.info(
