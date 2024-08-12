@@ -611,15 +611,25 @@ class D3DPhysicsMethods:
     @physics_method(
         columns=[
             "ip_rt",
+            "ip_prog_rt",
             "ip_error_rt",
+            "dip_dt_rt",
             "dipprog_dt_rt",
-            "dipprog_dt",
-            "power_supply_railed",
         ],
         tokamak=Tokamak.D3D,
     )
     def get_rt_ip_parameters(params: PhysicsMethodParams):
-        params.mds_conn.open_tree("d3d")
+        """
+        Get real-time plasma current and programmed plasma current from EFIT,
+        then compute the real-time ip_error and the derivatives of all of the above signals.
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_Ip_parameters_RT.m
+        https://github.com/MIT-PSFC/disruption-py/pull/254
+
+        Last major update by William Wei on 8/5/2024
+        """
         ip_rt = [np.nan]
         ip_prog_rt = [np.nan]
         ip_error_rt = [np.nan]
@@ -704,7 +714,7 @@ class D3DPhysicsMethods:
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
             ipimode = np.full(len(params.times), np.nan)
-        feedback_off_indices = np.where((ipimode != 0) & (ipimode == 3))
+        (feedback_off_indices,) = np.where((ipimode != 0) & (ipimode == 3))
         ip_error_rt[feedback_off_indices] = np.nan
         # Finally, get 'epsoff' to determine if/when the E-coil power supplies have railed
         # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
@@ -719,23 +729,27 @@ class D3DPhysicsMethods:
             # the last time sample
             t_epsoff += 0.001
             epsoff = interp1(t_epsoff, epsoff, params.times, "linear")
-            railed_indices = np.where(np.abs(epsoff) > 0.5)
             power_supply_railed = np.zeros(len(params.times))
+            (railed_indices,) = np.where(np.abs(epsoff) > 0.5)
             power_supply_railed[railed_indices] = 1
-            ip_error_rt[railed_indices] = np.nan
+            # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
+            # PCS feedback control of Ip is not being applied.  Therefore the
+            # 'ip_error' parameter is undefined for these times.
+            (ps_railed_indices,) = np.where(power_supply_railed != 0)
+            ip_error_rt[ps_railed_indices] = np.nan
         except mdsExceptions.MdsException as e:
             params.logger.info(
                 f"[Shot {params.shot_id}]:Failed to get epsoff signal. "
                 + "power_supply_railed will be NaN."
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            power_supply_railed = [np.nan]
         # 'dip_dt_RT': dip_dt_rt,
         output = {
             "ip_rt": ip_rt,
+            "ip_prog_rt": ip_prog_rt,
             "ip_error_rt": ip_error_rt,
+            "dip_dt_rt": dip_dt_rt,
             "dipprog_dt_rt": dipprog_dt_rt,
-            "power_supply_railed": power_supply_railed,
         }
         return output
 
