@@ -17,14 +17,13 @@ from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environm
 from tests.utils.eval_against_sql import (
     eval_against_cache,
     eval_shots_against_cache,
-    get_fresh_data,
     get_cached_from_fresh,
+    get_fresh_data,
 )
 from tests.utils.factory import (
     get_tokamak_test_expected_failure_columns,
     get_tokamak_test_shotlist,
 )
-
 from tests.utils.pytest_helper import extract_param, save_to_csv
 
 
