@@ -548,7 +548,7 @@ class D3DPhysicsMethods:
                 )
                 polarity = polarity[0]
             ip_prog_rt = ip_prog_rt * polarity
-            dipprog_dt_rt = matlab_gradient_1d_vectorized(ip_prog_rt, t_ip_prog_rt)
+            dipprog_dt_rt = np.gradient(ip_prog_rt, t_ip_prog_rt)
             ip_prog_rt = interp1(t_ip_prog_rt, ip_prog_rt, params.times, "linear")
             dipprog_dt_rt = interp1(t_ip_prog_rt, dipprog_dt_rt, params.times, "linear")
         except mdsExceptions.MdsException as e:
