@@ -9,13 +9,7 @@ from MDSplus import mdsExceptions
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.math import (
-    get_bolo,
-    gsastd,
-    interp1,
-    power,
-    matlab_gradient_1d_vectorized,
-)
+from disruption_py.core.utils.math import get_bolo, gsastd, interp1, power
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -488,7 +482,6 @@ class D3DPhysicsMethods:
             "ip_error_rt",
             "dip_dt_rt",
             "dipprog_dt_rt",
-            "power_supply_railed",
         ],
         tokamak=Tokamak.D3D,
     )
@@ -509,7 +502,6 @@ class D3DPhysicsMethods:
         ip_error_rt = [np.nan]
         dip_dt_rt = [np.nan]
         dipprog_dt_rt = [np.nan]
-        power_supply_railed = [np.nan]
         # Get measured plasma current parameters
         # TODO: Why open d3d and not the rt efit tree?
         try:
@@ -625,7 +617,6 @@ class D3DPhysicsMethods:
             "ip_error_rt": ip_error_rt,
             "dip_dt_rt": dip_dt_rt,
             "dipprog_dt_rt": dipprog_dt_rt,
-            "power_supply_railed": power_supply_railed,
         }
         return output
 
