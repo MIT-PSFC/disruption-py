@@ -76,7 +76,7 @@ def test_cache_setting_sql(tokamak, shotlist, num_processes):
 
     # Verify the correct columns were retrieved from SQL
     for res in results:
-        assert set(res.columns) == {"i_efc", "shot", "time", "commit_hash"}
+        assert {"i_efc", "shot", "time", "commit_hash"} == set(res.columns)
 
 
 @skip_on_fast_execution
@@ -99,7 +99,7 @@ def test_only_requested_columns(tokamak, shotlist):
         num_processes=2,
     )
     for res in results:
-        assert set(res.columns) == {"v_loop", "q95", "shot", "time", "commit_hash"}
+        assert {"v_loop", "q95", "shot", "time", "commit_hash"} == set(res.columns)
 
 
 @skip_on_fast_execution
