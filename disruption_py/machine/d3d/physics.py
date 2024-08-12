@@ -867,7 +867,6 @@ class D3DPhysicsMethods:
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
         # Get raw bolometer data 
         try:
-            # BUG: all channels have the same p_rad['brightness']
             p_rad = D3DPhysicsMethods._get_p_rad(params)
         except Exception as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get bolometer data")
@@ -983,19 +982,19 @@ class D3DPhysicsMethods:
                 p_rad_all_but_div[:, div_indices] = np.nan
 
                 # DEBUG
-                import matplotlib.pyplot as plt
-                for i in range(5000, 12000, 1000):
-                    print(i)
-                    try:
-                        plt.figure()
-                        plt.scatter(p_rad["xinterp"][i], p_rad_core[i], label='core')
-                        plt.scatter(p_rad["xinterp"][i], p_rad_div[i], label='div')
-                        plt.legend()
-                        plt.xlabel('xinterp')
-                        plt.title(f"i={i}, t={p_rad['t'][i]}")
-                        plt.show()
-                    except:
-                        continue
+                # import matplotlib.pyplot as plt
+                # for i in range(5000, 12000, 1000):
+                #     print(i)
+                #     try:
+                #         plt.figure()
+                #         plt.scatter(p_rad["xinterp"][i], p_rad_core[i], label='core')
+                #         plt.scatter(p_rad["xinterp"][i], p_rad_div[i], label='div')
+                #         plt.legend()
+                #         plt.xlabel('xinterp')
+                #         plt.title(f"i={i}, t={p_rad['t'][i]}")
+                #         plt.show()
+                #     except:
+                #         continue
                 ######
 
                 # # Calculate the peaking factors
