@@ -15,10 +15,10 @@ def config(tokamak: Union[Enum, str] = None):
         tokamak = tokamak.value
 
     if tokamak not in configs:
-        settings_file_path = os.path.expanduser("~/proj/ONW/ONE_SCOPE/disruption-py/disruption_py/config.toml")
+        #settings_file_path = os.path.expanduser("~/proj/ONW/ONE_SCOPE/disruption-py/disruption_py/config.toml")
         configs[tokamak] = Dynaconf(
             envvar_prefix="DISPY",
-            settings_file=settings_file_path, #TODO(ZanderKeith): Submit an issue about this relative path not working
+            #settings_file=settings_file_path, #TODO(ZanderKeith): Submit an issue about this relative path not working
             environments=True,
             default_env="default",
             env=tokamak,

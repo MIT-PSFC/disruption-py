@@ -1385,6 +1385,29 @@ class CmodTearingMethods:
 
         return expected_cross_phase
 
+    def cross_phase_mask(original_signal, cross_phases, expected_cross_phases, tolerance=0.5):
+
+        masked_signal = original_signal
+        for cross_phase, expected_cross_phase in zip(cross_phases, expected_cross_phases):
+            # If the expected cross phase is near 0 or 2pi, we risk a 2 pi jump messing things up
+            # Gotta bring everything into the center of the circle
+            if (expected_cross_phase < np.pi/8):
+                tested_expected_cross_phase = expected_cross_phase + np.pi
+                tested_cross_phase = (cross_phase + np.pi) % (2 * np.pi)
+            elif (expected_cross_phase > 15*np.pi/8):
+                tested_expected_cross_phase = expected_cross_phase - np.pi
+                tested_cross_phase = (cross_phase - np.pi) % (2 * np.pi)
+            else:
+                tested_expected_cross_phase = expected_cross_phase
+                tested_cross_phase = cross_phase
+            masked_signal = np.where(
+                np.abs(tested_cross_phase - tested_expected_cross_phase) > tolerance,
+                np.nan,
+                masked_signal
+            )
+        return masked_signal
+
+
     @staticmethod
     @physics_method(
         tags=["mirnov_spectrogram", "cross_spectrum_real", "cross_spectrum_imag", "cross_power", "cross_phase", "cross_coherence"], tokamak=Tokamak.CMOD
@@ -1393,10 +1416,12 @@ class CmodTearingMethods:
         # Give me two mirnov probes that work PLEASE
         # BP02_GHK *should* be fairly constistent at least, so that one goes up front
         # All the others, who knows man. Just try them all and pick the first that exists. TODO(ZanderKeith)
-        gh_mirnov_names = ["BP02_GHK"] + [f"BP0{p}_GHK" for p in [1] + [i for i in range(3, 10)]] + [f"BP{p}_GHK" for p in range(10, 19)]
+        gh_mirnov_names = ["BP02_GHK"] + [f"BP0{p}_GHK" for p in [1, *list(range(3, 10))]] + [f"BP{p}_GHK" for p in range(10, 19)]
         ab_mirnov_names = [f"BP0{p}_ABK" for p in range(1, 10)] + [f"BP{p}_ABK" for p in range(10, 19)]
         path = r"\magnetics::top.active_mhd.signals"
 
+        mirnov_0 = None
+        mirnov_1 = None
         mirnov_signal_0 = None
         mirnov_signal_1 = None
         mirnov_times = None # This will be set by the first probe that is found
@@ -1408,6 +1433,7 @@ class CmodTearingMethods:
                         path=f"{path}:{mirnov_name}", tree_name="magnetics"
                     )
                     gh_mirnov_names.remove(mirnov_name)
+                    mirnov_0 = mirnov_name
                 except:
                     continue
             else:
@@ -1418,6 +1444,7 @@ class CmodTearingMethods:
                     mirnov_signal_1, _ = params.mds_conn.get_data_with_dims(
                         path=f"{path}:{mirnov_name}", tree_name="magnetics"
                     )
+                    mirnov_1 = mirnov_name
                 except:
                     continue
             else:
@@ -1430,6 +1457,7 @@ class CmodTearingMethods:
                         mirnov_signal_1, mirnov_times = params.mds_conn.get_data_with_dims(
                             path=f"{path}:{mirnov_name}", tree_name="magnetics"
                         )
+                        mirnov_1 = mirnov_name
                     except:
                         continue
                 else:
@@ -1450,7 +1478,7 @@ class CmodTearingMethods:
 
         f_timebase = 1 / (params.times[1] - params.times[0]) # however fast the timebase is
 
-        SFT = CmodPhysicsMethods.setup_stfft(f_mirnov=f_mirnov, f_target=f_timebase)
+        SFT = CmodTearingMethods.setup_stfft(f_mirnov=f_mirnov, f_target=f_timebase)
 
         mirnov_signal_0_fft = SFT.stft(mirnov_signal_0)
         mirnov_signal_1_fft = SFT.stft(mirnov_signal_1)
@@ -1487,10 +1515,10 @@ class CmodTearingMethods:
         cross_coherence = cross_power / (mirnov_0_power * mirnov_1_power)
 
         # Use multi-indexing to store the frequency data
-        mirnov_0_real_data = pd.DataFrame(mirnov_signal_0_fft_interp.T.real, columns=pd.MultiIndex.from_product([["mirnov_0_real"], freqs], names=["", "frequencies"]), dtype=np.float64)
-        mirnov_0_imag_data = pd.DataFrame(mirnov_signal_0_fft_interp.T.imag, columns=pd.MultiIndex.from_product([["mirnov_0_imag"], freqs], names=["", "frequencies"]), dtype=np.float64)
-        mirnov_1_real_data = pd.DataFrame(mirnov_signal_1_fft_interp.T.real, columns=pd.MultiIndex.from_product([["mirnov_1_real"], freqs], names=["", "frequencies"]), dtype=np.float64)
-        mirnov_1_imag_data = pd.DataFrame(mirnov_signal_1_fft_interp.T.imag, columns=pd.MultiIndex.from_product([["mirnov_1_imag"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        mirnov_0_real_data = pd.DataFrame(mirnov_signal_0_fft_interp.T.real, columns=pd.MultiIndex.from_product([[f"mirnov_0_real"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        mirnov_0_imag_data = pd.DataFrame(mirnov_signal_0_fft_interp.T.imag, columns=pd.MultiIndex.from_product([[f"mirnov_0_imag"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        mirnov_1_real_data = pd.DataFrame(mirnov_signal_1_fft_interp.T.real, columns=pd.MultiIndex.from_product([[f"mirnov_1_real"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        mirnov_1_imag_data = pd.DataFrame(mirnov_signal_1_fft_interp.T.imag, columns=pd.MultiIndex.from_product([[f"mirnov_1_imag"], freqs], names=["", "frequencies"]), dtype=np.float64)
         cross_spectrum_real_data = pd.DataFrame(Cxy.T.real, columns=pd.MultiIndex.from_product([["cross_spectrum_real"], freqs], names=["", "frequencies"]), dtype=np.float64)
         cross_spectrum_imag_data = pd.DataFrame(Cxy.T.imag, columns=pd.MultiIndex.from_product([["cross_spectrum_imag"], freqs], names=["", "frequencies"]), dtype=np.float64)
         cross_power_data = pd.DataFrame(cross_power.T, columns=pd.MultiIndex.from_product([["cross_power"], freqs], names=["", "frequencies"]), dtype=np.float64)
