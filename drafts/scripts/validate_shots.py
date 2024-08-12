@@ -3,7 +3,7 @@
 import argparse
 import random
 
-from disruption_py.io.sql import *
+from disruption_py.inout.sql import *
 from disruption_py.shots import *
 
 TEST_D3D_SHOT_LIST = [175552, 175553, 175554, 191914, "191786"]

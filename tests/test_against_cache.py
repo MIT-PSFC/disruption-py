@@ -15,10 +15,10 @@ import pytest
 
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from tests.utils.eval_against_sql import (
-    eval_against_sql,
-    eval_shots_against_sql,
-    get_mdsplus_data,
-    get_sql_data_for_mdsplus,
+    eval_against_cache,
+    eval_shots_against_cache,
+    get_fresh_data,
+    get_cached_from_fresh,
 )
 from tests.utils.factory import (
     get_tokamak_test_expected_failure_columns,
@@ -29,56 +29,61 @@ from tests.utils.pytest_helper import extract_param, save_to_csv
 
 
 @pytest.fixture(scope="module")
-def mdsplus_data(
+def fresh_data(
     tokamak: Tokamak,
     shotlist: List[int],
     module_file_path_f,
     pytestconfig,
 ) -> Dict[int, pd.DataFrame]:
-    mds = get_mdsplus_data(
+    fresh_data = get_fresh_data(
         tokamak=tokamak,
         shotlist=shotlist,
         log_file_path=module_file_path_f(".log"),
         test_columns=extract_param(pytestconfig),
     )
-    save_to_csv(data=mds, module_file_path_f=module_file_path_f, data_source_name="mds")
-    return mds
+    save_to_csv(
+        data=fresh_data, module_file_path_f=module_file_path_f, data_source_name="fresh"
+    )
+    return fresh_data
 
 
 @pytest.fixture(scope="module")
-def sql_data(
+def cache_data(
     tokamak: Tokamak,
     shotlist: List[int],
-    mdsplus_data: Dict[int, pd.DataFrame],
+    fresh_data: Dict[int, pd.DataFrame],
     module_file_path_f,
     pytestconfig,
 ) -> Dict[int, pd.DataFrame]:
-    sql = get_sql_data_for_mdsplus(
+    cache_data = get_cached_from_fresh(
         tokamak=tokamak,
         shotlist=shotlist,
-        mdsplus_data=mdsplus_data,
+        fresh_data=fresh_data,
         test_columns=extract_param(pytestconfig),
     )
-    save_to_csv(data=sql, module_file_path_f=module_file_path_f, data_source_name="sql")
-    return sql
+    save_to_csv(
+        data=cache_data, module_file_path_f=module_file_path_f, data_source_name="cache"
+    )
+    return cache_data
 
 
 def test_data_columns(
     shotlist: List[int],
-    mdsplus_data: Dict[int, pd.DataFrame],
-    sql_data: Dict[int, pd.DataFrame],
+    fresh_data: Dict[int, pd.DataFrame],
+    cache_data: Dict[int, pd.DataFrame],
     data_column,
     expected_failure_columns: List[str],
 ):
     """
-    Test that the data columns are the same between MDSplus and SQL across specified data columns.
+    Test that the data columns are the same between fresh and cached sources across
+    specified data columns.
 
     Data column is parameterized in pytest_generate_tests.
     """
-    eval_shots_against_sql(
+    eval_shots_against_cache(
         shotlist=shotlist,
-        mdsplus_data=mdsplus_data,
-        sql_data=sql_data,
+        fresh_data=fresh_data,
+        cache_data=cache_data,
         data_columns=[data_column],
         expected_failure_columns=expected_failure_columns,  # we use xfail instead of manually expecting for column failures
     )
@@ -113,7 +118,7 @@ if __name__ == "__main__":
 
     expected_failure_columns = get_tokamak_test_expected_failure_columns(tokamak)
 
-    data_differences = eval_against_sql(
+    data_differences = eval_against_cache(
         tokamak=tokamak,
         shotlist=shotlist,
         expected_failure_columns=expected_failure_columns,

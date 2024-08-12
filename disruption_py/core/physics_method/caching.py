@@ -11,6 +11,18 @@ from disruption_py.core.physics_method.params import PhysicsMethodParams
 
 
 def cache_method(method: Callable) -> Callable:
+    """Decorates a function as a cached method and instantiates its cache.
+
+    Cached methods are functions that run expensive operations on data in the shot
+    and may be reused. The cache is used to store the results of the parameter
+    method so that it is only calculated once per shot for a given timebase.
+
+    Parameters
+    ----------
+    method: Callable
+        The method to be cached.
+    """
+
     @functools.wraps(method)
     def wrapper(*args, **kwargs):
         physics_method_params: PhysicsMethodParams = (

@@ -11,7 +11,7 @@ import pandas as pd
 
 import disruption_py.data
 from disruption_py.core.utils.enums import map_string_to_enum
-from disruption_py.io.sql import ShotDatabase
+from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -164,15 +164,14 @@ def shotlist_setting_runner(shotlist_setting, params: ShotlistSettingParams):
     Retrieve list of shot ids for the given shotlist setting.
     """
     if isinstance(shotlist_setting, ShotlistSetting):
-        return shotlist_setting.get_shotlist(params)
+        # Do not immediately return the list because it may be multidimensional
+        # and would need to be handled as such below
+        shotlist_setting = shotlist_setting.get_shotlist(params)
 
-    if isinstance(shotlist_setting, int) or (
+    if isinstance(shotlist_setting, (int, np.int64)) or (
         isinstance(shotlist_setting, str) and shotlist_setting.isdigit()
     ):
         return [shotlist_setting]
-
-    if isinstance(shotlist_setting, np.ndarray):
-        return shotlist_setting
 
     if isinstance(shotlist_setting, str):
         shotlist_setting_object = _get_shotlist_setting_mappings.get(
@@ -196,7 +195,7 @@ def shotlist_setting_runner(shotlist_setting, params: ShotlistSettingParams):
         if chosen_setting is not None:
             return shotlist_setting_runner(chosen_setting, params)
 
-    if isinstance(shotlist_setting, list):
+    if isinstance(shotlist_setting, (list, np.ndarray)):
         all_results = []
         for setting in shotlist_setting:
             sub_result = shotlist_setting_runner(setting, params)

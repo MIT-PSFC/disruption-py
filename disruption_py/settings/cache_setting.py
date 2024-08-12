@@ -8,7 +8,7 @@ from typing import Dict, Union
 import pandas as pd
 
 from disruption_py.core.utils.enums import map_string_to_enum
-from disruption_py.io.sql import ShotDatabase
+from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -94,12 +94,12 @@ class SQLCacheSetting(CacheSetting):
 
 
 class DFCacheSetting(CacheSetting):
-    """Cache setting for retrieving data from a pandas dataframe.
+    """Cache setting for retrieving data from a Pandas DataFrame.
 
     Parameters
     ----------
     cache_data : pd.DataFrame
-        The dataframe to use as the cached data.
+        The DataFrame to use as the cached data.
     """
 
     def __init__(self, cache_data: pd.DataFrame):

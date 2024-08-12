@@ -11,7 +11,7 @@ import pandas as pd
 
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.misc import safe_df_concat
-from disruption_py.io.sql import ShotDatabase
+from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -21,8 +21,8 @@ class OutputSettingParams:
 
     Attributes
     ----------
-    result : pd.Dataframe
-        The dataframe of results for a single shot.
+    result : pd.DataFrame
+        The DataFrame of results for a single shot.
     database : ShotDatabase
         Database object to use for getting cache data.
         A different database connection is used by each thread/process.
@@ -75,18 +75,18 @@ class OutputSetting(ABC):
     @abstractmethod
     def _output_shot(self, params: OutputSettingParams):
         """Abstract method implemented by subclasses to handle data output for a single shot.
-        This method is called by disruption_py with the shots dataframe in the params object
+        This method is called by disruption_py with the shots DataFrame in the params object
         once the data has been retrieved.
 
         Parameters
         ----------
         params : OutputSettingParams
-            Params containing the data retrieved for a shot in a dataframe and other utility parameters.
+            Params containing the data retrieved for a shot in a DataFrame and other utility parameters.
         """
         pass
 
     def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """Empty method optionally overriden by subclasses to handle cleanup after all shots have been
+        """Empty method optionally overridden by subclasses to handle cleanup after all shots have been
         output. This may include closing files or other cleanup.
 
         Parameters
@@ -100,7 +100,7 @@ class OutputSetting(ABC):
     def get_results(self, params: CompleteOutputSettingParams) -> Any:
         """Abstract method implemented by subclasses to handle the output of the data from
         calls to `get_shots_data`. This method is called by disruption_py once `output_shot()` has been
-        called for all shots ids.
+        called for all shot ids.
 
         Parameters
         ----------
@@ -157,7 +157,7 @@ class OutputSettingList(OutputSetting):
 
 class OutputSettingDict(OutputSetting):
     """
-    Utility class that is automatically used when a dicationary is passed as the `output_setting` parameter in `RetrievalSettings.
+    Utility class that is automatically used when a dictionary is passed as the `output_setting` parameter in `RetrievalSettings.
 
     Parameters
     ----------
@@ -201,7 +201,7 @@ class OutputSettingDict(OutputSetting):
 
 class ListOutputSetting(OutputSetting):
     """
-    Output all retrieved shot data as a list of dataframes, once retrieval complete.
+    Output all retrieved shot data as a list of DataFrames, once retrieval completes.
     """
 
     def __init__(self):
@@ -219,7 +219,7 @@ class ListOutputSetting(OutputSetting):
 
 class DictOutputSetting(OutputSetting):
     """
-    Output all retrieved shot data as a dict of dataframes with the keys being shot numbers.
+    Output all retrieved shot data as a dict of DataFrames with the keys being shot numbers.
     """
 
     def __init__(self):
@@ -237,7 +237,7 @@ class DictOutputSetting(OutputSetting):
 
 class DataFrameOutputSetting(OutputSetting):
     """
-    Output all retrieved shot data as a list of dataframes, once retrieval complete.
+    Output all retrieved shot data as a list of DataFrames, once retrieval completes.
     """
 
     def __init__(self):
@@ -364,7 +364,7 @@ class BatchedCSVOutputSetting(OutputSetting):
 
 class SQLOutputSetting(OutputSetting):
     """
-    Stream outputted data to disruption_warning or similar sql table.
+    Stream outputted data to disruption_warning or similar SQL table.
     """
 
     def __init__(
@@ -390,7 +390,7 @@ class SQLOutputSetting(OutputSetting):
             )
             self.modifications += 1
         else:
-            params.logger.warning("No shot id found in result dataframe")
+            params.logger.warning("No shot id found in result DataFrame")
         self.total_shots += 1
 
     def get_results(self, params: CompleteOutputSettingParams) -> Any:

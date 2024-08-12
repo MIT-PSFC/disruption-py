@@ -20,9 +20,6 @@ from disruption_py.machine.tokamak import Tokamak
 
 class D3DPhysicsMethods:
 
-    # Tokamak Variables
-    NOMINAL_FLATTOP_RADIUS = 0.59
-
     @staticmethod
     @physics_method(columns=["time_until_disrupt"], tokamak=Tokamak.D3D)
     def _get_time_until_disrupt(params: PhysicsMethodParams):
@@ -31,28 +28,55 @@ class D3DPhysicsMethods:
         return {"time_until_disrupt": [np.nan]}
 
     @staticmethod
-    @physics_method(columns=["h98", "h_alpha"], tokamak=Tokamak.D3D)
-    def get_H_parameters(params: PhysicsMethodParams):
+    @physics_method(columns=["h98"], tokamak=Tokamak.D3D)
+    def get_h98(params: PhysicsMethodParams):
+        """
+        Get the H98y2 energy confinement time parameter
+
+        Reference
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_H98_d3d.m
+
+        Last major update by William Wei on 7/31/2024
+        """
         output = {
             "h98": [np.nan],
-            "h_alpha": [np.nan],
         }
         try:
             h_98, t_h_98 = params.mds_conn.get_data_with_dims(
                 r"\H_THH98Y2", tree_name="transport"
             )
-            h_98 = interp1(t_h_98, h_98, params.times)
+            t_h_98 /= 1e3  # [ms] -> [s]
+            h_98 = interp1(t_h_98, h_98, params.times, "linear")
             output["h98"] = h_98
         except ValueError as e:
             params.logger.info(
                 f"[Shot {params.shot_id}]: Failed to get H98 signal. Returning NaNs."
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+        return output
+
+    @staticmethod
+    @physics_method(columns=["h_alpha"], tokamak=Tokamak.D3D)
+    def get_h_alpha(params: PhysicsMethodParams):
+        """
+        Get the H_alpha line emission intensity.
+
+        Reference
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_H98_d3d.m
+
+        Last major update by William Wei on 7/31/2024
+        """
+        output = {
+            "h_alpha": [np.nan],
+        }
         try:
             h_alpha, t_h_alpha = params.mds_conn.get_data_with_dims(
                 r"\fs04", tree_name="d3d"
             )
-            h_alpha = interp1(t_h_alpha, h_alpha, params.times)
+            t_h_alpha /= 1e3  # [ms] -> [s]
+            h_alpha = interp1(t_h_alpha, h_alpha, params.times, "linear")
             output["h_alpha"] = h_alpha
         except ValueError as e:
             params.logger.info(
@@ -663,6 +687,7 @@ class D3DPhysicsMethods:
         always return an arrays of NaN for z_prog, z_error, and
         z_error_norm.
         """
+        NOMINAL_FLATTOP_RADIUS = 0.59
         z_cur = [np.nan]
         z_cur_norm = [np.nan]
         z_prog = [np.nan]
@@ -690,7 +715,7 @@ class D3DPhysicsMethods:
                     f"[Shot {params.shot_id}]:Failed to get efit parameters"
                 )
                 params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-                z_cur_norm = z_cur / D3DPhysicsMethods.NOMINAL_FLATTOP_RADIUS
+                z_cur_norm = z_cur / NOMINAL_FLATTOP_RADIUS
         except mdsExceptions.MdsException as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get vpszp signal")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
@@ -719,6 +744,7 @@ class D3DPhysicsMethods:
             raise NotImplementedError
             # TODO: Move to a folder like "/fusion/projects/disruption_warning/data"
             filename = "/fusion/projects/disruption_warning/matlab_programs/recalc.nc"
+            # pylint: disable=undefined-variable
             ncid = nc.Dataset(filename, "r")
             brad = ncid.variables["dusbradial_calculated"][:]
             t_n1 = ncid.variables["times"][:] * 1.0e-3  # [ms] -> [s]
@@ -938,6 +964,7 @@ class D3DPhysicsMethods:
         }
         return output
 
+    @staticmethod
     # TODO: Finish implementing just in case
     def _efit_map_rz_to_rho_original(params: PhysicsMethodParams, ts_dict, efit_dict):
         slices = np.zeros(ts_dict["time"].shape)
@@ -979,7 +1006,7 @@ class D3DPhysicsMethods:
         poloidal plane.
         Parameters
         ----------
-        times: np.ndarray
+        ts: np.ndarray
             Timebase to interpolate to
         efit_dict: dict
             Dictionary with the efit data. Keys are 'time', 'r', 'z', 'psin', 'rhovn'
@@ -1060,21 +1087,6 @@ class D3DPhysicsMethods:
         kappa_area[invalid_indices] = np.nan
         kappa_area = interp1(t, kappa_area, params.times)
         return {"kappa_area": kappa_area}
-
-    @staticmethod
-    @physics_method(columns=["h98", "h_alpha"], tokamak=Tokamak.D3D)
-    def get_h_parameters(params: PhysicsMethodParams):
-        h98, t_h98 = params.mds_conn.get_data_with_dims(
-            r"\H_THH98Y2", tree_name="transport"
-        )
-        h98 = interp1(t_h98, h98, params.times)
-
-        h_alpha, t_h_alpha = params.mds_conn.get_data_with_dims(
-            r"\fs04", tree_name="d3d"
-        )
-        h_alpha = interp1(t_h_alpha, h_alpha, params.times)
-        output = {"h98": h98, "h_alpha": h_alpha}
-        return output
 
     @staticmethod
     @physics_method(
@@ -1242,7 +1254,8 @@ class D3DPhysicsMethods:
             fan_chans = np.arange(0, 24)
         elif fan == "lower":
             fan_chans = np.arange(24, 48)
-        elif fan == "custom":
+        # Default is fan="custom"
+        else:
             # 1st choice (heavily cover divertor and core)
             fan_chans = np.array([3, 4, 5, 6, 7, 8, 9, 12, 14, 15, 16, 22]) + 24
 
