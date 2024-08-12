@@ -1342,60 +1342,88 @@ class D3DPhysicsMethods:
         tokamak=Tokamak.D3D,
     )
     def get_shape_parameters(params: PhysicsMethodParams):
-        efit_time = (
-            params.mds_conn.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree")
-            / 1.0e3
-        )  # [ms] -> [s]
-        sqfod = params.mds_conn.get_data(r"\efit_a_eqdsk:sqfod", tree_name="_efit_tree")
-        sqfou = params.mds_conn.get_data(r"\efit_a_eqdsk:sqfou", tree_name="_efit_tree")
-        tritop = params.mds_conn.get_data(
-            r"\efit_a_eqdsk:tritop", tree_name="_efit_tree"
-        )  # meters
-        tribot = params.mds_conn.get_data(
-            r"\efit_a_eqdsk:tribot", tree_name="_efit_tree"
-        )  # meters
-        # plasma minor radius [m]
-        aminor = params.mds_conn.get_data(
-            r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
-        )
-        chisq = params.mds_conn.get_data(r"\efit_a_eqdsk:chisq", tree_name="_efit_tree")
-        # Compute triangularity and squareness:
-        delta = (tritop + tribot) / 2.0
-        squareness = (sqfod + sqfou) / 2.0
+        """
+        Get the plasma triangularity (delta), squareness, and minor radius [m] from EFIT.
 
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_shape_parameters.m
+        https://github.com/MIT-PSFC/disruption-py/pull/258
+
+        Last major update by William Wei on 8/6/2024
+        """
+        # Get efit_time
+        try:
+            efit_time = params.mds_conn.get_data(
+                r"\efit_a_eqdsk:atime", tree_name="_efit_tree"
+            )
+            efit_time /= 1e3  # [ms] -> [s]
+        except mdsExceptions.MdsException as e:
+            params.logger.info(f"[Shot {params.shot_id}]:Failed to get EFIT time")
+            params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+            return {"delta": [np.nan], "squareness": [np.nan], "aminor": [np.nan]}
+        # Compute triangularity
+        try:
+            tritop = params.mds_conn.get_data(
+                r"\efit_a_eqdsk:tritop", tree_name="_efit_tree"
+            )  # meters
+            tribot = params.mds_conn.get_data(
+                r"\efit_a_eqdsk:tribot", tree_name="_efit_tree"
+            )  # meters
+            delta = (tritop + tribot) / 2.0
+            delta = interp1(efit_time, delta, params.times, "linear")
+        except mdsExceptions.MdsException as e:
+            params.logger.info(
+                f"[Shot {params.shot_id}]:Failed to obtain triangularity signals"
+            )
+            params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+            delta = [np.nan]
+        # Compute squareness
+        try:
+            sqfod = params.mds_conn.get_data(
+                r"\efit_a_eqdsk:sqfod", tree_name="_efit_tree"
+            )
+            sqfou = params.mds_conn.get_data(
+                r"\efit_a_eqdsk:sqfou", tree_name="_efit_tree"
+            )
+            squareness = (sqfod + sqfou) / 2.0
+            squareness = interp1(efit_time, squareness, params.times, "linear")
+        except mdsExceptions.MdsException as e:
+            params.logger.info(
+                f"[Shot {params.shot_id}]:Failed to obtain squareness signals"
+            )
+            params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+            squareness = [np.nan]
+        # Get aminor
+        try:
+            aminor = params.mds_conn.get_data(
+                r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
+            )
+            aminor = interp1(efit_time, aminor, params.times, "linear")
+        except mdsExceptions.MdsException as e:
+            params.logger.info(
+                f"[Shot {params.shot_id}]:Failed to obtain aminor signals"
+            )
+            params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+            aminor = [np.nan]
         # Remove invalid indices
-        invalid_indices = np.where(chisq > 50)
-        delta[invalid_indices] = np.nan
-        squareness[invalid_indices] = np.nan
-        aminor[invalid_indices] = np.nan
-
-        # Interpolate to desired times
-        delta = interp1(
-            efit_time,
-            delta,
-            params.times,
-            "linear",
-            bounds_error=False,
-            fill_value=np.nan,
-        )
-        squareness = interp1(
-            efit_time,
-            squareness,
-            params.times,
-            "linear",
-            bounds_error=False,
-            fill_value=np.nan,
-        )
-        aminor = interp1(
-            efit_time,
-            aminor,
-            params.times,
-            "linear",
-            bounds_error=False,
-            fill_value=np.nan,
-        )
-        output = {"delta": delta, "squareness": squareness, "aminor": aminor}
-        return output
+        try:
+            chisq = params.mds_conn.get_data(
+                r"\efit_a_eqdsk:chisq", tree_name="_efit_tree"
+            )
+            invalid_indices = np.where(chisq > 50)
+            if ~np.isnan(delta[0]):
+                delta[invalid_indices] = np.nan
+            if ~np.isnan(squareness[0]):
+                squareness[invalid_indices] = np.nan
+            if ~np.isnan(aminor[0]):
+                aminor[invalid_indices] = np.nan
+        except mdsExceptions.MdsException as e:
+            params.logger.info(
+                f"[Shot {params.shot_id}]:Failed to obtain chisq to remove unreliable time points."
+            )
+            params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+        return {"delta": delta, "squareness": squareness, "aminor": aminor}
 
     @staticmethod
     @cache_method
