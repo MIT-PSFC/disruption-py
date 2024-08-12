@@ -83,25 +83,28 @@ def test_output_exists(initial_mdsplus_data, shotlist, test_file_path_f, tokamak
     """
     # There is no SQL output for DIII-D
     if tokamak is Tokamak.CMOD:
-        df_output, list_output, dict_output, csv_processed, hdf_processed, _ = (
+        df_output, list_output, dict_output, csv_output, hdf_output, _ = (
             initial_mdsplus_data
         )
     else:
-        df_output, list_output, dict_output, csv_processed, hdf_processed = (
+        df_output, list_output, dict_output, csv_output, hdf_output = (
             initial_mdsplus_data
         )
 
     assert isinstance(df_output, pd.DataFrame), "DataFrame output does not exist"
     assert isinstance(list_output, list), "List output does not exist"
     assert isinstance(dict_output, dict), "Dict output does not exist"
-    assert (
-        csv_processed == hdf_processed == len(list_output) == len(shotlist)
-    ), "Number of shots does not match"
+    assert isinstance(csv_output, pd.DataFrame), "DataFrame from CSV does not exist"
+    assert isinstance(hdf_output, pd.DataFrame), "DataFrame from HDF5 does not exist"
+    assert_frame_equal_unordered(df_output, csv_output)
+    assert_frame_equal_unordered(csv_output, hdf_output)
     assert os.path.exists(test_file_path_f(".csv")), ".csv output does not exist"
     assert os.path.exists(test_file_path_f(".hdf5")), ".hdf5 output does not exist"
 
 
-def test_sql_output_setting(shotlist, tokamak, shot_database: ShotDatabase) -> Dict:
+def test_sql_output_setting(
+    shotlist, tokamak, shot_database: ShotDatabase, initial_mdsplus_data_df
+) -> Dict:
     """
     Ensure SQL output setting works by reading from an initial writeback to
     SQL, then by updating the SQL with another writeback, and making sure data from
