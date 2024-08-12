@@ -1142,12 +1142,26 @@ class D3DPhysicsMethods:
     @staticmethod
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.D3D)
     def get_kappa_area(params: PhysicsMethodParams):
+        """
+        Compute kappa_area (elongation parameter) defined as
+        plasma area / (pi * aminor**2)
+
+        Note: the EFIT-computed kappa is retrieved in D3DEfitMethods.
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_kappa_area.m
+        https://github.com/MIT-PSFC/disruption-py/pull/256
+
+        Last major update by William Wei on 8/6/2024
+        """
         a_minor = params.mds_conn.get_data(
             r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
         )
         area = params.mds_conn.get_data(r"\efit_a_eqdsk:area", tree_name="_efit_tree")
         chisq = params.mds_conn.get_data(r"\efit_a_eqdsk:chisq", tree_name="_efit_tree")
-        t = params.mds_conn.get(r"\efit_a_eqdsk:atime", tree_name="_efit_tree")
+        t = params.mds_conn.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree")
+        t /= 1e3  # [ms] -> [s]
         kappa_area = area / (np.pi * a_minor**2)
         invalid_indices = np.where(chisq > 50)
         kappa_area[invalid_indices] = np.nan
