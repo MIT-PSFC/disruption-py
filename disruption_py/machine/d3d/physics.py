@@ -413,23 +413,44 @@ class D3DPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["n_e_rt", "greenwald_fraction_rt"],
+        columns=["n_e_rt", "greenwald_fraction_rt", "dn_dt_rt"],
         tokamak=Tokamak.D3D,
     )
     def get_rt_density_parameters(params: PhysicsMethodParams):
-        ne_rt = [np.nan]
-        g_f_rt = [np.nan]
-        dne_dt_rt = [np.nan]
+        """
+        Get real-time electron density from EFIT, then compute the
+        real-time dn_dt and Greenwald_fraction.
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_density_parameters_RT.m
+        https://github.com/MIT-PSFC/disruption-py/pull/251
+
+        Last major update by William Wei on 8/2/2024
+        """
+
+        nan_output = {
+            "n_e_rt": [np.nan],
+            "greenwald_fraction_rt": [np.nan],
+            "dn_dt_rt": [np.nan],
+        }
         try:
-            # TODO: CHECK TREE_NAME
             ne_rt, t_ne_rt = params.mds_conn.get_data_with_dims(
-                f"ptdata('dssdenest', {params.shot_id})"
-            )
+                f"ptdata('dssdenest', {params.shot_id})", tree_name="_efit_tree"
+            )  # [10^19 m^-3]
             t_ne_rt = t_ne_rt / 1.0e3  # [ms] to [s]
             ne_rt = ne_rt * 1.0e19  # [10^19 m^-3] -> [m^-3]
             dne_dt_rt = np.gradient(ne_rt, t_ne_rt)  # [m^-3/s]
             ne_rt = interp1(t_ne_rt, ne_rt, params.times, "linear")
             dne_dt_rt = interp1(t_ne_rt, dne_dt_rt, params.times, "linear")
+        except mdsExceptions.MdsException as e:
+            params.logger.info(f"[Shot {params.shot_id}]:Failed to get ne_rt data")
+            params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+            return nan_output
+
+        try:
+            # Get real time ip to calculate the Greenwald density
+            # NOTE: avoid using nested try-except blocks?
             try:
                 ip_rt, t_ip_rt = params.mds_conn.get_data_with_dims(
                     f"ptdata('ipsip', {params.shot_id})"
@@ -439,23 +460,39 @@ class D3DPhysicsMethods:
             except Exception as e:
                 ip_rt, t_ip_rt = params.mds_conn.get_data_with_dims(
                     f"ptdata('ipspr15v', {params.shot_id})"
-                )  # [MA], [ms]
+                )  # [volts; 2 V/MA], [ms]
                 t_ip_rt = t_ip_rt / 1.0e3  # [ms] to [s]
+                ip_rt /= 2  # [volts] to [MA]
             ip_sign = np.sign(np.sum(ip_rt))
             ip = interp1(t_ip_rt, ip_rt * ip_sign, params.times, "linear")
-            a_minor_rt, t_a_rt = params.mds_conn.get_data_with_dims(
-                r"\efit_a_eqdsk:aminor", tree_name="efitrt1"
-            )  # [m], [ms]
-            t_a_rt = t_a_rt / 1.0e3  # [ms] -> [s]
-            a_minor_rt = interp1(t_a_rt, a_minor_rt, params.times, "linear")
+
+            # Read in EFIT minor radius and timebase.  This is also needed to calculate
+            # the Greenwald density limit.  However, if the minor radius data is not
+            # available, use a default fixed value of 0.59 m.  (We surveyed several
+            # hundred shots to determine this default value.)  Note that the efit
+            # timebase data is in a node called "atime" instead of "time" (where "time"
+            # does not work).
+
+            # For the real-time (RT) signals, read from the EFITRT1 tree
+            try:
+                a_minor_rt, t_a_rt = params.mds_conn.get_data_with_dims(
+                    r"\efit_a_eqdsk:aminor", tree_name="efitrt1"
+                )  # [m], [ms]
+                t_a_rt = t_a_rt / 1.0e3  # [ms] -> [s]
+                a_minor_rt = interp1(t_a_rt, a_minor_rt, params.times, "linear")
+            except Exception as e:
+                a_minor_rt = 0.59 * np.ones(len(params.times))
+
             with np.errstate(divide="ignore"):
-                n_g_rt = ip / 1.0e6 / (np.pi * a_minor_rt**2)  # [MA/m^2]
-                g_f_rt = ne_rt / 1.0e20 / n_g_rt  # TODO: Fill in units
+                n_g_rt = ip / (np.pi * a_minor_rt**2)  # [MA/m^2]
+                g_f_rt = ne_rt / 1.0e20 / n_g_rt
         except mdsExceptions.MdsException as e:
-            params.logger.info(f"[Shot {params.shot_id}]:Failed to get some parameter")
+            params.logger.info(
+                f"[Shot {params.shot_id}]:Failed to compute real-time Greenwald fraction."
+            )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-        # ' dne_dt_RT': dne_dt_rt
-        return {"n_e_rt": ne_rt, "greenwald_fraction_rt": g_f_rt}
+            g_f_rt = [np.nan]
+        return {"n_e_rt": ne_rt, "greenwald_fraction_rt": g_f_rt, "dn_dt_rt": dne_dt_rt}
 
     @staticmethod
     @physics_method(
