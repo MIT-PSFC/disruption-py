@@ -800,7 +800,7 @@ class D3DPhysicsMethods:
         # and 1 at separatrix.
         ts_radial_range = (0, 1)
         # set to true to interpolate ts_channel data onto equispaced radial grid
-        ts_equispaced = False
+        ts_equispaced = True
 
         ## Bolometer parameters
         # fan to use for P_rad peaking factors (either 'lower', 'upper', or 'custom')
@@ -917,9 +917,17 @@ class D3DPhysicsMethods:
                 # ts_equispaced = False by default
                 # TODO: implement this
                 if ts_equispaced:
-                    raise NotImplementedError(
-                        "Equispaced is currently assumed to be false"
-                    )
+                    for i in range(len(ts['time'])):
+                        (no_nans,) = np.where(~np.isnan(ts['te'][:, i]) 
+                                              & ~np.isnan(ts['ne'][:,i]))
+                        if len(no_nans) > 1:
+                            radii = ts[ts_radius][no_nans, i]
+                            if len(radii) > 2:
+                                rad_coord_interp = np.linspace(min(radii), max(radii), len(radii))
+                                # MATLAB used interp1(kind='pchip') which isn't available in disruption-py
+                                ts['te'][no_nans,i] = interp1(radii, ts['te'][no_nans, i], rad_coord_interp, 'linear')
+                                ts['ne'][no_nans,i] = interp1(radii, ts['ne'][no_nans, i], rad_coord_interp, 'linear')
+                                ts[ts_radius][no_nans,i] = rad_coord_interp
                 
                 # NOTE: there's so many edge points so the PF value has to be low
                 import matplotlib.pyplot as plt
