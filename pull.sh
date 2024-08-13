@@ -150,9 +150,18 @@ do
       # deactivate
       deactivate
 
+      # clock
+      TELAP=$((SECONDS-TSTART))
+      if [[ $TELAP -lt 60 ]]
+      then
+         TMESS="${TELAP}s"
+      else
+         TMESS="$((TELAP/60))m$((TELAP%60))s"
+      fi
+
       # status
       [[ -z "$SHA" ]] && exit 0
-      echo "{\"state\":\"$STATE\",\"description\":\"Updated on $TODAY in $((SECONDS-TSTART)) s\",\"context\":\"$STATUS\"}" \
+      echo "{\"state\":\"$STATE\",\"description\":\"Updated on $TODAY in $TMESS\",\"context\":\"$STATUS\"}" \
       | tee "$LOG/data.json" \
       | curl -s \
          -X POST \
