@@ -800,7 +800,7 @@ class D3DPhysicsMethods:
         # and 1 at separatrix.
         ts_radial_range = (0, 1)
         # set to true to interpolate ts_channel data onto equispaced radial grid
-        ts_equispaced = True
+        ts_equispaced = False
 
         ## Bolometer parameters
         # fan to use for P_rad peaking factors (either 'lower', 'upper', or 'custom')
@@ -816,10 +816,10 @@ class D3DPhysicsMethods:
         # 'brightness'; % either 'brightness' or 'power' ('z')
         p_rad_metric = "brightness"
 
-        ## Additional parameters (not in MATLAB script)
+        ## Additional parameters (not in MATLAB scri1pt)
         # Ts options
         ts_options = ["combined", "core", "tangential"]
-        # vertical range of the DIII-D cross section in meters
+        # vertical range of the DIII-D cross section in meters (for p_rad)
         vert_range = 3.0
 
         ne_pf = [np.nan]
@@ -871,8 +871,8 @@ class D3DPhysicsMethods:
 
             # NOTE: This looks good to me
             import matplotlib.pyplot as plt
-            for i in range(300, 1300, 200):
-                plt.plot(ts['rhovn'][:, i], ts['te'][:, i], label=f"t={round(ts['time'][i], 2)} s")
+            for i in range(500, 1200, 150):
+                plt.plot(ts['rhovn'][:, i], ts['te'][:, i], label=f"t={ts['time'][i]:.2f} s")
                 plt.scatter(ts['rhovn'][:, i], ts['te'][:, i])
             plt.axvline(ts_radial_range[0], c='r', linestyle=':')
             plt.axvline(ts_radial_range[1], c='r', linestyle=':')
@@ -880,6 +880,7 @@ class D3DPhysicsMethods:
             plt.xlabel('rhovn')
             plt.ylabel('Te (eV)')
             plt.legend()
+            plt.title(f"{params.shot_id} Thomson profiles")
             plt.show()
 
             params.logger.info(f"ts['rhovn'].shape: {ts["rhovn"].shape}")
@@ -929,8 +930,8 @@ class D3DPhysicsMethods:
                 
                 # NOTE: there's so many edge points so the PF value has to be low
                 import matplotlib.pyplot as plt
-                for i in range(500, 1300, 150):
-                    plt.plot(ts['rhovn'][:, i], ts['te'][:, i], label=f"t={ts['time'][i].round(2)} s")
+                for i in range(500, 1200, 150):
+                    plt.plot(ts['rhovn'][:, i], ts['te'][:, i], label=f"t={ts['time'][i]:.2f} s")
                     plt.scatter(ts['rhovn'][:, i], ts['te'][:, i])
                 plt.axvline(ts_radial_range[0], c='r', linestyle=':')
                 plt.axvline(ts_radial_range[1], c='r', linestyle=':')
@@ -938,10 +939,11 @@ class D3DPhysicsMethods:
                 plt.xlabel('rhovn')
                 plt.ylabel('Te (eV)')
                 plt.legend()
+                plt.title(f"{params.shot_id} Thomson profiles")
                 plt.show()
 
-                for i in range(500, 1500, 150):
-                    plt.plot(ts['rhovn'][:, i], ts['ne'][:, i], label=f"t={ts['time'][i].round(2)} s")
+                for i in range(500, 1200, 150):
+                    plt.plot(ts['rhovn'][:, i], ts['ne'][:, i], label=f"t={ts['time'][i]:.2f} s")
                     plt.scatter(ts['rhovn'][:, i], ts['ne'][:, i])
                 plt.axvline(ts_radial_range[0], c='r', linestyle=':')
                 plt.axvline(ts_radial_range[1], c='r', linestyle=':')
@@ -949,6 +951,7 @@ class D3DPhysicsMethods:
                 plt.xlabel('rhovn')
                 plt.ylabel('ne (m^-3)')
                 plt.legend()
+                plt.title(f"{params.shot_id} Thomson profiles")
                 plt.show()
                 
                 # Find core bin for Thomson and calculate Te, ne peaking factors
