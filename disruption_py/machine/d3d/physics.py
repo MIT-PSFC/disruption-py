@@ -914,8 +914,6 @@ class D3DPhysicsMethods:
                 ts["ne"][np.isnan(ts[ts_radius])] = np.nan
 
                 # Interpolate onto uniform radial base if needed
-                # ts_equispaced = False by default
-                # TODO: implement this
                 if ts_equispaced:
                     for i in range(len(ts['time'])):
                         (no_nans,) = np.where(~np.isnan(ts['te'][:, i]) 
