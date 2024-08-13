@@ -790,6 +790,7 @@ class D3DPhysicsMethods:
         - Prad_peaking_XDIV_RT
         SQL table data are available for all 4 testing shots
         '''
+        ## Thomson parameters
         ts_data_type = "blessed"  # either 'blessed', 'unblessed', or 'ptdata'
         # metric to use for core/edge binning (either 'psin' or 'rhovn')
         ts_radius = "rhovn"
@@ -800,6 +801,8 @@ class D3DPhysicsMethods:
         ts_radial_range = (0, 1)
         # set to true to interpolate ts_channel data onto equispaced radial grid
         ts_equispaced = False
+
+        ## Bolometer parameters
         # fan to use for P_rad peaking factors (either 'lower', 'upper', or 'custom')
         bolometer_fan = "custom"
         # array of bolometer fan channel numbers covering divertor
@@ -812,10 +815,13 @@ class D3DPhysicsMethods:
         )
         # 'brightness'; % either 'brightness' or 'power' ('z')
         p_rad_metric = "brightness"
+
+        ## Additional parameters (not in MATLAB script)
         # Ts options
         ts_options = ["combined", "core", "tangential"]
         # vertical range of the DIII-D cross section in meters
         vert_range = 3.0
+
         ne_pf = [np.nan]
         te_pf = [np.nan]
         rad_cva = [np.nan]
@@ -842,7 +848,8 @@ class D3DPhysicsMethods:
             )
             rad_cva = [np.nan]
             rad_xdiv = [np.nan]
-        # Get Thomson data
+
+        # Get raw Thomson data
         try:
             ts = D3DPhysicsMethods._get_ne_te(params)   # -- DEBUGGED
             # TODO: needs better way to do this
@@ -861,11 +868,26 @@ class D3DPhysicsMethods:
             ts["psin"], ts["rhovn"] = D3DPhysicsMethods.efit_rz_interp(ts, efit_dict)
             ts["rhovn"] = ts["rhovn"].T
             ts["psin"] = ts["psin"].T
+
+            # NOTE: This looks good to me
+            import matplotlib.pyplot as plt
+            for i in range(300, 1300, 200):
+                plt.plot(ts['rhovn'][:, i], ts['te'][:, i], label=f"t={round(ts['time'][i], 2)} s")
+                plt.scatter(ts['rhovn'][:, i], ts['te'][:, i])
+            plt.axvline(ts_radial_range[0], c='r', linestyle=':')
+            plt.axvline(ts_radial_range[1], c='r', linestyle=':')
+            plt.axvline(ts_core_margin, c='r', linestyle='--')
+            plt.xlabel('rhovn')
+            plt.ylabel('Te (eV)')
+            plt.legend()
+            plt.show()
+
             params.logger.info(f"ts['rhovn'].shape: {ts["rhovn"].shape}")
         except Exception as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to interpolate TS data")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-        # Get raw bolometer data 
+        
+        # Get P_rad data 
         try:
             p_rad = D3DPhysicsMethods._get_p_rad(params)
         except Exception as e:
@@ -893,10 +915,35 @@ class D3DPhysicsMethods:
 
                 # Interpolate onto uniform radial base if needed
                 # ts_equispaced = False by default
+                # TODO: implement this
                 if ts_equispaced:
                     raise NotImplementedError(
                         "Equispaced is currently assumed to be false"
-                    )  # TODO
+                    )
+                
+                # NOTE: there's so many edge points so the PF value has to be low
+                import matplotlib.pyplot as plt
+                for i in range(500, 1300, 150):
+                    plt.plot(ts['rhovn'][:, i], ts['te'][:, i], label=f"t={ts['time'][i].round(2)} s")
+                    plt.scatter(ts['rhovn'][:, i], ts['te'][:, i])
+                plt.axvline(ts_radial_range[0], c='r', linestyle=':')
+                plt.axvline(ts_radial_range[1], c='r', linestyle=':')
+                plt.axvline(ts_core_margin, c='r', linestyle='--')
+                plt.xlabel('rhovn')
+                plt.ylabel('Te (eV)')
+                plt.legend()
+                plt.show()
+
+                for i in range(500, 1500, 150):
+                    plt.plot(ts['rhovn'][:, i], ts['ne'][:, i], label=f"t={ts['time'][i].round(2)} s")
+                    plt.scatter(ts['rhovn'][:, i], ts['ne'][:, i])
+                plt.axvline(ts_radial_range[0], c='r', linestyle=':')
+                plt.axvline(ts_radial_range[1], c='r', linestyle=':')
+                plt.axvline(ts_core_margin, c='r', linestyle='--')
+                plt.xlabel('rhovn')
+                plt.ylabel('ne (m^-3)')
+                plt.legend()
+                plt.show()
                 
                 # Find core bin for Thomson and calculate Te, ne peaking factors
                 core_mask = ts[ts_radius] < ts_core_margin
@@ -1324,7 +1371,6 @@ class D3DPhysicsMethods:
             # Change time unit from [ms] to [s]
             lasers[laser]['time'] /= 1e3
         # NOTE: Why use these debug commands?
-        # NOTE: why does core have 41 bins in the edge, and tangential has 6 bins in the core?
         if 'core' in lasers.keys():
             params.logger.debug(
                 "_get_ne_te: Core bins {}".format(lasers["core"]["te"].shape)
