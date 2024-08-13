@@ -13,6 +13,7 @@ from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings.output_setting import SQLOutputSetting
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.workflow import get_database, get_shots_data
+from tests.utils.data_difference import assert_frame_equal_unordered
 
 WRITE_DATABASE_TABLE_NAME = config().database.write_database_table_name
 FIRST_ITERATION_COLUMNS = config().database.protected_columns + ["beta_p"]
@@ -65,16 +66,6 @@ def initial_mdsplus_data(shotlist, tokamak, test_file_path_f) -> Dict:
 @pytest.fixture(scope="module")
 def initial_mdsplus_data_df(initial_mdsplus_data):
     return initial_mdsplus_data[0]
-
-
-def assert_frame_equal_unordered(df1: pd.DataFrame, df2: pd.DataFrame):
-    df1_sorted = df1.sort_values(by=config().database.protected_columns).reset_index(
-        drop=True
-    )
-    df2_sorted = df2.sort_values(by=config().database.protected_columns).reset_index(
-        drop=True
-    )
-    pd.testing.assert_frame_equal(df1_sorted, df2_sorted, check_like=True)
 
 
 def test_output_exists(initial_mdsplus_data, shotlist, test_file_path_f, tokamak):

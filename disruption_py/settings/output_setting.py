@@ -255,10 +255,19 @@ class DataFrameOutputSetting(OutputSetting):
 
 class HDF5OutputSetting(OutputSetting):
     """
-    Stream outputted data to an HDF5 file.
+    Stream outputted data to an HDF5 file. Data for each shot is stored in a table
+    under the key `df_SHOTID`.
     """
 
-    def __init__(self, filepath, only_output_numeric=True):
+    def __init__(self, filepath, only_output_numeric=False):
+        """
+        Params:
+        filepath: str
+            hdf5 file path
+        only_output_numeric: bool
+            (default False) whether the hdf5 file should exclude all non-numeric
+            quantities (e.g. commit hash).
+        """
         self.filepath = filepath
         self.output_shot_count = 0
         self.only_output_numeric = only_output_numeric
