@@ -42,12 +42,10 @@ def initial_mdsplus_data(shotlist, tokamak, test_file_path_f) -> Dict:
         "dict",
         test_file_path_f(".csv"),
         test_file_path_f(".hdf5"),
+        SQLOutputSetting(table_name=WRITE_DATABASE_TABLE_NAME),
     ]
-    if tokamak is Tokamak.CMOD:
-        output_settings.append(SQLOutputSetting(table_name=WRITE_DATABASE_TABLE_NAME))
 
     retrieval_settings = RetrievalSettings(
-        time_setting="efit",
         efit_nickname_setting="disruption",
         run_columns=FIRST_ITERATION_COLUMNS,
         run_tags=[],
@@ -101,8 +99,6 @@ def test_sql_output_setting(
     SQL, then by updating the SQL with another writeback, and making sure data from
     MDSplus matches the data from SQL for both retrievals.
     """
-    if tokamak is Tokamak.D3D:
-        pytest.skip("Skipping test on DIII-D")
     # Test initial database readback
     result = shot_database.get_shots_data(shotlist, sql_table=WRITE_DATABASE_TABLE_NAME)
     assert_frame_equal_unordered(
@@ -112,7 +108,6 @@ def test_sql_output_setting(
 
     # Do second retrieval that updates the data for the columns
     retrieval_settings = RetrievalSettings(
-        time_setting="efit",
         efit_nickname_setting="disruption",
         run_columns=ALL_ITERATION_COLUMNS,
         run_tags=[],
