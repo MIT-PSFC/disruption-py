@@ -987,6 +987,7 @@ class D3DPhysicsMethods:
 
             # Calculate Prad CVA, X-DIV Peaking Factors
             try:
+                # TODO: what's the unit of zmaxis?
                 # # Interpolate zmaxis and channel intersects x onto the bolometer timebase
                 z_m_axis = interp1(efit_dict["time"], efit_dict["zmaxis"], p_rad["t"])
                 z_m_axis = np.repeat(z_m_axis[:, np.newaxis], p_rad["x"].shape[1], axis=1)
@@ -1051,7 +1052,28 @@ class D3DPhysicsMethods:
                 plt.xlabel('xinterp')
                 plt.ylabel('p_rad')
                 plt.legend()
-                plt.title(f"{params.shot_id} bolometer brightness profiles \n (o=core, x=edge)")
+                plt.title(f"{params.shot_id} bolometer brightness profiles \n (o=core, x=all but core)")
+                plt.show()
+
+                # DEBUG
+                import matplotlib.pyplot as plt
+                colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']
+                i_c = 0
+                for i in range(6000, 11000, 1000):
+                    plt.plot(p_rad['xinterp'][i,:], dummy_core[i,:], 
+                             label=f"t={p_rad['t'][i]:.2f} s", 
+                             c=colors[i_c], linestyle=':')
+                    plt.scatter(p_rad['xinterp'][i, :], p_rad_div[i, :], 
+                             c=colors[i_c], marker='o')
+                    plt.scatter(p_rad['xinterp'][i, :], p_rad_all_but_div[i, :], 
+                             c=colors[i_c], marker='x')
+                    i_c += 1
+                    if i_c == len(colors):
+                        i_c = 0
+                plt.xlabel('xinterp')
+                plt.ylabel('p_rad')
+                plt.legend()
+                plt.title(f"{params.shot_id} bolometer brightness profiles \n (o=div, x=all but dev)")
                 plt.show()
 
                 # # Calculate the peaking factors
