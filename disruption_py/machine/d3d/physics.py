@@ -1007,6 +1007,8 @@ class D3DPhysicsMethods:
 
                 # # Grab p_rad measurements for each needed set of channels
                 p_rad_core = np.array(p_rad[p_rad_metric]).T
+                
+                # DEBUG
                 dummy_core = p_rad_core.copy()
 
                 # DEBUG
@@ -1064,16 +1066,16 @@ class D3DPhysicsMethods:
                              label=f"t={p_rad['t'][i]:.2f} s", 
                              c=colors[i_c], linestyle=':')
                     plt.scatter(p_rad['xinterp'][i, :], p_rad_div[i, :], 
-                             c=colors[i_c], marker='o')
+                             c=colors[i_c], marker='v')
                     plt.scatter(p_rad['xinterp'][i, :], p_rad_all_but_div[i, :], 
-                             c=colors[i_c], marker='x')
+                             c=colors[i_c], marker='*')
                     i_c += 1
                     if i_c == len(colors):
                         i_c = 0
                 plt.xlabel('xinterp')
                 plt.ylabel('p_rad')
                 plt.legend()
-                plt.title(f"{params.shot_id} bolometer brightness profiles \n (o=div, x=all but dev)")
+                plt.title(f"{params.shot_id} bolometer brightness profiles \n (v=div, *=all but dev)")
                 plt.show()
 
                 # # Calculate the peaking factors
