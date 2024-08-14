@@ -48,7 +48,6 @@ def get_run_times(method, num_trials):
 
 
 result = get_many_efit()
-print("Num efit quantities:", len(result.columns))
 assert_frame_equal_unordered(get_many_efit(), get_efit())
 
 
@@ -62,7 +61,7 @@ many = get_run_times(get_many_efit, NUM_TRIALS)
 orig = np.array(orig) * 1000
 many = np.array(many) * 1000
 
-plt.title(f"MDS getMany vs get for efit requests, {NUM_TRIALS} trials")
+plt.title(f"MDS getMany vs get for efit requests, {NUM_TRIALS} trials, 22 quantities")
 plt.hist(orig, label="get", alpha=0.7)
 plt.hist(many, label="getMany", alpha=0.7)
 

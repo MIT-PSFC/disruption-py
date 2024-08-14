@@ -66,4 +66,27 @@ plt.xlabel("Number of MDSplus requests")
 plt.ylabel("Time (ms)")
 plt.legend()
 plt.savefig("z_factor_many.png")
-plt.show()
+plt.cla()
+
+
+### Histogram
+# Compare the same number of z_factor and efit requests
+NUM_EFIT_REQS = 22
+NUM_TRIALS = 100
+orig = get_run_times(z_factor, NUM_TRIALS, NUM_EFIT_REQS)
+many = get_run_times(z_factor_MANY, NUM_TRIALS, NUM_EFIT_REQS)
+many = np.array(many) * 1000
+orig = np.array(orig) * 1000
+orig_mean, many_mean = np.mean(orig), np.mean(many)
+plt.title(
+    f"MDS getMany vs get for {NUM_EFIT_REQS} z_factor requests, {NUM_TRIALS} trials"
+)
+plt.hist(orig, label="get", alpha=0.7)
+plt.hist(many, label="getMany", alpha=0.7)
+plt.axvline(orig_mean, linestyle="--", color="C0", label=f"$\mu={orig_mean: .2f}$ ms")
+plt.axvline(many_mean, linestyle="--", color="C1", label=f"$\mu={many_mean: .2f}$ ms")
+plt.xlabel("Time to get efit data (ms)")
+plt.ylabel("Frequency")
+plt.legend()
+plt.tight_layout()
+plt.savefig("z_factor_many_hist.png")
