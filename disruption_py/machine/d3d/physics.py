@@ -869,19 +869,19 @@ class D3DPhysicsMethods:
             ts["rhovn"] = ts["rhovn"].T
             ts["psin"] = ts["psin"].T
 
-            # NOTE: This looks good to me
-            import matplotlib.pyplot as plt
-            for i in range(500, 1200, 150):
-                plt.plot(ts['rhovn'][:, i], ts['te'][:, i], label=f"t={ts['time'][i]:.2f} s")
-                plt.scatter(ts['rhovn'][:, i], ts['te'][:, i])
-            plt.axvline(ts_radial_range[0], c='r', linestyle=':')
-            plt.axvline(ts_radial_range[1], c='r', linestyle=':')
-            plt.axvline(ts_core_margin, c='r', linestyle='--')
-            plt.xlabel('rhovn')
-            plt.ylabel('Te (eV)')
-            plt.legend()
-            plt.title(f"{params.shot_id} Thomson profiles")
-            plt.show()
+            # # NOTE: This looks good to me
+            # import matplotlib.pyplot as plt
+            # for i in range(500, 1200, 150):
+            #     plt.plot(ts['rhovn'][:, i], ts['te'][:, i], label=f"t={ts['time'][i]:.2f} s")
+            #     plt.scatter(ts['rhovn'][:, i], ts['te'][:, i])
+            # plt.axvline(ts_radial_range[0], c='r', linestyle=':')
+            # plt.axvline(ts_radial_range[1], c='r', linestyle=':')
+            # plt.axvline(ts_core_margin, c='r', linestyle='--')
+            # plt.xlabel('rhovn')
+            # plt.ylabel('Te (eV)')
+            # plt.legend()
+            # plt.title(f"{params.shot_id} Thomson profiles")
+            # plt.show()
 
             params.logger.info(f"ts['rhovn'].shape: {ts["rhovn"].shape}")
         except Exception as e:
@@ -890,7 +890,7 @@ class D3DPhysicsMethods:
         
         # Get P_rad data 
         try:
-            p_rad = D3DPhysicsMethods._get_p_rad(params)
+            p_rad = D3DPhysicsMethods._get_p_rad(params, fan=bolometer_fan)
         except Exception as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get bolometer data")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
@@ -965,26 +965,6 @@ class D3DPhysicsMethods:
                 # ne_pf = np.nanmean(ne_core, axis=0) / np.nanmean(ts["ne"], axis=0)
                 #
 
-                # DEBUG
-                # import matplotlib.pyplot as plt
-                # for i in range(400, 1500, 100):
-                #     pf = np.nan
-                #     try:
-                #         pf = np.nanmean(te_core[:,i]) / np.nanmean(ts['te'][:,i])
-                #     except:
-                #         pf = np.nan
-                #     plt.figure()
-                #     plt.plot(ts[ts_radius][:,i], ts['te'][:,i])
-                #     plt.scatter(ts[ts_radius][:,i], ts['te'][:,i], c='b', label='all')
-                #     plt.scatter(ts[ts_radius][:,i], te_core[:,i], c='r', label='core')
-                #     plt.axvline(0.3, c='r')
-                #     plt.xlabel('rhovn')
-                #     plt.ylabel('te')
-                #     plt.legend()
-                #     plt.title(f"i={i}, t={ts['time'][i]}, pf={pf}")
-                #     plt.show()
-                # ###
-
                 te_pf = np.full(len(ts['time']), np.nan)
                 ne_pf = np.full(len(ts['time']), np.nan)
                 for i in range(len(te_pf)):
@@ -1026,6 +1006,22 @@ class D3DPhysicsMethods:
 
                 # # Grab p_rad measurements for each needed set of channels
                 p_rad_core = np.array(p_rad[p_rad_metric]).T
+                dummy_core = p_rad_core.copy()
+
+                # DEBUG
+                import matplotlib.pyplot as plt
+                for i in range(6000, 11000, 1000):
+                    plt.plot(p_rad['xinterp'][i, :], p_rad_core[i, :], label=f"t={p_rad['t'][i]:.2f} s")
+                    plt.scatter(p_rad['xinterp'][i, :], p_rad_core[i, :])
+                # plt.axvline(ts_radial_range[0], c='r', linestyle=':')
+                # plt.axvline(ts_radial_range[1], c='r', linestyle=':')
+                # plt.axvline(ts_core_margin, c='r', linestyle='--')
+                plt.xlabel('xinterp')
+                plt.ylabel('p_rad')
+                plt.legend()
+                plt.title(f"{params.shot_id} bolometer brightness profiles")
+                plt.show()
+
                 p_rad_all_but_core = p_rad_core.copy()
                 p_rad_div = p_rad_core.copy()
                 p_rad_all_but_div = p_rad_core.copy()
@@ -1038,20 +1034,25 @@ class D3DPhysicsMethods:
                 p_rad_all_but_div[:, div_indices] = np.nan
 
                 # DEBUG
-                # import matplotlib.pyplot as plt
-                # for i in range(5000, 12000, 1000):
-                #     print(i)
-                #     try:
-                #         plt.figure()
-                #         plt.scatter(p_rad["xinterp"][i], p_rad_core[i], label='core')
-                #         plt.scatter(p_rad["xinterp"][i], p_rad_div[i], label='div')
-                #         plt.legend()
-                #         plt.xlabel('xinterp')
-                #         plt.title(f"i={i}, t={p_rad['t'][i]}")
-                #         plt.show()
-                #     except:
-                #         continue
-                ######
+                import matplotlib.pyplot as plt
+                colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']
+                i_c = 0
+                for i in range(6000, 11000, 1000):
+                    plt.plot(p_rad['xinterp'][i,:], dummy_core[i,:], 
+                             label=f"t={p_rad['t'][i]:.2f} s", 
+                             c=colors[i_c], linestyle=':')
+                    plt.scatter(p_rad['xinterp'][i, :], p_rad_core[i, :], 
+                             c=colors[i_c], marker='o')
+                    plt.scatter(p_rad['xinterp'][i, :], p_rad_all_but_core[i, :], 
+                             c=colors[i_c], marker='x')
+                    i_c += 1
+                    if i_c == len(colors):
+                        i_c = 0
+                plt.xlabel('xinterp')
+                plt.ylabel('p_rad')
+                plt.legend()
+                plt.title(f"{params.shot_id} bolometer brightness profiles \n (o=core, x=edge)")
+                plt.show()
 
                 # # Calculate the peaking factors
                 rad_cva = np.full(len(p_rad['t']), np.nan)
@@ -1443,6 +1444,7 @@ class D3DPhysicsMethods:
         elif fan == 'custom':
             # 1st choice (heavily cover divertor and core)
             fan_chans = np.array([3, 4, 5, 6, 7, 8, 9, 12, 14, 15, 16, 22]) + 24
+            fan_chans -= 1
         else:
             return False
 
@@ -1450,7 +1452,8 @@ class D3DPhysicsMethods:
         bol_prm, _ = params.mds_conn.get_data_with_dims(r"\bol_prm", tree_name="bolom")
         lower_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
         upper_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
-        bol_channels = lower_channels + upper_channels
+        # bol_channels = lower_channels + upper_channels
+        bol_channels = upper_channels + lower_channels
         bol_signals = []
         bol_times = (
             []
