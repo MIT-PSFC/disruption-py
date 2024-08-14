@@ -306,6 +306,27 @@ class SignalTimeSetting(TimeSetting):
             )
             raise Exception(e)
 
+class PCSTimeSetting(TimeSetting):
+    """Plasma Control System runs at ~1 kHz"""
+    def __init__(self):
+        self.tokamak_overrides = {Tokamak.CMOD: self.cmod_times}
+
+    def cmod_times(self, params: TimeSettingParams):
+        return np.array(np.arange(0.0, 2.0, 0.001)) # TODO(ZanderKeith) Just hardcoded start and stop time for now
+
+    def _get_times(self, params: TimeSettingParams) -> np.ndarray:
+        return self.tokamak_overrides[params.tokamak](params)
+class OfflineTimeSetting(TimeSetting):
+    """Timebase to use when performing offline analysis. Runs at 10 kHz for high resolution."""
+    def __init__(self):
+        self.tokamak_overrides = {Tokamak.CMOD: self.cmod_times}
+
+    def cmod_times(self, params: TimeSettingParams):
+        return np.array(np.arange(0.0, 2.0, 0.0001)) # TODO(ZanderKeith) Just hardcoded start and stop time for now
+
+    def _get_times(self, params: TimeSettingParams) -> np.ndarray:
+        return self.tokamak_overrides[params.tokamak](params)
+
 
 # --8<-- [start:time_setting_dict]
 _time_setting_mappings: Dict[str, TimeSetting] = {
@@ -316,6 +337,8 @@ _time_setting_mappings: Dict[str, TimeSetting] = {
         Tokamak.D3D: DisruptionTimeSetting(),
     },
     "ip": IpTimeSetting(),
+    "pcs": PCSTimeSetting(),
+    "offline": OfflineTimeSetting(),
 }
 # --8<-- [end:time_setting_dict]
 
