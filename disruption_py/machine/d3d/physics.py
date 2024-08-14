@@ -764,7 +764,6 @@ class D3DPhysicsMethods:
         rhovn: Normalized rho
         psin:: Normalized poloidal flux
 
-
         This function calculates peaking factors for the shot number
         given by the user corresponding to the times in the given timebase.
         Electron temperature (Te_PF) and density (ne_PF) profile peaking 
@@ -808,6 +807,7 @@ class D3DPhysicsMethods:
         # array of bolometer fan channel numbers covering divertor
         # (upper fan: 1->24, lower fan: 25:48)
         div_channels = np.arange(3, 8) + 24
+        div_channels -= 1   # python indicing
         # time window for filtering raw bolometer signal in [ms]
         smoothing_window = 40
         p_rad_core_def = (
