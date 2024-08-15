@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import os
-
 import pandas as pd
 import pytest
 
@@ -10,18 +8,8 @@ from disruption_py.inout.mds import ProcessMDSConnection
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.workflow import get_shots_data
+from tests.conftest import skip_on_fast_execution
 from tests.utils.data_difference import assert_frame_equal_unordered
-
-
-def skip_on_fast_execution(method):
-    if "GITHUB_ACTIONS" in os.environ:
-
-        @pytest.mark.skip("fast execution")
-        def wrapper(method):
-            return method
-
-        return wrapper
-    return method
 
 
 def dummy_mds_initializer():
@@ -48,9 +36,9 @@ def full_time_domain_data(tokamak, shotlist):
 @pytest.mark.parametrize("num_processes", [1, 2])
 def test_cache_setting_sql(tokamak, shotlist, num_processes):
     """
-    Use `time_until_disrupt` to test retrieving cached data from SQL. 
-    `time_until_disrupt` exists in SQL and it is the only parameter returned from 
-    its physics method, so the physics method will not run. This test uses a dummy 
+    Use `time_until_disrupt` to test retrieving cached data from SQL.
+    `time_until_disrupt` exists in SQL and it is the only parameter returned from
+    its physics method, so the physics method will not run. This test uses a dummy
     MDSconnection to ensure we don't call MDSplus.
     """
     retrieval_settings = RetrievalSettings(
@@ -126,8 +114,8 @@ def test_cache_setting_prev_output(tokamak, shotlist, test_file_path_f, output_f
 def test_only_requested_columns(tokamak, shotlist):
     """
     Ensure `only_requested_columns` works. `ip` is returned by
-    `get_ip_parameters`, so we should not see any of the other quantities like 
-    `dip_dt` returned. `q95` is from efit, so none of the other efit quantities 
+    `get_ip_parameters`, so we should not see any of the other quantities like
+    `dip_dt` returned. `q95` is from efit, so none of the other efit quantities
     should be returned.
     """
     retrieval_settings = RetrievalSettings(
@@ -143,7 +131,7 @@ def test_only_requested_columns(tokamak, shotlist):
         num_processes=2,
     )
     for res in results:
-        assert {"ip", "q95", "shot", "time", "commit_hash"} == set(res.columns), f"{set(res.columns)}"
+        assert {"ip", "q95", "shot", "time", "commit_hash"} == set(res.columns)
 
 
 @skip_on_fast_execution
