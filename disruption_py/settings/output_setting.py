@@ -41,7 +41,7 @@ class OutputSettingParams:
 
 @dataclass
 class CompleteOutputSettingParams:
-    """Params passed by disruption_py to stream_output_cleanup() and get_results methods.
+    """Params passed by disruption_py to get_results() method.
 
     Attributes
     ----------
@@ -82,17 +82,6 @@ class OutputSetting(ABC):
         ----------
         params : OutputSettingParams
             Params containing the data retrieved for a shot in a DataFrame and other utility parameters.
-        """
-        pass
-
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """Empty method optionally overridden by subclasses to handle cleanup after all shots have been
-        output. This may include closing files or other cleanup.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            Utility parameters such as the tokamak and logger.
         """
         pass
 
@@ -144,10 +133,6 @@ class OutputSettingList(OutputSetting):
 
         return all_results
 
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        for individual_setting in self.output_setting_list:
-            individual_setting.stream_output_cleanup(params)
-
     def get_results(self, params: CompleteOutputSettingParams):
         return [
             individual_setting.get_results(params)
@@ -182,14 +167,6 @@ class OutputSettingDict(OutputSetting):
             params.logger.warning(f"No output setting for tokamak {params.tokamak}")
             return None
 
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        chosen_setting = self.output_setting_dict.get(params.tokamak, None)
-        if chosen_setting is not None:
-            return chosen_setting.stream_output_cleanup(params)
-        else:
-            params.logger.warning(f"No output setting for tokamak {params.tokamak}")
-            return None
-
     def get_results(self, params: CompleteOutputSettingParams):
         chosen_setting = self.output_setting_dict.get(params.tokamak, None)
         if chosen_setting is not None:
@@ -213,9 +190,6 @@ class ListOutputSetting(OutputSetting):
     def get_results(self, params: CompleteOutputSettingParams):
         return self.results
 
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        self.results = []
-
 
 class DictOutputSetting(OutputSetting):
     """
@@ -231,9 +205,6 @@ class DictOutputSetting(OutputSetting):
     def get_results(self, params: CompleteOutputSettingParams):
         return self.results
 
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        self.results = {}
-
 
 class DataFrameOutputSetting(OutputSetting):
     """
@@ -248,9 +219,6 @@ class DataFrameOutputSetting(OutputSetting):
 
     def get_results(self, params: CompleteOutputSettingParams):
         return self.results
-
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        self.results = pd.DataFrame()
 
 
 class HDF5OutputSetting(OutputSetting):
@@ -294,9 +262,6 @@ class HDF5OutputSetting(OutputSetting):
     def get_results(self, params: CompleteOutputSettingParams):
         return self.results
 
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        self.results = pd.DataFrame()
-
 
 class CSVOutputSetting(OutputSetting):
     """
@@ -332,9 +297,6 @@ class CSVOutputSetting(OutputSetting):
 
     def get_results(self, params: CompleteOutputSettingParams):
         return self.results
-
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        self.results = pd.DataFrame()
 
 
 class BatchedCSVOutputSetting(OutputSetting):
@@ -380,9 +342,6 @@ class BatchedCSVOutputSetting(OutputSetting):
             self._write_batch_to_csv()
         return self.results
 
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        self.results = pd.DataFrame()
-
 
 class SQLOutputSetting(OutputSetting):
     """
@@ -416,9 +375,6 @@ class SQLOutputSetting(OutputSetting):
 
     def get_results(self, params: CompleteOutputSettingParams) -> Any:
         return self.results
-
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        self.results = pd.DataFrame()
 
 
 # --8<-- [start:output_setting_dict]

@@ -66,7 +66,7 @@ def initial_mdsplus_data_df(initial_mdsplus_data):
     return initial_mdsplus_data[0]
 
 
-def test_output_exists(initial_mdsplus_data, shotlist, test_file_path_f, tokamak):
+def test_output_exists(initial_mdsplus_data, test_file_path_f, tokamak):
     """
     Test creation of all output formats except SQL.
     """
@@ -88,7 +88,7 @@ def test_output_exists(initial_mdsplus_data, shotlist, test_file_path_f, tokamak
 
 
 def test_sql_output_setting(
-    shotlist, tokamak, shot_database: ShotDatabase, initial_mdsplus_data_df
+    shotlist, shot_database: ShotDatabase, initial_mdsplus_data_df
 ) -> Dict:
     """
     Ensure SQL output setting works by reading from an initial writeback to
