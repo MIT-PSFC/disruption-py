@@ -386,14 +386,15 @@ class BatchedCSVOutputSetting(OutputSetting):
 
 class SQLOutputSetting(OutputSetting):
     """
-    Stream outputted data to disruption_warning or similar SQL table.
+    Stream outputted data to disruption_warning or similar SQL table. By default,
+    stream to the test table: disruption_warning_test.
     """
 
     def __init__(
         self,
         should_update=False,
         should_override_columns: List[str] = None,
-        table_name="disruption_warning",
+        table_name="disruption_warning_test",
     ):
         self.should_update = should_update
         self.should_override_columns = should_override_columns
