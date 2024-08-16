@@ -941,6 +941,7 @@ class CmodPhysicsMethods:
             )
 
         # TODO: Calculate ne and pressure peaking factors
+        # TODO: implement line 165-200
 
         # Interpolate peaking factors to the requested time basis
         Te_PF = interp1(TS_time, Te_PF, times, "linear")
@@ -977,6 +978,7 @@ class CmodPhysicsMethods:
                 r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
             )
             bminor = aminor * kappa
+
             # Get Te data and TS time basis
             node_ext = ".yag_new.results.profiles"
             TS_Te_core, TS_time = params.mds_conn.get_data_with_dims(
@@ -998,7 +1000,11 @@ class CmodPhysicsMethods:
                     f"[Shot {params.shot_id}]: TS edge data and z positions are not the same length for shot"
                 )
                 return nan_output
+            
             # TODO: Get ne data
+            # TODO: implement line 79, 128-163
+            # compare_ts_tci now in drafts/machine/cmod/thomson.py
+
             TS_ne = np.full(len(params.times), np.nan)
         except mdsExceptions.MdsException as e:
             return nan_output
