@@ -9,7 +9,6 @@ import pytest
 from disruption_py.config import config
 from disruption_py.core.utils.misc import without_duplicates
 from disruption_py.inout.sql import ShotDatabase
-from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings.output_setting import SQLOutputSetting
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.workflow import get_database, get_shots_data
@@ -67,7 +66,7 @@ def initial_mdsplus_data_df(initial_mdsplus_data):
     return initial_mdsplus_data[0]
 
 
-def test_output_exists(initial_mdsplus_data, test_file_path_f, tokamak):
+def test_output_exists(initial_mdsplus_data, test_file_path_f):
     """
     Test creation of all output formats except SQL.
     """
