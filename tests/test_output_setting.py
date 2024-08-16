@@ -71,8 +71,8 @@ def test_output_exists(initial_mdsplus_data, test_file_path_f, tokamak):
     Test creation of all output formats except SQL.
     """
     df_output, list_output, dict_output, csv_output, hdf_output, sql_output = (
-            initial_mdsplus_data
-        )
+        initial_mdsplus_data
+    )
     assert isinstance(df_output, pd.DataFrame), "DataFrame output does not exist"
     assert isinstance(list_output, list), "List output does not exist"
     assert isinstance(dict_output, dict), "Dict output does not exist"
@@ -109,16 +109,13 @@ def test_sql_output_setting(
         run_tags=[],
         only_requested_columns=True,
     )
-    shot_data, _ = get_shots_data(
+    shot_data = get_shots_data(
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
-        output_setting=[
-            "dataframe",
-            SQLOutputSetting(
-                table_name=WRITE_DATABASE_TABLE_NAME,
-                should_override_columns=SECOND_ITERATION_COLUMNS,
-            ),
-        ],
+        output_setting=SQLOutputSetting(
+            table_name=WRITE_DATABASE_TABLE_NAME,
+            should_override_columns=SECOND_ITERATION_COLUMNS,
+        ),
         num_processes=2,
     )
     result = shot_database.get_shots_data(shotlist, sql_table=WRITE_DATABASE_TABLE_NAME)

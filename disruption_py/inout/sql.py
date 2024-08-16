@@ -436,7 +436,7 @@ class ShotDatabase:
         else:
             query = (
                 f"select {selected_cols} from {sql_table} where shot in "
-                + f"({shotlist}) order by time"
+                + f"({shotlist}) order by shot, time"
             )
         shot_df = pd.read_sql_query(query, self.engine)
         shot_df.columns = shot_df.columns.str.lower()

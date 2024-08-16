@@ -141,6 +141,7 @@ def get_shots_data(
         tokamak=tokamak, logger=logger
     )
     results = output_setting.get_results(finish_output_type_setting_params)
+    output_setting.stream_output_cleanup(finish_output_type_setting_params)
     return results
 
 
