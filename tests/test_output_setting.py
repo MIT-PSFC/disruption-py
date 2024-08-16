@@ -13,6 +13,7 @@ from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings.output_setting import SQLOutputSetting
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.workflow import get_database, get_shots_data
+from tests.conftest import skip_on_fast_execution
 from tests.utils.data_difference import assert_frame_equal_unordered
 
 WRITE_DATABASE_TABLE_NAME = config().database.write_database_table_name
@@ -87,6 +88,7 @@ def test_output_exists(initial_mdsplus_data, test_file_path_f, tokamak):
     assert_frame_equal_unordered(hdf_output, sql_output)
 
 
+@skip_on_fast_execution
 def test_sql_output_setting(
     shotlist, shot_database: ShotDatabase, initial_mdsplus_data_df
 ) -> Dict:
