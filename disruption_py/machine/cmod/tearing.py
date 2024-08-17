@@ -18,6 +18,8 @@ from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import gaussian_fit, interp1, smooth
 from disruption_py.machine.tokamak import Tokamak
 
+CHECKED_N_MODES = list(range(1, 10))
+CHECKED_M_MODES = list(range(1, 11))
 
 def setup_stfft(f_mirnov=2.5e6, f_target=1e3, frequency_resolution=None) -> ShortTimeFFT:
     """Set up the Short Time Fast Fourier Transform object for the mirnov signals
@@ -228,7 +230,7 @@ class CmodTearingMethods:
             # Test to make sure the sampling frequency is consistent
             actual_mirnov_sample_freq = 1 / (mirnov_times[1] - mirnov_times[0])  # Mirnov sampling rate
             if actual_mirnov_sample_freq < 2.4e6 or actual_mirnov_sample_freq > 2.6e6:
-                print("Mirnov sample frequency is not 2.5 MHz. Be warned!!!")
+                print(f"Mirnov sample frequency is not 2.5 MHz. Be warned!!! Got {actual_mirnov_sample_freq}")
                 f_mirnov = actual_mirnov_sample_freq
             else:
                 f_mirnov = 2.5e6
@@ -393,12 +395,8 @@ class CmodTearingMethods:
 
         Returns
         -------
-        mirnov_times : numpy.ndarray
-            The times of the Mirnov signals.
-        mirnov_signals: list[numpy.ndarray]
-            The signals from the Mirnov coils.
-        probe_locations: list[tuple[float, float, float]]
-            The (phi, theta, theta_offset) locations of the probes in radians.
+        mirnov_ffts: xarray.DataArray
+            The STFFT of the Mirnov coils.
         """
 
         all_mirnov_names, phi_all, theta_all, theta_pol_all = CmodTearingMethods.get_mirnov_names_and_locations(params)
@@ -417,11 +415,11 @@ class CmodTearingMethods:
             mirnov_1_name = all_mirnov_names[mirnov_1_index]
             mirnov_2_name = all_mirnov_names[mirnov_2_index]
 
-            mirnov_1_fft, freqs = CmodTearingMethods.get_mirnov_stfft(params, mirnov_1_name)
+            mirnov_1_fft, freqs = CmodTearingMethods.get_mirnov_stfft(params=params, mirnov_name=mirnov_1_name)
             if mirnov_1_fft is None:
                 candidate_pairs = [pair for pair in candidate_pairs if mirnov_1_index not in pair]
                 continue
-            mirnov_2_fft, _ = CmodTearingMethods.get_mirnov_stfft(params, mirnov_2_name)
+            mirnov_2_fft, _ = CmodTearingMethods.get_mirnov_stfft(params=params, mirnov_name=mirnov_2_name)
             if mirnov_2_fft is None:
                 candidate_pairs = [pair for pair in candidate_pairs if mirnov_2_index not in pair]
                 continue
@@ -453,6 +451,7 @@ class CmodTearingMethods:
     @staticmethod
     @cache_method
     def get_mirnov_spectrogram(params: PhysicsMethodParams):
+        all_mirnov_names, _, _, _ = CmodTearingMethods.get_mirnov_names_and_locations(params)
         for mirnov_name in all_mirnov_names:
             mirnov_data, freqs = CmodTearingMethods.get_mirnov_stfft(params=params, mirnov_name=mirnov_name)
             if mirnov_data is not None:
@@ -486,29 +485,24 @@ class CmodTearingMethods:
     )
     def _get_n_mode_spectrograms(params: PhysicsMethodParams):
         """Calculate the spectrogram from a Mirnov coil that is masked to only show specific n modes."""
-        # Everything up to 5/4
-        searched_modes = list(range(1, 10))
 
         mirnov_data = CmodTearingMethods.get_two_mirnov_ffts(params)
         original_spectrogram, freqs = CmodTearingMethods.get_mirnov_spectrogram(params)
 
         # Find the cross phase between the probes
-        cross_phase_1_2 = np.angle(mirnov_data[0] * np.conj(mirnov_data[1])) % (2 * np.pi)
-        cross_phase_1_3 = np.angle(mirnov_data[0] * np.conj(mirnov_data[2])) % (2 * np.pi)
+        cross_phase = np.angle(mirnov_data[0] * np.conj(mirnov_data[1])) % (2 * np.pi)
 
         # For each mode, mask the original spectrogram
         masked_spectrograms = {}
-        for mode in searched_modes:
-            expected_cross_phase_1_2 = get_expected_cross_phase(mode, mirnov_data.theta[0], mirnov_data.phi[0], mirnov_data.theta[1], mirnov_data.phi[1], cylindrical=False)
-            expected_cross_phase_1_3 = get_expected_cross_phase(mode, mirnov_data.theta[0], mirnov_data.phi[0], mirnov_data.theta[2], mirnov_data.phi[2], cylindrical=False)
-
-            masked_spectrogram = cross_phase_mask(original_spectrogram.values, [cross_phase_1_2, cross_phase_1_3], [expected_cross_phase_1_2, expected_cross_phase_1_3])
+        for mode in CHECKED_N_MODES:
+            expected_cross_phase = get_expected_cross_phase((0, mode), mirnov_data.theta[0], mirnov_data.phi[0], mirnov_data.theta[1], mirnov_data.phi[1])
+            masked_spectrogram = cross_phase_mask(original_spectrogram, [cross_phase], [expected_cross_phase])
             masked_spectrograms[mode] = masked_spectrogram
 
         # Make a dictionary where the keys are ("mode_spectrogram", mode, frequency) and the values are the masked spectrogram data
         mode_spectrogram_dict = {}
         for i, freq in enumerate(freqs):
-            for mode in searched_modes:
+            for mode in CHECKED_N_MODES:
                 mode_spectrogram_dict[("n_mode_spectrogram", mode, freq)] = masked_spectrograms[mode][i]
 
         return mode_spectrogram_dict
