@@ -5,6 +5,7 @@ import warnings
 from importlib import resources
 
 import numpy as np
+import scipy
 import pandas as pd
 from MDSplus import mdsExceptions
 
@@ -14,6 +15,7 @@ from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import gaussian_fit, interp1, smooth
 from disruption_py.machine.tokamak import Tokamak
+from disruption_py.machine.cmod.efit import CmodEfitMethods
 
 warnings.filterwarnings("error", category=RuntimeWarning)
 
@@ -1020,16 +1022,30 @@ class CmodPhysicsMethods:
                 return nan_output
             
             # Get ne data
-            calib = np.nan
             TS_ne_core = params.mds_conn.get_data(
                 f"{node_ext}:ne_rz", tree_name="electrons"
             )
             TS_ne_edge = params.mds_conn.get_data(r"\ts_ne")
             TS_ne = np.concatenate((TS_ne_core, TS_ne_edge))
 
-            # TODO: calibrate TS_ne (line 79, 145-163)
-            # compare_ts_tci now in drafts/machine/cmod/thomson.py
-            # Why compute TS_pressure before calibrating TS_ne?
+            # This shouldn't affect ne_PF (except if calib is not between 0.5 & 1.5)
+            # because we're just multiplying ne by a constant
+            (nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _) = ThomsonDensityMeasure.compare_ts_tci(params)
+            if np.mean(nl_ts1) != 1e32 and np.mean(nl_ts2) != 1e32:
+                nl_tci = np.concatenate((nl_tci1, nl_tci2))
+                nl_ts = np.concatenate((nl_ts1 + nl_ts2))
+                calib = np.mean(nl_tci) / np.mean(nl_ts)
+            elif np.mean(nl_ts1) != 1e32 and np.mean(nl_ts2) == 1e32:
+                calib = np.mean(nl_tci1) / np.mean(nl_ts1)
+            elif np.mean(nl_ts1) == 1e32 and np.mean(nl_ts2) != 1e32:
+                calib = np.mean(nl_tci2) / np.mean(nl_ts2)
+            else:
+                calib = np.nan
+            
+            if 0.5 < calib < 1.5:
+                TS_ne *= calib
+            else:
+                return nan_output
 
         except mdsExceptions.MdsException as e:
             return nan_output
@@ -1177,3 +1193,252 @@ class CmodPhysicsMethods:
         ):
             return True
         return False
+
+# helper class holding functions for thomson density measures
+class ThomsonDensityMeasure:
+
+    # The following methods are translated from IDL code.
+    @staticmethod
+    def compare_ts_tci(params: PhysicsMethodParams, nlnum=4):
+        """
+        Comparison between chord integrated Thomson electron density and TCI results.
+        """
+        core_mult = 1.0
+        edge_mult = 1.0
+        nl_ts1 = [1e32]
+        nl_ts2 = [1e32]
+        nl_tci1 = [1e32]
+        nl_tci2 = [1e32]
+        ts_time1 = [1e32]
+        ts_time2 = [1e32]
+        (tci_time,) = params.mds_conn.get_dims(
+            ".YAG_NEW.RESULTS.PROFILES:NE_RZ", tree_name="electrons"
+        )
+        tci, tci_t = params.mds_conn.get_data_with_dims(
+            f".TCI.RESULTS:NL_{nlnum:02d}", tree_name="electrons"
+        )
+        # BUG: FAILED HERE!
+        nlts, nlts_t = ThomsonDensityMeasure.integrate_ts_tci(params, nlnum)
+        t0 = np.amin(nlts_t)
+        t1 = np.amax(nlts_t)
+        nyag1, nyag2, indices1, indices2 = ThomsonDensityMeasure.parse_yags(params)
+        if nyag1 > 0:
+            ts_time1 = tci_time[indices1]
+            (valid_indices,) = np.where((ts_time1 >= t0) & (ts_time1 <= t1))
+            if valid_indices.size > 0:
+                nl_tci1 = interp1(tci_t, tci, ts_time1[valid_indices])
+                nl_ts1 = interp1(nlts_t, nlts, ts_time1[valid_indices])
+                time1 = ts_time1[valid_indices]
+        else:
+            time1 = -1
+        if nyag2 > 0:
+            ts_time2 = tci_time[indices2]
+            (valid_indices,) = np.where((ts_time2 >= t0) & (ts_time2 <= t1))
+            if valid_indices.size > 0:
+                nl_tci1 = interp1(tci_t, tci, ts_time2[valid_indices])
+                nl_ts1 = interp1(nlts_t, nlts, ts_time2[valid_indices])
+                time2 = ts_time2[valid_indices]
+        else:
+            time2 = -1
+        return nl_ts1, nl_ts2, nl_tci1, nl_tci2, time1, time2
+
+    @staticmethod
+    def parse_yags(params: PhysicsMethodParams):
+        nyag1 = params.mds_conn.get_data(r"\knobs:pulses_q", tree_name="electrons")
+        nyag2 = params.mds_conn.get_data(r"\knobs:pulses_q_2", tree_name="electrons")
+        indices1 = -1
+        indices2 = -1
+        dark = params.mds_conn.get_data(r"\n_dark_prior", tree_name="electrons")
+        ntotal = params.mds_conn.get_data(r"\n_total", tree_name="electrons")
+        nt = ntotal - dark
+        if nyag1 == 0:
+            if nyag2 != 0:
+                indices2 = np.arange(nyag2)
+        else:
+            if nyag2 == 0:
+                indices1 = np.arange(nyag1)
+            else:
+                if nyag1 == nyag2:
+                    indices1 = 2 * np.arange(nyag1)
+                    indices2 = indices1 + 1
+                else:
+                    if nyag1 == nyag2:
+                        indices1 = 2 * np.arange(nyag1)
+                        indices2 = indices1 + 1
+                    else:
+                        indices1 = 2 * np.arange(nyag1) + (nyag1 > nyag2)
+                        indices2 = np.concatenate(
+                            (
+                                2 * np.arange(nyag2) + (nyag1 < nyag2),
+                                2 * nyag2 + np.arange(nyag1 - nyag2 - 1),
+                            )
+                        )
+        (v_ind1,) = np.where(indices1 < nt)
+        if nyag1 > 0 and v_ind1.size > 0:
+            indices1 = indices1[v_ind1]
+        else:
+            indices1 = -1
+        (v_ind2,) = np.where(indices2 < nt)
+        if nyag2 > 0 and v_ind2.size > 0:
+            indices2 = indices2[v_ind2]
+        else:
+            indices2 = -1
+        return nyag1, nyag2, indices1, indices2
+
+    @staticmethod
+    def integrate_ts_tci(params: PhysicsMethodParams, nlnum):
+        """
+        Integrate Thomson electron density measurement to the line integrated electron
+        density for comparison with two color interferometer (TCI) measurement results
+        """
+        core_mult = 1.0
+        edge_mult = 1.0
+        nlts = 1e32
+        nlts_t = 1e32
+        t, z, n_e, n_e_sig = ThomsonDensityMeasure.map_ts2tci(params, nlnum)
+        if z[0, 0] == 1e32:
+            return None, None  # TODO: Log and maybe return nan arrs
+        nts = len(t)
+        nlts_t = t
+        nlts = np.full(t.shape, np.nan)
+        for i in range(nts):
+            (ind,) = np.where(
+                (np.abs(z[i, :]) < 0.5) & (n_e[i, :] > 0) & (n_e[i, :] < 1e21) & (n_e[i, :] / n_e_sig[i, :] > 2)
+            )
+            if len(ind) < 3:
+                nlts[i] = 0
+            else:
+                x = z[i, ind]
+                y = n_e[i, ind]
+                values_uniq, ind_uniq = np.unique(x, return_index=True)
+                y = y[ind_uniq]
+                nlts[i] = np.trapz(y, x)
+        return nlts, nlts_t
+
+    @staticmethod
+    def map_ts2tci(params: PhysicsMethodParams, nlnum):
+        core_mult = 1.0
+        edge_mult = 1.0
+        t = [1e32]
+        z = [1e32]
+        n_e = [1e32]
+        n_e_sig = [1e32]
+        flag = 1
+        valid_indices, efit_times = CmodEfitMethods.efit_check(params)
+        ip = params.mds_conn.get_data(r"\ip", "cmod")
+        if np.mean(ip) > 0:
+            flag = 0
+        efit_times = params.mds_conn.get_data(
+            r"\efit_aeqdsk:time", tree_name="_efit_tree", astype="float64"
+        )
+        t1 = np.amin(efit_times)
+        t2 = np.amax(efit_times)
+        psia, psia_t = params.mds_conn.get_data_with_dims(
+            r"\efit_aeqdsk:SIBDRY", tree_name="_efit_tree"
+        )
+        psi_0 = params.mds_conn.get(r"\efit_aeqdsk:SIMAGX", tree_name="_efit_tree")
+        nets_core, nets_core_t = params.mds_conn.get_data_with_dims(
+            ".YAG_NEW.RESULTS.PROFILES:NE_RZ", tree_name="electrons"
+        )
+        nets_core_err = params.mds_conn.get_data(
+            ".YAG_NEW.RESULTS.PROFILES:NE_ERR", tree_name="electrons"
+        )
+        zts_core = params.mds_conn.get_data(
+            ".YAG_NEW.RESULTS.PROFILES:Z_SORTED", tree_name="electrons"
+        )
+        mts_core = len(zts_core)
+        zts_edge = params.mds_conn.get_data(r"\fiber_z")
+        mts_edge = len(zts_edge)
+        try:
+            nets_edge = params.mds_conn.get_data(r"\ts_ne")
+            nets_edge_err = params.mds_conn.get_data(r"\ts_ne_err")
+        except mdsExceptions.mdsException as err:
+            nets_edge = np.zeros((len(nets_core[:, 1]), mts_edge))
+            nets_edge_err = nets_edge + 1e20
+        mts = mts_core + mts_edge
+        rts = params.mds_conn.get(".YAG.RESULTS.PARAM:R") + np.zeros((1, mts))
+        rtci = params.mds_conn.get_data(".tci.results:rad")
+        nts = len(nets_core_t)
+        zts = np.zeros((1, mts))
+        zts[:, :mts_core] = zts_core
+        zts[:, mts_core:] = zts_edge
+        nets = np.zeros((nts, mts))
+        nets_err = np.zeros((nts, mts))
+        nets[:, :mts_core] = (nets_core * core_mult).T
+        nets_err[:, :mts_core] = (nets_core_err * core_mult).T
+        nets[:, mts_core:] = (nets_edge * edge_mult).T
+        nets_err[:, mts_core:] = (nets_edge_err * edge_mult).T
+        valid_indices = np.where((nets_core_t >= t1) & (nets_core_t <= t2))
+        if len(valid_indices) == 0:
+            return t, z, n_e, n_e_sig
+        nets_core_t = nets_core_t[valid_indices]
+        nets = nets[valid_indices]
+        nets_err = nets_err[valid_indices]
+        psits = ThomsonDensityMeasure.efit_rz2psi(params, rts, zts, nets_core_t)
+        mtci = 101
+        ztci = -0.4 + 0.8 * np.arange(0, mtci) / (mtci - 1)
+        rtci = rtci[nlnum] + np.zeros((1, mtci))
+        psitci = ThomsonDensityMeasure.efit_rz2psi(params, rtci, ztci, nets_core_t)
+        psia = interp1(psia_t, psia, nets_core_t)
+        psi_0 = interp1(psia_t, psi_0, nets_core_t)
+        nts = len(nets_core_t)
+        for i in range(nts):
+            psits[:, i] = (psits[:, i] - psi_0[i]) / (psia[i] - psi_0[i])
+            psitci[:, i] = (psitci[:, i] - psi_0[i]) / (psia[i] - psi_0[i])
+        zmapped = np.zeros((nts, 2 * mts)) + 1e32
+        nemapped = zmapped.copy()
+        nemapped_err = zmapped.copy()
+        for i in range(nts):
+            index = np.argmin(psitci[i, :]) if flag else np.argmax(psitci[i, :])
+            psi_val = psitci[i, index]
+            for j in range(mts):
+                if (flag and psits[j, i] >= psi_val) or (
+                    not flag and psits[j, i] <= psi_val
+                ):
+                    a1 = interp1(psitci[:index, i], ztci[:index], psits[j, i])
+                    a2 = interp1(psitci[index:, i], ztci[index:], psits[j, i])
+                    zmapped[i, [j, j + mts]] = [a1, a2]
+                    nemapped[i, [j, j + mts]] = nets[i, j]
+                    nemapped_err[i, [j, j + mts]] = nets_err[i, j]
+            sorted_indices = np.argsort(zmapped[i, :])
+            zmapped[i, :] = zmapped[i, sorted_indices]
+            nemapped[i, :] = nemapped[i, sorted_indices]
+            nemapped_err[i, :] = nemapped_err[i, sorted_indices]
+        z = zmapped
+        n_e = nemapped
+        n_e_sig = nemapped_err
+        t = nets_core_t
+        return t, z, n_e, n_e_sig
+
+    # TODO: Move to utils
+    @staticmethod
+    def efit_rz2psi(params: PhysicsMethodParams, r, z, t, tree="analysis"):
+        r = r.flatten()
+        z = z.flatten()
+        psi = np.full((len(r), len(t)), np.nan)
+        z = np.float32(z)
+        psirz, rgrid, zgrid, times = params.mds_conn.get_data_with_dims(
+            r"\efit_geqdsk:psirz", tree_name=tree, dim_nums=[0, 1, 2]
+        )
+        rgrid, zgrid = np.meshgrid(rgrid, zgrid)  # , indexing='ij')
+
+        points = np.array(
+            [rgrid.flatten(), zgrid.flatten()]
+        ).T  # This transposes the array to shape (n, 2)
+        for i, time in enumerate(t):
+            # Find the index of the closest time
+            time_idx = np.argmin(np.abs(times - time))
+            # Extract the corresponding Psirz slice and transpose it
+            Psirz = np.transpose(psirz[time_idx, :, :])
+            # Perform cubic interpolation on the Psirz slice
+            values = Psirz.flatten()
+            try:
+                psi[:, i] = scipy.interpolate.griddata(
+                    points, values, (r, z), method="cubic"
+                )
+            except:
+                params.logger.warning(
+                    f"Interpolation failed for efit_rz2psi time {time}"
+                )
+
+        return psi
