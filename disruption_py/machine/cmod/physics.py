@@ -1237,8 +1237,6 @@ class ThomsonDensityMeasure:
                 nl_tci1 = interp1(tci_t, tci, ts_time1[valid_indices])
                 nl_ts1 = interp1(nlts_t, nlts, ts_time1[valid_indices])
                 time1 = ts_time1[valid_indices]
-        else:
-            time1 = -1
         if nyag2 > 0:
             ts_time2 = tci_time[indices2]
             (valid_indices,) = np.where((ts_time2 >= t0) & (ts_time2 <= t1))
@@ -1246,8 +1244,6 @@ class ThomsonDensityMeasure:
                 nl_tci1 = interp1(tci_t, tci, ts_time2[valid_indices])
                 nl_ts1 = interp1(nlts_t, nlts, ts_time2[valid_indices])
                 time2 = ts_time2[valid_indices]
-        else:
-            time2 = -1
         return nl_ts1, nl_ts2, nl_tci1, nl_tci2, time1, time2
 
     @staticmethod
