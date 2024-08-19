@@ -905,8 +905,9 @@ class CmodPhysicsMethods:
         - https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_peaking_factor_cmod.m
         - https://github.com/MIT-PSFC/disruption-py/issues/210
         - https://github.com/MIT-PSFC/disruption-py/pull/216
+        - https://github.com/MIT-PSFC/disruption-py/pull/268
 
-        Last major update by: William Wei on 7/12/2024
+        Last major update by: William Wei on 8/19/2024
 
         """
         # Compute TS_pressure
@@ -943,7 +944,9 @@ class CmodPhysicsMethods:
             z_arr_equal_spacing = np.linspace(z0[itime], TS_z_arr[-1], len(TS_z_arr))
             Te_arr_equal_spacing = interp1(TS_z_arr, TS_Te_arr, z_arr_equal_spacing)
             ne_arr_equal_spacing = interp1(TS_z_arr, TS_ne_arr, z_arr_equal_spacing)
-            pressure_arr_equal_spacing = interp1(TS_z_arr, TS_pressure_arr, z_arr_equal_spacing)
+            pressure_arr_equal_spacing = interp1(
+                TS_z_arr, TS_pressure_arr, z_arr_equal_spacing
+            )
             # Calculate Te_PF
             (core_index,) = np.where(
                 np.array((z_arr_equal_spacing - z0[itime]) < 0.2 * abs(bminor[itime]))
@@ -956,9 +959,9 @@ class CmodPhysicsMethods:
             ne_PF[itime] = np.mean(ne_arr_equal_spacing[core_index]) / np.mean(
                 ne_arr_equal_spacing
             )
-            pressure_PF[itime] = np.mean(pressure_arr_equal_spacing[core_index]) / np.mean(
-                pressure_arr_equal_spacing
-            )
+            pressure_PF[itime] = np.mean(
+                pressure_arr_equal_spacing[core_index]
+            ) / np.mean(pressure_arr_equal_spacing)
 
         # Interpolate peaking factors to the requested time basis
         ne_PF = interp1(TS_time, ne_PF, times, "linear")
@@ -1004,9 +1007,9 @@ class CmodPhysicsMethods:
             TS_Te_core, TS_time = params.mds_conn.get_data_with_dims(
                 f"{node_ext}:te_rz", tree_name="electrons"
             )
-            TS_Te_core = TS_Te_core * 1000 # [keV] -> [eV]
+            TS_Te_core = TS_Te_core * 1000  # [keV] -> [eV]
             TS_Te_edge = params.mds_conn.get_data(r"\ts_te")
-            TS_Te = np.concatenate((TS_Te_core, TS_Te_edge)) * 11600 # [eV] -> [K]
+            TS_Te = np.concatenate((TS_Te_core, TS_Te_edge)) * 11600  # [eV] -> [K]
 
             # Get ne data
             TS_ne_core = params.mds_conn.get_data(
@@ -1029,12 +1032,14 @@ class CmodPhysicsMethods:
                 return nan_output
         except mdsExceptions.MdsException as e:
             return nan_output
-        
+
         # Calibrate TS_ne using TCI -- slow
         if USE_TS_TCI_CALIBRATION:
             # This shouldn't affect ne_PF (except if calib is not between 0.5 & 1.5)
             # because we're just multiplying ne by a constant
-            (nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _) = ThomsonDensityMeasure.compare_ts_tci(params)
+            (nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _) = (
+                ThomsonDensityMeasure.compare_ts_tci(params)
+            )
             if np.mean(nl_ts1) != 1e32 and np.mean(nl_ts2) != 1e32:
                 nl_tci = np.concatenate((nl_tci1, nl_tci2))
                 nl_ts = np.concatenate((nl_ts1 + nl_ts2))
@@ -1050,7 +1055,7 @@ class CmodPhysicsMethods:
                 TS_ne *= calib
             else:
                 return nan_output
-                
+
         return CmodPhysicsMethods.get_peaking_factors(
             params.times, TS_time, TS_Te, TS_ne, TS_z, efit_time, bminor, z0
         )
@@ -1196,6 +1201,7 @@ class CmodPhysicsMethods:
             return True
         return False
 
+
 # helper class holding functions for thomson density measures
 class ThomsonDensityMeasure:
 
@@ -1305,7 +1311,10 @@ class ThomsonDensityMeasure:
         nlts = np.full(t.shape, np.nan)
         for i in range(nts):
             (ind,) = np.where(
-                (np.abs(z[i, :]) < 0.5) & (n_e[i, :] > 0) & (n_e[i, :] < 1e21) & (n_e[i, :] / n_e_sig[i, :] > 2)
+                (np.abs(z[i, :]) < 0.5)
+                & (n_e[i, :] > 0)
+                & (n_e[i, :] < 1e21)
+                & (n_e[i, :] / n_e_sig[i, :] > 2)
             )
             if len(ind) < 3:
                 nlts[i] = 0
