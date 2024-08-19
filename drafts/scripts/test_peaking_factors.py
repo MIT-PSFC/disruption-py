@@ -4,9 +4,9 @@ from disruption_py.workflow import get_shots_data
 import matplotlib.pyplot as plt
 import MDSplus as mds
 
-#shotno = 1150928025
-#shotno = 1120828014
-shotno = 1120830026
+shotno = 1140605022
+#shotno = 1120927014
+#shotno = 1120830026
 signals = ['ip', 'kappa', 'p_rad', 'te_peaking', 'te_peaking_ece', 'prad_peaking', 'te_width_ece']
 
 # default method for pulling disruption-py data
@@ -44,6 +44,7 @@ axs[4].plot(data['time'], data['te_peaking'], c='r', marker='.', label='TS')
 axs[5].plot(data['time'], data['te_width_ece'], c='b', marker='.')
 axs[5].set_xlabel('Time [s]', fontsize=14)
 axs[5].set_xlim(0, 1.5)
+axs[5].set_ylim(0, 0.15)
 axs[0].set_ylabel("Ip [MA]")
 axs[1].set_ylabel("Te0 [keV]")
 axs[2].set_ylabel("Prad [MW]")
