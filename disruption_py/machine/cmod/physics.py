@@ -875,8 +875,6 @@ class CmodPhysicsMethods:
         Because the TS chords have uneven spacings, measurements are first interpolated to an array of
         equally spaced vertical positions and then used to calculate the peaking factors.
 
-        Currently, only the Te_peaking feature has been implemented.
-
         Parameters:
         ----------
         times : array_like
@@ -925,6 +923,7 @@ class CmodPhysicsMethods:
             TS_Te_arr = TS_Te[:, itime]
             TS_ne_arr = TS_ne[:, itime]
             TS_pressure_arr = TS_pressure[:, itime]
+            # This gives identical results using either TS_Te_arr or TS_ne_arr
             (indx,) = np.where(TS_ne_arr > 0)
             if len(indx) < 10:
                 continue
