@@ -908,7 +908,7 @@ class CmodPhysicsMethods:
         Last major update by: William Wei on 8/19/2024
 
         """
-        # Compute TS_pressure
+        # Calculate TS_pressure
         TS_pressure = TS_Te * TS_ne * 1.38e-23
         # Interpolate EFIT signals to TS time basis
         bminor = interp1(efit_time, bminor, TS_time)
