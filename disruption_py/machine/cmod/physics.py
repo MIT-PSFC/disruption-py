@@ -866,7 +866,7 @@ class CmodPhysicsMethods:
         return output
 
     @staticmethod
-    def get_peaking_factors(times, TS_time, TS_Te, TS_ne, TS_pressure, TS_z, efit_time, bminor, z0):
+    def get_peaking_factors(times, TS_time, TS_Te, TS_ne, TS_z, efit_time, bminor, z0):
         """
         Calculate Te, ne, and pressure peaking factors given Thomson Scattering Te and ne measurements.
 
@@ -907,34 +907,41 @@ class CmodPhysicsMethods:
         Last major update by: William Wei on 7/12/2024
 
         """
+        # Compute TS_pressure
+        TS_pressure = TS_Te * TS_ne * 1.38e-23
         # Interpolate EFIT signals to TS time basis
         bminor = interp1(efit_time, bminor, TS_time)
         z0 = interp1(efit_time, z0, TS_time)
 
-        # Calculate Te peaking factor
+        # Calculate Te, ne, & pressure peaking factors
         Te_PF = np.full(len(TS_time), np.nan)
-        equal_index_arr = np.full(len(TS_time), np.nan)
+        ne_PF = np.full(len(TS_time), np.nan)
+        pressure_PF = np.full(len(TS_time), np.nan)
         (itimes,) = np.where((TS_time > 0) & (TS_time < times[-1]))
         for itime in itimes:
             TS_Te_arr = TS_Te[:, itime]
-            (indx,) = np.where(TS_Te_arr > 0)
-            # DEBUG
             TS_ne_arr = TS_ne[:, itime]
-            (indx_ne,) = np.where(TS_ne_arr > 0)
-            equal_index_arr[itime] = np.array_equal(indx, indx_ne)
+            TS_pressure_arr = TS_pressure[:, itime]
+            (indx,) = np.where(TS_ne_arr > 0)
             if len(indx) < 10:
                 continue
             TS_Te_arr = TS_Te_arr[indx]
+            TS_ne_arr = TS_ne_arr[indx]
+            TS_pressure_arr = TS_pressure_arr[indx]
             TS_z_arr = TS_z[indx]
             sorted_indx = np.argsort(TS_z_arr)
             TS_z_arr = TS_z_arr[sorted_indx]
             TS_Te_arr = TS_Te_arr[sorted_indx]
+            TS_ne_arr = TS_ne_arr[sorted_indx]
+            TS_pressure_arr = TS_pressure_arr[sorted_indx]
             # Create equal-spacing array of TS_z_arr and interpolate TS_Te_arr on it
             # Skip if there's no EFIT zmagx data
             if np.isnan(z0[itime]):
                 continue
             z_arr_equal_spacing = np.linspace(z0[itime], TS_z_arr[-1], len(TS_z_arr))
             Te_arr_equal_spacing = interp1(TS_z_arr, TS_Te_arr, z_arr_equal_spacing)
+            ne_arr_equal_spacing = interp1(TS_z_arr, TS_ne_arr, z_arr_equal_spacing)
+            pressure_arr_equal_spacing = interp1(TS_z_arr, TS_pressure_arr, z_arr_equal_spacing)
             # Calculate Te_PF
             (core_index,) = np.where(
                 np.array((z_arr_equal_spacing - z0[itime]) < 0.2 * abs(bminor[itime]))
@@ -944,59 +951,9 @@ class CmodPhysicsMethods:
             Te_PF[itime] = np.mean(Te_arr_equal_spacing[core_index]) / np.mean(
                 Te_arr_equal_spacing
             )
-        # Calculate ne_peaking
-        ne_PF = np.full(len(TS_time), np.nan)
-        for itime in itimes:
-            TS_ne_arr = TS_ne[:, itime]
-            # TODO: verify if indx_ne & indx_Te are identical
-            # matlab uses indx_ne to determine indices (line 177)
-            (indx,) = np.where(TS_ne_arr > 0)    # In case indx_ne != indx_Te
-            if len(indx) < 10:
-                continue
-            TS_ne_arr = TS_ne_arr[indx]
-            TS_z_arr = TS_z[indx]
-            sorted_indx = np.argsort(TS_z_arr)
-            TS_z_arr = TS_z_arr[sorted_indx]
-            TS_ne_arr = TS_ne_arr[sorted_indx]
-            # Create equal-spacing array of TS_z_arr and interpolate TS_Te_arr on it
-            # Skip if there's no EFIT zmagx data
-            if np.isnan(z0[itime]):
-                continue
-            z_arr_equal_spacing = np.linspace(z0[itime], TS_z_arr[-1], len(TS_z_arr))
-            ne_arr_equal_spacing = interp1(TS_z_arr, TS_ne_arr, z_arr_equal_spacing)
-            # Calculate ne_PF
-            (core_index,) = np.where(
-                np.array((z_arr_equal_spacing - z0[itime]) < 0.2 * abs(bminor[itime]))
-            )
-            if len(core_index) < 2:
-                continue
             ne_PF[itime] = np.mean(ne_arr_equal_spacing[core_index]) / np.mean(
                 ne_arr_equal_spacing
             )
-        # Calculate pressure peaking
-        pressure_PF = np.full(len(TS_time), np.nan)
-        for itime in itimes:
-            TS_pressure_arr = TS_pressure[:, itime]
-            (indx,) = np.where(TS_pressure_arr > 0)
-            if len(indx) < 10:
-                continue
-            TS_pressure_arr = TS_pressure_arr[indx]
-            TS_z_arr = TS_z[indx]
-            sorted_indx = np.argsort(TS_z_arr)
-            TS_z_arr = TS_z_arr[sorted_indx]
-            TS_pressure_arr = TS_pressure_arr[sorted_indx]
-            # Create equal-spacing array of TS_z_arr and interpolate TS_pressure_arr on it
-            # Skip if there's no EFIT zmagx data
-            if np.isnan(z0[itime]):
-                continue
-            z_arr_equal_spacing = np.linspace(z0[itime], TS_z_arr[-1], len(TS_z_arr))
-            pressure_arr_equal_spacing = interp1(TS_z_arr, TS_pressure_arr, z_arr_equal_spacing)
-            # Calculate pressure_PF
-            (core_index,) = np.where(
-                np.array((z_arr_equal_spacing - z0[itime]) < 0.2 * abs(bminor[itime]))
-            )
-            if len(core_index) < 2:
-                continue
             pressure_PF[itime] = np.mean(pressure_arr_equal_spacing[core_index]) / np.mean(
                 pressure_arr_equal_spacing
             )
@@ -1069,8 +1026,6 @@ class CmodPhysicsMethods:
             )
             TS_ne_edge = params.mds_conn.get_data(r"\ts_ne")
             TS_ne = np.concatenate((TS_ne_core, TS_ne_edge))
-            # TODO: move pressure computation to the main function?
-            TS_pressure = TS_Te * TS_ne * 1.38e-23
 
             # TODO: calibrate TS_ne (line 79, 145-163)
             # compare_ts_tci now in drafts/machine/cmod/thomson.py
@@ -1079,7 +1034,7 @@ class CmodPhysicsMethods:
         except mdsExceptions.MdsException as e:
             return nan_output
         return CmodPhysicsMethods.get_peaking_factors(
-            params.times, TS_time, TS_Te, TS_ne, TS_pressure, TS_z, efit_time, bminor, z0
+            params.times, TS_time, TS_Te, TS_ne, TS_z, efit_time, bminor, z0
         )
 
     @staticmethod
