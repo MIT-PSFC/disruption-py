@@ -946,7 +946,7 @@ class CmodPhysicsMethods:
             pressure_arr_equal_spacing = interp1(
                 TS_z_arr, TS_pressure_arr, z_arr_equal_spacing
             )
-            # Calculate Te_PF
+            # Calculate peaking factors
             (core_index,) = np.where(
                 np.array((z_arr_equal_spacing - z0[itime]) < 0.2 * abs(bminor[itime]))
             )
