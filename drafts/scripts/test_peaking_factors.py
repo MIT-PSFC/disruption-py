@@ -4,9 +4,11 @@ from disruption_py.workflow import get_shots_data
 import matplotlib.pyplot as plt
 import MDSplus as mds
 
-shotno = 1140605022
-#shotno = 1120927014
-#shotno = 1120830026
+#shotno = 1140605022
+shotno = 1120828014
+#shotno = 1150928025
+#shotno = 1120927014 # 1.22 and 1.24 show profile narrowing, 1.2696 shows profile broadening as core cools
+#shotno = 1120830026 # 0.52 and 0.57
 signals = ['ip', 'kappa', 'p_rad', 'te_peaking', 'te_peaking_ece', 'prad_peaking', 'te_width_ece']
 
 # default method for pulling disruption-py data

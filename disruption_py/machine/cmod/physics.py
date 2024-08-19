@@ -13,7 +13,7 @@ import disruption_py.data
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.math import gaussian_fit, gauss, interp1, smooth
+from disruption_py.core.utils.math import gaussian_fit, gauss, interp1, smooth, gaussian_fit_with_fixed_mean
 from disruption_py.machine.tokamak import Tokamak
 #from disruption_py.settings.domain_setting import DomainSettingParams, FlattopDomainSetting
 
@@ -918,7 +918,7 @@ class CmodPhysicsMethods:
         # Calculate Te peaking factor
         Te_PF = np.full(len(TS_time), np.nan)
         (itimes,) = np.where((TS_time > 0) & (TS_time < times[-1]))
-        test_time = 1.345
+        test_time = 0.72
         itest = np.argmin(np.abs(TS_time - test_time))
         for itime in itimes:
             TS_Te_arr = TS_Te[:, itime]
@@ -1111,9 +1111,9 @@ class CmodPhysicsMethods:
         Te = Te.T
         radii = radii.T
 
-        test_time = 1.336
+        test_time = 0.57
         itest = np.argmin(np.abs(efit_time - test_time))
-        test_time2 = 1.344
+        test_time2 = 0.578
         itest2 = np.argmin(np.abs(efit_time - test_time2))
         for i in range(len(efit_time)):
             sorted_index = np.argsort(radii[i,:])
@@ -1177,9 +1177,12 @@ class CmodPhysicsMethods:
                 # Perform Gaussian fit to extract Te width
                 r = radii[i,okay_indices[i,:]]
                 y = Te[i,okay_indices[i,:]]
-                guess = [r0[i], y.max(), (y.max() - y.min()) / 3]
+                #guess = [r0[i], y.max(), (y.max() - y.min()) / 3]
+                guess = [y.max(), (y.max() - y.min()) / 3]
                 try:
-                    pa, pmu, psigma = gaussian_fit(r, y, guess)
+                    #pa, pmu, psigma = gaussian_fit(r, y, guess)
+                    pmu = r0[i]
+                    pa, psigma = gaussian_fit_with_fixed_mean(pmu, r, y, guess)
                 except RuntimeError as exc:
                     if str(exc).startswith("Optimal parameters not found"):
                         continue
@@ -1208,13 +1211,13 @@ class CmodPhysicsMethods:
                         plt.plot(rsample, gauss(rsample, pa, pmu, np.abs(psigma)), c=color, linestyle='--')
                         #plt.scatter(r_equal_spaced, te_equal_spaced, c='b', marker='o', s=30, label='GPC Uniform Radial Basis')
                         #plt.scatter(r_equal_spaced[core_indices], te_equal_spaced[core_indices], c='r', marker='.')
-                        # plt.axvline(r0[i], c='k', linestyle='--', label="$R_0$")
                         # #plt.axvline(r0[i]-0.2*aminor[i], c='gray', linestyle='--')
                         # plt.axvline(r0[i]+aminor[i], c='grey', linestyle='--', label="$R_0 + a$")
                         if (i ==itest2): 
+                            plt.axvline(r0[i], c='k', linestyle='--', label="$R_0$")
                             plt.xlabel("R [m]", fontsize=16)
                             plt.ylabel("Te [keV]", fontsize=16)
-                            plt.title("Te Profile Fits of ECE\nC-Mod Shot " + str(1140605022), fontsize=18)
+                            plt.title("Te Profile Fits of ECE\nC-Mod Shot " + str(1120828014), fontsize=18)
                             plt.legend(fontsize=16)
                             plt.show()
                         # plt.scatter(radii[i,:], Te[i,:], c='k', marker='x', s=35, 

@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
+from functools import partial
 from scipy.interpolate import interp1d, interp2d
 from scipy.optimize import curve_fit
 from scipy.signal import medfilt
@@ -238,6 +239,30 @@ def gauss(x, *params):
     out = a * np.exp(-((x - mu) ** 2) / (2.0 * sigma**2))
     return out
 
+def gauss_wrapper(x, a, sigma, mu):
+    return gauss(x, a, mu, sigma)
+
+def gaussian_fit_with_fixed_mean(mu, *args):
+    """
+    Parameters
+    ----------
+    mu : float
+        The fixed mean of the Gaussian fit
+    x : array
+        The x-coordinates of the data points.
+    y : array
+        The y-coordinates of the data points.
+    p0 : array (len 2)
+        The initial values of the parameters (Amplitude, sigma).
+
+    Returns
+    -------
+    coeffs : array
+        The coefficients of the fit.
+    """
+    gauss_fixed_mean = partial(gauss_wrapper, mu=mu)
+    coeffs, _ = curve_fit(gauss_fixed_mean, *args)
+    return coeffs
 
 def matlab_gsastd(
     x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=0
