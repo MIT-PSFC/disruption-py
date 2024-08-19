@@ -976,6 +976,7 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def _get_peaking_factors(params: PhysicsMethodParams):
+        USE_TS_TCI_CALIBRATION = False
         nan_output = {
             "ne_peaking": [np.nan],
             "te_peaking": [np.nan],
@@ -1028,24 +1029,26 @@ class CmodPhysicsMethods:
             TS_ne_edge = params.mds_conn.get_data(r"\ts_ne")
             TS_ne = np.concatenate((TS_ne_core, TS_ne_edge))
 
-            # This shouldn't affect ne_PF (except if calib is not between 0.5 & 1.5)
-            # because we're just multiplying ne by a constant
-            (nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _) = ThomsonDensityMeasure.compare_ts_tci(params)
-            if np.mean(nl_ts1) != 1e32 and np.mean(nl_ts2) != 1e32:
-                nl_tci = np.concatenate((nl_tci1, nl_tci2))
-                nl_ts = np.concatenate((nl_ts1 + nl_ts2))
-                calib = np.mean(nl_tci) / np.mean(nl_ts)
-            elif np.mean(nl_ts1) != 1e32 and np.mean(nl_ts2) == 1e32:
-                calib = np.mean(nl_tci1) / np.mean(nl_ts1)
-            elif np.mean(nl_ts1) == 1e32 and np.mean(nl_ts2) != 1e32:
-                calib = np.mean(nl_tci2) / np.mean(nl_ts2)
-            else:
-                calib = np.nan
-            
-            if 0.5 < calib < 1.5:
-                TS_ne *= calib
-            else:
-                return nan_output
+            # Calibrate TS_ne using TCI -- slow
+            if USE_TS_TCI_CALIBRATION:
+                # This shouldn't affect ne_PF (except if calib is not between 0.5 & 1.5)
+                # because we're just multiplying ne by a constant
+                (nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _) = ThomsonDensityMeasure.compare_ts_tci(params)
+                if np.mean(nl_ts1) != 1e32 and np.mean(nl_ts2) != 1e32:
+                    nl_tci = np.concatenate((nl_tci1, nl_tci2))
+                    nl_ts = np.concatenate((nl_ts1 + nl_ts2))
+                    calib = np.mean(nl_tci) / np.mean(nl_ts)
+                elif np.mean(nl_ts1) != 1e32 and np.mean(nl_ts2) == 1e32:
+                    calib = np.mean(nl_tci1) / np.mean(nl_ts1)
+                elif np.mean(nl_ts1) == 1e32 and np.mean(nl_ts2) != 1e32:
+                    calib = np.mean(nl_tci2) / np.mean(nl_ts2)
+                else:
+                    calib = np.nan
+                
+                if 0.5 < calib < 1.5:
+                    TS_ne *= calib
+                else:
+                    return nan_output
 
         except mdsExceptions.MdsException as e:
             return nan_output
