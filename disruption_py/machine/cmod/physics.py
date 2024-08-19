@@ -936,7 +936,7 @@ class CmodPhysicsMethods:
             TS_Te_arr = TS_Te_arr[sorted_indx]
             TS_ne_arr = TS_ne_arr[sorted_indx]
             TS_pressure_arr = TS_pressure_arr[sorted_indx]
-            # Create equal-spacing array of TS_z_arr and interpolate TS_Te_arr on it
+            # Create equal-spacing array of TS_z_arr and interpolate TS profile on it
             # Skip if there's no EFIT zmagx data
             if np.isnan(z0[itime]):
                 continue
