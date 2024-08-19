@@ -1225,11 +1225,11 @@ class ThomsonDensityMeasure:
         tci, tci_t = params.mds_conn.get_data_with_dims(
             f".TCI.RESULTS:NL_{nlnum:02d}", tree_name="electrons"
         )
-        # BUG: FAILED HERE!
         nlts, nlts_t = ThomsonDensityMeasure.integrate_ts_tci(params, nlnum)
         t0 = np.amin(nlts_t)
         t1 = np.amax(nlts_t)
         nyag1, nyag2, indices1, indices2 = ThomsonDensityMeasure.parse_yags(params)
+        time1, time2 = -1, -1
         if nyag1 > 0:
             ts_time1 = tci_time[indices1]
             (valid_indices,) = np.where((ts_time1 >= t0) & (ts_time1 <= t1))
