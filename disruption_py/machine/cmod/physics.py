@@ -1111,9 +1111,9 @@ class CmodPhysicsMethods:
         Te = Te.T
         radii = radii.T
 
-        test_time = 0.57
+        test_time = 0.26
         itest = np.argmin(np.abs(efit_time - test_time))
-        test_time2 = 0.578
+        test_time2 = 0.57
         itest2 = np.argmin(np.abs(efit_time - test_time2))
         for i in range(len(efit_time)):
             sorted_index = np.argsort(radii[i,:])
@@ -1142,11 +1142,11 @@ class CmodPhysicsMethods:
                 calib_edge = calib_indices & (radii[i,:] > r0[i] + 0.85*aminor[i])
                 te_edge = np.min(Te[i,calib_edge])
                 indx_edge = np.argmin(np.abs(Te[i,:] - te_edge))
-                if (i==itest):
-                    print("te_edge") 
-                    print(r0[i] + 0.85*aminor[i])
-                    print(Te[i, calib_edge])
-                    print(te_edge)
+                # if (i==itest):
+                    # print("te_edge") 
+                    # print(r0[i] + 0.85*aminor[i])
+                    # print(Te[i, calib_edge])
+                    # print(te_edge)
                 for j in range(indx_edge + 1, len(radii[i,:])):
                     if Te[i,j] > 1.2 * Te[i,indx_edge]:
                         nonthermal_overlap_indices[j] = True
@@ -1171,6 +1171,7 @@ class CmodPhysicsMethods:
 
         # Compute peaking factor and width
         Te_PF = np.full(len(efit_time), np.nan)
+        Te_edge_vs_avg = np.full(len(efit_time), np.nan)
         Te_hwhm = np.full(len(efit_time), np.nan)
         for i in range(len(efit_time)):
             if (np.sum(okay_indices[i,:]) > min_points):
@@ -1192,43 +1193,67 @@ class CmodPhysicsMethods:
                 Te_hwhm[i] = np.abs(psigma) * np.sqrt(2 * np.log(2))
 
                 # Compute PF using equal spaced radial basis to reduce bias in changes in radial sampling over time
-                r_equal_spaced = np.linspace(r_inboard, r_outboard, npoints)
+                r_equal_spaced = np.linspace(r_inboard, r_outboard, 100*npoints)
                 te_equal_spaced = interp1(radii[i,okay_indices[i,:]], Te[i,okay_indices[i,:]], r_equal_spaced)
                 # Note during last 5 EFITs te_equal_space could contain nans
                 core_indices = ((np.abs(r_equal_spaced - r0[i]) < 0.2 * aminor[i]) & (~np.isnan(te_equal_spaced)))
-                if (np.sum(core_indices) > 0):
+                edge_indices = ((np.abs(r_equal_spaced - r0[i]) > 0.8 * aminor[i]) & (~np.isnan(te_equal_spaced)))
+                if (np.sum(core_indices) > 0 and np.sum(edge_indices) > 0):
                     Te_PF[i] = np.nanmean(te_equal_spaced[core_indices]) / np.nanmean(te_equal_spaced)
-                    if (i == itest or i == itest2):
-                        if (i == itest):
-                            color ='b'
-                            marker='o'
-                        else:
-                            color = 'r'
-                            marker='.'
-                        #plt.scatter(radii[i,:], Te[i,:], c=color, marker=marker, label='Time = ' + str(efit_time[i].round(3)) + ' s')
-                        plt.scatter(r, y, c=color, marker=marker, label='Time = ' + str(efit_time[i].round(3)) + ' s')
+                    Te_edge_vs_avg[i] = np.nanmean(te_equal_spaced[edge_indices]) / np.nanmean(te_equal_spaced)
+                    if (i==itest):
+                        plt.scatter(radii[i,:], Te[i,:], c='b', marker='x', label='GPC Raw (' + str(efit_time[i].round(3)) + ' s)')
                         rsample = np.linspace(r.min(), r.max(), 100)
-                        plt.plot(rsample, gauss(rsample, pa, pmu, np.abs(psigma)), c=color, linestyle='--')
-                        #plt.scatter(r_equal_spaced, te_equal_spaced, c='b', marker='o', s=30, label='GPC Uniform Radial Basis')
-                        #plt.scatter(r_equal_spaced[core_indices], te_equal_spaced[core_indices], c='r', marker='.')
-                        # #plt.axvline(r0[i]-0.2*aminor[i], c='gray', linestyle='--')
-                        # plt.axvline(r0[i]+aminor[i], c='grey', linestyle='--', label="$R_0 + a$")
-                        if (i ==itest2): 
-                            plt.axvline(r0[i], c='k', linestyle='--', label="$R_0$")
-                            plt.xlabel("R [m]", fontsize=16)
-                            plt.ylabel("Te [keV]", fontsize=16)
-                            plt.title("Te Profile Fits of ECE\nC-Mod Shot " + str(1120828014), fontsize=18)
-                            plt.legend(fontsize=16)
-                            plt.show()
+                        #plt.scatter(r_equal_spaced, te_equal_spaced, c='b', marker='.', s=30, label='GPC Uniform Radial Basis')
+                        #plt.axvline(r0[i]-0.2*aminor[i], c='b', linestyle='--')
+                        #plt.axvline(r0[i]+0.2*aminor[i], c='b', linestyle='--')
+                        #plt.axvline(r0[i]+0.8*aminor[i], c='b', linestyle='--')
+                        plt.axvline(r0[i], c='b', linestyle='--', label='$R_0$ (' + str(efit_time[i].round(3)) + ' s)')
+                    if (i==itest2):
+                        plt.scatter(radii[i,:], Te[i,:], c='r', marker='x', label='GPC Raw (' + str(efit_time[i].round(3)) + ' s)')
+                        rsample = np.linspace(r.min(), r.max(), 100)
+                        # plt.scatter(r_equal_spaced, te_equal_spaced, c='r', marker='.', s=30, label='GPC Uniform Radial Basis')
+                        # plt.axvline(r0[i]-0.2*aminor[i], c='r', linestyle='--')
+                        # plt.axvline(r0[i]+0.2*aminor[i], c='r', linestyle='--')
+                        # plt.axvline(r0[i]+0.8*aminor[i], c='r', linestyle='--')
+                        plt.axvline(r0[i], c='r', linestyle='--', label='$R_0$ (' + str(efit_time[i].round(3)) + ' s)')
+                        plt.xlabel("R [m]", fontsize=16)
+                        plt.ylabel("Te [keV]", fontsize=16)
+                        plt.title("Te Profiles of ECE\nC-Mod Shot " + str(1120830026), fontsize=18)
+                        plt.legend(fontsize=16)
+                        plt.show()
+                    # if (i == itest or i == itest2):
+                    #     if (i == itest):
+                    #         color ='b'
+                    #         marker='o'
+                    #     else:
+                    #         color = 'r'
+                    #         marker='.'
+                    #     #plt.scatter(radii[i,:], Te[i,:], c=color, marker=marker, label='Time = ' + str(efit_time[i].round(3)) + ' s')
+                    #     plt.scatter(r, y, c=color, marker=marker, label='Time = ' + str(efit_time[i].round(3)) + ' s')
+                    #     rsample = np.linspace(r.min(), r.max(), 100)
+                    #     plt.plot(rsample, gauss(rsample, pa, pmu, np.abs(psigma)), c=color, linestyle='--')
+                    #     #plt.scatter(r_equal_spaced, te_equal_spaced, c='b', marker='o', s=30, label='GPC Uniform Radial Basis')
+                    #     #plt.scatter(r_equal_spaced[core_indices], te_equal_spaced[core_indices], c='r', marker='.')
+                    #     # #plt.axvline(r0[i]-0.2*aminor[i], c='gray', linestyle='--')
+                    #     # plt.axvline(r0[i]+aminor[i], c='grey', linestyle='--', label="$R_0 + a$")
+                    #     if (i ==itest2): 
+                    #         plt.axvline(r0[i], c='k', linestyle='--', label="$R_0$")
+                    #         plt.xlabel("R [m]", fontsize=16)
+                    #         plt.ylabel("Te [keV]", fontsize=16)
+                    #         plt.title("Te Profile Fits of ECE\nC-Mod Shot " + str(1120828014), fontsize=18)
+                    #         plt.legend(fontsize=16)
+                    #         plt.show()
                         # plt.scatter(radii[i,:], Te[i,:], c='k', marker='x', s=35, 
                         #     label='GPC Raw ('+str(efit_time[i].round(3)) + ' s)')
         Te_PF = interp1(efit_time, Te_PF, times)
+        Te_edge_vs_avg = interp1(efit_time, Te_edge_vs_avg, times)
         Te_hwhm = interp1(efit_time, Te_hwhm, times)
-        return pd.DataFrame({"te_peaking_ece": Te_PF, "te_width_ece": Te_hwhm})
+        return pd.DataFrame({"te_peaking_ece": Te_PF, "te_edge_vs_avg_ece": Te_edge_vs_avg, "te_width_ece": Te_hwhm})
     
     @staticmethod
     @physics_method(
-        columns=["te_peaking_ece", "te_width_ece"],
+        columns=["te_peaking_ece", "te_edge_vs_avg_ece", "te_width_ece"],
         tokamak=Tokamak.CMOD,
     )
     def _get_te_profile_params_ece(params: PhysicsMethodParams):
