@@ -55,7 +55,7 @@ class DomainSetting(ABC):
 
 class DomainSettingDict(DomainSetting):
     """
-    Utility class that is automatically used when a dicationary is passed as the
+    Utility class that is automatically used when a dictionary is passed as the
     `domain_setting` parameter in `RetrievalSettings`.
 
     Parameters

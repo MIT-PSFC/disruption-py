@@ -22,6 +22,9 @@ class ProcessMDSConnection:
     logger = logging.getLogger("disruption_py")
 
     def __init__(self, conn_string: str):
+        self.conn = None
+        if conn_string is None:
+            return
         # pylint: disable=no-member
         self.conn = MDSplus.Connection(conn_string)
         try:

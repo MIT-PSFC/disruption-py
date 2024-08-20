@@ -313,6 +313,8 @@ class ShotDatabase:
                 and (update or curr_df[column_name].isna().all())
             ):
                 update_columns_shot_data[column_name] = shot_data[column_name]
+        # pyodbc will fill SQL with NULL for None, but not for np.nan
+        update_columns_shot_data = update_columns_shot_data.replace({np.nan: None})
         with self.conn.cursor() as curs:
             for index, row in enumerate(
                 update_columns_shot_data.itertuples(index=False, name=None)
@@ -434,7 +436,7 @@ class ShotDatabase:
         else:
             query = (
                 f"select {selected_cols} from {sql_table} where shot in "
-                + f"({shotlist}) order by time"
+                + f"({shotlist}) order by shot, time"
             )
         shot_df = pd.read_sql_query(query, self.engine)
         shot_df.columns = shot_df.columns.str.lower()

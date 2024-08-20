@@ -74,20 +74,23 @@ class OutputSetting(ABC):
 
     @abstractmethod
     def _output_shot(self, params: OutputSettingParams):
-        """Abstract method implemented by subclasses to handle data output for a single shot.
-        This method is called by disruption_py with the shots DataFrame in the params object
-        once the data has been retrieved.
+        """Abstract method implemented by subclasses to handle data output for a
+        single shot. This method is called by disruption_py with the shots DataFrame
+        in the params object once the data has been retrieved.
 
         Parameters
         ----------
         params : OutputSettingParams
-            Params containing the data retrieved for a shot in a DataFrame and other utility parameters.
+            Params containing the data retrieved for a shot in a DataFrame and other
+            utility parameters.
         """
         pass
 
     def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """Empty method optionally overridden by subclasses to handle cleanup after all shots have been
-        output. This may include closing files or other cleanup.
+        """Empty method optionally overridden by subclasses to handle cleanup after
+        all shots have been output. This may include closing files or other cleanup.
+        Subclasses should implement this method so multiple output types can be
+        used for the same data without appending to the other's outputted dataframe.
 
         Parameters
         ----------
@@ -255,13 +258,23 @@ class DataFrameOutputSetting(OutputSetting):
 
 class HDF5OutputSetting(OutputSetting):
     """
-    Stream outputted data to an HDF5 file.
+    Stream outputted data to an HDF5 file. Data for each shot is stored in a table
+    under the key `df_SHOTID`.
     """
 
-    def __init__(self, filepath, only_output_numeric=True):
+    def __init__(self, filepath, only_output_numeric=False):
+        """
+        Params:
+        filepath: str
+            hdf5 file path
+        only_output_numeric: bool
+            (default False) whether the hdf5 file should exclude all non-numeric
+            quantities (e.g. commit hash).
+        """
         self.filepath = filepath
         self.output_shot_count = 0
         self.only_output_numeric = only_output_numeric
+        self.results: pd.DataFrame = pd.DataFrame()
 
     def _output_shot(self, params: OutputSettingParams):
         mode = "a" if self.output_shot_count > 0 else "w"
@@ -279,12 +292,13 @@ class HDF5OutputSetting(OutputSetting):
             mode=mode,
         )
         self.output_shot_count += 1
-
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        pass
+        self.results = safe_df_concat(self.results, [params.result])
 
     def get_results(self, params: CompleteOutputSettingParams):
-        return self.output_shot_count
+        return self.results
+
+    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
+        self.results = pd.DataFrame()
 
 
 class CSVOutputSetting(OutputSetting):
@@ -300,6 +314,7 @@ class CSVOutputSetting(OutputSetting):
         self.output_shot_count = 0
         if clear_file is True and os.path.exists(filepath):
             os.remove(filepath)
+        self.results: pd.DataFrame = pd.DataFrame()
 
     def _output_shot(self, params: OutputSettingParams):
         file_exists = os.path.isfile(self.filepath)
@@ -316,9 +331,13 @@ class CSVOutputSetting(OutputSetting):
                 self.filepath, mode="a", index=False, header=(not file_exists)
             )
         self.output_shot_count += 1
+        self.results = safe_df_concat(self.results, [params.result])
 
     def get_results(self, params: CompleteOutputSettingParams):
-        return self.output_shot_count
+        return self.results
+
+    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
+        self.results = pd.DataFrame()
 
 
 class BatchedCSVOutputSetting(OutputSetting):
@@ -337,6 +356,8 @@ class BatchedCSVOutputSetting(OutputSetting):
         if self.clear_file and os.path.exists(filepath):
             os.remove(filepath)
 
+        self.results: pd.DataFrame = pd.DataFrame()
+
     def _output_shot(self, params: OutputSettingParams):
         # Append the current result to the batch data list
         self.batch_data.append(params.result)
@@ -346,6 +367,7 @@ class BatchedCSVOutputSetting(OutputSetting):
             self._write_batch_to_csv()
 
         self.output_shot_count += 1
+        self.results = safe_df_concat(self.results, [params.result])
 
     def _write_batch_to_csv(self):
         file_exists = os.path.isfile(self.filepath)
@@ -359,25 +381,28 @@ class BatchedCSVOutputSetting(OutputSetting):
         # Write any remaining batched data to the CSV file before returning results
         if self.batch_data:
             self._write_batch_to_csv()
-        return self.output_shot_count
+        return self.results
+
+    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
+        self.results = pd.DataFrame()
 
 
 class SQLOutputSetting(OutputSetting):
     """
-    Stream outputted data to disruption_warning or similar SQL table.
+    Stream outputted data to disruption_warning or similar SQL table. By default,
+    stream to the test table: disruption_warning_test.
     """
 
     def __init__(
         self,
         should_update=False,
         should_override_columns: List[str] = None,
-        table_name="disruption_warning",
+        table_name="disruption_warning_test",
     ):
         self.should_update = should_update
         self.should_override_columns = should_override_columns
         self.table_name = table_name
-        self.modifications = 0
-        self.total_shots = 0
+        self.results: pd.DataFrame = pd.DataFrame()
 
     def _output_shot(self, params: OutputSettingParams):
         if not params.result.empty and ("shot" in params.result.columns):
@@ -388,13 +413,15 @@ class SQLOutputSetting(OutputSetting):
                 update=self.should_update,
                 override_columns=self.should_override_columns,
             )
-            self.modifications += 1
         else:
             params.logger.warning("No shot id found in result DataFrame")
-        self.total_shots += 1
+        self.results = safe_df_concat(self.results, [params.result])
 
     def get_results(self, params: CompleteOutputSettingParams) -> Any:
-        return (self.modifications, self.total_shots)
+        return self.results
+
+    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
+        self.results = pd.DataFrame()
 
 
 # --8<-- [start:output_setting_dict]
