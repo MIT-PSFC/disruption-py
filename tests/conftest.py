@@ -88,9 +88,20 @@ def module_file_path_f(request, tmpdir):
     return inner
 
 
-@pytest.fixture(scope="function")
+@pytest.fixture(scope="module")
 def test_file_path_f(request, tmpdir):
     def inner(suffix):
         return os.path.join(tmpdir, f"{request.node.name}{suffix}")
 
     return inner
+
+
+def skip_on_fast_execution(method):
+    if "GITHUB_ACTIONS" in os.environ:
+
+        @pytest.mark.skip("fast execution")
+        def wrapper(method):
+            return method
+
+        return wrapper
+    return method

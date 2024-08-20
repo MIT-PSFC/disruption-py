@@ -116,8 +116,8 @@ class DefaultNicknameSetting(NicknameSetting):
 
     def __init__(self):
         self.tokamak_overrides = {
-            Tokamak.CMOD: lambda params: "analysis",
-            Tokamak.D3D: lambda params: "efit01",
+            Tokamak.CMOD: StaticNicknameSetting("analysis")._get_tree_name,
+            Tokamak.D3D: StaticNicknameSetting("efit01")._get_tree_name,
         }
 
     def _get_tree_name(self, params: NicknameSettingParams) -> str:
