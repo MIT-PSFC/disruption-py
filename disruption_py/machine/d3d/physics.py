@@ -9,7 +9,12 @@ from MDSplus import mdsExceptions
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.math import get_bolo, gsastd, interp1, power
+from disruption_py.core.utils.math import (
+    interp1,
+    matlab_get_bolo,
+    matlab_gsastd,
+    matlab_power,
+)
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -82,16 +87,28 @@ class D3DPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["p_rad", "p_nbi", "p_ech", "p_ohm", "radiated_fraction", "v_loop"],
+        columns=["p_rad", "p_nbi", "p_ech", "radiated_fraction"],
         tokamak=Tokamak.D3D,
     )
     def get_power_parameters(params: PhysicsMethodParams):
+        """
+        Compute the input NBI, ECH powers, radiated power measured by the bolometer array,
+        and the radiated fraction for a DIII-D shot.
+
+        References:
+        -------
+        - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_power_d3d.m
+
+        Last major update by William Wei on 8/1/2024
+        """
+
         # Get neutral beam injected power
         try:
             p_nbi, t_nbi = params.mds_conn.get_data_with_dims(
                 r"\d3d::top.nb:pinj", tree_name="d3d", astype="float64"
             )
-            p_nbi *= 1.0e3  # [KW] -> [W]
+            t_nbi /= 1e3  # [ms] -> [s]
+            p_nbi *= 1e3  # [KW] -> [W]
             if len(t_nbi) > 2:
                 p_nbi = interp1(
                     t_nbi,
@@ -110,13 +127,19 @@ class D3DPhysicsMethods:
             p_nbi = np.zeros(len(params.times))
             params.logger.info(f"[Shot {params.shot_id}]:Failed to open NBI node")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-        # Get electron cycholotrn heating (ECH) power. It's poitn data, so it's not
-        #  stored in an MDSplus tree
+
+        # Get electron cyclotron heating (ECH) power. It's point data, so it's not
+        # stored in an MDSplus tree
         try:
             p_ech, t_ech = params.mds_conn.get_data_with_dims(
                 r"\top.ech.total:echpwrc", tree_name="rf"
             )
+            t_ech /= 1e3  # [ms] -> [s]
             if len(t_ech) > 2:
+                # Sometimes, t_ech has an extra "0" value tacked on to the end.
+                # This must be removed before the interpolation.
+                if t_ech[-1] == 0:
+                    t_ech, p_ech = t_ech[:-1], p_ech[:-1]
                 p_ech = interp1(
                     t_ech,
                     p_ech,
@@ -137,8 +160,11 @@ class D3DPhysicsMethods:
                 f"[Shot {params.shot_id}]:Failed to open ECH node. Setting to zeros"
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+
         # Get ohmic power and loop voltage
-        p_ohm, v_loop = D3DPhysicsMethods.get_ohmic_parameters(params)
+        ohmic_parameters = D3DPhysicsMethods.get_ohmic_parameters(params)
+        p_ohm = ohmic_parameters["p_ohm"]
+
         # Radiated power
         # We had planned to use the standard signal r'\bolom::prad_tot' for this
         # parameter.  However, the processing involved in calculating \prad_tot
@@ -149,6 +175,7 @@ class D3DPhysicsMethods:
         # and powers.pro).  I converted them into Matlab routines, and modified the
         # analysis so that the smoothing is causal, and uses a shorter window.
         smoothing_window = 0.010  # [s]
+
         try:
             bol_prm, _ = params.mds_conn.get_data_with_dims(
                 r"\bol_prm", tree_name="bolom"
@@ -156,19 +183,26 @@ class D3DPhysicsMethods:
         except mdsExceptions.MdsException as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to open bolom tree.")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-        lower_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
-        upper_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
-        bol_channels = lower_channels + upper_channels
+        upper_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
+        lower_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
+        bol_channels = upper_channels + lower_channels
         bol_signals = []
-        bol_times = []
         for i in range(48):
-            bol_signal, bol_time = params.mds_conn.get_data_with_dims(
+            bol_signal = params.mds_conn.get_data(
                 rf"\top.raw:{bol_channels[i]}", tree_name="bolom"
             )
             bol_signals.append(bol_signal)
-            bol_times.append(bol_time)
-        a_struct = get_bolo(
-            params.shot_id, bol_channels, bol_prm, bol_signals, bol_times
+        bol_time = params.mds_conn.get_dims(
+            rf"\top.raw:{bol_channels[0]}", tree_name="bolom"
+        )[0]
+        bol_time /= 1e3  # [ms] -> [s]
+        a_struct = matlab_get_bolo(
+            shot_id=params.shot_id,
+            bol_channels=bol_channels,
+            bol_prm=bol_prm,
+            bol_top=bol_signals,
+            bol_time=bol_time,
+            drtau=smoothing_window * 1e3,
         )
         ier = 0
         for j in range(48):
@@ -178,39 +212,49 @@ class D3DPhysicsMethods:
                 p_rad = np.full(len(params.times), np.nan)
                 break
         if ier == 0:
-            b_struct = power(a_struct)
+            b_struct = matlab_power(a_struct)
             p_rad = b_struct.pwrmix  # [W]
-            p_rad = interp1(a_struct.time, p_rad, params.times, "linear")
+            p_rad = interp1(a_struct.raw_time, p_rad, params.times, "linear")
 
         # Remove any negative values from the power data
+        # TODO: Could p_ohm be negative?
         p_rad[np.isinf(p_rad)] = np.nan
         p_rad[p_rad < 0] = 0
         p_nbi[p_nbi < 0] = 0
         p_ech[p_ech < 0] = 0
 
-        p_input = p_rad + p_nbi + p_ech  # [W]
+        p_input = p_ohm + p_nbi + p_ech  # [W]
         rad_fraction = p_rad / p_input
         rad_fraction[np.isinf(rad_fraction)] = np.nan
 
         # Computer P_sol, defined as P_in - P_rad
+        # TODO: Why calculate p_sol?
         p_sol = p_input - p_rad
+
         output = {
             "p_rad": p_rad,
             "p_nbi": p_nbi,
             "p_ech": p_ech,
-            "p_ohm": p_ohm,
             "radiated_fraction": rad_fraction,
-            "v_loop": v_loop,
         }
         return output
 
     @staticmethod
     @physics_method(
-        columns=["p_rad", "p_nbi", "p_ech", "p_ohm", "radiated_fraction", "v_loop"],
+        columns=["p_ohm", "v_loop"],
         tokamak=Tokamak.D3D,
     )
     def get_ohmic_parameters(params: PhysicsMethodParams):
-        output = {
+        """
+        Compute ohmic heating power and loop voltage for a DIII-D shot
+
+        References:
+        -------
+        - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_P_ohm_d3d.m
+
+        Last major update by William Wei on 8/1/2024
+        """
+        nan_output = {
             "p_ohm": [np.nan],
             "v_loop": [np.nan],
         }
@@ -219,6 +263,7 @@ class D3DPhysicsMethods:
             v_loop, t_v_loop = params.mds_conn.get_data_with_dims(
                 f'ptdata("vloopb", {params.shot_id})', tree_name="d3d"
             )
+            t_v_loop /= 1e3  # [ms] -> [s]
             v_loop = scipy.signal.medfilt(v_loop, 11)
             v_loop = interp1(t_v_loop, v_loop, params.times, "linear")
         except mdsExceptions.MdsException as e:
@@ -226,33 +271,55 @@ class D3DPhysicsMethods:
                 f"[Shot {params.shot_id}]:Failed to open VLOOPB node. Setting to NaN."
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+            return nan_output
         # Get plasma current
         try:
             ip, t_ip = params.mds_conn.get_data_with_dims(
                 f"ptdata('ip', {params.shot_id})", tree_name="d3d"
             )
-            t_ip = t_ip / 1.0e3  # [ms] -> [s]
+            t_ip /= 1e3  # [ms] -> [s]
+
+            # Alessandro Pau (JET & AUG) has given Cristina a robust routine that
+            # performs time differentiation with smoothing, while preserving causality.
+            # It can be useful for differentiating numerous signals such as Ip, Vloop,
+            # etc.  It is called 'GSASTD'. We will use this routine in place of Matlab's
+            # 'gradient' and smoothing/filtering routines for certain signals.
+
             # We choose a 20-point width for gsastd. This means a 10ms window for
-            #  ip smoothing
-            dipdt_smoothed = gsastd(t_ip, ip, 1, 20, 3, 1, 0)
+            # ip smoothing
+            dipdt_smoothed = matlab_gsastd(
+                x=t_ip,
+                y=ip,
+                derivative_mode=1,
+                width=20,
+                smooth_type=3,
+                ends_type=1,
+                slew_rate=0,
+            )
             li, t_li = params.mds_conn.get_data_with_dims(
                 r"\efit_a_eqdsk:li", tree_name="_efit_tree"
             )
-            chisq = params.mds_conn.get_data(r"\efit_a_eqdsk:chisq")
+            t_li /= 1e3
+            # Use chisq to determine which time slices are invalid
+            chisq = params.mds_conn.get_data(
+                r"\efit_a_eqdsk:chisq", tree_name="_efit_tree"
+            )
             # Filter out invalid indices of efit reconstruction
-            invalid_indices = None  # TODO: Finish
+            (invalid_indices,) = np.where(chisq > 50)
+            li[invalid_indices] = np.nan
         except mdsExceptions.MdsException as e:
             params.logger.info(
                 f"[Shot {params.shot_id}]:Unable to get plasma current data. p_ohm set to NaN."
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            return output
+            return nan_output
         # [m] For simplicity, use fixed r_0 = 1.67 for DIII-D major radius
         r_0 = 1.67
-        inductance = 4.0 * np.pi * r_0 * li / 2  # [H]
+        inductance = 4.0 * np.pi * 1e-7 * r_0 * li / 2  # [H]
         inductance = interp1(t_li, inductance, params.times, "linear")
         ip = interp1(t_ip, ip, params.times, "linear")
         dipdt_smoothed = interp1(t_ip, dipdt_smoothed, params.times, "linear")
+
         v_inductive = inductance * dipdt_smoothed  # [V]
         v_resistive = v_loop - v_inductive  # [V]
         p_ohm = ip * v_resistive  # [W]
@@ -265,41 +332,64 @@ class D3DPhysicsMethods:
         tokamak=Tokamak.D3D,
     )
     def get_density_parameters(params: PhysicsMethodParams):
-        ne = [np.nan]
-        g_f = [np.nan]
-        dne_dt = [np.nan]
+        """
+        Get electron density from EFIT, then compute dn_dt and Greenwald_fraction.
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_density_parameters.m
+        https://github.com/MIT-PSFC/disruption-py/issues/238
+        https://github.com/MIT-PSFC/disruption-py/pull/249
+
+        Last major update by William Wei on 8/2/2024
+        """
+        nan_output = {
+            "n_e": [np.nan],
+            "greenwald_fraction": [np.nan],
+            "dn_dt": [np.nan],
+        }
         try:
             ne, t_ne = params.mds_conn.get_data_with_dims(
                 r"\density", tree_name="_efit_tree"
             )
-            ne = ne * 1.0e6  # [cm^3] -> [m^3]
-            t_ne = t_ne / 1.0e3  # [ms] -> [s]
-            dne_dt = np.gradient(ne, t_ne)
-            # NOTE: t_ne has higher resolution than efit_time so t_ne[0] < efit_time[0]
-            # because of rounding, meaning we need to allow extrapolation
-            ne = interp1(
-                t_ne,
-                ne,
-                params.times,
-                "linear",
-                bounds_error=False,
-                fill_value="extrapolate",
-            )
-            dne_dt = interp1(
-                t_ne,
-                dne_dt,
-                params.times,
-                "linear",
-                bounds_error=False,
-                fill_value="extrapolate",
-            )
-            # TODO: CHECK TREE_NAME
+            # If EFIT disruption tree does not contain density data,
+            # then read density from BCI subtree of D3D main tree
+            # TODO: Find a shot to test this logic
+            if len(~np.isnan(ne)) == 0:
+                ne, t_ne = params.mds_conn.get_data_with_dims(
+                    r"\denv2", tree_name="d3d"
+                )
+        except mdsExceptions.MdsException as e:
+            params.logger.info(f"[Shot {params.shot_id}]:Failed to get ne data.")
+            params.logger.debug(f"[Shot {params.shot_id}]::{traceback.format_exc()}")
+            return nan_output
+
+        ne = ne * 1.0e6  # [cm^3] -> [m^3]
+        t_ne = t_ne / 1.0e3  # [ms] -> [s]
+        dne_dt = np.gradient(ne, t_ne)
+        # NOTE: t_ne has higher resolution than efit_time so t_ne[0] < efit_time[0]
+        # because of rounding, meaning we need to allow extrapolation
+        ne = interp1(
+            t_ne,
+            ne,
+            params.times,
+            "linear",
+            bounds_error=False,
+        )
+        dne_dt = interp1(
+            t_ne,
+            dne_dt,
+            params.times,
+            "linear",
+            bounds_error=False,
+        )
+        try:
             ip, t_ip = params.mds_conn.get_data_with_dims(
                 f"ptdata('ip', {params.shot_id})", tree_name="_efit_tree"
             )  # [A], [ms]
             t_ip = t_ip / 1.0e3  # [ms] -> [s]
             ipsign = np.sign(np.sum(ip))
-            ip = interp1(t_ip, ip * ipsign, params.times, "linear")
+            ip = interp1(t_ip, ip * ipsign, params.times, "linear")  # positive definite
             a_minor, t_a = params.mds_conn.get_data_with_dims(
                 r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
             )  # [m], [ms]
@@ -307,33 +397,60 @@ class D3DPhysicsMethods:
             a_minor = interp1(t_a, a_minor, params.times, "linear")
             with np.errstate(divide="ignore"):
                 n_g = ip / 1.0e6 / (np.pi * a_minor**2)  # [MA/m^2]
-                g_f = ne / 1.0e20 / n_g  # TODO: Fill in units
+                g_f = ne / n_g * 1e-20
         except mdsExceptions.MdsException as e:
             # TODO: Confirm that there is a separate exception if ptdata name doesn't exist
-            params.logger.info(f"[Shot {params.shot_id}]:Failed to get some parameter")
+            params.logger.info(
+                f"[Shot {params.shot_id}]:Failed to compute Greenwald fraction."
+            )
             params.logger.debug(f"[Shot {params.shot_id}]::{traceback.format_exc()}")
-        output = {"n_e": ne, "greenwald_fraction": g_f, "dn_dt": dne_dt}
-        return output
+            g_f = [np.nan]
+        return {
+            "n_e": ne,
+            "greenwald_fraction": g_f,
+            "dn_dt": dne_dt,
+        }
 
     @staticmethod
     @physics_method(
-        columns=["n_e_rt", "greenwald_fraction_rt"],
+        columns=["n_e_rt", "greenwald_fraction_rt", "dn_dt_rt"],
         tokamak=Tokamak.D3D,
     )
     def get_rt_density_parameters(params: PhysicsMethodParams):
-        ne_rt = [np.nan]
-        g_f_rt = [np.nan]
-        dne_dt_rt = [np.nan]
+        """
+        Get real-time electron density from EFIT, then compute the
+        real-time dn_dt and Greenwald_fraction.
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_density_parameters_RT.m
+        https://github.com/MIT-PSFC/disruption-py/pull/251
+
+        Last major update by William Wei on 8/2/2024
+        """
+
+        nan_output = {
+            "n_e_rt": [np.nan],
+            "greenwald_fraction_rt": [np.nan],
+            "dn_dt_rt": [np.nan],
+        }
         try:
-            # TODO: CHECK TREE_NAME
             ne_rt, t_ne_rt = params.mds_conn.get_data_with_dims(
-                f"ptdata('dssdenest', {params.shot_id})"
-            )
+                f"ptdata('dssdenest', {params.shot_id})", tree_name="_efit_tree"
+            )  # [10^19 m^-3]
             t_ne_rt = t_ne_rt / 1.0e3  # [ms] to [s]
             ne_rt = ne_rt * 1.0e19  # [10^19 m^-3] -> [m^-3]
             dne_dt_rt = np.gradient(ne_rt, t_ne_rt)  # [m^-3/s]
             ne_rt = interp1(t_ne_rt, ne_rt, params.times, "linear")
             dne_dt_rt = interp1(t_ne_rt, dne_dt_rt, params.times, "linear")
+        except mdsExceptions.MdsException as e:
+            params.logger.info(f"[Shot {params.shot_id}]:Failed to get ne_rt data")
+            params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+            return nan_output
+
+        try:
+            # Get real time ip to calculate the Greenwald density
+            # NOTE: avoid using nested try-except blocks?
             try:
                 ip_rt, t_ip_rt = params.mds_conn.get_data_with_dims(
                     f"ptdata('ipsip', {params.shot_id})"
@@ -343,23 +460,39 @@ class D3DPhysicsMethods:
             except Exception as e:
                 ip_rt, t_ip_rt = params.mds_conn.get_data_with_dims(
                     f"ptdata('ipspr15v', {params.shot_id})"
-                )  # [MA], [ms]
+                )  # [volts; 2 V/MA], [ms]
                 t_ip_rt = t_ip_rt / 1.0e3  # [ms] to [s]
+                ip_rt /= 2  # [volts] to [MA]
             ip_sign = np.sign(np.sum(ip_rt))
             ip = interp1(t_ip_rt, ip_rt * ip_sign, params.times, "linear")
-            a_minor_rt, t_a_rt = params.mds_conn.get_data_with_dims(
-                r"\efit_a_eqdsk:aminor", tree_name="efitrt1"
-            )  # [m], [ms]
-            t_a_rt = t_a_rt / 1.0e3  # [ms] -> [s]
-            a_minor_rt = interp1(t_a_rt, a_minor_rt, params.times, "linear")
+
+            # Read in EFIT minor radius and timebase.  This is also needed to calculate
+            # the Greenwald density limit.  However, if the minor radius data is not
+            # available, use a default fixed value of 0.59 m.  (We surveyed several
+            # hundred shots to determine this default value.)  Note that the efit
+            # timebase data is in a node called "atime" instead of "time" (where "time"
+            # does not work).
+
+            # For the real-time (RT) signals, read from the EFITRT1 tree
+            try:
+                a_minor_rt, t_a_rt = params.mds_conn.get_data_with_dims(
+                    r"\efit_a_eqdsk:aminor", tree_name="efitrt1"
+                )  # [m], [ms]
+                t_a_rt = t_a_rt / 1.0e3  # [ms] -> [s]
+                a_minor_rt = interp1(t_a_rt, a_minor_rt, params.times, "linear")
+            except Exception as e:
+                a_minor_rt = 0.59 * np.ones(len(params.times))
+
             with np.errstate(divide="ignore"):
-                n_g_rt = ip / 1.0e6 / (np.pi * a_minor_rt**2)  # [MA/m^2]
-                g_f_rt = ne_rt / 1.0e20 / n_g_rt  # TODO: Fill in units
+                n_g_rt = ip / (np.pi * a_minor_rt**2)  # [MA/m^2]
+                g_f_rt = ne_rt / 1.0e20 / n_g_rt
         except mdsExceptions.MdsException as e:
-            params.logger.info(f"[Shot {params.shot_id}]:Failed to get some parameter")
+            params.logger.info(
+                f"[Shot {params.shot_id}]:Failed to compute real-time Greenwald fraction."
+            )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-        # ' dne_dt_RT': dne_dt_rt
-        return {"n_e_rt": ne_rt, "greenwald_fraction_rt": g_f_rt}
+            g_f_rt = [np.nan]
+        return {"n_e_rt": ne_rt, "greenwald_fraction_rt": g_f_rt, "dn_dt_rt": dne_dt_rt}
 
     @staticmethod
     @physics_method(
@@ -478,15 +611,25 @@ class D3DPhysicsMethods:
     @physics_method(
         columns=[
             "ip_rt",
+            "ip_prog_rt",
             "ip_error_rt",
+            "dip_dt_rt",
             "dipprog_dt_rt",
-            "dipprog_dt",
-            "power_supply_railed",
         ],
         tokamak=Tokamak.D3D,
     )
     def get_rt_ip_parameters(params: PhysicsMethodParams):
-        params.mds_conn.open_tree("d3d")
+        """
+        Get real-time plasma current and programmed plasma current from EFIT,
+        then compute the real-time ip_error and the derivatives of all of the above signals.
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_Ip_parameters_RT.m
+        https://github.com/MIT-PSFC/disruption-py/pull/254
+
+        Last major update by William Wei on 8/5/2024
+        """
         ip_rt = [np.nan]
         ip_prog_rt = [np.nan]
         ip_error_rt = [np.nan]
@@ -571,7 +714,7 @@ class D3DPhysicsMethods:
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
             ipimode = np.full(len(params.times), np.nan)
-        feedback_off_indices = np.where((ipimode != 0) & (ipimode == 3))
+        (feedback_off_indices,) = np.where((ipimode != 0) & (ipimode == 3))
         ip_error_rt[feedback_off_indices] = np.nan
         # Finally, get 'epsoff' to determine if/when the E-coil power supplies have railed
         # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
@@ -586,23 +729,27 @@ class D3DPhysicsMethods:
             # the last time sample
             t_epsoff += 0.001
             epsoff = interp1(t_epsoff, epsoff, params.times, "linear")
-            railed_indices = np.where(np.abs(epsoff) > 0.5)
             power_supply_railed = np.zeros(len(params.times))
+            (railed_indices,) = np.where(np.abs(epsoff) > 0.5)
             power_supply_railed[railed_indices] = 1
-            ip_error_rt[railed_indices] = np.nan
+            # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
+            # PCS feedback control of Ip is not being applied.  Therefore the
+            # 'ip_error' parameter is undefined for these times.
+            (ps_railed_indices,) = np.where(power_supply_railed != 0)
+            ip_error_rt[ps_railed_indices] = np.nan
         except mdsExceptions.MdsException as e:
             params.logger.info(
                 f"[Shot {params.shot_id}]:Failed to get epsoff signal. "
                 + "power_supply_railed will be NaN."
             )
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            power_supply_railed = [np.nan]
         # 'dip_dt_RT': dip_dt_rt,
         output = {
             "ip_rt": ip_rt,
+            "ip_prog_rt": ip_prog_rt,
             "ip_error_rt": ip_error_rt,
+            "dip_dt_rt": dip_dt_rt,
             "dipprog_dt_rt": dipprog_dt_rt,
-            "power_supply_railed": power_supply_railed,
         }
         return output
 
@@ -734,16 +881,43 @@ class D3DPhysicsMethods:
     @staticmethod
     @physics_method(columns=["n1rms", "n1rms_normalized"], tokamak=Tokamak.D3D)
     def get_n1rms_parameters(params: PhysicsMethodParams):
-        n1rms, t_n1rms = params.mds_conn.get_data_with_dims(r"\n1rms", tree_name="d3d")
-        n1rms *= 1.0e-4  # Gauss -> Tesla
-        n1rms = interp1(t_n1rms, n1rms, params.times)
-        b_tor, t_b_tor = params.mds_conn.get_data_with_dims(
-            f"ptdata('bt', {params.shot_id})", tree_name="d3d"
-        )
-        b_tor = interp1(t_b_tor, b_tor, params.times)  # [T]
-        n1rms_norm = n1rms / np.abs(b_tor)
-        output = {"n1rms": n1rms, "n1rms_normalized": n1rms_norm}
-        return output
+        """
+        Get n1rms data, then compute n1rms_normalized = n1rms / btor
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_n1rms_d3d.m
+        https://github.com/MIT-PSFC/disruption-py/pull/257
+
+        Last major update by William Wei on 8/6/2024
+        """
+        # Get n1rms signal from d3d tree
+        try:
+            n1rms, t_n1rms = params.mds_conn.get_data_with_dims(
+                r"\n1rms", tree_name="d3d"
+            )
+            n1rms *= 1.0e-4  # Gauss -> Tesla
+            t_n1rms /= 1e3  # [ms] -> [s]
+            n1rms = interp1(t_n1rms, n1rms, params.times)
+        except mdsExceptions.MdsException as e:
+            params.logger.info(f"[Shot {params.shot_id}]:Failed to get n1rms signal")
+            params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+            return {"n1rms": [np.nan], "n1rms_normalized": [np.nan]}
+        # Calculate n1rms_norm
+        try:
+            b_tor, t_b_tor = params.mds_conn.get_data_with_dims(
+                f"ptdata('bt', {params.shot_id})", tree_name="d3d"
+            )
+            t_b_tor /= 1e3  # [ms] -> [s]
+            b_tor = interp1(t_b_tor, b_tor, params.times)  # [T]
+            n1rms_norm = n1rms / np.abs(b_tor)
+        except mdsExceptions.MdsException as e:
+            params.logger.info(
+                f"[Shot {params.shot_id}]:Failed to get b_tor signal to compute n1rms_normalized"
+            )
+            params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+            n1rms_norm = [np.nan]
+        return {"n1rms": n1rms, "n1rms_normalized": n1rms_norm}
 
     # TODO: Need to test and unblock recalculating peaking factors
     # By default get_peaking_factors should grab the data from MDSPlus as opposed
@@ -1009,12 +1183,26 @@ class D3DPhysicsMethods:
     @staticmethod
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.D3D)
     def get_kappa_area(params: PhysicsMethodParams):
+        """
+        Compute kappa_area (elongation parameter) defined as
+        plasma area / (pi * aminor**2)
+
+        Note: the EFIT-computed kappa is retrieved in D3DEfitMethods.
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_kappa_area.m
+        https://github.com/MIT-PSFC/disruption-py/pull/256
+
+        Last major update by William Wei on 8/6/2024
+        """
         a_minor = params.mds_conn.get_data(
             r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
         )
         area = params.mds_conn.get_data(r"\efit_a_eqdsk:area", tree_name="_efit_tree")
         chisq = params.mds_conn.get_data(r"\efit_a_eqdsk:chisq", tree_name="_efit_tree")
-        t = params.mds_conn.get(r"\efit_a_eqdsk:atime", tree_name="_efit_tree")
+        t = params.mds_conn.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree")
+        t /= 1e3  # [ms] -> [s]
         kappa_area = area / (np.pi * a_minor**2)
         invalid_indices = np.where(chisq > 50)
         kappa_area[invalid_indices] = np.nan
@@ -1027,60 +1215,88 @@ class D3DPhysicsMethods:
         tokamak=Tokamak.D3D,
     )
     def get_shape_parameters(params: PhysicsMethodParams):
-        efit_time = (
-            params.mds_conn.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree")
-            / 1.0e3
-        )  # [ms] -> [s]
-        sqfod = params.mds_conn.get_data(r"\efit_a_eqdsk:sqfod", tree_name="_efit_tree")
-        sqfou = params.mds_conn.get_data(r"\efit_a_eqdsk:sqfou", tree_name="_efit_tree")
-        tritop = params.mds_conn.get_data(
-            r"\efit_a_eqdsk:tritop", tree_name="_efit_tree"
-        )  # meters
-        tribot = params.mds_conn.get_data(
-            r"\efit_a_eqdsk:tribot", tree_name="_efit_tree"
-        )  # meters
-        # plasma minor radius [m]
-        aminor = params.mds_conn.get_data(
-            r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
-        )
-        chisq = params.mds_conn.get_data(r"\efit_a_eqdsk:chisq", tree_name="_efit_tree")
-        # Compute triangularity and squareness:
-        delta = (tritop + tribot) / 2.0
-        squareness = (sqfod + sqfou) / 2.0
+        """
+        Get the plasma triangularity (delta), squareness, and minor radius [m] from EFIT.
 
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_shape_parameters.m
+        https://github.com/MIT-PSFC/disruption-py/pull/258
+
+        Last major update by William Wei on 8/6/2024
+        """
+        # Get efit_time
+        try:
+            efit_time = params.mds_conn.get_data(
+                r"\efit_a_eqdsk:atime", tree_name="_efit_tree"
+            )
+            efit_time /= 1e3  # [ms] -> [s]
+        except mdsExceptions.MdsException as e:
+            params.logger.info(f"[Shot {params.shot_id}]:Failed to get EFIT time")
+            params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+            return {"delta": [np.nan], "squareness": [np.nan], "aminor": [np.nan]}
+        # Compute triangularity
+        try:
+            tritop = params.mds_conn.get_data(
+                r"\efit_a_eqdsk:tritop", tree_name="_efit_tree"
+            )  # meters
+            tribot = params.mds_conn.get_data(
+                r"\efit_a_eqdsk:tribot", tree_name="_efit_tree"
+            )  # meters
+            delta = (tritop + tribot) / 2.0
+            delta = interp1(efit_time, delta, params.times, "linear")
+        except mdsExceptions.MdsException as e:
+            params.logger.info(
+                f"[Shot {params.shot_id}]:Failed to obtain triangularity signals"
+            )
+            params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+            delta = [np.nan]
+        # Compute squareness
+        try:
+            sqfod = params.mds_conn.get_data(
+                r"\efit_a_eqdsk:sqfod", tree_name="_efit_tree"
+            )
+            sqfou = params.mds_conn.get_data(
+                r"\efit_a_eqdsk:sqfou", tree_name="_efit_tree"
+            )
+            squareness = (sqfod + sqfou) / 2.0
+            squareness = interp1(efit_time, squareness, params.times, "linear")
+        except mdsExceptions.MdsException as e:
+            params.logger.info(
+                f"[Shot {params.shot_id}]:Failed to obtain squareness signals"
+            )
+            params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+            squareness = [np.nan]
+        # Get aminor
+        try:
+            aminor = params.mds_conn.get_data(
+                r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
+            )
+            aminor = interp1(efit_time, aminor, params.times, "linear")
+        except mdsExceptions.MdsException as e:
+            params.logger.info(
+                f"[Shot {params.shot_id}]:Failed to obtain aminor signals"
+            )
+            params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+            aminor = [np.nan]
         # Remove invalid indices
-        invalid_indices = np.where(chisq > 50)
-        delta[invalid_indices] = np.nan
-        squareness[invalid_indices] = np.nan
-        aminor[invalid_indices] = np.nan
-
-        # Interpolate to desired times
-        delta = interp1(
-            efit_time,
-            delta,
-            params.times,
-            "linear",
-            bounds_error=False,
-            fill_value=np.nan,
-        )
-        squareness = interp1(
-            efit_time,
-            squareness,
-            params.times,
-            "linear",
-            bounds_error=False,
-            fill_value=np.nan,
-        )
-        aminor = interp1(
-            efit_time,
-            aminor,
-            params.times,
-            "linear",
-            bounds_error=False,
-            fill_value=np.nan,
-        )
-        output = {"delta": delta, "squareness": squareness, "aminor": aminor}
-        return output
+        try:
+            chisq = params.mds_conn.get_data(
+                r"\efit_a_eqdsk:chisq", tree_name="_efit_tree"
+            )
+            invalid_indices = np.where(chisq > 50)
+            if ~np.isnan(delta[0]):
+                delta[invalid_indices] = np.nan
+            if ~np.isnan(squareness[0]):
+                squareness[invalid_indices] = np.nan
+            if ~np.isnan(aminor[0]):
+                aminor[invalid_indices] = np.nan
+        except mdsExceptions.MdsException as e:
+            params.logger.info(
+                f"[Shot {params.shot_id}]:Failed to obtain chisq to remove unreliable time points."
+            )
+            params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+        return {"delta": delta, "squareness": squareness, "aminor": aminor}
 
     @staticmethod
     @cache_method
@@ -1207,10 +1423,10 @@ class D3DPhysicsMethods:
             )
             bol_signals.append(bol_signal)
             bol_times.append(bol_time)
-        a_struct = get_bolo(
+        a_struct = matlab_get_bolo(
             params.shot_id, bol_channels, bol_prm, bol_signals, bol_times[0]
         )
-        b_struct = power(a_struct)
+        b_struct = matlab_power(a_struct)
         r_major_axis, efit_time = params.mds_conn.get_data_with_dims(
             r"\top.results.geqdsk:rmaxis", tree_name="_efit_tree"
         )
@@ -1264,7 +1480,7 @@ class D3DPhysicsMethods:
         # Normalize the poloidal flux grid (0=magnetic axis, 1=boundary)
         # [Translated from D. Eldon's OMFITeqdsk read_basic_eq_from_mds() function]
         psi_norm_f = efit_dict["ssibry"] - efit_dict["ssimag"]
-        problems = np.where(psi_norm_f == 0)[0]
+        (problems,) = np.where(psi_norm_f == 0)
         # Prevent divide by 0 error by replacing 0s in the denominator
         psi_norm_f[problems] = 1
         efit_dict["psin"] = (
