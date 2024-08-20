@@ -5,7 +5,6 @@ import warnings
 from importlib import resources
 
 import numpy as np
-import scipy
 import pandas as pd
 from MDSplus import mdsExceptions
 
@@ -15,8 +14,6 @@ from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import gaussian_fit, interp1, smooth
 from disruption_py.machine.tokamak import Tokamak
-
-# from disruption_py.machine.cmod.efit import CmodEfitMethods
 from disruption_py.machine.cmod.thomson import ThomsonDensityMeasure
 
 warnings.filterwarnings("error", category=RuntimeWarning)
