@@ -918,7 +918,7 @@ class CmodPhysicsMethods:
         # Calculate Te peaking factor
         Te_PF = np.full(len(TS_time), np.nan)
         (itimes,) = np.where((TS_time > 0) & (TS_time < times[-1]))
-        test_time = 0.72
+        test_time = 1.460
         itest = np.argmin(np.abs(TS_time - test_time))
         for itime in itimes:
             TS_Te_arr = TS_Te[:, itime]
@@ -1051,11 +1051,15 @@ class CmodPhysicsMethods:
         radial points to minimize artifacts caused by a point moving across the arbitrary core or edge boundary.
         
         ECE as a Te profile diagnostic can suffer from several artifacts:
-        Artifacts currently NOT checked for
+        Artifacts currently NOT explicity checked for
         - Density cutoffs: High ne plasmas (typically H-modes) can have an ECE cutoff. According to
           Amanda Hubbard, "what you wil see is a section of profile which is much LOWER than Thomson Scattering,
           for some portion of the LFS profile (typically starting around r/a 0.8?).  In this case ECE cannot be used."
-          Henry Wietfeldt: I don't have any examples of this issue yet.
+          An example shot with ECE cutoffs is 1140226024 (Callibration of Thomson density using ECE cutoffs).
+          Because the critical density is proportional to B^2, shots with B = 5.4 T on axis would need 
+          to have very high densities to experience a cutoff in the profile. We could look for cutoffs by comparing
+          the B profile to the ne profile and checking that ne < ncrit throughout the profile; however, 
+          a simpler check for now is to ignore shots with B < 4.5 T and assume there are no cutoffs with B >= 4.5 T.
         Artifacts currently checked for
         - Non-aligned grating: The gratings were usually aligned for radial coverage assuming 
           Bt=5.4T. For low Bt shots (like 2.8T), sometimes the gratings were adjusted, sometimes not.
@@ -1070,9 +1074,22 @@ class CmodPhysicsMethods:
           of the plasma. Generally channels with R < 0.6 m suffer from overlap with 3rd harmonic emission from the core.
           This leads to an apparently higher Te for R < 0.6 m than in reality. The gratings were usually
           aligned to measure the profile from the core outwards for this reason.
-        Source: https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_ECE_data_cmod.m
+        Sources: 
+        - https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_ECE_data_cmod.m
+        - K. Zhurovich, D. A. Mossessian, J. W. Hughes, A. E. Hubbard, J. H. Irby, and E. S. Marmar, 
+          "Calibration of Thomson scattering systems using electron cyclotron emission cutoff data,"
+          Rev. Sci. Instrum., vol. 76, no. 5, p. 053506, 2005, doi: 10.1063/1.1899311.
         Author: Henry Wietfeldt (08/05/24)
         """
+        # Constants
+        core_bound_factor = 0.2
+        edge_bound_factor = 0.8
+        min_points = 9 # Minimum number of okay GPC channels for reliable calculations
+        min_te = 0.02 # Channels with Te (in keV) below this value are considered poorly calibrated
+        min_r_to_avoid_harmonic_overlap = 0.6  # Only consider points with greater R (in m) to avoid harmonic overlap with core
+        rising_tail_factor = 1.2 # Multiplicative factor to identify rising tail (sign of non-thermal emission)
+
+
         # Only use EFITs starting after the GPC diagnostic has profiles.
         efit_time = efit_time[efit_time >= max(np.max(gpc1_rad_time[:,0]), gpc2_rad_time[0])]
         
@@ -1121,16 +1138,14 @@ class CmodPhysicsMethods:
         Te = Te.T
         radii = radii.T
 
-        test_time = 0.56
+        test_time = 0.6602
         itest = np.argmin(np.abs(efit_time - test_time))
-        test_time2 = 0.57
+        test_time2 = 1.4
         itest2 = np.argmin(np.abs(efit_time - test_time2))
         for i in range(len(efit_time)):
             sorted_index = np.argsort(radii[i,:])
             radii[i,:] = radii[i,sorted_index]
             Te[i,:] = Te[i,sorted_index]
-
-        min_points = 7 # Minimum number of points for calculations
 
         # Compute peaking factor and width
         Te_PF = np.full(len(efit_time), np.nan)
@@ -1138,17 +1153,17 @@ class CmodPhysicsMethods:
         Te_hwhm = np.full(len(efit_time), np.nan)
         for i in range(len(efit_time)):
             # Only consider points that are likely to accurately measure Te
-            calib_indices = (Te[i,:] > 0.01) & (radii[i,:] > 0)
-            harmonic_overlap_indices = (radii[i,:] < 0.6)
+            calib_indices = (Te[i,:] > min_te) & (radii[i,:] > 0)
+            harmonic_overlap_indices = (radii[i,:] < min_r_to_avoid_harmonic_overlap)
             nonthermal_overlap_indices = np.full(len(radii[i,:]), False)
             # Identify rising tail (overlap with non-thermal emission)
             # Finding the min Te near the edge and checking outwards for a rising tail seems to do well
-            calib_edge = calib_indices & (radii[i,:] > r0[i] + 0.8*aminor[i])
+            calib_edge = calib_indices & (radii[i,:] > r0[i] + edge_bound_factor*aminor[i])
             if (np.sum(calib_edge) > 0):
                 te_edge = np.min(Te[i,calib_edge])
                 indx_edge = np.argmin(np.abs(Te[i,:] - te_edge))
                 for j in range(len(Te[i,:])-1-indx_edge):
-                    if Te[i,indx_edge + j + 1] > 1.2 * Te[i,indx_edge]:
+                    if Te[i,indx_edge + j + 1] > rising_tail_factor * Te[i,indx_edge]:
                         nonthermal_overlap_indices[indx_edge + j + 1] = True
             okay_indices = calib_indices & (~harmonic_overlap_indices) & (~nonthermal_overlap_indices)
 
@@ -1171,33 +1186,33 @@ class CmodPhysicsMethods:
                 # Calculate core/edge vs. average using uniformly sampled radial basis
                 r_equal_spaced = np.linspace(r0[i], r0[i]+aminor[i], 100)
                 te_equal_spaced = interp1(r, y, r_equal_spaced, fill_value=(y[0], y[-1]))
-                core_indices = ((np.abs(r_equal_spaced - r0[i]) < 0.2 * aminor[i]) & (~np.isnan(te_equal_spaced)))
-                edge_indices = ((np.abs(r_equal_spaced - r0[i]) > 0.8 * aminor[i]) & (~np.isnan(te_equal_spaced)))
+                core_indices = ((np.abs(r_equal_spaced - r0[i]) < core_bound_factor * aminor[i]) & (~np.isnan(te_equal_spaced)))
+                edge_indices = ((np.abs(r_equal_spaced - r0[i]) > edge_bound_factor * aminor[i]) & (~np.isnan(te_equal_spaced)))
                 if (np.sum(core_indices) > 0):
                     Te_PF[i] = np.nanmean(te_equal_spaced[core_indices]) / np.nanmean(te_equal_spaced)
                 if (np.sum(edge_indices) > 0):
                     Te_edge_vs_avg[i] = np.nanmean(te_equal_spaced[edge_indices]) / np.nanmean(te_equal_spaced)
-                if (i==itest):
-                    plt.scatter(radii[i,:], Te[i,:], c='b', marker='x', label='GPC Raw (' + str(efit_time[i].round(3)) + ' s)')
-                    rsample = np.linspace(r.min(), r.max(), 100)
-                    plt.scatter(r_equal_spaced, te_equal_spaced, c='b', marker='.', s=30, label='GPC Uniform Radial Basis')
-                    plt.axvline(r0[i]-0.2*aminor[i], c='b', linestyle='--')
-                    plt.axvline(r0[i]+0.2*aminor[i], c='b', linestyle='--')
-                    plt.axvline(r0[i]+0.8*aminor[i], c='b', linestyle='--')
-                    plt.axvline(r0[i], c='b', linestyle='--', label='$R_0$ (' + str(efit_time[i].round(3)) + ' s)')
-                if (i==itest2):
-                    plt.scatter(radii[i,:], Te[i,:], c='r', marker='x', label='GPC Raw (' + str(efit_time[i].round(3)) + ' s)')
-                    rsample = np.linspace(r.min(), r.max(), 100)
-                    plt.scatter(r_equal_spaced, te_equal_spaced, c='r', marker='.', s=30, label='GPC Uniform Radial Basis')
-                    plt.axvline(r0[i]-0.2*aminor[i], c='r', linestyle='--')
-                    plt.axvline(r0[i]+0.2*aminor[i], c='r', linestyle='--')
-                    plt.axvline(r0[i]+0.8*aminor[i], c='r', linestyle='--')
-                    plt.axvline(r0[i], c='r', linestyle='--', label='$R_0$ (' + str(efit_time[i].round(3)) + ' s)')
-                    plt.xlabel("R [m]", fontsize=16)
-                    plt.ylabel("Te [keV]", fontsize=16)
-                    plt.title("Te Profiles of ECE\nC-Mod Shot " + str(1120830026), fontsize=18)
-                    plt.legend(fontsize=16)
-                    plt.show()
+                # if (i==itest):
+                #     plt.scatter(radii[i,:], Te[i,:], c='b', marker='x', label='GPC Raw (' + str(efit_time[i].round(3)) + ' s)')
+                #     rsample = np.linspace(r.min(), r.max(), 100)
+                #     plt.scatter(r_equal_spaced, te_equal_spaced, c='b', marker='.', s=30, label='GPC Uniform Radial Basis')
+                #     plt.axvline(r0[i]-0.2*aminor[i], c='b', linestyle='--')
+                #     plt.axvline(r0[i]+0.2*aminor[i], c='b', linestyle='--')
+                #     plt.axvline(r0[i]+0.8*aminor[i], c='b', linestyle='--')
+                #     plt.axvline(r0[i], c='b', linestyle='--', label='$R_0$ (' + str(efit_time[i].round(3)) + ' s)')
+                # if (i==itest2):
+                #     plt.scatter(radii[i,:], Te[i,:], c='r', marker='x', label='GPC Raw (' + str(efit_time[i].round(3)) + ' s)')
+                #     rsample = np.linspace(r.min(), r.max(), 100)
+                #     plt.scatter(r_equal_spaced, te_equal_spaced, c='r', marker='.', s=30, label='GPC Uniform Radial Basis')
+                #     plt.axvline(r0[i]-0.2*aminor[i], c='r', linestyle='--')
+                #     plt.axvline(r0[i]+0.2*aminor[i], c='r', linestyle='--')
+                #     plt.axvline(r0[i]+aminor[i], c='gray', linestyle='--', label='$R_0 + a$')
+                #     plt.axvline(r0[i], c='k', linestyle='--', label='$R_0$ (' + str(efit_time[i].round(3)) + ' s)')
+                #     plt.xlabel("R [m]", fontsize=16)
+                #     plt.ylabel("Te [keV]", fontsize=16)
+                #     plt.title("Te Profiles of ECE\nC-Mod Shot " + str(1140226024), fontsize=18)
+                #     plt.legend(fontsize=16)
+                #     plt.show()
                     # if (i == itest or i == itest2):
                     #     if (i == itest):
                     #         color ='b'
@@ -1233,6 +1248,9 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def _get_te_profile_params_ece(params: PhysicsMethodParams):
+        # Constants
+        min_bt = 4.5 # Minimum on-axis Bt to assume there are no cutoffs.
+        n_channels = 9 # Number of GPC channels
         nan_output = {
             "te_core_vs_avg_ece": np.full(len(params.times), np.nan),
             "te_edge_vs_avg_ece": np.full(len(params.times), np.nan),
@@ -1247,13 +1265,13 @@ class CmodPhysicsMethods:
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}] {traceback.format_exc()}")
             return nan_output
-        # Is there an easy way to select flattop period?
+        # Is there an easy way to select flattop period without having to get ipprog from MDSplus?
         #flattop_times = FlattopDomainSetting()._get_domain_cmod(DomainSettingParams(params, params.tokamak, params.logger))
         #print(params.times[:3], params.times[-3:], flattop_times[:3], flattop_times[-3:])
         ftop_btor = np.min(np.abs(btor[(t_mag > 0.8*params.disruption_time) & (t_mag < 0.9*params.disruption_time)]))
-        if (ftop_btor < 3.5):
+        if (ftop_btor < min_bt):
             params.logger.warning(
-                f"[Shot {params.shot_id}]:ECE unreliable for low Bt shots (Bt = {ftop_btor} T)."
+                f"[Shot {params.shot_id}]:ECE unreliable for automated calculations with low Bt shots (Bt = {ftop_btor} T) due to possible density cutoffs."
             )
             return nan_output
         # Shots with LH heating are unreliable because direct heating of electrons leads to nonthermal emission
@@ -1264,7 +1282,7 @@ class CmodPhysicsMethods:
             # LH Power units in kW
             if (np.max(lh_power[(lh_time > 0) & (lh_time < params.disruption_time)]) > 1.):
                 params.logger.warning(
-                    f"[Shot {params.shot_id}]:ECE unreliable for shots with LH heathing."
+                    f"[Shot {params.shot_id}]:ECE unreliable for automated calculations with shots with LHCD due to possible nonthermal emission."
                 )
                 return nan_output
         except:
@@ -1282,7 +1300,6 @@ class CmodPhysicsMethods:
             return nan_output
         # Read in Te profile measurements from 9 GPC1 channels
         node_path = '.ece.gpc_results'
-        n_channels = 9
         gpc1_te_data = []
         gpc1_te_time = []
         gpc1_rad_data = []
