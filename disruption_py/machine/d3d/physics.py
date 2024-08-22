@@ -869,19 +869,12 @@ class D3DPhysicsMethods:
             ts["rhovn"] = ts["rhovn"].T
             ts["psin"] = ts["psin"].T
 
-            # # NOTE: This looks good to me
-            # import matplotlib.pyplot as plt
-            # for i in range(500, 1200, 150):
-            #     plt.plot(ts['rhovn'][:, i], ts['te'][:, i], label=f"t={ts['time'][i]:.2f} s")
-            #     plt.scatter(ts['rhovn'][:, i], ts['te'][:, i])
-            # plt.axvline(ts_radial_range[0], c='r', linestyle=':')
-            # plt.axvline(ts_radial_range[1], c='r', linestyle=':')
-            # plt.axvline(ts_core_margin, c='r', linestyle='--')
-            # plt.xlabel('rhovn')
-            # plt.ylabel('Te (eV)')
-            # plt.legend()
-            # plt.title(f"{params.shot_id} Thomson profiles")
-            # plt.show()
+            # BUG: nansum ts['rhovn'] & ts['psin'] don't match MATLAB!
+            # shot = 161228: 
+            # nansum: matlab: rhovn = 17796, psin = 32244
+            #         disrpy: rhovn = 30005, psin = 1448812
+            # Shape:  matlab: rhovn: 2612x47, psin: 2612x47
+            #         disrpy: rhovn: 47x2612, psin: 47x47x2612
 
             params.logger.info(f"ts['rhovn'].shape: {ts["rhovn"].shape}")
         except Exception as e:
