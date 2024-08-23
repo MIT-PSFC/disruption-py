@@ -45,14 +45,14 @@ nav:
       - Calculated Parameters:
           - Physics Methods:
               - Overview: usage/physics_methods/physics_method_reference.md
-              - C-Mod Built-in Methods: >
-                  usage/physics_methods/cmod_built_in_method_reference.md
-              - D3D Built-in Methods: >
-                  usage/physics_methods/d3d_built_in_method_reference.md
-              - Physics Method Decorators: >
-                  usage/physics_methods/decorator_reference.md
-          - Parameter Reference: >
-              usage/physics_methods/disruption_parameters_reference.md
+              - C-Mod Built-in Methods: "usage/physics_methods/\
+                cmod_built_in_method_reference.md"
+              - D3D Built-in Methods: "usage/physics_methods/\
+                d3d_built_in_method_reference.md"
+              - Physics Method Decorators: "usage/physics_methods/\
+                decorator_reference.md"
+          - Parameter Reference: "usage/physics_methods/\
+            disruption_parameters_reference.md"
       - Data I/O:
           - SQL Database: usage/sql_database.md
           - MDSplus Connection: usage/mds_connection_reference.md
