@@ -227,13 +227,13 @@ class CmodTearingMethods:
                         path=f"{path}.{mirnov_name}",
                         tree_name="magnetics",
             )
-            # Test to make sure the sampling frequency is consistent
+            # Put the Mirnov sample frequency to 2.5 MHz
+            f_mirnov = 2.5e6
             actual_mirnov_sample_freq = 1 / (mirnov_times[1] - mirnov_times[0])  # Mirnov sampling rate
-            if actual_mirnov_sample_freq < 2.4e6 or actual_mirnov_sample_freq > 2.6e6:
-                print(f"Mirnov sample frequency is not 2.5 MHz. Be warned!!! Got {actual_mirnov_sample_freq}")
-                f_mirnov = actual_mirnov_sample_freq
-            else:
-                f_mirnov = 2.5e6
+            if actual_mirnov_sample_freq < f_mirnov*0.99 or actual_mirnov_sample_freq > f_mirnov*1.01:
+                print(f"Mirnov sample frequency is not 2.5 MHz. Be warned!!! Got {actual_mirnov_sample_freq} in shot {params.shot_id}.")
+                # Interpolate the signal to the correct timebase
+                mirnov_signal = interp1(mirnov_times, mirnov_signal, np.arange(mirnov_times[0], mirnov_times[-1], 1/f_mirnov))
 
             f_timebase = 1 / (params.times[1] - params.times[0])  # however fast the timebase is
 
