@@ -16,7 +16,6 @@ pyodbc = "^5.1.0"
 scikit_learn = "^1.5.0"
 scipy = "^1.13.0"
 SQLAlchemy = "^2.0.0"
-matplotlib = "^3.9.1"
 
 [tool.poetry.group.dev]
 optional = true
