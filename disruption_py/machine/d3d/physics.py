@@ -1172,7 +1172,18 @@ class D3DPhysicsMethods:
         -------
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/sorting/efit_Rz_interp.m
         """
-        times = ts["time"]  # [s]
+
+        # Shouldn't use mesh grid -> want to interp onto ts (time[i], r[i], z[i])
+        # T, R, Z = np.meshgrid(ts["time"], ts["r"], ts["z"], indexing="ij")
+        # NOTE: T, R, Z match MATLAB
+        T = np.tile(ts["time"], [len(ts["r"]), 1]).transpose()
+        R = np.tile(ts["r"], [len(ts["time"]), 1])
+        Z = np.tile(ts["z"], [len(ts["time"]), 1])
+
+        # Implement a 3D (time,radial,vertical) gridded interpolation
+        # NOTE: time, r, z match MATLAB
+        # BUG: psin's 2nd & 3rd dims corresponds to the 3rd & 2nd dim in matlab script.
+        # load_efit.m line 83: shiftdim(psirz, n-1)
         interp = scipy.interpolate.RegularGridInterpolator(
             [efit_dict["time"], efit_dict["r"], efit_dict["z"]],
             efit_dict["psin"],
@@ -1180,21 +1191,25 @@ class D3DPhysicsMethods:
             bounds_error=False,
             fill_value=np.nan,
         )
-        # T,R,Z = np.meshgrid(times, efit_dict['r'], efit_dict['z'],indexing='ij')
-        T, R, Z = np.meshgrid(times, ts["r"], ts["z"], indexing="ij")
-        print("EFIT rhovn shape:", efit_dict["rhovn"].shape)
-        # print(np.stack((T,R,Z),axis=1).shape)
+
+        # Apply interpolant to diagnostic data and return outputs as a new structure field
+        # BUG: psin still doesn't match MATLAB but close enough (161228, sum(psin): python=30911, MATLAB=32244)
         psin = interp((T, R, Z))
+
+        # Get rhovn using the interpolant stored in EFIT, then save this as another field in 'data'
         rho_vn_diag_almost = interp1(
-            efit_dict["time"], efit_dict["rhovn"], times, axis=0
+            efit_dict["time"], efit_dict["rhovn"], ts["time"], axis=0
         )
         print("Rho_vn_diag_almost shape", rho_vn_diag_almost.shape)
-        rho_vn_diag = np.empty(psin.shape[:2])
-        psin_timebase = np.linspace(0, 1, efit_dict["rhovn"].shape[1])
+        # NOTE: rho_vn_diag_almost matches MATLAB outputs
+        rho_vn_diag = np.empty(psin.shape[:2]) 
+        psin_interp = np.linspace(0, 1, efit_dict["rhovn"].shape[1]) # Implied psin grid for rhovn
+        # Interpolate again to get rhovn on same psin base
+        # BUG: rho_vn_diag does not match MATLAB
         for i in range(psin.shape[0]):
             rho_vn_diag[i] = interp1(
-                psin_timebase, rho_vn_diag_almost[i,], psin[i, :]
-            ).diagonal()
+                psin_interp, rho_vn_diag_almost[i, :], psin[i, :]
+            )
         return psin, rho_vn_diag
 
     @staticmethod
@@ -1522,7 +1537,7 @@ class D3DPhysicsMethods:
     def _get_efit_dict(params: PhysicsMethodParams):
         efit_dict = dict()
         path = r"\top.results.geqdsk:"
-        nodes = ["z", "r", "rhovn", "psirz", "zmaxis", "ssimag", "ssibry"]
+        nodes = ["z", "r", "rhovn", "psirz", "zmaxis", "ssimag", "ssibry"]  
         (efit_dict_time,) = params.mds_conn.get_dims(
             f"{path}psirz", tree_name="_efit_tree", dim_nums=[2]
         )
@@ -1538,10 +1553,17 @@ class D3DPhysicsMethods:
                     f"[Shot {params.shot_id}]: Failed to get {node} from efit, Setting to all NaNs."
                 )
                 params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+
+        # Shift psirz's dimenisons
+        # efit_dict['psirz']'s dimensions (1st,2nd,3rd) correspond to MATLAB script's psirz's (3rd,2nd,1st) dimensions before shiftdim. 
+        # This seems to be resulted from MDSplus call 
+        # TODO: is the order of dimensions consistent in python?
+        efit_dict['psirz'] = np.transpose(efit_dict['psirz'], (0,2,1))
+        
         # Normalize the poloidal flux grid (0=magnetic axis, 1=boundary)
         # [Translated from D. Eldon's OMFITeqdsk read_basic_eq_from_mds() function]
         psi_norm_f = efit_dict["ssibry"] - efit_dict["ssimag"]
-        problems = np.where(psi_norm_f == 0)[0]
+        (problems,) = np.where(psi_norm_f == 0)
         # Prevent divide by 0 error by replacing 0s in the denominator
         psi_norm_f[problems] = 1
         efit_dict["psin"] = (
