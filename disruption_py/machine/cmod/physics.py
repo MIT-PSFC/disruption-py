@@ -4,16 +4,17 @@ import traceback
 import warnings
 from importlib import resources
 
+import disruption_py.data
 import numpy as np
 import pandas as pd
-from MDSplus import mdsExceptions
-
-import disruption_py.data
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import gaussian_fit, interp1, smooth
 from disruption_py.machine.tokamak import Tokamak
+from MDSplus import mdsExceptions
+from scipy.signal import ShortTimeFFT
+from scipy.signal.windows import kaiser
 
 warnings.filterwarnings("error", category=RuntimeWarning)
 
@@ -1146,3 +1147,414 @@ class CmodPhysicsMethods:
         ):
             return True
         return False
+
+class CmodTearingMethods:
+
+    @staticmethod
+    @physics_method(
+        columns=["n_equal_1_std"],
+        tokamak=Tokamak.CMOD,
+    )
+    def _get_n_equal_1_std(params: PhysicsMethodParams):
+        """ Calculate n=1 STD from magnetics data.
+
+        This uses the set of Mirnov coils that are not integrated
+        (Those that end in k)
+        These are distributed in a grid on the outboard side of a limiter.
+
+        At the moment just testing with GH array,
+        but there is one on AB as well.
+        """
+
+        # Get a single bit of Mirnov coil data
+        # Mirnov coils are on a very fast timebase
+        # Using the GH signals since that's what Bob did
+        # Also have option to use 
+        mirnov_names = ["BP02_GHK"]
+
+        # path = r".rf_lim_coils."
+        # mirnov_node_names = params.mds_conn.get_data(
+        #     path + "nodename", tree_name = "magnetics"
+        # )
+        # phi = params.mds_conn.get_data(
+        #     path + "phi_gh", tree_name = "magnetics"
+        # )
+        # mirnov_pickup_coeffs = params.mds_conn.get_data(
+        #     path + "pickup_coeff", tree_name = "magnetics"
+        # )
+        # # Only use the coils in mirnov_names
+        # _, mirnov_indices, _ = np.intersect1d(
+        #     mirnov_node_names, mirnov_names, return_indices=True
+        # )
+        # mirnov_phi = phi + 360
+        # mirnov_pickup_coeffs = mirnov_pickup_coeffs[mirnov_indices]
+
+        # signal = params.mds_conn.get_data(
+        #     path + mirnov_names[0], tree_name = "magnetics"
+        # )
+
+        path = r"\magnetics::top.active_mhd.signals"
+        mirnov_signal, mirnov_times = params.mds_conn.get_data_with_dims(
+            path=f"{path}:{mirnov_names[0]}", tree_name="magnetics"
+        )
+
+        # Implementation of finding the standard deviation is based on
+        # the matlap script get_Mirnov_std.m
+        # For each time in the target timebase,
+        # Sample the previous 0.001 seconds of the fast mirnov signal
+        # and obtain the standard deviation
+        # Mirnov is ~5 MHz, so 0.001 seconds has plenty of samples
+
+        target_times = params.times
+        time_window = 0.001
+        n_equal_1_std = np.zeros(len(target_times))
+
+        for i, time in enumerate(target_times):
+            window_indices = np.where(
+                (mirnov_times > time - time_window) & (mirnov_times < time)
+            )
+            # Compute standard deviation ignoring nans
+            n_equal_1_std[i] = np.nanstd(mirnov_signal[window_indices])
+
+        return pd.DataFrame(
+            {
+                "n_equal_1_std": n_equal_1_std,
+            }
+        )
+    
+    @staticmethod
+    @physics_method(
+        tags="sxr_array_1", tokamak=Tokamak.CMOD
+    )
+    def _get_sxr_chord_data(params: PhysicsMethodParams):
+        """ """
+        sxr_dataframe = pd.DataFrame()
+        for chord in range(0,40):
+            try:
+                path = f"\\top.brightnesses.array_1:chord_{chord}"
+                sxr, t_sxr = params.mds_conn.get_data_with_dims(
+                    r"{}".format(path),
+                    tree_name="xtomo",
+                    astype="float64",
+                )
+                sxr = interp1(t_sxr, sxr, params.shot_props.times)
+            except:
+                sxr = np.full(len(params.shot_props.times), np.nan)
+
+            sxr_dataframe[f"sxr_array_1", chord] = sxr
+        return sxr_dataframe
+
+    @staticmethod
+    @physics_method(
+        columns=["sxr_emiss", "sxr_array2_bright", "sxr_array4_bright"], tokamak=Tokamak.CMOD
+    )
+    def _get_sxr_profile_data(params: PhysicsMethodParams):
+        """ """
+        try:
+            sxr_emiss, t_sxr = params.mds_conn.get_data_with_dims(
+                r"\top.results.core:emiss",
+                tree_name="xtomo",
+                astype="float64",
+            )
+            sxr_emiss = interp1(t_sxr, sxr_emiss, params.shot_props.times)
+        except mdsExceptions.TreeFOPENR as e:
+            params.logger.warning(
+                f"[Shot {params.shot_props.shot_id}]: Failed to get SXR EMISS data returning NaNs"
+            )
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]: {traceback.format_exc()}"
+            )
+            sxr_emiss = np.full(len(params.shot_props.times), np.nan)
+
+        try:
+            sxr_array2_bright, t_sxr = params.mds_conn.get_data_with_dims(
+                r"\top.results.array_2:bright",
+                tree_name="xtomo",
+                astype="float64",
+            )
+            sxr_array2_bright = interp1(t_sxr, sxr_array2_bright, params.shot_props.times)
+        except mdsExceptions.TreeFOPENR as e:
+            params.logger.warning(
+                f"[Shot {params.shot_props.shot_id}]: Failed to get SXR ARRAY 2 BRIGHT data returning NaNs"
+            )
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]: {traceback.format_exc()}"
+            )
+            sxr_array2_bright = np.full(len(params.shot_props.times), np.nan)
+
+        try:
+            sxr_array4_bright, t_sxr = params.mds_conn.get_data_with_dims(
+                r"\top.results.array_4:bright",
+                tree_name="xtomo",
+                astype="float64",
+            )
+            sxr_array4_bright = interp1(t_sxr, sxr_array4_bright, params.shot_props.times)
+        except mdsExceptions.TreeFOPENR as e:
+            params.logger.warning(
+                f"[Shot {params.shot_props.shot_id}]: Failed to get SXR ARRAY 4 BRIGHT data returning NaNs"
+            )
+            params.logger.debug(
+                f"[Shot {params.shot_props.shot_id}]: {traceback.format_exc()}"
+            )
+            sxr_array4_bright = np.full(len(params.shot_props.times), np.nan)
+        return pd.DataFrame({"sxr_emiss": sxr_emiss, "sxr_array2_bright": sxr_array2_bright, "sxr_array4_bright": sxr_array4_bright})  
+
+
+    @staticmethod
+    @physics_method(
+        tags=["ece_te"], tokamak=Tokamak.CMOD
+    )
+    def _get_ece_te_data(params: PhysicsMethodParams):
+        ece_dataframe = pd.DataFrame()
+        for channel_number in range(1, 10):
+            try:
+                path = f"\\top.ece.gpc_results.te:te{channel_number}"
+                ece, t_ece = params.mds_conn.get_data_with_dims(
+                    r"{}".format(path),
+                    tree_name="electrons",
+                    astype="float64",
+                )
+                ece = interp1(t_ece, ece, params.times)
+            except:
+                ece = np.full(len(params.times), np.nan)
+
+            ece_dataframe["ece_te", channel_number] = ece
+
+        return ece_dataframe
+
+    def setup_stfft(f_mirnov=2.5e6, f_target=1e3, frequency_resolution=None) -> ShortTimeFFT:
+        """Set up the Short Time Fast Fourier Transform object for the mirnov signals
+
+        Parameters
+        ----------
+        f_mirnov : float, optional (default=2.5e6)
+            The sampling frequency of the mirnov signals
+        f_target : float, optional (default=1e3)
+            The sampling frequency of the target timebase
+        frequency_resolution : float, optional (default=None)
+            The width of the frequency bins in the FFT. If None, will be set to 250 Hz
+
+        Returns
+        -------
+        SFT : scipy.signal.ShortTimeFFT
+            The ShortTimeFFT object
+        """
+        # Frequency resolution is the minimum frequency of interest, the size of the bins
+        if frequency_resolution is None:
+            frequency_resolution = 250
+
+        # Window size is the number of samples in the window
+        # Think of how many samples you need to measure the minimum frequency you care about
+        window_size = int(f_mirnov / frequency_resolution)
+        # Hop is how much the window is slid between timesteps.
+        # Slide the window based on the target frequency so interpolation is minimized
+        hop = int(f_mirnov / f_target)
+        # Something something kaiser window is optimal, just pick a beta that works
+        window = kaiser(window_size, beta=14)
+        SFT = ShortTimeFFT(win=window, hop=hop, fs=f_mirnov)
+        return SFT
+
+    def get_expected_cross_phase(mode: tuple[int, int], theta_1: float, phi_1: float, theta_2: float, phi_2: float):
+        """Calculate the expected cross phase between two mirnov probes if there were an m/n mode present
+        This cross phase will match if it is calculated like so:
+        cross_spectrum = probe_1_fft * np.conj(probe_2_fft)
+        cross_phase = np.angle(cross_spectrum) % (2 * np.pi)
+
+        Parameters:
+        ----------
+        mode : tuple[int, int]
+            The m/n mode that is expected to be present
+        theta_1 : float
+            The poloidal angle of the first mirnov probe [rad]
+        phi_1 : float
+            The toroidal angle of the first mirnov probe [rad]
+        theta_2 : float
+            The poloidal angle of the second mirnov probe [rad]
+        phi_2 : float
+            The toroidal angle of the second mirnov probe [rad]
+
+        Returns:
+        ----------
+        expected_cross_phase : float
+            The expected cross phase between the two probes.
+        """
+
+        poloidal_phase = mode[0] * (theta_2 - theta_1)
+        toroidal_phase = mode[1] * (phi_2 - phi_1)
+        expected_cross_phase = (poloidal_phase + toroidal_phase) % (2 * np.pi)
+
+        return expected_cross_phase
+
+    def cross_phase_mask(original_signal, cross_phases, expected_cross_phases, tolerance=0.5):
+
+        masked_signal = original_signal
+        for cross_phase, expected_cross_phase in zip(cross_phases, expected_cross_phases):
+            # If the expected cross phase is near 0 or 2pi, we risk a 2 pi jump messing things up
+            # Gotta bring everything into the center of the circle
+            if (expected_cross_phase < np.pi/8):
+                tested_expected_cross_phase = expected_cross_phase + np.pi
+                tested_cross_phase = (cross_phase + np.pi) % (2 * np.pi)
+            elif (expected_cross_phase > 15*np.pi/8):
+                tested_expected_cross_phase = expected_cross_phase - np.pi
+                tested_cross_phase = (cross_phase - np.pi) % (2 * np.pi)
+            else:
+                tested_expected_cross_phase = expected_cross_phase
+                tested_cross_phase = cross_phase
+            masked_signal = np.where(
+                np.abs(tested_cross_phase - tested_expected_cross_phase) > tolerance,
+                np.nan,
+                masked_signal
+            )
+        return masked_signal
+
+
+    @staticmethod
+    @physics_method(
+        tags=["mirnov_spectrogram", "cross_spectrum_real", "cross_spectrum_imag", "cross_power", "cross_phase", "cross_coherence"], tokamak=Tokamak.CMOD
+    )
+    def _get_mirnov_spectra(params: PhysicsMethodParams):
+        # Give me two mirnov probes that work PLEASE
+        # BP02_GHK *should* be fairly constistent at least, so that one goes up front
+        # All the others, who knows man. Just try them all and pick the first that exists. TODO(ZanderKeith)
+        gh_mirnov_names = ["BP02_GHK"] + [f"BP0{p}_GHK" for p in [1, *list(range(3, 10))]] + [f"BP{p}_GHK" for p in range(10, 19)]
+        ab_mirnov_names = [f"BP0{p}_ABK" for p in range(1, 10)] + [f"BP{p}_ABK" for p in range(10, 19)]
+        path = r"\magnetics::top.active_mhd.signals"
+
+        mirnov_0 = None
+        mirnov_1 = None
+        mirnov_signal_0 = None
+        mirnov_signal_1 = None
+        mirnov_times = None # This will be set by the first probe that is found
+
+        for mirnov_name in gh_mirnov_names:
+            if mirnov_signal_0 is None:
+                try:
+                    mirnov_signal_0, mirnov_times = params.mds_conn.get_data_with_dims(
+                        path=f"{path}:{mirnov_name}", tree_name="magnetics"
+                    )
+                    gh_mirnov_names.remove(mirnov_name)
+                    mirnov_0 = mirnov_name
+                except:
+                    continue
+            else:
+                break
+        for mirnov_name in ab_mirnov_names:
+            if mirnov_signal_1 is None:
+                try:
+                    mirnov_signal_1, _ = params.mds_conn.get_data_with_dims(
+                        path=f"{path}:{mirnov_name}", tree_name="magnetics"
+                    )
+                    mirnov_1 = mirnov_name
+                except:
+                    continue
+            else:
+                break
+        # If we ran through the whole thing without finding a second toroidally spaced probe, just use a probe that's nearby
+        if mirnov_signal_1 is None:
+            for mirnov_name in gh_mirnov_names:
+                if mirnov_signal_1 is None:
+                    try:
+                        mirnov_signal_1, mirnov_times = params.mds_conn.get_data_with_dims(
+                            path=f"{path}:{mirnov_name}", tree_name="magnetics"
+                        )
+                        mirnov_1 = mirnov_name
+                    except:
+                        continue
+                else:
+                    break
+        # If we went through all our probes and couldn't find a second one, just return NaNs
+        if mirnov_signal_0 is None:
+            mirnov_signal_0 = np.full(len(params.times), np.nan)
+        if mirnov_signal_1 is None:
+            mirnov_signal_1 = np.full(len(params.times), np.nan)
+
+        # Test to make sure the sampling frequency is consistent
+        actual_mirnov_sample_freq = 1 / (mirnov_times[1] - mirnov_times[0])    # Mirnov sampling rate
+        if actual_mirnov_sample_freq < 2.4e6 or actual_mirnov_sample_freq > 2.6e6:
+            print("Mirnov sample frequency is not 2.5 MHz. Be warned!!!")
+            f_mirnov = actual_mirnov_sample_freq
+        else:
+            f_mirnov = 2.5e6
+
+        f_timebase = 1 / (params.times[1] - params.times[0]) # however fast the timebase is
+
+        SFT = CmodTearingMethods.setup_stfft(f_mirnov=f_mirnov, f_target=f_timebase)
+
+        mirnov_signal_0_fft = SFT.stft(mirnov_signal_0)
+        mirnov_signal_1_fft = SFT.stft(mirnov_signal_1)
+
+        Sx2 = SFT.spectrogram(mirnov_signal_0)
+
+        # Cut the fft to the maximum value we care about
+        # Don't care about rotations faster than 80kHz in C-Mod
+        f_indices = np.where(SFT.f < 80e3)
+        freqs = SFT.f[f_indices]
+        mirnov_signal_0_fft = mirnov_signal_0_fft[f_indices]
+        mirnov_signal_1_fft = mirnov_signal_1_fft[f_indices]
+        Sx2 = Sx2[f_indices]
+
+        # Interpolate the fft's onto the target timebase
+        fft_times = (SFT.delta_t * np.arange(mirnov_signal_0_fft.shape[1])) + mirnov_times[0]
+        mirnov_signal_0_fft_interp = interp1(fft_times, mirnov_signal_0_fft, params.times)
+        mirnov_signal_1_fft_interp = interp1(fft_times, mirnov_signal_1_fft, params.times)
+        Sx2_interp = interp1(fft_times, Sx2, params.times)
+
+        # Get the complex cross spectrum
+        Cxy = mirnov_signal_0_fft_interp*np.conj(mirnov_signal_1_fft_interp)
+
+        # Get the cross power
+        # TODO(ZanderKeith): There is a dedicated scipy function for cross power, should compare results
+        #f, Pxy = sp.signal.csd(mirnov_signal_0, mirnov_signal_1, fs=mirnov_sample_freq)
+        cross_power = np.abs(Cxy)
+
+        # Get the cross phase
+        cross_phase = np.angle(Cxy)
+
+        mirnov_0_power = np.abs(mirnov_signal_0_fft_interp)
+        mirnov_1_power = np.abs(mirnov_signal_1_fft_interp)
+        cross_coherence = cross_power / (mirnov_0_power * mirnov_1_power)
+
+        # Use multi-indexing to store the frequency data
+        mirnov_0_real_data = pd.DataFrame(mirnov_signal_0_fft_interp.T.real, columns=pd.MultiIndex.from_product([[f"mirnov_0_real"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        mirnov_0_imag_data = pd.DataFrame(mirnov_signal_0_fft_interp.T.imag, columns=pd.MultiIndex.from_product([[f"mirnov_0_imag"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        mirnov_1_real_data = pd.DataFrame(mirnov_signal_1_fft_interp.T.real, columns=pd.MultiIndex.from_product([[f"mirnov_1_real"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        mirnov_1_imag_data = pd.DataFrame(mirnov_signal_1_fft_interp.T.imag, columns=pd.MultiIndex.from_product([[f"mirnov_1_imag"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        cross_spectrum_real_data = pd.DataFrame(Cxy.T.real, columns=pd.MultiIndex.from_product([["cross_spectrum_real"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        cross_spectrum_imag_data = pd.DataFrame(Cxy.T.imag, columns=pd.MultiIndex.from_product([["cross_spectrum_imag"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        cross_power_data = pd.DataFrame(cross_power.T, columns=pd.MultiIndex.from_product([["cross_power"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        cross_phase_data = pd.DataFrame(cross_phase.T, columns=pd.MultiIndex.from_product([["cross_phase"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        cross_coherence_data = pd.DataFrame(cross_coherence.T, columns=pd.MultiIndex.from_product([["cross_coherence"], freqs], names=["", "frequencies"]), dtype=np.float64)
+        mirnov_spectrum_data = pd.DataFrame(Sx2_interp.T, columns=pd.MultiIndex.from_product([["mirnov_spectrogram"], freqs], names=["", "frequencies"]), dtype=np.float64)
+
+        return pd.concat([cross_spectrum_real_data, cross_spectrum_imag_data, cross_power_data, cross_phase_data, cross_coherence_data, mirnov_spectrum_data,
+                          mirnov_0_real_data, mirnov_0_imag_data, mirnov_1_real_data, mirnov_1_imag_data], axis=1)
+
+    @staticmethod
+    @physics_method(
+        tags=["partial_flux"], tokamak=Tokamak.CMOD
+    )
+    def _get_partial_flux(params: PhysicsMethodParams):
+        # TODO: look into calibration stuff. The commented out things don't seem to do anything
+        #calibration_path = r"\magnetics::top.flux_partial.btor_pickup"
+        #calibration_signal = params.mds_conn.get_data(path=calibration_path, tree_name="magnetics")
+        
+        partial_flux_names = ["F08", "F13", "F14", "F15", "F20", "F27", "F28", "F29", "LM_CD", "LM_EF", "LM_HJ", "LM_KA"]
+        path = r"\magnetics::top.flux_partial.signals"
+
+        partial_flux_dataframe = pd.DataFrame()
+        for i, partial_flux_coil in enumerate(partial_flux_names):
+            try:
+                partial_flux_signal, partial_flux_times = params.mds_conn.get_data_with_dims(
+                    path=f"{path}:{partial_flux_coil}", tree_name="magnetics"
+                )
+                #partial_flux_signal = partial_flux_signal - calibration_signal[i]
+                partial_flux_signal_interp = interp1(partial_flux_times, partial_flux_signal, params.times)
+            except:
+                partial_flux_signal_interp = np.full(len(params.times), np.nan)
+
+            partial_flux_name = "partial_flux_" + partial_flux_coil
+
+            # Interpolate the partial flux onto the target timebase
+            partial_flux_dataframe[partial_flux_name] = partial_flux_signal_interp
+
+        return partial_flux_dataframe
