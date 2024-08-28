@@ -240,25 +240,7 @@ def gauss(x, *params):
 
 
 def gaussian_fit_with_fixed_mean(mu, *args):
-    """
-    Parameters
-    ----------
-    mu : float
-        The fixed mean of the Gaussian fit
-    x : array
-        The x-coordinates of the data points.
-    y : array
-        The y-coordinates of the data points.
-    p0 : array (len 2)
-        The initial values of the parameters (Amplitude, sigma).
-
-    Returns
-    -------
-    coeffs : array
-        The coefficients of the fit.
-
-    Last Major Update: Henry Wietfeldt (8/8/24)
-    """
+    """Same as gaussian_fit() but with mu as a fixed parameter"""
     # with full_output=False (default), always returns a 2-tuple
     # pylint: disable-next=unbalanced-tuple-unpacking
     coeffs, _ = curve_fit(lambda x, a, sigma: gauss(x, a, mu, sigma), *args)
