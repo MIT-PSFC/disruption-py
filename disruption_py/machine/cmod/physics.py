@@ -1032,8 +1032,6 @@ class CmodPhysicsMethods:
         lh_time,
     ):
         """
-        TODO: Clean up docstring. Write short description of algorithm. Describe input/output and refs, last major update
-        Model after Ip
         Calculates Te PF and width from ECE data using the two GPC diagnostic systems.
         GPC diagnostics look at the mid-plane, and each channel detects a different
         emitted frequency associated with the second harmonic, which depends on B and therefore R.
@@ -1042,37 +1040,42 @@ class CmodPhysicsMethods:
           those w/ |R - R0| < 0.2*a of the magnetic axis.
         - te_edge_vs_avg is defined as mean(edge)/mean(all) where edge bins are defined as
           those with 0.8*a < |R - R0| < a
-        For core and edge vs. average calculations, different shots can have different radial sampling,
-        and during a few experiments on C-Mod, Bt was changed during the shot, changing the radial sampling.
-        Different radial samplings can have different proportions of core to edge sampling, which affects
-        the mean Te over the whole profile, biasing the core vs average and edge vs average statistics.
-        Therefore, we use a uniformly sampled radial basis from R0 to R0+a. We use many interpolated
-        radial points to minimize artifacts caused by a point moving across the arbitrary core or edge boundary.
+        For core and edge vs. average calculations, different shots can have different radial
+        sampling, and during a few experiments on C-Mod, Bt was changed during the shot, changing
+        the radial sampling. Different radial samplings can have different proportions of core to
+        edge sampling, which affects the mean Te over the whole profile, biasing the core vs
+        average and edge vs average statistics. Therefore, we use a uniformly sampled radial basis
+        from R0 to R0+a. We use many interpolated radial points to minimize artifacts caused by a
+        point moving across the arbitrary core or edge boundary.
 
         ECE as a Te profile diagnostic can suffer from several artifacts:
         Artifacts currently NOT explicity checked for
         - Density cutoffs: High ne plasmas (typically H-modes) can have an ECE cutoff. According to
-          Amanda Hubbard, "what you wil see is a section of profile which is much LOWER than Thomson Scattering,
-          for some portion of the LFS profile (typically starting around r/a 0.8?).  In this case ECE cannot be used."
-          An example shot with ECE cutoffs is 1140226024 (Callibration of Thomson density using ECE cutoffs).
-          Because the critical density is proportional to B^2, shots with B = 5.4 T on axis would need
-          to have very high densities to experience a cutoff in the profile. We could look for cutoffs by comparing
-          the B profile to the ne profile and checking that ne < ncrit throughout the profile; however,
-          a simpler check for now is to ignore shots with B < 4.5 T and assume there are no cutoffs with B >= 4.5 T.
+          Amanda Hubbard, "what you wil see is a section of profile which is much LOWER than
+          Thomson Scattering, for some portion of the LFS profile (typically starting around
+          r/a 0.8?). In this case ECE cannot be used." An example shot with ECE cutoffs is
+          1140226024 (Callibration of Thomson density using ECE cutoffs). Because the critical
+          density is proportional to B^2, shots with B = 5.4 T on axis would need to have very high
+          densities to experience a cutoff in the profile. We could look for cutoffs by comparing
+          the B profile to the ne profile and checking that ne < ncrit throughout the profile;
+          however, a simpler check for now is to ignore shots with B < 4.5 T and assume there are
+          no cutoffs with B >= 4.5 T.
         Artifacts currently checked for
         - Non-aligned grating: The gratings were usually aligned for radial coverage assuming
-          Bt=5.4T. For low Bt shots (like 2.8T), sometimes the gratings were adjusted, sometimes not.
-          Low Bt shots also tend to have low signal and often experience density cutoffs.
+          Bt=5.4T. For low Bt shots (like 2.8T), sometimes the gratings were adjusted, sometimes
+          not. Low Bt shots also tend to have low signal and often experience density cutoffs.
           Therefore, ECE should be avoided in automated calculations for low Bt shots.
-        - Nonthermal emission. The calculation of Te vs. r assumes that the second harmonic emission can
-          be modeled as black-body emission, which assumes the electrons are in thermal equilibrium.
-          On C-Mod, nonthermal emission results in an apparent Te that goes UP towards the edge and in the SOL.
-          which is actually downshifted non-thermal emission from deeper in the core. Significant runaway
-          populations and LHCD lead to nonthermal artifacts. Occassionally low ne shots also had nonthermal artifacts.
-        - Harmonic overlap: Certain channels can pick up emission from different harmonics from other regions
-          of the plasma. Generally channels with R < 0.6 m suffer from overlap with 3rd harmonic emission from the core.
-          This leads to an apparently higher Te for R < 0.6 m than in reality. The gratings were usually
-          aligned to measure the profile from the core outwards for this reason.
+        - Nonthermal emission. The calculation of Te vs. r assumes that the second harmonic
+          emission can be modeled as black-body emission, which assumes the electrons are in thermal
+          equilibrium. On C-Mod, nonthermal emission results in an apparent Te that goes UP towards
+          the edge and in the SOL, which is actually downshifted non-thermal emission from deeper
+          in the core. Significant runaway populations and LHCD lead to nonthermal artifacts.
+          Occassionally low ne shots also had nonthermal artifacts.
+        - Harmonic overlap: Certain channels can pick up emission from different harmonics from
+          other regions of the plasma. Generally channels with R < 0.6 m suffer from overlap with
+          3rd harmonic emission from the core. This leads to an apparently higher Te for R < 0.6 m
+          than in reality. The gratings were usually aligned to measure the profile from the core
+          outwards for this reason.
 
         Parameters
         ----------
@@ -1115,9 +1118,9 @@ class CmodPhysicsMethods:
 
         Sources:
         - https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_ECE_data_cmod.m
-        - K. Zhurovich, D. A. Mossessian, J. W. Hughes, A. E. Hubbard, J. H. Irby, and E. S. Marmar,
-          "Calibration of Thomson scattering systems using electron cyclotron emission cutoff data,"
-          Rev. Sci. Instrum., vol. 76, no. 5, p. 053506, 2005, doi: 10.1063/1.1899311.
+        - K. Zhurovich, et. al. "Calibration of Thomson scattering systems using electron cyclotron
+          emission cutoff data," Rev. Sci. Instrum., vol. 76, no. 5, p. 053506, 2005,
+          doi: 10.1063/1.1899311.
 
         Last Major Update: Henry Wietfeldt (08/28/24)
         """
@@ -1135,8 +1138,8 @@ class CmodPhysicsMethods:
         efit_time = efit_time[
             efit_time >= max(np.max(gpc1_rad_time[:, 0]), gpc2_rad_time[0])
         ]
-        # Interpolate GPC data onto efit timebase. Note the timebase for radial measurements is much slower
-        # than the timebasis for Te measurements but radial positions are pretty stable so linear interpolation is fine.
+        # Interpolate GPC data onto efit timebase. Timebase for radial measurements is slower
+        # than efit but radial positions are approx. stable so linear interpolation is safe.
         n_channels = gpc1_te_data.shape[0]
         gpc1_te = np.full((n_channels, len(efit_time)), np.nan)
         gpc1_rad = np.full((n_channels, len(efit_time)), np.nan)
@@ -1159,7 +1162,7 @@ class CmodPhysicsMethods:
         indx_last_rad = np.argmax(efit_time > gpc2_rad_time[-1]) - 1
         for i in range(len(radii)):
             radii[i, indx_last_rad + 1 :] = radii[i, indx_last_rad]
-        # The rest of the calculations will loop over time then radius so transpose data for efficient caching
+        # The rest of the calculations loop over time then radii so transpose for efficient caching
         te = te.T
         radii = radii.T
         for i in range(len(efit_time)):
@@ -1168,8 +1171,8 @@ class CmodPhysicsMethods:
             te[i, :] = te[i, sorted_index]
 
         # Time slices with low Btor are unreliable because gratings are often not aligned to field,
-        # signal is low, and there are frequent density cutoffs
-        # Time slices with LH heating are unreliable because direct heating of electrons leads to nonthermal emission
+        # signal is low, and there are frequent density cutoffs. Time slices with LH heating
+        # are unreliable because direct heating of electrons leads to nonthermal emission
         btor = interp1(t_mag, btor, efit_time)
         lh_power = interp1(lh_time, lh_power, efit_time)
         lh_power = np.nan_to_num(lh_power, nan=0.0)
@@ -1186,8 +1189,8 @@ class CmodPhysicsMethods:
             calib_indices = (te[i, :] > min_te) & (radii[i, :] > 0)
             harmonic_overlap_indices = radii[i, :] < min_r_to_avoid_harmonic_overlap
             nonthermal_overlap_indices = np.full(len(radii[i, :]), False)
-            # Identify rising tail (overlap with non-thermal emission)
-            # Finding the min Te near the edge and checking outwards for a rising tail seems to do well
+            # Identify rising tail (overlap with non-thermal emission). Finding the min Te near
+            # the edge and checking outwards for a rising tail seems to do well
             calib_edge = calib_indices & (
                 radii[i, :] > r0[i] + edge_bound_factor * aminor[i]
             )
@@ -1293,7 +1296,8 @@ class CmodPhysicsMethods:
         except mdsExceptions.MdsException:
             params.logger.debug(f"[Shot {params.shot_id}] {traceback.format_exc()}")
             return nan_output
-        # Time slices with LH heating are unreliable because direct heating of electrons leads to nonthermal emission
+        # Time slices with LH heating are unreliable because direct heating
+        # of electrons leads to nonthermal emission
         try:
             lh_power, lh_time = params.mds_conn.get_data_with_dims(
                 ".results:netpow", tree_name="lh"

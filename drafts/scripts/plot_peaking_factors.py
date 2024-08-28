@@ -5,15 +5,14 @@ Last Major Update: Henry Wietfeldt (8/28/24)
 """
 
 import logging
-import numpy as np
-from disruption_py.settings import LogSettings, RetrievalSettings
-from disruption_py.workflow import get_shots_data
 import matplotlib.pyplot as plt
 import MDSplus as mds
+from disruption_py.settings import LogSettings, RetrievalSettings
+from disruption_py.workflow import get_shots_data
 
 
-PLOT = True
-shotno = 1120828014
+PLOT_OUTPUT = True
+SHOT_ID = 1120828014
 signals = [
     "ip",
     "kappa",
@@ -36,7 +35,7 @@ retrieval_settings = RetrievalSettings(
 )
 
 data = get_shots_data(
-    shotlist_setting=[shotno],
+    shotlist_setting=[SHOT_ID],
     retrieval_settings=retrieval_settings,
     log_settings=LogSettings(console_log_level=logging.DEBUG),
     output_setting="dataframe",
@@ -45,9 +44,9 @@ data = get_shots_data(
 
 data.to_csv("peaking_factors.csv")
 
-if PLOT:
+if PLOT_OUTPUT:
     # Get Te0 to compare sawteeth to Te peaking
-    te0_data = mds.Tree("cmod", shotno).getNode("\\gpc2_te0").getData()
+    te0_data = mds.Tree("cmod", SHOT_ID).getNode("\\gpc2_te0").getData()
     te0 = te0_data.data()
     te0_time = te0_data.dim_of().data()
 
@@ -75,5 +74,5 @@ if PLOT:
     axs[5].set_ylabel("Te edge/avg")
     axs[6].set_ylabel("Te width [m]")
     axs[4].legend()
-    axs[0].set_title("Cmod Shot " + str(shotno))
+    axs[0].set_title("Cmod Shot " + str(SHOT_ID))
     plt.show()

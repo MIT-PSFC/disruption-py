@@ -259,8 +259,9 @@ def gaussian_fit_with_fixed_mean(mu, *args):
 
     Last Major Update: Henry Wietfeldt (8/8/24)
     """
-    gauss_fixed_mean = lambda x, a, sigma: gauss(x, a, mu, sigma)
-    coeffs, _ = curve_fit(gauss_fixed_mean, *args)
+    # with full_output=False (default), always returns a 2-tuple
+    # pylint: disable-next=unbalanced-tuple-unpacking
+    coeffs, _ = curve_fit(lambda x, a, sigma: gauss(x, a, mu, sigma), *args)
     return coeffs
 
 
