@@ -24,6 +24,10 @@ def test_tokamak_parameter(shotlist, tok):
     """
     col_name = "x"
 
+    # The physics method needs to be defined in the global scope because
+    # multiprocessing & pickling don't work with locally defined functions.
+    global my_physics_method
+
     @physics_method(columns=[col_name], tokamak=tok)
     def my_physics_method(params: PhysicsMethodParams):
         return {col_name: np.ones(shape=len(params.times))}
