@@ -1015,7 +1015,7 @@ class CmodPhysicsMethods:
     
     @staticmethod
     def get_te_profile_params_ece(times, gpc1_te_data, gpc1_te_time, gpc1_rad_data, gpc1_rad_time, 
-                gpc2_te_data, gpc2_te_time, gpc2_rad_data, gpc2_rad_time, efit_time, r0, aminor):
+                gpc2_te_data, gpc2_te_time, gpc2_rad_data, gpc2_rad_time, efit_time, r0, aminor, btor, t_mag, lh_power, lh_time):
         """
         TODO: Clean up docstring. Write short description of algorithm. Describe input/output and refs, last major update
         Model after Ip
@@ -1058,18 +1058,61 @@ class CmodPhysicsMethods:
           of the plasma. Generally channels with R < 0.6 m suffer from overlap with 3rd harmonic emission from the core.
           This leads to an apparently higher Te for R < 0.6 m than in reality. The gratings were usually
           aligned to measure the profile from the core outwards for this reason.
+        
+        Parameters
+        ----------
+        times : array_like
+            Requested time basis
+        gpc1_te_array: array_like
+            Te measurements from GPC diagnostic
+        gpc1_te_time: array_like
+            Time basis of GPC Te measurements
+        gpc1_rad_data: array_like
+            Radial positions corresponding to GPC channels
+        gpc1_rad_time: array_like
+            Time basis of GPC channel radial positions
+        gpc2_te_array: array_like
+            Te measurements from GPC2 diagnostic
+        gpc2_te_time: array_like
+            Time basis of GPC2 Te measurements
+        gpc2_rad_data: array_like
+            Radial positions corresponding to GPC2 channels
+        gpc2_rad_time: array_like
+            Time basis of GPC2 channel radial positions
+        efit_time : array_like
+            Time basis of '_efit_tree'
+        r0 : array_like
+            Radial position of the magnetic axis from EFIT
+        aminor : array_like
+            Horizontal minor radius from EFIT
+        btor: array_like
+            On-axis toroidal field from magnetics
+        t_mag: array_like
+            Time basis of magnetic diagnostic measurements
+        lh_power: array_like
+            Lower hybrid power
+        lh_time: array_like
+            Time basis of lower hybrid power
+
+        Returns
+        -------
+        Dictionary of ne_peaking, Te_peaking, and pressure_peaking
+
         Sources: 
         - https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_ECE_data_cmod.m
         - K. Zhurovich, D. A. Mossessian, J. W. Hughes, A. E. Hubbard, J. H. Irby, and E. S. Marmar, 
           "Calibration of Thomson scattering systems using electron cyclotron emission cutoff data,"
           Rev. Sci. Instrum., vol. 76, no. 5, p. 053506, 2005, doi: 10.1063/1.1899311.
-        Author: Henry Wietfeldt (08/05/24)
+        
+        Last Major Update: Henry Wietfeldt (08/28/24)
         """
         # Constants
         core_bound_factor = 0.2
         edge_bound_factor = 0.8
         min_okay_channels = 9
         min_te = 0.02   # [keV]
+        min_btor = 4.5 # [T]
+        max_lh_power = 1. # [kW]
         min_r_to_avoid_harmonic_overlap = 0.6  # [m]
         rising_tail_factor = 1.2
 
@@ -1105,11 +1148,18 @@ class CmodPhysicsMethods:
             radii[i,:] = radii[i,sorted_index]
             Te[i,:] = Te[i,sorted_index]
 
+        # Time slices with low Btor are unreliable because gratings are often not aligned to field,
+        # signal is low, and there are frequent density cutoffs
+        # Time slices with LH heating are unreliable because direct heating of electrons leads to nonthermal emission
+        btor = interp1(t_mag, btor, efit_time)
+        lh_power = interp1(lh_time, lh_power, efit_time)
+        (okay_time_indices,) = np.where((btor > min_btor) & (lh_power < max_lh_power))
+
         # Main loop for calculations
         Te_PF = np.full(len(efit_time), np.nan)
         Te_edge_vs_avg = np.full(len(efit_time), np.nan)
         Te_hwhm = np.full(len(efit_time), np.nan)
-        for i in range(len(efit_time)):
+        for i in okay_time_indices:
             # Only consider points that are likely to accurately measure Te
             calib_indices = (Te[i,:] > min_te) & (radii[i,:] > 0)
             harmonic_overlap_indices = (radii[i,:] < min_r_to_avoid_harmonic_overlap)
@@ -1132,7 +1182,7 @@ class CmodPhysicsMethods:
                 guess = [y.max(), (y.max() - y.min()) / 3]
                 try:
                     pmu = r0[i]
-                    pa, psigma = gaussian_fit_with_fixed_mean(pmu, r, y, guess)
+                    _, psigma = gaussian_fit_with_fixed_mean(pmu, r, y, guess)
                 except RuntimeError as exc:
                     if str(exc).startswith("Optimal parameters not found"):
                         continue
@@ -1153,7 +1203,7 @@ class CmodPhysicsMethods:
         Te_PF = interp1(efit_time, Te_PF, times)
         Te_edge_vs_avg = interp1(efit_time, Te_edge_vs_avg, times)
         Te_hwhm = interp1(efit_time, Te_hwhm, times)
-        return pd.DataFrame({"te_core_vs_avg_ece": Te_PF, "te_edge_vs_avg_ece": Te_edge_vs_avg, "te_width_ece": Te_hwhm})
+        return {"te_core_vs_avg_ece": Te_PF, "te_edge_vs_avg_ece": Te_edge_vs_avg, "te_width_ece": Te_hwhm}
     
     @staticmethod
     @physics_method(
@@ -1162,41 +1212,12 @@ class CmodPhysicsMethods:
     )
     def _get_te_profile_params_ece(params: PhysicsMethodParams):
         # Constants
-        min_bt = 4.5  # [T]
         n_gpc1_channels = 9
         nan_output = {
             "te_core_vs_avg_ece": np.full(len(params.times), np.nan),
             "te_edge_vs_avg_ece": np.full(len(params.times), np.nan),
             "te_width_ece": np.full(len(params.times), np.nan),
         }
-        # Shots with low Btor are unreliable because gratings are often not aligned to field,
-        # signal is low, and there are frequent density cutoffs
-        try:
-            btor, t_mag = params.mds_conn.get_data_with_dims(
-                r"\btor", tree_name="magnetics"
-        )
-        except mdsExceptions.MdsException as e:
-            params.logger.debug(f"[Shot {params.shot_id}] {traceback.format_exc()}")
-            return nan_output
-        # TODO: Is there an easy way to select flattop period without having to get ipprog from MDSplus?
-        ftop_btor = np.min(np.abs(btor[(t_mag > 0.8*params.disruption_time) & (t_mag < 0.9*params.disruption_time)]))
-        if (ftop_btor < min_bt):
-            params.logger.warning(
-                f"[Shot {params.shot_id}]:ECE unreliable for automated calculations with low Bt shots (Bt = {ftop_btor} T) due to possible density cutoffs."
-            )
-            return nan_output
-        # Shots with LH heating are unreliable because direct heating of electrons leads to nonthermal emission
-        try:
-            lh_power, lh_time = params.mds_conn.get_data_with_dims(
-                '.results:netpow', tree_name='lh'
-            ) # [kW], [s]
-            if (np.max(lh_power[(lh_time > 0) & (lh_time < params.disruption_time)]) > 1.):
-                params.logger.warning(
-                    f"[Shot {params.shot_id}]:ECE unreliable for automated calculations with shots with LHCD due to possible nonthermal emission."
-                )
-                return nan_output
-        except:
-            pass
         # Get magnetic axis data from EFIT
         try:
             r0 = 0.01 * params.mds_conn.get_data(
@@ -1208,6 +1229,24 @@ class CmodPhysicsMethods:
         except mdsExceptions.MdsException as e:
             params.logger.debug(f"[Shot {params.shot_id}]: Failed to get efit data")
             return nan_output
+        # Shots with low Btor are unreliable because gratings are often not aligned to field,
+        # signal is low, and there are frequent density cutoffs
+        try:
+            btor, t_mag = params.mds_conn.get_data_with_dims(
+                r"\btor", tree_name="magnetics"
+        )
+        except mdsExceptions.MdsException as e:
+            params.logger.debug(f"[Shot {params.shot_id}] {traceback.format_exc()}")
+            return nan_output
+        # Time slices with LH heating are unreliable because direct heating of electrons leads to nonthermal emission
+        try:
+            lh_power, lh_time = params.mds_conn.get_data_with_dims(
+                '.results:netpow', tree_name='lh'
+            ) # [kW], [s]
+        except:
+            # When LH power is off, it's often not stored in tree.
+            lh_time = np.copy(efit_time)
+            lh_power = np.zeros(len(efit_time))
         # Read in Te profile measurements from 9 GPC1 ("GPC" in MDSplus tree) channels
         node_path = '.ece.gpc_results'
         gpc1_te_data = []
@@ -1227,7 +1266,6 @@ class CmodPhysicsMethods:
                 gpc1_rad_data.append(rad_data)
                 gpc1_rad_time.append(rad_time)
             except:
-                print("Couldn't get channel " + str(i+1))
                 continue
         gpc1_te_data = np.array(gpc1_te_data)
         gpc1_te_time = np.array(gpc1_te_time)
@@ -1247,7 +1285,7 @@ class CmodPhysicsMethods:
             return nan_output
         return CmodPhysicsMethods.get_te_profile_params_ece(
                     params.times, gpc1_te_data, gpc1_te_time, gpc1_rad_data, gpc1_rad_time,
-                    gpc2_te_data, gpc2_te_time, gpc2_rad_data, gpc2_rad_time, efit_time, r0, aminor
+                    gpc2_te_data, gpc2_te_time, gpc2_rad_data, gpc2_rad_time, efit_time, r0, aminor, btor, t_mag, lh_power, lh_time
         )
         
 

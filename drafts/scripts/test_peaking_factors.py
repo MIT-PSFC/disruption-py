@@ -14,7 +14,8 @@ shotno = 1120828014
 #shotno = 1120830026 # 0.52 and 0.57
 #shotno = 1150605026 # example of GPC off
 #shotno = 1140226024 # example of cutoff
-#shotno = 1150605023
+# shotno = 1150605023
+#shotno = 1140717002 # Example with LH heating
 signals = ['ip', 'kappa', 'p_rad', 'te_peaking', 'te_core_vs_avg_ece', 'te_edge_vs_avg_ece', 'prad_peaking', 'te_width_ece']
 
 # shot_list = np.loadtxt("cmod_shots_2012_to_2016.txt", dtype=int)
@@ -40,6 +41,7 @@ data = get_shots_data(
 )
 
 data.to_csv('peaking_factors.csv')
+print(data.columns)
 
 if (PLOT):
     # Get Te0 to compare sawteeth to Te peaking
