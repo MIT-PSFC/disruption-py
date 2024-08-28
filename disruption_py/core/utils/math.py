@@ -238,6 +238,7 @@ def gauss(x, *params):
     out = a * np.exp(-((x - mu) ** 2) / (2.0 * sigma**2))
     return out
 
+
 def gaussian_fit_with_fixed_mean(mu, *args):
     """
     Parameters
@@ -255,12 +256,13 @@ def gaussian_fit_with_fixed_mean(mu, *args):
     -------
     coeffs : array
         The coefficients of the fit.
-    
+
     Last Major Update: Henry Wietfeldt (8/8/24)
     """
     gauss_fixed_mean = lambda x, a, sigma: gauss(x, a, mu, sigma)
     coeffs, _ = curve_fit(gauss_fixed_mean, *args)
     return coeffs
+
 
 def matlab_gsastd(
     x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=0
