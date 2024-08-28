@@ -125,9 +125,8 @@ def get_shots_data(
             repeat(retrieval_settings),
             shotlist_list,
         )
-        shots_id_and_data = pool.imap(_execute_retrieval, args)
 
-        for shot_id, shot_data in shots_id_and_data:
+        for shot_id, shot_data in pool.imap(_execute_retrieval, args):
             if shot_data is None:
                 logger.warning(
                     "Not outputting data for shot %s due, data is None.", shot_id
