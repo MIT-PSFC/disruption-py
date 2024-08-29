@@ -857,25 +857,15 @@ class D3DPhysicsMethods:
                 if option in ts:
                     ts = ts[option]
                     break
-            # NOTE: didn't throughly debug efit_rz_interp; it appears to match MATLAB script
             efit_dict = D3DPhysicsMethods._get_efit_dict(params)
         except Exception as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get TS data")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
             ts = 0
         try:
-            # NOTE: didn't debug efit_rz_interp; assume it works
             ts["psin"], ts["rhovn"] = D3DPhysicsMethods.efit_rz_interp(ts, efit_dict)
             ts["rhovn"] = ts["rhovn"].T
             ts["psin"] = ts["psin"].T
-
-            # BUG: nansum ts['rhovn'] & ts['psin'] don't match MATLAB!
-            # shot = 161228: 
-            # nansum: matlab: rhovn = 17796, psin = 32244
-            #         disrpy: rhovn = 30005, psin = 1448812
-            # Shape:  matlab: rhovn: 2612x47, psin: 2612x47
-            #         disrpy: rhovn: 47x2612, psin: 47x47x2612
-
             params.logger.info(f"ts['rhovn'].shape: {ts["rhovn"].shape}")
         except Exception as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to interpolate TS data")
@@ -921,26 +911,25 @@ class D3DPhysicsMethods:
                                 ts['ne'][no_nans,i] = interp1(radii, ts['ne'][no_nans, i], rad_coord_interp, 'linear')
                                 ts[ts_radius][no_nans,i] = rad_coord_interp
                 
-                # NOTE: there's so many edge points so the PF value has to be low
-                import matplotlib.pyplot as plt
-                fig, axes = plt.subplots(2, 1, figsize=(6,6))
-                for i in range(500, 1200, 150):
-                    axes[0].plot(ts['rhovn'][:, i], ts['te'][:, i], label=f"t={ts['time'][i]:.2f} s", marker='o')
-                    axes[1].plot(ts['rhovn'][:, i], ts['ne'][:, i], label=f"t={ts['time'][i]:.2f} s", marker='o')
-                axes[0].axvline(ts_radial_range[0], c='r', linestyle=':')
-                axes[0].axvline(ts_radial_range[1], c='r', linestyle=':')
-                axes[0].axvline(ts_core_margin, c='r', linestyle='--')
-                axes[0].set_xlabel('rhovn')
-                axes[0].set_ylabel('Te (eV)')
-                axes[0].legend()
-                axes[1].axvline(ts_radial_range[0], c='r', linestyle=':')
-                axes[1].axvline(ts_radial_range[1], c='r', linestyle=':')
-                axes[1].axvline(ts_core_margin, c='r', linestyle='--')
-                axes[1].set_xlabel('rhovn')
-                axes[1].set_ylabel('ne (m^-3)')
-                axes[1].legend()
-                plt.suptitle(f"{params.shot_id} Thomson profiles")
-                plt.show()
+                # import matplotlib.pyplot as plt
+                # fig, axes = plt.subplots(2, 1, figsize=(6,6))
+                # for i in range(500, 1200, 150):
+                #     axes[0].plot(ts['rhovn'][:, i], ts['te'][:, i], label=f"t={ts['time'][i]:.2f} s", marker='o')
+                #     axes[1].plot(ts['rhovn'][:, i], ts['ne'][:, i], label=f"t={ts['time'][i]:.2f} s", marker='o')
+                # axes[0].axvline(ts_radial_range[0], c='r', linestyle=':')
+                # axes[0].axvline(ts_radial_range[1], c='r', linestyle=':')
+                # axes[0].axvline(ts_core_margin, c='r', linestyle='--')
+                # axes[0].set_xlabel('rhovn')
+                # axes[0].set_ylabel('Te (eV)')
+                # axes[0].legend()
+                # axes[1].axvline(ts_radial_range[0], c='r', linestyle=':')
+                # axes[1].axvline(ts_radial_range[1], c='r', linestyle=':')
+                # axes[1].axvline(ts_core_margin, c='r', linestyle='--')
+                # axes[1].set_xlabel('rhovn')
+                # axes[1].set_ylabel('ne (m^-3)')
+                # axes[1].legend()
+                # plt.suptitle(f"{params.shot_id} Thomson profiles")
+                # plt.show()
                 
                 # Find core bin for Thomson and calculate Te, ne peaking factors
                 core_mask = ts[ts_radius] < ts_core_margin
@@ -948,11 +937,6 @@ class D3DPhysicsMethods:
                 te_core[~core_mask] = np.nan
                 ne_core = ts["ne"].copy()
                 ne_core[~core_mask] = np.nan
-                # BUG: RuntimeWarning: Mean of empty slice
-                # te_pf = np.nanmean(te_core, axis=0) / np.nanmean(ts["te"], axis=0)
-                # ne_pf = np.nanmean(ne_core, axis=0) / np.nanmean(ts["ne"], axis=0)
-                #
-
                 te_pf = np.full(len(ts['time']), np.nan)
                 ne_pf = np.full(len(ts['time']), np.nan)
                 for i in range(len(te_pf)):
@@ -1551,4 +1535,4 @@ class D3DPhysicsMethods:
             efit_dict["psirz"] - efit_dict["ssimag"][:, np.newaxis, np.newaxis]
         ) / psi_norm_f[:, np.newaxis, np.newaxis]
         efit_dict["psin"][problems, :, :] = 0
-        return efit_dict"
+        return efit_dict
