@@ -923,28 +923,23 @@ class D3DPhysicsMethods:
                 
                 # NOTE: there's so many edge points so the PF value has to be low
                 import matplotlib.pyplot as plt
+                fig, axes = plt.subplots(2, 1, figsize=(6,6))
                 for i in range(500, 1200, 150):
-                    plt.plot(ts['rhovn'][:, i], ts['te'][:, i], label=f"t={ts['time'][i]:.2f} s")
-                    plt.scatter(ts['rhovn'][:, i], ts['te'][:, i])
-                plt.axvline(ts_radial_range[0], c='r', linestyle=':')
-                plt.axvline(ts_radial_range[1], c='r', linestyle=':')
-                plt.axvline(ts_core_margin, c='r', linestyle='--')
-                plt.xlabel('rhovn')
-                plt.ylabel('Te (eV)')
-                plt.legend()
-                plt.title(f"{params.shot_id} Thomson profiles")
-                plt.show()
-
-                for i in range(500, 1200, 150):
-                    plt.plot(ts['rhovn'][:, i], ts['ne'][:, i], label=f"t={ts['time'][i]:.2f} s")
-                    plt.scatter(ts['rhovn'][:, i], ts['ne'][:, i])
-                plt.axvline(ts_radial_range[0], c='r', linestyle=':')
-                plt.axvline(ts_radial_range[1], c='r', linestyle=':')
-                plt.axvline(ts_core_margin, c='r', linestyle='--')
-                plt.xlabel('rhovn')
-                plt.ylabel('ne (m^-3)')
-                plt.legend()
-                plt.title(f"{params.shot_id} Thomson profiles")
+                    axes[0].plot(ts['rhovn'][:, i], ts['te'][:, i], label=f"t={ts['time'][i]:.2f} s", marker='o')
+                    axes[1].plot(ts['rhovn'][:, i], ts['ne'][:, i], label=f"t={ts['time'][i]:.2f} s", marker='o')
+                axes[0].axvline(ts_radial_range[0], c='r', linestyle=':')
+                axes[0].axvline(ts_radial_range[1], c='r', linestyle=':')
+                axes[0].axvline(ts_core_margin, c='r', linestyle='--')
+                axes[0].set_xlabel('rhovn')
+                axes[0].set_ylabel('Te (eV)')
+                axes[0].legend()
+                axes[1].axvline(ts_radial_range[0], c='r', linestyle=':')
+                axes[1].axvline(ts_radial_range[1], c='r', linestyle=':')
+                axes[1].axvline(ts_core_margin, c='r', linestyle='--')
+                axes[1].set_xlabel('rhovn')
+                axes[1].set_ylabel('ne (m^-3)')
+                axes[1].legend()
+                plt.suptitle(f"{params.shot_id} Thomson profiles")
                 plt.show()
                 
                 # Find core bin for Thomson and calculate Te, ne peaking factors
@@ -1005,18 +1000,18 @@ class D3DPhysicsMethods:
                 dummy_core = p_rad_core.copy()
 
                 # DEBUG
-                import matplotlib.pyplot as plt
-                for i in range(6000, 11000, 1000):
-                    plt.plot(p_rad['xinterp'][i, :], p_rad_core[i, :], label=f"t={p_rad['t'][i]:.2f} s")
-                    plt.scatter(p_rad['xinterp'][i, :], p_rad_core[i, :])
-                # plt.axvline(ts_radial_range[0], c='r', linestyle=':')
-                # plt.axvline(ts_radial_range[1], c='r', linestyle=':')
-                # plt.axvline(ts_core_margin, c='r', linestyle='--')
-                plt.xlabel('xinterp')
-                plt.ylabel('p_rad')
-                plt.legend()
-                plt.title(f"{params.shot_id} bolometer brightness profiles")
-                plt.show()
+                # import matplotlib.pyplot as plt
+                # for i in range(6000, 11000, 1000):
+                #     plt.plot(p_rad['xinterp'][i, :], p_rad_core[i, :], label=f"t={p_rad['t'][i]:.2f} s")
+                #     plt.scatter(p_rad['xinterp'][i, :], p_rad_core[i, :])
+                # # plt.axvline(ts_radial_range[0], c='r', linestyle=':')
+                # # plt.axvline(ts_radial_range[1], c='r', linestyle=':')
+                # # plt.axvline(ts_core_margin, c='r', linestyle='--')
+                # plt.xlabel('xinterp')
+                # plt.ylabel('p_rad')
+                # plt.legend()
+                # plt.title(f"{params.shot_id} bolometer brightness profiles")
+                # plt.show()
 
                 p_rad_all_but_core = p_rad_core.copy()
                 p_rad_div = p_rad_core.copy()
@@ -1030,46 +1025,46 @@ class D3DPhysicsMethods:
                 p_rad_all_but_div[:, div_indices] = np.nan
 
                 # DEBUG
-                import matplotlib.pyplot as plt
-                colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']
-                i_c = 0
-                for i in range(6000, 11000, 1000):
-                    plt.plot(p_rad['xinterp'][i,:], dummy_core[i,:], 
-                             label=f"t={p_rad['t'][i]:.2f} s", 
-                             c=colors[i_c], linestyle=':')
-                    plt.scatter(p_rad['xinterp'][i, :], p_rad_core[i, :], 
-                             c=colors[i_c], marker='o')
-                    plt.scatter(p_rad['xinterp'][i, :], p_rad_all_but_core[i, :], 
-                             c=colors[i_c], marker='x')
-                    i_c += 1
-                    if i_c == len(colors):
-                        i_c = 0
-                plt.xlabel('xinterp')
-                plt.ylabel('p_rad')
-                plt.legend()
-                plt.title(f"{params.shot_id} bolometer brightness profiles \n (o=core, x=all but core)")
-                plt.show()
+                # import matplotlib.pyplot as plt
+                # colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']
+                # i_c = 0
+                # for i in range(6000, 11000, 1000):
+                #     plt.plot(p_rad['xinterp'][i,:], dummy_core[i,:], 
+                #              label=f"t={p_rad['t'][i]:.2f} s", 
+                #              c=colors[i_c], linestyle=':')
+                #     plt.scatter(p_rad['xinterp'][i, :], p_rad_core[i, :], 
+                #              c=colors[i_c], marker='o')
+                #     plt.scatter(p_rad['xinterp'][i, :], p_rad_all_but_core[i, :], 
+                #              c=colors[i_c], marker='x')
+                #     i_c += 1
+                #     if i_c == len(colors):
+                #         i_c = 0
+                # plt.xlabel('xinterp')
+                # plt.ylabel('p_rad')
+                # plt.legend()
+                # plt.title(f"{params.shot_id} bolometer brightness profiles \n (o=core, x=all but core)")
+                # plt.show()
 
                 # DEBUG
-                import matplotlib.pyplot as plt
-                colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']
-                i_c = 0
-                for i in range(6000, 11000, 1000):
-                    plt.plot(p_rad['xinterp'][i,:], dummy_core[i,:], 
-                             label=f"t={p_rad['t'][i]:.2f} s", 
-                             c=colors[i_c], linestyle=':')
-                    plt.scatter(p_rad['xinterp'][i, :], p_rad_div[i, :], 
-                             c=colors[i_c], marker='v')
-                    plt.scatter(p_rad['xinterp'][i, :], p_rad_all_but_div[i, :], 
-                             c=colors[i_c], marker='*')
-                    i_c += 1
-                    if i_c == len(colors):
-                        i_c = 0
-                plt.xlabel('xinterp')
-                plt.ylabel('p_rad')
-                plt.legend()
-                plt.title(f"{params.shot_id} bolometer brightness profiles \n (v=div, *=all but dev)")
-                plt.show()
+                # import matplotlib.pyplot as plt
+                # colors = ['r', 'g', 'b', 'c', 'm', 'y', 'k']
+                # i_c = 0
+                # for i in range(6000, 11000, 1000):
+                #     plt.plot(p_rad['xinterp'][i,:], dummy_core[i,:], 
+                #              label=f"t={p_rad['t'][i]:.2f} s", 
+                #              c=colors[i_c], linestyle=':')
+                #     plt.scatter(p_rad['xinterp'][i, :], p_rad_div[i, :], 
+                #              c=colors[i_c], marker='v')
+                #     plt.scatter(p_rad['xinterp'][i, :], p_rad_all_but_div[i, :], 
+                #              c=colors[i_c], marker='*')
+                #     i_c += 1
+                #     if i_c == len(colors):
+                #         i_c = 0
+                # plt.xlabel('xinterp')
+                # plt.ylabel('p_rad')
+                # plt.legend()
+                # plt.title(f"{params.shot_id} bolometer brightness profiles \n (v=div, *=all but dev)")
+                # plt.show()
 
                 # # Calculate the peaking factors
                 rad_cva = np.full(len(p_rad['t']), np.nan)
@@ -1089,23 +1084,11 @@ class D3DPhysicsMethods:
                     ):
                         # How is this div vs all?
                         rad_xdiv[i] = np.nanmean(p_rad_div[i,:]) / np.nanmean(p_rad_all_but_core[i,:])
-                # BUG: divide by nan
-                # rad_cva = np.nanmean(p_rad_core, axis=1) / np.nanmean(
-                #     p_rad_all_but_div, axis=1
-                # )
-                # rad_xdiv = np.nanmean(p_rad_div, axis=1) / np.nanmean(
-                #     p_rad_all_but_core, axis=1
-                # )
                 rad_cva = interp1(p_rad["t"], rad_cva, params.times)
                 rad_xdiv = interp1(p_rad["t"], rad_xdiv, params.times)
             except:
                 pass
-        # output = {
-        #     "te_pf": te_pf,
-        #     "ne_pf": ne_pf,
-        #     "rad_cva": rad_cva,
-        #     "rad_xdiv": rad_xdiv,
-        # }
+
         output = {
             "te_peaking_cva_rt": te_pf, 
             "ne_peaking_cva_rt": ne_pf, 
@@ -1555,9 +1538,13 @@ class D3DPhysicsMethods:
                 params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
 
         # Shift psirz's dimenisons
-        # efit_dict['psirz']'s dimensions (1st,2nd,3rd) correspond to MATLAB script's psirz's (3rd,2nd,1st) dimensions before shiftdim. 
-        # This seems to be resulted from MDSplus call 
+        # efit_dict['psirz']'s dimensions (1st,2nd,3rd) correspond to MATLAB script's 
+        # psirz's (3rd,2nd,1st) dimensions before shiftdim. This seems to be resulted from MDSplus call 
         # TODO: is the order of dimensions consistent in python?
+        import matplotlib.pyplot as plt
+        plt.imshow(efit_dict['psirz'][150,:,31:], cmap='jet')
+        plt.show()
+
         efit_dict['psirz'] = np.transpose(efit_dict['psirz'], (0,2,1))
         
         # Normalize the poloidal flux grid (0=magnetic axis, 1=boundary)
