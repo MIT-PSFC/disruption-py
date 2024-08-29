@@ -1156,17 +1156,12 @@ class D3DPhysicsMethods:
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/sorting/efit_Rz_interp.m
         """
 
-        # Shouldn't use mesh grid -> want to interp onto ts (time[i], r[i], z[i])
-        # T, R, Z = np.meshgrid(ts["time"], ts["r"], ts["z"], indexing="ij")
-        # NOTE: T, R, Z match MATLAB
         T = np.tile(ts["time"], [len(ts["r"]), 1]).transpose()
         R = np.tile(ts["r"], [len(ts["time"]), 1])
         Z = np.tile(ts["z"], [len(ts["time"]), 1])
 
         # Implement a 3D (time,radial,vertical) gridded interpolation
-        # NOTE: time, r, z match MATLAB
-        # BUG: psin's 2nd & 3rd dims corresponds to the 3rd & 2nd dim in matlab script.
-        # load_efit.m line 83: shiftdim(psirz, n-1)
+        # efit_dict['psin'] has the dimensions (time, Z, R)
         interp = scipy.interpolate.RegularGridInterpolator(
             [efit_dict["time"], efit_dict["z"], efit_dict["r"]],
             efit_dict["psin"],
@@ -1176,7 +1171,6 @@ class D3DPhysicsMethods:
         )
 
         # Apply interpolant to diagnostic data and return outputs as a new structure field
-        # BUG: psin still doesn't match MATLAB but close enough (161228, sum(psin): python=30911, MATLAB=32244)
         psin = interp((T, Z, R))
 
         # Get rhovn using the interpolant stored in EFIT, then save this as another field in 'data'
@@ -1184,11 +1178,9 @@ class D3DPhysicsMethods:
             efit_dict["time"], efit_dict["rhovn"], ts["time"], axis=0
         )
         print("Rho_vn_diag_almost shape", rho_vn_diag_almost.shape)
-        # NOTE: rho_vn_diag_almost matches MATLAB outputs
         rho_vn_diag = np.empty(psin.shape[:2]) 
         psin_interp = np.linspace(0, 1, efit_dict["rhovn"].shape[1]) # Implied psin grid for rhovn
         # Interpolate again to get rhovn on same psin base
-        # BUG: rho_vn_diag does not match MATLAB
         for i in range(psin.shape[0]):
             rho_vn_diag[i] = interp1(
                 psin_interp, rho_vn_diag_almost[i, :], psin[i, :]
@@ -1537,18 +1529,15 @@ class D3DPhysicsMethods:
                 )
                 params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
 
-        # Shift psirz's dimenisons
-        # efit_dict['psirz']'s dimensions (1st,2nd,3rd) correspond to MATLAB script's 
-        # psirz's (3rd,2nd,1st) dimensions before shiftdim. This seems to be resulted from MDSplus call 
-        # TODO: is the order of dimensions consistent in python?
-        import matplotlib.pyplot as plt
-        fig, axes = plt.subplots(1, 5)
-        for i in range(5):
-            j = len(efit_dict['time']) - 10 + 2*i
-            axes[i].imshow(efit_dict['psirz'][j,:,:], cmap='jet', origin='lower',
-                           extent=[efit_dict['r'][0], efit_dict['r'][-1], efit_dict['z'][0], efit_dict['z'][-1]])
-            axes[i].set_xlabel(efit_dict['time'][j])
-        plt.show()
+        # efit_dict['psirz'] has the dimensions (time, Z, R)
+        # import matplotlib.pyplot as plt
+        # fig, axes = plt.subplots(1, 5)
+        # for i in range(5):
+        #     j = len(efit_dict['time']) - 10 + 2*i
+        #     axes[i].imshow(efit_dict['psirz'][j,:,:], cmap='jet', origin='lower',
+        #                    extent=[efit_dict['r'][0], efit_dict['r'][-1], efit_dict['z'][0], efit_dict['z'][-1]])
+        #     axes[i].set_xlabel(efit_dict['time'][j])
+        # plt.show()
 
         # efit_dict['psirz'] = np.transpose(efit_dict['psirz'], (0,2,1))
         
@@ -1562,4 +1551,4 @@ class D3DPhysicsMethods:
             efit_dict["psirz"] - efit_dict["ssimag"][:, np.newaxis, np.newaxis]
         ) / psi_norm_f[:, np.newaxis, np.newaxis]
         efit_dict["psin"][problems, :, :] = 0
-        return efit_dict
+        return efit_dict"
