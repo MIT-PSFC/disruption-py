@@ -1168,7 +1168,7 @@ class D3DPhysicsMethods:
         # BUG: psin's 2nd & 3rd dims corresponds to the 3rd & 2nd dim in matlab script.
         # load_efit.m line 83: shiftdim(psirz, n-1)
         interp = scipy.interpolate.RegularGridInterpolator(
-            [efit_dict["time"], efit_dict["r"], efit_dict["z"]],
+            [efit_dict["time"], efit_dict["z"], efit_dict["r"]],
             efit_dict["psin"],
             method="linear",
             bounds_error=False,
@@ -1177,7 +1177,7 @@ class D3DPhysicsMethods:
 
         # Apply interpolant to diagnostic data and return outputs as a new structure field
         # BUG: psin still doesn't match MATLAB but close enough (161228, sum(psin): python=30911, MATLAB=32244)
-        psin = interp((T, R, Z))
+        psin = interp((T, Z, R))
 
         # Get rhovn using the interpolant stored in EFIT, then save this as another field in 'data'
         rho_vn_diag_almost = interp1(
@@ -1542,10 +1542,15 @@ class D3DPhysicsMethods:
         # psirz's (3rd,2nd,1st) dimensions before shiftdim. This seems to be resulted from MDSplus call 
         # TODO: is the order of dimensions consistent in python?
         import matplotlib.pyplot as plt
-        plt.imshow(efit_dict['psirz'][150,:,31:], cmap='jet')
+        fig, axes = plt.subplots(1, 5)
+        for i in range(5):
+            j = len(efit_dict['time']) - 10 + 2*i
+            axes[i].imshow(efit_dict['psirz'][j,:,:], cmap='jet', origin='lower',
+                           extent=[efit_dict['r'][0], efit_dict['r'][-1], efit_dict['z'][0], efit_dict['z'][-1]])
+            axes[i].set_xlabel(efit_dict['time'][j])
         plt.show()
 
-        efit_dict['psirz'] = np.transpose(efit_dict['psirz'], (0,2,1))
+        # efit_dict['psirz'] = np.transpose(efit_dict['psirz'], (0,2,1))
         
         # Normalize the poloidal flux grid (0=magnetic axis, 1=boundary)
         # [Translated from D. Eldon's OMFITeqdsk read_basic_eq_from_mds() function]
