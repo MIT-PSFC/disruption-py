@@ -386,7 +386,7 @@ def fastsmooth(y, w, smooth_type=1, ends_type=0):
 
 
 # TODO: Cover documentation with Cristina
-def power(a):
+def matlab_power(a):
     # Multiplicative constants (kappa) to get the power radiating in the i^th viewing chord
     kappa = np.array(
         [
@@ -524,9 +524,12 @@ def power(a):
         divu: np.ndarray
         chan: list
 
-    # c = Channel("", np.zeros((4096)), np.zeros((4096)), 0.0, 0.0, 0.0)
-    # b = Power(np.zeros((4096)), np.zeros((4096)), np.zeros((4096)), np.tile(c, (48)))
-    b = Power(np.zeros((4096)), np.zeros((4096)), np.zeros((4096)), [])
+    b = Power(
+        pwrmix=np.zeros((4096)), 
+        divl=np.zeros((4096)), 
+        divu=np.zeros((4096)), 
+        chan=[]
+    )
     for i in range(48):
         b.chan.append(Channel("", np.zeros((4096)), np.zeros((4096)), 0.0, 0.0, 0.0))
     for i in range(48):
@@ -553,7 +556,7 @@ def power(a):
     return b
 
 
-def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
+def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
     drtau /= 1.0e3
     gam = np.zeros((1, 49))
     tau = np.zeros((1, 49))
@@ -916,10 +919,10 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
     #t_del = bolo_shot.time[1] - bolo_shot.time[0]  # -- Not used 
     bolo_shot.raw_time = time
 
-    # TODO: why calculate these? These parameters aren't used in MATLAB either
+    # TODO: Why calculate these parameters? 
     # m = 2 * np.fix(np.fix(1000 * drtau) / np.fix(1000 * t_del) / 2) + 1
     # k = np.arange(0, m) - np.fix((m - 1) / 2)
-    # nzer = np.where(k != 0)
+    # (nzer,) = np.where(k != 0)
     # k[nzer] = 1.0 / k[nzer]
     # k = k / t_del / (np.fix(m / 2) * 2)
 
@@ -937,11 +940,11 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         # Subtract baseline offset
         temp = data - np.mean(data[:20])
         # Filter signal using causal moving average filter (i.e. boxcar)
+        # NOTE: lfilter gives closer results to MATLAB than np.convolve
         # temp_filtered = np.convolve(temp, smoothing_kernel, "same")
-        temp_filtered = lfilter(smoothing_kernel, 1, temp)  # NOTE: closer to MATLAB than np.convolve
-        dr_dt = np.gradient(temp_filtered, dt)
+        temp_filtered = lfilter(smoothing_kernel, 1, temp)  
+        dr_dt = np.gradient(temp_filtered, time)
         # Calculate power on each detector, P_d(t) [as given in Leonard et al, Rev. Sci. Instr. (1995)]
-        # NOTE: pwr doesn't match MATLAB due to diff. functions being used, although it's close
         bolo_shot.channels[i].pwr = medfilt(
             (gam[i + 1] * temp_filtered + tau[i + 1] * dr_dt) / scrfact[i],
             window_size + (not window_size % 2),
