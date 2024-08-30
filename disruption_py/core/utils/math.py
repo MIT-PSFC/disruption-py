@@ -387,6 +387,16 @@ def fastsmooth(y, w, smooth_type=1, ends_type=0):
 
 # TODO: Cover documentation with Cristina
 def matlab_power(a):
+    """
+    Python reimplementation of powers_new.m
+    Used for calculating the total radiated power from the bolometer array.
+
+    -------
+    References:
+    - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/powers_new.m
+
+    Last major update by William Wei on 7/26/2024
+    """
     # Multiplicative constants (kappa) to get the power radiating in the i^th viewing chord
     kappa = np.array(
         [
@@ -528,7 +538,7 @@ def matlab_power(a):
         pwrmix=np.zeros((4096)), 
         divl=np.zeros((4096)), 
         divu=np.zeros((4096)), 
-        chan=[]
+        chan=[],
     )
     for i in range(48):
         b.chan.append(Channel("", np.zeros((4096)), np.zeros((4096)), 0.0, 0.0, 0.0))
@@ -557,7 +567,18 @@ def matlab_power(a):
 
 
 def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
+    """
+    Python reimplementation of getbolo_new.m.
+    Used for calculating the total radiated power from the bolometer array.
+
+    -------
+    References:
+    - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/getbolo_new.m
+
+    Last major update by William Wei on 7/26/2024
+    """
     drtau /= 1.0e3
+    # NOTE: why set gam, tau & scrfact as 2D arrays?
     gam = np.zeros((1, 49))
     tau = np.zeros((1, 49))
     kappa = [
@@ -916,15 +937,15 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
     smoothing_kernel = (1.0 / window_size) * np.ones(window_size)
     bolo_shot.ntimes = int(len(time) / 4)
     bolo_shot.time = np.linspace(np.min(time), np.max(time), bolo_shot.ntimes)
-    #t_del = bolo_shot.time[1] - bolo_shot.time[0]  # -- Not used 
+    t_del = bolo_shot.time[1] - bolo_shot.time[0]  # -- Not used 
     bolo_shot.raw_time = time
 
     # TODO: Why calculate these parameters? 
-    # m = 2 * np.fix(np.fix(1000 * drtau) / np.fix(1000 * t_del) / 2) + 1
-    # k = np.arange(0, m) - np.fix((m - 1) / 2)
-    # (nzer,) = np.where(k != 0)
-    # k[nzer] = 1.0 / k[nzer]
-    # k = k / t_del / (np.fix(m / 2) * 2)
+    m = 2 * np.fix(np.fix(1000 * drtau) / np.fix(1000 * t_del) / 2) + 1
+    k = np.arange(0, m) - np.fix((m - 1) / 2)
+    (nzer,) = np.where(k != 0)
+    k[nzer] = 1.0 / k[nzer]
+    k = k / t_del / (np.fix(m / 2) * 2)
 
     for i in range(48):
         bolo_shot.channels[i].label = bol_channels[i]

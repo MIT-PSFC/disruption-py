@@ -9,7 +9,12 @@ from MDSplus import mdsExceptions
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.math import matlab_get_bolo, gsastd, interp1, matlab_power
+from disruption_py.core.utils.math import (
+    interp1, 
+    matlab_get_bolo, 
+    gsastd, 
+    matlab_power
+)
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -161,14 +166,31 @@ class D3DPhysicsMethods:
         bol_channels = lower_channels + upper_channels
         bol_signals = []
         bol_times = []
+        # for i in range(48):
+        #     bol_signal, bol_time = params.mds_conn.get_data_with_dims(
+        #         rf"\top.raw:{bol_channels[i]}", tree_name="bolom"
+        #     )
+        #     bol_signals.append(bol_signal)
+        #     bol_times.append(bol_time)
+        # a_struct = matlab_get_bolo(
+        #     params.shot_id, bol_channels, bol_prm, bol_signals, bol_times
+        # )
         for i in range(48):
-            bol_signal, bol_time = params.mds_conn.get_data_with_dims(
+            bol_signal = params.mds_conn.get_data(
                 rf"\top.raw:{bol_channels[i]}", tree_name="bolom"
             )
             bol_signals.append(bol_signal)
-            bol_times.append(bol_time)
+        bol_time = params.mds_conn.get_dims(
+            rf"\top.raw:{bol_channels[0]}", tree_name="bolom"
+        )[0]
+        bol_time /= 1e3  # [ms] -> [s]
         a_struct = matlab_get_bolo(
-            params.shot_id, bol_channels, bol_prm, bol_signals, bol_times
+            shot_id=params.shot_id,
+            bol_channels=bol_channels,
+            bol_prm=bol_prm,
+            bol_top=bol_signals,
+            bol_time=bol_time,
+            drtau=smoothing_window * 1e3,
         )
         ier = 0
         for j in range(48):
