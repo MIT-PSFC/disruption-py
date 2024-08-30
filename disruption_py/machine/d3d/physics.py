@@ -9,7 +9,12 @@ from MDSplus import mdsExceptions
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.math import interp1, matlab_get_bolo, matlab_gsastd, matlab_power
+from disruption_py.core.utils.math import (
+    interp1,
+    matlab_get_bolo,
+    matlab_gsastd,
+    matlab_power,
+)
 from disruption_py.machine.tokamak import Tokamak
 
 

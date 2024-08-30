@@ -246,7 +246,9 @@ def gauss(x, *params):
 # 'gradient' and smoothing/filtering routines for certain signals.
 
 
-def matlab_gsastd(x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=None):
+def matlab_gsastd(
+    x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=None
+):
     """
     Fast non-causal differentiation of noisy data.
 
