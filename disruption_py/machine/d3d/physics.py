@@ -876,7 +876,6 @@ class D3DPhysicsMethods:
             ts["psin"], ts["rhovn"] = D3DPhysicsMethods.efit_rz_interp(ts, efit_dict)
             ts["rhovn"] = ts["rhovn"].T
             ts["psin"] = ts["psin"].T
-            params.logger.info(f"ts['rhovn'].shape: {ts["rhovn"].shape}")
         except Exception as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to interpolate TS data")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
@@ -1088,7 +1087,6 @@ class D3DPhysicsMethods:
         rho_vn_diag_almost = interp1(
             efit_dict["time"], efit_dict["rhovn"], ts["time"], axis=0
         )
-        print("Rho_vn_diag_almost shape", rho_vn_diag_almost.shape)
         rho_vn_diag = np.empty(psin.shape[:2]) 
         psin_interp = np.linspace(0, 1, efit_dict["rhovn"].shape[1]) # Implied psin grid for rhovn
         # Interpolate again to get rhovn on same psin base
@@ -1298,17 +1296,7 @@ class D3DPhysicsMethods:
             lasers[laser]["ne"][lasers[laser]["ne"] == 0] = np.nan
             # Change time unit from [ms] to [s]
             lasers[laser]['time'] /= 1e3
-        # NOTE: Why use these debug commands?
-        if 'core' in lasers.keys():
-            params.logger.debug(
-                "_get_ne_te: Core bins {}".format(lasers["core"]["te"].shape)
-            )
-        if 'tangential' in lasers.keys():
-            params.logger.debug(
-                "_get_ne_te: Tangential bins {}".format(
-                    lasers["tangential"]["te"].shape
-                )
-            )
+
         # If both systems/lasers available, combine them and interpolate the data
         # from the tangential system onto the finer (core) timebase
         if "tangential" in lasers and lasers["tangential"] is not None:
@@ -1333,8 +1321,6 @@ class D3DPhysicsMethods:
                 lasers["combined"]["z"] = np.concatenate(
                     (lasers["core"]["z"], lasers["tangential"]["z"])
                 )
-        params.logger.debug("_get_ne_te: R Bins: {}".format(len(lasers["combined"]["r"])))
-        params.logger.debug("_get_ne_te: Z Bins: {}".format(len(lasers["combined"]["z"])))
         return lasers
 
     @staticmethod
