@@ -873,7 +873,7 @@ class D3DPhysicsMethods:
         
         # Get P_rad data 
         try:
-            p_rad = D3DPhysicsMethods._get_p_rad(params, fan=bolometer_fan)
+            p_rad = D3DPhysicsMethods._get_p_rad(params, fan=bolometer_fan, smoothing_window=smoothing_window)
         except Exception as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get bolometer data")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
@@ -963,7 +963,10 @@ class D3DPhysicsMethods:
                 # # Interpolate zmaxis and channel intersects x onto the bolometer timebase
                 z_m_axis = interp1(efit_dict["time"], efit_dict["zmaxis"], p_rad["t"])
                 z_m_axis = np.repeat(z_m_axis[:, np.newaxis], p_rad["x"].shape[1], axis=1)
-                p_rad["xinterp"] = interp1(p_rad["xtime"], p_rad["x"], p_rad["t"], axis=0)
+                # NOTE: MATLAB uses extrapolation. Use fill_value='extrapolate' resolves p_rad['xinterp']'s mismatch.
+                # TODO: should we use extrapolation here?
+                p_rad["xinterp"] = interp1(p_rad["xtime"], p_rad["x"], p_rad["t"], axis=0, 
+                                           kind='linear', fill_value="extrapolate")
                 # # Determine the bolometer channels falling in the 'core' bin
                 core_indices = (
                     p_rad["xinterp"] < z_m_axis + p_rad_core_def * vert_range
@@ -978,12 +981,11 @@ class D3DPhysicsMethods:
                     div_indices[p_rad["ch_avail"].index(div_channel)] = True
 
                 # # Grab p_rad measurements for each needed set of channels
+                # BUG: p_rad_core doesn't match MATLAB!
                 p_rad_core = np.array(p_rad[p_rad_metric]).T
                 
                 # DEBUG
-                dummy_core = p_rad_core.copy()
-
-                # DEBUG
+                # dummy_core = p_rad_core.copy()
                 # import matplotlib.pyplot as plt
                 # for i in range(6000, 11000, 1000):
                 #     plt.plot(p_rad['xinterp'][i, :], p_rad_core[i, :], label=f"t={p_rad['t'][i]:.2f} s")
@@ -1412,9 +1414,13 @@ class D3DPhysicsMethods:
 
     @staticmethod
     @cache_method
-    def _get_p_rad(params: PhysicsMethodParams, fan="custom"):
+    def _get_p_rad(params: PhysicsMethodParams, fan="custom", smoothing_window=50):
         '''
         Retrieves DIII-D radiation data from the bolometer MDSplus tree
+
+        8/30/24: Debugged, now a_struct.channels[i].pwr still does not match with MATLAB due to the different results of lfilter, although they are close enough.
+        
+        #TODO: Update docstring.
 
         Inputs:
         -------
@@ -1441,8 +1447,9 @@ class D3DPhysicsMethods:
 
         # Get bolometry data
         bol_prm, _ = params.mds_conn.get_data_with_dims(r"\bol_prm", tree_name="bolom")
-        lower_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
-        upper_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
+        # getbolo_new.m line 86-89
+        upper_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
+        lower_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
         # bol_channels = lower_channels + upper_channels
         bol_channels = upper_channels + lower_channels
         bol_signals = []
@@ -1456,9 +1463,12 @@ class D3DPhysicsMethods:
             bol_time /= 1e3 # [ms] -> [s]
             bol_signals.append(bol_signal)
             bol_times.append(bol_time)
+        # BUG: a_struct.channels[i].pwr mismatch (although close) with MATLAB. All other params match
         a_struct = get_bolo(
-            params.shot_id, bol_channels, bol_prm, bol_signals, bol_times[0]
+            params.shot_id, bol_channels, bol_prm, bol_signals, bol_times[0], smoothing_window
         )
+        # BUG: all params (except chan[i].R, Z, angle) don't match MATLAB -- caused by a_struct.channels[i].pwr!
+        # UPDATE: still don't match but a lot closer
         b_struct = power(a_struct)
         r_major_axis, efit_time = params.mds_conn.get_data_with_dims(
             r"\top.results.geqdsk:rmaxis", tree_name="_efit_tree"
@@ -1473,21 +1483,32 @@ class D3DPhysicsMethods:
             "xtime": efit_time,
             "t": a_struct.raw_time,
         }
-        for i in range(len(fan_chans)):
-            chan = fan_chans[i]
-            output["power"].append(b_struct.chan[chan].chanpwr)
-            if a_struct.channels[chan].ier == 0:
-                output["ch_avail"].append(chan)
-            output["x"][:, i] = a_struct.channels[chan].Z + np.tan(
-                a_struct.channels[chan].angle * np.pi / 180.0
-            ) * (r_major_axis - a_struct.channels[chan].R)
-            b_struct.chan[chan].chanpwr[np.where(b_struct.chan[chan].chanpwr < 0)] = 0
-            b_struct.chan[chan].brightness[
-                np.where(b_struct.chan[chan].brightness < 0)
-            ] = 0
-            output["z"].append(b_struct.chan[i].chanpwr)
-            output["brightness"].append(b_struct.chan[i].brightness)
-        # BUG: all output["brightness"] channels are identical
+        if fan != "custom":
+            for i in range(len(fan_chans)):
+                ichan = fan_chans[i]
+                if a_struct.channels[ichan].ier == 0:
+                    output["ch_avail"].append(ichan)
+                output['x'][:,i] = a_struct.channels[ichan].Z + np.tan(a_struct.channels[ichan].angle * np.pi / 180.0)*(r_major_axis - a_struct.channels[ichan].R)
+                b_struct.chan[ichan].chanpwr[np.where(b_struct.chan[ichan].chanpwr < 0)] = 0
+                b_struct.chan[ichan].brightness[np.where(b_struct.chan[ichan].brightness < 0)] = 0
+                output["z"].append(b_struct.chan[ichan].chanpwr)
+                output["brightness"].append(b_struct.chan[ichan].brightness)
+            output["power"] = output["z"]
+        else:
+            lower_fan_chans = np.arange(24, 48) # TODO: why only use lower_fan_channels?
+            j = 0
+            for i in range(len(lower_fan_chans)):
+                output["power"].append(b_struct.chan[lower_fan_chans[i]].chanpwr)   # Why include these channels in output['power']?
+                if lower_fan_chans[i] in fan_chans:
+                    ichan = fan_chans[j]
+                    if a_struct.channels[ichan].ier == 0:
+                        output["ch_avail"].append(ichan)
+                    output['x'][:,j] = a_struct.channels[ichan].Z + np.tan(a_struct.channels[ichan].angle * np.pi / 180.0)*(r_major_axis - a_struct.channels[ichan].R)
+                    b_struct.chan[ichan].chanpwr[np.where(b_struct.chan[ichan].chanpwr < 0)] = 0
+                    b_struct.chan[ichan].brightness[np.where(b_struct.chan[ichan].brightness < 0)] = 0
+                    output["z"].append(b_struct.chan[ichan].chanpwr)
+                    output["brightness"].append(b_struct.chan[ichan].brightness)
+                    j += 1
         return output
 
     # TODO: Replace all instances of efit_dict with a dataclass

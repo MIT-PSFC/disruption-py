@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d, interp2d
 from scipy.optimize import curve_fit
-from scipy.signal import medfilt
+from scipy.signal import medfilt, lfilter
 
 pd.options.mode.chained_assignment = None
 
@@ -529,14 +529,12 @@ def power(a):
     b = Power(np.zeros((4096)), np.zeros((4096)), np.zeros((4096)), [])
     for i in range(48):
         b.chan.append(Channel("", np.zeros((4096)), np.zeros((4096)), 0.0, 0.0, 0.0))
-    # BUG: all b.chan[i].chanpwr & brightness updates together at every iteration
     for i in range(48):
         b.chan[i].chanpwr = kappa[i] * a.channels[i].pwr
         b.chan[i].brightness = etendu[i] * a.channels[i].pwr
         b.chan[i].R = a.channels[i].R
         b.chan[i].Z = a.channels[i].Z
         b.chan[i].angle = a.channels[i].angle
-    # BUG: all channels' brightness are the same
     b.pwrmix = 0.0
     b.divl = 0.0
     b.divu = 0.0
@@ -915,13 +913,16 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
     smoothing_kernel = (1.0 / window_size) * np.ones(window_size)
     bolo_shot.ntimes = int(len(time) / 4)
     bolo_shot.time = np.linspace(np.min(time), np.max(time), bolo_shot.ntimes)
-    t_del = bolo_shot.time[1] - bolo_shot.time[0]
+    #t_del = bolo_shot.time[1] - bolo_shot.time[0]  # -- Not used 
     bolo_shot.raw_time = time
-    m = 2 * np.fix(np.fix(1000 * drtau) / np.fix(1000 * t_del) / 2) + 1
-    k = np.arange(0, m) - np.fix((m - 1) / 2)
-    nzer = np.where(k != 0)
-    k[nzer] = 1.0 / k[nzer]
-    k = k / t_del / (np.fix(m / 2) * 2)
+
+    # TODO: why calculate these? These parameters aren't used in MATLAB either
+    # m = 2 * np.fix(np.fix(1000 * drtau) / np.fix(1000 * t_del) / 2) + 1
+    # k = np.arange(0, m) - np.fix((m - 1) / 2)
+    # nzer = np.where(k != 0)
+    # k[nzer] = 1.0 / k[nzer]
+    # k = k / t_del / (np.fix(m / 2) * 2)
+
     for i in range(48):
         bolo_shot.channels[i].label = bol_channels[i]
         data = interp1(bol_time, bol_top[i], bolo_shot.raw_time)
@@ -936,10 +937,11 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         # Subtract baseline offset
         temp = data - np.mean(data[:20])
         # Filter signal using causal moving average filter (i.e. boxcar)
-        temp_filtered = np.convolve(temp, smoothing_kernel, "same")
-        # temp_filtered = lfilter(smoothing_kernel, 1, temp)
+        # temp_filtered = np.convolve(temp, smoothing_kernel, "same")
+        temp_filtered = lfilter(smoothing_kernel, 1, temp)  # NOTE: closer to MATLAB than np.convolve
         dr_dt = np.gradient(temp_filtered, dt)
         # Calculate power on each detector, P_d(t) [as given in Leonard et al, Rev. Sci. Instr. (1995)]
+        # NOTE: pwr doesn't match MATLAB due to diff. functions being used, although it's close
         bolo_shot.channels[i].pwr = medfilt(
             (gam[i + 1] * temp_filtered + tau[i + 1] * dr_dt) / scrfact[i],
             window_size + (not window_size % 2),
