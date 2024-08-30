@@ -939,7 +939,8 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
     smoothing_kernel = (1.0 / window_size) * np.ones(window_size)
     bolo_shot.ntimes = int(len(time) / 4)
     bolo_shot.time = np.linspace(np.min(time), np.max(time), bolo_shot.ntimes)
-    t_del = bolo_shot.time[1] - bolo_shot.time[0]  # -- Not used
+    # TODO: t_del not used in following computation
+    t_del = bolo_shot.time[1] - bolo_shot.time[0]
     bolo_shot.raw_time = time
 
     # TODO: Why calculate these parameters?
