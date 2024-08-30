@@ -245,6 +245,10 @@ TEST_COLUMNS = [
 	"beta_n",
 	"dipprog_dt",
 	"dipprog_dt_rt",
+	"te_peaking_cva_rt", 
+	"ne_peaking_cva_rt", 
+	"prad_peaking_cva_rt", 
+	"prad_peaking_xdiv_rt",
 ]
 EXPECTED_FAILURE_COLUMNS = [
 	"kappa",
@@ -277,6 +281,10 @@ EXPECTED_FAILURE_COLUMNS = [
 	"beta_n",
 	"kappa_area",
 	"commit_hash",
+	"te_peaking_cva_rt", 
+	"ne_peaking_cva_rt", 
+	"prad_peaking_cva_rt", 
+	"prad_peaking_xdiv_rt",
 ]
 
 [d3d.testing.test_shots]

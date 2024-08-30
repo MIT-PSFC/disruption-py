@@ -535,9 +535,9 @@ def matlab_power(a):
         chan: list
 
     b = Power(
-        pwrmix=np.zeros((4096)), 
-        divl=np.zeros((4096)), 
-        divu=np.zeros((4096)), 
+        pwrmix=np.zeros((4096)),
+        divl=np.zeros((4096)),
+        divu=np.zeros((4096)),
         chan=[],
     )
     for i in range(48):
@@ -937,10 +937,10 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
     smoothing_kernel = (1.0 / window_size) * np.ones(window_size)
     bolo_shot.ntimes = int(len(time) / 4)
     bolo_shot.time = np.linspace(np.min(time), np.max(time), bolo_shot.ntimes)
-    t_del = bolo_shot.time[1] - bolo_shot.time[0]  # -- Not used 
+    t_del = bolo_shot.time[1] - bolo_shot.time[0]  # -- Not used
     bolo_shot.raw_time = time
 
-    # TODO: Why calculate these parameters? 
+    # TODO: Why calculate these parameters?
     m = 2 * np.fix(np.fix(1000 * drtau) / np.fix(1000 * t_del) / 2) + 1
     k = np.arange(0, m) - np.fix((m - 1) / 2)
     (nzer,) = np.where(k != 0)
@@ -963,7 +963,7 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
         # Filter signal using causal moving average filter (i.e. boxcar)
         # NOTE: lfilter gives closer results to MATLAB than np.convolve
         # temp_filtered = np.convolve(temp, smoothing_kernel, "same")
-        temp_filtered = lfilter(smoothing_kernel, 1, temp)  
+        temp_filtered = lfilter(smoothing_kernel, 1, temp)
         dr_dt = np.gradient(temp_filtered, time)
         # Calculate power on each detector, P_d(t) [as given in Leonard et al, Rev. Sci. Instr. (1995)]
         bolo_shot.channels[i].pwr = medfilt(

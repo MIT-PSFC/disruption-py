@@ -9,12 +9,7 @@ from MDSplus import mdsExceptions
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.math import (
-    interp1, 
-    matlab_get_bolo, 
-    gsastd, 
-    matlab_power
-)
+from disruption_py.core.utils.math import interp1, matlab_get_bolo, gsastd, matlab_power
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -763,27 +758,32 @@ class D3DPhysicsMethods:
     # https://docs.google.com/document/d/1R7fI7mCOkMQGt8xX2nS6ZmNNkcyvPQ7NmBfRPICFaFs/edit?usp=sharing
     @staticmethod
     @physics_method(
-        columns=["te_peaking_cva_rt", "ne_peaking_cva_rt", "prad_peaking_cva_rt", "prad_peaking_xdiv_rt"],
+        columns=[
+            "te_peaking_cva_rt",
+            "ne_peaking_cva_rt",
+            "prad_peaking_cva_rt",
+            "prad_peaking_xdiv_rt",
+        ],
         tokamak=Tokamak.D3D,
     )
     def get_peaking_factors(params: PhysicsMethodParams):
-        '''
+        """
         This function calculates peaking factors for the shot number
         given by the user corresponding to the times in the given timebase.
-        Electron temperature (Te_PF) and density (ne_PF) profile peaking 
+        Electron temperature (Te_PF) and density (ne_PF) profile peaking
         factors are taken from Thomson scattering measurements, and the peaking
         factors describing radiated power distributions (Rad_CVA and Rad_XDIV)
-        are taken from the 2pi foil bolometer system. 
+        are taken from the 2pi foil bolometer system.
 
         The Thomson-based peaking factors are computed by first mapping the channel
-        locations to the EFIT grid (rhovn: normalized rho, psin: normalized poloidal 
+        locations to the EFIT grid (rhovn: normalized rho, psin: normalized poloidal
         flux) and then determining the core channels through a threshold on rhovn.
 
-        For the bolometer-based peaking factors, a subset of 12 chords from the lower 
+        For the bolometer-based peaking factors, a subset of 12 chords from the lower
         fan array (fan = 'custom') are selected for the calculation. The core chords
         are determined through a threshold from the magnetic axis. The divertor chords
         preselected and consist of 5 chords from the 12-chord array.
-        
+
         Returns
         -------
         te_peaking_cva_rt: np.ndarray
@@ -801,7 +801,7 @@ class D3DPhysicsMethods:
         https://github.com/MIT-PSFC/disruption-py/pull/265
 
         Last major update by William Wei on 8/30/2024
-        '''
+        """
         ## Thomson parameters
         ts_data_type = "blessed"  # either 'blessed', 'unblessed', or 'ptdata'
         # metric to use for core/edge binning (either 'psin' or 'rhovn')
@@ -820,7 +820,7 @@ class D3DPhysicsMethods:
         # array of bolometer fan channel numbers covering divertor
         # (upper fan: 1->24, lower fan: 25:48)
         div_channels = np.arange(3, 8) + 24
-        div_channels -= 1   # python indicing
+        div_channels -= 1  # python indicing
         # time window for filtering raw bolometer signal in [ms]
         smoothing_window = 40
         p_rad_core_def = (
@@ -879,10 +879,12 @@ class D3DPhysicsMethods:
         except Exception as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to interpolate TS data")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-        
-        # Get P_rad data 
+
+        # Get P_rad data
         try:
-            p_rad = D3DPhysicsMethods._get_p_rad(params, fan=bolometer_fan, smoothing_window=smoothing_window)
+            p_rad = D3DPhysicsMethods._get_p_rad(
+                params, fan=bolometer_fan, smoothing_window=smoothing_window
+            )
         except Exception as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get bolometer data")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
@@ -908,39 +910,56 @@ class D3DPhysicsMethods:
 
                 # Interpolate onto uniform radial base if needed
                 if ts_equispaced:
-                    for i in range(len(ts['time'])):
-                        (no_nans,) = np.where(~np.isnan(ts['te'][:, i]) 
-                                              & ~np.isnan(ts['ne'][:,i]))
+                    for i in range(len(ts["time"])):
+                        (no_nans,) = np.where(
+                            ~np.isnan(ts["te"][:, i]) & ~np.isnan(ts["ne"][:, i])
+                        )
                         if len(no_nans) > 1:
                             radii = ts[ts_radius][no_nans, i]
                             if len(radii) > 2:
-                                rad_coord_interp = np.linspace(min(radii), max(radii), len(radii))
+                                rad_coord_interp = np.linspace(
+                                    min(radii), max(radii), len(radii)
+                                )
                                 # MATLAB used interp1(kind='pchip') which isn't available in disruption-py
-                                ts['te'][no_nans,i] = interp1(radii, ts['te'][no_nans, i], rad_coord_interp, 'linear')
-                                ts['ne'][no_nans,i] = interp1(radii, ts['ne'][no_nans, i], rad_coord_interp, 'linear')
-                                ts[ts_radius][no_nans,i] = rad_coord_interp
-                
+                                ts["te"][no_nans, i] = interp1(
+                                    radii,
+                                    ts["te"][no_nans, i],
+                                    rad_coord_interp,
+                                    "linear",
+                                )
+                                ts["ne"][no_nans, i] = interp1(
+                                    radii,
+                                    ts["ne"][no_nans, i],
+                                    rad_coord_interp,
+                                    "linear",
+                                )
+                                ts[ts_radius][no_nans, i] = rad_coord_interp
+
                 # Find core bin for Thomson and calculate Te, ne peaking factors
                 core_mask = ts[ts_radius] < ts_core_margin
                 te_core = ts["te"].copy()
                 te_core[~core_mask] = np.nan
                 ne_core = ts["ne"].copy()
                 ne_core[~core_mask] = np.nan
-                te_pf = np.full(len(ts['time']), np.nan)
-                ne_pf = np.full(len(ts['time']), np.nan)
+                te_pf = np.full(len(ts["time"]), np.nan)
+                ne_pf = np.full(len(ts["time"]), np.nan)
                 for i in range(len(te_pf)):
                     if (
-                        ~np.isnan(te_core[:,i]).all() 
-                        and ~np.isnan(ts["te"][:,i]).all() 
-                        and np.nanmean(ts["te"][:,i]) != 0
+                        ~np.isnan(te_core[:, i]).all()
+                        and ~np.isnan(ts["te"][:, i]).all()
+                        and np.nanmean(ts["te"][:, i]) != 0
                     ):
-                        te_pf[i] = np.nanmean(te_core[:,i]) / np.nanmean(ts["te"][:,i])
+                        te_pf[i] = np.nanmean(te_core[:, i]) / np.nanmean(
+                            ts["te"][:, i]
+                        )
                     if (
-                        ~np.isnan(ne_core[:,i]).all() 
-                        and ~np.isnan(ts["ne"][:,i]).all()
-                        and np.nanmean(ts["ne"][:,i]) != 0
-                    ): 
-                        ne_pf[i] = np.nanmean(ne_core[:,i]) / np.nanmean(ts["ne"][:,i])
+                        ~np.isnan(ne_core[:, i]).all()
+                        and ~np.isnan(ts["ne"][:, i]).all()
+                        and np.nanmean(ts["ne"][:, i]) != 0
+                    ):
+                        ne_pf[i] = np.nanmean(ne_core[:, i]) / np.nanmean(
+                            ts["ne"][:, i]
+                        )
                 te_pf = interp1(ts["time"], te_pf, params.times)
                 ne_pf = interp1(ts["time"], ne_pf, params.times)
             except:
@@ -950,9 +969,13 @@ class D3DPhysicsMethods:
             try:
                 # Interpolate zmaxis and channel intersects x onto the bolometer timebase
                 z_m_axis = interp1(efit_dict["time"], efit_dict["zmaxis"], p_rad["t"])
-                z_m_axis = np.repeat(z_m_axis[:, np.newaxis], p_rad["x"].shape[1], axis=1)
+                z_m_axis = np.repeat(
+                    z_m_axis[:, np.newaxis], p_rad["x"].shape[1], axis=1
+                )
                 # NOTE: MATLAB uses extrapolation in p_rad["xinterp"] computation.
-                p_rad["xinterp"] = interp1(p_rad["xtime"], p_rad["x"], p_rad["t"], axis=0)
+                p_rad["xinterp"] = interp1(
+                    p_rad["xtime"], p_rad["x"], p_rad["t"], axis=0
+                )
                 # Determine the bolometer channels falling in the 'core' bin
                 core_indices = (
                     p_rad["xinterp"] < z_m_axis + p_rad_core_def * vert_range
@@ -973,32 +996,36 @@ class D3DPhysicsMethods:
                 p_rad_all_but_div[:, div_indices] = np.nan
 
                 # Calculate the peaking factors
-                rad_cva = np.full(len(p_rad['t']), np.nan)
-                rad_xdiv = np.full(len(p_rad['t']), np.nan)
+                rad_cva = np.full(len(p_rad["t"]), np.nan)
+                rad_xdiv = np.full(len(p_rad["t"]), np.nan)
                 for i in range(len(rad_cva)):
                     if (
-                        ~np.isnan(p_rad_core[i,:]).all() 
-                        and ~np.isnan(p_rad_all_but_div[i,:]).all() 
-                        and np.nanmean(p_rad_all_but_div[i,:]) != 0
+                        ~np.isnan(p_rad_core[i, :]).all()
+                        and ~np.isnan(p_rad_all_but_div[i, :]).all()
+                        and np.nanmean(p_rad_all_but_div[i, :]) != 0
                     ):
                         # NOTE: How is this core vs all?
-                        rad_cva[i] = np.nanmean(p_rad_core[i,:]) / np.nanmean(p_rad_all_but_div[i,:])
+                        rad_cva[i] = np.nanmean(p_rad_core[i, :]) / np.nanmean(
+                            p_rad_all_but_div[i, :]
+                        )
                     if (
-                        ~np.isnan(p_rad_div[i,:]).all() 
-                        and ~np.isnan(p_rad_all_but_core[i,:]).all() 
-                        and np.nanmean(p_rad_all_but_core[i,:]) != 0
+                        ~np.isnan(p_rad_div[i, :]).all()
+                        and ~np.isnan(p_rad_all_but_core[i, :]).all()
+                        and np.nanmean(p_rad_all_but_core[i, :]) != 0
                     ):
                         # NOTE: How is this div vs all?
-                        rad_xdiv[i] = np.nanmean(p_rad_div[i,:]) / np.nanmean(p_rad_all_but_core[i,:])
+                        rad_xdiv[i] = np.nanmean(p_rad_div[i, :]) / np.nanmean(
+                            p_rad_all_but_core[i, :]
+                        )
                 rad_cva = interp1(p_rad["t"], rad_cva, params.times)
                 rad_xdiv = interp1(p_rad["t"], rad_xdiv, params.times)
             except:
                 pass
 
         output = {
-            "te_peaking_cva_rt": te_pf, 
-            "ne_peaking_cva_rt": ne_pf, 
-            "prad_peaking_cva_rt": rad_cva, 
+            "te_peaking_cva_rt": te_pf,
+            "ne_peaking_cva_rt": ne_pf,
+            "prad_peaking_cva_rt": rad_cva,
             "prad_peaking_xdiv_rt": rad_xdiv,
         }
         return output
@@ -1050,7 +1077,7 @@ class D3DPhysicsMethods:
             Thomson scattering data returned by D3DPhysicsMethods._get_ne_te(...)
         efit_dict: dict
             Dictionary with the efit data. Keys are 'time', 'r', 'z', 'psin', 'rhovn'
-        
+
         Returns
         -------
         psin: np.ndarray
@@ -1087,13 +1114,13 @@ class D3DPhysicsMethods:
         rho_vn_diag_almost = interp1(
             efit_dict["time"], efit_dict["rhovn"], ts["time"], axis=0
         )
-        rho_vn_diag = np.empty(psin.shape[:2]) 
-        psin_interp = np.linspace(0, 1, efit_dict["rhovn"].shape[1]) # Implied psin grid for rhovn
+        rho_vn_diag = np.empty(psin.shape[:2])
+        psin_interp = np.linspace(
+            0, 1, efit_dict["rhovn"].shape[1]
+        )  # Implied psin grid for rhovn
         # Interpolate again to get rhovn on same psin base
         for i in range(psin.shape[0]):
-            rho_vn_diag[i] = interp1(
-                psin_interp, rho_vn_diag_almost[i, :], psin[i, :]
-            )
+            rho_vn_diag[i] = interp1(psin_interp, rho_vn_diag_almost[i, :], psin[i, :])
         return psin, rho_vn_diag
 
     @staticmethod
@@ -1210,7 +1237,7 @@ class D3DPhysicsMethods:
         data_source="blessed",
         ts_systems=["core", "tangential"],
     ):
-        '''
+        """
         Retrieves DIII-D Thomson scattering data
 
         Inputs
@@ -1234,7 +1261,7 @@ class D3DPhysicsMethods:
 
         Original method by Kevin Montes on March 2019
         Last major update by William Wei on 8/8/2024
-        '''
+        """
         if data_source == "blessed":  # 'blessed' by Thomson group
             mds_path = r"\top.ts.blessed."
         elif data_source == "unblessed":
@@ -1244,7 +1271,7 @@ class D3DPhysicsMethods:
             raise NotImplementedError("ptdata case not fully implemented yet")  # TODO
         else:
             raise ValueError(f"Invalid data_source: {data_source}")
-        
+
         # Account for pointname formatting change in 2017 (however using ptdata is unimplemented)
         # NOTE: "suffix" is only used if data_source="ptdata" which isn't implemented yet
         suffix = {"core": "cor", "tangential": "tan"}
@@ -1295,7 +1322,7 @@ class D3DPhysicsMethods:
             lasers[laser]["te"][lasers[laser]["te"] == 0] = np.nan
             lasers[laser]["ne"][lasers[laser]["ne"] == 0] = np.nan
             # Change time unit from [ms] to [s]
-            lasers[laser]['time'] /= 1e3
+            lasers[laser]["time"] /= 1e3
 
         # If both systems/lasers available, combine them and interpolate the data
         # from the tangential system onto the finer (core) timebase
@@ -1326,11 +1353,11 @@ class D3DPhysicsMethods:
     @staticmethod
     @cache_method
     def _get_p_rad(params: PhysicsMethodParams, fan="custom", smoothing_window=50):
-        '''
+        """
         Retrieves DIII-D radiation data from the bolometer MDSplus tree
 
-        Note: a_struct.channels[i].pwr does not exactly match the results from MATLAB 
-        due to the use of different filtering functions (lfilter & medfilt in Python). 
+        Note: a_struct.channels[i].pwr does not exactly match the results from MATLAB
+        due to the use of different filtering functions (lfilter & medfilt in Python).
         However the differences are close enough so that this isn't a major problem.
 
         Inputs:
@@ -1345,12 +1372,12 @@ class D3DPhysicsMethods:
         Original author: Kevin Montes. Date: March 2019
 
         Last major update by William Wei on 8/30/2024
-        '''
+        """
         if fan == "upper":
             fan_chans = np.arange(0, 24)
         elif fan == "lower":
             fan_chans = np.arange(24, 48)
-        elif fan == 'custom':
+        elif fan == "custom":
             # 1st choice (heavily cover divertor and core)
             fan_chans = np.array([3, 4, 5, 6, 7, 8, 9, 12, 14, 15, 16, 22]) + 24
             fan_chans -= 1
@@ -1370,17 +1397,22 @@ class D3DPhysicsMethods:
             bol_signal, bol_time = params.mds_conn.get_data_with_dims(
                 rf"\top.raw:{bol_channels[i]}", tree_name="bolom"
             )
-            bol_time /= 1e3 # [ms] -> [s]
+            bol_time /= 1e3  # [ms] -> [s]
             bol_signals.append(bol_signal)
             bol_times.append(bol_time)
         a_struct = matlab_get_bolo(
-            params.shot_id, bol_channels, bol_prm, bol_signals, bol_times[0], smoothing_window
+            params.shot_id,
+            bol_channels,
+            bol_prm,
+            bol_signals,
+            bol_times[0],
+            smoothing_window,
         )
         b_struct = matlab_power(a_struct)
         r_major_axis, efit_time = params.mds_conn.get_data_with_dims(
             r"\top.results.geqdsk:rmaxis", tree_name="_efit_tree"
         )
-        efit_time /= 1e3    # [ms] -> [s]
+        efit_time /= 1e3  # [ms] -> [s]
         output = {
             "ch_avail": [],
             "z": [],
@@ -1395,26 +1427,38 @@ class D3DPhysicsMethods:
                 ichan = fan_chans[i]
                 if a_struct.channels[ichan].ier == 0:
                     output["ch_avail"].append(ichan)
-                output['x'][:,i] = a_struct.channels[ichan].Z + np.tan(a_struct.channels[ichan].angle * np.pi / 180.0)*(r_major_axis - a_struct.channels[ichan].R)
-                b_struct.chan[ichan].chanpwr[np.where(b_struct.chan[ichan].chanpwr < 0)] = 0
-                b_struct.chan[ichan].brightness[np.where(b_struct.chan[ichan].brightness < 0)] = 0
+                output["x"][:, i] = a_struct.channels[ichan].Z + np.tan(
+                    a_struct.channels[ichan].angle * np.pi / 180.0
+                ) * (r_major_axis - a_struct.channels[ichan].R)
+                b_struct.chan[ichan].chanpwr[
+                    np.where(b_struct.chan[ichan].chanpwr < 0)
+                ] = 0
+                b_struct.chan[ichan].brightness[
+                    np.where(b_struct.chan[ichan].brightness < 0)
+                ] = 0
                 output["z"].append(b_struct.chan[ichan].chanpwr)
                 output["brightness"].append(b_struct.chan[ichan].brightness)
             output["power"] = output["z"]
         else:
             # All custom channels are in the lower array
-            lower_fan_chans = np.arange(24, 48) 
+            lower_fan_chans = np.arange(24, 48)
             j = 0
             for i in range(len(lower_fan_chans)):
                 # Why include these extra channels in output['power']?
-                output["power"].append(b_struct.chan[lower_fan_chans[i]].chanpwr)   
+                output["power"].append(b_struct.chan[lower_fan_chans[i]].chanpwr)
                 if lower_fan_chans[i] in fan_chans:
                     ichan = fan_chans[j]
                     if a_struct.channels[ichan].ier == 0:
                         output["ch_avail"].append(ichan)
-                    output['x'][:,j] = a_struct.channels[ichan].Z + np.tan(a_struct.channels[ichan].angle * np.pi / 180.0)*(r_major_axis - a_struct.channels[ichan].R)
-                    b_struct.chan[ichan].chanpwr[np.where(b_struct.chan[ichan].chanpwr < 0)] = 0
-                    b_struct.chan[ichan].brightness[np.where(b_struct.chan[ichan].brightness < 0)] = 0
+                    output["x"][:, j] = a_struct.channels[ichan].Z + np.tan(
+                        a_struct.channels[ichan].angle * np.pi / 180.0
+                    ) * (r_major_axis - a_struct.channels[ichan].R)
+                    b_struct.chan[ichan].chanpwr[
+                        np.where(b_struct.chan[ichan].chanpwr < 0)
+                    ] = 0
+                    b_struct.chan[ichan].brightness[
+                        np.where(b_struct.chan[ichan].brightness < 0)
+                    ] = 0
                     output["z"].append(b_struct.chan[ichan].chanpwr)
                     output["brightness"].append(b_struct.chan[ichan].brightness)
                     j += 1
@@ -1426,7 +1470,7 @@ class D3DPhysicsMethods:
     def _get_efit_dict(params: PhysicsMethodParams):
         efit_dict = dict()
         path = r"\top.results.geqdsk:"
-        nodes = ["z", "r", "rhovn", "psirz", "zmaxis", "ssimag", "ssibry"]  
+        nodes = ["z", "r", "rhovn", "psirz", "zmaxis", "ssimag", "ssibry"]
         (efit_dict_time,) = params.mds_conn.get_dims(
             f"{path}psirz", tree_name="_efit_tree", dim_nums=[2]
         )
@@ -1442,7 +1486,7 @@ class D3DPhysicsMethods:
                     f"[Shot {params.shot_id}]: Failed to get {node} from efit, Setting to all NaNs."
                 )
                 params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-        
+
         # Normalize the poloidal flux grid (0=magnetic axis, 1=boundary)
         # [Translated from D. Eldon's OMFITeqdsk read_basic_eq_from_mds() function]
         psi_norm_f = efit_dict["ssibry"] - efit_dict["ssimag"]
