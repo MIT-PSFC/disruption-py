@@ -165,16 +165,6 @@ class D3DPhysicsMethods:
         upper_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
         bol_channels = lower_channels + upper_channels
         bol_signals = []
-        bol_times = []
-        # for i in range(48):
-        #     bol_signal, bol_time = params.mds_conn.get_data_with_dims(
-        #         rf"\top.raw:{bol_channels[i]}", tree_name="bolom"
-        #     )
-        #     bol_signals.append(bol_signal)
-        #     bol_times.append(bol_time)
-        # a_struct = matlab_get_bolo(
-        #     params.shot_id, bol_channels, bol_prm, bol_signals, bol_times
-        # )
         for i in range(48):
             bol_signal = params.mds_conn.get_data(
                 rf"\top.raw:{bol_channels[i]}", tree_name="bolom"
