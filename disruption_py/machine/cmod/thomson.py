@@ -11,7 +11,7 @@ from disruption_py.machine.cmod import CmodEfitMethods
 
 
 # helper class holding functions for thomson density measures
-class ThomsonDensityMeasure:
+class CmodThomsonDensityMeasure:
 
     # The following methods are translated from IDL code.
     @staticmethod
@@ -33,10 +33,10 @@ class ThomsonDensityMeasure:
         tci, tci_t = params.mds_conn.get_data_with_dims(
             f".TCI.RESULTS:NL_{nlnum:02d}", tree_name="electrons"
         )
-        nlts, nlts_t = ThomsonDensityMeasure.integrate_ts_tci(params, nlnum)
+        nlts, nlts_t = CmodThomsonDensityMeasure.integrate_ts_tci(params, nlnum)
         t0 = np.amin(nlts_t)
         t1 = np.amax(nlts_t)
-        nyag1, nyag2, indices1, indices2 = ThomsonDensityMeasure.parse_yags(params)
+        nyag1, nyag2, indices1, indices2 = CmodThomsonDensityMeasure.parse_yags(params)
         time1, time2 = -1, -1
         if nyag1 > 0:
             ts_time1 = tci_time[indices1]
@@ -107,7 +107,7 @@ class ThomsonDensityMeasure:
         edge_mult = 1.0
         nlts = 1e32
         nlts_t = 1e32
-        t, z, n_e, n_e_sig = ThomsonDensityMeasure.map_ts2tci(params, nlnum)
+        t, z, n_e, n_e_sig = CmodThomsonDensityMeasure.map_ts2tci(params, nlnum)
         if z[0, 0] == 1e32:
             return None, None  # TODO: Log and maybe return nan arrs
         nts = len(t)
@@ -189,11 +189,11 @@ class ThomsonDensityMeasure:
         nets_core_t = nets_core_t[valid_indices]
         nets = nets[valid_indices]
         nets_err = nets_err[valid_indices]
-        psits = ThomsonDensityMeasure.efit_rz2psi(params, rts, zts, nets_core_t)
+        psits = CmodThomsonDensityMeasure.efit_rz2psi(params, rts, zts, nets_core_t)
         mtci = 101
         ztci = -0.4 + 0.8 * np.arange(0, mtci) / (mtci - 1)
         rtci = rtci[nlnum] + np.zeros((1, mtci))
-        psitci = ThomsonDensityMeasure.efit_rz2psi(params, rtci, ztci, nets_core_t)
+        psitci = CmodThomsonDensityMeasure.efit_rz2psi(params, rtci, ztci, nets_core_t)
         psia = interp1(psia_t, psia, nets_core_t)
         psi_0 = interp1(psia_t, psi_0, nets_core_t)
         nts = len(nets_core_t)

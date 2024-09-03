@@ -14,7 +14,7 @@ from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import gaussian_fit, interp1, smooth
 from disruption_py.machine.tokamak import Tokamak
-from disruption_py.machine.cmod.thomson import ThomsonDensityMeasure
+from disruption_py.machine.cmod.thomson import CmodThomsonDensityMeasure
 
 warnings.filterwarnings("error", category=RuntimeWarning)
 
@@ -1036,7 +1036,7 @@ class CmodPhysicsMethods:
             # This shouldn't affect ne_PF (except if calib is not between 0.5 & 1.5)
             # because we're just multiplying ne by a constant
             (nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _) = (
-                ThomsonDensityMeasure.compare_ts_tci(params)
+                CmodThomsonDensityMeasure.compare_ts_tci(params)
             )
             if np.mean(nl_ts1) != 1e32 and np.mean(nl_ts2) != 1e32:
                 nl_tci = np.concatenate((nl_tci1, nl_tci2))
