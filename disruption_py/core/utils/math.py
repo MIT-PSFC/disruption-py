@@ -241,9 +241,7 @@ def gauss(x, *params):
 
 def gaussian_fit_with_fixed_mean(mu, *args):
     """Same as gaussian_fit() but with mu as a fixed parameter"""
-    # with full_output=False (default), always returns a 2-tuple
-    # pylint: disable-next=unbalanced-tuple-unpacking
-    coeffs, _ = curve_fit(lambda x, a, sigma: gauss(x, a, mu, sigma), *args)
+    coeffs, *_ = curve_fit(lambda x, a, sigma: gauss(x, a, mu, sigma), *args)
     return coeffs
 
 
