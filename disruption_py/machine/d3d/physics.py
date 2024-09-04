@@ -1115,30 +1115,22 @@ class D3DPhysicsMethods:
                     and ~np.isnan(ts["te"][:, i]).all()
                     and np.nanmean(ts["te"][:, i]) != 0
                 ):
-                    te_pf[i] = np.nanmean(te_core[:, i]) / np.nanmean(
-                        ts["te"][:, i]
-                    )
+                    te_pf[i] = np.nanmean(te_core[:, i]) / np.nanmean(ts["te"][:, i])
                 if (
                     ~np.isnan(ne_core[:, i]).all()
                     and ~np.isnan(ts["ne"][:, i]).all()
                     and np.nanmean(ts["ne"][:, i]) != 0
                 ):
-                    ne_pf[i] = np.nanmean(ne_core[:, i]) / np.nanmean(
-                        ts["ne"][:, i]
-                    )
+                    ne_pf[i] = np.nanmean(ne_core[:, i]) / np.nanmean(ts["ne"][:, i])
             te_pf = interp1(ts["time"], te_pf, params.times)
             ne_pf = interp1(ts["time"], ne_pf, params.times)
 
             # Calculate Prad CVA, X-DIV Peaking Factors
             # Interpolate zmaxis and channel intersects x onto the bolometer timebase
             z_m_axis = interp1(efit_dict["time"], efit_dict["zmaxis"], p_rad["t"])
-            z_m_axis = np.repeat(
-                z_m_axis[:, np.newaxis], p_rad["x"].shape[1], axis=1
-            )
+            z_m_axis = np.repeat(z_m_axis[:, np.newaxis], p_rad["x"].shape[1], axis=1)
             # NOTE: MATLAB uses extrapolation in p_rad["xinterp"] computation.
-            p_rad["xinterp"] = interp1(
-                p_rad["xtime"], p_rad["x"], p_rad["t"], axis=0
-            )
+            p_rad["xinterp"] = interp1(p_rad["xtime"], p_rad["x"], p_rad["t"], axis=0)
             # Determine the bolometer channels falling in the 'core' bin
             core_indices = (
                 p_rad["xinterp"] < z_m_axis + p_rad_core_def * vert_range
