@@ -755,24 +755,23 @@ class D3DPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["zcur", "zcur_normalized", "z_prog", "z_error", "z_error_normalized"],
+        columns=["zcur", "zcur_normalized"],
         tokamak=Tokamak.D3D,
     )
     def get_z_parameters(params: PhysicsMethodParams):
         """
-        On DIII-D the plasma control system uses isoflux
-        control to control the plasma shape and position.  It does
-        NOT use zcur control.  Therefore, the PCS does not have a
-        programmed vertical position.  This routine will now
-        always return an arrays of NaN for z_prog, z_error, and
-        z_error_norm.
+        Get the vertical position of the plasma current centroid, then
+        compute the normalized values with respect to the plasma minor radius.
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_Z_error_d3d.m
+        https://github.com/MIT-PSFC/disruption-py/pull/255
+
+        Last major update by William Wei on 9/4/2024
         """
         NOMINAL_FLATTOP_RADIUS = 0.59
-        z_cur = [np.nan]
-        z_cur_norm = [np.nan]
-        z_prog = [np.nan]
-        z_error = [np.nan]
-        z_error_norm = [np.nan]
+        # Get z_cur
         try:
             z_cur, t_z_cur = params.mds_conn.get_data_with_dims(
                 f"ptdata('vpszp', {params.shot_id})", tree_name="d3d"
@@ -780,33 +779,28 @@ class D3DPhysicsMethods:
             t_z_cur = t_z_cur / 1.0e3  # [ms] -> [s]
             z_cur = z_cur / 1.0e2  # [cm] -> [m]
             z_cur = interp1(t_z_cur, z_cur, params.times, "linear")
-            try:
-                a_minor, t_a = params.mds_conn.get_data_with_dims(
-                    r"\efit_a_eqdsk:aminor", tree_name="d3d"
-                )  # [m], [ms]
-                t_a = t_a / 1.0e3  # [ms] -> [s]
-                chisq = params.mds_conn.get_data(r"\efit_a_eqdsk:chisq")
-                invalid_indices = np.where(chisq > 50)
-                a_minor[invalid_indices] = np.nan
-                a_minor = interp1(t_a, a_minor, params.times, "linear")
-                z_cur_norm = z_cur / a_minor
-            except mdsExceptions.MdsException as e:
-                params.logger.info(
-                    f"[Shot {params.shot_id}]:Failed to get efit parameters"
-                )
-                params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-                z_cur_norm = z_cur / NOMINAL_FLATTOP_RADIUS
         except mdsExceptions.MdsException as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get vpszp signal")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-        output = {
-            "zcur": z_cur,
-            "zcur_normalized": z_cur_norm,
-            "z_prog": z_prog,
-            "z_error": z_error,
-            "z_error_normalized": z_error_norm,
-        }
-        return output
+            return {"zcur": [np.nan], "zcur_norm": [np.nan]}
+        # Compute z_cur_norm
+        try:
+            a_minor, t_a = params.mds_conn.get_data_with_dims(
+                r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
+            )  # [m], [ms]
+            t_a = t_a / 1.0e3  # [ms] -> [s]
+            chisq = params.mds_conn.get_data(
+                r"\efit_a_eqdsk:chisq", tree_name="_efit_tree"
+            )
+            (invalid_indices,) = np.where(chisq > 50)
+            a_minor[invalid_indices] = np.nan
+            a_minor = interp1(t_a, a_minor, params.times, "linear")
+            z_cur_norm = z_cur / a_minor
+        except mdsExceptions.MdsException as e:
+            params.logger.info(f"[Shot {params.shot_id}]:Failed to get efit parameters")
+            params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+            z_cur_norm = z_cur / NOMINAL_FLATTOP_RADIUS
+        return {"zcur": z_cur, "zcur_normalized": z_cur_norm}
 
     @staticmethod
     @physics_method(
