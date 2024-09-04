@@ -1064,130 +1064,124 @@ class D3DPhysicsMethods:
         # if ts_equispaced:
         if ts != 0 and ts_radius in ts:
             # Calculate te_pf & ne_pf
-            try:
-                # Drop data outside of valid range
-                invalid_indices = np.where(
-                    (ts[ts_radius] < ts_radial_range[0])
-                    | (ts[ts_radius] > ts_radial_range[1])
-                )
-                ts["te"][invalid_indices] = np.nan
-                ts["ne"][invalid_indices] = np.nan
-                ts["te"][np.isnan(ts[ts_radius])] = np.nan
-                ts["ne"][np.isnan(ts[ts_radius])] = np.nan
+            # Drop data outside of valid range
+            invalid_indices = np.where(
+                (ts[ts_radius] < ts_radial_range[0])
+                | (ts[ts_radius] > ts_radial_range[1])
+            )
+            ts["te"][invalid_indices] = np.nan
+            ts["ne"][invalid_indices] = np.nan
+            ts["te"][np.isnan(ts[ts_radius])] = np.nan
+            ts["ne"][np.isnan(ts[ts_radius])] = np.nan
 
-                # Interpolate onto uniform radial base if needed
-                if ts_equispaced:
-                    for i in range(len(ts["time"])):
-                        (no_nans,) = np.where(
-                            ~np.isnan(ts["te"][:, i]) & ~np.isnan(ts["ne"][:, i])
-                        )
-                        if len(no_nans) > 1:
-                            radii = ts[ts_radius][no_nans, i]
-                            if len(radii) > 2:
-                                rad_coord_interp = np.linspace(
-                                    min(radii), max(radii), len(radii)
-                                )
-                                # MATLAB used interp1(kind='pchip') which isn't available in disruption-py
-                                ts["te"][no_nans, i] = interp1(
-                                    radii,
-                                    ts["te"][no_nans, i],
-                                    rad_coord_interp,
-                                    "linear",
-                                )
-                                ts["ne"][no_nans, i] = interp1(
-                                    radii,
-                                    ts["ne"][no_nans, i],
-                                    rad_coord_interp,
-                                    "linear",
-                                )
-                                ts[ts_radius][no_nans, i] = rad_coord_interp
+            # Interpolate onto uniform radial base if needed
+            if ts_equispaced:
+                for i in range(len(ts["time"])):
+                    (no_nans,) = np.where(
+                        ~np.isnan(ts["te"][:, i]) & ~np.isnan(ts["ne"][:, i])
+                    )
+                    if len(no_nans) > 1:
+                        radii = ts[ts_radius][no_nans, i]
+                        if len(radii) > 2:
+                            rad_coord_interp = np.linspace(
+                                min(radii), max(radii), len(radii)
+                            )
+                            # MATLAB used interp1(kind='pchip') which isn't available in disruption-py
+                            ts["te"][no_nans, i] = interp1(
+                                radii,
+                                ts["te"][no_nans, i],
+                                rad_coord_interp,
+                                "linear",
+                            )
+                            ts["ne"][no_nans, i] = interp1(
+                                radii,
+                                ts["ne"][no_nans, i],
+                                rad_coord_interp,
+                                "linear",
+                            )
+                            ts[ts_radius][no_nans, i] = rad_coord_interp
 
-                # Find core bin for Thomson and calculate Te, ne peaking factors
-                core_mask = ts[ts_radius] < ts_core_margin
-                te_core = ts["te"].copy()
-                te_core[~core_mask] = np.nan
-                ne_core = ts["ne"].copy()
-                ne_core[~core_mask] = np.nan
-                te_pf = np.full(len(ts["time"]), np.nan)
-                ne_pf = np.full(len(ts["time"]), np.nan)
-                for i in range(len(te_pf)):
-                    if (
-                        ~np.isnan(te_core[:, i]).all()
-                        and ~np.isnan(ts["te"][:, i]).all()
-                        and np.nanmean(ts["te"][:, i]) != 0
-                    ):
-                        te_pf[i] = np.nanmean(te_core[:, i]) / np.nanmean(
-                            ts["te"][:, i]
-                        )
-                    if (
-                        ~np.isnan(ne_core[:, i]).all()
-                        and ~np.isnan(ts["ne"][:, i]).all()
-                        and np.nanmean(ts["ne"][:, i]) != 0
-                    ):
-                        ne_pf[i] = np.nanmean(ne_core[:, i]) / np.nanmean(
-                            ts["ne"][:, i]
-                        )
-                te_pf = interp1(ts["time"], te_pf, params.times)
-                ne_pf = interp1(ts["time"], ne_pf, params.times)
-            except:
-                pass
+            # Find core bin for Thomson and calculate Te, ne peaking factors
+            core_mask = ts[ts_radius] < ts_core_margin
+            te_core = ts["te"].copy()
+            te_core[~core_mask] = np.nan
+            ne_core = ts["ne"].copy()
+            ne_core[~core_mask] = np.nan
+            te_pf = np.full(len(ts["time"]), np.nan)
+            ne_pf = np.full(len(ts["time"]), np.nan)
+            for i in range(len(te_pf)):
+                if (
+                    ~np.isnan(te_core[:, i]).all()
+                    and ~np.isnan(ts["te"][:, i]).all()
+                    and np.nanmean(ts["te"][:, i]) != 0
+                ):
+                    te_pf[i] = np.nanmean(te_core[:, i]) / np.nanmean(
+                        ts["te"][:, i]
+                    )
+                if (
+                    ~np.isnan(ne_core[:, i]).all()
+                    and ~np.isnan(ts["ne"][:, i]).all()
+                    and np.nanmean(ts["ne"][:, i]) != 0
+                ):
+                    ne_pf[i] = np.nanmean(ne_core[:, i]) / np.nanmean(
+                        ts["ne"][:, i]
+                    )
+            te_pf = interp1(ts["time"], te_pf, params.times)
+            ne_pf = interp1(ts["time"], ne_pf, params.times)
 
             # Calculate Prad CVA, X-DIV Peaking Factors
-            try:
-                # Interpolate zmaxis and channel intersects x onto the bolometer timebase
-                z_m_axis = interp1(efit_dict["time"], efit_dict["zmaxis"], p_rad["t"])
-                z_m_axis = np.repeat(
-                    z_m_axis[:, np.newaxis], p_rad["x"].shape[1], axis=1
-                )
-                # NOTE: MATLAB uses extrapolation in p_rad["xinterp"] computation.
-                p_rad["xinterp"] = interp1(
-                    p_rad["xtime"], p_rad["x"], p_rad["t"], axis=0
-                )
-                # Determine the bolometer channels falling in the 'core' bin
-                core_indices = (
-                    p_rad["xinterp"] < z_m_axis + p_rad_core_def * vert_range
-                ) & (p_rad["xinterp"] > z_m_axis - p_rad_core_def * vert_range)
-                # Designate the divertor bin and find all 'other' channels not in that bin
-                div_indices = np.full(len(p_rad["ch_avail"]), False)
-                for div_channel in div_channels:
-                    div_indices[p_rad["ch_avail"].index(div_channel)] = True
+            # Interpolate zmaxis and channel intersects x onto the bolometer timebase
+            z_m_axis = interp1(efit_dict["time"], efit_dict["zmaxis"], p_rad["t"])
+            z_m_axis = np.repeat(
+                z_m_axis[:, np.newaxis], p_rad["x"].shape[1], axis=1
+            )
+            # NOTE: MATLAB uses extrapolation in p_rad["xinterp"] computation.
+            p_rad["xinterp"] = interp1(
+                p_rad["xtime"], p_rad["x"], p_rad["t"], axis=0
+            )
+            # Determine the bolometer channels falling in the 'core' bin
+            core_indices = (
+                p_rad["xinterp"] < z_m_axis + p_rad_core_def * vert_range
+            ) & (p_rad["xinterp"] > z_m_axis - p_rad_core_def * vert_range)
+            # Designate the divertor bin and find all 'other' channels not in that bin
+            div_indices = np.full(len(p_rad["ch_avail"]), False)
+            for div_channel in div_channels:
+                div_indices[p_rad["ch_avail"].index(div_channel)] = True
 
-                # Grab p_rad measurements for each needed set of channels
-                p_rad_core = np.array(p_rad[p_rad_metric]).T
-                p_rad_all_but_core = p_rad_core.copy()
-                p_rad_div = p_rad_core.copy()
-                p_rad_all_but_div = p_rad_core.copy()
-                p_rad_core[~core_indices] = np.nan
-                p_rad_all_but_core[core_indices] = np.nan
-                p_rad_div[:, ~div_indices] = np.nan
-                p_rad_all_but_div[:, div_indices] = np.nan
+            # Grab p_rad measurements for each needed set of channels
+            p_rad_core = np.array(p_rad[p_rad_metric]).T
+            p_rad_all_but_core = p_rad_core.copy()
+            p_rad_div = p_rad_core.copy()
+            p_rad_all_but_div = p_rad_core.copy()
+            p_rad_core[~core_indices] = np.nan
+            p_rad_all_but_core[core_indices] = np.nan
+            p_rad_div[:, ~div_indices] = np.nan
+            p_rad_all_but_div[:, div_indices] = np.nan
 
-                # Calculate the peaking factors
-                rad_cva = np.full(len(p_rad["t"]), np.nan)
-                rad_xdiv = np.full(len(p_rad["t"]), np.nan)
-                for i in range(len(rad_cva)):
-                    if (
-                        ~np.isnan(p_rad_core[i, :]).all()
-                        and ~np.isnan(p_rad_all_but_div[i, :]).all()
-                        and np.nanmean(p_rad_all_but_div[i, :]) != 0
-                    ):
-                        # NOTE: How is this core vs all?
-                        rad_cva[i] = np.nanmean(p_rad_core[i, :]) / np.nanmean(
-                            p_rad_all_but_div[i, :]
-                        )
-                    if (
-                        ~np.isnan(p_rad_div[i, :]).all()
-                        and ~np.isnan(p_rad_all_but_core[i, :]).all()
-                        and np.nanmean(p_rad_all_but_core[i, :]) != 0
-                    ):
-                        # NOTE: How is this div vs all?
-                        rad_xdiv[i] = np.nanmean(p_rad_div[i, :]) / np.nanmean(
-                            p_rad_all_but_core[i, :]
-                        )
-                rad_cva = interp1(p_rad["t"], rad_cva, params.times)
-                rad_xdiv = interp1(p_rad["t"], rad_xdiv, params.times)
-            except:
-                pass
+            # Calculate the peaking factors
+            rad_cva = np.full(len(p_rad["t"]), np.nan)
+            rad_xdiv = np.full(len(p_rad["t"]), np.nan)
+            for i in range(len(rad_cva)):
+                if (
+                    ~np.isnan(p_rad_core[i, :]).all()
+                    and ~np.isnan(p_rad_all_but_div[i, :]).all()
+                    and np.nanmean(p_rad_all_but_div[i, :]) != 0
+                ):
+                    # NOTE: How is this core vs all?
+                    rad_cva[i] = np.nanmean(p_rad_core[i, :]) / np.nanmean(
+                        p_rad_all_but_div[i, :]
+                    )
+                if (
+                    ~np.isnan(p_rad_div[i, :]).all()
+                    and ~np.isnan(p_rad_all_but_core[i, :]).all()
+                    and np.nanmean(p_rad_all_but_core[i, :]) != 0
+                ):
+                    # NOTE: How is this div vs all?
+                    rad_xdiv[i] = np.nanmean(p_rad_div[i, :]) / np.nanmean(
+                        p_rad_all_but_core[i, :]
+                    )
+            rad_cva = interp1(p_rad["t"], rad_cva, params.times)
+            rad_xdiv = interp1(p_rad["t"], rad_xdiv, params.times)
 
         output = {
             "te_peaking_cva_rt": te_pf,

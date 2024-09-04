@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d, interp2d
 from scipy.optimize import curve_fit
-from scipy.signal import medfilt, lfilter
+from scipy.signal import lfilter, medfilt
 
 pd.options.mode.chained_assignment = None
 
