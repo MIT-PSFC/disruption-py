@@ -7,8 +7,10 @@ Last Major Update: Henry Wietfeldt (8/28/24)
 """
 
 import logging
+
 import matplotlib.pyplot as plt
 import MDSplus as mds
+
 from disruption_py.settings import LogSettings, RetrievalSettings
 from disruption_py.workflow import get_shots_data
 
