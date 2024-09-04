@@ -608,25 +608,13 @@ class D3DPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["zcur", "zcur_normalized", "z_prog", "z_error", "z_error_normalized"],
+        columns=["zcur", "zcur_normalized"],
         tokamak=Tokamak.D3D,
     )
     def get_z_parameters(params: PhysicsMethodParams):
         """
         Get the vertical position of the plasma current centroid, then
         compute the normalized values with respect to the plasma minor radius.
-
-        z_prog, z_error, and z_error_normalized will always be returned as
-        arrays of NaN (see note below) .
-
-        From get_Z_error_d3d.m:
-        "The original script was adapted from get_Z_parameters.m on C-Mod.
-        However, on DIII-D the plasma control system uses isoflux
-        control to control the plasma shape and position.  It does
-        NOT use zcur control.  Therefore, the PCS does not have a
-        programmed vertical position.  This routine will now
-        always return an arrays of NaN for z_prog, z_error, and
-        z_error_norm."
 
         References
         -------
@@ -636,13 +624,6 @@ class D3DPhysicsMethods:
         Last major update by William Wei on 8/5/2024
         """
         NOMINAL_FLATTOP_RADIUS = 0.59
-        nan_output = {
-            "zcur": [np.nan],
-            "zcur_norm": [np.nan],
-            "z_prog": [np.nan],
-            "z_error": [np.nan],
-            "z_error_normalized": [np.nan],
-        }
         # Get z_cur
         try:
             z_cur, t_z_cur = params.mds_conn.get_data_with_dims(
@@ -654,7 +635,7 @@ class D3DPhysicsMethods:
         except mdsExceptions.MdsException as e:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get vpszp signal")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
-            return nan_output
+            return {"zcur": [np.nan], "zcur_norm": [np.nan]}
         # Compute z_cur_norm
         try:
             a_minor, t_a = params.mds_conn.get_data_with_dims(
@@ -672,14 +653,7 @@ class D3DPhysicsMethods:
             params.logger.info(f"[Shot {params.shot_id}]:Failed to get efit parameters")
             params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
             z_cur_norm = z_cur / NOMINAL_FLATTOP_RADIUS
-        output = {
-            "zcur": z_cur,
-            "zcur_normalized": z_cur_norm,
-            "z_prog": [np.nan],
-            "z_error": [np.nan],
-            "z_error_normalized": [np.nan],
-        }
-        return output
+        return {"zcur": z_cur, "zcur_normalized": z_cur_norm}
 
     @staticmethod
     @physics_method(

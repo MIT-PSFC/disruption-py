@@ -209,7 +209,6 @@ TEST_COLUMNS = [
 	"ip_error",
 	"beta_p",
 	"time_until_disrupt",
-	"z_error",
 	"li_rt",
 	"beta_p_rt",
 	"n1rms_normalized",
