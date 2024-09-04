@@ -985,9 +985,8 @@ class D3DPhysicsMethods:
         # fan to use for P_rad peaking factors (either 'lower', 'upper', or 'custom')
         bolometer_fan = "custom"
         # array of bolometer fan channel numbers covering divertor
-        # (upper fan: 1->24, lower fan: 25:48)
-        div_channels = np.arange(3, 8) + 24
-        div_channels -= 1  # python indicing
+        # (upper fan: 0->23, lower fan: 24:47)
+        div_channels = np.arange(3, 8) + 23
         # time window for filtering raw bolometer signal in [ms]
         smoothing_window = 40
         p_rad_core_def = (
