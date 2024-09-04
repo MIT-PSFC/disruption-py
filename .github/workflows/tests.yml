@@ -112,13 +112,14 @@ jobs:
           echo DISPY_TOKAMAK=d3d \
           | tee -a "$GITHUB_ENV"
 
+      - name: Install poetry
+        run: pipx install poetry
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+          cache: 'poetry'
 
       - name: Install requirements
         run: poetry install --with dev
