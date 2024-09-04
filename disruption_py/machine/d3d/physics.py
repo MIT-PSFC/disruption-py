@@ -986,7 +986,7 @@ class D3DPhysicsMethods:
         bolometer_fan = "custom"
         # array of bolometer fan channel numbers covering divertor
         # (upper fan: 0->23, lower fan: 24:47)
-        div_channels = np.arange(3, 8) + 23
+        div_channels = np.arange(26, 31)
         # time window for filtering raw bolometer signal in [ms]
         smoothing_window = 40
         p_rad_core_def = (
@@ -995,7 +995,7 @@ class D3DPhysicsMethods:
         # 'brightness'; % either 'brightness' or 'power' ('z')
         p_rad_metric = "brightness"
 
-        ## Additional parameters (not in MATLAB scri1pt)
+        ## Additional parameters (not in MATLAB script)
         # Ts options
         ts_options = ["combined", "core", "tangential"]
         # vertical range of the DIII-D cross section in meters (for p_rad)
@@ -1028,7 +1028,6 @@ class D3DPhysicsMethods:
         # Get raw Thomson data
         try:
             ts = D3DPhysicsMethods._get_ne_te(params)
-            # TODO: needs better way to do this
             for option in ts_options:
                 if option in ts:
                     ts = ts[option]
@@ -1267,9 +1266,10 @@ class D3DPhysicsMethods:
             efit_dict["time"], efit_dict["rhovn"], ts["time"], axis=0
         )
         rho_vn_diag = np.empty(psin.shape[:2])
+        # Ger the implied psin grid for rhovn
         psin_interp = np.linspace(
             0, 1, efit_dict["rhovn"].shape[1]
-        )  # Implied psin grid for rhovn
+        )  
         # Interpolate again to get rhovn on same psin base
         for i in range(psin.shape[0]):
             rho_vn_diag[i] = interp1(psin_interp, rho_vn_diag_almost[i, :], psin[i, :])
@@ -1515,8 +1515,7 @@ class D3DPhysicsMethods:
             # Place NaNs for broken channels
             lasers[laser]["te"][lasers[laser]["te"] == 0] = np.nan
             lasers[laser]["ne"][lasers[laser]["ne"] == 0] = np.nan
-            # Change time unit from [ms] to [s]
-            lasers[laser]["time"] /= 1e3
+            lasers[laser]["time"] /= 1e3    # [ms] -> [s]
 
         # If both systems/lasers available, combine them and interpolate the data
         # from the tangential system onto the finer (core) timebase
