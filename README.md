@@ -27,7 +27,6 @@ docs/ # documentation
 examples/ # example workflows
 scripts/ # miscellaneous scripts
 tests/ # automated testing
-.pip/ # pip-style requirements by group
 ```
 
 The original Matlab scripts are now stored in the `matlab` [protected branch](https://github.com/MIT-PSFC/disruption-py/tree/matlab).
