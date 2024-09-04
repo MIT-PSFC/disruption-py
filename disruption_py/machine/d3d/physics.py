@@ -1267,9 +1267,7 @@ class D3DPhysicsMethods:
         )
         rho_vn_diag = np.empty(psin.shape[:2])
         # Ger the implied psin grid for rhovn
-        psin_interp = np.linspace(
-            0, 1, efit_dict["rhovn"].shape[1]
-        )  
+        psin_interp = np.linspace(0, 1, efit_dict["rhovn"].shape[1])
         # Interpolate again to get rhovn on same psin base
         for i in range(psin.shape[0]):
             rho_vn_diag[i] = interp1(psin_interp, rho_vn_diag_almost[i, :], psin[i, :])
@@ -1515,7 +1513,7 @@ class D3DPhysicsMethods:
             # Place NaNs for broken channels
             lasers[laser]["te"][lasers[laser]["te"] == 0] = np.nan
             lasers[laser]["ne"][lasers[laser]["ne"] == 0] = np.nan
-            lasers[laser]["time"] /= 1e3    # [ms] -> [s]
+            lasers[laser]["time"] /= 1e3  # [ms] -> [s]
 
         # If both systems/lasers available, combine them and interpolate the data
         # from the tangential system onto the finer (core) timebase
