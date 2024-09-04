@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d, interp2d
 from scipy.optimize import curve_fit
-from scipy.signal import medfilt
+from scipy.signal import lfilter, medfilt
 
 pd.options.mode.chained_assignment = None
 
@@ -999,13 +999,7 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
 
     bolo_shot.ntimes = int(len(time) / 4)
     bolo_shot.time = np.linspace(np.min(time), np.max(time), bolo_shot.ntimes)
-    t_del = bolo_shot.time[1] - bolo_shot.time[0]
     bolo_shot.raw_time = time
-    m = 2 * np.fix(np.fix(1000 * drtau) / np.fix(1000 * t_del) / 2) + 1
-    k = np.arange(0, m) - np.fix((m - 1) / 2)
-    (nzer,) = np.where(k != 0)
-    k[nzer] = 1.0 / k[nzer]
-    k = k / t_del / (np.fix(m / 2) * 2)
 
     for i in range(48):
         bolo_shot.channels[i].label = bol_channels[i]
@@ -1023,12 +1017,10 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
         # Subtract baseline offset
         temp = data - np.mean(data[:20])
         # Filter signal using causal moving average filter (i.e. boxcar)
-        temp_filtered = np.convolve(temp, smoothing_kernel, "same")
-        # temp_filtered = lfilter(smoothing_kernel, 1, temp)
-
-        # dr_dt = np.gradient(temp_filtered, dt)  # BUG: This fails in testing because np.gradient is replaced with matlab_gradient_1d_vectorized
+        # NOTE: lfilter gives closer results to MATLAB than np.convolve
+        # temp_filtered = np.convolve(temp, smoothing_kernel, "same")
+        temp_filtered = lfilter(smoothing_kernel, 1, temp)
         dr_dt = np.gradient(temp_filtered, time)
-
         # Calculate power on each detector, P_d(t) [as given in Leonard et al, Rev. Sci. Instr. (1995)]
         # BUG: MATLAB's medfilt1 function does not require window_size to be odd. This could introduce discrepancy with this python implementation.
         bolo_shot.channels[i].pwr = medfilt(

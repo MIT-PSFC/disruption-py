@@ -221,6 +221,10 @@ TEST_COLUMNS = [
 	"p_ech",
 	"p_rad",
 	"radiated_fraction",
+	"te_peaking_cva_rt", 
+	"ne_peaking_cva_rt", 
+	"prad_peaking_cva_rt", 
+	"prad_peaking_xdiv_rt",
 ]
 EXPECTED_FAILURE_COLUMNS = [
 	"kappa",
@@ -256,6 +260,10 @@ EXPECTED_FAILURE_COLUMNS = [
 	"squareness",
 	"delta",
 	"aminor",
+	"te_peaking_cva_rt", 
+	"ne_peaking_cva_rt", 
+	"prad_peaking_cva_rt", 
+	"prad_peaking_xdiv_rt",
 ]
 
 [d3d.testing.test_shots]
