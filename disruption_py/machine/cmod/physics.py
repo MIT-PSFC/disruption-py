@@ -1049,12 +1049,12 @@ class CmodPhysicsMethods:
         across the arbitrary core or edge boundary.
 
         ECE as a Te profile diagnostic can suffer from several artifacts:
-        Artifacts currently NOT explicity checked for
+        Artifacts currently NOT explicitly checked for
         - Density cutoffs: High ne plasmas (typically H-modes) can have an ECE cutoff.
           According to Amanda Hubbard, "what you wil see is a section of profile which
           is much LOWER than Thomson Scattering, for some portion of the LFS profile
           (typically starting around r/a 0.8?). In this case ECE cannot be used." An
-          example shot with ECE cutoffs is 1140226024 (Callibration of Thomson density
+          example shot with ECE cutoffs is 1140226024 (Calibration of Thomson density
           using ECE cutoffs). Because the critical density is proportional to B^2,
           shots with B = 5.4 T on axis would need to have very high densities to
           experience a cutoff in the profile. We could look for cutoffs by comparing
@@ -1067,13 +1067,13 @@ class CmodPhysicsMethods:
           adjusted, sometimes not. Low Bt shots also tend to have low signal and often
           experience density cutoffs. Therefore, ECE should be avoided in automated
           calculations for low Bt shots.
-        - Nonthermal emission. The calculation of Te vs. r assumes that the second
+        - Non-thermal emission. The calculation of Te vs. r assumes that the second
           harmonic emission can be modeled as black-body emission, which assumes the
-          electrons are in thermal equilibrium. On C-Mod, nonthermal emission results
+          electrons are in thermal equilibrium. On C-Mod, non-thermal emission results
           in an apparent Te that goes UP towards the edge and in the SOL, which is
           actually downshifted non-thermal emission from deeper in the core.
-          Significant runaway populations and LHCD lead to nonthermal artifacts.
-          Occassionally low ne shots also had nonthermal artifacts.
+          Significant runaway populations and LHCD lead to non-thermal artifacts.
+          Occasionally low ne shots also had non-thermal artifacts.
         - Harmonic overlap: Certain channels can pick up emission from different
           harmonics from other regions of the plasma. Generally channels with R < 0.6 m
           suffer from overlap with 3rd harmonic emission from the core. This leads to
@@ -1129,6 +1129,7 @@ class CmodPhysicsMethods:
 
         Last Major Update: Henry Wietfeldt (08/28/24)
         """
+
         # Constants
         core_bound_factor = 0.2
         edge_bound_factor = 0.8
@@ -1143,6 +1144,7 @@ class CmodPhysicsMethods:
         efit_time = efit_time[
             efit_time >= max(np.max(gpc1_rad_time[:, 0]), gpc2_rad_time[0])
         ]
+
         # Interpolate GPC data onto efit timebase. Timebase for radial measurements is
         # slower than efit but radial positions are approx. stable so linear
         # interpolation is safe.
@@ -1154,6 +1156,7 @@ class CmodPhysicsMethods:
             gpc1_rad[i, :] = interp1(
                 gpc1_rad_time[i, :], gpc1_rad_data[i, :], efit_time
             )
+
         n_channels = gpc2_te_data.shape[0]
         gpc2_te = np.full((n_channels, len(efit_time)), np.nan)
         gpc2_rad = np.full((n_channels, len(efit_time)), np.nan)
@@ -1168,6 +1171,7 @@ class CmodPhysicsMethods:
         indx_last_rad = np.argmax(efit_time > gpc2_rad_time[-1]) - 1
         for i in range(len(radii)):
             radii[i, indx_last_rad + 1 :] = radii[i, indx_last_rad]
+
         # Remaining calculations loop over time then radii so transpose for efficient
         # caching
         te = te.T
@@ -1180,7 +1184,7 @@ class CmodPhysicsMethods:
         # Time slices with low Btor are unreliable because gratings are often not
         # aligned to field, signal is low, and there are frequent density cutoffs.
         # Time slices with LH heating are unreliable because direct electron heating
-        # leads to nonthermal emission
+        # leads to non-thermal emission
         btor = interp1(t_mag, btor, efit_time)
         lh_power = interp1(lh_time, lh_power, efit_time)
         lh_power = np.nan_to_num(lh_power, nan=0.0)
@@ -1197,6 +1201,7 @@ class CmodPhysicsMethods:
             calib_indices = (te[i, :] > min_te) & (radii[i, :] > 0)
             harmonic_overlap_indices = radii[i, :] < min_r_to_avoid_harmonic_overlap
             nonthermal_overlap_indices = np.full(len(radii[i, :]), False)
+
             # Identify rising tail (overlap with non-thermal emission). Finding the min
             # Te near the edge and checking outwards for a rising tail seems to do well
             calib_edge = calib_indices & (
@@ -1226,6 +1231,7 @@ class CmodPhysicsMethods:
                     if str(exc).startswith("Optimal parameters not found"):
                         continue
                     raise exc
+
                 # rescale from sigma to HWHM
                 # https://en.wikipedia.org/wiki/Full_width_at_half_maximum
                 te_hwhm[i] = np.abs(psigma) * np.sqrt(2 * np.log(2))
@@ -1249,6 +1255,7 @@ class CmodPhysicsMethods:
                     te_edge_vs_avg[i] = np.nanmean(
                         te_equal_spaced[edge_indices]
                     ) / np.nanmean(te_equal_spaced)
+
         te_core_vs_avg = interp1(efit_time, te_core_vs_avg, times)
         te_edge_vs_avg = interp1(efit_time, te_edge_vs_avg, times)
         te_hwhm = interp1(efit_time, te_hwhm, times)
@@ -1277,13 +1284,15 @@ class CmodPhysicsMethods:
 
         Last Major Update: Henry Wietfeldt (8/28/24)
         """
+
         # Constants
         n_gpc1_channels = 9
         nan_output = {
-            "te_core_vs_avg_ece": np.full(len(params.times), np.nan),
-            "te_edge_vs_avg_ece": np.full(len(params.times), np.nan),
-            "te_width_ece": np.full(len(params.times), np.nan),
+            "te_core_vs_avg_ece": [np.nan],
+            "te_edge_vs_avg_ece": [np.nan],
+            "te_width_ece": [np.nan],
         }
+
         # Get magnetic axis data from EFIT
         try:
             r0 = 0.01 * params.mds_conn.get_data(
@@ -1295,6 +1304,7 @@ class CmodPhysicsMethods:
         except mdsExceptions.MdsException:
             params.logger.debug(f"[Shot {params.shot_id}]: Failed to get efit data")
             return nan_output
+
         # Btor and LH Power used for filtering okay time slices
         try:
             btor, t_mag = params.mds_conn.get_data_with_dims(
@@ -1311,6 +1321,7 @@ class CmodPhysicsMethods:
             # When LH power is off, it's often not stored in tree.
             lh_time = np.copy(efit_time)
             lh_power = np.zeros(len(efit_time))
+
         # Read in Te profile measurements from 9 GPC1 ("GPC" in MDSplus tree) channels
         node_path = ".ece.gpc_results"
         gpc1_te_data = []
@@ -1335,6 +1346,7 @@ class CmodPhysicsMethods:
         gpc1_te_time = np.array(gpc1_te_time)
         gpc1_rad_data = np.array(gpc1_rad_data)
         gpc1_rad_time = np.array(gpc1_rad_time)
+
         # Read in Te profile measurements from GPC2 (19 channels)
         node_path = ".gpc_2.results"
         try:
@@ -1347,6 +1359,7 @@ class CmodPhysicsMethods:
         except mdsExceptions.MdsException:
             params.logger.debug(f"[Shot {params.shot_id}]: Failed to get GPC2 data")
             return nan_output
+
         return CmodPhysicsMethods.get_te_profile_params_ece(
             params.times,
             gpc1_te_data,
