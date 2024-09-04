@@ -117,10 +117,11 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+
       - name: Install requirements
-        run: |
-          pip install -r .pip/main.txt -r .pip/dev.txt
-          pip install -e .
+        run: poetry install --with dev
 
       - name: Check tunnel
         run: |
@@ -133,16 +134,16 @@ jobs:
           fi
 
       - name: Test SQL
-        run: python -O examples/sql.py
+        run: poetry run python -O examples/sql.py
 
       - name: Test MDSplus
-        run: python examples/mdsplus.py
+        run: poetry run python examples/mdsplus.py
 
       - name: Test EFIT
-        run: python examples/efit.py
+        run: poetry run python examples/efit.py
 
       - name: Run all tests
-        run: pytest -v --durations=0 tests
+        run: poetry run pytest -v --durations=0 tests
 
       - name: Close tunnel
         run: xargs -a ssh.pid kill -TERM
