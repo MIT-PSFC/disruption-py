@@ -50,20 +50,10 @@ jobs:
           poetry --version
 
       - name: Check lock files
-        run: |
-          poetry lock --no-update
-          bash .pip/lock.sh
-          git diff --exit-code || true
-          poetry check
+        run: poetry check --lock
 
       - name: Poetry install
         run: poetry install
-
-      - name: List packages
-        run: |
-          poetry run pip list \
-          | tee pip.log
-          grep disruption.py pip.log
 
       - name: Test import
         run: |
