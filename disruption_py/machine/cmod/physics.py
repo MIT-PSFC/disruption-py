@@ -619,7 +619,7 @@ class CmodPhysicsMethods:
         """
         v_axis = interp1(hirex_time, hirex_velocity, times)
         return {"v_axis_0": v_axis[0], "v_axis_1": v_axis[1]}
-    
+
     @staticmethod
     def get_rotation_frequency_axis(rotation_velocity):
         """
