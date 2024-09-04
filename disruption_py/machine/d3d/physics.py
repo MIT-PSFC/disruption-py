@@ -621,7 +621,7 @@ class D3DPhysicsMethods:
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_Z_error_d3d.m
         https://github.com/MIT-PSFC/disruption-py/pull/255
 
-        Last major update by William Wei on 8/5/2024
+        Last major update by William Wei on 9/4/2024
         """
         NOMINAL_FLATTOP_RADIUS = 0.59
         # Get z_cur
