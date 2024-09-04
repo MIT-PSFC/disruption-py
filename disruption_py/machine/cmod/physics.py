@@ -944,6 +944,7 @@ class CmodPhysicsMethods:
             Te_PF[itime] = np.mean(Te_arr_equal_spacing[core_index]) / np.mean(
                 Te_arr_equal_spacing
             )
+
         # TODO: Calculate ne and pressure peaking factors
 
         # Interpolate peaking factors to the requested time basis
