@@ -567,7 +567,7 @@ class CmodPhysicsMethods:
         v_0 = np.empty(len(time))
         # Check that the argon intensity pulse has a minimum count and duration
         # threshold
-        valid_indices = np.where(intensity > 1000 & intensity < 10000)
+        valid_indices = np.where((intensity > 1000) & (intensity < 10000))
         # Matlab code just multiplies by time delta but that doesn't work in the
         # case where we have different time deltas. Instead we sum the time deltas
         # for all valid indices to check the total duration
@@ -589,7 +589,8 @@ class CmodPhysicsMethods:
         # Check to see if shot was done on a day where there was a locked
         # mode HIREX calibration by cross checking with list of calibrated
         # runs. If not calibrated, return NaN outputs.
-        if params.shot_id not in calibrated:
+        # TODO(ZanderKeith): Are there no calibration shots prior to 2015?
+        if int(params.shot_id/1000) not in calibrated.values:
             return nan_output
         try:
             intensity, time = params.mds_conn.get_data_with_dims(
@@ -609,6 +610,73 @@ class CmodPhysicsMethods:
             params.times, intensity, time, vel, hirextime
         )
         return output
+
+    @staticmethod
+    def get_rotation_velocity_axis(times, hirex_velocity, hirex_time):
+        """
+        Calculate the rotation velocity according to CJ Perks, see docstring for
+        `_get_rotation_velocity_axis` for more information.
+        """
+        v_axis = interp1(hirex_time, hirex_velocity, times)
+        return {"v_axis_0": v_axis[0], "v_axis_1": v_axis[1]}
+    
+    @staticmethod
+    def get_rotation_frequency_axis(rotation_velocity):
+        """
+        Calculate the rotation frequency from the rotation velocity.
+        """
+        f_axis = rotation_velocity / (2 * np.pi * 0.68)
+        return {"f_axis": f_axis}
+
+    @staticmethod
+    @physics_method(columns=["v_axis_0", "v_axis_1", "f_axis"], tokamak=Tokamak.CMOD)
+    def _get_rotation_velocity_axis(params: PhysicsMethodParams):
+        """Calculate the rotation velocity according to CJ Perks:
+        "The first, easiest, and least reliable is to use the rotation time trace under:
+        `\SPECTROSCOPY::TOP.HIREX_SR.ANALYSIS.Z:VEL` (don't trust the others)
+        This is produced from an automatic procedure that should be run for every shot
+        where it calculates the Doppler shift of a characteristic x-ray as recorded
+        from a midplane line-of-sight on the spectrometer applying a standard mapping
+        of pixel to wavelength.
+        This measurement is biased to the on-axis value for the toroidal flow."
+        """
+        try:
+            hirex_velocity, hirex_time = params.mds_conn.get_data_with_dims(
+                ".hirex_sr.analysis.z:vel", tree_name="spectroscopy", astype="float64"
+            )
+        except mdsExceptions.TreeFOPENR:
+            params.logger.debug(f"[Shot {params.shot_id}]: {traceback.format_exc()}")
+            return {"v_axis_0": [np.nan], "v_axis_1": [np.nan], "f_axis": [np.nan]}
+
+        v_output = CmodPhysicsMethods.get_rotation_velocity_axis(params.times, hirex_velocity, hirex_time)
+        f_output = CmodPhysicsMethods.get_rotation_frequency_axis(v_output["v_axis_0"])
+
+        return {**v_output, **f_output}
+
+    @staticmethod
+    @physics_method(columns=["v_alfven", "f_tae"], tokamak=Tokamak.CMOD)
+    def _get_alfven_velocity(params: PhysicsMethodParams):
+        """Estimate the Alfven velocity and the TAE frequency.
+        Assumes a Hydrogen plasma.
+        """
+        btor, t_mag = params.mds_conn.get_data_with_dims(
+            r"\btor", tree_name="magnetics"
+        )
+        btor = interp1(t_mag, btor, params.times)
+
+        # TODO(ZanderKeith): Make regular density method cached and use it here
+        n_e, t_n = params.mds_conn.get_data_with_dims(
+            r".tci.results:nl_04", tree_name="electrons", astype="float64"
+        )
+        n_e = interp1(t_n, n_e, params.times)
+        # Make all densities positive
+        n_e = np.abs(n_e)
+
+        mu_0 = 4 * np.pi * 1e-7
+        v_alfven = btor / np.sqrt(mu_0 * n_e * 1e6 * 1.6726219e-27)
+        f_tae = v_alfven / (2 * np.pi * 0.68)
+
+        return {"v_alfven": v_alfven, "f_tae": f_tae}
 
     # TODO: Split into static and instance method
     @staticmethod
