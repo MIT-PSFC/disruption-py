@@ -37,6 +37,8 @@ result = get_shots_data(
     log_settings=LogSettings(console_log_level=0),
 )
 
+maybe = False
+
 print(result)
 
 assert result.shape == shape
