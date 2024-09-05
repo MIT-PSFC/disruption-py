@@ -38,7 +38,6 @@ reinstall: uninstall install
 
 lock:
 	poetry lock --no-update
-	bash .pip/lock.sh
 	git status
 
 update:

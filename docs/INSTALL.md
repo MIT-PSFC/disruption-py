@@ -144,7 +144,8 @@ Python is obviously a requirement for disruption-py -- please make sure you are 
 which python
 ```
 
-Python requirements may be installed either from the Poetry-native lockfile `poetry.lock` committed to the repository in the main folder, or through the backward-compatible pip-style `requirements.txt` files named according to the dependency group within the `.pip` folder, e.g. `.pip/main.txt`.
+Python requirements should be installed from the Poetry-native lockfile `poetry.lock` committed to the repository in the main folder.
+If necessary, backward-compatible pip-style `requirements.txt` files can be produced through the [Poetry export command](https://python-poetry.org/docs/cli/#export).
 
 ### Virtual environments
 
@@ -153,12 +154,4 @@ If using Poetry, one will be created automatically, e.g.:
 
 ```bash
 poetry install --with dev
-```
-
-If using vanilla Python, one can be created through the `venv` module, e.g.:
-
-```bash
-python -m venv myenv
-source myenv/bin/activate
-pip install -r .pip/main.txt -r .pip/dev.txt
 ```
