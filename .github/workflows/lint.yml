@@ -91,16 +91,15 @@ jobs:
           | grep '^Your code has been rated' \
           | tee -a "$GITHUB_STEP_SUMMARY"
 
-      - name: Create annotations
+      - name: Create pylint annotations
         if: |
           github.event_name == 'pull_request' &&
           github.event.pull_request.draft == false
         run: |
-          BASE=${{ github.event.pull_request.base.sha }}
-          git diff --unified=0 --patch "$BASE" \
+          git diff --unified=0 --patch "${{ github.event.pull_request.base.sha }}" \
           | ./scripts/parse_git_diff.awk \
-          | tee pylint.lines
-          git diff --name-only "$BASE" \
+          > pylint.lines
+          git diff --name-only "${{ github.event.pull_request.base.sha }}" \
           | grep -xFf pylint.args \
           | xargs poetry run pylint --output-format=github \
           | grep -Ff pylint.lines || true
