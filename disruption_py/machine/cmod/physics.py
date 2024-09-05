@@ -1127,8 +1127,9 @@ class CmodPhysicsMethods:
         - K. Zhurovich, et. al. "Calibration of Thomson scattering systems using
           electron cyclotron emission cutoff data," Rev. Sci. Instrum., vol. 76, no. 5,
           p. 053506, 2005, doi: 10.1063/1.1899311.
+        - https://github.com/MIT-PSFC/disruption-py/pull/260
 
-        Last Major Update: Henry Wietfeldt (08/28/24)
+        Last Major Update: Henry Wietfeldt (08/28/24), (PR: #260)
         """
 
         # Constants
