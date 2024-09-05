@@ -43,7 +43,7 @@ class CmodPhysicsMethods:
             node_path = node_path.strip()
             if node_path.split(".")[-1].startswith("SEG_"):
                 is_on = params.mds_conn.get_data(
-                    f'getnci($, "STATE")', arguments=node_path + ":SEG_NUM"
+                    'getnci($, "STATE")', arguments=node_path + ":SEG_NUM"
                 )
                 # 0 represents node being on, 1 represents node being off
                 if is_on != 0:
@@ -607,7 +607,7 @@ class CmodPhysicsMethods:
         except mdsExceptions.TreeFOPENR as e:
             params.logger.warning(
                 f"[Shot {params.shot_id}]: Failed to open necessary tress for "
-                + f"rotational velocity calculations."
+                + "rotational velocity calculations."
             )
             params.logger.debug(f"[Shot {params.shot_id}]: {traceback.format_exc()}")
             return nan_output

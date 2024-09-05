@@ -666,7 +666,7 @@ class D3DPhysicsMethods:
             if len(polarity) > 1:
                 params.logger.info(
                     f"[Shot {params.shot_id}]:Polarity of Ip target is not constant."
-                    + f" Setting to first value in array."
+                    + " Setting to first value in array."
                 )
                 params.logger.debug(
                     f"[Shot {params.shot_id}]: Polarity array: {polarity}"
