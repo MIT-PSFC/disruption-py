@@ -3,7 +3,6 @@
 """ Used in the documentation for the physics methods. """
 
 import numpy as np
-import pandas as pd
 
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
