@@ -51,7 +51,7 @@ class D3DPhysicsMethods:
             output["h98"] = h_98
         except ValueError as e:
             params.logger.info(
-                f"[Shot {params.shot_id}]: Failed to get H98 signal. Returning NaNs."
+                "[Shot %s]: Failed to get H98 signal. Returning NaNs.", params.shot_id
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
         return output
@@ -80,7 +80,8 @@ class D3DPhysicsMethods:
             output["h_alpha"] = h_alpha
         except ValueError as e:
             params.logger.info(
-                f"[Shot {params.shot_id}]: Failed to get H_alpha signal. Returning NaNs."
+                "[Shot %s]: Failed to get H_alpha signal. Returning NaNs.",
+                params.shot_id,
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
         return output
@@ -120,12 +121,12 @@ class D3DPhysicsMethods:
                 )
             else:
                 params.logger.info(
-                    f"[Shot {params.shot_id}]:No NBI power data found in this shot."
+                    "[Shot %s]: No NBI power data found in this shot.", params.shot_id
                 )
                 p_nbi = np.zeros(len(params.times))
         except mdsExceptions.MdsException as e:
             p_nbi = np.zeros(len(params.times))
-            params.logger.info(f"[Shot {params.shot_id}]:Failed to open NBI node")
+            params.logger.info("[Shot %s]: Failed to open NBI node", params.shot_id)
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
 
         # Get electron cyclotron heating (ECH) power. It's point data, so it's not
@@ -150,14 +151,14 @@ class D3DPhysicsMethods:
                 )
             else:
                 params.logger.info(
-                    f"[Shot {params.shot_id}]:No ECH power data found in this "
-                    + "shot. Setting to zeros"
+                    "[Shot %s]: No ECH power data found in this shot. Setting to zeros",
+                    params.shot_id,
                 )
                 p_ech = np.zeros(len(params.times))
         except mdsExceptions.MdsException as e:
             p_ech = np.zeros(len(params.times))
             params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to open ECH node. Setting to zeros"
+                "[Shot %s]: Failed to open ECH node. Setting to zeros", params.shot_id
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
 
@@ -181,7 +182,7 @@ class D3DPhysicsMethods:
                 r"\bol_prm", tree_name="bolom"
             )
         except mdsExceptions.MdsException as e:
-            params.logger.info(f"[Shot {params.shot_id}]:Failed to open bolom tree.")
+            params.logger.info("[Shot %s]: Failed to open bolom tree.", params.shot_id)
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
         upper_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
         lower_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
@@ -268,7 +269,7 @@ class D3DPhysicsMethods:
             v_loop = interp1(t_v_loop, v_loop, params.times, "linear")
         except mdsExceptions.MdsException as e:
             params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to open VLOOPB node. Setting to NaN."
+                "[Shot %s]: Failed to open VLOOPB node. Setting to NaN.", params.shot_id
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             return nan_output
@@ -309,7 +310,8 @@ class D3DPhysicsMethods:
             li[invalid_indices] = np.nan
         except mdsExceptions.MdsException as e:
             params.logger.info(
-                f"[Shot {params.shot_id}]:Unable to get plasma current data. p_ohm set to NaN."
+                "[Shot %s]: Unable to get plasma current data. p_ohm set to NaN.",
+                params.shot_id,
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             return nan_output
@@ -360,7 +362,7 @@ class D3DPhysicsMethods:
                     r"\denv2", tree_name="d3d"
                 )
         except mdsExceptions.MdsException as e:
-            params.logger.info(f"[Shot {params.shot_id}]:Failed to get ne data.")
+            params.logger.info("[Shot %s]: Failed to get ne data.", params.shot_id)
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             return nan_output
 
@@ -401,7 +403,7 @@ class D3DPhysicsMethods:
         except mdsExceptions.MdsException as e:
             # TODO: Confirm that there is a separate exception if ptdata name doesn't exist
             params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to compute Greenwald fraction."
+                "[Shot %s]: Failed to compute Greenwald fraction.", params.shot_id
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             g_f = [np.nan]
@@ -444,7 +446,7 @@ class D3DPhysicsMethods:
             ne_rt = interp1(t_ne_rt, ne_rt, params.times, "linear")
             dne_dt_rt = interp1(t_ne_rt, dne_dt_rt, params.times, "linear")
         except mdsExceptions.MdsException as e:
-            params.logger.info(f"[Shot {params.shot_id}]:Failed to get ne_rt data")
+            params.logger.info("[Shot %s]: Failed to get ne_rt data", params.shot_id)
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             return nan_output
 
@@ -488,7 +490,8 @@ class D3DPhysicsMethods:
                 g_f_rt = ne_rt / 1.0e20 / n_g_rt
         except mdsExceptions.MdsException as e:
             params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to compute real-time Greenwald fraction."
+                "[Shot %s]: Failed to compute real-time Greenwald fraction.",
+                params.shot_id,
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             g_f_rt = [np.nan]
@@ -517,7 +520,8 @@ class D3DPhysicsMethods:
             dip_dt = interp1(t_ip, dip_dt, params.times, "linear")
         except mdsExceptions.MdsException as e:
             params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to get measured plasma current parameters"
+                "[Shot %s]: Failed to get measured plasma current parameters",
+                params.shot_id,
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
         # Get programmed plasma current parameters
@@ -533,11 +537,12 @@ class D3DPhysicsMethods:
             )
             if len(polarity) > 1:
                 params.logger.info(
-                    f"[Shot {params.shot_id}]:Polarity of Ip target is not constant."
-                    + "Using value at first timestep."
+                    "[Shot %s]: Polarity of Ip target is not constant. "
+                    "Using value at first timestep.",
+                    params.shot_id,
                 )
                 params.logger.debug(
-                    f"[Shot {params.shot_id}]: Polarity array {polarity}"
+                    "[Shot %s]: Polarity array %s", params.shot_id, polarity
                 )
                 polarity = polarity[0]
             ip_prog = ip_prog * polarity
@@ -546,7 +551,8 @@ class D3DPhysicsMethods:
             dipprog_dt = interp1(t_ip_prog, dipprog_dt, params.times, "linear")
         except mdsExceptions.MdsException as e:
             params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to get programmed plasma current parameters"
+                "[Shot %s]: Failed to get programmed plasma current parameters",
+                params.shot_id,
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
         # Now get the signal pointname 'ipimode'.  This PCS signal denotes whether
@@ -566,7 +572,8 @@ class D3DPhysicsMethods:
             ipimode = interp1(t_ipimode, ipimode, params.times, "linear")
         except mdsExceptions.MdsException as e:
             params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to get ipimode signal. Setting to NaN."
+                "[Shot %s]: Failed to get ipimode signal. Setting to NaN.",
+                params.shot_id,
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             ipimode = np.full(len(params.times), np.nan)
@@ -593,7 +600,8 @@ class D3DPhysicsMethods:
             ip_error[railed_indices] = np.nan
         except mdsExceptions.MdsException as e:
             params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to get epsoff signal. Setting to NaN."
+                "[Shot %s]: Failed to get epsoff signal. Setting to NaN.",
+                params.shot_id,
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             power_supply_railed = [np.nan]
@@ -648,7 +656,8 @@ class D3DPhysicsMethods:
             dip_dt_rt = interp1(t_ip_rt, dip_dt_rt, params.times, "linear")
         except mdsExceptions.MdsException as e:
             params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to get measured plasma current parameters"
+                "[Shot %s]: Failed to get measured plasma current parameters",
+                params.shot_id,
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
         # Get programmed plasma current parameters
@@ -665,11 +674,12 @@ class D3DPhysicsMethods:
             )
             if len(polarity) > 1:
                 params.logger.info(
-                    f"[Shot {params.shot_id}]:Polarity of Ip target is not constant."
-                    + " Setting to first value in array."
+                    "[Shot %s]: Polarity of Ip target is not constant."
+                    " Setting to first value in array.",
+                    params.shot_id,
                 )
                 params.logger.debug(
-                    f"[Shot {params.shot_id}]: Polarity array: {polarity}"
+                    "[Shot %s]: Polarity array: %s", params.shot_id, polarity
                 )
                 polarity = polarity[0]
             ip_prog_rt = ip_prog_rt * polarity
@@ -678,7 +688,8 @@ class D3DPhysicsMethods:
             dipprog_dt_rt = interp1(t_ip_prog_rt, dipprog_dt_rt, params.times, "linear")
         except mdsExceptions.MdsException as e:
             params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to get programmed plasma current parameters"
+                "[Shot %s]: Failed to get programmed plasma current parameters",
+                params.shot_id,
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
         try:
@@ -690,7 +701,8 @@ class D3DPhysicsMethods:
             ip_error_rt = interp1(t_ip_error_rt, ip_error_rt, params.times, "linear")
         except mdsExceptions.MdsException as e:
             params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to get ipeecoil signal. Setting to NaN."
+                "[Shot %s]: Failed to get ipeecoil signal. Setting to NaN.",
+                params.shot_id,
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
         # Now get the signal pointname 'ipimode'.  This PCS signal denotes whether
@@ -710,7 +722,8 @@ class D3DPhysicsMethods:
             ipimode = interp1(t_ipimode, ipimode, params.times, "linear")
         except mdsExceptions.MdsException as e:
             params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to get ipimode signal. Setting to NaN."
+                "[Shot %s]: Failed to get ipimode signal. Setting to NaN.",
+                params.shot_id,
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             ipimode = np.full(len(params.times), np.nan)
@@ -739,8 +752,9 @@ class D3DPhysicsMethods:
             ip_error_rt[ps_railed_indices] = np.nan
         except mdsExceptions.MdsException as e:
             params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to get epsoff signal. "
-                + "power_supply_railed will be NaN."
+                "[Shot %s]: Failed to get epsoff signal. "
+                "power_supply_railed will be NaN.",
+                params.shot_id,
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
         # 'dip_dt_RT': dip_dt_rt,
@@ -780,7 +794,7 @@ class D3DPhysicsMethods:
             z_cur = z_cur / 1.0e2  # [cm] -> [m]
             z_cur = interp1(t_z_cur, z_cur, params.times, "linear")
         except mdsExceptions.MdsException as e:
-            params.logger.info(f"[Shot {params.shot_id}]:Failed to get vpszp signal")
+            params.logger.info("[Shot %s]: Failed to get vpszp signal", params.shot_id)
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             return {"zcur": [np.nan], "zcur_norm": [np.nan]}
         # Compute z_cur_norm
@@ -797,7 +811,9 @@ class D3DPhysicsMethods:
             a_minor = interp1(t_a, a_minor, params.times, "linear")
             z_cur_norm = z_cur / a_minor
         except mdsExceptions.MdsException as e:
-            params.logger.info(f"[Shot {params.shot_id}]:Failed to get efit parameters")
+            params.logger.info(
+                "[Shot %s]: Failed to get efit parameters", params.shot_id
+            )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             z_cur_norm = z_cur / NOMINAL_FLATTOP_RADIUS
         return {"zcur": z_cur, "zcur_normalized": z_cur_norm}
@@ -855,7 +871,8 @@ class D3DPhysicsMethods:
                     dusbradial *= 1.0e-4  # [T]
                 except mdsExceptions.MdsException as e:
                     params.logger.info(
-                        f"[Shot {params.shot_id}]:Failed to get n1 bradial signal. Returning NaN."
+                        "[Shot %s]: Failed to get n1 bradial signal. Returning NaN.",
+                        params.shot_id,
                     )
                     params.logger.debug(
                         "[Shot %s]: %s", params.shot_id, traceback.format_exc()
@@ -896,7 +913,7 @@ class D3DPhysicsMethods:
             t_n1rms /= 1e3  # [ms] -> [s]
             n1rms = interp1(t_n1rms, n1rms, params.times)
         except mdsExceptions.MdsException as e:
-            params.logger.info(f"[Shot {params.shot_id}]:Failed to get n1rms signal")
+            params.logger.info("[Shot %s]: Failed to get n1rms signal", params.shot_id)
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             return {"n1rms": [np.nan], "n1rms_normalized": [np.nan]}
         # Calculate n1rms_norm
@@ -909,7 +926,8 @@ class D3DPhysicsMethods:
             n1rms_norm = n1rms / np.abs(b_tor)
         except mdsExceptions.MdsException as e:
             params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to get b_tor signal to compute n1rms_normalized"
+                "[Shot %s]: Failed to get b_tor signal to compute n1rms_normalized",
+                params.shot_id,
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             n1rms_norm = [np.nan]
@@ -1015,8 +1033,9 @@ class D3DPhysicsMethods:
         except mdsExceptions.MdsException as e:
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to get CVA and XDIV from MDSPlus."
-                + " Calculating locally, results may be inaccurate."
+                "[Shot %s]: Failed to get CVA and XDIV from MDSPlus."
+                " Calculating locally, results may be inaccurate.",
+                params.shot_id,
             )
             rad_cva = [np.nan]
             rad_xdiv = [np.nan]
@@ -1030,7 +1049,7 @@ class D3DPhysicsMethods:
                     break
             efit_dict = D3DPhysicsMethods._get_efit_dict(params)
         except Exception as e:
-            params.logger.info(f"[Shot {params.shot_id}]:Failed to get TS data")
+            params.logger.info("[Shot %s]: Failed to get TS data", params.shot_id)
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             ts = 0
         try:
@@ -1038,7 +1057,9 @@ class D3DPhysicsMethods:
             ts["rhovn"] = ts["rhovn"].T
             ts["psin"] = ts["psin"].T
         except Exception as e:
-            params.logger.info(f"[Shot {params.shot_id}]:Failed to interpolate TS data")
+            params.logger.info(
+                "[Shot %s]: Failed to interpolate TS data", params.shot_id
+            )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
 
         # Get P_rad data
@@ -1047,12 +1068,14 @@ class D3DPhysicsMethods:
                 params, fan=bolometer_fan, smoothing_window=smoothing_window
             )
         except Exception as e:
-            params.logger.info(f"[Shot {params.shot_id}]:Failed to get bolometer data")
+            params.logger.info(
+                "[Shot %s]: Failed to get bolometer data", params.shot_id
+            )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             p_rad = 0
         if p_rad == 0 and ts == 0:
             params.logger.info(
-                f"[Shot {params.shot_id}]:Both TS and bolometer data missing for shot"
+                "[Shot %s]: Both TS and bolometer data missing for shot", params.shot_id
             )
 
         # if ts_equispaced:
@@ -1292,11 +1315,11 @@ class D3DPhysicsMethods:
             else:
                 zeff = np.zeros(len(params.times))
                 params.logger.info(
-                    f"[Shot {params.shot_id}]:No zeff data found in this shot."
+                    "[Shot %s]: No zeff data found in this shot.", params.shot_id
                 )
         except mdsExceptions.MdsException as e:
             zeff = np.zeros(len(params.times))
-            params.logger.info(f"[Shot {params.shot_id}]:Failed to open Zeff node")
+            params.logger.info("[Shot %s]: Failed to open Zeff node", params.shot_id)
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
         return {"z_eff": zeff}
 
@@ -1352,7 +1375,7 @@ class D3DPhysicsMethods:
             )
             efit_time /= 1e3  # [ms] -> [s]
         except mdsExceptions.MdsException as e:
-            params.logger.info(f"[Shot {params.shot_id}]:Failed to get EFIT time")
+            params.logger.info("[Shot %s]: Failed to get EFIT time", params.shot_id)
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             return {"delta": [np.nan], "squareness": [np.nan], "aminor": [np.nan]}
         # Compute triangularity
@@ -1367,7 +1390,7 @@ class D3DPhysicsMethods:
             delta = interp1(efit_time, delta, params.times, "linear")
         except mdsExceptions.MdsException as e:
             params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to obtain triangularity signals"
+                "[Shot %s]: Failed to obtain triangularity signals", params.shot_id
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             delta = [np.nan]
@@ -1383,7 +1406,7 @@ class D3DPhysicsMethods:
             squareness = interp1(efit_time, squareness, params.times, "linear")
         except mdsExceptions.MdsException as e:
             params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to obtain squareness signals"
+                "[Shot %s]: Failed to obtain squareness signals", params.shot_id
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             squareness = [np.nan]
@@ -1395,7 +1418,7 @@ class D3DPhysicsMethods:
             aminor = interp1(efit_time, aminor, params.times, "linear")
         except mdsExceptions.MdsException as e:
             params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to obtain aminor signals"
+                "[Shot %s]: Failed to obtain aminor signals", params.shot_id
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             aminor = [np.nan]
@@ -1413,7 +1436,8 @@ class D3DPhysicsMethods:
                 aminor[invalid_indices] = np.nan
         except mdsExceptions.MdsException as e:
             params.logger.info(
-                f"[Shot {params.shot_id}]:Failed to obtain chisq to remove unreliable time points."
+                "[Shot %s]: Failed to obtain chisq to remove unreliable time points.",
+                params.shot_id,
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
         return {"delta": delta, "squareness": squareness, "aminor": aminor}
@@ -1479,7 +1503,9 @@ class D3DPhysicsMethods:
             except mdsExceptions.MdsException as e:
                 lasers[laser] = None
                 params.logger.info(
-                    f"[Shot {params.shot_id}]: Failed to get {laser} time. Setting laser data to None."
+                    "[Shot %s]: Failed to get %s time. Setting laser data to None.",
+                    params.shot_id,
+                    laser,
                 )
                 params.logger.debug(
                     "[Shot %s]: %s", params.shot_id, traceback.format_exc()
@@ -1502,8 +1528,12 @@ class D3DPhysicsMethods:
                 except mdsExceptions.MdsException as e:
                     lasers[laser][node] = np.full(lasers[laser]["time"].shape, np.nan)
                     params.logger.info(
-                        f"[Shot {params.shot_id}]: Failed to get {laser}:{name}({node})"
-                        + " data, Setting to all NaNs."
+                        "[Shot %s]: Failed to get %s:%s(%s)"
+                        " data, Setting to all NaNs.",
+                        params.shot_id,
+                        laser,
+                        name,
+                        node,
                     )
                     params.logger.debug(
                         "[Shot %s]: %s", params.shot_id, traceback.format_exc()
@@ -1671,7 +1701,9 @@ class D3DPhysicsMethods:
             except mdsExceptions.MdsException as e:
                 efit_dict[node] = np.full(len(efit_dict["time"]), np.nan)
                 params.logger.info(
-                    f"[Shot {params.shot_id}]: Failed to get {node} from efit, Setting to all NaNs."
+                    "[Shot %s]: Failed to get %s from efit, Setting to all NaNs.",
+                    params.shot_id,
+                    node,
                 )
                 params.logger.debug(
                     "[Shot %s]: %s", params.shot_id, traceback.format_exc()
