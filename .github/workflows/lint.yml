@@ -95,11 +95,13 @@ jobs:
         if: |
           github.event_name == 'pull_request' &&
           github.event.pull_request.draft == false
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
         run: |
-          git diff --unified=0 --patch "${{ github.event.pull_request.base.sha }}" \
+          git diff --unified=0 --patch "$BASE" \
           | ./scripts/parse_git_diff.awk \
           > pylint.lines
-          git diff --name-only "${{ github.event.pull_request.base.sha }}" \
+          git diff --name-only "$BASE" \
           | grep -xFf pylint.args \
           | xargs poetry run pylint --output-format=github \
           | grep -Ff pylint.lines || true
