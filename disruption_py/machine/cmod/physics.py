@@ -1583,10 +1583,10 @@ class CmodPhysicsMethods:
         `_get_peaking_factors_no_tci`, and `_get_edge_parameters` to fail?
         """
         if (
-            (shot_id > 1120000000 and shot_id < 1120213000)
-            or (shot_id > 1140000000 and shot_id < 1140227000)
-            or (shot_id > 1150000000 and shot_id < 1150610000)
-            or (shot_id > 1160000000 and shot_id < 1160303000)
+            1120000000 < shot_id < 1120213000
+            or 1140000000 < shot_id < 1140227000
+            or 1150000000 < shot_id < 1150610000
+            or 1160000000 < shot_id < 1160303000
         ):
             return True
         return False
