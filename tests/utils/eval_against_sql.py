@@ -155,7 +155,10 @@ def eval_shot_against_cache(
         expectation = "failure" if expect_failure else "success"
         failure = "failed" if data_difference.failed else "succeeded"
         logger.debug(
-            f"Expected {expectation} and {failure}:\n{data_difference.column_mismatch_string}"
+            "Expected %s and %s:\n%s",
+            expectation,
+            failure,
+            data_difference.column_mismatch_string,
         )
     assert not data_difference.failed, "Comparison failed"
 

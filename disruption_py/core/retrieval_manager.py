@@ -40,7 +40,7 @@ class RetrievalManager:
         """
         Get data for a single shot. May be run across different processes.
         """
-        self.logger.info(f"starting {shot_id}")
+        self.logger.info("starting %s", shot_id)
         try:
             physics_method_params = self.shot_setup(
                 shot_id=int(shot_id),
@@ -51,13 +51,13 @@ class RetrievalManager:
                 physics_method_params=physics_method_params,
             )
             self.shot_cleanup(physics_method_params)
-            self.logger.info(f"completed {shot_id}")
+            self.logger.info("completed %s", shot_id)
             return retrieved_data
         except Exception as e:
             self.logger.warning(
-                f"[Shot {shot_id}]: fatal error {traceback.format_exc()}"
+                "[Shot %s]: fatal error %s", shot_id, traceback.format_exc()
             )
-            self.logger.error(f"failed {shot_id} with error {e}")
+            self.logger.error("failed %s with error %s", shot_id, e)
             return None
 
     def shot_setup(
@@ -72,7 +72,8 @@ class RetrievalManager:
         except Exception as e:
             disruption_time = None
             self.logger.error(
-                f"Failed to retreive disruption time with error {e}. Continuing as if the shot did not disrupt."
+                "Failed to retrieve disruption time with error %s. Continuing as if the shot did not disrupt.",
+                e,
             )
 
         mds_conn = self.process_mds_conn.get_shot_connection(shot_id=shot_id)
@@ -103,7 +104,8 @@ class RetrievalManager:
             return physics_method_params
         except Exception as e:
             self.logger.info(
-                f"[Shot {shot_id}]: Caught failed to setup shot {shot_id}, cleaning up tree manager."
+                "[Shot %s]: Caught failed to setup shot, cleaning up tree manager.",
+                shot_id,
             )
             mds_conn.cleanup()
             raise e
