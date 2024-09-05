@@ -252,8 +252,6 @@ class CmodThomsonDensityMeasure:
                     points, values, (r, z), method="cubic"
                 )
             except:
-                params.logger.warning(
-                    f"Interpolation failed for efit_rz2psi time {time}"
-                )
+                params.logger.warning("Interpolation failed for efit_rz2psi time", time)
 
         return psi
