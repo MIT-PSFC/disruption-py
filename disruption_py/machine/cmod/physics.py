@@ -1142,9 +1142,12 @@ class CmodPhysicsMethods:
         rising_tail_factor = 1.2
 
         # Only use EFITs starting after the GPC diagnostic has profiles.
-        efit_time = efit_time[
-            efit_time >= max(np.max(gpc1_rad_time[:, 0]), gpc2_rad_time[0])
-        ]
+        if len(gpc1_rad_time) > 0:
+            efit_time = efit_time[
+                efit_time >= max(np.max(gpc1_rad_time[:, 0]), gpc2_rad_time[0])
+            ]
+        else:
+            efit_time = efit_time[efit_time >= gpc2_rad_time[0]]
 
         # Interpolate GPC data onto efit timebase. Timebase for radial measurements is
         # slower than efit but radial positions are approx. stable so linear
@@ -1154,16 +1157,22 @@ class CmodPhysicsMethods:
         gpc1_rad = np.full((n_channels, len(efit_time)), np.nan)
         for i in range(n_channels):
             gpc1_te[i, :] = interp1(gpc1_te_time[i, :], gpc1_te_data[i, :], efit_time)
-            gpc1_rad[i, :] = interp1(
-                gpc1_rad_time[i, :], gpc1_rad_data[i, :], efit_time
-            )
+            if len(gpc1_rad_data[i, :]) > 1:
+                gpc1_rad[i, :] = interp1(
+                    gpc1_rad_time[i, :], gpc1_rad_data[i, :], efit_time
+                )
+            else:
+                gpc1_rad[i, :] = np.full(len(efit_time), np.nan)
 
         n_channels = gpc2_te_data.shape[0]
         gpc2_te = np.full((n_channels, len(efit_time)), np.nan)
         gpc2_rad = np.full((n_channels, len(efit_time)), np.nan)
         for i in range(n_channels):
             gpc2_te[i, :] = interp1(gpc2_te_time, gpc2_te_data[i, :], efit_time)
-            gpc2_rad[i, :] = interp1(gpc2_rad_time, gpc2_rad_data[i, :], efit_time)
+            if len(gpc2_rad_data[i, :]) > 1:
+                gpc2_rad[i, :] = interp1(gpc2_rad_time, gpc2_rad_data[i, :], efit_time)
+            else:
+                gpc2_rad[i, :] = np.full(len(efit_time), np.nan)
 
         # Combine GPC systems and extend the last radii measurement up until the last
         # EFIT. Radii depend on Bt, which should be stable until the current quench.
@@ -1187,7 +1196,10 @@ class CmodPhysicsMethods:
         # Time slices with LH heating are unreliable because direct electron heating
         # leads to non-thermal emission
         btor = interp1(t_mag, btor, efit_time)
-        lh_power = interp1(lh_time, lh_power, efit_time)
+        if len(lh_time) > 1:
+            lh_power = interp1(lh_time, lh_power, efit_time)
+        else:
+            lh_power = np.zeros(len(efit_time))
         lh_power = np.nan_to_num(lh_power, nan=0.0)
         (okay_time_indices,) = np.where(
             (np.abs(btor) > min_btor) & (lh_power < max_lh_power)
@@ -1319,7 +1331,9 @@ class CmodPhysicsMethods:
                 ".results:netpow", tree_name="lh"
             )  # [kW], [s]
         except mdsExceptions.MdsException:
-            # When LH power is off, it's often not stored in tree.
+            # When LH power is off, it's often not stored in tree or it's a single 0.
+            lh_power = 0.0
+        if not isinstance(lh_power, np.ndarray):
             lh_time = np.copy(efit_time)
             lh_power = np.zeros(len(efit_time))
 
@@ -1337,10 +1351,13 @@ class CmodPhysicsMethods:
                 rad_data, rad_time = params.mds_conn.get_data_with_dims(
                     node_path + ".rad:r" + str(i + 1), tree_name="electrons"
                 )  # [m], [s]
-                gpc1_te_data.append(te_data)
-                gpc1_te_time.append(te_time)
-                gpc1_rad_data.append(rad_data)
-                gpc1_rad_time.append(rad_time)
+                # For C-Mod shot 1120522025 (and maybe others), rad_time is strings.
+                # Don't use channel in that case
+                if np.issubdtype(rad_time.dtype, np.floating):
+                    gpc1_te_data.append(te_data)
+                    gpc1_te_time.append(te_time)
+                    gpc1_rad_data.append(rad_data)
+                    gpc1_rad_time.append(rad_time)
             except mdsExceptions.MdsException:
                 continue
         gpc1_te_data = np.array(gpc1_te_data)
