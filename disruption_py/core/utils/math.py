@@ -239,6 +239,12 @@ def gauss(x, *params):
     return out
 
 
+def gaussian_fit_with_fixed_mean(mu, *args):
+    """Same as gaussian_fit() but with mu as a fixed parameter"""
+    coeffs, *_ = curve_fit(lambda x, a, sigma: gauss(x, a, mu, sigma), *args)
+    return coeffs
+
+
 def matlab_gsastd(
     x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=0
 ):
