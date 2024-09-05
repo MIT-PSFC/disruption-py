@@ -84,9 +84,26 @@ jobs:
         run: |
           poetry run pylint --version
           find disruption_py examples tests -type f -name '*.py' \
+          | tee pylint.args \
           | xargs poetry run pylint \
           --msg-template='{path}:{line}:{column}: |{msg_id} {symbol}| {msg}' \
-          | tee pylint.log
+          | tee pylint.log \
+          | grep '^Your code has been rated' \
+          | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Create annotations
+        if: |
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.draft == false
+        run: |
+          BASE=${{ github.event.pull_request.base.sha }}
+          git diff --unified=0 --patch "$BASE" \
+          | ./scripts/parse_git_diff.awk \
+          | tee pylint.lines
+          git diff --name-only "$BASE" \
+          | grep -xFf pylint.args \
+          | xargs poetry run pylint --output-format=github \
+          | grep -Ff pylint.lines || true
 
       - name: Compute statistics
         run: |
@@ -95,12 +112,6 @@ jobs:
           | uniq -c \
           | sort -n \
           | tee stats.log
-
-      - name: Print summary
-        run: |
-          tail pylint.log \
-          | grep '^Your code has been rated' \
-          | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Prohibit errors
         run: |
