@@ -18,7 +18,7 @@ from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import gaussian_fit, interp1, smooth
 from disruption_py.machine.tokamak import Tokamak
 
-CHECKED_N_MODES = list(range(2, 10))  # Disregard n=1, go up to n=9. Anything higher is getting in the realm of "maybe that's just a really slow TAE"
+CHECKED_N_MODES = list(range(2, 20))  # Disregard n=1, go up to n=9. Anything higher is getting in the realm of "maybe that's just a really slow TAE"
 CHECKED_M_MODES = list(range(1, 11))  # TODO(ZanderKeith) This is bad. We have zero clue what the m number is.
 PHASE_TOLERANCE = np.deg2rad(5)       # The tolerance for the phase to be considered a match
 
@@ -53,7 +53,6 @@ def setup_stfft(f_mirnov=2.5e6, f_target=1e3, frequency_resolution=None) -> Shor
     window = kaiser(window_size, beta=14)
     SFT = ShortTimeFFT(win=window, hop=hop, fs=f_mirnov)
     return SFT
-
 
 def get_expected_cross_phase(mode: tuple[int, int], theta_1: float, phi_1: float, theta_2: float, phi_2: float, cylindrical=True):
     """Calculate the expected cross phase between two mirnov probes if there were an m/n mode present
@@ -100,7 +99,7 @@ def get_expected_cross_phase(mode: tuple[int, int], theta_1: float, phi_1: float
 
     return float(expected_cross_phase)
 
-def cross_phase_mask(original_signal, probe_cross_phase, kept_cross_phases, tolerance=PHASE_TOLERANCE):
+def cross_phase_mask(original_signal, probe_cross_phase, mask_cross_phases, tolerance=PHASE_TOLERANCE, inverted=False):
     """Mask the signal based on the cross phases between multiple probes
     Things to look into: Change tolerance based on the mode number (higher q gets more lenience)
     somehow correct for the curvature of the torus
@@ -113,10 +112,12 @@ def cross_phase_mask(original_signal, probe_cross_phase, kept_cross_phases, tole
         The original signal to mask
     probe_cross_phase : np.ndarray
         The cross phase between two mirnov probes
-    kept_cross_phases : list[float]
+    mask_cross_phases : list[float]
         The cross phases that are allowed to be kept
     tolerance : float, optional (default=PHASE_TOLERANCE) [rad]
         The tolerance for the cross phase to be considered a match
+    inverted : bool, optional (default=False)
+        If True, will invert the mask and remove the values in mask_cross_phases
 
     Returns:
     ----------
@@ -124,22 +125,30 @@ def cross_phase_mask(original_signal, probe_cross_phase, kept_cross_phases, tole
         The original signal with the masked values set to np.nan
     """
 
-    valid_signal = np.zeros_like(original_signal)
-    for kept_cross_phase in kept_cross_phases:
+    if not inverted:
+        valid_signal = np.zeros_like(original_signal)
+    else:
+        valid_signal = np.ones_like(original_signal)
+
+    for cross_phase in mask_cross_phases:
         # We know the probe's cross phase should be sufficiently different from 0 or 2pi
         # But if the expected cross phase is near 0 or 2pi, we risk a 2 pi jump messing things up
         # Gotta bring everything into the center of the circle
-        if kept_cross_phase < np.pi / 8:
-            tested_cross_phase = kept_cross_phase + np.pi
+        if cross_phase < np.pi / 8:
+            tested_cross_phase = cross_phase + np.pi
             tested_probe_cross_phase = (probe_cross_phase + np.pi) % (2 * np.pi)
-        elif kept_cross_phase > 15 * np.pi / 8:
-            tested_cross_phase = kept_cross_phase - np.pi
+        elif cross_phase > 15 * np.pi / 8:
+            tested_cross_phase = cross_phase - np.pi
             tested_probe_cross_phase = (probe_cross_phase - np.pi) % (2 * np.pi)
         else:
-            tested_cross_phase = kept_cross_phase
+            tested_cross_phase = cross_phase
             tested_probe_cross_phase = probe_cross_phase
         cross_phase_difference = np.abs(tested_cross_phase - tested_probe_cross_phase)
-        valid_signal = np.where(cross_phase_difference < tolerance, 1, valid_signal)
+
+        if not inverted:
+            valid_signal = np.where(cross_phase_difference < tolerance, 1, valid_signal)
+        else:
+            valid_signal = np.where(cross_phase_difference < tolerance, 0, valid_signal)
 
     masked_signal = np.where(valid_signal == 1, original_signal, np.nan)
 
@@ -184,7 +193,6 @@ def aliasing_check(phi_1: float, phi_2: float, n_modes_of_interest: list[int], n
                     return True
 
     return False
-
 
 class CmodTearingMethods:
     @staticmethod
@@ -274,9 +282,10 @@ class CmodTearingMethods:
             )
             # Get the Mirnov sample frequency
             f_mirnov = int(1 / (mirnov_times[1] - mirnov_times[0]))
+            print(f"Using Mirnov frequency of {f_mirnov} Hz on {mirnov_name}")
             # Print a warning if the sample rate is very slow
             if f_mirnov < 2.4e6:
-                params.logger.warning(f"[Shot {params.shot_id}] You're too slow! Got Mirnov frequency of {f_mirnov} Hz, expected 2.5 MHz or 5 MHz")
+                params.logger.warning(f"[Shot {params.shot_id}] You're too slow! Got Mirnov frequency of {f_mirnov} Hz on {mirnov_name}, expected 2.5 MHz or 5 MHz")
             # Interpolate the signal to an integer sample frequency
             mirnov_signal = interp1(mirnov_times, mirnov_signal, np.arange(mirnov_times[0], mirnov_times[-1], 1/f_mirnov))
 
@@ -295,138 +304,6 @@ class CmodTearingMethods:
             return mirnov_fft_interp, freqs
         except Exception as e:
             return None, None
-
-    # def get_three_mirnov_signals(params: PhysicsMethodParams):  # noqa: PLR0915
-    #     """Get measurements from up to 3 available Mirnov coils to be used for n and m mode filtering.
-
-    #     Parameters
-    #     ----------
-    #     params : PhysicsMethodParams
-    #         The parameters for the physics method.
-
-    #     Returns
-    #     -------
-    #     mirnov_times : numpy.ndarray
-    #         The times of the Mirnov signals.
-    #     mirnov_signals: list[numpy.ndarray]
-    #         The signals from the Mirnov coils.
-    #     probe_locations: list[tuple[float, float, float]]
-    #         The (phi, theta, theta_offset) locations of the probes in radians.
-    #     """
-
-    #     # Get all names of the Mirnov coils TODO: how do you do this in disruption-py?
-    #     # I want the equivalent of .getNode, or .getNodeWild, and things like that
-    #     # mirnov_coil_names = params.mds_connection.get_coil_names()
-    #     # TODO: expand for every Mirnov coil. For now, just using the ABK, GHK, and K coils
-    #     mirnov_names_ab = [f"BP0{p}_ABK" for p in range(1, 10)] + [f"BP{p}_ABK" for p in range(10, 19)]
-    #     mirnov_names_gh = [f"BP0{p}_GHK" for p in range(1, 10)] + [f"BP{p}_GHK" for p in range(10, 19)]
-    #     mirnov_names_k = [f"BP0{p}_K" for p in range(1, 7)]
-
-    #     phi_ab, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.phi_AB", tree_name="magnetics")
-    #     phi_gh, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.phi_GH", tree_name="magnetics")
-    #     phi_k, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.phi_K", tree_name="magnetics")
-    #     phi_all = np.concatenate((phi_ab, phi_gh, phi_k))
-    #     phi_all = np.deg2rad(phi_all)
-
-    #     R_ab, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.R_AB", tree_name="magnetics")
-    #     R_gh, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.R_GH", tree_name="magnetics")
-    #     R_k, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.R_K", tree_name="magnetics")
-    #     R_all = np.concatenate((R_ab, R_gh, R_k))
-
-    #     Z_ab, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.Z_AB", tree_name="magnetics")
-    #     Z_gh, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.Z_GH", tree_name="magnetics")
-    #     Z_k, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.Z_K", tree_name="magnetics")
-    #     Z_all = np.concatenate((Z_ab, Z_gh, Z_k))
-
-    #     theta_all = np.arctan2(Z_all, R_all)
-
-    #     theta_pol_ab, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.theta_pol_AB", tree_name="magnetics")
-    #     theta_pol_gh, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.theta_pol_GH", tree_name="magnetics")
-    #     # theta_pol_k, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.theta_pol_K", tree_name="magnetics")  # noqa: ERA001
-    #     theta_pol_k = np.empty_like(Z_k)  # Calibration data doesn't exist, so we'll just say NaN and deal with it later
-    #     theta_pol_all = np.concatenate((theta_pol_ab, theta_pol_gh, theta_pol_k))
-    #     theta_pol_all = np.deg2rad(theta_pol_all)
-
-    #     unchecked_names = all_mirnov_names.copy()
-
-    #     mirnov_times = None
-    #     mirnov_signals = []
-    #     mirnov_locations = []
-    #     mirnov_probes = []
-    #     while len(mirnov_signals) < 3 and len(unchecked_names) > 0:
-    #         if len(mirnov_locations) > 0:
-    #             # Pick an unchecked probe with the largest average distance from the presently selected probes
-    #             all_distances = np.zeros((len(unchecked_names), len(mirnov_locations)))
-    #             for i, probe in enumerate(unchecked_names):
-    #                 probe_index = all_mirnov_names.index(probe)
-    #                 for j, loc in enumerate(mirnov_locations):
-    #                     phi, theta, theta_pol = loc
-    #                     all_distances[i, j] = np.sqrt((phi - phi_all[probe_index]) ** 2 + (theta - theta_all[probe_index]) ** 2)
-    #             distances = np.mean(all_distances, axis=1)
-    #             mirnov_name = unchecked_names[np.argmax(distances)]
-    #         else:
-    #             # Haven't picked any yet, just find the first probe in the unchecked list
-    #             mirnov_name = unchecked_names[0]
-
-    #         selected_index = all_mirnov_names.index(mirnov_name)
-
-    #         try:
-    #             mirnov_signal, mirnov_time = params.mds_conn.get_data_with_dims(
-    #                 path=f"{path}.{mirnov_name}",
-    #                 tree_name="magnetics",
-    #             )
-
-    #             mirnov_signals.append(mirnov_signal)
-    #             phi = phi_all[selected_index]
-    #             theta = theta_all[selected_index]
-    #             theta_pol = theta_pol_all[selected_index]
-    #             if theta_pol == np.nan:
-    #                 theta_pol = theta  # No calibration data exists, so assume it's perfectly aligned
-    #             mirnov_locations.append((phi, theta, theta_pol))
-    #             mirnov_probes.append(mirnov_name)
-
-    #             if mirnov_times is None:
-    #                 mirnov_times = mirnov_time
-    #         except Exception as e:
-    #             # Problem with this probe, skip it
-    #             pass
-
-    #         unchecked_names.remove(mirnov_name)
-
-    #     return mirnov_times, mirnov_signals, mirnov_locations
-
-    # @staticmethod
-    # @cache_method
-    # def get_three_mirnov_stffts(params: PhysicsMethodParams):
-    #     """Get the short-time fast Fourier transforms of up to 3 available Mirnov coils.
-
-    #     Parameters
-    #     ----------
-    #     params : PhysicsMethodParams
-    #         The parameters for the physics method.
-
-    #     Returns
-    #     -------
-    #     mirnov_ffts: xarray.DataArray
-    #         The STFFT of the Mirnov coils.
-    #     """
-
-    #     mirnov_times, mirnov_signals, mirnov_locations = CmodTearingMethods.get_three_mirnov_signals(params)
-
-    #     # Make an xarray DataArray for the STFFT's, with dimensions of probe location, frequency, and time
-    #     mirnov_ffts = xr.DataArray(
-    #         np.array(signal_ffts_interp),
-    #         dims=("probe", "frequency", "time"),
-    #         coords={
-    #             "probe": list(range(len(mirnov_locations))),
-    #             "frequency": freqs,
-    #             "time": params.times,
-    #             "phi": ("probe", [loc[0] for loc in mirnov_locations]),
-    #             "theta": ("probe", [loc[1] for loc in mirnov_locations]),
-    #             "theta_pol": ("probe", [loc[2] for loc in mirnov_locations]),
-    #         },
-    #     )
-    #     return mirnov_ffts
 
     @staticmethod
     @cache_method
@@ -448,7 +325,7 @@ class CmodTearingMethods:
 
         # Get all pairs of probes where their toroidal separation doesn't cause aliasing with the n=1 mode
         # And sort them by the poloidal distance
-        candidate_pairs = [(i, j) for i in range(len(all_mirnov_names)) for j in range(i + 1, len(all_mirnov_names)) if (aliasing_check(phi_all[i], phi_all[j], [1], CHECKED_N_MODES) is False)]
+        candidate_pairs = [(i, j) for i in range(len(all_mirnov_names)) for j in range(i + 1, len(all_mirnov_names)) if (aliasing_check(phi_all[i], phi_all[j], CHECKED_N_MODES, [1]) is False)]
         candidate_pairs = sorted(candidate_pairs, key=lambda x: np.abs(theta_all[x[0]] - theta_all[x[1]]))
 
         # Get the signals from the first pair that works
@@ -470,6 +347,8 @@ class CmodTearingMethods:
                 continue
 
             mirnov_ffts = np.array([mirnov_1_fft, mirnov_2_fft])
+            if np.abs(theta_pol_all[mirnov_1_index] - theta_pol_all[mirnov_2_index]) > PHASE_TOLERANCE:
+                params.logger.warning(f"[Shot {params.shot_id}] The poloidal angles of the probes are not aligned. This may cause issues with the n mode filtering.")
 
             mirnov_1_location = (phi_all[mirnov_1_index], theta_all[mirnov_1_index], theta_pol_all[mirnov_1_index])
             mirnov_2_location = (phi_all[mirnov_2_index], theta_all[mirnov_2_index], theta_pol_all[mirnov_2_index])
@@ -558,7 +437,7 @@ class CmodTearingMethods:
         tokamak=Tokamak.CMOD,
     )
     def _get_n_mode_spectrograms(params: PhysicsMethodParams):
-        """Calculate the spectrogram from a Mirnov coil that is masked to show modes 2 <= n <= 9."""
+        """Calculate the spectrogram from a Mirnov coil that is masked to show modes CHECKED_N_MODES."""
 
         mirnov_data = CmodTearingMethods.get_two_mirnov_ffts(params)
         original_spectrogram, freqs = CmodTearingMethods.get_mirnov_spectrogram(params)
@@ -570,6 +449,9 @@ class CmodTearingMethods:
         expected_cross_phases = [get_expected_cross_phase((0, mode), 0, mirnov_data.phi[0], 0, mirnov_data.phi[1]) for mode in CHECKED_N_MODES]
 
         masked_spectrogram = cross_phase_mask(original_spectrogram, cross_phase, expected_cross_phases)
+        # Remove anything remotely close to n=1
+        n_1_cross_phase = get_expected_cross_phase((0, 1), 0, mirnov_data.phi[0], 0, mirnov_data.phi[1])
+        masked_spectrogram = cross_phase_mask(masked_spectrogram, cross_phase, [n_1_cross_phase], PHASE_TOLERANCE, inverted=True)
 
         # Make a dictionary where the keys are ("n_greater_1_spectrogram", frequency) and the values are the masked spectrogram data
         spectrogram_dict = {}
