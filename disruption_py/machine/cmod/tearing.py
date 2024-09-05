@@ -18,9 +18,10 @@ from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import gaussian_fit, interp1, smooth
 from disruption_py.machine.tokamak import Tokamak
 
-CHECKED_N_MODES = list(range(2, 20))  # Disregard n=1, go up to n=9. Anything higher is getting in the realm of "maybe that's just a really slow TAE"
+CHECKED_N_MODES = list(range(2, 6))  # Disregard n=1, go up to n=9. Anything higher is getting in the realm of "maybe that's just a really slow TAE"
+#CHECKED_N_MODES = list(range(11, 12))
 CHECKED_M_MODES = list(range(1, 11))  # TODO(ZanderKeith) This is bad. We have zero clue what the m number is.
-PHASE_TOLERANCE = np.deg2rad(5)       # The tolerance for the phase to be considered a match
+PHASE_TOLERANCE = np.deg2rad(10)       # The tolerance for the phase to be considered a match
 
 def setup_stfft(f_mirnov=2.5e6, f_target=1e3, frequency_resolution=None) -> ShortTimeFFT:
     """Set up the Short Time Fast Fourier Transform object for the mirnov signals
@@ -279,14 +280,15 @@ class CmodTearingMethods:
                         path=f"{path}.{mirnov_name}",
                         tree_name="magnetics",
             )
-            # Get the Mirnov sample frequency
-            f_mirnov = int(1 / (mirnov_times[1] - mirnov_times[0]))
+            # Get the sampling frequency of the Mirnov signal
+            f_mirnov = 1 / np.mean(np.diff(mirnov_times))
             print(f"Using Mirnov frequency of {f_mirnov} Hz on {mirnov_name}")
             # Print a warning if the sample rate is very slow
             if f_mirnov < 2.4e6:
                 params.logger.warning(f"[Shot {params.shot_id}] You're too slow! Got Mirnov frequency of {f_mirnov} Hz on {mirnov_name}, expected 2.5 MHz or 5 MHz")
-            # Interpolate the signal to an integer sample frequency
-            mirnov_signal = interp1(mirnov_times, mirnov_signal, np.arange(mirnov_times[0], mirnov_times[-1], 1/f_mirnov))
+            # Interpolate the signal to the actual correct Mirnov frequency
+            #f_mirnov = 2.5e6
+            #mirnov_signal = interp1(mirnov_times, mirnov_signal, np.arange(mirnov_times[0], mirnov_times[-1], 1/f_mirnov))
 
             f_timebase = 1 / (params.times[1] - params.times[0])  # however fast the timebase is
 
@@ -300,6 +302,14 @@ class CmodTearingMethods:
             fft_times = (SFT.delta_t * np.arange(mirnov_fft_full.shape[1])) + mirnov_times[0]
             mirnov_fft_interp = interp1(fft_times, mirnov_fft_full, params.times)
 
+            # Check if the average difference between frequencies is NOT close to 250
+            if not np.isclose(np.mean(np.diff(freqs)), 250, atol=1):
+                params.logger.warning(f"[Shot {params.shot_id}] The Mirnov frequency resolution is not 250 Hz")
+            # Replace the frequencies with nice integers (for the sake of consistency)
+            freqs = np.arange(0, 80e3, 250)
+
+            if (mirnov_fft_interp.shape[0] != 320):
+                params.logger.warning(f"[Shot {params.shot_id}] The Mirnov signal is not 320 samples long. This may cause issues with the n mode filtering.")
             return mirnov_fft_interp, freqs
         except Exception as e:
             return None, None
