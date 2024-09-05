@@ -62,7 +62,7 @@ class CmodEfitMethods:
         efit_time = params.mds_conn.get_data(
             r"\efit_aeqdsk:time", tree_name="_efit_tree", astype="float64"
         )  # [s]
-        efit_data = dict()
+        efit_data = {}
 
         # Get data from each of the columns in efit_cols one at a time
         for param in CmodEfitMethods.efit_cols:

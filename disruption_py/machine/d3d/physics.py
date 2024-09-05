@@ -1464,9 +1464,9 @@ class D3DPhysicsMethods:
         if params.shot_id < 172749:  # First shot on Sep 19, 2017
             suffix["tangential"] = "hor"
 
-        lasers = dict()
+        lasers = {}
         for laser in ts_systems:
-            lasers[laser] = dict()
+            lasers[laser] = {}
             sub_tree = f"{mds_path}{laser}"
             try:
                 (t_sub_tree,) = params.mds_conn.get_dims(
@@ -1513,7 +1513,7 @@ class D3DPhysicsMethods:
         # from the tangential system onto the finer (core) timebase
         if "tangential" in lasers and lasers["tangential"] is not None:
             if "core" in lasers and lasers["core"] is not None:
-                lasers["combined"] = dict()
+                lasers["combined"] = {}
                 # Interpolate tangential data onto core timebase
                 for key in lasers["tangential"]:
                     if key not in ["time", "r", "z"]:
@@ -1652,7 +1652,7 @@ class D3DPhysicsMethods:
     @staticmethod
     @cache_method
     def _get_efit_dict(params: PhysicsMethodParams):
-        efit_dict = dict()
+        efit_dict = {}
         path = r"\top.results.geqdsk:"
         nodes = ["z", "r", "rhovn", "psirz", "zmaxis", "ssimag", "ssibry"]
         (efit_dict_time,) = params.mds_conn.get_dims(
