@@ -253,7 +253,6 @@ class CmodTearingMethods:
 
         return all_mirnov_names, phi_all, theta_all, theta_pol_all
 
-
     @staticmethod
     @cache_method
     def get_mirnov_stfft(params: PhysicsMethodParams, mirnov_name: str):
