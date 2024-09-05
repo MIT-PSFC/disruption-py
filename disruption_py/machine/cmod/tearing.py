@@ -18,8 +18,9 @@ from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import gaussian_fit, interp1, smooth
 from disruption_py.machine.tokamak import Tokamak
 
-CHECKED_N_MODES = list(range(1, 10))
-CHECKED_M_MODES = list(range(1, 11))
+CHECKED_N_MODES = list(range(2, 10))  # Disregard n=1, go up to n=9. Anything higher is getting in the realm of "maybe that's just a really slow TAE"
+CHECKED_M_MODES = list(range(1, 11))  # TODO(ZanderKeith) This is bad. We have zero clue what the m number is.
+PHASE_TOLERANCE = np.deg2rad(5)       # The tolerance for the phase to be considered a match
 
 def setup_stfft(f_mirnov=2.5e6, f_target=1e3, frequency_resolution=None) -> ShortTimeFFT:
     """Set up the Short Time Fast Fourier Transform object for the mirnov signals
@@ -99,8 +100,7 @@ def get_expected_cross_phase(mode: tuple[int, int], theta_1: float, phi_1: float
 
     return float(expected_cross_phase)
 
-
-def cross_phase_mask(original_signal, cross_phases, expected_cross_phases, tolerance=0.2):
+def cross_phase_mask(original_signal, probe_cross_phase, kept_cross_phases, tolerance=PHASE_TOLERANCE):
     """Mask the signal based on the cross phases between multiple probes
     Things to look into: Change tolerance based on the mode number (higher q gets more lenience)
     somehow correct for the curvature of the torus
@@ -111,11 +111,11 @@ def cross_phase_mask(original_signal, cross_phases, expected_cross_phases, toler
     ----------
     original_signal : numpy.ndarray
         The original signal to mask
-    cross_phases : list[float]
-        The cross phases between the probes
-    expected_cross_phases : list[float]
-        The expected cross phases between the probes
-    tolerance : float, optional (default=0.5) [rad]
+    probe_cross_phase : np.ndarray
+        The cross phase between two mirnov probes
+    kept_cross_phases : list[float]
+        The cross phases that are allowed to be kept
+    tolerance : float, optional (default=PHASE_TOLERANCE) [rad]
         The tolerance for the cross phase to be considered a match
 
     Returns:
@@ -124,21 +124,66 @@ def cross_phase_mask(original_signal, cross_phases, expected_cross_phases, toler
         The original signal with the masked values set to np.nan
     """
 
-    masked_signal = original_signal
-    for cross_phase, expected_cross_phase in zip(cross_phases, expected_cross_phases):
-        # If the expected cross phase is near 0 or 2pi, we risk a 2 pi jump messing things up
+    valid_signal = np.zeros_like(original_signal)
+    for kept_cross_phase in kept_cross_phases:
+        # We know the probe's cross phase should be sufficiently different from 0 or 2pi
+        # But if the expected cross phase is near 0 or 2pi, we risk a 2 pi jump messing things up
         # Gotta bring everything into the center of the circle
-        if expected_cross_phase < np.pi / 8:
-            tested_expected_cross_phase = expected_cross_phase + np.pi
-            tested_cross_phase = (cross_phase + np.pi) % (2 * np.pi)
-        elif expected_cross_phase > 15 * np.pi / 8:
-            tested_expected_cross_phase = expected_cross_phase - np.pi
-            tested_cross_phase = (cross_phase - np.pi) % (2 * np.pi)
+        if kept_cross_phase < np.pi / 8:
+            tested_cross_phase = kept_cross_phase + np.pi
+            tested_probe_cross_phase = (probe_cross_phase + np.pi) % (2 * np.pi)
+        elif kept_cross_phase > 15 * np.pi / 8:
+            tested_cross_phase = kept_cross_phase - np.pi
+            tested_probe_cross_phase = (probe_cross_phase - np.pi) % (2 * np.pi)
         else:
-            tested_expected_cross_phase = expected_cross_phase
-            tested_cross_phase = cross_phase
-        masked_signal = np.where(np.abs(tested_cross_phase - tested_expected_cross_phase) > tolerance, np.nan, masked_signal)
+            tested_cross_phase = kept_cross_phase
+            tested_probe_cross_phase = probe_cross_phase
+        cross_phase_difference = np.abs(tested_cross_phase - tested_probe_cross_phase)
+        valid_signal = np.where(cross_phase_difference < tolerance, 1, valid_signal)
+
+    masked_signal = np.where(valid_signal == 1, original_signal, np.nan)
+
     return masked_signal
+
+def aliasing_check(phi_1: float, phi_2: float, n_modes_of_interest: list[int], n_avoided_modes: list[int], tolerance=PHASE_TOLERANCE, self_aliasing=False):
+    """Check if the toroidal separation between two probes causes aliasing between the modes of interest and the avoided modes.
+
+    Parameters:
+    ----------
+    phi_1 : float
+        The toroidal angle of the first mirnov probe [rad]
+    phi_2 : float
+        The toroidal angle of the second mirnov probe [rad]
+    n_modes_of_interest : list[int]
+        The modes that are of interest
+    n_avoided_modes : list[int]
+        The modes to avoid aliasing with
+    tolerance : float, optional (default=PHASE_TOLERANCE) [rad]
+        The tolerance for the phase to be considered a match
+    self_aliasing : bool, optional (default=False)
+        If True, will also check for aliasing between the modes of interest
+
+    Returns:
+    ----------
+    aliasing : bool
+        True if the toroidal separation causes aliasing between the modes of interest and the avoided modes, False otherwise
+    """
+
+    interest_n_cross_phases = [get_expected_cross_phase((0, n), 0, phi_1, 0, phi_2) for n in n_modes_of_interest]
+    avoided_n_cross_phases = [get_expected_cross_phase((0, n), 0, phi_1, 0, phi_2) for n in n_avoided_modes]
+
+    for interest_cross_phase in interest_n_cross_phases:
+        for avoided_cross_phase in avoided_n_cross_phases:
+            if np.abs(interest_cross_phase - avoided_cross_phase) < tolerance:
+                return True
+
+    if self_aliasing:
+        for interest_cross_phase_1 in interest_n_cross_phases:
+            for interest_cross_phase_2 in interest_n_cross_phases:
+                if np.abs(interest_cross_phase_1 - interest_cross_phase_2) < tolerance:
+                    return True
+
+    return False
 
 
 class CmodTearingMethods:
@@ -227,13 +272,13 @@ class CmodTearingMethods:
                         path=f"{path}.{mirnov_name}",
                         tree_name="magnetics",
             )
-            # Put the Mirnov sample frequency to 2.5 MHz
-            f_mirnov = 2.5e6
-            actual_mirnov_sample_freq = 1 / (mirnov_times[1] - mirnov_times[0])  # Mirnov sampling rate
-            if actual_mirnov_sample_freq < f_mirnov*0.99 or actual_mirnov_sample_freq > f_mirnov*1.01:
-                print(f"Mirnov sample frequency is not 2.5 MHz. Be warned!!! Got {actual_mirnov_sample_freq} in shot {params.shot_id}.")
-                # Interpolate the signal to the correct timebase
-                mirnov_signal = interp1(mirnov_times, mirnov_signal, np.arange(mirnov_times[0], mirnov_times[-1], 1/f_mirnov))
+            # Get the Mirnov sample frequency
+            f_mirnov = int(1 / (mirnov_times[1] - mirnov_times[0]))
+            # Print a warning if the sample rate is very slow
+            if f_mirnov < 2.4e6:
+                params.logger.warning(f"[Shot {params.shot_id}] You're too slow! Got Mirnov frequency of {f_mirnov} Hz, expected 2.5 MHz or 5 MHz")
+            # Interpolate the signal to an integer sample frequency
+            mirnov_signal = interp1(mirnov_times, mirnov_signal, np.arange(mirnov_times[0], mirnov_times[-1], 1/f_mirnov))
 
             f_timebase = 1 / (params.times[1] - params.times[0])  # however fast the timebase is
 
@@ -401,9 +446,9 @@ class CmodTearingMethods:
 
         all_mirnov_names, phi_all, theta_all, theta_pol_all = CmodTearingMethods.get_mirnov_names_and_locations(params)
 
-        # Get all pairs of probes where the toroidal distance is at least 30 degrees
+        # Get all pairs of probes where their toroidal separation doesn't cause aliasing with the n=1 mode
         # And sort them by the poloidal distance
-        candidate_pairs = [(i, j) for i in range(len(all_mirnov_names)) for j in range(i + 1, len(all_mirnov_names)) if np.abs(phi_all[i] - phi_all[j]) > np.deg2rad(30)]
+        candidate_pairs = [(i, j) for i in range(len(all_mirnov_names)) for j in range(i + 1, len(all_mirnov_names)) if (aliasing_check(phi_all[i], phi_all[j], [1], CHECKED_N_MODES) is False)]
         candidate_pairs = sorted(candidate_pairs, key=lambda x: np.abs(theta_all[x[0]] - theta_all[x[1]]))
 
         # Get the signals from the first pair that works
@@ -506,6 +551,32 @@ class CmodTearingMethods:
                 mode_spectrogram_dict[("n_mode_spectrogram", mode, freq)] = masked_spectrograms[mode][i]
 
         return mode_spectrogram_dict
+
+    @staticmethod
+    @physics_method(
+        tags=["n_greater_1_spectrogram"],
+        tokamak=Tokamak.CMOD,
+    )
+    def _get_n_mode_spectrograms(params: PhysicsMethodParams):
+        """Calculate the spectrogram from a Mirnov coil that is masked to show modes 2 <= n <= 9."""
+
+        mirnov_data = CmodTearingMethods.get_two_mirnov_ffts(params)
+        original_spectrogram, freqs = CmodTearingMethods.get_mirnov_spectrogram(params)
+
+        # Find the cross phase between the probes
+        cross_phase = np.angle(mirnov_data[0] * np.conj(mirnov_data[1])) % (2 * np.pi)
+
+        # For each mode, get the expected cross phase
+        expected_cross_phases = [get_expected_cross_phase((0, mode), 0, mirnov_data.phi[0], 0, mirnov_data.phi[1]) for mode in CHECKED_N_MODES]
+
+        masked_spectrogram = cross_phase_mask(original_spectrogram, cross_phase, expected_cross_phases)
+
+        # Make a dictionary where the keys are ("n_greater_1_spectrogram", frequency) and the values are the masked spectrogram data
+        spectrogram_dict = {}
+        for i, freq in enumerate(freqs):
+            spectrogram_dict[("n_greater_1_spectrogram", freq)] = masked_spectrogram[i]
+
+        return spectrogram_dict
 
     @staticmethod
     @physics_method(
