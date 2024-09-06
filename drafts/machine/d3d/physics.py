@@ -76,12 +76,10 @@ class D3DDraftPhysicsMethods:
             efit_dict = D3DPhysicsMethods._get_efit_dict(params)
             ts["psin"], ts["rhovn"] = D3DPhysicsMethods.efit_rz_interp(ts, efit_dict)
         except Exception as e:
-            params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+            params.logger.debug("[Shot %s]: %S", params.shot_id, traceback.format_exc())
             ts = 0
         if ts == 0:
-            params.logger.info(
-                f"[Shot {params.shot_id}]:Both TS data missing for shot #{params.shot_id}"
-            )
+            params.logger.info("[Shot %s]: Both TS data missing", params.shot_id)
         if ts != 0:
             # Drop data outside of valid range #ADM: this looks unfinished
             invalid_indices = np.where(

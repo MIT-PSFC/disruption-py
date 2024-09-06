@@ -81,7 +81,7 @@ class CacheSettingDict(CacheSetting):
         if chosen_setting is not None:
             return chosen_setting.get_cache_data(params)
         else:
-            params.logger.warning(f"No cache setting for tokamak {params.tokamak}")
+            params.logger.warning("No cache setting for tokamak %s", arams.tokamak)
             return None
 
 
@@ -89,7 +89,7 @@ class SQLCacheSetting(CacheSetting):
     """Cache setting for retrieving data from SQL database."""
 
     def _get_cache_data(self, params: CacheSettingParams) -> pd.DataFrame:
-        params.logger.info(f"retrieving sql data for {params.shot_id}")
+        params.logger.info("retrieving sql data for %s", params.shot_id)
         return params.database.get_shots_data(shotlist=[params.shot_id])
 
 

@@ -182,7 +182,7 @@ class OutputSettingDict(OutputSetting):
         if chosen_setting is not None:
             return chosen_setting.output_shot(params)
         else:
-            params.logger.warning(f"No output setting for tokamak {params.tokamak}")
+            params.logger.warning("No output setting for tokamak %s", params.tokamak)
             return None
 
     def stream_output_cleanup(self, params: CompleteOutputSettingParams):
@@ -190,7 +190,7 @@ class OutputSettingDict(OutputSetting):
         if chosen_setting is not None:
             return chosen_setting.stream_output_cleanup(params)
         else:
-            params.logger.warning(f"No output setting for tokamak {params.tokamak}")
+            params.logger.warning("No output setting for tokamak %s", params.tokamak)
             return None
 
     def get_results(self, params: CompleteOutputSettingParams):
@@ -198,7 +198,7 @@ class OutputSettingDict(OutputSetting):
         if chosen_setting is not None:
             return chosen_setting.get_results(params)
         else:
-            params.logger.warning(f"No output setting for tokamak {params.tokamak}")
+            params.logger.warning("No output setting for tokamak %s", params.tokamak)
             return None
 
 
