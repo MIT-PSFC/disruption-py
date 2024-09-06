@@ -1037,18 +1037,6 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
     return bolo_shot
 
 
-def save_open_plots(filename):
-    import matplotlib.pyplot as plt
-    from matplotlib.backends.backend_pdf import PdfPages
-
-    pp = PdfPages(filename)
-    fig_nums = plt.get_fignums()
-    figs = [plt.figure(n) for n in fig_nums]
-    for fig in figs:
-        fig.savefig(pp, format="pdf")
-    pp.close()
-
-
 def matlab_gradient_1d_vectorized(f, h, **kwargs):
     """
     Compute the gradient for a 1D array using vectorized operations.
