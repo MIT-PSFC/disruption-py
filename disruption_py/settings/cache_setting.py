@@ -81,7 +81,7 @@ class CacheSettingDict(CacheSetting):
         if chosen_setting is not None:
             return chosen_setting.get_cache_data(params)
         else:
-            params.logger.warning("No cache setting for tokamak %s", arams.tokamak)
+            params.logger.warning("No cache setting for tokamak %s", params.tokamak)
             return None
 
 
