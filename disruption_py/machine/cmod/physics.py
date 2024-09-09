@@ -187,7 +187,7 @@ class CmodPhysicsMethods:
                             ip_prog[segment_indices] = ip_prog_temp[segment_indices]
                     except mdsExceptions.MdsException as e:
                         params.logger.warning(
-                            "[Shot %s]:  Error getting PID gains for wire %s",
+                            "[Shot %s]: Error getting PID gains for wire %s",
                             params.shot_id,
                             wire_index,
                         )
@@ -605,7 +605,7 @@ class CmodPhysicsMethods:
             )
         except mdsExceptions.TreeFOPENR as e:
             params.logger.warning(
-                "[Shot %s]:  Failed to open necessary trees for rotational velocity calculations.",
+                "[Shot %s]: Failed to open necessary trees for rotational velocity calculations.",
                 params.shot_id,
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
@@ -685,7 +685,7 @@ class CmodPhysicsMethods:
                 )
                 if len(signal) == 1:
                     params.logger.warning(
-                        "[Shot %s] Only one data point for %s. Returning nans.",
+                        "[Shot %s]: Only one data point for %s. Returning nans.",
                         params.shot_id,
                         bp13_names[i],
                     )
@@ -696,9 +696,9 @@ class CmodPhysicsMethods:
                 bp13_signals[:, i] = interp1(t_mag, signal, params.times)
             except mdsExceptions.TreeNODATA as e:
                 params.logger.warning(
-                    "[Shot %s]:  No data for %s", params.shot_id, bp13_names[i]
+                    "[Shot %s]: No data for %s", params.shot_id, bp13_names[i]
                 )
-                params.logger.debug("[Shot %s]:  %s", params.shot_id, e)
+                params.logger.debug("[Shot %s]: %s", params.shot_id, e)
                 # Only calculate n=1 amplitude if all sensors have data
                 return nan_output
         # TODO: Examine edge case behavior of sign
@@ -776,8 +776,8 @@ class CmodPhysicsMethods:
                 r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
             )
         except Exception as e:
-            params.logger.debug("[Shot %s]:  %s", params.shot_id, e)
-            params.logger.warning("[Shot %s]:  No density data", params.shot_id)
+            params.logger.debug("[Shot %s]: %s", params.shot_id, e)
+            params.logger.warning("[Shot %s]: No density data", params.shot_id)
             # TODO: Handle this case
             raise NotImplementedError(
                 "Can't currently handle failure of grabbing density data"
@@ -801,7 +801,7 @@ class CmodPhysicsMethods:
             )
         except Exception as e:
             params.logger.debug(
-                "[Shot %s]:  %s", params.shot_id, traceback.format_exc()
+                "[Shot %s]: %s", params.shot_id, traceback.format_exc()
             )
             return {"i_efc": [np.nan]}
         output = CmodPhysicsMethods.get_efc_current(params.times, iefc, t_iefc)
@@ -1032,7 +1032,7 @@ class CmodPhysicsMethods:
             # Make sure that there are equal numbers of edge position and edge temperature points
             if len(TS_z_edge) != TS_Te_edge.shape[0]:
                 params.logger.warning(
-                    "[Shot %s]:  TS edge data and z positions are not the same length for shot",
+                    "[Shot %s]: TS edge data and z positions are not the same length for shot",
                     params.shot_id,
                 )
                 return nan_output
@@ -1371,7 +1371,7 @@ class CmodPhysicsMethods:
                 r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
             )  # [m], [s]
         except mdsExceptions.MdsException:
-            params.logger.debug("[Shot %s]:  Failed to get efit data", params.shot_id)
+            params.logger.debug("[Shot %s]: Failed to get efit data", params.shot_id)
             return nan_output
 
         # Btor and LH Power used for filtering okay time slices
@@ -1431,7 +1431,7 @@ class CmodPhysicsMethods:
                 node_path + ":radii", tree_name="electrons"
             )  # [m], [s]
         except mdsExceptions.MdsException:
-            params.logger.debug("[Shot %s]:  Failed to get GPC2 data", params.shot_id)
+            params.logger.debug("[Shot %s]: Failed to get GPC2 data", params.shot_id)
             return nan_output
 
         return CmodPhysicsMethods.get_te_profile_params_ece(
@@ -1472,7 +1472,7 @@ class CmodPhysicsMethods:
                 r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
             )
         except mdsExceptions.MdsException as e:
-            params.logger.debug("[Shot %s]:  Failed to get efit data", params.shot_id)
+            params.logger.debug("[Shot %s]: Failed to get efit data", params.shot_id)
             return nan_output
         got_axa = False
         try:
@@ -1491,7 +1491,7 @@ class CmodPhysicsMethods:
             )
             got_axa = True
         except mdsExceptions.MdsException as e:
-            params.logger.debug("[Shot %s]:  Failed to get AXA data", params.shot_id)
+            params.logger.debug("[Shot %s]: Failed to get AXA data", params.shot_id)
         got_axj = False
         try:
             bright_axj, t_axj, r_axj = params.mds_conn.get_data_with_dims(
@@ -1509,7 +1509,7 @@ class CmodPhysicsMethods:
             )
             got_axj = True
         except mdsExceptions.MdsException as e:
-            params.logger.debug("[Shot %s]:  Failed to get AXJ data", params.shot_id)
+            params.logger.debug("[Shot %s]: Failed to get AXJ data", params.shot_id)
         if not (got_axa or got_axj):
             return nan_output
         a_minor = interp1(efit_time, aminor, params.times)
@@ -1573,7 +1573,7 @@ class CmodPhysicsMethods:
             )
         except mdsExceptions.TreeFOPENR as e:
             params.logger.warning(
-                "[Shot %s]:  Failed to get SXR data returning NaNs", params.shot_id
+                "[Shot %s]: Failed to get SXR data returning NaNs", params.shot_id
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             return {"sxr": [np.nan]}
