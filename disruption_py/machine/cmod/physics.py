@@ -390,7 +390,7 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def get_ohmic_parameters(
-        times, v_loop, v_loop_time, li, efittime, dip_smoothed, ip
+        times, v_loop, v_loop_time, li, efittime, dip_smoothed, ip, r0
     ):
         """Calculate the ohmic power from the loop voltage, inductive voltage, and
         plasma current.
@@ -411,6 +411,8 @@ class CmodPhysicsMethods:
             The smoothed plasma current.
         ip : array_like
             The plasma current.
+        r0 : array_like
+            The plasma major radius
 
         Returns
         -------
@@ -424,9 +426,7 @@ class CmodPhysicsMethods:
 
 
         """
-        # For simplicity, we use R0 = 0.68 m, but we could use \efit_aeqdsk:rmagx
-        R0 = 0.68
-        inductance = 4.0 * np.pi * 1.0e-7 * R0 * li / 2.0
+        inductance = 4.0 * np.pi * 1.0e-7 * r0 * li / 2.0
         v_loop = interp1(v_loop_time, v_loop, times)
         inductance = interp1(efittime, inductance, times)
         v_inductive = inductance * dip_smoothed
@@ -453,6 +453,10 @@ class CmodPhysicsMethods:
             r"\efit_aeqdsk:li", tree_name="_efit_tree", astype="float64"
         )
         ip_parameters = CmodPhysicsMethods._get_ip_parameters(params=params)
+        r0 = 0.01 * params.mds_conn.get_data(
+            r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
+        )
+
         output = CmodPhysicsMethods.get_ohmic_parameters(
             params.times,
             v_loop,
@@ -461,6 +465,7 @@ class CmodPhysicsMethods:
             efittime,
             ip_parameters["dip_smoothed"],
             ip_parameters["ip"],
+            r0,
         )
         return output
 
