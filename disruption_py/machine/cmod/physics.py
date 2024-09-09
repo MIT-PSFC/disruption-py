@@ -685,7 +685,7 @@ class CmodPhysicsMethods:
                 )
                 if len(signal) == 1:
                     params.logger.warning(
-                        "[Shot %s] Only one data point for %s. " "Returning nans.",
+                        "[Shot %s] Only one data point for %s. Returning nans.",
                         params.shot_id,
                         bp13_names[i],
                     )
