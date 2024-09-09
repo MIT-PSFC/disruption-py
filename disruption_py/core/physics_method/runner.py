@@ -145,8 +145,8 @@ def populate_method(
             result = method(params=physics_method_params)
         except Exception as e:
             physics_method_params.logger.warning(
-                f"[Shot {physics_method_params.shot_id}]:Failed to populate {name}"
-                + f"with error {e}"
+                f"[Shot {physics_method_params.shot_id}]:Failed to populate {name} "
+                f"with error {e}"
             )
             physics_method_params.logger.debug(f"{traceback.format_exc()}")
     else:
@@ -158,13 +158,13 @@ def populate_method(
         except Exception as e:
             physics_method_params.logger.warning(
                 f"[Shot {physics_method_params.shot_id}]:Failed to cache {name} "
-                + f"with error {e}"
+                "with error {e}"
             )
             physics_method_params.logger.debug(f"{traceback.format_exc()}")
 
     physics_method_params.logger.info(
         f"[Shot {physics_method_params.shot_id}]:Completed {name}, time_elapsed: "
-        + f"{time.time() - start_time}"
+        f"{time.time() - start_time}"
     )
     return result
 
@@ -225,7 +225,7 @@ def populate_shot(
                 if method_metadata in run_bound_method_metadata:
                     physics_method_params.logger.info(
                         f"[Shot {physics_method_params.shot_id}]:Skipping "
-                        + f"{method_metadata.name} already populated"
+                        f"{method_metadata.name} already populated"
                     )
 
     start_time = time.time()
@@ -257,7 +257,7 @@ def populate_shot(
         if len(method_df) != len(pre_filled_shot_data):
             physics_method_params.logger.error(
                 f"[Shot {physics_method_params.shot_id}]:Ignoring parameter "
-                + f"{method_dict} with different length than timebase"
+                f"{method_dict} with different length than timebase"
             )
             # TODO, should we drop the columns, or is it better to raise an
             # exception when the data do not match?

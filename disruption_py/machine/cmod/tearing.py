@@ -18,7 +18,7 @@ from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import gaussian_fit, interp1, smooth
 from disruption_py.machine.tokamak import Tokamak
 
-CHECKED_N_MODES = list(range(2, 6))  # Disregard n=1, go up to n=9. Anything higher is getting in the realm of "maybe that's just a really slow TAE"
+CHECKED_N_MODES = list(range(2, 9))  # Disregard n=1, go up to n=8. Anything higher is getting in the realm of "maybe that's just a really slow TAE"
 #CHECKED_N_MODES = list(range(11, 12))
 CHECKED_M_MODES = list(range(1, 11))  # TODO(ZanderKeith) This is bad. We have zero clue what the m number is.
 PHASE_TOLERANCE = np.deg2rad(10)       # The tolerance for the phase to be considered a match
@@ -195,6 +195,8 @@ def aliasing_check(phi_1: float, phi_2: float, n_modes_of_interest: list[int], n
 
     return False
 
+
+
 class CmodTearingMethods:
     @staticmethod
     @cache_method
@@ -222,6 +224,9 @@ class CmodTearingMethods:
         # I want the equivalent of .getNode, or .getNodeWild, and things like that
         # something along these lines: mirnov_coil_names = params.mds_connection.get_coil_names()
         # TODO(ZanderKeith): expand for every Mirnov coil. For now, just using the ABK, GHK, and K coils
+        # There are some others but I can't find their positions in MDSPlus,
+        # Need to be taken from here: https://cmodwiki.psfc.mit.edu/index.php/FastMagneticsLocations#2010_Locations
+        # And might need to include some logic for pre and post 2010...
         mirnov_names_ab = [f"BP0{p}_ABK" for p in range(1, 10)] + [f"BP{p}_ABK" for p in range(10, 19)]
         mirnov_names_gh = [f"BP0{p}_GHK" for p in range(1, 10)] + [f"BP{p}_GHK" for p in range(10, 19)]
         mirnov_names_k = [f"BP0{p}_K" for p in range(1, 7)]
@@ -380,6 +385,98 @@ class CmodTearingMethods:
 
         # If we get here, we couldn't find a pair of probes that worked
         return None
+
+    @staticmethod
+    @cache_method
+    def get_all_mirnov_ffts(params: PhysicsMethodParams):
+        """Get all FFTs of the available Mirnov coils for this shot.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters for the physics method.
+
+        Returns
+        -------
+        mirnov_ffts : xarray.DataArray
+            The FFT of the Mirnov coils.
+            Dimensions are probe, frequency, and time.
+            Coordinates are probe, frequency, time, phi, theta, and theta_pol.
+        """
+
+        all_mirnov_names, phi_all, theta_all, theta_pol_all = CmodTearingMethods.get_mirnov_names_and_locations(params)
+
+        valid_mirnov_ffts = []
+        valid_mirnov_names = []
+        valid_mirnov_locations = []
+        saved_freqs = None
+        for mirnov_index, mirnov_name in enumerate(all_mirnov_names):
+            mirnov_fft, freqs = CmodTearingMethods.get_mirnov_stfft(params=params, mirnov_name=mirnov_name)
+            if mirnov_fft is not None:
+                valid_mirnov_ffts.append(mirnov_fft)
+
+                valid_mirnov_names.append(mirnov_name)
+
+                mirnov_phi = phi_all[mirnov_index]
+                mirnov_theta = theta_all[mirnov_index]
+                mirnov_theta_pol = theta_pol_all[mirnov_index]
+                valid_mirnov_locations.append((mirnov_phi, mirnov_theta, mirnov_theta_pol))
+            if saved_freqs is None:
+                saved_freqs = freqs
+
+        mirnov_ffts = xr.DataArray(
+            np.array(valid_mirnov_ffts),
+            dims=("probe", "frequency", "time"),
+            coords={
+                "probe": list(range(len(valid_mirnov_locations))),
+                "probe_name": ("probe", valid_mirnov_names),
+                "frequency": saved_freqs,
+                "time": params.times,
+                "phi": ("probe", [loc[0] for loc in valid_mirnov_locations]),
+                "theta": ("probe", [loc[1] for loc in valid_mirnov_locations]),
+                "theta_pol": ("probe", [loc[2] for loc in valid_mirnov_locations]),
+            },
+        )
+
+
+        # Convert to a dataset and save to a zarr file for testing
+        mirnov_ffts_dataset = mirnov_ffts.to_dataset(name="mirnov_ffts")
+        mirnov_ffts_dataset.to_zarr(f"datasets/{params.shot_id}_mirnov_ffts.zarr", mode="w")
+
+        return mirnov_ffts
+
+    @staticmethod
+    @physics_method(
+        tags=["all_mirnov_ffts"],
+        tokamak=Tokamak.CMOD,
+    )
+    def _get_all_mirnov_ffts(params: PhysicsMethodParams):
+        """Get all FFTs of the available Mirnov coils for this shot.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters for the physics method.
+
+        Returns
+        -------
+        mirnov_ffts : dict
+            The FFTs of the Mirnov coils.
+            Dimensions are probe, phi, theta, theta_pol, frequency, and time.
+        """
+
+        mirnov_ffts_xarray = CmodTearingMethods.get_all_mirnov_ffts(params)
+
+        # Convert the xarray to a dictionary to pass back to disruption-py
+        mirnov_ffts = {}
+        for mirnov_index, mirnov_name in enumerate(mirnov_ffts_xarray.probe.values):
+            mirnov_phi = mirnov_ffts_xarray.phi.values[mirnov_index]
+            mirnov_theta = mirnov_ffts_xarray.theta.values[mirnov_index]
+            mirnov_theta_pol = mirnov_ffts_xarray.theta_pol.values[mirnov_index]
+            for freq in mirnov_ffts_xarray.frequency.values:
+                mirnov_ffts[(mirnov_name, mirnov_phi, mirnov_theta, mirnov_theta_pol, freq)] = mirnov_ffts_xarray.sel(probe=mirnov_name, frequency=freq).values
+
+        return mirnov_ffts
 
     @staticmethod
     @cache_method
