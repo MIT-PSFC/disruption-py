@@ -84,7 +84,6 @@ class OutputSetting(ABC):
             Params containing the data retrieved for a shot in a DataFrame and other
             utility parameters.
         """
-        pass
 
     def stream_output_cleanup(self, params: CompleteOutputSettingParams):
         """Empty method optionally overridden by subclasses to handle cleanup after
@@ -97,7 +96,6 @@ class OutputSetting(ABC):
         params : CompleteOutputSettingParams
             Utility parameters such as the tokamak and logger.
         """
-        pass
 
     @abstractmethod
     def get_results(self, params: CompleteOutputSettingParams) -> Any:
@@ -116,7 +114,6 @@ class OutputSetting(ABC):
             The desired output of the call to `get_shots_data` potentially containing the data for all shots,
             some aggregation of that data, or nothing.
         """
-        pass
 
 
 class OutputSettingList(OutputSetting):

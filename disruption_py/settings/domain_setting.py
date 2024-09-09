@@ -50,7 +50,6 @@ class DomainSetting(ABC):
         Get the modified times attribute of the provided physics_method_params
         given the desired domain of the timebase
         """
-        pass
 
 
 class DomainSettingDict(DomainSetting):

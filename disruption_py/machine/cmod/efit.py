@@ -91,7 +91,6 @@ class CmodEfitMethods:
                     "[Shot %s]: %s", params.shot_id, traceback.format_exc()
                 )
                 efit_data[param] = np.full(len(efit_time), np.nan)
-                pass
 
         for deriv_param, param in CmodEfitMethods.efit_derivs.items():
             efit_data[deriv_param] = np.gradient(
@@ -109,7 +108,6 @@ class CmodEfitMethods:
         except:
             print("unable to get V_surf")
             efit_data["v_surf"] = np.full(len(efit_time), np.nan)
-            pass
 
         # For shots before 2000, adjust units of aminor, compute beta_n and v_loop
         if params.shot_id <= 1000000000:
@@ -127,7 +125,6 @@ class CmodEfitMethods:
             except:
                 print("unable to get v_loop_efit")
                 efit_data["v_loop_efit"] = np.full(len(efit_time), np.nan)
-                pass
 
             # Compute beta_n
             beta_t = params.mds_conn.get_data(

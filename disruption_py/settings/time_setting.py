@@ -80,7 +80,6 @@ class TimeSetting(ABC):
         np.ndarray
             Numpy array containing times in the timebase.
         """
-        pass
 
 
 class TimeSettingDict(TimeSetting):
