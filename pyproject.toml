@@ -48,3 +48,13 @@ matplotlib = "^3.9.0"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pylint]
+disable = [
+    "invalid-name",
+    "too-many-arguments",
+    "too-many-branches",
+    "too-many-lines",
+    "too-many-locals",
+    "too-many-statements",
+]
