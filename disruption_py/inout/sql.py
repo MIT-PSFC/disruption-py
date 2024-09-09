@@ -80,7 +80,7 @@ class ShotDatabase:
         # read profile
         profile_path = database_dict["profile_path"]
         profile = os.path.expanduser(profile_path)
-        with open(profile, "r") as fio:
+        with open(profile, "r", encoding="utf-8") as fio:
             db_user, db_pass = fio.read().split()[-2:]
 
         return SharedInstanceFactory(ShotDatabase).get_instance(
