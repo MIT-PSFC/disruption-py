@@ -5,8 +5,6 @@ This module contains utility functions for various numerical operations.
 """
 
 import copy
-import random
-import string
 from dataclasses import dataclass
 
 import numpy as np
@@ -16,10 +14,6 @@ from scipy.optimize import curve_fit
 from scipy.signal import lfilter, medfilt
 
 pd.options.mode.chained_assignment = None
-
-
-def generate_id(size=8):
-    return "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
 
 
 def interp1(x, y, new_x, kind="linear", bounds_error=False, fill_value=np.nan, axis=-1):
