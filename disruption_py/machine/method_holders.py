@@ -9,9 +9,8 @@ def get_method_holders(tokamak: Tokamak):
         from disruption_py.machine.d3d import METHOD_HOLDERS
 
         return METHOD_HOLDERS
-    elif tokamak is Tokamak.CMOD:
+    if tokamak is Tokamak.CMOD:
         from disruption_py.machine.cmod import METHOD_HOLDERS
 
         return METHOD_HOLDERS
-    else:
-        raise ValueError(f"Invalid tokamak for physics methods {tokamak}")
+    raise ValueError(f"Invalid tokamak for physics methods {tokamak}")

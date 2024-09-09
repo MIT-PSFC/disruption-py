@@ -299,7 +299,7 @@ def matlab_gsastd(
         width = 1
     if derivative_mode == 0:
         return matlab_fastsmooth(y_arr, width, smooth_type, ends_type)
-    elif derivative_mode == 1:
+    if derivative_mode == 1:
         return matlab_fastsmooth(matlab_deriv(x, y_arr), width, smooth_type, ends_type)
     raise ValueError("derivative_mode only takes 0 or 1 as input")
 

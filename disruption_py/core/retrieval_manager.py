@@ -256,7 +256,5 @@ class RetrievalManager:
             )
             if not timed_cache_data["merge_success_flag"].isna().any():
                 return timed_cache_data.drop(columns=["merge_success_flag"])
-            else:
-                return None
-        else:
             return None
+        return None

@@ -209,7 +209,7 @@ class ShotDatabase:
                 shot_data=shot_data,
                 table_name=self.write_database_table_name,
             )
-        elif (
+        if (
             len(curr_df) == len(shot_data)
             and (
                 (curr_df["time"] - shot_data["time"]).abs() < config().TIME_CONST

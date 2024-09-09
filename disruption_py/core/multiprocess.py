@@ -102,7 +102,7 @@ class MultiprocessingShotRetriever:
             self.logger.info("Processing result for shot: %s", shot_id)
             if result is MARK_COMPLETE:
                 break
-            elif result is None:
+            if result is None:
                 self.logger.warning(
                     "Not outputting data for shot %s, data is None.", shot_id
                 )

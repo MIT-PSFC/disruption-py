@@ -110,9 +110,8 @@ class TimeSettingDict(TimeSetting):
         chosen_setting = self.resolved_time_setting_dict.get(params.tokamak, None)
         if chosen_setting is not None:
             return chosen_setting.get_times(params)
-        else:
-            params.logger.warning("No time setting for tokamak %s", params.tokamak)
-            return None
+        params.logger.warning("No time setting for tokamak %s", params.tokamak)
+        return None
 
 
 class ListTimeSetting(TimeSetting):
@@ -263,12 +262,11 @@ class DisruptionTimeSetting(TimeSetting):
         finite_indices = np.where((signal_time >= 0.0) & (np.abs(signal) > threshold))
         if len(finite_indices) == 0:
             return duration, signal_max
-        else:
-            dt = np.diff(signal_time)
-            duration = np.sum(dt[finite_indices[:-1]])
-            if duration < 0.1:  # Assuming < 100 ms is not a bona fide plasma
-                duration = 0
-                return duration, signal_max
+        dt = np.diff(signal_time)
+        duration = np.sum(dt[finite_indices[:-1]])
+        if duration < 0.1:  # Assuming < 100 ms is not a bona fide plasma
+            duration = 0
+            return duration, signal_max
         polarity = np.sign(
             np.trapz(signal[finite_indices], signal_time[finite_indices])
         )
