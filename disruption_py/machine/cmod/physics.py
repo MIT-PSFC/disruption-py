@@ -781,7 +781,7 @@ class CmodPhysicsMethods:
             # TODO: Handle this case
             raise NotImplementedError(
                 "Can't currently handle failure of grabbing density data"
-            )
+            ) from e
         output = CmodPhysicsMethods.get_densities(
             params.times, n_e, t_n, ip, t_ip, a_minor, t_a
         )
