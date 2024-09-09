@@ -113,8 +113,10 @@ class FlattopDomainSetting(DomainSetting):
         indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
         if len(indices_flattop) == 0:
             params.logger.warning(
-                "[Shot %s]: Could not find flattop timebase. "
-                "Defaulting to full shot(efit) timebase.",
+                (
+                    "[Shot %s]: Could not find flattop timebase. "
+                    "Defaulting to full shot(efit) timebase."
+                ),
                 params.physics_method_params.shot_id,
             )
             return None
@@ -138,8 +140,10 @@ class FlattopDomainSetting(DomainSetting):
             )
             if len(polarity) > 1:
                 params.logger.info(
-                    "[Shot %s]: Polarity of Ip target is not constant. "
-                    "Using value at first timestep.",
+                    (
+                        "[Shot %s]: Polarity of Ip target is not constant. "
+                        "Using value at first timestep."
+                    ),
                     params.physics_method_params.shot_id,
                 )
                 params.logger.debug(
@@ -158,8 +162,7 @@ class FlattopDomainSetting(DomainSetting):
             )
         except Exception as e:
             params.logger.warning(
-                "[Shot %s]: Could not find flattop timebase. "
-                "Defaulting to full timebase.",
+                "[Shot %s]: Could not find flattop timebase. Defaulting to full timebase.",
                 params.physics_method_params.shot_id,
             )
             params.logger.debug(
@@ -211,8 +214,7 @@ class RampupAndFlattopDomainSetting(DomainSetting):
         indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
         if len(indices_flattop) == 0:
             params.logger.warning(
-                "[Shot %s]: Could not find flattop timebase. "
-                "Defaulting to full timebase.",
+                "[Shot %s]: Could not find flattop timebase. Defaulting to full timebase.",
                 params.physics_method_params.shot_id,
             )
             return None

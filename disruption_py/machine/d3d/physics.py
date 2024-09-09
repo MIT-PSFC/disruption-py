@@ -537,8 +537,10 @@ class D3DPhysicsMethods:
             )
             if len(polarity) > 1:
                 params.logger.info(
-                    "[Shot %s]: Polarity of Ip target is not constant. "
-                    "Using value at first timestep.",
+                    (
+                        "[Shot %s]: Polarity of Ip target is not constant. "
+                        "Using value at first timestep."
+                    ),
                     params.shot_id,
                 )
                 params.logger.debug(
@@ -752,8 +754,10 @@ class D3DPhysicsMethods:
             ip_error_rt[ps_railed_indices] = np.nan
         except mdsExceptions.MdsException as e:
             params.logger.info(
-                "[Shot %s]: Failed to get epsoff signal. "
-                "power_supply_railed will be NaN.",
+                (
+                    "[Shot %s]: Failed to get epsoff signal. "
+                    "power_supply_railed will be NaN."
+                ),
                 params.shot_id,
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
@@ -1033,8 +1037,10 @@ class D3DPhysicsMethods:
         except mdsExceptions.MdsException as e:
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             params.logger.info(
-                "[Shot %s]: Failed to get CVA and XDIV from MDSPlus."
-                " Calculating locally, results may be inaccurate.",
+                (
+                    "[Shot %s]: Failed to get CVA and XDIV from MDSPlus."
+                    " Calculating locally, results may be inaccurate."
+                ),
                 params.shot_id,
             )
             rad_cva = [np.nan]
@@ -1528,8 +1534,7 @@ class D3DPhysicsMethods:
                 except mdsExceptions.MdsException as e:
                     lasers[laser][node] = np.full(lasers[laser]["time"].shape, np.nan)
                     params.logger.info(
-                        "[Shot %s]: Failed to get %s:%s(%s)"
-                        " data, Setting to all NaNs.",
+                        "[Shot %s]: Failed to get %s:%s(%s) data, Setting to all NaNs.",
                         params.shot_id,
                         laser,
                         name,
