@@ -335,7 +335,7 @@ def resolve_time_setting(
         if time_setting_object is not None:
             return time_setting_object
 
-    if isinstance(time_setting, np.ndarray) or isinstance(time_setting, list):
+    if isinstance(time_setting, (list, np.ndarray)):
         return ListTimeSetting(time_setting)
 
     if isinstance(time_setting, pd.Series):
