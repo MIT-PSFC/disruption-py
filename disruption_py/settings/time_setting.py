@@ -111,7 +111,7 @@ class TimeSettingDict(TimeSetting):
         if chosen_setting is not None:
             return chosen_setting.get_times(params)
         else:
-            params.logger.warning(f"No time setting for tokamak {params.tokamak}")
+            params.logger.warning("No time setting for tokamak %s", params.tokamak)
             return None
 
 
@@ -151,9 +151,12 @@ class CacheTimeSetting(TimeSetting):
                 return times
             except KeyError as e:
                 params.logger.warning(
-                    f"[Shot {params.shot_id}]: Shot constructor was passed data but no timebase."
+                    "[Shot %s]: Shot constructor was passed data but no timebase.",
+                    params.shot_id,
                 )
-                params.logger.debug(f"[Shot {params.shot_id}]:{traceback.format_exc()}")
+                params.logger.debug(
+                    "[Shot %s]: %s", params.shot_id, traceback.format_exc()
+                )
         else:
             return self.fallback_time_setting.get_times(params)
 
@@ -305,7 +308,7 @@ class SignalTimeSetting(TimeSetting):
             return signal_time
         except Exception as e:
             params.logger.error(
-                f"Failed to set up timebase for signal {self.signal_path}"
+                "Failed to set up timebase for signal %s", self.signal_path
             )
             raise Exception(e)
 

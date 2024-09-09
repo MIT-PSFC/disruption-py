@@ -124,7 +124,7 @@ def get_shots_data(
             )
             if shot_data is None:
                 logger.warning(
-                    f"Not outputting data for shot {shot_id} due, data is None."
+                    "Not outputting data for shot %s due, data is None.", shot_id
                 )
             else:
                 output_setting.output_shot(

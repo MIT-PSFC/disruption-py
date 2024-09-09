@@ -99,12 +99,12 @@ class MultiprocessingShotRetriever:
     def _result_processor(self):
         while True:
             shot_id, result = self.result_queue.get()
-            self.logger.info(f"Processing result for shot: {shot_id}")
+            self.logger.info("Processing result for shot: %s", shot_id)
             if result is MARK_COMPLETE:
                 break
             elif result is None:
                 self.logger.warning(
-                    f"Not outputting data for shot {shot_id}, data is None."
+                    "Not outputting data for shot %s, data is None.", shot_id
                 )
                 continue
             self.output_setting.output_shot(

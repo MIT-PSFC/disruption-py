@@ -47,8 +47,8 @@ def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams):
         ).all()
     ):
         physics_method_params.logger.error(
-            f"[Shot {physics_method_params.shot_id}]: ERROR Computation on different"
-            + " timebase than pre-filled shot data"
+            "[Shot %s]: ERROR Computation on different timebase than pre-filled shot data",
+            physics_method_params.shot_id,
         )
     return pre_filled_shot_data
 
@@ -120,9 +120,10 @@ def filter_methods_to_run(
             methods_to_run.append(bound_method_metadata)
         else:
             physics_method_params.logger.info(
-                f"[Shot {physics_method_params.shot_id}]:Skipping "
-                + f"{bound_method_metadata.name} in class "
-                + f"{bound_method_metadata.bound_method}"
+                "[Shot %s]: Skipping %s in class %s",
+                physics_method_params.shot_id,
+                bound_method_metadata.name,
+                bound_method_metadata.bound_method,
             )
     return methods_to_run
 
@@ -139,32 +140,38 @@ def populate_method(
     result = None
     if bound_method_metadata.populate:
         physics_method_params.logger.info(
-            f"[Shot {physics_method_params.shot_id}]:Populating {name}"
+            "[Shot %s]: Populating %s", physics_method_params.shot_id, name
         )
         try:
             result = method(params=physics_method_params)
         except Exception as e:
             physics_method_params.logger.warning(
-                f"[Shot {physics_method_params.shot_id}]:Failed to populate {name}"
-                + f"with error {e}"
+                "[Shot %s]: Failed to populate %s with error %s",
+                physics_method_params.shot_id,
+                name,
+                e,
             )
-            physics_method_params.logger.debug(f"{traceback.format_exc()}")
+            physics_method_params.logger.debug("%s", traceback.format_exc())
     else:
         physics_method_params.logger.info(
-            f"[Shot {physics_method_params.shot_id}]:Caching {name}"
+            "[Shot %s]: Caching %s", physics_method_params.shot_id, name
         )
         try:
             method(params=physics_method_params)
         except Exception as e:
             physics_method_params.logger.warning(
-                f"[Shot {physics_method_params.shot_id}]:Failed to cache {name} "
-                + f"with error {e}"
+                "[Shot %s]: Failed to cache %s with error %s",
+                physics_method_params.shot_id,
+                name,
+                e,
             )
-            physics_method_params.logger.debug(f"{traceback.format_exc()}")
+            physics_method_params.logger.debug("%s", traceback.format_exc())
 
     physics_method_params.logger.info(
-        f"[Shot {physics_method_params.shot_id}]:Completed {name}, time_elapsed: "
-        + f"{time.time() - start_time}"
+        "[Shot %s]: Completed %s, time_elapsed: %s",
+        physics_method_params.shot_id,
+        name,
+        time.time() - start_time,
     )
     return result
 
@@ -224,8 +231,9 @@ def populate_shot(
                 cached_method_metadata.append(method_metadata)
                 if method_metadata in run_bound_method_metadata:
                     physics_method_params.logger.info(
-                        f"[Shot {physics_method_params.shot_id}]:Skipping "
-                        + f"{method_metadata.name} already populated"
+                        "[Shot %s]: Skipping %s already populated",
+                        physics_method_params.shot_id,
+                        method_metadata.name,
                     )
 
     start_time = time.time()
@@ -256,8 +264,9 @@ def populate_shot(
         method_df = pd.DataFrame(method_dict)
         if len(method_df) != len(pre_filled_shot_data):
             physics_method_params.logger.error(
-                f"[Shot {physics_method_params.shot_id}]:Ignoring parameter "
-                + f"{method_dict} with different length than timebase"
+                "[Shot %s]: Ignoring parameter %s with different length than timebase",
+                physics_method_params.shot_id,
+                method_dict,
             )
             # TODO, should we drop the columns, or is it better to raise an
             # exception when the data do not match?

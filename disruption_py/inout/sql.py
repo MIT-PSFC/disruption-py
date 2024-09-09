@@ -40,14 +40,14 @@ class ShotDatabase:
         if protected_columns is None:
             protected_columns = []
 
-        self.logger.info(f"Database initialization: {user}@{host}/{db_name}")
+        self.logger.info("Database initialization: %s@%s/%s", user, host, db_name)
         drivers = pyodbc.drivers()
         if driver in drivers:
             self.driver = driver
         else:
             self.driver = drivers[0]
             self.logger.warning(
-                f"Database driver fallback: '{driver}' -> '{self.driver}'"
+                "Database driver fallback: '%s' -> '%s'", driver, self.driver
             )
         self.host = host
         self.port = port
@@ -124,7 +124,7 @@ class ShotDatabase:
         """
         current_thread = threading.current_thread()
         if current_thread not in self._thread_connections:
-            self.logger.info(f"Connecting to database for thread {current_thread}")
+            self.logger.info("Connecting to database for thread %s", current_thread)
             self._thread_connections[current_thread] = pyodbc.connect(
                 self.connection_string
             )
@@ -360,7 +360,7 @@ class ShotDatabase:
             self.engine,
         )
         if len(data_df) == 0:
-            self.logger.info(f"Shot {shot_id} does not exist in database")
+            self.logger.info("Shot %s does not exist in database", shot_id)
             return False
         with self.conn.cursor() as curs:
             curs.execute(
@@ -382,7 +382,7 @@ class ShotDatabase:
             )
             return True
         except Exception as e:
-            self.logger.error(f"Failed to add column {col_name} with error {e}")
+            self.logger.error("Failed to add column %s with error %s", col_name, e)
             return False
 
     def remove_column(self, col_name):
@@ -393,7 +393,7 @@ class ShotDatabase:
                 + "adding shot data"
             )
         if col_name in self.protected_columns:
-            self.logger.error(f"Failed to drop protected column {col_name}")
+            self.logger.error("Failed to drop protected column %s", col_name)
             return False
         try:
             self.query(
@@ -402,7 +402,7 @@ class ShotDatabase:
             )
             return True
         except Exception as e:
-            self.logger.error(f"Failed to drop column {col_name} with error {e}")
+            self.logger.error("Failed to drop column %s with error %s", col_name, e)
             return False
 
     def get_shots_data(

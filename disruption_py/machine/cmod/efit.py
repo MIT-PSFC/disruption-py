@@ -85,10 +85,10 @@ class CmodEfitMethods:
                     )
             except:
                 params.logger.warning(
-                    f"[Shot {params.shot_id}]: Unable to get {param} from EFIT tree"
+                    "[Shot %s]: Unable to get %s from EFIT tree", params.shot_id, param
                 )
                 params.logger.debug(
-                    f"[Shot {params.shot_id}]: {traceback.format_exc()}"
+                    "[Shot %s]: %s", params.shot_id, traceback.format_exc()
                 )
                 efit_data[param] = np.full(len(efit_time), np.nan)
                 pass
