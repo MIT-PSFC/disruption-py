@@ -834,6 +834,9 @@ class D3DPhysicsMethods:
         }
         # The following shots are missing bradial calculations in MDSplus and
         # must be loaded from a separate datafile
+        # NOTE: This implementation needs revising.
+        #       In the meantime, let's disable the corresponding pylint error.
+        #       pylint: disable-next=no-else-raise
         if 176030 <= params.shot_id <= 176912:
             raise NotImplementedError
             # TODO: Move to a folder like "/fusion/projects/disruption_warning/data"
