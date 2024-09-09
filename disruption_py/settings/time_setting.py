@@ -308,7 +308,7 @@ class SignalTimeSetting(TimeSetting):
             params.logger.error(
                 "Failed to set up timebase for signal %s", self.signal_path
             )
-            raise Exception(e)
+            raise
 
 
 # --8<-- [start:time_setting_dict]
