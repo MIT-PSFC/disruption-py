@@ -45,10 +45,6 @@ ipympl = "^0.9.0"
 jupyterlab = "^4.2.0"
 matplotlib = "^3.9.0"
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
 [tool.pylint]
 disable = [
     "invalid-name",
@@ -59,3 +55,7 @@ disable = [
     "too-many-locals",
     "too-many-statements",
 ]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
