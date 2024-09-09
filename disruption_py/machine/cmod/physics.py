@@ -800,9 +800,7 @@ class CmodPhysicsMethods:
                 r"\efc:u_bus_r_cur", tree_name="engineering"
             )
         except Exception as e:
-            params.logger.debug(
-                "[Shot %s]: %s", params.shot_id, traceback.format_exc()
-            )
+            params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             return {"i_efc": [np.nan]}
         output = CmodPhysicsMethods.get_efc_current(params.times, iefc, t_iefc)
         return output
