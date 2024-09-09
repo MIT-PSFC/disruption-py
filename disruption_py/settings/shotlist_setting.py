@@ -123,9 +123,8 @@ class DatabaseShotlistSetting(ShotlistSetting):
                 query=self.sql_query, use_pandas=True
             )
             return query_result_df.iloc[:, 0].tolist()
-        else:
-            query_result = params.database.query(query=self.sql_query, use_pandas=False)
-            return [row[0] for row in query_result]
+        query_result = params.database.query(query=self.sql_query, use_pandas=False)
+        return [row[0] for row in query_result]
 
 
 # --8<-- [start:get_shotlist_setting_dict]

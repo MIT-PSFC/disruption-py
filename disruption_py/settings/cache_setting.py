@@ -80,9 +80,8 @@ class CacheSettingDict(CacheSetting):
         chosen_setting = self.resolved_cache_setting_dict.get(params.tokamak, None)
         if chosen_setting is not None:
             return chosen_setting.get_cache_data(params)
-        else:
-            params.logger.warning("No cache setting for tokamak %s", params.tokamak)
-            return None
+        params.logger.warning("No cache setting for tokamak %s", params.tokamak)
+        return None
 
 
 class SQLCacheSetting(CacheSetting):

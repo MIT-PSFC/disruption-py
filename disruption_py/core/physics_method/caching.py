@@ -37,17 +37,15 @@ def cache_method(method: Callable) -> Callable:
 
         if cache_key in physics_method_params._cached_results:
             return physics_method_params._cached_results[cache_key]
-        else:
-            result = method(*args, **kwargs)
-            physics_method_params._cached_results[cache_key] = result
-            return result
+        result = method(*args, **kwargs)
+        physics_method_params._cached_results[cache_key] = result
+        return result
 
     if isinstance(method, staticmethod):
         return staticmethod(wrapper)
-    elif isinstance(method, classmethod):
+    if isinstance(method, classmethod):
         return classmethod(wrapper)
-    else:
-        return wrapper
+    return wrapper
 
 
 def get_method_cache_key(
@@ -84,11 +82,10 @@ def manually_cache(
             "[Shot %s]: Manually caching %s", physics_method_params.shot_id, method_name
         )
         return True
-    else:
-        physics_method_params.logger.debug(
-            "[Shot %s]: Can not cache %s missing columns %s",
-            physics_method_params.shot_id,
-            method_name,
-            missing_columns,
-        )
-        return False
+    physics_method_params.logger.debug(
+        "[Shot %s]: Can not cache %s missing columns %s",
+        physics_method_params.shot_id,
+        method_name,
+        missing_columns,
+    )
+    return False

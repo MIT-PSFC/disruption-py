@@ -14,7 +14,7 @@ class SharedInstanceFactory:
         def make_hashable(obj):
             if isinstance(obj, dict):
                 return tuple(sorted((k, make_hashable(v)) for k, v in obj.items()))
-            elif isinstance(obj, (list, set)):
+            if isinstance(obj, (list, set)):
                 return tuple(sorted(make_hashable(e) for e in obj))
             return obj
 

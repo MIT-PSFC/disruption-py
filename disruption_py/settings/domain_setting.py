@@ -79,9 +79,8 @@ class DomainSettingDict(DomainSetting):
         chosen_setting = self.resolved_domain_setting_dict.get(params.tokamak, None)
         if chosen_setting is not None:
             return chosen_setting.get_domain(params)
-        else:
-            params.logger.warning("No domain setting for tokamak %s", params.tokamak)
-            return None
+        params.logger.warning("No domain setting for tokamak %s", params.tokamak)
+        return None
 
 
 class FullDomainSetting(DomainSetting):
