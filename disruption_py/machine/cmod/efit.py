@@ -70,7 +70,7 @@ class CmodEfitMethods:
                 # If shot before 2000 and the param is in efit_cols_pre_2000
                 if (
                     params.shot_id <= 1000000000
-                    and param not in CmodEfitMethods.efit_cols_pre_2000.keys()
+                    and param not in CmodEfitMethods.efit_cols_pre_2000
                 ):
                     efit_data[param] = params.mds_conn.get_data(
                         CmodEfitMethods.efit_cols_pre_2000[param],

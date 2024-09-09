@@ -13,6 +13,7 @@ dynaconf = "^3.2.0"
 numpy = "^1.26.0"
 pandas = {extras = ["hdf5"], version = "^2.2.0"}
 pyodbc = "^5.1.0"
+ruff = "^0.6.4"
 scikit_learn = "^1.5.0"
 scipy = "^1.13.0"
 SQLAlchemy = "^2.0.0"
