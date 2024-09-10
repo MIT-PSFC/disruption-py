@@ -1456,7 +1456,7 @@ class D3DPhysicsMethods:
     def _get_ne_te(
         params: PhysicsMethodParams,
         data_source="blessed",
-        ts_systems=["core", "tangential"],
+        ts_systems=None,
     ):
         """
         Retrieves DIII-D Thomson scattering data
@@ -1483,6 +1483,8 @@ class D3DPhysicsMethods:
         Original method by Kevin Montes on March 2019
         Last major update by William Wei on 8/8/2024
         """
+        if ts_systems is None:
+            ts_systems = ["core", "tangential"]
         if data_source == "blessed":  # 'blessed' by Thomson group
             mds_path = r"\top.ts.blessed."
         elif data_source == "unblessed":

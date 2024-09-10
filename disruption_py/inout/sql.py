@@ -408,7 +408,7 @@ class ShotDatabase:
     def get_shots_data(
         self,
         shotlist: List[int],
-        cols: List[str] = ["*"],
+        cols: List[str] = None,
         sql_table="disruption_warning",
     ):
         """get_shots_data retrieves columns from sql data for given shotlist
@@ -427,6 +427,8 @@ class ShotDatabase:
         pd.Dataframe
             Dataframe containing queried data
         """
+        if cols is None:
+            cols = ["*"]
         shotlist = ",".join([str(shot_id) for shot_id in shotlist])
         selected_cols = f"{cols[0]}"
         if len(cols) > 1:
