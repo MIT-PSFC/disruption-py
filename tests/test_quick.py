@@ -4,32 +4,8 @@
 execute a few simple workflows as tests.
 """
 
+from examples.efit import main as test_efit
+from examples.mdsplus import main as test_mdsplus
+from examples.sql import main as test_sql
 
-def test_sql():
-    """
-    test SQL connection.
-    """
-
-    import examples.sql
-
-    print("Success:", examples.sql.__file__)
-
-
-def test_mdsplus():
-    """
-    test MDSplus connection.
-    """
-
-    import examples.mdsplus
-
-    print("Success:", examples.mdsplus.__file__)
-
-
-def test_efit():
-    """
-    test EFIT workflow.
-    """
-
-    import examples.efit
-
-    print("Success:", examples.efit.__file__)
+__all__ = ["test_efit", "test_mdsplus", "test_sql"]
