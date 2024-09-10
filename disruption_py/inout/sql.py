@@ -429,17 +429,13 @@ class ShotDatabase:
         """
         if cols is None:
             cols = ["*"]
-        shotlist = ",".join([str(shot_id) for shot_id in shotlist])
-        selected_cols = f"{cols[0]}"
-        if len(cols) > 1:
-            selected_cols += "".join([f", {col}" for col in cols[1:]])
+        cols = ", ".join(str(col) for col in cols)
+        shotlist = ",".join(str(shot) for shot in shotlist)
+        query = f"select {cols} from {sql_table}"
         if shotlist is None:
-            query = f"select {selected_cols} from {sql_table} order by time"
+            query += " order by time"
         else:
-            query = (
-                f"select {selected_cols} from {sql_table} where shot in "
-                + f"({shotlist}) order by shot, time"
-            )
+            query += f" where shot in ({shotlist}) order by shot, time"
         shot_df = pd.read_sql_query(query, self.engine)
         shot_df.columns = shot_df.columns.str.lower()
         return shot_df
