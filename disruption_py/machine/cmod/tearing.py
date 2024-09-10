@@ -22,6 +22,7 @@ CHECKED_N_MODES = list(range(2, 9))  # Disregard n=1, go up to n=8. Anything hig
 #CHECKED_N_MODES = list(range(11, 12))
 CHECKED_M_MODES = list(range(1, 11))  # TODO(ZanderKeith) This is bad. We have zero clue what the m number is.
 PHASE_TOLERANCE = np.deg2rad(10)       # The tolerance for the phase to be considered a match
+R0 = 0.68
 
 def setup_stfft(f_mirnov=2.5e6, f_target=1e3, frequency_resolution=None) -> ShortTimeFFT:
     """Set up the Short Time Fast Fourier Transform object for the mirnov signals
@@ -99,6 +100,8 @@ def get_expected_cross_phase(mode: tuple[int, int], theta_1: float, phi_1: float
         expected_cross_phase = (probe_2_phase - probe_1_phase) % (2 * np.pi)
 
     return float(expected_cross_phase)
+
+#def calculate_probe_loss
 
 def cross_phase_mask(original_signal, probe_cross_phase, mask_cross_phases, tolerance=PHASE_TOLERANCE, inverted=False):
     """Mask the signal based on the cross phases between multiple probes
@@ -195,8 +198,6 @@ def aliasing_check(phi_1: float, phi_2: float, n_modes_of_interest: list[int], n
 
     return False
 
-
-
 class CmodTearingMethods:
     @staticmethod
     @cache_method
@@ -223,38 +224,70 @@ class CmodTearingMethods:
         # How do you do this in disruption-py?
         # I want the equivalent of .getNode, or .getNodeWild, and things like that
         # something along these lines: mirnov_coil_names = params.mds_connection.get_coil_names()
-        # TODO(ZanderKeith): expand for every Mirnov coil. For now, just using the ABK, GHK, and K coils
-        # There are some others but I can't find their positions in MDSPlus,
-        # Need to be taken from here: https://cmodwiki.psfc.mit.edu/index.php/FastMagneticsLocations#2010_Locations
-        # And might need to include some logic for pre and post 2010...
+
+        # These are the coils with positions that exist in MDSPlus, a LOT easier to deal with
         mirnov_names_ab = [f"BP0{p}_ABK" for p in range(1, 10)] + [f"BP{p}_ABK" for p in range(10, 19)]
         mirnov_names_gh = [f"BP0{p}_GHK" for p in range(1, 10)] + [f"BP{p}_GHK" for p in range(10, 19)]
         mirnov_names_k = [f"BP0{p}_K" for p in range(1, 7)]
-        all_mirnov_names = mirnov_names_ab + mirnov_names_gh + mirnov_names_k
 
         phi_ab, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.phi_AB", tree_name="magnetics")
         phi_gh, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.phi_GH", tree_name="magnetics")
         phi_k, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.phi_K", tree_name="magnetics")
-        phi_all = np.concatenate((phi_ab, phi_gh, phi_k))
-        phi_all = np.deg2rad(phi_all)
 
         R_ab, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.R_AB", tree_name="magnetics")
         R_gh, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.R_GH", tree_name="magnetics")
         R_k, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.R_K", tree_name="magnetics")
-        R_all = np.concatenate((R_ab, R_gh, R_k))
 
         Z_ab, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.Z_AB", tree_name="magnetics")
         Z_gh, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.Z_GH", tree_name="magnetics")
         Z_k, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.Z_K", tree_name="magnetics")
-        Z_all = np.concatenate((Z_ab, Z_gh, Z_k))
-
-        theta_all = np.arctan2(Z_all, R_all)
 
         theta_pol_ab, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.theta_pol_AB", tree_name="magnetics")
         theta_pol_gh, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.theta_pol_GH", tree_name="magnetics")
         # theta_pol_k, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.theta_pol_K", tree_name="magnetics")  # noqa: ERA001
         theta_pol_k = np.empty_like(Z_k)  # Calibration data doesn't exist, so we'll just say NaN and deal with it later
-        theta_pol_all = np.concatenate((theta_pol_ab, theta_pol_gh, theta_pol_k))
+
+        # These are the coils without positions in MDSPlus, need to hard-code values.
+        # Taken from here: https://cmodwiki.psfc.mit.edu/index.php/FastMagneticsLocations#2010_Locations
+        # Might need to include some logic for pre and post 2010... TODO(ZanderKeith)
+
+        mirnov_names_tab = ["BP1T_ABK", "BP2T_ABK", "BP3T_ABK", "BP4T_ABK", "BP5T_ABK", "BP6T_ABK"]
+        mirnov_names_tgh = ["BP1T_GHK", "BP2T_GHK", "BP3T_GHK", "BP4T_GHK", "BP5T_GHK", "BP6T_GHK"]
+        mirnov_names_top = ["BP_KA_TOP", "BP_AB_TOP", "BP_BC_TOP", "BP_EF_TOP"]
+        mirnov_names_bot = ["BP_KA_BOT", "BP_BC_BOT", "BP_EF_BOT"]
+
+        phi_tab = [-23.10, -25.50, -27.90, -23.10, -25.50, -27.90]
+        phi_tgh = [-224.40, -226.80, -229.20, -224.40, -226.80, -229.20]
+        phi_top = [-344.80, -10.16, -59.87, -169.55]
+        phi_bot = [-344.80, -59.87, -169.55]
+
+        R_tab = [0.1030, 0.1030, 0.1030, -0.1030, -0.1030, -0.1030]
+        R_tgh = [0.1000, 0.1000, 0.1000, -0.1000, -0.1000, -0.1000]
+        R_top = [0.0985, 0.0985, 0.0985, 0.1082]
+        R_bot = [-0.0985, -0.0985, -0.1092]
+
+        Z_tab = [0.9045, 0.9045, 0.9045, 0.9045, 0.9045, 0.9045]
+        Z_tgh = [0.9042, 0.9042, 0.9042, 0.9042, 0.9042, 0.9042]
+        Z_top = [0.9126, 0.9126, 0.9146, 0.9126]
+        Z_bot = [0.9131, 0.9151, 0.9131]
+
+        theta_pol_tab = [23.7, 23.7, 23.7, -23.7, -23.7, -23.7]
+        theta_pol_tgh = [23.1, 23.1, 23.1, -23.1, -23.1, -23.1]
+        theta_pol_top = [18.0, 18.0, 18.0, 19.8]
+        theta_pol_bot = [-18.0, -18.0, -20.0]
+
+        all_mirnov_names = mirnov_names_ab + mirnov_names_gh + mirnov_names_k + mirnov_names_tab + mirnov_names_tgh + mirnov_names_top + mirnov_names_bot
+
+        phi_all = np.concatenate((phi_ab, phi_gh, phi_k, phi_tab, phi_tgh, phi_top, phi_bot))
+        phi_all = np.deg2rad(phi_all)
+        R_all = np.concatenate((R_ab, R_gh, R_k, R_tab, R_tgh, R_top, R_bot))
+        Z_all = np.concatenate((Z_ab, Z_gh, Z_k, Z_tab, Z_tgh, Z_top, Z_bot))
+
+        # The angle we care about is when the hypotenuse is the minor radius
+        Rd = R_all - R0
+        theta_all = np.arctan2(Z_all, Rd)
+
+        theta_pol_all = np.concatenate((theta_pol_ab, theta_pol_gh, theta_pol_k, theta_pol_tab, theta_pol_tgh, theta_pol_top, theta_pol_bot))
         theta_pol_all = np.deg2rad(theta_pol_all)
 
         return all_mirnov_names, phi_all, theta_all, theta_pol_all
