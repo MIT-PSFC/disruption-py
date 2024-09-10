@@ -308,6 +308,11 @@ class D3DPhysicsMethods:
             # Filter out invalid indices of efit reconstruction
             (invalid_indices,) = np.where(chisq > 50)
             li[invalid_indices] = np.nan
+
+            r_0, t_r0 = params.mds_conn.get_data_with_dims(
+                r"\top.results.geqdsk:rmaxis", tree_name="_efit_tree"
+            )  # [m], [ms]
+            t_r0 /= 1e3  # [ms] -> [s]
         except mdsExceptions.MdsException as e:
             params.logger.info(
                 "[Shot %s]: Unable to get plasma current data. p_ohm set to NaN.",
@@ -315,10 +320,10 @@ class D3DPhysicsMethods:
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             return nan_output
-        # [m] For simplicity, use fixed r_0 = 1.67 for DIII-D major radius
-        r_0 = 1.67
+
+        li = interp1(t_li, li, params.times, "linear")
+        r_0 = interp1(t_r0, r_0, params.times, "linear")
         inductance = 4.0 * np.pi * 1e-7 * r_0 * li / 2  # [H]
-        inductance = interp1(t_li, inductance, params.times, "linear")
         ip = interp1(t_ip, ip, params.times, "linear")
         dipdt_smoothed = interp1(t_ip, dipdt_smoothed, params.times, "linear")
 
