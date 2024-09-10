@@ -1,34 +1,44 @@
 #!/usr/bin/env python3
 
 """
-execute a simple fetch to test MDSplus connection.
+example module for MDSplus.
 """
 
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.workflow import get_mdsplus_class
 
-tokamak = resolve_tokamak_from_environment()
 
-if tokamak is Tokamak.D3D:
-    shot = 161228
-    shape = (196,)
-elif tokamak is Tokamak.CMOD:
-    shot = 1150805012
-    shape = (2400,)
-else:
-    raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
+def main():
+    """
+    execute a simple fetch to test MDSplus connection.
+    """
 
-mds = get_mdsplus_class(tokamak).conn
-print(f"Initialized MDSplus: {mds.hostspec}")
+    tokamak = resolve_tokamak_from_environment()
 
-mds.openTree("EFIT01", shot)
-print("#", shot)
+    if tokamak is Tokamak.D3D:
+        shot = 161228
+        shape = (196,)
+    elif tokamak is Tokamak.CMOD:
+        shot = 1150805012
+        shape = (2400,)
+    else:
+        raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 
-node = r"\efit_aeqdsk:time"
-print(">", node)
+    mds = get_mdsplus_class(tokamak).conn
+    print(f"Initialized MDSplus: {mds.hostspec}")
 
-out = mds.get(node).data()
-print("=", out.shape)
-print(out)
+    mds.openTree("EFIT01", shot)
+    print("#", shot)
 
-assert out.shape == shape
+    node = r"\efit_aeqdsk:time"
+    print(">", node)
+
+    out = mds.get(node).data()
+    print("=", out.shape)
+    print(out)
+
+    assert out.shape == shape
+
+
+if __name__ == "__main__":
+    main()
