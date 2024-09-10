@@ -310,8 +310,8 @@ class D3DPhysicsMethods:
 
             r_0, t_r0 = params.mds_conn.get_data_with_dims(
                 r"\top.results.geqdsk:rmaxis", tree_name="_efit_tree"
-            )   # [m], [ms]
-            t_r0 /= 1e3 # [ms] -> [s]
+            )  # [m], [ms]
+            t_r0 /= 1e3  # [ms] -> [s]
         except mdsExceptions.MdsException as e:
             params.logger.info(
                 f"[Shot {params.shot_id}]:Unable to get plasma current data. p_ohm set to NaN."
