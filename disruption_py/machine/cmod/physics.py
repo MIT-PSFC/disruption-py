@@ -451,11 +451,11 @@ class CmodPhysicsMethods:
             }
         li, efittime = params.mds_conn.get_data_with_dims(
             r"\efit_aeqdsk:li", tree_name="_efit_tree", astype="float64"
-        )
+        )  # [dimensionless], [s]
         ip_parameters = CmodPhysicsMethods._get_ip_parameters(params=params)
         r0 = 0.01 * params.mds_conn.get_data(
             r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
-        )
+        )  # [cm] -> [m]
 
         output = CmodPhysicsMethods.get_ohmic_parameters(
             params.times,
