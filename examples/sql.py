@@ -4,7 +4,6 @@
 example module for SQL.
 """
 
-import os
 
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.workflow import get_database
@@ -43,26 +42,9 @@ def main():
         out = db.query(query)
         print("=", out.shape)
 
-        print(out.iloc[0] if out.shape[0] == 1 else out)
+        print(out.iloc[0] if out.shape[0] == 1 else out, "\n")
         if vals:
             assert out.iloc[0, 0] == vals.pop(0)
-
-        if queries:
-            print()
-            continue
-
-        if not __debug__ or any(
-            k in os.environ for k in ["PYTEST_CURRENT_TEST", "GITHUB_ACTIONS"]
-        ):
-            break
-
-        try:
-            query = input("\n> ")
-            if query:
-                queries += [query]
-        except (EOFError, KeyboardInterrupt):
-            print()
-            break
 
 
 if __name__ == "__main__":

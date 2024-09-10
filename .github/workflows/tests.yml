@@ -135,7 +135,7 @@ jobs:
           fi
 
       - name: Test SQL
-        run: poetry run python -O examples/sql.py
+        run: poetry run python examples/sql.py
 
       - name: Test MDSplus
         run: poetry run python examples/mdsplus.py
