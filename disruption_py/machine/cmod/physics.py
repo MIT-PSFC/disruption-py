@@ -412,7 +412,7 @@ class CmodPhysicsMethods:
         ip : array_like
             The plasma current.
         r0 : array_like
-            The plasma major radius
+            The major radius of the plasma's magnetic axis.
 
         Returns
         -------
