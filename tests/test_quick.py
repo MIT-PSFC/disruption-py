@@ -33,3 +33,5 @@ def test_efit():
     import examples.efit
 
     print("Success:", examples.efit.__file__)
+
+import does_not_exist
