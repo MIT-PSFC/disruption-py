@@ -34,4 +34,6 @@ def test_efit():
 
     print("Success:", examples.efit.__file__)
 
-import does_not_exist
+FRUITS = {"apple": 1, "pear": 5, "peach": 10}
+for fruit in FRUITS.keys():
+    print(fruit)
