@@ -18,6 +18,8 @@ def extract_param(config):
         List[str], the data column if it exists, otherwise None.
     """
     args = config.invocation_params.args
+    if len(args) == 0:
+        return None
     m = re.search(r"\[(.+)\]$", args[-1])
     param = [m.group(1)] if m is not None else None
     return param
