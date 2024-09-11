@@ -18,8 +18,8 @@ from disruption_py.core.utils.math import (
     interp1,
     smooth,
 )
-from disruption_py.machine.tokamak import Tokamak
 from disruption_py.machine.cmod.thomson import CmodThomsonDensityMeasure
+from disruption_py.machine.tokamak import Tokamak
 
 warnings.filterwarnings("error", category=RuntimeWarning)
 
