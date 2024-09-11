@@ -130,6 +130,9 @@ jobs:
           > codes.old
           sort -u codes.all \
           > codes.new
+          echo "vvv NEW CODES vvv"
+          grep -vxFf codes.{old,new} || true
+          echo "^^^ NEW CODES ^^^"
           ! grep -vxFf codes.{old,new}
 
       - name: Prohibit score decrease
