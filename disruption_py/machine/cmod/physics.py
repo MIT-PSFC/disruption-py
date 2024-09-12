@@ -350,7 +350,7 @@ class CmodPhysicsMethods:
         # search through the active segments (determined above), find the factors,
         # and *divide* by the factor only for the times in the active segment (as
         # determined from start_times and stop_times.
-        for i, (segment, start) in enumerate(active_wire_segments):
+        for i, (_, start) in enumerate(active_wire_segments):
             if i == len(active_wire_segments) - 1:
                 end = pcstime[-1]
             else:
