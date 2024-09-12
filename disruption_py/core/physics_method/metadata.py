@@ -14,7 +14,6 @@ class MethodMetadata:
     """
 
     name: str
-    populate: bool
 
     cache: bool
     tokamaks: Union[Tokamak, List[Tokamak]]
@@ -27,9 +26,8 @@ class MethodMetadata:
     ]
 
     def __post_init__(self):
-        if self.populate:
-            object.__setattr__(self, "tags", self.tags or ["all"])
-            object.__setattr__(self, "columns", self.columns or [])
+        object.__setattr__(self, "tags", self.tags or ["all"])
+        object.__setattr__(self, "columns", self.columns or [])
 
 
 @dataclass(frozen=True)
