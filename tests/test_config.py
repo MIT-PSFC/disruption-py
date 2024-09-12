@@ -18,7 +18,7 @@ def change_directory(test, tmpdir="/tmp"):
 @change_directory
 def test_settings_file():
     """
-    Temporarily change the current working directory to test if the config
+    Temporarily change the current working directory to test if the config settings
     file is reachable.
     """
     assert config().TIME_CONST is not None
