@@ -65,24 +65,19 @@ class CmodEfitMethods:
         efit_data = {}
 
         # Get data from each of the columns in efit_cols one at a time
-        for param in CmodEfitMethods.efit_cols:
+        for param, path in CmodEfitMethods.efit_cols.items():
             try:
                 # If shot before 2000 and the param is in efit_cols_pre_2000
                 if (
                     params.shot_id <= 1000000000
-                    and param not in CmodEfitMethods.efit_cols_pre_2000
+                    and param in CmodEfitMethods.efit_cols_pre_2000
                 ):
-                    efit_data[param] = params.mds_conn.get_data(
-                        CmodEfitMethods.efit_cols_pre_2000[param],
-                        tree_name="_efit_tree",
-                        astype="float64",
-                    )
-                else:
-                    efit_data[param] = params.mds_conn.get_data(
-                        CmodEfitMethods.efit_cols[param],
-                        tree_name="_efit_tree",
-                        astype="float64",
-                    )
+                    path = CmodEfitMethods.efit_cols_pre_2000[param]
+                efit_data[param] = params.mds_conn.get_data(
+                    path=path,
+                    tree_name="_efit_tree",
+                    astype="float64",
+                )
             except:
                 params.logger.warning(
                     "[Shot %s]: Unable to get %s from EFIT tree", params.shot_id, param
