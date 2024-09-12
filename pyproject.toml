@@ -47,6 +47,15 @@ matplotlib = "^3.9.0"
 
 [tool.pylint]
 extension-pkg-allow-list = ["pyodbc"]
+disable = [
+    "invalid-name",
+    "too-many-arguments",
+    "too-many-branches",
+    "too-many-instance-attributes",
+    "too-many-lines",
+    "too-many-locals",
+    "too-many-statements",
+]
 
 [build-system]
 requires = ["poetry-core"]
