@@ -36,6 +36,7 @@ def decorated_physics_method(params: PhysicsMethodParams) -> dict:
 # # --8<-- [start:kappa_area_request_example]
 
 
+# pylint: disable=duplicate-code
 @physics_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
 def _get_kappa_area(params: PhysicsMethodParams):
     aminor = params.mds_conn.get_data(
