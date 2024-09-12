@@ -94,9 +94,6 @@ def filter_methods_to_run(
 
     methods_to_run = []
     for bound_method_metadata in all_bound_method_metadata:
-        if not bound_method_metadata.populate:
-            continue
-
         # exclude if tokamak does not match
         if not (
             bound_method_metadata.tokamaks is None
@@ -133,39 +130,27 @@ def populate_method(
     bound_method_metadata: BoundMethodMetadata,
     start_time,
 ):
+    """
+    Get data from a physics method.
+    """
 
     method = bound_method_metadata.bound_method
     name = bound_method_metadata.name
 
     result = None
-    if bound_method_metadata.populate:
-        physics_method_params.logger.info(
-            "[Shot %s]: Populating %s", physics_method_params.shot_id, name
+    physics_method_params.logger.info(
+        "[Shot %s]: Populating %s", physics_method_params.shot_id, name
+    )
+    try:
+        result = method(params=physics_method_params)
+    except Exception as e:
+        physics_method_params.logger.warning(
+            "[Shot %s]: Failed to populate %s with error %s",
+            physics_method_params.shot_id,
+            name,
+            e,
         )
-        try:
-            result = method(params=physics_method_params)
-        except Exception as e:
-            physics_method_params.logger.warning(
-                "[Shot %s]: Failed to populate %s with error %s",
-                physics_method_params.shot_id,
-                name,
-                e,
-            )
-            physics_method_params.logger.debug("%s", traceback.format_exc())
-    else:
-        physics_method_params.logger.info(
-            "[Shot %s]: Caching %s", physics_method_params.shot_id, name
-        )
-        try:
-            method(params=physics_method_params)
-        except Exception as e:
-            physics_method_params.logger.warning(
-                "[Shot %s]: Failed to cache %s with error %s",
-                physics_method_params.shot_id,
-                name,
-                e,
-            )
-            physics_method_params.logger.debug("%s", traceback.format_exc())
+        physics_method_params.logger.debug("%s", traceback.format_exc())
 
     physics_method_params.logger.info(
         "[Shot %s]: Completed %s, time_elapsed: %s",

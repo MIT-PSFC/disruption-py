@@ -58,7 +58,6 @@ def physics_method(
         method_metadata = MethodMetadata(
             name=method.__name__,
             cache=cache,
-            populate=True,
             tokamaks=tokamak,
             columns=columns,
             tags=tags,
