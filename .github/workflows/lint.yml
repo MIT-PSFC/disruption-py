@@ -76,7 +76,10 @@ jobs:
           git log -1
           find disruption_py examples tests -type f -name '*.py' \
           | xargs poetry run pylint \
+          --msg-template='|{msg_id} {symbol}|' \
+          | tee pylint.old \
           | grep '^Your code has been rated'
+          echo
           git reset --hard "${{ github.event.pull_request.head.sha }}"
           git log -1
 
@@ -110,6 +113,7 @@ jobs:
         run: |
           cut -s -d '|' -f 2 pylint.log \
           | sort \
+          | tee codes.all \
           | uniq -c \
           | sort -n \
           | tee stats.log
@@ -117,6 +121,19 @@ jobs:
       - name: Prohibit errors
         run: |
           ! grep \|E <( grep -v "Unable to import 'MDSplus'" pylint.log )
+
+      - name: Prohibit new codes
+        if: |
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.draft == false
+        run: |
+          grep '^|' pylint.old \
+          | sort -u \
+          | sed 's/|//g' \
+          > codes.old
+          sort -u codes.all \
+          > codes.new
+          ! grep -vxFf codes.{old,new}
 
       - name: Prohibit score decrease
         if: |
