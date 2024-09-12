@@ -130,6 +130,9 @@ def populate_method(
     bound_method_metadata: BoundMethodMetadata,
     start_time,
 ):
+    """
+    Get data from a physics method.
+    """
 
     method = bound_method_metadata.bound_method
     name = bound_method_metadata.name
