@@ -350,8 +350,7 @@ class CmodPhysicsMethods:
         # search through the active segments (determined above), find the factors,
         # and *divide* by the factor only for the times in the active segment (as
         # determined from start_times and stop_times.
-        for i in range(len(active_wire_segments)):
-            segment, start = active_wire_segments[i]
+        for i, (segment, start) in enumerate(active_wire_segments):
             if i == len(active_wire_segments) - 1:
                 end = pcstime[-1]
             else:
@@ -683,16 +682,16 @@ class CmodPhysicsMethods:
         # 2. Subtract btor pickup
         # 3. Interpolate bp onto shot timebase
 
-        for i in range(len(bp13_names)):
+        for i, bp13_name in enumerate(bp13_names):
             try:
                 signal = params.mds_conn.get_data(
-                    path + bp13_names[i], tree_name="magnetics"
+                    path + bp13_name, tree_name="magnetics"
                 )
                 if len(signal) == 1:
                     params.logger.warning(
                         "[Shot %s]: Only one data point for %s. Returning nans.",
                         params.shot_id,
-                        bp13_names[i],
+                        bp13_name,
                     )
                     return nan_output
                 baseline = np.mean(signal[baseline_indices])
@@ -701,7 +700,7 @@ class CmodPhysicsMethods:
                 bp13_signals[:, i] = interp1(t_mag, signal, params.times)
             except mdsExceptions.TreeNODATA as e:
                 params.logger.warning(
-                    "[Shot %s]: No data for %s", params.shot_id, bp13_names[i]
+                    "[Shot %s]: No data for %s", params.shot_id, bp13_name
                 )
                 params.logger.debug("[Shot %s]: %s", params.shot_id, e)
                 # Only calculate n=1 amplitude if all sensors have data
