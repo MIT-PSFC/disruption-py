@@ -80,7 +80,7 @@ class ShotDatabase:
         # read profile
         profile_path = database_dict["profile_path"]
         profile = os.path.expanduser(profile_path)
-        with open(profile, "r") as fio:
+        with open(profile, "r", encoding="utf-8") as fio:
             db_user, db_pass = fio.read().split()[-2:]
 
         return SharedInstanceFactory(ShotDatabase).get_instance(
@@ -408,7 +408,7 @@ class ShotDatabase:
     def get_shots_data(
         self,
         shotlist: List[int],
-        cols: List[str] = ["*"],
+        cols: List[str] = None,
         sql_table="disruption_warning",
     ):
         """get_shots_data retrieves columns from sql data for given shotlist
@@ -427,17 +427,15 @@ class ShotDatabase:
         pd.Dataframe
             Dataframe containing queried data
         """
-        shotlist = ",".join([str(shot_id) for shot_id in shotlist])
-        selected_cols = f"{cols[0]}"
-        if len(cols) > 1:
-            selected_cols += "".join([f", {col}" for col in cols[1:]])
+        if cols is None:
+            cols = ["*"]
+        cols = ", ".join(str(col) for col in cols)
+        shotlist = ",".join(str(shot) for shot in shotlist)
+        query = f"select {cols} from {sql_table}"
         if shotlist is None:
-            query = f"select {selected_cols} from {sql_table} order by time"
+            query += " order by time"
         else:
-            query = (
-                f"select {selected_cols} from {sql_table} where shot in "
-                + f"({shotlist}) order by shot, time"
-            )
+            query += f" where shot in ({shotlist}) order by shot, time"
         shot_df = pd.read_sql_query(query, self.engine)
         shot_df.columns = shot_df.columns.str.lower()
         return shot_df
@@ -494,6 +492,7 @@ class DummyDatabase(ShotDatabase):
     <pd.DataFrame>
     """
 
+    # pylint: disable-next=super-init-not-called
     def __init__(self, **kwargs):
         pass
 
@@ -502,15 +501,18 @@ class DummyDatabase(ShotDatabase):
         return cls()
 
     @property
-    def conn(self, **kwargs):
+    def conn(self):
         return DummyObject()
 
+    # pylint: disable-next=arguments-differ
     def query(self, **kwargs):
         return pd.DataFrame()
 
+    # pylint: disable-next=arguments-differ
     def get_shots_data(self, **kwargs):
         return pd.DataFrame()
 
+    # pylint: disable-next=arguments-differ
     def get_disruption_time(self, **kwargs):
         return None
 

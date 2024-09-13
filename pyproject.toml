@@ -46,6 +46,8 @@ jupyterlab = "^4.2.0"
 matplotlib = "^3.9.0"
 
 [tool.pylint]
+extension-pkg-allow-list = ["pyodbc"]
+ignored-modules = ["MDSplus"]
 disable = [
     "invalid-name",
     "too-many-arguments",

@@ -11,10 +11,10 @@ def map_string_attributes_to_enum(obj, enum_translations: Dict):
             try:
                 enum_value = enum_class(getattr(obj, field_name))
                 setattr(obj, field_name, enum_value)
-            except ValueError:
+            except ValueError as e:
                 raise ValueError(
                     f"Invalid enum value for field '{field_name}': {getattr(obj, field_name)}"
-                )
+                ) from e
 
 
 def map_string_to_enum(value, enum_class, should_raise=True):
@@ -23,10 +23,10 @@ def map_string_to_enum(value, enum_class, should_raise=True):
     else:
         try:
             enum_value = enum_class(value)
-        except ValueError:
+        except ValueError as e:
             if should_raise:
                 raise ValueError(
                     f"Cannot convert value '{value}' to enum for '{enum_class}'"
-                )
+                ) from e
             return None
     return enum_value

@@ -167,7 +167,7 @@ class CmodThomsonDensityMeasure:
         try:
             nets_edge = params.mds_conn.get_data(r"\ts_ne")
             nets_edge_err = params.mds_conn.get_data(r"\ts_ne_err")
-        except mdsExceptions.mdsException as err:
+        except mdsExceptions.MdsException:
             nets_edge = np.zeros((len(nets_core[:, 1]), mts_edge))
             nets_edge_err = nets_edge + 1e20
         mts = mts_core + mts_edge

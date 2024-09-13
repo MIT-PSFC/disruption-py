@@ -118,10 +118,6 @@ jobs:
           | sort -n \
           | tee stats.log
 
-      - name: Prohibit errors
-        run: |
-          ! grep \|E <( grep -v "Unable to import 'MDSplus'" pylint.log )
-
       - name: Prohibit new codes
         if: |
           github.event_name == 'pull_request' &&
@@ -131,7 +127,7 @@ jobs:
           | sort -u \
           | sed 's/|//g' \
           > codes.old
-          sort -u codes.all \
+          uniq codes.all \
           > codes.new
           ! grep -vxFf codes.{old,new}
 

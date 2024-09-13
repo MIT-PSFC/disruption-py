@@ -1140,6 +1140,7 @@ class D3DPhysicsMethods:
             ne_core[~core_mask] = np.nan
             te_pf = np.full(len(ts["time"]), np.nan)
             ne_pf = np.full(len(ts["time"]), np.nan)
+            # pylint: disable-next=consider-using-enumerate
             for i in range(len(te_pf)):
                 if (
                     ~np.isnan(te_core[:, i]).all()
@@ -1184,6 +1185,7 @@ class D3DPhysicsMethods:
             # Calculate the peaking factors
             rad_cva = np.full(len(p_rad["t"]), np.nan)
             rad_xdiv = np.full(len(p_rad["t"]), np.nan)
+            # pylint: disable-next=consider-using-enumerate
             for i in range(len(rad_cva)):
                 if (
                     ~np.isnan(p_rad_core[i, :]).all()
@@ -1461,7 +1463,7 @@ class D3DPhysicsMethods:
     def _get_ne_te(
         params: PhysicsMethodParams,
         data_source="blessed",
-        ts_systems=["core", "tangential"],
+        ts_systems=None,
     ):
         """
         Retrieves DIII-D Thomson scattering data
@@ -1488,6 +1490,8 @@ class D3DPhysicsMethods:
         Original method by Kevin Montes on March 2019
         Last major update by William Wei on 8/8/2024
         """
+        if ts_systems is None:
+            ts_systems = ["core", "tangential"]
         if data_source == "blessed":  # 'blessed' by Thomson group
             mds_path = r"\top.ts.blessed."
         elif data_source == "unblessed":
@@ -1654,8 +1658,7 @@ class D3DPhysicsMethods:
             "t": a_struct.raw_time,
         }
         if fan != "custom":
-            for i in range(len(fan_chans)):
-                ichan = fan_chans[i]
+            for i, ichan in enumerate(fan_chans):
                 if a_struct.channels[ichan].ier == 0:
                     output["ch_avail"].append(ichan)
                 output["x"][:, i] = a_struct.channels[ichan].Z + np.tan(
@@ -1674,10 +1677,10 @@ class D3DPhysicsMethods:
             # All custom channels are in the lower array
             lower_fan_chans = np.arange(24, 48)
             j = 0
-            for i in range(len(lower_fan_chans)):
+            for i, lower_fan_chan in enumerate(lower_fan_chans):
                 # Why include these extra channels in output['power']?
-                output["power"].append(b_struct.chan[lower_fan_chans[i]].chanpwr)
-                if lower_fan_chans[i] in fan_chans:
+                output["power"].append(b_struct.chan[lower_fan_chan].chanpwr)
+                if lower_fan_chan in fan_chans:
                     ichan = fan_chans[j]
                     if a_struct.channels[ichan].ier == 0:
                         output["ch_avail"].append(ichan)

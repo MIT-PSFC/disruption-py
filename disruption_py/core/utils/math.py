@@ -207,7 +207,7 @@ def gaussian_fit(*args):
         The coefficients of the fit.
     """
 
-    coeffs, var_matrix = curve_fit(gauss, *args)
+    coeffs, *_ = curve_fit(gauss, *args)
     return coeffs
 
 

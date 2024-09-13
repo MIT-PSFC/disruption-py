@@ -155,8 +155,7 @@ class CacheTimeSetting(TimeSetting):
                 params.logger.debug(
                     "[Shot %s]: %s", params.shot_id, traceback.format_exc()
                 )
-        else:
-            return self.fallback_time_setting.get_times(params)
+        return self.fallback_time_setting.get_times(params)
 
 
 class EfitTimeSetting(TimeSetting):
@@ -307,7 +306,7 @@ class SignalTimeSetting(TimeSetting):
             params.logger.error(
                 "Failed to set up timebase for signal %s", self.signal_path
             )
-            raise Exception(e)
+            raise
 
 
 # --8<-- [start:time_setting_dict]
@@ -334,7 +333,7 @@ def resolve_time_setting(
         if time_setting_object is not None:
             return time_setting_object
 
-    if isinstance(time_setting, np.ndarray) or isinstance(time_setting, list):
+    if isinstance(time_setting, (list, np.ndarray)):
         return ListTimeSetting(time_setting)
 
     if isinstance(time_setting, pd.Series):
