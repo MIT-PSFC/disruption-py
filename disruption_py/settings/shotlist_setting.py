@@ -54,7 +54,6 @@ class ShotlistSetting(ABC):
         params : ShotlistSettingParams
             Params that can be used to determine shotlist.
         """
-        pass
 
 
 class IncludedShotlistSetting(ShotlistSetting):
