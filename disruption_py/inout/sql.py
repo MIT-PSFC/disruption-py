@@ -492,15 +492,12 @@ class DummyDatabase(ShotDatabase):
     <pd.DataFrame>
     """
 
-    def __init__(self, **kwargs):
-        pass
-
     @classmethod
     def initializer(cls, **kwargs):
         return cls()
 
     @property
-    def conn(self, **kwargs):
+    def conn(self):
         return DummyObject()
 
     def query(self, **kwargs):

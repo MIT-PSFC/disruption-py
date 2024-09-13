@@ -156,8 +156,7 @@ class CacheTimeSetting(TimeSetting):
                 params.logger.debug(
                     "[Shot %s]: %s", params.shot_id, traceback.format_exc()
                 )
-        else:
-            return self.fallback_time_setting.get_times(params)
+        return self.fallback_time_setting.get_times(params)
 
 
 class EfitTimeSetting(TimeSetting):
