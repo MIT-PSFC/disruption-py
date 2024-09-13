@@ -492,6 +492,7 @@ class DummyDatabase(ShotDatabase):
     <pd.DataFrame>
     """
 
+    # pylint: disable-next=super-init-not-called
     def __init__(self, **kwargs):
         pass
 
@@ -503,12 +504,15 @@ class DummyDatabase(ShotDatabase):
     def conn(self):
         return DummyObject()
 
+    # pylint: disable-next=arguments-differ
     def query(self, **kwargs):
         return pd.DataFrame()
 
+    # pylint: disable-next=arguments-differ
     def get_shots_data(self, **kwargs):
         return pd.DataFrame()
 
+    # pylint: disable-next=arguments-differ
     def get_disruption_time(self, **kwargs):
         return None
 
