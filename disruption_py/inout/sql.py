@@ -492,6 +492,9 @@ class DummyDatabase(ShotDatabase):
     <pd.DataFrame>
     """
 
+    def __init__(self, **kwargs):
+        pass
+
     @classmethod
     def initializer(cls, **kwargs):
         return cls()
