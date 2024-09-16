@@ -19,8 +19,6 @@ class CmodThomsonDensityMeasure:
         """
         Comparison between chord integrated Thomson electron density and TCI results.
         """
-        core_mult = 1.0
-        edge_mult = 1.0
         nl_ts1 = [1e32]
         nl_ts2 = [1e32]
         nl_tci1 = [1e32]
@@ -103,10 +101,6 @@ class CmodThomsonDensityMeasure:
         Integrate Thomson electron density measurement to the line integrated electron
         density for comparison with two color interferometer (TCI) measurement results
         """
-        core_mult = 1.0
-        edge_mult = 1.0
-        nlts = 1e32
-        nlts_t = 1e32
         t, z, n_e, n_e_sig = CmodThomsonDensityMeasure.map_ts2tci(params, nlnum)
         if z[0, 0] == 1e32:
             return None, None  # TODO: Log and maybe return nan arrs
@@ -125,7 +119,7 @@ class CmodThomsonDensityMeasure:
             else:
                 x = z[i, ind]
                 y = n_e[i, ind]
-                values_uniq, ind_uniq = np.unique(x, return_index=True)
+                _, ind_uniq = np.unique(x, return_index=True)
                 y = y[ind_uniq]
                 nlts[i] = np.trapz(y, x)
         return nlts, nlts_t

@@ -228,10 +228,6 @@ class D3DPhysicsMethods:
         rad_fraction = p_rad / p_input
         rad_fraction[np.isinf(rad_fraction)] = np.nan
 
-        # Computer P_sol, defined as P_in - P_rad
-        # TODO: Why calculate p_sol?
-        p_sol = p_input - p_rad
-
         output = {
             "p_rad": p_rad,
             "p_nbi": p_nbi,
