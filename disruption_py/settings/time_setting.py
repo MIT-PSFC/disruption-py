@@ -147,7 +147,7 @@ class CacheTimeSetting(TimeSetting):
                 if times[-1] > config(params.tokamak).MAX_SHOT_TIME:
                     times /= 1000  # [ms] -> [s]
                 return times
-            except KeyError as e:
+            except KeyError:
                 params.logger.warning(
                     "[Shot %s]: Shot constructor was passed data but no timebase.",
                     params.shot_id,
@@ -173,7 +173,7 @@ class EfitTimeSetting(TimeSetting):
                     tree_name="_efit_tree",
                     astype="float64",
                 )
-            except Exception as e:
+            except Exception:
                 return params.mds_conn.get_data(
                     r"\analysis::efit:results:a_eqdsk:time",
                     tree_name="_efit_tree",
@@ -302,7 +302,7 @@ class SignalTimeSetting(TimeSetting):
                 self.signal_path, tree_name=self.tree_name, astype="float64"
             )
             return signal_time
-        except Exception as e:
+        except Exception:
             params.logger.error(
                 "Failed to set up timebase for signal %s", self.signal_path
             )

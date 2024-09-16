@@ -87,6 +87,6 @@ def get_commit_hash():
             .decode("ascii")
             .strip()
         )
-    except Exception as e:
+    except Exception:
         commit_hash = None
     return commit_hash
