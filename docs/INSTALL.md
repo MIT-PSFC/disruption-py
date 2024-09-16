@@ -17,7 +17,6 @@ Snippets for quick addition to a user's `.bashrc` file are provided in the subse
 #### Python
 
 Four Python versions are installed as [miniconda](https://docs.anaconda.com/free/miniconda/) distributions:
-- Python 3.9
 - Python 3.10
 - Python 3.11
 - Python 3.12
