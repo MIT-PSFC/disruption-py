@@ -151,6 +151,7 @@ def populate_method(
             e,
         )
         physics_method_params.logger.debug("%s", traceback.format_exc())
+        result = {col: [np.nan] for col in bound_method_metadata.columns}
 
     physics_method_params.logger.info(
         "[Shot %s]: Completed %s, time_elapsed: %s",
