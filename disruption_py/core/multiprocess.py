@@ -44,7 +44,6 @@ class Consumer(multiprocessing.Process):
 
             self.task_queue.task_done()
             self.result_queue.put((shot_id, answer))
-        return
 
 
 class ShotTask:

@@ -7,7 +7,7 @@ from MDSplus import mdsExceptions
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
 from disruption_py.core.utils.misc import safe_cast
-from disruption_py.machine.cmod import CmodEfitMethods
+from disruption_py.machine.cmod.efit import CmodEfitMethods
 
 
 # helper class holding functions for thomson density measures
@@ -167,7 +167,7 @@ class CmodThomsonDensityMeasure:
         try:
             nets_edge = params.mds_conn.get_data(r"\ts_ne")
             nets_edge_err = params.mds_conn.get_data(r"\ts_ne_err")
-        except mdsExceptions.mdsException as err:
+        except mdsExceptions.MdsException:
             nets_edge = np.zeros((len(nets_core[:, 1]), mts_edge))
             nets_edge_err = nets_edge + 1e20
         mts = mts_core + mts_edge

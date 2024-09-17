@@ -29,13 +29,13 @@ def decorated_physics_method(params: PhysicsMethodParams) -> dict:
         parameter being a key-value pair. Each of the dictionary's values should be the same
         length as the timebase (`params.times`).
     """
-    pass
 
 
 # # Paramater cached method example
 # # --8<-- [start:kappa_area_request_example]
 
 
+# pylint: disable=duplicate-code
 @physics_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
 def _get_kappa_area(params: PhysicsMethodParams):
     aminor = params.mds_conn.get_data(

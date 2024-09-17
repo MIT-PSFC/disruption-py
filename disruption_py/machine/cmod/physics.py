@@ -18,8 +18,8 @@ from disruption_py.core.utils.math import (
     interp1,
     smooth,
 )
-from disruption_py.machine.tokamak import Tokamak
 from disruption_py.machine.cmod.thomson import CmodThomsonDensityMeasure
+from disruption_py.machine.tokamak import Tokamak
 
 warnings.filterwarnings("error", category=RuntimeWarning)
 
@@ -350,8 +350,7 @@ class CmodPhysicsMethods:
         # search through the active segments (determined above), find the factors,
         # and *divide* by the factor only for the times in the active segment (as
         # determined from start_times and stop_times.
-        for i in range(len(active_wire_segments)):
-            segment, start = active_wire_segments[i]
+        for i, (_, start) in enumerate(active_wire_segments):
             if i == len(active_wire_segments) - 1:
                 end = pcstime[-1]
             else:
@@ -389,7 +388,7 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def get_ohmic_parameters(
-        times, v_loop, v_loop_time, li, efittime, dip_smoothed, ip
+        times, v_loop, v_loop_time, li, efittime, dip_smoothed, ip, r0
     ):
         """Calculate the ohmic power from the loop voltage, inductive voltage, and
         plasma current.
@@ -410,6 +409,8 @@ class CmodPhysicsMethods:
             The smoothed plasma current.
         ip : array_like
             The plasma current.
+        r0 : array_like
+            The major radius of the plasma's magnetic axis.
 
         Returns
         -------
@@ -423,9 +424,7 @@ class CmodPhysicsMethods:
 
 
         """
-        # For simplicity, we use R0 = 0.68 m, but we could use \efit_aeqdsk:rmagx
-        R0 = 0.68
-        inductance = 4.0 * np.pi * 1.0e-7 * R0 * li / 2.0
+        inductance = 4.0 * np.pi * 1.0e-7 * r0 * li / 2.0
         v_loop = interp1(v_loop_time, v_loop, times)
         inductance = interp1(efittime, inductance, times)
         v_inductive = inductance * dip_smoothed
@@ -450,8 +449,12 @@ class CmodPhysicsMethods:
             }
         li, efittime = params.mds_conn.get_data_with_dims(
             r"\efit_aeqdsk:li", tree_name="_efit_tree", astype="float64"
-        )
+        )  # [dimensionless], [s]
         ip_parameters = CmodPhysicsMethods._get_ip_parameters(params=params)
+        r0 = 0.01 * params.mds_conn.get_data(
+            r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
+        )  # [cm] -> [m]
+
         output = CmodPhysicsMethods.get_ohmic_parameters(
             params.times,
             v_loop,
@@ -460,6 +463,7 @@ class CmodPhysicsMethods:
             efittime,
             ip_parameters["dip_smoothed"],
             ip_parameters["ip"],
+            r0,
         )
         return output
 
@@ -678,16 +682,16 @@ class CmodPhysicsMethods:
         # 2. Subtract btor pickup
         # 3. Interpolate bp onto shot timebase
 
-        for i in range(len(bp13_names)):
+        for i, bp13_name in enumerate(bp13_names):
             try:
                 signal = params.mds_conn.get_data(
-                    path + bp13_names[i], tree_name="magnetics"
+                    path + bp13_name, tree_name="magnetics"
                 )
                 if len(signal) == 1:
                     params.logger.warning(
                         "[Shot %s]: Only one data point for %s. Returning nans.",
                         params.shot_id,
-                        bp13_names[i],
+                        bp13_name,
                     )
                     return nan_output
                 baseline = np.mean(signal[baseline_indices])
@@ -696,7 +700,7 @@ class CmodPhysicsMethods:
                 bp13_signals[:, i] = interp1(t_mag, signal, params.times)
             except mdsExceptions.TreeNODATA as e:
                 params.logger.warning(
-                    "[Shot %s]: No data for %s", params.shot_id, bp13_names[i]
+                    "[Shot %s]: No data for %s", params.shot_id, bp13_name
                 )
                 params.logger.debug("[Shot %s]: %s", params.shot_id, e)
                 # Only calculate n=1 amplitude if all sensors have data
@@ -781,7 +785,7 @@ class CmodPhysicsMethods:
             # TODO: Handle this case
             raise NotImplementedError(
                 "Can't currently handle failure of grabbing density data"
-            )
+            ) from e
         output = CmodPhysicsMethods.get_densities(
             params.times, n_e, t_n, ip, t_ip, a_minor, t_a
         )

@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
+
 import os
 
 from disruption_py.config import config
 
 
 def change_directory(test, tmpdir="/tmp"):
+    """
+    Change the current working directory before a test and revert back to the
+    original directory after the test completes.
+    """
     original_dir = os.getcwd()
     os.chdir(tmpdir)
 

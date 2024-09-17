@@ -7,15 +7,15 @@ from typing import Union
 from disruption_py.config import config
 from disruption_py.core.utils.enums import map_string_to_enum
 
-"""
-For documentation of supported tokamaks:
-# --8<-- [start:allowed_tokamak_types_snippet]
-Currently supported tokamak type strings are: `"cmod", "d3d"`
-# --8<-- [end:allowed_tokamak_types_snippet]
-"""
-
 
 class Tokamak(Enum):
+    """
+    For documentation of supported tokamaks:
+    # --8<-- [start:allowed_tokamak_types_snippet]
+    Currently supported tokamak type strings are: `"cmod", "d3d"`
+    # --8<-- [end:allowed_tokamak_types_snippet]
+    """
+
     D3D = "d3d"
     CMOD = "cmod"
     EAST = "east"

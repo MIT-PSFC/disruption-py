@@ -63,7 +63,6 @@ class CacheSetting(ABC):
         pd.DataFrame
             Pandas dataframe containing cached data.
         """
-        pass
 
 
 class CacheSettingDict(CacheSetting):
