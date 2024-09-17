@@ -8,6 +8,7 @@ from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
+from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import (
     interp1,
@@ -1396,7 +1397,7 @@ class D3DPhysicsMethods:
             mds_path = r"\top.ts.blessed."  # Don't ask...I don't have the answer
             raise NotImplementedError("ptdata case not fully implemented yet")  # TODO
         else:
-            raise ValueError(f"Invalid data_source: {data_source}")
+            raise CalculationError(f"Invalid data_source: {data_source}")
 
         # Account for pointname formatting change in 2017 (however using ptdata is unimplemented)
         # NOTE: "suffix" is only used if data_source="ptdata" which isn't implemented yet
