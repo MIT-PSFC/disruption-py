@@ -6,9 +6,11 @@ from collections.abc import Iterable
 
 import numpy as np
 import pandas as pd
+from MDSplus import mdsExceptions
 
 from disruption_py.config import config
 from disruption_py.core.physics_method.caching import manually_cache
+from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.metadata import (
     BoundMethodMetadata,
     get_method_metadata,
@@ -143,7 +145,12 @@ def populate_method(
     )
     try:
         result = method(params=physics_method_params)
-    except Exception as e:
+    except (
+        mdsExceptions.TreeNNF,
+        mdsExceptions.TreeNODATA,
+        CalculationError,
+        NotImplementedError,
+    ) as e:
         physics_method_params.logger.warning(
             "[Shot %s]: Failed to populate %s with error %s",
             physics_method_params.shot_id,

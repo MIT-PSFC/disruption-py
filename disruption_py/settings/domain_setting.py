@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from logging import Logger
 from typing import Dict, Union
 
+from MDSplus import mdsExceptions
 import numpy as np
 
 from disruption_py.core.physics_method.params import PhysicsMethodParams
@@ -158,7 +159,7 @@ class FlattopDomainSetting(DomainSetting):
             dipprog_dt = interp1(
                 t_ip_prog, dipprog_dt, params.physics_method_params.times, "linear"
             )
-        except Exception:
+        except mdsExceptions.MdsException:
             params.logger.warning(
                 "[Shot %s]: Could not find flattop timebase. Defaulting to full timebase.",
                 params.physics_method_params.shot_id,

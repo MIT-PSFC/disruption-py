@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from logging import Logger
 from typing import Dict, Union
 
+from MDSplus import mdsExceptions
 import numpy as np
 import pandas as pd
 
@@ -173,7 +174,7 @@ class EfitTimeSetting(TimeSetting):
                     tree_name="_efit_tree",
                     astype="float64",
                 )
-            except Exception:
+            except mdsExceptions.MdsException:
                 return params.mds_conn.get_data(
                     r"\analysis::efit:results:a_eqdsk:time",
                     tree_name="_efit_tree",
@@ -302,7 +303,7 @@ class SignalTimeSetting(TimeSetting):
                 self.signal_path, tree_name=self.tree_name, astype="float64"
             )
             return signal_time
-        except Exception:
+        except mdsExceptions.MdsException:
             params.logger.error(
                 "Failed to set up timebase for signal %s", self.signal_path
             )

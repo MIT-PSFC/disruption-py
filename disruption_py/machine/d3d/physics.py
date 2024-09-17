@@ -999,7 +999,7 @@ class D3DPhysicsMethods:
                     ts = ts[option]
                     break
             efit_dict = D3DPhysicsMethods._get_efit_dict(params)
-        except Exception:
+        except (NotImplementedError, CalculationError, mdsExceptions.MdsException):
             params.logger.info("[Shot %s]: Failed to get TS data", params.shot_id)
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             ts = 0
@@ -1018,7 +1018,7 @@ class D3DPhysicsMethods:
             p_rad = D3DPhysicsMethods._get_p_rad(
                 params, fan=bolometer_fan, smoothing_window=smoothing_window
             )
-        except Exception:
+        except mdsExceptions.MdsException:
             params.logger.info(
                 "[Shot %s]: Failed to get bolometer data", params.shot_id
             )
