@@ -1213,41 +1213,6 @@ class D3DPhysicsMethods:
         return output
 
     @staticmethod
-    # TODO: Finish implementing just in case
-    def _efit_map_rz_to_rho_original(params: PhysicsMethodParams, ts_dict, efit_dict):
-        slices = np.zeros(ts_dict["time"].shape)
-        # If thomson starts before EFIT (often does), then use the first valid EFIT
-        # slice for early Thomson data.
-        early_indices = np.where(ts_dict["time"] < efit_dict["time"])
-        if len(early_indices[0]) > 0:
-            slices[early_indices] = 1
-            first_ts = early_indices[0][-1]
-        else:
-            first_ts = 0
-        # If Thomson ends after EFIT (also often happens), then use the last valid EFIT
-        # slice for late Thomson data.
-        late_indices = np.where(ts_dict["time"] >= efit_dict["time"])
-        if len(late_indices[0]) > 0:
-            slices[late_indices] = len(efit_dict["time"])
-            last_ts = late_indices[0][0] - 1
-        else:
-            last_ts = len(ts_dict["time"]) - 1
-        diag_slices = np.arange(first_ts, last_ts + 1, 1)
-        # Acquire list of diag time slices w/in EFIT time range; Should find closest EFIT
-        # for each one
-        for i in diag_slices:
-            slices[i] = np.argmin(np.abs(efit_dict["time"] - ts_dict["time"][i]))
-        # Interpolate EFIT data onto Thomson time slices
-        psin_diag_arr = np.zeros((len(efit_dict["time"]), len(ts_dict["z"])))
-        for r in np.unique(ts_dict["r"]):
-            dr = r - efit_dict["r"]
-            # Find closet EFIT R on the left and right
-            right = np.where(efit_dict["r"] > r, 1)
-            left = right - 1
-            if efit_dict["r"][right] == r:
-                psin_slice = np.squeeze(efit_dict["psin"][:, right, :])
-
-    @staticmethod
     def efit_rz_interp(ts, efit_dict):
         """
         Interpolate the efit data to the given timebase and project onto the
