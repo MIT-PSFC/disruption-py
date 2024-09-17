@@ -1052,7 +1052,7 @@ class D3DPhysicsMethods:
 
         # Get raw Thomson data
         try:
-            ts = D3DPhysicsMethods._get_ne_te(params)
+            ts = D3DPhysicsMethods._get_ne_te(params, data_source=ts_data_type)
             for option in ts_options:
                 if option in ts:
                     ts = ts[option]
