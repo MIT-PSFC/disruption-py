@@ -256,66 +256,49 @@ class D3DPhysicsMethods:
             "v_loop": [np.nan],
         }
         # Get edge loop voltage and smooth it a bit with a median filter
-        try:
-            v_loop, t_v_loop = params.mds_conn.get_data_with_dims(
-                f'ptdata("vloopb", {params.shot_id})', tree_name="d3d"
-            )
-            t_v_loop /= 1e3  # [ms] -> [s]
-            v_loop = scipy.signal.medfilt(v_loop, 11)
-            v_loop = interp1(t_v_loop, v_loop, params.times, "linear")
-        except mdsExceptions.MdsException:
-            params.logger.info(
-                "[Shot %s]: Failed to open VLOOPB node. Setting to NaN.", params.shot_id
-            )
-            params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
-            return nan_output
+        v_loop, t_v_loop = params.mds_conn.get_data_with_dims(
+            f'ptdata("vloopb", {params.shot_id})', tree_name="d3d"
+        )
+        t_v_loop /= 1e3  # [ms] -> [s]
+        v_loop = scipy.signal.medfilt(v_loop, 11)
+        v_loop = interp1(t_v_loop, v_loop, params.times, "linear")
         # Get plasma current
-        try:
-            ip, t_ip = params.mds_conn.get_data_with_dims(
-                f"ptdata('ip', {params.shot_id})", tree_name="d3d"
-            )
-            t_ip /= 1e3  # [ms] -> [s]
+        ip, t_ip = params.mds_conn.get_data_with_dims(
+            f"ptdata('ip', {params.shot_id})", tree_name="d3d"
+        )
+        t_ip /= 1e3  # [ms] -> [s]
 
-            # Alessandro Pau (JET & AUG) has given Cristina a robust routine that
-            # performs time differentiation with smoothing, while preserving causality.
-            # It can be useful for differentiating numerous signals such as Ip, Vloop,
-            # etc.  It is called 'GSASTD'. We will use this routine in place of Matlab's
-            # 'gradient' and smoothing/filtering routines for certain signals.
+        # Alessandro Pau (JET & AUG) has given Cristina a robust routine that
+        # performs time differentiation with smoothing, while preserving causality.
+        # It can be useful for differentiating numerous signals such as Ip, Vloop,
+        # etc.  It is called 'GSASTD'. We will use this routine in place of Matlab's
+        # 'gradient' and smoothing/filtering routines for certain signals.
 
-            # We choose a 20-point width for gsastd. This means a 10ms window for
-            # ip smoothing
-            dipdt_smoothed = matlab_gsastd(
-                x=t_ip,
-                y=ip,
-                derivative_mode=1,
-                width=20,
-                smooth_type=3,
-                ends_type=1,
-                slew_rate=0,
-            )
-            li, t_li = params.mds_conn.get_data_with_dims(
-                r"\efit_a_eqdsk:li", tree_name="_efit_tree"
-            )
-            t_li /= 1e3
-            # Use chisq to determine which time slices are invalid
-            chisq = params.mds_conn.get_data(
-                r"\efit_a_eqdsk:chisq", tree_name="_efit_tree"
-            )
-            # Filter out invalid indices of efit reconstruction
-            (invalid_indices,) = np.where(chisq > 50)
-            li[invalid_indices] = np.nan
+        # We choose a 20-point width for gsastd. This means a 10ms window for
+        # ip smoothing
+        dipdt_smoothed = matlab_gsastd(
+            x=t_ip,
+            y=ip,
+            derivative_mode=1,
+            width=20,
+            smooth_type=3,
+            ends_type=1,
+            slew_rate=0,
+        )
+        li, t_li = params.mds_conn.get_data_with_dims(
+            r"\efit_a_eqdsk:li", tree_name="_efit_tree"
+        )
+        t_li /= 1e3
+        # Use chisq to determine which time slices are invalid
+        chisq = params.mds_conn.get_data(r"\efit_a_eqdsk:chisq", tree_name="_efit_tree")
+        # Filter out invalid indices of efit reconstruction
+        (invalid_indices,) = np.where(chisq > 50)
+        li[invalid_indices] = np.nan
 
-            r_0, t_r0 = params.mds_conn.get_data_with_dims(
-                r"\top.results.geqdsk:rmaxis", tree_name="_efit_tree"
-            )  # [m], [ms]
-            t_r0 /= 1e3  # [ms] -> [s]
-        except mdsExceptions.MdsException:
-            params.logger.info(
-                "[Shot %s]: Unable to get plasma current data. p_ohm set to NaN.",
-                params.shot_id,
-            )
-            params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
-            return nan_output
+        r_0, t_r0 = params.mds_conn.get_data_with_dims(
+            r"\top.results.geqdsk:rmaxis", tree_name="_efit_tree"
+        )  # [m], [ms]
+        t_r0 /= 1e3  # [ms] -> [s]
 
         li = interp1(t_li, li, params.times, "linear")
         r_0 = interp1(t_r0, r_0, params.times, "linear")
@@ -346,26 +329,14 @@ class D3DPhysicsMethods:
 
         Last major update by William Wei on 8/2/2024
         """
-        nan_output = {
-            "n_e": [np.nan],
-            "greenwald_fraction": [np.nan],
-            "dn_dt": [np.nan],
-        }
-        try:
-            ne, t_ne = params.mds_conn.get_data_with_dims(
-                r"\density", tree_name="_efit_tree"
-            )
-            # If EFIT disruption tree does not contain density data,
-            # then read density from BCI subtree of D3D main tree
-            # TODO: Find a shot to test this logic
-            if len(~np.isnan(ne)) == 0:
-                ne, t_ne = params.mds_conn.get_data_with_dims(
-                    r"\denv2", tree_name="d3d"
-                )
-        except mdsExceptions.MdsException:
-            params.logger.info("[Shot %s]: Failed to get ne data.", params.shot_id)
-            params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
-            return nan_output
+        ne, t_ne = params.mds_conn.get_data_with_dims(
+            r"\density", tree_name="_efit_tree"
+        )
+        # If EFIT disruption tree does not contain density data,
+        # then read density from BCI subtree of D3D main tree
+        # TODO: Find a shot to test this logic
+        if len(~np.isnan(ne)) == 0:
+            ne, t_ne = params.mds_conn.get_data_with_dims(r"\denv2", tree_name="d3d")
 
         ne = ne * 1.0e6  # [cm^3] -> [m^3]
         t_ne = t_ne / 1.0e3  # [ms] -> [s]
@@ -431,71 +402,52 @@ class D3DPhysicsMethods:
 
         Last major update by William Wei on 8/2/2024
         """
+        ne_rt, t_ne_rt = params.mds_conn.get_data_with_dims(
+            f"ptdata('dssdenest', {params.shot_id})", tree_name="_efit_tree"
+        )  # [10^19 m^-3]
+        t_ne_rt = t_ne_rt / 1.0e3  # [ms] to [s]
+        ne_rt = ne_rt * 1.0e19  # [10^19 m^-3] -> [m^-3]
+        dne_dt_rt = np.gradient(ne_rt, t_ne_rt)  # [m^-3/s]
+        ne_rt = interp1(t_ne_rt, ne_rt, params.times, "linear")
+        dne_dt_rt = interp1(t_ne_rt, dne_dt_rt, params.times, "linear")
 
-        nan_output = {
-            "n_e_rt": [np.nan],
-            "greenwald_fraction_rt": [np.nan],
-            "dn_dt_rt": [np.nan],
-        }
+        # Get real time ip to calculate the Greenwald density
+
         try:
-            ne_rt, t_ne_rt = params.mds_conn.get_data_with_dims(
-                f"ptdata('dssdenest', {params.shot_id})", tree_name="_efit_tree"
-            )  # [10^19 m^-3]
-            t_ne_rt = t_ne_rt / 1.0e3  # [ms] to [s]
-            ne_rt = ne_rt * 1.0e19  # [10^19 m^-3] -> [m^-3]
-            dne_dt_rt = np.gradient(ne_rt, t_ne_rt)  # [m^-3/s]
-            ne_rt = interp1(t_ne_rt, ne_rt, params.times, "linear")
-            dne_dt_rt = interp1(t_ne_rt, dne_dt_rt, params.times, "linear")
+            ip_rt, t_ip_rt = params.mds_conn.get_data_with_dims(
+                f"ptdata('ipsip', {params.shot_id})"
+            )  # [MA], [ms]
+            t_ip_rt = t_ip_rt / 1.0e3  # [ms] to [s]
+            # TODO: look at units of ip_rt (not SA)
         except mdsExceptions.MdsException:
-            params.logger.info("[Shot %s]: Failed to get ne_rt data", params.shot_id)
-            params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
-            return nan_output
-
-        try:
-            # Get real time ip to calculate the Greenwald density
-            # NOTE: avoid using nested try-except blocks?
-            try:
-                ip_rt, t_ip_rt = params.mds_conn.get_data_with_dims(
-                    f"ptdata('ipsip', {params.shot_id})"
-                )  # [MA], [ms]
-                t_ip_rt = t_ip_rt / 1.0e3  # [ms] to [s]
-                # TODO: look at units of ip_rt (not SA)
-            except Exception:
-                ip_rt, t_ip_rt = params.mds_conn.get_data_with_dims(
-                    f"ptdata('ipspr15v', {params.shot_id})"
-                )  # [volts; 2 V/MA], [ms]
-                t_ip_rt = t_ip_rt / 1.0e3  # [ms] to [s]
-                ip_rt /= 2  # [volts] to [MA]
+            ip_rt, t_ip_rt = params.mds_conn.get_data_with_dims(
+                f"ptdata('ipspr15v', {params.shot_id})"
+            )  # [volts; 2 V/MA], [ms]
+            t_ip_rt = t_ip_rt / 1.0e3  # [ms] to [s]
+            ip_rt /= 2  # [volts] to [MA]
             ip_sign = np.sign(np.sum(ip_rt))
             ip = interp1(t_ip_rt, ip_rt * ip_sign, params.times, "linear")
 
-            # Read in EFIT minor radius and timebase.  This is also needed to calculate
-            # the Greenwald density limit.  However, if the minor radius data is not
-            # available, use a default fixed value of 0.59 m.  (We surveyed several
-            # hundred shots to determine this default value.)  Note that the efit
-            # timebase data is in a node called "atime" instead of "time" (where "time"
-            # does not work).
+        # Read in EFIT minor radius and timebase.  This is also needed to calculate
+        # the Greenwald density limit.  However, if the minor radius data is not
+        # available, use a default fixed value of 0.59 m.  (We surveyed several
+        # hundred shots to determine this default value.)  Note that the efit
+        # timebase data is in a node called "atime" instead of "time" (where "time"
+        # does not work).
 
-            # For the real-time (RT) signals, read from the EFITRT1 tree
-            try:
-                a_minor_rt, t_a_rt = params.mds_conn.get_data_with_dims(
-                    r"\efit_a_eqdsk:aminor", tree_name="efitrt1"
-                )  # [m], [ms]
-                t_a_rt = t_a_rt / 1.0e3  # [ms] -> [s]
-                a_minor_rt = interp1(t_a_rt, a_minor_rt, params.times, "linear")
-            except Exception:
-                a_minor_rt = 0.59 * np.ones(len(params.times))
-
-            with np.errstate(divide="ignore"):
-                n_g_rt = ip / (np.pi * a_minor_rt**2)  # [MA/m^2]
-                g_f_rt = ne_rt / 1.0e20 / n_g_rt
+        # For the real-time (RT) signals, read from the EFITRT1 tree
+        try:
+            a_minor_rt, t_a_rt = params.mds_conn.get_data_with_dims(
+                r"\efit_a_eqdsk:aminor", tree_name="efitrt1"
+            )  # [m], [ms]
+            t_a_rt = t_a_rt / 1.0e3  # [ms] -> [s]
+            a_minor_rt = interp1(t_a_rt, a_minor_rt, params.times, "linear")
         except mdsExceptions.MdsException:
-            params.logger.info(
-                "[Shot %s]: Failed to compute real-time Greenwald fraction.",
-                params.shot_id,
-            )
-            params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
-            g_f_rt = [np.nan]
+            a_minor_rt = 0.59 * np.ones(len(params.times))
+
+        with np.errstate(divide="ignore"):
+            n_g_rt = ip / (np.pi * a_minor_rt**2)  # [MA/m^2]
+            g_f_rt = ne_rt / 1.0e20 / n_g_rt
         return {"n_e_rt": ne_rt, "greenwald_fraction_rt": g_f_rt, "dn_dt_rt": dne_dt_rt}
 
     @staticmethod
@@ -791,17 +743,12 @@ class D3DPhysicsMethods:
         """
         nominal_flattop_radius = 0.59
         # Get z_cur
-        try:
-            z_cur, t_z_cur = params.mds_conn.get_data_with_dims(
-                f"ptdata('vpszp', {params.shot_id})", tree_name="d3d"
-            )
-            t_z_cur = t_z_cur / 1.0e3  # [ms] -> [s]
-            z_cur = z_cur / 1.0e2  # [cm] -> [m]
-            z_cur = interp1(t_z_cur, z_cur, params.times, "linear")
-        except mdsExceptions.MdsException:
-            params.logger.info("[Shot %s]: Failed to get vpszp signal", params.shot_id)
-            params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
-            return {"zcur": [np.nan], "zcur_norm": [np.nan]}
+        z_cur, t_z_cur = params.mds_conn.get_data_with_dims(
+            f"ptdata('vpszp', {params.shot_id})", tree_name="d3d"
+        )
+        t_z_cur = t_z_cur / 1.0e3  # [ms] -> [s]
+        z_cur = z_cur / 1.0e2  # [cm] -> [m]
+        z_cur = interp1(t_z_cur, z_cur, params.times, "linear")
         # Compute z_cur_norm
         try:
             a_minor, t_a = params.mds_conn.get_data_with_dims(
@@ -913,17 +860,10 @@ class D3DPhysicsMethods:
         Last major update by William Wei on 8/6/2024
         """
         # Get n1rms signal from d3d tree
-        try:
-            n1rms, t_n1rms = params.mds_conn.get_data_with_dims(
-                r"\n1rms", tree_name="d3d"
-            )
-            n1rms *= 1.0e-4  # Gauss -> Tesla
-            t_n1rms /= 1e3  # [ms] -> [s]
-            n1rms = interp1(t_n1rms, n1rms, params.times)
-        except mdsExceptions.MdsException:
-            params.logger.info("[Shot %s]: Failed to get n1rms signal", params.shot_id)
-            params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
-            return {"n1rms": [np.nan], "n1rms_normalized": [np.nan]}
+        n1rms, t_n1rms = params.mds_conn.get_data_with_dims(r"\n1rms", tree_name="d3d")
+        n1rms *= 1.0e-4  # Gauss -> Tesla
+        t_n1rms /= 1e3  # [ms] -> [s]
+        n1rms = interp1(t_n1rms, n1rms, params.times)
         # Calculate n1rms_norm
         try:
             b_tor, t_b_tor = params.mds_conn.get_data_with_dims(
@@ -1346,15 +1286,10 @@ class D3DPhysicsMethods:
         Last major update by William Wei on 8/6/2024
         """
         # Get efit_time
-        try:
-            efit_time = params.mds_conn.get_data(
-                r"\efit_a_eqdsk:atime", tree_name="_efit_tree"
-            )
-            efit_time /= 1e3  # [ms] -> [s]
-        except mdsExceptions.MdsException:
-            params.logger.info("[Shot %s]: Failed to get EFIT time", params.shot_id)
-            params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
-            return {"delta": [np.nan], "squareness": [np.nan], "aminor": [np.nan]}
+        efit_time = params.mds_conn.get_data(
+            r"\efit_a_eqdsk:atime", tree_name="_efit_tree"
+        )
+        efit_time /= 1e3  # [ms] -> [s]
         # Compute triangularity
         try:
             tritop = params.mds_conn.get_data(
