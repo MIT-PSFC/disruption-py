@@ -85,6 +85,11 @@ def get_cached_from_fresh(
     for shot_id in shotlist:
         times = fresh_data[shot_id]["time"]
         sql_data = db.get_shots_data([shot_id], cols=test_columns)
+
+        if sql_data.empty:
+            shot_data[shot_id] = pd.DataFrame()
+            continue
+
         shot_data[shot_id] = pd.merge_asof(
             times.to_frame(),
             sql_data,
@@ -142,8 +147,8 @@ def eval_shot_against_cache(
         data_column=data_column,
         fresh_column_data=fresh_shot_data.get(data_column, None),
         cache_column_data=cache_shot_data.get(data_column, None),
-        fresh_time=fresh_shot_data["time"],
-        cache_time=cache_shot_data["time"],
+        fresh_time=fresh_shot_data.get("time"),
+        cache_time=cache_shot_data.get("time"),
         missing_fresh_data=missing_fresh_data,
         missing_cache_data=missing_cache_data,
         expect_failure=expect_failure,
@@ -196,7 +201,13 @@ def eval_against_cache(
     if test_columns is None:
         fresh_columns = set().union(*(df.columns for df in fresh_data.values()))
         cache_columns = set().union(*(df.columns for df in cache_data.values()))
-        test_columns = sorted(fresh_columns.intersection(cache_columns))
+        # Handle when one of fresh/cache has no data
+        if len(fresh_columns) == 0:
+            test_columns = sorted(cache_columns)
+        elif len(cache_columns) == 0:
+            test_columns = sorted(fresh_columns)
+        else:
+            test_columns = sorted(fresh_columns.intersection(cache_columns))
 
     data_differences = eval_shots_against_cache(
         shotlist=shotlist,
