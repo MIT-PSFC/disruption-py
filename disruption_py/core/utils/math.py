@@ -364,7 +364,7 @@ def matlab_fastsmooth(y, w, smooth_type=1, ends_type=0):
     Last major update by William Wei on 7/24/2024
     """
     smoothed_y = matlab_sa(y, w, ends_type)
-    for i in range(smooth_type - 1):
+    for _ in range(smooth_type - 1):
         smoothed_y = matlab_sa(smoothed_y, w, ends_type)
     return smoothed_y
 

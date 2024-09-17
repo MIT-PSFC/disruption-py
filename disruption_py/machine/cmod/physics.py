@@ -185,7 +185,7 @@ class CmodPhysicsMethods:
                                 (pcstime >= start) & (pcstime <= end)
                             )
                             ip_prog[segment_indices] = ip_prog_temp[segment_indices]
-                    except mdsExceptions.MdsException as e:
+                    except mdsExceptions.MdsException:
                         params.logger.warning(
                             "[Shot %s]: Error getting PID gains for wire %s",
                             params.shot_id,
@@ -325,7 +325,7 @@ class CmodPhysicsMethods:
                             ]
                             z_prog[segment_indices] = z_prog_temp[segment_indices]
                             break
-                    except mdsExceptions.MdsException as e:
+                    except mdsExceptions.MdsException:
                         params.logger.debug(
                             "[Shot %s]: %s", params.shot_id, traceback.format_exc()
                         )
@@ -536,7 +536,7 @@ class CmodPhysicsMethods:
                 )
                 values[2 * i] = sig
                 values[2 * i + 1] = sig_time
-            except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF) as e:
+            except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF):
                 continue
         p_oh = CmodPhysicsMethods._get_ohmic_parameters(params=params)["p_oh"]
         output = CmodPhysicsMethods.get_power(params.times, *values, p_oh)
@@ -607,7 +607,7 @@ class CmodPhysicsMethods:
             vel, hirextime = params.mds_conn.get_data_with_dims(
                 ".hirex_sr.analysis.a:vel", tree_name="spectroscopy", astype="float64"
             )
-        except mdsExceptions.TreeFOPENR as e:
+        except mdsExceptions.TreeFOPENR:
             params.logger.warning(
                 "[Shot %s]: Failed to open necessary trees for rotational velocity calculations.",
                 params.shot_id,
@@ -803,7 +803,7 @@ class CmodPhysicsMethods:
             iefc, t_iefc = params.mds_conn.get_data_with_dims(
                 r"\efc:u_bus_r_cur", tree_name="engineering"
             )
-        except Exception as e:
+        except Exception:
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             return {"i_efc": [np.nan]}
         output = CmodPhysicsMethods.get_efc_current(params.times, iefc, t_iefc)
@@ -867,7 +867,7 @@ class CmodPhysicsMethods:
             ts_z = params.mds_conn.get_data(
                 node_path + ":z_sorted", tree_name="electrons"
             )
-        except mdsExceptions.MdsException as e:
+        except mdsExceptions.MdsException:
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             return {"te_width": [np.nan]}
         output = CmodPhysicsMethods.get_Ts_parameters(
@@ -1038,7 +1038,7 @@ class CmodPhysicsMethods:
                     params.shot_id,
                 )
                 return nan_output
-        except mdsExceptions.MdsException as e:
+        except mdsExceptions.MdsException:
             return nan_output
 
         # Calibrate TS_ne using TCI -- slow
@@ -1473,7 +1473,7 @@ class CmodPhysicsMethods:
             aminor, efit_time = params.mds_conn.get_data_with_dims(
                 r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
             )
-        except mdsExceptions.MdsException as e:
+        except mdsExceptions.MdsException:
             params.logger.debug("[Shot %s]: Failed to get efit data", params.shot_id)
             return nan_output
         got_axa = False
@@ -1492,7 +1492,7 @@ class CmodPhysicsMethods:
                 tree_name="spectroscopy",
             )
             got_axa = True
-        except mdsExceptions.MdsException as e:
+        except mdsExceptions.MdsException:
             params.logger.debug("[Shot %s]: Failed to get AXA data", params.shot_id)
         got_axj = False
         try:
@@ -1510,7 +1510,7 @@ class CmodPhysicsMethods:
                 tree_name="spectroscopy",
             )
             got_axj = True
-        except mdsExceptions.MdsException as e:
+        except mdsExceptions.MdsException:
             params.logger.debug("[Shot %s]: Failed to get AXJ data", params.shot_id)
         if not (got_axa or got_axj):
             return nan_output
@@ -1573,7 +1573,7 @@ class CmodPhysicsMethods:
                 tree_name="xtomo",
                 astype="float64",
             )
-        except mdsExceptions.TreeFOPENR as e:
+        except mdsExceptions.TreeFOPENR:
             params.logger.warning(
                 "[Shot %s]: Failed to get SXR data returning NaNs", params.shot_id
             )

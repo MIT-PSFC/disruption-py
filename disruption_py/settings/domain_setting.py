@@ -158,7 +158,7 @@ class FlattopDomainSetting(DomainSetting):
             dipprog_dt = interp1(
                 t_ip_prog, dipprog_dt, params.physics_method_params.times, "linear"
             )
-        except Exception as e:
+        except Exception:
             params.logger.warning(
                 "[Shot %s]: Could not find flattop timebase. Defaulting to full timebase.",
                 params.physics_method_params.shot_id,
