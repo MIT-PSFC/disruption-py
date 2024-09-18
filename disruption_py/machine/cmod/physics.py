@@ -640,7 +640,7 @@ class CmodPhysicsMethods:
         and their signals have been analog integrated (units: tesla), so they
         don't have to be numerically integrated.  These four sensors were working
         well in 2014, 2015, and 2016.  I looked at our locked mode MGI run on
-        1150605, and the different applied a-coil phasings do indeed show up on
+        1150605, and the different applied A-coil phasings do indeed show up on
         the n=1 signal.
 
         N=1 toroidal assymmetry in the magnetic fields
@@ -711,7 +711,7 @@ class CmodPhysicsMethods:
         btor_magnitude = interp1(t_mag, btor_magnitude, params.times)
         btor = interp1(t_mag, btor, params.times)  # Interpolate BT with sign
 
-        # Create the 'design' matrix ('a') for the linear system of equations:
+        # Create the 'design' matrix ('A') for the linear system of equations:
         # Bp(phi) = A1 + A2*sin(phi) + A3*cos(phi)
         ncoeffs = 3
         a = np.empty((len(bp13_names), ncoeffs))
@@ -1091,12 +1091,12 @@ class CmodPhysicsMethods:
         Calculates Te PF and width from ECE data using the two GPC diagnostic systems.
         GPC diagnostics look at the mid-plane, and each channel detects a different
         emitted frequency associated with the second harmonic, which depends on B and
-        therefore r.
+        therefore R.
         - te_width is the half-width at half-max of a Gaussian fit of the Te profile
         - te_core_vs_avg is defined as mean(core)/mean(all) where core bins are defined
-          as those w/ |r - R0| < 0.2*a of the magnetic axis.
+          as those w/ |R - R0| < 0.2*a of the magnetic axis.
         - te_edge_vs_avg is defined as mean(edge)/mean(all) where edge bins are defined as
-          those with 0.8*a < |r - R0| < a
+          those with 0.8*a < |R - R0| < a
         For core and edge vs. average calculations, different shots can have different
         radial sampling, and during a few experiments on C-Mod, Bt was changed during
         the shot, changing the radial sampling. Different radial samplings can have
@@ -1133,9 +1133,9 @@ class CmodPhysicsMethods:
           Significant runaway populations and LHCD lead to non-thermal artifacts.
           Occasionally low ne shots also had non-thermal artifacts.
         - Harmonic overlap: Certain channels can pick up emission from different
-          harmonics from other regions of the plasma. Generally channels with r < 0.6 m
+          harmonics from other regions of the plasma. Generally channels with R < 0.6 m
           suffer from overlap with 3rd harmonic emission from the core. This leads to
-          an apparently higher Te for r < 0.6 m than in reality. The gratings were
+          an apparently higher Te for R < 0.6 m than in reality. The gratings were
           usually aligned to measure the profile from the core outwards for this
           reason.
 
