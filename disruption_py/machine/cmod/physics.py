@@ -640,7 +640,7 @@ class CmodPhysicsMethods:
         and their signals have been analog integrated (units: tesla), so they
         don't have to be numerically integrated.  These four sensors were working
         well in 2014, 2015, and 2016.  I looked at our locked mode MGI run on
-        1150605, and the different applied A-coil phasings do indeed show up on
+        1150605, and the different applied a-coil phasings do indeed show up on
         the n=1 signal.
 
         N=1 toroidal assymmetry in the magnetic fields
@@ -711,14 +711,14 @@ class CmodPhysicsMethods:
         btor_magnitude = interp1(t_mag, btor_magnitude, params.times)
         btor = interp1(t_mag, btor, params.times)  # Interpolate BT with sign
 
-        # Create the 'design' matrix ('A') for the linear system of equations:
+        # Create the 'design' matrix ('a') for the linear system of equations:
         # Bp(phi) = A1 + A2*sin(phi) + A3*cos(phi)
         ncoeffs = 3
-        A = np.empty((len(bp13_names), ncoeffs))
-        A[:, 0] = np.ones(4)
-        A[:, 1] = np.sin(bp13_phi * np.pi / 180.0)
-        A[:, 2] = np.cos(bp13_phi * np.pi / 180.0)
-        coeffs = np.linalg.pinv(A) @ bp13_signals.T
+        a = np.empty((len(bp13_names), ncoeffs))
+        a[:, 0] = np.ones(4)
+        a[:, 1] = np.sin(bp13_phi * np.pi / 180.0)
+        a[:, 2] = np.cos(bp13_phi * np.pi / 180.0)
+        coeffs = np.linalg.pinv(a) @ bp13_signals.T
         # The n=1 amplitude at each time is sqrt(A2^2 + A3^2)
         # The n=1 phase at each time is arctan(-A2/A3), using complex number
         # phasor formalism, exp(i(phi - delta))
@@ -753,8 +753,8 @@ class CmodPhysicsMethods:
         a_minor = interp1(t_a, a_minor, times, bounds_error=False, fill_value=np.nan)
         # make sure aminor is not 0 or less than 0
         a_minor[a_minor <= 0] = 0.001
-        n_G = abs(ip) / (np.pi * a_minor**2) * 1e20  # Greenwald density in m ^-3
-        g_f = n_e / n_G
+        n_g = abs(ip) / (np.pi * a_minor**2) * 1e20  # Greenwald density in m ^-3
+        g_f = n_e / n_g
         output = {"n_e": n_e, "dn_dt": dn_dt, "greenwald_fraction": g_f}
         return output
 
@@ -810,7 +810,7 @@ class CmodPhysicsMethods:
         return output
 
     @staticmethod
-    def get_Ts_parameters(times, ts_data, ts_time, ts_z, z_sorted=False):
+    def get_ts_parameters(times, ts_data, ts_time, ts_z, z_sorted=False):
         # sort z array
         if not z_sorted:
             idx = np.argsort(ts_z)
@@ -854,7 +854,7 @@ class CmodPhysicsMethods:
 
     @staticmethod
     @physics_method(columns=["te_width"], tokamak=Tokamak.CMOD)
-    def _get_Ts_parameters(params: PhysicsMethodParams):
+    def _get_ts_parameters(params: PhysicsMethodParams):
         # TODO: Guassian vs parabolic fit for te profile
 
         # Read in Thomson core temperature data, which is a 2-D array, with the
@@ -870,13 +870,13 @@ class CmodPhysicsMethods:
         except mdsExceptions.MdsException:
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             return {"te_width": [np.nan]}
-        output = CmodPhysicsMethods.get_Ts_parameters(
+        output = CmodPhysicsMethods.get_ts_parameters(
             params.times, ts_data, ts_time, ts_z
         )
         return output
 
     @staticmethod
-    def get_peaking_factors(times, TS_time, TS_Te, TS_ne, TS_z, efit_time, bminor, z0):
+    def get_peaking_factors(times, ts_time, ts_te, ts_ne, ts_z, efit_time, bminor, z0):
         """
         Calculate Te, ne, and pressure peaking factors given Thomson Scattering Te and ne measurements.
 
@@ -887,13 +887,13 @@ class CmodPhysicsMethods:
         ----------
         times : array_like
             Requested time basis
-        TS_time : array_like
+        ts_time : array_like
             Time basis of the Thomson Scattering diagnostic
-        TS_Te : array_like
+        ts_te : array_like
             Core and edge Te measurements from TS
-        TS_ne : array_like
+        ts_ne : array_like
             Core and edge ne measurements from TS
-        TS_z : array_like
+        ts_z : array_like
             Vertical position of the core and edge TS chords
         efit_time : array_like
             Time basis of '_efit_tree'
@@ -916,43 +916,43 @@ class CmodPhysicsMethods:
         Last major update by: William Wei on 8/19/2024
 
         """
-        # Calculate TS_pressure
-        TS_pressure = TS_Te * TS_ne * 1.38e-23
+        # Calculate ts_pressure
+        ts_pressure = ts_te * ts_ne * 1.38e-23
         # Interpolate EFIT signals to TS time basis
-        bminor = interp1(efit_time, bminor, TS_time)
-        z0 = interp1(efit_time, z0, TS_time)
+        bminor = interp1(efit_time, bminor, ts_time)
+        z0 = interp1(efit_time, z0, ts_time)
 
         # Calculate Te, ne, & pressure peaking factors
-        Te_PF = np.full(len(TS_time), np.nan)
-        ne_PF = np.full(len(TS_time), np.nan)
-        pressure_PF = np.full(len(TS_time), np.nan)
-        (itimes,) = np.where((TS_time > 0) & (TS_time < times[-1]))
+        te_pf = np.full(len(ts_time), np.nan)
+        ne_pf = np.full(len(ts_time), np.nan)
+        pressure_pf = np.full(len(ts_time), np.nan)
+        (itimes,) = np.where((ts_time > 0) & (ts_time < times[-1]))
         for itime in itimes:
-            TS_Te_arr = TS_Te[:, itime]
-            TS_ne_arr = TS_ne[:, itime]
-            TS_pressure_arr = TS_pressure[:, itime]
-            # This gives identical results using either TS_Te_arr or TS_ne_arr
-            (indx,) = np.where(TS_ne_arr > 0)
+            ts_te_arr = ts_te[:, itime]
+            ts_ne_arr = ts_ne[:, itime]
+            ts_pressure_arr = ts_pressure[:, itime]
+            # This gives identical results using either ts_te_arr or ts_ne_arr
+            (indx,) = np.where(ts_ne_arr > 0)
             if len(indx) < 10:
                 continue
-            TS_Te_arr = TS_Te_arr[indx]
-            TS_ne_arr = TS_ne_arr[indx]
-            TS_pressure_arr = TS_pressure_arr[indx]
-            TS_z_arr = TS_z[indx]
-            sorted_indx = np.argsort(TS_z_arr)
-            TS_z_arr = TS_z_arr[sorted_indx]
-            TS_Te_arr = TS_Te_arr[sorted_indx]
-            TS_ne_arr = TS_ne_arr[sorted_indx]
-            TS_pressure_arr = TS_pressure_arr[sorted_indx]
-            # Create equal-spacing array of TS_z_arr and interpolate TS profile on it
+            ts_te_arr = ts_te_arr[indx]
+            ts_ne_arr = ts_ne_arr[indx]
+            ts_pressure_arr = ts_pressure_arr[indx]
+            ts_z_arr = ts_z[indx]
+            sorted_indx = np.argsort(ts_z_arr)
+            ts_z_arr = ts_z_arr[sorted_indx]
+            ts_te_arr = ts_te_arr[sorted_indx]
+            ts_ne_arr = ts_ne_arr[sorted_indx]
+            ts_pressure_arr = ts_pressure_arr[sorted_indx]
+            # Create equal-spacing array of ts_z_arr and interpolate TS profile on it
             # Skip if there's no EFIT zmagx data
             if np.isnan(z0[itime]):
                 continue
-            z_arr_equal_spacing = np.linspace(z0[itime], TS_z_arr[-1], len(TS_z_arr))
-            Te_arr_equal_spacing = interp1(TS_z_arr, TS_Te_arr, z_arr_equal_spacing)
-            ne_arr_equal_spacing = interp1(TS_z_arr, TS_ne_arr, z_arr_equal_spacing)
+            z_arr_equal_spacing = np.linspace(z0[itime], ts_z_arr[-1], len(ts_z_arr))
+            te_arr_equal_spacing = interp1(ts_z_arr, ts_te_arr, z_arr_equal_spacing)
+            ne_arr_equal_spacing = interp1(ts_z_arr, ts_ne_arr, z_arr_equal_spacing)
             pressure_arr_equal_spacing = interp1(
-                TS_z_arr, TS_pressure_arr, z_arr_equal_spacing
+                ts_z_arr, ts_pressure_arr, z_arr_equal_spacing
             )
             # Calculate peaking factors
             (core_index,) = np.where(
@@ -960,24 +960,24 @@ class CmodPhysicsMethods:
             )
             if len(core_index) < 2:
                 continue
-            Te_PF[itime] = np.mean(Te_arr_equal_spacing[core_index]) / np.mean(
-                Te_arr_equal_spacing
+            te_pf[itime] = np.mean(te_arr_equal_spacing[core_index]) / np.mean(
+                te_arr_equal_spacing
             )
-            ne_PF[itime] = np.mean(ne_arr_equal_spacing[core_index]) / np.mean(
+            ne_pf[itime] = np.mean(ne_arr_equal_spacing[core_index]) / np.mean(
                 ne_arr_equal_spacing
             )
-            pressure_PF[itime] = np.mean(
+            pressure_pf[itime] = np.mean(
                 pressure_arr_equal_spacing[core_index]
             ) / np.mean(pressure_arr_equal_spacing)
 
         # Interpolate peaking factors to the requested time basis
-        ne_PF = interp1(TS_time, ne_PF, times, "linear")
-        Te_PF = interp1(TS_time, Te_PF, times, "linear")
-        pressure_PF = interp1(TS_time, pressure_PF, times, "linear")
+        ne_pf = interp1(ts_time, ne_pf, times, "linear")
+        te_pf = interp1(ts_time, te_pf, times, "linear")
+        pressure_pf = interp1(ts_time, pressure_pf, times, "linear")
         return {
-            "ne_peaking": ne_PF,
-            "te_peaking": Te_PF,
-            "pressure_peaking": pressure_PF,
+            "ne_peaking": ne_pf,
+            "te_peaking": te_pf,
+            "pressure_peaking": pressure_pf,
         }
 
     @staticmethod
@@ -986,7 +986,7 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def _get_peaking_factors(params: PhysicsMethodParams):
-        USE_TS_TCI_CALIBRATION = False
+        use_ts_tci_calibration = False
         nan_output = {
             "ne_peaking": [np.nan],
             "te_peaking": [np.nan],
@@ -1011,28 +1011,28 @@ class CmodPhysicsMethods:
 
             # Get Te data and TS time basis
             node_ext = ".yag_new.results.profiles"
-            TS_Te_core, TS_time = params.mds_conn.get_data_with_dims(
+            ts_te_core, ts_time = params.mds_conn.get_data_with_dims(
                 f"{node_ext}:te_rz", tree_name="electrons"
             )
-            TS_Te_core = TS_Te_core * 1000  # [keV] -> [eV]
-            TS_Te_edge = params.mds_conn.get_data(r"\ts_te")
-            TS_Te = np.concatenate((TS_Te_core, TS_Te_edge)) * 11600  # [eV] -> [K]
+            ts_te_core = ts_te_core * 1000  # [keV] -> [eV]
+            ts_te_edge = params.mds_conn.get_data(r"\ts_te")
+            ts_te = np.concatenate((ts_te_core, ts_te_edge)) * 11600  # [eV] -> [K]
 
             # Get ne data
-            TS_ne_core = params.mds_conn.get_data(
+            ts_ne_core = params.mds_conn.get_data(
                 f"{node_ext}:ne_rz", tree_name="electrons"
             )
-            TS_ne_edge = params.mds_conn.get_data(r"\ts_ne")
-            TS_ne = np.concatenate((TS_ne_core, TS_ne_edge))
+            ts_ne_edge = params.mds_conn.get_data(r"\ts_ne")
+            ts_ne = np.concatenate((ts_ne_core, ts_ne_edge))
 
             # Get TS chord positions
-            TS_z_core = params.mds_conn.get_data(
+            ts_z_core = params.mds_conn.get_data(
                 f"{node_ext}:z_sorted", tree_name="electrons"
             )
-            TS_z_edge = params.mds_conn.get_data(r"\fiber_z", tree_name="electrons")
-            TS_z = np.concatenate((TS_z_core, TS_z_edge))
+            ts_z_edge = params.mds_conn.get_data(r"\fiber_z", tree_name="electrons")
+            ts_z = np.concatenate((ts_z_core, ts_z_edge))
             # Make sure that there are equal numbers of edge position and edge temperature points
-            if len(TS_z_edge) != TS_Te_edge.shape[0]:
+            if len(ts_z_edge) != ts_te_edge.shape[0]:
                 params.logger.warning(
                     "[Shot %s]: TS edge data and z positions are not the same length for shot",
                     params.shot_id,
@@ -1041,8 +1041,8 @@ class CmodPhysicsMethods:
         except mdsExceptions.MdsException:
             return nan_output
 
-        # Calibrate TS_ne using TCI -- slow
-        if USE_TS_TCI_CALIBRATION:
+        # Calibrate ts_ne using TCI -- slow
+        if use_ts_tci_calibration:
             # This shouldn't affect ne_PF (except if calib is not between 0.5 & 1.5)
             # because we're just multiplying ne by a constant
             (nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _) = (
@@ -1060,12 +1060,12 @@ class CmodPhysicsMethods:
                 calib = np.nan
 
             if 0.5 < calib < 1.5:
-                TS_ne *= calib
+                ts_ne *= calib
             else:
                 return nan_output
 
         return CmodPhysicsMethods.get_peaking_factors(
-            params.times, TS_time, TS_Te, TS_ne, TS_z, efit_time, bminor, z0
+            params.times, ts_time, ts_te, ts_ne, ts_z, efit_time, bminor, z0
         )
 
     @staticmethod
