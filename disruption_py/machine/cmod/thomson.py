@@ -165,7 +165,7 @@ class CmodThomsonDensityMeasure:
             nets_edge = np.zeros((len(nets_core[:, 1]), mts_edge))
             nets_edge_err = nets_edge + 1e20
         mts = mts_core + mts_edge
-        rts = params.mds_conn.get(".YAG.RESULTS.PARAM:R") + np.zeros((1, mts))
+        rts = params.mds_conn.get(".YAG.RESULTS.PARAM:r") + np.zeros((1, mts))
         rtci = params.mds_conn.get_data(".tci.results:rad")
         nts = len(nets_core_t)
         zts = np.zeros((1, mts))

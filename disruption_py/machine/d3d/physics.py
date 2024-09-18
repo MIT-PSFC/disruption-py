@@ -1622,9 +1622,9 @@ class D3DPhysicsMethods:
             for i, ichan in enumerate(fan_chans):
                 if a_struct.channels[ichan].ier == 0:
                     output["ch_avail"].append(ichan)
-                output["x"][:, i] = a_struct.channels[ichan].Z + np.tan(
+                output["x"][:, i] = a_struct.channels[ichan].z + np.tan(
                     a_struct.channels[ichan].angle * np.pi / 180.0
-                ) * (r_major_axis - a_struct.channels[ichan].R)
+                ) * (r_major_axis - a_struct.channels[ichan].r)
                 b_struct.chan[ichan].chanpwr[
                     np.where(b_struct.chan[ichan].chanpwr < 0)
                 ] = 0
@@ -1645,9 +1645,9 @@ class D3DPhysicsMethods:
                     ichan = fan_chans[j]
                     if a_struct.channels[ichan].ier == 0:
                         output["ch_avail"].append(ichan)
-                    output["x"][:, j] = a_struct.channels[ichan].Z + np.tan(
+                    output["x"][:, j] = a_struct.channels[ichan].z + np.tan(
                         a_struct.channels[ichan].angle * np.pi / 180.0
-                    ) * (r_major_axis - a_struct.channels[ichan].R)
+                    ) * (r_major_axis - a_struct.channels[ichan].r)
                     b_struct.chan[ichan].chanpwr[
                         np.where(b_struct.chan[ichan].chanpwr < 0)
                     ] = 0

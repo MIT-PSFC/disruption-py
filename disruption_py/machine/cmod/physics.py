@@ -1091,12 +1091,12 @@ class CmodPhysicsMethods:
         Calculates Te PF and width from ECE data using the two GPC diagnostic systems.
         GPC diagnostics look at the mid-plane, and each channel detects a different
         emitted frequency associated with the second harmonic, which depends on B and
-        therefore R.
+        therefore r.
         - te_width is the half-width at half-max of a Gaussian fit of the Te profile
         - te_core_vs_avg is defined as mean(core)/mean(all) where core bins are defined
-          as those w/ |R - R0| < 0.2*a of the magnetic axis.
+          as those w/ |r - R0| < 0.2*a of the magnetic axis.
         - te_edge_vs_avg is defined as mean(edge)/mean(all) where edge bins are defined as
-          those with 0.8*a < |R - R0| < a
+          those with 0.8*a < |r - R0| < a
         For core and edge vs. average calculations, different shots can have different
         radial sampling, and during a few experiments on C-Mod, Bt was changed during
         the shot, changing the radial sampling. Different radial samplings can have
@@ -1133,9 +1133,9 @@ class CmodPhysicsMethods:
           Significant runaway populations and LHCD lead to non-thermal artifacts.
           Occasionally low ne shots also had non-thermal artifacts.
         - Harmonic overlap: Certain channels can pick up emission from different
-          harmonics from other regions of the plasma. Generally channels with R < 0.6 m
+          harmonics from other regions of the plasma. Generally channels with r < 0.6 m
           suffer from overlap with 3rd harmonic emission from the core. This leads to
-          an apparently higher Te for R < 0.6 m than in reality. The gratings were
+          an apparently higher Te for r < 0.6 m than in reality. The gratings were
           usually aligned to measure the profile from the core outwards for this
           reason.
 

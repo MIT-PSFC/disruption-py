@@ -55,7 +55,7 @@ def interp1(x, y, new_x, kind="linear", bounds_error=False, fill_value=np.nan, a
     return set_interp(new_x)
 
 
-def interp2(X, Y, V, Xq, Yq, kind="linear"):
+def interp2(x, y, v, xq, yq, kind="linear"):
     """
     Interpolate a 2-D array.
 
@@ -67,15 +67,15 @@ def interp2(X, Y, V, Xq, Yq, kind="linear"):
 
     Parameters
     ----------
-    X : array
+    x : array
         The X-coordinates of the original array.
-    Y : array
+    y : array
         The Y-coordinates of the original array.
-    V : array
+    v : array
         The data of the original array.
-    Xq : float
+    xq : float
         The X-coordinate of the interpolated point.
-    Yq : float
+    yq : float
         The Y-coordinate of the interpolated point.
     kind : str, optional
         The interpolation method to use. Options are 'linear', 'nearest',
@@ -87,8 +87,8 @@ def interp2(X, Y, V, Xq, Yq, kind="linear"):
         The interpolated value at the point (Xq, Yq).
 
     """
-    set_interp = interp2d(X, Y, V, kind=kind)
-    return set_interp(Xq, Yq)
+    set_interp = interp2d(x, y, v, kind=kind)
+    return set_interp(xq, yq)
 
 
 def exp_filter(x, w, strategy="fragmented"):
@@ -573,8 +573,8 @@ def matlab_power(a):
         label: str
         chanpwr: np.ndarray
         brightness: np.ndarray
-        R: float
-        Z: float
+        r: float
+        z: float
         angle: float
 
     @dataclass
@@ -594,8 +594,8 @@ def matlab_power(a):
         b.chan.append(Channel("", np.zeros((4096)), np.zeros((4096)), 0.0, 0.0, 0.0))
         b.chan[i].chanpwr = kappa[i] * a.channels[i].pwr
         b.chan[i].brightness = etendu[i] * a.channels[i].pwr
-        b.chan[i].R = a.channels[i].R
-        b.chan[i].Z = a.channels[i].Z
+        b.chan[i].r = a.channels[i].r
+        b.chan[i].z = a.channels[i].z
         b.chan[i].angle = a.channels[i].angle
     b.pwrmix = 0.0
     b.divl = 0.0
@@ -922,8 +922,8 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
     @dataclass
     class Channel:
         label: str
-        R: float
-        Z: float
+        r: float
+        z: float
         angle: float
         ier: int
         pwr: np.ndarray
@@ -934,8 +934,8 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
 
     one_channel = Channel(
         label="",
-        R=0.0,
-        Z=0.0,
+        r=0.0,
+        z=0.0,
         angle=0.0,
         ier=0,
         pwr=np.zeros((1, 4096)),
@@ -1010,8 +1010,8 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
         bolo_shot.channels[i].gam = gam[i + 1]
         bolo_shot.channels[i].tau = tau[i + 1]
         bolo_shot.channels[i].scrfact = scrfact[i]
-        bolo_shot.channels[i].R = aperx[i]
-        bolo_shot.channels[i].Z = apery[i]
+        bolo_shot.channels[i].r = aperx[i]
+        bolo_shot.channels[i].z = apery[i]
         bolo_shot.channels[i].angle = angle[i]
 
         # Subtract baseline offset
