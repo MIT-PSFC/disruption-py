@@ -16,8 +16,8 @@ def dummy_mds_initializer():
     return ProcessMDSConnection(None)
 
 
-@pytest.fixture(scope="module")
-def full_time_domain_data(tokamak, shotlist):
+@pytest.fixture(scope="module", name="full_time_domain_data")
+def full_time_domain_data_fixture(tokamak, shotlist):
     retrieval_settings = RetrievalSettings(
         efit_nickname_setting="default", domain_setting="full"
     )
