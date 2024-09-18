@@ -88,7 +88,11 @@ def test_data_columns(
     )
 
 
-if __name__ == "__main__":
+def main():
+    """
+    main function called by command-line invocation.
+    """
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--data-column",
@@ -128,3 +132,7 @@ if __name__ == "__main__":
     print(
         f"Python tests complete. Checked {len(shotlist)} shots with {len(columns)} columns."
     )
+
+
+if __name__ == "__main__":
+    main()
