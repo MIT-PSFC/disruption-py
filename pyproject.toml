@@ -1,10 +1,25 @@
 [tool.poetry]
-authors = ["Gregorio L. Trevisan <gtrevisan@psfc.mit.edu>"]
+authors = [
+    "Cristina Rea <crea@psfc.mit.edu>",
+    "Gregorio L. Trevisan <gtrevisan@psfc.mit.edu>",
+    "MIT PSFC Disruption Studies Group <disruption-py@lists.psfc.mit.edu>",
+]
 description = "Data Framework for the MIT PSFC Disruption Studies Group"
+documentation = "https://mit-psfc.github.io/disruption-py/"
 homepage = "https://disruptions.mit.edu/"
+keywords = [
+    "plasma physics",
+    "nuclear fusion",
+    "tokamak",
+    "disruptions",
+]
 license = "MIT"
+maintainers = [
+    "Gregorio L. Trevisan <gtrevisan@psfc.mit.edu>",
+]
 name = "disruption-py"
 readme = "README.md"
+repository = "https://github.com/MIT-PSFC/disruption-py/"
 version = "0.8.0"
 
 [tool.poetry.dependencies]
