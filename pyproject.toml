@@ -4,7 +4,7 @@ authors = [
     "Gregorio L. Trevisan <gtrevisan@psfc.mit.edu>",
     "MIT PSFC Disruption Studies Group <disruption-py@lists.psfc.mit.edu>",
 ]
-description = "Data Framework for the MIT PSFC Disruption Studies Group"
+description = "Scientific Data Framework for the MIT PSFC Disruption Studies Group"
 documentation = "https://mit-psfc.github.io/disruption-py/"
 homepage = "https://disruptions.mit.edu/"
 keywords = [
