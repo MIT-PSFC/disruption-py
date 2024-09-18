@@ -222,7 +222,7 @@ class CmodDraftPhysicsMethods:
 
         # Get parameters for calculating confinement time
         powers_df = CmodPhysicsMethods._get_power(params=params)
-        efit_df = CmodEfitMethods._get_EFIT_parameters(params=params)
+        efit_df = CmodEfitMethods._get_efit_parameters(params=params)
         density_df = CmodPhysicsMethods._get_densities(params=params)
         ip_df = CmodPhysicsMethods._get_ip_parameters(params=params)
 

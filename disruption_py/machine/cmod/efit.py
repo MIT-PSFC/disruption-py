@@ -57,7 +57,7 @@ class CmodEfitMethods:
         ],
         tokamak=Tokamak.CMOD,
     )
-    def _get_EFIT_parameters(params: PhysicsMethodParams):
+    def _get_efit_parameters(params: PhysicsMethodParams):
 
         efit_time = params.mds_conn.get_data(
             r"\efit_aeqdsk:time", tree_name="_efit_tree", astype="float64"

@@ -16,13 +16,12 @@ def main():
 
     tokamak = resolve_tokamak_from_environment()
 
+    run_methods = ["_get_efit_parameters"]
     if tokamak is Tokamak.D3D:
         shotlist = [161228]
-        run_methods = ["_get_efit_parameters"]
         shape = (247, 16)
     elif tokamak is Tokamak.CMOD:
         shotlist = [1150805012]
-        run_methods = ["_get_EFIT_parameters"]
         shape = (62, 25)
     else:
         raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
