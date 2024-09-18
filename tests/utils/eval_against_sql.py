@@ -74,11 +74,11 @@ def get_cached_from_fresh(
         Dictionary mapping shot IDs to retrieved SQL data.
     """
     # Mapping SQL data onto the MDSplus timebase means SQL data needs time data
-    MERGE_COL = "time"
+    merge_col = "time"
     if test_columns is None:
         test_columns = ["*"]
-    elif MERGE_COL not in test_columns:
-        test_columns.append(MERGE_COL)
+    elif merge_col not in test_columns:
+        test_columns.append(merge_col)
 
     db = ShotDatabase.from_config(tokamak=tokamak)
     shot_data = {}
@@ -93,7 +93,7 @@ def get_cached_from_fresh(
         shot_data[shot_id] = pd.merge_asof(
             times.to_frame(),
             sql_data,
-            on=MERGE_COL,
+            on=merge_col,
             direction="nearest",
             tolerance=config().TIME_CONST,
         )
