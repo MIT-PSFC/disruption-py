@@ -13,10 +13,10 @@ from disruption_py.settings import OutputSetting, OutputSettingParams
 
 # define a sentinel value for signifying that task queue is complete
 class MarkCompleteEnum(Enum):
-    MarkComplete = "MarkComplete"
+    MARK_COMPLETE = "MARK_COMPLETE"
 
 
-MARK_COMPLETE = MarkCompleteEnum.MarkComplete
+MARK_COMPLETE = MarkCompleteEnum.MARK_COMPLETE
 
 
 class Consumer(multiprocessing.Process):
