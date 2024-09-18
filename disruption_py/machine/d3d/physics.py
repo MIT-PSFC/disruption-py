@@ -789,7 +789,7 @@ class D3DPhysicsMethods:
 
         Last major update by William Wei on 9/4/2024
         """
-        NOMINAL_FLATTOP_RADIUS = 0.59
+        nominal_flattop_radius = 0.59
         # Get z_cur
         try:
             z_cur, t_z_cur = params.mds_conn.get_data_with_dims(
@@ -820,7 +820,7 @@ class D3DPhysicsMethods:
                 "[Shot %s]: Failed to get efit parameters", params.shot_id
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
-            z_cur_norm = z_cur / NOMINAL_FLATTOP_RADIUS
+            z_cur_norm = z_cur / nominal_flattop_radius
         return {"zcur": z_cur, "zcur_normalized": z_cur_norm}
 
     @staticmethod
@@ -1240,12 +1240,12 @@ class D3DPhysicsMethods:
         Last major update by William Wei on 8/29/2024
         """
 
-        T = np.tile(ts["time"], [len(ts["r"]), 1]).transpose()
-        R = np.tile(ts["r"], [len(ts["time"]), 1])
-        Z = np.tile(ts["z"], [len(ts["time"]), 1])
+        t = np.tile(ts["time"], [len(ts["r"]), 1]).transpose()
+        r = np.tile(ts["r"], [len(ts["time"]), 1])
+        z = np.tile(ts["z"], [len(ts["time"]), 1])
 
         # Implement a 3D (time,radial,vertical) gridded interpolation
-        # efit_dict['psin'] has the dimensions (time, Z, R)
+        # efit_dict['psin'] has the dimensions (time, z, r)
         interp = scipy.interpolate.RegularGridInterpolator(
             [efit_dict["time"], efit_dict["z"], efit_dict["r"]],
             efit_dict["psin"],
@@ -1255,7 +1255,7 @@ class D3DPhysicsMethods:
         )
 
         # Apply interpolant to diagnostic data and return outputs as a new structure field
-        psin = interp((T, Z, R))
+        psin = interp((t, z, r))
 
         # Get rhovn using the interpolant stored in EFIT, then save this as another field in 'data'
         rho_vn_diag_almost = interp1(
