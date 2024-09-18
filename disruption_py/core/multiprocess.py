@@ -11,8 +11,11 @@ from disruption_py.inout.sql import ShotDatabase
 from disruption_py.settings import OutputSetting, OutputSettingParams
 
 
-# define a sentinel value for signifying that task queue is complete
 class MarkCompleteEnum(Enum):
+    """
+    sentinel value for signifying that task queue is complete.
+    """
+
     MARK_COMPLETE = "MARK_COMPLETE"
 
 
