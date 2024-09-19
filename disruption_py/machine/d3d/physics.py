@@ -426,8 +426,8 @@ class D3DPhysicsMethods:
             )  # [volts; 2 V/MA], [ms]
             t_ip_rt = t_ip_rt / 1.0e3  # [ms] to [s]
             ip_rt /= 2  # [volts] to [MA]
-            ip_sign = np.sign(np.sum(ip_rt))
-            ip = interp1(t_ip_rt, ip_rt * ip_sign, params.times, "linear")
+        ip_sign = np.sign(np.sum(ip_rt))
+        ip = interp1(t_ip_rt, ip_rt * ip_sign, params.times, "linear")
 
         # Read in EFIT minor radius and timebase.  This is also needed to calculate
         # the Greenwald density limit.  However, if the minor radius data is not
