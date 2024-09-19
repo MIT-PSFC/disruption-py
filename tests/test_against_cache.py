@@ -27,8 +27,8 @@ from tests.utils.factory import (
 from tests.utils.pytest_helper import extract_param, save_to_csv
 
 
-@pytest.fixture(scope="module")
-def fresh_data(
+@pytest.fixture(scope="module", name="fresh_data")
+def fresh_data_fixture(
     tokamak: Tokamak,
     shotlist: List[int],
     module_file_path_f,
@@ -46,8 +46,8 @@ def fresh_data(
     return fresh_data
 
 
-@pytest.fixture(scope="module")
-def cache_data(
+@pytest.fixture(scope="module", name="cache_data")
+def cache_data_fixture(
     tokamak: Tokamak,
     shotlist: List[int],
     fresh_data: Dict[int, pd.DataFrame],
@@ -88,7 +88,11 @@ def test_data_columns(
     )
 
 
-if __name__ == "__main__":
+def main():
+    """
+    main function called by command-line invocation.
+    """
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--data-column",
@@ -128,3 +132,7 @@ if __name__ == "__main__":
     print(
         f"Python tests complete. Checked {len(shotlist)} shots with {len(columns)} columns."
     )
+
+
+if __name__ == "__main__":
+    main()

@@ -45,8 +45,8 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize("data_column", data_columns)
 
 
-@pytest.fixture(scope="session")
-def tokamak():
+@pytest.fixture(scope="session", name="tokamak")
+def tokamak_fixture():
     return resolve_tokamak_from_environment()
 
 
@@ -55,8 +55,8 @@ def shotlist(tokamak):
     return get_tokamak_test_shotlist(tokamak)
 
 
-@pytest.fixture(scope="module")
-def data_columns(tokamak):
+@pytest.fixture(scope="module", name="data_columns")
+def data_columns_fixture(tokamak):
     return get_tokamak_test_columns(tokamak)
 
 
@@ -73,8 +73,8 @@ def mock_numpy_gradient():
         yield
 
 
-@pytest.fixture(scope="session")
-def tmpdir():
+@pytest.fixture(scope="session", name="tmpdir")
+def tmpdir_fixture():
     tmpdir_path = mkdtemp(prefix=f"disruptionpy-{time.strftime('%y%m%d-%H%M%S')}-")
     print(f"Using temporary directory: {tmpdir_path} for file output")
     yield tmpdir_path
