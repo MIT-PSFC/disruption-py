@@ -178,7 +178,7 @@ class RetrievalManager:
         self,
         physics_method_params: PhysicsMethodParams,
         retrieval_settings: RetrievalSettings,
-        **kwargs,
+        **_kwargs,
     ) -> PhysicsMethodParams:
 
         new_timebase = retrieval_settings.domain_setting.get_domain(
