@@ -1214,31 +1214,26 @@ class D3DPhysicsMethods:
     @physics_method(columns=["z_eff"], tokamak=Tokamak.D3D)
     def get_zeff_parameters(params: PhysicsMethodParams):
         # Get Zeff
-        try:
-            zeff, t_zeff = params.mds_conn.get_data_with_dims(
-                r"\d3d::top.spectroscopy.vb.zeff:zeff", tree_name="d3d"
+        zeff, t_zeff = params.mds_conn.get_data_with_dims(
+            r"\d3d::top.spectroscopy.vb.zeff:zeff", tree_name="d3d"
+        )
+        t_zeff = t_zeff / 1.0e3  # [ms] -> [s]
+        # t_nbi = params.mds_conn.get(
+        # r"dim_of(\d3d::top.nb:pinj)").data()/1.e3  # [ms]->[s]
+        if len(t_zeff) > 2:
+            zeff = interp1(
+                t_zeff,
+                zeff,
+                params.times,
+                "linear",
+                bounds_error=False,
+                fill_value=0.0,
             )
-            t_zeff = t_zeff / 1.0e3  # [ms] -> [s]
-            # t_nbi = params.mds_conn.get(
-            # r"dim_of(\d3d::top.nb:pinj)").data()/1.e3  # [ms]->[s]
-            if len(t_zeff) > 2:
-                zeff = interp1(
-                    t_zeff,
-                    zeff,
-                    params.times,
-                    "linear",
-                    bounds_error=False,
-                    fill_value=0.0,
-                )
-            else:
-                zeff = np.zeros(len(params.times))
-                params.logger.info(
-                    "[Shot %s]: No zeff data found in this shot.", params.shot_id
-                )
-        except mdsExceptions.MdsException:
+        else:
             zeff = np.zeros(len(params.times))
-            params.logger.info("[Shot %s]: Failed to open Zeff node", params.shot_id)
-            params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
+            params.logger.info(
+                "[Shot %s]: No zeff data found in this shot.", params.shot_id
+            )
         return {"z_eff": zeff}
 
     @staticmethod
