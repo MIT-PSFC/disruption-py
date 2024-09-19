@@ -150,6 +150,7 @@ def populate_method(
         mdsExceptions.TreeNODATA,
         CalculationError,
         NotImplementedError,
+        ValueError,
     ) as e:
         physics_method_params.logger.warning(
             "[Shot %s]: Failed to populate %s with error %s",
