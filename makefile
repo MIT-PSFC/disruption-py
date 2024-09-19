@@ -82,6 +82,9 @@ pylint-only:
 	find $(PYLINT_DIRS) -type f -name '*.py' \
 	| xargs poetry run pylint --disable=all --enable=$(CODE)
 
+find-todos:
+	CODE=fixme make pylint-only
+
 shellcheck:
 	poetry run shellcheck --version
 	find -type f -not -path '*/.git/*' \

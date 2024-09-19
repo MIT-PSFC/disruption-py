@@ -49,6 +49,7 @@ matplotlib = "^3.9.0"
 extension-pkg-allow-list = ["pyodbc"]
 ignored-modules = ["MDSplus"]
 disable = [
+    "fixme",
     "too-many-arguments",
     "too-many-branches",
     "too-many-instance-attributes",

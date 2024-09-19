@@ -23,8 +23,8 @@ ALL_ITERATION_COLUMNS = without_duplicates(
 )
 
 
-@pytest.fixture(scope="module")
-def shot_database(tokamak) -> ShotDatabase:
+@pytest.fixture(scope="module", name="shot_database")
+def shot_database_fixture(tokamak) -> ShotDatabase:
     return get_database(tokamak=tokamak)
 
 
@@ -34,8 +34,8 @@ def setup_shot_database(shotlist, shot_database):
         shot_database.remove_shot_data(shot)
 
 
-@pytest.fixture(scope="module")
-def initial_mdsplus_data(shotlist, tokamak, test_file_path_f) -> Dict:
+@pytest.fixture(scope="module", name="initial_mdsplus_data")
+def initial_mdsplus_data_fixture(shotlist, tokamak, test_file_path_f) -> Dict:
     output_settings = [
         "dataframe",
         "list",
@@ -61,8 +61,8 @@ def initial_mdsplus_data(shotlist, tokamak, test_file_path_f) -> Dict:
     return all_outputs
 
 
-@pytest.fixture(scope="module")
-def initial_mdsplus_data_df(initial_mdsplus_data):
+@pytest.fixture(scope="module", name="initial_mdsplus_data_df")
+def initial_mdsplus_data_df_fixture(initial_mdsplus_data):
     return initial_mdsplus_data[0]
 
 
