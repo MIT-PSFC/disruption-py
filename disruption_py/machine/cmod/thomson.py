@@ -237,10 +237,10 @@ class CmodThomsonDensityMeasure:
         for i, time in enumerate(t):
             # Find the index of the closest time
             time_idx = np.argmin(np.abs(times - time))
-            # Extract the corresponding Psirz slice and transpose it
-            Psirz = np.transpose(psirz[time_idx, :, :])
-            # Perform cubic interpolation on the Psirz slice
-            values = Psirz.flatten()
+            # Extract the corresponding psirz slice and transpose it
+            psirz = np.transpose(psirz[time_idx, :, :])
+            # Perform cubic interpolation on the psirz slice
+            values = psirz.flatten()
             try:
                 psi[:, i] = sp.interpolate.griddata(
                     points, values, (r, z), method="cubic"
