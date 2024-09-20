@@ -151,6 +151,7 @@ def populate_method(
         CalculationError,
         NotImplementedError,
         ValueError,
+        AttributeError,
     ) as e:
         physics_method_params.logger.warning(
             "[Shot %s]: Failed to populate %s with error %s",
