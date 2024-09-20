@@ -252,10 +252,6 @@ class D3DPhysicsMethods:
 
         Last major update by William Wei on 8/1/2024
         """
-        nan_output = {
-            "p_ohm": [np.nan],
-            "v_loop": [np.nan],
-        }
         # Get edge loop voltage and smooth it a bit with a median filter
         v_loop, t_v_loop = params.mds_conn.get_data_with_dims(
             f'ptdata("vloopb", {params.shot_id})', tree_name="d3d"
