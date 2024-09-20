@@ -33,11 +33,13 @@ class D3DEfitMethods:
         "wmhd_rt": r"\efit_a_eqdsk:wmhd",
         "chisq": r"\efit_a_eqdsk:chisq",
     }
+    returned_cols = list((set(efit_cols.keys()) | set(efit_derivs.keys())) - {"chisq"})
+    rt_returned_cols = list(set(efit_derivs.keys()) - {"chisq"})
     # 'v_loop_efit_RT': r'\efit_a_eqdsk:vsurf',
 
     @staticmethod
     @physics_method(
-        columns=[*efit_cols.keys(), *efit_derivs.keys()],
+        columns=returned_cols,
         tokamak=Tokamak.D3D,
     )
     def _get_efit_parameters(params: PhysicsMethodParams):
@@ -68,7 +70,7 @@ class D3DEfitMethods:
 
     @staticmethod
     @physics_method(
-        columns=[*rt_efit_cols.keys()],
+        columns=rt_returned_cols,
         tokamak=Tokamak.D3D,
     )
     def _get_rt_efit_parameters(params: PhysicsMethodParams):
