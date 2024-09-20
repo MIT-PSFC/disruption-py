@@ -669,7 +669,7 @@ class CmodPhysicsMethods:
         for i, bp13_name in enumerate(bp13_names):
             signal = params.mds_conn.get_data(path + bp13_name, tree_name="magnetics")
             if len(signal) == 1:
-                raise CalculationError("No data for %s".format(bp13_name))
+                raise CalculationError("No data for %s", bp13_name)
 
             baseline = np.mean(signal[baseline_indices])
             signal = signal - baseline
