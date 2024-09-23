@@ -1332,19 +1332,23 @@ class D3DPhysicsMethods:
             invalid_indices = np.where(chisq > 50)
             if ~np.isnan(delta[0]):
                 delta[invalid_indices] = np.nan
-                delta = interp1(efit_time, delta, params.times, "linear")
             if ~np.isnan(squareness[0]):
                 squareness[invalid_indices] = np.nan
-                squareness = interp1(efit_time, squareness, params.times, "linear")
             if ~np.isnan(aminor[0]):
                 aminor[invalid_indices] = np.nan
-                aminor = interp1(efit_time, aminor, params.times, "linear")
         except mdsExceptions.MdsException:
             params.logger.info(
                 "[Shot %s]: Failed to obtain chisq to remove unreliable time points.",
                 params.shot_id,
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
+        # Interpolate to the requested time basis
+        if ~np.isnan(delta[0]):
+            delta = interp1(efit_time, delta, params.times, "linear")
+        if ~np.isnan(squareness[0]):
+            squareness = interp1(efit_time, squareness, params.times, "linear")
+        if ~np.isnan(aminor[0]):
+            aminor = interp1(efit_time, aminor, params.times, "linear")
         return {"delta": delta, "squareness": squareness, "aminor": aminor}
 
     @staticmethod
