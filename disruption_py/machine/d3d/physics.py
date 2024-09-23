@@ -1292,7 +1292,7 @@ class D3DPhysicsMethods:
                 r"\efit_a_eqdsk:tribot", tree_name="_efit_tree"
             )  # meters
             delta = (tritop + tribot) / 2.0
-            delta = interp1(efit_time, delta, params.times, "linear")
+            # delta = interp1(efit_time, delta, params.times, "linear")
         except mdsExceptions.MdsException:
             params.logger.info(
                 "[Shot %s]: Failed to obtain triangularity signals", params.shot_id
@@ -1308,7 +1308,7 @@ class D3DPhysicsMethods:
                 r"\efit_a_eqdsk:sqfou", tree_name="_efit_tree"
             )
             squareness = (sqfod + sqfou) / 2.0
-            squareness = interp1(efit_time, squareness, params.times, "linear")
+            # squareness = interp1(efit_time, squareness, params.times, "linear")
         except mdsExceptions.MdsException:
             params.logger.info(
                 "[Shot %s]: Failed to obtain squareness signals", params.shot_id
@@ -1320,7 +1320,7 @@ class D3DPhysicsMethods:
             aminor = params.mds_conn.get_data(
                 r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
             )
-            aminor = interp1(efit_time, aminor, params.times, "linear")
+            # aminor = interp1(efit_time, aminor, params.times, "linear")
         except mdsExceptions.MdsException:
             params.logger.info(
                 "[Shot %s]: Failed to obtain aminor signals", params.shot_id
@@ -1335,10 +1335,13 @@ class D3DPhysicsMethods:
             invalid_indices = np.where(chisq > 50)
             if ~np.isnan(delta[0]):
                 delta[invalid_indices] = np.nan
+                delta = interp1(efit_time, delta, params.times, "linear")
             if ~np.isnan(squareness[0]):
                 squareness[invalid_indices] = np.nan
+                squareness = interp1(efit_time, squareness, params.times, "linear")
             if ~np.isnan(aminor[0]):
                 aminor[invalid_indices] = np.nan
+                aminor = interp1(efit_time, aminor, params.times, "linear")
         except mdsExceptions.MdsException:
             params.logger.info(
                 "[Shot %s]: Failed to obtain chisq to remove unreliable time points.",
