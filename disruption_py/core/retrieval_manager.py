@@ -190,7 +190,8 @@ class RetrievalManager:
         )
         if new_timebase is not None:
             physics_method_params.times = new_timebase
-            physics_method_params._cached_results.clear()  # TODO: Make this only modify the cached results for new times
+            # TODO: Make this only modify the cached results for new times
+            physics_method_params.cached_results.clear()
 
         return physics_method_params
 

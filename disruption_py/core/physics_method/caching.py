@@ -35,10 +35,10 @@ def cache_method(method: Callable) -> Callable:
             method, physics_method_params.times, other_params
         )
 
-        if cache_key in physics_method_params._cached_results:
-            return physics_method_params._cached_results[cache_key]
+        if cache_key in physics_method_params.cached_results:
+            return physics_method_params.cached_results[cache_key]
         result = method(*args, **kwargs)
-        physics_method_params._cached_results[cache_key] = result
+        physics_method_params.cached_results[cache_key] = result
         return result
 
     if isinstance(method, staticmethod):
@@ -72,12 +72,12 @@ def manually_cache(
 ) -> bool:
     if method_columns is None:
         return False
-    if not hasattr(physics_method_params, "_cached_results"):
-        physics_method_params._cached_results = {}
+    if not hasattr(physics_method_params, "cached_results"):
+        physics_method_params.cached_results = {}
     missing_columns = set(col for col in method_columns if col not in data.columns)
     if len(missing_columns) == 0:
         cache_key = get_method_cache_key(method, data["time"].values)
-        physics_method_params._cached_results[cache_key] = data[method_columns]
+        physics_method_params.cached_results[cache_key] = data[method_columns]
         physics_method_params.logger.debug(
             "[Shot %s]: Manually caching %s", physics_method_params.shot_id, method_name
         )
