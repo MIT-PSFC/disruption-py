@@ -785,6 +785,7 @@ class D3DPhysicsMethods:
         if 176030 <= params.shot_id <= 176912:
             raise NotImplementedError
             # TODO: Move to a folder like "/fusion/projects/disruption_warning/data"
+            # pylint: disable-next=unreachable
             filename = "/fusion/projects/disruption_warning/matlab_programs/recalc.nc"
             # pylint: disable=undefined-variable
             ncid = nc.Dataset(filename, "r")
