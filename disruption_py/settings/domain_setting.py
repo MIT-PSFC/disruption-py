@@ -102,8 +102,6 @@ class FlattopDomainSetting(DomainSetting):
         raise ValueError(f"flattop domain not defined for tokamak: {params.tokamak}")
 
     def _get_domain_cmod(self, params: DomainSettingParams) -> np.ndarray:
-        # TODO: a future PR will fix physics methods to be called without underscores.
-        # pylint: disable-next=protected-access
         ip_parameters = CmodPhysicsMethods.get_ip_parameters(
             params=params.physics_method_params
         )
@@ -205,8 +203,6 @@ class RampupAndFlattopDomainSetting(DomainSetting):
         )
 
     def _get_domain_cmod(self, params: DomainSettingParams) -> np.ndarray:
-        # TODO: a future PR will fix physics methods to be called without underscores.
-        # pylint: disable-next=protected-access
         ip_parameters = CmodPhysicsMethods.get_ip_parameters(
             params=params.physics_method_params
         )
