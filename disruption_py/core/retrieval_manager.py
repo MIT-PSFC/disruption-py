@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import logging
-import traceback
 
 import numpy as np
 import pandas as pd
