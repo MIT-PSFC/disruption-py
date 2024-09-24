@@ -6,9 +6,9 @@ from dataclasses import dataclass
 from logging import Logger
 from typing import Dict, Union
 
-from MDSplus import mdsExceptions
 import numpy as np
 import pandas as pd
+from MDSplus import mdsExceptions
 
 from disruption_py.config import config
 from disruption_py.core.utils.enums import map_string_to_enum

@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from logging import Logger
 from typing import Dict, Union
 
-from MDSplus import mdsExceptions
 import numpy as np
+from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.enums import map_string_to_enum

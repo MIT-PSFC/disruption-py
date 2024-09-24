@@ -2,8 +2,8 @@
 
 import traceback
 
-from MDSplus import mdsExceptions
 import numpy as np
+from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams

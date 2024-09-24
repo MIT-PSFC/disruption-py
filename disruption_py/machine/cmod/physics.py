@@ -8,10 +8,10 @@ import numpy as np
 import pandas as pd
 from MDSplus import mdsExceptions
 
-from disruption_py.core.physics_method.errors import CalculationError
 import disruption_py.data
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
+from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import (
     gaussian_fit,
