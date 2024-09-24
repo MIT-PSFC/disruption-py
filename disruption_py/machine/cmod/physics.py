@@ -335,7 +335,7 @@ class CmodPhysicsMethods:
                     continue
                 break
         if z_wire_index == -1:
-            raise CalculationError("No ZCUR wire was found")
+            raise CalculationError("Data source error: No ZCUR wire was found")
         # Read in A_OUT, which is a 16xN matrix of the errors for *all* 16 wires for
         # *all* of the segments. Note that DPCS time is usually taken at 10kHz.
         wire_errors, dpcstime = params.mds_conn.get_data_with_dims(
@@ -1002,7 +1002,9 @@ class CmodPhysicsMethods:
             if 0.5 < calib < 1.5:
                 ts_ne *= calib
             else:
-                raise CalculationError("Not calibrated")
+                raise CalculationError(
+                    "Density calibration error exceeds acceptable" "range"
+                )
 
         return CmodPhysicsMethods.get_peaking_factors(
             params.times, ts_time, ts_te, ts_ne, ts_z, efit_time, bminor, z0
