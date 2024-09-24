@@ -31,15 +31,13 @@ class D3DEfitMethods:
         "li_rt": r"\efit_a_eqdsk:li",
         "q95_rt": r"\efit_a_eqdsk:q95",
         "wmhd_rt": r"\efit_a_eqdsk:wmhd",
-        "chisq": r"\efit_a_eqdsk:chisq",
+        "chisq_rt": r"\efit_a_eqdsk:chisq",
     }
-    returned_cols = list((set(efit_cols.keys()) | set(efit_derivs.keys())) - {"chisq"})
-    rt_returned_cols = list(set(efit_derivs.keys()) - {"chisq"})
     # 'v_loop_efit_RT': r'\efit_a_eqdsk:vsurf',
 
     @staticmethod
     @physics_method(
-        columns=returned_cols,
+        columns=[*efit_cols.keys(), *efit_derivs.keys()],
         tokamak=Tokamak.D3D,
     )
     def get_efit_parameters(params: PhysicsMethodParams):
@@ -58,7 +56,7 @@ class D3DEfitMethods:
         # 'chisq' to determine which time slices should be excluded from our
         # disruption warning database.
         invalid_indices = np.where(efit_data["chisq"] > 50)
-        del efit_data["chisq"]
+
         for param in efit_data:
             efit_data[param][invalid_indices] = np.nan
         for deriv_param, param in D3DEfitMethods.efit_derivs.items():
@@ -70,7 +68,7 @@ class D3DEfitMethods:
 
     @staticmethod
     @physics_method(
-        columns=rt_returned_cols,
+        columns=[*rt_efit_cols.keys()],
         tokamak=Tokamak.D3D,
     )
     def get_rt_efit_parameters(params: PhysicsMethodParams):
@@ -87,8 +85,8 @@ class D3DEfitMethods:
         # invalid reconstructions, such as 'terror' and 'chisq'.  Here we use
         # 'chisq' to determine which time slices should be excluded from our
         # disruption warning database.
-        invalid_indices = np.where(efit_data["chisq"] > 50)
-        del efit_data["chisq"]
+        invalid_indices = np.where(efit_data["chisq_rt"] > 50)
+
         for param in efit_data:
             efit_data[param][invalid_indices] = np.nan
         if not np.array_equal(params.times, efit_time):
