@@ -153,11 +153,16 @@ def populate_method(
         NotImplementedError,
         ValueError,
     ) as e:
-        if type(e) == ValueError:
-            interp_err = (
+        if isinstance(e, ValueError):
+            catch_error_msgs = [
                 "x and y arrays must be equal in length along interpolation axis."
-            )
-            if interp_err not in str(e.args):
+            ]
+            should_catch = False
+            for msg in catch_error_msgs:
+                if msg in str(e.args):
+                    should_catch = True
+                    break
+            if not should_catch:
                 raise
 
         physics_method_params.logger.warning(
