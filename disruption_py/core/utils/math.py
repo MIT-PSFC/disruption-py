@@ -1031,7 +1031,7 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
     return bolo_shot
 
 
-def matlab_gradient_1d_vectorized(f, h, **kwargs):
+def matlab_gradient_1d_vectorized(f, h, **_kwargs):
     """
     Compute the gradient for a 1D array using vectorized operations.
 

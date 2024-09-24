@@ -29,6 +29,7 @@ def decorated_physics_method(params: PhysicsMethodParams) -> dict:
         parameter being a key-value pair. Each of the dictionary's values should be the same
         length as the timebase (`params.times`).
     """
+    _ = params
 
 
 # # Paramater cached method example

@@ -34,7 +34,7 @@ class ShotDatabase:
         passwd,
         protected_columns=None,
         write_database_table_name=None,
-        **kwargs,
+        **_kwargs,
     ):
 
         if protected_columns is None:
@@ -497,7 +497,7 @@ class DummyDatabase(ShotDatabase):
         pass
 
     @classmethod
-    def initializer(cls, **kwargs):
+    def initializer(cls, **_kwargs):
         return cls()
 
     @property
@@ -505,19 +505,19 @@ class DummyDatabase(ShotDatabase):
         return DummyObject()
 
     # pylint: disable-next=arguments-differ
-    def query(self, **kwargs):
+    def query(self, **_kwargs):
         return pd.DataFrame()
 
     # pylint: disable-next=arguments-differ
-    def get_shots_data(self, **kwargs):
+    def get_shots_data(self, **_kwargs):
         return pd.DataFrame()
 
     # pylint: disable-next=arguments-differ
-    def get_disruption_time(self, **kwargs):
+    def get_disruption_time(self, **_kwargs):
         return None
 
-    def get_disruption_shotlist(self, **kwargs):
+    def get_disruption_shotlist(self, **_kwargs):
         return []
 
-    def get_disruption_warning_shotlist(self, **kwargs):
+    def get_disruption_warning_shotlist(self, **_kwargs):
         return []
