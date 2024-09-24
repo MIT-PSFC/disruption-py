@@ -22,7 +22,7 @@ class D3DPhysicsMethods:
 
     @staticmethod
     @physics_method(columns=["time_until_disrupt"], tokamak=Tokamak.D3D)
-    def _get_time_until_disrupt(params: PhysicsMethodParams):
+    def get_time_until_disrupt(params: PhysicsMethodParams):
         if params.disrupted:
             return {"time_until_disrupt": params.disruption_time - params.times}
         return {"time_until_disrupt": [np.nan]}

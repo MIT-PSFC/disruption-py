@@ -16,7 +16,7 @@ def main():
 
     tokamak = resolve_tokamak_from_environment()
 
-    run_methods = ["_get_efit_parameters"]
+    run_methods = ["get_efit_parameters"]
     if tokamak is Tokamak.D3D:
         shotlist = [161228]
         shape = (247, 16)

@@ -28,7 +28,7 @@ class PhysicsMethodParams:
     interpolation_method: Any  # Fix
     metadata: dict
 
-    _cached_results: Dict[str, Any] = field(default_factory=dict)
+    cached_results: Dict[str, Any] = field(default_factory=dict)
 
     @property
     def disrupted(self):
@@ -37,4 +37,4 @@ class PhysicsMethodParams:
     def cleanup(self):
         self.mds_conn.cleanup()
         self.times = None
-        self._cached_results.clear()
+        self.cached_results.clear()

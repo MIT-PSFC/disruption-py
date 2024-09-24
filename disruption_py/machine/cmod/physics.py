@@ -27,7 +27,7 @@ warnings.filterwarnings("error", category=RuntimeWarning)
 class CmodPhysicsMethods:
     @staticmethod
     @cache_method
-    def get_active_wire_segments(params: PhysicsMethodParams):
+    def _get_active_wire_segments(params: PhysicsMethodParams):
         params.mds_conn.open_tree(tree_name="pcs")
         root_nid = params.mds_conn.get("GetDefaultNid()")
         children_nids = params.mds_conn.get(
@@ -62,14 +62,14 @@ class CmodPhysicsMethods:
 
     @staticmethod
     @physics_method(columns=["time_until_disrupt"], tokamak=Tokamak.CMOD)
-    def _get_time_until_disrupt(params: PhysicsMethodParams):
+    def get_time_until_disrupt(params: PhysicsMethodParams):
         time_until_disrupt = [np.nan]
         if params.disrupted:
             time_until_disrupt = params.disruption_time - params.times
         return {"time_until_disrupt": time_until_disrupt}
 
     @staticmethod
-    def get_ip_parameters(times, ip, magtime, ip_prog, pcstime):
+    def _get_ip_parameters(times, ip, magtime, ip_prog, pcstime):
         """Calculates actual and programmed current as well as their derivatives
         and difference.
 
@@ -143,9 +143,9 @@ class CmodPhysicsMethods:
         columns=["ip", "dip_dt", "dip_smoothed", "ip_prog", "dipprog_dt", "ip_error"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_ip_parameters(params: PhysicsMethodParams):
+    def get_ip_parameters(params: PhysicsMethodParams):
         # Automatically generated
-        active_segments = CmodPhysicsMethods.get_active_wire_segments(params=params)
+        active_segments = CmodPhysicsMethods._get_active_wire_segments(params=params)
 
         # Default PCS timebase is 1 KHZ
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
@@ -198,13 +198,13 @@ class CmodPhysicsMethods:
         ip, magtime = params.mds_conn.get_data_with_dims(
             r"\ip", tree_name="magnetics", astype="float64"
         )
-        output = CmodPhysicsMethods.get_ip_parameters(
+        output = CmodPhysicsMethods._get_ip_parameters(
             params.times, ip, magtime, ip_prog, pcstime
         )
         return output
 
     @staticmethod
-    def get_z_parameters(times, z_prog, pcstime, z_error_without_ip, ip, dpcstime):
+    def _get_z_parameters(times, z_prog, pcstime, z_error_without_ip, ip, dpcstime):
         """Get values of Z_error, Z_prog, and derived signals from plasma control
         system (PCS).
 
@@ -283,13 +283,13 @@ class CmodPhysicsMethods:
         columns=["z_error", "z_prog", "zcur", "v_z", "z_times_v_z"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_z_parameters(params: PhysicsMethodParams):
+    def get_z_parameters(params: PhysicsMethodParams):
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
         z_prog = np.empty(pcstime.shape)
         z_prog.fill(np.nan)
         z_prog_temp = z_prog.copy()
         z_wire_index = -1
-        active_wire_segments = CmodPhysicsMethods.get_active_wire_segments(
+        active_wire_segments = CmodPhysicsMethods._get_active_wire_segments(
             params=params
         )
 
@@ -382,12 +382,12 @@ class CmodPhysicsMethods:
                 r"\ip", tree_name="magnetics"
             )
             ip = interp1(ip_time, ip, dpcstime)
-        return CmodPhysicsMethods.get_z_parameters(
+        return CmodPhysicsMethods._get_z_parameters(
             params.times, z_prog, pcstime, z_error_without_ip, ip, dpcstime
         )
 
     @staticmethod
-    def get_ohmic_parameters(
+    def _get_ohmic_parameters(
         times, v_loop, v_loop_time, li, efittime, dip_smoothed, ip, r0
     ):
         """Calculate the ohmic power from the loop voltage, inductive voltage, and
@@ -438,7 +438,7 @@ class CmodPhysicsMethods:
         columns=["p_oh", "v_loop"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_ohmic_parameters(params: PhysicsMethodParams):
+    def get_ohmic_parameters(params: PhysicsMethodParams):
         v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
             r"\top.mflux:v0", tree_name="analysis", astype="float64"
         )
@@ -450,12 +450,12 @@ class CmodPhysicsMethods:
         li, efittime = params.mds_conn.get_data_with_dims(
             r"\efit_aeqdsk:li", tree_name="_efit_tree", astype="float64"
         )  # [dimensionless], [s]
-        ip_parameters = CmodPhysicsMethods._get_ip_parameters(params=params)
+        ip_parameters = CmodPhysicsMethods.get_ip_parameters(params=params)
         r0 = 0.01 * params.mds_conn.get_data(
             r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
         )  # [cm] -> [m]
 
-        output = CmodPhysicsMethods.get_ohmic_parameters(
+        output = CmodPhysicsMethods._get_ohmic_parameters(
             params.times,
             v_loop,
             v_loop_time,
@@ -468,7 +468,7 @@ class CmodPhysicsMethods:
         return output
 
     @staticmethod
-    def get_power(times, p_lh, t_lh, p_icrf, t_icrf, p_rad, t_rad, p_ohm):
+    def _get_power(times, p_lh, t_lh, p_icrf, t_icrf, p_rad, t_rad, p_ohm):
         if p_lh is not None and isinstance(t_lh, np.ndarray) and len(t_lh) > 1:
             p_lh = interp1(t_lh, p_lh * 1.0e3, times)
         else:
@@ -514,7 +514,7 @@ class CmodPhysicsMethods:
         columns=["p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", "radiated_fraction"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_power(params: PhysicsMethodParams):
+    def get_power(params: PhysicsMethodParams):
         """
         NOTE: the timebase for the LH power signal does not extend over the full
             time span of the discharge.  Therefore, when interpolating the LH power
@@ -538,18 +538,18 @@ class CmodPhysicsMethods:
                 values[2 * i + 1] = sig_time
             except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF):
                 continue
-        p_oh = CmodPhysicsMethods._get_ohmic_parameters(params=params)["p_oh"]
-        output = CmodPhysicsMethods.get_power(params.times, *values, p_oh)
+        p_oh = CmodPhysicsMethods.get_ohmic_parameters(params=params)["p_oh"]
+        output = CmodPhysicsMethods._get_power(params.times, *values, p_oh)
         return output
 
     @staticmethod
-    def get_kappa_area(times, aminor, area, a_times):
+    def _get_kappa_area(times, aminor, area, a_times):
         output = {"kappa_area": interp1(a_times, area / (np.pi * aminor**2), times)}
         return output
 
     @staticmethod
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
-    def _get_kappa_area(params: PhysicsMethodParams):
+    def get_kappa_area(params: PhysicsMethodParams):
         aminor = params.mds_conn.get_data(
             r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
         )
@@ -563,11 +563,11 @@ class CmodPhysicsMethods:
         aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
         # make sure area is not 0 or less than 0
         area[area <= 0] = 3.14 * 0.001**2
-        output = CmodPhysicsMethods.get_kappa_area(params.times, aminor, area, times)
+        output = CmodPhysicsMethods._get_kappa_area(params.times, aminor, area, times)
         return output
 
     @staticmethod
-    def get_rotation_velocity(times, intensity, time, vel, hirextime):
+    def _get_rotation_velocity(times, intensity, time, vel, hirextime):
         """
         Uses spectroscopy graphs of ionized(to hydrogen and helium levels) Argon
         to calculate velocity. Because of the heat profile of the plasma, suitable
@@ -591,7 +591,7 @@ class CmodPhysicsMethods:
     # TODO: Calculate v_mid
     @staticmethod
     @physics_method(columns=["v_0"], tokamak=Tokamak.CMOD)
-    def _get_rotation_velocity(params: PhysicsMethodParams):
+    def get_rotation_velocity(params: PhysicsMethodParams):
         nan_output = {"v_0": [np.nan]}
         with resources.path(disruption_py.data, "lock_mode_calib_shots.txt") as fio:
             calibrated = pd.read_csv(fio)
@@ -614,14 +614,14 @@ class CmodPhysicsMethods:
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             return nan_output
-        output = CmodPhysicsMethods.get_rotation_velocity(
+        output = CmodPhysicsMethods._get_rotation_velocity(
             params.times, intensity, time, vel, hirextime
         )
         return output
 
     # TODO: Split into static and instance method
     @staticmethod
-    def get_n_equal_1_amplitude():
+    def _get_n_equal_1_amplitude():
         pass
 
     # TODO: Try catch failure to get BP13 sensors
@@ -630,7 +630,7 @@ class CmodPhysicsMethods:
         columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase", "bt"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_n_equal_1_amplitude(params: PhysicsMethodParams):
+    def get_n_equal_1_amplitude(params: PhysicsMethodParams):
         """Calculate n=1 amplitude and phase.
 
         This method uses the four BP13 Bp sensors near the midplane on the outboard
@@ -737,7 +737,7 @@ class CmodPhysicsMethods:
         return output
 
     @staticmethod
-    def get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
+    def _get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
         if len(n_e) != len(t_n):
             return {
                 "n_e": [np.nan],
@@ -763,7 +763,7 @@ class CmodPhysicsMethods:
         columns=["n_e", "dn_dt", "greenwald_fraction"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_densities(params: PhysicsMethodParams):
+    def get_densities(params: PhysicsMethodParams):
         try:
             # Line-integrated density
             n_e, t_n = params.mds_conn.get_data_with_dims(
@@ -786,19 +786,19 @@ class CmodPhysicsMethods:
             raise NotImplementedError(
                 "Can't currently handle failure of grabbing density data"
             ) from e
-        output = CmodPhysicsMethods.get_densities(
+        output = CmodPhysicsMethods._get_densities(
             params.times, n_e, t_n, ip, t_ip, a_minor, t_a
         )
         return output
 
     @staticmethod
-    def get_efc_current(times, iefc, t_iefc):
+    def _get_efc_current(times, iefc, t_iefc):
         output = {"i_efc": interp1(t_iefc, iefc, times, "linear")}
         return output
 
     @staticmethod
     @physics_method(columns=["i_efc"], tokamak=Tokamak.CMOD)
-    def _get_efc_current(params: PhysicsMethodParams):
+    def get_efc_current(params: PhysicsMethodParams):
         try:
             iefc, t_iefc = params.mds_conn.get_data_with_dims(
                 r"\efc:u_bus_r_cur", tree_name="engineering"
@@ -806,11 +806,11 @@ class CmodPhysicsMethods:
         except Exception:
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             return {"i_efc": [np.nan]}
-        output = CmodPhysicsMethods.get_efc_current(params.times, iefc, t_iefc)
+        output = CmodPhysicsMethods._get_efc_current(params.times, iefc, t_iefc)
         return output
 
     @staticmethod
-    def get_ts_parameters(times, ts_data, ts_time, ts_z, z_sorted=False):
+    def _get_ts_parameters(times, ts_data, ts_time, ts_z, z_sorted=False):
         # sort z array
         if not z_sorted:
             idx = np.argsort(ts_z)
@@ -854,7 +854,7 @@ class CmodPhysicsMethods:
 
     @staticmethod
     @physics_method(columns=["te_width"], tokamak=Tokamak.CMOD)
-    def _get_ts_parameters(params: PhysicsMethodParams):
+    def get_ts_parameters(params: PhysicsMethodParams):
         # TODO: Guassian vs parabolic fit for te profile
 
         # Read in Thomson core temperature data, which is a 2-D array, with the
@@ -870,13 +870,13 @@ class CmodPhysicsMethods:
         except mdsExceptions.MdsException:
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             return {"te_width": [np.nan]}
-        output = CmodPhysicsMethods.get_ts_parameters(
+        output = CmodPhysicsMethods._get_ts_parameters(
             params.times, ts_data, ts_time, ts_z
         )
         return output
 
     @staticmethod
-    def get_peaking_factors(times, ts_time, ts_te, ts_ne, ts_z, efit_time, bminor, z0):
+    def _get_peaking_factors(times, ts_time, ts_te, ts_ne, ts_z, efit_time, bminor, z0):
         """
         Calculate Te, ne, and pressure peaking factors given Thomson Scattering Te and ne measurements.
 
@@ -985,7 +985,7 @@ class CmodPhysicsMethods:
         columns=["ne_peaking", "te_peaking", "pressure_peaking"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_peaking_factors(params: PhysicsMethodParams):
+    def get_peaking_factors(params: PhysicsMethodParams):
         use_ts_tci_calibration = False
         nan_output = {
             "ne_peaking": [np.nan],
@@ -1064,12 +1064,12 @@ class CmodPhysicsMethods:
             else:
                 return nan_output
 
-        return CmodPhysicsMethods.get_peaking_factors(
+        return CmodPhysicsMethods._get_peaking_factors(
             params.times, ts_time, ts_te, ts_ne, ts_z, efit_time, bminor, z0
         )
 
     @staticmethod
-    def get_te_profile_params_ece(
+    def __get_te_profile_params_ece(
         times,
         gpc1_te_data,
         gpc1_te_time,
@@ -1341,7 +1341,7 @@ class CmodPhysicsMethods:
         columns=["te_core_vs_avg_ece", "te_edge_vs_avg_ece", "te_width_ece"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_te_profile_params_ece(params: PhysicsMethodParams):
+    def get_te_profile_params_ece(params: PhysicsMethodParams):
         """
         Gets MDSplus data to be used in the calculations of te profile parameters
         from ECE data
@@ -1436,7 +1436,7 @@ class CmodPhysicsMethods:
             params.logger.debug("[Shot %s]: Failed to get GPC2 data", params.shot_id)
             return nan_output
 
-        return CmodPhysicsMethods.get_te_profile_params_ece(
+        return CmodPhysicsMethods.__get_te_profile_params_ece(
             params.times,
             gpc1_te_data,
             gpc1_te_time,
@@ -1460,7 +1460,7 @@ class CmodPhysicsMethods:
         columns=["prad_peaking"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_prad_peaking(params: PhysicsMethodParams):
+    def get_prad_peaking(params: PhysicsMethodParams):
         prad_peaking = np.full(len(params.times), np.nan)
         nan_output = {"prad_peaking": prad_peaking}
         try:
@@ -1559,14 +1559,10 @@ class CmodPhysicsMethods:
                 prad_peaking[i] = np.nanmean(core_radiation) / np.nanmean(all_radiation)
         return {"prad_peaking": prad_peaking}
 
-    @staticmethod
-    def get_sxr_parameters():
-        pass
-
     # TODO: get more accurate description of soft x-ray data
     @staticmethod
     @physics_method(columns=["sxr"], tokamak=Tokamak.CMOD)
-    def _get_sxr_data(params: PhysicsMethodParams):
+    def get_sxr_data(params: PhysicsMethodParams):
         try:
             sxr, t_sxr = params.mds_conn.get_data_with_dims(
                 r"\top.brightnesses.array_1:chord_16",
