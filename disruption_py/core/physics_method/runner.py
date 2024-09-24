@@ -153,6 +153,13 @@ def populate_method(
         NotImplementedError,
         ValueError,
     ) as e:
+        if type(e) == ValueError:
+            interp_err = (
+                "x and y arrays must be equal in length along interpolation axis."
+            )
+            if interp_err not in str(e.args):
+                raise
+
         physics_method_params.logger.warning(
             "[Shot %s]: Failed to populate %s with error %s",
             physics_method_params.shot_id,
