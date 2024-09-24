@@ -1004,6 +1004,7 @@ class D3DPhysicsMethods:
             ts["psin"], ts["rhovn"] = D3DPhysicsMethods.efit_rz_interp(ts, efit_dict)
             ts["rhovn"] = ts["rhovn"].T
             ts["psin"] = ts["psin"].T
+        # pylint: disable=broad-exception-caught
         except Exception:
             params.logger.info(
                 "[Shot %s]: Failed to interpolate TS data", params.shot_id

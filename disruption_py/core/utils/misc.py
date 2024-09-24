@@ -87,6 +87,7 @@ def get_commit_hash():
             .decode("ascii")
             .strip()
         )
+    # pylint: disable=broad-exception-caught
     except Exception:
         commit_hash = None
     return commit_hash

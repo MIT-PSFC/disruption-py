@@ -53,6 +53,7 @@ class RetrievalManager:
             self.shot_cleanup(physics_method_params)
             self.logger.info("completed %s", shot_id)
             return retrieved_data
+        # pylint: disable=broad-exception-caught
         except Exception as e:
             self.logger.warning(
                 "[Shot %s]: fatal error %s", shot_id, traceback.format_exc()
@@ -69,6 +70,7 @@ class RetrievalManager:
 
         try:
             disruption_time = self.process_database.get_disruption_time(shot_id=shot_id)
+        # pylint: disable=broad-exception-caught
         except Exception as e:
             disruption_time = None
             self.logger.error(

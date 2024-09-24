@@ -245,6 +245,7 @@ class CmodThomsonDensityMeasure:
                 psi[:, i] = sp.interpolate.griddata(
                     points, values, (r, z), method="cubic"
                 )
+            # pylint: disable=bare-except
             except:
                 params.logger.warning("Interpolation failed for efit_rz2psi time", time)
 

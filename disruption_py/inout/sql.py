@@ -381,6 +381,7 @@ class ShotDatabase:
                 use_pandas=False,
             )
             return True
+        # pylint: disable=broad-exception-caught
         except Exception as e:
             self.logger.error("Failed to add column %s with error %s", col_name, e)
             return False
@@ -401,6 +402,7 @@ class ShotDatabase:
                 use_pandas=False,
             )
             return True
+        # pylint: disable=broad-exception-caught
         except Exception as e:
             self.logger.error("Failed to drop column %s with error %s", col_name, e)
             return False
