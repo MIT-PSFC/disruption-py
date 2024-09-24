@@ -31,10 +31,10 @@ class CmodThomsonDensityMeasure:
         tci, tci_t = params.mds_conn.get_data_with_dims(
             f".TCI.RESULTS:NL_{nlnum:02d}", tree_name="electrons"
         )
-        nlts, nlts_t = CmodThomsonDensityMeasure.integrate_ts_tci(params, nlnum)
+        nlts, nlts_t = CmodThomsonDensityMeasure._integrate_ts_tci(params, nlnum)
         t0 = np.amin(nlts_t)
         t1 = np.amax(nlts_t)
-        nyag1, nyag2, indices1, indices2 = CmodThomsonDensityMeasure.parse_yags(params)
+        nyag1, nyag2, indices1, indices2 = CmodThomsonDensityMeasure._parse_yags(params)
         time1, time2 = -1, -1
         if nyag1 > 0:
             ts_time1 = tci_time[indices1]
@@ -53,7 +53,7 @@ class CmodThomsonDensityMeasure:
         return nl_ts1, nl_ts2, nl_tci1, nl_tci2, time1, time2
 
     @staticmethod
-    def parse_yags(params: PhysicsMethodParams):
+    def _parse_yags(params: PhysicsMethodParams):
         nyag1 = params.mds_conn.get_data(r"\knobs:pulses_q", tree_name="electrons")
         nyag2 = params.mds_conn.get_data(r"\knobs:pulses_q_2", tree_name="electrons")
         indices1 = -1
@@ -96,12 +96,12 @@ class CmodThomsonDensityMeasure:
         return nyag1, nyag2, indices1, indices2
 
     @staticmethod
-    def integrate_ts_tci(params: PhysicsMethodParams, nlnum):
+    def _integrate_ts_tci(params: PhysicsMethodParams, nlnum):
         """
         Integrate Thomson electron density measurement to the line integrated electron
         density for comparison with two color interferometer (TCI) measurement results
         """
-        t, z, n_e, n_e_sig = CmodThomsonDensityMeasure.map_ts2tci(params, nlnum)
+        t, z, n_e, n_e_sig = CmodThomsonDensityMeasure._map_ts2tci(params, nlnum)
         if z[0, 0] == 1e32:
             return None, None  # TODO: Log and maybe return nan arrs
         nts = len(t)
@@ -125,7 +125,7 @@ class CmodThomsonDensityMeasure:
         return nlts, nlts_t
 
     @staticmethod
-    def map_ts2tci(params: PhysicsMethodParams, nlnum):
+    def _map_ts2tci(params: PhysicsMethodParams, nlnum):
         core_mult = 1.0
         edge_mult = 1.0
         t = [1e32]
@@ -183,11 +183,11 @@ class CmodThomsonDensityMeasure:
         nets_core_t = nets_core_t[valid_indices]
         nets = nets[valid_indices]
         nets_err = nets_err[valid_indices]
-        psits = CmodThomsonDensityMeasure.efit_rz2psi(params, rts, zts, nets_core_t)
+        psits = CmodThomsonDensityMeasure._efit_rz2psi(params, rts, zts, nets_core_t)
         mtci = 101
         ztci = -0.4 + 0.8 * np.arange(0, mtci) / (mtci - 1)
         rtci = rtci[nlnum] + np.zeros((1, mtci))
-        psitci = CmodThomsonDensityMeasure.efit_rz2psi(params, rtci, ztci, nets_core_t)
+        psitci = CmodThomsonDensityMeasure._efit_rz2psi(params, rtci, ztci, nets_core_t)
         psia = interp1(psia_t, psia, nets_core_t)
         psi_0 = interp1(psia_t, psi_0, nets_core_t)
         nts = len(nets_core_t)
@@ -221,7 +221,7 @@ class CmodThomsonDensityMeasure:
 
     # TODO: Move to utils
     @staticmethod
-    def efit_rz2psi(params: PhysicsMethodParams, r, z, t, tree="analysis"):
+    def _efit_rz2psi(params: PhysicsMethodParams, r, z, t, tree="analysis"):
         r = r.flatten()
         z = z.flatten()
         psi = np.full((len(r), len(t)), np.nan)

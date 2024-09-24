@@ -104,7 +104,7 @@ class FlattopDomainSetting(DomainSetting):
     def _get_domain_cmod(self, params: DomainSettingParams) -> np.ndarray:
         # TODO: a future PR will fix physics methods to be called without underscores.
         # pylint: disable-next=protected-access
-        ip_parameters = CmodPhysicsMethods._get_ip_parameters(
+        ip_parameters = CmodPhysicsMethods.get_ip_parameters(
             params=params.physics_method_params
         )
         ipprog, dipprog_dt = ip_parameters["ip_prog"], ip_parameters["dipprog_dt"]
@@ -207,7 +207,7 @@ class RampupAndFlattopDomainSetting(DomainSetting):
     def _get_domain_cmod(self, params: DomainSettingParams) -> np.ndarray:
         # TODO: a future PR will fix physics methods to be called without underscores.
         # pylint: disable-next=protected-access
-        ip_parameters = CmodPhysicsMethods._get_ip_parameters(
+        ip_parameters = CmodPhysicsMethods.get_ip_parameters(
             params=params.physics_method_params
         )
         ipprog, dipprog_dt = ip_parameters["ip_prog"], ip_parameters["dipprog_dt"]

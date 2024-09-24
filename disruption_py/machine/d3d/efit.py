@@ -40,7 +40,7 @@ class D3DEfitMethods:
         columns=[*efit_cols.keys(), *efit_derivs.keys()],
         tokamak=Tokamak.D3D,
     )
-    def _get_efit_parameters(params: PhysicsMethodParams):
+    def get_efit_parameters(params: PhysicsMethodParams):
         efit_data = {
             k: params.mds_conn.get_data(v, tree_name="_efit_tree")
             for k, v in D3DEfitMethods.efit_cols.items()
@@ -71,7 +71,7 @@ class D3DEfitMethods:
         columns=[*rt_efit_cols.keys()],
         tokamak=Tokamak.D3D,
     )
-    def _get_rt_efit_parameters(params: PhysicsMethodParams):
+    def get_rt_efit_parameters(params: PhysicsMethodParams):
         efit_data = {
             k: params.mds_conn.get_data(v, tree_name="efitrt1")
             for k, v in D3DEfitMethods.rt_efit_cols.items()
