@@ -41,25 +41,17 @@ class RetrievalManager:
         Get data for a single shot. May be run across different processes.
         """
         self.logger.info("starting %s", shot_id)
-        try:
-            physics_method_params = self.shot_setup(
-                shot_id=int(shot_id),
-                retrieval_settings=retrieval_settings,
-            )
-            retrieved_data = populate_shot(
-                retrieval_settings=retrieval_settings,
-                physics_method_params=physics_method_params,
-            )
-            self.shot_cleanup(physics_method_params)
-            self.logger.info("completed %s", shot_id)
-            return retrieved_data
-        # pylint: disable=broad-exception-caught
-        except Exception as e:
-            self.logger.warning(
-                "[Shot %s]: fatal error %s", shot_id, traceback.format_exc()
-            )
-            self.logger.error("failed %s with error %s", shot_id, e)
-            return None
+        physics_method_params = self.shot_setup(
+            shot_id=int(shot_id),
+            retrieval_settings=retrieval_settings,
+        )
+        retrieved_data = populate_shot(
+            retrieval_settings=retrieval_settings,
+            physics_method_params=physics_method_params,
+        )
+        self.shot_cleanup(physics_method_params)
+        self.logger.info("completed %s", shot_id)
+        return retrieved_data
 
     def shot_setup(
         self, shot_id: int, retrieval_settings: RetrievalSettings, **kwargs
@@ -68,15 +60,7 @@ class RetrievalManager:
         Sets up the shot properties for cmod.
         """
 
-        try:
-            disruption_time = self.process_database.get_disruption_time(shot_id=shot_id)
-        # pylint: disable=broad-exception-caught
-        except Exception as e:
-            disruption_time = None
-            self.logger.error(
-                "Failed to retrieve disruption time with error %s. Continuing as if the shot did not disrupt.",
-                e,
-            )
+        disruption_time = self.process_database.get_disruption_time(shot_id=shot_id)
 
         mds_conn = self.process_mds_conn.get_shot_connection(shot_id=shot_id)
 

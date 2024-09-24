@@ -1000,16 +1000,10 @@ class D3DPhysicsMethods:
             params.logger.info("[Shot %s]: Failed to get TS data", params.shot_id)
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             ts = 0
-        try:
-            ts["psin"], ts["rhovn"] = D3DPhysicsMethods.efit_rz_interp(ts, efit_dict)
-            ts["rhovn"] = ts["rhovn"].T
-            ts["psin"] = ts["psin"].T
-        # pylint: disable=broad-exception-caught
-        except Exception:
-            params.logger.info(
-                "[Shot %s]: Failed to interpolate TS data", params.shot_id
-            )
-            params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
+
+        ts["psin"], ts["rhovn"] = D3DPhysicsMethods.efit_rz_interp(ts, efit_dict)
+        ts["rhovn"] = ts["rhovn"].T
+        ts["psin"] = ts["psin"].T
 
         # Get P_rad data
         try:

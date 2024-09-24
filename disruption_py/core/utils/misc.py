@@ -81,13 +81,9 @@ def safe_df_concat(base_df: pd.DataFrame, new_dfs: List[pd.DataFrame]):
 
 def get_commit_hash():
     # setup commit hash
-    try:
-        commit_hash = (
-            subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])
-            .decode("ascii")
-            .strip()
-        )
-    # pylint: disable=broad-exception-caught
-    except Exception:
-        commit_hash = None
+    commit_hash = (
+        subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])
+        .decode("ascii")
+        .strip()
+    )
     return commit_hash
