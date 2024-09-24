@@ -1003,7 +1003,7 @@ class CmodPhysicsMethods:
                 ts_ne *= calib
             else:
                 raise CalculationError(
-                    "Density calibration error exceeds acceptable" "range"
+                    "Density calibration error exceeds acceptable range"
                 )
 
         return CmodPhysicsMethods.get_peaking_factors(
