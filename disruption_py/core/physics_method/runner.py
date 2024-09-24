@@ -157,12 +157,7 @@ def populate_method(
             catch_error_msgs = [
                 "x and y arrays must be equal in length along interpolation axis."
             ]
-            should_catch = False
-            for msg in catch_error_msgs:
-                if msg in str(e.args):
-                    should_catch = True
-                    break
-            if not should_catch:
+            if not any(msg in str(e.args) for msg in catch_error_msgs):
                 raise
 
         physics_method_params.logger.warning(
