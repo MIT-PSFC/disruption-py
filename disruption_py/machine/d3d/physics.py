@@ -415,7 +415,6 @@ class D3DPhysicsMethods:
                 f"ptdata('ipsip', {params.shot_id})"
             )  # [MA], [ms]
             t_ip_rt = t_ip_rt / 1.0e3  # [ms] to [s]
-            # TODO: look at units of ip_rt (not SA)
         except mdsExceptions.MdsException:
             ip_rt, t_ip_rt = params.mds_conn.get_data_with_dims(
                 f"ptdata('ipspr15v', {params.shot_id})"
@@ -423,7 +422,7 @@ class D3DPhysicsMethods:
             t_ip_rt = t_ip_rt / 1.0e3  # [ms] to [s]
             ip_rt /= 2  # [volts] to [MA]
         ip_sign = np.sign(np.sum(ip_rt))
-        ip = interp1(t_ip_rt, ip_rt * ip_sign, params.times, "linear")
+        ip_rt = interp1(t_ip_rt, ip_rt * ip_sign, params.times, "linear")
 
         # Read in EFIT minor radius and timebase.  This is also needed to calculate
         # the Greenwald density limit.  However, if the minor radius data is not
@@ -443,7 +442,7 @@ class D3DPhysicsMethods:
             a_minor_rt = 0.59 * np.ones(len(params.times))
 
         with np.errstate(divide="ignore"):
-            n_g_rt = ip / (np.pi * a_minor_rt**2)  # [MA/m^2]
+            n_g_rt = ip_rt / (np.pi * a_minor_rt**2)  # [MA/m^2]
             g_f_rt = ne_rt / 1.0e20 / n_g_rt
         return {"n_e_rt": ne_rt, "greenwald_fraction_rt": g_f_rt, "dn_dt_rt": dne_dt_rt}
 
