@@ -128,6 +128,21 @@ class DatabaseShotlistSetting(ShotlistSetting):
 
 # --8<-- [start:get_shotlist_setting_dict]
 _get_shotlist_setting_mappings: Dict[str, ShotlistSetting] = {
+    "disruption_warning": DatabaseShotlistSetting(
+        "select distinct shot from disruption_warning"
+    ),
+    "plasmas": DatabaseShotlistSetting(
+        """
+        if exists (select * from information_schema.tables where table_name = 'summary')
+        begin
+            select distinct shot from summary where ipmax > 100e3 and pulse_length > 0.1;
+        end
+        else if exists (select * from information_schema.tables where table_name = 'summaries')
+        begin
+            select distinct shot from summaries where ipmax > 100e3 and pulse_length > 0.1;
+        end
+        """
+    ),
     "d3d_paper_shotlist": IncludedShotlistSetting("paper_shotlist.txt"),
     "d3d_train_disr": IncludedShotlistSetting("train_disr.txt"),
     "d3d_train_nondisr": IncludedShotlistSetting("train_nondisr.txt"),
