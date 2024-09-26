@@ -202,7 +202,7 @@ class CmodTearingMethods:
     @staticmethod
     @cache_method
     def get_mirnov_names_and_locations(params: PhysicsMethodParams):
-        """Get the names and locations of the Mirnov coils.
+        """Get the names and locations of the Mirnov coils in the ANALYSIS tree.
 
         Parameters
         ----------
@@ -226,10 +226,12 @@ class CmodTearingMethods:
         # something along these lines: mirnov_coil_names = params.mds_connection.get_coil_names()
 
         # These are the coils with positions that exist in MDSPlus, a LOT easier to deal with
-        mirnov_names_ab = [f"BP0{p}_ABK" for p in range(1, 10)] + [f"BP{p}_ABK" for p in range(10, 19)]
-        mirnov_names_gh = [f"BP0{p}_GHK" for p in range(1, 10)] + [f"BP{p}_GHK" for p in range(10, 19)]
+        mirnov_names_ab = [f"BP0{p}_ABK" for p in range(1, 10)] + [f"BP{p}_ABK" for p in range(10, 21)]
+        mirnov_names_gh = [f"BP0{p}_GHK" for p in range(1, 10)] + [f"BP{p}_GHK" for p in range(10, 21)]
         mirnov_names_k = [f"BP0{p}_K" for p in range(1, 7)]
 
+        # There's some tomfoolery in here because the probe locations are in a different tree from the signals, so we need to cut off the extra probes
+        # that are NOT being digitized
         phi_ab, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.phi_AB", tree_name="magnetics")
         phi_gh, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.phi_GH", tree_name="magnetics")
         phi_k, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.phi_K", tree_name="magnetics")
@@ -247,6 +249,27 @@ class CmodTearingMethods:
         # theta_pol_k, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.theta_pol_K", tree_name="magnetics")  # noqa: ERA001
         theta_pol_k = np.empty_like(Z_k)  # Calibration data doesn't exist, so we'll just say NaN and deal with it later
 
+        # For each of the above, we need to cut off the extra probes that are NOT being digitized
+        # This is a bit of a kludge, but I'm expecting probes which aren't digitized to not show up in the analysis tree
+        # TODO(ZanderKeith): Just hardcode all the analysis tree probes
+        # The digitized probes are the first 20 for AB and GH, and the first 6 for K
+        phi_ab = phi_ab[:len(mirnov_names_ab)]
+        phi_gh = phi_gh[:len(mirnov_names_gh)]
+        phi_k = phi_k[:7]
+
+        R_ab = R_ab[:len(mirnov_names_ab)]
+        R_gh = R_gh[:len(mirnov_names_gh)]
+        R_k = R_k[:7]
+
+        Z_ab = Z_ab[:len(mirnov_names_ab)]
+        Z_gh = Z_gh[:len(mirnov_names_gh)]
+        Z_k = Z_k[:7]
+
+
+        theta_pol_ab = theta_pol_ab[:len(mirnov_names_ab)]
+        theta_pol_gh = theta_pol_gh[:len(mirnov_names_gh)]
+        theta_pol_k = theta_pol_k[:7]
+
         # These are the coils without positions in MDSPlus, need to hard-code values.
         # Taken from here: https://cmodwiki.psfc.mit.edu/index.php/FastMagneticsLocations#2010_Locations
         # Might need to include some logic for pre and post 2010... TODO(ZanderKeith)
@@ -261,15 +284,16 @@ class CmodTearingMethods:
         phi_top = [-344.80, -10.16, -59.87, -169.55]
         phi_bot = [-344.80, -59.87, -169.55]
 
-        R_tab = [0.1030, 0.1030, 0.1030, -0.1030, -0.1030, -0.1030]
-        R_tgh = [0.1000, 0.1000, 0.1000, -0.1000, -0.1000, -0.1000]
-        R_top = [0.0985, 0.0985, 0.0985, 0.1082]
-        R_bot = [-0.0985, -0.0985, -0.1092]
+        # Yes, the order of these is different from the c-mod wiki website. I'm putting it like phi, R, Z, theta_pol
+        R_tab = [0.9045, 0.9045, 0.9045, 0.9045, 0.9045, 0.9045]
+        R_tgh = [0.9042, 0.9042, 0.9042, 0.9042, 0.9042, 0.9042]
+        R_top = [0.9126, 0.9126, 0.9146, 0.9126]
+        R_bot = [0.9131, 0.9151, 0.9131]
 
-        Z_tab = [0.9045, 0.9045, 0.9045, 0.9045, 0.9045, 0.9045]
-        Z_tgh = [0.9042, 0.9042, 0.9042, 0.9042, 0.9042, 0.9042]
-        Z_top = [0.9126, 0.9126, 0.9146, 0.9126]
-        Z_bot = [0.9131, 0.9151, 0.9131]
+        Z_tab = [0.1030, 0.1030, 0.1030, -0.1030, -0.1030, -0.1030]
+        Z_tgh = [0.1000, 0.1000, 0.1000, -0.1000, -0.1000, -0.1000]
+        Z_top = [0.0985, 0.0985, 0.0985, 0.1082]
+        Z_bot = [-0.0985, -0.0985, -0.1092]
 
         theta_pol_tab = [23.7, 23.7, 23.7, -23.7, -23.7, -23.7]
         theta_pol_tgh = [23.1, 23.1, 23.1, -23.1, -23.1, -23.1]
