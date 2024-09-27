@@ -87,6 +87,6 @@ def get_commit_hash():
             .decode("ascii")
             .strip()
         )
-    except Exception:
+    except subprocess.CalledProcessError:
         commit_hash = None
     return commit_hash

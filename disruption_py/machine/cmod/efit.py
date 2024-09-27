@@ -3,6 +3,7 @@
 import traceback
 
 import numpy as np
+from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
@@ -78,7 +79,7 @@ class CmodEfitMethods:
                     tree_name="_efit_tree",
                     astype="float64",
                 )
-            except:
+            except mdsExceptions.MdsException:
                 params.logger.warning(
                     "[Shot %s]: Unable to get %s from EFIT tree", params.shot_id, param
                 )
@@ -100,7 +101,7 @@ class CmodEfitMethods:
                 r"\efit_geqdsk:ssibry", tree_name="_efit_tree", astype="float64"
             )
             efit_data["v_surf"] = np.gradient(ssibry, efit_time) * 2 * np.pi
-        except:
+        except mdsExceptions.MdsException:
             print("unable to get V_surf")
             efit_data["v_surf"] = np.full(len(efit_time), np.nan)
 
@@ -117,7 +118,7 @@ class CmodEfitMethods:
                     r"\efit_geqdsk:ssimag", tree_name="_efit_tree", astype="float64"
                 )
                 efit_data["v_loop_efit"] = np.gradient(ssimag, efit_time) * 2 * np.pi
-            except:
+            except mdsExceptions.MdsException:
                 print("unable to get v_loop_efit")
                 efit_data["v_loop_efit"] = np.full(len(efit_time), np.nan)
 

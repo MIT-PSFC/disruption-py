@@ -6,9 +6,11 @@ from collections.abc import Iterable
 
 import numpy as np
 import pandas as pd
+from MDSplus import mdsExceptions
 
 from disruption_py.config import config
 from disruption_py.core.physics_method.caching import manually_cache
+from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.metadata import (
     BoundMethodMetadata,
     get_method_metadata,
@@ -47,7 +49,7 @@ def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams):
         ).all()
     ):
         physics_method_params.logger.error(
-            "[Shot %s]: ERROR Computation on different timebase than pre-filled shot data",
+            "[Shot %s]: Computation on different timebase than pre-filled shot data",
             physics_method_params.shot_id,
         )
     return pre_filled_shot_data
@@ -143,7 +145,20 @@ def populate_method(
     )
     try:
         result = method(params=physics_method_params)
-    except Exception as e:
+    except (
+        mdsExceptions.TreeNNF,
+        mdsExceptions.TreeNODATA,
+        CalculationError,
+        NotImplementedError,
+        ValueError,
+    ) as e:
+        if isinstance(e, ValueError):
+            catch_error_msgs = [
+                "x and y arrays must be equal in length along interpolation axis."
+            ]
+            if not any(msg in str(e.args) for msg in catch_error_msgs):
+                raise
+
         physics_method_params.logger.warning(
             "[Shot %s]: Failed to populate %s with error %s",
             physics_method_params.shot_id,
@@ -151,6 +166,7 @@ def populate_method(
             e,
         )
         physics_method_params.logger.debug("%s", traceback.format_exc())
+        result = {col: [np.nan] for col in bound_method_metadata.columns}
 
     physics_method_params.logger.info(
         "[Shot %s]: Completed %s, time_elapsed: %s",
