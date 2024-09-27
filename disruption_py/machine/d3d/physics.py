@@ -369,12 +369,17 @@ class D3DPhysicsMethods:
             with np.errstate(divide="ignore"):
                 n_g = ip / 1.0e6 / (np.pi * a_minor**2)  # [MA/m^2]
                 g_f = ne / n_g * 1e-20
-        except mdsExceptions.MdsException:
+        except (mdsExceptions.MdsException, ValueError) as e:
             # TODO: Confirm that there is a separate exception if ptdata name doesn't exist
             params.logger.info(
                 "[Shot %s]: Failed to compute Greenwald fraction.", params.shot_id
             )
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
+
+            err = "operands could not be broadcast together with shapes"
+            if isinstance(ValueError, e) and err not in e.args:
+                raise
+
             g_f = [np.nan]
         return {
             "n_e": ne,
@@ -440,10 +445,21 @@ class D3DPhysicsMethods:
             a_minor_rt = interp1(t_a_rt, a_minor_rt, params.times, "linear")
         except mdsExceptions.MdsException:
             a_minor_rt = 0.59 * np.ones(len(params.times))
+        try:
+            with np.errstate(divide="ignore"):
+                n_g_rt = ip_rt / (np.pi * a_minor_rt**2)  # [MA/m^2]
+                g_f_rt = ne_rt / 1.0e20 / n_g_rt
+        except ValueError as e:
+            params.logger.info(
+                "[Shot %s]: Failed to compute Greenwald fraction rt.", params.shot_id
+            )
+            params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
 
-        with np.errstate(divide="ignore"):
-            n_g_rt = ip_rt / (np.pi * a_minor_rt**2)  # [MA/m^2]
-            g_f_rt = ne_rt / 1.0e20 / n_g_rt
+            err = "operands could not be broadcast together with shapes"
+            if err not in e.args:
+                raise
+            g_f_rt = [np.nan]
+
         return {"n_e_rt": ne_rt, "greenwald_fraction_rt": g_f_rt, "dn_dt_rt": dne_dt_rt}
 
     @staticmethod
