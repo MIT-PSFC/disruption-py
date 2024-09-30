@@ -15,7 +15,6 @@ _years_ | **2012-2016**
 _maintainer_ | @AlexSaperstein
 
 This is a list of disruptive shots with Vertical Displacement Events (VDEs) on Alcator C-Mod.
-These shots were taken between 2012 -> 2016.
 
 This list does not descriminate between hot and cold VDEs.
 Where 'hot' refers to the VDEs preceding the Thermal Quench (TQ), while 'cold' refers to the VDEs following it.
@@ -34,7 +33,7 @@ Onset times were chosen based on significant deviations (> ~2 cm) in the `z_erro
 > It should be noted that onset times were chosen using a version of the disruption-py dataset that had poor time-resolution more than 20ms before the disruption.
 > As a result, onset times which precede the disruption by more than 20ms have an error of ~20ms associated with them.
 
-## UFO disruptions
+## "Unidentified Flying Object" (UFO) disruptions
 
 info|value
 -|-
@@ -45,7 +44,6 @@ _years_ | **2012-2016**
 _maintainer_ | @HWietfeldt
 
 This is a list of disruptive shots with likely UFO disruptions on Alcator C-Mod.
-These shots were taken between 2012 -> 2016.
 
 This list was generated from an automatically generated database of high-Z injection events on C-Mod discharges.
 High-Z injection events were labeled using a Mo +31 charge state signal measured from a VUV spectrometer.
