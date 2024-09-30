@@ -18,7 +18,7 @@ This is a list of disruptive shots with Vertical Displacement Events (VDEs) on A
 These shots were taken between 2012 -> 2016.
 
 This list does not descriminate between hot and cold VDEs.
-Where 'hot' refers to the VDEs preceding the Thermal Quench (TQ), while 'old' refers to the VDEs following it.
+Where 'hot' refers to the VDEs preceding the Thermal Quench (TQ), while 'cold' refers to the VDEs following it.
 
 ### Details
 
