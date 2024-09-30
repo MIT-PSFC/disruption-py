@@ -56,28 +56,6 @@ class ShotlistSetting(ABC):
         """
 
 
-class IncludedShotlistSetting(ShotlistSetting):
-    """Use the shotlist from one of the provided data files.
-
-    Directly passing a key from the _get_shotlist_setting_mappings dictionary as a string will
-    automatically create a new IncludedShotlistSetting object with that data_file_name.
-
-    Parameters
-    ----------
-    data_file_name : str
-        The name of the datafile that should be used to retrieve the shotlist.
-    """
-
-    def __init__(self, data_file_name: str) -> List:
-        with resources.path(disruption_py.data, data_file_name) as data_file:
-            df = pd.read_csv(data_file, header=None)
-            lst = df.values[:, 0].tolist()
-            self.shotlist = lst
-
-    def _get_shotlist(self, params: ShotlistSettingParams) -> List:
-        return self.shotlist
-
-
 class FileShotlistSetting(ShotlistSetting):
     """Use a shotlist from the provided file path, this may be any file readable by pandas read_csv.
 
@@ -96,6 +74,28 @@ class FileShotlistSetting(ShotlistSetting):
         self.shotlist = (
             pd.read_csv(file_path, header=None).iloc[:, column_index].values.tolist()
         )
+
+    def _get_shotlist(self, params: ShotlistSettingParams) -> List:
+        return self.shotlist
+
+
+class IncludedShotlistSetting(ShotlistSetting):
+    """Use the shotlist from one of the provided data files.
+
+    Directly passing a key from the _get_shotlist_setting_mappings dictionary as a string will
+    automatically create a new IncludedShotlistSetting object with that data_file_name.
+
+    Parameters
+    ----------
+    data_file_name : str
+        The name of the datafile that should be used to retrieve the shotlist.
+    """
+
+    def __init__(self, data_file_name: str) -> List:
+        with resources.path(disruption_py.data, data_file_name) as data_file:
+            df = pd.read_csv(data_file, header=None)
+            lst = df.values[:, 0].tolist()
+            self.shotlist = lst
 
     def _get_shotlist(self, params: ShotlistSettingParams) -> List:
         return self.shotlist
