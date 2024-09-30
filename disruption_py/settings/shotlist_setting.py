@@ -17,7 +17,8 @@ from disruption_py.machine.tokamak import Tokamak
 
 @dataclass
 class ShotlistSettingParams:
-    """Params passed by disruption_py to _get_shotlist() method.
+    """
+    Params passed by disruption_py to _get_shotlist() method.
 
     Attributes
     ----------
@@ -37,7 +38,9 @@ class ShotlistSettingParams:
 
 
 class ShotlistSetting(ABC):
-    """ShotlistSetting abstract class that should be inherited by all shotlist setting classes."""
+    """
+    ShotlistSetting abstract class that should be inherited by all shotlist setting classes.
+    """
 
     def get_shotlist(self, params: ShotlistSettingParams) -> List:
         if hasattr(self, "tokamak_overrides"):
@@ -47,7 +50,8 @@ class ShotlistSetting(ABC):
 
     @abstractmethod
     def _get_shotlist(self, params: ShotlistSettingParams) -> List:
-        """Abstract method implemented by subclasses to get shotlist for the given setting params.
+        """
+        Abstract method implemented by subclasses to get shotlist for the given setting params.
 
         Parameters
         ----------
@@ -57,30 +61,35 @@ class ShotlistSetting(ABC):
 
 
 class FileShotlistSetting(ShotlistSetting):
-    """Use a shotlist from the provided file path, this may be any file readable by pandas read_csv.
+    """
+    Use `pandas.read_csv` to read a file, then extract and use values from any column.
 
-    Directly passing a file path as a string to the shotlist setting with the file name suffixed by txt or csv
-    will automatically create a new FileShotlistSetting object with that file path.
+    Directly passing a file path as a string to the shotlist setting with the file name suffixed
+    by txt or csv will automatically create a new FileShotlistSetting object with that file path.
 
     Parameters
     ----------
     file_path : str
         The file path of the file that should be used for retrieving the shotlist.
     column_index : int
-        The index of the column that should be read. For text files, this should be 0. Defaults to 0.
+        The index of the column that should be read. Defaults to 0.
+    kwargs : Dict
+        Optional keyword arguments dictionary to be passed to `pandas.read_csv`.
     """
 
-    def __init__(self, file_path, column_index=0):
-        self.shotlist = (
-            pd.read_csv(file_path, header=None).iloc[:, column_index].values.tolist()
-        )
+    def __init__(self, file_path: str, column_index: int = 0, **kwargs: Dict):
+        kwargs.setdefault("header", "infer")
+        df = pd.read_csv(file_path, **kwargs)
+        arr = df.values[:, column_index]
+        self.shotlist = arr.astype(int).tolist()
 
     def _get_shotlist(self, params: ShotlistSettingParams) -> List:
         return self.shotlist
 
 
 class IncludedShotlistSetting(ShotlistSetting):
-    """Use the shotlist from one of the provided data files.
+    """
+    Use the shotlist from one of the provided data files.
 
     Directly passing a key from the _get_shotlist_setting_mappings dictionary as a string will
     automatically create a new IncludedShotlistSetting object with that data_file_name.
@@ -102,7 +111,8 @@ class IncludedShotlistSetting(ShotlistSetting):
 
 
 class DatabaseShotlistSetting(ShotlistSetting):
-    """Use an sql query of the database to retrieve the shotlist.
+    """
+    Use an sql query of the database to retrieve the shotlist.
 
     Parameters
     ----------
