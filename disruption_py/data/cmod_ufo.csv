@@ -1,4 +1,4 @@
-shot,t_injection_seconds,duration_seconds,t_until_thermal_quench_seconds,notes
+shot,injection_time,duration,t_until_thermal_quench,notes
 1120106009,1.419925259590149,0.0083008537292479,0.0085006497031534,
 1120106022,1.022206114768982,0.0009999999999998,0.0012040201571255,Manually Labeled UFO: UFO disruption: Fe and Ca injections
 1120118001,1.1411611309051517,0.0049541721343993,0.0055470331290341,
