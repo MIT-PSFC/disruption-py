@@ -143,6 +143,8 @@ _get_shotlist_setting_mappings: Dict[str, ShotlistSetting] = {
         end
         """
     ),
+    "cmod_ufo": IncludedShotlistSetting("cmod_ufo.txt"),
+    "cmod_vde": IncludedShotlistSetting("cmod_vde.txt"),
     "d3d_paper_shotlist": IncludedShotlistSetting("paper_shotlist.txt"),
     "d3d_train_disr": IncludedShotlistSetting("train_disr.txt"),
     "d3d_train_nondisr": IncludedShotlistSetting("train_nondisr.txt"),
