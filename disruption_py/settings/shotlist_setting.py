@@ -73,7 +73,7 @@ class FileShotlistSetting(ShotlistSetting):
         The file path of the file that should be used for retrieving the shotlist.
     column_index : int
         The index of the column that should be read. Defaults to 0.
-    kwargs : Dict
+    **kwargs : Dict
         Optional keyword arguments dictionary to be passed to `pandas.read_csv`.
     """
 
@@ -87,27 +87,24 @@ class FileShotlistSetting(ShotlistSetting):
         return self.shotlist
 
 
-class IncludedShotlistSetting(ShotlistSetting):
+class IncludedShotlistSetting(FileShotlistSetting):
     """
     Use the shotlist from one of the provided data files.
 
     Directly passing a key from the _get_shotlist_setting_mappings dictionary as a string will
-    automatically create a new IncludedShotlistSetting object with that data_file_name.
+    automatically create a new IncludedShotlistSetting object with that file_name.
 
     Parameters
     ----------
-    data_file_name : str
+    file_name : str
         The name of the datafile that should be used to retrieve the shotlist.
+    **kwargs : Dict
+        Optional keyword arguments dictionary to be passed to `FileShotlistSetting`.
     """
 
-    def __init__(self, data_file_name: str) -> List:
-        with resources.path(disruption_py.data, data_file_name) as data_file:
-            df = pd.read_csv(data_file, header=None)
-            lst = df.values[:, 0].tolist()
-            self.shotlist = lst
-
-    def _get_shotlist(self, params: ShotlistSettingParams) -> List:
-        return self.shotlist
+    def __init__(self, file_name: str, **kwargs: Dict) -> List:
+        with resources.path(disruption_py.data, file_name) as file_path:
+            super().__init__(file_path, **kwargs)
 
 
 class DatabaseShotlistSetting(ShotlistSetting):
