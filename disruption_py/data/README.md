@@ -2,7 +2,7 @@
 # C-MOD shotlists
 
 > [!TIP]
-> Shot numbers on Alcator C-Mod correspond to the date and order in which the shot was taken, with the following the pattern: [1]YYMMDDNNN, where YY is the last 2 digits of the year (99 for 1999, 100 for 2000, and so on), MM is the month, DD is the day, and NNN is the NNNth shot taken that day.
+> Shot numbers on Alcator C-Mod correspond to the date and order in which the shot was taken, with the following the pattern: `[1]YYMMDDNNN`, where `YY` is the last 2 digits of the year (`99` for 1999, `100` for 2000, and so on), `MM` is the month, `DD` is the day, and `NNN` is the N-th shot taken that day.
 
 ## Vertical Displacement Events (VDEs)
 
