@@ -593,7 +593,9 @@ class CmodPhysicsMethods:
     @physics_method(columns=["v_0"], tokamak=Tokamak.CMOD)
     def get_rotation_velocity(params: PhysicsMethodParams):
         nan_output = {"v_0": [np.nan]}
-        with resources.path(disruption_py.data, "lock_mode_calib_shots.txt") as fio:
+        data = resources.files(disruption_py.data)
+        file = data.joinpath("lock_mode_calib_shots.txt")
+        with resources.as_file(file) as fio:
             calibrated = pd.read_csv(fio)
         # Check to see if shot was done on a day where there was a locked
         # mode HIREX calibration by cross checking with list of calibrated

@@ -103,7 +103,9 @@ class IncludedShotlistSetting(FileShotlistSetting):
     """
 
     def __init__(self, file_name: str, **kwargs: Dict) -> List:
-        with resources.path(disruption_py.data, file_name) as file_path:
+        data = resources.files(disruption_py.data)
+        file = data.joinpath(file_name)
+        with resources.as_file(file) as file_path:
             super().__init__(file_path, **kwargs)
 
 
