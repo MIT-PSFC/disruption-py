@@ -52,9 +52,9 @@ Increases in the Mo +31 charge state signal were labeled as injections if:
 - soft x-ray radiation increased around the time of injection and before the thermal quench,
 - low error in the vertical position at the time of injection.
 
-This list contains likely UFO disruptions, defined as shots with a labeled high-Z injection within 10 ms of the thermal quench.
+This list contains likely UFO disruptions, defined as shots with a labeled high-Z injection within 10 ms prior to the thermal quench onset.
 Only 1/6th of these shots were manually validated as containing a UFO disruption by Henry Wietfeldt.
-Whether a shot has been validated is indicated in the "notes" column.
+Whether a shot has been validated is indicated in the "vetted" column.
 Other shots may have labeling errors since they have not yet been manually validated.
 
 ### Details
@@ -63,5 +63,6 @@ Column description:
 - `shot` (integer): shot numbers,
 - `injection_time` (seconds): time of the injection, based on when the Mo +31 charge state signal began to increase,
 - `duration` (seconds): time between when the Mo +31 charge state signal began to increase and stopped increasing,
-- `t_until_thermal_quench` (seconds): time between `t_injection` and the onset of the thermal quench, determined from core Te measurements using an ECE diagnostic system,
+- `thermal_quench_time` (seconds): time between `t_injection` and the onset of the thermal quench, determined from core Te measurements using an ECE diagnostic system,
+- `vetted` (1/0): 1 if the shot has been manually validated as a UFO disruption, 0 otherwise,
 - `notes` (string): additional notes, including whether the shot has been validated as a UFO.
