@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Module for retrieving and calculating data for DIII-D physics methods.
+"""
+
 import traceback
 
 import numpy as np
@@ -20,10 +24,27 @@ from disruption_py.machine.tokamak import Tokamak
 
 
 class D3DPhysicsMethods:
+    """
+    A class to retrieve and calculate physics-related data for DIII-D.
+    """
 
     @staticmethod
     @physics_method(columns=["time_until_disrupt"], tokamak=Tokamak.D3D)
     def get_time_until_disrupt(params: PhysicsMethodParams):
+        """
+        Calculate the time until disruption occurs.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the time until disruption. If the shot does
+            not disrupt, return NaN.
+        """
         if params.disrupted:
             return {"time_until_disrupt": params.disruption_time - params.times}
         return {"time_until_disrupt": [np.nan]}
@@ -468,6 +489,29 @@ class D3DPhysicsMethods:
         tokamak=Tokamak.D3D,
     )
     def get_ip_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve plasma current parameters including measured and programmed values.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+            - 'ip' : array
+                Measured plasma current values interpolated to the specified times.
+            - 'ip_error' : array
+                Error in plasma current, defined where feedback is active.
+            - 'dip_dt' : array
+                Time derivative of the measured plasma current.
+            - 'dipprog_dt' : array
+                Time derivative of the programmed plasma current.
+            - 'power_supply_railed' : array
+                Indicator of whether the power supply has railed at the specified times.
+        """
         ip = [np.nan]
         ip_prog = [np.nan]
         dip_dt = [np.nan]
@@ -788,6 +832,23 @@ class D3DPhysicsMethods:
         tokamak=Tokamak.D3D,
     )
     def get_n1_bradial_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve normalized n=1 bradial parameters for a given shot.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+            - 'n_equal_1_normalized' : array
+                Normalized n=1 bradial parameter values.
+            - 'n_equal_1_mode' : array
+                Raw n=1 bradial parameter values.
+        """
         output = {
             "n_equal_1_normalized": [np.nan],
             "n_equal_1_mode": [np.nan],
@@ -1215,18 +1276,30 @@ class D3DPhysicsMethods:
         # Interpolate again to get rhovn on same psin base
         for i in range(psin.shape[0]):
             rho_vn_diag[i] = interp1(psin_interp, rho_vn_diag_almost[i, :], psin[i, :])
-        return psin, rho_vn_diag
 
     @staticmethod
     @physics_method(columns=["z_eff"], tokamak=Tokamak.D3D)
     def get_zeff_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve the effective charge (Z_eff) parameters for a given shot.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following key:
+            - 'z_eff' : array
+                Effective charge values interpolated to the specified times.
+        """
         # Get Zeff
         zeff, t_zeff = params.mds_conn.get_data_with_dims(
             r"\d3d::top.spectroscopy.vb.zeff:zeff", tree_name="d3d"
         )
         t_zeff = t_zeff / 1.0e3  # [ms] -> [s]
-        # t_nbi = params.mds_conn.get(
-        # r"dim_of(\d3d::top.nb:pinj)").data()/1.e3  # [ms]->[s]
         if len(t_zeff) > 2:
             zeff = interp1(
                 t_zeff,
@@ -1605,6 +1678,37 @@ class D3DPhysicsMethods:
     @staticmethod
     @cache_method
     def _get_efit_dict(params: PhysicsMethodParams):
+        """
+        Retrieve the EFIT data dictionary for a given shot.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+            - 'time' : array
+                Time values corresponding to the EFIT data in seconds.
+            - 'z' : array
+                Z-coordinates from the EFIT data.
+            - 'r' : array
+                R-coordinates from the EFIT data.
+            - 'rhovn' : array
+                Normalized rho values from the EFIT data.
+            - 'psirz' : array
+                Poloidal flux values from the EFIT data.
+            - 'zmaxis' : array
+                Maximum Z-axis values from the EFIT data.
+            - 'ssimag' : array
+                Inner boundary magnetic flux from the EFIT data.
+            - 'ssibry' : array
+                Outer boundary magnetic flux from the EFIT data.
+            - 'psin' : array
+                Normalized poloidal flux values.
+        """
         efit_dict = {}
         path = r"\top.results.geqdsk:"
         nodes = ["z", "r", "rhovn", "psirz", "zmaxis", "ssimag", "ssibry"]

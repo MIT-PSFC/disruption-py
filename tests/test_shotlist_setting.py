@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""Unit tests for the shotlist_setting"""
+
 import numpy as np
 import pytest
 
@@ -21,7 +23,10 @@ def get_shotlists():
     """
 
     class CustomShotlistSetting(ShotlistSetting):
+        """A custom shotlist setting for testing"""
+
         def _get_shotlist(self, params: ShotlistSettingParams):
+            """Return Numpy array of shots"""
             return np.array([REFERENCE_SHOTLIST])
 
     shot_lists = [

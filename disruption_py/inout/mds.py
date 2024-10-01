@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Module for managing connections to MDSplus.
+"""
+
 import logging
 from typing import Any, Callable, Dict, List, Tuple
 
@@ -8,7 +12,7 @@ import numpy as np
 
 from disruption_py.config import config
 from disruption_py.core.utils.misc import safe_cast
-from disruption_py.core.utils.shared_instance import SharedInstanceFactory
+from disruption_py.core.utils.shared_instance import SharedInstance
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -34,7 +38,11 @@ class ProcessMDSConnection:
 
     @classmethod
     def from_config(cls, tokamak: Tokamak):
-        return SharedInstanceFactory(ProcessMDSConnection).get_instance(
+        """
+        Create instance of the MDS connection based on the connection string
+        from the configuration.
+        """
+        return SharedInstance(ProcessMDSConnection).get_instance(
             config(tokamak).MDSPLUS_CONNECTION_STRING
         )
 

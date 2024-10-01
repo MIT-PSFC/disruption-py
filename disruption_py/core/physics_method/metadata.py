@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Module for defining metadata classes for physics methods.
+"""
+
 from dataclasses import dataclass, fields
 from typing import Callable, List, Union
 
@@ -32,6 +36,15 @@ class MethodMetadata:
 
 @dataclass(frozen=True)
 class BoundMethodMetadata(MethodMetadata):
+    """
+    Metadata for a bound method, extending `MethodMetadata`.
+
+    Attributes
+    ----------
+    bound_method : Callable
+        The method that is bound to this metadata.
+    """
+
     bound_method: Callable
 
     @classmethod
@@ -42,11 +55,21 @@ class BoundMethodMetadata(MethodMetadata):
         physics_method_params: PhysicsMethodParams,
     ):
         """
-        Evaluate arguments to decorators to usable values.
+        Bind a method to its metadata and resolve any callable parameters.
 
-        Some parameters provided to the physics_method decorators can take method
-        that are evaluated at runtime. `resolve_for` evaluates all of these methods
-        and returns a new instance of `MethodMetadata`without function parameters.
+        Parameters
+        ----------
+        method_metadata : MethodMetadata
+            Metadata instance containing the method's unresolved parameters.
+        bound_method : Callable
+            The callable method to be bound.
+        physics_method_params : PhysicsMethodParams
+            Parameters required for resolving the method.
+
+        Returns
+        -------
+        BoundMethodMetadata
+            A new instance of `BoundMethodMetadata` with resolved parameters.
         """
         new_method_metadata_params = {}
         bind_to = (getattr(bound_method, "__self__", None),)

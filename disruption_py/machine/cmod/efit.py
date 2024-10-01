@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Module for retrieving and processing EFIT parameters for CMOD.
+"""
+
 import traceback
 
 import numpy as np
@@ -12,6 +16,18 @@ from disruption_py.machine.tokamak import Tokamak
 
 
 class CmodEfitMethods:
+    """
+    Class for retrieving and processing EFIT parameters for CMOD.
+
+    Attributes
+    ----------
+    efit_cols : dict
+        A dictionary mapping parameter names to their corresponding EFIT data paths.
+    efit_cols_pre_2000 : dict
+        A dictionary for EFIT column names for data before the year 2000.
+    efit_derivs : dict
+        A dictionary mapping derivative parameter names to their corresponding base parameters.
+    """
 
     efit_cols = {
         "beta_n": r"\efit_aeqdsk:betan",
@@ -59,7 +75,19 @@ class CmodEfitMethods:
         tokamak=Tokamak.CMOD,
     )
     def get_efit_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve EFIT parameters for CMOD.
 
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the retrieved EFIT parameters.
+        """
         efit_time = params.mds_conn.get_data(
             r"\efit_aeqdsk:time", tree_name="_efit_tree", astype="float64"
         )  # [s]
@@ -112,7 +140,7 @@ class CmodEfitMethods:
             efit_data["aminor"] = efit_data["aminor"] / 100  # [cm] to [m]
 
             # Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally
-            #  sure on this one)
+            # sure on this one)
             try:  # TODO: confirm this
                 ssimag = params.mds_conn.get_data(
                     r"\efit_geqdsk:ssimag", tree_name="_efit_tree", astype="float64"
@@ -139,7 +167,18 @@ class CmodEfitMethods:
     @staticmethod
     def efit_check(params: PhysicsMethodParams):
         """
+        Check the validity of EFIT parameters for the given shot.
         # TODO: Get description from Jinxiang
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDS connection and shot information.
+
+        Returns
+        -------
+        tuple
+            A tuple containing valid indices and corresponding times.
         """
         values = []
         for expr in [

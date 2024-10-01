@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 
+"""
+Module for defining parameters used in physics methods for DisruptionPy.
+
+This module contains the `PhysicsMethodParams` class, which holds useful
+variables for physics methods, including MDSplus connections, timebase data,
+and caching mechanisms for results.
+"""
+
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict
@@ -31,10 +39,18 @@ class PhysicsMethodParams:
     cached_results: Dict[str, Any] = field(default_factory=dict)
 
     @property
-    def disrupted(self):
+    def disrupted(self) -> bool:
+        """Check if the disruption time is set.
+
+        Returns
+        -------
+        bool
+            True if disruption time is not None, False otherwise.
+        """
         return self.disruption_time is not None
 
-    def cleanup(self):
+    def cleanup(self) -> None:
+        """Clean up resources used by the physics method parameters."""
         self.mds_conn.cleanup()
         self.times = None
         self.cached_results.clear()

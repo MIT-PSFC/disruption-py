@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+"""
+Example usage of `get_shots_data` demonstrating the use of a dummy sql database.
+"""
+
+
 import logging
 import os
 

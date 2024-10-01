@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+"""
+This module contains tests to ensure that physics methods can be executed
+correctly when the tokamak parameter is set to either `None` or a specific
+tokamak instance.
+"""
+
 import numpy as np
 import pytest
 

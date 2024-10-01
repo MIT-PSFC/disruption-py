@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+"""This module provides utility functions for pytest like extracting parameters
+from pytest command-line arguments and saving data to temporary CSV files."""
+
 import re
 
 import pandas as pd
@@ -25,9 +28,9 @@ def extract_param(config):
     return param
 
 
-def save_to_csv(data, module_file_path_f, data_source_name):
+def save_to_csv(data, test_file_path_f, data_source_name):
     """Save a dataframe of fresh or cached data to the tmp testing directory"""
     for shot_id in data:
         pd.DataFrame(data[shot_id]).to_csv(
-            module_file_path_f(f"-{data_source_name}-{shot_id}.csv")
+            test_file_path_f(f"-{data_source_name}-{shot_id}.csv")
         )

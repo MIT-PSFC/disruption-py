@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Module for retrieving and calculating data for CMOD physics methods.
+"""
+
 import traceback
 import warnings
 from importlib import resources
@@ -26,9 +30,28 @@ warnings.filterwarnings("error", category=RuntimeWarning)
 
 
 class CmodPhysicsMethods:
+    """
+    This class provides methods to retrieve and calculate physics-related data
+    for CMOD.
+    """
+
     @staticmethod
     @cache_method
     def _get_active_wire_segments(params: PhysicsMethodParams):
+        """
+        Retrieve active wire segments from the MDSplus tree.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection and shot info.
+
+        Returns
+        -------
+        list of tuple
+            A list of tuples, where each tuple contains the node path of the
+            active segment and its start time. The list is sorted by start time.
+        """
         params.mds_conn.open_tree(tree_name="pcs")
         root_nid = params.mds_conn.get("GetDefaultNid()")
         children_nids = params.mds_conn.get(
@@ -64,6 +87,20 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(columns=["time_until_disrupt"], tokamak=Tokamak.CMOD)
     def get_time_until_disrupt(params: PhysicsMethodParams):
+        """
+        Calculate the time until disruption.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the disruption information and times.
+
+        Returns
+        -------
+        dict
+            A dictionary with a single key "time_until_disrupt" containing a list
+            of time until disruption.
+        """
         time_until_disrupt = [np.nan]
         if params.disrupted:
             time_until_disrupt = params.disruption_time - params.times
@@ -145,6 +182,20 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def get_ip_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve and interpolate Ip parameters.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the interpolated IP parameters, including
+            "ip", "dip_dt", "dip_smoothed", "ip_prog", "dipprog_dt", and "ip_error".
+        """
         # Automatically generated
         active_segments = CmodPhysicsMethods._get_active_wire_segments(params=params)
 
@@ -152,7 +203,7 @@ class CmodPhysicsMethods:
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
         ip_prog = np.full(pcstime.shape, np.nan)
 
-        # For each activate segment:
+        # For each active segment:
         # 1.) Find the wire for IP control and check if it has non-zero PID gains
         # 2.) IF it does, interpolate IP programming onto the PCS timebase
         # 3.) Clip to the start and stop times of PCS timebase
@@ -285,6 +336,20 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def get_z_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve and interpolate Z parameters.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the Z parameters, including "z_error", "z_prog",
+            "zcur", "v_z", and "z_times_v_z".
+        """
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
         z_prog = np.empty(pcstime.shape)
         z_prog.fill(np.nan)
@@ -414,7 +479,7 @@ class CmodPhysicsMethods:
 
         Returns
         -------
-        p_ohm : array_like
+        p_oh : array_like
             The ohmic power.
         v_loop : array_like
             The loop voltage.
@@ -439,6 +504,20 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def get_ohmic_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve and calculate ohmic heating parameters.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the calculated ohmic parameters, including
+            "p_oh" and "v_loop".
+        """
         v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
             r"\top.mflux:v0", tree_name="analysis", astype="float64"
         )
@@ -467,6 +546,34 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def _get_power(times, p_lh, t_lh, p_icrf, t_icrf, p_rad, t_rad, p_ohm):
+        """
+        Calculate the total power input and radiated fraction.
+
+        Parameters
+        ----------
+        times : np.ndarray
+            The time array for which to calculate the power.
+        p_lh : np.ndarray or None
+            The power from lower hybrid heating.
+        t_lh : np.ndarray or None
+            The time array corresponding to lower hybrid heating power.
+        p_icrf : np.ndarray or None
+            The power from ICRF heating.
+        t_icrf : np.ndarray or None
+            The time array corresponding to ICRF heating power.
+        p_rad : np.ndarray or None
+            The radiated power.
+        t_rad : np.ndarray or None
+            The time array corresponding to radiated power.
+        p_ohm : np.ndarray
+            The ohmic heating power.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the calculated power values, including
+            "p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", and "radiated_fraction".
+        """
         if p_lh is not None and isinstance(t_lh, np.ndarray) and len(t_lh) > 1:
             p_lh = interp1(t_lh, p_lh * 1.0e3, times)
         else:
@@ -542,12 +649,44 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def _get_kappa_area(times, aminor, area, a_times):
+        """
+        Interpolate the kappa area.
+
+        Parameters
+        ----------
+        times : np.ndarray
+            The time array for which to calculate the kappa area.
+        aminor : np.ndarray
+            The minor radius values.
+        area : np.ndarray
+            The area values.
+        a_times : np.ndarray
+            The time array corresponding to the area values.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the kappa area.
+        """
         output = {"kappa_area": interp1(a_times, area / (np.pi * aminor**2), times)}
         return output
 
     @staticmethod
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
     def get_kappa_area(params: PhysicsMethodParams):
+        """
+        Retrieve and calculate the kappa area.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the calculated kappa area.
+        """
         aminor = params.mds_conn.get_data(
             r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
         )
@@ -590,6 +729,20 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(columns=["v_0"], tokamak=Tokamak.CMOD)
     def get_rotation_velocity(params: PhysicsMethodParams):
+        """
+        Retrieve the rotational velocity for a given shot.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the rotational velocity.
+            If the shot is not calibrated, it returns NaN.
+        """
         # pylint: disable-next=deprecated-method
         with resources.path(disruption_py.data, "lock_mode_calib_shots.txt") as fio:
             calibrated = pd.read_csv(fio)
@@ -610,11 +763,6 @@ class CmodPhysicsMethods:
             params.times, intensity, time, vel, hirextime
         )
         return output
-
-    # TODO: Split into static and instance method
-    @staticmethod
-    def _get_n_equal_1_amplitude():
-        pass
 
     @staticmethod
     @physics_method(
@@ -710,6 +858,32 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def _get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
+        """
+        Calculate electron density, its gradient, and Greenwald fraction.
+
+        Parameters
+        ----------
+        times : array_like
+            Time points at which to interpolate the densities.
+        n_e : array_like
+            Electron density values.
+        t_n : array_like
+            Corresponding time values for electron density.
+        ip : array_like
+            Plasma current values.
+        t_ip : array_like
+            Corresponding time values for plasma current.
+        a_minor : array_like
+            Minor radius values.
+        t_a : array_like
+            Corresponding time values for minor radius.
+
+        Returns
+        -------
+        dict
+            A dictionary containing interpolated electron density (`n_e`),
+            its gradient (`dn_dt`), and the Greenwald fraction (`greenwald_fraction`).
+        """
         if len(n_e) != len(t_n):
             raise CalculationError("n_e and t_n are different lengths")
         # get the gradient of n_E
@@ -732,6 +906,20 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def get_densities(params: PhysicsMethodParams):
+        """
+        Retrieve and calculate electron density and related parameters.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing electron density (`n_e`), its gradient (`dn_dt`),
+            and the Greenwald fraction (`greenwald_fraction`).
+        """
         # Line-integrated density
         n_e, t_n = params.mds_conn.get_data_with_dims(
             r".tci.results:nl_04", tree_name="electrons", astype="float64"
@@ -754,12 +942,42 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def _get_efc_current(times, iefc, t_iefc):
+        """
+        Interpolate EFC current values at specified times.
+
+        Parameters
+        ----------
+        times : array_like
+            Time points at which to interpolate the EFC current.
+        iefc : array_like
+            EFC current values.
+        t_iefc : array_like
+            Corresponding time values for EFC current.
+
+        Returns
+        -------
+        dict
+            A dictionary containing interpolated EFC current.
+        """
         output = {"i_efc": interp1(t_iefc, iefc, times, "linear")}
         return output
 
     @staticmethod
     @physics_method(columns=["i_efc"], tokamak=Tokamak.CMOD)
     def get_efc_current(params: PhysicsMethodParams):
+        """
+        Retrieve the EFC current for a given shot.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the EFC current (`i_efc`).
+        """
         iefc, t_iefc = params.mds_conn.get_data_with_dims(
             r"\efc:u_bus_r_cur", tree_name="engineering"
         )
@@ -768,6 +986,27 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def _get_ts_parameters(times, ts_data, ts_time, ts_z, z_sorted=False):
+        """
+        Calculate the Thomson scattering temperature width parameters.
+
+        Parameters
+        ----------
+        times : array_like
+            Time points at which to interpolate the temperature width.
+        ts_data : array_like
+            2D array of Thomson scattering temperature data.
+        ts_time : array_like
+            Corresponding time values for the temperature data.
+        ts_z : array_like
+            Vertical coordinate values corresponding to the temperature data.
+        z_sorted : bool, optional
+            If True, assumes `ts_z` is already sorted. Default is False.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the temperature width (`te_width`).
+        """
         # sort z array
         if not z_sorted:
             idx = np.argsort(ts_z)
@@ -812,7 +1051,20 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(columns=["te_width"], tokamak=Tokamak.CMOD)
     def get_ts_parameters(params: PhysicsMethodParams):
-        # TODO: Guassian vs parabolic fit for te profile
+        """
+        Retrieve Thomson scattering temperature width parameters.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the temperature width (`te_width`).
+        """
+        # TODO: Gaussian vs parabolic fit for te profile
 
         # Read in Thomson core temperature data, which is a 2-D array, with the
         # dependent dimensions being time and z (vertical coordinate)
@@ -939,6 +1191,21 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def get_peaking_factors(params: PhysicsMethodParams):
+        """
+        Calculate peaking factors for electron density, electron temperature, and
+        pressure.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing peaking factors for electron density (`ne_peaking`),
+            electron temperature (`te_peaking`), and pressure (`pressure_peaking`).
+        """
         use_ts_tci_calibration = False
         # Ignore shots on the blacklist
         if CmodPhysicsMethods.is_on_blacklist(params.shot_id):
@@ -1387,6 +1654,19 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def get_prad_peaking(params: PhysicsMethodParams):
+        """
+        Calculate the peaking factor for radiated power.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the peaking factor for radiated power (`prad_peaking`).
+        """
         prad_peaking = np.full(len(params.times), np.nan)
         nan_output = {"prad_peaking": prad_peaking}
         r0 = 0.01 * params.mds_conn.get_data(
@@ -1485,6 +1765,19 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(columns=["sxr"], tokamak=Tokamak.CMOD)
     def get_sxr_data(params: PhysicsMethodParams):
+        """
+        Retrieve soft X-ray (SXR) data for a given shot.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the soft X-ray data (`sxr`).
+        """
         sxr, t_sxr = params.mds_conn.get_data_with_dims(
             r"\top.brightnesses.array_1:chord_16",
             tree_name="xtomo",

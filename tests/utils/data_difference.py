@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+"""
+Module for handling and analyzing data differences between fresh MDSplus data
+and cached SQL data.
+"""
+
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -35,18 +40,22 @@ class DataDifference:
 
     @property
     def num_anomalies(self) -> int:
+        """Sum the number of anomalies"""
         return np.sum(self.anomalies)
 
     @property
     def timebase_length(self) -> int:
+        """Get the timebase length"""
         return len(self.anomalies)
 
     @property
     def missing_data(self) -> bool:
+        """Return True if either fresh or cache is missing data."""
         return self.missing_cache_data or self.missing_fresh_data
 
     @property
     def failed(self) -> str:
+        """Return True if missing data or if there are too many anomalies."""
         if self.missing_data:
             return True
         return (
@@ -56,10 +65,12 @@ class DataDifference:
 
     @property
     def failure_ratio_string(self) -> str:
+        """Create a string for the fraction of datapoints that are anomalies"""
         return f"{self.num_anomalies / self.timebase_length:.4f}"
 
     @property
     def column_mismatch_string(self) -> str:
+        """Create a string showing the difference between fresh and cache data."""
         # Missing data handled here because difference_df expects data to exist
         s = f"Shot {self.shot_id} column {self.data_column}"
         if self.missing_cache_data or self.missing_fresh_data:
@@ -74,6 +85,9 @@ class DataDifference:
 
     @property
     def difference_df(self) -> pd.DataFrame:
+        """Create a dataframe with columns for time, fresh data, cache data, the
+        ratio between the two data, the absolute difference between them, the relative
+        difference, and whether the point is an anomaly."""
         indices = (
             np.arange(self.timebase_length)
             if config().testing.VERBOSE_OUTPUT
@@ -145,6 +159,7 @@ class DataDifference:
 
 
 def assert_frame_equal_unordered(df1: pd.DataFrame, df2: pd.DataFrame):
+    """Compare whether two dataframes have the same values."""
     df1_sorted = df1.sort_values(by=config().database.protected_columns).reset_index(
         drop=True
     )

@@ -31,17 +31,35 @@ from tests.utils.pytest_helper import extract_param, save_to_csv
 def fresh_data_fixture(
     tokamak: Tokamak,
     shotlist: List[int],
-    module_file_path_f,
+    test_file_path_f,
     pytestconfig,
 ) -> Dict[int, pd.DataFrame]:
+    """Fixture to retrieve fresh data for the specified tokamak and shotlist.
+
+    Parameters
+    ----------
+    tokamak : Tokamak
+        The tokamak object used to retrieve data.
+    shotlist : List[int]
+        The list of shot identifiers to retrieve data for.
+    test_file_path_f : function
+        A function to generate file paths for saving logs.
+    pytestconfig : Config
+        The pytest configuration object.
+
+    Returns
+    -------
+    Dict[int, pd.DataFrame]
+        A dictionary mapping shot identifiers to their corresponding fresh DataFrames.
+    """
     fresh_data = get_fresh_data(
         tokamak=tokamak,
         shotlist=shotlist,
-        log_file_path=module_file_path_f(".log"),
+        log_file_path=test_file_path_f(".log"),
         test_columns=extract_param(pytestconfig),
     )
     save_to_csv(
-        data=fresh_data, module_file_path_f=module_file_path_f, data_source_name="fresh"
+        data=fresh_data, test_file_path_f=test_file_path_f, data_source_name="fresh"
     )
     return fresh_data
 
@@ -51,9 +69,29 @@ def cache_data_fixture(
     tokamak: Tokamak,
     shotlist: List[int],
     fresh_data: Dict[int, pd.DataFrame],
-    module_file_path_f,
+    test_file_path_f,
     pytestconfig,
 ) -> Dict[int, pd.DataFrame]:
+    """Fixture to retrieve cached data based on fresh data for the specified tokamak and shotlist.
+
+    Parameters
+    ----------
+    tokamak : Tokamak
+        The tokamak object used to retrieve data.
+    shotlist : List[int]
+        The list of shot identifiers to retrieve data for.
+    fresh_data : Dict[int, pd.DataFrame]
+        The fresh data retrieved for the specified shotlist.
+    test_file_path_f : function
+        A function to generate file paths for saving logs.
+    pytestconfig : Config
+        The pytest configuration object.
+
+    Returns
+    -------
+    Dict[int, pd.DataFrame]
+        A dictionary mapping shot identifiers to their corresponding cached DataFrames.
+    """
     cache_data = get_cached_from_fresh(
         tokamak=tokamak,
         shotlist=shotlist,
@@ -61,7 +99,7 @@ def cache_data_fixture(
         test_columns=extract_param(pytestconfig),
     )
     save_to_csv(
-        data=cache_data, module_file_path_f=module_file_path_f, data_source_name="cache"
+        data=cache_data, test_file_path_f=test_file_path_f, data_source_name="cache"
     )
     return cache_data
 

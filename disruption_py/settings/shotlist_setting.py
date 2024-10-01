@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+"""
+Handles retrieving shotlists from various sources including lists, files, and SQL 
+databases.
+"""
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from importlib import resources
@@ -40,6 +45,20 @@ class ShotlistSetting(ABC):
     """ShotlistSetting abstract class that should be inherited by all shotlist setting classes."""
 
     def get_shotlist(self, params: ShotlistSettingParams) -> List:
+        """
+        Retrieve the shotlist based on the provided parameters.
+
+        Parameters
+        ----------
+        params : ShotlistSettingParams
+            The parameters containing the database, tokamak, and logger used
+            to determine the shotlist.
+
+        Returns
+        -------
+        List
+            A list of shot IDs retrieved.
+        """
         if hasattr(self, "tokamak_overrides"):
             if params.tokamak in self.tokamak_overrides:
                 return self.tokamak_overrides[params.tokamak](params)

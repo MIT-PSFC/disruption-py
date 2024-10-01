@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Module for managing SQL database connections.
+"""
+
 import logging
 import os
 import threading
@@ -13,7 +17,7 @@ from sqlalchemy import create_engine
 
 from disruption_py.config import config
 from disruption_py.core.utils.misc import without_duplicates
-from disruption_py.core.utils.shared_instance import SharedInstanceFactory
+from disruption_py.core.utils.shared_instance import SharedInstance
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -83,7 +87,7 @@ class ShotDatabase:
         with open(profile, "r", encoding="utf-8") as fio:
             db_user, db_pass = fio.read().split()[-2:]
 
-        return SharedInstanceFactory(ShotDatabase).get_instance(
+        return SharedInstance(ShotDatabase).get_instance(
             driver=database_dict["driver"],
             host=database_dict["host"],
             port=database_dict["port"],
@@ -462,6 +466,10 @@ class ShotDatabase:
 
 
 class DummyObject:
+    """
+    A dummy connection object.
+    """
+
     def __getattr__(self, name):
         # Return self for any attribute or method call
         return self
@@ -489,6 +497,7 @@ class DummyDatabase(ShotDatabase):
         pass
 
     @classmethod
+    # pylint: disable-next=missing-function-docstring
     def initializer(cls, **_kwargs):
         return cls()
 

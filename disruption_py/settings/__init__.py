@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""Package initialization for the settings module."""
+
 from .cache_setting import CacheSetting, CacheSettingParams
 from .log_settings import LogSettings
 from .output_setting import (
