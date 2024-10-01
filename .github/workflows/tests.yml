@@ -144,7 +144,7 @@ jobs:
         run: poetry run python examples/efit.py
 
       - name: Run all tests
-        run: poetry run pytest -v --durations=0 tests
+        run: make test
 
       - name: Close tunnel
         run: xargs -a ssh.pid kill -TERM
