@@ -9,7 +9,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
-from scipy.interpolate import interp1d, interp2d
+from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
 from scipy.signal import lfilter, medfilt
 
@@ -53,42 +53,6 @@ def interp1(x, y, new_x, kind="linear", bounds_error=False, fill_value=np.nan, a
         x, y, kind=kind, bounds_error=bounds_error, fill_value=fill_value, axis=axis
     )
     return set_interp(new_x)
-
-
-def interp2(x, y, v, xq, yq, kind="linear"):
-    """
-    Interpolate a 2-D array.
-
-    This function takes in 2D arrays of X and Y coordinates, and a 2D array of
-    data V, and returns the interpolated value at the point (Xq, Yq). The
-    kind of interpolation is specified by the user. The function uses the
-    scipy.interpolate.interp2d function to create the interpolant, which is
-    then evaluated at the point (Xq, Yq).
-
-    Parameters
-    ----------
-    x : array
-        The X-coordinates of the original array.
-    y : array
-        The Y-coordinates of the original array.
-    v : array
-        The data of the original array.
-    xq : float
-        The X-coordinate of the interpolated point.
-    yq : float
-        The Y-coordinate of the interpolated point.
-    kind : str, optional
-        The interpolation method to use. Options are 'linear', 'nearest',
-        'zero', 'slinear', 'quadratic', and 'cubic'. Defaults to 'linear'.
-
-    Returns
-    -------
-    _ : float
-        The interpolated value at the point (Xq, Yq).
-
-    """
-    set_interp = interp2d(x, y, v, kind=kind)
-    return set_interp(xq, yq)
 
 
 def exp_filter(x, w, strategy="fragmented"):
