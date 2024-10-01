@@ -1,10 +1,10 @@
 
-# parameters
+# parameters #
 
 PYLINT_DIRS := disruption_py examples tests
 DELETE_OBJS := __pycache__ .pytest_cache
 
-# environment
+# environment #
 
 GITHUB_ACTIONS ?= 0
 ifeq ($(GITHUB_ACTIONS), true)
