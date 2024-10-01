@@ -102,7 +102,7 @@ class IncludedShotlistSetting(FileShotlistSetting):
         Optional keyword arguments dictionary to be passed to `FileShotlistSetting`.
     """
 
-    def __init__(self, file_name: str, **kwargs: Dict) -> List:
+    def __init__(self, file_name: str, **kwargs: Dict):
         data = resources.files(disruption_py.data)
         file = data.joinpath(file_name)
         with resources.as_file(file) as file_path:
