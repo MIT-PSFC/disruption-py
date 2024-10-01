@@ -80,12 +80,12 @@ isort:
 
 pylint:
 	poetry run pylint --version
-	find $(PYLINT_DIRS) -type f -name '*.py' \
-	| xargs poetry run pylint
+	find $(PYLINT_DIRS) -type f -name '*.py' -not -empty \
+	| xargs poetry run pylint -v
 
 pylint-only:
-	find $(PYLINT_DIRS) -type f -name '*.py' \
-	| xargs poetry run pylint --disable=all --enable=$(CODE)
+	find $(PYLINT_DIRS) -type f -name '*.py' -not -empty  \
+	| xargs poetry run pylint -v --disable=all --enable=$(CODE)
 
 find-todos:
 	CODE=fixme make pylint-only
