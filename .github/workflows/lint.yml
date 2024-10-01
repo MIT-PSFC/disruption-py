@@ -36,7 +36,7 @@ jobs:
           cache: 'poetry'
 
       - name: Install requirements
-        run: poetry install --only dev
+        run: make install-all
 
       - name: Run black
         run: |
@@ -65,7 +65,7 @@ jobs:
           cache: 'poetry'
 
       - name: Install requirements
-        run: poetry install --with dev,lab
+        run: make install-all
 
       - name: Run pylint
         run: |
@@ -118,7 +118,7 @@ jobs:
           cache: 'poetry'
 
       - name: Install requirements
-        run: poetry install --only dev
+        run: make install-all
 
       - name: Run yamllint
         run: |

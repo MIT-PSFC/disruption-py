@@ -122,7 +122,7 @@ jobs:
           cache: 'poetry'
 
       - name: Install requirements
-        run: poetry install --with dev
+        run: make install-all
 
       - name: Check tunnel
         run: |
