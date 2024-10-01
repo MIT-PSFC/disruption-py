@@ -4,6 +4,14 @@
 PYLINT_DIRS := disruption_py examples tests
 DELETE_OBJS := __pycache__ .pytest_cache
 
+# environment
+
+GITHUB_ACTIONS ?= 0
+ifeq ($(GITHUB_ACTIONS), true)
+    CHECK_ARG := --check
+    FORMAT_ARG := --output-format=github
+endif
+
 # git #
 
 .PHONY: status fetch
@@ -59,38 +67,42 @@ quick:
 	poetry run pytest -v tests/test_quick.py
 
 test:
-	poetry run pytest -v tests
+	poetry run pytest -v --durations=0 tests
 
 test-fast:
-	GITHUB_ACTIONS=1 poetry run pytest -v tests
+	GITHUB_ACTIONS=true poetry run pytest -v tests
 
 # lint #
 
-.PHONY: lint black isort pylint shellcheck yamllint
+.PHONY: lint isort black pylint pylint-only pylint-todos shellcheck yamllint
 
-lint: black pylint shellcheck yamllint
+lint: isort black pylint shellcheck yamllint
 
 black:
+	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	poetry run black --version
-	poetry run black --check .
+	poetry run black $(CHECK_ARG) .
 
 isort:
+	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	poetry run isort --version
-	poetry run isort --check --profile black .
+	poetry run isort $(CHECK_ARG) --profile black .
 
 pylint:
+	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	poetry run pylint --version
 	find $(PYLINT_DIRS) -type f -name '*.py' -not -empty \
-	| xargs poetry run pylint -v
+	| xargs poetry run pylint -v $(FORMAT_ARG)
 
 pylint-only:
 	find $(PYLINT_DIRS) -type f -name '*.py' -not -empty  \
 	| xargs poetry run pylint -v --disable=all --enable=$(CODE)
 
-find-todos:
+pylint-todos:
 	CODE=fixme make pylint-only
 
 shellcheck:
+	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	poetry run shellcheck --version
 	find -type f -not -path '*/.git/*' \
 	| xargs grep -l '^#!/bin/bash' \
@@ -101,8 +113,9 @@ shellcheck:
 	done
 
 yamllint:
+	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	poetry run yamllint --version
-	find -type f -iname '*.yml' -or -iname '*.yaml' \
+	find -type f -iname '*.yml' -or -iname '*.yaml' -not -empty \
 	| while read -r F; \
 	do \
 	   echo "--> $$F"; \
