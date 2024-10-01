@@ -588,39 +588,6 @@ class CmodPhysicsMethods:
         v_0 = interp1(time, v_0, times)
         return {"v_0": v_0}
 
-    # TODO: Calculate v_mid
-    @staticmethod
-    @physics_method(columns=["v_0"], tokamak=Tokamak.CMOD)
-    def get_rotation_velocity(params: PhysicsMethodParams):
-        nan_output = {"v_0": [np.nan]}
-        data = resources.files(disruption_py.data)
-        file = data.joinpath("lock_mode_calib_shots.txt")
-        with resources.as_file(file) as fio:
-            calibrated = pd.read_csv(fio)
-        # Check to see if shot was done on a day where there was a locked
-        # mode HIREX calibration by cross checking with list of calibrated
-        # runs. If not calibrated, return NaN outputs.
-        if params.shot_id not in calibrated:
-            return nan_output
-        try:
-            intensity, time = params.mds_conn.get_data_with_dims(
-                ".hirex_sr.analysis.a:int", tree_name="spectroscopy", astype="float64"
-            )
-            vel, hirextime = params.mds_conn.get_data_with_dims(
-                ".hirex_sr.analysis.a:vel", tree_name="spectroscopy", astype="float64"
-            )
-        except mdsExceptions.TreeFOPENR:
-            params.logger.warning(
-                "[Shot %s]: Failed to open necessary trees for rotational velocity calculations.",
-                params.shot_id,
-            )
-            params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
-            return nan_output
-        output = CmodPhysicsMethods._get_rotation_velocity(
-            params.times, intensity, time, vel, hirextime
-        )
-        return output
-
     # TODO: Split into static and instance method
     @staticmethod
     def _get_n_equal_1_amplitude():
