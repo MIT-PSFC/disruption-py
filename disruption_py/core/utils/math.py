@@ -533,6 +533,7 @@ def matlab_power(a):
     )  # convert to [m^(-2)]
 
     @dataclass
+    # pylint: disable-next=missing-class-docstring
     class Channel:
         label: str
         chanpwr: np.ndarray
@@ -542,6 +543,7 @@ def matlab_power(a):
         angle: float
 
     @dataclass
+    # pylint: disable-next=missing-class-docstring
     class Power:
         pwrmix: np.ndarray
         divl: np.ndarray
@@ -884,6 +886,7 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
     )
 
     @dataclass
+    # pylint: disable-next=missing-class-docstring
     class Channel:
         label: str
         r: float
@@ -911,6 +914,7 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
     channels = [copy.deepcopy(one_channel) for i in range(48)]
 
     @dataclass
+    # pylint: disable-next=missing-class-docstring
     class Bolo:
         shot_id: int
         kappa: np.ndarray
