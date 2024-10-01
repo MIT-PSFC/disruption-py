@@ -1693,21 +1693,21 @@ class D3DPhysicsMethods:
         dict
             A dictionary containing the following keys:
             - 'time' : array
-                Time values corresponding to the EFIT data in seconds.
+                Time corresponding to the EFIT data in seconds.
             - 'z' : array
-                Z-coordinates from the EFIT data.
+                Elevation coordinates of the grid from the EFIT data.
             - 'r' : array
-                R-coordinates from the EFIT data.
+                Radial coordinates of the grid from the EFIT data.
             - 'rhovn' : array
-                Normalized rho values from the EFIT data.
+                Normalized radius from the EFIT data.
             - 'psirz' : array
-                Poloidal flux values from the EFIT data.
+                Poloidal flux on the rectangular grid points from the EFIT data.
             - 'zmaxis' : array
-                Maximum Z-axis values from the EFIT data.
+                Z of magnetic axis from the EFIT data.
             - 'ssimag' : array
-                Inner boundary magnetic flux from the EFIT data.
+                Poloidal flux at magnetic axis from the EFIT data.
             - 'ssibry' : array
-                Outer boundary magnetic flux from the EFIT data.
+                Poloidal flux at the plasma boundary from the EFIT data.
             - 'psin' : array
                 Normalized poloidal flux values.
         """
