@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
-"""Unit tests for the retrieval settings which covers data retrieval from various 
-sources and the time domain of the data retrieved."""
+"""
+Unit tests for the retrieval settings which covers data retrieval from various 
+sources and the time domain of the data retrieved.
+"""
 
 import pandas as pd
 import pytest

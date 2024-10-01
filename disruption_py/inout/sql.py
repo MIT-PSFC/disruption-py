@@ -116,7 +116,8 @@ class ShotDatabase:
 
     @property
     def conn(self):
-        """Property returning a connection to sql database.
+        """
+        Property returning a connection to sql database.
 
         If a connection exists for the given thread returns that connection,
         otherwise creates a new connection
@@ -135,7 +136,8 @@ class ShotDatabase:
         return self._thread_connections[current_thread]
 
     def query(self, query: str, use_pandas=True):
-        """query sql database
+        """
+        query sql database
 
         Parameters
         ----------
@@ -407,7 +409,8 @@ class ShotDatabase:
         cols: List[str] = None,
         sql_table="disruption_warning",
     ):
-        """get_shots_data retrieves columns from sql data for given shotlist
+        """
+        get_shots_data retrieves columns from sql data for given shotlist
 
         Parameters
         ----------

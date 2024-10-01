@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
-"""This module provides utility functions for pytest like extracting parameters
-from pytest command-line arguments and saving data to temporary CSV files."""
+"""
+This module provides utility functions for pytest like extracting parameters
+from pytest command-line arguments and saving data to temporary CSV files.
+"""
 
 import re
 
@@ -9,7 +11,8 @@ import pandas as pd
 
 
 def extract_param(config):
-    """Extract the data column from the pytest command.
+    """
+    Extract the data column from the pytest command.
 
     E.g. will return ip given
     `pytest -s tests/test_against_sql.py -k test_data_columns[ip]`

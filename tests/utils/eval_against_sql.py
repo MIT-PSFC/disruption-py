@@ -178,7 +178,8 @@ def eval_against_cache(
     expected_failure_columns: List[str],
     test_columns=None,
 ) -> Dict[int, pd.DataFrame]:
-    """Evaluate fresh data against cached data for specified shots.
+    """
+    Evaluate fresh data against cached data for specified shots.
 
     This function retrieves fresh data from a tokamak and compares it against
     cached data, identifying any differences. It temporarily patches the NumPy

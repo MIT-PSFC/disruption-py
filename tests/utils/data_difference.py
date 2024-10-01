@@ -85,9 +85,11 @@ class DataDifference:
 
     @property
     def difference_df(self) -> pd.DataFrame:
-        """Create a dataframe with columns for time, fresh data, cache data, the
+        """
+        Create a dataframe with columns for time, fresh data, cache data, the
         ratio between the two data, the absolute difference between them, the relative
-        difference, and whether the point is an anomaly."""
+        difference, and whether the point is an anomaly.
+        """
         indices = (
             np.arange(self.timebase_length)
             if config().testing.VERBOSE_OUTPUT

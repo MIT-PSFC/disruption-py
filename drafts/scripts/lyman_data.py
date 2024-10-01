@@ -56,7 +56,8 @@ def get_cmod_kin_profs(
     osborne_fit=False,
     apply_final_sep_stretch=False,
 ):
-    """Function to load and fit modified-tanh functions to C-Mod ne and Te.
+    """
+    Function to load and fit modified-tanh functions to C-Mod ne and Te.
 
     This function is designed to be robust for operation within the construction of
     the C-Mod Ly-a database. It makes use of the profiletools package just to conveniently
@@ -1058,7 +1059,8 @@ def get_cmod_kin_profs(
 
 
 def prefit_filter(p_ne, p_Te, TS=True):
-    """Function to filter some TS points before fitting.
+    """
+    Function to filter some TS points before fitting.
 
     Parameters
     ----------
@@ -1129,7 +1131,8 @@ def prefit_filter(p_ne, p_Te, TS=True):
 
 
 def postfit_filter(p_ne, p_Te, ne, Te, rhop_kp):
-    """Filter some of the TS points based on an existing fit
+    """
+    Filter some of the TS points based on an existing fit
 
     Parameters
     ----------
@@ -1169,7 +1172,8 @@ def postfit_filter(p_ne, p_Te, ne, Te, rhop_kp):
 
 
 def create_pe(p_ne, p_Te):
-    """Creates a pressure profileobject to be fit in addition to ne and Te
+    """
+    Creates a pressure profileobject to be fit in addition to ne and Te
 
     A rather complicated procedure that could probably be simplified, but requires some special attention since
     lengths of ne and Te may be different as a result of the filtering from above
@@ -1323,7 +1327,8 @@ def fetch_edge_probes(
     max_ne_cm3=5e13,
     shift_probes=True,
 ):
-    """Load data for the ASP and FSP probes on Alcator C-Mod.
+    """
+    Load data for the ASP and FSP probes on Alcator C-Mod.
     Time in seconds.
 
     rhop_min and rhop_max are used to subselect the radial range of the data.
@@ -1741,7 +1746,8 @@ def fetch_edge_probes(
 
 
 def filter_TS(ne_TS, Te_TS, ne_SP, Te_SP, cutoff):
-    """Function to do X
+    """
+    Function to do X
 
     This function does X by doing Y
 
@@ -1771,7 +1777,8 @@ def filter_TS(ne_TS, Te_TS, ne_SP, Te_SP, cutoff):
 
 
 def filter_SP(ne_TS, Te_TS, ne_SP, Te_SP, cutoff):
-    """Function to do X
+    """
+    Function to do X
 
     This function does X by doing Y
 
@@ -1799,7 +1806,8 @@ def filter_SP(ne_TS, Te_TS, ne_SP, Te_SP, cutoff):
 
 
 def match_pressure(ne_TS, Te_TS, ne_SP, Te_SP, plot=False):
-    """Function to do X
+    """
+    Function to do X
 
     This function does X by doing Y
 
@@ -1891,7 +1899,8 @@ def match_pressure(ne_TS, Te_TS, ne_SP, Te_SP, plot=False):
 
 
 def get_vol_avg(shot, time, rhop, ne, Te, geqdsk=None, quantities=["p", "n", "T"]):
-    """Calculate volume-averaged pressure given some ne,Te radial profiles.
+    """
+    Calculate volume-averaged pressure given some ne,Te radial profiles.
 
     ne must be in cm^-3 units and Te in eV.
     """
@@ -1927,7 +1936,8 @@ def get_vol_avg(shot, time, rhop, ne, Te, geqdsk=None, quantities=["p", "n", "T"
 
 
 def get_geqdsk_cmod(shot, time_ms, gfiles_loc="/home/sciortino/EFIT/gfiles/"):
-    """Get a geqdsk file in omfit_eqdsk format by loading it from disk, if available,
+    """
+    Get a geqdsk file in omfit_eqdsk format by loading it from disk, if available,
     or from MDS+ otherwise.
 
     This function tries to first load a EFIT20, if available.
@@ -1994,7 +2004,8 @@ def get_geqdsk_cmod(shot, time_ms, gfiles_loc="/home/sciortino/EFIT/gfiles/"):
 
 
 def get_Greenwald_frac(shot, tmin, tmax, rhop, ne, Ip_MA, a_m=0.22, geqdsk=None):
-    """Calculate Greenwald density fraction by normalizing volume-averaged density.
+    """
+    Calculate Greenwald density fraction by normalizing volume-averaged density.
 
     INPUTS
     ------
@@ -2029,7 +2040,8 @@ def get_Greenwald_frac(shot, tmin, tmax, rhop, ne, Ip_MA, a_m=0.22, geqdsk=None)
 
 
 def get_CMOD_gas_fueling(shot, plot=False):
-    """Load injected gas amounts and give a grand total in Torr-l.
+    """
+    Load injected gas amounts and give a grand total in Torr-l.
     Translated from gas_input2_ninja.dat scope.
     """
 
@@ -2102,7 +2114,8 @@ def get_CMOD_gas_fueling(shot, plot=False):
 
 
 def get_Lya_data(shot=1080416024, systems=["LYMID"], plot=True):
-    """Get Ly-alpha data for C-Mod from any (or all) of the systems:
+    """
+    Get Ly-alpha data for C-Mod from any (or all) of the systems:
     ['LYMID','WB1LY','WB4LY','LLY','BPLY']
     """
 
@@ -2164,7 +2177,8 @@ def get_Lya_data(shot=1080416024, systems=["LYMID"], plot=True):
 
 
 def calc_nu_star(ne, Te):
-    """Function to do X
+    """
+    Function to do X
 
     This function does X by doing Y
 
@@ -2208,7 +2222,8 @@ def calc_nu_star(ne, Te):
 
 
 def identify_mode(shot):
-    """Function to do X
+    """
+    Function to do X
 
     This function does X by doing Y
 
@@ -2274,7 +2289,8 @@ def identify_mode(shot):
 def get_fit_gradient(
     y, c, rhop, fit_type, geqdsk, grad_type="analytic", out="rvol", reg=None, plot=True
 ):
-    """Function to do X
+    """
+    Function to do X
 
     This function does X by doing Y
 
@@ -2636,7 +2652,8 @@ class kinetic_profile:
 
 
 def fetch_bright(shot, system):
-    """Function to do X
+    """
+    Function to do X
 
     This function does X by doing Y
 
@@ -2671,7 +2688,8 @@ def fetch_bright(shot, system):
 
 
 def fetch_emiss(shot, system):
-    """Function to do X
+    """
+    Function to do X
 
     This function does X by doing Y
 
@@ -2708,7 +2726,8 @@ def fetch_emiss(shot, system):
 
 
 def fetch_tomo_emiss(shot, system, r_end=0.93, sys_err=5, shift=0):
-    """Function to do X
+    """
+    Function to do X
 
     This function does X by doing Y
 
@@ -2773,7 +2792,8 @@ def get_CMOD_1D_geom(shot, time):
 
 
 def calculate_lambdaT(p_Te, geqdsk, plot_lambdas=False):
-    """Function to do X
+    """
+    Function to do X
 
     This function does X by doing Y
 
@@ -3008,7 +3028,8 @@ def smooth(y, box_pts):
 
 
 def get_P_ohmic(shot):
-    """Get Ohmic power
+    """
+    Get Ohmic power
 
     Translated/adapted from scopes:
     _vsurf =  deriv(smooth1d(\ANALYSIS::EFIT_SSIBRY,2))*$2pi ;
@@ -3056,7 +3077,8 @@ def get_P_ohmic(shot):
 
 
 def get_CMOD_var(var, shot, tmin=None, tmax=None, plot=False):
-    """Get tree variable for a CMOD shot. If a time window is given, the value averaged over that window is returned,
+    """
+    Get tree variable for a CMOD shot. If a time window is given, the value averaged over that window is returned,
     or else the time series is given.  See list below for acceptable input variables.
     """
 
@@ -3248,7 +3270,8 @@ def get_CMOD_var(var, shot, tmin=None, tmax=None, plot=False):
 
 
 def load_fmp_neTe(shot, loc="outer", get_max=False, plot=False):
-    """Load slow ne and Te from Flush Mounted Probes (FMP) on the divertor from the nodes
+    """
+    Load slow ne and Te from Flush Mounted Probes (FMP) on the divertor from the nodes
     \EDGE::top.probes.fmp.osd_0{ii}.p0.*e_Slow
 
     If get_max=True, returns the maximum of all the loaded probe signals over time. Otherwise, return
@@ -3411,7 +3434,8 @@ def load_fmp_neTe(shot, loc="outer", get_max=False, plot=False):
 
 
 def get_dWdt(shot, tmin=None, tmax=None, plot=False):
-    """Function to do X
+    """
+    Function to do X
 
     This function does X by doing Y
 

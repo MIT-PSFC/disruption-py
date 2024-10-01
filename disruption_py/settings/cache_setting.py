@@ -19,7 +19,8 @@ from disruption_py.machine.tokamak import Tokamak
 
 @dataclass
 class CacheSettingParams:
-    """Params passed by disruption_py to _get_cache_data() method.
+    """
+    Params passed by disruption_py to _get_cache_data() method.
 
     Attributes
     ----------
@@ -63,7 +64,8 @@ class CacheSetting(ABC):
 
     @abstractmethod
     def _get_cache_data(self, params: CacheSettingParams) -> pd.DataFrame:
-        """Abstract method implemented by subclasses to get cached data for a
+        """
+        Abstract method implemented by subclasses to get cached data for a
         given set of params as a Pandas dataframe.
 
         Parameters
@@ -126,7 +128,8 @@ class SQLCacheSetting(CacheSetting):
 
 
 class DFCacheSetting(CacheSetting):
-    """Cache setting for retrieving data from a Pandas DataFrame.
+    """
+    Cache setting for retrieving data from a Pandas DataFrame.
 
     Parameters
     ----------
@@ -151,7 +154,8 @@ _cache_setting_mappings: Dict[str, CacheSetting] = {
 def resolve_cache_setting(
     cache_setting: CacheSettingType,
 ) -> CacheSetting:
-    """Resolve the cache setting to a CacheSetting instance.
+    """
+    Resolve the cache setting to a CacheSetting instance.
 
     Parameters
     ----------

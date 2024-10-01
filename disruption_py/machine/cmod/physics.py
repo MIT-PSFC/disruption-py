@@ -108,7 +108,8 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def _get_ip_parameters(times, ip, magtime, ip_prog, pcstime):
-        """Calculates actual and programmed current as well as their derivatives
+        """
+        Calculates actual and programmed current as well as their derivatives
         and difference.
 
         The time derivatives are useful for discriminating between rampup, flattop,
@@ -257,7 +258,8 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def _get_z_parameters(times, z_prog, pcstime, z_error_without_ip, ip, dpcstime):
-        """Get values of Z_error, Z_prog, and derived signals from plasma control
+        """
+        Get values of Z_error, Z_prog, and derived signals from plasma control
         system (PCS).
 
         Z_prog is the programmed vertical position of the plasma current centroid,
@@ -455,7 +457,8 @@ class CmodPhysicsMethods:
     def _get_ohmic_parameters(
         times, v_loop, v_loop_time, li, efittime, dip_smoothed, ip, r0
     ):
-        """Calculate the ohmic power from the loop voltage, inductive voltage, and
+        """
+        Calculate the ohmic power from the loop voltage, inductive voltage, and
         plasma current.
 
         Parameters
@@ -770,7 +773,8 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def get_n_equal_1_amplitude(params: PhysicsMethodParams):
-        """Calculate n=1 amplitude and phase.
+        """
+        Calculate n=1 amplitude and phase.
 
         This method uses the four BP13 Bp sensors near the midplane on the outboard
         vessel wall.  The calculation is done by using a least squares fit to an
@@ -1788,7 +1792,8 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def is_on_blacklist(shot_id: int) -> bool:
-        """TODO why will these shots cause `_get_peaking_factors`,
+        """
+        TODO why will these shots cause `_get_peaking_factors`,
         `_get_peaking_factors_no_tci`, and `_get_edge_parameters` to fail?
         """
         if (

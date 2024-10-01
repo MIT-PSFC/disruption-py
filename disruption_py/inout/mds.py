@@ -95,7 +95,8 @@ class MDSConnection:
         self.last_open_tree = None
 
     def get(self, expression: str, arguments: Any = None, tree_name: str = None) -> Any:
-        """Evaluate the specified expression.
+        """
+        Evaluate the specified expression.
 
         The expression is passed as string argument, but may contain optional arguments.
         These arguments are then passed as an array of Data objects.

@@ -22,7 +22,8 @@ from disruption_py.machine.tokamak import Tokamak
 
 @dataclass
 class ShotlistSettingParams:
-    """Params passed by disruption_py to _get_shotlist() method.
+    """
+    Params passed by disruption_py to _get_shotlist() method.
 
     Attributes
     ----------
@@ -66,7 +67,8 @@ class ShotlistSetting(ABC):
 
     @abstractmethod
     def _get_shotlist(self, params: ShotlistSettingParams) -> List:
-        """Abstract method implemented by subclasses to get shotlist for the given setting params.
+        """
+        Abstract method implemented by subclasses to get shotlist for the given setting params.
 
         Parameters
         ----------
@@ -76,7 +78,8 @@ class ShotlistSetting(ABC):
 
 
 class IncludedShotlistSetting(ShotlistSetting):
-    """Use the shotlist from one of the provided data files.
+    """
+    Use the shotlist from one of the provided data files.
 
     Directly passing a key from the _get_shotlist_setting_mappings dictionary as a string will
     automatically create a new IncludedShotlistSetting object with that data_file_name.
@@ -99,7 +102,8 @@ class IncludedShotlistSetting(ShotlistSetting):
 
 
 class FileShotlistSetting(ShotlistSetting):
-    """Use a shotlist from the provided file path, this may be any file readable by pandas read_csv.
+    """
+    Use a shotlist from the provided file path, this may be any file readable by pandas read_csv.
 
     Directly passing a file path as a string to the shotlist setting with the file name suffixed by txt or csv
     will automatically create a new FileShotlistSetting object with that file path.
@@ -122,7 +126,8 @@ class FileShotlistSetting(ShotlistSetting):
 
 
 class DatabaseShotlistSetting(ShotlistSetting):
-    """Use an sql query of the database to retrieve the shotlist.
+    """
+    Use an sql query of the database to retrieve the shotlist.
 
     Parameters
     ----------

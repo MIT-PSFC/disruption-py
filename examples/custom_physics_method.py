@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" Used in the documentation for the physics methods. """
+"""Used in the documentation for the physics methods."""
 
 import numpy as np
 
@@ -13,7 +13,8 @@ from disruption_py.workflow import get_shots_data
 
 @physics_method(columns=["upper_gap", "lower_gap"], tokamak=Tokamak.D3D)
 def decorated_physics_method(params: PhysicsMethodParams) -> dict:
-    """All parametrized methods passed to `get_shots_data` will be called once for every shot retrieved.
+    """
+    All parametrized methods passed to `get_shots_data` will be called once for every shot retrieved.
     Decorated methods may call other decorated methods, however, execution order is not guranteed as calls
     will be reordered to minimize resource usage based on the `physics_method` decorator.
 

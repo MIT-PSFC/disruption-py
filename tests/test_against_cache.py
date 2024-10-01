@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-"""Unit tests for workflows involving get_dataset_df() for obtaining CMOD data.
+"""
+Unit tests for workflows involving get_dataset_df() for obtaining CMOD data.
 
 Expects to be run on the MFE workstations.
 Expects MDSplus to be installed and configured.
@@ -34,7 +35,8 @@ def fresh_data_fixture(
     test_file_path_f,
     pytestconfig,
 ) -> Dict[int, pd.DataFrame]:
-    """Fixture to retrieve fresh data for the specified tokamak and shotlist.
+    """
+    Fixture to retrieve fresh data for the specified tokamak and shotlist.
 
     Parameters
     ----------
@@ -72,7 +74,8 @@ def cache_data_fixture(
     test_file_path_f,
     pytestconfig,
 ) -> Dict[int, pd.DataFrame]:
-    """Fixture to retrieve cached data based on fresh data for the specified tokamak and shotlist.
+    """
+    Fixture to retrieve cached data based on fresh data for the specified tokamak and shotlist.
 
     Parameters
     ----------

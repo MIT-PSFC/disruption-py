@@ -29,7 +29,8 @@ REQUIRED_COLS = {"time", "shot", "commit_hash"}
 
 
 def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams) -> pd.DataFrame:
-    """Retrieve pre-filled shot data for the given physics method parameters.
+    """
+    Retrieve pre-filled shot data for the given physics method parameters.
 
     Parameters
     ----------
@@ -73,7 +74,8 @@ def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams) -> pd.Da
 
 
 def get_all_physics_methods(all_passed: list) -> set:
-    """Retrieve all callable physics methods from the provided list.
+    """
+    Retrieve all callable physics methods from the provided list.
 
     Parameters
     ----------
@@ -102,7 +104,8 @@ def bind_method_metadata(
     physics_methods: set,
     physics_method_params: PhysicsMethodParams,
 ) -> list:
-    """Bind metadata to the provided physics methods.
+    """
+    Bind metadata to the provided physics methods.
 
     Parameters
     ----------
@@ -133,7 +136,8 @@ def filter_methods_to_run(
     retrieval_settings: RetrievalSettings,
     physics_method_params: PhysicsMethodParams,
 ) -> list:
-    """Filter the bound methods to determine which should be executed.
+    """
+    Filter the bound methods to determine which should be executed.
 
     Parameters
     ----------
@@ -192,7 +196,8 @@ def populate_method(
     bound_method_metadata: BoundMethodMetadata,
     start_time: float,
 ) -> Any:
-    """Execute a physics method and log the results.
+    """
+    Execute a physics method and log the results.
 
     Parameters
     ----------
@@ -253,7 +258,8 @@ def populate_shot(
     retrieval_settings: RetrievalSettings,
     physics_method_params: PhysicsMethodParams,
 ) -> pd.DataFrame:
-    """Run the physics methods to populate shot data.
+    """
+    Run the physics methods to populate shot data.
 
     This function executes the physics methods included through the
     `custom_physics_methods` property of retrieval_settings or in the built-in list

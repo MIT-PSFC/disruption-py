@@ -17,8 +17,10 @@ from disruption_py.machine.tokamak import Tokamak
 
 @dataclass
 class PhysicsMethodParams:
-    """Holder for useful variables for the physics methods like an MDSplus connection
-    and the timebase for the data."""
+    """
+    Holder for useful variables for the physics methods like an MDSplus connection
+    and the timebase for the data.
+    """
 
     logger = logging.getLogger("disruption_py")
 
@@ -36,7 +38,8 @@ class PhysicsMethodParams:
 
     @property
     def disrupted(self) -> bool:
-        """Check if the disruption time is set.
+        """
+        Check if the disruption time is set.
 
         Returns
         -------

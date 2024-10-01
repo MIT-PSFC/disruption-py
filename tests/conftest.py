@@ -32,8 +32,10 @@ def verbose_output(pytestconfig):
 
 
 def pytest_generate_tests(metafunc):
-    """Parametrize `data_column` and mark expected failure columns. Marked columns
-    will xfail on assert False and xpass on assert True."""
+    """
+    Parametrize `data_column` and mark expected failure columns. Marked columns
+    will xfail on assert False and xpass on assert True.
+    """
     tokamak = resolve_tokamak_from_environment()
 
     # parameterized across tests
@@ -93,7 +95,8 @@ def tmpdir_fixture():
 
 @pytest.fixture(scope="module")
 def test_file_path_f(request, tmpdir):
-    """Fixture to generate file paths for test files.
+    """
+    Fixture to generate file paths for test files.
 
     Parameters
     ----------

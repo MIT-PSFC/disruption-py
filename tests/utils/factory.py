@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
-"""This module provides utility functions for retrieving testing settings like the
-shots and columns based on the provided tokamak."""
+"""
+This module provides utility functions for retrieving testing settings like the
+shots and columns based on the provided tokamak.
+"""
 
 import os
 
@@ -15,8 +17,10 @@ def get_tokamak_test_expected_failure_columns(tokamak: Tokamak):
 
 
 def get_tokamak_test_shotlist(tokamak: Tokamak) -> list[int]:
-    """Return the shot ids used for testing from the config. Return a smaller
-    shotlist when running as a Github action."""
+    """
+    Return the shot ids used for testing from the config. Return a smaller
+    shotlist when running as a Github action.
+    """
     shot_id_dict = config(tokamak).testing.TEST_SHOTS
 
     if "GITHUB_ACTIONS" in os.environ:

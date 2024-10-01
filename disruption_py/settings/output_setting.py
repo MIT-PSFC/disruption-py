@@ -80,7 +80,8 @@ class OutputSetting(ABC):
     """
 
     def output_shot(self, params: OutputSettingParams):
-        """Output a single shot based on the provided parameters.
+        """
+        Output a single shot based on the provided parameters.
 
         Parameters
         ----------
@@ -94,7 +95,8 @@ class OutputSetting(ABC):
 
     @abstractmethod
     def _output_shot(self, params: OutputSettingParams):
-        """Abstract method implemented by subclasses to handle data output for a
+        """
+        Abstract method implemented by subclasses to handle data output for a
         single shot.
 
         Parameters
@@ -104,7 +106,8 @@ class OutputSetting(ABC):
         """
 
     def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """Empty method optionally overridden by subclasses to handle cleanup after
+        """
+        Empty method optionally overridden by subclasses to handle cleanup after
         all shots have been output. This may include closing files or other cleanup.
         Subclasses should implement this method so multiple output types can be
         used for the same data without appending to the other's outputted dataframe.
@@ -117,7 +120,8 @@ class OutputSetting(ABC):
 
     @abstractmethod
     def get_results(self, params: CompleteOutputSettingParams) -> Any:
-        """Return final output after all shots are processed.
+        """
+        Return final output after all shots are processed.
 
         Parameters
         ----------
@@ -137,7 +141,8 @@ class OutputSettingList(OutputSetting):
     """
 
     def __init__(self, output_setting_list: List[OutputSettingType]):
-        """Initialize OutputSettingList with a list of output settings.
+        """
+        Initialize OutputSettingList with a list of output settings.
 
         Parameters
         ----------
@@ -150,7 +155,8 @@ class OutputSettingList(OutputSetting):
         ]
 
     def _output_shot(self, params: OutputSettingParams):
-        """Output a single shot for each output setting in the list.
+        """
+        Output a single shot for each output setting in the list.
 
         Parameters
         ----------
@@ -160,7 +166,8 @@ class OutputSettingList(OutputSetting):
         return [s.output_shot(params) for s in self.output_setting_list]
 
     def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """Cleanup for each output setting in the list.
+        """
+        Cleanup for each output setting in the list.
 
         Parameters
         ----------
@@ -171,7 +178,8 @@ class OutputSettingList(OutputSetting):
             individual_setting.stream_output_cleanup(params)
 
     def get_results(self, params: CompleteOutputSettingParams):
-        """Get results from each output setting in the list.
+        """
+        Get results from each output setting in the list.
 
         Parameters
         ----------
@@ -192,7 +200,8 @@ class OutputSettingDict(OutputSetting):
     """
 
     def __init__(self, output_setting_dict: Dict[Tokamak, OutputSettingType]):
-        """Initialize OutputSettingDict with a dictionary of output settings.
+        """
+        Initialize OutputSettingDict with a dictionary of output settings.
 
         Parameters
         ----------
@@ -205,7 +214,8 @@ class OutputSettingDict(OutputSetting):
         }
 
     def _output_shot(self, params: OutputSettingParams):
-        """Output a single shot for the specified tokamak.
+        """
+        Output a single shot for the specified tokamak.
 
         Parameters
         ----------
@@ -219,7 +229,8 @@ class OutputSettingDict(OutputSetting):
         return None
 
     def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """Cleanup for the output setting of the specified tokamak.
+        """
+        Cleanup for the output setting of the specified tokamak.
 
         Parameters
         ----------
@@ -233,7 +244,8 @@ class OutputSettingDict(OutputSetting):
         return None
 
     def get_results(self, params: CompleteOutputSettingParams):
-        """Get results from the output setting of the specified tokamak.
+        """
+        Get results from the output setting of the specified tokamak.
 
         Parameters
         ----------
@@ -262,7 +274,8 @@ class ListOutputSetting(OutputSetting):
         self.results = []
 
     def _output_shot(self, params: OutputSettingParams):
-        """Output a single shot by appending the result to the list.
+        """
+        Output a single shot by appending the result to the list.
 
         Parameters
         ----------
@@ -272,7 +285,8 @@ class ListOutputSetting(OutputSetting):
         self.results.append(params.result)
 
     def get_results(self, params: CompleteOutputSettingParams):
-        """Get the accumulated results.
+        """
+        Get the accumulated results.
 
         Parameters
         ----------
@@ -287,7 +301,8 @@ class ListOutputSetting(OutputSetting):
         return self.results
 
     def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """Cleanup the results list.
+        """
+        Cleanup the results list.
 
         Parameters
         ----------
@@ -307,7 +322,8 @@ class DictOutputSetting(OutputSetting):
         self.results = {}
 
     def _output_shot(self, params: OutputSettingParams):
-        """Output a single shot by storing the result in the dictionary.
+        """
+        Output a single shot by storing the result in the dictionary.
 
         Parameters
         ----------
@@ -317,7 +333,8 @@ class DictOutputSetting(OutputSetting):
         self.results[params.shot_id] = params.result
 
     def get_results(self, params: CompleteOutputSettingParams):
-        """Get the accumulated results.
+        """
+        Get the accumulated results.
 
         Parameters
         ----------
@@ -332,7 +349,8 @@ class DictOutputSetting(OutputSetting):
         return self.results
 
     def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """Cleanup the results dictionary.
+        """
+        Cleanup the results dictionary.
 
         Parameters
         ----------
@@ -352,7 +370,8 @@ class DataFrameOutputSetting(OutputSetting):
         self.results: pd.DataFrame = pd.DataFrame()
 
     def _output_shot(self, params: OutputSettingParams):
-        """Output a single shot by concatenating the result to the DataFrame.
+        """
+        Output a single shot by concatenating the result to the DataFrame.
 
         Parameters
         ----------
@@ -362,7 +381,8 @@ class DataFrameOutputSetting(OutputSetting):
         self.results = safe_df_concat(self.results, [params.result])
 
     def get_results(self, params: CompleteOutputSettingParams):
-        """Get the accumulated results.
+        """
+        Get the accumulated results.
 
         Parameters
         ----------
@@ -377,7 +397,8 @@ class DataFrameOutputSetting(OutputSetting):
         return self.results
 
     def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """Cleanup the results DataFrame.
+        """
+        Cleanup the results DataFrame.
 
         Parameters
         ----------
@@ -411,7 +432,8 @@ class HDF5OutputSetting(OutputSetting):
         self.results: pd.DataFrame = pd.DataFrame()
 
     def _output_shot(self, params: OutputSettingParams):
-        """Output a single shot to the HDF5 file.
+        """
+        Output a single shot to the HDF5 file.
 
         Parameters
         ----------
@@ -436,7 +458,8 @@ class HDF5OutputSetting(OutputSetting):
         self.results = safe_df_concat(self.results, [params.result])
 
     def get_results(self, params: CompleteOutputSettingParams):
-        """Get the accumulated results.
+        """
+        Get the accumulated results.
 
         Parameters
         ----------
@@ -451,7 +474,8 @@ class HDF5OutputSetting(OutputSetting):
         return self.results
 
     def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """Cleanup the results DataFrame.
+        """
+        Cleanup the results DataFrame.
 
         Parameters
         ----------
@@ -470,7 +494,8 @@ class CSVOutputSetting(OutputSetting):
     def __init__(
         self, filepath: str, flexible_columns: bool = True, clear_file: bool = True
     ):
-        """Initialize CSVOutputSetting with a file path and options.
+        """
+        Initialize CSVOutputSetting with a file path and options.
 
         Parameters
         ----------
@@ -489,7 +514,8 @@ class CSVOutputSetting(OutputSetting):
         self.results: pd.DataFrame = pd.DataFrame()
 
     def _output_shot(self, params: OutputSettingParams):
-        """Output a single shot to the CSV file.
+        """
+        Output a single shot to the CSV file.
 
         Parameters
         ----------
@@ -513,7 +539,8 @@ class CSVOutputSetting(OutputSetting):
         self.results = safe_df_concat(self.results, [params.result])
 
     def get_results(self, params: CompleteOutputSettingParams):
-        """Get the accumulated results.
+        """
+        Get the accumulated results.
 
         Parameters
         ----------
@@ -528,7 +555,8 @@ class CSVOutputSetting(OutputSetting):
         return self.results
 
     def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """Cleanup the results DataFrame.
+        """
+        Cleanup the results DataFrame.
 
         Parameters
         ----------

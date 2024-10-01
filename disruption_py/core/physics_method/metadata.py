@@ -94,7 +94,8 @@ class BoundMethodMetadata(MethodMetadata):
 
 
 def is_parametered_method(method: Callable) -> bool:
-    """Returns whether the method is decorated with `physics_method` decorator
+    """
+    Returns whether the method is decorated with `physics_method` decorator
 
     Parameters
     ----------
@@ -110,7 +111,8 @@ def is_parametered_method(method: Callable) -> bool:
 
 
 def get_method_metadata(method: Callable, should_throw: bool = False) -> MethodMetadata:
-    """Get method metadata for method
+    """
+    Get method metadata for method
 
     Parameters
     ----------

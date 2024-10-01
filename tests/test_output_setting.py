@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
-"""Unit tests for ensuring data can be outputted in multiple formats including
-lists, dictionaries, DataFrames, csv, hdf5, and to an SQL table."""
+"""
+Unit tests for ensuring data can be outputted in multiple formats including
+lists, dictionaries, DataFrames, csv, hdf5, and to an SQL table.
+"""
 
 import os
 from typing import Dict
