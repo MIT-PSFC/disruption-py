@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+# TODO: https://github.com/MIT-PSFC/disruption-py/pull/271
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+# pylint: disable=missing-module-docstring
+
 import multiprocessing
 import threading
 from enum import Enum
