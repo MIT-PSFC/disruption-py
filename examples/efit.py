@@ -18,7 +18,7 @@ def main():
 
     run_methods = ["get_efit_parameters"]
     if tokamak is Tokamak.D3D:
-        shotlist = [176917]
+        shotlist = [161228]
         shape = (247, 17)
     elif tokamak is Tokamak.CMOD:
         shotlist = [1150805012]
