@@ -590,6 +590,7 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(columns=["v_0"], tokamak=Tokamak.CMOD)
     def get_rotation_velocity(params: PhysicsMethodParams):
+        # pylint: disable-next=deprecated-method
         with resources.path(disruption_py.data, "lock_mode_calib_shots.txt") as fio:
             calibrated = pd.read_csv(fio)
         # Check to see if shot was done on a day where there was a locked

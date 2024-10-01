@@ -79,6 +79,11 @@ extension-pkg-allow-list = ["pyodbc"]
 ignored-modules = ["MDSplus"]
 disable = [
     "fixme",
+    "line-too-long",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "missing-module-docstring",
+    "too-few-public-methods",
     "too-many-arguments",
     "too-many-branches",
     "too-many-instance-attributes",

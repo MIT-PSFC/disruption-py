@@ -69,6 +69,7 @@ class IncludedShotlistSetting(ShotlistSetting):
     """
 
     def __init__(self, data_file_name: str) -> List:
+        # pylint: disable-next=deprecated-method
         with resources.path(disruption_py.data, data_file_name) as data_file:
             df = pd.read_csv(data_file, header=None)
             lst = df.values[:, 0].tolist()
