@@ -1,4 +1,6 @@
 
+# parameters
+
 PYLINT_DIRS := disruption_py examples tests
 DELETE_OBJS := __pycache__ .pytest_cache
 
@@ -26,10 +28,13 @@ clean-delete:
 
 # poetry #
 
-.PHONY: install uninstall reinstall lock update show
+.PHONY: install install-all uninstall reinstall lock update show
 
 install:
 	poetry install --with dev
+
+install-all:
+	poetry install --with dev,docs,lab
 
 uninstall:
 	poetry env list | cut -d' ' -f1 | xargs poetry env remove
