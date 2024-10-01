@@ -2,13 +2,10 @@
 
 import traceback
 import warnings
-from importlib import resources
 
 import numpy as np
-import pandas as pd
 from MDSplus import mdsExceptions
 
-import disruption_py.data
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.errors import CalculationError
