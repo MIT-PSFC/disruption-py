@@ -375,15 +375,11 @@ class ShotDatabase:
                 "specify write_database_table_name in the configuration before "
                 + "adding shot data"
             )
-        try:
-            self.query(
-                f"alter table {self.write_database_table_name} add {col_name} {var_type};",
-                use_pandas=False,
-            )
-            return True
-        except Exception as e:
-            self.logger.error("Failed to add column %s with error %s", col_name, e)
-            return False
+        self.query(
+            f"alter table {self.write_database_table_name} add {col_name} {var_type};",
+            use_pandas=False,
+        )
+        return True
 
     def remove_column(self, col_name):
         """Remove column from SQL table"""
@@ -395,15 +391,11 @@ class ShotDatabase:
         if col_name in self.protected_columns:
             self.logger.error("Failed to drop protected column %s", col_name)
             return False
-        try:
-            self.query(
-                f"alter table {self.write_database_table_name} drop column {col_name};",
-                use_pandas=False,
-            )
-            return True
-        except Exception as e:
-            self.logger.error("Failed to drop column %s with error %s", col_name, e)
-            return False
+        self.query(
+            f"alter table {self.write_database_table_name} drop column {col_name};",
+            use_pandas=False,
+        )
+        return True
 
     def get_shots_data(
         self,

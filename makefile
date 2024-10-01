@@ -44,7 +44,7 @@ update:
 	poetry update
 
 show:
-	poetry show --latest --why
+	poetry show --latest --why --top-level --with dev,lab,docs
 
 # test #
 

@@ -1,11 +1,5 @@
 ## Installation { .doc .doc-heading }
 
-### Issues with package versioning { .doc .doc-heading }
-Please ensure you are using Python >= 3.9.
-
-#### On CMod { .doc .doc-heading }
-On the mfe workstations use mferws02 or mferws03
-
 ### How can I use DisruptionPy if I don't have access to the GitHub Repository? { .doc .doc-heading }
 If you are unable to access the GitHub repository, you can manually install the package. Note that you may be installing an older version of DisruptionPy.
 

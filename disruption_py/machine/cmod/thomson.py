@@ -241,11 +241,6 @@ class CmodThomsonDensityMeasure:
             psirz = np.transpose(psirz[time_idx, :, :])
             # Perform cubic interpolation on the psirz slice
             values = psirz.flatten()
-            try:
-                psi[:, i] = sp.interpolate.griddata(
-                    points, values, (r, z), method="cubic"
-                )
-            except:
-                params.logger.warning("Interpolation failed for efit_rz2psi time", time)
+            psi[:, i] = sp.interpolate.griddata(points, values, (r, z), method="cubic")
 
         return psi

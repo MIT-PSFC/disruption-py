@@ -11,6 +11,7 @@ from MDSplus import mdsExceptions
 import disruption_py.data
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
+from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import (
     gaussian_fit,
@@ -334,8 +335,7 @@ class CmodPhysicsMethods:
                     continue
                 break
         if z_wire_index == -1:
-            # TODO: Make appropriate error
-            raise ValueError("No ZCUR wire was found")
+            raise CalculationError("Data source error: No ZCUR wire was found")
         # Read in A_OUT, which is a 16xN matrix of the errors for *all* 16 wires for
         # *all* of the segments. Note that DPCS time is usually taken at 10kHz.
         wire_errors, dpcstime = params.mds_conn.get_data_with_dims(
@@ -443,10 +443,8 @@ class CmodPhysicsMethods:
             r"\top.mflux:v0", tree_name="analysis", astype="float64"
         )
         if len(v_loop_time) <= 1:
-            return {
-                "p_oh": np.zeros(len(params.times)),
-                "v_loop": np.zeros(len(params.times)),
-            }
+            raise CalculationError("No data for v_loop_time")
+
         li, efittime = params.mds_conn.get_data_with_dims(
             r"\efit_aeqdsk:li", tree_name="_efit_tree", astype="float64"
         )  # [dimensionless], [s]
@@ -593,7 +591,6 @@ class CmodPhysicsMethods:
     def _get_n_equal_1_amplitude():
         pass
 
-    # TODO: Try catch failure to get BP13 sensors
     @staticmethod
     @physics_method(
         columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase", "bt"],
@@ -614,12 +611,6 @@ class CmodPhysicsMethods:
 
         N=1 toroidal assymmetry in the magnetic fields
         """
-        nan_output = {
-            "n_equal_1_mode": [np.nan],
-            "n_equal_1_normalized": [np.nan],
-            "n_equal_1_phase": [np.nan],
-            "bt": [np.nan],
-        }
         # These sensors are placed toroidally around the machine. Letters refer to
         # the 2 ports the sensors were placed between.
         bp13_names = ["BP13_BC", "BP13_DE", "BP13_GH", "BP13_JK"]
@@ -652,28 +643,15 @@ class CmodPhysicsMethods:
         # 3. Interpolate bp onto shot timebase
 
         for i, bp13_name in enumerate(bp13_names):
-            try:
-                signal = params.mds_conn.get_data(
-                    path + bp13_name, tree_name="magnetics"
-                )
-                if len(signal) == 1:
-                    params.logger.warning(
-                        "[Shot %s]: Only one data point for %s. Returning nans.",
-                        params.shot_id,
-                        bp13_name,
-                    )
-                    return nan_output
-                baseline = np.mean(signal[baseline_indices])
-                signal = signal - baseline
-                signal = signal - bp13_btor_pickup_coeffs[i] * btor
-                bp13_signals[:, i] = interp1(t_mag, signal, params.times)
-            except mdsExceptions.TreeNODATA as e:
-                params.logger.warning(
-                    "[Shot %s]: No data for %s", params.shot_id, bp13_name
-                )
-                params.logger.debug("[Shot %s]: %s", params.shot_id, e)
-                # Only calculate n=1 amplitude if all sensors have data
-                return nan_output
+            signal = params.mds_conn.get_data(path + bp13_name, tree_name="magnetics")
+            if len(signal) == 1:
+                raise CalculationError(f"No data for {bp13_name}")
+
+            baseline = np.mean(signal[baseline_indices])
+            signal = signal - baseline
+            signal = signal - bp13_btor_pickup_coeffs[i] * btor
+            bp13_signals[:, i] = interp1(t_mag, signal, params.times)
+
         # TODO: Examine edge case behavior of sign
         polarity = np.sign(np.mean(btor))
         btor_magnitude = btor * polarity
@@ -708,11 +686,7 @@ class CmodPhysicsMethods:
     @staticmethod
     def _get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
         if len(n_e) != len(t_n):
-            return {
-                "n_e": [np.nan],
-                "dn_dt": [np.nan],
-                "greenwald_fraction": [np.nan],
-            }
+            raise CalculationError("n_e and t_n are different lengths")
         # get the gradient of n_E
         dn_dt = np.gradient(n_e, t_n)
         n_e = interp1(t_n, n_e, times)
@@ -733,28 +707,21 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def get_densities(params: PhysicsMethodParams):
-        try:
-            # Line-integrated density
-            n_e, t_n = params.mds_conn.get_data_with_dims(
-                r".tci.results:nl_04", tree_name="electrons", astype="float64"
-            )
-            # Divide by chord length of ~0.6m to get line averaged density.
-            # For future refernce, chord length is stored in
-            # .01*\analysis::efit_aeqdsk:rco2v[3,*]
-            n_e = np.squeeze(n_e) / 0.6
-            ip, t_ip = params.mds_conn.get_data_with_dims(
-                r"\ip", tree_name="magnetics", astype="float64"
-            )
-            a_minor, t_a = params.mds_conn.get_data_with_dims(
-                r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
-            )
-        except Exception as e:
-            params.logger.debug("[Shot %s]: %s", params.shot_id, e)
-            params.logger.warning("[Shot %s]: No density data", params.shot_id)
-            # TODO: Handle this case
-            raise NotImplementedError(
-                "Can't currently handle failure of grabbing density data"
-            ) from e
+        # Line-integrated density
+        n_e, t_n = params.mds_conn.get_data_with_dims(
+            r".tci.results:nl_04", tree_name="electrons", astype="float64"
+        )
+        # Divide by chord length of ~0.6m to get line averaged density.
+        # For future refernce, chord length is stored in
+        # .01*\analysis::efit_aeqdsk:rco2v[3,*]
+        n_e = np.squeeze(n_e) / 0.6
+        ip, t_ip = params.mds_conn.get_data_with_dims(
+            r"\ip", tree_name="magnetics", astype="float64"
+        )
+        a_minor, t_a = params.mds_conn.get_data_with_dims(
+            r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
+        )
+
         output = CmodPhysicsMethods._get_densities(
             params.times, n_e, t_n, ip, t_ip, a_minor, t_a
         )
@@ -768,13 +735,9 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(columns=["i_efc"], tokamak=Tokamak.CMOD)
     def get_efc_current(params: PhysicsMethodParams):
-        try:
-            iefc, t_iefc = params.mds_conn.get_data_with_dims(
-                r"\efc:u_bus_r_cur", tree_name="engineering"
-            )
-        except Exception:
-            params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
-            return {"i_efc": [np.nan]}
+        iefc, t_iefc = params.mds_conn.get_data_with_dims(
+            r"\efc:u_bus_r_cur", tree_name="engineering"
+        )
         output = CmodPhysicsMethods._get_efc_current(params.times, iefc, t_iefc)
         return output
 
@@ -829,16 +792,12 @@ class CmodPhysicsMethods:
         # Read in Thomson core temperature data, which is a 2-D array, with the
         # dependent dimensions being time and z (vertical coordinate)
         node_path = ".yag_new.results.profiles"
-        try:
-            ts_data, ts_time = params.mds_conn.get_data_with_dims(
-                node_path + ":te_rz", tree_name="electrons"
-            )
-            ts_z = params.mds_conn.get_data(
-                node_path + ":z_sorted", tree_name="electrons"
-            )
-        except mdsExceptions.MdsException:
-            params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
-            return {"te_width": [np.nan]}
+
+        ts_data, ts_time = params.mds_conn.get_data_with_dims(
+            node_path + ":te_rz", tree_name="electrons"
+        )
+        ts_z = params.mds_conn.get_data(node_path + ":z_sorted", tree_name="electrons")
+
         output = CmodPhysicsMethods._get_ts_parameters(
             params.times, ts_data, ts_time, ts_z
         )
@@ -956,59 +915,47 @@ class CmodPhysicsMethods:
     )
     def get_peaking_factors(params: PhysicsMethodParams):
         use_ts_tci_calibration = False
-        nan_output = {
-            "ne_peaking": [np.nan],
-            "te_peaking": [np.nan],
-            "pressure_peaking": [np.nan],
-        }
         # Ignore shots on the blacklist
         if CmodPhysicsMethods.is_on_blacklist(params.shot_id):
-            return nan_output
+            raise CalculationError("Shot is on blacklist")
         # Fetch data
-        try:
-            # Get EFIT geometry data
-            z0 = 0.01 * params.mds_conn.get_data(
-                r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
-            )
-            kappa = params.mds_conn.get_data(
-                r"\efit_aeqdsk:kappa", tree_name="_efit_tree"
-            )
-            aminor, efit_time = params.mds_conn.get_data_with_dims(
-                r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
-            )
-            bminor = aminor * kappa
+        # Get EFIT geometry data
+        z0 = 0.01 * params.mds_conn.get_data(
+            r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
+        )
+        kappa = params.mds_conn.get_data(r"\efit_aeqdsk:kappa", tree_name="_efit_tree")
+        aminor, efit_time = params.mds_conn.get_data_with_dims(
+            r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
+        )
+        bminor = aminor * kappa
 
-            # Get Te data and TS time basis
-            node_ext = ".yag_new.results.profiles"
-            ts_te_core, ts_time = params.mds_conn.get_data_with_dims(
-                f"{node_ext}:te_rz", tree_name="electrons"
-            )
-            ts_te_core = ts_te_core * 1000  # [keV] -> [eV]
-            ts_te_edge = params.mds_conn.get_data(r"\ts_te")
-            ts_te = np.concatenate((ts_te_core, ts_te_edge)) * 11600  # [eV] -> [K]
+        # Get Te data and TS time basis
+        node_ext = ".yag_new.results.profiles"
+        ts_te_core, ts_time = params.mds_conn.get_data_with_dims(
+            f"{node_ext}:te_rz", tree_name="electrons"
+        )
+        ts_te_core = ts_te_core * 1000  # [keV] -> [eV]
+        ts_te_edge = params.mds_conn.get_data(r"\ts_te")
+        ts_te = np.concatenate((ts_te_core, ts_te_edge)) * 11600  # [eV] -> [K]
 
-            # Get ne data
-            ts_ne_core = params.mds_conn.get_data(
-                f"{node_ext}:ne_rz", tree_name="electrons"
-            )
-            ts_ne_edge = params.mds_conn.get_data(r"\ts_ne")
-            ts_ne = np.concatenate((ts_ne_core, ts_ne_edge))
+        # Get ne data
+        ts_ne_core = params.mds_conn.get_data(
+            f"{node_ext}:ne_rz", tree_name="electrons"
+        )
+        ts_ne_edge = params.mds_conn.get_data(r"\ts_ne")
+        ts_ne = np.concatenate((ts_ne_core, ts_ne_edge))
 
-            # Get TS chord positions
-            ts_z_core = params.mds_conn.get_data(
-                f"{node_ext}:z_sorted", tree_name="electrons"
+        # Get TS chord positions
+        ts_z_core = params.mds_conn.get_data(
+            f"{node_ext}:z_sorted", tree_name="electrons"
+        )
+        ts_z_edge = params.mds_conn.get_data(r"\fiber_z", tree_name="electrons")
+        ts_z = np.concatenate((ts_z_core, ts_z_edge))
+        # Make sure that there are equal numbers of edge position and edge temperature points
+        if len(ts_z_edge) != ts_te_edge.shape[0]:
+            raise CalculationError(
+                "TS edge data and z positions are not the same length for shot"
             )
-            ts_z_edge = params.mds_conn.get_data(r"\fiber_z", tree_name="electrons")
-            ts_z = np.concatenate((ts_z_core, ts_z_edge))
-            # Make sure that there are equal numbers of edge position and edge temperature points
-            if len(ts_z_edge) != ts_te_edge.shape[0]:
-                params.logger.warning(
-                    "[Shot %s]: TS edge data and z positions are not the same length for shot",
-                    params.shot_id,
-                )
-                return nan_output
-        except mdsExceptions.MdsException:
-            return nan_output
 
         # Calibrate ts_ne using TCI -- slow
         if use_ts_tci_calibration:
@@ -1031,7 +978,9 @@ class CmodPhysicsMethods:
             if 0.5 < calib < 1.5:
                 ts_ne *= calib
             else:
-                return nan_output
+                raise CalculationError(
+                    "Density calibration error exceeds acceptable range"
+                )
 
         return CmodPhysicsMethods._get_peaking_factors(
             params.times, ts_time, ts_te, ts_ne, ts_z, efit_time, bminor, z0
@@ -1327,32 +1276,19 @@ class CmodPhysicsMethods:
 
         # Constants
         n_gpc1_channels = 9
-        nan_output = {
-            "te_core_vs_avg_ece": [np.nan],
-            "te_edge_vs_avg_ece": [np.nan],
-            "te_width_ece": [np.nan],
-        }
 
         # Get magnetic axis data from EFIT
-        try:
-            r0 = 0.01 * params.mds_conn.get_data(
-                r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
-            )  # [cm] -> [m]
-            aminor, efit_time = params.mds_conn.get_data_with_dims(
-                r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
-            )  # [m], [s]
-        except mdsExceptions.MdsException:
-            params.logger.debug("[Shot %s]: Failed to get efit data", params.shot_id)
-            return nan_output
+        r0 = 0.01 * params.mds_conn.get_data(
+            r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
+        )  # [cm] -> [m]
+        aminor, efit_time = params.mds_conn.get_data_with_dims(
+            r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
+        )  # [m], [s]
 
         # Btor and LH Power used for filtering okay time slices
-        try:
-            btor, t_mag = params.mds_conn.get_data_with_dims(
-                r"\btor", tree_name="magnetics"
-            )
-        except mdsExceptions.MdsException:
-            params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
-            return nan_output
+        btor, t_mag = params.mds_conn.get_data_with_dims(
+            r"\btor", tree_name="magnetics"
+        )
         try:
             lh_power, lh_time = params.mds_conn.get_data_with_dims(
                 ".results:netpow", tree_name="lh"
@@ -1394,16 +1330,12 @@ class CmodPhysicsMethods:
 
         # Read in Te profile measurements from GPC2 (19 channels)
         node_path = ".gpc_2.results"
-        try:
-            gpc2_te_data, gpc2_te_time = params.mds_conn.get_data_with_dims(
-                node_path + ":gpc2_te", tree_name="electrons"
-            )  # [keV], [s]
-            gpc2_rad_data, gpc2_rad_time = params.mds_conn.get_data_with_dims(
-                node_path + ":radii", tree_name="electrons"
-            )  # [m], [s]
-        except mdsExceptions.MdsException:
-            params.logger.debug("[Shot %s]: Failed to get GPC2 data", params.shot_id)
-            return nan_output
+        gpc2_te_data, gpc2_te_time = params.mds_conn.get_data_with_dims(
+            node_path + ":gpc2_te", tree_name="electrons"
+        )  # [keV], [s]
+        gpc2_rad_data, gpc2_rad_time = params.mds_conn.get_data_with_dims(
+            node_path + ":radii", tree_name="electrons"
+        )  # [m], [s]
 
         return CmodPhysicsMethods.__get_te_profile_params_ece(
             params.times,
@@ -1432,19 +1364,15 @@ class CmodPhysicsMethods:
     def get_prad_peaking(params: PhysicsMethodParams):
         prad_peaking = np.full(len(params.times), np.nan)
         nan_output = {"prad_peaking": prad_peaking}
-        try:
-            r0 = 0.01 * params.mds_conn.get_data(
-                r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
-            )
-            z0 = 0.01 * params.mds_conn.get_data(
-                r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
-            )
-            aminor, efit_time = params.mds_conn.get_data_with_dims(
-                r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
-            )
-        except mdsExceptions.MdsException:
-            params.logger.debug("[Shot %s]: Failed to get efit data", params.shot_id)
-            return nan_output
+        r0 = 0.01 * params.mds_conn.get_data(
+            r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
+        )
+        z0 = 0.01 * params.mds_conn.get_data(
+            r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
+        )
+        aminor, efit_time = params.mds_conn.get_data_with_dims(
+            r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
+        )
         got_axa = False
         try:
             bright_axa, t_axa, r_axa = params.mds_conn.get_data_with_dims(
@@ -1532,18 +1460,11 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(columns=["sxr"], tokamak=Tokamak.CMOD)
     def get_sxr_data(params: PhysicsMethodParams):
-        try:
-            sxr, t_sxr = params.mds_conn.get_data_with_dims(
-                r"\top.brightnesses.array_1:chord_16",
-                tree_name="xtomo",
-                astype="float64",
-            )
-        except mdsExceptions.TreeFOPENR:
-            params.logger.warning(
-                "[Shot %s]: Failed to get SXR data returning NaNs", params.shot_id
-            )
-            params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
-            return {"sxr": [np.nan]}
+        sxr, t_sxr = params.mds_conn.get_data_with_dims(
+            r"\top.brightnesses.array_1:chord_16",
+            tree_name="xtomo",
+            astype="float64",
+        )
         sxr = interp1(t_sxr, sxr, params.times)
         return {"sxr": sxr}
 

@@ -37,13 +37,13 @@ repository = "https://github.com/MIT-PSFC/disruption-py/"
 version = "0.8.0"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.10"
 dynaconf = "^3.2.0"
 numpy = "^1.26.0"
 pandas = {extras = ["hdf5"], version = "^2.2.0"}
 pyodbc = "^5.1.0"
 scikit_learn = "^1.5.0"
-scipy = "^1.13.0"
+scipy = "^1.14.0"
 SQLAlchemy = "^2.0.0"
 
 [tool.poetry.group.dev]
@@ -79,11 +79,17 @@ extension-pkg-allow-list = ["pyodbc"]
 ignored-modules = ["MDSplus"]
 disable = [
     "fixme",
+    "line-too-long",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "missing-module-docstring",
+    "too-few-public-methods",
     "too-many-arguments",
     "too-many-branches",
     "too-many-instance-attributes",
     "too-many-lines",
     "too-many-locals",
+    "too-many-positional-arguments",
     "too-many-statements",
 ]
 
