@@ -103,13 +103,13 @@ pylint-todos:
 
 shellcheck:
 	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
-	poetry run shellcheck --version
+	shellcheck --version
 	find -type f -not -path '*/.git/*' \
 	| xargs grep -l '^#!/bin/bash' \
 	| while read -r F; \
 	do \
 	   echo "--> $$F"; \
-	   poetry run shellcheck "$$F"; \
+	   shellcheck "$$F"; \
 	done
 
 yamllint:
