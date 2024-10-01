@@ -20,7 +20,8 @@ class CmodThomsonDensityMeasure:
     @staticmethod
     def compare_ts_tci(params: PhysicsMethodParams, nlnum=4):
         """
-        Compare chord integrated Thomson electron density with TCI results.
+        Helper function used for comparing electron density measurements from
+        Thomson scattering with the two-color interferometer (TCI).
 
         Parameters
         ----------
@@ -32,7 +33,7 @@ class CmodThomsonDensityMeasure:
         Returns
         -------
         tuple
-            Tuple containing the Thomson density and TCI results.
+            Tuple containing the Thomson and TCI electron density measurements.
         """
         nl_ts1 = [1e32]
         nl_ts2 = [1e32]
@@ -70,7 +71,7 @@ class CmodThomsonDensityMeasure:
     @staticmethod
     def _parse_yags(params: PhysicsMethodParams):
         """
-        Parse YAG data to determine indices and counts.
+        Parse YAG laser data to determine indices and counts.
 
         Parameters
         ----------
@@ -127,7 +128,7 @@ class CmodThomsonDensityMeasure:
     def _integrate_ts_tci(params: PhysicsMethodParams, nlnum):
         """
         Integrate Thomson electron density measurement to the line integrated electron
-        density for comparison with two color interferometer (TCI) measurement results.
+        density for comparison with two-color interferometer (TCI) measurement results.
 
         Parameters
         ----------
@@ -274,7 +275,6 @@ class CmodThomsonDensityMeasure:
         t = nets_core_t
         return t, z, n_e, n_e_sig
 
-    # TODO: Move to utils
     @staticmethod
     def _efit_rz2psi(params: PhysicsMethodParams, r, z, t, tree="analysis"):
         """

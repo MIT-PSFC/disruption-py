@@ -339,7 +339,7 @@ class CmodPhysicsMethods:
     )
     def get_z_parameters(params: PhysicsMethodParams):
         """
-        Retrieve and interpolate Z parameters.
+        Retrieve and interpolate plasma's vertical position parameters.
 
         Parameters
         ----------
@@ -349,7 +349,7 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the Z parameters, including "z_error", "z_prog",
+            A dictionary containing the vertical position parameters, including "z_error", "z_prog",
             "zcur", "v_z", and "z_times_v_z".
         """
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
@@ -550,7 +550,8 @@ class CmodPhysicsMethods:
     @staticmethod
     def _get_power(times, p_lh, t_lh, p_icrf, t_icrf, p_rad, t_rad, p_ohm):
         """
-        Calculate the total power input and radiated fraction.
+        Calculate the input and radiated powers, and then calculate the
+        radiated fraction.
 
         Parameters
         ----------
@@ -653,7 +654,7 @@ class CmodPhysicsMethods:
     @staticmethod
     def _get_kappa_area(times, aminor, area, a_times):
         """
-        Interpolate the kappa area.
+        Calculate and interpolate kappa_area
 
         Parameters
         ----------
@@ -669,7 +670,7 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the kappa area.
+            A dictionary containing the kappa_area.
         """
         output = {"kappa_area": interp1(a_times, area / (np.pi * aminor**2), times)}
         return output
@@ -678,7 +679,8 @@ class CmodPhysicsMethods:
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
     def get_kappa_area(params: PhysicsMethodParams):
         """
-        Retrieve and calculate the kappa area.
+        Retrieve and calculate the plasma's ellipticity (kappa, also known as
+        the elongation) using its area and minor radius.
 
         Parameters
         ----------
@@ -688,7 +690,7 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the calculated kappa area.
+            A dictionary containing the calculated kappa_area.
         """
         aminor = params.mds_conn.get_data(
             r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
@@ -863,7 +865,7 @@ class CmodPhysicsMethods:
     @staticmethod
     def _get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
         """
-        Calculate electron density, its gradient, and Greenwald fraction.
+        Calculate electron density, its time derivative, and Greenwald fraction.
 
         Parameters
         ----------
@@ -886,7 +888,7 @@ class CmodPhysicsMethods:
         -------
         dict
             A dictionary containing interpolated electron density (`n_e`),
-            its gradient (`dn_dt`), and the Greenwald fraction (`greenwald_fraction`).
+            its time derivative (`dn_dt`), and the Greenwald fraction (`greenwald_fraction`).
         """
         if len(n_e) != len(t_n):
             raise CalculationError("n_e and t_n are different lengths")
@@ -970,7 +972,7 @@ class CmodPhysicsMethods:
     @physics_method(columns=["i_efc"], tokamak=Tokamak.CMOD)
     def get_efc_current(params: PhysicsMethodParams):
         """
-        Retrieve the EFC current for a given shot.
+        Retrieve the error field correction (EFC) current for a given shot.
 
         Parameters
         ----------
@@ -1770,7 +1772,7 @@ class CmodPhysicsMethods:
     @physics_method(columns=["sxr"], tokamak=Tokamak.CMOD)
     def get_sxr_data(params: PhysicsMethodParams):
         """
-        Retrieve soft X-ray (SXR) data for a given shot.
+        Retrieve soft X-ray (SXR) data from array 1 chord 16 for a given shot.
 
         Parameters
         ----------

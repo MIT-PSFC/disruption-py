@@ -32,7 +32,8 @@ class D3DPhysicsMethods:
     @physics_method(columns=["time_until_disrupt"], tokamak=Tokamak.D3D)
     def get_time_until_disrupt(params: PhysicsMethodParams):
         """
-        Calculate the time until disruption occurs.
+        Calculate the time until the disruption for a given shot. If the shot does
+        not disrupt, return NaN.
 
         Parameters
         ----------
