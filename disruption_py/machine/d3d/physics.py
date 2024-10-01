@@ -940,9 +940,10 @@ class D3DPhysicsMethods:
         Reference
         -------
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_peaking_factors_d3d.m
+        https://github.com/MIT-PSFC/disruption-py/issues/261
         https://github.com/MIT-PSFC/disruption-py/pull/265
 
-        Last major update by William Wei on 8/30/2024
+        Last major update by William Wei on 10/01/2024
         """
         ## Thomson parameters
         ts_data_type = "blessed"  # either 'blessed', 'unblessed', or 'ptdata'
