@@ -2,10 +2,7 @@
 
 """
 This module provides decorators and utility functions for caching the results of
-expensive method calls in physics calculations. The `cache_method` decorator allows
-methods to store their results based on input parameters, reducing redundant calculations
-for the same shot and timebase. The `manually_cache` function provides a way to cache
-results based on a DataFrame and specified columns.
+expensive method calls in physics calculations.
 """
 
 import functools

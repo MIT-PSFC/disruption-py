@@ -1276,6 +1276,7 @@ class D3DPhysicsMethods:
         # Interpolate again to get rhovn on same psin base
         for i in range(psin.shape[0]):
             rho_vn_diag[i] = interp1(psin_interp, rho_vn_diag_almost[i, :], psin[i, :])
+        return psin, rho_vn_diag
 
     @staticmethod
     @physics_method(columns=["z_eff"], tokamak=Tokamak.D3D)

@@ -2,10 +2,6 @@
 
 """
 Module for defining parameters used in physics methods for DisruptionPy.
-
-This module contains the `PhysicsMethodParams` class, which holds useful
-variables for physics methods, including MDSplus connections, timebase data,
-and caching mechanisms for results.
 """
 
 import logging

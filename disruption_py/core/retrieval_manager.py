@@ -35,9 +35,9 @@ class RetrievalManager:
     tokamak : Tokamak
         The tokamak instance.
     process_database : ShotDatabase
-        The database for processing shot data.
+        The SQL database
     process_mds_conn : ProcessMDSConnection
-        The MDS connection for processing.
+        The MDS connection
     """
 
     logger = logging.getLogger("disruption_py")
@@ -54,9 +54,9 @@ class RetrievalManager:
         tokamak : Tokamak
             The tokamak instance.
         process_database : ShotDatabase
-            The database for processing shot data.
+            The SQL database.
         process_mds_conn : ProcessMDSConnection
-            The MDS connection for processing.
+            The MDS connection.
         """
         self.tokamak = tokamak
         self.process_database = process_database
@@ -111,7 +111,7 @@ class RetrievalManager:
         Returns
         -------
         PhysicsMethodParams
-            The parameters for the physics method.
+            Parameters containing MDS connection and shot information
         """
 
         disruption_time = self.process_database.get_disruption_time(shot_id=shot_id)
@@ -163,7 +163,7 @@ class RetrievalManager:
         cls : type
             The class type.
         physics_method_params : PhysicsMethodParams
-            The parameters for the physics method to clean up.
+            Parameters containing MDS connection and shot information.
         """
         physics_method_params.cleanup()
 

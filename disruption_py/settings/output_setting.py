@@ -483,9 +483,10 @@ class CSVOutputSetting(OutputSetting):
         """
         self.filepath = filepath
         self.flexible_columns = flexible_columns
-        self.results: pd.DataFrame = pd.DataFrame()
+        self.output_shot_count = 0
         if clear_file and os.path.exists(filepath):
             os.remove(filepath)
+        self.results: pd.DataFrame = pd.DataFrame()
 
     def _output_shot(self, params: OutputSettingParams):
         """Output a single shot to the CSV file.

@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 """
-Module for mapping string attributes to enum values.
-
 This module provides functions to convert string attributes of an object
 to corresponding enum values and to convert string values to enum values.
 """
@@ -20,11 +18,6 @@ def map_string_attributes_to_enum(obj, enum_translations: Dict):
         The object whose attributes will be mapped to enum values.
     enum_translations : Dict[str, type]
         A dictionary mapping attribute names to their corresponding enum classes.
-
-    Raises
-    ------
-    ValueError
-        If the value of an attribute cannot be converted to the corresponding enum.
     """
     for field_name, enum_class in enum_translations.items():
         if hasattr(obj, field_name) and not isinstance(

@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
 
 """
-Module for populating shot data using physics methods in DisruptionPy.
-
-This module contains functions to retrieve and populate shot data by executing
-physics methods. It handles method binding, filtering based on retrieval settings,
-and ensures data consistency across different methods.
+Module for populating shot data by executing physics methods in DisruptionPy.
 """
 
 import time
 import traceback
 from collections.abc import Iterable
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -37,7 +34,7 @@ def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams) -> pd.Da
     Parameters
     ----------
     physics_method_params : PhysicsMethodParams
-        The parameters containing pre-filled shot data and other relevant information.
+        Parameters containing MDS connection and shot information
 
     Returns
     -------
@@ -200,9 +197,9 @@ def populate_method(
     Parameters
     ----------
     physics_method_params : PhysicsMethodParams
-        The parameters to be passed to the method.
+        Parameters containing MDS connection and shot information
     bound_method_metadata : BoundMethodMetadata
-        The metadata for the bound method to be executed.
+        The metadata for a physics method like the associated tokamak, columns, etc.
     start_time : float
         The start time for measuring execution duration.
 
