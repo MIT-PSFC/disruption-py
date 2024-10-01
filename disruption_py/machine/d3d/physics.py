@@ -1030,7 +1030,7 @@ class D3DPhysicsMethods:
             p_rad = 0
 
         # Calculate te_pf & ne_pf
-        if ts and ts_radius in ts:
+        if ts != 0 and ts_radius in ts:
             # Drop data outside of valid range
             invalid_indices = np.where(
                 (ts[ts_radius] < ts_radial_range[0])
