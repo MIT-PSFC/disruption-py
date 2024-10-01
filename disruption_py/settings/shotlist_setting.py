@@ -78,12 +78,17 @@ class FileShotlistSetting(ShotlistSetting):
     """
 
     def __init__(self, file_path: str, column_index: int = 0, **kwargs: Dict):
-        kwargs.setdefault("header", "infer")
-        df = pd.read_csv(file_path, **kwargs)
-        arr = df.values[:, column_index]
-        self.shotlist = arr.astype(int).tolist()
+        self.file_path = file_path
+        self.column_index = column_index
+        self.kwargs = kwargs
+        self.shotlist = []
 
     def _get_shotlist(self, params: ShotlistSettingParams) -> List:
+        if not self.shotlist:
+            self.kwargs.setdefault("header", "infer")
+            df = pd.read_csv(self.file_path, **self.kwargs)
+            arr = df.values[:, self.column_index]
+            self.shotlist = arr.astype(int).tolist()
         return self.shotlist
 
 
