@@ -23,7 +23,7 @@ Where 'hot' refers to the VDEs preceding the Thermal Quench (TQ), while 'cold' r
 
 Column description:
 - `shot` (integer): shot numbers,
-- `onset_time` (seconds): manually labeled onset times of the VDEs,
+- `onset_time` (float, seconds): manually labeled onset times of the VDEs,
 - `notes` (string): any additional notes about the shot.
 
 All of these shots have been manually vetted by @AlexSaperstein for the presence of VDEs and their onset times.
@@ -61,8 +61,8 @@ Other shots may have labeling errors since they have not yet been manually valid
 
 Column description:
 - `shot` (integer): shot numbers,
-- `injection_time` (seconds): time of the injection, based on when the Mo +31 charge state signal began to increase,
-- `duration` (seconds): time between when the Mo +31 charge state signal began to increase and stopped increasing,
-- `thermal_quench_time` (seconds): time of the thermal quench, determined from core Te measurements using an ECE diagnostic system,
+- `injection_time` (float, seconds): time of the injection, based on when the Mo +31 charge state signal began to increase,
+- `duration` (float, seconds): time between when the Mo +31 charge state signal began to increase and stopped increasing,
+- `thermal_quench_time` (float, seconds): time of the thermal quench, determined from core Te measurements using an ECE diagnostic system,
 - `vetted` (bool): whether the shot has been manually validated as a UFO disruption, True (1) or False (0),
 - `notes` (string): additional notes.
