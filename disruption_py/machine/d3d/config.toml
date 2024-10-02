@@ -1,0 +1,115 @@
+[d3d]
+MDSPLUS_CONNECTION_STRING = "atlas"
+
+[d3d.database]
+profile_path= "~/D3DRDB.sybase_login"
+driver= "FreeTDS"
+host= "d3drdb"
+port= 8001
+db_name= "d3drdb"
+
+[d3d.database.protected_columns]
+dynaconf_merge = []
+
+[d3d.testing]
+TEST_COLUMNS = [
+	"h98",
+	"ip",
+	"q95",
+	"squareness",
+	"zcur_normalized",
+	"q0",
+	"ip_error",
+	"beta_p",
+	"time_until_disrupt",
+	"li_rt",
+	"beta_p_rt",
+	"n1rms_normalized",
+	"qstar",
+	"ip_error_rt",
+	"h_alpha",
+	"n_e_rt",
+	"wmhd_rt",
+	"ip_rt",
+	"dli_dt",
+	"dbetap_dt",
+	"dn_dt",
+	"shot",
+	"n_equal_1_mode",
+	"dip_dt",
+	"upper_gap",
+	"n_equal_1_normalized",
+	"q95_rt",
+	"zcur",
+	"lower_gap",
+	"greenwald_fraction_rt",
+	"kappa",
+	"kappa_area",
+	"power_supply_railed",
+	"n_e",
+	"delta",
+	"greenwald_fraction",
+	"dwmhd_dt",
+	"wmhd",
+	"aminor",
+	"time",
+	"li",
+	"beta_n",
+	"dipprog_dt",
+	"dipprog_dt_rt",
+	"p_ohm",
+	"v_loop",
+	"p_nbi",
+	"p_ech",
+	"p_rad",
+	"radiated_fraction",
+	"te_peaking_cva_rt", 
+	"ne_peaking_cva_rt", 
+	"prad_peaking_cva_rt", 
+	"prad_peaking_xdiv_rt",
+]
+EXPECTED_FAILURE_COLUMNS = [
+	"kappa",
+	"h_alpha",
+	"dipprog_dt_rt",
+	"li",
+	"dwmhd_dt",
+	"beta_p",
+	"dn_dt",
+	"greenwald_fraction",
+	"li_rt",
+	"n_equal_1_normalized",
+	"zcur",
+	"dli_dt",
+	"q95_rt",
+	"zcur_normalized",
+	"qstar",
+	"wmhd",
+	"lower_gap",
+	"beta_p_rt",
+	"dbetap_dt",
+	"n_equal_1_mode",
+	"q95",
+	"upper_gap",
+	"q0",
+	"n_e",
+	"beta_n",
+	"kappa_area",
+	"commit_hash",
+	"p_ohm",
+	"p_rad",
+	"radiated_fraction",
+	"squareness",
+	"delta",
+	"aminor",
+	"te_peaking_cva_rt", 
+	"ne_peaking_cva_rt", 
+	"prad_peaking_cva_rt", 
+	"prad_peaking_xdiv_rt",
+]
+
+[d3d.testing.test_shots]
+disrup1_fast = 161228
+disrup2_full = 161237
+no_disrup1_full = 166177
+no_disrup2_full = 166253
