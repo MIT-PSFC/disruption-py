@@ -995,6 +995,7 @@ class D3DPhysicsMethods:
             t_rad_xdiv /= 1e3  # [ms] -> [s]
             rad_xdiv = interp1(t_rad_xdiv, rad_xdiv, params.times)
         except mdsExceptions.MdsException:
+            calculate_prad_pf = True
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             params.logger.info(
                 (
@@ -1003,9 +1004,8 @@ class D3DPhysicsMethods:
                 ),
                 params.shot_id,
             )
-            calculate_prad_pf = True
 
-        # Get raw Thomson data     
+        # Get raw Thomson data
         try:
             ts = D3DPhysicsMethods._get_ne_te(params, data_source=ts_data_type)
             for option in ts_options:
@@ -1014,9 +1014,9 @@ class D3DPhysicsMethods:
                     break
             efit_dict = D3DPhysicsMethods._get_efit_dict(params)
         except (NotImplementedError, CalculationError, mdsExceptions.MdsException):
+            ts = {}
             params.logger.info("[Shot %s]: Failed to get TS data", params.shot_id)
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
-            ts = {}
         if ts:
             ts["psin"], ts["rhovn"] = D3DPhysicsMethods.efit_rz_interp(ts, efit_dict)
             ts["rhovn"] = ts["rhovn"].T
