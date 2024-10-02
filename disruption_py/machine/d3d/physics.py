@@ -999,13 +999,14 @@ class D3DPhysicsMethods:
             params.logger.info(
                 (
                     "[Shot %s]: Failed to get rad_cva and rad_xdiv from MDSplus."
-                    "Calculating using raw bolometer data."
+                    " Calculating using raw bolometer data."
                 ),
                 params.shot_id,
             )
             calculate_prad_pf = True
 
         # Get raw Thomson data
+        ts = {}
         try:
             ts = D3DPhysicsMethods._get_ne_te(params, data_source=ts_data_type)
             for option in ts_options:
@@ -1016,7 +1017,6 @@ class D3DPhysicsMethods:
         except (NotImplementedError, CalculationError, mdsExceptions.MdsException):
             params.logger.info("[Shot %s]: Failed to get TS data", params.shot_id)
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
-            ts = {}
         if ts:
             ts["psin"], ts["rhovn"] = D3DPhysicsMethods.efit_rz_interp(ts, efit_dict)
             ts["rhovn"] = ts["rhovn"].T
