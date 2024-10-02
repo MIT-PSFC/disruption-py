@@ -162,13 +162,6 @@ _get_shotlist_setting_mappings: Dict[str, ShotlistSetting] = {
     "d3d_paper_shotlist": IncludedShotlistSetting("paper_shotlist.txt"),
     "d3d_train_disr": IncludedShotlistSetting("train_disr.txt"),
     "d3d_train_nondisr": IncludedShotlistSetting("train_nondisr.txt"),
-    "cmod_test": IncludedShotlistSetting("cmod_test.txt"),
-    "cmod_non_disruptions_ids_not_blacklist": IncludedShotlistSetting(
-        "cmod_non_disruptions_ids_not_blacklist.txt"
-    ),
-    "cmod_non_disruptions_ids_not_blacklist_mini": IncludedShotlistSetting(
-        "cmod_non_disruptions_ids_not_blacklist_mini.txt"
-    ),
 }
 # --8<-- [end:get_shotlist_setting_dict]
 
