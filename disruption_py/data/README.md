@@ -12,7 +12,7 @@ _file_ | `cmod_vde.csv`
 _machine_ | **Alcator C-MOD**
 _total shots_ | **99**
 _years_ | **2012-2016**
-_maintainer_ | @AlexSaperstein
+_maintainer_ | [Alex Saperstein](https://github.com/alexsaperstein)
 
 This is a list of disruptive shots with Vertical Displacement Events (VDEs) on Alcator C-Mod.
 
@@ -26,7 +26,7 @@ Column description:
 - `onset_time` (seconds): manually labeled onset times of the VDEs,
 - `notes` (string): any additional notes about the shot.
 
-All of these shots have been manually vetted by Alex Saperstein for the presence of VDEs and their onset times.
+All of these shots have been manually vetted by @AlexSaperstein for the presence of VDEs and their onset times.
 Onset times were chosen based on significant deviations (> ~2 cm) in the `z_error` feature.
 
 > [!NOTE]
@@ -41,7 +41,7 @@ _file_ | `cmod_ufo.csv`
 _machine_ | **Alcator C-MOD**
 _total shots_ | **122**
 _years_ | **2012-2016**
-_maintainer_ | @HWietfeldt
+_maintainer_ | [Henry Wietfeldt](https://github.com/hwietfeldt)
 
 This is a list of disruptive shots with likely UFO disruptions on Alcator C-Mod.
 
@@ -53,7 +53,7 @@ Increases in the Mo +31 charge state signal were labeled as injections if:
 - low error in the vertical position at the time of injection.
 
 This list contains likely UFO disruptions, defined as shots with a labeled high-Z injection within 10 ms prior to the thermal quench onset.
-Only 1/6th of these shots were manually validated as containing a UFO disruption by Henry Wietfeldt.
+Only 1/6th of these shots were manually validated as containing a UFO disruption by @HWietfeldt.
 Whether a shot has been validated is indicated in the "vetted" column.
 Other shots may have labeling errors since they have not yet been manually validated.
 
