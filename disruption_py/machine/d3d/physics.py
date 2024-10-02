@@ -986,11 +986,13 @@ class D3DPhysicsMethods:
         try:
             rad_cva, t_rad_cva = params.mds_conn.get_data_with_dims(
                 f"ptdata('dpsrrdcva', {params.shot_id})", tree_name="d3d"
-            )
+            )  # [], [ms]
+            t_rad_cva /= 1e3  # [ms] -> [s]
             rad_cva = interp1(t_rad_cva, rad_cva, params.times)
             rad_xdiv, t_rad_xdiv = params.mds_conn.get_data_with_dims(
                 f"ptdata('dpsrrdxdiv', {params.shot_id})", tree_name="d3d"
-            )
+            )  # [], [ms]
+            t_rad_xdiv /= 1e3  # [ms] -> [s]
             rad_xdiv = interp1(t_rad_xdiv, rad_xdiv, params.times)
         except mdsExceptions.MdsException:
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
@@ -1021,6 +1023,7 @@ class D3DPhysicsMethods:
             ts["psin"] = ts["psin"].T
 
         # Get P_rad data
+        p_rad = {}
         if calculate_prad_pf:
             try:
                 p_rad = D3DPhysicsMethods._get_p_rad(
@@ -1033,10 +1036,9 @@ class D3DPhysicsMethods:
                 params.logger.debug(
                     "[Shot %s]: %s", params.shot_id, traceback.format_exc()
                 )
-                p_rad = {}
 
         # Calculate te_pf & ne_pf
-        if ts and (ts_radius in ts):
+        if ts_radius in ts:
             # Drop data outside of valid range
             invalid_indices = np.where(
                 (ts[ts_radius] < ts_radial_range[0])
@@ -1100,7 +1102,7 @@ class D3DPhysicsMethods:
             ne_pf = interp1(ts["time"], ne_pf, params.times)
 
         # Calculate prad_cva, prad_xdiv
-        if p_rad:
+        if calculate_prad_pf and p_rad:
             # Interpolate zmaxis and channel intersects x onto the bolometer timebase
             z_m_axis = interp1(efit_dict["time"], efit_dict["zmaxis"], p_rad["t"])
             z_m_axis = np.repeat(z_m_axis[:, np.newaxis], p_rad["x"].shape[1], axis=1)
