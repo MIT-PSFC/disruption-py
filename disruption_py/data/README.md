@@ -63,6 +63,6 @@ Column description:
 - `shot` (integer): shot numbers,
 - `injection_time` (seconds): time of the injection, based on when the Mo +31 charge state signal began to increase,
 - `duration` (seconds): time between when the Mo +31 charge state signal began to increase and stopped increasing,
-- `thermal_quench_time` (seconds): time between `t_injection` and the onset of the thermal quench, determined from core Te measurements using an ECE diagnostic system,
-- `vetted` (1/0): 1 if the shot has been manually validated as a UFO disruption, 0 otherwise,
-- `notes` (string): additional notes, including whether the shot has been validated as a UFO.
+- `thermal_quench_time` (seconds): time of the thermal quench, determined from core Te measurements using an ECE diagnostic system,
+- `vetted` (bool): whether the shot has been manually validated as a UFO disruption, True (1) or False (0),
+- `notes` (string): additional notes.
