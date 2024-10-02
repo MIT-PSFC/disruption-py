@@ -940,8 +940,8 @@ class D3DPhysicsMethods:
         Reference
         -------
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_peaking_factors_d3d.m
-        https://github.com/MIT-PSFC/disruption-py/issues/261
         https://github.com/MIT-PSFC/disruption-py/pull/265
+        https://github.com/MIT-PSFC/disruption-py/pull/328
 
         Last major update by William Wei on 10/01/2024
         """
@@ -982,6 +982,7 @@ class D3DPhysicsMethods:
         rad_cva = [np.nan]
         rad_xdiv = [np.nan]
         # Get precomputed rad_cva & rad_xdiv data stored in ptdata tree
+        calculate_prad_pf = False
         try:
             rad_cva, t_rad_cva = params.mds_conn.get_data_with_dims(
                 f"ptdata('dpsrrdcva', {params.shot_id})", tree_name="d3d"
@@ -995,10 +996,12 @@ class D3DPhysicsMethods:
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
             params.logger.info(
                 (
-                    "[Shot %s]: Failed to get rad_cva and rad_xdiv from MDSplus. Calculating using raw bolometer data."
+                    "[Shot %s]: Failed to get rad_cva and rad_xdiv from MDSplus."
+                    "Calculating using raw bolometer data."
                 ),
                 params.shot_id,
             )
+            calculate_prad_pf = True
 
         # Get raw Thomson data
         try:
@@ -1011,26 +1014,29 @@ class D3DPhysicsMethods:
         except (NotImplementedError, CalculationError, mdsExceptions.MdsException):
             params.logger.info("[Shot %s]: Failed to get TS data", params.shot_id)
             params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
-            ts = 0
-        if ts != 0:
+            ts = {}
+        if ts:
             ts["psin"], ts["rhovn"] = D3DPhysicsMethods.efit_rz_interp(ts, efit_dict)
             ts["rhovn"] = ts["rhovn"].T
             ts["psin"] = ts["psin"].T
 
         # Get P_rad data
-        try:
-            p_rad = D3DPhysicsMethods._get_p_rad(
-                params, fan=bolometer_fan, smoothing_window=smoothing_window
-            )
-        except mdsExceptions.MdsException:
-            params.logger.info(
-                "[Shot %s]: Failed to get bolometer data", params.shot_id
-            )
-            params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
-            p_rad = 0
+        if calculate_prad_pf:
+            try:
+                p_rad = D3DPhysicsMethods._get_p_rad(
+                    params, fan=bolometer_fan, smoothing_window=smoothing_window
+                )
+            except mdsExceptions.MdsException:
+                params.logger.info(
+                    "[Shot %s]: Failed to get bolometer data", params.shot_id
+                )
+                params.logger.debug(
+                    "[Shot %s]: %s", params.shot_id, traceback.format_exc()
+                )
+                p_rad = {}
 
         # Calculate te_pf & ne_pf
-        if ts != 0 and ts_radius in ts:
+        if ts and (ts_radius in ts):
             # Drop data outside of valid range
             invalid_indices = np.where(
                 (ts[ts_radius] < ts_radial_range[0])
@@ -1094,7 +1100,7 @@ class D3DPhysicsMethods:
             ne_pf = interp1(ts["time"], ne_pf, params.times)
 
         # Calculate prad_cva, prad_xdiv
-        if (np.isnan(rad_cva[0]) or (np.isnan(rad_xdiv[0]))) and p_rad:
+        if p_rad:
             # Interpolate zmaxis and channel intersects x onto the bolometer timebase
             z_m_axis = interp1(efit_dict["time"], efit_dict["zmaxis"], p_rad["t"])
             z_m_axis = np.repeat(z_m_axis[:, np.newaxis], p_rad["x"].shape[1], axis=1)
