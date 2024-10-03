@@ -802,8 +802,8 @@ class D3DPhysicsMethods:
             # TODO: Move to a folder like "/fusion/projects/disruption_warning/data"
             # pylint: disable-next=unreachable
             filename = "/fusion/projects/disruption_warning/matlab_programs/recalc.nc"
-            # pylint: disable=undefined-variable
-            ncid = nc.Dataset(filename, "r")
+            # pylint: disable-next=undefined-variable
+            ncid = nc.Dataset(filename, "r")  # noqa: F821 --> ruff: undefined-name
             brad = ncid.variables["dusbradial_calculated"][:]
             t_n1 = ncid.variables["times"][:] * 1.0e-3  # [ms] -> [s]
             shots = ncid.variables["shots"][:]
