@@ -1023,26 +1023,26 @@ class D3DPhysicsMethods:
                     (no_nans,) = np.where(
                         ~np.isnan(ts["te"][:, i]) & ~np.isnan(ts["ne"][:, i])
                     )
-                    if len(no_nans) > 1:
-                        radii = ts[ts_radius][no_nans, i]
-                        if len(radii) > 2:
-                            rad_coord_interp = np.linspace(
-                                min(radii), max(radii), len(radii)
-                            )
-                            # MATLAB used interp1(kind='pchip') which isn't available in disruption-py
-                            ts["te"][no_nans, i] = interp1(
-                                radii,
-                                ts["te"][no_nans, i],
-                                rad_coord_interp,
-                                "linear",
-                            )
-                            ts["ne"][no_nans, i] = interp1(
-                                radii,
-                                ts["ne"][no_nans, i],
-                                rad_coord_interp,
-                                "linear",
-                            )
-                            ts[ts_radius][no_nans, i] = rad_coord_interp
+                    if len(no_nans) <= 1:
+                        continue
+                    radii = ts[ts_radius][no_nans, i]
+                    if len(radii) <= 2:
+                        continue
+                    rad_coord_interp = np.linspace(min(radii), max(radii), len(radii))
+                    # MATLAB used interp1(kind='pchip') which isn't available in disruption-py
+                    ts["te"][no_nans, i] = interp1(
+                        radii,
+                        ts["te"][no_nans, i],
+                        rad_coord_interp,
+                        "linear",
+                    )
+                    ts["ne"][no_nans, i] = interp1(
+                        radii,
+                        ts["ne"][no_nans, i],
+                        rad_coord_interp,
+                        "linear",
+                    )
+                    ts[ts_radius][no_nans, i] = rad_coord_interp
 
             # Find core bin for Thomson and calculate Te, ne peaking factors
             core_mask = ts[ts_radius] < ts_core_margin

@@ -136,7 +136,8 @@ class RetrievalSettings:
         if is_tokamak_indexed(prop_dict):
             if tokamak.value not in prop_dict:
                 raise ValueError(
-                    f"Tokamak {tokamak.value} not found in shot settings. Available tokamaks are {prop_dict.keys()}"
+                    f"Tokamak {tokamak.value} not found in shot settings. Available"
+                    f" tokamaks are {prop_dict.keys()}"
                 )
 
             prop_dict = prop_dict[tokamak.value]

@@ -154,6 +154,7 @@ class MultiprocessingShotRetriever:
         for consumer in self.consumers:
             consumer.join()
 
-        # Signal the result processing thread to stop once completed processing and wait for it to finish
+        # Signal the result processing thread to stop once completed processing
+        # and wait for it to finish
         self.result_queue.put((None, MARK_COMPLETE))
         self.result_thread.join()

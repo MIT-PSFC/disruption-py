@@ -48,7 +48,8 @@ def map_string_to_enum(value, enum_class, should_raise=True):
     Returns
     -------
     enum_class
-        The corresponding enum value if conversion is successful, otherwise None if should_raise is False.
+        The corresponding enum value if conversion is successful, otherwise None
+        if should_raise is False.
     """
     if isinstance(value, enum_class):
         enum_value = value
