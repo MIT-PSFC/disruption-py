@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+# TODO: https://github.com/MIT-PSFC/disruption-py/pull/271
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+# pylint: disable=missing-module-docstring
+
 import multiprocessing
 import threading
 from enum import Enum
@@ -149,6 +154,7 @@ class MultiprocessingShotRetriever:
         for consumer in self.consumers:
             consumer.join()
 
-        # Signal the result processing thread to stop once completed processing and wait for it to finish
+        # Signal the result processing thread to stop once completed processing
+        # and wait for it to finish
         self.result_queue.put((None, MARK_COMPLETE))
         self.result_thread.join()

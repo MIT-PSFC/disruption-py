@@ -19,7 +19,8 @@ class CmodDraftPhysicsMethods:
 
     @staticmethod
     def get_edge_parameters(times, p_Te, p_ne, edge_rho_min=0.85, edge_rho_max=0.95):
-        """Compute the edge Temperature and edge Density signal from the TS.
+        """
+        Compute the edge Temperature and edge Density signal from the TS.
 
         Parameters
         ----------
@@ -209,7 +210,8 @@ class CmodDraftPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def _get_H98(params: PhysicsMethodParams):
-        """Prepare to compute H98 by getting tau_E
+        """
+        Prepare to compute H98 by getting tau_E
 
         Scaling from eq. 20, ITER Physics Basis Chapter 2
         https://iopscience.iop.org/article/10.1088/0029-5515/39/12/302/pdf

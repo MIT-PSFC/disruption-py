@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""Module for retrieving physics method classes based on the specified tokamak."""
+
 from disruption_py.machine.tokamak import Tokamak
 
 

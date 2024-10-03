@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Module for retrieving and calculating data for DIII-D physics methods.
+"""
+
 import traceback
 
 import numpy as np
@@ -20,10 +24,28 @@ from disruption_py.machine.tokamak import Tokamak
 
 
 class D3DPhysicsMethods:
+    """
+    A class to retrieve and calculate physics-related data for DIII-D.
+    """
 
     @staticmethod
     @physics_method(columns=["time_until_disrupt"], tokamak=Tokamak.D3D)
     def get_time_until_disrupt(params: PhysicsMethodParams):
+        """
+        Calculate the time until the disruption for a given shot. If the shot does
+        not disrupt, return NaN.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the time until disruption. If the shot does
+            not disrupt, return NaN.
+        """
         if params.disrupted:
             return {"time_until_disrupt": params.disruption_time - params.times}
         return {"time_until_disrupt": [np.nan]}
@@ -468,6 +490,29 @@ class D3DPhysicsMethods:
         tokamak=Tokamak.D3D,
     )
     def get_ip_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve plasma current parameters including measured and programmed values.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+            - 'ip' : array
+                Measured plasma current values interpolated to the specified times.
+            - 'ip_error' : array
+                Error in plasma current, defined where feedback is active.
+            - 'dip_dt' : array
+                Time derivative of the measured plasma current.
+            - 'dipprog_dt' : array
+                Time derivative of the programmed plasma current.
+            - 'power_supply_railed' : array
+                Indicator of whether the power supply has railed at the specified times.
+        """
         ip = [np.nan]
         ip_prog = [np.nan]
         dip_dt = [np.nan]
@@ -595,7 +640,7 @@ class D3DPhysicsMethods:
     )
     def get_rt_ip_parameters(params: PhysicsMethodParams):
         """
-        Get real-time plasma current and programmed plasma current from EFIT,
+        Get the real-time plasma current and programmed plasma current from EFIT,
         then compute the real-time ip_error and the derivatives of all of the above signals.
 
         References
@@ -783,87 +828,10 @@ class D3DPhysicsMethods:
         return {"zcur": z_cur, "zcur_normalized": z_cur_norm}
 
     @staticmethod
-    @physics_method(
-        columns=["n_equal_1_normalized", "n_equal_1_mode"],
-        tokamak=Tokamak.D3D,
-    )
-    def get_n1_bradial_parameters(params: PhysicsMethodParams):
-        output = {
-            "n_equal_1_normalized": [np.nan],
-            "n_equal_1_mode": [np.nan],
-        }
-        # The following shots are missing bradial calculations in MDSplus and
-        # must be loaded from a separate datafile
-        # NOTE: This implementation needs revising.
-        #       In the meantime, let's disable the corresponding pylint error.
-        #       pylint: disable-next=no-else-raise
-        if 176030 <= params.shot_id <= 176912:
-            raise NotImplementedError
-            # TODO: Move to a folder like "/fusion/projects/disruption_warning/data"
-            # pylint: disable-next=unreachable
-            filename = "/fusion/projects/disruption_warning/matlab_programs/recalc.nc"
-            # pylint: disable-next=undefined-variable
-            ncid = nc.Dataset(filename, "r")  # noqa: F821 --> ruff: undefined-name
-            brad = ncid.variables["dusbradial_calculated"][:]
-            t_n1 = ncid.variables["times"][:] * 1.0e-3  # [ms] -> [s]
-            shots = ncid.variables["shots"][:]
-            shot_indices = np.where(shots == params.shot_id)
-            if len(shot_indices) == 1:
-                dusbradial = brad[shot_indices, :] * 1.0e-4  # [T]
-            else:
-                params.logger.info(
-                    f"Shot {params.shot_id} not found in {filename}.  Returning NaN."
-                )
-                dusbradial = np.full(len(params.times), np.nan)
-            ncid.close()
-        # Check ONFR than DUD(legacy)
-        else:
-            try:
-                # TODO: TREE NAME?
-                dusbradial, t_n1 = params.mds_conn.get_data_with_dims(
-                    f"ptdata('onsbradial', {params.shot_id})",
-                    tree_name="d3d",
-                )
-                dusbradial = interp1(t_n1, dusbradial, params.times)
-                dusbradial *= 1.0e-4  # [T]
-            except mdsExceptions.MdsException:
-                params.logger.debug(
-                    "[Shot %s]: %s", params.shot_id, traceback.format_exc()
-                )
-                try:
-                    dusbradial, t_n1 = params.mds_conn.get_data_with_dims(
-                        f"ptdata('dusbradial', {params.shot_id})",
-                        tree_name="d3d",
-                    )
-                    dusbradial = interp1(t_n1, dusbradial, params.times)
-                    dusbradial *= 1.0e-4  # [T]
-                except mdsExceptions.MdsException:
-                    params.logger.info(
-                        "[Shot %s]: Failed to get n1 bradial signal. Returning NaN.",
-                        params.shot_id,
-                    )
-                    params.logger.debug(
-                        "[Shot %s]: %s", params.shot_id, traceback.format_exc()
-                    )
-                    return output
-        n_equal_1_mode = interp1(dusbradial, t_n1, params.times)
-        # Get toroidal field Btor
-        b_tor, t_b_tor = params.mds_conn.get_data_with_dims(
-            f"ptdata('bt', {params.shot_id})", tree_name="d3d"
-        )
-        b_tor = interp1(t_b_tor, b_tor, params.times)  # [T]
-        n_equal_1_normalized = n_equal_1_mode / b_tor
-        output = {
-            "n_equal_1_normalized": n_equal_1_normalized,
-            "n_equal_1_mode": n_equal_1_mode,
-        }
-        return output
-
-    @staticmethod
     @physics_method(columns=["n1rms", "n1rms_normalized"], tokamak=Tokamak.D3D)
     def get_n1rms_parameters(params: PhysicsMethodParams):
         """
-        Get n1rms data, then compute n1rms_normalized = n1rms / btor
+        Get the n1rms data, then compute n1rms_normalized = n1rms / btor
 
         References
         -------
@@ -1055,26 +1023,26 @@ class D3DPhysicsMethods:
                     (no_nans,) = np.where(
                         ~np.isnan(ts["te"][:, i]) & ~np.isnan(ts["ne"][:, i])
                     )
-                    if len(no_nans) > 1:
-                        radii = ts[ts_radius][no_nans, i]
-                        if len(radii) > 2:
-                            rad_coord_interp = np.linspace(
-                                min(radii), max(radii), len(radii)
-                            )
-                            # MATLAB used interp1(kind='pchip') which isn't available in disruption-py
-                            ts["te"][no_nans, i] = interp1(
-                                radii,
-                                ts["te"][no_nans, i],
-                                rad_coord_interp,
-                                "linear",
-                            )
-                            ts["ne"][no_nans, i] = interp1(
-                                radii,
-                                ts["ne"][no_nans, i],
-                                rad_coord_interp,
-                                "linear",
-                            )
-                            ts[ts_radius][no_nans, i] = rad_coord_interp
+                    if len(no_nans) <= 1:
+                        continue
+                    radii = ts[ts_radius][no_nans, i]
+                    if len(radii) <= 2:
+                        continue
+                    rad_coord_interp = np.linspace(min(radii), max(radii), len(radii))
+                    # MATLAB used interp1(kind='pchip') which isn't available in disruption-py
+                    ts["te"][no_nans, i] = interp1(
+                        radii,
+                        ts["te"][no_nans, i],
+                        rad_coord_interp,
+                        "linear",
+                    )
+                    ts["ne"][no_nans, i] = interp1(
+                        radii,
+                        ts["ne"][no_nans, i],
+                        rad_coord_interp,
+                        "linear",
+                    )
+                    ts[ts_radius][no_nans, i] = rad_coord_interp
 
             # Find core bin for Thomson and calculate Te, ne peaking factors
             core_mask = ts[ts_radius] < ts_core_margin
@@ -1221,13 +1189,26 @@ class D3DPhysicsMethods:
     @staticmethod
     @physics_method(columns=["z_eff"], tokamak=Tokamak.D3D)
     def get_zeff_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve the effective charge (Z_eff) parameters for a given shot.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following key:
+            - 'z_eff' : array
+                Effective charge values interpolated to the specified times.
+        """
         # Get Zeff
         zeff, t_zeff = params.mds_conn.get_data_with_dims(
             r"\d3d::top.spectroscopy.vb.zeff:zeff", tree_name="d3d"
         )
         t_zeff = t_zeff / 1.0e3  # [ms] -> [s]
-        # t_nbi = params.mds_conn.get(
-        # r"dim_of(\d3d::top.nb:pinj)").data()/1.e3  # [ms]->[s]
         if len(t_zeff) > 2:
             zeff = interp1(
                 t_zeff,
@@ -1606,6 +1587,37 @@ class D3DPhysicsMethods:
     @staticmethod
     @cache_method
     def _get_efit_dict(params: PhysicsMethodParams):
+        """
+        Retrieve the EFIT data dictionary for a given shot.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+            - 'time' : array
+                Time corresponding to the EFIT data in seconds.
+            - 'z' : array
+                Elevation coordinates of the grid from the EFIT data.
+            - 'r' : array
+                Radial coordinates of the grid from the EFIT data.
+            - 'rhovn' : array
+                Normalized radius from the EFIT data.
+            - 'psirz' : array
+                Poloidal flux on the rectangular grid points from the EFIT data.
+            - 'zmaxis' : array
+                Z of magnetic axis from the EFIT data.
+            - 'ssimag' : array
+                Poloidal flux at magnetic axis from the EFIT data.
+            - 'ssibry' : array
+                Poloidal flux at the plasma boundary from the EFIT data.
+            - 'psin' : array
+                Normalized poloidal flux values.
+        """
         efit_dict = {}
         path = r"\top.results.geqdsk:"
         nodes = ["z", "r", "rhovn", "psirz", "zmaxis", "ssimag", "ssibry"]

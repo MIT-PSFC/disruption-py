@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" Used in the documentation for the physics methods. """
+"""Used in the documentation for the physics methods."""
 
 import numpy as np
 
@@ -13,21 +13,24 @@ from disruption_py.workflow import get_shots_data
 
 @physics_method(columns=["upper_gap", "lower_gap"], tokamak=Tokamak.D3D)
 def decorated_physics_method(params: PhysicsMethodParams) -> dict:
-    """All parametrized methods passed to `get_shots_data` will be called once for every shot retrieved.
-    Decorated methods may call other decorated methods, however, execution order is not guranteed as calls
-    will be reordered to minimize resource usage based on the `physics_method` decorator.
+    """
+    All parametrized methods passed to `get_shots_data` will be called once for every
+    shot retrieved. Decorated methods may call other decorated methods, however,
+    execution order is not guaranteed as calls will be reordered to minimize resource
+    usage based on the `physics_method` decorator.
 
     Parameters
     ----------
     params : PhysicsMethodParams
-        Parameters passed by disruption_py to the decorated method that should be used to help retrieve the shot data from MDSplus.
+        Parameters passed by disruption_py to the decorated method that should be
+        used to help retrieve the shot data from MDSplus.
 
     Returns
     -------
     dict
         Dictionary containing the results of the decorated method, with each returned
-        parameter being a key-value pair. Each of the dictionary's values should be the same
-        length as the timebase (`params.times`).
+        parameter being a key-value pair. Each of the dictionary's values should
+        be the same length as the timebase (`params.times`).
     """
     _ = params
 

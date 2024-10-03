@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""Module for evaluating fresh data against cached data for testing."""
+
 import logging
 import os
 import time
@@ -176,6 +178,31 @@ def eval_against_cache(
     expected_failure_columns: List[str],
     test_columns=None,
 ) -> Dict[int, pd.DataFrame]:
+    """
+    Evaluate fresh data against cached data for specified shots.
+
+    This function retrieves fresh data from a tokamak and compares it against
+    cached data, identifying any differences. It temporarily patches the NumPy
+    gradient function to ensure compatibility with MATLAB-style gradient calculations.
+
+    Parameters
+    ----------
+    tokamak : Tokamak
+        The tokamak object used to retrieve data.
+    shotlist : List[int]
+        A list of shot identifiers to evaluate.
+    expected_failure_columns : List[str]
+        A list of columns that are expected to fail during evaluation.
+    test_columns : List[str], optional
+        A list of columns to test against the cached data. If None, the function
+        will determine the columns based on the available data.
+
+    Returns
+    -------
+    Dict[int, pd.DataFrame]
+        A dictionary mapping shot identifiers to their corresponding data
+        differences as DataFrames.
+    """
 
     tempfolder = mkdtemp(prefix=f"disruptionpy-{time.strftime('%y%m%d-%H%M%S')}-")
     print(f"Outputting to temporary folder: {tempfolder}")

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Module for managing connections to MDSplus.
+"""
+
 import logging
 from typing import Any, Callable, Dict, List, Tuple
 
@@ -8,7 +12,7 @@ import numpy as np
 
 from disruption_py.config import config
 from disruption_py.core.utils.misc import safe_cast
-from disruption_py.core.utils.shared_instance import SharedInstanceFactory
+from disruption_py.core.utils.shared_instance import SharedInstance
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -16,7 +20,8 @@ class ProcessMDSConnection:
     """
     Abstract class for connecting to MDSplus.
 
-    Ensure that a single MDSPlus connection is used by each process for all shots retrieved by that process.
+    Ensure that a single MDSPlus connection is used by each process for all shots
+    retrieved by that process.
     """
 
     logger = logging.getLogger("disruption_py")
@@ -34,7 +39,11 @@ class ProcessMDSConnection:
 
     @classmethod
     def from_config(cls, tokamak: Tokamak):
-        return SharedInstanceFactory(ProcessMDSConnection).get_instance(
+        """
+        Create instance of the MDS connection based on the connection string
+        from the configuration.
+        """
+        return SharedInstance(ProcessMDSConnection).get_instance(
             config(tokamak).MDSPLUS_CONNECTION_STRING
         )
 
@@ -87,7 +96,8 @@ class MDSConnection:
         self.last_open_tree = None
 
     def get(self, expression: str, arguments: Any = None, tree_name: str = None) -> Any:
-        """Evaluate the specified expression.
+        """
+        Evaluate the specified expression.
 
         The expression is passed as string argument, but may contain optional arguments.
         These arguments are then passed as an array of Data objects.

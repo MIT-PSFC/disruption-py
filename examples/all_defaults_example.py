@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Example usage of `get_shots_data` with all the default arguments explicitly assigned.
+"""
+
 import logging
 
 from disruption_py.settings import LogSettings, RetrievalSettings

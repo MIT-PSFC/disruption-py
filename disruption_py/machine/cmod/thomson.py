@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""Module for processing Thomson electron density measurements."""
+
 import numpy as np
 import scipy as sp
 from MDSplus import mdsExceptions
@@ -10,14 +12,28 @@ from disruption_py.core.utils.misc import safe_cast
 from disruption_py.machine.cmod.efit import CmodEfitMethods
 
 
-# helper class holding functions for thomson density measures
 class CmodThomsonDensityMeasure:
+    """
+    A helper class for Thomson electron density measurements.
+    """
 
-    # The following methods are translated from IDL code.
     @staticmethod
     def compare_ts_tci(params: PhysicsMethodParams, nlnum=4):
         """
-        Comparison between chord integrated Thomson electron density and TCI results.
+        Helper function used for comparing electron density measurements from
+        Thomson scattering with the two-color interferometer (TCI).
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+        nlnum : int, optional
+            The number of the TCI channel to compare (default is 4).
+
+        Returns
+        -------
+        tuple
+            Tuple containing the Thomson and TCI electron density measurements.
         """
         nl_ts1 = [1e32]
         nl_ts2 = [1e32]
@@ -54,6 +70,19 @@ class CmodThomsonDensityMeasure:
 
     @staticmethod
     def _parse_yags(params: PhysicsMethodParams):
+        """
+        Parse YAG laser data to determine indices and counts.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+
+        Returns
+        -------
+        tuple
+            Tuple containing the number of YAGs and their indices.
+        """
         nyag1 = params.mds_conn.get_data(r"\knobs:pulses_q", tree_name="electrons")
         nyag2 = params.mds_conn.get_data(r"\knobs:pulses_q_2", tree_name="electrons")
         indices1 = -1
@@ -99,7 +128,19 @@ class CmodThomsonDensityMeasure:
     def _integrate_ts_tci(params: PhysicsMethodParams, nlnum):
         """
         Integrate Thomson electron density measurement to the line integrated electron
-        density for comparison with two color interferometer (TCI) measurement results
+        density for comparison with two-color interferometer (TCI) measurement results.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+        nlnum : int
+            The number of the TCI channel to integrate.
+
+        Returns
+        -------
+        tuple
+            Tuple containing the integrated electron density and corresponding times.
         """
         t, z, n_e, n_e_sig = CmodThomsonDensityMeasure._map_ts2tci(params, nlnum)
         if z[0, 0] == 1e32:
@@ -126,6 +167,21 @@ class CmodThomsonDensityMeasure:
 
     @staticmethod
     def _map_ts2tci(params: PhysicsMethodParams, nlnum):
+        """
+        Map Thomson density measurements to TCI measurements.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+        nlnum : int
+            The number of the TCI channel to map.
+
+        Returns
+        -------
+        tuple
+            Tuple containing time, z-coordinates, electron density, and density errors.
+        """
         core_mult = 1.0
         edge_mult = 1.0
         t = [1e32]
@@ -219,9 +275,29 @@ class CmodThomsonDensityMeasure:
         t = nets_core_t
         return t, z, n_e, n_e_sig
 
-    # TODO: Move to utils
     @staticmethod
     def _efit_rz2psi(params: PhysicsMethodParams, r, z, t, tree="analysis"):
+        """
+        Interpolate the magnetic flux function (psi) from R and Z coordinates.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+        r : array_like
+            Radial coordinates.
+        z : array_like
+            Vertical coordinates.
+        t : array_like
+            Time points for interpolation.
+        tree : str, optional
+            The MDSplus tree name (default is "analysis").
+
+        Returns
+        -------
+        np.ndarray
+            Interpolated psi values corresponding to the input R and Z coordinates.
+        """
         r = r.flatten()
         z = z.flatten()
         psi = np.full((len(r), len(t)), np.nan)
@@ -229,7 +305,7 @@ class CmodThomsonDensityMeasure:
         psirz, rgrid, zgrid, times = params.mds_conn.get_data_with_dims(
             r"\efit_geqdsk:psirz", tree_name=tree, dim_nums=[0, 1, 2]
         )
-        rgrid, zgrid = np.meshgrid(rgrid, zgrid)  # , indexing='ij')
+        rgrid, zgrid = np.meshgrid(rgrid, zgrid)
 
         points = np.array(
             [rgrid.flatten(), zgrid.flatten()]

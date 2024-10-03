@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""This module contains tests to ensure all of the config settings load properly."""
+
 import os
 
 from disruption_py.config import config

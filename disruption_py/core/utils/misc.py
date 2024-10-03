@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Module for utility functions related to class instantiation, data manipulation, and version control.
+"""
+
 import subprocess
 import warnings
 from typing import List
@@ -27,7 +31,7 @@ def instantiate_classes(lst: List):
 
 def without_duplicates(lst: List):
     """
-    Get list without duplicates maintaining order.
+    Get list without duplicates while maintaining order.
 
     Parameters
     ----------
@@ -43,14 +47,45 @@ def without_duplicates(lst: List):
     return [x for x in lst if not (x in seen or seen.add(x))]
 
 
-def safe_cast(array: np.ndarray, dtype, copy=False):
+def safe_cast(array: np.ndarray, dtype, copy=False) -> np.ndarray:
+    """
+    Safely cast a NumPy array to a specified dtype, suppressing warnings.
+
+    Parameters
+    ----------
+    array : np.ndarray
+        The NumPy array to cast.
+    dtype : type
+        The target data type to cast the array to.
+    copy : bool, optional
+        Whether to create a copy of the array (default is False).
+
+    Returns
+    -------
+    np.ndarray
+        The casted NumPy array.
+    """
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=RuntimeWarning)
         return array.astype(dtype, copy=copy)
 
 
-def safe_df_concat(base_df: pd.DataFrame, new_dfs: List[pd.DataFrame]):
+def safe_df_concat(base_df: pd.DataFrame, new_dfs: List[pd.DataFrame]) -> pd.DataFrame:
+    """
+    Safely concatenate a base DataFrame with a list of new DataFrames.
 
+    Parameters
+    ----------
+    base_df : pd.DataFrame
+        The base DataFrame to concatenate with.
+    new_dfs : List[pd.DataFrame]
+        A list of new DataFrames to concatenate.
+
+    Returns
+    -------
+    pd.DataFrame
+        The concatenated DataFrame.
+    """
     if isinstance(new_dfs, pd.DataFrame):
         new_dfs = [new_dfs]
 
@@ -79,8 +114,15 @@ def safe_df_concat(base_df: pd.DataFrame, new_dfs: List[pd.DataFrame]):
     return concat_df
 
 
-def get_commit_hash():
-    # setup commit hash
+def get_commit_hash() -> str:
+    """
+    Retrieve the current Git commit hash.
+
+    Returns
+    -------
+    str
+        The short commit hash if available, otherwise None.
+    """
     try:
         commit_hash = (
             subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])

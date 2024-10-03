@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+"""
+This module provides classes and methods to specify different domain settings
+for the timebase used, including full, flattop, and ramp-up domains. 
+"""
+
 import traceback
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -21,7 +26,16 @@ DomainSettingType = Union["DomainSetting", str, Dict[Tokamak, "DomainSettingType
 @dataclass
 class DomainSettingParams:
     """
-    Params passed by disruption_py to get_domain() method.
+    Parameters passed to the `get_domain` method.
+
+    Attributes
+    ----------
+    physics_method_params : PhysicsMethodParams
+        The physics method parameters that include timebase information.
+    tokamak : Tokamak
+        The tokamak instance for which the domain is set.
+    logger : Logger
+        Logger instance for logging relevant messages.
     """
 
     physics_method_params: PhysicsMethodParams
@@ -31,14 +45,23 @@ class DomainSettingParams:
 
 class DomainSetting(ABC):
     """
-    A setting for specifying the domain of the timebase to use.
-
-    Should modify the provided physics method params to use the specified domain.
+    Abstract base class for domain settings that modify the timebase
+    domain in physics method parameters.
     """
 
     def get_domain(self, params: DomainSettingParams) -> np.ndarray:
         """
         Get the domain of the timebase to use.
+
+        Parameters
+        ----------
+        params : DomainSettingParams
+            The parameters including the physics method and tokamak information.
+
+        Returns
+        -------
+        np.ndarray
+            Array representing the timebase domain.
         """
         if hasattr(self, "tokamak_overrides"):
             if params.tokamak in self.tokamak_overrides:
@@ -48,15 +71,24 @@ class DomainSetting(ABC):
     @abstractmethod
     def _get_domain(self, params: DomainSettingParams) -> np.ndarray:
         """
-        Get the modified times attribute of the provided physics_method_params
-        given the desired domain of the timebase
+        Abstract method to get the modified times attribute of the physics method
+        parameters based on the domain.
+
+        Parameters
+        ----------
+        params : DomainSettingParams
+            The parameters for domain modification.
+
+        Returns
+        -------
+        np.ndarray
+            Array of modified times.
         """
 
 
 class DomainSettingDict(DomainSetting):
     """
-    Utility class that is automatically used when a dictionary is passed as the
-    `domain_setting` parameter in `RetrievalSettings`.
+    Domain setting class that handles a dictionary of tokamak-domain mappings.
 
     Parameters
     ----------
@@ -67,6 +99,14 @@ class DomainSettingDict(DomainSetting):
     """
 
     def __init__(self, domain_setting_dict: Dict[Tokamak, DomainSettingType]):
+        """
+        Initialize DomainSettingDict with a dictionary of tokamak-domain settings.
+
+        Parameters
+        ----------
+        domain_setting_dict : dict
+            Dictionary of tokamak to domain setting mappings.
+        """
         resolved_domain_setting_dict = {
             map_string_to_enum(tokamak, Tokamak): resolve_domain_setting(
                 individual_setting
@@ -76,6 +116,19 @@ class DomainSettingDict(DomainSetting):
         self.resolved_domain_setting_dict = resolved_domain_setting_dict
 
     def _get_domain(self, params: DomainSettingParams) -> np.ndarray:
+        """
+        Get the domain for the given tokamak based on the resolved settings.
+
+        Parameters
+        ----------
+        params : DomainSettingParams
+            Parameters containing physics method and tokamak information.
+
+        Returns
+        -------
+        np.ndarray
+            The resolved timebase domain for the given tokamak.
+        """
         chosen_setting = self.resolved_domain_setting_dict.get(params.tokamak, None)
         if chosen_setting is not None:
             return chosen_setting.get_domain(params)
@@ -84,7 +137,24 @@ class DomainSettingDict(DomainSetting):
 
 
 class FullDomainSetting(DomainSetting):
+    """
+    Domain setting that uses the full timebase.
+    """
+
     def _get_domain(self, params: DomainSettingParams) -> np.ndarray:
+        """
+        Get the full timebase domain.
+
+        Parameters
+        ----------
+        params : DomainSettingParams
+            Parameters containing physics method and tokamak information.
+
+        Returns
+        -------
+        np.ndarray
+            The full timebase.
+        """
         return params.physics_method_params.times
 
 
@@ -94,15 +164,44 @@ class FlattopDomainSetting(DomainSetting):
     """
 
     def __init__(self):
+        """
+        Initialize the FlattopDomainSetting with tokamak-specific overrides.
+        """
         self.tokamak_overrides = {
             Tokamak.CMOD: self._get_domain_cmod,
             Tokamak.D3D: self._get_domain_d3d,
         }
 
     def _get_domain(self, params: DomainSettingParams) -> np.ndarray:
+        """
+        Get the flattop domain for the given tokamak.
+
+        Parameters
+        ----------
+        params : DomainSettingParams
+            Parameters containing physics method and tokamak information.
+
+        Returns
+        -------
+        np.ndarray
+            The flattop timebase domain.
+        """
         raise ValueError(f"flattop domain not defined for tokamak: {params.tokamak}")
 
     def _get_domain_cmod(self, params: DomainSettingParams) -> np.ndarray:
+        """
+        Get the flattop domain for CMOD tokamak.
+
+        Parameters
+        ----------
+        params : DomainSettingParams
+            Parameters containing physics method and tokamak information.
+
+        Returns
+        -------
+        np.ndarray
+            The flattop timebase domain for CMOD.
+        """
         ip_parameters = CmodPhysicsMethods.get_ip_parameters(
             params=params.physics_method_params
         )
@@ -122,6 +221,19 @@ class FlattopDomainSetting(DomainSetting):
         return params.physics_method_params.times[indices_flattop]
 
     def _get_domain_d3d(self, params: DomainSettingParams) -> np.ndarray:
+        """
+        Get the flattop domain for D3D tokamak.
+
+        Parameters
+        ----------
+        params : DomainSettingParams
+            Parameters containing physics method and tokamak information.
+
+        Returns
+        -------
+        np.ndarray
+            The flattop timebase domain for D3D.
+        """
         try:
             (
                 ip_prog,
@@ -194,16 +306,45 @@ class RampupAndFlattopDomainSetting(DomainSetting):
     """
 
     def __init__(self):
+        """
+        Initialize the RampupAndFlattopDomainSetting with tokamak-specific overrides.
+        """
         self.tokamak_overrides = {
             Tokamak.CMOD: self._get_domain_cmod,
         }
 
     def _get_domain(self, params: DomainSettingParams) -> np.ndarray:
+        """
+        Get the ramp-up and flattop domain for the given tokamak.
+
+        Parameters
+        ----------
+        params : DomainSettingParams
+            Parameters containing physics method and tokamak information.
+
+        Returns
+        -------
+        np.ndarray
+            The ramp-up and flattop timebase domain.
+        """
         raise ValueError(
             f"ramp up and flattop domain not defined for tokamak: {params.tokamak}"
         )
 
     def _get_domain_cmod(self, params: DomainSettingParams) -> np.ndarray:
+        """
+        Get the ramp-up and flattop domain for CMOD tokamak.
+
+        Parameters
+        ----------
+        params : DomainSettingParams
+            Parameters containing physics method and tokamak information.
+
+        Returns
+        -------
+        np.ndarray
+            The ramp-up and flattop timebase domain for CMOD.
+        """
         ip_parameters = CmodPhysicsMethods.get_ip_parameters(
             params=params.physics_method_params
         )
@@ -232,7 +373,20 @@ _domain_setting_mappings: Dict[str, DomainSetting] = {
 
 def resolve_domain_setting(
     domain_setting: DomainSettingType,
-) -> np.ndarray:
+) -> DomainSetting:
+    """
+    Resolve the given domain setting into a DomainSetting object.
+
+    Parameters
+    ----------
+    domain_setting : DomainSettingType
+        The domain setting to resolve, which can be a string, DomainSetting, or dictionary.
+
+    Returns
+    -------
+    DomainSetting
+        The resolved domain setting.
+    """
     if domain_setting is None:
         return FullDomainSetting()
 

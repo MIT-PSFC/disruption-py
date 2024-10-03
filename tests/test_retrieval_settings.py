@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+"""
+Unit tests for the retrieval settings which covers data retrieval from various
+sources and the time domain of the data retrieved.
+"""
+
 import pandas as pd
 import pytest
 
@@ -13,11 +18,13 @@ from tests.utils.data_difference import assert_frame_equal_unordered
 
 
 def dummy_mds_initializer():
+    """Return a dummy MDS connection to ensure no fresh data is retrieved."""
     return ProcessMDSConnection(None)
 
 
 @pytest.fixture(scope="module", name="full_time_domain_data")
 def full_time_domain_data_fixture(tokamak, shotlist):
+    """Get data for the full time domain"""
     retrieval_settings = RetrievalSettings(
         efit_nickname_setting="default", domain_setting="full"
     )

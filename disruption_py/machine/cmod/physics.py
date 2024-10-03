@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Module for retrieving and calculating data for CMOD physics methods.
+"""
+
 import traceback
 import warnings
 
@@ -23,9 +27,28 @@ warnings.filterwarnings("error", category=RuntimeWarning)
 
 
 class CmodPhysicsMethods:
+    """
+    This class provides methods to retrieve and calculate physics-related data
+    for CMOD.
+    """
+
     @staticmethod
     @cache_method
     def _get_active_wire_segments(params: PhysicsMethodParams):
+        """
+        Retrieve active wire segments from the MDSplus tree.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection and shot info.
+
+        Returns
+        -------
+        list of tuple
+            A list of tuples, where each tuple contains the node path of the
+            active segment and its start time. The list is sorted by start time.
+        """
         params.mds_conn.open_tree(tree_name="pcs")
         root_nid = params.mds_conn.get("GetDefaultNid()")
         children_nids = params.mds_conn.get(
@@ -61,6 +84,20 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(columns=["time_until_disrupt"], tokamak=Tokamak.CMOD)
     def get_time_until_disrupt(params: PhysicsMethodParams):
+        """
+        Calculate the time until disruption.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the disruption information and times.
+
+        Returns
+        -------
+        dict
+            A dictionary with a single key "time_until_disrupt" containing a list
+            of time until disruption.
+        """
         time_until_disrupt = [np.nan]
         if params.disrupted:
             time_until_disrupt = params.disruption_time - params.times
@@ -68,7 +105,8 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def _get_ip_parameters(times, ip, magtime, ip_prog, pcstime):
-        """Calculates actual and programmed current as well as their derivatives
+        """
+        Calculates actual and programmed current as well as their derivatives
         and difference.
 
         The time derivatives are useful for discriminating between rampup, flattop,
@@ -142,6 +180,20 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def get_ip_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve and interpolate Ip parameters.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the interpolated Ip parameters, including
+            "ip", "dip_dt", "dip_smoothed", "ip_prog", "dipprog_dt", and "ip_error".
+        """
         # Automatically generated
         active_segments = CmodPhysicsMethods._get_active_wire_segments(params=params)
 
@@ -149,7 +201,7 @@ class CmodPhysicsMethods:
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
         ip_prog = np.full(pcstime.shape, np.nan)
 
-        # For each activate segment:
+        # For each active segment:
         # 1.) Find the wire for IP control and check if it has non-zero PID gains
         # 2.) IF it does, interpolate IP programming onto the PCS timebase
         # 3.) Clip to the start and stop times of PCS timebase
@@ -203,7 +255,8 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def _get_z_parameters(times, z_prog, pcstime, z_error_without_ip, ip, dpcstime):
-        """Get values of Z_error, Z_prog, and derived signals from plasma control
+        """
+        Get values of Z_error, Z_prog, and derived signals from plasma control
         system (PCS).
 
         Z_prog is the programmed vertical position of the plasma current centroid,
@@ -282,6 +335,20 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def get_z_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve and interpolate plasma's vertical position parameters.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the vertical position parameters, including "z_error", "z_prog",
+            "zcur", "v_z", and "z_times_v_z".
+        """
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
         z_prog = np.empty(pcstime.shape)
         z_prog.fill(np.nan)
@@ -387,7 +454,8 @@ class CmodPhysicsMethods:
     def _get_ohmic_parameters(
         times, v_loop, v_loop_time, li, efittime, dip_smoothed, ip, r0
     ):
-        """Calculate the ohmic power from the loop voltage, inductive voltage, and
+        """
+        Calculate the ohmic power from the loop voltage, inductive voltage, and
         plasma current.
 
         Parameters
@@ -399,11 +467,11 @@ class CmodPhysicsMethods:
         v_loop_time : array_like
             The times at which the loop voltage was measured.
         li : array_like
-            The inductance of the loop.
+            The plasma's internal inductance from EFIT.
         efittime : array_like
-            The times at which the inductance was measured.
+            The EFIT time base.
         dip_smoothed : array_like
-            The smoothed plasma current.
+            The smoothed time derivative of the measured plasma current.
         ip : array_like
             The plasma current.
         r0 : array_like
@@ -411,15 +479,10 @@ class CmodPhysicsMethods:
 
         Returns
         -------
-        p_ohm : array_like
+        p_oh : array_like
             The ohmic power.
         v_loop : array_like
             The loop voltage.
-
-        Original Authors
-        ----------------
-
-
         """
         inductance = 4.0 * np.pi * 1.0e-7 * r0 * li / 2.0
         v_loop = interp1(v_loop_time, v_loop, times)
@@ -436,6 +499,20 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def get_ohmic_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve and calculate ohmic heating parameters.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the calculated ohmic parameters, including
+            "p_oh" and "v_loop".
+        """
         v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
             r"\top.mflux:v0", tree_name="analysis", astype="float64"
         )
@@ -464,6 +541,35 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def _get_power(times, p_lh, t_lh, p_icrf, t_icrf, p_rad, t_rad, p_ohm):
+        """
+        Calculate the input and radiated powers, and then calculate the
+        radiated fraction.
+
+        Parameters
+        ----------
+        times : np.ndarray
+            The time array for which to calculate the power.
+        p_lh : np.ndarray or None
+            The power from lower hybrid heating.
+        t_lh : np.ndarray or None
+            The time array corresponding to lower hybrid heating power.
+        p_icrf : np.ndarray or None
+            The power from ICRF heating.
+        t_icrf : np.ndarray or None
+            The time array corresponding to ICRF heating power.
+        p_rad : np.ndarray or None
+            The radiated power.
+        t_rad : np.ndarray or None
+            The time array corresponding to radiated power.
+        p_ohm : np.ndarray
+            The ohmic heating power.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the calculated power values, including
+            "p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", and "radiated_fraction".
+        """
         if p_lh is not None and isinstance(t_lh, np.ndarray) and len(t_lh) > 1:
             p_lh = interp1(t_lh, p_lh * 1.0e3, times)
         else:
@@ -539,12 +645,45 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def _get_kappa_area(times, aminor, area, a_times):
+        """
+        Calculate and interpolate kappa_area
+
+        Parameters
+        ----------
+        times : np.ndarray
+            The time array for which to calculate the kappa_area.
+        aminor : np.ndarray
+            The minor radius values.
+        area : np.ndarray
+            The area values.
+        a_times : np.ndarray
+            The time array corresponding to the area values.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the kappa_area.
+        """
         output = {"kappa_area": interp1(a_times, area / (np.pi * aminor**2), times)}
         return output
 
     @staticmethod
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
     def get_kappa_area(params: PhysicsMethodParams):
+        """
+        Retrieve and calculate the plasma's ellipticity (kappa, also known as
+        the elongation) using its area and minor radius.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the calculated "kappa_area".
+        """
         aminor = params.mds_conn.get_data(
             r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
         )
@@ -564,9 +703,9 @@ class CmodPhysicsMethods:
     @staticmethod
     def _get_rotation_velocity(times, intensity, time, vel, hirextime):
         """
-        Uses spectroscopy graphs of ionized(to hydrogen and helium levels) Argon
+        Uses spectroscopy graphs of ionized (to hydrogen and helium levels) Argon
         to calculate velocity. Because of the heat profile of the plasma, suitable
-        measurements are only found near the center
+        measurements are only found near the center.
         """
         v_0 = np.empty(len(time))
         # Check that the argon intensity pulse has a minimum count and duration
@@ -583,18 +722,14 @@ class CmodPhysicsMethods:
         v_0 = interp1(time, v_0, times)
         return {"v_0": v_0}
 
-    # TODO: Split into static and instance method
-    @staticmethod
-    def _get_n_equal_1_amplitude():
-        pass
-
     @staticmethod
     @physics_method(
         columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase", "bt"],
         tokamak=Tokamak.CMOD,
     )
     def get_n_equal_1_amplitude(params: PhysicsMethodParams):
-        """Calculate n=1 amplitude and phase.
+        """
+        Calculate n=1 amplitude and phase.
 
         This method uses the four BP13 Bp sensors near the midplane on the outboard
         vessel wall.  The calculation is done by using a least squares fit to an
@@ -682,6 +817,32 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def _get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
+        """
+        Calculate electron density, its time derivative, and the Greenwald fraction.
+
+        Parameters
+        ----------
+        times : array_like
+            Time points at which to interpolate the densities.
+        n_e : array_like
+            Electron density values.
+        t_n : array_like
+            Corresponding time values for electron density.
+        ip : array_like
+            Plasma current values.
+        t_ip : array_like
+            Corresponding time values for plasma current.
+        a_minor : array_like
+            Minor radius values.
+        t_a : array_like
+            Corresponding time values for minor radius.
+
+        Returns
+        -------
+        dict
+            A dictionary containing interpolated electron density (`n_e`),
+            its time derivative (`dn_dt`), and the Greenwald fraction (`greenwald_fraction`).
+        """
         if len(n_e) != len(t_n):
             raise CalculationError("n_e and t_n are different lengths")
         # get the gradient of n_E
@@ -704,6 +865,20 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def get_densities(params: PhysicsMethodParams):
+        """
+        Retrieve and calculate electron density and related parameters.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing electron density (`n_e`), its gradient (`dn_dt`),
+            and the Greenwald fraction (`greenwald_fraction`).
+        """
         # Line-integrated density
         n_e, t_n = params.mds_conn.get_data_with_dims(
             r".tci.results:nl_04", tree_name="electrons", astype="float64"
@@ -726,12 +901,42 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def _get_efc_current(times, iefc, t_iefc):
+        """
+        Interpolate EFC current values at specified times.
+
+        Parameters
+        ----------
+        times : array_like
+            Time points at which to interpolate the EFC current.
+        iefc : array_like
+            EFC current values.
+        t_iefc : array_like
+            Corresponding time values for EFC current.
+
+        Returns
+        -------
+        dict
+            A dictionary containing interpolated EFC current.
+        """
         output = {"i_efc": interp1(t_iefc, iefc, times, "linear")}
         return output
 
     @staticmethod
     @physics_method(columns=["i_efc"], tokamak=Tokamak.CMOD)
     def get_efc_current(params: PhysicsMethodParams):
+        """
+        Retrieve the error field correction (EFC) current for a given shot.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the EFC current (`i_efc`).
+        """
         iefc, t_iefc = params.mds_conn.get_data_with_dims(
             r"\efc:u_bus_r_cur", tree_name="engineering"
         )
@@ -740,6 +945,27 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def _get_ts_parameters(times, ts_data, ts_time, ts_z, z_sorted=False):
+        """
+        Calculate the Thomson scattering temperature width parameters.
+
+        Parameters
+        ----------
+        times : array_like
+            Time points at which to interpolate the temperature width.
+        ts_data : array_like
+            2D array of Thomson scattering temperature data.
+        ts_time : array_like
+            Corresponding time values for the temperature data.
+        ts_z : array_like
+            Vertical coordinate values corresponding to the temperature data.
+        z_sorted : bool, optional
+            If True, assumes `ts_z` is already sorted. Default is False.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the temperature width (`te_width`).
+        """
         # sort z array
         if not z_sorted:
             idx = np.argsort(ts_z)
@@ -784,7 +1010,20 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(columns=["te_width"], tokamak=Tokamak.CMOD)
     def get_ts_parameters(params: PhysicsMethodParams):
-        # TODO: Guassian vs parabolic fit for te profile
+        """
+        Retrieve Thomson scattering temperature width parameters.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the temperature width (`te_width`).
+        """
+        # TODO: Gaussian vs parabolic fit for te profile
 
         # Read in Thomson core temperature data, which is a 2-D array, with the
         # dependent dimensions being time and z (vertical coordinate)
@@ -803,10 +1042,12 @@ class CmodPhysicsMethods:
     @staticmethod
     def _get_peaking_factors(times, ts_time, ts_te, ts_ne, ts_z, efit_time, bminor, z0):
         """
-        Calculate Te, ne, and pressure peaking factors given Thomson Scattering Te and ne measurements.
+        Calculate Te, ne, and pressure peaking factors given Thomson Scattering
+        Te and ne measurements.
 
-        Because the TS chords have uneven spacings, measurements are first interpolated to an array of
-        equally spaced vertical positions and then used to calculate the peaking factors.
+        Because the TS chords have uneven spacings, measurements are first interpolated
+        to an array of equally spaced vertical positions and then used to calculate
+        the peaking factors.
 
         Parameters:
         ----------
@@ -833,7 +1074,7 @@ class CmodPhysicsMethods:
 
         References:
         ----------
-        - https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_peaking_factor_cmod.m
+        - https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_peaking_factor_cmod.m  # pylint: disable=line-too-long
         - https://github.com/MIT-PSFC/disruption-py/issues/210
         - https://github.com/MIT-PSFC/disruption-py/pull/216
         - https://github.com/MIT-PSFC/disruption-py/pull/268
@@ -911,6 +1152,21 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def get_peaking_factors(params: PhysicsMethodParams):
+        """
+        Calculate peaking factors for electron density, electron temperature, and
+        pressure.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing peaking factors for electron density (`ne_peaking`),
+            temperature (`te_peaking`), and pressure (`pressure_peaking`).
+        """
         use_ts_tci_calibration = False
         # Ignore shots on the blacklist
         if CmodPhysicsMethods.is_on_blacklist(params.shot_id):
@@ -984,7 +1240,7 @@ class CmodPhysicsMethods:
         )
 
     @staticmethod
-    def __get_te_profile_params_ece(
+    def _get_te_profile_params_ece(
         times,
         gpc1_te_data,
         gpc1_te_time,
@@ -1334,7 +1590,7 @@ class CmodPhysicsMethods:
             node_path + ":radii", tree_name="electrons"
         )  # [m], [s]
 
-        return CmodPhysicsMethods.__get_te_profile_params_ece(
+        return CmodPhysicsMethods._get_te_profile_params_ece(
             params.times,
             gpc1_te_data,
             gpc1_te_time,
@@ -1359,6 +1615,19 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def get_prad_peaking(params: PhysicsMethodParams):
+        """
+        Calculate the peaking factor for radiated power.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the peaking factor for radiated power (`prad_peaking`).
+        """
         prad_peaking = np.full(len(params.times), np.nan)
         nan_output = {"prad_peaking": prad_peaking}
         r0 = 0.01 * params.mds_conn.get_data(
@@ -1457,6 +1726,19 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(columns=["sxr"], tokamak=Tokamak.CMOD)
     def get_sxr_data(params: PhysicsMethodParams):
+        """
+        Retrieve soft X-ray (SXR) data from array 1 chord 16 for a given shot.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the soft X-ray data (`sxr`).
+        """
         sxr, t_sxr = params.mds_conn.get_data_with_dims(
             r"\top.brightnesses.array_1:chord_16",
             tree_name="xtomo",
@@ -1467,7 +1749,8 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def is_on_blacklist(shot_id: int) -> bool:
-        """TODO why will these shots cause `_get_peaking_factors`,
+        """
+        TODO why will these shots cause `_get_peaking_factors`,
         `_get_peaking_factors_no_tci`, and `_get_edge_parameters` to fail?
         """
         if (
