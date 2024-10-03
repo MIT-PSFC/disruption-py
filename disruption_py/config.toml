@@ -113,7 +113,6 @@ TEST_COLUMNS=[
 	"greenwald_fraction",
 	"n_equal_1_mode",
 	"n_equal_1_normalized",
-	"v_0",
 	"ip",
 	"dip_dt",
 	"dipprog_dt",
