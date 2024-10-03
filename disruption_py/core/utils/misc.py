@@ -8,13 +8,13 @@ import numpy as np
 import pandas as pd
 
 
-def instantiate_classes(l: List):
+def instantiate_classes(lst: List):
     """
     Instantiate all classes in a list of classes and objects.
 
     Parameters
     ----------
-    l : List
+    lst : List
         List to instantiate classes from.
 
     Returns
@@ -22,25 +22,25 @@ def instantiate_classes(l: List):
     List
         The list with all classes instantiated.
     """
-    return [x() for x in l if isinstance(x, type)]
+    return [x() for x in lst if isinstance(x, type)]
 
 
-def without_duplicates(l: List):
+def without_duplicates(lst: List):
     """
     Get list without duplicates maintaining order.
 
     Parameters
     ----------
-    l : List
+    lst : List
         List to get without duplicates.
 
     Returns
     -------
     List
-        The list l with duplicates removed.
+        The list lst with duplicates removed.
     """
     seen = set()
-    return [x for x in l if not (x in seen or seen.add(x))]
+    return [x for x in lst if not (x in seen or seen.add(x))]
 
 
 def safe_cast(array: np.ndarray, dtype, copy=False):
