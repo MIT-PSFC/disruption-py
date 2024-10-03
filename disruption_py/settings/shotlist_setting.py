@@ -38,9 +38,7 @@ class ShotlistSettingParams:
 
 
 class ShotlistSetting(ABC):
-    """
-    ShotlistSetting abstract class that should be inherited by all shotlist setting classes.
-    """
+    """ShotlistSetting abstract class that should be inherited by all shotlist setting classes."""
 
     def get_shotlist(self, params: ShotlistSettingParams) -> List:
         if hasattr(self, "tokamak_overrides"):
