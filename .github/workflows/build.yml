@@ -51,10 +51,10 @@ jobs:
         run: poetry run python -c "import disruption_py"
 
       - name: Build package
-        run: poetry run build
+        run: poetry build
 
       - name: Publish package
         if: github.event_name == 'release'
         env:
           POETRY_PYPI_TOKEN_PYPI: "${{ secrets.PYPI_TOKEN }}"
-        run: poetry run publish
+        run: poetry publish
