@@ -69,6 +69,22 @@ jobs:
         run: make pylint
 
 
+  ruff:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      github.event.pull_request.draft == false
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - name: Install requirements
+        run: make install-all
+
+      - name: Run ruff
+        run: make ruff
+
+
   shellcheck:
     runs-on: ubuntu-latest
     if: |
