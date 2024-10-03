@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""Module for handling tokamak types and resolving tokamak configurations."""
+
 import os
 from enum import Enum
 from typing import Union

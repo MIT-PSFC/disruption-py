@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+"""
+This module defines the LogSettings class, which provides settings and setup for 
+logging in both files and console with customizable levels and formats.
+"""
+
 import logging
 from dataclasses import dataclass
 
@@ -7,26 +12,28 @@ from dataclasses import dataclass
 @dataclass
 class LogSettings:
     """
-    Settings for logging.
+    Settings for configuring logging.
 
     Attributes
     ----------
-    log_file_path : str
-        The path of the log file. Set to None if no log file should be created. Default is None.
-    file_log_level : int
-        The log level for the log file. Default is logging.INFO.
-        Possible values are: logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR, logging.CRITICAL.
-        See https://docs.python.org/3/library/logging.html#levels for more information.
-    log_file_write_mode : str
-        The write mode for the log file. Default is "w".
-    log_to_console : bool
-        Whether to log to the console. Default is True.
-    console_log_level : int
-        The log level for the console. Default is logging.INFO.
-        Possible values are: logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR, logging.CRITICAL.
-        See https://docs.python.org/3/library/logging.html#levels for more information.
-    use_custom_logging : bool
-        Whether to use custom logging. If set to true, no logging setup will be done. Default is False.
+    log_file_path : str, optional
+        Path to the log file. If None, no log file will be created (default is None).
+    file_log_level : int, optional
+        Logging level for the log file (default is logging.WARNING).
+        Can be set to logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR,
+        or logging.CRITICAL.
+    log_file_write_mode : str, optional
+        File write mode for the log file (default is 'w').
+    log_to_console : bool, optional
+        Whether to log messages to the console (default is True).
+    console_log_level : int, optional
+        Logging level for console output (default is logging.WARNING).
+        Can be set to logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR, or logging.CRITICAL.
+    use_custom_logging : bool, optional
+        Whether to use custom logging setup (default is False).
+        If True, no logging setup is done within this class.
+    _logging_has_been_setup : bool, optional
+        Internal flag to prevent multiple setups (default is False).
     """
 
     log_file_path: str = None
@@ -40,11 +47,36 @@ class LogSettings:
 
     _logging_has_been_setup: bool = False
 
-    def logger(self, logger_name="disruption_py"):
+    def logger(self, logger_name="disruption_py") -> logging.Logger:
+        """
+        Get or set up the logger with the specified settings.
+
+        Parameters
+        ----------
+        logger_name : str, optional
+            Name of the logger (default is "disruption_py").
+
+        Returns
+        -------
+        logging.Logger
+            The configured logger instance.
+        """
         return self.setup_logging(logger_name)
 
-    def setup_logging(self, logger_name="disruption_py"):
+    def setup_logging(self, logger_name="disruption_py") -> logging.Logger:
+        """
+        Set up logging based on the provided settings.
 
+        Parameters
+        ----------
+        logger_name : str, optional
+            Name of the logger (default is "disruption_py").
+
+        Returns
+        -------
+        logging.Logger
+            Configured logger instance.
+        """
         logger = logging.getLogger(logger_name)
         if self.use_custom_logging or self._logging_has_been_setup:
             return logger

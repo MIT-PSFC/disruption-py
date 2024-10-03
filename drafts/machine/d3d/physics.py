@@ -107,3 +107,97 @@ class D3DDraftPhysicsMethods:
             "te_sep": te_sep,
             "ne_sep": ne_sep,
         }
+
+    @staticmethod
+    @physics_method(
+        columns=["n_equal_1_normalized", "n_equal_1_mode"],
+        tokamak=Tokamak.D3D,
+    )
+    def get_n1_bradial_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve normalized n=1 bradial parameters for a given shot.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+            - 'n_equal_1_normalized' : array
+                Normalized n=1 bradial parameter values.
+            - 'n_equal_1_mode' : array
+                Raw n=1 bradial parameter values.
+        """
+        output = {
+            "n_equal_1_normalized": [np.nan],
+            "n_equal_1_mode": [np.nan],
+        }
+        # The following shots are missing bradial calculations in MDSplus and
+        # must be loaded from a separate datafile
+        # NOTE: This implementation needs revising.
+        #       In the meantime, let's disable the corresponding pylint error.
+        #       pylint: disable-next=no-else-raise
+        if 176030 <= params.shot_id <= 176912:
+            raise NotImplementedError
+            # TODO: Move to a folder like "/fusion/projects/disruption_warning/data"
+            # pylint: disable-next=unreachable
+            filename = "/fusion/projects/disruption_warning/matlab_programs/recalc.nc"
+            # pylint: disable=undefined-variable
+            ncid = nc.Dataset(filename, "r")
+            brad = ncid.variables["dusbradial_calculated"][:]
+            t_n1 = ncid.variables["times"][:] * 1.0e-3  # [ms] -> [s]
+            shots = ncid.variables["shots"][:]
+            shot_indices = np.where(shots == params.shot_id)
+            if len(shot_indices) == 1:
+                dusbradial = brad[shot_indices, :] * 1.0e-4  # [T]
+            else:
+                params.logger.info(
+                    f"Shot {params.shot_id} not found in {filename}.  Returning NaN."
+                )
+                dusbradial = np.full(len(params.times), np.nan)
+            ncid.close()
+        # Check ONFR than DUD(legacy)
+        else:
+            try:
+                # TODO: TREE NAME?
+                dusbradial, t_n1 = params.mds_conn.get_data_with_dims(
+                    f"ptdata('onsbradial', {params.shot_id})",
+                    tree_name="d3d",
+                )
+                dusbradial = interp1(t_n1, dusbradial, params.times)
+                dusbradial *= 1.0e-4  # [T]
+            except mdsExceptions.MdsException:
+                params.logger.debug(
+                    "[Shot %s]: %s", params.shot_id, traceback.format_exc()
+                )
+                try:
+                    dusbradial, t_n1 = params.mds_conn.get_data_with_dims(
+                        f"ptdata('dusbradial', {params.shot_id})",
+                        tree_name="d3d",
+                    )
+                    dusbradial = interp1(t_n1, dusbradial, params.times)
+                    dusbradial *= 1.0e-4  # [T]
+                except mdsExceptions.MdsException:
+                    params.logger.info(
+                        "[Shot %s]: Failed to get n1 bradial signal. Returning NaN.",
+                        params.shot_id,
+                    )
+                    params.logger.debug(
+                        "[Shot %s]: %s", params.shot_id, traceback.format_exc()
+                    )
+                    return output
+        n_equal_1_mode = interp1(dusbradial, t_n1, params.times)
+        # Get toroidal field Btor
+        b_tor, t_b_tor = params.mds_conn.get_data_with_dims(
+            f"ptdata('bt', {params.shot_id})", tree_name="d3d"
+        )
+        b_tor = interp1(t_b_tor, b_tor, params.times)  # [T]
+        n_equal_1_normalized = n_equal_1_mode / b_tor
+        output = {
+            "n_equal_1_normalized": n_equal_1_normalized,
+            "n_equal_1_mode": n_equal_1_mode,
+        }
+        return output

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+This module provides a decorator to signify methods that calculate physics quantities.
+"""
+
 from typing import Callable, List, Union
 
 from disruption_py.core.physics_method.caching import cache_method

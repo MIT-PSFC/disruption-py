@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Module for managing SQL database connections.
+"""
+
 import logging
 import os
 import threading
@@ -13,7 +17,7 @@ from sqlalchemy import create_engine
 
 from disruption_py.config import config
 from disruption_py.core.utils.misc import without_duplicates
-from disruption_py.core.utils.shared_instance import SharedInstanceFactory
+from disruption_py.core.utils.shared_instance import SharedInstance
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -83,7 +87,7 @@ class ShotDatabase:
         with open(profile, "r", encoding="utf-8") as fio:
             db_user, db_pass = fio.read().split()[-2:]
 
-        return SharedInstanceFactory(ShotDatabase).get_instance(
+        return SharedInstance(ShotDatabase).get_instance(
             driver=database_dict["driver"],
             host=database_dict["host"],
             port=database_dict["port"],
@@ -112,7 +116,8 @@ class ShotDatabase:
 
     @property
     def conn(self):
-        """Property returning a connection to sql database.
+        """
+        Property returning a connection to sql database.
 
         If a connection exists for the given thread returns that connection,
         otherwise creates a new connection
@@ -131,7 +136,8 @@ class ShotDatabase:
         return self._thread_connections[current_thread]
 
     def query(self, query: str, use_pandas=True):
-        """query sql database
+        """
+        query sql database
 
         Parameters
         ----------
@@ -403,7 +409,8 @@ class ShotDatabase:
         cols: List[str] = None,
         sql_table="disruption_warning",
     ):
-        """get_shots_data retrieves columns from sql data for given shotlist
+        """
+        get_shots_data retrieves columns from sql data for given shotlist
 
         Parameters
         ----------
@@ -462,6 +469,10 @@ class ShotDatabase:
 
 
 class DummyObject:
+    """
+    A dummy connection object.
+    """
+
     def __getattr__(self, name):
         # Return self for any attribute or method call
         return self
@@ -473,15 +484,8 @@ class DummyObject:
 
 class DummyDatabase(ShotDatabase):
     """
-    A database class that does not require connecting to an SQL server but returns
+    A database class that does not require connecting to an SQL server and returns
     no data.
-
-    Note: On CMod, disruption time data and any derrivative values will not be correct.
-
-    Examples
-    --------
-    >>> get_shots_data(shotlist_setting=[1150805012], database_initializer=DummyDatabase.initializer)
-    <pd.DataFrame>
     """
 
     # pylint: disable-next=super-init-not-called
@@ -489,6 +493,7 @@ class DummyDatabase(ShotDatabase):
         pass
 
     @classmethod
+    # pylint: disable-next=missing-function-docstring
     def initializer(cls, **_kwargs):
         return cls()
 

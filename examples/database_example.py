@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""Example usage of `get_shots_data` testing the connection to the SQL database."""
+
 from disruption_py.workflow import get_database
 
 cmod_database = get_database(tokamak="cmod")

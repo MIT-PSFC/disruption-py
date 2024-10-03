@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+"""
+Example usage of `get_shots_data` demonstrating how to provide a customized 
+shotlist_setting by subclassing `ShotlistSetting`.
+"""
+
 from typing import List
 
 from disruption_py.settings.retrieval_settings import RetrievalSettings
@@ -10,11 +15,14 @@ from disruption_py.settings.shotlist_setting import (
 from disruption_py.workflow import get_shots_data
 
 
-# Create the ShotlistSetting class that handles getting the needed shotlist
 class CustomShotlistSetting(ShotlistSetting):
+    """The ShotlistSetting class handles getting the needed shotlist"""
 
-    # the _get_shotlist function takes a set of parameters including a reference to the sql database and returns a list of shot numbers
     def _get_shotlist(self, params: ShotlistSettingParams) -> List:
+        """
+        Takes a set of parameters including a reference to the sql database and
+        return a list of shot numbers.
+        """
         sql_shot_nums = params.database.query(
             "SELECT shot FROM good_shots WHERE EXTRACT(YEAR FROM entered) BETWEEN 2019 AND 2021;"
         )["shot"]

@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+"""
+This module provides classes for managing and retrieving cached data from various 
+sources, including SQL databases and Pandas DataFrames.
+"""
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from logging import Logger
@@ -14,7 +19,8 @@ from disruption_py.machine.tokamak import Tokamak
 
 @dataclass
 class CacheSettingParams:
-    """Params passed by disruption_py to _get_cache_data() method.
+    """
+    Params passed by disruption_py to _get_cache_data() method.
 
     Attributes
     ----------
@@ -41,9 +47,16 @@ CacheSettingType = Union[
 
 
 class CacheSetting(ABC):
-    """CacheSetting abstract class that should be inherited by all cache setting classes."""
+    """
+    CacheSetting abstract class that should be inherited by all cache setting classes.
+
+    Subclasses must implement the `_get_cache_data` method to define how cached data is retrieved.
+    """
 
     def get_cache_data(self, params: CacheSettingParams) -> pd.DataFrame:
+        """
+        Return cached data, using tokamak-specific overrides if available.
+        """
         if hasattr(self, "tokamak_overrides"):
             if params.tokamak in self.tokamak_overrides:
                 return self.tokamak_overrides[params.tokamak](params)
@@ -51,7 +64,9 @@ class CacheSetting(ABC):
 
     @abstractmethod
     def _get_cache_data(self, params: CacheSettingParams) -> pd.DataFrame:
-        """Abstract method implemented by subclasses to get cached data for a given set of params as a pandas dataframe.
+        """
+        Abstract method implemented by subclasses to get cached data for a
+        given set of params as a Pandas dataframe.
 
         Parameters
         ----------
@@ -66,6 +81,27 @@ class CacheSetting(ABC):
 
 
 class CacheSettingDict(CacheSetting):
+    """
+    A class that resolves and manages cache settings for Tokamak instances.
+
+    This class takes a dictionary of cache settings and resolves them for easy access.
+
+    Attributes
+    ----------
+    resolved_cache_setting_dict : Dict[Tokamak, CacheSettingType]
+        A mapping of Tokamak instances to their resolved cache settings.
+
+    Parameters
+    ----------
+    cache_setting_dict : Dict[Tokamak, CacheSettingType]
+        A dictionary of initial cache settings for each Tokamak.
+
+    Methods
+    -------
+    _get_cache_data(params: CacheSettingParams) -> pd.DataFrame
+        Retrieves cache data for the specified Tokamak.
+    """
+
     def __init__(self, cache_setting_dict: Dict[Tokamak, CacheSettingType]):
         resolved_cache_setting_dict = {
             map_string_to_enum(tokamak, Tokamak): resolve_cache_setting(
@@ -92,7 +128,8 @@ class SQLCacheSetting(CacheSetting):
 
 
 class DFCacheSetting(CacheSetting):
-    """Cache setting for retrieving data from a Pandas DataFrame.
+    """
+    Cache setting for retrieving data from a Pandas DataFrame.
 
     Parameters
     ----------
@@ -117,6 +154,21 @@ _cache_setting_mappings: Dict[str, CacheSetting] = {
 def resolve_cache_setting(
     cache_setting: CacheSettingType,
 ) -> CacheSetting:
+    """
+    Resolve the cache setting to a CacheSetting instance.
+
+    Parameters
+    ----------
+    cache_setting : CacheSettingType
+        The cache setting to resolve. This can be an instance of CacheSetting,
+        a string representing a cache setting type, a Pandas DataFrame, or a
+        dictionary of cache settings.
+
+    Returns
+    -------
+    CacheSetting
+        An instance of CacheSetting corresponding to the provided cache setting.
+    """
     if cache_setting is None:
         return None
 

@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+"""
+Unit tests for ensuring data can be outputted in multiple formats including
+lists, dictionaries, DataFrames, csv, hdf5, and to an SQL table.
+"""
+
 import os
 from typing import Dict
 
@@ -25,17 +30,25 @@ ALL_ITERATION_COLUMNS = without_duplicates(
 
 @pytest.fixture(scope="module", name="shot_database")
 def shot_database_fixture(tokamak) -> ShotDatabase:
+    """
+    Fixture for creating a ShotDatabase instance.
+    """
     return get_database(tokamak=tokamak)
 
 
 @pytest.fixture(autouse=True, scope="module")
 def setup_shot_database(shotlist, shot_database):
+    """
+    This fixture automatically removes data for each shot in the
+    provided shotlist from the shot_database.
+    """
     for shot in shotlist:
         shot_database.remove_shot_data(shot)
 
 
 @pytest.fixture(scope="module", name="initial_mdsplus_data")
 def initial_mdsplus_data_fixture(shotlist, tokamak, test_file_path_f) -> Dict:
+    """Get data in multiple formats"""
     output_settings = [
         "dataframe",
         "list",
@@ -63,6 +76,7 @@ def initial_mdsplus_data_fixture(shotlist, tokamak, test_file_path_f) -> Dict:
 
 @pytest.fixture(scope="module", name="initial_mdsplus_data_df")
 def initial_mdsplus_data_df_fixture(initial_mdsplus_data):
+    """Return only the dataframe output type"""
     return initial_mdsplus_data[0]
 
 

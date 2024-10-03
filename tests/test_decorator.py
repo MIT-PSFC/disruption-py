@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+"""
+This module contains tests to ensure that physics methods can be executed
+correctly when the tokamak parameter is set to either `None` or a specific
+tokamak instance.
+"""
+
 import numpy as np
 import pytest
 
@@ -12,8 +18,10 @@ from disruption_py.workflow import get_shots_data
 
 @pytest.mark.parametrize("tok", [None, resolve_tokamak_from_environment()])
 def test_tokamak_parameter(shotlist, tok):
-    """Ensure physics methods run when the tokamak parameter is set as either
-    `None` or a specific tokamak."""
+    """
+    Ensure physics methods run when the tokamak parameter is set as either
+    `None` or a specific tokamak.
+    """
     col_name = "x"
 
     @physics_method(columns=[col_name], tokamak=tok)
