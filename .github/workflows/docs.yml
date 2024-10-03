@@ -45,7 +45,7 @@ jobs:
           cache: 'poetry'
 
       - name: Install dependencies
-        run: poetry install --only docs
+        run: make install-all
 
       - name: Build documentation
         run: poetry run mkdocs build --site-dir _site

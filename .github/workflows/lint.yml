@@ -36,12 +36,10 @@ jobs:
           cache: 'poetry'
 
       - name: Install requirements
-        run: poetry install --only dev
+        run: make install-all
 
       - name: Run black
-        run: |
-          poetry run black --version
-          poetry run black --check .
+        run: make black
 
 
   pylint:
@@ -65,14 +63,10 @@ jobs:
           cache: 'poetry'
 
       - name: Install requirements
-        run: poetry install --with dev,lab
+        run: make install-all
 
       - name: Run pylint
-        run: |
-          poetry run pylint --version
-          find disruption_py examples tests -type f -name '*.py' \
-          | xargs poetry run pylint \
-          --output-format=github
+        run: make pylint
 
 
   shellcheck:
@@ -88,15 +82,7 @@ jobs:
         run: sudo apt-get install shellcheck
 
       - name: Run shellcheck
-        run: |
-          shellcheck --version
-          find -type f -not -path '*/.git/*' \
-          | xargs grep -l '^#!/bin/bash' \
-          | while read -r FILE
-          do
-             echo "--> $FILE"
-             shellcheck -x "$FILE"
-          done
+        run: make shellcheck
 
 
   yamllint:
@@ -118,14 +104,7 @@ jobs:
           cache: 'poetry'
 
       - name: Install requirements
-        run: poetry install --only dev
+        run: make install-all
 
       - name: Run yamllint
-        run: |
-          poetry run yamllint --version
-          find -type f -iname '*.yml' -or -iname '*.yaml' \
-          | while read -r FILE
-          do
-             echo "--> $FILE"
-             poetry run yamllint "$FILE"
-          done
+        run: make yamllint
