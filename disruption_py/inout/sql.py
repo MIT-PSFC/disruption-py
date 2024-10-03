@@ -484,15 +484,8 @@ class DummyObject:
 
 class DummyDatabase(ShotDatabase):
     """
-    A database class that does not require connecting to an SQL server but returns
+    A database class that does not require connecting to an SQL server and returns
     no data.
-
-    Note: On CMod, disruption time data and any derrivative values will not be correct.
-
-    Examples
-    --------
-    >>> get_shots_data(shotlist_setting=[1150805012], database_initializer=DummyDatabase.initializer)
-    <pd.DataFrame>
     """
 
     # pylint: disable-next=super-init-not-called
