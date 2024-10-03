@@ -640,7 +640,7 @@ class D3DPhysicsMethods:
     )
     def get_rt_ip_parameters(params: PhysicsMethodParams):
         """
-        Get real-time plasma current and programmed plasma current from EFIT,
+        Get the real-time plasma current and programmed plasma current from EFIT,
         then compute the real-time ip_error and the derivatives of all of the above signals.
 
         References
@@ -831,7 +831,7 @@ class D3DPhysicsMethods:
     @physics_method(columns=["n1rms", "n1rms_normalized"], tokamak=Tokamak.D3D)
     def get_n1rms_parameters(params: PhysicsMethodParams):
         """
-        Get n1rms data, then compute n1rms_normalized = n1rms / btor
+        Get the n1rms data, then compute n1rms_normalized = n1rms / btor
 
         References
         -------

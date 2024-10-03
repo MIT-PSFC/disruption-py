@@ -16,7 +16,7 @@ def decorated_physics_method(params: PhysicsMethodParams) -> dict:
     """
     All parametrized methods passed to `get_shots_data` will be called once for every
     shot retrieved. Decorated methods may call other decorated methods, however,
-    execution order is not guranteed as calls will be reordered to minimize resource
+    execution order is not guaranteed as calls will be reordered to minimize resource
     usage based on the `physics_method` decorator.
 
     Parameters

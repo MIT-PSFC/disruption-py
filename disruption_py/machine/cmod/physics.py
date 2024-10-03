@@ -467,11 +467,11 @@ class CmodPhysicsMethods:
         v_loop_time : array_like
             The times at which the loop voltage was measured.
         li : array_like
-            The inductance of the loop.
+            The plasma's internal inductance from EFIT.
         efittime : array_like
-            The times at which the inductance was measured.
+            The EFIT time base.
         dip_smoothed : array_like
-            The smoothed time derivative of the plasma current.
+            The smoothed time derivative of the measured plasma current.
         ip : array_like
             The plasma current.
         r0 : array_like
@@ -651,7 +651,7 @@ class CmodPhysicsMethods:
         Parameters
         ----------
         times : np.ndarray
-            The time array for which to calculate the kappa area.
+            The time array for which to calculate the kappa_area.
         aminor : np.ndarray
             The minor radius values.
         area : np.ndarray
@@ -1165,7 +1165,7 @@ class CmodPhysicsMethods:
         -------
         dict
             A dictionary containing peaking factors for electron density (`ne_peaking`),
-            electron temperature (`te_peaking`), and pressure (`pressure_peaking`).
+            temperature (`te_peaking`), and pressure (`pressure_peaking`).
         """
         use_ts_tci_calibration = False
         # Ignore shots on the blacklist
@@ -1240,7 +1240,7 @@ class CmodPhysicsMethods:
         )
 
     @staticmethod
-    def __get_te_profile_params_ece(
+    def _get_te_profile_params_ece(
         times,
         gpc1_te_data,
         gpc1_te_time,
@@ -1590,7 +1590,7 @@ class CmodPhysicsMethods:
             node_path + ":radii", tree_name="electrons"
         )  # [m], [s]
 
-        return CmodPhysicsMethods.__get_te_profile_params_ece(
+        return CmodPhysicsMethods._get_te_profile_params_ece(
             params.times,
             gpc1_te_data,
             gpc1_te_time,
