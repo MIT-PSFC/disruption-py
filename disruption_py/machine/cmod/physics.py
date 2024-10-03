@@ -6,13 +6,10 @@ Module for retrieving and calculating data for CMOD physics methods.
 
 import traceback
 import warnings
-from importlib import resources
 
 import numpy as np
-import pandas as pd
 from MDSplus import mdsExceptions
 
-import disruption_py.data
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.errors import CalculationError
@@ -724,45 +721,6 @@ class CmodPhysicsMethods:
             v_0 *= 1000.0
         v_0 = interp1(time, v_0, times)
         return {"v_0": v_0}
-
-    # TODO: Calculate v_mid
-    @staticmethod
-    @physics_method(columns=["v_0"], tokamak=Tokamak.CMOD)
-    def get_rotation_velocity(params: PhysicsMethodParams):
-        """
-        Retrieve the rotational velocity for a given shot.
-
-        Parameters
-        ----------
-        params : PhysicsMethodParams
-            The parameters containing the MDSplus connection, shot id and more.
-
-        Returns
-        -------
-        dict
-            A dictionary containing the rotational velocity.
-            If the shot is not calibrated, it returns NaN.
-        """
-        # pylint: disable-next=deprecated-method
-        with resources.path(disruption_py.data, "lock_mode_calib_shots.txt") as fio:
-            calibrated = pd.read_csv(fio)
-        # Check to see if shot was done on a day where there was a locked
-        # mode HIREX calibration by cross checking with list of calibrated
-        # runs. If not calibrated, raise an error.
-        if params.shot_id not in calibrated:
-            raise CalculationError("Not calibrated")
-
-        intensity, time = params.mds_conn.get_data_with_dims(
-            ".hirex_sr.analysis.a:int", tree_name="spectroscopy", astype="float64"
-        )
-        vel, hirextime = params.mds_conn.get_data_with_dims(
-            ".hirex_sr.analysis.a:vel", tree_name="spectroscopy", astype="float64"
-        )
-
-        output = CmodPhysicsMethods._get_rotation_velocity(
-            params.times, intensity, time, vel, hirextime
-        )
-        return output
 
     @staticmethod
     @physics_method(

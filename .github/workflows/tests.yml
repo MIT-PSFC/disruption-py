@@ -122,11 +122,11 @@ jobs:
           cache: 'poetry'
 
       - name: Install requirements
-        run: poetry install --with dev
+        run: make install-all
 
       - name: Check tunnel
         run: |
-          xargs -a ssh.pid ps -p
+          xargs -a ssh.pid ps -p || true
           if ! grep 'Authenticated.*publickey' ssh.log
           then
              curl -s ipinfo.io && echo
@@ -144,7 +144,7 @@ jobs:
         run: poetry run python examples/efit.py
 
       - name: Run all tests
-        run: poetry run pytest -v --durations=0 tests
+        run: make test
 
       - name: Close tunnel
         run: xargs -a ssh.pid kill -TERM
