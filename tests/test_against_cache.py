@@ -125,7 +125,7 @@ def test_data_columns(
         fresh_data=fresh_data,
         cache_data=cache_data,
         data_columns=[data_column],
-        expected_failure_columns=expected_failure_columns,  # we use xfail instead of manually expecting for column failures
+        expected_failure_columns=expected_failure_columns,
     )
 
 

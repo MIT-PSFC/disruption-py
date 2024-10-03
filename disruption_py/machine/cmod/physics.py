@@ -1089,10 +1089,12 @@ class CmodPhysicsMethods:
     @staticmethod
     def _get_peaking_factors(times, ts_time, ts_te, ts_ne, ts_z, efit_time, bminor, z0):
         """
-        Calculate Te, ne, and pressure peaking factors given Thomson Scattering Te and ne measurements.
+        Calculate Te, ne, and pressure peaking factors given Thomson Scattering
+        Te and ne measurements.
 
-        Because the TS chords have uneven spacings, measurements are first interpolated to an array of
-        equally spaced vertical positions and then used to calculate the peaking factors.
+        Because the TS chords have uneven spacings, measurements are first interpolated
+        to an array of equally spaced vertical positions and then used to calculate
+        the peaking factors.
 
         Parameters:
         ----------
@@ -1119,7 +1121,7 @@ class CmodPhysicsMethods:
 
         References:
         ----------
-        - https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_peaking_factor_cmod.m
+        - https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_peaking_factor_cmod.m  # pylint: disable=line-too-long
         - https://github.com/MIT-PSFC/disruption-py/issues/210
         - https://github.com/MIT-PSFC/disruption-py/pull/216
         - https://github.com/MIT-PSFC/disruption-py/pull/268

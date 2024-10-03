@@ -20,7 +20,8 @@ class ProcessMDSConnection:
     """
     Abstract class for connecting to MDSplus.
 
-    Ensure that a single MDSPlus connection is used by each process for all shots retrieved by that process.
+    Ensure that a single MDSPlus connection is used by each process for all shots
+    retrieved by that process.
     """
 
     logger = logging.getLogger("disruption_py")

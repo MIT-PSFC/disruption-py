@@ -28,7 +28,8 @@ class LogSettings:
         Whether to log messages to the console (default is True).
     console_log_level : int, optional
         Logging level for console output (default is logging.WARNING).
-        Can be set to logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR, or logging.CRITICAL.
+        Can be set to logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR,
+        or logging.CRITICAL.
     use_custom_logging : bool, optional
         Whether to use custom logging setup (default is False).
         If True, no logging setup is done within this class.

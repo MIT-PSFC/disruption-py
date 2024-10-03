@@ -59,7 +59,11 @@ def exp_filter(x, w, strategy="fragmented"):
     """
     Implements an exponential filter.
 
-    This function implements an exponential filter on the given array x. In the case of nan values in the input array, we default to using the last timestep that was not a nan value. In the fragmented strategy, any time we encounter invald values, we restart the filter at the next valid value.
+    This function implements an exponential filter on the given array x. In the
+    case of nan values in the input array, we default to using the last timestep
+    that was not a nan value. In the fragmented strategy, any time we encounter
+    invald values, we restart the filter at the next valid value.
+
     Parameters
     ----------
     x : array
@@ -67,7 +71,8 @@ def exp_filter(x, w, strategy="fragmented"):
     w : float
         The filter weight.
     strategy: str, optional
-        Imputation strategy to be used, if any. Options are 'fragmented' or 'none'. Default is 'fragmented.'
+        Imputation strategy to be used, if any. Options are 'fragmented' or 'none'.
+        Default is 'fragmented.'
 
     Returns
     -------
@@ -305,7 +310,8 @@ def matlab_fastsmooth(y, w, smooth_type=1, ends_type=0):
     smooth_type : int, optional
         Determines the type of smoothing to use.
         0 -> no smoothing.
-            -- NOTE: In the original MATLAB function, smooth_type = 0 will still cause the function to smoooth the array once.
+            -- NOTE: In the original MATLAB function, smooth_type = 0 will still
+                cause the function to smoooth the array once.
             -- (i.e. it's identical to smooth_type = 1).
             -- We keep the same behavior in this python implementation.
         1 -> rectangular (sliding-average or boxcar)
@@ -360,7 +366,8 @@ def matlab_sa(y, smooth_width, ends_type=0):
 
     Last major update by William Wei on 7/24/2024
     """
-    # NOTE: numpy behaviour is different than matlab and will round X.5 to nearest even value instead of value farther away from 0
+    # NOTE: numpy behaviour is different than matlab and will round X.5 to nearest
+    # even value instead of value farther away from 0
 
     w = matlab_round_int(smooth_width)
     sum_points = np.sum(y[:w])
@@ -989,8 +996,10 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
         # temp_filtered = np.convolve(temp, smoothing_kernel, "same")
         temp_filtered = lfilter(smoothing_kernel, 1, temp)
         dr_dt = np.gradient(temp_filtered, time)
-        # Calculate power on each detector, P_d(t) [as given in Leonard et al, Rev. Sci. Instr. (1995)]
-        # BUG: MATLAB's medfilt1 function does not require window_size to be odd. This could introduce discrepancy with this python implementation.
+        # Calculate power on each detector, P_d(t) [as given in Leonard et al,
+        # Rev. Sci. Instr. (1995)]
+        # BUG: MATLAB's medfilt1 function does not require window_size to be odd.
+        # This could introduce discrepancy with this python implementation.
         bolo_shot.channels[i].pwr = medfilt(
             (gam[i + 1] * temp_filtered + tau[i + 1] * dr_dt) / scrfact[i],
             window_size + (not window_size % 2),

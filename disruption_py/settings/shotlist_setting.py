@@ -103,17 +103,20 @@ class IncludedShotlistSetting(ShotlistSetting):
 
 class FileShotlistSetting(ShotlistSetting):
     """
-    Use a shotlist from the provided file path, this may be any file readable by pandas read_csv.
+    Use a shotlist from the provided file path, this may be any file readable by
+    pandas read_csv.
 
-    Directly passing a file path as a string to the shotlist setting with the file name suffixed by txt or csv
-    will automatically create a new FileShotlistSetting object with that file path.
+    Directly passing a file path as a string to the shotlist setting with the file
+    name suffixed by txt or csv will automatically create a new FileShotlistSetting
+    object with that file path.
 
     Parameters
     ----------
     file_path : str
         The file path of the file that should be used for retrieving the shotlist.
     column_index : int
-        The index of the column that should be read. For text files, this should be 0. Defaults to 0.
+        The index of the column that should be read. For text files, this should
+        be 0. Defaults to 0.
     """
 
     def __init__(self, file_path, column_index=0):
