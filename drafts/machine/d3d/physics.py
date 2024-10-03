@@ -137,15 +137,11 @@ class D3DDraftPhysicsMethods:
         }
         # The following shots are missing bradial calculations in MDSplus and
         # must be loaded from a separate datafile
-        # NOTE: This implementation needs revising.
-        #       In the meantime, let's disable the corresponding pylint error.
-        #       pylint: disable-next=no-else-raise
+        # TODO: This implementation needs revising.
         if 176030 <= params.shot_id <= 176912:
             raise NotImplementedError
             # TODO: Move to a folder like "/fusion/projects/disruption_warning/data"
-            # pylint: disable-next=unreachable
             filename = "/fusion/projects/disruption_warning/matlab_programs/recalc.nc"
-            # pylint: disable=undefined-variable
             ncid = nc.Dataset(filename, "r")
             brad = ncid.variables["dusbradial_calculated"][:]
             t_n1 = ncid.variables["times"][:] * 1.0e-3  # [ms] -> [s]
