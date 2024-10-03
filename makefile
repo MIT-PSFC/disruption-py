@@ -74,9 +74,12 @@ test-fast:
 
 # lint #
 
-.PHONY: lint isort black pylint pylint-only pylint-todos shellcheck yamllint
+.PHONY: lint check isort black pylint pylint-only pylint-todos shellcheck yamllint
 
 lint: isort black pylint shellcheck yamllint
+
+check:
+	make lint GITHUB_ACTIONS=true
 
 black:
 	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
