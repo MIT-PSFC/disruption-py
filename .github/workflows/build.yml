@@ -21,7 +21,6 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
     steps:
 
       - name: Checkout
@@ -53,25 +52,8 @@ jobs:
       - name: Build package
         run: poetry run build
 
-
-  publish:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'release'
-    steps:
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install poetry
-        run: pipx install poetry
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: 'pyproject.toml'
-          cache: 'poetry'
-
       - name: Publish package
+        if: github.event_name == 'release'
         env:
           POETRY_PYPI_TOKEN_PYPI: "${{ secrets.PYPI_TOKEN }}"
-        run: poetry run publish --build
+        run: poetry run publish
