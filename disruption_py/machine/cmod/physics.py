@@ -467,11 +467,11 @@ class CmodPhysicsMethods:
         v_loop_time : array_like
             The times at which the loop voltage was measured.
         li : array_like
-            The inductance of the loop.
+            The plasma's internal inductance from EFIT.
         efittime : array_like
-            The times at which the inductance was measured.
+            The EFIT time base.
         dip_smoothed : array_like
-            The smoothed time derivative of the plasma current.
+            The smoothed time derivative of the measured plasma current.
         ip : array_like
             The plasma current.
         r0 : array_like
