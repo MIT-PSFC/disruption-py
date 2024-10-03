@@ -74,9 +74,9 @@ test-fast:
 
 # lint #
 
-.PHONY: lint check isort black pylint pylint-only pylint-todos shellcheck yamllint
+.PHONY: lint check isort black ruff pylint pylint-only pylint-todos shellcheck yamllint
 
-lint: isort black pylint shellcheck yamllint
+lint: isort black ruff pylint shellcheck yamllint
 
 check:
 	make lint GITHUB_ACTIONS=true
@@ -95,7 +95,7 @@ pylint:
 	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	poetry run pylint --version
 	find $(PYLINT_DIRS) -type f -name '*.py' -not -empty \
-	| xargs poetry run pylint -v $(FORMAT_ARG)
+	| xargs poetry run pylint -v --jobs 4 $(FORMAT_ARG)
 
 pylint-only:
 	find $(PYLINT_DIRS) -type f -name '*.py' -not -empty  \
@@ -103,6 +103,12 @@ pylint-only:
 
 pylint-todos:
 	CODE=fixme make pylint-only
+
+ruff:
+	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
+	poetry run ruff --version
+	find $(PYLINT_DIRS) -type f -name '*.py' -not -empty \
+	| xargs poetry run ruff check $(FORMAT_ARG)
 
 shellcheck:
 	@[ "$(GITHUB_ACTIONS)" != "true" ] || \

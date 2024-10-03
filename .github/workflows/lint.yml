@@ -50,8 +50,6 @@ jobs:
     steps:
 
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Install poetry
         run: pipx install poetry
@@ -67,6 +65,31 @@ jobs:
 
       - name: Run pylint
         run: make pylint
+
+
+  ruff:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      github.event.pull_request.draft == false
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - name: Install poetry
+        run: pipx install poetry
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: 'pyproject.toml'
+          cache: 'poetry'
+
+      - name: Install requirements
+        run: make install-all
+
+      - name: Run ruff
+        run: make ruff
 
 
   shellcheck:
