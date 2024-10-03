@@ -130,16 +130,16 @@ def gauss_smooth(y, smooth_width, ends_type):
     """
     w = np.round(smooth_width)
     w = int(w)  # Ensure w is an integer
-    l = len(y)
-    s = np.zeros(l)
+    ly = len(y)
+    s = np.zeros(ly)
 
-    for i in range(l):
+    for i in range(ly):
         if i < w // 2:
             if ends_type == 0:
                 s[i] = 0
             else:
                 s[i] = np.mean(y[: i + w // 2])
-        elif i >= l - w // 2:
+        elif i >= ly - w // 2:
             if ends_type == 0:
                 s[i] = 0
             else:
@@ -366,12 +366,12 @@ def matlab_sa(y, smooth_width, ends_type=0):
     sum_points = np.sum(y[:w])
     s = np.zeros(y.shape)
     half_w = matlab_round_int(w / 2.0)
-    l = len(y)
-    for i in range(l - w):
+    ly = len(y)
+    for i in range(ly - w):
         s[i + half_w - 1] = sum_points
         sum_points = sum_points - y[i]
         sum_points = sum_points + y[i + w]
-    s[i + half_w] = np.sum(y[l - w : l])
+    s[i + half_w] = np.sum(y[ly - w : ly])
     y_smooth = s / w
 
     if ends_type == 1:
@@ -379,8 +379,8 @@ def matlab_sa(y, smooth_width, ends_type=0):
         y_smooth[0] = (y[0] + y[1]) / 2
         for i in range(1, start_point):
             y_smooth[i] = np.mean(y[0 : 2 * i + 1])
-            y_smooth[l - i - 1] = np.mean(y[l - 2 * i - 1 : l])
-        y_smooth[l - 1] = (y[l - 1] + y[l - 2]) / 2
+            y_smooth[ly - i - 1] = np.mean(y[ly - 2 * i - 1 : ly])
+        y_smooth[ly - 1] = (y[ly - 1] + y[ly - 2]) / 2
 
     return y_smooth
 
