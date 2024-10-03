@@ -95,7 +95,7 @@ pylint:
 	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	poetry run pylint --version
 	find $(PYLINT_DIRS) -type f -name '*.py' -not -empty \
-	| xargs poetry run pylint -v $(FORMAT_ARG)
+	| xargs poetry run pylint -v --jobs 4 $(FORMAT_ARG)
 
 pylint-only:
 	find $(PYLINT_DIRS) -type f -name '*.py' -not -empty  \
