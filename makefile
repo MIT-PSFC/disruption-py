@@ -1,6 +1,16 @@
 
+# parameters #
+
 PYLINT_DIRS := disruption_py examples tests
 DELETE_OBJS := __pycache__ .pytest_cache
+
+# environment #
+
+GITHUB_ACTIONS ?= 0
+ifeq ($(GITHUB_ACTIONS), true)
+    CHECK_ARG := --check
+    FORMAT_ARG := --output-format=github
+endif
 
 # git #
 
@@ -26,10 +36,13 @@ clean-delete:
 
 # poetry #
 
-.PHONY: install uninstall reinstall lock update show
+.PHONY: install install-all uninstall reinstall lock update show
 
 install:
 	poetry install --with dev
+
+install-all:
+	poetry install --with dev,docs,lab
 
 uninstall:
 	poetry env list | cut -d' ' -f1 | xargs poetry env remove
@@ -54,50 +67,58 @@ quick:
 	poetry run pytest -v tests/test_quick.py
 
 test:
-	poetry run pytest -v tests
+	poetry run pytest -v --durations=0 tests
 
 test-fast:
-	GITHUB_ACTIONS=1 poetry run pytest -v tests
+	GITHUB_ACTIONS=true poetry run pytest -v tests
 
 # lint #
 
-.PHONY: lint black isort pylint shellcheck yamllint
+.PHONY: lint check isort black pylint pylint-only pylint-todos shellcheck yamllint
 
-lint: black pylint shellcheck yamllint
+lint: isort black pylint shellcheck yamllint
+
+check:
+	make lint GITHUB_ACTIONS=true
 
 black:
+	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	poetry run black --version
-	poetry run black --check .
+	poetry run black $(CHECK_ARG) .
 
 isort:
+	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	poetry run isort --version
-	poetry run isort --check --profile black .
+	poetry run isort $(CHECK_ARG) --profile black .
 
 pylint:
+	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	poetry run pylint --version
-	find $(PYLINT_DIRS) -type f -name '*.py' \
-	| xargs poetry run pylint
+	find $(PYLINT_DIRS) -type f -name '*.py' -not -empty \
+	| xargs poetry run pylint -v $(FORMAT_ARG)
 
 pylint-only:
-	find $(PYLINT_DIRS) -type f -name '*.py' \
-	| xargs poetry run pylint --disable=all --enable=$(CODE)
+	find $(PYLINT_DIRS) -type f -name '*.py' -not -empty  \
+	| xargs poetry run pylint -v --disable=all --enable=$(CODE)
 
-find-todos:
+pylint-todos:
 	CODE=fixme make pylint-only
 
 shellcheck:
-	poetry run shellcheck --version
+	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
+	shellcheck --version
 	find -type f -not -path '*/.git/*' \
 	| xargs grep -l '^#!/bin/bash' \
 	| while read -r F; \
 	do \
 	   echo "--> $$F"; \
-	   poetry run shellcheck "$$F"; \
+	   shellcheck "$$F"; \
 	done
 
 yamllint:
+	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	poetry run yamllint --version
-	find -type f -iname '*.yml' -or -iname '*.yaml' \
+	find -type f -iname '*.yml' -or -iname '*.yaml' -not -empty \
 	| while read -r F; \
 	do \
 	   echo "--> $$F"; \

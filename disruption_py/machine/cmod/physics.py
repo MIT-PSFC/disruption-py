@@ -6,13 +6,10 @@ Module for retrieving and calculating data for CMOD physics methods.
 
 import traceback
 import warnings
-from importlib import resources
 
 import numpy as np
-import pandas as pd
 from MDSplus import mdsExceptions
 
-import disruption_py.data
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.errors import CalculationError
@@ -194,7 +191,7 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the interpolated IP parameters, including
+            A dictionary containing the interpolated Ip parameters, including
             "ip", "dip_dt", "dip_smoothed", "ip_prog", "dipprog_dt", and "ip_error".
         """
         # Automatically generated
@@ -474,7 +471,7 @@ class CmodPhysicsMethods:
         efittime : array_like
             The times at which the inductance was measured.
         dip_smoothed : array_like
-            The smoothed plasma current.
+            The smoothed time derivative of the plasma current.
         ip : array_like
             The plasma current.
         r0 : array_like
@@ -486,11 +483,6 @@ class CmodPhysicsMethods:
             The ohmic power.
         v_loop : array_like
             The loop voltage.
-
-        Original Authors
-        ----------------
-
-
         """
         inductance = 4.0 * np.pi * 1.0e-7 * r0 * li / 2.0
         v_loop = interp1(v_loop_time, v_loop, times)
@@ -690,7 +682,7 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the calculated kappa_area.
+            A dictionary containing the calculated "kappa_area".
         """
         aminor = params.mds_conn.get_data(
             r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
@@ -711,9 +703,9 @@ class CmodPhysicsMethods:
     @staticmethod
     def _get_rotation_velocity(times, intensity, time, vel, hirextime):
         """
-        Uses spectroscopy graphs of ionized(to hydrogen and helium levels) Argon
+        Uses spectroscopy graphs of ionized (to hydrogen and helium levels) Argon
         to calculate velocity. Because of the heat profile of the plasma, suitable
-        measurements are only found near the center
+        measurements are only found near the center.
         """
         v_0 = np.empty(len(time))
         # Check that the argon intensity pulse has a minimum count and duration
@@ -729,45 +721,6 @@ class CmodPhysicsMethods:
             v_0 *= 1000.0
         v_0 = interp1(time, v_0, times)
         return {"v_0": v_0}
-
-    # TODO: Calculate v_mid
-    @staticmethod
-    @physics_method(columns=["v_0"], tokamak=Tokamak.CMOD)
-    def get_rotation_velocity(params: PhysicsMethodParams):
-        """
-        Retrieve the rotational velocity for a given shot.
-
-        Parameters
-        ----------
-        params : PhysicsMethodParams
-            The parameters containing the MDSplus connection, shot id and more.
-
-        Returns
-        -------
-        dict
-            A dictionary containing the rotational velocity.
-            If the shot is not calibrated, it returns NaN.
-        """
-        # pylint: disable-next=deprecated-method
-        with resources.path(disruption_py.data, "lock_mode_calib_shots.txt") as fio:
-            calibrated = pd.read_csv(fio)
-        # Check to see if shot was done on a day where there was a locked
-        # mode HIREX calibration by cross checking with list of calibrated
-        # runs. If not calibrated, raise an error.
-        if params.shot_id not in calibrated:
-            raise CalculationError("Not calibrated")
-
-        intensity, time = params.mds_conn.get_data_with_dims(
-            ".hirex_sr.analysis.a:int", tree_name="spectroscopy", astype="float64"
-        )
-        vel, hirextime = params.mds_conn.get_data_with_dims(
-            ".hirex_sr.analysis.a:vel", tree_name="spectroscopy", astype="float64"
-        )
-
-        output = CmodPhysicsMethods._get_rotation_velocity(
-            params.times, intensity, time, vel, hirextime
-        )
-        return output
 
     @staticmethod
     @physics_method(
@@ -865,7 +818,7 @@ class CmodPhysicsMethods:
     @staticmethod
     def _get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
         """
-        Calculate electron density, its time derivative, and Greenwald fraction.
+        Calculate electron density, its time derivative, and the Greenwald fraction.
 
         Parameters
         ----------
