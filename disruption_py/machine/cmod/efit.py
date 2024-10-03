@@ -144,6 +144,83 @@ class CmodEfitMethods:
         return efit_data
 
     @staticmethod
+    @physics_method(
+        columns=[
+            *efit_cols.keys(),
+            *efit_cols_pre_2000.keys(),
+            *efit_derivs.keys(),
+            "v_surf",
+            "v_loop_efit",
+            "beta_n",
+        ],
+        tokamak=Tokamak.CMOD,
+    )
+    def _getMany_EFIT_parameters(params: PhysicsMethodParams):
+        named_expressions = {
+            "efit_time": r"\efit_aeqdsk:time",
+            "ssibry": r"\efit_geqdsk:ssibry",
+            "ssimag": r"\efit_geqdsk:ssimag",
+            "beta_t": r"\efit_aeqdsk:betat",
+        }
+        for param in CmodEfitMethods.efit_cols:
+            if (
+                params.shot_id <= 1000000000
+                and param not in CmodEfitMethods.efit_cols_pre_2000.keys()
+            ):
+                named_expressions[param] = CmodEfitMethods.efit_cols_pre_2000[param]
+            else:
+                named_expressions[param] = CmodEfitMethods.efit_cols[param]
+
+        efit_data = params.mds_conn.get_many(
+            names=list(named_expressions.keys()),
+            expressions=list(named_expressions.values()),
+            astype="float64",
+            tree_name="_efit_tree",
+        )
+
+        for deriv_param, param in CmodEfitMethods.efit_derivs.items():
+            efit_data[deriv_param] = np.gradient(
+                efit_data[param],
+                efit_data["efit_time"],
+                edge_order=1,
+            )
+
+        # Get data for V_surf := deriv(\ANALYSIS::EFIT_SSIBRY)*2*pi
+        efit_data["v_surf"] = (
+            np.gradient(efit_data["ssibry"], efit_data["efit_time"]) * 2 * np.pi
+        )
+
+        # For shots before 2000, adjust units of aminor, compute beta_n and v_loop
+        if params.shot_id <= 1000000000:
+
+            # Adjust aminor units
+            efit_data["aminor"] = efit_data["aminor"] / 100  # [cm] to [m]
+
+            # Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally
+            #  sure on this one)
+            efit_data["v_loop_efit"] = (
+                np.gradient(efit_data["ssimag"], efit_data["efit_time"]) * 2 * np.pi
+            )
+
+            # Compute beta_n
+            efit_data["beta_n"] = np.reciprocal(
+                np.reciprocal(efit_data["beta_t"]) + np.reciprocal(efit_data["beta_p"])
+            )
+
+        if not np.array_equal(params.times, efit_data["efit_time"]):
+            for param in efit_data:
+                efit_data[param] = interp1(
+                    efit_data["efit_time"], efit_data[param], params.times
+                )
+
+        del efit_data["beta_t"]
+        del efit_data["efit_time"]
+        del efit_data["ssibry"]
+        del efit_data["ssimag"]
+
+        return efit_data
+
+    @staticmethod
     def efit_check(params: PhysicsMethodParams):
         """
         # TODO: Get description from Jinxiang

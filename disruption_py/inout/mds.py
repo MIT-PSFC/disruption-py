@@ -111,6 +111,57 @@ class MDSConnection:
         else:
             return self.conn.get(expression, arguments)
 
+    def get_many(
+        self,
+        names: List[str],
+        expressions: List[str],
+        arguments: List = None,
+        astype: Union[str, List[str]] = None,
+        tree_name: str = None,
+    ) -> Any:
+        """Evaluate the specified expressions with MDSplus getMany.
+
+        Parameters
+        ----------
+        expression : str
+            MDSplus TDI expression. Please see MDSplus documentation for more
+            information.
+        arguments : Any, optional
+            Arguments for MDSplus TDI Expression. Please see MDSplus documentation
+            for more information. Default None.
+        astype: str or List[str], optional
+            Type(s) to convert the data to
+        tree_name : str, optional
+
+        Returns
+        -------
+        dict
+            Result of evaluating TDI expression from MDSplus.
+        """
+        if tree_name is not None:
+            self.open_tree(tree_name)
+
+        if arguments is None:
+            arguments = [None] * len(names)
+        if isinstance(astype, str) or astype is None:
+            astype = [astype] * len(names)
+
+        getter = self.conn.getMany()
+        for name, expr, arg in zip(names, expressions, arguments):
+            if arg is None:
+                getter.append(name, expr)
+            else:
+                getter.append(name, expr, arg)
+
+        result_dict = getter.execute()
+        values = {}
+        for i, name in enumerate(names):
+            data = np.array(result_dict[name].get("value"))
+            if astype[i]:
+                data = safe_cast(data, astype[i])
+            values[name] = data
+        return values
+
     # Convenience methods
 
     def get_data(
