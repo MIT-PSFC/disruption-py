@@ -44,7 +44,7 @@ poetry add disruption-py
 pip install disruption-py
 ```
 
-For custom installations, please refer to our [Installation guide](INSTALL.md).
+For custom installations, please refer to our [Installation guide](docs/INSTALL.md).
 
 ## Getting Started
 
