@@ -34,7 +34,7 @@ maintainers = [
 name = "disruption-py"
 readme = "README.md"
 repository = "https://github.com/MIT-PSFC/disruption-py/"
-version = "0.8.0"
+version = "0.9.0"
 
 [tool.poetry.dependencies]
 python = "^3.10"
