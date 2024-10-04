@@ -5,21 +5,15 @@ This module contains utility functions for various numerical operations.
 """
 
 import copy
-import random
-import string
 from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
-from scipy.interpolate import interp1d, interp2d
+from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
-from scipy.signal import medfilt
+from scipy.signal import lfilter, medfilt
 
 pd.options.mode.chained_assignment = None
-
-
-def generate_id(size=8):
-    return "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
 
 
 def interp1(x, y, new_x, kind="linear", bounds_error=False, fill_value=np.nan, axis=-1):
@@ -61,47 +55,15 @@ def interp1(x, y, new_x, kind="linear", bounds_error=False, fill_value=np.nan, a
     return set_interp(new_x)
 
 
-def interp2(X, Y, V, Xq, Yq, kind="linear"):
-    """
-    Interpolate a 2-D array.
-
-    This function takes in 2D arrays of X and Y coordinates, and a 2D array of
-    data V, and returns the interpolated value at the point (Xq, Yq). The
-    kind of interpolation is specified by the user. The function uses the
-    scipy.interpolate.interp2d function to create the interpolant, which is
-    then evaluated at the point (Xq, Yq).
-
-    Parameters
-    ----------
-    X : array
-        The X-coordinates of the original array.
-    Y : array
-        The Y-coordinates of the original array.
-    V : array
-        The data of the original array.
-    Xq : float
-        The X-coordinate of the interpolated point.
-    Yq : float
-        The Y-coordinate of the interpolated point.
-    kind : str, optional
-        The interpolation method to use. Options are 'linear', 'nearest',
-        'zero', 'slinear', 'quadratic', and 'cubic'. Defaults to 'linear'.
-
-    Returns
-    -------
-    _ : float
-        The interpolated value at the point (Xq, Yq).
-
-    """
-    set_interp = interp2d(X, Y, V, kind=kind)
-    return set_interp(Xq, Yq)
-
-
 def exp_filter(x, w, strategy="fragmented"):
     """
     Implements an exponential filter.
 
-    This function implements an exponential filter on the given array x. In the case of nan values in the input array, we default to using the last timestep that was not a nan value. In the fragmented strategy, any time we encounter invald values, we restart the filter at the next valid value.
+    This function implements an exponential filter on the given array x. In the
+    case of nan values in the input array, we default to using the last timestep
+    that was not a nan value. In the fragmented strategy, any time we encounter
+    invald values, we restart the filter at the next valid value.
+
     Parameters
     ----------
     x : array
@@ -109,7 +71,8 @@ def exp_filter(x, w, strategy="fragmented"):
     w : float
         The filter weight.
     strategy: str, optional
-        Imputation strategy to be used, if any. Options are 'fragmented' or 'none'. Default is 'fragmented.'
+        Imputation strategy to be used, if any. Options are 'fragmented' or 'none'.
+        Default is 'fragmented.'
 
     Returns
     -------
@@ -172,16 +135,16 @@ def gauss_smooth(y, smooth_width, ends_type):
     """
     w = np.round(smooth_width)
     w = int(w)  # Ensure w is an integer
-    l = len(y)
-    s = np.zeros(l)
+    ly = len(y)
+    s = np.zeros(ly)
 
-    for i in range(l):
+    for i in range(ly):
         if i < w // 2:
             if ends_type == 0:
                 s[i] = 0
             else:
                 s[i] = np.mean(y[: i + w // 2])
-        elif i >= l - w // 2:
+        elif i >= ly - w // 2:
             if ends_type == 0:
                 s[i] = 0
             else:
@@ -213,7 +176,7 @@ def gaussian_fit(*args):
         The coefficients of the fit.
     """
 
-    coeffs, var_matrix = curve_fit(gauss, *args)
+    coeffs, *_ = curve_fit(gauss, *args)
     return coeffs
 
 
@@ -239,15 +202,17 @@ def gauss(x, *params):
     return out
 
 
-# Alessandro Pau (JET & AUG) has given Cristina a robust routine that
-# performs time differentiation with smoothing, while preserving causality.
-# It can be useful for differentiating numerous signals such as Ip, Vloop,
-# etc.  It is called 'GSASTD'. We will use this routine in place of Matlab's
-# 'gradient' and smoothing/filtering routines for certain signals.
+def gaussian_fit_with_fixed_mean(mu, *args):
+    """Same as gaussian_fit() but with mu as a fixed parameter"""
+    coeffs, *_ = curve_fit(lambda x, a, sigma: gauss(x, a, mu, sigma), *args)
+    return coeffs
 
 
-def gsastd(x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=None):
+def matlab_gsastd(
+    x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=0
+):
     """
+    Python reimplementation of the GSASTD routine originally by Alessandro Pau
     Fast non-causal differentiation of noisy data.
 
     Parameters
@@ -280,24 +245,31 @@ def gsastd(x, y, derivative_mode, width, smooth_type=1, ends_type=0, slew_rate=N
     -------
     array_like
         Smoothed dataset.
+
+    References
+    -------
+    - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_P_ohm_d3d.m
+
+    Last major update by: William Wei on 7/24/2024
     """
-    if slew_rate is not None:
-        for i in range(1, len(y) - 1):
-            diff = y[i + 1] - y[i]
+    y_arr = y.copy()
+    if slew_rate:
+        for i in range(0, len(y_arr) - 1):
+            diff = y_arr[i + 1] - y_arr[i]
             if abs(diff) > slew_rate:
-                y[i + 1] = y[i] + np.sign(diff) * slew_rate
+                y_arr[i + 1] = y_arr[i] + np.sign(diff) * slew_rate
     if smooth_type == 0:
-        width = 0
+        width = 1
     if derivative_mode == 0:
-        return fastsmooth(y, width, smooth_type, ends_type)
-    elif derivative_mode == 1:
-        return fastsmooth(deriv(x, y), width, smooth_type, ends_type)
+        return matlab_fastsmooth(y_arr, width, smooth_type, ends_type)
+    if derivative_mode == 1:
+        return matlab_fastsmooth(matlab_deriv(x, y_arr), width, smooth_type, ends_type)
     raise ValueError("derivative_mode only takes 0 or 1 as input")
 
 
-def deriv(x, y):
+def matlab_deriv(x, y):
     """
-    Calculate the derivative of a dataset.
+    Calculate the derivative of a dataset. Used by GSASTD.
 
     Parameters
     ----------
@@ -310,19 +282,24 @@ def deriv(x, y):
     -------
     d: array
         The derivative of the dataset.
+
+    References:
+    -------
+    - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/GSASTD.m
     """
-    n = len(y) - 1
+    n = len(y)
     d = np.zeros(y.shape)
     d[0] = (y[1] - y[0]) / (x[1] - x[0])
-    d[n] = (y[n] - y[n - 1]) / (x[n] - x[n - 1])
-    for i in range(1, n):
+    d[n - 1] = (y[n - 1] - y[n - 2]) / (x[n - 1] - x[n - 2])
+    for i in range(1, n - 1):
         d[i] = (y[i + 1] - y[i - 1]) / (x[i + 1] - x[i - 1])
     return d
 
 
-def fastsmooth(y, w, smooth_type=1, ends_type=0):
+def matlab_fastsmooth(y, w, smooth_type=1, ends_type=0):
     """
     Wrapper for looping over the dataset using the smooth function.
+    Used by GSASTD.
 
     Parameters
     ----------
@@ -333,6 +310,10 @@ def fastsmooth(y, w, smooth_type=1, ends_type=0):
     smooth_type : int, optional
         Determines the type of smoothing to use.
         0 -> no smoothing.
+            -- NOTE: In the original MATLAB function, smooth_type = 0 will still
+                cause the function to smoooth the array once.
+            -- (i.e. it's identical to smooth_type = 1).
+            -- We keep the same behavior in this python implementation.
         1 -> rectangular (sliding-average or boxcar)
         2 -> triangular (2 passes of sliding-average)
         3 -> pseudo-Gaussian (3 passes of sliding-average)
@@ -345,48 +326,98 @@ def fastsmooth(y, w, smooth_type=1, ends_type=0):
     -------
     array_like
         The smoothed dataset.
+
+    References:
+    -------
+    - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/GSASTD.m
+
+    Last major update by William Wei on 7/24/2024
     """
-    smoothed_y = smooth(y, w)
-    for i in range(smooth_type - 1):
-        smoothed_y = smooth(smoothed_y, w)
+    smoothed_y = matlab_sa(y, w, ends_type)
+    for _ in range(smooth_type - 1):
+        smoothed_y = matlab_sa(smoothed_y, w, ends_type)
     return smoothed_y
 
 
-# def smooth(y, smooth_width, ends_type):
-#    """
-#    Smooth a dataset using a Gaussian window.
-#
-#    Parameters
-#    ----------
-#    y : array_like
-#        The y coordinates of the dataset.
-#    smooth_width : int
-#        The width of the smoothing window.
-#    ends_type : int
-#        Determines how the "ends" of the signal are handled.
-#        0 -> ends are "zeroed"
-#        1 -> the ends are smoothed with progressively smaller smooths the closer to the end.
-#
-#    Returns
-#    -------
-#    array_like
-#        The smoothed dataset.
-#    """
-# NOTE: numpy behaviour is different than matlab and will round X.5 to nearest even value instead of value farther away from 0
-#    w = np.round(smooth_width)
-#    sum_points = np.sum(y[:w])
-#    s = np.zeros(y.shape)
-#    half_w = int(np.round(w/2.0))
-#    l = len(y)
-#    for i in range(l-w):
-#        s[i+half_w-1] = sum_points
-#        sum_points = sum_points - y[i]
-#    s[i+half_w] = np.sum(y[l-w:l])
-#    return s/w
+def matlab_sa(y, smooth_width, ends_type=0):
+    """
+    Compute the centered moving average of y
+    Used by GSASTD
+
+    Parameters
+    ----------
+    y : array_like
+        The y coordinates of the dataset.
+    smooth_width : int
+        The width of the smoothing window.
+    ends_type : int
+        Determines how the "ends" of the signal are handled.
+        0 -> ends are "zeroed"
+        1 -> the ends are smoothed with progressively smaller smooths the closer to the end.
+
+    Returns
+    -------
+    array_like
+        The smoothed dataset.
+
+    References:
+    -------
+    - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/GSASTD.
+
+    Last major update by William Wei on 7/24/2024
+    """
+    # NOTE: numpy behaviour is different than matlab and will round X.5 to nearest
+    # even value instead of value farther away from 0
+
+    w = matlab_round_int(smooth_width)
+    sum_points = np.sum(y[:w])
+    s = np.zeros(y.shape)
+    half_w = matlab_round_int(w / 2.0)
+    ly = len(y)
+    for i in range(ly - w):
+        s[i + half_w - 1] = sum_points
+        sum_points = sum_points - y[i]
+        sum_points = sum_points + y[i + w]
+    s[i + half_w] = np.sum(y[ly - w : ly])
+    y_smooth = s / w
+
+    if ends_type == 1:
+        start_point = matlab_round_int((smooth_width + 1) / 2)
+        y_smooth[0] = (y[0] + y[1]) / 2
+        for i in range(1, start_point):
+            y_smooth[i] = np.mean(y[0 : 2 * i + 1])
+            y_smooth[ly - i - 1] = np.mean(y[ly - 2 * i - 1 : ly])
+        y_smooth[ly - 1] = (y[ly - 1] + y[ly - 2]) / 2
+
+    return y_smooth
+
+
+def matlab_round_int(x):
+    """
+    Custom rounding function. Round x.5 to the nearest integer with larger magnitude
+    numpy behaviour is different than matlab and will round X.5 to nearest even value
+    instead of value farther away from 0.
+    """
+    sign = np.sign(x)
+    x = abs(x)
+    if x % 1 == 0.5:
+        return int(sign * np.ceil(x))
+    return int(sign * round(x))
 
 
 # TODO: Cover documentation with Cristina
-def power(a):
+def matlab_power(a):
+    """
+    Python reimplementation of powers_new.m
+    Used for calculating the total radiated power from the bolometer array.
+
+    -------
+    References:
+    - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/powers_new.m
+
+    Last major update by William Wei on 7/26/2024
+    """
+
     # Multiplicative constants (kappa) to get the power radiating in the i^th viewing chord
     kappa = np.array(
         [
@@ -509,28 +540,35 @@ def power(a):
     )  # convert to [m^(-2)]
 
     @dataclass
+    # pylint: disable-next=missing-class-docstring
     class Channel:
         label: str
         chanpwr: np.ndarray
         brightness: np.ndarray
-        R: float
-        Z: float
+        r: float
+        z: float
         angle: float
 
     @dataclass
+    # pylint: disable-next=missing-class-docstring
     class Power:
         pwrmix: np.ndarray
         divl: np.ndarray
         divu: np.ndarray
-        chan: np.ndarray
+        chan: list
 
-    c = Channel("", np.zeros((4096)), np.zeros((4096)), 0.0, 0.0, 0.0)
-    b = Power(np.zeros((4096)), np.zeros((4096)), np.zeros((4096)), np.tile(c, (48)))
+    b = Power(
+        pwrmix=np.zeros((4096)),
+        divl=np.zeros((4096)),
+        divu=np.zeros((4096)),
+        chan=[],
+    )
     for i in range(48):
+        b.chan.append(Channel("", np.zeros((4096)), np.zeros((4096)), 0.0, 0.0, 0.0))
         b.chan[i].chanpwr = kappa[i] * a.channels[i].pwr
         b.chan[i].brightness = etendu[i] * a.channels[i].pwr
-        b.chan[i].R = a.channels[i].R
-        b.chan[i].Z = a.channels[i].Z
+        b.chan[i].r = a.channels[i].r
+        b.chan[i].z = a.channels[i].z
         b.chan[i].angle = a.channels[i].angle
     b.pwrmix = 0.0
     b.divl = 0.0
@@ -546,12 +584,23 @@ def power(a):
         b.pwrmix = b.pwrmix + b.chan[i].chanpwr
     for i in range(5, 12):
         b.pwrmix = b.pwrmix - kappa[i] * b.divl / 7.0 / kappa[i + 43]
-    b.pwrmix = b.pwrmix + b.divl + b.divu
+    b.pwrmix = b.pwrmix + b.divu + b.divl
     return b
 
 
-def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
-    drtau /= 1.0e3
+def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
+    """
+    Python reimplementation of getbolo_new.m.
+    Used for calculating the total radiated power from the bolometer array.
+
+    -------
+    References:
+    - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/getbolo_new.m
+
+    Last major update by William Wei on 7/26/2024
+    """
+    drtau /= 1e3
+    # NOTE: why set gam, tau & scrfact as 2D arrays?
     gam = np.zeros((1, 49))
     tau = np.zeros((1, 49))
     kappa = [
@@ -626,6 +675,7 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
             1.3993e8,
             1.5376e8,
         ]
+        # transmission factor through ECH screen
         # improved ECH screen
         scrfact = [
             0.7990,
@@ -843,10 +893,11 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
     )
 
     @dataclass
+    # pylint: disable-next=missing-class-docstring
     class Channel:
         label: str
-        R: float
-        Z: float
+        r: float
+        z: float
         angle: float
         ier: int
         pwr: np.ndarray
@@ -856,11 +907,21 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         scrfact: float
 
     one_channel = Channel(
-        "", 0.0, 0.0, 0.0, 0, np.zeros((1, 4096)), np.zeros((1, 4096)), 0.0, 0.0, 0.0
+        label="",
+        r=0.0,
+        z=0.0,
+        angle=0.0,
+        ier=0,
+        pwr=np.zeros((1, 4096)),
+        raw=np.zeros((1, 16384)),
+        gam=0.0,
+        tau=0.0,
+        scrfact=0.0,
     )
     channels = [copy.deepcopy(one_channel) for i in range(48)]
 
     @dataclass
+    # pylint: disable-next=missing-class-docstring
     class Bolo:
         shot_id: int
         kappa: np.ndarray
@@ -871,13 +932,13 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         channels: list
 
     bolo_shot = Bolo(
-        shot_id,
-        kappa,
-        np.zeros((1, 4096)),
-        np.zeros((1, 16384)),
-        0,
-        np.zeros((1, 4096)),
-        channels,
+        shot_id=shot_id,
+        kappa=kappa,
+        time=np.zeros((1, 4096)),
+        raw_time=np.zeros((1, 16384)),
+        ntimes=0,
+        tot_pwr=np.zeros((1, 4096)),
+        channels=channels,
     )
     # TODO: Find explanation for this
     if shot_id > 79400:
@@ -904,57 +965,50 @@ def get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50):
         for i in range(48):
             bolo_shot.channels[i].ier = 1
         return bolo_shot
-    time = np.linspace(np.min(bol_time[0]), np.min(bol_time[-1]), 16384)
+
+    # time = np.linspace(np.min(bol_time[0]), np.min(bol_time[-1]), 16384)
+    time = np.linspace(bol_time[0], bol_time[-1], 16384)
     dt = time[1] - time[0]
-    window_size = int(np.around(drtau / dt))
+    window_size = matlab_round_int(drtau / dt)
     smoothing_kernel = (1.0 / window_size) * np.ones(window_size)
+
     bolo_shot.ntimes = int(len(time) / 4)
     bolo_shot.time = np.linspace(np.min(time), np.max(time), bolo_shot.ntimes)
-    t_del = bolo_shot.time[1] - bolo_shot.time[0]
     bolo_shot.raw_time = time
-    m = 2 * np.fix(np.fix(1000 * drtau) / np.fix(1000 * t_del) / 2) + 1
-    k = np.arange(0, m) - np.fix((m - 1) / 2)
-    nzer = np.where(k != 0)
-    k[nzer] = 1.0 / k[nzer]
-    k = k / t_del / (np.fix(m / 2) * 2)
+
     for i in range(48):
         bolo_shot.channels[i].label = bol_channels[i]
         data = interp1(bol_time, bol_top[i], bolo_shot.raw_time)
+
         bolo_shot.channels[i].ier = 0
         bolo_shot.channels[i].raw = data
         bolo_shot.channels[i].gam = gam[i + 1]
         bolo_shot.channels[i].tau = tau[i + 1]
         bolo_shot.channels[i].scrfact = scrfact[i]
-        bolo_shot.channels[i].R = aperx[i]
-        bolo_shot.channels[i].Z = apery[i]
+        bolo_shot.channels[i].r = aperx[i]
+        bolo_shot.channels[i].z = apery[i]
         bolo_shot.channels[i].angle = angle[i]
+
         # Subtract baseline offset
         temp = data - np.mean(data[:20])
         # Filter signal using causal moving average filter (i.e. boxcar)
-        temp_filtered = np.convolve(temp, smoothing_kernel, "same")
-        # temp_filtered = lfilter(smoothing_kernel, 1, temp)
-        dr_dt = np.gradient(temp_filtered, dt)
-        # Calculate power on each detector, P_d(t) [as given in Leonard et al, Rev. Sci. Instr. (1995)]
+        # NOTE: lfilter gives closer results to MATLAB than np.convolve
+        # temp_filtered = np.convolve(temp, smoothing_kernel, "same")
+        temp_filtered = lfilter(smoothing_kernel, 1, temp)
+        dr_dt = np.gradient(temp_filtered, time)
+        # Calculate power on each detector, P_d(t) [as given in Leonard et al,
+        # Rev. Sci. Instr. (1995)]
+        # BUG: MATLAB's medfilt1 function does not require window_size to be odd.
+        # This could introduce discrepancy with this python implementation.
         bolo_shot.channels[i].pwr = medfilt(
             (gam[i + 1] * temp_filtered + tau[i + 1] * dr_dt) / scrfact[i],
             window_size + (not window_size % 2),
         )
+
     return bolo_shot
 
 
-def save_open_plots(filename):
-    import matplotlib.pyplot as plt
-    from matplotlib.backends.backend_pdf import PdfPages
-
-    pp = PdfPages(filename)
-    fig_nums = plt.get_fignums()
-    figs = [plt.figure(n) for n in fig_nums]
-    for fig in figs:
-        fig.savefig(pp, format="pdf")
-    pp.close()
-
-
-def matlab_gradient_1d_vectorized(f, h, **kwargs):
+def matlab_gradient_1d_vectorized(f, h, **_kwargs):
     """
     Compute the gradient for a 1D array using vectorized operations.
 

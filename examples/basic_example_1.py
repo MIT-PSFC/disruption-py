@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+"""
+Example usage of `get_shots_data` for retrieving three shots and outputting data 
+to csv.
+"""
+
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.workflow import get_shots_data
 

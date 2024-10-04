@@ -112,19 +112,21 @@ jobs:
           echo DISPY_TOKAMAK=d3d \
           | tee -a "$GITHUB_ENV"
 
+      - name: Install poetry
+        run: pipx install poetry
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version-file: 'pyproject.toml'
+          cache: 'poetry'
 
       - name: Install requirements
-        run: |
-          pip install -r .pip/main.txt -r .pip/dev.txt
-          pip install -e .
+        run: make install-all
 
       - name: Check tunnel
         run: |
-          xargs -a ssh.pid ps -p
+          xargs -a ssh.pid ps -p || true
           if ! grep 'Authenticated.*publickey' ssh.log
           then
              curl -s ipinfo.io && echo
@@ -133,16 +135,16 @@ jobs:
           fi
 
       - name: Test SQL
-        run: python -O examples/sql.py
+        run: poetry run python examples/sql.py
 
       - name: Test MDSplus
-        run: python examples/mdsplus.py
+        run: poetry run python examples/mdsplus.py
 
       - name: Test EFIT
-        run: python examples/efit.py
+        run: poetry run python examples/efit.py
 
       - name: Run all tests
-        run: pytest -v --durations=0 tests
+        run: make test
 
       - name: Close tunnel
         run: xargs -a ssh.pid kill -TERM

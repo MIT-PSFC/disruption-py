@@ -46,17 +46,20 @@ def get_shots_data(
     Attributes
     ----------
     shotlist_setting : ShotlistSettingType
-        Data retrieved for all shotlist specified by the setting. See ShotlistSetting for more details.
+        Data retrieved for all shotlist specified by the setting. See ShotlistSetting
+        for more details.
     retrieval_settings : RetrievalSettings
-        The settings that each shot uses when retrieving data. See RetrievalSettings for more details.
-        If None, the default values of each setting in RetrievalSettings is used.
+        The settings that each shot uses when retrieving data. See RetrievalSettings
+        for more details. If None, the default values of each setting in
+        RetrievalSettings is used.
     output_setting : OutputSetting
-        The output type setting to be used when outputting the retrieved data for each shot. Note that data
-        is streamed to the output type setting object as it is retrieved. Can pass any OutputSettingType
-        that resolves to an OutputSetting. See OutputSetting for more details. Defaults to "list".
+        The output type setting to be used when outputting the retrieved data for
+        each shot. Note that data is streamed to the output type setting object
+        as it is retrieved. Can pass any OutputSettingType that resolves to an
+        OutputSetting. See OutputSetting for more details. Defaults to "list".
     num_processes : int
-        The number of processes to use for data retrieval. If 1, the data is retrieved in serial.
-        If > 1, the data is retrieved in parallel.
+        The number of processes to use for data retrieval. If 1, the data is retrieved
+        in serial. If > 1, the data is retrieved in parallel.
     log_settings : LogSettings
         Settings for logging.
     Returns
@@ -124,7 +127,7 @@ def get_shots_data(
             )
             if shot_data is None:
                 logger.warning(
-                    f"Not outputting data for shot {shot_id} due, data is None."
+                    "Not outputting data for shot %s due, data is None.", shot_id
                 )
             else:
                 output_setting.output_shot(

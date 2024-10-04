@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""Module for evaluating fresh data against cached data for testing."""
+
 import logging
 import os
 import time
@@ -74,21 +76,26 @@ def get_cached_from_fresh(
         Dictionary mapping shot IDs to retrieved SQL data.
     """
     # Mapping SQL data onto the MDSplus timebase means SQL data needs time data
-    MERGE_COL = "time"
+    merge_col = "time"
     if test_columns is None:
         test_columns = ["*"]
-    elif MERGE_COL not in test_columns:
-        test_columns.append(MERGE_COL)
+    elif merge_col not in test_columns:
+        test_columns.append(merge_col)
 
     db = ShotDatabase.from_config(tokamak=tokamak)
     shot_data = {}
     for shot_id in shotlist:
         times = fresh_data[shot_id]["time"]
         sql_data = db.get_shots_data([shot_id], cols=test_columns)
+
+        if sql_data.empty:
+            shot_data[shot_id] = pd.DataFrame()
+            continue
+
         shot_data[shot_id] = pd.merge_asof(
             times.to_frame(),
             sql_data,
-            on=MERGE_COL,
+            on=merge_col,
             direction="nearest",
             tolerance=config().TIME_CONST,
         )
@@ -142,8 +149,8 @@ def eval_shot_against_cache(
         data_column=data_column,
         fresh_column_data=fresh_shot_data.get(data_column, None),
         cache_column_data=cache_shot_data.get(data_column, None),
-        fresh_time=fresh_shot_data["time"],
-        cache_time=cache_shot_data["time"],
+        fresh_time=fresh_shot_data.get("time"),
+        cache_time=cache_shot_data.get("time"),
         missing_fresh_data=missing_fresh_data,
         missing_cache_data=missing_cache_data,
         expect_failure=expect_failure,
@@ -155,11 +162,10 @@ def eval_shot_against_cache(
         expectation = "failure" if expect_failure else "success"
         failure = "failed" if data_difference.failed else "succeeded"
         logger.debug(
-            "Expected {expectation} and {failure}:\n{report}".format(
-                expectation=expectation,
-                failure=failure,
-                report=data_difference.column_mismatch_string,
-            )
+            "Expected %s and %s:\n%s",
+            expectation,
+            failure,
+            data_difference.column_mismatch_string,
         )
     assert not data_difference.failed, "Comparison failed"
 
@@ -172,6 +178,31 @@ def eval_against_cache(
     expected_failure_columns: List[str],
     test_columns=None,
 ) -> Dict[int, pd.DataFrame]:
+    """
+    Evaluate fresh data against cached data for specified shots.
+
+    This function retrieves fresh data from a tokamak and compares it against
+    cached data, identifying any differences. It temporarily patches the NumPy
+    gradient function to ensure compatibility with MATLAB-style gradient calculations.
+
+    Parameters
+    ----------
+    tokamak : Tokamak
+        The tokamak object used to retrieve data.
+    shotlist : List[int]
+        A list of shot identifiers to evaluate.
+    expected_failure_columns : List[str]
+        A list of columns that are expected to fail during evaluation.
+    test_columns : List[str], optional
+        A list of columns to test against the cached data. If None, the function
+        will determine the columns based on the available data.
+
+    Returns
+    -------
+    Dict[int, pd.DataFrame]
+        A dictionary mapping shot identifiers to their corresponding data
+        differences as DataFrames.
+    """
 
     tempfolder = mkdtemp(prefix=f"disruptionpy-{time.strftime('%y%m%d-%H%M%S')}-")
     print(f"Outputting to temporary folder: {tempfolder}")
@@ -197,7 +228,13 @@ def eval_against_cache(
     if test_columns is None:
         fresh_columns = set().union(*(df.columns for df in fresh_data.values()))
         cache_columns = set().union(*(df.columns for df in cache_data.values()))
-        test_columns = sorted(fresh_columns.intersection(cache_columns))
+        # Handle when one of fresh/cache has no data
+        if len(fresh_columns) == 0:
+            test_columns = sorted(cache_columns)
+        elif len(cache_columns) == 0:
+            test_columns = sorted(fresh_columns)
+        else:
+            test_columns = sorted(fresh_columns.intersection(cache_columns))
 
     data_differences = eval_shots_against_cache(
         shotlist=shotlist,

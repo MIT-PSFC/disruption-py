@@ -19,7 +19,8 @@ class CmodDraftPhysicsMethods:
 
     @staticmethod
     def get_edge_parameters(times, p_Te, p_ne, edge_rho_min=0.85, edge_rho_max=0.95):
-        """Compute the edge Temperature and edge Density signal from the TS.
+        """
+        Compute the edge Temperature and edge Density signal from the TS.
 
         Parameters
         ----------
@@ -209,7 +210,8 @@ class CmodDraftPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def _get_H98(params: PhysicsMethodParams):
-        """Prepare to compute H98 by getting tau_E
+        """
+        Prepare to compute H98 by getting tau_E
 
         Scaling from eq. 20, ITER Physics Basis Chapter 2
         https://iopscience.iop.org/article/10.1088/0029-5515/39/12/302/pdf
@@ -222,7 +224,7 @@ class CmodDraftPhysicsMethods:
 
         # Get parameters for calculating confinement time
         powers_df = CmodPhysicsMethods._get_power(params=params)
-        efit_df = CmodEfitMethods._get_EFIT_parameters(params=params)
+        efit_df = CmodEfitMethods.get_efit_parameters(params=params)
         density_df = CmodPhysicsMethods._get_densities(params=params)
         ip_df = CmodPhysicsMethods._get_ip_parameters(params=params)
 
@@ -266,4 +268,37 @@ class CmodDraftPhysicsMethods:
             "dwmhd_dt": dwmhd_dt,
             "p_input": p_input,
         }
+        return output
+
+    # TODO: Calculate v_mid
+    @staticmethod
+    @physics_method(columns=["v_0"], tokamak=Tokamak.CMOD)
+    def get_rotation_velocity(params: PhysicsMethodParams):
+        nan_output = {"v_0": [np.nan]}
+        data = resources.files(disruption_py.data)
+        file = data.joinpath("lock_mode_calib_shots.txt")
+        with resources.as_file(file) as fio:
+            calibrated = pd.read_csv(fio)
+        # Check to see if shot was done on a day where there was a locked
+        # mode HIREX calibration by cross checking with list of calibrated
+        # runs. If not calibrated, return NaN outputs.
+        if params.shot_id not in calibrated:
+            return nan_output
+        try:
+            intensity, time = params.mds_conn.get_data_with_dims(
+                ".hirex_sr.analysis.a:int", tree_name="spectroscopy", astype="float64"
+            )
+            vel, hirextime = params.mds_conn.get_data_with_dims(
+                ".hirex_sr.analysis.a:vel", tree_name="spectroscopy", astype="float64"
+            )
+        except mdsExceptions.TreeFOPENR:
+            params.logger.warning(
+                "[Shot %s]: Failed to open necessary trees for rotational velocity calculations.",
+                params.shot_id,
+            )
+            params.logger.debug("[Shot %s]: %s", params.shot_id, traceback.format_exc())
+            return nan_output
+        output = CmodPhysicsMethods._get_rotation_velocity(
+            params.times, intensity, time, vel, hirextime
+        )
         return output

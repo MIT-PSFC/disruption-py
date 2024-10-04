@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+"""
+Example usage of `get_shots_data` when providing a pre-made shot list, cache data 
+and specifying only some methods to be run. Note how `run_tags=[]` in addition to 
+specifying `run_methods` & `run_columns`. Uses multiple processes for faster retrieval.
+"""
+
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.workflow import get_shots_data
 

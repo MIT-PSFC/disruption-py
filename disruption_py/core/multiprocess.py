@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+# TODO: https://github.com/MIT-PSFC/disruption-py/pull/271
+# pylint: disable=missing-class-docstring
+# pylint: disable=missing-function-docstring
+# pylint: disable=missing-module-docstring
+
 import multiprocessing
 import threading
 from enum import Enum
@@ -11,12 +16,15 @@ from disruption_py.inout.sql import ShotDatabase
 from disruption_py.settings import OutputSetting, OutputSettingParams
 
 
-# define a sentinel value for signifying that task queue is complete
 class MarkCompleteEnum(Enum):
-    MarkComplete = "MarkComplete"
+    """
+    sentinel value for signifying that task queue is complete.
+    """
+
+    MARK_COMPLETE = "MARK_COMPLETE"
 
 
-MARK_COMPLETE = MarkCompleteEnum.MarkComplete
+MARK_COMPLETE = MarkCompleteEnum.MARK_COMPLETE
 
 
 class Consumer(multiprocessing.Process):
@@ -44,7 +52,6 @@ class Consumer(multiprocessing.Process):
 
             self.task_queue.task_done()
             self.result_queue.put((shot_id, answer))
-        return
 
 
 class ShotTask:
@@ -99,12 +106,12 @@ class MultiprocessingShotRetriever:
     def _result_processor(self):
         while True:
             shot_id, result = self.result_queue.get()
-            self.logger.info(f"Processing result for shot: {shot_id}")
+            self.logger.info("Processing result for shot: %s", shot_id)
             if result is MARK_COMPLETE:
                 break
-            elif result is None:
+            if result is None:
                 self.logger.warning(
-                    f"Not outputting data for shot {shot_id}, data is None."
+                    "Not outputting data for shot %s, data is None.", shot_id
                 )
                 continue
             self.output_setting.output_shot(
@@ -147,6 +154,7 @@ class MultiprocessingShotRetriever:
         for consumer in self.consumers:
             consumer.join()
 
-        # Signal the result processing thread to stop once completed processing and wait for it to finish
+        # Signal the result processing thread to stop once completed processing
+        # and wait for it to finish
         self.result_queue.put((None, MARK_COMPLETE))
         self.result_thread.join()

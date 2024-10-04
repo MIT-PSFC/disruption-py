@@ -27,14 +27,24 @@ docs/ # documentation
 examples/ # example workflows
 scripts/ # miscellaneous scripts
 tests/ # automated testing
-.pip/ # pip-style requirements by group
 ```
 
 The original Matlab scripts are now stored in the `matlab` [protected branch](https://github.com/MIT-PSFC/disruption-py/tree/matlab).
 
 ## Installation
 
-For public and private installations, please refer to our [Installation guide](INSTALL.md).
+DisruptionPy is now open-source and [available at PyPI](https://pypi.org/project/disruption-py/)!
+For standard installations, please follow the usual way:
+
+```bash
+# if you use poetry:
+poetry add disruption-py
+
+# if you use pip:
+pip install disruption-py
+```
+
+For custom installations, please refer to our [Installation guide](docs/INSTALL.md).
 
 ## Getting Started
 

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Module for utility functions related to class instantiation, data manipulation, and version control.
+"""
+
 import subprocess
 import warnings
 from typing import List
@@ -8,13 +12,13 @@ import numpy as np
 import pandas as pd
 
 
-def instantiate_classes(l: List):
+def instantiate_classes(lst: List):
     """
     Instantiate all classes in a list of classes and objects.
 
     Parameters
     ----------
-    l : List
+    lst : List
         List to instantiate classes from.
 
     Returns
@@ -22,35 +26,66 @@ def instantiate_classes(l: List):
     List
         The list with all classes instantiated.
     """
-    return [x() for x in l if isinstance(x, type)]
+    return [x() for x in lst if isinstance(x, type)]
 
 
-def without_duplicates(l: List):
+def without_duplicates(lst: List):
     """
-    Get list without duplicates maintaining order.
+    Get list without duplicates while maintaining order.
 
     Parameters
     ----------
-    l : List
+    lst : List
         List to get without duplicates.
 
     Returns
     -------
     List
-        The list l with duplicates removed.
+        The list lst with duplicates removed.
     """
     seen = set()
-    return [x for x in l if not (x in seen or seen.add(x))]
+    return [x for x in lst if not (x in seen or seen.add(x))]
 
 
-def safe_cast(array: np.ndarray, dtype, copy=False):
+def safe_cast(array: np.ndarray, dtype, copy=False) -> np.ndarray:
+    """
+    Safely cast a NumPy array to a specified dtype, suppressing warnings.
+
+    Parameters
+    ----------
+    array : np.ndarray
+        The NumPy array to cast.
+    dtype : type
+        The target data type to cast the array to.
+    copy : bool, optional
+        Whether to create a copy of the array (default is False).
+
+    Returns
+    -------
+    np.ndarray
+        The casted NumPy array.
+    """
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=RuntimeWarning)
         return array.astype(dtype, copy=copy)
 
 
-def safe_df_concat(base_df: pd.DataFrame, new_dfs: List[pd.DataFrame]):
+def safe_df_concat(base_df: pd.DataFrame, new_dfs: List[pd.DataFrame]) -> pd.DataFrame:
+    """
+    Safely concatenate a base DataFrame with a list of new DataFrames.
 
+    Parameters
+    ----------
+    base_df : pd.DataFrame
+        The base DataFrame to concatenate with.
+    new_dfs : List[pd.DataFrame]
+        A list of new DataFrames to concatenate.
+
+    Returns
+    -------
+    pd.DataFrame
+        The concatenated DataFrame.
+    """
     if isinstance(new_dfs, pd.DataFrame):
         new_dfs = [new_dfs]
 
@@ -79,14 +114,21 @@ def safe_df_concat(base_df: pd.DataFrame, new_dfs: List[pd.DataFrame]):
     return concat_df
 
 
-def get_commit_hash():
-    # setup commit hash
+def get_commit_hash() -> str:
+    """
+    Retrieve the current Git commit hash.
+
+    Returns
+    -------
+    str
+        The short commit hash if available, otherwise None.
+    """
     try:
         commit_hash = (
             subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])
             .decode("ascii")
             .strip()
         )
-    except Exception as e:
+    except subprocess.CalledProcessError:
         commit_hash = None
     return commit_hash

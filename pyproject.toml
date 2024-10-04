@@ -1,20 +1,49 @@
 [tool.poetry]
-authors = ["Gregorio L. Trevisan <gtrevisan@psfc.mit.edu>"]
-description = "Data Framework for the MIT PSFC Disruption Studies Group"
+authors = [
+    "Cristina Rea <crea@psfc.mit.edu>",
+    "Gregorio L. Trevisan <gtrevisan@psfc.mit.edu>",
+    "MIT PSFC Disruption Studies Group <disruption-py@lists.psfc.mit.edu>",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Version Control :: Git",
+]
+description = "Scientific Data Framework for the MIT PSFC Disruption Studies Group"
+documentation = "https://mit-psfc.github.io/disruption-py/"
 homepage = "https://disruptions.mit.edu/"
+keywords = [
+    "plasma physics",
+    "nuclear fusion",
+    "tokamak",
+    "disruptions",
+]
 license = "MIT"
+maintainers = [
+    "Gregorio L. Trevisan <gtrevisan@psfc.mit.edu>",
+]
 name = "disruption-py"
 readme = "README.md"
-version = "0.7.0"
+repository = "https://github.com/MIT-PSFC/disruption-py/"
+version = "0.8.0"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.10"
 dynaconf = "^3.2.0"
 numpy = "^1.26.0"
 pandas = {extras = ["hdf5"], version = "^2.2.0"}
 pyodbc = "^5.1.0"
 scikit_learn = "^1.5.0"
-scipy = "^1.13.0"
+scipy = "^1.14.0"
 SQLAlchemy = "^2.0.0"
 
 [tool.poetry.group.dev]
@@ -22,8 +51,9 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.8.0"
-pylint = "^3.2.0"
+pylint = "^3.3.0"
 pytest = "^8.3.0"
+ruff = "^0.6.0"
 yamllint = "^1.35.0"
 
 [tool.poetry.group.docs]
@@ -34,7 +64,7 @@ black = "^24.8.0"
 mkdocs = "^1.6.0"
 mkdocs-literate-nav = "^0.6.0"
 mkdocs-material = "^9.5.0"
-mkdocstrings = {extras = ["python"], version = "^0.25.0"}
+mkdocstrings = {extras = ["python"], version = "^0.26.0"}
 
 [tool.poetry.group.lab]
 optional = true
@@ -44,6 +74,21 @@ ipykernel = "^6.29.0"
 ipympl = "^0.9.0"
 jupyterlab = "^4.2.0"
 matplotlib = "^3.9.0"
+
+[tool.pylint]
+extension-pkg-allow-list = ["pyodbc"]
+ignored-modules = ["MDSplus"]
+disable = [
+    "fixme",
+    "too-few-public-methods",
+    "too-many-arguments",
+    "too-many-branches",
+    "too-many-instance-attributes",
+    "too-many-lines",
+    "too-many-locals",
+    "too-many-positional-arguments",
+    "too-many-statements",
+]
 
 [build-system]
 requires = ["poetry-core"]

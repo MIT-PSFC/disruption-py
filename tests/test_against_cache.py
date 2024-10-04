@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-"""Unit tests for workflows involving get_dataset_df() for obtaining CMOD data.
+"""
+Unit tests for workflows involving get_dataset_df() for obtaining CMOD data.
 
 Expects to be run on the MFE workstations.
 Expects MDSplus to be installed and configured.
@@ -17,44 +18,83 @@ from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environm
 from tests.utils.eval_against_sql import (
     eval_against_cache,
     eval_shots_against_cache,
-    get_fresh_data,
     get_cached_from_fresh,
+    get_fresh_data,
 )
 from tests.utils.factory import (
     get_tokamak_test_expected_failure_columns,
     get_tokamak_test_shotlist,
 )
-
 from tests.utils.pytest_helper import extract_param, save_to_csv
 
 
-@pytest.fixture(scope="module")
-def fresh_data(
+@pytest.fixture(scope="module", name="fresh_data")
+def fresh_data_fixture(
     tokamak: Tokamak,
     shotlist: List[int],
-    module_file_path_f,
+    test_file_path_f,
     pytestconfig,
 ) -> Dict[int, pd.DataFrame]:
+    """
+    Fixture to retrieve fresh data for the specified tokamak and shotlist.
+
+    Parameters
+    ----------
+    tokamak : Tokamak
+        The tokamak object used to retrieve data.
+    shotlist : List[int]
+        The list of shot identifiers to retrieve data for.
+    test_file_path_f : function
+        A function to generate file paths for saving logs.
+    pytestconfig : Config
+        The pytest configuration object.
+
+    Returns
+    -------
+    Dict[int, pd.DataFrame]
+        A dictionary mapping shot identifiers to their corresponding fresh DataFrames.
+    """
     fresh_data = get_fresh_data(
         tokamak=tokamak,
         shotlist=shotlist,
-        log_file_path=module_file_path_f(".log"),
+        log_file_path=test_file_path_f(".log"),
         test_columns=extract_param(pytestconfig),
     )
     save_to_csv(
-        data=fresh_data, module_file_path_f=module_file_path_f, data_source_name="fresh"
+        data=fresh_data, test_file_path_f=test_file_path_f, data_source_name="fresh"
     )
     return fresh_data
 
 
-@pytest.fixture(scope="module")
-def cache_data(
+@pytest.fixture(scope="module", name="cache_data")
+def cache_data_fixture(
     tokamak: Tokamak,
     shotlist: List[int],
     fresh_data: Dict[int, pd.DataFrame],
-    module_file_path_f,
+    test_file_path_f,
     pytestconfig,
 ) -> Dict[int, pd.DataFrame]:
+    """
+    Fixture to retrieve cached data based on fresh data for the specified tokamak and shotlist.
+
+    Parameters
+    ----------
+    tokamak : Tokamak
+        The tokamak object used to retrieve data.
+    shotlist : List[int]
+        The list of shot identifiers to retrieve data for.
+    fresh_data : Dict[int, pd.DataFrame]
+        The fresh data retrieved for the specified shotlist.
+    test_file_path_f : function
+        A function to generate file paths for saving logs.
+    pytestconfig : Config
+        The pytest configuration object.
+
+    Returns
+    -------
+    Dict[int, pd.DataFrame]
+        A dictionary mapping shot identifiers to their corresponding cached DataFrames.
+    """
     cache_data = get_cached_from_fresh(
         tokamak=tokamak,
         shotlist=shotlist,
@@ -62,7 +102,7 @@ def cache_data(
         test_columns=extract_param(pytestconfig),
     )
     save_to_csv(
-        data=cache_data, module_file_path_f=module_file_path_f, data_source_name="cache"
+        data=cache_data, test_file_path_f=test_file_path_f, data_source_name="cache"
     )
     return cache_data
 
@@ -85,11 +125,15 @@ def test_data_columns(
         fresh_data=fresh_data,
         cache_data=cache_data,
         data_columns=[data_column],
-        expected_failure_columns=expected_failure_columns,  # we use xfail instead of manually expecting for column failures
+        expected_failure_columns=expected_failure_columns,
     )
 
 
-if __name__ == "__main__":
+def main():
+    """
+    main function called by command-line invocation.
+    """
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--data-column",
@@ -129,3 +173,7 @@ if __name__ == "__main__":
     print(
         f"Python tests complete. Checked {len(shotlist)} shots with {len(columns)} columns."
     )
+
+
+if __name__ == "__main__":
+    main()

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Module for defining parameters used in physics methods for DisruptionPy.
+"""
+
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict
@@ -13,8 +17,10 @@ from disruption_py.machine.tokamak import Tokamak
 
 @dataclass
 class PhysicsMethodParams:
-    """Holder for useful variables for the physics methods like an MDSplus connection
-    and the timebase for the data."""
+    """
+    Holder for useful variables for the physics methods like an MDSplus connection
+    and the timebase for the data.
+    """
 
     logger = logging.getLogger("disruption_py")
 
@@ -28,13 +34,22 @@ class PhysicsMethodParams:
     interpolation_method: Any  # Fix
     metadata: dict
 
-    _cached_results: Dict[str, Any] = field(default_factory=dict)
+    cached_results: Dict[str, Any] = field(default_factory=dict)
 
     @property
-    def disrupted(self):
+    def disrupted(self) -> bool:
+        """
+        Check if the disruption time is set.
+
+        Returns
+        -------
+        bool
+            True if disruption time is not None, False otherwise.
+        """
         return self.disruption_time is not None
 
-    def cleanup(self):
+    def cleanup(self) -> None:
+        """Clean up resources used by the physics method parameters."""
         self.mds_conn.cleanup()
         self.times = None
-        self._cached_results.clear()
+        self.cached_results.clear()

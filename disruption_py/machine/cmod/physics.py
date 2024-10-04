@@ -1,27 +1,54 @@
 #!/usr/bin/env python3
 
+"""
+Module for retrieving and calculating data for CMOD physics methods.
+"""
+
 import traceback
 import warnings
-from importlib import resources
 
 import numpy as np
-import pandas as pd
 from MDSplus import mdsExceptions
 
-import disruption_py.data
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
+from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.math import gaussian_fit, interp1, smooth
+from disruption_py.core.utils.math import (
+    gaussian_fit,
+    gaussian_fit_with_fixed_mean,
+    interp1,
+    smooth,
+)
+from disruption_py.machine.cmod.thomson import CmodThomsonDensityMeasure
 from disruption_py.machine.tokamak import Tokamak
 
 warnings.filterwarnings("error", category=RuntimeWarning)
 
 
 class CmodPhysicsMethods:
+    """
+    This class provides methods to retrieve and calculate physics-related data
+    for CMOD.
+    """
+
     @staticmethod
     @cache_method
-    def get_active_wire_segments(params: PhysicsMethodParams):
+    def _get_active_wire_segments(params: PhysicsMethodParams):
+        """
+        Retrieve active wire segments from the MDSplus tree.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection and shot info.
+
+        Returns
+        -------
+        list of tuple
+            A list of tuples, where each tuple contains the node path of the
+            active segment and its start time. The list is sorted by start time.
+        """
         params.mds_conn.open_tree(tree_name="pcs")
         root_nid = params.mds_conn.get("GetDefaultNid()")
         children_nids = params.mds_conn.get(
@@ -37,7 +64,7 @@ class CmodPhysicsMethods:
             node_path = node_path.strip()
             if node_path.split(".")[-1].startswith("SEG_"):
                 is_on = params.mds_conn.get_data(
-                    f'getnci($, "STATE")', arguments=node_path + ":SEG_NUM"
+                    'getnci($, "STATE")', arguments=node_path + ":SEG_NUM"
                 )
                 # 0 represents node being on, 1 represents node being off
                 if is_on != 0:
@@ -56,15 +83,30 @@ class CmodPhysicsMethods:
 
     @staticmethod
     @physics_method(columns=["time_until_disrupt"], tokamak=Tokamak.CMOD)
-    def _get_time_until_disrupt(params: PhysicsMethodParams):
+    def get_time_until_disrupt(params: PhysicsMethodParams):
+        """
+        Calculate the time until disruption.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the disruption information and times.
+
+        Returns
+        -------
+        dict
+            A dictionary with a single key "time_until_disrupt" containing a list
+            of time until disruption.
+        """
         time_until_disrupt = [np.nan]
         if params.disrupted:
             time_until_disrupt = params.disruption_time - params.times
         return {"time_until_disrupt": time_until_disrupt}
 
     @staticmethod
-    def get_ip_parameters(times, ip, magtime, ip_prog, pcstime):
-        """Calculates actual and programmed current as well as their derivatives
+    def _get_ip_parameters(times, ip, magtime, ip_prog, pcstime):
+        """
+        Calculates actual and programmed current as well as their derivatives
         and difference.
 
         The time derivatives are useful for discriminating between rampup, flattop,
@@ -137,15 +179,29 @@ class CmodPhysicsMethods:
         columns=["ip", "dip_dt", "dip_smoothed", "ip_prog", "dipprog_dt", "ip_error"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_ip_parameters(params: PhysicsMethodParams):
+    def get_ip_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve and interpolate Ip parameters.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the interpolated Ip parameters, including
+            "ip", "dip_dt", "dip_smoothed", "ip_prog", "dipprog_dt", and "ip_error".
+        """
         # Automatically generated
-        active_segments = CmodPhysicsMethods.get_active_wire_segments(params=params)
+        active_segments = CmodPhysicsMethods._get_active_wire_segments(params=params)
 
         # Default PCS timebase is 1 KHZ
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
         ip_prog = np.full(pcstime.shape, np.nan)
 
-        # For each activate segment:
+        # For each active segment:
         # 1.) Find the wire for IP control and check if it has non-zero PID gains
         # 2.) IF it does, interpolate IP programming onto the PCS timebase
         # 3.) Clip to the start and stop times of PCS timebase
@@ -179,28 +235,28 @@ class CmodPhysicsMethods:
                                 (pcstime >= start) & (pcstime <= end)
                             )
                             ip_prog[segment_indices] = ip_prog_temp[segment_indices]
-                    except mdsExceptions.MdsException as e:
+                    except mdsExceptions.MdsException:
                         params.logger.warning(
-                            [
-                                f"[Shot {params.shot_id}]: Error getting PID gains"
-                                + f" for wire {wire_index}"
-                            ]
+                            "[Shot %s]: Error getting PID gains for wire %s",
+                            params.shot_id,
+                            wire_index,
                         )
                         params.logger.debug(
-                            [f"[Shot {params.shot_id}]: {traceback.format_exc()}"]
+                            "[Shot %s]: %s", params.shot_id, traceback.format_exc()
                         )
                     break  # Break out of wire_index loop
         ip, magtime = params.mds_conn.get_data_with_dims(
             r"\ip", tree_name="magnetics", astype="float64"
         )
-        output = CmodPhysicsMethods.get_ip_parameters(
+        output = CmodPhysicsMethods._get_ip_parameters(
             params.times, ip, magtime, ip_prog, pcstime
         )
         return output
 
     @staticmethod
-    def get_z_parameters(times, z_prog, pcstime, z_error_without_ip, ip, dpcstime):
-        """Get values of Z_error, Z_prog, and derived signals from plasma control
+    def _get_z_parameters(times, z_prog, pcstime, z_error_without_ip, ip, dpcstime):
+        """
+        Get values of Z_error, Z_prog, and derived signals from plasma control
         system (PCS).
 
         Z_prog is the programmed vertical position of the plasma current centroid,
@@ -278,13 +334,27 @@ class CmodPhysicsMethods:
         columns=["z_error", "z_prog", "zcur", "v_z", "z_times_v_z"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_z_parameters(params: PhysicsMethodParams):
+    def get_z_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve and interpolate plasma's vertical position parameters.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the vertical position parameters, including "z_error", "z_prog",
+            "zcur", "v_z", and "z_times_v_z".
+        """
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
         z_prog = np.empty(pcstime.shape)
         z_prog.fill(np.nan)
         z_prog_temp = z_prog.copy()
         z_wire_index = -1
-        active_wire_segments = CmodPhysicsMethods.get_active_wire_segments(
+        active_wire_segments = CmodPhysicsMethods._get_active_wire_segments(
             params=params
         )
 
@@ -320,17 +390,16 @@ class CmodPhysicsMethods:
                             ]
                             z_prog[segment_indices] = z_prog_temp[segment_indices]
                             break
-                    except mdsExceptions.MdsException as e:
+                    except mdsExceptions.MdsException:
                         params.logger.debug(
-                            f"[Shot {params.shot_id}]: {traceback.format_exc()}"
+                            "[Shot %s]: %s", params.shot_id, traceback.format_exc()
                         )
                         continue  # TODO: Consider raising appropriate error
                 else:
                     continue
                 break
         if z_wire_index == -1:
-            # TODO: Make appropriate error
-            raise ValueError("No ZCUR wire was found")
+            raise CalculationError("Data source error: No ZCUR wire was found")
         # Read in A_OUT, which is a 16xN matrix of the errors for *all* 16 wires for
         # *all* of the segments. Note that DPCS time is usually taken at 10kHz.
         wire_errors, dpcstime = params.mds_conn.get_data_with_dims(
@@ -345,8 +414,7 @@ class CmodPhysicsMethods:
         # search through the active segments (determined above), find the factors,
         # and *divide* by the factor only for the times in the active segment (as
         # determined from start_times and stop_times.
-        for i in range(len(active_wire_segments)):
-            segment, start = active_wire_segments[i]
+        for i, (_, start) in enumerate(active_wire_segments):
             if i == len(active_wire_segments) - 1:
                 end = pcstime[-1]
             else:
@@ -378,15 +446,16 @@ class CmodPhysicsMethods:
                 r"\ip", tree_name="magnetics"
             )
             ip = interp1(ip_time, ip, dpcstime)
-        return CmodPhysicsMethods.get_z_parameters(
+        return CmodPhysicsMethods._get_z_parameters(
             params.times, z_prog, pcstime, z_error_without_ip, ip, dpcstime
         )
 
     @staticmethod
-    def get_ohmic_parameters(
-        times, v_loop, v_loop_time, li, efittime, dip_smoothed, ip
+    def _get_ohmic_parameters(
+        times, v_loop, v_loop_time, li, efittime, dip_smoothed, ip, r0
     ):
-        """Calculate the ohmic power from the loop voltage, inductive voltage, and
+        """
+        Calculate the ohmic power from the loop voltage, inductive voltage, and
         plasma current.
 
         Parameters
@@ -398,29 +467,24 @@ class CmodPhysicsMethods:
         v_loop_time : array_like
             The times at which the loop voltage was measured.
         li : array_like
-            The inductance of the loop.
+            The plasma's internal inductance from EFIT.
         efittime : array_like
-            The times at which the inductance was measured.
+            The EFIT time base.
         dip_smoothed : array_like
-            The smoothed plasma current.
+            The smoothed time derivative of the measured plasma current.
         ip : array_like
             The plasma current.
+        r0 : array_like
+            The major radius of the plasma's magnetic axis.
 
         Returns
         -------
-        p_ohm : array_like
+        p_oh : array_like
             The ohmic power.
         v_loop : array_like
             The loop voltage.
-
-        Original Authors
-        ----------------
-
-
         """
-        # For simplicity, we use R0 = 0.68 m, but we could use \efit_aeqdsk:rmagx
-        R0 = 0.68
-        inductance = 4.0 * np.pi * 1.0e-7 * R0 * li / 2.0
+        inductance = 4.0 * np.pi * 1.0e-7 * r0 * li / 2.0
         v_loop = interp1(v_loop_time, v_loop, times)
         inductance = interp1(efittime, inductance, times)
         v_inductive = inductance * dip_smoothed
@@ -434,20 +498,36 @@ class CmodPhysicsMethods:
         columns=["p_oh", "v_loop"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_ohmic_parameters(params: PhysicsMethodParams):
+    def get_ohmic_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve and calculate ohmic heating parameters.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the calculated ohmic parameters, including
+            "p_oh" and "v_loop".
+        """
         v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
             r"\top.mflux:v0", tree_name="analysis", astype="float64"
         )
         if len(v_loop_time) <= 1:
-            return {
-                "p_oh": np.zeros(len(params.times)),
-                "v_loop": np.zeros(len(params.times)),
-            }
+            raise CalculationError("No data for v_loop_time")
+
         li, efittime = params.mds_conn.get_data_with_dims(
             r"\efit_aeqdsk:li", tree_name="_efit_tree", astype="float64"
-        )
-        ip_parameters = CmodPhysicsMethods._get_ip_parameters(params=params)
-        output = CmodPhysicsMethods.get_ohmic_parameters(
+        )  # [dimensionless], [s]
+        ip_parameters = CmodPhysicsMethods.get_ip_parameters(params=params)
+        r0 = 0.01 * params.mds_conn.get_data(
+            r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
+        )  # [cm] -> [m]
+
+        output = CmodPhysicsMethods._get_ohmic_parameters(
             params.times,
             v_loop,
             v_loop_time,
@@ -455,11 +535,41 @@ class CmodPhysicsMethods:
             efittime,
             ip_parameters["dip_smoothed"],
             ip_parameters["ip"],
+            r0,
         )
         return output
 
     @staticmethod
-    def get_power(times, p_lh, t_lh, p_icrf, t_icrf, p_rad, t_rad, p_ohm):
+    def _get_power(times, p_lh, t_lh, p_icrf, t_icrf, p_rad, t_rad, p_ohm):
+        """
+        Calculate the input and radiated powers, and then calculate the
+        radiated fraction.
+
+        Parameters
+        ----------
+        times : np.ndarray
+            The time array for which to calculate the power.
+        p_lh : np.ndarray or None
+            The power from lower hybrid heating.
+        t_lh : np.ndarray or None
+            The time array corresponding to lower hybrid heating power.
+        p_icrf : np.ndarray or None
+            The power from ICRF heating.
+        t_icrf : np.ndarray or None
+            The time array corresponding to ICRF heating power.
+        p_rad : np.ndarray or None
+            The radiated power.
+        t_rad : np.ndarray or None
+            The time array corresponding to radiated power.
+        p_ohm : np.ndarray
+            The ohmic heating power.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the calculated power values, including
+            "p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", and "radiated_fraction".
+        """
         if p_lh is not None and isinstance(t_lh, np.ndarray) and len(t_lh) > 1:
             p_lh = interp1(t_lh, p_lh * 1.0e3, times)
         else:
@@ -505,7 +615,7 @@ class CmodPhysicsMethods:
         columns=["p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", "radiated_fraction"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_power(params: PhysicsMethodParams):
+    def get_power(params: PhysicsMethodParams):
         """
         NOTE: the timebase for the LH power signal does not extend over the full
             time span of the discharge.  Therefore, when interpolating the LH power
@@ -527,20 +637,53 @@ class CmodPhysicsMethods:
                 )
                 values[2 * i] = sig
                 values[2 * i + 1] = sig_time
-            except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF) as e:
+            except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF):
                 continue
-        p_oh = CmodPhysicsMethods._get_ohmic_parameters(params=params)["p_oh"]
-        output = CmodPhysicsMethods.get_power(params.times, *values, p_oh)
+        p_oh = CmodPhysicsMethods.get_ohmic_parameters(params=params)["p_oh"]
+        output = CmodPhysicsMethods._get_power(params.times, *values, p_oh)
         return output
 
     @staticmethod
-    def get_kappa_area(times, aminor, area, a_times):
+    def _get_kappa_area(times, aminor, area, a_times):
+        """
+        Calculate and interpolate kappa_area
+
+        Parameters
+        ----------
+        times : np.ndarray
+            The time array for which to calculate the kappa_area.
+        aminor : np.ndarray
+            The minor radius values.
+        area : np.ndarray
+            The area values.
+        a_times : np.ndarray
+            The time array corresponding to the area values.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the kappa_area.
+        """
         output = {"kappa_area": interp1(a_times, area / (np.pi * aminor**2), times)}
         return output
 
     @staticmethod
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
-    def _get_kappa_area(params: PhysicsMethodParams):
+    def get_kappa_area(params: PhysicsMethodParams):
+        """
+        Retrieve and calculate the plasma's ellipticity (kappa, also known as
+        the elongation) using its area and minor radius.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the calculated "kappa_area".
+        """
         aminor = params.mds_conn.get_data(
             r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
         )
@@ -554,15 +697,15 @@ class CmodPhysicsMethods:
         aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
         # make sure area is not 0 or less than 0
         area[area <= 0] = 3.14 * 0.001**2
-        output = CmodPhysicsMethods.get_kappa_area(params.times, aminor, area, times)
+        output = CmodPhysicsMethods._get_kappa_area(params.times, aminor, area, times)
         return output
 
     @staticmethod
-    def get_rotation_velocity(times, intensity, time, vel, hirextime):
+    def _get_rotation_velocity(times, intensity, time, vel, hirextime):
         """
-        Uses spectroscopy graphs of ionized(to hydrogen and helium levels) Argon
+        Uses spectroscopy graphs of ionized (to hydrogen and helium levels) Argon
         to calculate velocity. Because of the heat profile of the plasma, suitable
-        measurements are only found near the center
+        measurements are only found near the center.
         """
         v_0 = np.empty(len(time))
         # Check that the argon intensity pulse has a minimum count and duration
@@ -579,50 +722,14 @@ class CmodPhysicsMethods:
         v_0 = interp1(time, v_0, times)
         return {"v_0": v_0}
 
-    # TODO: Calculate v_mid
-    @staticmethod
-    @physics_method(columns=["v_0"], tokamak=Tokamak.CMOD)
-    def _get_rotation_velocity(params: PhysicsMethodParams):
-        nan_output = {"v_0": [np.nan]}
-        with resources.path(disruption_py.data, "lock_mode_calib_shots.txt") as fio:
-            calibrated = pd.read_csv(fio)
-        # Check to see if shot was done on a day where there was a locked
-        # mode HIREX calibration by cross checking with list of calibrated
-        # runs. If not calibrated, return NaN outputs.
-        if params.shot_id not in calibrated:
-            return nan_output
-        try:
-            intensity, time = params.mds_conn.get_data_with_dims(
-                ".hirex_sr.analysis.a:int", tree_name="spectroscopy", astype="float64"
-            )
-            vel, hirextime = params.mds_conn.get_data_with_dims(
-                ".hirex_sr.analysis.a:vel", tree_name="spectroscopy", astype="float64"
-            )
-        except mdsExceptions.TreeFOPENR as e:
-            params.logger.warning(
-                f"[Shot {params.shot_id}]: Failed to open necessary tress for "
-                + f"rotational velocity calculations."
-            )
-            params.logger.debug(f"[Shot {params.shot_id}]: {traceback.format_exc()}")
-            return nan_output
-        output = CmodPhysicsMethods.get_rotation_velocity(
-            params.times, intensity, time, vel, hirextime
-        )
-        return output
-
-    # TODO: Split into static and instance method
-    @staticmethod
-    def get_n_equal_1_amplitude():
-        pass
-
-    # TODO: Try catch failure to get BP13 sensors
     @staticmethod
     @physics_method(
         columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase", "bt"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_n_equal_1_amplitude(params: PhysicsMethodParams):
-        """Calculate n=1 amplitude and phase.
+    def get_n_equal_1_amplitude(params: PhysicsMethodParams):
+        """
+        Calculate n=1 amplitude and phase.
 
         This method uses the four BP13 Bp sensors near the midplane on the outboard
         vessel wall.  The calculation is done by using a least squares fit to an
@@ -636,12 +743,6 @@ class CmodPhysicsMethods:
 
         N=1 toroidal assymmetry in the magnetic fields
         """
-        nan_output = {
-            "n_equal_1_mode": [np.nan],
-            "n_equal_1_normalized": [np.nan],
-            "n_equal_1_phase": [np.nan],
-            "bt": [np.nan],
-        }
         # These sensors are placed toroidally around the machine. Letters refer to
         # the 2 ports the sensors were placed between.
         bp13_names = ["BP13_BC", "BP13_DE", "BP13_GH", "BP13_JK"]
@@ -673,28 +774,16 @@ class CmodPhysicsMethods:
         # 2. Subtract btor pickup
         # 3. Interpolate bp onto shot timebase
 
-        for i in range(len(bp13_names)):
-            try:
-                signal = params.mds_conn.get_data(
-                    path + bp13_names[i], tree_name="magnetics"
-                )
-                if len(signal) == 1:
-                    params.logger.warning(
-                        f"[Shot {params.shot_id}] Only one data point for "
-                        + f"{bp13_names[i]} Returning nans."
-                    )
-                    return nan_output
-                baseline = np.mean(signal[baseline_indices])
-                signal = signal - baseline
-                signal = signal - bp13_btor_pickup_coeffs[i] * btor
-                bp13_signals[:, i] = interp1(t_mag, signal, params.times)
-            except mdsExceptions.TreeNODATA as e:
-                params.logger.warning(
-                    f"[Shot {params.shot_id}] No data for {bp13_names[i]}"
-                )
-                params.logger.debug(f"[Shot {params.shot_id}] {e}")
-                # Only calculate n=1 amplitude if all sensors have data
-                return nan_output
+        for i, bp13_name in enumerate(bp13_names):
+            signal = params.mds_conn.get_data(path + bp13_name, tree_name="magnetics")
+            if len(signal) == 1:
+                raise CalculationError(f"No data for {bp13_name}")
+
+            baseline = np.mean(signal[baseline_indices])
+            signal = signal - baseline
+            signal = signal - bp13_btor_pickup_coeffs[i] * btor
+            bp13_signals[:, i] = interp1(t_mag, signal, params.times)
+
         # TODO: Examine edge case behavior of sign
         polarity = np.sign(np.mean(btor))
         btor_magnitude = btor * polarity
@@ -704,11 +793,11 @@ class CmodPhysicsMethods:
         # Create the 'design' matrix ('A') for the linear system of equations:
         # Bp(phi) = A1 + A2*sin(phi) + A3*cos(phi)
         ncoeffs = 3
-        A = np.empty((len(bp13_names), ncoeffs))
-        A[:, 0] = np.ones(4)
-        A[:, 1] = np.sin(bp13_phi * np.pi / 180.0)
-        A[:, 2] = np.cos(bp13_phi * np.pi / 180.0)
-        coeffs = np.linalg.pinv(A) @ bp13_signals.T
+        a = np.empty((len(bp13_names), ncoeffs))
+        a[:, 0] = np.ones(4)
+        a[:, 1] = np.sin(bp13_phi * np.pi / 180.0)
+        a[:, 2] = np.cos(bp13_phi * np.pi / 180.0)
+        coeffs = np.linalg.pinv(a) @ bp13_signals.T
         # The n=1 amplitude at each time is sqrt(A2^2 + A3^2)
         # The n=1 phase at each time is arctan(-A2/A3), using complex number
         # phasor formalism, exp(i(phi - delta))
@@ -727,13 +816,35 @@ class CmodPhysicsMethods:
         return output
 
     @staticmethod
-    def get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
+    def _get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
+        """
+        Calculate electron density, its time derivative, and the Greenwald fraction.
+
+        Parameters
+        ----------
+        times : array_like
+            Time points at which to interpolate the densities.
+        n_e : array_like
+            Electron density values.
+        t_n : array_like
+            Corresponding time values for electron density.
+        ip : array_like
+            Plasma current values.
+        t_ip : array_like
+            Corresponding time values for plasma current.
+        a_minor : array_like
+            Minor radius values.
+        t_a : array_like
+            Corresponding time values for minor radius.
+
+        Returns
+        -------
+        dict
+            A dictionary containing interpolated electron density (`n_e`),
+            its time derivative (`dn_dt`), and the Greenwald fraction (`greenwald_fraction`).
+        """
         if len(n_e) != len(t_n):
-            return {
-                "n_e": [np.nan],
-                "dn_dt": [np.nan],
-                "greenwald_fraction": [np.nan],
-            }
+            raise CalculationError("n_e and t_n are different lengths")
         # get the gradient of n_E
         dn_dt = np.gradient(n_e, t_n)
         n_e = interp1(t_n, n_e, times)
@@ -743,8 +854,8 @@ class CmodPhysicsMethods:
         a_minor = interp1(t_a, a_minor, times, bounds_error=False, fill_value=np.nan)
         # make sure aminor is not 0 or less than 0
         a_minor[a_minor <= 0] = 0.001
-        n_G = abs(ip) / (np.pi * a_minor**2) * 1e20  # Greenwald density in m ^-3
-        g_f = n_e / n_G
+        n_g = abs(ip) / (np.pi * a_minor**2) * 1e20  # Greenwald density in m ^-3
+        g_f = n_e / n_g
         output = {"n_e": n_e, "dn_dt": dn_dt, "greenwald_fraction": g_f}
         return output
 
@@ -753,54 +864,108 @@ class CmodPhysicsMethods:
         columns=["n_e", "dn_dt", "greenwald_fraction"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_densities(params: PhysicsMethodParams):
-        try:
-            # Line-integrated density
-            n_e, t_n = params.mds_conn.get_data_with_dims(
-                r".tci.results:nl_04", tree_name="electrons", astype="float64"
-            )
-            # Divide by chord length of ~0.6m to get line averaged density.
-            # For future refernce, chord length is stored in
-            # .01*\analysis::efit_aeqdsk:rco2v[3,*]
-            n_e = np.squeeze(n_e) / 0.6
-            ip, t_ip = params.mds_conn.get_data_with_dims(
-                r"\ip", tree_name="magnetics", astype="float64"
-            )
-            a_minor, t_a = params.mds_conn.get_data_with_dims(
-                r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
-            )
-        except Exception as e:
-            params.logger.debug(f"[Shot {params.shot_id}] {e}")
-            params.logger.warning(f"[Shot {params.shot_id}] No density data")
-            # TODO: Handle this case
-            raise NotImplementedError(
-                "Can't currently handle failure of grabbing density data"
-            )
-        output = CmodPhysicsMethods.get_densities(
+    def get_densities(params: PhysicsMethodParams):
+        """
+        Retrieve and calculate electron density and related parameters.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing electron density (`n_e`), its gradient (`dn_dt`),
+            and the Greenwald fraction (`greenwald_fraction`).
+        """
+        # Line-integrated density
+        n_e, t_n = params.mds_conn.get_data_with_dims(
+            r".tci.results:nl_04", tree_name="electrons", astype="float64"
+        )
+        # Divide by chord length of ~0.6m to get line averaged density.
+        # For future refernce, chord length is stored in
+        # .01*\analysis::efit_aeqdsk:rco2v[3,*]
+        n_e = np.squeeze(n_e) / 0.6
+        ip, t_ip = params.mds_conn.get_data_with_dims(
+            r"\ip", tree_name="magnetics", astype="float64"
+        )
+        a_minor, t_a = params.mds_conn.get_data_with_dims(
+            r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
+        )
+
+        output = CmodPhysicsMethods._get_densities(
             params.times, n_e, t_n, ip, t_ip, a_minor, t_a
         )
         return output
 
     @staticmethod
-    def get_efc_current(times, iefc, t_iefc):
+    def _get_efc_current(times, iefc, t_iefc):
+        """
+        Interpolate EFC current values at specified times.
+
+        Parameters
+        ----------
+        times : array_like
+            Time points at which to interpolate the EFC current.
+        iefc : array_like
+            EFC current values.
+        t_iefc : array_like
+            Corresponding time values for EFC current.
+
+        Returns
+        -------
+        dict
+            A dictionary containing interpolated EFC current.
+        """
         output = {"i_efc": interp1(t_iefc, iefc, times, "linear")}
         return output
 
     @staticmethod
     @physics_method(columns=["i_efc"], tokamak=Tokamak.CMOD)
-    def _get_efc_current(params: PhysicsMethodParams):
-        try:
-            iefc, t_iefc = params.mds_conn.get_data_with_dims(
-                r"\efc:u_bus_r_cur", tree_name="engineering"
-            )
-        except Exception as e:
-            params.logger.debug(f"[Shot {params.shot_id}] {traceback.format_exc()}")
-            return {"i_efc": [np.nan]}
-        output = CmodPhysicsMethods.get_efc_current(params.times, iefc, t_iefc)
+    def get_efc_current(params: PhysicsMethodParams):
+        """
+        Retrieve the error field correction (EFC) current for a given shot.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the EFC current (`i_efc`).
+        """
+        iefc, t_iefc = params.mds_conn.get_data_with_dims(
+            r"\efc:u_bus_r_cur", tree_name="engineering"
+        )
+        output = CmodPhysicsMethods._get_efc_current(params.times, iefc, t_iefc)
         return output
 
     @staticmethod
-    def get_Ts_parameters(times, ts_data, ts_time, ts_z, z_sorted=False):
+    def _get_ts_parameters(times, ts_data, ts_time, ts_z, z_sorted=False):
+        """
+        Calculate the Thomson scattering temperature width parameters.
+
+        Parameters
+        ----------
+        times : array_like
+            Time points at which to interpolate the temperature width.
+        ts_data : array_like
+            2D array of Thomson scattering temperature data.
+        ts_time : array_like
+            Corresponding time values for the temperature data.
+        ts_z : array_like
+            Vertical coordinate values corresponding to the temperature data.
+        z_sorted : bool, optional
+            If True, assumes `ts_z` is already sorted. Default is False.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the temperature width (`te_width`).
+        """
         # sort z array
         if not z_sorted:
             idx = np.argsort(ts_z)
@@ -844,48 +1009,57 @@ class CmodPhysicsMethods:
 
     @staticmethod
     @physics_method(columns=["te_width"], tokamak=Tokamak.CMOD)
-    def _get_Ts_parameters(params: PhysicsMethodParams):
-        # TODO: Guassian vs parabolic fit for te profile
+    def get_ts_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve Thomson scattering temperature width parameters.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the temperature width (`te_width`).
+        """
+        # TODO: Gaussian vs parabolic fit for te profile
 
         # Read in Thomson core temperature data, which is a 2-D array, with the
         # dependent dimensions being time and z (vertical coordinate)
         node_path = ".yag_new.results.profiles"
-        try:
-            ts_data, ts_time = params.mds_conn.get_data_with_dims(
-                node_path + ":te_rz", tree_name="electrons"
-            )
-            ts_z = params.mds_conn.get_data(
-                node_path + ":z_sorted", tree_name="electrons"
-            )
-        except mdsExceptions.MdsException as e:
-            params.logger.debug(f"[Shot {params.shot_id}] {traceback.format_exc()}")
-            return {"te_width": [np.nan]}
-        output = CmodPhysicsMethods.get_Ts_parameters(
+
+        ts_data, ts_time = params.mds_conn.get_data_with_dims(
+            node_path + ":te_rz", tree_name="electrons"
+        )
+        ts_z = params.mds_conn.get_data(node_path + ":z_sorted", tree_name="electrons")
+
+        output = CmodPhysicsMethods._get_ts_parameters(
             params.times, ts_data, ts_time, ts_z
         )
         return output
 
     @staticmethod
-    def get_peaking_factors(times, TS_time, TS_Te, TS_ne, TS_z, efit_time, bminor, z0):
+    def _get_peaking_factors(times, ts_time, ts_te, ts_ne, ts_z, efit_time, bminor, z0):
         """
-        Calculate Te, ne, and pressure peaking factors given Thomson Scattering Te and ne measurements.
+        Calculate Te, ne, and pressure peaking factors given Thomson Scattering
+        Te and ne measurements.
 
-        Because the TS chords have uneven spacings, measurements are first interpolated to an array of
-        equally spaced vertical positions and then used to calculate the peaking factors.
-
-        Currently, only the Te_peaking feature has been implemented.
+        Because the TS chords have uneven spacings, measurements are first interpolated
+        to an array of equally spaced vertical positions and then used to calculate
+        the peaking factors.
 
         Parameters:
         ----------
         times : array_like
             Requested time basis
-        TS_time : array_like
+        ts_time : array_like
             Time basis of the Thomson Scattering diagnostic
-        TS_Te : array_like
+        ts_te : array_like
             Core and edge Te measurements from TS
-        TS_ne : array_like
+        ts_ne : array_like
             Core and edge ne measurements from TS
-        TS_z : array_like
+        ts_z : array_like
             Vertical position of the core and edge TS chords
         efit_time : array_like
             Time basis of '_efit_tree'
@@ -900,54 +1074,76 @@ class CmodPhysicsMethods:
 
         References:
         ----------
-        - https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_peaking_factor_cmod.m
+        - https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_peaking_factor_cmod.m  # pylint: disable=line-too-long
         - https://github.com/MIT-PSFC/disruption-py/issues/210
         - https://github.com/MIT-PSFC/disruption-py/pull/216
+        - https://github.com/MIT-PSFC/disruption-py/pull/268
 
-        Last major update by: William Wei on 7/12/2024
+        Last major update by: William Wei on 8/19/2024
 
         """
+        # Calculate ts_pressure
+        ts_pressure = ts_te * ts_ne * 1.38e-23
         # Interpolate EFIT signals to TS time basis
-        bminor = interp1(efit_time, bminor, TS_time)
-        z0 = interp1(efit_time, z0, TS_time)
+        bminor = interp1(efit_time, bminor, ts_time)
+        z0 = interp1(efit_time, z0, ts_time)
 
-        # Calculate Te peaking factor
-        Te_PF = np.full(len(TS_time), np.nan)
-        (itimes,) = np.where((TS_time > 0) & (TS_time < times[-1]))
+        # Calculate Te, ne, & pressure peaking factors
+        te_pf = np.full(len(ts_time), np.nan)
+        ne_pf = np.full(len(ts_time), np.nan)
+        pressure_pf = np.full(len(ts_time), np.nan)
+        (itimes,) = np.where((ts_time > 0) & (ts_time < times[-1]))
         for itime in itimes:
-            TS_Te_arr = TS_Te[:, itime]
-            (indx,) = np.where(TS_Te_arr > 0)
+            ts_te_arr = ts_te[:, itime]
+            ts_ne_arr = ts_ne[:, itime]
+            ts_pressure_arr = ts_pressure[:, itime]
+            # This gives identical results using either ts_te_arr or ts_ne_arr
+            (indx,) = np.where(ts_ne_arr > 0)
             if len(indx) < 10:
                 continue
-            TS_Te_arr = TS_Te_arr[indx]
-            TS_z_arr = TS_z[indx]
-            sorted_indx = np.argsort(TS_z_arr)
-            TS_z_arr = TS_z_arr[sorted_indx]
-            TS_Te_arr = TS_Te_arr[sorted_indx]
-            # Create equal-spacing array of TS_z_arr and interpolate TS_Te_arr on it
+            ts_te_arr = ts_te_arr[indx]
+            ts_ne_arr = ts_ne_arr[indx]
+            ts_pressure_arr = ts_pressure_arr[indx]
+            ts_z_arr = ts_z[indx]
+            sorted_indx = np.argsort(ts_z_arr)
+            ts_z_arr = ts_z_arr[sorted_indx]
+            ts_te_arr = ts_te_arr[sorted_indx]
+            ts_ne_arr = ts_ne_arr[sorted_indx]
+            ts_pressure_arr = ts_pressure_arr[sorted_indx]
+            # Create equal-spacing array of ts_z_arr and interpolate TS profile on it
             # Skip if there's no EFIT zmagx data
             if np.isnan(z0[itime]):
                 continue
-            z_arr_equal_spacing = np.linspace(z0[itime], TS_z_arr[-1], len(TS_z_arr))
-            Te_arr_equal_spacing = interp1(TS_z_arr, TS_Te_arr, z_arr_equal_spacing)
-            # Calculate Te_PF
+            z_arr_equal_spacing = np.linspace(z0[itime], ts_z_arr[-1], len(ts_z_arr))
+            te_arr_equal_spacing = interp1(ts_z_arr, ts_te_arr, z_arr_equal_spacing)
+            ne_arr_equal_spacing = interp1(ts_z_arr, ts_ne_arr, z_arr_equal_spacing)
+            pressure_arr_equal_spacing = interp1(
+                ts_z_arr, ts_pressure_arr, z_arr_equal_spacing
+            )
+            # Calculate peaking factors
             (core_index,) = np.where(
                 np.array((z_arr_equal_spacing - z0[itime]) < 0.2 * abs(bminor[itime]))
             )
             if len(core_index) < 2:
                 continue
-            Te_PF[itime] = np.mean(Te_arr_equal_spacing[core_index]) / np.mean(
-                Te_arr_equal_spacing
+            te_pf[itime] = np.mean(te_arr_equal_spacing[core_index]) / np.mean(
+                te_arr_equal_spacing
             )
-
-        # TODO: Calculate ne and pressure peaking factors
+            ne_pf[itime] = np.mean(ne_arr_equal_spacing[core_index]) / np.mean(
+                ne_arr_equal_spacing
+            )
+            pressure_pf[itime] = np.mean(
+                pressure_arr_equal_spacing[core_index]
+            ) / np.mean(pressure_arr_equal_spacing)
 
         # Interpolate peaking factors to the requested time basis
-        Te_PF = interp1(TS_time, Te_PF, times, "linear")
+        ne_pf = interp1(ts_time, ne_pf, times, "linear")
+        te_pf = interp1(ts_time, te_pf, times, "linear")
+        pressure_pf = interp1(ts_time, pressure_pf, times, "linear")
         return {
-            "ne_peaking": [np.nan],
-            "te_peaking": Te_PF,
-            "pressure_peaking": [np.nan],
+            "ne_peaking": ne_pf,
+            "te_peaking": te_pf,
+            "pressure_peaking": pressure_pf,
         }
 
     @staticmethod
@@ -955,55 +1151,462 @@ class CmodPhysicsMethods:
         columns=["ne_peaking", "te_peaking", "pressure_peaking"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_peaking_factors(params: PhysicsMethodParams):
-        nan_output = {
-            "ne_peaking": [np.nan],
-            "te_peaking": [np.nan],
-            "pressure_peaking": [np.nan],
-        }
+    def get_peaking_factors(params: PhysicsMethodParams):
+        """
+        Calculate peaking factors for electron density, electron temperature, and
+        pressure.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing peaking factors for electron density (`ne_peaking`),
+            temperature (`te_peaking`), and pressure (`pressure_peaking`).
+        """
+        use_ts_tci_calibration = False
         # Ignore shots on the blacklist
         if CmodPhysicsMethods.is_on_blacklist(params.shot_id):
-            return nan_output
+            raise CalculationError("Shot is on blacklist")
         # Fetch data
-        try:
-            # Get EFIT geometry data
-            z0 = 0.01 * params.mds_conn.get_data(
-                r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
+        # Get EFIT geometry data
+        z0 = 0.01 * params.mds_conn.get_data(
+            r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
+        )
+        kappa = params.mds_conn.get_data(r"\efit_aeqdsk:kappa", tree_name="_efit_tree")
+        aminor, efit_time = params.mds_conn.get_data_with_dims(
+            r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
+        )
+        bminor = aminor * kappa
+
+        # Get Te data and TS time basis
+        node_ext = ".yag_new.results.profiles"
+        ts_te_core, ts_time = params.mds_conn.get_data_with_dims(
+            f"{node_ext}:te_rz", tree_name="electrons"
+        )
+        ts_te_core = ts_te_core * 1000  # [keV] -> [eV]
+        ts_te_edge = params.mds_conn.get_data(r"\ts_te")
+        ts_te = np.concatenate((ts_te_core, ts_te_edge)) * 11600  # [eV] -> [K]
+
+        # Get ne data
+        ts_ne_core = params.mds_conn.get_data(
+            f"{node_ext}:ne_rz", tree_name="electrons"
+        )
+        ts_ne_edge = params.mds_conn.get_data(r"\ts_ne")
+        ts_ne = np.concatenate((ts_ne_core, ts_ne_edge))
+
+        # Get TS chord positions
+        ts_z_core = params.mds_conn.get_data(
+            f"{node_ext}:z_sorted", tree_name="electrons"
+        )
+        ts_z_edge = params.mds_conn.get_data(r"\fiber_z", tree_name="electrons")
+        ts_z = np.concatenate((ts_z_core, ts_z_edge))
+        # Make sure that there are equal numbers of edge position and edge temperature points
+        if len(ts_z_edge) != ts_te_edge.shape[0]:
+            raise CalculationError(
+                "TS edge data and z positions are not the same length for shot"
             )
-            kappa = params.mds_conn.get_data(
-                r"\efit_aeqdsk:kappa", tree_name="_efit_tree"
+
+        # Calibrate ts_ne using TCI -- slow
+        if use_ts_tci_calibration:
+            # This shouldn't affect ne_PF (except if calib is not between 0.5 & 1.5)
+            # because we're just multiplying ne by a constant
+            (nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _) = (
+                CmodThomsonDensityMeasure.compare_ts_tci(params)
             )
-            aminor, efit_time = params.mds_conn.get_data_with_dims(
-                r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
-            )
-            bminor = aminor * kappa
-            # Get Te data and TS time basis
-            node_ext = ".yag_new.results.profiles"
-            TS_Te_core, TS_time = params.mds_conn.get_data_with_dims(
-                f"{node_ext}:te_rz", tree_name="electrons"
-            )
-            # Convert keV to eV
-            TS_Te_core = TS_Te_core * 1000
-            TS_Te_edge = params.mds_conn.get_data(r"\ts_te")
-            # Convert eV to Kelvin
-            TS_Te = np.concatenate((TS_Te_core, TS_Te_edge)) * 11600
-            TS_z_core = params.mds_conn.get_data(
-                f"{node_ext}:z_sorted", tree_name="electrons"
-            )
-            TS_z_edge = params.mds_conn.get_data(r"\fiber_z", tree_name="electrons")
-            TS_z = np.concatenate((TS_z_core, TS_z_edge))
-            # Make sure that there are equal numbers of edge position and edge temperature points
-            if len(TS_z_edge) != TS_Te_edge.shape[0]:
-                params.logger.warning(
-                    f"[Shot {params.shot_id}]: TS edge data and z positions are not the same length for shot"
+            if np.mean(nl_ts1) != 1e32 and np.mean(nl_ts2) != 1e32:
+                nl_tci = np.concatenate((nl_tci1, nl_tci2))
+                nl_ts = np.concatenate((nl_ts1 + nl_ts2))
+                calib = np.mean(nl_tci) / np.mean(nl_ts)
+            elif np.mean(nl_ts1) != 1e32 and np.mean(nl_ts2) == 1e32:
+                calib = np.mean(nl_tci1) / np.mean(nl_ts1)
+            elif np.mean(nl_ts1) == 1e32 and np.mean(nl_ts2) != 1e32:
+                calib = np.mean(nl_tci2) / np.mean(nl_ts2)
+            else:
+                calib = np.nan
+
+            if 0.5 < calib < 1.5:
+                ts_ne *= calib
+            else:
+                raise CalculationError(
+                    "Density calibration error exceeds acceptable range"
                 )
-                return nan_output
-            # TODO: Get ne data
-            TS_ne = np.full(len(params.times), np.nan)
-        except mdsExceptions.MdsException as e:
-            return nan_output
-        return CmodPhysicsMethods.get_peaking_factors(
-            params.times, TS_time, TS_Te, TS_ne, TS_z, efit_time, bminor, z0
+
+        return CmodPhysicsMethods._get_peaking_factors(
+            params.times, ts_time, ts_te, ts_ne, ts_z, efit_time, bminor, z0
+        )
+
+    @staticmethod
+    def _get_te_profile_params_ece(
+        times,
+        gpc1_te_data,
+        gpc1_te_time,
+        gpc1_rad_data,
+        gpc1_rad_time,
+        gpc2_te_data,
+        gpc2_te_time,
+        gpc2_rad_data,
+        gpc2_rad_time,
+        efit_time,
+        r0,
+        aminor,
+        btor,
+        t_mag,
+        lh_power,
+        lh_time,
+    ):
+        """
+        Calculates Te PF and width from ECE data using the two GPC diagnostic systems.
+        GPC diagnostics look at the mid-plane, and each channel detects a different
+        emitted frequency associated with the second harmonic, which depends on B and
+        therefore R.
+        - te_width is the half-width at half-max of a Gaussian fit of the Te profile
+        - te_core_vs_avg is defined as mean(core)/mean(all) where core bins are defined
+          as those w/ |R - R0| < 0.2*a of the magnetic axis.
+        - te_edge_vs_avg is defined as mean(edge)/mean(all) where edge bins are defined as
+          those with 0.8*a < |R - R0| < a
+        For core and edge vs. average calculations, different shots can have different
+        radial sampling, and during a few experiments on C-Mod, Bt was changed during
+        the shot, changing the radial sampling. Different radial samplings can have
+        different proportions of core to edge sampling, which affects the mean Te over
+        the whole profile, biasing the core vs average and edge vs average statistics.
+        Therefore, we use a uniformly sampled radial basis from R0 to R0+a. We use many
+        interpolated radial points to minimize artifacts caused by a point moving
+        across the arbitrary core or edge boundary.
+
+        ECE as a Te profile diagnostic can suffer from several artifacts:
+        Artifacts currently NOT explicitly checked for
+        - Density cutoffs: High ne plasmas (typically H-modes) can have an ECE cutoff.
+          According to Amanda Hubbard, "what you wil see is a section of profile which
+          is much LOWER than Thomson Scattering, for some portion of the LFS profile
+          (typically starting around r/a 0.8?). In this case ECE cannot be used." An
+          example shot with ECE cutoffs is 1140226024 (Calibration of Thomson density
+          using ECE cutoffs). Because the critical density is proportional to B^2,
+          shots with B = 5.4 T on axis would need to have very high densities to
+          experience a cutoff in the profile. We could look for cutoffs by comparing
+          the B profile to the ne profile and checking that ne < ncrit throughout the
+          profile; however, a simpler check for now is to ignore shots with B < 4.5 T
+          and assume there are no cutoffs with B >= 4.5 T.
+        Artifacts currently checked for
+        - Non-aligned grating: The gratings were usually aligned for radial coverage
+          assuming Bt=5.4T. For low Bt shots (like 2.8T), sometimes the gratings were
+          adjusted, sometimes not. Low Bt shots also tend to have low signal and often
+          experience density cutoffs. Therefore, ECE should be avoided in automated
+          calculations for low Bt shots.
+        - Non-thermal emission. The calculation of Te vs. r assumes that the second
+          harmonic emission can be modeled as black-body emission, which assumes the
+          electrons are in thermal equilibrium. On C-Mod, non-thermal emission results
+          in an apparent Te that goes UP towards the edge and in the SOL, which is
+          actually downshifted non-thermal emission from deeper in the core.
+          Significant runaway populations and LHCD lead to non-thermal artifacts.
+          Occasionally low ne shots also had non-thermal artifacts.
+        - Harmonic overlap: Certain channels can pick up emission from different
+          harmonics from other regions of the plasma. Generally channels with R < 0.6 m
+          suffer from overlap with 3rd harmonic emission from the core. This leads to
+          an apparently higher Te for R < 0.6 m than in reality. The gratings were
+          usually aligned to measure the profile from the core outwards for this
+          reason.
+
+        Parameters
+        ----------
+        times : array_like
+            Requested time basis
+        gpc1_te_array: array_like
+            Te measurements from GPC diagnostic
+        gpc1_te_time: array_like
+            Time basis of GPC Te measurements
+        gpc1_rad_data: array_like
+            Radial positions corresponding to GPC channels
+        gpc1_rad_time: array_like
+            Time basis of GPC channel radial positions
+        gpc2_te_array: array_like
+            Te measurements from GPC2 diagnostic
+        gpc2_te_time: array_like
+            Time basis of GPC2 Te measurements
+        gpc2_rad_data: array_like
+            Radial positions corresponding to GPC2 channels
+        gpc2_rad_time: array_like
+            Time basis of GPC2 channel radial positions
+        efit_time : array_like
+            Time basis of '_efit_tree'
+        r0 : array_like
+            Radial position of the magnetic axis from EFIT
+        aminor : array_like
+            Horizontal minor radius from EFIT
+        btor: array_like
+            On-axis toroidal field from magnetics
+        t_mag: array_like
+            Time basis of magnetic diagnostic measurements
+        lh_power: array_like
+            Lower hybrid power
+        lh_time: array_like
+            Time basis of lower hybrid power
+
+        Returns
+        -------
+        Dictionary of ne_peaking, Te_peaking, and pressure_peaking
+
+        Sources:
+        - https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/
+          get_ECE_data_cmod.m
+        - K. Zhurovich, et. al. "Calibration of Thomson scattering systems using
+          electron cyclotron emission cutoff data," Rev. Sci. Instrum., vol. 76, no. 5,
+          p. 053506, 2005, doi: 10.1063/1.1899311.
+        - https://github.com/MIT-PSFC/disruption-py/pull/260
+
+        Last Major Update: Henry Wietfeldt (08/28/24), (PR: #260)
+        """
+
+        # Constants
+        core_bound_factor = 0.2
+        edge_bound_factor = 0.8
+        min_okay_channels = 9
+        min_te = 0.02  # [keV]
+        min_btor = 4.5  # [T]
+        max_lh_power = 1.0  # [kW]
+        min_r_to_avoid_harmonic_overlap = 0.6  # [m]
+        rising_tail_factor = 1.2
+
+        # Only use EFITs starting after the GPC diagnostic has profiles.
+        if len(gpc1_rad_time) > 0:
+            efit_time = efit_time[
+                efit_time >= max(np.max(gpc1_rad_time[:, 0]), gpc2_rad_time[0])
+            ]
+        else:
+            efit_time = efit_time[efit_time >= gpc2_rad_time[0]]
+
+        # Interpolate GPC data onto efit timebase. Timebase for radial measurements is
+        # slower than efit but radial positions are approx. stable so linear
+        # interpolation is safe.
+        n_channels = gpc1_te_data.shape[0]
+        gpc1_te = np.full((n_channels, len(efit_time)), np.nan)
+        gpc1_rad = np.full((n_channels, len(efit_time)), np.nan)
+        for i in range(n_channels):
+            gpc1_te[i, :] = interp1(gpc1_te_time[i, :], gpc1_te_data[i, :], efit_time)
+            if len(gpc1_rad_data[i, :]) > 1:
+                gpc1_rad[i, :] = interp1(
+                    gpc1_rad_time[i, :], gpc1_rad_data[i, :], efit_time
+                )
+            else:
+                gpc1_rad[i, :] = np.full(len(efit_time), np.nan)
+
+        n_channels = gpc2_te_data.shape[0]
+        gpc2_te = np.full((n_channels, len(efit_time)), np.nan)
+        gpc2_rad = np.full((n_channels, len(efit_time)), np.nan)
+        for i in range(n_channels):
+            gpc2_te[i, :] = interp1(gpc2_te_time, gpc2_te_data[i, :], efit_time)
+            if len(gpc2_rad_data[i, :]) > 1:
+                gpc2_rad[i, :] = interp1(gpc2_rad_time, gpc2_rad_data[i, :], efit_time)
+            else:
+                gpc2_rad[i, :] = np.full(len(efit_time), np.nan)
+
+        # Combine GPC systems and extend the last radii measurement up until the last
+        # EFIT. Radii depend on Bt, which should be stable until the current quench.
+        te = np.concatenate((gpc1_te, gpc2_te), axis=0)
+        radii = np.concatenate((gpc1_rad, gpc2_rad), axis=0)
+        indx_last_rad = np.argmax(efit_time > gpc2_rad_time[-1]) - 1
+        for i in range(len(radii)):
+            radii[i, indx_last_rad + 1 :] = radii[i, indx_last_rad]
+
+        # Remaining calculations loop over time then radii so transpose for efficient
+        # caching
+        te = te.T
+        radii = radii.T
+        for i in range(len(efit_time)):
+            sorted_index = np.argsort(radii[i, :])
+            radii[i, :] = radii[i, sorted_index]
+            te[i, :] = te[i, sorted_index]
+
+        # Time slices with low Btor are unreliable because gratings are often not
+        # aligned to field, signal is low, and there are frequent density cutoffs.
+        # Time slices with LH heating are unreliable because direct electron heating
+        # leads to non-thermal emission
+        btor = interp1(t_mag, btor, efit_time)
+        if len(lh_time) > 1:
+            lh_power = interp1(lh_time, lh_power, efit_time)
+        else:
+            lh_power = np.zeros(len(efit_time))
+        lh_power = np.nan_to_num(lh_power, nan=0.0)
+        (okay_time_indices,) = np.where(
+            (np.abs(btor) > min_btor) & (lh_power < max_lh_power)
+        )
+
+        # Main loop for calculations
+        te_core_vs_avg = np.full(len(efit_time), np.nan)
+        te_edge_vs_avg = np.full(len(efit_time), np.nan)
+        te_hwhm = np.full(len(efit_time), np.nan)
+        for i in okay_time_indices:
+            # Only consider points that are likely to accurately measure Te
+            calib_indices = (te[i, :] > min_te) & (radii[i, :] > 0)
+            harmonic_overlap_indices = radii[i, :] < min_r_to_avoid_harmonic_overlap
+            nonthermal_overlap_indices = np.full(len(radii[i, :]), False)
+
+            # Identify rising tail (overlap with non-thermal emission). Finding the min
+            # Te near the edge and checking outwards for a rising tail seems to do well
+            calib_edge = calib_indices & (
+                radii[i, :] > r0[i] + edge_bound_factor * aminor[i]
+            )
+            if np.sum(calib_edge) > 0:
+                te_edge = np.min(te[i, calib_edge])
+                indx_edge = np.argmin(np.abs(te[i, :] - te_edge))
+                for j in range(len(te[i, :]) - 1 - indx_edge):
+                    if te[i, indx_edge + j + 1] > rising_tail_factor * te[i, indx_edge]:
+                        nonthermal_overlap_indices[indx_edge + j + 1] = True
+            okay_indices = (
+                calib_indices
+                & (~harmonic_overlap_indices)
+                & (~nonthermal_overlap_indices)
+            )
+
+            if np.sum(okay_indices) > min_okay_channels:
+                # Estimate Te width using Gaussian fit with center fixed on mag. axis
+                r = radii[i, okay_indices]
+                y = te[i, okay_indices]
+                guess = [y.max(), (y.max() - y.min()) / 3]
+                try:
+                    pmu = r0[i]
+                    _, psigma = gaussian_fit_with_fixed_mean(pmu, r, y, guess)
+                except RuntimeError as exc:
+                    if str(exc).startswith("Optimal parameters not found"):
+                        continue
+                    raise exc
+
+                # rescale from sigma to HWHM
+                # https://en.wikipedia.org/wiki/Full_width_at_half_maximum
+                te_hwhm[i] = np.abs(psigma) * np.sqrt(2 * np.log(2))
+
+                # Calculate core/edge vs. average using uniformly sampled radial basis
+                r_equal_spaced = np.linspace(r0[i], r0[i] + aminor[i], 100)
+                te_equal_spaced = interp1(
+                    r, y, r_equal_spaced, fill_value=(y[0], y[-1])
+                )
+                core_indices = (
+                    np.abs(r_equal_spaced - r0[i]) < core_bound_factor * aminor[i]
+                ) & (~np.isnan(te_equal_spaced))
+                edge_indices = (
+                    np.abs(r_equal_spaced - r0[i]) > edge_bound_factor * aminor[i]
+                ) & (~np.isnan(te_equal_spaced))
+                if np.sum(core_indices) > 0:
+                    te_core_vs_avg[i] = np.nanmean(
+                        te_equal_spaced[core_indices]
+                    ) / np.nanmean(te_equal_spaced)
+                if np.sum(edge_indices) > 0:
+                    te_edge_vs_avg[i] = np.nanmean(
+                        te_equal_spaced[edge_indices]
+                    ) / np.nanmean(te_equal_spaced)
+
+        te_core_vs_avg = interp1(efit_time, te_core_vs_avg, times)
+        te_edge_vs_avg = interp1(efit_time, te_edge_vs_avg, times)
+        te_hwhm = interp1(efit_time, te_hwhm, times)
+        return {
+            "te_core_vs_avg_ece": te_core_vs_avg,
+            "te_edge_vs_avg_ece": te_edge_vs_avg,
+            "te_width_ece": te_hwhm,
+        }
+
+    @staticmethod
+    @physics_method(
+        columns=["te_core_vs_avg_ece", "te_edge_vs_avg_ece", "te_width_ece"],
+        tokamak=Tokamak.CMOD,
+    )
+    def get_te_profile_params_ece(params: PhysicsMethodParams):
+        """
+        Gets MDSplus data to be used in the calculations of te profile parameters
+        from ECE data
+        Parameters
+        ----------
+        params: PhysicsMethodParams
+            The parameters storing the requested time base, shot id, etc
+        Returns
+        ----------
+        Output of get_te_profile_params_ece(), which processes the MDSplus data
+
+        Last Major Update: Henry Wietfeldt (8/28/24)
+        """
+
+        # Constants
+        n_gpc1_channels = 9
+
+        # Get magnetic axis data from EFIT
+        r0 = 0.01 * params.mds_conn.get_data(
+            r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
+        )  # [cm] -> [m]
+        aminor, efit_time = params.mds_conn.get_data_with_dims(
+            r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
+        )  # [m], [s]
+
+        # Btor and LH Power used for filtering okay time slices
+        btor, t_mag = params.mds_conn.get_data_with_dims(
+            r"\btor", tree_name="magnetics"
+        )
+        try:
+            lh_power, lh_time = params.mds_conn.get_data_with_dims(
+                ".results:netpow", tree_name="lh"
+            )  # [kW], [s]
+        except mdsExceptions.MdsException:
+            # When LH power is off, it's often not stored in tree or it's a single 0.
+            lh_power = 0.0
+        if not isinstance(lh_power, np.ndarray):
+            lh_time = np.copy(efit_time)
+            lh_power = np.zeros(len(efit_time))
+
+        # Read in Te profile measurements from 9 GPC1 ("GPC" in MDSplus tree) channels
+        node_path = ".ece.gpc_results"
+        gpc1_te_data = []
+        gpc1_te_time = []
+        gpc1_rad_data = []
+        gpc1_rad_time = []
+        for i in range(n_gpc1_channels):
+            try:
+                te_data, te_time = params.mds_conn.get_data_with_dims(
+                    node_path + ".te:te" + str(i + 1), tree_name="electrons"
+                )  # [keV], [s]
+                rad_data, rad_time = params.mds_conn.get_data_with_dims(
+                    node_path + ".rad:r" + str(i + 1), tree_name="electrons"
+                )  # [m], [s]
+                # For C-Mod shot 1120522025 (and maybe others), rad_time is strings.
+                # Don't use channel in that case
+                if np.issubdtype(rad_time.dtype, np.floating):
+                    gpc1_te_data.append(te_data)
+                    gpc1_te_time.append(te_time)
+                    gpc1_rad_data.append(rad_data)
+                    gpc1_rad_time.append(rad_time)
+            except mdsExceptions.MdsException:
+                continue
+        gpc1_te_data = np.array(gpc1_te_data)
+        gpc1_te_time = np.array(gpc1_te_time)
+        gpc1_rad_data = np.array(gpc1_rad_data)
+        gpc1_rad_time = np.array(gpc1_rad_time)
+
+        # Read in Te profile measurements from GPC2 (19 channels)
+        node_path = ".gpc_2.results"
+        gpc2_te_data, gpc2_te_time = params.mds_conn.get_data_with_dims(
+            node_path + ":gpc2_te", tree_name="electrons"
+        )  # [keV], [s]
+        gpc2_rad_data, gpc2_rad_time = params.mds_conn.get_data_with_dims(
+            node_path + ":radii", tree_name="electrons"
+        )  # [m], [s]
+
+        return CmodPhysicsMethods._get_te_profile_params_ece(
+            params.times,
+            gpc1_te_data,
+            gpc1_te_time,
+            gpc1_rad_data,
+            gpc1_rad_time,
+            gpc2_te_data,
+            gpc2_te_time,
+            gpc2_rad_data,
+            gpc2_rad_time,
+            efit_time,
+            r0,
+            aminor,
+            btor,
+            t_mag,
+            lh_power,
+            lh_time,
         )
 
     @staticmethod
@@ -1011,22 +1614,31 @@ class CmodPhysicsMethods:
         columns=["prad_peaking"],
         tokamak=Tokamak.CMOD,
     )
-    def _get_prad_peaking(params: PhysicsMethodParams):
+    def get_prad_peaking(params: PhysicsMethodParams):
+        """
+        Calculate the peaking factor for radiated power.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the peaking factor for radiated power (`prad_peaking`).
+        """
         prad_peaking = np.full(len(params.times), np.nan)
         nan_output = {"prad_peaking": prad_peaking}
-        try:
-            r0 = 0.01 * params.mds_conn.get_data(
-                r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
-            )
-            z0 = 0.01 * params.mds_conn.get_data(
-                r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
-            )
-            aminor, efit_time = params.mds_conn.get_data_with_dims(
-                r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
-            )
-        except mdsExceptions.MdsException as e:
-            params.logger.debug(f"[Shot {params.shot_id}]: Failed to get efit data")
-            return nan_output
+        r0 = 0.01 * params.mds_conn.get_data(
+            r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
+        )
+        z0 = 0.01 * params.mds_conn.get_data(
+            r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
+        )
+        aminor, efit_time = params.mds_conn.get_data_with_dims(
+            r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
+        )
         got_axa = False
         try:
             bright_axa, t_axa, r_axa = params.mds_conn.get_data_with_dims(
@@ -1043,8 +1655,8 @@ class CmodPhysicsMethods:
                 tree_name="spectroscopy",
             )
             got_axa = True
-        except mdsExceptions.MdsException as e:
-            params.logger.debug(f"[Shot {params.shot_id}]: Failed to get AXA data")
+        except mdsExceptions.MdsException:
+            params.logger.debug("[Shot %s]: Failed to get AXA data", params.shot_id)
         got_axj = False
         try:
             bright_axj, t_axj, r_axj = params.mds_conn.get_data_with_dims(
@@ -1061,8 +1673,8 @@ class CmodPhysicsMethods:
                 tree_name="spectroscopy",
             )
             got_axj = True
-        except mdsExceptions.MdsException as e:
-            params.logger.debug(f"[Shot {params.shot_id}]: Failed to get AXJ data")
+        except mdsExceptions.MdsException:
+            params.logger.debug("[Shot %s]: Failed to get AXJ data", params.shot_id)
         if not (got_axa or got_axj):
             return nan_output
         a_minor = interp1(efit_time, aminor, params.times)
@@ -1110,39 +1722,42 @@ class CmodPhysicsMethods:
                 prad_peaking[i] = np.nanmean(core_radiation) / np.nanmean(all_radiation)
         return {"prad_peaking": prad_peaking}
 
-    @staticmethod
-    def get_sxr_parameters():
-        pass
-
     # TODO: get more accurate description of soft x-ray data
     @staticmethod
     @physics_method(columns=["sxr"], tokamak=Tokamak.CMOD)
-    def _get_sxr_data(params: PhysicsMethodParams):
-        try:
-            sxr, t_sxr = params.mds_conn.get_data_with_dims(
-                r"\top.brightnesses.array_1:chord_16",
-                tree_name="xtomo",
-                astype="float64",
-            )
-        except mdsExceptions.TreeFOPENR as e:
-            params.logger.warning(
-                f"[Shot {params.shot_id}]: Failed to get SXR data returning NaNs"
-            )
-            params.logger.debug(f"[Shot {params.shot_id}]: {traceback.format_exc()}")
-            return {"sxr": [np.nan]}
+    def get_sxr_data(params: PhysicsMethodParams):
+        """
+        Retrieve soft X-ray (SXR) data from array 1 chord 16 for a given shot.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the soft X-ray data (`sxr`).
+        """
+        sxr, t_sxr = params.mds_conn.get_data_with_dims(
+            r"\top.brightnesses.array_1:chord_16",
+            tree_name="xtomo",
+            astype="float64",
+        )
         sxr = interp1(t_sxr, sxr, params.times)
         return {"sxr": sxr}
 
     @staticmethod
     def is_on_blacklist(shot_id: int) -> bool:
-        """TODO why will these shots cause `_get_peaking_factors`,
+        """
+        TODO why will these shots cause `_get_peaking_factors`,
         `_get_peaking_factors_no_tci`, and `_get_edge_parameters` to fail?
         """
         if (
-            (shot_id > 1120000000 and shot_id < 1120213000)
-            or (shot_id > 1140000000 and shot_id < 1140227000)
-            or (shot_id > 1150000000 and shot_id < 1150610000)
-            or (shot_id > 1160000000 and shot_id < 1160303000)
+            1120000000 < shot_id < 1120213000
+            or 1140000000 < shot_id < 1140227000
+            or 1150000000 < shot_id < 1150610000
+            or 1160000000 < shot_id < 1160303000
         ):
             return True
         return False

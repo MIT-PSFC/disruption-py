@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+"""
+This module defines the RetrievalSettings class, which is used to configure 
+settings for retrieving data for a single shot.
+"""
+
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import List
@@ -20,10 +25,13 @@ from disruption_py.settings.time_setting import (
 
 
 def default_tags():
+    """Return the default tag 'all'."""
     return ["all"]
 
 
 class InterpolationMethod(Enum):
+    """Enum for specifying interpolation methods."""
+
     LINEAR = "linear"
     LOG = "log"
     LOG_LINEAR = "log_linear"
@@ -36,55 +44,53 @@ class InterpolationMethod(Enum):
 
 @dataclass
 class RetrievalSettings:
-    """RetrievalSettings to be used for retrieving data for a single shot.
+    """
+    Settings for retrieving data for a single shot.
 
     Attributes
     ----------
-    cache_setting : CacheSetting
-        The cache setting to be used when prefilling data for the shot. Can pass any
-        CacheSettingType that resolves to a CacheSetting. See CacheSetting for more
-        details. Set to None if no data should be prefilled. Defaults to None.
-    efit_nickname_setting : NicknameSetting
-        The nickname setting to be used when retrieving data for the shot. Defines the nicknames that
-        should be created for the efit_tree.
-    run_methods : List[str]
-        A list of physics method names to be run. Named methods will be run when retrieving data
-        from  MDSplus for the shot. Named methods must have the physics_method decorator and either
-        be passed in the `custom_physics_methods` argument or included in the built-in list. Defaults
+    cache_setting : CacheSetting, optional
+        Cache setting to prefill data (default is None). Can pass any CacheSettingType
+        that resolves to a CacheSetting. See CacheSetting for more details. Set
+        to None if no data should be prefilled.
+    efit_nickname_setting : NicknameSetting, optional
+        Nickname setting for retrieving efit tree data (default is "disruption").
+    run_methods : list of str, optional
+        List of physics methods to run (default is an empty list). Named methods
+        will be run when retrieving data from  MDSplus for the shot. Named methods
+        must have the physics_method decorator and either be passed in the
+        `custom_physics_methods` argument or included in the built-in list. Defaults
         to an empty list.
-    run_tags : List[str]
-        A list of physics method tags to be run. Methods used for retrieving data from MDSplus can be
-        tagged with the physics_method decorator and can either be passed in the `custom_physics_methods`
-        argument or included in the built-in list. All methods with at least one included tag will be run.
-        Defaults to ["all"].
-    run_columns : List[str]
-        A list of columns to be retrieved. All methods with the physics_method decorator referenced
-        as containing an included column will be run and all columns returned by those methods will be used.
-        Methods can either be passed in the `custom_physics_methods` argument or included in the built-in
-        list. If you wish to only return the requested columns, set only_requested_columns to true in the
-        retrieval_settings.
-    only_requested_columns : bool
-        Whether only columns requested in run_columns should be included in the produced DataFrame.
-        Even if not all requested columns exist in the produced DataFrame only the requested columns will
-        be produced. Otherwise all columns returned by all methods run will be included. Default false.
-    custom_physics_methods : list
-        A list of physics methods and objects containing physics methods. The Methods are
-        collected and run when retrieving data from MDSplus if the method is included through
-        either the run_methods, run_tags, run_columns setting. Defaults to an empty list.
-    time_setting : TimeSetting
-        The time setting to be used when setting the timebase for the shot. The retrieved data will
-        be interpolated to this timebase. Can pass any `TimeSettingType` that resolves to a TimeSetting.
-        See TimeSetting for more details. Defaults to "disruption_warning".
-    domain_setting : DomainSetting
-        The domain of the timebase that should be used when retrieving data for the shot. Either "full",
-        "flattop", or "rampup_and_flattop". Can pass any `DomainSettingType` that resolves to a `DomainSetting`
-        such as the listed strings. Defaults to "full".
-    use_cache_setting_timebase : bool
-        If true and cache data exists for the shot, the timebase from the cached data will be used instead
-        of the timebase from the time_setting. Wraps the time_setting with CacheTimeSetting.
-        Defaults to False.
-    interpolation_method : InterpolationMethod
-        The interpolation method to be used when retrieving data for the shot. CURRENTLY UNIMPLEMENTED.
+    run_tags : list of str, optional
+        List of method tags to run (default is ["all"]). Methods used for retrieving
+        data from MDSplus can be tagged with the physics_method decorator and can
+        either be passed in the `custom_physics_methods` argument or included in
+        the built-in list. All methods with at least one included tag will be run.
+    run_columns : list of str, optional
+        List of columns to retrieve (default is an empty list). All methods with
+        the physics_method decorator referenced as containing an included column
+        will be run and all columns returned by those methods will be used. Methods
+        can either be passed in the `custom_physics_methods` argument or included
+        in the built-in list. If you wish to only return the requested columns,
+        set only_requested_columns to true in the retrieval_settings.
+    only_requested_columns : bool, optional
+        Whether to only include requested columns in the result (default is False).
+    custom_physics_methods : list, optional
+        List of custom physics methods (default is an empty list). The Methods are
+        collected and run when retrieving data from MDSplus if the method is included
+        through either the run_methods, run_tags, run_columns setting.
+    time_setting : TimeSetting, optional
+        Time setting for the shot (default is "disruption_warning"). The retrieved
+        data will be interpolated to this timebase. Can pass any `TimeSettingType`
+        that resolves to a TimeSetting. See TimeSetting for more details.
+    domain_setting : DomainSetting, optional
+        Domain setting for the timebase (default is "full"). Either "full", "flattop",
+        or "rampup_and_flattop". Can pass any `DomainSettingType` that resolves
+        to a `DomainSetting` such as the listed strings.
+    use_cache_setting_timebase : bool, optional
+        If True, use timebase from cache if available (default is False).
+    interpolation_method : InterpolationMethod, optional
+        Interpolation method to be used (default is "linear"). CURRENTLY UNIMPLEMENTED.
     """
 
     # Prefill data settings
@@ -107,17 +113,31 @@ class RetrievalSettings:
     interpolation_method: InterpolationMethod = "linear"
 
     def __post_init__(self):
+        """Resolve settings after initialization."""
         self.resolve()
 
     @classmethod
     def from_dict(cls, prop_dict, tokamak: Tokamak):
         """
         Create a RetrievalSettings object from a dictionary.
+
+        Parameters
+        ----------
+        prop_dict : dict
+            Dictionary containing properties for RetrievalSettings.
+        tokamak : Tokamak
+            Tokamak for which to create settings.
+
+        Returns
+        -------
+        RetrievalSettings
+            A configured RetrievalSettings object.
         """
         if is_tokamak_indexed(prop_dict):
             if tokamak.value not in prop_dict:
                 raise ValueError(
-                    f"Tokamak {tokamak.value} not found in shot settings. Available tokamaks are {prop_dict.keys()}"
+                    f"Tokamak {tokamak.value} not found in shot settings. Available"
+                    f" tokamaks are {prop_dict.keys()}"
                 )
 
             prop_dict = prop_dict[tokamak.value]
@@ -126,11 +146,10 @@ class RetrievalSettings:
 
     def resolve(self):
         """
-        Take parameters that are passed preset values, and convert to value usable
-        by disruption_py.
+        Resolve preset values into specific objects or enums.
 
-        This primarily refers to passed strings, lists, and dictionaries that can
-        be resolved to a specific request type or a specific enum.
+        This method resolves passed strings, lists, and dictionaries into specific
+        request types or enums.
         """
 
         self.cache_setting = resolve_cache_setting(self.cache_setting)

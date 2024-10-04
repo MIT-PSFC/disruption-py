@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
+"""
+Module for managing retrieval of shot data from a tokamak.
+"""
+
 import logging
-import traceback
 
 import numpy as np
 import pandas as pd
@@ -22,6 +25,21 @@ from disruption_py.settings.time_setting import TimeSettingParams
 
 
 class RetrievalManager:
+    """
+    Class for managing the retrieval of shot data from a tokamak.
+
+    Attributes
+    ----------
+    logger : logging.Logger
+        Logger for the RetrievalManager.
+    tokamak : Tokamak
+        The tokamak instance.
+    process_database : ShotDatabase
+        The SQL database
+    process_mds_conn : ProcessMDSConnection
+        The MDS connection
+    """
+
     logger = logging.getLogger("disruption_py")
 
     def __init__(
@@ -30,6 +48,16 @@ class RetrievalManager:
         process_database: ShotDatabase,
         process_mds_conn: ProcessMDSConnection,
     ):
+        """
+        Parameters
+        ----------
+        tokamak : Tokamak
+            The tokamak instance.
+        process_database : ShotDatabase
+            The SQL database.
+        process_mds_conn : ProcessMDSConnection
+            The MDS connection.
+        """
         self.tokamak = tokamak
         self.process_database = process_database
         self.process_mds_conn = process_mds_conn
@@ -39,41 +67,54 @@ class RetrievalManager:
     ) -> pd.DataFrame:
         """
         Get data for a single shot. May be run across different processes.
+
+        Parameters
+        ----------
+        shot_id : int
+            The ID of the shot to retrieve data for.
+        retrieval_settings : RetrievalSettings
+            The settings for data retrieval.
+
+        Returns
+        -------
+        pd.DataFrame
+            The retrieved shot data as a DataFrame, or None if an error occurred.
         """
-        self.logger.info(f"starting {shot_id}")
-        try:
-            physics_method_params = self.shot_setup(
-                shot_id=int(shot_id),
-                retrieval_settings=retrieval_settings,
-            )
-            retrieved_data = populate_shot(
-                retrieval_settings=retrieval_settings,
-                physics_method_params=physics_method_params,
-            )
-            self.shot_cleanup(physics_method_params)
-            self.logger.info(f"completed {shot_id}")
-            return retrieved_data
-        except Exception as e:
-            self.logger.warning(
-                f"[Shot {shot_id}]: fatal error {traceback.format_exc()}"
-            )
-            self.logger.error(f"failed {shot_id} with error {e}")
-            return None
+        self.logger.info("starting %s", shot_id)
+        physics_method_params = self.shot_setup(
+            shot_id=int(shot_id),
+            retrieval_settings=retrieval_settings,
+        )
+        retrieved_data = populate_shot(
+            retrieval_settings=retrieval_settings,
+            physics_method_params=physics_method_params,
+        )
+        self.shot_cleanup(physics_method_params)
+        self.logger.info("completed %s", shot_id)
+        return retrieved_data
 
     def shot_setup(
         self, shot_id: int, retrieval_settings: RetrievalSettings, **kwargs
     ) -> PhysicsMethodParams:
         """
-        Sets up the shot properties for cmod.
+        Sets up the shot properties for the tokamak.
+
+        Parameters
+        ----------
+        shot_id : int
+            The ID of the shot to set up.
+        retrieval_settings : RetrievalSettings
+            The settings for data retrieval.
+        **kwargs : dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        PhysicsMethodParams
+            Parameters containing MDS connection and shot information
         """
 
-        try:
-            disruption_time = self.process_database.get_disruption_time(shot_id=shot_id)
-        except Exception as e:
-            disruption_time = None
-            self.logger.error(
-                f"Failed to retreive disruption time with error {e}. Continuing as if the shot did not disrupt."
-            )
+        disruption_time = self.process_database.get_disruption_time(shot_id=shot_id)
 
         mds_conn = self.process_mds_conn.get_shot_connection(shot_id=shot_id)
 
@@ -103,7 +144,8 @@ class RetrievalManager:
             return physics_method_params
         except Exception as e:
             self.logger.info(
-                f"[Shot {shot_id}]: Caught failed to setup shot {shot_id}, cleaning up tree manager."
+                "[Shot %s]: Caught failed to setup shot, cleaning up tree manager.",
+                shot_id,
             )
             mds_conn.cleanup()
             raise e
@@ -113,6 +155,16 @@ class RetrievalManager:
         cls,
         physics_method_params: PhysicsMethodParams,
     ):
+        """
+        Clean up the physics method parameters.
+
+        Parameters
+        ----------
+        cls : type
+            The class type.
+        physics_method_params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+        """
         physics_method_params.cleanup()
 
     def setup_physics_method_params(
@@ -123,7 +175,27 @@ class RetrievalManager:
         retrieval_settings: RetrievalSettings,
         **kwargs,
     ) -> PhysicsMethodParams:
+        """
+        Set up the physics method parameters for the shot.
 
+        Parameters
+        ----------
+        shot_id : int
+            The ID of the shot.
+        mds_conn : MDSConnection
+            The MDS connection for the shot.
+        disruption_time : float
+            The disruption time of the shot.
+        retrieval_settings : RetrievalSettings
+            The settings for data retrieval.
+        **kwargs : dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        PhysicsMethodParams
+            The configured physics method parameters.
+        """
         cache_data = self._retrieve_cache_data(
             shot_id=shot_id,
             retrieval_settings=retrieval_settings,
@@ -165,7 +237,7 @@ class RetrievalManager:
             metadata=metadata,
         )
 
-        # modify already existing shot props, such as modifying timebase
+        # Modify already existing shot properties, such as modifying timebase
         physics_method_params = self._modify_method_params_for_settings(
             physics_method_params, retrieval_settings, **kwargs
         )
@@ -176,9 +248,25 @@ class RetrievalManager:
         self,
         physics_method_params: PhysicsMethodParams,
         retrieval_settings: RetrievalSettings,
-        **kwargs,
+        **_kwargs,
     ) -> PhysicsMethodParams:
+        """
+        Modify the physics method parameters based on retrieval settings.
 
+        Parameters
+        ----------
+        physics_method_params : PhysicsMethodParams
+            The parameters for the physics method to modify.
+        retrieval_settings : RetrievalSettings
+            The settings for data retrieval.
+        **_kwargs : dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        PhysicsMethodParams
+            The modified physics method parameters.
+        """
         new_timebase = retrieval_settings.domain_setting.get_domain(
             DomainSettingParams(
                 physics_method_params=physics_method_params,
@@ -188,7 +276,8 @@ class RetrievalManager:
         )
         if new_timebase is not None:
             physics_method_params.times = new_timebase
-            physics_method_params._cached_results.clear()  # TODO: Make this only modify the cached results for new times
+            # TODO: Make this only modify the cached results for new times
+            physics_method_params.cached_results.clear()
 
         return physics_method_params
 
@@ -197,6 +286,21 @@ class RetrievalManager:
         shot_id: int,
         retrieval_settings: RetrievalSettings,
     ) -> pd.DataFrame:
+        """
+        Retrieve cached data for the specified shot.
+
+        Parameters
+        ----------
+        shot_id : int
+            The ID of the shot.
+        retrieval_settings : RetrievalSettings
+            The settings for data retrieval.
+
+        Returns
+        -------
+        pd.DataFrame
+            The cached data for the shot, or None if no cache is available.
+        """
         if retrieval_settings.cache_setting is not None:
             cache_setting_params = CacheSettingParams(
                 shot_id=shot_id,
@@ -223,6 +327,24 @@ class RetrievalManager:
     ) -> np.ndarray:
         """
         Initialize the timebase of the shot.
+
+        Parameters
+        ----------
+        shot_id : int
+            The ID of the shot.
+        cache_data : pd.DataFrame
+            The cached data for the shot.
+        mds_conn : MDSConnection
+            The MDS connection for the shot.
+        disruption_time : float
+            The disruption time of the shot.
+        retrieval_settings : RetrievalSettings
+            The settings for data retrieval.
+
+        Returns
+        -------
+        np.ndarray
+            The initialized timebase as a NumPy array.
         """
         setting_params = TimeSettingParams(
             shot_id=shot_id,
@@ -241,6 +363,20 @@ class RetrievalManager:
     ) -> pd.DataFrame:
         """
         Initialize the shot with data, if cached data matches the shot timebase.
+
+        Parameters
+        ----------
+        cls : type
+            The class type.
+        times : np.ndarray
+            The timebase for the shot.
+        cache_data : pd.DataFrame
+            The cached data for the shot.
+
+        Returns
+        -------
+        pd.DataFrame
+            The pre-filled shot data as a DataFrame, or None if no match is found.
         """
         if cache_data is not None:
             time_df = pd.DataFrame(times, columns=["time"])
@@ -254,7 +390,5 @@ class RetrievalManager:
             )
             if not timed_cache_data["merge_success_flag"].isna().any():
                 return timed_cache_data.drop(columns=["merge_success_flag"])
-            else:
-                return None
-        else:
             return None
+        return None

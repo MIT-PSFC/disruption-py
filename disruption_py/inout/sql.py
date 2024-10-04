@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+Module for managing SQL database connections.
+"""
+
 import logging
 import os
 import threading
@@ -13,7 +17,7 @@ from sqlalchemy import create_engine
 
 from disruption_py.config import config
 from disruption_py.core.utils.misc import without_duplicates
-from disruption_py.core.utils.shared_instance import SharedInstanceFactory
+from disruption_py.core.utils.shared_instance import SharedInstance
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -34,20 +38,20 @@ class ShotDatabase:
         passwd,
         protected_columns=None,
         write_database_table_name=None,
-        **kwargs,
+        **_kwargs,
     ):
 
         if protected_columns is None:
             protected_columns = []
 
-        self.logger.info(f"Database initialization: {user}@{host}/{db_name}")
+        self.logger.info("Database initialization: %s@%s/%s", user, host, db_name)
         drivers = pyodbc.drivers()
         if driver in drivers:
             self.driver = driver
         else:
             self.driver = drivers[0]
             self.logger.warning(
-                f"Database driver fallback: '{driver}' -> '{self.driver}'"
+                "Database driver fallback: '%s' -> '%s'", driver, self.driver
             )
         self.host = host
         self.port = port
@@ -80,10 +84,10 @@ class ShotDatabase:
         # read profile
         profile_path = database_dict["profile_path"]
         profile = os.path.expanduser(profile_path)
-        with open(profile, "r") as fio:
+        with open(profile, "r", encoding="utf-8") as fio:
             db_user, db_pass = fio.read().split()[-2:]
 
-        return SharedInstanceFactory(ShotDatabase).get_instance(
+        return SharedInstance(ShotDatabase).get_instance(
             driver=database_dict["driver"],
             host=database_dict["host"],
             port=database_dict["port"],
@@ -112,7 +116,8 @@ class ShotDatabase:
 
     @property
     def conn(self):
-        """Property returning a connection to sql database.
+        """
+        Property returning a connection to sql database.
 
         If a connection exists for the given thread returns that connection,
         otherwise creates a new connection
@@ -124,14 +129,15 @@ class ShotDatabase:
         """
         current_thread = threading.current_thread()
         if current_thread not in self._thread_connections:
-            self.logger.info(f"Connecting to database for thread {current_thread}")
+            self.logger.info("Connecting to database for thread %s", current_thread)
             self._thread_connections[current_thread] = pyodbc.connect(
                 self.connection_string
             )
         return self._thread_connections[current_thread]
 
     def query(self, query: str, use_pandas=True):
-        """query sql database
+        """
+        query sql database
 
         Parameters
         ----------
@@ -209,7 +215,7 @@ class ShotDatabase:
                 shot_data=shot_data,
                 table_name=self.write_database_table_name,
             )
-        elif (
+        if (
             len(curr_df) == len(shot_data)
             and (
                 (curr_df["time"] - shot_data["time"]).abs() < config().TIME_CONST
@@ -313,6 +319,8 @@ class ShotDatabase:
                 and (update or curr_df[column_name].isna().all())
             ):
                 update_columns_shot_data[column_name] = shot_data[column_name]
+        # pyodbc will fill SQL with NULL for None, but not for np.nan
+        update_columns_shot_data = update_columns_shot_data.replace({np.nan: None})
         with self.conn.cursor() as curs:
             for index, row in enumerate(
                 update_columns_shot_data.itertuples(index=False, name=None)
@@ -358,7 +366,7 @@ class ShotDatabase:
             self.engine,
         )
         if len(data_df) == 0:
-            self.logger.info(f"Shot {shot_id} does not exist in database")
+            self.logger.info("Shot %s does not exist in database", shot_id)
             return False
         with self.conn.cursor() as curs:
             curs.execute(
@@ -373,15 +381,11 @@ class ShotDatabase:
                 "specify write_database_table_name in the configuration before "
                 + "adding shot data"
             )
-        try:
-            self.query(
-                f"alter table {self.write_database_table_name} add {col_name} {var_type};",
-                use_pandas=False,
-            )
-            return True
-        except Exception as e:
-            self.logger.error(f"Failed to add column {col_name} with error {e}")
-            return False
+        self.query(
+            f"alter table {self.write_database_table_name} add {col_name} {var_type};",
+            use_pandas=False,
+        )
+        return True
 
     def remove_column(self, col_name):
         """Remove column from SQL table"""
@@ -391,25 +395,22 @@ class ShotDatabase:
                 + "adding shot data"
             )
         if col_name in self.protected_columns:
-            self.logger.error(f"Failed to drop protected column {col_name}")
+            self.logger.error("Failed to drop protected column %s", col_name)
             return False
-        try:
-            self.query(
-                f"alter table {self.write_database_table_name} drop column {col_name};",
-                use_pandas=False,
-            )
-            return True
-        except Exception as e:
-            self.logger.error(f"Failed to drop column {col_name} with error {e}")
-            return False
+        self.query(
+            f"alter table {self.write_database_table_name} drop column {col_name};",
+            use_pandas=False,
+        )
+        return True
 
     def get_shots_data(
         self,
         shotlist: List[int],
-        cols: List[str] = ["*"],
+        cols: List[str] = None,
         sql_table="disruption_warning",
     ):
-        """get_shots_data retrieves columns from sql data for given shotlist
+        """
+        get_shots_data retrieves columns from sql data for given shotlist
 
         Parameters
         ----------
@@ -425,17 +426,15 @@ class ShotDatabase:
         pd.Dataframe
             Dataframe containing queried data
         """
-        shotlist = ",".join([str(shot_id) for shot_id in shotlist])
-        selected_cols = f"{cols[0]}"
-        if len(cols) > 1:
-            selected_cols += "".join([f", {col}" for col in cols[1:]])
+        if cols is None:
+            cols = ["*"]
+        cols = ", ".join(str(col) for col in cols)
+        shotlist = ",".join(str(shot) for shot in shotlist)
+        query = f"select {cols} from {sql_table}"
         if shotlist is None:
-            query = f"select {selected_cols} from {sql_table} order by time"
+            query += " order by time"
         else:
-            query = (
-                f"select {selected_cols} from {sql_table} where shot in "
-                + f"({shotlist}) order by time"
-            )
+            query += f" where shot in ({shotlist}) order by shot, time"
         shot_df = pd.read_sql_query(query, self.engine)
         shot_df.columns = shot_df.columns.str.lower()
         return shot_df
@@ -470,6 +469,10 @@ class ShotDatabase:
 
 
 class DummyObject:
+    """
+    A dummy connection object.
+    """
+
     def __getattr__(self, name):
         # Return self for any attribute or method call
         return self
@@ -481,39 +484,37 @@ class DummyObject:
 
 class DummyDatabase(ShotDatabase):
     """
-    A database class that does not require connecting to an SQL server but returns
+    A database class that does not require connecting to an SQL server and returns
     no data.
-
-    Note: On CMod, disruption time data and any derrivative values will not be correct.
-
-    Examples
-    --------
-    >>> get_shots_data(shotlist_setting=[1150805012], database_initializer=DummyDatabase.initializer)
-    <pd.DataFrame>
     """
 
+    # pylint: disable-next=super-init-not-called
     def __init__(self, **kwargs):
         pass
 
     @classmethod
-    def initializer(cls, **kwargs):
+    # pylint: disable-next=missing-function-docstring
+    def initializer(cls, **_kwargs):
         return cls()
 
     @property
-    def conn(self, **kwargs):
+    def conn(self):
         return DummyObject()
 
-    def query(self, **kwargs):
+    # pylint: disable-next=arguments-differ
+    def query(self, **_kwargs):
         return pd.DataFrame()
 
-    def get_shots_data(self, **kwargs):
+    # pylint: disable-next=arguments-differ
+    def get_shots_data(self, **_kwargs):
         return pd.DataFrame()
 
-    def get_disruption_time(self, **kwargs):
+    # pylint: disable-next=arguments-differ
+    def get_disruption_time(self, **_kwargs):
         return None
 
-    def get_disruption_shotlist(self, **kwargs):
+    def get_disruption_shotlist(self, **_kwargs):
         return []
 
-    def get_disruption_warning_shotlist(self, **kwargs):
+    def get_disruption_warning_shotlist(self, **_kwargs):
         return []

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+"""
+This module provides a decorator to signify methods that calculate physics quantities.
+"""
+
 from typing import Callable, List, Union
 
 from disruption_py.core.physics_method.caching import cache_method
@@ -58,7 +62,6 @@ def physics_method(
         method_metadata = MethodMetadata(
             name=method.__name__,
             cache=cache,
-            populate=True,
             tokamaks=tokamak,
             columns=columns,
             tags=tags,

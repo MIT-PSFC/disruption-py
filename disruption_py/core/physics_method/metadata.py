@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 
-from dataclasses import Field, dataclass, fields
-from typing import Any, Callable, List, Union
+"""
+Module for defining metadata classes for physics methods.
+"""
+
+from dataclasses import dataclass, fields
+from typing import Callable, List, Union
 
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.machine.tokamak import Tokamak
@@ -9,8 +13,11 @@ from disruption_py.machine.tokamak import Tokamak
 
 @dataclass(frozen=True)
 class MethodMetadata:
+    """
+    Holder for the arguments to the decorator.
+    """
+
     name: str
-    populate: bool
 
     cache: bool
     tokamaks: Union[Tokamak, List[Tokamak]]
@@ -23,14 +30,21 @@ class MethodMetadata:
     ]
 
     def __post_init__(self):
-        if self.populate:
-            object.__setattr__(self, "tags", self.tags or ["all"])
-            object.__setattr__(self, "columns", self.columns or [])
-        object.__setattr__(self, "tokamaks", self.tokamaks or [])
+        object.__setattr__(self, "tags", self.tags or ["all"])
+        object.__setattr__(self, "columns", self.columns or [])
 
 
 @dataclass(frozen=True)
 class BoundMethodMetadata(MethodMetadata):
+    """
+    Metadata for a bound method, extending `MethodMetadata`.
+
+    Attributes
+    ----------
+    bound_method : Callable
+        The method that is bound to this metadata.
+    """
+
     bound_method: Callable
 
     @classmethod
@@ -41,11 +55,21 @@ class BoundMethodMetadata(MethodMetadata):
         physics_method_params: PhysicsMethodParams,
     ):
         """
-        Evaluate arguments to decorators to usable values.
+        Bind a method to its metadata and resolve any callable parameters.
 
-        Some parameters provided to the physics_method decorators can take method that are evaluated
-        at runtime. `resolve_for` evaluates all of these methods and returns a new instance of `MethodMetadata`
-        without function parameters.
+        Parameters
+        ----------
+        method_metadata : MethodMetadata
+            Metadata instance containing the method's unresolved parameters.
+        bound_method : Callable
+            The callable method to be bound.
+        physics_method_params : PhysicsMethodParams
+            Parameters required for resolving the method.
+
+        Returns
+        -------
+        BoundMethodMetadata
+            A new instance of `BoundMethodMetadata` with resolved parameters.
         """
         new_method_metadata_params = {}
         bind_to = (getattr(bound_method, "__self__", None),)
@@ -70,7 +94,8 @@ class BoundMethodMetadata(MethodMetadata):
 
 
 def is_parametered_method(method: Callable) -> bool:
-    """Returns whether the method is decorated with `physics_method` decorator
+    """
+    Returns whether the method is decorated with `physics_method` decorator
 
     Parameters
     ----------
@@ -86,7 +111,8 @@ def is_parametered_method(method: Callable) -> bool:
 
 
 def get_method_metadata(method: Callable, should_throw: bool = False) -> MethodMetadata:
-    """Get method metadata for method
+    """
+    Get method metadata for method
 
     Parameters
     ----------

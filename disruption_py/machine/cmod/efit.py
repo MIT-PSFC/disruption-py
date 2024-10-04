@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 
+"""
+Module for retrieving and processing EFIT parameters for CMOD.
+"""
+
 import traceback
 
 import numpy as np
+from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
@@ -11,6 +16,18 @@ from disruption_py.machine.tokamak import Tokamak
 
 
 class CmodEfitMethods:
+    """
+    Class for retrieving and processing EFIT parameters for CMOD.
+
+    Attributes
+    ----------
+    efit_cols : dict
+        A dictionary mapping parameter names to their corresponding EFIT data paths.
+    efit_cols_pre_2000 : dict
+        A dictionary for EFIT column names for data before the year 2000.
+    efit_derivs : dict
+        A dictionary mapping derivative parameter names to their corresponding base parameters.
+    """
 
     efit_cols = {
         "beta_n": r"\efit_aeqdsk:betan",
@@ -57,41 +74,47 @@ class CmodEfitMethods:
         ],
         tokamak=Tokamak.CMOD,
     )
-    def _get_EFIT_parameters(params: PhysicsMethodParams):
+    def get_efit_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve EFIT parameters for CMOD.
 
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the retrieved EFIT parameters.
+        """
         efit_time = params.mds_conn.get_data(
             r"\efit_aeqdsk:time", tree_name="_efit_tree", astype="float64"
         )  # [s]
-        efit_data = dict()
+        efit_data = {}
 
         # Get data from each of the columns in efit_cols one at a time
-        for param in CmodEfitMethods.efit_cols:
+        for param, path in CmodEfitMethods.efit_cols.items():
             try:
                 # If shot before 2000 and the param is in efit_cols_pre_2000
                 if (
                     params.shot_id <= 1000000000
-                    and param not in CmodEfitMethods.efit_cols_pre_2000.keys()
+                    and param in CmodEfitMethods.efit_cols_pre_2000
                 ):
-                    efit_data[param] = params.mds_conn.get_data(
-                        CmodEfitMethods.efit_cols_pre_2000[param],
-                        tree_name="_efit_tree",
-                        astype="float64",
-                    )
-                else:
-                    efit_data[param] = params.mds_conn.get_data(
-                        CmodEfitMethods.efit_cols[param],
-                        tree_name="_efit_tree",
-                        astype="float64",
-                    )
-            except:
+                    path = CmodEfitMethods.efit_cols_pre_2000[param]
+                efit_data[param] = params.mds_conn.get_data(
+                    path=path,
+                    tree_name="_efit_tree",
+                    astype="float64",
+                )
+            except mdsExceptions.MdsException:
                 params.logger.warning(
-                    f"[Shot {params.shot_id}]: Unable to get {param} from EFIT tree"
+                    "[Shot %s]: Unable to get %s from EFIT tree", params.shot_id, param
                 )
                 params.logger.debug(
-                    f"[Shot {params.shot_id}]: {traceback.format_exc()}"
+                    "[Shot %s]: %s", params.shot_id, traceback.format_exc()
                 )
                 efit_data[param] = np.full(len(efit_time), np.nan)
-                pass
 
         for deriv_param, param in CmodEfitMethods.efit_derivs.items():
             efit_data[deriv_param] = np.gradient(
@@ -106,10 +129,9 @@ class CmodEfitMethods:
                 r"\efit_geqdsk:ssibry", tree_name="_efit_tree", astype="float64"
             )
             efit_data["v_surf"] = np.gradient(ssibry, efit_time) * 2 * np.pi
-        except:
+        except mdsExceptions.MdsException:
             print("unable to get V_surf")
             efit_data["v_surf"] = np.full(len(efit_time), np.nan)
-            pass
 
         # For shots before 2000, adjust units of aminor, compute beta_n and v_loop
         if params.shot_id <= 1000000000:
@@ -118,16 +140,15 @@ class CmodEfitMethods:
             efit_data["aminor"] = efit_data["aminor"] / 100  # [cm] to [m]
 
             # Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally
-            #  sure on this one)
+            # sure on this one)
             try:  # TODO: confirm this
                 ssimag = params.mds_conn.get_data(
                     r"\efit_geqdsk:ssimag", tree_name="_efit_tree", astype="float64"
                 )
                 efit_data["v_loop_efit"] = np.gradient(ssimag, efit_time) * 2 * np.pi
-            except:
+            except mdsExceptions.MdsException:
                 print("unable to get v_loop_efit")
                 efit_data["v_loop_efit"] = np.full(len(efit_time), np.nan)
-                pass
 
             # Compute beta_n
             beta_t = params.mds_conn.get_data(
@@ -146,7 +167,18 @@ class CmodEfitMethods:
     @staticmethod
     def efit_check(params: PhysicsMethodParams):
         """
+        Check the validity of EFIT parameters for the given shot.
         # TODO: Get description from Jinxiang
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDS connection and shot information.
+
+        Returns
+        -------
+        tuple
+            A tuple containing valid indices and corresponding times.
         """
         values = []
         for expr in [

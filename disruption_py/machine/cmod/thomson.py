@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""Module for processing Thomson electron density measurements."""
+
 import numpy as np
 import scipy as sp
 from MDSplus import mdsExceptions
@@ -7,20 +9,32 @@ from MDSplus import mdsExceptions
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
 from disruption_py.core.utils.misc import safe_cast
-from disruption_py.machine.cmod import CmodEfitMethods
+from disruption_py.machine.cmod.efit import CmodEfitMethods
 
 
-# helper class holding functions for thomson density measures
-class CmodDraftThomsonDensityMeasure:
+class CmodThomsonDensityMeasure:
+    """
+    A helper class for Thomson electron density measurements.
+    """
 
-    # The following methods are translated from IDL code.
     @staticmethod
     def compare_ts_tci(params: PhysicsMethodParams, nlnum=4):
         """
-        Comparison between chord integrated Thomson electron density and TCI results.
+        Helper function used for comparing electron density measurements from
+        Thomson scattering with the two-color interferometer (TCI).
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+        nlnum : int, optional
+            The number of the TCI channel to compare (default is 4).
+
+        Returns
+        -------
+        tuple
+            Tuple containing the Thomson and TCI electron density measurements.
         """
-        core_mult = 1.0
-        edge_mult = 1.0
         nl_ts1 = [1e32]
         nl_ts2 = [1e32]
         nl_tci1 = [1e32]
@@ -33,34 +47,42 @@ class CmodDraftThomsonDensityMeasure:
         tci, tci_t = params.mds_conn.get_data_with_dims(
             f".TCI.RESULTS:NL_{nlnum:02d}", tree_name="electrons"
         )
-        nlts, nlts_t = ThomsonDensityMeasure.integrate_ts_tci(nlnum)
+        nlts, nlts_t = CmodThomsonDensityMeasure._integrate_ts_tci(params, nlnum)
         t0 = np.amin(nlts_t)
         t1 = np.amax(nlts_t)
-        nyag1, nyag2, indices1, indices2 = ThomsonDensityMeasure.parse_yags(params)
+        nyag1, nyag2, indices1, indices2 = CmodThomsonDensityMeasure._parse_yags(params)
+        time1, time2 = -1, -1
         if nyag1 > 0:
-            indices1 += 1
             ts_time1 = tci_time[indices1]
-            valid_indices = np.where(ts_time1 >= t0 & ts_time1 <= t1)
+            (valid_indices,) = np.where((ts_time1 >= t0) & (ts_time1 <= t1))
             if valid_indices.size > 0:
                 nl_tci1 = interp1(tci_t, tci, ts_time1[valid_indices])
                 nl_ts1 = interp1(nlts_t, nlts, ts_time1[valid_indices])
                 time1 = ts_time1[valid_indices]
-        else:
-            time1 = -1
         if nyag2 > 0:
-            indices2 += 1
             ts_time2 = tci_time[indices2]
-            valid_indices = np.where(ts_time2 >= t0 & ts_time2 <= t1)
+            (valid_indices,) = np.where((ts_time2 >= t0) & (ts_time2 <= t1))
             if valid_indices.size > 0:
                 nl_tci1 = interp1(tci_t, tci, ts_time2[valid_indices])
                 nl_ts1 = interp1(nlts_t, nlts, ts_time2[valid_indices])
                 time2 = ts_time2[valid_indices]
-        else:
-            time2 = -1
         return nl_ts1, nl_ts2, nl_tci1, nl_tci2, time1, time2
 
     @staticmethod
-    def parse_yags(params: PhysicsMethodParams):
+    def _parse_yags(params: PhysicsMethodParams):
+        """
+        Parse YAG laser data to determine indices and counts.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+
+        Returns
+        -------
+        tuple
+            Tuple containing the number of YAGs and their indices.
+        """
         nyag1 = params.mds_conn.get_data(r"\knobs:pulses_q", tree_name="electrons")
         nyag2 = params.mds_conn.get_data(r"\knobs:pulses_q_2", tree_name="electrons")
         indices1 = -1
@@ -90,12 +112,12 @@ class CmodDraftThomsonDensityMeasure:
                                 2 * nyag2 + np.arange(nyag1 - nyag2 - 1),
                             )
                         )
-        v_ind1 = np.where(indices1 < nt)
+        (v_ind1,) = np.where(indices1 < nt)
         if nyag1 > 0 and v_ind1.size > 0:
             indices1 = indices1[v_ind1]
         else:
             indices1 = -1
-        v_ind2 = np.where(indices2 < nt)
+        (v_ind2,) = np.where(indices2 < nt)
         if nyag2 > 0 and v_ind2.size > 0:
             indices2 = indices2[v_ind2]
         else:
@@ -103,41 +125,63 @@ class CmodDraftThomsonDensityMeasure:
         return nyag1, nyag2, indices1, indices2
 
     @staticmethod
-    def integrate_ts_tci(params: PhysicsMethodParams, nlnum):
+    def _integrate_ts_tci(params: PhysicsMethodParams, nlnum):
         """
         Integrate Thomson electron density measurement to the line integrated electron
-        density for comparison with two color interferometer (TCI) measurement results
+        density for comparison with two-color interferometer (TCI) measurement results.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+        nlnum : int
+            The number of the TCI channel to integrate.
+
+        Returns
+        -------
+        tuple
+            Tuple containing the integrated electron density and corresponding times.
         """
-        core_mult = 1.0
-        edge_mult = 1.0
-        nlts = 1e32
-        nlts_t = 1e32
-        t, z, n_e, n_e_sig = ThomsonDensityMeasure.map_ts2tci(params, nlnum)
+        t, z, n_e, n_e_sig = CmodThomsonDensityMeasure._map_ts2tci(params, nlnum)
         if z[0, 0] == 1e32:
             return None, None  # TODO: Log and maybe return nan arrs
         nts = len(t)
         nlts_t = t
         nlts = np.full(t.shape, np.nan)
-        for i in range(len(nts)):
-            ind = np.where(
-                np.abs(z[i, :])
-                < 0.5 & n_e[i, :]
-                > 0 & n_e[i, :]
-                < 1e21 & n_e[i, :] / n_e_sig[i, :]
-                > 2
+        for i in range(nts):
+            (ind,) = np.where(
+                (np.abs(z[i, :]) < 0.5)
+                & (n_e[i, :] > 0)
+                & (n_e[i, :] < 1e21)
+                & (n_e[i, :] / n_e_sig[i, :] > 2)
             )
             if len(ind) < 3:
                 nlts[i] = 0
             else:
                 x = z[i, ind]
                 y = n_e[i, ind]
-                values_uniq, ind_uniq = np.unique(x, return_index=True)
+                _, ind_uniq = np.unique(x, return_index=True)
                 y = y[ind_uniq]
                 nlts[i] = np.trapz(y, x)
         return nlts, nlts_t
 
     @staticmethod
-    def map_ts2tci(params: PhysicsMethodParams, nlnum):
+    def _map_ts2tci(params: PhysicsMethodParams, nlnum):
+        """
+        Map Thomson density measurements to TCI measurements.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+        nlnum : int
+            The number of the TCI channel to map.
+
+        Returns
+        -------
+        tuple
+            Tuple containing time, z-coordinates, electron density, and density errors.
+        """
         core_mult = 1.0
         edge_mult = 1.0
         t = [1e32]
@@ -145,7 +189,7 @@ class CmodDraftThomsonDensityMeasure:
         n_e = [1e32]
         n_e_sig = [1e32]
         flag = 1
-        valid_indices, efit_times = CmodEfitMethods.efit_check()
+        valid_indices, efit_times = CmodEfitMethods.efit_check(params)
         ip = params.mds_conn.get_data(r"\ip", "cmod")
         if np.mean(ip) > 0:
             flag = 0
@@ -173,7 +217,7 @@ class CmodDraftThomsonDensityMeasure:
         try:
             nets_edge = params.mds_conn.get_data(r"\ts_ne")
             nets_edge_err = params.mds_conn.get_data(r"\ts_ne_err")
-        except mdsExceptions.mdsException as err:
+        except mdsExceptions.MdsException:
             nets_edge = np.zeros((len(nets_core[:, 1]), mts_edge))
             nets_edge_err = nets_edge + 1e20
         mts = mts_core + mts_edge
@@ -195,32 +239,32 @@ class CmodDraftThomsonDensityMeasure:
         nets_core_t = nets_core_t[valid_indices]
         nets = nets[valid_indices]
         nets_err = nets_err[valid_indices]
-        psits = ThomsonDensityMeasure.efit_rz2psi(rts, zts, nets_core_t)
+        psits = CmodThomsonDensityMeasure._efit_rz2psi(params, rts, zts, nets_core_t)
         mtci = 101
         ztci = -0.4 + 0.8 * np.arange(0, mtci) / (mtci - 1)
         rtci = rtci[nlnum] + np.zeros((1, mtci))
-        psitci = ThomsonDensityMeasure.efit_rz2psi(rtci, ztci, nets_core_t)
+        psitci = CmodThomsonDensityMeasure._efit_rz2psi(params, rtci, ztci, nets_core_t)
         psia = interp1(psia_t, psia, nets_core_t)
         psi_0 = interp1(psia_t, psi_0, nets_core_t)
         nts = len(nets_core_t)
         for i in range(nts):
-            psits[i, :] = (psits[i, :] - psi_0[i]) / (psia[i] - psi_0[i])
-            psitci[i, :] = (psitci[i, :] - psi_0[i]) / (psia[i] - psi_0[i])
+            psits[:, i] = (psits[:, i] - psi_0[i]) / (psia[i] - psi_0[i])
+            psitci[:, i] = (psitci[:, i] - psi_0[i]) / (psia[i] - psi_0[i])
         zmapped = np.zeros((nts, 2 * mts)) + 1e32
         nemapped = zmapped.copy()
         nemapped_err = zmapped.copy()
         for i in range(nts):
             index = np.argmin(psitci[i, :]) if flag else np.argmax(psitci[i, :])
             psi_val = psitci[i, index]
-            for j in range(len(mts)):
-                if (flag and psits[i, j] >= psi_val) or (
-                    not flag and psits[i, j] <= psi_val
+            for j in range(mts):
+                if (flag and psits[j, i] >= psi_val) or (
+                    not flag and psits[j, i] <= psi_val
                 ):
-                    a1 = interp1(psitci[i, :index], ztci[:index], psits[i, j])
-                    a2 = interp1(psitci[i, index:], ztci[index:], psits[i, j])
-                    zmapped[i, np.arange(j, j + mts + 1)] = np.arange(a1, a2)
-                    nemapped[i, np.arange(j, j + mts + 1)] = nets[i, j]
-                    nemapped_err[i, np.arange(j, j + mts + 1)] = nets_err[i, j]
+                    a1 = interp1(psitci[:index, i], ztci[:index], psits[j, i])
+                    a2 = interp1(psitci[index:, i], ztci[index:], psits[j, i])
+                    zmapped[i, [j, j + mts]] = [a1, a2]
+                    nemapped[i, [j, j + mts]] = nets[i, j]
+                    nemapped_err[i, [j, j + mts]] = nets_err[i, j]
             sorted_indices = np.argsort(zmapped[i, :])
             zmapped[i, :] = zmapped[i, sorted_indices]
             nemapped[i, :] = nemapped[i, sorted_indices]
@@ -231,17 +275,37 @@ class CmodDraftThomsonDensityMeasure:
         t = nets_core_t
         return t, z, n_e, n_e_sig
 
-    # TODO: Move to utils
     @staticmethod
-    def efit_rz2psi(params: PhysicsMethodParams, r, z, t, tree="analysis"):
+    def _efit_rz2psi(params: PhysicsMethodParams, r, z, t, tree="analysis"):
+        """
+        Interpolate the magnetic flux function (psi) from R and Z coordinates.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+        r : array_like
+            Radial coordinates.
+        z : array_like
+            Vertical coordinates.
+        t : array_like
+            Time points for interpolation.
+        tree : str, optional
+            The MDSplus tree name (default is "analysis").
+
+        Returns
+        -------
+        np.ndarray
+            Interpolated psi values corresponding to the input R and Z coordinates.
+        """
         r = r.flatten()
         z = z.flatten()
         psi = np.full((len(r), len(t)), np.nan)
-        z = safe_cast(z, "float32")  # TODO: Ask if this change is necessary
+        z = safe_cast(z, "float32")
         psirz, rgrid, zgrid, times = params.mds_conn.get_data_with_dims(
             r"\efit_geqdsk:psirz", tree_name=tree, dim_nums=[0, 1, 2]
         )
-        rgrid, zgrid = np.meshgrid(rgrid, zgrid)  # , indexing='ij')
+        rgrid, zgrid = np.meshgrid(rgrid, zgrid)
 
         points = np.array(
             [rgrid.flatten(), zgrid.flatten()]
@@ -249,17 +313,10 @@ class CmodDraftThomsonDensityMeasure:
         for i, time in enumerate(t):
             # Find the index of the closest time
             time_idx = np.argmin(np.abs(times - time))
-            # Extract the corresponding Psirz slice and transpose it
-            Psirz = np.transpose(psirz[time_idx, :, :])
-            # Perform cubic interpolation on the Psirz slice
-            values = Psirz.flatten()
-            try:
-                psi[:, i] = sp.interpolate.griddata(
-                    points, values, (r, z), method="cubic"
-                )
-            except:
-                params.logger.warning(
-                    f"Interpolation failed for efit_rz2psi time {time}"
-                )
+            # Extract the corresponding psirz slice and transpose it
+            psirz = np.transpose(psirz[time_idx, :, :])
+            # Perform cubic interpolation on the psirz slice
+            values = psirz.flatten()
+            psi[:, i] = sp.interpolate.griddata(points, values, (r, z), method="cubic")
 
         return psi

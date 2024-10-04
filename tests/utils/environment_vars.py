@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""Module for managing temporary modifications to environment variables."""
+
 import os
 from contextlib import contextmanager
 from typing import Iterable, Tuple

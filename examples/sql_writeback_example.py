@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+"""
+Example usage of `get_shots_data` that writes the results back to the test SQL table.
+"""
 
 from disruption_py.settings.output_setting import SQLOutputSetting
 from disruption_py.settings.retrieval_settings import RetrievalSettings

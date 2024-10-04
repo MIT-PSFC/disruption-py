@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+"""
+Handles retrieving shotlists from various sources including lists, files, and SQL 
+databases.
+"""
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from importlib import resources
@@ -17,7 +22,8 @@ from disruption_py.machine.tokamak import Tokamak
 
 @dataclass
 class ShotlistSettingParams:
-    """Params passed by disruption_py to _get_shotlist() method.
+    """
+    Params passed by disruption_py to _get_shotlist() method.
 
     Attributes
     ----------
@@ -40,6 +46,20 @@ class ShotlistSetting(ABC):
     """ShotlistSetting abstract class that should be inherited by all shotlist setting classes."""
 
     def get_shotlist(self, params: ShotlistSettingParams) -> List:
+        """
+        Retrieve the shotlist based on the provided parameters.
+
+        Parameters
+        ----------
+        params : ShotlistSettingParams
+            The parameters containing the database, tokamak, and logger used
+            to determine the shotlist.
+
+        Returns
+        -------
+        List
+            A list of shot IDs retrieved.
+        """
         if hasattr(self, "tokamak_overrides"):
             if params.tokamak in self.tokamak_overrides:
                 return self.tokamak_overrides[params.tokamak](params)
@@ -47,63 +67,73 @@ class ShotlistSetting(ABC):
 
     @abstractmethod
     def _get_shotlist(self, params: ShotlistSettingParams) -> List:
-        """Abstract method implemented by subclasses to get shotlist for the given setting params.
+        """
+        Abstract method implemented by subclasses to get shotlist for the given setting params.
 
         Parameters
         ----------
         params : ShotlistSettingParams
             Params that can be used to determine shotlist.
         """
-        pass
-
-
-class IncludedShotlistSetting(ShotlistSetting):
-    """Use the shotlist from one of the provided data files.
-
-    Directly passing a key from the _get_shotlist_setting_mappings dictionary as a string will
-    automatically create a new IncludedShotlistSetting object with that data_file_name.
-
-    Parameters
-    ----------
-    data_file_name : str
-        The name of the datafile that should be used to retrieve the shotlist.
-    """
-
-    def __init__(self, data_file_name: str) -> List:
-        with resources.path(disruption_py.data, data_file_name) as data_file:
-            df = pd.read_csv(data_file, header=None)
-            lst = df.values[:, 0].tolist()
-            self.shotlist = lst
-
-    def _get_shotlist(self, params: ShotlistSettingParams) -> List:
-        return self.shotlist
 
 
 class FileShotlistSetting(ShotlistSetting):
-    """Use a shotlist from the provided file path, this may be any file readable by pandas read_csv.
+    """
+    Use `pandas.read_csv` to read a file, then extract and use values from any column.
 
-    Directly passing a file path as a string to the shotlist setting with the file name suffixed by txt or csv
-    will automatically create a new FileShotlistSetting object with that file path.
+    Directly passing a file path as a string to the shotlist setting with the file name suffixed
+    by txt or csv will automatically create a new FileShotlistSetting object with that file path.
 
     Parameters
     ----------
     file_path : str
         The file path of the file that should be used for retrieving the shotlist.
     column_index : int
-        The index of the column that should be read. For text files, this should be 0. Defaults to 0.
+        The index of the column that should be read. Defaults to 0.
+    **kwargs : Dict
+        Optional keyword arguments dictionary to be passed to `pandas.read_csv`.
     """
 
-    def __init__(self, file_path, column_index=0):
-        self.shotlist = (
-            pd.read_csv(file_path, header=None).iloc[:, column_index].values.tolist()
-        )
+    def __init__(self, file_path: str, column_index: int = 0, **kwargs: Dict):
+        self.file_path = file_path
+        self.column_index = column_index
+        self.kwargs = kwargs
+        self.shotlist = []
 
     def _get_shotlist(self, params: ShotlistSettingParams) -> List:
+        if not self.shotlist:
+            self.kwargs.setdefault("header", "infer")
+            df = pd.read_csv(self.file_path, **self.kwargs)
+            arr = df.values[:, self.column_index]
+            self.shotlist = arr.astype(int).tolist()
         return self.shotlist
 
 
+class IncludedShotlistSetting(FileShotlistSetting):
+    """
+    Use the shotlist from one of the provided data files.
+
+    Directly passing a key from the _get_shotlist_setting_mappings dictionary as a string will
+    automatically create a new IncludedShotlistSetting object with that file_name.
+
+    Parameters
+    ----------
+    file_name : str
+        The name of the datafile that should be used to retrieve the shotlist.
+    **kwargs : Dict
+        Optional keyword arguments dictionary to be passed to `FileShotlistSetting`.
+    """
+
+    def __init__(self, file_name: str, **kwargs: Dict):
+        data = resources.files(disruption_py.data)
+        file = data.joinpath(file_name)
+        with resources.as_file(file) as file_path:
+            super().__init__(file_path, **kwargs)
+
+
 class DatabaseShotlistSetting(ShotlistSetting):
-    """Use an sql query of the database to retrieve the shotlist.
+    """
+    Use an sql query of the database to retrieve the shotlist.
 
     Parameters
     ----------
@@ -123,23 +153,29 @@ class DatabaseShotlistSetting(ShotlistSetting):
                 query=self.sql_query, use_pandas=True
             )
             return query_result_df.iloc[:, 0].tolist()
-        else:
-            query_result = params.database.query(query=self.sql_query, use_pandas=False)
-            return [row[0] for row in query_result]
+        query_result = params.database.query(query=self.sql_query, use_pandas=False)
+        return [row[0] for row in query_result]
 
 
 # --8<-- [start:get_shotlist_setting_dict]
 _get_shotlist_setting_mappings: Dict[str, ShotlistSetting] = {
-    "d3d_paper_shotlist": IncludedShotlistSetting("paper_shotlist.txt"),
-    "d3d_train_disr": IncludedShotlistSetting("train_disr.txt"),
-    "d3d_train_nondisr": IncludedShotlistSetting("train_nondisr.txt"),
-    "cmod_test": IncludedShotlistSetting("cmod_test.txt"),
-    "cmod_non_disruptions_ids_not_blacklist": IncludedShotlistSetting(
-        "cmod_non_disruptions_ids_not_blacklist.txt"
+    "disruption_warning": DatabaseShotlistSetting(
+        "select distinct shot from disruption_warning"
     ),
-    "cmod_non_disruptions_ids_not_blacklist_mini": IncludedShotlistSetting(
-        "cmod_non_disruptions_ids_not_blacklist_mini.txt"
+    "plasmas": DatabaseShotlistSetting(
+        """
+        if exists (select * from information_schema.tables where table_name = 'summary')
+        begin
+            select distinct shot from summary where ipmax > 100e3 and pulse_length > 0.1;
+        end
+        else if exists (select * from information_schema.tables where table_name = 'summaries')
+        begin
+            select distinct shot from summaries where ipmax > 100e3 and pulse_length > 0.1;
+        end
+        """
     ),
+    "cmod_ufo": IncludedShotlistSetting("cmod_ufo.csv"),
+    "cmod_vde": IncludedShotlistSetting("cmod_vde.csv"),
 }
 # --8<-- [end:get_shotlist_setting_dict]
 
