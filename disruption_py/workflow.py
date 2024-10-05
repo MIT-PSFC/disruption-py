@@ -3,9 +3,9 @@
 """
 The main entrypoint for retrieving DisruptionPy data. 
 """
-
-import logging
 from typing import Any, Callable
+
+from loguru import logger
 
 from disruption_py.core.multiprocess import MultiprocessingShotRetriever
 from disruption_py.core.retrieval_manager import RetrievalManager
@@ -26,8 +26,6 @@ from disruption_py.settings.shotlist_setting import (
     ShotlistSettingType,
     shotlist_setting_runner,
 )
-
-logger = logging.getLogger("disruption_py")
 
 
 def get_shots_data(
@@ -86,7 +84,7 @@ def get_shots_data(
     output_setting = resolve_output_setting(output_setting)
 
     # do not spawn unnecessary processes
-    shotlist_setting_params = ShotlistSettingParams(database, tokamak, logger)
+    shotlist_setting_params = ShotlistSettingParams(database, tokamak)
     shotlist_list = without_duplicates(
         shotlist_setting_runner(shotlist_setting, shotlist_setting_params)
     )
@@ -106,7 +104,6 @@ def get_shots_data(
                 )
             ),
             tokamak=tokamak,
-            logger=logger,
         )
         shot_retriever.run(
             shotlist_list=shotlist_list,
@@ -120,6 +117,7 @@ def get_shots_data(
             process_database=database,
             process_mds_conn=mds_connection,
         )
+        num_success = 0
         for shot_id in shotlist_list:
             shot_data = retrieval_manager.get_shot_data(
                 shot_id=shot_id,
@@ -127,22 +125,30 @@ def get_shots_data(
             )
             if shot_data is None:
                 logger.warning(
-                    "Not outputting data for shot %s due, data is None.", shot_id
+                    "[#{shot_id}]: Not outputting data for shot, data is None.",
+                    shot_id=shot_id,
                 )
             else:
+                num_success += 1
                 output_setting.output_shot(
                     OutputSettingParams(
                         shot_id=shot_id,
                         result=shot_data,
                         database=database,
                         tokamak=tokamak,
-                        logger=logger,
                     )
                 )
+        total = len(shotlist_list)
+        percent_success = round(num_success / total * 100, 2)
+        logger.log(
+            "SUMMARY",
+            "Retrieved data for {num_success}/{total} shots ({percent_success}%)",
+            num_success=num_success,
+            total=total,
+            percent_success=percent_success,
+        )
 
-    finish_output_type_setting_params = CompleteOutputSettingParams(
-        tokamak=tokamak, logger=logger
-    )
+    finish_output_type_setting_params = CompleteOutputSettingParams(tokamak=tokamak)
     results = output_setting.get_results(finish_output_type_setting_params)
     output_setting.stream_output_cleanup(finish_output_type_setting_params)
     return results

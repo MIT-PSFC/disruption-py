@@ -7,7 +7,6 @@ resolve MDSplus tree names for various tokamaks.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from logging import Logger
 from typing import Dict, Union
 
 from disruption_py.core.utils.enums import map_string_to_enum
@@ -37,8 +36,6 @@ class NicknameSettingParams:
         The time of the disruption in seconds.
     tokamak : Tokamak
         The tokamak for which results are being processed.
-    logger : Logger
-        Logger for logging relevant messages.
     """
 
     shot_id: int
@@ -46,7 +43,6 @@ class NicknameSettingParams:
     database: ShotDatabase
     disruption_time: float
     tokamak: Tokamak
-    logger: Logger
 
 
 class NicknameSetting(ABC):

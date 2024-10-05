@@ -4,8 +4,6 @@
 Module for retrieving and processing EFIT parameters for CMOD.
 """
 
-import traceback
-
 import numpy as np
 from MDSplus import mdsExceptions
 
@@ -107,13 +105,12 @@ class CmodEfitMethods:
                     tree_name="_efit_tree",
                     astype="float64",
                 )
-            except mdsExceptions.MdsException:
+            except mdsExceptions.MdsException as e:
                 params.logger.warning(
-                    "[Shot %s]: Unable to get %s from EFIT tree", params.shot_id, param
+                    "Unable to get {param} from EFIT tree",
+                    param=param,
                 )
-                params.logger.debug(
-                    "[Shot %s]: %s", params.shot_id, traceback.format_exc()
-                )
+                params.logger.opt(exception=True).debug(e)
                 efit_data[param] = np.full(len(efit_time), np.nan)
 
         for deriv_param, param in CmodEfitMethods.efit_derivs.items():
@@ -130,7 +127,7 @@ class CmodEfitMethods:
             )
             efit_data["v_surf"] = np.gradient(ssibry, efit_time) * 2 * np.pi
         except mdsExceptions.MdsException:
-            print("unable to get V_surf")
+            params.logger.warning("Failed to get v_surf.")
             efit_data["v_surf"] = np.full(len(efit_time), np.nan)
 
         # For shots before 2000, adjust units of aminor, compute beta_n and v_loop
@@ -147,7 +144,7 @@ class CmodEfitMethods:
                 )
                 efit_data["v_loop_efit"] = np.gradient(ssimag, efit_time) * 2 * np.pi
             except mdsExceptions.MdsException:
-                print("unable to get v_loop_efit")
+                params.logger.warning("Failed to get v_loop_efit.")
                 efit_data["v_loop_efit"] = np.full(len(efit_time), np.nan)
 
             # Compute beta_n

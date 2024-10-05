@@ -47,8 +47,6 @@ def test_shotlist_setting_runner(shotlist):
     Ensure all variations of shotlist_settings get flattened to a single dimensional
     list.
     """
-    shot_ids_request_params = ShotlistSettingParams(
-        database=None, tokamak=None, logger=None
-    )
+    shot_ids_request_params = ShotlistSettingParams(database=None, tokamak=None)
     result = shotlist_setting_runner(shotlist, shot_ids_request_params)
     assert REFERENCE_SHOTLIST == result

@@ -8,7 +8,6 @@ databases.
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from importlib import resources
-from logging import Logger
 from typing import Dict, List, Type, Union
 
 import numpy as np
@@ -33,13 +32,10 @@ class ShotlistSettingParams:
         Defaults to logbook.
     tokamak : Tokamak
         The tokamak that is data is being retrieved for.
-    logger : Logger
-        Logger object from disruption_py to use for logging.
     """
 
     database: ShotDatabase
     tokamak: Tokamak
-    logger: Logger
 
 
 class ShotlistSetting(ABC):
