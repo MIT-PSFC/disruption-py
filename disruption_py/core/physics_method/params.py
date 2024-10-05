@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-
 """
 Module for defining parameters used in physics methods for DisruptionPy.
 """

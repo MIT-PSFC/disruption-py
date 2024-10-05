@@ -66,7 +66,7 @@ def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams) -> pd.Da
         ).all()
     ):
         physics_method_params.logger.error(
-            "[Shot %s]: ERROR Computation on different timebase than pre-filled shot data",
+            "Computation on different timebase than pre-filled shot data",
             physics_method_params.shot_id,
         )
     return pre_filled_shot_data
