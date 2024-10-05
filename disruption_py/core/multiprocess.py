@@ -10,6 +10,8 @@ import threading
 from enum import Enum
 from typing import Callable
 
+from loguru import logger
+
 from disruption_py.config import config
 from disruption_py.core.retrieval_manager import RetrievalManager
 from disruption_py.inout.sql import ShotDatabase
@@ -81,7 +83,6 @@ class MultiprocessingShotRetriever:
         output_setting: OutputSetting,
         retrieval_manager_initializer: Callable[..., RetrievalManager],
         tokamak,
-        logger,
         num_processes=1,
     ):
 
@@ -91,7 +92,6 @@ class MultiprocessingShotRetriever:
         self.output_setting = output_setting
         self.database = database
         self.tokamak = tokamak
-        self.logger = logger
         self.result_thread = threading.Thread(target=self._result_processor)
 
         self.consumers = [
@@ -104,25 +104,37 @@ class MultiprocessingShotRetriever:
         ]
 
     def _result_processor(self):
+        num_success = 0
+        total = 0
         while True:
             shot_id, result = self.result_queue.get()
-            self.logger.info("Processing result for shot: %s", shot_id)
+            logger.info("[#{shot_id}]: Processing result", shot_id=shot_id)
             if result is MARK_COMPLETE:
                 break
+            total += 1
             if result is None:
-                self.logger.warning(
-                    "Not outputting data for shot %s, data is None.", shot_id
+                logger.warning(
+                    "[#{shot_id}]: Not outputting data, data is None.",
+                    shot_id=shot_id,
                 )
                 continue
+            num_success += 1
             self.output_setting.output_shot(
                 OutputSettingParams(
                     shot_id=shot_id,
                     result=result,
                     database=self.database,
                     tokamak=self.tokamak,
-                    logger=self.logger,
                 )
             )
+        percent_success = round(num_success / total * 100, 2)
+        logger.log(
+            "SUMMARY",
+            "Retrieved data for {num_success}/{total} shots ({percent_success}%)",
+            num_success=num_success,
+            total=total,
+            percent_success=percent_success,
+        )
 
     def run(self, shotlist_list, retrieval_settings, await_complete=True):
 

@@ -5,7 +5,6 @@ Module for populating shot data by executing physics methods in DisruptionPy.
 """
 
 import time
-import traceback
 from collections.abc import Iterable
 from typing import Any
 
@@ -67,7 +66,7 @@ def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams) -> pd.Da
         ).all()
     ):
         physics_method_params.logger.error(
-            "[Shot %s]: Computation on different timebase than pre-filled shot data",
+            "[Shot %s]: ERROR Computation on different timebase than pre-filled shot data",
             physics_method_params.shot_id,
         )
     return pre_filled_shot_data
@@ -183,10 +182,9 @@ def filter_methods_to_run(
             methods_to_run.append(bound_method_metadata)
         else:
             physics_method_params.logger.info(
-                "[Shot %s]: Skipping %s in class %s",
-                physics_method_params.shot_id,
-                bound_method_metadata.name,
-                bound_method_metadata.bound_method,
+                "Skipping {method_name} in class {bound_method}",
+                method_name=bound_method_metadata.name,
+                bound_method=bound_method_metadata.bound_method,
             )
     return methods_to_run
 
@@ -217,9 +215,6 @@ def populate_method(
     name = bound_method_metadata.name
 
     result = None
-    physics_method_params.logger.info(
-        "[Shot %s]: Populating %s", physics_method_params.shot_id, name
-    )
     try:
         result = method(params=physics_method_params)
     except (
@@ -237,19 +232,17 @@ def populate_method(
                 raise
 
         physics_method_params.logger.warning(
-            "[Shot %s]: Failed to populate %s with error %s",
-            physics_method_params.shot_id,
-            name,
-            e,
+            "Failed to populate {name} with error {e}",
+            name=name,
+            e=e,
         )
-        physics_method_params.logger.debug("%s", traceback.format_exc())
+        physics_method_params.logger.opt(exception=True).debug(e)
         result = {col: [np.nan] for col in bound_method_metadata.columns}
 
     physics_method_params.logger.info(
-        "[Shot %s]: Completed %s, time_elapsed: %s",
-        physics_method_params.shot_id,
-        name,
-        time.time() - start_time,
+        "Completed {name}, time_elapsed: {t:.3f}s",
+        name=name,
+        t=time.time() - start_time,
     )
     return result
 
@@ -309,9 +302,8 @@ def populate_shot(
                 cached_method_metadata.append(method_metadata)
                 if method_metadata in run_bound_method_metadata:
                     physics_method_params.logger.info(
-                        "[Shot %s]: Skipping %s already populated",
-                        physics_method_params.shot_id,
-                        method_metadata.name,
+                        "Skipping {name} already populated",
+                        name=method_metadata.name,
                     )
 
     start_time = time.time()
@@ -327,6 +319,8 @@ def populate_shot(
             )
         )
 
+    num_parameters = 0
+    num_valid = 0
     filtered_methods = []
     for method_dict in methods_data:
         if method_dict is None:
@@ -334,22 +328,34 @@ def populate_shot(
         # Pad parameters which are only a single NaN (from our error outputs) in
         # order to create a DataFrame for easy comparison with cached data.
         for parameter in method_dict:
+            num_parameters += 1
             if (
                 np.all(np.isnan(method_dict[parameter]))
                 and len(method_dict[parameter]) == 1
             ):
                 method_dict[parameter] = np.full(len(pre_filled_shot_data), np.nan)
+            else:
+                num_valid += 1
         method_df = pd.DataFrame(method_dict)
         if len(method_df) != len(pre_filled_shot_data):
             physics_method_params.logger.error(
-                "[Shot %s]: Ignoring parameter %s with different length than timebase",
-                physics_method_params.shot_id,
-                method_dict,
+                "Ignoring parameters {parameter} with different length than timebase",
+                parameter=list(method_dict.keys()),
             )
             # TODO: Should we drop the columns, or is it better to raise an
             # exception when the data do not match?
             continue
         filtered_methods.append(method_df)
+
+    percent_valid = (
+        round((num_valid) / num_parameters * 100, 2) if num_parameters else 0
+    )
+    physics_method_params.logger.success(
+        "{num_valid}/{total} parameters have data ({percent_valid}%)",
+        num_valid=num_valid,
+        total=num_parameters,
+        percent_valid=percent_valid,
+    )
 
     # TODO: This is a hack to get around the fact that some methods return
     #       multiple parameters. This should be fixed in the future.

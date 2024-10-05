@@ -22,7 +22,6 @@ export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring
 To better understand the issue that you are seeing in DisruptionPy you can enable more detailed logging by passing `log_settings` to the [`get_shots_data`][disruption_py.workflow.get_shots_data] call. For more information on customizing logging, please see [`LogSettings`][disruption_py.settings.LogSettings].
 
 ```python
-import logging
 from disruption_py.settings import LogSettings
 from disruption_py.workflow import get_shots_data
 
@@ -32,8 +31,8 @@ get_shots_data(
     log_settings=LogSettings(
         log_to_console=True,
         log_file_path="path/to/log/file",
-        file_log_level=logging.DEBUG,
-        console_log_level=logging.DEBUG
+        file_log_level="DEBUG",
+        console_log_level="DEBUG"
     ),
 
     ...
