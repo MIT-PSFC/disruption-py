@@ -2,7 +2,6 @@
 
 """Module for evaluating fresh data against cached data for testing."""
 
-import logging
 import os
 import time
 from contextlib import contextmanager
@@ -11,6 +10,7 @@ from typing import Dict, List
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 
 from disruption_py.config import config
 from disruption_py.core.utils.math import matlab_gradient_1d_vectorized
@@ -19,8 +19,6 @@ from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings import LogSettings, RetrievalSettings
 from disruption_py.workflow import get_shots_data
 from tests.utils.data_difference import DataDifference
-
-logger = logging.getLogger("disruption_py")
 
 
 def get_fresh_data(
@@ -53,8 +51,8 @@ def get_fresh_data(
             log_to_console=True,
             log_file_path=log_file_path,
             log_file_write_mode="w",
-            file_log_level=logging.DEBUG,
-            console_log_level=logging.DEBUG,
+            file_log_level="DEBUG",
+            console_log_level="DEBUG",
         ),
     )
     return shot_data
@@ -162,10 +160,10 @@ def eval_shot_against_cache(
         expectation = "failure" if expect_failure else "success"
         failure = "failed" if data_difference.failed else "succeeded"
         logger.debug(
-            "Expected %s and %s:\n%s",
-            expectation,
-            failure,
-            data_difference.column_mismatch_string,
+            "Expected {expectation} and {failure}:\n{mismatch_string}",
+            expectation=expectation,
+            failure=failure,
+            mismatch_string=data_difference.column_mismatch_string,
         )
     assert not data_difference.failed, "Comparison failed"
 
