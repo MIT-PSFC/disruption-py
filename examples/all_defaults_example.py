@@ -4,8 +4,6 @@
 Example usage of `get_shots_data` with all the default arguments explicitly assigned.
 """
 
-import logging
-
 from disruption_py.settings import LogSettings, RetrievalSettings
 from disruption_py.workflow import get_shots_data
 
@@ -36,10 +34,10 @@ shot_data = get_shots_data(
     num_processes=1,
     log_settings=LogSettings(  # logging
         log_file_path=None,
-        file_log_level=logging.WARNING,
+        file_log_level="WARNING",
         log_file_write_mode="w",
         log_to_console=True,
-        console_log_level=logging.WARNING,
+        console_log_level="WARNING",
         use_custom_logging=False,
     ),
 )

@@ -4,8 +4,6 @@
 Example usage of `get_shots_data` demonstrating the use of a dummy sql database.
 """
 
-
-import logging
 import os
 
 from disruption_py.inout.sql import DummyDatabase
@@ -29,6 +27,6 @@ shot_data = get_shots_data(
     num_processes=1,
     database_initializer=DummyDatabase.initializer,  # use dummy database
     log_settings=LogSettings(
-        console_log_level=logging.DEBUG,
+        console_log_level="DEBUG",
     ),
 )

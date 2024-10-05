@@ -128,13 +128,13 @@ def manually_cache(
         cache_key = get_method_cache_key(method, data["time"].values)
         physics_method_params.cached_results[cache_key] = data[method_columns]
         physics_method_params.logger.debug(
-            "[Shot %s]: Manually caching %s", physics_method_params.shot_id, method_name
+            "Manually caching {method_name}",
+            method_name=method_name,
         )
         return True
     physics_method_params.logger.debug(
-        "[Shot %s]: Can not cache %s missing columns %s",
-        physics_method_params.shot_id,
-        method_name,
-        missing_columns,
+        "Can not cache {method_name} missing columns {missing_columns}",
+        method_name=method_name,
+        missing_columns=missing_columns,
     )
     return False

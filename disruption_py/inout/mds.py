@@ -4,11 +4,11 @@
 Module for managing connections to MDSplus.
 """
 
-import logging
 from typing import Any, Callable, Dict, List, Tuple
 
 import MDSplus
 import numpy as np
+from loguru import logger
 
 from disruption_py.config import config
 from disruption_py.core.utils.misc import safe_cast
@@ -24,8 +24,6 @@ class ProcessMDSConnection:
     retrieved by that process.
     """
 
-    logger = logging.getLogger("disruption_py")
-
     def __init__(self, conn_string: str):
         self.conn = None
         if conn_string is None:
@@ -35,7 +33,7 @@ class ProcessMDSConnection:
         try:
             self.conn.get("shorten_path()")
         except MDSplus.mdsExceptions.TdiUNKNOWN_VAR:
-            self.logger.debug("MDSplus does not support the `shorten_path()` method.")
+            logger.debug("MDSplus does not support the `shorten_path()` method.")
 
     @classmethod
     def from_config(cls, tokamak: Tokamak):
@@ -56,8 +54,6 @@ class MDSConnection:
     """
     Wrapper class for MDSPlus Connection class used for handling individual shots.
     """
-
-    logger = logging.getLogger("disruption_py")
 
     def __init__(
         self, conn: MDSplus.Connection, shot_id: int  # pylint: disable=no-member

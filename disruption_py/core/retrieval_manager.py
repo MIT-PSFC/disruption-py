@@ -4,10 +4,10 @@
 Module for managing retrieval of shot data from a tokamak.
 """
 
-import logging
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 
 from disruption_py.config import config
 from disruption_py.core.physics_method.params import PhysicsMethodParams
@@ -30,8 +30,6 @@ class RetrievalManager:
 
     Attributes
     ----------
-    logger : logging.Logger
-        Logger for the RetrievalManager.
     tokamak : Tokamak
         The tokamak instance.
     process_database : ShotDatabase
@@ -39,8 +37,6 @@ class RetrievalManager:
     process_mds_conn : ProcessMDSConnection
         The MDS connection
     """
-
-    logger = logging.getLogger("disruption_py")
 
     def __init__(
         self,
@@ -80,7 +76,6 @@ class RetrievalManager:
         pd.DataFrame
             The retrieved shot data as a DataFrame, or None if an error occurred.
         """
-        self.logger.info("starting %s", shot_id)
         physics_method_params = self.shot_setup(
             shot_id=int(shot_id),
             retrieval_settings=retrieval_settings,
@@ -90,7 +85,6 @@ class RetrievalManager:
             physics_method_params=physics_method_params,
         )
         self.shot_cleanup(physics_method_params)
-        self.logger.info("completed %s", shot_id)
         return retrieved_data
 
     def shot_setup(
@@ -127,7 +121,6 @@ class RetrievalManager:
                         database=self.process_database,
                         disruption_time=disruption_time,
                         tokamak=self.tokamak,
-                        logger=self.logger,
                     )
                 )
             }
@@ -143,9 +136,9 @@ class RetrievalManager:
             )
             return physics_method_params
         except Exception as e:
-            self.logger.info(
-                "[Shot %s]: Caught failed to setup shot, cleaning up tree manager.",
-                shot_id,
+            logger.info(
+                "[#{shot_id}]: Caught failed to setup shot, cleaning up tree manager.",
+                shot_id=shot_id,
             )
             mds_conn.cleanup()
             raise e
@@ -271,7 +264,6 @@ class RetrievalManager:
             DomainSettingParams(
                 physics_method_params=physics_method_params,
                 tokamak=self.tokamak,
-                logger=self.logger,
             )
         )
         if new_timebase is not None:
@@ -306,7 +298,6 @@ class RetrievalManager:
                 shot_id=shot_id,
                 database=self.process_database,
                 tokamak=self.tokamak,
-                logger=self.logger,
             )
             cache_data = retrieval_settings.cache_setting.get_cache_data(
                 cache_setting_params
@@ -353,7 +344,6 @@ class RetrievalManager:
             database=self.process_database,
             disruption_time=disruption_time,
             tokamak=self.tokamak,
-            logger=self.logger,
         )
         return retrieval_settings.time_setting.get_times(setting_params)
 
