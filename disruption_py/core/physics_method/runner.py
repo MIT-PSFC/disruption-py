@@ -319,8 +319,9 @@ def populate_shot(
             )
         )
 
-    num_parameters = 0
-    num_valid = 0
+    # Initialize with cached data
+    num_parameters = len(pre_filled_shot_data.columns)
+    num_valid = pre_filled_shot_data.notna().any().sum()
     filtered_methods = []
     for method_dict in methods_data:
         if method_dict is None:
