@@ -29,3 +29,10 @@ def test_settings_file():
     file is reachable.
     """
     assert config().TIME_CONST is not None
+
+
+def test_access_tokamak_settings(tokamak):
+    """
+    Test each tokamak's unique settings are accessible.
+    """
+    assert config(tokamak)
