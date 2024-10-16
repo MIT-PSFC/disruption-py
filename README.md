@@ -1,7 +1,7 @@
 
 # DisruptionPy
 
-An interoperable Python package for plasma disruption analysis and prediction using ML. 
+An open-source physics-based Scientific Framework for Disruption Analysis of Fusion Plasmas for AI/ML applications. 
 
 ## Background
 
