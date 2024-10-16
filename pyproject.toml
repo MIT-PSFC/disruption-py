@@ -18,7 +18,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Software Development :: Version Control :: Git",
 ]
-description = "Scientific Data Framework for the MIT PSFC Disruption Studies Group"
+description = "An open-source physics-based Scientific Framework for Disruption Analysis of Fusion Plasmas for AI/ML applications"
 documentation = "https://mit-psfc.github.io/disruption-py/"
 homepage = "https://disruptions.mit.edu/"
 keywords = [
