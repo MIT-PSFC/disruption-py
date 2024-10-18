@@ -47,7 +47,7 @@ class CmodEfitMethods:
         "tribot": r"\efit_aeqdsk:doutl",
         "a_minor": r"\efit_aeqdsk:aout/100",
         "rmagx": r"\efit_aeqdsk:rmagx/100",
-        "chisq": r"\efit_aeqdsk:chisq",
+        "chisq": r"\efit_aeqdsk:tsaisq",
     }
 
     # EFIT column names for data before 2000 TODO: confirm with Bob that these are
