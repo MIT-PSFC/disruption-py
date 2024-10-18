@@ -520,12 +520,12 @@ class CmodPhysicsMethods:
             raise CalculationError("No data for v_loop_time")
 
         li, efittime = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:li", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:ali", tree_name="_efit_tree", astype="float64"
         )  # [dimensionless], [s]
         ip_parameters = CmodPhysicsMethods.get_ip_parameters(params=params)
-        r0 = 0.01 * params.mds_conn.get_data(
-            r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
-        )  # [cm] -> [m]
+        r0 = params.mds_conn.get_data(
+            r"\efit_aeqdsk:rmagx/100", tree_name="_efit_tree"
+        )  # [m]
 
         output = CmodPhysicsMethods._get_ohmic_parameters(
             params.times,
@@ -685,10 +685,10 @@ class CmodPhysicsMethods:
             A dictionary containing the calculated "kappa_area".
         """
         aminor = params.mds_conn.get_data(
-            r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:aout/100", tree_name="_efit_tree", astype="float64"
         )
         area = params.mds_conn.get_data(
-            r"\efit_aeqdsk:area", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:areao/1e4", tree_name="_efit_tree", astype="float64"
         )
         times = params.mds_conn.get_data(
             r"\efit_aeqdsk:time", tree_name="_efit_tree", astype="float64"
@@ -891,7 +891,7 @@ class CmodPhysicsMethods:
             r"\ip", tree_name="magnetics", astype="float64"
         )
         a_minor, t_a = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:aout/100", tree_name="_efit_tree", astype="float64"
         )
 
         output = CmodPhysicsMethods._get_densities(
@@ -1173,12 +1173,10 @@ class CmodPhysicsMethods:
             raise CalculationError("Shot is on blacklist")
         # Fetch data
         # Get EFIT geometry data
-        z0 = 0.01 * params.mds_conn.get_data(
-            r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
-        )
+        z0 = params.mds_conn.get_data(r"\efit_aeqdsk:zmagx/100", tree_name="_efit_tree")
         kappa = params.mds_conn.get_data(r"\efit_aeqdsk:kappa", tree_name="_efit_tree")
         aminor, efit_time = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
+            r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )
         bminor = aminor * kappa
 
@@ -1531,11 +1529,11 @@ class CmodPhysicsMethods:
         n_gpc1_channels = 9
 
         # Get magnetic axis data from EFIT
-        r0 = 0.01 * params.mds_conn.get_data(
-            r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
-        )  # [cm] -> [m]
+        r0 = params.mds_conn.get_data(
+            r"\efit_aeqdsk:rmagx/100", tree_name="_efit_tree"
+        )  # [m]
         aminor, efit_time = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
+            r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )  # [m], [s]
 
         # Btor and LH Power used for filtering okay time slices
@@ -1630,14 +1628,12 @@ class CmodPhysicsMethods:
         """
         prad_peaking = np.full(len(params.times), np.nan)
         nan_output = {"prad_peaking": prad_peaking}
-        r0 = 0.01 * params.mds_conn.get_data(
-            r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
-        )
-        z0 = 0.01 * params.mds_conn.get_data(
-            r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
-        )
+        r0 = params.mds_conn.get_data(
+            r"\efit_aeqdsk:rmagx/100", tree_name="_efit_tree"
+        )  # [m]
+        z0 = params.mds_conn.get_data(r"\efit_aeqdsk:zmagx/100", tree_name="_efit_tree")
         aminor, efit_time = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
+            r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )
         got_axa = False
         try:
