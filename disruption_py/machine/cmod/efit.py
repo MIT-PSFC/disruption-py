@@ -38,7 +38,7 @@ class CmodEfitMethods:
         "lower_gap": r"\efit_aeqdsk:obott/100",
         "q0": r"\efit_aeqdsk:qqmagx",
         "qstar": r"\efit_aeqdsk:qsta",
-        "q95": r"\efit_aeqdsk:q95",
+        "q95": r"\efit_aeqdsk:qpsib",
         "v_loop_efit": r"\efit_aeqdsk:vloopt",
         "wmhd": r"\efit_aeqdsk:wplasm",
         "ssep": r"\efit_aeqdsk:ssep/100",
@@ -57,7 +57,7 @@ class CmodEfitMethods:
         "li": r"\efit_aeqdsk:ali",
         "q0": r"\efit_aeqdsk:qqmagx",
         "qstar": r"\efit_aeqdsk:qsta",
-        "q95": r"\efit_aeqdsk:qsib",  # Not sure about this one
+        "q95": r"\efit_aeqdsk:qpsib",  # Not sure about this one
     }
 
     efit_derivs = {"dbetap_dt": "beta_p", "dli_dt": "li", "dwmhd_dt": "wmhd"}
