@@ -50,23 +50,12 @@ class CmodEfitMethods:
         "chisq": r"\efit_aeqdsk:tsaisq",
     }
 
-    # EFIT column names for data before 2000 TODO: confirm with Bob that these are
-    # the right back-ups and make sure that these are similar to standard EFIT columns
-    efit_cols_pre_2000 = {
-        "a_minor": r"\efit_aeqdsk:aout/100",
-        "li": r"\efit_aeqdsk:ali",
-        "q0": r"\efit_aeqdsk:qqmagx",
-        "qstar": r"\efit_aeqdsk:qsta",
-        "q95": r"\efit_aeqdsk:qpsib",  # Not sure about this one
-    }
-
     efit_derivs = {"dbetap_dt": "beta_p", "dli_dt": "li", "dwmhd_dt": "wmhd"}
 
     @staticmethod
     @physics_method(
         columns=[
             *efit_cols.keys(),
-            *efit_cols_pre_2000.keys(),
             *efit_derivs.keys(),
             "v_surf",
             "v_loop_efit",
@@ -96,12 +85,6 @@ class CmodEfitMethods:
         # Get data from each of the columns in efit_cols one at a time
         for param, path in CmodEfitMethods.efit_cols.items():
             try:
-                # If shot before 2000 and the param is in efit_cols_pre_2000
-                if (
-                    params.shot_id <= 1000000000
-                    and param in CmodEfitMethods.efit_cols_pre_2000
-                ):
-                    path = CmodEfitMethods.efit_cols_pre_2000[param]
                 efit_data[param] = params.mds_conn.get_data(
                     path=path,
                     tree_name="_efit_tree",
