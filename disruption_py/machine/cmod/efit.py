@@ -45,7 +45,7 @@ class CmodEfitMethods:
         "n_over_ncrit": r"-\efit_aeqdsk:xnnc",
         "tritop": r"\efit_aeqdsk:doutu",
         "tribot": r"\efit_aeqdsk:doutl",
-        "a_minor": r"\efit_aeqdsk:aminor",
+        "a_minor": r"\efit_aeqdsk:aout/100",
         "rmagx": r"\efit_aeqdsk:rmagx",  # TODO: change units to [m] (current [cm])
         "chisq": r"\efit_aeqdsk:chisq",
     }
@@ -53,7 +53,7 @@ class CmodEfitMethods:
     # EFIT column names for data before 2000 TODO: confirm with Bob that these are
     # the right back-ups and make sure that these are similar to standard EFIT columns
     efit_cols_pre_2000 = {
-        "a_minor": r"\efit_aeqdsk:aout",
+        "a_minor": r"\efit_aeqdsk:aout/100",
         "li": r"\efit_aeqdsk:ali",
         "q0": r"\efit_aeqdsk:qqmagx",
         "qstar": r"\efit_aeqdsk:qsta",
@@ -133,11 +133,8 @@ class CmodEfitMethods:
             print("unable to get V_surf")
             efit_data["v_surf"] = np.full(len(efit_time), np.nan)
 
-        # For shots before 2000, adjust units of aminor, compute beta_n and v_loop
+        # For shots before 2000, compute beta_n and v_loop
         if params.shot_id <= 1000000000:
-
-            # Adjust aminor units
-            efit_data["aminor"] = efit_data["aminor"] / 100  # [cm] to [m]
 
             # Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally
             # sure on this one)

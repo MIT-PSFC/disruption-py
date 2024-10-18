@@ -685,7 +685,7 @@ class CmodPhysicsMethods:
             A dictionary containing the calculated "kappa_area".
         """
         aminor = params.mds_conn.get_data(
-            r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:aout/100", tree_name="_efit_tree", astype="float64"
         )
         area = params.mds_conn.get_data(
             r"\efit_aeqdsk:area", tree_name="_efit_tree", astype="float64"
@@ -891,7 +891,7 @@ class CmodPhysicsMethods:
             r"\ip", tree_name="magnetics", astype="float64"
         )
         a_minor, t_a = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:aout/100", tree_name="_efit_tree", astype="float64"
         )
 
         output = CmodPhysicsMethods._get_densities(
@@ -1178,7 +1178,7 @@ class CmodPhysicsMethods:
         )
         kappa = params.mds_conn.get_data(r"\efit_aeqdsk:kappa", tree_name="_efit_tree")
         aminor, efit_time = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
+            r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )
         bminor = aminor * kappa
 
@@ -1535,7 +1535,7 @@ class CmodPhysicsMethods:
             r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
         )  # [cm] -> [m]
         aminor, efit_time = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
+            r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )  # [m], [s]
 
         # Btor and LH Power used for filtering okay time slices
@@ -1637,7 +1637,7 @@ class CmodPhysicsMethods:
             r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
         )
         aminor, efit_time = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:aminor", tree_name="_efit_tree"
+            r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )
         got_axa = False
         try:
