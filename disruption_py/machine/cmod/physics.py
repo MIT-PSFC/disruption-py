@@ -1173,9 +1173,7 @@ class CmodPhysicsMethods:
             raise CalculationError("Shot is on blacklist")
         # Fetch data
         # Get EFIT geometry data
-        z0 = 0.01 * params.mds_conn.get_data(
-            r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
-        )
+        z0 = params.mds_conn.get_data(r"\efit_aeqdsk:zmagx/100", tree_name="_efit_tree")
         kappa = params.mds_conn.get_data(r"\efit_aeqdsk:kappa", tree_name="_efit_tree")
         aminor, efit_time = params.mds_conn.get_data_with_dims(
             r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
@@ -1633,9 +1631,7 @@ class CmodPhysicsMethods:
         r0 = params.mds_conn.get_data(
             r"\efit_aeqdsk:rmagx/100", tree_name="_efit_tree"
         )  # [m]
-        z0 = 0.01 * params.mds_conn.get_data(
-            r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
-        )
+        z0 = params.mds_conn.get_data(r"\efit_aeqdsk:zmagx/100", tree_name="_efit_tree")
         aminor, efit_time = params.mds_conn.get_data_with_dims(
             r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )
