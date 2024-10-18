@@ -36,7 +36,7 @@ class CmodEfitMethods:
         "li": r"\efit_aeqdsk:ali",
         "upper_gap": r"\efit_aeqdsk:otop/100",
         "lower_gap": r"\efit_aeqdsk:obott/100",
-        "q0": r"\efit_aeqdsk:q0",
+        "q0": r"\efit_aeqdsk:qqmagx",
         "qstar": r"\efit_aeqdsk:qstar",
         "q95": r"\efit_aeqdsk:q95",
         "v_loop_efit": r"\efit_aeqdsk:vloopt",
