@@ -33,7 +33,7 @@ class CmodEfitMethods:
         "beta_n": r"\efit_aeqdsk:betan",
         "beta_p": r"\efit_aeqdsk:betap",
         "kappa": r"\efit_aeqdsk:eout",
-        "li": r"\efit_aeqdsk:li",
+        "li": r"\efit_aeqdsk:ali",
         "upper_gap": r"\efit_aeqdsk:otop/100",
         "lower_gap": r"\efit_aeqdsk:obott/100",
         "q0": r"\efit_aeqdsk:q0",

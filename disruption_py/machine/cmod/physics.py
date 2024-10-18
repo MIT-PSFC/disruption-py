@@ -520,7 +520,7 @@ class CmodPhysicsMethods:
             raise CalculationError("No data for v_loop_time")
 
         li, efittime = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:li", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:ali", tree_name="_efit_tree", astype="float64"
         )  # [dimensionless], [s]
         ip_parameters = CmodPhysicsMethods.get_ip_parameters(params=params)
         r0 = 0.01 * params.mds_conn.get_data(
