@@ -688,7 +688,7 @@ class CmodPhysicsMethods:
             r"\efit_aeqdsk:aout/100", tree_name="_efit_tree", astype="float64"
         )
         area = params.mds_conn.get_data(
-            r"\efit_aeqdsk:area", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:areao/1e4", tree_name="_efit_tree", astype="float64"
         )
         times = params.mds_conn.get_data(
             r"\efit_aeqdsk:time", tree_name="_efit_tree", astype="float64"
