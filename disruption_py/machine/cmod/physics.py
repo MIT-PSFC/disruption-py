@@ -523,9 +523,9 @@ class CmodPhysicsMethods:
             r"\efit_aeqdsk:ali", tree_name="_efit_tree", astype="float64"
         )  # [dimensionless], [s]
         ip_parameters = CmodPhysicsMethods.get_ip_parameters(params=params)
-        r0 = 0.01 * params.mds_conn.get_data(
-            r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
-        )  # [cm] -> [m]
+        r0 = params.mds_conn.get_data(
+            r"\efit_aeqdsk:rmagx/100", tree_name="_efit_tree"
+        )  # [m]
 
         output = CmodPhysicsMethods._get_ohmic_parameters(
             params.times,
@@ -1531,9 +1531,9 @@ class CmodPhysicsMethods:
         n_gpc1_channels = 9
 
         # Get magnetic axis data from EFIT
-        r0 = 0.01 * params.mds_conn.get_data(
-            r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
-        )  # [cm] -> [m]
+        r0 = params.mds_conn.get_data(
+            r"\efit_aeqdsk:rmagx/100", tree_name="_efit_tree"
+        )  # [m]
         aminor, efit_time = params.mds_conn.get_data_with_dims(
             r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )  # [m], [s]
@@ -1630,9 +1630,9 @@ class CmodPhysicsMethods:
         """
         prad_peaking = np.full(len(params.times), np.nan)
         nan_output = {"prad_peaking": prad_peaking}
-        r0 = 0.01 * params.mds_conn.get_data(
-            r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
-        )
+        r0 = params.mds_conn.get_data(
+            r"\efit_aeqdsk:rmagx/100", tree_name="_efit_tree"
+        )  # [m]
         z0 = 0.01 * params.mds_conn.get_data(
             r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
         )

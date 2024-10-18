@@ -46,7 +46,7 @@ class CmodEfitMethods:
         "tritop": r"\efit_aeqdsk:doutu",
         "tribot": r"\efit_aeqdsk:doutl",
         "a_minor": r"\efit_aeqdsk:aout/100",
-        "rmagx": r"\efit_aeqdsk:rmagx",  # TODO: change units to [m] (current [cm])
+        "rmagx": r"\efit_aeqdsk:rmagx/100",
         "chisq": r"\efit_aeqdsk:chisq",
     }
 
