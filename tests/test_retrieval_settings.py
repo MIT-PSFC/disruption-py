@@ -90,7 +90,7 @@ def test_cache_setting_prev_output(tokamak, shotlist, test_file_path_f, output_f
     )
 
     if output_format == ".csv":
-        cache_data = pd.read_csv(test_file_path_f(".csv"))
+        cache_data = pd.read_csv(test_file_path_f(".csv"), dtype={"commit_hash": str})
     else:
         cache_data_list = []
         for shot in shotlist:
