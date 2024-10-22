@@ -6,7 +6,7 @@ Two _public_ installations are currently maintained automatically:
 - on the C-MOD MFE Workstations, and
 - on the DIII-D Omega cluster.
 
-A _private_ installation is possible on any machine, either on a personal laptop, or on any experimental cluster. 
+A _private_ installation is possible on any machine, either on a personal laptop, or on any experimental cluster.
 
 ## Public installations
 
@@ -83,11 +83,13 @@ Or execute a disruption-py-based script through:
 disruption-python workflow.py
 ```
 
-If a script is made executable, then it may be called seamlessly by specifying the full path to `disruption-python` as a shebang, and then simply executed:
+A script can therefore be executed seamlessly through `disruption-python` by specifying a custom shebang:
 
 ```
-user@host:~$ head -n1 workflow.py # for C-MOD
-#!/usr/local/mfe/disruptions/disruption-py/repo/auto/disruption-python
+user@host:~$ head -n1 workflow.py
+#!/usr/bin/env disruption-python
+
+user@host:~$ chmod +x workflow.py
 
 user@host:~$ ./workflow.py
 ```
