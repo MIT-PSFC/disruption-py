@@ -76,7 +76,7 @@ test-fast:
 
 .PHONY: lint check isort black ruff pylint pylint-only pylint-todos shellcheck yamllint
 
-lint: isort black ruff pylint shellcheck yamllint
+lint: isort black ruff pylint shellcheck yamllint toml-sort
 
 check:
 	make lint GITHUB_ACTIONS=true
@@ -129,4 +129,14 @@ yamllint:
 	do \
 	   echo "--> $$F"; \
 	   poetry run yamllint "$$F"; \
+	done
+
+toml-sort:
+	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
+	poetry run toml-sort --version
+	find -type f -iname '*.toml' -not -empty \
+	| while read -r F; \
+	do \
+	   echo "--> $$F"; \
+	   poetry run toml-sort $(CHECK_ARG) -i --trailing-comma-inline-array "$$F"; \
 	done

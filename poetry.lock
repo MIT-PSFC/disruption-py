@@ -2444,8 +2444,8 @@ files = [
 [package.dependencies]
 numpy = [
     {version = ">=1.22.4", markers = "python_version < \"3.11\""},
-    {version = ">=1.23.2", markers = "python_version == \"3.11\""},
     {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
+    {version = ">=1.23.2", markers = "python_version == \"3.11\""},
 ]
 python-dateutil = ">=2.8.2"
 pytz = ">=2020.1"
@@ -2790,8 +2790,8 @@ astroid = ">=3.3.4,<=3.4.0-dev0"
 colorama = {version = ">=0.4.5", markers = "sys_platform == \"win32\""}
 dill = [
     {version = ">=0.2", markers = "python_version < \"3.11\""},
-    {version = ">=0.3.6", markers = "python_version >= \"3.11\" and python_version < \"3.12\""},
     {version = ">=0.3.7", markers = "python_version >= \"3.12\""},
+    {version = ">=0.3.6", markers = "python_version >= \"3.11\" and python_version < \"3.12\""},
 ]
 isort = ">=4.2.5,<5.13.0 || >5.13.0,<6"
 mccabe = ">=0.6,<0.8"
@@ -3833,6 +3833,20 @@ doc = ["sphinx", "sphinx_rtd_theme"]
 test = ["pytest", "ruff"]
 
 [[package]]
+name = "toml-sort"
+version = "0.23.1"
+description = "Toml sorting library"
+optional = false
+python-versions = ">=3.7,<4.0"
+files = [
+    {file = "toml_sort-0.23.1-py3-none-any.whl", hash = "sha256:69ae60de9c4d67478533697eb4119092e2b30ddffe5ca09bbad3912905c935a0"},
+    {file = "toml_sort-0.23.1.tar.gz", hash = "sha256:833728c48b0f8d509aecd9ae8347768ca3a9332977b32c9fd2002932f0eb9c90"},
+]
+
+[package.dependencies]
+tomlkit = ">=0.11.2"
+
+[[package]]
 name = "tomli"
 version = "2.0.2"
 description = "A lil' TOML parser"
@@ -4080,4 +4094,4 @@ dev = ["doc8", "flake8", "flake8-import-order", "rstcheck[sphinx]", "sphinx"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "a624ea65ccba6c214ba84af1625cf3ffe5c8bef2e1c27d30d0fe205f88a50c3b"
+content-hash = "29742f3d32b55fb1730fa8f853596e4e9eb976184065237834d551875a6fce54"

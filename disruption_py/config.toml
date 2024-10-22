@@ -8,6 +8,6 @@ write_database_table_name = "disruption_warning_test"
 protected_columns = ["time", "shot"]
 
 [default.testing]
-VAL_TOLERANCE = 0.01  # Tolerance for comparing values between MDSplus and SQL
-MATCH_FRACTION = 0.95  # Fraction of signals that must match between MDSplus and SQL
+VAL_TOLERANCE = 0.01 # Tolerance for comparing values between MDSplus and SQL
+MATCH_FRACTION = 0.95 # Fraction of signals that must match between MDSplus and SQL
 VERBOSE_OUTPUT = true
