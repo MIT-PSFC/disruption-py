@@ -7,10 +7,10 @@ sources, including SQL databases and Pandas DataFrames.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from logging import Logger
 from typing import Dict, Union
 
 import pandas as pd
+from loguru import logger
 
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.inout.sql import ShotDatabase
@@ -31,14 +31,18 @@ class CacheSettingParams:
         A different database connection is used by each thread/process.
     tokamak : Tokamak
         The tokamak being run.
-    logger : Logger
-        Logger object from disruption_py to use for logging.
     """
 
     shot_id: int
     database: ShotDatabase
     tokamak: Tokamak
-    logger: Logger
+
+    def __post_init__(self):
+        self.logger = logger.patch(
+            lambda record: record.update(
+                message=f"[#{self.shot_id}]: " + record["message"]
+            )
+        )
 
 
 CacheSettingType = Union[
@@ -115,7 +119,9 @@ class CacheSettingDict(CacheSetting):
         chosen_setting = self.resolved_cache_setting_dict.get(params.tokamak, None)
         if chosen_setting is not None:
             return chosen_setting.get_cache_data(params)
-        params.logger.warning("No cache setting for tokamak %s", params.tokamak)
+        params.logger.warning(
+            "No cache setting for tokamak {tokamak}", tokamak=params.tokamak
+        )
         return None
 
 
@@ -123,7 +129,7 @@ class SQLCacheSetting(CacheSetting):
     """Cache setting for retrieving data from SQL database."""
 
     def _get_cache_data(self, params: CacheSettingParams) -> pd.DataFrame:
-        params.logger.info("retrieving sql data for %s", params.shot_id)
+        params.logger.info("retrieving sql data")
         return params.database.get_shots_data(shotlist=[params.shot_id])
 
 
