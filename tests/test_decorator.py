@@ -26,6 +26,7 @@ def test_tokamak_parameter(shotlist, tok):
 
     # The physics method needs to be defined in the global scope because
     # multiprocessing & pickling don't work with locally defined functions.
+    # pylint disable-next=global-variable-undefined
     global my_physics_method
 
     @physics_method(columns=[col_name], tokamak=tok)
