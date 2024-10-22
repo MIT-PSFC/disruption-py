@@ -74,7 +74,7 @@ test-fast:
 
 # lint #
 
-.PHONY: lint check isort black ruff pylint pylint-only pylint-todos shellcheck yamllint
+.PHONY: lint check isort black ruff pylint pylint-only pylint-todos shellcheck yamllint toml-sort
 
 lint: isort black ruff pylint shellcheck yamllint toml-sort
 
