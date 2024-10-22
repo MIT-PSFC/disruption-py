@@ -24,3 +24,6 @@ jobs:
             This issue has been open for 3 months with no activity.
           stale-pr-message: >
             This pull request has been open for 6 months with no activity.
+          stale-issue-label: stale
+          exempt-issue-labels: eternal
+          exempt-pr-labels: eternal
