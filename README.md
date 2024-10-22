@@ -52,7 +52,7 @@ Please see the project [quickstart](https://mit-psfc.github.io/disruption-py/qui
 
 ## Issues
 
-If you have an issue please create an issue on the GitHub repository
+If you have an issue please crate an issue on the GitHub repository
 
 ## Development
 
