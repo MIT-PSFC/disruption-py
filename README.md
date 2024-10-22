@@ -17,7 +17,7 @@
 [![Linting: yamllint](https://img.shields.io/badge/linting-yamllint-lightblue)](https://github.com/adrienverge/yamllint)
 [![Testing: pytest](https://img.shields.io/badge/testing-pytest-red)](https://github.com/pylint-dev/pylint-pytest)
 
-![Supported versions](https://img.shields.io/pypi/pyversions/disruption-py)
+[![Supported versions](https://img.shields.io/pypi/pyversions/disruption-py)](pyproject.toml)
 [![Stats: downloads](https://static.pepy.tech/badge/disruption-py)](https://pepy.tech/project/disruption-py)
 [![Available: PyPI](https://img.shields.io/pypi/v/disruption-py.svg)](https://pypi.python.org/pypi/disruption-py/)
 [![Available: Zenodo](https://zenodo.org/badge/DOI/10.5281/zenodo.13935223.svg)](https://doi.org/10.5281/zenodo.13935223)
