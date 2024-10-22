@@ -1,7 +1,7 @@
-[cmod]
-MDSPLUS_CONNECTION_STRING = "alcdata-archives"
+[cmod.inout.mds]
+mdsplus_connection_string = "alcdata-archives"
 
-[cmod.database]
+[cmod.inout.sql]
 profile_path = "~/logbook.sybase_login"
 driver = "ODBC Driver 18 for SQL Server"
 host = "alcdb2"
@@ -68,8 +68,8 @@ protected_columns = [
   "commit_hash",
 ]
 
-[cmod.testing]
-TEST_COLUMNS = [
+[cmod.tests]
+test_columns = [
   "i_efc",
   "sxr",
   "time_until_disrupt",
@@ -118,7 +118,7 @@ TEST_COLUMNS = [
   "time",
   "shot",
 ]
-EXPECTED_FAILURE_COLUMNS = [
+expected_failure_columns = [
   "te_width",
   "zcur",
   "v_z",
@@ -132,7 +132,7 @@ EXPECTED_FAILURE_COLUMNS = [
   "radiated_fraction",
 ]
 
-[cmod.testing.test_shots]
+[cmod.tests.shots]
 flattop1_fast = 1150805012
 no_disrup1_full = 1150805013
 no_disrup2_full = 1150805014

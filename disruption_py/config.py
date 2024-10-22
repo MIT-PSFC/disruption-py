@@ -36,7 +36,11 @@ def config(tokamak: Union[Enum, str] = None):
         configs[tokamak] = Dynaconf(
             envvar_prefix="DISPY",
             root_path=os.path.dirname(__file__),
-            settings_files=["config.toml", f"machine/{tokamak}/config.toml"],
+            settings_files=[
+                "config.toml",
+                f"machine/{tokamak}/config.toml",
+                os.path.expanduser("~/.config/disruption-py/user.toml"),
+            ],
             environments=True,
             default_env="default",
             env=tokamak,

@@ -60,7 +60,7 @@ class DataDifference:
             return True
         return (
             self.num_anomalies / self.timebase_length
-            > 1 - config().testing.MATCH_FRACTION
+            > 1 - config().tests.match_fraction
         )
 
     @property
@@ -92,7 +92,7 @@ class DataDifference:
         """
         indices = (
             np.arange(self.timebase_length)
-            if config().testing.VERBOSE_OUTPUT
+            if config().tests.verbose_output
             else self.anomalies.flatten()
         )
         anomaly = self.anomalies[indices]
@@ -152,7 +152,7 @@ class DataDifference:
         numeric_anomalies_mask = np.where(
             np.isnan(relative_difference),
             False,
-            relative_difference > config().testing.VAL_TOLERANCE,
+            relative_difference > config().tests.val_tolerance,
         )
         nan_anomalies_mask = cache_is_nan != fresh_is_nan
         anomalies: pd.Series = numeric_anomalies_mask | nan_anomalies_mask
@@ -162,10 +162,10 @@ class DataDifference:
 
 def assert_frame_equal_unordered(df1: pd.DataFrame, df2: pd.DataFrame):
     """Compare whether two dataframes have the same values."""
-    df1_sorted = df1.sort_values(by=config().database.protected_columns).reset_index(
+    df1_sorted = df1.sort_values(by=config().inout.sql.protected_columns).reset_index(
         drop=True
     )
-    df2_sorted = df2.sort_values(by=config().database.protected_columns).reset_index(
+    df2_sorted = df2.sort_values(by=config().inout.sql.protected_columns).reset_index(
         drop=True
     )
     pd.testing.assert_frame_equal(df1_sorted, df2_sorted, check_like=True)
