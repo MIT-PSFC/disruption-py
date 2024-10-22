@@ -19,9 +19,9 @@
 
 [![Supported versions](https://img.shields.io/pypi/pyversions/disruption-py)](pyproject.toml)
 [![Stats: downloads](https://static.pepy.tech/badge/disruption-py)](https://pepy.tech/project/disruption-py)
-[![Available: PyPI](https://img.shields.io/pypi/v/disruption-py.svg)](https://pypi.python.org/pypi/disruption-py/)
+[![Available: PyPI](https://img.shields.io/pypi/v/disruption-py.svg)](https://pypi.org/project/disruption-py/)
 [![Available: Zenodo](https://zenodo.org/badge/DOI/10.5281/zenodo.13935223.svg)](https://doi.org/10.5281/zenodo.13935223)
-![License: MIT](https://img.shields.io/pypi/l/disruption-py?color=750014)
+[![License: MIT](https://img.shields.io/pypi/l/disruption-py?color=750014)](LICENSE)
 
 ## Background
 
