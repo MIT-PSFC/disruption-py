@@ -20,8 +20,8 @@ from disruption_py.workflow import get_database, get_shots_data
 from tests.conftest import skip_on_fast_execution
 from tests.utils.data_difference import assert_frame_equal_unordered
 
-WRITE_DATABASE_TABLE_NAME = config().database.write_database_table_name
-FIRST_ITERATION_COLUMNS = config().database.protected_columns + ["beta_p"]
+WRITE_DATABASE_TABLE_NAME = config().inout.sql.write_database_table_name
+FIRST_ITERATION_COLUMNS = config().inout.sql.protected_columns + ["beta_p"]
 SECOND_ITERATION_COLUMNS = ["kappa"]
 ALL_ITERATION_COLUMNS = without_duplicates(
     FIRST_ITERATION_COLUMNS + SECOND_ITERATION_COLUMNS

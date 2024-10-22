@@ -100,7 +100,7 @@ class MultiprocessingShotRetriever:
                 result_queue=self.result_queue,
                 retrieval_manager_initializer=retrieval_manager_initializer,
             )
-            for _ in range(min(num_processes, config().MAX_PROCESSES))
+            for _ in range(min(num_processes, config().max_processes))
         ]
 
     def _result_processor(self):

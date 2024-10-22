@@ -13,7 +13,7 @@ from disruption_py.machine.tokamak import Tokamak
 
 def get_tokamak_test_expected_failure_columns(tokamak: Tokamak):
     """Return the columns expected to fail from the config"""
-    return config(tokamak).testing.EXPECTED_FAILURE_COLUMNS
+    return config(tokamak).tests.expected_failure_columns
 
 
 def get_tokamak_test_shotlist(tokamak: Tokamak) -> list[int]:
@@ -21,7 +21,7 @@ def get_tokamak_test_shotlist(tokamak: Tokamak) -> list[int]:
     Return the shot ids used for testing from the config. Return a smaller
     shotlist when running as a Github action.
     """
-    shot_id_dict = config(tokamak).testing.TEST_SHOTS
+    shot_id_dict = config(tokamak).tests.shots
 
     if "GITHUB_ACTIONS" in os.environ:
         shot_id_dict = {
@@ -33,4 +33,4 @@ def get_tokamak_test_shotlist(tokamak: Tokamak) -> list[int]:
 
 def get_tokamak_test_columns(tokamak: Tokamak):
     """Return the columns used for testing from the config."""
-    return config(tokamak).testing.TEST_COLUMNS
+    return config(tokamak).tests.test_columns

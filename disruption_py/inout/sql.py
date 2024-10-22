@@ -73,7 +73,7 @@ class ShotDatabase:
         """
         Initialize database from config file.
         """
-        return cls._from_dict(config(tokamak).database)
+        return cls._from_dict(config(tokamak).inout.sql)
 
     @classmethod
     def _from_dict(cls, database_dict: dict):
@@ -218,7 +218,7 @@ class ShotDatabase:
         if (
             len(curr_df) == len(shot_data)
             and (
-                (curr_df["time"] - shot_data["time"]).abs() < config().TIME_CONST
+                (curr_df["time"] - shot_data["time"]).abs() < config().time_const
             ).all()
         ):
             return self._update_shot_data(
@@ -307,7 +307,7 @@ class ShotDatabase:
 
         update_columns_shot_data = pd.DataFrame()
         for column_name in curr_df.columns:
-            if column_name in config().database.protected_columns or (
+            if column_name in config().inout.sql.protected_columns or (
                 column_name in self.protected_columns
                 and column_name not in override_columns
             ):
