@@ -34,6 +34,7 @@ The original Matlab scripts are now stored in the `matlab` [protected branch](ht
 ## Installation
 
 DisruptionPy is now open-source and [available at PyPI](https://pypi.org/project/disruption-py/)!
+
 For standard installations, please follow the usual way:
 
 ```bash
@@ -48,12 +49,11 @@ For custom installations, please refer to our [Installation guide](docs/INSTALL.
 
 ## Getting Started
 
-Please see the project [quickstart](https://mit-psfc.github.io/disruption-py/quickstart/usage_quickstart/).
+Please see the [project quickstart](https://mit-psfc.github.io/disruption-py/quickstart/usage_quickstart/).
 
-## Issues
 
-If you have an issue please crate an issue on the GitHub repository
+## Contributing
 
-## Development
-
-Please create a pull request if you have something to contribute!
+- If you encounter any problems, please [create a new issue](https://github.com/MIT-PSFC/disruption-py/issues/new).
+- If you would like to contribute, please [submit a pull request](https://github.com/MIT-PSFC/disruption-py/compare/dev...).
+- If you have general questions, please [start a new discussion](https://github.com/MIT-PSFC/disruption-py/discussions/new?category=q-a).
