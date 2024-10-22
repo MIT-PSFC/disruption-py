@@ -128,6 +128,8 @@ EXPECTED_FAILURE_COLUMNS= [
 	"te_peaking",
 	"pressure_peaking",
 	"greenwald_fraction",
+    "p_oh",
+    "radiated_fraction",
 ]
 
 [cmod.testing.test_shots]
