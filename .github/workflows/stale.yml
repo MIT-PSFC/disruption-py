@@ -17,13 +17,12 @@ jobs:
     steps:
       - uses: actions/stale@v9
         with:
-          days-before-issue-stale: 90
-          days-before-pr-stale: 180
+          days-before-stale: 90
           days-before-close: 30
           stale-issue-message: >
             This issue has been open for 3 months with no activity.
           stale-pr-message: >
-            This pull request has been open for 6 months with no activity.
+            This pull request has been open for 3 months with no activity.
           stale-issue-label: stale
           exempt-issue-labels: eternal
           exempt-pr-labels: eternal
