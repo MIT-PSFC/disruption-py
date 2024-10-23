@@ -133,7 +133,7 @@ class CmodEfitMethods:
             # Compute beta_n
             beta_t = params.mds_conn.get_data(
                 r"\efit_aeqdsk:betat", tree_name="_efit_tree", astype="float64"
-            )
+            )   # [dimensionless]
             efit_data["beta_n"] = np.reciprocal(
                 np.reciprocal(beta_t) + np.reciprocal(efit_data["beta_p"])
             )
