@@ -23,6 +23,7 @@
 [![Available: Zenodo](https://zenodo.org/badge/DOI/10.5281/zenodo.13935223.svg)](https://doi.org/10.5281/zenodo.13935223)
 [![License: MIT](https://img.shields.io/pypi/l/disruption-py?color=750014)](LICENSE)
 
+
 ## Background
 
 A key element of plasma control systems (PCS) in tokamak reactors is the prediction and avoidance of disruptions, sudden losses of the thermal and magnetic energy stored within the plasma that can occur when tokamaks operate near regions of plasma instability or because of system malfunctions.
@@ -33,23 +34,34 @@ This is also due to the fact that fusion science currently lacks first-principle
 
 DisruptionPy is an open-source python package for training, updating, and evaluating algorithms for disruption prediction and avoidance that can be applied to Alcator C-Mod and DIII-D data, and can deploy models in DIII-D and EAST (TBD) PCSs.
 
+
 ## Overview
 
 DisruptionPy makes it easy to retrieve tabular data from MDSplus databases efficiently.
 Users can create their own methods and/or use built-in methods that retrieve and derive a variety of important parameters from experimental data for disruption analysis.
 These methods are run across all provided sets of discharges (or shot ids), outputting tabular data in customizable formats.
 
+
+## Repository layout
+
+Notable branches:
+
+- `main`, the [stable branch](https://github.com/MIT-PSFC/disruption-py/tree/main),
+- `dev`, the [development branch](https://github.com/MIT-PSFC/disruption-py/tree/dev),
+- `matlab`, the [historical branch](https://github.com/MIT-PSFC/disruption-py/tree/matlab).
+
+
 ## Project layout
 
-```python
-disruption_py/ # source code
-docs/ # documentation
-examples/ # example workflows
-scripts/ # miscellaneous scripts
-tests/ # automated testing
-```
+Brief description of the folders in our project:
 
-The original Matlab scripts are now stored in the `matlab` [protected branch](https://github.com/MIT-PSFC/disruption-py/tree/matlab).
+- `disruption_py/`, package source code,
+- `docs/`, documentation sources,
+- `drafts/`, experimental scripts,
+- `examples/`, example workflows,
+- `scripts/`, miscellaneous scripts,
+- `tests/`, testing workflows.
+
 
 ## Installation
 
@@ -67,12 +79,16 @@ pip install disruption-py
 
 For custom installations, please refer to our [Installation guide](docs/INSTALL.md).
 
+
 ## Getting Started
 
 Please see the [project quickstart](https://mit-psfc.github.io/disruption-py/quickstart/usage_quickstart/).
 
 
 ## Contributing
+
+> [!IMPORTANT]
+> Make sure you refer to the latest version of our [development branch](https://github.com/MIT-PSFC/disruption-py/tree/dev)!
 
 - If you encounter any problems, please [create a new issue](https://github.com/MIT-PSFC/disruption-py/issues/new).
 - If you would like to contribute, please [submit a pull request](https://github.com/MIT-PSFC/disruption-py/compare/dev...).
