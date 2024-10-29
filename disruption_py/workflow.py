@@ -46,7 +46,7 @@ def _execute_retrieval(args):
     """
     tokamak, db_init, mds_init, retrieval_settings, shot_id = args
     database = db_init() if db_init else get_database(tokamak)
-    mds_conn = mds_init() if mds_init else ProcessMDSConnection.from_config(tokamak)
+    mds_conn = mds_init() if mds_init else get_mdsplus_class(tokamak)
 
     retrieval_manager = RetrievalManager(
         tokamak=tokamak,
