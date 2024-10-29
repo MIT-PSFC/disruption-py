@@ -47,8 +47,8 @@ def _execute_retrieval(args):
     tuple of shot id and the dataframe
     """
     tokamak, db_init, mds_init, retrieval_settings, shot_id = args
-    database = db_init() if db_init else get_database(tokamak)
-    mds_conn = mds_init() if mds_init else get_mdsplus_class(tokamak)
+    database = _get_database_instance(tokamak, db_init)
+    mds_conn = _get_mds_instance(tokamak, mds_init)
 
     retrieval_manager = RetrievalManager(
         tokamak=tokamak,
@@ -98,11 +98,7 @@ def get_shots_data(
     (log_settings or LogSettings()).setup_logging()
 
     tokamak = resolve_tokamak_from_environment(tokamak)
-    if database_initializer:
-        database = database_initializer()
-    else:
-        database = get_database(tokamak=tokamak)
-
+    database = _get_database_instance(tokamak, database_initializer)
     # Clean-up parameters
     if retrieval_settings is None:
         retrieval_settings = RetrievalSettings()
@@ -168,3 +164,21 @@ def get_mdsplus_class(
     """
     tokamak = resolve_tokamak_from_environment(tokamak)
     return ProcessMDSConnection.from_config(tokamak=tokamak)
+
+
+def _get_database_instance(tokamak, database_initializer):
+    """
+    Create database instance
+    """
+    return database_initializer() if database_initializer else get_database(tokamak)
+
+
+def _get_mds_instance(tokamak, mds_connection_initializer):
+    """
+    Create MDSplus instance
+    """
+    return (
+        mds_connection_initializer()
+        if mds_connection_initializer
+        else get_mdsplus_class(tokamak)
+    )
