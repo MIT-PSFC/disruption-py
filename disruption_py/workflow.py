@@ -45,33 +45,6 @@ def _execute_retrieval(args):
     tuple of shot id and the dataframe
     """
     tokamak, db_init, mds_init, retrieval_settings, shot_id = args
-    database = db_init() if db_init else get_database(tokamak)
-    mds_conn = mds_init() if mds_init else get_mdsplus_class(tokamak)
-
-    retrieval_manager = RetrievalManager(
-        tokamak=tokamak,
-        process_database=database,
-        process_mds_conn=mds_conn,
-    )
-    return shot_id, retrieval_manager.get_shot_data(shot_id, retrieval_settings)
-
-
-def _execute_retrieval(args):
-    """
-    Wrapper around getting shot data for a single shot to ensure the arguments
-    are all multiprocessing compatible (e.g. no lambdas passed as args).
-
-    Params
-    ------
-    args : List
-        tokamak, database initializer, mds connection initializer, retrieval
-        settings, and the shot id
-
-    Returns
-    -------
-    tuple of shot id and the dataframe
-    """
-    tokamak, db_init, mds_init, retrieval_settings, shot_id = args
     database = _get_database_instance(tokamak, db_init)
     mds_conn = _get_mds_instance(tokamak, mds_init)
 
