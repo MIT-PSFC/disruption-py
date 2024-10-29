@@ -5,9 +5,10 @@ The main entrypoint for retrieving DisruptionPy data.
 """
 
 import logging
+from itertools import repeat
+from multiprocessing import Pool
 from typing import Any, Callable
 
-from disruption_py.core.multiprocess import MultiprocessingShotRetriever
 from disruption_py.core.retrieval_manager import RetrievalManager
 from disruption_py.core.utils.misc import without_duplicates
 from disruption_py.inout.mds import ProcessMDSConnection
@@ -28,6 +29,33 @@ from disruption_py.settings.shotlist_setting import (
 )
 
 logger = logging.getLogger("disruption_py")
+
+
+def _execute_retrieval(args):
+    """
+    Wrapper around getting shot data for a single shot to ensure the arguments
+    are all multiprocessing compatible (e.g. no lambdas passed as args).
+
+    Params
+    ------
+    args : List
+        tokamak, database initializer, mds connection initializer, retrieval
+        settings, and the shot id
+
+    Returns
+    -------
+    tuple of shot id and the dataframe
+    """
+    tokamak, db_init, mds_init, retrieval_settings, shot_id = args
+    database = _get_database_instance(tokamak, db_init)
+    mds_conn = _get_mds_instance(tokamak, mds_init)
+
+    retrieval_manager = RetrievalManager(
+        tokamak=tokamak,
+        process_database=database,
+        process_mds_conn=mds_conn,
+    )
+    return shot_id, retrieval_manager.get_shot_data(shot_id, retrieval_settings)
 
 
 def get_shots_data(
@@ -70,14 +98,7 @@ def get_shots_data(
     (log_settings or LogSettings()).setup_logging()
 
     tokamak = resolve_tokamak_from_environment(tokamak)
-
-    database_initializer = database_initializer or (
-        lambda: get_database(tokamak=tokamak)
-    )
-    database = database_initializer()
-    mds_connection_initializer = mds_connection_initializer or (
-        lambda: ProcessMDSConnection.from_config(tokamak=tokamak)
-    )
+    database = _get_database_instance(tokamak, database_initializer)
     # Clean-up parameters
     if retrieval_settings is None:
         retrieval_settings = RetrievalSettings()
@@ -92,39 +113,16 @@ def get_shots_data(
     )
 
     num_processes = min(num_processes, len(shotlist_list))
+    with Pool(processes=num_processes) as pool:
+        args = zip(
+            repeat(tokamak),
+            repeat(database_initializer),
+            repeat(mds_connection_initializer),
+            repeat(retrieval_settings),
+            shotlist_list,
+        )
 
-    if num_processes > 1:
-        shot_retriever = MultiprocessingShotRetriever(
-            database=database,
-            num_processes=num_processes,
-            output_setting=output_setting,
-            retrieval_manager_initializer=(
-                lambda: RetrievalManager(
-                    tokamak=tokamak,
-                    process_database=database_initializer(),
-                    process_mds_conn=mds_connection_initializer(),
-                )
-            ),
-            tokamak=tokamak,
-            logger=logger,
-        )
-        shot_retriever.run(
-            shotlist_list=shotlist_list,
-            retrieval_settings=retrieval_settings,
-            await_complete=True,
-        )
-    else:
-        mds_connection = mds_connection_initializer()
-        retrieval_manager = RetrievalManager(
-            tokamak=tokamak,
-            process_database=database,
-            process_mds_conn=mds_connection,
-        )
-        for shot_id in shotlist_list:
-            shot_data = retrieval_manager.get_shot_data(
-                shot_id=shot_id,
-                retrieval_settings=retrieval_settings,
-            )
+        for shot_id, shot_data in pool.imap(_execute_retrieval, args):
             if shot_data is None:
                 logger.warning(
                     "Not outputting data for shot %s due, data is None.", shot_id
@@ -166,3 +164,21 @@ def get_mdsplus_class(
     """
     tokamak = resolve_tokamak_from_environment(tokamak)
     return ProcessMDSConnection.from_config(tokamak=tokamak)
+
+
+def _get_database_instance(tokamak, database_initializer):
+    """
+    Create database instance
+    """
+    if database_initializer:
+        return database_initializer()
+    return get_database(tokamak)
+
+
+def _get_mds_instance(tokamak, mds_connection_initializer):
+    """
+    Create MDSplus instance
+    """
+    if mds_connection_initializer:
+        return mds_connection_initializer()
+    return get_mdsplus_class(tokamak)
