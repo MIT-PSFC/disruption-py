@@ -170,15 +170,15 @@ def _get_database_instance(tokamak, database_initializer):
     """
     Create database instance
     """
-    return database_initializer() if database_initializer else get_database(tokamak)
+    if database_initializer:
+        return database_initializer()
+    return get_database(tokamak)
 
 
 def _get_mds_instance(tokamak, mds_connection_initializer):
     """
     Create MDSplus instance
     """
-    return (
-        mds_connection_initializer()
-        if mds_connection_initializer
-        else get_mdsplus_class(tokamak)
-    )
+    if mds_connection_initializer:
+        return mds_connection_initializer()
+    return get_mdsplus_class(tokamak)
