@@ -6,6 +6,7 @@ Module for utility functions related to class instantiation, data manipulation, 
 
 import subprocess
 import warnings
+from functools import lru_cache
 from typing import List
 
 import numpy as np
@@ -114,6 +115,7 @@ def safe_df_concat(base_df: pd.DataFrame, new_dfs: List[pd.DataFrame]) -> pd.Dat
     return concat_df
 
 
+@lru_cache
 def get_commit_hash() -> str:
     """
     Retrieve the current Git commit hash.
