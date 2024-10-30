@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 from loguru import logger
 
-from disruption_py.core.utils.misc import get_commit_hash
+from disruption_py.core.utils.misc import get_commit_hash, get_temporary_folder
 
 
 @dataclass
@@ -23,7 +23,8 @@ class LogSettings:
     Attributes
     ----------
     log_file_path : str, optional
-        Path to the log file. If None, no log file will be created (default is None).
+        Path to the log file. If None, no log file will be created.
+        By default, a log file will be created in a temporary folder.
     file_log_level : str
         Logging level for the log file (default is "DEBUG").
         Possible values are: "TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "SUMMARY", "ERROR",
@@ -43,7 +44,7 @@ class LogSettings:
         Internal flag to prevent multiple setups (default is False).
     """
 
-    log_file_path: str = None
+    log_file_path: str = os.path.join(get_temporary_folder(), "output.log")
     file_log_level: str = "DEBUG"
     log_file_write_mode: str = "w"
 
@@ -106,7 +107,6 @@ class LogSettings:
 
         # Add file handler if log file path is provided
         if self.log_file_path is not None:
-            logger.debug("Logging to file {file_path}", file_path=self.log_file_path)
             logger.add(
                 self.log_file_path,
                 level=self.file_log_level,
@@ -122,10 +122,18 @@ class LogSettings:
         commit = get_commit_hash()
         logger.log(
             "SUMMARY",
-            f"> {package} "
-            + f"v{importlib.metadata.version(package)} "
-            + f"# {commit} "
-            + f"/ {os.getenv('USER')}@{os.uname().nodename}",
+            "Starting: {p} ~ v{v} # {c} / {u}@{h}",
+            p=package,
+            v=importlib.metadata.version(package),
+            c=commit,
+            u=os.getenv("USER"),
+            h=os.uname().nodename,
         )
-        logger.debug(f"https://github.com/MIT-PSFC/disruption-py/commit/{commit}")
-        logger.debug(sys.executable)
+        if self.log_file_path is not None:
+            logger.log("SUMMARY", "Logging: {l}", l=self.log_file_path)
+        logger.debug(
+            "Repository: {r}/commit/{c}",
+            r="https://github.com/MIT-PSFC/disruption-py",
+            c=commit,
+        )
+        logger.debug("Executable: {e}", e=sys.executable)
