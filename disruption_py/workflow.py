@@ -124,7 +124,7 @@ def get_shots_data(
         for shot_id, shot_data in pool.imap(_execute_retrieval, args):
             if shot_data is None:
                 logger.warning(
-                    "[#{shot_id}]: Not outputting data for shot, data is None.",
+                    "#{shot_id} | Not outputting data for shot, data is None.",
                     shot_id=shot_id,
                 )
             else:

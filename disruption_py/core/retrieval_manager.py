@@ -137,7 +137,7 @@ class RetrievalManager:
             return physics_method_params
         except Exception as e:
             logger.info(
-                "[#{shot_id}]: Caught failed to setup shot, cleaning up tree manager.",
+                "#{shot_id} | Caught failed to setup shot, cleaning up tree manager.",
                 shot_id=shot_id,
             )
             mds_conn.cleanup()

@@ -43,7 +43,7 @@ class DomainSettingParams:
     def __post_init__(self):
         self.logger = logger.patch(
             lambda record: record.update(
-                message=f"[#{self.physics_method_params.shot_id}]: " + record["message"]
+                message=f"#{self.physics_method_params.shot_id} | " + record["message"]
             )
         )
 

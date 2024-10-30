@@ -373,9 +373,7 @@ class ShotDatabase:
             self.engine,
         )
         if len(data_df) == 0:
-            logger.info(
-                "[#{shot_id}]: shot does not exist in database", shot_id=shot_id
-            )
+            logger.info("#{shot_id} | shot does not exist in database", shot_id=shot_id)
             return False
         with self.conn.cursor() as curs:
             curs.execute(

@@ -40,7 +40,7 @@ class CacheSettingParams:
     def __post_init__(self):
         self.logger = logger.patch(
             lambda record: record.update(
-                message=f"[#{self.shot_id}]: " + record["message"]
+                message=f"#{self.shot_id} | " + record["message"]
             )
         )
 
