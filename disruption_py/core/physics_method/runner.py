@@ -181,7 +181,7 @@ def filter_methods_to_run(
         ):
             methods_to_run.append(bound_method_metadata)
         else:
-            physics_method_params.logger.info(
+            physics_method_params.logger.debug(
                 "Skipping {method_name} in class {bound_method}",
                 method_name=bound_method_metadata.name,
                 bound_method=bound_method_metadata.bound_method,
