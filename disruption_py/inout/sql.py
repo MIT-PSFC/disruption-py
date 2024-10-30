@@ -43,7 +43,7 @@ class ShotDatabase:
             protected_columns = []
 
         logger.info(
-            "Database initialization:{user}@{host}/{db_name}",
+            "Database initialization: {user}@{host}/{db_name}",
             user=user,
             host=host,
             db_name=db_name,
