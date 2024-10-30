@@ -5,11 +5,14 @@ This module defines the LogSettings class, which provides settings and setup for
 logging in both files and console with customizable levels and formats.
 """
 
+import importlib.metadata
 import os
 import sys
 from dataclasses import dataclass
 
 from loguru import logger
+
+from disruption_py.core.utils.misc import get_commit_hash
 
 
 @dataclass
@@ -114,4 +117,15 @@ class LogSettings:
                 diagnose=True,
             )
 
-        logger.debug(os.getenv("VIRTUAL_ENV"))
+        # header
+        package = "disruption_py"
+        commit = get_commit_hash()
+        logger.log(
+            "SUMMARY",
+            f"> {package} "
+            + f"v{importlib.metadata.version(package)} "
+            + f"# {commit} "
+            + f"/ {os.getenv('USER')}@{os.uname().nodename}",
+        )
+        logger.debug(f"https://github.com/MIT-PSFC/disruption-py/commit/{commit}")
+        logger.debug(sys.executable)
