@@ -84,11 +84,10 @@ class LogSettings:
         # Add summary level after warning (30) but before error (40)
         logger.level("SUMMARY", no=35, color="<cyan>")
 
-        # Do not include the date in the console logs to save space
-        console_format = "{time:HH:mm:ss.SSS} <level>{level} | {message} </level>"
-        file_format = (
-            "{time:YYYY-MM-DD HH:mm:ss.SSS} <level>{level} | {message} </level>"
-        )
+        # formats
+        message_format = "<level>[{level:^7s}] {message}</level>"
+        console_format = "{time:HH:mm:ss.SSS} " + message_format
+        file_format = "{time:YYYY-MM-DD HH:mm:ss.SSS} " + message_format
 
         # Add console handler
         if self.log_to_console:
