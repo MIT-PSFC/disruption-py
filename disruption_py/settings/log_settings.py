@@ -45,7 +45,7 @@ class LogSettings:
     log_file_write_mode: str = "w"
 
     log_to_console: bool = True
-    console_log_level: str = "WARNING"
+    console_log_level: str = "INFO"
 
     use_custom_logging: bool = False
 
