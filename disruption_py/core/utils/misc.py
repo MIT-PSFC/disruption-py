@@ -4,9 +4,13 @@
 Module for utility functions related to class instantiation, data manipulation, and version control.
 """
 
+import os
 import subprocess
+import time
 import warnings
 from functools import lru_cache
+from pathlib import Path
+from tempfile import mkdtemp
 from typing import List
 
 import numpy as np
@@ -134,3 +138,23 @@ def get_commit_hash() -> str:
     except subprocess.CalledProcessError:
         commit_hash = None
     return commit_hash
+
+
+@lru_cache
+def get_temporary_folder() -> Path:
+    """
+    Create and return a temporary folder.
+    The result is cached to return the same path for different invocations.
+
+    Returns
+    -------
+    Path
+        Resulting temporary folder.
+    """
+
+    # create temporary top folder
+    top = os.path.join("/tmp", os.getenv("USER"), "disruption-py")
+    Path(top).mkdir(parents=True, exist_ok=True)
+
+    # create temporary sub folder
+    return mkdtemp(prefix=time.strftime("%Y%m%d-%H%M%S-"), dir=top)
