@@ -20,7 +20,7 @@ retrieval_settings = RetrievalSettings(
     only_requested_columns=False,
     custom_physics_methods=[],
     # timebase settings
-    time_setting="disruption_warning",  # use efit timebase
+    time_setting="efit",  # use efit timebase
     domain_setting="full",
     use_cache_setting_timebase=False,
     interpolation_method="linear",

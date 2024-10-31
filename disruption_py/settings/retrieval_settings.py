@@ -80,7 +80,7 @@ class RetrievalSettings:
         collected and run when retrieving data from MDSplus if the method is included
         through either the run_methods, run_tags, run_columns setting.
     time_setting : TimeSetting, optional
-        Time setting for the shot (default is "disruption_warning"). The retrieved
+        Time setting for the shot (default is "efit"). The retrieved
         data will be interpolated to this timebase. Can pass any `TimeSettingType`
         that resolves to a TimeSetting. See TimeSetting for more details.
     domain_setting : DomainSetting, optional
@@ -107,7 +107,7 @@ class RetrievalSettings:
     custom_physics_methods: list = field(default_factory=list)
 
     # Timebase setting
-    time_setting: TimeSetting = "disruption_warning"
+    time_setting: TimeSetting = "efit"
     domain_setting: DomainSetting = "full"
     use_cache_setting_timebase: bool = False
     interpolation_method: InterpolationMethod = "linear"

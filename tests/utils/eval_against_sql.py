@@ -39,7 +39,7 @@ def get_fresh_data(
     """
     retrieval_settings = RetrievalSettings(
         efit_nickname_setting="disruption",
-        time_setting="disruption_warning",
+        time_setting="efit",
         run_tags=[] if test_columns else ["all"],
         run_columns=test_columns if test_columns else [],
         only_requested_columns=test_columns,

@@ -9,7 +9,7 @@ from disruption_py.workflow import get_database, get_shots_data
 
 retrieval_settings = RetrievalSettings(
     # uses the efit timebase when returning data
-    time_setting="disruption_warning",
+    time_setting="efit",
     efit_nickname_setting="disruption",
     # run all available methods
     run_tags=["all"],
