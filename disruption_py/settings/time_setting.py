@@ -289,6 +289,7 @@ class EfitTimeSetting(TimeSetting):
             rf"\efit_a_eqdsk:{node}",
             tree_name="_efit_tree",
             astype="float64",
+            cast_all=True,
         )
         return data_with_dims[index] / scale
 
