@@ -42,7 +42,7 @@ class ShotDatabase:
         if protected_columns is None:
             protected_columns = []
 
-        logger.info(
+        logger.debug(
             "Database initialization: {user}@{host}/{db_name}",
             user=user,
             host=host,
@@ -134,7 +134,7 @@ class ShotDatabase:
         """
         current_thread = threading.current_thread()
         if current_thread not in self._thread_connections:
-            logger.info(
+            logger.debug(
                 "Connecting to database for thread {current_thread}",
                 current_thread=str(current_thread),
             )

@@ -120,8 +120,7 @@ class LogSettings:
         # header
         package = "disruption_py"
         commit = get_commit_hash()
-        logger.log(
-            "SUMMARY",
+        logger.info(
             "Starting: {p} ~ v{v} # {c} / {u}@{h}",
             p=package,
             v=importlib.metadata.version(package),
@@ -130,7 +129,7 @@ class LogSettings:
             h=os.uname().nodename,
         )
         if self.log_file_path is not None:
-            logger.log("SUMMARY", "Logging: {l}", l=self.log_file_path)
+            logger.info("Logging: {l}", l=self.log_file_path)
         logger.debug(
             "Repository: {r}/commit/{c}",
             r="https://github.com/MIT-PSFC/disruption-py",
