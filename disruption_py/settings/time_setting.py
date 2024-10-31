@@ -6,6 +6,7 @@ retrieving data in disruption_py for various tokamaks and shot configurations.
 """
 
 import traceback
+import warnings
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from logging import Logger
@@ -279,141 +280,6 @@ class EfitTimeSetting(TimeSetting):
         )
 
 
-class DisruptionTimeSetting(TimeSetting):
-    """
-    Time setting for using the disruption timebase.
-
-    The disruption timebase is the timebase of the shot that was disrupted.
-    """
-
-    # Disruption Variables
-    DT_BEFORE_DISRUPTION = 0.002
-    DURATION_BEFORE_DISRUPTION = 0.10
-
-    def __init__(self, minimum_ip=400.0e3, minimum_duration=0.100):
-        """
-        Initialize with minimum current and duration values.
-
-        Parameters
-        ----------
-        minimum_ip : float, optional
-            Minimum current in amps (default is 400,000 A).
-        minimum_duration : float, optional
-            Minimum duration in seconds (default is 0.1 seconds).
-        """
-        self.tokamak_overrides = {Tokamak.D3D: self.d3d_times}
-        self.minimum_ip = minimum_ip
-        self.minimum_duration = minimum_duration
-
-    def _get_times(self, params: TimeSettingParams) -> np.ndarray:
-        """
-        Abstract method for retrieving disruption timebase.
-
-        Parameters
-        ----------
-        params : TimeSettingParams
-            Parameters needed to retrieve the timebase.
-
-        Returns
-        -------
-        np.ndarray
-            Array of times in the timebase.
-        """
-        raise ValueError("Disruption time setting not implemented")
-
-    def d3d_times(self, params: TimeSettingParams):
-        """
-        Retrieve disruption timebase for the D3D tokamak.
-
-        Parameters
-        ----------
-        params : TimeSettingParams
-            Parameters needed to retrieve the timebase.
-
-        Returns
-        -------
-        np.ndarray
-            Array of times in the timebase.
-        """
-        raw_ip, ip_time = params.mds_conn.get_data_with_dims(
-            f"ptdata('ip', {params.shot_id})", tree_name="d3d"
-        )
-        ip_time = ip_time / 1.0e3
-        baseline = np.mean(raw_ip[0:10])
-        ip = raw_ip - baseline
-        duration, ip_max = self._get_end_of_shot(ip, ip_time, 100e3)
-        if duration < self.minimum_duration or np.abs(ip_max) < self.minimum_ip:
-            raise NotImplementedError()
-
-        times = np.arange(0.100, duration + config(params.tokamak).TIME_CONST, 0.025)
-        if params.disrupted:
-            additional_times = np.arange(
-                params.disruption_time - self.DURATION_BEFORE_DISRUPTION,
-                params.disruption_time + config(params.tokamak).TIME_CONST,
-                self.DT_BEFORE_DISRUPTION,
-            )
-            times = times[
-                np.where(
-                    times
-                    < (
-                        params.disruption_time
-                        - self.DURATION_BEFORE_DISRUPTION
-                        - config(params.tokamak).TIME_CONST
-                    )
-                )
-            ]
-            times = np.concatenate((times, additional_times))
-        return times
-
-    @classmethod
-    def _get_end_of_shot(cls, signal, signal_time, threshold=1.0e5):
-        """
-        Calculate the end of shot based on signal and threshold.
-
-        Parameters
-        ----------
-        signal : np.ndarray
-            Signal array representing the current.
-        signal_time : np.ndarray
-            Time array corresponding to the signal.
-        threshold : float
-            Threshold value for determining shot end.
-
-        Returns
-        -------
-        duration : float
-            Duration of the shot.
-        signal_max : float
-            Maximum signal value.
-        """
-        duration = 0
-        signal_max = 0
-        if threshold < 0:
-            raise Warning("Threshold is negative.")
-        base_indices = np.where(signal_time <= 0.0)
-        baseline = np.mean(signal[base_indices]) if len(base_indices) > 0 else 0
-        signal -= baseline
-        # Check if there was a finite signal otherwise consider the shot a "no plasma" shot
-        finite_indices = np.where((signal_time >= 0.0) & (np.abs(signal) > threshold))
-        if len(finite_indices) == 0:
-            return duration, signal_max
-        dt = np.diff(signal_time)
-        duration = np.sum(dt[finite_indices[:-1]])
-        if duration < 0.1:  # Assuming < 100 ms is not a bona fide plasma
-            duration = 0
-            return duration, signal_max
-        polarity = np.sign(
-            np.trapz(signal[finite_indices], signal_time[finite_indices])
-        )
-        polarized_signal = polarity * signal
-        valid_indices = np.where((polarized_signal >= threshold) & (signal_time > 0.0))
-        duration = signal_time[np.max(valid_indices)]
-        if len(valid_indices) == signal_time.size:
-            duration = -duration
-        signal_max = np.max(polarized_signal) * polarity
-        return duration, signal_max
-
-
 class IpTimeSetting(TimeSetting):
     """
     Time setting for using the timebase of the plasma current.
@@ -506,15 +372,32 @@ class SignalTimeSetting(TimeSetting):
             raise
 
 
+class DeprecatedTimeSetting(EfitTimeSetting):
+    """
+    Utility subclass to raise a deprecation warning.
+    """
+
+    def __init__(self, deprecated: str):
+        """
+        Raise a DeprecationWarning.
+        """
+
+        warnings.warn(
+            f"The TimeSetting shortcut `{deprecated}` is deprecated"
+            " and will be removed in a future version:"
+            " please use the shortcut `efit`, instead.",
+            DeprecationWarning,
+        )
+        super().__init__()
+
+
 # --8<-- [start:time_setting_dict]
 _time_setting_mappings: Dict[str, TimeSetting] = {
     "efit": EfitTimeSetting(),
-    "disruption": DisruptionTimeSetting(),
-    "disruption_warning": {
-        Tokamak.CMOD: EfitTimeSetting(),
-        Tokamak.D3D: DisruptionTimeSetting(),
-    },
     "ip": IpTimeSetting(),
+    # deprecated
+    "disruption": DeprecatedTimeSetting("disruption"),
+    "disruption_warning": DeprecatedTimeSetting("disruption_warning"),
 }
 # --8<-- [end:time_setting_dict]
 
