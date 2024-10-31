@@ -58,7 +58,7 @@ done
 [[ "$1" = "-n" ]] && exit 0
 [[ "$1" = "--dry-run" ]] && exit 0
 
-xargs -a "$TMPF" -n 2 poetry add --group
+[[ -s "$TMPF" ]] && xargs -a "$TMPF" -n 2 poetry add --group
 poetry update
 
 git status
