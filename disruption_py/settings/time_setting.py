@@ -258,6 +258,15 @@ class EfitTimeSetting(TimeSetting):
     Time setting for using the EFIT timebase.
     """
 
+    time_config = {
+        # which EFIT a-file result nodename to read
+        "node": {Tokamak.CMOD: "time", Tokamak.D3D: "atime"},
+        # whether time is in the data, or the dims
+        "index": {Tokamak.CMOD: 0, Tokamak.D3D: 1},
+        # whether rescaling is necessary to get [s]
+        "scale": {Tokamak.CMOD: 1, Tokamak.D3D: 1000},
+    }
+
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         """
         Retrieve the EFIT timebase from MDSplus.
@@ -273,11 +282,15 @@ class EfitTimeSetting(TimeSetting):
             Array of times in the timebase.
         """
 
-        return params.mds_conn.get_data(
-            r"\efit_a_eqdsk:time",
+        node, index, scale = (
+            self.time_config[k].get(params.tokamak) for k in ["node", "index", "scale"]
+        )
+        data_with_dims = params.mds_conn.get_data_with_dims(
+            rf"\efit_a_eqdsk:{node}",
             tree_name="_efit_tree",
             astype="float64",
         )
+        return data_with_dims[index] / scale
 
 
 class IpTimeSetting(TimeSetting):
