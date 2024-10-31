@@ -257,50 +257,9 @@ class EfitTimeSetting(TimeSetting):
     Time setting for using the EFIT timebase.
     """
 
-    def __init__(self):
-        """
-        Initialize with tokamak-specific overrides for EFIT.
-        """
-        self.tokamak_overrides = {Tokamak.CMOD: self.cmod_times}
-
-    def cmod_times(self, params: TimeSettingParams):
-        """
-        Retrieve the EFIT timebase for the CMOD tokamak.
-
-        Parameters
-        ----------
-        params : TimeSettingParams
-            Parameters needed to retrieve the timebase.
-
-        Returns
-        -------
-        np.ndarray
-            Array of times in the timebase.
-        """
-        efit_tree_name = params.mds_conn.get_tree_name_of_nickname("_efit_tree")
-        if efit_tree_name == "analysis":
-            try:
-                return params.mds_conn.get_data(
-                    r"\analysis::efit_aeqdsk:time",
-                    tree_name="_efit_tree",
-                    astype="float64",
-                )
-            except mdsExceptions.MdsException:
-                return params.mds_conn.get_data(
-                    r"\analysis::efit:results:a_eqdsk:time",
-                    tree_name="_efit_tree",
-                    astype="float64",
-                )
-        else:
-            return params.mds_conn.get_data(
-                rf"\{efit_tree_name}::top.results.a_eqdsk:time",
-                tree_name="_efit_tree",
-                astype="float64",
-            )
-
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         """
-        Abstract method for retrieving EFIT timebase.
+        Retrieve the EFIT timebase from MDSplus.
 
         Parameters
         ----------
@@ -312,7 +271,12 @@ class EfitTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        raise ValueError("EFIT timebase setting not implemented")
+
+        return params.mds_conn.get_data(
+            r"\efit_a_eqdsk:time",
+            tree_name="_efit_tree",
+            astype="float64",
+        )
 
 
 class DisruptionTimeSetting(TimeSetting):
