@@ -467,6 +467,8 @@ class CmodTearingMethods:
         valid_mirnov_names = []
         valid_mirnov_locations = []
         saved_freqs = None
+
+        #stupid_break_count = 1
         for mirnov_index, mirnov_name in enumerate(all_mirnov_names):
             mirnov_fft, freqs = CmodTearingMethods.get_mirnov_stfft(params=params, mirnov_name=mirnov_name)
             if mirnov_fft is not None:
@@ -478,6 +480,11 @@ class CmodTearingMethods:
                 mirnov_theta = theta_all[mirnov_index]
                 mirnov_theta_pol = theta_pol_all[mirnov_index]
                 valid_mirnov_locations.append((mirnov_phi, mirnov_theta, mirnov_theta_pol))
+
+                # stupid_break_count -= 1
+                # if stupid_break_count < 0:
+                #     print("STUPID BREAK!!!")
+                #     break
             if saved_freqs is None:
                 saved_freqs = freqs
 
@@ -495,10 +502,9 @@ class CmodTearingMethods:
             },
         )
 
-
         # Convert to a dataset and save to a zarr file for testing
-        mirnov_ffts_dataset = mirnov_ffts.to_dataset(name="mirnov_ffts")
-        mirnov_ffts_dataset.to_zarr(f"datasets/{params.shot_id}_mirnov_ffts.zarr", mode="w")
+        # mirnov_ffts_dataset = mirnov_ffts.to_dataset(name="mirnov_ffts")
+        # mirnov_ffts_dataset.to_zarr(f"datasets/{params.shot_id}_mirnov_ffts.zarr", mode="w")
 
         return mirnov_ffts
 
@@ -526,12 +532,13 @@ class CmodTearingMethods:
 
         # Convert the xarray to a dictionary to pass back to disruption-py
         mirnov_ffts = {}
-        for mirnov_index, mirnov_name in enumerate(mirnov_ffts_xarray.probe.values):
+        for mirnov_index, mirnov_name in enumerate(mirnov_ffts_xarray.probe_name.values):
             mirnov_phi = mirnov_ffts_xarray.phi.values[mirnov_index]
             mirnov_theta = mirnov_ffts_xarray.theta.values[mirnov_index]
             mirnov_theta_pol = mirnov_ffts_xarray.theta_pol.values[mirnov_index]
             for freq in mirnov_ffts_xarray.frequency.values:
-                mirnov_ffts[(mirnov_name, mirnov_phi, mirnov_theta, mirnov_theta_pol, freq)] = mirnov_ffts_xarray.sel(probe=mirnov_name, frequency=freq).values
+                #TODO(ZanderKeith) IF SOMETHING BREAKS LOOK HERE!
+                mirnov_ffts[("all_mirnov_ffts", mirnov_name, mirnov_phi, mirnov_theta, mirnov_theta_pol, freq)] = mirnov_ffts_xarray.sel(probe=mirnov_index, frequency=freq).values
 
         return mirnov_ffts
 
@@ -656,7 +663,4 @@ class CmodTearingMethods:
                 mode_spectrogram_dict[("mode_spectrogram", mode, freq)] = masked_spectrograms[mode][i]
 
         return mode_spectrogram_dict
-
-
-
 
