@@ -351,7 +351,10 @@ def populate_shot(
     percent_valid = (
         round((num_valid) / num_parameters * 100, 2) if num_parameters else 0
     )
-    physics_method_params.logger.success(
+
+    level = "SUCCESS" if percent_valid >= 50 else "WARNING"
+    physics_method_params.logger.log(
+        level,
         "{num_valid}/{total} parameters have data ({percent_valid}%)",
         num_valid=num_valid,
         total=num_parameters,
