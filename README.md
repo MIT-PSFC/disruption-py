@@ -23,26 +23,34 @@
 [![Available: Zenodo](https://zenodo.org/badge/DOI/10.5281/zenodo.13935223.svg)](https://doi.org/10.5281/zenodo.13935223)
 [![License: MIT](https://img.shields.io/pypi/l/disruption-py?color=750014)](LICENSE)
 
-
-### Background
-
-A key element of plasma control systems (PCS) in magnetically confined tokamak devices is the prediction and avoidance of disruptions, sudden losses of the thermal and magnetic energy stored within the plasma that can occur when tokamak plasmas operate near stability boundaries or because of hardware anomalies.
-The energy stored in the plasma and released during disruptions over milliseconds can cause severe damage to plasma-facing components, limiting experimental operation and the device lifetime [[1](https://www.tandfonline.com/doi/full/10.1080/15361055.2023.2229675)].
-This poses a serious challenge to next-generation fusion devices such as SPARC, which will have to operate near some of the limits of plasma stability to achieve intended performance and will do so at for long and frequent intervals.
-Fusion science currently lacks first-principle, theoretical solutions to fully predict and avoid disruptions. 
-However, previous work [[2](https://doi.org/10.1088/1741-4326/ab28bf),[3](https://doi.org/10.1088/1741-4326/abf74d)] has shown the usefulness of machine-learning (ML) algorithms for disruption prevention for both DIII-D and EAST -- the Experimental Advanced Superconducting Tokamak in China -- operations.
-
+## Concept
 DisruptionPy is an open-source, interoperable python package for fast data retrieval of experimental data from MDSplus fusion repositories. 
-The library allows database development for downstream analysis and ML model training for disruption studies. 
+The library allows an efficient database preparation for downstream analysis and/or ML model development for disruption studies. 
 Its current implementation is available for Alcator C-Mod and DIII-D data servers.
 
 
 ## Overview
+### Background
+A key element to ensure steady state operations in magnetically confined tokamak devices is the prediction and avoidance of disruptions.
+These are sudden losses of the thermal and magnetic energy stored within the plasma, which can occur when tokamaks operate near stability boundaries or because of hardware anomalies.
+The energy stored in the plasma and released during disruptions over milliseconds can cause severe damage to plasma-facing components, limiting experimental operations and the device's lifespan [[1](https://www.tandfonline.com/doi/full/10.1080/15361055.2023.2229675)].
+Disruptions still pose a serious challenge to next-generation fusion devices such as ITER or SPARC, which will have to operate near some of the limits of plasma stability to achieve intended performance and will do so at for long and frequent intervals.
+Fusion science currently lacks first-principle, theoretical solutions to fully predict and avoid disruptions. 
+However, previous work [[2](https://doi.org/10.1088/1741-4326/ab28bf),[3](https://doi.org/10.1088/1741-4326/abf74d)] has shown the usefulness of machine-learning (ML) algorithms for disruption prevention for both DIII-D and EAST -- the Experimental Advanced Superconducting Tokamak in China -- operations.
+DisruptionPy provides a standardized analysis pipeline across different fusion devices to build ML-ready datasets.
 
-DisruptionPy makes it easy to retrieve tabular data from MDSplus databases efficiently.
-Users can create their own methods and/or use built-in methods that retrieve and derive a variety of important parameters from experimental data for disruption analysis.
-These methods are run across all provided sets of discharges (or shot ids), outputting tabular data in customizable formats.
+### Workflow
+DisruptionPy makes it easy to retrieve experimental data from MDSplus [[4](https://www.mdsplus.org/index.php/Introduction)] fusion repositories efficiently.
+Users can create their own routines and/or use built-in ones that retrieve and derive a variety of important signals from experimental data for disruption analysis.
+These routines are then interpolated on a requested timebase across the specified set of plasma discharges (or shots) to assemble a dataset and save it under a variety of available formats.
 
+< insert workflow image here > TODO
+
+### Acknowledgments
+DisruptionPy was fully revamped under the "Open and FAIR Fusion for Machine Learning Applications" [[5](https://crea-psfc.github.io/open-fair-fusion/)], with work partly funded by DOE ... TODO
+
+### References
+TODO
 
 ## Repository layout
 
