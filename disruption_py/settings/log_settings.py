@@ -11,6 +11,7 @@ import sys
 from dataclasses import dataclass
 
 from loguru import logger
+from tqdm.auto import tqdm
 
 from disruption_py.core.utils.misc import get_commit_hash, get_temporary_folder
 
@@ -96,7 +97,7 @@ class LogSettings:
         # Add console handler
         if self.log_to_console:
             logger.add(
-                sys.stderr,
+                lambda msg: tqdm.write(msg, end=""),
                 level=self.console_log_level,
                 format=console_format,
                 colorize=True,

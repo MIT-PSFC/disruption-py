@@ -8,6 +8,7 @@ from multiprocessing import Pool
 from typing import Any, Callable
 
 from loguru import logger
+from tqdm.auto import tqdm
 
 from disruption_py.core.retrieval_manager import RetrievalManager
 from disruption_py.core.utils.misc import without_duplicates
@@ -121,7 +122,9 @@ def get_shots_data(
         )
         num_success = 0
 
-        for shot_id, shot_data in pool.imap(_execute_retrieval, args):
+        for shot_id, shot_data in tqdm(
+            pool.imap(_execute_retrieval, args), total=len(shotlist_list)
+        ):
             if shot_data is None:
                 logger.warning(
                     "#{shot_id} | Not outputting data for shot, data is None.",
