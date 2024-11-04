@@ -77,7 +77,7 @@ class LogSettings:
         logger.remove()
 
         # Set colors without any bolding for each level (levels are bold by default)
-        logger.level("DEBUG", color="<white>")
+        logger.level("DEBUG", color="<dim><white>")
         logger.level("INFO", color="<white>")
         logger.level("WARNING", color="<yellow>")
         logger.level("ERROR", color="<red>")
