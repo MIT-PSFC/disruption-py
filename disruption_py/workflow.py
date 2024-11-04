@@ -142,8 +142,9 @@ def get_shots_data(
                 )
         total = len(shotlist_list)
         percent_success = round(num_success / total * 100, 2)
+        level = "SUCCESS" if percent_success > 50 else "WARNING"
         logger.log(
-            "SUMMARY",
+            level,
             "Retrieved data for {num_success}/{total} shots ({percent_success}%)",
             num_success=num_success,
             total=total,

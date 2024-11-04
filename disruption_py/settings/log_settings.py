@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-This module defines the LogSettings class, which provides settings and setup for 
+This module defines the LogSettings class, which provides settings and setup for
 logging in both files and console with customizable levels and formats.
 """
 
@@ -28,7 +28,7 @@ class LogSettings:
         By default, a log file will be created in a temporary folder.
     file_log_level : str
         Logging level for the log file (default is "DEBUG").
-        Possible values are: "TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "SUMMARY", "ERROR",
+        Possible values are: "TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR",
         "CRITICAL". See https://loguru.readthedocs.io/en/stable/api/logger.html#levels
     log_file_write_mode : str, optional
         The write mode for the log file. Default is "w".
@@ -36,7 +36,7 @@ class LogSettings:
         Whether to log messages to the console (default is True).
     console_log_level : str
         The log level for the console. Default is "WARNING".
-        Possible values are: "TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "SUMMARY", "ERROR",
+        Possible values are: "TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR",
         "CRITICAL". See https://loguru.readthedocs.io/en/stable/api/logger.html#levels
     use_custom_logging : bool
         Whether to use custom logging. If set to true, no logging setup will be done.
@@ -54,17 +54,7 @@ class LogSettings:
 
     use_custom_logging: bool = False
 
-    @property
-    def _logging_has_been_setup(self) -> bool:
-        """
-        Return True if the logger has been set up, False otherwise.
-        """
-        try:
-            # The logger is set up when the SUMMARY level exists.
-            logger.level("SUMMARY")
-            return True
-        except ValueError:
-            return False
+    _logging_has_been_setup: bool = False
 
     def setup_logging(self):
         """
@@ -86,8 +76,12 @@ class LogSettings:
         # Remove default logger
         logger.remove()
 
-        # Add summary level after warning (30) but before error (40)
-        logger.level("SUMMARY", no=35, color="<cyan>")
+        # Set colors without any bolding for each level (levels are bold by default)
+        logger.level("DEBUG", color="<white>")
+        logger.level("INFO", color="<white>")
+        logger.level("WARNING", color="<yellow>")
+        logger.level("ERROR", color="<red>")
+        logger.level("SUCCESS", color="<green>")
 
         # formats
         message_format = "<level>[{level:^7s}] {message}</level>"
@@ -137,3 +131,5 @@ class LogSettings:
             c=commit,
         )
         logger.debug("Executable: {e}", e=sys.executable)
+
+        self._logging_has_been_setup = True
