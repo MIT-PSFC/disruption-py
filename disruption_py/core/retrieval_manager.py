@@ -13,7 +13,7 @@ from disruption_py.config import config
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.physics_method.runner import populate_shot
 from disruption_py.core.utils.math import interp1
-from disruption_py.core.utils.misc import get_commit_hash
+from disruption_py.core.utils.misc import get_commit_hash, shot_log_msg
 from disruption_py.inout.mds import MDSConnection, ProcessMDSConnection
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
@@ -137,8 +137,9 @@ class RetrievalManager:
             return physics_method_params
         except Exception as e:
             logger.info(
-                "#{shot_id} | Caught failed to setup shot, cleaning up tree manager.",
-                shot_id=shot_id,
+                shot_log_msg(
+                    shot_id, "Caught failed to setup shot, cleaning up tree manager."
+                ),
             )
             mds_conn.cleanup()
             raise e

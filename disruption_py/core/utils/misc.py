@@ -158,3 +158,22 @@ def get_temporary_folder() -> Path:
 
     # create temporary sub folder
     return mkdtemp(prefix=time.strftime("%Y%m%d-%H%M%S-"), dir=top)
+
+
+def shot_log_msg(shot_id: int, message: str):
+    """
+    Format a string with the shot id and message
+
+    Parameters
+    ----------
+    shot_id : int
+        The shot id to prefix the message with.
+    message : str
+        The message to log.
+
+    Returns
+    -------
+    str
+        The formatted log message
+    """
+    return f"#{shot_id} | {message}"

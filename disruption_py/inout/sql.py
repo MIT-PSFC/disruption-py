@@ -16,7 +16,7 @@ from loguru import logger
 from sqlalchemy import create_engine
 
 from disruption_py.config import config
-from disruption_py.core.utils.misc import without_duplicates
+from disruption_py.core.utils.misc import shot_log_msg, without_duplicates
 from disruption_py.core.utils.shared_instance import SharedInstance
 from disruption_py.machine.tokamak import Tokamak
 
@@ -373,7 +373,7 @@ class ShotDatabase:
             self.engine,
         )
         if len(data_df) == 0:
-            logger.info("#{shot_id} | shot does not exist in database", shot_id=shot_id)
+            logger.info(shot_log_msg(shot_id, "shot does not exist in database"))
             return False
         with self.conn.cursor() as curs:
             curs.execute(

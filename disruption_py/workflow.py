@@ -11,7 +11,7 @@ from loguru import logger
 from tqdm.auto import tqdm
 
 from disruption_py.core.retrieval_manager import RetrievalManager
-from disruption_py.core.utils.misc import without_duplicates
+from disruption_py.core.utils.misc import shot_log_msg, without_duplicates
 from disruption_py.inout.mds import ProcessMDSConnection
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
@@ -127,8 +127,9 @@ def get_shots_data(
         ):
             if shot_data is None:
                 logger.warning(
-                    "#{shot_id} | Not outputting data for shot, data is None.",
-                    shot_id=shot_id,
+                    shot_log_msg(
+                        shot_id, "Not outputting data for shot, data is None."
+                    ),
                 )
             else:
                 num_success += 1
