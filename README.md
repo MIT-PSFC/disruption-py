@@ -24,9 +24,10 @@
 [![License: MIT](https://img.shields.io/pypi/l/disruption-py?color=750014)](LICENSE)
 
 ## Concept
-DisruptionPy is an open-source, interoperable python package for fast data retrieval of experimental data from MDSplus fusion repositories. 
-The library allows an efficient database preparation for downstream analysis and/or ML model development for disruption studies. 
-Its current implementation is available for Alcator C-Mod and DIII-D data servers.
+
+DisruptionPy is an open-source Scientific Python package for fast retrieval of experimental Fusion data from [MDSplus](https://www.mdsplus.org/) servers.
+The library allows an efficient database preparation for downstream analysis and/or ML model development for disruption studies.
+At present, the main supported machines are [Alcator C-Mod](https://en.wikipedia.org/wiki/Alcator_C-Mod) and [DIII-D](https://en.wikipedia.org/wiki/DIII-D_(tokamak)).
 
 
 ## Overview
