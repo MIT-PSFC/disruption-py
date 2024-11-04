@@ -50,21 +50,27 @@ These routines are then interpolated on a requested timebase across the specifie
 
 ![flowchart](docs/workflow.png)
 
-_Figure: Schematic flowchart of a typical DisruptionPy workflow. By Y Wei (2024)._
+_Figure: Schematic flowchart of a typical DisruptionPy workflow. By Y Wei (2024) [6]._
 
 ### Acknowledgments
 
-The most recent revamp of DisruptionPy was partially supported by DOE FES under Award DE-SC0024368, "Open and FAIR Fusion for Machine Learning Applications" [[4](https://crea-psfc.github.io/open-fair-fusion/)].
+The most recent revamp of DisruptionPy [4, 5, 6] was partially supported by DOE FES under Award DE-SC0024368, "Open and FAIR Fusion for Machine Learning Applications" [7].
 
 ### References
 
-[1] AD Maris, A Wang, C Rea, RS Granetz, E Marmar (2023), _"The Impact of Disruptions on the Economics of a Tokamak Power Plant"_, **Fusion Science and Technology** 80(5) 636-652, [DOI:10.1080/15361055.2023.2229675](https://doi.org/10.1080/15361055.2023.2229675).
+1. AD Maris, A Wang, C Rea, RS Granetz, E Marmar (2023), _"The Impact of Disruptions on the Economics of a Tokamak Power Plant"_, **Fusion Science and Technology** 80(5) 636-652, [DOI:10.1080/15361055.2023.2229675](https://doi.org/10.1080/15361055.2023.2229675).
 
-[2] C Rea, KJ Montes, KG Erickson, RS Granetz & RA Tinguely (2019), _"A real-time machine learning-based disruption predictor in DIII-D"_, **Nuclear Fusion** 59 096016, [DOI:10.1088/1741-4326/ab28bf](https://doi.org/10.1088/1741-4326/ab28bf).
+2. C Rea, KJ Montes, KG Erickson, RS Granetz & RA Tinguely (2019), _"A real-time machine learning-based disruption predictor in DIII-D"_, **Nuclear Fusion** 59 096016, [DOI:10.1088/1741-4326/ab28bf](https://doi.org/10.1088/1741-4326/ab28bf).
 
-[3] WH Hu, C Rea, et al. (2021), _"Real-time prediction of high-density EAST disruptions using random forest"_, **Nuclear Fusion** 61 066034, [DOI:10.1088/1741-4326/abf74d](https://doi.org/10.1088/1741-4326/abf74d).
+3. WH Hu, C Rea, et al. (2021), _"Real-time prediction of high-density EAST disruptions using random forest"_, **Nuclear Fusion** 61 066034, [DOI:10.1088/1741-4326/abf74d](https://doi.org/10.1088/1741-4326/abf74d).
 
-[4] C Rea, et al. (2023), [_"Open and FAIR Fusion for Machine Learning Applications"_](https://crea-psfc.github.io/open-fair-fusion/)
+4. C Rea, et al. (2024), _"Open and FAIR Fusion for Machine Learning Applications"_, 66th APS Division of Plasma Physics Meeting, [PP12.27](https://meetings.aps.org/Meeting/DPP24/Session/PP12.27).
+
+5. GL Trevisan, et al. (2024), _"Functional Improvements and Technical Developments of a Community-driven and Physics-informed Numerical Library for Disruption Studies"_, 66th APS Division of Plasma Physics Meeting, [PP12.9](https://meetings.aps.org/Meeting/DPP24/Session/PP12.9).
+
+6. Y Wei, et al. (2024), _"Physics validation of parameter methods in DisruptionPy"_, 66th APS Division of Plasma Physics Meeting, [PP12.10](https://meetings.aps.org/Meeting/DPP24/Session/PP12.10).
+
+7. C Rea, et al. (2023), _"Open and FAIR Fusion for Machine Learning Applications"_, [Project website](https://crea-psfc.github.io/open-fair-fusion/).
 
 
 ## Repository layout
