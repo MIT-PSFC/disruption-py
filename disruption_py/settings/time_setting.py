@@ -238,7 +238,7 @@ class CacheTimeSetting(TimeSetting):
             try:
                 times = params.cache_data["time"].to_numpy()
                 # Check if the timebase is in ms instead of s
-                if times[-1] > config(params.tokamak).MAX_SHOT_TIME:
+                if times[-1] > config(params.tokamak).max_shot_time:
                     times /= 1000  # [ms] -> [s]
                 return times
             except KeyError:
@@ -381,11 +381,11 @@ class DisruptionTimeSetting(TimeSetting):
         if duration < self.minimum_duration or np.abs(ip_max) < self.minimum_ip:
             raise NotImplementedError()
 
-        times = np.arange(0.100, duration + config(params.tokamak).TIME_CONST, 0.025)
+        times = np.arange(0.100, duration + config(params.tokamak).time_const, 0.025)
         if params.disrupted:
             additional_times = np.arange(
                 params.disruption_time - self.DURATION_BEFORE_DISRUPTION,
-                params.disruption_time + config(params.tokamak).TIME_CONST,
+                params.disruption_time + config(params.tokamak).time_const,
                 self.DT_BEFORE_DISRUPTION,
             )
             times = times[
@@ -394,7 +394,7 @@ class DisruptionTimeSetting(TimeSetting):
                     < (
                         params.disruption_time
                         - self.DURATION_BEFORE_DISRUPTION
-                        - config(params.tokamak).TIME_CONST
+                        - config(params.tokamak).time_const
                     )
                 )
             ]
