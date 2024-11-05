@@ -128,7 +128,7 @@ def get_shots_data(
         num_success = 0
 
         for shot_id, shot_data in tqdm(
-            pool.imap(_execute_retrieval, args), total=len(shotlist_list)
+            pool.imap(_execute_retrieval, args), total=len(shotlist_list), leave=False
         ):
             if shot_data is None:
                 logger.warning(
