@@ -61,8 +61,8 @@ class LogSettings:
 
     use_custom_logging: bool = False
 
-    warning_threshold: int = 500
-    success_threshold: int = 100
+    warning_threshold: int = 1000
+    success_threshold: int = 500
 
     _logging_has_been_setup: bool = False
 
@@ -90,13 +90,15 @@ class LogSettings:
         console_format = "{time:HH:mm:ss.SSS} " + message_format
         file_format = "{time:YYYY-MM-DD HH:mm:ss.SSS} " + message_format
 
-        # Determine console log level dynamically based on the number of shots
-        console_level = "INFO"
         if self.console_log_level is None:
+            # Determine console log level dynamically based on the number of shots
+            console_level = "INFO"
             if num_shots and num_shots > self.warning_threshold:
                 console_level = "WARNING"
             elif num_shots and num_shots > self.success_threshold:
                 console_level = "SUCCESS"
+        else:
+            console_level = self.console_log_level
 
         # Add console handler
         if self.log_to_console:
