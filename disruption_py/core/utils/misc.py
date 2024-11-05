@@ -177,3 +177,40 @@ def shot_log_msg(shot_id: int, message: str):
         The formatted log message
     """
     return f"#{shot_id} | {message}"
+
+
+def get_elapsed_time(elapsed: float) -> str:
+    """
+    Convert elapsed seconds into human-readable format.
+
+    Parameters
+    ----------
+    elapsed : float
+        Elapsed number of seconds.
+
+    Returns
+    -------
+    str
+        Human-readable formatted message.
+    """
+
+    out = []
+    d = elapsed // (24 * 3600)
+    elapsed -= d * (24 * 3600)
+    h = elapsed // 3600
+    elapsed -= h * 3600
+    m = elapsed // 60
+    elapsed -= m * 60
+    s = int(elapsed)
+    ms = (elapsed - s) * 1000
+    if d > 0:
+        out += [f"{d:.0f}d"]
+    if h > 0:
+        out += [f"{h:.0f}h"]
+    if m > 0:
+        out += [f"{m:.0f}m"]
+    if s > 0:
+        out += [f"{s:.0f}s"]
+    if not out:
+        out += [f"{ms:.0f}ms"]
+    return " ".join(out)
