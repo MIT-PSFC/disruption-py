@@ -3,6 +3,8 @@
 """
 The main entrypoint for retrieving DisruptionPy data. 
 """
+
+import time
 from itertools import repeat
 from multiprocessing import Pool
 from typing import Any, Callable
@@ -11,7 +13,11 @@ from loguru import logger
 from tqdm.auto import tqdm
 
 from disruption_py.core.retrieval_manager import RetrievalManager
-from disruption_py.core.utils.misc import shot_log_msg, without_duplicates
+from disruption_py.core.utils.misc import (
+    get_elapsed_time,
+    shot_log_msg,
+    without_duplicates,
+)
 from disruption_py.inout.mds import ProcessMDSConnection
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
@@ -126,6 +132,7 @@ def get_shots_data(
         p="es" if num_processes > 1 else "",
     )
 
+    took = -time.time()
     with Pool(processes=num_processes) as pool:
         args = zip(
             repeat(tokamak),
@@ -155,16 +162,28 @@ def get_shots_data(
                         tokamak=tokamak,
                     )
                 )
-        total = len(shotlist_list)
-        percent_success = round(num_success / total * 100, 2)
-        level = "SUCCESS" if percent_success > 50 else "WARNING"
-        logger.log(
-            level,
-            "Retrieved data for {num_success:,}/{total:,} shots ({percent_success}%)",
-            num_success=num_success,
-            total=total,
-            percent_success=percent_success,
-        )
+    took += time.time()
+
+    # log stop
+    total = len(shotlist_list)
+    percent_success = num_success / total * 100
+    if percent_success >= 75:
+        level = "SUCCESS"
+    elif percent_success >= 25:
+        level = "WARNING"
+    else:
+        level = "ERROR"
+    logger.log(
+        level,
+        "Completed workflow! "
+        "retrieved {num_success:,}/{total:,} shots ({percent_success:.2f}%) "
+        "in {elapsed} ({each:.3f} s/shot)",
+        num_success=num_success,
+        total=total,
+        percent_success=percent_success,
+        elapsed=get_elapsed_time(took),
+        each=took / total,
+    )
 
     finish_output_type_setting_params = CompleteOutputSettingParams(tokamak=tokamak)
     results = output_setting.get_results(finish_output_type_setting_params)
