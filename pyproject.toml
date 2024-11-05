@@ -1,35 +1,39 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry]
 authors = [
-    "Cristina Rea <crea@psfc.mit.edu>",
-    "Gregorio L. Trevisan <gtrevisan@psfc.mit.edu>",
-    "MIT PSFC Disruption Studies Group <disruption-py@lists.psfc.mit.edu>",
+  "Cristina Rea <crea@psfc.mit.edu>",
+  "Gregorio L. Trevisan <gtrevisan@psfc.mit.edu>",
+  "MIT PSFC Disruption Studies Group <disruption-py@lists.psfc.mit.edu>",
 ]
 classifiers = [
-    "Development Status :: 4 - Beta",
-    "Environment :: Console",
-    "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
-    "Natural Language :: English",
-    "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3",
-    "Topic :: Scientific/Engineering",
-    "Topic :: Scientific/Engineering :: Physics",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Software Development :: Version Control :: Git",
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Natural Language :: English",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Physics",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Software Development :: Version Control :: Git",
 ]
 description = "An open-source physics-based Scientific Framework for Disruption Analysis of Fusion Plasmas for AI/ML applications"
 documentation = "https://mit-psfc.github.io/disruption-py/"
 homepage = "https://disruptions.mit.edu/"
 keywords = [
-    "plasma physics",
-    "nuclear fusion",
-    "tokamak",
-    "disruptions",
+  "plasma physics",
+  "nuclear fusion",
+  "tokamak",
+  "disruptions",
 ]
 license = "MIT"
 maintainers = [
-    "Gregorio L. Trevisan <gtrevisan@psfc.mit.edu>",
+  "Gregorio L. Trevisan <gtrevisan@psfc.mit.edu>",
 ]
 name = "disruption-py"
 readme = "README.md"
@@ -56,6 +60,7 @@ black = "^24.10.0"
 pylint = "^3.3.0"
 pytest = "^8.3.0"
 ruff = "^0.7.0"
+toml-sort = "^0.23.0"
 yamllint = "^1.35.0"
 
 [tool.poetry.group.docs]
@@ -81,17 +86,13 @@ matplotlib = "^3.9.0"
 extension-pkg-allow-list = ["pyodbc"]
 ignored-modules = ["MDSplus"]
 disable = [
-    "fixme",
-    "too-few-public-methods",
-    "too-many-arguments",
-    "too-many-branches",
-    "too-many-instance-attributes",
-    "too-many-lines",
-    "too-many-locals",
-    "too-many-positional-arguments",
-    "too-many-statements",
+  "fixme",
+  "too-few-public-methods",
+  "too-many-arguments",
+  "too-many-branches",
+  "too-many-instance-attributes",
+  "too-many-lines",
+  "too-many-locals",
+  "too-many-positional-arguments",
+  "too-many-statements",
 ]
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
