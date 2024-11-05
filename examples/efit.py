@@ -39,7 +39,6 @@ def main():
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
         output_setting="dataframe",
-        log_settings=LogSettings(console_log_level=0),
     )
 
     print(result)
