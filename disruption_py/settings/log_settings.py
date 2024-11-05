@@ -35,12 +35,19 @@ class LogSettings:
     log_to_console : bool
         Whether to log messages to the console (default is True).
     console_log_level : str
-        The log level for the console. Default is "WARNING".
+        The log level for the console. Default is None, so log level will be determined
+        dynamically based on the number of shots.
         Possible values are: "TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR",
         "CRITICAL". See https://loguru.readthedocs.io/en/stable/api/logger.html#levels
     use_custom_logging : bool
         Whether to use custom logging. If set to true, no logging setup will be done.
         Default is False.
+    warning_threshold : int
+        If number of shots is greater than this threshold, the console log level will
+        be "WARNING". Default is 500.
+    success_threshold : int
+        If number of shots is greater than this threshold and less than the warning_threshold,
+        the console log level will be "SUCCESS". Default is 100.
     _logging_has_been_setup : bool
         Internal flag to prevent multiple setups (default is False).
     """
@@ -50,49 +57,52 @@ class LogSettings:
     log_file_write_mode: str = "w"
 
     log_to_console: bool = True
-    console_log_level: str = "INFO"
+    console_log_level: str = None
 
     use_custom_logging: bool = False
 
+    warning_threshold: int = 500
+    success_threshold: int = 100
+
     _logging_has_been_setup: bool = False
 
-    def setup_logging(self):
+    def reset_handlers(self, num_shots: int = None):
         """
-        Set up logging based on the provided settings.
+        Remove default logger and set up custom handlers.
 
         Parameters
         ----------
-        logger_name : str, optional
-            Name of the logger (default is "disruption_py").
-
-        Returns
-        -------
-        logging.Logger
-            Configured logger instance.
+        num_shots : int, optional
+            Number of shots to determine the console log level dynamically.
         """
-        if self.use_custom_logging or self._logging_has_been_setup:
-            return
-
         # Remove default logger
         logger.remove()
 
         # Set colors without any bolding for each level (levels are bold by default)
         logger.level("DEBUG", color="<dim><white>")
         logger.level("INFO", color="<white>")
+        logger.level("SUCCESS", color="<green>")
         logger.level("WARNING", color="<yellow>")
         logger.level("ERROR", color="<red>")
-        logger.level("SUCCESS", color="<green>")
 
         # formats
         message_format = "<level>[{level:^7s}] {message}</level>"
         console_format = "{time:HH:mm:ss.SSS} " + message_format
         file_format = "{time:YYYY-MM-DD HH:mm:ss.SSS} " + message_format
 
+        # Determine console log level dynamically based on the number of shots
+        console_level = "INFO"
+        if self.console_log_level is None:
+            if num_shots and num_shots > self.warning_threshold:
+                console_level = "WARNING"
+            elif num_shots and num_shots > self.success_threshold:
+                console_level = "SUCCESS"
+
         # Add console handler
         if self.log_to_console:
             logger.add(
                 lambda msg: tqdm.write(msg, end=""),
-                level=self.console_log_level,
+                level=console_level,
                 format=console_format,
                 colorize=True,
                 enqueue=True,
@@ -111,6 +121,25 @@ class LogSettings:
                 backtrace=False,
                 diagnose=True,
             )
+
+    def setup_logging(self):
+        """
+        Set up logging based on the provided settings.
+
+        Parameters
+        ----------
+        logger_name : str, optional
+            Name of the logger (default is "disruption_py").
+
+        Returns
+        -------
+        logging.Logger
+            Configured logger instance.
+        """
+        if self.use_custom_logging or self._logging_has_been_setup:
+            return
+
+        self.reset_handlers(num_shots=None)
 
         # header
         package = "disruption_py"

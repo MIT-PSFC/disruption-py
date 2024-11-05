@@ -94,7 +94,8 @@ def get_shots_data(
     Any
         The value of OutputSetting.get_results. See OutputSetting for more details.
     """
-    (log_settings or LogSettings()).setup_logging()
+    log_settings = log_settings or LogSettings()
+    log_settings.setup_logging()
 
     tokamak = resolve_tokamak_from_environment(tokamak)
     database = _get_database_instance(tokamak, database_initializer)
@@ -110,6 +111,10 @@ def get_shots_data(
     shotlist_list = without_duplicates(
         shotlist_setting_runner(shotlist_setting, shotlist_setting_params)
     )
+
+    # Dynamically set the console log level based on the number of shots
+    if log_settings.console_log_level is None:
+        log_settings.reset_handlers(num_shots=len(shotlist_list))
 
     num_processes = min(num_processes, len(shotlist_list))
     with Pool(processes=num_processes) as pool:
