@@ -5,15 +5,27 @@ This module contains utility functions for various numerical operations.
 """
 
 import copy
+import warnings
 from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 from scipy.interpolate import interp1d
 from scipy.optimize import curve_fit
 from scipy.signal import lfilter, medfilt
 
 pd.options.mode.chained_assignment = None
+
+
+def showwarning(message, category, filename, lineno, _file=None, line=None):
+    """
+    Reroute warnings through loguru to be compatible with tqdm progress bars.
+    """
+    logger.warning(warnings.formatwarning(message, category, filename, lineno, line))
+
+
+warnings.showwarning = showwarning
 
 
 def interp1(x, y, new_x, kind="linear", bounds_error=False, fill_value=np.nan, axis=-1):
