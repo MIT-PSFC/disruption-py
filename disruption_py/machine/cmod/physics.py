@@ -1755,6 +1755,68 @@ class CmodPhysicsMethods:
         return {"sxr": sxr}
 
     @staticmethod
+    @physics_method(
+        columns=["beta_n_calc"],
+        tokamak=Tokamak.CMOD,
+    )
+    def get_beta_normalized(params: PhysicsMethodParams):
+        """
+        Calculate the normalized beta (betan) also known as the Troyon factor.
+
+        betan is defined as the total plasma beta (p/(B^2/2mu_0))
+        divided by (Ip [MA]/(a*Bt)).
+
+        Since beta_total is dominated by beta_toroidal
+        (1/beta_tot = 1/beta_tor + 1/beta_pol), we approximate betan ~= betat
+        for the calculation. This definition is equivalent to \efit_aeqdsk:betan
+        which isn't available for pre-2000 shots.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        betan: in percentage
+        """
+        # Get signals
+        beta_t, efittime = params.mds_conn.get_data_with_dims(
+            r"\efit_aeqdsk:betat", tree_name="_efit_tree", astype="float64"
+        )  # [%], [s]
+        # ip = CmodPhysicsMethods.get_ip_parameters(params=params)["ip"] / 1e6  # [MA]
+        aminor = params.mds_conn.get_data(
+            r"\efit_aeqdsk:aout/100", tree_name="_efit_tree", astype="float64"
+        )  # [m]
+        # btor, t_mag = params.mds_conn.get_data_with_dims(
+        #     r"\btor", tree_name="magnetics"
+        # )  # [T], [s]
+
+        # Interpolate betat, aminor, and btor to params.times (ip already in requested timebase)
+        beta_t = interp1(efittime, beta_t, params.times)
+        aminor = interp1(efittime, aminor, params.times)
+        # btor = interp1(t_mag, btor, params.times)
+
+        # TEST: use EFIT ip & btor
+        ip = (
+            params.mds_conn.get_data(
+                r"\efit_aeqdsk:cpasma", tree_name="_efit_tree", astype="float64"
+            )
+            / 1e6
+        )
+        btor = params.mds_conn.get_data(
+            r"\efit_aeqdsk:btaxp", tree_name="_efit_tree", astype="float64"
+        )
+        ip = interp1(efittime, ip, params.times)
+        btor = interp1(efittime, btor, params.times)
+
+        # Calculate betan
+        ip_normalized = ip / (aminor * btor)
+        beta_n = beta_t / ip_normalized
+
+        return {"beta_n_calc": beta_n}
+
+    @staticmethod
     def is_on_blacklist(shot_id: int) -> bool:
         """
         TODO why will these shots cause `_get_peaking_factors`,
