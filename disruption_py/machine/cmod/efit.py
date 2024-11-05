@@ -33,31 +33,21 @@ class CmodEfitMethods:
         "beta_n": r"\efit_aeqdsk:betan",
         "beta_p": r"\efit_aeqdsk:betap",
         "kappa": r"\efit_aeqdsk:eout",
-        "li": r"\efit_aeqdsk:li",
+        "li": r"\efit_aeqdsk:ali",
         "upper_gap": r"\efit_aeqdsk:otop/100",
         "lower_gap": r"\efit_aeqdsk:obott/100",
-        "q0": r"\efit_aeqdsk:q0",
-        "qstar": r"\efit_aeqdsk:qstar",
-        "q95": r"\efit_aeqdsk:q95",
+        "q0": r"\efit_aeqdsk:qqmagx",
+        "qstar": r"\efit_aeqdsk:qsta",
+        "q95": r"\efit_aeqdsk:qpsib",
         "v_loop_efit": r"\efit_aeqdsk:vloopt",
         "wmhd": r"\efit_aeqdsk:wplasm",
         "ssep": r"\efit_aeqdsk:ssep/100",
         "n_over_ncrit": r"-\efit_aeqdsk:xnnc",
         "tritop": r"\efit_aeqdsk:doutu",
         "tribot": r"\efit_aeqdsk:doutl",
-        "a_minor": r"\efit_aeqdsk:aminor",
-        "rmagx": r"\efit_aeqdsk:rmagx",  # TODO: change units to [m] (current [cm])
-        "chisq": r"\efit_aeqdsk:chisq",
-    }
-
-    # EFIT column names for data before 2000 TODO: confirm with Bob that these are
-    # the right back-ups and make sure that these are similar to standard EFIT columns
-    efit_cols_pre_2000 = {
-        "a_minor": r"\efit_aeqdsk:aout",
-        "li": r"\efit_aeqdsk:ali",
-        "q0": r"\efit_aeqdsk:qqmagx",
-        "qstar": r"\efit_aeqdsk:qsta",
-        "q95": r"\efit_aeqdsk:qsib",  # Not sure about this one
+        "a_minor": r"\efit_aeqdsk:aout/100",
+        "rmagx": r"\efit_aeqdsk:rmagx/100",
+        "chisq": r"\efit_aeqdsk:tsaisq",
     }
 
     efit_derivs = {"dbetap_dt": "beta_p", "dli_dt": "li", "dwmhd_dt": "wmhd"}
@@ -66,7 +56,6 @@ class CmodEfitMethods:
     @physics_method(
         columns=[
             *efit_cols.keys(),
-            *efit_cols_pre_2000.keys(),
             *efit_derivs.keys(),
             "v_surf",
             "v_loop_efit",
@@ -96,12 +85,6 @@ class CmodEfitMethods:
         # Get data from each of the columns in efit_cols one at a time
         for param, path in CmodEfitMethods.efit_cols.items():
             try:
-                # If shot before 2000 and the param is in efit_cols_pre_2000
-                if (
-                    params.shot_id <= 1000000000
-                    and param in CmodEfitMethods.efit_cols_pre_2000
-                ):
-                    path = CmodEfitMethods.efit_cols_pre_2000[param]
                 efit_data[param] = params.mds_conn.get_data(
                     path=path,
                     tree_name="_efit_tree",
@@ -133,11 +116,8 @@ class CmodEfitMethods:
             print("unable to get V_surf")
             efit_data["v_surf"] = np.full(len(efit_time), np.nan)
 
-        # For shots before 2000, adjust units of aminor, compute beta_n and v_loop
+        # For shots before 2000, compute beta_n and v_loop
         if params.shot_id <= 1000000000:
-
-            # Adjust aminor units
-            efit_data["aminor"] = efit_data["aminor"] / 100  # [cm] to [m]
 
             # Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally
             # sure on this one)
@@ -153,7 +133,7 @@ class CmodEfitMethods:
             # Compute beta_n
             beta_t = params.mds_conn.get_data(
                 r"\efit_aeqdsk:betat", tree_name="_efit_tree", astype="float64"
-            )
+            )  # [dimensionless]
             efit_data["beta_n"] = np.reciprocal(
                 np.reciprocal(beta_t) + np.reciprocal(efit_data["beta_p"])
             )
