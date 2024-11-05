@@ -232,7 +232,7 @@ def populate_method(
                 raise
 
         physics_method_params.logger.warning(
-            "Failed to populate {name} with error {e}",
+            "{name}: Failed! {e}",
             name=name,
             e=e,
         )
@@ -240,7 +240,7 @@ def populate_method(
         result = {col: [np.nan] for col in bound_method_metadata.columns}
 
     physics_method_params.logger.info(
-        "Completed {name}, time_elapsed: {t:.3f}s",
+        "{t:.3f}s : {name}",
         name=name,
         t=time.time() - start_time,
     )
@@ -348,14 +348,22 @@ def populate_shot(
             continue
         filtered_methods.append(method_df)
 
-    percent_valid = (
-        round((num_valid) / num_parameters * 100, 2) if num_parameters else 0
-    )
+    percent_valid = (num_valid / num_parameters * 100) if num_parameters else 0
+    if percent_valid >= 75:
+        level = "SUCCESS"
+        quant = "all" if percent_valid == 100 else "most"
+    elif percent_valid >= 25:
+        level = "WARNING"
+        quant = "many" if percent_valid >= 50 else "some"
+    else:
+        level = "ERROR"
+        quant = "no" if percent_valid == 0 else "few"
 
-    level = "SUCCESS" if percent_valid >= 50 else "WARNING"
     physics_method_params.logger.log(
         level,
-        "{num_valid}/{total} parameters have data ({percent_valid}%)",
+        "{level}! {quant} parameters have data: {num_valid}/{total} ({percent_valid:.2f}%)",
+        level=level.capitalize(),
+        quant=quant.capitalize(),
         num_valid=num_valid,
         total=num_parameters,
         percent_valid=percent_valid,
