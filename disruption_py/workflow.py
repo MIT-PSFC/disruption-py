@@ -111,12 +111,21 @@ def get_shots_data(
     shotlist_list = without_duplicates(
         shotlist_setting_runner(shotlist_setting, shotlist_setting_params)
     )
+    num_processes = min(num_processes, len(shotlist_list))
 
     # Dynamically set the console log level based on the number of shots
     if log_settings.console_log_level is None:
         log_settings.reset_handlers(num_shots=len(shotlist_list))
 
-    num_processes = min(num_processes, len(shotlist_list))
+    # log start
+    logger.info(
+        "Starting workflow: {n:,} shot{s} / {m} process{p}",
+        n=len(shotlist_list),
+        s="s" if len(shotlist_list) > 1 else "",
+        m=num_processes,
+        p="es" if num_processes > 1 else "",
+    )
+
     with Pool(processes=num_processes) as pool:
         args = zip(
             repeat(tokamak),
@@ -151,7 +160,7 @@ def get_shots_data(
         level = "SUCCESS" if percent_success > 50 else "WARNING"
         logger.log(
             level,
-            "Retrieved data for {num_success}/{total} shots ({percent_success}%)",
+            "Retrieved data for {num_success:,}/{total:,} shots ({percent_success}%)",
             num_success=num_success,
             total=total,
             percent_success=percent_success,
