@@ -377,7 +377,7 @@ class RetrievalManager:
                 flagged_cache_data,
                 on="time",
                 direction="nearest",
-                tolerance=config().TIME_CONST,
+                tolerance=config().time_const,
             )
             if not timed_cache_data["merge_success_flag"].isna().any():
                 return timed_cache_data.drop(columns=["merge_success_flag"])

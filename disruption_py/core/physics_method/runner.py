@@ -62,7 +62,7 @@ def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams) -> pd.Da
         or not np.isclose(
             pre_filled_shot_data["time"],
             physics_method_params.times,
-            atol=config().TIME_CONST,
+            atol=config().time_const,
         ).all()
     ):
         physics_method_params.logger.error(

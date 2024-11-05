@@ -95,7 +95,7 @@ def get_cached_from_fresh(
             sql_data,
             on=merge_col,
             direction="nearest",
-            tolerance=config().TIME_CONST,
+            tolerance=config().time_const,
         )
     return shot_data
 

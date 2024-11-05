@@ -42,7 +42,7 @@ class ProcessMDSConnection:
         from the configuration.
         """
         return SharedInstance(ProcessMDSConnection).get_instance(
-            config(tokamak).MDSPLUS_CONNECTION_STRING
+            config(tokamak).inout.mds.mdsplus_connection_string
         )
 
     def get_shot_connection(self, shot_id: int):
