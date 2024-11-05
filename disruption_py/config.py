@@ -33,13 +33,19 @@ def config(tokamak: Union[Enum, str] = None):
         tokamak = tokamak.value
 
     if tokamak not in configs:
+
+        # enforce permissions for user config
+        user_config = os.path.expanduser("~/.config/disruption-py/user.toml")
+        if os.path.exists(user_config):
+            os.chmod(user_config, 0o600)
+
         configs[tokamak] = Dynaconf(
             envvar_prefix="DISPY",
             root_path=os.path.dirname(__file__),
             settings_files=[
                 "config.toml",
                 f"machine/{tokamak}/config.toml",
-                os.path.expanduser("~/.config/disruption-py/user.toml"),
+                user_config,
             ],
             environments=True,
             default_env="default",
