@@ -22,7 +22,7 @@ def main():
         shape = (247, 17)
     elif tokamak is Tokamak.CMOD:
         shotlist = [1150805012]
-        shape = (62, 25)
+        shape = (62, 24)
     else:
         raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 
