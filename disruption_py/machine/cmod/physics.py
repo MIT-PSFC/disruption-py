@@ -644,63 +644,6 @@ class CmodPhysicsMethods:
         return output
 
     @staticmethod
-    def _get_kappa_area(times, aminor, area, a_times):
-        """
-        Calculate and interpolate kappa_area
-
-        Parameters
-        ----------
-        times : np.ndarray
-            The time array for which to calculate the kappa_area.
-        aminor : np.ndarray
-            The minor radius values.
-        area : np.ndarray
-            The area values.
-        a_times : np.ndarray
-            The time array corresponding to the area values.
-
-        Returns
-        -------
-        dict
-            A dictionary containing the kappa_area.
-        """
-        output = {"kappa_area": interp1(a_times, area / (np.pi * aminor**2), times)}
-        return output
-
-    @staticmethod
-    @physics_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
-    def get_kappa_area(params: PhysicsMethodParams):
-        """
-        Retrieve and calculate the plasma's ellipticity (kappa, also known as
-        the elongation) using its area and minor radius.
-
-        Parameters
-        ----------
-        params : PhysicsMethodParams
-            The parameters containing the MDSplus connection, shot id and more.
-
-        Returns
-        -------
-        dict
-            A dictionary containing the calculated "kappa_area".
-        """
-        aminor = params.mds_conn.get_data(
-            r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
-        )
-        area = params.mds_conn.get_data(
-            r"\efit_aeqdsk:area", tree_name="_efit_tree", astype="float64"
-        )
-        times = params.mds_conn.get_data(
-            r"\efit_aeqdsk:time", tree_name="_efit_tree", astype="float64"
-        )
-
-        aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
-        # make sure area is not 0 or less than 0
-        area[area <= 0] = 3.14 * 0.001**2
-        output = CmodPhysicsMethods._get_kappa_area(params.times, aminor, area, times)
-        return output
-
-    @staticmethod
     def _get_rotation_velocity(times, intensity, time, vel, hirextime):
         """
         Uses spectroscopy graphs of ionized (to hydrogen and helium levels) Argon
