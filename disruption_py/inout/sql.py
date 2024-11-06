@@ -71,31 +71,33 @@ class ShotDatabase:
     @classmethod
     def from_config(cls, tokamak: Tokamak):
         """
-        Initialize database from config file.
-        """
-        return cls._from_dict(config(tokamak).inout.sql)
-
-    @classmethod
-    def _from_dict(cls, database_dict: dict):
-        """
-        Initialize database from config file.
+        Initialize database from config.
         """
 
-        # read profile
-        profile_path = database_dict["profile_path"]
-        profile = os.path.expanduser(profile_path)
-        with open(profile, "r", encoding="utf-8") as fio:
-            db_user, db_pass = fio.read().split()[-2:]
+        db_conf = config(tokamak).inout.sql
+
+        # read sybase login
+        if any(f"db_{key}" not in db_conf for key in ["user", "pass"]):
+            db_name = db_conf["db_name"]
+            for name in [db_name.lower(), db_name.upper()]:
+                profile = os.path.expanduser(f"~/{name}.sybase_login")
+                if not os.path.exists(profile):
+                    continue
+                with open(profile, "r", encoding="utf-8") as fio:
+                    db_conf["db_user"], db_conf["db_pass"] = fio.read().split()[-2:]
+                break
+            else:
+                raise ValueError("could not read DB username and password.")
 
         return SharedInstance(ShotDatabase).get_instance(
-            driver=database_dict["driver"],
-            host=database_dict["host"],
-            port=database_dict["port"],
-            db_name=database_dict["db_name"],
-            user=db_user,
-            passwd=db_pass,
-            protected_columns=without_duplicates(database_dict["protected_columns"]),
-            write_database_table_name=database_dict.get("write_database_table_name"),
+            driver=db_conf["driver"],
+            host=db_conf["host"],
+            port=db_conf["port"],
+            db_name=db_conf["db_name"],
+            user=db_conf["db_user"],
+            passwd=db_conf["db_pass"],
+            protected_columns=without_duplicates(db_conf["protected_columns"]),
+            write_database_table_name=db_conf.get("write_database_table_name"),
         )
 
     def _get_connection_string(self, db_name):
