@@ -108,7 +108,7 @@ poetry add disruption-py
 pip install disruption-py
 ```
 
-For custom installations, please refer to our [Installation guide](https://mit-psfc.github.io/disruption-py/INSTALL/).
+For custom installations, please refer to our [Installation guide](docs/INSTALL.md).
 
 
 ## Getting Started
