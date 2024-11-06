@@ -1801,7 +1801,7 @@ class CmodPhysicsMethods:
         btor = params.mds_conn.get_data(
             r"\efit_aeqdsk:btaxp", tree_name="_efit_tree", astype="float64"
         )  # [T]
-
+        
         # Calculate beta_n
         with np.errstate(divide="ignore", invalid="ignore"):
             ip_normalized = ip / (aminor * btor)
