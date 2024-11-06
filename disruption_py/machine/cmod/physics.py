@@ -1761,15 +1761,17 @@ class CmodPhysicsMethods:
     )
     def get_beta_normalized(params: PhysicsMethodParams):
         """
-        Calculate the normalized beta (betan) also known as the Troyon factor.
+        Calculate the normalized beta (beta_n) also known as the Troyon factor.
 
-        betan is defined as the total plasma beta (p/(B^2/2mu_0))
-        divided by (Ip [MA]/(a*Bt)).
+        beta_n is defined as the total plasma beta (p/(B^2/2mu_0))
+        divided by Ip [MA]/(a*Bt).
 
-        Since beta_total is dominated by beta_toroidal
-        (1/beta_tot = 1/beta_tor + 1/beta_pol), we approximate betan ~= betat
-        for the calculation. This definition is equivalent to \efit_aeqdsk:betan
-        which isn't available for pre-2000 shots.
+        Since the total beta is dominated by the toroidal beta
+        (1/beta_tot = 1/beta_tor + 1/beta_pol), we approximate beta_n using
+        beta_t. This definition is consistent with that of \efit_aeqdsk:betan
+        which isn't available for pre-2000 shots. For the same reason we use
+        \cpasma and \btaxp from AEQDSK instead of \ip and \btor from \magnetics
+        for the plasma current and toroidal field data.
 
         Parameters
         ----------
@@ -1778,41 +1780,35 @@ class CmodPhysicsMethods:
 
         Returns
         -------
-        betan: in percentage
+        beta_n: the normalized beta given in percentage.
+
+        References
+        ----------
+        - http://wiki.fusenet.eu/fusionwiki/index.php/Beta
+
+        Last major update by William Wei on 11/6/24
         """
-        # Get signals
+        # Get signals from EFIT tree
         beta_t, efittime = params.mds_conn.get_data_with_dims(
             r"\efit_aeqdsk:betat", tree_name="_efit_tree", astype="float64"
         )  # [%], [s]
-        # ip = CmodPhysicsMethods.get_ip_parameters(params=params)["ip"] / 1e6  # [MA]
+        ip = params.mds_conn.get_data(
+            r"\efit_aeqdsk:cpasma/1e6", tree_name="_efit_tree", astype="float64"
+        )  # [MA]
         aminor = params.mds_conn.get_data(
             r"\efit_aeqdsk:aout/100", tree_name="_efit_tree", astype="float64"
         )  # [m]
-        # btor, t_mag = params.mds_conn.get_data_with_dims(
-        #     r"\btor", tree_name="magnetics"
-        # )  # [T], [s]
-
-        # Interpolate betat, aminor, and btor to params.times (ip already in requested timebase)
-        beta_t = interp1(efittime, beta_t, params.times)
-        aminor = interp1(efittime, aminor, params.times)
-        # btor = interp1(t_mag, btor, params.times)
-
-        # TEST: use EFIT ip & btor
-        ip = (
-            params.mds_conn.get_data(
-                r"\efit_aeqdsk:cpasma", tree_name="_efit_tree", astype="float64"
-            )
-            / 1e6
-        )
         btor = params.mds_conn.get_data(
             r"\efit_aeqdsk:btaxp", tree_name="_efit_tree", astype="float64"
-        )
-        ip = interp1(efittime, ip, params.times)
-        btor = interp1(efittime, btor, params.times)
+        )  # [T]
 
-        # Calculate betan
-        ip_normalized = ip / (aminor * btor)
-        beta_n = beta_t / ip_normalized
+        # Calculate beta_n
+        with np.errstate(divide="ignore", invalid="ignore"):
+            ip_normalized = ip / (aminor * btor)
+            beta_n = beta_t / ip_normalized
+            
+        # Interpolate beta_n to params.times
+        beta_n = interp1(efittime, beta_n, params.times)
 
         return {"beta_n_calc": beta_n}
 
