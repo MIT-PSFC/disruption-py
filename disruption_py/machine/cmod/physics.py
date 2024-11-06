@@ -1756,7 +1756,7 @@ class CmodPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["beta_n_calc"],
+        columns=["beta_n"],
         tokamak=Tokamak.CMOD,
     )
     def get_beta_normalized(params: PhysicsMethodParams):
@@ -1806,11 +1806,11 @@ class CmodPhysicsMethods:
         with np.errstate(divide="ignore", invalid="ignore"):
             ip_normalized = ip / (aminor * btor)
             beta_n = beta_t / ip_normalized
-            
+
         # Interpolate beta_n to params.times
         beta_n = interp1(efittime, beta_n, params.times)
 
-        return {"beta_n_calc": beta_n}
+        return {"beta_n": beta_n}
 
     @staticmethod
     def is_on_blacklist(shot_id: int) -> bool:
