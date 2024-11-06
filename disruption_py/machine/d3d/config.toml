@@ -2,7 +2,6 @@
 mdsplus_connection_string = "atlas"
 
 [d3d.inout.sql]
-profile_path = "~/D3DRDB.sybase_login"
 driver = "FreeTDS"
 host = "d3drdb"
 port = 8001
