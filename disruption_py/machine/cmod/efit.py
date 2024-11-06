@@ -114,7 +114,7 @@ class CmodEfitMethods:
             print("unable to get V_surf")
             efit_data["v_surf"] = np.full(len(efit_time), np.nan)
 
-        # For shots before 2000, compute beta_n and v_loop
+        # For shots before 2000, compute v_loop
         if params.shot_id <= 1000000000:
 
             # Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally

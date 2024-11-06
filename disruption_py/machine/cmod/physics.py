@@ -1782,7 +1782,8 @@ class CmodPhysicsMethods:
 
         Returns
         -------
-        beta_n: the normalized beta given in percentage.
+        dict
+            A dictionary containing the beta_n data given in percentage.
 
         References
         ----------
