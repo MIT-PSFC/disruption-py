@@ -1755,10 +1755,7 @@ class CmodPhysicsMethods:
         return {"sxr": sxr}
 
     @staticmethod
-    @physics_method(
-        columns=["beta_n"],
-        tokamak=Tokamak.CMOD,
-    )
+    @physics_method(columns=["beta_n"], tokamak=Tokamak.CMOD)
     def get_beta_normalized(params: PhysicsMethodParams):
         """
         Calculate the normalized beta (beta_n) also known as the Troyon factor.
