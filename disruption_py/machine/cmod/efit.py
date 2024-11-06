@@ -30,7 +30,6 @@ class CmodEfitMethods:
     """
 
     efit_cols = {
-        "beta_n": r"\efit_aeqdsk:betan",
         "beta_p": r"\efit_aeqdsk:betap",
         "kappa": r"\efit_aeqdsk:eout",
         "li": r"\efit_aeqdsk:ali",
@@ -59,7 +58,6 @@ class CmodEfitMethods:
             *efit_derivs.keys(),
             "v_surf",
             "v_loop_efit",
-            "beta_n",
         ],
         tokamak=Tokamak.CMOD,
     )
@@ -116,7 +114,7 @@ class CmodEfitMethods:
             print("unable to get V_surf")
             efit_data["v_surf"] = np.full(len(efit_time), np.nan)
 
-        # For shots before 2000, compute beta_n and v_loop
+        # For shots before 2000, compute v_loop
         if params.shot_id <= 1000000000:
 
             # Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally
@@ -129,14 +127,6 @@ class CmodEfitMethods:
             except mdsExceptions.MdsException:
                 print("unable to get v_loop_efit")
                 efit_data["v_loop_efit"] = np.full(len(efit_time), np.nan)
-
-            # Compute beta_n
-            beta_t = params.mds_conn.get_data(
-                r"\efit_aeqdsk:betat", tree_name="_efit_tree", astype="float64"
-            )  # [dimensionless]
-            efit_data["beta_n"] = np.reciprocal(
-                np.reciprocal(beta_t) + np.reciprocal(efit_data["beta_p"])
-            )
 
         if not np.array_equal(params.times, efit_time):
             for param in efit_data:
