@@ -17,11 +17,11 @@
 [![Linting: yamllint](https://img.shields.io/badge/linting-yamllint-lightblue)](https://github.com/adrienverge/yamllint)
 [![Testing: pytest](https://img.shields.io/badge/testing-pytest-red)](https://github.com/pylint-dev/pylint-pytest)
 
-[![Supported versions](https://img.shields.io/pypi/pyversions/disruption-py)](pyproject.toml)
+[![Supported versions](https://img.shields.io/pypi/pyversions/disruption-py)](https://github.com/MIT-PSFC/disruption-py/blob/main/pyproject.toml)
 [![Stats: downloads](https://static.pepy.tech/badge/disruption-py)](https://pepy.tech/project/disruption-py)
 [![Available: PyPI](https://img.shields.io/pypi/v/disruption-py.svg)](https://pypi.org/project/disruption-py/)
 [![Available: Zenodo](https://zenodo.org/badge/DOI/10.5281/zenodo.13935223.svg)](https://doi.org/10.5281/zenodo.13935223)
-[![License: MIT](https://img.shields.io/pypi/l/disruption-py?color=750014)](LICENSE)
+[![License: MIT](https://img.shields.io/pypi/l/disruption-py?color=750014)](https://github.com/MIT-PSFC/disruption-py/blob/main/LICENSE)
 
 ## Concept
 
@@ -48,7 +48,7 @@ DisruptionPy makes it easy to retrieve experimental data from [MDSplus](https://
 Users can create their own routines and/or use built-in ones that retrieve and derive a variety of important signals from experimental data for disruption analysis.
 These routines are then interpolated on a requested timebase across the specified set of plasma discharges (or shots) to assemble a dataset and save it under a variety of available formats.
 
-![flowchart](docs/workflow.png)
+<img src="docs/workflow.png" alt="Schematic flowchart of a typical DisruptionPy workflow. By Y Wei (2024)" width="400" onerror="this.onerror=null;this.src='workflow.png';" />
 
 _Figure: Schematic flowchart of a typical DisruptionPy workflow. By Y Wei (2024) [6]._
 
@@ -108,7 +108,7 @@ poetry add disruption-py
 pip install disruption-py
 ```
 
-For custom installations, please refer to our [Installation guide](docs/INSTALL.md).
+For custom installations, please refer to our [Installation guide](https://mit-psfc.github.io/disruption-py/INSTALL/).
 
 
 ## Getting Started
