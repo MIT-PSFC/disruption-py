@@ -167,15 +167,8 @@ def get_shots_data(
     # log stop
     total = len(shotlist_list)
     percent_success = num_success / total * 100
-    if percent_success >= 75:
-        level = "SUCCESS"
-    elif percent_success >= 25:
-        level = "WARNING"
-    else:
-        level = "ERROR"
-    logger.log(
-        level,
-        "Completed workflow! "
+    logger.info(
+        "Completed workflow: "
         "retrieved {num_success:,}/{total:,} shots ({percent_success:.2f}%) "
         "in {elapsed} ({each:.3f} s/shot)",
         num_success=num_success,
