@@ -1767,11 +1767,13 @@ class CmodPhysicsMethods:
         divided by Ip [MA]/(a*Bt).
 
         Since the total beta is dominated by the toroidal beta
-        (1/beta_tot = 1/beta_tor + 1/beta_pol), we approximate beta_n using
-        beta_t. This definition is consistent with that of efit_aeqdsk:betan
-        which isn't available for pre-2000 shots. For the same reason we use
-        cpasma and btaxp from AEQDSK instead of ip and btor from magnetics
-        for the plasma current and toroidal field data.
+        (1/beta_tot = 1/beta_tor + 1/beta_pol), we can approximate beta_n
+        using beta_t. This definition is consistent with that of
+        EFIT_AEQDSK:BETAN which isn't available for pre-2000 shots.
+
+        To make the input data consistent with EFIT_AEQDSK:BETAN, we use
+        CPASMA and BTAXP from EFIT_AEQDSK instead of IP and BTOR from MAGNETICS
+        for Ip and Bt.
 
         Parameters
         ----------
