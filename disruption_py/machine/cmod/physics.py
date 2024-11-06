@@ -1768,9 +1768,9 @@ class CmodPhysicsMethods:
 
         Since the total beta is dominated by the toroidal beta
         (1/beta_tot = 1/beta_tor + 1/beta_pol), we approximate beta_n using
-        beta_t. This definition is consistent with that of \efit_aeqdsk:betan
+        beta_t. This definition is consistent with that of efit_aeqdsk:betan
         which isn't available for pre-2000 shots. For the same reason we use
-        \cpasma and \btaxp from AEQDSK instead of \ip and \btor from \magnetics
+        cpasma and btaxp from AEQDSK instead of ip and btor from magnetics
         for the plasma current and toroidal field data.
 
         Parameters
