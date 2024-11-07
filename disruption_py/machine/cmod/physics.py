@@ -1811,6 +1811,38 @@ class CmodPhysicsMethods:
         beta_n = interp1(efittime, beta_n, params.times)
 
         return {"beta_n": beta_n}
+    
+    @staticmethod
+    @physics_method(columns=["v_surf"], tokamak=Tokamak.CMOD)
+    def get_surface_voltage(params: PhysicsMethodParams):
+        """
+        Calculate the plasma surface voltage defined as v_surf=-deriv(SSIBRY)*2pi.
+        
+        Note that there is a VSURFA node in the EFIT tree, however the stored data
+        are all zeros for every shot.
+        
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the v_surf data.
+
+        Last major update by William Wei on 11/7/24
+        """
+        # Get signals from EFIT tree
+        ssibry, efit_time = params.mds_conn.get_data_with_dims(
+            r"\efit_aeqdsk:ssibry", tree_name="_efit_tree", astype="float64"
+        )  # [V*s/rad], [s]
+        
+        # Compute v_surf and interpolate to params.times
+        v_surf = -2 * np.pi* np.gradient(ssibry, efit_time)
+        v_surf = interp1(efit_time, v_surf, params.times)
+        
+        return {'v_surf': v_surf}
 
     @staticmethod
     def is_on_blacklist(shot_id: int) -> bool:
