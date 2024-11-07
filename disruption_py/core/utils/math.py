@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 from scipy.interpolate import interp1d
-from scipy.optimize import curve_fit
+from scipy.optimize import OptimizeWarning, curve_fit
 from scipy.signal import lfilter, medfilt
 
 pd.options.mode.chained_assignment = None
@@ -187,8 +187,9 @@ def gaussian_fit(*args):
     coeffs : array
         The coefficients of the fit.
     """
-
-    coeffs, *_ = curve_fit(gauss, *args)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", OptimizeWarning)
+        coeffs, *_ = curve_fit(gauss, *args)
     return coeffs
 
 
@@ -216,7 +217,9 @@ def gauss(x, *params):
 
 def gaussian_fit_with_fixed_mean(mu, *args):
     """Same as gaussian_fit() but with mu as a fixed parameter"""
-    coeffs, *_ = curve_fit(lambda x, a, sigma: gauss(x, a, mu, sigma), *args)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", OptimizeWarning)
+        coeffs, *_ = curve_fit(lambda x, a, sigma: gauss(x, a, mu, sigma), *args)
     return coeffs
 
 
