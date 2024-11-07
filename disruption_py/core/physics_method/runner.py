@@ -214,7 +214,9 @@ def populate_method(
     method = bound_method_metadata.bound_method
     name = bound_method_metadata.name
 
+    physics_method_params.logger.trace("Started: {name}", name=name)
     result = None
+
     try:
         result = method(params=physics_method_params)
     except (
