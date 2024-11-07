@@ -56,7 +56,6 @@ class CmodEfitMethods:
         columns=[
             *efit_cols.keys(),
             *efit_derivs.keys(),
-            "v_surf",
             "v_loop_efit",
         ],
         tokamak=Tokamak.CMOD,
@@ -103,16 +102,6 @@ class CmodEfitMethods:
                 efit_time,
                 edge_order=1,
             )
-
-        # Get data for V_surf := deriv(\ANALYSIS::EFIT_SSIBRY)*2*pi
-        try:
-            ssibry = params.mds_conn.get_data(
-                r"\efit_geqdsk:ssibry", tree_name="_efit_tree", astype="float64"
-            )
-            efit_data["v_surf"] = np.gradient(ssibry, efit_time) * 2 * np.pi
-        except mdsExceptions.MdsException:
-            print("unable to get V_surf")
-            efit_data["v_surf"] = np.full(len(efit_time), np.nan)
 
         # For shots before 2000, compute v_loop
         if params.shot_id <= 1000000000:
