@@ -52,7 +52,8 @@ class ProcessMDSConnection:
 
 def _better_mds_exceptions(func):
     """
-    Decorator to catch MDSplus exceptions and add the tree and node path to the error.
+    Decorator to catch MDSplus exceptions and recreate them with a more descriptive
+    error message which includes the tree and the node path.
     """
 
     def wrapper(*args, **kwargs):
@@ -63,14 +64,19 @@ def _better_mds_exceptions(func):
             path = kwargs.get("path", None)
         try:
             return func(*args, **kwargs)
-        except MDSplus.mdsExceptions.TreeNODATA:
-            # Raise from None to avoid chaining exceptions
-            raise MDSplus.mdsExceptions.TreeNODATA(
-                f"No data available. Tree: {self.last_open_tree}, Node: {path}"
+        except MDSplus.mdsExceptions.TreeFOPENR:
+            nick = kwargs["tree_name"]
+            tree = self.get_tree_name_of_nickname(nick)
+            raise MDSplus.mdsExceptions.TreeFOPENR(
+                f"Tree not found. Nick: {nick}, Tree: {tree}"
             ) from None
         except MDSplus.mdsExceptions.TreeNNF:
             raise MDSplus.mdsExceptions.TreeNNF(
-                f"Node Not Found. Tree: {self.last_open_tree}, Node: {path}"
+                f"Node not found. Tree: {self.last_open_tree}, Node: {path}"
+            ) from None
+        except MDSplus.mdsExceptions.TreeNODATA:
+            raise MDSplus.mdsExceptions.TreeNODATA(
+                f"No data available. Tree: {self.last_open_tree}, Node: {path}"
             ) from None
 
     return wrapper

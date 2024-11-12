@@ -219,6 +219,7 @@ def populate_method(
     try:
         result = method(params=physics_method_params)
     except (
+        mdsExceptions.TreeFOPENR,
         mdsExceptions.TreeNNF,
         mdsExceptions.TreeNODATA,
         CalculationError,
