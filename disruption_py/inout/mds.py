@@ -70,7 +70,7 @@ def _better_mds_exceptions(func):
             if nick == tree:
                 nick = ""
             raise MDSplus.mdsExceptions.TreeFOPENR(
-                f"Tree not found. "
+                "Tree not found. "
                 + (f"Nick: {nick}, " if nick else "")
                 + f"Tree: {tree}"
             ) from None
