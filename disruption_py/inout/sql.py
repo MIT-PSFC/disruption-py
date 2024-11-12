@@ -76,11 +76,12 @@ class ShotDatabase:
         self.protected_columns = protected_columns
         self.write_database_table_name = write_database_table_name
 
+        dialect = "mysql" if "mysql" in self.driver.lower() else "mssql"
         self.connection_string = self._get_connection_string(self.db_name)
         self._thread_connections = {}
         quoted_connection_string = quote_plus(self.connection_string)
         self.engine = create_engine(
-            f"mssql+pyodbc:///?odbc_connect={quoted_connection_string}"
+            f"{dialect}+pyodbc:///?odbc_connect={quoted_connection_string}"
         )
 
     @classmethod
