@@ -50,8 +50,18 @@ class ShotDatabase:
         )
         drivers = pyodbc.drivers()
         if driver in drivers:
+            # same driver
             self.driver = driver
+        elif any(d.startswith(driver) for d in drivers):
+            # fuzzy driver
+            self.driver = next(d for d in drivers if d.startswith(driver))
+            logger.info(
+                "Database driver fallback: '{driver}' -> '{class_driver}'",
+                driver=driver,
+                class_driver=self.driver,
+            )
         else:
+            # any driver
             self.driver = drivers[0]
             logger.warning(
                 "Database driver fallback: '{driver}' -> '{class_driver}'",
