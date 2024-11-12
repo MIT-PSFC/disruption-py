@@ -50,6 +50,29 @@ class ProcessMDSConnection:
         return MDSConnection(self.conn, shot_id)
 
 
+def _better_mds_exceptions(func):
+    """
+    Decorator to catch MDSplus exceptions and add the tree and node path to the error.
+    """
+
+    def wrapper(*args, **kwargs):
+        self = args[0]
+        path = args[1]
+        try:
+            return func(*args, **kwargs)
+        except MDSplus.mdsExceptions.TreeNODATA:
+            # Raise from None to avoid chaining exceptions
+            raise MDSplus.mdsExceptions.TreeNODATA(
+                f"No data available. Tree: {self.last_open_tree}, Node: {path}"
+            ) from None
+        except MDSplus.mdsExceptions.TreeNNF:
+            raise MDSplus.mdsExceptions.TreeNNF(
+                f"Node Not Found. Tree: {self.last_open_tree}, Node: {path}"
+            ) from None
+
+    return wrapper
+
+
 class MDSConnection:
     """
     Wrapper class for MDSPlus Connection class used for handling individual shots.
@@ -91,6 +114,7 @@ class MDSConnection:
         """
         self.last_open_tree = None
 
+    @_better_mds_exceptions
     def get(self, expression: str, arguments: Any = None, tree_name: str = None) -> Any:
         """
         Evaluate the specified expression.
@@ -121,6 +145,7 @@ class MDSConnection:
 
     # Convenience methods
 
+    @_better_mds_exceptions
     def get_data(
         self,
         path: str,
@@ -158,6 +183,7 @@ class MDSConnection:
 
         return data
 
+    @_better_mds_exceptions
     def get_data_with_dims(
         self,
         path: str,
@@ -203,6 +229,7 @@ class MDSConnection:
 
         return data, *dims
 
+    @_better_mds_exceptions
     def get_dims(
         self,
         path: str,
