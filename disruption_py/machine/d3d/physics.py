@@ -71,7 +71,7 @@ class D3DPhysicsMethods:
             h_98 = interp1(t_h_98, h_98, params.times, "linear")
             output["h98"] = h_98
         except ValueError as e:
-            params.logger.info("Failed to get H98 signal. Returning NaNs.")
+            params.logger.warning("Failed to get H98 signal. Returning NaNs.")
             params.logger.opt(exception=True).debug(e)
         return output
 
@@ -98,7 +98,7 @@ class D3DPhysicsMethods:
             h_alpha = interp1(t_h_alpha, h_alpha, params.times, "linear")
             output["h_alpha"] = h_alpha
         except ValueError as e:
-            params.logger.info("Failed to get H_alpha signal. Returning NaNs.")
+            params.logger.warning("Failed to get H_alpha signal. Returning NaNs.")
             params.logger.opt(exception=True).debug(e)
         return output
 
@@ -140,7 +140,7 @@ class D3DPhysicsMethods:
                 p_nbi = np.zeros(len(params.times))
         except mdsExceptions.MdsException as e:
             p_nbi = np.zeros(len(params.times))
-            params.logger.info("Failed to open NBI node")
+            params.logger.warning("Failed to open NBI node")
             params.logger.opt(exception=True).debug(e)
 
         # Get electron cyclotron heating (ECH) power. It's point data, so it's not
@@ -170,7 +170,7 @@ class D3DPhysicsMethods:
                 p_ech = np.zeros(len(params.times))
         except mdsExceptions.MdsException as e:
             p_ech = np.zeros(len(params.times))
-            params.logger.info("Failed to open ECH node. Setting to zeros")
+            params.logger.warning("Failed to open ECH node. Setting to zeros")
             params.logger.opt(exception=True).debug(e)
 
         # Get ohmic power and loop voltage
@@ -193,7 +193,7 @@ class D3DPhysicsMethods:
                 r"\bol_prm", tree_name="bolom"
             )
         except mdsExceptions.MdsException as e:
-            params.logger.info("Failed to open bolom tree.")
+            params.logger.warning("Failed to open bolom tree.")
             params.logger.opt(exception=True).debug(e)
         upper_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
         lower_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
@@ -381,7 +381,7 @@ class D3DPhysicsMethods:
                 g_f = ne / n_g * 1e-20
         except (mdsExceptions.MdsException, ValueError) as e:
             # TODO: Confirm that there is a separate exception if ptdata name doesn't exist
-            params.logger.info("Failed to compute Greenwald fraction.")
+            params.logger.warning("Failed to compute Greenwald fraction.")
             params.logger.opt(exception=True).debug(e)
 
             err = "operands could not be broadcast together with shapes"
@@ -458,7 +458,7 @@ class D3DPhysicsMethods:
                 n_g_rt = ip_rt / (np.pi * a_minor_rt**2)  # [MA/m^2]
                 g_f_rt = ne_rt / 1.0e20 / n_g_rt
         except ValueError as e:
-            params.logger.info("Failed to compute Greenwald fraction rt.")
+            params.logger.warningo("Failed to compute Greenwald fraction rt.")
             params.logger.opt(exception=True).debug(e)
 
             err = "operands could not be broadcast together with shapes"
@@ -513,7 +513,7 @@ class D3DPhysicsMethods:
             ip = interp1(t_ip, ip, params.times, "linear")
             dip_dt = interp1(t_ip, dip_dt, params.times, "linear")
         except mdsExceptions.MdsException as e:
-            params.logger.info("Failed to get measured plasma current parameters")
+            params.logger.warningo("Failed to get measured plasma current parameters")
             params.logger.opt(exception=True).debug(e)
         # Get programmed plasma current parameters
         try:
@@ -540,7 +540,7 @@ class D3DPhysicsMethods:
             ip_prog = interp1(t_ip_prog, ip_prog, params.times, "linear")
             dipprog_dt = interp1(t_ip_prog, dipprog_dt, params.times, "linear")
         except mdsExceptions.MdsException as e:
-            params.logger.info("Failed to get programmed plasma current parameters")
+            params.logger.warningo("Failed to get programmed plasma current parameters")
             params.logger.opt(exception=True).debug(e)
         # Now get the signal pointname 'ipimode'.  This PCS signal denotes whether
         # or not PCS is actually feedback controlling the plasma current.  There
@@ -558,7 +558,7 @@ class D3DPhysicsMethods:
             t_ipimode = t_ipimode / 1.0e3  # [ms] -> [s]
             ipimode = interp1(t_ipimode, ipimode, params.times, "linear")
         except mdsExceptions.MdsException as e:
-            params.logger.info("Failed to get ipimode signal. Setting to NaN.")
+            params.logger.warningo("Failed to get ipimode signal. Setting to NaN.")
             params.logger.opt(exception=True).debug(e)
             ipimode = np.full(len(params.times), np.nan)
         feedback_on_indices = np.where((ipimode == 0) | (ipimode == 3))
@@ -583,7 +583,7 @@ class D3DPhysicsMethods:
             power_supply_railed[railed_indices] = 1
             ip_error[railed_indices] = np.nan
         except mdsExceptions.MdsException as e:
-            params.logger.info("Failed to get epsoff signal. Setting to NaN.")
+            params.logger.warningo("Failed to get epsoff signal. Setting to NaN.")
             params.logger.opt(exception=True).debug(e)
             power_supply_railed = [np.nan]
         output = {
@@ -635,7 +635,7 @@ class D3DPhysicsMethods:
             ip_rt = interp1(t_ip_rt, ip_rt, params.times, "linear")
             dip_dt_rt = interp1(t_ip_rt, dip_dt_rt, params.times, "linear")
         except mdsExceptions.MdsException as e:
-            params.logger.info("Failed to get measured plasma current parameters")
+            params.logger.warningo("Failed to get measured plasma current parameters")
             params.logger.opt(exception=True).debug(e)
         # Get programmed plasma current parameters
         try:
@@ -661,7 +661,7 @@ class D3DPhysicsMethods:
             ip_prog_rt = interp1(t_ip_prog_rt, ip_prog_rt, params.times, "linear")
             dipprog_dt_rt = interp1(t_ip_prog_rt, dipprog_dt_rt, params.times, "linear")
         except mdsExceptions.MdsException as e:
-            params.logger.info("Failed to get programmed plasma current parameters")
+            params.logger.warningo("Failed to get programmed plasma current parameters")
             params.logger.opt(exception=True).debug(e)
         try:
             ip_error_rt, t_ip_error_rt = params.mds_conn.get_data_with_dims(
@@ -671,7 +671,7 @@ class D3DPhysicsMethods:
             ip_error_rt = ip_error_rt * 1.0e6 * 0.5  # [MA] -> [A]
             ip_error_rt = interp1(t_ip_error_rt, ip_error_rt, params.times, "linear")
         except mdsExceptions.MdsException as e:
-            params.logger.info("Failed to get ipeecoil signal. Setting to NaN.")
+            params.logger.warningo("Failed to get ipeecoil signal. Setting to NaN.")
             params.logger.opt(exception=True).debug(e)
         # Now get the signal pointname 'ipimode'.  This PCS signal denotes whether
         # or not PCS is actually feedback controlling the plasma current.  There
@@ -689,7 +689,7 @@ class D3DPhysicsMethods:
             t_ipimode = t_ipimode / 1.0e3  # [ms] -> [s]
             ipimode = interp1(t_ipimode, ipimode, params.times, "linear")
         except mdsExceptions.MdsException as e:
-            params.logger.info("Failed to get ipimode signal. Setting to NaN.")
+            params.logger.warningo("Failed to get ipimode signal. Setting to NaN.")
             params.logger.opt(exception=True).debug(e)
             ipimode = np.full(len(params.times), np.nan)
         (feedback_off_indices,) = np.where((ipimode != 0) & (ipimode == 3))
@@ -716,7 +716,7 @@ class D3DPhysicsMethods:
             (ps_railed_indices,) = np.where(power_supply_railed != 0)
             ip_error_rt[ps_railed_indices] = np.nan
         except mdsExceptions.MdsException as e:
-            params.logger.info(
+            params.logger.warningo(
                 "Failed to get epsoff signal. power_supply_railed will be NaN.",
             )
             params.logger.opt(exception=True).debug(e)
@@ -769,7 +769,7 @@ class D3DPhysicsMethods:
             a_minor = interp1(t_a, a_minor, params.times, "linear")
             z_cur_norm = z_cur / a_minor
         except mdsExceptions.MdsException as e:
-            params.logger.info("Failed to get efit parameters")
+            params.logger.warningo("Failed to get efit parameters")
             params.logger.opt(exception=True).debug(e)
             z_cur_norm = z_cur / nominal_flattop_radius
         return {"zcur": z_cur, "zcur_normalized": z_cur_norm}
@@ -801,7 +801,9 @@ class D3DPhysicsMethods:
             b_tor = interp1(t_b_tor, b_tor, params.times)  # [T]
             n1rms_norm = n1rms / np.abs(b_tor)
         except mdsExceptions.MdsException as e:
-            params.logger.info("Failed to get b_tor signal to compute n1rms_normalized")
+            params.logger.warningo(
+                "Failed to get b_tor signal to compute n1rms_normalized"
+            )
             params.logger.opt(exception=True).debug(e)
             n1rms_norm = [np.nan]
         return {"n1rms": n1rms, "n1rms_normalized": n1rms_norm}
@@ -908,7 +910,7 @@ class D3DPhysicsMethods:
             rad_xdiv = interp1(t_rad_xdiv, rad_xdiv, params.times)
         except mdsExceptions.MdsException as e:
             calculate_prad_pf = True
-            params.logger.info(
+            params.logger.warningo(
                 "Failed to get CVA and XDIV from MDSPlus."
                 " Calculating locally, results may be inaccurate."
             )
@@ -924,7 +926,7 @@ class D3DPhysicsMethods:
             efit_dict = D3DPhysicsMethods._get_efit_dict(params)
         except (NotImplementedError, CalculationError, mdsExceptions.MdsException) as e:
             ts = {}
-            params.logger.info("Failed to get TS data")
+            params.logger.warningo("Failed to get TS data")
             params.logger.opt(exception=True).debug(e)
         if ts:
             ts["psin"], ts["rhovn"] = D3DPhysicsMethods.efit_rz_interp(ts, efit_dict)
@@ -939,7 +941,7 @@ class D3DPhysicsMethods:
                     params, fan=bolometer_fan, smoothing_window=smoothing_window
                 )
             except mdsExceptions.MdsException as e:
-                params.logger.info("Failed to get bolometer data")
+                params.logger.warningo("Failed to get bolometer data")
                 params.logger.opt(exception=True).debug(e)
 
         # Calculate te_pf & ne_pf
@@ -1220,7 +1222,7 @@ class D3DPhysicsMethods:
             )  # meters
             delta = (tritop + tribot) / 2.0
         except mdsExceptions.MdsException as e:
-            params.logger.info("Failed to obtain triangularity signals")
+            params.logger.warningo("Failed to obtain triangularity signals")
             params.logger.opt(exception=True).debug(e)
             delta = [np.nan]
         # Compute squareness
@@ -1233,7 +1235,7 @@ class D3DPhysicsMethods:
             )
             squareness = (sqfod + sqfou) / 2.0
         except mdsExceptions.MdsException as e:
-            params.logger.info("Failed to obtain squareness signals")
+            params.logger.warningo("Failed to obtain squareness signals")
             params.logger.opt(exception=True).debug(e)
             squareness = [np.nan]
         # Get aminor
@@ -1242,7 +1244,7 @@ class D3DPhysicsMethods:
                 r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
             )
         except mdsExceptions.MdsException as e:
-            params.logger.info("Failed to obtain aminor signals")
+            params.logger.warningo("Failed to obtain aminor signals")
             params.logger.opt(exception=True).debug(e)
             aminor = [np.nan]
         # Remove invalid indices
@@ -1258,7 +1260,7 @@ class D3DPhysicsMethods:
             if ~np.isnan(aminor[0]):
                 aminor[invalid_indices] = np.nan
         except mdsExceptions.MdsException as e:
-            params.logger.info(
+            params.logger.warningo(
                 "Failed to obtain chisq to remove unreliable time points.",
             )
             params.logger.opt(exception=True).debug(e)
@@ -1333,7 +1335,7 @@ class D3DPhysicsMethods:
                 lasers[laser]["time"] = t_sub_tree / 1.0e3  # [ms] -> [s]
             except mdsExceptions.MdsException as e:
                 lasers[laser] = None
-                params.logger.info(
+                params.logger.warningo(
                     "Failed to get {laser} time. Setting laser data to None.",
                     laser=laser,
                 )
@@ -1355,7 +1357,7 @@ class D3DPhysicsMethods:
                     )
                 except mdsExceptions.MdsException as e:
                     lasers[laser][node] = np.full(lasers[laser]["time"].shape, np.nan)
-                    params.logger.info(
+                    params.logger.warningo(
                         "Failed to get {laser}:{name}({node}) data, Setting to all NaNs.",
                         laser=laser,
                         name=name,
@@ -1554,7 +1556,7 @@ class D3DPhysicsMethods:
                 )
             except mdsExceptions.MdsException as e:
                 efit_dict[node] = np.full(len(efit_dict["time"]), np.nan)
-                params.logger.info(
+                params.logger.warningo(
                     "Failed to get {node} from efit, Setting to all NaNs.",
                     node=node,
                 )
