@@ -34,8 +34,8 @@ class EASTEfitMethods:
         "wmhd": r"\efit_a_eqdsk:wmhd",
         "chisq": r"\efit_a_eqdsk:chisq",
     }
-    efit_derivs = {"dbetap_dt": "beta_p", "dli_dt": 'li', 'dwmhd_dt': "wmhd"}
-    
+    efit_derivs = {"dbetap_dt": "beta_p", "dli_dt": "li", "dwmhd_dt": "wmhd"}
+
     pefit_cols = {
         "pbeta_n": r"\efit_aeqdsk:betan",
         "pbeta_p": r"\efit_a_eqdsk:betap",
@@ -92,7 +92,7 @@ class EASTEfitMethods:
             for param in efit_data:
                 efit_data[param] = interp1(efit_time, efit_data[param], params.times)
         return efit_data
-    
+
     @staticmethod
     @physics_method(
         columns=[
@@ -101,10 +101,10 @@ class EASTEfitMethods:
         tokamak=Tokamak.EAST,
     )
     def get_pefit_parameters(params: PhysicsMethodParams):
-        '''
-        Retrieve real-time P-EFIT (Parallel-EFIT) parameters from 
+        """
+        Retrieve real-time P-EFIT (Parallel-EFIT) parameters from
         the 'pefit_east' tree.
-        
+
         Parameters
         ----------
         params : PhysicsMethodParams
@@ -114,13 +114,13 @@ class EASTEfitMethods:
         -------
         dict
             A dictionary containing the retrieved P-EFIT parameters.
-        '''
+        """
         efit_data = {
             k: params.mds_conn.get_data(v, tree_name="pefit_east")
             for k, v in EASTEfitMethods.pefit_cols.items()
         }
-        efit_time = (
-            params.mds_conn.get_data(r"\efit_a_eqdsk:atime", tree_name="pefit_east")
+        efit_time = params.mds_conn.get_data(
+            r"\efit_a_eqdsk:atime", tree_name="pefit_east"
         )  # TODO: [unit?]
         # P-EFIT reconstructions are sometimes invalid, particularly when very close
         # to a disruption.  There are a number of P-EFIT parameters that can indicate
@@ -131,7 +131,7 @@ class EASTEfitMethods:
         #   - chisq < 20
         #   - convergence error < 1 (data stored in MDS+ is multiplied by 1e3)
         #   - ip > 180 kA
-        # For now, we only check the first two conditions. 
+        # For now, we only check the first two conditions.
         # If ever we want to extend analysis to ramp up or down we need to check ip.
         invalid_indices = np.where(
             (efit_data["pchisq"] > 50) & (efit_data["pconvergence"] < 1)
@@ -143,7 +143,3 @@ class EASTEfitMethods:
             for param in efit_data:
                 efit_data[param] = interp1(efit_time, efit_data[param], params.times)
         return efit_data
-    
-    
-    
-    
