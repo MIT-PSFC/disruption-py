@@ -136,7 +136,7 @@ class RetrievalManager:
             )
             return physics_method_params
         except Exception as e:
-            logger.error(shot_log_msg(shot_id, "Failed to setup shot!"))
+            logger.error(shot_log_msg(shot_id, f"Failed to setup shot! {e}"))
             mds_conn.cleanup()
             raise e
 
