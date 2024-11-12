@@ -190,6 +190,15 @@ class ShotDatabase:
         curs.close()
         return output
 
+    def get_version(self):
+        """
+        Query the version of the SQL database.
+        """
+        mysql = "mysql" in self.driver.lower()
+        query = "select " + ("version()" if mysql else "@@version")
+        version = self.query(query, use_pandas=False)
+        return version[0][0]
+
     def add_shot_data(
         self,
         shot_id: int,

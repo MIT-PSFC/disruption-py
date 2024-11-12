@@ -35,6 +35,7 @@ def main():
         raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 
     print(f"Initialized DB: {db.user}@{db.host}/{db.db_name}")
+    print("Version:", db.get_version())
 
     while queries:
 
