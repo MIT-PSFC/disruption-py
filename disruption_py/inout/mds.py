@@ -57,7 +57,10 @@ def _better_mds_exceptions(func):
 
     def wrapper(*args, **kwargs):
         self = args[0]
-        path = args[1]
+        if len(args) > 1:
+            path = args[1]
+        else:
+            path = kwargs.get("path", None)
         try:
             return func(*args, **kwargs)
         except MDSplus.mdsExceptions.TreeNODATA:
