@@ -96,6 +96,7 @@ class MDSConnection:
         self.tree_nicknames = {}
         self.last_open_tree = None
 
+    @_better_mds_exceptions
     def open_tree(self, tree_name: str):
         """
         Open the specified _name.
