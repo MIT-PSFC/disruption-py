@@ -361,7 +361,8 @@ def populate_shot(
 
     physics_method_params.logger.log(
         level,
-        "{level}! {quant} parameters have data: {num_valid}/{total} ({percent_valid:.2f}%) in {elapsed}",
+        "{level}! {quant} parameters have data: {num_valid}/{total} ({percent_valid:.2f}%)"
+        " in {elapsed}",
         level=level.capitalize(),
         quant=quant.capitalize(),
         num_valid=num_valid,
