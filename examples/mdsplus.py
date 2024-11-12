@@ -18,22 +18,25 @@ def main():
     if tokamak is Tokamak.D3D:
         shot = 161228
         shape = (196,)
+        efit = "efit01"
     elif tokamak is Tokamak.CMOD:
         shot = 1150805012
         shape = (2400,)
+        efit = "efit01"
     elif tokamak is Tokamak.EAST:
         shot = 55555
         shape = (102,)
+        efit = "efit_east"
     else:
         raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 
     mds = get_mdsplus_class(tokamak).conn
     print(f"Initialized MDSplus: {mds.hostspec}")
 
-    mds.openTree("EFIT01", shot)
+    mds.openTree(efit, shot)
     print("#", shot)
 
-    node = r"\efit_aeqdsk:time"
+    node = r"dim_of(\efit_aeqdsk:li)"
     print(">", node)
 
     out = mds.get(node).data()
