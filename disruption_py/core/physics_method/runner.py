@@ -21,6 +21,7 @@ from disruption_py.core.physics_method.metadata import (
     is_parametered_method,
 )
 from disruption_py.core.physics_method.params import PhysicsMethodParams
+from disruption_py.core.utils.misc import get_elapsed_time
 from disruption_py.machine.method_holders import get_method_holders
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 
@@ -192,7 +193,6 @@ def filter_methods_to_run(
 def populate_method(
     physics_method_params: PhysicsMethodParams,
     bound_method_metadata: BoundMethodMetadata,
-    start_time: float,
 ) -> Any:
     """
     Execute a physics method and log the results.
@@ -203,14 +203,13 @@ def populate_method(
         Parameters containing MDS connection and shot information
     bound_method_metadata : BoundMethodMetadata
         The metadata for a physics method like the associated tokamak, columns, etc.
-    start_time : float
-        The start time for measuring execution duration.
 
     Returns
     -------
     Any
         The result of the executed method, or None if an error occurred.
     """
+    start_time = time.time()
     method = bound_method_metadata.bound_method
     name = bound_method_metadata.name
 
@@ -317,7 +316,6 @@ def populate_shot(
             populate_method(
                 physics_method_params=physics_method_params,
                 bound_method_metadata=bound_method_metadata,
-                start_time=start_time,
             )
         )
 
@@ -363,12 +361,13 @@ def populate_shot(
 
     physics_method_params.logger.log(
         level,
-        "{level}! {quant} parameters have data: {num_valid}/{total} ({percent_valid:.2f}%)",
+        "{level}! {quant} parameters have data: {num_valid}/{total} ({percent_valid:.2f}%) in {elapsed}",
         level=level.capitalize(),
         quant=quant.capitalize(),
         num_valid=num_valid,
         total=num_parameters,
         percent_valid=percent_valid,
+        elapsed=get_elapsed_time(time.time() - start_time),
     )
 
     # TODO: This is a hack to get around the fact that some methods return
