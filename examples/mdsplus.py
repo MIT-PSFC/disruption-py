@@ -21,6 +21,9 @@ def main():
     elif tokamak is Tokamak.CMOD:
         shot = 1150805012
         shape = (2400,)
+    elif tokamak is Tokamak.EAST:
+        shot = 55555
+        shape = (102,)
     else:
         raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 
