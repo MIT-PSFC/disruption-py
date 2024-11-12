@@ -98,7 +98,7 @@ class LogSettings:
             elif num_shots and num_shots > self.success_threshold:
                 console_level = "SUCCESS"
         else:
-            console_level = self.console_log_level
+            console_level = self.console_log_level.upper()
 
         # Add console handler
         if self.log_to_console:
