@@ -7,6 +7,7 @@ This module contains utility functions for various numerical operations.
 import copy
 import warnings
 from dataclasses import dataclass
+from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -26,6 +27,23 @@ def showwarning(message, category, filename, lineno, _file=None, line=None):
 
 
 warnings.showwarning = showwarning
+
+
+def filter_cov_warning(func: Callable) -> Callable:
+    """
+    Decorator to filter out covariance warnings.
+    """
+
+    def wrapper(*args, **kwargs):
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                category=OptimizeWarning,
+                message="Covariance of the parameters could not be estimated",
+            )
+            return func(*args, **kwargs)
+
+    return wrapper
 
 
 def interp1(x, y, new_x, kind="linear", bounds_error=False, fill_value=np.nan, axis=-1):
@@ -166,6 +184,7 @@ def gauss_smooth(y, smooth_width, ends_type):
     return s
 
 
+@filter_cov_warning
 def gaussian_fit(*args):
     """
     Fits a Gaussian curve to a set of data points (x,y).
@@ -187,9 +206,7 @@ def gaussian_fit(*args):
     coeffs : array
         The coefficients of the fit.
     """
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", OptimizeWarning)
-        coeffs, *_ = curve_fit(gauss, *args)
+    coeffs, *_ = curve_fit(gauss, *args)
     return coeffs
 
 
@@ -215,11 +232,10 @@ def gauss(x, *params):
     return out
 
 
+@filter_cov_warning
 def gaussian_fit_with_fixed_mean(mu, *args):
     """Same as gaussian_fit() but with mu as a fixed parameter"""
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", OptimizeWarning)
-        coeffs, *_ = curve_fit(lambda x, a, sigma: gauss(x, a, mu, sigma), *args)
+    coeffs, *_ = curve_fit(lambda x, a, sigma: gauss(x, a, mu, sigma), *args)
     return coeffs
 
 
