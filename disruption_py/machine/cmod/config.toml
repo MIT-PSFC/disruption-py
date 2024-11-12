@@ -2,7 +2,7 @@
 mdsplus_connection_string = "alcdata-archives"
 
 [cmod.inout.sql]
-driver = "ODBC Driver 18 for SQL Server"
+driver = "ODBC"
 host = "alcdb2"
 port = 1433
 db_name = "logbook"
