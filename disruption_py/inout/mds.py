@@ -104,6 +104,7 @@ class MDSConnection:
         If the specified tree_name is a nickname for a tree_name, will open the tree
         that it is a nickname for.
         """
+        logger.trace(f"Opening tree: {tree_name}", tree_name)
         if (
             tree_name not in self.tree_nicknames
             and tree_name in self.tree_nickname_funcs
@@ -187,6 +188,7 @@ class MDSConnection:
         if tree_name is not None:
             self.open_tree(tree_name)
 
+        logger.trace(f"Getting data: {path}", path)
         data = self.conn.get("_sig=" + path, arguments).data()
         if astype:
             data = safe_cast(data, astype)
@@ -229,6 +231,7 @@ class MDSConnection:
         if tree_name is not None:
             self.open_tree(tree_name)
 
+        logger.trace(f"Getting data and dims: {path}", path)
         data = self.conn.get("_sig=" + path).data()
         dims = [self.conn.get(f"dim_of(_sig,{dim_num})").data() for dim_num in dim_nums]
 
@@ -272,6 +275,7 @@ class MDSConnection:
         if tree_name is not None:
             self.open_tree(tree_name)
 
+        logger.trace(f"Getting dims: {path}", path)
         dims = [self.conn.get(f"dim_of({path},{d})").data() for d in dim_nums]
 
         if astype:
