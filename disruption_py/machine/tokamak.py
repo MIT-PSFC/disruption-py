@@ -60,6 +60,8 @@ def resolve_tokamak_from_environment(tokamak: Union[Tokamak, str] = None):
         return Tokamak.CMOD
     if os.path.exists("/fusion/projects/disruption_warning"):
         return Tokamak.D3D
+    if os.path.exists("/NONEXISTENT_PATH"):  # TODO: determine corresponding path
+        return Tokamak.EAST
     # case 5
     raise ValueError(
         "Tokamak is unspecified and could not be determined from the environment."

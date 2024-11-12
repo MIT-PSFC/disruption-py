@@ -180,6 +180,7 @@ class FlattopDomainSetting(DomainSetting):
         self.tokamak_overrides = {
             Tokamak.CMOD: self._get_domain_cmod,
             Tokamak.D3D: self._get_domain_d3d,
+            Tokamak.EAST: self._get_domain_east,
         }
 
     def _get_domain(self, params: DomainSettingParams) -> np.ndarray:
@@ -293,6 +294,23 @@ class FlattopDomainSetting(DomainSetting):
             & (power_supply_railed != 1)
         )
         return params.physics_method_params.times[indices_flattop]
+
+    def _get_domain_east(self, params: DomainSettingParams) -> np.ndarray:
+        """
+        Get the flattop domain for EAST tokamak.
+
+        Parameters
+        ----------
+        params : DomainSettingParams
+            Parameters containing physics method and tokamak information.
+
+        Returns
+        -------
+        np.ndarray
+            The flattop timebase domain for EAST.
+        """
+
+        return
 
 
 class RampupAndFlattopDomainSetting(DomainSetting):
