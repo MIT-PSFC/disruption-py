@@ -65,7 +65,7 @@ def _better_mds_exceptions(func):
         try:
             return func(*args, **kwargs)
         except MDSplus.mdsExceptions.TreeFOPENR:
-            nick = kwargs["tree_name"]
+            nick = kwargs.get("tree_name", None)
             tree = self.get_tree_name_of_nickname(nick)
             raise MDSplus.mdsExceptions.TreeFOPENR(
                 f"Tree not found. Nick: {nick}, Tree: {tree}"
