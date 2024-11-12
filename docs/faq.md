@@ -41,6 +41,3 @@ get_shots_data(
 
 ### Why does DisruptionPy log `%MDSPLUS-E-ERROR` for all shots after a certain shot number? { .doc .doc-heading }
 You may have a corrupted shot inside of your request. Please try to remove the shot id for which the error first occurs from your `shotlist_request` and run DisruptionPy again. If the problem persists, please create an issue on the GitHub.
-
-### Why does DisruptionPy continue to log `Processing result for shot: ***shot id***` after having retrieved all data? { .doc .doc-heading }
-This is likely a result of your [`output_setting`][disruption_py.settings.output_setting.OutputSetting] being slow. You should try to use a different `output_setting` or batch the output of your current request.
