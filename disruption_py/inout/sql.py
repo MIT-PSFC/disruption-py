@@ -127,7 +127,7 @@ class ShotDatabase:
             "TrustServerCertificate": "yes",
             "Connection Timeout": 60,
         }
-        if "ODBC" in self.driver:
+        if self.driver.lower().startswith("odbc"):
             params["SERVER"] += f",{params.pop('PORT')}"
         conn_str = ";".join([f"{k}={v}" for k, v in params.items()])
         return conn_str
