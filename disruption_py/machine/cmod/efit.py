@@ -23,8 +23,6 @@ class CmodEfitMethods:
     ----------
     efit_cols : dict
         A dictionary mapping parameter names to their corresponding EFIT data paths.
-    efit_cols_pre_2000 : dict
-        A dictionary for EFIT column names for data before the year 2000.
     efit_derivs : dict
         A dictionary mapping derivative parameter names to their corresponding base parameters.
     """
@@ -56,8 +54,6 @@ class CmodEfitMethods:
         columns=[
             *efit_cols.keys(),
             *efit_derivs.keys(),
-            "v_surf",
-            "v_loop_efit",
         ],
         tokamak=Tokamak.CMOD,
     )
@@ -103,30 +99,6 @@ class CmodEfitMethods:
                 efit_time,
                 edge_order=1,
             )
-
-        # Get data for V_surf := deriv(\ANALYSIS::EFIT_SSIBRY)*2*pi
-        try:
-            ssibry = params.mds_conn.get_data(
-                r"\efit_geqdsk:ssibry", tree_name="_efit_tree", astype="float64"
-            )
-            efit_data["v_surf"] = np.gradient(ssibry, efit_time) * 2 * np.pi
-        except mdsExceptions.MdsException:
-            print("unable to get V_surf")
-            efit_data["v_surf"] = np.full(len(efit_time), np.nan)
-
-        # For shots before 2000, compute v_loop
-        if params.shot_id <= 1000000000:
-
-            # Get data for v_loop --> deriv(\ANALYSIS::EFIT_SSIMAG)*$2pi (not totally
-            # sure on this one)
-            try:  # TODO: confirm this
-                ssimag = params.mds_conn.get_data(
-                    r"\efit_geqdsk:ssimag", tree_name="_efit_tree", astype="float64"
-                )
-                efit_data["v_loop_efit"] = np.gradient(ssimag, efit_time) * 2 * np.pi
-            except mdsExceptions.MdsException:
-                print("unable to get v_loop_efit")
-                efit_data["v_loop_efit"] = np.full(len(efit_time), np.nan)
 
         if not np.array_equal(params.times, efit_time):
             for param in efit_data:
