@@ -1,12 +1,26 @@
 #!/usr/bin/env python3
 
 """
-This module defines the LogSettings class, which provides settings and setup for 
+This module defines the LogSettings class, which provides settings and setup for
 logging in both files and console with customizable levels and formats.
 """
 
-import logging
+import importlib.metadata
+import os
+import sys
 from dataclasses import dataclass
+from typing import Union
+
+from loguru import logger
+from tqdm.auto import tqdm
+
+from disruption_py.core.utils.misc import get_commit_hash, get_temporary_folder
+
+LogSettingsType = Union[
+    "LogSettings",
+    str,
+    int,
+]
 
 
 @dataclass
@@ -17,54 +31,109 @@ class LogSettings:
     Attributes
     ----------
     log_file_path : str, optional
-        Path to the log file. If None, no log file will be created (default is None).
-    file_log_level : int, optional
-        Logging level for the log file (default is logging.WARNING).
-        Can be set to logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR,
-        or logging.CRITICAL.
+        Path to the log file. If None, no log file will be created.
+        By default, a log file will be created in a temporary folder.
+    file_log_level : str
+        Logging level for the log file (default is "DEBUG").
+        Possible values are: "TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR",
+        "CRITICAL". See https://loguru.readthedocs.io/en/stable/api/logger.html#levels
     log_file_write_mode : str, optional
-        File write mode for the log file (default is 'w').
-    log_to_console : bool, optional
+        The write mode for the log file. Default is "w".
+    log_to_console : bool
         Whether to log messages to the console (default is True).
-    console_log_level : int, optional
-        Logging level for console output (default is logging.WARNING).
-        Can be set to logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR,
-        or logging.CRITICAL.
-    use_custom_logging : bool, optional
-        Whether to use custom logging setup (default is False).
-        If True, no logging setup is done within this class.
-    _logging_has_been_setup : bool, optional
+    console_log_level : str or int, optional
+        The log level for the console. Default is None, so log level will be determined
+        dynamically based on the number of shots.
+        Possible values are: "TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR",
+        "CRITICAL". See https://loguru.readthedocs.io/en/stable/api/logger.html#levels
+    use_custom_logging : bool
+        Whether to use custom logging. If set to true, no logging setup will be done.
+        Default is False.
+    warning_threshold : int
+        If number of shots is greater than this threshold, the console log level will
+        be "WARNING". Default is 1000.
+    success_threshold : int
+        If number of shots is greater than this threshold and less than the warning_threshold,
+        the console log level will be "SUCCESS". Default is 500.
+    _logging_has_been_setup : bool
         Internal flag to prevent multiple setups (default is False).
     """
 
-    log_file_path: str = None
-    file_log_level: int = logging.WARNING
+    log_file_path: str = os.path.join(get_temporary_folder(), "output.log")
+    file_log_level: str = "DEBUG"
     log_file_write_mode: str = "w"
 
     log_to_console: bool = True
-    console_log_level: int = logging.WARNING
+    console_log_level: str = None
 
     use_custom_logging: bool = False
 
+    warning_threshold: int = 1000
+    success_threshold: int = 500
+
     _logging_has_been_setup: bool = False
 
-    def logger(self, logger_name="disruption_py") -> logging.Logger:
+    def reset_handlers(self, num_shots: int = None):
         """
-        Get or set up the logger with the specified settings.
+        Remove default logger and set up custom handlers.
 
         Parameters
         ----------
-        logger_name : str, optional
-            Name of the logger (default is "disruption_py").
-
-        Returns
-        -------
-        logging.Logger
-            The configured logger instance.
+        num_shots : int, optional
+            Number of shots to determine the console log level dynamically.
         """
-        return self.setup_logging(logger_name)
+        # Remove default logger
+        logger.remove()
 
-    def setup_logging(self, logger_name="disruption_py") -> logging.Logger:
+        # Set colors without any bolding for each level (levels are bold by default)
+        logger.level("DEBUG", color="<dim>")
+        logger.level("INFO", color="")
+        logger.level("SUCCESS", color="<green>")
+        logger.level("WARNING", color="<yellow>")
+        logger.level("ERROR", color="<red>")
+
+        # formats
+        message_format = "<level>[{level:^7s}] {message}</level>"
+        console_format = "{time:HH:mm:ss.SSS} " + message_format
+        file_format = "{time:YYYY-MM-DD HH:mm:ss.SSS} " + message_format
+
+        if self.console_log_level is None:
+            # Determine console log level dynamically based on the number of shots
+            console_level = "INFO"
+            if num_shots and num_shots > self.warning_threshold:
+                console_level = "WARNING"
+            elif num_shots and num_shots > self.success_threshold:
+                console_level = "SUCCESS"
+        elif isinstance(self.console_log_level, str):
+            console_level = self.console_log_level.upper()
+        else:
+            console_level = self.console_log_level
+
+        # Add console handler
+        if self.log_to_console:
+            logger.add(
+                lambda msg: tqdm.write(msg, end=""),
+                level=console_level,
+                format=console_format,
+                colorize=True,
+                enqueue=True,
+                backtrace=False,
+                diagnose=True,
+            )
+
+        # Add file handler if log file path is provided
+        if self.log_file_path is not None:
+            logger.add(
+                self.log_file_path,
+                level=self.file_log_level,
+                format=file_format,
+                mode=self.log_file_write_mode,
+                enqueue=True,
+                backtrace=False,
+                diagnose=True,
+            )
+
+    def setup_logging(self):
         """
         Set up logging based on the provided settings.
 
@@ -78,25 +147,58 @@ class LogSettings:
         logging.Logger
             Configured logger instance.
         """
-        logger = logging.getLogger(logger_name)
         if self.use_custom_logging or self._logging_has_been_setup:
-            return logger
+            return
+
+        self.reset_handlers(num_shots=None)
+
+        # header
+        package = "disruption_py"
+        commit = get_commit_hash()
+        logger.success(
+            "Starting: {p} ~ v{v} # {c} / {u}@{h}",
+            p=package,
+            v=importlib.metadata.version(package),
+            c=commit,
+            u=os.getenv("USER"),
+            h=os.uname().nodename,
+        )
+        if self.log_file_path is not None:
+            logger.info("Logging: {l}", l=self.log_file_path)
+        logger.debug(
+            "Repository: {r}/commit/{c}",
+            r="https://github.com/MIT-PSFC/disruption-py",
+            c=commit,
+        )
+        logger.debug("Executable: {e}", e=sys.executable)
+
         self._logging_has_been_setup = True
 
-        formatter = logging.Formatter(
-            "%(asctime)s,%(msecs)d %(name)s %(levelname)s | %(message)s", "%H:%M:%S"
-        )
-        logger.propagate = False
-        logger.handlers.clear()
-        logger.setLevel(logging.DEBUG)
-        if self.log_file_path is not None:
-            fh = logging.FileHandler(self.log_file_path, mode=self.log_file_write_mode)
-            fh.setFormatter(formatter)
-            fh.setLevel(self.file_log_level)
-            logger.addHandler(fh)
-        if self.log_to_console:
-            sh = logging.StreamHandler()
-            sh.setLevel(self.console_log_level)
-            sh.setFormatter(formatter)
-            logger.addHandler(sh)
-        return logger
+
+def resolve_log_settings(
+    log_settings: LogSettingsType,
+) -> LogSettings:
+    """
+    Resolve the log settings to a LogSettings instance.
+
+    Parameters
+    ----------
+    log_settings : LogSettingsType
+        The log setting to resolve, which can be an instance of LogSettings, or
+        a string or int representing the console log level
+
+    Returns
+    -------
+    LogSettings
+        The resolved LogSettings instance.
+    """
+    if isinstance(log_settings, LogSettings):
+        return log_settings
+
+    if isinstance(log_settings, (str, int)):
+        return LogSettings(console_log_level=log_settings)
+
+    if log_settings is None:
+        return LogSettings()
+
+    raise ValueError(f"Invalid log settings {log_settings}")

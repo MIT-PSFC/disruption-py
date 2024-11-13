@@ -5,18 +5,18 @@ This module provides classes and methods to specify different domain settings
 for the timebase used, including full, flattop, and ramp-up domains. 
 """
 
-import traceback
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from logging import Logger
 from typing import Dict, Union
 
 import numpy as np
+from loguru import logger
 from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.math import interp1
+from disruption_py.core.utils.misc import shot_log_msg
 from disruption_py.machine.cmod.physics import CmodPhysicsMethods
 from disruption_py.machine.tokamak import Tokamak
 
@@ -40,7 +40,15 @@ class DomainSettingParams:
 
     physics_method_params: PhysicsMethodParams
     tokamak: Tokamak
-    logger: Logger
+
+    def __post_init__(self):
+        self.logger = logger.patch(
+            lambda record: record.update(
+                message=shot_log_msg(
+                    self.physics_method_params.shot_id, record["message"]
+                )
+            )
+        )
 
 
 class DomainSetting(ABC):
@@ -132,7 +140,9 @@ class DomainSettingDict(DomainSetting):
         chosen_setting = self.resolved_domain_setting_dict.get(params.tokamak, None)
         if chosen_setting is not None:
             return chosen_setting.get_domain(params)
-        params.logger.warning("No domain setting for tokamak %s", params.tokamak)
+        params.logger.warning(
+            "No domain setting for tokamak {tokamak}", tokamak=params.tokamak
+        )
         return None
 
 
@@ -211,11 +221,8 @@ class FlattopDomainSetting(DomainSetting):
         indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
         if len(indices_flattop) == 0:
             params.logger.warning(
-                (
-                    "[Shot %s]: Could not find flattop timebase. "
-                    "Defaulting to full shot(efit) timebase."
-                ),
-                params.physics_method_params.shot_id,
+                "Could not find flattop timebase. "
+                "Defaulting to full shot (efit) timebase.",
             )
             return None
         return params.physics_method_params.times[indices_flattop]
@@ -251,17 +258,10 @@ class FlattopDomainSetting(DomainSetting):
             )
             if len(polarity) > 1:
                 params.logger.info(
-                    (
-                        "[Shot %s]: Polarity of Ip target is not constant. "
-                        "Using value at first timestep."
-                    ),
-                    params.physics_method_params.shot_id,
+                    "Polarity of Ip target is not constant. "
+                    "Using value at first timestep.",
                 )
-                params.logger.debug(
-                    "[Shot %s]: Polarity array %s",
-                    params.physics_method_params.shot_id,
-                    polarity,
-                )
+                params.logger.debug("Polarity array {polarity}", polarity=polarity)
                 polarity = polarity[0]
             ip_prog = ip_prog * polarity
             dipprog_dt = np.gradient(ip_prog, t_ip_prog)
@@ -271,16 +271,11 @@ class FlattopDomainSetting(DomainSetting):
             dipprog_dt = interp1(
                 t_ip_prog, dipprog_dt, params.physics_method_params.times, "linear"
             )
-        except mdsExceptions.MdsException:
+        except mdsExceptions.MdsException as e:
             params.logger.warning(
-                "[Shot %s]: Could not find flattop timebase. Defaulting to full timebase.",
-                params.physics_method_params.shot_id,
+                "Could not find flattop timebase. Defaulting to full timebase.",
             )
-            params.logger.debug(
-                "[Shot %s]: %s",
-                params.physics_method_params.shot_id,
-                traceback.format_exc(),
-            )
+            params.logger.opt(exception=True).debug(e)
             return None
         epsoff, t_epsoff = params.physics_method_params.mds_conn.get_data_with_dims(
             f"ptdata('epsoff', {params.physics_method_params.shot_id})", tree_name="d3d"
@@ -354,8 +349,7 @@ class RampupAndFlattopDomainSetting(DomainSetting):
         indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
         if len(indices_flattop) == 0:
             params.logger.warning(
-                "[Shot %s]: Could not find flattop timebase. Defaulting to full timebase.",
-                params.physics_method_params.shot_id,
+                "Could not find flattop timebase. Defaulting to full timebase.",
             )
             return None
         end_index = np.max(indices_flattop)
