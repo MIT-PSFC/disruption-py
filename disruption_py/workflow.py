@@ -22,7 +22,7 @@ from disruption_py.inout.mds import ProcessMDSConnection
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.settings import RetrievalSettings
-from disruption_py.settings.log_settings import LogSettings
+from disruption_py.settings.log_settings import LogSettings, resolve_log_settings
 from disruption_py.settings.output_setting import (
     CompleteOutputSettingParams,
     OutputSetting,
@@ -100,7 +100,7 @@ def get_shots_data(
     Any
         The value of OutputSetting.get_results. See OutputSetting for more details.
     """
-    log_settings = log_settings or LogSettings()
+    log_settings = resolve_log_settings(log_settings)
     log_settings.setup_logging()
 
     tokamak = resolve_tokamak_from_environment(tokamak)
