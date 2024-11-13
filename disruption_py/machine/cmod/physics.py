@@ -1829,7 +1829,7 @@ class CmodPhysicsMethods:
         """
         # Get signals from EFIT tree
         ssibry, efit_time = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:ssibry", tree_name="_efit_tree", astype="float64"
+            r"\efit_geqdsk:ssibry", tree_name="_efit_tree", astype="float64"
         )  # [V*s/rad], [s]
 
         # Compute v_surf and interpolate to params.times
