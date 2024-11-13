@@ -4,11 +4,11 @@
 Module for managing connections to MDSplus.
 """
 
-import logging
 from typing import Any, Callable, Dict, List, Tuple
 
 import MDSplus
 import numpy as np
+from loguru import logger
 
 from disruption_py.config import config
 from disruption_py.core.utils.misc import safe_cast
@@ -24,8 +24,6 @@ class ProcessMDSConnection:
     retrieved by that process.
     """
 
-    logger = logging.getLogger("disruption_py")
-
     def __init__(self, conn_string: str):
         self.conn = None
         if conn_string is None:
@@ -35,7 +33,7 @@ class ProcessMDSConnection:
         try:
             self.conn.get("shorten_path()")
         except MDSplus.mdsExceptions.TdiUNKNOWN_VAR:
-            self.logger.debug("MDSplus does not support the `shorten_path()` method.")
+            logger.debug("MDSplus does not support the `shorten_path()` method.")
 
     @classmethod
     def from_config(cls, tokamak: Tokamak):
@@ -52,12 +50,46 @@ class ProcessMDSConnection:
         return MDSConnection(self.conn, shot_id)
 
 
+def _better_mds_exceptions(func):
+    """
+    Decorator to catch MDSplus exceptions and recreate them with a more descriptive
+    error message which includes the tree and the node path.
+    """
+
+    def wrapper(*args, **kwargs):
+        self = args[0]
+        if len(args) > 1:
+            path = args[1]
+        else:
+            path = kwargs.get("path", None)
+        try:
+            return func(*args, **kwargs)
+        except MDSplus.mdsExceptions.TreeFOPENR:
+            nick = kwargs.get("tree_name", None)
+            tree = self.tree_name(nick)
+            if nick == tree:
+                nick = ""
+            raise MDSplus.mdsExceptions.TreeFOPENR(
+                "Tree not found. "
+                + (f"Nick: {nick}, " if nick else "")
+                + f"Tree: {tree}"
+            ) from None
+        except MDSplus.mdsExceptions.TreeNNF:
+            raise MDSplus.mdsExceptions.TreeNNF(
+                f"Node not found. Tree: {self.last_open_tree}, Node: {path}"
+            ) from None
+        except MDSplus.mdsExceptions.TreeNODATA:
+            raise MDSplus.mdsExceptions.TreeNODATA(
+                f"No data available. Tree: {self.last_open_tree}, Node: {path}"
+            ) from None
+
+    return wrapper
+
+
 class MDSConnection:
     """
     Wrapper class for MDSPlus Connection class used for handling individual shots.
     """
-
-    logger = logging.getLogger("disruption_py")
 
     def __init__(
         self, conn: MDSplus.Connection, shot_id: int  # pylint: disable=no-member
@@ -68,6 +100,7 @@ class MDSConnection:
         self.tree_nicknames = {}
         self.last_open_tree = None
 
+    @_better_mds_exceptions
     def open_tree(self, tree_name: str):
         """
         Open the specified _name.
@@ -75,6 +108,7 @@ class MDSConnection:
         If the specified tree_name is a nickname for a tree_name, will open the tree
         that it is a nickname for.
         """
+        logger.trace("Opening tree: {tree_name}", tree_name=tree_name)
         if (
             tree_name not in self.tree_nicknames
             and tree_name in self.tree_nickname_funcs
@@ -95,6 +129,7 @@ class MDSConnection:
         """
         self.last_open_tree = None
 
+    @_better_mds_exceptions
     def get(self, expression: str, arguments: Any = None, tree_name: str = None) -> Any:
         """
         Evaluate the specified expression.
@@ -125,6 +160,7 @@ class MDSConnection:
 
     # Convenience methods
 
+    @_better_mds_exceptions
     def get_data(
         self,
         path: str,
@@ -156,12 +192,14 @@ class MDSConnection:
         if tree_name is not None:
             self.open_tree(tree_name)
 
+        logger.trace("Getting data: {path}", path=path)
         data = self.conn.get("_sig=" + path, arguments).data()
         if astype:
             data = safe_cast(data, astype)
 
         return data
 
+    @_better_mds_exceptions
     def get_data_with_dims(
         self,
         path: str,
@@ -197,6 +235,7 @@ class MDSConnection:
         if tree_name is not None:
             self.open_tree(tree_name)
 
+        logger.trace("Getting data and dims: {path}", path=path)
         data = self.conn.get("_sig=" + path).data()
         dims = [self.conn.get(f"dim_of(_sig,{dim_num})").data() for dim_num in dim_nums]
 
@@ -207,6 +246,7 @@ class MDSConnection:
 
         return data, *dims
 
+    @_better_mds_exceptions
     def get_dims(
         self,
         path: str,
@@ -239,6 +279,7 @@ class MDSConnection:
         if tree_name is not None:
             self.open_tree(tree_name)
 
+        logger.trace("Getting dims: {path}", path=path)
         dims = [self.conn.get(f"dim_of({path},{d})").data() for d in dim_nums]
 
         if astype:

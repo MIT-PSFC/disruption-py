@@ -4,7 +4,6 @@
 Module for retrieving and calculating data for CMOD physics methods.
 """
 
-import traceback
 import warnings
 
 import numpy as np
@@ -235,15 +234,12 @@ class CmodPhysicsMethods:
                                 (pcstime >= start) & (pcstime <= end)
                             )
                             ip_prog[segment_indices] = ip_prog_temp[segment_indices]
-                    except mdsExceptions.MdsException:
+                    except mdsExceptions.MdsException as e:
                         params.logger.warning(
-                            "[Shot %s]: Error getting PID gains for wire %s",
-                            params.shot_id,
-                            wire_index,
+                            "Error getting PID gains for wire {wire_index}",
+                            wire_index=wire_index,
                         )
-                        params.logger.debug(
-                            "[Shot %s]: %s", params.shot_id, traceback.format_exc()
-                        )
+                        params.logger.opt(exception=True).debug(e)
                     break  # Break out of wire_index loop
         ip, magtime = params.mds_conn.get_data_with_dims(
             r"\ip", tree_name="magnetics", astype="float64"
@@ -361,17 +357,17 @@ class CmodPhysicsMethods:
         for node_path, start in active_wire_segments:
             for wire_index in range(1, 17):
                 wire_node_name = params.mds_conn.get_data(
-                    node_path + f":P_{wire_index :02d}:name", tree_name="pcs"
+                    node_path + f":P_{wire_index:02d}:name", tree_name="pcs"
                 )
                 if wire_node_name == "ZCUR":
                     try:
                         pid_gains = params.mds_conn.get_data(
-                            node_path + f":P_{wire_index :02d}:pid_gains",
+                            node_path + f":P_{wire_index:02d}:pid_gains",
                             tree_name="pcs",
                         )
                         if np.any(pid_gains):
                             signal, sigtime = params.mds_conn.get_data_with_dims(
-                                node_path + f":P_{wire_index :02d}", tree_name="pcs"
+                                node_path + f":P_{wire_index:02d}", tree_name="pcs"
                             )
                             end = sigtime[
                                 np.argmin(np.abs(sigtime - pcstime[-1]) + 0.0001)
@@ -390,10 +386,8 @@ class CmodPhysicsMethods:
                             ]
                             z_prog[segment_indices] = z_prog_temp[segment_indices]
                             break
-                    except mdsExceptions.MdsException:
-                        params.logger.debug(
-                            "[Shot %s]: %s", params.shot_id, traceback.format_exc()
-                        )
+                    except mdsExceptions.MdsException as e:
+                        params.logger.opt(exception=True).debug(e)
                         continue  # TODO: Consider raising appropriate error
                 else:
                     continue
@@ -420,7 +414,7 @@ class CmodPhysicsMethods:
             else:
                 end = active_wire_segments[i + 1][1]
             z_factor = params.mds_conn.get_data(
-                rf"\dpcs::top.seg_{i+1:02d}:p_{z_wire_index:02d}:predictor:factor",
+                rf"\dpcs::top.seg_{i + 1:02d}:p_{z_wire_index:02d}:predictor:factor",
                 tree_name="hybrid",
             )
             temp_indx = np.where((dpcstime >= start) & (dpcstime <= end))
@@ -618,9 +612,9 @@ class CmodPhysicsMethods:
     def get_power(params: PhysicsMethodParams):
         """
         NOTE: the timebase for the LH power signal does not extend over the full
-            time span of the discharge.  Therefore, when interpolating the LH power
+            time span of the discharge. Therefore, when interpolating the LH power
             signal onto the "timebase" array, the LH signal has to be extrapolated
-            with zero values.  This is an option in the 'interp1' routine.  If the
+            with zero values. This is an option in the 'interp1' routine. If the
             extrapolation is not done, then the 'interp1' routine will assign NaN
             (Not-a-Number) values for times outside the LH timebase, and the NaN's
             will propagate into p_input and rad_fraction, which is not desirable.
@@ -733,12 +727,12 @@ class CmodPhysicsMethods:
         Calculate n=1 amplitude and phase.
 
         This method uses the four BP13 Bp sensors near the midplane on the outboard
-        vessel wall.  The calculation is done by using a least squares fit to an
-        expansion in terms of n = 0 & 1 toroidal harmonics.  The BP13 sensors are
+        vessel wall. The calculation is done by using a least squares fit to an
+        expansion in terms of n = 0 & 1 toroidal harmonics. The BP13 sensors are
         part of the set used for plasma control and equilibrium reconstruction,
         and their signals have been analog integrated (units: tesla), so they
-        don't have to be numerically integrated.  These four sensors were working
-        well in 2014, 2015, and 2016.  I looked at our locked mode MGI run on
+        don't have to be numerically integrated. These four sensors were working
+        well in 2014, 2015, and 2016. I looked at our locked mode MGI run on
         1150605, and the different applied A-coil phasings do indeed show up on
         the n=1 signal.
 
@@ -1569,10 +1563,10 @@ class CmodPhysicsMethods:
         for i in range(n_gpc1_channels):
             try:
                 te_data, te_time = params.mds_conn.get_data_with_dims(
-                    node_path + ".te:te" + str(i + 1), tree_name="electrons"
+                    f"{node_path}.te:te{i + 1}", tree_name="electrons"
                 )  # [keV], [s]
                 rad_data, rad_time = params.mds_conn.get_data_with_dims(
-                    node_path + ".rad:r" + str(i + 1), tree_name="electrons"
+                    f"{node_path}.rad:r{i + 1}", tree_name="electrons"
                 )  # [m], [s]
                 # For C-Mod shot 1120522025 (and maybe others), rad_time is strings.
                 # Don't use channel in that case
@@ -1663,7 +1657,7 @@ class CmodPhysicsMethods:
             )  # [index]
             got_axa = True
         except mdsExceptions.MdsException:
-            params.logger.debug("[Shot %s]: Failed to get AXA data", params.shot_id)
+            params.logger.debug("Failed to get AXA data")
         got_axj = False
         try:
             bright_axj, t_axj, r_axj = params.mds_conn.get_data_with_dims(
@@ -1681,7 +1675,7 @@ class CmodPhysicsMethods:
             )  # [index]
             got_axj = True
         except mdsExceptions.MdsException:
-            params.logger.debug("[Shot %s]: Failed to get AXJ data", params.shot_id)
+            params.logger.debug("Failed to get AXJ data")
         if not (got_axa or got_axj):
             return nan_output
         a_minor = interp1(efit_time, aminor, params.times)
