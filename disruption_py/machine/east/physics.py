@@ -27,3 +27,25 @@ class EASTPhysicsMethods:
     """
     A class to retrieve and calculate physics-related data for DIII-D.
     """
+    
+    @staticmethod
+    @physics_method(columns=["time_until_disrupt"], tokamak=Tokamak.EAST)
+    def get_time_until_disrupt(params: PhysicsMethodParams):
+        """
+        Calculate the time until the disruption for a given shot. If the shot does
+        not disrupt, return NaN.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the time until disruption. If the shot does
+            not disrupt, return NaN.
+        """
+        if params.disrupted:
+            return {"time_until_disrupt": params.disruption_time - params.times}
+        return {"time_until_disrupt": [np.nan]}
