@@ -53,12 +53,14 @@ class EASTPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["ip", "ip_error", "dip_dt", "dipprog_dt", "power_supply_railed"],
+        columns=["ip", "ip_prog", "ip_error", "ip_error_normalized", 
+                 "dip_dt", "dipprog_dt"],
         tokamak=Tokamak.D3D,
     )
     def get_ip_parameters(params: PhysicsMethodParams):
         """
-        Retrieve plasma current parameters including measured and programmed values.
+        Retrieve plasma current parameters including measured,  
+        programmed and error values.
 
         Parameters
         ----------
@@ -75,6 +77,8 @@ class EASTPhysicsMethods:
                 Programmed (requested) plasma current [A].
             - 'ip_error' : array
                 ip - ip_prog [A].
+            - 'ip_error_normalized' : array
+                ip_error normalized to ip_prog [dimensionless].
             - 'dip_dt' : array
                 Time derivative of the measured plasma current [A/s].
             - 'dipprog_dt' : array
@@ -89,10 +93,10 @@ class EASTPhysicsMethods:
         """
         ip = [np.nan]
         ip_prog = [np.nan]
+        ip_error = [np.nan]
+        ip_error_normalized = [np.nan]
         dip_dt = [np.nan]
         dipprog_dt = [np.nan]
-        # Fill with nans instead of using a single nan because indices are used
-        ip_error = np.full(len(params.times), np.nan)
         
         # Read in the measured plasma current, Ip.  There are several
         # different measurements of Ip: IPE, IPG, IPM (all in the EAST tree), and
@@ -125,15 +129,104 @@ class EASTPhysicsMethods:
         # Calculate dip_dt
         dip_dt = np.gradient(ip, ip_time)
         
+        # Get the programmed plasma current.  For most times, the EAST plasma
+        # control system (PCS) programming is signal "\lmtipref" in the pcs_east
+        # tree.  However, there is an alternate control scheme, "isoflux" control,
+        # which uses one of four possible signals (\ietip, \idtip, \istip, iutip).
+        # Note that only one of these 4 signals is defined at any given time during
+        # the shot.  The transition from normal control to isoflux control is
+        # identified by several signals, one of which is called "\sytps1".  When
+        # \sytps1 = 0, use \lmtipref for ip_prog.  When \sytps1 > 0, use whichever
+        # isoflux or transition signal is defined.  Also, accordingly to Yuan
+        # Qiping (EAST PCS expert), no shot is ever programmed to have a
+        # back-transition, i.e. after a transition to isoflux control, no shot is
+        # ever programmed to transition back to standard control.
         
+        # Start with \lmtipref (standard Ip programming), which is defined for the
+        # entire shot, and defines the timebase for the programmed Ip signal.
+        ip_prog, ip_prog_time = params.mds_conn.get_data_with_dims(
+            r"\lmtipref*1e6", tree_name="pcs_east")  # [A], [s]
+        
+        # Now check to see if there is a transition to isoflux control
+        sytps1, time_sytps1 = params.mds_conn.get_data_with_dims(
+            r"\sytps1", tree_name="pcs_east")
+        (sytps1_indices,) = np.where(sytps1 > 0)
+        
+        # If PCS switches to isoflux control, then read in the 4 possible Ip target
+        # signals, and interpolate each one onto the \lmtipref timebase.  There will
+        # be many NaN values.
+        
+        if len(sytps1_indices) > 0 and time_sytps1[0] <= ip_prog_time[-1]:
+            try:
+                ietip, ietip_time = params.mds_conn.get_data_with_dims(
+                    r"\ietip", tree_name="pcs_east")
+                ietip = interp1(ietip_time, ietip, ip_prog_time)
+            except mdsExceptions.MdsException:
+                ietip = np.full(len(ip_prog_time), np.nan)
+        
+            try:
+                idtip, idtip_time = params.mds_conn.get_data_with_dims(
+                    r"\idtip", tree_name="pcs_east")
+                idtip = interp1(idtip_time, idtip, ip_prog_time)
+            except mdsExceptions.MdsException:
+                idtip = np.full(len(ip_prog_time), np.nan)
+
+            try:
+                istip, istip_time = params.mds_conn.get_data_with_dims(
+                    r"\istip", tree_name="pcs_east")
+                istip = interp1(istip_time, istip, ip_prog_time)
+            except mdsExceptions.MdsException:
+                istip = np.full(len(ip_prog_time), np.nan)
+            
+            try:
+                iutip, iutip_time = params.mds_conn.get_data_with_dims(
+                    r"\iutip", tree_name="pcs_east")
+                iutip = interp1(iutip_time, iutip, ip_prog_time)
+            except mdsExceptions.MdsException:
+                iutip = np.full(len(ip_prog_time), np.nan)
+            
+            # Okay, now loop through all times, selecting the alternate isoflux target
+            # Ip value for each time that isoflux control is enabled (i.e. for each
+            # time that \sytps1 ~= 0).  (Only one of the 4 possible isoflux target Ip
+            # signals is defined at each time.)
+            tstart_isoflux_control = time_sytps1[sytps1_indices[0]]
+            (indices,) = np.where(ip_prog_time >= tstart_isoflux_control)
+            
+            for it in range(len(indices)):
+                if not np.isnan(ietip[it]):
+                    ip_prog[it] = ietip[it]
+                elif not np.isnan(idtip[it]):
+                    ip_prog[it] = idtip[it]
+                elif not np.isnan(istip[it]):
+                    ip_prog[it] = istip[it]
+                elif not np.isnan(iutip[it]):
+                    ip_prog[it] = iutip[it]
+        
+            # End of block for dealing with isoflux control
+        
+        # For shots before year 2014, the LMTIPREF timebase needs to be shifted 
+        # by 17.0 ms
+        if params.shot_id < 44432:
+            ip_prog_time -= 0.0170
+        
+        # Calculate dipprog_dt
+        dipprog_dt = np.gradient(ip_prog, ip_prog_time)
         
         # Interpolate all retrieved signals to the requested timebase
-        # TODO
+        ip = interp1(ip_time, ip, params.times)
+        dip_dt = interp1(ip_time, dip_dt, params.time)
+        ip_prog = interp1(ip_prog_time, ip_prog, params.times)
+        dipprog_dt = interp1(ip_prog_time, dipprog_dt, params.times)
+        
+        # Calculate ip_error and ip_error_normalized
+        ip_error = ip - ip_prog
+        ip_error_normalized = ip_error / ip_prog
 
         output = {
             'ip': ip,
             'ip_prog': ip_prog,
             'ip_error': ip_error,
+            'ip_error_normalized': ip_error_normalized,
             'dip_dt': dip_dt,
             'dipprog_dt': dipprog_dt,
         }
