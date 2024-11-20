@@ -595,11 +595,6 @@ class EASTPhysicsMethods:
             r"\plhi2*1e3",  # LHW 4.66 GHz data
         ]
         p_lh = get_heating_power(lh_addresses, "east_1")  # [W]
-        # p_lh_list = [np.nan]*2
-        # for i, lh_address in enumerate(lh_addresses):
-        #     p_lh_i, lh_time_i = params.mds_conn.get_data_with_dims(lh_address, tree_name="east_1")  # [W], [s]
-        #     p_lh_list[i] = interp1(lh_time_i, p_lh_i, params.times, kind="linear", fill_value=0)
-        # p_lh = sum(p_lh_list)
 
         # Get ECRH power
         p_ecrh, ecrh_time = params.mds_conn.get_data_with_dims(
@@ -620,11 +615,6 @@ class EASTPhysicsMethods:
             r"\picrfbr*-1e3",
         ]
         p_icrf = get_heating_power(icrf_addresses, "icrf_east")  # [W]
-        # p_icrf_list = [np.nan]*4
-        # for i, icrf_address in enumerate(icrf_addresses):
-        #     p_icrf_i, icrf_time_i = params.mds_conn.get_data_with_dims(icrf_address, tree_name="icrf_east")  # [W], [s]
-        #     p_icrf_list[i] = interp1(icrf_time_i, p_icrf_i, params.times, kind="linear", fill_value=0)
-        # p_icrf = sum(p_icrf_list)   # [W]
 
         # Get NBI power
         nbi_addresses = [
@@ -634,11 +624,6 @@ class EASTPhysicsMethods:
             r"\pnbi2rsource*1e3",
         ]
         p_nbi = get_heating_power(nbi_addresses, "nbi_east")  # [W]
-        # p_nbi_list = [np.nan]*4
-        # for i, nbi_address in enumerate(nbi_addresses):
-        #     p_nbi_i, nbi_time_i = params.mds_conn.get_data_with_dims(nbi_addresses, tree_name="nbi_east")  # [W], [s]
-        #     p_nbi_list[i] = interp1(nbi_time_i, p_nbi_i, params.times, kind="linear", fill_value=0)
-        # p_nbi = sum(p_nbi_list)   # [W]
 
         # Get ohmic power
         p_ohm = EASTPhysicsMethods.get_p_ohm(params)["p_ohm"]
