@@ -64,8 +64,12 @@ class EASTPhysicsMethods:
     )
     def get_ip_parameters(params: PhysicsMethodParams):
         """
-        Retrieve plasma current parameters including measured,
-        programmed and error values.
+        This routine calculates Ip_error = (Ip - Ip_programmed), i.e. how much
+        the actual plasma current differs from the requested current.  It
+        linearly interpolates both the programmed and measured plasma currents
+        onto the given timebase.  The routine also calculates the time
+        derivatives of the measured Ip and programmed Ip.  The time derivatives
+        are useful for discriminating between rampup, flattop, and rampdown.
 
         Parameters
         ----------
@@ -290,3 +294,60 @@ class EASTPhysicsMethods:
         v_loop = interp1(v_loop_time, v_loop, params.times)
 
         return {"v_loop": v_loop}
+
+    @staticmethod
+    @physics_method(
+        columns=[
+            "zcur",
+            "z_prog",
+            "z_error",
+            "zcur_lmsz",
+            "z_error_lmsz",
+            "zcur_lmsz_normalized",
+            "z_error_lmsz_normalized",
+        ],
+        tokamak=Tokamak.EAST,
+    )
+    def get_z_error(params: PhysicsMethodParams):
+        """
+        This script calculates Z_error = Z_cur - Z_programmed, or how much the
+        actual vertical position differs from the requested position.  Two
+        different methods are used to calculate Z_error, and both versions are
+        returned by the routine.  The original method gets the z-centroid from
+        the \zcur calculated by EFIT; the other uses the z-centroid from the
+        \lmsz signal calculated by the plasma control system (PCS).  The
+        normalized versions of the lmsz-derived signals are also returned.  They
+        are normalized to the plasma minor radius.  All the signals are linearly
+        interpolated onto the given timebase.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+            - 'zcur' : array
+                Calculated z from EFIT [m].
+            - 'z_prog' : array
+                Programmed/requested/target z [m].
+            - 'z_error' : array
+                z_error = z_cur - z_prog [m].
+            - 'zcur_lmsz' : array
+                Calculated z from PCS [m].
+            - 'z_error_lmsz' : array
+                z_error_lmsz = zcur_lmsz - z_prog [m].
+            - 'zcur_lmsz_normalized' : array
+                zcur_lmsz / aminor
+            - 'z_error_lmsz_normalized' : array
+                z_error_lmsz_normalized = z_error_lmsz / aminor
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_Ip_parameters.m
+
+        Original author: Robert Granetz, Dec 2015
+        Last major update: 11/19/24 by William Wei
+        """
