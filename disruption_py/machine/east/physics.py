@@ -492,7 +492,6 @@ class EASTPhysicsMethods:
             "p_rad",
             "p_ecrh",
             "p_lh",
-            "p_ohm",
             "p_icrf",
             "p_nbi",
             "rad_input_frac",
@@ -528,8 +527,6 @@ class EASTPhysicsMethods:
                 Electron cyclotron resonance heating power [W].
             - 'p_lh' : array
                 Lower hybrid power [W].
-            - 'p_ohm' : array
-                Ohmic power [W].
             - 'p_icrf' : array
                 Ion cyclotron resonance heating power [W].
             - 'p_nbi' : array
@@ -563,6 +560,24 @@ class EASTPhysicsMethods:
         rad_loss_frac = [np.nan]
         p_input = [np.nan]
 
+        def get_heating_power(addresses, tree):
+            """
+            Helper function to pack p_lh, p_icrf, and p_nbi computations
+            """
+            heating_power = np.empty(params.times.shape)
+            for address in addresses:
+                power_address, time_address = params.mds_conn.get_data_with_dims(
+                    address, tree_name=tree
+                )
+                heating_power += interp1(
+                    time_address,
+                    power_address,
+                    params.times,
+                    kind="linear",
+                    fill_value=0,
+                )
+            return heating_power
+
         # Get lower hybrid power
 
         # Note: the timebase for the LH power signal does not extend over the full
@@ -573,16 +588,18 @@ class EASTPhysicsMethods:
         # (Not-a-Number) values for times outside the LH timebase, and the NaN's
         # will propagate into p_input, rad_input_frac, and rad_loss_frac, which is
         # not desirable.
-        p_lh1, lh_time1 = params.mds_conn.get_data_with_dims(
-            r"\plhi1*1e3", tree_name="east_1"
-        )  # LHW 2.45 GHz data, [W], [s]
-        p_lh2, lh_time2 = params.mds_conn.get_data_with_dims(
-            r"\plhi2*1e3", tree_name="east_1"
-        )  # LHW 4.66 GHz data, [W], [s]
+
         # TODO: check if the extrapolation method actually works
-        p_lh1 = interp1(lh_time1, p_lh1, params.times, kind="linear", fill_value=0)
-        p_lh2 = interp1(lh_time2, p_lh2, params.times, kind="linear", fill_value=0)
-        p_lh = p_lh1 + p_lh2
+        lh_addresses = [
+            r"\plhi1*1e3",  # LHW 2.45 GHz data
+            r"\plhi2*1e3",  # LHW 4.66 GHz data
+        ]
+        p_lh = get_heating_power(lh_addresses, "east_1")  # [W]
+        # p_lh_list = [np.nan]*2
+        # for i, lh_address in enumerate(lh_addresses):
+        #     p_lh_i, lh_time_i = params.mds_conn.get_data_with_dims(lh_address, tree_name="east_1")  # [W], [s]
+        #     p_lh_list[i] = interp1(lh_time_i, p_lh_i, params.times, kind="linear", fill_value=0)
+        # p_lh = sum(p_lh_list)
 
         # Get ECRH power
         p_ecrh, ecrh_time = params.mds_conn.get_data_with_dims(
@@ -595,27 +612,100 @@ class EASTPhysicsMethods:
         p_ecrh = interp1(ecrh_time, p_ecrh, params.times, kind="linear", fill_value=0)
 
         # Get ICRF power
-        # Get all 4 addresses
-        p_icrfii, icrf_time1 = params.mds_conn.get_data_with_dims(
-            r"\picrfii*1e3", tree_name="icrf_east"
-        )  # [W], [s]
-        p_icrfir, icrf_time2 = params.mds_conn.get_data_with_dims(
-            r"\picrfir*1e3", tree_name="icrf_east"
-        )  # [W], [s]
-        p_icrfbi, icrf_time3 = params.mds_conn.get_data_with_dims(
-            r"\picrfbi*1e3", tree_name="icrf_east"
-        )  # [W], [s]
-        p_icrfbr, icrf_time4 = params.mds_conn.get_data_with_dims(
-            r"\picrfbr*1e3", tree_name="icrf_east"
-        )  # [W], [s]
-        # Interpolate signals
-        for p_icrf_n, icrf_time_n in zip(
-            [p_icrfii, p_icrfir, p_icrfbi, p_icrfbr],
-            [icrf_time1, icrf_time2, icrf_time3, icrf_time4],
-        ):
-            p_icrf_n = interp1(
-                icrf_time_n, p_icrf_n, params.times, kind="linear", fill_value=0
-            )
-        p_icrf = (p_icrfii - p_icrfir) + (p_icrfbi - p_icrfbr)  # [W]
+        # p_ICRF = (p_icrfii - p_icrfir) + (p_icrfbi - p_icrfbr)
+        icrf_addresses = [
+            r"\picrfii*1e3",
+            r"\picrfir*-1e3",
+            r"\picrfbi*1e3",
+            r"\picrfbr*-1e3",
+        ]
+        p_icrf = get_heating_power(icrf_addresses, "icrf_east")  # [W]
+        # p_icrf_list = [np.nan]*4
+        # for i, icrf_address in enumerate(icrf_addresses):
+        #     p_icrf_i, icrf_time_i = params.mds_conn.get_data_with_dims(icrf_address, tree_name="icrf_east")  # [W], [s]
+        #     p_icrf_list[i] = interp1(icrf_time_i, p_icrf_i, params.times, kind="linear", fill_value=0)
+        # p_icrf = sum(p_icrf_list)   # [W]
 
-        return
+        # Get NBI power
+        nbi_addresses = [
+            r"\pnbi1lsource*1e3",
+            r"\pnbi1rsource*1e3",
+            r"\pnbi2lsource*1e3",
+            r"\pnbi2rsource*1e3",
+        ]
+        p_nbi = get_heating_power(nbi_addresses, "nbi_east")  # [W]
+        # p_nbi_list = [np.nan]*4
+        # for i, nbi_address in enumerate(nbi_addresses):
+        #     p_nbi_i, nbi_time_i = params.mds_conn.get_data_with_dims(nbi_addresses, tree_name="nbi_east")  # [W], [s]
+        #     p_nbi_list[i] = interp1(nbi_time_i, p_nbi_i, params.times, kind="linear", fill_value=0)
+        # p_nbi = sum(p_nbi_list)   # [W]
+
+        # Get ohmic power
+        p_ohm = EASTPhysicsMethods.get_p_ohm(params)["p_ohm"]
+
+        # Get radiated power
+        # tree = 'prad_east'
+        # TODO: implement `prad_bulk_xuv2014_2016`
+        # p_rad, rad_time = prad_bulk_xuv2014_2016(params.shot_id)    # Original from Duan Yanming, and modified by RSG
+        # p_rad = interp1(rad_time, p_rad, params.times, kind="linear", fill_value=0)
+        p_rad = [np.nan] * len(params.times)
+
+        # Get Wmhd and calculate dWmhd_dt
+        wmhd, efittime = params.mds_conn.get_data_with_dims(
+            r"\efit_aeqdsk:wplasm", tree_name="_efit_tree"
+        )  # [W], [s]
+        dwmhd_dt = np.gradient(wmhd, efittime)
+        dwmhd_dt = interp1(efittime, dwmhd_dt, params.times)
+
+        # Calculate p_input, rad_input_frac, and rad_loss_frac
+        p_input = p_ohm + p_lh + p_icrf + p_ecrh + p_nbi
+        rad_input_frac = (
+            p_rad / p_input
+        )  # TODO: div/0 error? Use with np.errorstate(...)
+        rad_loss_frac = p_rad / (p_input - dwmhd_dt)
+
+        output = {
+            "p_rad": p_rad,
+            "p_ecrh": p_ecrh,
+            "p_lh": p_lh,
+            "p_ohm": p_ohm,
+            "p_icrf": p_icrf,
+            "p_nbi": p_nbi,
+            "rad_input_frac": rad_input_frac,
+            "rad_loss_frac": rad_loss_frac,
+            "p_input": p_input,
+        }
+        return output
+
+    @staticmethod
+    @physics_method(
+        columns=["p_ohm"],
+        tokamak=Tokamak.EAST,
+    )
+    def get_p_ohm(params: PhysicsMethodParams):
+        """
+        DESCRIPTION
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+            - 'p_ohm' : array
+                DESCRIPTION
+
+        References
+        -------
+        LINK
+
+        Original Author:
+
+        Last major update:
+        """
+        p_ohm = [np.nan]
+
+        return {"p_ohm": p_ohm}
