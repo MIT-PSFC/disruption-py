@@ -32,6 +32,7 @@ class EASTEfitMethods:
         "qstar": r"\efit_a_eqdsk:qstar",
         "q95": r"\efit_a_eqdsk:q95",
         "wmhd": r"\efit_a_eqdsk:wmhd",
+        "aminor": r"\efit_a_eqdsk:aout",
         "chisq": r"\efit_a_eqdsk:chisq",
     }
     efit_derivs = {"dbetap_dt": "beta_p", "dli_dt": "li", "dwmhd_dt": "wmhd"}

@@ -305,6 +305,7 @@ class EASTPhysicsMethods:
             "z_error_lmsz",
             "zcur_lmsz_normalized",
             "z_error_lmsz_normalized",
+            "aminor",
         ],
         tokamak=Tokamak.EAST,
     )
@@ -346,8 +347,8 @@ class EASTPhysicsMethods:
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_Ip_parameters.m
-
-        Original author: Robert Granetz, Dec 2015
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_Z_error.m
+        
+        Original authors: Wang Bo, Alex Tinguely, & Robert Granetz, 2015
         Last major update: 11/19/24 by William Wei
         """
