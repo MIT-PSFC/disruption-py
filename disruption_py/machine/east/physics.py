@@ -289,4 +289,4 @@ class EASTPhysicsMethods:
         # Interpolate the signal onto the requested timebase
         v_loop = interp1(v_loop_time, v_loop, params.times)
 
-        output = {"v_loop": v_loop}
+        return {"v_loop": v_loop}
