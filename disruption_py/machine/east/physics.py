@@ -45,7 +45,7 @@ class EASTPhysicsMethods:
         dict
             A dictionary containing the time until disruption. If the shot does
             not disrupt, return NaN.
-            
+
         Last major update: 11/19/24 by William Wei
         """
         if params.disrupted:
@@ -100,7 +100,7 @@ class EASTPhysicsMethods:
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_Ip_parameters.m
 
         Original author: Robert Granetz, Dec 2015
-        
+
         Last major update: 11/19/24 by William Wei
         """
         ip = [np.nan]
@@ -283,7 +283,7 @@ class EASTPhysicsMethods:
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_v_loop.m
 
         Original Author: Robert Granetz, Apr 2016
-        
+
         Last major update: 11/19/24 by William Wei
         """
         v_loop = [np.nan]
@@ -397,12 +397,12 @@ class EASTPhysicsMethods:
         aminor = interp1(zcur_time, aminor, params.times)
         z_prog = interp1(z_prog_time, z_prog, params.times)
         zcur_lmsz = interp1(lmsz_time, zcur_lmsz, params.times)
-        
+
         # Calculate both versions of z_error
         z_error = zcur - z_prog
         z_error_lmsz = zcur_lmsz - z_prog
         z_error_lmsz_normalized = z_error_lmsz / aminor
-        
+
         output = {
             "zcur": zcur,
             "z_prog": z_prog,
@@ -413,8 +413,7 @@ class EASTPhysicsMethods:
             "z_error_lmsz_normalized": z_error_lmsz_normalized,
         }
         return output
-    
-    
+
     @staticmethod
     @physics_method(
         columns=["ne", "greenwald_fraction", "dn_dt"],
@@ -457,34 +456,32 @@ class EASTPhysicsMethods:
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_density_parameters.m
 
         Original Author: Robert Granetz, Apr 2017
-        
+
         Last major update: 11/19/24 by William Wei
         """
         ne = [np.nan]
         greenwald_fraction = [np.nan]
         dn_dt = [np.nan]
-        
+
         # Get the density and calculate dn_dt
         ne, netime = params.mds_conn.get_data_with_dims(
-            r"\dfsdev*1e19", tree_name="pcs_east")  # [m^-3], [s]
-        dn_dt = np.gradient(ne, netime) #[m^-3/s]
-        
+            r"\dfsdev*1e19", tree_name="pcs_east"
+        )  # [m^-3], [s]
+        dn_dt = np.gradient(ne, netime)  # [m^-3/s]
+
         # Interpolate ne and dn_dt to the requested timebase
         ne = interp1(netime, ne, params.times)
         dn_dt = interp1(netime, dn_dt, params.times)
-        
+
         # Calculate Greenwald density
         # TODO: use \aminor or \aout? -- MATLAB: \aout
         aminor, efittime = params.mds_conn.get_data_with_dims(
-            r"\aout", tree_name="_efit_tree")  # [m], [s]
+            r"\aout", tree_name="_efit_tree"
+        )  # [m], [s]
         aminor = interp1(efittime, aminor, params.times)
-        ip = EASTPhysicsMethods.get_ip_parameters(params)['ip'] # [A]
-        nG = 1e20*(ip/1e6) / (np.pi * aminor**2)    # [m^-3]
+        ip = EASTPhysicsMethods.get_ip_parameters(params)["ip"]  # [A]
+        nG = 1e20 * (ip / 1e6) / (np.pi * aminor**2)  # [m^-3]
         greenwald_fraction = ne / nG
 
-        output = {
-            'ne': ne, 
-            "greenwald_fraction": greenwald_fraction, 
-            'dn_dt': dn_dt
-        }
+        output = {"ne": ne, "greenwald_fraction": greenwald_fraction, "dn_dt": dn_dt}
         return output
