@@ -348,7 +348,64 @@ class EASTPhysicsMethods:
         References
         -------
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_Z_error.m
-        
-        Original authors: Wang Bo, Alex Tinguely, & Robert Granetz, 2015
+
+        Original Authors
+        ----------------
+        - Wang Bo
+        - Alex Tinguely
+        - Robert Granetz
+
         Last major update: 11/19/24 by William Wei
         """
+        zcur = [np.nan]
+        z_prog = [np.nan]
+        z_error = [np.nan]
+        zcur_lmsz = [np.nan]
+        z_error_lmsz = [np.nan]
+        zcur_lmsz_normalized = [np.nan]
+        z_error_lmsz_normalized = [np.nan]
+        aminor = [np.nan]
+
+        # Read in the calculated zcur from EFIT
+        zcur, zcur_time = params.mds_conn.get_data_with_dims(
+            r"\efit_aeqdsk:zcur", tree_name="_efit_tree"
+        )  # [A], [s]
+        # Deal with rare bug
+        zcur_time, unique_indices = np.unique(zcur_time, return_index=True)
+        zcur = zcur[unique_indices]
+
+        # Read in aminor from EFIT
+        # TODO: use \aminor or \aout?
+        aminor = params.mds_conn.get_data(r"\aminor", treename="_efit_tree")  # [m]
+        aminor = aminor[unique_indices]
+
+        # Next, get the programmed/requested/target Z from PCS, and the
+        # calculated Z-centroid from PCS
+        z_prog, z_prog_time = params.mds_conn.get_data_with_dims(
+            r"\lmtzref/100", tree_name="pcs_east"
+        )  # [m], [s] (Node says 'm' but it's wrong)
+        zcur_lmsz, lmsz_time = params.mds_conn.get_data_with_dims(
+            r"\lmsz", tree_name="pcs_east"
+        )  # [m], [s]
+
+        # Interpolate all retrieved signals to the requested timebase
+        zcur = interp1(zcur_time, zcur, params.times)
+        aminor = interp1(zcur_time, aminor, params.times)
+        z_prog = interp1(z_prog_time, z_prog, params.times)
+        zcur_lmsz = interp1(lmsz_time, zcur_lmsz, params.times)
+        
+        # Calculate both versions of z_error
+        z_error = zcur - z_prog
+        z_error_lmsz = zcur_lmsz - z_prog
+        z_error_lmsz_normalized = z_error_lmsz / aminor
+        
+        output = {
+            "zcur": zcur,
+            "z_prog": z_prog,
+            "z_error": z_error,
+            "zcur_lmsz": zcur_lmsz,
+            "z_error_lmsz": z_error_lmsz,
+            "zcur_lmsz_normalized": zcur_lmsz_normalized,
+            "z_error_lmsz_normalized": z_error_lmsz_normalized,
+        }
+        return output
