@@ -45,6 +45,8 @@ class EASTPhysicsMethods:
         dict
             A dictionary containing the time until disruption. If the shot does
             not disrupt, return NaN.
+            
+        Last major update: 11/19/24 by William Wei
         """
         if params.disrupted:
             return {"time_until_disrupt": params.disruption_time - params.times}
@@ -98,6 +100,7 @@ class EASTPhysicsMethods:
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_Ip_parameters.m
 
         Original author: Robert Granetz, Dec 2015
+        
         Last major update: 11/19/24 by William Wei
         """
         ip = [np.nan]
@@ -279,7 +282,8 @@ class EASTPhysicsMethods:
         -------
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_v_loop.m
 
-        Original author: Robert Granetz, Apr 2016
+        Original Author: Robert Granetz, Apr 2016
+        
         Last major update: 11/19/24 by William Wei
         """
         v_loop = [np.nan]
@@ -351,8 +355,8 @@ class EASTPhysicsMethods:
 
         Original Authors
         ----------------
-        - Wang Bo
-        - Alex Tinguely
+        - Wang Bo, 2015/12/10
+        - Alex Tinguely, 2015/09/09
         - Robert Granetz
 
         Last major update: 11/19/24 by William Wei
@@ -375,7 +379,7 @@ class EASTPhysicsMethods:
         zcur = zcur[unique_indices]
 
         # Read in aminor from EFIT
-        # TODO: use \aminor or \aout?
+        # TODO: use \aminor or \aout? -- MATLAB: \aminor
         aminor = params.mds_conn.get_data(r"\aminor", treename="_efit_tree")  # [m]
         aminor = aminor[unique_indices]
 
@@ -407,5 +411,80 @@ class EASTPhysicsMethods:
             "z_error_lmsz": z_error_lmsz,
             "zcur_lmsz_normalized": zcur_lmsz_normalized,
             "z_error_lmsz_normalized": z_error_lmsz_normalized,
+        }
+        return output
+    
+    
+    @staticmethod
+    @physics_method(
+        columns=["ne", "greenwald_fraction", "dn_dt"],
+        tokamak=Tokamak.EAST,
+    )
+    def get_density_parameters(params: PhysicsMethodParams):
+        """
+        This routine obtains the line-averaged density from the HCN vertical
+        chord.  The node is called \DFSDEV in the PCS_EAST tree.  This signal is
+        also used by the PCS for feedback control of the density.
+
+        The plasma density is also measured by a POlarimeter/INTerferometer
+        diagnostic (PO INT), which has 11 horizontal chords.  The midplane
+        channel is \POINT_N6 in the EAST tree.  (This diagnostic uses an FIR
+        laser at 432 micrometers.)  However, I found that the POINT density
+        measurement is bad on a significant fraction of EAST shots, even in
+        2017.
+
+        The routine also calculates the Greenwald density using aminor coming
+        from EFIT.  The time derivative of electron density is also obtained.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+            - 'ne' : array
+                Density as measured by the polarimeter.interferometer [m^-3].
+            - 'greenwald_fraction' : array
+                greenwald_fraction = ne / nG [dimensionless].
+            - 'dn/dt' : array
+                dn_dt = d(ne)/dt [m^-3/s].
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_density_parameters.m
+
+        Original Author: Robert Granetz, Apr 2017
+        
+        Last major update: 11/19/24 by William Wei
+        """
+        ne = [np.nan]
+        greenwald_fraction = [np.nan]
+        dn_dt = [np.nan]
+        
+        # Get the density and calculate dn_dt
+        ne, netime = params.mds_conn.get_data_with_dims(
+            r"\dfsdev*1e19", tree_name="pcs_east")  # [m^-3], [s]
+        dn_dt = np.gradient(ne, netime) #[m^-3/s]
+        
+        # Interpolate ne and dn_dt to the requested timebase
+        ne = interp1(netime, ne, params.times)
+        dn_dt = interp1(netime, dn_dt, params.times)
+        
+        # Calculate Greenwald density
+        # TODO: use \aminor or \aout? -- MATLAB: \aout
+        aminor, efittime = params.mds_conn.get_data_with_dims(
+            r"\aout", tree_name="_efit_tree")  # [m], [s]
+        aminor = interp1(efittime, aminor, params.times)
+        ip = EASTPhysicsMethods.get_ip_parameters(params)['ip'] # [A]
+        nG = 1e20*(ip/1e6) / (np.pi * aminor**2)    # [m^-3]
+        greenwald_fraction = ne / nG
+
+        output = {
+            'ne': ne, 
+            "greenwald_fraction": greenwald_fraction, 
+            'dn_dt': dn_dt
         }
         return output
