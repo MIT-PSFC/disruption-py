@@ -486,16 +486,24 @@ class EASTPhysicsMethods:
         output = {"ne": ne, "greenwald_fraction": greenwald_fraction, "dn_dt": dn_dt}
         return output
 
-
     @staticmethod
     @physics_method(
-        columns=["p_rad", "p_ecrh", "p_lh", "p_ohm", "p_icrf", "p_nbi", 
-                 "rad_input_frac", "rad_loss_frac", "p_input"],
+        columns=[
+            "p_rad",
+            "p_ecrh",
+            "p_lh",
+            "p_ohm",
+            "p_icrf",
+            "p_nbi",
+            "rad_input_frac",
+            "rad_loss_frac",
+            "p_input",
+        ],
         tokamak=Tokamak.EAST,
     )
     def get_power(params: PhysicsMethodParams):
         """
-        This function gets the input heating powers -- ohmic (p_OHM),electron 
+        This function gets the input heating powers -- ohmic (p_OHM),electron
         cyclotron resonance heating (p_ECRH), neutral beam injection system (p_NBI)
         ion cyclotron (p_ICRF), and lower hybrid (p_LH) -- as well as the radiated
         output power (p_RAD).  If any of the auxiliary heating powers are not
@@ -504,7 +512,7 @@ class EASTPhysicsMethods:
         separate function, get_P_ohm.m.  If either the ohmic heating power or the
         radiated power is unavailable, then arrays of NaN (Not-a-Number) are
         returned for them, and for the radiated power fraction.
-        
+
         Parameters
         ----------
         params : PhysicsMethodParams
@@ -554,7 +562,7 @@ class EASTPhysicsMethods:
         rad_input_frac = [np.nan]
         rad_loss_frac = [np.nan]
         p_input = [np.nan]
-        
+
         # Get lower hybrid power
 
         # Note: the timebase for the LH power signal does not extend over the full
@@ -565,11 +573,49 @@ class EASTPhysicsMethods:
         # (Not-a-Number) values for times outside the LH timebase, and the NaN's
         # will propagate into p_input, rad_input_frac, and rad_loss_frac, which is
         # not desirable.
-        
-        p_lh, lh_time1 = params.mds_conn.get_data_with_dims(
+        p_lh1, lh_time1 = params.mds_conn.get_data_with_dims(
             r"\plhi1*1e3", tree_name="east_1"
-        )  # [W], [s]
+        )  # LHW 2.45 GHz data, [W], [s]
+        p_lh2, lh_time2 = params.mds_conn.get_data_with_dims(
+            r"\plhi2*1e3", tree_name="east_1"
+        )  # LHW 4.66 GHz data, [W], [s]
         # TODO: check if the extrapolation method actually works
-        p_lh = interp1(lh_time1, p_lh, params.times, kind='linear', fill_value=0)
-        
+        p_lh1 = interp1(lh_time1, p_lh1, params.times, kind="linear", fill_value=0)
+        p_lh2 = interp1(lh_time2, p_lh2, params.times, kind="linear", fill_value=0)
+        p_lh = p_lh1 + p_lh2
+
+        # Get ECRH power
+        p_ecrh, ecrh_time = params.mds_conn.get_data_with_dims(
+            r"\pecrh1i*1e3", tree_name="analysis"
+        )  # [W], [s]
+        (baseline_indices,) = np.where(ecrh_time < 0)
+        if len(baseline_indices) > 0:
+            p_ecrh_baseline = np.mean(p_ecrh[baseline_indices])
+            p_ecrh -= p_ecrh_baseline
+        p_ecrh = interp1(ecrh_time, p_ecrh, params.times, kind="linear", fill_value=0)
+
+        # Get ICRF power
+        # Get all 4 addresses
+        p_icrfii, icrf_time1 = params.mds_conn.get_data_with_dims(
+            r"\picrfii*1e3", tree_name="icrf_east"
+        )  # [W], [s]
+        p_icrfir, icrf_time2 = params.mds_conn.get_data_with_dims(
+            r"\picrfir*1e3", tree_name="icrf_east"
+        )  # [W], [s]
+        p_icrfbi, icrf_time3 = params.mds_conn.get_data_with_dims(
+            r"\picrfbi*1e3", tree_name="icrf_east"
+        )  # [W], [s]
+        p_icrfbr, icrf_time4 = params.mds_conn.get_data_with_dims(
+            r"\picrfbr*1e3", tree_name="icrf_east"
+        )  # [W], [s]
+        # Interpolate signals
+        for p_icrf_n, icrf_time_n in zip(
+            [p_icrfii, p_icrfir, p_icrfbi, p_icrfbr],
+            [icrf_time1, icrf_time2, icrf_time3, icrf_time4],
+        ):
+            p_icrf_n = interp1(
+                icrf_time_n, p_icrf_n, params.times, kind="linear", fill_value=0
+            )
+        p_icrf = (p_icrfii - p_icrfir) + (p_icrfbi - p_icrfbr)  # [W]
+
         return
