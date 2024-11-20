@@ -485,3 +485,91 @@ class EASTPhysicsMethods:
 
         output = {"ne": ne, "greenwald_fraction": greenwald_fraction, "dn_dt": dn_dt}
         return output
+
+
+    @staticmethod
+    @physics_method(
+        columns=["p_rad", "p_ecrh", "p_lh", "p_ohm", "p_icrf", "p_nbi", 
+                 "rad_input_frac", "rad_loss_frac", "p_input"],
+        tokamak=Tokamak.EAST,
+    )
+    def get_power(params: PhysicsMethodParams):
+        """
+        This function gets the input heating powers -- ohmic (p_OHM),electron 
+        cyclotron resonance heating (p_ECRH), neutral beam injection system (p_NBI)
+        ion cyclotron (p_ICRF), and lower hybrid (p_LH) -- as well as the radiated
+        output power (p_RAD).  If any of the auxiliary heating powers are not
+        available (there was no ICRF or LH), then this function returns an array
+        of zeros for them.  The ohmic heating power is obtained by calling a
+        separate function, get_P_ohm.m.  If either the ohmic heating power or the
+        radiated power is unavailable, then arrays of NaN (Not-a-Number) are
+        returned for them, and for the radiated power fraction.
+        
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+            - 'p_rad' : array
+                Radiated power [W].
+            - 'p_ecrh' : array
+                Electron cyclotron resonance heating power [W].
+            - 'p_lh' : array
+                Lower hybrid power [W].
+            - 'p_ohm' : array
+                Ohmic power [W].
+            - 'p_icrf' : array
+                Ion cyclotron resonance heating power [W].
+            - 'p_nbi' : array
+                Neutral beam injection power [W].
+            - 'p_input' : array
+                Total input power = p_ohm + p_lh + p_icrf + p_ecrh + p_nbi [W].
+            - 'rad_input_frac' : array
+                Radiated input fraction = p_rad / p_input [%].
+            - 'rad_loss_frac' : array
+                Radiated loss fraction = p_rad / (p_rad + dWmhd/dt) [%].
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_power.m
+
+        Original Author
+        ----------------
+        - Wang Bo, Dec 2015
+        - Robert Granetz, Oct 2015
+        - Alex Tinguely, Oct 2016
+
+        Last major update: 11/20/24 by William Wei
+        """
+        p_rad = [np.nan]
+        p_ecrh = [np.nan]
+        p_lh = [np.nan]
+        p_ohm = [np.nan]
+        p_icrf = [np.nan]
+        p_nbi = [np.nan]
+        rad_input_frac = [np.nan]
+        rad_loss_frac = [np.nan]
+        p_input = [np.nan]
+        
+        # Get lower hybrid power
+
+        # Note: the timebase for the LH power signal does not extend over the full
+        # time span of the discharge.  Therefore, when interpolating the LH power
+        # signal onto the "timebase" array, the LH signal has to be extrapolated
+        # with zero values.  This is an option in the 'interp1' routine.  If the
+        # extrapolation is not done, then the 'interp1' routine will assign NaN
+        # (Not-a-Number) values for times outside the LH timebase, and the NaN's
+        # will propagate into p_input, rad_input_frac, and rad_loss_frac, which is
+        # not desirable.
+        
+        p_lh, lh_time1 = params.mds_conn.get_data_with_dims(
+            r"\plhi1*1e3", tree_name="east_1"
+        )  # [W], [s]
+        # TODO: check if the extrapolation method actually works
+        p_lh = interp1(lh_time1, p_lh, params.times, kind='linear', fill_value=0)
+        
+        return
