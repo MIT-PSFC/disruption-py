@@ -624,11 +624,11 @@ class EASTPhysicsMethods:
         p_nbi = get_heating_power(nbi_addresses, "nbi_east")  # [W]
 
         # Get ohmic power
-        p_ohm = EASTPhysicsMethods.get_p_ohm(params)["p_ohm"]
+        p_ohm = EASTPhysicsMethods.get_p_ohm(params)["p_ohm"]   # [W]
 
         # Get radiated power
         # tree = 'prad_east'
-        # TODO: implement `prad_bulk_xuv2014_2016`
+        # TODO: find and implement `prad_bulk_xuv2014_2016`
         # p_rad, rad_time = prad_bulk_xuv2014_2016(params.shot_id)    # Original from Duan Yanming, and modified by RSG
         # p_rad = interp1(rad_time, p_rad, params.times, kind="linear", fill_value=0)
         p_rad = [np.nan] * len(params.times)
@@ -732,3 +732,76 @@ class EASTPhysicsMethods:
         p_phm = ip * v_resistive
 
         return {"p_ohm": p_ohm}
+
+
+    @staticmethod
+    @physics_method(
+        columns=["n_equal_1_mode", "n_equal_1_phase", "e_equal_1_normalized",
+                 "rmp_n_equal_1", "rmp_n_equal_1_phase", "btor"],
+        tokamak=Tokamak.EAST,
+    )
+    def get_n_equal_1_data(params: PhysicsMethodParams):
+        """
+        This function computes the amplitude and phase of the n=1 Fourier
+        component of the net saddle signals (total saddle signals minus the
+        calculated pickup from the RMP coils) and interpolates the signals onto
+        the specified timebase.  It also computes the amplitude and phase of the
+        n=1 Fourier component of the calculated pickup from the RMP coils into
+        the database.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+            - 'n_equal_1_mode' : array
+                Amplitude of n=1 Fourier component of saddle signals after 
+                subtracting the calculated pickup from the RMP coil currents [T].
+            - 'n_equal_1_phase' : array
+                Toroidal phase angle of above [rad].
+            - 'n_equal_1_normalized' : array
+                'n_equal_1_mode' normalized to btor.
+            'rmp_n_equal_1' : array
+                Amplitude of the n=1 Fourier component of the calculated pickup 
+                of the RMP coils on the saddle signals [T].
+            'rmp_n_equal_1_phase' : array
+                toroidal phase angle of above [rad].
+            'btor' : array
+                Toroidal magnetic field [T].
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_n_equal_1_data.m
+
+        Original Authors
+        ----------------
+        Robert Granetz, Apr 2017
+
+        Last major update: 2014/11/21 by William Wei
+        """
+        n_equal_1_mode = [np.nan]
+        n_equal_1_phase = [np.nan]
+        n_equal_1_normalized = [np.nan]
+        rmp_n_equal_1 = [np.nan]
+        rmp_n_equal_1_phase = [np.nan]
+        btor = [np.nan]
+        
+        # Read in the saddle sensor data and rmp coil currents
+        # TODO: implement get_rmp_and_saddle_signals
+        # rmptime, rmp, saddletime, saddle = get_rmp_and_saddle_signals(params.shot_id)
+        
+        
+        output = {
+            'n_equal_1_mode': n_equal_1_mode,
+            'n_equal_1_phase': n_equal_1_phase,
+            'n_equal_1_normalized': n_equal_1_normalized,
+            'rmp_n_equal_1': rmp_n_equal_1,
+            'rmp_n_equal_1_phase': rmp_n_equal_1_phase,
+            'btor': btor,
+        }
+        
+        return output
