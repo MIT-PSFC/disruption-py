@@ -16,9 +16,7 @@ from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import (
     interp1,
-    matlab_get_bolo,
-    matlab_gsastd,
-    matlab_power,
+    smooth,
 )
 from disruption_py.machine.tokamak import Tokamak
 
@@ -669,7 +667,20 @@ class EASTPhysicsMethods:
     )
     def get_p_ohm(params: PhysicsMethodParams):
         """
-        DESCRIPTION
+        This script calculates the ohmic power, p_ohm. We use the following 
+        expression to calculate P_ohm:
+        
+        P_ohm = Ip * V_resistive
+        
+        where: V_resistive = V_loop - V_inductive = V_loop - L * dIp/dt
+        and L = L_internal = mu0 * R0 * li/2
+        
+        - pcs_east node '\pcvloop'        is used for V_loop,
+        - efit18   node '\efit_aeqdsk:li' is used for li,
+        - pcs_east node '\pcrl01'         is used for Ip
+
+        If the EFIT data or the magnetics Ip data is not available, then P_ohm is
+        returned as NaN.
 
         Parameters
         ----------
@@ -681,16 +692,43 @@ class EASTPhysicsMethods:
         dict
             A dictionary containing the following keys:
             - 'p_ohm' : array
-                DESCRIPTION
+                Ohmic power [W].
 
         References
         -------
-        LINK
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_P_ohm.m
 
-        Original Author:
+        Original Authors
+        ----------------
+        Wang Bo, Dec 2015
+        Alex Tinguely, Sep 2015
+        Robert Granetz, Oct 2015 -- Jun 2016
 
-        Last major update:
+        Last major update: 2014/11/21 by William Wei
         """
         p_ohm = [np.nan]
+        
+        # Get raw signals
+        vloop, vloop_time = params.mds_conn.get_data_with_dims(r"\pcvloop", tree_name='pcs_east')   # [V]
+        li, li_time = params.mds_conn.get_data_with_dims(r"\efit_aeqdsk:li", tree_name='_efit_tree')    # [H]
+        # Fetch raw ip signal to calculate dip_dt and apply smoothing
+        ip, ip_time = params.mds_conn.get_data_with_dims(r"\pcrl01", tree_name="pcs_east")  # [A]
+        sign_ip = np.sign(sum(ip))
+        dipdt = np.gradient(ip, ip_time)
+        dipdt_smoothed = smooth(dipdt, 11)  # Use 11-point boxcar smoothing
+                
+        # Interpolate fetched signals to the requested timebase
+        for signal, signal_time in zip([vloop, li, ip, dipdt_smoothed], [vloop_time, li_time, ip_time, ip_time]):
+            signal = interp1(signal_time, signal, params.times, kind='linear', bounds_error=0)
+        
+        # Calculate p_ohm
+        # TODO: check DIV/0 error
+        # TODO: replace 1.85 with fetched r0 signal
+        inductance = 4e-7 * np.pi * 1.85 * li/2     # For EAST use R0 = 1.85 m 
+        v_inductive = -inductance * dipdt_smoothed
+        v_resistive = vloop - v_inductive
+        (v_resistive_indices,) = np.where(v_resistive * sign_ip < 0)
+        v_resistive(v_resistive_indices) = 0
+        p_phm = ip * v_resistive
 
         return {"p_ohm": p_ohm}
