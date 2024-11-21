@@ -624,7 +624,7 @@ class EASTPhysicsMethods:
         p_nbi = get_heating_power(nbi_addresses, "nbi_east")  # [W]
 
         # Get ohmic power
-        p_ohm = EASTPhysicsMethods.get_p_ohm(params)["p_ohm"]   # [W]
+        p_ohm = EASTPhysicsMethods.get_p_ohm(params)["p_ohm"]  # [W]
 
         # Get radiated power
         # tree = 'prad_east'
@@ -667,14 +667,14 @@ class EASTPhysicsMethods:
     )
     def get_p_ohm(params: PhysicsMethodParams):
         """
-        This script calculates the ohmic power, p_ohm. We use the following 
+        This script calculates the ohmic power, p_ohm. We use the following
         expression to calculate P_ohm:
-        
+
         P_ohm = Ip * V_resistive
-        
+
         where: V_resistive = V_loop - V_inductive = V_loop - L * dIp/dt
         and L = L_internal = mu0 * R0 * li/2
-        
+
         - pcs_east node '\pcvloop'        is used for V_loop,
         - efit18   node '\efit_aeqdsk:li' is used for li,
         - pcs_east node '\pcrl01'         is used for Ip
@@ -707,37 +707,52 @@ class EASTPhysicsMethods:
         Last major update: 2014/11/21 by William Wei
         """
         p_ohm = [np.nan]
-        
+
         # Get raw signals
-        vloop, vloop_time = params.mds_conn.get_data_with_dims(r"\pcvloop", tree_name='pcs_east')   # [V]
-        li, li_time = params.mds_conn.get_data_with_dims(r"\efit_aeqdsk:li", tree_name='_efit_tree')    # [H]
+        vloop, vloop_time = params.mds_conn.get_data_with_dims(
+            r"\pcvloop", tree_name="pcs_east"
+        )  # [V]
+        li, li_time = params.mds_conn.get_data_with_dims(
+            r"\efit_aeqdsk:li", tree_name="_efit_tree"
+        )  # [H]
         # Fetch raw ip signal to calculate dip_dt and apply smoothing
-        ip, ip_time = params.mds_conn.get_data_with_dims(r"\pcrl01", tree_name="pcs_east")  # [A]
+        ip, ip_time = params.mds_conn.get_data_with_dims(
+            r"\pcrl01", tree_name="pcs_east"
+        )  # [A]
         sign_ip = np.sign(sum(ip))
         dipdt = np.gradient(ip, ip_time)
         dipdt_smoothed = smooth(dipdt, 11)  # Use 11-point boxcar smoothing
-                
+
         # Interpolate fetched signals to the requested timebase
-        for signal, signal_time in zip([vloop, li, ip, dipdt_smoothed], [vloop_time, li_time, ip_time, ip_time]):
-            signal = interp1(signal_time, signal, params.times, kind='linear', bounds_error=0)
-        
+        for signal, signal_time in zip(
+            [vloop, li, ip, dipdt_smoothed], [vloop_time, li_time, ip_time, ip_time]
+        ):
+            signal = interp1(
+                signal_time, signal, params.times, kind="linear", bounds_error=0
+            )
+
         # Calculate p_ohm
         # TODO: check DIV/0 error
         # TODO: replace 1.85 with fetched r0 signal
-        inductance = 4e-7 * np.pi * 1.85 * li/2     # For EAST use R0 = 1.85 m 
+        inductance = 4e-7 * np.pi * 1.85 * li / 2  # For EAST use R0 = 1.85 m
         v_inductive = -inductance * dipdt_smoothed
         v_resistive = vloop - v_inductive
         (v_resistive_indices,) = np.where(v_resistive * sign_ip < 0)
-        v_resistive(v_resistive_indices) = 0
+        v_resistive[v_resistive_indices] = 0
         p_phm = ip * v_resistive
 
         return {"p_ohm": p_ohm}
 
-
     @staticmethod
     @physics_method(
-        columns=["n_equal_1_mode", "n_equal_1_phase", "e_equal_1_normalized",
-                 "rmp_n_equal_1", "rmp_n_equal_1_phase", "btor"],
+        columns=[
+            "n_equal_1_mode",
+            "n_equal_1_phase",
+            "e_equal_1_normalized",
+            "rmp_n_equal_1",
+            "rmp_n_equal_1_phase",
+            "btor",
+        ],
         tokamak=Tokamak.EAST,
     )
     def get_n_equal_1_data(params: PhysicsMethodParams):
@@ -759,14 +774,14 @@ class EASTPhysicsMethods:
         dict
             A dictionary containing the following keys:
             - 'n_equal_1_mode' : array
-                Amplitude of n=1 Fourier component of saddle signals after 
+                Amplitude of n=1 Fourier component of saddle signals after
                 subtracting the calculated pickup from the RMP coil currents [T].
             - 'n_equal_1_phase' : array
                 Toroidal phase angle of above [rad].
             - 'n_equal_1_normalized' : array
                 'n_equal_1_mode' normalized to btor.
             'rmp_n_equal_1' : array
-                Amplitude of the n=1 Fourier component of the calculated pickup 
+                Amplitude of the n=1 Fourier component of the calculated pickup
                 of the RMP coils on the saddle signals [T].
             'rmp_n_equal_1_phase' : array
                 toroidal phase angle of above [rad].
@@ -789,19 +804,18 @@ class EASTPhysicsMethods:
         rmp_n_equal_1 = [np.nan]
         rmp_n_equal_1_phase = [np.nan]
         btor = [np.nan]
-        
+
         # Read in the saddle sensor data and rmp coil currents
         # TODO: implement get_rmp_and_saddle_signals
         # rmptime, rmp, saddletime, saddle = get_rmp_and_saddle_signals(params.shot_id)
-        
-        
+
         output = {
-            'n_equal_1_mode': n_equal_1_mode,
-            'n_equal_1_phase': n_equal_1_phase,
-            'n_equal_1_normalized': n_equal_1_normalized,
-            'rmp_n_equal_1': rmp_n_equal_1,
-            'rmp_n_equal_1_phase': rmp_n_equal_1_phase,
-            'btor': btor,
+            "n_equal_1_mode": n_equal_1_mode,
+            "n_equal_1_phase": n_equal_1_phase,
+            "n_equal_1_normalized": n_equal_1_normalized,
+            "rmp_n_equal_1": rmp_n_equal_1,
+            "rmp_n_equal_1_phase": rmp_n_equal_1_phase,
+            "btor": btor,
         }
-        
+
         return output
