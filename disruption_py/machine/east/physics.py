@@ -1249,7 +1249,8 @@ class EASTPhysicsMethods:
         -------
         dict
             A dictionary containing the following keys:
-                - prad_peaking = ratio of core Prad signals to all Prad signals
+                - 'prad_peaking' : array
+                    Ratio of core Prad signals to all Prad signals
 
         Note
         ------
@@ -1415,3 +1416,86 @@ class EASTPhysicsMethods:
         prad_peaking = interp1(xuvtime, prad_peaking, params.times)
 
         return {"prad_peaking": prad_peaking}
+
+    @staticmethod
+    @physics_method(
+        columns=["mirnov_std", "mirnov_std_normalized"],
+        tokamak=Tokamak.EAST,
+    )
+    def get_mirnov_std(params: PhysicsMethodParams):
+        """
+        Compute mirnov_std and mirnov_std_normalized
+
+        The set of Mirnov sensors digitized at 200 kHz (from Dalong):
+            - cmp1t~cmp26t  (c-port),
+            - kmp1t~kmp26t (k-port),
+        all in the EAST tree
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+                - 'mirnov_std' : array
+                    stdev of a mirnov sensor
+                - 'mirnov_std_normalized' : array
+                    mirnov_std normalized to btor
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_mirnov_std.m
+
+
+        Last major update: 2014/11/22 by William Wei
+        """
+        mirnov_sensor = "cmp1t"  # default one used in disruption_warning_database.m
+
+        mirnov_std = np.full(len(params.times), np.nan)
+        mirnov_st_normalized = [np.nan]
+
+        # get the toroidal magnetic field. For shots < 60000, the TF current
+        # was in node "\it" in the "eng_tree", and the timebase of the signal was
+        # not well-defined.  For shots between 60000 (on 2016/01/29) and 65165
+        # (2016/05/01), the "\it" node is in the "pcs_east" tree, with a proper
+        # timebase.  For shots after 65165, the "\it" node was back in the
+        # "eng_tree" tree (with a proper timebase).  Also, starting with shot
+        # 60000, there is a fibreoptic-based measurement of the TF current.  The
+        # signals are "\focs_it" (digitized at 50 kHz) and "\focs_it_s"
+        # (sub-sampled at 1 kHz), both in the "east" tree.  The latter two signals
+        # differ by 1.6% from the \it signal (as of 2016/04/18).
+
+        # TODO: Compare to btor computation in get_n_equal_1_data() once it's implemented
+        if 60000 <= params.shot_id <= 65165:
+            tree = "pcs_east"
+        else:
+            tree = "eng_tree"
+        itf, btor_time = params.mds_conn.get_data_with_dims(r"\it", tree_name=tree)
+        btor = (
+            (4 * np.pi * 1e-7) * itf * (16 * 130) / (2 * np.pi * 1.8)
+        )  # about 4,327 amps/tesla
+        if params.shot_id < 60000:
+            # Btor is constant in time (superconducting magnet).
+            # Construct 2-point signal from scalar value
+            btor = np.mean(btor)
+            btor = [btor, btor]
+            btor_time = [0, 1000]
+        btor = interp1(btor_time, btor, params.times)
+
+        # Get the Mirnov signal
+        time_window = 0.001
+        bp_dot, bp_dot_time = params.mds_conn.get_data_with_dims(
+            r"\Mirnov_sensor" + mirnov_sensor, tree_name="east"
+        )
+        for i, time in enumerate(params.times):
+            (indices,) = np.where(
+                (params.times[i] - time_window) < bp_dot_time < params.times[i]
+            )
+            mirnov_std[i] = np.nanstd(bp_dot[indices])
+
+        mirnov_std_normalized = mirnov_std / abs(btor)
+
+        return {"mirnov_std": mirnov_std, "mirnov_std_normalized": mirnov_st_normalized}
