@@ -1002,3 +1002,159 @@ class EASTPhysicsMethods:
         lower_gap = [np.nan]
 
         return {"pupper_gap": upper_gap, "plower_gap": lower_gap}
+
+    @staticmethod
+    @physics_method(
+        columns=["ip_error_rt", "q95_rt", "beta_p_rt", "li_rt", "wmhd_rt"],
+        tokamak=Tokamak.EAST,
+    )
+    def get_pcs_parameters(params: PhysicsMethodParams):
+        """
+        This function gets many of the real time signals that are actually used
+        in the plasma control system (PCS) on the EAST tokamak.
+
+        For development of a disruption prediction algorithm that we want to run
+        in real time in the PCS, it is better to train on a database of these real
+        time signals than on the processed signals in the analysis trees and east
+        trees.
+
+        Note: since 2018 the EFIT-derived signals used in the PCS are calculated
+        by P-EFIT, which is different than RT-EFIT.  This information came from
+        QP Yuan <qpyuan@ipp.ac.cn>
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+            - 'ip_error_rt' : array
+                error between actual and pre-programmed plasma currents
+            - 'q95_rt' : array
+                q95 calculated by RT-EFIT for PCS (P-EFIT since 2018)
+            - 'beta_p_rt' : array
+                beta_p calculated by RT-EFIT for PCS (P-EFIT since 2018)
+            - 'li_rt' : array
+                li calculated by RT-EFIT for PCS (P-EFIT since 2018)
+            - 'wmhd_rt' : array
+                Wmhd calculated by RT-EFIT for PCS (P-EFIT since 2018)
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_pcs.m
+
+        Original Author
+        ----------------
+        Robert Granetz, Dec 2018
+
+        Last major update: 2014/11/22 by William Wei
+        """
+        output = dict()
+
+        # Get ip_error_rt, beta_p_rt, li_rt, and wmhd_rt
+        signals = {
+            "ip_error_rt": r"\lmeip",
+            "beta_p_rt": r"\pfsbetap",
+            "li_rt": r"\pfsli",
+            "wmhd_rt": r"\pfswmhd",
+        }
+        for name, address in signals.items():
+            signal, timearray = params.mds_conn.get_data_with_dims(
+                address, tree_name="pcs_east"
+            )
+            signal = interp1(
+                timearray, signal, params.times, kind="linear", bounds_error=0
+            )
+            output[name] = signal
+
+        # Get q95_rt
+        q95_rt, q95_rt_time = params.mds_conn.get_data_with_dims(
+            r"\q95", tree_name="pefitrt_east"
+        )
+        # Deal with bug
+        q95_rt_time, unique_indices = np.unique(q95_rt_time, return_index=True)
+        q95_rt = q95_rt[unique_indices]
+        q95_rt = interp1(
+            q95_rt_time, q95_rt, params.times, kind="linear", bounds_error=0
+        )
+        output["q95_rt"] = q95_rt
+
+        return output
+
+    @staticmethod
+    @physics_method(
+        columns=[
+            "p_rad_rt",
+            "p_ecrh_rt",
+            "p_lh_rt",
+            "p_oh_rt",
+            "p_icrf_rt",
+            "p_nbi_rt",
+            "rad_input_frac_rt",
+            "rad_loss_frac_rt",
+        ],
+        tokamak=Tokamak.EAST,
+    )
+    def get_pcs_power(params: PhysicsMethodParams):
+        """
+        This function gets the real time power signals that are actually used
+        in the plasma control system (PCS) on the EAST tokamak.
+
+        For development of a disruption prediction algorithm that we want to run
+        in real time in the PCS, it is better to train on a database of these real
+        time signals than on the processed signals in the analysis trees and east
+        trees.
+
+        Note: since 2018 the EFIT-derived signals used in the PCS are calculated
+        by P-EFIT, which is different than RT-EFIT.  This information came from
+        QP Yuan <qpyuan@ipp.ac.cn>
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+            - 'p_rad_rt' : array
+                radiated power [W]
+            - 'p_ecrh_rt' : array
+                electron cyclotron resonance heating power [W]
+            - 'p_lh_RT' : array
+                lower hybrid power [W]
+            - 'p_oh_rt' : array
+                ohmic power [W]
+            - 'p_icrf_rt' : array
+                ion cyclotron power [W]
+            - 'p_nbi_RT' : array
+                neutral beam injection power [W]
+            - 'rad_input_frac' : array
+                rad_input_frac = p_rad/p_input [%]
+                               = p_rad/(p_ohm + p_lh + p_icrh + p_ecrh + p_nbi)
+                               = ratio of radiated power to total input power
+            - 'rad_loss_frac' : array
+                rad_loss_frac = p_rad/p_loss
+                              = p_rad/(p_rad + p_cond + p_conv)
+                              = p_rad/(p_input - dWmhd/dt)
+                              = ratio of radiated power to total loss power
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_pcs.m
+
+        Original Author
+        ----------------
+        Robert Granetz, Dec 2018
+
+        Last major update: 2014/11/22 by William Wei
+        """
+        pcs_data = {k: [np.nan] for k in EASTPhysicsMethods.pcs_cols}
+
+        #
+
+        return
