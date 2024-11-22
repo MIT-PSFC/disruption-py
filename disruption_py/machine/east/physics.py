@@ -1225,3 +1225,193 @@ class EASTPhysicsMethods:
             "p_nbi_rt": p_nbi_rt,
         }
         return output
+
+    @staticmethod
+    @physics_method(
+        columns=["prad_peaking"],
+        tokamak=Tokamak.EAST,
+    )
+    def get_prad_peaking(params: PhysicsMethodParams):
+        """
+        This routine calculates the peaking factor of the profiles of radiated
+        power measured by the AXUV arrays on EAST.  Here we define the peaking
+        factor as the ratio of the average of the Prad signals of the core
+        channels to the average of all the channels, excluding those that look in
+        the divertor region (core-to-average).  This routine linearly
+        interpolates the prad_peaking signal onto the given timebase.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+                - prad_peaking = ratio of core Prad signals to all Prad signals
+
+        Note
+        ------
+        For now we are defining "core" to be the centralmost 6 chords out of the
+        64 chords in the EAST axuv arrays, and "all" to be all of the non-divertor
+        -viewing chords.  See comments later in this code for more details.
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_prad_peaking.m
+
+        Original Author
+        ----------------
+        Robert Granetz, May 2019
+
+        Last major update: 2014/11/22 by William Wei
+        """
+
+        # The following section about calibration factors was copied-and-pasted
+        # directly from Duan Yanmin <ymduan@ipp.ac.cn>'s code.
+
+        # Calibration factors
+        Fac1 = [
+            1.3681,
+            1.3429,
+            1.3215,
+            1.3039,
+            1.2898,
+            1.2793,
+            1.2723,
+            1.2689,
+            1.2689,
+            1.2723,
+            1.2793,
+            1.2898,
+            1.3039,
+            1.3215,
+            1.3429,
+            1.3681,
+        ] * 1e4
+        Fac2 = [
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        ]  # factors of Amp.Gain
+        Fac3 = [1, 1, 1, 1]  # cross calibration factors between arrays
+        Fac4 = 1 * 1e-3  # unit convert
+        # Fac5=2.5    # corrected factor by cross calibration with foil bolometer
+        Maj_R = 1.85
+        Del_r = [
+            3.6,
+            3.6,
+            3.5,
+            3.4,
+            3.4,
+            3.3,
+            3.3,
+            3.2,
+            3.2,
+            3.1,
+            3.1,
+            3.0,
+            3.0,
+            2.9,
+            2.9,
+            2.8,
+            2.9,
+            2.8,
+            2.8,
+            2.8,
+            2.8,
+            2.8,
+            2.8,
+            2.7,
+            2.7,
+            2.7,
+            2.7,
+            2.7,
+            2.6,
+            2.6,
+            2.6,
+            2.6,
+            2.6,
+            2.6,
+            2.6,
+            2.6,
+            2.7,
+            2.7,
+            2.7,
+            2.7,
+            2.7,
+            2.8,
+            2.8,
+            2.8,
+            2.8,
+            2.8,
+            2.8,
+            2.9,
+            2.8,
+            2.9,
+            2.9,
+            3.0,
+            3.0,
+            3.1,
+            3.1,
+            3.2,
+            3.2,
+            3.3,
+            3.3,
+            3.4,
+            3.4,
+            3.5,
+            3.6,
+            3.6,
+        ] * 0.01
+
+        # Get XUV data
+        xuvtime = params.mds_conn.get_dims(r"\pxuv1", tree_name="east_1")
+        # There are 64 AXUV chords, arranged in 4 arrays of 16 channels each
+        xuv = np.full((len(xuvtime), 64), np.nan)
+
+        dt = xuvtime[1] - xuvtime[0]
+        smoothing_time = 1e-3
+        smoothing_window = max([round(smoothing_time / dt, 1)])
+        for iarray in range(4):
+            for ichan in range(16):
+                ichord = 16 * iarray + ichan
+                # TODO: confirm the actual address of each chord
+                signal = params.mds_conn.get_data(
+                    r"\pxuv" + str(ichord), tree_name="east_1"
+                )
+                signal = signal - np.mean(signal[:100])  # Subtract baseline
+                signal_smoothed = smooth(xuv[:, ichord], smoothing_window)
+                xuv[:, ichord] = (
+                    signal_smoothed
+                    * Fac1[ichan]
+                    * Fac2[iarray][ichan]
+                    * Fac3[iarray]
+                    * Fac4
+                    * 2
+                    * np.pi
+                    * Maj_R
+                    * Del_r[ichan]
+                )  # from Duan Yanming's program
+
+        # Correction for bad channels (from Duan Yanmin's program)
+        xuv[:, 11] = 0.5 * (xuv[:, 10] + xuv[:, 12])
+
+        # Define the core chords to be #28 to #37 (centermost 10 chords), and
+        # define the non-divertor chords to be #09 to #56.  (Chords #1-8 view the
+        # lower divertor region, and chords #57-64 view the upper divertor region.)
+        ch_core = np.zeros((64, 1))
+        ch_core[29:35] = 1 / 6
+        ch_all = np.zeros((64, 1))
+        ch_all[8:56] = 1 / 48
+
+        prad_peaking = np.full((len(xuvtime)), np.nan)
+        for itime in range(len(xuvtime)):
+            prad_peaking[itime] = (xuv[itime, :] * ch_core) / (xuv[itime, :] * ch_all)
+
+        # Interpret to the requested timebase
+        prad_peaking = interp1(xuvtime, prad_peaking, params.times)
+
+        return {"prad_peaking": prad_peaking}
