@@ -1088,13 +1088,8 @@ class EASTPhysicsMethods:
     @physics_method(
         columns=[
             "p_rad_rt",
-            "p_ecrh_rt",
             "p_lh_rt",
-            "p_oh_rt",
-            "p_icrf_rt",
             "p_nbi_rt",
-            "rad_input_frac_rt",
-            "rad_loss_frac_rt",
         ],
         tokamak=Tokamak.EAST,
     )
@@ -1112,6 +1107,9 @@ class EASTPhysicsMethods:
         by P-EFIT, which is different than RT-EFIT.  This information came from
         QP Yuan <qpyuan@ipp.ac.cn>
 
+        As of Nov 2024, only p_rad_rt, p_lh_rt, and p_nbi_rt have been implemented.
+        All other PCS signals weren't implemented in original MATLAB script.
+
         Parameters
         ----------
         params : PhysicsMethodParams
@@ -1123,21 +1121,21 @@ class EASTPhysicsMethods:
             A dictionary containing the following keys:
             - 'p_rad_rt' : array
                 radiated power [W]
-            - 'p_ecrh_rt' : array
+            - [UNAVAILABLE] 'p_ecrh_rt' : array
                 electron cyclotron resonance heating power [W]
             - 'p_lh_RT' : array
                 lower hybrid power [W]
-            - 'p_oh_rt' : array
+            - [UNAVAILABLE] 'p_oh_rt' : array
                 ohmic power [W]
-            - 'p_icrf_rt' : array
+            - [UNAVAILABLE] 'p_icrf_rt' : array
                 ion cyclotron power [W]
             - 'p_nbi_RT' : array
                 neutral beam injection power [W]
-            - 'rad_input_frac' : array
+            - [UNAVAILABLE] 'rad_input_frac' : array
                 rad_input_frac = p_rad/p_input [%]
                                = p_rad/(p_ohm + p_lh + p_icrh + p_ecrh + p_nbi)
                                = ratio of radiated power to total input power
-            - 'rad_loss_frac' : array
+            - [UNAVAILABLE] 'rad_loss_frac' : array
                 rad_loss_frac = p_rad/p_loss
                               = p_rad/(p_rad + p_cond + p_conv)
                               = p_rad/(p_input - dWmhd/dt)
@@ -1153,8 +1151,77 @@ class EASTPhysicsMethods:
 
         Last major update: 2014/11/22 by William Wei
         """
-        pcs_data = {k: [np.nan] for k in EASTPhysicsMethods.pcs_cols}
+        # Get p_rad_rt
+        p_rad_rt, timearray = params.mds_conn.get_data_with_dims(
+            r"\pcprad", tree_name="pcs_east"
+        )
+        p_rad_rt = interp1(
+            timearray, p_rad_rt, params.times, kind="linear", bounds_error=0
+        )
 
-        #
+        # TODO: Verify the outputs, then modify get_heating_power() to make it compatible with this
+        # Get p_nbi_rt
+        nbi_addresses = {
+            "i_nbil_rt": r"\pcnbi1li",
+            "v_nbil_rt": r"\pcnbi1lv",
+            "i_nbir_rt": r"\pcnbi1ri",
+            "v_nbir_rt": r"\pcnbi1rv",
+        }
+        nbi_signals = dict()
+        for name, address in nbi_addresses.items():
+            signal, timearray = params.mds_conn.get_data_with_dims(
+                address, tree_name="pefitrt_east"
+            )
+            signal = interp1(
+                timearray, signal, params.times, kind="linear", bounds_error=0
+            )
+            nbi_signals[name] = signal
+        p_nbi_rt = (
+            nbi_signals["i_nbil_rt"] * nbi_signals["v_nbil_rt"]
+            + nbi_signals["i_nbir_rt"] * nbi_signals["v_nbir_rt"]
+        )
 
-        return
+        # Get p_lh_rt
+        lh_addresses = {
+            "p_lh_46_inj_rt": r"\pcplhi",
+            "p_lh_46_ref_rt": r"\pcplhr",
+            "p_lh_245_inj_rt": r"\pcplhi2",
+            "p_lh_245_ref_rt": r"\pcplhr2",
+        }
+        lh_signals = dict()
+        for name, address in lh_addresses.items():
+            signal, timearray = params.mds_conn.get_data_with_dims(
+                address, tree_name="pefitrt_east"
+            )
+            signal = interp1(
+                timearray, signal, params.times, kind="linear", bounds_error=0
+            )
+            lh_signals[name] = signal
+        p_lh_rt = (
+            lh_signals["p_lh_46_inj_rt"]
+            - lh_signals["p_lh_46_ref_rt"]
+            + lh_signals["p_lh_245_inj_rt"]
+            - lh_signals["p_lh_245_ref_rt"]
+        )
+
+        # Q.P. Yuan:
+        # There is no signals from ICRF or ECRH connected to PCS. And I checked the
+        # signals for NBI, there is no effective value, just noise. We will make
+        # the NBI signals available in this EAST campaign. The PLHI2 and PLHR2 for
+        # 2.45G LHW system have signals but are not calibrated yet.
+
+        # Get p_ohm
+        # "Note, I'm not bothering to calculate a real time version" -- Whoever who wrote this
+        # p_ohm = EASTPhysicsMethods.get_p_ohm(params)['p_ohm']
+
+        # Compute total power and radiation fractions
+        # p_input_rt = p_ohm + p_lh_rt + p_icrf_rt + p_ecrh_rt + p_nbi_rt
+        # rad_input_frac_rt = p_rad_rt / p_input_rt
+        # rad_loss_frac_rt = p_rad_rt / (p_input_rt - dwmhd_dt)
+
+        output = {
+            "p_rad_rt": p_rad_rt,
+            "p_lh_rt": p_lh_rt,
+            "p_nbi_rt": p_nbi_rt,
+        }
+        return output
