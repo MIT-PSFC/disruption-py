@@ -25,29 +25,31 @@ class EASTEfitMethods:
     # TODO: confirm units
     efit_cols = {
         "beta_n": r"\efit_aeqdsk:betan",
-        "beta_p": r"\efit_a_eqdsk:betap",
-        "kappa": r"\efit_a_eqdsk:kappa",
-        "li": r"\efit_a_eqdsk:li",
-        "q0": r"\efit_a_eqdsk:q0",
-        "qstar": r"\efit_a_eqdsk:qstar",
-        "q95": r"\efit_a_eqdsk:q95",
-        "wmhd": r"\efit_a_eqdsk:wmhd",
-        "aminor": r"\efit_a_eqdsk:aout",
-        "chisq": r"\efit_a_eqdsk:chisq",
+        "beta_p": r"\efit_aeqdsk:betap",
+        "kappa": r"\efit_aeqdsk:kappa",
+        "li": r"\efit_aeqdsk:li",
+        "q0": r"\efit_aeqdsk:q0",
+        "qstar": r"\efit_aeqdsk:qstar",
+        "q95": r"\efit_aeqdsk:q95",
+        "wmhd": r"\efit_aeqdsk:wmhd",
+        "area": r"\efit_aeqdsk:area*1e-4",  # [cm^2] -> [m^2], from get_kappa_area
+        "aminor": r"\efit_aeqdsk:aout",
+        "chisq": r"\efit_aeqdsk:chisq",
     }
     efit_derivs = {"dbetap_dt": "beta_p", "dli_dt": "li", "dwmhd_dt": "wmhd"}
 
     pefit_cols = {
         "pbeta_n": r"\efit_aeqdsk:betan",
-        "pbeta_p": r"\efit_a_eqdsk:betap",
-        "pkappa": r"\efit_a_eqdsk:kappa",
-        "pli": r"\efit_a_eqdsk:li",
-        "pq0": r"\efit_a_eqdsk:q0",
-        "pqstar": r"\efit_a_eqdsk:qstar",
-        "pq95": r"\efit_a_eqdsk:q95",
-        "pwmhd": r"\efit_a_eqdsk:wmhd",
+        "pbeta_p": r"\efit_aeqdsk:betap",
+        "pkappa": r"\efit_aeqdsk:kappa",
+        "pli": r"\efit_aeqdsk:li",
+        "pq0": r"\efit_aeqdsk:q0",
+        "pqstar": r"\efit_aeqdsk:qstar",
+        "pq95": r"\efit_aeqdsk:q95",
+        "pwmhd": r"\efit_aeqdsk:wmhd",
+        "parea": r"\efit_aeqdsk:area*1e-4",  # # [cm^2] -> [m^2]
         "paminor": r"\efit_aeqdsk:aout",
-        "pchisq": r"\efit_a_eqdsk:chisq",
+        "pchisq": r"\efit_aeqdsk:chisq",
         "pconvergence": r"\efit_aeqdsk:error",
     }
 
@@ -116,13 +118,18 @@ class EASTEfitMethods:
         dict
             A dictionary containing the retrieved P-EFIT parameters.
         """
-        efit_data = {
-            k: params.mds_conn.get_data(v, tree_name="pefit_east")
-            for k, v in EASTEfitMethods.pefit_cols.items()
-        }
         efit_time = params.mds_conn.get_data(
             r"\efit_a_eqdsk:atime", tree_name="pefit_east"
         )  # TODO: [unit?]
+
+        # Deal with bug
+        efit_time, unique_indices = np.unique(efit_time, return_index=True)
+
+        efit_data = {
+            k: params.mds_conn.get_data(v, tree_name="pefit_east")[unique_indices]
+            for k, v in EASTEfitMethods.pefit_cols.items()
+        }
+
         # P-EFIT reconstructions are sometimes invalid, particularly when very close
         # to a disruption.  There are a number of P-EFIT parameters that can indicate
         # invalid reconstructions, such as 'error' and 'chisq'.  Here we use

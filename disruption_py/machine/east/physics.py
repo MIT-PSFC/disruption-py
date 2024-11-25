@@ -19,6 +19,7 @@ from disruption_py.core.utils.math import (
     smooth,
 )
 from disruption_py.machine.tokamak import Tokamak
+from disruption_py.machine.east import EASTEfitMethods
 
 
 class EASTPhysicsMethods:
@@ -1002,6 +1003,80 @@ class EASTPhysicsMethods:
         lower_gap = [np.nan]
 
         return {"pupper_gap": upper_gap, "plower_gap": lower_gap}
+
+    @staticmethod
+    @physics_method(columns=["kappa_area"], tokamak=Tokamak.EAST)
+    def get_kappa_area(params: PhysicsMethodParams):
+        """
+        This script computes kappa_area (elongation parameter) defined as
+        plasma area / (pi * aminor**2)
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+            - 'kappa_area' : array
+                Computed elongation parameter
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_kappa_area.m
+
+        Original Authors
+        ----------------
+        Robert Granetz, Dec 2015
+        Alex Tinguely, Oct 2015
+        Cristina Rea, Aug 2018
+
+        Last major update: 2014/11/25 by William Wei
+        """
+        # Get area and aminor from EASTEfitMethods
+        area, aminor = EASTEfitMethods.get_efit_parameters["area", "aminor"]
+        # Compute kappa_area
+        kappa_area = area / (np.pi * aminor**2)
+
+        return {"kappa_area": kappa_area}
+
+    @staticmethod
+    @physics_method(columns=["pkappa_area"], tokamak=Tokamak.EAST)
+    def get_pkappa_area(params: PhysicsMethodParams):
+        """
+        This script computes kappa_area (elongation parameter) defined as
+        plasma area / (pi * aminor**2) using data from the P-EFIT tree.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+            - 'pkappa_area' : array
+                Computed elongation parameter using data from the P-EFIT tree.
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_PEFIT_parameters.m
+
+        Original Authors
+        ----------------
+        Cristina Rea, May 2019
+
+        Last major update: 2014/11/25 by William Wei
+        """
+        # Get area and aminor from EASTEfitMethods
+        area, aminor = EASTEfitMethods.get_pefit_parameters["parea", "paminor"]
+        # Compute kappa_area
+        kappa_area = area / (np.pi * aminor**2)
+
+        return {"pkappa_area": kappa_area}
 
     @staticmethod
     @physics_method(
