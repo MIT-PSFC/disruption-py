@@ -1498,4 +1498,7 @@ class EASTPhysicsMethods:
 
         mirnov_std_normalized = mirnov_std / abs(btor)
 
-        return {"mirnov_std": mirnov_std, "mirnov_std_normalized": mirnov_st_normalized}
+        return {
+            "mirnov_std": mirnov_std,
+            "mirnov_std_normalized": mirnov_std_normalized,
+        }
