@@ -1503,7 +1503,6 @@ class EASTPhysicsMethods:
             "mirnov_std_normalized": mirnov_std_normalized,
         }
 
-
     @staticmethod
     @physics_method(
         columns=["n1rms", "n2rms", "n1rms_normalized", "n2rms_normalized"],
@@ -1529,25 +1528,91 @@ class EASTPhysicsMethods:
         dict
             A dictionary containing the following keys:
                 - 'n1rms' : array
-                    ADD DESCRIPTION
+                    std over a time window of the n=1 mode from the Mirnov array [T].
                 - 'n2rms' : array
-                    ADD DESCRIPTION
+                    std over a time window of the n=2 mode from the Mirnov array [T].
                 - 'n1rms_normalized' : array
-                    n1rms normalized to btor
+                    n1rms normalized to btor [dimensionless].
                 - 'n2rms_normalized' : array
-                    n2rms normalized to btor
-                    
+                    n2rms normalized to btor [ dimensionless].
+
         References
         -------
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_n1rms_n2rms.m
 
         Last major update: 2014/11/25 by William Wei
         """
-        
-        mirtime = params.mds_conn.get_dims(r"\mitab2", tree_name='east')
+        n1rms = np.full(len(params.times), np.nan)
+        n2rms = np.full(len(params.times), np.nan)
+        n1rms_normalized = [np.nan]
+        n2rms_normalized = [np.nan]
+
+        mirtime = params.mds_conn.get_dims(r"\mitab2", tree_name="east")
         mir = np.full((len(mirtime), 16), np.nan)
-        mir_nodes = [r'\mitab2', r'\mitbc2', r'\mitcd2', r'\mitde2', r'\mitef2', r'\mitfg2',
-                         r'\mit2gh', r'\mit2hi', r'\mitij2', r'\mitjk2', r'\mitkl2', r'\mit2lm',
-                         r'\mit2mn', r'\mitno2', r'\mitop2', r'\mit2pa']
+        mir_nodes = [
+            r"\mitab2",
+            r"\mitbc2",
+            r"\mitcd2",
+            r"\mitde2",
+            r"\mitef2",
+            r"\mitfg2",
+            r"\mit2gh",
+            r"\mit2hi",
+            r"\mitij2",
+            r"\mitjk2",
+            r"\mitkl2",
+            r"\mit2lm",
+            r"\mit2mn",
+            r"\mitno2",
+            r"\mitop2",
+            r"\mit2pa",
+        ]
         for i, node in enumerate(mir_nodes):
-            mir[:,i] = params.mds_conn.get_data(node, tree_name='east')
+            mir[:, i] = params.mds_conn.get_data(node, tree_name="east")
+
+        # Get btor data
+        # Copied from get_mirnov_std. Consider making this into a standalone physics method
+        # TODO: Compare to btor computation in get_n_equal_1_data() once it's implemented
+        if 60000 <= params.shot_id <= 65165:
+            tree = "pcs_east"
+        else:
+            tree = "eng_tree"
+        itf, btor_time = params.mds_conn.get_data_with_dims(r"\it", tree_name=tree)
+        btor = (
+            (4 * np.pi * 1e-7) * itf * (16 * 130) / (2 * np.pi * 1.8)
+        )  # about 4,327 amps/tesla
+        if params.shot_id < 60000:
+            # Btor is constant in time (superconducting magnet).
+            # Construct 2-point signal from scalar value
+            btor = np.mean(btor)
+            btor = [btor, btor]
+            btor_time = [0, 1000]
+        btor = interp1(btor_time, btor, params.times)
+
+        # Compute the n=1 and n=2 mode signals from the Mirnov array signals
+        # TODO: Verify the output structure of scipy.fft.fft; MATLAB one has index 3 (so 0, 1, 2?)
+        mir_fft_output = scipy.fft.fft(mir, n=2)
+        amplitude = abs(mir_fft_output) / mir_fft_output.shape[1]
+        amplitude[:, 0:] *= 2  # TODO: Why?
+        phase = np.arctan2(np.imag(mir_fft_output) / np.real(mir_fft_output))
+        n1 = amplitude[:, 0] * np.cos(phase[:, 0])
+        n2 = amplitude[:, 1] * np.cos(phase[:, 1])
+
+        # Calculate n1rms & n2rms
+        time_window = 0.001
+        for i, time in enumerate(params.times):
+            (indices,) = np.where(time - time_window <= mirtime < time + time_window)
+            n1rms[i] = np.nanstd(n1[indices])
+            n2rms[i] = np.nanstd(n2[indices])
+
+        # Calculate the normalized signals
+        n1rms_normalized = n1rms / abs(btor)
+        n2rms_normalized = n2rms / abs(btor)
+
+        output = {
+            "n1rms": n1rms,
+            "n2rms": n2rms,
+            "n1rms_normalized": n1rms_normalized,
+            "n2rms_normalized": n2rms_normalized,
+        }
+        return output
