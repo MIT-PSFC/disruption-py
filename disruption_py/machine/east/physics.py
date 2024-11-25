@@ -558,18 +558,18 @@ class EASTPhysicsMethods:
         rad_loss_frac = [np.nan]
         p_input = [np.nan]
 
-        def get_heating_power(addresses, tree):
+        def get_heating_power(nodes, tree):
             """
             Helper function to pack p_lh, p_icrf, and p_nbi computations
             """
             heating_power = np.empty(params.times.shape)
-            for address in addresses:
-                power_address, time_address = params.mds_conn.get_data_with_dims(
-                    address, tree_name=tree
+            for node in nodes:
+                power_node, time_node = params.mds_conn.get_data_with_dims(
+                    node, tree_name=tree
                 )
                 heating_power += interp1(
-                    time_address,
-                    power_address,
+                    time_node,
+                    power_node,
                     params.times,
                     kind="linear",
                     fill_value=0,
@@ -588,11 +588,11 @@ class EASTPhysicsMethods:
         # not desirable.
 
         # TODO: check if the extrapolation method actually works
-        lh_addresses = [
+        lh_nodes = [
             r"\plhi1*1e3",  # LHW 2.45 GHz data
             r"\plhi2*1e3",  # LHW 4.66 GHz data
         ]
-        p_lh = get_heating_power(lh_addresses, "east_1")  # [W]
+        p_lh = get_heating_power(lh_nodes, "east_1")  # [W]
 
         # Get ECRH power
         p_ecrh, ecrh_time = params.mds_conn.get_data_with_dims(
@@ -606,22 +606,22 @@ class EASTPhysicsMethods:
 
         # Get ICRF power
         # p_ICRF = (p_icrfii - p_icrfir) + (p_icrfbi - p_icrfbr)
-        icrf_addresses = [
+        icrf_nodes = [
             r"\picrfii*1e3",
             r"\picrfir*-1e3",
             r"\picrfbi*1e3",
             r"\picrfbr*-1e3",
         ]
-        p_icrf = get_heating_power(icrf_addresses, "icrf_east")  # [W]
+        p_icrf = get_heating_power(icrf_nodes, "icrf_east")  # [W]
 
         # Get NBI power
-        nbi_addresses = [
+        nbi_nodes = [
             r"\pnbi1lsource*1e3",
             r"\pnbi1rsource*1e3",
             r"\pnbi2lsource*1e3",
             r"\pnbi2rsource*1e3",
         ]
-        p_nbi = get_heating_power(nbi_addresses, "nbi_east")  # [W]
+        p_nbi = get_heating_power(nbi_nodes, "nbi_east")  # [W]
 
         # Get ohmic power
         p_ohm = EASTPhysicsMethods.get_p_ohm(params)["p_ohm"]  # [W]
@@ -1061,9 +1061,9 @@ class EASTPhysicsMethods:
             "li_rt": r"\pfsli",
             "wmhd_rt": r"\pfswmhd",
         }
-        for name, address in signals.items():
+        for name, node in signals.items():
             signal, timearray = params.mds_conn.get_data_with_dims(
-                address, tree_name="pcs_east"
+                node, tree_name="pcs_east"
             )
             signal = interp1(
                 timearray, signal, params.times, kind="linear", bounds_error=0
@@ -1161,16 +1161,16 @@ class EASTPhysicsMethods:
 
         # TODO: Verify the outputs, then modify get_heating_power() to make it compatible with this
         # Get p_nbi_rt
-        nbi_addresses = {
+        nbi_nodes = {
             "i_nbil_rt": r"\pcnbi1li",
             "v_nbil_rt": r"\pcnbi1lv",
             "i_nbir_rt": r"\pcnbi1ri",
             "v_nbir_rt": r"\pcnbi1rv",
         }
         nbi_signals = dict()
-        for name, address in nbi_addresses.items():
+        for name, node in nbi_nodes.items():
             signal, timearray = params.mds_conn.get_data_with_dims(
-                address, tree_name="pefitrt_east"
+                node, tree_name="pefitrt_east"
             )
             signal = interp1(
                 timearray, signal, params.times, kind="linear", bounds_error=0
@@ -1182,16 +1182,16 @@ class EASTPhysicsMethods:
         )
 
         # Get p_lh_rt
-        lh_addresses = {
+        lh_nodes = {
             "p_lh_46_inj_rt": r"\pcplhi",
             "p_lh_46_ref_rt": r"\pcplhr",
             "p_lh_245_inj_rt": r"\pcplhi2",
             "p_lh_245_ref_rt": r"\pcplhr2",
         }
         lh_signals = dict()
-        for name, address in lh_addresses.items():
+        for name, node in lh_nodes.items():
             signal, timearray = params.mds_conn.get_data_with_dims(
-                address, tree_name="pefitrt_east"
+                node, tree_name="pefitrt_east"
             )
             signal = interp1(
                 timearray, signal, params.times, kind="linear", bounds_error=0
@@ -1379,7 +1379,7 @@ class EASTPhysicsMethods:
         for iarray in range(4):
             for ichan in range(16):
                 ichord = 16 * iarray + ichan
-                # TODO: confirm the actual address of each chord
+                # TODO: confirm the actual node of each chord
                 signal = params.mds_conn.get_data(
                     r"\pxuv" + str(ichord), tree_name="east_1"
                 )
@@ -1502,3 +1502,52 @@ class EASTPhysicsMethods:
             "mirnov_std": mirnov_std,
             "mirnov_std_normalized": mirnov_std_normalized,
         }
+
+
+    @staticmethod
+    @physics_method(
+        columns=["n1rms", "n2rms", "n1rms_normalized", "n2rms_normalized"],
+        tokamak=Tokamak.EAST,
+    )
+    def get_n1rms_n2rms(params: PhysicsMethodParams):
+        """
+        Read in the saddle sensor data and the rmp currents from the MDSplus
+        tree.  All the outputs have time as their 1st dimension,
+        i.e. rmp(time,rmpcoil#) and sad(time,saddlecoil#), and the time arrays
+        are column vectors.
+
+        The ordering of the rmp data is: irmpu1 to irmpu8, then irmpl1 to irmpl8.
+        The ordering of the saddle data is: sad_pa, sad_bc, .. sad_no.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+                - 'n1rms' : array
+                    ADD DESCRIPTION
+                - 'n2rms' : array
+                    ADD DESCRIPTION
+                - 'n1rms_normalized' : array
+                    n1rms normalized to btor
+                - 'n2rms_normalized' : array
+                    n2rms normalized to btor
+                    
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_n1rms_n2rms.m
+
+        Last major update: 2014/11/25 by William Wei
+        """
+        
+        mirtime = params.mds_conn.get_dims(r"\mitab2", tree_name='east')
+        mir = np.full((len(mirtime), 16), np.nan)
+        mir_nodes = [r'\mitab2', r'\mitbc2', r'\mitcd2', r'\mitde2', r'\mitef2', r'\mitfg2',
+                         r'\mit2gh', r'\mit2hi', r'\mitij2', r'\mitjk2', r'\mitkl2', r'\mit2lm',
+                         r'\mit2mn', r'\mitno2', r'\mitop2', r'\mit2pa']
+        for i, node in enumerate(mir_nodes):
+            mir[:,i] = params.mds_conn.get_data(node, tree_name='east')
