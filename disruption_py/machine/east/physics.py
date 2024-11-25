@@ -1616,3 +1616,41 @@ class EASTPhysicsMethods:
             "n2rms_normalized": n2rms_normalized,
         }
         return output
+
+    @staticmethod
+    @physics_method(
+        columns=["h98"],
+        tokamak=Tokamak.EAST,
+    )
+    def get_v_loop(params: PhysicsMethodParams):
+        """
+        Get the H98y2 energy confinement time parameter.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+            - 'h98' : array
+                H98y2 energy confinement time.
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_h98.m
+
+        Last major update: 11/25/24 by William Wei
+        """
+        h98_y2 = [np.nan]
+
+        h98_y2, h98_y2_time = params.mds_conn.get_data_with_dims(
+            r"\h98_mhd", tree_name="energy_east"
+        )
+
+        # Interpolate the signal onto the requested timebase
+        h98_y2 = interp1(h98_y2_time, h98_y2, params.times)
+
+        return {"h98": h98_y2}
