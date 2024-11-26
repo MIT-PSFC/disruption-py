@@ -792,6 +792,7 @@ class EASTPhysicsMethods:
         References
         -------
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_n_equal_1_data.m
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_rmp_and_saddle_signals.m
 
         Original Authors
         ----------------
@@ -806,9 +807,107 @@ class EASTPhysicsMethods:
         rmp_n_equal_1_phase = [np.nan]
         btor = [np.nan]
 
-        # Read in the saddle sensor data and rmp coil currents
-        # TODO: implement get_rmp_and_saddle_signals
-        # rmptime, rmp, saddletime, saddle = get_rmp_and_saddle_signals(params.shot_id)
+        # Get the rmp coil currents
+        rmptime = params.mds_conn.get_dims(r"\irmpu1", tree_name="east")
+        rmp = np.full((len(rmptime, 16)), np.nan)
+        for i in range(8):
+            # Get irmpu1 to irmpu8
+            signal = params.mds_conn.get_data(rf"\irmpu{i+1}", tree_name="east")
+            if len(signal) == len(rmptime):
+                rmp[:, i] = signal
+            # Get irmpl1 to irmpl8
+            signal = params.mds_conn.get_data(rf"\irmpl{i+1}", tree_name="east")
+            if len(signal) == len(rmptime):
+                rmp[:, i + 8] = signal
+        # Get saddle coil signals
+        saddletime = params.mds_conn.get_dims(r"\sad_pa", tree_name="east")
+        saddle = np.full((len(saddletime, 8)), np.nan)
+        saddle_nodes = [
+            r"\sad_pa",
+            r"\sad_bc",
+            r"\sad_de",
+            r"\sad_fg",
+            r"\sad_hi",
+            r"\sad_jk",
+            r"\sad_lk",
+            r"\sad_no",
+        ]
+        # \sad_no not operational in 2015
+        # TODO: verify this!
+        for i, node in enumerate(saddle_nodes[:7]):
+            saddle[:, i] = params.mds_conn.get_data(node, tree_name="east")
+        saddle[:, 7] = params.mds_conn.get_data(
+            r"\sad_lo", tree_name="east"
+        ) - params.mds_conn.get_data(r"\sad_lm", tree_name="east")
+
+        # Calculate RMP n=1 Fourier component amplitude and phase (on the timebase
+        # of the saddle signals)
+        # TODO: Find 'rmp_sadle_coeff_matrix.mat'
+        coeff_matrix = None
+        rmp_pickup = np.transpose(coeff_matrix * np.transpose(rmp))
+        # Interpolate rmp_pickup onto the saddle time timebase
+        rmp_pickup = interp1(rmptime, rmp_pickup, saddletime)
+
+        # Calculate fast Fourier transforms of the RMP-induced signals, and get
+        # mode amplitudes and phases
+        rmp_fft_output = scipy.fft.fft(
+            rmp_pickup, axis=1
+        )  # Take FFT along 2nd dimension (phi)
+        amplitude = abs(rmp_fft_output) / rmp_fft_output.shape[1]
+        amplitude[:, 1:] *= 2  # TODO: Why?
+        phase = np.arctan2(np.imag(rmp_fft_output), np.real(rmp_fft_output))
+        # Only want n=1 Fourier component
+        rmp_n_equal_1 = amplitude[:, 1]
+        rmp_n_equal_1_phase = phase[:, 1]
+        # Interpolate onto the requested timebase
+        rmp_n_equal_1 = interp1(saddletime, rmp_n_equal_1, params.times)
+        rmp_n_equal_1_phase = interp1(saddletime, rmp_n_equal_1_phase, params.times)
+
+        # The saddle signals can include direct pickup from the RMP coils, when the
+        # RMP coils are active.  This direct pickup must be subtracted from the
+        # saddle signals to leave just the plasma response and baseline drifts.
+        saddle -= rmp_pickup
+        # Calculate fast Fourier transforms and get mode amplitudes and phases
+        saddle_fft_output = scipy.fft.fft(
+            saddle, axis=1
+        )  # Take FFT along 2nd dimension (phi)
+        amplitude = abs(saddle_fft_output) / saddle_fft_output.shape[1]
+        amplitude[:, 1:] *= 2  # TODO: Why?
+        phase = np.arctan2(np.imag(saddle_fft_output), np.real(saddle_fft_output))
+        # Only want n=1 Fourier component
+        n_equal_1_mode = amplitude[:, 1]
+        n_equal_1_phase = phase[:, 1]
+        # Interpolate onto the requested timebase
+        n_equal_1_mode = interp1(saddletime, n_equal_1_mode, params.times)
+        n_equal_1_phase = interp1(saddletime, n_equal_1_phase, params.times)
+
+        # Next, get the toroidal magnetic field.  For shots < 60000, the TF current
+        # was in node "\it" in the "eng_tree", and the timebase of the signal was
+        # not well-defined.  For shots between 60000 (on 2016/01/29) and 65165
+        # (2016/05/01), the "\it" node is in the "pcs_east" tree, with a proper
+        # timebase.  For shots after 65165, the "\it" node was back in the
+        # "eng_tree" tree (with a proper timebase).  Also, starting with shot
+        # 60000, there is a fibreoptic-based measurement of the TF current.  The
+        # signals are "\focs_it" (digitized at 50 kHz) and "\focs_it_s"
+        # (sub-sampled at 1 kHz), both in the "east" tree.  The latter two signals
+        # differ by 1.6% from the \it signal (as of 2016/04/18).
+        if 60000 <= params.shot_id <= 65165:
+            tree = "pcs_east"
+        else:
+            tree = "eng_tree"
+        itf, btor_time = params.mds_conn.get_data_with_dims(r"\it", tree_name=tree)
+        btor = (
+            (4 * np.pi * 1e-7) * itf * (16 * 130) / (2 * np.pi * 1.8)
+        )  # about 4,327 amps/tesla
+        if params.shot_id < 60000:
+            # Btor is constant in time (superconducting magnet).
+            # Construct 2-point signal from scalar value
+            btor = np.mean(btor)
+            btor = [btor, btor]
+            btor_time = [0, 1000]
+        btor = interp1(btor_time, btor, params.times)
+
+        n_equal_1_normalized /= btor
 
         output = {
             "n_equal_1_mode": n_equal_1_mode,
@@ -1666,12 +1765,12 @@ class EASTPhysicsMethods:
 
         # Compute the n=1 and n=2 mode signals from the Mirnov array signals
         # TODO: Verify the output structure of scipy.fft.fft; MATLAB one has index 3 (so 0, 1, 2?)
-        mir_fft_output = scipy.fft.fft(mir, n=2)
+        mir_fft_output = scipy.fft.fft(mir, axis=2)
         amplitude = abs(mir_fft_output) / mir_fft_output.shape[1]
-        amplitude[:, 0:] *= 2  # TODO: Why?
+        amplitude[:, 1:] *= 2  # TODO: Why?
         phase = np.arctan2(np.imag(mir_fft_output) / np.real(mir_fft_output))
-        n1 = amplitude[:, 0] * np.cos(phase[:, 0])
-        n2 = amplitude[:, 1] * np.cos(phase[:, 1])
+        n1 = amplitude[:, 1] * np.cos(phase[:, 1])
+        n2 = amplitude[:, 2] * np.cos(phase[:, 2])
 
         # Calculate n1rms & n2rms
         time_window = 0.001
