@@ -752,7 +752,6 @@ class EASTPhysicsMethods:
             "e_equal_1_normalized",
             "rmp_n_equal_1",
             "rmp_n_equal_1_phase",
-            "btor",
         ],
         tokamak=Tokamak.EAST,
     )
@@ -786,8 +785,6 @@ class EASTPhysicsMethods:
                 of the RMP coils on the saddle signals [T].
             'rmp_n_equal_1_phase' : array
                 toroidal phase angle of above [rad].
-            'btor' : array
-                Toroidal magnetic field [T].
 
         References
         -------
@@ -798,14 +795,13 @@ class EASTPhysicsMethods:
         ----------------
         Robert Granetz, Apr 2017
 
-        Last major update: 2014/11/21 by William Wei
+        Last major update: 2014/11/26 by William Wei
         """
         n_equal_1_mode = [np.nan]
         n_equal_1_phase = [np.nan]
         n_equal_1_normalized = [np.nan]
         rmp_n_equal_1 = [np.nan]
         rmp_n_equal_1_phase = [np.nan]
-        btor = [np.nan]
 
         # Get the rmp coil currents
         rmptime = params.mds_conn.get_dims(r"\irmpu1", tree_name="east")
@@ -881,16 +877,60 @@ class EASTPhysicsMethods:
         n_equal_1_mode = interp1(saddletime, n_equal_1_mode, params.times)
         n_equal_1_phase = interp1(saddletime, n_equal_1_phase, params.times)
 
-        # Next, get the toroidal magnetic field.  For shots < 60000, the TF current
-        # was in node "\it" in the "eng_tree", and the timebase of the signal was
-        # not well-defined.  For shots between 60000 (on 2016/01/29) and 65165
-        # (2016/05/01), the "\it" node is in the "pcs_east" tree, with a proper
-        # timebase.  For shots after 65165, the "\it" node was back in the
-        # "eng_tree" tree (with a proper timebase).  Also, starting with shot
-        # 60000, there is a fibreoptic-based measurement of the TF current.  The
-        # signals are "\focs_it" (digitized at 50 kHz) and "\focs_it_s"
-        # (sub-sampled at 1 kHz), both in the "east" tree.  The latter two signals
-        # differ by 1.6% from the \it signal (as of 2016/04/18).
+        # Next, get the toroidal magnetic field and compute n_equal_1_normalized
+        btor = EASTPhysicsMethods.get_btor(params)["btor"]
+        n_equal_1_normalized = n_equal_1_mode / abs(btor)
+
+        output = {
+            "n_equal_1_mode": n_equal_1_mode,
+            "n_equal_1_phase": n_equal_1_phase,
+            "n_equal_1_normalized": n_equal_1_normalized,
+            "rmp_n_equal_1": rmp_n_equal_1,
+            "rmp_n_equal_1_phase": rmp_n_equal_1_phase,
+        }
+
+        return output
+
+    @staticmethod
+    @physics_method(columns=["btor"], tokamak=Tokamak.EAST)
+    def get_btor(params: PhysicsMethodParams):
+        """
+        Fetch and calculate the toroidal magnetic field signal.
+
+        For shots < 60000, the TF current was in node "\it" in the "eng_tree",
+        and the timebase of the signal was not well-defined.
+
+        For shots between 60000 (on 2016/01/29) and 65165 (2016/05/01), the
+        "\it" node is in the "pcs_east" tree, with a proper timebase.
+
+        For shots after 65165, the "\it" node was back in the "eng_tree" tree
+        (with a proper timebase).
+
+        Also, starting with shot 60000, there is a fibreoptic-based measurement
+        of the TF current. The signals are "\focs_it" (digitized at 50 kHz) and
+        "\focs_it_s" (sub-sampled at 1 kHz), both in the "east" tree.  The latter
+        two signals differ by 1.6% from the \it signal (as of 2016/04/18).
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+            - 'btor' : array
+                Toroidal magnetic field [T].
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_n_equal_1_data.m
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_mirnov_std.m
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_n1rms_n2rms.m
+
+        Last major update: 2014/11/26 by William Wei
+        """
         if 60000 <= params.shot_id <= 65165:
             tree = "pcs_east"
         else:
@@ -905,20 +945,11 @@ class EASTPhysicsMethods:
             btor = np.mean(btor)
             btor = [btor, btor]
             btor_time = [0, 1000]
+
+        # Interpolate onto the requested timebase
         btor = interp1(btor_time, btor, params.times)
 
-        n_equal_1_normalized /= btor
-
-        output = {
-            "n_equal_1_mode": n_equal_1_mode,
-            "n_equal_1_phase": n_equal_1_phase,
-            "n_equal_1_normalized": n_equal_1_normalized,
-            "rmp_n_equal_1": rmp_n_equal_1,
-            "rmp_n_equal_1_phase": rmp_n_equal_1_phase,
-            "btor": btor,
-        }
-
-        return output
+        return {"btor": btor}
 
     @staticmethod
     @physics_method(
@@ -1623,7 +1654,6 @@ class EASTPhysicsMethods:
         -------
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_mirnov_std.m
 
-
         Last major update: 2014/11/22 by William Wei
         """
         mirnov_sensor = "cmp1t"  # default one used in disruption_warning_database.m
@@ -1631,33 +1661,8 @@ class EASTPhysicsMethods:
         mirnov_std = np.full(len(params.times), np.nan)
         mirnov_st_normalized = [np.nan]
 
-        # get the toroidal magnetic field. For shots < 60000, the TF current
-        # was in node "\it" in the "eng_tree", and the timebase of the signal was
-        # not well-defined.  For shots between 60000 (on 2016/01/29) and 65165
-        # (2016/05/01), the "\it" node is in the "pcs_east" tree, with a proper
-        # timebase.  For shots after 65165, the "\it" node was back in the
-        # "eng_tree" tree (with a proper timebase).  Also, starting with shot
-        # 60000, there is a fibreoptic-based measurement of the TF current.  The
-        # signals are "\focs_it" (digitized at 50 kHz) and "\focs_it_s"
-        # (sub-sampled at 1 kHz), both in the "east" tree.  The latter two signals
-        # differ by 1.6% from the \it signal (as of 2016/04/18).
-
-        # TODO: Compare to btor computation in get_n_equal_1_data() once it's implemented
-        if 60000 <= params.shot_id <= 65165:
-            tree = "pcs_east"
-        else:
-            tree = "eng_tree"
-        itf, btor_time = params.mds_conn.get_data_with_dims(r"\it", tree_name=tree)
-        btor = (
-            (4 * np.pi * 1e-7) * itf * (16 * 130) / (2 * np.pi * 1.8)
-        )  # about 4,327 amps/tesla
-        if params.shot_id < 60000:
-            # Btor is constant in time (superconducting magnet).
-            # Construct 2-point signal from scalar value
-            btor = np.mean(btor)
-            btor = [btor, btor]
-            btor_time = [0, 1000]
-        btor = interp1(btor_time, btor, params.times)
+        # Get the toroidal magnetic field.
+        btor = EASTPhysicsMethods.get_btor(params)["btor"]
 
         # Get the Mirnov signal
         time_window = 0.001
@@ -1708,7 +1713,7 @@ class EASTPhysicsMethods:
                 - 'n1rms_normalized' : array
                     n1rms normalized to btor [dimensionless].
                 - 'n2rms_normalized' : array
-                    n2rms normalized to btor [ dimensionless].
+                    n2rms normalized to btor [dimensionless].
 
         References
         -------
@@ -1745,23 +1750,7 @@ class EASTPhysicsMethods:
             mir[:, i] = params.mds_conn.get_data(node, tree_name="east")
 
         # Get btor data
-        # Copied from get_mirnov_std. Consider making this into a standalone physics method
-        # TODO: Compare to btor computation in get_n_equal_1_data() once it's implemented
-        if 60000 <= params.shot_id <= 65165:
-            tree = "pcs_east"
-        else:
-            tree = "eng_tree"
-        itf, btor_time = params.mds_conn.get_data_with_dims(r"\it", tree_name=tree)
-        btor = (
-            (4 * np.pi * 1e-7) * itf * (16 * 130) / (2 * np.pi * 1.8)
-        )  # about 4,327 amps/tesla
-        if params.shot_id < 60000:
-            # Btor is constant in time (superconducting magnet).
-            # Construct 2-point signal from scalar value
-            btor = np.mean(btor)
-            btor = [btor, btor]
-            btor_time = [0, 1000]
-        btor = interp1(btor_time, btor, params.times)
+        btor = EASTPhysicsMethods.get_btor(params)["btor"]
 
         # Compute the n=1 and n=2 mode signals from the Mirnov array signals
         # TODO: Verify the output structure of scipy.fft.fft; MATLAB one has index 3 (so 0, 1, 2?)
