@@ -60,7 +60,7 @@ black = "^24.10.0"
 pylint = "^3.3.0"
 pytest = "^8.3.0"
 ruff = "^0.7.0"
-toml-sort = "^0.23.0"
+toml-sort = "^0.24.2"
 yamllint = "^1.35.0"
 
 [tool.poetry.group.docs]
