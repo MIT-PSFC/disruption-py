@@ -59,7 +59,7 @@ optional = true
 black = "^24.10.0"
 pylint = "^3.3.0"
 pytest = "^8.3.0"
-ruff = "^0.7.0"
+ruff = "^0.8.1"
 toml-sort = "^0.23.0"
 yamllint = "^1.35.0"
 
