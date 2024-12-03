@@ -157,8 +157,7 @@ class MDSConnection:
         cache_key = make_hashable([expression, tree_name, arguments])
         eval_expr = None
 
-        if cache_key in self.data_cache:
-            eval_expr = self.data_cache[cache_key]
+        eval_expr = self.data_cache.get(cache_key)
 
         # Retrieve evaluated expression from MDSplus
         if eval_expr is None:
@@ -170,8 +169,6 @@ class MDSConnection:
                 eval_expr = self.conn.get(expression, arguments)
 
             # Cache evaluated expression
-            if cache_key not in self.data_cache:
-                self.data_cache[cache_key] = {}
             self.data_cache[cache_key] = eval_expr
 
         return eval_expr
@@ -209,9 +206,7 @@ class MDSConnection:
         # Try to retrieve data from cache
         cache_key = make_hashable([path, tree_name, arguments])
 
-        data = None
-        if cache_key in self.data_cache:
-            data = self.data_cache[cache_key].get("data")
+        data = self.data_cache.get(cache_key, {}).get("data")
 
         if data is None:
             # Retrieve data from MDSplus
@@ -222,9 +217,7 @@ class MDSConnection:
             data = self.conn.get(path, arguments).data()
 
             # Cache data
-            if cache_key not in self.data_cache:
-                self.data_cache[cache_key] = {}
-            self.data_cache[cache_key]["data"] = data
+            self.data_cache.setdefault(cache_key, {})["data"] = data
 
         if astype:
             data = safe_cast(data, astype)
@@ -310,11 +303,9 @@ class MDSConnection:
 
         # Try to retrieve dimensions of data from cache.
         cache_key = make_hashable([path, tree_name])
-        if cache_key in self.data_cache:
-            cached: dict = self.data_cache[cache_key]
-            for i, dim_num in enumerate(dim_nums):
-                if dim_num in cached:
-                    dims[i] = cached[dim_num]
+        cached = self.data_cache.get(cache_key, {})
+        for i, dim_num in enumerate(dim_nums):
+            dims[i] = cached.get(dim_num)
 
         # Retrieve from MDSplus
         retrieved_from_cache = any(d is not None for d in dims)
