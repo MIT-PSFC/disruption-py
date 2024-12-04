@@ -4,18 +4,14 @@
 Module for retrieving and calculating data for DIII-D physics methods.
 """
 
-import traceback
-
 import numpy as np
 import scipy
 from MDSplus import mdsExceptions
 
-from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
-from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1, smooth
-from disruption_py.machine.east import EastEfitMethods
+from disruption_py.machine.east.efit import EastEfitMethods
 from disruption_py.machine.tokamak import Tokamak
 
 
