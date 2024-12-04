@@ -4,6 +4,6 @@
 
 from disruption_py.machine.east.efit import EastEfitMethods
 
-from disruption_py.machine.east.physics import EASTPhysicsMethods
+from disruption_py.machine.east.physics import EastPhysicsMethods
 
-METHOD_HOLDERS = [EastEfitMethods, EASTPhysicsMethods]
+METHOD_HOLDERS = [EastEfitMethods, EastPhysicsMethods]

@@ -18,7 +18,7 @@ from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.math import interp1
 from disruption_py.core.utils.misc import shot_log_msg
 from disruption_py.machine.cmod.physics import CmodPhysicsMethods
-from disruption_py.machine.east.physics import EASTPhysicsMethods
+from disruption_py.machine.east.physics import EastPhysicsMethods
 from disruption_py.machine.tokamak import Tokamak
 
 DomainSettingType = Union["DomainSetting", str, Dict[Tokamak, "DomainSettingType"]]
@@ -311,7 +311,7 @@ class FlattopDomainSetting(DomainSetting):
             The flattop timebase domain for EAST.
         """
         # Copied from _get_domain_cmod, needs to adjust threshold later
-        ip_parameters = EASTPhysicsMethods.get_ip_parameters(
+        ip_parameters = EastPhysicsMethods.get_ip_parameters(
             params=params.physics_method_params
         )
         ipprog, dipprog_dt = ip_parameters["ip_prog"], ip_parameters["dipprog_dt"]

@@ -22,7 +22,7 @@ from disruption_py.machine.tokamak import Tokamak
 from disruption_py.machine.east import EastEfitMethods
 
 
-class EASTPhysicsMethods:
+class EastPhysicsMethods:
     """
     A class to retrieve and calculate physics-related data for EAST.
     """
@@ -478,7 +478,7 @@ class EASTPhysicsMethods:
             r"\aout", tree_name="_efit_tree"
         )  # [m], [s]
         aminor = interp1(efittime, aminor, params.times)
-        ip = EASTPhysicsMethods.get_ip_parameters(params)["ip"]  # [A]
+        ip = EastPhysicsMethods.get_ip_parameters(params)["ip"]  # [A]
         nG = 1e20 * (ip / 1e6) / (np.pi * aminor**2)  # [m^-3]
         greenwald_fraction = ne / nG
 
@@ -625,7 +625,7 @@ class EASTPhysicsMethods:
         p_nbi = get_heating_power(nbi_nodes, "nbi_east")  # [W]
 
         # Get ohmic power
-        p_ohm = EASTPhysicsMethods.get_p_ohm(params)["p_ohm"]  # [W]
+        p_ohm = EastPhysicsMethods.get_p_ohm(params)["p_ohm"]  # [W]
 
         # Get radiated power
         # tree = 'prad_east'
@@ -878,7 +878,7 @@ class EASTPhysicsMethods:
         n_equal_1_phase = interp1(saddletime, n_equal_1_phase, params.times)
 
         # Next, get the toroidal magnetic field and compute n_equal_1_normalized
-        btor = EASTPhysicsMethods.get_btor(params)["btor"]
+        btor = EastPhysicsMethods.get_btor(params)["btor"]
         n_equal_1_normalized = n_equal_1_mode / abs(btor)
 
         output = {
@@ -1417,7 +1417,7 @@ class EASTPhysicsMethods:
 
         # Get p_ohm
         # "Note, I'm not bothering to calculate a real time version" -- Whoever who wrote this
-        # p_ohm = EASTPhysicsMethods.get_p_ohm(params)['p_ohm']
+        # p_ohm = EastPhysicsMethods.get_p_ohm(params)['p_ohm']
 
         # Compute total power and radiation fractions
         # p_input_rt = p_ohm + p_lh_rt + p_icrf_rt + p_ecrh_rt + p_nbi_rt
@@ -1663,7 +1663,7 @@ class EASTPhysicsMethods:
         mirnov_st_normalized = [np.nan]
 
         # Get the toroidal magnetic field.
-        btor = EASTPhysicsMethods.get_btor(params)["btor"]
+        btor = EastPhysicsMethods.get_btor(params)["btor"]
 
         # Get the Mirnov signal
         time_window = 0.001
@@ -1751,7 +1751,7 @@ class EASTPhysicsMethods:
             mir[:, i] = params.mds_conn.get_data(node, tree_name="east")
 
         # Get btor data
-        btor = EASTPhysicsMethods.get_btor(params)["btor"]
+        btor = EastPhysicsMethods.get_btor(params)["btor"]
 
         # Compute the n=1 and n=2 mode signals from the Mirnov array signals
         # TODO: Verify the output structure of scipy.fft.fft; MATLAB one has index 3 (so 0, 1, 2?)
