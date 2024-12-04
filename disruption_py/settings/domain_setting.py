@@ -326,8 +326,6 @@ class FlattopDomainSetting(DomainSetting):
             return None
         return params.physics_method_params.times[indices_flattop]
 
-        return
-
 
 class RampupAndFlattopDomainSetting(DomainSetting):
     """

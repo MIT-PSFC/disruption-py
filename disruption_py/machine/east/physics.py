@@ -740,7 +740,7 @@ class EastPhysicsMethods:
         v_resistive = vloop - v_inductive
         (v_resistive_indices,) = np.where(v_resistive * sign_ip < 0)
         v_resistive[v_resistive_indices] = 0
-        p_phm = ip * v_resistive
+        p_ohm = ip * v_resistive
 
         return {"p_ohm": p_ohm}
 
@@ -1786,7 +1786,7 @@ class EastPhysicsMethods:
         columns=["h98"],
         tokamak=Tokamak.EAST,
     )
-    def get_v_loop(params: PhysicsMethodParams):
+    def get_h98(params: PhysicsMethodParams):
         """
         Get the H98y2 energy confinement time parameter.
 
