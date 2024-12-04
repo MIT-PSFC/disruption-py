@@ -22,7 +22,7 @@ def main():
     elif tokamak is Tokamak.CMOD:
         shot = 1150805012
         shape = (2400,)
-        efit = "efit01"
+        efit = "analysis"
     elif tokamak is Tokamak.EAST:
         shot = 55555
         shape = (102,)
