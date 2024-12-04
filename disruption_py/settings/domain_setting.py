@@ -18,6 +18,7 @@ from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.math import interp1
 from disruption_py.core.utils.misc import shot_log_msg
 from disruption_py.machine.cmod.physics import CmodPhysicsMethods
+from disruption_py.machine.east.physics import EASTPhysicsMethods
 from disruption_py.machine.tokamak import Tokamak
 
 DomainSettingType = Union["DomainSetting", str, Dict[Tokamak, "DomainSettingType"]]
@@ -309,6 +310,21 @@ class FlattopDomainSetting(DomainSetting):
         np.ndarray
             The flattop timebase domain for EAST.
         """
+        # Copied from _get_domain_cmod, needs to adjust threshold later
+        ip_parameters = EASTPhysicsMethods.get_ip_parameters(
+            params=params.physics_method_params
+        )
+        ipprog, dipprog_dt = ip_parameters["ip_prog"], ip_parameters["dipprog_dt"]
+        indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 5e4)[0]
+        indices_flattop_2 = np.where(np.abs(ipprog) > 1.0e5)[0]
+        indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
+        if len(indices_flattop) == 0:
+            params.logger.warning(
+                "Could not find flattop timebase. "
+                "Defaulting to full shot (efit) timebase.",
+            )
+            return None
+        return params.physics_method_params.times[indices_flattop]
 
         return
 

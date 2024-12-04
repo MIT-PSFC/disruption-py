@@ -24,7 +24,7 @@ from disruption_py.machine.east import EASTEfitMethods
 
 class EASTPhysicsMethods:
     """
-    A class to retrieve and calculate physics-related data for DIII-D.
+    A class to retrieve and calculate physics-related data for EAST.
     """
 
     @staticmethod
@@ -1477,6 +1477,7 @@ class EASTPhysicsMethods:
         # The following section about calibration factors was copied-and-pasted
         # directly from Duan Yanmin <ymduan@ipp.ac.cn>'s code.
 
+        # TODO: Move calibration factors to a separate settings file
         # Calibration factors
         Fac1 = [
             1.3681,
