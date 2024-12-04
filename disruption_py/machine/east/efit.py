@@ -12,7 +12,7 @@ from disruption_py.core.utils.math import interp1
 from disruption_py.machine.tokamak import Tokamak
 
 
-class EASTEfitMethods:
+class EastEfitMethods:
     """
     Class for retrieving and processing EFIT parameters for EAST.
 
@@ -74,7 +74,7 @@ class EASTEfitMethods:
         """
         efit_data = {
             k: params.mds_conn.get_data(v, tree_name="_efit_tree")
-            for k, v in EASTEfitMethods.efit_cols.items()
+            for k, v in EastEfitMethods.efit_cols.items()
         }
         efit_time = params.mds_conn.get_data(
             r"\efit_aeqdsk:atime", tree_name="_efit_tree", astype="float64"
@@ -89,7 +89,7 @@ class EASTEfitMethods:
 
         for param in efit_data:
             efit_data[param][invalid_indices] = np.nan
-        for deriv_param, param in EASTEfitMethods.efit_derivs.items():
+        for deriv_param, param in EastEfitMethods.efit_derivs.items():
             efit_data[deriv_param] = np.gradient(efit_data[param], efit_time)
         if not np.array_equal(params.times, efit_time):
             for param in efit_data:
@@ -127,7 +127,7 @@ class EASTEfitMethods:
 
         efit_data = {
             k: params.mds_conn.get_data(v, tree_name="pefit_east")[unique_indices]
-            for k, v in EASTEfitMethods.pefit_cols.items()
+            for k, v in EastEfitMethods.pefit_cols.items()
         }
 
         # P-EFIT reconstructions are sometimes invalid, particularly when very close

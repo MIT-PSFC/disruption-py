@@ -19,7 +19,7 @@ from disruption_py.core.utils.math import (
     smooth,
 )
 from disruption_py.machine.tokamak import Tokamak
-from disruption_py.machine.east import EASTEfitMethods
+from disruption_py.machine.east import EastEfitMethods
 
 
 class EASTPhysicsMethods:
@@ -1165,8 +1165,8 @@ class EASTPhysicsMethods:
 
         Last major update: 2014/11/25 by William Wei
         """
-        # Get area and aminor from EASTEfitMethods
-        area, aminor = EASTEfitMethods.get_efit_parameters["area", "aminor"]
+        # Get area and aminor from EastEfitMethods
+        area, aminor = EastEfitMethods.get_efit_parameters["area", "aminor"]
         # Compute kappa_area
         kappa_area = area / (np.pi * aminor**2)
 
@@ -1201,8 +1201,8 @@ class EASTPhysicsMethods:
 
         Last major update: 2014/11/25 by William Wei
         """
-        # Get area and aminor from EASTEfitMethods
-        area, aminor = EASTEfitMethods.get_pefit_parameters["parea", "paminor"]
+        # Get area and aminor from EastEfitMethods
+        area, aminor = EastEfitMethods.get_pefit_parameters["parea", "paminor"]
         # Compute kappa_area
         kappa_area = area / (np.pi * aminor**2)
 

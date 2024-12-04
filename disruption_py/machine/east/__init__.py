@@ -2,8 +2,8 @@
 
 """Package initialization for the EAST machine module."""
 
-from disruption_py.machine.east.efit import EASTEfitMethods
+from disruption_py.machine.east.efit import EastEfitMethods
 
 from disruption_py.machine.east.physics import EASTPhysicsMethods
 
-METHOD_HOLDERS = [EASTEfitMethods, EASTPhysicsMethods]
+METHOD_HOLDERS = [EastEfitMethods, EASTPhysicsMethods]
