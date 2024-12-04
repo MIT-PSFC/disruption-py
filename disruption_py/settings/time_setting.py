@@ -264,7 +264,10 @@ class EfitTimeSetting(TimeSetting):
         """
         Initialize with tokamak-specific overrides for EFIT.
         """
-        self.tokamak_overrides = {Tokamak.CMOD: self.cmod_times}
+        self.tokamak_overrides = {
+            Tokamak.CMOD: self.cmod_times,
+            Tokamak.EAST: self.east_times,
+        }
 
     def cmod_times(self, params: TimeSettingParams):
         """
@@ -300,6 +303,26 @@ class EfitTimeSetting(TimeSetting):
                 tree_name="_efit_tree",
                 astype="float64",
             )
+
+    def east_times(self, params: TimeSettingParams):
+        """
+        Retrieve the EFIT timebase for the EAST tokamak.
+
+        Parameters
+        ----------
+        params : TimeSettingParams
+            Parameters needed to retrieve the timebase.
+
+        Returns
+        -------
+        np.ndarray
+            Array of times in the timebase.
+        """
+        return params.mds_conn.get_data(
+            r"\efit_aeqdsk:atime",
+            tree_name="_efit_tree",
+            astype="float64",
+        )
 
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         """
@@ -553,6 +576,7 @@ _time_setting_mappings: Dict[str, TimeSetting] = {
     "disruption_warning": {
         Tokamak.CMOD: EfitTimeSetting(),
         Tokamak.D3D: DisruptionTimeSetting(),
+        Tokamak.EAST: EfitTimeSetting(),
     },
     "ip": IpTimeSetting(),
 }
