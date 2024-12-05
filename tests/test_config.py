@@ -12,10 +12,10 @@ def change_directory(test, tmpdir="/tmp"):
     Change the current working directory before a test and revert back to the
     original directory after the test completes.
     """
-    original_dir = os.getcwd()
-    os.chdir(tmpdir)
 
     def wrapper():
+        original_dir = os.getcwd()
+        os.chdir(tmpdir)
         test()
         os.chdir(original_dir)
 
