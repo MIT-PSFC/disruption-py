@@ -273,7 +273,9 @@ class DisruptionNicknameSetting(NicknameSetting):
     def _east_nickname(self, params: NicknameSettingParams) -> str:
         """
         Get the disruption EFIT tree name for EAST.
-
+        
+        12/4/24: There's no efit18 tree for EAST according to Cristina.
+                 Need to verify if this is actually the case.
         Parameters
         ----------
         params : NicknameSettingParams
@@ -284,9 +286,7 @@ class DisruptionNicknameSetting(NicknameSetting):
         str
             The resolved EFIT tree name.
         """
-        if params.disruption_time is None:
-            return DefaultNicknameSetting().get_tree_name(params)
-        return "efit18"
+        return DefaultNicknameSetting().get_tree_name(params)
 
     def _get_tree_name(self, params: NicknameSettingParams) -> str:
         """
