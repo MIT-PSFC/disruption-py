@@ -314,14 +314,11 @@ class FlattopDomainSetting(DomainSetting):
         ip_parameters = EastPhysicsMethods.get_ip_parameters(
             params=params.physics_method_params
         )
-        ipprog, dipprog_dt = ip_parameters["ip_prog"], ip_parameters["dipprog_dt"]
-        indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 5e4)[0]
-        indices_flattop_2 = np.where(np.abs(ipprog) > 1.0e5)[0]
-        indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
+        dipprog_dt = ip_parameters["dipprog_dt"]
+        (indices_flattop,) = np.where(np.abs(dipprog_dt) <= 1e3)
         if len(indices_flattop) == 0:
             params.logger.warning(
-                "Could not find flattop timebase. "
-                "Defaulting to full shot (efit) timebase.",
+                "Could not find flattop timebase. Defaulting to full shot timebase.",
             )
             return None
         return params.physics_method_params.times[indices_flattop]
