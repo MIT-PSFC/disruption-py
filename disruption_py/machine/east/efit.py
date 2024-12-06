@@ -47,7 +47,7 @@ class EastEfitMethods:
         "pqstar": r"\efit_aeqdsk:qstar",
         "pq95": r"\efit_aeqdsk:q95",
         "pwmhd": r"\efit_aeqdsk:wmhd",
-        "parea": r"\efit_aeqdsk:area*1e-4",  # # [cm^2] -> [m^2]
+        "parea": r"\efit_aeqdsk:area*1e-4",  # [cm^2] -> [m^2]
         "paminor": r"\efit_aeqdsk:aout",
         "pchisq": r"\efit_aeqdsk:chisq",
         "pconvergence": r"\efit_aeqdsk:error",

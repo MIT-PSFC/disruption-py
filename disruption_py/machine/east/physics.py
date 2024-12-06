@@ -645,7 +645,6 @@ class EastPhysicsMethods:
             "p_rad": p_rad,
             "p_ecrh": p_ecrh,
             "p_lh": p_lh,
-            "p_ohm": p_ohm,
             "p_icrf": p_icrf,
             "p_nbi": p_nbi,
             "rad_input_frac": rad_input_frac,
