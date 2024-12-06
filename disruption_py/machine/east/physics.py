@@ -226,7 +226,7 @@ class EastPhysicsMethods:
 
         # Interpolate all retrieved signals to the requested timebase
         ip = interp1(ip_time, ip, params.times)
-        dip_dt = interp1(ip_time, dip_dt, params.time)
+        dip_dt = interp1(ip_time, dip_dt, params.times)
         ip_prog = interp1(ip_prog_time, ip_prog, params.times)
         dipprog_dt = interp1(ip_prog_time, dipprog_dt, params.times)
 

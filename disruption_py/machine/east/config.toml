@@ -6,3 +6,18 @@ driver = "MySQL"
 host = "202.127.205.10"
 port = 3306
 db_name = "east_disruption"
+
+[east.tests]
+test_columns = [
+    "ip",
+    "ip_prog",
+    "ip_error",
+    "ip_error_normalized",
+    "dip_dt",
+    "dipprog_dt",
+]
+expected_failure_columns = [
+]
+
+[east.tests.shots]
+default = 55555
