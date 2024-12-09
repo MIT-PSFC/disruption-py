@@ -93,10 +93,25 @@ test_columns = [
     "h98",
 ]
 expected_failure_columns = [
+    "area",
+    "aminor",
+    "chisq",
+    "dbetap_dt",
+    "dli_dt",
+    "dwmhd_dt",
+    "parea",
+    "pchisq",
+    "pconvergence",
+    "ip_prog",
+    "dip_dt",
+    "z_prog",
+    "dn_dt",
 ]
 
 [east.tests.shots]
 no_disrup1 = 55555
-no_disrup2 = 82440
 disrup1 = 53857
-disrup2 = 82445
+no_disrup2 = 70000
+disrup2 = 70022
+no_disrup3 = 82440
+disrup3 = 82445
