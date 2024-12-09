@@ -301,7 +301,6 @@ class EastPhysicsMethods:
             "z_error_lmsz",
             "zcur_lmsz_normalized",
             "z_error_lmsz_normalized",
-            "aminor",
         ],
         tokamak=Tokamak.EAST,
     )
@@ -360,7 +359,6 @@ class EastPhysicsMethods:
         z_error_lmsz = [np.nan]
         zcur_lmsz_normalized = [np.nan]
         z_error_lmsz_normalized = [np.nan]
-        aminor = [np.nan]
 
         # Read in the calculated zcur from EFIT
         zcur, zcur_time = params.mds_conn.get_data_with_dims(
@@ -372,7 +370,7 @@ class EastPhysicsMethods:
 
         # Read in aminor from EFIT
         # TODO: use \aminor or \aout? -- MATLAB: \aminor
-        aminor = params.mds_conn.get_data(r"\aminor", treename="_efit_tree")  # [m]
+        aminor = params.mds_conn.get_data(r"\aminor", tree_name="_efit_tree")  # [m]
         aminor = aminor[unique_indices]
 
         # Next, get the programmed/requested/target Z from PCS, and the
@@ -408,7 +406,7 @@ class EastPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["ne", "greenwald_fraction", "dn_dt"],
+        columns=["n_e", "greenwald_fraction", "dn_dt"],
         tokamak=Tokamak.EAST,
     )
     def get_density_parameters(params: PhysicsMethodParams):
@@ -436,7 +434,7 @@ class EastPhysicsMethods:
         -------
         dict
             A dictionary containing the following keys:
-            - 'ne' : array
+            - 'n_e' : array
                 Density as measured by the polarimeter.interferometer [m^-3].
             - 'greenwald_fraction' : array
                 greenwald_fraction = ne / nG [dimensionless].
@@ -475,7 +473,7 @@ class EastPhysicsMethods:
         nG = 1e20 * (ip / 1e6) / (np.pi * aminor**2)  # [m^-3]
         greenwald_fraction = ne / nG
 
-        output = {"ne": ne, "greenwald_fraction": greenwald_fraction, "dn_dt": dn_dt}
+        output = {"n_e": ne, "greenwald_fraction": greenwald_fraction, "dn_dt": dn_dt}
         return output
 
     @staticmethod
@@ -1158,9 +1156,12 @@ class EastPhysicsMethods:
         Last major update: 2014/11/25 by William Wei
         """
         # Get area and aminor from EastEfitMethods
-        area, aminor = EastEfitMethods.get_efit_parameters["area", "aminor"]
+        efit_params = EastEfitMethods.get_efit_parameters(params=params)
+        area = efit_params["area"]
+        aminor = efit_params["aminor"]
         # Compute kappa_area
-        kappa_area = area / (np.pi * aminor**2)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            kappa_area = area / (np.pi * aminor**2)
 
         return {"kappa_area": kappa_area}
 
@@ -1194,9 +1195,12 @@ class EastPhysicsMethods:
         Last major update: 2014/11/25 by William Wei
         """
         # Get area and aminor from EastEfitMethods
-        area, aminor = EastEfitMethods.get_pefit_parameters["parea", "paminor"]
+        pefit_params = EastEfitMethods.get_pefit_parameters(params=params)
+        area = pefit_params["parea"]
+        aminor = pefit_params["paminor"]
         # Compute kappa_area
-        kappa_area = area / (np.pi * aminor**2)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            kappa_area = area / (np.pi * aminor**2)
 
         return {"pkappa_area": kappa_area}
 
@@ -1259,25 +1263,33 @@ class EastPhysicsMethods:
             "wmhd_rt": r"\pfswmhd",
         }
         for name, node in signals.items():
-            signal, timearray = params.mds_conn.get_data_with_dims(
-                node, tree_name="pcs_east"
-            )
-            signal = interp1(
-                timearray, signal, params.times, kind="linear", bounds_error=0
-            )
-            output[name] = signal
+            try:
+                signal, timearray = params.mds_conn.get_data_with_dims(
+                    node, tree_name="pcs_east"
+                )
+                signal = interp1(
+                    timearray, signal, params.times, kind="linear", bounds_error=0
+                )
+                output[name] = signal
+            # TODO: Specify error type
+            except:
+                output[name] = [np.nan]
 
         # Get q95_rt
-        q95_rt, q95_rt_time = params.mds_conn.get_data_with_dims(
-            r"\q95", tree_name="pefitrt_east"
-        )
-        # Deal with bug
-        q95_rt_time, unique_indices = np.unique(q95_rt_time, return_index=True)
-        q95_rt = q95_rt[unique_indices]
-        q95_rt = interp1(
-            q95_rt_time, q95_rt, params.times, kind="linear", bounds_error=0
-        )
-        output["q95_rt"] = q95_rt
+        try:
+            q95_rt, q95_rt_time = params.mds_conn.get_data_with_dims(
+                r"\q95", tree_name="pefitrt_east"
+            )
+            # Deal with bug
+            q95_rt_time, unique_indices = np.unique(q95_rt_time, return_index=True)
+            q95_rt = q95_rt[unique_indices]
+            q95_rt = interp1(
+                q95_rt_time, q95_rt, params.times, kind="linear", bounds_error=0
+            )
+            output["q95_rt"] = q95_rt
+        # TODO: Specify error type
+        except:
+            output["q95_rt"] = [np.nan]
 
         return output
 
@@ -1349,12 +1361,15 @@ class EastPhysicsMethods:
         Last major update: 2014/11/22 by William Wei
         """
         # Get p_rad_rt
-        p_rad_rt, timearray = params.mds_conn.get_data_with_dims(
-            r"\pcprad", tree_name="pcs_east"
-        )
-        p_rad_rt = interp1(
-            timearray, p_rad_rt, params.times, kind="linear", bounds_error=0
-        )
+        try:
+            p_rad_rt, timearray = params.mds_conn.get_data_with_dims(
+                r"\pcprad", tree_name="pcs_east"
+            )
+            p_rad_rt = interp1(
+                timearray, p_rad_rt, params.times, kind="linear", bounds_error=0
+            )
+        except:
+            p_rad_rt = [np.nan]
 
         # TODO: Verify the outputs, then modify get_heating_power() to make it compatible with this
         # Get p_nbi_rt
@@ -1364,19 +1379,22 @@ class EastPhysicsMethods:
             "i_nbir_rt": r"\pcnbi1ri",
             "v_nbir_rt": r"\pcnbi1rv",
         }
-        nbi_signals = dict()
-        for name, node in nbi_nodes.items():
-            signal, timearray = params.mds_conn.get_data_with_dims(
-                node, tree_name="pefitrt_east"
+        try:
+            nbi_signals = dict()
+            for name, node in nbi_nodes.items():
+                signal, timearray = params.mds_conn.get_data_with_dims(
+                    node, tree_name="pefitrt_east"
+                )
+                signal = interp1(
+                    timearray, signal, params.times, kind="linear", bounds_error=0
+                )
+                nbi_signals[name] = signal
+            p_nbi_rt = (
+                nbi_signals["i_nbil_rt"] * nbi_signals["v_nbil_rt"]
+                + nbi_signals["i_nbir_rt"] * nbi_signals["v_nbir_rt"]
             )
-            signal = interp1(
-                timearray, signal, params.times, kind="linear", bounds_error=0
-            )
-            nbi_signals[name] = signal
-        p_nbi_rt = (
-            nbi_signals["i_nbil_rt"] * nbi_signals["v_nbil_rt"]
-            + nbi_signals["i_nbir_rt"] * nbi_signals["v_nbir_rt"]
-        )
+        except:
+            p_nbi_rt = [np.nan]
 
         # Get p_lh_rt
         lh_nodes = {
@@ -1385,21 +1403,24 @@ class EastPhysicsMethods:
             "p_lh_245_inj_rt": r"\pcplhi2",
             "p_lh_245_ref_rt": r"\pcplhr2",
         }
-        lh_signals = dict()
-        for name, node in lh_nodes.items():
-            signal, timearray = params.mds_conn.get_data_with_dims(
-                node, tree_name="pefitrt_east"
+        try:
+            lh_signals = dict()
+            for name, node in lh_nodes.items():
+                signal, timearray = params.mds_conn.get_data_with_dims(
+                    node, tree_name="pefitrt_east"
+                )
+                signal = interp1(
+                    timearray, signal, params.times, kind="linear", bounds_error=0
+                )
+                lh_signals[name] = signal
+            p_lh_rt = (
+                lh_signals["p_lh_46_inj_rt"]
+                - lh_signals["p_lh_46_ref_rt"]
+                + lh_signals["p_lh_245_inj_rt"]
+                - lh_signals["p_lh_245_ref_rt"]
             )
-            signal = interp1(
-                timearray, signal, params.times, kind="linear", bounds_error=0
-            )
-            lh_signals[name] = signal
-        p_lh_rt = (
-            lh_signals["p_lh_46_inj_rt"]
-            - lh_signals["p_lh_46_ref_rt"]
-            + lh_signals["p_lh_245_inj_rt"]
-            - lh_signals["p_lh_245_ref_rt"]
-        )
+        except:
+            p_lh_rt = [np.nan]
 
         # Q.P. Yuan:
         # There is no signals from ICRF or ECRH connected to PCS. And I checked the
