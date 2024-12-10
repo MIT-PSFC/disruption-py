@@ -128,6 +128,7 @@ class MDSConnection:
         """
         Close all open trees
         """
+        self.data_cache = None
         self.last_open_tree = None
 
     @_better_mds_exceptions
