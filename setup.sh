@@ -21,6 +21,14 @@ then
    export MDSPLUS_DIR=/fusion/usc/c8/opt/mdsplus/alpha/7.139.59
    export DISPY_DIR=/fusion/projects/disruption_warning/disruption-py
 
+elif [[ -d /project/disruption ]]
+then
+
+   # EAST cluster
+   export PATH=/usr/bin:/usr/sbin
+   export MDSPLUS_DIR=/project/disruption/mdsplus
+   export DISPY_DIR=/project/disruption
+
 else
 
    exit 1
