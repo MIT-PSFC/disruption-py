@@ -17,7 +17,7 @@ poetry self update \
 
 # API token
 GAPI="https://api.github.com/repos/mit-psfc/disruption-py"
-AUTH="$(cat "/home/$USER/.gh_pat")"
+AUTH="$(cat ~/.gh_pat)"
 
 # for each repo folder
 for FOLDER in "$DISPY_DIR"/repo/*
