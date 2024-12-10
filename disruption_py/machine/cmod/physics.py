@@ -1181,7 +1181,9 @@ class CmodPhysicsMethods:
         aminor, efit_time = params.mds_conn.get_data_with_dims(
             r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )  # [m], [s]
-        bminor = aminor * kappa
+        # Avoid edge case error caused by NaN * 0
+        with np.errstate(invalid="ignore"):
+            bminor = aminor * kappa
 
         # Get Te data and TS time basis
         node_ext = ".yag_new.results.profiles"
