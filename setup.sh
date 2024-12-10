@@ -27,6 +27,9 @@ then
    # EAST cluster
    export PATH=/usr/bin:/usr/sbin
    export MDSPLUS_DIR=/project/disruption/mdsplus
+   export MDSPLUS_API=$MDSPLUS_DIR/alpha/python
+   export MDSPLUS_BIN=$MDSPLUS_DIR/7.18-3/bin64
+   export MDSPLUS_LIB=$MDSPLUS_DIR/7.18-3/lib64
    export DISPY_DIR=/project/disruption
 
 else
@@ -38,9 +41,9 @@ fi
 unset PYTHONPATH
 
 # mdsplus
-export PATH=$PATH:$MDSPLUS_DIR/bin
-export PYTHONPATH=$MDSPLUS_DIR/python:$PYTHONPATH
-export LD_LIBRARY_PATH=$MDSPLUS_DIR/lib:$LD_LIBRARY_PATH
+export PATH=$PATH:${MDSPLUS_BIN:-$MDSPLUS_DIR/bin}
+export PYTHONPATH=${MDSPLUS_API:-$MDSPLUS_DIR/python}:$PYTHONPATH
+export LD_LIBRARY_PATH=${MDSPLUS_LIB:-$MDSPLUS_DIR/lib}:$LD_LIBRARY_PATH
 
 # poetry
 export PATH=$DISPY_DIR/poetry/bin:$PATH
