@@ -52,7 +52,7 @@ def get_fresh_data(
             log_file_path=log_file_path,
             log_file_write_mode="w",
             file_log_level="DEBUG",
-            console_log_level="DEBUG",
+            console_log_level="WARNING",
         ),
     )
     return shot_data

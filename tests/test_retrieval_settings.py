@@ -136,6 +136,7 @@ def test_only_requested_columns(tokamak, shotlist):
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
         num_processes=2,
+        log_settings="WARNING",
     )
     for res in results:
         assert {"ip", "q95", "shot", "time", "commit_hash"} == set(res.columns)
@@ -159,6 +160,7 @@ def test_domain_setting(tokamak, shotlist, domain_setting, full_time_domain_data
         retrieval_settings=retrieval_settings,
         output_setting="dict",
         num_processes=2,
+        log_settings="WARNING",
     )
     results = [results[shot] for shot in shotlist]
 
