@@ -69,7 +69,7 @@ def get_shots_data(
     database_initializer: Callable[..., ShotDatabase] = None,
     mds_connection_initializer: Callable[..., ProcessMDSConnection] = None,
     retrieval_settings: RetrievalSettings = None,
-    output_setting: OutputSetting = "list",
+    output_setting: OutputSetting = "dataframe",
     num_processes: int = 1,
     log_settings: LogSettings = None,
 ) -> Any:
