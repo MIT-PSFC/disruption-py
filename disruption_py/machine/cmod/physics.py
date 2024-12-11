@@ -1173,17 +1173,15 @@ class CmodPhysicsMethods:
         # Fetch data
         # Get EFIT geometry data
         z0 = params.mds_conn.get_data(
-            r"\efit_aeqdsk:zmagx/100", tree_name="_efit_tree"
+            r"\efit_aeqdsk:zmagx/100", tree_name="_efit_tree", astype=np.float64
         )  # [m]
         kappa = params.mds_conn.get_data(
-            r"\efit_aeqdsk:kappa", tree_name="_efit_tree"
+            r"\efit_aeqdsk:kappa", tree_name="_efit_tree", astype=np.float64
         )  # [dimensionless]
         aminor, efit_time = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
+            r"\efit_aeqdsk:aout/100", tree_name="_efit_tree", astype=np.float64
         )  # [m], [s]
-        # Avoid edge case error caused by NaN * 0
-        with np.errstate(invalid="ignore"):
-            bminor = aminor * kappa
+        bminor = aminor * kappa
 
         # Get Te data and TS time basis
         node_ext = ".yag_new.results.profiles"
