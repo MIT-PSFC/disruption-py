@@ -16,7 +16,7 @@ import MDSplus as mds
 from disruption_py.settings import LogSettings, RetrievalSettings
 from disruption_py.workflow import get_shots_data
 
-SHOT_ID = 1120105021
+SHOT_ID = 1160818023
 signals = [
     "ip",
     "zcur",

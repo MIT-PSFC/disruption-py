@@ -1769,26 +1769,32 @@ class CmodPhysicsMethods:
             tree_name="xtomo",
             astype="float64",
         )
+        valid_times = (t_sxr > 0) & (t_sxr < 2.)
+        t_sxr = t_sxr[valid_times]
         sxr = np.zeros(shape=(n_chords, len(t_sxr)))
-        sxr[0] = chord_01
+        sxr[0] = chord_01[valid_times]
         for i in range(1, n_chords):
-            sxr[i] = params.mds_conn.get_data(
+            chord, t_chord = params.mds_conn.get_data_with_dims(
                 r"\top.brightnesses.array_3:chord_" + f"{i+1:02}",
                 tree_name="xtomo",
                 astype="float64",
             )
-        # Use only timebase from 0 onwards
-        print(sxr.shape)
-        valid_times = t_sxr > 0
-        t_sxr = t_sxr[valid_times]
-        sxr = sxr[:,valid_times]
+            # Occasionally the time bases of a chord are of a different length
+            # Usually one timebase is just cut off early after shot is over
+            valid_times = (t_chord > 0) & (t_chord < 2.)
+            sxr[i] = chord[valid_times]
         core_sxr = np.max(sxr, axis=0)
+
+        # Subtract const background
+        wndw = int(0.005 / (t_sxr[1] - t_sxr[0]))
+        background = np.mean(core_sxr[:wndw])
+        core_sxr = core_sxr - background
 
         # For each time, find average core sxr over a time range of prior 20 ms
         # Thermal quench is if SXR drops below 10% of average
         # Start at t=0.2 s to let plasma heat up so there's significant SXR emission
         time_tq = -1
-        wndw = int(20 / (t_sxr[1] - t_sxr[0])) # Window of indices for averaging sxr
+        wndw = int(0.02 / (t_sxr[1] - t_sxr[0])) # Window of indices for averaging sxr
         i_start = np.argmax(t_sxr > 0.2)
         last_avg_on_axis = 0.0 # Tracks average of SXR before plasma moves vertically off-axis
         t_last_avg_on_axs = 0.0
@@ -1801,7 +1807,8 @@ class CmodPhysicsMethods:
                 t_last_avg_on_axs = t_sxr[i]
             else:
                 prior_avg = last_avg_on_axis
-            if core_sxr[i] < 0.1*prior_avg:
+            if core_sxr[i] < 0.15*prior_avg:
+                print(core_sxr[i])
                 print(t_last_avg_on_axs)
                 print(prior_avg)
                 time_tq = t_sxr[i]
