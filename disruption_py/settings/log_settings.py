@@ -157,7 +157,7 @@ class LogSettings:
         # header
         package = "disruption_py"
         commit = get_commit_hash()
-        logger.success(
+        logger.info(
             "Starting: {p} ~ v{v} # {c} / {u}@{h}",
             p=package,
             v=importlib.metadata.version(package),
