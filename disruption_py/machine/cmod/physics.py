@@ -1027,10 +1027,10 @@ class CmodPhysicsMethods:
         node_path = ".yag_new.results.profiles"
 
         ts_data, ts_time = params.mds_conn.get_data_with_dims(
-            node_path + ":te_rz", tree_name="electrons"
+            node_path + ":te_rz", tree_name="electrons", astype="float64"
         )  # [keV], [s]
         ts_z = params.mds_conn.get_data(
-            node_path + ":z_sorted", tree_name="electrons"
+            node_path + ":z_sorted", tree_name="electrons", astype="float64"
         )  # [m]
 
         output = CmodPhysicsMethods._get_ts_parameters(
