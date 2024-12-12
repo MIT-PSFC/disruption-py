@@ -1186,24 +1186,26 @@ class CmodPhysicsMethods:
         # Get Te data and TS time basis
         node_ext = ".yag_new.results.profiles"
         ts_te_core, ts_time = params.mds_conn.get_data_with_dims(
-            f"{node_ext}:te_rz", tree_name="electrons"
+            f"{node_ext}:te_rz", tree_name="electrons", astype="float64"
         )  # [keV], [s]
         ts_te_core = ts_te_core * 1000  # [keV] -> [eV]
-        ts_te_edge = params.mds_conn.get_data(r"\ts_te")  # [eV]
+        ts_te_edge = params.mds_conn.get_data(r"\ts_te", astype="float64")  # [eV]
         ts_te = np.concatenate((ts_te_core, ts_te_edge)) * 11600  # [eV] -> [K]
 
         # Get ne data
         ts_ne_core = params.mds_conn.get_data(
-            f"{node_ext}:ne_rz", tree_name="electrons"
+            f"{node_ext}:ne_rz", tree_name="electrons", astype="float64"
         )  # [m^-3]
-        ts_ne_edge = params.mds_conn.get_data(r"\ts_ne")  # [m^-3]
+        ts_ne_edge = params.mds_conn.get_data(r"\ts_ne", astype="float64")  # [m^-3]
         ts_ne = np.concatenate((ts_ne_core, ts_ne_edge))
 
         # Get TS chord positions
         ts_z_core = params.mds_conn.get_data(
-            f"{node_ext}:z_sorted", tree_name="electrons"
+            f"{node_ext}:z_sorted", tree_name="electrons", astype="float64"
         )  # [m]
-        ts_z_edge = params.mds_conn.get_data(r"\fiber_z", tree_name="electrons")  # [m]
+        ts_z_edge = params.mds_conn.get_data(
+            r"\fiber_z", tree_name="electrons", astype="float64"
+        )  # [m]
         ts_z = np.concatenate((ts_z_core, ts_z_edge))
         # Make sure that there are equal numbers of edge position and edge temperature points
         if len(ts_z_edge) != ts_te_edge.shape[0]:
