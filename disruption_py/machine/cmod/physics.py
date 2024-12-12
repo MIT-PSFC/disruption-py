@@ -242,7 +242,7 @@ class CmodPhysicsMethods:
                         params.logger.opt(exception=True).debug(e)
                     break  # Break out of wire_index loop
         ip, magtime = params.mds_conn.get_data_with_dims(
-            r"\ip", tree_name="magnetics", astype="float64"
+            r"\ip", tree_name="magnetics"
         )  # [A], [s]
         output = CmodPhysicsMethods._get_ip_parameters(
             params.times, ip, magtime, ip_prog, pcstime
@@ -508,13 +508,13 @@ class CmodPhysicsMethods:
             "p_oh" and "v_loop".
         """
         v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
-            r"\top.mflux:v0", tree_name="analysis", astype="float64"
+            r"\top.mflux:v0", tree_name="analysis"
         )  # [V], [s]
         if len(v_loop_time) <= 1:
             raise CalculationError("No data for v_loop_time")
 
         li, efittime = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:ali", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:ali", tree_name="_efit_tree"
         )  # [dimensionless], [s]
         ip_parameters = CmodPhysicsMethods.get_ip_parameters(params=params)
         r0 = params.mds_conn.get_data(
@@ -628,7 +628,7 @@ class CmodPhysicsMethods:
         for i in range(3):
             try:
                 sig, sig_time = params.mds_conn.get_data_with_dims(
-                    nodes[i], tree_name=trees[i], astype="float64"
+                    nodes[i], tree_name=trees[i]
                 )
                 values[2 * i] = sig
                 values[2 * i + 1] = sig_time
@@ -680,13 +680,13 @@ class CmodPhysicsMethods:
             A dictionary containing the calculated "kappa_area".
         """
         aminor = params.mds_conn.get_data(
-            r"\efit_aeqdsk:aout/100", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )  # [m]
         area = params.mds_conn.get_data(
-            r"\efit_aeqdsk:areao/1e4", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:areao/1e4", tree_name="_efit_tree"
         )  # [m^2]
         times = params.mds_conn.get_data(
-            r"\efit_aeqdsk:time", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:time", tree_name="_efit_tree"
         )  # [s]
 
         aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
@@ -878,17 +878,17 @@ class CmodPhysicsMethods:
         """
         # Line-integrated density
         n_e, t_n = params.mds_conn.get_data_with_dims(
-            r".tci.results:nl_04", tree_name="electrons", astype="float64"
+            r".tci.results:nl_04", tree_name="electrons"
         )  # [m^-3], [s]
         # Divide by chord length of ~0.6m to get line averaged density.
         # For future refernce, chord length is stored in
         # .01*\analysis::efit_aeqdsk:rco2v[3,*]
         n_e = np.squeeze(n_e) / 0.6
         ip, t_ip = params.mds_conn.get_data_with_dims(
-            r"\ip", tree_name="magnetics", astype="float64"
+            r"\ip", tree_name="magnetics"
         )  # [A], [s]
         a_minor, t_a = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:aout/100", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )  # [m], [s]
 
         output = CmodPhysicsMethods._get_densities(
@@ -1743,7 +1743,6 @@ class CmodPhysicsMethods:
         sxr, t_sxr = params.mds_conn.get_data_with_dims(
             r"\top.brightnesses.array_1:chord_16",
             tree_name="xtomo",
-            astype="float64",
         )  # [W/m^2], [s]
         sxr = interp1(t_sxr, sxr, params.times)
         return {"sxr": sxr}
@@ -1784,16 +1783,16 @@ class CmodPhysicsMethods:
         """
         # Get signals from EFIT tree
         beta_t, efittime = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:betat", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:betat", tree_name="_efit_tree"
         )  # [%], [s]
         ip = params.mds_conn.get_data(
-            r"\efit_aeqdsk:cpasma/1e6", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:cpasma/1e6", tree_name="_efit_tree"
         )  # [MA]
         aminor = params.mds_conn.get_data(
-            r"\efit_aeqdsk:aout/100", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )  # [m]
         btor = params.mds_conn.get_data(
-            r"\efit_aeqdsk:btaxp", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:btaxp", tree_name="_efit_tree"
         )  # [T]
 
         # Calculate beta_n
@@ -1829,7 +1828,7 @@ class CmodPhysicsMethods:
         """
         # Get signals from EFIT tree
         sibdry, efit_time = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:sibdry", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:sibdry", tree_name="_efit_tree"
         )  # [V*s/rad], [s]
 
         # Compute v_surf and interpolate to params.times
