@@ -8,6 +8,8 @@ import traceback
 import warnings
 
 import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
 from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.caching import cache_method
@@ -1746,6 +1748,73 @@ class CmodPhysicsMethods:
         )
         sxr = interp1(t_sxr, sxr, params.times)
         return {"sxr": sxr}
+    
+    @staticmethod
+    @physics_method(columns=["thermal_quench_time"], tokamak=Tokamak.CMOD)
+    def get_thermal_quench_time(params: PhysicsMethodParams):
+        n_chords = 38
+        # Get magnetic axis data from EFIT
+        thermal_quench_time = np.full(len(params.times), np.nan)
+        ip, magtime = params.mds_conn.get_data_with_dims(
+            r"\ip", tree_name="magnetics", astype="float64"
+        )
+        z0 = 0.01 * params.mds_conn.get_data(
+            r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
+        )  # [cm] -> [m]
+        r0 = 0.01 * params.mds_conn.get_data(
+            r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
+        )  # [cm] -> [m]
+        # Get timebase of horizontal SXR array 
+        chord_01, t_sxr = params.mds_conn.get_data_with_dims(
+            r"\top.brightnesses.array_3:chord_01",
+            tree_name="xtomo",
+            astype="float64",
+        )
+        sxr = np.zeros(shape=(n_chords, len(t_sxr)))
+        sxr[0] = chord_01
+        for i in range(1, n_chords):
+            print(i)
+            sxr[i] = params.mds_conn.get_data(
+                r"\top.brightnesses.array_3:chord_" + f"{i+1:02}",
+                tree_name="xtomo",
+                astype="float64",
+            )
+        # Use only timebase from 0 - current quench time
+        print(sxr.shape)
+        sxr_copy = np.copy(sxr)
+        t_sxr_copy = np.copy(t_sxr)
+        valid_times = (t_sxr > params.disruption_time - 0.02) & (t_sxr < params.disruption_time + 0.1)
+        t_sxr = t_sxr[valid_times]
+        sxr = sxr[:,valid_times]
+        max_brightness = np.max(sxr, axis=0)
+
+        # Get time of thermal quench as 20% time of pre-disruptive value
+        sxr_pre_disrupt = np.median(max_brightness[t_sxr < params.disruption_time - 0.005])
+        time_tq_end = t_sxr[np.argmax(max_brightness < 0.2 * sxr_pre_disrupt)]
+
+
+        print(time_tq_end)
+        fig, axs = plt.subplots(2, 1, sharex=True)
+        axs[0].scatter(magtime, np.abs(ip)/1e6, marker='o')
+        axs[1].scatter(t_sxr, max_brightness/1e3, marker='.', s=10)
+        for ax in axs:
+            ax.axvline(time_tq_end, linestyle='--', c='r', label='TQ End')
+            ax.axvline(params.disruption_time, linestyle='--', c='k', label='CQ')
+        axs[0].set_xlim(1.464, 1.474)
+        axs[0].set_title('C-Mod Shot: ' + str(params.shot_id))
+        axs[0].set_ylabel('Ip [MA]')
+        axs[1].set_ylabel('max(SXR) [kW/m^2]')
+        axs[1].set_xlabel("Time [s]")
+        axs[1].legend()
+
+        plt.show()
+        # data = pd.DataFrame({'time': t_sxr, 'sxr': max_brightness})
+        # data.to_csv('sxr_out.csv')
+        print(max_brightness.shape)
+        print(z0[-12:])
+        print(r0[-12:])
+        thermal_quench_time = time_tq_end * np.ones(len(params.times))
+        return {"thermal_quench_time": thermal_quench_time}
 
     @staticmethod
     def is_on_blacklist(shot_id: int) -> bool:
