@@ -85,8 +85,10 @@ class LogSettings:
         # Remove default logger
         logger.remove()
 
-        # Set colors without any bolding for each level (levels are bold by default)
-        logger.level("DEBUG", color="<dim>")
+        # Set custom style and add a VERBOSE level
+        logger.level("TRACE", color="<cyan><dim>")
+        logger.level("DEBUG", color="<blue>")
+        logger.level("VERBOSE", color="<dim>", no=15)
         logger.level("INFO", color="")
         logger.level("SUCCESS", color="<green>")
         logger.level("WARNING", color="<yellow>")
