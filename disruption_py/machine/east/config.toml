@@ -109,9 +109,7 @@ expected_failure_columns = [
 ]
 
 [east.tests.shots]
-no_disrup1 = 55555
-disrup1 = 53857
-no_disrup2 = 70000
-disrup2 = 70022
-no_disrup3 = 82440
-disrup3 = 82445
+disrup1_fast = 55012
+disrup2_full = 56020
+disrup3_full = 56549
+disrup4_full = 57508
