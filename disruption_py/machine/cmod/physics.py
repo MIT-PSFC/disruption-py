@@ -1759,12 +1759,10 @@ class CmodPhysicsMethods:
         ip, magtime = params.mds_conn.get_data_with_dims(
             r"\ip", tree_name="magnetics", astype="float64"
         )
-        z0 = 0.01 * params.mds_conn.get_data(
+        z0, efit_time = params.mds_conn.get_data_with_dims(
             r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
-        )  # [cm] -> [m]
-        r0 = 0.01 * params.mds_conn.get_data(
-            r"\efit_aeqdsk:rmagx", tree_name="_efit_tree"
-        )  # [cm] -> [m]
+        )  # [cm], [s]
+        z0 *= 0.01 # [cm] -> [m]
         # Get timebase of horizontal SXR array 
         chord_01, t_sxr = params.mds_conn.get_data_with_dims(
             r"\top.brightnesses.array_3:chord_01",
@@ -1774,47 +1772,64 @@ class CmodPhysicsMethods:
         sxr = np.zeros(shape=(n_chords, len(t_sxr)))
         sxr[0] = chord_01
         for i in range(1, n_chords):
-            print(i)
             sxr[i] = params.mds_conn.get_data(
                 r"\top.brightnesses.array_3:chord_" + f"{i+1:02}",
                 tree_name="xtomo",
                 astype="float64",
             )
-        # Use only timebase from 0 - current quench time
+        # Use only timebase from 0 onwards
         print(sxr.shape)
-        sxr_copy = np.copy(sxr)
-        t_sxr_copy = np.copy(t_sxr)
-        valid_times = (t_sxr > params.disruption_time - 0.02) & (t_sxr < params.disruption_time + 0.1)
+        valid_times = t_sxr > 0
         t_sxr = t_sxr[valid_times]
         sxr = sxr[:,valid_times]
-        max_brightness = np.max(sxr, axis=0)
+        core_sxr = np.max(sxr, axis=0)
 
-        # Get time of thermal quench as 20% time of pre-disruptive value
-        sxr_pre_disrupt = np.median(max_brightness[t_sxr < params.disruption_time - 0.005])
-        time_tq_end = t_sxr[np.argmax(max_brightness < 0.2 * sxr_pre_disrupt)]
+        # For each time, find average core sxr over a time range of prior 20 ms
+        # Thermal quench is if SXR drops below 10% of average
+        # Start at t=0.2 s to let plasma heat up so there's significant SXR emission
+        time_tq = -1
+        wndw = int(20 / (t_sxr[1] - t_sxr[0])) # Window of indices for averaging sxr
+        i_start = np.argmax(t_sxr > 0.2)
+        last_avg_on_axis = 0.0 # Tracks average of SXR before plasma moves vertically off-axis
+        t_last_avg_on_axs = 0.0
+        for i in range(i_start, len(core_sxr)):
+            # Check if vertical position is normal to determine prior average sxr
+            indx_z0 = np.argmax(efit_time > t_sxr[i]) - 1
+            if np.abs(z0[indx_z0]) < 0.02:
+                prior_avg = np.mean(core_sxr[i-wndw:i])
+                last_avg_on_axis = prior_avg
+                t_last_avg_on_axs = t_sxr[i]
+            else:
+                prior_avg = last_avg_on_axis
+            if core_sxr[i] < 0.1*prior_avg:
+                print(t_last_avg_on_axs)
+                print(prior_avg)
+                time_tq = t_sxr[i]
+                break
 
-
-        print(time_tq_end)
-        fig, axs = plt.subplots(2, 1, sharex=True)
+        fig, axs = plt.subplots(3, 1, sharex=True)
         axs[0].scatter(magtime, np.abs(ip)/1e6, marker='o')
-        axs[1].scatter(t_sxr, max_brightness/1e3, marker='.', s=10)
+        axs[1].scatter(t_sxr, core_sxr, marker='.', s=10)
+        axs[2].scatter(efit_time, z0, marker='o', s=10)
+        indx1 = np.argmax(t_sxr > t_last_avg_on_axs - 0.02)
+        indx2 = np.argmax(t_sxr > t_last_avg_on_axs) 
+        axs[1].axhline(np.mean(core_sxr[indx1:indx2]), linestyle='--')
         for ax in axs:
-            ax.axvline(time_tq_end, linestyle='--', c='r', label='TQ End')
+            ax.axvline(time_tq, linestyle='--', c='r', label='TQ End')
             ax.axvline(params.disruption_time, linestyle='--', c='k', label='CQ')
-        axs[0].set_xlim(1.464, 1.474)
+        # axs[0].set_xlim(1.464, 1.474)
         axs[0].set_title('C-Mod Shot: ' + str(params.shot_id))
         axs[0].set_ylabel('Ip [MA]')
-        axs[1].set_ylabel('max(SXR) [kW/m^2]')
-        axs[1].set_xlabel("Time [s]")
+        axs[1].set_ylabel('max(SXR) [W/m^2]')
+        axs[2].set_ylabel('Z0 [m]')
+        axs[2].set_xlabel("Time [s]")
         axs[1].legend()
 
         plt.show()
         # data = pd.DataFrame({'time': t_sxr, 'sxr': max_brightness})
         # data.to_csv('sxr_out.csv')
-        print(max_brightness.shape)
-        print(z0[-12:])
-        print(r0[-12:])
-        thermal_quench_time = time_tq_end * np.ones(len(params.times))
+        print(core_sxr.shape)
+        thermal_quench_time = time_tq * np.ones(len(params.times))
         return {"thermal_quench_time": thermal_quench_time}
 
     @staticmethod
