@@ -63,6 +63,7 @@ def test_cache_setting_sql(tokamak, shotlist, num_processes):
         retrieval_settings=retrieval_settings,
         num_processes=num_processes,
         mds_connection_initializer=dummy_mds_initializer,
+        output_setting="list",
     )
 
     # Ensure there is a connection to SQL -- if there is a dummy MDS connection,
@@ -136,6 +137,7 @@ def test_only_requested_columns(tokamak, shotlist):
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
         num_processes=2,
+        output_setting="list",
     )
     for res in results:
         assert {"ip", "q95", "shot", "time", "commit_hash"} == set(res.columns)
