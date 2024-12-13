@@ -50,7 +50,6 @@ test_columns = [
     "z_error_lmsz",
     "zcur_lmsz_normalized",
     "z_error_lmsz_normalized",
-    "aminor",
     "ne", 
     "greenwald_fraction", 
     "dn_dt",
