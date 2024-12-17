@@ -16,13 +16,16 @@ import MDSplus as mds
 from disruption_py.settings import LogSettings, RetrievalSettings
 from disruption_py.workflow import get_shots_data
 
-SHOT_ID = 1160818023
+SHOT_ID = 1150506022 # Early TQ
+#SHOT_ID = 1140226017
 signals = [
     "ip",
     "zcur",
     "wmhd",
     "time_until_disrupt",
-    "thermal_quench_time"
+    "thermal_quench_time",
+    "thermal_quench_time_wndw_pause",
+    "thermal_quench_time_onset"
 ]
 
 # default method for pulling disruption-py data

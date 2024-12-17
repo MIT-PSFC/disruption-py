@@ -1751,8 +1751,8 @@ class CmodPhysicsMethods:
         return {"sxr": sxr}
     
     @staticmethod
-    @physics_method(columns=["thermal_quench_time"], tokamak=Tokamak.CMOD)
-    def get_thermal_quench_time(params: PhysicsMethodParams):
+    @physics_method(columns=["thermal_quench_time_wndw_pause"], tokamak=Tokamak.CMOD)
+    def get_thermal_quench_time_wndw_pause(params: PhysicsMethodParams):
         n_chords = 38
         # Get magnetic axis data from EFIT
         thermal_quench_time = np.full(len(params.times), np.nan)
@@ -1822,7 +1822,7 @@ class CmodPhysicsMethods:
         indx2 = np.argmax(t_sxr > t_last_avg_on_axs) 
         axs[1].axhline(np.mean(core_sxr[indx1:indx2]), linestyle='--')
         for ax in axs:
-            ax.axvline(time_tq, linestyle='--', c='r', label='TQ End')
+            ax.axvline(time_tq, linestyle='--', c='r', label='TQ End (Wndw Pause)')
             ax.axvline(params.disruption_time, linestyle='--', c='k', label='CQ')
         # axs[0].set_xlim(1.464, 1.474)
         axs[0].set_title('C-Mod Shot: ' + str(params.shot_id))
@@ -1837,7 +1837,155 @@ class CmodPhysicsMethods:
         # data.to_csv('sxr_out.csv')
         print(core_sxr.shape)
         thermal_quench_time = time_tq * np.ones(len(params.times))
+        return {"thermal_quench_time_wndw_pause": thermal_quench_time}
+
+    @staticmethod
+    @physics_method(columns=["thermal_quench_time"], tokamak=Tokamak.CMOD)
+    def get_thermal_quench_time(params: PhysicsMethodParams):
+        n_chords = 38
+        # Get magnetic axis data from EFIT
+        thermal_quench_time = np.full(len(params.times), np.nan)
+        ip, magtime = params.mds_conn.get_data_with_dims(
+            r"\ip", tree_name="magnetics", astype="float64"
+        )
+        z0, efit_time = params.mds_conn.get_data_with_dims(
+            r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
+        )  # [cm], [s]
+        z0 *= 0.01 # [cm] -> [m]
+        # Get timebase of horizontal SXR array 
+        chord_01, t_sxr = params.mds_conn.get_data_with_dims(
+            r"\top.brightnesses.array_3:chord_01",
+            tree_name="xtomo",
+            astype="float64",
+        )
+        valid_times = (t_sxr > 0) & (t_sxr < 2.)
+        t_sxr = t_sxr[valid_times]
+        sxr = np.zeros(shape=(n_chords, len(t_sxr)))
+        sxr[0] = chord_01[valid_times]
+        for i in range(1, n_chords):
+            chord, t_chord = params.mds_conn.get_data_with_dims(
+                r"\top.brightnesses.array_3:chord_" + f"{i+1:02}",
+                tree_name="xtomo",
+                astype="float64",
+            )
+            # Occasionally the time bases of a chord are of a different length
+            # Usually one timebase is just cut off early after shot is over
+            valid_times = (t_chord > 0) & (t_chord < 2.)
+            sxr[i] = chord[valid_times]
+        core_sxr = np.max(sxr, axis=0)
+
+        # Subtract const background
+        wndw = int(0.005 / (t_sxr[1] - t_sxr[0]))
+        background = np.mean(core_sxr[:wndw])
+        core_sxr = core_sxr - background
+
+        # For each time, find average core sxr over a time range of prior 20 ms
+        # Thermal quench is if SXR drops below 15% of average
+        # Start at t=0.2 s to let plasma heat up so there's significant SXR emission
+        time_tq = -1
+        wndw = int(0.02 / (t_sxr[1] - t_sxr[0])) # Window of indices for averaging sxr
+        i_start = np.argmax(t_sxr > 0.2)
+        for i in range(i_start, len(core_sxr)):
+            prior_avg = np.mean(core_sxr[i-wndw:i])
+            if core_sxr[i] < 0.15*prior_avg:
+                print(core_sxr[i])
+                print(prior_avg)
+                time_tq = t_sxr[i]
+                break
+
+        fig, axs = plt.subplots(3, 1, sharex=True)
+        axs[0].scatter(magtime, np.abs(ip)/1e6, marker='o')
+        axs[1].scatter(t_sxr, core_sxr, marker='.', s=10)
+        axs[2].scatter(efit_time, z0, marker='o', s=10)
+        axs[1].axhline(prior_avg, linestyle='--')
+        for ax in axs:
+            ax.axvline(time_tq, linestyle='--', c='r', label='TQ End')
+            ax.axvline(params.disruption_time, linestyle='--', c='k', label='CQ')
+        axs[0].set_title('C-Mod Shot: ' + str(params.shot_id))
+        axs[0].set_ylabel('Ip [MA]')
+        axs[1].set_ylabel('max(SXR) [W/m^2]')
+        axs[2].set_ylabel('Z0 [m]')
+        axs[2].set_xlabel("Time [s]")
+        axs[1].legend()
+
+        plt.show()
+        thermal_quench_time = time_tq * np.ones(len(params.times))
         return {"thermal_quench_time": thermal_quench_time}
+    
+    @staticmethod
+    @physics_method(columns=["thermal_quench_time_onset"], tokamak=Tokamak.CMOD)
+    def get_thermal_quench_time_onset(params: PhysicsMethodParams):
+        n_chords = 38
+        # Get magnetic axis data from EFIT
+        thermal_quench_time_onset = np.full(len(params.times), np.nan)
+        ip, magtime = params.mds_conn.get_data_with_dims(
+            r"\ip", tree_name="magnetics", astype="float64"
+        )
+        z0, efit_time = params.mds_conn.get_data_with_dims(
+            r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
+        )  # [cm], [s]
+        z0 *= 0.01 # [cm] -> [m]
+        # Get timebase of horizontal SXR array 
+        chord_01, t_sxr = params.mds_conn.get_data_with_dims(
+            r"\top.brightnesses.array_3:chord_01",
+            tree_name="xtomo",
+            astype="float64",
+        )
+        valid_times = (t_sxr > 0) & (t_sxr < 2.)
+        t_sxr = t_sxr[valid_times]
+        sxr = np.zeros(shape=(n_chords, len(t_sxr)))
+        sxr[0] = chord_01[valid_times]
+        for i in range(1, n_chords):
+            chord, t_chord = params.mds_conn.get_data_with_dims(
+                r"\top.brightnesses.array_3:chord_" + f"{i+1:02}",
+                tree_name="xtomo",
+                astype="float64",
+            )
+            # Occasionally the time bases of a chord are of a different length
+            # Usually one timebase is just cut off early after shot is over
+            valid_times = (t_chord > 0) & (t_chord < 2.)
+            sxr[i] = chord[valid_times]
+        core_sxr = np.max(sxr, axis=0)
+
+        # Subtract const background
+        wndw = int(0.005 / (t_sxr[1] - t_sxr[0]))
+        background = np.mean(core_sxr[:wndw])
+        core_sxr = core_sxr - background
+
+        # Get pre-disruption SXR as mean of the core SXR emission between 30 ms
+        # and 10 ms before the thermal quench time
+        indx1 = np.argmax(t_sxr > params.disruption_time - 0.02)
+        indx2 = np.argmax(t_sxr > params.disruption_time - 0.005)
+        sxr_pre_disrupt = np.mean(core_sxr[indx1:indx2])
+
+        # Work backwards from current quench time to find 80% of final TQ
+        i = np.argmax(t_sxr > params.disruption_time)
+        print(params.disruption_time)
+        while (core_sxr[i] < 0.9*sxr_pre_disrupt) and (i > 0):
+            i -= 1
+        time_tq_onset = t_sxr[i]
+        print(i)
+        print(t_sxr.shape)
+        print(t_sxr[i])
+        
+        fig, axs = plt.subplots(3, 1, sharex=True)
+        axs[0].scatter(magtime, np.abs(ip)/1e6, marker='o')
+        axs[1].scatter(t_sxr, core_sxr, marker='.', s=10)
+        axs[2].scatter(efit_time, z0, marker='o', s=10)
+        axs[1].axhline(sxr_pre_disrupt, linestyle='--')
+        for ax in axs:
+            ax.axvline(time_tq_onset, linestyle='--', c='r', label='TQ Onset')
+            ax.axvline(params.disruption_time, linestyle='--', c='k', label='CQ')
+        axs[0].set_title('C-Mod Shot: ' + str(params.shot_id))
+        axs[0].set_ylabel('Ip [MA]')
+        axs[1].set_ylabel('max(SXR) [W/m^2]')
+        axs[2].set_ylabel('Z0 [m]')
+        axs[2].set_xlabel("Time [s]")
+        axs[1].legend()
+
+        plt.show()
+        thermal_quench_time_onset = time_tq_onset * np.ones(len(params.times))
+        return {"thermal_quench_time_onset": thermal_quench_time_onset}
 
     @staticmethod
     @physics_method(columns=["beta_n"], tokamak=Tokamak.CMOD)
