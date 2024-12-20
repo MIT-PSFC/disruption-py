@@ -1814,6 +1814,7 @@ class CmodPhysicsMethods:
                 time_tq = t_sxr[i]
                 break
 
+        print("TQ Time (Window pause): " + str(time_tq))
         fig, axs = plt.subplots(3, 1, sharex=True)
         axs[0].scatter(magtime, np.abs(ip)/1e6, marker='o')
         axs[1].scatter(t_sxr, core_sxr, marker='.', s=10)
@@ -1821,9 +1822,9 @@ class CmodPhysicsMethods:
         indx1 = np.argmax(t_sxr > t_last_avg_on_axs - 0.02)
         indx2 = np.argmax(t_sxr > t_last_avg_on_axs) 
         axs[1].axhline(np.mean(core_sxr[indx1:indx2]), linestyle='--')
-        for ax in axs:
-            ax.axvline(time_tq, linestyle='--', c='r', label='TQ End (Wndw Pause)')
-            ax.axvline(params.disruption_time, linestyle='--', c='k', label='CQ')
+        #for ax in axs:
+        #    ax.axvline(time_tq, linestyle='--', c='r', label='TQ End (Wndw Pause)')
+        #    ax.axvline(params.disruption_time, linestyle='--', c='k', label='CQ')
         # axs[0].set_xlim(1.464, 1.474)
         axs[0].set_title('C-Mod Shot: ' + str(params.shot_id))
         axs[0].set_ylabel('Ip [MA]')
@@ -1892,15 +1893,15 @@ class CmodPhysicsMethods:
                 print(prior_avg)
                 time_tq = t_sxr[i]
                 break
-
+        print("TQ Time (No window pause): " + str(time_tq))
         fig, axs = plt.subplots(3, 1, sharex=True)
         axs[0].scatter(magtime, np.abs(ip)/1e6, marker='o')
         axs[1].scatter(t_sxr, core_sxr, marker='.', s=10)
         axs[2].scatter(efit_time, z0, marker='o', s=10)
         axs[1].axhline(prior_avg, linestyle='--')
-        for ax in axs:
-            ax.axvline(time_tq, linestyle='--', c='r', label='TQ End')
-            ax.axvline(params.disruption_time, linestyle='--', c='k', label='CQ')
+        # for ax in axs:
+        #     ax.axvline(time_tq, linestyle='--', c='r', label='TQ End')
+        #     ax.axvline(params.disruption_time, linestyle='--', c='k', label='CQ')
         axs[0].set_title('C-Mod Shot: ' + str(params.shot_id))
         axs[0].set_ylabel('Ip [MA]')
         axs[1].set_ylabel('max(SXR) [W/m^2]')
@@ -1952,22 +1953,27 @@ class CmodPhysicsMethods:
         background = np.mean(core_sxr[:wndw])
         core_sxr = core_sxr - background
 
-        # Get pre-disruption SXR as mean of the core SXR emission between 30 ms
-        # and 10 ms before the thermal quench time
-        indx1 = np.argmax(t_sxr > params.disruption_time - 0.02)
-        indx2 = np.argmax(t_sxr > params.disruption_time - 0.005)
+        # Get pre-disruption SXR as mean of the core SXR emission between 20 ms
+        # and 5 ms before the current quench time
+        indx1 = np.argmax(t_sxr > params.disruption_time - 0.015)
+        indx2 = np.argmax(t_sxr > params.disruption_time - 0.003)
         sxr_pre_disrupt = np.mean(core_sxr[indx1:indx2])
 
-        # Work backwards from current quench time to find 80% of final TQ
-        i = np.argmax(t_sxr > params.disruption_time)
+        # Work backwards from current quench time to find 90% of final TQ
+        # Use window average to smooth noise
+        # TODO: What if I apply a median filter to each channel before taking the max?
+        smooth_width = 0.0004
+        indx1 = np.argmax(t_sxr > params.disruption_time - smooth_width)
+        indx2 = np.argmax(t_sxr > params.disruption_time)
         print(params.disruption_time)
-        while (core_sxr[i] < 0.9*sxr_pre_disrupt) and (i > 0):
-            i -= 1
-        time_tq_onset = t_sxr[i]
+        while (np.median(core_sxr[indx1:indx2]) < 0.9*sxr_pre_disrupt) and (indx1 > 0):
+            indx1 -= 1
+            indx2 -= 1
+        time_tq_onset = t_sxr[indx2] - smooth_width / 2
         print(i)
         print(t_sxr.shape)
         print(t_sxr[i])
-        
+        print("TQ Onset Time: " + str(time_tq_onset))
         fig, axs = plt.subplots(3, 1, sharex=True)
         axs[0].scatter(magtime, np.abs(ip)/1e6, marker='o')
         axs[1].scatter(t_sxr, core_sxr, marker='.', s=10)
