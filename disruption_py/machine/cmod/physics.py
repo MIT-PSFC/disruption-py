@@ -10,6 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from MDSplus import mdsExceptions
+from scipy.ndimage import median_filter
 
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
@@ -1946,6 +1947,13 @@ class CmodPhysicsMethods:
             # Usually one timebase is just cut off early after shot is over
             valid_times = (t_chord > 0) & (t_chord < 2.)
             sxr[i] = chord[valid_times]
+        core_sxr_raw = np.max(sxr, axis=0)
+        # Median filter for each channel to reduce noise
+        print(sxr.shape)
+        print(sxr[0].shape)
+        smooth_width = int(0.00015 / (t_sxr[1] - t_sxr[0]))
+        print(smooth_width)
+        sxr = median_filter(sxr, size=(1, smooth_width), mode='constant', cval=0.)
         core_sxr = np.max(sxr, axis=0)
 
         # Subtract const background
@@ -1963,21 +1971,26 @@ class CmodPhysicsMethods:
         # Use window average to smooth noise
         # TODO: What if I apply a median filter to each channel before taking the max?
         smooth_width = 0.0004
-        indx1 = np.argmax(t_sxr > params.disruption_time - smooth_width)
-        indx2 = np.argmax(t_sxr > params.disruption_time)
-        print(params.disruption_time)
-        while (np.median(core_sxr[indx1:indx2]) < 0.9*sxr_pre_disrupt) and (indx1 > 0):
-            indx1 -= 1
-            indx2 -= 1
-        time_tq_onset = t_sxr[indx2] - smooth_width / 2
+        # indx1 = np.argmax(t_sxr > params.disruption_time - smooth_width)
+        # indx2 = np.argmax(t_sxr > params.disruption_time)
+        # print(params.disruption_time)
+        # while (np.median(core_sxr[indx1:indx2]) < 0.9*sxr_pre_disrupt) and (indx1 > 0):
+        #     indx1 -= 1
+        #     indx2 -= 1
+        i = np.argmax(t_sxr > params.disruption_time)
+        while (core_sxr[i] < 0.9*sxr_pre_disrupt) and (indx1 > 0):
+            i -= 1
+        time_tq_onset = t_sxr[i]
+        # time_tq_onset = t_sxr[indx2] - smooth_width / 2
         print(i)
         print(t_sxr.shape)
         print(t_sxr[i])
         print("TQ Onset Time: " + str(time_tq_onset))
-        fig, axs = plt.subplots(3, 1, sharex=True)
+        fig, axs = plt.subplots(4, 1, sharex=True)
         axs[0].scatter(magtime, np.abs(ip)/1e6, marker='o')
         axs[1].scatter(t_sxr, core_sxr, marker='.', s=10)
-        axs[2].scatter(efit_time, z0, marker='o', s=10)
+        axs[2].scatter(t_sxr, core_sxr_raw, marker='.', s=10)
+        axs[3].scatter(efit_time, z0, marker='o', s=10)
         axs[1].axhline(sxr_pre_disrupt, linestyle='--')
         for ax in axs:
             ax.axvline(time_tq_onset, linestyle='--', c='r', label='TQ Onset')
@@ -1985,8 +1998,8 @@ class CmodPhysicsMethods:
         axs[0].set_title('C-Mod Shot: ' + str(params.shot_id))
         axs[0].set_ylabel('Ip [MA]')
         axs[1].set_ylabel('max(SXR) [W/m^2]')
-        axs[2].set_ylabel('Z0 [m]')
-        axs[2].set_xlabel("Time [s]")
+        axs[3].set_ylabel('Z0 [m]')
+        axs[3].set_xlabel("Time [s]")
         axs[1].legend()
 
         plt.show()
