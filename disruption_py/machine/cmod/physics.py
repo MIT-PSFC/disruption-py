@@ -507,19 +507,22 @@ class CmodPhysicsMethods:
             A dictionary containing the calculated ohmic parameters, including
             "p_oh" and "v_loop".
         """
-        v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
-            r"\top.mflux:v0", tree_name="analysis", astype="float64"
-        )  # [V], [s]
-        if len(v_loop_time) <= 1:
-            raise CalculationError("No data for v_loop_time")
+        try:
+            v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
+                r"\top.mflux:v0", tree_name="analysis", astype="float64"
+            )  # [V], [s]
+            if len(v_loop_time) <= 1:
+                raise CalculationError("No data for v_loop_time")
 
-        li, efittime = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:ali", tree_name="_efit_tree", astype="float64"
-        )  # [dimensionless], [s]
-        ip_parameters = CmodPhysicsMethods.get_ip_parameters(params=params)
-        r0 = params.mds_conn.get_data(
-            r"\efit_aeqdsk:rmagx/100", tree_name="_efit_tree"
-        )  # [m]
+            li, efittime = params.mds_conn.get_data_with_dims(
+                r"\efit_aeqdsk:ali", tree_name="_efit_tree", astype="float64"
+            )  # [dimensionless], [s]
+            ip_parameters = CmodPhysicsMethods.get_ip_parameters(params=params)
+            r0 = params.mds_conn.get_data(
+                r"\efit_aeqdsk:rmagx/100", tree_name="_efit_tree"
+            )  # [m]
+        except mdsExceptions.TreeNODATA:
+            return {'p_oh': [np.nan], 'v_loop': [np.nan]}
 
         output = CmodPhysicsMethods._get_ohmic_parameters(
             params.times,
@@ -565,12 +568,12 @@ class CmodPhysicsMethods:
             "p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", and "radiated_fraction".
         """
         if p_lh is not None and isinstance(t_lh, np.ndarray) and len(t_lh) > 1:
-            p_lh = interp1(t_lh, p_lh * 1.0e3, times)
+            p_lh = interp1(t_lh, p_lh * 1.0e3, times, fill_value=0)
         else:
             p_lh = np.zeros(len(times))
 
         if p_icrf is not None and isinstance(t_icrf, np.ndarray) and len(t_icrf) > 1:
-            p_icrf = interp1(t_icrf, p_icrf * 1.0e6, times, bounds_error=False)
+            p_icrf = interp1(t_icrf, p_icrf * 1.0e6, times, fill_value=0)
         else:
             p_icrf = np.zeros(len(times))
 
@@ -589,8 +592,12 @@ class CmodPhysicsMethods:
             # shots, excluding times for
             # which p_rad (uncalibrated) <= 1.e5 W
             dprad = np.gradient(p_rad, t_rad)
-            p_rad = interp1(t_rad, p_rad, times)
+            p_rad = interp1(t_rad, p_rad, times, fill_value=0)
             dprad = interp1(t_rad, dprad, times)
+            
+        if len(p_ohm) == 1 and np.isnan(p_ohm[0]):
+            p_ohm = np.zeros(len(times))
+        
         p_input = p_ohm + p_lh + p_icrf
         rad_fraction = p_rad / p_input
         rad_fraction[rad_fraction == np.inf] = np.nan
