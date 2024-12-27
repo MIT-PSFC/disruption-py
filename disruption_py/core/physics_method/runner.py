@@ -171,15 +171,24 @@ def filter_methods_to_run(
         ):
             continue
 
-        if tags is not None and bool(
-            set(bound_method_metadata.tags).intersection(tags)
-        ):
-            methods_to_run.append(bound_method_metadata)
-        elif methods is not None and bound_method_metadata.name in methods:
-            methods_to_run.append(bound_method_metadata)
-        elif columns is not None and bool(
-            set(bound_method_metadata.columns).intersection(columns)
-        ):
+        should_run = (
+            (
+                tags is not None
+                and bool(set(bound_method_metadata.tags).intersection(tags))
+            )
+            or (methods is not None and bound_method_metadata.name in methods)
+            or (
+                columns is not None
+                and bool(set(bound_method_metadata.columns).intersection(columns))
+            )
+        )
+
+        # reasons that methods should be exluded from should run
+        should_not_run = (
+            methods is not None and ("~" + bound_method_metadata.name) in methods
+        )
+
+        if should_run and not should_not_run:
             methods_to_run.append(bound_method_metadata)
         else:
             physics_method_params.logger.debug(
