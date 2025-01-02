@@ -12,6 +12,7 @@ from typing import Any, Callable
 from loguru import logger
 from tqdm.auto import tqdm
 
+from disruption_py.core.physics_method.runner import get_all_physics_methods
 from disruption_py.core.retrieval_manager import RetrievalManager
 from disruption_py.core.utils.misc import (
     get_elapsed_time,
@@ -20,6 +21,7 @@ from disruption_py.core.utils.misc import (
 )
 from disruption_py.inout.mds import ProcessMDSConnection
 from disruption_py.inout.sql import ShotDatabase
+from disruption_py.machine.method_holders import get_method_holders
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.settings import RetrievalSettings
 from disruption_py.settings.log_settings import LogSettings, resolve_log_settings
@@ -220,3 +222,25 @@ def _get_mds_instance(tokamak, mds_connection_initializer):
     if mds_connection_initializer:
         return mds_connection_initializer()
     return get_mdsplus_class(tokamak)
+
+
+def get_physics_method_names(tokamak: Tokamak = None) -> list[str]:
+    """
+    Get the names of all physics methods available for the tokamak.
+
+    Params
+    ------
+    tokamak : Tokamak
+        The tokamak to get the physics methods for. If None, the tokamak is resolved
+        from the environment.
+
+    Returns
+    -------
+    List[str]
+        The names of all physics methods available for the tokamak.
+    """
+    tokamak = resolve_tokamak_from_environment(tokamak)
+    method_holder = get_method_holders(tokamak)
+    all_physics_methods = get_all_physics_methods(method_holder)
+    method_names = [method.__name__ for method in all_physics_methods]
+    return method_names
