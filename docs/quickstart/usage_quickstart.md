@@ -3,7 +3,7 @@
 Creating a script gives you the full functionality of DisruptionPy. 
 
 ### Examples
-Use [`basic_example_1.py`](https://github.com/MIT-PSFC/disruption-py/blob/main/examples/basic_example_1.py) or [`basic_example_2.py`](https://github.com/MIT-PSFC/disruption-py/blob/main/examples/basic_example_2.py) for a simple way to get started. Check out [`all_defaults_example.py`](https://github.com/MIT-PSFC/disruption-py/blob/main/examples/all_defaults_example.py) to see the all the default settings for retrieving data. 
+For a simple way to get started, check out [`simple.py`](https://github.com/MIT-PSFC/disruption-py/blob/main/examples/simple.py) or [`defaults.py`](https://github.com/MIT-PSFC/disruption-py/blob/main/examples/defaults.py) to see the all the default settings for retrieving data. 
 
 ### Creating a DisruptionPy script
 1. **Create the shot data retrieval settings**
