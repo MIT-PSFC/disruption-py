@@ -257,8 +257,7 @@ class FlattopDomainSetting(DomainSetting):
                 )
             )
             if len(polarity) > 1:
-                params.logger.log(
-                    "VERBOSE",
+                params.logger.verbose(
                     "Polarity of Ip target is not constant. "
                     "Using value at first timestep.",
                 )

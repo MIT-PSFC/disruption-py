@@ -9,6 +9,7 @@ import importlib.metadata
 import os
 import sys
 from dataclasses import dataclass
+from functools import partialmethod
 from typing import Union
 
 from loguru import logger
@@ -85,15 +86,6 @@ class LogSettings:
         # Remove default logger
         logger.remove()
 
-        # Set custom style and add a VERBOSE level
-        logger.level("TRACE", color="<cyan><dim>")
-        logger.level("DEBUG", color="<blue>")
-        logger.level("VERBOSE", color="<dim>", no=15)
-        logger.level("INFO", color="")
-        logger.level("SUCCESS", color="<green>")
-        logger.level("WARNING", color="<yellow>")
-        logger.level("ERROR", color="<red>")
-
         # formats
         message_format = "<level>[{level:^7s}] {message}</level>"
         console_format = "{time:HH:mm:ss.SSS} " + message_format
@@ -151,6 +143,19 @@ class LogSettings:
         """
         if self.use_custom_logging or self._logging_has_been_setup:
             return
+
+        # Set custom style and add a VERBOSE level. This only needs to be done
+        # once, so there is no need to add it to the reset_handlers method.
+        logger.level("TRACE", color="<cyan><dim>")
+        logger.level("DEBUG", color="<blue>")
+        logger.level("VERBOSE", color="<dim>", no=15)
+        logger.level("INFO", color="")
+        logger.level("SUCCESS", color="<green>")
+        logger.level("WARNING", color="<yellow>")
+        logger.level("ERROR", color="<red>")
+        # Bind the verbose level to the class so it can be used in any file even
+        # after changing the logger instance
+        logger.__class__.verbose = partialmethod(logger.__class__.log, "VERBOSE")
 
         self.reset_handlers(num_shots=None)
 
