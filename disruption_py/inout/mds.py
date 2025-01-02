@@ -108,7 +108,6 @@ class MDSConnection:
         If the specified tree_name is a nickname for a tree_name, will open the tree
         that it is a nickname for.
         """
-        logger.trace("Opening tree: {tree_name}", tree_name=tree_name)
         if (
             tree_name not in self.tree_nicknames
             and tree_name in self.tree_nickname_funcs
@@ -119,6 +118,7 @@ class MDSConnection:
             tree_name = self.tree_nicknames[tree_name]
 
         if self.last_open_tree != tree_name:
+            logger.trace("Opening tree: {tree_name}", tree_name=tree_name)
             self.conn.openTree(tree_name, self.shot_id)
 
         self.last_open_tree = tree_name
