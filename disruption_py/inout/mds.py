@@ -126,7 +126,7 @@ class MDSConnection:
 
     def cleanup(self):
         """
-        Close all open trees
+        Close all open trees and reset cache to save memory.
         """
         self.data_cache = None
         self.last_open_tree = None
