@@ -148,7 +148,12 @@ class LogSettings:
         # once, so there is no need to add it to the reset_handlers method.
         logger.level("TRACE", color="<cyan><dim>")
         logger.level("DEBUG", color="<blue>")
-        logger.level("VERBOSE", color="<dim>", no=15)
+        # Ensure the level does not already exist because the level no can only
+        # be added once. This might happen if the logger is re-initialized.
+        try:
+            logger.level("VERBOSE", color="<dim>")
+        except ValueError:
+            logger.level("VERBOSE", color="<dim>", no=15)
         logger.level("INFO", color="")
         logger.level("SUCCESS", color="<green>")
         logger.level("WARNING", color="<yellow>")
