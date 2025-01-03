@@ -18,6 +18,7 @@ from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.math import interp1
 from disruption_py.core.utils.misc import shot_log_msg
 from disruption_py.machine.cmod.physics import CmodPhysicsMethods
+from disruption_py.machine.d3d.physics import D3DPhysicsMethods
 from disruption_py.machine.tokamak import Tokamak
 
 DomainSettingType = Union["DomainSetting", str, Dict[Tokamak, "DomainSettingType"]]
@@ -250,19 +251,7 @@ class FlattopDomainSetting(DomainSetting):
                 tree_name="d3d",
             )
             t_ip_prog = t_ip_prog / 1.0e3  # [ms] -> [s]
-            polarity = np.unique(
-                params.physics_method_params.mds_conn.get_data(
-                    f"ptdata('iptdirect', {params.physics_method_params.shot_id})",
-                    tree_name="d3d",
-                )
-            )
-            if len(polarity) > 1:
-                params.logger.info(
-                    "Polarity of Ip target is not constant. "
-                    "Using value at first timestep.",
-                )
-                params.logger.debug("Polarity array {polarity}", polarity=polarity)
-                polarity = polarity[0]
+            polarity = D3DPhysicsMethods.get_polarity(params.physics_method_params)
             ip_prog = ip_prog * polarity
             dipprog_dt = np.gradient(ip_prog, t_ip_prog)
             ip_prog = interp1(
