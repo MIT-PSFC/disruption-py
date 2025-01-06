@@ -44,5 +44,6 @@ def test_tokamak_parameter(shotlist, tok):
         retrieval_settings=retrieval_settings,
         output_setting="list",
         num_processes=1,
+        log_settings="WARNING",
     )
     assert col_name in shot_data[0]
