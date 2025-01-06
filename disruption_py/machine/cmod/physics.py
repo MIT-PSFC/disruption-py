@@ -22,8 +22,6 @@ from disruption_py.core.utils.math import (
 from disruption_py.machine.cmod.thomson import CmodThomsonDensityMeasure
 from disruption_py.machine.tokamak import Tokamak
 
-warnings.filterwarnings("error", category=RuntimeWarning)
-
 
 class CmodPhysicsMethods:
     """
