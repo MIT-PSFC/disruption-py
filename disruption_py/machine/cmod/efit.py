@@ -70,7 +70,7 @@ class CmodEfitMethods:
             A dictionary containing the retrieved EFIT parameters.
         """
         efit_time = params.mds_conn.get_data(
-            r"\efit_aeqdsk:time", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:time", tree_name="_efit_tree"
         )  # [s]
         efit_data = {}
 
@@ -80,7 +80,6 @@ class CmodEfitMethods:
                 efit_data[param] = params.mds_conn.get_data(
                     path=path,
                     tree_name="_efit_tree",
-                    astype="float64",
                 )
             except mdsExceptions.MdsException as e:
                 params.logger.warning(
