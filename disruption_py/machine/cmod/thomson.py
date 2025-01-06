@@ -194,7 +194,7 @@ class CmodThomsonDensityMeasure:
         if np.mean(ip) > 0:
             flag = 0
         efit_times = params.mds_conn.get_data(
-            r"\efit_aeqdsk:time", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:time", tree_name="_efit_tree"
         )
         t1 = np.amin(efit_times)
         t2 = np.amax(efit_times)
