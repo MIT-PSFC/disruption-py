@@ -18,7 +18,7 @@ jobs:
 
 
   pytest:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     if: |
       github.event_name == 'push' ||
       github.event.pull_request.draft == false
@@ -113,7 +113,7 @@ jobs:
           | tee -a "$GITHUB_ENV"
 
       - name: Install poetry
-        run: pipx install poetry
+        run: pipx install 'poetry<2.0.0'
 
       - name: Setup Python
         uses: actions/setup-python@v5
