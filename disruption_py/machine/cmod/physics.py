@@ -1951,7 +1951,7 @@ class CmodPhysicsMethods:
         # Median filter for each channel to reduce noise
         print(sxr.shape)
         print(sxr[0].shape)
-        smooth_width = int(0.00015 / (t_sxr[1] - t_sxr[0]))
+        smooth_width = int(0.000150 / (t_sxr[1] - t_sxr[0]))
         print(smooth_width)
         sxr = median_filter(sxr, size=(1, smooth_width), mode='constant', cval=0.)
         core_sxr = np.max(sxr, axis=0)
@@ -1963,7 +1963,7 @@ class CmodPhysicsMethods:
 
         # Get pre-disruption SXR as mean of the core SXR emission between 20 ms
         # and 5 ms before the current quench time
-        indx1 = np.argmax(t_sxr > params.disruption_time - 0.015)
+        indx1 = np.argmax(t_sxr > params.disruption_time - 0.006)
         indx2 = np.argmax(t_sxr > params.disruption_time - 0.003)
         sxr_pre_disrupt = np.mean(core_sxr[indx1:indx2])
 
@@ -1986,23 +1986,23 @@ class CmodPhysicsMethods:
         print(t_sxr.shape)
         print(t_sxr[i])
         print("TQ Onset Time: " + str(time_tq_onset))
-        fig, axs = plt.subplots(4, 1, sharex=True)
-        axs[0].scatter(magtime, np.abs(ip)/1e6, marker='o')
-        axs[1].scatter(t_sxr, core_sxr, marker='.', s=10)
-        axs[2].scatter(t_sxr, core_sxr_raw, marker='.', s=10)
-        axs[3].scatter(efit_time, z0, marker='o', s=10)
-        axs[1].axhline(sxr_pre_disrupt, linestyle='--')
-        for ax in axs:
-            ax.axvline(time_tq_onset, linestyle='--', c='r', label='TQ Onset')
-            ax.axvline(params.disruption_time, linestyle='--', c='k', label='CQ')
-        axs[0].set_title('C-Mod Shot: ' + str(params.shot_id))
-        axs[0].set_ylabel('Ip [MA]')
-        axs[1].set_ylabel('max(SXR) [W/m^2]')
-        axs[3].set_ylabel('Z0 [m]')
-        axs[3].set_xlabel("Time [s]")
-        axs[1].legend()
+        # fig, axs = plt.subplots(4, 1, sharex=True)
+        # axs[0].scatter(magtime, np.abs(ip)/1e6, marker='o')
+        # axs[1].scatter(t_sxr, core_sxr, marker='.', s=10)
+        # axs[2].scatter(t_sxr, core_sxr_raw, marker='.', s=10)
+        # axs[3].scatter(efit_time, z0, marker='o', s=10)
+        # axs[1].axhline(sxr_pre_disrupt, linestyle='--')
+        # for ax in axs:
+        #     ax.axvline(time_tq_onset, linestyle='--', c='r', label='TQ Onset')
+        #     ax.axvline(params.disruption_time, linestyle='--', c='k', label='CQ')
+        # axs[0].set_title('C-Mod Shot: ' + str(params.shot_id))
+        # axs[0].set_ylabel('Ip [MA]')
+        # axs[1].set_ylabel('max(SXR) [W/m^2]')
+        # axs[3].set_ylabel('Z0 [m]')
+        # axs[3].set_xlabel("Time [s]")
+        # axs[1].legend()
 
-        plt.show()
+        # plt.show()
         thermal_quench_time_onset = time_tq_onset * np.ones(len(params.times))
         return {"thermal_quench_time_onset": thermal_quench_time_onset}
 
