@@ -536,10 +536,12 @@ class CmodPhysicsMethods:
         return output
 
     @staticmethod
-    def _get_power(times, p_lh, t_lh, p_icrf, t_icrf, p_rad, t_rad, p_ohm):
+    def _get_power(
+        times, p_lh, t_lh, p_icrf, t_icrf, p_rad, t_rad, p_ohm, wmhd, efit_time
+    ):
         """
-        Calculate the input and radiated powers, and then calculate the
-        radiated fraction.
+        Calculate the input and radiated powers, then calculate the
+        radiated fraction and radiation confinement time.
 
         Parameters
         ----------
@@ -559,12 +561,18 @@ class CmodPhysicsMethods:
             The time array corresponding to radiated power.
         p_ohm : np.ndarray
             The ohmic heating power.
+        wmhd : np.ndarray
+            The total plasma energy.
+        efit_time : np.ndarray
+            The EFIT time base
 
         Returns
         -------
         dict
             A dictionary containing the calculated power values, including
-            "p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", and "radiated_fraction".
+            "p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", "radiated_fraction", and "tau_rad".
+
+        Last major update by William Wei on 1/6/2025
         """
         if p_lh is not None and isinstance(t_lh, np.ndarray) and len(t_lh) > 1:
             p_lh = interp1(t_lh, p_lh * 1.0e3, times, fill_value=0)
@@ -597,9 +605,14 @@ class CmodPhysicsMethods:
         if all(np.isnan(p_ohm)):
             p_ohm = np.zeros(len(times))
 
+        # Calculate radiated fraction
         p_input = p_ohm + p_lh + p_icrf
         rad_fraction = p_rad / p_input
         rad_fraction[rad_fraction == np.inf] = np.nan
+
+        # Calculate radiation confinement time
+        wmhd = interp1(efit_time, wmhd, times)
+        tau_rad = wmhd / p_rad
         output = {
             "p_rad": p_rad,
             "dprad_dt": dprad,
@@ -607,12 +620,21 @@ class CmodPhysicsMethods:
             "p_icrf": p_icrf,
             "p_input": p_input,
             "radiated_fraction": rad_fraction,
+            "tau_rad": tau_rad,
         }
         return output
 
     @staticmethod
     @physics_method(
-        columns=["p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", "radiated_fraction"],
+        columns=[
+            "p_rad",
+            "dprad_dt",
+            "p_lh",
+            "p_icrf",
+            "p_input",
+            "radiated_fraction",
+            "tau_rad",
+        ],
         tokamak=Tokamak.CMOD,
     )
     def get_power(params: PhysicsMethodParams):
@@ -644,7 +666,12 @@ class CmodPhysicsMethods:
             p_oh = CmodPhysicsMethods.get_ohmic_parameters(params=params)["p_oh"]
         except mdsExceptions.TreeNODATA:
             p_oh = np.full(len(params.times), np.nan)
-        output = CmodPhysicsMethods._get_power(params.times, *values, p_oh)
+        wmhd, efit_time = params.mds_conn.get_data_with_dims(
+            r"\efit_aeqdsk:wplasm", tree_name="_efit_tree", astype="float64"
+        )  # [J], [s]
+        output = CmodPhysicsMethods._get_power(
+            params.times, *values, p_oh, wmhd, efit_time
+        )
         return output
 
     @staticmethod
