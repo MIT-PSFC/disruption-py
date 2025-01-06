@@ -1949,17 +1949,13 @@ class CmodPhysicsMethods:
             sxr[i] = chord[valid_times]
         core_sxr_raw = np.max(sxr, axis=0)
         # Median filter for each channel to reduce noise
-        print(sxr.shape)
-        print(sxr[0].shape)
-        smooth_width = int(0.000150 / (t_sxr[1] - t_sxr[0]))
-        print(smooth_width)
+        # print(sxr.shape)
+        # print(sxr[0].shape)
+        smooth_width = int(0.000150 / (t_sxr[1] - t_sxr[0])) + 1
+        # print(t_sxr)
+        # print(smooth_width)
         sxr = median_filter(sxr, size=(1, smooth_width), mode='constant', cval=0.)
         core_sxr = np.max(sxr, axis=0)
-
-        # Subtract const background
-        wndw = int(0.005 / (t_sxr[1] - t_sxr[0]))
-        background = np.mean(core_sxr[:wndw])
-        core_sxr = core_sxr - background
 
         # Get pre-disruption SXR as mean of the core SXR emission between 20 ms
         # and 5 ms before the current quench time
@@ -1982,10 +1978,10 @@ class CmodPhysicsMethods:
             i -= 1
         time_tq_onset = t_sxr[i]
         # time_tq_onset = t_sxr[indx2] - smooth_width / 2
-        print(i)
-        print(t_sxr.shape)
-        print(t_sxr[i])
-        print("TQ Onset Time: " + str(time_tq_onset))
+        # print(i)
+        # print(t_sxr.shape)
+        # print(t_sxr[i])
+        # print("TQ Onset Time: " + str(time_tq_onset))
         # fig, axs = plt.subplots(4, 1, sharex=True)
         # axs[0].scatter(magtime, np.abs(ip)/1e6, marker='o')
         # axs[1].scatter(t_sxr, core_sxr, marker='.', s=10)
@@ -1993,7 +1989,7 @@ class CmodPhysicsMethods:
         # axs[3].scatter(efit_time, z0, marker='o', s=10)
         # axs[1].axhline(sxr_pre_disrupt, linestyle='--')
         # for ax in axs:
-        #     ax.axvline(time_tq_onset, linestyle='--', c='r', label='TQ Onset')
+        #     # ax.axvline(time_tq_onset, linestyle='--', c='r', label='TQ Onset')
         #     ax.axvline(params.disruption_time, linestyle='--', c='k', label='CQ')
         # axs[0].set_title('C-Mod Shot: ' + str(params.shot_id))
         # axs[0].set_ylabel('Ip [MA]')
