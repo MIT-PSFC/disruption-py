@@ -507,22 +507,19 @@ class CmodPhysicsMethods:
             A dictionary containing the calculated ohmic parameters, including
             "p_oh" and "v_loop".
         """
-        try:
-            v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
-                r"\top.mflux:v0", tree_name="analysis", astype="float64"
-            )  # [V], [s]
-            if len(v_loop_time) <= 1:
-                raise CalculationError("No data for v_loop_time")
+        v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
+            r"\top.mflux:v0", tree_name="analysis", astype="float64"
+        )  # [V], [s]
+        if len(v_loop_time) <= 1:
+            raise CalculationError("No data for v_loop_time")
 
-            li, efittime = params.mds_conn.get_data_with_dims(
-                r"\efit_aeqdsk:ali", tree_name="_efit_tree", astype="float64"
-            )  # [dimensionless], [s]
-            ip_parameters = CmodPhysicsMethods.get_ip_parameters(params=params)
-            r0 = params.mds_conn.get_data(
-                r"\efit_aeqdsk:rmagx/100", tree_name="_efit_tree"
-            )  # [m]
-        except mdsExceptions.TreeNODATA:
-            return {'p_oh': [np.nan], 'v_loop': [np.nan]}
+        li, efittime = params.mds_conn.get_data_with_dims(
+            r"\efit_aeqdsk:ali", tree_name="_efit_tree", astype="float64"
+        )  # [dimensionless], [s]
+        ip_parameters = CmodPhysicsMethods.get_ip_parameters(params=params)
+        r0 = params.mds_conn.get_data(
+            r"\efit_aeqdsk:rmagx/100", tree_name="_efit_tree"
+        )  # [m]
 
         output = CmodPhysicsMethods._get_ohmic_parameters(
             params.times,
@@ -594,10 +591,10 @@ class CmodPhysicsMethods:
             dprad = np.gradient(p_rad, t_rad)
             p_rad = interp1(t_rad, p_rad, times, fill_value=0)
             dprad = interp1(t_rad, dprad, times)
-            
-        if len(p_ohm) == 1 and np.isnan(p_ohm[0]):
+
+        if all(np.isnan(p_ohm)):
             p_ohm = np.zeros(len(times))
-        
+
         p_input = p_ohm + p_lh + p_icrf
         rad_fraction = p_rad / p_input
         rad_fraction[rad_fraction == np.inf] = np.nan
@@ -641,7 +638,10 @@ class CmodPhysicsMethods:
                 values[2 * i + 1] = sig_time
             except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF):
                 continue
-        p_oh = CmodPhysicsMethods.get_ohmic_parameters(params=params)["p_oh"]
+        try:
+            p_oh = CmodPhysicsMethods.get_ohmic_parameters(params=params)["p_oh"]
+        except mdsExceptions.TreeNODATA:
+            p_oh = np.full(len(params.times), np.nan)
         output = CmodPhysicsMethods._get_power(params.times, *values, p_oh)
         return output
 
