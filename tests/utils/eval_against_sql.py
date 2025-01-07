@@ -3,9 +3,7 @@
 """Module for evaluating fresh data against cached data for testing."""
 
 import os
-import time
 from contextlib import contextmanager
-from tempfile import mkdtemp
 from typing import Dict, List
 
 import numpy as np
