@@ -45,8 +45,9 @@ class LogSettings:
     console_log_level : str or int, optional
         The log level for the console. Default is None, so log level will be determined
         dynamically based on the number of shots.
-        Possible values are: "TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR",
-        "CRITICAL". See https://loguru.readthedocs.io/en/stable/api/logger.html#levels
+        Possible values are: "TRACE", "DEBUG", "VERBOSE" (custom level), "INFO", "SUCCESS",
+        "WARNING", "ERROR", "CRITICAL".
+        See https://loguru.readthedocs.io/en/stable/api/logger.html#levels
     use_custom_logging : bool
         Whether to use custom logging. If set to true, no logging setup will be done.
         Default is False.
@@ -56,6 +57,9 @@ class LogSettings:
     success_threshold : int
         If number of shots is greater than this threshold and less than the warning_threshold,
         the console log level will be "SUCCESS". Default is 500.
+    info_threshold : int
+        If number of shots is greater than this threshold and less than the success_threshold,
+        the console log level will be "INFO". Default is 50.
     _logging_has_been_setup : bool
         Internal flag to prevent multiple setups (default is False).
     """
@@ -71,6 +75,7 @@ class LogSettings:
 
     warning_threshold: int = 1000
     success_threshold: int = 500
+    info_threshold: int = 50
 
     _logging_has_been_setup: bool = False
 
@@ -93,11 +98,13 @@ class LogSettings:
 
         if self.console_log_level is None:
             # Determine console log level dynamically based on the number of shots
-            console_level = "INFO"
+            console_level = "VERBOSE"
             if num_shots and num_shots > self.warning_threshold:
                 console_level = "WARNING"
             elif num_shots and num_shots > self.success_threshold:
                 console_level = "SUCCESS"
+            elif num_shots and num_shots > self.info_threshold:
+                console_level = "INFO"
         elif isinstance(self.console_log_level, str):
             console_level = self.console_log_level.upper()
         else:
