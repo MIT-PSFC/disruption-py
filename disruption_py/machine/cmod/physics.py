@@ -648,31 +648,31 @@ class CmodPhysicsMethods:
             (Not-a-Number) values for times outside the LH timebase, and the NaN's
             will propagate into p_input and rad_fraction, which is not desirable.
         """
-        values = [
-            None
-        ] * 6  # List to store the time and values of the LH power, icrf power, and radiated power
+        # LH power, ICRF power, radiated power, and respective time bases
+        values = ["lh", "icrf", "rad"]
         trees = ["LH", "RF", "spectroscopy"]
-        nodes = [r"\LH::TOP.RESULTS:NETPOW", r"\rf::rf_power_net", r"\twopi_diode"]
+        nodes = [r"\TOP.RESULTS:NETPOW", r"\rf_power_net", r"\twopi_diode"]
+        kwa = {}
         # TODO: Find these nodes and add units
-        for i in range(3):
+        for val, tree, node in zip(values, trees, nodes):
+            p = f"p_{val}"
+            t = f"t_{val}"
             try:
-                sig, sig_time = params.mds_conn.get_data_with_dims(
-                    nodes[i], tree_name=trees[i], astype=None
+                kwa[p], kwa[t] = params.mds_conn.get_data_with_dims(
+                    node, tree_name=tree, astype=None
                 )
-                values[2 * i] = sig
-                values[2 * i + 1] = sig_time
             except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF):
-                continue
+                kwa[p], kwa[t] = None, None
+        # Ohmic power
         try:
-            p_oh = CmodPhysicsMethods.get_ohmic_parameters(params=params)["p_oh"]
+            kwa["p_ohm"] = CmodPhysicsMethods.get_ohmic_parameters(params=params)["p_oh"]
         except mdsExceptions.TreeNODATA:
-            p_oh = np.full(len(params.times), np.nan)
-        wmhd, efit_time = params.mds_conn.get_data_with_dims(
+            kwa["p_ohm"] = np.full(len(params.times), np.nan)
+        # Plasma magnetic energy, and respective time base
+        kwa["wmhd"], kwa["efit_time"] = params.mds_conn.get_data_with_dims(
             r"\efit_aeqdsk:wplasm", tree_name="_efit_tree", astype="float64"
         )  # [J], [s]
-        output = CmodPhysicsMethods._get_power(
-            params.times, *values, p_oh, wmhd, efit_time
-        )
+        output = CmodPhysicsMethods._get_power(params.times, **kwa)
         return output
 
     @staticmethod
