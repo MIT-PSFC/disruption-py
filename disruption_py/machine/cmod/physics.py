@@ -603,7 +603,7 @@ class CmodPhysicsMethods:
             dprad = interp1(t_rad, dprad, times)
 
         # Replace nans with zeros in p_ohm
-        p_ohm = np.nan_to_num(p_ohm)
+        p_ohm = np.nan_to_num(p_ohm, nan=0.0)
 
         # Calculate radiated fraction
         p_input = p_ohm + p_lh + p_icrf
@@ -666,7 +666,7 @@ class CmodPhysicsMethods:
         # Ohmic power
         try:
             kwa["p_ohm"] = CmodPhysicsMethods.get_ohmic_parameters(params=params)["p_oh"]
-        except mdsExceptions.TreeNODATA:
+        except mdsExceptions.TreeException:
             kwa["p_ohm"] = np.full(len(params.times), np.nan)
         # Plasma magnetic energy, and respective time base
         kwa["wmhd"], kwa["efit_time"] = params.mds_conn.get_data_with_dims(
