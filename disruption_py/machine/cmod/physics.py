@@ -509,9 +509,14 @@ class CmodPhysicsMethods:
             A dictionary containing the calculated ohmic parameters, including
             "p_oh" and "v_loop".
         """
-        v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
-            r"\top.mflux:v0", tree_name="analysis"
-        )  # [V], [s]
+        try:
+            v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
+                r"\top.mflux:v0", tree_name="analysis"
+            )  # [V], [s]
+        except mdsExceptions.TreeException:
+            v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
+                r"\efit_aeqdsk:vloopt", tree_name="_efit_tree"
+            )  # [V], [s]
         if len(v_loop_time) <= 1:
             raise CalculationError("No data for v_loop_time")
 
@@ -665,7 +670,9 @@ class CmodPhysicsMethods:
                 kwa[p], kwa[t] = None, None
         # Ohmic power
         try:
-            kwa["p_ohm"] = CmodPhysicsMethods.get_ohmic_parameters(params=params)["p_oh"]
+            kwa["p_ohm"] = CmodPhysicsMethods.get_ohmic_parameters(params=params)[
+                "p_oh"
+            ]
         except mdsExceptions.TreeException:
             kwa["p_ohm"] = np.full(len(params.times), np.nan)
         # Plasma magnetic energy, and respective time base
