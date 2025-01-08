@@ -619,6 +619,7 @@ class CmodPhysicsMethods:
         wmhd = interp1(efit_time, wmhd, times)
         with np.errstate(divide="ignore", invalid="ignore"):
             tau_rad = wmhd / p_rad
+        tau_rad[tau_rad == np.inf] = np.nan
         output = {
             "p_rad": p_rad,
             "dprad_dt": dprad,
