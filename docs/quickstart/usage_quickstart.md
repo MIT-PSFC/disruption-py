@@ -43,15 +43,12 @@ For a simple way to get started, check out [`simple.py`](https://github.com/MIT-
 
 	??? question "I don't want to connect to the SQL database."
 		DisruptionPy provides a dummy database class that allows users to retrieve data from MDSplus
-		without having to connect to the associated SQL database. Pass
-		the dummy database's default initializer as the database initializer to the handler class.
-		Note: this will result in data retrieval being incorrect for parameter methods that depend on
+		without having to connect to the associated SQL database. See the [example](https://github.com/MIT-PSFC/disruption-py/blob/main/examples/no_database.py) or simply change the code above to pass
+		the dummy database's default inititalizer as the database initializer to the handler class.
+		note: this will result in data retrieval being incorrect for parameter methods that depend on 
 		data retrieved from the SQL table eg. `time_until_disrupt`
 		```python
-		from disruption_py.inout.sql import DummyDatabase
-		get_shots_data(
-			... ,
-			database_initializer=DummyDatabase.initializer,
-			... ,
-		)
+		--8<--
+		examples/no_database.py
+		--8<--
 		```
