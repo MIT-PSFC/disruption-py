@@ -668,8 +668,8 @@ class CmodPhysicsMethods:
         """
         # LH power, ICRF power, radiated power, and respective time bases
         values = ["lh", "icrf", "rad"]
-        trees = ["LH", "RF", "spectroscopy"]
-        nodes = [r"\TOP.RESULTS:NETPOW", r"\rf_power_net", r"\twopi_diode"]
+        trees = ["lh", "rf", "spectroscopy"]
+        nodes = [r"\top.results:netpow", r"\rf_power_net", r"\twopi_diode"]
         kwa = {}
         for val, tree, node in zip(values, trees, nodes):
             p = f"p_{val}"
