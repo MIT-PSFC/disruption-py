@@ -514,7 +514,7 @@ class CmodPhysicsMethods:
                 r"\top.mflux:v0", tree_name="analysis"
             )  # [V], [s]
         except mdsExceptions.TreeException:
-            params.logger.warning(
+            params.logger.verbose(
                 r"v_loop: Failed to get \top.mflux:v0 data. Use \efit_aeqdsk:vloopt instead."
             )
             v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
