@@ -1918,6 +1918,8 @@ class CmodPhysicsMethods:
     @physics_method(columns=["thermal_quench_time_onset"], tokamak=Tokamak.CMOD)
     def get_thermal_quench_time_onset(params: PhysicsMethodParams):
         n_chords = 38
+        time_above_thresh = 0.001
+        normalized_threshold = 0.7
         # Get magnetic axis data from EFIT
         thermal_quench_time_onset = np.full(len(params.times), np.nan)
         ip, magtime = params.mds_conn.get_data_with_dims(
@@ -1951,7 +1953,8 @@ class CmodPhysicsMethods:
             sxr[i] = chord[valid_times]
         sxr_prog_core = sxr[17]
         # Median filter for each channel to reduce noise
-        smooth_width = int(0.000150 / (t_sxr[1] - t_sxr[0])) + 1
+        sample_time = t_sxr[1] - t_sxr[0]
+        smooth_width = int(0.000150 / sample_time) + 1
         sxr = median_filter(sxr, size=(1, smooth_width), mode='constant', cval=0.)
         if (params.shot_id > 1040000000 and params.shot_id < 106000000):
             sxr[14] = 0 # Bad chord during 2005 campaign
@@ -1963,10 +1966,16 @@ class CmodPhysicsMethods:
         indx2 = np.argmax(t_sxr > params.disruption_time - 0.003)
         sxr_pre_disrupt = np.mean(core_sxr[indx1:indx2])
 
-        i = np.argmax(t_sxr > params.disruption_time)
-        while (core_sxr[i] < 0.9*sxr_pre_disrupt) and (indx1 > 0):
+        min_points_above_thresh = int(time_above_thresh / sample_time) + 1
+        i = np.argmax(t_sxr > params.disruption_time) - 1
+        points_above_thresh = 0
+        while (points_above_thresh < min_points_above_thresh) and (indx1 > 0):
+            if (core_sxr[i] > normalized_threshold*sxr_pre_disrupt):
+                points_above_thresh = points_above_thresh + 1
+            else:
+                points_above_thresh = 0
             i -= 1
-        time_tq_onset = t_sxr[i]
+        time_tq_onset = t_sxr[i] + 0.001
         # time_tq_onset = t_sxr[indx2] - smooth_width / 2
         # print(i)
         # print(t_sxr.shape)
