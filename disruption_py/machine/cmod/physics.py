@@ -514,6 +514,9 @@ class CmodPhysicsMethods:
                 r"\top.mflux:v0", tree_name="analysis"
             )  # [V], [s]
         except mdsExceptions.TreeException:
+            params.logger.warning(
+                r"v_loop: Failed to get \top.mflux:v0 data. Use \efit_aeqdsk:vloopt instead."
+            )
             v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
                 r"\efit_aeqdsk:vloopt", tree_name="_efit_tree"
             )  # [V], [s]
@@ -569,7 +572,7 @@ class CmodPhysicsMethods:
         wmhd : np.ndarray
             The total plasma energy.
         efit_time : np.ndarray
-            The EFIT time base
+            The EFIT time base.
 
         Returns
         -------
@@ -578,6 +581,10 @@ class CmodPhysicsMethods:
             "p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", "radiated_fraction", and "tau_rad".
 
         Last major update by William Wei on 1/6/2025
+        References
+        ----------
+        - https://github.com/MIT-PSFC/disruption-py/pull/367
+
         """
         if p_lh is not None and isinstance(t_lh, np.ndarray) and len(t_lh) > 1:
             p_lh = interp1(t_lh, p_lh * 1.0e3, times, fill_value=0)
@@ -671,9 +678,8 @@ class CmodPhysicsMethods:
                 kwa[p], kwa[t] = None, None
         # Ohmic power
         try:
-            kwa["p_ohm"] = CmodPhysicsMethods.get_ohmic_parameters(params=params)[
-                "p_oh"
-            ]
+            result = CmodPhysicsMethods.get_ohmic_parameters(params=params)
+            kwa["p_ohm"] = result["p_oh"]  # [W]
         except mdsExceptions.TreeException:
             kwa["p_ohm"] = np.full(len(params.times), np.nan)
         # Plasma magnetic energy, and respective time base
