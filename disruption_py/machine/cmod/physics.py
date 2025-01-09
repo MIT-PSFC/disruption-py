@@ -608,7 +608,7 @@ class CmodPhysicsMethods:
             dprad = interp1(t_rad, dprad, times)
 
         # Replace nans with zeros in p_ohm
-        p_ohm = np.nan_to_num(p_ohm, nan=0.0)
+        np.nan_to_num(p_ohm, copy=False, nan=0.0)
 
         # Calculate radiated fraction
         p_input = p_ohm + p_lh + p_icrf
