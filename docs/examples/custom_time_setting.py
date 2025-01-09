@@ -3,12 +3,7 @@
 """Example usage of `get_shots_data` demonstrating using a custom time setting."""
 
 
-from disruption_py.settings import (
-    LogSettings,
-    RetrievalSettings,
-    TimeSetting,
-    TimeSettingParams,
-)
+from disruption_py.settings import RetrievalSettings, TimeSetting, TimeSettingParams
 from disruption_py.workflow import get_shots_data
 
 
@@ -34,12 +29,7 @@ retrieval_settings = RetrievalSettings(
 
 shot_data = get_shots_data(
     tokamak="cmod",
-    shotlist_setting="cmod_non_disruptions_ids_not_blacklist_mini",
+    shotlist_setting=[1150805012],
     retrieval_settings=retrieval_settings,
-    output_setting="examples/p_rad.csv",
-    num_processes=4,
-    log_settings=LogSettings(
-        log_to_console=False,  # don't log to the console
-        log_file_path="examples/last_log.log",  # instead log to this file
-    ),
+    num_processes=1,
 )
