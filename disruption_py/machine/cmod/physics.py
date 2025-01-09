@@ -587,12 +587,12 @@ class CmodPhysicsMethods:
 
         """
         if p_lh is not None and isinstance(t_lh, np.ndarray) and len(t_lh) > 1:
-            p_lh = interp1(t_lh, p_lh * 1.0e3, times, fill_value=0) # [kW] -> [W]
+            p_lh = interp1(t_lh, p_lh * 1.0e3, times, fill_value=0)  # [kW] -> [W]
         else:
             p_lh = np.zeros(len(times))
 
         if p_icrf is not None and isinstance(t_icrf, np.ndarray) and len(t_icrf) > 1:
-            p_icrf = interp1(t_icrf, p_icrf * 1.0e6, times, fill_value=0)   # [MW] -> [W]
+            p_icrf = interp1(t_icrf, p_icrf * 1.0e6, times, fill_value=0)  # [MW] -> [W]
         else:
             p_icrf = np.zeros(len(times))
 
@@ -660,7 +660,7 @@ class CmodPhysicsMethods:
             extrapolation is not done, then the 'interp1' routine will assign NaN
             (Not-a-Number) values for times outside the LH timebase, and the NaN's
             will propagate into p_input and rad_fraction, which is not desirable.
-            
+
         LH, ICRF, & radiated power data sources:
         - lh: \lh::top.results.netpow [kW]
         - icrf: \rf::top.antenna.results.pwr_net_tot [MW]
