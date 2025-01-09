@@ -18,7 +18,7 @@ from disruption_py.workflow import get_shots_data
 
 #SHOT_ID = 1140515015
 #SHOT_ID = 1140827029
-SHOT_ID = 1050211022
+SHOT_ID = 1140827029
 signals = [
     "ip",
     "zcur",
@@ -42,7 +42,7 @@ data = get_shots_data(
     retrieval_settings=retrieval_settings,
     log_settings=LogSettings(console_log_level=logging.DEBUG),
     output_setting="dataframe",
-    num_processes=20,
+    num_processes=1,
 )
 data.to_csv("thermal_quench_time.csv")
 # print(data.columns)

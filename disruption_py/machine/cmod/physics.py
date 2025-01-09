@@ -1943,36 +1943,26 @@ class CmodPhysicsMethods:
                 tree_name="xtomo",
                 astype="float64",
             )
+            # Subtract constant background
+            chord = chord - np.mean(chord[t_chord < 0.])
             # Occasionally the time bases of a chord are of a different length
             # Usually one timebase is just cut off early after shot is over
             valid_times = (t_chord > 0) & (t_chord < 2.)
             sxr[i] = chord[valid_times]
-        core_sxr_raw = np.max(sxr, axis=0)
+        sxr_prog_core = sxr[17]
         # Median filter for each channel to reduce noise
-        # print(sxr.shape)
-        # print(sxr[0].shape)
         smooth_width = int(0.000150 / (t_sxr[1] - t_sxr[0])) + 1
-        # print(t_sxr)
-        # print(smooth_width)
         sxr = median_filter(sxr, size=(1, smooth_width), mode='constant', cval=0.)
+        if (params.shot_id > 1040000000 and params.shot_id < 106000000):
+            sxr[14] = 0 # Bad chord during 2005 campaign
         core_sxr = np.max(sxr, axis=0)
 
         # Get pre-disruption SXR as mean of the core SXR emission between 20 ms
         # and 5 ms before the current quench time
-        indx1 = np.argmax(t_sxr > params.disruption_time - 0.006)
+        indx1 = np.argmax(t_sxr > params.disruption_time - 0.020)
         indx2 = np.argmax(t_sxr > params.disruption_time - 0.003)
         sxr_pre_disrupt = np.mean(core_sxr[indx1:indx2])
 
-        # Work backwards from current quench time to find 90% of final TQ
-        # Use window average to smooth noise
-        # TODO: What if I apply a median filter to each channel before taking the max?
-        smooth_width = 0.0004
-        # indx1 = np.argmax(t_sxr > params.disruption_time - smooth_width)
-        # indx2 = np.argmax(t_sxr > params.disruption_time)
-        # print(params.disruption_time)
-        # while (np.median(core_sxr[indx1:indx2]) < 0.9*sxr_pre_disrupt) and (indx1 > 0):
-        #     indx1 -= 1
-        #     indx2 -= 1
         i = np.argmax(t_sxr > params.disruption_time)
         while (core_sxr[i] < 0.9*sxr_pre_disrupt) and (indx1 > 0):
             i -= 1
@@ -1981,24 +1971,24 @@ class CmodPhysicsMethods:
         # print(i)
         # print(t_sxr.shape)
         # print(t_sxr[i])
-        # print("TQ Onset Time: " + str(time_tq_onset))
-        # fig, axs = plt.subplots(4, 1, sharex=True)
-        # axs[0].scatter(magtime, np.abs(ip)/1e6, marker='o')
-        # axs[1].scatter(t_sxr, core_sxr, marker='.', s=10)
-        # axs[2].scatter(t_sxr, core_sxr_raw, marker='.', s=10)
-        # axs[3].scatter(efit_time, z0, marker='o', s=10)
-        # axs[1].axhline(sxr_pre_disrupt, linestyle='--')
-        # for ax in axs:
-        #     # ax.axvline(time_tq_onset, linestyle='--', c='r', label='TQ Onset')
-        #     ax.axvline(params.disruption_time, linestyle='--', c='k', label='CQ')
-        # axs[0].set_title('C-Mod Shot: ' + str(params.shot_id))
-        # axs[0].set_ylabel('Ip [MA]')
-        # axs[1].set_ylabel('max(SXR) [W/m^2]')
-        # axs[3].set_ylabel('Z0 [m]')
-        # axs[3].set_xlabel("Time [s]")
-        # axs[1].legend()
+        print("TQ Onset Time: " + str(time_tq_onset))
+        fig, axs = plt.subplots(4, 1, sharex=True)
+        axs[0].scatter(magtime, np.abs(ip)/1e6, marker='o')
+        axs[1].scatter(t_sxr, core_sxr, marker='.', s=10)
+        axs[2].scatter(t_sxr, sxr_prog_core, marker='.', s=10)
+        axs[3].scatter(efit_time, z0, marker='o', s=10)
+        axs[1].axhline(sxr_pre_disrupt, linestyle='--')
+        for ax in axs:
+            ax.axvline(time_tq_onset, linestyle='--', c='r', label='TQ Onset')
+            ax.axvline(params.disruption_time, linestyle='--', c='k', label='CQ')
+        axs[0].set_title('C-Mod Shot: ' + str(params.shot_id))
+        axs[0].set_ylabel('Ip [MA]')
+        axs[1].set_ylabel('max(SXR) [W/m^2]')
+        axs[3].set_ylabel('Z0 [m]')
+        axs[3].set_xlabel("Time [s]")
+        axs[1].legend()
 
-        # plt.show()
+        plt.show()
         thermal_quench_time_onset = time_tq_onset * np.ones(len(params.times))
         return {"thermal_quench_time_onset": thermal_quench_time_onset}
 
