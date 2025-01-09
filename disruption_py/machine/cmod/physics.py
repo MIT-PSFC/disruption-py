@@ -676,7 +676,7 @@ class CmodPhysicsMethods:
             t = f"t_{val}"
             try:
                 kwa[p], kwa[t] = params.mds_conn.get_data_with_dims(
-                    node, tree_name=tree, astype=None
+                    node, tree_name=tree
                 )
             except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF):
                 kwa[p], kwa[t] = None, None
