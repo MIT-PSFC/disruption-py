@@ -1956,9 +1956,11 @@ class CmodPhysicsMethods:
         sample_time = t_sxr[1] - t_sxr[0]
         smooth_width = int(0.000150 / sample_time) + 1
         sxr = median_filter(sxr, size=(1, smooth_width), mode='constant', cval=0.)
-        if (params.shot_id > 1040000000 and params.shot_id < 106000000):
-            sxr[14] = 0 # Bad chord during 2005 campaign
+        if (params.shot_id > 1040000000 and params.shot_id < 1060000000):
+            sxr[14] = 0. # Bad chord during 2005 campaign
+        print(sxr[14][4000:4005])
         core_sxr = np.max(sxr, axis=0)
+        core_sxr_index = np.argmax(sxr, axis=0)
 
         # Get pre-disruption SXR as mean of the core SXR emission between 20 ms
         # and 5 ms before the current quench time
@@ -1980,15 +1982,15 @@ class CmodPhysicsMethods:
         # print(i)
         # print(t_sxr.shape)
         # print(t_sxr[i])
-        print("TQ Onset Time: " + str(time_tq_onset))
+        #print("TQ Onset Time: " + str(time_tq_onset))
         fig, axs = plt.subplots(4, 1, sharex=True)
         axs[0].scatter(magtime, np.abs(ip)/1e6, marker='o')
         axs[1].scatter(t_sxr, core_sxr, marker='.', s=10)
-        axs[2].scatter(t_sxr, sxr_prog_core, marker='.', s=10)
+        axs[2].scatter(t_sxr, core_sxr_index, marker='.', s=10)
         axs[3].scatter(efit_time, z0, marker='o', s=10)
         axs[1].axhline(sxr_pre_disrupt, linestyle='--')
         for ax in axs:
-            ax.axvline(time_tq_onset, linestyle='--', c='r', label='TQ Onset')
+            #ax.axvline(time_tq_onset, linestyle='--', c='r', label='TQ Onset')
             ax.axvline(params.disruption_time, linestyle='--', c='k', label='CQ')
         axs[0].set_title('C-Mod Shot: ' + str(params.shot_id))
         axs[0].set_ylabel('Ip [MA]')
