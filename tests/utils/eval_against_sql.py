@@ -3,9 +3,7 @@
 """Module for evaluating fresh data against cached data for testing."""
 
 import os
-import time
 from contextlib import contextmanager
-from tempfile import mkdtemp
 from typing import Dict, List
 
 import numpy as np
@@ -14,6 +12,7 @@ from loguru import logger
 
 from disruption_py.config import config
 from disruption_py.core.utils.math import matlab_gradient_1d_vectorized
+from disruption_py.core.utils.misc import get_temporary_folder
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings import LogSettings, RetrievalSettings
@@ -202,7 +201,7 @@ def eval_against_cache(
         differences as DataFrames.
     """
 
-    tempfolder = mkdtemp(prefix=f"disruptionpy-{time.strftime('%y%m%d-%H%M%S')}-")
+    tempfolder = get_temporary_folder()
     print(f"Outputting to temporary folder: {tempfolder}")
 
     @contextmanager
