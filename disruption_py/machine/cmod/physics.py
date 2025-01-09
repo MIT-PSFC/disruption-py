@@ -652,7 +652,7 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def get_power(params: PhysicsMethodParams):
-        """
+        r"""
         NOTE: the timebase for the LH power signal does not extend over the full
             time span of the discharge. Therefore, when interpolating the LH power
             signal onto the "timebase" array, the LH signal has to be extrapolated
