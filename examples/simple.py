@@ -5,7 +5,11 @@ simple module with command-line argument parsing.
 """
 
 import argparse
+import os
 
+from loguru import logger
+
+from disruption_py.core.utils.misc import get_temporary_folder
 from disruption_py.machine.tokamak import resolve_tokamak_from_environment
 from disruption_py.settings import RetrievalSettings
 from disruption_py.workflow import get_shots_data
@@ -29,7 +33,13 @@ def main(tokamak, methods, shots, processes, log_level):
         retrieval_settings=RetrievalSettings(run_methods=methods, run_tags=tags),
         num_processes=processes,
         log_settings=log_level,
+        output_setting="dataframe",
     )
+
+    csv = os.path.join(get_temporary_folder(), "output.csv")
+    logger.info("Output: {csv}", csv=csv)
+    out.to_csv(csv, index=False)
+
     return out
 
 
