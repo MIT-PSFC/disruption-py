@@ -183,9 +183,7 @@ def filter_methods_to_run(
             methods_to_run.append(bound_method_metadata)
         else:
             physics_method_params.logger.debug(
-                "Skipping {method_name} in {bound_method}",
-                method_name=bound_method_metadata.name,
-                bound_method=bound_method_metadata.bound_method.__qualname__,
+                "Skipping method: {name}", name=bound_method_metadata.name
             )
     return methods_to_run
 
@@ -241,7 +239,7 @@ def populate_method(
         physics_method_params.logger.opt(exception=True).debug(e)
         result = {col: [np.nan] for col in bound_method_metadata.columns}
 
-    physics_method_params.logger.info(
+    physics_method_params.logger.verbose(
         "{t:.3f}s : {name}",
         name=name,
         t=time.time() - start_time,
@@ -303,8 +301,8 @@ def populate_shot(
             if cache_success:
                 cached_method_metadata.append(method_metadata)
                 if method_metadata in run_bound_method_metadata:
-                    physics_method_params.logger.info(
-                        "Skipping {name} already populated",
+                    physics_method_params.logger.verbose(
+                        "Cached method: {name}",
                         name=method_metadata.name,
                     )
 
