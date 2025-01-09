@@ -136,17 +136,7 @@ class LogSettings:
 
     def setup_logging(self):
         """
-        Set up logging based on the provided settings.
-
-        Parameters
-        ----------
-        logger_name : str, optional
-            Name of the logger (default is "disruption_py").
-
-        Returns
-        -------
-        logging.Logger
-            Configured logger instance.
+        Set up logging with custom styles and levels.
         """
         if self.use_custom_logging or self._logging_has_been_setup:
             return
