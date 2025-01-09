@@ -624,9 +624,7 @@ class CmodPhysicsMethods:
 
         # Calculate radiation confinement time
         wmhd = interp1(efit_time, wmhd, times)
-        with np.errstate(divide="ignore", invalid="ignore"):
-            tau_rad = wmhd / p_rad
-        tau_rad[tau_rad == np.inf] = np.nan
+        tau_rad = wmhd / np.where(p_rad != 0, p_rad, np.nan)
         output = {
             "p_rad": p_rad,
             "dprad_dt": dprad,
