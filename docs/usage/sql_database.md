@@ -30,7 +30,7 @@ Here is an example that uses DisruptionPy to get shot data from the `disruption_
 for eight shots from the disruption warning shotlist:
 ```python
 --8<--
-examples/database_example.py
+docs/examples/database_example.py
 --8<--
 ```
 
