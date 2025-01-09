@@ -36,8 +36,9 @@ class LogSettings:
         By default, a log file will be created in a temporary folder.
     file_log_level : str
         Logging level for the log file (default is "DEBUG").
-        Possible values are: "TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR",
-        "CRITICAL". See https://loguru.readthedocs.io/en/stable/api/logger.html#levels
+        Possible values are:
+        "TRACE", "DEBUG", "VERBOSE" (custom), "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL".
+        See: https://loguru.readthedocs.io/en/stable/api/logger.html#levels
     log_file_write_mode : str, optional
         The write mode for the log file. Default is "w".
     log_to_console : bool
@@ -45,9 +46,9 @@ class LogSettings:
     console_log_level : str or int, optional
         The log level for the console. Default is None, so log level will be determined
         dynamically based on the number of shots.
-        Possible values are: "TRACE", "DEBUG", "VERBOSE" (custom level), "INFO", "SUCCESS",
-        "WARNING", "ERROR", "CRITICAL".
-        See https://loguru.readthedocs.io/en/stable/api/logger.html#levels
+        Possible values are:
+        "TRACE", "DEBUG", "VERBOSE" (custom), "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL".
+        See: https://loguru.readthedocs.io/en/stable/api/logger.html#levels
     use_custom_logging : bool
         Whether to use custom logging. If set to true, no logging setup will be done.
         Default is False.
