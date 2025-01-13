@@ -692,8 +692,6 @@ class EastPhysicsMethods:
 
         Last major update: 2014/11/21 by William Wei
         """
-        p_ohm = [np.nan]
-
         # Get raw signals
         vloop, vloop_time = params.mds_conn.get_data_with_dims(
             r"\pcvloop", tree_name="pcs_east"
