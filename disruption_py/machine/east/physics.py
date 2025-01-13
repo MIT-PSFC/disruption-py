@@ -352,14 +352,6 @@ class EastPhysicsMethods:
 
         Last major update: 11/19/24 by William Wei
         """
-        zcur = [np.nan]
-        z_prog = [np.nan]
-        z_error = [np.nan]
-        zcur_lmsz = [np.nan]
-        z_error_lmsz = [np.nan]
-        zcur_lmsz_normalized = [np.nan]
-        z_error_lmsz_normalized = [np.nan]
-
         # Read in the calculated zcur from EFIT
         zcur, zcur_time = params.mds_conn.get_data_with_dims(
             r"\efit_aeqdsk:zcur", tree_name="_efit_tree"
@@ -388,7 +380,10 @@ class EastPhysicsMethods:
         z_prog = interp1(z_prog_time, z_prog, params.times)
         zcur_lmsz = interp1(lmsz_time, zcur_lmsz, params.times)
 
-        # Calculate both versions of z_error
+        # Calculate zcur_lmsz_normalized
+        zcur_lmsz_normalized = zcur_lmsz / aminor
+
+        # Calculate both versions of z_error and z_error_lmsz_normalized
         z_error = zcur - z_prog
         z_error_lmsz = zcur_lmsz - z_prog
         z_error_lmsz_normalized = z_error_lmsz / aminor
