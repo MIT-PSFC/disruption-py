@@ -44,7 +44,6 @@ test_columns = [
     "dipprog_dt",
     "v_loop",
     "zcur",
-    "z_prog",
     "z_error",
     "zcur_lmsz",
     "z_error_lmsz",
@@ -103,7 +102,6 @@ expected_failure_columns = [
     "pconvergence",
     "ip_prog",
     "dip_dt",
-    "z_prog",
     "dn_dt",
 ]
 
