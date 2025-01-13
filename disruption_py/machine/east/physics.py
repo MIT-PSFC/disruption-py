@@ -461,7 +461,7 @@ class EastPhysicsMethods:
         # Calculate Greenwald density
         # TODO: use \aminor or \aout? -- MATLAB: \aout
         aminor, efittime = params.mds_conn.get_data_with_dims(
-            r"\aout", tree_name="_efit_tree"
+            r"\efit_aeqdsk:aout", tree_name="_efit_tree"
         )  # [m], [s]
         aminor = interp1(efittime, aminor, params.times)
         ip = EastPhysicsMethods.get_ip_parameters(params)["ip"]  # [A]

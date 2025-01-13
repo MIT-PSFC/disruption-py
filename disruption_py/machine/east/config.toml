@@ -49,9 +49,8 @@ test_columns = [
     "z_error_lmsz",
     "zcur_lmsz_normalized",
     "z_error_lmsz_normalized",
-    "ne", 
+    "n_e", 
     "greenwald_fraction", 
-    "dn_dt",
     "p_rad",
     "p_ecrh",
     "p_lh",
@@ -102,7 +101,6 @@ expected_failure_columns = [
     "pconvergence",
     "ip_prog",
     "dip_dt",
-    "dn_dt",
 ]
 
 [east.tests.shots]
