@@ -37,10 +37,8 @@ test_columns = [
     "pconvergence",
     "time_until_disrupt",
     "ip",
-    "ip_prog",
     "ip_error",
     "ip_error_normalized",
-    "dip_dt",
     "dipprog_dt",
     "v_loop",
     "zcur",
@@ -99,8 +97,6 @@ expected_failure_columns = [
     "parea",
     "pchisq",
     "pconvergence",
-    "ip_prog",
-    "dip_dt",
 ]
 
 [east.tests.shots]
