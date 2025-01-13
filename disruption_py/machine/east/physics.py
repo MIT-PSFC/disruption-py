@@ -305,7 +305,7 @@ class EastPhysicsMethods:
         tokamak=Tokamak.EAST,
     )
     def get_z_error(params: PhysicsMethodParams):
-        """
+        r"""
         This script calculates Z_error = Z_cur - Z_programmed, or how much the
         actual vertical position differs from the requested position.  Two
         different methods are used to calculate Z_error, and both versions are
@@ -405,7 +405,7 @@ class EastPhysicsMethods:
         tokamak=Tokamak.EAST,
     )
     def get_density_parameters(params: PhysicsMethodParams):
-        """
+        r"""
         This routine obtains the line-averaged density from the HCN vertical
         chord.  The node is called \DFSDEV in the PCS_EAST tree.  This signal is
         also used by the PCS for feedback control of the density.
@@ -652,7 +652,7 @@ class EastPhysicsMethods:
         tokamak=Tokamak.EAST,
     )
     def get_p_ohm(params: PhysicsMethodParams):
-        """
+        r"""
         This script calculates the ohmic power, p_ohm. We use the following
         expression to calculate P_ohm:
 
@@ -879,7 +879,7 @@ class EastPhysicsMethods:
     @staticmethod
     @physics_method(columns=["btor"], tokamak=Tokamak.EAST)
     def get_btor(params: PhysicsMethodParams):
-        """
+        r"""
         Fetch and calculate the toroidal magnetic field signal.
 
         For shots < 60000, the TF current was in node "\it" in the "eng_tree",
