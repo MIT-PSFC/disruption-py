@@ -612,7 +612,7 @@ class EastPhysicsMethods:
         p_nbi = get_heating_power(nbi_nodes, "nbi_east")  # [W]
 
         # Get ohmic power
-        p_ohm = EastPhysicsMethods.get_p_ohm(params)["p_ohm"]  # [W]
+        p_ohm = EastPhysicsMethods.get_p_ohm(params)["p_oh"]  # [W]
 
         # Get radiated power
         # tree = 'prad_east'
@@ -649,7 +649,7 @@ class EastPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["p_ohm"],
+        columns=["p_oh"],
         tokamak=Tokamak.EAST,
     )
     def get_p_ohm(params: PhysicsMethodParams):
@@ -678,7 +678,7 @@ class EastPhysicsMethods:
         -------
         dict
             A dictionary containing the following keys:
-            - 'p_ohm' : array
+            - 'p_oh' : array
                 Ohmic power [W].
 
         References
@@ -693,8 +693,6 @@ class EastPhysicsMethods:
 
         Last major update: 2014/11/21 by William Wei
         """
-        p_ohm = [np.nan]
-
         # Get raw signals
         vloop, vloop_time = params.mds_conn.get_data_with_dims(
             r"\pcvloop", tree_name="pcs_east"
@@ -711,12 +709,12 @@ class EastPhysicsMethods:
         dipdt_smoothed = smooth(dipdt, 11)  # Use 11-point boxcar smoothing
 
         # Interpolate fetched signals to the requested timebase
-        for signal, signal_time in zip(
-            [vloop, li, ip, dipdt_smoothed], [vloop_time, li_time, ip_time, ip_time]
-        ):
-            signal = interp1(
-                signal_time, signal, params.times, kind="linear", bounds_error=0
-            )
+        vloop = interp1(vloop_time, vloop, params.times, kind="linear", bounds_error=0)
+        li = interp1(li_time, li, params.times, kind="linear", bounds_error=0)
+        ip = interp1(ip_time, ip, params.times, kind="linear", bounds_error=0)
+        dipdt_smoothed = interp1(
+            ip_time, dipdt_smoothed, params.times, kind="linear", bounds_error=0
+        )
 
         # Calculate p_ohm
         # TODO: check DIV/0 error
@@ -728,7 +726,7 @@ class EastPhysicsMethods:
         v_resistive[v_resistive_indices] = 0
         p_ohm = ip * v_resistive
 
-        return {"p_ohm": p_ohm}
+        return {"p_oh": p_ohm}
 
     @staticmethod
     @physics_method(
