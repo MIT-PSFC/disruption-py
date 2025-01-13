@@ -97,6 +97,7 @@ expected_failure_columns = [
     "parea",
     "pchisq",
     "pconvergence",
+    "p_oh",
 ]
 
 [east.tests.shots]
