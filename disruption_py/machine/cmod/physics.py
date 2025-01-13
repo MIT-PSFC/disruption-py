@@ -1930,18 +1930,24 @@ class CmodPhysicsMethods:
         )  # [cm], [s]
         z0 *= 0.01 # [cm] -> [m]
         # Get timebase of horizontal SXR array 
+        if (params.shot_id > 1040000000 and params.shot_id < 1060000000):
+            # Array 3 is bad for chords 15, 21-38 during 2005 campaign
+            # so use array 1 (vertical array)
+            array_path = r"\top.brightnesses.array_1"
+        else:
+            array_path = r"\top.brightnesses.array_3"
         chord_01, t_sxr = params.mds_conn.get_data_with_dims(
-            r"\top.brightnesses.array_3:chord_01",
+            array_path + ":chord_01",
             tree_name="xtomo",
             astype="float64",
-        )
+        ) # Units: W/m^2, s
         valid_times = (t_sxr > 0) & (t_sxr < 2.)
         t_sxr = t_sxr[valid_times]
         sxr = np.zeros(shape=(n_chords, len(t_sxr)))
         sxr[0] = chord_01[valid_times]
         for i in range(1, n_chords):
             chord, t_chord = params.mds_conn.get_data_with_dims(
-                r"\top.brightnesses.array_3:chord_" + f"{i+1:02}",
+                array_path + ":chord_" + f"{i+1:02}",
                 tree_name="xtomo",
                 astype="float64",
             )
@@ -1950,15 +1956,14 @@ class CmodPhysicsMethods:
             # Occasionally the time bases of a chord are of a different length
             # Usually one timebase is just cut off early after shot is over
             valid_times = (t_chord > 0) & (t_chord < 2.)
-            sxr[i] = chord[valid_times]
+            # If a chord is cut off prematurely, it's likely junk so ignore
+            if len(chord[valid_times]) == sxr.shape[1]:
+                sxr[i] = chord[valid_times]
         sxr_prog_core = sxr[17]
         # Median filter for each channel to reduce noise
         sample_time = t_sxr[1] - t_sxr[0]
         smooth_width = int(0.000150 / sample_time) + 1
         sxr = median_filter(sxr, size=(1, smooth_width), mode='constant', cval=0.)
-        if (params.shot_id > 1040000000 and params.shot_id < 1060000000):
-            sxr[14] = 0. # Bad chord during 2005 campaign
-        print(sxr[14][4000:4005])
         core_sxr = np.max(sxr, axis=0)
         core_sxr_index = np.argmax(sxr, axis=0)
 
@@ -1978,10 +1983,6 @@ class CmodPhysicsMethods:
                 points_above_thresh = 0
             i -= 1
         time_tq_onset = t_sxr[i] + 0.001
-        # time_tq_onset = t_sxr[indx2] - smooth_width / 2
-        # print(i)
-        # print(t_sxr.shape)
-        # print(t_sxr[i])
         #print("TQ Onset Time: " + str(time_tq_onset))
         fig, axs = plt.subplots(4, 1, sharex=True)
         axs[0].scatter(magtime, np.abs(ip)/1e6, marker='o')
