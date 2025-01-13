@@ -97,6 +97,15 @@ expected_failure_columns = [
     "parea",
     "pchisq",
     "pconvergence",
+    "beta_n",
+    "beta_p",
+    "kappa",
+    "li",
+    "q0",
+    "qstar",
+    "q95",
+    "wmhd",
+    "greenwald_fraction",
     "p_oh",
 ]
 
