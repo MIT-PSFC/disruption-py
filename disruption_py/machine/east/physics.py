@@ -282,6 +282,7 @@ class EastPhysicsMethods:
 
         # Get "\vp1_s" signal from the EAST tree.  (This signal is a sub-sampled
         # version of "vp1".)
+        # TODO: Fallback to \pcvloop when \vp1_s isn't available (e.g. shot 81548)?
         v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
             r"\vp1_s", tree_name="east"
         )
