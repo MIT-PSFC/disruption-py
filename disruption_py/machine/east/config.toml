@@ -57,7 +57,7 @@ test_columns = [
     "rad_input_frac",
     "rad_loss_frac",
     "p_input",
-    "p_ohm",
+    "p_oh",
     "n_equal_1_mode",
     "n_equal_1_phase",
     "e_equal_1_normalized",
