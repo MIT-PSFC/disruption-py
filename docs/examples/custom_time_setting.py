@@ -19,17 +19,8 @@ class PRadTime(TimeSetting):
         return time_array
 
 
-retrieval_settings = RetrievalSettings(
-    time_setting=PRadTime(),
-    run_tags=[],  # default is all, so if you do not want all data must set to an empty list
-    run_columns=["p_rad"],  # run physics methods
-    only_requested_columns=True,  # only return the column data for run_columns
-    domain_setting="flattop",  # retrieve data from the flattop time domain
-)
-
 shot_data = get_shots_data(
     tokamak="cmod",
     shotlist_setting=[1150805012],
-    retrieval_settings=retrieval_settings,
-    num_processes=1,
+    retrieval_settings=RetrievalSettings(time_setting=PRadTime()),
 )
