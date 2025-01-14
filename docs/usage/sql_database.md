@@ -26,11 +26,10 @@ The dataset contains unique plasma discharges from MIT's Alcator C-Mod tokamak, 
 	For more details on computed values please see [parameter reference][disruption-parameter-descriptions].
 
 ## Retrieving data from the SQL database { .doc .doc-heading }
-Here is an example that uses DisruptionPy to get shot data from the `disruption_warning` table
-for eight shots from the disruption warning shotlist:
+Here is an example retrieving data from `disruption_warning` or `disruptions` table
 ```python
 --8<--
-docs/examples/database_example.py
+examples/sql.py
 --8<--
 ```
 

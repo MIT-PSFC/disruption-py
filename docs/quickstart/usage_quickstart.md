@@ -49,6 +49,6 @@ For a simple way to get started, check out [`simple.py`](https://github.com/MIT-
 		data retrieved from the SQL table eg. `time_until_disrupt`
 		```python
 		--8<--
-		docs/examples/no_database.py
+		docs/examples/dummy_database.py
 		--8<--
 		```
