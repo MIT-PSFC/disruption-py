@@ -469,34 +469,6 @@ class D3DPhysicsMethods:
         return {"n_e_rt": ne_rt, "greenwald_fraction_rt": g_f_rt, "dn_dt_rt": dne_dt_rt}
 
     @staticmethod
-    def get_polarity(params: PhysicsMethodParams):
-        """
-        Get the polarity of the plasma current. Returns the first value if the polarity
-        is not constant.
-
-        Parameters
-        ----------
-        params : PhysicsMethodParams
-            Parameters containing MDS connection and shot information.
-
-        Returns
-        -------
-        polarity value
-        """
-        polarity = np.unique(
-            params.mds_conn.get_data(
-                f"ptdata('iptdirect', {params.shot_id})", tree_name="d3d"
-            )
-        )
-        if len(polarity) > 1:
-            params.logger.info(
-                "Polarity of Ip target is not constant. Using value at first timestep.",
-            )
-            params.logger.debug("Polarity array: {polarity}", polarity=polarity)
-            polarity = polarity[0]
-        return polarity
-
-    @staticmethod
     @physics_method(
         columns=["ip", "ip_error", "dip_dt", "dipprog_dt", "power_supply_railed"],
         tokamak=Tokamak.D3D,
@@ -549,7 +521,7 @@ class D3DPhysicsMethods:
                 f"ptdata('iptipp', {params.shot_id})", tree_name="d3d"
             )  # [A], [ms]
             t_ip_prog = t_ip_prog / 1.0e3  # [ms] -> [s]
-            polarity = D3DPhysicsMethods.get_polarity(params)
+            polarity = polarity_util(params)
             ip_prog = ip_prog * polarity
             dipprog_dt = np.gradient(ip_prog, t_ip_prog)
             ip_prog = interp1(t_ip_prog, ip_prog, params.times, "linear")
@@ -659,7 +631,7 @@ class D3DPhysicsMethods:
             )  # [MA], [ms]
             t_ip_prog_rt = t_ip_prog_rt / 1.0e3  # [ms] -> [s]
             ip_prog_rt = ip_prog_rt * 1.0e6 * 0.5  # [MA] -> [A]
-            polarity = D3DPhysicsMethods.get_polarity(params)
+            polarity = polarity_util(params)
             ip_prog_rt = ip_prog_rt * polarity
             dipprog_dt_rt = np.gradient(ip_prog_rt, t_ip_prog_rt)
             ip_prog_rt = interp1(t_ip_prog_rt, ip_prog_rt, params.times, "linear")
@@ -1577,3 +1549,33 @@ class D3DPhysicsMethods:
         ) / psi_norm_f[:, np.newaxis, np.newaxis]
         efit_dict["psin"][problems, :, :] = 0
         return efit_dict
+
+
+def polarity_util(params: PhysicsMethodParams):
+    """
+    Get the plasma current polarity. Accepts PhysicsMethodParams to access
+    the MDS connection, but it is not a physics method.
+
+    Returns the first value of polarity array if the polarity is not constant.
+
+    Parameters
+    ----------
+    params : PhysicsMethodParams
+        Parameters containing MDS connection and shot information.
+
+    Returns
+    -------
+    polarity value, -1 or 1.
+    """
+    polarity = np.unique(
+        params.mds_conn.get_data(
+            f"ptdata('iptdirect', {params.shot_id})", tree_name="d3d"
+        )
+    )
+    if len(polarity) > 1:
+        params.logger.info(
+            "Polarity of Ip target is not constant. Using value at first timestep.",
+        )
+        params.logger.debug("Polarity array: {polarity}", polarity=polarity)
+        polarity = polarity[0]
+    return polarity
