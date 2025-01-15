@@ -509,9 +509,17 @@ class CmodPhysicsMethods:
             A dictionary containing the calculated ohmic parameters, including
             "p_oh" and "v_loop".
         """
-        v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
-            r"\top.mflux:v0", tree_name="analysis"
-        )  # [V], [s]
+        try:
+            v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
+                r"\top.mflux:v0", tree_name="analysis"
+            )  # [V], [s]
+        except mdsExceptions.TreeException:
+            params.logger.verbose(
+                r"v_loop: Failed to get \top.mflux:v0 data. Use \efit_aeqdsk:vloopt instead."
+            )
+            v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
+                r"\efit_aeqdsk:vloopt", tree_name="_efit_tree"
+            )  # [V], [s]
         if len(v_loop_time) <= 1:
             raise CalculationError("No data for v_loop_time")
 
@@ -536,10 +544,12 @@ class CmodPhysicsMethods:
         return output
 
     @staticmethod
-    def _get_power(times, p_lh, t_lh, p_icrf, t_icrf, p_rad, t_rad, p_ohm):
+    def _get_power(
+        times, p_lh, t_lh, p_icrf, t_icrf, p_rad, t_rad, p_ohm, wmhd, efit_time
+    ):
         """
-        Calculate the input and radiated powers, and then calculate the
-        radiated fraction.
+        Calculate the input and radiated powers, then calculate the
+        radiated fraction and radiation confinement time.
 
         Parameters
         ----------
@@ -559,20 +569,30 @@ class CmodPhysicsMethods:
             The time array corresponding to radiated power.
         p_ohm : np.ndarray
             The ohmic heating power.
+        wmhd : np.ndarray
+            The total plasma energy.
+        efit_time : np.ndarray
+            The EFIT time base.
 
         Returns
         -------
         dict
             A dictionary containing the calculated power values, including
-            "p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", and "radiated_fraction".
+            "p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", "radiated_fraction", and "tau_rad".
+
+        Last major update by William Wei on 1/6/2025
+        References
+        ----------
+        - https://github.com/MIT-PSFC/disruption-py/pull/367
+
         """
         if p_lh is not None and isinstance(t_lh, np.ndarray) and len(t_lh) > 1:
-            p_lh = interp1(t_lh, p_lh * 1.0e3, times)
+            p_lh = interp1(t_lh, p_lh * 1.0e3, times, fill_value=0)  # [kW] -> [W]
         else:
             p_lh = np.zeros(len(times))
 
         if p_icrf is not None and isinstance(t_icrf, np.ndarray) and len(t_icrf) > 1:
-            p_icrf = interp1(t_icrf, p_icrf * 1.0e6, times, bounds_error=False)
+            p_icrf = interp1(t_icrf, p_icrf * 1.0e6, times, fill_value=0)  # [MW] -> [W]
         else:
             p_icrf = np.zeros(len(times))
 
@@ -582,20 +602,29 @@ class CmodPhysicsMethods:
             or not isinstance(t_rad, np.ndarray)
             or len(t_rad) <= 1
         ):
-            p_rad = np.array([np.nan] * len(times))  # TODO: Fix
+            p_rad = np.full(len(times), np.nan)
             dprad = p_rad.copy()
         else:
-            p_rad = p_rad * 1.0e3  # [W]
+            p_rad = p_rad * 1.0e3  # [kW] -> [W]
             p_rad = p_rad * 4.5  # Factor of 4.5 comes from cross-calibration with
             # 2pi_foil during flattop times of non-disruptive
             # shots, excluding times for
             # which p_rad (uncalibrated) <= 1.e5 W
             dprad = np.gradient(p_rad, t_rad)
-            p_rad = interp1(t_rad, p_rad, times)
+            p_rad = interp1(t_rad, p_rad, times, fill_value=0)
             dprad = interp1(t_rad, dprad, times)
+
+        # Replace nans with zeros in p_ohm
+        np.nan_to_num(p_ohm, copy=False, nan=0.0)
+
+        # Calculate radiated fraction
         p_input = p_ohm + p_lh + p_icrf
         rad_fraction = p_rad / p_input
         rad_fraction[rad_fraction == np.inf] = np.nan
+
+        # Calculate radiation confinement time
+        wmhd = interp1(efit_time, wmhd, times)
+        tau_rad = wmhd / np.where(p_rad != 0, p_rad, np.nan)
         output = {
             "p_rad": p_rad,
             "dprad_dt": dprad,
@@ -603,16 +632,25 @@ class CmodPhysicsMethods:
             "p_icrf": p_icrf,
             "p_input": p_input,
             "radiated_fraction": rad_fraction,
+            "tau_rad": tau_rad,
         }
         return output
 
     @staticmethod
     @physics_method(
-        columns=["p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", "radiated_fraction"],
+        columns=[
+            "p_rad",
+            "dprad_dt",
+            "p_lh",
+            "p_icrf",
+            "p_input",
+            "radiated_fraction",
+            "tau_rad",
+        ],
         tokamak=Tokamak.CMOD,
     )
     def get_power(params: PhysicsMethodParams):
-        """
+        r"""
         NOTE: the timebase for the LH power signal does not extend over the full
             time span of the discharge. Therefore, when interpolating the LH power
             signal onto the "timebase" array, the LH signal has to be extrapolated
@@ -620,24 +658,37 @@ class CmodPhysicsMethods:
             extrapolation is not done, then the 'interp1' routine will assign NaN
             (Not-a-Number) values for times outside the LH timebase, and the NaN's
             will propagate into p_input and rad_fraction, which is not desirable.
+
+        LH, ICRF, & radiated power data sources:
+        - lh: \lh::top.results.netpow [kW]
+        - icrf: \rf::top.antenna.results.pwr_net_tot [MW]
+        - rad: \spectroscopy::top.bolometer.twopi_diode [kW]
         """
-        values = [
-            None
-        ] * 6  # List to store the time and values of the LH power, icrf power, and radiated power
-        trees = ["LH", "RF", "spectroscopy"]
-        nodes = [r"\LH::TOP.RESULTS:NETPOW", r"\rf::rf_power_net", r"\twopi_diode"]
-        # TODO: Find these nodes and add units
-        for i in range(3):
+        # LH power, ICRF power, radiated power, and respective time bases
+        values = ["lh", "icrf", "rad"]
+        trees = ["lh", "rf", "spectroscopy"]
+        nodes = [r"\top.results:netpow", r"\rf_power_net", r"\twopi_diode"]
+        kwa = {}
+        for val, tree, node in zip(values, trees, nodes):
+            p = f"p_{val}"
+            t = f"t_{val}"
             try:
-                sig, sig_time = params.mds_conn.get_data_with_dims(
-                    nodes[i], tree_name=trees[i], astype=None
+                kwa[p], kwa[t] = params.mds_conn.get_data_with_dims(
+                    node, tree_name=tree
                 )
-                values[2 * i] = sig
-                values[2 * i + 1] = sig_time
             except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF):
-                continue
-        p_oh = CmodPhysicsMethods.get_ohmic_parameters(params=params)["p_oh"]
-        output = CmodPhysicsMethods._get_power(params.times, *values, p_oh)
+                kwa[p], kwa[t] = None, None
+        # Ohmic power
+        try:
+            result = CmodPhysicsMethods.get_ohmic_parameters(params=params)
+            kwa["p_ohm"] = result["p_oh"]  # [W]
+        except mdsExceptions.TreeException:
+            kwa["p_ohm"] = np.full(len(params.times), np.nan)
+        # Plasma magnetic energy, and respective time base
+        kwa["wmhd"], kwa["efit_time"] = params.mds_conn.get_data_with_dims(
+            r"\efit_aeqdsk:wplasm", tree_name="_efit_tree", astype="float64"
+        )  # [J], [s]
+        output = CmodPhysicsMethods._get_power(params.times, **kwa)
         return output
 
     @staticmethod

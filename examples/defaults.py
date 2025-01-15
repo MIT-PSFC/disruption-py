@@ -37,7 +37,7 @@ shot_data = get_shots_data(
         file_log_level="DEBUG",
         log_file_write_mode="w",
         log_to_console=True,
-        console_log_level=None,  # defaults to INFO but varies based on number of shots
+        console_log_level=None,  # defaults to VERBOSE but varies based on number of shots
         use_custom_logging=False,
     ),
 )
