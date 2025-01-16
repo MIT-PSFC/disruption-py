@@ -18,7 +18,7 @@ from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.math import interp1
 from disruption_py.core.utils.misc import shot_log_msg
 from disruption_py.machine.cmod.physics import CmodPhysicsMethods
-from disruption_py.machine.d3d.physics import polarity_util
+from disruption_py.machine.d3d.util import D3DUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 
 DomainSettingType = Union["DomainSetting", str, Dict[Tokamak, "DomainSettingType"]]
@@ -251,7 +251,7 @@ class FlattopDomainSetting(DomainSetting):
                 tree_name="d3d",
             )
             t_ip_prog = t_ip_prog / 1.0e3  # [ms] -> [s]
-            polarity = polarity_util(params.physics_method_params)
+            polarity = D3DUtilMethods.get_polarity(params.physics_method_params)
             ip_prog = ip_prog * polarity
             dipprog_dt = np.gradient(ip_prog, t_ip_prog)
             ip_prog = interp1(

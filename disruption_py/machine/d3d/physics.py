@@ -18,6 +18,7 @@ from disruption_py.core.utils.math import (
     matlab_gsastd,
     matlab_power,
 )
+from disruption_py.machine.d3d.util import D3DUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -521,7 +522,7 @@ class D3DPhysicsMethods:
                 f"ptdata('iptipp', {params.shot_id})", tree_name="d3d"
             )  # [A], [ms]
             t_ip_prog = t_ip_prog / 1.0e3  # [ms] -> [s]
-            polarity = polarity_util(params)
+            polarity = D3DUtilMethods.get_polarity(params)
             ip_prog = ip_prog * polarity
             dipprog_dt = np.gradient(ip_prog, t_ip_prog)
             ip_prog = interp1(t_ip_prog, ip_prog, params.times, "linear")
@@ -631,7 +632,7 @@ class D3DPhysicsMethods:
             )  # [MA], [ms]
             t_ip_prog_rt = t_ip_prog_rt / 1.0e3  # [ms] -> [s]
             ip_prog_rt = ip_prog_rt * 1.0e6 * 0.5  # [MA] -> [A]
-            polarity = polarity_util(params)
+            polarity = D3DUtilMethods.get_polarity(params)
             ip_prog_rt = ip_prog_rt * polarity
             dipprog_dt_rt = np.gradient(ip_prog_rt, t_ip_prog_rt)
             ip_prog_rt = interp1(t_ip_prog_rt, ip_prog_rt, params.times, "linear")
@@ -1549,33 +1550,3 @@ class D3DPhysicsMethods:
         ) / psi_norm_f[:, np.newaxis, np.newaxis]
         efit_dict["psin"][problems, :, :] = 0
         return efit_dict
-
-
-def polarity_util(params: PhysicsMethodParams):
-    """
-    Get the plasma current polarity. Accepts PhysicsMethodParams to access
-    the MDS connection, but it is not a physics method.
-
-    Returns the first value of polarity array if the polarity is not constant.
-
-    Parameters
-    ----------
-    params : PhysicsMethodParams
-        Parameters containing MDS connection and shot information.
-
-    Returns
-    -------
-    polarity value, -1 or 1.
-    """
-    polarity = np.unique(
-        params.mds_conn.get_data(
-            f"ptdata('iptdirect', {params.shot_id})", tree_name="d3d"
-        )
-    )
-    if len(polarity) > 1:
-        params.logger.info(
-            "Polarity of Ip target is not constant. Using value at first timestep.",
-        )
-        params.logger.debug("Polarity array: {polarity}", polarity=polarity)
-        polarity = polarity[0]
-    return polarity
