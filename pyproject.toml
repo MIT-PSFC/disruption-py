@@ -82,6 +82,9 @@ ipympl = "^0.9.0"
 jupyterlab = "^4.3.0"
 matplotlib = "^3.9.0"
 
+[tool.poetry.scripts]
+disruption-workflow = "examples.simple:cli"
+
 [tool.pylint]
 extension-pkg-allow-list = ["pyodbc"]
 ignored-modules = ["MDSplus"]
