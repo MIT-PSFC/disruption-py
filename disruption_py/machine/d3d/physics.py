@@ -18,6 +18,7 @@ from disruption_py.core.utils.math import (
     matlab_gsastd,
     matlab_power,
 )
+from disruption_py.machine.d3d.util import D3DUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -521,18 +522,7 @@ class D3DPhysicsMethods:
                 f"ptdata('iptipp', {params.shot_id})", tree_name="d3d"
             )  # [A], [ms]
             t_ip_prog = t_ip_prog / 1.0e3  # [ms] -> [s]
-            polarity = np.unique(
-                params.mds_conn.get_data(
-                    f"ptdata('iptdirect', {params.shot_id})", tree_name="d3d"
-                )
-            )
-            if len(polarity) > 1:
-                params.logger.verbose(
-                    "Polarity of Ip target is not constant. "
-                    "Using value at first timestep.",
-                )
-                params.logger.debug("Polarity array {polarity}", polarity=polarity)
-                polarity = polarity[0]
+            polarity = D3DUtilMethods.get_polarity(params)
             ip_prog = ip_prog * polarity
             dipprog_dt = np.gradient(ip_prog, t_ip_prog)
             ip_prog = interp1(t_ip_prog, ip_prog, params.times, "linear")
@@ -642,18 +632,7 @@ class D3DPhysicsMethods:
             )  # [MA], [ms]
             t_ip_prog_rt = t_ip_prog_rt / 1.0e3  # [ms] -> [s]
             ip_prog_rt = ip_prog_rt * 1.0e6 * 0.5  # [MA] -> [A]
-            polarity = np.unique(
-                params.mds_conn.get_data(
-                    f"ptdata('iptdirect', {params.shot_id})", tree_name="d3d"
-                )
-            )
-            if len(polarity) > 1:
-                params.logger.verbose(
-                    "Polarity of Ip target is not constant."
-                    " Setting to first value in array.",
-                )
-                params.logger.debug("Polarity array: {polarity}", polarity=polarity)
-                polarity = polarity[0]
+            polarity = D3DUtilMethods.get_polarity(params)
             ip_prog_rt = ip_prog_rt * polarity
             dipprog_dt_rt = np.gradient(ip_prog_rt, t_ip_prog_rt)
             ip_prog_rt = interp1(t_ip_prog_rt, ip_prog_rt, params.times, "linear")
