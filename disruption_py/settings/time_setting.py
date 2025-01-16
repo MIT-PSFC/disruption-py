@@ -5,18 +5,18 @@ This module defines classes for time settings, used to manage the timebase for
 retrieving data in disruption_py for various tokamaks and shot configurations.
 """
 
-import traceback
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from logging import Logger
 from typing import Dict, Union
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 from MDSplus import mdsExceptions
 
 from disruption_py.config import config
 from disruption_py.core.utils.enums import map_string_to_enum
+from disruption_py.core.utils.misc import shot_log_msg
 from disruption_py.inout.mds import MDSConnection
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
@@ -41,8 +41,6 @@ class TimeSettingParams:
         Time when the shot disrupted in seconds (or None if no disruption occurred).
     tokamak : Tokamak
         Tokamak for which the time setting is applied.
-    logger : Logger
-        Logger object used by disruption_py for logging messages.
     """
 
     shot_id: int
@@ -51,7 +49,13 @@ class TimeSettingParams:
     database: ShotDatabase
     disruption_time: float
     tokamak: Tokamak
-    logger: Logger
+
+    def __post_init__(self):
+        self.logger = logger.patch(
+            lambda record: record.update(
+                message=shot_log_msg(self.shot_id, record["message"])
+            )
+        )
 
     @property
     def disrupted(self) -> bool:
@@ -161,7 +165,9 @@ class TimeSettingDict(TimeSetting):
         chosen_setting = self.resolved_time_setting_dict.get(params.tokamak, None)
         if chosen_setting is not None:
             return chosen_setting.get_times(params)
-        params.logger.warning("No time setting for tokamak %s", params.tokamak)
+        params.logger.warning(
+            "No time setting for tokamak {tokamak}", tokamak=params.tokamak
+        )
         return None
 
 
@@ -238,17 +244,14 @@ class CacheTimeSetting(TimeSetting):
             try:
                 times = params.cache_data["time"].to_numpy()
                 # Check if the timebase is in ms instead of s
-                if times[-1] > config(params.tokamak).MAX_SHOT_TIME:
+                if times[-1] > config(params.tokamak).max_shot_time:
                     times /= 1000  # [ms] -> [s]
                 return times
-            except KeyError:
+            except KeyError as e:
                 params.logger.warning(
-                    "[Shot %s]: Shot constructor was passed data but no timebase.",
-                    params.shot_id,
+                    "Shot constructor was passed data but no timebase."
                 )
-                params.logger.debug(
-                    "[Shot %s]: %s", params.shot_id, traceback.format_exc()
-                )
+                params.logger.opt(exception=True).debug(e)
         return self.fallback_time_setting.get_times(params)
 
 
@@ -381,11 +384,11 @@ class DisruptionTimeSetting(TimeSetting):
         if duration < self.minimum_duration or np.abs(ip_max) < self.minimum_ip:
             raise NotImplementedError()
 
-        times = np.arange(0.100, duration + config(params.tokamak).TIME_CONST, 0.025)
+        times = np.arange(0.100, duration + config(params.tokamak).time_const, 0.025)
         if params.disrupted:
             additional_times = np.arange(
                 params.disruption_time - self.DURATION_BEFORE_DISRUPTION,
-                params.disruption_time + config(params.tokamak).TIME_CONST,
+                params.disruption_time + config(params.tokamak).time_const,
                 self.DT_BEFORE_DISRUPTION,
             )
             times = times[
@@ -394,7 +397,7 @@ class DisruptionTimeSetting(TimeSetting):
                     < (
                         params.disruption_time
                         - self.DURATION_BEFORE_DISRUPTION
-                        - config(params.tokamak).TIME_CONST
+                        - config(params.tokamak).time_const
                     )
                 )
             ]
@@ -537,7 +540,8 @@ class SignalTimeSetting(TimeSetting):
             return signal_time
         except mdsExceptions.MdsException:
             params.logger.error(
-                "Failed to set up timebase for signal %s", self.signal_path
+                "Failed to set up timebase for signal {signal_path}",
+                signal_path=self.signal_path,
             )
             raise
 

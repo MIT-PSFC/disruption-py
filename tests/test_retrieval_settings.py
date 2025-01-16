@@ -63,6 +63,7 @@ def test_cache_setting_sql(tokamak, shotlist, num_processes):
         retrieval_settings=retrieval_settings,
         num_processes=num_processes,
         mds_connection_initializer=dummy_mds_initializer,
+        output_setting="list",
     )
 
     # Ensure there is a connection to SQL -- if there is a dummy MDS connection,
@@ -90,7 +91,7 @@ def test_cache_setting_prev_output(tokamak, shotlist, test_file_path_f, output_f
     )
 
     if output_format == ".csv":
-        cache_data = pd.read_csv(test_file_path_f(".csv"))
+        cache_data = pd.read_csv(test_file_path_f(".csv"), dtype={"commit_hash": str})
     else:
         cache_data_list = []
         for shot in shotlist:
@@ -136,6 +137,8 @@ def test_only_requested_columns(tokamak, shotlist):
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
         num_processes=2,
+        output_setting="list",
+        log_settings="WARNING",
     )
     for res in results:
         assert {"ip", "q95", "shot", "time", "commit_hash"} == set(res.columns)
@@ -159,6 +162,7 @@ def test_domain_setting(tokamak, shotlist, domain_setting, full_time_domain_data
         retrieval_settings=retrieval_settings,
         output_setting="dict",
         num_processes=2,
+        log_settings="WARNING",
     )
     results = [results[shot] for shot in shotlist]
 

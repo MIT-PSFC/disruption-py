@@ -5,15 +5,45 @@ This module contains utility functions for various numerical operations.
 """
 
 import copy
+import warnings
 from dataclasses import dataclass
+from typing import Callable
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 from scipy.interpolate import interp1d
-from scipy.optimize import curve_fit
+from scipy.optimize import OptimizeWarning, curve_fit
 from scipy.signal import lfilter, medfilt
 
 pd.options.mode.chained_assignment = None
+
+
+def showwarning(message, category, filename, lineno, _file=None, line=None):
+    """
+    Reroute warnings through loguru to be compatible with tqdm progress bars.
+    """
+    logger.warning(warnings.formatwarning(message, category, filename, lineno, line))
+
+
+warnings.showwarning = showwarning
+
+
+def filter_cov_warning(func: Callable) -> Callable:
+    """
+    Decorator to filter out covariance warnings.
+    """
+
+    def wrapper(*args, **kwargs):
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                category=OptimizeWarning,
+                message="Covariance of the parameters could not be estimated",
+            )
+            return func(*args, **kwargs)
+
+    return wrapper
 
 
 def interp1(x, y, new_x, kind="linear", bounds_error=False, fill_value=np.nan, axis=-1):
@@ -154,6 +184,7 @@ def gauss_smooth(y, smooth_width, ends_type):
     return s
 
 
+@filter_cov_warning
 def gaussian_fit(*args):
     """
     Fits a Gaussian curve to a set of data points (x,y).
@@ -175,7 +206,6 @@ def gaussian_fit(*args):
     coeffs : array
         The coefficients of the fit.
     """
-
     coeffs, *_ = curve_fit(gauss, *args)
     return coeffs
 
@@ -202,6 +232,7 @@ def gauss(x, *params):
     return out
 
 
+@filter_cov_warning
 def gaussian_fit_with_fixed_mean(mu, *args):
     """Same as gaussian_fit() but with mu as a fixed parameter"""
     coeffs, *_ = curve_fit(lambda x, a, sigma: gauss(x, a, mu, sigma), *args)

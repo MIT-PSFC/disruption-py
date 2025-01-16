@@ -4,13 +4,14 @@
 Module for defining parameters used in physics methods for DisruptionPy.
 """
 
-import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 
+from disruption_py.core.utils.misc import shot_log_msg
 from disruption_py.inout.mds import MDSConnection
 from disruption_py.machine.tokamak import Tokamak
 
@@ -22,8 +23,6 @@ class PhysicsMethodParams:
     and the timebase for the data.
     """
 
-    logger = logging.getLogger("disruption_py")
-
     shot_id: int
     tokamak: Tokamak
     disruption_time: float
@@ -33,6 +32,13 @@ class PhysicsMethodParams:
     pre_filled_shot_data: pd.DataFrame
     interpolation_method: Any  # Fix
     metadata: dict
+
+    def __post_init__(self):
+        self.logger = logger.patch(
+            lambda record: record.update(
+                message=shot_log_msg(self.shot_id, record["message"])
+            )
+        )
 
     cached_results: Dict[str, Any] = field(default_factory=dict)
 

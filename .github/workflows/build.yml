@@ -21,14 +21,18 @@ jobs:
 
 
   build:
-    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      github.event_name == 'release' ||
+      github.event.pull_request.draft == false
+    runs-on: ubuntu-22.04
     steps:
 
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Install poetry
-        run: pipx install poetry
+        run: pipx install 'poetry<2.0.0'
 
       - name: Setup Python
         uses: actions/setup-python@v5

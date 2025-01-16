@@ -24,6 +24,11 @@ def test_tokamak_parameter(shotlist, tok):
     """
     col_name = "x"
 
+    # The physics method needs to be defined in the global scope because
+    # multiprocessing and pickling don't work with locally-defined functions.
+    # pylint: disable-next=global-variable-undefined
+    global my_physics_method
+
     @physics_method(columns=[col_name], tokamak=tok)
     def my_physics_method(params: PhysicsMethodParams):
         return {col_name: np.ones(shape=len(params.times))}
@@ -39,5 +44,6 @@ def test_tokamak_parameter(shotlist, tok):
         retrieval_settings=retrieval_settings,
         output_setting="list",
         num_processes=1,
+        log_settings="WARNING",
     )
     assert col_name in shot_data[0]

@@ -11,11 +11,11 @@ dataframes.
 import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from logging import Logger
 from typing import Any, Dict, List, Type, Union
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.misc import safe_df_concat
@@ -38,15 +38,12 @@ class OutputSettingParams:
         Database connection for retrieving cache data.
     tokamak : Tokamak
         The tokamak for which results are being outputted.
-    logger : Logger
-        Logger instance.
     """
 
     shot_id: int
     result: pd.DataFrame
     database: ShotDatabase
     tokamak: Tokamak
-    logger: Logger
 
 
 @dataclass
@@ -58,12 +55,9 @@ class CompleteOutputSettingParams:
     ----------
     tokamak : Tokamak
         The tokamak for which results are being outputted.
-    logger : Logger
-        Logger instance.
     """
 
     tokamak: Tokamak
-    logger: Logger
 
 
 OutputSettingType = Union[
@@ -225,7 +219,9 @@ class OutputSettingDict(OutputSetting):
         chosen_setting = self.output_setting_dict.get(params.tokamak)
         if chosen_setting is not None:
             return chosen_setting.output_shot(params)
-        params.logger.warning("No output setting for tokamak %s", params.tokamak)
+        logger.warning(
+            "No output setting for tokamak {tokamak}", tokamak=params.tokamak
+        )
         return None
 
     def stream_output_cleanup(self, params: CompleteOutputSettingParams):
@@ -240,7 +236,9 @@ class OutputSettingDict(OutputSetting):
         chosen_setting = self.output_setting_dict.get(params.tokamak)
         if chosen_setting:
             return chosen_setting.stream_output_cleanup(params)
-        params.logger.warning("No output setting for tokamak %s", params.tokamak)
+        logger.warning(
+            "No output setting for tokamak {tokamak}", tokamak=params.tokamak
+        )
         return None
 
     def get_results(self, params: CompleteOutputSettingParams):
@@ -260,7 +258,9 @@ class OutputSettingDict(OutputSetting):
         chosen_setting = self.output_setting_dict.get(params.tokamak, None)
         if chosen_setting is not None:
             return chosen_setting.get_results(params)
-        params.logger.warning("No output setting for tokamak %s", params.tokamak)
+        logger.warning(
+            "No output setting for tokamak {tokamak}", tokamak=params.tokamak
+        )
         return None
 
 
@@ -706,7 +706,7 @@ class SQLOutputSetting(OutputSetting):
                 override_columns=self.should_override_columns,
             )
         else:
-            params.logger.warning("No shot id found in result DataFrame")
+            logger.warning("No shot id found in result DataFrame")
         self.results = safe_df_concat(self.results, [params.result])
 
     def get_results(self, params: CompleteOutputSettingParams) -> Any:

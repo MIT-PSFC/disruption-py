@@ -4,7 +4,6 @@
 Module for managing SQL database connections.
 """
 
-import logging
 import os
 import threading
 from typing import List
@@ -13,10 +12,11 @@ from urllib.parse import quote_plus
 import numpy as np
 import pandas as pd
 import pyodbc
+from loguru import logger
 from sqlalchemy import create_engine
 
 from disruption_py.config import config
-from disruption_py.core.utils.misc import without_duplicates
+from disruption_py.core.utils.misc import shot_log_msg, without_duplicates
 from disruption_py.core.utils.shared_instance import SharedInstance
 from disruption_py.machine.tokamak import Tokamak
 
@@ -25,8 +25,6 @@ class ShotDatabase:
     """
     Handles grabbing data from MySQL server.
     """
-
-    logger = logging.getLogger("disruption_py")
 
     def __init__(
         self,
@@ -44,14 +42,21 @@ class ShotDatabase:
         if protected_columns is None:
             protected_columns = []
 
-        self.logger.info("Database initialization: %s@%s/%s", user, host, db_name)
+        logger.debug(
+            "Database initialization: {user}@{host}/{db_name}",
+            user=user,
+            host=host,
+            db_name=db_name,
+        )
         drivers = pyodbc.drivers()
         if driver in drivers:
             self.driver = driver
         else:
             self.driver = drivers[0]
-            self.logger.warning(
-                "Database driver fallback: '%s' -> '%s'", driver, self.driver
+            logger.warning(
+                "Database driver fallback: '{driver}' -> '{class_driver}'",
+                driver=driver,
+                class_driver=self.driver,
             )
         self.host = host
         self.port = port
@@ -71,31 +76,33 @@ class ShotDatabase:
     @classmethod
     def from_config(cls, tokamak: Tokamak):
         """
-        Initialize database from config file.
-        """
-        return cls._from_dict(config(tokamak).database)
-
-    @classmethod
-    def _from_dict(cls, database_dict: dict):
-        """
-        Initialize database from config file.
+        Initialize database from config.
         """
 
-        # read profile
-        profile_path = database_dict["profile_path"]
-        profile = os.path.expanduser(profile_path)
-        with open(profile, "r", encoding="utf-8") as fio:
-            db_user, db_pass = fio.read().split()[-2:]
+        db_conf = config(tokamak).inout.sql
+
+        # read sybase login
+        if any(f"db_{key}" not in db_conf for key in ["user", "pass"]):
+            db_name = db_conf["db_name"]
+            for name in [db_name.lower(), db_name.upper()]:
+                profile = os.path.expanduser(f"~/{name}.sybase_login")
+                if not os.path.exists(profile):
+                    continue
+                with open(profile, "r", encoding="utf-8") as fio:
+                    db_conf["db_user"], db_conf["db_pass"] = fio.read().split()[-2:]
+                break
+            else:
+                raise ValueError("could not read DB username and password.")
 
         return SharedInstance(ShotDatabase).get_instance(
-            driver=database_dict["driver"],
-            host=database_dict["host"],
-            port=database_dict["port"],
-            db_name=database_dict["db_name"],
-            user=db_user,
-            passwd=db_pass,
-            protected_columns=without_duplicates(database_dict["protected_columns"]),
-            write_database_table_name=database_dict.get("write_database_table_name"),
+            driver=db_conf["driver"],
+            host=db_conf["host"],
+            port=db_conf["port"],
+            db_name=db_conf["db_name"],
+            user=db_conf["db_user"],
+            passwd=db_conf["db_pass"],
+            protected_columns=without_duplicates(db_conf["protected_columns"]),
+            write_database_table_name=db_conf.get("write_database_table_name"),
         )
 
     def _get_connection_string(self, db_name):
@@ -129,7 +136,10 @@ class ShotDatabase:
         """
         current_thread = threading.current_thread()
         if current_thread not in self._thread_connections:
-            self.logger.info("Connecting to database for thread %s", current_thread)
+            logger.debug(
+                "Connecting to database for thread {current_thread}",
+                current_thread=str(current_thread),
+            )
             self._thread_connections[current_thread] = pyodbc.connect(
                 self.connection_string
             )
@@ -164,9 +174,8 @@ class ShotDatabase:
             if "select" in query.lower():
                 output = curs.fetchall()
         except pyodbc.DatabaseError as e:
-            print(e)
-            self.logger.debug(e)
-            self.logger.error("Query failed, returning None")
+            logger.error("Query failed with error {e}, returning None", e=e)
+            logger.opt(exception=True).debug(e)
         curs.close()
         return output
 
@@ -218,7 +227,7 @@ class ShotDatabase:
         if (
             len(curr_df) == len(shot_data)
             and (
-                (curr_df["time"] - shot_data["time"]).abs() < config().TIME_CONST
+                (curr_df["time"] - shot_data["time"]).abs() < config().time_const
             ).all()
         ):
             return self._update_shot_data(
@@ -230,7 +239,7 @@ class ShotDatabase:
                 override_columns=override_columns,
             )
 
-        self.logger.error("Invalid timebase for data output")
+        logger.error("Invalid timebase for data output")
         return False
 
     def _insert_shot_data(
@@ -307,7 +316,7 @@ class ShotDatabase:
 
         update_columns_shot_data = pd.DataFrame()
         for column_name in curr_df.columns:
-            if column_name in config().database.protected_columns or (
+            if column_name in config().inout.sql.protected_columns or (
                 column_name in self.protected_columns
                 and column_name not in override_columns
             ):
@@ -366,7 +375,7 @@ class ShotDatabase:
             self.engine,
         )
         if len(data_df) == 0:
-            self.logger.info("Shot %s does not exist in database", shot_id)
+            logger.warning(shot_log_msg(shot_id, "shot does not exist in database"))
             return False
         with self.conn.cursor() as curs:
             curs.execute(
@@ -395,7 +404,9 @@ class ShotDatabase:
                 + "adding shot data"
             )
         if col_name in self.protected_columns:
-            self.logger.error("Failed to drop protected column %s", col_name)
+            logger.error(
+                "Failed to drop protected column {col_name}", col_name=col_name
+            )
             return False
         self.query(
             f"alter table {self.write_database_table_name} drop column {col_name};",

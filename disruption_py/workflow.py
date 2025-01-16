@@ -4,17 +4,25 @@
 The main entrypoint for retrieving DisruptionPy data. 
 """
 
-import logging
+import time
+from itertools import repeat
+from multiprocessing import Pool
 from typing import Any, Callable
 
-from disruption_py.core.multiprocess import MultiprocessingShotRetriever
+from loguru import logger
+from tqdm.auto import tqdm
+
 from disruption_py.core.retrieval_manager import RetrievalManager
-from disruption_py.core.utils.misc import without_duplicates
+from disruption_py.core.utils.misc import (
+    get_elapsed_time,
+    shot_log_msg,
+    without_duplicates,
+)
 from disruption_py.inout.mds import ProcessMDSConnection
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.settings import RetrievalSettings
-from disruption_py.settings.log_settings import LogSettings
+from disruption_py.settings.log_settings import LogSettings, resolve_log_settings
 from disruption_py.settings.output_setting import (
     CompleteOutputSettingParams,
     OutputSetting,
@@ -27,7 +35,32 @@ from disruption_py.settings.shotlist_setting import (
     shotlist_setting_runner,
 )
 
-logger = logging.getLogger("disruption_py")
+
+def _execute_retrieval(args):
+    """
+    Wrapper around getting shot data for a single shot to ensure the arguments
+    are all multiprocessing compatible (e.g. no lambdas passed as args).
+
+    Params
+    ------
+    args : List
+        tokamak, database initializer, mds connection initializer, retrieval
+        settings, and the shot id
+
+    Returns
+    -------
+    tuple of shot id and the dataframe
+    """
+    tokamak, db_init, mds_init, retrieval_settings, shot_id = args
+    database = _get_database_instance(tokamak, db_init)
+    mds_conn = _get_mds_instance(tokamak, mds_init)
+
+    retrieval_manager = RetrievalManager(
+        tokamak=tokamak,
+        process_database=database,
+        process_mds_conn=mds_conn,
+    )
+    return shot_id, retrieval_manager.get_shot_data(shot_id, retrieval_settings)
 
 
 def get_shots_data(
@@ -36,7 +69,7 @@ def get_shots_data(
     database_initializer: Callable[..., ShotDatabase] = None,
     mds_connection_initializer: Callable[..., ProcessMDSConnection] = None,
     retrieval_settings: RetrievalSettings = None,
-    output_setting: OutputSetting = "list",
+    output_setting: OutputSetting = "dataframe",
     num_processes: int = 1,
     log_settings: LogSettings = None,
 ) -> Any:
@@ -67,17 +100,11 @@ def get_shots_data(
     Any
         The value of OutputSetting.get_results. See OutputSetting for more details.
     """
-    (log_settings or LogSettings()).setup_logging()
+    log_settings = resolve_log_settings(log_settings)
+    log_settings.setup_logging()
 
     tokamak = resolve_tokamak_from_environment(tokamak)
-
-    database_initializer = database_initializer or (
-        lambda: get_database(tokamak=tokamak)
-    )
-    database = database_initializer()
-    mds_connection_initializer = mds_connection_initializer or (
-        lambda: ProcessMDSConnection.from_config(tokamak=tokamak)
-    )
+    database = _get_database_instance(tokamak, database_initializer)
     # Clean-up parameters
     if retrieval_settings is None:
         retrieval_settings = RetrievalSettings()
@@ -86,63 +113,72 @@ def get_shots_data(
     output_setting = resolve_output_setting(output_setting)
 
     # do not spawn unnecessary processes
-    shotlist_setting_params = ShotlistSettingParams(database, tokamak, logger)
+    shotlist_setting_params = ShotlistSettingParams(database, tokamak)
     shotlist_list = without_duplicates(
         shotlist_setting_runner(shotlist_setting, shotlist_setting_params)
     )
-
     num_processes = min(num_processes, len(shotlist_list))
 
-    if num_processes > 1:
-        shot_retriever = MultiprocessingShotRetriever(
-            database=database,
-            num_processes=num_processes,
-            output_setting=output_setting,
-            retrieval_manager_initializer=(
-                lambda: RetrievalManager(
-                    tokamak=tokamak,
-                    process_database=database_initializer(),
-                    process_mds_conn=mds_connection_initializer(),
-                )
-            ),
-            tokamak=tokamak,
-            logger=logger,
+    # Dynamically set the console log level based on the number of shots
+    if log_settings.console_log_level is None:
+        log_settings.reset_handlers(num_shots=len(shotlist_list))
+
+    # log start
+    logger.info(
+        "Starting workflow: {n:,} shot{s} / {m} process{p}",
+        n=len(shotlist_list),
+        s="s" if len(shotlist_list) > 1 else "",
+        m=num_processes,
+        p="es" if num_processes > 1 else "",
+    )
+
+    took = -time.time()
+    with Pool(processes=num_processes) as pool:
+        args = zip(
+            repeat(tokamak),
+            repeat(database_initializer),
+            repeat(mds_connection_initializer),
+            repeat(retrieval_settings),
+            shotlist_list,
         )
-        shot_retriever.run(
-            shotlist_list=shotlist_list,
-            retrieval_settings=retrieval_settings,
-            await_complete=True,
-        )
-    else:
-        mds_connection = mds_connection_initializer()
-        retrieval_manager = RetrievalManager(
-            tokamak=tokamak,
-            process_database=database,
-            process_mds_conn=mds_connection,
-        )
-        for shot_id in shotlist_list:
-            shot_data = retrieval_manager.get_shot_data(
-                shot_id=shot_id,
-                retrieval_settings=retrieval_settings,
-            )
+        num_success = 0
+
+        for shot_id, shot_data in tqdm(
+            pool.imap(_execute_retrieval, args), total=len(shotlist_list), leave=False
+        ):
             if shot_data is None:
                 logger.warning(
-                    "Not outputting data for shot %s due, data is None.", shot_id
+                    shot_log_msg(
+                        shot_id, "Not outputting data for shot, data is None."
+                    ),
                 )
             else:
+                num_success += 1
                 output_setting.output_shot(
                     OutputSettingParams(
                         shot_id=shot_id,
                         result=shot_data,
                         database=database,
                         tokamak=tokamak,
-                        logger=logger,
                     )
                 )
+    took += time.time()
 
-    finish_output_type_setting_params = CompleteOutputSettingParams(
-        tokamak=tokamak, logger=logger
+    # log stop
+    total = len(shotlist_list)
+    percent_success = num_success / total * 100
+    logger.info(
+        "Completed workflow: "
+        "retrieved {num_success:,}/{total:,} shots ({percent_success:.2f}%) "
+        "in {elapsed} ({each:.3f} s/shot)",
+        num_success=num_success,
+        total=total,
+        percent_success=percent_success,
+        elapsed=get_elapsed_time(took),
+        each=took / total,
     )
+
+    finish_output_type_setting_params = CompleteOutputSettingParams(tokamak=tokamak)
     results = output_setting.get_results(finish_output_type_setting_params)
     output_setting.stream_output_cleanup(finish_output_type_setting_params)
     return results
@@ -166,3 +202,21 @@ def get_mdsplus_class(
     """
     tokamak = resolve_tokamak_from_environment(tokamak)
     return ProcessMDSConnection.from_config(tokamak=tokamak)
+
+
+def _get_database_instance(tokamak, database_initializer):
+    """
+    Create database instance
+    """
+    if database_initializer:
+        return database_initializer()
+    return get_database(tokamak)
+
+
+def _get_mds_instance(tokamak, mds_connection_initializer):
+    """
+    Create MDSplus instance
+    """
+    if mds_connection_initializer:
+        return mds_connection_initializer()
+    return get_mdsplus_class(tokamak)

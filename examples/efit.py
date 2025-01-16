@@ -5,7 +5,7 @@ example module for EFIT.
 """
 
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
-from disruption_py.settings import LogSettings, RetrievalSettings
+from disruption_py.settings import RetrievalSettings
 from disruption_py.workflow import get_shots_data
 
 
@@ -22,7 +22,7 @@ def main():
         shape = (247, 17)
     elif tokamak is Tokamak.CMOD:
         shotlist = [1150805012]
-        shape = (62, 25)
+        shape = (62, 23)
     else:
         raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 
@@ -39,7 +39,6 @@ def main():
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
         output_setting="dataframe",
-        log_settings=LogSettings(console_log_level=0),
     )
 
     print(result)

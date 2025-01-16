@@ -3,13 +3,12 @@
 """Pytest configuration module for setting up fixtures."""
 
 import os
-import time
-from tempfile import mkdtemp
 from unittest.mock import patch
 
 import pytest
 
 from disruption_py.core.utils.math import matlab_gradient_1d_vectorized
+from disruption_py.core.utils.misc import get_temporary_folder
 from disruption_py.machine.tokamak import resolve_tokamak_from_environment
 from tests.utils.factory import (
     get_tokamak_test_columns,
@@ -85,16 +84,8 @@ def mock_numpy_gradient():
         yield
 
 
-@pytest.fixture(scope="session", name="tmpdir")
-def tmpdir_fixture():
-    """Fixture to create a temporary directory for file output."""
-    tmpdir_path = mkdtemp(prefix=f"disruptionpy-{time.strftime('%y%m%d-%H%M%S')}-")
-    print(f"Using temporary directory: {tmpdir_path} for file output")
-    yield tmpdir_path
-
-
 @pytest.fixture(scope="module")
-def test_file_path_f(request, tmpdir):
+def test_file_path_f(request):
     """
     Fixture to generate file paths for test files.
 
@@ -102,8 +93,6 @@ def test_file_path_f(request, tmpdir):
     ----------
     request : FixtureRequest
         The request object for the current test.
-    tmpdir : str
-        The path to the temporary directory.
 
     Returns
     -------
@@ -112,7 +101,7 @@ def test_file_path_f(request, tmpdir):
     """
 
     def inner(suffix):
-        return os.path.join(tmpdir, f"{request.node.name}{suffix}")
+        return os.path.join(get_temporary_folder(), f"{request.node.name}{suffix}")
 
     return inner
 
