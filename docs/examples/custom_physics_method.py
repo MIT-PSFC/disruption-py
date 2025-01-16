@@ -64,11 +64,12 @@ def get_custom_kappa_area(params: PhysicsMethodParams):
 
 # --8<-- [end:kappa_area_request_example]
 
+retrieval_settings = RetrievalSettings(
+    custom_physics_methods=[get_custom_kappa_area],
+)
 
 shot_data = get_shots_data(
     tokamak="cmod",
     shotlist_setting=[1150805012],
-    retrieval_settings=RetrievalSettings(
-        custom_physics_methods=[get_custom_kappa_area],
-    ),
+    retrieval_settings=retrieval_settings,
 )

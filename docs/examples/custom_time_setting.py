@@ -19,8 +19,10 @@ class PRadTime(TimeSetting):
         return time_array
 
 
+retrieval_settings = RetrievalSettings(time_setting=PRadTime())
+
 shot_data = get_shots_data(
     tokamak="cmod",
     shotlist_setting=[1150805012],
-    retrieval_settings=RetrievalSettings(time_setting=PRadTime()),
+    retrieval_settings=retrieval_settings,
 )
