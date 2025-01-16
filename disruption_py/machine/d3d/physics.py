@@ -136,7 +136,7 @@ class D3DPhysicsMethods:
                     fill_value=0.0,
                 )
             else:
-                params.logger.info("No NBI power data found in this shot.")
+                params.logger.verbose("No NBI power data found in this shot.")
                 p_nbi = np.zeros(len(params.times))
         except mdsExceptions.MdsException as e:
             p_nbi = np.zeros(len(params.times))
@@ -164,7 +164,7 @@ class D3DPhysicsMethods:
                     fill_value=0.0,
                 )
             else:
-                params.logger.info(
+                params.logger.verbose(
                     "No ECH power data found in this shot. Setting to zeros",
                 )
                 p_ech = np.zeros(len(params.times))
@@ -1135,7 +1135,7 @@ class D3DPhysicsMethods:
             )
         else:
             zeff = np.zeros(len(params.times))
-            params.logger.info("No zeff data found in this shot.")
+            params.logger.verbose("No zeff data found in this shot.")
         return {"z_eff": zeff}
 
     @staticmethod
