@@ -41,7 +41,7 @@ def decorated_physics_method(params: PhysicsMethodParams) -> dict:
 
 # pylint: disable=duplicate-code
 @physics_method(columns=["custom_kappa_area"], tokamak=Tokamak.CMOD)
-def get_kappa_area(params: PhysicsMethodParams):
+def get_custom_kappa_area(params: PhysicsMethodParams):
     aminor = params.mds_conn.get_data(
         r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
     )
@@ -69,6 +69,6 @@ shot_data = get_shots_data(
     tokamak="cmod",
     shotlist_setting=[1150805012],
     retrieval_settings=RetrievalSettings(
-        custom_physics_methods=[get_kappa_area],
+        custom_physics_methods=[get_custom_kappa_area],
     ),
 )
