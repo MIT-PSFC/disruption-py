@@ -38,7 +38,7 @@ maintainers = [
 name = "disruption-py"
 readme = "README.md"
 repository = "https://github.com/MIT-PSFC/disruption-py/"
-version = "0.9.0"
+version = "0.10.0"
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -47,8 +47,8 @@ loguru = "^0.7.0"
 numpy = "^1.26.0"
 pandas = {extras = ["hdf5"], version = "^2.2.0"}
 pyodbc = "^5.2.0"
-scikit_learn = "^1.5.0"
-scipy = "^1.14.0"
+scikit_learn = "^1.6.0"
+scipy = "^1.15.0"
 SQLAlchemy = "^2.0.0"
 tqdm = "^4.67.0"
 
@@ -59,7 +59,7 @@ optional = true
 black = "^24.10.0"
 pylint = "^3.3.0"
 pytest = "^8.3.0"
-ruff = "^0.8.0"
+ruff = "^0.9.0"
 toml-sort = "^0.24.0"
 yamllint = "^1.35.0"
 
@@ -80,7 +80,10 @@ optional = true
 ipykernel = "^6.29.0"
 ipympl = "^0.9.0"
 jupyterlab = "^4.3.0"
-matplotlib = "^3.9.0"
+matplotlib = "^3.10.0"
+
+[tool.poetry.scripts]
+disruption-workflow = "examples.simple:cli"
 
 [tool.pylint]
 extension-pkg-allow-list = ["pyodbc"]

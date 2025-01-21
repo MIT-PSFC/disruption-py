@@ -3,7 +3,7 @@
 Creating a script gives you the full functionality of DisruptionPy. 
 
 ### Examples
-Use [`basic_example_1.py`](https://github.com/MIT-PSFC/disruption-py/blob/main/examples/basic_example_1.py) or [`basic_example_2.py`](https://github.com/MIT-PSFC/disruption-py/blob/main/examples/basic_example_2.py) for a simple way to get started. Check out [`all_defaults_example.py`](https://github.com/MIT-PSFC/disruption-py/blob/main/examples/all_defaults_example.py) to see the all the default settings for retrieving data. 
+For a simple way to get started, check out [`simple.py`](https://github.com/MIT-PSFC/disruption-py/blob/main/examples/simple.py) or [`defaults.py`](https://github.com/MIT-PSFC/disruption-py/blob/main/examples/defaults.py) to see the all the default settings for retrieving data. 
 
 ### Creating a DisruptionPy script
 1. **Create the shot data retrieval settings**
@@ -43,12 +43,12 @@ Use [`basic_example_1.py`](https://github.com/MIT-PSFC/disruption-py/blob/main/e
 
 	??? question "I don't want to connect to the SQL database."
 		DisruptionPy provides a dummy database class that allows users to retrieve data from MDSplus
-		without having to connect to the associated SQL database. See the [example](https://github.com/MIT-PSFC/disruption-py/blob/main/examples/no_database.py) or simply change the code above to pass
-		the dummy database's default inititalizer as the database initializer to the handler class.
-		note: this will result in data retrieval being incorrect for parameter methods that depend on 
+		without having to connect to the associated SQL database. Pass
+		the dummy database's default initializer as the database initializer to the handler class.
+		Note: this will result in data retrieval being incorrect for parameter methods that depend on 
 		data retrieved from the SQL table eg. `time_until_disrupt`
 		```python
 		--8<--
-		examples/no_database.py
+		docs/examples/dummy_database.py
 		--8<--
 		```
