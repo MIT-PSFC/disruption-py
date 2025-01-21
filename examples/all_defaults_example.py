@@ -13,7 +13,6 @@ retrieval_settings = RetrievalSettings(
     efit_nickname_setting="disruption",
     # method selection
     run_methods=[],
-    run_tags=["all"],
     run_columns=[],
     only_requested_columns=False,
     custom_physics_methods=[],

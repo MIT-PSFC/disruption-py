@@ -11,8 +11,6 @@ retrieval_settings = RetrievalSettings(
     # uses the efit timebase when returning data
     time_setting="disruption_warning",
     efit_nickname_setting="disruption",
-    # run all available methods
-    run_tags=["all"],
 )
 shotlist = [1140819005, 1140819009]
 shot_data = get_shots_data(

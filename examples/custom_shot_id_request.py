@@ -32,7 +32,6 @@ class CustomShotlistSetting(ShotlistSetting):
 retrieval_settings = RetrievalSettings(
     # use the efit timebase preset for time_setting
     time_setting="efit",
-    run_tags=[],
     # only run thr get_ip_parameters method
     run_methods=["_get_ip_parameters"],
 )

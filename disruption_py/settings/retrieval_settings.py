@@ -24,11 +24,6 @@ from disruption_py.settings.time_setting import (
 )
 
 
-def default_tags():
-    """Return the default tag 'all'."""
-    return ["all"]
-
-
 class InterpolationMethod(Enum):
     """Enum for specifying interpolation methods."""
 
@@ -56,29 +51,23 @@ class RetrievalSettings:
     efit_nickname_setting : NicknameSetting, optional
         Nickname setting for retrieving efit tree data (default is "disruption").
     run_methods : list of str, optional
-        List of physics methods to run (default is an empty list). Named methods
-        will be run when retrieving data from  MDSplus for the shot. Named methods
-        must have the physics_method decorator and either be passed in the
-        `custom_physics_methods` argument or included in the built-in list. Defaults
-        to an empty list.
-    run_tags : list of str, optional
-        List of method tags to run (default is ["all"]). Methods used for retrieving
-        data from MDSplus can be tagged with the physics_method decorator and can
-        either be passed in the `custom_physics_methods` argument or included in
-        the built-in list. All methods with at least one included tag will be run.
+        List of physics methods to run (default is None). If None, and run_columns
+        is None, all methods will be run. Named methods will be run when retrieving
+        data from  MDSplus for the shot. Named methods must have the physics_method
+        decorator and either be passed in the `custom_physics_methods` argument
+        or included in the built-in method holders.
     run_columns : list of str, optional
-        List of columns to retrieve (default is an empty list). All methods with
-        the physics_method decorator referenced as containing an included column
-        will be run and all columns returned by those methods will be used. Methods
-        can either be passed in the `custom_physics_methods` argument or included
-        in the built-in list. If you wish to only return the requested columns,
-        set only_requested_columns to true in the retrieval_settings.
+        List of columns to retrieve (default is None). If None, and run_methods is
+        None, all methods will be run. If specified, all methods with the physics_method
+        decorator referencing the specified column will be run and all columns returned
+        by those methods will be used. If you wish to only return the requested columns,
+        set only_requested_columns to True in the retrieval_settings.
     only_requested_columns : bool, optional
         Whether to only include requested columns in the result (default is False).
     custom_physics_methods : list, optional
         List of custom physics methods (default is an empty list). The Methods are
         collected and run when retrieving data from MDSplus if the method is included
-        through either the run_methods, run_tags, run_columns setting.
+        through either the run_methods or run_columns setting.
     time_setting : TimeSetting, optional
         Time setting for the shot (default is "disruption_warning"). The retrieved
         data will be interpolated to this timebase. Can pass any `TimeSettingType`
@@ -100,9 +89,8 @@ class RetrievalSettings:
     efit_nickname_setting: NicknameSetting = "disruption"
 
     # Shot run settings
-    run_methods: List[str] = field(default_factory=list)
-    run_tags: List[str] = field(default_factory=default_tags)
-    run_columns: List[str] = field(default_factory=list)
+    run_methods: List[str] | None = None
+    run_columns: List[str] | None = None
     only_requested_columns: bool = False
     custom_physics_methods: list = field(default_factory=list)
 
@@ -170,4 +158,5 @@ class RetrievalSettings:
             self.time_setting, CacheTimeSetting
         ):
             self.time_setting = CacheTimeSetting(self.time_setting)
-        self.run_columns = [col.lower() for col in self.run_columns]
+        if self.run_columns is not None:
+            self.run_columns = [col.lower() for col in self.run_columns]

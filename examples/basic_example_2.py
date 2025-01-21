@@ -2,8 +2,7 @@
 
 """
 Example usage of `get_shots_data` when providing a pre-made shot list, cache data 
-and specifying only some methods to be run. Note how `run_tags=[]` in addition to 
-specifying `run_methods` & `run_columns`. Uses multiple processes for faster retrieval.
+and specifying only some methods to be run. Uses multiple processes for faster retrieval.
 """
 
 from disruption_py.settings.retrieval_settings import RetrievalSettings
@@ -17,7 +16,6 @@ retrieval_settings = RetrievalSettings(
     time_setting="efit",
     # run the get_ip_parameters method
     run_methods=["_get_ip_parameters"],
-    run_tags=[],
     # run the method that  returns the ne_peaking column
     run_columns=["ne_peaking"],
 )

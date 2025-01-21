@@ -144,7 +144,7 @@ def filter_methods_to_run(
     all_bound_method_metadata : list[BoundMethodMetadata]
         A list of bound method metadata instances.
     retrieval_settings : RetrievalSettings
-        The settings that dictate which methods should be run based on tags, methods,
+        The settings that dictate which methods should be run based on methods
         and columns.
     physics_method_params : PhysicsMethodParams
         The parameters that will be passed to the methods that are run.
@@ -154,10 +154,11 @@ def filter_methods_to_run(
     list
         A list of bound method metadata instances that are eligible to run.
     """
-    tags = retrieval_settings.run_tags
     methods = retrieval_settings.run_methods
-    columns = REQUIRED_COLS.union(retrieval_settings.run_columns)
-
+    if retrieval_settings.run_columns is not None:
+        columns = REQUIRED_COLS.union(retrieval_settings.run_columns)
+    else:
+        columns = None
     methods_to_run = []
     for bound_method_metadata in all_bound_method_metadata:
         # exclude if tokamak does not match
@@ -172,10 +173,7 @@ def filter_methods_to_run(
             continue
 
         should_run = (
-            (
-                tags is not None
-                and bool(set(bound_method_metadata.tags).intersection(tags))
-            )
+            (methods is None and columns is None)
             or (methods is not None and bound_method_metadata.name in methods)
             or (
                 columns is not None
@@ -267,7 +265,7 @@ def populate_shot(
 
     This function executes the physics methods included through the
     `custom_physics_methods` property of retrieval_settings or in the built-in list
-    of methods. It selects methods based on run_methods, run_tags, and run_columns
+    of methods. It selects methods based on run_methods and run_columns
     in retrieval_settings.
 
     Parameters
@@ -386,7 +384,10 @@ def populate_shot(
 
     local_data = pd.concat([pre_filled_shot_data] + filtered_methods, axis=1)
     local_data = local_data.loc[:, ~local_data.columns.duplicated()]
-    if retrieval_settings.only_requested_columns:
+    if (
+        retrieval_settings.only_requested_columns
+        and retrieval_settings.run_columns is not None
+    ):
         include_columns = list(
             REQUIRED_COLS.union(
                 set(retrieval_settings.run_columns).intersection(

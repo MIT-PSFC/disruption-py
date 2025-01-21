@@ -68,7 +68,6 @@ def _get_kappa_area(params: PhysicsMethodParams):
 retrieval_settings = RetrievalSettings(
     time_setting="efit",
     # run only the custom kappa_area method
-    run_tags=[],
     run_columns=["kappa_area"],
     only_requested_columns=True,
     custom_physics_methods=[_get_kappa_area],

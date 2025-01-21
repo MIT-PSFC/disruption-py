@@ -11,8 +11,6 @@ from disruption_py.workflow import get_shots_data
 retrieval_settings = RetrievalSettings(
     # uses the efit timebase when returning data
     time_setting="efit",
-    # run all available methods
-    run_tags=["all"],
 )
 shot_data = get_shots_data(
     tokamak="cmod",
