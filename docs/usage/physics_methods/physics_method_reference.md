@@ -14,7 +14,7 @@ Users of DisruptionPy can create their own custom physics methods by adding the 
 
 ### Physics methods structure
 
-::: examples.custom_physics_method.decorated_physics_method
+::: docs.examples.custom_physics_method.decorated_physics_method
     handler: python
 	options:
 	  heading_level: 4
@@ -45,7 +45,7 @@ def ***_method(params: PhysicsMethodParams) -> dict:
 
         ```python
         --8<--
-		examples/custom_physics_method.py:kappa_area_request_example
+		docs/examples/custom_physics_method.py:kappa_area_request_example
         --8<--
         ```
 

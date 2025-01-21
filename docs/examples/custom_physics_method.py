@@ -15,7 +15,7 @@ from disruption_py.workflow import get_shots_data
 def decorated_physics_method(params: PhysicsMethodParams) -> dict:
     """
     All parametrized methods passed to `get_shots_data` will be called once for every
-    shot retrieved. Decorated methods may call other decorated methods, however,
+    shot retrieved. Decorated methods may call other decorated methods, however
     execution order is not guaranteed as calls will be reordered to minimize resource
     usage based on the `physics_method` decorator.
 
@@ -40,8 +40,8 @@ def decorated_physics_method(params: PhysicsMethodParams) -> dict:
 
 
 # pylint: disable=duplicate-code
-@physics_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
-def _get_kappa_area(params: PhysicsMethodParams):
+@physics_method(columns=["custom_kappa_area"], tokamak=Tokamak.CMOD)
+def get_custom_kappa_area(params: PhysicsMethodParams):
     aminor = params.mds_conn.get_data(
         r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
     )
@@ -56,7 +56,7 @@ def _get_kappa_area(params: PhysicsMethodParams):
     aminor[aminor <= 0] = 0.001
     area[area <= 0] = 3.14 * 0.001**2
     return {
-        "kappa_area": params.interpolation_method(
+        "custom_kappa_area": params.interpolation_method(
             times, area / (np.pi * aminor**2), params.times
         )
     }
@@ -64,18 +64,12 @@ def _get_kappa_area(params: PhysicsMethodParams):
 
 # --8<-- [end:kappa_area_request_example]
 
-
 retrieval_settings = RetrievalSettings(
-    time_setting="efit",
-    # run only the custom kappa_area method
-    run_columns=["kappa_area"],
-    only_requested_columns=True,
-    custom_physics_methods=[_get_kappa_area],
+    custom_physics_methods=[get_custom_kappa_area],
 )
+
 shot_data = get_shots_data(
     tokamak="cmod",
     shotlist_setting=[1150805012],
     retrieval_settings=retrieval_settings,
-    output_setting="list",
-    num_processes=1,
 )
