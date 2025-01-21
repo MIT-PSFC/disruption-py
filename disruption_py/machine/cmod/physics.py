@@ -1918,8 +1918,8 @@ class CmodPhysicsMethods:
     @physics_method(columns=["thermal_quench_time_onset"], tokamak=Tokamak.CMOD)
     def get_thermal_quench_time_onset(params: PhysicsMethodParams):
         n_chords = 38
-        time_above_thresh = 0.001
-        normalized_threshold = 0.7
+        time_above_threshold = 0.0005
+        normalized_threshold = 0.5
         # Get magnetic axis data from EFIT
         thermal_quench_time_onset = np.full(len(params.times), np.nan)
         ip, magtime = params.mds_conn.get_data_with_dims(
@@ -1973,7 +1973,7 @@ class CmodPhysicsMethods:
         indx2 = np.argmax(t_sxr > params.disruption_time - 0.003)
         sxr_pre_disrupt = np.mean(core_sxr[indx1:indx2])
 
-        min_points_above_thresh = int(time_above_thresh / sample_time) + 1
+        min_points_above_thresh = int(time_above_threshold / sample_time) + 1
         i = np.argmax(t_sxr > params.disruption_time) - 1
         points_above_thresh = 0
         while (points_above_thresh < min_points_above_thresh) and (indx1 > 0):
