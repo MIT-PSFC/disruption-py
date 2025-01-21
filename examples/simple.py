@@ -25,12 +25,12 @@ def main(tokamak, methods, shots, processes, log_level):
         tokamak = resolve_tokamak_from_environment()
     if not shots:
         shots, *_ = get_tokamak_test_shotlist(tokamak)
-    tags = [] if methods else ["all"]
+    methods = methods or None
 
     out = get_shots_data(
         tokamak=tokamak,
         shotlist_setting=shots,
-        retrieval_settings=RetrievalSettings(run_methods=methods, run_tags=tags),
+        retrieval_settings=RetrievalSettings(run_methods=methods),
         num_processes=processes,
         log_settings=log_level,
         output_setting="dataframe",
