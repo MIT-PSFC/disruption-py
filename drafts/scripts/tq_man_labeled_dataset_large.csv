@@ -1,0 +1,101 @@
+shot,tq_onset_manual,tq_end_manual,tau_man,notes
+1050211022,0.92364,0.9245,0.00086,"VDE (logbook, Zcur), SXR has only 5 kHz time resolution"
+1050303003,1.3115,1.31213,0.00063,"SXR channel 15 junk, channels 21+ stay elevated until after CQ; SXR array 1 is fine"
+1050311006,0.98447,0.98612,0.00165,"VDE (logbook, Zcur)"
+1050311010,0.95391,0.95429,0.00038,"VDE (Zcur), sxr array 3 chords 21-38 weird"
+1050311013,0.71292,0.7159,0.00298,"2 stage thermal quench space 2 ms apart. sxr array 3 chords 21-38 junk and cut off after disruption, before 2 s. Since the core Te only recovers to 0.2 keV and they're only 2 ms apart, count the first as the onset of the thermal quench, sxr array 1 is junk for chords 1-16"
+1050311023,0.83874,0.8403,0.00156,"Two stage TQ, count second one bc much more significant. "
+1050317009,1.2435,1.2441,0.0006,"VDE (Zcur), Seems to be ECE cutoff at 1.21 s due to increased density since SXR and Wmhd remain high, SXR array 3 chords 21-38 bad"
+1050318035,1.09311,1.09371,0.0006,
+1050330006,0.45852,0.4591,0.00058,"Long current quench, reheats slightly after losing vertical control"
+1050330019,0.93663,0.93714,0.00051,"Long current quench, reheats slightly after losing vertical control"
+1050413021,0.82171,0.82312,0.00141,"VDE (Zcur), short delay between TQ and CQ"
+1050413031,0.88622,0.8874,0.00118,"Partial thermal collapse at 0.76, chords 21-38 bad for SXR array 3, VDE (Zcur)"
+1050415007,1.28862,1.28961,0.00099,"Very low SXR, used ECE to label TQ"
+1050415014,1.28606,1.287,0.00094,chords 21-38 for array 3 bad. 
+1050415016,0.6517,0.6521,0.0004,"ECE bad, LM + injection (logbook), Wmhd + SXR to label TQ"
+1050420010,0.98269,0.98428,0.00159,"chords 21-38 bad, w/ chord 37 contaminating signal"
+1050421007,0.51352,0.51462,0.0011,"multi-stage TQ, ECE more clearly shows fast quench"
+1050422009,0.41631,0.41709,0.00078,chords 21-38 bad
+1050427017,0.43769,0.4396,0.00191,Long TQ
+1050428006,0.99137,0.99234,0.00097,chords 21-38 bad
+1050429010,0.49331,0.49412,0.00081,
+1050429012,0.28238,0.28316,0.00078,"Using SXR array 1, ECE"
+1050526036,1.3143,1.3163,0.002,
+1050603004,0.8355,0.8359,0.0004,"ECE bad, VDE (Zcur)"
+1050603012,0.80791,0.80892,0.00101,
+1050614029,1.42371,1.42464,0.00093,
+1050628001,0.83778,0.83848,0.0007,"ECE off but FRC ECE good w/ high sampling rate, used for labeling TQ"
+1050722014,0.806,0.80644,0.00044,ECE bad
+1050728026,0.55615,0.5577,0.00155,ECE bad
+1050802017,0.80172,0.8026,0.00088,"Long CQ with two periods of reheating and minor TQs. Since nearly all thermal energy is lost in first quench (based on Wmhd, Te0 ECE and SXR, count first TQ as quench)"
+1050825013,0.86489,0.86633,0.00144,"Multi-stage TQ, w/ some reheating. Using quench corresponding to drop in nearly all thermal energy based on Wmhd, current profile flattenning (li drop) and Te0 from ECE"
+1051130014,0.64238,0.64337,0.00099,Low SXR signal with much more prominent and noisy recombination spike. Used Te0 from ECE for labeling
+1051205003,1.46251,1.46311,0.0006,"Low SXR signal, VDE (Zcur), hard to label start of TQ, using second quench based on current signal but could call either the TQ"
+1120620020,0.91289,0.91369,0.0008,
+1120717002,0.63004,0.63139,0.00135,"ECE bad, TS bad, two stage TQ, using second quench based on current signal but could call either the TQ"
+1120719001,0.35284,0.3534,0.00056,"ECE junk, core Te ~0.8keV (TS) so not much SXR w/ large recombination spikes"
+1120720014,0.8249,0.82546,0.00056,
+1120801007,0.559,0.55955,0.00055,
+1120801032,0.44886,0.44957,0.00071,
+1120802010,1.0045,1.00506,0.00056,ECE junk
+1120802012,1.00454,1.00507,0.00053,"ECE bad, FRC ECE good"
+1120814004,1.35529,1.35545,0.00016,"Two stage TQ, ECE cut off. Based on SXR and Wmhd, plasma loses almost all thermal energy in first quench, so count that as the main thermal quench. Used SXR arrays 1 and 3 for labeling"
+1120828032,1.00652,1.00684,0.00032,
+1120831017,1.43055,1.43115,0.0006,"VDE (Zcur), due to high densities, might be ECE cutoffs? Used array 3 and current spike to label TQ"
+1120904026,0.84987,0.85077,0.0009,Long TQ w/o clear fast quench
+1120907017,0.65738,0.65807,0.00069,"Seems to be large recombination spike based on ECE, Halpha"
+1120907034,0.7795,0.78027,0.00077,
+1120913013,0.64195,0.64285,0.0009,Large recombination spike
+1120914032,0.80876,0.81058,0.00182,
+1120914033,0.79132,0.79302,0.0017,
+1121002019,0.7049,0.70536,0.00046,
+1140205005,0.56382,0.56475,0.00093,~5 ms gap between thermal quench and current quench. Prominant recombination spike after plasma loses vertical control after TQ
+1140226016,1.02814,1.02933,0.00119,VDE (Zcur)
+1140522020,0.83987,0.84039,0.00052,Big SXR spike right before TQ and after TQ. Used ECE for labeling start of TQ
+1140612030,0.73338,0.73376,0.00038,"ECE bad, Bt=6.75 T"
+1140625019,1.13768,1.13807,0.00039,
+1140702004,1.15002,1.15071,0.00069,
+1140702009,1.35367,1.3547,0.00103,
+1140702012,1.42545,1.42612,0.00067,VDE (Zcur)
+1140702021,0.59482,0.59593,0.00111,
+1140715025,0.51048,0.51102,0.00054,VDE (Zcur)
+1140717002,1.03038,1.03094,0.00056,SXR 1 starts to decay slighlty earlier than SXR 3. Used SXR 1 to label start of TQ
+1140808007,1.36176,1.36316,0.0014,Low SXR signal (Te0 ~ 0.7 keV from TS before TQ)
+1140826003,0.49869,0.49987,0.00118,Low SXR signal (0.8 Te0 from ECE before TQ) w/ large recombination spike
+1150605021,1.00457,1.00492,0.00035,"ECE junk, FRC ECE good"
+1150610015,1.35946,1.3597,0.00024,"Low SXR signal, seems to be ECE cutoff near TQ, reheats during long CQ"
+1150618026,1.46119,1.46172,0.00053,"VDE (Zcur), Low SXR signal (Te0 ~0.9 keV from TS before TQ). Likely ECE cutoff bc below TS. Used SXR array 3 + Wmhd to label TQ but hard to label"
+1150618037,0.79636,0.79712,0.00076,Seems to be ECE cutoff based on low ECE Te0 and high density. TQ then large SXR spike during CQ when presumably plasma hits wall
+1150624012,1.22684,1.22721,0.00037,"Long TQ, used Te0 from ECE to label fast quench, though not obvious"
+1150714012,0.84158,0.84732,0.00574,"Mo injection causes disruption (logbook). Long, multi-stage TQ"
+1150716008,0.73641,0.73736,0.00095,
+1150723029,1.01989,1.02074,0.00085,
+1150812006,1.18052,1.18142,0.0009,VDE (Zcur)
+1150820018,1.2887,1.28933,0.00063,
+1150903011,0.36079,0.36167,0.00088,ECE bad based on TS
+1150916026,0.83339,0.83373,0.00034,"ECE drops before SXR drops. SXR coincides, Wmhd and li drop from EFIT, and current spike, so go with SXR and EFIT"
+1150922028,1.46561,1.46621,0.0006,
+1160503023,1.34057,1.34102,0.00045,VDE (Zcur)
+1160503026,1.18909,1.18989,0.0008,
+1160511011,1.02622,1.0266,0.00038,VDE (Zcur)
+1160511012,1.02632,1.02681,0.00049,
+1160511016,1.31545,1.31689,0.00144,"Low SXR signal, VDE"
+1160511027,1.30459,1.3052,0.00061,"ECE bad, low SXR"
+1160512002,0.52031,0.52115,0.00084,
+1160512003,1.51689,1.51812,0.00123,Used ECE to label since many recombination spikes
+1160513005,1.02145,1.02182,0.00037,ECE bad
+1160607031,1.37437,1.37472,0.00035,
+1160608017,1.06587,1.06607,0.0002,VDE (Zcur)
+1160617016,0.4609,0.46212,0.00122,"Two-stage TQ, count as one since only 1 ms apart"
+1160628003,1.01694,1.01712,0.00018,VDE (Zcur)
+1160707009,1.0157,1.01709,0.00139,"ECE bad based on TS, low SXR"
+1160712006,1.39563,1.39671,0.00108,Used ECE to label start of TQ
+1160714006,1.22157,1.22338,0.00181,"several stages, weird TQ, bad ECE. TS useful in locating start of fast quench"
+1160728023,1.23755,1.2381,0.00055,ECE falls slightly earlier. Used SXR since that coincides with current spike and drop in li
+1160804012,0.83763,0.83802,0.00039,
+1160816006,0.92713,0.92768,0.00055,Long TQ w/o clear sudden drops. Used ECE (w/ more clear sudden quench) to label onset
+1160816009,1.01015,1.0107,0.00055,
+1160824003,0.60757,0.60788,0.00031,"Long current quench, plasma reheats slighlty but vertically displaced by 10-20 cm so count first drop as TQ"
+1160901007,1.46962,1.46986,0.00024,
+1160909026,1.45389,1.45412,0.00023,VDE (Zcur)
