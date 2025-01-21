@@ -1,0 +1,16 @@
+shot_id,tq_onset_manual,tq_end_manual,notes
+1120217025,1.43916,1.43931,VDE
+1120503017,1.36452,1.36504,VDE
+1120601015,0.65674,0.65740,VDE
+1120904011,0.89220,0.89284,VDE
+1140226017,1.06172,1.06229,VDE
+1140515015,1.27064,1.27094,VDE
+1140731030,1.29189,1.29216,VDE
+1140827029,0.74660,0.74714,"VDE, Could label TQ from 0.73639 to 0.73714 based on SXR, Wmhd, and Halpha (significant recombination) with plasma reheating afterwards before another TQ and CQ"
+1150506022,0.72345,0.72360,VDE
+1150715008,0.82298,0.82327,VDE
+1120210022,1.23589,1.23648,"RC, Large sawtooth crash from 1.2276 to 1.2284 that expels some Wmhd (see ECE Te0 and Wmhd) but plasma recovers, then disrupts"
+1120831013,0.32076,0.32138,"RC, LM?, Large sawtooth crash 0.401 to 0.403 based on ECE, SXR, then core reheats and disrupts after"
+1120927005,0.41163,0.41388,RC
+1150714029,0.80724,0.80768,RC
+1160608008,0.85906,0.85961,"RC, Used ECE"
