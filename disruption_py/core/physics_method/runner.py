@@ -159,6 +159,7 @@ def filter_methods_to_run(
         columns = REQUIRED_COLS.union(retrieval_settings.run_columns)
     else:
         columns = None
+    only_excluded_methods_specified = all("~" in method for method in methods or [])
     methods_to_run = []
     for bound_method_metadata in all_bound_method_metadata:
         # exclude if tokamak does not match
@@ -172,13 +173,19 @@ def filter_methods_to_run(
         ):
             continue
 
+        both_none = methods is None and columns is None
+        method_specified = methods is not None and bound_method_metadata.name in methods
+        column_speficied = columns is not None and bool(
+            set(bound_method_metadata.columns).intersection(columns)
+        )
+        is_not_excluded = (
+            only_excluded_methods_specified
+            and not columns
+            and methods
+            and (("~" + bound_method_metadata.name) not in methods)
+        )
         should_run = (
-            (methods is None and columns is None)
-            or (methods is not None and bound_method_metadata.name in methods)
-            or (
-                columns is not None
-                and bool(set(bound_method_metadata.columns).intersection(columns))
-            )
+            both_none or method_specified or column_speficied or is_not_excluded
         )
 
         # reasons that methods should be exluded from should run
