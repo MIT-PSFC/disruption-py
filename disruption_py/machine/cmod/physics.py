@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from MDSplus import mdsExceptions
 from scipy.ndimage import median_filter
+import yaml
 
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
@@ -1918,8 +1919,12 @@ class CmodPhysicsMethods:
     @physics_method(columns=["thermal_quench_time_onset"], tokamak=Tokamak.CMOD)
     def get_thermal_quench_time_onset(params: PhysicsMethodParams):
         n_chords = 38
-        time_above_threshold = 0.0005
-        normalized_threshold = 0.5
+        with open("tq_params.yaml", "r") as f:
+            tq_params = yaml.safe_load(f)
+        time_above_threshold = tq_params['time_above_threshold']
+        normalized_threshold = tq_params['normalized_threshold']
+        print(time_above_threshold)
+        print(normalized_threshold)
         # Get magnetic axis data from EFIT
         thermal_quench_time_onset = np.full(len(params.times), np.nan)
         ip, magtime = params.mds_conn.get_data_with_dims(
@@ -1982,25 +1987,25 @@ class CmodPhysicsMethods:
             else:
                 points_above_thresh = 0
             i -= 1
-        time_tq_onset = t_sxr[i] + 0.001
+        time_tq_onset = t_sxr[i] + time_above_threshold
         #print("TQ Onset Time: " + str(time_tq_onset))
-        fig, axs = plt.subplots(4, 1, sharex=True)
-        axs[0].scatter(magtime, np.abs(ip)/1e6, marker='o')
-        axs[1].scatter(t_sxr, core_sxr, marker='.', s=10)
-        axs[2].scatter(t_sxr, core_sxr_index, marker='.', s=10)
-        axs[3].scatter(efit_time, z0, marker='o', s=10)
-        axs[1].axhline(sxr_pre_disrupt, linestyle='--')
-        for ax in axs:
-            #ax.axvline(time_tq_onset, linestyle='--', c='r', label='TQ Onset')
-            ax.axvline(params.disruption_time, linestyle='--', c='k', label='CQ')
-        axs[0].set_title('C-Mod Shot: ' + str(params.shot_id))
-        axs[0].set_ylabel('Ip [MA]')
-        axs[1].set_ylabel('max(SXR) [W/m^2]')
-        axs[3].set_ylabel('Z0 [m]')
-        axs[3].set_xlabel("Time [s]")
-        axs[1].legend()
+        # fig, axs = plt.subplots(4, 1, sharex=True)
+        # axs[0].scatter(magtime, np.abs(ip)/1e6, marker='o')
+        # axs[1].scatter(t_sxr, core_sxr, marker='.', s=10)
+        # axs[2].scatter(t_sxr, core_sxr_index, marker='.', s=10)
+        # axs[3].scatter(efit_time, z0, marker='o', s=10)
+        # axs[1].axhline(sxr_pre_disrupt, linestyle='--')
+        # for ax in axs:
+        #     #ax.axvline(time_tq_onset, linestyle='--', c='r', label='TQ Onset')
+        #     ax.axvline(params.disruption_time, linestyle='--', c='k', label='CQ')
+        # axs[0].set_title('C-Mod Shot: ' + str(params.shot_id))
+        # axs[0].set_ylabel('Ip [MA]')
+        # axs[1].set_ylabel('max(SXR) [W/m^2]')
+        # axs[3].set_ylabel('Z0 [m]')
+        # axs[3].set_xlabel("Time [s]")
+        # axs[1].legend()
 
-        plt.show()
+        # plt.show()
         thermal_quench_time_onset = time_tq_onset * np.ones(len(params.times))
         return {"thermal_quench_time_onset": thermal_quench_time_onset}
 

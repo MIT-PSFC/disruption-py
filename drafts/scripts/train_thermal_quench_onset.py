@@ -11,40 +11,38 @@ Last Major Update: Henry Wietfeldt (01/06/25)
 import logging
 
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
+import yaml
 
 from disruption_py.settings import LogSettings, RetrievalSettings
 from disruption_py.workflow import get_shots_data
 
-input_fn = 'drafts/scripts/tq_man_labeled_dataset.csv'
-output_fn = 'drafts/scripts/test_thermal_quench_onset_output.csv'
+input_fn = 'drafts/scripts/tq_man_labeled_dataset_large.csv'
+output_fn = 'drafts/scripts/train_thermal_quench_onset_output.csv'
 physics_method_script = 'disruption_py/machine/cmod/physics.py'
-time_above_threshold_scan = [0.001]
-normalized_threshold_scan = [0.7]
+time_above_threshold_scan = [0.000, 0.001]
+normalized_threshold_scan = [0.7, 1.0]
 
-def modify_script(target_script, time_above_threshold, normalized_threshold):
-    with open(target_script, "r") as file:
-        lines = file.readlines()
-    # Update the parameters in the target script
-    for i, line in enumerate(lines):
-        stripped_line = line.lstrip()
-        if stripped_line.startswith("time_above_threshold ="):
-            indent_length = len(line) - len(stripped_line)
-            indent = line[:indent_length]
-            lines[i] = f"{indent}time_above_threshold = {time_above_threshold}\n"
-        elif stripped_line.startswith("normalized_threshold ="):
-            indent_length = len(line) - len(stripped_line)
-            indent = line[:indent_length]
-            lines[i] = f"{indent}normalized_threshold = {normalized_threshold}\n"
-    # Write the modified lines back to the target script
-    with open(target_script, "w") as file:
-        file.writelines(lines)
+def modify_param_file(time_above_threshold, normalized_threshold, param_file='tq_params.yaml'):
+    """
+    Updates the YAML params file with the new threshold parameters.
+    """
+    # Load current thermal quench params
+    with open(param_file, "r") as f:
+        tq_params = yaml.safe_load(f)
+
+    # Modify the config
+    tq_params["time_above_threshold"] = time_above_threshold
+    tq_params["normalized_threshold"] = normalized_threshold
+
+    # Write it back to disk
+    with open(param_file, "w") as f:
+        yaml.safe_dump(tq_params, f)
 
 manual_db = pd.read_csv(input_fn)
 np.random.seed(42) # For reproducible output
-training_set = np.random.choice(manual_db['shot'].to_numpy(), size=70, replace=False)
-output_db = manual_db[manual_db['shot'].isin(training_set)]
+training_set = np.random.choice(manual_db['shot'].to_numpy(), size=10, replace=False)
+manual_db = manual_db[manual_db['shot'].isin(training_set)]
 
 signals = [
     "thermal_quench_time_onset"
@@ -60,17 +58,25 @@ retrieval_settings = RetrievalSettings(
     only_requested_columns=True,
 )
 
-
+scan_size = len(time_above_threshold_scan)*len(normalized_threshold_scan)
+trials = pd.MultiIndex.from_product([time_above_threshold_scan, normalized_threshold_scan], 
+                                    names=['time_above_threshold', 'normalized_threshold'])
+output_db = pd.DataFrame({'square_loss': np.zeros(scan_size),
+                          'square_loss_norm': np.zeros(scan_size),
+                          'late_square_loss': np.zeros(scan_size),
+                          'outliers': np.zeros(scan_size)
+                          }, index=trials)
+print(output_db)
 for tat in time_above_threshold_scan:
     for nt in normalized_threshold_scan:
-        modify_script(target_script=physics_method_script, 
-                      time_above_threshold=tat,
-                      normalized_threshold=nt
-        )
+        print("Should be using parameters: ")
+        print("time_above_threshold " + str(tat))
+        print("normalized threshold " + str(nt))
+        modify_param_file(time_above_threshold=tat, normalized_threshold=nt)
         data = get_shots_data(
             shotlist_setting=training_set,
             retrieval_settings=retrieval_settings,
-            log_settings=LogSettings(console_log_level=logging.ERROR),
+            log_settings=LogSettings(console_log_level=logging.WARNING),
             output_setting="dataframe",
             num_processes=20,
         )
@@ -78,8 +84,22 @@ for tat in time_above_threshold_scan:
         data = data.drop_duplicates(subset='shot', keep='first').drop(columns='time').rename(columns={'thermal_quench_time_onset':'tq_onset_auto'})
         data['time_above_threshold'] = tat
         data['normalized_threshold'] = nt
-        output_db = output_db.merge(data, how='left', on='shot')
-        output_db['tq_onset_auto'] = output_db['tq_onset_auto'].round(5)
-
-output_db.to_csv(output_fn, index=False, columns=['shot','tq_onset_manual','tq_end_manual','tq_onset_auto', 'time_above_threshold',
-                                                   'normalized_threshold', 'commit_hash', 'notes'])
+        print(data)
+        # Types of losses:
+        # Square loss, square loss normalized by width, late square loss, outliers (> 1 ms)
+        data = manual_db.merge(data, how='left', on='shot')
+        data['square_loss'] = (1000*(data['tq_onset_auto'] - data['tq_onset_manual']))**2 # in ms
+        data['square_loss_norm'] = data['square_loss'] / (1000*(data['tq_end_manual']-data['tq_onset_manual']))**2
+        data['late_square_loss'] = data['square_loss']
+        data.loc[data['tq_onset_auto'] < data['tq_onset_manual'], 'late_square_loss'] = 0
+        data['outliers'] = 0
+        data.loc[np.abs(data['tq_onset_auto'] - data['tq_onset_manual'])/(data['tq_end_manual']-data['tq_onset_manual']) > 2, 'outliers'] = 1
+        print(data[['shot', 'tq_onset_manual', 'tq_end_manual', 'tq_onset_auto', 'square_loss', 'square_loss_norm', 'late_square_loss', 'outliers']])
+        # Output stats
+        output_db.loc[(tat, nt), 'square_loss'] = data['square_loss'].sum() / len(training_set)
+        output_db.loc[(tat, nt), 'square_loss_norm'] = data['square_loss_norm'].sum() / len(training_set)
+        output_db.loc[(tat, nt), 'late_square_loss'] = data['late_square_loss'].sum() / len(training_set)
+        output_db.loc[(tat, nt), 'outliers'] = data['outliers'].sum() / len(training_set)
+        print(output_db)
+print(output_db)
+output_db.to_csv(output_fn, index=True)
