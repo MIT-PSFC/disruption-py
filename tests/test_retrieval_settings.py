@@ -207,6 +207,7 @@ def test_run_methods_and_columns(
     - If `run_methods` excludes a method returning a column specified in `run_columns`,
       the method is not run
     """
+    num_all_cols = 64
     retrieval_settings = RetrievalSettings(
         run_methods=run_methods,
         run_columns=run_columns,
@@ -218,6 +219,9 @@ def test_run_methods_and_columns(
         num_processes=2,
         log_settings="WARNING",
     )
-    if expected_cols is not None:
+    # Expected columns None means all columns (except forbidden cols) are returned
+    if expected_cols is None:
+        assert len(results.columns) == num_all_cols - len(forbidden_cols)
+    else:
         assert set(results.columns) == set(expected_cols)
     assert not any(col in results.columns for col in forbidden_cols)
