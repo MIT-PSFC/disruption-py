@@ -11,9 +11,11 @@ retrieval_settings = RetrievalSettings(
     # data settings
     cache_setting=None,
     efit_nickname_setting="disruption",
-    # method selection
-    run_methods=[],
-    run_columns=[],
+    # method selection.
+    # None (the default) means run all methods, so there is no need to specify
+    # run_methods or run_columns when you want to fetch all of the data.
+    run_methods=None,
+    run_columns=None,
     only_requested_columns=False,
     custom_physics_methods=[],
     # timebase settings
