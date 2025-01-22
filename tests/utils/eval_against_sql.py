@@ -18,6 +18,7 @@ from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings import LogSettings, RetrievalSettings
 from disruption_py.workflow import get_shots_data
 from tests.utils.data_difference import DataDifference
+from tests.utils.factory import get_tokamak_test_columns
 
 
 def get_fresh_data(
@@ -223,15 +224,7 @@ def eval_against_cache(
     cache_data = get_cached_from_fresh(tokamak, shotlist, fresh_data, test_columns)
 
     if test_columns is None:
-        fresh_columns = set().union(*(df.columns for df in fresh_data.values()))
-        cache_columns = set().union(*(df.columns for df in cache_data.values()))
-        # Handle when one of fresh/cache has no data
-        if len(fresh_columns) == 0:
-            test_columns = sorted(cache_columns)
-        elif len(cache_columns) == 0:
-            test_columns = sorted(fresh_columns)
-        else:
-            test_columns = sorted(fresh_columns.intersection(cache_columns))
+        test_columns = get_tokamak_test_columns(tokamak)
 
     data_differences = eval_shots_against_cache(
         shotlist=shotlist,
