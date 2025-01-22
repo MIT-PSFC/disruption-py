@@ -157,7 +157,7 @@ def main():
         "--log-level",
         type=str.lower,
         action="store",
-        default="DEBUG",
+        default="INFO",
         help="Console log level",
     )
 
