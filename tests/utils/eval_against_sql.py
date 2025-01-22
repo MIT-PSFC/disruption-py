@@ -26,11 +26,25 @@ def get_fresh_data(
     shotlist: List[int],
     log_file_path: str,
     test_columns: List[str] = None,
+    console_log_level: str = "WARNING",
 ) -> Dict[int, pd.DataFrame]:
     """
     Get fresh data for a list of shots.
 
-     Returns
+    Parameters
+    ----------
+    tokamak : Tokamak
+        The tokamak for which to retrieve data.
+    shotlist : List[int]
+        A list of shot IDs to retrieve data for.
+    log_file_path : str
+        The path to the log file.
+    test_columns : List[str], optional
+        A list of columns to retrieve.
+    console_log_level : str, optional
+        The log level for console output. Default is "WARNING".
+
+    Returns
     -------
     Dict[int, pd.DataFrame]
         Dictionary mapping shot IDs to retrieved fresh data.
@@ -52,7 +66,7 @@ def get_fresh_data(
             log_file_path=log_file_path,
             log_file_write_mode="w",
             file_log_level="DEBUG",
-            console_log_level="WARNING",
+            console_log_level=console_log_level,
         ),
     )
     return shot_data
@@ -181,6 +195,7 @@ def eval_against_cache(
     shotlist: List[int],
     expected_failure_columns: List[str],
     test_columns=None,
+    console_log_level="WARNING",
 ) -> Dict[int, pd.DataFrame]:
     """
     Evaluate fresh data against cached data for specified shots.
@@ -200,6 +215,8 @@ def eval_against_cache(
     test_columns : List[str], optional
         A list of columns to test against the cached data. If None, the function
         will determine the columns based on the available data.
+    console_log_level : str, optional
+        The log level for console output. Default is "WARNING".
 
     Returns
     -------
@@ -226,6 +243,7 @@ def eval_against_cache(
             shotlist=shotlist,
             log_file_path=os.path.join(tempfolder, "data_retrieval.log"),
             test_columns=test_columns,
+            console_log_level=console_log_level,
         )
     cache_data = get_cached_from_fresh(tokamak, shotlist, fresh_data, test_columns)
 
