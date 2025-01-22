@@ -165,7 +165,13 @@ def eval_shot_against_cache(
             failure=failure,
             mismatch_string=data_difference.column_mismatch_string,
         )
-    assert not data_difference.failed, "Comparison failed"
+    # Python tests should not assert for expected failures to only catch unexpected failures
+    # Pytest should assert for expected failures to confirm the test fails or
+    # to catch unexpected successes
+    if "PYTEST_CURRENT_TEST" in os.environ or not expect_failure:
+        assert (
+            not data_difference.failed
+        ), f"Comparison failed on shot {data_difference.shot_id}, column {data_difference.data_column}"
 
     return data_difference
 
