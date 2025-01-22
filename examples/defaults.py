@@ -10,17 +10,18 @@ from disruption_py.workflow import get_shots_data
 retrieval_settings = RetrievalSettings(
     # data settings
     cache_setting=None,
-    efit_nickname_setting="disruption",  # defaults to use "disruption" tree for disruptive shots
+    efit_nickname_setting="disruption",
     # method selection.
-    run_methods=None,  # defaults to run all available methods for the machine
-    run_columns=None,  # defaults to return all available columns for the machine
-    only_requested_columns=False,  # defaults to return all columns retrieved by the methods
+    # Defaults to run all available methods by setting run_methods and run_columns to None
+    run_methods=None,
+    run_columns=None,
+    only_requested_columns=False,
     custom_physics_methods=[],
     # timebase settings
-    time_setting="disruption_warning",  # defaults to return data in "disruption_warning" time base
-    domain_setting="full",  # defaults to get entire shot
+    time_setting="disruption_warning",
+    domain_setting="full",
     use_cache_setting_timebase=False,
-    interpolation_method="linear",  # defaults to use linear interpolation
+    interpolation_method="linear",
 )
 
 shot_data = get_shots_data(
