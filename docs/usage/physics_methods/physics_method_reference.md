@@ -63,10 +63,10 @@ For a physics method to be run after calling [`get_shots_data`][disruption_py.wo
 
 2. The method must have the `physics_method` decorator with its `tokamak` parameter either not set or set to the tokamak that you are retrieving data from.
 
-3. The method is included to run via either the `run_methods`, `run_tags`, or `run_columns` parameters of the shot settings.
+3. The method is included to run via either the `run_methods` or `run_columns` parameters of the shot settings.
     - To be included via `run_methods`, the method name must be listed inside of `run_methods`
-	- To be included via `run_tags`, the method must have a tag listed in the `tags` parameter of the `physics_method` decorator that is included in `run_tags`
 	- To be included via `run_columns`, the method must have a column list in the `columns` parameter of the `physics_method` decorator that is included in `run_columns`
+	- If neither `run_methods` nor `run_columns` is specified, all built-in methods will be run
 
 
 Once all designated methods have been collected, DisruptionPy optimizes their execution order to minimize resource usage by using the information supplied in the `physics_method` decorator. Once reordering is complete, the methods are run.

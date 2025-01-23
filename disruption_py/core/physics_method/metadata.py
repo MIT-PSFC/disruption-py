@@ -22,7 +22,6 @@ class MethodMetadata:
     cache: bool
     tokamaks: Union[Tokamak, List[Tokamak]]
     columns: Union[List[str], Callable]
-    tags: List[str]
 
     ALLOWED_UNRESOLVED = [
         "columns",
@@ -30,7 +29,6 @@ class MethodMetadata:
     ]
 
     def __post_init__(self):
-        object.__setattr__(self, "tags", self.tags or ["all"])
         object.__setattr__(self, "columns", self.columns or [])
 
 
