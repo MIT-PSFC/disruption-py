@@ -13,6 +13,7 @@ import logging
 import numpy as np
 import pandas as pd
 import yaml
+import MDSplus.mdsExceptions as mdse
 
 from disruption_py.settings import LogSettings, RetrievalSettings
 from disruption_py.workflow import get_shots_data
@@ -20,8 +21,8 @@ from disruption_py.workflow import get_shots_data
 input_fn = 'drafts/scripts/tq_man_labeled_dataset_large.csv'
 output_fn = 'drafts/scripts/train_thermal_quench_onset_output.csv'
 physics_method_script = 'disruption_py/machine/cmod/physics.py'
-time_above_threshold_scan = [0.000, 0.001]
-normalized_threshold_scan = [0.7, 1.0]
+time_above_threshold_scan = [0.005, 0.01]
+normalized_threshold_scan = [0.5, 0.7]
 
 def modify_param_file(time_above_threshold, normalized_threshold, param_file='tq_params.yaml'):
     """
@@ -41,7 +42,7 @@ def modify_param_file(time_above_threshold, normalized_threshold, param_file='tq
 
 manual_db = pd.read_csv(input_fn)
 np.random.seed(42) # For reproducible output
-training_set = np.random.choice(manual_db['shot'].to_numpy(), size=10, replace=False)
+training_set = np.random.choice(manual_db['shot'].to_numpy(), size=70, replace=False)
 manual_db = manual_db[manual_db['shot'].isin(training_set)]
 
 signals = [
@@ -69,22 +70,23 @@ output_db = pd.DataFrame({'square_loss': np.zeros(scan_size),
 print(output_db)
 for tat in time_above_threshold_scan:
     for nt in normalized_threshold_scan:
-        print("Should be using parameters: ")
-        print("time_above_threshold " + str(tat))
-        print("normalized threshold " + str(nt))
         modify_param_file(time_above_threshold=tat, normalized_threshold=nt)
-        data = get_shots_data(
-            shotlist_setting=training_set,
-            retrieval_settings=retrieval_settings,
-            log_settings=LogSettings(console_log_level=logging.WARNING),
-            output_setting="dataframe",
-            num_processes=20,
-        )
+        try:
+            data = get_shots_data(
+                shotlist_setting=training_set,
+                retrieval_settings=retrieval_settings,
+                log_settings=LogSettings(console_log_level=logging.WARNING),
+                output_setting="dataframe",
+                num_processes=20,
+            )
+        except mdse.MdsException as e:
+            print("Error " + str(tat) + ", " + str(nt))
+            print(e)
+            continue
         data = data.sort_values(by=['shot', 'time'])
         data = data.drop_duplicates(subset='shot', keep='first').drop(columns='time').rename(columns={'thermal_quench_time_onset':'tq_onset_auto'})
         data['time_above_threshold'] = tat
         data['normalized_threshold'] = nt
-        print(data)
         # Types of losses:
         # Square loss, square loss normalized by width, late square loss, outliers (> 1 ms)
         data = manual_db.merge(data, how='left', on='shot')
@@ -100,6 +102,5 @@ for tat in time_above_threshold_scan:
         output_db.loc[(tat, nt), 'square_loss_norm'] = data['square_loss_norm'].sum() / len(training_set)
         output_db.loc[(tat, nt), 'late_square_loss'] = data['late_square_loss'].sum() / len(training_set)
         output_db.loc[(tat, nt), 'outliers'] = data['outliers'].sum() / len(training_set)
+        output_db.to_csv(output_fn, index=True)
         print(output_db)
-print(output_db)
-output_db.to_csv(output_fn, index=True)

@@ -1923,17 +1923,15 @@ class CmodPhysicsMethods:
             tq_params = yaml.safe_load(f)
         time_above_threshold = tq_params['time_above_threshold']
         normalized_threshold = tq_params['normalized_threshold']
-        print(time_above_threshold)
-        print(normalized_threshold)
         # Get magnetic axis data from EFIT
         thermal_quench_time_onset = np.full(len(params.times), np.nan)
-        ip, magtime = params.mds_conn.get_data_with_dims(
-            r"\ip", tree_name="magnetics", astype="float64"
-        )
-        z0, efit_time = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
-        )  # [cm], [s]
-        z0 *= 0.01 # [cm] -> [m]
+        # ip, magtime = params.mds_conn.get_data_with_dims(
+        #     r"\ip", tree_name="magnetics", astype="float64"
+        # )
+        # z0, efit_time = params.mds_conn.get_data_with_dims(
+        #     r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
+        # )  # [cm], [s]
+        # z0 *= 0.01 # [cm] -> [m]
         # Get timebase of horizontal SXR array 
         if (params.shot_id > 1040000000 and params.shot_id < 1060000000):
             # Array 3 is bad for chords 15, 21-38 during 2005 campaign
@@ -1941,21 +1939,30 @@ class CmodPhysicsMethods:
             array_path = r"\top.brightnesses.array_1"
         else:
             array_path = r"\top.brightnesses.array_3"
-        chord_01, t_sxr = params.mds_conn.get_data_with_dims(
-            array_path + ":chord_01",
-            tree_name="xtomo",
-            astype="float64",
-        ) # Units: W/m^2, s
+        try:
+            chord_01, t_sxr = params.mds_conn.get_data_with_dims(
+                array_path + ":chord_01",
+                tree_name="xtomo",
+                astype="float64",
+            ) # Units: W/m^2, s
+        except mdsExceptions.MdsException:
+            print(params.shot_id)
+            params.logger.debug("Failed to get SXR " + array_path + " data")
+            return {"thermal_quench_time_onset": np.full(len(params.times), np.nan)}
         valid_times = (t_sxr > 0) & (t_sxr < 2.)
         t_sxr = t_sxr[valid_times]
         sxr = np.zeros(shape=(n_chords, len(t_sxr)))
         sxr[0] = chord_01[valid_times]
         for i in range(1, n_chords):
-            chord, t_chord = params.mds_conn.get_data_with_dims(
-                array_path + ":chord_" + f"{i+1:02}",
-                tree_name="xtomo",
-                astype="float64",
-            )
+            try:
+                chord, t_chord = params.mds_conn.get_data_with_dims(
+                    array_path + ":chord_" + f"{i+1:02}",
+                    tree_name="xtomo",
+                    astype="float64",
+                )
+            except mdsExceptions.MdsException:
+                params.logger.debug("Failed to get SXR " + array_path + " chord " + str(i+1) + " data")
+                sxr[i] = 0.
             # Subtract constant background
             chord = chord - np.mean(chord[t_chord < 0.])
             # Occasionally the time bases of a chord are of a different length
@@ -1981,7 +1988,7 @@ class CmodPhysicsMethods:
         min_points_above_thresh = int(time_above_threshold / sample_time) + 1
         i = np.argmax(t_sxr > params.disruption_time) - 1
         points_above_thresh = 0
-        while (points_above_thresh < min_points_above_thresh) and (indx1 > 0):
+        while (points_above_thresh < min_points_above_thresh) and (i > 0):
             if (core_sxr[i] > normalized_threshold*sxr_pre_disrupt):
                 points_above_thresh = points_above_thresh + 1
             else:
