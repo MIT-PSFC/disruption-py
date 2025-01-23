@@ -8,11 +8,10 @@ from disruption_py.settings import LogSettings, RetrievalSettings
 from disruption_py.workflow import get_shots_data
 
 retrieval_settings = RetrievalSettings(
-    # data settings
     cache_setting=None,
     efit_nickname_setting="disruption",
-    # method selection.
-    # Defaults to run all available methods by setting run_methods and run_columns to None
+    # method/column selection
+    # default None: all methods/columns
     run_methods=None,
     run_columns=None,
     only_requested_columns=False,
@@ -21,23 +20,29 @@ retrieval_settings = RetrievalSettings(
     time_setting="disruption_warning",
     domain_setting="full",
     use_cache_setting_timebase=False,
+    # not yet implemented
     interpolation_method="linear",
 )
 
 shot_data = get_shots_data(
-    shotlist_setting=[],  # required
-    tokamak=None,  # defaults to detect from environment
-    database_initializer=None,  # defaults to SQL connection for tokamak
-    mds_connection_initializer=None,  # defaults to MDSplus server string for tokamak
+    # required argument
+    shotlist_setting=[],
+    # default None: detect from environment
+    tokamak=None,
+    # default None: standard SQL/MDSplus connection
+    database_initializer=None,
+    mds_connection_initializer=None,
     retrieval_settings=retrieval_settings,
     output_setting="dataframe",
     num_processes=1,
     log_settings=LogSettings(
-        log_file_path=None,  # defaults to "output.log" in tmp folder for the session
+        # default None: "output.log" in temporary session folder
+        log_file_path=None,
         file_log_level="DEBUG",
         log_file_write_mode="w",
         log_to_console=True,
-        console_log_level=None,  # defaults to VERBOSE but varies based on number of shots
+        # default None: VERBOSE, or higher based on number of shots
+        console_log_level=None,
         use_custom_logging=False,
     ),
 )
