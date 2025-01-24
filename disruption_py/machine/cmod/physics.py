@@ -1921,7 +1921,7 @@ class CmodPhysicsMethods:
         n_chords = 38
         with open("tq_params.yaml", "r") as f:
             tq_params = yaml.safe_load(f)
-        time_above_threshold = tq_params['time_above_threshold']
+        min_time_above_threshold = tq_params['min_time_above_threshold']
         normalized_threshold = tq_params['normalized_threshold']
         # Get magnetic axis data from EFIT
         thermal_quench_time_onset = np.full(len(params.times), np.nan)
@@ -1953,6 +1953,7 @@ class CmodPhysicsMethods:
         t_sxr = t_sxr[valid_times]
         sxr = np.zeros(shape=(n_chords, len(t_sxr)))
         sxr[0] = chord_01[valid_times]
+        # TODO: Method to ensure chord isn't noise (autocorrelation?, ex: 1050311010, 1050311013, 105311023)
         for i in range(1, n_chords):
             try:
                 chord, t_chord = params.mds_conn.get_data_with_dims(
@@ -1972,10 +1973,28 @@ class CmodPhysicsMethods:
             if len(chord[valid_times]) == sxr.shape[1]:
                 sxr[i] = chord[valid_times]
         sxr_prog_core = sxr[17]
-        # Median filter for each channel to reduce noise
         sample_time = t_sxr[1] - t_sxr[0]
-        smooth_width = int(0.000150 / sample_time) + 1
-        sxr = median_filter(sxr, size=(1, smooth_width), mode='constant', cval=0.)
+        # Discard chords dominated by noise using the chord's autocorrelation
+        # Only do this for 2005 shots because I've found those shots frequently
+        # have bad chords compared to 2012-2016 chords, for which window smoothing
+        # should do the trick.
+        if (params.shot_id < 1060000000):
+            noise_autorr_cutoff = 0.01 # s, good chords should be 100's of s
+            for i, chord in enumerate(sxr):
+                autocorr = np.correlate(chord, chord, mode='full')
+                autocorr = autocorr / np.max(autocorr)  # Normalize
+                lags = np.arange(-len(chord) + 1, len(chord))
+                #print(str(i+1) + ": " + str(autocorr))
+                #print(str(i+1) + ": " + str(np.mean(chord)))
+                index_no_lag = np.argmax(autocorr)
+                index_decay = np.argmax(autocorr[index_no_lag:] < 0)
+                if (index_decay*sample_time < noise_autorr_cutoff):
+                    sxr[i] = 0.
+                    # print(str(params.shot_id) + " chord " + str(i+1) + " is bad (noisy)")
+        # Median filter for each channel to reduce noise
+        else:
+            smooth_width = int(0.000150 / sample_time) + 1
+            sxr = median_filter(sxr, size=(1, smooth_width), mode='constant', cval=0.)
         core_sxr = np.max(sxr, axis=0)
         core_sxr_index = np.argmax(sxr, axis=0)
 
@@ -1985,17 +2004,24 @@ class CmodPhysicsMethods:
         indx2 = np.argmax(t_sxr > params.disruption_time - 0.003)
         sxr_pre_disrupt = np.mean(core_sxr[indx1:indx2])
 
-        min_points_above_thresh = int(time_above_threshold / sample_time) + 1
+        # min_points_above_thresh = int(time_above_threshold / sample_time) + 1
+        # print(time_above_threshold)
+        # print(sample_time)
+        # print(min_points_above_thresh)
         i = np.argmax(t_sxr > params.disruption_time) - 1
+        # print("Current Quench Time: " + str(t_sxr[i]))
         points_above_thresh = 0
-        while (points_above_thresh < min_points_above_thresh) and (i > 0):
+        # TODO: Fix issue where t_sxr isn't uniformly sampled (ex: 1050722014)
+        time_above_threshold = 0
+        while (time_above_threshold < min_time_above_threshold) and (i > 0):
             if (core_sxr[i] > normalized_threshold*sxr_pre_disrupt):
-                points_above_thresh = points_above_thresh + 1
+                time_above_threshold = time_above_threshold + t_sxr[i+1] - t_sxr[i]
             else:
-                points_above_thresh = 0
+                time_above_threshold = 0
             i -= 1
         time_tq_onset = t_sxr[i] + time_above_threshold
-        #print("TQ Onset Time: " + str(time_tq_onset))
+
+        # print("TQ Onset Time: " + str(time_tq_onset))
         # fig, axs = plt.subplots(4, 1, sharex=True)
         # axs[0].scatter(magtime, np.abs(ip)/1e6, marker='o')
         # axs[1].scatter(t_sxr, core_sxr, marker='.', s=10)
@@ -2003,7 +2029,7 @@ class CmodPhysicsMethods:
         # axs[3].scatter(efit_time, z0, marker='o', s=10)
         # axs[1].axhline(sxr_pre_disrupt, linestyle='--')
         # for ax in axs:
-        #     #ax.axvline(time_tq_onset, linestyle='--', c='r', label='TQ Onset')
+        #     ax.axvline(time_tq_onset, linestyle='--', c='r', label='TQ Onset')
         #     ax.axvline(params.disruption_time, linestyle='--', c='k', label='CQ')
         # axs[0].set_title('C-Mod Shot: ' + str(params.shot_id))
         # axs[0].set_ylabel('Ip [MA]')

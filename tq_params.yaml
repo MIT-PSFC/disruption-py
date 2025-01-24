@@ -1,2 +1,2 @@
-normalized_threshold: 0.75
-time_above_threshold: 0.005750000000000003
+min_time_above_threshold: 0.004
+normalized_threshold: 0.5

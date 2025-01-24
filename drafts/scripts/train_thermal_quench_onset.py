@@ -21,10 +21,10 @@ from disruption_py.workflow import get_shots_data
 input_fn = 'drafts/scripts/tq_man_labeled_dataset_large.csv'
 output_fn = 'drafts/scripts/train_thermal_quench_onset_output.csv'
 physics_method_script = 'disruption_py/machine/cmod/physics.py'
-time_above_threshold_scan = [0.004]
+min_time_above_threshold_scan = [0.004]
 normalized_threshold_scan = [0.5]
 
-def modify_param_file(time_above_threshold, normalized_threshold, param_file='tq_params.yaml'):
+def modify_param_file(min_time_above_threshold, normalized_threshold, param_file='tq_params.yaml'):
     """
     Updates the YAML params file with the new threshold parameters.
     """
@@ -33,7 +33,7 @@ def modify_param_file(time_above_threshold, normalized_threshold, param_file='tq
         tq_params = yaml.safe_load(f)
 
     # Modify the config
-    tq_params["time_above_threshold"] = time_above_threshold
+    tq_params["min_time_above_threshold"] = min_time_above_threshold
     tq_params["normalized_threshold"] = normalized_threshold
 
     # Write it back to disk
@@ -59,18 +59,18 @@ retrieval_settings = RetrievalSettings(
     only_requested_columns=True,
 )
 
-scan_size = len(time_above_threshold_scan)*len(normalized_threshold_scan)
-trials = pd.MultiIndex.from_product([time_above_threshold_scan, normalized_threshold_scan], 
-                                    names=['time_above_threshold', 'normalized_threshold'])
+scan_size = len(min_time_above_threshold_scan)*len(normalized_threshold_scan)
+trials = pd.MultiIndex.from_product([min_time_above_threshold_scan, normalized_threshold_scan], 
+                                    names=['min_time_above_threshold', 'normalized_threshold'])
 output_db = pd.DataFrame({'square_loss': np.zeros(scan_size),
                           'square_loss_norm': np.zeros(scan_size),
                           'late_square_loss': np.zeros(scan_size),
                           'outliers': np.zeros(scan_size)
                           }, index=trials)
 print(output_db)
-for tat in time_above_threshold_scan:
+for mtat in min_time_above_threshold_scan:
     for nt in normalized_threshold_scan:
-        modify_param_file(time_above_threshold=tat, normalized_threshold=nt)
+        modify_param_file(min_time_above_threshold=mtat, normalized_threshold=nt)
         try:
             data = get_shots_data(
                 shotlist_setting=training_set,
@@ -80,12 +80,12 @@ for tat in time_above_threshold_scan:
                 num_processes=20,
             )
         except mdse.MdsException as e:
-            print("Error " + str(tat) + ", " + str(nt))
+            print("Error " + str(mtat) + ", " + str(nt))
             print(e)
             continue
         data = data.sort_values(by=['shot', 'time'])
         data = data.drop_duplicates(subset='shot', keep='first').drop(columns='time').rename(columns={'thermal_quench_time_onset':'tq_onset_auto'})
-        data['time_above_threshold'] = tat
+        data['min_time_above_threshold'] = mtat
         data['normalized_threshold'] = nt
         # Types of losses:
         # Square loss, square loss normalized by width, late square loss, outliers (> 1 ms)
@@ -98,9 +98,9 @@ for tat in time_above_threshold_scan:
         data.loc[np.abs(data['tq_onset_auto'] - data['tq_onset_manual'])/(data['tq_end_manual']-data['tq_onset_manual']) > 2, 'outliers'] = 1
         print(data[['shot', 'tq_onset_manual', 'tq_end_manual', 'tq_onset_auto', 'square_loss', 'square_loss_norm', 'late_square_loss', 'outliers']])
         # Output stats
-        output_db.loc[(tat, nt), 'square_loss'] = data['square_loss'].sum() / len(training_set)
-        output_db.loc[(tat, nt), 'square_loss_norm'] = data['square_loss_norm'].sum() / len(training_set)
-        output_db.loc[(tat, nt), 'late_square_loss'] = data['late_square_loss'].sum() / len(training_set)
-        output_db.loc[(tat, nt), 'outliers'] = data['outliers'].sum() / len(training_set)
+        output_db.loc[(mtat, nt), 'square_loss'] = data['square_loss'].sum() / len(training_set)
+        output_db.loc[(mtat, nt), 'square_loss_norm'] = data['square_loss_norm'].sum() / len(training_set)
+        output_db.loc[(mtat, nt), 'late_square_loss'] = data['late_square_loss'].sum() / len(training_set)
+        output_db.loc[(mtat, nt), 'outliers'] = data['outliers'].sum() / len(training_set)
         output_db.to_csv(output_fn, index=True)
         print(output_db)

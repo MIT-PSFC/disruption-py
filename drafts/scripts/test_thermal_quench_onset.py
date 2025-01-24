@@ -26,6 +26,7 @@ manual_db = pd.read_csv(input_fn)
 #shotlist = manual_db['shot'].to_numpy()
 np.random.seed(42) # For reproducible output
 training_set = np.random.choice(manual_db['shot'].to_numpy(), size=70, replace=False)
+testing_set = np.setdiff1d(manual_db['shot'].to_numpy(), training_set)
 
 signals = [
     "thermal_quench_time_onset"
