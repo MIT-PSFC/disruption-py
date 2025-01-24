@@ -21,8 +21,8 @@ from disruption_py.workflow import get_shots_data
 input_fn = 'drafts/scripts/tq_man_labeled_dataset_large.csv'
 output_fn = 'drafts/scripts/train_thermal_quench_onset_output.csv'
 physics_method_script = 'disruption_py/machine/cmod/physics.py'
-time_above_threshold_scan = [0.005, 0.01]
-normalized_threshold_scan = [0.5, 0.7]
+time_above_threshold_scan = [0.004]
+normalized_threshold_scan = [0.5]
 
 def modify_param_file(time_above_threshold, normalized_threshold, param_file='tq_params.yaml'):
     """

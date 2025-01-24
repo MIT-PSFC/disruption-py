@@ -18,12 +18,14 @@ import MDSplus as mds
 from disruption_py.settings import LogSettings, RetrievalSettings
 from disruption_py.workflow import get_shots_data
 
-input_fn = 'drafts/scripts/tq_man_labeled_dataset.csv'
-output_fn = 'drafts/scripts/test_thermal_quench_onset_output.csv'
+input_fn = 'drafts/scripts/tq_man_labeled_dataset_large.csv'
+output_fn = 'drafts/scripts/test_thermal_quench_onset_large_output.csv'
 
 manual_db = pd.read_csv(input_fn)
 
-shotlist = manual_db['shot'].to_numpy()
+#shotlist = manual_db['shot'].to_numpy()
+np.random.seed(42) # For reproducible output
+training_set = np.random.choice(manual_db['shot'].to_numpy(), size=70, replace=False)
 
 signals = [
     "thermal_quench_time_onset"
@@ -40,9 +42,9 @@ retrieval_settings = RetrievalSettings(
 )
 
 data = get_shots_data(
-    shotlist_setting=shotlist,
+    shotlist_setting=training_set,
     retrieval_settings=retrieval_settings,
-    log_settings=LogSettings(console_log_level=logging.WARNING),
+    log_settings=LogSettings(console_log_level=logging.DEBUG),
     output_setting="dataframe",
     num_processes=20,
 )
