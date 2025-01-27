@@ -607,8 +607,8 @@ class BatchedCSVOutputSetting(OutputSetting):
         params : OutputSettingParams
             The parameters containing the result to be outputted.
         """
-        if self.output_shot_count == 0:
-            self.columns = params.result.columns
+        # if self.output_shot_count == 0:
+        #     self.columns = params.result.columns
 
         # Append the current result to the batch data list
         self.batch_data.append(params.result)
@@ -627,6 +627,8 @@ class BatchedCSVOutputSetting(OutputSetting):
         file_exists = os.path.isfile(self.filepath)
         combined_df = safe_df_concat(pd.DataFrame(), self.batch_data)
         # Enforce the to-be-saved combined_df to have the same column order as the first shot
+        if self.columns is None:
+            self.columns = combined_df.columns
         combined_df = combined_df[self.columns]
         combined_df.to_csv(
             self.filepath, mode="a", index=False, header=(not file_exists)
