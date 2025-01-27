@@ -804,7 +804,23 @@ class CmodPhysicsMethods:
         1150605, and the different applied A-coil phasings do indeed show up on
         the n=1 signal.
 
-        N=1 toroidal assymmetry in the magnetic fields
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the calculated n=1 mode amplitude (`n_equal_1_mode`)
+            and phase (`n_equal_1_phase`), the n=1 mode amplitude normalized to the toroidal
+            field strength (`n_equal_1_normalized`), and the toroidal field strength (`bt`).
+
+        References
+        -------
+        - original source: [get_n_equal_1_amplitude.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_n_equal_1_amplitude.m)
+        - issues: #[211](https://github.com/MIT-PSFC/disruption-py/issues/211)
+
         """
         # These sensors are placed toroidally around the machine. Letters refer to
         # the 2 ports the sensors were placed between.
