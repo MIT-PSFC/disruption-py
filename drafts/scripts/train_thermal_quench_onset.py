@@ -21,8 +21,10 @@ from disruption_py.workflow import get_shots_data
 input_fn = 'drafts/scripts/tq_man_labeled_dataset_large.csv'
 output_fn = 'drafts/scripts/train_thermal_quench_onset_output.csv'
 physics_method_script = 'disruption_py/machine/cmod/physics.py'
-min_time_above_threshold_scan = [0.004]
-normalized_threshold_scan = [0.5]
+training_frac = 0.7
+seed=42
+min_time_above_threshold_scan = np.arange(0, 0.0065, 0.0005).append(0.010)
+normalized_threshold_scan = np.arange(0.4, 0.8, 0.05)
 
 def modify_param_file(min_time_above_threshold, normalized_threshold, param_file='tq_params.yaml'):
     """
@@ -41,9 +43,10 @@ def modify_param_file(min_time_above_threshold, normalized_threshold, param_file
         yaml.safe_dump(tq_params, f)
 
 manual_db = pd.read_csv(input_fn)
-np.random.seed(42) # For reproducible output
-training_set = np.random.choice(manual_db['shot'].to_numpy(), size=70, replace=False)
-manual_db = manual_db[manual_db['shot'].isin(training_set)]
+training_set_05 = manual_db[manual_db['shot'] < 1060000000].sample(frac=training_frac, random_state=seed)
+training_set_12_to_16 = manual_db[manual_db['shot'] > 1120000000].sample(frac=training_frac, random_state=seed)
+training_set = pd.concat([training_set_05, training_set_12_to_16])
+#manual_db = manual_db[manual_db['shot'].isin(training_set)]
 
 signals = [
     "thermal_quench_time_onset"
@@ -73,7 +76,7 @@ for mtat in min_time_above_threshold_scan:
         modify_param_file(min_time_above_threshold=mtat, normalized_threshold=nt)
         try:
             data = get_shots_data(
-                shotlist_setting=training_set,
+                shotlist_setting=training_set['shot'].to_numpy(),
                 retrieval_settings=retrieval_settings,
                 log_settings=LogSettings(console_log_level=logging.WARNING),
                 output_setting="dataframe",
@@ -88,7 +91,7 @@ for mtat in min_time_above_threshold_scan:
         data['min_time_above_threshold'] = mtat
         data['normalized_threshold'] = nt
         # Types of losses:
-        # Square loss, square loss normalized by width, late square loss, outliers (> 1 ms)
+        # Square loss, square loss normalized by width, late square loss, outliers, square_loss_non_outliers
         data = manual_db.merge(data, how='left', on='shot')
         data['square_loss'] = (1000*(data['tq_onset_auto'] - data['tq_onset_manual']))**2 # in ms
         data['square_loss_norm'] = data['square_loss'] / (1000*(data['tq_end_manual']-data['tq_onset_manual']))**2
@@ -102,5 +105,7 @@ for mtat in min_time_above_threshold_scan:
         output_db.loc[(mtat, nt), 'square_loss_norm'] = data['square_loss_norm'].sum() / len(training_set)
         output_db.loc[(mtat, nt), 'late_square_loss'] = data['late_square_loss'].sum() / len(training_set)
         output_db.loc[(mtat, nt), 'outliers'] = data['outliers'].sum() / len(training_set)
+        output_db.loc[(mtat, nt), 'square_loss_non_outliers'] = data[data['outliers']==0]['square_loss'].sum()/ len(training_set)
+        output_db.loc[(mtat, nt), 'late_square_loss_non_outliers'] = data[data['outliers']==0]['late_square_loss'].sum()/ len(training_set)
         output_db.to_csv(output_fn, index=True)
         print(output_db)

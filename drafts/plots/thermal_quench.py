@@ -18,7 +18,7 @@ from disruption_py.workflow import get_shots_data
 
 #SHOT_ID = 1140515015
 #SHOT_ID = 1140827029
-SHOT_ID = 1150618026
+SHOT_ID = 1140522020
 signals = [
     "ip",
     "zcur",
