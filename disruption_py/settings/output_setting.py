@@ -607,9 +607,6 @@ class BatchedCSVOutputSetting(OutputSetting):
         params : OutputSettingParams
             The parameters containing the result to be outputted.
         """
-        # if self.output_shot_count == 0:
-        #     self.columns = params.result.columns
-
         # Append the current result to the batch data list
         self.batch_data.append(params.result)
 
