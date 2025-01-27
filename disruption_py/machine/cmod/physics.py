@@ -2012,6 +2012,8 @@ class CmodPhysicsMethods:
 
         [^1]: http://wiki.fusenet.eu/fusionwiki/index.php/Beta
 
+        [^1]: http://wiki.fusenet.eu/fusionwiki/index.php/Beta
+
         Parameters
         ----------
         params : PhysicsMethodParams
