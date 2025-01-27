@@ -1807,7 +1807,7 @@ class CmodPhysicsMethods:
         Calculate the normalized beta (beta_n) also known as the Troyon factor.
 
         beta_n is defined as the total plasma beta (p/(B^2/2mu_0))
-        divided by Ip [MA]/(a*Bt).
+        divided by Ip [MA]/(a*Bt) [^1].
 
         Since the total beta is dominated by the toroidal beta
         (1/beta_tot = 1/beta_tor + 1/beta_pol), we can approximate beta_n
@@ -1817,6 +1817,8 @@ class CmodPhysicsMethods:
         To make the input data consistent with EFIT_AEQDSK:BETAN, we use
         CPASMA and BTAXP from EFIT_AEQDSK instead of IP and BTOR from MAGNETICS
         for Ip and Bt.
+
+        [^1]: http://wiki.fusenet.eu/fusionwiki/index.php/Beta
 
         Parameters
         ----------
@@ -1830,9 +1832,8 @@ class CmodPhysicsMethods:
 
         References
         ----------
-        - http://wiki.fusenet.eu/fusionwiki/index.php/Beta
+        - pull request: #[343](https://github.com/MIT-PSFC/disruption-py/pull/343)
 
-        Last major update by William Wei on 11/6/24
         """
         # Get signals from EFIT tree
         beta_t, efittime = params.mds_conn.get_data_with_dims(
