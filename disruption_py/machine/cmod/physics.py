@@ -506,7 +506,8 @@ class CmodPhysicsMethods:
     )
     def get_ohmic_parameters(params: PhysicsMethodParams):
         """
-        Retrieve and calculate ohmic heating parameters.
+        Calculate the ohmic power from the loop voltage, inductive voltage, and
+        plasma current.
 
         Parameters
         ----------
@@ -518,6 +519,11 @@ class CmodPhysicsMethods:
         dict
             A dictionary containing the calculated ohmic parameters, including
             "p_oh" and "v_loop".
+
+        References
+        -------
+        - original source: [get_P_ohm.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_P_ohm.m)
+        - pull requests: #[367](https://github.com/MIT-PSFC/disruption-py/pull/367)
         """
         try:
             v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
