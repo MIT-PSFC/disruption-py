@@ -25,11 +25,12 @@ manual_db = pd.read_csv(input_fn)
 
 #shotlist = manual_db['shot'].to_numpy()
 np.random.seed(42) # For reproducible output
-training_set = np.random.choice(manual_db['shot'].to_numpy(), size=70, replace=False)
+training_set = np.random.choice(manual_db['shot'].to_numpy(), size=10, replace=False)
 testing_set = np.setdiff1d(manual_db['shot'].to_numpy(), training_set)
 
 signals = [
-    "thermal_quench_time_onset"
+    "thermal_quench_time_onset",
+    "time_until_disrupt"
 ]
 
 # default method for pulling disruption-py data
@@ -50,8 +51,10 @@ data = get_shots_data(
     num_processes=20,
 )
 
+data['t_cq'] = data['time'] + data['time_until_disrupt']
 data = data.sort_values(by=['shot', 'time'])
-data = data.drop_duplicates(subset='shot', keep='first').drop(columns='time').rename(columns={'thermal_quench_time_onset':'tq_onset_auto'})
-output_db = manual_db.merge(data, how='left', on='shot')
+data = data.drop_duplicates(subset='shot', keep='first').drop(columns=['time', 'time_until_disrupt']).rename(columns={'thermal_quench_time_onset':'tq_onset_auto'})
+print(data)
+output_db = manual_db.merge(data, how='outer', on='shot')
 output_db['tq_onset_auto'] = output_db['tq_onset_auto'].round(5)
-output_db.to_csv(output_fn, index=False, columns=['shot','tq_onset_manual','tq_end_manual','tq_onset_auto', 'commit_hash', 'notes'])
+output_db.to_csv(output_fn, index=False, columns=['shot','tq_onset_manual','tq_end_manual','tq_onset_auto', 't_cq', 'commit_hash', 'notes'])
