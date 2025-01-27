@@ -1251,7 +1251,11 @@ class CmodPhysicsMethods:
     def get_peaking_factors(params: PhysicsMethodParams):
         """
         Calculate peaking factors for electron density, electron temperature, and
-        pressure.
+        pressure from Thomson Scattering measurements
+
+        Because the TS chords have uneven spacings, measurements are first interpolated
+        to an array of equally spaced vertical positions and then used to calculate
+        the peaking factors.
 
         Parameters
         ----------
@@ -1263,6 +1267,12 @@ class CmodPhysicsMethods:
         dict
             A dictionary containing peaking factors for electron density (`ne_peaking`),
             temperature (`te_peaking`), and pressure (`pressure_peaking`).
+
+        References
+        -------
+        - original source: [get_peaking_factor_cmod.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_peaking_factor_cmod.m)
+        - pull requests: #[216](https://github.com/MIT-PSFC/disruption-py/pull/216), #[225](https://github.com/MIT-PSFC/disruption-py/pull/225), #[268](https://github.com/MIT-PSFC/disruption-py/pull/268)
+        - issues: #[210](https://github.com/MIT-PSFC/disruption-py/issues/210)
         """
         use_ts_tci_calibration = False
         # Ignore shots on the blacklist
