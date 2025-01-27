@@ -928,6 +928,10 @@ class CmodPhysicsMethods:
         dict
             A dictionary containing electron density (`n_e`), its gradient (`dn_dt`),
             and the Greenwald fraction (`greenwald_fraction`).
+
+        References
+        -------
+        - original source: [get_densities.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_densities.m)
         """
         # Line-integrated density
         n_e, t_n = params.mds_conn.get_data_with_dims(
