@@ -730,7 +730,8 @@ class CmodPhysicsMethods:
     def get_kappa_area(params: PhysicsMethodParams):
         """
         Retrieve and calculate the plasma's ellipticity (kappa, also known as
-        the elongation) using its area and minor radius.
+        the elongation) using its area and minor radius. It is defined as:
+        kappa_area = [plasma cross-sectional area] / pi * [plasma minor radius]^2.
 
         Parameters
         ----------
@@ -741,6 +742,10 @@ class CmodPhysicsMethods:
         -------
         dict
             A dictionary containing the calculated "kappa_area".
+
+        References:
+        -------
+        - original source: [get_kappa_area.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_kappa_area.m)
         """
         aminor = params.mds_conn.get_data(
             r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
