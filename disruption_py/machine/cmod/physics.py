@@ -990,6 +990,10 @@ class CmodPhysicsMethods:
         -------
         dict
             A dictionary containing the EFC current (`i_efc`).
+
+        References
+        -------
+        - original source: [get_efc_current.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_efc_current.m)
         """
         iefc, t_iefc = params.mds_conn.get_data_with_dims(
             r"\efc:u_bus_r_cur", tree_name="engineering"
