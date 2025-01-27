@@ -178,7 +178,11 @@ class CmodPhysicsMethods:
     )
     def get_ip_parameters(params: PhysicsMethodParams):
         """
-        Retrieve and interpolate Ip parameters.
+        Calculates actual and programmed current as well as their derivatives
+        and difference.
+
+        The time derivatives are useful for discriminating between rampup, flattop,
+        and rampdown.
 
         Parameters
         ----------
@@ -190,6 +194,12 @@ class CmodPhysicsMethods:
         dict
             A dictionary containing the interpolated Ip parameters, including
             "ip", "dip_dt", "dip_smoothed", "ip_prog", "dipprog_dt", and "ip_error".
+
+        References
+        -------
+        - original source: [get_Ip_parameters.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_Ip_parameters.m)
+        - pull requests: #[181](https://github.com/MIT-PSFC/disruption-py/pull/181)
+        - issues: #[175](https://github.com/MIT-PSFC/disruption-py/issues/175)
         """
         # Automatically generated
         active_segments = CmodPhysicsMethods._get_active_wire_segments(params=params)
