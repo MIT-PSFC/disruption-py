@@ -61,7 +61,6 @@ def initial_mdsplus_data_fixture(shotlist, tokamak, test_file_path_f) -> Dict:
     retrieval_settings = RetrievalSettings(
         efit_nickname_setting="disruption",
         run_columns=FIRST_ITERATION_COLUMNS,
-        run_tags=[],
         only_requested_columns=True,
     )
     all_outputs = get_shots_data(
@@ -121,7 +120,6 @@ def test_sql_output_setting(
     retrieval_settings = RetrievalSettings(
         efit_nickname_setting="disruption",
         run_columns=ALL_ITERATION_COLUMNS,
-        run_tags=[],
         only_requested_columns=True,
     )
     shot_data = get_shots_data(

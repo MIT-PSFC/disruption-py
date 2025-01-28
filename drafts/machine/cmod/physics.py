@@ -112,7 +112,6 @@ class CmodDraftPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        tags=["experimental"],
         columns=["te_edge", "ne_edge"],
         tokamak=Tokamak.CMOD,
     )
@@ -205,7 +204,6 @@ class CmodDraftPhysicsMethods:
     # TODO: Finish
     @staticmethod
     @physics_method(
-        tags=["experimental"],
         columns=["h98", "wmhd", "btor", "dwmhd_dt", "p_input"],
         tokamak=Tokamak.CMOD,
     )

@@ -13,7 +13,6 @@ class D3DDraftPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        tags=["experimental"],
         tokamak=Tokamak.D3D,
         columns=[
             "te_core",

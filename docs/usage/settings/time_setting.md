@@ -37,8 +37,14 @@ Custom implementations of time settings must inherit from the `TimeSetting` abst
 ::: disruption_py.settings.time_setting
     handler: python
 	options:
-	  heading_level: 2
+	  heading_level: 3
 	  members:
 	  - TimeSetting
 	  - TimeSettingParams
 
+### Custom time settings example
+
+::: docs.examples.custom_time_setting
+    handler: python
+	options:
+	  heading_level: 4
