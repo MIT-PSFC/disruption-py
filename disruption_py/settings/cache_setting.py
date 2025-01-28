@@ -168,7 +168,7 @@ class HDF5CacheSetting(CacheSetting):
         # Some shots may not have been cached, so the key will not exist, and
         # it throws an error. If there is no cached data, return None.
         try:
-            return pd.read_hdf(self.cache_file, key=f"df_{params.shot_id}")
+            return pd.read_hdf(self.cache_file, key=str(params.shot_id))
         except KeyError:
             return None
 

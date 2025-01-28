@@ -449,7 +449,7 @@ class HDF5OutputSetting(OutputSetting):
 
         output_result.to_hdf(
             self.filepath,
-            key=f"df_{params.shot_id}",
+            key=str(params.shot_id),
             format="table",
             complib="blosc",
             mode=mode,

@@ -96,7 +96,7 @@ def test_cache_setting_prev_output(tokamak, shotlist, test_file_path_f, output_f
         cache_data_list = []
         for shot in shotlist:
             cache_data_list.append(
-                pd.read_hdf(test_file_path_f(".hdf5"), key=f"df_{shot}")
+                pd.read_hdf(test_file_path_f(".hdf5"), key=str(shot))
             )
         cache_data = safe_df_concat(pd.DataFrame(), cache_data_list)
 
