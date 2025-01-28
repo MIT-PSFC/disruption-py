@@ -1949,21 +1949,29 @@ class CmodPhysicsMethods:
     @physics_method(columns=["beta_n"], tokamak=Tokamak.CMOD)
     def get_beta_normalized(params: PhysicsMethodParams):
         """
-        Calculate the normalized beta (beta_n) also known as the Troyon factor.
+        Calculate the normalized beta, $\\beta_N$, also known as the Troyon factor:
+        $$
+        \\beta_N = \\beta_\\text{tot} \\frac{a B_T}{I_p}.
+        $$
 
-        beta_n is defined as the total plasma beta (p/(B^2/2mu_0))
-        divided by Ip [MA]/(a*Bt) [^1].
+        Where $I_p$ is in MA, and the total plasma beta $\\beta$ is defined as
+        $$
+        \\beta_\\text{tot} = \\frac{p}{B^2/2\\mu_0}.
+        $$
 
-        Since the total beta is dominated by the toroidal beta
-        (1/beta_tot = 1/beta_tor + 1/beta_pol), we can approximate beta_n
-        using beta_t. This definition is consistent with that of
-        EFIT_AEQDSK:BETAN which isn't available for pre-2000 shots.
+        Since the total beta is dominated by the toroidal beta,
+        $$
+        \\frac{1}{\\beta_\\text{tot}} = \\frac{1}{\\beta_\\text{tor}} +
+        \\frac{1}{\\beta_\\text{pol}},
+        $$
+
+        we can approximate $\\beta_N$ using $\\beta_\\text{tor}$. This definition
+        is consistent with that of `EFIT_AEQDSK:BETAN` which isn't available for
+        pre-2000 shots.
 
         To make the input data consistent with EFIT_AEQDSK:BETAN, we use
         CPASMA and BTAXP from EFIT_AEQDSK instead of IP and BTOR from MAGNETICS
         for Ip and Bt.
-
-        [^1]: http://wiki.fusenet.eu/fusionwiki/index.php/Beta
 
         Parameters
         ----------
@@ -2008,7 +2016,13 @@ class CmodPhysicsMethods:
     @physics_method(columns=["v_surf"], tokamak=Tokamak.CMOD)
     def get_surface_voltage(params: PhysicsMethodParams):
         """
-        Calculate the plasma surface voltage defined as v_surf=-deriv(SIBDRY)*2pi.
+        Calculate the plasma surface voltage defined as
+        $$
+        v_\\text{surf} = -2 \\pi \\frac{d\\phi}{dt},
+        $$
+
+        Note that there is a `VSURFA` node in the `EFIT` tree, however the stored
+        data are all zeros for every shot.
 
         Parameters
         ----------
@@ -2018,7 +2032,7 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the v_surf data.
+            A dictionary containing the $v_\\text{surf}$ data.
 
         References
         -------
