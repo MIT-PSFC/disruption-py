@@ -1964,6 +1964,7 @@ class CmodPhysicsMethods:
             except mdsExceptions.MdsException:
                 params.logger.debug("Failed to get SXR " + array_path + " chord " + str(i+1) + " data")
                 sxr[i] = 0.
+                continue
             # Subtract constant background
             chord = chord - np.mean(chord[t_chord < 0.])
             # Occasionally the time bases of a chord are of a different length

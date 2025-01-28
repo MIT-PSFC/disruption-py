@@ -25,6 +25,8 @@ training_frac = 0.7
 seed=42
 min_time_above_threshold_scan = np.arange(0.001, 0.0065, 0.0005).tolist()
 normalized_threshold_scan = np.arange(0.4, 0.8, 0.05).tolist()
+min_time_above_threshold_scan = [0.004]
+normalized_threshold_scan = [0.75]
 print(min_time_above_threshold_scan)
 
 def modify_param_file(min_time_above_threshold, normalized_threshold, param_file='tq_params.yaml'):
@@ -47,6 +49,7 @@ manual_db = pd.read_csv(input_fn)
 training_set_05 = manual_db[manual_db['shot'] < 1060000000].sample(frac=training_frac, random_state=seed)
 training_set_12_to_16 = manual_db[manual_db['shot'] > 1120000000].sample(frac=training_frac, random_state=seed)
 training_set = pd.concat([training_set_05, training_set_12_to_16])
+print(training_set)
 
 signals = [
     "thermal_quench_time_onset",
@@ -95,7 +98,8 @@ for mtat in min_time_above_threshold_scan:
         output_db.loc[(mtat, nt), 'commit_hash'] = data['commit_hash'].to_numpy()[0]
         # Types of losses:
         # Square loss, square loss normalized by width, late square loss, outliers, square_loss_non_outliers
-        data = manual_db.merge(data, how='left', on='shot')
+        data = training_set.merge(data, how='left', on='shot')
+        print(data['tq_onset_auto'].count())
         data['square_loss'] = (1000*(data['tq_onset_auto'] - data['tq_onset_manual']))**2 # in ms
         data['square_loss_tq_norm'] = data['square_loss'] / (1000*(data['tq_end_manual']-data['tq_onset_manual']))**2
         data['square_loss_cq_norm'] = data['square_loss'] / (1000*(data['t_cq']-data['tq_onset_manual']))**2
@@ -104,12 +108,14 @@ for mtat in min_time_above_threshold_scan:
         data['outliers'] = 0
         data.loc[np.abs(data['tq_onset_auto'] - data['tq_onset_manual'])/(data['tq_end_manual']-data['tq_onset_manual']) > 2, 'outliers'] = 1
         # Output stats
-        output_db.loc[(mtat, nt), 'square_loss'] = data['square_loss'].sum() / len(training_set)
-        output_db.loc[(mtat, nt), 'square_loss_tq_norm'] = data['square_loss_tq_norm'].sum() / len(training_set)
-        output_db.loc[(mtat, nt), 'square_loss_cq_norm'] = data['square_loss_cq_norm'].sum() / len(training_set)
-        output_db.loc[(mtat, nt), 'late_square_loss'] = data['late_square_loss'].sum() / len(training_set)
-        output_db.loc[(mtat, nt), 'outliers'] = data['outliers'].sum() / len(training_set)
-        output_db.loc[(mtat, nt), 'square_loss_non_outliers'] = data[data['outliers']==0]['square_loss'].sum()/ len(training_set)
-        output_db.loc[(mtat, nt), 'late_square_loss_non_outliers'] = data[data['outliers']==0]['late_square_loss'].sum()/ len(training_set)
+        print(data['tq_onset_auto'].count())
+        output_db.loc[(mtat, nt), 'nshots'] = data['tq_onset_auto'].count()
+        output_db.loc[(mtat, nt), 'square_loss'] = data['square_loss'].sum() / output_db.loc[(mtat, nt), 'nshots']
+        output_db.loc[(mtat, nt), 'square_loss_tq_norm'] = data['square_loss_tq_norm'].sum() / output_db.loc[(mtat, nt), 'nshots']
+        output_db.loc[(mtat, nt), 'square_loss_cq_norm'] = data['square_loss_cq_norm'].sum() / output_db.loc[(mtat, nt), 'nshots']
+        output_db.loc[(mtat, nt), 'late_square_loss'] = data['late_square_loss'].sum() / output_db.loc[(mtat, nt), 'nshots']
+        output_db.loc[(mtat, nt), 'outliers'] = data['outliers'].sum() / output_db.loc[(mtat, nt), 'nshots']
+        output_db.loc[(mtat, nt), 'square_loss_non_outliers'] = data[data['outliers']==0]['square_loss'].sum()/ output_db.loc[(mtat, nt), 'nshots']
+        output_db.loc[(mtat, nt), 'late_square_loss_non_outliers'] = data[data['outliers']==0]['late_square_loss'].sum()/ output_db.loc[(mtat, nt), 'nshots']
         output_db.to_csv(output_fn, index=True)
         print(output_db)
