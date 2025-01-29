@@ -59,7 +59,7 @@ maintainers = [
 name = "disruption-py"
 readme = "README.md"
 version = "0.10.0"
-requires-python = ">=3.10,<4"
+requires-python = ">=3.11,<4"
 dependencies = [
   "dynaconf>=3.2.0",
   "loguru>=0.7.0",
