@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-This module provides classes for handling nickname settings, which are used to 
+This module provides classes for handling nickname settings, which are used to
 resolve MDSplus tree names for various tokamaks.
 """
 
