@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-The main entrypoint for retrieving DisruptionPy data. 
+The main entrypoint for retrieving DisruptionPy data.
 """
 
 import time
