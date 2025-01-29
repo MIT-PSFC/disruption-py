@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-This module defines the RetrievalSettings class, which is used to configure 
+This module defines the RetrievalSettings class, which is used to configure
 settings for retrieving data for a single shot.
 """
 

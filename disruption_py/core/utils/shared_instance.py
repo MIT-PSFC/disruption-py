@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 """
-This module provides a singleton class that ensures only one instance of a 
-given class is created for a specific set of arguments, allowing for 
+This module provides a singleton class that ensures only one instance of a
+given class is created for a specific set of arguments, allowing for
 shared instances across the same process.
 """
 
