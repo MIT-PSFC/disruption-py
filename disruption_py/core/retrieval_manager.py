@@ -300,6 +300,10 @@ class RetrievalManager:
             cache_data = retrieval_settings.cache_setting.get_cache_data(
                 cache_setting_params
             )
+            # Even if cache setting is not None, the cache may not have data for
+            # all shots
+            if cache_data is None:
+                return None
             cache_data["shot"] = cache_data["shot"].astype(int)
             cache_data = cache_data[cache_data["shot"] == shot_id]
         else:
