@@ -24,6 +24,7 @@ theme:
     accent: custom
 extra_css:
   - stylesheets/disruptions.css
+  - https://unpkg.com/katex@0/dist/katex.min.css
 nav:
   - Overview:
       - Background: index.md
@@ -62,6 +63,8 @@ markdown_extensions:
   - attr_list
   - admonition
   - footnotes
+  - pymdownx.arithmatex:
+      generic: true
   - pymdownx.details
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
@@ -109,3 +112,7 @@ plugins:
             show_root_full_path: true
             show_root_members_full_path: false
             show_object_full_path: false
+extra_javascript:
+  - javascripts/katex.js
+  - https://unpkg.com/katex@0/dist/katex.min.js
+  - https://unpkg.com/katex@0/dist/contrib/auto-render.min.js

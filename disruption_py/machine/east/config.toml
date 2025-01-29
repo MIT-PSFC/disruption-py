@@ -1,0 +1,8 @@
+[east.inout.mds]
+mdsplus_connection_string = "mds.ipp.ac.cn"
+
+[east.inout.sql]
+driver = "MySQL"
+host = "202.127.205.10"
+port = 3306
+db_name = "east_disruption"

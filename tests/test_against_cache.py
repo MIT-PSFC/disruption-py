@@ -136,6 +136,7 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "-c",
         "--data-column",
         type=str.lower,
         default=None,
@@ -143,11 +144,21 @@ def main():
     )
 
     parser.add_argument(
+        "-s",
         "--shot-id",
         type=int,
         action="store",
         default=None,
         help="Shot number to test, uses the default shot list if not specified",
+    )
+
+    parser.add_argument(
+        "-l",
+        "--log-level",
+        type=str.lower,
+        action="store",
+        default="INFO",
+        help="Console log level",
     )
 
     args = parser.parse_args()
@@ -167,6 +178,7 @@ def main():
         shotlist=shotlist,
         expected_failure_columns=expected_failure_columns,
         test_columns=data_columns,
+        console_log_level=args.log_level,
     )
 
     columns = {dd.data_column for dd in data_differences}

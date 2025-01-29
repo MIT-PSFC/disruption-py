@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-This module defines classes for time settings, used to manage the timebase for 
+This module defines classes for time settings, used to manage the timebase for
 retrieving data in disruption_py for various tokamaks and shot configurations.
 """
 

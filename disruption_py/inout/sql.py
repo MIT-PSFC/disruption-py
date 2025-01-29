@@ -50,8 +50,18 @@ class ShotDatabase:
         )
         drivers = pyodbc.drivers()
         if driver in drivers:
+            # exact driver
             self.driver = driver
+        elif any(d.startswith(driver) for d in drivers):
+            # fuzzy driver
+            self.driver = next(d for d in drivers if d.startswith(driver))
+            logger.info(
+                "Database driver fallback: '{driver}' -> '{class_driver}'",
+                driver=driver,
+                class_driver=self.driver,
+            )
         else:
+            # first driver
             self.driver = drivers[0]
             logger.warning(
                 "Database driver fallback: '{driver}' -> '{class_driver}'",
@@ -66,11 +76,12 @@ class ShotDatabase:
         self.protected_columns = protected_columns
         self.write_database_table_name = write_database_table_name
 
+        dialect = "mysql" if "mysql" in self.driver.lower() else "mssql"
         self.connection_string = self._get_connection_string(self.db_name)
         self._thread_connections = {}
         quoted_connection_string = quote_plus(self.connection_string)
         self.engine = create_engine(
-            f"mssql+pyodbc:///?odbc_connect={quoted_connection_string}"
+            f"{dialect}+pyodbc:///?odbc_connect={quoted_connection_string}"
         )
 
     @classmethod
@@ -116,7 +127,7 @@ class ShotDatabase:
             "TrustServerCertificate": "yes",
             "Connection Timeout": 60,
         }
-        if "ODBC" in self.driver:
+        if self.driver.lower().startswith("odbc"):
             params["SERVER"] += f",{params.pop('PORT')}"
         conn_str = ";".join([f"{k}={v}" for k, v in params.items()])
         return conn_str
@@ -178,6 +189,15 @@ class ShotDatabase:
             logger.opt(exception=True).debug(e)
         curs.close()
         return output
+
+    def get_version(self):
+        """
+        Query the version of the SQL database.
+        """
+        mysql = "mysql" in self.driver.lower()
+        query = "select " + ("version()" if mysql else "@@version")
+        version = self.query(query, use_pandas=False)
+        return version[0][0]
 
     def add_shot_data(
         self,
