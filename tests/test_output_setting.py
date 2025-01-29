@@ -135,3 +135,20 @@ def test_sql_output_setting(
     assert_frame_equal_unordered(
         result[ALL_ITERATION_COLUMNS], shot_data[ALL_ITERATION_COLUMNS]
     )
+
+
+@skip_on_fast_execution
+def test_batch_csv(tokamak, test_file_path_f):
+    """
+    Test the batch csv output setting to ensure it outputs the same columns in
+    the same order as the dataframe in memory.
+    """
+    csv = test_file_path_f(".csv")
+    out = get_shots_data(
+        tokamak=tokamak,
+        shotlist_setting="disruption_py/data/cmod_ufo.csv",
+        num_processes=10,
+        output_setting=csv,
+    )
+    df = pd.read_csv(csv)
+    assert_frame_equal_unordered(out, df)
