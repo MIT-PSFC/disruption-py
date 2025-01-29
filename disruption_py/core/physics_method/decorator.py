@@ -4,6 +4,8 @@
 This module provides a decorator to signify methods that calculate physics quantities.
 """
 
+import time
+from functools import wraps
 from typing import Callable, List, Union
 
 from disruption_py.core.physics_method.caching import cache_method
@@ -54,6 +56,18 @@ def physics_method(
         else:
             wrapper = method
 
+        # Add elapsed time log
+        @wraps(wrapper)
+        def timed_wrapper(params, *args, **kwargs):
+            start_time = time.time()
+            result = wrapper(params, *args, **kwargs)
+            params.logger.verbose(
+                "{t:.3f}s : {name}",
+                name=method.__name__,
+                t=time.time() - start_time,
+            )
+            return result
+
         method_metadata = MethodMetadata(
             name=method.__name__,
             cache=cache,
@@ -61,7 +75,8 @@ def physics_method(
             columns=columns,
         )
 
-        wrapper.method_metadata = method_metadata
-        return wrapper
+        timed_wrapper.method_metadata = method_metadata
+
+        return timed_wrapper
 
     return outer_wrapper
