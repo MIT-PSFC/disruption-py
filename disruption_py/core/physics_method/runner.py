@@ -221,7 +221,6 @@ def populate_method(
     Any
         The result of the executed method, or None if an error occurred.
     """
-    start_time = time.time()
     method = bound_method_metadata.bound_method
     name = bound_method_metadata.name
 
@@ -253,11 +252,6 @@ def populate_method(
         physics_method_params.logger.opt(exception=True).debug(e)
         result = {col: [np.nan] for col in bound_method_metadata.columns}
 
-    physics_method_params.logger.verbose(
-        "{t:.3f}s : {name}",
-        name=name,
-        t=time.time() - start_time,
-    )
     return result
 
 

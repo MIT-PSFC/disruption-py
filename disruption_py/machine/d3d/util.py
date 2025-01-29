@@ -1,5 +1,5 @@
 """
-Module for helper, not physics, methods. 
+Module for helper, not physics, methods.
 """
 
 import numpy as np

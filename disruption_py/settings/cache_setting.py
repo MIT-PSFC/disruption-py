@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-This module provides classes for managing and retrieving cached data from various 
+This module provides classes for managing and retrieving cached data from various
 sources, including SQL databases and Pandas DataFrames.
 """
 
