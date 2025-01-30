@@ -975,6 +975,8 @@ class EastPhysicsMethods:
         upper_gap = [np.nan]
         lower_gap = [np.nan]
 
+        return {"upper_gap": upper_gap, "lower_gap": lower_gap}
+
         # TODO: verify all of the reshape and tile functions!
         # Get plasma boundary data
         data, efittime = params.mds_conn.get_data_with_dims(
