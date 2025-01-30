@@ -595,6 +595,7 @@ class BatchedCSVOutputSetting(OutputSetting):
             os.remove(filepath)
 
         self.results: pd.DataFrame = pd.DataFrame()
+        self.columns = None
 
     def _output_shot(self, params: OutputSettingParams):
         """
@@ -622,6 +623,10 @@ class BatchedCSVOutputSetting(OutputSetting):
         """
         file_exists = os.path.isfile(self.filepath)
         combined_df = safe_df_concat(pd.DataFrame(), self.batch_data)
+        # Enforce the to-be-saved combined_df to have the same column order as the first shot
+        if self.columns is None:
+            self.columns = combined_df.columns
+        combined_df = combined_df[self.columns]
         combined_df.to_csv(
             self.filepath, mode="a", index=False, header=(not file_exists)
         )
