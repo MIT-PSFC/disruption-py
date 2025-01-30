@@ -23,10 +23,10 @@ output_fn = 'drafts/scripts/train_thermal_quench_onset_output.csv'
 physics_method_script = 'disruption_py/machine/cmod/physics.py'
 training_frac = 0.7
 seed=42
-min_time_above_threshold_scan = np.arange(0.001, 0.0065, 0.0005).tolist()
-normalized_threshold_scan = np.arange(0.4, 0.8, 0.05).tolist()
-min_time_above_threshold_scan = [0.004]
-normalized_threshold_scan = [0.75]
+# min_time_above_threshold_scan = np.arange(0.00325, 0.007, 0.0005).tolist()
+# normalized_threshold_scan = np.arange(0.4, 0.65, 0.025).tolist()
+min_time_above_threshold_scan = [0.003, 0.004, 0.005, 0.006, 0.007, 0.01]
+normalized_threshold_scan = [0.4, 0.45, 0.5, 0.55, 0.6]
 print(min_time_above_threshold_scan)
 
 def modify_param_file(min_time_above_threshold, normalized_threshold, param_file='tq_params.yaml'):
@@ -49,7 +49,11 @@ manual_db = pd.read_csv(input_fn)
 training_set_05 = manual_db[manual_db['shot'] < 1060000000].sample(frac=training_frac, random_state=seed)
 training_set_12_to_16 = manual_db[manual_db['shot'] > 1120000000].sample(frac=training_frac, random_state=seed)
 training_set = pd.concat([training_set_05, training_set_12_to_16])
-print(training_set)
+
+# Get test set
+df_helper = manual_db.merge(training_set, how='left', indicator=True)
+testing_set = df_helper[df_helper['_merge'] == 'left_only'].drop(columns=['_merge'])
+print(testing_set)
 
 signals = [
     "thermal_quench_time_onset",

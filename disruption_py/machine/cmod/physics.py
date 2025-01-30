@@ -1991,7 +1991,11 @@ class CmodPhysicsMethods:
                 index_decay = np.argmax(autocorr[index_no_lag:] < 0)
                 if (index_decay*sample_time < noise_autorr_cutoff):
                     sxr[i] = 0.
-                    # print(str(params.shot_id) + " chord " + str(i+1) + " is bad (noisy)")
+                # Median filter for each channel to reduce noise
+        # else:
+        #     smooth_width = int(0.000150 / sample_time) + 1
+        #     sxr = median_filter(sxr, size=(1, smooth_width), mode='constant', cval=0.)
+        #             # print(str(params.shot_id) + " chord " + str(i+1) + " is bad (noisy)")
         core_sxr = np.max(sxr, axis=0)
         core_sxr_index = np.argmax(sxr, axis=0)
 

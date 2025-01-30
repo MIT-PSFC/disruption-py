@@ -20,13 +20,20 @@ from disruption_py.workflow import get_shots_data
 
 input_fn = 'drafts/scripts/tq_man_labeled_dataset_large.csv'
 output_fn = 'drafts/scripts/test_thermal_quench_onset_large_output.csv'
+seed=42
+training_frac = 0.7
 
 manual_db = pd.read_csv(input_fn)
 
 #shotlist = manual_db['shot'].to_numpy()
-np.random.seed(42) # For reproducible output
-training_set = np.random.choice(manual_db['shot'].to_numpy(), size=10, replace=False)
-testing_set = np.setdiff1d(manual_db['shot'].to_numpy(), training_set)
+manual_db = pd.read_csv(input_fn)
+training_set_05 = manual_db[manual_db['shot'] < 1060000000].sample(frac=training_frac, random_state=seed)
+training_set_12_to_16 = manual_db[manual_db['shot'] > 1120000000].sample(frac=training_frac, random_state=seed)
+training_set = pd.concat([training_set_05, training_set_12_to_16])
+
+# Get testing set
+df_helper = manual_db.merge(training_set, how='left', indicator=True)
+testing_set = df_helper[df_helper['_merge'] == 'left_only'].drop(columns=['_merge'])
 
 signals = [
     "thermal_quench_time_onset",
@@ -44,7 +51,7 @@ retrieval_settings = RetrievalSettings(
 )
 
 data = get_shots_data(
-    shotlist_setting=training_set,
+    shotlist_setting=testing_set['shot'].to_numpy(),
     retrieval_settings=retrieval_settings,
     log_settings=LogSettings(console_log_level=logging.DEBUG),
     output_setting="dataframe",
