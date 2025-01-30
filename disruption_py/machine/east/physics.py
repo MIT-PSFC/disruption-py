@@ -1775,24 +1775,29 @@ class EastPhysicsMethods:
             r"\mit2pa",
         ]
         for i, node in enumerate(mir_nodes):
-            mir[:, i] = params.mds_conn.get_data(node, tree_name="east")
+            try:
+                mir[:, i] = params.mds_conn.get_data(node, tree_name="east")
+            except:
+                continue
 
         # Get btor data
         btor = EastPhysicsMethods.get_btor(params)["btor"]
 
         # Compute the n=1 and n=2 mode signals from the Mirnov array signals
         # TODO: Verify the output structure of scipy.fft.fft; MATLAB one has index 3 (so 0, 1, 2?)
-        mir_fft_output = scipy.fft.fft(mir, axis=2)
+        mir_fft_output = scipy.fft.fft(mir, axis=0)
         amplitude = abs(mir_fft_output) / mir_fft_output.shape[1]
         amplitude[:, 1:] *= 2  # TODO: Why?
-        phase = np.arctan2(np.imag(mir_fft_output) / np.real(mir_fft_output))
+        phase = np.arctan2(np.imag(mir_fft_output), np.real(mir_fft_output))
         n1 = amplitude[:, 1] * np.cos(phase[:, 1])
         n2 = amplitude[:, 2] * np.cos(phase[:, 2])
 
         # Calculate n1rms & n2rms
         time_window = 0.001
         for i, time in enumerate(params.times):
-            (indices,) = np.where(time - time_window <= mirtime < time + time_window)
+            (indices,) = np.where(
+                (time - time_window <= mirtime) & (mirtime < time + time_window)
+            )
             n1rms[i] = np.nanstd(n1[indices])
             n2rms[i] = np.nanstd(n2[indices])
 
