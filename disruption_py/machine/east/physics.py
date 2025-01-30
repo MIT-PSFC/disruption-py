@@ -788,8 +788,8 @@ class EastPhysicsMethods:
         rmp_n_equal_1_phase = [np.nan]
 
         # Get the rmp coil currents
-        rmptime = params.mds_conn.get_dims(r"\irmpu1", tree_name="east")
-        rmp = np.full((len(rmptime, 16)), np.nan)
+        rmptime = params.mds_conn.get_dims(r"\irmpu1", tree_name="east")[0]
+        rmp = np.full((len(rmptime), 16), np.nan)
         for i in range(8):
             # Get irmpu1 to irmpu8
             signal = params.mds_conn.get_data(rf"\irmpu{i+1}", tree_name="east")
@@ -800,8 +800,8 @@ class EastPhysicsMethods:
             if len(signal) == len(rmptime):
                 rmp[:, i + 8] = signal
         # Get saddle coil signals
-        saddletime = params.mds_conn.get_dims(r"\sad_pa", tree_name="east")
-        saddle = np.full((len(saddletime, 8)), np.nan)
+        saddletime = params.mds_conn.get_dims(r"\sad_pa", tree_name="east")[0]
+        saddle = np.full((len(saddletime), 8), np.nan)
         saddle_nodes = [
             r"\sad_pa",
             r"\sad_bc",
