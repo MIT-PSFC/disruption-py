@@ -14,7 +14,10 @@ import pytest
 from disruption_py.config import config
 from disruption_py.core.utils.misc import without_duplicates
 from disruption_py.inout.sql import ShotDatabase
-from disruption_py.settings.output_setting import SQLOutputSetting
+from disruption_py.settings.output_setting import (
+    BatchedCSVOutputSetting,
+    SQLOutputSetting,
+)
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.workflow import get_database, get_shots_data
 from tests.conftest import skip_on_fast_execution
@@ -135,3 +138,21 @@ def test_sql_output_setting(
     assert_frame_equal_unordered(
         result[ALL_ITERATION_COLUMNS], shot_data[ALL_ITERATION_COLUMNS]
     )
+
+
+def test_batch_csv(tokamak, test_file_path_f, shotlist):
+    """
+    Test the batch csv output setting to ensure it outputs the same columns in
+    the same order as the dataframe in memory.
+    """
+    csv = test_file_path_f(".csv")
+    out = get_shots_data(
+        tokamak=tokamak,
+        shotlist_setting=shotlist,
+        num_processes=2,
+        # Use a batch size less than the number of shots to ensure multiple batches
+        # are written to the CSV file.
+        output_setting=BatchedCSVOutputSetting(filepath=csv, batch_size=1),
+    )
+    df = pd.read_csv(csv)
+    assert_frame_equal_unordered(out, df)
