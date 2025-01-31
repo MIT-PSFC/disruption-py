@@ -466,8 +466,8 @@ class EastPhysicsMethods:
         )  # [m], [s]
         aminor = interp1(efittime, aminor, params.times)
         ip = EastPhysicsMethods.get_ip_parameters(params)["ip"]  # [A]
-        nG = 1e20 * (ip / 1e6) / (np.pi * aminor**2)  # [m^-3]
-        greenwald_fraction = ne / nG
+        n_g = 1e20 * (ip / 1e6) / (np.pi * aminor**2)  # [m^-3]
+        greenwald_fraction = ne / n_g
 
         output = {"n_e": ne, "greenwald_fraction": greenwald_fraction, "dn_dt": dn_dt}
         return output
@@ -617,7 +617,8 @@ class EastPhysicsMethods:
         # Get radiated power
         # tree = 'prad_east'
         # TODO: find and implement `prad_bulk_xuv2014_2016`
-        # p_rad, rad_time = prad_bulk_xuv2014_2016(params.shot_id)    # Original from Duan Yanming, and modified by RSG
+        # Original from Duan Yanming, and modified by RSG
+        # p_rad, rad_time = prad_bulk_xuv2014_2016(params.shot_id)
         # p_rad = interp1(rad_time, p_rad, params.times, kind="linear", fill_value=0)
         p_rad = [np.nan] * len(params.times)
 
@@ -830,9 +831,8 @@ class EastPhysicsMethods:
 
         # Calculate fast Fourier transforms of the RMP-induced signals, and get
         # mode amplitudes and phases
-        rmp_fft_output = scipy.fft.fft(
-            rmp_pickup, axis=1
-        )  # Take FFT along 2nd dimension (phi)
+        # Take FFT along 2nd dimension (phi)
+        rmp_fft_output = scipy.fft.fft(rmp_pickup, axis=1)
         amplitude = abs(rmp_fft_output) / rmp_fft_output.shape[1]
         amplitude[:, 1:] *= 2  # TODO: Why?
         phase = np.arctan2(np.imag(rmp_fft_output), np.real(rmp_fft_output))
@@ -848,9 +848,8 @@ class EastPhysicsMethods:
         # saddle signals to leave just the plasma response and baseline drifts.
         saddle -= rmp_pickup
         # Calculate fast Fourier transforms and get mode amplitudes and phases
-        saddle_fft_output = scipy.fft.fft(
-            saddle, axis=1
-        )  # Take FFT along 2nd dimension (phi)
+        # Take FFT along 2nd dimension (phi)
+        saddle_fft_output = scipy.fft.fft(saddle, axis=1)
         amplitude = abs(saddle_fft_output) / saddle_fft_output.shape[1]
         amplitude[:, 1:] *= 2  # TODO: Why?
         phase = np.arctan2(np.imag(saddle_fft_output), np.real(saddle_fft_output))
@@ -975,8 +974,8 @@ class EastPhysicsMethods:
         upper_gap = [np.nan]
         lower_gap = [np.nan]
 
-        return {"upper_gap": upper_gap, "lower_gap": lower_gap}
-
+        """
+        # TODO: Debug the following code
         # TODO: verify all of the reshape and tile functions!
         # Get plasma boundary data
         data, efittime = params.mds_conn.get_data_with_dims(
@@ -1075,7 +1074,7 @@ class EastPhysicsMethods:
 
         # Interpolate to the requested timebase
         # TODO: do this after clean up all the above codes!
-
+        """
         return {"upper_gap": upper_gap, "lower_gap": lower_gap}
 
     @staticmethod
@@ -1249,7 +1248,7 @@ class EastPhysicsMethods:
 
         Last major update: 2014/11/22 by William Wei
         """
-        output = dict()
+        output = {}
 
         # Get ip_error_rt, beta_p_rt, li_rt, and wmhd_rt
         signals = {
@@ -1268,7 +1267,7 @@ class EastPhysicsMethods:
                 )
                 output[name] = signal
             # TODO: Specify error type
-            except:
+            except mdsExceptions.MdsException:
                 output[name] = [np.nan]
 
         # Get q95_rt
@@ -1284,7 +1283,7 @@ class EastPhysicsMethods:
             )
             output["q95_rt"] = q95_rt
         # TODO: Specify error type
-        except:
+        except mdsExceptions.MdsException:
             output["q95_rt"] = [np.nan]
 
         return output
@@ -1364,7 +1363,7 @@ class EastPhysicsMethods:
             p_rad_rt = interp1(
                 timearray, p_rad_rt, params.times, kind="linear", bounds_error=0
             )
-        except:
+        except mdsExceptions.MdsException:
             p_rad_rt = [np.nan]
 
         # TODO: Verify the outputs, then modify get_heating_power() to make it compatible with this
@@ -1376,7 +1375,7 @@ class EastPhysicsMethods:
             "v_nbir_rt": r"\pcnbi1rv",
         }
         try:
-            nbi_signals = dict()
+            nbi_signals = {}
             for name, node in nbi_nodes.items():
                 signal, timearray = params.mds_conn.get_data_with_dims(
                     node, tree_name="pefitrt_east"
@@ -1389,7 +1388,7 @@ class EastPhysicsMethods:
                 nbi_signals["i_nbil_rt"] * nbi_signals["v_nbil_rt"]
                 + nbi_signals["i_nbir_rt"] * nbi_signals["v_nbir_rt"]
             )
-        except:
+        except mdsExceptions.MdsException:
             p_nbi_rt = [np.nan]
 
         # Get p_lh_rt
@@ -1400,7 +1399,7 @@ class EastPhysicsMethods:
             "p_lh_245_ref_rt": r"\pcplhr2",
         }
         try:
-            lh_signals = dict()
+            lh_signals = {}
             for name, node in lh_nodes.items():
                 signal, timearray = params.mds_conn.get_data_with_dims(
                     node, tree_name="pefitrt_east"
@@ -1415,7 +1414,7 @@ class EastPhysicsMethods:
                 + lh_signals["p_lh_245_inj_rt"]
                 - lh_signals["p_lh_245_ref_rt"]
             )
-        except:
+        except mdsExceptions.MdsException:
             p_lh_rt = [np.nan]
 
         # Q.P. Yuan:
@@ -1488,7 +1487,7 @@ class EastPhysicsMethods:
 
         # TODO: Move calibration factors to a separate settings file
         # Calibration factors
-        Fac1 = (
+        fac_1 = (
             np.array(
                 [
                     1.3681,
@@ -1511,7 +1510,7 @@ class EastPhysicsMethods:
             )
             * 1e4
         )
-        Fac2 = np.array(
+        fac_2 = np.array(
             [
                 [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                 [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -1519,11 +1518,11 @@ class EastPhysicsMethods:
                 [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
             ]
         )  # factors of Amp.Gain
-        Fac3 = np.array([1, 1, 1, 1])  # cross calibration factors between arrays
-        Fac4 = 1 * 1e-3  # unit convert
+        fac_3 = np.array([1, 1, 1, 1])  # cross calibration factors between arrays
+        fac_4 = 1 * 1e-3  # unit convert
         # Fac5=2.5    # corrected factor by cross calibration with foil bolometer
-        Maj_R = 1.85
-        Del_r = (
+        maj_r = 1.85
+        del_r = (
             np.array(
                 [
                     3.6,
@@ -1614,14 +1613,14 @@ class EastPhysicsMethods:
                 signal_smoothed = smooth(signal, smoothing_window)
                 xuv[:, ichord] = (
                     signal_smoothed
-                    * Fac1[ichan]
-                    * Fac2[iarray][ichan]
-                    * Fac3[iarray]
-                    * Fac4
+                    * fac_1[ichan]
+                    * fac_2[iarray][ichan]
+                    * fac_3[iarray]
+                    * fac_4
                     * 2
                     * np.pi
-                    * Maj_R
-                    * Del_r[ichan]
+                    * maj_r
+                    * del_r[ichan]
                 )  # from Duan Yanming's program
 
         # Correction for bad channels (from Duan Yanmin's program)
@@ -1638,12 +1637,9 @@ class EastPhysicsMethods:
         prad_peaking = np.full((len(xuvtime)), np.nan)
         # TODO: find better way to do this for loop
         for itime in range(len(xuvtime)):
-            try:
-                prad_peaking[itime] = np.dot(xuv[itime, :], ch_core) / np.dot(
-                    xuv[itime, :], ch_all
-                )
-            except:
-                continue
+            prad_core = np.dot(xuv[itime, :], ch_core)
+            prad_all = np.dot(xuv[itime, :], ch_all)
+            prad_peaking[itime] = prad_core / prad_all
 
         # Interpret to the requested timebase
         prad_peaking = interp1(xuvtime, prad_peaking, params.times)
@@ -1687,7 +1683,7 @@ class EastPhysicsMethods:
         mirnov_sensor = "cmp1t"  # default one used in disruption_warning_database.m
 
         mirnov_std = np.full(len(params.times), np.nan)
-        mirnov_st_normalized = [np.nan]
+        mirnov_std_normalized = [np.nan]
 
         # Get the toroidal magnetic field.
         btor = EastPhysicsMethods.get_btor(params)["btor"]
@@ -1698,9 +1694,7 @@ class EastPhysicsMethods:
             r"\Mirnov_sensor" + mirnov_sensor, tree_name="east"
         )
         for i, time in enumerate(params.times):
-            (indices,) = np.where(
-                (params.times[i] - time_window) < bp_dot_time < params.times[i]
-            )
+            (indices,) = np.where((time - time_window) < bp_dot_time < time)
             mirnov_std[i] = np.nanstd(bp_dot[indices])
 
         mirnov_std_normalized = mirnov_std / abs(btor)
@@ -1777,7 +1771,7 @@ class EastPhysicsMethods:
         for i, node in enumerate(mir_nodes):
             try:
                 mir[:, i] = params.mds_conn.get_data(node, tree_name="east")
-            except:
+            except mdsExceptions.MdsException:
                 continue
 
         # Get btor data
