@@ -1918,6 +1918,17 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(columns=["thermal_quench_time_onset"], tokamak=Tokamak.CMOD)
     def get_thermal_quench_time_onset(params: PhysicsMethodParams):
+        """
+        Gets the onset of the fast thermal quench using SXR data.
+        ----------
+        params: PhysicsMethodParams
+            The parameters storing the requested time base, shot id, etc
+        Returns
+        ----------
+        Output is an array with each element the thermal quench onset time, in s
+
+        Last Major Update: Henry Wietfeldt (1/31/25)
+        """
         n_chords = 38
         with open("tq_params.yaml", "r") as f:
             tq_params = yaml.safe_load(f)
@@ -1953,7 +1964,6 @@ class CmodPhysicsMethods:
         t_sxr = t_sxr[valid_times]
         sxr = np.zeros(shape=(n_chords, len(t_sxr)))
         sxr[0] = chord_01[valid_times]
-        # TODO: Method to ensure chord isn't noise (autocorrelation?, ex: 1050311010, 1050311013, 105311023)
         for i in range(1, n_chords):
             try:
                 chord, t_chord = params.mds_conn.get_data_with_dims(
@@ -1985,13 +1995,10 @@ class CmodPhysicsMethods:
                 autocorr = np.correlate(chord, chord, mode='full')
                 autocorr = autocorr / np.max(autocorr)  # Normalize
                 lags = np.arange(-len(chord) + 1, len(chord))
-                #print(str(i+1) + ": " + str(autocorr))
-                #print(str(i+1) + ": " + str(np.mean(chord)))
                 index_no_lag = np.argmax(autocorr)
                 index_decay = np.argmax(autocorr[index_no_lag:] < 0)
                 if (index_decay*sample_time < noise_autorr_cutoff):
                     sxr[i] = 0.
-                # Median filter for each channel to reduce noise
         else:
             # Smooth noise for 2012-2016 shots
             smooth_width = int(0.000150 / sample_time) + 1
