@@ -1992,27 +1992,22 @@ class CmodPhysicsMethods:
                 if (index_decay*sample_time < noise_autorr_cutoff):
                     sxr[i] = 0.
                 # Median filter for each channel to reduce noise
-        # else:
-        #     smooth_width = int(0.000150 / sample_time) + 1
-        #     sxr = median_filter(sxr, size=(1, smooth_width), mode='constant', cval=0.)
-        #             # print(str(params.shot_id) + " chord " + str(i+1) + " is bad (noisy)")
+        else:
+            # Smooth noise for 2012-2016 shots
+            smooth_width = int(0.000150 / sample_time) + 1
+            sxr = median_filter(sxr, size=(1, smooth_width), mode='constant', cval=0.)
+                    # print(str(params.shot_id) + " chord " + str(i+1) + " is bad (noisy)")
         core_sxr = np.max(sxr, axis=0)
         core_sxr_index = np.argmax(sxr, axis=0)
 
         # Get pre-disruption SXR as mean of the core SXR emission between 20 ms
-        # and 5 ms before the current quench time
+        # and 3 ms before the current quench time, which seems to reasonably
+        # capture pre-disruption SXR levels
         indx1 = np.argmax(t_sxr > params.disruption_time - 0.020)
         indx2 = np.argmax(t_sxr > params.disruption_time - 0.003)
         sxr_pre_disrupt = np.mean(core_sxr[indx1:indx2])
 
-        # min_points_above_thresh = int(time_above_threshold / sample_time) + 1
-        # print(time_above_threshold)
-        # print(sample_time)
-        # print(min_points_above_thresh)
         i = np.argmax(t_sxr > params.disruption_time) - 1
-        # print("Current Quench Time: " + str(t_sxr[i]))
-        points_above_thresh = 0
-        # TODO: Fix issue where t_sxr isn't uniformly sampled (ex: 1050722014)
         time_above_threshold = 0
         while (time_above_threshold < min_time_above_threshold) and (i > 0):
             if (core_sxr[i] > normalized_threshold*sxr_pre_disrupt):
