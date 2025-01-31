@@ -110,6 +110,8 @@ expected_failure_columns = [
     "pq0",
     "pqstar",
     "p_rad",
+    "p_lh",
+    "p_icrf",
     "p_nbi",
     "rad_input_frac",
     "rad_loss_frac",
