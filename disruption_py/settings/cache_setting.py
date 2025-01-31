@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
 """
-This module provides classes for managing and retrieving cached data from various 
+This module provides classes for managing and retrieving cached data from various
 sources, including SQL databases and Pandas DataFrames.
 """
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, Union
+from typing import Dict, Type, Union
 
 import pandas as pd
 from loguru import logger
@@ -151,11 +151,56 @@ class DFCacheSetting(CacheSetting):
         return self.cache_data
 
 
+class HDF5CacheSetting(CacheSetting):
+    """
+    Cache setting for retrieving data from an HDF5 file.
+
+    Parameters
+    ----------
+    cache_file : str
+        The path to the HDF5 file to use as the cached data.
+    """
+
+    def __init__(self, cache_file: str):
+        self.cache_file = cache_file
+
+    def _get_cache_data(self, params: CacheSettingParams) -> pd.DataFrame:
+        # Some shots may not have been cached, so the key will not exist, and
+        # it throws an error. If there is no cached data, return None.
+        try:
+            return pd.read_hdf(self.cache_file, key=f"df_{params.shot_id}")
+        except KeyError:
+            return None
+
+
+class CSVCacheSetting(CacheSetting):
+    """
+    Cache setting for retrieving data from a CSV file.
+
+    Parameters
+    ----------
+    cache_file : str
+        The path to the CSV file to use as the cached data.
+    """
+
+    def __init__(self, cache_file: str):
+        self.cache_file = cache_file
+
+    def _get_cache_data(self, params: CacheSettingParams) -> pd.DataFrame:
+        return pd.read_csv(self.cache_file)
+
+
 # --8<-- [start:cache_setting_dict]
 _cache_setting_mappings: Dict[str, CacheSetting] = {
     "sql": SQLCacheSetting(),
 }
 # --8<-- [end:cache_setting_dict]
+
+_file_suffix_to_cache_setting: Dict[str, Type[CacheSetting]] = {
+    ".h5": HDF5CacheSetting,
+    ".hdf5": HDF5CacheSetting,
+    ".csv": CSVCacheSetting,
+}
 
 
 def resolve_cache_setting(
@@ -183,9 +228,17 @@ def resolve_cache_setting(
         return cache_setting
 
     if isinstance(cache_setting, str):
-        cache_setting = _cache_setting_mappings.get(cache_setting, None)
-        if cache_setting is not None:
-            return cache_setting
+        cache_setting_object = _cache_setting_mappings.get(cache_setting, None)
+        if cache_setting_object is not None:
+            return cache_setting_object
+
+        # assume that it is a file path
+        for (
+            suffix,
+            cache_setting_type,
+        ) in _file_suffix_to_cache_setting.items():
+            if cache_setting.endswith(suffix):
+                return cache_setting_type(cache_setting)
 
     if isinstance(cache_setting, pd.DataFrame):
         return DFCacheSetting(cache_setting)

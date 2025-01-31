@@ -2,7 +2,7 @@
 
 """
 This module provides classes and methods to specify different domain settings
-for the timebase used, including full, flattop, and ramp-up domains. 
+for the timebase used, including full, flattop, and ramp-up domains.
 """
 
 from abc import ABC, abstractmethod
