@@ -819,7 +819,7 @@ class EastPhysicsMethods:
             try:
                 saddle[:, i] = params.mds_conn.get_data(node, tree_name="east")
             except mdsExceptions.MdsException:
-                continue
+                saddle[:, i] = 0
         # \sad_no not operational in 2015
         sad_lo = params.mds_conn.get_data(r"\sad_lo", tree_name="east")
         sad_lm = params.mds_conn.get_data(r"\sad_lm", tree_name="east")
@@ -978,107 +978,106 @@ class EastPhysicsMethods:
         upper_gap = [np.nan]
         lower_gap = [np.nan]
 
-        """
-        # TODO: Debug the following code
-        # TODO: verify all of the reshape and tile functions!
-        # Get plasma boundary data
-        data, efittime = params.mds_conn.get_data_with_dims(
-            r"\top.results.geqdsk:bdry", tree_name="_efit_tree"
-        )
-        # TODO: Check the actual shape in MATLAB script
-        xcoords = np.reshape(data[0, :, :], (-1, len(efittime)))
-        ycoords = np.reshape(data[1, :, :], (-1, len(efittime)))
+        # # TODO: Debug the following code
+        # # TODO: verify all of the reshape and tile functions!
+        # # Get plasma boundary data
+        # data, efittime = params.mds_conn.get_data_with_dims(
+        #     r"\top.results.geqdsk:bdry", tree_name="_efit_tree"
+        # )
+        # # TODO: Check the actual shape in MATLAB script
+        # xcoords = np.reshape(data[0, :, :], (-1, len(efittime)))
+        # ycoords = np.reshape(data[1, :, :], (-1, len(efittime)))
 
-        # Get first wall geometry data
-        xfirstwall = params.mds_conn.get_data(
-            r"\top.results.geqdsk:xlim", tree_name="_efit_tree"
-        )
-        yfirstwall = params.mds_conn.get_data(
-            r"\top.results.geqdsk:ylim", tree_name="_efit_tree"
-        )
-        seed = np.ones((len(xcoords), 1))
-        xfirstwall = np.reshape(xfirstwall, (-1, 1))
-        yfirstwall = np.reshape(yfirstwall, (-1, 1))
-        xfirstwall_mat = np.tile(xfirstwall, (1, len(efittime)))
-        yfirstwall_mat = np.tile(yfirstwall, (1, len(efittime)))
+        # # Get first wall geometry data
+        # xfirstwall = params.mds_conn.get_data(
+        #     r"\top.results.geqdsk:xlim", tree_name="_efit_tree"
+        # )
+        # yfirstwall = params.mds_conn.get_data(
+        #     r"\top.results.geqdsk:ylim", tree_name="_efit_tree"
+        # )
+        # seed = np.ones((len(xcoords), 1))
+        # xfirstwall = np.reshape(xfirstwall, (-1, 1))
+        # yfirstwall = np.reshape(yfirstwall, (-1, 1))
+        # xfirstwall_mat = np.tile(xfirstwall, (1, len(efittime)))
+        # yfirstwall_mat = np.tile(yfirstwall, (1, len(efittime)))
 
-        # Calculate upper & lower gaps
-        (index_upperwall,) = np.where(yfirstwall > 0.6)
-        (index_lowerwall,) = np.where(yfirstwall < -0.6)
+        # # Calculate upper & lower gaps
+        # (index_upperwall,) = np.where(yfirstwall > 0.6)
+        # (index_lowerwall,) = np.where(yfirstwall < -0.6)
 
-        xupperwall = xfirstwall_mat[index_upperwall, :]
-        xupperwall_mat = np.reshape(
-            np.kron(xupperwall, seed),
-            (
-                len(
-                    seed,
-                ),
-                -1,
-                len(efittime),
-            ),
-        )
-        xlowerwall = xfirstwall_mat[index_lowerwall, :]
-        xlowerwall_mat = np.reshape(
-            np.kron(xlowerwall, seed),
-            (
-                len(
-                    seed,
-                ),
-                -1,
-                len(efittime),
-            ),
-        )
+        # xupperwall = xfirstwall_mat[index_upperwall, :]
+        # xupperwall_mat = np.reshape(
+        #     np.kron(xupperwall, seed),
+        #     (
+        #         len(
+        #             seed,
+        #         ),
+        #         -1,
+        #         len(efittime),
+        #     ),
+        # )
+        # xlowerwall = xfirstwall_mat[index_lowerwall, :]
+        # xlowerwall_mat = np.reshape(
+        #     np.kron(xlowerwall, seed),
+        #     (
+        #         len(
+        #             seed,
+        #         ),
+        #         -1,
+        #         len(efittime),
+        #     ),
+        # )
 
-        yupperwall = yfirstwall_mat[index_upperwall, :]
-        yupperwall_mat = np.reshape(
-            np.kron(yupperwall, seed),
-            (
-                len(
-                    seed,
-                ),
-                -1,
-                len(efittime),
-            ),
-        )
-        ylowerwall = yfirstwall_mat[index_lowerwall, :]
-        ylowerwall_mat = np.reshape(
-            np.kron(ylowerwall, seed),
-            (
-                len(
-                    seed,
-                ),
-                -1,
-                len(efittime),
-            ),
-        )
+        # yupperwall = yfirstwall_mat[index_upperwall, :]
+        # yupperwall_mat = np.reshape(
+        #     np.kron(yupperwall, seed),
+        #     (
+        #         len(
+        #             seed,
+        #         ),
+        #         -1,
+        #         len(efittime),
+        #     ),
+        # )
+        # ylowerwall = yfirstwall_mat[index_lowerwall, :]
+        # ylowerwall_mat = np.reshape(
+        #     np.kron(ylowerwall, seed),
+        #     (
+        #         len(
+        #             seed,
+        #         ),
+        #         -1,
+        #         len(efittime),
+        #     ),
+        # )
 
-        xupperplasma_mat = np.reshape(
-            np.tile(xcoords, (len(xupperwall), 1))(-1, len(xupperwall), len(efittime))
-        )
-        yupperplasma_mat = np.reshape(
-            np.tile(ycoords, (len(yupperwall), 1))(-1, len(yupperwall), len(efittime))
-        )
-        xlowerplasma_mat = np.reshape(
-            np.tile(xcoords, (len(xlowerwall), 1))(-1, len(xlowerwall), len(efittime))
-        )
-        ylowerplasma_mat = np.reshape(
-            np.tile(ycoords, (len(ylowerwall), 1))(-1, len(ylowerwall), len(efittime))
-        )
+        # xupperplasma_mat = np.reshape(
+        #     np.tile(xcoords, (len(xupperwall), 1))(-1, len(xupperwall), len(efittime))
+        # )
+        # yupperplasma_mat = np.reshape(
+        #     np.tile(ycoords, (len(yupperwall), 1))(-1, len(yupperwall), len(efittime))
+        # )
+        # xlowerplasma_mat = np.reshape(
+        #     np.tile(xcoords, (len(xlowerwall), 1))(-1, len(xlowerwall), len(efittime))
+        # )
+        # ylowerplasma_mat = np.reshape(
+        #     np.tile(ycoords, (len(ylowerwall), 1))(-1, len(ylowerwall), len(efittime))
+        # )
 
-        uppergap_mat = (
-            ((xupperplasma_mat - xupperwall_mat) ** 2)
-            + ((yupperplasma_mat - yupperwall_mat) ** 2)
-        ) ** 0.5
-        lowergap_mat = (
-            ((xlowerplasma_mat - xlowerwall_mat) ** 2)
-            + ((ylowerplasma_mat - ylowerwall_mat) ** 2)
-        ) ** 0.5
-        upper_gap = np.reshape(min(min(uppergap_mat)), (-1, 1))
-        lower_gap = np.reshape(min(min(lowergap_mat)), (-1, 1))
+        # uppergap_mat = (
+        #     ((xupperplasma_mat - xupperwall_mat) ** 2)
+        #     + ((yupperplasma_mat - yupperwall_mat) ** 2)
+        # ) ** 0.5
+        # lowergap_mat = (
+        #     ((xlowerplasma_mat - xlowerwall_mat) ** 2)
+        #     + ((ylowerplasma_mat - ylowerwall_mat) ** 2)
+        # ) ** 0.5
+        # upper_gap = np.reshape(min(min(uppergap_mat)), (-1, 1))
+        # lower_gap = np.reshape(min(min(lowergap_mat)), (-1, 1))
 
         # Interpolate to the requested timebase
         # TODO: do this after clean up all the above codes!
-        """
+        
         return {"upper_gap": upper_gap, "lower_gap": lower_gap}
 
     @staticmethod
