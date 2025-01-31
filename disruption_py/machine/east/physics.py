@@ -813,40 +813,44 @@ class EastPhysicsMethods:
             r"\sad_lk",
             r"\sad_no",
         ]
-        # \sad_no not operational in 2015
+
         # TODO: verify this!
         for i, node in enumerate(saddle_nodes[:7]):
-            saddle[:, i] = params.mds_conn.get_data(node, tree_name="east")
-        saddle[:, 7] = params.mds_conn.get_data(
-            r"\sad_lo", tree_name="east"
-        ) - params.mds_conn.get_data(r"\sad_lm", tree_name="east")
+            try:
+                saddle[:, i] = params.mds_conn.get_data(node, tree_name="east")
+            except mdsExceptions.MdsException:
+                continue
+        # \sad_no not operational in 2015
+        sad_lo = params.mds_conn.get_data(r"\sad_lo", tree_name="east")
+        sad_lm = params.mds_conn.get_data(r"\sad_lm", tree_name="east")
+        saddle[:, 7] = sad_lo - sad_lm
 
         # Calculate RMP n=1 Fourier component amplitude and phase (on the timebase
         # of the saddle signals)
         # TODO: Find 'rmp_sadle_coeff_matrix.mat'
-        coeff_matrix = None
-        rmp_pickup = np.transpose(coeff_matrix * np.transpose(rmp))
+        # coeff_matrix = None
+        # rmp_pickup = np.transpose(coeff_matrix * np.transpose(rmp))
         # Interpolate rmp_pickup onto the saddle time timebase
-        rmp_pickup = interp1(rmptime, rmp_pickup, saddletime)
+        # rmp_pickup = interp1(rmptime, rmp_pickup, saddletime)
 
         # Calculate fast Fourier transforms of the RMP-induced signals, and get
         # mode amplitudes and phases
         # Take FFT along 2nd dimension (phi)
-        rmp_fft_output = scipy.fft.fft(rmp_pickup, axis=1)
-        amplitude = abs(rmp_fft_output) / rmp_fft_output.shape[1]
-        amplitude[:, 1:] *= 2  # TODO: Why?
-        phase = np.arctan2(np.imag(rmp_fft_output), np.real(rmp_fft_output))
+        # rmp_fft_output = scipy.fft.fft(rmp_pickup, axis=1)
+        # amplitude = abs(rmp_fft_output) / rmp_fft_output.shape[1]
+        # amplitude[:, 1:] *= 2  # TODO: Why?
+        # phase = np.arctan2(np.imag(rmp_fft_output), np.real(rmp_fft_output))
         # Only want n=1 Fourier component
-        rmp_n_equal_1 = amplitude[:, 1]
-        rmp_n_equal_1_phase = phase[:, 1]
+        # rmp_n_equal_1 = amplitude[:, 1]
+        # rmp_n_equal_1_phase = phase[:, 1]
         # Interpolate onto the requested timebase
-        rmp_n_equal_1 = interp1(saddletime, rmp_n_equal_1, params.times)
-        rmp_n_equal_1_phase = interp1(saddletime, rmp_n_equal_1_phase, params.times)
+        # rmp_n_equal_1 = interp1(saddletime, rmp_n_equal_1, params.times)
+        # rmp_n_equal_1_phase = interp1(saddletime, rmp_n_equal_1_phase, params.times)
 
         # The saddle signals can include direct pickup from the RMP coils, when the
         # RMP coils are active.  This direct pickup must be subtracted from the
         # saddle signals to leave just the plasma response and baseline drifts.
-        saddle -= rmp_pickup
+        # saddle -= rmp_pickup
         # Calculate fast Fourier transforms and get mode amplitudes and phases
         # Take FFT along 2nd dimension (phi)
         saddle_fft_output = scipy.fft.fft(saddle, axis=1)
