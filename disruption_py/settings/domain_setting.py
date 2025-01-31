@@ -19,6 +19,7 @@ from disruption_py.core.utils.math import interp1
 from disruption_py.core.utils.misc import shot_log_msg
 from disruption_py.machine.cmod.physics import CmodPhysicsMethods
 from disruption_py.machine.d3d.util import D3DUtilMethods
+from disruption_py.machine.east.physics import EastPhysicsMethods
 from disruption_py.machine.tokamak import Tokamak
 
 DomainSettingType = Union["DomainSetting", str, Dict[Tokamak, "DomainSettingType"]]
