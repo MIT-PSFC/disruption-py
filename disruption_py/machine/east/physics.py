@@ -1077,7 +1077,7 @@ class EastPhysicsMethods:
 
         # Interpolate to the requested timebase
         # TODO: do this after clean up all the above codes!
-        
+
         return {"upper_gap": upper_gap, "lower_gap": lower_gap}
 
     @staticmethod
