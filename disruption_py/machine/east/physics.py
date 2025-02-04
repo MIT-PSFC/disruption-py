@@ -12,6 +12,7 @@ from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1, smooth
 from disruption_py.machine.east.efit import EastEfitMethods
+from disruption_py.machine.east.util import EastUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -125,12 +126,7 @@ class EastPhysicsMethods:
         ip = scipy.signal.medfilt(ip, 5)  # Remove noise spikes with median filter
 
         # Subtract baseline offset
-        (base_indices,) = np.where(
-            ip_time <= -5.8
-        )  # time before any PF supplies turn on
-        if len(base_indices) > 0:
-            baseline = sum(ip[base_indices]) / len(base_indices)
-            ip -= baseline
+        ip = EastUtilMethods.subtract_ip_baseline_offset(ip, ip_time)
 
         # Calculate dip_dt
         dip_dt = np.gradient(ip, ip_time)

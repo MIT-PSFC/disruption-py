@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Dict, Union
 
 import numpy as np
+import scipy
 import pandas as pd
 from loguru import logger
 from MDSplus import mdsExceptions
@@ -20,6 +21,7 @@ from disruption_py.core.utils.misc import shot_log_msg
 from disruption_py.inout.mds import MDSConnection
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
+from disruption_py.machine.east.util import EastUtilMethods
 
 
 @dataclass
@@ -453,13 +455,15 @@ class DisruptionTimeSetting(TimeSetting):
         # by 17.0 ms
         if params.shot_id < 44432:
             ip_time -= 0.0170
+
+        # High-frequency noise spikes on some shots can cause a problem with the
+        # time derivative and other computations.  Use a median filter to reduce
+        # the problem.
+        ip = scipy.signal.medfilt(ip, 5)  # Remove noise spikes with median filter
+
         # Subtract baseline offset
-        (base_indices,) = np.where(
-            ip_time <= -5.8
-        )  # time before any PF supplies turn on
-        if len(base_indices) > 0:
-            baseline = sum(ip[base_indices]) / len(base_indices)
-            ip -= baseline
+        ip = EastUtilMethods.subtract_ip_baseline_offset(ip, ip_time)
+
         # For EAST, minimum_ip = 200e3 [A], minimum_duration = 0.6 [s]
         duration, ip_max = self._get_end_of_shot(ip, ip_time, self.minimum_ip)
         if duration < self.minimum_duration or np.abs(ip_max) < self.minimum_ip:
