@@ -190,13 +190,29 @@ def test_domain_setting(tokamak, shotlist, domain_setting, full_time_domain_data
         # Test run_methods and run_columns combo
         ([], [], REQUIRED_COLS, []),
         (["get_kappa_area"], [], REQUIRED_COLS | {"kappa_area"}, []),
-        (["get_kappa_area"], ["greenwald_fraction"], REQUIRED_COLS | {"kappa_area", "n_e", "dn_dt", "greenwald_fraction"}, []),
-        (["~get_kappa_area"], ["greenwald_fraction"], REQUIRED_COLS | {"n_e", "dn_dt", "greenwald_fraction"}, []),
+        (
+            ["get_kappa_area"],
+            ["greenwald_fraction"],
+            REQUIRED_COLS | {"kappa_area", "n_e", "dn_dt", "greenwald_fraction"},
+            [],
+        ),
+        (
+            ["~get_kappa_area"],
+            ["greenwald_fraction"],
+            REQUIRED_COLS | {"n_e", "dn_dt", "greenwald_fraction"},
+            [],
+        ),
         (["~get_kappa_area"], ["kappa_area"], REQUIRED_COLS, []),
     ],
 )
 def test_run_methods_and_columns(
-    tokamak, shotlist, run_methods, run_columns, expected_cols, forbidden_cols, full_time_domain_data
+    tokamak,
+    shotlist,
+    run_methods,
+    run_columns,
+    expected_cols,
+    forbidden_cols,
+    full_time_domain_data,
 ):
     """
     Test the `run_methods` and `run_columns` parameters of RetrievalSettings.
