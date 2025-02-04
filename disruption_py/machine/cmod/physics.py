@@ -566,6 +566,14 @@ class CmodPhysicsMethods:
         """
         Calculate the input and radiated powers, then calculate the
         radiated fraction and radiation confinement time.
+        
+        NOTE: the timebase for the LH power signal does not extend over the full
+            time span of the discharge. Therefore, when interpolating the LH power
+            signal onto the "timebase" array, the LH signal has to be extrapolated
+            with zero values. This is an option in the 'interp1' routine. If the
+            extrapolation is not done, then the 'interp1' routine will assign NaN
+            (Not-a-Number) values for times outside the LH timebase, and the NaN's
+            will propagate into p_input and rad_fraction, which is not desirable.
 
         Parameters
         ----------
@@ -667,18 +675,32 @@ class CmodPhysicsMethods:
     )
     def get_power(params: PhysicsMethodParams):
         r"""
-        NOTE: the timebase for the LH power signal does not extend over the full
-            time span of the discharge. Therefore, when interpolating the LH power
-            signal onto the "timebase" array, the LH signal has to be extrapolated
-            with zero values. This is an option in the 'interp1' routine. If the
-            extrapolation is not done, then the 'interp1' routine will assign NaN
-            (Not-a-Number) values for times outside the LH timebase, and the NaN's
-            will propagate into p_input and rad_fraction, which is not desirable.
-
-        LH, ICRF, & radiated power data sources:
-        - lh: \lh::top.results.netpow [kW]
-        - icrf: \rf::top.antenna.results.pwr_net_tot [MW]
-        - rad: \spectroscopy::top.bolometer.twopi_diode [kW]
+        Calculate the input and radiated powers, then calculate the
+        radiated fraction and radiation confinement time.
+        
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+            
+        Returns
+        -------
+        dict
+            A dictionary containing the calculated power values, including
+            "p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", "radiated_fraction", and "tau_rad".
+            
+        References
+        -------
+        - original source: [get_power.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_power.m)
+        - pull requests: #[62](https://github.com/MIT-PSFC/disruption-py/pull/62), #[367](https://github.com/MIT-PSFC/disruption-py/pull/367)
+    
+        Notes
+        -------
+        Actual data source of LH, ICRF, and radiated power:
+        
+        - p_lh: \lh::top.results.netpow [kW]
+        - p_icrf: \rf::top.antenna.results.pwr_net_tot [MW]
+        - p_rad: \spectroscopy::top.bolometer.twopi_diode [kW]
         """
         # LH power, ICRF power, radiated power, and respective time bases
         values = ["lh", "icrf", "rad"]
