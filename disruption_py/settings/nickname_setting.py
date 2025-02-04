@@ -213,6 +213,8 @@ class DefaultNicknameSetting(NicknameSetting):
 class DisruptionNicknameSetting(NicknameSetting):
     """
     Nickname setting to resolve the '_efit_tree' nickname to the disruption EFIT tree.
+
+    EAST does not have a disruption EFIT tree, so we'll use the default "efit_east" tree.
     """
 
     def __init__(self):
@@ -222,7 +224,7 @@ class DisruptionNicknameSetting(NicknameSetting):
         self.tokamak_overrides = {
             Tokamak.CMOD: self._cmod_nickname,
             Tokamak.D3D: self._d3d_nickname,
-            Tokamak.EAST: self._east_nickname,
+            Tokamak.EAST: StaticNicknameSetting("efit_east")._get_tree_name,
         }
 
     def _d3d_nickname(self, params: NicknameSettingParams) -> str:
@@ -269,24 +271,6 @@ class DisruptionNicknameSetting(NicknameSetting):
         if params.disruption_time is None:
             return DefaultNicknameSetting().get_tree_name(params)
         return "efit18"
-
-    def _east_nickname(self, params: NicknameSettingParams) -> str:
-        """
-        Get the disruption EFIT tree name for EAST.
-
-        12/4/24: There's no efit18 tree for EAST according to Cristina.
-                 Need to verify if this is actually the case.
-        Parameters
-        ----------
-        params : NicknameSettingParams
-            Parameters needed to determine the nickname.
-
-        Returns
-        -------
-        str
-            The resolved EFIT tree name.
-        """
-        return DefaultNicknameSetting().get_tree_name(params)
 
     def _get_tree_name(self, params: NicknameSettingParams) -> str:
         """
