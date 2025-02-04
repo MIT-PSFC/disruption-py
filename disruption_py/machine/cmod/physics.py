@@ -1949,9 +1949,6 @@ class CmodPhysicsMethods:
         """
         Calculate the plasma surface voltage defined as v_surf=-deriv(SIBDRY)*2pi.
 
-        Note that there is a VSURFA node in the EFIT tree, however the stored data
-        are all zeros for every shot.
-
         Parameters
         ----------
         params : PhysicsMethodParams
@@ -1962,7 +1959,15 @@ class CmodPhysicsMethods:
         dict
             A dictionary containing the v_surf data.
 
-        Last major update by William Wei on 12/3/24
+        References
+        -------
+        - pull requests: #[23](https://github.com/MIT-PSFC/disruption-py/pull/23), #[344](https://github.com/MIT-PSFC/disruption-py/pull/344), #[345](https://github.com/MIT-PSFC/disruption-py/pull/345), #[356](https://github.com/MIT-PSFC/disruption-py/pull/356)
+        - issues: #[25](https://github.com/MIT-PSFC/disruption-py/issues/25), #[29](https://github.com/MIT-PSFC/disruption-py/issues/29)
+
+        Notes
+        -------
+        The CMOD EFIT tree does have a `VSURFA` node, but the stored values
+        are zeros for every shot.
         """
         # Get signals from EFIT tree
         sibdry, efit_time = params.mds_conn.get_data_with_dims(
