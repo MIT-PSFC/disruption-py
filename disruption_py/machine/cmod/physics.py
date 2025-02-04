@@ -1919,7 +1919,16 @@ class CmodPhysicsMethods:
     @physics_method(columns=["thermal_quench_time_onset"], tokamak=Tokamak.CMOD)
     def get_thermal_quench_time_onset(params: PhysicsMethodParams):
         """
-        Gets the onset of the fast thermal quench using SXR data.
+        Gets the onset of the fast thermal quench using SXR arrays using an off-line
+        algorithm. The thermal quench onset is found by examining the max SXR intensity
+        across all chords in the array for a given time slice, which should track the
+        core SXR emission in the case of a hot VDE. Iterating backwards from the current quench,
+        the TQ onset is labeled as the point in which the max(SXR) intensity rises above
+        a threshold determined by the pre-disruptive max(SXR) intensity for a minimum amount
+        of time (when iterating backwards in time), which should be robust to transient spikes
+        in the SXR signal during the thermal quench.
+        Note performance is better for 2012-2016, for which SXR chords have a 250kHz sampling rate,
+        compared to 2005 shots which have a 5 kHz sampling rate and tend to be noisier.
         ----------
         params: PhysicsMethodParams
             The parameters storing the requested time base, shot id, etc
@@ -1930,12 +1939,13 @@ class CmodPhysicsMethods:
         Last Major Update: Henry Wietfeldt (1/31/25)
         """
         n_chords = 38
+        # For varying threshold while tuning
         with open("tq_params.yaml", "r") as f:
             tq_params = yaml.safe_load(f)
         min_time_above_threshold = tq_params['min_time_above_threshold']
         normalized_threshold = tq_params['normalized_threshold']
-        # Get magnetic axis data from EFIT
         thermal_quench_time_onset = np.full(len(params.times), np.nan)
+        # Get magnetic axis data from EFIT for testing purposes
         # ip, magtime = params.mds_conn.get_data_with_dims(
         #     r"\ip", tree_name="magnetics", astype="float64"
         # )
@@ -1943,10 +1953,11 @@ class CmodPhysicsMethods:
         #     r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
         # )  # [cm], [s]
         # z0 *= 0.01 # [cm] -> [m]
-        # Get timebase of horizontal SXR array 
+
+        # Get timebase of SXR array from first chord
         if (params.shot_id > 1040000000 and params.shot_id < 1060000000):
             # Array 3 is bad for chords 15, 21-38 during 2005 campaign
-            # so use array 1 (vertical array)
+            # so use array 1 (vertical array) for 2005 shots
             array_path = r"\top.brightnesses.array_1"
         else:
             array_path = r"\top.brightnesses.array_3"
@@ -1964,6 +1975,7 @@ class CmodPhysicsMethods:
         t_sxr = t_sxr[valid_times]
         sxr = np.zeros(shape=(n_chords, len(t_sxr)))
         sxr[0] = chord_01[valid_times]
+        # Get all SXR chords
         for i in range(1, n_chords):
             try:
                 chord, t_chord = params.mds_conn.get_data_with_dims(
@@ -1980,30 +1992,32 @@ class CmodPhysicsMethods:
             # Occasionally the time bases of a chord are of a different length
             # Usually one timebase is just cut off early after shot is over
             valid_times = (t_chord > 0) & (t_chord < 2.)
-            # If a chord is cut off prematurely, it's likely junk so ignore
+            # Goods chords should be of the same shape
             if len(chord[valid_times]) == sxr.shape[1]:
                 sxr[i] = chord[valid_times]
-        sxr_prog_core = sxr[17]
-        sample_time = t_sxr[1] - t_sxr[0]
+
         # Discard chords dominated by noise using the chord's autocorrelation
         # Only do this for 2005 shots because I've found those shots frequently
         # have bad chords compared to 2012-2016 chords, for which window smoothing
-        # should do the trick.
+        # should do the trick. The autocorrelation method is pretty slow for 2012-2016
+        # chords, due to the 250 kHz sampling rate
+        sample_time = t_sxr[1] - t_sxr[0]
         if (params.shot_id < 1060000000):
-            noise_autorr_cutoff = 0.01 # s, good chords should be 100's of s
+            noise_autorr_cutoff = 0.01 # s, good chords should be 100's of ms
             for i, chord in enumerate(sxr):
                 autocorr = np.correlate(chord, chord, mode='full')
                 autocorr = autocorr / np.max(autocorr)  # Normalize
-                lags = np.arange(-len(chord) + 1, len(chord))
+                #lags = np.arange(-len(chord) + 1, len(chord))
                 index_no_lag = np.argmax(autocorr)
                 index_decay = np.argmax(autocorr[index_no_lag:] < 0)
                 if (index_decay*sample_time < noise_autorr_cutoff):
                     sxr[i] = 0.
         else:
-            # Smooth noise for 2012-2016 shots
+            # Smooth noise for 2012-2016 shots bc taking max across chords amplifies noise
+            # 0.15 ms window is shorter than the typical TQ duration on C-Mod 
+            # but filters noise sufficiently
             smooth_width = int(0.000150 / sample_time) + 1
             sxr = median_filter(sxr, size=(1, smooth_width), mode='constant', cval=0.)
-                    # print(str(params.shot_id) + " chord " + str(i+1) + " is bad (noisy)")
         core_sxr = np.max(sxr, axis=0)
         core_sxr_index = np.argmax(sxr, axis=0)
 
@@ -2014,6 +2028,12 @@ class CmodPhysicsMethods:
         indx2 = np.argmax(t_sxr > params.disruption_time - 0.003)
         sxr_pre_disrupt = np.mean(core_sxr[indx1:indx2])
 
+        # Identify the TQ onset time by iterating backwards 
+        # from max (dI/dt) during current quench (params.disruption_time)
+        # Require that the max(SXR) signal be above a threshold for a minimum duration
+        # when iterating backwards to label as the TQ onset. Requiring a minimum
+        # duration avoids labeling transient spikes in the SXR signal due to recombination or 
+        # impurity accumulation during the TQ
         i = np.argmax(t_sxr > params.disruption_time) - 1
         time_above_threshold = 0
         while (time_above_threshold < min_time_above_threshold) and (i > 0):
@@ -2024,6 +2044,7 @@ class CmodPhysicsMethods:
             i -= 1
         time_tq_onset = t_sxr[i] + time_above_threshold
 
+        # Plotting for testing
         # print("TQ Onset Time: " + str(time_tq_onset))
         # fig, axs = plt.subplots(4, 1, sharex=True)
         # axs[0].scatter(magtime, np.abs(ip)/1e6, marker='o')
