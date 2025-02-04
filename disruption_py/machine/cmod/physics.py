@@ -1758,6 +1758,13 @@ class CmodPhysicsMethods:
         -------
         dict
             A dictionary containing the peaking factor for radiated power (`prad_peaking`).
+
+        References
+        -------
+        - original source: [get_Prad_peaking.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_Prad_peaking.m)
+        - pull requests: #[200](https://github.com/MIT-PSFC/disruption-py/pull/200), #[227](https://github.com/MIT-PSFC/disruption-py/pull/227)
+        - issues: #[92](https://github.com/MIT-PSFC/disruption-py/issues/92), #[192](https://github.com/MIT-PSFC/disruption-py/issues/192), #[206](https://github.com/MIT-PSFC/disruption-py/issues/206)
+
         """
         prad_peaking = np.full(len(params.times), np.nan)
         nan_output = {"prad_peaking": prad_peaking}
