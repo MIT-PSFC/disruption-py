@@ -854,7 +854,7 @@ class EastPhysicsMethods:
         # Calculate fast Fourier transforms and get mode amplitudes and phases
         # Take FFT along 2nd dimension (phi)
         saddle_fft_output = scipy.fft.fft(saddle, axis=1)
-        amplitude = abs(saddle_fft_output) / saddle_fft_output.shape[1]
+        amplitude = abs(saddle_fft_output) / len(saddle_fft_output[0])
         amplitude[:, 1:] *= 2  # TODO: Why?
         phase = np.arctan2(np.imag(saddle_fft_output), np.real(saddle_fft_output))
         # Only want n=1 Fourier component
@@ -1783,7 +1783,7 @@ class EastPhysicsMethods:
         # Compute the n=1 and n=2 mode signals from the Mirnov array signals
         # TODO: Verify the output structure of scipy.fft.fft; MATLAB one has index 3 (so 0, 1, 2?)
         mir_fft_output = scipy.fft.fft(mir, axis=0)
-        amplitude = abs(mir_fft_output) / mir_fft_output.shape[1]
+        amplitude = abs(mir_fft_output) / len(mir_fft_output[0])
         amplitude[:, 1:] *= 2  # TODO: Why?
         phase = np.arctan2(np.imag(mir_fft_output), np.real(mir_fft_output))
         n1 = amplitude[:, 1] * np.cos(phase[:, 1])
