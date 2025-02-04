@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Type, Union
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 from loguru import logger
 
 from disruption_py.core.utils.enums import map_string_to_enum
@@ -742,11 +743,50 @@ class SQLOutputSetting(OutputSetting):
         self.results = pd.DataFrame()
 
 
+class DatasetOutputSetting(OutputSetting):
+    """
+    Outputs shot data as an xarray Dataset.
+    """
+
+    def __init__(self):
+        """Initialize DatasetOutputSetting with None."""
+        self.datasets = []
+
+    def _output_shot(self, params: OutputSettingParams):
+        """
+        Output a single shot by concatenating the data in the Dataset.
+
+        Parameters
+        ----------
+        params : OutputSettingParams
+            The parameters for outputting shot results.
+        """
+        new_ds = xr.Dataset.from_dataframe(params.result.set_index(["shot", "time"]))
+        self.datasets.append(new_ds)
+
+    def get_results(self, params: CompleteOutputSettingParams):
+        """
+        Get the accumulated results.
+
+        Parameters
+        ----------
+        params : CompleteOutputSettingParams
+            The parameters for output cleanup and result fetching.
+
+        Returns
+        -------
+        Dict[int, xr.Dataset]
+            The dataset of results with dims shot and time.
+        """
+        return xr.concat(self.datasets, dim="shot")
+
+
 # --8<-- [start:output_setting_dict]
 _output_setting_mappings: Dict[str, OutputSetting] = {
     "list": ListOutputSetting(),
     "dataframe": DataFrameOutputSetting(),
     "dict": DictOutputSetting(),
+    "dataset": DatasetOutputSetting(),
 }
 # --8<-- [end:output_setting_dict]
 
