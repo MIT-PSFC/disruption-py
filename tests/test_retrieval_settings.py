@@ -182,21 +182,37 @@ def test_domain_setting(tokamak, shotlist, domain_setting, full_time_domain_data
         # Test run_methods with run_columns=None
         (None, None, None, []),
         ([], None, REQUIRED_COLS, []),
-        (["~get_sxr_data"], None, None, ["sxr"]),
-        (["get_sxr_data"], None, REQUIRED_COLS | {"sxr"}, []),
+        (["~get_kappa_area"], None, None, ["kappa_area"]),
+        (["get_kappa_area"], None, REQUIRED_COLS | {"kappa_area"}, []),
         # Test run_columns with run_methods=None
         (None, [], REQUIRED_COLS, []),
-        (None, ["sxr"], REQUIRED_COLS | {"sxr"}, []),
+        (None, ["kappa_area"], REQUIRED_COLS | {"kappa_area"}, []),
         # Test run_methods and run_columns combo
         ([], [], REQUIRED_COLS, []),
-        (["get_sxr_data"], [], REQUIRED_COLS | {"sxr"}, []),
-        (["get_sxr_data"], ["beta_n"], REQUIRED_COLS | {"sxr", "beta_n"}, []),
-        (["~get_sxr_data"], ["beta_n"], REQUIRED_COLS | {"beta_n"}, []),
-        (["~get_sxr_data"], ["sxr"], REQUIRED_COLS, []),
+        (["get_kappa_area"], [], REQUIRED_COLS | {"kappa_area"}, []),
+        (
+            ["get_kappa_area"],
+            ["greenwald_fraction"],
+            REQUIRED_COLS | {"kappa_area", "n_e", "dn_dt", "greenwald_fraction"},
+            [],
+        ),
+        (
+            ["~get_kappa_area"],
+            ["greenwald_fraction"],
+            REQUIRED_COLS | {"n_e", "dn_dt", "greenwald_fraction"},
+            [],
+        ),
+        (["~get_kappa_area"], ["kappa_area"], REQUIRED_COLS, []),
     ],
 )
 def test_run_methods_and_columns(
-    tokamak, shotlist, run_methods, run_columns, expected_cols, forbidden_cols
+    tokamak,
+    shotlist,
+    run_methods,
+    run_columns,
+    expected_cols,
+    forbidden_cols,
+    full_time_domain_data,
 ):
     """
     Test the `run_methods` and `run_columns` parameters of RetrievalSettings.
@@ -207,7 +223,7 @@ def test_run_methods_and_columns(
     - If `run_methods` excludes a method returning a column specified in `run_columns`,
       the method is not run
     """
-    num_all_cols = 64
+    num_all_cols = len(full_time_domain_data[0].columns)
     retrieval_settings = RetrievalSettings(
         run_methods=run_methods,
         run_columns=run_columns,
