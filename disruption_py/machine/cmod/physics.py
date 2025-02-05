@@ -1973,6 +1973,8 @@ class CmodPhysicsMethods:
         CPASMA and BTAXP from EFIT_AEQDSK instead of IP and BTOR from MAGNETICS
         for Ip and Bt.
 
+        [^1]: http://wiki.fusenet.eu/fusionwiki/index.php/Beta
+
         Parameters
         ----------
         params : PhysicsMethodParams
