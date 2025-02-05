@@ -369,11 +369,11 @@ class CmodPhysicsMethods:
         dict
             A dictionary containing the vertical position parameters, including "z_error", "z_prog",
             "zcur", "v_z", and "z_times_v_z".
-            
+
         References
         -------
         - original source: [get_Z_parameters.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_Z_parameters.m)
-        - pull requests: #[134](https://github.com/MIT-PSFC/disruption-py/pull/134), #[136](https://github.com/MIT-PSFC/disruption-py/pull/136) 
+        - pull requests: #[134](https://github.com/MIT-PSFC/disruption-py/pull/134), #[136](https://github.com/MIT-PSFC/disruption-py/pull/136)
         - issues: #[133](https://github.com/MIT-PSFC/disruption-py/issues/133)
         """
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
@@ -1954,9 +1954,9 @@ class CmodPhysicsMethods:
         \\beta_N = \\beta_\\text{tot} \\frac{a B_T}{I_p}.
         $$
 
-        Where $I_p$ is in MA, and the total plasma beta $\\beta$ is defined as
+        Where $I_p$ is in MA, and the total plasma beta $\\beta$ is defined as [^1]
         $$
-        \\beta_\\text{tot} = \\frac{p}{B^2/2\\mu_0}.
+        \\beta_\\text{tot} = \\frac{p}{B^2/2\\mu_0} .
         $$
 
         Since the total beta is dominated by the toroidal beta,
