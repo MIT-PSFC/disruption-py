@@ -1478,7 +1478,7 @@ class CmodPhysicsMethods:
 
         Returns
         -------
-        Dictionary of ne_peaking, Te_peaking, and pressure_peaking
+        Dictionary of te_core_vs_avg_ece, te_edge_vs_avg_ece, and te_width_ece.
 
         Sources:
         - https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/
@@ -1645,17 +1645,44 @@ class CmodPhysicsMethods:
     )
     def get_te_profile_params_ece(params: PhysicsMethodParams):
         """
-        Gets MDSplus data to be used in the calculations of te profile parameters
-        from ECE data
+        Calculates Te peaking factor and width from the electron cyclotron emission (ECE)
+        data using the two GPC diagnostic systems.
+
+        GPC diagnostics look at the mid-plane, and each channel detects a different
+        emitted frequency associated with the second harmonic, which depends on the toroidal
+        magnetic field (`Bt`) and therefore the plasma major radius (`R`).
+
+        - `te_width_ece` is the half-width at half-max of a Gaussian fit of the Te profile
+        - `te_core_vs_avg_ece` is defined as mean(core)/mean(all) where core bins are defined
+          as those with |R - R0| < 0.2*a of the magnetic axis.
+        - `te_edge_vs_avg_ece` is defined as `mean(edge)/mean(all)` where edge bins are defined as
+          those with 0.8*a < |R - R0| < a
+
+        For core and edge vs. average calculations, different shots can have different
+        radial sampling, and during a few experiments on C-Mod, Bt was changed during
+        the shot, changing the radial sampling. Different radial samplings can have
+        different proportions of core to edge sampling, which affects the mean `Te` over
+        the whole profile, biasing the core vs average and edge vs average statistics.
+        Therefore, we use a uniformly sampled radial basis from R0 to R0+a. We use many
+        interpolated radial points to minimize artifacts caused by a point moving
+        across the arbitrary core or edge boundary.
+
         Parameters
         ----------
-        params: PhysicsMethodParams
-            The parameters storing the requested time base, shot id, etc
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
         Returns
         ----------
-        Output of get_te_profile_params_ece(), which processes the MDSplus data
+        dict
+            A dictionary containing the Te width (`te_width_ece`), the core-vs-average
+            (`te_core_vs_avg_ece`), and the edge-vs-average peak factors (`te_edge_vs_avg_ece`)
+            from the ECE data.
 
-        Last Major Update: Henry Wietfeldt (8/28/24)
+        References
+        -------
+        - referenced sources: [get_ECE_data_cmod.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_ECE_data_cmod.m)
+        - pull requests: #[260](https://github.com/MIT-PSFC/disruption-py/pull/260)
         """
 
         # Constants
