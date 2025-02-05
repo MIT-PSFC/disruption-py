@@ -85,7 +85,7 @@ class CmodPhysicsMethods:
         Calculate the time until disruption.
 
         Currently, the disruption time is queried from the `DISRUPTIONS` table
-        in the SQL database of each machine. These disruption times were calculated 
+        in the SQL database of each machine. These disruption times were calculated
         using Robert Granetz's routine.
 
         Parameters
@@ -1137,7 +1137,9 @@ class CmodPhysicsMethods:
     @physics_method(columns=["te_width"], tokamak=Tokamak.CMOD)
     def get_ts_parameters(params: PhysicsMethodParams):
         """
-        Retrieve Thomson scattering temperature width parameters.
+        Retrieve the electron temperature signals from the Thomson scattering (TS)
+        diagnostics, then calculate the half-width at half-maximum of the Gaussian
+        fit to the profile.
 
         Parameters
         ----------
@@ -1147,7 +1149,13 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the temperature width (`te_width`).
+            A dictionary containing the electron temperature profile width (`te_width`).
+
+        References
+        -------
+        - original source: [get_TS_data_cmod.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_TS_data_cmod.m)
+        - pull requests: #[107](https://github.com/MIT-PSFC/disruption-py/pull/107)
+        - issues: #[383](https://github.com/MIT-PSFC/disruption-py/issues/383)
         """
         # TODO: Gaussian vs parabolic fit for te profile
 
