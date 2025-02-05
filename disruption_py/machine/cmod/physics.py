@@ -319,7 +319,6 @@ class CmodPhysicsMethods:
         Sources
         -------
         - matlab/cmod_matlab/matlab-core/get_Z_parameters.m
-        - matlab/cmod_matlab/matlab-core/get_Z_parameters.m
 
         """
         divsafe_ip = np.where(ip != 0, ip, np.nan)
@@ -351,7 +350,14 @@ class CmodPhysicsMethods:
     )
     def get_z_parameters(params: PhysicsMethodParams):
         """
-        Retrieve and interpolate plasma's vertical position parameters.
+        Get values of Z_error, Z_prog, and derived signals from plasma control
+        system (PCS).
+
+        Z_prog is the programmed vertical position of the plasma current centroid,
+        and Z_error is the difference between the actual position and that requested
+        (Z_error = Z_cur - Z_prog). Thus, the actual (estimated) position, Z_cur,
+        can be calculated. And the vertical velocity, v_z, can be taken from the
+        time derivative, and the product z_times_v_z ( = Z_cur * v_z) is also calculated.
 
         Parameters
         ----------
@@ -363,6 +369,12 @@ class CmodPhysicsMethods:
         dict
             A dictionary containing the vertical position parameters, including "z_error", "z_prog",
             "zcur", "v_z", and "z_times_v_z".
+            
+        References
+        -------
+        - original source: [get_Z_parameters.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_Z_parameters.m)
+        - pull requests: #[134](https://github.com/MIT-PSFC/disruption-py/pull/134), #[136](https://github.com/MIT-PSFC/disruption-py/pull/136) 
+        - issues: #[133](https://github.com/MIT-PSFC/disruption-py/issues/133)
         """
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
         z_prog = np.empty(pcstime.shape)
