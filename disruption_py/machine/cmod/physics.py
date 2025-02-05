@@ -84,6 +84,10 @@ class CmodPhysicsMethods:
         """
         Calculate the time until disruption.
 
+        Currently, the disruption time is queried from the `DISRUPTIONS` table
+        in the SQL database of each machine. These disruption times were calculated 
+        using Robert Granetz's routine.
+
         Parameters
         ----------
         params : PhysicsMethodParams
@@ -92,8 +96,13 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary with a single key "time_until_disrupt" containing a list
-            of time until disruption.
+            A dictionary with a single key "time_until_disrupt".
+
+        References
+        -------
+        - original source: [get_t_disrupt.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_t_disrupt.m)
+        - issues: #[223](https://github.com/MIT-PSFC/disruption-py/issues/223)
+
         """
         time_until_disrupt = [np.nan]
         if params.disrupted:
