@@ -1865,7 +1865,7 @@ class CmodPhysicsMethods:
     @physics_method(columns=["sxr"], tokamak=Tokamak.CMOD)
     def get_sxr_data(params: PhysicsMethodParams):
         """
-        Retrieve soft X-ray (SXR) data from array 1 chord 16 for a given shot.
+        Retrieve the central soft X-ray (SXR) signal (array 1 chord 16) for a given shot.
 
         Parameters
         ----------
@@ -1876,6 +1876,11 @@ class CmodPhysicsMethods:
         -------
         dict
             A dictionary containing the soft X-ray data (`sxr`).
+
+        References
+        -------
+        - original source: [get_sxr_data.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_sxr_data.m)
+
         """
         sxr, t_sxr = params.mds_conn.get_data_with_dims(
             r"\top.brightnesses.array_1:chord_16",
