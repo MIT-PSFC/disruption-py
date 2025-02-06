@@ -76,12 +76,12 @@ class ShotDatabase:
         self.protected_columns = protected_columns
         self.write_database_table_name = write_database_table_name
 
-        dialect = "mysql" if "mysql" in self.driver.lower() else "mssql"
+        self.dialect = "mysql" if "mysql" in self.driver.lower() else "mssql"
         self.connection_string = self._get_connection_string(self.db_name)
         self._thread_connections = {}
         quoted_connection_string = quote_plus(self.connection_string)
         self.engine = create_engine(
-            f"{dialect}+pyodbc:///?odbc_connect={quoted_connection_string}"
+            f"{self.dialect}+pyodbc:///?odbc_connect={quoted_connection_string}"
         )
 
     @classmethod
@@ -367,14 +367,32 @@ class ShotDatabase:
 
     def _get_identity_column_names(self, table_name: str):
         """Get which column names are identity columns in table."""
+        queries = {
+            "mssql": """
+                     SELECT
+                       c.name AS ColumnName
+                     FROM
+                       sys.columns c
+                       INNER JOIN sys.tables t ON c.object_id = t.object_id
+                       LEFT JOIN sys.identity_columns ic ON ic.object_id = c.object_id
+                       AND ic.column_id = c.column_id
+                     WHERE
+                       t.name = '{table_name}'
+                       AND ic.object_id IS NOT NULL
+                     """,
+            "mysql": """
+                     SELECT
+                       COLUMN_NAME AS ColumnName
+                     FROM
+                       INFORMATION_SCHEMA.COLUMNS
+                     WHERE
+                       TABLE_NAME = '{table_name}'
+                       AND EXTRA LIKE '%auto_increment%';
+                     """,
+        }
         with self.conn.cursor() as curs:
-            query = f"""\
-            SELECT c.name AS ColumnName 
-            FROM sys.columns c
-            INNER JOIN sys.tables t ON c.object_id = t.object_id
-            LEFT JOIN sys.identity_columns ic ON ic.object_id = c.object_id AND ic.column_id = c.column_id
-            WHERE t.name = '{table_name}' AND ic.object_id IS NOT NULL
-            """
+            query = queries[self.dialect].format(table_name=table_name)
+            logger.trace("Executing query: {query}", query=query)
             curs.execute(query)
             return [row[0] for row in curs.fetchall()]
 
