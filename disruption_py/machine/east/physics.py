@@ -706,7 +706,7 @@ class EastPhysicsMethods:
         columns=[
             "n_equal_1_mode",
             "n_equal_1_phase",
-            "e_equal_1_normalized",
+            "n_equal_1_normalized",
             "rmp_n_equal_1",
             "rmp_n_equal_1_phase",
         ],
