@@ -105,19 +105,32 @@ def test_output_exists(initial_mdsplus_data, test_file_path_f):
 
 @skip_on_fast_execution
 def test_sql_output_setting(
-    shotlist, shot_database: ShotDatabase, initial_mdsplus_data_df
+    shotlist, shot_database: ShotDatabase, initial_mdsplus_data_df, test_file_path_f
 ) -> Dict:
     """
     Ensure SQL output setting works by reading from an initial writeback to
     SQL, then by updating the SQL with another writeback, and making sure data from
     MDSplus matches the data from SQL for both retrievals.
     """
-    # Test initial database readback
-    result = shot_database.get_shots_data(shotlist, sql_table=WRITE_DATABASE_TABLE_NAME)
-    assert_frame_equal_unordered(
-        result[FIRST_ITERATION_COLUMNS],
-        initial_mdsplus_data_df[FIRST_ITERATION_COLUMNS],
+
+    # Test initial database writeback
+    result = shot_database.get_shots_data(
+        shotlist=shotlist,
+        cols=FIRST_ITERATION_COLUMNS,
+        sql_table=WRITE_DATABASE_TABLE_NAME,
     )
+    try:
+        assert_frame_equal_unordered(
+            result[FIRST_ITERATION_COLUMNS],
+            initial_mdsplus_data_df[FIRST_ITERATION_COLUMNS],
+        )
+    except AssertionError:
+        print("Initial writeback to SQL failed!")
+        result.to_csv(test_file_path_f("-1L.csv"))
+        initial_mdsplus_data_df[FIRST_ITERATION_COLUMNS].to_csv(
+            test_file_path_f("-1R.csv")
+        )
+        raise
 
     # Do second retrieval that updates the data for the columns
     retrieval_settings = RetrievalSettings(
@@ -134,10 +147,20 @@ def test_sql_output_setting(
         ),
         num_processes=2,
     )
-    result = shot_database.get_shots_data(shotlist, sql_table=WRITE_DATABASE_TABLE_NAME)
-    assert_frame_equal_unordered(
-        result[ALL_ITERATION_COLUMNS], shot_data[ALL_ITERATION_COLUMNS]
+    result = shot_database.get_shots_data(
+        shotlist=shotlist,
+        cols=ALL_ITERATION_COLUMNS,
+        sql_table=WRITE_DATABASE_TABLE_NAME,
     )
+    try:
+        assert_frame_equal_unordered(
+            result[ALL_ITERATION_COLUMNS], shot_data[ALL_ITERATION_COLUMNS]
+        )
+    except AssertionError:
+        print("Second writeback to SQL failed!")
+        result[ALL_ITERATION_COLUMNS].to_csv(test_file_path_f("-2L.csv"))
+        shot_data[ALL_ITERATION_COLUMNS].to_csv(test_file_path_f("-2R.csv"))
+        raise
 
 
 def test_batch_csv(tokamak, test_file_path_f, shotlist):
@@ -145,7 +168,7 @@ def test_batch_csv(tokamak, test_file_path_f, shotlist):
     Test the batch csv output setting to ensure it outputs the same columns in
     the same order as the dataframe in memory.
     """
-    csv = test_file_path_f(".csv")
+    csv = test_file_path_f("-batch.csv")
     out = get_shots_data(
         tokamak=tokamak,
         shotlist_setting=shotlist,
