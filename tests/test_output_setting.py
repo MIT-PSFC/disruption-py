@@ -141,6 +141,7 @@ def test_sql_output_setting(
         retrieval_settings=retrieval_settings,
         output_setting=SQLOutputSetting(
             table_name=WRITE_DATABASE_TABLE_NAME,
+            should_update=True,
             should_override_columns=SECOND_ITERATION_COLUMNS,
         ),
         num_processes=2,
