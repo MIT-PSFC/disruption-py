@@ -153,7 +153,7 @@ def test_domain_setting(tokamak, shotlist, domain_setting, full_time_domain_data
         tokamak in [Tokamak.D3D, Tokamak.EAST]
         and domain_setting == "rampup_and_flattop"
     ):
-        pytest.skip("rampup_and_flattop domain setting not defined for DIII-D")
+        pytest.skip(f"{domain_setting} domain setting not defined for {tokamak.value}")
     retrieval_settings = RetrievalSettings(
         efit_nickname_setting="default", domain_setting=domain_setting
     )
