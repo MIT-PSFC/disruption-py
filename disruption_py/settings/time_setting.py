@@ -245,7 +245,7 @@ class CacheTimeSetting(TimeSetting):
             try:
                 times = params.cache_data["time"].to_numpy()
                 # Check if the timebase is in ms instead of s
-                if times[-1] > config(params.tokamak).max_shot_time:
+                if 0 < config(params.tokamak).max_shot_time < times[-1]:
                     times /= 1000  # [ms] -> [s]
                 return times
             except KeyError as e:
