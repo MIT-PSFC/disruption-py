@@ -149,7 +149,10 @@ def test_domain_setting(tokamak, shotlist, domain_setting, full_time_domain_data
     Test the two partial domain settings by comparing their start and end times
     with the full domain.
     """
-    if tokamak == Tokamak.D3D and domain_setting == "rampup_and_flattop":
+    if (
+        tokamak in [Tokamak.D3D, Tokamak.EAST]
+        and domain_setting == "rampup_and_flattop"
+    ):
         pytest.skip("rampup_and_flattop domain setting not defined for DIII-D")
     retrieval_settings = RetrievalSettings(
         efit_nickname_setting="default", domain_setting=domain_setting
