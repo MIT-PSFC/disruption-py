@@ -124,13 +124,12 @@ def test_sql_output_setting(
             result[FIRST_ITERATION_COLUMNS],
             initial_mdsplus_data_df[FIRST_ITERATION_COLUMNS],
         )
-    except AssertionError:
-        print("Initial writeback to SQL failed!")
+    except AssertionError as e:
         result.to_csv(test_file_path_f("-1L.csv"))
         initial_mdsplus_data_df[FIRST_ITERATION_COLUMNS].to_csv(
             test_file_path_f("-1R.csv")
         )
-        raise
+        raise AssertionError(f"First writeback to SQL failed! {e.args[0]}") from e
 
     # Do second retrieval that updates the data for the columns
     retrieval_settings = RetrievalSettings(
@@ -156,11 +155,10 @@ def test_sql_output_setting(
         assert_frame_equal_unordered(
             result[ALL_ITERATION_COLUMNS], shot_data[ALL_ITERATION_COLUMNS]
         )
-    except AssertionError:
-        print("Second writeback to SQL failed!")
+    except AssertionError as e:
         result[ALL_ITERATION_COLUMNS].to_csv(test_file_path_f("-2L.csv"))
         shot_data[ALL_ITERATION_COLUMNS].to_csv(test_file_path_f("-2R.csv"))
-        raise
+        raise AssertionError(f"Second writeback to SQL failed! {e.args[0]}") from e
 
 
 def test_batch_csv(tokamak, test_file_path_f, shotlist):
