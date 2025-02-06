@@ -45,8 +45,7 @@ def setup_shot_database(shotlist, shot_database):
     This fixture automatically removes data for each shot in the
     provided shotlist from the shot_database.
     """
-    for shot in shotlist:
-        shot_database.remove_shot_data(shot)
+    shot_database.remove_shot_data(shotlist)
 
 
 @pytest.fixture(scope="module", name="initial_mdsplus_data")

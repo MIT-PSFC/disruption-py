@@ -16,7 +16,7 @@ from loguru import logger
 from sqlalchemy import create_engine
 
 from disruption_py.config import config
-from disruption_py.core.utils.misc import shot_log_msg, without_duplicates
+from disruption_py.core.utils.misc import without_duplicates
 from disruption_py.core.utils.shared_instance import SharedInstance
 from disruption_py.machine.tokamak import Tokamak
 
@@ -396,30 +396,18 @@ class ShotDatabase:
             curs.execute(query)
             return [row[0] for row in curs.fetchall()]
 
-    def remove_shot_data(self, shot_id):
-        """Remove shot from SQL table."""
-        if self.write_database_table_name is None:
-            raise ValueError(
-                "specify write_database_table_name in the configuration before "
-                + "adding shot data"
-            )
-        if self.write_database_table_name == "disruption_warning":
-            raise ValueError(
-                "Please do not delete from the disruption_warning database"
-            )
-        data_df = pd.read_sql_query(
-            f"""select * from {self.write_database_table_name} where shot = """
-            + f"""{shot_id} order by time""",
-            self.engine,
-        )
-        if len(data_df) == 0:
-            logger.warning(shot_log_msg(shot_id, "shot does not exist in database"))
-            return False
+    def remove_shot_data(self, shotlist: List[int]):
+        """Remove shot data from the test SQL table."""
+        table_name = self.write_database_table_name
+        if not table_name.endswith("_test"):
+            raise ValueError("Deletion is restricted to tables ending in '_test'.")
+        shots = [str(s) for s in shotlist]
         with self.conn.cursor() as curs:
-            curs.execute(
-                f"delete from {self.write_database_table_name} where shot = {shot_id}"
-            )
-        return True
+            query = f"delete from {table_name} where shot in ({', '.join(shots)})"
+            logger.debug("Executing query: '{query}'", query=query)
+            curs.execute(query)
+            logger.debug("Deleted: {rows} rows", rows=curs.rowcount)
+            return curs.rowcount > 0
 
     def add_column(self, col_name, var_type="TEXT"):
         """Add column to SQL table without filling in data for column."""
