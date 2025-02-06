@@ -89,6 +89,7 @@ class EastEfitMethods:
 
         for param in efit_data:
             efit_data[param][invalid_indices] = np.nan
+        # pylint: disable=duplicate-code
         for deriv_param, param in EastEfitMethods.efit_derivs.items():
             efit_data[deriv_param] = np.gradient(efit_data[param], efit_time)
         if not np.array_equal(params.times, efit_time):
@@ -144,7 +145,7 @@ class EastEfitMethods:
         invalid_indices = np.where(
             (efit_data["pchisq"] > 50) & (efit_data["pconvergence"] < 1)
         )
-
+        # pylint: disable=duplicate-code
         for param in efit_data:
             efit_data[param][invalid_indices] = np.nan
         if not np.array_equal(params.times, efit_time):
