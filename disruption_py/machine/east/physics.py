@@ -103,31 +103,7 @@ class EastPhysicsMethods:
         dip_dt = [np.nan]
         dipprog_dt = [np.nan]
 
-        # Read in the measured plasma current, Ip.  There are several
-        # different measurements of Ip: IPE, IPG, IPM (all in the EAST tree), and
-        # PCRL01 (in the PCS_EAST tree).  At various times in the history of EAST,
-        # there are been problems with all of these measurements, such as broken
-        # sensors, inverted signals, and shifted timebases.  I think the most
-        # reliable one is PCRL01, which is the one used by the Plasma Control
-        # System (PCS) for feedback control.  So that is the one I will use for the
-        # disruption warning database.
-        ip, ip_time = params.mds_conn.get_data_with_dims(
-            r"\pcrl01", tree_name="pcs_east"
-        )  # [A], [s]
-
-        # For shots before year 2014, the PCRL01 timebase needs to be shifted
-        # by 17.0 ms
-        if params.shot_id < 44432:
-            ip_time -= 0.0170
-
-        # High-frequency noise spikes on some shots can cause a problem with the
-        # time derivative and other computations.  Use a median filter to reduce
-        # the problem.
-        ip = scipy.signal.medfilt(ip, 5)  # Remove noise spikes with median filter
-
-        # Subtract baseline offset
-        ip = EastUtilMethods.subtract_ip_baseline_offset(ip, ip_time)
-
+        ip, ip_time = EastUtilMethods.retrieve_ip(params.mds_conn, params.shot_id)
         # Calculate dip_dt
         dip_dt = np.gradient(ip, ip_time)
 
