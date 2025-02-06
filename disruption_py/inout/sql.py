@@ -16,7 +16,7 @@ from loguru import logger
 from sqlalchemy import create_engine
 
 from disruption_py.config import config
-from disruption_py.core.utils.misc import without_duplicates
+from disruption_py.core.utils.misc import shot_log_msg, without_duplicates
 from disruption_py.core.utils.shared_instance import SharedInstance
 from disruption_py.machine.tokamak import Tokamak
 
@@ -350,6 +350,7 @@ class ShotDatabase:
                 update_columns_shot_data[column_name] = shot_data[column_name]
         # pyodbc will fill SQL with NULL for None, but not for np.nan
         update_columns_shot_data = update_columns_shot_data.replace({np.nan: None})
+        ko_rows = 0
         with self.conn.cursor() as curs:
             for index, row in enumerate(
                 update_columns_shot_data.itertuples(index=False, name=None)
@@ -360,9 +361,12 @@ class ShotDatabase:
                 )
                 sql_command = (
                     f"UPDATE {table_name} SET {sql_set_string} "
-                    + "WHERE time = ? AND shot = ?;"
+                    + "WHERE time BETWEEN ? AND ? AND shot = ?;"
                 )
-                curs.execute(sql_command, row + (curr_df["time"][index], str(shot_id)))
+                t = curr_df["time"][index] + np.array([-0.5, 0.5]) * config().time_const
+                curs.execute(sql_command, row + (*t, str(shot_id)))
+                ko_rows += curs.rowcount == 0
+        logger.error(shot_log_msg(shot_id, f"Could not update {ko_rows} rows."))
         return True
 
     def _get_identity_column_names(self, table_name: str):
