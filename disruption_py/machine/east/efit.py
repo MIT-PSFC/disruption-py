@@ -72,6 +72,8 @@ class EastEfitMethods:
         dict
             A dictionary containing the retrieved EFIT parameters.
         """
+        # pylint: disable=duplicate-code
+
         efit_data = {
             k: params.mds_conn.get_data(v, tree_name="_efit_tree")
             for k, v in EastEfitMethods.efit_cols.items()
@@ -89,7 +91,6 @@ class EastEfitMethods:
 
         for param in efit_data:
             efit_data[param][invalid_indices] = np.nan
-        # pylint: disable=duplicate-code
         for deriv_param, param in EastEfitMethods.efit_derivs.items():
             efit_data[deriv_param] = np.gradient(efit_data[param], efit_time)
         if not np.array_equal(params.times, efit_time):
@@ -119,6 +120,8 @@ class EastEfitMethods:
         dict
             A dictionary containing the retrieved P-EFIT parameters.
         """
+        # pylint: disable=duplicate-code
+
         efit_time = params.mds_conn.get_data(
             r"\efit_a_eqdsk:atime", tree_name="pefit_east"
         )  # TODO: [unit?]
@@ -145,7 +148,6 @@ class EastEfitMethods:
         invalid_indices = np.where(
             (efit_data["pchisq"] > 50) & (efit_data["pconvergence"] < 1)
         )
-        # pylint: disable=duplicate-code
         for param in efit_data:
             efit_data[param][invalid_indices] = np.nan
         if not np.array_equal(params.times, efit_time):
