@@ -14,7 +14,6 @@ import pytest
 from disruption_py.config import config
 from disruption_py.core.utils.misc import without_duplicates
 from disruption_py.inout.sql import ShotDatabase
-from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.settings.output_setting import (
     BatchedCSVOutputSetting,
     SQLOutputSetting,
@@ -83,10 +82,6 @@ def initial_mdsplus_data_df_fixture(initial_mdsplus_data):
     return initial_mdsplus_data[0]
 
 
-@pytest.mark.xfail(
-    resolve_tokamak_from_environment() == Tokamak("east"),
-    reason="EAST has no _test tables",
-)
 def test_output_exists(initial_mdsplus_data, test_file_path_f):
     """
     Test creation of all output formats except SQL.
@@ -109,10 +104,6 @@ def test_output_exists(initial_mdsplus_data, test_file_path_f):
 
 
 @skip_on_fast_execution
-@pytest.mark.xfail(
-    resolve_tokamak_from_environment() == Tokamak("east"),
-    reason="EAST has no _test tables",
-)
 def test_sql_output_setting(
     shotlist, shot_database: ShotDatabase, initial_mdsplus_data_df
 ) -> Dict:
