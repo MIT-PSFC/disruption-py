@@ -31,6 +31,7 @@ then
    export MDSPLUS_BIN=$MDSPLUS_DIR/7.18-3/bin64
    export MDSPLUS_LIB=$MDSPLUS_DIR/7.18-3/lib64
    export DISPY_DIR=/project/disruption
+   export ODBCSYSINI=$DISPY_DIR
 
 else
 
