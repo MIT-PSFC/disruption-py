@@ -61,7 +61,7 @@ do
 
    # read statuses
    SHA=
-   if [[ $DISPY_BRANCH =~ ^main ]] || [[ $DISPY_BRANCH =~ ^dev ]]
+   if [[ $DISPY_BRANCH =~ ^main ]] || [[ $DISPY_BRANCH =~ ^dev ]] || [[ $DISPY_BRANCH =~ ^east ]]
    then
       SHA=$(git rev-parse HEAD)
       curl -s \
