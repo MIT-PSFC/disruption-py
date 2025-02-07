@@ -1,6 +1,6 @@
 [build-system]
-requires = ["poetry-core>=2.0"]
 build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=2.0"]
 
 [dependency-groups]
 dev = [
@@ -45,6 +45,17 @@ classifiers = [
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Topic :: Software Development :: Version Control :: Git",
 ]
+dependencies = [
+  "dynaconf>=3.2.0",
+  "loguru>=0.7.0",
+  "numpy>=1.26.0,<2.0.0",
+  "pandas[hdf5]>=2.2.0",
+  "pyodbc>=5.2.0",
+  "scikit_learn>=1.6.0",
+  "scipy>=1.15.0",
+  "SQLAlchemy>=2.0.0",
+  "tqdm>=4.67.0",
+]
 description = "An open-source physics-based Scientific Framework for Disruption Analysis of Fusion Plasmas for AI/ML applications"
 keywords = [
   "plasma physics",
@@ -58,19 +69,8 @@ maintainers = [
 ]
 name = "disruption-py"
 readme = "README.md"
-version = "0.10.0"
 requires-python = ">=3.11,<4"
-dependencies = [
-  "dynaconf>=3.2.0",
-  "loguru>=0.7.0",
-  "numpy>=1.26.0,<2.0.0",
-  "pandas[hdf5]>=2.2.0",
-  "pyodbc>=5.2.0",
-  "scikit_learn>=1.6.0",
-  "scipy>=1.15.0",
-  "SQLAlchemy>=2.0.0",
-  "tqdm>=4.67.0",
-]
+version = "0.10.0"
 
 [project.scripts]
 disruption-workflow = "examples.simple:cli"
@@ -111,8 +111,6 @@ jupyterlab = "^4.3.0"
 matplotlib = "^3.10.0"
 
 [tool.pylint]
-extension-pkg-allow-list = ["pyodbc"]
-ignored-modules = ["MDSplus"]
 disable = [
   "fixme",
   "too-few-public-methods",
@@ -124,6 +122,8 @@ disable = [
   "too-many-positional-arguments",
   "too-many-statements",
 ]
+extension-pkg-allow-list = ["pyodbc"]
+ignored-modules = ["MDSplus"]
 
 [tool.uv]
 default-groups = []
