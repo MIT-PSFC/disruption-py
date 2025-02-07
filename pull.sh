@@ -88,7 +88,7 @@ do
       TSTART=$SECONDS
 
       # read status
-      STATUS="Deploy / $(basename "$VENV") @ ${HOSTNAME%-*}"
+      STATUS="Deploy / $(basename "$VENV") @ $(echo "$HOSTNAME" | grep -o '^[a-z]*')"
       STATE=
       if [[ -n "$SHA" ]] && [[ -s "$LOG/sha.json" ]]
       then
