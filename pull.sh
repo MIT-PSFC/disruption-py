@@ -135,7 +135,6 @@ do
       > "$LOG/after.log"
 
       # fast test
-      export GITHUB_ACTIONS=1
       poetry run pytest -v tests \
       1> "$LOG/test.out" \
       2> "$LOG/test.err"
