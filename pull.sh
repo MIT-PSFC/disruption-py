@@ -88,7 +88,7 @@ do
       TSTART=$SECONDS
 
       # read status
-      STATUS="Install / $(basename "$VENV") @ ${HOSTNAME%-*}"
+      STATUS="Deploy / $(basename "$VENV") @ ${HOSTNAME%-*}"
       STATE=
       if [[ -n "$SHA" ]] && [[ -s "$LOG/sha.json" ]]
       then
@@ -160,7 +160,7 @@ do
 
       # status
       [[ -z "$SHA" ]] && exit 0
-      echo "{\"state\":\"$STATE\",\"description\":\"Updated on $TODAY in $TMESS\",\"context\":\"$STATUS\"}" \
+      echo "{\"state\":\"$STATE\",\"description\":\"Deployed on $TODAY in $TMESS\",\"context\":\"$STATUS\"}" \
       | tee "$LOG/data.json" \
       | curl -s \
          -X POST \
