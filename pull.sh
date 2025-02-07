@@ -31,6 +31,9 @@ do
    if [[ $# -ge 1 ]] && [[ "$1" != "$DISPY_BRANCH" ]]
    then
       continue
+   elif [[ "$DISPY_BRANCH" == "test" ]]
+   then
+      continue
    fi
 
    # log
