@@ -134,9 +134,15 @@ yamllint:
 toml-sort:
 	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	poetry run toml-sort --version
-	find -type f -iname '*.toml' -not -empty \
+	find -maxdepth 1 -type f -iname '*.toml' -not -empty \
 	| while read -r F; \
 	do \
 	   echo "--> $$F"; \
-	   poetry run toml-sort $(CHECK_ARG) -i --trailing-comma-inline-array "$$F"; \
+	   poetry run toml-sort $(CHECK_ARG) "$$F"; \
+	done
+	find -mindepth 2 -type f -iname '*.toml' -not -empty \
+	| while read -r F; \
+	do \
+	   echo "--> $$F"; \
+	   poetry run toml-sort $(CHECK_ARG) --all "$$F"; \
 	done
