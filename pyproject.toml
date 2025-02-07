@@ -125,5 +125,11 @@ disable = [
 extension-pkg-allow-list = ["pyodbc"]
 ignored-modules = ["MDSplus"]
 
+[tool.tomlsort]
+ignore_case = true
+in_place = true
+sort_table_keys = true
+trailing_comma_inline_array = true
+
 [tool.uv]
 default-groups = []
