@@ -27,12 +27,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install poetry
-        run: pipx install 'poetry<2.0.0'
+        run: pipx install poetry
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version-file: 'pyproject.toml'
           cache: 'poetry'
 
       - name: Install requirements
@@ -52,12 +52,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install poetry
-        run: pipx install 'poetry<2.0.0'
+        run: pipx install poetry
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version-file: 'pyproject.toml'
           cache: 'poetry'
 
       - name: Install requirements
@@ -77,12 +77,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install poetry
-        run: pipx install 'poetry<2.0.0'
+        run: pipx install poetry
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version-file: 'pyproject.toml'
           cache: 'poetry'
 
       - name: Install requirements
@@ -118,12 +118,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install poetry
-        run: pipx install 'poetry<2.0.0'
+        run: pipx install poetry
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version-file: 'pyproject.toml'
           cache: 'poetry'
 
       - name: Install requirements
