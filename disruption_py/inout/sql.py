@@ -366,7 +366,8 @@ class ShotDatabase:
                 t = curr_df["time"][index] + np.array([-0.5, 0.5]) * config().time_const
                 curs.execute(sql_command, row + (*t, str(shot_id)))
                 ko_rows += curs.rowcount == 0
-        logger.error(shot_log_msg(shot_id, f"Could not update {ko_rows} rows."))
+        if ko_rows:
+            logger.error(shot_log_msg(shot_id, f"Could not update {ko_rows} rows."))
         return True
 
     def _get_identity_column_names(self, table_name: str):
