@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # parameters
-export DISPY_PYVERS=${DISPY_PYVERS:=3.10}
+export DISPY_PYVERS=${DISPY_PYVERS:=3.12}
 export DISPY_BRANCH=${DISPY_BRANCH:=main}
 
 # reset
