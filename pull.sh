@@ -69,11 +69,11 @@ do
       SHA=$(git rev-parse HEAD)
       curl -s \
       -H "$AUTH" \
-      -D "$LOG/sha.txt" \
-      -o "$LOG/sha.json" \
+      -D "$LOG/read.txt" \
+      -o "$LOG/read.json" \
       "$GAPI/commits/$SHA/statuses" \
       2>&1 \
-      > "$LOG/curl.log"
+      > "$LOG/read.log"
    fi
 
    # for each python version
@@ -173,7 +173,7 @@ do
          "$GAPI/commits/$SHA/statuses" \
          -d @- \
          2>&1 \
-         >> "$LOG/curl.log"
+         > "$LOG/write.log"
 
       } &
 
