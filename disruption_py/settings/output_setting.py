@@ -780,6 +780,17 @@ class DatasetOutputSetting(OutputSetting):
         """
         return xr.concat(self.datasets, dim="shot")
 
+    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
+        """
+        Clean up the list of datasets.
+
+        Parameters
+        ----------
+        params : CompleteOutputSettingParams
+            The parameters for cleaning up the output stream.
+        """
+        self.datasets = []
+
 
 # --8<-- [start:output_setting_dict]
 _output_setting_mappings: Dict[str, OutputSetting] = {
