@@ -19,10 +19,12 @@ def main():
     run_methods = ["get_efit_parameters"]
     if tokamak is Tokamak.D3D:
         shotlist = [161228]
-        shape = (247, 17)
+        len_time = 247
+        len_data = 15
     elif tokamak is Tokamak.CMOD:
         shotlist = [1150805012]
-        shape = (62, 23)
+        len_time = 62
+        len_data = 21
     else:
         raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 
@@ -37,12 +39,12 @@ def main():
         tokamak=tokamak,
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
-        output_setting="dataframe",
+        output_setting="dataset",
     )
 
     print(result)
-
-    assert result.shape == shape
+    assert len(result.time) == len_time
+    assert len(result.data_vars) == len_data
 
 
 if __name__ == "__main__":
