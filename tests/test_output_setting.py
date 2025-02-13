@@ -10,6 +10,7 @@ from typing import Dict
 
 import pandas as pd
 import pytest
+import xarray as xr
 
 from disruption_py.config import config
 from disruption_py.core.utils.misc import without_duplicates
@@ -59,6 +60,7 @@ def initial_mdsplus_data_fixture(shotlist, tokamak, test_file_path_f) -> Dict:
         test_file_path_f(".csv"),
         test_file_path_f(".hdf5"),
         SQLOutputSetting(table_name=WRITE_DATABASE_TABLE_NAME),
+        "dataset",
     ]
 
     retrieval_settings = RetrievalSettings(
@@ -86,9 +88,15 @@ def test_output_exists(initial_mdsplus_data, test_file_path_f):
     """
     Test creation of all output formats except SQL.
     """
-    df_output, list_output, dict_output, csv_output, hdf_output, sql_output = (
-        initial_mdsplus_data
-    )
+    (
+        df_output,
+        list_output,
+        dict_output,
+        csv_output,
+        hdf_output,
+        sql_output,
+        ds_output,
+    ) = initial_mdsplus_data
     assert isinstance(df_output, pd.DataFrame), "DataFrame output does not exist"
     assert isinstance(list_output, list), "List output does not exist"
     assert isinstance(dict_output, dict), "Dict output does not exist"
@@ -97,6 +105,7 @@ def test_output_exists(initial_mdsplus_data, test_file_path_f):
     assert isinstance(sql_output, pd.DataFrame), "DataFrame from SQL does not exist"
     assert os.path.exists(test_file_path_f(".csv")), ".csv output does not exist"
     assert os.path.exists(test_file_path_f(".hdf5")), ".hdf5 output does not exist"
+    assert isinstance(ds_output, xr.Dataset), "Dataset output does not exist"
 
     assert_frame_equal_unordered(df_output, csv_output)
     assert_frame_equal_unordered(csv_output, hdf_output)
