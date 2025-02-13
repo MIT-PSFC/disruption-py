@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from typing import Dict, List
 
 import numpy as np
-import pandas as pd
+import xarray as xr
 from loguru import logger
 
 from disruption_py.config import config
@@ -27,7 +27,7 @@ def get_fresh_data(
     log_file_path: str,
     test_columns: List[str] = None,
     console_log_level: str = "WARNING",
-) -> Dict[int, pd.DataFrame]:
+) -> xr.Dataset:
     """
     Get fresh data for a list of shots.
 
@@ -46,8 +46,8 @@ def get_fresh_data(
 
     Returns
     -------
-    Dict[int, pd.DataFrame]
-        Dictionary mapping shot IDs to retrieved fresh data.
+    xr.Dataset
+        Fresh dataset.
     """
     retrieval_settings = RetrievalSettings(
         efit_nickname_setting="disruption",
@@ -59,7 +59,7 @@ def get_fresh_data(
         tokamak=tokamak,
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
-        output_setting="dict",
+        output_setting="dataset",
         log_settings=LogSettings(
             log_to_console=True,
             log_file_path=log_file_path,
@@ -74,17 +74,17 @@ def get_fresh_data(
 def get_cached_from_fresh(
     tokamak: Tokamak,
     shotlist: List[int],
-    fresh_data: Dict[int, pd.DataFrame],
+    fresh_data: xr.Dataset,
     test_columns: List[str] = None,
-) -> Dict[int, pd.DataFrame]:
+) -> xr.Dataset:
     """
     Get cached SQL data for a list of shots and map onto the timebase of the supplied
     fresh MDSplus data.
 
     Returns
     -------
-    Dict[int, pd.DataFrame]
-        Dictionary mapping shot IDs to retrieved SQL data.
+    xr.Dataset
+        Dataset of retrieved SQL data.
     """
     # Mapping SQL data onto the MDSplus timebase means SQL data needs time data
     merge_col = "time"
@@ -93,30 +93,33 @@ def get_cached_from_fresh(
     elif merge_col not in test_columns:
         test_columns.append(merge_col)
 
+    index = ["shot", "time"]
+
     db = ShotDatabase.from_config(tokamak=tokamak)
-    shot_data = {}
+    shot_data_list = []
     for shot_id in shotlist:
-        times = fresh_data[shot_id]["time"]
-        sql_data = db.get_shots_data([shot_id], cols=test_columns)
-
-        if sql_data.empty:
-            shot_data[shot_id] = pd.DataFrame()
+        sql_data_df = db.get_shots_data([shot_id], cols=test_columns).astype(float)
+        if sql_data_df.empty:
+            shot_data_list.append(xr.Dataset(coords={"shot": [shot_id], "time": []}))
             continue
+        sql_data_df["shot"] = shot_id
 
-        shot_data[shot_id] = pd.merge_asof(
-            times.to_frame(),
-            sql_data,
-            on=merge_col,
-            direction="nearest",
-            tolerance=config().time_const,
-        )
+        # Some shots, like 1150805012 on C-Mod, have multiple entries for the same
+        # shot and time. You can't create a Dataset from a DF with duplicate indices
+        sql_data_df.drop_duplicates(subset=index, inplace=True)
+        sql_data = xr.Dataset.from_dataframe(sql_data_df.set_index(index))
+        shot_data_list.append(sql_data)
+    shot_data = xr.concat(shot_data_list, dim="shot")
+    shot_data = shot_data.reindex(
+        {"time": fresh_data.time}, method="nearest", tolerance=config().time_const
+    )
     return shot_data
 
 
 def eval_shots_against_cache(
     shotlist: List[int],
-    fresh_data: Dict[int, pd.DataFrame],
-    cache_data: Dict[int, pd.DataFrame],
+    fresh_data: xr.Dataset,
+    cache_data: xr.Dataset,
     data_columns: List[str],
     expected_failure_columns: List[str] = None,
 ) -> List["DataDifference"]:
@@ -129,7 +132,9 @@ def eval_shots_against_cache(
     data_differences: List[DataDifference] = []
     for data_column in data_columns:
         for shot_id in shotlist:
-            fresh_shot_data, cache_shot_data = fresh_data[shot_id], cache_data[shot_id]
+            fresh_shot_data, cache_shot_data = fresh_data.sel(
+                shot=shot_id
+            ), cache_data.sel(shot=shot_id)
             expect_failure = data_column in expected_failure_columns
 
             data_difference = eval_shot_against_cache(
@@ -145,8 +150,8 @@ def eval_shots_against_cache(
 
 def eval_shot_against_cache(
     shot_id: int,
-    fresh_shot_data: pd.DataFrame,
-    cache_shot_data: pd.DataFrame,
+    fresh_shot_data: xr.Dataset,
+    cache_shot_data: xr.Dataset,
     data_column: str,
     expect_failure: bool = False,
 ) -> "DataDifference":
@@ -158,8 +163,8 @@ def eval_shot_against_cache(
     data_difference = DataDifference(
         shot_id=shot_id,
         data_column=data_column,
-        fresh_column_data=fresh_shot_data.get(data_column, None),
-        cache_column_data=cache_shot_data.get(data_column, None),
+        fresh_data_array=fresh_shot_data.get(data_column, None),
+        cache_data_array=cache_shot_data.get(data_column, None),
         fresh_time=fresh_shot_data.get("time"),
         cache_time=cache_shot_data.get("time"),
         missing_fresh_data=missing_fresh_data,
@@ -184,7 +189,7 @@ def eval_shot_against_cache(
     if "PYTEST_CURRENT_TEST" in os.environ or not expect_failure:
         assert not data_difference.failed, (
             f"Comparison failed on shot {data_difference.shot_id}, "
-            "column {data_difference.data_column}"
+            f"column {data_difference.data_column}"
         )
 
     return data_difference
@@ -196,7 +201,7 @@ def eval_against_cache(
     expected_failure_columns: List[str],
     test_columns=None,
     console_log_level="WARNING",
-) -> Dict[int, pd.DataFrame]:
+) -> Dict[int, xr.Dataset]:
     """
     Evaluate fresh data against cached data for specified shots.
 
@@ -220,9 +225,8 @@ def eval_against_cache(
 
     Returns
     -------
-    Dict[int, pd.DataFrame]
-        A dictionary mapping shot identifiers to their corresponding data
-        differences as DataFrames.
+    List[DataDifference]
+        A list of DataDifference objects; one for each shot.
     """
 
     tempfolder = get_temporary_folder()
