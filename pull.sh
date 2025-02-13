@@ -64,13 +64,15 @@ do
 
    # read statuses
    SHA=
+   JSON=
    if [[ $DISPY_BRANCH =~ ^main ]] || [[ $DISPY_BRANCH =~ ^dev ]] || [[ $DISPY_BRANCH =~ ^east ]]
    then
       SHA=$(git rev-parse HEAD)
+      JSON="$LOG/read.json"
       curl -s \
       -H "$AUTH" \
       -D "$LOG/read.txt" \
-      -o "$LOG/read.json" \
+      -o "$JSON" \
       "$GAPI/commits/$SHA/statuses" \
       2>&1 \
       > "$LOG/read.log"
@@ -93,9 +95,9 @@ do
       # read status
       STATUS="Deploy / $(basename "$VENV") @ $(echo "$HOSTNAME" | grep -o '^[a-z]*')"
       STATE=
-      if [[ -n "$SHA" ]] && [[ -s "$LOG/sha.json" ]]
+      if [[ -n "$SHA" ]] && [[ -s "$JSON" ]]
       then
-         STATE=$(jq -r "sort_by(.updated_at) | map(select(.context == \"$STATUS\")) | last.state" "$LOG/sha.json" 2> /dev/null)
+         STATE=$(jq -r "sort_by(.updated_at) | map(select(.context == \"$STATUS\")) | last.state" "$JSON" 2> /dev/null)
          [[ "$STATE" = "null" ]] && STATE=
       fi
 
