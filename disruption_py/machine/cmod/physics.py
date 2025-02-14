@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from MDSplus import mdsExceptions
 from scipy.ndimage import median_filter
+from scipy.signal import butter, filtfilt
 import yaml
 
 from disruption_py.core.physics_method.caching import cache_method
@@ -2018,6 +2019,11 @@ class CmodPhysicsMethods:
             # but filters noise sufficiently
             smooth_width = int(0.000150 / sample_time) + 1
             sxr = median_filter(sxr, size=(1, smooth_width), mode='constant', cval=0.)
+            # Butterworth low pass filter
+            # cutoff = 0.5
+            # normalized_cutoff = cutoff / 125.
+            # b, a = butter(6, normalized_cutoff, btype='low', analog=False)
+            # sxr = filtfilt(b, a, sxr, axis=1)
         core_sxr = np.max(sxr, axis=0)
         core_sxr_index = np.argmax(sxr, axis=0)
 
