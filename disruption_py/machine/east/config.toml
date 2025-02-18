@@ -38,7 +38,6 @@ expected_failure_columns = [
   "n_equal_1_mode",
   "n_equal_1_phase",
   "p_input",
-  "p_nbi",
   "p_oh",
   "p_rad",
   "parea",
