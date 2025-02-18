@@ -10,9 +10,24 @@ export DISPY_LOG=$DISPY_LOG
 mkdir -p "$DISPY_LOG"
 
 # poetry
-which poetry
-poetry self update \
-> "$DISPY_LOG/poetry.log"
+{
+   which poetry
+   poetry --version
+   poetry self update
+   poetry --version
+} \
+> "$DISPY_LOG/poetry.log" \
+2>&1
+
+# uv
+{
+   which uv
+   uv --version
+   uv self update
+   uv --version
+} \
+> "$DISPY_LOG/uv.log" \
+2>&1
 
 # API token
 GAPI="https://api.github.com/repos/mit-psfc/disruption-py"
@@ -55,8 +70,8 @@ do
       done
       git status
    } \
-   2>&1 \
-   > "$LOG/git.log"
+   > "$LOG/git.log" \
+   2>&1
 
    # check pyproject
    [[ -s pyproject.toml ]] || continue
@@ -73,8 +88,8 @@ do
       -D "$LOG/read.txt" \
       -o "$JSON" \
       "$GAPI/commits/$SHA/statuses" \
-      2>&1 \
-      > "$LOG/read.log"
+      > "$LOG/read.log" \
+      2>&1
    fi
 
    # for each python version
@@ -115,28 +130,28 @@ do
       # env
       env \
       | grep -e ^DISPY_ -e PYTHONPATH \
-      2>&1 \
-      > "$LOG/env.log"
+      > "$LOG/env.log" \
+      2>&1
 
       # before
       poetry run pip list \
-      2>&1 \
-      > "$LOG/before.log"
+      > "$LOG/before.log" \
+      2>&1
 
       # upgrade
       pip install --upgrade pip \
-      2>&1 \
-      > "$LOG/upgrade.log"
+      > "$LOG/upgrade.log" \
+      2>&1
 
       # install
       poetry install --with lab --with dev \
-      2>&1 \
-      > "$LOG/install.log"
+      > "$LOG/install.log" \
+      2>&1
 
       # after
       poetry run pip list \
-      2>&1 \
-      > "$LOG/after.log"
+      > "$LOG/after.log" \
+      2>&1
 
       # fast test
       poetry run pytest -v tests \
@@ -173,8 +188,8 @@ do
          -o "$LOG/write.json" \
          "$GAPI/commits/$SHA/statuses" \
          -d @- \
-         2>&1 \
-         > "$LOG/write.log"
+         > "$LOG/write.log" \
+         2>&1
 
       } &
 
