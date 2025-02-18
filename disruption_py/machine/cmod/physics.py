@@ -1046,7 +1046,9 @@ class CmodPhysicsMethods:
             guess = [y[i], z[i], (z.max() - z.min()) / 3]
             # actual fit
             try:
-                _, pmean, psigma = gaussian_fit(z, y, guess, y_error, True)
+                _, pmean, psigma = gaussian_fit(
+                    z, y, guess, sigma=y_error, absolute_sigma=True
+                )
             except RuntimeError as exc:
                 if str(exc).startswith("Optimal parameters not found"):
                     continue
