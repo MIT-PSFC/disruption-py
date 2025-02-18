@@ -107,6 +107,18 @@ def cache_data_fixture(
     return cache_data
 
 
+def test_data_fetch(
+    shotlist: List[int],
+    fresh_data: Dict[int, pd.DataFrame],
+    cache_data: Dict[int, pd.DataFrame],
+    expected_failure_columns: List[str],
+):
+    """
+    Convenience test that triggers some fixtures to get more accurate time measurements.
+    """
+    return shotlist, fresh_data, cache_data, expected_failure_columns
+
+
 def test_data_columns(
     shotlist: List[int],
     fresh_data: Dict[int, pd.DataFrame],
