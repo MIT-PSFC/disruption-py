@@ -522,7 +522,7 @@ class EastPhysicsMethods:
             """
             Helper function to pack p_lh, p_icrf, and p_nbi computations
             """
-            heating_power = np.empty(params.times.shape)
+            heating_power = np.zeros(params.times.shape)
             for node in nodes:
                 power_node, time_node = params.mds_conn.get_data_with_dims(
                     node, tree_name=tree
