@@ -1051,14 +1051,14 @@ class CmodPhysicsMethods:
                 if str(exc).startswith("Optimal parameters not found"):
                     continue
                 raise exc
-            # reject points with unphysical mean or sigma
-            if pmean < -0.35 or pmean > 0.35 or psigma > 0.35:
+            # rescale from sigma to HWHM
+            # https://en.wikipedia.org/wiki/Full_width_at_half_maximum
+            hwm = np.abs(psigma) * np.sqrt(2 * np.log(2))
+            # reject points with unphysical mean or hwm
+            if pmean < -0.35 or pmean > 0.35 or hwm > 0.35:
                 continue
             # store output
-            te_hwm[idx] = np.abs(psigma)
-        # rescale from sigma to HWHM
-        # https://en.wikipedia.org/wiki/Full_width_at_half_maximum
-        te_hwm *= np.sqrt(2 * np.log(2))
+            te_hwm[idx] = hwm
         # time interpolation
         te_hwm = interp1(ts_time, te_hwm, times)
         return {"te_width": te_hwm}
