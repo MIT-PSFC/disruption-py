@@ -153,8 +153,8 @@ do
       > "$LOG/after.log" \
       2>&1
 
-      # fast test
-      poetry run pytest -v tests \
+      # full test
+      make test \
       1> "$LOG/test.out" \
       2> "$LOG/test.err"
       RC=${PIPESTATUS[0]}
