@@ -17,21 +17,17 @@ Snippets for quick addition to a user's `.bashrc` file are provided in the subse
 
 #### Python
 
-Several Python versions are installed as [miniconda](https://docs.anaconda.com/free/miniconda/) distributions:
+A recent Python 3.12 version is installed as a [miniconda](https://docs.anaconda.com/free/miniconda/) distribution.
+It might be used directly from the `"$DISPY_DIR"/miniconda/3.12` folder.
 
-- Python 3.10
-- Python 3.11
-- Python 3.12
-
-The Python version can be controlled through the `DISPY_PYVERS` environment variable.
-They may also be used directly from the `"$DISPY_DIR"/miniconda` folder.
+Several other Python 3 versions are available in the miniconda folder.
 
 #### Poetry
 
-We use [Poetry](https://python-poetry.org/) for dependency management.
+We use [Poetry](https://python-poetry.org/) and [uv](https://docs.astral.sh/uv/) for dependency management.
 
-The helper scripts automatically activate the appropriate virtual environment, so direct Poetry usage is not needed.
-It may be used directly from the `"$DISPY_DIR"/poetry` folder.
+The helper scripts automatically activate the appropriate virtual environment, so direct Poetry or uv usage is not needed.
+They may be used directly from the `"$DISPY_DIR"/poetry` or `"$DISPY_DIR"/uv` folders.
 
 #### Branches
 
@@ -44,10 +40,10 @@ The target branch can be controlled through the `DISPY_BRANCH` environment varia
 
 #### Virtual environments
 
-For each branch, a few virtual environments with different Python versions are available for usage.
+For each branch, a virtual environment based off Python 3.12 is available for usage.
 
-The helper scripts will choose a specific virtual environment based on the `DISPY_BRANCH` and `DISPY_PYVERS` environment variables.
-They may also be used directly from the `"$DISPY_DIR"/venv` folder.
+The helper scripts will choose the appropriate virtual environment based on the `DISPY_BRANCH` environment variable.
+It may also be used directly from the `"$DISPY_DIR"/venv` folder.
 
 #### Setup and activation
 
@@ -104,8 +100,7 @@ Suggested snippet to be appended to the user's `~/.bashrc` file:
 # disruption-py
 export DISPY_DIR=/usr/local/mfe/disruptions/disruption-py
 export DISPY_BRANCH=main # default. or dev  
-export DISPY_PYVERS=3.10 # default. or 3.X
-export PATH=$PATH:$DISPY_DIR/repo/auto
+export PATH=$PATH:$DISPY_DIR/repo/auto:$DISPY_DIR/poetry/bin:$DISPY_DIR/uv
 ```
 
 ### DIII-D
@@ -116,8 +111,18 @@ Suggested snippet to be appended to the user's `~/.bashrc` file:
 # disruption-py
 export DISPY_DIR=/fusion/projects/disruption_warning/disruption-py
 export DISPY_BRANCH=main # default. or dev  
-export DISPY_PYVERS=3.10 # default. or 3.X
-export PATH=$PATH:$DISPY_DIR/repo/auto
+export PATH=$PATH:$DISPY_DIR/repo/auto:$DISPY_DIR/poetry/bin:$DISPY_DIR/uv
+```
+
+### EAST
+
+Suggested snippet to be appended to the user's `~/.bashrc` file:
+
+```bash
+# disruption-py
+export DISPY_DIR=/project/disruption-py
+export DISPY_BRANCH=main # default. or dev
+export PATH=$PATH:$DISPY_DIR/repo/auto:$DISPY_DIR/poetry/bin:$DISPY_DIR/uv
 ```
 
 ## Private installation
