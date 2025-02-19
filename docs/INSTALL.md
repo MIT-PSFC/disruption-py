@@ -18,11 +18,9 @@ Snippets for quick addition to a user's `.bashrc` file are provided in the subse
 #### Python
 
 A recent Python 3.12 version is installed as a [miniconda](https://docs.anaconda.com/free/miniconda/) distribution.
-It might be used directly from the `"$DISPY_DIR"/miniconda/3.12` folder.
+It might be used directly from the `"$DISPY_DIR"/miniconda` folder.
 
-Several other Python 3 versions are available in the miniconda folder.
-
-#### Poetry
+#### Dependency management
 
 We use [Poetry](https://python-poetry.org/) and [uv](https://docs.astral.sh/uv/) for dependency management.
 
@@ -58,6 +56,8 @@ More often, a user may choose to directly _activate_ the chosen virtual environm
 
 ```bash
 source "$DISPY_DIR"/repo/auto/activate.sh
+# or the alias defined in our snippet
+disruption-activate
 ```
 
 The helper scripts rely on the user adopting the [Bash shell](https://www.gnu.org/software/bash/).
@@ -101,6 +101,7 @@ Suggested snippet to be appended to the user's `~/.bashrc` file:
 export DISPY_DIR=/usr/local/mfe/disruptions/disruption-py
 export DISPY_BRANCH=main # default. or dev  
 export PATH=$PATH:$DISPY_DIR/repo/auto:$DISPY_DIR/poetry/bin:$DISPY_DIR/uv
+alias disruption-activate='source "$DISPY_DIR"/repo/auto/activate.sh'
 ```
 
 ### DIII-D
@@ -112,6 +113,7 @@ Suggested snippet to be appended to the user's `~/.bashrc` file:
 export DISPY_DIR=/fusion/projects/disruption_warning/disruption-py
 export DISPY_BRANCH=main # default. or dev  
 export PATH=$PATH:$DISPY_DIR/repo/auto:$DISPY_DIR/poetry/bin:$DISPY_DIR/uv
+alias disruption-activate='source "$DISPY_DIR"/repo/auto/activate.sh'
 ```
 
 ### EAST
@@ -123,6 +125,7 @@ Suggested snippet to be appended to the user's `~/.bashrc` file:
 export DISPY_DIR=/project/disruption-py
 export DISPY_BRANCH=main # default. or dev
 export PATH=$PATH:$DISPY_DIR/repo/auto:$DISPY_DIR/poetry/bin:$DISPY_DIR/uv
+alias disruption-activate='source "$DISPY_DIR"/repo/auto/activate.sh'
 ```
 
 ## Private installation
