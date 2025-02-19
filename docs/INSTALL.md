@@ -38,7 +38,7 @@ The target branch can be controlled through the `DISPY_BRANCH` environment varia
 
 #### Virtual environments
 
-For each branch, a virtual environment based off Python 3.12 is available for usage.
+For each branch, a Python 3.12 virtual environment is available for usage.
 
 The helper scripts will choose the appropriate virtual environment based on the `DISPY_BRANCH` environment variable.
 It may also be used directly from the `"$DISPY_DIR"/venv` folder.
