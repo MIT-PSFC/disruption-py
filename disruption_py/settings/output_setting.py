@@ -796,6 +796,42 @@ class DatasetOutputSetting(OutputSetting):
         self.datasets = []
 
 
+class NetCDFOutputSetting(DatasetOutputSetting):
+    """
+    Save outputted data to a NetCDF file from an xarray Dataset.
+    """
+
+    def __init__(self, filepath: str):
+        """
+        Initialize NetCDFOutputSetting with a file path.
+
+        Parameters
+        ----------
+        filepath : str
+            The path to the NetCDF file.
+        """
+        super().__init__()
+        self.filepath = filepath
+
+    def get_results(self, params: CompleteOutputSettingParams):
+        """
+        Get the accumulated results.
+
+        Parameters
+        ----------
+        params : CompleteOutputSettingParams
+            The parameters for output cleanup and result fetching.
+
+        Returns
+        -------
+        xr.Dataset
+            The dataset of results with dims shot and time.
+        """
+        ds = super().get_results(params)
+        ds.to_netcdf(self.filepath)
+        return ds
+
+
 # --8<-- [start:output_setting_dict]
 _output_setting_mappings: Dict[str, OutputSetting] = {
     "list": ListOutputSetting(),
@@ -810,6 +846,7 @@ _file_suffix_to_output_setting: Dict[str, Type[OutputSetting]] = {
     ".h5": HDF5OutputSetting,
     ".hdf5": HDF5OutputSetting,
     ".csv": BatchedCSVOutputSetting,
+    ".nc": NetCDFOutputSetting,
 }
 # --8<-- [end:file_suffix_to_output_setting_dict]
 

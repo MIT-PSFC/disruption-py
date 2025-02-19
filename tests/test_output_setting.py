@@ -61,6 +61,7 @@ def initial_mdsplus_data_fixture(shotlist, tokamak, test_file_path_f) -> Dict:
         test_file_path_f(".hdf5"),
         SQLOutputSetting(table_name=WRITE_DATABASE_TABLE_NAME),
         "dataset",
+        test_file_path_f(".nc"),
     ]
 
     retrieval_settings = RetrievalSettings(
@@ -96,6 +97,7 @@ def test_output_exists(initial_mdsplus_data, test_file_path_f):
         hdf_output,
         sql_output,
         ds_output,
+        nc_output,
     ) = initial_mdsplus_data
     assert isinstance(df_output, pd.DataFrame), "DataFrame output does not exist"
     assert isinstance(list_output, list), "List output does not exist"
@@ -106,6 +108,7 @@ def test_output_exists(initial_mdsplus_data, test_file_path_f):
     assert os.path.exists(test_file_path_f(".csv")), ".csv output does not exist"
     assert os.path.exists(test_file_path_f(".hdf5")), ".hdf5 output does not exist"
     assert isinstance(ds_output, xr.Dataset), "Dataset output does not exist"
+    assert os.path.exists(test_file_path_f(".nc")), ".nc output does not exist"
 
     assert_frame_equal_unordered(df_output, csv_output)
     assert_frame_equal_unordered(csv_output, hdf_output)
