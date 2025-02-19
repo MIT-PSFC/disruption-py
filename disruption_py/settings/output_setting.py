@@ -762,6 +762,10 @@ class DatasetOutputSetting(OutputSetting):
             The parameters for outputting shot results.
         """
         new_ds = xr.Dataset.from_dataframe(params.result.set_index(["shot", "time"]))
+        # Assign commit_hash to the dataset as a whole rather than as a data var
+        # because it currently does not vary across shot or time.
+        new_ds.attrs["commit_hash"] = new_ds.commit_hash.values.flat[0]
+        new_ds.drop_vars("commit_hash")
         self.datasets.append(new_ds)
 
     def get_results(self, params: CompleteOutputSettingParams):
