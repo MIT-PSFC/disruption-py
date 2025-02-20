@@ -69,6 +69,26 @@ OutputSettingType = Union[
 ]
 
 
+def dataset_to_dataframe(ds: xr.Dataset) -> pd.DataFrame:
+    """
+    Convert an xarray Dataset to a pandas DataFrame. Add the commit_hash attribute
+    as a column.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        The Dataset to convert.
+
+    Returns
+    -------
+    pd.DataFrame
+        The converted DataFrame.
+    """
+    df = ds.to_dataframe().reset_index()
+    df["commit_hash"] = ds.commit_hash
+    return df
+
+
 class OutputSetting(ABC):
     """
     OutputSetting abstract class that should be inherited by all output setting classes.
@@ -241,8 +261,9 @@ class DataFrameOutputSetting(OutputSetting):
         params : OutputSettingParams
             The parameters for outputting shot results.
         """
+
         self.results = safe_df_concat(
-            self.results, [params.result.to_dataframe().reset_index()]
+            self.results, [dataset_to_dataframe(params.result)]
         )
 
     def get_results(self, params: CompleteOutputSettingParams):
@@ -350,7 +371,7 @@ class CSVOutputSetting(OutputSetting):
             The parameters for outputting shot results.
         """
         file_exists = os.path.isfile(self.filepath)
-        combined_df = params.result.to_dataframe().reset_index()
+        combined_df = dataset_to_dataframe(params.result)
         if self.flexible_columns:
             if file_exists:
                 existing_df = pd.read_csv(self.filepath)
@@ -423,7 +444,7 @@ class BatchedCSVOutputSetting(OutputSetting):
             The parameters containing the result to be outputted.
         """
         # Append the current result to the batch data list
-        df = params.result.to_dataframe().reset_index()
+        df = dataset_to_dataframe(params.result)
         self.batch_data.append(df)
 
         # Check if the batch size has been reached
@@ -507,7 +528,7 @@ class SQLOutputSetting(OutputSetting):
         params : OutputSettingParams
             The parameters containing the result to be outputted.
         """
-        df = params.result.to_dataframe().reset_index()
+        df = dataset_to_dataframe(params.result)
         if not df.empty and ("shot" in df.columns):
             shot_id = df["shot"].iloc[0]
             params.database.add_shot_data(
