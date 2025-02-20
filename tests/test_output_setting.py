@@ -109,6 +109,7 @@ def test_output_exists(initial_mdsplus_data, test_file_path_f):
     assert os.path.exists(test_file_path_f(".hdf5")), ".hdf5 output does not exist"
     assert isinstance(ds_output, xr.Dataset), "Dataset output does not exist"
     assert os.path.exists(test_file_path_f(".nc")), ".nc output does not exist"
+    assert isinstance(nc_output, xr.Dataset), "Dataset from .nc does not exist"
 
     assert_frame_equal_unordered(df_output, csv_output)
     assert_frame_equal_unordered(csv_output, hdf_output)
