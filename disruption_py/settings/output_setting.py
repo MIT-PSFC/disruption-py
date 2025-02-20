@@ -33,8 +33,8 @@ class OutputSettingParams:
     ----------
     shot_id : int
         Shot ID.
-    result : pd.DataFrame
-        DataFrame of shot results.
+    result : xr.Dataset
+        Dataset of shot results.
     database : ShotDatabase
         Database connection for retrieving cache data.
     tokamak : Tokamak
@@ -42,7 +42,7 @@ class OutputSettingParams:
     """
 
     shot_id: int
-    result: pd.DataFrame
+    result: xr.Dataset
     database: ShotDatabase
     tokamak: Tokamak
 
@@ -100,19 +100,6 @@ class OutputSetting(ABC):
             The parameters for outputting shot results.
         """
 
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """
-        Empty method optionally overridden by subclasses to handle cleanup after
-        all shots have been output. This may include closing files or other cleanup.
-        Subclasses should implement this method so multiple output types can be
-        used for the same data without appending to the other's outputted dataframe.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
-        """
-
     @abstractmethod
     def get_results(self, params: CompleteOutputSettingParams) -> Any:
         """
@@ -159,18 +146,6 @@ class OutputSettingList(OutputSetting):
             The parameters for outputting shot results.
         """
         return [s.output_shot(params) for s in self.output_setting_list]
-
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """
-        Cleanup for each output setting in the list.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
-        """
-        for individual_setting in self.output_setting_list:
-            individual_setting.stream_output_cleanup(params)
 
     def get_results(self, params: CompleteOutputSettingParams):
         """
@@ -220,23 +195,6 @@ class OutputSettingDict(OutputSetting):
         chosen_setting = self.output_setting_dict.get(params.tokamak)
         if chosen_setting is not None:
             return chosen_setting.output_shot(params)
-        logger.warning(
-            "No output setting for tokamak {tokamak}", tokamak=params.tokamak
-        )
-        return None
-
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """
-        Cleanup for the output setting of the specified tokamak.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
-        """
-        chosen_setting = self.output_setting_dict.get(params.tokamak)
-        if chosen_setting:
-            return chosen_setting.stream_output_cleanup(params)
         logger.warning(
             "No output setting for tokamak {tokamak}", tokamak=params.tokamak
         )
@@ -301,66 +259,36 @@ class DataFrameOutputSetting(OutputSetting):
         """
         return self.results
 
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
+
+class DatasetOutputSetting(OutputSetting):
+    """
+    Outputs shot data as an xarray Dataset.
+    """
+
+    def __init__(self, filepath: str = None):
         """
-        Cleanup the results DataFrame.
+        Initialize DatasetOutputSetting with an empty list of Datasets.
 
         Parameters
         ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
-        """
-        self.results = pd.DataFrame()
-
-
-class HDF5OutputSetting(OutputSetting):
-    """
-    Stream outputted data to an HDF5 file. Data for each shot is stored in a table
-    under the key `df_SHOTID`.
-    """
-
-    def __init__(self, filepath: str, only_output_numeric: bool = False):
-        """
-        Initialize HDF5OutputSetting with a file path and numeric output option.
-
-        Parameters
-        ----------
-        filepath : str
-            The path to the HDF5 file.
-        only_output_numeric : bool, optional
-            If True, only numeric data will be outputted (default is False) and
-            non-numeric quantities like commit hash will be excluded.
+        filepath : str, optional
+            The path to the file where the dataset will be saved (default is None
+            to only keep the data in memory). Accepted file extensions are .h5,
+            .hdf5, and .nc.
         """
         self.filepath = filepath
-        self.output_shot_count = 0
-        self.only_output_numeric = only_output_numeric
-        self.results: pd.DataFrame = pd.DataFrame()
+        self.datasets = []
 
     def _output_shot(self, params: OutputSettingParams):
         """
-        Output a single shot to the HDF5 file.
+        Output a single shot by concatenating the data in the Dataset.
 
         Parameters
         ----------
         params : OutputSettingParams
             The parameters for outputting shot results.
         """
-        mode = "a" if self.output_shot_count > 0 else "w"
-
-        if self.only_output_numeric:
-            output_result = params.result.select_dtypes([np.number])
-        else:
-            output_result = params.result
-
-        output_result.to_hdf(
-            self.filepath,
-            key=f"df_{params.shot_id}",
-            format="table",
-            complib="blosc",
-            mode=mode,
-        )
-        self.output_shot_count += 1
-        self.results = safe_df_concat(self.results, [params.result])
+        self.datasets.append(params.result)
 
     def get_results(self, params: CompleteOutputSettingParams):
         """
@@ -373,21 +301,13 @@ class HDF5OutputSetting(OutputSetting):
 
         Returns
         -------
-        pd.DataFrame
-            The combined DataFrame of results.
+        Dict[int, xr.Dataset]
+            The dataset of results with dims shot and time.
         """
-        return self.results
-
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """
-        Cleanup the results DataFrame.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
-        """
-        self.results = pd.DataFrame()
+        ds = xr.concat(self.datasets, dim="shot")
+        if self.filepath:
+            ds.to_netcdf(self.filepath)
+        return
 
 
 class CSVOutputSetting(OutputSetting):
@@ -458,17 +378,6 @@ class CSVOutputSetting(OutputSetting):
             The combined DataFrame of results.
         """
         return self.results
-
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """
-        Cleanup the results DataFrame.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
-        """
-        self.results = pd.DataFrame()
 
 
 class BatchedCSVOutputSetting(OutputSetting):
@@ -556,17 +465,6 @@ class BatchedCSVOutputSetting(OutputSetting):
             self._write_batch_to_csv()
         return self.results
 
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """
-        Clean up the output stream by resetting results.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for cleaning up the output stream.
-        """
-        self.results = pd.DataFrame()
-
 
 class SQLOutputSetting(OutputSetting):
     """
@@ -635,101 +533,6 @@ class SQLOutputSetting(OutputSetting):
         """
         return self.results
 
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """
-        Clean up the output stream by resetting results.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for cleaning up the output stream.
-        """
-        self.results = pd.DataFrame()
-
-
-class DatasetOutputSetting(OutputSetting):
-    """
-    Outputs shot data as an xarray Dataset.
-    """
-
-    def __init__(self):
-        """Initialize DatasetOutputSetting with None."""
-        self.datasets = []
-
-    def _output_shot(self, params: OutputSettingParams):
-        """
-        Output a single shot by concatenating the data in the Dataset.
-
-        Parameters
-        ----------
-        params : OutputSettingParams
-            The parameters for outputting shot results.
-        """
-        self.datasets.append(params.result)
-
-    def get_results(self, params: CompleteOutputSettingParams):
-        """
-        Get the accumulated results.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
-
-        Returns
-        -------
-        Dict[int, xr.Dataset]
-            The dataset of results with dims shot and time.
-        """
-        return xr.concat(self.datasets, dim="shot")
-
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """
-        Clean up the list of datasets.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for cleaning up the output stream.
-        """
-        self.datasets = []
-
-
-class NetCDFOutputSetting(DatasetOutputSetting):
-    """
-    Save outputted data to a NetCDF file from an xarray Dataset.
-    """
-
-    def __init__(self, filepath: str):
-        """
-        Initialize NetCDFOutputSetting with a file path.
-
-        Parameters
-        ----------
-        filepath : str
-            The path to the NetCDF file.
-        """
-        super().__init__()
-        self.filepath = filepath
-
-    def get_results(self, params: CompleteOutputSettingParams):
-        """
-        Get the accumulated results.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
-
-        Returns
-        -------
-        xr.Dataset
-            The dataset of results with dims shot and time.
-        """
-        ds = super().get_results(params)
-        ds.to_netcdf(self.filepath)
-        return ds
-
 
 # --8<-- [start:output_setting_dict]
 _output_setting_mappings: Dict[str, OutputSetting] = {
@@ -740,10 +543,10 @@ _output_setting_mappings: Dict[str, OutputSetting] = {
 
 # --8<-- [start:file_suffix_to_output_setting_dict]
 _file_suffix_to_output_setting: Dict[str, Type[OutputSetting]] = {
-    ".h5": HDF5OutputSetting,
-    ".hdf5": HDF5OutputSetting,
+    ".h5": DatasetOutputSetting,
+    ".hdf5": DatasetOutputSetting,
+    ".nc": DatasetOutputSetting,
     ".csv": BatchedCSVOutputSetting,
-    ".nc": NetCDFOutputSetting,
 }
 # --8<-- [end:file_suffix_to_output_setting_dict]
 
