@@ -309,7 +309,7 @@ class DatasetOutputSetting(OutputSetting):
         ds = xr.concat(self.datasets, dim="shot")
         if self.filepath:
             ds.to_netcdf(self.filepath)
-        return
+        return ds
 
 
 class CSVOutputSetting(OutputSetting):
