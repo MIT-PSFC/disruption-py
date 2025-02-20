@@ -241,7 +241,9 @@ class DataFrameOutputSetting(OutputSetting):
         params : OutputSettingParams
             The parameters for outputting shot results.
         """
-        self.results = safe_df_concat(self.results, [params.result])
+        self.results = safe_df_concat(
+            self.results, [params.result.to_dataframe().reset_index()]
+        )
 
     def get_results(self, params: CompleteOutputSettingParams):
         """
@@ -348,12 +350,11 @@ class CSVOutputSetting(OutputSetting):
             The parameters for outputting shot results.
         """
         file_exists = os.path.isfile(self.filepath)
+        combined_df = params.result.to_dataframe().reset_index()
         if self.flexible_columns:
             if file_exists:
                 existing_df = pd.read_csv(self.filepath)
-                combined_df = safe_df_concat(existing_df, [params.result])
-            else:
-                combined_df = params.result
+                combined_df = safe_df_concat(existing_df, [combined_df])
 
             combined_df.to_csv(self.filepath, index=False)
         else:
@@ -361,7 +362,7 @@ class CSVOutputSetting(OutputSetting):
                 self.filepath, mode="a", index=False, header=(not file_exists)
             )
         self.output_shot_count += 1
-        self.results = safe_df_concat(self.results, [params.result])
+        self.results = safe_df_concat(self.results, [combined_df])
 
     def get_results(self, params: CompleteOutputSettingParams):
         """
@@ -422,14 +423,15 @@ class BatchedCSVOutputSetting(OutputSetting):
             The parameters containing the result to be outputted.
         """
         # Append the current result to the batch data list
-        self.batch_data.append(params.result)
+        df = params.result.to_dataframe().reset_index()
+        self.batch_data.append(df)
 
         # Check if the batch size has been reached
         if len(self.batch_data) >= self.batch_size:
             self._write_batch_to_csv()
 
         self.output_shot_count += 1
-        self.results = safe_df_concat(self.results, [params.result])
+        self.results = safe_df_concat(self.results, [df])
 
     def _write_batch_to_csv(self):
         """
@@ -505,17 +507,18 @@ class SQLOutputSetting(OutputSetting):
         params : OutputSettingParams
             The parameters containing the result to be outputted.
         """
-        if not params.result.empty and ("shot" in params.result.columns):
-            shot_id = params.result["shot"].iloc[0]
+        df = params.result.to_dataframe().reset_index()
+        if not df.empty and ("shot" in df.columns):
+            shot_id = df["shot"].iloc[0]
             params.database.add_shot_data(
                 shot_id=shot_id,
-                shot_data=params.result,
+                shot_data=df,
                 update=self.should_update,
                 override_columns=self.should_override_columns,
             )
         else:
             logger.warning("No shot id found in result DataFrame")
-        self.results = safe_df_concat(self.results, [params.result])
+        self.results = safe_df_concat(self.results, [df])
 
     def get_results(self, params: CompleteOutputSettingParams) -> Any:
         """
