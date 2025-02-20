@@ -5,7 +5,7 @@ Three _public_ installations are currently maintained automatically:
 
 - on the C-MOD MFE workstations,
 - on the DIII-D `omega` cluster,
-- on the EAST `cs` cluster.
+- on the EAST `cs` servers.
 
 A _private_ installation is possible on any machine, either on a personal laptop, or on any experimental cluster.
 
