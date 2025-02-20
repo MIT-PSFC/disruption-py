@@ -101,10 +101,13 @@ DisruptionPy is now open-source and [available at PyPI](https://pypi.org/project
 For standard installations, please follow the usual way:
 
 ```bash
-# if you use poetry:
+# if you use poetry
 poetry add disruption-py
 
-# if you use pip:
+# if you use uv
+uv add disruption-py
+
+# if you use pip
 pip install disruption-py
 ```
 
