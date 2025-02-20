@@ -10,6 +10,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 from MDSplus import mdsExceptions
 
 from disruption_py.config import config
@@ -258,7 +259,7 @@ def populate_method(
 def populate_shot(
     retrieval_settings: RetrievalSettings,
     physics_method_params: PhysicsMethodParams,
-) -> pd.DataFrame:
+) -> xr.Dataset:
     """
     Run the physics methods to populate shot data.
 
@@ -276,8 +277,8 @@ def populate_shot(
 
     Returns
     -------
-    pd.DataFrame
-        A DataFrame containing the queried data.
+    xr.Dataset
+        A dataset containing the queried data.
     """
     # Concatenate built-in classes containing registered methods with user-provided
     # classes/methods
@@ -327,9 +328,19 @@ def populate_shot(
         )
 
     # Initialize with cached data
-    num_parameters = len(pre_filled_shot_data.columns)
-    num_valid = pre_filled_shot_data.notna().any().sum()
-    filtered_methods = []
+    # Temporarily convert from DataFrame to xarray Dataset. In the future, all
+    # caching should occur with xarrays rather than DataFrames.
+    ds = xr.Dataset.from_dataframe(pre_filled_shot_data.set_index(["shot", "time"]))
+    # Assign commit_hash to the dataset as a whole rather than as a data var
+    # because it currently does not vary across shot or time.
+    ds.attrs["commit_hash"] = ds.commit_hash.values.flat[0]
+    ds = ds.drop_vars("commit_hash")
+
+    num_parameters = len(ds.data_vars)
+    if len(ds.data_vars) == 0:
+        num_valid = 0
+    else:
+        num_valid = ds.notnull().any().to_array().sum()
     for method_dict in methods_data:
         if method_dict is None:
             continue
@@ -341,19 +352,16 @@ def populate_shot(
                 np.all(np.isnan(method_dict[parameter]))
                 and len(method_dict[parameter]) == 1
             ):
-                method_dict[parameter] = np.full(len(pre_filled_shot_data), np.nan)
+                method_dict[parameter] = np.full(len(ds.time), np.nan)
             else:
                 num_valid += 1
-        method_df = pd.DataFrame(method_dict)
-        if len(method_df) != len(pre_filled_shot_data):
-            physics_method_params.logger.error(
-                "Ignoring parameters {parameter} with different length than timebase",
-                parameter=list(method_dict.keys()),
-            )
-            # TODO: Should we drop the columns, or is it better to raise an
-            # exception when the data do not match?
-            continue
-        filtered_methods.append(method_df)
+            if len(method_dict[parameter]) != len(ds.time):
+                physics_method_params.logger.error(
+                    "Ignoring parameters {parameter} with different length than timebase",
+                    parameter=parameter,
+                )
+                continue
+            ds[parameter] = (("shot", "time"), method_dict[parameter].reshape(1, -1))
 
     percent_valid = (num_valid / num_parameters * 100) if num_parameters else 0
     if percent_valid >= 75:
@@ -378,21 +386,14 @@ def populate_shot(
         elapsed=get_elapsed_time(time.time() - start_time),
     )
 
-    # TODO: This is a hack to get around the fact that some methods return
-    #       multiple parameters. This should be fixed in the future.
-
-    local_data = pd.concat([pre_filled_shot_data] + filtered_methods, axis=1)
-    local_data = local_data.loc[:, ~local_data.columns.duplicated()]
     if (
         retrieval_settings.only_requested_columns
         and retrieval_settings.run_columns is not None
     ):
         include_columns = list(
             REQUIRED_COLS.union(
-                set(retrieval_settings.run_columns).intersection(
-                    set(local_data.columns)
-                )
+                set(retrieval_settings.run_columns).intersection(set(ds.data_vars))
             )
         )
-        local_data = local_data[include_columns]
-    return local_data
+        ds = ds[include_columns]
+    return ds
