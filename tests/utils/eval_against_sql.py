@@ -98,7 +98,7 @@ def get_cached_from_fresh(
     db = ShotDatabase.from_config(tokamak=tokamak)
     shot_data_list = []
     for shot_id in shotlist:
-        sql_data_df = db.get_shots_data([shot_id], cols=test_columns).astype(float)
+        sql_data_df = db.get_shots_data([shot_id], cols=test_columns).astype("float32")
         if sql_data_df.empty:
             shot_data_list.append(xr.Dataset(coords={"shot": [shot_id], "time": []}))
             continue
@@ -111,7 +111,9 @@ def get_cached_from_fresh(
         shot_data_list.append(sql_data)
     shot_data = xr.concat(shot_data_list, dim="shot")
     shot_data = shot_data.reindex(
-        {"time": fresh_data.time}, method="nearest", tolerance=config().time_const
+        {"time": fresh_data.time.copy()},
+        method="nearest",
+        tolerance=config().time_const,
     )
     return shot_data
 
