@@ -265,102 +265,6 @@ class OutputSettingDict(OutputSetting):
         return None
 
 
-class ListOutputSetting(OutputSetting):
-    """
-    Outputs shot data as a list of DataFrames.
-    """
-
-    def __init__(self):
-        """Initialize ListOutputSetting with an empty results list."""
-        self.results = []
-
-    def _output_shot(self, params: OutputSettingParams):
-        """
-        Output a single shot by appending the result to the list.
-
-        Parameters
-        ----------
-        params : OutputSettingParams
-            The parameters for outputting shot results.
-        """
-        self.results.append(params.result)
-
-    def get_results(self, params: CompleteOutputSettingParams):
-        """
-        Get the accumulated results.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
-
-        Returns
-        -------
-        List[pd.DataFrame]
-            The list of results.
-        """
-        return self.results
-
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """
-        Cleanup the results list.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
-        """
-        self.results = []
-
-
-class DictOutputSetting(OutputSetting):
-    """
-    Outputs shot data as a dict of DataFrames keyed by shot number.
-    """
-
-    def __init__(self):
-        """Initialize DictOutputSetting with an empty results dictionary."""
-        self.results = {}
-
-    def _output_shot(self, params: OutputSettingParams):
-        """
-        Output a single shot by storing the result in the dictionary.
-
-        Parameters
-        ----------
-        params : OutputSettingParams
-            The parameters for outputting shot results.
-        """
-        self.results[params.shot_id] = params.result
-
-    def get_results(self, params: CompleteOutputSettingParams):
-        """
-        Get the accumulated results.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
-
-        Returns
-        -------
-        Dict[int, pd.DataFrame]
-            The dictionary of results keyed by shot number.
-        """
-        return self.results
-
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """
-        Cleanup the results dictionary.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
-        """
-        self.results = {}
-
-
 class DataFrameOutputSetting(OutputSetting):
     """
     Outputs all shot data as a single DataFrame.
@@ -829,10 +733,8 @@ class NetCDFOutputSetting(DatasetOutputSetting):
 
 # --8<-- [start:output_setting_dict]
 _output_setting_mappings: Dict[str, OutputSetting] = {
-    "list": ListOutputSetting(),
-    "dataframe": DataFrameOutputSetting(),
-    "dict": DictOutputSetting(),
-    "dataset": DatasetOutputSetting(),
+    "dataframe": DataFrameOutputSetting,
+    "dataset": DatasetOutputSetting,
 }
 # --8<-- [end:output_setting_dict]
 
@@ -867,9 +769,9 @@ def resolve_output_setting(
         return output_setting
 
     if isinstance(output_setting, str):
-        output_setting_object = _output_setting_mappings.get(output_setting, None)
-        if output_setting_object is not None:
-            return output_setting_object
+        output_setting_cls = _output_setting_mappings.get(output_setting, None)
+        if output_setting_cls is not None:
+            return output_setting_cls()
 
     if isinstance(output_setting, str):
         # assume that it is a file path
