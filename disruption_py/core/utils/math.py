@@ -1053,7 +1053,7 @@ def matlab_gradient_1d_vectorized(f, h, **_kwargs):
     h_diff = np.diff(h)
     f_diff = np.diff(f)
     # Combine into a single gradient array
-    g = np.empty_like(f)
+    g = np.full(f.shape, np.nan)
     g[0] = f_diff[0] / h_diff[0]
     g[-1] = f_diff[-1] / h_diff[-1]
     g[1:-1] = (f[2:] - f[0:-2]) / (h[2:] - h[0:-2])
