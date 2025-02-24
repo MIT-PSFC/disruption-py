@@ -7,6 +7,7 @@ Module for managing retrieval of shot data from a tokamak.
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 from loguru import logger
 
 from disruption_py.config import config
@@ -60,7 +61,7 @@ class RetrievalManager:
 
     def get_shot_data(
         self, shot_id, retrieval_settings: RetrievalSettings
-    ) -> pd.DataFrame:
+    ) -> xr.Dataset:
         """
         Get data for a single shot. May be run across different processes.
 
@@ -73,8 +74,8 @@ class RetrievalManager:
 
         Returns
         -------
-        pd.DataFrame
-            The retrieved shot data as a DataFrame, or None if an error occurred.
+        xr.Dataset
+            The retrieved shot data as a xarray Dataset, or None if an error occurred.
         """
         physics_method_params = self.shot_setup(
             shot_id=int(shot_id),
@@ -275,7 +276,7 @@ class RetrievalManager:
         self,
         shot_id: int,
         retrieval_settings: RetrievalSettings,
-    ) -> pd.DataFrame:
+    ) -> xr.Dataset:
         """
         Retrieve cached data for the specified shot.
 
@@ -288,7 +289,7 @@ class RetrievalManager:
 
         Returns
         -------
-        pd.DataFrame
+        xr.Dataset
             The cached data for the shot, or None if no cache is available.
         """
         if retrieval_settings.cache_setting is not None:
@@ -305,7 +306,9 @@ class RetrievalManager:
             if cache_data is None:
                 return None
             cache_data["shot"] = cache_data["shot"].astype(int)
-            cache_data = cache_data[cache_data["shot"] == shot_id]
+            if shot_id not in cache_data["shot"]:
+                return None
+            cache_data = cache_data.sel(shot=shot_id)
         else:
             cache_data = None
         return cache_data
@@ -313,7 +316,7 @@ class RetrievalManager:
     def _init_times(
         self,
         shot_id: int,
-        cache_data: pd.DataFrame,
+        cache_data: xr.Dataset,
         mds_conn: MDSConnection,
         disruption_time: float,
         retrieval_settings: RetrievalSettings,
@@ -325,7 +328,7 @@ class RetrievalManager:
         ----------
         shot_id : int
             The ID of the shot.
-        cache_data : pd.DataFrame
+        cache_data : xr.Dataset
             The cached data for the shot.
         mds_conn : MDSConnection
             The MDS connection for the shot.
@@ -351,8 +354,8 @@ class RetrievalManager:
 
     @classmethod
     def _pre_fill_shot_data(
-        cls, times: np.ndarray, cache_data: pd.DataFrame
-    ) -> pd.DataFrame:
+        cls, times: np.ndarray, cache_data: xr.Dataset
+    ) -> xr.Dataset:
         """
         Initialize the shot with data, if cached data matches the shot timebase.
 
@@ -362,25 +365,23 @@ class RetrievalManager:
             The class type.
         times : np.ndarray
             The timebase for the shot.
-        cache_data : pd.DataFrame
+        cache_data : xr.Dataset
             The cached data for the shot.
 
         Returns
         -------
-        pd.DataFrame
-            The pre-filled shot data as a DataFrame, or None if no match is found.
+        xr.Dataset
+            The pre-filled shot data as a Datset, or None if no match is found.
         """
-        if cache_data is not None:
-            time_df = pd.DataFrame(times, columns=["time"])
-            flagged_cache_data = cache_data.assign(merge_success_flag=1)
-            timed_cache_data = pd.merge_asof(
-                time_df,
-                flagged_cache_data,
-                on="time",
-                direction="nearest",
-                tolerance=config().time_const,
-            )
-            if not timed_cache_data["merge_success_flag"].isna().any():
-                return timed_cache_data.drop(columns=["merge_success_flag"])
+        if cache_data is None:
             return None
-        return None
+        cache_data["success_flag"] = ("time", [1] * len(cache_data.time))
+        timed_cache_data = cache_data.reindex(
+            time=times,
+            method="nearest",
+            tolerance=config().time_const,
+        )
+        if timed_cache_data.success_flag.isnull().any():
+            return None
+        timed_cache_data = timed_cache_data.drop_vars("success_flag")
+        return timed_cache_data

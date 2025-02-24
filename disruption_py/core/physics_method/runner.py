@@ -29,7 +29,7 @@ from disruption_py.settings.retrieval_settings import RetrievalSettings
 REQUIRED_COLS = {"time", "shot", "commit_hash"}
 
 
-def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams) -> pd.DataFrame:
+def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams) -> xr.Dataset:
     """
     Retrieve pre-filled shot data for the given physics method parameters.
 
@@ -40,37 +40,48 @@ def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams) -> pd.Da
 
     Returns
     -------
-    pd.DataFrame
-        A DataFrame containing the pre-filled shot data.
+    xr.Dataset
+        A Dataset containing the pre-filled shot data.
     """
     pre_filled_shot_data = physics_method_params.pre_filled_shot_data
 
     # If the shot object was already passed data in the constructor, use that data.
-    # Otherwise, create an empty dataframe.
+    # Otherwise, create a new Dataset.
     if pre_filled_shot_data is None:
-        pre_filled_shot_data = pd.DataFrame()
-    if "time" not in pre_filled_shot_data:
-        pre_filled_shot_data["time"] = physics_method_params.times
-    if "shot" not in pre_filled_shot_data:
-        pre_filled_shot_data["shot"] = int(physics_method_params.shot_id)
-    pre_filled_shot_data["commit_hash"] = physics_method_params.metadata.get(
-        "commit_hash", None
-    )
-
-    # Check that pre_filled_shot_data is on the same timebase as the shot object
-    # to ensure data consistency
-    if (
-        len(pre_filled_shot_data["time"]) != len(physics_method_params.times)
-        or not np.isclose(
-            pre_filled_shot_data["time"],
-            physics_method_params.times,
-            atol=config().time_const,
-        ).all()
-    ):
-        physics_method_params.logger.error(
-            "Computation on different timebase than pre-filled shot data",
-            physics_method_params.shot_id,
+        pre_filled_shot_data = xr.Dataset(
+            {},
+            coords={
+                "shot": [int(physics_method_params.shot_id)],
+                "time": physics_method_params.times,
+            },
         )
+    else:
+        if "time" not in pre_filled_shot_data:
+            pre_filled_shot_data = pre_filled_shot_data.assign_coords(
+                time=physics_method_params.times
+            )
+        if "shot" not in pre_filled_shot_data:
+            pre_filled_shot_data = pre_filled_shot_data.assign_coords(
+                shot=int(physics_method_params.shot_id)
+            )
+        # Check that pre_filled_shot_data is on the same timebase as the shot object
+        # to ensure data consistency
+        if (
+            len(pre_filled_shot_data["time"]) != len(physics_method_params.times)
+            or not np.isclose(
+                pre_filled_shot_data["time"],
+                physics_method_params.times,
+                atol=config().time_const,
+            ).all()
+        ):
+            physics_method_params.logger.error(
+                "Computation on different timebase than pre-filled shot data",
+                physics_method_params.shot_id,
+            )
+
+    pre_filled_shot_data = pre_filled_shot_data.assign_attrs(
+        commit_hash=physics_method_params.metadata.get("commit_hash", None)
+    )
     return pre_filled_shot_data
 
 
@@ -294,7 +305,7 @@ def populate_shot(
         all_bound_method_metadata, retrieval_settings, physics_method_params
     )
 
-    pre_filled_shot_data = get_prefilled_shot_data(physics_method_params)
+    shot_data = get_prefilled_shot_data(physics_method_params)
     # Manually cache data that has already been retrieved (likely from SQL tables)
     # Methods added to pre_cached_method_names will be skipped by method optimizer
     cached_method_metadata = []
@@ -302,7 +313,7 @@ def populate_shot(
         for method_metadata in all_bound_method_metadata:
             cache_success = manually_cache(
                 physics_method_params=physics_method_params,
-                data=pre_filled_shot_data,
+                data=shot_data,
                 method=method_metadata.bound_method,
                 method_name=method_metadata.name,
                 method_columns=method_metadata.columns,
@@ -327,20 +338,11 @@ def populate_shot(
             )
         )
 
-    # Initialize with cached data
-    # Temporarily convert from DataFrame to xarray Dataset. In the future, all
-    # caching should occur with xarrays rather than DataFrames.
-    ds = xr.Dataset.from_dataframe(pre_filled_shot_data.set_index(["shot", "time"]))
-    # Assign commit_hash to the dataset as a whole rather than as a data var
-    # because it currently does not vary across shot or time.
-    ds.attrs["commit_hash"] = ds.commit_hash.values.flat[0]
-    ds = ds.drop_vars("commit_hash")
-
-    num_parameters = len(ds.data_vars)
-    if len(ds.data_vars) == 0:
+    num_parameters = len(shot_data.data_vars)
+    if len(shot_data.data_vars) == 0:
         num_valid = 0
     else:
-        num_valid = ds.notnull().any().to_array().sum()
+        num_valid = shot_data.notnull().any().to_array().sum()
     for method_dict in methods_data:
         if method_dict is None:
             continue
@@ -352,16 +354,19 @@ def populate_shot(
                 np.all(np.isnan(method_dict[parameter]))
                 and len(method_dict[parameter]) == 1
             ):
-                method_dict[parameter] = np.full(len(ds.time), np.nan)
+                method_dict[parameter] = np.full(len(shot_data.time), np.nan)
             else:
                 num_valid += 1
-            if len(method_dict[parameter]) != len(ds.time):
+            if len(method_dict[parameter]) != len(shot_data.time):
                 physics_method_params.logger.error(
                     "Ignoring parameters {parameter} with different length than timebase",
                     parameter=parameter,
                 )
                 continue
-            ds[parameter] = (("shot", "time"), method_dict[parameter].reshape(1, -1))
+            shot_data[parameter] = (
+                ("shot", "time"),
+                method_dict[parameter].reshape(1, -1),
+            )
 
     percent_valid = (num_valid / num_parameters * 100) if num_parameters else 0
     if percent_valid >= 75:
@@ -392,8 +397,10 @@ def populate_shot(
     ):
         include_columns = list(
             REQUIRED_COLS.union(
-                set(retrieval_settings.run_columns).intersection(set(ds.data_vars))
+                set(retrieval_settings.run_columns).intersection(
+                    set(shot_data.data_vars)
+                )
             )
         )
-        ds = ds[include_columns]
-    return ds
+        shot_data = shot_data[include_columns]
+    return shot_data
