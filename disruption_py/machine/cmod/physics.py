@@ -346,8 +346,7 @@ class CmodPhysicsMethods:
             "zcur", "v_z", and "z_times_v_z".
         """
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
-        z_prog = np.empty(pcstime.shape)
-        z_prog.fill(np.nan)
+        z_prog = np.full(pcstime.shape, np.nan)
         z_prog_temp = z_prog.copy()
         z_wire_index = -1
         active_wire_segments = CmodPhysicsMethods._get_active_wire_segments(
@@ -404,8 +403,7 @@ class CmodPhysicsMethods:
         # The value of Z_error we read is not in the units we want. It must be *divided*
         #  by a factor AND *divided* by the plasma current.
         z_error_without_factor_and_ip = wire_errors[:, z_wire_index]
-        z_error_without_ip = np.empty(z_error_without_factor_and_ip.shape)
-        z_error_without_ip.fill(np.nan)
+        z_error_without_ip = np.full(z_error_without_factor_and_ip.shape, np.nan)
         # Also, it turns out that different segments have different factors. So we
         # search through the active segments (determined above), find the factors,
         # and *divide* by the factor only for the times in the active segment (as
@@ -755,7 +753,7 @@ class CmodPhysicsMethods:
         to calculate velocity. Because of the heat profile of the plasma, suitable
         measurements are only found near the center.
         """
-        v_0 = np.empty(len(time))
+        v_0 = np.full(len(time), np.nan)
         # Check that the argon intensity pulse has a minimum count and duration
         # threshold
         valid_indices = np.where(intensity > 1000 & intensity < 10000)
@@ -794,7 +792,7 @@ class CmodPhysicsMethods:
         # These sensors are placed toroidally around the machine. Letters refer to
         # the 2 ports the sensors were placed between.
         bp13_names = ["BP13_BC", "BP13_DE", "BP13_GH", "BP13_JK"]
-        bp13_signals = np.empty((len(params.times), len(bp13_names)))
+        bp13_signals = np.full((len(params.times), len(bp13_names)), np.nan)
 
         path = r"\mag_bp_coils."
         bp_node_names = params.mds_conn.get_data(
@@ -843,7 +841,7 @@ class CmodPhysicsMethods:
         # Create the 'design' matrix ('A') for the linear system of equations:
         # Bp(phi) = A1 + A2*sin(phi) + A3*cos(phi)
         ncoeffs = 3
-        a = np.empty((len(bp13_names), ncoeffs))
+        a = np.full((len(bp13_names), ncoeffs), np.nan)
         a[:, 0] = np.ones(4)
         a[:, 1] = np.sin(bp13_phi * np.pi / 180.0)
         a[:, 2] = np.cos(bp13_phi * np.pi / 180.0)
