@@ -124,7 +124,7 @@ shellcheck:
 yamllint:
 	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	poetry run yamllint --version
-	find -type f -iname '*.yml' -or -iname '*.yaml' -not -empty -not -path '*/.venv/*' \
+	find -type f -iname '*.y*ml' -not -empty -not -path '*/.venv/*' \
 	| while read -r F; \
 	do \
 	   echo "--> $$F"; \
