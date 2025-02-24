@@ -99,7 +99,7 @@ class FileShotlistSetting(ShotlistSetting):
     def _get_shotlist(self, params: ShotlistSettingParams) -> List:
         if not self.shotlist:
             self.kwargs.setdefault("header", "infer")
-            df = pd.read_csv(self.file_path, **self.kwargs)
+            df = pd.read_csv(self.file_path, dtype={"commit_hash": str}, **self.kwargs)
             arr = df.values[:, self.column_index]
             self.shotlist = arr.astype(int).tolist()
         return self.shotlist

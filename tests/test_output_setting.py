@@ -154,5 +154,5 @@ def test_batch_csv(tokamak, test_file_path_f, shotlist):
         # are written to the CSV file.
         output_setting=BatchedCSVOutputSetting(filepath=csv, batch_size=1),
     )
-    df = pd.read_csv(csv)
+    df = pd.read_csv(csv, dtype={"commit_hash": str})
     assert_frame_equal_unordered(out, df)

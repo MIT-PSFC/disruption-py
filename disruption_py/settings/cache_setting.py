@@ -187,7 +187,7 @@ class CSVCacheSetting(CacheSetting):
         self.cache_file = cache_file
 
     def _get_cache_data(self, params: CacheSettingParams) -> pd.DataFrame:
-        return pd.read_csv(self.cache_file)
+        return pd.read_csv(self.cache_file, dtype={"commit_hash": str})
 
 
 # --8<-- [start:cache_setting_dict]

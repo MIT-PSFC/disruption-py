@@ -525,7 +525,7 @@ class CSVOutputSetting(OutputSetting):
         file_exists = os.path.isfile(self.filepath)
         if self.flexible_columns:
             if file_exists:
-                existing_df = pd.read_csv(self.filepath)
+                existing_df = pd.read_csv(self.filepath, dtype={"commit_hash": str})
                 combined_df = safe_df_concat(existing_df, [params.result])
             else:
                 combined_df = params.result
