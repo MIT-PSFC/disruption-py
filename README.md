@@ -34,12 +34,12 @@ At present, the main supported machines are [Alcator C-Mod](https://en.wikipedia
 
 ### Background
 
-A key element to ensure steady state operations in magnetically confined tokamak devices is the prediction and avoidance of disruptions.
+A key element to ensure steady state operations in magnetically-confined tokamak devices is the prediction and avoidance of disruptions.
 These are sudden losses of the thermal and magnetic energy stored within the plasma, which can occur when tokamaks operate near stability boundaries or because of hardware anomalies.
 The energy stored in the plasma and released during disruptions over milliseconds can cause severe damage to plasma-facing components, limiting experimental operations and the device's lifespan [[1](https://doi.org/10.1080/15361055.2023.2229675)].
-Disruptions still pose a serious challenge to next-generation fusion devices such as ITER or SPARC, which will have to operate near some of the limits of plasma stability to achieve intended performance and will do so at for long and frequent intervals.
+Disruptions still pose a serious challenge to next-generation fusion devices such as [ITER](https://en.wikipedia.org/wiki/ITER) or [SPARC](https://en.wikipedia.org/wiki/SPARC_(tokamak)), which will have to operate near some of the limits of plasma stability to achieve intended performance and will do so at for long and frequent intervals.
 Fusion science currently lacks first-principle, theoretical solutions to fully predict and avoid disruptions.
-However, previous work [[2](https://doi.org/10.1088/1741-4326/ab28bf), [3](https://doi.org/10.1088/1741-4326/abf74d)] has shown the usefulness of machine-learning (ML) algorithms for disruption prevention for both DIII-D and EAST -- the Experimental Advanced Superconducting Tokamak in China -- operations.
+However, previous work [[2](https://doi.org/10.1088/1741-4326/ab28bf), [3](https://doi.org/10.1088/1741-4326/abf74d)] has shown the usefulness of machine-learning (ML) algorithms for disruption prevention for both [DIII-D](https://en.wikipedia.org/wiki/DIII-D_(tokamak)) and [EAST](https://en.wikipedia.org/wiki/Experimental_Advanced_Superconducting_Tokamak) operations.
 DisruptionPy provides a standardized analysis pipeline across different fusion devices to build ML-ready datasets.
 
 ### Workflow
@@ -50,11 +50,11 @@ These routines are then interpolated on a requested timebase across the specifie
 
 <img src="docs/workflow.png" alt="Schematic flowchart of a typical DisruptionPy workflow. By Y Wei (2024)" width="400" onerror="this.onerror=null;this.src='workflow.png';" />
 
-_Figure: Schematic flowchart of a typical DisruptionPy workflow. By Y Wei (2024) [6]._
+_Figure: Schematic flowchart of a typical DisruptionPy workflow. By Y Wei (2024) [[6](https://meetings.aps.org/Meeting/DPP24/Session/PP12.10)]._
 
 ### Acknowledgments
 
-The most recent revamp of DisruptionPy [4, 5, 6] was partially supported by DOE FES under Award DE-SC0024368, "Open and FAIR Fusion for Machine Learning Applications" [7].
+The most recent revamp of DisruptionPy [[4](https://meetings.aps.org/Meeting/DPP24/Session/PP12.27), [5](https://meetings.aps.org/Meeting/DPP24/Session/PP12.9), [6](https://meetings.aps.org/Meeting/DPP24/Session/PP12.10)] was partially supported by DOE FES under Award DE-SC0024368, "Open and FAIR Fusion for Machine Learning Applications" [[7](https://crea-psfc.github.io/open-fair-fusion/)].
 
 ### References
 
@@ -101,10 +101,13 @@ DisruptionPy is now open-source and [available at PyPI](https://pypi.org/project
 For standard installations, please follow the usual way:
 
 ```bash
-# if you use poetry:
+# if you use poetry
 poetry add disruption-py
 
-# if you use pip:
+# if you use uv
+uv add disruption-py
+
+# if you use pip
 pip install disruption-py
 ```
 
