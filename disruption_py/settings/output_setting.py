@@ -285,7 +285,8 @@ class DataFrameOutputSetting(OutputSetting):
 
 class DatasetOutputSetting(OutputSetting):
     """
-    Outputs shot data as an xarray Dataset.
+    Outputs shot data as an xarray Dataset and (optionally) save the Dataset to
+    a file.
     """
 
     def __init__(self, filepath: str = None):
