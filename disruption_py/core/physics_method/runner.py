@@ -331,42 +331,31 @@ def populate_shot(
     for bound_method_metadata in run_bound_method_metadata:
         if bound_method_metadata in cached_method_metadata:
             continue
-        methods_data.append(
-            populate_method(
-                physics_method_params=physics_method_params,
-                bound_method_metadata=bound_method_metadata,
-            )
+        method_result = populate_method(
+            physics_method_params=physics_method_params,
+            bound_method_metadata=bound_method_metadata,
         )
+        # Temporarily handle both xr.Dataset and dict results from physics
+        # methods until all methods return xr.Dataset
+        if isinstance(method_result, xr.Dataset):
+            methods_data.append(method_result)
+            continue
+        method_result = method_result or {}
+        ds_dict = {}
+        for col in method_result:
+            if np.all(np.isnan(method_result[col])) and len(method_result[col]) == 1:
+                ds_dict[col] = ("time", [np.nan] * len(shot_data.time))
+            else:
+                ds_dict[col] = ("time", method_result[col])
+        ds = xr.Dataset(ds_dict, coords={"time": shot_data.time})
+        methods_data.append(ds)
+    shot_data = xr.merge([shot_data] + methods_data)
 
     num_parameters = len(shot_data.data_vars)
     if len(shot_data.data_vars) == 0:
         num_valid = 0
     else:
         num_valid = shot_data.notnull().any().to_array().sum()
-    for method_dict in methods_data:
-        if method_dict is None:
-            continue
-        # Pad parameters which are only a single NaN (from our error outputs) in
-        # order to create a DataFrame for easy comparison with cached data.
-        for parameter in method_dict:
-            num_parameters += 1
-            if (
-                np.all(np.isnan(method_dict[parameter]))
-                and len(method_dict[parameter]) == 1
-            ):
-                method_dict[parameter] = np.full(len(shot_data.time), np.nan)
-            else:
-                num_valid += 1
-            if len(method_dict[parameter]) != len(shot_data.time):
-                physics_method_params.logger.error(
-                    "Ignoring parameters {parameter} with different length than timebase",
-                    parameter=parameter,
-                )
-                continue
-            shot_data[parameter] = (
-                ("shot", "time"),
-                method_dict[parameter].reshape(1, -1),
-            )
 
     percent_valid = (num_valid / num_parameters * 100) if num_parameters else 0
     if percent_valid >= 75:
