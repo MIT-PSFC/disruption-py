@@ -185,7 +185,7 @@ def gauss_smooth(y, smooth_width, ends_type):
 
 
 @filter_cov_warning
-def gaussian_fit(*args):
+def gaussian_fit(*args, **kwargs):
     """
     Fits a Gaussian curve to a set of data points (x,y).
     Returns an array of coefficients, c, that describe the fit.
@@ -206,7 +206,7 @@ def gaussian_fit(*args):
     coeffs : array
         The coefficients of the fit.
     """
-    coeffs, *_ = curve_fit(gauss, *args)
+    coeffs, *_ = curve_fit(gauss, *args, **kwargs)
     return coeffs
 
 
