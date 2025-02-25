@@ -1080,7 +1080,7 @@ class CmodPhysicsMethods:
         return output
 
     @staticmethod
-    def _get_ts_parameters(times, ts_data, ts_time, ts_z, z_sorted=False):
+    def _get_ts_parameters(times, ts_data, ts_time, ts_z, ts_error, z_sorted=False):
         """
         Calculate the Thomson scattering temperature width parameters.
 
@@ -1094,6 +1094,8 @@ class CmodPhysicsMethods:
             Corresponding time values for the temperature data.
         ts_z : array_like
             Vertical coordinate values corresponding to the temperature data.
+        ts_error: array_like
+            2D array of Thomson scattering temperature error data.
         z_sorted : bool, optional
             If True, assumes `ts_z` is already sorted. Default is False.
 
@@ -1107,6 +1109,7 @@ class CmodPhysicsMethods:
             idx = np.argsort(ts_z)
             ts_z = ts_z[idx]
             ts_data = ts_data[idx]
+            ts_error = ts_error[idx]
         # init output
         te_hwm = np.full(len(ts_time), np.nan)
         # select valid times
@@ -1117,6 +1120,7 @@ class CmodPhysicsMethods:
         for idx in valid_times:
             # select non-zero indices
             y = ts_data[:, idx]
+            y_error = ts_error[:, idx]
             (ok_indices,) = np.where(y != 0)
             # skip if not enough points
             if len(ok_indices) < 3:
@@ -1124,21 +1128,30 @@ class CmodPhysicsMethods:
             # working arrays
             y = y[ok_indices]
             z = ts_z[ok_indices]
+            y_error = y_error[ok_indices]
             # initial guess
             i = y.argmax()
             guess = [y[i], z[i], (z.max() - z.min()) / 3]
             # actual fit
             try:
-                _, _, psigma = gaussian_fit(z, y, guess)
+                _, pmean, psigma = gaussian_fit(
+                    z, y, guess, sigma=y_error, absolute_sigma=True
+                )
             except RuntimeError as exc:
                 if str(exc).startswith("Optimal parameters not found"):
                     continue
                 raise exc
+            # reject points with unphysical mean
+            if pmean < -0.35 or pmean > 0.35:
+                continue
             # store output
             te_hwm[idx] = np.abs(psigma)
         # rescale from sigma to HWHM
         # https://en.wikipedia.org/wiki/Full_width_at_half_maximum
         te_hwm *= np.sqrt(2 * np.log(2))
+        # reject points with unphysical HWHM
+        (bad_indices,) = np.where(te_hwm > 0.35)
+        te_hwm[bad_indices] = np.nan
         # time interpolation
         te_hwm = interp1(ts_time, te_hwm, times)
         return {"te_width": te_hwm}
@@ -1179,9 +1192,12 @@ class CmodPhysicsMethods:
         ts_z = params.mds_conn.get_data(
             node_path + ":z_sorted", tree_name="electrons"
         )  # [m]
+        ts_error = params.mds_conn.get_data(
+            node_path + ":te_err", tree_name="electrons"
+        )  # [keV]
 
         output = CmodPhysicsMethods._get_ts_parameters(
-            params.times, ts_data, ts_time, ts_z
+            params.times, ts_data, ts_time, ts_z, ts_error
         )
         return output
 
