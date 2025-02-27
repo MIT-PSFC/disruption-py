@@ -26,7 +26,7 @@ from disruption_py.core.utils.misc import get_elapsed_time
 from disruption_py.machine.method_holders import get_method_holders
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 
-REQUIRED_COLS = {"time", "shot", "commit_hash"}
+REQUIRED_COLS = {"time", "shot"}
 
 
 def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams) -> xr.Dataset:
@@ -168,7 +168,7 @@ def filter_methods_to_run(
     """
     methods = retrieval_settings.run_methods
     if retrieval_settings.run_columns is not None:
-        columns = REQUIRED_COLS.union(retrieval_settings.run_columns)
+        columns = retrieval_settings.run_columns
     else:
         columns = None
     only_excluded_methods_specified = all("~" in method for method in methods or [])
