@@ -386,7 +386,7 @@ class D3DPhysicsMethods:
             params.logger.opt(exception=True).debug(e)
 
             err = "operands could not be broadcast together with shapes"
-            if isinstance(ValueError, e) and err not in e.args:
+            if isinstance(e, ValueError) and err not in e.args:
                 raise
 
             g_f = [np.nan]
