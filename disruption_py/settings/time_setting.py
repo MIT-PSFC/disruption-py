@@ -19,6 +19,7 @@ from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.misc import shot_log_msg
 from disruption_py.inout.mds import MDSConnection
 from disruption_py.inout.sql import ShotDatabase
+from disruption_py.machine.east.util import EastUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -244,7 +245,7 @@ class CacheTimeSetting(TimeSetting):
             try:
                 times = params.cache_data["time"].to_numpy()
                 # Check if the timebase is in ms instead of s
-                if times[-1] > config(params.tokamak).max_shot_time:
+                if 0 < config(params.tokamak).max_shot_time < times[-1]:
                     times /= 1000  # [ms] -> [s]
                 return times
             except KeyError as e:
@@ -264,7 +265,10 @@ class EfitTimeSetting(TimeSetting):
         """
         Initialize with tokamak-specific overrides for EFIT.
         """
-        self.tokamak_overrides = {Tokamak.CMOD: self.cmod_times}
+        self.tokamak_overrides = {
+            Tokamak.CMOD: self.cmod_times,
+            Tokamak.EAST: self.east_times,
+        }
 
     def cmod_times(self, params: TimeSettingParams):
         """
@@ -301,6 +305,26 @@ class EfitTimeSetting(TimeSetting):
                 astype="float64",
             )
 
+    def east_times(self, params: TimeSettingParams):
+        """
+        Retrieve the EFIT timebase for the EAST tokamak.
+
+        Parameters
+        ----------
+        params : TimeSettingParams
+            Parameters needed to retrieve the timebase.
+
+        Returns
+        -------
+        np.ndarray
+            Array of times in the timebase.
+        """
+        return params.mds_conn.get_data(
+            r"\efit_aeqdsk:atime",
+            tree_name="_efit_tree",
+            astype="float64",
+        )
+
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         """
         Abstract method for retrieving EFIT timebase.
@@ -326,8 +350,10 @@ class DisruptionTimeSetting(TimeSetting):
     """
 
     # Disruption Variables
-    DT_BEFORE_DISRUPTION = 0.002
-    DURATION_BEFORE_DISRUPTION = 0.10
+    DT_BEFORE_DISRUPTION_D3D = 0.002
+    DURATION_BEFORE_DISRUPTION_D3D = 0.10
+    DT_BEFORE_DISRUPTION_EAST = 0.010
+    DURATION_BEFORE_DISRUPTION_EAST = 0.25
 
     def __init__(self, minimum_ip=400.0e3, minimum_duration=0.100):
         """
@@ -340,7 +366,10 @@ class DisruptionTimeSetting(TimeSetting):
         minimum_duration : float, optional
             Minimum duration in seconds (default is 0.1 seconds).
         """
-        self.tokamak_overrides = {Tokamak.D3D: self.d3d_times}
+        self.tokamak_overrides = {
+            Tokamak.D3D: self.d3d_times,
+            Tokamak.EAST: self.east_times,
+        }
         self.minimum_ip = minimum_ip
         self.minimum_duration = minimum_duration
 
@@ -387,16 +416,56 @@ class DisruptionTimeSetting(TimeSetting):
         times = np.arange(0.100, duration + config(params.tokamak).time_const, 0.025)
         if params.disrupted:
             additional_times = np.arange(
-                params.disruption_time - self.DURATION_BEFORE_DISRUPTION,
+                params.disruption_time - self.DURATION_BEFORE_DISRUPTION_D3D,
                 params.disruption_time + config(params.tokamak).time_const,
-                self.DT_BEFORE_DISRUPTION,
+                self.DT_BEFORE_DISRUPTION_D3D,
             )
             times = times[
                 np.where(
                     times
                     < (
                         params.disruption_time
-                        - self.DURATION_BEFORE_DISRUPTION
+                        - self.DURATION_BEFORE_DISRUPTION_D3D
+                        - config(params.tokamak).time_const
+                    )
+                )
+            ]
+            times = np.concatenate((times, additional_times))
+        return times
+
+    def east_times(self, params: TimeSettingParams):
+        """
+        Retrieve disruption timebase for the EAST tokamak.
+
+        Parameters
+        ----------
+        params : TimeSettingParams
+            Parameters needed to retrieve the timebase.
+
+        Returns
+        -------
+        np.ndarray
+            Array of times in the timebase.
+        """
+        ip, ip_time = EastUtilMethods.retrieve_ip(params.mds_conn, params.shot_id)
+        # For EAST, minimum_ip = 200e3 [A], minimum_duration = 0.6 [s]
+        duration, ip_max = self._get_end_of_shot(ip, ip_time, self.minimum_ip)
+        if duration < self.minimum_duration or np.abs(ip_max) < self.minimum_ip:
+            raise NotImplementedError()
+
+        times = np.arange(0.200, duration + config(params.tokamak).time_const, 0.1)
+        if params.disrupted:
+            additional_times = np.arange(
+                params.disruption_time - self.DURATION_BEFORE_DISRUPTION_EAST,
+                params.disruption_time + config(params.tokamak).time_const,
+                self.DT_BEFORE_DISRUPTION_EAST,
+            )
+            times = times[
+                np.where(
+                    times
+                    < (
+                        params.disruption_time
+                        - self.DURATION_BEFORE_DISRUPTION_EAST
                         - config(params.tokamak).time_const
                     )
                 )
@@ -549,10 +618,14 @@ class SignalTimeSetting(TimeSetting):
 # --8<-- [start:time_setting_dict]
 _time_setting_mappings: Dict[str, TimeSetting] = {
     "efit": EfitTimeSetting(),
-    "disruption": DisruptionTimeSetting(),
+    "disruption": {
+        Tokamak.D3D: DisruptionTimeSetting(),
+        Tokamak.EAST: DisruptionTimeSetting(minimum_ip=200e3, minimum_duration=0.6),
+    },
     "disruption_warning": {
         Tokamak.CMOD: EfitTimeSetting(),
         Tokamak.D3D: DisruptionTimeSetting(),
+        Tokamak.EAST: DisruptionTimeSetting(minimum_ip=200e3, minimum_duration=0.6),
     },
     "ip": IpTimeSetting(),
 }

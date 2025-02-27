@@ -193,6 +193,7 @@ class DefaultNicknameSetting(NicknameSetting):
         self.tokamak_overrides = {
             Tokamak.CMOD: StaticNicknameSetting("analysis")._get_tree_name,
             Tokamak.D3D: StaticNicknameSetting("efit01")._get_tree_name,
+            Tokamak.EAST: StaticNicknameSetting("efit_east")._get_tree_name,
         }
 
     def _get_tree_name(self, params: NicknameSettingParams) -> str:
@@ -212,6 +213,8 @@ class DefaultNicknameSetting(NicknameSetting):
 class DisruptionNicknameSetting(NicknameSetting):
     """
     Nickname setting to resolve the '_efit_tree' nickname to the disruption EFIT tree.
+
+    EAST does not have a disruption EFIT tree, so we'll use the default "efit_east" tree.
     """
 
     def __init__(self):
@@ -221,6 +224,7 @@ class DisruptionNicknameSetting(NicknameSetting):
         self.tokamak_overrides = {
             Tokamak.CMOD: self._cmod_nickname,
             Tokamak.D3D: self._d3d_nickname,
+            Tokamak.EAST: StaticNicknameSetting("efit_east")._get_tree_name,
         }
 
     def _d3d_nickname(self, params: NicknameSettingParams) -> str:
