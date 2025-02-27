@@ -131,7 +131,7 @@ def get_commit_hash() -> str:
     """
     try:
         commit_hash = (
-            subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])
+            subprocess.check_output(["git", "rev-parse", "HEAD"])
             .decode("ascii")
             .strip()
         )
