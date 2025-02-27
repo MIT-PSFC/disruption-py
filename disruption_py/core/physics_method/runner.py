@@ -355,7 +355,7 @@ def populate_shot(
     if len(shot_data.data_vars) == 0:
         num_valid = 0
     else:
-        num_valid = shot_data.notnull().any().to_array().sum()
+        num_valid = int(shot_data.notnull().any().to_array().sum())
 
     percent_valid = (num_valid / num_parameters * 100) if num_parameters else 0
     if percent_valid >= 75:
