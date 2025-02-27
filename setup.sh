@@ -41,6 +41,12 @@ fi
 
 unset PYTHONPATH
 
+# local
+if [[ -d "$HOME/.local/bin" ]]
+then
+   PATH="$HOME/.local/bin:$PATH"
+fi
+
 # mdsplus
 export PATH=$PATH:${MDSPLUS_BIN:-$MDSPLUS_DIR/bin}
 export PYTHONPATH=${MDSPLUS_API:-$MDSPLUS_DIR/python}:$PYTHONPATH
