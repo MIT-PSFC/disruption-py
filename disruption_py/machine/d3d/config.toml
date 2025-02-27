@@ -17,7 +17,6 @@ expected_failure_columns = [
   "commit_hash",
   "dbetap_dt",
   "delta",
-  "dipprog_dt_rt",
   "dli_dt",
   "dn_dt",
   "dwmhd_dt",

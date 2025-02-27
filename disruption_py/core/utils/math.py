@@ -73,6 +73,8 @@ def interp1(x, y, new_x, kind="linear", bounds_error=False, fill_value=np.nan, a
     fill_value : float, optional
         The value to use for new_x values outside of the range of x. This
         is only used if bounds_error is False. Defaults to nan.
+        If fill_value = 'extrapolate', the method will extrapolate based on
+        the selected interpolation method.
 
     Returns
     -------
@@ -185,7 +187,7 @@ def gauss_smooth(y, smooth_width, ends_type):
 
 
 @filter_cov_warning
-def gaussian_fit(*args):
+def gaussian_fit(*args, **kwargs):
     """
     Fits a Gaussian curve to a set of data points (x,y).
     Returns an array of coefficients, c, that describe the fit.
@@ -206,7 +208,7 @@ def gaussian_fit(*args):
     coeffs : array
         The coefficients of the fit.
     """
-    coeffs, *_ = curve_fit(gauss, *args)
+    coeffs, *_ = curve_fit(gauss, *args, **kwargs)
     return coeffs
 
 
@@ -1053,7 +1055,7 @@ def matlab_gradient_1d_vectorized(f, h, **_kwargs):
     h_diff = np.diff(h)
     f_diff = np.diff(f)
     # Combine into a single gradient array
-    g = np.empty_like(f)
+    g = np.full(f.shape, np.nan)
     g[0] = f_diff[0] / h_diff[0]
     g[-1] = f_diff[-1] / h_diff[-1]
     g[1:-1] = (f[2:] - f[0:-2]) / (h[2:] - h[0:-2])

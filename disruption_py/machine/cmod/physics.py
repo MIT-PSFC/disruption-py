@@ -346,8 +346,7 @@ class CmodPhysicsMethods:
             "zcur", "v_z", and "z_times_v_z".
         """
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
-        z_prog = np.empty(pcstime.shape)
-        z_prog.fill(np.nan)
+        z_prog = np.full(pcstime.shape, np.nan)
         z_prog_temp = z_prog.copy()
         z_wire_index = -1
         active_wire_segments = CmodPhysicsMethods._get_active_wire_segments(
@@ -404,8 +403,7 @@ class CmodPhysicsMethods:
         # The value of Z_error we read is not in the units we want. It must be *divided*
         #  by a factor AND *divided* by the plasma current.
         z_error_without_factor_and_ip = wire_errors[:, z_wire_index]
-        z_error_without_ip = np.empty(z_error_without_factor_and_ip.shape)
-        z_error_without_ip.fill(np.nan)
+        z_error_without_ip = np.full(z_error_without_factor_and_ip.shape, np.nan)
         # Also, it turns out that different segments have different factors. So we
         # search through the active segments (determined above), find the factors,
         # and *divide* by the factor only for the times in the active segment (as
@@ -755,7 +753,7 @@ class CmodPhysicsMethods:
         to calculate velocity. Because of the heat profile of the plasma, suitable
         measurements are only found near the center.
         """
-        v_0 = np.empty(len(time))
+        v_0 = np.full(len(time), np.nan)
         # Check that the argon intensity pulse has a minimum count and duration
         # threshold
         valid_indices = np.where(intensity > 1000 & intensity < 10000)
@@ -794,7 +792,7 @@ class CmodPhysicsMethods:
         # These sensors are placed toroidally around the machine. Letters refer to
         # the 2 ports the sensors were placed between.
         bp13_names = ["BP13_BC", "BP13_DE", "BP13_GH", "BP13_JK"]
-        bp13_signals = np.empty((len(params.times), len(bp13_names)))
+        bp13_signals = np.full((len(params.times), len(bp13_names)), np.nan)
 
         path = r"\mag_bp_coils."
         bp_node_names = params.mds_conn.get_data(
@@ -843,7 +841,7 @@ class CmodPhysicsMethods:
         # Create the 'design' matrix ('A') for the linear system of equations:
         # Bp(phi) = A1 + A2*sin(phi) + A3*cos(phi)
         ncoeffs = 3
-        a = np.empty((len(bp13_names), ncoeffs))
+        a = np.full((len(bp13_names), ncoeffs), np.nan)
         a[:, 0] = np.ones(4)
         a[:, 1] = np.sin(bp13_phi * np.pi / 180.0)
         a[:, 2] = np.cos(bp13_phi * np.pi / 180.0)
@@ -994,7 +992,7 @@ class CmodPhysicsMethods:
         return output
 
     @staticmethod
-    def _get_ts_parameters(times, ts_data, ts_time, ts_z, z_sorted=False):
+    def _get_ts_parameters(times, ts_data, ts_time, ts_z, ts_error, z_sorted=False):
         """
         Calculate the Thomson scattering temperature width parameters.
 
@@ -1008,6 +1006,8 @@ class CmodPhysicsMethods:
             Corresponding time values for the temperature data.
         ts_z : array_like
             Vertical coordinate values corresponding to the temperature data.
+        ts_error: array_like
+            2D array of Thomson scattering temperature error data.
         z_sorted : bool, optional
             If True, assumes `ts_z` is already sorted. Default is False.
 
@@ -1021,6 +1021,7 @@ class CmodPhysicsMethods:
             idx = np.argsort(ts_z)
             ts_z = ts_z[idx]
             ts_data = ts_data[idx]
+            ts_error = ts_error[idx]
         # init output
         te_hwm = np.full(len(ts_time), np.nan)
         # select valid times
@@ -1031,6 +1032,7 @@ class CmodPhysicsMethods:
         for idx in valid_times:
             # select non-zero indices
             y = ts_data[:, idx]
+            y_error = ts_error[:, idx]
             (ok_indices,) = np.where(y != 0)
             # skip if not enough points
             if len(ok_indices) < 3:
@@ -1038,21 +1040,30 @@ class CmodPhysicsMethods:
             # working arrays
             y = y[ok_indices]
             z = ts_z[ok_indices]
+            y_error = y_error[ok_indices]
             # initial guess
             i = y.argmax()
             guess = [y[i], z[i], (z.max() - z.min()) / 3]
             # actual fit
             try:
-                _, _, psigma = gaussian_fit(z, y, guess)
+                _, pmean, psigma = gaussian_fit(
+                    z, y, guess, sigma=y_error, absolute_sigma=True
+                )
             except RuntimeError as exc:
                 if str(exc).startswith("Optimal parameters not found"):
                     continue
                 raise exc
+            # reject points with unphysical mean
+            if pmean < -0.35 or pmean > 0.35:
+                continue
             # store output
             te_hwm[idx] = np.abs(psigma)
         # rescale from sigma to HWHM
         # https://en.wikipedia.org/wiki/Full_width_at_half_maximum
         te_hwm *= np.sqrt(2 * np.log(2))
+        # reject points with unphysical HWHM
+        (bad_indices,) = np.where(te_hwm > 0.35)
+        te_hwm[bad_indices] = np.nan
         # time interpolation
         te_hwm = interp1(ts_time, te_hwm, times)
         return {"te_width": te_hwm}
@@ -1085,9 +1096,12 @@ class CmodPhysicsMethods:
         ts_z = params.mds_conn.get_data(
             node_path + ":z_sorted", tree_name="electrons"
         )  # [m]
+        ts_error = params.mds_conn.get_data(
+            node_path + ":te_err", tree_name="electrons"
+        )  # [keV]
 
         output = CmodPhysicsMethods._get_ts_parameters(
-            params.times, ts_data, ts_time, ts_z
+            params.times, ts_data, ts_time, ts_z, ts_error
         )
         return output
 

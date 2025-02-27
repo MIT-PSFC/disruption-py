@@ -19,4 +19,8 @@ def get_method_holders(tokamak: Tokamak):
         from disruption_py.machine.cmod import METHOD_HOLDERS
 
         return METHOD_HOLDERS
+    if tokamak is Tokamak.EAST:
+        from disruption_py.machine.east import METHOD_HOLDERS
+
+        return METHOD_HOLDERS
     raise ValueError(f"Invalid tokamak for physics methods {tokamak}")

@@ -19,6 +19,7 @@ from disruption_py.core.utils.math import interp1
 from disruption_py.core.utils.misc import shot_log_msg
 from disruption_py.machine.cmod.physics import CmodPhysicsMethods
 from disruption_py.machine.d3d.util import D3DUtilMethods
+from disruption_py.machine.east.physics import EastPhysicsMethods
 from disruption_py.machine.tokamak import Tokamak
 
 DomainSettingType = Union["DomainSetting", str, Dict[Tokamak, "DomainSettingType"]]
@@ -181,6 +182,7 @@ class FlattopDomainSetting(DomainSetting):
         self.tokamak_overrides = {
             Tokamak.CMOD: self._get_domain_cmod,
             Tokamak.D3D: self._get_domain_d3d,
+            Tokamak.EAST: self._get_domain_east,
         }
 
     def _get_domain(self, params: DomainSettingParams) -> np.ndarray:
@@ -283,6 +285,33 @@ class FlattopDomainSetting(DomainSetting):
             & (np.abs(ip_prog) > 100e3)
             & (power_supply_railed != 1)
         )
+        return params.physics_method_params.times[indices_flattop]
+
+    def _get_domain_east(self, params: DomainSettingParams) -> np.ndarray:
+        """
+        Get the flattop domain for EAST tokamak.
+
+        Parameters
+        ----------
+        params : DomainSettingParams
+            Parameters containing physics method and tokamak information.
+
+        Returns
+        -------
+        np.ndarray
+            The flattop timebase domain for EAST.
+        """
+        # Copied from _get_domain_cmod, needs to adjust threshold later
+        ip_parameters = EastPhysicsMethods.get_ip_parameters(
+            params=params.physics_method_params
+        )
+        dipprog_dt = ip_parameters["dipprog_dt"]
+        (indices_flattop,) = np.where(np.abs(dipprog_dt) <= 1e3)
+        if len(indices_flattop) == 0:
+            params.logger.warning(
+                "Could not find flattop timebase. Defaulting to full shot timebase.",
+            )
+            return None
         return params.physics_method_params.times[indices_flattop]
 
 
