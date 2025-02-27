@@ -218,9 +218,8 @@ class FlattopDomainSetting(DomainSetting):
         ip_parameters = CmodPhysicsMethods.get_ip_parameters(
             params=params.physics_method_params
         )
-        ipprog, dipprog_dt = ip_parameters["ip_prog"].dropna("time"), ip_parameters[
-            "dipprog_dt"
-        ].dropna("time")
+        ipprog = ip_parameters["ip_prog"].dropna("time")
+        dipprog_dt = ip_parameters["dipprog_dt"].dropna("time")
         indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 1e3)[0]
         indices_flattop_2 = np.where(np.abs(ipprog) > 1.0e5)[0]
         indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
