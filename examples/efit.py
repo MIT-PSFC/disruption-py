@@ -4,6 +4,8 @@
 example module for EFIT.
 """
 
+from disruption_py.machine.cmod.efit import CmodEfitMethods
+from disruption_py.machine.d3d.efit import D3DEfitMethods
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.settings import RetrievalSettings
 from disruption_py.workflow import get_shots_data
@@ -20,11 +22,11 @@ def main():
     if tokamak is Tokamak.D3D:
         shotlist = [161228]
         len_time = 247
-        len_data = 15
+        len_data = len(D3DEfitMethods.efit_cols) + len(D3DEfitMethods.efit_derivs)
     elif tokamak is Tokamak.CMOD:
         shotlist = [1150805012]
         len_time = 62
-        len_data = 21
+        len_data = len(CmodEfitMethods.efit_cols) + len(CmodEfitMethods.efit_derivs)
     else:
         raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 
