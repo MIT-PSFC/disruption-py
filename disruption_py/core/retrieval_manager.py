@@ -6,7 +6,6 @@ Module for managing retrieval of shot data from a tokamak.
 
 
 import numpy as np
-import pandas as pd
 import xarray as xr
 from loguru import logger
 

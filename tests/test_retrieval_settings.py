@@ -8,13 +8,11 @@ sources and the time domain of the data retrieved.
 import pytest
 import xarray as xr
 
-from disruption_py.core.utils.misc import safe_df_concat
 from disruption_py.inout.mds import ProcessMDSConnection
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.workflow import get_shots_data
 from tests.conftest import skip_on_fast_execution
-from tests.utils.data_difference import assert_frame_equal_unordered
 
 
 def dummy_mds_initializer():

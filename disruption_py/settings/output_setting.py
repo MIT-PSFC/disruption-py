@@ -13,7 +13,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List, Type, Union
 
-import numpy as np
 import pandas as pd
 import xarray as xr
 from loguru import logger
