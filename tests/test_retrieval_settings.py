@@ -7,8 +7,8 @@ sources and the time domain of the data retrieved.
 
 import pandas as pd
 import pytest
+import xarray as xr
 
-from disruption_py.core.physics_method.runner import REQUIRED_COLS
 from disruption_py.core.utils.misc import safe_df_concat
 from disruption_py.inout.mds import ProcessMDSConnection
 from disruption_py.machine.tokamak import Tokamak
@@ -33,11 +33,9 @@ def full_time_domain_data_fixture(tokamak, shotlist):
         tokamak=tokamak,
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
-        output_setting="dict",
+        output_setting="dataset",
         num_processes=2,
     )
-    # Output data in the order shots were given
-    results = [results[shot] for shot in shotlist]
     return results
 
 
@@ -63,47 +61,47 @@ def test_cache_setting_sql(tokamak, shotlist, num_processes):
         retrieval_settings=retrieval_settings,
         num_processes=num_processes,
         mds_connection_initializer=dummy_mds_initializer,
-        output_setting="list",
+        output_setting="dataset",
     )
 
     # Ensure there is a connection to SQL -- if there is a dummy MDS connection,
     # but no cache data is retrieved from SQL, then results=[]
-    assert len(shotlist) == len(results)
+    assert len(shotlist) == len(results.shot)
 
-    # Verify the correct columns were retrieved from SQL
-    for res in results:
-        assert {"time_until_disrupt", "shot", "time", "commit_hash"} == set(res.columns)
+    # Verify the correct data vars were retrieved from SQL
+    assert {"time_until_disrupt"} == set(results.data_vars)
+    assert {"shot", "time"} == set(results.dims)
+    assert "commit_hash" in results.attrs
 
 
 @skip_on_fast_execution
-@pytest.mark.parametrize("output_format", [".csv", ".hdf5"])
+@pytest.mark.parametrize("output_format", [".nc", ".hdf5"])
 def test_cache_setting_prev_output(tokamak, shotlist, test_file_path_f, output_format):
     """
     Use the file output from an initial call to `get_shots_data` as the cache for
     a subsequent call to `get_shots_data` and make sure the data remains the same.
+
+    Only request `time_until_disrupt` rather than all data vars to speed up the test.
     """
     # Save data to file
     get_shots_data(
         tokamak=tokamak,
+        retrieval_settings=RetrievalSettings(
+            run_columns=["time_until_disrupt"], only_requested_columns=True
+        ),
         shotlist_setting=shotlist,
         num_processes=2,
         output_setting=test_file_path_f(output_format),
     )
 
-    if output_format == ".csv":
-        cache_data = pd.read_csv(test_file_path_f(".csv"), dtype={"commit_hash": str})
-    else:
-        cache_data_list = []
-        for shot in shotlist:
-            cache_data_list.append(
-                pd.read_hdf(test_file_path_f(".hdf5"), key=f"df_{shot}")
-            )
-        cache_data = safe_df_concat(pd.DataFrame(), cache_data_list)
+    cache_data = xr.open_dataset(test_file_path_f(output_format))
 
     # Use saved data as cache
     retrieval_settings = RetrievalSettings(
         cache_setting=cache_data,
         use_cache_setting_timebase=True,
+        run_columns=["time_until_disrupt"],
+        only_requested_columns=True,
     )
 
     results = get_shots_data(
@@ -111,11 +109,10 @@ def test_cache_setting_prev_output(tokamak, shotlist, test_file_path_f, output_f
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
         num_processes=2,
-        output_setting="dataframe",
+        output_setting="dataset",
         mds_connection_initializer=dummy_mds_initializer,
     )
-    assert len(shotlist) == len(set(cache_data["shot"])) == len(set(results["shot"]))
-    assert_frame_equal_unordered(cache_data, results)
+    xr.testing.assert_equal(cache_data, results)
 
 
 @skip_on_fast_execution
@@ -126,8 +123,9 @@ def test_only_requested_columns(tokamak, shotlist):
     `dip_dt` returned. `q95` is from efit, so none of the other efit quantities
     should be returned.
     """
+    columns = {"ip", "q95"}
     retrieval_settings = RetrievalSettings(
-        run_columns=["ip", "q95"],
+        run_columns=columns,
         only_requested_columns=True,
     )
     results = get_shots_data(
@@ -135,11 +133,10 @@ def test_only_requested_columns(tokamak, shotlist):
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
         num_processes=2,
-        output_setting="list",
+        output_setting="dataset",
         log_settings="WARNING",
     )
-    for res in results:
-        assert {"ip", "q95", "shot", "time", "commit_hash"} == set(res.columns)
+    assert columns == set(results.data_vars)
 
 
 @skip_on_fast_execution
@@ -152,27 +149,31 @@ def test_domain_setting(tokamak, shotlist, domain_setting, full_time_domain_data
     if tokamak == Tokamak.D3D and domain_setting == "rampup_and_flattop":
         pytest.skip("rampup_and_flattop domain setting not defined for DIII-D")
     retrieval_settings = RetrievalSettings(
-        efit_nickname_setting="default", domain_setting=domain_setting
+        efit_nickname_setting="default",
+        domain_setting=domain_setting,
+        run_columns=["ip"],
+        only_requested_columns=True,
     )
     results = get_shots_data(
         tokamak=tokamak,
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
-        output_setting="dict",
+        output_setting="dataset",
         num_processes=2,
         log_settings="WARNING",
     )
-    results = [results[shot] for shot in shotlist]
 
-    assert len(shotlist) == len(results) == len(full_time_domain_data)
-    for part_domain, full_domain in zip(results, full_time_domain_data):
+    assert len(shotlist) == len(results.shot) == len(full_time_domain_data.shot)
+    for shot in shotlist:
+        part_domain = results.sel(shot=shot).ip.dropna("time")
+        full_domain = full_time_domain_data.sel(shot=shot).ip.dropna("time")
         p_start, p_end = part_domain["time"].values[0], part_domain["time"].values[-1]
         f_start, f_end = full_domain["time"].values[0], full_domain["time"].values[-1]
         if domain_setting == "flattop":
             # Use <= because a shot may end during the flattop,
             assert f_start < p_start < p_end <= f_end
         else:
-            assert f_start == p_start < p_end < f_end
+            assert f_start == p_start < p_end <= f_end
 
 
 @skip_on_fast_execution
@@ -181,28 +182,28 @@ def test_domain_setting(tokamak, shotlist, domain_setting, full_time_domain_data
     [
         # Test run_methods with run_columns=None
         (None, None, None, []),
-        ([], None, REQUIRED_COLS, []),
+        ([], None, {}, []),
         (["~get_kappa_area"], None, None, ["kappa_area"]),
-        (["get_kappa_area"], None, REQUIRED_COLS | {"kappa_area"}, []),
+        (["get_kappa_area"], None, {"kappa_area"}, []),
         # Test run_columns with run_methods=None
-        (None, [], REQUIRED_COLS, []),
-        (None, ["kappa_area"], REQUIRED_COLS | {"kappa_area"}, []),
+        (None, [], {}, []),
+        (None, ["kappa_area"], {"kappa_area"}, []),
         # Test run_methods and run_columns combo
-        ([], [], REQUIRED_COLS, []),
-        (["get_kappa_area"], [], REQUIRED_COLS | {"kappa_area"}, []),
+        ([], [], {}, []),
+        (["get_kappa_area"], [], {"kappa_area"}, []),
         (
             ["get_kappa_area"],
             ["greenwald_fraction"],
-            REQUIRED_COLS | {"kappa_area", "n_e", "dn_dt", "greenwald_fraction"},
+            {"kappa_area", "n_e", "dn_dt", "greenwald_fraction"},
             [],
         ),
         (
             ["~get_kappa_area"],
             ["greenwald_fraction"],
-            REQUIRED_COLS | {"n_e", "dn_dt", "greenwald_fraction"},
+            {"n_e", "dn_dt", "greenwald_fraction"},
             [],
         ),
-        (["~get_kappa_area"], ["kappa_area"], REQUIRED_COLS, []),
+        (["~get_kappa_area"], ["kappa_area"], {}, []),
     ],
 )
 def test_run_methods_and_columns(
@@ -223,7 +224,7 @@ def test_run_methods_and_columns(
     - If `run_methods` excludes a method returning a column specified in `run_columns`,
       the method is not run
     """
-    num_all_cols = len(full_time_domain_data[0].columns)
+    num_all_cols = len(full_time_domain_data.data_vars)
     retrieval_settings = RetrievalSettings(
         run_methods=run_methods,
         run_columns=run_columns,
@@ -234,10 +235,11 @@ def test_run_methods_and_columns(
         retrieval_settings=retrieval_settings,
         num_processes=2,
         log_settings="WARNING",
+        output_setting="dataset",
     )
     # Expected columns None means all columns (except forbidden cols) are returned
     if expected_cols is None:
-        assert len(results.columns) == num_all_cols - len(forbidden_cols)
+        assert len(results.data_vars) == num_all_cols - len(forbidden_cols)
     else:
-        assert set(results.columns) == set(expected_cols)
-    assert not any(col in results.columns for col in forbidden_cols)
+        assert set(results.data_vars) == set(expected_cols)
+    assert not any(col in results.data_vars for col in forbidden_cols)

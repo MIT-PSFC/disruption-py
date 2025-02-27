@@ -33,6 +33,7 @@ def dataframe_to_dataset(df: pd.DataFrame) -> xr.Dataset:
     xr.Dataset
         The converted Dataset.
     """
+    df.drop_duplicates(subset=["shot", "time"], inplace=True)
     ds = xr.Dataset.from_dataframe(df.set_index(["shot", "time"]))
     # Assign commit_hash to the dataset as a whole rather than as a data var
     # because it currently does not vary across shot or time.

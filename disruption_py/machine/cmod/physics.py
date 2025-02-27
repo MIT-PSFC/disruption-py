@@ -96,7 +96,7 @@ class CmodPhysicsMethods:
             A dictionary with a single key "time_until_disrupt" containing a list
             of time until disruption.
         """
-        time_until_disrupt = [np.nan]
+        time_until_disrupt = np.full(len(params.times), np.nan)
         if params.disrupted:
             time_until_disrupt = params.disruption_time - params.times
         output = xr.Dataset(
