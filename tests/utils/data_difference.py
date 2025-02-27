@@ -144,14 +144,21 @@ class DataDifference:
                 len(self.fresh_data_array)
             )
 
+        # DataArrays may be of different lengths because isolating the data for
+        # a particular shot requires dropping nans. But there might be nans within
+        # the data for a particular shot as well that were dropped. Computing the
+        # relative difference requires the two arrays to be the same length.
+        no_nan_cache = self.cache_data_array.where(
+            ~(cache_is_nan | fresh_is_nan), drop=True
+        )
+        no_nan_fresh = self.fresh_data_array.where(
+            ~(cache_is_nan | fresh_is_nan), drop=True
+        )
         relative_difference = safe_cast(
             np.where(
-                self.cache_data_array != 0,
-                np.abs(
-                    (self.fresh_data_array - self.cache_data_array)
-                    / self.cache_data_array
-                ),
-                np.where(self.fresh_data_array != 0, np.inf, np.nan),
+                no_nan_cache != 0,
+                np.abs((no_nan_fresh - no_nan_cache) / no_nan_cache),
+                np.where(no_nan_fresh != 0, np.inf, np.nan),
             ),
             "float64",
         )  # necessary in case all produced values are nan
