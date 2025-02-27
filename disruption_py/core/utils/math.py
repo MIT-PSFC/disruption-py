@@ -73,6 +73,8 @@ def interp1(x, y, new_x, kind="linear", bounds_error=False, fill_value=np.nan, a
     fill_value : float, optional
         The value to use for new_x values outside of the range of x. This
         is only used if bounds_error is False. Defaults to nan.
+        If fill_value = 'extrapolate', the method will extrapolate based on
+        the selected interpolation method.
 
     Returns
     -------
