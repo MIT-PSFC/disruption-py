@@ -108,13 +108,18 @@ def get_cached_from_fresh(
         # shot and time. You can't create a Dataset from a DF with duplicate indices
         sql_data_df.drop_duplicates(subset=index, inplace=True)
         sql_data = xr.Dataset.from_dataframe(sql_data_df.set_index(index))
+
+        # Reindex SQL data onto the MDSplus timebase for each shot individually
+        # rather than reindexing on the entire dataset. This allows comparing
+        # times of data for individual shots between fresh/cache.
+        fresh_shot_time = (
+            fresh_data.sel(shot=shot_id).dropna(dim="time", how="all").time
+        )
+        sql_data = sql_data.reindex(
+            {"time": fresh_shot_time}, method="nearest", tolerance=config().time_const
+        )
         shot_data_list.append(sql_data)
     shot_data = xr.concat(shot_data_list, dim="shot")
-    shot_data = shot_data.reindex(
-        {"time": fresh_data.time.copy()},
-        method="nearest",
-        tolerance=config().time_const,
-    )
     return shot_data
 
 
@@ -165,8 +170,8 @@ def eval_shot_against_cache(
     data_difference = DataDifference(
         shot_id=shot_id,
         data_column=data_column,
-        fresh_data_array=fresh_shot_data.get(data_column, None),
-        cache_data_array=cache_shot_data.get(data_column, None),
+        fresh_data_array=fresh_shot_data.get(data_column, None).dropna("time"),
+        cache_data_array=cache_shot_data.get(data_column, None).dropna("time"),
         fresh_time=fresh_shot_data.get("time"),
         cache_time=cache_shot_data.get("time"),
         missing_fresh_data=missing_fresh_data,
