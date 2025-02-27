@@ -37,8 +37,10 @@ def dataframe_to_dataset(df: pd.DataFrame) -> xr.Dataset:
     ds = xr.Dataset.from_dataframe(df.set_index(["shot", "time"]))
     # Assign commit_hash to the dataset as a whole rather than as a data var
     # because it currently does not vary across shot or time.
-    ds.attrs["commit_hash"] = ds.commit_hash.values.flat[0]
-    ds = ds.drop_vars("commit_hash")
+    if "commit_hash" in ds.data_vars:
+        ds.attrs["commit_hash"] = ds.commit_hash.values.flat[0]
+        ds = ds.drop_vars("commit_hash")
+
     return ds
 
 
