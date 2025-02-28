@@ -906,7 +906,7 @@ class D3DPhysicsMethods:
             params.logger.warning("Failed to get TS data")
             params.logger.opt(exception=True).debug(e)
         if ts:
-            ts["psin"], ts["rhovn"] = D3DPhysicsMethods.efit_rz_interp(ts, efit_dict)
+            ts["psin"], ts["rhovn"] = D3DPhysicsMethods._efit_rz_interp(ts, efit_dict)
             ts["rhovn"] = ts["rhovn"].T
             ts["psin"] = ts["psin"].T
 
@@ -1046,7 +1046,7 @@ class D3DPhysicsMethods:
         return output
 
     @staticmethod
-    def efit_rz_interp(ts, efit_dict):
+    def _efit_rz_interp(ts, efit_dict):
         """
         Interpolate the efit data to the given timebase and project onto the
         poloidal plane.
