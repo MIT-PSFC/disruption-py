@@ -91,11 +91,20 @@ class D3DPhysicsMethods:
         """
         Get the H_alpha line emission intensity.
 
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the H_alpha line emission intensity factor (`h_alpha`).
+
         Reference
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_H98_d3d.m
-
-        Last major update by William Wei on 7/31/2024
+        - original source: [get_H_alpha_d3d.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_H_alpha_d3d.m)
+        - pull requests: #[239](https://github.com/MIT-PSFC/disruption-py/pull/239)
         """
         output = {
             "h_alpha": [np.nan],
