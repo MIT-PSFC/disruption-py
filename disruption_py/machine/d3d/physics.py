@@ -418,15 +418,30 @@ class D3DPhysicsMethods:
     )
     def get_rt_density_parameters(params: PhysicsMethodParams):
         """
-        Get real-time electron density from EFIT, then compute the
-        real-time dn_dt and Greenwald_fraction.
+        This routine obtains the line-averaged density available to the PCS in
+        real-time ('dssdenest'), which is calculated using the double-pass
+        interferometer line-integrated density measurements and EFITRT1 path
+        lengths (PATHV1, PATHV2, PATHV3, PATHR0).
+
+        This routine also calculates the time derivative of electron density, and
+        the Greenwald density using aminor coming from EFITRT1 trees.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the real-time electron density (`n_e_rt`),
+            its time derivative (`dn_dt_rt`), and the real-time Greenwald fraction
+            (`greenwald_fraction_rt`).
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_density_parameters_RT.m
-        https://github.com/MIT-PSFC/disruption-py/pull/251
-
-        Last major update by William Wei on 8/2/2024
+        - original source: [get_density_parameters_RT.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_density_parameters_RT.m)
+        - pull requests: #[251](https://github.com/MIT-PSFC/disruption-py/pull/251)
         """
         ne_rt, t_ne_rt = params.mds_conn.get_data_with_dims(
             f"ptdata('dssdenest', {params.shot_id})", tree_name="_efit_tree"
