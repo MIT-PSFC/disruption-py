@@ -1341,7 +1341,7 @@ class CmodPhysicsMethods:
         """
         use_ts_tci_calibration = False
         # Ignore shots on the blacklist
-        if CmodPhysicsMethods.is_on_blacklist(params.shot_id):
+        if CmodPhysicsMethods._is_on_blacklist(params.shot_id):
             raise CalculationError("Shot is on blacklist")
         # Fetch data
         # Get EFIT geometry data
@@ -2072,7 +2072,7 @@ class CmodPhysicsMethods:
         return {"v_surf": v_surf}
 
     @staticmethod
-    def is_on_blacklist(shot_id: int) -> bool:
+    def _is_on_blacklist(shot_id: int) -> bool:
         """
         TODO why will these shots cause `_get_peaking_factors`,
         `_get_peaking_factors_no_tci`, and `_get_edge_parameters` to fail?
