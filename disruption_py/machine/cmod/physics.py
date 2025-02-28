@@ -1177,7 +1177,7 @@ class CmodPhysicsMethods:
         References
         -------
         - original source: [get_TS_data_cmod.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_TS_data_cmod.m)
-        - pull requests: #[107](https://github.com/MIT-PSFC/disruption-py/pull/107)
+        - pull requests: #[107](https://github.com/MIT-PSFC/disruption-py/pull/107), #[402](https://github.com/MIT-PSFC/disruption-py/pull/402)
         - issues: #[383](https://github.com/MIT-PSFC/disruption-py/issues/383)
         """
         # TODO: Gaussian vs parabolic fit for te profile
