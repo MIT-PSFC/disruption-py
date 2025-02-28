@@ -53,13 +53,22 @@ class D3DPhysicsMethods:
     @physics_method(columns=["h98"], tokamak=Tokamak.D3D)
     def get_h98(params: PhysicsMethodParams):
         """
-        Get the H98y2 energy confinement time parameter
+        Get the H98y2 energy confinement factor.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the H98y2 factor (`h98`).
 
         Reference
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_H98_d3d.m
-
-        Last major update by William Wei on 7/31/2024
+        - original: [get_H98_d3d.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_H98_d3d.m)
+        - pull requests: #[239](https://github.com/MIT-PSFC/disruption-py/pull/239)
         """
         output = {
             "h98": [np.nan],
