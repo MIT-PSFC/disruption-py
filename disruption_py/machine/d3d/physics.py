@@ -327,15 +327,30 @@ class D3DPhysicsMethods:
     )
     def get_density_parameters(params: PhysicsMethodParams):
         """
-        Get electron density from EFIT, then compute dn_dt and Greenwald_fraction.
+        This routine obtains the line-averaged density MDS nodename \DENSITY
+        (actually a TDI function) in the EFIT trees created for the disruption
+        warning database.  It is calculated using the double-pass interferometer
+        line-integrated density measurements and EFIT path lengths (PATHV1,
+        PATHV2, PATHV3, PATHR0)
+
+        The routine also calculates the time derivatives of electron density,
+        and the Greenwald density using aminor coming from our EFIT trees.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing electron density (`n_e`), its time derivative
+            (`dn_dt`), and the Greenwald fraction (`greenwald_fraction`).
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_density_parameters.m
-        https://github.com/MIT-PSFC/disruption-py/issues/238
-        https://github.com/MIT-PSFC/disruption-py/pull/249
-
-        Last major update by William Wei on 8/2/2024
+        - original source: [get_density_parameters.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_density_parameters.m)
+        - pull requests: #[249](https://github.com/MIT-PSFC/disruption-py/pull/249)
         """
         ne, t_ne = params.mds_conn.get_data_with_dims(
             r"\density", tree_name="_efit_tree"
