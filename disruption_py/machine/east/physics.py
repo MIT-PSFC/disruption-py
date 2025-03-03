@@ -1477,7 +1477,7 @@ class EastPhysicsMethods:
         # Get the toroidal magnetic field.
         btor = EastPhysicsMethods.get_btor(params)["btor"]
 
-        # Get the Mirnov signal from \cmp1t
+        # Get the Mirnov signal from \cmp1t (5 MHz)
         time_window = 0.001
         bp_dot, bp_dot_time = params.mds_conn.get_data_with_dims(
             r"\cmp1t", tree_name="east"
@@ -1486,9 +1486,12 @@ class EastPhysicsMethods:
             (indices,) = np.where(
                 ((time - time_window) < bp_dot_time) & (bp_dot_time < time)
             )
-            mirnov_std[i] = np.nanstd(bp_dot[indices])
+            mirnov_std[i] = np.nanstd(bp_dot[indices], ddof=1)
 
         mirnov_std_normalized = mirnov_std / abs(btor)
+        
+        print(mirnov_std)
+        print(mirnov_std_normalized)
 
         return {
             "mirnov_std": mirnov_std,
