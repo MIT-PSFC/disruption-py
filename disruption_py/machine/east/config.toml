@@ -29,8 +29,6 @@ expected_failure_columns = [
   "kappa_area",
   "li",
   "li_rt",
-  "mirnov_std",
-  "mirnov_std_normalized",
   "n1rms",
   "n1rms_normalized",
   "n2rms",
