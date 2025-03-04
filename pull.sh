@@ -101,7 +101,7 @@ do
       TSTART=$SECONDS
 
       # read status
-      STATUS="Deploy / $(basename "$VENV") @ $(echo "$HOSTNAME" | grep -o '^[a-z]*')"
+      STATUS="Deploy / $(echo "$HOSTNAME" | grep -o '^[a-z]*')"
       STATE=
       if [[ -n "$SHA" ]] && [[ -s "$JSON" ]]
       then
