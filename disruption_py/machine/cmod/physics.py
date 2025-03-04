@@ -96,7 +96,7 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary with a single key "time_until_disrupt".
+            A dictionary with a single key `time_until_disrupt`.
 
         References
         -------
@@ -155,7 +155,6 @@ class CmodPhysicsMethods:
         Sources
         -------
         - matlab/cmod_matlab/matlab-core/get_Ip_parameters.m
-        - matlab/cmod_matlab/matlab-core/get_Ip_parameters.m
         """
         dip = np.gradient(ip, magtime)
         dip_smoothed = smooth(dip, 11)  # ,ends_type=0)
@@ -187,7 +186,7 @@ class CmodPhysicsMethods:
     )
     def get_ip_parameters(params: PhysicsMethodParams):
         """
-        Calculates actual and programmed current as well as their derivatives
+        Calculates actual and programmed current as well as their time derivatives
         and difference.
 
         The time derivatives are useful for discriminating between rampup, flattop,
@@ -202,7 +201,7 @@ class CmodPhysicsMethods:
         -------
         dict
             A dictionary containing the interpolated Ip parameters, including
-            "ip", "dip_dt", "dip_smoothed", "ip_prog", "dipprog_dt", and "ip_error".
+            `ip`, `dip_dt`, `dip_smoothed`, `ip_prog`, `dipprog_dt`, and `ip_error`.
 
         References
         -------
@@ -367,8 +366,8 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the vertical position parameters, including "z_error", "z_prog",
-            "zcur", "v_z", and "z_times_v_z".
+            A dictionary containing the vertical position parameters, including `z_error`, `z_prog`,
+            `zcur`, `v_z`, and `z_times_v_z`.
 
         References
         -------
@@ -525,7 +524,7 @@ class CmodPhysicsMethods:
     )
     def get_ohmic_parameters(params: PhysicsMethodParams):
         """
-        Calculate the ohmic power from the loop voltage, inductive voltage, and
+        Calculate the ohmic heating power from the loop voltage, inductive voltage, and
         plasma current.
 
         Parameters
@@ -536,8 +535,8 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the calculated ohmic parameters, including
-            "p_oh" and "v_loop".
+            A dictionary containing the loop voltage (`v_loop`) and the ohmic 
+            heating power (`p_oh`).
 
         References
         -------
@@ -706,7 +705,7 @@ class CmodPhysicsMethods:
         -------
         dict
             A dictionary containing the calculated power values, including
-            "p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", "radiated_fraction", and "tau_rad".
+            `p_rad`, `dprad_dt`, `p_lh`, `p_icrf`, `p_input`, `radiated_fraction`, and `tau_rad`.
 
         References
         -------
@@ -788,7 +787,7 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the calculated "kappa_area".
+            A dictionary containing the calculated `kappa_area`.
 
         References:
         -------
@@ -2048,7 +2047,7 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the $v_\\text{surf}$ data.
+            A dictionary containing the surface voltage (`v_surf`) data.
 
         References
         -------
