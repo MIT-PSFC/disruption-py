@@ -1958,7 +1958,7 @@ class CmodPhysicsMethods:
     @physics_method(columns=["sxr"], tokamak=Tokamak.CMOD)
     def get_sxr_data(params: PhysicsMethodParams):
         """
-        Retrieve the central soft X-ray (SXR) signal (array 1 chord 16) for a given shot.
+        Retrieve the central soft X-ray (SXR) signal (*array 1 chord 16*) for a given shot.
 
         Parameters
         ----------
