@@ -349,8 +349,8 @@ class CmodPhysicsMethods:
     )
     def get_z_parameters(params: PhysicsMethodParams):
         r"""
-        Get values of the programmed vertical position of the  plasma current 
-        centroid $z_\text{prog}$ and the control error $z_\text{error}$ from 
+        Get values of the programmed vertical position of the  plasma current
+        centroid $z_\text{prog}$ and the control error $z_\text{error}$ from
         the plasma control system (PCS), then calculate the estimated current centroid
         position $z_\text{cur} = z_\text{prog} + z_\text{error}$, the vertical velocity
         $v_z = \frac{d}{dt}z_\text{cur}$, and the product $z_\text{cur} \cdot v_z$.
@@ -532,7 +532,7 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the loop voltage (`v_loop`) and the ohmic 
+            A dictionary containing the loop voltage (`v_loop`) and the ohmic
             heating power (`p_oh`).
 
         References
@@ -691,7 +691,7 @@ class CmodPhysicsMethods:
     def get_power(params: PhysicsMethodParams):
         r"""
         Get the lower hybrid heating, ion cyclotron resonant heating,
-        and the radiated powers, then calculate the total input power, 
+        and the radiated powers, then calculate the total input power,
         radiated fraction, and radiation confinement time.
 
         The total input power, the radiated fractions, and the radiation
@@ -705,7 +705,7 @@ class CmodPhysicsMethods:
         $$
         \tau_\text{rad} = \frac{W_\text{mhd}}{p_\text{rad}}
         $$
-        
+
         Parameters
         ----------
         params : PhysicsMethodParams
@@ -785,13 +785,13 @@ class CmodPhysicsMethods:
         r"""
         Retrieve and calculate the plasma's ellipticity (kappa, also known as
         the elongation) using its area and minor radius. It is defined as:
-        
+
         $$
         \kappa_{area} = \frac{A}{\pi a^2}
         $$
-        
+
         where $A$ is the plasma cross-sectional area and $a$ is the minor radius.
-        
+
         Parameters
         ----------
         params : PhysicsMethodParams
@@ -1014,11 +1014,11 @@ class CmodPhysicsMethods:
         $$
         n_G = \frac{I_p}{\pi a^2}
         $$
-        
+
         where $n_G$ is given in $10^{20} m^{-3}$ and $I_p$ is in MA.
-        
+
         [^1]: https://wiki.fusion.ciemat.es/wiki/Greenwald_limit
-        
+
         Parameters
         ----------
         params : PhysicsMethodParams
@@ -1988,7 +1988,7 @@ class CmodPhysicsMethods:
         r"""
         Calculate the normalized beta, $\beta_N$, also known as the Troyon factor:
         $$
-        \beta_N = \beta_\text{tot} \frac{a B_T}{I_p}
+        \beta_N = \beta_\text{tot} \frac{a B_t}{I_p}
         $$
 
         Where $I_p$ is in MA, and the total plasma beta $\beta$ is defined as [^1]
@@ -2008,7 +2008,7 @@ class CmodPhysicsMethods:
 
         To make the input data consistent with `EFIT_AEQDSK:BETAN`, we use
         `CPASMA` and `BTAXP` from `EFIT_AEQDSK` instead of `IP` and `BTOR` from
-        `MAGNETICS` for $I_p$ and $B_T$.
+        `MAGNETICS` for $I_p$ and $B_t$.
 
         [^1]: http://wiki.fusenet.eu/fusionwiki/index.php/Beta
 
