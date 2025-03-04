@@ -1489,9 +1489,6 @@ class EastPhysicsMethods:
             mirnov_std[i] = np.nanstd(bp_dot[indices], ddof=1)
 
         mirnov_std_normalized = mirnov_std / abs(btor)
-        
-        print(mirnov_std)
-        print(mirnov_std_normalized)
 
         return {
             "mirnov_std": mirnov_std,
