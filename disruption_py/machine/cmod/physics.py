@@ -1996,7 +1996,7 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the beta_n data given in percentage.
+            A dictionary containing the `beta_n` data given in percentage.
 
         References
         ----------
