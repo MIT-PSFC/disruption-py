@@ -777,8 +777,13 @@ class CmodPhysicsMethods:
         """
         Retrieve and calculate the plasma's ellipticity (kappa, also known as
         the elongation) using its area and minor radius. It is defined as:
-        kappa_area = [plasma cross-sectional area] / pi * [plasma minor radius]^2.
-
+        
+        $$
+        \\kappa_{area} = \\frac{A}{\\pi a^2}
+        $$
+        
+        where $A$ is the plasma cross-sectional area and $a$ is the minor radius.
+        
         Parameters
         ----------
         params : PhysicsMethodParams
