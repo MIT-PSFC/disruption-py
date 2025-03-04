@@ -115,8 +115,8 @@ class CmodPhysicsMethods:
         Calculates actual and programmed current as well as their derivatives
         and difference.
 
-        The time derivatives are useful for discriminating between rampup, flattop,
-        and rampdown.
+        The time derivatives are useful for discriminating between the ramp up, flattop,
+        and ramp down phases.
 
         Parameters
         ----------
@@ -189,8 +189,8 @@ class CmodPhysicsMethods:
         Calculates actual and programmed current as well as their time derivatives
         and difference.
 
-        The time derivatives are useful for discriminating between rampup, flattop,
-        and rampdown.
+        The time derivatives are useful for discriminating between the ramp up, flattop,
+        and ramp down phases.
 
         Parameters
         ----------
