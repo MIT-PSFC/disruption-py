@@ -843,17 +843,17 @@ class CmodPhysicsMethods:
     )
     def get_n_equal_1_amplitude(params: PhysicsMethodParams):
         """
-        Calculate n=1 amplitude and phase.
+        Calculate *n*=1 amplitude and phase.
 
         This method uses the four BP13 Bp sensors near the midplane on the outboard
         vessel wall. The calculation is done by using a least squares fit to an
-        expansion in terms of n = 0 & 1 toroidal harmonics. The BP13 sensors are
+        expansion in terms of *n*=0 & 1 toroidal harmonics. The BP13 sensors are
         part of the set used for plasma control and equilibrium reconstruction,
         and their signals have been analog integrated (units: tesla), so they
         don't have to be numerically integrated. These four sensors were working
         well in 2014, 2015, and 2016. I looked at our locked mode MGI run on
         1150605, and the different applied A-coil phasings do indeed show up on
-        the n=1 signal.
+        the *n*=1 signal.
 
         Parameters
         ----------
