@@ -58,16 +58,10 @@ do
 
    # reset
    {
-      for N in {0..9}
-      do
-         git status
-         git reset --hard
-         git clean -ffdx
-         git pull && break
-         REV=$((1+N*2))
-         echo "reset: HEAD~$REV"
-         git reset --hard "HEAD~$REV"
-      done
+      git fetch origin HEAD
+      git status
+      git reset --hard "origin/$(git rev-parse --abbrev-ref HEAD)"
+      git clean -ffdx
       git status
    } \
    > "$LOG/git.log" \
