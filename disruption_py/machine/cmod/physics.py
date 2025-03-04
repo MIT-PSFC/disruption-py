@@ -993,8 +993,19 @@ class CmodPhysicsMethods:
     )
     def get_densities(params: PhysicsMethodParams):
         """
-        Retrieve and calculate electron density and related parameters.
-
+        Calculate electron density, its time derivative, and the Greenwald fraction.
+        
+        The Greenwald fraction is the ratio of the measured electron density $n_e$ and 
+        the Greenwald fraction $n_G$ which is defined as [^1]:
+        
+        $$
+        n_G = \\frac{I_p}{\\pi a^2}
+        $$
+        
+        where $n_G$ is given in $10^{20} m^{-3}$ and $I_p$ is in MA.
+        
+        [^1]: http://wiki.fusenet.eu/fusionwiki/index.php/Beta
+        
         Parameters
         ----------
         params : PhysicsMethodParams
