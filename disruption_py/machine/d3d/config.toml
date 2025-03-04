@@ -27,6 +27,8 @@ expected_failure_columns = [
   "li",
   "li_rt",
   "lower_gap",
+  "mirnov_std",
+  "mirnov_std_normalized",
   "n_e",
   "n_equal_1_mode",
   "n_equal_1_normalized",
