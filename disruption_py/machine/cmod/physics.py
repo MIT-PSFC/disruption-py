@@ -782,12 +782,12 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
     def get_kappa_area(params: PhysicsMethodParams):
-        """
+        r"""
         Retrieve and calculate the plasma's ellipticity (kappa, also known as
         the elongation) using its area and minor radius. It is defined as:
         
         $$
-        \\kappa_{area} = \\frac{A}{\\pi a^2}
+        \kappa_{area} = \frac{A}{\pi a^2}
         $$
         
         where $A$ is the plasma cross-sectional area and $a$ is the minor radius.
@@ -1005,14 +1005,14 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def get_densities(params: PhysicsMethodParams):
-        """
+        r"""
         Calculate electron density, its time derivative, and the Greenwald fraction.
         
         The Greenwald fraction is the ratio of the measured electron density $n_e$ and 
         the Greenwald density limit $n_G$ defined as [^1]:
         
         $$
-        n_G = \\frac{I_p}{\\pi a^2}
+        n_G = \frac{I_p}{\pi a^2}
         $$
         
         where $n_G$ is given in $10^{20} m^{-3}$ and $I_p$ is in MA.
@@ -1985,24 +1985,24 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(columns=["beta_n"], tokamak=Tokamak.CMOD)
     def get_beta_normalized(params: PhysicsMethodParams):
-        """
-        Calculate the normalized beta, $\\beta_N$, also known as the Troyon factor:
+        r"""
+        Calculate the normalized beta, $\beta_N$, also known as the Troyon factor:
         $$
-        \\beta_N = \\beta_\\text{tot} \\frac{a B_T}{I_p}.
+        \beta_N = \beta_\text{tot} \frac{a B_T}{I_p}
         $$
 
-        Where $I_p$ is in MA, and the total plasma beta $\\beta$ is defined as [^1]
+        Where $I_p$ is in MA, and the total plasma beta $\beta$ is defined as [^1]
         $$
-        \\beta_\\text{tot} = \\frac{p}{B^2/2\\mu_0} .
+        \beta_\text{tot} = \frac{p}{B^2/2\mu_0}
         $$
 
         Since the total beta is dominated by the toroidal beta,
         $$
-        \\frac{1}{\\beta_\\text{tot}} = \\frac{1}{\\beta_\\text{tor}} +
-        \\frac{1}{\\beta_\\text{pol}},
+        \frac{1}{\beta_\text{tot}} = \frac{1}{\beta_\text{tor}} +
+        \frac{1}{\beta_\text{pol}}
         $$
 
-        we can approximate $\\beta_N$ using $\\beta_\\text{tor}$. This definition
+        we can approximate $\beta_N$ using $\beta_\text{tor}$. This definition
         is consistent with that of `EFIT_AEQDSK:BETAN` which isn't available for
         pre-2000 shots.
 
@@ -2054,10 +2054,10 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(columns=["v_surf"], tokamak=Tokamak.CMOD)
     def get_surface_voltage(params: PhysicsMethodParams):
-        """
+        r"""
         Calculate the plasma surface voltage defined as
         $$
-        v_\\text{surf} = -2 \\pi \\frac{d\\phi}{dt},
+        v_\text{surf} = -2 \pi \frac{d\phi}{dt}
         $$
 
         Note that there is a `VSURFA` node in the `EFIT` tree, however the stored
