@@ -348,15 +348,12 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def get_z_parameters(params: PhysicsMethodParams):
-        """
-        Get values of Z_error, Z_prog, and derived signals from plasma control
-        system (PCS).
-
-        Z_prog is the programmed vertical position of the plasma current centroid,
-        and Z_error is the difference between the actual position and that requested
-        (Z_error = Z_cur - Z_prog). Thus, the actual (estimated) position, Z_cur,
-        can be calculated. And the vertical velocity, v_z, can be taken from the
-        time derivative, and the product z_times_v_z ( = Z_cur * v_z) is also calculated.
+        r"""
+        Get values of the programmed vertical position of the  plasma current 
+        centroid $z_\text{prog}$ and the control error $z_\text{error}$ from 
+        the plasma control system (PCS), then calculate the estimated current centroid
+        position $z_\text{cur} = z_\text{prog} + z_\text{error}$, the vertical velocity
+        $v_z = \frac{d}{dt}z_\text{cur}$, and the product $z_\text{cur} \cdot v_z$.
 
         Parameters
         ----------
