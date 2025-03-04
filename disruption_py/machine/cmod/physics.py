@@ -1711,12 +1711,12 @@ class CmodPhysicsMethods:
     )
     def get_te_profile_params_ece(params: PhysicsMethodParams):
         """
-        Calculates Te peaking factor and width from the electron cyclotron emission (ECE)
+        Calculates $T_e$ peaking factor and width from the electron cyclotron emission (ECE)
         data using the two GPC diagnostic systems.
 
         GPC diagnostics look at the mid-plane, and each channel detects a different
         emitted frequency associated with the second harmonic, which depends on the toroidal
-        magnetic field (`Bt`) and therefore the plasma major radius (`R`).
+        magnetic field ($B_t$) and therefore the plasma major radius ($R$).
 
         - `te_width_ece` is the half-width at half-max of a Gaussian fit of the Te profile
         - `te_core_vs_avg_ece` is defined as mean(core)/mean(all) where core bins are defined
@@ -1725,11 +1725,11 @@ class CmodPhysicsMethods:
           those with $0.8 a < |R - R_0| < a$
 
         For core and edge vs. average calculations, different shots can have different
-        radial sampling, and during a few experiments on C-Mod, Bt was changed during
+        radial sampling, and during a few experiments on C-Mod, $B_t$ was changed during
         the shot, changing the radial sampling. Different radial samplings can have
-        different proportions of core to edge sampling, which affects the mean `Te` over
+        different proportions of core to edge sampling, which affects the mean $T_e$ over
         the whole profile, biasing the core vs average and edge vs average statistics.
-        Therefore, we use a uniformly sampled radial basis from R0 to R0+a. We use many
+        Therefore, we use a uniformly sampled radial basis from $R_0$ to $R_0+a$. We use many
         interpolated radial points to minimize artifacts caused by a point moving
         across the arbitrary core or edge boundary.
 
@@ -1741,7 +1741,7 @@ class CmodPhysicsMethods:
         Returns
         ----------
         dict
-            A dictionary containing the Te width (`te_width_ece`), the core-vs-average
+            A dictionary containing the $T_e$ width (`te_width_ece`), the core-vs-average
             (`te_core_vs_avg_ece`), and the edge-vs-average peak factors (`te_edge_vs_avg_ece`)
             from the ECE data.
 
