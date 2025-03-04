@@ -1465,22 +1465,22 @@ class EastPhysicsMethods:
 
         Last major update: 2014/11/22 by William Wei
         """
-        mirnov_sensor = "cmp1t"  # default one used in disruption_warning_database.m
-
         mirnov_std = np.full(len(params.times), np.nan)
         mirnov_std_normalized = [np.nan]
 
         # Get the toroidal magnetic field.
         btor = EastPhysicsMethods.get_btor(params)["btor"]
 
-        # Get the Mirnov signal
+        # Get the Mirnov signal from \cmp1t (5 MHz)
         time_window = 0.001
         bp_dot, bp_dot_time = params.mds_conn.get_data_with_dims(
-            r"\Mirnov_sensor" + mirnov_sensor, tree_name="east"
-        )
+            r"\cmp1t", tree_name="east"
+        )  # [T/s], [s]
         for i, time in enumerate(params.times):
-            (indices,) = np.where((time - time_window) < bp_dot_time < time)
-            mirnov_std[i] = np.nanstd(bp_dot[indices])
+            (indices,) = np.where(
+                ((time - time_window) < bp_dot_time) & (bp_dot_time < time)
+            )
+            mirnov_std[i] = np.nanstd(bp_dot[indices], ddof=1)
 
         mirnov_std_normalized = mirnov_std / abs(btor)
 
