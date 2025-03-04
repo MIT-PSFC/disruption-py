@@ -1723,9 +1723,9 @@ class CmodPhysicsMethods:
 
         - `te_width_ece` is the half-width at half-max of a Gaussian fit of the Te profile
         - `te_core_vs_avg_ece` is defined as mean(core)/mean(all) where core bins are defined
-          as those with |R - R0| < 0.2*a of the magnetic axis.
+          as those with $|R - R_0| < 0.2 a$ of the magnetic axis.
         - `te_edge_vs_avg_ece` is defined as `mean(edge)/mean(all)` where edge bins are defined as
-          those with 0.8*a < |R - R0| < a
+          those with $0.8 a < |R - R_0| < a$
 
         For core and edge vs. average calculations, different shots can have different
         radial sampling, and during a few experiments on C-Mod, Bt was changed during
