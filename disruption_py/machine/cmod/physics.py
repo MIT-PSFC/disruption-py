@@ -693,9 +693,22 @@ class CmodPhysicsMethods:
     )
     def get_power(params: PhysicsMethodParams):
         r"""
-        Calculate the input and radiated powers, then calculate the
-        radiated fraction and radiation confinement time.
+        Get the lower hybrid heating, ion cyclotron resonant heating,
+        and the radiated powers, then calculate the total input power, 
+        radiated fraction, and radiation confinement time.
 
+        The total input power, the radiated fractions, and the radiation
+        confinement time are defined as:
+        $$
+        p_\text{input} = p_\text{ohmic} + p_\text{lh} + p_\text{icrf}
+        $$
+        $$
+        f_\text{rad} = \frac{p_\text{rad}}{p_\text{input}}
+        $$
+        $$
+        \tau_\text{rad} = \frac{W_\text{mhd}}{p_\text{rad}}
+        $$
+        
         Parameters
         ----------
         params : PhysicsMethodParams
@@ -711,16 +724,14 @@ class CmodPhysicsMethods:
         -------
         - original source: [get_power.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_power.m)
         - pull requests: #[62](https://github.com/MIT-PSFC/disruption-py/pull/62), #[367](https://github.com/MIT-PSFC/disruption-py/pull/367)
-
-        Notes
-        -------
+        """
+        # Get LH power, ICRF power, radiated power, and respective time bases
+        """
         Actual data source of LH, ICRF, and radiated power:
-
         - p_lh: `\lh::top.results.netpow` [kW]
         - p_icrf: `\rf::top.antenna.results.pwr_net_tot` [MW]
         - p_rad: `\spectroscopy::top.bolometer.twopi_diode` [kW]
         """
-        # LH power, ICRF power, radiated power, and respective time bases
         values = ["lh", "icrf", "rad"]
         trees = ["lh", "rf", "spectroscopy"]
         nodes = [r"\top.results:netpow", r"\rf_power_net", r"\twopi_diode"]
