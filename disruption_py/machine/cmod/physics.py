@@ -996,7 +996,7 @@ class CmodPhysicsMethods:
         Calculate electron density, its time derivative, and the Greenwald fraction.
         
         The Greenwald fraction is the ratio of the measured electron density $n_e$ and 
-        the Greenwald fraction $n_G$ which is defined as [^1]:
+        the Greenwald density limit $n_G$ defined as [^1]:
         
         $$
         n_G = \\frac{I_p}{\\pi a^2}
@@ -1004,7 +1004,7 @@ class CmodPhysicsMethods:
         
         where $n_G$ is given in $10^{20} m^{-3}$ and $I_p$ is in MA.
         
-        [^1]: http://wiki.fusenet.eu/fusionwiki/index.php/Beta
+        [^1]: https://wiki.fusion.ciemat.es/wiki/Greenwald_limit
         
         Parameters
         ----------
