@@ -12,7 +12,6 @@ import numpy as np
 import xarray as xr
 from MDSplus import mdsExceptions
 
-from disruption_py.config import config
 from disruption_py.core.physics_method.caching import manually_cache
 from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.metadata import (
@@ -24,64 +23,6 @@ from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.misc import get_elapsed_time
 from disruption_py.machine.method_holders import get_method_holders
 from disruption_py.settings.retrieval_settings import RetrievalSettings
-
-REQUIRED_COLS = {"time", "shot"}
-
-
-def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams) -> xr.Dataset:
-    """
-    Retrieve pre-filled shot data for the given physics method parameters.
-
-    Parameters
-    ----------
-    physics_method_params : PhysicsMethodParams
-        Parameters containing MDS connection and shot information
-
-    Returns
-    -------
-    xr.Dataset
-        A Dataset containing the pre-filled shot data.
-    """
-    pre_filled_shot_data = physics_method_params.pre_filled_shot_data
-
-    # If the shot object was already passed data in the constructor, use that data.
-    # Otherwise, create a new Dataset.
-    if pre_filled_shot_data is None:
-        pre_filled_shot_data = xr.Dataset(
-            {},
-            coords={
-                "shot": [int(physics_method_params.shot_id)],
-                "time": physics_method_params.times,
-            },
-        )
-    else:
-        if "time" not in pre_filled_shot_data:
-            pre_filled_shot_data = pre_filled_shot_data.assign_coords(
-                time=physics_method_params.times
-            )
-        if "shot" not in pre_filled_shot_data:
-            pre_filled_shot_data = pre_filled_shot_data.assign_coords(
-                shot=int(physics_method_params.shot_id)
-            )
-        # Check that pre_filled_shot_data is on the same timebase as the shot object
-        # to ensure data consistency
-        if (
-            len(pre_filled_shot_data["time"]) != len(physics_method_params.times)
-            or not np.isclose(
-                pre_filled_shot_data["time"],
-                physics_method_params.times,
-                atol=config().time_const,
-            ).all()
-        ):
-            physics_method_params.logger.error(
-                "Computation on different timebase than pre-filled shot data",
-                physics_method_params.shot_id,
-            )
-
-    pre_filled_shot_data = pre_filled_shot_data.assign_attrs(
-        commit_hash=physics_method_params.metadata.get("commit_hash", None)
-    )
-    return pre_filled_shot_data
 
 
 def get_all_physics_methods(all_passed: list) -> set:
@@ -304,7 +245,6 @@ def populate_shot(
         all_bound_method_metadata, retrieval_settings, physics_method_params
     )
 
-    shot_data = get_prefilled_shot_data(physics_method_params)
     # Manually cache data that has already been retrieved (likely from SQL tables)
     # Methods added to pre_cached_method_names will be skipped by method optimizer
     cached_method_metadata = []
@@ -312,7 +252,7 @@ def populate_shot(
         for method_metadata in all_bound_method_metadata:
             cache_success = manually_cache(
                 physics_method_params=physics_method_params,
-                data=shot_data,
+                data=physics_method_params.pre_filled_shot_data,
                 method=method_metadata.bound_method,
                 method_name=method_metadata.name,
                 method_columns=method_metadata.columns,
@@ -344,7 +284,7 @@ def populate_shot(
                     np.all(np.isnan(method_result[col]))
                     and len(method_result[col]) == 1
                 ):
-                    data_vars[col] = ("time", [np.nan] * len(shot_data.time))
+                    data_vars[col] = ("time", physics_method_params.times * np.nan)
                 else:
                     data_vars[col] = ("time", method_result[col])
             ds = xr.Dataset(
@@ -364,7 +304,16 @@ def populate_shot(
             )
         ###############################################
         methods_data.append(method_result)
-    shot_data = xr.merge([shot_data] + methods_data).squeeze()
+
+    if physics_method_params.pre_filled_shot_data:
+        methods_data += [physics_method_params.pre_filled_shot_data]
+    shot_data = (
+        xr.merge(methods_data)
+        .squeeze()
+        .assign_attrs(
+            commit_hash=physics_method_params.metadata.get("commit_hash", None)
+        )
+    )
 
     num_parameters = len(shot_data.data_vars)
     if len(shot_data.data_vars) == 0:

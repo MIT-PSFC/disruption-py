@@ -9,6 +9,7 @@ from typing import Any, Dict
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 from loguru import logger
 
 from disruption_py.core.utils.misc import shot_log_msg
@@ -29,7 +30,7 @@ class PhysicsMethodParams:
     mds_conn: MDSConnection
     times: np.ndarray
     cache_data: pd.DataFrame
-    pre_filled_shot_data: pd.DataFrame
+    pre_filled_shot_data: xr.Dataset
     interpolation_method: Any  # Fix
     metadata: dict
 

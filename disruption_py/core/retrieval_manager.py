@@ -370,7 +370,7 @@ class RetrievalManager:
         Returns
         -------
         xr.Dataset
-            The pre-filled shot data as a Datset, or None if no match is found.
+            The pre-filled shot data as a Dataset, or None if no match is found.
         """
         if cache_data is None:
             return None
