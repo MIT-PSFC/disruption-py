@@ -33,8 +33,8 @@ For a simple way to get started, check out [`simple.py`](https://github.com/MIT-
 		shotlist_setting=[1150805012, 1150805013, 1150805014],
 		# Use the created retrieval_settings
 		retrieval_settings=retrieval_settings,
-		# Automatically stream retrieved data to a csv file by passing in a file path ending in .csv
-		output_setting="data.csv",
+		# Save dataset to file
+		output_setting="data.nc",
 		# Use a single process to retrieve the data
 		num_processes=1,
 	)
