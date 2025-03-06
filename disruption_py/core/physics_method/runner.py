@@ -334,22 +334,32 @@ def populate_shot(
             physics_method_params=physics_method_params,
             bound_method_metadata=bound_method_metadata,
         )
-        # Temporarily handle both xr.Dataset and dict results from physics
-        # methods until all methods return xr.Dataset
-        if isinstance(method_result, xr.Dataset):
-            methods_data.append(method_result)
+        # TODO: XARRAY: temporarily handle dictionaries
+        ###############################################
+        if isinstance(method_result, dict):
+            method_result = method_result or {}
+            data_vars = {}
+            for col in method_result:
+                if (
+                    np.all(np.isnan(method_result[col]))
+                    and len(method_result[col]) == 1
+                ):
+                    data_vars[col] = ("time", [np.nan] * len(shot_data.time))
+                else:
+                    data_vars[col] = ("time", method_result[col])
+            ds = xr.Dataset(data_vars=data_vars).assign_coords(
+                shot=physics_method_params.shot_id, time=physics_method_params.times
+            )
+            methods_data.append(ds)
             continue
-        method_result = method_result or {}
-        data_vars = {}
-        for col in method_result:
-            if np.all(np.isnan(method_result[col])) and len(method_result[col]) == 1:
-                data_vars[col] = ("time", [np.nan] * len(shot_data.time))
-            else:
-                data_vars[col] = ("time", method_result[col])
-        ds = xr.Dataset(data_vars=data_vars).assign_coords(
-            shot=physics_method_params.shot_id, time=physics_method_params.times
-        )
-        methods_data.append(ds)
+        if not isinstance(method_result, xr.Dataset):
+            raise ValueError(
+                bound_method_metadata.name,
+                "did not return a dict or Dataset",
+                type(method_result),
+            )
+        ###############################################
+        methods_data.append(method_result)
     shot_data = xr.merge([shot_data] + methods_data)
 
     num_parameters = len(shot_data.data_vars)
