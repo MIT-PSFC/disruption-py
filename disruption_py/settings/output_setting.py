@@ -557,18 +557,21 @@ class SQLOutputSetting(OutputSetting):
 
 
 # --8<-- [start:output_setting_dict]
-_output_setting_mappings: Dict[str, OutputSetting] = {
+_output_setting_mappings: Dict[str, Type[OutputSetting]] = {
     "dataframe": DataFrameOutputSetting,
     "dataset": DatasetOutputSetting,
+    "pandas": DataFrameOutputSetting,
+    "xarray": DatasetOutputSetting,
 }
 # --8<-- [end:output_setting_dict]
 
 # --8<-- [start:file_suffix_to_output_setting_dict]
 _file_suffix_to_output_setting: Dict[str, Type[OutputSetting]] = {
+    ".cdf": DatasetOutputSetting,
+    ".csv": BatchedCSVOutputSetting,
     ".h5": DatasetOutputSetting,
     ".hdf5": DatasetOutputSetting,
     ".nc": DatasetOutputSetting,
-    ".csv": BatchedCSVOutputSetting,
 }
 # --8<-- [end:file_suffix_to_output_setting_dict]
 
