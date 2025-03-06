@@ -164,12 +164,11 @@ class LogSettings:
 
         # header
         package = "disruption_py"
-        commit = get_commit_hash()
         logger.info(
             "Starting: {p} ~ v{v} # {c} / {u}@{h}",
             p=package,
             v=importlib.metadata.version(package),
-            c=commit,
+            c=get_commit_hash(),
             u=os.getenv("USER"),
             h=os.uname().nodename,
         )
@@ -178,7 +177,7 @@ class LogSettings:
         logger.debug(
             "Repository: {r}/commit/{c}",
             r="https://github.com/MIT-PSFC/disruption-py",
-            c=commit,
+            c=get_commit_hash(),
         )
         logger.debug("Executable: {e}", e=sys.executable)
 

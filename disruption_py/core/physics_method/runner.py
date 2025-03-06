@@ -307,9 +307,7 @@ def populate_shot(
 
     if physics_method_params.pre_filled_shot_data:
         methods_data += [physics_method_params.pre_filled_shot_data]
-    shot_data = xr.merge(methods_data).assign_attrs(
-        commit_hash=physics_method_params.metadata.get("commit_hash", None)
-    )
+    shot_data = xr.merge(methods_data)
 
     num_parameters = len(shot_data.data_vars)
     if len(shot_data.data_vars) == 0:

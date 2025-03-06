@@ -70,8 +70,7 @@ OutputSettingType = Union[
 
 def dataset_to_dataframe(ds: xr.Dataset) -> pd.DataFrame:
     """
-    Convert an xarray Dataset to a pandas DataFrame. Add the commit_hash attribute
-    as a column.
+    Convert an xarray Dataset to a pandas DataFrame.
 
     Parameters
     ----------
@@ -84,7 +83,6 @@ def dataset_to_dataframe(ds: xr.Dataset) -> pd.DataFrame:
         The converted DataFrame.
     """
     df = ds.to_dataframe().reset_index()
-    df["commit_hash"] = ds.commit_hash
     return df
 
 

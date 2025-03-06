@@ -68,7 +68,6 @@ def test_cache_setting_sql(tokamak, shotlist, num_processes):
     # Verify the correct data vars were retrieved from SQL
     assert {"time_until_disrupt"} == set(results.data_vars)
     assert {"shot", "time"} == set(results.dims)
-    assert "commit_hash" in results.attrs
 
 
 @skip_on_fast_execution

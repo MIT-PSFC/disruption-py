@@ -21,11 +21,11 @@ from disruption_py.machine.tokamak import Tokamak
 
 def dataframe_to_dataset(df: pd.DataFrame) -> xr.Dataset:
     """
-    Convert a Pandas DataFrame to xarray Dataset. Add the commit_hash as an attribute
-    rather than as a data variable because it does not vary across shot or time.
+    Convert a Pandas DataFrame to xarray Dataset.
+
     Parameters
     ----------
-    ds : pd.DataFrame
+    df : pd.DataFrame
         The DataFrame to convert.
 
     Returns
@@ -33,14 +33,9 @@ def dataframe_to_dataset(df: pd.DataFrame) -> xr.Dataset:
     xr.Dataset
         The converted Dataset.
     """
+
     df.drop_duplicates(subset=["shot", "time"], inplace=True)
     ds = xr.Dataset.from_dataframe(df.set_index(["shot", "time"]))
-    # Assign commit_hash to the dataset as a whole rather than as a data var
-    # because it currently does not vary across shot or time.
-    if "commit_hash" in ds.data_vars:
-        ds.attrs["commit_hash"] = ds.commit_hash.values.flat[0]
-        ds = ds.drop_vars("commit_hash")
-
     return ds
 
 

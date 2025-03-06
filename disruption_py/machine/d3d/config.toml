@@ -14,7 +14,6 @@ expected_failure_columns = [
   "beta_n",
   "beta_p",
   "beta_p_rt",
-  "commit_hash",
   "dbetap_dt",
   "delta",
   "dli_dt",

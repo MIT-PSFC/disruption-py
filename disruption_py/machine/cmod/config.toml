@@ -9,7 +9,6 @@ port = 1433
 protected_columns = [
   "beta_n",
   "beta_p",
-  "commit_hash",
   "dbetap_dt",
   "dip_dt",
   "dipprog_dt",
