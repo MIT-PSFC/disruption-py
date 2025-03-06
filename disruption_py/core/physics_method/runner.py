@@ -340,13 +340,13 @@ def populate_shot(
             methods_data.append(method_result)
             continue
         method_result = method_result or {}
-        ds_dict = {}
+        data_vars = {}
         for col in method_result:
             if np.all(np.isnan(method_result[col])) and len(method_result[col]) == 1:
-                ds_dict[col] = ("time", [np.nan] * len(shot_data.time))
+                data_vars[col] = ("time", [np.nan] * len(shot_data.time))
             else:
-                ds_dict[col] = ("time", method_result[col])
-        ds = xr.Dataset(ds_dict).assign_coords(
+                data_vars[col] = ("time", method_result[col])
+        ds = xr.Dataset(data_vars=data_vars).assign_coords(
             shot=physics_method_params.shot_id, time=physics_method_params.times
         )
         methods_data.append(ds)
