@@ -100,7 +100,8 @@ class CmodPhysicsMethods:
 
         References
         -------
-        - original source: [get_t_disrupt.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_t_disrupt.m)
+        - original source: [get_t_disrupt.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/CMOD/matlab-core/get_t_disrupt.m)
         - issues: #[223](https://github.com/MIT-PSFC/disruption-py/issues/223)
 
         """
@@ -205,7 +206,8 @@ class CmodPhysicsMethods:
 
         References
         -------
-        - original source: [get_Ip_parameters.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_Ip_parameters.m)
+        - original source: [get_Ip_parameters.m](https://github.com/MIT-PSFC/
+        disruption-py/blob/matlab/CMOD/matlab-core/get_Ip_parameters.m)
         - pull requests: #[181](https://github.com/MIT-PSFC/disruption-py/pull/181)
         - issues: #[175](https://github.com/MIT-PSFC/disruption-py/issues/175)
         """
@@ -368,8 +370,10 @@ class CmodPhysicsMethods:
 
         References
         -------
-        - original source: [get_Z_parameters.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_Z_parameters.m)
-        - pull requests: #[134](https://github.com/MIT-PSFC/disruption-py/pull/134), #[136](https://github.com/MIT-PSFC/disruption-py/pull/136)
+        - original source: [get_Z_parameters.m](https://github.com/MIT-PSFC/
+        disruption-py/blob/matlab/CMOD/matlab-core/get_Z_parameters.m)
+        - pull requests: #[134](https://github.com/MIT-PSFC/disruption-py/pull/
+        134), #[136](https://github.com/MIT-PSFC/disruption-py/pull/136)
         - issues: #[133](https://github.com/MIT-PSFC/disruption-py/issues/133)
         """
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
@@ -537,7 +541,8 @@ class CmodPhysicsMethods:
 
         References
         -------
-        - original source: [get_P_ohm.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_P_ohm.m)
+        - original source: [get_P_ohm.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/CMOD/matlab-core/get_P_ohm.m)
         - pull requests: #[367](https://github.com/MIT-PSFC/disruption-py/pull/367)
         """
         try:
@@ -719,8 +724,10 @@ class CmodPhysicsMethods:
 
         References
         -------
-        - original source: [get_power.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_power.m)
-        - pull requests: #[62](https://github.com/MIT-PSFC/disruption-py/pull/62), #[367](https://github.com/MIT-PSFC/disruption-py/pull/367)
+        - original source: [get_power.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/CMOD/matlab-core/get_power.m)
+        - pull requests: #[62](https://github.com/MIT-PSFC/disruption-py/pull/62), #[367](https:
+        //github.com/MIT-PSFC/disruption-py/pull/367)
         """
         # Get LH power, ICRF power, radiated power, and respective time bases
         # Data source of LH, ICRF, and radiated power:
@@ -802,7 +809,8 @@ class CmodPhysicsMethods:
 
         References:
         -------
-        - original source: [get_kappa_area.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_kappa_area.m)
+        - original source: [get_kappa_area.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/CMOD/matlab-core/get_kappa_area.m)
         """
         aminor = params.mds_conn.get_data(
             r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
@@ -875,7 +883,8 @@ class CmodPhysicsMethods:
 
         References
         -------
-        - original source: [get_n_equal_1_amplitude.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_n_equal_1_amplitude.m)
+        - original source: [get_n_equal_1_amplitude.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/CMOD/matlab-core/get_n_equal_1_amplitude.m)
         - issues: #[211](https://github.com/MIT-PSFC/disruption-py/issues/211)
 
         """
@@ -1030,7 +1039,8 @@ class CmodPhysicsMethods:
 
         References
         -------
-        - original source: [get_densities.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_densities.m)
+        - original source: [get_densities.m](https://github.com/MIT-PSFC/disruption-py/blob/
+        matlab/CMOD/matlab-core/get_densities.m)
         """
         # Line-integrated density
         n_e, t_n = params.mds_conn.get_data_with_dims(
@@ -1092,7 +1102,8 @@ class CmodPhysicsMethods:
 
         References
         -------
-        - original source: [get_efc_current.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_efc_current.m)
+        - original source: [get_efc_current.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/CMOD/matlab-core/get_efc_current.m)
         """
         iefc, t_iefc = params.mds_conn.get_data_with_dims(
             r"\efc:u_bus_r_cur", tree_name="engineering"
@@ -1197,8 +1208,10 @@ class CmodPhysicsMethods:
 
         References
         -------
-        - original source: [get_TS_data_cmod.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_TS_data_cmod.m)
-        - pull requests: #[107](https://github.com/MIT-PSFC/disruption-py/pull/107), #[402](https://github.com/MIT-PSFC/disruption-py/pull/402)
+        - original source: [get_TS_data_cmod.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/CMOD/matlab-core/get_TS_data_cmod.m)
+        - pull requests: #[107](https://github.com/MIT-PSFC/disruption-py/
+        pull/107), #[402](https://github.com/MIT-PSFC/disruption-py/pull/402)
         - issues: #[383](https://github.com/MIT-PSFC/disruption-py/issues/383)
         """
         # TODO: Gaussian vs parabolic fit for te profile
@@ -1356,8 +1369,11 @@ class CmodPhysicsMethods:
 
         References
         -------
-        - original source: [get_peaking_factor_cmod.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_peaking_factor_cmod.m)
-        - pull requests: #[216](https://github.com/MIT-PSFC/disruption-py/pull/216), #[225](https://github.com/MIT-PSFC/disruption-py/pull/225), #[268](https://github.com/MIT-PSFC/disruption-py/pull/268)
+        - original source: [get_peaking_factor_cmod.m](https://github.com/MIT-PSFC/
+        disruption-py/blob/matlab/CMOD/matlab-core/get_peaking_factor_cmod.m)
+        - pull requests: #[216](https://github.com/MIT-PSFC/disruption-py/
+        pull/216), #[225](https://github.com/MIT-PSFC/disruption-py/pull/
+        225), #[268](https://github.com/MIT-PSFC/disruption-py/pull/268)
         - issues: #[210](https://github.com/MIT-PSFC/disruption-py/issues/210)
         """
         use_ts_tci_calibration = False
@@ -1745,7 +1761,8 @@ class CmodPhysicsMethods:
 
         References
         -------
-        - referenced sources: [get_ECE_data_cmod.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_ECE_data_cmod.m)
+        - referenced sources: [get_ECE_data_cmod.m](https://github.com/MIT-PSFC/
+        disruption-py/blob/matlab/CMOD/matlab-core/get_ECE_data_cmod.m)
         - pull requests: #[260](https://github.com/MIT-PSFC/disruption-py/pull/260)
         """
 
@@ -1852,9 +1869,13 @@ class CmodPhysicsMethods:
 
         References
         -------
-        - original source: [get_Prad_peaking.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_Prad_peaking.m)
-        - pull requests: #[200](https://github.com/MIT-PSFC/disruption-py/pull/200), #[227](https://github.com/MIT-PSFC/disruption-py/pull/227)
-        - issues: #[92](https://github.com/MIT-PSFC/disruption-py/issues/92), #[192](https://github.com/MIT-PSFC/disruption-py/issues/192), #[206](https://github.com/MIT-PSFC/disruption-py/issues/206)
+        - original source: [get_Prad_peaking.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/CMOD/matlab-core/get_Prad_peaking.m)
+        - pull requests: #[200](https://github.com/MIT-PSFC/disruption-py/
+        pull/200), #[227](https://github.com/MIT-PSFC/disruption-py/pull/227)
+        - issues: #[92](https://github.com/MIT-PSFC/disruption-py/issues/
+        92), #[192](https://github.com/MIT-PSFC/disruption-py/
+        issues/192), #[206](https://github.com/MIT-PSFC/disruption-py/issues/206)
 
         """
         prad_peaking = np.full(len(params.times), np.nan)
@@ -1970,7 +1991,8 @@ class CmodPhysicsMethods:
 
         References
         -------
-        - original source: [get_sxr_data.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_sxr_data.m)
+        - original source: [get_sxr_data.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/CMOD/matlab-core/get_sxr_data.m)
 
         """
         sxr, t_sxr = params.mds_conn.get_data_with_dims(
@@ -2073,8 +2095,12 @@ class CmodPhysicsMethods:
 
         References
         -------
-        - pull requests: #[23](https://github.com/MIT-PSFC/disruption-py/pull/23), #[344](https://github.com/MIT-PSFC/disruption-py/pull/344), #[345](https://github.com/MIT-PSFC/disruption-py/pull/345), #[356](https://github.com/MIT-PSFC/disruption-py/pull/356)
-        - issues: #[25](https://github.com/MIT-PSFC/disruption-py/issues/25), #[29](https://github.com/MIT-PSFC/disruption-py/issues/29)
+        - pull requests: #[23](https://github.com/MIT-PSFC/disruption-py/
+        pull/23), #[344](https://github.com/MIT-PSFC/disruption-py/pull/344), #[345](https://
+        github.com/MIT-PSFC/disruption-py/pull/345), #[356](https://github.com/MIT-PSFC/
+        disruption-py/pull/356)
+        - issues: #[25](https://github.com/MIT-PSFC/disruption-py/issues/25), #[29](https://
+        github.com/MIT-PSFC/disruption-py/issues/29)
 
         Notes
         -------
