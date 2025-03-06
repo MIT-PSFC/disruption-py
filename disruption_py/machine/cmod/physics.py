@@ -102,7 +102,7 @@ class CmodPhysicsMethods:
         output = xr.Dataset(
             data_vars={"time_until_disrupt": ("time", time_until_disrupt)},
             coords={"shot": params.shot_id, "time": params.times},
-        ).squeeze()
+        )
         return output
 
     @staticmethod
@@ -247,7 +247,7 @@ class CmodPhysicsMethods:
         )
         output = xr.Dataset(
             data_vars=data_vars, coords={"shot": params.shot_id, "time": params.times}
-        ).squeeze()
+        )
         return output
 
     @staticmethod

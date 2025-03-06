@@ -293,7 +293,7 @@ def populate_shot(
                     "shot": physics_method_params.shot_id,
                     "time": physics_method_params.times,
                 },
-            ).squeeze()
+            )
             methods_data.append(ds)
             continue
         if not isinstance(method_result, xr.Dataset):
@@ -307,12 +307,8 @@ def populate_shot(
 
     if physics_method_params.pre_filled_shot_data:
         methods_data += [physics_method_params.pre_filled_shot_data]
-    shot_data = (
-        xr.merge(methods_data)
-        .squeeze()
-        .assign_attrs(
-            commit_hash=physics_method_params.metadata.get("commit_hash", None)
-        )
+    shot_data = xr.merge(methods_data).assign_attrs(
+        commit_hash=physics_method_params.metadata.get("commit_hash", None)
     )
 
     num_parameters = len(shot_data.data_vars)
