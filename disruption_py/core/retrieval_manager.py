@@ -275,7 +275,7 @@ class RetrievalManager:
         self,
         shot_id: int,
         retrieval_settings: RetrievalSettings,
-    ) -> xr.Dataset:
+    ) -> xr.Dataset | None:
         """
         Retrieve cached data for the specified shot.
 
@@ -288,28 +288,31 @@ class RetrievalManager:
 
         Returns
         -------
-        xr.Dataset
+        xr.Dataset or None
             The cached data for the shot, or None if no cache is available.
         """
-        if retrieval_settings.cache_setting is not None:
-            cache_setting_params = CacheSettingParams(
+
+        if retrieval_settings.cache_setting is None:
+            logger.trace(shot_log_msg(shot_id, "No cache setting available"))
+            return None
+
+        cache_data = retrieval_settings.cache_setting.get_cache_data(
+            CacheSettingParams(
                 shot_id=shot_id,
                 database=self.process_database,
                 tokamak=self.tokamak,
             )
-            cache_data = retrieval_settings.cache_setting.get_cache_data(
-                cache_setting_params
-            )
-            # Even if cache setting is not None, the cache may not have data for
-            # all shots
-            if cache_data is None:
-                return None
-            cache_data["shot"] = cache_data["shot"].astype(int)
-            if shot_id not in cache_data["shot"]:
-                return None
-            cache_data = cache_data.sel(shot=shot_id)
-        else:
-            cache_data = None
+        )
+
+        if cache_data is None:
+            logger.trace(shot_log_msg(shot_id, "No cache data available"))
+            return None
+
+        if shot_id not in cache_data["shot"]:
+            logger.trace(shot_log_msg(shot_id, "Shot not in cache data"))
+            return None
+
+        cache_data = cache_data.sel(shot=shot_id)
         return cache_data
 
     def _init_times(

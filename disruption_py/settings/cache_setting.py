@@ -164,19 +164,21 @@ class SQLCacheSetting(CacheSetting):
 
 class DatasetCacheSetting(CacheSetting):
     """
-    Cache setting for retrieving data from an xarray Dataset, hdf5, or netcdf.
+    Cache setting for retrieving data from a Dataset.
 
     Parameters
     ----------
-    cache_data : xr.Dataset
-        The Dataset to use as the cached data.
+    cache_setting : xr.Dataset or str
+        The Dataset to use as the cached data, or its file path.
     """
 
     def __init__(self, cache_setting: xr.Dataset | str):
         if isinstance(cache_setting, str):
             cache_data = xr.open_dataset(cache_setting)
-        else:
+        elif isinstance(cache_setting, xr.Dataset):
             cache_data = cache_setting
+        else:
+            raise ValueError(f"Invalid cache setting: {cache_setting}")
         self.cache_data = cache_data
 
     def _get_cache_data(self, params: CacheSettingParams) -> xr.Dataset:
