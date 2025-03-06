@@ -119,7 +119,7 @@ def get_cached_from_fresh(
             {"time": fresh_shot_time}, method="nearest", tolerance=config().time_const
         )
         shot_data_list.append(sql_data)
-    shot_data = xr.concat(shot_data_list, dim="shot")
+    shot_data = xr.concat(shot_data_list, dim="shot").squeeze()
     return shot_data
 
 

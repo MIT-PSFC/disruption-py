@@ -327,7 +327,7 @@ class DatasetOutputSetting(OutputSetting):
         Dict[int, xr.Dataset]
             The dataset of results with dims shot and time.
         """
-        ds = xr.concat(self.datasets, dim="shot")
+        ds = xr.concat(self.datasets, dim="shot").squeeze()
         if self.filepath:
             ds.to_netcdf(self.filepath)
         return ds

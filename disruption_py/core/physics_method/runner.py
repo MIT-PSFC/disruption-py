@@ -364,7 +364,7 @@ def populate_shot(
             )
         ###############################################
         methods_data.append(method_result)
-    shot_data = xr.merge([shot_data] + methods_data)
+    shot_data = xr.merge([shot_data] + methods_data).squeeze()
 
     num_parameters = len(shot_data.data_vars)
     if len(shot_data.data_vars) == 0:
@@ -395,16 +395,8 @@ def populate_shot(
         elapsed=get_elapsed_time(time.time() - start_time),
     )
 
-    if (
-        retrieval_settings.only_requested_columns
-        and retrieval_settings.run_columns is not None
-    ):
-        include_columns = list(
-            REQUIRED_COLS.union(
-                set(retrieval_settings.run_columns).intersection(
-                    set(shot_data.data_vars)
-                )
-            )
-        )
-        shot_data = shot_data[include_columns]
+    # column down-selection
+    if retrieval_settings.only_requested_columns and retrieval_settings.run_columns:
+        shot_data = shot_data[retrieval_settings.run_columns]
+
     return shot_data
