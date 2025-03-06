@@ -723,12 +723,10 @@ class CmodPhysicsMethods:
         - pull requests: #[62](https://github.com/MIT-PSFC/disruption-py/pull/62), #[367](https://github.com/MIT-PSFC/disruption-py/pull/367)
         """
         # Get LH power, ICRF power, radiated power, and respective time bases
-        """
-        Actual data source of LH, ICRF, and radiated power:
-        - p_lh: `\lh::top.results.netpow` [kW]
-        - p_icrf: `\rf::top.antenna.results.pwr_net_tot` [MW]
-        - p_rad: `\spectroscopy::top.bolometer.twopi_diode` [kW]
-        """
+        # Data source of LH, ICRF, and radiated power:
+        # - p_lh: `\lh::top.results.netpow` [kW]
+        # - p_icrf: `\rf::top.antenna.results.pwr_net_tot` [MW]
+        # - p_rad: `\spectroscopy::top.bolometer.twopi_diode` [kW]
         values = ["lh", "icrf", "rad"]
         trees = ["lh", "rf", "spectroscopy"]
         nodes = [r"\top.results:netpow", r"\rf_power_net", r"\twopi_diode"]
@@ -1007,10 +1005,10 @@ class CmodPhysicsMethods:
     def get_densities(params: PhysicsMethodParams):
         r"""
         Calculate electron density, its time derivative, and the Greenwald fraction.
-        
-        The Greenwald fraction is the ratio of the measured electron density $n_e$ and 
+
+        The Greenwald fraction is the ratio of the measured electron density $n_e$ and
         the Greenwald density limit $n_G$ defined as [^1]:
-        
+
         $$
         n_G = \frac{I_p}{\pi a^2}
         $$
@@ -1991,7 +1989,7 @@ class CmodPhysicsMethods:
         \beta_N = \beta_\text{tot} \frac{a B_t}{I_p}
         $$
 
-        Where $I_p$ is in MA, and the total plasma beta $\beta$ is defined as [^1]
+        Where $I_p$ is in MA, and the total plasma beta $\beta$ is defined as: [^1]
         $$
         \beta_\text{tot} = \frac{p}{B^2/2\mu_0}
         $$
