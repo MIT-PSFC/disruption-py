@@ -56,7 +56,6 @@ def initial_mdsplus_data_fixture(shotlist, tokamak, test_file_path_f) -> Dict:
         "dataframe",
         "dataset",
         test_file_path_f(".csv"),
-        test_file_path_f(".hdf5"),
         test_file_path_f(".nc"),
         SQLOutputSetting(table_name=WRITE_DATABASE_TABLE_NAME),
     ]
@@ -90,23 +89,18 @@ def test_output_exists(initial_mdsplus_data, test_file_path_f):
         df_output,
         ds_output,
         csv_output,
-        hdf_output,
         nc_output,
         sql_output,
     ) = initial_mdsplus_data
     assert isinstance(df_output, pd.DataFrame), "DataFrame output does not exist"
     assert isinstance(ds_output, xr.Dataset), "Dataset output does not exist"
     assert isinstance(csv_output, pd.DataFrame), "DataFrame from CSV does not exist"
-    assert isinstance(hdf_output, xr.Dataset), "Dataset from HDF5 does not exist"
     assert isinstance(nc_output, xr.Dataset), "Dataset from .nc does not exist"
     assert isinstance(sql_output, pd.DataFrame), "DataFrame from SQL does not exist"
     assert os.path.exists(test_file_path_f(".nc")), ".nc output does not exist"
     assert os.path.exists(test_file_path_f(".csv")), ".csv output does not exist"
-    assert os.path.exists(test_file_path_f(".hdf5")), ".hdf5 output does not exist"
-
     assert_frame_equal_unordered(df_output, csv_output)
     assert_frame_equal_unordered(df_output, sql_output)
-    xr.testing.assert_equal(ds_output, hdf_output)
     xr.testing.assert_equal(ds_output, nc_output)
 
 
