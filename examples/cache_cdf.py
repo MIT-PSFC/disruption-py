@@ -13,9 +13,9 @@ from tests.utils.factory import get_tokamak_test_shotlist
 
 # Create a long-lived cache directory, if it does not exist
 # to demonstrate how to provide cache data from a previous run
-cache_dir = os.path.expanduser("~/.cache/disruption-py/")
+cache_dir = os.path.expanduser("~/.cache/disruption-py")
 os.makedirs(cache_dir, exist_ok=True)
-cache_h5 = cache_dir + "my_workflow.h5"
+cache_nc = os.path.join(cache_dir, "example_cache.nc")
 
 tokamak = resolve_tokamak_from_environment()
 shots = get_tokamak_test_shotlist(tokamak)
@@ -25,30 +25,26 @@ LOG_SETTINGS = "INFO"
 
 initial_shots = shots[: len(shots) // 2]
 
-# First run retrieves data for the first half of the shots
+# 1: retrieve and store data for some shots, takes some time
 cached_shot_data = get_shots_data(
     shotlist_setting=initial_shots,
-    log_settings=LOG_SETTINGS,
-    output_setting=cache_h5,
-)
-
-# Second run to show little time is spent on retrieving data for the first half of the shots
-rs = RetrievalSettings(
-    cache_setting=cached_shot_data,
-)
-cached_shot_data = get_shots_data(
-    retrieval_settings=rs,
-    shotlist_setting=initial_shots,
+    output_setting=cache_nc,
     log_settings=LOG_SETTINGS,
 )
 
-# Final run on all the data, using the long-term saved cache data
-retrieval_settings = RetrievalSettings(
-    cache_setting=cache_h5,
+# 2: use in-memory cache for the same shots, takes no time at all
+cached_shot_data = get_shots_data(
+    shotlist_setting=initial_shots,
+    retrieval_settings=RetrievalSettings(cache_setting=cached_shot_data),
+    log_settings=LOG_SETTINGS,
 )
+
+# 3: all the shots, priming cache from the long-term storage netcdf file
 shot_data = get_shots_data(
-    tokamak=tokamak,
     shotlist_setting=shots,
-    retrieval_settings=retrieval_settings,
+    tokamak=tokamak,
+    retrieval_settings=RetrievalSettings(
+        cache_setting=cache_nc,
+    ),
     log_settings=LOG_SETTINGS,
 )
