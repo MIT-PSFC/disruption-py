@@ -346,7 +346,9 @@ def populate_shot(
                 ds_dict[col] = ("time", [np.nan] * len(shot_data.time))
             else:
                 ds_dict[col] = ("time", method_result[col])
-        ds = xr.Dataset(ds_dict, coords={"time": shot_data.time})
+        ds = xr.Dataset(ds_dict).assign_coords(
+            shot=physics_method_params.shot_id, time=physics_method_params.times
+        )
         methods_data.append(ds)
     shot_data = xr.merge([shot_data] + methods_data)
 
