@@ -100,8 +100,8 @@ class CmodPhysicsMethods:
         if params.disrupted:
             time_until_disrupt = params.disruption_time - params.times
         output = xr.Dataset(
-            {"time_until_disrupt": ("time", time_until_disrupt)},
-            coords={"time": params.times},
+            data_vars={"time_until_disrupt": ("time", time_until_disrupt)},
+            coords={"shot": params.shot_id, "time": params.times},
         )
         return output
 
@@ -129,7 +129,7 @@ class CmodPhysicsMethods:
 
         Returns
         -------
-        xr.Dataset with data_vars:
+        xr.Dataset:
             ip : plasma current.
             dip_dt : Time derivative of the actual plasma current.
             dip_smoothed : Smoothed time derivative of the actual plasma current.
@@ -146,7 +146,6 @@ class CmodPhysicsMethods:
         Sources
         -------
         - matlab/cmod_matlab/matlab-core/get_Ip_parameters.m
-        - matlab/cmod_matlab/matlab-core/get_Ip_parameters.m
         """
         dip = np.gradient(ip, magtime)
         dip_smoothed = smooth(dip, 11)
@@ -160,7 +159,7 @@ class CmodPhysicsMethods:
         dip_smoothed = interp1(magtime, dip_smoothed, times)
 
         ip_error = (np.abs(ip) - np.abs(ip_prog)) * np.sign(ip)
-        output_dict = {
+        data_vars = {
             "ip": ("time", ip),
             "dip_dt": ("time", dip),
             "dip_smoothed": ("time", dip_smoothed),
@@ -168,7 +167,7 @@ class CmodPhysicsMethods:
             "dipprog_dt": ("time", dipprog_dt),
             "ip_error": ("time", ip_error),
         }
-        output = xr.Dataset(output_dict, coords={"time": times})
+        output = xr.Dataset(data_vars)
         return output
 
     @staticmethod
@@ -246,7 +245,7 @@ class CmodPhysicsMethods:
         )  # [A], [s]
         output = CmodPhysicsMethods._get_ip_parameters(
             params.times, ip, magtime, ip_prog, pcstime
-        )
+        ).assign_coords(shot=params.shot_id, time=params.times)
         return output
 
     @staticmethod
