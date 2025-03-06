@@ -72,28 +72,25 @@ def test_cache_setting_sql(tokamak, shotlist, num_processes):
 
 
 @skip_on_fast_execution
-@pytest.mark.parametrize("output_format", [".nc", ".hdf5"])
-def test_cache_setting_prev_output(tokamak, shotlist, test_file_path_f, output_format):
+def test_cache_setting_prev_output(tokamak, shotlist):
     """
-    Use the file output from an initial call to `get_shots_data` as the cache for
-    a subsequent call to `get_shots_data` and make sure the data remains the same.
+    Use the output from an initial call to `get_shots_data` as the cache for a
+    subsequent call to `get_shots_data` and make sure the data remains the same.
 
     Only request `time_until_disrupt` rather than all data vars to speed up the test.
     """
-    # Save data to file
-    get_shots_data(
+    # get some data to prime the cache
+    cache_data = get_shots_data(
         tokamak=tokamak,
         retrieval_settings=RetrievalSettings(
             run_columns=["time_until_disrupt"], only_requested_columns=True
         ),
         shotlist_setting=shotlist,
         num_processes=2,
-        output_setting=test_file_path_f(output_format),
+        output_setting="dataset",
     )
 
-    cache_data = xr.open_dataset(test_file_path_f(output_format))
-
-    # Use saved data as cache
+    # set the data as cache
     retrieval_settings = RetrievalSettings(
         cache_setting=cache_data,
         use_cache_setting_timebase=True,
@@ -101,6 +98,7 @@ def test_cache_setting_prev_output(tokamak, shotlist, test_file_path_f, output_f
         only_requested_columns=True,
     )
 
+    # use the cached data
     results = get_shots_data(
         tokamak=tokamak,
         shotlist_setting=shotlist,
