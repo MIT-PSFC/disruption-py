@@ -25,7 +25,7 @@ from tests.utils.factory import (
     get_tokamak_test_expected_failure_columns,
     get_tokamak_test_shotlist,
 )
-from tests.utils.pytest_helper import extract_param, save_to_csv
+from tests.utils.pytest_helper import extract_param
 
 
 @pytest.fixture(scope="module", name="fresh_data")
@@ -60,9 +60,7 @@ def fresh_data_fixture(
         log_file_path=test_file_path_f(".log"),
         test_columns=extract_param(pytestconfig),
     )
-    save_to_csv(
-        data=fresh_data, test_file_path_f=test_file_path_f, data_source_name="fresh"
-    )
+    fresh_data.to_netcdf(test_file_path_f("-fresh.nc"))
     return fresh_data
 
 
@@ -101,9 +99,7 @@ def cache_data_fixture(
         fresh_data=fresh_data,
         test_columns=extract_param(pytestconfig),
     )
-    save_to_csv(
-        data=cache_data, test_file_path_f=test_file_path_f, data_source_name="cache"
-    )
+    cache_data.to_netcdf(test_file_path_f("-cache.nc"))
     return cache_data
 
 
