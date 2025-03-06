@@ -33,12 +33,12 @@ def main(tokamak, methods, shots, processes, log_level):
         retrieval_settings=RetrievalSettings(run_methods=methods),
         num_processes=processes,
         log_settings=log_level,
-        output_setting="dataframe",
+        output_setting="dataset",
     )
 
-    csv = os.path.join(get_temporary_folder(), "output.csv")
-    logger.info("Output: {csv}", csv=csv)
-    out.to_csv(csv, index=False)
+    cdf = os.path.join(get_temporary_folder(), "output.nc")
+    logger.info("Output: {cdf}", cdf=cdf)
+    out.to_netcdf(cdf)
 
     return out
 
