@@ -576,9 +576,7 @@ _file_suffix_to_output_setting: Dict[str, Type[OutputSetting]] = {
 # --8<-- [end:file_suffix_to_output_setting_dict]
 
 
-def resolve_output_setting(
-    output_setting: OutputSettingType,
-) -> OutputSetting:
+def resolve_output_setting(output_setting: OutputSettingType) -> OutputSetting:
     """
     Resolve the output setting to an OutputSetting instance.
 
@@ -593,22 +591,19 @@ def resolve_output_setting(
     OutputSetting
         The resolved OutputSetting instance.
     """
+
     if isinstance(output_setting, OutputSetting):
         return output_setting
 
     if isinstance(output_setting, str):
-        output_setting_cls = _output_setting_mappings.get(output_setting, None)
-        if output_setting_cls is not None:
+        # shortcuts
+        output_setting_cls = _output_setting_mappings.get(output_setting)
+        if output_setting_cls:
             return output_setting_cls()
-
-    if isinstance(output_setting, str):
-        # assume that it is a file path
-        for (
-            suffix,
-            output_setting_type,
-        ) in _file_suffix_to_output_setting.items():
-            if output_setting.endswith(suffix):
-                return output_setting_type(output_setting)
+        # extensions
+        for ext, output_setting_cls in _file_suffix_to_output_setting.items():
+            if output_setting.lower().endswith(ext):
+                return output_setting_cls(output_setting)
 
     if isinstance(output_setting, dict):
         return OutputSettingDict(output_setting)
@@ -616,4 +611,4 @@ def resolve_output_setting(
     if isinstance(output_setting, list):
         return OutputSettingList(output_setting)
 
-    raise ValueError(f"Invalid output processor {output_setting}")
+    raise ValueError(f"Invalid output setting: {output_setting}")
