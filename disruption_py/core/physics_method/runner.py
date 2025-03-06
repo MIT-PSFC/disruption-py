@@ -347,9 +347,13 @@ def populate_shot(
                     data_vars[col] = ("time", [np.nan] * len(shot_data.time))
                 else:
                     data_vars[col] = ("time", method_result[col])
-            ds = xr.Dataset(data_vars=data_vars).assign_coords(
-                shot=physics_method_params.shot_id, time=physics_method_params.times
-            )
+            ds = xr.Dataset(
+                data_vars=data_vars,
+                coords={
+                    "shot": physics_method_params.shot_id,
+                    "time": physics_method_params.times,
+                },
+            ).squeeze()
             methods_data.append(ds)
             continue
         if not isinstance(method_result, xr.Dataset):

@@ -102,7 +102,7 @@ class CmodPhysicsMethods:
         output = xr.Dataset(
             data_vars={"time_until_disrupt": ("time", time_until_disrupt)},
             coords={"shot": params.shot_id, "time": params.times},
-        )
+        ).squeeze()
         return output
 
     @staticmethod
@@ -129,7 +129,7 @@ class CmodPhysicsMethods:
 
         Returns
         -------
-        xr.Dataset:
+        data_vars : dict of tuples for xr.Dataset
             ip : plasma current.
             dip_dt : Time derivative of the actual plasma current.
             dip_smoothed : Smoothed time derivative of the actual plasma current.
@@ -157,8 +157,8 @@ class CmodPhysicsMethods:
         ip = interp1(magtime, ip, times)
         dip = interp1(magtime, dip, times)
         dip_smoothed = interp1(magtime, dip_smoothed, times)
-
         ip_error = (np.abs(ip) - np.abs(ip_prog)) * np.sign(ip)
+
         data_vars = {
             "ip": ("time", ip),
             "dip_dt": ("time", dip),
@@ -167,8 +167,7 @@ class CmodPhysicsMethods:
             "dipprog_dt": ("time", dipprog_dt),
             "ip_error": ("time", ip_error),
         }
-        output = xr.Dataset(data_vars)
-        return output
+        return data_vars
 
     @staticmethod
     @physics_method(
@@ -243,9 +242,12 @@ class CmodPhysicsMethods:
         ip, magtime = params.mds_conn.get_data_with_dims(
             r"\ip", tree_name="magnetics"
         )  # [A], [s]
-        output = CmodPhysicsMethods._get_ip_parameters(
+        data_vars = CmodPhysicsMethods._get_ip_parameters(
             params.times, ip, magtime, ip_prog, pcstime
-        ).assign_coords(shot=params.shot_id, time=params.times)
+        )
+        output = xr.Dataset(
+            data_vars=data_vars, coords={"shot": params.shot_id, "time": params.times}
+        ).squeeze()
         return output
 
     @staticmethod
