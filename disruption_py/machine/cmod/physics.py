@@ -17,7 +17,7 @@ from disruption_py.core.utils.math import (
     gaussian_fit,
     gaussian_fit_with_fixed_mean,
     interp1,
-    smooth,
+    matlab_smooth,
 )
 from disruption_py.machine.cmod.thomson import CmodThomsonDensityMeasure
 from disruption_py.machine.tokamak import Tokamak
@@ -149,7 +149,7 @@ class CmodPhysicsMethods:
         - matlab/cmod_matlab/matlab-core/get_Ip_parameters.m
         """
         dip = np.gradient(ip, magtime)
-        dip_smoothed = smooth(dip, 11)  # ,ends_type=0)
+        dip_smoothed = matlab_smooth(dip, 11)  # ,ends_type=0)
         dipprog_dt = np.gradient(ip_prog, pcstime)
         ip_prog = interp1(
             pcstime, ip_prog, times, bounds_error=False, fill_value=ip_prog[-1]
