@@ -145,6 +145,31 @@ def matlab_smooth(arr: np.ndarray, window_size: int) -> np.ndarray:
     return np.concatenate((start, mid, end))
 
 
+def causal_boxcar_smooth(signal: np.array, window_size: int) -> np.ndarray:
+    """
+    Causal boxcar averaging filter
+
+    Parameters
+    ----------
+    signal: np.ndarray
+        Signal to smooth
+
+    window_size: int
+        Size of the window to smooth over
+
+    Returns
+    -------
+    np.ndarray
+        Smoothed array
+    """
+    kernel = np.ones(window_size) / window_size
+    mid = np.convolve(signal, kernel, mode="valid")
+    start = np.zeros(window_size - 1)
+    for i in range(window_size - 1):
+        start[i] = np.mean(signal[: i + 1])
+    return np.concatenate((start, mid))
+
+
 def gauss_smooth(y, smooth_width, ends_type):
     """
     Smooth a dataset using a Gaussian window.
