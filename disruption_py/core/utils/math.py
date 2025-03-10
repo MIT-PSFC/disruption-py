@@ -121,7 +121,7 @@ def exp_filter(x, w, strategy="fragmented"):
     return filtered_x
 
 
-def smooth(arr: np.ndarray, window_size: int) -> np.ndarray:
+def matlab_smooth(arr: np.ndarray, window_size: int) -> np.ndarray:
     """
     Implements Matlab's smooth function https://www.mathworks.com/help/curvefit/smooth.html.
 
