@@ -309,7 +309,8 @@ class DatasetOutputSetting(OutputSetting):
         logger.trace(
             shot_log_msg(
                 params.shot_id,
-                f"Appending dataset: {params.result.time.shape} time slices",
+                "Appending dataset: "
+                f"{params.result.time.shape if "time" in params.result else 'no'} time slices",
             )
         )
         self.datasets.append(params.result)
