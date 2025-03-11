@@ -146,6 +146,7 @@ class CmodPhysicsMethods:
         Sources
         -------
         - matlab/cmod_matlab/matlab-core/get_Ip_parameters.m
+        - matlab/cmod_matlab/matlab-core/get_Ip_parameters.m
         """
         dip = np.gradient(ip, magtime)
         dip_smoothed = smooth(dip, 11)
