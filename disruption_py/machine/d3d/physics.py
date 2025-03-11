@@ -6,6 +6,7 @@ Module for retrieving and calculating data for DIII-D physics methods.
 
 import numpy as np
 import scipy
+import xarray as xr
 from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.caching import cache_method
@@ -61,20 +62,25 @@ class D3DPhysicsMethods:
 
         Last major update by William Wei on 7/31/2024
         """
-        output = {
-            "h98": [np.nan],
-        }
+
+        h_98 = np.full(len(params.times), np.nan)
+
         try:
             h_98, t_h_98 = params.mds_conn.get_data_with_dims(
                 r"\H_THH98Y2", tree_name="transport"
             )
             t_h_98 /= 1e3  # [ms] -> [s]
             h_98 = interp1(t_h_98, h_98, params.times, "linear")
-            output["h98"] = h_98
         except ValueError as e:
             params.logger.warning("Failed to get H98 signal. Returning NaNs.")
             params.logger.opt(exception=True).debug(e)
-        return output
+
+        # xarray dataset
+        data_vars = {"h98": ("time", h_98)}
+        coords = {"shot": params.shot_id, "time": params.times}
+        ds = xr.Dataset(data_vars=data_vars, coords=coords)
+
+        return ds
 
     @staticmethod
     @physics_method(columns=["h_alpha"], tokamak=Tokamak.D3D)
