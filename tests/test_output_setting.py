@@ -54,7 +54,7 @@ def initial_mdsplus_data_fixture(shotlist, tokamak, test_file_path_f) -> Dict:
         "dataset",
         test_file_path_f(".csv"),
         test_file_path_f(".nc"),
-        SQLOutputSetting(table_name=WRITE_DATABASE_TABLE_NAME),
+        SQLOutputSetting(),
     ]
 
     retrieval_settings = RetrievalSettings(
@@ -139,7 +139,6 @@ def test_sql_output_setting(
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
         output_setting=SQLOutputSetting(
-            table_name=WRITE_DATABASE_TABLE_NAME,
             should_update=True,
             should_override_columns=SECOND_ITERATION_COLUMNS,
         ),

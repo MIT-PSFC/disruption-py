@@ -252,7 +252,6 @@ class SQLOutputSetting(DataFrameOutputSetting):
         self,
         should_update=False,
         should_override_columns: List[str] = None,
-        table_name="disruption_warning_test",
     ):
         """
         Initialize the SQLOutputSetting.
@@ -263,14 +262,10 @@ class SQLOutputSetting(DataFrameOutputSetting):
             Whether to update existing records (default is False).
         should_override_columns : List[str], optional
             List of columns to override in the SQL table (default is None).
-        table_name : str, optional
-            The name of the SQL table to stream data to (default is
-            "disruption_warning_test").
         """
         super().__init__()
         self.should_update = should_update
         self.should_override_columns = should_override_columns
-        self.table_name = table_name
 
     def _output_shot(self, params: OutputSettingParams):
         """
