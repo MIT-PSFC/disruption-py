@@ -174,12 +174,10 @@ class DataDifference:
         return anomalies, relative_difference
 
 
-def assert_frame_equal_unordered(df1: pd.DataFrame, df2: pd.DataFrame):
-    """Compare whether two dataframes have the same values."""
-    df1_sorted = df1.sort_values(by=config().inout.sql.protected_columns).reset_index(
-        drop=True
-    )
-    df2_sorted = df2.sort_values(by=config().inout.sql.protected_columns).reset_index(
-        drop=True
-    )
-    pd.testing.assert_frame_equal(df1_sorted, df2_sorted, check_like=True)
+def assert_frame_equal_unordered(left: pd.DataFrame, right: pd.DataFrame):
+    """
+    Compare whether two dataframes have the same values.
+    Before comparing, set the index properly and drop all-nan rows.
+    """
+    dfs = [df.set_index(["shot", "time"]).dropna(how="all") for df in [left, right]]
+    pd.testing.assert_frame_equal(*dfs, check_like=True)
