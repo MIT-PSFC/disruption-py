@@ -6,6 +6,7 @@ Module for retrieving and calculating data for DIII-D physics methods.
 
 import numpy as np
 import scipy
+import xarray as xr
 from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.decorator import physics_method
@@ -250,7 +251,6 @@ class EastPhysicsMethods:
 
         Last major update: 11/19/24 by William Wei
         """
-        v_loop = [np.nan]
 
         # Get "\vp1_s" signal from the EAST tree.  (This signal is a sub-sampled
         # version of "vp1".)
@@ -262,7 +262,12 @@ class EastPhysicsMethods:
         # Interpolate the signal onto the requested timebase
         v_loop = interp1(v_loop_time, v_loop, params.times)
 
-        return {"v_loop": v_loop}
+        # xarray dataset
+        data_vars = {"v_loop": ("time", v_loop)}
+        coords = {"shot": params.shot_id, "time": params.times}
+        ds = xr.Dataset(data_vars=data_vars, coords=coords)
+
+        return ds
 
     @staticmethod
     @physics_method(
