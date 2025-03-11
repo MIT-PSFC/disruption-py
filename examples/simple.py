@@ -60,4 +60,5 @@ def cli():
 
 
 if __name__ == "__main__":
-    print(cli())
+    ds = cli()
+    print(ds)
