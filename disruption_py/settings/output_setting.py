@@ -65,24 +65,6 @@ OutputSettingType = Union[
 ]
 
 
-def dataset_to_dataframe(ds: xr.Dataset) -> pd.DataFrame:
-    """
-    Convert an xarray Dataset to a pandas DataFrame.
-
-    Parameters
-    ----------
-    ds : xr.Dataset
-        The Dataset to convert.
-
-    Returns
-    -------
-    pd.DataFrame
-        The converted DataFrame.
-    """
-    df = ds.to_dataframe().reset_index()
-    return df
-
-
 class OutputSetting(ABC):
     """
     OutputSetting abstract class that should be inherited by all output setting classes.
@@ -300,7 +282,7 @@ class SQLOutputSetting(OutputSetting):
         params : OutputSettingParams
             The parameters containing the result to be outputted.
         """
-        df = dataset_to_dataframe(params.result)
+        df = params.result.to_dataframe().reset_index()
         if not df.empty and ("shot" in df.columns):
             shot_id = df["shot"].iloc[0]
             params.database.add_shot_data(
