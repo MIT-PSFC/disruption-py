@@ -8,7 +8,6 @@ for shot data, including saving to files, databases, lists, dictionaries, and
 dataframes.
 """
 
-import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List, Type, Union
@@ -275,162 +274,6 @@ class DatasetOutputSetting(OutputSetting):
         return ds
 
 
-class CSVOutputSetting(OutputSetting):
-    """
-    Outputs shot data to a single CSV file.
-    Not recommended when retrieving a large number of shots.
-    """
-
-    def __init__(
-        self, filepath: str, flexible_columns: bool = True, clear_file: bool = True
-    ):
-        """
-        Initialize CSVOutputSetting with a file path and options.
-
-        Parameters
-        ----------
-        filepath : str
-            The path to the CSV file.
-        flexible_columns : bool, optional
-            If True, allows for flexible columns in the CSV (default is True).
-        clear_file : bool, optional
-            If True, clears the file if it exists (default is True).
-        """
-        self.filepath = filepath
-        self.flexible_columns = flexible_columns
-        self.output_shot_count = 0
-        if clear_file and os.path.exists(filepath):
-            os.remove(filepath)
-        self.results: pd.DataFrame = pd.DataFrame()
-
-    def _output_shot(self, params: OutputSettingParams):
-        """
-        Output a single shot to the CSV file.
-
-        Parameters
-        ----------
-        params : OutputSettingParams
-            The parameters for outputting shot results.
-        """
-        file_exists = os.path.isfile(self.filepath)
-        combined_df = dataset_to_dataframe(params.result)
-        if self.flexible_columns:
-            if file_exists:
-                existing_df = pd.read_csv(self.filepath)
-                combined_df = safe_df_concat(existing_df, [combined_df])
-
-            combined_df.to_csv(self.filepath, index=False)
-        else:
-            params.result.to_csv(
-                self.filepath, mode="a", index=False, header=(not file_exists)
-            )
-        self.output_shot_count += 1
-        self.results = safe_df_concat(self.results, [combined_df])
-
-    def get_results(self, params: CompleteOutputSettingParams):
-        """
-        Get the accumulated results.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
-
-        Returns
-        -------
-        pd.DataFrame
-            The combined DataFrame of results.
-        """
-        return self.results
-
-
-class BatchedCSVOutputSetting(OutputSetting):
-    """
-    Stream outputted data to a single CSV file in batches.
-    """
-
-    def __init__(self, filepath, batch_size=100, clear_file=True):
-        """
-        Initialize the BatchedCSVOutputSetting.
-
-        Parameters
-        ----------
-        filepath : str
-            The path to the CSV file where data will be written.
-        batch_size : int, optional
-            The number of records to write to the CSV file in one batch (default is 100).
-        clear_file : bool, optional
-            Whether to clear the file at the beginning (default is True).
-        """
-        self.filepath = filepath
-        self.batch_size = batch_size
-        self.clear_file = clear_file
-        self.batch_data = []  # Initialize an empty list to hold batched data
-        self.output_shot_count = 0
-
-        # Clear the file at the beginning if required
-        if self.clear_file and os.path.exists(filepath):
-            os.remove(filepath)
-
-        self.results: pd.DataFrame = pd.DataFrame()
-        self.columns = None
-
-    def _output_shot(self, params: OutputSettingParams):
-        """
-        Append the current result to the batch data list and write to CSV if
-        batch size is reached.
-
-        Parameters
-        ----------
-        params : OutputSettingParams
-            The parameters containing the result to be outputted.
-        """
-        # Append the current result to the batch data list
-        df = dataset_to_dataframe(params.result)
-        self.batch_data.append(df)
-
-        # Check if the batch size has been reached
-        if len(self.batch_data) >= self.batch_size:
-            self._write_batch_to_csv()
-
-        self.output_shot_count += 1
-        self.results = safe_df_concat(self.results, [df])
-
-    def _write_batch_to_csv(self):
-        """
-        Write the current batch of data to the CSV file.
-        """
-        file_exists = os.path.isfile(self.filepath)
-        combined_df = safe_df_concat(pd.DataFrame(), self.batch_data)
-        # Enforce the to-be-saved combined_df to have the same column order as the first shot
-        if self.columns is None:
-            self.columns = combined_df.columns
-        combined_df = combined_df[self.columns]
-        combined_df.to_csv(
-            self.filepath, mode="a", index=False, header=(not file_exists)
-        )
-        self.batch_data.clear()
-
-    def get_results(self, params: CompleteOutputSettingParams):
-        """
-        Write any remaining batched data to the CSV file before returning results.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for retrieving results.
-
-        Returns
-        -------
-        pd.DataFrame
-            The DataFrame containing the results.
-        """
-        # Write any remaining batched data to the CSV file before returning results
-        if self.batch_data:
-            self._write_batch_to_csv()
-        return self.results
-
-
 class SQLOutputSetting(OutputSetting):
     """
     Stream outputted data to a SQL table. By default, stream to the test table:
@@ -512,7 +355,7 @@ _output_setting_mappings: Dict[str, Type[OutputSetting]] = {
 # --8<-- [start:file_suffix_to_output_setting_dict]
 _file_suffix_to_output_setting: Dict[str, Type[OutputSetting]] = {
     ".cdf": DatasetOutputSetting,
-    ".csv": BatchedCSVOutputSetting,
+    ".csv": DataFrameOutputSetting,
     ".h5": DatasetOutputSetting,
     ".hdf5": DatasetOutputSetting,
     ".nc": DatasetOutputSetting,
