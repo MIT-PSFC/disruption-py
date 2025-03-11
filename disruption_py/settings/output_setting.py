@@ -12,11 +12,10 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List, Type, Union
 
-import pandas as pd
 import xarray as xr
 from loguru import logger
 
-from disruption_py.core.utils.misc import safe_df_concat, shot_log_msg
+from disruption_py.core.utils.misc import shot_log_msg
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
 
@@ -243,10 +242,10 @@ class DataFrameOutputSetting(DatasetOutputSetting):
         return df
 
 
-class SQLOutputSetting(OutputSetting):
+class SQLOutputSetting(DataFrameOutputSetting):
     """
-    Stream outputted data to a SQL table. By default, stream to the test table:
-    disruption_warning_test.
+    Stream shot data to a SQL table.
+    By default, stream to the test table `disruption_warning_test`.
     """
 
     def __init__(
@@ -268,10 +267,10 @@ class SQLOutputSetting(OutputSetting):
             The name of the SQL table to stream data to (default is
             "disruption_warning_test").
         """
+        super().__init__()
         self.should_update = should_update
         self.should_override_columns = should_override_columns
         self.table_name = table_name
-        self.results: pd.DataFrame = pd.DataFrame()
 
     def _output_shot(self, params: OutputSettingParams):
         """
@@ -282,34 +281,15 @@ class SQLOutputSetting(OutputSetting):
         params : OutputSettingParams
             The parameters containing the result to be outputted.
         """
+        super()._output_shot(params)
         df = params.result.to_dataframe().reset_index()
-        if not df.empty and ("shot" in df.columns):
-            shot_id = df["shot"].iloc[0]
-            params.database.add_shot_data(
-                shot_id=shot_id,
-                shot_data=df,
-                update=self.should_update,
-                override_columns=self.should_override_columns,
-            )
-        else:
-            logger.warning("No shot id found in result DataFrame")
-        self.results = safe_df_concat(self.results, [df])
-
-    def get_results(self, params: CompleteOutputSettingParams) -> Any:
-        """
-        Retrieve the results stored in the SQL output setting.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for retrieving results.
-
-        Returns
-        -------
-        pd.DataFrame
-            The DataFrame containing the results.
-        """
-        return self.results
+        logger.debug(shot_log_msg(params.shot_id, f"Updating SQL table: {df.shape}"))
+        params.database.add_shot_data(
+            shot_id=params.shot_id,
+            shot_data=df,
+            update=self.should_update,
+            override_columns=self.should_override_columns,
+        )
 
 
 # --8<-- [start:output_setting_dict]
