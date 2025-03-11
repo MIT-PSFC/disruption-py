@@ -178,46 +178,6 @@ class OutputSettingList(OutputSetting):
         return [s.get_results(params) for s in self.output_setting_list]
 
 
-class DataFrameOutputSetting(OutputSetting):
-    """
-    Outputs all shot data as a single DataFrame.
-    """
-
-    def __init__(self):
-        """Initialize DataFrameOutputSetting with an empty DataFrame."""
-        self.results: pd.DataFrame = pd.DataFrame()
-
-    def _output_shot(self, params: OutputSettingParams):
-        """
-        Output a single shot by concatenating the result to the DataFrame.
-
-        Parameters
-        ----------
-        params : OutputSettingParams
-            The parameters for outputting shot results.
-        """
-
-        self.results = safe_df_concat(
-            self.results, [dataset_to_dataframe(params.result)]
-        )
-
-    def get_results(self, params: CompleteOutputSettingParams):
-        """
-        Get the accumulated results.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
-
-        Returns
-        -------
-        pd.DataFrame
-            The combined DataFrame of results.
-        """
-        return self.results
-
-
 class DatasetOutputSetting(OutputSetting):
     """
     Outputs shot data as a xarray.Dataset.
@@ -272,6 +232,46 @@ class DatasetOutputSetting(OutputSetting):
             logger.debug(f"Saving dataset: {self.filepath}")
             ds.to_netcdf(self.filepath)
         return ds
+
+
+class DataFrameOutputSetting(OutputSetting):
+    """
+    Outputs all shot data as a single DataFrame.
+    """
+
+    def __init__(self):
+        """Initialize DataFrameOutputSetting with an empty DataFrame."""
+        self.results: pd.DataFrame = pd.DataFrame()
+
+    def _output_shot(self, params: OutputSettingParams):
+        """
+        Output a single shot by concatenating the result to the DataFrame.
+
+        Parameters
+        ----------
+        params : OutputSettingParams
+            The parameters for outputting shot results.
+        """
+
+        self.results = safe_df_concat(
+            self.results, [dataset_to_dataframe(params.result)]
+        )
+
+    def get_results(self, params: CompleteOutputSettingParams):
+        """
+        Get the accumulated results.
+
+        Parameters
+        ----------
+        params : CompleteOutputSettingParams
+            The parameters for output cleanup and result fetching.
+
+        Returns
+        -------
+        pd.DataFrame
+            The combined DataFrame of results.
+        """
+        return self.results
 
 
 class SQLOutputSetting(OutputSetting):
