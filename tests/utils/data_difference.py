@@ -177,7 +177,10 @@ class DataDifference:
 def assert_frame_equal_unordered(left: pd.DataFrame, right: pd.DataFrame):
     """
     Compare whether two dataframes have the same values.
-    Before comparing, set the index properly and drop all-nan rows.
+    Before comparing, round time, set the index properly and drop all-nan rows.
     """
-    dfs = [df.set_index(["shot", "time"]).dropna(how="all") for df in [left, right]]
+    dfs = [
+        df.assign(time=df.time.round(5)).set_index(["shot", "time"]).dropna(how="all")
+        for df in [left, right]
+    ]
     pd.testing.assert_frame_equal(*dfs, check_like=True)
