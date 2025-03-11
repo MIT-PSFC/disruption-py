@@ -17,7 +17,6 @@ import pandas as pd
 import xarray as xr
 from loguru import logger
 
-from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.misc import safe_df_concat, shot_log_msg
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
@@ -63,7 +62,6 @@ class CompleteOutputSettingParams:
 OutputSettingType = Union[
     "OutputSetting",
     str,
-    Dict[str, "OutputSettingType"],
     List["OutputSettingType"],
 ]
 
@@ -179,65 +177,6 @@ class OutputSettingList(OutputSetting):
             A list of results from each output setting.
         """
         return [s.get_results(params) for s in self.output_setting_list]
-
-
-class OutputSettingDict(OutputSetting):
-    """
-    Handles output settings based on a dictionary of tokamaks.
-    """
-
-    def __init__(self, output_setting_dict: Dict[Tokamak, OutputSettingType]):
-        """
-        Initialize OutputSettingDict with a dictionary of output settings.
-
-        Parameters
-        ----------
-        output_setting_dict : Dict[Tokamak, OutputSettingType]
-            A dictionary mapping tokamak instances to their respective output settings.
-        """
-        self.output_setting_dict = {
-            map_string_to_enum(tokamak, Tokamak): resolve_output_setting(setting)
-            for tokamak, setting in output_setting_dict.items()
-        }
-
-    def _output_shot(self, params: OutputSettingParams):
-        """
-        Output a single shot for the specified tokamak.
-
-        Parameters
-        ----------
-        params : OutputSettingParams
-            The parameters for outputting shot results.
-        """
-        chosen_setting = self.output_setting_dict.get(params.tokamak)
-        if chosen_setting is not None:
-            return chosen_setting.output_shot(params)
-        logger.warning(
-            "No output setting for tokamak {tokamak}", tokamak=params.tokamak
-        )
-        return None
-
-    def get_results(self, params: CompleteOutputSettingParams):
-        """
-        Get results from the output setting of the specified tokamak.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
-
-        Returns
-        -------
-        Any
-            The results from the output setting for the specified tokamak.
-        """
-        chosen_setting = self.output_setting_dict.get(params.tokamak, None)
-        if chosen_setting is not None:
-            return chosen_setting.get_results(params)
-        logger.warning(
-            "No output setting for tokamak {tokamak}", tokamak=params.tokamak
-        )
-        return None
 
 
 class DataFrameOutputSetting(OutputSetting):
@@ -609,9 +548,6 @@ def resolve_output_setting(output_setting: OutputSettingType) -> OutputSetting:
         for ext, output_setting_cls in _file_suffix_to_output_setting.items():
             if output_setting.lower().endswith(ext):
                 return output_setting_cls(output_setting)
-
-    if isinstance(output_setting, dict):
-        return OutputSettingDict(output_setting)
 
     if isinstance(output_setting, list):
         return OutputSettingList(output_setting)
