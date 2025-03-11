@@ -228,38 +228,20 @@ class DatasetOutputSetting(OutputSetting):
             The dataset of the concatenated results.
         """
         ds = xr.concat(self.datasets, dim="shot")
-        if self.filepath:
+        if self.filepath and not self.filepath.endswith(".csv"):
             logger.debug(f"Saving dataset: {self.filepath}")
             ds.to_netcdf(self.filepath)
         return ds
 
 
-class DataFrameOutputSetting(OutputSetting):
+class DataFrameOutputSetting(DatasetOutputSetting):
     """
-    Outputs all shot data as a single DataFrame.
+    Output shot data as a pandas.DataFrame.
     """
-
-    def __init__(self):
-        """Initialize DataFrameOutputSetting with an empty DataFrame."""
-        self.results: pd.DataFrame = pd.DataFrame()
-
-    def _output_shot(self, params: OutputSettingParams):
-        """
-        Output a single shot by concatenating the result to the DataFrame.
-
-        Parameters
-        ----------
-        params : OutputSettingParams
-            The parameters for outputting shot results.
-        """
-
-        self.results = safe_df_concat(
-            self.results, [dataset_to_dataframe(params.result)]
-        )
 
     def get_results(self, params: CompleteOutputSettingParams):
         """
-        Get the accumulated results.
+        Get the concatenated results.
 
         Parameters
         ----------
@@ -269,9 +251,14 @@ class DataFrameOutputSetting(OutputSetting):
         Returns
         -------
         pd.DataFrame
-            The combined DataFrame of results.
+            The dataframe of the concatenated results.
         """
-        return self.results
+        ds = super().get_results(params)
+        df = ds.to_dataframe().reset_index()
+        if self.filepath:
+            logger.debug(f"Saving dataframe: {self.filepath}")
+            df.to_csv(self.filepath, index=False)
+        return df
 
 
 class SQLOutputSetting(OutputSetting):
