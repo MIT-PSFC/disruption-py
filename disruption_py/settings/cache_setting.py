@@ -218,14 +218,15 @@ class CSVCacheSetting(DatasetCacheSetting):
 
 # --8<-- [start:cache_setting_dict]
 _cache_setting_mappings: Dict[str, CacheSetting] = {
-    "sql": SQLCacheSetting(),
+    "sql": SQLCacheSetting,
 }
 # --8<-- [end:cache_setting_dict]
 
 _file_suffix_to_cache_setting: Dict[str, Type[CacheSetting]] = {
+    ".cdf": DatasetCacheSetting,
+    ".csv": CSVCacheSetting,
     ".h5": DatasetCacheSetting,
     ".hdf5": DatasetCacheSetting,
-    ".csv": CSVCacheSetting,
     ".nc": DatasetCacheSetting,
 }
 
@@ -256,17 +257,14 @@ def resolve_cache_setting(
         return cache_setting
 
     if isinstance(cache_setting, str):
-        cache_setting_object = _cache_setting_mappings.get(cache_setting, None)
-        if cache_setting_object is not None:
-            return cache_setting_object
-
-        # assume that it is a file path
-        for (
-            suffix,
-            cache_setting_type,
-        ) in _file_suffix_to_cache_setting.items():
-            if cache_setting.endswith(suffix):
-                return cache_setting_type(cache_setting)
+        # shortcuts
+        cache_setting_cls = _cache_setting_mappings.get(cache_setting)
+        if cache_setting_cls:
+            return cache_setting_cls()
+        # extensions
+        for ext, cache_setting_cls in _file_suffix_to_cache_setting.items():
+            if cache_setting.lower().endswith(ext):
+                return cache_setting_cls(cache_setting)
 
     if isinstance(cache_setting, pd.DataFrame):
         return DFCacheSetting(cache_setting)
