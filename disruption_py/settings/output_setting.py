@@ -18,7 +18,7 @@ import xarray as xr
 from loguru import logger
 
 from disruption_py.core.utils.enums import map_string_to_enum
-from disruption_py.core.utils.misc import safe_df_concat
+from disruption_py.core.utils.misc import safe_df_concat, shot_log_msg
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
 
@@ -282,38 +282,41 @@ class DataFrameOutputSetting(OutputSetting):
 
 class DatasetOutputSetting(OutputSetting):
     """
-    Outputs shot data as an xarray Dataset and (optionally) save the Dataset to
-    a file.
+    Outputs shot data as a xarray.Dataset.
     """
 
     def __init__(self, filepath: str = None):
         """
-        Initialize DatasetOutputSetting with an empty list of Datasets.
+        Initialize DatasetOutputSetting with an empty list of datasets.
 
         Parameters
         ----------
         filepath : str, optional
-            The path to the file where the dataset will be saved (default is None
-            to only keep the data in memory). Accepted file extensions are .h5,
-            .hdf5, and .nc.
+            The path to the file where the dataset will be saved.
         """
         self.filepath = filepath
         self.datasets = []
 
     def _output_shot(self, params: OutputSettingParams):
         """
-        Output a single shot by concatenating the data in the Dataset.
+        Output a single shot dataset by appending its data to the list of results.
 
         Parameters
         ----------
         params : OutputSettingParams
             The parameters for outputting shot results.
         """
+        logger.trace(
+            shot_log_msg(
+                params.shot_id,
+                f"Appending dataset: {params.result.time.shape} time slices",
+            )
+        )
         self.datasets.append(params.result)
 
     def get_results(self, params: CompleteOutputSettingParams):
         """
-        Get the accumulated results.
+        Get the concatenated results.
 
         Parameters
         ----------
@@ -322,11 +325,12 @@ class DatasetOutputSetting(OutputSetting):
 
         Returns
         -------
-        Dict[int, xr.Dataset]
-            The dataset of results with dims shot and time.
+        xr.Dataset
+            The dataset of the concatenated results.
         """
         ds = xr.concat(self.datasets, dim="shot")
         if self.filepath:
+            logger.debug(f"Saving dataset: {self.filepath}")
             ds.to_netcdf(self.filepath)
         return ds
 
