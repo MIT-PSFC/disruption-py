@@ -1916,6 +1916,181 @@ class CmodPhysicsMethods:
         thermal_quench_time = time_tq * np.ones(len(params.times))
         return {"thermal_quench_time": thermal_quench_time}
     
+    # Old method
+    # @staticmethod
+    # @physics_method(columns=["thermal_quench_time_onset"], tokamak=Tokamak.CMOD)
+    # def get_thermal_quench_time_onset(params: PhysicsMethodParams):
+    #     """
+    #     Gets the onset of the fast thermal quench using SXR arrays using an off-line
+    #     algorithm. The thermal quench onset is found by examining the max SXR intensity
+    #     across all chords in the array for a given time slice, which should track the
+    #     core SXR emission in the case of a hot VDE. Iterating backwards from the current quench,
+    #     the TQ onset is labeled as the point in which the max(SXR) intensity rises above
+    #     a threshold determined by the pre-disruptive max(SXR) intensity for a minimum amount
+    #     of time (when iterating backwards in time), which should be robust to transient spikes
+    #     in the SXR signal during the thermal quench.
+    #     Note performance is better for 2012-2016, for which SXR chords have a 250kHz sampling rate,
+    #     compared to 2005 shots which have a 5 kHz sampling rate and tend to be noisier.
+    #     ----------
+    #     params: PhysicsMethodParams
+    #         The parameters storing the requested time base, shot id, etc
+    #     Returns
+    #     ----------
+    #     Output is an array with each element the thermal quench onset time, in s
+
+    #     Last Major Update: Henry Wietfeldt (1/31/25)
+    #     """
+    #     n_chords = 38
+    #     # For varying threshold while tuning
+    #     with open("tq_params.yaml", "r") as f:
+    #         tq_params = yaml.safe_load(f)
+    #     min_time_above_threshold = tq_params['min_time_above_threshold']
+    #     normalized_threshold = tq_params['normalized_threshold']
+    #     thermal_quench_time_onset = np.full(len(params.times), np.nan)
+    #     # Get magnetic axis data from EFIT for testing purposes
+    #     ip, magtime = params.mds_conn.get_data_with_dims(
+    #         r"\ip", tree_name="magnetics", astype="float64"
+    #     )
+    #     z0, efit_time = params.mds_conn.get_data_with_dims(
+    #         r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
+    #     )  # [cm], [s]
+    #     z0 *= 0.01 # [cm] -> [m]
+
+    #     # Get timebase of SXR array from first chord
+    #     if (params.shot_id > 1040000000 and params.shot_id < 1060000000):
+    #         # Array 3 is bad for chords 15, 21-38 during 2005 campaign
+    #         # so use array 1 (vertical array) for 2005 shots
+    #         array_path = r"\top.brightnesses.array_1"
+    #     else:
+    #         array_path = r"\top.brightnesses.array_3"
+    #     try:
+    #         chord_01, t_sxr = params.mds_conn.get_data_with_dims(
+    #             array_path + ":chord_01",
+    #             tree_name="xtomo",
+    #             astype="float64",
+    #         ) # Units: W/m^2, s
+    #     except mdsExceptions.MdsException:
+    #         print(params.shot_id)
+    #         params.logger.debug("Failed to get SXR " + array_path + " data")
+    #         return {"thermal_quench_time_onset": np.full(len(params.times), np.nan)}
+    #     valid_times = (t_sxr > 0) & (t_sxr < 2.)
+    #     t_sxr = t_sxr[valid_times]
+    #     sxr = np.zeros(shape=(n_chords, len(t_sxr)))
+    #     sxr[0] = chord_01[valid_times]
+    #     # Get all SXR chords
+    #     for i in range(1, n_chords):
+    #         try:
+    #             chord, t_chord = params.mds_conn.get_data_with_dims(
+    #                 array_path + ":chord_" + f"{i+1:02}",
+    #                 tree_name="xtomo",
+    #                 astype="float64",
+    #             )
+    #         except mdsExceptions.MdsException:
+    #             params.logger.debug("Failed to get SXR " + array_path + " chord " + str(i+1) + " data")
+    #             sxr[i] = 0.
+    #             continue
+    #         # Subtract constant background
+    #         chord = chord - np.mean(chord[t_chord < 0.])
+    #         # Occasionally the time bases of a chord are of a different length
+    #         # Usually one timebase is just cut off early after shot is over
+    #         valid_times = (t_chord > 0) & (t_chord < 2.)
+    #         # Goods chords should be of the same shape
+    #         if len(chord[valid_times]) == sxr.shape[1]:
+    #             sxr[i] = chord[valid_times]
+
+    #     # Discard chords dominated by noise using the chord's autocorrelation
+    #     # Only do this for 2005 shots because I've found those shots frequently
+    #     # have bad chords compared to 2012-2016 chords, for which window smoothing
+    #     # should do the trick. The autocorrelation method is pretty slow for 2012-2016
+    #     # chords, due to the 250 kHz sampling rate
+    #     sample_time = t_sxr[1] - t_sxr[0]
+    #     if (params.shot_id < 1060000000):
+    #         noise_autorr_cutoff = 0.01 # s, good chords should be 100's of ms
+    #         for i, chord in enumerate(sxr):
+    #             autocorr = np.correlate(chord, chord, mode='full')
+    #             autocorr = autocorr / np.max(autocorr)  # Normalize
+    #             #lags = np.arange(-len(chord) + 1, len(chord))
+    #             index_no_lag = np.argmax(autocorr)
+    #             index_decay = np.argmax(autocorr[index_no_lag:] < 0)
+    #             if (index_decay*sample_time < noise_autorr_cutoff):
+    #                 sxr[i] = 0.
+    #         cutoff = 0.5
+    #         normalized_cutoff = cutoff / 2.5
+    #         b, a = butter(6, normalized_cutoff, btype='low', analog=False)
+    #         sxr = filtfilt(b, a, sxr, axis=1)
+    #     else:
+    #         # Smooth noise for 2012-2016 shots bc taking max across chords amplifies noise
+    #         # 0.15 ms window is shorter than the typical TQ duration on C-Mod 
+    #         # but filters noise sufficiently
+    #         # smooth_width = int(0.000150 / sample_time) + 1
+    #         # sxr = median_filter(sxr, size=(1, smooth_width), mode='constant', cval=0.)
+    #         # Butterworth low pass filter
+    #         # Cutoff of 0.5 kHz and order 2 seems to filter recombination spikes
+    #         # for shots with large recomb spikes (see shot 1120913013)
+    #         cutoff = 0.5
+    #         normalized_cutoff = cutoff / 125.
+    #         b, a = butter(2, normalized_cutoff, btype='low', analog=False)
+    #         sxr = filtfilt(b, a, sxr, axis=1)
+    #     core_sxr = np.max(sxr, axis=0)
+    #     core_sxr_index = np.argmax(sxr, axis=0)
+
+    #     # Get pre-disruption SXR as mean of the core SXR emission between 20 ms
+    #     # and 3 ms before the current quench time, which seems to reasonably
+    #     # capture pre-disruption SXR levels
+    #     indx1 = np.argmax(t_sxr > params.disruption_time - 0.020)
+    #     indx2 = np.argmax(t_sxr > params.disruption_time - 0.003)
+    #     sxr_pre_disrupt = np.mean(core_sxr[indx1:indx2])
+
+    #     # Identify the TQ onset time by iterating backwards 
+    #     # from max (dI/dt) during current quench (params.disruption_time)
+    #     # Require that the max(SXR) signal be above a threshold for a minimum duration
+    #     # when iterating backwards to label as the TQ onset. Requiring a minimum
+    #     # duration avoids labeling transient spikes in the SXR signal due to recombination or 
+    #     # impurity accumulation during the TQ
+    #     i = np.argmax(t_sxr > params.disruption_time) - 1
+    #     time_above_threshold = 0
+    #     while (time_above_threshold < min_time_above_threshold) and (i > 0):
+    #         if (core_sxr[i] > normalized_threshold*sxr_pre_disrupt):
+    #             time_above_threshold = time_above_threshold + t_sxr[i+1] - t_sxr[i]
+    #         else:
+    #             time_above_threshold = 0
+    #         i -= 1
+    #     time_tq_onset = t_sxr[i] + time_above_threshold
+
+    #     # Plotting for testing
+    #     print("TQ Onset Time: " + str(time_tq_onset))
+    #     plt.rcParams['font.size'] = 16
+    #     fig, axs = plt.subplots(4, 1, sharex=True, figsize=(10,8))
+    #     axs[0].scatter(magtime, np.abs(ip)/1e6, marker='.', s=10, c='k')
+    #     axs[1].scatter(t_sxr, core_sxr, marker='.', s=5, c='k')
+    #     axs[2].scatter(t_sxr, np.gradient(core_sxr, t_sxr), marker='.', s=5, c='k')
+    #     axs[3].scatter(efit_time, z0, marker='o', s=10, c='k')
+    #     axs[1].axhline(normalized_threshold*sxr_pre_disrupt, linestyle='--', c='k', label='Thresh')
+    #     for ax in axs:
+    #         #ax.axvline(0.63004, linestyle='-', c='r', label='TQ (Man)')
+    #         ax.axvline(time_tq_onset, linestyle='--', c='r', label='TQ (Auto)')
+    #         ax.axvline(params.disruption_time, linestyle='--', c='b', label='CQ')
+    #     axs[0].set_title('C-Mod Shot: ' + str(params.shot_id))
+    #     axs[0].set_ylabel('Ip [MA]')
+    #     axs[1].set_ylabel('max(SXR) [$W/m^2$]')
+    #     axs[2].set_ylabel("Chord")
+    #     axs[3].set_ylabel('Z0 [m]')
+    #     axs[3].set_xlabel("Time [s]")
+    #     axs[1].legend(fontsize=12)
+
+    #     # 1. Identify minimum in dSXR/dt over window before CQ
+    #     # 2. For minimum, define drop as duration in which dSXR/dt < 0 around minima
+    #     # 3. Repeat 1-2 recursively over windows on either side of drop duration
+    #     # 4. Integrate drop in SXR for each drop. Must be > thresh
+    #     # 5. Identify Ip spike(s) dI/dt > thresh
+    #     # 6. TQs are SXR drops that feature dI/dt spike 
+
+
+    #     plt.show()
+    #     thermal_quench_time_onset = time_tq_onset * np.ones(len(params.times))
+    #     return {"thermal_quench_time_onset": thermal_quench_time_onset}
+
+    # New method
     @staticmethod
     @physics_method(columns=["thermal_quench_time_onset"], tokamak=Tokamak.CMOD)
     def get_thermal_quench_time_onset(params: PhysicsMethodParams):
@@ -1940,6 +2115,8 @@ class CmodPhysicsMethods:
         Last Major Update: Henry Wietfeldt (1/31/25)
         """
         n_chords = 38
+        butterworth_cutoff = 0.5
+        butterworth_order = 2
         # For varying threshold while tuning
         with open("tq_params.yaml", "r") as f:
             tq_params = yaml.safe_load(f)
@@ -1947,13 +2124,13 @@ class CmodPhysicsMethods:
         normalized_threshold = tq_params['normalized_threshold']
         thermal_quench_time_onset = np.full(len(params.times), np.nan)
         # Get magnetic axis data from EFIT for testing purposes
-        # ip, magtime = params.mds_conn.get_data_with_dims(
-        #     r"\ip", tree_name="magnetics", astype="float64"
-        # )
-        # z0, efit_time = params.mds_conn.get_data_with_dims(
-        #     r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
-        # )  # [cm], [s]
-        # z0 *= 0.01 # [cm] -> [m]
+        ip, magtime = params.mds_conn.get_data_with_dims(
+            r"\ip", tree_name="magnetics", astype="float64"
+        )
+        z0, efit_time = params.mds_conn.get_data_with_dims(
+            r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
+        )  # [cm], [s]
+        z0 *= 0.01 # [cm] -> [m]
 
         # Get timebase of SXR array from first chord
         if (params.shot_id > 1040000000 and params.shot_id < 1060000000):
@@ -2013,64 +2190,52 @@ class CmodPhysicsMethods:
                 index_decay = np.argmax(autocorr[index_no_lag:] < 0)
                 if (index_decay*sample_time < noise_autorr_cutoff):
                     sxr[i] = 0.
+            normalized_cutoff = butterworth_cutoff / 2.5
         else:
-            # Smooth noise for 2012-2016 shots bc taking max across chords amplifies noise
-            # 0.15 ms window is shorter than the typical TQ duration on C-Mod 
-            # but filters noise sufficiently
-            smooth_width = int(0.000150 / sample_time) + 1
-            sxr = median_filter(sxr, size=(1, smooth_width), mode='constant', cval=0.)
-            # Butterworth low pass filter
-            # cutoff = 0.5
-            # normalized_cutoff = cutoff / 125.
-            # b, a = butter(6, normalized_cutoff, btype='low', analog=False)
-            # sxr = filtfilt(b, a, sxr, axis=1)
+            normalized_cutoff = butterworth_cutoff / 125.
+        # Butterworth low pass filter
+        # Cutoff of 0.5 kHz and order 2 seems to filter recombination spikes
+        # for shots with large recomb spikes (see shot 1120913013)
+        b, a = butter(butterworth_order, normalized_cutoff, btype='low', analog=False)
+        sxr = filtfilt(b, a, sxr, axis=1)
         core_sxr = np.max(sxr, axis=0)
+        dcore_sxr_dt = np.gradient(core_sxr, t_sxr)
         core_sxr_index = np.argmax(sxr, axis=0)
 
-        # Get pre-disruption SXR as mean of the core SXR emission between 20 ms
-        # and 3 ms before the current quench time, which seems to reasonably
-        # capture pre-disruption SXR levels
-        indx1 = np.argmax(t_sxr > params.disruption_time - 0.020)
-        indx2 = np.argmax(t_sxr > params.disruption_time - 0.003)
-        sxr_pre_disrupt = np.mean(core_sxr[indx1:indx2])
-
-        # Identify the TQ onset time by iterating backwards 
-        # from max (dI/dt) during current quench (params.disruption_time)
-        # Require that the max(SXR) signal be above a threshold for a minimum duration
-        # when iterating backwards to label as the TQ onset. Requiring a minimum
-        # duration avoids labeling transient spikes in the SXR signal due to recombination or 
-        # impurity accumulation during the TQ
-        i = np.argmax(t_sxr > params.disruption_time) - 1
-        time_above_threshold = 0
-        while (time_above_threshold < min_time_above_threshold) and (i > 0):
-            if (core_sxr[i] > normalized_threshold*sxr_pre_disrupt):
-                time_above_threshold = time_above_threshold + t_sxr[i+1] - t_sxr[i]
-            else:
-                time_above_threshold = 0
-            i -= 1
-        time_tq_onset = t_sxr[i] + time_above_threshold
+        # Find minima of dSXR/dt in 20 ms window leading up to disruption
+        istart = np.argmax(t_sxr > params.disruption_time - 0.020)
+        iend = np.argmax(t_sxr > params.disruption_time)
+        imin = istart + np.argmin(dcore_sxr_dt[istart:iend])
 
         # Plotting for testing
-        # print("TQ Onset Time: " + str(time_tq_onset))
-        # fig, axs = plt.subplots(4, 1, sharex=True)
-        # axs[0].scatter(magtime, np.abs(ip)/1e6, marker='o')
-        # axs[1].scatter(t_sxr, core_sxr, marker='.', s=10)
-        # axs[2].scatter(t_sxr, core_sxr_index, marker='.', s=10)
-        # axs[3].scatter(efit_time, z0, marker='o', s=10)
-        # axs[1].axhline(sxr_pre_disrupt, linestyle='--')
-        # for ax in axs:
-        #     ax.axvline(time_tq_onset, linestyle='--', c='r', label='TQ Onset')
-        #     ax.axvline(params.disruption_time, linestyle='--', c='k', label='CQ')
-        # axs[0].set_title('C-Mod Shot: ' + str(params.shot_id))
-        # axs[0].set_ylabel('Ip [MA]')
-        # axs[1].set_ylabel('max(SXR) [W/m^2]')
-        # axs[3].set_ylabel('Z0 [m]')
-        # axs[3].set_xlabel("Time [s]")
-        # axs[1].legend()
+        plt.rcParams['font.size'] = 16
+        fig, axs = plt.subplots(4, 1, sharex=True, figsize=(10,8))
+        axs[0].scatter(magtime, np.abs(ip)/1e6, marker='.', s=10, c='k')
+        axs[1].scatter(t_sxr, core_sxr, marker='.', s=5, c='k')
+        axs[2].scatter(t_sxr, dcore_sxr_dt, marker='.', s=5, c='k')
+        axs[3].scatter(efit_time, z0, marker='o', s=10, c='k')
+        for ax in axs:
+            ax.axvline(params.disruption_time, linestyle='--', c='b', label='CQ')
+        axs[0].set_title('C-Mod Shot: ' + str(params.shot_id))
+        axs[0].set_ylabel('Ip [MA]')
+        axs[1].set_ylabel('max(SXR) [$W/m^2$]')
+        axs[2].set_ylabel("Chord")
+        axs[3].set_ylabel('Z0 [m]')
+        axs[3].set_xlabel("Time [s]")
+        axs[1].legend(fontsize=12)
 
-        # plt.show()
+        # 1. Identify minimum in dSXR/dt over window before CQ
+        # 2. For minimum, define drop as duration in which dSXR/dt < 0 around minima
+        # 3. Repeat 1-2 recursively over windows on either side of drop duration
+        # 4. Integrate drop in SXR for each drop. Must be > thresh
+        # 5. Identify Ip spike(s) dI/dt > thresh
+        # 6. TQs are SXR drops that feature dI/dt spike 
+
+
+        plt.show()
         thermal_quench_time_onset = time_tq_onset * np.ones(len(params.times))
         return {"thermal_quench_time_onset": thermal_quench_time_onset}
+
 
     @staticmethod
     @physics_method(columns=["beta_n"], tokamak=Tokamak.CMOD)
