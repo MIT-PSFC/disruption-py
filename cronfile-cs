@@ -1,0 +1,3 @@
+
+# run github actions
+30 8-16 * * 1-5	GITHUB_ACTIONS=true bash "$DISPY_DIR/repo/auto/pull.sh" dev &> /dev/null
