@@ -35,5 +35,9 @@ sha256sum -b "$TMPF".{old,new}
 diff --color=always "$TMPF".{old,new}
 
 # install
-# crontab "$TMPF.new"
-
+echo -en "\ninstall? y/[n] "
+read -r ANSWER
+if [[ "$ANSWER" = "y" ]]
+then
+   crontab "$TMPF.new"
+fi
