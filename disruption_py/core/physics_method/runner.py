@@ -148,7 +148,7 @@ def filter_methods_to_run(
         if should_run and not should_not_run:
             methods_to_run.append(bound_method_metadata)
         else:
-            physics_method_params.logger.debug(
+            physics_method_params.logger.trace(
                 "Skipping method: {name}", name=bound_method_metadata.name
             )
     return methods_to_run
@@ -250,20 +250,25 @@ def populate_shot(
     cached_method_metadata = []
     if physics_method_params.pre_filled_shot_data is not None:
         for method_metadata in all_bound_method_metadata:
-            cache_success = manually_cache(
+            physics_method_params.logger.trace(
+                "{action} cache for method: {name}",
+                action=(
+                    "Priming"
+                    if method_metadata in run_bound_method_metadata
+                    else "Skipping"
+                ),
+                name=method_metadata.name,
+            )
+            if method_metadata not in run_bound_method_metadata:
+                continue
+            if manually_cache(
                 physics_method_params=physics_method_params,
                 data=physics_method_params.pre_filled_shot_data,
                 method=method_metadata.bound_method,
                 method_name=method_metadata.name,
                 method_columns=method_metadata.columns,
-            )
-            if cache_success:
+            ):
                 cached_method_metadata.append(method_metadata)
-                if method_metadata in run_bound_method_metadata:
-                    physics_method_params.logger.verbose(
-                        "Cached method: {name}",
-                        name=method_metadata.name,
-                    )
 
     start_time = time.time()
     methods_data = []
