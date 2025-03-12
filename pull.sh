@@ -103,7 +103,7 @@ do
       # context
       if [[ "$GITHUB_ACTIONS" = "true" ]]
       then
-         STATUS="Tests / pytest ($DISPY_TOKAMAK)"
+         STATUS="Tests / pytest (${DISPY_TOKAMAK^^})"
       else
          STATUS="Deploy / $(echo "$HOSTNAME" | grep -o '^[a-z]*')"
       fi
