@@ -14,10 +14,19 @@ chmod go-rwx "$TMPD"
 crontab -l \
 > "$TMPF.old"
 
-# build
+# build global
 envsubst \
 < cronfile \
 > "$TMPF.new"
+
+# build local
+MYCRON="cronfile-$(echo "$HOSTNAME" | grep -o '^[a-z]*')"
+if [[ -s "$MYCRON" ]]
+then
+   envsubst \
+   < "$MYCRON" \
+   >> "$TMPF.new"
+fi
 
 # hashsums
 sha256sum -b "$TMPF".{old,new}
