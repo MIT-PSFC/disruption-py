@@ -33,6 +33,7 @@ sha256sum -b "$TMPF".{old,new}
 
 # compare
 diff --color=always "$TMPF".{old,new}
+diff -q "$TMPF".{old,new} && exit 0
 
 # install
 echo -en "\ninstall? y/[n] "
