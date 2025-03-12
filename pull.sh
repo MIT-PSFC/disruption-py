@@ -100,8 +100,15 @@ do
 
       TSTART=$SECONDS
 
+      # context
+      if [[ "$GITHUB_ACTIONS" = "true" ]]
+      then
+         STATUS="Tests / pytest ($DISPY_TOKAMAK)"
+      else
+         STATUS="Deploy / $(echo "$HOSTNAME" | grep -o '^[a-z]*')"
+      fi
+
       # read status
-      STATUS="Deploy / $(echo "$HOSTNAME" | grep -o '^[a-z]*')"
       STATE=
       if [[ -n "$SHA" ]] && [[ -s "$JSON" ]]
       then
