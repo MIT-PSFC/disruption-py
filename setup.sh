@@ -12,6 +12,7 @@ then
    export PATH=/usr/local/bin:/usr/sbin:/usr/bin:/usr/local/cmod/bin:/opt/thinlinc/bin
    export MDSPLUS_DIR=/usr/local/mdsplus
    export DISPY_DIR=/usr/local/mfe/disruptions/disruption-py
+   export DISPY_TOKAMAK=cmod
 
 elif [[ -d /fusion/projects/disruption_warning ]]
 then
@@ -20,6 +21,7 @@ then
    export PATH=/usr/bin:/usr/sbin
    export MDSPLUS_DIR=/fusion/usc/c8/opt/mdsplus/alpha/7.139.59
    export DISPY_DIR=/fusion/projects/disruption_warning/disruption-py
+   export DISPY_TOKAMAK=d3d
 
 elif [[ -d /project/disruption ]]
 then
@@ -32,6 +34,7 @@ then
    export MDSPLUS_LIB=$MDSPLUS_DIR/7.18-3/lib64
    export DISPY_DIR=/project/disruption
    export ODBCSYSINI=$DISPY_DIR
+   export DISPY_TOKAMAK=east
 
 else
 
