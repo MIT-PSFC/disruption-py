@@ -13,7 +13,6 @@ import pandas as pd
 import xarray as xr
 from loguru import logger
 
-from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.misc import shot_log_msg
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
@@ -67,9 +66,7 @@ class CacheSettingParams:
         )
 
 
-CacheSettingType = Union[
-    "CacheSetting", str, pd.DataFrame, Dict[Tokamak, "CacheSettingType"]
-]
+CacheSettingType = Union["CacheSetting", xr.Dataset, str]
 
 
 class CacheSetting(ABC):
@@ -106,47 +103,6 @@ class CacheSetting(ABC):
         """
 
 
-class CacheSettingDict(CacheSetting):
-    """
-    A class that resolves and manages cache settings for Tokamak instances.
-
-    This class takes a dictionary of cache settings and resolves them for easy access.
-
-    Attributes
-    ----------
-    resolved_cache_setting_dict : Dict[Tokamak, CacheSettingType]
-        A mapping of Tokamak instances to their resolved cache settings.
-
-    Parameters
-    ----------
-    cache_setting_dict : Dict[Tokamak, CacheSettingType]
-        A dictionary of initial cache settings for each Tokamak.
-
-    Methods
-    -------
-    _get_cache_data(params: CacheSettingParams) -> xr.Dataset
-        Retrieves cache data for the specified Tokamak.
-    """
-
-    def __init__(self, cache_setting_dict: Dict[Tokamak, CacheSettingType]):
-        resolved_cache_setting_dict = {
-            map_string_to_enum(tokamak, Tokamak): resolve_cache_setting(
-                individual_setting
-            )
-            for tokamak, individual_setting in cache_setting_dict.items()
-        }
-        self.resolved_cache_setting_dict = resolved_cache_setting_dict
-
-    def _get_cache_data(self, params: CacheSettingParams) -> xr.Dataset:
-        chosen_setting = self.resolved_cache_setting_dict.get(params.tokamak, None)
-        if chosen_setting is not None:
-            return chosen_setting.get_cache_data(params)
-        params.logger.warning(
-            "No cache setting for tokamak {tokamak}", tokamak=params.tokamak
-        )
-        return None
-
-
 class SQLCacheSetting(CacheSetting):
     """Cache setting for retrieving data from SQL database."""
 
@@ -180,42 +136,6 @@ class DatasetCacheSetting(CacheSetting):
         return self.cache_data
 
 
-class DFCacheSetting(CacheSetting):
-    """
-    Cache setting for retrieving data from a Pandas DataFrame.
-
-    Parameters
-    ----------
-    cache_data : pd.DataFrame
-        The DataFrame to use as the cached data.
-    """
-
-    def __init__(self, cache_data: pd.DataFrame):
-        self.cache_data = dataframe_to_dataset(cache_data)
-
-    def _get_cache_data(self, params: CacheSettingParams) -> pd.DataFrame:
-        return self.cache_data
-
-
-class CSVCacheSetting(DatasetCacheSetting):
-    """
-    Cache setting for retrieving data from a CSV file.
-
-    Parameters
-    ----------
-    cache_file : str
-        The path to the CSV file to use as the cached data.
-    """
-
-    def __init__(self, cache_file: str):
-        super().__init__(self._open_file(cache_file))
-
-    def _open_file(self, cache_file: str) -> xr.Dataset:
-        df = pd.read_csv(cache_file)
-        ds = dataframe_to_dataset(df)
-        return ds
-
-
 # --8<-- [start:cache_setting_dict]
 _cache_setting_mappings: Dict[str, CacheSetting] = {
     "sql": SQLCacheSetting,
@@ -224,7 +144,6 @@ _cache_setting_mappings: Dict[str, CacheSetting] = {
 
 _file_suffix_to_cache_setting: Dict[str, Type[CacheSetting]] = {
     ".cdf": DatasetCacheSetting,
-    ".csv": CSVCacheSetting,
     ".h5": DatasetCacheSetting,
     ".hdf5": DatasetCacheSetting,
     ".nc": DatasetCacheSetting,
@@ -266,13 +185,7 @@ def resolve_cache_setting(
             if cache_setting.lower().endswith(ext):
                 return cache_setting_cls(cache_setting)
 
-    if isinstance(cache_setting, pd.DataFrame):
-        return DFCacheSetting(cache_setting)
-
     if isinstance(cache_setting, xr.Dataset):
         return DatasetCacheSetting(cache_setting)
-
-    if isinstance(cache_setting, dict):
-        return CacheSettingDict(cache_setting)
 
     raise ValueError("Invalid cache setting")
