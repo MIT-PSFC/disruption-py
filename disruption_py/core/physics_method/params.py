@@ -8,7 +8,6 @@ from dataclasses import dataclass, field
 from typing import Any, Dict
 
 import numpy as np
-import pandas as pd
 import xarray as xr
 from loguru import logger
 
@@ -29,7 +28,7 @@ class PhysicsMethodParams:
     disruption_time: float
     mds_conn: MDSConnection
     times: np.ndarray
-    cache_data: pd.DataFrame
+    cache_data: xr.Dataset
     pre_filled_shot_data: xr.Dataset
     interpolation_method: Any  # Fix
     metadata: dict

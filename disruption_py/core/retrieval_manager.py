@@ -307,7 +307,7 @@ class RetrievalManager:
             logger.trace(shot_log_msg(shot_id, "No cache data available"))
             return None
 
-        if shot_id not in cache_data["shot"]:
+        if shot_id not in cache_data.shot:
             logger.trace(shot_log_msg(shot_id, "Shot not in cache data"))
             return None
 
