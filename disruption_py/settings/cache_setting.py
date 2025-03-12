@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
 """
-This module provides classes for managing and retrieving cached data from various
-sources, including SQL databases and Pandas DataFrames.
+This module provides classes for managing and retrieving cached data.
 """
 
 from abc import ABC, abstractmethod
@@ -46,7 +45,7 @@ class CacheSettingParams:
     Attributes
     ----------
     shot_id : int
-        Shot Id for which to get cached data. Defaults to logbook.
+        Shot Id for which to get cached data.
     database : ShotDatabase
         Database object to use for getting cached data.
         A different database connection is used by each thread/process.
@@ -89,7 +88,7 @@ class CacheSetting(ABC):
     def _get_cache_data(self, params: CacheSettingParams) -> xr.Dataset:
         """
         Abstract method implemented by subclasses to get cached data for a
-        given set of params as a Pandas dataframe.
+        given set of params as an xarray dataset.
 
         Parameters
         ----------
@@ -98,13 +97,15 @@ class CacheSetting(ABC):
 
         Returns
         -------
-        pd.DataFrame
-            Pandas dataframe containing cached data.
+        xr.Dataset
+            xarray dataset containing cached data.
         """
 
 
 class SQLCacheSetting(CacheSetting):
-    """Cache setting for retrieving data from SQL database."""
+    """
+    Cache setting for retrieving data from the SQL database.
+    """
 
     def _get_cache_data(self, params: CacheSettingParams) -> xr.Dataset:
         params.logger.info("retrieving sql data")
@@ -115,7 +116,7 @@ class SQLCacheSetting(CacheSetting):
 
 class DatasetCacheSetting(CacheSetting):
     """
-    Cache setting for retrieving data from a Dataset.
+    Cache setting for retrieving data from an xarray Dataset.
 
     Parameters
     ----------
@@ -153,7 +154,7 @@ _file_suffix_to_cache_setting: Dict[str, Type[CacheSetting]] = {
 # pylint: disable-next=too-many-return-statements
 def resolve_cache_setting(
     cache_setting: CacheSettingType,
-) -> CacheSetting:
+) -> CacheSetting | None:
     """
     Resolve the cache setting to a CacheSetting instance.
 
@@ -161,8 +162,7 @@ def resolve_cache_setting(
     ----------
     cache_setting : CacheSettingType
         The cache setting to resolve. This can be an instance of CacheSetting,
-        a string representing a cache setting type, a Pandas DataFrame, an xarray
-        Dataset, or a dictionary of cache settings.
+        a string representing a cache setting type, or an xarray Dataset.
 
     Returns
     -------
