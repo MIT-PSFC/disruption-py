@@ -58,7 +58,7 @@ do
 
    # reset
    {
-      git fetch origin HEAD
+      git fetch origin "$DISPY_BRANCH"
       git status
       git reset --hard "origin/$(git rev-parse --abbrev-ref HEAD)"
       git clean -ffdx
