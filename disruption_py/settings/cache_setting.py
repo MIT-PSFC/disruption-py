@@ -8,33 +8,12 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, Type, Union
 
-import pandas as pd
 import xarray as xr
 from loguru import logger
 
 from disruption_py.core.utils.misc import shot_log_msg
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
-
-
-def dataframe_to_dataset(df: pd.DataFrame) -> xr.Dataset:
-    """
-    Convert a Pandas DataFrame to xarray Dataset.
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        The DataFrame to convert.
-
-    Returns
-    -------
-    xr.Dataset
-        The converted Dataset.
-    """
-
-    df.drop_duplicates(subset=["shot", "time"], inplace=True)
-    ds = xr.Dataset.from_dataframe(df.set_index(["shot", "time"]))
-    return ds
 
 
 @dataclass
@@ -108,9 +87,20 @@ class SQLCacheSetting(CacheSetting):
     """
 
     def _get_cache_data(self, params: CacheSettingParams) -> xr.Dataset:
-        params.logger.info("retrieving sql data")
         df = params.database.get_shots_data(shotlist=[params.shot_id])
-        ds = dataframe_to_dataset(df)
+        old = df.shape[0]
+        params.logger.debug(
+            shot_log_msg(params.shot_id, f"Retrieved cache from SQL: {old} rows")
+        )
+        df.drop_duplicates(subset=["shot", "time"], inplace=True)
+        new = df.shape[0]
+        if new < old:
+            params.logger.debug(
+                shot_log_msg(
+                    params.shot_id, f"Pruned cache: {old-new} rows"
+                )
+            )
+        ds = xr.Dataset.from_dataframe(df.set_index(["shot", "time"]))
         return ds
 
 
