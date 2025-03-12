@@ -84,6 +84,10 @@ class CmodPhysicsMethods:
         """
         Calculate the time until disruption.
 
+        Currently, the disruption time is queried from the `DISRUPTIONS` table
+        in the SQL database of each machine. These disruption times were calculated
+        using Robert Granetz's routine.
+
         Parameters
         ----------
         params : PhysicsMethodParams
@@ -92,8 +96,14 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary with a single key "time_until_disrupt" containing a list
-            of time until disruption.
+            A dictionary with a single key `time_until_disrupt`.
+
+        References
+        -------
+        - original source: [get_t_disrupt.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/CMOD/matlab-core/get_t_disrupt.m)
+        - issues: #[223](https://github.com/MIT-PSFC/disruption-py/issues/223)
+
         """
         time_until_disrupt = [np.nan]
         if params.disrupted:
@@ -106,8 +116,8 @@ class CmodPhysicsMethods:
         Calculates actual and programmed current as well as their derivatives
         and difference.
 
-        The time derivatives are useful for discriminating between rampup, flattop,
-        and rampdown.
+        The time derivatives are useful for discriminating between the ramp up, flattop,
+        and ramp down phases.
 
         Parameters
         ----------
@@ -146,7 +156,6 @@ class CmodPhysicsMethods:
         Sources
         -------
         - matlab/cmod_matlab/matlab-core/get_Ip_parameters.m
-        - matlab/cmod_matlab/matlab-core/get_Ip_parameters.m
         """
         dip = np.gradient(ip, magtime)
         dip_smoothed = smooth(dip, 11)  # ,ends_type=0)
@@ -178,7 +187,11 @@ class CmodPhysicsMethods:
     )
     def get_ip_parameters(params: PhysicsMethodParams):
         """
-        Retrieve and interpolate Ip parameters.
+        Calculates actual and programmed current as well as their time derivatives
+        and difference.
+
+        The time derivatives are useful for discriminating between the ramp up, flattop,
+        and ramp down phases.
 
         Parameters
         ----------
@@ -189,7 +202,14 @@ class CmodPhysicsMethods:
         -------
         dict
             A dictionary containing the interpolated Ip parameters, including
-            "ip", "dip_dt", "dip_smoothed", "ip_prog", "dipprog_dt", and "ip_error".
+            `ip`, `dip_dt`, `dip_smoothed`, `ip_prog`, `dipprog_dt`, and `ip_error`.
+
+        References
+        -------
+        - original source: [get_Ip_parameters.m](https://github.com/MIT-PSFC/
+        disruption-py/blob/matlab/CMOD/matlab-core/get_Ip_parameters.m)
+        - pull requests: #[181](https://github.com/MIT-PSFC/disruption-py/pull/181)
+        - issues: #[175](https://github.com/MIT-PSFC/disruption-py/issues/175)
         """
         # Automatically generated
         active_segments = CmodPhysicsMethods._get_active_wire_segments(params=params)
@@ -300,7 +320,6 @@ class CmodPhysicsMethods:
         Sources
         -------
         - matlab/cmod_matlab/matlab-core/get_Z_parameters.m
-        - matlab/cmod_matlab/matlab-core/get_Z_parameters.m
 
         """
         divsafe_ip = np.where(ip != 0, ip, np.nan)
@@ -331,8 +350,12 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def get_z_parameters(params: PhysicsMethodParams):
-        """
-        Retrieve and interpolate plasma's vertical position parameters.
+        r"""
+        Get values of the programmed vertical position of the  plasma current
+        centroid $z_\text{prog}$ and the control error $z_\text{error}$ from
+        the plasma control system (PCS), then calculate the estimated current centroid
+        position $z_\text{cur} = z_\text{prog} + z_\text{error}$, the vertical velocity
+        $v_z = \frac{d}{dt}z_\text{cur}$, and the product $z_\text{cur} \cdot v_z$.
 
         Parameters
         ----------
@@ -342,8 +365,16 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the vertical position parameters, including "z_error", "z_prog",
-            "zcur", "v_z", and "z_times_v_z".
+            A dictionary containing the vertical position parameters, including `z_error`, `z_prog`,
+            `zcur`, `v_z`, and `z_times_v_z`.
+
+        References
+        -------
+        - original source: [get_Z_parameters.m](https://github.com/MIT-PSFC/
+        disruption-py/blob/matlab/CMOD/matlab-core/get_Z_parameters.m)
+        - pull requests: #[134](https://github.com/MIT-PSFC/disruption-py/pull/
+        134), #[136](https://github.com/MIT-PSFC/disruption-py/pull/136)
+        - issues: #[133](https://github.com/MIT-PSFC/disruption-py/issues/133)
         """
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
         z_prog = np.full(pcstime.shape, np.nan)
@@ -494,7 +525,8 @@ class CmodPhysicsMethods:
     )
     def get_ohmic_parameters(params: PhysicsMethodParams):
         """
-        Retrieve and calculate ohmic heating parameters.
+        Calculate the ohmic heating power from the loop voltage, inductive voltage, and
+        plasma current.
 
         Parameters
         ----------
@@ -504,8 +536,14 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the calculated ohmic parameters, including
-            "p_oh" and "v_loop".
+            A dictionary containing the loop voltage (`v_loop`) and the ohmic
+            heating power (`p_oh`).
+
+        References
+        -------
+        - original source: [get_P_ohm.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/CMOD/matlab-core/get_P_ohm.m)
+        - pull requests: #[367](https://github.com/MIT-PSFC/disruption-py/pull/367)
         """
         try:
             v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
@@ -548,6 +586,14 @@ class CmodPhysicsMethods:
         """
         Calculate the input and radiated powers, then calculate the
         radiated fraction and radiation confinement time.
+
+        NOTE: the timebase for the LH power signal does not extend over the full
+            time span of the discharge. Therefore, when interpolating the LH power
+            signal onto the "timebase" array, the LH signal has to be extrapolated
+            with zero values. This is an option in the 'interp1' routine. If the
+            extrapolation is not done, then the 'interp1' routine will assign NaN
+            (Not-a-Number) values for times outside the LH timebase, and the NaN's
+            will propagate into p_input and rad_fraction, which is not desirable.
 
         Parameters
         ----------
@@ -649,20 +695,45 @@ class CmodPhysicsMethods:
     )
     def get_power(params: PhysicsMethodParams):
         r"""
-        NOTE: the timebase for the LH power signal does not extend over the full
-            time span of the discharge. Therefore, when interpolating the LH power
-            signal onto the "timebase" array, the LH signal has to be extrapolated
-            with zero values. This is an option in the 'interp1' routine. If the
-            extrapolation is not done, then the 'interp1' routine will assign NaN
-            (Not-a-Number) values for times outside the LH timebase, and the NaN's
-            will propagate into p_input and rad_fraction, which is not desirable.
+        Get the lower hybrid heating, ion cyclotron resonant heating,
+        and the radiated powers, then calculate the total input power,
+        radiated fraction, and radiation confinement time.
 
-        LH, ICRF, & radiated power data sources:
-        - lh: \lh::top.results.netpow [kW]
-        - icrf: \rf::top.antenna.results.pwr_net_tot [MW]
-        - rad: \spectroscopy::top.bolometer.twopi_diode [kW]
+        The total input power, the radiated fractions, and the radiation
+        confinement time are defined as:
+        $$
+        p_\text{input} = p_\text{ohmic} + p_\text{lh} + p_\text{icrf}
+        $$
+        $$
+        f_\text{rad} = \frac{p_\text{rad}}{p_\text{input}}
+        $$
+        $$
+        \tau_\text{rad} = \frac{W_\text{mhd}}{p_\text{rad}}
+        $$
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the calculated power values, including
+            `p_rad`, `dprad_dt`, `p_lh`, `p_icrf`, `p_input`, `radiated_fraction`, and `tau_rad`.
+
+        References
+        -------
+        - original source: [get_power.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/CMOD/matlab-core/get_power.m)
+        - pull requests: #[62](https://github.com/MIT-PSFC/disruption-py/pull/62), #[367](https:
+        //github.com/MIT-PSFC/disruption-py/pull/367)
         """
-        # LH power, ICRF power, radiated power, and respective time bases
+        # Get LH power, ICRF power, radiated power, and respective time bases
+        # Data source of LH, ICRF, and radiated power:
+        # - p_lh: `\lh::top.results.netpow` [kW]
+        # - p_icrf: `\rf::top.antenna.results.pwr_net_tot` [MW]
+        # - p_rad: `\spectroscopy::top.bolometer.twopi_diode` [kW]
         values = ["lh", "icrf", "rad"]
         trees = ["lh", "rf", "spectroscopy"]
         nodes = [r"\top.results:netpow", r"\rf_power_net", r"\twopi_diode"]
@@ -716,9 +787,15 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
     def get_kappa_area(params: PhysicsMethodParams):
-        """
+        r"""
         Retrieve and calculate the plasma's ellipticity (kappa, also known as
-        the elongation) using its area and minor radius.
+        the elongation) using its area and minor radius. It is defined as:
+
+        $$
+        \kappa_{area} = \frac{A}{\pi a^2}
+        $$
+
+        where $A$ is the plasma cross-sectional area and $a$ is the minor radius.
 
         Parameters
         ----------
@@ -728,7 +805,12 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the calculated "kappa_area".
+            A dictionary containing the calculated `kappa_area`.
+
+        References:
+        -------
+        - original source: [get_kappa_area.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/CMOD/matlab-core/get_kappa_area.m)
         """
         aminor = params.mds_conn.get_data(
             r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
@@ -775,19 +857,36 @@ class CmodPhysicsMethods:
     )
     def get_n_equal_1_amplitude(params: PhysicsMethodParams):
         """
-        Calculate n=1 amplitude and phase.
+        Calculate *n*=1 amplitude and phase.
 
         This method uses the four BP13 Bp sensors near the midplane on the outboard
         vessel wall. The calculation is done by using a least squares fit to an
-        expansion in terms of n = 0 & 1 toroidal harmonics. The BP13 sensors are
+        expansion in terms of *n*=0 & 1 toroidal harmonics. The BP13 sensors are
         part of the set used for plasma control and equilibrium reconstruction,
         and their signals have been analog integrated (units: tesla), so they
         don't have to be numerically integrated. These four sensors were working
         well in 2014, 2015, and 2016. I looked at our locked mode MGI run on
         1150605, and the different applied A-coil phasings do indeed show up on
-        the n=1 signal.
+        the *n*=1 signal.
 
-        N=1 toroidal assymmetry in the magnetic fields
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the calculated n=1 mode amplitude (`n_equal_1_mode`)
+            and phase (`n_equal_1_phase`), the n=1 mode amplitude normalized to the toroidal
+            field strength (`n_equal_1_normalized`), and the toroidal field strength (`bt`).
+
+        References
+        -------
+        - original source: [get_n_equal_1_amplitude.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/CMOD/matlab-core/get_n_equal_1_amplitude.m)
+        - issues: #[211](https://github.com/MIT-PSFC/disruption-py/issues/211)
+
         """
         # These sensors are placed toroidally around the machine. Letters refer to
         # the 2 ports the sensors were placed between.
@@ -913,8 +1012,19 @@ class CmodPhysicsMethods:
         tokamak=Tokamak.CMOD,
     )
     def get_densities(params: PhysicsMethodParams):
-        """
-        Retrieve and calculate electron density and related parameters.
+        r"""
+        Calculate electron density, its time derivative, and the Greenwald fraction.
+
+        The Greenwald fraction is the ratio of the measured electron density $n_e$ and
+        the Greenwald density limit $n_G$ defined as [^1]:
+
+        $$
+        n_G = \frac{I_p}{\pi a^2}
+        $$
+
+        where $n_G$ is given in $10^{20} m^{-3}$ and $I_p$ is in MA.
+
+        [^1]: https://wiki.fusion.ciemat.es/wiki/Greenwald_limit
 
         Parameters
         ----------
@@ -926,6 +1036,11 @@ class CmodPhysicsMethods:
         dict
             A dictionary containing electron density (`n_e`), its gradient (`dn_dt`),
             and the Greenwald fraction (`greenwald_fraction`).
+
+        References
+        -------
+        - original source: [get_densities.m](https://github.com/MIT-PSFC/disruption-py/blob/
+        matlab/CMOD/matlab-core/get_densities.m)
         """
         # Line-integrated density
         n_e, t_n = params.mds_conn.get_data_with_dims(
@@ -984,6 +1099,11 @@ class CmodPhysicsMethods:
         -------
         dict
             A dictionary containing the EFC current (`i_efc`).
+
+        References
+        -------
+        - original source: [get_efc_current.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/CMOD/matlab-core/get_efc_current.m)
         """
         iefc, t_iefc = params.mds_conn.get_data_with_dims(
             r"\efc:u_bus_r_cur", tree_name="engineering"
@@ -1072,7 +1192,9 @@ class CmodPhysicsMethods:
     @physics_method(columns=["te_width"], tokamak=Tokamak.CMOD)
     def get_ts_parameters(params: PhysicsMethodParams):
         """
-        Retrieve Thomson scattering temperature width parameters.
+        Retrieve the electron temperature signals from the Thomson scattering (TS)
+        diagnostics, then calculate the half-width at half-maximum of the Gaussian
+        fit to the profile.
 
         Parameters
         ----------
@@ -1082,7 +1204,15 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the temperature width (`te_width`).
+            A dictionary containing the electron temperature profile width (`te_width`).
+
+        References
+        -------
+        - original source: [get_TS_data_cmod.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/CMOD/matlab-core/get_TS_data_cmod.m)
+        - pull requests: #[107](https://github.com/MIT-PSFC/disruption-py/
+        pull/107), #[402](https://github.com/MIT-PSFC/disruption-py/pull/402)
+        - issues: #[383](https://github.com/MIT-PSFC/disruption-py/issues/383)
         """
         # TODO: Gaussian vs parabolic fit for te profile
 
@@ -1220,7 +1350,11 @@ class CmodPhysicsMethods:
     def get_peaking_factors(params: PhysicsMethodParams):
         """
         Calculate peaking factors for electron density, electron temperature, and
-        pressure.
+        pressure from Thomson Scattering measurements
+
+        Because the TS chords have uneven spacings, measurements are first interpolated
+        to an array of equally spaced vertical positions and then used to calculate
+        the peaking factors.
 
         Parameters
         ----------
@@ -1232,10 +1366,19 @@ class CmodPhysicsMethods:
         dict
             A dictionary containing peaking factors for electron density (`ne_peaking`),
             temperature (`te_peaking`), and pressure (`pressure_peaking`).
+
+        References
+        -------
+        - original source: [get_peaking_factor_cmod.m](https://github.com/MIT-PSFC/
+        disruption-py/blob/matlab/CMOD/matlab-core/get_peaking_factor_cmod.m)
+        - pull requests: #[216](https://github.com/MIT-PSFC/disruption-py/
+        pull/216), #[225](https://github.com/MIT-PSFC/disruption-py/pull/
+        225), #[268](https://github.com/MIT-PSFC/disruption-py/pull/268)
+        - issues: #[210](https://github.com/MIT-PSFC/disruption-py/issues/210)
         """
         use_ts_tci_calibration = False
         # Ignore shots on the blacklist
-        if CmodPhysicsMethods.is_on_blacklist(params.shot_id):
+        if CmodPhysicsMethods._is_on_blacklist(params.shot_id):
             raise CalculationError("Shot is on blacklist")
         # Fetch data
         # Get EFIT geometry data
@@ -1415,7 +1558,7 @@ class CmodPhysicsMethods:
 
         Returns
         -------
-        Dictionary of ne_peaking, Te_peaking, and pressure_peaking
+        Dictionary of te_core_vs_avg_ece, te_edge_vs_avg_ece, and te_width_ece.
 
         Sources:
         - https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/
@@ -1582,17 +1725,45 @@ class CmodPhysicsMethods:
     )
     def get_te_profile_params_ece(params: PhysicsMethodParams):
         """
-        Gets MDSplus data to be used in the calculations of te profile parameters
-        from ECE data
+        Calculates $T_e$ peaking factor and width from the electron cyclotron emission (ECE)
+        data using the two GPC diagnostic systems.
+
+        GPC diagnostics look at the mid-plane, and each channel detects a different
+        emitted frequency associated with the second harmonic, which depends on the toroidal
+        magnetic field ($B_t$) and therefore the plasma major radius ($R$).
+
+        - `te_width_ece` is the half-width at half-max of a Gaussian fit of the Te profile
+        - `te_core_vs_avg_ece` is defined as mean(core)/mean(all) where core bins are defined
+          as those with $|R - R_0| < 0.2 a$ of the magnetic axis.
+        - `te_edge_vs_avg_ece` is defined as `mean(edge)/mean(all)` where edge bins are defined as
+          those with $0.8 a < |R - R_0| < a$
+
+        For core and edge vs. average calculations, different shots can have different
+        radial sampling, and during a few experiments on C-Mod, $B_t$ was changed during
+        the shot, changing the radial sampling. Different radial samplings can have
+        different proportions of core to edge sampling, which affects the mean $T_e$ over
+        the whole profile, biasing the core vs average and edge vs average statistics.
+        Therefore, we use a uniformly sampled radial basis from $R_0$ to $R_0+a$. We use many
+        interpolated radial points to minimize artifacts caused by a point moving
+        across the arbitrary core or edge boundary.
+
         Parameters
         ----------
-        params: PhysicsMethodParams
-            The parameters storing the requested time base, shot id, etc
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
         Returns
         ----------
-        Output of get_te_profile_params_ece(), which processes the MDSplus data
+        dict
+            A dictionary containing the $T_e$ width (`te_width_ece`), the core-vs-average
+            (`te_core_vs_avg_ece`), and the edge-vs-average peak factors (`te_edge_vs_avg_ece`)
+            from the ECE data.
 
-        Last Major Update: Henry Wietfeldt (8/28/24)
+        References
+        -------
+        - referenced sources: [get_ECE_data_cmod.m](https://github.com/MIT-PSFC/
+        disruption-py/blob/matlab/CMOD/matlab-core/get_ECE_data_cmod.m)
+        - pull requests: #[260](https://github.com/MIT-PSFC/disruption-py/pull/260)
         """
 
         # Constants
@@ -1695,6 +1866,17 @@ class CmodPhysicsMethods:
         -------
         dict
             A dictionary containing the peaking factor for radiated power (`prad_peaking`).
+
+        References
+        -------
+        - original source: [get_Prad_peaking.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/CMOD/matlab-core/get_Prad_peaking.m)
+        - pull requests: #[200](https://github.com/MIT-PSFC/disruption-py/
+        pull/200), #[227](https://github.com/MIT-PSFC/disruption-py/pull/227)
+        - issues: #[92](https://github.com/MIT-PSFC/disruption-py/issues/
+        92), #[192](https://github.com/MIT-PSFC/disruption-py/
+        issues/192), #[206](https://github.com/MIT-PSFC/disruption-py/issues/206)
+
         """
         prad_peaking = np.full(len(params.times), np.nan)
         nan_output = {"prad_peaking": prad_peaking}
@@ -1795,7 +1977,7 @@ class CmodPhysicsMethods:
     @physics_method(columns=["sxr"], tokamak=Tokamak.CMOD)
     def get_sxr_data(params: PhysicsMethodParams):
         """
-        Retrieve soft X-ray (SXR) data from array 1 chord 16 for a given shot.
+        Retrieve the central soft X-ray (SXR) signal (*array 1 chord 16*) for a given shot.
 
         Parameters
         ----------
@@ -1806,6 +1988,12 @@ class CmodPhysicsMethods:
         -------
         dict
             A dictionary containing the soft X-ray data (`sxr`).
+
+        References
+        -------
+        - original source: [get_sxr_data.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/CMOD/matlab-core/get_sxr_data.m)
+
         """
         sxr, t_sxr = params.mds_conn.get_data_with_dims(
             r"\top.brightnesses.array_1:chord_16",
@@ -1817,30 +2005,32 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(columns=["beta_n"], tokamak=Tokamak.CMOD)
     def get_beta_normalized(params: PhysicsMethodParams):
-        """
-        Calculate the normalized beta, $\\beta_N$, also known as the Troyon factor:
+        r"""
+        Calculate the normalized beta, $\beta_N$, also known as the Troyon factor:
         $$
-        \\beta_N = \\beta_\\text{tot} \\frac{a B_T}{I_p}.
+        \beta_N = \beta_\text{tot} \frac{a B_t}{I_p}
         $$
 
-        Where $I_p$ is in MA, and the total plasma beta $\\beta$ is defined as
+        Where $I_p$ is in MA, and the total plasma beta $\beta$ is defined as: [^1]
         $$
-        \\beta_\\text{tot} = \\frac{p}{B^2/2\\mu_0}.
+        \beta_\text{tot} = \frac{p}{B^2/2\mu_0}
         $$
 
         Since the total beta is dominated by the toroidal beta,
         $$
-        \\frac{1}{\\beta_\\text{tot}} = \\frac{1}{\\beta_\\text{tor}} +
-        \\frac{1}{\\beta_\\text{pol}},
+        \frac{1}{\beta_\text{tot}} = \frac{1}{\beta_\text{tor}} +
+        \frac{1}{\beta_\text{pol}}
         $$
 
-        we can approximate $\\beta_N$ using $\\beta_\\text{tor}$. This definition
+        we can approximate $\beta_N$ using $\beta_\text{tor}$. This definition
         is consistent with that of `EFIT_AEQDSK:BETAN` which isn't available for
         pre-2000 shots.
 
         To make the input data consistent with `EFIT_AEQDSK:BETAN`, we use
         `CPASMA` and `BTAXP` from `EFIT_AEQDSK` instead of `IP` and `BTOR` from
-        `MAGNETICS` for $I_p$ and $B_T$.
+        `MAGNETICS` for $I_p$ and $B_t$.
+
+        [^1]: http://wiki.fusenet.eu/fusionwiki/index.php/Beta
 
         Parameters
         ----------
@@ -1850,13 +2040,12 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the beta_n data given in percentage.
+            A dictionary containing the `beta_n` data given in percentage.
 
         References
         ----------
-        - http://wiki.fusenet.eu/fusionwiki/index.php/Beta
+        - pull request: #[343](https://github.com/MIT-PSFC/disruption-py/pull/343)
 
-        Last major update by William Wei on 11/6/24
         """
         # Get signals from EFIT tree
         beta_t, efittime = params.mds_conn.get_data_with_dims(
@@ -1885,10 +2074,10 @@ class CmodPhysicsMethods:
     @staticmethod
     @physics_method(columns=["v_surf"], tokamak=Tokamak.CMOD)
     def get_surface_voltage(params: PhysicsMethodParams):
-        """
+        r"""
         Calculate the plasma surface voltage defined as
         $$
-        v_\\text{surf} = -2 \\pi \\frac{d\\phi}{dt},
+        v_\text{surf} = -2 \pi \frac{d\phi}{dt}
         $$
 
         Note that there is a `VSURFA` node in the `EFIT` tree, however the stored
@@ -1902,9 +2091,21 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the $v_\\text{surf}$ data.
+            A dictionary containing the surface voltage (`v_surf`) data.
 
-        Last major update by William Wei on 12/3/24
+        References
+        -------
+        - pull requests: #[23](https://github.com/MIT-PSFC/disruption-py/
+        pull/23), #[344](https://github.com/MIT-PSFC/disruption-py/pull/344), #[345](https://
+        github.com/MIT-PSFC/disruption-py/pull/345), #[356](https://github.com/MIT-PSFC/
+        disruption-py/pull/356)
+        - issues: #[25](https://github.com/MIT-PSFC/disruption-py/issues/25), #[29](https://
+        github.com/MIT-PSFC/disruption-py/issues/29)
+
+        Notes
+        -------
+        The CMOD EFIT tree does have a `VSURFA` node, but the stored values
+        are zeros for every shot.
         """
         # Get signals from EFIT tree
         sibdry, efit_time = params.mds_conn.get_data_with_dims(
@@ -1918,7 +2119,7 @@ class CmodPhysicsMethods:
         return {"v_surf": v_surf}
 
     @staticmethod
-    def is_on_blacklist(shot_id: int) -> bool:
+    def _is_on_blacklist(shot_id: int) -> bool:
         """
         TODO why will these shots cause `_get_peaking_factors`,
         `_get_peaking_factors_no_tci`, and `_get_edge_parameters` to fail?
