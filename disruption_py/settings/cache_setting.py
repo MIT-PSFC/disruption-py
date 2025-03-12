@@ -96,9 +96,7 @@ class SQLCacheSetting(CacheSetting):
         new = df.shape[0]
         if new < old:
             params.logger.debug(
-                shot_log_msg(
-                    params.shot_id, f"Pruned cache: {old-new} rows"
-                )
+                shot_log_msg(params.shot_id, f"Pruned cache: {old-new} rows")
             )
         ds = xr.Dataset.from_dataframe(df.set_index(["shot", "time"]))
         return ds

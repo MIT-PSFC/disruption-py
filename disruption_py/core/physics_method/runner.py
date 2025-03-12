@@ -245,9 +245,9 @@ def populate_shot(
         all_bound_method_metadata, retrieval_settings, physics_method_params
     )
 
-    # Manually cache data that has already been retrieved (likely from SQL tables)
-    # Methods added to pre_cached_method_names will be skipped by method optimizer
+    # Manually cache data that has already been retrieved
     cached_method_metadata = []
+    cached_method_results = []
     if physics_method_params.pre_filled_shot_data is not None:
         for method_metadata in all_bound_method_metadata:
             physics_method_params.logger.trace(
@@ -269,6 +269,9 @@ def populate_shot(
                 method_columns=method_metadata.columns,
             ):
                 cached_method_metadata.append(method_metadata)
+                cached_method_results.append(
+                    physics_method_params.pre_filled_shot_data[method_metadata.columns]
+                )
 
     start_time = time.time()
     methods_data = []
@@ -310,8 +313,8 @@ def populate_shot(
         ###############################################
         methods_data.append(method_result)
 
-    if physics_method_params.pre_filled_shot_data:
-        methods_data += [physics_method_params.pre_filled_shot_data]
+    if cached_method_results:
+        methods_data += cached_method_results
     shot_data = xr.merge(methods_data)
 
     num_parameters = len(shot_data.data_vars)
