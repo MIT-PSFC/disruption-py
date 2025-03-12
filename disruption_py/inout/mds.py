@@ -11,7 +11,7 @@ import numpy as np
 from loguru import logger
 
 from disruption_py.config import config
-from disruption_py.core.utils.misc import safe_cast
+from disruption_py.core.utils.misc import safe_cast, shot_log_msg
 from disruption_py.core.utils.shared_instance import SharedInstance
 from disruption_py.machine.tokamak import Tokamak
 
@@ -118,7 +118,7 @@ class MDSConnection:
             tree_name = self.tree_nicknames[tree_name]
 
         if self.last_open_tree != tree_name:
-            logger.trace("Opening tree: {tree_name}", tree_name=tree_name)
+            logger.trace(shot_log_msg(self.shot_id, f"Opening tree: {tree_name}"))
             self.conn.openTree(tree_name, self.shot_id)
 
         self.last_open_tree = tree_name
@@ -192,7 +192,7 @@ class MDSConnection:
         if tree_name is not None:
             self.open_tree(tree_name)
 
-        logger.trace("Getting data: {path}", path=path)
+        logger.trace(shot_log_msg(self.shot_id, f"Getting data: {path}"))
         data = self.conn.get("_sig=" + path, arguments).data()
         if astype:
             data = safe_cast(data, astype)
