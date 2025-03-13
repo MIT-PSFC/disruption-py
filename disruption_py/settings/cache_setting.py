@@ -139,7 +139,6 @@ _file_suffix_to_cache_setting: Dict[str, Type[CacheSetting]] = {
 }
 
 
-# pylint: disable-next=too-many-return-statements
 def resolve_cache_setting(
     cache_setting: CacheSettingType,
 ) -> CacheSetting | None:

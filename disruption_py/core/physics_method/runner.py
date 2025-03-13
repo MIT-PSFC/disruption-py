@@ -107,10 +107,7 @@ def filter_methods_to_run(
         A list of bound method metadata instances that are eligible to run.
     """
     methods = retrieval_settings.run_methods
-    if retrieval_settings.run_columns is not None:
-        columns = retrieval_settings.run_columns
-    else:
-        columns = None
+    columns = retrieval_settings.run_columns
     only_excluded_methods_specified = all("~" in method for method in methods or [])
     methods_to_run = []
     for bound_method_metadata in all_bound_method_metadata:
@@ -134,15 +131,15 @@ def filter_methods_to_run(
             only_excluded_methods_specified
             and not columns
             and methods
-            and (("~" + bound_method_metadata.name) not in methods)
+            and (f"~{bound_method_metadata.name}" not in methods)
         )
         should_run = (
             both_none or method_specified or column_speficied or is_not_excluded
         )
 
-        # reasons that methods should be exluded from should run
+        # reasons that methods should be excluded from should run
         should_not_run = (
-            methods is not None and ("~" + bound_method_metadata.name) in methods
+            methods is not None and f"~{bound_method_metadata.name}" in methods
         )
 
         if should_run and not should_not_run:
@@ -177,7 +174,6 @@ def populate_method(
     name = bound_method_metadata.name
 
     physics_method_params.logger.trace("Starting method: {name}", name=name)
-    result = None
 
     try:
         result = method(params=physics_method_params)
