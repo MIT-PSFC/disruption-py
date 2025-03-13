@@ -29,10 +29,13 @@ def main():
         vals = [13245, 8055, 5190, 24219]
     elif tokamak is Tokamak.CMOD:
         vals = [10435, 6640, 3795, 13785]
+    elif tokamak is Tokamak.EAST:
+        vals = [18568, 9875, 8693, 30482]
     else:
         raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 
     print(f"Initialized DB: {db.user}@{db.host}/{db.db_name}")
+    print("Version:", db.get_version())
 
     while queries:
 

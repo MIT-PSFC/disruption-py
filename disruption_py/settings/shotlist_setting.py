@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Handles retrieving shotlists from various sources including lists, files, and SQL 
+Handles retrieving shotlists from various sources including lists, files, and SQL
 databases.
 """
 

@@ -17,17 +17,20 @@ on:
 jobs:
 
 
-  black:
+  lint:
     runs-on: ubuntu-22.04
     if: |
       github.event_name == 'push' ||
       github.event.pull_request.draft == false
+    strategy:
+      matrix:
+        tool: [black, pylint, ruff, toml-sort, yamllint]
+    name: ${{ matrix.tool }}
     steps:
-
       - uses: actions/checkout@v4
 
       - name: Install poetry
-        run: pipx install 'poetry<2.0.0'
+        run: pipx install poetry
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -38,58 +41,8 @@ jobs:
       - name: Install requirements
         run: make install-all
 
-      - name: Run black
-        run: make black
-
-
-  pylint:
-    runs-on: ubuntu-22.04
-    if: |
-      github.event_name == 'push' ||
-      github.event.pull_request.draft == false
-    steps:
-
-      - uses: actions/checkout@v4
-
-      - name: Install poetry
-        run: pipx install 'poetry<2.0.0'
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: 'pyproject.toml'
-          cache: 'poetry'
-
-      - name: Install requirements
-        run: make install-all
-
-      - name: Run pylint
-        run: make pylint
-
-
-  ruff:
-    runs-on: ubuntu-22.04
-    if: |
-      github.event_name == 'push' ||
-      github.event.pull_request.draft == false
-    steps:
-
-      - uses: actions/checkout@v4
-
-      - name: Install poetry
-        run: pipx install 'poetry<2.0.0'
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: 'pyproject.toml'
-          cache: 'poetry'
-
-      - name: Install requirements
-        run: make install-all
-
-      - name: Run ruff
-        run: make ruff
+      - name: Run ${{ matrix.tool }}
+        run: make ${{ matrix.tool }}
 
 
   shellcheck:
@@ -106,28 +59,3 @@ jobs:
 
       - name: Run shellcheck
         run: make shellcheck
-
-
-  yamllint:
-    runs-on: ubuntu-22.04
-    if: |
-      github.event_name == 'push' ||
-      github.event.pull_request.draft == false
-    steps:
-
-      - uses: actions/checkout@v4
-
-      - name: Install poetry
-        run: pipx install 'poetry<2.0.0'
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: 'pyproject.toml'
-          cache: 'poetry'
-
-      - name: Install requirements
-        run: make install-all
-
-      - name: Run yamllint
-        run: make yamllint

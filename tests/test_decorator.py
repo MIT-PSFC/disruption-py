@@ -34,7 +34,6 @@ def test_tokamak_parameter(shotlist, tok):
         return {col_name: np.ones(shape=len(params.times))}
 
     retrieval_settings = RetrievalSettings(
-        run_tags=[],
         run_columns=[col_name],
         only_requested_columns=True,
         custom_physics_methods=[my_physics_method],

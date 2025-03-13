@@ -50,8 +50,18 @@ class ShotDatabase:
         )
         drivers = pyodbc.drivers()
         if driver in drivers:
+            # exact driver
             self.driver = driver
+        elif any(d.startswith(driver) for d in drivers):
+            # fuzzy driver
+            self.driver = next(d for d in drivers if d.startswith(driver))
+            logger.info(
+                "Database driver fallback: '{driver}' -> '{class_driver}'",
+                driver=driver,
+                class_driver=self.driver,
+            )
         else:
+            # first driver
             self.driver = drivers[0]
             logger.warning(
                 "Database driver fallback: '{driver}' -> '{class_driver}'",
@@ -66,11 +76,12 @@ class ShotDatabase:
         self.protected_columns = protected_columns
         self.write_database_table_name = write_database_table_name
 
+        self.dialect = "mysql" if "mysql" in self.driver.lower() else "mssql"
         self.connection_string = self._get_connection_string(self.db_name)
         self._thread_connections = {}
         quoted_connection_string = quote_plus(self.connection_string)
         self.engine = create_engine(
-            f"mssql+pyodbc:///?odbc_connect={quoted_connection_string}"
+            f"{self.dialect}+pyodbc:///?odbc_connect={quoted_connection_string}"
         )
 
     @classmethod
@@ -116,7 +127,7 @@ class ShotDatabase:
             "TrustServerCertificate": "yes",
             "Connection Timeout": 60,
         }
-        if "ODBC" in self.driver:
+        if self.driver.lower().startswith("odbc"):
             params["SERVER"] += f",{params.pop('PORT')}"
         conn_str = ";".join([f"{k}={v}" for k, v in params.items()])
         return conn_str
@@ -178,6 +189,15 @@ class ShotDatabase:
             logger.opt(exception=True).debug(e)
         curs.close()
         return output
+
+    def get_version(self):
+        """
+        Query the version of the SQL database.
+        """
+        mysql = "mysql" in self.driver.lower()
+        query = "select " + ("version()" if mysql else "@@version")
+        version = self.query(query, use_pandas=False)
+        return version[0][0]
 
     def add_shot_data(
         self,
@@ -330,6 +350,7 @@ class ShotDatabase:
                 update_columns_shot_data[column_name] = shot_data[column_name]
         # pyodbc will fill SQL with NULL for None, but not for np.nan
         update_columns_shot_data = update_columns_shot_data.replace({np.nan: None})
+        ko_rows = 0
         with self.conn.cursor() as curs:
             for index, row in enumerate(
                 update_columns_shot_data.itertuples(index=False, name=None)
@@ -340,48 +361,58 @@ class ShotDatabase:
                 )
                 sql_command = (
                     f"UPDATE {table_name} SET {sql_set_string} "
-                    + "WHERE time = ? AND shot = ?;"
+                    + "WHERE time BETWEEN ? AND ? AND shot = ?;"
                 )
-                curs.execute(sql_command, row + (curr_df["time"][index], str(shot_id)))
+                t = curr_df["time"][index] + np.array([-0.5, 0.5]) * config().time_const
+                curs.execute(sql_command, row + (*t, str(shot_id)))
+                ko_rows += curs.rowcount == 0
+        if ko_rows:
+            logger.error(shot_log_msg(shot_id, f"Could not update {ko_rows} rows."))
         return True
 
     def _get_identity_column_names(self, table_name: str):
         """Get which column names are identity columns in table."""
+        queries = {
+            "mssql": """
+                     SELECT
+                       c.name AS ColumnName
+                     FROM
+                       sys.columns c
+                       INNER JOIN sys.tables t ON c.object_id = t.object_id
+                       LEFT JOIN sys.identity_columns ic ON ic.object_id = c.object_id
+                       AND ic.column_id = c.column_id
+                     WHERE
+                       t.name = '{table_name}'
+                       AND ic.object_id IS NOT NULL
+                     """,
+            "mysql": """
+                     SELECT
+                       COLUMN_NAME AS ColumnName
+                     FROM
+                       INFORMATION_SCHEMA.COLUMNS
+                     WHERE
+                       TABLE_NAME = '{table_name}'
+                       AND EXTRA LIKE '%auto_increment%';
+                     """,
+        }
         with self.conn.cursor() as curs:
-            query = f"""\
-            SELECT c.name AS ColumnName 
-            FROM sys.columns c
-            INNER JOIN sys.tables t ON c.object_id = t.object_id
-            LEFT JOIN sys.identity_columns ic ON ic.object_id = c.object_id AND ic.column_id = c.column_id
-            WHERE t.name = '{table_name}' AND ic.object_id IS NOT NULL
-            """
+            query = queries[self.dialect].format(table_name=table_name)
+            logger.trace("Executing query: {query}", query=query)
             curs.execute(query)
             return [row[0] for row in curs.fetchall()]
 
-    def remove_shot_data(self, shot_id):
-        """Remove shot from SQL table."""
-        if self.write_database_table_name is None:
-            raise ValueError(
-                "specify write_database_table_name in the configuration before "
-                + "adding shot data"
-            )
-        if self.write_database_table_name == "disruption_warning":
-            raise ValueError(
-                "Please do not delete from the disruption_warning database"
-            )
-        data_df = pd.read_sql_query(
-            f"""select * from {self.write_database_table_name} where shot = """
-            + f"""{shot_id} order by time""",
-            self.engine,
-        )
-        if len(data_df) == 0:
-            logger.warning(shot_log_msg(shot_id, "shot does not exist in database"))
-            return False
+    def remove_shot_data(self, shotlist: List[int]):
+        """Remove shot data from the test SQL table."""
+        table_name = self.write_database_table_name
+        if not table_name.endswith("_test"):
+            raise ValueError("Deletion is restricted to tables ending in '_test'.")
+        shots = [str(s) for s in shotlist]
         with self.conn.cursor() as curs:
-            curs.execute(
-                f"delete from {self.write_database_table_name} where shot = {shot_id}"
-            )
-        return True
+            query = f"delete from {table_name} where shot in ({', '.join(shots)})"
+            logger.debug("Executing query: '{query}'", query=query)
+            curs.execute(query)
+            logger.debug("Deleted: {rows} rows", rows=curs.rowcount)
+            return curs.rowcount > 0
 
     def add_column(self, col_name, var_type="TEXT"):
         """Add column to SQL table without filling in data for column."""

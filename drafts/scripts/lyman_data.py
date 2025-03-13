@@ -2460,8 +2460,7 @@ class kinetic_profile:
                     grad_fit_dist[inf_vals_gfd] = np.nan
 
             except:
-                placeholder = np.empty(self.x.shape)
-                placeholder[:] = np.nan
+                placeholder = np.full(self.x.shape, np.nan)
 
                 fit_dist[ii] = placeholder
                 grad_fit_dist[ii] = placeholder

@@ -113,7 +113,7 @@ jobs:
           | tee -a "$GITHUB_ENV"
 
       - name: Install poetry
-        run: pipx install 'poetry<2.0.0'
+        run: pipx install poetry
 
       - name: Setup Python
         uses: actions/setup-python@v5

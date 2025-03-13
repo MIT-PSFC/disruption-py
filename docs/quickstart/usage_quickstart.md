@@ -12,11 +12,10 @@ For a simple way to get started, check out [`simple.py`](https://github.com/MIT-
 	```python
 	from disruption_py.settings.retrieval_settings import RetrievalSettings
 
+	# Run all available methods by default
 	retrieval_settings = RetrievalSettings(
 		# Use the efit timebase when returning data
 		time_setting="efit",
-		# Run all available methods
-		run_tags=["all"],
 	)
 	```
 
