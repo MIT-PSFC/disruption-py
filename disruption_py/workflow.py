@@ -148,9 +148,8 @@ def get_shots_data(
         ):
             if shot_data is None:
                 logger.warning(
-                    shot_log_msg(
-                        shot_id, "Not outputting data for shot, data is None."
-                    ),
+                    shot_log_msg("Not outputting data for shot, data is None."),
+                    shot=shot_id,
                 )
             else:
                 num_success += 1

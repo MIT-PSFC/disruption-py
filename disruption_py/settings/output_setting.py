@@ -186,11 +186,9 @@ class DatasetOutputSetting(OutputSetting):
             The parameters for outputting shot results.
         """
         logger.trace(
-            shot_log_msg(
-                params.shot_id,
-                "Appending dataset: "
-                f"{params.result.time.shape if "time" in params.result else 'no'} time slices",
-            )
+            shot_log_msg("Appending dataset: {length} time slices"),
+            shot=params.shot_id,
+            length=params.result.time.shape if "time" in params.result else "no",
         )
         self.datasets.append(params.result)
 
@@ -278,7 +276,11 @@ class SQLOutputSetting(DataFrameOutputSetting):
         """
         super()._output_shot(params)
         df = params.result.to_dataframe().reset_index()
-        logger.debug(shot_log_msg(params.shot_id, f"Updating SQL table: {df.shape}"))
+        logger.debug(
+            shot_log_msg("Updating SQL table: {shape}"),
+            shot=params.shot_id,
+            shape=df.shape,
+        )
         params.database.add_shot_data(
             shot_id=params.shot_id,
             shot_data=df,

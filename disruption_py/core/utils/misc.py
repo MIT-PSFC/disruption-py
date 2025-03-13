@@ -11,9 +11,10 @@ import warnings
 from functools import lru_cache
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import List
+from typing import List, Type
 
 import numpy as np
+from loguru import logger
 
 
 def instantiate_classes(lst: List):
@@ -115,23 +116,37 @@ def get_temporary_folder() -> Path:
     return mkdtemp(prefix=time.strftime("%Y%m%d-%H%M%S-"), dir=top)
 
 
-def shot_log_msg(shot_id: int, message: str):
+def shot_log_msg(message: str) -> str:
     """
-    Format a string with the shot id and message
+    Modify a message by prepending a shot format string.
 
     Parameters
     ----------
-    shot_id : int
-        The shot id to prefix the message with.
     message : str
-        The message to log.
+        The message to modify.
 
     Returns
     -------
     str
-        The formatted log message
+        The modified message to be formatted downstream.
     """
-    return f"#{shot_id} | {message}"
+    return "#{shot} | " + message
+
+
+def shot_log_patch(mylogger: Type[logger], shot: int):
+    """
+    Patch a logger by prepending the shot number to its message.
+
+    Parameters
+    ----------
+    mylogger:
+        The logger to modify.
+    shot: int
+        The shot id to prepend.
+    """
+    return mylogger.patch(
+        lambda r: r.update(message=shot_log_msg(r["message"]).format(shot=shot))
+    )
 
 
 def get_elapsed_time(elapsed: float) -> str:

@@ -136,7 +136,9 @@ class RetrievalManager:
             )
             return physics_method_params
         except Exception as e:
-            logger.critical(shot_log_msg(shot_id, f"Failed to set up shot! {e}"))
+            logger.critical(
+                shot_log_msg("Failed to set up shot! {e}"), shot=shot_id, e=e
+            )
             logger.opt(exception=True).debug(e)
             mds_conn.cleanup()
             raise e
@@ -292,7 +294,7 @@ class RetrievalManager:
         """
 
         if retrieval_settings.cache_setting is None:
-            logger.trace(shot_log_msg(shot_id, "No cache setting available"))
+            logger.trace(shot_log_msg("No cache setting available"), shot=shot_id)
             return None
 
         cache_data = retrieval_settings.cache_setting.get_cache_data(
@@ -304,11 +306,11 @@ class RetrievalManager:
         )
 
         if cache_data is None:
-            logger.trace(shot_log_msg(shot_id, "No cache data available"))
+            logger.trace(shot_log_msg("No cache data available"), shot=shot_id)
             return None
 
         if shot_id not in cache_data.shot:
-            logger.trace(shot_log_msg(shot_id, "Shot not in cache data"))
+            logger.trace(shot_log_msg("Shot not in cache data"), shot=shot_id)
             return None
 
         cache_data = cache_data.sel(shot=shot_id)

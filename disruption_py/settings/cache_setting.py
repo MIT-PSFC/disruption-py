@@ -11,7 +11,7 @@ from typing import Dict, Type, Union
 import xarray as xr
 from loguru import logger
 
-from disruption_py.core.utils.misc import shot_log_msg
+from disruption_py.core.utils.misc import shot_log_patch
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
 
@@ -37,11 +37,7 @@ class CacheSettingParams:
     tokamak: Tokamak
 
     def __post_init__(self):
-        self.logger = logger.patch(
-            lambda record: record.update(
-                message=shot_log_msg(self.shot_id, record["message"])
-            )
-        )
+        self.logger = shot_log_patch(logger, self.shot_id)
 
 
 CacheSettingType = Union["CacheSetting", xr.Dataset, str]
@@ -90,13 +86,15 @@ class SQLCacheSetting(CacheSetting):
         df = params.database.get_shots_data(shotlist=[params.shot_id])
         old = df.shape[0]
         params.logger.debug(
-            shot_log_msg(params.shot_id, f"Retrieved cache from SQL: {old} rows")
+            "Retrieved cache from SQL: {old} rows",
+            old=old,
         )
         df.drop_duplicates(subset=["shot", "time"], inplace=True)
         new = df.shape[0]
         if new < old:
             params.logger.debug(
-                shot_log_msg(params.shot_id, f"Pruned cache: {old-new} rows")
+                "Pruned cache: {diff} rows",
+                diff=old - new,
             )
         ds = xr.Dataset.from_dataframe(df.set_index(["shot", "time"]))
         return ds
