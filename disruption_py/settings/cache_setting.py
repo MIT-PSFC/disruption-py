@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
 
 """
-This module provides classes for managing and retrieving cached data from various
-sources, including SQL databases and Pandas DataFrames.
+This module provides classes for managing and retrieving cached data.
 """
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, Type, Union
 
-import pandas as pd
+import xarray as xr
 from loguru import logger
 
-from disruption_py.core.utils.enums import map_string_to_enum
-from disruption_py.core.utils.misc import shot_log_msg
+from disruption_py.core.utils.misc import shot_log_patch
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
 
@@ -26,7 +24,7 @@ class CacheSettingParams:
     Attributes
     ----------
     shot_id : int
-        Shot Id for which to get cached data. Defaults to logbook.
+        Shot Id for which to get cached data.
     database : ShotDatabase
         Database object to use for getting cached data.
         A different database connection is used by each thread/process.
@@ -39,16 +37,10 @@ class CacheSettingParams:
     tokamak: Tokamak
 
     def __post_init__(self):
-        self.logger = logger.patch(
-            lambda record: record.update(
-                message=shot_log_msg(self.shot_id, record["message"])
-            )
-        )
+        self.logger = shot_log_patch(logger, self.shot_id)
 
 
-CacheSettingType = Union[
-    "CacheSetting", str, pd.DataFrame, Dict[Tokamak, "CacheSettingType"]
-]
+CacheSettingType = Union["CacheSetting", xr.Dataset, str]
 
 
 class CacheSetting(ABC):
@@ -58,7 +50,7 @@ class CacheSetting(ABC):
     Subclasses must implement the `_get_cache_data` method to define how cached data is retrieved.
     """
 
-    def get_cache_data(self, params: CacheSettingParams) -> pd.DataFrame:
+    def get_cache_data(self, params: CacheSettingParams) -> xr.Dataset:
         """
         Return cached data, using tokamak-specific overrides if available.
         """
@@ -68,10 +60,10 @@ class CacheSetting(ABC):
         return self._get_cache_data(params)
 
     @abstractmethod
-    def _get_cache_data(self, params: CacheSettingParams) -> pd.DataFrame:
+    def _get_cache_data(self, params: CacheSettingParams) -> xr.Dataset:
         """
         Abstract method implemented by subclasses to get cached data for a
-        given set of params as a Pandas dataframe.
+        given set of params as an xarray dataset.
 
         Parameters
         ----------
@@ -80,132 +72,81 @@ class CacheSetting(ABC):
 
         Returns
         -------
-        pd.DataFrame
-            Pandas dataframe containing cached data.
+        xr.Dataset
+            xarray dataset containing cached data.
         """
 
 
-class CacheSettingDict(CacheSetting):
-    """
-    A class that resolves and manages cache settings for Tokamak instances.
-
-    This class takes a dictionary of cache settings and resolves them for easy access.
-
-    Attributes
-    ----------
-    resolved_cache_setting_dict : Dict[Tokamak, CacheSettingType]
-        A mapping of Tokamak instances to their resolved cache settings.
-
-    Parameters
-    ----------
-    cache_setting_dict : Dict[Tokamak, CacheSettingType]
-        A dictionary of initial cache settings for each Tokamak.
-
-    Methods
-    -------
-    _get_cache_data(params: CacheSettingParams) -> pd.DataFrame
-        Retrieves cache data for the specified Tokamak.
-    """
-
-    def __init__(self, cache_setting_dict: Dict[Tokamak, CacheSettingType]):
-        resolved_cache_setting_dict = {
-            map_string_to_enum(tokamak, Tokamak): resolve_cache_setting(
-                individual_setting
-            )
-            for tokamak, individual_setting in cache_setting_dict.items()
-        }
-        self.resolved_cache_setting_dict = resolved_cache_setting_dict
-
-    def _get_cache_data(self, params: CacheSettingParams) -> pd.DataFrame:
-        chosen_setting = self.resolved_cache_setting_dict.get(params.tokamak, None)
-        if chosen_setting is not None:
-            return chosen_setting.get_cache_data(params)
-        params.logger.warning(
-            "No cache setting for tokamak {tokamak}", tokamak=params.tokamak
-        )
-        return None
-
-
 class SQLCacheSetting(CacheSetting):
-    """Cache setting for retrieving data from SQL database."""
-
-    def _get_cache_data(self, params: CacheSettingParams) -> pd.DataFrame:
-        params.logger.info("retrieving sql data")
-        return params.database.get_shots_data(shotlist=[params.shot_id])
-
-
-class DFCacheSetting(CacheSetting):
     """
-    Cache setting for retrieving data from a Pandas DataFrame.
+    Cache setting for retrieving data from the SQL database.
+    """
+
+    def _get_cache_data(self, params: CacheSettingParams) -> xr.Dataset:
+        old = params.database.get_shots_data(shotlist=[params.shot_id])
+        params.logger.debug(
+            "Retrieved cache from SQL: {shape} rows", shape=old.shape[0]
+        )
+        # this section is needed because at present the combo shot/time is not an index
+        # in the database, and thus it's not unique. dbkey is used as an index instead
+        new = old.drop_duplicates(subset=["shot", "time"])
+        diff = old.shape[0] - new.shape[0]
+        if diff > 0:
+            params.logger.warning("Pruned cache: {diff} rows", diff=diff)
+            (db1,) = set(old.dbkey) - set(new.dbkey)
+            ((shot, time),) = old[old.dbkey == db1][["shot", "time"]].values
+            (db2,) = new[new.shot == shot][new.time == time].dbkey.values
+            o = old[old.dbkey == db1].reset_index(drop=True).drop(columns=["dbkey"])
+            n = new[new.dbkey == db2].reset_index(drop=True).drop(columns=["dbkey"])
+            d = 100 * (1 - n / o)
+            d = d[d > 1e-6].dropna(axis=1, how="all")
+            d.index.name = "dbkeys"
+            d.index = [(db1, db2)]
+            params.logger.debug("Pruned rows: diff %:\n{d}", d=d.T)
+        ds = xr.Dataset.from_dataframe(new.set_index(["shot", "time"]))
+        return ds
+
+
+class DatasetCacheSetting(CacheSetting):
+    """
+    Cache setting for retrieving data from an xarray Dataset.
 
     Parameters
     ----------
-    cache_data : pd.DataFrame
-        The DataFrame to use as the cached data.
+    cache_setting : xr.Dataset or str
+        The Dataset to use as the cached data, or its file path.
     """
 
-    def __init__(self, cache_data: pd.DataFrame):
+    def __init__(self, cache_setting: xr.Dataset | str):
+        if isinstance(cache_setting, str):
+            cache_data = xr.open_dataset(cache_setting)
+        elif isinstance(cache_setting, xr.Dataset):
+            cache_data = cache_setting
+        else:
+            raise ValueError(f"Invalid cache setting: {cache_setting}")
         self.cache_data = cache_data
 
-    def _get_cache_data(self, params: CacheSettingParams) -> pd.DataFrame:
+    def _get_cache_data(self, params: CacheSettingParams) -> xr.Dataset:
         return self.cache_data
-
-
-class HDF5CacheSetting(CacheSetting):
-    """
-    Cache setting for retrieving data from an HDF5 file.
-
-    Parameters
-    ----------
-    cache_file : str
-        The path to the HDF5 file to use as the cached data.
-    """
-
-    def __init__(self, cache_file: str):
-        self.cache_file = cache_file
-
-    def _get_cache_data(self, params: CacheSettingParams) -> pd.DataFrame:
-        # Some shots may not have been cached, so the key will not exist, and
-        # it throws an error. If there is no cached data, return None.
-        try:
-            return pd.read_hdf(self.cache_file, key=f"df_{params.shot_id}")
-        except KeyError:
-            return None
-
-
-class CSVCacheSetting(CacheSetting):
-    """
-    Cache setting for retrieving data from a CSV file.
-
-    Parameters
-    ----------
-    cache_file : str
-        The path to the CSV file to use as the cached data.
-    """
-
-    def __init__(self, cache_file: str):
-        self.cache_file = cache_file
-
-    def _get_cache_data(self, params: CacheSettingParams) -> pd.DataFrame:
-        return pd.read_csv(self.cache_file)
 
 
 # --8<-- [start:cache_setting_dict]
 _cache_setting_mappings: Dict[str, CacheSetting] = {
-    "sql": SQLCacheSetting(),
+    "sql": SQLCacheSetting,
 }
 # --8<-- [end:cache_setting_dict]
 
 _file_suffix_to_cache_setting: Dict[str, Type[CacheSetting]] = {
-    ".h5": HDF5CacheSetting,
-    ".hdf5": HDF5CacheSetting,
-    ".csv": CSVCacheSetting,
+    ".cdf": DatasetCacheSetting,
+    ".h5": DatasetCacheSetting,
+    ".hdf5": DatasetCacheSetting,
+    ".nc": DatasetCacheSetting,
 }
 
 
 def resolve_cache_setting(
     cache_setting: CacheSettingType,
-) -> CacheSetting:
+) -> CacheSetting | None:
     """
     Resolve the cache setting to a CacheSetting instance.
 
@@ -213,8 +154,7 @@ def resolve_cache_setting(
     ----------
     cache_setting : CacheSettingType
         The cache setting to resolve. This can be an instance of CacheSetting,
-        a string representing a cache setting type, a Pandas DataFrame, or a
-        dictionary of cache settings.
+        a string representing a cache setting type, or an xarray Dataset.
 
     Returns
     -------
@@ -228,22 +168,16 @@ def resolve_cache_setting(
         return cache_setting
 
     if isinstance(cache_setting, str):
-        cache_setting_object = _cache_setting_mappings.get(cache_setting, None)
-        if cache_setting_object is not None:
-            return cache_setting_object
+        # shortcuts
+        cache_setting_cls = _cache_setting_mappings.get(cache_setting)
+        if cache_setting_cls:
+            return cache_setting_cls()
+        # extensions
+        for ext, cache_setting_cls in _file_suffix_to_cache_setting.items():
+            if cache_setting.lower().endswith(ext):
+                return cache_setting_cls(cache_setting)
 
-        # assume that it is a file path
-        for (
-            suffix,
-            cache_setting_type,
-        ) in _file_suffix_to_cache_setting.items():
-            if cache_setting.endswith(suffix):
-                return cache_setting_type(cache_setting)
-
-    if isinstance(cache_setting, pd.DataFrame):
-        return DFCacheSetting(cache_setting)
-
-    if isinstance(cache_setting, dict):
-        return CacheSettingDict(cache_setting)
+    if isinstance(cache_setting, xr.Dataset):
+        return DatasetCacheSetting(cache_setting)
 
     raise ValueError("Invalid cache setting")

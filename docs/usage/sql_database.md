@@ -19,8 +19,7 @@ The dataset contains unique plasma discharges from MIT's Alcator C-Mod tokamak, 
 	'intentional_disruption', 'Te_width_ECE', 'Wmhd', 'n_over_ncrit',
 	'n_equal_1_mode', 'Mirnov', 'Mirnov_norm_btor', 'Mirnov_norm_bpol',
 	'Te_peaking', 'ne_peaking', 'Te_peaking_ECE', 'SXR_peaking',
-	'kappa_area', 'I_efc', 'SXR', 'H_alpha', 'Prad_peaking_CVA',
-	'commit_hash'
+	'kappa_area', 'I_efc', 'SXR', 'H_alpha', 'Prad_peaking_CVA'
 	```
 
 	For more details on computed values please see [parameter reference][disruption-parameter-descriptions].

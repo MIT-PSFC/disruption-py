@@ -10,14 +10,12 @@ from typing import Dict
 
 import pandas as pd
 import pytest
+import xarray as xr
 
 from disruption_py.config import config
 from disruption_py.core.utils.misc import without_duplicates
 from disruption_py.inout.sql import ShotDatabase
-from disruption_py.settings.output_setting import (
-    BatchedCSVOutputSetting,
-    SQLOutputSetting,
-)
+from disruption_py.settings.output_setting import SQLOutputSetting
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.workflow import get_database, get_shots_data
 from tests.conftest import skip_on_fast_execution
@@ -53,11 +51,10 @@ def initial_mdsplus_data_fixture(shotlist, tokamak, test_file_path_f) -> Dict:
     """Get data in multiple formats"""
     output_settings = [
         "dataframe",
-        "list",
-        "dict",
+        "dataset",
         test_file_path_f(".csv"),
-        test_file_path_f(".hdf5"),
-        SQLOutputSetting(table_name=WRITE_DATABASE_TABLE_NAME),
+        test_file_path_f(".nc"),
+        SQLOutputSetting(),
     ]
 
     retrieval_settings = RetrievalSettings(
@@ -85,21 +82,23 @@ def test_output_exists(initial_mdsplus_data, test_file_path_f):
     """
     Test creation of all output formats except SQL.
     """
-    df_output, list_output, dict_output, csv_output, hdf_output, sql_output = (
-        initial_mdsplus_data
-    )
+    (
+        df_output,
+        ds_output,
+        csv_output,
+        nc_output,
+        sql_output,
+    ) = initial_mdsplus_data
     assert isinstance(df_output, pd.DataFrame), "DataFrame output does not exist"
-    assert isinstance(list_output, list), "List output does not exist"
-    assert isinstance(dict_output, dict), "Dict output does not exist"
+    assert isinstance(ds_output, xr.Dataset), "Dataset output does not exist"
     assert isinstance(csv_output, pd.DataFrame), "DataFrame from CSV does not exist"
-    assert isinstance(hdf_output, pd.DataFrame), "DataFrame from HDF5 does not exist"
+    assert isinstance(nc_output, xr.Dataset), "Dataset from .nc does not exist"
     assert isinstance(sql_output, pd.DataFrame), "DataFrame from SQL does not exist"
+    assert os.path.exists(test_file_path_f(".nc")), ".nc output does not exist"
     assert os.path.exists(test_file_path_f(".csv")), ".csv output does not exist"
-    assert os.path.exists(test_file_path_f(".hdf5")), ".hdf5 output does not exist"
-
     assert_frame_equal_unordered(df_output, csv_output)
-    assert_frame_equal_unordered(csv_output, hdf_output)
-    assert_frame_equal_unordered(hdf_output, sql_output)
+    assert_frame_equal_unordered(df_output, sql_output)
+    xr.testing.assert_equal(ds_output, nc_output)
 
 
 @skip_on_fast_execution
@@ -140,7 +139,6 @@ def test_sql_output_setting(
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
         output_setting=SQLOutputSetting(
-            table_name=WRITE_DATABASE_TABLE_NAME,
             should_update=True,
             should_override_columns=SECOND_ITERATION_COLUMNS,
         ),
@@ -159,21 +157,3 @@ def test_sql_output_setting(
         result[ALL_ITERATION_COLUMNS].to_csv(test_file_path_f("-2L.csv"))
         shot_data[ALL_ITERATION_COLUMNS].to_csv(test_file_path_f("-2R.csv"))
         raise AssertionError(f"Second writeback to SQL failed! {e.args[0]}") from e
-
-
-def test_batch_csv(tokamak, test_file_path_f, shotlist):
-    """
-    Test the batch csv output setting to ensure it outputs the same columns in
-    the same order as the dataframe in memory.
-    """
-    csv = test_file_path_f("-batch.csv")
-    out = get_shots_data(
-        tokamak=tokamak,
-        shotlist_setting=shotlist,
-        num_processes=2,
-        # Use a batch size less than the number of shots to ensure multiple batches
-        # are written to the CSV file.
-        output_setting=BatchedCSVOutputSetting(filepath=csv, batch_size=1),
-    )
-    df = pd.read_csv(csv)
-    assert_frame_equal_unordered(out, df)

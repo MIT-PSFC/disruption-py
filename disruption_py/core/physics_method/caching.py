@@ -10,7 +10,7 @@ import threading
 from typing import Callable, List
 
 import numpy as np
-import pandas as pd
+import xarray as xr
 
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 
@@ -93,7 +93,7 @@ def get_method_cache_key(
 
 def manually_cache(
     physics_method_params: PhysicsMethodParams,
-    data: pd.DataFrame,
+    data: xr.Dataset,
     method: Callable,
     method_name: str,
     method_columns: List[str],
@@ -105,8 +105,8 @@ def manually_cache(
     ----------
     physics_method_params : PhysicsMethodParams
         The parameters containing the shot ID and logger for logging.
-    data : pd.DataFrame
-        The DataFrame containing the data to be cached.
+    data : xr.Dataset
+        The Dataset containing the data to be cached.
     method : Callable
         The method for which the results are being cached.
     method_name : str
@@ -123,18 +123,18 @@ def manually_cache(
         return False
     if not hasattr(physics_method_params, "cached_results"):
         physics_method_params.cached_results = {}
-    missing_columns = set(col for col in method_columns if col not in data.columns)
+    missing_columns = set(col for col in method_columns if col not in data.data_vars)
     if len(missing_columns) == 0:
         cache_key = get_method_cache_key(method, data["time"].values)
         physics_method_params.cached_results[cache_key] = data[method_columns]
         physics_method_params.logger.debug(
-            "Manually caching {method_name}",
+            "Primed cache for method: {method_name}",
             method_name=method_name,
         )
         return True
     physics_method_params.logger.debug(
-        "Can not cache {method_name} missing columns {missing_columns}",
+        "Failed cache for method: {method_name}. missing: {missing_columns}",
         method_name=method_name,
-        missing_columns=missing_columns,
+        missing_columns=", ".join(missing_columns),
     )
     return False

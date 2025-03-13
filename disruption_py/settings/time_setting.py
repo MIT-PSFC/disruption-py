@@ -10,13 +10,13 @@ from dataclasses import dataclass
 from typing import Dict, Union
 
 import numpy as np
-import pandas as pd
+import xarray as xr
 from loguru import logger
 from MDSplus import mdsExceptions
 
 from disruption_py.config import config
 from disruption_py.core.utils.enums import map_string_to_enum
-from disruption_py.core.utils.misc import shot_log_msg
+from disruption_py.core.utils.misc import shot_log_patch
 from disruption_py.inout.mds import MDSConnection
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.east.util import EastUtilMethods
@@ -34,7 +34,7 @@ class TimeSettingParams:
         Shot ID for the timebase being created.
     mds_conn : MDSConnection
         Connection to MDSPlus for retrieving MDSPlus data.
-    cache_data : pd.DataFrame
+    cache_data : xr.Dataset
         Pre-filled data provided to disruption_py.
     database : ShotDatabase
         Database object with connection to the SQL database.
@@ -46,17 +46,13 @@ class TimeSettingParams:
 
     shot_id: int
     mds_conn: MDSConnection
-    cache_data: pd.DataFrame
+    cache_data: xr.Dataset
     database: ShotDatabase
     disruption_time: float
     tokamak: Tokamak
 
     def __post_init__(self):
-        self.logger = logger.patch(
-            lambda record: record.update(
-                message=shot_log_msg(self.shot_id, record["message"])
-            )
-        )
+        self.logger = shot_log_patch(logger, self.shot_id)
 
     @property
     def disrupted(self) -> bool:
@@ -176,7 +172,7 @@ class ListTimeSetting(TimeSetting):
     """
     Time setting for using a pre-defined list of times.
 
-    Used when a list, numpy array, or pandas series is passed as the `time_setting`
+    Used when a list or numpy array is passed as the `time_setting`
     parameter in `RetrievalSettings`.
     """
 
@@ -186,7 +182,7 @@ class ListTimeSetting(TimeSetting):
 
         Parameters
         ----------
-        times : list, np.ndarray, pd.Series
+        times : list, np.ndarray
             List or array of times to use as the timebase.
         """
         self.times = times
@@ -243,7 +239,7 @@ class CacheTimeSetting(TimeSetting):
         if params.cache_data is not None:
             # set timebase to be the timebase of cached data
             try:
-                times = params.cache_data["time"].to_numpy()
+                times = params.cache_data.time.to_numpy()
                 # Check if the timebase is in ms instead of s
                 if 0 < config(params.tokamak).max_shot_time < times[-1]:
                     times /= 1000  # [ms] -> [s]
@@ -658,9 +654,6 @@ def resolve_time_setting(
 
     if isinstance(time_setting, (list, np.ndarray)):
         return ListTimeSetting(time_setting)
-
-    if isinstance(time_setting, pd.Series):
-        return ListTimeSetting(time_setting.to_numpy())
 
     if isinstance(time_setting, dict):
         return TimeSettingDict(time_setting)

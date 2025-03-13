@@ -367,7 +367,11 @@ class ShotDatabase:
                 curs.execute(sql_command, row + (*t, str(shot_id)))
                 ko_rows += curs.rowcount == 0
         if ko_rows:
-            logger.error(shot_log_msg(shot_id, f"Could not update {ko_rows} rows."))
+            logger.error(
+                shot_log_msg("Could not update {ko_rows} rows."),
+                shot=shot_id,
+                ko_rows=ko_rows,
+            )
         return True
 
     def _get_identity_column_names(self, table_name: str):

@@ -9,10 +9,9 @@ from collections.abc import Iterable
 from typing import Any
 
 import numpy as np
-import pandas as pd
+import xarray as xr
 from MDSplus import mdsExceptions
 
-from disruption_py.config import config
 from disruption_py.core.physics_method.caching import manually_cache
 from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.metadata import (
@@ -24,53 +23,6 @@ from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.misc import get_elapsed_time
 from disruption_py.machine.method_holders import get_method_holders
 from disruption_py.settings.retrieval_settings import RetrievalSettings
-
-REQUIRED_COLS = {"time", "shot", "commit_hash"}
-
-
-def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams) -> pd.DataFrame:
-    """
-    Retrieve pre-filled shot data for the given physics method parameters.
-
-    Parameters
-    ----------
-    physics_method_params : PhysicsMethodParams
-        Parameters containing MDS connection and shot information
-
-    Returns
-    -------
-    pd.DataFrame
-        A DataFrame containing the pre-filled shot data.
-    """
-    pre_filled_shot_data = physics_method_params.pre_filled_shot_data
-
-    # If the shot object was already passed data in the constructor, use that data.
-    # Otherwise, create an empty dataframe.
-    if pre_filled_shot_data is None:
-        pre_filled_shot_data = pd.DataFrame()
-    if "time" not in pre_filled_shot_data:
-        pre_filled_shot_data["time"] = physics_method_params.times
-    if "shot" not in pre_filled_shot_data:
-        pre_filled_shot_data["shot"] = int(physics_method_params.shot_id)
-    pre_filled_shot_data["commit_hash"] = physics_method_params.metadata.get(
-        "commit_hash", None
-    )
-
-    # Check that pre_filled_shot_data is on the same timebase as the shot object
-    # to ensure data consistency
-    if (
-        len(pre_filled_shot_data["time"]) != len(physics_method_params.times)
-        or not np.isclose(
-            pre_filled_shot_data["time"],
-            physics_method_params.times,
-            atol=config().time_const,
-        ).all()
-    ):
-        physics_method_params.logger.error(
-            "Computation on different timebase than pre-filled shot data",
-            physics_method_params.shot_id,
-        )
-    return pre_filled_shot_data
 
 
 def get_all_physics_methods(all_passed: list) -> set:
@@ -155,10 +107,7 @@ def filter_methods_to_run(
         A list of bound method metadata instances that are eligible to run.
     """
     methods = retrieval_settings.run_methods
-    if retrieval_settings.run_columns is not None:
-        columns = REQUIRED_COLS.union(retrieval_settings.run_columns)
-    else:
-        columns = None
+    columns = retrieval_settings.run_columns
     only_excluded_methods_specified = all("~" in method for method in methods or [])
     methods_to_run = []
     for bound_method_metadata in all_bound_method_metadata:
@@ -182,21 +131,21 @@ def filter_methods_to_run(
             only_excluded_methods_specified
             and not columns
             and methods
-            and (("~" + bound_method_metadata.name) not in methods)
+            and (f"~{bound_method_metadata.name}" not in methods)
         )
         should_run = (
             both_none or method_specified or column_speficied or is_not_excluded
         )
 
-        # reasons that methods should be exluded from should run
+        # reasons that methods should be excluded from should run
         should_not_run = (
-            methods is not None and ("~" + bound_method_metadata.name) in methods
+            methods is not None and f"~{bound_method_metadata.name}" in methods
         )
 
         if should_run and not should_not_run:
             methods_to_run.append(bound_method_metadata)
         else:
-            physics_method_params.logger.debug(
+            physics_method_params.logger.trace(
                 "Skipping method: {name}", name=bound_method_metadata.name
             )
     return methods_to_run
@@ -225,7 +174,6 @@ def populate_method(
     name = bound_method_metadata.name
 
     physics_method_params.logger.trace("Starting method: {name}", name=name)
-    result = None
 
     try:
         result = method(params=physics_method_params)
@@ -258,7 +206,7 @@ def populate_method(
 def populate_shot(
     retrieval_settings: RetrievalSettings,
     physics_method_params: PhysicsMethodParams,
-) -> pd.DataFrame:
+) -> xr.Dataset:
     """
     Run the physics methods to populate shot data.
 
@@ -276,8 +224,8 @@ def populate_shot(
 
     Returns
     -------
-    pd.DataFrame
-        A DataFrame containing the queried data.
+    xr.Dataset
+        A dataset containing the queried data.
     """
     # Concatenate built-in classes containing registered methods with user-provided
     # classes/methods
@@ -293,67 +241,83 @@ def populate_shot(
         all_bound_method_metadata, retrieval_settings, physics_method_params
     )
 
-    pre_filled_shot_data = get_prefilled_shot_data(physics_method_params)
-    # Manually cache data that has already been retrieved (likely from SQL tables)
-    # Methods added to pre_cached_method_names will be skipped by method optimizer
+    # Manually cache data that has already been retrieved
     cached_method_metadata = []
+    cached_method_results = []
     if physics_method_params.pre_filled_shot_data is not None:
         for method_metadata in all_bound_method_metadata:
-            cache_success = manually_cache(
+            physics_method_params.logger.trace(
+                "{action} cache for method: {name}",
+                action=(
+                    "Priming"
+                    if method_metadata in run_bound_method_metadata
+                    else "Skipping"
+                ),
+                name=method_metadata.name,
+            )
+            if method_metadata not in run_bound_method_metadata:
+                continue
+            if manually_cache(
                 physics_method_params=physics_method_params,
-                data=pre_filled_shot_data,
+                data=physics_method_params.pre_filled_shot_data,
                 method=method_metadata.bound_method,
                 method_name=method_metadata.name,
                 method_columns=method_metadata.columns,
-            )
-            if cache_success:
+            ):
                 cached_method_metadata.append(method_metadata)
-                if method_metadata in run_bound_method_metadata:
-                    physics_method_params.logger.verbose(
-                        "Cached method: {name}",
-                        name=method_metadata.name,
-                    )
+                cached_method_results.append(
+                    physics_method_params.pre_filled_shot_data[method_metadata.columns]
+                )
 
     start_time = time.time()
     methods_data = []
     for bound_method_metadata in run_bound_method_metadata:
         if bound_method_metadata in cached_method_metadata:
             continue
-        methods_data.append(
-            populate_method(
-                physics_method_params=physics_method_params,
-                bound_method_metadata=bound_method_metadata,
-            )
+        method_result = populate_method(
+            physics_method_params=physics_method_params,
+            bound_method_metadata=bound_method_metadata,
         )
-
-    # Initialize with cached data
-    num_parameters = len(pre_filled_shot_data.columns)
-    num_valid = pre_filled_shot_data.notna().any().sum()
-    filtered_methods = []
-    for method_dict in methods_data:
-        if method_dict is None:
-            continue
-        # Pad parameters which are only a single NaN (from our error outputs) in
-        # order to create a DataFrame for easy comparison with cached data.
-        for parameter in method_dict:
-            num_parameters += 1
-            if (
-                np.all(np.isnan(method_dict[parameter]))
-                and len(method_dict[parameter]) == 1
-            ):
-                method_dict[parameter] = np.full(len(pre_filled_shot_data), np.nan)
-            else:
-                num_valid += 1
-        method_df = pd.DataFrame(method_dict)
-        if len(method_df) != len(pre_filled_shot_data):
-            physics_method_params.logger.error(
-                "Ignoring parameters {parameter} with different length than timebase",
-                parameter=list(method_dict.keys()),
+        # TODO: XARRAY: temporarily handle dictionaries
+        ###############################################
+        if isinstance(method_result, dict):
+            method_result = method_result or {}
+            data_vars = {}
+            for col in method_result:
+                if (
+                    np.all(np.isnan(method_result[col]))
+                    and len(method_result[col]) == 1
+                ):
+                    data_vars[col] = ("time", physics_method_params.times * np.nan)
+                else:
+                    data_vars[col] = ("time", method_result[col])
+            ds = xr.Dataset(
+                data_vars=data_vars,
+                coords={
+                    "shot": physics_method_params.shot_id,
+                    "time": physics_method_params.times,
+                },
             )
-            # TODO: Should we drop the columns, or is it better to raise an
-            # exception when the data do not match?
+            methods_data.append(ds)
             continue
-        filtered_methods.append(method_df)
+        if not isinstance(method_result, xr.Dataset):
+            raise ValueError(
+                bound_method_metadata.name,
+                "did not return a dict or Dataset",
+                type(method_result),
+            )
+        ###############################################
+        methods_data.append(method_result)
+
+    if cached_method_results:
+        methods_data += cached_method_results
+    shot_data = xr.merge(methods_data)
+
+    num_parameters = len(shot_data.data_vars)
+    if len(shot_data.data_vars) == 0:
+        num_valid = 0
+    else:
+        num_valid = int(shot_data.notnull().any().to_array().sum())
 
     percent_valid = (num_valid / num_parameters * 100) if num_parameters else 0
     if percent_valid >= 75:
@@ -378,21 +342,8 @@ def populate_shot(
         elapsed=get_elapsed_time(time.time() - start_time),
     )
 
-    # TODO: This is a hack to get around the fact that some methods return
-    #       multiple parameters. This should be fixed in the future.
+    # column down-selection
+    if retrieval_settings.only_requested_columns and retrieval_settings.run_columns:
+        shot_data = shot_data[retrieval_settings.run_columns]
 
-    local_data = pd.concat([pre_filled_shot_data] + filtered_methods, axis=1)
-    local_data = local_data.loc[:, ~local_data.columns.duplicated()]
-    if (
-        retrieval_settings.only_requested_columns
-        and retrieval_settings.run_columns is not None
-    ):
-        include_columns = list(
-            REQUIRED_COLS.union(
-                set(retrieval_settings.run_columns).intersection(
-                    set(local_data.columns)
-                )
-            )
-        )
-        local_data = local_data[include_columns]
-    return local_data
+    return shot_data

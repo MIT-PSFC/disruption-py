@@ -11,10 +11,10 @@ import warnings
 from functools import lru_cache
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import List
+from typing import List, Type
 
 import numpy as np
-import pandas as pd
+from loguru import logger
 
 
 def instantiate_classes(lst: List):
@@ -75,50 +75,6 @@ def safe_cast(array: np.ndarray, dtype, copy=False) -> np.ndarray:
         return array.astype(dtype, copy=copy)
 
 
-def safe_df_concat(base_df: pd.DataFrame, new_dfs: List[pd.DataFrame]) -> pd.DataFrame:
-    """
-    Safely concatenate a base DataFrame with a list of new DataFrames.
-
-    Parameters
-    ----------
-    base_df : pd.DataFrame
-        The base DataFrame to concatenate with.
-    new_dfs : List[pd.DataFrame]
-        A list of new DataFrames to concatenate.
-
-    Returns
-    -------
-    pd.DataFrame
-        The concatenated DataFrame.
-    """
-    if isinstance(new_dfs, pd.DataFrame):
-        new_dfs = [new_dfs]
-
-    all_cols = set(base_df.columns).union(*[set(new_df.columns) for new_df in new_dfs])
-
-    new_dfs = [new_df.dropna(axis=1, how="all") for new_df in new_dfs]
-    new_dfs = [
-        new_df
-        for new_df in new_dfs
-        if not new_df.empty and not new_df.isna().all().all()
-    ]
-
-    if len(new_dfs) == 0:
-        return base_df
-
-    if base_df.empty:
-        concat_df = pd.concat(new_dfs, axis=0, ignore_index=True, sort=False)
-    else:
-        concat_df = pd.concat(
-            [base_df] + new_dfs, axis=0, ignore_index=True, sort=False
-        )
-
-    missing_cols = all_cols - set(concat_df.columns)
-    for col in missing_cols:
-        concat_df[col] = np.nan
-    return concat_df
-
-
 @lru_cache
 def get_commit_hash() -> str:
     """
@@ -131,7 +87,7 @@ def get_commit_hash() -> str:
     """
     try:
         commit_hash = (
-            subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])
+            subprocess.check_output(["git", "rev-parse", "HEAD"])
             .decode("ascii")
             .strip()
         )
@@ -160,23 +116,37 @@ def get_temporary_folder() -> Path:
     return mkdtemp(prefix=time.strftime("%Y%m%d-%H%M%S-"), dir=top)
 
 
-def shot_log_msg(shot_id: int, message: str):
+def shot_log_msg(message: str) -> str:
     """
-    Format a string with the shot id and message
+    Modify a message by prepending a shot format string.
 
     Parameters
     ----------
-    shot_id : int
-        The shot id to prefix the message with.
     message : str
-        The message to log.
+        The message to modify.
 
     Returns
     -------
     str
-        The formatted log message
+        The modified message to be formatted downstream.
     """
-    return f"#{shot_id} | {message}"
+    return "#{shot} | " + message
+
+
+def shot_log_patch(mylogger: Type[logger], shot: int):
+    """
+    Patch a logger by prepending the shot number to its message.
+
+    Parameters
+    ----------
+    mylogger:
+        The logger to modify.
+    shot: int
+        The shot id to prepend.
+    """
+    return mylogger.patch(
+        lambda r: r.update(message=shot_log_msg(r["message"]).format(shot=shot))
+    )
 
 
 def get_elapsed_time(elapsed: float) -> str:

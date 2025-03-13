@@ -69,7 +69,7 @@ def get_shots_data(
     database_initializer: Callable[..., ShotDatabase] = None,
     mds_connection_initializer: Callable[..., ProcessMDSConnection] = None,
     retrieval_settings: RetrievalSettings = None,
-    output_setting: OutputSetting = "dataframe",
+    output_setting: OutputSetting = "dataset",
     num_processes: int = 1,
     log_settings: LogSettings = None,
 ) -> Any:
@@ -89,7 +89,7 @@ def get_shots_data(
         The output type setting to be used when outputting the retrieved data for
         each shot. Note that data is streamed to the output type setting object
         as it is retrieved. Can pass any OutputSettingType that resolves to an
-        OutputSetting. See OutputSetting for more details. Defaults to "list".
+        OutputSetting. See OutputSetting for more details. Defaults to "dataset".
     num_processes : int
         The number of processes to use for data retrieval. If 1, the data is retrieved
         in serial. If > 1, the data is retrieved in parallel.
@@ -148,9 +148,8 @@ def get_shots_data(
         ):
             if shot_data is None:
                 logger.warning(
-                    shot_log_msg(
-                        shot_id, "Not outputting data for shot, data is None."
-                    ),
+                    shot_log_msg("Not outputting data for shot, data is None."),
+                    shot=shot_id,
                 )
             else:
                 num_success += 1
@@ -180,7 +179,6 @@ def get_shots_data(
 
     finish_output_type_setting_params = CompleteOutputSettingParams(tokamak=tokamak)
     results = output_setting.get_results(finish_output_type_setting_params)
-    output_setting.stream_output_cleanup(finish_output_type_setting_params)
     return results
 
 

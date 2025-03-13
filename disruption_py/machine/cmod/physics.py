@@ -7,6 +7,7 @@ Module for retrieving and calculating data for CMOD physics methods.
 import warnings
 
 import numpy as np
+import xarray as xr
 from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.caching import cache_method
@@ -105,10 +106,14 @@ class CmodPhysicsMethods:
         - issues: #[223](https://github.com/MIT-PSFC/disruption-py/issues/223)
 
         """
-        time_until_disrupt = [np.nan]
+        time_until_disrupt = np.full(len(params.times), np.nan)
         if params.disrupted:
             time_until_disrupt = params.disruption_time - params.times
-        return {"time_until_disrupt": time_until_disrupt}
+        output = xr.Dataset(
+            data_vars={"time_until_disrupt": ("time", time_until_disrupt)},
+            coords={"shot": params.shot_id, "time": params.times},
+        )
+        return output
 
     @staticmethod
     def _get_ip_parameters(times, ip, magtime, ip_prog, pcstime):
@@ -134,18 +139,13 @@ class CmodPhysicsMethods:
 
         Returns
         -------
-        ip : array_like
-            Actual plasma current.
-        dip_dt : array_like
-            Time derivative of the actual plasma current.
-        dip_smoothed : array_like
-            Smoothed time derivative of the actual plasma current.
-        ip_prog : array_like
-            Programmed plasma current.
-        dipprog_dt : array_like
-            Time derivative of the programmed plasma current.
-        ip_error : array_like
-            Difference between the actual and programmed plasma current.
+        data_vars : dict of tuples for xr.Dataset
+            ip : plasma current.
+            dip_dt : Time derivative of the actual plasma current.
+            dip_smoothed : Smoothed time derivative of the actual plasma current.
+            ip_prog : Programmed plasma current.
+            dipprog_dt : Time derivative of the programmed plasma current.
+            ip_error : Difference between the actual and programmed plasma current.
 
         Original Authors
         ----------------
@@ -158,7 +158,7 @@ class CmodPhysicsMethods:
         - matlab/cmod_matlab/matlab-core/get_Ip_parameters.m
         """
         dip = np.gradient(ip, magtime)
-        dip_smoothed = smooth(dip, 11)  # ,ends_type=0)
+        dip_smoothed = smooth(dip, 11)
         dipprog_dt = np.gradient(ip_prog, pcstime)
         ip_prog = interp1(
             pcstime, ip_prog, times, bounds_error=False, fill_value=ip_prog[-1]
@@ -167,18 +167,17 @@ class CmodPhysicsMethods:
         ip = interp1(magtime, ip, times)
         dip = interp1(magtime, dip, times)
         dip_smoothed = interp1(magtime, dip_smoothed, times)
-
         ip_error = (np.abs(ip) - np.abs(ip_prog)) * np.sign(ip)
-        # import pdb; pdb.set_trace()
-        output = {
-            "ip": ip,
-            "dip_dt": dip,
-            "dip_smoothed": dip_smoothed,
-            "ip_prog": ip_prog,
-            "dipprog_dt": dipprog_dt,
-            "ip_error": ip_error,
+
+        data_vars = {
+            "ip": ("time", ip),
+            "dip_dt": ("time", dip),
+            "dip_smoothed": ("time", dip_smoothed),
+            "ip_prog": ("time", ip_prog),
+            "dipprog_dt": ("time", dipprog_dt),
+            "ip_error": ("time", ip_error),
         }
-        return output
+        return data_vars
 
     @staticmethod
     @physics_method(
@@ -200,8 +199,8 @@ class CmodPhysicsMethods:
 
         Returns
         -------
-        dict
-            A dictionary containing the interpolated Ip parameters, including
+        xr.Dataset
+            A dataset containing the interpolated Ip parameters, including
             `ip`, `dip_dt`, `dip_smoothed`, `ip_prog`, `dipprog_dt`, and `ip_error`.
 
         References
@@ -264,8 +263,11 @@ class CmodPhysicsMethods:
         ip, magtime = params.mds_conn.get_data_with_dims(
             r"\ip", tree_name="magnetics"
         )  # [A], [s]
-        output = CmodPhysicsMethods._get_ip_parameters(
+        data_vars = CmodPhysicsMethods._get_ip_parameters(
             params.times, ip, magtime, ip_prog, pcstime
+        )
+        output = xr.Dataset(
+            data_vars=data_vars, coords={"shot": params.shot_id, "time": params.times}
         )
         return output
 
@@ -512,9 +514,9 @@ class CmodPhysicsMethods:
         inductance = 4.0 * np.pi * 1.0e-7 * r0 * li / 2.0
         v_loop = interp1(v_loop_time, v_loop, times)
         inductance = interp1(efittime, inductance, times)
-        v_inductive = inductance * dip_smoothed
+        v_inductive = inductance * dip_smoothed.values
         v_resistive = v_loop - v_inductive
-        p_ohm = ip * v_resistive
+        p_ohm = ip.values * v_resistive
         output = {"p_oh": p_ohm, "v_loop": v_loop}
         return output
 

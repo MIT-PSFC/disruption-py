@@ -14,4 +14,5 @@ shot_data = get_shots_data(
     tokamak="cmod",
     shotlist_setting=[1150805012],
     retrieval_settings=retrieval_settings,
+    log_settings="debug",
 )

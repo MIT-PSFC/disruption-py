@@ -8,10 +8,10 @@ from dataclasses import dataclass, field
 from typing import Any, Dict
 
 import numpy as np
-import pandas as pd
+import xarray as xr
 from loguru import logger
 
-from disruption_py.core.utils.misc import shot_log_msg
+from disruption_py.core.utils.misc import shot_log_patch
 from disruption_py.inout.mds import MDSConnection
 from disruption_py.machine.tokamak import Tokamak
 
@@ -28,17 +28,13 @@ class PhysicsMethodParams:
     disruption_time: float
     mds_conn: MDSConnection
     times: np.ndarray
-    cache_data: pd.DataFrame
-    pre_filled_shot_data: pd.DataFrame
+    cache_data: xr.Dataset
+    pre_filled_shot_data: xr.Dataset
     interpolation_method: Any  # Fix
     metadata: dict
 
     def __post_init__(self):
-        self.logger = logger.patch(
-            lambda record: record.update(
-                message=shot_log_msg(self.shot_id, record["message"])
-            )
-        )
+        self.logger = shot_log_patch(logger, self.shot_id)
 
     cached_results: Dict[str, Any] = field(default_factory=dict)
 

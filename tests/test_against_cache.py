@@ -9,10 +9,10 @@ Expects SQL credentials to be configured.
 """
 
 import argparse
-from typing import Dict, List
+from typing import List
 
-import pandas as pd
 import pytest
+import xarray as xr
 
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from tests.utils.eval_against_sql import (
@@ -25,7 +25,7 @@ from tests.utils.factory import (
     get_tokamak_test_expected_failure_columns,
     get_tokamak_test_shotlist,
 )
-from tests.utils.pytest_helper import extract_param, save_to_csv
+from tests.utils.pytest_helper import extract_param
 
 
 @pytest.fixture(scope="module", name="fresh_data")
@@ -34,7 +34,7 @@ def fresh_data_fixture(
     shotlist: List[int],
     test_file_path_f,
     pytestconfig,
-) -> Dict[int, pd.DataFrame]:
+) -> xr.Dataset:
     """
     Fixture to retrieve fresh data for the specified tokamak and shotlist.
 
@@ -51,8 +51,8 @@ def fresh_data_fixture(
 
     Returns
     -------
-    Dict[int, pd.DataFrame]
-        A dictionary mapping shot identifiers to their corresponding fresh DataFrames.
+    xr.Dataset
+        Fresh data
     """
     fresh_data = get_fresh_data(
         tokamak=tokamak,
@@ -60,9 +60,7 @@ def fresh_data_fixture(
         log_file_path=test_file_path_f(".log"),
         test_columns=extract_param(pytestconfig),
     )
-    save_to_csv(
-        data=fresh_data, test_file_path_f=test_file_path_f, data_source_name="fresh"
-    )
+    fresh_data.to_netcdf(test_file_path_f("-fresh.nc"))
     return fresh_data
 
 
@@ -70,10 +68,10 @@ def fresh_data_fixture(
 def cache_data_fixture(
     tokamak: Tokamak,
     shotlist: List[int],
-    fresh_data: Dict[int, pd.DataFrame],
+    fresh_data: xr.Dataset,
     test_file_path_f,
     pytestconfig,
-) -> Dict[int, pd.DataFrame]:
+) -> xr.Dataset:
     """
     Fixture to retrieve cached data based on fresh data for the specified tokamak and shotlist.
 
@@ -83,7 +81,7 @@ def cache_data_fixture(
         The tokamak object used to retrieve data.
     shotlist : List[int]
         The list of shot identifiers to retrieve data for.
-    fresh_data : Dict[int, pd.DataFrame]
+    fresh_data : xr.Dataset
         The fresh data retrieved for the specified shotlist.
     test_file_path_f : function
         A function to generate file paths for saving logs.
@@ -92,8 +90,8 @@ def cache_data_fixture(
 
     Returns
     -------
-    Dict[int, pd.DataFrame]
-        A dictionary mapping shot identifiers to their corresponding cached DataFrames.
+    xr.Dataset
+        The cached data
     """
     cache_data = get_cached_from_fresh(
         tokamak=tokamak,
@@ -101,16 +99,14 @@ def cache_data_fixture(
         fresh_data=fresh_data,
         test_columns=extract_param(pytestconfig),
     )
-    save_to_csv(
-        data=cache_data, test_file_path_f=test_file_path_f, data_source_name="cache"
-    )
+    cache_data.to_netcdf(test_file_path_f("-cache.nc"))
     return cache_data
 
 
 def test_data_columns(
     shotlist: List[int],
-    fresh_data: Dict[int, pd.DataFrame],
-    cache_data: Dict[int, pd.DataFrame],
+    fresh_data: xr.Dataset,
+    cache_data: xr.Dataset,
     data_column,
     expected_failure_columns: List[str],
 ):

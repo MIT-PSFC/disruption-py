@@ -16,7 +16,7 @@ from MDSplus import mdsExceptions
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.math import interp1
-from disruption_py.core.utils.misc import shot_log_msg
+from disruption_py.core.utils.misc import shot_log_patch
 from disruption_py.machine.cmod.physics import CmodPhysicsMethods
 from disruption_py.machine.d3d.util import D3DUtilMethods
 from disruption_py.machine.east.physics import EastPhysicsMethods
@@ -44,12 +44,8 @@ class DomainSettingParams:
     tokamak: Tokamak
 
     def __post_init__(self):
-        self.logger = logger.patch(
-            lambda record: record.update(
-                message=shot_log_msg(
-                    self.physics_method_params.shot_id, record["message"]
-                )
-            )
+        self.logger = self.logger = shot_log_patch(
+            logger, self.physics_method_params.shot_id
         )
 
 
@@ -218,7 +214,8 @@ class FlattopDomainSetting(DomainSetting):
         ip_parameters = CmodPhysicsMethods.get_ip_parameters(
             params=params.physics_method_params
         )
-        ipprog, dipprog_dt = ip_parameters["ip_prog"], ip_parameters["dipprog_dt"]
+        ipprog = ip_parameters["ip_prog"].dropna("time")
+        dipprog_dt = ip_parameters["dipprog_dt"].dropna("time")
         indices_flattop_1 = np.where(np.abs(dipprog_dt) <= 1e3)[0]
         indices_flattop_2 = np.where(np.abs(ipprog) > 1.0e5)[0]
         indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
