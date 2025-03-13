@@ -83,20 +83,27 @@ class SQLCacheSetting(CacheSetting):
     """
 
     def _get_cache_data(self, params: CacheSettingParams) -> xr.Dataset:
-        df = params.database.get_shots_data(shotlist=[params.shot_id])
-        old = df.shape[0]
+        old = params.database.get_shots_data(shotlist=[params.shot_id])
         params.logger.debug(
-            "Retrieved cache from SQL: {old} rows",
-            old=old,
+            "Retrieved cache from SQL: {shape} rows", shape=old.shape[0]
         )
-        df.drop_duplicates(subset=["shot", "time"], inplace=True)
-        new = df.shape[0]
-        if new < old:
-            params.logger.debug(
-                "Pruned cache: {diff} rows",
-                diff=old - new,
-            )
-        ds = xr.Dataset.from_dataframe(df.set_index(["shot", "time"]))
+        # this section is needed because at present the combo shot/time is not an index
+        # in the database, and thus it's not unique. dbkey is used as an index instead
+        new = old.drop_duplicates(subset=["shot", "time"])
+        diff = old.shape[0] - new.shape[0]
+        if diff > 0:
+            params.logger.warning("Pruned cache: {diff} rows", diff=diff)
+            (db1,) = set(old.dbkey) - set(new.dbkey)
+            ((shot, time),) = old[old.dbkey == db1][["shot", "time"]].values
+            (db2,) = new[new.shot == shot][new.time == time].dbkey.values
+            o = old[old.dbkey == db1].reset_index(drop=True).drop(columns=["dbkey"])
+            n = new[new.dbkey == db2].reset_index(drop=True).drop(columns=["dbkey"])
+            d = 100 * (1 - n / o)
+            d = d[d > 1e-6].dropna(axis=1, how="all")
+            d.index.name = "dbkeys"
+            d.index = [(db1, db2)]
+            params.logger.debug("Pruned rows: diff %:\n{d}", d=d.T)
+        ds = xr.Dataset.from_dataframe(new.set_index(["shot", "time"]))
         return ds
 
 
