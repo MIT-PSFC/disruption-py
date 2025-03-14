@@ -17,7 +17,8 @@ from disruption_py.core.utils.math import (
     gaussian_fit,
     gaussian_fit_with_fixed_mean,
     interp1,
-    smooth,
+    matlab_smooth,
+    causal_boxcar_smooth,
 )
 from disruption_py.machine.cmod.thomson import CmodThomsonDensityMeasure
 from disruption_py.machine.tokamak import Tokamak
@@ -158,7 +159,40 @@ class CmodPhysicsMethods:
         - matlab/cmod_matlab/matlab-core/get_Ip_parameters.m
         """
         dip = np.gradient(ip, magtime)
-        dip_smoothed = smooth(dip, 11)  # ,ends_type=0)
+
+        ### To be removed in final commit ###
+        dip_smoothed = matlab_smooth(dip, 11)  # ,ends_type=0)
+        dip_smoothed_causal = causal_boxcar_smooth(dip, 6)
+
+        import matplotlib.pyplot as plt
+
+        plt.figure()
+        plt.plot(magtime, dip, c="c", label="dip")
+        plt.plot(
+            magtime,
+            dip_smoothed,
+            linestyle="-",
+            c="m",
+            label="dip_smoothed non-causal (11-point)",
+        )
+        plt.plot(
+            magtime,
+            dip_smoothed_causal,
+            linestyle="-",
+            c="k",
+            label="dip_smoothed causal (6-point)",
+        )
+        plt.legend()
+        plt.title("1120105021 dip smoothed causal vs non-causal filters")
+        plt.xlabel("time (s)")
+        plt.ylabel("(A/s)")
+        plt.show()
+        ######
+
+        # Apply 6-point causal boxcar smoothing to dip_dt
+        # This introduces a delay of about 0.5 ms
+        dip_smoothed = causal_boxcar_smooth(dip, 6)
+
         dipprog_dt = np.gradient(ip_prog, pcstime)
         ip_prog = interp1(
             pcstime, ip_prog, times, bounds_error=False, fill_value=ip_prog[-1]
@@ -515,6 +549,9 @@ class CmodPhysicsMethods:
         v_inductive = inductance * dip_smoothed
         v_resistive = v_loop - v_inductive
         p_ohm = ip * v_resistive
+        # Set negative p_ohm values to 0
+        (indices,) = np.where(p_ohm < 0)
+        p_ohm[indices] = 0
         output = {"p_oh": p_ohm, "v_loop": v_loop}
         return output
 
@@ -549,6 +586,52 @@ class CmodPhysicsMethods:
             v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
                 r"\top.mflux:v0", tree_name="analysis"
             )  # [V], [s]
+
+            ### To be removed in final commit
+            v_loop_efit, v_loop_efit_time = params.mds_conn.get_data_with_dims(
+                r"\efit_aeqdsk:vloopt", tree_name="_efit_tree"
+            )  # [V], [s]
+            v_loop_smoothed = causal_boxcar_smooth(v_loop, 6)
+            v_loop_smoothed_interp = interp1(
+                v_loop_time, v_loop_smoothed, v_loop_efit_time
+            )
+
+            import matplotlib.pyplot as plt
+
+            plt.figure()
+            plt.plot(v_loop_time, v_loop, c="c", label="mflux:v0")
+            plt.plot(
+                v_loop_time, v_loop_smoothed, c="m", label="causal_smoothed(mflux:v0)"
+            )
+            plt.plot(
+                v_loop_efit_time,
+                v_loop_smoothed_interp,
+                c="y",
+                label="causal_smoothed(mflux:v0)\ninterp(efit_time)",
+            )
+            plt.plot(
+                v_loop_efit_time,
+                v_loop_efit,
+                c="k",
+                linestyle="--",
+                marker="x",
+                label="vloopt",
+            )
+            plt.legend()
+            plt.title("1120105021 vloop 6-point smooth")
+            plt.xlabel("time (s)")
+            plt.ylabel("loop voltage (V)")
+            # plt.xlim(0, 1.5)
+            # plt.ylim(-10, 8)
+            plt.xlim(1.46, 1.48)
+            plt.ylim(-10, 0)
+            plt.show()
+            ######
+
+            # Apply 6-point boxcar smoothing to raw vloop signal.
+            # This introduces a delay of around 0.5 ms
+            v_loop = causal_boxcar_smooth(v_loop, 6)
+
         except mdsExceptions.TreeException:
             params.logger.verbose(
                 r"v_loop: Failed to get \top.mflux:v0 data. Use \efit_aeqdsk:vloopt instead."
