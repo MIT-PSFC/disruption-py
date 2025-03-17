@@ -1272,112 +1272,7 @@ class EastPhysicsMethods:
 
         # TODO: Move calibration factors to a separate settings file
         # Calibration factors
-        fac_1 = (
-            np.array(
-                [
-                    1.3681,
-                    1.3429,
-                    1.3215,
-                    1.3039,
-                    1.2898,
-                    1.2793,
-                    1.2723,
-                    1.2689,
-                    1.2689,
-                    1.2723,
-                    1.2793,
-                    1.2898,
-                    1.3039,
-                    1.3215,
-                    1.3429,
-                    1.3681,
-                ]
-            )
-            * 1e4
-        )
-        fac_2 = np.array(
-            [
-                [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-                [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-                [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-                [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-            ]
-        )  # factors of Amp.Gain
-        fac_3 = np.array([1, 1, 1, 1])  # cross calibration factors between arrays
-        fac_4 = 1 * 1e-3  # unit convert
-        # Fac5=2.5    # corrected factor by cross calibration with foil bolometer
-        maj_r = 1.85
-        del_r = (
-            np.array(
-                [
-                    3.6,
-                    3.6,
-                    3.5,
-                    3.4,
-                    3.4,
-                    3.3,
-                    3.3,
-                    3.2,
-                    3.2,
-                    3.1,
-                    3.1,
-                    3.0,
-                    3.0,
-                    2.9,
-                    2.9,
-                    2.8,
-                    2.9,
-                    2.8,
-                    2.8,
-                    2.8,
-                    2.8,
-                    2.8,
-                    2.8,
-                    2.7,
-                    2.7,
-                    2.7,
-                    2.7,
-                    2.7,
-                    2.6,
-                    2.6,
-                    2.6,
-                    2.6,
-                    2.6,
-                    2.6,
-                    2.6,
-                    2.6,
-                    2.7,
-                    2.7,
-                    2.7,
-                    2.7,
-                    2.7,
-                    2.8,
-                    2.8,
-                    2.8,
-                    2.8,
-                    2.8,
-                    2.8,
-                    2.9,
-                    2.8,
-                    2.9,
-                    2.9,
-                    3.0,
-                    3.0,
-                    3.1,
-                    3.1,
-                    3.2,
-                    3.2,
-                    3.3,
-                    3.3,
-                    3.4,
-                    3.4,
-                    3.5,
-                    3.6,
-                    3.6,
-                ]
-            )
-            * 0.01
-        )
+        calib_factors = EastUtilMethods.get_axuv_calib_factors()
 
         # Get XUV data
         (xuvtime,) = params.mds_conn.get_dims(r"\pxuv1", tree_name="east_1")
@@ -1398,14 +1293,14 @@ class EastPhysicsMethods:
                 signal_smoothed = smooth(signal, smoothing_window)
                 xuv[:, ichord] = (
                     signal_smoothed
-                    * fac_1[ichan]
-                    * fac_2[iarray][ichan]
-                    * fac_3[iarray]
-                    * fac_4
+                    * calib_factors["Fac1"][ichan]
+                    * calib_factors["Fac2"][iarray][ichan]
+                    * calib_factors["Fac3"][iarray]
+                    * calib_factors["Fac4"]
                     * 2
                     * np.pi
-                    * maj_r
-                    * del_r[ichan]
+                    * calib_factors["Maj_R"]
+                    * calib_factors["Del_r"][ichan]
                 )  # from Duan Yanming's program
 
         # Correction for bad channels (from Duan Yanmin's program)
