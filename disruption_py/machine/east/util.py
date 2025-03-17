@@ -6,6 +6,7 @@ import numpy as np
 import scipy
 
 from disruption_py.inout.mds import MDSConnection
+from disruption_py.core.utils.math import smooth
 
 
 class EastUtilMethods:

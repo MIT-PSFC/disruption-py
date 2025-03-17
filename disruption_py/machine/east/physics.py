@@ -442,9 +442,109 @@ class EastPhysicsMethods:
         return {"n_e": ne, "greenwald_fraction": greenwald_fraction, "dn_dt": dn_dt}
 
     @staticmethod
+    def get_raw_axuv_data(params: PhysicsMethodParams):
+        """
+        Get the raw (uncalibrated) data from the AXUV arrays for calculating
+        the total radiated power and prad_peaking. The AXUV diagnostic contains
+        4 arrays of 16 channels each.
+
+        Note that the original implementations in Prad_bulk_xuv2014_2016.m and
+        get_prad_peaking.m are slightly different in where the calibration factors
+        are applied. This difference isn't explained in the scripts so I keep
+        these functions different.
+
+        TODO: should this function be put in EastUtilMethods?
+        """
+        # Get XUV data
+        (xuvtime,) = params.mds_conn.get_dims(r"\pxuv1", tree_name="east_1")  # [s]
+        # There are 64 AXUV chords, arranged in 4 arrays of 16 channels each
+        xuv = np.full((len(xuvtime), 64), np.nan)
+
+        dt = xuvtime[1] - xuvtime[0]
+        smoothing_time = 1e-3
+        smoothing_window = int(max([round(smoothing_time / dt, 1)]))
+
+        for iarray in range(4):
+            for ichan in range(16):
+                ichord = 16 * iarray + ichan
+                # TODO: confirm the actual node of each chord
+                signal = params.mds_conn.get_data(
+                    r"\pxuv" + str(ichord + 1), tree_name="east_1"
+                )
+                # Subtract baseline
+                signal = signal - np.mean(signal[:100])
+                # TODO: change this to causal smoothing
+                xuv[:, ichord] = smooth(signal, smoothing_window) * 1e3  # [kW] -> [W]
+        return xuv, xuvtime
+
+    @staticmethod
+    @physics_method(columns=["p_rad"], tokamak=Tokamak.EAST)
+    def get_radiated_power(params: PhysicsMethodParams):
+        """
+        Calculate total radiated power in bulk plasma from the AXUV arrays.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+            - 'p_rad' : array
+                Radiated power [W].
+
+        References
+        -------
+        - Prad_bulk_xuv2014_2016.m (Not in repo)
+
+        TODO: Update docstring
+        """
+        # Get the raw AXUV data
+        try:
+            xuv, xuvtime = EastPhysicsMethods.get_raw_axuv_data(params)  # [W], [s]
+        except mdsExceptions.MdsException:
+            return {"p_rad": [np.nan]}
+
+        # Get calibration factors
+        calib_factors = EastUtilMethods.get_axuv_calib_factors()
+        # Apply calibration factors Fac1 to Fac4
+        for i in range(64):
+            xuv[:, i] *= (
+                calib_factors["Fac1"][i % 16]
+                * calib_factors["Fac2"][i // 16][i % 16]
+                * calib_factors["Fac3"][i // 16]
+                * calib_factors["Fac4"]
+            )
+        # Correction for bad channels (from Duan Yanmin's program)
+        xuv[:, 11] = 0.5 * (xuv[:, 10] + xuv[:, 12])
+        xuv[:, 35] = 0.5 * (xuv[:, 34] + xuv[:, 35])
+        # Apply geometric calibrations and Fac5
+        for i in range(64):
+            xuv[:, i] *= (
+                2
+                * np.pi
+                * calib_factors["Maj_R"]
+                * calib_factors["Del_r"][i]
+                * calib_factors["Fac5"]
+            )
+
+        # Select core measurements
+        core_indices = (
+            list(range(7, 15))
+            + list(range(20, 32))
+            + list(range(32, 48))
+            + list(range(53, 59))
+        )
+        p_rad = np.sum(xuv[:, core_indices], axis=1)  # TODO: check nans
+        # Interpolate to requested time base
+        p_rad = interp1(xuvtime, p_rad, params.times, kind="linear", fill_value=0)
+        return {"p_rad": p_rad}
+
+    @staticmethod
     @physics_method(
         columns=[
-            "p_rad",
             "p_ecrh",
             "p_lh",
             "p_icrf",
@@ -584,12 +684,7 @@ class EastPhysicsMethods:
         p_ohm = EastPhysicsMethods.get_p_ohm(params)["p_oh"]  # [W]
 
         # Get radiated power
-        # tree = 'prad_east'
-        # TODO: find and implement `prad_bulk_xuv2014_2016`
-        # Original from Duan Yanming, and modified by RSG
-        # p_rad, rad_time = prad_bulk_xuv2014_2016(params.shot_id)
-        # p_rad = interp1(rad_time, p_rad, params.times, kind="linear", fill_value=0)
-        p_rad = [np.nan] * len(params.times)
+        p_rad = EastPhysicsMethods.get_radiated_power(params)["p_rad"]  # [W]
 
         # Get Wmhd and calculate dWmhd_dt
         wmhd, efittime = params.mds_conn.get_data_with_dims(
@@ -606,7 +701,6 @@ class EastPhysicsMethods:
         rad_loss_frac = p_rad / (p_input - dwmhd_dt)
 
         output = {
-            "p_rad": p_rad,
             "p_ecrh": p_ecrh,
             "p_lh": p_lh,
             "p_icrf": p_icrf,
@@ -1266,45 +1360,26 @@ class EastPhysicsMethods:
 
         Last major update: 2014/11/22 by William Wei
         """
+        xuv, xuvtime = EastPhysicsMethods.get_raw_axuv_data(params)
 
-        # The following section about calibration factors was copied-and-pasted
-        # directly from Duan Yanmin <ymduan@ipp.ac.cn>'s code.
-
-        # TODO: Move calibration factors to a separate settings file
-        # Calibration factors
+        # Get calibration factors
         calib_factors = EastUtilMethods.get_axuv_calib_factors()
-
-        # Get XUV data
-        (xuvtime,) = params.mds_conn.get_dims(r"\pxuv1", tree_name="east_1")
-        # There are 64 AXUV chords, arranged in 4 arrays of 16 channels each
-        xuv = np.full((len(xuvtime), 64), np.nan)
-
-        dt = xuvtime[1] - xuvtime[0]
-        smoothing_time = 1e-3
-        smoothing_window = int(max([round(smoothing_time / dt, 1)]))
-        for iarray in range(4):
-            for ichan in range(16):
-                ichord = 16 * iarray + ichan
-                # TODO: confirm the actual node of each chord
-                signal = params.mds_conn.get_data(
-                    r"\pxuv" + str(ichord + 1), tree_name="east_1"
-                )
-                signal = signal - np.mean(signal[:100])  # Subtract baseline
-                signal_smoothed = smooth(signal, smoothing_window)
-                xuv[:, ichord] = (
-                    signal_smoothed
-                    * calib_factors["Fac1"][ichan]
-                    * calib_factors["Fac2"][iarray][ichan]
-                    * calib_factors["Fac3"][iarray]
-                    * calib_factors["Fac4"]
-                    * 2
-                    * np.pi
-                    * calib_factors["Maj_R"]
-                    * calib_factors["Del_r"][ichan]
-                )  # from Duan Yanming's program
-
+        # Apply calibration factors
+        for i in range(64):
+            xuv[:, i] *= (
+                calib_factors["Fac1"][i % 16]
+                * calib_factors["Fac2"][i // 16][i % 16]
+                * calib_factors["Fac3"][i // 16]
+                * calib_factors["Fac4"]
+                * 2
+                * np.pi
+                * calib_factors["Maj_R"]
+                * calib_factors["Del_r"][i]
+                # * calib_factors["Fac5"]
+            )
         # Correction for bad channels (from Duan Yanmin's program)
         xuv[:, 11] = 0.5 * (xuv[:, 10] + xuv[:, 12])
+        # xuv[:, 35] = 0.5 * (xuv[:, 34] + xuv[:, 35])
 
         # Define the core chords to be #28 to #37 (centermost 10 chords), and
         # define the non-divertor chords to be #09 to #56.  (Chords #1-8 view the
