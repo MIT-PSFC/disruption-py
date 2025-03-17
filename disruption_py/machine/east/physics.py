@@ -518,6 +518,7 @@ class EastPhysicsMethods:
                 * calib_factors["Fac4"]
             )
         # Correction for bad channels (from Duan Yanmin's program)
+        # NOTE: why not [35] = ([34]+[36])/2 when [35] is the bad channel?
         xuv[:, 11] = 0.5 * (xuv[:, 10] + xuv[:, 12])
         xuv[:, 35] = 0.5 * (xuv[:, 34] + xuv[:, 35])
         # Apply geometric calibrations and Fac5
@@ -1366,6 +1367,7 @@ class EastPhysicsMethods:
         calib_factors = EastUtilMethods.get_axuv_calib_factors()
         # Apply calibration factors
         for i in range(64):
+            # NOTE: Original script has Del_r(ichan) which should be a mistake
             xuv[:, i] *= (
                 calib_factors["Fac1"][i % 16]
                 * calib_factors["Fac2"][i // 16][i % 16]
@@ -1374,10 +1376,11 @@ class EastPhysicsMethods:
                 * 2
                 * np.pi
                 * calib_factors["Maj_R"]
-                * calib_factors["Del_r"][i]
+                * calib_factors["Del_r"][i] 
                 # * calib_factors["Fac5"]
             )
         # Correction for bad channels (from Duan Yanmin's program)
+        # NOTE: get_radiated_power does this first and then apply geometric correction.
         xuv[:, 11] = 0.5 * (xuv[:, 10] + xuv[:, 12])
         # xuv[:, 35] = 0.5 * (xuv[:, 34] + xuv[:, 35])
 
