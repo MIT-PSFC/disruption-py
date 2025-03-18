@@ -8,6 +8,7 @@ Module for managing retrieval of shot data from a tokamak.
 import numpy as np
 import pandas as pd
 from loguru import logger
+from MDSplus import mdsExceptions
 
 from disruption_py.config import config
 from disruption_py.core.physics_method.params import PhysicsMethodParams
@@ -60,7 +61,7 @@ class RetrievalManager:
 
     def get_shot_data(
         self, shot_id, retrieval_settings: RetrievalSettings
-    ) -> pd.DataFrame:
+    ) -> pd.DataFrame | None:
         """
         Get data for a single shot. May be run across different processes.
 
@@ -73,13 +74,15 @@ class RetrievalManager:
 
         Returns
         -------
-        pd.DataFrame
+        pd.DataFrame, or None
             The retrieved shot data as a DataFrame, or None if an error occurred.
         """
         physics_method_params = self.shot_setup(
             shot_id=int(shot_id),
             retrieval_settings=retrieval_settings,
         )
+        if not physics_method_params:
+            return None
         retrieved_data = populate_shot(
             retrieval_settings=retrieval_settings,
             physics_method_params=physics_method_params,
@@ -89,7 +92,7 @@ class RetrievalManager:
 
     def shot_setup(
         self, shot_id: int, retrieval_settings: RetrievalSettings, **kwargs
-    ) -> PhysicsMethodParams:
+    ) -> PhysicsMethodParams | None:
         """
         Sets up the shot properties for the tokamak.
 
@@ -104,7 +107,7 @@ class RetrievalManager:
 
         Returns
         -------
-        PhysicsMethodParams
+        PhysicsMethodParams, or None
             Parameters containing MDS connection and shot information
         """
 
@@ -135,11 +138,11 @@ class RetrievalManager:
                 **kwargs,
             )
             return physics_method_params
-        except Exception as e:
+        except mdsExceptions.MdsException as e:
             logger.critical(shot_log_msg(shot_id, f"Failed to set up shot! {e}"))
             logger.opt(exception=True).debug(e)
             mds_conn.cleanup()
-            raise e
+            return None
 
     @classmethod
     def shot_cleanup(
