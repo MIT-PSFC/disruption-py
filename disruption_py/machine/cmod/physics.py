@@ -157,6 +157,7 @@ class CmodPhysicsMethods:
         -------
         - matlab/cmod_matlab/matlab-core/get_Ip_parameters.m
         """
+        print("here")
         dip = np.gradient(ip, magtime)
         dip_smoothed = smooth(dip, 11)  # ,ends_type=0)
         dipprog_dt = np.gradient(ip_prog, pcstime)
@@ -211,6 +212,7 @@ class CmodPhysicsMethods:
         - pull requests: #[181](https://github.com/MIT-PSFC/disruption-py/pull/181)
         - issues: #[175](https://github.com/MIT-PSFC/disruption-py/issues/175)
         """
+        print("Here")
         # Automatically generated
         active_segments = CmodPhysicsMethods._get_active_wire_segments(params=params)
 
@@ -2132,3 +2134,144 @@ class CmodPhysicsMethods:
         ):
             return True
         return False
+
+    # New method
+    @staticmethod
+    @physics_method(columns=["thermal_quench_time_onset"], tokamak=Tokamak.CMOD)
+    def get_thermal_quench_time_onset(params: PhysicsMethodParams):
+        """
+        Gets the onset of the fast thermal quench using SXR arrays using an off-line
+        algorithm. The thermal quench onset is found by examining the max SXR intensity
+        across all chords in the array for a given time slice, which should track the
+        core SXR emission in the case of a hot VDE. Iterating backwards from the current quench,
+        the TQ onset is labeled as the point in which the max(SXR) intensity rises above
+        a threshold determined by the pre-disruptive max(SXR) intensity for a minimum amount
+        of time (when iterating backwards in time), which should be robust to transient spikes
+        in the SXR signal during the thermal quench.
+        Note performance is better for 2012-2016, for which SXR chords have a 250kHz sampling rate,
+        compared to 2005 shots which have a 5 kHz sampling rate and tend to be noisier.
+        ----------
+        params: PhysicsMethodParams
+            The parameters storing the requested time base, shot id, etc
+        Returns
+        ----------
+        Output is an array with each element the thermal quench onset time, in s
+
+        Last Major Update: Henry Wietfeldt (1/31/25)
+        """
+        print("In desired method")
+        from scipy.signal import butter, filtfilt
+        n_chords = 38
+        butterworth_cutoff = 0.5
+        butterworth_order = 2
+        thermal_quench_time_onset = np.full(len(params.times), np.nan)
+        # Get magnetic axis data from EFIT for testing purposes
+        ip, magtime = params.mds_conn.get_data_with_dims(
+            r"\ip", tree_name="magnetics", astype="float64"
+        )
+        z0, efit_time = params.mds_conn.get_data_with_dims(
+            r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
+        )  # [cm], [s]
+        z0 *= 0.01 # [cm] -> [m]
+
+        # Get timebase of SXR array from first chord
+        if (params.shot_id > 1040000000 and params.shot_id < 1060000000):
+            # Array 3 is bad for chords 15, 21-38 during 2005 campaign
+            # so use array 1 (vertical array) for 2005 shots
+            array_path = r"\top.brightnesses.array_1"
+        else:
+            array_path = r"\top.brightnesses.array_3"
+        try:
+            chord_01, t_sxr = params.mds_conn.get_data_with_dims(
+                array_path + ":chord_01",
+                tree_name="xtomo",
+                astype="float64",
+            ) # Units: W/m^2, s
+        except mdsExceptions.MdsException:
+            print(params.shot_id)
+            params.logger.debug("Failed to get SXR " + array_path + " data")
+            return {"thermal_quench_time_onset": np.full(len(params.times), np.nan)}
+        valid_times = (t_sxr > 0) & (t_sxr < 2.)
+        t_sxr = t_sxr[valid_times]
+        sxr = np.zeros(shape=(n_chords, len(t_sxr)))
+        sxr[0] = chord_01[valid_times]
+        # Get all SXR chords
+        for i in range(1, n_chords):
+            try:
+                chord, t_chord = params.mds_conn.get_data_with_dims(
+                    array_path + ":chord_" + f"{i+1:02}",
+                    tree_name="xtomo",
+                    astype="float64",
+                )
+            except mdsExceptions.MdsException:
+                params.logger.debug("Failed to get SXR " + array_path + " chord " + str(i+1) + " data")
+                sxr[i] = 0.
+                continue
+            # Subtract constant background
+            chord = chord - np.mean(chord[t_chord < 0.])
+            # Occasionally the time bases of a chord are of a different length
+            # Usually one timebase is just cut off early after shot is over
+            valid_times = (t_chord > 0) & (t_chord < 2.)
+            # Goods chords should be of the same shape
+            if len(chord[valid_times]) == sxr.shape[1]:
+                sxr[i] = chord[valid_times]
+
+        # Discard chords dominated by noise using the chord's autocorrelation
+        # Only do this for 2005 shots because I've found those shots frequently
+        # have bad chords compared to 2012-2016 chords, for which window smoothing
+        # should do the trick. The autocorrelation method is pretty slow for 2012-2016
+        # chords, due to the 250 kHz sampling rate
+        sample_time = t_sxr[1] - t_sxr[0]
+        if (params.shot_id < 1060000000):
+            noise_autorr_cutoff = 0.01 # s, good chords should be 100's of ms
+            for i, chord in enumerate(sxr):
+                autocorr = np.correlate(chord, chord, mode='full')
+                autocorr = autocorr / np.max(autocorr)  # Normalize
+                #lags = np.arange(-len(chord) + 1, len(chord))
+                index_no_lag = np.argmax(autocorr)
+                index_decay = np.argmax(autocorr[index_no_lag:] < 0)
+                if (index_decay*sample_time < noise_autorr_cutoff):
+                    sxr[i] = 0.
+            normalized_cutoff = butterworth_cutoff / 2.5
+        else:
+            normalized_cutoff = butterworth_cutoff / 125.
+        # Butterworth low pass filter
+        # Cutoff of 0.5 kHz and order 2 seems to filter recombination spikes
+        # for shots with large recomb spikes (see shot 1120913013)
+        b, a = butter(butterworth_order, normalized_cutoff, btype='low', analog=False)
+        sxr = filtfilt(b, a, sxr, axis=1)
+        core_sxr = np.max(sxr, axis=0)
+        dcore_sxr_dt = np.gradient(core_sxr, t_sxr)
+        core_sxr_index = np.argmax(sxr, axis=0)
+
+        # Find minima of dSXR/dt in 20 ms window leading up to disruption
+        istart = np.argmax(t_sxr > params.disruption_time - 0.020)
+        iend = np.argmax(t_sxr > params.disruption_time)
+        imin = istart + np.argmin(dcore_sxr_dt[istart:iend])
+
+        #Write some signals for plotting
+        import pickle
+        plot_df = {"magtime":magtime,
+                   "ip": ip,
+                   "t_sxr": t_sxr,
+                   "core_sxr": core_sxr,
+                   "dcore_sxr_dt": dcore_sxr_dt,
+                   "efit_time": efit_time,
+                   "z0": z0,
+                   "t_disrupt": params.disruption_time,
+                   }
+        with open('sxr.pkl', 'wb') as f:
+            pickle.dump(plot_df, f)
+
+
+        # 1. Identify minimum in dSXR/dt over window before CQ
+        # 2. For minimum, define drop as duration in which dSXR/dt < 0 around minima
+        # 3. Repeat 1-2 recursively over windows on either side of drop duration
+        # 4. Integrate drop in SXR for each drop. Must be > thresh
+        # 5. Identify Ip spike(s) dI/dt > thresh
+        # 6. TQs are SXR drops that feature dI/dt spike 
+
+
+        thermal_quench_time_onset = -1 * np.ones(len(params.times))
+        return {"thermal_quench_time_onset": thermal_quench_time_onset}
+

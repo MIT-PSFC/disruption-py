@@ -23,6 +23,7 @@ lab = [
   "ipympl>=0.9.0",
   "jupyterlab>=4.3.0",
   "matplotlib>=3.10.0",
+  "PyQt5>=5.15.4"
 ]
 
 [project]
