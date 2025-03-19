@@ -2160,7 +2160,7 @@ class CmodPhysicsMethods:
         Last Major Update: Henry Wietfeldt (1/31/25)
         """
         print("In desired method")
-        from scipy.signal import butter, filtfilt
+        from scipy.signal import butter, lfilter
         n_chords = 38
         butterworth_cutoff = 0.5
         butterworth_order = 2
@@ -2169,6 +2169,7 @@ class CmodPhysicsMethods:
         ip, magtime = params.mds_conn.get_data_with_dims(
             r"\ip", tree_name="magnetics", astype="float64"
         )
+        ip = np.abs(ip)
         z0, efit_time = params.mds_conn.get_data_with_dims(
             r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
         )  # [cm], [s]
@@ -2239,26 +2240,42 @@ class CmodPhysicsMethods:
         # Cutoff of 0.5 kHz and order 2 seems to filter recombination spikes
         # for shots with large recomb spikes (see shot 1120913013)
         b, a = butter(butterworth_order, normalized_cutoff, btype='low', analog=False)
-        sxr = filtfilt(b, a, sxr, axis=1)
+        sxr = lfilter(b, a, sxr, axis=1)
         core_sxr = np.max(sxr, axis=0)
-        dcore_sxr_dt = np.gradient(core_sxr, t_sxr)
+        dcore_sxr_dt = np.diff(core_sxr, prepend=0)/sample_time/core_sxr
         core_sxr_index = np.argmax(sxr, axis=0)
 
-        # Find minima of dSXR/dt in 20 ms window leading up to disruption
-        istart = np.argmax(t_sxr > params.disruption_time - 0.020)
-        iend = np.argmax(t_sxr > params.disruption_time)
-        imin = istart + np.argmin(dcore_sxr_dt[istart:iend])
+        # dIp/dt/Ip for finding current spikes
+        valid_magtimes = (magtime > 0.) & (magtime < 2.)
+        ip = ip[valid_magtimes]
+        magtime = magtime[valid_magtimes]
+        ip_growth_rate = np.diff(ip, prepend=0)/(magtime[1]-magtime[0])/ip
+
+        # For t in valid times (do we need min requirement on ip?)
+        # For now do ip > 0.3 MA
+        # Is t > t_disrupt?
+        # Is sxr growth rate below (negative) threshold?
+        # Yes: mark time, wait until growth rate returns to below thresh
+        #      check if ip growth rate above threshold in that window
+        # Otherwise, continue
+        thermal_quench_times = []
+        sxr_gr_thresh = -500
+        ip_gr_thresh = 10
+        t_start = magtime[np.argmax(ip > 0.3e6)]
+        i_start = np.argmax(t_sxr > t_start)
 
         #Write some signals for plotting
         import pickle
         plot_df = {"magtime":magtime,
                    "ip": ip,
+                   "ip_growth_rate": ip_growth_rate,
                    "t_sxr": t_sxr,
                    "core_sxr": core_sxr,
                    "dcore_sxr_dt": dcore_sxr_dt,
                    "efit_time": efit_time,
                    "z0": z0,
                    "t_disrupt": params.disruption_time,
+                   "t_start": t_start,
                    }
         with open('sxr.pkl', 'wb') as f:
             pickle.dump(plot_df, f)
