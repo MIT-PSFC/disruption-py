@@ -531,7 +531,7 @@ class EastPhysicsMethods:
                 * calib_factors["Fac5"]
             )
 
-        # Select core measurements
+        # Subtract divertor measurements and overlapping measurments
         core_indices = (
             list(range(7, 15))
             + list(range(20, 32))
@@ -1376,7 +1376,7 @@ class EastPhysicsMethods:
                 * 2
                 * np.pi
                 * calib_factors["Maj_R"]
-                * calib_factors["Del_r"][i] 
+                * calib_factors["Del_r"][i]
                 # * calib_factors["Fac5"]
             )
         # Correction for bad channels (from Duan Yanmin's program)
