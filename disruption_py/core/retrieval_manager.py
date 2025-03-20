@@ -137,6 +137,13 @@ class RetrievalManager:
                 retrieval_settings=retrieval_settings,
                 **kwargs,
             )
+            if len(physics_method_params.times) < 2:
+                logger.critical(
+                    shot_log_msg("Timebase is too short: size {size}"),
+                    shot=shot_id,
+                    size=len(physics_method_params.times),
+                )
+                return None
             return physics_method_params
         except mdsExceptions.MdsException as e:
             logger.critical(
