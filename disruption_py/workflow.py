@@ -69,7 +69,7 @@ def get_shots_data(
     database_initializer: Callable[..., ShotDatabase] = None,
     mds_connection_initializer: Callable[..., ProcessMDSConnection] = None,
     retrieval_settings: RetrievalSettings = None,
-    output_setting: OutputSetting = "dataset",
+    output_setting: OutputSetting = "dataframe",
     num_processes: int = 1,
     log_settings: LogSettings = None,
 ) -> Any:
@@ -89,7 +89,7 @@ def get_shots_data(
         The output type setting to be used when outputting the retrieved data for
         each shot. Note that data is streamed to the output type setting object
         as it is retrieved. Can pass any OutputSettingType that resolves to an
-        OutputSetting. See OutputSetting for more details. Defaults to "dataset".
+        OutputSetting. See OutputSetting for more details. Defaults to "dataframe".
     num_processes : int
         The number of processes to use for data retrieval. If 1, the data is retrieved
         in serial. If > 1, the data is retrieved in parallel.

@@ -218,6 +218,17 @@ class DataFrameOutputSetting(DatasetOutputSetting):
     Output shot data as a pandas.DataFrame.
     """
 
+    def __init__(self, *args):
+        """
+        Display a visible DeprecationWarning.
+        """
+        super().__init__(*args)
+        logger.warning(
+            "The pandas DataFrame output setting has been deprecated "
+            "and will be removed in the next release. "
+            "Please use xarray Dataset, instead."
+        )
+
     def get_results(self, params: CompleteOutputSettingParams):
         """
         Get the concatenated results.

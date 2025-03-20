@@ -33,7 +33,7 @@ shot_data = get_shots_data(
     database_initializer=None,
     mds_connection_initializer=None,
     retrieval_settings=retrieval_settings,
-    output_setting="dataset",
+    output_setting="dataframe",
     num_processes=1,
     log_settings=LogSettings(
         # default None: "output.log" in temporary session folder
