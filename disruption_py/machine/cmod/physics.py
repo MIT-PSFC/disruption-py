@@ -2258,11 +2258,26 @@ class CmodPhysicsMethods:
         # Yes: mark time, wait until growth rate returns to below thresh
         #      check if ip growth rate above threshold in that window
         # Otherwise, continue
-        thermal_quench_times = []
-        sxr_gr_thresh = -500
+        thermal_quenches = np.full(len(t_sxr), False)
+        ip_thresh = 200e3 # [A]
+        sxr_gr_thresh = -1000
         ip_gr_thresh = 10
         t_start = magtime[np.argmax(ip > 0.3e6)]
-        i_start = np.argmax(t_sxr > t_start)
+        in_thermal_quench = False
+        tq_duration = 0.
+        for i, t in enumerate(t_sxr):
+            if in_thermal_quench:
+                #tq_duration += t_sxr[i] - t_sxr[i-1]
+                if (dcore_sxr_dt[i] >=0.):
+                    in_thermal_quench = False
+            else:
+                i_mag = np.argmax(magtime > t)
+                if (ip[i_mag] > ip_thresh) and (dcore_sxr_dt[i] < sxr_gr_thresh):
+                    thermal_quenches[i] = True
+                    in_thermal_quench = True
+        #mask = np.concatenate(([False], thermal_quenches[:-1] == True))
+        #thermal_quenches[mask & thermal_quenches] = False
+        thermal_quench_times = t_sxr[thermal_quenches]
 
         #Write some signals for plotting
         import pickle
@@ -2276,6 +2291,7 @@ class CmodPhysicsMethods:
                    "z0": z0,
                    "t_disrupt": params.disruption_time,
                    "t_start": t_start,
+                   "thermal_quench_times": thermal_quench_times,
                    }
         with open('sxr.pkl', 'wb') as f:
             pickle.dump(plot_df, f)

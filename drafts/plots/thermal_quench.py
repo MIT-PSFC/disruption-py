@@ -60,6 +60,8 @@ axs[4].scatter(df['efit_time'], df['z0'], marker='o', s=10, c='k')
 for ax in axs:
     ax.axvline(df['t_disrupt'], linestyle='--', c='b', label='CQ')
     ax.axvline(df['t_start'], linestyle='--', c='k', label='tstart')
+for t_tq in df['thermal_quench_times']:
+    axs[3].axvline(t_tq, linestyle='--', c='g')
 axs[0].set_title('C-Mod Shot: ' + str(SHOT_ID))
 axs[0].set_ylabel('Ip [MA]')
 axs[1].set_ylabel('dIp/dt [MA/s]')
