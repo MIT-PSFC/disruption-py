@@ -206,6 +206,9 @@ class DatasetOutputSetting(OutputSetting):
         xr.Dataset
             The dataset of the concatenated results.
         """
+        if not self.datasets:
+            logger.critical("No datasets to concatenate.")
+            return xr.Dataset()
         ds = xr.concat(self.datasets, dim="shot")
         if self.filepath and not self.filepath.endswith(".csv"):
             logger.debug(f"Saving dataset: {self.filepath}")
