@@ -161,7 +161,7 @@ class OutputSettingList(OutputSetting):
 
 class DatasetOutputSetting(OutputSetting):
     """
-    Outputs shot data as a xarray.Dataset.
+    Outputs shot data as an xarray Dataset.
     """
 
     def __init__(self, filepath: str = None):

@@ -63,7 +63,7 @@ class CacheSetting(ABC):
     def _get_cache_data(self, params: CacheSettingParams) -> xr.Dataset:
         """
         Abstract method implemented by subclasses to get cached data for a
-        given set of params as an xarray dataset.
+        given set of params as an xarray Dataset.
 
         Parameters
         ----------
@@ -73,7 +73,7 @@ class CacheSetting(ABC):
         Returns
         -------
         xr.Dataset
-            xarray dataset containing cached data.
+            xarray Dataset containing cached data.
         """
 
 

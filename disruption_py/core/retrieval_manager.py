@@ -74,7 +74,7 @@ class RetrievalManager:
         Returns
         -------
         xr.Dataset
-            The retrieved shot data as a xarray Dataset, or None if an error occurred.
+            The retrieved shot data as an xarray Dataset, or None if an error occurred.
         """
         physics_method_params = self.shot_setup(
             shot_id=int(shot_id),
