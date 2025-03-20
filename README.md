@@ -93,7 +93,6 @@ Brief description of the folders in our project:
 
 - `disruption_py/`, package source code,
 - `docs/`, documentation sources,
-- `drafts/`, experimental scripts,
 - `examples/`, example workflows,
 - `scripts/`, miscellaneous scripts,
 - `tests/`, testing workflows.

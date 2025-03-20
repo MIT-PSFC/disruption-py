@@ -16,7 +16,7 @@ from disruption_py.workflow import get_shots_data
 from tests.utils.factory import get_tokamak_test_shotlist
 
 
-def main(tokamak, methods, shots, processes, log_level):
+def main(tokamak, methods, shots, efit_tree, time_base, processes, log_level):
     """
     simple workflow.
     """
@@ -27,10 +27,13 @@ def main(tokamak, methods, shots, processes, log_level):
         shots, *_ = get_tokamak_test_shotlist(tokamak)
     methods = methods or None
 
+    sett = RetrievalSettings(
+        efit_nickname_setting=efit_tree, time_setting=time_base, run_methods=methods
+    )
     out = get_shots_data(
         tokamak=tokamak,
         shotlist_setting=shots,
-        retrieval_settings=RetrievalSettings(run_methods=methods),
+        retrieval_settings=sett,
         num_processes=processes,
         log_settings=log_level,
         output_setting="dataset",
@@ -53,8 +56,10 @@ def cli():
     parser.add_argument("-t", "--tokamak", type=str)
     parser.add_argument("-s", "--shots", type=int, action="append")
     parser.add_argument("-m", "--methods", type=str, action="append")
+    parser.add_argument("-e", "--efit-tree", type=str, default="disruption")
+    parser.add_argument("-b", "--time-base", default="disruption_warning")
     parser.add_argument("-p", "--processes", type=int, default=1)
-    parser.add_argument("-l", "--log-level")
+    parser.add_argument("-l", "--log-level", default="VERBOSE")
 
     return main(**vars(parser.parse_args()))
 
