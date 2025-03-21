@@ -2263,18 +2263,28 @@ class CmodPhysicsMethods:
         sxr_gr_thresh = -1000
         ip_gr_thresh = 10
         t_start = magtime[np.argmax(ip > 0.3e6)]
+        in_candidate_thermal_quench = False
         in_thermal_quench = False
         tq_duration = 0.
+        index_tq = 0
         for i, t in enumerate(t_sxr):
+            i_mag = np.argmax(magtime > t)
             if in_thermal_quench:
-                #tq_duration += t_sxr[i] - t_sxr[i-1]
+                # Skip until the thermal quench is over
                 if (dcore_sxr_dt[i] >=0.):
                     in_thermal_quench = False
-            else:
-                i_mag = np.argmax(magtime > t)
-                if (ip[i_mag] > ip_thresh) and (dcore_sxr_dt[i] < sxr_gr_thresh):
-                    thermal_quenches[i] = True
+            elif in_candidate_thermal_quench:
+                # Check if there's an ip spike while the SXR is decaying
+                if (ip_growth_rate[i_mag] > ip_gr_thresh):
+                    thermal_quenches[index_tq] = True
                     in_thermal_quench = True
+                    in_candidate_thermal_quench = False
+                elif (dcore_sxr_dt[i] >=0.):
+                    in_candidate_thermal_quench = False
+            else:
+                if (ip[i_mag] > ip_thresh) and (dcore_sxr_dt[i] < sxr_gr_thresh):
+                    index_tq = i
+                    in_candidate_thermal_quench = True
         #mask = np.concatenate(([False], thermal_quenches[:-1] == True))
         #thermal_quenches[mask & thermal_quenches] = False
         thermal_quench_times = t_sxr[thermal_quenches]
