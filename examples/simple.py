@@ -16,7 +16,9 @@ from disruption_py.workflow import get_shots_data
 from tests.utils.factory import get_tokamak_test_shotlist
 
 
-def main(tokamak, methods, shots, efit_tree, time_base, processes, log_level):
+def main(
+    tokamak, methods, shots, efit_tree, time_base, output_file, processes, log_level
+):
     """
     simple workflow.
     """
@@ -39,9 +41,12 @@ def main(tokamak, methods, shots, efit_tree, time_base, processes, log_level):
         output_setting="dataset",
     )
 
-    cdf = os.path.join(get_temporary_folder(), "output.nc")
-    logger.info("Output: {cdf}", cdf=cdf)
-    out.to_netcdf(cdf)
+    if output_file:
+        output_file = os.path.realpath(output_file)
+    else:
+        output_file = os.path.join(get_temporary_folder(), "output.nc")
+    logger.info("Output: {output_file}", output_file=output_file)
+    out.to_netcdf(output_file)
 
     return out
 
@@ -53,11 +58,12 @@ def cli():
 
     parser = argparse.ArgumentParser()
 
+    parser.add_argument("shots", nargs="*")
     parser.add_argument("-t", "--tokamak", type=str)
-    parser.add_argument("-s", "--shots", type=int, action="append")
     parser.add_argument("-m", "--methods", type=str, action="append")
     parser.add_argument("-e", "--efit-tree", type=str, default="disruption")
     parser.add_argument("-b", "--time-base", default="disruption_warning")
+    parser.add_argument("-o", "--output-file", type=str)
     parser.add_argument("-p", "--processes", type=int, default=1)
     parser.add_argument("-l", "--log-level", default="VERBOSE")
 
