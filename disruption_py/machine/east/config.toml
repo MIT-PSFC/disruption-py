@@ -35,7 +35,7 @@ expected_failure_columns = [
   "n2rms_normalized",
   "p_input",
   "p_oh",
-  "p_rad",
+  "prad_peaking",
   "q0",
   "q95",
   "qstar",

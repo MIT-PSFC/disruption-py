@@ -7,6 +7,7 @@ import scipy
 
 from disruption_py.inout.mds import MDSConnection
 
+
 class EastUtilMethods:
     """
     A class of helper methods that might fetch and compute data from MDSplus
