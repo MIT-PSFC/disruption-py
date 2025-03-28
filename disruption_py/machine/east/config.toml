@@ -33,9 +33,6 @@ expected_failure_columns = [
   "n1rms_normalized",
   "n2rms",
   "n2rms_normalized",
-  "n_equal_1_mode",
-  "n_equal_1_normalized",
-  "n_equal_1_phase",
   "p_input",
   "p_oh",
   "p_rad",
@@ -44,8 +41,6 @@ expected_failure_columns = [
   "qstar",
   "rad_input_frac",
   "rad_loss_frac",
-  "rmp_n_equal_1",
-  "rmp_n_equal_1_phase",
   "wmhd",
   "wmhd_rt",
 ]
