@@ -94,6 +94,8 @@ test_columns = [
   "rmp_n_equal_1",
   "rmp_n_equal_1_phase",
   "time_until_disrupt",
+  "upper_gap",
+  "lower_gap",
   "v_loop",
   "wmhd",
   "wmhd_rt",

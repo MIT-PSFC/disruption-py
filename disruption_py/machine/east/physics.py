@@ -1601,3 +1601,118 @@ class EastPhysicsMethods:
         h98_y2 = interp1(h98_y2_time, h98_y2, params.times)
 
         return {"h98": h98_y2}
+
+    @staticmethod
+    @physics_method(
+        columns=["upper_gap", "lower_gap"],
+        tokamak=Tokamak.EAST,
+    )
+    def get_efit_gaps(params: PhysicsMethodParams):
+        """
+        This script calculates upper and lower gaps from EFIT information
+        on plasma boundary and first wall geometry. This is needed because
+        the EAST version of EFIT does not output the upper and lower gaps
+        directly.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+            - 'upper_gap' : array
+                Upper gap [m].
+            - 'lower_gap' : array
+                Lower gap [m].
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_EFIT_gaps.m
+
+        Original Authors
+        ----------------
+        Robert Granetz
+        Jiaxiang Zhu
+
+        Last major update: 2014/11/22 by William Wei
+        """
+        upper_gap = [np.nan]
+        lower_gap = [np.nan]
+
+        # Get plasma boundary data
+        data, efittime = params.mds_conn.get_data_with_dims(
+            r"\top.results.geqdsk:bdry", tree_name="_efit_tree"
+        )
+        # Convert the order of indices to MATLAB order
+        # MATLAB (0, 1, 2) -> Python (2, 1, 0)
+        data = np.transpose(data, [2, 1, 0])
+        xcoords = np.reshape(data[0, :, :], (-1, len(efittime)))
+        ycoords = np.reshape(data[1, :, :], (-1, len(efittime)))
+
+        # Get first wall geometry data
+        xfirstwall = params.mds_conn.get_data(
+            r"\top.results.geqdsk:xlim", tree_name="_efit_tree"
+        )
+        yfirstwall = params.mds_conn.get_data(
+            r"\top.results.geqdsk:ylim", tree_name="_efit_tree"
+        )
+        seed = np.ones((len(xcoords), 1))
+        xfirstwall = np.reshape(xfirstwall, (-1, 1))
+        yfirstwall = np.reshape(yfirstwall, (-1, 1))
+        xfirstwall_mat = np.tile(xfirstwall, (1, len(efittime)))
+        yfirstwall_mat = np.tile(yfirstwall, (1, len(efittime)))
+
+        # Calculate upper & lower gaps
+        index_upperwall, _ = np.where(yfirstwall > 0.6)
+        index_lowerwall, _ = np.where(yfirstwall < -0.6)
+
+        xupperwall = xfirstwall_mat[index_upperwall, :]
+        xupperwall_mat = np.reshape(
+            np.kron(xupperwall, seed), (len(seed), -1, len(efittime))
+        )
+        xlowerwall = xfirstwall_mat[index_lowerwall, :]
+        xlowerwall_mat = np.reshape(
+            np.kron(xlowerwall, seed), (len(seed), -1, len(efittime))
+        )
+
+        yupperwall = yfirstwall_mat[index_upperwall, :]
+        yupperwall_mat = np.reshape(
+            np.kron(yupperwall, seed), (len(seed), -1, len(efittime))
+        )
+        ylowerwall = yfirstwall_mat[index_lowerwall, :]
+        ylowerwall_mat = np.reshape(
+            np.kron(ylowerwall, seed), (len(seed), -1, len(efittime))
+        )
+
+        xupperplasma_mat = np.reshape(
+            np.tile(xcoords, (len(xupperwall), 1)), (-1, len(xupperwall), len(efittime))
+        )
+        yupperplasma_mat = np.reshape(
+            np.tile(ycoords, (len(yupperwall), 1)), (-1, len(yupperwall), len(efittime))
+        )
+        xlowerplasma_mat = np.reshape(
+            np.tile(xcoords, (len(xlowerwall), 1)), (-1, len(xlowerwall), len(efittime))
+        )
+        ylowerplasma_mat = np.reshape(
+            np.tile(ycoords, (len(ylowerwall), 1)), (-1, len(ylowerwall), len(efittime))
+        )
+
+        uppergap_mat = np.sqrt(
+            np.square(xupperplasma_mat - xupperwall_mat)
+            + np.square(yupperplasma_mat - yupperwall_mat)
+        )
+        lowergap_mat = np.sqrt(
+            np.square(xlowerplasma_mat - xlowerwall_mat)
+            + np.square(ylowerplasma_mat - ylowerwall_mat)
+        )
+        upper_gap = uppergap_mat.min(axis=(0, 1))
+        lower_gap = lowergap_mat.min(axis=(0, 1))
+
+        # Interpolate to the requested timebase
+        upper_gap = interp1(efittime, upper_gap, params.times)
+        lower_gap = interp1(efittime, lower_gap, params.times)
+
+        return {"upper_gap": upper_gap, "lower_gap": lower_gap}
