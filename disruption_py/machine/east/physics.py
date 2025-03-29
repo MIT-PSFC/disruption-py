@@ -216,10 +216,7 @@ class EastPhysicsMethods:
         }
 
     @staticmethod
-    @physics_method(
-        columns=["v_loop"],
-        tokamak=Tokamak.EAST,
-    )
+    @physics_method(columns=["v_loop"], tokamak=Tokamak.EAST)
     def get_v_loop(params: PhysicsMethodParams):
         """
         This routine gets the loop voltage from the EAST tree. The signal in the
@@ -372,8 +369,7 @@ class EastPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["n_e", "greenwald_fraction", "dn_dt"],
-        tokamak=Tokamak.EAST,
+        columns=["n_e", "greenwald_fraction", "dn_dt"], tokamak=Tokamak.EAST
     )
     def get_density_parameters(params: PhysicsMethodParams):
         r"""
@@ -713,10 +709,7 @@ class EastPhysicsMethods:
         return output
 
     @staticmethod
-    @physics_method(
-        columns=["p_oh"],
-        tokamak=Tokamak.EAST,
-    )
+    @physics_method(columns=["p_oh"], tokamak=Tokamak.EAST)
     def get_p_ohm(params: PhysicsMethodParams):
         r"""
         This script calculates the ohmic power, p_ohm. We use the following
@@ -1170,14 +1163,7 @@ class EastPhysicsMethods:
         return output
 
     @staticmethod
-    @physics_method(
-        columns=[
-            "p_rad_rt",
-            "p_lh_rt",
-            "p_nbi_rt",
-        ],
-        tokamak=Tokamak.EAST,
-    )
+    @physics_method(columns=["p_rad_rt", "p_lh_rt", "p_nbi_rt"], tokamak=Tokamak.EAST)
     def get_pcs_power(params: PhysicsMethodParams):
         """
         This function gets the real time power signals that are actually used
@@ -1320,10 +1306,7 @@ class EastPhysicsMethods:
         }
 
     @staticmethod
-    @physics_method(
-        columns=["prad_peaking"],
-        tokamak=Tokamak.EAST,
-    )
+    @physics_method(columns=["prad_peaking"], tokamak=Tokamak.EAST)
     def get_prad_peaking(params: PhysicsMethodParams):
         """
         This routine calculates the peaking factor of the profiles of radiated
@@ -1406,8 +1389,7 @@ class EastPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["mirnov_std", "mirnov_std_normalized"],
-        tokamak=Tokamak.EAST,
+        columns=["mirnov_std", "mirnov_std_normalized"], tokamak=Tokamak.EAST
     )
     def get_mirnov_std(params: PhysicsMethodParams):
         """
@@ -1565,10 +1547,7 @@ class EastPhysicsMethods:
         }
 
     @staticmethod
-    @physics_method(
-        columns=["h98"],
-        tokamak=Tokamak.EAST,
-    )
+    @physics_method(columns=["h98"], tokamak=Tokamak.EAST)
     def get_h98(params: PhysicsMethodParams):
         """
         Get the H98y2 energy confinement time parameter.
