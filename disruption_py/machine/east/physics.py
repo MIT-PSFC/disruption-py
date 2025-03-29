@@ -1603,48 +1603,16 @@ class EastPhysicsMethods:
         return {"h98": h98_y2}
 
     @staticmethod
-    @physics_method(
-        columns=["upper_gap", "lower_gap"],
-        tokamak=Tokamak.EAST,
-    )
-    def get_efit_gaps(params: PhysicsMethodParams):
+    def _get_efit_gaps(params: PhysicsMethodParams, tree: str = "_efit_tree"):
         """
-        This script calculates upper and lower gaps from EFIT information
-        on plasma boundary and first wall geometry. This is needed because
-        the EAST version of EFIT does not output the upper and lower gaps
-        directly.
-
-        Parameters
-        ----------
-        params : PhysicsMethodParams
-            Parameters containing MDS connection and shot information
-
-        Returns
-        -------
-        dict
-            A dictionary containing the following keys:
-            - 'upper_gap' : array
-                Upper gap [m].
-            - 'lower_gap' : array
-                Lower gap [m].
-
-        References
-        -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_EFIT_gaps.m
-
-        Original Authors
-        ----------------
-        Robert Granetz
-        Jiaxiang Zhu
-
-        Last major update: 2014/11/22 by William Wei
+        Hidden method to calculate the EFIT and P-EFIT gaps
         """
         upper_gap = [np.nan]
         lower_gap = [np.nan]
 
         # Get plasma boundary data
         data, efittime = params.mds_conn.get_data_with_dims(
-            r"\top.results.geqdsk:bdry", tree_name="_efit_tree"
+            r"\top.results.geqdsk:bdry", tree_name=tree
         )
         # Convert the order of indices to MATLAB order
         # MATLAB (0, 1, 2) -> Python (2, 1, 0)
@@ -1654,10 +1622,10 @@ class EastPhysicsMethods:
 
         # Get first wall geometry data
         xfirstwall = params.mds_conn.get_data(
-            r"\top.results.geqdsk:xlim", tree_name="_efit_tree"
+            r"\top.results.geqdsk:xlim", tree_name=tree
         )
         yfirstwall = params.mds_conn.get_data(
-            r"\top.results.geqdsk:ylim", tree_name="_efit_tree"
+            r"\top.results.geqdsk:ylim", tree_name=tree
         )
         seed = np.ones((len(xcoords), 1))
         xfirstwall = np.reshape(xfirstwall, (-1, 1))
@@ -1716,3 +1684,55 @@ class EastPhysicsMethods:
         lower_gap = interp1(efittime, lower_gap, params.times)
 
         return {"upper_gap": upper_gap, "lower_gap": lower_gap}
+
+    @staticmethod
+    @physics_method(
+        columns=["upper_gap", "lower_gap", "pupper_gap", "plower_gap"],
+        tokamak=Tokamak.EAST,
+    )
+    def get_efit_gaps(params: PhysicsMethodParams):
+        """
+        This script calculates upper and lower gaps from the EFIT and P-EFIT
+        information on plasma boundary and first wall geometry. This is needed
+        because the EAST version of EFIT does not output the upper and lower
+        gaps directly.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing the following keys:
+            - 'upper_gap' : array
+                Upper gap [m].
+            - 'lower_gap' : array
+                Lower gap [m].
+            - 'pupper_gap' : array
+                Upper gap computed from the P-EFIT tree [m].
+            - 'plower_gap' : array
+                Lower gap computed from the P-EFIT tree [m].
+
+        References
+        -------
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_EFIT_gaps.m
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_PEFIT_gaps.m
+
+        Original Authors
+        ----------------
+        Robert Granetz
+        Jiaxiang Zhu
+
+        Last major update: 2015/03/29 by William Wei
+        """
+        efit_gaps = EastPhysicsMethods._get_efit_gaps(params=params, tree="_efit_tree")
+        pefit_gaps = EastPhysicsMethods._get_efit_gaps(params=params, tree="pefit_east")
+
+        return {
+            "upper_gap": efit_gaps["upper_gap"],
+            "lower_gap": efit_gaps["lower_gap"],
+            "pupper_gap": pefit_gaps["upper_gap"],
+            "plower_gap": pefit_gaps["lower_gap"],
+        }
