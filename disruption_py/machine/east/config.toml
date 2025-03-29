@@ -12,15 +12,9 @@ port = 3306
 
 [east.tests]
 expected_failure_columns = [
-  "aminor",
-  "area",
   "beta_n",
   "beta_p",
   "beta_p_rt",
-  "chisq",
-  "dbetap_dt",
-  "dli_dt",
-  "dwmhd_dt",
   "greenwald_fraction",
   "ip_error_rt",
   "kappa",
@@ -41,17 +35,11 @@ expected_failure_columns = [
   "wmhd_rt",
 ]
 test_columns = [
-  "aminor",
-  "area",
   "beta_n",
   "beta_p",
   "beta_p_rt",
   "btor",
-  "chisq",
-  "dbetap_dt",
   "dipprog_dt",
-  "dli_dt",
-  "dwmhd_dt",
   "greenwald_fraction",
   "ip",
   "ip_error",
