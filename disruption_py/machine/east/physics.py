@@ -1515,16 +1515,16 @@ class EastPhysicsMethods:
             r"\mitde2",
             r"\mitef2",
             r"\mitfg2",
-            r"\mit2gh",
-            r"\mit2hi",
+            r"\mitgh2",
+            r"\mithi2",
             r"\mitij2",
             r"\mitjk2",
             r"\mitkl2",
-            r"\mit2lm",
-            r"\mit2mn",
+            r"\mitlm2",
+            r"\mitmn2",
             r"\mitno2",
             r"\mitop2",
-            r"\mit2pa",
+            r"\mitpa2",
         ]
         for i, node in enumerate(mir_nodes):
             try:
@@ -1537,7 +1537,7 @@ class EastPhysicsMethods:
 
         # Compute the n=1 and n=2 mode signals from the Mirnov array signals
         # TODO: Verify the output structure of scipy.fft.fft; MATLAB one has index 3 (so 0, 1, 2?)
-        mir_fft_output = scipy.fft.fft(mir, axis=0)
+        mir_fft_output = scipy.fft.fft(mir, axis=1)
         amplitude = abs(mir_fft_output) / len(mir_fft_output[0])
         amplitude[:, 1:] *= 2  # TODO: Why?
         phase = np.arctan2(np.imag(mir_fft_output), np.real(mir_fft_output))
@@ -1548,10 +1548,10 @@ class EastPhysicsMethods:
         time_window = 0.001
         for i, time in enumerate(params.times):
             (indices,) = np.where(
-                (time - time_window <= mirtime) & (mirtime < time + time_window)
+                (time - time_window < mirtime) & (mirtime < time + time_window)
             )
-            n1rms[i] = np.nanstd(n1[indices])
-            n2rms[i] = np.nanstd(n2[indices])
+            n1rms[i] = np.nanstd(n1[indices], ddof=1)
+            n2rms[i] = np.nanstd(n2[indices], ddof=1)
 
         # Calculate the normalized signals
         n1rms_normalized = n1rms / abs(btor)
