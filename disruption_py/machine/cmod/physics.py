@@ -2161,6 +2161,7 @@ class CmodPhysicsMethods:
         """
         print("In desired method")
         from scipy.signal import butter, lfilter
+        # TODO: What do we do during ramp-up?
         n_chords = 38
         butterworth_cutoff = 0.5
         butterworth_order = 2
@@ -2176,7 +2177,7 @@ class CmodPhysicsMethods:
         z0 *= 0.01 # [cm] -> [m]
 
         # Get timebase of SXR array from first chord
-        if (params.shot_id > 1040000000 and params.shot_id < 1060000000):
+        if (params.shot_id > 1050000000 and params.shot_id < 1060000000):
             # Array 3 is bad for chords 15, 21-38 during 2005 campaign
             # so use array 1 (vertical array) for 2005 shots
             array_path = r"\top.brightnesses.array_1"
@@ -2192,7 +2193,7 @@ class CmodPhysicsMethods:
             print(params.shot_id)
             params.logger.debug("Failed to get SXR " + array_path + " data")
             return {"thermal_quench_time_onset": np.full(len(params.times), np.nan)}
-        valid_times = (t_sxr > 0) & (t_sxr < 2.)
+        valid_times = (t_sxr > 0) & (t_sxr < 2.0)
         t_sxr = t_sxr[valid_times]
         sxr = np.zeros(shape=(n_chords, len(t_sxr)))
         sxr[0] = chord_01[valid_times]
@@ -2240,15 +2241,25 @@ class CmodPhysicsMethods:
         # Cutoff of 0.5 kHz and order 2 seems to filter recombination spikes
         # for shots with large recomb spikes (see shot 1120913013)
         b, a = butter(butterworth_order, normalized_cutoff, btype='low', analog=False)
+        core_sxr_raw = np.max(sxr, axis=0)
         sxr = lfilter(b, a, sxr, axis=1)
         core_sxr = np.max(sxr, axis=0)
-        dcore_sxr_dt = np.diff(core_sxr, prepend=0)/sample_time/core_sxr
+        core_sxr_growth_rate = np.diff(core_sxr, prepend=0)/sample_time/core_sxr
         core_sxr_index = np.argmax(sxr, axis=0)
 
         # dIp/dt/Ip for finding current spikes
-        valid_magtimes = (magtime > 0.) & (magtime < 2.)
+        valid_magtimes = (magtime > 0.) & (magtime < 2.0)
         ip = ip[valid_magtimes]
         magtime = magtime[valid_magtimes]
+        sample_magtime = magtime[1] - magtime[0]
+        print(sample_magtime)
+        print(1 / sample_magtime)
+        magtime_sample_rate = 0.5 * 1e-3 / (magtime[1] - magtime[0])
+        print(magtime_sample_rate)
+        normalized_cutoff = 0.25 / magtime_sample_rate
+        print(normalized_cutoff)
+        b, a = butter(butterworth_order, normalized_cutoff, btype='low', analog=False)
+        ip = lfilter(b, a, ip)
         ip_growth_rate = np.diff(ip, prepend=0)/(magtime[1]-magtime[0])/ip
 
         # For t in valid times (do we need min requirement on ip?)
@@ -2259,32 +2270,43 @@ class CmodPhysicsMethods:
         #      check if ip growth rate above threshold in that window
         # Otherwise, continue
         thermal_quenches = np.full(len(t_sxr), False)
-        ip_thresh = 200e3 # [A]
-        sxr_gr_thresh = -1000
-        ip_gr_thresh = 10
-        t_start = magtime[np.argmax(ip > 0.3e6)]
+        ip_thresh = 300e3 # [A]
+        core_sxr_thresh = 100 # Typically plasma is too cool to measure temperature with SXR
+        sxr_gr_thresh = -1000 # 50% decay over 0.5 ms
+        ip_gr_thresh = 4 # 4% growth over 0.5 ms
+        t_start = magtime[np.argmax(ip > ip_thresh)]
         in_candidate_thermal_quench = False
         in_thermal_quench = False
-        tq_duration = 0.
         index_tq = 0
         for i, t in enumerate(t_sxr):
             i_mag = np.argmax(magtime > t)
             if in_thermal_quench:
                 # Skip until the thermal quench is over
-                if (dcore_sxr_dt[i] >=0.):
+                if (core_sxr_growth_rate[i] >=0.):
                     in_thermal_quench = False
             elif in_candidate_thermal_quench:
                 # Check if there's an ip spike while the SXR is decaying
-                if (ip_growth_rate[i_mag] > ip_gr_thresh):
+                # TODO: Either look backwards over a window or look for positive & negative changes (latter seems to work and should be more robust)
+                # TODO: Separate positive and negative Ip thresholds based on decay rates?
+                if (np.abs(ip_growth_rate[i_mag]) > ip_gr_thresh):
                     thermal_quenches[index_tq] = True
                     in_thermal_quench = True
                     in_candidate_thermal_quench = False
-                elif (dcore_sxr_dt[i] >=0.):
+                elif (core_sxr_growth_rate[i] >=0.):
                     in_candidate_thermal_quench = False
             else:
-                if (ip[i_mag] > ip_thresh) and (dcore_sxr_dt[i] < sxr_gr_thresh):
-                    index_tq = i
-                    in_candidate_thermal_quench = True
+                # Add buffer to current quench disruption time due to phase shift
+                if ((core_sxr_growth_rate[i] < sxr_gr_thresh) and (ip[i_mag] > ip_thresh) and (core_sxr[i] > core_sxr_thresh) and 
+                        (t <= params.disruption_time + 0.001)):
+                    i_mag_2ms_prev = np.argmax(magtime > t - 0.002)
+                    if (np.max(ip_growth_rate[i_mag_2ms_prev:i_mag+1]) > ip_gr_thresh):
+                        # There was already an ip spike w/in the last 2 ms => definitely a TQ
+                        thermal_quenches[i] = True
+                        in_thermal_quench = True
+                    else:
+                        # Continue looking for ip spike
+                        index_tq = i
+                        in_candidate_thermal_quench = True
         #mask = np.concatenate(([False], thermal_quenches[:-1] == True))
         #thermal_quenches[mask & thermal_quenches] = False
         thermal_quench_times = t_sxr[thermal_quenches]
@@ -2295,8 +2317,9 @@ class CmodPhysicsMethods:
                    "ip": ip,
                    "ip_growth_rate": ip_growth_rate,
                    "t_sxr": t_sxr,
+                   "core_sxr_raw": core_sxr_raw,
                    "core_sxr": core_sxr,
-                   "dcore_sxr_dt": dcore_sxr_dt,
+                   "core_sxr_growth_rate": core_sxr_growth_rate,
                    "efit_time": efit_time,
                    "z0": z0,
                    "t_disrupt": params.disruption_time,
