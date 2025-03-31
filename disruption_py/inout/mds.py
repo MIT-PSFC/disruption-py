@@ -11,7 +11,7 @@ import numpy as np
 from loguru import logger
 
 from disruption_py.config import config
-from disruption_py.core.utils.misc import safe_cast
+from disruption_py.core.utils.misc import safe_cast, shot_msg
 from disruption_py.core.utils.shared_instance import SharedInstance
 from disruption_py.machine.tokamak import Tokamak
 
@@ -118,7 +118,11 @@ class MDSConnection:
             tree_name = self.tree_nicknames[tree_name]
 
         if self.last_open_tree != tree_name:
-            logger.trace("Opening tree: {tree_name}", tree_name=tree_name)
+            logger.trace(
+                shot_msg("Opening tree: {tree_name}"),
+                shot=self.shot_id,
+                tree_name=tree_name,
+            )
             self.conn.openTree(tree_name, self.shot_id)
 
         self.last_open_tree = tree_name
@@ -192,7 +196,7 @@ class MDSConnection:
         if tree_name is not None:
             self.open_tree(tree_name)
 
-        logger.trace("Getting data: {path}", path=path)
+        logger.trace(shot_msg("Getting data: {path}"), shot=self.shot_id, path=path)
         data = self.conn.get("_sig=" + path, arguments).data()
         if astype:
             data = safe_cast(data, astype)
@@ -235,7 +239,9 @@ class MDSConnection:
         if tree_name is not None:
             self.open_tree(tree_name)
 
-        logger.trace("Getting data and dims: {path}", path=path)
+        logger.trace(
+            shot_msg("Getting data and dims: {path}"), shot=self.shot_id, path=path
+        )
         data = self.conn.get("_sig=" + path).data()
         dims = [self.conn.get(f"dim_of(_sig,{dim_num})").data() for dim_num in dim_nums]
 
@@ -279,7 +285,7 @@ class MDSConnection:
         if tree_name is not None:
             self.open_tree(tree_name)
 
-        logger.trace("Getting dims: {path}", path=path)
+        logger.trace(shot_msg("Getting dims: {path}"), shot=self.shot_id, path=path)
         dims = [self.conn.get(f"dim_of({path},{d})").data() for d in dim_nums]
 
         if astype:

@@ -15,7 +15,7 @@ from tqdm.auto import tqdm
 from disruption_py.core.retrieval_manager import RetrievalManager
 from disruption_py.core.utils.misc import (
     get_elapsed_time,
-    shot_log_msg,
+    shot_msg,
     without_duplicates,
 )
 from disruption_py.inout.mds import ProcessMDSConnection
@@ -148,9 +148,8 @@ def get_shots_data(
         ):
             if shot_data is None:
                 logger.warning(
-                    shot_log_msg(
-                        shot_id, "Not outputting data for shot, data is None."
-                    ),
+                    shot_msg("Not outputting data for shot, data is None."),
+                    shot=shot_id,
                 )
             else:
                 num_success += 1

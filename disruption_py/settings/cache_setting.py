@@ -13,7 +13,7 @@ import pandas as pd
 from loguru import logger
 
 from disruption_py.core.utils.enums import map_string_to_enum
-from disruption_py.core.utils.misc import shot_log_msg
+from disruption_py.core.utils.misc import shot_msg_patch
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
 
@@ -39,11 +39,7 @@ class CacheSettingParams:
     tokamak: Tokamak
 
     def __post_init__(self):
-        self.logger = logger.patch(
-            lambda record: record.update(
-                message=shot_log_msg(self.shot_id, record["message"])
-            )
-        )
+        self.logger = shot_msg_patch(logger, self.shot_id)
 
 
 CacheSettingType = Union[

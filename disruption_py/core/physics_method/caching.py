@@ -135,6 +135,6 @@ def manually_cache(
     physics_method_params.logger.debug(
         "Can not cache {method_name} missing columns {missing_columns}",
         method_name=method_name,
-        missing_columns=missing_columns,
+        missing_columns=",".join(missing_columns),
     )
     return False
