@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 
-from disruption_py.core.utils.misc import shot_log_msg
+from disruption_py.core.utils.misc import shot_msg_patch
 from disruption_py.inout.mds import MDSConnection
 from disruption_py.machine.tokamak import Tokamak
 
@@ -34,11 +34,7 @@ class PhysicsMethodParams:
     metadata: dict
 
     def __post_init__(self):
-        self.logger = logger.patch(
-            lambda record: record.update(
-                message=shot_log_msg(self.shot_id, record["message"])
-            )
-        )
+        self.logger = shot_msg_patch(logger, self.shot_id)
 
     cached_results: Dict[str, Any] = field(default_factory=dict)
 

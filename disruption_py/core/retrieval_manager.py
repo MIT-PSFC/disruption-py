@@ -14,7 +14,7 @@ from disruption_py.config import config
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.physics_method.runner import populate_shot
 from disruption_py.core.utils.math import interp1
-from disruption_py.core.utils.misc import get_commit_hash, shot_log_msg
+from disruption_py.core.utils.misc import get_commit_hash, shot_msg
 from disruption_py.inout.mds import MDSConnection, ProcessMDSConnection
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
@@ -139,7 +139,7 @@ class RetrievalManager:
             )
             return physics_method_params
         except mdsExceptions.MdsException as e:
-            logger.critical(shot_log_msg(shot_id, f"Failed to set up shot! {e}"))
+            logger.critical(shot_msg("Failed to set up shot! {e}"), shot=shot_id, e=e)
             logger.opt(exception=True).debug(e)
             mds_conn.cleanup()
             return None
