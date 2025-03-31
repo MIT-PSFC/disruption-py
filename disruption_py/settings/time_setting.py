@@ -34,8 +34,6 @@ class TimeSettingParams:
         Shot ID for the timebase being created.
     mds_conn : MDSConnection
         Connection to MDSPlus for retrieving MDSPlus data.
-    cache_data : pd.DataFrame
-        Pre-filled data provided to disruption_py.
     database : ShotDatabase
         Database object with connection to the SQL database.
     disruption_time : float
@@ -46,7 +44,6 @@ class TimeSettingParams:
 
     shot_id: int
     mds_conn: MDSConnection
-    cache_data: pd.DataFrame
     database: ShotDatabase
     disruption_time: float
     tokamak: Tokamak
@@ -202,54 +199,6 @@ class ListTimeSetting(TimeSetting):
             Array of times in the timebase.
         """
         return self.times
-
-
-class CacheTimeSetting(TimeSetting):
-    """
-    Time setting for using the timebase from cached data.
-
-    If no cached data is available, the fallback time setting is used.
-    """
-
-    def __init__(self, fallback_time_setting: TimeSettingType) -> None:
-        """
-        Initialize with a fallback time setting.
-
-        Parameters
-        ----------
-        fallback_time_setting : TimeSettingType
-            Fallback time setting to use if cached data is unavailable.
-        """
-        self.fallback_time_setting = resolve_time_setting(fallback_time_setting)
-
-    def _get_times(self, params: TimeSettingParams) -> np.ndarray:
-        """
-        Retrieve the timebase from cached data, or use the fallback if unavailable.
-
-        Parameters
-        ----------
-        params : TimeSettingParams
-            Parameters needed to retrieve the timebase.
-
-        Returns
-        -------
-        np.ndarray
-            Array of times in the timebase.
-        """
-        if params.cache_data is not None:
-            # set timebase to be the timebase of cached data
-            try:
-                times = params.cache_data["time"].to_numpy()
-                # Check if the timebase is in ms instead of s
-                if 0 < config(params.tokamak).max_shot_time < times[-1]:
-                    times /= 1000  # [ms] -> [s]
-                return times
-            except KeyError as e:
-                params.logger.warning(
-                    "Shot constructor was passed data but no timebase."
-                )
-                params.logger.opt(exception=True).debug(e)
-        return self.fallback_time_setting.get_times(params)
 
 
 class EfitTimeSetting(TimeSetting):

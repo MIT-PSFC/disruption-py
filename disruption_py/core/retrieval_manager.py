@@ -10,7 +10,6 @@ import pandas as pd
 from loguru import logger
 from MDSplus import mdsExceptions
 
-from disruption_py.config import config
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.physics_method.runner import populate_shot
 from disruption_py.core.utils.math import interp1
@@ -18,7 +17,6 @@ from disruption_py.core.utils.misc import shot_msg
 from disruption_py.inout.mds import MDSConnection, ProcessMDSConnection
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
-from disruption_py.settings.cache_setting import CacheSettingParams
 from disruption_py.settings.domain_setting import DomainSettingParams
 from disruption_py.settings.nickname_setting import NicknameSettingParams
 from disruption_py.settings.retrieval_settings import RetrievalSettings
@@ -190,25 +188,17 @@ class RetrievalManager:
         PhysicsMethodParams
             The configured physics method parameters.
         """
-        cache_data = self._retrieve_cache_data(
-            shot_id=shot_id,
-            retrieval_settings=retrieval_settings,
-        )
 
         interpolation_method = interp1  # TODO: fix
 
         times = self._init_times(
             shot_id=shot_id,
-            cache_data=cache_data,
             mds_conn=mds_conn,
             disruption_time=disruption_time,
             retrieval_settings=retrieval_settings,
         )
 
-        pre_filled_shot_data = self._pre_fill_shot_data(
-            times=times,
-            cache_data=cache_data,
-        )
+        pre_filled_shot_data = None
 
         metadata = {
             "labels": {},
@@ -224,7 +214,6 @@ class RetrievalManager:
             disruption_time=disruption_time,
             mds_conn=mds_conn,
             times=times,
-            cache_data=cache_data,
             pre_filled_shot_data=pre_filled_shot_data,
             interpolation_method=interpolation_method,
             metadata=metadata,
@@ -273,49 +262,9 @@ class RetrievalManager:
 
         return physics_method_params
 
-    def _retrieve_cache_data(
-        self,
-        shot_id: int,
-        retrieval_settings: RetrievalSettings,
-    ) -> pd.DataFrame:
-        """
-        Retrieve cached data for the specified shot.
-
-        Parameters
-        ----------
-        shot_id : int
-            The ID of the shot.
-        retrieval_settings : RetrievalSettings
-            The settings for data retrieval.
-
-        Returns
-        -------
-        pd.DataFrame
-            The cached data for the shot, or None if no cache is available.
-        """
-        if retrieval_settings.cache_setting is not None:
-            cache_setting_params = CacheSettingParams(
-                shot_id=shot_id,
-                database=self.process_database,
-                tokamak=self.tokamak,
-            )
-            cache_data = retrieval_settings.cache_setting.get_cache_data(
-                cache_setting_params
-            )
-            # Even if cache setting is not None, the cache may not have data for
-            # all shots
-            if cache_data is None:
-                return None
-            cache_data["shot"] = cache_data["shot"].astype(int)
-            cache_data = cache_data[cache_data["shot"] == shot_id]
-        else:
-            cache_data = None
-        return cache_data
-
     def _init_times(
         self,
         shot_id: int,
-        cache_data: pd.DataFrame,
         mds_conn: MDSConnection,
         disruption_time: float,
         retrieval_settings: RetrievalSettings,
@@ -327,8 +276,6 @@ class RetrievalManager:
         ----------
         shot_id : int
             The ID of the shot.
-        cache_data : pd.DataFrame
-            The cached data for the shot.
         mds_conn : MDSConnection
             The MDS connection for the shot.
         disruption_time : float
@@ -344,45 +291,8 @@ class RetrievalManager:
         setting_params = TimeSettingParams(
             shot_id=shot_id,
             mds_conn=mds_conn,
-            cache_data=cache_data,
             database=self.process_database,
             disruption_time=disruption_time,
             tokamak=self.tokamak,
         )
         return retrieval_settings.time_setting.get_times(setting_params)
-
-    @classmethod
-    def _pre_fill_shot_data(
-        cls, times: np.ndarray, cache_data: pd.DataFrame
-    ) -> pd.DataFrame:
-        """
-        Initialize the shot with data, if cached data matches the shot timebase.
-
-        Parameters
-        ----------
-        cls : type
-            The class type.
-        times : np.ndarray
-            The timebase for the shot.
-        cache_data : pd.DataFrame
-            The cached data for the shot.
-
-        Returns
-        -------
-        pd.DataFrame
-            The pre-filled shot data as a DataFrame, or None if no match is found.
-        """
-        if cache_data is not None:
-            time_df = pd.DataFrame(times, columns=["time"])
-            flagged_cache_data = cache_data.assign(merge_success_flag=1)
-            timed_cache_data = pd.merge_asof(
-                time_df,
-                flagged_cache_data,
-                on="time",
-                direction="nearest",
-                tolerance=config().time_const,
-            )
-            if not timed_cache_data["merge_success_flag"].isna().any():
-                return timed_cache_data.drop(columns=["merge_success_flag"])
-            return None
-        return None

@@ -28,7 +28,6 @@ class PhysicsMethodParams:
     disruption_time: float
     mds_conn: MDSConnection
     times: np.ndarray
-    cache_data: pd.DataFrame
     pre_filled_shot_data: pd.DataFrame
     interpolation_method: Any  # Fix
     metadata: dict

@@ -34,7 +34,6 @@ nav:
           - Workflow: usage/workflow_reference.md
       - Settings:
           - Settings Classes:
-              - Cache Setting: usage/settings/cache_setting.md
               - Domain Setting: usage/settings/domain_setting.md
               - Log Settings: usage/settings/log_settings.md
               - Nickname Setting: usage/settings/nickname_setting.md
