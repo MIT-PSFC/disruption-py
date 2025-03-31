@@ -554,15 +554,15 @@ class EastPhysicsMethods:
     )
     def get_power(params: PhysicsMethodParams):
         """
-        This function gets the input heating powers -- ohmic (p_OHM),electron
-        cyclotron resonance heating (p_ECRH), neutral beam injection system (p_NBI)
-        ion cyclotron (p_ICRF), and lower hybrid (p_LH) -- as well as the radiated
-        output power (p_RAD).  If any of the auxiliary heating powers are not
-        available (there was no ICRF or LH), then this function returns an array
-        of zeros for them.  The ohmic heating power is obtained by calling a
-        separate function, get_P_ohm.m.  If either the ohmic heating power or the
-        radiated power is unavailable, then arrays of NaN (Not-a-Number) are
-        returned for them, and for the radiated power fraction.
+        This function gets the axuillary heating powers -- electron cyclotron
+        resonance heating (p_ECRH), neutral beam injection system (p_NBI)
+        ion cyclotron (p_ICRF), and lower hybrid (p_LH). If any of the auxiliary
+        heating powers are not available (there was no ICRF or LH), then this
+        function returns an array of zeros for them.
+
+        This function also calculates the total input power, the radiated input
+        fraction, and the radiated loss function by calling get_p_ohm and
+        get_radiated_power.
 
         Parameters
         ----------
@@ -573,8 +573,6 @@ class EastPhysicsMethods:
         -------
         dict
             A dictionary containing the following keys:
-            - 'p_rad' : array
-                Radiated power [W].
             - 'p_ecrh' : array
                 Electron cyclotron resonance heating power [W].
             - 'p_lh' : array
@@ -602,10 +600,8 @@ class EastPhysicsMethods:
 
         Last major update: 11/20/24 by William Wei
         """
-        p_rad = [np.nan]
         p_ecrh = [np.nan]
         p_lh = [np.nan]
-        p_ohm = [np.nan]
         p_icrf = [np.nan]
         p_nbi = [np.nan]
         rad_input_frac = [np.nan]
@@ -764,6 +760,7 @@ class EastPhysicsMethods:
         )  # [A]
         sign_ip = np.sign(sum(ip))
         dipdt = np.gradient(ip, ip_time)
+        # TODO: switch to causal boxcar smoothing
         dipdt_smoothed = smooth(dipdt, 11)  # Use 11-point boxcar smoothing
 
         # Interpolate fetched signals to the requested timebase
@@ -775,7 +772,6 @@ class EastPhysicsMethods:
         )
 
         # Calculate p_ohm
-        # TODO: check DIV/0 error
         # TODO: replace 1.85 with fetched r0 signal
         inductance = 4e-7 * np.pi * 1.85 * li / 2  # For EAST use R0 = 1.85 m
         v_inductive = -inductance * dipdt_smoothed
@@ -1596,8 +1592,7 @@ class EastPhysicsMethods:
         # Convert the order of indices to MATLAB order
         # MATLAB (0, 1, 2) -> Python (2, 1, 0)
         data = np.transpose(data, [2, 1, 0])
-        xcoords = np.reshape(data[0, :, :], (-1, len(efittime)))
-        ycoords = np.reshape(data[1, :, :], (-1, len(efittime)))
+        xcoords, ycoords = data[0, :, :], data[1, :, :]
 
         # Get first wall geometry data
         xfirstwall = params.mds_conn.get_data(
