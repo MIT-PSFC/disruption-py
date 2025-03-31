@@ -128,16 +128,16 @@ def get_commit_hash() -> str:
     Returns
     -------
     str
-        The short commit hash if available, otherwise None.
+        The commit hash, if available.
     """
     try:
         commit_hash = (
-            subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])
+            subprocess.check_output(["git", "rev-parse", "HEAD"])
             .decode("ascii")
             .strip()
         )
     except subprocess.CalledProcessError:
-        commit_hash = None
+        commit_hash = ""
     return commit_hash
 
 
