@@ -14,7 +14,7 @@ from disruption_py.config import config
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.physics_method.runner import populate_shot
 from disruption_py.core.utils.math import interp1
-from disruption_py.core.utils.misc import get_commit_hash, shot_msg
+from disruption_py.core.utils.misc import shot_msg
 from disruption_py.inout.mds import MDSConnection, ProcessMDSConnection
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
@@ -212,7 +212,6 @@ class RetrievalManager:
 
         metadata = {
             "labels": {},
-            "commit_hash": get_commit_hash(),
             "timestep": {},
             "duration": {},
             "description": "",

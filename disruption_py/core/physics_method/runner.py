@@ -25,7 +25,7 @@ from disruption_py.core.utils.misc import get_elapsed_time
 from disruption_py.machine.method_holders import get_method_holders
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 
-REQUIRED_COLS = {"time", "shot", "commit_hash"}
+REQUIRED_COLS = {"shot", "time"}
 
 
 def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams) -> pd.DataFrame:
@@ -52,9 +52,6 @@ def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams) -> pd.Da
         pre_filled_shot_data["time"] = physics_method_params.times
     if "shot" not in pre_filled_shot_data:
         pre_filled_shot_data["shot"] = int(physics_method_params.shot_id)
-    pre_filled_shot_data["commit_hash"] = physics_method_params.metadata.get(
-        "commit_hash", None
-    )
 
     # Check that pre_filled_shot_data is on the same timebase as the shot object
     # to ensure data consistency

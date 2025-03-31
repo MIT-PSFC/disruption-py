@@ -72,7 +72,7 @@ def test_cache_setting_sql(tokamak, shotlist, num_processes):
 
     # Verify the correct columns were retrieved from SQL
     for res in results:
-        assert {"time_until_disrupt", "shot", "time", "commit_hash"} == set(res.columns)
+        assert {"time_until_disrupt", "shot", "time"} == set(res.columns)
 
 
 @skip_on_fast_execution
@@ -91,7 +91,7 @@ def test_cache_setting_prev_output(tokamak, shotlist, test_file_path_f, output_f
     )
 
     if output_format == ".csv":
-        cache_data = pd.read_csv(test_file_path_f(".csv"), dtype={"commit_hash": str})
+        cache_data = pd.read_csv(test_file_path_f(".csv"))
     else:
         cache_data_list = []
         for shot in shotlist:
@@ -139,7 +139,7 @@ def test_only_requested_columns(tokamak, shotlist):
         log_settings="WARNING",
     )
     for res in results:
-        assert {"ip", "q95", "shot", "time", "commit_hash"} == set(res.columns)
+        assert {"ip", "q95", "shot", "time"} == set(res.columns)
 
 
 @skip_on_fast_execution
