@@ -73,7 +73,7 @@ requires-python = ">=3.11,<4"
 version = "0.11.0"
 
 [project.scripts]
-disruption-workflow = "examples.simple:cli"
+disruption-py = "disruption_py.workflow:cli"
 
 [project.urls]
 documentation = "https://mit-psfc.github.io/disruption-py/"
