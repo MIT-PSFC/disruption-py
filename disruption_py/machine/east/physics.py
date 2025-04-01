@@ -257,7 +257,7 @@ class EastPhysicsMethods:
             v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
                 r"\vp1_s", tree_name="east"
             )
-        except mdsExceptions.TreeException:
+        except mdsExceptions.MdsException:
             params.logger.verbose(
                 r"v_loop: Failed to get \vp1_s data. Use \pcvloop from pcs_east instead."
             )
