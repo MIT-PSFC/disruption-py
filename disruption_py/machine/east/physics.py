@@ -471,7 +471,6 @@ class EastPhysicsMethods:
         for iarray in range(4):
             for ichan in range(16):
                 ichord = 16 * iarray + ichan
-                # TODO: confirm the actual node of each chord
                 signal = params.mds_conn.get_data(
                     r"\pxuv" + str(ichord + 1), tree_name="east_1"
                 )
@@ -502,8 +501,6 @@ class EastPhysicsMethods:
         References
         -------
         - Prad_bulk_xuv2014_2016.m (Not in repo)
-
-        TODO: Update docstring
         """
         # Get the raw AXUV data
         try:
@@ -522,7 +519,7 @@ class EastPhysicsMethods:
                 * calib_factors["Fac4"]
             )
         # Correction for bad channels (from Duan Yanmin's program)
-        # NOTE: why not [35] = ([34]+[36])/2 when [35] is the bad channel?
+        # TODO: why not [35] = ([34]+[36])/2 when [35] is the bad channel?
         xuv[:, 11] = 0.5 * (xuv[:, 10] + xuv[:, 12])
         xuv[:, 35] = 0.5 * (xuv[:, 34] + xuv[:, 35])
         # Apply geometric calibrations and Fac5
@@ -542,7 +539,7 @@ class EastPhysicsMethods:
             + list(range(32, 48))
             + list(range(53, 59))
         )
-        p_rad = np.sum(xuv[:, core_indices], axis=1)  # TODO: check nans
+        p_rad = np.nansum(xuv[:, core_indices], axis=1)
         # Interpolate to requested time base
         p_rad = interp1(xuvtime, p_rad, params.times, kind="linear", fill_value=0)
         return {"p_rad": p_rad}
@@ -696,10 +693,9 @@ class EastPhysicsMethods:
 
         # Calculate p_input, rad_input_frac, and rad_loss_frac
         p_input = p_ohm + p_lh + p_icrf + p_ecrh + p_nbi
-        rad_input_frac = (
-            p_rad / p_input
-        )  # TODO: div/0 error? Use with np.errorstate(...)
-        rad_loss_frac = p_rad / (p_input - dwmhd_dt)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            rad_input_frac = p_rad / p_input
+            rad_loss_frac = p_rad / (p_input - dwmhd_dt)
 
         output = {
             "p_ecrh": p_ecrh,
@@ -904,7 +900,7 @@ class EastPhysicsMethods:
         rmp_n_equal_1 = amplitude[:, 1]
         rmp_n_equal_1_phase = phase[:, 1]
         # Interpolate onto the requested timebase
-        # TODO: interpolate phase may cause unexpected error
+        # TODO: figure out how to interpolate phase
         rmp_n_equal_1 = interp1(saddletime, rmp_n_equal_1, params.times)
         rmp_n_equal_1_phase = interp1(saddletime, rmp_n_equal_1_phase, params.times)
 
@@ -1144,7 +1140,6 @@ class EastPhysicsMethods:
                     timearray, signal, params.times, kind="linear", bounds_error=0
                 )
                 output[name] = signal
-            # TODO: Specify error type
             except mdsExceptions.MdsException:
                 output[name] = [np.nan]
 
@@ -1160,7 +1155,6 @@ class EastPhysicsMethods:
                 q95_rt_time, q95_rt, params.times, kind="linear", bounds_error=0
             )
             output["q95_rt"] = q95_rt
-        # TODO: Specify error type
         except mdsExceptions.MdsException:
             output["q95_rt"] = [np.nan]
 
@@ -1354,7 +1348,7 @@ class EastPhysicsMethods:
         calib_factors = EastUtilMethods.get_axuv_calib_factors()
         # Apply calibration factors
         for i in range(64):
-            # NOTE: Original script has Del_r(ichan) which should be a mistake
+            # Original script has Del_r(ichan) which should be a mistake
             xuv[:, i] *= (
                 calib_factors["Fac1"][i % 16]
                 * calib_factors["Fac2"][i // 16][i % 16]
@@ -1367,7 +1361,7 @@ class EastPhysicsMethods:
                 # * calib_factors["Fac5"]
             )
         # Correction for bad channels (from Duan Yanmin's program)
-        # NOTE: get_radiated_power does this first and then apply geometric correction.
+        # get_radiated_power does these 2 lines first and then apply geometric correction.
         xuv[:, 11] = 0.5 * (xuv[:, 10] + xuv[:, 12])
         # xuv[:, 35] = 0.5 * (xuv[:, 34] + xuv[:, 35])
 
@@ -1522,7 +1516,6 @@ class EastPhysicsMethods:
         btor = EastPhysicsMethods.get_btor(params)["btor"]
 
         # Compute the n=1 and n=2 mode signals from the Mirnov array signals
-        # TODO: Verify the output structure of scipy.fft.fft; MATLAB one has index 3 (so 0, 1, 2?)
         mir_fft_output = scipy.fft.fft(mir, axis=1)
         amplitude = abs(mir_fft_output) / len(mir_fft_output[0])
         amplitude[:, 1:] *= 2  # TODO: Why?
