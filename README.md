@@ -118,7 +118,60 @@ For custom installations, please refer to our [Installation guide](docs/INSTALL.
 
 ## Getting Started
 
-Please see the [project quickstart](https://mit-psfc.github.io/disruption-py/quickstart/usage_quickstart/).
+A simple command-line entry point is installed as `disruption-py`:
+
+```bash
+# if you use poetry
+poetry run disruption-py
+
+# if you use uv
+uv run disruption-py
+```
+
+The command-line arguments, which are subject to change, are documented in the help message:
+
+```bash
+uv run disruption-py --help
+```
+```
+usage: disruption-py [-h] [-t TOKAMAK] [-m METHODS] [-e EFIT_TREE] [-b TIME_BASE] [-o OUTPUT_FILE] [-p PROCESSES] [-l LOG_LEVEL] [shots ...]
+
+positional arguments:
+  shots
+
+options:
+  -h, --help            show this help message and exit
+  -t TOKAMAK, --tokamak TOKAMAK
+  -m METHODS, --methods METHODS
+  -e EFIT_TREE, --efit-tree EFIT_TREE
+  -b TIME_BASE, --time-base TIME_BASE
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+  -p PROCESSES, --processes PROCESSES
+  -l LOG_LEVEL, --log-level LOG_LEVEL
+```
+
+A typical invocation of the entry point would be:
+
+```bash
+uv run disruption-py -m get_efit_parameters -o efit.csv {1150805012..1150805022}
+```
+
+The same entry point can also be invoked from Python:
+
+```python
+from disruption_py.workflow import cli
+out = cli()
+```
+
+A simplified and flattened version of our workflow is available, as well:
+
+```python
+from disruption_py.workflow import run
+out = run(*args)
+```
+
+Finally, a full-fledge disruption script can configure all the settings according to the specific use case.
+Please refer to our `examples/defaults.py` script for a quickstart workflow with all the default arguments clearly explained.
 
 
 ## Contributing
