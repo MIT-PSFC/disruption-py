@@ -225,7 +225,9 @@ def _get_mds_instance(tokamak, mds_connection_initializer):
     return get_mdsplus_class(tokamak)
 
 
-def run(tokamak, methods, shots, efit_tree, time_base, processes, log_level):
+def run(
+    tokamak, methods, shots, efit_tree, time_base, output_file, processes, log_level
+):
     """
     simple workflow.
     """
@@ -248,9 +250,12 @@ def run(tokamak, methods, shots, efit_tree, time_base, processes, log_level):
         output_setting="dataframe",
     )
 
-    csv = os.path.join(get_temporary_folder(), "output.csv")
-    logger.info("Output: {csv}", csv=csv)
-    out.to_csv(csv, index=False)
+    if output_file:
+        output_file = os.path.realpath(output_file)
+    else:
+        output_file = os.path.join(get_temporary_folder(), "output.csv")
+    logger.info("Output: {output_file}", output_file=output_file)
+    out.to_csv(output_file, index=False)
 
     return out
 
@@ -262,13 +267,14 @@ def cli():
 
     parser = argparse.ArgumentParser()
 
+    parser.add_argument("shots", nargs="*")
     parser.add_argument("-t", "--tokamak", type=str)
-    parser.add_argument("-s", "--shots", type=int, action="append")
     parser.add_argument("-m", "--methods", type=str, action="append")
     parser.add_argument("-e", "--efit-tree", type=str, default="disruption")
-    parser.add_argument("-b", "--time-base", default="disruption_warning")
+    parser.add_argument("-b", "--time-base", type=str, default="disruption_warning")
+    parser.add_argument("-o", "--output-file", type=str)
     parser.add_argument("-p", "--processes", type=int, default=1)
-    parser.add_argument("-l", "--log-level", default="VERBOSE")
+    parser.add_argument("-l", "--log-level", type=str, default="VERBOSE")
 
     return run(**vars(parser.parse_args()))
 
