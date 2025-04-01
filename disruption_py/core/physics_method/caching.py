@@ -7,10 +7,9 @@ expensive method calls in physics calculations.
 
 import functools
 import threading
-from typing import Callable, List
+from typing import Callable
 
 import numpy as np
-import pandas as pd
 
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 
@@ -89,52 +88,3 @@ def get_method_cache_key(
         len(times),
         hashable_other_params,
     )
-
-
-def manually_cache(
-    physics_method_params: PhysicsMethodParams,
-    data: pd.DataFrame,
-    method: Callable,
-    method_name: str,
-    method_columns: List[str],
-) -> bool:
-    """
-    Manually cache results based on the provided DataFrame and method details.
-
-    Parameters
-    ----------
-    physics_method_params : PhysicsMethodParams
-        The parameters containing the shot ID and logger for logging.
-    data : pd.DataFrame
-        The DataFrame containing the data to be cached.
-    method : Callable
-        The method for which the results are being cached.
-    method_name : str
-        The name of the method being cached, used for logging.
-    method_columns : List[str]
-        The list of columns to check and cache.
-
-    Returns
-    -------
-    bool
-        True if caching was successful, False if there were missing columns.
-    """
-    if method_columns is None:
-        return False
-    if not hasattr(physics_method_params, "cached_results"):
-        physics_method_params.cached_results = {}
-    missing_columns = set(col for col in method_columns if col not in data.columns)
-    if len(missing_columns) == 0:
-        cache_key = get_method_cache_key(method, data["time"].values)
-        physics_method_params.cached_results[cache_key] = data[method_columns]
-        physics_method_params.logger.debug(
-            "Manually caching {method_name}",
-            method_name=method_name,
-        )
-        return True
-    physics_method_params.logger.debug(
-        "Can not cache {method_name} missing columns {missing_columns}",
-        method_name=method_name,
-        missing_columns=",".join(missing_columns),
-    )
-    return False
