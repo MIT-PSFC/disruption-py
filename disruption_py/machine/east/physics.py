@@ -554,7 +554,7 @@ class EastPhysicsMethods:
     )
     def get_power(params: PhysicsMethodParams):
         """
-        This function gets the axuillary heating powers -- electron cyclotron
+        This function gets the auxiliary heating powers -- electron cyclotron
         resonance heating (p_ECRH), neutral beam injection system (p_NBI)
         ion cyclotron (p_ICRF), and lower hybrid (p_LH). If any of the auxiliary
         heating powers are not available (there was no ICRF or LH), then this
