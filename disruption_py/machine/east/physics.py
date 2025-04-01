@@ -1592,7 +1592,7 @@ class EastPhysicsMethods:
         # Convert the order of indices to MATLAB order
         # MATLAB (0, 1, 2) -> Python (2, 1, 0)
         data = np.transpose(data, [2, 1, 0])
-        xcoords, ycoords = data[0, :, :], data[1, :, :]
+        xcoords, ycoords = data
 
         # Get first wall geometry data
         xfirstwall = params.mds_conn.get_data(
