@@ -218,13 +218,16 @@ class EastPhysicsMethods:
     @staticmethod
     @physics_method(columns=["v_loop"], tokamak=Tokamak.EAST)
     def get_v_loop(params: PhysicsMethodParams):
-        """
-        This routine gets the loop voltage from the EAST tree. The signal in the
+        r"""
+        This routine gets the loop voltage (\vp1_s) from the EAST tree. The signal in the
         tree is derived by taking the time derivative of a flux loop near the
         inboard midplane.  Two possible signals are available, one digitised at a
         high rate (50 kHz), and the other sub-sampled down to 1 kHz.  This
         routine reads in the 1 kHz signal.  It linearly interpolates the loop
         voltage signal onto the specified timebase.
+
+        If \vp1_s isn't available, the method will fall back to using \pcvloop from the
+        pcs_east tree instead.
 
         Parameters
         ----------
@@ -250,10 +253,17 @@ class EastPhysicsMethods:
 
         # Get "\vp1_s" signal from the EAST tree.  (This signal is a sub-sampled
         # version of "vp1".)
-        # TODO: Fallback to \pcvloop when \vp1_s isn't available (e.g. shot 81548)?
-        v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
-            r"\vp1_s", tree_name="east"
-        )
+        try:
+            v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
+                r"\vp1_s", tree_name="east"
+            )
+        except mdsExceptions.TreeException:
+            params.logger.verbose(
+                r"v_loop: Failed to get \vp1_s data. Use \pcvloop from pcs_east instead."
+            )
+            v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
+                r"\pcvloop", tree_name="pcs_east"
+            )  # [V]
 
         # Interpolate the signal onto the requested timebase
         v_loop = interp1(v_loop_time, v_loop, params.times)
