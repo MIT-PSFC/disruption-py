@@ -8,7 +8,6 @@ from dataclasses import dataclass, field
 from typing import Any, Dict
 
 import numpy as np
-import pandas as pd
 from loguru import logger
 
 from disruption_py.core.utils.misc import shot_msg_patch
@@ -28,7 +27,6 @@ class PhysicsMethodParams:
     disruption_time: float
     mds_conn: MDSConnection
     times: np.ndarray
-    pre_filled_shot_data: pd.DataFrame
     interpolation_method: Any  # Fix
     metadata: dict
 

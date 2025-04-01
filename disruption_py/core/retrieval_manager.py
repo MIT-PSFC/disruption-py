@@ -198,8 +198,6 @@ class RetrievalManager:
             retrieval_settings=retrieval_settings,
         )
 
-        pre_filled_shot_data = None
-
         metadata = {
             "labels": {},
             "timestep": {},
@@ -214,7 +212,6 @@ class RetrievalManager:
             disruption_time=disruption_time,
             mds_conn=mds_conn,
             times=times,
-            pre_filled_shot_data=pre_filled_shot_data,
             interpolation_method=interpolation_method,
             metadata=metadata,
         )

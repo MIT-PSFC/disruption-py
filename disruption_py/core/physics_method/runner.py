@@ -12,8 +12,6 @@ import numpy as np
 import pandas as pd
 from MDSplus import mdsExceptions
 
-from disruption_py.config import config
-from disruption_py.core.physics_method.caching import manually_cache
 from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.metadata import (
     BoundMethodMetadata,
@@ -26,48 +24,6 @@ from disruption_py.machine.method_holders import get_method_holders
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 
 REQUIRED_COLS = {"shot", "time"}
-
-
-def get_prefilled_shot_data(physics_method_params: PhysicsMethodParams) -> pd.DataFrame:
-    """
-    Retrieve pre-filled shot data for the given physics method parameters.
-
-    Parameters
-    ----------
-    physics_method_params : PhysicsMethodParams
-        Parameters containing MDS connection and shot information
-
-    Returns
-    -------
-    pd.DataFrame
-        A DataFrame containing the pre-filled shot data.
-    """
-    pre_filled_shot_data = physics_method_params.pre_filled_shot_data
-
-    # If the shot object was already passed data in the constructor, use that data.
-    # Otherwise, create an empty dataframe.
-    if pre_filled_shot_data is None:
-        pre_filled_shot_data = pd.DataFrame()
-    if "time" not in pre_filled_shot_data:
-        pre_filled_shot_data["time"] = physics_method_params.times
-    if "shot" not in pre_filled_shot_data:
-        pre_filled_shot_data["shot"] = int(physics_method_params.shot_id)
-
-    # Check that pre_filled_shot_data is on the same timebase as the shot object
-    # to ensure data consistency
-    if (
-        len(pre_filled_shot_data["time"]) != len(physics_method_params.times)
-        or not np.isclose(
-            pre_filled_shot_data["time"],
-            physics_method_params.times,
-            atol=config().time_const,
-        ).all()
-    ):
-        physics_method_params.logger.error(
-            "Computation on different timebase than pre-filled shot data",
-            physics_method_params.shot_id,
-        )
-    return pre_filled_shot_data
 
 
 def get_all_physics_methods(all_passed: list) -> set:
@@ -290,27 +246,9 @@ def populate_shot(
         all_bound_method_metadata, retrieval_settings, physics_method_params
     )
 
-    pre_filled_shot_data = get_prefilled_shot_data(physics_method_params)
     # Manually cache data that has already been retrieved (likely from SQL tables)
     # Methods added to pre_cached_method_names will be skipped by method optimizer
     cached_method_metadata = []
-    if physics_method_params.pre_filled_shot_data is not None:
-        for method_metadata in all_bound_method_metadata:
-            cache_success = manually_cache(
-                physics_method_params=physics_method_params,
-                data=pre_filled_shot_data,
-                method=method_metadata.bound_method,
-                method_name=method_metadata.name,
-                method_columns=method_metadata.columns,
-            )
-            if cache_success:
-                cached_method_metadata.append(method_metadata)
-                if method_metadata in run_bound_method_metadata:
-                    physics_method_params.logger.verbose(
-                        "Cached method: {name}",
-                        name=method_metadata.name,
-                    )
-
     start_time = time.time()
     methods_data = []
     for bound_method_metadata in run_bound_method_metadata:
@@ -324,8 +262,8 @@ def populate_shot(
         )
 
     # Initialize with cached data
-    num_parameters = len(pre_filled_shot_data.columns)
-    num_valid = pre_filled_shot_data.notna().any().sum()
+    num_parameters = 0
+    num_valid = 0
     filtered_methods = []
     for method_dict in methods_data:
         if method_dict is None:
@@ -338,11 +276,11 @@ def populate_shot(
                 np.all(np.isnan(method_dict[parameter]))
                 and len(method_dict[parameter]) == 1
             ):
-                method_dict[parameter] = np.full(len(pre_filled_shot_data), np.nan)
+                method_dict[parameter] = physics_method_params.times * np.nan
             else:
                 num_valid += 1
         method_df = pd.DataFrame(method_dict)
-        if len(method_df) != len(pre_filled_shot_data):
+        if len(method_df) != len(physics_method_params.times):
             physics_method_params.logger.error(
                 "Ignoring parameters {parameter} with different length than timebase",
                 parameter=list(method_dict.keys()),
@@ -378,7 +316,13 @@ def populate_shot(
     # TODO: This is a hack to get around the fact that some methods return
     #       multiple parameters. This should be fixed in the future.
 
-    local_data = pd.concat([pre_filled_shot_data] + filtered_methods, axis=1)
+    coords = pd.DataFrame(
+        {
+            "shot": [physics_method_params.shot_id] * len(physics_method_params.times),
+            "time": physics_method_params.times,
+        }
+    )
+    local_data = pd.concat([coords] + filtered_methods, axis=1)
     local_data = local_data.loc[:, ~local_data.columns.duplicated()]
     if (
         retrieval_settings.only_requested_columns
