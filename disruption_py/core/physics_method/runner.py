@@ -128,7 +128,7 @@ def filter_methods_to_run(
 
         both_none = methods is None and columns is None
         method_specified = methods is not None and bound_method_metadata.name in methods
-        column_speficied = columns is not None and bool(
+        column_specified = columns is not None and bool(
             set(bound_method_metadata.columns).intersection(columns)
         )
         is_not_excluded = (
@@ -138,7 +138,7 @@ def filter_methods_to_run(
             and f"~{bound_method_metadata.name}" not in methods
         )
         should_run = (
-            both_none or method_specified or column_speficied or is_not_excluded
+            both_none or method_specified or column_specified or is_not_excluded
         )
 
         # reasons that methods should be excluded from should run
