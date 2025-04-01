@@ -170,7 +170,7 @@ from disruption_py.workflow import run
 out = run(*args)
 ```
 
-Finally, a full-fledge disruption script can configure all the settings according to the specific use case.
+A full-fledged disruption script enables the configuration of all the settings according to the specific use case.
 Please refer to our `examples/defaults.py` script for a quickstart workflow with all the default arguments clearly explained.
 
 
