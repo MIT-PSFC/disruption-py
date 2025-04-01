@@ -11,20 +11,11 @@ from typing import Dict
 import pandas as pd
 import pytest
 
-from disruption_py.config import config
-from disruption_py.core.utils.misc import without_duplicates
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.settings.output_setting import BatchedCSVOutputSetting
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.workflow import get_database, get_shots_data
 from tests.utils.data_difference import assert_frame_equal_unordered
-
-WRITE_DATABASE_TABLE_NAME = config().inout.sql.write_database_table_name
-FIRST_ITERATION_COLUMNS = config().inout.sql.protected_columns + ["beta_p"]
-SECOND_ITERATION_COLUMNS = ["kappa"]
-ALL_ITERATION_COLUMNS = without_duplicates(
-    FIRST_ITERATION_COLUMNS + SECOND_ITERATION_COLUMNS
-)
 
 
 @pytest.fixture(scope="module", name="shot_database")
@@ -55,7 +46,7 @@ def initial_mdsplus_data_fixture(shotlist, tokamak, test_file_path_f) -> Dict:
 
     retrieval_settings = RetrievalSettings(
         efit_nickname_setting="disruption",
-        run_columns=FIRST_ITERATION_COLUMNS,
+        run_columns=["kappa"],
         only_requested_columns=True,
     )
     all_outputs = get_shots_data(
