@@ -135,15 +135,15 @@ def filter_methods_to_run(
             only_excluded_methods_specified
             and not columns
             and methods
-            and (("~" + bound_method_metadata.name) not in methods)
+            and f"~{bound_method_metadata.name}" not in methods
         )
         should_run = (
             both_none or method_specified or column_speficied or is_not_excluded
         )
 
-        # reasons that methods should be exluded from should run
+        # reasons that methods should be excluded from should run
         should_not_run = (
-            methods is not None and ("~" + bound_method_metadata.name) in methods
+            methods is not None and f"~{bound_method_metadata.name}" in methods
         )
 
         if should_run and not should_not_run:
@@ -178,7 +178,6 @@ def populate_method(
     name = bound_method_metadata.name
 
     physics_method_params.logger.trace("Starting method: {name}", name=name)
-    result = None
 
     try:
         result = method(params=physics_method_params)
@@ -246,22 +245,17 @@ def populate_shot(
         all_bound_method_metadata, retrieval_settings, physics_method_params
     )
 
-    # Manually cache data that has already been retrieved (likely from SQL tables)
-    # Methods added to pre_cached_method_names will be skipped by method optimizer
-    cached_method_metadata = []
+    # run methods and collect data
     start_time = time.time()
-    methods_data = []
-    for bound_method_metadata in run_bound_method_metadata:
-        if bound_method_metadata in cached_method_metadata:
-            continue
-        methods_data.append(
-            populate_method(
-                physics_method_params=physics_method_params,
-                bound_method_metadata=bound_method_metadata,
-            )
+    methods_data = [
+        populate_method(
+            physics_method_params=physics_method_params,
+            bound_method_metadata=bound_method_metadata,
         )
+        for bound_method_metadata in run_bound_method_metadata
+    ]
 
-    # Initialize with cached data
+    # create DataFrames of proper shape
     num_parameters = 0
     num_valid = 0
     filtered_methods = []
@@ -285,11 +279,10 @@ def populate_shot(
                 "Ignoring parameters {parameter} with different length than timebase",
                 parameter=list(method_dict.keys()),
             )
-            # TODO: Should we drop the columns, or is it better to raise an
-            # exception when the data do not match?
             continue
         filtered_methods.append(method_df)
 
+    # log statistics
     percent_valid = (num_valid / num_parameters * 100) if num_parameters else 0
     if percent_valid >= 75:
         level = "SUCCESS"
@@ -313,9 +306,7 @@ def populate_shot(
         elapsed=get_elapsed_time(time.time() - start_time),
     )
 
-    # TODO: This is a hack to get around the fact that some methods return
-    #       multiple parameters. This should be fixed in the future.
-
+    # concatenate partial DataFrames
     coords = pd.DataFrame(
         {
             "shot": [physics_method_params.shot_id] * len(physics_method_params.times),
@@ -324,16 +315,15 @@ def populate_shot(
     )
     local_data = pd.concat([coords] + filtered_methods, axis=1)
     local_data = local_data.loc[:, ~local_data.columns.duplicated()]
+
+    # include requested columns
+    include_cols = set(local_data.columns).difference(REQUIRED_COLS)
     if (
         retrieval_settings.only_requested_columns
         and retrieval_settings.run_columns is not None
     ):
-        include_columns = list(
-            REQUIRED_COLS.union(
-                set(retrieval_settings.run_columns).intersection(
-                    set(local_data.columns)
-                )
-            )
-        )
-        local_data = local_data[include_columns]
+        include_cols = set(retrieval_settings.run_columns).intersection(include_cols)
+
+    # sort columns
+    local_data = local_data[list(REQUIRED_COLS) + sorted(list(include_cols))]
     return local_data
