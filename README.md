@@ -153,7 +153,7 @@ options:
 A typical invocation of the entry point would be:
 
 ```bash
-uv run disruption-py -m get_efit_parameters -o efit.csv {1150805012..1150805022}
+uv run disruption-py -m get_efit_parameters -o efit.csv 1150805012 1150805020
 ```
 
 The same entry point can also be invoked from Python:
