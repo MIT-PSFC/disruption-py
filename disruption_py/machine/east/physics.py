@@ -448,7 +448,7 @@ class EastPhysicsMethods:
         return {"n_e": ne, "greenwald_fraction": greenwald_fraction, "dn_dt": dn_dt}
 
     @staticmethod
-    def get_raw_axuv_data(params: PhysicsMethodParams):
+    def _get_raw_axuv_data(params: PhysicsMethodParams):
         """
         Get the raw (uncalibrated) data from the AXUV arrays for calculating
         the total radiated power and prad_peaking. The AXUV diagnostic contains
@@ -458,8 +458,6 @@ class EastPhysicsMethods:
         get_prad_peaking.m are slightly different in where the calibration factors
         are applied. This difference isn't explained in the scripts so I keep
         these functions different.
-
-        TODO: should this function be put in EastUtilMethods?
         """
         # Get XUV data
         (xuvtime,) = params.mds_conn.get_dims(r"\pxuv1", tree_name="east_1")  # [s]
@@ -509,7 +507,7 @@ class EastPhysicsMethods:
         """
         # Get the raw AXUV data
         try:
-            xuv, xuvtime = EastPhysicsMethods.get_raw_axuv_data(params)  # [W], [s]
+            xuv, xuvtime = EastPhysicsMethods._get_raw_axuv_data(params)  # [W], [s]
         except mdsExceptions.MdsException:
             return {"p_rad": [np.nan]}
 
@@ -1350,7 +1348,7 @@ class EastPhysicsMethods:
 
         Last major update: 2014/11/22 by William Wei
         """
-        xuv, xuvtime = EastPhysicsMethods.get_raw_axuv_data(params)
+        xuv, xuvtime = EastPhysicsMethods._get_raw_axuv_data(params)
 
         # Get calibration factors
         calib_factors = EastUtilMethods.get_axuv_calib_factors()
