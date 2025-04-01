@@ -29,7 +29,6 @@ nav:
   - Overview:
       - Background: index.md
       - Installation: INSTALL.md
-      - Quickstart: quickstart/usage_quickstart.md
   - Usage:
       - Entry points:
           - Workflow: usage/workflow_reference.md
