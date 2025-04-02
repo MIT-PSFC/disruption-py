@@ -185,7 +185,7 @@ class ShotDatabase:
             if "select" in query.lower():
                 output = curs.fetchall()
         except pyodbc.DatabaseError as e:
-            logger.error("Query failed with error {e}, returning None", e=e)
+            logger.error("Query failed: {e}", e=repr(e))
             logger.opt(exception=True).debug(e)
         curs.close()
         return output
