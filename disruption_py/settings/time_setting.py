@@ -467,99 +467,6 @@ class DisruptionTimeSetting(TimeSetting):
         return duration, signal_max
 
 
-class IpTimeSetting(TimeSetting):
-    """
-    Time setting for using the timebase of the plasma current.
-    """
-
-    def __init__(self):
-        """
-        Initialize with tokamak-specific overrides.
-        """
-        self.tokamak_overrides = {Tokamak.D3D: self.d3d_times}
-
-    def _get_times(self, params: TimeSettingParams) -> np.ndarray:
-        """
-        Abstract method for retrieving the Ip timebase.
-
-        Parameters
-        ----------
-        params : TimeSettingParams
-            Parameters needed to retrieve the timebase.
-
-        Returns
-        -------
-        np.ndarray
-            Array of times in the timebase.
-        """
-        raise ValueError("Ip time setting not implemented")
-
-    def d3d_times(self, params: TimeSettingParams):
-        """
-        Retrieve the Ip timebase for the D3D tokamak.
-
-        Parameters
-        ----------
-        params : TimeSettingParams
-            Parameters needed to retrieve the timebase.
-
-        Returns
-        -------
-        np.ndarray
-            Array of times in the timebase.
-        """
-        (ip_time,) = params.mds_conn.get_dims(
-            f"ptdata('ip', {params.shot_id})", tree_name="d3d"
-        )
-        return ip_time
-
-
-class SignalTimeSetting(TimeSetting):
-    """
-    Time setting for using the timebase of a specific signal.
-    """
-
-    def __init__(self, tree_name: str, signal_path: str):
-        """
-        Initialize with the tree name and signal path.
-
-        Parameters
-        ----------
-        tree_name : str
-            Name of the tree containing the signal.
-        signal_path : str
-            Path to the signal within the tree.
-        """
-        self.tree_name = tree_name
-        self.signal_path = signal_path
-
-    def _get_times(self, params: TimeSettingParams) -> np.ndarray:
-        """
-        Retrieve the timebase for the specified signal.
-
-        Parameters
-        ----------
-        params : TimeSettingParams
-            Parameters needed to retrieve the timebase.
-
-        Returns
-        -------
-        np.ndarray
-            Array of times in the timebase.
-        """
-        try:
-            (signal_time,) = params.mds_conn.get_dims(
-                self.signal_path, tree_name=self.tree_name, astype="float64"
-            )
-            return signal_time
-        except mdsExceptions.MdsException:
-            params.logger.error(
-                "Failed to set up timebase for signal {signal_path}",
-                signal_path=self.signal_path,
-            )
-            raise
-
-
 # --8<-- [start:time_setting_dict]
 _time_setting_mappings: Dict[str, TimeSetting] = {
     "efit": EfitTimeSetting(),
@@ -572,7 +479,6 @@ _time_setting_mappings: Dict[str, TimeSetting] = {
         Tokamak.D3D: DisruptionTimeSetting(),
         Tokamak.EAST: DisruptionTimeSetting(minimum_ip=200e3, minimum_duration=0.6),
     },
-    "ip": IpTimeSetting(),
 }
 # --8<-- [end:time_setting_dict]
 
