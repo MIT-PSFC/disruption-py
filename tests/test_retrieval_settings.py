@@ -55,11 +55,10 @@ def test_only_requested_columns(tokamak, shotlist):
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
         num_processes=2,
-        output_setting="list",
+        output_setting="dataframe",
         log_settings="WARNING",
     )
-    for res in results:
-        assert {"ip", "q95", "shot", "time"} == set(res.columns)
+    assert {"ip", "q95", "shot", "time"} == set(results.columns)
 
 
 @skip_on_fast_execution
