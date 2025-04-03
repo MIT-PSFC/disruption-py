@@ -122,9 +122,7 @@ do
       source "$DISPY_DIR/repo/auto/activate.sh" || exit 11
 
       # log
-      export LOG="$LOG/py$DISPY_PYVERS"
-      mkdir -p "$LOG"
-      echo -e "$(date) :: $DISPY_BRANCH @ py$DISPY_PYVERS${STATE:+ = }$STATE"
+      echo -e "$(date) :: $DISPY_BRANCH @ $SHA${STATE:+ = }$STATE"
 
       # done
       [[ "$STATE" = "success" ]] && exit 0
@@ -165,7 +163,7 @@ do
       [[ $RC -eq 0 ]] && STATE=success || STATE=failure
 
       # log
-      echo -e "$(date) :: $DISPY_BRANCH @ py$DISPY_PYVERS = rc $RC"
+      echo -e "$(date) :: $DISPY_BRANCH @ $SHA = rc $RC"
 
       # deactivate
       deactivate
