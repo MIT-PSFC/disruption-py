@@ -18,7 +18,6 @@ from disruption_py.core.retrieval_manager import RetrievalManager
 from disruption_py.core.utils.misc import (
     get_elapsed_time,
     get_temporary_folder,
-    shot_msg,
     without_duplicates,
 )
 from disruption_py.inout.mds import ProcessMDSConnection
@@ -150,12 +149,7 @@ def get_shots_data(
         for shot_id, shot_data in tqdm(
             pool.imap(_execute_retrieval, args), total=len(shotlist_list), leave=False
         ):
-            if shot_data is None:
-                logger.warning(
-                    shot_msg("Not outputting data for shot, data is None."),
-                    shot=shot_id,
-                )
-            else:
+            if shot_data is not None:
                 num_success += 1
                 output_setting.output_shot(
                     OutputSettingParams(
