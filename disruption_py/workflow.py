@@ -14,6 +14,7 @@ from typing import Any, Callable
 from loguru import logger
 from tqdm.auto import tqdm
 
+from disruption_py.config import config
 from disruption_py.core.retrieval_manager import RetrievalManager
 from disruption_py.core.utils.misc import (
     get_elapsed_time,
@@ -37,7 +38,6 @@ from disruption_py.settings.shotlist_setting import (
     ShotlistSettingType,
     shotlist_setting_runner,
 )
-from tests.utils.factory import get_tokamak_test_shotlist
 
 
 def _execute_retrieval(args):
@@ -235,7 +235,7 @@ def run(
     if not tokamak:
         tokamak = resolve_tokamak_from_environment()
     if not shots:
-        shots, *_ = get_tokamak_test_shotlist(tokamak)
+        shots, *_ = config(tokamak).tests.shots.values()
     methods = methods or None
 
     sett = RetrievalSettings(
