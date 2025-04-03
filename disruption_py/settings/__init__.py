@@ -8,7 +8,7 @@ from .output_setting import (
     OutputSetting,
     OutputSettingParams,
 )
-from .retrieval_settings import InterpolationMethod, RetrievalSettings
+from .retrieval_settings import RetrievalSettings
 from .shotlist_setting import DatabaseShotlistSetting, FileShotlistSetting
 from .time_setting import TimeSetting, TimeSettingParams
 
@@ -17,7 +17,6 @@ __all__ = [
     "CompleteOutputSettingParams",
     "OutputSetting",
     "OutputSettingParams",
-    "InterpolationMethod",
     "RetrievalSettings",
     "DatabaseShotlistSetting",
     "FileShotlistSetting",
