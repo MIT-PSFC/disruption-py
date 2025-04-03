@@ -177,9 +177,10 @@ class LogSettings:
         if self.log_file_path is not None:
             logger.info("Logging: {l}", l=self.log_file_path)
         logger.debug(
-            "Repository: {url}/{append}",
+            "Repository: {url}{append}{commit}",
             url="https://github.com/MIT-PSFC/disruption-py",
-            append=f"commit/{commit}" if commit else "",
+            append="/commit/" if commit else "",
+            commit=commit,
         )
         logger.debug("Executable: {e}", e=sys.executable)
 
