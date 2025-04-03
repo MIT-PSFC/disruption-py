@@ -79,6 +79,8 @@ def _better_mds_exceptions(func):
                 err = "Node not found"
             elif isinstance(e, MDSplus.mdsExceptions.TreeNODATA):
                 err = "No data available"
+            elif isinstance(e, MDSplus.mdsExceptions.TreeBADRECORD):
+                err = "Bad record"
             else:
                 err = "MDSplus error"
             raise type(e)(f"{err}. Tree: {self.last_open_tree}, Node: {path}") from None
