@@ -163,12 +163,13 @@ class LogSettings:
         self.reset_handlers(num_shots=None)
 
         # header
-        package = "disruption_py"
+        package, *_ = __name__.split(".")
         commit = get_commit_hash()
         logger.info(
-            "Starting: {p} ~ v{v} # {c} / {u}@{h}",
+            "Starting: {p} ~ v{v}{t}{c} / {u}@{h}",
             p=package,
             v=importlib.metadata.version(package),
+            t=" # " if commit else "",
             c=commit,
             u=os.getenv("USER"),
             h=os.uname().nodename,
@@ -176,9 +177,9 @@ class LogSettings:
         if self.log_file_path is not None:
             logger.info("Logging: {l}", l=self.log_file_path)
         logger.debug(
-            "Repository: {r}/commit/{c}",
-            r="https://github.com/MIT-PSFC/disruption-py",
-            c=commit,
+            "Repository: {url}/{append}",
+            url="https://github.com/MIT-PSFC/disruption-py",
+            append=f"commit/{commit}" if commit else "",
         )
         logger.debug("Executable: {e}", e=sys.executable)
 
