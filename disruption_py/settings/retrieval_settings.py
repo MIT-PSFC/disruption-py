@@ -16,10 +16,7 @@ from disruption_py.settings.nickname_setting import (
     NicknameSetting,
     resolve_nickname_setting,
 )
-from disruption_py.settings.time_setting import (
-    TimeSetting,
-    resolve_time_setting,
-)
+from disruption_py.settings.time_setting import TimeSetting, resolve_time_setting
 
 
 class InterpolationMethod(Enum):
