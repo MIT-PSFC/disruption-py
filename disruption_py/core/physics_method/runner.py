@@ -181,27 +181,14 @@ def populate_method(
 
     try:
         result = method(params=physics_method_params)
-    except (
-        mdsExceptions.TreeFOPENR,
-        mdsExceptions.TreeNNF,
-        mdsExceptions.TreeNODATA,
-        CalculationError,
-        NotImplementedError,
-        ValueError,
-    ) as e:
-        if isinstance(e, ValueError):
-            catch_error_msgs = [
-                "x and y arrays must be equal in length along interpolation axis."
-            ]
-            if not any(msg in str(e.args) for msg in catch_error_msgs):
-                raise
-
-        physics_method_params.logger.warning(
-            "{name}: Failed! {e}",
-            name=name,
-            e=e,
-        )
-        physics_method_params.logger.opt(exception=True).debug(e)
+    # pylint: disable-next=broad-exception-caught
+    except Exception as e:
+        level = "ERROR"
+        if isinstance(e, (mdsExceptions.MdsException, CalculationError)):
+            if not isinstance(e, mdsExceptions.MDSplusERROR):
+                level = "WARNING"
+        physics_method_params.logger.log(level, "{name}: {exc}", name=name, exc=repr(e))
+        physics_method_params.logger.opt(exception=True).debug(name)
         result = {col: [np.nan] for col in bound_method_metadata.columns}
 
     return result

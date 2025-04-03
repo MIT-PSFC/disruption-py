@@ -255,10 +255,7 @@ class CmodPhysicsMethods:
                             )
                             ip_prog[segment_indices] = ip_prog_temp[segment_indices]
                     except mdsExceptions.MdsException as e:
-                        params.logger.warning(
-                            "Error getting PID gains for wire {wire_index}",
-                            wire_index=wire_index,
-                        )
+                        params.logger.warning(repr(e))
                         params.logger.opt(exception=True).debug(e)
                     break  # Break out of wire_index loop
         ip, magtime = params.mds_conn.get_data_with_dims(
@@ -419,6 +416,7 @@ class CmodPhysicsMethods:
                             z_prog[segment_indices] = z_prog_temp[segment_indices]
                             break
                     except mdsExceptions.MdsException as e:
+                        params.logger.warning(repr(e))
                         params.logger.opt(exception=True).debug(e)
                         continue  # TODO: Consider raising appropriate error
                 else:

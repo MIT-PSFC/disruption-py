@@ -82,10 +82,7 @@ class CmodEfitMethods:
                     tree_name="_efit_tree",
                 )
             except mdsExceptions.MdsException as e:
-                params.logger.warning(
-                    "Unable to get {param} from EFIT tree",
-                    param=param,
-                )
+                params.logger.warning(repr(e))
                 params.logger.opt(exception=True).debug(e)
                 efit_data[param] = np.full(len(efit_time), np.nan)
 
