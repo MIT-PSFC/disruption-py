@@ -124,7 +124,7 @@ def get_shots_data(
     num_processes = min(num_processes, len(shotlist_list))
     if num_processes < 1:
         logger.critical("Nothing to do!")
-        return
+        return None
 
     # Dynamically set the console log level based on the number of shots
     if log_settings.console_log_level is None:
