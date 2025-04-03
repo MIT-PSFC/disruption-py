@@ -9,14 +9,13 @@ import threading
 from typing import List
 from urllib.parse import quote_plus
 
-import numpy as np
 import pandas as pd
 import pyodbc
 from loguru import logger
 from sqlalchemy import create_engine
 
 from disruption_py.config import config
-from disruption_py.core.utils.misc import shot_msg, without_duplicates
+from disruption_py.core.utils.misc import without_duplicates
 from disruption_py.core.utils.shared_instance import SharedInstance
 from disruption_py.machine.tokamak import Tokamak
 
@@ -199,256 +198,6 @@ class ShotDatabase:
         version = self.query(query, use_pandas=False)
         return version[0][0]
 
-    def add_shot_data(
-        self,
-        shot_id: int,
-        shot_data: pd.DataFrame,
-        update=False,
-        override_columns: List[str] = None,
-    ):
-        """
-        Upload shot to SQL database.
-
-        Either inserts or updates shot data depending on whether a shot already exists
-        in database. If shot exists, then the timebase of the shot data must match
-        the timebase of the shot in the database.
-
-        Parameters
-        ----------
-        shot_id : int
-            Shot id of the shot being modified
-        shot_data : pd.DataFrame
-            Dataframe containing shot data for update
-        update : bool
-            Whether to update shot data if the shot already exists in database.
-            Update will happen regardless of whether the column being updated is
-            all nil. Default value is False.
-        override_columns : List[str]
-            List of protected columns that can still be updated. Update must be
-            true for input values in the columns to be changed. Default value is [].
-        """
-        if self.write_database_table_name is None:
-            raise ValueError(
-                "specify write_database_table_name in the configuration before "
-                + "adding shot data"
-            )
-        curr_df = pd.read_sql_query(
-            f"select * from {self.write_database_table_name} where shot={shot_id} "
-            + "order by time",
-            self.engine,
-        )
-
-        if len(curr_df) == 0:
-            return self._insert_shot_data(
-                curr_df=curr_df,
-                shot_data=shot_data,
-                table_name=self.write_database_table_name,
-            )
-        if (
-            len(curr_df) == len(shot_data)
-            and (
-                (curr_df["time"] - shot_data["time"]).abs() < config().time_const
-            ).all()
-        ):
-            return self._update_shot_data(
-                shot_id=shot_id,
-                curr_df=curr_df,
-                shot_data=shot_data,
-                update=update,
-                table_name=self.write_database_table_name,
-                override_columns=override_columns,
-            )
-
-        logger.error("Invalid timebase for data output")
-        return False
-
-    def _insert_shot_data(
-        self,
-        curr_df: pd.DataFrame,
-        shot_data: pd.DataFrame,
-        table_name: str,
-    ):
-        """
-        Insert shot data into SQL table.
-
-        Assumes that the shot id does not already exist in the database.
-        """
-
-        identity_column_names = self._get_identity_column_names(table_name)
-
-        matching_columns_shot_data = pd.DataFrame()
-        for column_name in curr_df.columns:
-            if column_name in identity_column_names:
-                continue
-
-            if column_name in shot_data.columns:
-                matching_columns_shot_data[column_name] = shot_data[column_name]
-
-        matching_columns_shot_data = matching_columns_shot_data.replace({np.nan: None})
-
-        column_names = matching_columns_shot_data.columns.tolist()
-        sql_column_names = ", ".join(column_names)
-        parameter_markers = "(" + ", ".join(["?"] * len(column_names)) + ")"
-        with self.conn.cursor() as curs:
-            data_tuples = list(
-                matching_columns_shot_data.itertuples(index=False, name=None)
-            )
-            curs.executemany(
-                f"insert into {table_name} ({sql_column_names}) values "
-                + f"{parameter_markers}",
-                data_tuples,
-            )
-        return True
-
-    def _update_shot_data(
-        self,
-        shot_id: int,
-        curr_df: pd.DataFrame,
-        shot_data: pd.DataFrame,
-        update: bool,
-        table_name: str,
-        override_columns: List[str] = None,
-    ):
-        """
-        Update shot data into SQL table.
-
-        Assumes that the shot id already exist in the database and the timebase of
-        shot_data is the same as curr_df.
-
-        Parameters
-        ----------
-        curr_df : pd.DataFrame
-            Data currently in sql database.
-        shot_data : pd.DataFrame
-            Dataframe containing shot data for update.
-        update : bool
-            Whether to update shot data if the shot already exists in database.
-            Update will happen regardless of whether the column being updated is
-            all nil. Default value is False.
-        override_columns : List[str]
-            List of columns that can should still be updated. Update must be true
-            for input values in the columns to be changed. Default value is [].
-        table_name : str
-            Name of the table for data insert or update. Default value is
-            "disruption_warning".
-        """
-        override_columns = override_columns or []
-
-        update_columns_shot_data = pd.DataFrame()
-        for column_name in curr_df.columns:
-            if column_name in config().inout.sql.protected_columns or (
-                column_name in self.protected_columns
-                and column_name not in override_columns
-            ):
-                continue
-
-            if (
-                column_name in shot_data.columns
-                and not shot_data[column_name].isna().all()
-                and (update or curr_df[column_name].isna().all())
-            ):
-                update_columns_shot_data[column_name] = shot_data[column_name]
-        # pyodbc will fill SQL with NULL for None, but not for np.nan
-        update_columns_shot_data = update_columns_shot_data.replace({np.nan: None})
-        ko_rows = 0
-        with self.conn.cursor() as curs:
-            for index, row in enumerate(
-                update_columns_shot_data.itertuples(index=False, name=None)
-            ):
-                update_column_names = list(update_columns_shot_data.columns)
-                sql_set_string = ", ".join(
-                    [f"{col} = ?" for col in update_column_names]
-                )
-                sql_command = (
-                    f"UPDATE {table_name} SET {sql_set_string} "
-                    + "WHERE time BETWEEN ? AND ? AND shot = ?;"
-                )
-                t = curr_df["time"][index] + np.array([-0.5, 0.5]) * config().time_const
-                curs.execute(sql_command, row + (*t, str(shot_id)))
-                ko_rows += curs.rowcount == 0
-        if ko_rows:
-            logger.error(
-                shot_msg("Could not update {ko_rows} rows."),
-                shot=shot_id,
-                ko_rows=ko_rows,
-            )
-        return True
-
-    def _get_identity_column_names(self, table_name: str):
-        """Get which column names are identity columns in table."""
-        queries = {
-            "mssql": """
-                     SELECT
-                       c.name AS ColumnName
-                     FROM
-                       sys.columns c
-                       INNER JOIN sys.tables t ON c.object_id = t.object_id
-                       LEFT JOIN sys.identity_columns ic ON ic.object_id = c.object_id
-                       AND ic.column_id = c.column_id
-                     WHERE
-                       t.name = '{table_name}'
-                       AND ic.object_id IS NOT NULL
-                     """,
-            "mysql": """
-                     SELECT
-                       COLUMN_NAME AS ColumnName
-                     FROM
-                       INFORMATION_SCHEMA.COLUMNS
-                     WHERE
-                       TABLE_NAME = '{table_name}'
-                       AND EXTRA LIKE '%auto_increment%';
-                     """,
-        }
-        with self.conn.cursor() as curs:
-            query = queries[self.dialect].format(table_name=table_name)
-            logger.trace("Executing query: {query}", query=query)
-            curs.execute(query)
-            return [row[0] for row in curs.fetchall()]
-
-    def remove_shot_data(self, shotlist: List[int]):
-        """Remove shot data from the test SQL table."""
-        table_name = self.write_database_table_name
-        if not table_name.endswith("_test"):
-            raise ValueError("Deletion is restricted to tables ending in '_test'.")
-        shots = [str(s) for s in shotlist]
-        with self.conn.cursor() as curs:
-            query = f"delete from {table_name} where shot in ({', '.join(shots)})"
-            logger.debug("Executing query: '{query}'", query=query)
-            curs.execute(query)
-            logger.debug("Deleted: {rows} rows", rows=curs.rowcount)
-            return curs.rowcount > 0
-
-    def add_column(self, col_name, var_type="TEXT"):
-        """Add column to SQL table without filling in data for column."""
-        if self.write_database_table_name is None:
-            raise ValueError(
-                "specify write_database_table_name in the configuration before "
-                + "adding shot data"
-            )
-        self.query(
-            f"alter table {self.write_database_table_name} add {col_name} {var_type};",
-            use_pandas=False,
-        )
-        return True
-
-    def remove_column(self, col_name):
-        """Remove column from SQL table"""
-        if self.write_database_table_name is None:
-            raise ValueError(
-                "specify write_database_table_name in the configuration before "
-                + "adding shot data"
-            )
-        if col_name in self.protected_columns:
-            logger.error(
-                "Failed to drop protected column {col_name}", col_name=col_name
-            )
-            return False
-        self.query(
-            f"alter table {self.write_database_table_name} drop column {col_name};",
-            use_pandas=False,
-        )
-        return True
-
     def get_shots_data(
         self,
         shotlist: List[int],
@@ -497,22 +246,6 @@ class ShotDatabase:
         t_disrupt = t_disrupt[0][0]
         return t_disrupt
 
-    def get_disruption_shotlist(self):
-        """
-        Get Pandas DataFrame of all disruptive shots and times from the disruption
-        table. Can be set as a cross-reference to determine whether a given shot
-        is disruptive or not (all shots in this table are disruptive) and contain
-        a t_disrupt.
-        """
-        return self.query("select distinct shot from disruptions order by shot")
-
-    def get_disruption_warning_shotlist(self):
-        """
-        Get Pandas DataFrame of all shots in the disruption_warning table. NOTE:
-        The disruption_warning table contains ONLY a subset of shots in this table
-        """
-        return self.query("select distinct shot from disruption_warning order by shot")
-
 
 class DummyObject:
     """
@@ -558,9 +291,3 @@ class DummyDatabase(ShotDatabase):
     # pylint: disable-next=arguments-differ
     def get_disruption_time(self, **_kwargs):
         return None
-
-    def get_disruption_shotlist(self, **_kwargs):
-        return []
-
-    def get_disruption_warning_shotlist(self, **_kwargs):
-        return []
