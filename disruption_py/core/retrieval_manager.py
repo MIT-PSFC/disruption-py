@@ -135,15 +135,19 @@ class RetrievalManager:
                 retrieval_settings=retrieval_settings,
                 **kwargs,
             )
-            if len(physics_method_params.times) < 2:
-                logger.critical(shot_msg("Pathological timebase!"), shot=shot_id)
-                return None
-            return physics_method_params
         except mdsExceptions.MdsException as e:
             logger.critical(shot_msg("Failed setup! {e}"), shot=shot_id, e=repr(e))
             logger.opt(exception=True).debug(shot_msg("Failed setup!"), shot=shot_id)
             mds_conn.cleanup()
             return None
+        if len(physics_method_params.times) < 2:
+            logger.critical(
+                shot_msg("Pathological timebase! {times}"),
+                shot=shot_id,
+                times=physics_method_params.times,
+            )
+            return None
+        return physics_method_params
 
     @classmethod
     def shot_cleanup(
