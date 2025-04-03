@@ -60,7 +60,8 @@ do
    {
       git fetch origin "$DISPY_BRANCH"
       git status
-      git reset --hard "origin/$(git rev-parse --abbrev-ref HEAD)"
+      git reset --hard "origin/$DISPY_BRANCH"
+      git pull
       git clean -ffdx
       git status
    } \
