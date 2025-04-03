@@ -74,14 +74,14 @@ def _better_mds_exceptions(func):
                 + (f"Nick: {nick}, " if nick else "")
                 + f"Tree: {tree}"
             ) from None
-        except MDSplus.mdsExceptions.TreeNNF:
-            raise MDSplus.mdsExceptions.TreeNNF(
-                f"Node not found. Tree: {self.last_open_tree}, Node: {path}"
-            ) from None
-        except MDSplus.mdsExceptions.TreeNODATA:
-            raise MDSplus.mdsExceptions.TreeNODATA(
-                f"No data available. Tree: {self.last_open_tree}, Node: {path}"
-            ) from None
+        except MDSplus.mdsExceptions.MdsException as e:
+            if isinstance(e, MDSplus.mdsExceptions.TreeNNF):
+                err = "Node not found"
+            elif isinstance(e, MDSplus.mdsExceptions.TreeNODATA):
+                err = "No data available"
+            else:
+                err = "MDSplus error"
+            raise type(e)(f"{err}. Tree: {self.last_open_tree}, Node: {path}") from None
 
     return wrapper
 
