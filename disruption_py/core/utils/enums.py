@@ -5,32 +5,6 @@ This module provides functions to convert string attributes of an object
 to corresponding enum values and to convert string values to enum values.
 """
 
-from typing import Dict
-
-
-def map_string_attributes_to_enum(obj, enum_translations: Dict):
-    """
-    Map string attributes of an object to corresponding enum values.
-
-    Parameters
-    ----------
-    obj : object
-        The object whose attributes will be mapped to enum values.
-    enum_translations : Dict[str, type]
-        A dictionary mapping attribute names to their corresponding enum classes.
-    """
-    for field_name, enum_class in enum_translations.items():
-        if hasattr(obj, field_name) and not isinstance(
-            getattr(obj, field_name), enum_class
-        ):
-            try:
-                enum_value = enum_class(getattr(obj, field_name))
-                setattr(obj, field_name, enum_value)
-            except ValueError as e:
-                raise ValueError(
-                    f"Invalid enum value for field '{field_name}': {getattr(obj, field_name)}"
-                ) from e
-
 
 def map_string_to_enum(value, enum_class, should_raise=True):
     """
