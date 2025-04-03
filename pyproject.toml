@@ -51,7 +51,6 @@ dependencies = [
   "numpy>=1.26.0,<2.0.0",
   "pandas[hdf5]>=2.2.0",
   "pyodbc>=5.2.0",
-  "scikit_learn>=1.6.0",
   "scipy>=1.15.0",
   "SQLAlchemy>=2.0.0",
   "tqdm>=4.67.0",
