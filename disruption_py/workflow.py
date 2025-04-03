@@ -14,6 +14,7 @@ from typing import Any, Callable
 from loguru import logger
 from tqdm.auto import tqdm
 
+from disruption_py.config import config
 from disruption_py.core.retrieval_manager import RetrievalManager
 from disruption_py.core.utils.misc import (
     get_elapsed_time,
@@ -37,7 +38,6 @@ from disruption_py.settings.shotlist_setting import (
     ShotlistSettingType,
     shotlist_setting_runner,
 )
-from tests.utils.factory import get_tokamak_test_shotlist
 
 
 def _execute_retrieval(args):
@@ -122,6 +122,9 @@ def get_shots_data(
         shotlist_setting_runner(shotlist_setting, shotlist_setting_params)
     )
     num_processes = min(num_processes, len(shotlist_list))
+    if num_processes < 1:
+        logger.critical("Nothing to do!")
+        return None
 
     # Dynamically set the console log level based on the number of shots
     if log_settings.console_log_level is None:
@@ -235,7 +238,7 @@ def run(
     if not tokamak:
         tokamak = resolve_tokamak_from_environment()
     if not shots:
-        shots, *_ = get_tokamak_test_shotlist(tokamak)
+        shots, *_ = config(tokamak).tests.shots.values()
     methods = methods or None
 
     sett = RetrievalSettings(
