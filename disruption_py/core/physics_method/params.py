@@ -27,7 +27,6 @@ class PhysicsMethodParams:
     disruption_time: float
     mds_conn: MDSConnection
     times: np.ndarray
-    interpolation_method: Any  # Fix
     metadata: dict
 
     def __post_init__(self):

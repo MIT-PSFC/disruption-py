@@ -38,7 +38,7 @@ def ***_method(params: PhysicsMethodParams) -> dict:
 2. To retrieve data from MDSplus use the `params` ([`PhysicsMethodParams`][disruption_py.core.physics_method.params.PhysicsMethodParams]) object. It contains many useful attributes, among which are the following:
     - `params.shot_id`: the shot id of the shot for which data is being retrieved.
 	- `params.mds_conn`: a wrapper around the MDSplus connection for the process, that makes it easier to get data for a shot. See [`MDSConnection`][disruption_py.inout.mds.MDSConnection] for details.
-    - `params.times`: the timebase of the shot for which data is being retrieved as a NumPy array of times. A common development pattern is using the `params.interpolation_method` method (defaults to `interp1`) to interpolate the retrieved/computed values to the desired timebase.
+    - `params.times`: the timebase of the shot for which data is being retrieved as a NumPy array of times.
 ??? example "Shot Data Request Examples"
 
     === "Kappa Area Parameter in C-Mod"
