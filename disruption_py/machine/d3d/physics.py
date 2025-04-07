@@ -1463,7 +1463,7 @@ class D3DPhysicsMethods:
             # All custom channels are in the lower array
             lower_fan_chans = np.arange(24, 48)
             j = 0
-            for i, lower_fan_chan in enumerate(lower_fan_chans):
+            for lower_fan_chan in lower_fan_chans:
                 # Why include these extra channels in output['power']?
                 output["power"].append(b_struct.chan[lower_fan_chan].chanpwr)
                 if lower_fan_chan in fan_chans:
