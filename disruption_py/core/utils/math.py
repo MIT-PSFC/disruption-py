@@ -343,7 +343,7 @@ def matlab_sa(y, smooth_width, ends_type=0):
         start_point = matlab_round_int((smooth_width + 1) / 2)
         y_smooth[0] = (y[0] + y[1]) / 2
         for i in range(1, start_point):
-            y_smooth[i] = np.mean(y[0 : 2 * i + 1])
+            y_smooth[i] = np.mean(y[: 2 * i + 1])
             y_smooth[ly - i - 1] = np.mean(y[ly - 2 * i - 1 : ly])
         y_smooth[ly - 1] = (y[ly - 1] + y[ly - 2]) / 2
 
@@ -983,6 +983,6 @@ def matlab_gradient_1d_vectorized(f, h, **_kwargs):
     g = np.full(f.shape, np.nan)
     g[0] = f_diff[0] / h_diff[0]
     g[-1] = f_diff[-1] / h_diff[-1]
-    g[1:-1] = (f[2:] - f[0:-2]) / (h[2:] - h[0:-2])
+    g[1:-1] = (f[2:] - f[:-2]) / (h[2:] - h[:-2])
 
     return g
