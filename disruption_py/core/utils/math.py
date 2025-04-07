@@ -212,7 +212,7 @@ def matlab_gsastd(
     """
     y_arr = y.copy()
     if slew_rate:
-        for i in range(0, len(y_arr) - 1):
+        for i in range(len(y_arr) - 1):
             diff = y_arr[i + 1] - y_arr[i]
             if abs(diff) > slew_rate:
                 y_arr[i + 1] = y_arr[i] + np.sign(diff) * slew_rate
