@@ -315,13 +315,9 @@ def resolve_nickname_setting(nickname_setting: NicknameSettingType) -> NicknameS
         return nickname_setting
     if isinstance(nickname_setting, dict):
         return NicknameSettingDict(nickname_setting)
-    if (
-        isinstance(nickname_setting, str)
-        and nickname_setting in _nickname_setting_mappings
-    ):
-        return _nickname_setting_mappings[nickname_setting]
-
     if isinstance(nickname_setting, str):
+        if nickname_setting in _nickname_setting_mappings:
+            return _nickname_setting_mappings[nickname_setting]
         return StaticNicknameSetting(nickname_setting)
 
     raise ValueError(f"Invalid nickname setting type {type(nickname_setting)}.")
