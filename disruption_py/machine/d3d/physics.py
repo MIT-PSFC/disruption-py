@@ -1580,8 +1580,8 @@ class D3DPhysicsMethods:
         - pull requests:
         - issues: #[408](https://github.com/MIT-PSFC/disruption-py/issues/408)
         """
-        THRESHOLD_DIPPROG_DT = 2e3
-        THRESHOLD_IP_PROG = 100e3
+        threshold_dipprog_dt = 2e3
+        threshold_ip_prog = 100e3
 
         # ip_parameters are given in the requested timebase
         ip_parameters = D3DPhysicsMethods.get_ip_parameters(params=params)
@@ -1594,8 +1594,8 @@ class D3DPhysicsMethods:
         shot_domain = np.full(len(ipprog), np.nan)
         # Get flattop domain indices
         (indices_flattop,) = np.where(
-            (np.abs(dipprog_dt) <= THRESHOLD_DIPPROG_DT)
-            & (np.abs(ipprog) >= THRESHOLD_IP_PROG)
+            (np.abs(dipprog_dt) <= threshold_dipprog_dt)
+            & (np.abs(ipprog) >= threshold_ip_prog)
             & (power_supply_railed != 1)
         )
         flattop_start, flattop_end = indices_flattop[0], indices_flattop[-1] + 1

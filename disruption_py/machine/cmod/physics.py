@@ -2126,8 +2126,8 @@ class CmodPhysicsMethods:
         - pull requests:
         - issues: #[408](https://github.com/MIT-PSFC/disruption-py/issues/408)
         """
-        THRESHOLD_DIPPROG_DT = 50e3
-        THRESHOLD_IP_PROG = 100e3
+        threshold_dipprog_dt = 50e3
+        threshold_ip_prog = 100e3
         # ip_parameters are given in the requested timebase
         ip_parameters = CmodPhysicsMethods.get_ip_parameters(params=params)
         ipprog, dipprog_dt = ip_parameters["ip_prog"], ip_parameters["dipprog_dt"]
@@ -2135,8 +2135,8 @@ class CmodPhysicsMethods:
         shot_domain = np.full(len(ipprog), np.nan)
         # Get flattop domain indices
         (indices_flattop,) = np.where(
-            (np.abs(dipprog_dt) <= THRESHOLD_DIPPROG_DT)
-            & (np.abs(ipprog) >= THRESHOLD_IP_PROG)
+            (np.abs(dipprog_dt) <= threshold_dipprog_dt)
+            & (np.abs(ipprog) >= threshold_ip_prog)
         )
         flattop_start, flattop_end = indices_flattop[0], indices_flattop[-1] + 1
         # Assign shot domains
