@@ -206,9 +206,7 @@ def shotlist_setting_runner(shotlist_setting, params: ShotlistSettingParams):
         return [shotlist_setting]
 
     if isinstance(shotlist_setting, str):
-        shotlist_setting_object = _get_shotlist_setting_mappings.get(
-            shotlist_setting, None
-        )
+        shotlist_setting_object = _get_shotlist_setting_mappings.get(shotlist_setting)
         if shotlist_setting_object is not None:
             return shotlist_setting_object.get_shotlist(params)
 
@@ -223,7 +221,7 @@ def shotlist_setting_runner(shotlist_setting, params: ShotlistSettingParams):
             map_string_to_enum(tokamak, Tokamak): shotlist_setting_mapping
             for tokamak, shotlist_setting_mapping in shotlist_setting.items()
         }
-        chosen_setting = shotlist_setting.get(params.tokamak, None)
+        chosen_setting = shotlist_setting.get(params.tokamak)
         if chosen_setting is not None:
             return shotlist_setting_runner(chosen_setting, params)
 

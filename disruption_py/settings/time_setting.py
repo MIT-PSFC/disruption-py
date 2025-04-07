@@ -597,7 +597,7 @@ def resolve_time_setting(
         return time_setting
 
     if isinstance(time_setting, str):
-        time_setting_object = _time_setting_mappings.get(time_setting, None)
+        time_setting_object = _time_setting_mappings.get(time_setting)
         if time_setting_object is not None:
             return time_setting_object
 

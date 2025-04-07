@@ -400,7 +400,7 @@ def resolve_domain_setting(
         return domain_setting
 
     if isinstance(domain_setting, str):
-        domain_setting_object = _domain_setting_mappings.get(domain_setting, None)
+        domain_setting_object = _domain_setting_mappings.get(domain_setting)
         if domain_setting_object is not None:
             return domain_setting_object
 
