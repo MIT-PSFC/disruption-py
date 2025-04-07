@@ -469,7 +469,14 @@ class D3DPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["ip", "ip_prog", "ip_error", "dip_dt", "dipprog_dt", "power_supply_railed"],
+        columns=[
+            "ip",
+            "ip_prog",
+            "ip_error",
+            "dip_dt",
+            "dipprog_dt",
+            "power_supply_railed",
+        ],
         tokamak=Tokamak.D3D,
     )
     def get_ip_parameters(params: PhysicsMethodParams):
@@ -1546,3 +1553,55 @@ class D3DPhysicsMethods:
         ) / psi_norm_f[:, np.newaxis, np.newaxis]
         efit_dict["psin"][problems, :, :] = 0
         return efit_dict
+
+    @staticmethod
+    @physics_method(columns=["shot_domain"], tokamak=Tokamak.D3D)
+    def get_shot_domain(params: PhysicsMethodParams):
+        r"""
+        Get the domain (or phase) of every time point in a shot and return it
+        as a categorical variable:
+
+        - 1: ramp-up
+        - 0: flat-top
+        - -1: ramp-down
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing `shot_domain`.
+
+        References
+        -------
+        - pull requests:
+        - issues: #[408](https://github.com/MIT-PSFC/disruption-py/issues/408)
+        """
+        THRESHOLD_DIPPROG_DT = 2e3
+        THRESHOLD_IP_PROG = 100e3
+
+        # ip_parameters are given in the requested timebase
+        ip_parameters = D3DPhysicsMethods.get_ip_parameters(params=params)
+        ipprog, dipprog_dt, power_supply_railed = (
+            ip_parameters["ip_prog"],
+            ip_parameters["dipprog_dt"],
+            ip_parameters["power_supply_railed"],
+        )
+
+        shot_domain = np.full(len(ipprog), np.nan)
+        # Get flattop domain indices
+        (indices_flattop,) = np.where(
+            (np.abs(dipprog_dt) <= THRESHOLD_DIPPROG_DT)
+            & (np.abs(ipprog) >= THRESHOLD_IP_PROG)
+            & (power_supply_railed != 1)
+        )
+        flattop_start, flattop_end = indices_flattop[0], indices_flattop[-1] + 1
+        # Assign shot domains
+        shot_domain[:flattop_start] = 1
+        shot_domain[flattop_start:flattop_end] = 0
+        shot_domain[flattop_end:] = -1
+
+        return {"shot_domain": shot_domain}
