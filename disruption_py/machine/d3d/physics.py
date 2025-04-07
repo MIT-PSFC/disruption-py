@@ -469,7 +469,7 @@ class D3DPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["ip", "ip_error", "dip_dt", "dipprog_dt", "power_supply_railed"],
+        columns=["ip", "ip_prog", "ip_error", "dip_dt", "dipprog_dt", "power_supply_railed"],
         tokamak=Tokamak.D3D,
     )
     def get_ip_parameters(params: PhysicsMethodParams):
@@ -487,6 +487,8 @@ class D3DPhysicsMethods:
             A dictionary containing the following keys:
             - 'ip' : array
                 Measured plasma current values interpolated to the specified times.
+            - 'ip_prog': array
+                Programmed plasma current.
             - 'ip_error' : array
                 Error in plasma current, defined where feedback is active.
             - 'dip_dt' : array
@@ -574,6 +576,7 @@ class D3DPhysicsMethods:
             power_supply_railed = [np.nan]
         return {
             "ip": ip,
+            "ip_prog": ip_prog,
             "ip_error": ip_error,
             "dip_dt": dip_dt,
             "dipprog_dt": dipprog_dt,
