@@ -4,6 +4,7 @@
 Module for managing connections to MDSplus.
 """
 
+import threading
 from typing import Any, Callable, Dict, List, Tuple
 
 import MDSplus
@@ -28,6 +29,11 @@ class ProcessMDSConnection:
         self.conn = None
         if conn_string is None:
             return
+        logger.debug(
+            "PID #{pid} | Connecting to MDSplus server: {server}",
+            server=conn_string,
+            pid=threading.get_native_id(),
+        )
         # pylint: disable=no-member
         self.conn = MDSplus.Connection(conn_string)
         try:
