@@ -69,7 +69,7 @@ maintainers = [
 name = "disruption-py"
 readme = "README.md"
 requires-python = ">=3.11,<4"
-version = "0.11.0"
+version = "0.11.0-dev"
 
 [project.scripts]
 disruption-py = "disruption_py.workflow:cli"
