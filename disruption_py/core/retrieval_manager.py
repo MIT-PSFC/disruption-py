@@ -202,21 +202,12 @@ class RetrievalManager:
             retrieval_settings=retrieval_settings,
         )
 
-        metadata = {
-            "labels": {},
-            "timestep": {},
-            "duration": {},
-            "description": "",
-            "disrupted": 100,  # TODO: Fix
-        }
-
         physics_method_params = PhysicsMethodParams(
             shot_id=shot_id,
             tokamak=self.tokamak,
             disruption_time=disruption_time,
             mds_conn=mds_conn,
             times=times,
-            metadata=metadata,
         )
 
         # Modify already existing shot properties, such as modifying timebase
