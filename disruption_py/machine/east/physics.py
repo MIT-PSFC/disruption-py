@@ -1634,7 +1634,7 @@ class EastPhysicsMethods:
     def get_shot_domain(params: PhysicsMethodParams):
         r"""
         Get the domain (or phase) of every time point in a shot and return it
-        as a categorical variable:
+        as a categorical feature:
 
         - 1: ramp-up
         - 0: flat-top
