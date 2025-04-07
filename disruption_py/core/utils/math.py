@@ -155,8 +155,7 @@ def gauss(x, *params):
     """
 
     a, mu, sigma = params
-    out = a * np.exp(-((x - mu) ** 2) / (2.0 * sigma**2))
-    return out
+    return a * np.exp(-((x - mu) ** 2) / (2.0 * sigma**2))
 
 
 @filter_cov_warning

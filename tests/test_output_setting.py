@@ -31,14 +31,13 @@ def initial_mdsplus_data_fixture(shotlist, tokamak, test_file_path_f) -> Dict:
         run_columns=["kappa"],
         only_requested_columns=True,
     )
-    all_outputs = get_shots_data(
+    return get_shots_data(
         tokamak=tokamak,
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
         output_setting=output_settings,
         num_processes=2,
     )
-    return all_outputs
 
 
 @pytest.fixture(scope="module", name="initial_mdsplus_data_df")

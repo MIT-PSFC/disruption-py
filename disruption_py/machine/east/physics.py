@@ -206,7 +206,7 @@ class EastPhysicsMethods:
         ip_error = ip - ip_prog
         ip_error_normalized = ip_error / ip_prog
 
-        output = {
+        return {
             "ip": ip,
             "ip_prog": ip_prog,
             "ip_error": ip_error,
@@ -214,7 +214,6 @@ class EastPhysicsMethods:
             "dip_dt": dip_dt,
             "dipprog_dt": dipprog_dt,
         }
-        return output
 
     @staticmethod
     @physics_method(
@@ -361,7 +360,7 @@ class EastPhysicsMethods:
         z_error_lmsz = zcur_lmsz - z_prog
         z_error_lmsz_normalized = z_error_lmsz / aminor
 
-        output = {
+        return {
             "zcur": zcur,
             "z_prog": z_prog,
             "z_error": z_error,
@@ -370,7 +369,6 @@ class EastPhysicsMethods:
             "zcur_lmsz_normalized": zcur_lmsz_normalized,
             "z_error_lmsz_normalized": z_error_lmsz_normalized,
         }
-        return output
 
     @staticmethod
     @physics_method(
@@ -441,8 +439,7 @@ class EastPhysicsMethods:
         n_g = 1e20 * (ip / 1e6) / (np.pi * aminor**2)  # [m^-3]
         greenwald_fraction = ne / n_g
 
-        output = {"n_e": ne, "greenwald_fraction": greenwald_fraction, "dn_dt": dn_dt}
-        return output
+        return {"n_e": ne, "greenwald_fraction": greenwald_fraction, "dn_dt": dn_dt}
 
     @staticmethod
     @physics_method(
@@ -840,15 +837,13 @@ class EastPhysicsMethods:
         btor = EastPhysicsMethods.get_btor(params)["btor"]
         n_equal_1_normalized = n_equal_1_mode / abs(btor)
 
-        output = {
+        return {
             "n_equal_1_mode": n_equal_1_mode,
             "n_equal_1_phase": n_equal_1_phase,
             "n_equal_1_normalized": n_equal_1_normalized,
             "rmp_n_equal_1": rmp_n_equal_1,
             "rmp_n_equal_1_phase": rmp_n_equal_1_phase,
         }
-
-        return output
 
     @staticmethod
     @physics_method(columns=["btor"], tokamak=Tokamak.EAST)
@@ -1223,12 +1218,11 @@ class EastPhysicsMethods:
         # rad_input_frac_rt = p_rad_rt / p_input_rt
         # rad_loss_frac_rt = p_rad_rt / (p_input_rt - dwmhd_dt)
 
-        output = {
+        return {
             "p_rad_rt": p_rad_rt,
             "p_lh_rt": p_lh_rt,
             "p_nbi_rt": p_nbi_rt,
         }
-        return output
 
     @staticmethod
     @physics_method(
@@ -1590,13 +1584,12 @@ class EastPhysicsMethods:
         n1rms_normalized = n1rms / abs(btor)
         n2rms_normalized = n2rms / abs(btor)
 
-        output = {
+        return {
             "n1rms": n1rms,
             "n2rms": n2rms,
             "n1rms_normalized": n1rms_normalized,
             "n2rms_normalized": n2rms_normalized,
         }
-        return output
 
     @staticmethod
     @physics_method(

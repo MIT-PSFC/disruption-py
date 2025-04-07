@@ -240,13 +240,12 @@ class D3DPhysicsMethods:
         rad_fraction = p_rad / p_input
         rad_fraction[np.isinf(rad_fraction)] = np.nan
 
-        output = {
+        return {
             "p_rad": p_rad,
             "p_nbi": p_nbi,
             "p_ech": p_ech,
             "radiated_fraction": rad_fraction,
         }
-        return output
 
     @staticmethod
     @physics_method(
@@ -317,8 +316,7 @@ class D3DPhysicsMethods:
         v_inductive = inductance * dipdt_smoothed  # [V]
         v_resistive = v_loop - v_inductive  # [V]
         p_ohm = ip * v_resistive  # [W]
-        output = {"p_ohm": p_ohm, "v_loop": v_loop}
-        return output
+        return {"p_ohm": p_ohm, "v_loop": v_loop}
 
     @staticmethod
     @physics_method(
@@ -574,14 +572,13 @@ class D3DPhysicsMethods:
             params.logger.warning("Failed to get epsoff signal. Setting to NaN.")
             params.logger.opt(exception=True).debug(e)
             power_supply_railed = [np.nan]
-        output = {
+        return {
             "ip": ip,
             "ip_error": ip_error,
             "dip_dt": dip_dt,
             "dipprog_dt": dipprog_dt,
             "power_supply_railed": power_supply_railed,
         }
-        return output
 
     @staticmethod
     @physics_method(
@@ -697,15 +694,13 @@ class D3DPhysicsMethods:
                 "Failed to get epsoff signal. power_supply_railed will be NaN.",
             )
             params.logger.opt(exception=True).debug(e)
-        # 'dip_dt_RT': dip_dt_rt,
-        output = {
+        return {
             "ip_rt": ip_rt,
             "ip_prog_rt": ip_prog_rt,
             "ip_error_rt": ip_error_rt,
             "dip_dt_rt": dip_dt_rt,
             "dipprog_dt_rt": dipprog_dt_rt,
         }
-        return output
 
     @staticmethod
     @physics_method(
@@ -1037,13 +1032,12 @@ class D3DPhysicsMethods:
             rad_cva = interp1(p_rad["t"], rad_cva, params.times)
             rad_xdiv = interp1(p_rad["t"], rad_xdiv, params.times)
 
-        output = {
+        return {
             "te_peaking_cva_rt": te_pf,
             "ne_peaking_cva_rt": ne_pf,
             "prad_peaking_cva_rt": rad_cva,
             "prad_peaking_xdiv_rt": rad_xdiv,
         }
-        return output
 
     @staticmethod
     def efit_rz_interp(ts, efit_dict):

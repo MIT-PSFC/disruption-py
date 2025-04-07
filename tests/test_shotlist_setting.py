@@ -29,7 +29,7 @@ def get_shotlists():
             """Return Numpy array of shots"""
             return np.array([REFERENCE_SHOTLIST])
 
-    shot_lists = [
+    return [
         CustomShotlistSetting(),
         np.array(REFERENCE_SHOTLIST),
         np.array([REFERENCE_SHOTLIST]),
@@ -38,7 +38,6 @@ def get_shotlists():
         [REFERENCE_SHOTLIST],
         [[[i] for i in REFERENCE_SHOTLIST]],
     ]
-    return shot_lists
 
 
 @pytest.mark.parametrize("shotlist", get_shotlists())

@@ -128,8 +128,7 @@ class ShotDatabase:
         }
         if self.driver.lower().startswith("odbc"):
             params["SERVER"] += f",{params.pop('PORT')}"
-        conn_str = ";".join([f"{k}={v}" for k, v in params.items()])
-        return conn_str
+        return ";".join([f"{k}={v}" for k, v in params.items()])
 
     @property
     def conn(self):

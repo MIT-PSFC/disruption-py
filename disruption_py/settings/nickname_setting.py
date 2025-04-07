@@ -251,8 +251,7 @@ class DisruptionNicknameSetting(NicknameSetting):
         )
         if len(efit_trees) == 0:
             return DefaultNicknameSetting().get_tree_name(params)
-        efit_tree = efit_trees[-1][0]
-        return efit_tree
+        return efit_trees[-1][0]
 
     def _cmod_nickname(self, params: NicknameSettingParams) -> str:
         """
