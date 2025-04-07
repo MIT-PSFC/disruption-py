@@ -1604,9 +1604,13 @@ class D3DPhysicsMethods:
             key=len,
         )
         # Assign shot domains
-        flattop_start, flattop_end = indices_flattop[0], indices_flattop[-1] + 1
-        shot_domain[:flattop_start] = 1
-        shot_domain[flattop_start:flattop_end] = 0
-        shot_domain[flattop_end:] = -1
+        if len(indices_flattop) == 0:
+            # Shot only has ramp up phase
+            shot_domain[:] = 1
+        else:
+            flattop_start, flattop_end = indices_flattop[0], indices_flattop[-1] + 1
+            shot_domain[:flattop_start] = 1
+            shot_domain[flattop_start:flattop_end] = 0
+            shot_domain[flattop_end:] = -1
 
         return {"shot_domain": shot_domain}
