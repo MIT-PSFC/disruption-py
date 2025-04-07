@@ -2101,6 +2101,51 @@ class CmodPhysicsMethods:
         return {"v_surf": v_surf}
 
     @staticmethod
+    @physics_method(columns=["shot_domain"], tokamak=Tokamak.CMOD)
+    def get_shot_domain(params: PhysicsMethodParams):
+        r"""
+        Get the domain (or phase) of every time point in a shot and return it
+        as a categorical variable:
+
+        - 1: ramp-up
+        - 0: flat-top
+        - -1: ramp-down
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing `shot_domain`.
+
+        References
+        -------
+        - pull requests:
+        - issues: #[408](https://github.com/MIT-PSFC/disruption-py/issues/408)
+        """
+        THRESHOLD_DIPPROG_DT = 50e3
+        THRESHOLD_IP_PROG = 100e3
+        # ip_parameters are given in the requested timebase
+        ip_parameters = CmodPhysicsMethods.get_ip_parameters(params=params)
+        ipprog, dipprog_dt = ip_parameters["ip_prog"], ip_parameters["dipprog_dt"]
+
+        shot_domain = np.full(len(ipprog), np.nan)
+        # Get flattop domain indices
+        (indices_flattop_1,) = np.where(np.abs(dipprog_dt) <= THRESHOLD_DIPPROG_DT)
+        (indices_flattop_2,) = np.where(np.abs(ipprog) >= THRESHOLD_IP_PROG)
+        indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
+        flattop_start, flattop_end = indices_flattop[0], indices_flattop[-1] + 1
+        # Assign shot domains
+        shot_domain[:flattop_start] = 1
+        shot_domain[flattop_start:flattop_end] = 0
+        shot_domain[flattop_end:] = -1
+
+        return {"shot_domain": shot_domain}
+
+    @staticmethod
     def _is_on_blacklist(shot_id: int) -> bool:
         """
         TODO why will these shots cause `_get_peaking_factors`,
