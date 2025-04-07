@@ -155,8 +155,7 @@ def gauss(x, *params):
     """
 
     a, mu, sigma = params
-    out = a * np.exp(-((x - mu) ** 2) / (2.0 * sigma**2))
-    return out
+    return a * np.exp(-((x - mu) ** 2) / (2.0 * sigma**2))
 
 
 @filter_cov_warning
@@ -212,7 +211,7 @@ def matlab_gsastd(
     """
     y_arr = y.copy()
     if slew_rate:
-        for i in range(0, len(y_arr) - 1):
+        for i in range(len(y_arr) - 1):
             diff = y_arr[i + 1] - y_arr[i]
             if abs(diff) > slew_rate:
                 y_arr[i + 1] = y_arr[i] + np.sign(diff) * slew_rate
@@ -343,7 +342,7 @@ def matlab_sa(y, smooth_width, ends_type=0):
         start_point = matlab_round_int((smooth_width + 1) / 2)
         y_smooth[0] = (y[0] + y[1]) / 2
         for i in range(1, start_point):
-            y_smooth[i] = np.mean(y[0 : 2 * i + 1])
+            y_smooth[i] = np.mean(y[: 2 * i + 1])
             y_smooth[ly - i - 1] = np.mean(y[ly - 2 * i - 1 : ly])
         y_smooth[ly - 1] = (y[ly - 1] + y[ly - 2]) / 2
 
@@ -876,7 +875,7 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
         tau=0.0,
         scrfact=0.0,
     )
-    channels = [copy.deepcopy(one_channel) for i in range(48)]
+    channels = [copy.deepcopy(one_channel) for _ in range(48)]
 
     @dataclass
     # pylint: disable-next=missing-class-docstring
@@ -930,7 +929,7 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
     window_size = matlab_round_int(drtau / dt)
     smoothing_kernel = (1.0 / window_size) * np.ones(window_size)
 
-    bolo_shot.ntimes = int(len(time) / 4)
+    bolo_shot.ntimes = len(time) // 4
     bolo_shot.time = np.linspace(np.min(time), np.max(time), bolo_shot.ntimes)
     bolo_shot.raw_time = time
 
@@ -983,6 +982,6 @@ def matlab_gradient_1d_vectorized(f, h, **_kwargs):
     g = np.full(f.shape, np.nan)
     g[0] = f_diff[0] / h_diff[0]
     g[-1] = f_diff[-1] / h_diff[-1]
-    g[1:-1] = (f[2:] - f[0:-2]) / (h[2:] - h[0:-2])
+    g[1:-1] = (f[2:] - f[:-2]) / (h[2:] - h[:-2])
 
     return g

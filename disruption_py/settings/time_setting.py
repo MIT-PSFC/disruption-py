@@ -352,7 +352,7 @@ class DisruptionTimeSetting(TimeSetting):
             f"ptdata('ip', {params.shot_id})", tree_name="d3d"
         )
         ip_time = ip_time / 1.0e3
-        baseline = np.mean(raw_ip[0:10])
+        baseline = np.mean(raw_ip[:10])
         ip = raw_ip - baseline
         duration, ip_max = self._get_end_of_shot(ip, ip_time, 100e3)
         if duration < self.minimum_duration or np.abs(ip_max) < self.minimum_ip:
@@ -597,7 +597,7 @@ def resolve_time_setting(
         return time_setting
 
     if isinstance(time_setting, str):
-        time_setting_object = _time_setting_mappings.get(time_setting, None)
+        time_setting_object = _time_setting_mappings.get(time_setting)
         if time_setting_object is not None:
             return time_setting_object
 

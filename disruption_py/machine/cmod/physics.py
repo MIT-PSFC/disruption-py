@@ -61,7 +61,7 @@ class CmodPhysicsMethods:
             node_path = node_path.strip()
             if node_path.split(".")[-1].startswith("SEG_"):
                 is_on = params.mds_conn.get_data(
-                    'getnci($, "STATE")', arguments=node_path + ":SEG_NUM"
+                    'getnci($, "STATE")', arguments=f"{node_path}:SEG_NUM"
                 )
                 # 0 represents node being on, 1 represents node being off
                 if is_on != 0:
@@ -70,7 +70,7 @@ class CmodPhysicsMethods:
                     (
                         node_path,
                         params.mds_conn.get_data(
-                            node_path + ":start_time", tree_name="pcs"
+                            f"{node_path}:start_time", tree_name="pcs"
                         ),
                     )
                 )
@@ -169,8 +169,7 @@ class CmodPhysicsMethods:
         dip_smoothed = interp1(magtime, dip_smoothed, times)
 
         ip_error = (np.abs(ip) - np.abs(ip_prog)) * np.sign(ip)
-        # import pdb; pdb.set_trace()
-        output = {
+        return {
             "ip": ip,
             "dip_dt": dip,
             "dip_smoothed": dip_smoothed,
@@ -178,7 +177,6 @@ class CmodPhysicsMethods:
             "dipprog_dt": dipprog_dt,
             "ip_error": ip_error,
         }
-        return output
 
     @staticmethod
     @physics_method(
@@ -226,19 +224,19 @@ class CmodPhysicsMethods:
             # Ip wire can be one of 16 but is normally no. 16
             for wire_index in range(16, 0, -1):
                 wire_node_name = params.mds_conn.get_data(
-                    node_path + f":P_{wire_index :02d}:name",
+                    f"{node_path}:P_{wire_index:02d}:name",
                     tree_name="pcs",
                     astype=None,
                 )
                 if wire_node_name == "IP":
                     try:
                         pid_gains = params.mds_conn.get_data(
-                            node_path + f":P_{wire_index :02d}:pid_gains",
+                            f"{node_path}:P_{wire_index:02d}:pid_gains",
                             tree_name="pcs",
                         )
                         if np.any(pid_gains):
                             signal, sigtime = params.mds_conn.get_data_with_dims(
-                                node_path + f":P_{wire_index :02d}", tree_name="pcs"
+                                f"{node_path}:P_{wire_index:02d}", tree_name="pcs"
                             )
                             ip_prog_temp = interp1(
                                 sigtime,
@@ -261,10 +259,9 @@ class CmodPhysicsMethods:
         ip, magtime = params.mds_conn.get_data_with_dims(
             r"\ip", tree_name="magnetics"
         )  # [A], [s]
-        output = CmodPhysicsMethods._get_ip_parameters(
+        return CmodPhysicsMethods._get_ip_parameters(
             params.times, ip, magtime, ip_prog, pcstime
         )
-        return output
 
     @staticmethod
     def _get_z_parameters(times, z_prog, pcstime, z_error_without_ip, ip, dpcstime):
@@ -332,14 +329,13 @@ class CmodPhysicsMethods:
         z_times_v_z = interp1(
             dpcstime, z_times_v_z, times, "linear", False, z_times_v_z[-1]
         )
-        output = {
+        return {
             "z_error": z_error,
             "z_prog": z_prog,
             "zcur": z_cur,
             "v_z": v_z,
             "z_times_v_z": z_times_v_z,
         }
-        return output
 
     @staticmethod
     @physics_method(
@@ -384,19 +380,19 @@ class CmodPhysicsMethods:
         for node_path, start in active_wire_segments:
             for wire_index in range(1, 17):
                 wire_node_name = params.mds_conn.get_data(
-                    node_path + f":P_{wire_index:02d}:name",
+                    f"{node_path}:P_{wire_index:02d}:name",
                     tree_name="pcs",
                     astype=None,
                 )
                 if wire_node_name == "ZCUR":
                     try:
                         pid_gains = params.mds_conn.get_data(
-                            node_path + f":P_{wire_index:02d}:pid_gains",
+                            f"{node_path}:P_{wire_index:02d}:pid_gains",
                             tree_name="pcs",
                         )
                         if np.any(pid_gains):
                             signal, sigtime = params.mds_conn.get_data_with_dims(
-                                node_path + f":P_{wire_index:02d}", tree_name="pcs"
+                                f"{node_path}:P_{wire_index:02d}", tree_name="pcs"
                             )
                             end = sigtime[
                                 np.argmin(np.abs(sigtime - pcstime[-1]) + 0.0001)
@@ -513,8 +509,7 @@ class CmodPhysicsMethods:
         v_inductive = inductance * dip_smoothed
         v_resistive = v_loop - v_inductive
         p_ohm = ip * v_resistive
-        output = {"p_oh": p_ohm, "v_loop": v_loop}
-        return output
+        return {"p_oh": p_ohm, "v_loop": v_loop}
 
     @staticmethod
     @physics_method(
@@ -565,7 +560,7 @@ class CmodPhysicsMethods:
             r"\efit_aeqdsk:rmagx/100", tree_name="_efit_tree"
         )  # [m]
 
-        output = CmodPhysicsMethods._get_ohmic_parameters(
+        return CmodPhysicsMethods._get_ohmic_parameters(
             params.times,
             v_loop,
             v_loop_time,
@@ -575,7 +570,6 @@ class CmodPhysicsMethods:
             ip_parameters["ip"],
             r0,
         )
-        return output
 
     @staticmethod
     def _get_power(
@@ -667,7 +661,7 @@ class CmodPhysicsMethods:
         # Calculate radiation confinement time
         wmhd = interp1(efit_time, wmhd, times)
         tau_rad = wmhd / np.where(p_rad != 0, p_rad, np.nan)
-        output = {
+        return {
             "p_rad": p_rad,
             "dprad_dt": dprad,
             "p_lh": p_lh,
@@ -676,7 +670,6 @@ class CmodPhysicsMethods:
             "radiated_fraction": rad_fraction,
             "tau_rad": tau_rad,
         }
-        return output
 
     @staticmethod
     @physics_method(
@@ -755,8 +748,7 @@ class CmodPhysicsMethods:
         kwa["wmhd"], kwa["efit_time"] = params.mds_conn.get_data_with_dims(
             r"\efit_aeqdsk:wplasm", tree_name="_efit_tree", astype="float64"
         )  # [J], [s]
-        output = CmodPhysicsMethods._get_power(params.times, **kwa)
-        return output
+        return CmodPhysicsMethods._get_power(params.times, **kwa)
 
     @staticmethod
     def _get_kappa_area(times, aminor, area, a_times):
@@ -779,8 +771,7 @@ class CmodPhysicsMethods:
         dict
             A dictionary containing the kappa_area.
         """
-        output = {"kappa_area": interp1(a_times, area / (np.pi * aminor**2), times)}
-        return output
+        return {"kappa_area": interp1(a_times, area / (np.pi * aminor**2), times)}
 
     @staticmethod
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
@@ -823,8 +814,7 @@ class CmodPhysicsMethods:
         aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
         # make sure area is not 0 or less than 0
         area[area <= 0] = 3.14 * 0.001**2
-        output = CmodPhysicsMethods._get_kappa_area(params.times, aminor, area, times)
-        return output
+        return CmodPhysicsMethods._get_kappa_area(params.times, aminor, area, times)
 
     @staticmethod
     def _get_rotation_velocity(times, intensity, time, vel, hirextime):
@@ -893,11 +883,11 @@ class CmodPhysicsMethods:
 
         path = r"\mag_bp_coils."
         bp_node_names = params.mds_conn.get_data(
-            path + "nodename", tree_name="magnetics", astype=None
+            f"{path}nodename", tree_name="magnetics", astype=None
         )
-        phi = params.mds_conn.get_data(path + "phi", tree_name="magnetics")  # [degree]
+        phi = params.mds_conn.get_data(f"{path}phi", tree_name="magnetics")  # [degree]
         btor_pickup_coeffs = params.mds_conn.get_data(
-            path + "btor_pickup", tree_name="magnetics"
+            f"{path}btor_pickup", tree_name="magnetics"
         )  # [dimensionless]
         _, bp13_indices, _ = np.intersect1d(
             bp_node_names, bp13_names, return_indices=True
@@ -952,13 +942,12 @@ class CmodPhysicsMethods:
         n_equal_1_normalized = n_equal_1_amplitude / btor_magnitude
         # INFO: Debugging purpose block of code at end of matlab file
         # INFO: n_equal_1_amplitude vs n_equal_1_mode
-        output = {
+        return {
             "n_equal_1_mode": n_equal_1_amplitude,
             "n_equal_1_normalized": n_equal_1_normalized,
             "n_equal_1_phase": n_equal_1_phase,
             "bt": btor,
         }
-        return output
 
     @staticmethod
     def _get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
@@ -1001,8 +990,7 @@ class CmodPhysicsMethods:
         a_minor[a_minor <= 0] = 0.001
         n_g = abs(ip) / (np.pi * a_minor**2) * 1e20  # Greenwald density in m ^-3
         g_f = n_e / n_g
-        output = {"n_e": n_e, "dn_dt": dn_dt, "greenwald_fraction": g_f}
-        return output
+        return {"n_e": n_e, "dn_dt": dn_dt, "greenwald_fraction": g_f}
 
     @staticmethod
     @physics_method(
@@ -1055,10 +1043,9 @@ class CmodPhysicsMethods:
             r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )  # [m], [s]
 
-        output = CmodPhysicsMethods._get_densities(
+        return CmodPhysicsMethods._get_densities(
             params.times, n_e, t_n, ip, t_ip, a_minor, t_a
         )
-        return output
 
     @staticmethod
     def _get_efc_current(times, iefc, t_iefc):
@@ -1079,8 +1066,7 @@ class CmodPhysicsMethods:
         dict
             A dictionary containing interpolated EFC current.
         """
-        output = {"i_efc": interp1(t_iefc, iefc, times, "linear")}
-        return output
+        return {"i_efc": interp1(t_iefc, iefc, times, "linear")}
 
     @staticmethod
     @physics_method(columns=["i_efc"], tokamak=Tokamak.CMOD)
@@ -1106,8 +1092,7 @@ class CmodPhysicsMethods:
         iefc, t_iefc = params.mds_conn.get_data_with_dims(
             r"\efc:u_bus_r_cur", tree_name="engineering"
         )  # [A], [s]
-        output = CmodPhysicsMethods._get_efc_current(params.times, iefc, t_iefc)
-        return output
+        return CmodPhysicsMethods._get_efc_current(params.times, iefc, t_iefc)
 
     @staticmethod
     def _get_ts_parameters(times, ts_data, ts_time, ts_z, ts_error, z_sorted=False):
@@ -1219,19 +1204,18 @@ class CmodPhysicsMethods:
         node_path = ".yag_new.results.profiles"
 
         ts_data, ts_time = params.mds_conn.get_data_with_dims(
-            node_path + ":te_rz", tree_name="electrons"
+            f"{node_path}:te_rz", tree_name="electrons"
         )  # [keV], [s]
         ts_z = params.mds_conn.get_data(
-            node_path + ":z_sorted", tree_name="electrons"
+            f"{node_path}:z_sorted", tree_name="electrons"
         )  # [m]
         ts_error = params.mds_conn.get_data(
-            node_path + ":te_err", tree_name="electrons"
+            f"{node_path}:te_err", tree_name="electrons"
         )  # [keV]
 
-        output = CmodPhysicsMethods._get_ts_parameters(
+        return CmodPhysicsMethods._get_ts_parameters(
             params.times, ts_data, ts_time, ts_z, ts_error
         )
-        return output
 
     @staticmethod
     def _get_peaking_factors(times, ts_time, ts_te, ts_ne, ts_z, efit_time, bminor, z0):
@@ -1821,10 +1805,10 @@ class CmodPhysicsMethods:
         # Read in Te profile measurements from GPC2 (19 channels)
         node_path = ".gpc_2.results"
         gpc2_te_data, gpc2_te_time = params.mds_conn.get_data_with_dims(
-            node_path + ":gpc2_te", tree_name="electrons"
+            f"{node_path}:gpc2_te", tree_name="electrons"
         )  # [keV], [s]
         gpc2_rad_data, gpc2_rad_time = params.mds_conn.get_data_with_dims(
-            node_path + ":radii", tree_name="electrons"
+            f"{node_path}:radii", tree_name="electrons"
         )  # [m], [s]
 
         return CmodPhysicsMethods._get_te_profile_params_ece(
@@ -2122,11 +2106,9 @@ class CmodPhysicsMethods:
         TODO why will these shots cause `_get_peaking_factors`,
         `_get_peaking_factors_no_tci`, and `_get_edge_parameters` to fail?
         """
-        if (
+        return (
             1120000000 < shot_id < 1120213000
             or 1140000000 < shot_id < 1140227000
             or 1150000000 < shot_id < 1150610000
             or 1160000000 < shot_id < 1160303000
-        ):
-            return True
-        return False
+        )

@@ -413,7 +413,7 @@ def resolve_output_setting(
         return output_setting
 
     if isinstance(output_setting, str):
-        output_setting_object = _output_setting_mappings.get(output_setting, None)
+        output_setting_object = _output_setting_mappings.get(output_setting)
         if output_setting_object is not None:
             return output_setting_object
 

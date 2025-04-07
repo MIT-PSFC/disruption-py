@@ -55,7 +55,7 @@ def get_fresh_data(
         run_columns=test_columns,
         only_requested_columns=True,
     )
-    shot_data = get_shots_data(
+    return get_shots_data(
         tokamak=tokamak,
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
@@ -68,7 +68,6 @@ def get_fresh_data(
             console_log_level=console_log_level,
         ),
     )
-    return shot_data
 
 
 def get_cached_from_fresh(

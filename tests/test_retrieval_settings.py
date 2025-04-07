@@ -162,4 +162,4 @@ def test_run_methods_and_columns(
         assert len(results.columns) == num_all_cols - len(forbidden_cols)
     else:
         assert set(results.columns) == set(expected_cols)
-    assert not any(col in results.columns for col in forbidden_cols)
+    assert all(col not in results.columns for col in forbidden_cols)

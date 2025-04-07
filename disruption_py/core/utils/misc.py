@@ -87,7 +87,7 @@ def safe_df_concat(base_df: pd.DataFrame, new_dfs: List[pd.DataFrame]) -> pd.Dat
         if not new_df.empty and not new_df.isna().all().all()
     ]
 
-    if len(new_dfs) == 0:
+    if not new_dfs:
         return base_df
 
     if base_df.empty:

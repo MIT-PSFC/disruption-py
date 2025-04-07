@@ -27,8 +27,7 @@ def extract_param(config):
     if len(args) == 0:
         return None
     m = re.search(r"\[(.+)\]$", args[-1])
-    param = [m.group(1)] if m is not None else None
-    return param
+    return [m[1]] if m is not None else None
 
 
 def save_to_csv(data, test_file_path_f, data_source_name):

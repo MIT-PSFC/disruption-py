@@ -115,13 +115,14 @@ class CmodEfitMethods:
         tuple
             A tuple containing valid indices and corresponding times.
         """
-        values = []
-        for expr in [
-            r"_lf=\analysis::efit_aeqdsk:lflag",
-            r"_l0=((sum(_lf,1) - _lf[*,20] - _lf[*,1])==0)",
-            r"_n=\analysis::efit_fitout:nitera,(_l0 and (_n>4))",
-        ]:
-            values.append(params.mds_conn.get(expr, tree_name="analysis"))
+        values = [
+            params.mds_conn.get(expr, tree_name="analysis")
+            for expr in [
+                r"_lf=\analysis::efit_aeqdsk:lflag",
+                r"_l0=((sum(_lf,1) - _lf[*,20] - _lf[*,1])==0)",
+                r"_n=\analysis::efit_fitout:nitera,(_l0 and (_n>4))",
+            ]
+        ]
         _n = values[2].data()
         valid_indices = np.nonzero(_n)
         (times,) = params.mds_conn.get_dims(
