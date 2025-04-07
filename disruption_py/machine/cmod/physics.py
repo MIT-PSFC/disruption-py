@@ -2134,9 +2134,10 @@ class CmodPhysicsMethods:
 
         shot_domain = np.full(len(ipprog), np.nan)
         # Get flattop domain indices
-        (indices_flattop_1,) = np.where(np.abs(dipprog_dt) <= THRESHOLD_DIPPROG_DT)
-        (indices_flattop_2,) = np.where(np.abs(ipprog) >= THRESHOLD_IP_PROG)
-        indices_flattop = np.intersect1d(indices_flattop_1, indices_flattop_2)
+        (indices_flattop,) = np.where(
+            (np.abs(dipprog_dt) <= THRESHOLD_DIPPROG_DT)
+            & (np.abs(ipprog) >= THRESHOLD_IP_PROG)
+        )
         flattop_start, flattop_end = indices_flattop[0], indices_flattop[-1] + 1
         # Assign shot domains
         shot_domain[:flattop_start] = 1
