@@ -2138,8 +2138,13 @@ class CmodPhysicsMethods:
             (np.abs(dipprog_dt) <= threshold_dipprog_dt)
             & (np.abs(ipprog) >= threshold_ip_prog)
         )
-        flattop_start, flattop_end = indices_flattop[0], indices_flattop[-1] + 1
+        # Get the longest subsequence of indices_flattop
+        indices_flattop = max(
+            np.split(indices_flattop, np.where(np.diff(indices_flattop) != 1)[0] + 1),
+            key=len,
+        )
         # Assign shot domains
+        flattop_start, flattop_end = indices_flattop[0], indices_flattop[-1] + 1
         shot_domain[:flattop_start] = 1
         shot_domain[flattop_start:flattop_end] = 0
         shot_domain[flattop_end:] = -1
