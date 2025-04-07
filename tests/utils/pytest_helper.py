@@ -27,7 +27,7 @@ def extract_param(config):
     if len(args) == 0:
         return None
     m = re.search(r"\[(.+)\]$", args[-1])
-    param = [m.group(1)] if m is not None else None
+    param = [m[1]] if m is not None else None
     return param
 
 
