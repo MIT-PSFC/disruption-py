@@ -139,6 +139,11 @@ class MDSConnection:
         """
         Close all open trees
         """
+        logger.trace(
+            shot_msg("Closing trees"),
+            shot=self.shot_id,
+        )
+        self.conn.closeAllTrees()
         self.last_open_tree = None
 
     @_better_mds_exceptions
