@@ -876,7 +876,7 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
         tau=0.0,
         scrfact=0.0,
     )
-    channels = [copy.deepcopy(one_channel) for i in range(48)]
+    channels = [copy.deepcopy(one_channel) for _ in range(48)]
 
     @dataclass
     # pylint: disable-next=missing-class-docstring
