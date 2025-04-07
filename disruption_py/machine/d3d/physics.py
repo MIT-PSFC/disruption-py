@@ -1513,13 +1513,12 @@ class D3DPhysicsMethods:
             - 'psin' : array
                 Normalized poloidal flux values.
         """
-        efit_dict = {}
         path = r"\top.results.geqdsk:"
         nodes = ["z", "r", "rhovn", "psirz", "zmaxis", "ssimag", "ssibry"]
         (efit_dict_time,) = params.mds_conn.get_dims(
             f"{path}psirz", tree_name="_efit_tree", dim_nums=[2]
         )
-        efit_dict["time"] = efit_dict_time / 1e3  # [ms] -> [s]
+        efit_dict = {"time": efit_dict_time / 1e3}  # [ms] -> [s]
         for node in nodes:
             try:
                 efit_dict[node] = params.mds_conn.get_data(
