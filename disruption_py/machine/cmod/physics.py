@@ -61,7 +61,7 @@ class CmodPhysicsMethods:
             node_path = node_path.strip()
             if node_path.split(".")[-1].startswith("SEG_"):
                 is_on = params.mds_conn.get_data(
-                    'getnci($, "STATE")', arguments=node_path + ":SEG_NUM"
+                    'getnci($, "STATE")', arguments=f"{node_path}:SEG_NUM"
                 )
                 # 0 represents node being on, 1 represents node being off
                 if is_on != 0:
@@ -70,7 +70,7 @@ class CmodPhysicsMethods:
                     (
                         node_path,
                         params.mds_conn.get_data(
-                            node_path + ":start_time", tree_name="pcs"
+                            f"{node_path}:start_time", tree_name="pcs"
                         ),
                     )
                 )
@@ -226,19 +226,19 @@ class CmodPhysicsMethods:
             # Ip wire can be one of 16 but is normally no. 16
             for wire_index in range(16, 0, -1):
                 wire_node_name = params.mds_conn.get_data(
-                    node_path + f":P_{wire_index :02d}:name",
+                    f"{node_path}:P_{wire_index:02d}:name",
                     tree_name="pcs",
                     astype=None,
                 )
                 if wire_node_name == "IP":
                     try:
                         pid_gains = params.mds_conn.get_data(
-                            node_path + f":P_{wire_index :02d}:pid_gains",
+                            f"{node_path}:P_{wire_index:02d}:pid_gains",
                             tree_name="pcs",
                         )
                         if np.any(pid_gains):
                             signal, sigtime = params.mds_conn.get_data_with_dims(
-                                node_path + f":P_{wire_index :02d}", tree_name="pcs"
+                                f"{node_path}:P_{wire_index:02d}", tree_name="pcs"
                             )
                             ip_prog_temp = interp1(
                                 sigtime,
@@ -384,19 +384,19 @@ class CmodPhysicsMethods:
         for node_path, start in active_wire_segments:
             for wire_index in range(1, 17):
                 wire_node_name = params.mds_conn.get_data(
-                    node_path + f":P_{wire_index:02d}:name",
+                    f"{node_path}:P_{wire_index:02d}:name",
                     tree_name="pcs",
                     astype=None,
                 )
                 if wire_node_name == "ZCUR":
                     try:
                         pid_gains = params.mds_conn.get_data(
-                            node_path + f":P_{wire_index:02d}:pid_gains",
+                            f"{node_path}:P_{wire_index:02d}:pid_gains",
                             tree_name="pcs",
                         )
                         if np.any(pid_gains):
                             signal, sigtime = params.mds_conn.get_data_with_dims(
-                                node_path + f":P_{wire_index:02d}", tree_name="pcs"
+                                f"{node_path}:P_{wire_index:02d}", tree_name="pcs"
                             )
                             end = sigtime[
                                 np.argmin(np.abs(sigtime - pcstime[-1]) + 0.0001)
@@ -893,11 +893,11 @@ class CmodPhysicsMethods:
 
         path = r"\mag_bp_coils."
         bp_node_names = params.mds_conn.get_data(
-            path + "nodename", tree_name="magnetics", astype=None
+            f"{path}nodename", tree_name="magnetics", astype=None
         )
-        phi = params.mds_conn.get_data(path + "phi", tree_name="magnetics")  # [degree]
+        phi = params.mds_conn.get_data(f"{path}phi", tree_name="magnetics")  # [degree]
         btor_pickup_coeffs = params.mds_conn.get_data(
-            path + "btor_pickup", tree_name="magnetics"
+            f"{path}btor_pickup", tree_name="magnetics"
         )  # [dimensionless]
         _, bp13_indices, _ = np.intersect1d(
             bp_node_names, bp13_names, return_indices=True
@@ -1219,13 +1219,13 @@ class CmodPhysicsMethods:
         node_path = ".yag_new.results.profiles"
 
         ts_data, ts_time = params.mds_conn.get_data_with_dims(
-            node_path + ":te_rz", tree_name="electrons"
+            f"{node_path}:te_rz", tree_name="electrons"
         )  # [keV], [s]
         ts_z = params.mds_conn.get_data(
-            node_path + ":z_sorted", tree_name="electrons"
+            f"{node_path}:z_sorted", tree_name="electrons"
         )  # [m]
         ts_error = params.mds_conn.get_data(
-            node_path + ":te_err", tree_name="electrons"
+            f"{node_path}:te_err", tree_name="electrons"
         )  # [keV]
 
         output = CmodPhysicsMethods._get_ts_parameters(
@@ -1821,10 +1821,10 @@ class CmodPhysicsMethods:
         # Read in Te profile measurements from GPC2 (19 channels)
         node_path = ".gpc_2.results"
         gpc2_te_data, gpc2_te_time = params.mds_conn.get_data_with_dims(
-            node_path + ":gpc2_te", tree_name="electrons"
+            f"{node_path}:gpc2_te", tree_name="electrons"
         )  # [keV], [s]
         gpc2_rad_data, gpc2_rad_time = params.mds_conn.get_data_with_dims(
-            node_path + ":radii", tree_name="electrons"
+            f"{node_path}:radii", tree_name="electrons"
         )  # [m], [s]
 
         return CmodPhysicsMethods._get_te_profile_params_ece(

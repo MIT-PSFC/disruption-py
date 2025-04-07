@@ -199,7 +199,7 @@ class MDSConnection:
             self.open_tree(tree_name)
 
         logger.trace(shot_msg("Getting data: {path}"), shot=self.shot_id, path=path)
-        data = self.conn.get("_sig=" + path, arguments).data()
+        data = self.conn.get(f"_sig={path}", arguments).data()
         if astype:
             data = safe_cast(data, astype)
 
