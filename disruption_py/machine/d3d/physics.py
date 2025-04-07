@@ -1573,11 +1573,13 @@ class D3DPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing `shot_domain`.
+            A dictionary containing the categorical feature `shot_domain`.
 
         References
         -------
-        - pull requests:
+        - original source: [get_flattop_indices.m](https://github.com/MIT-PSFC/disr
+        uption-py/blob/matlab/DIII-D/get_flattop_indices.m)
+        - pull requests: #[433](https://github.com/MIT-PSFC/disruption-py/pull/433)
         - issues: #[408](https://github.com/MIT-PSFC/disruption-py/issues/408)
         """
         threshold_dipprog_dt = 2e3

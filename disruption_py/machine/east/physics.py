@@ -1648,11 +1648,14 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing `shot_domain`.
+            A dictionary containing the categorical feature `shot_domain`.
 
         References
         -------
-        - pull requests:
+        - original source: [get_flattop_indices.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/EAST/utils/get_flattop_indices.m), [get_flattop_times.m](https://github
+        .com/MIT-PSFC/disruption-py/blob/matlab/EAST/utils/get_flattop_times.m)
+        - pull requests: #[433](https://github.com/MIT-PSFC/disruption-py/pull/433)
         - issues: #[408](https://github.com/MIT-PSFC/disruption-py/issues/408)
         """
         threshold_dipprog_dt = 1e3

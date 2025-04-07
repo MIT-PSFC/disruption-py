@@ -2105,7 +2105,7 @@ class CmodPhysicsMethods:
     def get_shot_domain(params: PhysicsMethodParams):
         r"""
         Get the domain (or phase) of every time point in a shot and return it
-        as a categorical variable:
+        as a categorical feature:
 
         - 1: ramp-up
         - 0: flat-top
@@ -2119,11 +2119,13 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing `shot_domain`.
+            A dictionary containing the categorical feature `shot_domain`.
 
         References
         -------
-        - pull requests:
+        - original source: [get_flattop_indices.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/CMOD/matlab-core/get_flattop_indices.m)
+        - pull requests: #[433](https://github.com/MIT-PSFC/disruption-py/pull/433)
         - issues: #[408](https://github.com/MIT-PSFC/disruption-py/issues/408)
         """
         threshold_dipprog_dt = 50e3
