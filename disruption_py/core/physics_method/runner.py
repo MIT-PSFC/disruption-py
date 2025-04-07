@@ -16,7 +16,7 @@ from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.metadata import (
     BoundMethodMetadata,
     get_method_metadata,
-    is_parametered_method,
+    is_physics_method,
 )
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.misc import get_elapsed_time
@@ -42,12 +42,12 @@ def get_all_physics_methods(all_passed: list) -> set:
     """
     physics_methods = set()
     for passed in all_passed:
-        if callable(passed) and is_parametered_method(passed):
+        if callable(passed) and is_physics_method(passed):
             physics_methods.add(passed)
 
         for method_name in dir(passed):
             method = getattr(passed, method_name, None)
-            if method is None or not is_parametered_method(method):
+            if method is None or not is_physics_method(method):
                 continue
             physics_methods.add(method)
     return physics_methods

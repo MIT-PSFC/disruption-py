@@ -12,7 +12,6 @@ from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.physics_method.runner import populate_shot
-from disruption_py.core.utils.math import interp1
 from disruption_py.core.utils.misc import shot_msg
 from disruption_py.inout.mds import MDSConnection, ProcessMDSConnection
 from disruption_py.inout.sql import ShotDatabase
@@ -196,8 +195,6 @@ class RetrievalManager:
             The configured physics method parameters.
         """
 
-        interpolation_method = interp1  # TODO: fix
-
         times = self._init_times(
             shot_id=shot_id,
             mds_conn=mds_conn,
@@ -205,22 +202,12 @@ class RetrievalManager:
             retrieval_settings=retrieval_settings,
         )
 
-        metadata = {
-            "labels": {},
-            "timestep": {},
-            "duration": {},
-            "description": "",
-            "disrupted": 100,  # TODO: Fix
-        }
-
         physics_method_params = PhysicsMethodParams(
             shot_id=shot_id,
             tokamak=self.tokamak,
             disruption_time=disruption_time,
             mds_conn=mds_conn,
             times=times,
-            interpolation_method=interpolation_method,
-            metadata=metadata,
         )
 
         # Modify already existing shot properties, such as modifying timebase

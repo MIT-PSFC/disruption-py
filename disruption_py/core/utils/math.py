@@ -87,40 +87,6 @@ def interp1(x, y, new_x, kind="linear", bounds_error=False, fill_value=np.nan, a
     return set_interp(new_x)
 
 
-def exp_filter(x, w, strategy="fragmented"):
-    """
-    Implements an exponential filter.
-
-    This function implements an exponential filter on the given array x. In the
-    case of nan values in the input array, we default to using the last timestep
-    that was not a nan value. In the fragmented strategy, any time we encounter
-    invald values, we restart the filter at the next valid value.
-
-    Parameters
-    ----------
-    x : array
-        The array to filter.
-    w : float
-        The filter weight.
-    strategy: str, optional
-        Imputation strategy to be used, if any. Options are 'fragmented' or 'none'.
-        Default is 'fragmented.'
-
-    Returns
-    -------
-    _ : array
-        The filtered array.
-    """
-    filtered_x = np.zeros(x.shape)
-    filtered_x[0] = x[0]
-    for i in range(1, len(x)):
-        filtered_x[i] = w * x[i] + (1 - w) * filtered_x[i - 1]
-        if strategy == "fragmented":
-            if np.isnan(filtered_x[i - 1]):
-                filtered_x[i] = x[i]
-    return filtered_x
-
-
 def smooth(arr: np.ndarray, window_size: int) -> np.ndarray:
     """
     Implements Matlab's smooth function https://www.mathworks.com/help/curvefit/smooth.html.
@@ -143,47 +109,6 @@ def smooth(arr: np.ndarray, window_size: int) -> np.ndarray:
     start = np.cumsum(arr[: window_size - 1][::2] / b_weights)
     end = (np.cumsum(arr[:-window_size:-1])[::2] / b_weights)[::-1]
     return np.concatenate((start, mid, end))
-
-
-def gauss_smooth(y, smooth_width, ends_type):
-    """
-    Smooth a dataset using a Gaussian window.
-
-    Parameters
-    ----------
-    y : array_like
-        The y coordinates of the dataset.
-    smooth_width : int
-        The width of the smoothing window.
-    ends_type : int
-        Determines how the "ends" of the signal are handled.
-        0 -> ends are "zeroed"
-        1 -> the ends are smoothed with progressively smaller smooths the closer to the end.
-
-    Returns
-    -------
-    array_like
-        The smoothed dataset.
-    """
-    w = np.round(smooth_width)
-    w = int(w)  # Ensure w is an integer
-    ly = len(y)
-    s = np.zeros(ly)
-
-    for i in range(ly):
-        if i < w // 2:
-            if ends_type == 0:
-                s[i] = 0
-            else:
-                s[i] = np.mean(y[: i + w // 2])
-        elif i >= ly - w // 2:
-            if ends_type == 0:
-                s[i] = 0
-            else:
-                s[i] = np.mean(y[i - w // 2 :])
-        else:
-            s[i] = np.mean(y[i - w // 2 : i + w // 2])
-    return s
 
 
 @filter_cov_warning

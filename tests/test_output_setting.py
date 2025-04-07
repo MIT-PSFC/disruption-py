@@ -11,28 +11,10 @@ from typing import Dict
 import pandas as pd
 import pytest
 
-from disruption_py.inout.sql import ShotDatabase
 from disruption_py.settings.output_setting import BatchedCSVOutputSetting
 from disruption_py.settings.retrieval_settings import RetrievalSettings
-from disruption_py.workflow import get_database, get_shots_data
+from disruption_py.workflow import get_shots_data
 from tests.utils.data_difference import assert_frame_equal_unordered
-
-
-@pytest.fixture(scope="module", name="shot_database")
-def shot_database_fixture(tokamak) -> ShotDatabase:
-    """
-    Fixture for creating a ShotDatabase instance.
-    """
-    return get_database(tokamak=tokamak)
-
-
-@pytest.fixture(autouse=True, scope="module")
-def setup_shot_database(shotlist, shot_database):
-    """
-    This fixture automatically removes data for each shot in the
-    provided shotlist from the shot_database.
-    """
-    shot_database.remove_shot_data(shotlist)
 
 
 @pytest.fixture(scope="module", name="initial_mdsplus_data")

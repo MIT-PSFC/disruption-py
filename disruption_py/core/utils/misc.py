@@ -18,23 +18,6 @@ import pandas as pd
 from loguru import logger
 
 
-def instantiate_classes(lst: List):
-    """
-    Instantiate all classes in a list of classes and objects.
-
-    Parameters
-    ----------
-    lst : List
-        List to instantiate classes from.
-
-    Returns
-    -------
-    List
-        The list with all classes instantiated.
-    """
-    return [x() for x in lst if isinstance(x, type)]
-
-
 def without_duplicates(lst: List):
     """
     Get list without duplicates while maintaining order.

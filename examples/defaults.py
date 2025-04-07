@@ -18,8 +18,6 @@ retrieval_settings = RetrievalSettings(
     # timebase settings
     time_setting="disruption_warning",
     domain_setting="full",
-    # not yet implemented
-    interpolation_method="linear",
 )
 
 shot_data = get_shots_data(
