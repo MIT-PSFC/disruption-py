@@ -930,7 +930,7 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
     window_size = matlab_round_int(drtau / dt)
     smoothing_kernel = (1.0 / window_size) * np.ones(window_size)
 
-    bolo_shot.ntimes = int(len(time) / 4)
+    bolo_shot.ntimes = len(time) // 4
     bolo_shot.time = np.linspace(np.min(time), np.max(time), bolo_shot.ntimes)
     bolo_shot.raw_time = time
 
