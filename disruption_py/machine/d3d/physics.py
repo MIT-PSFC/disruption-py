@@ -123,7 +123,7 @@ class D3DPhysicsMethods:
         # Get neutral beam injected power
         try:
             p_nbi, t_nbi = params.mds_conn.get_data_with_dims(
-                r"\d3d::top.nb:pinj", tree_name="d3d"
+                r"\top.nb:pinj", tree_name="d3d"
             )
             t_nbi /= 1e3  # [ms] -> [s]
             p_nbi *= 1e3  # [KW] -> [W]
@@ -1116,7 +1116,7 @@ class D3DPhysicsMethods:
         """
         # Get Zeff
         zeff, t_zeff = params.mds_conn.get_data_with_dims(
-            r"\d3d::top.spectroscopy.vb.zeff:zeff", tree_name="d3d"
+            r"\top.spectroscopy.vb.zeff:zeff", tree_name="d3d"
         )
         t_zeff = t_zeff / 1.0e3  # [ms] -> [s]
         if len(t_zeff) > 2:
