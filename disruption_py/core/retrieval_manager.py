@@ -115,6 +115,7 @@ class RetrievalManager:
         except Exception as e:
             logger.critical(shot_msg("Failed cleanup! {e}"), shot=shot_id, e=repr(e))
             logger.opt(exception=True).debug(shot_msg("Failed cleanup!"), shot=shot_id)
+            retrieved_data = None
             logger.debug(
                 "PID #{pid} | Reconnecting to MDSplus server.",
                 pid=threading.get_native_id(),
