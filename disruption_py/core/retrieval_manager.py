@@ -10,7 +10,6 @@ import threading
 import numpy as np
 import pandas as pd
 from loguru import logger
-from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.physics_method.runner import populate_shot
@@ -76,27 +75,52 @@ class RetrievalManager:
         pd.DataFrame, or None
             The retrieved shot data as a DataFrame, or None if an error occurred.
         """
-        physics_method_params = self.shot_setup(
-            shot_id=int(shot_id),
-            retrieval_settings=retrieval_settings,
-        )
-        if not physics_method_params:
-            return None
-        retrieved_data = populate_shot(
-            retrieval_settings=retrieval_settings,
-            physics_method_params=physics_method_params,
-        )
+
+        logger.trace(shot_msg("Starting retrieval."), shot=shot_id)
+
+        # shot setup
+        physics_method_params = None
+        try:
+            physics_method_params = self.shot_setup(
+                shot_id=int(shot_id),
+                retrieval_settings=retrieval_settings,
+            )
+        # pylint: disable-next=broad-exception-caught
+        except Exception as e:
+            logger.critical(shot_msg("Failed setup! {e}"), shot=shot_id, e=repr(e))
+            logger.opt(exception=True).debug(shot_msg("Failed setup!"), shot=shot_id)
+
+        # shot retrieval
+        retrieved_data = None
+        if physics_method_params:
+            try:
+                retrieved_data = populate_shot(
+                    retrieval_settings=retrieval_settings,
+                    physics_method_params=physics_method_params,
+                )
+            # pylint: disable-next=broad-exception-caught
+            except Exception as e:
+                # exceptions should be caught by runner.py
+                logger.critical(
+                    shot_msg("Failed retrieval! {e}"), shot=shot_id, e=repr(e)
+                )
+                logger.opt(exception=True).debug(
+                    shot_msg("Failed retrieval!"), shot=shot_id
+                )
+
+        # shot cleanup
         try:
             self.shot_cleanup(physics_method_params)
-        except mdsExceptions.MdsException:
-            logger.critical(shot_msg("Failed cleanup! Discarding data."), shot=shot_id)
+        # pylint: disable-next=broad-exception-caught
+        except Exception as e:
+            logger.critical(shot_msg("Failed cleanup! {e}"), shot=shot_id, e=repr(e))
             logger.opt(exception=True).debug(shot_msg("Failed cleanup!"), shot=shot_id)
             logger.debug(
                 "PID #{pid} | Reconnecting to MDSplus server.",
                 pid=threading.get_native_id(),
             )
             physics_method_params.mds_conn.conn.reconnect()
-            return None
+
         return retrieved_data
 
     def shot_setup(
@@ -138,26 +162,15 @@ class RetrievalManager:
             }
         )
 
-        try:
-            physics_method_params = self.setup_physics_method_params(
-                shot_id=shot_id,
-                mds_conn=mds_conn,
-                disruption_time=disruption_time,
-                retrieval_settings=retrieval_settings,
-                **kwargs,
-            )
-        except mdsExceptions.MdsException as e:
-            logger.critical(shot_msg("Failed setup! {e}"), shot=shot_id, e=repr(e))
-            logger.opt(exception=True).debug(shot_msg("Failed setup!"), shot=shot_id)
-            mds_conn.cleanup()
-            return None
+        physics_method_params = self.setup_physics_method_params(
+            shot_id=shot_id,
+            mds_conn=mds_conn,
+            disruption_time=disruption_time,
+            retrieval_settings=retrieval_settings,
+            **kwargs,
+        )
         if len(physics_method_params.times) < 2:
-            logger.critical(
-                shot_msg("Pathological timebase! {times}"),
-                shot=shot_id,
-                times=physics_method_params.times,
-            )
-            return None
+            raise ValueError("Pathological timebase.")
         return physics_method_params
 
     @classmethod
