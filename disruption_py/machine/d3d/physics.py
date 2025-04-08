@@ -95,8 +95,8 @@ class D3DPhysicsMethods:
     @staticmethod
     @physics_method(columns=["h_alpha"], tokamak=Tokamak.D3D)
     def get_h_alpha(params: PhysicsMethodParams):
-        """
-        Get the H_alpha line emission intensity.
+        r"""
+        Get the $H_{\alpha}$ line emission intensity.
 
         Parameters
         ----------
@@ -106,8 +106,8 @@ class D3DPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the H_alpha line emission intensity
-            factor (`h_alpha`).
+            A dictionary containing the $H_{\alpha}$ line emission intensity
+            signal (`h_alpha`).
 
         Reference
         -------
@@ -136,7 +136,7 @@ class D3DPhysicsMethods:
         tokamak=Tokamak.D3D,
     )
     def get_power_parameters(params: PhysicsMethodParams):
-        """
+        r"""
         Get the neutral beam injection (NBI), electron cyclotron resonant heating (ECH),
         and the radiated powers, then calculate the radiated fraction.
 
@@ -866,12 +866,9 @@ class D3DPhysicsMethods:
     @staticmethod
     @physics_method(columns=["n1rms", "n1rms_normalized"], tokamak=Tokamak.D3D)
     def get_n1rms_parameters(params: PhysicsMethodParams):
-        """
-        Retrieve the n1rms data, then compute the normalized n1rms signal defined as:
-
-        $$
-        n1rms_normalized = \frac{n1rms}{B_{tor}}
-        $$
+        r"""
+        Get the `n1rms` signal, then compute the normalized `n1rms` by dividing it
+        by $B_{tor}$.
 
         Parameters
         ----------
@@ -1266,7 +1263,7 @@ class D3DPhysicsMethods:
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.D3D)
     def get_kappa_area(params: PhysicsMethodParams):
         r"""
-        Retrieve and calculate the plasma's ellipticity (kappa, also known as
+        Retrieve and calculate the plasma's ellipticity (*kappa*, also known as
         the elongation) using its area and minor radius. It is defined as:
 
         $$
