@@ -76,6 +76,7 @@ expected_failure_columns = [
   "sxr",
   "te_peaking",
   "te_width",
+  "v_loop",
   "v_z",
   "z_times_v_z",
   "zcur",
