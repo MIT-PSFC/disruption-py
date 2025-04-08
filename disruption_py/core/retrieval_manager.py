@@ -79,7 +79,6 @@ class RetrievalManager:
         logger.trace(shot_msg("Starting retrieval."), shot=shot_id)
 
         # shot setup
-        physics_method_params = None
         try:
             physics_method_params = self.shot_setup(
                 shot_id=int(shot_id),
@@ -89,24 +88,22 @@ class RetrievalManager:
         except Exception as e:
             logger.critical(shot_msg("Failed setup! {e}"), shot=shot_id, e=repr(e))
             logger.opt(exception=True).debug(shot_msg("Failed setup!"), shot=shot_id)
+            return None
 
         # shot retrieval
-        retrieved_data = None
-        if physics_method_params:
-            try:
-                retrieved_data = populate_shot(
-                    retrieval_settings=retrieval_settings,
-                    physics_method_params=physics_method_params,
-                )
-            # pylint: disable-next=broad-exception-caught
-            except Exception as e:
-                # exceptions should be caught by runner.py
-                logger.critical(
-                    shot_msg("Failed retrieval! {e}"), shot=shot_id, e=repr(e)
-                )
-                logger.opt(exception=True).debug(
-                    shot_msg("Failed retrieval!"), shot=shot_id
-                )
+        try:
+            retrieved_data = populate_shot(
+                retrieval_settings=retrieval_settings,
+                physics_method_params=physics_method_params,
+            )
+        # pylint: disable-next=broad-exception-caught
+        except Exception as e:
+            # exceptions should be caught by runner.py
+            logger.critical(shot_msg("Failed retrieval! {e}"), shot=shot_id, e=repr(e))
+            logger.opt(exception=True).debug(
+                shot_msg("Failed retrieval!"), shot=shot_id
+            )
+            retrieved_data = None
 
         # shot cleanup
         try:
