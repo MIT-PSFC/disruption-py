@@ -586,6 +586,8 @@ class SignalTimeSetting(TimeSetting):
                 signal_path=self.signal_path,
             )
             raise
+        if params.tokamak == Tokamak.D3D:
+            signal_time /= 1e3  # [ms] -> [s]
         if self.use_efit_time_range:
             efit_time = EfitTimeSetting().tokamak_overrides[params.tokamak](params)
             (indices_efit_range,) = np.where(
