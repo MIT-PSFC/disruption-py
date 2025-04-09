@@ -89,7 +89,8 @@ def _better_mds_exceptions(func):
                 err = "Bad record"
             else:
                 err = "MDSplus error"
-            raise type(e)(f"{err}. Tree: {self.open_trees[0]}, Node: {path}") from None
+            last_tree = self.open_trees[0] if self.open_trees else None
+            raise type(e)(f"{err}. Tree: {last_tree}, Node: {path}") from None
 
     return wrapper
 
