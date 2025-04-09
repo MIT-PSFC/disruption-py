@@ -194,6 +194,8 @@ class MDSConnection:
         np.ndarray
             Returns the node data.
         """
+        if tree_name == "ptdata":
+            path, tree_name = self._resolve_d3d_ptdata_path(path)
 
         if tree_name is not None:
             self.open_tree(tree_name)
@@ -237,6 +239,9 @@ class MDSConnection:
         """
 
         dim_nums = dim_nums or [0]
+
+        if tree_name == "ptdata":
+            path, tree_name = self._resolve_d3d_ptdata_path(path)
 
         if tree_name is not None:
             self.open_tree(tree_name)
@@ -284,6 +289,9 @@ class MDSConnection:
 
         dim_nums = dim_nums or [0]
 
+        if tree_name == "ptdata":
+            path, tree_name = self._resolve_d3d_ptdata_path(path)
+
         if tree_name is not None:
             self.open_tree(tree_name)
 
@@ -320,3 +328,12 @@ class MDSConnection:
         The tree name for for_name, whether it is a nickname or tree name itself
         """
         return self.get_tree_name_of_nickname(for_name) or for_name
+
+    def _resolve_d3d_ptdata_path(self, path: str) -> Tuple[str, str]:
+        """
+        This function allows a user to specify tree = 'ptdata' in get methods.
+        It only works with simple expressions (i.e. no additional mathematical operations).
+
+        Return the ptdata path and tree='d3d'
+        """
+        return [f'ptdata("{path}", {self.shot_id})', "d3d"]
