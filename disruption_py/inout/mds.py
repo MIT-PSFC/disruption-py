@@ -240,7 +240,7 @@ class MDSConnection:
 
         dim_nums = dim_nums or [0]
 
-        if tree_name == "ptdata":
+        if tree_name.lower() == "ptdata":
             path, tree_name = self._resolve_d3d_ptdata_path(path)
 
         if tree_name is not None:
