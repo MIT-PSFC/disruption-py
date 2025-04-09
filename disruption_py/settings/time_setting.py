@@ -212,6 +212,7 @@ class EfitTimeSetting(TimeSetting):
         """
         self.tokamak_overrides = {
             Tokamak.CMOD: self.cmod_times,
+            Tokamak.D3D: self.d3d_times,
             Tokamak.EAST: self.east_times,
         }
 
@@ -249,6 +250,29 @@ class EfitTimeSetting(TimeSetting):
                 tree_name=efit_tree_name,
                 astype="float64",
             )
+
+    def d3d_times(self, params: TimeSettingParams):
+        """
+        Retrieve the EFIT timebase for the DIII-D tokamak.
+
+        Parameters
+        ----------
+        params : TimeSettingParams
+            Parameters needed to retrieve the timebase.
+
+        Returns
+        -------
+        np.ndarray
+            Array of times in the timebase.
+        """
+        return (
+            params.mds_conn.get_data(
+                r"\efit_a_eqdsk:atime",
+                tree_name="_efit_tree",
+                astype="float64",
+            )
+            / 1.0e3
+        )  # [ms] -> [s]
 
     def east_times(self, params: TimeSettingParams):
         """
@@ -519,7 +543,9 @@ class SignalTimeSetting(TimeSetting):
     Time setting for using the timebase of a specific signal.
     """
 
-    def __init__(self, tree_name: str, signal_path: str):
+    def __init__(
+        self, tree_name: str, signal_path: str, use_efit_time_range: bool = True
+    ):
         """
         Initialize with the tree name and signal path.
 
@@ -529,9 +555,12 @@ class SignalTimeSetting(TimeSetting):
             Name of the tree containing the signal.
         signal_path : str
             Path to the signal within the tree.
+        use_efit_time_range : bool
+            Cut off the requested timebase with the efit time range
         """
         self.tree_name = tree_name
         self.signal_path = signal_path
+        self.use_efit_time_range = use_efit_time_range
 
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         """
@@ -551,13 +580,19 @@ class SignalTimeSetting(TimeSetting):
             (signal_time,) = params.mds_conn.get_dims(
                 self.signal_path, tree_name=self.tree_name, astype="float64"
             )
-            return signal_time
         except mdsExceptions.MdsException:
             params.logger.error(
                 "Failed to set up timebase for signal {signal_path}",
                 signal_path=self.signal_path,
             )
             raise
+        if self.use_efit_time_range:
+            efit_time = EfitTimeSetting().tokamak_overrides[params.tokamak](params)
+            (indices_efit_range,) = np.where(
+                (signal_time >= efit_time[0]) & (signal_time <= efit_time[-1])
+            )
+            signal_time = signal_time[indices_efit_range]
+        return signal_time
 
 
 # --8<-- [start:time_setting_dict]
