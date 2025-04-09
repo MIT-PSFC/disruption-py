@@ -5,8 +5,6 @@ Module for managing retrieval of shot data from a tokamak.
 """
 
 
-import threading
-
 import numpy as np
 import pandas as pd
 from loguru import logger
@@ -113,11 +111,7 @@ class RetrievalManager:
             logger.critical(shot_msg("Failed cleanup! {e}"), shot=shot_id, e=repr(e))
             logger.opt(exception=True).debug(shot_msg("Failed cleanup!"), shot=shot_id)
             retrieved_data = None
-            logger.debug(
-                "PID #{pid} | Reconnecting to MDSplus server.",
-                pid=threading.get_native_id(),
-            )
-            physics_method_params.mds_conn.conn.reconnect()
+            physics_method_params.mds_conn.reconnect()
 
         return retrieved_data
 

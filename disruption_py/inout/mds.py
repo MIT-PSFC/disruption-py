@@ -108,6 +108,16 @@ class MDSConnection:
         self.tree_nicknames = {}
         self.last_open_tree = None
 
+    def reconnect(self):
+        """
+        Reconnect to the MDSplus server.
+        """
+        logger.debug(
+            "PID #{pid} | Reconnecting to MDSplus server.",
+            pid=threading.get_native_id(),
+        )
+        self.conn.reconnect()
+
     @_better_mds_exceptions
     def open_tree(self, tree_name: str):
         """
