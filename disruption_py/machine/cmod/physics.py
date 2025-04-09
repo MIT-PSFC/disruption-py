@@ -14,10 +14,10 @@ from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import (
+    causal_boxcar_smooth,
     gaussian_fit,
     gaussian_fit_with_fixed_mean,
     interp1,
-    causal_boxcar_smooth,
 )
 from disruption_py.machine.cmod.thomson import CmodThomsonDensityMeasure
 from disruption_py.machine.tokamak import Tokamak
