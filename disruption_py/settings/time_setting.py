@@ -233,20 +233,20 @@ class EfitTimeSetting(TimeSetting):
         if efit_tree_name == "analysis":
             try:
                 return params.mds_conn.get_data(
-                    r"\analysis::efit_aeqdsk:time",
-                    tree_name="_efit_tree",
+                    r"\efit_aeqdsk:time",
+                    tree_name=efit_tree_name,
                     astype="float64",
                 )
             except mdsExceptions.MdsException:
                 return params.mds_conn.get_data(
-                    r"\analysis::efit:results:a_eqdsk:time",
-                    tree_name="_efit_tree",
+                    r"\efit:results:a_eqdsk:time",
+                    tree_name=efit_tree_name,
                     astype="float64",
                 )
         else:
             return params.mds_conn.get_data(
-                rf"\{efit_tree_name}::top.results.a_eqdsk:time",
-                tree_name="_efit_tree",
+                r"\top.results.a_eqdsk:time",
+                tree_name=efit_tree_name,
                 astype="float64",
             )
 
