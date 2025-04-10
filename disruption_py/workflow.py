@@ -5,7 +5,8 @@ main workflow
 """
 
 import argparse
-import os
+
+# import os
 import time
 from itertools import repeat
 from multiprocessing import Pool
@@ -16,9 +17,8 @@ from tqdm.auto import tqdm
 
 from disruption_py.config import config
 from disruption_py.core.retrieval_manager import RetrievalManager
-from disruption_py.core.utils.misc import (
+from disruption_py.core.utils.misc import (  # get_temporary_folder,
     get_elapsed_time,
-    get_temporary_folder,
     without_duplicates,
 )
 from disruption_py.inout.mds import ProcessMDSConnection
@@ -176,7 +176,9 @@ def get_shots_data(
         each=took / total,
     )
 
-    return output_setting.get_results()
+    results = output_setting.get_results()
+    output_setting.to_disk()
+    return results
 
 
 def get_database(
@@ -217,9 +219,7 @@ def _get_mds_instance(tokamak, mds_connection_initializer):
     return get_mdsplus_class(tokamak)
 
 
-def run(
-    tokamak, methods, shots, efit_tree, time_base, output_file, processes, log_level
-):
+def run(tokamak, methods, shots, efit_tree, time_base, output, processes, log_level):
     """
     simple workflow.
     """
@@ -233,23 +233,15 @@ def run(
     sett = RetrievalSettings(
         efit_nickname_setting=efit_tree, time_setting=time_base, run_methods=methods
     )
-    out = get_shots_data(
+
+    return get_shots_data(
         tokamak=tokamak,
         shotlist_setting=shots,
         retrieval_settings=sett,
         num_processes=processes,
         log_settings=log_level,
-        output_setting="dataframe",
+        output_setting=output,
     )
-
-    if output_file:
-        output_file = os.path.realpath(output_file)
-    else:
-        output_file = os.path.join(get_temporary_folder(), "output.csv")
-    logger.info("Output: {output_file}", output_file=output_file)
-    out.to_csv(output_file, index=False)
-
-    return out
 
 
 def cli():
@@ -264,7 +256,7 @@ def cli():
     parser.add_argument("-m", "--methods", type=str, action="append")
     parser.add_argument("-e", "--efit-tree", type=str, default="disruption")
     parser.add_argument("-b", "--time-base", type=str, default="disruption_warning")
-    parser.add_argument("-o", "--output-file", type=str)
+    parser.add_argument("-o", "--output", type=str, default="dataset")
     parser.add_argument("-p", "--processes", type=int, default=1)
     parser.add_argument("-l", "--log-level", type=str, default="VERBOSE")
 
@@ -272,4 +264,5 @@ def cli():
 
 
 if __name__ == "__main__":
-    print(cli())
+    out = cli()
+    print(out)

@@ -8,6 +8,8 @@ for shot data, including saving to files, databases, lists, dictionaries, and
 dataframes.
 """
 
+import os
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List, Type, Union
@@ -16,6 +18,7 @@ import pandas as pd
 import xarray as xr
 from loguru import logger
 
+from disruption_py.core.utils.misc import get_temporary_folder
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -84,6 +87,12 @@ class OutputSetting(ABC):
             The final output results.
         """
 
+    @abstractmethod
+    def to_disk(self):
+        """
+        Save final output to disk.
+        """
+
 
 class OutputSettingList(OutputSetting):
     """
@@ -126,21 +135,34 @@ class OutputSettingList(OutputSetting):
         """
         return [s.get_results() for s in self.output_setting_list]
 
+    def to_disk(self):
+        pass
+
 
 class DictOutputSetting(OutputSetting):
     """
     Outputs data as a dictionary of Datasets.
     """
 
-    def __init__(self):
+    def __init__(self, path: str | None | bool = None):
         """
-        Initialize an empty dictionary.
+        Initialize empty DictOutputSetting.
+
+        Parameters
+        ----------
+        path : str | None | bool
+            The path for writing results to disk.
+            If False, no results are written to disk.
+            If True/None, the temporary location will be used.
         """
         self.results = {}
+        self.path = path
+        if path in [True, None]:
+            self.path = get_temporary_folder()
 
     def _output_shot(self, params: OutputSettingParams):
         """
-        Store a single Dataset in the dictionary.
+        Store a single result in the dictionary.
 
         Parameters
         ----------
@@ -160,8 +182,101 @@ class DictOutputSetting(OutputSetting):
         """
         return self.results
 
+    def to_disk(self):
+        """
+        Save all resulting Datasets into a folder.
+        """
 
-class DatasetOutputSetting(DictOutputSetting):
+        if not self.path:
+            return
+        if os.path.exists(self.path):
+            if not os.path.isdir(self.path):
+                raise FileExistsError(f"Path already exists! {self.path}")
+        else:
+            os.makedirs(self.path)
+
+        logger.debug("Saving results: {path}", path=self.path)
+
+        t = time.time()
+        for shot, dataset in self.results.items():
+            cdf = os.path.join(self.path, f"{shot}.nc")
+            logger.trace("Saving result: {cdf}", cdf=cdf)
+            dataset.to_netcdf(cdf)
+        logger.info(
+            "Saved results in {took:.3f} s: {path}",
+            took=time.time() - t,
+            path=self.path,
+        )
+
+
+class SingleOutputSetting(DictOutputSetting):
+    """
+    Abstract class that outputs data as a single object/file.
+    """
+
+    def __init__(self, path: str | None | bool = None):
+        """
+        Initialize empty SingleOutputSetting.
+
+        Parameters
+        ----------
+        path : str | None | bool
+            The path for writing results to disk.
+            If False, no results are written to disk.
+            If True/None, the temporary location will be used.
+        """
+        super().__init__(path=False)
+        self.result = None
+        self.path = path
+        if path in [True, None]:
+            ext = "nc"
+            if "DataFrame" in self.__class__.__name__:
+                ext = "csv"
+            self.path = os.path.join(get_temporary_folder(), f"output.{ext}")
+
+    def get_results(self) -> Any:
+        """
+        Get the resulting object.
+
+        Returns
+        -------
+        Any
+            The resulting object.
+        """
+        self.results = {}
+        return self.result
+
+    def to_disk(self):
+        """
+        Save the resulting object into a file.
+        """
+
+        if not self.path:
+            return
+        if os.path.exists(self.path):
+            raise FileExistsError(f"File already exists! {self.path}")
+
+        logger.debug(
+            "Saving {type}: {path}", type=self.result.__class__.__name__, path=self.path
+        )
+
+        t = time.time()
+        for method in ["to_netcdf", "to_csv"]:
+            if not hasattr(self.result, method):
+                continue
+            getattr(self.result, method)(self.path)
+            break
+        else:
+            raise NotImplementedError("Could not save object to file.")
+        logger.info(
+            "Saved {type} in {took:.3f} s: {path}",
+            type=self.result.__class__.__name__,
+            took=time.time() - t,
+            path=self.path,
+        )
+
+
+class DatasetOutputSetting(SingleOutputSetting):
     """
     Outputs data as a single Dataset.
     """
@@ -173,15 +288,16 @@ class DatasetOutputSetting(DictOutputSetting):
         Returns
         -------
         xr.Dataset
-            The Dataset containing the results.
+            The resulting Dataset.
         """
         logger.debug("Concatenating {tot} results.", tot=len(self.results))
-        return xr.concat(self.results.values(), dim="idx")
+        self.result = xr.concat(self.results.values(), dim="idx")
+        return super().get_results()
 
 
-class DataTreeOutputSetting(DictOutputSetting):
+class DataTreeOutputSetting(SingleOutputSetting):
     """
-    Outputs data as a Datatree of Datasets.
+    Outputs data as a single DataTree.
     """
 
     def get_results(self) -> xr.DataTree:
@@ -193,11 +309,13 @@ class DataTreeOutputSetting(DictOutputSetting):
         xr.DataTree
             The DataTree containing the results, with shots as keys.
         """
-        logger.debug("Branching {tot} results.", tot=len(self.results))
-        return xr.DataTree.from_dict(self.results)
+        logger.debug("Appending {tot} results.", tot=len(self.results))
+        self.results = {str(k): v for k, v in self.results.items()}
+        self.result = xr.DataTree.from_dict(self.results)
+        return super().get_results()
 
 
-class DataFrameOutputSetting(DatasetOutputSetting):
+class DataFrameOutputSetting(SingleOutputSetting):
     """
     Outputs data as a DataFrame.
     """
@@ -209,27 +327,28 @@ class DataFrameOutputSetting(DatasetOutputSetting):
         Returns
         -------
         pd.DataFrame
-            The combined DataFrame of results.
+            The resulting DataFrame.
         """
         base = ["shot", "time"]
-        df = super().get_results().to_dataframe()
+        df = pd.concat([ds.to_dataframe() for ds in self.results.values()])
         cols = base + [c for c in sorted(df.columns) if c not in base]
-        return df[cols]
+        self.result = df[cols].reindex()
+        return super().get_results()
 
 
 # --8<-- [start:output_setting_dict]
 _output_setting_mappings: Dict[str, OutputSetting] = {
-    "dataframe": DataFrameOutputSetting(),
-    "dataset": DatasetOutputSetting(),
-    "datatree": DataTreeOutputSetting(),
-    "df": DataFrameOutputSetting(),
-    "dict": DictOutputSetting(),
-    "ds": DatasetOutputSetting(),
-    "dt": DataTreeOutputSetting(),
-    "pandas": DataFrameOutputSetting(),
-    "pd": DataFrameOutputSetting(),
-    "xarray": DatasetOutputSetting(),
-    "xr": DatasetOutputSetting(),
+    "dataframe": DataFrameOutputSetting,
+    "dataset": DatasetOutputSetting,
+    "datatree": DataTreeOutputSetting,
+    "df": DataFrameOutputSetting,
+    "dict": DictOutputSetting,
+    "ds": DatasetOutputSetting,
+    "dt": DataTreeOutputSetting,
+    "pandas": DataFrameOutputSetting,
+    "pd": DataFrameOutputSetting,
+    "xarray": DatasetOutputSetting,
+    "xr": DatasetOutputSetting,
 }
 # --8<-- [end:output_setting_dict]
 
@@ -269,7 +388,7 @@ def resolve_output_setting(
         # check shortcuts
         output_setting_object = _output_setting_mappings.get(output_setting)
         if output_setting_object is not None:
-            return output_setting_object
+            return output_setting_object()
         # check suffixes
         for suffix, output_setting_type in _file_suffix_to_output_setting.items():
             if output_setting.endswith(suffix):
