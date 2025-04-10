@@ -7,12 +7,13 @@ sources and the time domain of the data retrieved.
 
 import pytest
 
-from disruption_py.core.physics_method.runner import REQUIRED_COLS
 from disruption_py.inout.mds import ProcessMDSConnection
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.workflow import get_shots_data
 from tests.conftest import skip_on_fast_execution
+
+COORDS = {"shot", "time"}
 
 
 def dummy_mds_initializer():
@@ -103,28 +104,28 @@ def test_domain_setting(tokamak, shotlist, domain_setting, full_time_domain_data
     [
         # Test run_methods with run_columns=None
         (None, None, None, []),
-        ([], None, REQUIRED_COLS, []),
+        ([], None, COORDS, []),
         (["~get_kappa_area"], None, None, ["kappa_area"]),
-        (["get_kappa_area"], None, REQUIRED_COLS | {"kappa_area"}, []),
+        (["get_kappa_area"], None, COORDS | {"kappa_area"}, []),
         # Test run_columns with run_methods=None
-        (None, [], REQUIRED_COLS, []),
-        (None, ["kappa_area"], REQUIRED_COLS | {"kappa_area"}, []),
+        (None, [], COORDS, []),
+        (None, ["kappa_area"], COORDS | {"kappa_area"}, []),
         # Test run_methods and run_columns combo
-        ([], [], REQUIRED_COLS, []),
-        (["get_kappa_area"], [], REQUIRED_COLS | {"kappa_area"}, []),
+        ([], [], COORDS, []),
+        (["get_kappa_area"], [], COORDS | {"kappa_area"}, []),
         (
             ["get_kappa_area"],
             ["greenwald_fraction"],
-            REQUIRED_COLS | {"kappa_area", "n_e", "dn_dt", "greenwald_fraction"},
+            COORDS | {"kappa_area", "n_e", "dn_dt", "greenwald_fraction"},
             [],
         ),
         (
             ["~get_kappa_area"],
             ["greenwald_fraction"],
-            REQUIRED_COLS | {"n_e", "dn_dt", "greenwald_fraction"},
+            COORDS | {"n_e", "dn_dt", "greenwald_fraction"},
             [],
         ),
-        (["~get_kappa_area"], ["kappa_area"], REQUIRED_COLS, []),
+        (["~get_kappa_area"], ["kappa_area"], COORDS, []),
     ],
 )
 def test_run_methods_and_columns(

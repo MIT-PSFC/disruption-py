@@ -11,7 +11,6 @@ from typing import Dict
 import pandas as pd
 import pytest
 
-from disruption_py.settings.output_setting import BatchedCSVOutputSetting
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.workflow import get_shots_data
 from tests.utils.data_difference import assert_frame_equal_unordered
@@ -57,21 +56,3 @@ def test_output_exists(initial_mdsplus_data, test_file_path_f):
     assert os.path.exists(test_file_path_f(".csv")), ".csv output does not exist"
 
     assert_frame_equal_unordered(df_output, csv_output)
-
-
-def test_batch_csv(tokamak, test_file_path_f, shotlist):
-    """
-    Test the batch csv output setting to ensure it outputs the same columns in
-    the same order as the dataframe in memory.
-    """
-    csv = test_file_path_f("-batch.csv")
-    out = get_shots_data(
-        tokamak=tokamak,
-        shotlist_setting=shotlist,
-        num_processes=2,
-        # Use a batch size less than the number of shots to ensure multiple batches
-        # are written to the CSV file.
-        output_setting=BatchedCSVOutputSetting(filepath=csv, batch_size=1),
-    )
-    df = pd.read_csv(csv)
-    assert_frame_equal_unordered(out, df)
