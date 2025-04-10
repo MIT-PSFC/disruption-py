@@ -65,6 +65,7 @@ class OutputSetting(ABC):
         if hasattr(self, "tokamak_overrides"):
             if params.tokamak in self.tokamak_overrides:
                 self.tokamak_overrides[params.tokamak](params)
+                return
         self._output_shot(params)
 
     @abstractmethod
