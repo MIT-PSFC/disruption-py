@@ -27,7 +27,6 @@ from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environm
 from disruption_py.settings import RetrievalSettings
 from disruption_py.settings.log_settings import LogSettings, resolve_log_settings
 from disruption_py.settings.output_setting import (
-    CompleteOutputSettingParams,
     OutputSetting,
     OutputSettingParams,
     resolve_output_setting,
@@ -158,7 +157,6 @@ def get_shots_data(
                     OutputSettingParams(
                         shot_id=shot_id,
                         result=shot_data,
-                        database=database,
                         tokamak=tokamak,
                     )
                 )
@@ -178,10 +176,7 @@ def get_shots_data(
         each=took / total,
     )
 
-    finish_output_type_setting_params = CompleteOutputSettingParams(tokamak=tokamak)
-    results = output_setting.get_results(finish_output_type_setting_params)
-    output_setting.stream_output_cleanup(finish_output_type_setting_params)
-    return results
+    return output_setting.get_results()
 
 
 def get_database(
