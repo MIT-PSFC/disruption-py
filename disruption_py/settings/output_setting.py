@@ -169,7 +169,7 @@ class DictOutputSetting(OutputSetting):
         params : OutputSettingParams
             The parameters for outputting shot results.
         """
-        self.results[params.shot_id] = params.result
+        self.results[str(params.shot_id)] = params.result
 
     def get_results(self) -> Dict[int, xr.Dataset]:
         """
@@ -234,15 +234,28 @@ class SingleOutputSetting(DictOutputSetting):
                 ext = "csv"
             self.path = os.path.join(get_temporary_folder(), f"output.{ext}")
 
-    def get_results(self) -> Any:
+    @abstractmethod
+    def concat(self) -> xr.Dataset | xr.DataTree | pd.DataFrame:
+        """
+        Concatenate the resulting object.
+
+        Returns
+        -------
+        xr.Dataset | xr.DataTree | pd.DataFrame
+            The resulting object.
+        """
+
+    def get_results(self) -> xr.Dataset | xr.DataTree | pd.DataFrame:
         """
         Get the resulting object.
 
         Returns
         -------
-        Any
+        xr.Dataset | xr.DataTree | pd.DataFrame
             The resulting object.
         """
+        logger.debug("Concatenating {tot} shots.", tot=len(self.results))
+        self.result = self.concat()
         self.results = {}
         return self.result
 
@@ -281,18 +294,16 @@ class DatasetOutputSetting(SingleOutputSetting):
     Outputs data as a single Dataset.
     """
 
-    def get_results(self) -> xr.Dataset:
+    def concat(self) -> xr.Dataset:
         """
-        Get the resulting Dataset.
+        Concatenate the resulting Dataset.
 
         Returns
         -------
         xr.Dataset
             The resulting Dataset.
         """
-        logger.debug("Concatenating {tot} results.", tot=len(self.results))
-        self.result = xr.concat(self.results.values(), dim="idx")
-        return super().get_results()
+        return xr.concat(self.results.values(), dim="idx")
 
 
 class DataTreeOutputSetting(SingleOutputSetting):
@@ -300,19 +311,16 @@ class DataTreeOutputSetting(SingleOutputSetting):
     Outputs data as a single DataTree.
     """
 
-    def get_results(self) -> xr.DataTree:
+    def concat(self) -> xr.DataTree:
         """
-        Get the resulting DataTree.
+        Concatenate the resulting DataTree.
 
         Returns
         -------
         xr.DataTree
             The DataTree containing the results, with shots as keys.
         """
-        logger.debug("Appending {tot} results.", tot=len(self.results))
-        self.results = {str(k): v for k, v in self.results.items()}
-        self.result = xr.DataTree.from_dict(self.results)
-        return super().get_results()
+        return xr.DataTree.from_dict(self.results)
 
 
 class DataFrameOutputSetting(SingleOutputSetting):
@@ -320,9 +328,9 @@ class DataFrameOutputSetting(SingleOutputSetting):
     Outputs data as a DataFrame.
     """
 
-    def get_results(self) -> pd.DataFrame:
+    def concat(self) -> pd.DataFrame:
         """
-        Get the resulting DataFrame.
+        Concatenate the resulting DataFrame.
 
         Returns
         -------
@@ -332,8 +340,7 @@ class DataFrameOutputSetting(SingleOutputSetting):
         base = ["shot", "time"]
         df = pd.concat([ds.to_dataframe() for ds in self.results.values()])
         cols = base + [c for c in sorted(df.columns) if c not in base]
-        self.result = df[cols].reindex()
-        return super().get_results()
+        return df[cols].reindex()
 
 
 # --8<-- [start:output_setting_dict]
