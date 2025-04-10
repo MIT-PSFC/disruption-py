@@ -12,7 +12,7 @@ import os
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict, List, Type, Union
+from typing import Dict, List, Type, Union
 
 import pandas as pd
 import xarray as xr
@@ -43,6 +43,9 @@ class OutputSettingParams:
 
 
 OutputSettingType = Union["OutputSetting", str, List["OutputSettingType"]]
+OutputDictType = Dict[str, xr.Dataset]
+OutputSingleType = xr.Dataset | xr.DataTree | pd.DataFrame
+OutputType = OutputDictType | OutputSingleType
 
 
 class OutputSetting(ABC):
@@ -61,8 +64,8 @@ class OutputSetting(ABC):
         """
         if hasattr(self, "tokamak_overrides"):
             if params.tokamak in self.tokamak_overrides:
-                return self.tokamak_overrides[params.tokamak](params)
-        return self._output_shot(params)
+                self.tokamak_overrides[params.tokamak](params)
+        self._output_shot(params)
 
     @abstractmethod
     def _output_shot(self, params: OutputSettingParams):
@@ -77,7 +80,7 @@ class OutputSetting(ABC):
         """
 
     @abstractmethod
-    def get_results(self) -> Any:
+    def get_results(self) -> OutputType:
         """
         Return final output after all shots are processed.
 
@@ -122,21 +125,23 @@ class OutputSettingList(OutputSetting):
         params : OutputSettingParams
             The parameters for outputting shot results.
         """
-        return [s.output_shot(params) for s in self.output_setting_list]
+        _ = [s.output_shot(params) for s in self.output_setting_list]
 
-    def get_results(self):
+    def get_results(self) -> List[OutputType]:
         """
         Get results from each output setting in the list.
 
         Returns
         -------
-        List[Any]
+        List[OutputType]
             A list of results from each output setting.
         """
         return [s.get_results() for s in self.output_setting_list]
 
     def to_disk(self):
-        pass
+        """
+        Do not save OutputSettingList to disk.
+        """
 
 
 class DictOutputSetting(OutputSetting):
@@ -171,7 +176,7 @@ class DictOutputSetting(OutputSetting):
         """
         self.results[str(params.shot_id)] = params.result
 
-    def get_results(self) -> Dict[int, xr.Dataset]:
+    def get_results(self) -> OutputDictType:
         """
         Get the resulting dictionary.
 
@@ -235,7 +240,7 @@ class SingleOutputSetting(DictOutputSetting):
             self.path = os.path.join(get_temporary_folder(), f"output.{ext}")
 
     @abstractmethod
-    def concat(self) -> xr.Dataset | xr.DataTree | pd.DataFrame:
+    def concat(self) -> OutputSingleType:
         """
         Concatenate the resulting object.
 
@@ -245,7 +250,7 @@ class SingleOutputSetting(DictOutputSetting):
             The resulting object.
         """
 
-    def get_results(self) -> xr.Dataset | xr.DataTree | pd.DataFrame:
+    def get_results(self) -> OutputSingleType:
         """
         Get the resulting object.
 
