@@ -92,7 +92,7 @@ class OutputSetting(ABC):
         """
 
     @abstractmethod
-    def to_disk(self):
+    def to_disk(self) -> str | None:
         """
         Save final output to disk.
         """
@@ -139,10 +139,11 @@ class OutputSettingList(OutputSetting):
         """
         return [s.get_results() for s in self.output_setting_list]
 
-    def to_disk(self):
+    def to_disk(self) -> None:
         """
         Do not save OutputSettingList to disk.
         """
+        return None
 
 
 class DictOutputSetting(OutputSetting):
@@ -188,13 +189,13 @@ class DictOutputSetting(OutputSetting):
         """
         return self.results
 
-    def to_disk(self):
+    def to_disk(self) -> str | None:
         """
         Save all resulting Datasets into a folder.
         """
 
         if not self.path:
-            return
+            return None
         if os.path.exists(self.path):
             if not os.path.isdir(self.path):
                 raise FileExistsError(f"Path already exists! {self.path}")
@@ -213,6 +214,7 @@ class DictOutputSetting(OutputSetting):
             took=time.time() - t,
             path=self.path,
         )
+        return self.path
 
 
 class SingleOutputSetting(DictOutputSetting):
@@ -265,13 +267,13 @@ class SingleOutputSetting(DictOutputSetting):
         self.results = {}
         return self.result
 
-    def to_disk(self):
+    def to_disk(self) -> str | None:
         """
         Save the resulting object into a file.
         """
 
         if not self.path:
-            return
+            return None
         if os.path.exists(self.path):
             raise FileExistsError(f"File already exists! {self.path}")
 
@@ -293,6 +295,7 @@ class SingleOutputSetting(DictOutputSetting):
             took=time.time() - t,
             path=self.path,
         )
+        return self.path
 
 
 class DatasetOutputSetting(SingleOutputSetting):
