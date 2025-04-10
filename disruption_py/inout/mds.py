@@ -118,6 +118,7 @@ class MDSConnection:
             pid=threading.get_native_id(),
         )
         self.conn.reconnect()
+        self.open_trees = []
 
     @_better_mds_exceptions
     def open_tree(self, tree_name: str):
