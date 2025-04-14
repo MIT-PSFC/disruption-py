@@ -693,9 +693,15 @@ class EastPhysicsMethods:
 
         # Calculate p_input, rad_input_frac, and rad_loss_frac
         p_input = p_ohm + p_lh + p_icrf + p_ecrh + p_nbi
-        with np.errstate(divide="ignore", invalid="ignore"):
-            rad_input_frac = p_rad / p_input
-            rad_loss_frac = p_rad / (p_input - dwmhd_dt)
+        p_loss = p_input - dwmhd_dt
+
+        rad_input_frac = np.full(len(params.times), np.nan)
+        (valid_indices,) = np.where((p_input != 0) & ~np.isnan(p_input))
+        rad_input_frac[valid_indices] = p_rad[valid_indices] / p_input[valid_indices]
+
+        rad_loss_frac = np.full(len(params.times), np.nan)
+        (valid_indices,) = np.where((p_loss != 0) & ~np.isnan(p_loss))
+        rad_loss_frac[valid_indices] = p_rad[valid_indices] / p_loss[valid_indices]
 
         output = {
             "p_ecrh": p_ecrh,
