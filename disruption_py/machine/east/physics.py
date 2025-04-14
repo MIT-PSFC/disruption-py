@@ -882,11 +882,9 @@ class EastPhysicsMethods:
                 saddle[:, i] = params.mds_conn.get_data(node, tree_name="east")
             except mdsExceptions.MdsException:
                 saddle[:, i] = 0
-        # \sad_no not operational in 2015
         sad_lo = params.mds_conn.get_data(r"\sad_lo", tree_name="east")
         sad_lm = params.mds_conn.get_data(r"\sad_lm", tree_name="east")
         saddle[:, 7] = sad_lo - sad_lm
-        # End of get_rmp_and_saddle_signals
 
         # Calculate RMP n=1 Fourier component amplitude and phase (on the timebase
         # of the saddle signals)
