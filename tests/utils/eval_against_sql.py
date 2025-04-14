@@ -12,11 +12,11 @@ from loguru import logger
 
 from disruption_py.config import config
 from disruption_py.core.utils.math import matlab_gradient_1d_vectorized
-from disruption_py.core.utils.misc import get_temporary_folder
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings import LogSettings, RetrievalSettings
 from disruption_py.workflow import get_shots_data
+from tests.conftest import test_folder
 from tests.utils.data_difference import DataDifference
 from tests.utils.factory import get_tokamak_test_columns
 
@@ -24,7 +24,7 @@ from tests.utils.factory import get_tokamak_test_columns
 def get_fresh_data(
     tokamak: Tokamak,
     shotlist: List[int],
-    log_file_path: str,
+    folder: str,
     test_columns: List[str] = None,
     console_log_level: str = "WARNING",
 ) -> Dict[int, pd.DataFrame]:
@@ -37,8 +37,8 @@ def get_fresh_data(
         The tokamak for which to retrieve data.
     shotlist : List[int]
         A list of shot IDs to retrieve data for.
-    log_file_path : str
-        The path to the log file.
+    folder : str
+        The path to the folder.
     test_columns : List[str], optional
         A list of columns to retrieve.
     console_log_level : str, optional
@@ -55,19 +55,17 @@ def get_fresh_data(
         run_columns=test_columns,
         only_requested_columns=True,
     )
-    return get_shots_data(
+    out = get_shots_data(
         tokamak=tokamak,
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
-        output_setting="dict",
+        output_setting=os.path.join(folder, "output/"),
         log_settings=LogSettings(
-            log_to_console=True,
-            log_file_path=log_file_path,
-            log_file_write_mode="w",
-            file_log_level="DEBUG",
             console_log_level=console_log_level,
+            log_file_path=os.path.join(folder, "output.log"),
         ),
     )
+    return {int(k): v.to_dataframe() for k, v in out.items()}
 
 
 def get_cached_from_fresh(
@@ -224,9 +222,6 @@ def eval_against_cache(
         differences as DataFrames.
     """
 
-    tempfolder = get_temporary_folder()
-    print(f"Outputting to temporary folder: {tempfolder}")
-
     @contextmanager
     def monkey_patch_numpy_gradient():
         original_function = np.gradient
@@ -240,7 +235,7 @@ def eval_against_cache(
         fresh_data = get_fresh_data(
             tokamak=tokamak,
             shotlist=shotlist,
-            log_file_path=os.path.join(tempfolder, "data_retrieval.log"),
+            folder=test_folder("eval_against_cache"),
             test_columns=test_columns,
             console_log_level=console_log_level,
         )

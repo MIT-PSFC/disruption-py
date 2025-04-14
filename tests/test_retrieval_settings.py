@@ -4,43 +4,40 @@
 Unit tests for the retrieval settings which covers data retrieval from various
 sources and the time domain of the data retrieved.
 """
+import os
+from typing import Dict
 
 import pytest
 
-from disruption_py.inout.mds import ProcessMDSConnection
 from disruption_py.machine.tokamak import Tokamak
-from disruption_py.settings.retrieval_settings import RetrievalSettings
+from disruption_py.settings import RetrievalSettings
+from disruption_py.settings.log_settings import LogSettings
 from disruption_py.workflow import get_shots_data
 from tests.conftest import skip_on_fast_execution
 
 COORDS = {"shot", "time"}
 
 
-def dummy_mds_initializer():
-    """Return a dummy MDS connection to ensure no fresh data is retrieved."""
-    return ProcessMDSConnection(None)
-
-
 @pytest.fixture(scope="module", name="full_time_domain_data")
-def full_time_domain_data_fixture(tokamak, shotlist):
-    """Get data for the full time domain"""
-    retrieval_settings = RetrievalSettings(
-        efit_nickname_setting="default", domain_setting="full"
-    )
+def full_time_domain_data_fixture(tokamak, shotlist, test_folder_m) -> Dict:
+    """
+    Get data for the full time domain.
+    """
     results = get_shots_data(
         tokamak=tokamak,
         shotlist_setting=shotlist,
-        retrieval_settings=retrieval_settings,
-        output_setting="dict",
+        output_setting=os.path.join(test_folder_m, "output/"),
+        log_settings=LogSettings(
+            console_log_level="WARNING",
+            log_file_path=os.path.join(test_folder_m, "output.log"),
+        ),
         num_processes=2,
     )
-    # Output data in the order shots were given
-    results = [results[shot] for shot in shotlist]
-    return results
+    return [results[str(shot)] for shot in shotlist]
 
 
 @skip_on_fast_execution
-def test_only_requested_columns(tokamak, shotlist):
+def test_only_requested_columns(tokamak, shotlist, test_folder_f):
     """
     Ensure `only_requested_columns` works. `ip` is returned by
     `get_ip_parameters`, so we should not see any of the other quantities like
@@ -55,16 +52,22 @@ def test_only_requested_columns(tokamak, shotlist):
         tokamak=tokamak,
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
+        output_setting=os.path.join(test_folder_f, "output.nc"),
+        log_settings=LogSettings(
+            console_log_level="WARNING",
+            log_file_path=os.path.join(test_folder_f, "output.log"),
+        ),
         num_processes=2,
-        output_setting="dataframe",
-        log_settings="WARNING",
     )
-    assert {"ip", "q95", "shot", "time"} == set(results.columns)
+    assert {"shot", "time"} == set(results.coords)
+    assert {"ip", "q95"} == set(results.data_vars)
 
 
 @skip_on_fast_execution
 @pytest.mark.parametrize("domain_setting", ["flattop", "rampup_and_flattop"])
-def test_domain_setting(tokamak, shotlist, domain_setting, full_time_domain_data):
+def test_domain_setting(
+    tokamak, shotlist, domain_setting, full_time_domain_data, test_folder_f
+):
     """
     Test the two partial domain settings by comparing their start and end times
     with the full domain.
@@ -81,11 +84,14 @@ def test_domain_setting(tokamak, shotlist, domain_setting, full_time_domain_data
         tokamak=tokamak,
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
-        output_setting="dict",
+        output_setting=os.path.join(test_folder_f, "output/"),
+        log_settings=LogSettings(
+            console_log_level="WARNING",
+            log_file_path=os.path.join(test_folder_f, "output.log"),
+        ),
         num_processes=2,
-        log_settings="WARNING",
     )
-    results = [results[shot] for shot in shotlist]
+    results = [results[str(shot)] for shot in shotlist]
 
     assert len(shotlist) == len(results) == len(full_time_domain_data)
     for part_domain, full_domain in zip(results, full_time_domain_data):
@@ -104,28 +110,28 @@ def test_domain_setting(tokamak, shotlist, domain_setting, full_time_domain_data
     [
         # Test run_methods with run_columns=None
         (None, None, None, []),
-        ([], None, COORDS, []),
+        ([], None, [], []),
         (["~get_kappa_area"], None, None, ["kappa_area"]),
-        (["get_kappa_area"], None, COORDS | {"kappa_area"}, []),
+        (["get_kappa_area"], None, {"kappa_area"}, []),
         # Test run_columns with run_methods=None
-        (None, [], COORDS, []),
-        (None, ["kappa_area"], COORDS | {"kappa_area"}, []),
+        (None, [], [], []),
+        (None, ["kappa_area"], {"kappa_area"}, []),
         # Test run_methods and run_columns combo
-        ([], [], COORDS, []),
-        (["get_kappa_area"], [], COORDS | {"kappa_area"}, []),
+        ([], [], [], []),
+        (["get_kappa_area"], [], {"kappa_area"}, []),
         (
             ["get_kappa_area"],
             ["greenwald_fraction"],
-            COORDS | {"kappa_area", "n_e", "dn_dt", "greenwald_fraction"},
+            {"kappa_area", "n_e", "dn_dt", "greenwald_fraction"},
             [],
         ),
         (
             ["~get_kappa_area"],
             ["greenwald_fraction"],
-            COORDS | {"n_e", "dn_dt", "greenwald_fraction"},
+            {"n_e", "dn_dt", "greenwald_fraction"},
             [],
         ),
-        (["~get_kappa_area"], ["kappa_area"], COORDS, []),
+        (["~get_kappa_area"], ["kappa_area"], [], []),
     ],
 )
 def test_run_methods_and_columns(
@@ -136,6 +142,7 @@ def test_run_methods_and_columns(
     expected_cols,
     forbidden_cols,
     full_time_domain_data,
+    test_folder_f,
 ):
     """
     Test the `run_methods` and `run_columns` parameters of RetrievalSettings.
@@ -146,7 +153,6 @@ def test_run_methods_and_columns(
     - If `run_methods` excludes a method returning a column specified in `run_columns`,
       the method is not run
     """
-    num_all_cols = len(full_time_domain_data[0].columns)
     retrieval_settings = RetrievalSettings(
         run_methods=run_methods,
         run_columns=run_columns,
@@ -155,12 +161,18 @@ def test_run_methods_and_columns(
         tokamak=tokamak,
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
+        output_setting=os.path.join(test_folder_f, "output.nc"),
+        log_settings=LogSettings(
+            console_log_level="WARNING",
+            log_file_path=os.path.join(test_folder_f, "output.log"),
+        ),
         num_processes=2,
-        log_settings="WARNING",
     )
     # Expected columns None means all columns (except forbidden cols) are returned
     if expected_cols is None:
-        assert len(results.columns) == num_all_cols - len(forbidden_cols)
+        assert len(results.data_vars) == len(full_time_domain_data[0].data_vars) - len(
+            forbidden_cols
+        )
     else:
-        assert set(results.columns) == set(expected_cols)
-    assert all(col not in results.columns for col in forbidden_cols)
+        assert set(results.data_vars) == set(expected_cols)
+    assert all(col not in results.data_vars for col in forbidden_cols)
