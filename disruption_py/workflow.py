@@ -5,8 +5,6 @@ main workflow
 """
 
 import argparse
-
-# import os
 import time
 from itertools import repeat
 from multiprocessing import Pool
@@ -17,7 +15,7 @@ from tqdm.auto import tqdm
 
 from disruption_py.config import config
 from disruption_py.core.retrieval_manager import RetrievalManager
-from disruption_py.core.utils.misc import (  # get_temporary_folder,
+from disruption_py.core.utils.misc import (
     get_elapsed_time,
     without_duplicates,
 )
