@@ -4,6 +4,7 @@
 Module for managing connections to MDSplus.
 """
 
+import threading
 from typing import Any, Callable, Dict, List, Tuple
 
 import MDSplus
@@ -28,6 +29,11 @@ class ProcessMDSConnection:
         self.conn = None
         if conn_string is None:
             return
+        logger.debug(
+            "PID #{pid} | Connecting to MDSplus server: {server}",
+            server=conn_string,
+            pid=threading.get_native_id(),
+        )
         # pylint: disable=no-member
         self.conn = MDSplus.Connection(conn_string)
         try:
@@ -83,7 +89,8 @@ def _better_mds_exceptions(func):
                 err = "Bad record"
             else:
                 err = "MDSplus error"
-            raise type(e)(f"{err}. Tree: {self.last_open_tree}, Node: {path}") from None
+            last_tree = self.open_trees[0] if self.open_trees else None
+            raise type(e)(f"{err}. Tree: {last_tree}, Node: {path}") from None
 
     return wrapper
 
@@ -100,7 +107,18 @@ class MDSConnection:
         self.shot_id = shot_id
         self.tree_nickname_funcs = {}
         self.tree_nicknames = {}
-        self.last_open_tree = None
+        self.open_trees = []
+
+    def reconnect(self):
+        """
+        Reconnect to the MDSplus server.
+        """
+        logger.debug(
+            "PID #{pid} | Reconnecting to MDSplus server.",
+            pid=threading.get_native_id(),
+        )
+        self.conn.reconnect()
+        self.open_trees = []
 
     @_better_mds_exceptions
     def open_tree(self, tree_name: str):
@@ -119,21 +137,32 @@ class MDSConnection:
         if tree_name in self.tree_nicknames:
             tree_name = self.tree_nicknames[tree_name]
 
-        if self.last_open_tree != tree_name:
+        if not self.open_trees or self.open_trees[0] != tree_name:
             logger.trace(
                 shot_msg("Opening tree: {tree_name}"),
                 shot=self.shot_id,
                 tree_name=tree_name,
             )
             self.conn.openTree(tree_name, self.shot_id)
-
-        self.last_open_tree = tree_name
+            self.open_trees = [tree_name] + [
+                t for t in self.open_trees if t != tree_name
+            ]
 
     def cleanup(self):
         """
         Close all open trees
         """
-        self.last_open_tree = None
+        logger.trace(
+            shot_msg("Closing {ntrees} trees"),
+            shot=self.shot_id,
+            ntrees=len(self.open_trees),
+        )
+        for tree in self.open_trees:
+            try:
+                self.conn.closeTree(tree, self.shot_id)
+            except MDSplus.mdsExceptions.TreeNOT_OPEN:
+                break
+        self.open_trees = []
 
     @_better_mds_exceptions
     def get(self, expression: str, arguments: Any = None, tree_name: str = None) -> Any:
