@@ -6,6 +6,7 @@ Module for utility functions related to class instantiation, data manipulation, 
 
 import os
 import subprocess
+import sys
 import time
 import warnings
 from functools import lru_cache
@@ -125,23 +126,28 @@ def get_commit_hash() -> str:
 
 
 @lru_cache
-def get_temporary_folder() -> Path:
+def get_temporary_folder() -> str:
     """
     Create and return a temporary folder.
     The result is cached to return the same path for different invocations.
 
     Returns
     -------
-    Path
+    str
         Resulting temporary folder.
     """
 
     # create temporary top folder
-    top = os.path.join("/tmp", os.getenv("USER"), "disruption-py")
+    top = os.path.join(
+        "/tmp",
+        os.getenv("USER"),
+        "disruption-py",
+        ("." if "pytest" in sys.modules else "") + time.strftime("%Y-%m-%d"),
+    )
     Path(top).mkdir(parents=True, exist_ok=True)
 
     # create temporary sub folder
-    return mkdtemp(prefix=time.strftime("%Y%m%d-%H%M%S-"), dir=top)
+    return mkdtemp(dir=top, prefix=time.strftime("%H.%M.%S-"))
 
 
 def shot_msg(message: str) -> str:
