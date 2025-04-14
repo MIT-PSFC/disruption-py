@@ -191,8 +191,6 @@ def populate_method(
 
         # mock-up data
         result = {col: [np.nan] for col in bound_method_metadata.columns}
-        if isinstance(e, mdsExceptions.MDSplusERROR):
-            physics_method_params.mds_conn.reconnect()
 
         # reconnect if needed
         if isinstance(e, mdsExceptions.MDSplusERROR):
