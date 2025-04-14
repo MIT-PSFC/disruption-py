@@ -9,6 +9,8 @@ dataframes.
 """
 
 import os
+import sys
+import tempfile
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -92,7 +94,7 @@ class OutputSetting(ABC):
         """
 
     @abstractmethod
-    def to_disk(self) -> str | None:
+    def to_disk(self) -> str:
         """
         Save final output to disk.
         """
@@ -139,11 +141,11 @@ class OutputSettingList(OutputSetting):
         """
         return [s.get_results() for s in self.output_setting_list]
 
-    def to_disk(self) -> None:
+    def to_disk(self) -> List[str]:
         """
-        Do not save OutputSettingList to disk.
+        Save each OutputSettingList to disk.
         """
-        return None
+        return [s.to_disk() for s in self.output_setting_list]
 
 
 class DictOutputSetting(OutputSetting):
@@ -151,21 +153,23 @@ class DictOutputSetting(OutputSetting):
     Outputs data as a dictionary of Datasets.
     """
 
-    def __init__(self, path: str | None | bool = None):
+    def __init__(self, path: str | bool = True):
         """
         Initialize empty DictOutputSetting.
 
         Parameters
         ----------
-        path : str | None | bool
+        path : str | bool, default = True
             The path for writing results to disk.
+            If True, a temporary location will be used.
             If False, no results are written to disk.
-            If True/None, the temporary location will be used.
         """
         self.results = {}
+        if path is True:
+            path = os.path.join(get_temporary_folder(), "output")
+            if os.path.exists(path) or "pytest" in sys.modules:
+                path = tempfile.mkdtemp(dir=get_temporary_folder(), prefix="output-")
         self.path = path
-        if path in [True, None]:
-            self.path = get_temporary_folder()
 
     def _output_shot(self, params: OutputSettingParams):
         """
@@ -189,20 +193,20 @@ class DictOutputSetting(OutputSetting):
         """
         return self.results
 
-    def to_disk(self) -> str | None:
+    def to_disk(self) -> str:
         """
         Save all resulting Datasets into a folder.
         """
 
         if not self.path:
-            return None
+            return ""
         if os.path.exists(self.path):
             if not os.path.isdir(self.path):
                 raise FileExistsError(f"Path already exists! {self.path}")
+            if os.listdir(self.path):
+                logger.warning("Output folder already exists! {path}", path=self.path)
         else:
             os.makedirs(self.path)
-
-        logger.debug("Saving results: {path}", path=self.path)
 
         t = time.time()
         for shot, dataset in self.results.items():
@@ -222,25 +226,27 @@ class SingleOutputSetting(DictOutputSetting):
     Abstract class that outputs data as a single object/file.
     """
 
-    def __init__(self, path: str | None | bool = None):
+    def __init__(self, path: str | bool = True):
         """
         Initialize empty SingleOutputSetting.
 
         Parameters
         ----------
-        path : str | None | bool
+        path : str | bool, default = True
             The path for writing results to disk.
+            If True, a unique temporary location will be used.
             If False, no results are written to disk.
-            If True/None, the temporary location will be used.
         """
         super().__init__(path=False)
         self.result = None
+        if path is True:
+            ext = ".csv" if "DataFrame" in self.__class__.__name__ else ".nc"
+            path = os.path.join(get_temporary_folder(), f"output{ext}")
+            if os.path.exists(path) or "pytest" in sys.modules:
+                _, path = tempfile.mkstemp(
+                    dir=get_temporary_folder(), prefix="output-", suffix=ext
+                )
         self.path = path
-        if path in [True, None]:
-            ext = "nc"
-            if "DataFrame" in self.__class__.__name__:
-                ext = "csv"
-            self.path = os.path.join(get_temporary_folder(), f"output.{ext}")
 
     @abstractmethod
     def concat(self) -> OutputSingleType:
@@ -267,14 +273,14 @@ class SingleOutputSetting(DictOutputSetting):
         self.results = {}
         return self.result
 
-    def to_disk(self) -> str | None:
+    def to_disk(self) -> str:
         """
         Save the resulting object into a file.
         """
 
         if not self.path:
-            return None
-        if os.path.exists(self.path):
+            return ""
+        if os.path.exists(self.path) and os.path.getsize(self.path):
             raise FileExistsError(f"File already exists! {self.path}")
 
         logger.debug(
@@ -347,9 +353,9 @@ class DataFrameOutputSetting(SingleOutputSetting):
             The resulting DataFrame.
         """
         base = ["shot", "time"]
-        df = pd.concat([ds.to_dataframe() for ds in self.results.values()])
+        df = xr.concat(self.results.values(), dim="idx").to_dataframe()
         cols = base + [c for c in sorted(df.columns) if c not in base]
-        return df[cols].reindex()
+        return df[cols]
 
 
 # --8<-- [start:output_setting_dict]
