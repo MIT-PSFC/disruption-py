@@ -477,7 +477,9 @@ class EastPhysicsMethods:
                 # Subtract baseline
                 signal = signal - np.mean(signal[:100])
                 # TODO: change this to causal smoothing
-                xuv[:, ichord] = smooth(signal, smoothing_window) * 1e3  # [kW] -> [W]
+                xuv[:, ichord] = (
+                    matlab_smooth(signal, smoothing_window) * 1e3
+                )  # [kW] -> [W]
         return xuv, xuvtime
 
     @staticmethod
