@@ -254,7 +254,7 @@ def cli():
     parser.add_argument("-m", "--methods", type=str, action="append")
     parser.add_argument("-e", "--efit-tree", type=str, default="disruption")
     parser.add_argument("-b", "--time-base", type=str, default="disruption_warning")
-    parser.add_argument("-o", "--output", type=str, default="dataset")
+    parser.add_argument("-o", "--output", type=str, default="dataframe")
     parser.add_argument("-p", "--processes", type=int, default=1)
     parser.add_argument("-l", "--log-level", type=str, default="VERBOSE")
 
