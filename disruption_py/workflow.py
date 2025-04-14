@@ -89,7 +89,7 @@ def get_shots_data(
         The output type setting to be used when outputting the retrieved data for
         each shot. Note that data is streamed to the output type setting object
         as it is retrieved. Can pass any OutputSettingType that resolves to an
-        OutputSetting. See OutputSetting for more details. Defaults to "list".
+        OutputSetting. See OutputSetting for more details. Defaults to "dataframe".
     num_processes : int
         The number of processes to use for data retrieval. If 1, the data is retrieved
         in serial. If > 1, the data is retrieved in parallel.
