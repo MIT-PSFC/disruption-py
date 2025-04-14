@@ -4,10 +4,11 @@
 Unit tests for the retrieval settings which covers data retrieval from various
 sources and the time domain of the data retrieved.
 """
+
 import os
-from typing import Dict
 
 import pytest
+import xarray as xr
 
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings import RetrievalSettings
@@ -15,25 +16,22 @@ from disruption_py.settings.log_settings import LogSettings
 from disruption_py.workflow import get_shots_data
 from tests.conftest import skip_on_fast_execution
 
-COORDS = {"shot", "time"}
 
-
-@pytest.fixture(scope="module", name="full_time_domain_data")
-def full_time_domain_data_fixture(tokamak, shotlist, test_folder_m) -> Dict:
+@pytest.fixture(scope="module", name="full_domain_data")
+def full_domain_data_fixture(tokamak, shotlist, test_folder_m) -> xr.Dataset:
     """
     Get data for the full time domain.
     """
-    results = get_shots_data(
+    return get_shots_data(
         tokamak=tokamak,
         shotlist_setting=shotlist,
-        output_setting=os.path.join(test_folder_m, "output/"),
+        output_setting=os.path.join(test_folder_m, "output.nc"),
         log_settings=LogSettings(
             console_log_level="WARNING",
             log_file_path=os.path.join(test_folder_m, "output.log"),
         ),
         num_processes=2,
     )
-    return [results[str(shot)] for shot in shotlist]
 
 
 @skip_on_fast_execution
@@ -44,8 +42,9 @@ def test_only_requested_columns(tokamak, shotlist, test_folder_f):
     `dip_dt` returned. `q95` is from efit, so none of the other efit quantities
     should be returned.
     """
+    run_columns = ["ip", "q95"]
     retrieval_settings = RetrievalSettings(
-        run_columns=["ip", "q95"],
+        run_columns=run_columns,
         only_requested_columns=True,
     )
     results = get_shots_data(
@@ -59,14 +58,13 @@ def test_only_requested_columns(tokamak, shotlist, test_folder_f):
         ),
         num_processes=2,
     )
-    assert {"shot", "time"} == set(results.coords)
-    assert {"ip", "q95"} == set(results.data_vars)
+    assert set(run_columns) == set(results.data_vars)
 
 
 @skip_on_fast_execution
 @pytest.mark.parametrize("domain_setting", ["flattop", "rampup_and_flattop"])
 def test_domain_setting(
-    tokamak, shotlist, domain_setting, full_time_domain_data, test_folder_f
+    tokamak, shotlist, domain_setting, full_domain_data, test_folder_f
 ):
     """
     Test the two partial domain settings by comparing their start and end times
@@ -80,23 +78,27 @@ def test_domain_setting(
     retrieval_settings = RetrievalSettings(
         efit_nickname_setting="default", domain_setting=domain_setting
     )
-    results = get_shots_data(
+    part_domain_data = get_shots_data(
         tokamak=tokamak,
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
-        output_setting=os.path.join(test_folder_f, "output/"),
+        output_setting=os.path.join(test_folder_f, "output.nc"),
         log_settings=LogSettings(
             console_log_level="WARNING",
             log_file_path=os.path.join(test_folder_f, "output.log"),
         ),
         num_processes=2,
     )
-    results = [results[str(shot)] for shot in shotlist]
-
-    assert len(shotlist) == len(results) == len(full_time_domain_data)
-    for part_domain, full_domain in zip(results, full_time_domain_data):
-        p_start, p_end = part_domain["time"].values[0], part_domain["time"].values[-1]
-        f_start, f_end = full_domain["time"].values[0], full_domain["time"].values[-1]
+    assert (
+        set(shotlist)
+        == set(part_domain_data.shot.values)
+        == set(full_domain_data.shot.values)
+    )
+    for shot in shotlist:
+        part_domain = part_domain_data.sel(idx=part_domain_data.shot == shot)
+        full_domain = full_domain_data.sel(idx=full_domain_data.shot == shot)
+        p_start, p_end = part_domain.time.values[0], part_domain.time.values[-1]
+        f_start, f_end = full_domain.time.values[0], full_domain.time.values[-1]
         if domain_setting == "flattop":
             # Use <= because a shot may end during the flattop,
             assert f_start < p_start < p_end <= f_end
@@ -141,7 +143,7 @@ def test_run_methods_and_columns(
     run_columns,
     expected_cols,
     forbidden_cols,
-    full_time_domain_data,
+    full_domain_data,
     test_folder_f,
 ):
     """
@@ -163,15 +165,15 @@ def test_run_methods_and_columns(
         retrieval_settings=retrieval_settings,
         output_setting=os.path.join(test_folder_f, "output.nc"),
         log_settings=LogSettings(
-            console_log_level="WARNING",
+            console_log_level="CRITICAL",
             log_file_path=os.path.join(test_folder_f, "output.log"),
         ),
         num_processes=2,
     )
     # Expected columns None means all columns (except forbidden cols) are returned
     if expected_cols is None:
-        assert len(results.data_vars) == len(full_time_domain_data[0].data_vars) - len(
-            forbidden_cols
+        assert set(results.data_vars) == set(
+            k for k in full_domain_data.data_vars if k not in forbidden_cols
         )
     else:
         assert set(results.data_vars) == set(expected_cols)
