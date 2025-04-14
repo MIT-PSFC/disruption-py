@@ -87,19 +87,21 @@ def mock_numpy_gradient():
 
 def test_folder(request) -> str:
     """
-    Fixture to generate a folder for each test.
+    Generate a folder for each test.
 
     Parameters
     ----------
-    request : FixtureRequest
-        The request object for the current test.
+    request : FixtureRequest | str
+        The request object for the current test, or a string.
 
     Returns
     -------
     str
         The temporary folder.
     """
-    folder = os.path.join(get_temporary_folder(), request.node.name)
+    if not isinstance(request, str):
+        request = request.node.name
+    folder = os.path.join(get_temporary_folder(), request)
     os.makedirs(folder, exist_ok=True)
     return folder
 
