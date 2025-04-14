@@ -10,7 +10,7 @@ from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.math import interp1, smooth
+from disruption_py.core.utils.math import interp1, matlab_smooth
 from disruption_py.machine.east.efit import EastEfitMethods
 from disruption_py.machine.east.util import EastUtilMethods
 from disruption_py.machine.tokamak import Tokamak
@@ -771,7 +771,7 @@ class EastPhysicsMethods:
         sign_ip = np.sign(sum(ip))
         dipdt = np.gradient(ip, ip_time)
         # TODO: switch to causal boxcar smoothing
-        dipdt_smoothed = smooth(dipdt, 11)  # Use 11-point boxcar smoothing
+        dipdt_smoothed = matlab_smooth(dipdt, 11)  # Use 11-point boxcar smoothing
 
         # Interpolate fetched signals to the requested timebase
         vloop = interp1(vloop_time, vloop, params.times, kind="linear", bounds_error=0)

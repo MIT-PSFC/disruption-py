@@ -31,19 +31,25 @@ class D3DPhysicsMethods:
     @physics_method(columns=["time_until_disrupt"], tokamak=Tokamak.D3D)
     def get_time_until_disrupt(params: PhysicsMethodParams):
         """
-        Calculate the time until the disruption for a given shot. If the shot does
-        not disrupt, return NaN.
+        Calculate the time until disruption. If the shot does not disrupt, return NaN.
+
+        Currently, the disruption time is queried from the `DISRUPTIONS` table
+        in the SQL database of each machine. These disruption times were calculated
+        using Robert Granetz's routine.
 
         Parameters
         ----------
         params : PhysicsMethodParams
-            Parameters containing MDS connection and shot information.
+            The parameters containing the disruption information and times.
 
         Returns
         -------
         dict
-            A dictionary containing the time until disruption. If the shot does
-            not disrupt, return NaN.
+            A dictionary with a single key `time_until_disrupt`.
+
+        References
+        -------
+        - issues: #[223](https://github.com/MIT-PSFC/disruption-py/issues/223)
         """
         if params.disrupted:
             return {"time_until_disrupt": params.disruption_time - params.times}
@@ -53,13 +59,23 @@ class D3DPhysicsMethods:
     @physics_method(columns=["h98"], tokamak=Tokamak.D3D)
     def get_h98(params: PhysicsMethodParams):
         """
-        Get the H98y2 energy confinement time parameter
+        Get the H98y2 energy confinement factor.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the H98y2 factor (`h98`).
 
         Reference
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_H98_d3d.m
-
-        Last major update by William Wei on 7/31/2024
+        - original: [get_H98_d3d.m](https://github.com/MIT-PSFC/disruption-py/blob/
+        matlab/DIII-D/get_H98_d3d.m)
+        - pull requests: #[239](https://github.com/MIT-PSFC/disruption-py/pull/239)
         """
         output = {
             "h98": [np.nan],
@@ -79,14 +95,25 @@ class D3DPhysicsMethods:
     @staticmethod
     @physics_method(columns=["h_alpha"], tokamak=Tokamak.D3D)
     def get_h_alpha(params: PhysicsMethodParams):
-        """
-        Get the H_alpha line emission intensity.
+        r"""
+        Get the $H_{\alpha}$ line emission intensity.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the $H_{\alpha}$ line emission intensity
+            signal (`h_alpha`).
 
         Reference
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_H98_d3d.m
-
-        Last major update by William Wei on 7/31/2024
+        - original source: [get_H_alpha_d3d.m](https://github.com/MIT-PSFC/disrupt
+        ion-py/blob/matlab/DIII-D/get_H_alpha_d3d.m)
+        - pull requests: #[239](https://github.com/MIT-PSFC/disruption-py/pull/239)
         """
         output = {
             "h_alpha": [np.nan],
@@ -109,21 +136,38 @@ class D3DPhysicsMethods:
         tokamak=Tokamak.D3D,
     )
     def get_power_parameters(params: PhysicsMethodParams):
-        """
-        Compute the input NBI, ECH powers, radiated power measured by the bolometer array,
-        and the radiated fraction for a DIII-D shot.
+        r"""
+        Get the neutral beam injection (NBI), electron cyclotron resonant heating (ECH),
+        and the radiated powers, then calculate the radiated fraction.
+
+        The radiated fraction is defined as:
+
+        $$
+        f_\text{rad} = \frac{p_\text{rad}}{p_\text{ohm} + p_\text{nbi} + p_\text{ech}}
+        $$
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the retrieved and calculated power signals, including
+            `p_rad`, `p_nbi`, `p_ech`, and `radiated_fraction`.
 
         References:
         -------
-        - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_power_d3d.m
-
-        Last major update by William Wei on 8/1/2024
+        - original source: [get_power_d3d.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/DIII-D/get_power_d3d.m)
+        - pull requests: #[234](https://github.com/MIT-PSFC/disruption-py/pull/234)
+        - issues: #[229](https://github.com/MIT-PSFC/disruption-py/issues/229)
         """
-
         # Get neutral beam injected power
         try:
             p_nbi, t_nbi = params.mds_conn.get_data_with_dims(
-                r"\d3d::top.nb:pinj", tree_name="d3d"
+                r"\top.nb:pinj", tree_name="d3d"
             )
             t_nbi /= 1e3  # [ms] -> [s]
             p_nbi *= 1e3  # [KW] -> [W]
@@ -254,13 +298,26 @@ class D3DPhysicsMethods:
     )
     def get_ohmic_parameters(params: PhysicsMethodParams):
         """
-        Compute ohmic heating power and loop voltage for a DIII-D shot
+        Calculate the ohmic heating power from the loop voltage, inductive voltage, and
+        plasma current.
 
-        References:
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
         -------
-        - https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_P_ohm_d3d.m
+        dict
+            A dictionary containing the loop voltage (`v_loop`) and the ohmic
+            heating power (`p_oh`).
 
-        Last major update by William Wei on 8/1/2024
+        References
+        -------
+        - original source: [get_P_ohm_d3d.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/DIII-D/get_P_ohm_d3d.m)
+        - pull requests: #[234](https://github.com/MIT-PSFC/disruption-py/pull/234)
+        - issues: #[229](https://github.com/MIT-PSFC/disruption-py/issues/229)
         """
         # Get edge loop voltage and smooth it a bit with a median filter
         v_loop, t_v_loop = params.mds_conn.get_data_with_dims(
@@ -325,15 +382,30 @@ class D3DPhysicsMethods:
     )
     def get_density_parameters(params: PhysicsMethodParams):
         """
-        Get electron density from EFIT, then compute dn_dt and Greenwald_fraction.
+        This routine obtains the line-averaged density (`DENSITY`) from the EFIT trees.
+        It is calculated using the double-pass interferometer
+        line-integrated density measurements and EFIT path lengths (`PATHV1`,
+        `PATHV2`, `PATHV3`, `PATHR0`)
+
+        The routine also calculates the time derivatives of electron density,
+        and the Greenwald fraction using aminor coming from the EFIT tree.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing electron density (`n_e`), its time derivative
+            (`dn_dt`), and the Greenwald fraction (`greenwald_fraction`).
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_density_parameters.m
-        https://github.com/MIT-PSFC/disruption-py/issues/238
-        https://github.com/MIT-PSFC/disruption-py/pull/249
-
-        Last major update by William Wei on 8/2/2024
+        - original source: [get_density_parameters.m](https://github.com/MIT-PSFC/disru
+        ption-py/blob/matlab/DIII-D/get_density_parameters.m)
+        - pull requests: #[249](https://github.com/MIT-PSFC/disruption-py/pull/249)
         """
         ne, t_ne = params.mds_conn.get_data_with_dims(
             r"\density", tree_name="_efit_tree"
@@ -401,15 +473,31 @@ class D3DPhysicsMethods:
     )
     def get_rt_density_parameters(params: PhysicsMethodParams):
         """
-        Get real-time electron density from EFIT, then compute the
-        real-time dn_dt and Greenwald_fraction.
+        This routine obtains the line-averaged density available to the PCS in
+        real-time (`dssdenest`), which is calculated using the double-pass
+        interferometer line-integrated density measurements and `EFITRT1` path
+        lengths (`PATHV1`, `PATHV2`, `PATHV3`, `PATHR0`).
+
+        This routine also calculates the time derivative of electron density, and
+        the Greenwald density using aminor coming from `EFITRT1` trees.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the real-time electron density (`n_e_rt`),
+            its time derivative (`dn_dt_rt`), and the real-time Greenwald fraction
+            (`greenwald_fraction_rt`).
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_density_parameters_RT.m
-        https://github.com/MIT-PSFC/disruption-py/pull/251
-
-        Last major update by William Wei on 8/2/2024
+        - original source: [get_density_parameters_RT.m](https://github.com/MIT-PSFC
+        /disruption-py/blob/matlab/DIII-D/get_density_parameters_RT.m)
+        - pull requests: #[251](https://github.com/MIT-PSFC/disruption-py/pull/251)
         """
         ne_rt, t_ne_rt = params.mds_conn.get_data_with_dims(
             f"ptdata('dssdenest', {params.shot_id})", tree_name="_efit_tree"
@@ -474,7 +562,10 @@ class D3DPhysicsMethods:
     )
     def get_ip_parameters(params: PhysicsMethodParams):
         """
-        Retrieve plasma current parameters including measured and programmed values.
+        This method retrieves the plasma current signal. It then calculates the error
+        between the programmed and the actual plasma current, and the time derivatives
+        of the actual and the programmed plasma current. It also checks the `epsoff`
+        signal to determine if one of the E-coil power supplies has railed.
 
         Parameters
         ----------
@@ -485,16 +576,18 @@ class D3DPhysicsMethods:
         -------
         dict
             A dictionary containing the following keys:
-            - 'ip' : array
-                Measured plasma current values interpolated to the specified times.
-            - 'ip_error' : array
-                Error in plasma current, defined where feedback is active.
-            - 'dip_dt' : array
-                Time derivative of the measured plasma current.
-            - 'dipprog_dt' : array
-                Time derivative of the programmed plasma current.
-            - 'power_supply_railed' : array
-                Indicator of whether the power supply has railed at the specified times.
+
+            - `ip`: Measured plasma current values interpolated to the specified times.
+            - `ip_error`: Error between the actual and programmed plasma currents.
+            - `dip_dt`: Time derivative of the measured plasma current.
+            - `dipprog_dt`: Time derivative of the programmed plasma current.
+            - `power_supply_railed`: Indicator of whether the power supply has railed
+            at the specified times.
+
+        References
+        -------
+        - original source: [get_Ip_parameters.m](https://github.com/MIT-PSFC/disruption-py/blob
+        /matlab/DIII-D/get_Ip_parameters.m)
         """
         ip = [np.nan]
         ip_prog = [np.nan]
@@ -593,15 +686,26 @@ class D3DPhysicsMethods:
     )
     def get_rt_ip_parameters(params: PhysicsMethodParams):
         """
-        Get the real-time plasma current and programmed plasma current from EFIT,
-        then compute the real-time ip_error and the derivatives of all of the above signals.
+        Get the real-time actual and programmed plasma current signals,
+        then compute the time derivatives and the error.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing the real-time plasma current (`ip_rt`), the programmed
+            current (`ip_prog_rt`), theerror between the actual and the programmed plasma currents
+            (`ip_error_rt`), and the time derivatives (`dip_dt_rt` and `dipprog_dt_rt`).
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_Ip_parameters_RT.m
-        https://github.com/MIT-PSFC/disruption-py/pull/254
-
-        Last major update by William Wei on 8/5/2024
+        - original source: [get_Ip_parameters_RT.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/DIII-D/get_Ip_parameters_RT.m)
+        - pull requests: #[254](https://github.com/MIT-PSFC/disruption-py/pull/254)
         """
         ip_rt = [np.nan]
         ip_prog_rt = [np.nan]
@@ -712,12 +816,25 @@ class D3DPhysicsMethods:
         Get the vertical position of the plasma current centroid, then
         compute the normalized values with respect to the plasma minor radius.
 
+        On DIII-D, the plasma control system uses isoflux control to control the
+        plasma shape and position. It does not use zcur control like in Alcator C-Mod.
+        As a result, the PCS does not have a programmed vertical position.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing `zcur` and `zcur_normalized`.
+
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_Z_error_d3d.m
-        https://github.com/MIT-PSFC/disruption-py/pull/255
-
-        Last major update by William Wei on 9/4/2024
+        - original source: [get_Z_error_d3d.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/DIII-D/get_Z_error_d3d.m)
+        - pull requests: #[255](https://github.com/MIT-PSFC/disruption-py/pull/255)
         """
         nominal_flattop_radius = 0.59
         # Get z_cur
@@ -749,15 +866,25 @@ class D3DPhysicsMethods:
     @staticmethod
     @physics_method(columns=["n1rms", "n1rms_normalized"], tokamak=Tokamak.D3D)
     def get_n1rms_parameters(params: PhysicsMethodParams):
-        """
-        Get the n1rms data, then compute n1rms_normalized = n1rms / btor
+        r"""
+        Get the `n1rms` signal, then compute the normalized `n1rms` by dividing it
+        by $B_{tor}$.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing `n1rms` and `n1rms_normalized`.
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_n1rms_d3d.m
-        https://github.com/MIT-PSFC/disruption-py/pull/257
-
-        Last major update by William Wei on 8/6/2024
+        - original source: [get_n1rms_d3d.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/DIII-D/get_n1rms_d3d.m)
+        - pull requests: #[257](https://github.com/MIT-PSFC/disruption-py/pull/257)
         """
         # Get n1rms signal from d3d tree
         n1rms, t_n1rms = params.mds_conn.get_data_with_dims(r"\n1rms", tree_name="d3d")
@@ -796,40 +923,41 @@ class D3DPhysicsMethods:
     )
     def get_peaking_factors(params: PhysicsMethodParams):
         """
-        This function calculates peaking factors for the shot number
-        given by the user corresponding to the times in the given timebase.
-        Electron temperature (Te_PF) and density (ne_PF) profile peaking
-        factors are taken from Thomson scattering measurements, and the peaking
-        factors describing radiated power distributions (Rad_CVA and Rad_XDIV)
-        are taken from the 2pi foil bolometer system.
+        This function calculates the peaking factors of:
 
-        The Thomson-based peaking factors are computed by first mapping the channel
-        locations to the EFIT grid (rhovn: normalized rho, psin: normalized poloidal
+        1. the electron temperature and densitymeasured by the Thomson scattering diagnostic,
+        2. the plasma's radiated power measured by the 2pi foil bolometer system.
+
+        The Thomson-based peaking factors are computed by first mapping the channels'
+        positions to the EFIT grid (`rhovn`: normalized rho, `psin`: normalized poloidal
         flux) and then determining the core channels through a threshold on rhovn.
 
-        For the bolometer-based peaking factors, a subset of 12 chords from the lower
-        fan array (fan = 'custom') are selected for the calculation. The core chords
-        are determined through a threshold from the magnetic axis. The divertor chords
-        preselected and consist of 5 chords from the 12-chord array.
+        The bolometer-based peaking factors are computed by first selecting a subset of 12 channels
+        from the lower fan array (fan = "custom"). From these 12 channels, the core channels are
+        determined through a threshold from the magnetic axis. The divertor channels consist of 5
+        channels which cover the lower divertor region.
 
         Returns
         -------
-        te_peaking_cva_rt: np.ndarray
-            Te peaking factor, core vs all channels
-        ne_peaking_cva_rt: np.ndarray
-            ne peaking factor, core vs all channels
-        prad_peaking_cva_rt: np.ndarray
-            bolometer peaking factor, core vs all-but-divertor channels
-        prad_peaking_xdiv_rt: np.ndarray
-            bolometer peaking factor, divertor vs all-but-core channels
+        dict
+            A dictionary containing the following keys:
+
+            - `te_peaking_cva_rt`: Peaking factor of the electron temperature profile,
+            core vs all channels.
+            - `ne_peaking_cva_rt`: Peaking factor of the electron density profile,
+            core vs all channels.
+            - `prad_peaking_cva_rt`: Peaking factor for the radiated power, core vs
+            all-but-divertor channels.
+            - `prad_peaking_xdiv_rt`: Peaking factor for the radiated power, divertor vs
+            all-but-core channels.
 
         Reference
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_peaking_factors_d3d.m
-        https://github.com/MIT-PSFC/disruption-py/pull/265
-        https://github.com/MIT-PSFC/disruption-py/pull/328
-
-        Last major update by William Wei on 10/01/2024
+        - original source: [get_peaking_factors_d3d.m](https://github.com/MIT-PSFC/
+        disruption-py/blob/matlab/DIII-D/get_peaking_factors_d3d.m)
+        - pull requests: #[265](https://github.com/MIT-PSFC/disruption-py/pull/
+        265), #[328](https://github.com/MIT-PSFC/disruption-py/pull/328)
+        - issues: #[261](https://github.com/MIT-PSFC/disruption-py/issues/261)
         """
         ## Thomson parameters
         ts_data_type = "blessed"  # either 'blessed', 'unblessed', or 'ptdata'
@@ -901,7 +1029,7 @@ class D3DPhysicsMethods:
             params.logger.warning("Failed to get TS data")
             params.logger.opt(exception=True).debug(e)
         if ts:
-            ts["psin"], ts["rhovn"] = D3DPhysicsMethods.efit_rz_interp(ts, efit_dict)
+            ts["psin"], ts["rhovn"] = D3DPhysicsMethods._efit_rz_interp(ts, efit_dict)
             ts["rhovn"] = ts["rhovn"].T
             ts["psin"] = ts["psin"].T
 
@@ -1040,7 +1168,7 @@ class D3DPhysicsMethods:
         }
 
     @staticmethod
-    def efit_rz_interp(ts, efit_dict):
+    def _efit_rz_interp(ts, efit_dict):
         """
         Interpolate the efit data to the given timebase and project onto the
         poloidal plane.
@@ -1100,7 +1228,7 @@ class D3DPhysicsMethods:
     @physics_method(columns=["z_eff"], tokamak=Tokamak.D3D)
     def get_zeff_parameters(params: PhysicsMethodParams):
         """
-        Retrieve the effective charge (Z_eff) parameters for a given shot.
+        Retrieve the effective charge (`z_eff`) parameters for a given shot.
 
         Parameters
         ----------
@@ -1110,13 +1238,11 @@ class D3DPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following key:
-            - 'z_eff' : array
-                Effective charge values interpolated to the specified times.
+            A dictionary containing `z_eff`
         """
         # Get Zeff
         zeff, t_zeff = params.mds_conn.get_data_with_dims(
-            r"\d3d::top.spectroscopy.vb.zeff:zeff", tree_name="d3d"
+            r"\top.spectroscopy.vb.zeff:zeff", tree_name="d3d"
         )
         t_zeff = t_zeff / 1.0e3  # [ms] -> [s]
         if len(t_zeff) > 2:
@@ -1136,18 +1262,31 @@ class D3DPhysicsMethods:
     @staticmethod
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.D3D)
     def get_kappa_area(params: PhysicsMethodParams):
-        """
-        Compute kappa_area (elongation parameter) defined as
-        plasma area / (pi * aminor**2)
+        r"""
+        Retrieve and calculate the plasma's ellipticity (*kappa*, also known as
+        the elongation) using its area and minor radius. It is defined as:
 
-        Note: the EFIT-computed kappa is retrieved in D3DEfitMethods.
+        $$
+        \kappa_{area} = \frac{A}{\pi a^2}
+        $$
+
+        where $A$ is the plasma cross-sectional area and $a$ is the minor radius.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the calculated `kappa_area`.
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_kappa_area.m
-        https://github.com/MIT-PSFC/disruption-py/pull/256
-
-        Last major update by William Wei on 8/6/2024
+        - original source: [get_kappa_area.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/DIII-D/get_kappa_area.m)
+        - pull requests: #[256](https://github.com/MIT-PSFC/disruption-py/pull/256)
         """
         a_minor = params.mds_conn.get_data(
             r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
@@ -1169,14 +1308,24 @@ class D3DPhysicsMethods:
     )
     def get_shape_parameters(params: PhysicsMethodParams):
         """
-        Get the plasma triangularity (delta), squareness, and minor radius [m] from EFIT.
+        Retrieve and compute the plasma triangularity (`delta`), squareness,
+        and minor radius from EFIT.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the keys `delta`, `squareness`, and `a_minor`.
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_shape_parameters.m
-        https://github.com/MIT-PSFC/disruption-py/pull/258
-
-        Last major update by William Wei on 8/6/2024
+        - original source: [get_shape_parameters.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/DIII-D/get_shape_parameters.m)
+        - pull requests: #[258](https://github.com/MIT-PSFC/disruption-py/pull/258)
         """
         # Get efit_time
         efit_time = params.mds_conn.get_data(

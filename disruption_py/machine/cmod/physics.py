@@ -14,10 +14,10 @@ from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import (
+    causal_boxcar_smooth,
     gaussian_fit,
     gaussian_fit_with_fixed_mean,
     interp1,
-    smooth,
 )
 from disruption_py.machine.cmod.thomson import CmodThomsonDensityMeasure
 from disruption_py.machine.tokamak import Tokamak
@@ -158,7 +158,9 @@ class CmodPhysicsMethods:
         - matlab/cmod_matlab/matlab-core/get_Ip_parameters.m
         """
         dip = np.gradient(ip, magtime)
-        dip_smoothed = smooth(dip, 11)  # ,ends_type=0)
+        # Apply 6-point causal boxcar smoothing to dip_dt
+        # This introduces a delay of about 0.5 ms
+        dip_smoothed = causal_boxcar_smooth(dip, 6)
         dipprog_dt = np.gradient(ip_prog, pcstime)
         ip_prog = interp1(
             pcstime, ip_prog, times, bounds_error=False, fill_value=ip_prog[-1]
@@ -438,6 +440,7 @@ class CmodPhysicsMethods:
                 end = pcstime[-1]
             else:
                 end = active_wire_segments[i + 1][1]
+            # DPCS refers to PCS so we need to open the common ancestor tree, HYBRID
             z_factor = params.mds_conn.get_data(
                 rf"\dpcs::top.seg_{i + 1:02d}:p_{z_wire_index:02d}:predictor:factor",
                 tree_name="hybrid",
@@ -453,10 +456,10 @@ class CmodPhysicsMethods:
         # TODO: Try to fix this
         if params.shot_id > 1150101000:
             ip_without_factor = params.mds_conn.get_data(
-                r"\hybrid::top.hardware.dpcs.signals.a_in:input_056", tree_name="hybrid"
+                r"\top.hardware.dpcs.signals.a_in:input_056", tree_name="hybrid"
             )
             ip_factor = params.mds_conn.get_data(
-                r"\hybrid::top.dpcs_config.inputs:input_056:p_to_v_expr",
+                r"\top.dpcs_config.inputs:input_056:p_to_v_expr",
                 tree_name="hybrid",
             )
             ip = ip_without_factor * ip_factor  # [A]
@@ -509,6 +512,9 @@ class CmodPhysicsMethods:
         v_inductive = inductance * dip_smoothed
         v_resistive = v_loop - v_inductive
         p_ohm = ip * v_resistive
+        # Set negative p_ohm values to 0
+        (indices,) = np.where(p_ohm < 0)
+        p_ohm[indices] = 0
         return {"p_oh": p_ohm, "v_loop": v_loop}
 
     @staticmethod
@@ -542,6 +548,9 @@ class CmodPhysicsMethods:
             v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
                 r"\top.mflux:v0", tree_name="analysis"
             )  # [V], [s]
+            # Apply 6-point boxcar smoothing to raw vloop signal.
+            # This introduces a delay of around 0.5 ms
+            v_loop = causal_boxcar_smooth(v_loop, 6)
         except mdsExceptions.TreeException:
             params.logger.verbose(
                 r"v_loop: Failed to get \top.mflux:v0 data. Use \efit_aeqdsk:vloopt instead."
@@ -1874,16 +1883,16 @@ class CmodPhysicsMethods:
         got_axa = False
         try:
             bright_axa, t_axa, r_axa = params.mds_conn.get_data_with_dims(
-                r"\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.AXA:BRIGHT",
+                r"\TOP.BOLOMETER.RESULTS.DIODE.AXA:BRIGHT",
                 tree_name="spectroscopy",
                 dim_nums=[1, 0],
             )  # [W/m^2], [s], [m]
             z_axa = params.mds_conn.get_data(
-                r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXA:Z_O",
+                r"\TOP.BOLOMETER.DIODE_CALIB.AXA:Z_O",
                 tree_name="spectroscopy",
             )  # [m]
             good_axa = params.mds_conn.get_data(
-                r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXA:GOOD",
+                r"\TOP.BOLOMETER.DIODE_CALIB.AXA:GOOD",
                 tree_name="spectroscopy",
             )  # [index]
             got_axa = True
@@ -1892,16 +1901,16 @@ class CmodPhysicsMethods:
         got_axj = False
         try:
             bright_axj, t_axj, r_axj = params.mds_conn.get_data_with_dims(
-                r"\SPECTROSCOPY::TOP.BOLOMETER.RESULTS.DIODE.AXJ:BRIGHT",
+                r"\TOP.BOLOMETER.RESULTS.DIODE.AXJ:BRIGHT",
                 tree_name="spectroscopy",
                 dim_nums=[1, 0],
             )  # [W/m^2], [s], [m]
             z_axj = params.mds_conn.get_data(
-                r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXJ:Z_O",
+                r"\TOP.BOLOMETER.DIODE_CALIB.AXJ:Z_O",
                 tree_name="spectroscopy",
             )  # [m]
             good_axj = params.mds_conn.get_data(
-                r"\SPECTROSCOPY::TOP.BOLOMETER.DIODE_CALIB.AXJ:GOOD",
+                r"\TOP.BOLOMETER.DIODE_CALIB.AXJ:GOOD",
                 tree_name="spectroscopy",
             )  # [index]
             got_axj = True

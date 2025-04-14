@@ -184,12 +184,15 @@ def populate_method(
     # pylint: disable-next=broad-exception-caught
     except Exception as e:
         level = "ERROR"
-        if isinstance(e, (mdsExceptions.MdsException, CalculationError)):
-            if not isinstance(e, mdsExceptions.MDSplusERROR):
-                level = "WARNING"
+        if isinstance(e, mdsExceptions.MDSplusERROR):
+            pass
+        elif isinstance(e, (mdsExceptions.MdsException, CalculationError)):
+            level = "WARNING"
         physics_method_params.logger.log(level, "{name}: {exc}", name=name, exc=repr(e))
         physics_method_params.logger.opt(exception=True).debug(name)
         result = {col: [np.nan] for col in bound_method_metadata.columns}
+        if isinstance(e, mdsExceptions.MDSplusERROR):
+            physics_method_params.mds_conn.reconnect()
 
     return result
 

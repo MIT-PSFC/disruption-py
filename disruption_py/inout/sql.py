@@ -146,8 +146,9 @@ class ShotDatabase:
         current_thread = threading.current_thread()
         if current_thread not in self._thread_connections:
             logger.debug(
-                "Connecting to database for thread {current_thread}",
-                current_thread=str(current_thread),
+                "PID #{pid} | Connecting to SQL database: {server}",
+                pid=threading.get_native_id(),
+                server=self.host,
             )
             self._thread_connections[current_thread] = pyodbc.connect(
                 self.connection_string
