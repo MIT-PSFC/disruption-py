@@ -8,7 +8,6 @@ tokamak instance.
 
 import os
 
-import numpy as np
 import pytest
 
 from disruption_py.core.physics_method.decorator import physics_method
@@ -33,7 +32,7 @@ def test_tokamak_parameter(shotlist, tok, test_folder_f):
 
     @physics_method(columns=[col_name], tokamak=tok)
     def my_physics_method(params: PhysicsMethodParams):
-        return {col_name: np.ones(shape=len(params.times))}
+        return {col_name: params.times**0}
 
     retrieval_settings = RetrievalSettings(
         run_columns=[col_name],
@@ -50,3 +49,6 @@ def test_tokamak_parameter(shotlist, tok, test_folder_f):
         ),
     )
     assert col_name in shot_data.data_vars
+    assert shotlist[0] in shot_data.shot
+    assert len(shot_data.time)
+    assert all(shot_data[col_name].values == 1)
