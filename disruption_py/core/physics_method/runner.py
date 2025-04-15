@@ -260,11 +260,12 @@ def populate_shot(
                     # as expected
                     pass
                 elif all(np.isnan(v)):
-                    # nan var needs to be padded
+                    # pad all-nan var
+                    physics_method_params.logger.debug("All-nan data: {col}", col=k)
                     v = [np.nan] * len(times)
                 else:
-                    # unexpected
-                    raise ValueError("Data length mismatch.")
+                    physics_method_params.logger.warning("Data length mismatch: {col}", col=k)
+                    continue
                 # convert to tuple with dim
                 data_vars[k] = ("idx", v)
 
