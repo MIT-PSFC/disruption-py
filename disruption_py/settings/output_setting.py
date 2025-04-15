@@ -180,7 +180,7 @@ class DictOutputSetting(OutputSetting):
         params : OutputSettingParams
             The parameters for outputting shot results.
         """
-        self.results[str(params.shot_id)] = params.result
+        self.results[params.shot_id] = params.result
 
     def get_results(self) -> OutputDictType:
         """
@@ -335,7 +335,7 @@ class DataTreeOutputSetting(SingleOutputSetting):
         xr.DataTree
             The DataTree containing the results, with shots as keys.
         """
-        return xr.DataTree.from_dict(self.results)
+        return xr.DataTree.from_dict({str(k): v for k, v in self.results.items()})
 
 
 class DataFrameOutputSetting(SingleOutputSetting):

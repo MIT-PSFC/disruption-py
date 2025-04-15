@@ -65,7 +65,7 @@ def get_fresh_data(
             log_file_path=os.path.join(folder, "output.log"),
         ),
     )
-    return {int(k): v.to_dataframe() for k, v in out.items()}
+    return {k: v.to_dataframe() for k, v in out.items()}
 
 
 def get_cached_from_fresh(
