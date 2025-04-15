@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Module for retrieving and calculating data for CMOD physics methods.
+Module for retrieving and calculating data for C-MOD physics methods.
 """
 
 import warnings
@@ -829,11 +829,7 @@ class CmodPhysicsMethods:
         data_vars = CmodPhysicsMethods._get_kappa_area(
             params.times, aminor, area, times
         )
-        coords = {
-            "shot": ("idx", len(params.times) * [params.shot_id]),
-            "time": ("idx", params.times),
-        }
-        return xr.Dataset(data_vars=data_vars, coords=coords)
+        return xr.Dataset(data_vars=data_vars, coords=params.to_coords())
 
     @staticmethod
     def _get_rotation_velocity(times, intensity, time, vel, hirextime):

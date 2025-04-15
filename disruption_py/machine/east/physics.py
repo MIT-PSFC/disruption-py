@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
 """
-Module for retrieving and calculating data for DIII-D physics methods.
+Module for retrieving and calculating data for EAST physics methods.
 """
 
 import numpy as np
 import scipy
+import xarray as xr
 from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.decorator import physics_method
@@ -943,8 +944,8 @@ class EastPhysicsMethods:
         # Compute kappa_area
         with np.errstate(divide="ignore", invalid="ignore"):
             kappa_area = area / (np.pi * aminor**2)
-
-        return {"kappa_area": kappa_area}
+        data_vars = {"kappa_area": ("idx", kappa_area)}
+        return xr.Dataset(data_vars=data_vars, coords=params.to_coords())
 
     @staticmethod
     @physics_method(columns=["pkappa_area"], tokamak=Tokamak.EAST)
