@@ -264,7 +264,9 @@ def populate_shot(
                     physics_method_params.logger.debug("All-nan data: {col}", col=k)
                     v = [np.nan] * len(times)
                 else:
-                    physics_method_params.logger.warning("Data length mismatch: {col}", col=k)
+                    physics_method_params.logger.warning(
+                        "Data length mismatch: {col}", col=k
+                    )
                     continue
                 # convert to tuple with dim
                 data_vars[k] = ("idx", v)
