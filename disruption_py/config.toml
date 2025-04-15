@@ -4,7 +4,6 @@ max_shot_time = 7.0 # [s]
 time_const = 1e-6
 
 [default.inout.sql]
-protected_columns = ["shot", "time"]
 write_database_table_name = "disruption_warning_test"
 
 [default.tests]
