@@ -5,7 +5,7 @@ Module for defining parameters used in physics methods for DisruptionPy.
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 import numpy as np
 from loguru import logger
@@ -46,7 +46,25 @@ class PhysicsMethodParams:
         return self.disruption_time is not None
 
     def cleanup(self) -> None:
-        """Clean up resources used by the physics method parameters."""
+        """
+        Clean up resources used by the physics method parameters.
+        """
         self.mds_conn.cleanup()
         self.times = None
         self.cached_results.clear()
+
+    def to_coords(self) -> Dict[str, Tuple[str, np.ndarray]]:
+        """
+        Create a dictionary of coordinates based on the parameters.
+
+        Returns
+        -------
+        Dict[str, Tuple[str, np.ndarray]]
+            A dictionary of dimension/coordinate tuples for xarray.
+            Supported dimension is `idx`, while supported coordinates are `shot` and `time`.
+        """
+        coords = {
+            "shot": len(self.times) * [self.shot_id],
+            "time": self.times,
+        }
+        return {k: ("idx", v) for k, v in coords.items()}
