@@ -12,7 +12,7 @@ import tempfile
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, List, Type, Union
+from typing import Dict, List, Type, TypeAlias, Union
 
 import pandas as pd
 import xarray as xr
@@ -42,10 +42,10 @@ class OutputSettingParams:
     tokamak: Tokamak
 
 
-OutputSettingType = Union["OutputSetting", str, List["OutputSettingType"]]
-OutputDictType = Dict[str, xr.Dataset]
-OutputSingleType = xr.Dataset | xr.DataTree | pd.DataFrame
-OutputType = OutputDictType | OutputSingleType
+OutputSettingType: TypeAlias = Union["OutputSetting", str, List["OutputSettingType"]]
+OutputDictType: TypeAlias = Dict[int, xr.Dataset]
+OutputSingleType: TypeAlias = xr.Dataset | xr.DataTree | pd.DataFrame
+OutputType: TypeAlias = OutputDictType | OutputSingleType
 
 
 class OutputSetting(ABC):
@@ -92,7 +92,7 @@ class OutputSetting(ABC):
         """
 
     @abstractmethod
-    def to_disk(self) -> str:
+    def to_disk(self) -> str | List[str]:
         """
         Save final output to disk.
         """
@@ -162,7 +162,7 @@ class DictOutputSetting(OutputSetting):
             If True, a temporary location will be used.
             If False, no results are written to disk.
         """
-        self.results = {}
+        self.results: Dict[int, xr.Dataset] = {}
         if path is True:
             path = os.path.join(get_temporary_folder(), "output")
             if os.path.exists(path) or "pytest" in sys.modules:
@@ -357,7 +357,7 @@ class DataFrameOutputSetting(DatasetOutputSetting):
 
 
 # --8<-- [start:output_setting_dict]
-_output_setting_mappings: Dict[str, OutputSetting] = {
+_output_setting_mappings: Dict[str, Type[OutputSetting]] = {
     "dataframe": DataFrameOutputSetting,
     "dataset": DatasetOutputSetting,
     "datatree": DataTreeOutputSetting,
