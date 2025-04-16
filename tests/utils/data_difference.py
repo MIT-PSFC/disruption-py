@@ -64,11 +64,6 @@ class DataDifference:
         )
 
     @property
-    def failure_ratio_string(self) -> str:
-        """Create a string for the fraction of datapoints that are anomalies"""
-        return f"{self.num_anomalies / self.timebase_length:.4f}"
-
-    @property
     def column_mismatch_string(self) -> str:
         """Create a string showing the difference between fresh and cache data."""
         # Missing data handled here because difference_df expects data to exist
