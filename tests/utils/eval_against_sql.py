@@ -26,7 +26,7 @@ def get_fresh_data(
     shotlist: List[int],
     folder: str,
     test_columns: List[str] = None,
-    console_log_level: str = "WARNING",
+    console_level: str = "WARNING",
 ) -> Dict[int, pd.DataFrame]:
     """
     Get fresh data for a list of shots.
@@ -41,7 +41,7 @@ def get_fresh_data(
         The path to the folder.
     test_columns : List[str], optional
         A list of columns to retrieve.
-    console_log_level : str, optional
+    console_level : str, optional
         The log level for console output. Default is "WARNING".
 
     Returns
@@ -61,7 +61,7 @@ def get_fresh_data(
         retrieval_settings=retrieval_settings,
         output_setting=os.path.join(folder, "output/"),
         log_settings=LogSettings(
-            console_level=console_log_level,
+            console_level=console_level,
             file_path=os.path.join(folder, "output.log"),
         ),
     )
@@ -192,7 +192,7 @@ def eval_against_cache(
     shotlist: List[int],
     expected_failure_columns: List[str],
     test_columns=None,
-    console_log_level="WARNING",
+    console_level="WARNING",
 ) -> Dict[int, pd.DataFrame]:
     """
     Evaluate fresh data against cached data for specified shots.
@@ -212,7 +212,7 @@ def eval_against_cache(
     test_columns : List[str], optional
         A list of columns to test against the cached data. If None, the function
         will determine the columns based on the available data.
-    console_log_level : str, optional
+    console_level : str, optional
         The log level for console output. Default is "WARNING".
 
     Returns
@@ -237,7 +237,7 @@ def eval_against_cache(
             shotlist=shotlist,
             folder=test_folder("eval_against_cache"),
             test_columns=test_columns,
-            console_log_level=console_log_level,
+            console_level=console_level,
         )
     cache_data = get_cached_from_fresh(tokamak, shotlist, fresh_data, test_columns)
 

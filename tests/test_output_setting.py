@@ -40,7 +40,7 @@ def fresh_data_fixture(shotlist, tokamak, test_folder_m) -> Dict:
         retrieval_settings=retrieval_settings,
         output_setting=output_settings,
         log_settings=LogSettings(
-            console_log_level="WARNING",
+            console_level="WARNING",
             log_file_path=os.path.join(test_folder_m, "output.log"),
         ),
         num_processes=2,

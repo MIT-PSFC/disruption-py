@@ -44,7 +44,7 @@ def test_tokamak_parameter(shotlist, tok, test_folder_f):
         retrieval_settings=retrieval_settings,
         output_setting=os.path.join(test_folder_f, "output.nc"),
         log_settings=LogSettings(
-            console_log_level="WARNING",
+            console_level="WARNING",
             log_file_path=os.path.join(test_folder_f, "output.log"),
         ),
     )

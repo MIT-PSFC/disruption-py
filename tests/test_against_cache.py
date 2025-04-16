@@ -167,7 +167,7 @@ def main():
         shotlist=shotlist,
         expected_failure_columns=expected_failure_columns,
         test_columns=data_columns,
-        console_log_level=args.log_level,
+        console_level=args.log_level,
     )
 
     columns = {dd.data_column for dd in data_differences}
