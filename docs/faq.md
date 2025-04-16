@@ -30,7 +30,7 @@ get_shots_data(
 
     log_settings=LogSettings(
         log_to_console=True,
-        log_file_path="path/to/log/file",
+        file_path="path/to/log/file",
         file_log_level="DEBUG",
         console_level="DEBUG"
     ),

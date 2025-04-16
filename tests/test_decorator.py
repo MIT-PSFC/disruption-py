@@ -45,7 +45,7 @@ def test_tokamak_parameter(shotlist, tok, test_folder_f):
         output_setting=os.path.join(test_folder_f, "output.nc"),
         log_settings=LogSettings(
             console_level="WARNING",
-            log_file_path=os.path.join(test_folder_f, "output.log"),
+            file_path=os.path.join(test_folder_f, "output.log"),
         ),
     )
     assert col_name in shot_data.data_vars

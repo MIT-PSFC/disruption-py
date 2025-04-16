@@ -28,7 +28,7 @@ def full_domain_data_fixture(tokamak, shotlist, test_folder_m) -> xr.Dataset:
         output_setting=os.path.join(test_folder_m, "output.nc"),
         log_settings=LogSettings(
             console_level="WARNING",
-            log_file_path=os.path.join(test_folder_m, "output.log"),
+            file_path=os.path.join(test_folder_m, "output.log"),
         ),
         num_processes=2,
     )
@@ -54,7 +54,7 @@ def test_only_requested_columns(tokamak, shotlist, test_folder_f):
         output_setting=os.path.join(test_folder_f, "output.nc"),
         log_settings=LogSettings(
             console_level="WARNING",
-            log_file_path=os.path.join(test_folder_f, "output.log"),
+            file_path=os.path.join(test_folder_f, "output.log"),
         ),
         num_processes=2,
     )
@@ -85,7 +85,7 @@ def test_domain_setting(
         output_setting=os.path.join(test_folder_f, "output.nc"),
         log_settings=LogSettings(
             console_level="WARNING",
-            log_file_path=os.path.join(test_folder_f, "output.log"),
+            file_path=os.path.join(test_folder_f, "output.log"),
         ),
         num_processes=2,
     )
@@ -166,7 +166,7 @@ def test_run_methods_and_columns(
         output_setting=os.path.join(test_folder_f, "output.nc"),
         log_settings=LogSettings(
             console_level="CRITICAL",
-            log_file_path=os.path.join(test_folder_f, "output.log"),
+            file_path=os.path.join(test_folder_f, "output.log"),
         ),
         num_processes=2,
     )
