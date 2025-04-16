@@ -6,7 +6,6 @@ Module for retrieving and calculating data for DIII-D physics methods.
 
 import numpy as np
 import scipy
-import xarray as xr
 from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.caching import cache_method
@@ -1299,8 +1298,8 @@ class D3DPhysicsMethods:
         kappa_area = area / (np.pi * a_minor**2)
         invalid_indices = np.where(chisq > 50)
         kappa_area[invalid_indices] = np.nan
-        data_vars = {"kappa_area": ("idx", interp1(t, kappa_area, params.times))}
-        return xr.Dataset(data_vars=data_vars, coords=params.to_coords())
+        data = {"kappa_area": interp1(t, kappa_area, params.times)}
+        return params.to_dataset(data=data)
 
     @staticmethod
     @physics_method(

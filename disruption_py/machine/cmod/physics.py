@@ -7,7 +7,6 @@ Module for retrieving and calculating data for C-MOD physics methods.
 import warnings
 
 import numpy as np
-import xarray as xr
 from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.caching import cache_method
@@ -781,9 +780,7 @@ class CmodPhysicsMethods:
         dict
             A dictionary containing the kappa_area.
         """
-        return {
-            "kappa_area": ("idx", interp1(a_times, area / (np.pi * aminor**2), times))
-        }
+        return {"kappa_area": interp1(a_times, area / (np.pi * aminor**2), times)}
 
     @staticmethod
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
@@ -826,10 +823,8 @@ class CmodPhysicsMethods:
         aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
         # make sure area is not 0 or less than 0
         area[area <= 0] = 3.14 * 0.001**2
-        data_vars = CmodPhysicsMethods._get_kappa_area(
-            params.times, aminor, area, times
-        )
-        return xr.Dataset(data_vars=data_vars, coords=params.to_coords())
+        data = CmodPhysicsMethods._get_kappa_area(params.times, aminor, area, times)
+        return params.to_dataset(data=data)
 
     @staticmethod
     def _get_rotation_velocity(times, intensity, time, vel, hirextime):
