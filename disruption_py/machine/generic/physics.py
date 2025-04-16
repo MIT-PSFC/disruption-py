@@ -7,10 +7,10 @@ import numpy as np
 
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.machine.tokamak import Tokamak
 from disruption_py.machine.cmod import CmodPhysicsMethods
 from disruption_py.machine.d3d import D3DPhysicsMethods
 from disruption_py.machine.east import EastPhysicsMethods
+from disruption_py.machine.tokamak import Tokamak
 
 
 class GenericPhysicsMethods:
