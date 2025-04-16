@@ -3,14 +3,14 @@
 """
 Module for defining parameters used in physics methods for DisruptionPy.
 """
-
 from dataclasses import dataclass, field
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 
 import numpy as np
+import xarray as xr
 from loguru import logger
 
-from disruption_py.core.utils.misc import shot_msg_patch
+from disruption_py.core.utils.misc import shot_msg_patch, to_tuple
 from disruption_py.inout.mds import MDSConnection
 from disruption_py.machine.tokamak import Tokamak
 
@@ -53,18 +53,21 @@ class PhysicsMethodParams:
         self.times = None
         self.cached_results.clear()
 
-    def to_coords(self) -> Dict[str, Tuple[str, np.ndarray]]:
+    def to_dataset(self, data: Dict[str, np.ndarray]) -> xr.Dataset:
         """
-        Create a dictionary of coordinates based on the parameters.
+        Create a dataset of variables, including coordinates based on the parameters.
 
         Returns
         -------
-        Dict[str, Tuple[str, np.ndarray]]
-            A dictionary of dimension/coordinate tuples for xarray.
-            Supported dimension is `idx`, while supported coordinates are `shot` and `time`.
+        xr.Dataset
+            A dataset of assumed dimension `idx`, with `shot` and `time` as coordinates.
         """
-        coords = {
-            "shot": len(self.times) * [self.shot_id],
-            "time": self.times,
-        }
-        return {k: ("idx", v) for k, v in coords.items()}
+        data_vars = to_tuple(data=data, dim="idx")
+        coords = to_tuple(
+            data={
+                "shot": len(self.times) * [self.shot_id],
+                "time": self.times,
+            },
+            dim="idx",
+        )
+        return xr.Dataset(data_vars=data_vars, coords=coords)
