@@ -12,7 +12,7 @@ import warnings
 from functools import lru_cache
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import List, Type
+from typing import Dict, List, Tuple, Type
 
 import numpy as np
 import pandas as pd
@@ -218,3 +218,23 @@ def get_elapsed_time(elapsed: float) -> str:
     if not out:
         out += [f"{ms:.0f}ms"]
     return " ".join(out)
+
+
+def to_tuple(
+    data: Dict[str, np.ndarray], dim: str
+) -> Dict[str, Tuple[str, np.ndarray]]:
+    """
+    Recreate a dictionary by making all values a 2-tuple with a given string.
+
+    Parameters
+    ----------
+    data : Dict[str, np.ndarray]
+        Dictionary of array data.
+    dim : str
+        String to be added as first element of the tuple.
+
+    Returns
+    -------
+    Dict[str, Tuple[str, np.ndarray]]
+    """
+    return {k: (dim, v) for k, v in data.items()}
