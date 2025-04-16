@@ -61,11 +61,9 @@ def get_fresh_data(
         retrieval_settings=retrieval_settings,
         output_setting="dict",
         log_settings=LogSettings(
-            log_to_console=True,
-            log_file_path=log_file_path,
-            log_file_write_mode="w",
-            file_log_level="DEBUG",
-            console_log_level=console_log_level,
+            file_path=log_file_path,
+            file_level="DEBUG",
+            console_level=console_log_level,
         ),
     )
 

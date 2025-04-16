@@ -120,10 +120,10 @@ disable = [
   "too-many-locals",
   "too-many-positional-arguments",
   "too-many-statements",
-  "duplicate-code",
 ]
 extension-pkg-allow-list = ["pyodbc"]
 ignored-modules = ["MDSplus"]
+min-similarity-lines = 5
 
 [tool.tomlsort]
 ignore_case = true
