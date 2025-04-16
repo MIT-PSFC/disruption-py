@@ -2110,63 +2110,6 @@ class CmodPhysicsMethods:
         return {"v_surf": v_surf}
 
     @staticmethod
-    @physics_method(columns=["shot_domain"], tokamak=Tokamak.CMOD)
-    def get_shot_domain(params: PhysicsMethodParams):
-        r"""
-        Get the domain (or phase) of every time point in a shot and return it
-        as a categorical feature:
-
-        - 1: ramp-up
-        - 0: flat-top
-        - -1: ramp-down
-
-        Parameters
-        ----------
-        params : PhysicsMethodParams
-            The parameters containing the MDSplus connection, shot id and more.
-
-        Returns
-        -------
-        dict
-            A dictionary containing the categorical feature `shot_domain`.
-
-        References
-        -------
-        - original source: [get_flattop_indices.m](https://github.com/MIT-PSFC/disruption-py
-        /blob/matlab/CMOD/matlab-core/get_flattop_indices.m)
-        - pull requests: #[433](https://github.com/MIT-PSFC/disruption-py/pull/433)
-        - issues: #[408](https://github.com/MIT-PSFC/disruption-py/issues/408)
-        """
-        threshold_dipprog_dt = 50e3
-        threshold_ip_prog = 100e3
-        # ip_parameters are given in the requested timebase
-        ip_parameters = CmodPhysicsMethods.get_ip_parameters(params=params)
-        ipprog, dipprog_dt = ip_parameters["ip_prog"], ip_parameters["dipprog_dt"]
-
-        shot_domain = np.full(len(ipprog), np.nan)
-        # Get flattop domain indices
-        (indices_flattop,) = np.where(
-            (np.abs(dipprog_dt) <= threshold_dipprog_dt)
-            & (np.abs(ipprog) >= threshold_ip_prog)
-        )
-        # Get the longest subsequence of indices_flattop
-        indices_flattop = max(
-            np.split(indices_flattop, np.where(np.diff(indices_flattop) != 1)[0] + 1),
-            key=len,
-        )
-        # Assign shot domains
-        if len(indices_flattop) == 0:
-            # Shot only has ramp up phase
-            shot_domain[:] = 1
-        else:
-            flattop_start, flattop_end = indices_flattop[0], indices_flattop[-1] + 1
-            shot_domain[:flattop_start] = 1
-            shot_domain[flattop_start:flattop_end] = 0
-            shot_domain[flattop_end:] = -1
-
-        return {"shot_domain": shot_domain}
-
-    @staticmethod
     def _is_on_blacklist(shot_id: int) -> bool:
         """
         TODO why will these shots cause `_get_peaking_factors`,
