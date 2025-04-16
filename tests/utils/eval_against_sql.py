@@ -61,8 +61,8 @@ def get_fresh_data(
         retrieval_settings=retrieval_settings,
         output_setting=os.path.join(folder, "output/"),
         log_settings=LogSettings(
-            console_log_level=console_log_level,
-            log_file_path=os.path.join(folder, "output.log"),
+            console_level=console_log_level,
+            file_path=os.path.join(folder, "output.log"),
         ),
     )
     return {k: v.to_dataframe() for k, v in out.items()}

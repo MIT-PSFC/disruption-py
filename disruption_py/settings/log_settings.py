@@ -31,27 +31,20 @@ class LogSettings:
 
     Attributes
     ----------
-    log_file_path : str, optional
+    file_path : str, optional
         Path to the log file. If None, no log file will be created.
         By default, a log file will be created in a temporary folder.
-    file_log_level : str
+    file_level : str
         Logging level for the log file (default is "DEBUG").
         Possible values are:
         "TRACE", "DEBUG", "VERBOSE" (custom), "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL".
         See: https://loguru.readthedocs.io/en/stable/api/logger.html#levels
-    log_file_write_mode : str, optional
-        The write mode for the log file. Default is "w".
-    log_to_console : bool
-        Whether to log messages to the console (default is True).
-    console_log_level : str or int, optional
+    console_level : str or int, optional
         The log level for the console. Default is None, so log level will be determined
         dynamically based on the number of shots.
         Possible values are:
         "TRACE", "DEBUG", "VERBOSE" (custom), "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL".
         See: https://loguru.readthedocs.io/en/stable/api/logger.html#levels
-    use_custom_logging : bool
-        Whether to use custom logging. If set to true, no logging setup will be done.
-        Default is False.
     warning_threshold : int
         If number of shots is greater than this threshold, the console log level will
         be "WARNING". Default is 1000.
@@ -65,14 +58,9 @@ class LogSettings:
         Internal flag to prevent multiple setups (default is False).
     """
 
-    log_file_path: str = os.path.join(get_temporary_folder(), "output.log")
-    file_log_level: str = "DEBUG"
-    log_file_write_mode: str = "w"
-
-    log_to_console: bool = True
-    console_log_level: str = None
-
-    use_custom_logging: bool = False
+    file_path: str = os.path.join(get_temporary_folder(), "output.log")
+    file_level: str = "DEBUG"
+    console_level: str = None
 
     warning_threshold: int = 1000
     success_threshold: int = 500
@@ -97,7 +85,7 @@ class LogSettings:
         console_format = "{time:HH:mm:ss.SSS} " + message_format
         file_format = "{time:YYYY-MM-DD HH:mm:ss.SSS} " + message_format
 
-        if self.console_log_level is None:
+        if self.console_level is None:
             # Determine console log level dynamically based on the number of shots
             console_level = "VERBOSE"
             if num_shots and num_shots > self.warning_threshold:
@@ -106,30 +94,29 @@ class LogSettings:
                 console_level = "SUCCESS"
             elif num_shots and num_shots > self.info_threshold:
                 console_level = "INFO"
-        elif isinstance(self.console_log_level, str):
-            console_level = self.console_log_level.upper()
+        elif isinstance(self.console_level, str):
+            console_level = self.console_level.upper()
         else:
-            console_level = self.console_log_level
+            console_level = self.console_level
 
         # Add console handler
-        if self.log_to_console:
-            logger.add(
-                lambda msg: tqdm.write(msg, end=""),
-                level=console_level,
-                format=console_format,
-                colorize=True,
-                enqueue=True,
-                backtrace=False,
-                diagnose=True,
-            )
+        logger.add(
+            lambda msg: tqdm.write(msg, end=""),
+            level=console_level,
+            format=console_format,
+            colorize=True,
+            enqueue=True,
+            backtrace=False,
+            diagnose=True,
+        )
 
         # Add file handler if log file path is provided
-        if self.log_file_path is not None:
+        if self.file_path is not None:
             logger.add(
-                self.log_file_path,
-                level=self.file_log_level,
+                self.file_path,
+                level=self.file_level,
                 format=file_format,
-                mode=self.log_file_write_mode,
+                mode="w",
                 enqueue=True,
                 backtrace=False,
                 diagnose=True,
@@ -139,7 +126,7 @@ class LogSettings:
         """
         Set up logging with custom styles and levels.
         """
-        if self.use_custom_logging or self._logging_has_been_setup:
+        if self._logging_has_been_setup:
             return
 
         # Set custom style and add a VERBOSE level. This only needs to be done
@@ -174,8 +161,8 @@ class LogSettings:
             u=os.getenv("USER"),
             h=os.uname().nodename,
         )
-        if self.log_file_path is not None:
-            logger.info("Logging: {l}", l=self.log_file_path)
+        if self.file_path is not None:
+            logger.info("Logging: {l}", l=self.file_path)
         logger.debug(
             "Repository: {url}{append}{commit}",
             url="https://github.com/MIT-PSFC/disruption-py",
@@ -208,7 +195,10 @@ def resolve_log_settings(
         return log_settings
 
     if isinstance(log_settings, (str, int)):
-        return LogSettings(console_log_level=log_settings)
+        return LogSettings(console_level=log_settings)
+
+    if isinstance(log_settings, dict):
+        return LogSettings(**log_settings)
 
     if log_settings is None:
         return LogSettings()

@@ -33,12 +33,9 @@ shot_data = get_shots_data(
     num_processes=1,
     log_settings=LogSettings(
         # default None: "output.log" in temporary session folder
-        log_file_path=None,
-        file_log_level="DEBUG",
-        log_file_write_mode="w",
-        log_to_console=True,
+        file_path=None,
+        file_level="DEBUG",
         # default None: VERBOSE, or higher based on number of shots
-        console_log_level=None,
-        use_custom_logging=False,
+        console_level=None,
     ),
 )

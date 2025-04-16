@@ -123,7 +123,7 @@ def get_shots_data(
         return None
 
     # Dynamically set the console log level based on the number of shots
-    if log_settings.console_log_level is None:
+    if log_settings.console_level is None:
         log_settings.reset_handlers(num_shots=len(shotlist_list))
 
     # log start
