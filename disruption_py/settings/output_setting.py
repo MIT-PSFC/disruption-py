@@ -3,9 +3,7 @@
 """
 Handles output settings for retrieving and saving shot data.
 
-This module provides classes and methods to manage various output settings
-for shot data, including saving to files, databases, lists, dictionaries, and
-dataframes.
+This module provides classes and methods to manage various output settings.
 """
 
 import os
