@@ -338,7 +338,7 @@ class DataTreeOutputSetting(SingleOutputSetting):
         return xr.DataTree.from_dict({str(k): v for k, v in self.results.items()})
 
 
-class DataFrameOutputSetting(SingleOutputSetting):
+class DataFrameOutputSetting(DatasetOutputSetting):
     """
     Outputs data as a DataFrame.
     """
@@ -352,8 +352,8 @@ class DataFrameOutputSetting(SingleOutputSetting):
         pd.DataFrame
             The resulting DataFrame.
         """
+        df = super().concat().to_dataframe()
         base = ["shot", "time"]
-        df = xr.concat(self.results.values(), dim="idx").to_dataframe()
         cols = base + [c for c in sorted(df.columns) if c not in base]
         return df[cols]
 
