@@ -69,7 +69,7 @@ def get_shots_data(
     database_initializer: Callable[..., ShotDatabase] = None,
     mds_connection_initializer: Callable[..., ProcessMDSConnection] = None,
     retrieval_settings: RetrievalSettings = None,
-    output_setting: OutputSetting = "dataframe",
+    output_setting: OutputSetting = "dataset",
     num_processes: int = 1,
     log_settings: LogSettings = None,
 ) -> Any:
@@ -89,7 +89,7 @@ def get_shots_data(
         The output type setting to be used when outputting the retrieved data for
         each shot. Note that data is streamed to the output type setting object
         as it is retrieved. Can pass any OutputSettingType that resolves to an
-        OutputSetting. See OutputSetting for more details. Defaults to "dataframe".
+        OutputSetting. See OutputSetting for more details. Defaults to "dataset".
     num_processes : int
         The number of processes to use for data retrieval. If 1, the data is retrieved
         in serial. If > 1, the data is retrieved in parallel.
@@ -254,7 +254,7 @@ def cli():
     parser.add_argument("-m", "--methods", type=str, action="append")
     parser.add_argument("-e", "--efit-tree", type=str, default="disruption")
     parser.add_argument("-b", "--time-base", type=str, default="disruption_warning")
-    parser.add_argument("-o", "--output", type=str, default="dataframe")
+    parser.add_argument("-o", "--output", type=str, default="dataset")
     parser.add_argument("-p", "--processes", type=int, default=1)
     parser.add_argument("-l", "--log-level", type=str, default="VERBOSE")
 
