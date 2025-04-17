@@ -81,7 +81,7 @@ class GenericPhysicsMethods:
         else:
             return {"shot_domain": [np.nan]}
 
-        shot_domain = np.full(len(signals["dipprog_dt"]), np.nan)
+        shot_domain = np.full(len(params.times), np.nan)
         # Get flattop domain indices
         indices_flattop = np.arange(len(shot_domain))
         for name in ["dipprog_dt", "ip_prog", "power_supply_railed"]:
