@@ -254,31 +254,23 @@ def populate_shot(
             times = physics_method_params.times
 
             # create data_vars dict
-            data_vars = {}
+            data = {}
             for k, v in result.items():
                 if len(v) == len(times):
                     # as expected
-                    pass
-                elif all(np.isnan(v)):
+                    data[k] = v
+                    continue
+                if all(np.isnan(v)):
                     # pad all-nan var
                     physics_method_params.logger.debug("All-nan data: {col}", col=k)
-                    v = [np.nan] * len(times)
-                else:
-                    physics_method_params.logger.warning(
-                        "Data length mismatch: {col}", col=k
-                    )
+                    data[k] = np.nan * times
                     continue
-                # convert to tuple with dim
-                data_vars[k] = ("idx", v)
-
-            # create coord dict
-            coords = {
-                "shot": ("idx", len(times) * [physics_method_params.shot_id]),
-                "time": ("idx", times),
-            }
+                physics_method_params.logger.warning(
+                    "Data length mismatch: {col}", col=k
+                )
 
             # create dataset
-            result = xr.Dataset(data_vars=data_vars, coords=coords)
+            result = physics_method_params.to_dataset(data=data)
 
         datasets += [result]
 
