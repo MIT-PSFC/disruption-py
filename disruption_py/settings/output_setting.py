@@ -316,6 +316,9 @@ class DatasetOutputSetting(SingleOutputSetting):
         xr.Dataset
             The resulting Dataset.
         """
+        if not self.results:
+            logger.critical("Nothing to concatenate!")
+            return xr.Dataset()
         return xr.concat(self.results.values(), dim="idx")
 
 
@@ -333,6 +336,9 @@ class DataTreeOutputSetting(SingleOutputSetting):
         xr.DataTree
             The DataTree containing the results, with shots as keys.
         """
+        if not self.results:
+            logger.critical("Nothing to concatenate!")
+            return xr.DataTree()
         return xr.DataTree.from_dict({str(k): v for k, v in self.results.items()})
 
 
@@ -350,6 +356,9 @@ class DataFrameOutputSetting(DatasetOutputSetting):
         pd.DataFrame
             The resulting DataFrame.
         """
+        if not self.results:
+            logger.critical("Nothing to concatenate!")
+            return pd.DataFrame()
         df = super().concat().to_dataframe()
         base = ["shot", "time"]
         cols = base + [c for c in sorted(df.columns) if c not in base]
