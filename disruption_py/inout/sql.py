@@ -32,7 +32,6 @@ class ShotDatabase:
         db_name,
         user,
         passwd,
-        write_database_table_name=None,
         **_kwargs,
     ):
 
@@ -67,7 +66,6 @@ class ShotDatabase:
         self.db_name = db_name
         self.user = user
         self.passwd = passwd
-        self.write_database_table_name = write_database_table_name
 
         self.dialect = "mysql" if "mysql" in self.driver.lower() else "mssql"
         self.connection_string = self._get_connection_string(self.db_name)
@@ -105,7 +103,6 @@ class ShotDatabase:
             db_name=db_conf["db_name"],
             user=db_conf["db_user"],
             passwd=db_conf["db_pass"],
-            write_database_table_name=db_conf.get("write_database_table_name"),
         )
 
     def _get_connection_string(self, db_name):
