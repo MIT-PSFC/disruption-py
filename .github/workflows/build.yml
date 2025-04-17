@@ -55,6 +55,7 @@ jobs:
         run: poetry run python -c "import disruption_py"
 
       - name: Discard dev package
+        if: github.event_name == 'release'
         run: ! poetry version | grep dev
 
       - name: Build package
