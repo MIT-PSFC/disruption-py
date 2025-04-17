@@ -3,6 +3,7 @@
 """
 Module for retrieving and calculating data for DIII-D physics methods.
 """
+from typing import Dict
 
 import numpy as np
 import scipy
@@ -1261,7 +1262,7 @@ class D3DPhysicsMethods:
 
     @staticmethod
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.D3D)
-    def get_kappa_area(params: PhysicsMethodParams):
+    def get_kappa_area(params: PhysicsMethodParams) -> Dict[str, np.ndarray]:
         r"""
         Retrieve and calculate the plasma's ellipticity (*kappa*, also known as
         the elongation) using its area and minor radius. It is defined as:
@@ -1279,7 +1280,7 @@ class D3DPhysicsMethods:
 
         Returns
         -------
-        dict
+        Dict[str, np.ndarray]
             A dictionary containing the calculated `kappa_area`.
 
         References
@@ -1298,8 +1299,7 @@ class D3DPhysicsMethods:
         kappa_area = area / (np.pi * a_minor**2)
         invalid_indices = np.where(chisq > 50)
         kappa_area[invalid_indices] = np.nan
-        data = {"kappa_area": interp1(t, kappa_area, params.times)}
-        return params.to_dataset(data=data)
+        return {"kappa_area": interp1(t, kappa_area, params.times)}
 
     @staticmethod
     @physics_method(

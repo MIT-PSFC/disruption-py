@@ -5,6 +5,7 @@ Module for retrieving and calculating data for C-MOD physics methods.
 """
 
 import warnings
+from typing import Dict
 
 import numpy as np
 from MDSplus import mdsExceptions
@@ -784,7 +785,7 @@ class CmodPhysicsMethods:
 
     @staticmethod
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.CMOD)
-    def get_kappa_area(params: PhysicsMethodParams):
+    def get_kappa_area(params: PhysicsMethodParams) -> Dict[str, np.ndarray]:
         r"""
         Retrieve and calculate the plasma's ellipticity (kappa, also known as
         the elongation) using its area and minor radius. It is defined as:
@@ -802,7 +803,7 @@ class CmodPhysicsMethods:
 
         Returns
         -------
-        dict
+        Dict[str, np.ndarray]
             A dictionary containing the calculated `kappa_area`.
 
         References:
@@ -823,8 +824,7 @@ class CmodPhysicsMethods:
         aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
         # make sure area is not 0 or less than 0
         area[area <= 0] = 3.14 * 0.001**2
-        data = CmodPhysicsMethods._get_kappa_area(params.times, aminor, area, times)
-        return params.to_dataset(data=data)
+        return CmodPhysicsMethods._get_kappa_area(params.times, aminor, area, times)
 
     @staticmethod
     def _get_rotation_velocity(times, intensity, time, vel, hirextime):
