@@ -56,7 +56,7 @@ jobs:
 
       - name: Discard dev package
         if: github.event_name == 'release'
-        run: ! poetry version | grep dev
+        run: "! poetry version | grep dev"
 
       - name: Build package
         run: poetry build
