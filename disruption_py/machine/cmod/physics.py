@@ -2110,6 +2110,50 @@ class CmodPhysicsMethods:
         return {"v_surf": v_surf}
 
     @staticmethod
+    @physics_method(columns=["h_alpha"], tokamak=Tokamak.CMOD)
+    def get_h_alpha(params: PhysicsMethodParams):
+        r"""
+        Get the H_alpha line emission intensity.
+
+        The intensity of H-alpha radiance indicates presence of ELMs, and/or
+        radiative events, and changes of confinement regimes.
+
+        In case of using this signal for ELM detection, it is recommended to
+        use the native time base of the signal to avoid loosing ELMs.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary with the H-alpha signal (`h_alpha`). In IS brightness units [W/(m2*sr)].
+
+        References
+        ----------
+        - pull request: #[?](https://github.com/MIT-PSFC/disruption-py/pull/?)
+        
+        Last major update by Enrique Zapata on 4/17/2025
+        """
+        output = {
+            "h_alpha": [np.nan],
+        }
+        # Get signals from SPECTROSCOPY tree
+        try:
+            h_alpha, time_halpha = params.mds_conn.get_data_with_dims(
+                r"\SPECTROSCOPY::HA_2_BRIGHT", tree_name="SPECTROSCOPY"
+            )  # [mW/(cm2*sr)], [s]
+            # Interpolate Halpha to params.times
+            h_alpha_interp = interp1(time_halpha, h_alpha, params.times)
+            output["h_alpha"]  =  10*h_alpha_interp # [W/(m2*sr)]
+        except ValueError as e:
+            params.logger.warning("Failed to get H_alpha signal. Returning NaNs.")
+            params.logger.opt(exception=True).debug(e)
+        return output
+
+    @staticmethod
     def _is_on_blacklist(shot_id: int) -> bool:
         """
         TODO why will these shots cause `_get_peaking_factors`,
