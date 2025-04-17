@@ -266,8 +266,11 @@ def populate_shot(
                     physics_method_params.logger.debug("All-nan data: {col}", col=k)
                     data[k] = np.nan * times
                     continue
-                physics_method_params.logger.warning(
-                    "Data length mismatch: {col}", col=k
+                physics_method_params.logger.error(
+                    "Data length mismatch: {col} {shape} vs times {times}",
+                    col=k,
+                    shape=v.shape,
+                    times=times.shape,
                 )
 
             # create dataset
