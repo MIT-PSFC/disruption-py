@@ -1,5 +1,4 @@
 [default]
-max_processes = 10
 max_shot_time = 7.0 # [s]
 time_const = 1e-6
 
