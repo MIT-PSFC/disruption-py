@@ -6,6 +6,7 @@ Module for populating shot data by executing physics methods in DisruptionPy.
 
 import time
 from collections.abc import Iterable
+from typing import Dict
 
 import numpy as np
 import xarray as xr
@@ -152,7 +153,7 @@ def filter_methods_to_run(
 def populate_method(
     physics_method_params: PhysicsMethodParams,
     bound_method_metadata: BoundMethodMetadata,
-) -> dict | xr.DataArray | xr.Dataset:
+) -> Dict[str, np.ndarray] | xr.DataArray | xr.Dataset:
     """
     Execute a physics method and store the result.
 
@@ -165,7 +166,7 @@ def populate_method(
 
     Returns
     -------
-    dict | xr.DataArray | xr.Dataset
+    Dict[str, np.ndarray] | xr.DataArray | xr.Dataset
         The result of the executed method.
     """
 
