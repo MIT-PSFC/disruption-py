@@ -54,6 +54,9 @@ jobs:
       - name: Test import
         run: poetry run python -c "import disruption_py"
 
+      - name: Discard dev package
+        run: ! poetry version | grep dev
+
       - name: Build package
         run: poetry build
 
