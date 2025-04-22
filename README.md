@@ -118,7 +118,13 @@ For custom installations, please refer to our [Installation guide](docs/INSTALL.
 
 ## Getting Started
 
-A simple command-line entry point is installed as `disruption-py`:
+We support execution through [on-the-fly virtual environment creation with `uv`](https://docs.astral.sh/uv/guides/tools/):
+
+```bash
+uvx disruption-py --help
+```
+
+When installed, a simple command-line entry point is available as `disruption-py`:
 
 ```bash
 # if you use poetry
@@ -163,7 +169,7 @@ from disruption_py.workflow import cli
 out = cli()
 ```
 
-A simplified and flattened version of our workflow is available, as well:
+For standard installations, a simplified and flattened version of our workflow is available, as well:
 
 ```python
 from disruption_py.workflow import run
@@ -172,6 +178,31 @@ out = run(*args)
 
 A full-fledged disruption script enables the configuration of all the settings according to the specific use case.
 Please refer to our `examples/defaults.py` script for a quickstart workflow with all the default arguments clearly explained.
+
+
+## Configuration
+
+DisruptionPy itself does not provide access to any of the underlying servers.
+
+While we honor the legacy `sybase_login` file credential format for database connections, we recommend using the following configuration snippet for maximum flexibility:
+
+```toml
+# ~/.config/disruption-py/config.toml
+
+[cmod.inout.sql]
+db_user = ""
+db_pass = ""
+
+[d3d.inout.sql]
+db_user = ""
+db_pass = ""
+
+[east.inout.sql]
+db_user = ""
+db_pass = ""
+```
+
+Any configuration parameter can be overridden by the above configuration file.
 
 
 ## Contributing
