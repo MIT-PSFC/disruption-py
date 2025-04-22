@@ -55,20 +55,22 @@ def test_output_exists(fresh_data, test_folder_m):
     # run and get from memory
     dict_out, ds_out, df_out, dt_out = fresh_data
 
-    # get from disk
+    # build paths
     dict_path = os.path.join(test_folder_m, "output/")
     ds_path = os.path.join(test_folder_m, "dataset.nc")
     dt_path = os.path.join(test_folder_m, "datatree.nc")
     df_path = os.path.join(test_folder_m, "dataframe.csv")
-    ds_dsk = xr.open_dataset(ds_path)
-    dt_dsk = xr.open_datatree(dt_path)
-    df_dsk = pd.read_csv(df_path, index_col=0)
 
     # path existence
     assert os.path.exists(dict_path), "Could not find dict folder"
     assert os.path.exists(ds_path), "Could not find dataset file"
     assert os.path.exists(dt_path), "Could not find datatree file"
     assert os.path.exists(df_path), "Could not find dataframe file"
+
+    # get from disk
+    ds_dsk = xr.open_dataset(ds_path)
+    dt_dsk = xr.open_datatree(dt_path)
+    df_dsk = pd.read_csv(df_path, index_col=0)
 
     # format types
     assert isinstance(dict_out, dict), "Wrong type for dict output"
