@@ -504,7 +504,11 @@ class IpTimeSetting(TimeSetting):
         """
         Initialize with tokamak-specific overrides.
         """
-        self.tokamak_overrides = {Tokamak.D3D: self.d3d_times}
+        self.tokamak_overrides = {
+            Tokamak.CMOD: self.cmod_times,
+            Tokamak.D3D: self.d3d_times,
+            Tokamak.EAST: self.east_times,
+        }
 
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         """
@@ -521,6 +525,23 @@ class IpTimeSetting(TimeSetting):
             Array of times in the timebase.
         """
         raise ValueError("Ip time setting not implemented")
+
+    def cmod_times(self, params: TimeSettingParams):
+        """
+        Retrieve the Ip timebase for the CMOD tokamak.
+
+        Parameters
+        ----------
+        params : TimeSettingParams
+            Parameters needed to retrieve the timebase.
+
+        Returns
+        -------
+        np.ndarray
+            Array of times in the timebase.
+        """
+        (ip_time,) = params.mds_conn.get_dims(r"\ip", tree_name="magnetics")
+        return ip_time
 
     def d3d_times(self, params: TimeSettingParams):
         """
@@ -539,6 +560,28 @@ class IpTimeSetting(TimeSetting):
         (ip_time,) = params.mds_conn.get_dims(
             f"ptdata('ip', {params.shot_id})", tree_name="d3d"
         )
+        return ip_time / 1e3
+
+    def east_times(self, params: TimeSettingParams):
+        """
+        Retrieve the Ip timebase for the EAST tokamak.
+
+        Parameters
+        ----------
+        params : TimeSettingParams
+            Parameters needed to retrieve the timebase.
+
+        Returns
+        -------
+        np.ndarray
+            Array of times in the timebase.
+        """
+        (ip_time,) = params.mds_conn.get_dims(r"\pcrl01", tree_name="pcs_east")
+
+        # For shots before year 2014, the PCRL01 timebase needs to be shifted
+        # by 17.0 ms
+        if params.shot_id < 44432:
+            ip_time -= 0.0170
         return ip_time
 
 
