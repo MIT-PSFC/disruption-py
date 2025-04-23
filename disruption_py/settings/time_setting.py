@@ -575,7 +575,7 @@ class IpTimeSetting(TimeSetting):
             Array of times in the timebase.
         """
         (ip_time,) = params.mds_conn.get_dims(
-            f"ptdata('ip', {params.shot_id})", tree_name="d3d"
+            f"ptdata('ip', {params.shot_id})", tree_name=None
         )
         ip_time /= 1e3  # [ms] -> [s]
         if self.use_efit_time_range:
