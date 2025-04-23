@@ -612,7 +612,7 @@ class SignalTimeSetting(TimeSetting):
     """
 
     def __init__(
-        self, tree_name: str, signal_path: str, use_efit_time_range: bool = True
+        self, tree_name: str, signal_path: str, use_efit_time_range: bool = False
     ):
         """
         Initialize with the tree name and signal path.
@@ -629,6 +629,34 @@ class SignalTimeSetting(TimeSetting):
         self.tree_name = tree_name
         self.signal_path = signal_path
         self.use_efit_time_range = use_efit_time_range
+        self.tokamak_overrides = {
+            Tokamak.D3D: self._get_times_d3d_wrapper,
+        }
+
+    def _use_efit_time_range(
+        self, params: TimeSettingParams, time: np.ndarray
+    ) -> np.ndarray:
+        """
+        Remove the beginning and the end of signal_time so that the
+        timebase covers the same range as the timebase of the
+        requested EFIT tree.
+        """
+        efit_time = EfitTimeSetting().get_times(params)
+        (indices_efit_range,) = np.where(
+            (time >= efit_time[0]) & (time <= efit_time[-1])
+        )
+        return time[indices_efit_range]
+
+    def _get_times_d3d_wrapper(self, params: TimeSettingParams) -> np.ndarray:
+        """
+        Wrapper function for the DIII-D tokamak
+        - Allow using tree_name="ptdata" to call PTDATA signals
+        - Convert time unit from ms to s
+        """
+        if self.tree_name.lower() == "ptdata":
+            self.signal_path = f'ptdata("{self.signal_path}", {params.shot_id})'
+            self.tree_name = None
+        return self._get_times(params)
 
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         """
@@ -657,11 +685,7 @@ class SignalTimeSetting(TimeSetting):
         if params.tokamak == Tokamak.D3D:
             signal_time /= 1e3  # [ms] -> [s]
         if self.use_efit_time_range:
-            efit_time = EfitTimeSetting().tokamak_overrides[params.tokamak](params)
-            (indices_efit_range,) = np.where(
-                (signal_time >= efit_time[0]) & (signal_time <= efit_time[-1])
-            )
-            signal_time = signal_time[indices_efit_range]
+            return self._use_efit_time_range(params, signal_time)
         return signal_time
 
 
