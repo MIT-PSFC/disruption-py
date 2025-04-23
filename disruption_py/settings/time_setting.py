@@ -389,7 +389,7 @@ class DisruptionTimeSetting(TimeSetting):
                 params.disruption_time + config(params.tokamak).time_const,
                 self.DT_BEFORE_DISRUPTION_D3D,
             )
-            (times,) = times[
+            times = times[
                 np.where(
                     times
                     < (
@@ -429,7 +429,7 @@ class DisruptionTimeSetting(TimeSetting):
                 params.disruption_time + config(params.tokamak).time_const,
                 self.DT_BEFORE_DISRUPTION_EAST,
             )
-            (times,) = times[
+            times = times[
                 np.where(
                     times
                     < (
