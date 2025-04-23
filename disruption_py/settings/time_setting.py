@@ -500,7 +500,7 @@ class IpTimeSetting(TimeSetting):
     Time setting for using the timebase of the plasma current.
     """
 
-    def __init__(self):
+    def __init__(self, use_efit_time_range: bool = False):
         """
         Initialize with tokamak-specific overrides.
         """
@@ -509,6 +509,7 @@ class IpTimeSetting(TimeSetting):
             Tokamak.D3D: self.d3d_times,
             Tokamak.EAST: self.east_times,
         }
+        self.use_efit_time_range = use_efit_time_range
 
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         """
@@ -526,6 +527,20 @@ class IpTimeSetting(TimeSetting):
         """
         raise ValueError("Ip time setting not implemented")
 
+    def _use_efit_time_range(
+        self, params: TimeSettingParams, time: np.ndarray
+    ) -> np.ndarray:
+        """
+        Remove the beginning and the end of ip_time so that the
+        timebase covers the same range as the timebase of the
+        requested EFIT tree.
+        """
+        efit_time = EfitTimeSetting().get_times(params)
+        (indices_efit_range,) = np.where(
+            (time >= efit_time[0]) & (time <= efit_time[-1])
+        )
+        return time[indices_efit_range]
+
     def cmod_times(self, params: TimeSettingParams):
         """
         Retrieve the Ip timebase for the CMOD tokamak.
@@ -541,6 +556,8 @@ class IpTimeSetting(TimeSetting):
             Array of times in the timebase.
         """
         (ip_time,) = params.mds_conn.get_dims(r"\ip", tree_name="magnetics")
+        if self.use_efit_time_range:
+            return self._use_efit_time_range(params, ip_time)
         return ip_time
 
     def d3d_times(self, params: TimeSettingParams):
@@ -560,7 +577,10 @@ class IpTimeSetting(TimeSetting):
         (ip_time,) = params.mds_conn.get_dims(
             f"ptdata('ip', {params.shot_id})", tree_name="d3d"
         )
-        return ip_time / 1e3
+        ip_time /= 1e3  # [ms] -> [s]
+        if self.use_efit_time_range:
+            return self._use_efit_time_range(params, ip_time)
+        return ip_time
 
     def east_times(self, params: TimeSettingParams):
         """
@@ -577,11 +597,12 @@ class IpTimeSetting(TimeSetting):
             Array of times in the timebase.
         """
         (ip_time,) = params.mds_conn.get_dims(r"\pcrl01", tree_name="pcs_east")
-
         # For shots before year 2014, the PCRL01 timebase needs to be shifted
         # by 17.0 ms
         if params.shot_id < 44432:
             ip_time -= 0.0170
+        if self.use_efit_time_range:
+            return self._use_efit_time_range(params, ip_time)
         return ip_time
 
 
