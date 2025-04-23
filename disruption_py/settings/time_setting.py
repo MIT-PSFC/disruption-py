@@ -389,7 +389,7 @@ class DisruptionTimeSetting(TimeSetting):
                 params.disruption_time + config(params.tokamak).time_const,
                 self.DT_BEFORE_DISRUPTION_D3D,
             )
-            times = times[
+            (times,) = times[
                 np.where(
                     times
                     < (
@@ -429,7 +429,7 @@ class DisruptionTimeSetting(TimeSetting):
                 params.disruption_time + config(params.tokamak).time_const,
                 self.DT_BEFORE_DISRUPTION_EAST,
             )
-            times = times[
+            (times,) = times[
                 np.where(
                     times
                     < (
@@ -467,11 +467,13 @@ class DisruptionTimeSetting(TimeSetting):
         signal_max = 0
         if threshold < 0:
             raise Warning("Threshold is negative.")
-        base_indices = np.where(signal_time <= 0.0)
+        (base_indices,) = np.where(signal_time <= 0.0)
         baseline = np.mean(signal[base_indices]) if len(base_indices) > 0 else 0
         signal -= baseline
         # Check if there was a finite signal otherwise consider the shot a "no plasma" shot
-        finite_indices = np.where((signal_time >= 0.0) & (np.abs(signal) > threshold))
+        (finite_indices,) = np.where(
+            (signal_time >= 0.0) & (np.abs(signal) > threshold)
+        )
         if len(finite_indices) == 0:
             return duration, signal_max
         dt = np.diff(signal_time)
@@ -483,7 +485,9 @@ class DisruptionTimeSetting(TimeSetting):
             np.trapz(signal[finite_indices], signal_time[finite_indices])
         )
         polarized_signal = polarity * signal
-        valid_indices = np.where((polarized_signal >= threshold) & (signal_time > 0.0))
+        (valid_indices,) = np.where(
+            (polarized_signal >= threshold) & (signal_time > 0.0)
+        )
         duration = signal_time[np.max(valid_indices)]
         if len(valid_indices) == signal_time.size:
             duration = -duration
