@@ -242,7 +242,8 @@ class EfitTimeSetting(TimeSetting):
             efit_time *= time_to_sec[efit_time_unit]
         else:
             params.logger.warning(
-                "Failed to get the timebase unit of EFIT tree {efit_tree_name}; assume the unit is in seconds",
+                """Failed to get the timebase unit of EFIT tree {efit_tree_name}; 
+                assume the unit is in seconds""",
                 efit_tree_name=params.mds_conn.get_tree_name_of_nickname("_efit_tree"),
             )
         return efit_time
