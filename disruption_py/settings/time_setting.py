@@ -678,8 +678,28 @@ class SignalTimeSetting(TimeSetting):
                 signal_path=self.signal_path,
             )
             raise
-        if params.tokamak == Tokamak.D3D:
-            signal_time /= 1e3  # [ms] -> [s]
+        # Convert unit to seconds
+        time_to_sec = {"s": 1, "ms": 1e-3, "us": 1e-6}
+        # The following expression returns a whitespace character (' ') for D3D PTDATA signal
+        signal_unit = params.mds_conn.get(
+            f"units_of(dim_of({self.signal_path}))", tree_name=self.tree_name
+        ).data()
+        signal_unit = signal_unit.lower()
+        if signal_unit in time_to_sec:
+            signal_time *= time_to_sec[signal_unit]
+        elif (
+            signal_unit == " "
+            and self.signal_path[:6] == "ptdata"
+            and params.tokamak == Tokamak.D3D
+        ):
+            # timebase of PTDATA signal defaults to [ms]
+            signal_time *= 1e-3
+        else:
+            params.logger.warning(
+                "Failed to get the unit of signal {signal_path}; assume the unit is in seconds",
+                signal_path=self.signal_path,
+            )
+        # Crop to EFIT time range
         if self.use_efit_time_range:
             return self._use_efit_time_range(params, signal_time)
         return signal_time
