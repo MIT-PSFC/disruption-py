@@ -324,6 +324,58 @@ class MDSConnection:
 
         return dims
 
+    @_better_mds_exceptions
+    def get_unit(self, path: str, tree_name: str = None) -> str:
+        """
+        Get the unit for record at specified path.
+
+        Parameters
+        ----------
+        path : str
+            MDSplus path to record.
+        tree_name : str, optional
+            The name of the tree that must be open for retrieval.
+
+        Returns
+        -------
+        string
+            Returns the unit of the requested signal.
+        """
+        if tree_name is not None:
+            self.open_tree(tree_name)
+
+        logger.trace(shot_msg("Getting unit: {path}"), shot=self.shot_id, path=path)
+        unit = self.conn.get(f"units_of({path})").data()
+
+        return unit
+
+    @_better_mds_exceptions
+    def get_unit_of_dim(self, path: str, tree_name: str = None) -> str:
+        """
+        Get the unit of timebase for record at specified path.
+
+        Parameters
+        ----------
+        path : str
+            MDSplus path to record.
+        tree_name : str, optional
+            The name of the tree that must be open for retrieval.
+
+        Returns
+        -------
+        string
+            Returns the unit of the requested signal.
+        """
+        if tree_name is not None:
+            self.open_tree(tree_name)
+
+        logger.trace(
+            shot_msg("Getting unit of dimension: {path}"), shot=self.shot_id, path=path
+        )
+        unit = self.conn.get(f"units_of(dim_of({path}))").data()
+
+        return unit
+
     # nicknames
 
     def add_tree_nickname_funcs(self, tree_nickname_funcs: Dict[str, Callable]):
