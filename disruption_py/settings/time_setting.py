@@ -212,9 +212,40 @@ class EfitTimeSetting(TimeSetting):
         """
         self.tokamak_overrides = {
             Tokamak.CMOD: self.cmod_times,
-            Tokamak.D3D: self.d3d_times,
+            Tokamak.D3D: self.get_efit_times,
             Tokamak.EAST: self.east_times,
         }
+
+    def get_efit_times(self, params: TimeSettingParams):
+        """
+        Retrieve the EFIT timebase for the tested tokamaks.
+
+        Parameters
+        ----------
+        params : TimeSettingParams
+            Parameters needed to retrieve the timebase.
+
+        Returns
+        -------
+        np.ndarray
+            Array of times in the timebase.
+        """
+        (efit_time,) = params.mds_conn.get_dims(
+            r"\efit_aeqdsk:ali", tree_name="_efit_tree", astype="float64"
+        )
+        efit_time_unit = params.mds_conn.get(
+            r"units_of(dim_of(\efit_aeqdsk:ali))", tree_name="_efit_tree"
+        ).data()
+        # Convert unit to seconds
+        time_to_sec = {"s": 1, "ms": 1e-3, "us": 1e-6}
+        if efit_time_unit.lower() in time_to_sec:
+            efit_time *= time_to_sec[efit_time_unit]
+        else:
+            params.logger.warning(
+                "Failed to get the timebase unit of EFIT tree {efit_tree_name}; assume the unit is in seconds",
+                efit_tree_name=params.mds_conn.get_tree_name_of_nickname("_efit_tree"),
+            )
+        return efit_time
 
     def cmod_times(self, params: TimeSettingParams):
         """
