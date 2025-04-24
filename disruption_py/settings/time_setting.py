@@ -265,14 +265,10 @@ class EfitTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        return (
-            params.mds_conn.get_data(
-                r"\efit_a_eqdsk:atime",
-                tree_name="_efit_tree",
-                astype="float64",
-            )
-            / 1.0e3
-        )  # [ms] -> [s]
+        times = params.mds_conn.get_data(
+            r"\efit_a_eqdsk:atime", tree_name="_efit_tree", astype="float64"
+        )
+        return times / 1e3  # [ms] -> [s]
 
     def east_times(self, params: TimeSettingParams):
         """
