@@ -283,45 +283,6 @@ class EfitTimeSetting(TimeSetting):
                 astype="float64",
             )
 
-    def d3d_times(self, params: TimeSettingParams):
-        """
-        Retrieve the EFIT timebase for the DIII-D tokamak.
-
-        Parameters
-        ----------
-        params : TimeSettingParams
-            Parameters needed to retrieve the timebase.
-
-        Returns
-        -------
-        np.ndarray
-            Array of times in the timebase.
-        """
-        times = params.mds_conn.get_data(
-            r"\efit_a_eqdsk:atime", tree_name="_efit_tree", astype="float64"
-        )
-        return times / 1e3  # [ms] -> [s]
-
-    def east_times(self, params: TimeSettingParams):
-        """
-        Retrieve the EFIT timebase for the EAST tokamak.
-
-        Parameters
-        ----------
-        params : TimeSettingParams
-            Parameters needed to retrieve the timebase.
-
-        Returns
-        -------
-        np.ndarray
-            Array of times in the timebase.
-        """
-        return params.mds_conn.get_data(
-            r"\efit_aeqdsk:atime",
-            tree_name="_efit_tree",
-            astype="float64",
-        )
-
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         """
         Abstract method for retrieving EFIT timebase.
