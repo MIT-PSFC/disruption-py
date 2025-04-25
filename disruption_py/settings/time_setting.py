@@ -213,7 +213,7 @@ class EfitTimeSetting(TimeSetting):
         self.tokamak_overrides = {
             Tokamak.CMOD: self.cmod_times,
             Tokamak.D3D: self.get_efit_times,
-            Tokamak.EAST: self.east_times,
+            Tokamak.EAST: self.get_efit_times,
         }
 
     def get_efit_times(self, params: TimeSettingParams):
