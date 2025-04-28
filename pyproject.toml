@@ -27,8 +27,8 @@ lab = [
 
 [project]
 authors = [
-  {name = "Cristina Rea", email = "crea@psfc.mit.edu"},
   {name = "Gregorio L. Trevisan", email = "gtrevisan@psfc.mit.edu"},
+  {name = "Cristina Rea", email = "crea@psfc.mit.edu"},
   {name = "MIT PSFC Disruption Studies Group", email = "disruption-py@lists.psfc.mit.edu"},
 ]
 classifiers = [
