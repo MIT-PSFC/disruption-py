@@ -1,6 +1,3 @@
-[east]
-max_shot_time = 0 # disabled
-
 [east.inout.mds]
 mdsplus_connection_string = "mds.ipp.ac.cn"
 
