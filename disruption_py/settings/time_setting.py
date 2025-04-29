@@ -645,6 +645,47 @@ class SignalTimeSetting(TimeSetting):
         return signal_time
 
 
+class SharedTimeSetting(TimeSetting):
+    """
+    Time setting for using a "shared" time among several time settings.
+    The first time setting in the list is used to determine the timebase, while the other
+    time settings in the list are used to select the starting and ending points, so that
+    the final time base focuses on a time window shared among all the given items.
+    """
+
+    def __init__(self, time_setting_list: list[TimeSetting]):
+        """
+        Initialize with a list of time settings.
+
+        Parameters
+        ----------
+        time_setting_list : list[TimeSetting]
+            List of time settings.
+        """
+        if len(time_setting_list) < 2:
+            raise ValueError("SharedTimeSetting requires at least 2 time settings.")
+        self.time_setting_list = time_setting_list
+
+    def _get_times(self, params: TimeSettingParams) -> np.ndarray:
+        """
+        Retrieve the shared timebase for the given settings.
+
+        Parameters
+        ----------
+        params : TimeSettingParams
+            Parameters needed to retrieve the timebase.
+
+        Returns
+        -------
+        np.ndarray
+            Array of times in the timebase.
+        """
+        times, *others = [ts.get_times(params) for ts in self.time_setting_list]
+        tmin = np.max([np.min(t) for t in others])
+        tmax = np.min([np.max(t) for t in others])
+        return times[np.where((times >= tmin) & (times <= tmax))]
+
+
 # --8<-- [start:time_setting_dict]
 _time_setting_mappings: Dict[str, TimeSetting] = {
     "efit": EfitTimeSetting(),
