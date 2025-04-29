@@ -66,6 +66,31 @@ class TimeSettingParams:
 TimeSettingType = Union["TimeSetting", str, Dict[Tokamak, "TimeSettingType"]]
 
 
+def _postprocess(times: np.ndarray, units: str = "") -> np.ndarray:
+    """
+    Return a deduplicated, sorted, rescaled time array.
+
+    Parameters
+    ----------
+    times : np.ndarray
+        Array of times.
+    units : str
+        Unit of measure for the array of times.
+
+    Returns
+    -------
+    np.ndarray
+        Post-processed array of times.
+    """
+    times = np.unique(times)
+    units = units.lower().strip()
+    if units == "ms":
+        return times * 1e-3
+    if units == "us":
+        return times * 1e-6
+    return times
+
+
 class TimeSetting(ABC):
     """
     Abstract base class for managing time settings to retrieve the timebase for shots.
@@ -92,8 +117,10 @@ class TimeSetting(ABC):
         """
         if hasattr(self, "tokamak_overrides"):
             if params.tokamak in self.tokamak_overrides:
-                return np.unique(self.tokamak_overrides[params.tokamak](params))
-        return np.unique(self._get_times(params))
+                return _postprocess(
+                    times=self.tokamak_overrides[params.tokamak](params)
+                )
+        return _postprocess(times=self._get_times(params))
 
     @abstractmethod
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
@@ -205,11 +232,6 @@ class EfitTimeSetting(TimeSetting):
     Time setting for using the EFIT timebase.
     """
 
-    def __init__(self):
-        """
-        Initialize with tokamak-specific overrides for EFIT.
-        """
-
     def _get_times(self, params: TimeSettingParams):
         """
         Retrieve the EFIT timebase for the tested tokamaks.
@@ -229,18 +251,13 @@ class EfitTimeSetting(TimeSetting):
         )
         efit_time_unit = params.mds_conn.get_data(
             r"units_of(dim_of(\efit_aeqdsk:ali))", tree_name="_efit_tree", astype="str"
-        ).lower()
-        # Convert unit to seconds
-        time_to_sec = {"ms": 1e-3, "us": 1e-6}
-        if efit_time_unit in time_to_sec:
-            efit_time *= time_to_sec[efit_time_unit]
-        elif efit_time_unit != "s":
+        )
+        if efit_time_unit != "s":
             params.logger.verbose(
-                "Failed to get the timebase unit of EFIT tree {efit_tree_name}; "
-                "assume the unit is in seconds",
-                efit_tree_name=params.mds_conn.get_tree_name_of_nickname("_efit_tree"),
+                "Failed to get the time units of EFIT tree '{tree}', assuming seconds.",
+                tree=params.mds_conn.get_tree_name_of_nickname("_efit_tree"),
             )
-        return efit_time
+        return _postprocess(times=efit_time, units=efit_time_unit)
 
 
 class DisruptionTimeSetting(TimeSetting):
@@ -574,29 +591,24 @@ class SignalTimeSetting(TimeSetting):
                 signal_path=self.signal_path,
             )
             raise
-        # Convert unit to seconds
-        time_to_sec = {"ms": 1e-3, "us": 1e-6}
-        # get_unit_of_dim returns a whitespace character (' ') for D3D PTDATA signal
         signal_unit = params.mds_conn.get_data(
             f"units_of(dim_of({self.signal_path}))",
             tree_name=self.tree_name,
             astype="str",
-        ).lower()
-        if signal_unit in time_to_sec:
-            signal_time *= time_to_sec[signal_unit]
-        elif (
-            signal_unit == " "
+        )
+        if (
+            not signal_unit.strip()
             and self.signal_path.startswith("ptdata")
             and params.tokamak == Tokamak.D3D
         ):
             # timebase of PTDATA signal defaults to [ms]
-            signal_time *= 1e-3
+            signal_unit = "ms"
         elif signal_unit != "s":
             params.logger.warning(
-                "Failed to get the unit of signal {signal_path}; assume the unit is in seconds",
-                signal_path=self.signal_path,
+                "Failed to get the time unit of signal `{path}`, assuming seconds.",
+                path=self.signal_path,
             )
-        return signal_time
+        return _postprocess(times=signal_time, units=signal_unit)
 
 
 class SharedTimeSetting(TimeSetting):
