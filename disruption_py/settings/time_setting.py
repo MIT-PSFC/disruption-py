@@ -610,8 +610,6 @@ class SignalTimeSetting(TimeSetting):
             (signal_time,) = params.mds_conn.get_dims(
                 self.signal_path, tree_name=self.tree_name, astype="float64"
             )
-            # Remove duplicated time points
-            signal_time = np.unique(signal_time)
         except mdsExceptions.MdsException:
             params.logger.error(
                 "Failed to set up timebase for signal {signal_path}",
