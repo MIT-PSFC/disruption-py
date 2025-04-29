@@ -210,13 +210,8 @@ class EfitTimeSetting(TimeSetting):
         """
         Initialize with tokamak-specific overrides for EFIT.
         """
-        self.tokamak_overrides = {
-            Tokamak.CMOD: self.cmod_times,
-            Tokamak.D3D: self.get_efit_times,
-            Tokamak.EAST: self.get_efit_times,
-        }
 
-    def get_efit_times(self, params: TimeSettingParams):
+    def _get_times(self, params: TimeSettingParams):
         """
         Retrieve the EFIT timebase for the tested tokamaks.
 
@@ -241,63 +236,12 @@ class EfitTimeSetting(TimeSetting):
         if efit_time_unit.lower() in time_to_sec:
             efit_time *= time_to_sec[efit_time_unit]
         else:
-            params.logger.warning(
+            params.logger.verbose(
                 """Failed to get the timebase unit of EFIT tree {efit_tree_name}; 
                 assume the unit is in seconds""",
                 efit_tree_name=params.mds_conn.get_tree_name_of_nickname("_efit_tree"),
             )
         return efit_time
-
-    def cmod_times(self, params: TimeSettingParams):
-        """
-        Retrieve the EFIT timebase for the CMOD tokamak.
-
-        Parameters
-        ----------
-        params : TimeSettingParams
-            Parameters needed to retrieve the timebase.
-
-        Returns
-        -------
-        np.ndarray
-            Array of times in the timebase.
-        """
-        efit_tree_name = params.mds_conn.get_tree_name_of_nickname("_efit_tree")
-        if efit_tree_name == "analysis":
-            try:
-                return params.mds_conn.get_data(
-                    r"\efit_aeqdsk:time",
-                    tree_name=efit_tree_name,
-                    astype="float64",
-                )
-            except mdsExceptions.MdsException:
-                return params.mds_conn.get_data(
-                    r"\efit:results:a_eqdsk:time",
-                    tree_name=efit_tree_name,
-                    astype="float64",
-                )
-        else:
-            return params.mds_conn.get_data(
-                r"\top.results.a_eqdsk:time",
-                tree_name=efit_tree_name,
-                astype="float64",
-            )
-
-    def _get_times(self, params: TimeSettingParams) -> np.ndarray:
-        """
-        Abstract method for retrieving EFIT timebase.
-
-        Parameters
-        ----------
-        params : TimeSettingParams
-            Parameters needed to retrieve the timebase.
-
-        Returns
-        -------
-        np.ndarray
-            Array of times in the timebase.
-        """
-        raise ValueError("EFIT timebase setting not implemented")
 
 
 class DisruptionTimeSetting(TimeSetting):
