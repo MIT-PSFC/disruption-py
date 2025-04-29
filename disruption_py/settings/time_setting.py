@@ -233,8 +233,8 @@ class EfitTimeSetting(TimeSetting):
         (efit_time,) = params.mds_conn.get_dims(
             r"\efit_aeqdsk:ali", tree_name="_efit_tree", astype="float64"
         )
-        efit_time_unit = params.mds_conn.get_unit_of_dim(
-            r"\efit_aeqdsk:ali", tree_name="_efit_tree"
+        efit_time_unit = params.mds_conn.get_data(
+            r"units_of(dim_of(\efit_aeqdsk:ali))", tree_name="_efit_tree", astype="str"
         )
         # Convert unit to seconds
         time_to_sec = {"s": 1, "ms": 1e-3, "us": 1e-6}
@@ -674,8 +674,10 @@ class SignalTimeSetting(TimeSetting):
         # Convert unit to seconds
         time_to_sec = {"s": 1, "ms": 1e-3, "us": 1e-6}
         # get_unit_of_dim returns a whitespace character (' ') for D3D PTDATA signal
-        signal_unit = params.mds_conn.get_unit_of_dim(
-            self.signal_path, tree_name=self.tree_name
+        signal_unit = params.mds_conn.get_data(
+            f"units_of(dim_of({self.signal_path}))",
+            tree_name=self.tree_name,
+            astype="str",
         )
         signal_unit = signal_unit.lower()
         if signal_unit in time_to_sec:
