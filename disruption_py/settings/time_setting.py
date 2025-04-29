@@ -655,6 +655,7 @@ _time_setting_mappings: Dict[str, TimeSetting] = {
         Tokamak.EAST: DisruptionTimeSetting(minimum_ip=200e3, minimum_duration=0.6),
     },
     "ip": IpTimeSetting(),
+    "ip_efit": SharedTimeSetting([IpTimeSetting(), EfitTimeSetting()]),
 }
 # --8<-- [end:time_setting_dict]
 
