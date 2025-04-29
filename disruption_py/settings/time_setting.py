@@ -231,11 +231,12 @@ class EfitTimeSetting(TimeSetting):
         efit_time_unit = params.mds_conn.get_data(
             r"units_of(dim_of(\efit_aeqdsk:ali))", tree_name="_efit_tree", astype="str"
         )
+        efit_time_unit = efit_time_unit.lower()
         # Convert unit to seconds
-        time_to_sec = {"s": 1, "ms": 1e-3, "us": 1e-6}
-        if efit_time_unit.lower() in time_to_sec:
+        time_to_sec = {"ms": 1e-3, "us": 1e-6}
+        if efit_time_unit in time_to_sec:
             efit_time *= time_to_sec[efit_time_unit]
-        else:
+        elif efit_time_unit != "s":
             params.logger.verbose(
                 "Failed to get the timebase unit of EFIT tree {efit_tree_name}; "
                 "assume the unit is in seconds",
@@ -618,7 +619,7 @@ class SignalTimeSetting(TimeSetting):
             )
             raise
         # Convert unit to seconds
-        time_to_sec = {"s": 1, "ms": 1e-3, "us": 1e-6}
+        time_to_sec = {"ms": 1e-3, "us": 1e-6}
         # get_unit_of_dim returns a whitespace character (' ') for D3D PTDATA signal
         signal_unit = params.mds_conn.get_data(
             f"units_of(dim_of({self.signal_path}))",
@@ -635,7 +636,7 @@ class SignalTimeSetting(TimeSetting):
         ):
             # timebase of PTDATA signal defaults to [ms]
             signal_time *= 1e-3
-        else:
+        elif signal_unit != "s":
             params.logger.warning(
                 "Failed to get the unit of signal {signal_path}; assume the unit is in seconds",
                 signal_path=self.signal_path,
