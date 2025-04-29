@@ -51,8 +51,6 @@ def test_shared_time_setting(tokamak: Tokamak):
         test_setup = ["efit01", "ip_efit", 161228, 0.1, 5.0395, 9880]
     elif tokamak is Tokamak.EAST:
         test_setup = ["efit_east", "ip_efit", 55012, 0.301, 5.7, 5401]
-    else:
-        raise ValueError(f"Unsupported tokamak: {tokamak}.")
 
     run_test_time_setting(*test_setup)
 
@@ -70,8 +68,6 @@ def test_signal_time_setting(tokamak: Tokamak):
     elif tokamak is Tokamak.EAST:
         time_setting = SignalTimeSetting("pcs_east", r"\pcvloop")
         test_setup = ["efit_east", time_setting, 55012, -5.5, 9.199, 14702]
-    else:
-        raise ValueError(f"Unsupported tokamak: {tokamak}.")
 
     run_test_time_setting(*test_setup)
 
@@ -88,7 +84,5 @@ def test_disruption_time_setting(tokamak: Tokamak):
         test_setup = ["disruption_warning", "disruption", 161228, 0.1, 5.0935, 247]
     elif tokamak is Tokamak.EAST:
         test_setup = ["disruption_warning", "disruption", 55012, 0.2, 5.7113, 79]
-    else:
-        raise ValueError(f"Unsupported tokamak: {tokamak}.")
 
     run_test_time_setting(*test_setup)
