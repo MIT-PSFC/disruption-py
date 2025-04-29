@@ -79,7 +79,7 @@ def test_disruption_time_setting(tokamak: Tokamak):
     DisruptionTimeSetting is not implemented for CMOD and therefore we skip this test.
     """
     if tokamak is Tokamak.CMOD:
-        return
+        pytest.skip("DisruptionTimeSetting is not implemented for CMOD.")
     if tokamak is Tokamak.D3D:
         test_setup = ["disruption_warning", "disruption", 161228, 0.1, 5.0935, 247]
     elif tokamak is Tokamak.EAST:
