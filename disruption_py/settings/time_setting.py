@@ -229,8 +229,7 @@ class EfitTimeSetting(TimeSetting):
         )
         efit_time_unit = params.mds_conn.get_data(
             r"units_of(dim_of(\efit_aeqdsk:ali))", tree_name="_efit_tree", astype="str"
-        )
-        efit_time_unit = efit_time_unit.lower()
+        ).lower()
         # Convert unit to seconds
         time_to_sec = {"ms": 1e-3, "us": 1e-6}
         if efit_time_unit in time_to_sec:
@@ -582,13 +581,12 @@ class SignalTimeSetting(TimeSetting):
             f"units_of(dim_of({self.signal_path}))",
             tree_name=self.tree_name,
             astype="str",
-        )
-        signal_unit = signal_unit.lower()
+        ).lower()
         if signal_unit in time_to_sec:
             signal_time *= time_to_sec[signal_unit]
         elif (
             signal_unit == " "
-            and self.signal_path[:6] == "ptdata"
+            and self.signal_path.startswith("ptdata")
             and params.tokamak == Tokamak.D3D
         ):
             # timebase of PTDATA signal defaults to [ms]
