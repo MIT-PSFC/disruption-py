@@ -94,7 +94,7 @@ class TimeSetting(ABC):
         if hasattr(self, "tokamak_overrides"):
             if params.tokamak in self.tokamak_overrides:
                 return self.tokamak_overrides[params.tokamak](params)
-        return self._get_times(params)
+        return np.unique(self._get_times(params))
 
     @abstractmethod
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
