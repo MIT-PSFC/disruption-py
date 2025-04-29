@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from typing import Dict, Union
 
 import numpy as np
-import pandas as pd
 from loguru import logger
 from MDSplus import mdsExceptions
 
@@ -179,7 +178,7 @@ class ListTimeSetting(TimeSetting):
 
         Parameters
         ----------
-        times : list, np.ndarray, pd.Series
+        times : list, np.ndarray
             List or array of times to use as the timebase.
         """
         self.times = times
@@ -727,11 +726,13 @@ def resolve_time_setting(
         if time_setting_object is not None:
             return time_setting_object
 
-    if isinstance(time_setting, (list, np.ndarray)):
+    if isinstance(time_setting, list):
+        if all(isinstance(ts, TimeSetting) for ts in time_setting):
+            return SharedTimeSetting(time_setting)
         return ListTimeSetting(time_setting)
 
-    if isinstance(time_setting, pd.Series):
-        return ListTimeSetting(time_setting.to_numpy())
+    if isinstance(time_setting, np.ndarray):
+        return ListTimeSetting(time_setting)
 
     if isinstance(time_setting, dict):
         return TimeSettingDict(time_setting)
