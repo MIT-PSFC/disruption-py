@@ -18,7 +18,7 @@ from disruption_py.settings.time_setting import SignalTimeSetting
 from disruption_py.workflow import get_shots_data
 
 
-def run_test_time_setting(efit_tree, time_setting, shotno, t_start, t_stop, length):
+def run_test_time_setting(time_setting, efit_tree, shotno, t_start, t_stop, length):
     """
     Retrieve data, then the check time array against the specified targets.
     """
@@ -45,44 +45,55 @@ def test_shared_time_setting(tokamak: Tokamak):
     """
     Test SharedTimeSetting by using the 'ip_efit' shortcut.
     """
-    if tokamak is Tokamak.CMOD:
-        test_setup = ["analysis", "ip_efit", 1150805012, 0.0601, 1.2799, 6100]
-    elif tokamak is Tokamak.D3D:
-        test_setup = ["efit01", "ip_efit", 161228, 0.1, 5.0395, 9880]
-    elif tokamak is Tokamak.EAST:
-        test_setup = ["efit_east", "ip_efit", 55012, 0.301, 5.7, 5401]
-
-    run_test_time_setting(*test_setup)
+    test_setup = {
+        Tokamak.CMOD: ["analysis", 1150805012, 0.0601, 1.2799, 6100],
+        Tokamak.D3D: ["efit01", 161228, 0.1, 5.0395, 9880],
+        Tokamak.EAST: ["efit_east", 55012, 0.301, 5.7, 5401],
+    }
+    run_test_time_setting("ip_efit", *test_setup[tokamak])
 
 
 def test_signal_time_setting(tokamak: Tokamak):
     """
     Test SignalTimeSetting using a signal that is not Ip or a EFIT signal.
     """
-    if tokamak is Tokamak.CMOD:
-        time_setting = SignalTimeSetting("spectroscopy", r"\twopi_diode")
-        test_setup = ["analysis", time_setting, 1150805012, -1.4997, 3.9559, 16384]
-    elif tokamak is Tokamak.D3D:
-        time_setting = SignalTimeSetting("rf", r"\top.ech.total:echpwrc")
-        test_setup = ["efit01", time_setting, 161228, -0.05, 10, 201000]
-    elif tokamak is Tokamak.EAST:
-        time_setting = SignalTimeSetting("pcs_east", r"\pcvloop")
-        test_setup = ["efit_east", time_setting, 55012, -5.5, 9.199, 14702]
-
-    run_test_time_setting(*test_setup)
+    test_setup = {
+        Tokamak.CMOD: [
+            SignalTimeSetting("spectroscopy", r"\twopi_diode"),
+            "analysis",
+            1150805012,
+            -1.4997,
+            3.9559,
+            16384,
+        ],
+        Tokamak.D3D: [
+            SignalTimeSetting("rf", r"\top.ech.total:echpwrc"),
+            "efit01",
+            161228,
+            -0.05,
+            10,
+            201000,
+        ],
+        Tokamak.EAST: [
+            SignalTimeSetting("pcs_east", r"\pcvloop"),
+            "efit_east",
+            55012,
+            -5.5,
+            9.199,
+            14702,
+        ],
+    }
+    run_test_time_setting(*test_setup[tokamak])
 
 
 def test_disruption_time_setting(tokamak: Tokamak):
     """
-    Test DisruptionTimeSetting for D3D and EAST.
-
-    DisruptionTimeSetting is not implemented for CMOD and therefore we skip this test.
+    Test DisruptionTimeSetting for DIII-D and EAST, skip for C-MOD.
     """
-    if tokamak is Tokamak.CMOD:
-        pytest.skip("DisruptionTimeSetting is not implemented for CMOD.")
-    if tokamak is Tokamak.D3D:
-        test_setup = ["disruption_warning", "disruption", 161228, 0.1, 5.0935, 247]
-    elif tokamak is Tokamak.EAST:
-        test_setup = ["disruption_warning", "disruption", 55012, 0.2, 5.7113, 79]
-
-    run_test_time_setting(*test_setup)
+    test_setup = {
+        Tokamak.D3D: [161228, 0.1, 5.0935, 247],
+        Tokamak.EAST: [55012, 0.2, 5.7113, 79],
+    }
+    if tokamak not in test_setup:
+        pytest.skip(f"DisruptionTimeSetting is not implemented for {tokamak.name}.")
+    run_test_time_setting("disruption", "disruption_warning", *test_setup)
