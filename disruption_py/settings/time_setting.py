@@ -93,7 +93,7 @@ class TimeSetting(ABC):
         """
         if hasattr(self, "tokamak_overrides"):
             if params.tokamak in self.tokamak_overrides:
-                return self.tokamak_overrides[params.tokamak](params)
+                return np.unique(self.tokamak_overrides[params.tokamak](params))
         return np.unique(self._get_times(params))
 
     @abstractmethod
