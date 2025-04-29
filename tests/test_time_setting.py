@@ -12,7 +12,7 @@ Unit tests for the time_setting
 import numpy as np
 import pytest
 
-from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
+from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings import RetrievalSettings
 from disruption_py.settings.time_setting import SignalTimeSetting
 from disruption_py.workflow import get_shots_data
@@ -41,11 +41,10 @@ def run_test_time_setting(efit_tree, time_setting, shotno, t_start, t_stop, leng
     assert len(times) == len(np.unique(times))
 
 
-def test_shared_time_setting():
+def test_shared_time_setting(tokamak: Tokamak):
     """
     Test SharedTimeSetting by using the 'ip_efit' shortcut.
     """
-    tokamak = resolve_tokamak_from_environment()
     if tokamak is Tokamak.CMOD:
         test_setup = ["analysis", "ip_efit", 1150805012, 0.0601, 1.2799, 6100]
     elif tokamak is Tokamak.D3D:
@@ -58,11 +57,10 @@ def test_shared_time_setting():
     run_test_time_setting(*test_setup)
 
 
-def test_signal_time_setting():
+def test_signal_time_setting(tokamak: Tokamak):
     """
     Test SignalTimeSetting using a signal that is not Ip or a EFIT signal.
     """
-    tokamak = resolve_tokamak_from_environment()
     if tokamak is Tokamak.CMOD:
         time_setting = SignalTimeSetting("spectroscopy", r"\twopi_diode")
         test_setup = ["analysis", time_setting, 1150805012, -1.4997, 3.9559, 16384]
@@ -78,13 +76,12 @@ def test_signal_time_setting():
     run_test_time_setting(*test_setup)
 
 
-def test_disruption_time_setting():
+def test_disruption_time_setting(tokamak: Tokamak):
     """
     Test DisruptionTimeSetting for D3D and EAST.
 
     DisruptionTimeSetting is not implemented for CMOD and therefore we skip this test.
     """
-    tokamak = resolve_tokamak_from_environment()
     if tokamak is Tokamak.CMOD:
         return
     if tokamak is Tokamak.D3D:
