@@ -433,7 +433,7 @@ class IpTimeSetting(TimeSetting):
     Time setting for using the timebase of the plasma current.
     """
 
-    def __init__(self, use_efit_time_range: bool = False):
+    def __init__(self):
         """
         Initialize with tokamak-specific overrides.
         """
@@ -442,7 +442,6 @@ class IpTimeSetting(TimeSetting):
             Tokamak.D3D: self.d3d_times,
             Tokamak.EAST: self.east_times,
         }
-        self.use_efit_time_range = use_efit_time_range
 
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         """
@@ -460,20 +459,6 @@ class IpTimeSetting(TimeSetting):
         """
         raise ValueError("Ip time setting not implemented")
 
-    def _use_efit_time_range(
-        self, params: TimeSettingParams, time: np.ndarray
-    ) -> np.ndarray:
-        """
-        Remove the beginning and the end of ip_time so that the
-        timebase covers the same range as the timebase of the
-        requested EFIT tree.
-        """
-        efit_time = EfitTimeSetting().get_times(params)
-        (indices_efit_range,) = np.where(
-            (time >= efit_time[0]) & (time <= efit_time[-1])
-        )
-        return time[indices_efit_range]
-
     def cmod_times(self, params: TimeSettingParams):
         """
         Retrieve the Ip timebase for the CMOD tokamak.
@@ -489,8 +474,6 @@ class IpTimeSetting(TimeSetting):
             Array of times in the timebase.
         """
         (ip_time,) = params.mds_conn.get_dims(r"\ip", tree_name="magnetics")
-        if self.use_efit_time_range:
-            return self._use_efit_time_range(params, ip_time)
         return ip_time
 
     def d3d_times(self, params: TimeSettingParams):
@@ -511,8 +494,6 @@ class IpTimeSetting(TimeSetting):
             f"ptdata('ip', {params.shot_id})", tree_name=None
         )
         ip_time /= 1e3  # [ms] -> [s]
-        if self.use_efit_time_range:
-            return self._use_efit_time_range(params, ip_time)
         return ip_time
 
     def east_times(self, params: TimeSettingParams):
@@ -534,8 +515,6 @@ class IpTimeSetting(TimeSetting):
         # by 17.0 ms
         if params.shot_id < 44432:
             ip_time -= 0.0170
-        if self.use_efit_time_range:
-            return self._use_efit_time_range(params, ip_time)
         return ip_time
 
 
@@ -544,9 +523,7 @@ class SignalTimeSetting(TimeSetting):
     Time setting for using the timebase of a specific signal.
     """
 
-    def __init__(
-        self, tree_name: str, signal_path: str, use_efit_time_range: bool = False
-    ):
+    def __init__(self, tree_name: str, signal_path: str):
         """
         Initialize with the tree name and signal path.
 
@@ -556,29 +533,12 @@ class SignalTimeSetting(TimeSetting):
             Name of the tree containing the signal.
         signal_path : str
             Path to the signal within the tree.
-        use_efit_time_range : bool
-            Cut off the requested timebase with the efit time range
         """
         self.tree_name = tree_name
         self.signal_path = signal_path
-        self.use_efit_time_range = use_efit_time_range
         self.tokamak_overrides = {
             Tokamak.D3D: self._get_times_d3d_wrapper,
         }
-
-    def _use_efit_time_range(
-        self, params: TimeSettingParams, time: np.ndarray
-    ) -> np.ndarray:
-        """
-        Remove the beginning and the end of signal_time so that the
-        timebase covers the same range as the timebase of the
-        requested EFIT tree.
-        """
-        efit_time = EfitTimeSetting().get_times(params)
-        (indices_efit_range,) = np.where(
-            (time >= efit_time[0]) & (time <= efit_time[-1])
-        )
-        return time[indices_efit_range]
 
     def _get_times_d3d_wrapper(self, params: TimeSettingParams) -> np.ndarray:
         """
@@ -638,9 +598,6 @@ class SignalTimeSetting(TimeSetting):
                 "Failed to get the unit of signal {signal_path}; assume the unit is in seconds",
                 signal_path=self.signal_path,
             )
-        # Crop to EFIT time range
-        if self.use_efit_time_range:
-            return self._use_efit_time_range(params, signal_time)
         return signal_time
 
 
