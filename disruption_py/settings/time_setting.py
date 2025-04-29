@@ -7,7 +7,7 @@ retrieving data in disruption_py for various tokamaks and shot configurations.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, Union
+from typing import Dict, List, Union
 
 import numpy as np
 from loguru import logger
@@ -63,7 +63,9 @@ class TimeSettingParams:
         return self.disruption_time is not None
 
 
-TimeSettingType = Union["TimeSetting", str, Dict[Tokamak, "TimeSettingType"]]
+TimeSettingType = Union[
+    "TimeSetting", str, Dict[Tokamak, "TimeSettingType"], List["TimeSettingType"]
+]
 
 
 def _postprocess(times: np.ndarray, units: str = "") -> np.ndarray:
