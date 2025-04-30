@@ -96,4 +96,4 @@ def test_disruption_time_setting(tokamak: Tokamak):
     }
     if tokamak not in test_setup:
         pytest.skip(f"DisruptionTimeSetting is not implemented for {tokamak.name}.")
-    run_test_time_setting("disruption", "disruption_warning", *test_setup)
+    run_test_time_setting("disruption", "disruption_warning", *test_setup[tokamak])
