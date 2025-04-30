@@ -37,7 +37,11 @@ expected_failure_columns = [
   "n_equal_1_mode",
   "n_equal_1_normalized",
   "n_equal_1_phase",
+  "p_ecrh", # east/east_1 tree issues
+  "p_icrf", # east/east_1 tree issues
   "p_input",
+  "p_lh", # east/east_1 tree issues
+  "p_nbi", # east/east_1 tree issues
   "p_oh",
   "p_rad",
   "parea",
@@ -46,6 +50,7 @@ expected_failure_columns = [
   "pkappa_area",
   "pq0",
   "pqstar",
+  "prad_peaking", # east/east_1 tree issues
   "q0",
   "q95",
   "qstar",
@@ -53,6 +58,7 @@ expected_failure_columns = [
   "rad_loss_frac",
   "rmp_n_equal_1",
   "rmp_n_equal_1_phase",
+  "v_loop", # east/east_1 tree issues
   "wmhd",
   "wmhd_rt",
 ]
