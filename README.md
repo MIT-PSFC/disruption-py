@@ -51,7 +51,9 @@ DisruptionPy makes it easy to retrieve experimental data from [MDSplus](https://
 Users can create their own routines and/or use built-in ones that retrieve and derive a variety of important signals from experimental data for disruption analysis.
 These routines are then interpolated on a requested timebase across the specified set of plasma discharges (or shots) to assemble a dataset and save it under a variety of available formats.
 
+<p align="center">
 <img src="docs/workflow.png" alt="Schematic flowchart of a typical DisruptionPy workflow. By Y Wei (2024)" width="400" onerror="this.onerror=null;this.src='workflow.png';" />
+</p>
 
 _Figure: Schematic flowchart of a typical DisruptionPy workflow. By Y Wei (2024) [[6](https://meetings.aps.org/Meeting/DPP24/Session/PP12.10)]._
 
