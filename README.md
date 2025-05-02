@@ -115,32 +115,26 @@ pip install disruption-py
 
 For custom installations, please refer to our [Installation guide](docs/INSTALL.md).
 
+Starting with [v0.11](https://github.com/MIT-PSFC/disruption-py/releases/tag/v0.11), we support execution through [on-the-fly virtual environment creation with `uv`](https://docs.astral.sh/uv/guides/tools/):
+
+```bash
+uvx disruption-py
+```
+
 
 ## Getting Started
 
-We support execution through [on-the-fly virtual environment creation with `uv`](https://docs.astral.sh/uv/guides/tools/):
-
-```bash
-uvx disruption-py --help
-```
-
-When installed, a simple command-line entry point is available as `disruption-py`:
-
-```bash
-# if you use poetry
-poetry run disruption-py
-
-# if you use uv
-uv run disruption-py
-```
+When installed, a simple command-line entry point is available as `disruption-py`.
 
 The command-line arguments, which are subject to change, are documented in the help message:
 
 ```bash
-uv run disruption-py --help
+disruption-py --help
 ```
 ```
-usage: disruption-py [-h] [-t TOKAMAK] [-m METHODS] [-e EFIT_TREE] [-b TIME_BASE] [-o OUTPUT_FILE] [-p PROCESSES] [-l LOG_LEVEL] [shots ...]
+usage: disruption-py [-h] [-t TOKAMAK] [-m METHODS] [-e EFIT_TREE] [-b TIME_BASE]
+                          [-o OUTPUT_FILE] [-p PROCESSES] [-l LOG_LEVEL]
+                          [shots ...]
 
 positional arguments:
   shots
@@ -156,28 +150,22 @@ options:
   -l LOG_LEVEL, --log-level LOG_LEVEL
 ```
 
-A typical invocation of the entry point would be:
+A typical command-line invocation of the entry point would be:
 
 ```bash
-uv run disruption-py -m get_efit_parameters -o efit.csv 1150805012 1150805020
+# fetch EFIT-based parameters for a couple of 2015 Alcator C-MOD shots
+disruption-py -m get_efit_parameters -o efit.csv 1150805012 1150805020
 ```
 
-The same entry point can also be invoked from Python:
-
-```python
-from disruption_py.workflow import cli
-out = cli()
-```
-
-For standard installations, a simplified and flattened version of our workflow is available, as well:
+For simplified workflows, a flattened invocation of our data pipeline is available from Python, as well:
 
 ```python
 from disruption_py.workflow import run
 out = run(*args)
 ```
 
-A full-fledged disruption script enables the configuration of all the settings according to the specific use case.
-Please refer to our `examples/defaults.py` script for a quickstart workflow with all the default arguments clearly explained.
+For more complicated workflows requiring the configuration of all the settings according to the specific user needs, a full-fledged disruption script might be necessary.
+Please refer to our `examples/defaults.py` script for a quickstart workflow with explicit default arguments.
 
 
 ## Configuration
