@@ -201,3 +201,33 @@ Any configuration parameter can be overridden by the above configuration file.
 - If you encounter any problems, please [create a new issue](https://github.com/MIT-PSFC/disruption-py/issues/new).
 - If you would like to contribute, please [submit a pull request](https://github.com/MIT-PSFC/disruption-py/compare/dev...).
 - If you have general questions, please [start a new discussion](https://github.com/MIT-PSFC/disruption-py/discussions/new?category=q-a).
+
+
+## Credits
+
+#### before 2021
+
+The backbone material for this project, that is, the original MATLAB code, was authored by several contributors at [MIT PSFC](https://www.psfc.mit.edu/) before 2021:
+
+- Robert Granetz, Principal Research Scientist,
+- Cristina Rea, then Research Scientist,
+- Kevin Montes, then Graduate Research Assistant,
+- Alex Tinguely, then Graduate Research Assistant,
+- Jinxiang Zhu, then Graduate Research Assistant.
+
+#### 2022 - 2023
+
+The initial porting of the code to Python, under the supervision of Dr. Cristina Rea, was tackled by:
+
+- Herbert Turner, then Master's Student.
+
+#### 2024 - present
+
+The subsequent heavy development and maintenance of the code within the newly-established [MIT PSFC Disruption Studies Group](https://disruptions.mit.edu/), was funded under the 3-year DOE FES Grant ["Open and FAIR Fusion for Machine Learning Applications"](https://crea-psfc.github.io/open-fair-fusion/) (2024-2026).
+
+Several contributors have been involved in the development of the code since then, most notably:
+
+- Gregorio L. Trevisan, Research Scientist,
+- Josh Lorincz, Undergraduate Student,
+- Amos Decker, Undergraduate Student,
+- William Wei, PostDoctoral Associate.
