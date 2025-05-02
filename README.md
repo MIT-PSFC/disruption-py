@@ -197,8 +197,7 @@ Any configuration parameter can be overridden by the above configuration file.
 
 ## Contributing
 
-> [!IMPORTANT]
-> Make sure you refer to the latest version of our [development branch](https://github.com/MIT-PSFC/disruption-py/tree/dev)!
+Make sure you refer to the latest version of our [development branch](https://github.com/MIT-PSFC/disruption-py/tree/dev)!
 
 - If you encounter any problems, please [create a new issue](https://github.com/MIT-PSFC/disruption-py/issues/new).
 - If you would like to contribute, please [submit a pull request](https://github.com/MIT-PSFC/disruption-py/compare/dev...).
