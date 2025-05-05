@@ -50,11 +50,14 @@ uninstall:
 reinstall: uninstall install
 
 lock:
-	poetry lock --no-update
+	poetry lock
+	uv lock || true
 	git status
 
 update:
 	poetry update
+	uv lock --upgrade || true
+	git status
 
 show:
 	poetry show --latest --why --top-level --with dev,lab,docs

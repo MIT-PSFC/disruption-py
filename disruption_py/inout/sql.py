@@ -15,7 +15,6 @@ from loguru import logger
 from sqlalchemy import create_engine
 
 from disruption_py.config import config
-from disruption_py.core.utils.misc import without_duplicates
 from disruption_py.core.utils.shared_instance import SharedInstance
 from disruption_py.machine.tokamak import Tokamak
 
@@ -33,13 +32,8 @@ class ShotDatabase:
         db_name,
         user,
         passwd,
-        protected_columns=None,
-        write_database_table_name=None,
         **_kwargs,
     ):
-
-        if protected_columns is None:
-            protected_columns = []
 
         logger.debug(
             "Database initialization: {user}@{host}/{db_name}",
@@ -72,8 +66,6 @@ class ShotDatabase:
         self.db_name = db_name
         self.user = user
         self.passwd = passwd
-        self.protected_columns = protected_columns
-        self.write_database_table_name = write_database_table_name
 
         self.dialect = "mysql" if "mysql" in self.driver.lower() else "mssql"
         self.connection_string = self._get_connection_string(self.db_name)
@@ -111,8 +103,6 @@ class ShotDatabase:
             db_name=db_conf["db_name"],
             user=db_conf["db_user"],
             passwd=db_conf["db_pass"],
-            protected_columns=without_duplicates(db_conf["protected_columns"]),
-            write_database_table_name=db_conf.get("write_database_table_name"),
         )
 
     def _get_connection_string(self, db_name):
@@ -172,17 +162,13 @@ class ShotDatabase:
         Any
             Result of query
         """
-        if "alter" in query.lower():
-            if query.lower() in self.protected_columns:
-                return 0
-        elif use_pandas:
+        if use_pandas:
             return pd.read_sql_query(query, self.engine)
         curs = self.conn.cursor()
         output = None
         try:
             curs.execute(query)
-            if "select" in query.lower():
-                output = curs.fetchall()
+            output = curs.fetchall()
         except pyodbc.DatabaseError as e:
             logger.error("Query failed: {e}", e=repr(e))
             logger.opt(exception=True).debug(e)

@@ -6,10 +6,10 @@ Module for populating shot data by executing physics methods in DisruptionPy.
 
 import time
 from collections.abc import Iterable
-from typing import Any
+from typing import Dict
 
 import numpy as np
-import pandas as pd
+import xarray as xr
 from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.errors import CalculationError
@@ -19,11 +19,9 @@ from disruption_py.core.physics_method.metadata import (
     is_physics_method,
 )
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.misc import get_elapsed_time
+from disruption_py.core.utils.misc import get_elapsed_time, to_tuple
 from disruption_py.machine.method_holders import get_method_holders
 from disruption_py.settings.retrieval_settings import RetrievalSettings
-
-REQUIRED_COLS = {"shot", "time"}
 
 
 def get_all_physics_methods(all_passed: list) -> set:
@@ -108,10 +106,7 @@ def filter_methods_to_run(
         A list of bound method metadata instances that are eligible to run.
     """
     methods = retrieval_settings.run_methods
-    if retrieval_settings.run_columns is not None:
-        columns = REQUIRED_COLS.union(retrieval_settings.run_columns)
-    else:
-        columns = None
+    columns = retrieval_settings.run_columns
     only_excluded_methods_specified = all("~" in method for method in methods or [])
     methods_to_run = []
     for bound_method_metadata in all_bound_method_metadata:
@@ -158,9 +153,9 @@ def filter_methods_to_run(
 def populate_method(
     physics_method_params: PhysicsMethodParams,
     bound_method_metadata: BoundMethodMetadata,
-) -> Any:
+) -> Dict[str, np.ndarray] | xr.DataArray | xr.Dataset:
     """
-    Execute a physics method and log the results.
+    Execute a physics method and store the result.
 
     Parameters
     ----------
@@ -171,18 +166,22 @@ def populate_method(
 
     Returns
     -------
-    Any
-        The result of the executed method, or None if an error occurred.
+    Dict[str, np.ndarray] | xr.DataArray | xr.Dataset
+        The result of the executed method.
     """
+
     method = bound_method_metadata.bound_method
     name = bound_method_metadata.name
-
     physics_method_params.logger.trace("Starting method: {name}", name=name)
 
     try:
+
         result = method(params=physics_method_params)
+
     # pylint: disable-next=broad-exception-caught
     except Exception as e:
+
+        # log exception
         level = "ERROR"
         if isinstance(e, mdsExceptions.MDSplusERROR):
             pass
@@ -190,7 +189,11 @@ def populate_method(
             level = "WARNING"
         physics_method_params.logger.log(level, "{name}: {exc}", name=name, exc=repr(e))
         physics_method_params.logger.opt(exception=True).debug(name)
+
+        # mock-up data
         result = {col: [np.nan] for col in bound_method_metadata.columns}
+
+        # reconnect if needed
         if isinstance(e, mdsExceptions.MDSplusERROR):
             physics_method_params.mds_conn.reconnect()
 
@@ -200,7 +203,7 @@ def populate_method(
 def populate_shot(
     retrieval_settings: RetrievalSettings,
     physics_method_params: PhysicsMethodParams,
-) -> pd.DataFrame:
+) -> xr.Dataset:
     """
     Run the physics methods to populate shot data.
 
@@ -218,11 +221,11 @@ def populate_shot(
 
     Returns
     -------
-    pd.DataFrame
-        A DataFrame containing the queried data.
+    xr.Dataset
+        A dataset containing the queried data.
     """
-    # Concatenate built-in classes containing registered methods with user-provided
-    # classes/methods
+
+    # concatenate built-in and user-provided classes/methods
     all_physics_method_holders = (
         get_method_holders(physics_method_params.tokamak)
         + retrieval_settings.custom_physics_methods
@@ -237,83 +240,81 @@ def populate_shot(
 
     # run methods and collect data
     start_time = time.time()
-    methods_data = [
-        populate_method(
+    datasets = []
+    for bound_method_metadata in run_bound_method_metadata:
+
+        # run method
+        result = populate_method(
             physics_method_params=physics_method_params,
             bound_method_metadata=bound_method_metadata,
         )
-        for bound_method_metadata in run_bound_method_metadata
-    ]
 
-    # create DataFrames of proper shape
-    num_parameters = 0
-    num_valid = 0
-    filtered_methods = []
-    for method_dict in methods_data:
-        if method_dict is None:
-            continue
-        # Pad parameters which are only a single NaN (from our error outputs) in
-        # order to create a DataFrame for easy comparison with cached data.
-        for parameter in method_dict:
-            num_parameters += 1
-            if (
-                np.all(np.isnan(method_dict[parameter]))
-                and len(method_dict[parameter]) == 1
-            ):
-                method_dict[parameter] = physics_method_params.times * np.nan
-            else:
-                num_valid += 1
-        method_df = pd.DataFrame(method_dict)
-        if len(method_df) != len(physics_method_params.times):
-            physics_method_params.logger.error(
-                "Ignoring parameters {parameter} with different length than timebase",
-                parameter=list(method_dict.keys()),
-            )
-            continue
-        filtered_methods.append(method_df)
+        # convert non-dataset dict to dataset
+        if not isinstance(result, (xr.DataArray, xr.Dataset)):
+
+            times = physics_method_params.times
+
+            # create data_vars dict
+            data = {}
+            for k, v in result.items():
+                if len(v) == len(times):
+                    # as expected
+                    data[k] = v
+                    continue
+                if all(np.isnan(v)):
+                    # pad all-nan var
+                    physics_method_params.logger.debug("All-nan data: {col}", col=k)
+                    data[k] = np.nan * times
+                    continue
+                physics_method_params.logger.error(
+                    "Data length mismatch: {col} {shape} vs times {times}",
+                    col=k,
+                    shape=v.shape,
+                    times=times.shape,
+                )
+
+            # create dataset
+            data_vars = to_tuple(data, dim="idx")
+            coords = physics_method_params.to_coords()
+            result = xr.Dataset(data_vars=data_vars, coords=coords)
+
+        datasets += [result]
+
+    # merge dataarrays/datasets into dataset
+    dataset = xr.merge(datasets)
 
     # log statistics
-    percent_valid = (num_valid / num_parameters * 100) if num_parameters else 0
-    if percent_valid >= 75:
+    if dataset:
+        tot = len(dataset.data_vars)
+        nok = int(dataset.notnull().any().to_array().sum())
+    else:
+        nok, tot = 0, 0
+    percent = (nok / tot * 100) if tot else 0
+    if percent >= 75:
         level = "SUCCESS"
-        quant = "all" if percent_valid == 100 else "most"
-    elif percent_valid >= 25:
+        quant = "all" if percent == 100 else "most"
+    elif percent >= 25:
         level = "WARNING"
-        quant = "many" if percent_valid >= 50 else "some"
+        quant = "many" if percent >= 50 else "some"
     else:
         level = "ERROR"
-        quant = "no" if percent_valid == 0 else "few"
+        quant = "no" if percent == 0 else "few"
 
     physics_method_params.logger.log(
         level,
-        "{level}! {quant} parameters have data: {num_valid}/{total} ({percent_valid:.2f}%)"
+        "{level}! {quant} parameters have data: {nok}/{tot} ({percent:.2f}%)"
         " in {elapsed}",
         level=level.capitalize(),
         quant=quant.capitalize(),
-        num_valid=num_valid,
-        total=num_parameters,
-        percent_valid=percent_valid,
+        nok=nok,
+        tot=tot,
+        percent=percent,
         elapsed=get_elapsed_time(time.time() - start_time),
     )
 
-    # concatenate partial DataFrames
-    coords = pd.DataFrame(
-        {
-            "shot": [physics_method_params.shot_id] * len(physics_method_params.times),
-            "time": physics_method_params.times,
-        }
-    )
-    local_data = pd.concat([coords] + filtered_methods, axis=1)
-    local_data = local_data.loc[:, ~local_data.columns.duplicated()]
-
-    # include requested columns
-    include_cols = set(local_data.columns).difference(REQUIRED_COLS)
-    if (
-        retrieval_settings.only_requested_columns
-        and retrieval_settings.run_columns is not None
-    ):
-        include_cols = set(retrieval_settings.run_columns).intersection(include_cols)
+    # select columns
+    if retrieval_settings.only_requested_columns and retrieval_settings.run_columns:
+        dataset = dataset[retrieval_settings.run_columns]
 
     # sort columns
-    local_data = local_data[list(REQUIRED_COLS) + sorted(list(include_cols))]
-    return local_data
+    return dataset[sorted(dataset)]
