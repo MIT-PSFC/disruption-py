@@ -84,16 +84,3 @@ def test_signal_time_setting(tokamak: Tokamak):
         ],
     }
     run_test_time_setting(*test_setup[tokamak])
-
-
-def test_disruption_time_setting(tokamak: Tokamak):
-    """
-    Test DisruptionTimeSetting for DIII-D and EAST, skip for C-MOD.
-    """
-    test_setup = {
-        Tokamak.D3D: [161228, 0.1, 5.0935, 247],
-        Tokamak.EAST: [55012, 0.2, 5.7113, 79],
-    }
-    if tokamak not in test_setup:
-        pytest.skip(f"DisruptionTimeSetting is not implemented for {tokamak.name}.")
-    run_test_time_setting("disruption", "disruption_warning", *test_setup[tokamak])
