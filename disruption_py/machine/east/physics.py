@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
 """
-Module for retrieving and calculating data for EAST physics methods.
+Module for retrieving and calculating data for DIII-D physics methods.
 """
-from typing import Dict
 
 import numpy as np
 import scipy
@@ -908,7 +907,7 @@ class EastPhysicsMethods:
 
     @staticmethod
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.EAST)
-    def get_kappa_area(params: PhysicsMethodParams) -> Dict[str, np.ndarray]:
+    def get_kappa_area(params: PhysicsMethodParams):
         """
         This script computes kappa_area (elongation parameter) defined as
         plasma area / (pi * aminor**2)
@@ -920,8 +919,10 @@ class EastPhysicsMethods:
 
         Returns
         -------
-        Dict[str, np.ndarray]
-            A dictionary containing the calculated `kappa_area`.
+        dict
+            A dictionary containing the following keys:
+            - 'kappa_area' : array
+                Computed elongation parameter
 
         References
         -------
@@ -940,7 +941,9 @@ class EastPhysicsMethods:
         area = efit_params["area"]
         aminor = efit_params["aminor"]
         # Compute kappa_area
-        kappa_area = np.where(aminor > 0, area / (np.pi * aminor**2), np.nan)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            kappa_area = area / (np.pi * aminor**2)
+
         return {"kappa_area": kappa_area}
 
     @staticmethod
