@@ -315,6 +315,7 @@ class DisruptionTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
+        time_config = config(params.tokamak).time
         raw_ip, ip_time = params.mds_conn.get_data_with_dims(
             f"ptdata('ip', {params.shot_id})", tree_name="d3d"
         )
@@ -323,26 +324,25 @@ class DisruptionTimeSetting(TimeSetting):
         ip = raw_ip - baseline
         duration, ip_max = self._get_end_of_shot(ip, ip_time, 100e3)
         if (
-            duration < config(params.tokamak).minimum_duration
-            or np.abs(ip_max) < config(params.tokamak).minimum_ip
+            duration < time_config.minimum_duration
+            or np.abs(ip_max) < time_config.minimum_ip
         ):
             raise NotImplementedError()
 
-        times = np.arange(0.100, duration + config(params.tokamak).time_const, 0.025)
+        times = np.arange(0.100, duration + time_config.time_const, 0.025)
         if params.disrupted:
             additional_times = np.arange(
-                params.disruption_time
-                - config(params.tokamak).duration_before_disruption,
-                params.disruption_time + config(params.tokamak).time_const,
-                config(params.tokamak).dt_before_disruption,
+                params.disruption_time - time_config.duration_before_disruption,
+                params.disruption_time + time_config.time_const,
+                time_config.dt_before_disruption,
             )
             times = times[
                 np.where(
                     times
                     < (
                         params.disruption_time
-                        - config(params.tokamak).duration_before_disruption
-                        - config(params.tokamak).time_const
+                        - time_config.duration_before_disruption
+                        - time_config.time_const
                     )
                 )
             ]
@@ -363,31 +363,29 @@ class DisruptionTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
+        time_config = config(params.tokamak).time
         ip, ip_time = EastUtilMethods.retrieve_ip(params.mds_conn, params.shot_id)
-        duration, ip_max = self._get_end_of_shot(
-            ip, ip_time, config(params.tokamak).minimum_ip
-        )
+        duration, ip_max = self._get_end_of_shot(ip, ip_time, time_config.minimum_ip)
         if (
-            duration < config(params.tokamak).minimum_duration
-            or np.abs(ip_max) < config(params.tokamak).minimum_ip
+            duration < time_config.minimum_duration
+            or np.abs(ip_max) < time_config.minimum_ip
         ):
             raise NotImplementedError()
 
-        times = np.arange(0.200, duration + config(params.tokamak).time_const, 0.1)
+        times = np.arange(0.200, duration + time_config.time_const, 0.1)
         if params.disrupted:
             additional_times = np.arange(
-                params.disruption_time
-                - config(params.tokamak).duration_before_disruption,
-                params.disruption_time + config(params.tokamak).time_const,
-                config(params.tokamak).dt_before_disruption,
+                params.disruption_time - time_config.duration_before_disruption,
+                params.disruption_time + time_config.time_const,
+                time_config.dt_before_disruption,
             )
             times = times[
                 np.where(
                     times
                     < (
                         params.disruption_time
-                        - config(params.tokamak).duration_before_disruption
-                        - config(params.tokamak).time_const
+                        - time_config.duration_before_disruption
+                        - time_config.time_const
                     )
                 )
             ]

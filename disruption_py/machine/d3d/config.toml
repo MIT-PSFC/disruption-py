@@ -1,9 +1,3 @@
-[d3d]
-dt_before_disruption = 0.002
-duration_before_disruption = 0.10
-minimum_duration = 0.1
-minimum_ip = 400e3
-
 [d3d.inout.mds]
 mdsplus_connection_string = "atlas"
 
@@ -114,3 +108,9 @@ disrup1_fast = 161228
 disrup2_full = 161237
 no_disrup1_full = 166177
 no_disrup2_full = 166253
+
+[d3d.time]
+dt_before_disruption = 0.002
+duration_before_disruption = 0.10
+minimum_duration = 0.1
+minimum_ip = 400e3
