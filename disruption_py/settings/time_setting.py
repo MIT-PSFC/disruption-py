@@ -657,10 +657,6 @@ class SharedTimeSetting(TimeSetting):
 # --8<-- [start:time_setting_dict]
 _time_setting_mappings: Dict[str, TimeSetting] = {
     "efit": EfitTimeSetting(),
-    "disruption": {
-        Tokamak.D3D: DisruptionTimeSetting(),
-        Tokamak.EAST: DisruptionTimeSetting(minimum_ip=200e3, minimum_duration=0.6),
-    },
     "disruption_warning": {
         Tokamak.CMOD: EfitTimeSetting(),
         Tokamak.D3D: DisruptionTimeSetting(),
