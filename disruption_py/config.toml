@@ -1,11 +1,6 @@
 [default]
-max_processes = 10
 max_shot_time = 7.0 # [s]
 time_const = 1e-6
-
-[default.inout.sql]
-protected_columns = ["shot", "time"]
-write_database_table_name = "disruption_warning_test"
 
 [default.tests]
 match_fraction = 0.95 # Fraction of signals that must match between MDSplus and SQL

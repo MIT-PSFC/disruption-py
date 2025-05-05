@@ -64,11 +64,6 @@ class DataDifference:
         )
 
     @property
-    def failure_ratio_string(self) -> str:
-        """Create a string for the fraction of datapoints that are anomalies"""
-        return f"{self.num_anomalies / self.timebase_length:.4f}"
-
-    @property
     def column_mismatch_string(self) -> str:
         """Create a string showing the difference between fresh and cache data."""
         # Missing data handled here because difference_df expects data to exist
@@ -158,14 +153,3 @@ class DataDifference:
         anomalies: pd.Series = numeric_anomalies_mask | nan_anomalies_mask
 
         return anomalies.to_numpy(), relative_difference
-
-
-def assert_frame_equal_unordered(df1: pd.DataFrame, df2: pd.DataFrame):
-    """Compare whether two dataframes have the same values."""
-    df1_sorted = df1.sort_values(by=config().inout.sql.protected_columns).reset_index(
-        drop=True
-    )
-    df2_sorted = df2.sort_values(by=config().inout.sql.protected_columns).reset_index(
-        drop=True
-    )
-    pd.testing.assert_frame_equal(df1_sorted, df2_sorted, check_like=True)

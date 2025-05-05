@@ -3,8 +3,7 @@
 """
 Module for managing retrieval of shot data from a tokamak.
 """
-
-
+import MDSplus.mdsExceptions
 import numpy as np
 import pandas as pd
 from loguru import logger
@@ -101,6 +100,8 @@ class RetrievalManager:
             logger.opt(exception=True).debug(
                 shot_msg("Failed retrieval!"), shot=shot_id
             )
+            if isinstance(e, MDSplus.mdsExceptions.MDSplusERROR):
+                physics_method_params.mds_conn.reconnect()
             retrieved_data = None
 
         # shot cleanup
@@ -110,8 +111,9 @@ class RetrievalManager:
         except Exception as e:
             logger.critical(shot_msg("Failed cleanup! {e}"), shot=shot_id, e=repr(e))
             logger.opt(exception=True).debug(shot_msg("Failed cleanup!"), shot=shot_id)
+            if isinstance(e, MDSplus.mdsExceptions.MDSplusERROR):
+                physics_method_params.mds_conn.reconnect()
             retrieved_data = None
-            physics_method_params.mds_conn.reconnect()
 
         return retrieved_data
 
