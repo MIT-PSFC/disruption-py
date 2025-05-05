@@ -571,6 +571,20 @@ class EastPhysicsMethods:
         fraction, and the radiated loss function by calling get_p_ohm and
         get_radiated_power.
 
+        Notes
+        ----------
+        For the moment we assume that the MDSplus trees always have the corresponding
+        tree nodes for each of the powers, even if the heating source or diagnostic
+        was not turned on in that shot. If the method is not able to access a particular
+        node, then we assume the tree is broken and skips computing that power, rather than
+        considering that heating source or diagnostic was turned off during that shot and assign
+        an array of 0 to that power. This was not the case in several shots on CMOD, and we need
+        to verify this on EAST in the future.
+
+        For now, if we encounter an MdsException error for any of the powers, we return
+        that power with nans and skip calculating the radiated fractions and p_input
+        if applicable.
+
         Parameters
         ----------
         params : PhysicsMethodParams
@@ -649,17 +663,27 @@ class EastPhysicsMethods:
             r"\plhi1*1e3",  # LHW 2.45 GHz data
             r"\plhi2*1e3",  # LHW 4.66 GHz data
         ]
-        p_lh = get_heating_power(lh_nodes, "east_1")  # [W]
+        try:
+            p_lh = get_heating_power(lh_nodes, "east_1")  # [W]
+        except mdsExceptions.MdsException:
+            params.logger.warning("Failed to get LH heating power")
+            p_lh = [np.nan]
 
         # Get ECRH power
-        p_ecrh, ecrh_time = params.mds_conn.get_data_with_dims(
-            r"\pecrh1i*1e3", tree_name="analysis"
-        )  # [W], [s]
-        (baseline_indices,) = np.where(ecrh_time < 0)
-        if len(baseline_indices) > 0:
-            p_ecrh_baseline = np.mean(p_ecrh[baseline_indices])
-            p_ecrh -= p_ecrh_baseline
-        p_ecrh = interp1(ecrh_time, p_ecrh, params.times, kind="linear", fill_value=0)
+        try:
+            p_ecrh, ecrh_time = params.mds_conn.get_data_with_dims(
+                r"\pecrh1i*1e3", tree_name="analysis"
+            )  # [W], [s]
+            (baseline_indices,) = np.where(ecrh_time < 0)
+            if len(baseline_indices) > 0:
+                p_ecrh_baseline = np.mean(p_ecrh[baseline_indices])
+                p_ecrh -= p_ecrh_baseline
+            p_ecrh = interp1(
+                ecrh_time, p_ecrh, params.times, kind="linear", fill_value=0
+            )
+        except mdsExceptions.MdsException:
+            params.logger.warning("Failed to get ECRH heating power")
+            p_ecrh = [np.nan]
 
         # Get ICRF power
         # p_ICRF = (p_icrfii - p_icrfir) + (p_icrfbi - p_icrfbr)
@@ -669,7 +693,11 @@ class EastPhysicsMethods:
             r"\picrfbi*1e3",
             r"\picrfbr*-1e3",
         ]
-        p_icrf = get_heating_power(icrf_nodes, "icrf_east")  # [W]
+        try:
+            p_icrf = get_heating_power(icrf_nodes, "icrf_east")  # [W]
+        except mdsExceptions.MdsException:
+            params.logger.warning("Failed to get ICRF heating power")
+            p_icrf = [np.nan]
 
         # Get NBI power
         nbi_nodes = [
@@ -678,7 +706,11 @@ class EastPhysicsMethods:
             r"\pnbi2lsource*1e3",
             r"\pnbi2rsource*1e3",
         ]
-        p_nbi = get_heating_power(nbi_nodes, "nbi_east")  # [W]
+        try:
+            p_nbi = get_heating_power(nbi_nodes, "nbi_east")  # [W]
+        except mdsExceptions.MdsException:
+            params.logger.warning("Failed to get NBI heating power")
+            p_nbi = [np.nan]
 
         # Get ohmic power
         p_ohm = EastPhysicsMethods.get_p_ohm(params)["p_oh"]  # [W]
@@ -686,24 +718,43 @@ class EastPhysicsMethods:
         # Get radiated power
         p_rad = EastPhysicsMethods.get_radiated_power(params)["p_rad"]  # [W]
 
-        # Get Wmhd and calculate dWmhd_dt
-        wmhd, efittime = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:wplasm", tree_name="_efit_tree"
-        )  # [W], [s]
-        dwmhd_dt = np.gradient(wmhd, efittime)
-        dwmhd_dt = interp1(efittime, dwmhd_dt, params.times)
+        # Calculate p_input
+        if not (
+            np.isnan(p_ohm).all()
+            and np.isnan(p_lh).all()
+            and np.isnan(p_icrf).all()
+            and np.isnan(p_ecrh).all()
+            and np.isnan(p_nbi).all()
+        ):
+            p_input = p_ohm + p_lh + p_icrf + p_ecrh + p_nbi
+        else:
+            p_input = [np.nan]
 
-        # Calculate p_input, rad_input_frac, and rad_loss_frac
-        p_input = p_ohm + p_lh + p_icrf + p_ecrh + p_nbi
-        p_loss = p_input - dwmhd_dt
+        # Get Wmhd, calculate dWmhd_dt, and calculate p_loss
+        try:
+            wmhd, efittime = params.mds_conn.get_data_with_dims(
+                r"\efit_aeqdsk:wplasm", tree_name="_efit_tree"
+            )  # [W], [s]
+            dwmhd_dt = np.gradient(wmhd, efittime)
+            dwmhd_dt = interp1(efittime, dwmhd_dt, params.times)
+            if not np.isnan(p_input).all():
+                p_loss = p_input - dwmhd_dt
+            else:
+                p_loss = [np.nan]
+        except mdsExceptions.MdsException:
+            params.logger.warning("Failed to get proper signals to compute p_loss")
+            p_loss = [np.nan]
 
         rad_input_frac = np.full(len(params.times), np.nan)
-        (valid_indices,) = np.where((p_input != 0) & ~np.isnan(p_input))
-        rad_input_frac[valid_indices] = p_rad[valid_indices] / p_input[valid_indices]
-
         rad_loss_frac = np.full(len(params.times), np.nan)
-        (valid_indices,) = np.where((p_loss != 0) & ~np.isnan(p_loss))
-        rad_loss_frac[valid_indices] = p_rad[valid_indices] / p_loss[valid_indices]
+        if ~(np.isnan(p_rad).all() and np.isnan(p_input).all()):
+            (valid_indices,) = np.where((p_input != 0) & ~np.isnan(p_input))
+            rad_input_frac[valid_indices] = (
+                p_rad[valid_indices] / p_input[valid_indices]
+            )
+        if ~(np.isnan(p_rad).all() and np.isnan(p_loss).all()):
+            (valid_indices,) = np.where((p_loss != 0) & ~np.isnan(p_loss))
+            rad_loss_frac[valid_indices] = p_rad[valid_indices] / p_loss[valid_indices]
 
         output = {
             "p_ecrh": p_ecrh,
@@ -760,16 +811,20 @@ class EastPhysicsMethods:
         Last major update: 2014/11/21 by William Wei
         """
         # Get raw signals
-        vloop, vloop_time = params.mds_conn.get_data_with_dims(
-            r"\pcvloop", tree_name="pcs_east"
-        )  # [V]
-        li, li_time = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:li", tree_name="_efit_tree"
-        )  # [H]
-        # Fetch raw ip signal to calculate dip_dt and apply smoothing
-        ip, ip_time = params.mds_conn.get_data_with_dims(
-            r"\pcrl01", tree_name="pcs_east"
-        )  # [A]
+        try:
+            vloop, vloop_time = params.mds_conn.get_data_with_dims(
+                r"\pcvloop", tree_name="pcs_east"
+            )  # [V]
+            li, li_time = params.mds_conn.get_data_with_dims(
+                r"\efit_aeqdsk:li", tree_name="_efit_tree"
+            )  # [H]
+            # Fetch raw ip signal to calculate dip_dt and apply smoothing
+            ip, ip_time = params.mds_conn.get_data_with_dims(
+                r"\pcrl01", tree_name="pcs_east"
+            )  # [A]
+        except mdsExceptions.MdsException:
+            params.logger.warning("Failed to get necessary signals to compute p_ohm")
+            return {"p_oh": [np.nan]}
         sign_ip = np.sign(sum(ip))
         dipdt = np.gradient(ip, ip_time)
         # TODO: switch to causal boxcar smoothing
