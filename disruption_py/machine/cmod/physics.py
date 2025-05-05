@@ -2134,7 +2134,7 @@ class CmodPhysicsMethods:
         References
         ----------
         - pull request: #[?](https://github.com/MIT-PSFC/disruption-py/pull/?)
-        
+
         Last major update by Enrique Zapata on 4/17/2025
         """
         output = {
@@ -2147,7 +2147,7 @@ class CmodPhysicsMethods:
             )  # [mW/(cm2*sr)], [s]
             # Interpolate Halpha to params.times
             h_alpha_interp = interp1(time_halpha, h_alpha, params.times)
-            output["h_alpha"]  =  10*h_alpha_interp # [W/(m2*sr)]
+            output["h_alpha"] = 10 * h_alpha_interp  # [W/(m2*sr)]
         except ValueError as e:
             params.logger.warning("Failed to get H_alpha signal. Returning NaNs.")
             params.logger.opt(exception=True).debug(e)
