@@ -9,16 +9,27 @@ Unit tests for the time_setting
 ('ip_efit' tests both IpTimeSetting and MixedTimeSetting)
 """
 
+import os
+
 import numpy as np
 import pytest
 
 from disruption_py.machine.tokamak import Tokamak
-from disruption_py.settings import RetrievalSettings
-from disruption_py.settings.time_setting import SignalTimeSetting
+from disruption_py.settings import LogSettings, RetrievalSettings
+from disruption_py.settings.time_setting import SignalTimeSetting, TimeSetting
 from disruption_py.workflow import get_shots_data
 
 
-def run_test_time_setting(time_setting, efit_tree, shotno, t_start, t_stop, length):
+def run_test_time_setting(
+    tokamak: Tokamak,
+    time_setting: TimeSetting,
+    efit_tree: str,
+    shot: int,
+    t_start: float,
+    t_stop: float,
+    length: float,
+    test_folder: str,
+):
     """
     Retrieve data, then the check time array against the specified targets.
     """
@@ -29,8 +40,14 @@ def run_test_time_setting(time_setting, efit_tree, shotno, t_start, t_stop, leng
         time_setting=time_setting,
     )
     shot_data = get_shots_data(
-        shotlist_setting=[shotno],
+        tokamak=tokamak,
+        shotlist_setting=[shot],
         retrieval_settings=retrieval_settings,
+        output_setting=os.path.join(test_folder, "output.nc"),
+        log_settings=LogSettings(
+            console_level="WARNING",
+            file_path=os.path.join(test_folder, "output.log"),
+        ),
     )
     times = shot_data["time"].to_numpy()
     # Check start, end, and length of time array
@@ -41,7 +58,7 @@ def run_test_time_setting(time_setting, efit_tree, shotno, t_start, t_stop, leng
     assert len(times) == len(np.unique(times))
 
 
-def test_shared_time_setting(tokamak: Tokamak):
+def test_shared_time_setting(tokamak: Tokamak, test_folder_f: str):
     """
     Test SharedTimeSetting by using the 'ip_efit' shortcut.
     """
@@ -50,10 +67,10 @@ def test_shared_time_setting(tokamak: Tokamak):
         Tokamak.D3D: ["efit01", 161228, 0.1, 5.0395, 9880],
         Tokamak.EAST: ["efit_east", 55012, 0.301, 5.7, 5401],
     }
-    run_test_time_setting("ip_efit", *test_setup[tokamak])
+    run_test_time_setting(tokamak, "ip_efit", *test_setup[tokamak], test_folder_f)
 
 
-def test_signal_time_setting(tokamak: Tokamak):
+def test_signal_time_setting(tokamak: Tokamak, test_folder_f: str):
     """
     Test SignalTimeSetting using a signal that is not Ip or a EFIT signal.
     """
@@ -83,4 +100,4 @@ def test_signal_time_setting(tokamak: Tokamak):
             14702,
         ],
     }
-    run_test_time_setting(*test_setup[tokamak])
+    run_test_time_setting(tokamak, *test_setup[tokamak], test_folder_f)
