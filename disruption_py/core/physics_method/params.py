@@ -3,14 +3,13 @@
 """
 Module for defining parameters used in physics methods for DisruptionPy.
 """
-
 from dataclasses import dataclass, field
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 import numpy as np
 from loguru import logger
 
-from disruption_py.core.utils.misc import shot_msg_patch
+from disruption_py.core.utils.misc import shot_msg_patch, to_tuple
 from disruption_py.inout.mds import MDSConnection
 from disruption_py.machine.tokamak import Tokamak
 
@@ -46,7 +45,26 @@ class PhysicsMethodParams:
         return self.disruption_time is not None
 
     def cleanup(self) -> None:
-        """Clean up resources used by the physics method parameters."""
+        """
+        Clean up resources used by the physics method parameters.
+        """
         self.mds_conn.cleanup()
         self.times = None
         self.cached_results.clear()
+
+    def to_coords(self) -> Dict[str, Tuple[str, np.ndarray]]:
+        """
+        Create a dictionary of coordinates based on the parameters.
+
+        Returns
+        -------
+        Dict[str, Tuple[str, np.ndarray]]
+            A dictionary with `shot` and `time` as coordinates for dimension `idx`.
+        """
+        return to_tuple(
+            data={
+                "shot": len(self.times) * [self.shot_id],
+                "time": self.times,
+            },
+            dim="idx",
+        )

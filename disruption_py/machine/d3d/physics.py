@@ -1344,7 +1344,7 @@ class D3DPhysicsMethods:
         except mdsExceptions.MdsException as e:
             params.logger.warning("Failed to obtain triangularity signals")
             params.logger.opt(exception=True).debug(e)
-            delta = [np.nan]
+            delta = None
         # Compute squareness
         try:
             sqfod = params.mds_conn.get_data(
@@ -1357,7 +1357,7 @@ class D3DPhysicsMethods:
         except mdsExceptions.MdsException as e:
             params.logger.warning("Failed to obtain squareness signals")
             params.logger.opt(exception=True).debug(e)
-            squareness = [np.nan]
+            squareness = None
         # Get aminor
         try:
             aminor = params.mds_conn.get_data(
@@ -1366,31 +1366,35 @@ class D3DPhysicsMethods:
         except mdsExceptions.MdsException as e:
             params.logger.warning("Failed to obtain aminor signals")
             params.logger.opt(exception=True).debug(e)
-            aminor = [np.nan]
-        # Remove invalid indices
+            aminor = None
+        # Check chisq for invalid indices
         try:
             chisq = params.mds_conn.get_data(
                 r"\efit_a_eqdsk:chisq", tree_name="_efit_tree"
             )
             invalid_indices = np.where(chisq > 50)
-            if ~np.isnan(delta[0]):
-                delta[invalid_indices] = np.nan
-            if ~np.isnan(squareness[0]):
-                squareness[invalid_indices] = np.nan
-            if ~np.isnan(aminor[0]):
-                aminor[invalid_indices] = np.nan
         except mdsExceptions.MdsException as e:
             params.logger.warning(
                 "Failed to obtain chisq to remove unreliable time points.",
             )
             params.logger.opt(exception=True).debug(e)
-        # Interpolate to the requested time basis
-        if ~np.isnan(delta[0]):
+            invalid_indices = []
+        # Remove invalid indices and interpolate to the requested timebase
+        if delta is not None:
+            delta[invalid_indices] = np.nan
             delta = interp1(efit_time, delta, params.times, "linear")
-        if ~np.isnan(squareness[0]):
+        else:
+            delta = [np.nan]
+        if squareness is not None:
+            squareness[invalid_indices] = np.nan
             squareness = interp1(efit_time, squareness, params.times, "linear")
-        if ~np.isnan(aminor[0]):
+        else:
+            squareness = [np.nan]
+        if aminor is not None:
+            aminor[invalid_indices] = np.nan
             aminor = interp1(efit_time, aminor, params.times, "linear")
+        else:
+            aminor = [np.nan]
         return {"delta": delta, "squareness": squareness, "aminor": aminor}
 
     @staticmethod

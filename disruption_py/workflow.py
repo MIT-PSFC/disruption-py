@@ -5,7 +5,6 @@ main workflow
 """
 
 import argparse
-import os
 import time
 from itertools import repeat
 from multiprocessing import Pool
@@ -18,7 +17,6 @@ from disruption_py.config import config
 from disruption_py.core.retrieval_manager import RetrievalManager
 from disruption_py.core.utils.misc import (
     get_elapsed_time,
-    get_temporary_folder,
     without_duplicates,
 )
 from disruption_py.inout.mds import ProcessMDSConnection
@@ -27,7 +25,6 @@ from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environm
 from disruption_py.settings import RetrievalSettings
 from disruption_py.settings.log_settings import LogSettings, resolve_log_settings
 from disruption_py.settings.output_setting import (
-    CompleteOutputSettingParams,
     OutputSetting,
     OutputSettingParams,
     resolve_output_setting,
@@ -72,7 +69,7 @@ def get_shots_data(
     database_initializer: Callable[..., ShotDatabase] = None,
     mds_connection_initializer: Callable[..., ProcessMDSConnection] = None,
     retrieval_settings: RetrievalSettings = None,
-    output_setting: OutputSetting = "dataframe",
+    output_setting: OutputSetting = "dataset",
     num_processes: int = 1,
     log_settings: LogSettings = None,
 ) -> Any:
@@ -92,7 +89,7 @@ def get_shots_data(
         The output type setting to be used when outputting the retrieved data for
         each shot. Note that data is streamed to the output type setting object
         as it is retrieved. Can pass any OutputSettingType that resolves to an
-        OutputSetting. See OutputSetting for more details. Defaults to "list".
+        OutputSetting. See OutputSetting for more details. Defaults to "dataset".
     num_processes : int
         The number of processes to use for data retrieval. If 1, the data is retrieved
         in serial. If > 1, the data is retrieved in parallel.
@@ -126,7 +123,7 @@ def get_shots_data(
         return None
 
     # Dynamically set the console log level based on the number of shots
-    if log_settings.console_log_level is None:
+    if log_settings.console_level is None:
         log_settings.reset_handlers(num_shots=len(shotlist_list))
 
     # log start
@@ -158,7 +155,6 @@ def get_shots_data(
                     OutputSettingParams(
                         shot_id=shot_id,
                         result=shot_data,
-                        database=database,
                         tokamak=tokamak,
                     )
                 )
@@ -178,9 +174,8 @@ def get_shots_data(
         each=took / total,
     )
 
-    finish_output_type_setting_params = CompleteOutputSettingParams(tokamak=tokamak)
-    results = output_setting.get_results(finish_output_type_setting_params)
-    output_setting.stream_output_cleanup(finish_output_type_setting_params)
+    results = output_setting.get_results()
+    output_setting.to_disk()
     return results
 
 
@@ -222,9 +217,7 @@ def _get_mds_instance(tokamak, mds_connection_initializer):
     return get_mdsplus_class(tokamak)
 
 
-def run(
-    tokamak, methods, shots, efit_tree, time_base, output_file, processes, log_level
-):
+def run(tokamak, methods, shots, efit_tree, time_base, output, processes, log_level):
     """
     simple workflow.
     """
@@ -238,23 +231,15 @@ def run(
     sett = RetrievalSettings(
         efit_nickname_setting=efit_tree, time_setting=time_base, run_methods=methods
     )
-    out = get_shots_data(
+
+    return get_shots_data(
         tokamak=tokamak,
         shotlist_setting=shots,
         retrieval_settings=sett,
         num_processes=processes,
         log_settings=log_level,
-        output_setting="dataframe",
+        output_setting=output,
     )
-
-    if output_file:
-        output_file = os.path.realpath(output_file)
-    else:
-        output_file = os.path.join(get_temporary_folder(), "output.csv")
-    logger.info("Output: {output_file}", output_file=output_file)
-    out.to_csv(output_file, index=False)
-
-    return out
 
 
 def cli():
@@ -269,7 +254,7 @@ def cli():
     parser.add_argument("-m", "--methods", type=str, action="append")
     parser.add_argument("-e", "--efit-tree", type=str, default="disruption")
     parser.add_argument("-b", "--time-base", type=str, default="disruption_warning")
-    parser.add_argument("-o", "--output-file", type=str)
+    parser.add_argument("-o", "--output", type=str, default="dataset")
     parser.add_argument("-p", "--processes", type=int, default=1)
     parser.add_argument("-l", "--log-level", type=str, default="VERBOSE")
 
@@ -277,4 +262,5 @@ def cli():
 
 
 if __name__ == "__main__":
-    print(cli())
+    out = cli()
+    print(out)

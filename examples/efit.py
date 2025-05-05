@@ -40,12 +40,12 @@ def main():
         tokamak=tokamak,
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
-        output_setting="dataframe",
+        output_setting="dataset",
     )
 
     print(result)
 
-    assert result.shape == shape
+    assert len(result), len(result.time) == shape
 
 
 if __name__ == "__main__":
