@@ -269,12 +269,6 @@ class DisruptionTimeSetting(TimeSetting):
     The disruption timebase is the timebase of the shot that was disrupted.
     """
 
-    # Disruption Variables
-    DT_BEFORE_DISRUPTION_D3D = 0.002
-    DURATION_BEFORE_DISRUPTION_D3D = 0.10
-    DT_BEFORE_DISRUPTION_EAST = 0.010
-    DURATION_BEFORE_DISRUPTION_EAST = 0.25
-
     def __init__(self, minimum_ip=400.0e3, minimum_duration=0.100):
         """
         Initialize with minimum current and duration values.
@@ -336,16 +330,17 @@ class DisruptionTimeSetting(TimeSetting):
         times = np.arange(0.100, duration + config(params.tokamak).time_const, 0.025)
         if params.disrupted:
             additional_times = np.arange(
-                params.disruption_time - self.DURATION_BEFORE_DISRUPTION_D3D,
+                params.disruption_time
+                - config(params.tokamak).duration_before_disruption,
                 params.disruption_time + config(params.tokamak).time_const,
-                self.DT_BEFORE_DISRUPTION_D3D,
+                config(params.tokamak).dt_before_disruption,
             )
             times = times[
                 np.where(
                     times
                     < (
                         params.disruption_time
-                        - self.DURATION_BEFORE_DISRUPTION_D3D
+                        - config(params.tokamak).duration_before_disruption
                         - config(params.tokamak).time_const
                     )
                 )
@@ -376,16 +371,17 @@ class DisruptionTimeSetting(TimeSetting):
         times = np.arange(0.200, duration + config(params.tokamak).time_const, 0.1)
         if params.disrupted:
             additional_times = np.arange(
-                params.disruption_time - self.DURATION_BEFORE_DISRUPTION_EAST,
+                params.disruption_time
+                - config(params.tokamak).duration_before_disruption,
                 params.disruption_time + config(params.tokamak).time_const,
-                self.DT_BEFORE_DISRUPTION_EAST,
+                config(params.tokamak).dt_before_disruption,
             )
             times = times[
                 np.where(
                     times
                     < (
                         params.disruption_time
-                        - self.DURATION_BEFORE_DISRUPTION_EAST
+                        - config(params.tokamak).duration_before_disruption
                         - config(params.tokamak).time_const
                     )
                 )

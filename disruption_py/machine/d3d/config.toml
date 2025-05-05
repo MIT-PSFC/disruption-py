@@ -1,3 +1,7 @@
+[d3d]
+dt_before_disruption = 0.002
+duration_before_disruption = 0.10
+
 [d3d.inout.mds]
 mdsplus_connection_string = "atlas"
 
