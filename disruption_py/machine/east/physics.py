@@ -734,7 +734,7 @@ class EastPhysicsMethods:
         # Get Wmhd, calculate dWmhd_dt, and calculate p_loss
         try:
             wmhd, efittime = params.mds_conn.get_data_with_dims(
-                r"\efit_aeqdsk:wplasm", tree_name="_efit_tree"
+                r"\efit_aeqdsk:wmhd", tree_name="_efit_tree"
             )  # [W], [s]
             dwmhd_dt = np.gradient(wmhd, efittime)
             dwmhd_dt = interp1(efittime, dwmhd_dt, params.times)
