@@ -508,6 +508,7 @@ class EastPhysicsMethods:
         try:
             xuv, xuvtime = EastPhysicsMethods._get_raw_axuv_data(params)  # [W], [s]
         except mdsExceptions.MdsException:
+            params.logger.warning("Failed to get raw AXUS data")
             return {"p_rad": [np.nan]}
 
         # Get calibration factors
@@ -719,12 +720,12 @@ class EastPhysicsMethods:
         p_rad = EastPhysicsMethods.get_radiated_power(params)["p_rad"]  # [W]
 
         # Calculate p_input
-        if not (
+        if ~(
             np.isnan(p_ohm).all()
-            and np.isnan(p_lh).all()
-            and np.isnan(p_icrf).all()
-            and np.isnan(p_ecrh).all()
-            and np.isnan(p_nbi).all()
+            or np.isnan(p_lh).all()
+            or np.isnan(p_icrf).all()
+            or np.isnan(p_ecrh).all()
+            or np.isnan(p_nbi).all()
         ):
             p_input = p_ohm + p_lh + p_icrf + p_ecrh + p_nbi
         else:
@@ -747,12 +748,12 @@ class EastPhysicsMethods:
 
         rad_input_frac = np.full(len(params.times), np.nan)
         rad_loss_frac = np.full(len(params.times), np.nan)
-        if ~(np.isnan(p_rad).all() and np.isnan(p_input).all()):
+        if ~(np.isnan(p_rad).all() or np.isnan(p_input).all()):
             (valid_indices,) = np.where((p_input != 0) & ~np.isnan(p_input))
             rad_input_frac[valid_indices] = (
                 p_rad[valid_indices] / p_input[valid_indices]
             )
-        if ~(np.isnan(p_rad).all() and np.isnan(p_loss).all()):
+        if ~(np.isnan(p_rad).all() or np.isnan(p_loss).all()):
             (valid_indices,) = np.where((p_loss != 0) & ~np.isnan(p_loss))
             rad_loss_frac[valid_indices] = p_rad[valid_indices] / p_loss[valid_indices]
 
