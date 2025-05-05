@@ -3,6 +3,7 @@
 """Pytest configuration module for setting up fixtures."""
 
 import os
+import tempfile
 from unittest.mock import patch
 
 import pytest
@@ -84,10 +85,47 @@ def mock_numpy_gradient():
         yield
 
 
+def test_folder(request) -> str:
+    """
+    Generate a folder for each test.
+
+    Parameters
+    ----------
+    request : FixtureRequest | str
+        The request object for the current test, or a string.
+
+    Returns
+    -------
+    str
+        The temporary folder.
+    """
+    if not isinstance(request, str):
+        request = request.node.name
+    folder = os.path.join(get_temporary_folder(), request)
+    os.makedirs(folder, exist_ok=True)
+    return folder
+
+
+@pytest.fixture(scope="function")
+def test_folder_f(request) -> str:
+    """
+    Function-scoped fixture to generate a folder for each test.
+    """
+    return test_folder(request)
+
+
+@pytest.fixture(scope="module")
+def test_folder_m(request) -> str:
+    """
+    Module-scoped fixture to generate a folder for each test.
+    """
+    return test_folder(request)
+
+
 @pytest.fixture(scope="module")
 def test_file_path_f(request):
     """
-    Fixture to generate file paths for test files.
+    Fixture to generate unique file paths for test files.
 
     Parameters
     ----------
@@ -97,11 +135,14 @@ def test_file_path_f(request):
     Returns
     -------
     function
-        A function that generates file paths with the specified suffix.
+        A function that generates file paths with the specified name.
     """
 
-    def inner(suffix):
-        return os.path.join(get_temporary_folder(), f"{request.node.name}{suffix}")
+    def inner(name):
+        base = os.path.join(get_temporary_folder(), request.node.name)
+        os.makedirs(base, exist_ok=True)
+        unique = tempfile.mkdtemp(dir=base, prefix="")
+        return os.path.join(unique, name)
 
     return inner
 

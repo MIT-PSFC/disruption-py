@@ -6,7 +6,6 @@ db_name = "d3drdb"
 driver = "FreeTDS"
 host = "d3drdb"
 port = 8001
-protected_columns = []
 
 [d3d.tests]
 expected_failure_columns = [

@@ -3,20 +3,22 @@
 """
 Handles output settings for retrieving and saving shot data.
 
-This module provides classes and methods to manage various output settings
-for shot data, including saving to files, databases, lists, dictionaries, and
-dataframes.
+This module provides classes and methods to manage various output settings.
 """
 
 import os
+import sys
+import tempfile
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict, List, Type, Union
+from typing import Dict, List, Type, TypeAlias, Union
 
 import pandas as pd
+import xarray as xr
+from loguru import logger
 
-from disruption_py.core.utils.misc import safe_df_concat
-from disruption_py.inout.sql import ShotDatabase
+from disruption_py.core.utils.misc import get_temporary_folder
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -29,40 +31,21 @@ class OutputSettingParams:
     ----------
     shot_id : int
         Shot ID.
-    result : pd.DataFrame
-        DataFrame of shot results.
-    database : ShotDatabase
-        Database connection for retrieving cache data.
+    result : xr.Dataset
+        Dataset of shot results.
     tokamak : Tokamak
         The tokamak for which results are being outputted.
     """
 
     shot_id: int
-    result: pd.DataFrame
-    database: ShotDatabase
+    result: xr.Dataset
     tokamak: Tokamak
 
 
-@dataclass
-class CompleteOutputSettingParams:
-    """
-    Parameters for output cleanup and result fetching.
-
-    Attributes
-    ----------
-    tokamak : Tokamak
-        The tokamak for which results are being outputted.
-    """
-
-    tokamak: Tokamak
-
-
-OutputSettingType = Union[
-    "OutputSetting",
-    str,
-    Dict[str, "OutputSettingType"],
-    List["OutputSettingType"],
-]
+OutputSettingType: TypeAlias = Union["OutputSetting", str, List["OutputSettingType"]]
+OutputDictType: TypeAlias = Dict[int, xr.Dataset]
+OutputSingleType: TypeAlias = xr.Dataset | xr.DataTree | pd.DataFrame
+OutputType: TypeAlias = OutputDictType | OutputSingleType
 
 
 class OutputSetting(ABC):
@@ -81,8 +64,9 @@ class OutputSetting(ABC):
         """
         if hasattr(self, "tokamak_overrides"):
             if params.tokamak in self.tokamak_overrides:
-                return self.tokamak_overrides[params.tokamak](params)
-        return self._output_shot(params)
+                self.tokamak_overrides[params.tokamak](params)
+                return
+        self._output_shot(params)
 
     @abstractmethod
     def _output_shot(self, params: OutputSettingParams):
@@ -96,33 +80,21 @@ class OutputSetting(ABC):
             The parameters for outputting shot results.
         """
 
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """
-        Empty method optionally overridden by subclasses to handle cleanup after
-        all shots have been output. This may include closing files or other cleanup.
-        Subclasses should implement this method so multiple output types can be
-        used for the same data without appending to the other's outputted dataframe.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
-        """
-
     @abstractmethod
-    def get_results(self, params: CompleteOutputSettingParams) -> Any:
+    def get_results(self) -> OutputType:
         """
         Return final output after all shots are processed.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
 
         Returns
         -------
         Any
             The final output results.
+        """
+
+    @abstractmethod
+    def to_disk(self) -> str | List[str]:
+        """
+        Save final output to disk.
         """
 
 
@@ -154,49 +126,52 @@ class OutputSettingList(OutputSetting):
         params : OutputSettingParams
             The parameters for outputting shot results.
         """
-        return [s.output_shot(params) for s in self.output_setting_list]
+        _ = [s.output_shot(params) for s in self.output_setting_list]
 
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """
-        Cleanup for each output setting in the list.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
-        """
-        for individual_setting in self.output_setting_list:
-            individual_setting.stream_output_cleanup(params)
-
-    def get_results(self, params: CompleteOutputSettingParams):
+    def get_results(self) -> List[OutputType]:
         """
         Get results from each output setting in the list.
 
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
-
         Returns
         -------
-        List[Any]
+        List[OutputType]
             A list of results from each output setting.
         """
-        return [s.get_results(params) for s in self.output_setting_list]
+        return [s.get_results() for s in self.output_setting_list]
+
+    def to_disk(self) -> List[str]:
+        """
+        Save each OutputSettingList to disk.
+        """
+        return [s.to_disk() for s in self.output_setting_list]
 
 
 class DictOutputSetting(OutputSetting):
     """
-    Outputs shot data as a dict of DataFrames keyed by shot number.
+    Outputs data as a dictionary of Datasets.
     """
 
-    def __init__(self):
-        """Initialize DictOutputSetting with an empty results dictionary."""
-        self.results = {}
+    def __init__(self, path: str | bool = True):
+        """
+        Initialize empty DictOutputSetting.
+
+        Parameters
+        ----------
+        path : str | bool, default = True
+            The path for writing results to disk.
+            If True, a temporary location will be used.
+            If False, no results are written to disk.
+        """
+        self.results: Dict[int, xr.Dataset] = {}
+        if path is True:
+            path = os.path.join(get_temporary_folder(), "output")
+            if os.path.exists(path) or "pytest" in sys.modules:
+                path = tempfile.mkdtemp(dir=get_temporary_folder(), prefix="output-")
+        self.path = path
 
     def _output_shot(self, params: OutputSettingParams):
         """
-        Output a single shot by storing the result in the dictionary.
+        Store a single result in the dictionary.
 
         Parameters
         ----------
@@ -205,189 +180,215 @@ class DictOutputSetting(OutputSetting):
         """
         self.results[params.shot_id] = params.result
 
-    def get_results(self, params: CompleteOutputSettingParams):
+    def get_results(self) -> OutputDictType:
         """
-        Get the accumulated results.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
+        Get the resulting dictionary.
 
         Returns
         -------
-        Dict[int, pd.DataFrame]
-            The dictionary of results keyed by shot number.
+        Dict[int, xr.Dataset]
+            The dictionary of results, with shots as keys.
         """
         return self.results
 
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
+    def to_disk(self) -> str:
         """
-        Cleanup the results dictionary.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
+        Save all resulting Datasets into a folder.
         """
-        self.results = {}
 
+        if not self.path:
+            return ""
+        if os.path.exists(self.path):
+            if not os.path.isdir(self.path):
+                raise FileExistsError(f"Path already exists! {self.path}")
+            if os.listdir(self.path):
+                logger.warning("Output folder already exists! {path}", path=self.path)
+        else:
+            os.makedirs(self.path)
 
-class DataFrameOutputSetting(OutputSetting):
-    """
-    Outputs all shot data as a single DataFrame.
-    """
-
-    def __init__(self):
-        """Initialize DataFrameOutputSetting with an empty DataFrame."""
-        self.results: pd.DataFrame = pd.DataFrame()
-
-    def _output_shot(self, params: OutputSettingParams):
-        """
-        Output a single shot by concatenating the result to the DataFrame.
-
-        Parameters
-        ----------
-        params : OutputSettingParams
-            The parameters for outputting shot results.
-        """
-        self.results = safe_df_concat(self.results, [params.result])
-
-    def get_results(self, params: CompleteOutputSettingParams):
-        """
-        Get the accumulated results.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
-
-        Returns
-        -------
-        pd.DataFrame
-            The combined DataFrame of results.
-        """
-        return self.results
-
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """
-        Cleanup the results DataFrame.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for output cleanup and result fetching.
-        """
-        self.results = pd.DataFrame()
-
-
-class BatchedCSVOutputSetting(OutputSetting):
-    """
-    Stream outputted data to a single CSV file in batches.
-    """
-
-    def __init__(self, filepath, batch_size=100, clear_file=True):
-        """
-        Initialize the BatchedCSVOutputSetting.
-
-        Parameters
-        ----------
-        filepath : str
-            The path to the CSV file where data will be written.
-        batch_size : int, optional
-            The number of records to write to the CSV file in one batch (default is 100).
-        clear_file : bool, optional
-            Whether to clear the file at the beginning (default is True).
-        """
-        self.filepath = filepath
-        self.batch_size = batch_size
-        self.clear_file = clear_file
-        self.batch_data = []  # Initialize an empty list to hold batched data
-        self.output_shot_count = 0
-
-        # Clear the file at the beginning if required
-        if self.clear_file and os.path.exists(filepath):
-            os.remove(filepath)
-
-        self.results: pd.DataFrame = pd.DataFrame()
-        self.columns = None
-
-    def _output_shot(self, params: OutputSettingParams):
-        """
-        Append the current result to the batch data list and write to CSV if
-        batch size is reached.
-
-        Parameters
-        ----------
-        params : OutputSettingParams
-            The parameters containing the result to be outputted.
-        """
-        # Append the current result to the batch data list
-        self.batch_data.append(params.result)
-
-        # Check if the batch size has been reached
-        if len(self.batch_data) >= self.batch_size:
-            self._write_batch_to_csv()
-
-        self.output_shot_count += 1
-        self.results = safe_df_concat(self.results, [params.result])
-
-    def _write_batch_to_csv(self):
-        """
-        Write the current batch of data to the CSV file.
-        """
-        file_exists = os.path.isfile(self.filepath)
-        combined_df = safe_df_concat(pd.DataFrame(), self.batch_data)
-        # Enforce the to-be-saved combined_df to have the same column order as the first shot
-        if self.columns is None:
-            self.columns = combined_df.columns
-        combined_df = combined_df[self.columns]
-        combined_df.to_csv(
-            self.filepath, mode="a", index=False, header=(not file_exists)
+        t = time.time()
+        for shot, dataset in self.results.items():
+            cdf = os.path.join(self.path, f"{shot}.nc")
+            logger.trace("Saving result: {cdf}", cdf=cdf)
+            dataset.to_netcdf(cdf)
+        logger.info(
+            "Saved results in {took:.3f} s: {path}",
+            took=time.time() - t,
+            path=self.path,
         )
-        self.batch_data.clear()
+        return self.path
 
-    def get_results(self, params: CompleteOutputSettingParams):
+
+class SingleOutputSetting(DictOutputSetting):
+    """
+    Abstract class that outputs data as a single object/file.
+    """
+
+    def __init__(self, path: str | bool = True):
         """
-        Write any remaining batched data to the CSV file before returning results.
+        Initialize empty SingleOutputSetting.
 
         Parameters
         ----------
-        params : CompleteOutputSettingParams
-            The parameters for retrieving results.
+        path : str | bool, default = True
+            The path for writing results to disk.
+            If True, a unique temporary location will be used.
+            If False, no results are written to disk.
+        """
+        super().__init__(path=False)
+        self.result = None
+        if path is True:
+            ext = ".csv" if "DataFrame" in self.__class__.__name__ else ".nc"
+            path = os.path.join(get_temporary_folder(), f"output{ext}")
+            if os.path.exists(path) or "pytest" in sys.modules:
+                _, path = tempfile.mkstemp(
+                    dir=get_temporary_folder(), prefix="output-", suffix=ext
+                )
+        self.path = path
+
+    @abstractmethod
+    def concat(self) -> OutputSingleType:
+        """
+        Concatenate the resulting object.
+
+        Returns
+        -------
+        xr.Dataset | xr.DataTree | pd.DataFrame
+            The resulting object.
+        """
+
+    def get_results(self) -> OutputSingleType:
+        """
+        Get the resulting object.
+
+        Returns
+        -------
+        xr.Dataset | xr.DataTree | pd.DataFrame
+            The resulting object.
+        """
+        logger.debug("Concatenating {tot} shots.", tot=len(self.results))
+        self.result = self.concat()
+        self.results = {}
+        return self.result
+
+    def to_disk(self) -> str:
+        """
+        Save the resulting object into a file.
+        """
+
+        if not self.path:
+            return ""
+        if os.path.exists(self.path) and os.path.getsize(self.path):
+            raise FileExistsError(f"File already exists! {self.path}")
+
+        logger.debug(
+            "Saving {type}: {path}", type=self.result.__class__.__name__, path=self.path
+        )
+
+        t = time.time()
+        for method in ["to_netcdf", "to_csv"]:
+            if not hasattr(self.result, method):
+                continue
+            getattr(self.result, method)(self.path)
+            break
+        else:
+            raise NotImplementedError("Could not save object to file.")
+        logger.info(
+            "Saved {type} in {took:.3f} s: {path}",
+            type=self.result.__class__.__name__,
+            took=time.time() - t,
+            path=self.path,
+        )
+        return self.path
+
+
+class DatasetOutputSetting(SingleOutputSetting):
+    """
+    Outputs data as a single Dataset.
+    """
+
+    def concat(self) -> xr.Dataset:
+        """
+        Concatenate the resulting Dataset.
+
+        Returns
+        -------
+        xr.Dataset
+            The resulting Dataset.
+        """
+        if not self.results:
+            logger.critical("Nothing to concatenate!")
+            return xr.Dataset()
+        return xr.concat(self.results.values(), dim="idx")
+
+
+class DataTreeOutputSetting(SingleOutputSetting):
+    """
+    Outputs data as a single DataTree.
+    """
+
+    def concat(self) -> xr.DataTree:
+        """
+        Concatenate the resulting DataTree.
+
+        Returns
+        -------
+        xr.DataTree
+            The DataTree containing the results, with shots as keys.
+        """
+        if not self.results:
+            logger.critical("Nothing to concatenate!")
+            return xr.DataTree()
+        return xr.DataTree.from_dict({str(k): v for k, v in self.results.items()})
+
+
+class DataFrameOutputSetting(DatasetOutputSetting):
+    """
+    Outputs data as a DataFrame.
+    """
+
+    def concat(self) -> pd.DataFrame:
+        """
+        Concatenate the resulting DataFrame.
 
         Returns
         -------
         pd.DataFrame
-            The DataFrame containing the results.
+            The resulting DataFrame.
         """
-        # Write any remaining batched data to the CSV file before returning results
-        if self.batch_data:
-            self._write_batch_to_csv()
-        return self.results
-
-    def stream_output_cleanup(self, params: CompleteOutputSettingParams):
-        """
-        Clean up the output stream by resetting results.
-
-        Parameters
-        ----------
-        params : CompleteOutputSettingParams
-            The parameters for cleaning up the output stream.
-        """
-        self.results = pd.DataFrame()
+        if not self.results:
+            logger.critical("Nothing to concatenate!")
+            return pd.DataFrame()
+        df = super().concat().to_dataframe()
+        base = ["shot", "time"]
+        cols = base + [c for c in sorted(df.columns) if c not in base]
+        return df[cols]
 
 
 # --8<-- [start:output_setting_dict]
-_output_setting_mappings: Dict[str, OutputSetting] = {
-    "dataframe": DataFrameOutputSetting(),
-    "dict": DictOutputSetting(),
+_output_setting_mappings: Dict[str, Type[OutputSetting]] = {
+    "dataframe": DataFrameOutputSetting,
+    "dataset": DatasetOutputSetting,
+    "datatree": DataTreeOutputSetting,
+    "df": DataFrameOutputSetting,
+    "dict": DictOutputSetting,
+    "ds": DatasetOutputSetting,
+    "dt": DataTreeOutputSetting,
+    "pandas": DataFrameOutputSetting,
+    "pd": DataFrameOutputSetting,
+    "xarray": DatasetOutputSetting,
+    "xr": DatasetOutputSetting,
 }
 # --8<-- [end:output_setting_dict]
 
 # --8<-- [start:file_suffix_to_output_setting_dict]
 _file_suffix_to_output_setting: Dict[str, Type[OutputSetting]] = {
-    ".csv": BatchedCSVOutputSetting,
+    ".cdf": DatasetOutputSetting,
+    ".csv": DataFrameOutputSetting,
+    ".hdf5": DatasetOutputSetting,
+    ".h5": DatasetOutputSetting,
+    ".nc": DatasetOutputSetting,
+    "/": DictOutputSetting,
 }
 # --8<-- [end:file_suffix_to_output_setting_dict]
 
@@ -413,16 +414,12 @@ def resolve_output_setting(
         return output_setting
 
     if isinstance(output_setting, str):
+        # check shortcuts
         output_setting_object = _output_setting_mappings.get(output_setting)
         if output_setting_object is not None:
-            return output_setting_object
-
-    if isinstance(output_setting, str):
-        # assume that it is a file path
-        for (
-            suffix,
-            output_setting_type,
-        ) in _file_suffix_to_output_setting.items():
+            return output_setting_object()
+        # check suffixes
+        for suffix, output_setting_type in _file_suffix_to_output_setting.items():
             if output_setting.endswith(suffix):
                 return output_setting_type(output_setting)
 

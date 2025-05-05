@@ -17,11 +17,7 @@ from tqdm.auto import tqdm
 
 from disruption_py.core.utils.misc import get_commit_hash, get_temporary_folder
 
-LogSettingsType = Union[
-    "LogSettings",
-    str,
-    int,
-]
+LogSettingsType = Union["LogSettings", str, int]
 
 
 @dataclass

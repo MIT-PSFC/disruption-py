@@ -21,8 +21,8 @@ def physics_method(
     """
     Decorator to signify a method to be run by DisruptionPy.
 
-    The decorated method calculates disruption parameters and returns a Pandas
-    DataFrame. All decorated methods must take the single argument params of type
+    The decorated method calculates disruption parameters and returns a Dataset.
+    All decorated methods must take the single argument params of type
     `PhysicsMethodParams`. The decorated method will be run if designated by the
     `run_methods` or `run_columns` attributes of the `RetrievalSettings`
     class, and if included inside of the `custom_physics_methods` argument of the
