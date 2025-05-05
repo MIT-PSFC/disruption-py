@@ -19,7 +19,7 @@ from disruption_py.core.physics_method.metadata import (
     is_physics_method,
 )
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.misc import get_elapsed_time
+from disruption_py.core.utils.misc import get_elapsed_time, to_tuple
 from disruption_py.machine.method_holders import get_method_holders
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 
@@ -274,7 +274,9 @@ def populate_shot(
                 )
 
             # create dataset
-            result = physics_method_params.to_dataset(data=data)
+            data_vars = to_tuple(data, dim="idx")
+            coords = physics_method_params.to_coords()
+            result = xr.Dataset(data_vars=data_vars, coords=coords)
 
         datasets += [result]
 
