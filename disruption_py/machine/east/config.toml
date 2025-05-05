@@ -1,6 +1,8 @@
 [east]
 dt_before_disruption = 0.010
 duration_before_disruption = 0.25
+minimum_duration = 0.6
+minimum_ip = 200e3
 
 [east.inout.mds]
 mdsplus_connection_string = "mds.ipp.ac.cn"

@@ -269,7 +269,7 @@ class DisruptionTimeSetting(TimeSetting):
     The disruption timebase is the timebase of the shot that was disrupted.
     """
 
-    def __init__(self, minimum_ip=400.0e3, minimum_duration=0.100):
+    def __init__(self):
         """
         Initialize with minimum current and duration values.
 
@@ -284,8 +284,6 @@ class DisruptionTimeSetting(TimeSetting):
             Tokamak.D3D: self.d3d_times,
             Tokamak.EAST: self.east_times,
         }
-        self.minimum_ip = minimum_ip
-        self.minimum_duration = minimum_duration
 
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         """
@@ -324,7 +322,10 @@ class DisruptionTimeSetting(TimeSetting):
         baseline = np.mean(raw_ip[:10])
         ip = raw_ip - baseline
         duration, ip_max = self._get_end_of_shot(ip, ip_time, 100e3)
-        if duration < self.minimum_duration or np.abs(ip_max) < self.minimum_ip:
+        if (
+            duration < config(params.tokamak).minimum_duration
+            or np.abs(ip_max) < config(params.tokamak).minimum_ip
+        ):
             raise NotImplementedError()
 
         times = np.arange(0.100, duration + config(params.tokamak).time_const, 0.025)
@@ -363,9 +364,13 @@ class DisruptionTimeSetting(TimeSetting):
             Array of times in the timebase.
         """
         ip, ip_time = EastUtilMethods.retrieve_ip(params.mds_conn, params.shot_id)
-        # For EAST, minimum_ip = 200e3 [A], minimum_duration = 0.6 [s]
-        duration, ip_max = self._get_end_of_shot(ip, ip_time, self.minimum_ip)
-        if duration < self.minimum_duration or np.abs(ip_max) < self.minimum_ip:
+        duration, ip_max = self._get_end_of_shot(
+            ip, ip_time, config(params.tokamak).minimum_ip
+        )
+        if (
+            duration < config(params.tokamak).minimum_duration
+            or np.abs(ip_max) < config(params.tokamak).minimum_ip
+        ):
             raise NotImplementedError()
 
         times = np.arange(0.200, duration + config(params.tokamak).time_const, 0.1)
@@ -656,7 +661,7 @@ _time_setting_mappings: Dict[str, TimeSetting] = {
     "disruption_warning": {
         Tokamak.CMOD: EfitTimeSetting(),
         Tokamak.D3D: DisruptionTimeSetting(),
-        Tokamak.EAST: DisruptionTimeSetting(minimum_ip=200e3, minimum_duration=0.6),
+        Tokamak.EAST: DisruptionTimeSetting(),
     },
     "ip": IpTimeSetting(),
     "ip_efit": SharedTimeSetting([IpTimeSetting(), EfitTimeSetting()]),
