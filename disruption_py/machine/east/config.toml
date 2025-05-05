@@ -23,14 +23,22 @@ expected_failure_columns = [
   "li_rt",
   "mirnov_std",
   "mirnov_std_normalized",
+  "n_equal_1_mode", # east/east_1 tree issues
+  "n_equal_1_normalized", # east/east_1 tree issues
+  "n_equal_1_phase", # east/east_1 tree issues
   "p_input",
+  "p_lh", # east/east_1 tree issues
   "p_oh",
+  "p_rad", # east/east_1 tree issues
   "prad_peaking",
   "q0",
   "q95",
   "qstar",
   "rad_input_frac",
   "rad_loss_frac",
+  "rmp_n_equal_1", # east/east_1 tree issues
+  "rmp_n_equal_1_phase", # east/east_1 tree issues
+  "v_loop", # east/east_1 tree issues
   "wmhd",
   "wmhd_rt",
 ]
