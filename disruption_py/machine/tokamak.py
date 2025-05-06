@@ -22,6 +22,7 @@ class Tokamak(Enum):
     CMOD = "cmod"
     EAST = "east"
     HBTEP = "hbtep"
+    MAST = "mast"
 
 
 def resolve_tokamak_from_environment(tokamak: Union[Tokamak, str] = None):
@@ -32,7 +33,7 @@ def resolve_tokamak_from_environment(tokamak: Union[Tokamak, str] = None):
     3. read the config;
     4. look for specific folders that will indicate presence on a given machine,
        and thus infer the tokamak from the cluster;
-    5. raise exception.
+    5. return the only open-access tokamak as a fallback.
     """
     if isinstance(tokamak, Tokamak):
         # case 1
@@ -55,6 +56,4 @@ def resolve_tokamak_from_environment(tokamak: Union[Tokamak, str] = None):
     if os.path.exists("/opt/hbt/disruptions"):
         return Tokamak.HBTEP
     # case 5
-    raise ValueError(
-        "Tokamak is unspecified and could not be determined from the environment."
-    )
+    return Tokamak.MAST
