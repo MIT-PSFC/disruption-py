@@ -266,19 +266,13 @@ class DisruptionTimeSetting(TimeSetting):
     """
     Time setting for using the disruption timebase.
 
-    The disruption timebase is the timebase of the shot that was disrupted.
+    The disruption timebase is kept for compatibility with the pre-computed matlab-based disruption warning DB,
+    and consists in an a-priori computation of the time base depending on a set of machine-specific settings.
     """
 
     def __init__(self):
         """
-        Initialize with minimum current and duration values.
-
-        Parameters
-        ----------
-        minimum_ip : float, optional
-            Minimum current in amps (default is 400,000 A).
-        minimum_duration : float, optional
-            Minimum duration in seconds (default is 0.1 seconds).
+        Initialize with tokamak overrides.
         """
         self.tokamak_overrides = {
             Tokamak.D3D: self.d3d_times,
@@ -287,7 +281,7 @@ class DisruptionTimeSetting(TimeSetting):
 
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         """
-        Abstract method for retrieving disruption timebase.
+        Fallback method for retrieving the disruption timebase.
 
         Parameters
         ----------
@@ -303,7 +297,7 @@ class DisruptionTimeSetting(TimeSetting):
 
     def d3d_times(self, params: TimeSettingParams) -> np.ndarray:
         """
-        Retrieve disruption timebase for the D3D tokamak.
+        Retrieve the disruption timebase for DIII-D.
 
         Parameters
         ----------
@@ -321,12 +315,11 @@ class DisruptionTimeSetting(TimeSetting):
         ip_time = ip_time / 1.0e3
         baseline = np.mean(raw_ip[:10])
         ip = raw_ip - baseline
-
         return self._calculate_disruption_times(params, ip, ip_time)
 
     def east_times(self, params: TimeSettingParams) -> np.ndarray:
         """
-        Retrieve disruption timebase for the EAST tokamak.
+        Retrieve the disruption timebase for EAST.
 
         Parameters
         ----------
@@ -341,8 +334,9 @@ class DisruptionTimeSetting(TimeSetting):
         ip, ip_time = EastUtilMethods.retrieve_ip(params.mds_conn, params.shot_id)
         return self._calculate_disruption_times(params, ip, ip_time)
 
+    @classmethod
     def _calculate_disruption_times(
-        self, params: TimeSettingParams, ip: np.ndarray, ip_time: np.ndarray
+        cls, params: TimeSettingParams, ip: np.ndarray, ip_time: np.ndarray
     ) -> np.ndarray:
         """
         Calculate the disruption time base given ip, ip_time, and time setting parameters.
@@ -372,7 +366,7 @@ class DisruptionTimeSetting(TimeSetting):
         PSFC/disruption-py/blob/matlab/EAST/utils/check_for_valid_plasma.m
         """
         time_config = config(params.tokamak).time
-        duration, ip_max = self._get_end_of_shot(
+        duration, ip_max = cls._get_end_of_shot(
             ip, ip_time, time_config.end_of_current_threshold
         )
         if (
