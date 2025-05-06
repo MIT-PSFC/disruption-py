@@ -77,9 +77,9 @@ test-fast:
 
 # lint #
 
-.PHONY: lint check isort black ruff pylint pylint-only pylint-todos shellcheck yamllint toml-sort
+.PHONY: lint check isort black ruff pylint pylint-only pylint-todos shellcheck yamllint toml-sort mypy
 
-lint: isort black ruff pylint shellcheck yamllint toml-sort
+lint: isort black ruff pylint shellcheck yamllint toml-sort mypy
 
 check:
 	make lint GITHUB_ACTIONS=true
@@ -93,6 +93,11 @@ isort:
 	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	poetry run isort --version
 	poetry run isort $(CHECK_ARG) --profile black .
+
+mypy:
+	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
+	uv run mypy --version
+	uv run mypy . || true
 
 pylint:
 	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
