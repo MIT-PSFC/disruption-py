@@ -1,12 +1,13 @@
 """
 Unit tests for the time_setting
 
-- CMOD: 'ip_efit', SignalTimeSetting
-- D3D: 'disruption', 'ip_efit', SignalTimeSetting
-- EAST: 'disruption', 'ip_efit', SignalTimeSetting
+Implemented tests:
+- 'ip_efit': tests SharedTimeSetting, IpTimeSetting, and EfitTimeSetting
+- SignalTimeSetting
 
-(EfitTimeSetting is tested in test_quick.py)
-('ip_efit' tests both IpTimeSetting and MixedTimeSetting)
+Time settings that are tested elsewhere:
+ - EfitTimeSetting: tested in test_quick.py
+ - DisruptionTimeSetting: tested in test_against_cache.py
 """
 
 import os
