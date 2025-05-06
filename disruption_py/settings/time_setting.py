@@ -266,8 +266,8 @@ class DisruptionTimeSetting(TimeSetting):
     """
     Time setting for using the disruption timebase.
 
-    The disruption timebase is kept for compatibility with the pre-computed matlab-based disruption warning DB,
-    and consists in an a-priori computation of the time base depending on a set of machine-specific settings.
+    The disruption timebase is kept for compatibility with the pre-computed matlab-based disruption warning
+    DB, and consists in an a-priori computation depending on a set of machine-specific settings.
     """
 
     def __init__(self):
