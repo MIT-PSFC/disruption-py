@@ -322,32 +322,8 @@ class DisruptionTimeSetting(TimeSetting):
         ip_time = ip_time / 1.0e3
         baseline = np.mean(raw_ip[:10])
         ip = raw_ip - baseline
-        duration, ip_max = self._get_end_of_shot(ip, ip_time, 100e3)
-        if (
-            duration < time_config.minimum_duration
-            or np.abs(ip_max) < time_config.minimum_ip
-        ):
-            raise NotImplementedError()
 
-        times = np.arange(0.100, duration + time_config.time_const, 0.025)
-        if params.disrupted:
-            additional_times = np.arange(
-                params.disruption_time - time_config.duration_before_disruption,
-                params.disruption_time + time_config.time_const,
-                time_config.dt_before_disruption,
-            )
-            times = times[
-                np.where(
-                    times
-                    < (
-                        params.disruption_time
-                        - time_config.duration_before_disruption
-                        - time_config.time_const
-                    )
-                )
-            ]
-            times = np.concatenate((times, additional_times))
-        return times
+        return self._calculate_disruption_times(params, ip, ip_time, time_config)
 
     def east_times(self, params: TimeSettingParams):
         """
@@ -365,14 +341,36 @@ class DisruptionTimeSetting(TimeSetting):
         """
         time_config = config(params.tokamak).time
         ip, ip_time = EastUtilMethods.retrieve_ip(params.mds_conn, params.shot_id)
-        duration, ip_max = self._get_end_of_shot(ip, ip_time, time_config.minimum_ip)
+        return self._calculate_disruption_times(params, ip, ip_time, time_config)
+
+    def _calculate_disruption_times(self, params, ip, ip_time, time_config):
+        """
+        Calculate the disruption time base given ip, ip_time, machine params and time config
+
+        References
+        ------
+        - D3D: [disruption_warning_database_d3d.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/DIII-D/disruption_warning_database_d3d.m), [check_for_valid_
+        plasma.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/utils/check
+        _for_valid_plasma.m)
+        - EAST: [disruption_warning_database.m](https://github.com/MIT-PSFC/disruption-py/blob/mat
+        lab/EAST/disruption_warning_database.m), [check_for_valid_plasma.m]https://github.com/MIT-
+        PSFC/disruption-py/blob/matlab/EAST/utils/check_for_valid_plasma.m
+        """
+        duration, ip_max = self._get_end_of_shot(
+            ip, ip_time, time_config.end_of_current_threshold
+        )
         if (
             duration < time_config.minimum_duration
             or np.abs(ip_max) < time_config.minimum_ip
         ):
             raise NotImplementedError()
 
-        times = np.arange(0.200, duration + time_config.time_const, 0.1)
+        times = np.arange(
+            time_config.disruption_time_start,
+            duration + time_config.time_const,
+            time_config.disruption_time_step,
+        )
         if params.disrupted:
             additional_times = np.arange(
                 params.disruption_time - time_config.duration_before_disruption,

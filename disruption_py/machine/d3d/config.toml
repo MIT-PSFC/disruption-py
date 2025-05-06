@@ -109,7 +109,10 @@ no_disrup1_full = 166177
 no_disrup2_full = 166253
 
 [d3d.time]
+disruption_time_start = 0.1
+disruption_time_step = 0.025
 dt_before_disruption = 0.002
 duration_before_disruption = 0.10
+end_of_current_threshold = 100e3
 minimum_duration = 0.1
 minimum_ip = 400e3
