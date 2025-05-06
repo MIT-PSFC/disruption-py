@@ -254,7 +254,7 @@ class EfitTimeSetting(TimeSetting):
         efit_time_unit = params.mds_conn.get_data(
             r"units_of(dim_of(\efit_aeqdsk:ali))", tree_name="_efit_tree", astype="str"
         )
-        if efit_time_unit != "s":
+        if efit_time_unit not in {"s", "ms", "us"}:
             params.logger.verbose(
                 "Failed to get the time units of EFIT tree '{tree}', assuming seconds.",
                 tree=params.mds_conn.get_tree_name_of_nickname("_efit_tree"),
