@@ -82,6 +82,19 @@ documentation = "https://mit-psfc.github.io/disruption-py/"
 homepage = "https://disruptions.mit.edu/"
 repository = "https://github.com/MIT-PSFC/disruption-py/"
 
+[tool.mypy]
+follow_untyped_imports = true
+
+[[tool.mypy.overrides]]
+follow_untyped_imports = false
+ignore_missing_imports = true
+module = ["MDSplus.*"]
+
+[[tool.mypy.overrides]]
+follow_untyped_imports = false
+ignore_missing_imports = true
+module = ["pyodbc.*"]
+
 [tool.poetry.group.dev]
 optional = true
 
