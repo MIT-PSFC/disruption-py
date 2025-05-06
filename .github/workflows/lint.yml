@@ -23,7 +23,7 @@ jobs:
       github.event.pull_request.draft == false
     strategy:
       matrix:
-        tool: [black, isort, pylint, ruff, toml-sort, yamllint]
+        tool: [black, isort, mypy, pylint, ruff, toml-sort, yamllint]
     name: ${{ matrix.tool }}
     steps:
       - uses: actions/checkout@v4
