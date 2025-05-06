@@ -301,7 +301,7 @@ class DisruptionTimeSetting(TimeSetting):
         """
         raise ValueError("Disruption time setting not implemented")
 
-    def d3d_times(self, params: TimeSettingParams):
+    def d3d_times(self, params: TimeSettingParams) -> np.ndarray:
         """
         Retrieve disruption timebase for the D3D tokamak.
 
@@ -315,7 +315,6 @@ class DisruptionTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        time_config = config(params.tokamak).time
         raw_ip, ip_time = params.mds_conn.get_data_with_dims(
             f"ptdata('ip', {params.shot_id})", tree_name="d3d"
         )
@@ -323,9 +322,9 @@ class DisruptionTimeSetting(TimeSetting):
         baseline = np.mean(raw_ip[:10])
         ip = raw_ip - baseline
 
-        return self._calculate_disruption_times(params, ip, ip_time, time_config)
+        return self._calculate_disruption_times(params, ip, ip_time)
 
-    def east_times(self, params: TimeSettingParams):
+    def east_times(self, params: TimeSettingParams) -> np.ndarray:
         """
         Retrieve disruption timebase for the EAST tokamak.
 
@@ -339,16 +338,31 @@ class DisruptionTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        time_config = config(params.tokamak).time
         ip, ip_time = EastUtilMethods.retrieve_ip(params.mds_conn, params.shot_id)
-        return self._calculate_disruption_times(params, ip, ip_time, time_config)
+        return self._calculate_disruption_times(params, ip, ip_time)
 
-    def _calculate_disruption_times(self, params, ip, ip_time, time_config):
+    def _calculate_disruption_times(
+        self, params: TimeSettingParams, ip: np.ndarray, ip_time: np.ndarray
+    ) -> np.ndarray:
         """
-        Calculate the disruption time base given ip, ip_time, machine params and time config
+        Calculate the disruption time base given ip, ip_time, and time setting parameters.
+
+        Parameters
+        ----------
+        params : TimeSettingParams
+            Parameters needed to compute the timebase.
+        ip : np.ndarray
+            Array of values for the plasma current.
+        ip_time : np.ndarray
+            Array of time for the plasma current.
+
+        Returns
+        -------
+        np.ndarray
+            Array of times in the timebase.
 
         References
-        ------
+        ----------
         - D3D: [disruption_warning_database_d3d.m](https://github.com/MIT-PSFC/disruption-py/
         blob/matlab/DIII-D/disruption_warning_database_d3d.m), [check_for_valid_
         plasma.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/utils/check
@@ -357,6 +371,7 @@ class DisruptionTimeSetting(TimeSetting):
         lab/EAST/disruption_warning_database.m), [check_for_valid_plasma.m]https://github.com/MIT-
         PSFC/disruption-py/blob/matlab/EAST/utils/check_for_valid_plasma.m
         """
+        time_config = config(params.tokamak).time
         duration, ip_max = self._get_end_of_shot(
             ip, ip_time, time_config.end_of_current_threshold
         )
@@ -364,7 +379,9 @@ class DisruptionTimeSetting(TimeSetting):
             duration < time_config.minimum_duration
             or np.abs(ip_max) < time_config.minimum_ip
         ):
-            raise NotImplementedError()
+            raise NotImplementedError(
+                "Duration or current maximum are below thresholds."
+            )
 
         times = np.arange(
             time_config.disruption_time_start,
