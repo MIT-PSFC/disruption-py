@@ -1,0 +1,11 @@
+[mast.inout.uda]
+hello = "world"
+
+[cmod.inout.sql]
+db_name = "something"
+driver = "ODBC"
+host = "server"
+port = 1433
+
+[mast.tests.shots]
+example = 30420

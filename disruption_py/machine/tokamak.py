@@ -21,6 +21,7 @@ class Tokamak(Enum):
     D3D = "d3d"
     CMOD = "cmod"
     EAST = "east"
+    MAST = "mast"
 
 
 def resolve_tokamak_from_environment(tokamak: Union[Tokamak, str] = None):
@@ -31,7 +32,7 @@ def resolve_tokamak_from_environment(tokamak: Union[Tokamak, str] = None):
     3. read the config;
     4. look for specific folders that will indicate presence on a given machine,
        and thus infer the tokamak from the cluster;
-    5. raise exception.
+    5. return the only open-access tokamak as a fallback.
     """
     if isinstance(tokamak, Tokamak):
         # case 1
@@ -52,6 +53,4 @@ def resolve_tokamak_from_environment(tokamak: Union[Tokamak, str] = None):
     if os.path.exists("/project/disruption"):
         return Tokamak.EAST
     # case 5
-    raise ValueError(
-        "Tokamak is unspecified and could not be determined from the environment."
-    )
+    return Tokamak.MAST
