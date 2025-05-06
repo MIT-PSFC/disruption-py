@@ -7,7 +7,7 @@ retrieving data in disruption_py for various tokamaks and shot configurations.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, List, Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 from loguru import logger
@@ -234,7 +234,7 @@ class EfitTimeSetting(TimeSetting):
     Time setting for using the EFIT timebase.
     """
 
-    def _get_times(self, params: TimeSettingParams):
+    def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         """
         Retrieve the EFIT timebase for the tested tokamaks.
 
@@ -402,7 +402,9 @@ class DisruptionTimeSetting(TimeSetting):
         return times
 
     @classmethod
-    def _get_end_of_shot(cls, signal, signal_time, threshold=1.0e5):
+    def _get_end_of_shot(
+        cls, signal, signal_time, threshold=1.0e5
+    ) -> Tuple[float, float]:
         """
         Calculate the end of shot based on signal and threshold.
 
@@ -485,7 +487,7 @@ class IpTimeSetting(TimeSetting):
         """
         raise ValueError("Ip time setting not implemented")
 
-    def cmod_times(self, params: TimeSettingParams):
+    def cmod_times(self, params: TimeSettingParams) -> np.ndarray:
         """
         Retrieve the Ip timebase for the CMOD tokamak.
 
@@ -502,7 +504,7 @@ class IpTimeSetting(TimeSetting):
         (ip_time,) = params.mds_conn.get_dims(r"\ip", tree_name="magnetics")
         return ip_time
 
-    def d3d_times(self, params: TimeSettingParams):
+    def d3d_times(self, params: TimeSettingParams) -> np.ndarray:
         """
         Retrieve the Ip timebase for the D3D tokamak.
 
@@ -522,7 +524,7 @@ class IpTimeSetting(TimeSetting):
         ip_time /= 1e3  # [ms] -> [s]
         return ip_time
 
-    def east_times(self, params: TimeSettingParams):
+    def east_times(self, params: TimeSettingParams) -> np.ndarray:
         """
         Retrieve the Ip timebase for the EAST tokamak.
 
