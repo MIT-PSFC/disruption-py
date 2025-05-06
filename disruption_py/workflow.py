@@ -5,6 +5,8 @@ main workflow
 """
 
 import argparse
+import json
+import os
 import time
 from itertools import repeat
 from multiprocessing import Pool
@@ -17,6 +19,7 @@ from disruption_py.config import config
 from disruption_py.core.retrieval_manager import RetrievalManager
 from disruption_py.core.utils.misc import (
     get_elapsed_time,
+    get_temporary_folder,
     without_duplicates,
 )
 from disruption_py.inout.mds import ProcessMDSConnection
@@ -100,8 +103,16 @@ def get_shots_data(
     Any
         The value of OutputSetting.get_results. See OutputSetting for more details.
     """
+
     log_settings = resolve_log_settings(log_settings)
     log_settings.setup_logging()
+
+    # dump configuration
+    json_file_path = os.path.join(get_temporary_folder(), "config.json")
+    config_dict = config(tokamak).to_dict()
+    with open(json_file_path, "w", encoding="utf8") as f:
+        json.dump(config_dict, f, indent=3, sort_keys=True)
+    logger.debug("Dumped configuration into: {path}", path=json_file_path)
 
     tokamak = resolve_tokamak_from_environment(tokamak)
     database = _get_database_instance(tokamak, database_initializer)
