@@ -8,12 +8,15 @@ settings for retrieving data for a single shot.
 from dataclasses import dataclass, field
 from typing import List
 
-from disruption_py.settings.domain_setting import DomainSetting, resolve_domain_setting
+from disruption_py.settings.domain_setting import (
+    DomainSettingType,
+    resolve_domain_setting,
+)
 from disruption_py.settings.nickname_setting import (
-    NicknameSetting,
+    NicknameSettingType,
     resolve_nickname_setting,
 )
-from disruption_py.settings.time_setting import TimeSetting, resolve_time_setting
+from disruption_py.settings.time_setting import TimeSettingType, resolve_time_setting
 
 
 @dataclass
@@ -54,7 +57,7 @@ class RetrievalSettings:
     """
 
     # Shot creation settings
-    efit_nickname_setting: NicknameSetting = "disruption"
+    efit_nickname_setting: NicknameSettingType = "disruption"
 
     # Shot run settings
     run_methods: List[str] | None = None
@@ -63,8 +66,8 @@ class RetrievalSettings:
     custom_physics_methods: list = field(default_factory=list)
 
     # Timebase setting
-    time_setting: TimeSetting = "disruption_warning"
-    domain_setting: DomainSetting = "full"
+    time_setting: TimeSettingType = "disruption_warning"
+    domain_setting: DomainSettingType = "full"
 
     def __post_init__(self):
         """Resolve settings after initialization."""

@@ -27,7 +27,7 @@ class LogSettings:
 
     Attributes
     ----------
-    file_path : str, optional
+    file_path : str | None
         Path to the log file. If None, no log file will be created.
         By default, a log file will be created in a temporary folder.
     file_level : str
@@ -35,7 +35,7 @@ class LogSettings:
         Possible values are:
         "TRACE", "DEBUG", "VERBOSE" (custom), "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL".
         See: https://loguru.readthedocs.io/en/stable/api/logger.html#levels
-    console_level : str or int, optional
+    console_level : str | int | None, optional
         The log level for the console. Default is None, so log level will be determined
         dynamically based on the number of shots.
         Possible values are:
@@ -54,9 +54,9 @@ class LogSettings:
         Internal flag to prevent multiple setups (default is False).
     """
 
-    file_path: str = os.path.join(get_temporary_folder(), "output.log")
+    file_path: str | None = os.path.join(get_temporary_folder(), "output.log")
     file_level: str = "DEBUG"
-    console_level: str = None
+    console_level: str | int | None = None
 
     warning_threshold: int = 1000
     success_threshold: int = 500

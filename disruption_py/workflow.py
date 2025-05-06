@@ -27,6 +27,7 @@ from disruption_py.settings.log_settings import LogSettings, resolve_log_setting
 from disruption_py.settings.output_setting import (
     OutputSetting,
     OutputSettingParams,
+    OutputSettingType,
     resolve_output_setting,
 )
 from disruption_py.settings.shotlist_setting import (
@@ -65,13 +66,13 @@ def _execute_retrieval(args):
 
 def get_shots_data(
     shotlist_setting: ShotlistSettingType,
-    tokamak: Tokamak = None,
-    database_initializer: Callable[..., ShotDatabase] = None,
-    mds_connection_initializer: Callable[..., ProcessMDSConnection] = None,
-    retrieval_settings: RetrievalSettings = None,
-    output_setting: OutputSetting = "dataset",
+    tokamak: Tokamak | None = None,
+    database_initializer: Callable[..., ShotDatabase] | None = None,
+    mds_connection_initializer: Callable[..., ProcessMDSConnection] | None = None,
+    retrieval_settings: RetrievalSettings | None = None,
+    output_setting: OutputSettingType = "dataset",
     num_processes: int = 1,
-    log_settings: LogSettings = None,
+    log_settings: LogSettings | None = None,
 ) -> Any:
     """
     Get shot data for all shots from shotlist_setting from CMOD.

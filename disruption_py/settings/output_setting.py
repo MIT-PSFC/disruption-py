@@ -45,7 +45,7 @@ class OutputSettingParams:
 OutputSettingType: TypeAlias = Union["OutputSetting", str, List["OutputSettingType"]]
 OutputDictType: TypeAlias = Dict[int, xr.Dataset]
 OutputSingleType: TypeAlias = xr.Dataset | xr.DataTree | pd.DataFrame
-OutputType: TypeAlias = OutputDictType | OutputSingleType
+OutputType: TypeAlias = OutputDictType | OutputSingleType | None
 
 
 class OutputSetting(ABC):

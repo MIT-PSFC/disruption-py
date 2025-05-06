@@ -5,7 +5,6 @@ Module for managing retrieval of shot data from a tokamak.
 """
 import MDSplus.mdsExceptions
 import numpy as np
-import pandas as pd
 from loguru import logger
 
 from disruption_py.core.physics_method.params import PhysicsMethodParams
@@ -16,6 +15,7 @@ from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings.domain_setting import DomainSettingParams
 from disruption_py.settings.nickname_setting import NicknameSettingParams
+from disruption_py.settings.output_setting import OutputType
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.settings.time_setting import TimeSettingParams
 
@@ -56,7 +56,7 @@ class RetrievalManager:
 
     def get_shot_data(
         self, shot_id, retrieval_settings: RetrievalSettings
-    ) -> pd.DataFrame | None:
+    ) -> OutputType:
         """
         Get data for a single shot. May be run across different processes.
 
@@ -119,7 +119,7 @@ class RetrievalManager:
 
     def shot_setup(
         self, shot_id: int, retrieval_settings: RetrievalSettings, **kwargs
-    ) -> PhysicsMethodParams | None:
+    ) -> PhysicsMethodParams:
         """
         Sets up the shot properties for the tokamak.
 
@@ -134,7 +134,7 @@ class RetrievalManager:
 
         Returns
         -------
-        PhysicsMethodParams, or None
+        PhysicsMethodParams
             Parameters containing MDS connection and shot information
         """
 
