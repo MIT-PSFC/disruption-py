@@ -1,6 +1,3 @@
-[east]
-max_shot_time = 0 # disabled
-
 [east.inout.mds]
 mdsplus_connection_string = "mds.ipp.ac.cn"
 
@@ -108,3 +105,12 @@ disrup1_fast = 55012
 disrup2_full = 56020
 disrup3_full = 56549
 disrup4_full = 57508
+
+[east.time]
+disruption_time_start = 0.2
+disruption_time_step = 0.1
+dt_before_disruption = 0.010
+duration_before_disruption = 0.25
+end_of_current_threshold = 200e3
+minimum_duration = 0.6
+minimum_ip = 200e3

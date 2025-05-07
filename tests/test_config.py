@@ -28,7 +28,7 @@ def test_settings_file():
     Temporarily change the current working directory to test if the config settings
     file is reachable.
     """
-    assert config().time_const is not None
+    assert config().time.time_const is not None
 
 
 def test_access_tokamak_settings(tokamak):

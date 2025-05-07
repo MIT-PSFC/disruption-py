@@ -63,7 +63,7 @@ jobs:
 
       - name: Setup SSH key
         run: |
-          mkdir ~/.ssh
+          mkdir -p ~/.ssh
           echo "${{ secrets.SSH_TUNNEL }}" \
           | tee ~/.ssh/id_rsa \
           | sha256sum
