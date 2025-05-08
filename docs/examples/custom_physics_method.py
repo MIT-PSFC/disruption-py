@@ -6,6 +6,7 @@ import numpy as np
 
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
+from disruption_py.core.utils.math import interp1
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.workflow import get_shots_data
@@ -56,9 +57,7 @@ def get_custom_kappa_area(params: PhysicsMethodParams):
     aminor[aminor <= 0] = 0.001
     area[area <= 0] = 3.14 * 0.001**2
     return {
-        "custom_kappa_area": params.interpolation_method(
-            times, area / (np.pi * aminor**2), params.times
-        )
+        "custom_kappa_area": interp1(times, area / (np.pi * aminor**2), params.times)
     }
 
 

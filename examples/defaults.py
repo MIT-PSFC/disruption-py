@@ -8,7 +8,6 @@ from disruption_py.settings import LogSettings, RetrievalSettings
 from disruption_py.workflow import get_shots_data
 
 retrieval_settings = RetrievalSettings(
-    cache_setting=None,
     efit_nickname_setting="disruption",
     # method/column selection
     # default None: all methods/columns
@@ -19,9 +18,6 @@ retrieval_settings = RetrievalSettings(
     # timebase settings
     time_setting="disruption_warning",
     domain_setting="full",
-    use_cache_setting_timebase=False,
-    # not yet implemented
-    interpolation_method="linear",
 )
 
 shot_data = get_shots_data(
@@ -33,16 +29,13 @@ shot_data = get_shots_data(
     database_initializer=None,
     mds_connection_initializer=None,
     retrieval_settings=retrieval_settings,
-    output_setting="dataframe",
+    output_setting="dataset",
     num_processes=1,
     log_settings=LogSettings(
         # default None: "output.log" in temporary session folder
-        log_file_path=None,
-        file_log_level="DEBUG",
-        log_file_write_mode="w",
-        log_to_console=True,
+        file_path=None,
+        file_level="DEBUG",
         # default None: VERBOSE, or higher based on number of shots
-        console_log_level=None,
-        use_custom_logging=False,
+        console_level=None,
     ),
 )

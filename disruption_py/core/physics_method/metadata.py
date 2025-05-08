@@ -91,7 +91,7 @@ class BoundMethodMetadata(MethodMetadata):
 # Utility methods for decorated methods
 
 
-def is_parametered_method(method: Callable) -> bool:
+def is_physics_method(method: Callable) -> bool:
     """
     Returns whether the method is decorated with `physics_method` decorator
 

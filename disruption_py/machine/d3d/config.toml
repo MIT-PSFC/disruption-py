@@ -6,7 +6,6 @@ db_name = "d3drdb"
 driver = "FreeTDS"
 host = "d3drdb"
 port = 8001
-protected_columns = []
 
 [d3d.tests]
 expected_failure_columns = [
@@ -14,7 +13,6 @@ expected_failure_columns = [
   "beta_n",
   "beta_p",
   "beta_p_rt",
-  "commit_hash",
   "dbetap_dt",
   "delta",
   "dli_dt",
@@ -109,3 +107,12 @@ disrup1_fast = 161228
 disrup2_full = 161237
 no_disrup1_full = 166177
 no_disrup2_full = 166253
+
+[d3d.time]
+disruption_time_start = 0.1
+disruption_time_step = 0.025
+dt_before_disruption = 0.002
+duration_before_disruption = 0.10
+end_of_current_threshold = 100e3
+minimum_duration = 0.1
+minimum_ip = 400e3

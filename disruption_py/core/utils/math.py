@@ -87,41 +87,7 @@ def interp1(x, y, new_x, kind="linear", bounds_error=False, fill_value=np.nan, a
     return set_interp(new_x)
 
 
-def exp_filter(x, w, strategy="fragmented"):
-    """
-    Implements an exponential filter.
-
-    This function implements an exponential filter on the given array x. In the
-    case of nan values in the input array, we default to using the last timestep
-    that was not a nan value. In the fragmented strategy, any time we encounter
-    invald values, we restart the filter at the next valid value.
-
-    Parameters
-    ----------
-    x : array
-        The array to filter.
-    w : float
-        The filter weight.
-    strategy: str, optional
-        Imputation strategy to be used, if any. Options are 'fragmented' or 'none'.
-        Default is 'fragmented.'
-
-    Returns
-    -------
-    _ : array
-        The filtered array.
-    """
-    filtered_x = np.zeros(x.shape)
-    filtered_x[0] = x[0]
-    for i in range(1, len(x)):
-        filtered_x[i] = w * x[i] + (1 - w) * filtered_x[i - 1]
-        if strategy == "fragmented":
-            if np.isnan(filtered_x[i - 1]):
-                filtered_x[i] = x[i]
-    return filtered_x
-
-
-def smooth(arr: np.ndarray, window_size: int) -> np.ndarray:
+def matlab_smooth(arr: np.ndarray, window_size: int) -> np.ndarray:
     """
     Implements Matlab's smooth function https://www.mathworks.com/help/curvefit/smooth.html.
 
@@ -145,45 +111,26 @@ def smooth(arr: np.ndarray, window_size: int) -> np.ndarray:
     return np.concatenate((start, mid, end))
 
 
-def gauss_smooth(y, smooth_width, ends_type):
+def causal_boxcar_smooth(signal: np.array, window_size: int) -> np.ndarray:
     """
-    Smooth a dataset using a Gaussian window.
-
+    Causal boxcar averaging filter
     Parameters
     ----------
-    y : array_like
-        The y coordinates of the dataset.
-    smooth_width : int
-        The width of the smoothing window.
-    ends_type : int
-        Determines how the "ends" of the signal are handled.
-        0 -> ends are "zeroed"
-        1 -> the ends are smoothed with progressively smaller smooths the closer to the end.
-
+    signal: np.ndarray
+        Signal to smooth
+    window_size: int
+        Size of the window to smooth over
     Returns
     -------
-    array_like
-        The smoothed dataset.
+    np.ndarray
+        Smoothed array
     """
-    w = np.round(smooth_width)
-    w = int(w)  # Ensure w is an integer
-    ly = len(y)
-    s = np.zeros(ly)
-
-    for i in range(ly):
-        if i < w // 2:
-            if ends_type == 0:
-                s[i] = 0
-            else:
-                s[i] = np.mean(y[: i + w // 2])
-        elif i >= ly - w // 2:
-            if ends_type == 0:
-                s[i] = 0
-            else:
-                s[i] = np.mean(y[i - w // 2 :])
-        else:
-            s[i] = np.mean(y[i - w // 2 : i + w // 2])
-    return s
+    kernel = np.ones(window_size) / window_size
+    mid = np.convolve(signal, kernel, mode="valid")
+    start = np.zeros(window_size - 1)
+    for i in range(window_size - 1):
+        start[i] = np.mean(signal[: i + 1])
+    return np.concatenate((start, mid))
 
 
 @filter_cov_warning
@@ -230,8 +177,7 @@ def gauss(x, *params):
     """
 
     a, mu, sigma = params
-    out = a * np.exp(-((x - mu) ** 2) / (2.0 * sigma**2))
-    return out
+    return a * np.exp(-((x - mu) ** 2) / (2.0 * sigma**2))
 
 
 @filter_cov_warning
@@ -287,7 +233,7 @@ def matlab_gsastd(
     """
     y_arr = y.copy()
     if slew_rate:
-        for i in range(0, len(y_arr) - 1):
+        for i in range(len(y_arr) - 1):
             diff = y_arr[i + 1] - y_arr[i]
             if abs(diff) > slew_rate:
                 y_arr[i + 1] = y_arr[i] + np.sign(diff) * slew_rate
@@ -418,7 +364,7 @@ def matlab_sa(y, smooth_width, ends_type=0):
         start_point = matlab_round_int((smooth_width + 1) / 2)
         y_smooth[0] = (y[0] + y[1]) / 2
         for i in range(1, start_point):
-            y_smooth[i] = np.mean(y[0 : 2 * i + 1])
+            y_smooth[i] = np.mean(y[: 2 * i + 1])
             y_smooth[ly - i - 1] = np.mean(y[ly - 2 * i - 1 : ly])
         y_smooth[ly - 1] = (y[ly - 1] + y[ly - 2]) / 2
 
@@ -951,7 +897,7 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
         tau=0.0,
         scrfact=0.0,
     )
-    channels = [copy.deepcopy(one_channel) for i in range(48)]
+    channels = [copy.deepcopy(one_channel) for _ in range(48)]
 
     @dataclass
     # pylint: disable-next=missing-class-docstring
@@ -1005,7 +951,7 @@ def matlab_get_bolo(shot_id, bol_channels, bol_prm, bol_top, bol_time, drtau=50)
     window_size = matlab_round_int(drtau / dt)
     smoothing_kernel = (1.0 / window_size) * np.ones(window_size)
 
-    bolo_shot.ntimes = int(len(time) / 4)
+    bolo_shot.ntimes = len(time) // 4
     bolo_shot.time = np.linspace(np.min(time), np.max(time), bolo_shot.ntimes)
     bolo_shot.raw_time = time
 
@@ -1058,6 +1004,6 @@ def matlab_gradient_1d_vectorized(f, h, **_kwargs):
     g = np.full(f.shape, np.nan)
     g[0] = f_diff[0] / h_diff[0]
     g[-1] = f_diff[-1] / h_diff[-1]
-    g[1:-1] = (f[2:] - f[0:-2]) / (h[2:] - h[0:-2])
+    g[1:-1] = (f[2:] - f[:-2]) / (h[2:] - h[:-2])
 
     return g

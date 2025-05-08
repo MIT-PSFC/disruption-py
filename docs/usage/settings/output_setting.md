@@ -22,18 +22,16 @@ disruption_py/settings/output_setting.py:output_setting_dict
 disruption_py/settings/output_setting.py:file_suffix_to_output_setting_dict
 --8<--
 ```
-- A dictionary mapping tokamak type strings to the desired [`OutputSetting`][disruption_py.settings.output_setting.OutputSetting] for that tokamak.  E.g. `{'cmod': 'list'}`.
+- A Python list of any other output type request option that can be passed as the [`OutputSetting`][disruption_py.settings.output_setting.OutputSetting] argument to [`get_shots_data`][disruption_py.workflow.get_shots_data] (all options listed previously). See [`OutputSettingList`][disruption_py.settings.output_setting.OutputSettingList] for more details.
 
-- A Python list of any other output type request option that can be passed as the [`OutputSetting`][disruption_py.settings.output_setting.OutputSetting] argument to [`get_shots_data`][disruption_py.workflow.get_shots_data] (all options listed previously). See [`ListOutputSetting`][disruption_py.settings.output_setting.ListOutputSetting] for more details.
-
-## Built-in Implemenations { .doc .doc-heading }
+## Built-in Implementations { .doc .doc-heading }
 ::: disruption_py.settings.output_setting
 	options:
 		show_root_heading: false
 		show_root_toc_entry: false
 		show_root_members_full_path: true
 		filters:
-		- "!^OutputSetting"
+		- "!^OutputSetting$"
 		- "!^CompleteOutputSettingParams$"
 
 ## Custom Implementations { .doc .doc-heading }

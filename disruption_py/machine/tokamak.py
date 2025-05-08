@@ -23,17 +23,6 @@ class Tokamak(Enum):
     EAST = "east"
 
 
-def is_tokamak_indexed(check_dict: dict):
-    """
-    Check if a dictionary is indexed by tokamak.
-    """
-    for option in Tokamak:
-        if option.value in check_dict:
-            return True
-
-    return False
-
-
 def resolve_tokamak_from_environment(tokamak: Union[Tokamak, str] = None):
     """
     Method to resolve the tokamak:

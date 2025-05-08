@@ -51,7 +51,9 @@ DisruptionPy makes it easy to retrieve experimental data from [MDSplus](https://
 Users can create their own routines and/or use built-in ones that retrieve and derive a variety of important signals from experimental data for disruption analysis.
 These routines are then interpolated on a requested timebase across the specified set of plasma discharges (or shots) to assemble a dataset and save it under a variety of available formats.
 
+<p align="center">
 <img src="docs/workflow.png" alt="Schematic flowchart of a typical DisruptionPy workflow. By Y Wei (2024)" width="400" onerror="this.onerror=null;this.src='workflow.png';" />
+</p>
 
 _Figure: Schematic flowchart of a typical DisruptionPy workflow. By Y Wei (2024) [[6](https://meetings.aps.org/Meeting/DPP24/Session/PP12.10)]._
 
@@ -91,7 +93,6 @@ Brief description of the folders in our project:
 
 - `disruption_py/`, package source code,
 - `docs/`, documentation sources,
-- `drafts/`, experimental scripts,
 - `examples/`, example workflows,
 - `scripts/`, miscellaneous scripts,
 - `tests/`, testing workflows.
@@ -116,17 +117,118 @@ pip install disruption-py
 
 For custom installations, please refer to our [Installation guide](docs/INSTALL.md).
 
+Starting with [v0.11](https://github.com/MIT-PSFC/disruption-py/releases/tag/v0.11), we support execution through [on-the-fly virtual environment creation with `uv`](https://docs.astral.sh/uv/guides/tools/):
+
+```bash
+uvx disruption-py
+```
+
 
 ## Getting Started
 
-Please see the [project quickstart](https://mit-psfc.github.io/disruption-py/quickstart/usage_quickstart/).
+When installed, a simple command-line entry point is available as `disruption-py`.
+
+The command-line arguments, which are subject to change, are documented in the help message:
+
+```bash
+disruption-py --help
+```
+```
+usage: disruption-py [-h] [-t TOKAMAK] [-m METHODS] [-e EFIT_TREE] [-b TIME_BASE]
+                          [-o OUTPUT_FILE] [-p PROCESSES] [-l LOG_LEVEL]
+                          [shots ...]
+
+positional arguments:
+  shots
+
+options:
+  -h, --help            show this help message and exit
+  -t TOKAMAK, --tokamak TOKAMAK
+  -m METHODS, --methods METHODS
+  -e EFIT_TREE, --efit-tree EFIT_TREE
+  -b TIME_BASE, --time-base TIME_BASE
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+  -p PROCESSES, --processes PROCESSES
+  -l LOG_LEVEL, --log-level LOG_LEVEL
+```
+
+A typical command-line invocation of the entry point would be:
+
+```bash
+# fetch EFIT-based parameters for a couple of 2015 Alcator C-MOD shots
+disruption-py -m get_efit_parameters -o efit.csv 1150805012 1150805020
+```
+
+For simplified workflows, a flattened invocation of our data pipeline is available from Python, as well:
+
+```python
+from disruption_py.workflow import run
+out = run(*args)
+```
+
+For more complicated workflows requiring the configuration of all the settings according to the specific user needs, a full-fledged disruption script might be necessary.
+Please refer to our `examples/defaults.py` script for a quickstart workflow with explicit default arguments.
+
+
+## Configuration
+
+DisruptionPy itself does not provide access to any of the underlying servers.
+
+While we honor the legacy `sybase_login` file credential format for database connections, we recommend using the following configuration snippet for maximum flexibility:
+
+```toml
+# ~/.config/disruption-py/config.toml
+
+[cmod.inout.sql]
+db_user = ""
+db_pass = ""
+
+[d3d.inout.sql]
+db_user = ""
+db_pass = ""
+
+[east.inout.sql]
+db_user = ""
+db_pass = ""
+```
+
+Any configuration parameter can be overridden by the above configuration file.
 
 
 ## Contributing
 
-> [!IMPORTANT]
-> Make sure you refer to the latest version of our [development branch](https://github.com/MIT-PSFC/disruption-py/tree/dev)!
+Make sure you refer to the latest version of our [development branch](https://github.com/MIT-PSFC/disruption-py/tree/dev)!
 
 - If you encounter any problems, please [create a new issue](https://github.com/MIT-PSFC/disruption-py/issues/new).
 - If you would like to contribute, please [submit a pull request](https://github.com/MIT-PSFC/disruption-py/compare/dev...).
 - If you have general questions, please [start a new discussion](https://github.com/MIT-PSFC/disruption-py/discussions/new?category=q-a).
+
+
+## Credits
+
+#### before 2021
+
+The backbone material for this project, that is, the original MATLAB code, was authored by several contributors at [MIT PSFC](https://www.psfc.mit.edu/) before 2021:
+
+- Robert Granetz, Principal Research Scientist,
+- Cristina Rea, then Research Scientist,
+- Kevin Montes, then Graduate Research Assistant,
+- Alex Tinguely, then Graduate Research Assistant,
+- Jinxiang Zhu, then Graduate Research Assistant.
+
+#### 2022 - 2023
+
+The initial porting of the code to Python, under the supervision of Dr. Cristina Rea, was tackled by:
+
+- Herbert Turner, then Master's Student.
+
+#### 2024 - present
+
+The subsequent heavy development and maintenance of the code within the newly-established [MIT PSFC Disruption Studies Group](https://disruptions.mit.edu/), was funded under the 3-year DOE FES Grant ["Open and FAIR Fusion for Machine Learning Applications"](https://crea-psfc.github.io/open-fair-fusion/) (2024-2026).
+
+Several contributors have been involved in the development of the code since then, most notably:
+
+- Gregorio L. Trevisan, Research Scientist,
+- Josh Lorincz, Undergraduate Student,
+- Amos Decker, Undergraduate Student,
+- William Wei, PostDoctoral Associate.

@@ -16,7 +16,7 @@ from MDSplus import mdsExceptions
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.math import interp1
-from disruption_py.core.utils.misc import shot_log_msg
+from disruption_py.core.utils.misc import shot_msg_patch
 from disruption_py.machine.cmod.physics import CmodPhysicsMethods
 from disruption_py.machine.d3d.util import D3DUtilMethods
 from disruption_py.machine.east.physics import EastPhysicsMethods
@@ -44,13 +44,7 @@ class DomainSettingParams:
     tokamak: Tokamak
 
     def __post_init__(self):
-        self.logger = logger.patch(
-            lambda record: record.update(
-                message=shot_log_msg(
-                    self.physics_method_params.shot_id, record["message"]
-                )
-            )
-        )
+        self.logger = shot_msg_patch(logger, self.physics_method_params.shot_id)
 
 
 class DomainSetting(ABC):
@@ -406,7 +400,7 @@ def resolve_domain_setting(
         return domain_setting
 
     if isinstance(domain_setting, str):
-        domain_setting_object = _domain_setting_mappings.get(domain_setting, None)
+        domain_setting_object = _domain_setting_mappings.get(domain_setting)
         if domain_setting_object is not None:
             return domain_setting_object
 

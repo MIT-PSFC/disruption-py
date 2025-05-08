@@ -101,17 +101,13 @@ class CmodThomsonDensityMeasure:
                     indices1 = 2 * np.arange(nyag1)
                     indices2 = indices1 + 1
                 else:
-                    if nyag1 == nyag2:
-                        indices1 = 2 * np.arange(nyag1)
-                        indices2 = indices1 + 1
-                    else:
-                        indices1 = 2 * np.arange(nyag1) + (nyag1 > nyag2)
-                        indices2 = np.concatenate(
-                            (
-                                2 * np.arange(nyag2) + (nyag1 < nyag2),
-                                2 * nyag2 + np.arange(nyag1 - nyag2 - 1),
-                            )
+                    indices1 = 2 * np.arange(nyag1) + (nyag1 > nyag2)
+                    indices2 = np.concatenate(
+                        (
+                            2 * np.arange(nyag2) + (nyag1 < nyag2),
+                            2 * nyag2 + np.arange(nyag1 - nyag2 - 1),
                         )
+                    )
         (v_ind1,) = np.where(indices1 < nt)
         if nyag1 > 0 and v_ind1.size > 0:
             indices1 = indices1[v_ind1]

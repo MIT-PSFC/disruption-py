@@ -82,10 +82,7 @@ class CmodEfitMethods:
                     tree_name="_efit_tree",
                 )
             except mdsExceptions.MdsException as e:
-                params.logger.warning(
-                    "Unable to get {param} from EFIT tree",
-                    param=param,
-                )
+                params.logger.warning(repr(e))
                 params.logger.opt(exception=True).debug(e)
                 efit_data[param] = np.full(len(efit_time), np.nan)
 
@@ -118,16 +115,15 @@ class CmodEfitMethods:
         tuple
             A tuple containing valid indices and corresponding times.
         """
-        values = []
-        for expr in [
-            r"_lf=\analysis::efit_aeqdsk:lflag",
-            r"_l0=((sum(_lf,1) - _lf[*,20] - _lf[*,1])==0)",
-            r"_n=\analysis::efit_fitout:nitera,(_l0 and (_n>4))",
-        ]:
-            values.append(params.mds_conn.get(expr, tree_name="analysis"))
+        values = [
+            params.mds_conn.get(expr, tree_name="analysis")
+            for expr in [
+                r"_lf=\efit_aeqdsk:lflag",
+                r"_l0=((sum(_lf,1) - _lf[*,20] - _lf[*,1])==0)",
+                r"_n=\efit_fitout:nitera,(_l0 and (_n>4))",
+            ]
+        ]
         _n = values[2].data()
         valid_indices = np.nonzero(_n)
-        (times,) = params.mds_conn.get_dims(
-            r"\analysis::efit_aeqdsk:lflag", tree_name="analysis"
-        )
+        (times,) = params.mds_conn.get_dims(r"\efit_aeqdsk:lflag", tree_name="analysis")
         return valid_indices, times[valid_indices]
