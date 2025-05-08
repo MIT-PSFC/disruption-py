@@ -467,7 +467,7 @@ wheels = [
 
 [[package]]
 name = "disruption-py"
-version = "0.11.0"
+version = "0.12.0-dev"
 source = { editable = "." }
 dependencies = [
     { name = "dynaconf" },
