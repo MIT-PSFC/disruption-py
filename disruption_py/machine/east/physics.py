@@ -276,15 +276,16 @@ class EastPhysicsMethods:
     )
     def get_z_error(params: PhysicsMethodParams):
         r"""
-        This script calculates Z_error = Z_cur - Z_programmed, or how much the
-        actual vertical position differs from the requested position.  Two
-        different methods are used to calculate Z_error, and both versions are
-        returned by the routine.  The original method gets the z-centroid from
-        the \zcur calculated by EFIT; the other uses the z-centroid from the
-        \lmsz signal calculated by the plasma control system (PCS).  The
-        normalized versions of the lmsz-derived signals are also returned.  They
-        are normalized to the plasma minor radius.  All the signals are linearly
-        interpolated onto the given timebase.
+        Get the programmed and measured vertical position of the plasma current
+        centroid, then calculate the control error.
+
+        This routine uses two methods to compute z_error. The original method
+        gets the z-centroid from the \zcur calculated by EFIT; the other uses
+        the z-centroid from the \lmsz signal calculated by the plasma control
+        system (PCS).
+
+        This routine also returns the normalized versions of lmsz-derived signals.
+        These signals are normalized to the plasma minor radius.
 
         Parameters
         ----------
@@ -295,32 +296,19 @@ class EastPhysicsMethods:
         -------
         dict
             A dictionary containing the following keys:
-            - 'zcur' : array
-                Calculated z from EFIT [m].
-            - 'z_prog' : array
-                Programmed/requested/target z [m].
-            - 'z_error' : array
-                z_error = z_cur - z_prog [m].
-            - 'zcur_lmsz' : array
-                Calculated z from PCS [m].
-            - 'z_error_lmsz' : array
-                z_error_lmsz = zcur_lmsz - z_prog [m].
-            - 'zcur_lmsz_normalized' : array
-                zcur_lmsz / aminor
-            - 'z_error_lmsz_normalized' : array
-                z_error_lmsz_normalized = z_error_lmsz / aminor
+
+            - `zcur`: Calculated z from EFIT [m].
+            - `z_prog`: Programmed/requested/target z [m].
+            - `z_error`: z_error = z_cur - z_prog [m].
+            - `zcur_lmsz`: Calculated z from PCS [m].
+            - `z_error_lmsz`: zcur_lmsz - z_prog [m].
+            - `zcur_lmsz_normalized`: zcur_lmsz / aminor.
+            - `z_error_lmsz_normalized`: z_error_lmsz / aminor.
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_Z_error.m
-
-        Original Authors
-        ----------------
-        - Wang Bo, 2015/12/10
-        - Alex Tinguely, 2015/09/09
-        - Robert Granetz
-
-        Last major update: 11/19/24 by William Wei
+        - original source: [get_Z_error.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/EAST/get_Z_error.m)
         """
         # Read in the calculated zcur from EFIT
         zcur, zcur_time = params.mds_conn.get_data_with_dims(
