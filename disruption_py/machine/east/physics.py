@@ -1045,17 +1045,8 @@ class EastPhysicsMethods:
     )
     def get_pcs_parameters(params: PhysicsMethodParams):
         """
-        This function gets many of the real time signals that are actually used
-        in the plasma control system (PCS) on the EAST tokamak.
-
-        For development of a disruption prediction algorithm that we want to run
-        in real time in the PCS, it is better to train on a database of these real
-        time signals than on the processed signals in the analysis trees and east
-        trees.
-
-        Note: since 2018 the EFIT-derived signals used in the PCS are calculated
-        by P-EFIT, which is different than RT-EFIT.  This information came from
-        QP Yuan <qpyuan@ipp.ac.cn>
+        Retrieve some real-time diagnostic signals that are used in the EAST
+        plasma control system (PCS).
 
         Parameters
         ----------
@@ -1066,26 +1057,17 @@ class EastPhysicsMethods:
         -------
         dict
             A dictionary containing the following keys:
-            - 'ip_error_rt' : array
-                error between actual and pre-programmed plasma currents
-            - 'q95_rt' : array
-                q95 calculated by RT-EFIT for PCS (P-EFIT since 2018)
-            - 'beta_p_rt' : array
-                beta_p calculated by RT-EFIT for PCS (P-EFIT since 2018)
-            - 'li_rt' : array
-                li calculated by RT-EFIT for PCS (P-EFIT since 2018)
-            - 'wmhd_rt' : array
-                Wmhd calculated by RT-EFIT for PCS (P-EFIT since 2018)
+
+            - `ip_error_rt`: error between actual and pre-programmed plasma currents.
+            - `q95_rt`: q95 calculated by RT-EFIT for PCS (P-EFIT since 2018).
+            - `beta_p_rt`: beta_p calculated by RT-EFIT for PCS (P-EFIT since 2018).
+            - `li_rt`: li calculated by RT-EFIT for PCS (P-EFIT since 2018).
+            - `wmhd_rt`:  Wmhd calculated by RT-EFIT for PCS (P-EFIT since 2018).
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_pcs.m
-
-        Original Author
-        ----------------
-        Robert Granetz, Dec 2018
-
-        Last major update: 2014/11/22 by William Wei
+        - original source: [get_pcs.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/EAST/get_pcs.m)
         """
         output = {}
 
