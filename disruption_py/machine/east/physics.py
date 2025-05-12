@@ -534,29 +534,22 @@ class EastPhysicsMethods:
     )
     def get_power(params: PhysicsMethodParams):
         """
-        This function gets the auxiliary heating powers -- electron cyclotron
-        resonance heating (p_ECRH), neutral beam injection system (p_NBI)
-        ion cyclotron (p_ICRF), and lower hybrid (p_LH). If any of the auxiliary
-        heating powers are not available (there was no ICRF or LH), then this
-        function returns an array of zeros for them.
+        This routine gets the auxiliary heating powers: electron cyclotron
+        resonance heating (p_ecrh), neutral beam injection system (p_nbi)
+        ion cyclotron (p_icrf)), and lower hybrid (p_lh). If any of the auxiliary
+        heating powers were not available during a shot, then it returns an array
+        of zeros for them.
 
-        This function also calculates the total input power, the radiated input
+        This routine also calculates the total input power, the radiated input
         fraction, and the radiated loss function by calling get_p_ohm and
         get_radiated_power.
 
-        Notes
-        ----------
-        For the moment we assume that the MDSplus trees always have the corresponding
-        tree nodes for each of the powers, even if the heating source or diagnostic
-        was not turned on in that shot. If the method is not able to access a particular
-        node, then we assume the tree is broken and skips computing that power, rather than
-        considering that heating source or diagnostic was turned off during that shot and assign
-        an array of 0 to that power. This was not the case in several shots on CMOD, and we need
-        to verify this on EAST in the future.
-
-        For now, if we encounter an MdsException error for any of the powers, we return
-        that power with nans and skip calculating the radiated fractions and p_input
-        if applicable.
+        Note that currently we assume that the MDSplus trees always have the corresponding
+        tree nodes for each of the powers, even if a heating source/diagnostic was turned
+        off in that shot. If the routine fails to find a tree or a tree node,
+        then it assumes that tree is broken and returns the corresponding power as an array
+        of nans. The routine will also skip calculating p_input or the radiated fractions if
+        any of the powers used in the computation is an array of nans.
 
         Parameters
         ----------
@@ -567,32 +560,21 @@ class EastPhysicsMethods:
         -------
         dict
             A dictionary containing the following keys:
-            - 'p_ecrh' : array
-                Electron cyclotron resonance heating power [W].
-            - 'p_lh' : array
-                Lower hybrid power [W].
-            - 'p_icrf' : array
-                Ion cyclotron resonance heating power [W].
-            - 'p_nbi' : array
-                Neutral beam injection power [W].
-            - 'p_input' : array
-                Total input power = p_ohm + p_lh + p_icrf + p_ecrh + p_nbi [W].
-            - 'rad_input_frac' : array
-                Radiated input fraction = p_rad / p_input [%].
-            - 'rad_loss_frac' : array
-                Radiated loss fraction = p_rad / (p_rad + dWmhd/dt) [%].
+
+            - `p_ecrh`: Electron cyclotron resonance heating power [W].
+            - `p_lh`: Lower hybrid power [W].
+            - `p_icrf`: Ion cyclotron resonance heating power [W].
+            - `p_nbi`: Neutral beam injection power [W].
+            - `p_input`: Total input power = p_ohm + p_lh + p_icrf + p_ecrh + p_nbi [W].
+            - `rad_input_frac: Radiated input fraction = p_rad / p_input [%].
+            - `rad_loss_frac`: Radiated loss fraction = p_rad / (p_rad + dWmhd/dt) [%].
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_power.m
-
-        Original Author
-        ----------------
-        - Wang Bo, Dec 2015
-        - Robert Granetz, Oct 2015
-        - Alex Tinguely, Oct 2016
-
-        Last major update: 11/20/24 by William Wei
+        - original source: [get_power.m](https://github.com/MIT-PSFC/disruption-py/blob/
+        matlab/EAST/get_power.m)
+        - pull requests: #[411](https://github.com/MIT-PSFC/disruption-py/pull/411), #[451](https:
+        //github.com/MIT-PSFC/disruption-py/pull/451)
         """
         p_ecrh = [np.nan]
         p_lh = [np.nan]
