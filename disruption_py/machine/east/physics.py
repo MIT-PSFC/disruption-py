@@ -212,12 +212,13 @@ class EastPhysicsMethods:
     @physics_method(columns=["v_loop"], tokamak=Tokamak.EAST)
     def get_v_loop(params: PhysicsMethodParams):
         r"""
-        This routine gets the loop voltage (\vp1_s) from the EAST tree. The signal in the
-        tree is derived by taking the time derivative of a flux loop near the
-        inboard midplane.  Two possible signals are available, one digitised at a
+        Get the loop voltage signal.
+
+        By default, this routine gets the loop voltage from \vp1_s from the east tree.
+        The signal in the tree is derived by taking the time derivative of a flux loop
+        near the inboard midplane.  Two possible signals are available, one digitised at a
         high rate (50 kHz), and the other sub-sampled down to 1 kHz.  This
-        routine reads in the 1 kHz signal.  It linearly interpolates the loop
-        voltage signal onto the specified timebase.
+        routine reads in the 1 kHz signal.
 
         If \vp1_s isn't available, the method will fall back to using \pcvloop from the
         pcs_east tree instead.
@@ -230,17 +231,14 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-            - 'v_loop' : array
-                Calculated loop voltage [V].
+            A dictionary containing the loop voltage (`v_loop`).
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_v_loop.m
-
-        Original Author: Robert Granetz, Apr 2016
-
-        Last major update: 11/19/24 by William Wei
+        - original source: [get_v_loop.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/EAST/get_v_loop.m)
+        - pull requests: #[411](https://github.com/MIT-PSFC/disruption-py/pull/411),
+        #[451](https://github.com/MIT-PSFC/disruption-py/pull/451)
         """
         v_loop = [np.nan]
 
