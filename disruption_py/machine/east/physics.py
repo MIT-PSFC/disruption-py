@@ -922,21 +922,7 @@ class EastPhysicsMethods:
     @physics_method(columns=["btor"], tokamak=Tokamak.EAST)
     def get_btor(params: PhysicsMethodParams):
         r"""
-        Fetch and calculate the toroidal magnetic field signal.
-
-        For shots < 60000, the TF current was in node "\it" in the "eng_tree",
-        and the timebase of the signal was not well-defined.
-
-        For shots between 60000 (on 2016/01/29) and 65165 (2016/05/01), the
-        "\it" node is in the "pcs_east" tree, with a proper timebase.
-
-        For shots after 65165, the "\it" node was back in the "eng_tree" tree
-        (with a proper timebase).
-
-        Also, starting with shot 60000, there is a fibreoptic-based measurement
-        of the TF current. The signals are "\focs_it" (digitized at 50 kHz) and
-        "\focs_it_s" (sub-sampled at 1 kHz), both in the "east" tree.  The latter
-        two signals differ by 1.6% from the \it signal (as of 2016/04/18).
+        Calculate the toroidal magnetic field signal.
 
         Parameters
         ----------
@@ -946,17 +932,15 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-            - 'btor' : array
-                Toroidal magnetic field [T].
+            A dictionary containing the toroidal magnetic field signal (`btor`).
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_n_equal_1_data.m
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_mirnov_std.m
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_n1rms_n2rms.m
-
-        Last major update: 2014/11/26 by William Wei
+        - original sources: [get_n_equal_1_data.m](https://github.com/MIT-PSFC/disr
+        uption-py/blob/matlab/EAST/get_n_equal_1_data.m), [get_mirnov_std.m](https:
+        //github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_mirnov_std.m),
+        [get_n1rms_n2rms.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/
+        EAST/get_n1rms_n2rms.m)
         """
         if 60000 <= params.shot_id <= 65165:
             tree = "pcs_east"
