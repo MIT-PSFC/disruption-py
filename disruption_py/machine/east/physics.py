@@ -966,8 +966,14 @@ class EastPhysicsMethods:
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.EAST)
     def get_kappa_area(params: PhysicsMethodParams):
         """
-        This script computes kappa_area (elongation parameter) defined as
-        plasma area / (pi * aminor**2)
+        Calculate the plasma's ellipticity (kappa, also known as
+        the elongation) using its area and minor radius. It is defined as:
+
+        $$
+        \kappa_{area} = \frac{A}{\pi a^2}
+        $$
+
+        where $A$ is the plasma cross-sectional area and $a$ is the minor radius.
 
         Parameters
         ----------
@@ -977,21 +983,12 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-            - 'kappa_area' : array
-                Computed elongation parameter
+            A dictionary containing the `kappa_area` signal.
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_kappa_area.m
-
-        Original Authors
-        ----------------
-        Robert Granetz, Dec 2015
-        Alex Tinguely, Oct 2015
-        Cristina Rea, Aug 2018
-
-        Last major update: 2014/11/25 by William Wei
+        - original source: [get_kappa_area.m](https://github.com/MIT-PSFC/disrup
+        tion-py/blob/matlab/EAST/get_kappa_area.m)
         """
         # Get area and aminor from EastEfitMethods
         efit_params = EastEfitMethods.get_efit_parameters(params=params)
@@ -1007,8 +1004,14 @@ class EastPhysicsMethods:
     @physics_method(columns=["pkappa_area"], tokamak=Tokamak.EAST)
     def get_pkappa_area(params: PhysicsMethodParams):
         """
-        This script computes kappa_area (elongation parameter) defined as
-        plasma area / (pi * aminor**2) using data from the P-EFIT tree.
+        Calculate the plasma's ellipticity (kappa) using the area and minor
+        radius data from the P-EFIT tree. `kappa_area` is defined as:
+
+        $$
+        \kappa_{area} = \frac{A}{\pi a^2}
+        $$
+
+        where $A$ is the plasma cross-sectional area and $a$ is the minor radius.
 
         Parameters
         ----------
@@ -1018,19 +1021,12 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-            - 'pkappa_area' : array
-                Computed elongation parameter using data from the P-EFIT tree.
+            A dictionary containing the `pkappa_area` signal.
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_PEFIT_parameters.m
-
-        Original Authors
-        ----------------
-        Cristina Rea, May 2019
-
-        Last major update: 2014/11/25 by William Wei
+        - original source: [get_PEFIT_parameters.m](https://github.com/MIT-PSFC/
+        disruption-py/blob/matlab/EAST/get_PEFIT_parameters.m)
         """
         # Get area and aminor from EastEfitMethods
         pefit_params = EastEfitMethods.get_pefit_parameters(params=params)
