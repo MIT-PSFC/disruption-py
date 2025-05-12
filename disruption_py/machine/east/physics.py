@@ -63,12 +63,9 @@ class EastPhysicsMethods:
     )
     def get_ip_parameters(params: PhysicsMethodParams):
         """
-        This routine calculates Ip_error = (Ip - Ip_programmed), i.e. how much
-        the actual plasma current differs from the requested current.  It
-        linearly interpolates both the programmed and measured plasma currents
-        onto the given timebase.  The routine also calculates the time
-        derivatives of the measured Ip and programmed Ip.  The time derivatives
-        are useful for discriminating between rampup, flattop, and rampdown.
+        This routine retrieves the plasma current signals. It then calculates the error
+        between the programmed and the actual plasma current, and the time derivatives
+        of the actual and the programmed plasma current.
 
         Parameters
         ----------
@@ -79,26 +76,18 @@ class EastPhysicsMethods:
         -------
         dict
             A dictionary containing the following keys:
-            - 'ip' : array
-                Measured plasma current [A].
-            - 'ip_prog' : array
-                Programmed (requested) plasma current [A].
-            - 'ip_error' : array
-                ip - ip_prog [A].
-            - 'ip_error_normalized' : array
-                ip_error normalized to ip_prog [dimensionless].
-            - 'dip_dt' : array
-                Time derivative of the measured plasma current [A/s].
-            - 'dipprog_dt' : array
-                Time derivative of the programmed plasma current [A/s]
+
+            - `ip`: Measured plasma current.
+            - `ip_prog`: Programmed plasma current.
+            - `ip_error`: Error between the actual and programmed plasma currents.
+            - `ip_error_normalized`: `ip_error` normalized to `ip_prog`.
+            - `dip_dt`: Time derivative of the measured plasma current.
+            - `dipprog_dt`: Time derivative of the programmed plasma current.
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_Ip_parameters.m
-
-        Original author: Robert Granetz, Dec 2015
-
-        Last major update: 11/19/24 by William Wei
+        - original source: [get_Ip_parameters.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/EAST/get_Ip_parameters.m)
         """
         ip = [np.nan]
         ip_prog = [np.nan]
