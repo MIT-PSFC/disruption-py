@@ -796,12 +796,9 @@ class EastPhysicsMethods:
     )
     def get_n_equal_1_data(params: PhysicsMethodParams):
         """
-        This function computes the amplitude and phase of the n=1 Fourier
-        component of the net saddle signals (total saddle signals minus the
-        calculated pickup from the RMP coils) and interpolates the signals onto
-        the specified timebase.  It also computes the amplitude and phase of the
-        n=1 Fourier component of the calculated pickup from the RMP coils into
-        the database.
+        Compute the amplitude and phase of the n=1 Fourier component of the net
+        saddle signals (total saddle signals minus the calculated pickup from
+        the RMP coils).
 
         Parameters
         ----------
@@ -812,29 +809,22 @@ class EastPhysicsMethods:
         -------
         dict
             A dictionary containing the following keys:
-            - 'n_equal_1_mode' : array
-                Amplitude of n=1 Fourier component of saddle signals after
-                subtracting the calculated pickup from the RMP coil currents [T].
-            - 'n_equal_1_phase' : array
-                Toroidal phase angle of above [rad].
-            - 'n_equal_1_normalized' : array
-                'n_equal_1_mode' normalized to btor.
-            'rmp_n_equal_1' : array
-                Amplitude of the n=1 Fourier component of the calculated pickup
-                of the RMP coils on the saddle signals [T].
-            'rmp_n_equal_1_phase' : array
-                toroidal phase angle of above [rad].
+
+            - `n_equal_1_mode`: Amplitude of n=1 Fourier component of saddle signals
+            after subtracting the calculated pickup from the RMP coil currents [T].
+            - `n_equal_1_phase`: Toroidal phase of the n=1 mode [rad].
+            - `n_equal_1_normalized`: `n_equal_1_mode` normalized to the toroidal magnetic
+            field (`btor`).
+            - `rmp_n_equal_1`: Amplitude of the n=1 Fourier component of the calculated
+            pickup of the RMP coils on the saddle signals [T].
+            - `rmp_n_equal_1_phase`: toroidal phase of the n=1 rmp pickup [rad].
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_n_equal_1_data.m
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_rmp_and_saddle_signals.m
-
-        Original Authors
-        ----------------
-        Robert Granetz, Apr 2017
-
-        Last major update: 2014/11/26 by William Wei
+        - original source: [get_n_equal_1_data.m](https://github.com/MIT-PSFC/disruption-
+        py/blob/matlab/EAST/get_n_equal_1_data.m), [get_rmp_and_saddle_signals.m](https://
+        github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_rmp_and_saddle_signals.m)
+        - pull requests: #[411](https://github.com/MIT-PSFC/disruption-py/pull/411)
         """
         n_equal_1_mode = [np.nan]
         n_equal_1_phase = [np.nan]
