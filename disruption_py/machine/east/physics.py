@@ -1345,13 +1345,9 @@ class EastPhysicsMethods:
     )
     def get_n1rms_n2rms(params: PhysicsMethodParams):
         """
-        Read in the saddle sensor data and the rmp currents from the MDSplus
-        tree.  All the outputs have time as their 1st dimension,
-        i.e. rmp(time,rmpcoil#) and sad(time,saddlecoil#), and the time arrays
-        are column vectors.
-
-        The ordering of the rmp data is: irmpu1 to irmpu8, then irmpl1 to irmpl8.
-        The ordering of the saddle data is: sad_pa, sad_bc, .. sad_no.
+        Retrieve data of the Mirnov sensor array and compute the n=1 and 2 Fourier
+        mode amplitudes. Then calculate the rolling standard deviation of the amplitudes
+        and normalize them to the toroidal magnetic field (`btor`).
 
         Parameters
         ----------
@@ -1362,20 +1358,17 @@ class EastPhysicsMethods:
         -------
         dict
             A dictionary containing the following keys:
-                - 'n1rms' : array
-                    std over a time window of the n=1 mode from the Mirnov array [T].
-                - 'n2rms' : array
-                    std over a time window of the n=2 mode from the Mirnov array [T].
-                - 'n1rms_normalized' : array
-                    n1rms normalized to btor [dimensionless].
-                - 'n2rms_normalized' : array
-                    n2rms normalized to btor [dimensionless].
+
+            - `n1rms`: rolling standard deviation of the n=1 mode from the Mirnov array [T].
+            - `n2rms`: rolling standard deviation the n=2 mode from the Mirnov array [T].
+            - `n1rms_normalized`: `n1rms` normalized to `btor` [dimensionless].
+            - `n2rms_normalized`: `n2rms` normalized to `btor` [dimensionless].
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_n1rms_n2rms.m
-
-        Last major update: 2014/11/25 by William Wei
+        - original source: [get_n1rms_n2rms.m](https://github.com/MIT-PSFC/disruption-py/blob
+        /matlab/EAST/get_n1rms_n2rms.m)
+        - pull requests: #[411](https://github.com/MIT-PSFC/disruption-py/pull/411)
         """
         n1rms = np.full(len(params.times), np.nan)
         n2rms = np.full(len(params.times), np.nan)
