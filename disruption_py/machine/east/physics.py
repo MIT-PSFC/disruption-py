@@ -1446,15 +1446,12 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-            - 'h98' : array
-                H98y2 energy confinement time.
+            A dictionary containing the H98y2 energy confinement time (`h98`).
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_h98.m
-
-        Last major update: 11/25/24 by William Wei
+        - original source: [get_h98.m](https://github.com/MIT-PSFC/disruption-py/blob/
+        matlab/EAST/get_h98.m)
         """
         h98_y2 = [np.nan]
 
@@ -1556,10 +1553,8 @@ class EastPhysicsMethods:
     )
     def get_efit_gaps(params: PhysicsMethodParams):
         """
-        This script calculates upper and lower gaps from the EFIT and P-EFIT
-        information on plasma boundary and first wall geometry. This is needed
-        because the EAST version of EFIT does not output the upper and lower
-        gaps directly.
+        Calculate the upper and lower gaps from the EFIT and P-EFIT
+        information on plasma boundary and first wall geometry.
 
         Parameters
         ----------
@@ -1569,27 +1564,15 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-            - 'upper_gap' : array
-                Upper gap [m].
-            - 'lower_gap' : array
-                Lower gap [m].
-            - 'pupper_gap' : array
-                Upper gap computed from the P-EFIT tree [m].
-            - 'plower_gap' : array
-                Lower gap computed from the P-EFIT tree [m].
+            A dictionary containing the upper and lower gaps from EFIT (`upper_gap`
+            and `lower_gap) and P-EFIT (`pupper_gap` and `plower_gap`) data.
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_EFIT_gaps.m
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_PEFIT_gaps.m
-
-        Original Authors
-        ----------------
-        Robert Granetz
-        Jiaxiang Zhu
-
-        Last major update: 2015/03/29 by William Wei
+        - original sources: [get_EFIT_gaps.m](https://github.com/MIT-PSFC/disruption-
+        py/blob/matlab/EAST/get_EFIT_gaps.m), [get_PEFIT_gaps.m](https://github.com/M
+        IT-PSFC/disruption-py/blob/matlab/EAST/get_PEFIT_gaps.m)
+        - pull requests: #[411](https://github.com/MIT-PSFC/disruption-py/pull/411)
         """
         efit_gaps = EastPhysicsMethods._get_efit_gaps(params=params, tree="_efit_tree")
         pefit_gaps = EastPhysicsMethods._get_efit_gaps(params=params, tree="pefit_east")
