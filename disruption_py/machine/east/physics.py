@@ -1291,12 +1291,8 @@ class EastPhysicsMethods:
     )
     def get_mirnov_std(params: PhysicsMethodParams):
         """
-        Compute mirnov_std and mirnov_std_normalized
-
-        The set of Mirnov sensors digitized at 200 kHz (from Dalong):
-            - cmp1t~cmp26t  (c-port),
-            - kmp1t~kmp26t (k-port),
-        all in the EAST tree
+        Fetch the signal from a single Mirnov sensor, then compute the rolling
+        standard deviation.
 
         Parameters
         ----------
@@ -1307,16 +1303,16 @@ class EastPhysicsMethods:
         -------
         dict
             A dictionary containing the following keys:
-                - 'mirnov_std' : array
-                    stdev of a mirnov sensor
-                - 'mirnov_std_normalized' : array
-                    mirnov_std normalized to btor
+
+            - `mirnov_std`: rolling stdev of a mirnov sensor.
+            - `mirnov_std_normalized`: `mirnov_std` normalized to the toroidal
+            magnetic field (`btor`).
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_mirnov_std.m
-
-        Last major update: 2014/11/22 by William Wei
+        - original source: [get_mirnov_std.m](https://github.com/MIT-PSFC/disrupt
+        ion-py/blob/matlab/EAST/get_mirnov_std.m)
+        - pull requests: #[411](https://github.com/MIT-PSFC/disruption-py/pull/411)
         """
         mirnov_std = np.full(len(params.times), np.nan)
         mirnov_std_normalized = [np.nan]
