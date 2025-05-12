@@ -469,13 +469,12 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-            - 'p_rad' : array
-                Radiated power [W].
+            A dictionary containing the total radiated power (`p_rad`).
 
         References
         -------
-        - Prad_bulk_xuv2014_2016.m (Not in repo)
+        - original source: Prad_bulk_xuv2014_2016.m (Currently not available in the repository)
+        - pull requests: #[411](https://github.com/MIT-PSFC/disruption-py/pull/411)
         """
         # Get the raw AXUV data
         try:
