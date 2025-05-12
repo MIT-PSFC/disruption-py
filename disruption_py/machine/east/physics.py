@@ -1220,12 +1220,10 @@ class EastPhysicsMethods:
     @physics_method(columns=["prad_peaking"], tokamak=Tokamak.EAST)
     def get_prad_peaking(params: PhysicsMethodParams):
         """
-        This routine calculates the peaking factor of the profiles of radiated
-        power measured by the AXUV arrays on EAST.  Here we define the peaking
-        factor as the ratio of the average of the Prad signals of the core
-        channels to the average of all the channels, excluding those that look in
-        the divertor region (core-to-average).  This routine linearly
-        interpolates the prad_peaking signal onto the given timebase.
+        Calculates the peaking factor of the profiles of radiated
+        power measured by the AXUV arrays on EAST. It is defined as the
+        ratio of the average of the centralmost 6 channels to the average
+        of all of the non-divertor-viewing channels (core-to-average).
 
         Parameters
         ----------
@@ -1235,25 +1233,14 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-                - 'prad_peaking' : array
-                    Ratio of core Prad signals to all Prad signals
-
-        Note
-        ------
-        For now we are defining "core" to be the centralmost 6 chords out of the
-        64 chords in the EAST axuv arrays, and "all" to be all of the non-divertor
-        -viewing chords.  See comments later in this code for more details.
+            A dictionary containing the peaking factor for radiated power (`prad_peaking`).
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_prad_peaking.m
-
-        Original Author
-        ----------------
-        Robert Granetz, May 2019
-
-        Last major update: 2014/11/22 by William Wei
+        - original source: [get_prad_peaking.m](https://github.com/MIT-PSFC/disruption-py/blob
+        /matlab/EAST/get_prad_peaking.m)
+        - pull requests: #[411](https://github.com/MIT-PSFC/disruption-py/pull/411), #[451](https:
+        //github.com/MIT-PSFC/disruption-py/pull/451)
         """
         xuv, xuvtime = EastPhysicsMethods._get_raw_axuv_data(params)
 
