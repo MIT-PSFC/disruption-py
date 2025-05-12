@@ -362,19 +362,21 @@ class EastPhysicsMethods:
     )
     def get_density_parameters(params: PhysicsMethodParams):
         r"""
-        This routine obtains the line-averaged density from the HCN vertical
-        chord.  The node is called \DFSDEV in the PCS_EAST tree.  This signal is
-        also used by the PCS for feedback control of the density.
+        Calculate electron density, its time derivative, and the Greenwald fraction.
 
-        The plasma density is also measured by a POlarimeter/INTerferometer
-        diagnostic (PO INT), which has 11 horizontal chords.  The midplane
-        channel is \POINT_N6 in the EAST tree.  (This diagnostic uses an FIR
-        laser at 432 micrometers.)  However, I found that the POINT density
-        measurement is bad on a significant fraction of EAST shots, even in
-        2017.
+        The Greenwald fraction is the ratio of the measured electron density $n_e$ and
+        the Greenwald density limit $n_G$ defined as [^1]:
 
-        The routine also calculates the Greenwald density using aminor coming
-        from EFIT.  The time derivative of electron density is also obtained.
+        $$
+        n_G = \frac{I_p}{\pi a^2}
+        $$
+
+        where $n_G$ is given in $10^{20} m^{-3}$ and $I_p$ is in MA.
+
+        The line-averaged electron density is obtained from the HCN vertical chord.
+        This signal is also used by the PCS for feedback control of the density.
+
+        [^1]: https://wiki.fusion.ciemat.es/wiki/Greenwald_limit
 
         Parameters
         ----------
@@ -384,21 +386,13 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-            - 'n_e' : array
-                Density as measured by the polarimeter.interferometer [m^-3].
-            - 'greenwald_fraction' : array
-                greenwald_fraction = ne / nG [dimensionless].
-            - 'dn/dt' : array
-                dn_dt = d(ne)/dt [m^-3/s].
+            A dictionary containing electron density (`n_e`), its time derivative (`dn_dt`),
+            and the Greenwald fraction (`greenwald_fraction`).
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_density_parameters.m
-
-        Original Author: Robert Granetz, Apr 2017
-
-        Last major update: 11/19/24 by William Wei
+        - original source: [get_density_parameters.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/EAST/get_density_parameters.m)
         """
         ne = [np.nan]
         greenwald_fraction = [np.nan]
