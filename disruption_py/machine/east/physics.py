@@ -1111,20 +1111,8 @@ class EastPhysicsMethods:
     @physics_method(columns=["p_rad_rt", "p_lh_rt", "p_nbi_rt"], tokamak=Tokamak.EAST)
     def get_pcs_power(params: PhysicsMethodParams):
         """
-        This function gets the real time power signals that are actually used
-        in the plasma control system (PCS) on the EAST tokamak.
-
-        For development of a disruption prediction algorithm that we want to run
-        in real time in the PCS, it is better to train on a database of these real
-        time signals than on the processed signals in the analysis trees and east
-        trees.
-
-        Note: since 2018 the EFIT-derived signals used in the PCS are calculated
-        by P-EFIT, which is different than RT-EFIT.  This information came from
-        QP Yuan <qpyuan@ipp.ac.cn>
-
-        As of Nov 2024, only p_rad_rt, p_lh_rt, and p_nbi_rt have been implemented.
-        All other PCS signals weren't implemented in original MATLAB script.
+        Calculate some real-time auxiliary heating power signals that are available
+        in the EAST plasma control system (PCS).
 
         Parameters
         ----------
@@ -1135,37 +1123,15 @@ class EastPhysicsMethods:
         -------
         dict
             A dictionary containing the following keys:
-            - 'p_rad_rt' : array
-                radiated power [W]
-            - [UNAVAILABLE] 'p_ecrh_rt' : array
-                electron cyclotron resonance heating power [W]
-            - 'p_lh_RT' : array
-                lower hybrid power [W]
-            - [UNAVAILABLE] 'p_oh_rt' : array
-                ohmic power [W]
-            - [UNAVAILABLE] 'p_icrf_rt' : array
-                ion cyclotron power [W]
-            - 'p_nbi_RT' : array
-                neutral beam injection power [W]
-            - [UNAVAILABLE] 'rad_input_frac' : array
-                rad_input_frac = p_rad/p_input [%]
-                               = p_rad/(p_ohm + p_lh + p_icrh + p_ecrh + p_nbi)
-                               = ratio of radiated power to total input power
-            - [UNAVAILABLE] 'rad_loss_frac' : array
-                rad_loss_frac = p_rad/p_loss
-                              = p_rad/(p_rad + p_cond + p_conv)
-                              = p_rad/(p_input - dWmhd/dt)
-                              = ratio of radiated power to total loss power
+
+            - `p_rad_rt`: radiated power [W].
+            - `p_lh_RT`: lower hybrid power [W].
+            - `p_nbi_RT`: neutral beam injection power [W].
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_pcs.m
-
-        Original Author
-        ----------------
-        Robert Granetz, Dec 2018
-
-        Last major update: 2014/11/22 by William Wei
+        - original source: [get_pcs.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/EAST/get_pcs.m)
         """
         # Get p_rad_rt
         try:
