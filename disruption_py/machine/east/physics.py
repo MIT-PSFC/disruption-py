@@ -965,7 +965,7 @@ class EastPhysicsMethods:
     @staticmethod
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.EAST)
     def get_kappa_area(params: PhysicsMethodParams):
-        """
+        r"""
         Calculate the plasma's ellipticity (kappa, also known as
         the elongation) using its area and minor radius. It is defined as:
 
@@ -1003,7 +1003,7 @@ class EastPhysicsMethods:
     @staticmethod
     @physics_method(columns=["pkappa_area"], tokamak=Tokamak.EAST)
     def get_pkappa_area(params: PhysicsMethodParams):
-        """
+        r"""
         Calculate the plasma's ellipticity (kappa) using the area and minor
         radius data from the P-EFIT tree. `kappa_area` is defined as:
 
