@@ -212,16 +212,12 @@ class EastPhysicsMethods:
     @physics_method(columns=["v_loop"], tokamak=Tokamak.EAST)
     def get_v_loop(params: PhysicsMethodParams):
         r"""
-        Get the loop voltage signal.
+        retrieve the loop voltage signal.
 
-        By default, this routine gets the loop voltage from \vp1_s from the east tree.
-        The signal in the tree is derived by taking the time derivative of a flux loop
-        near the inboard midplane.  Two possible signals are available, one digitised at a
-        high rate (50 kHz), and the other sub-sampled down to 1 kHz.  This
-        routine reads in the 1 kHz signal.
-
-        If \vp1_s isn't available, the method will fall back to using \pcvloop from the
-        pcs_east tree instead.
+        By default, this routine gets the loop voltage from `\vp1_s` from the `east` tree.
+        This signal is derived by taking the time derivative of a flux loop
+        near the inboard midplane. If `\vp1_s` isn't available, the method will fall back
+        to reading `\pcvloop` from the `pcs_east` tree instead.
 
         Parameters
         ----------
@@ -237,8 +233,8 @@ class EastPhysicsMethods:
         -------
         - original source: [get_v_loop.m](https://github.com/MIT-PSFC/disruption-py
         /blob/matlab/EAST/get_v_loop.m)
-        - pull requests: #[411](https://github.com/MIT-PSFC/disruption-py/pull/411),
-        #[451](https://github.com/MIT-PSFC/disruption-py/pull/451)
+        - pull requests: #[411](https://github.com/MIT-PSFC/disruption-py/pull/
+        411), #[451](https://github.com/MIT-PSFC/disruption-py/pull/451)
         """
         v_loop = [np.nan]
 
@@ -276,16 +272,14 @@ class EastPhysicsMethods:
     )
     def get_z_error(params: PhysicsMethodParams):
         r"""
-        Get the programmed and measured vertical position of the plasma current
+        Retrieve the programmed and measured vertical positions of the plasma current
         centroid, then calculate the control error.
 
-        This routine uses two methods to compute z_error. The original method
-        gets the z-centroid from the \zcur calculated by EFIT; the other uses
-        the z-centroid from the \lmsz signal calculated by the plasma control
-        system (PCS).
-
-        This routine also returns the normalized versions of lmsz-derived signals.
-        These signals are normalized to the plasma minor radius.
+        This routine uses two methods to compute `z_error`. The first and original method
+        gets the z-centroid from `\zcur` which is calculated by EFIT. The second method uses
+        the z-centroid from the `\lmsz` signal which is calculated by the plasma control
+        system (PCS). For the *lmsz*-derived signals, this routine also returns their normalized
+        version by dividing them by the plasma minor radius.
 
         Parameters
         ----------
@@ -295,15 +289,10 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-
-            - `zcur`: Calculated z from EFIT [m].
-            - `z_prog`: Programmed/requested/target z [m].
-            - `z_error`: z_error = z_cur - z_prog [m].
-            - `zcur_lmsz`: Calculated z from PCS [m].
-            - `z_error_lmsz`: zcur_lmsz - z_prog [m].
-            - `zcur_lmsz_normalized`: zcur_lmsz / aminor.
-            - `z_error_lmsz_normalized`: z_error_lmsz / aminor.
+            A dictionary containing the programmed vertical position (`z_prog`), the measured
+            vertical positions (`zcur` and `zcur_lmsz)`, the errors (`z_error` and
+            `z_error_lmsz`), and the normalized *lmsz*-derived signals (`zcur_lmsz_normalized`
+            and `z_error_lmsz_normalized`).
 
         References
         -------
@@ -362,10 +351,10 @@ class EastPhysicsMethods:
     )
     def get_density_parameters(params: PhysicsMethodParams):
         r"""
-        Calculate electron density, its time derivative, and the Greenwald fraction.
+        Calculate the electron density, its time derivative, and the Greenwald fraction.
 
         The Greenwald fraction is the ratio of the measured electron density $n_e$ and
-        the Greenwald density limit $n_G$ defined as [^1]:
+        the Greenwald density limit $n_G$ which is defined as [^1]:
 
         $$
         n_G = \frac{I_p}{\pi a^2}
@@ -374,7 +363,8 @@ class EastPhysicsMethods:
         where $n_G$ is given in $10^{20} m^{-3}$ and $I_p$ is in MA.
 
         The line-averaged electron density is obtained from the HCN vertical chord.
-        This signal is also used by the PCS for feedback control of the density.
+        This signal is also used by the plasma control system (PCS) for feedback control of
+        the density.
 
         [^1]: https://wiki.fusion.ciemat.es/wiki/Greenwald_limit
 
@@ -459,7 +449,8 @@ class EastPhysicsMethods:
     @physics_method(columns=["p_rad"], tokamak=Tokamak.EAST)
     def get_radiated_power(params: PhysicsMethodParams):
         """
-        Calculate total radiated power in bulk plasma from the AXUV arrays.
+        Calculate total radiated power in bulk plasma measured by
+        the AXUV arrays.
 
         Parameters
         ----------
@@ -473,7 +464,7 @@ class EastPhysicsMethods:
 
         References
         -------
-        - original source: Prad_bulk_xuv2014_2016.m (Currently not available in the repository)
+        - original source: Prad_bulk_xuv2014_2016.m (currently not available in the repository)
         - pull requests: #[411](https://github.com/MIT-PSFC/disruption-py/pull/411)
         """
         # Get the raw AXUV data
@@ -533,23 +524,32 @@ class EastPhysicsMethods:
         tokamak=Tokamak.EAST,
     )
     def get_power(params: PhysicsMethodParams):
-        """
+        r"""
         This routine gets the auxiliary heating powers: electron cyclotron
-        resonance heating (p_ecrh), neutral beam injection system (p_nbi)
-        ion cyclotron (p_icrf)), and lower hybrid (p_lh). If any of the auxiliary
+        resonance heating (`p_ecrh`), neutral beam injection system (`p_nbi`)
+        ion cyclotron (`p_icrf`), and lower hybrid (`p_lh`). If any of the auxiliary
         heating powers were not available during a shot, then it returns an array
         of zeros for them.
 
         This routine also calculates the total input power, the radiated input
-        fraction, and the radiated loss function by calling get_p_ohm and
-        get_radiated_power.
+        fraction, and the radiated loss function. These parameters are defined as:
+        $$
+        p_\text{input} = p_\text{ohmic} + p_\text{lh} + p_\text{icrf} + p_\text{ecrh}
+        + p_\text{nbi}
+        $$
+        $$
+        f_\text{rad input} = \frac{p_\text{rad}}{p_\text{input}}
+        $$
+        $$
+        f_\text{rad loss} = \frac{p_\text{rad}}{p_\text{rad} + dW_\text{mhd}/dt}
+        $$
 
         Note that currently we assume that the MDSplus trees always have the corresponding
         tree nodes for each of the powers, even if a heating source/diagnostic was turned
-        off in that shot. If the routine fails to find a tree or a tree node,
+        off during that shot. If the routine fails to find a tree or a tree node,
         then it assumes that tree is broken and returns the corresponding power as an array
-        of nans. The routine will also skip calculating p_input or the radiated fractions if
-        any of the powers used in the computation is an array of nans.
+        of `nans`. The routine will also skip calculating `p_input` or the radiated fractions if
+        any of its inputs is an array of `nans`.
 
         Parameters
         ----------
@@ -559,15 +559,9 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-
-            - `p_ecrh`: Electron cyclotron resonance heating power [W].
-            - `p_lh`: Lower hybrid power [W].
-            - `p_icrf`: Ion cyclotron resonance heating power [W].
-            - `p_nbi`: Neutral beam injection power [W].
-            - `p_input`: Total input power = p_ohm + p_lh + p_icrf + p_ecrh + p_nbi [W].
-            - `rad_input_frac: Radiated input fraction = p_rad / p_input [%].
-            - `rad_loss_frac`: Radiated loss fraction = p_rad / (p_rad + dWmhd/dt) [%].
+            A dictionary containing the auxiliary heating powers (`p_ecrh`, `p_lh`, `p_icrf`,
+            `p_nbi`), the total input power (`p_input`), and the radiated fractions
+            (`rad_input_frac`, `rad_loss_frac`).
 
         References
         -------
@@ -796,7 +790,7 @@ class EastPhysicsMethods:
     )
     def get_n_equal_1_data(params: PhysicsMethodParams):
         """
-        Compute the amplitude and phase of the n=1 Fourier component of the net
+        Compute the amplitude and phase of the $n$=1 Fourier component of the net
         saddle signals (total saddle signals minus the calculated pickup from
         the RMP coils).
 
@@ -810,14 +804,14 @@ class EastPhysicsMethods:
         dict
             A dictionary containing the following keys:
 
-            - `n_equal_1_mode`: Amplitude of n=1 Fourier component of saddle signals
-            after subtracting the calculated pickup from the RMP coil currents [T].
-            - `n_equal_1_phase`: Toroidal phase of the n=1 mode [rad].
+            - `n_equal_1_mode`: Amplitude of $n$=1 Fourier component of saddle signals
+            after subtracting the calculated pickup from the RMP coil currents.
+            - `n_equal_1_phase`: Toroidal phase of the $n$=1 mode.
             - `n_equal_1_normalized`: `n_equal_1_mode` normalized to the toroidal magnetic
             field (`btor`).
-            - `rmp_n_equal_1`: Amplitude of the n=1 Fourier component of the calculated
-            pickup of the RMP coils on the saddle signals [T].
-            - `rmp_n_equal_1_phase`: toroidal phase of the n=1 rmp pickup [rad].
+            - `rmp_n_equal_1`: Amplitude of the $n$=1 Fourier component of the calculated
+            pickup of the RMP coils on the saddle signals.
+            - `rmp_n_equal_1_phase`: toroidal phase of the $n$=1 rmp pickup.
 
         References
         -------
@@ -922,7 +916,7 @@ class EastPhysicsMethods:
     @physics_method(columns=["btor"], tokamak=Tokamak.EAST)
     def get_btor(params: PhysicsMethodParams):
         r"""
-        Calculate the toroidal magnetic field signal.
+        Calculate the toroidal magnetic field.
 
         Parameters
         ----------
@@ -932,7 +926,7 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the toroidal magnetic field signal (`btor`).
+            A dictionary containing the toroidal magnetic field (`btor`).
 
         References
         -------
@@ -966,7 +960,7 @@ class EastPhysicsMethods:
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.EAST)
     def get_kappa_area(params: PhysicsMethodParams):
         r"""
-        Calculate the plasma's ellipticity (kappa, also known as
+        Calculate the plasma's ellipticity (*kappa*, also known as
         the elongation) using its area and minor radius. It is defined as:
 
         $$
@@ -1004,7 +998,7 @@ class EastPhysicsMethods:
     @physics_method(columns=["pkappa_area"], tokamak=Tokamak.EAST)
     def get_pkappa_area(params: PhysicsMethodParams):
         r"""
-        Calculate the plasma's ellipticity (kappa) using the area and minor
+        Calculate the plasma's ellipticity (*kappa*) using the area and minor
         radius data from the P-EFIT tree. `kappa_area` is defined as:
 
         $$
@@ -1045,8 +1039,9 @@ class EastPhysicsMethods:
     )
     def get_pcs_parameters(params: PhysicsMethodParams):
         """
-        Retrieve some real-time diagnostic signals that are used in the EAST
-        plasma control system (PCS).
+        Retrieve a subset of the real-time diagnostic signals that are used in the EAST
+        plasma control system (PCS). These signals are either calculated by RT-EFIT (pre-2018)
+        or P-EFIT (since 2018).
 
         Parameters
         ----------
@@ -1056,13 +1051,7 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-
-            - `ip_error_rt`: error between actual and pre-programmed plasma currents.
-            - `q95_rt`: q95 calculated by RT-EFIT for PCS (P-EFIT since 2018).
-            - `beta_p_rt`: beta_p calculated by RT-EFIT for PCS (P-EFIT since 2018).
-            - `li_rt`: li calculated by RT-EFIT for PCS (P-EFIT since 2018).
-            - `wmhd_rt`:  Wmhd calculated by RT-EFIT for PCS (P-EFIT since 2018).
+            A dictionary containing `ip_error_rt`, `q95_rt`, `beta_p_rt`, `li_rt`, and `wmhd_rt`.
 
         References
         -------
@@ -1111,7 +1100,7 @@ class EastPhysicsMethods:
     @physics_method(columns=["p_rad_rt", "p_lh_rt", "p_nbi_rt"], tokamak=Tokamak.EAST)
     def get_pcs_power(params: PhysicsMethodParams):
         """
-        Calculate some real-time auxiliary heating power signals that are available
+        Retrieve and calculate real-time power signals that are available
         in the EAST plasma control system (PCS).
 
         Parameters
@@ -1124,9 +1113,9 @@ class EastPhysicsMethods:
         dict
             A dictionary containing the following keys:
 
-            - `p_rad_rt`: radiated power [W].
-            - `p_lh_RT`: lower hybrid power [W].
-            - `p_nbi_RT`: neutral beam injection power [W].
+            - `p_rad_rt`: radiated power.
+            - `p_lh_RT`: lower hybrid heating power.
+            - `p_nbi_RT`: neutral beam injection heating power.
 
         References
         -------
@@ -1220,10 +1209,10 @@ class EastPhysicsMethods:
     @physics_method(columns=["prad_peaking"], tokamak=Tokamak.EAST)
     def get_prad_peaking(params: PhysicsMethodParams):
         """
-        Calculates the peaking factor of the profiles of radiated
-        power measured by the AXUV arrays on EAST. It is defined as the
-        ratio of the average of the centralmost 6 channels to the average
-        of all of the non-divertor-viewing channels (core-to-average).
+        Calculates the peaking factor of the radiated power measured by
+        the AXUV arrays. It is defined as the ratio of the average of the
+        centralmost 6 channels to the average of all of the non-divertor-
+        viewing channels (core-to-average).
 
         Parameters
         ----------
@@ -1233,14 +1222,15 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the peaking factor for radiated power (`prad_peaking`).
+            A dictionary containing the peaking factor for the radiated
+            power profile (`prad_peaking`).
 
         References
         -------
-        - original source: [get_prad_peaking.m](https://github.com/MIT-PSFC/disruption-py/blob
-        /matlab/EAST/get_prad_peaking.m)
-        - pull requests: #[411](https://github.com/MIT-PSFC/disruption-py/pull/411), #[451](https:
-        //github.com/MIT-PSFC/disruption-py/pull/451)
+        - original source: [get_prad_peaking.m](https://github.com/MIT-PSFC/disr
+        uption-py/blob/matlab/EAST/get_prad_peaking.m)
+        - pull requests: #[411](https://github.com/MIT-PSFC/disruption-py/pull/
+        411), #[451](https://github.com/MIT-PSFC/disruption-py/pull/451)
         """
         xuv, xuvtime = EastPhysicsMethods._get_raw_axuv_data(params)
 
@@ -1292,7 +1282,7 @@ class EastPhysicsMethods:
     def get_mirnov_std(params: PhysicsMethodParams):
         """
         Fetch the signal from a single Mirnov sensor, then compute the rolling
-        standard deviation.
+        standard deviation over time using a fixed 1 ms window.
 
         Parameters
         ----------
@@ -1304,7 +1294,7 @@ class EastPhysicsMethods:
         dict
             A dictionary containing the following keys:
 
-            - `mirnov_std`: rolling stdev of a mirnov sensor.
+            - `mirnov_std`: rolling standard deviation of a mirnov sensor.
             - `mirnov_std_normalized`: `mirnov_std` normalized to the toroidal
             magnetic field (`btor`).
 
@@ -1345,9 +1335,9 @@ class EastPhysicsMethods:
     )
     def get_n1rms_n2rms(params: PhysicsMethodParams):
         """
-        Retrieve data of the Mirnov sensor array and compute the n=1 and 2 Fourier
+        Retrieve the Mirnov sensor array data and compute the $n$=1 and 2 Fourier
         mode amplitudes. Then calculate the rolling standard deviation of the amplitudes
-        and normalize them to the toroidal magnetic field (`btor`).
+        over a 1 ms window and normalize them to the toroidal magnetic field (`btor`).
 
         Parameters
         ----------
@@ -1359,10 +1349,10 @@ class EastPhysicsMethods:
         dict
             A dictionary containing the following keys:
 
-            - `n1rms`: rolling standard deviation of the n=1 mode from the Mirnov array [T].
-            - `n2rms`: rolling standard deviation the n=2 mode from the Mirnov array [T].
-            - `n1rms_normalized`: `n1rms` normalized to `btor` [dimensionless].
-            - `n2rms_normalized`: `n2rms` normalized to `btor` [dimensionless].
+            - `n1rms`: rolling standard deviation of the $n$=1 mode from the Mirnov array.
+            - `n2rms`: rolling standard deviation the $n$=2 mode from the Mirnov array.
+            - `n1rms_normalized`: `n1rms` normalized to `btor`.
+            - `n2rms_normalized`: `n2rms` normalized to `btor`.
 
         References
         -------
@@ -1436,7 +1426,7 @@ class EastPhysicsMethods:
     @physics_method(columns=["h98"], tokamak=Tokamak.EAST)
     def get_h98(params: PhysicsMethodParams):
         """
-        Get the H98y2 energy confinement time parameter.
+        Get the *H98y2* energy confinement factor.
 
         Parameters
         ----------
@@ -1446,7 +1436,7 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the H98y2 energy confinement time (`h98`).
+            A dictionary containing the *H98y2* energy confinement factor (`h98`).
 
         References
         -------
@@ -1553,8 +1543,8 @@ class EastPhysicsMethods:
     )
     def get_efit_gaps(params: PhysicsMethodParams):
         """
-        Calculate the upper and lower gaps from the EFIT and P-EFIT
-        information on plasma boundary and first wall geometry.
+        Calculate the upper and lower gaps from the EFIT/P-EFIT
+        plasma boundary and first wall geometry information.
 
         Parameters
         ----------
@@ -1564,8 +1554,9 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the upper and lower gaps from EFIT (`upper_gap`
-            and `lower_gap) and P-EFIT (`pupper_gap` and `plower_gap`) data.
+            A dictionary containing the upper and lower gaps computed from
+            EFIT (`upper_gap` and `lower_gap`) and P-EFIT (`pupper_gap` and
+            `plower_gap`) data.
 
         References
         -------
