@@ -43,6 +43,13 @@ class CmodEfitMethods:
         "a_minor": r"\efit_aeqdsk:aout/100",
         "rmagx": r"\efit_aeqdsk:rmagx/100",
         "chisq": r"\efit_aeqdsk:tsaisq",
+        # additional signals for defuse demo
+        "area": r"\efit_aeqdsk:areao/1e4",
+        "delta": r"(\efit_aeqdsk:doutu + \efit_aeqdsk:doutl)/2",
+        "rout": r"\efit_aeqdsk:rout/100",
+        "volume": r"\efit_aeqdsk:volume",
+        "rcur": r"\efit_aeqdsk:rcur",
+        "zmagx": r"\efit_aeqdsk:zmagx/100",
     }
 
     efit_derivs = {"dbetap_dt": "beta_p", "dli_dt": "li", "dwmhd_dt": "wmhd"}
