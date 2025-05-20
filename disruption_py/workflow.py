@@ -19,6 +19,7 @@ from disruption_py.core.retrieval_manager import RetrievalManager
 from disruption_py.core.utils.misc import (
     get_elapsed_time,
     without_duplicates,
+    get_commit_hash,
 )
 from disruption_py.inout.mds import ProcessMDSConnection
 from disruption_py.inout.sql import ShotDatabase
@@ -118,7 +119,7 @@ def get_shots_data(
 
     # Add global metadata
     metadata["global"]["tokamak"] = tokamak.name
-    metadata["global"]["commit_hash"] = None
+    metadata["global"]["commit_hash"] = get_commit_hash()
     metadata["global"]["datetime"] = datetime.datetime.now()
     metadata["global"]["retrieval_settings"] = retrieval_settings.get_run_params()
     metadata["global"].update(output_setting.get_run_params())
