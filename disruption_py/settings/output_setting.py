@@ -97,6 +97,9 @@ class OutputSetting(ABC):
         Save final output to disk.
         """
 
+    def get_run_params(self) -> dict:
+        return {"output_setting": None}
+
 
 class OutputSettingList(OutputSetting):
     """
@@ -144,6 +147,21 @@ class OutputSettingList(OutputSetting):
         Save each OutputSettingList to disk.
         """
         return [s.to_disk() for s in self.output_setting_list]
+
+    def get_run_params(self) -> dict:
+
+        output_settings = dict()
+        for i, output_setting in enumerate(self.output_setting_list):
+            output_settings[f"output_setting_{i}"] = output_setting.get_run_params()[
+                "output_setting"
+            ]
+
+        return {
+            "output_setting": {
+                "name": "OutputSettingList",
+                "params": output_settings,
+            }
+        }
 
 
 class DictOutputSetting(OutputSetting):
@@ -217,6 +235,9 @@ class DictOutputSetting(OutputSetting):
             path=self.path,
         )
         return self.path
+
+    def get_run_params(self) -> dict:
+        return {"output_setting": {"name": "DictOutputSetting"}}
 
 
 class SingleOutputSetting(DictOutputSetting):
@@ -301,6 +322,9 @@ class SingleOutputSetting(DictOutputSetting):
         )
         return self.path
 
+    def get_run_params(self) -> dict:
+        return {"output_setting": {"name": "SingleOutputSetting"}}
+
 
 class DatasetOutputSetting(SingleOutputSetting):
     """
@@ -321,6 +345,9 @@ class DatasetOutputSetting(SingleOutputSetting):
             return xr.Dataset()
         return xr.concat(self.results.values(), dim="idx")
 
+    def get_run_params(self) -> dict:
+        return {"output_setting": {"name": "DatasetOutputSetting"}}
+
 
 class DataTreeOutputSetting(SingleOutputSetting):
     """
@@ -340,6 +367,9 @@ class DataTreeOutputSetting(SingleOutputSetting):
             logger.critical("Nothing to concatenate!")
             return xr.DataTree()
         return xr.DataTree.from_dict({str(k): v for k, v in self.results.items()})
+
+    def get_run_params(self) -> dict:
+        return {"output_setting": {"name": "DataTreeOutputSetting"}}
 
 
 class DataFrameOutputSetting(DatasetOutputSetting):
@@ -363,6 +393,9 @@ class DataFrameOutputSetting(DatasetOutputSetting):
         base = ["shot", "time"]
         cols = base + [c for c in sorted(df.columns) if c not in base]
         return df[cols]
+
+    def get_run_params(self) -> dict:
+        return {"output_setting": {"name": "DataFrameOutputSetting"}}
 
 
 # --8<-- [start:output_setting_dict]

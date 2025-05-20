@@ -90,6 +90,12 @@ class NicknameSetting(ABC):
             The resolved MDSPlus tree name.
         """
 
+    def _get_run_params(self) -> dict:
+        """
+        DOCSTRING
+        """
+        return {"efit_nickname_setting": None}
+
 
 class NicknameSettingDict(NicknameSetting):
     """
@@ -180,6 +186,12 @@ class StaticNicknameSetting(NicknameSetting):
         """
         return self.tree_name
 
+    def _get_run_params(self) -> dict:
+        """
+        DOCSTRING
+        """
+        return {"efit_nickname_setting": {"name": self.tree_name}}
+
 
 class DefaultNicknameSetting(NicknameSetting):
     """
@@ -208,6 +220,12 @@ class DefaultNicknameSetting(NicknameSetting):
         raise NotImplementedError(
             f"{self.__class__.__name__} is not implemented for tokamak {params.tokamak}."
         )
+
+    def _get_run_params(self) -> dict:
+        """
+        DOCSTRING
+        """
+        return {"efit_nickname_setting": {"name": "DefaultNicknameSetting"}}
 
 
 class DisruptionNicknameSetting(NicknameSetting):
@@ -283,6 +301,12 @@ class DisruptionNicknameSetting(NicknameSetting):
         raise NotImplementedError(
             f"{self.__class__.__name__} is not implemented for tokamak {params.tokamak}."
         )
+
+    def _get_run_params(self) -> dict:
+        """
+        DOCSTRING
+        """
+        return {"efit_nickname_setting": {"name": "DisruptionNicknameSetting"}}
 
 
 # --8<-- [start:nickname_setting_keys]
