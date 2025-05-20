@@ -86,3 +86,19 @@ class RetrievalSettings:
 
         if self.run_columns is not None:
             self.run_columns = [col.lower() for col in self.run_columns]
+
+    def get_run_params(self):
+        """
+        Get the names and arguments of the settings. Return them as a dictionary.
+        """
+        run_params = dict()
+
+        run_params.update(self.efit_nickname_setting._get_run_params())
+        run_params["run_methods"] = self.run_methods
+        run_params["run_columns"] = self.run_columns
+        run_params["only_requested_columns"] = self.only_requested_columns
+        run_params["custom_physics_methods"] = self.custom_physics_methods
+        run_params.update(self.time_setting._get_run_params())
+        run_params.update(self.domain_setting._get_run_params())
+
+        return run_params
