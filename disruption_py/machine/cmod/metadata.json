@@ -1,0 +1,23 @@
+{
+    "dummy": {
+        "name": "",
+        "description": "",
+        "unit": "",
+        "IMAS_address": "",
+        "IMAS_description": ""
+    },
+    "ip": {
+        "name": "ip",
+        "description": "Measured plasma current",
+        "unit": "A",
+        "IMAS_address": "/equilibrium/time_slice(itime)/global_quantities/ip",
+        "IMAS_description": "Plasma current. Positive sign means anti-clockwise when viewed from above. The array of structure corresponds to a set of calculation methods (starting with the generally recommended method)."
+    },
+    "dip_dt": {
+        "name": "dip_dt",
+        "description": "Time derivative of the measured plasma current",
+        "unit": "A/s",
+        "IMAS_address": "",
+        "IMAS_description": ""
+    }
+}
