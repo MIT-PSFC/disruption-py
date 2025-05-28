@@ -140,6 +140,12 @@ class TimeSetting(ABC):
             Array of times in the timebase.
         """
 
+    def _get_run_params(self) -> dict:
+        """
+        DOCSTRING
+        """
+        return {"time_setting": None}
+
 
 class TimeSettingDict(TimeSetting):
     """
@@ -260,6 +266,12 @@ class EfitTimeSetting(TimeSetting):
                 tree=params.mds_conn.get_tree_name_of_nickname("_efit_tree"),
             )
         return _postprocess(times=efit_time, units=efit_time_unit)
+
+    def _get_run_params(self) -> dict:
+        """
+        DOCSTRING
+        """
+        return {"time_setting": {"name": "EfitTimeSetting"}}
 
 
 class DisruptionTimeSetting(TimeSetting):
@@ -455,6 +467,12 @@ class DisruptionTimeSetting(TimeSetting):
         signal_max = np.max(polarized_signal) * polarity
         return duration, signal_max
 
+    def _get_run_params(self) -> dict:
+        """
+        DOCSTRING
+        """
+        return {"time_setting": {"name": "DisruptionTimeSetting"}}
+
 
 class IpTimeSetting(TimeSetting):
     """
@@ -545,6 +563,12 @@ class IpTimeSetting(TimeSetting):
             ip_time -= 0.0170
         return ip_time
 
+    def _get_run_params(self) -> dict:
+        """
+        DOCSTRING
+        """
+        return {"time_setting": {"name": "IpTimeSetting"}}
+
 
 class SignalTimeSetting(TimeSetting):
     """
@@ -622,6 +646,20 @@ class SignalTimeSetting(TimeSetting):
             )
         return _postprocess(times=signal_time, units=signal_unit)
 
+    def _get_run_params(self) -> dict:
+        """
+        DOCSTRING
+        """
+        return {
+            "time_setting": {
+                "name": "SignalTimeSetting",
+                "params": {
+                    "tree_name": self.tree_name,
+                    "signal_path": self.signal_path,
+                },
+            }
+        }
+
 
 class SharedTimeSetting(TimeSetting):
     """
@@ -662,6 +700,23 @@ class SharedTimeSetting(TimeSetting):
         tmin = np.max([np.min(t) for t in others])
         tmax = np.min([np.max(t) for t in others])
         return times[np.where((times >= tmin) & (times <= tmax))]
+
+    def _get_run_params(self) -> dict:
+        """
+        DOCSTRING
+        """
+        time_settings = dict()
+        for i, time_setting in enumerate(self.time_setting_list):
+            time_settings[f"time_setting_{i}"] = time_setting._get_run_params()[
+                "time_setting"
+            ]
+
+        return {
+            "time_setting": {
+                "name": "SharedTimeSetting",
+                "params": time_settings,
+            }
+        }
 
 
 # --8<-- [start:time_setting_dict]
