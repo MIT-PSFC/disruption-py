@@ -1,75 +1,10 @@
-[cmod.inout.mds]
-mdsplus_connection_string = "alcdata-archives"
-
-[cmod.inout.sql]
-db_name = "logbook"
-driver = "ODBC"
-host = "alcdb2"
-port = 1433
+[cmod.precision]
+default_precision_in = "None"
+default_precision_out = "None"
 
 [cmod.tests]
-expected_failure_columns = [
-  "greenwald_fraction",
-  "ne_peaking",
-  "p_oh",
-  "pressure_peaking",
-  "radiated_fraction",
-  "sxr",
-  "te_peaking",
-  "te_width",
-  "v_loop",
-  "v_z",
-  "z_times_v_z",
-  "zcur",
-]
-test_columns = [
-  "beta_n",
-  "beta_p",
-  "dbetap_dt",
-  "dip_dt",
-  "dipprog_dt",
-  "dli_dt",
-  "dn_dt",
-  "dprad_dt",
-  "dwmhd_dt",
-  "greenwald_fraction",
-  "i_efc",
-  "ip",
-  "ip_error",
-  "kappa",
-  "kappa_area",
-  "li",
-  "lower_gap",
-  "n_e",
-  "n_equal_1_mode",
-  "n_equal_1_normalized",
-  "n_over_ncrit",
-  "ne_peaking",
-  "p_icrf",
-  "p_lh",
-  "p_oh",
-  "p_rad",
-  "pressure_peaking",
-  "q0",
-  "q95",
-  "qstar",
-  "radiated_fraction",
-  "shot",
-  "ssep",
-  "sxr",
-  "te_peaking",
-  "te_width",
-  "time",
-  "time_until_disrupt",
-  "upper_gap",
-  "v_loop",
-  "v_loop_efit",
-  "v_z",
-  "wmhd",
-  "z_error",
-  "z_times_v_z",
-  "zcur",
-]
+expected_failure_columns = [ "greenwald_fraction", "ne_peaking", "p_oh", "pressure_peaking", "radiated_fraction", "sxr", "te_peaking", "te_width", "v_loop", "v_z", "z_times_v_z", "zcur",]
+test_columns = [ "beta_n", "beta_p", "dbetap_dt", "dip_dt", "dipprog_dt", "dli_dt", "dn_dt", "dprad_dt", "dwmhd_dt", "greenwald_fraction", "i_efc", "ip", "ip_error", "kappa", "kappa_area", "li", "lower_gap", "n_e", "n_equal_1_mode", "n_equal_1_normalized", "n_over_ncrit", "ne_peaking", "p_icrf", "p_lh", "p_oh", "p_rad", "pressure_peaking", "q0", "q95", "qstar", "radiated_fraction", "shot", "ssep", "sxr", "te_peaking", "te_width", "time", "time_until_disrupt", "upper_gap", "v_loop", "v_loop_efit", "v_z", "wmhd", "z_error", "z_times_v_z", "zcur",]
 
 [cmod.tests.shots]
 flattop1_fast = 1150805012
@@ -82,3 +17,12 @@ rampdown3_full = 1150805017
 rampdown4_full = 1150805019
 rampdown5_full = 1150805020
 rampdown6_full = 1150805021
+
+[cmod.inout.mds]
+mdsplus_connection_string = "alcdata-archives"
+
+[cmod.inout.sql]
+db_name = "logbook"
+driver = "ODBC"
+host = "alcdb2"
+port = 1433

@@ -200,7 +200,7 @@ class MDSConnection:
         self,
         path: str,
         tree_name: str = None,
-        astype: str = "float64",
+        astype: str = None if config(Tokamak.CMOD).precision.default_precision_in == "None" else config(Tokamak.CMOD).precision.default_precision_in,
         arguments: Any = None,
     ) -> np.ndarray:
         """
@@ -223,7 +223,6 @@ class MDSConnection:
         np.ndarray
             Returns the node data.
         """
-
         if tree_name is not None:
             self.open_tree(tree_name)
 
@@ -240,7 +239,7 @@ class MDSConnection:
         path: str,
         tree_name: str = None,
         dim_nums: List = None,
-        astype: str = "float64",
+        astype: str =  None if config(Tokamak.CMOD).precision.default_precision_in == "None" else config(Tokamak.CMOD).precision.default_precision_in,
         cast_all: bool = False,
     ) -> Tuple:
         """
@@ -264,6 +263,7 @@ class MDSConnection:
         Tuple
             Returns the node data, followed by the requested dimensions.
         """
+        # print(config(Tokamak.CMOD).precision.default_precision_in)
 
         dim_nums = dim_nums or [0]
 
@@ -276,10 +276,17 @@ class MDSConnection:
         data = self.conn.get("_sig=" + path).data()
         dims = [self.conn.get(f"dim_of(_sig,{dim_num})").data() for dim_num in dim_nums]
 
+        val = self.conn.get("_sig=" + path)
+        # save casts to file
+        with open("output_cast_{}.txt".format(config(Tokamak.CMOD).precision.default_precision_in), "a") as f:
+            if isinstance(val.data()[0], np.ndarray):
+                f.write(f"{path}, {type(val)}, 'np.ndarray',{type(val.data()[0][0])}\n")
+            else:
+                f.write(f"{path}, {type(val)}, 'no np.ndarray',{type(val.data()[0])}\n")
         if astype:
             data = safe_cast(data, astype)
             if cast_all:
-                dims = [safe_cast(dim, astype) for dim in dims]
+                dims = [safe_cast(dim, config(Tokamak.CMOD).precision.default_precision_out) for dim in dims] # instead of astype
 
         return data, *dims
 
@@ -289,7 +296,7 @@ class MDSConnection:
         path: str,
         tree_name: str = None,
         dim_nums: List = None,
-        astype: str = None,
+        astype: str =  config(Tokamak.CMOD).precision.default_precision_in,
     ) -> Tuple:
         """
         Get the specified dimensions for record at specified path.

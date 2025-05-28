@@ -21,3 +21,6 @@ _site
 .coverage
 htmlcov/*
 local
+output_cast_float32.txt
+output_cast_float64.txt
+output_cast_None.txt
