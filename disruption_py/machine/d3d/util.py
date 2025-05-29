@@ -6,6 +6,8 @@ import numpy as np
 
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 
+from MDSplus import mdsExceptions
+
 
 class D3DUtilMethods:
     """
@@ -42,3 +44,32 @@ class D3DUtilMethods:
             params.logger.debug("Polarity array: {polarity}", polarity=polarity)
             polarity = polarity[0]
         return polarity
+
+    @staticmethod
+    def check_chisq(params: PhysicsMethodParams, signal: np.ndarray) -> np.ndarray:
+        """
+        Check chisq and remove unreliable data points
+
+        Consider making this a generic method or move to utils (prefer not to because MDS access)
+        """
+        chisq_threshold = 50  # to be added to machine specific config
+
+        try:
+            chisq = params.mds_conn.get_data(
+                r"\efit_a_eqdsk:chisq", tree_name="_efit_tree"
+            )
+            invalid_indices = np.where(chisq > chisq_threshold)
+        except mdsExceptions.MdsException as e:
+            params.logger.warning(
+                "Failed to obtain chisq to remove unreliable time points.",
+            )
+            params.logger.opt(exception=True).debug(e)
+            return signal
+
+        if len(signal) != len(chisq):
+            params.logger.warning(
+                "Length of signal does not match length of chisq. Return original signal.",
+            )
+
+        signal[invalid_indices] = np.nan
+        return signal

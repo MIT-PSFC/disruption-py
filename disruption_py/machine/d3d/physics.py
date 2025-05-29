@@ -1367,6 +1367,7 @@ class D3DPhysicsMethods:
             params.logger.warning("Failed to obtain aminor signals")
             params.logger.opt(exception=True).debug(e)
             aminor = None
+        """
         # Check chisq for invalid indices
         try:
             chisq = params.mds_conn.get_data(
@@ -1379,19 +1380,20 @@ class D3DPhysicsMethods:
             )
             params.logger.opt(exception=True).debug(e)
             invalid_indices = []
+        """
         # Remove invalid indices and interpolate to the requested timebase
         if delta is not None:
-            delta[invalid_indices] = np.nan
+            delta = D3DUtilMethods.check_chisq(params, delta)
             delta = interp1(efit_time, delta, params.times, "linear")
         else:
             delta = [np.nan]
         if squareness is not None:
-            squareness[invalid_indices] = np.nan
+            squareness = D3DUtilMethods.check_chisq(params, squareness)
             squareness = interp1(efit_time, squareness, params.times, "linear")
         else:
             squareness = [np.nan]
         if aminor is not None:
-            aminor[invalid_indices] = np.nan
+            aminor = D3DUtilMethods.check_chisq(params, aminor)
             aminor = interp1(efit_time, aminor, params.times, "linear")
         else:
             aminor = [np.nan]
