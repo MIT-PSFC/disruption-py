@@ -9,6 +9,7 @@ import numpy as np
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
+from disruption_py.machine.d3d.util import D3DUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -30,6 +31,9 @@ class D3DEfitMethods:
         "q95": r"\efit_a_eqdsk:q95",
         "wmhd": r"\efit_a_eqdsk:wmhd",
         "chisq": r"\efit_a_eqdsk:chisq",
+        "delta_new": r"(\efit_a_eqdsk:tritop + \efit_a_eqdsk:tribot)/2",
+        "squareness_new": r"(\efit_a_eqdsk:sqfod + \efit_a_eqdsk:sqfou)/2",
+        "aminor_new": r"\efit_a_eqdsk:aminor",
     }
 
     efit_derivs = {"dbetap_dt": "beta_p", "dli_dt": "li", "dwmhd_dt": "wmhd"}
@@ -74,10 +78,11 @@ class D3DEfitMethods:
         # invalid reconstructions, such as 'terror' and 'chisq'.  Here we use
         # 'chisq' to determine which time slices should be excluded from our
         # disruption warning database.
-        invalid_indices = np.where(efit_data["chisq"] > 50)
+        # invalid_indices = np.where(efit_data["chisq"] > 50)
 
         for param in efit_data:
-            efit_data[param][invalid_indices] = np.nan
+            # efit_data[param][invalid_indices] = np.nan
+            efit_data[param] = D3DUtilMethods.check_chisq(params, efit_data[param])
         for deriv_param, param in D3DEfitMethods.efit_derivs.items():
             efit_data[deriv_param] = np.gradient(efit_data[param], efit_time)
         if not np.array_equal(params.times, efit_time):
