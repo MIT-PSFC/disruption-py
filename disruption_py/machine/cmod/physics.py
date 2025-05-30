@@ -1992,12 +1992,12 @@ class CmodPhysicsMethods:
         )  # [W/m^2], [s]
         sxr = interp1(t_sxr, sxr, params.times)
         return {"sxr": sxr}
-    
+
     @staticmethod
-    @physics_method(columns=["ece_core"], tokamak=Tokamak.CMOD)
+    @physics_method(columns=["te_core_ece"], tokamak=Tokamak.CMOD)
     def get_ece_core_data(params: PhysicsMethodParams):
         """
-        Retrieve the central ECE signal for a given shot.
+        Retrieve the core Te from the ECE diagnostic for a given shot.
 
         Parameters
         ----------
@@ -2007,14 +2007,17 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the core ECE data (`ece_core`).
+            A dictionary containing the core Te from the ECE diagnostic (`te_core_ece`).
         """
         ece_core, t_ece = params.mds_conn.get_data_with_dims(
-            r"\gpc2_te0",
+            r"\gpc2_te0*1e3",
             tree_name="electrons",
-        )  # [Te], [s]
+        )  # [eV], [s]
+        # Check if the ECE diagnostic was turned on using an arbitrary 100 eV threshold
+        if max(ece_core) < 100:
+            return {"ece_core": [np.nan]}
         ece_core = interp1(t_ece, ece_core, params.times)
-        return {"ece_core": ece_core}
+        return {"te_core_ece": ece_core}
 
     @staticmethod
     @physics_method(columns=["beta_n"], tokamak=Tokamak.CMOD)
