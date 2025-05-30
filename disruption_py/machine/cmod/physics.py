@@ -1992,6 +1992,29 @@ class CmodPhysicsMethods:
         )  # [W/m^2], [s]
         sxr = interp1(t_sxr, sxr, params.times)
         return {"sxr": sxr}
+    
+    @staticmethod
+    @physics_method(columns=["ece_core"], tokamak=Tokamak.CMOD)
+    def get_ece_core_data(params: PhysicsMethodParams):
+        """
+        Retrieve the central ECE signal for a given shot.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the core ECE data (`ece_core`).
+        """
+        ece_core, t_ece = params.mds_conn.get_data_with_dims(
+            r"\gpc2_te0",
+            tree_name="electrons",
+        )  # [Te], [s]
+        ece_core = interp1(t_ece, ece_core, params.times)
+        return {"ece_core": ece_core}
 
     @staticmethod
     @physics_method(columns=["beta_n"], tokamak=Tokamak.CMOD)
