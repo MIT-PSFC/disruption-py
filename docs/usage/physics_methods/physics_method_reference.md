@@ -8,6 +8,7 @@ For more information on available methods please see the built-in method documen
 
 - [CMod Physics Methods](cmod_built_in_method_reference.md)
 - [DIII-D Physics Methods](d3d_built_in_method_reference.md)
+- [EAST Physics Methods](east_built_in_method_reference.md)
 
 ## Custom Physics Methods { .doc .doc-heading }
 Users of DisruptionPy can create their own custom physics methods by adding the [`@physics_method`][disruption_py.core.physics_method.decorator.physics_method] decorator to a method. These custom physics methods can then be passed as the `custom_physics_methods` parameter in [`RetrievalSettings`][disruption_py.settings.retrieval_settings] and their results will be included alongside those returned by the built-in methods. See [Physics Method Decorators](decorator_reference.md) for more details on decorators.
