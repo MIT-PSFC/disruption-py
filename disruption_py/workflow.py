@@ -6,6 +6,7 @@ main workflow
 
 import argparse
 import time
+import datetime
 from itertools import repeat
 from multiprocessing import Pool
 from typing import Any, Callable
@@ -18,6 +19,7 @@ from disruption_py.core.retrieval_manager import RetrievalManager
 from disruption_py.core.utils.misc import (
     get_elapsed_time,
     without_duplicates,
+    get_commit_hash,
 )
 from disruption_py.inout.mds import ProcessMDSConnection
 from disruption_py.inout.sql import ShotDatabase
@@ -103,6 +105,9 @@ def get_shots_data(
     log_settings = resolve_log_settings(log_settings)
     log_settings.setup_logging()
 
+    # Create metadata object
+    metadata = {"global": dict(), "shots": dict(), "signals": dict()}
+
     tokamak = resolve_tokamak_from_environment(tokamak)
     database = _get_database_instance(tokamak, database_initializer)
     # Clean-up parameters
@@ -111,6 +116,13 @@ def get_shots_data(
 
     retrieval_settings.resolve()
     output_setting = resolve_output_setting(output_setting)
+
+    # Add global metadata
+    metadata["global"]["tokamak"] = tokamak.name
+    metadata["global"]["commit_hash"] = get_commit_hash()
+    metadata["global"]["datetime"] = datetime.datetime.now()
+    metadata["global"]["retrieval_settings"] = retrieval_settings.get_run_params()
+    metadata["global"].update(output_setting.get_run_params())
 
     # do not spawn unnecessary processes
     shotlist_setting_params = ShotlistSettingParams(database, tokamak)
