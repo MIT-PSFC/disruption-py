@@ -973,7 +973,6 @@ class CmodPhysicsMethods:
         # The n=1 phase at each time is arctan(-A2/A3), using complex number
         # phasor formalism, exp(i(phi - delta))
         n_equal_1_amplitude = np.sqrt(coeffs[1, :] ** 2 + coeffs[2, :] ** 2)
-        # TODO: Confirm arctan2 = atan2
         n_equal_1_phase = np.arctan2(-coeffs[1, :], coeffs[2, :])
         n_equal_1_normalized = n_equal_1_amplitude / btor_magnitude
         # INFO: Debugging purpose block of code at end of matlab file
