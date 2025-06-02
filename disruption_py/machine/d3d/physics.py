@@ -557,7 +557,14 @@ class D3DPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["ip", "ip_error", "dip_dt", "dipprog_dt", "power_supply_railed"],
+        columns=[
+            "ip",
+            "ip_prog",
+            "ip_error",
+            "dip_dt",
+            "dipprog_dt",
+            "power_supply_railed",
+        ],
         tokamak=Tokamak.D3D,
     )
     def get_ip_parameters(params: PhysicsMethodParams):
@@ -667,6 +674,7 @@ class D3DPhysicsMethods:
             power_supply_railed = [np.nan]
         return {
             "ip": ip,
+            "ip_prog": ip_prog,
             "ip_error": ip_error,
             "dip_dt": dip_dt,
             "dipprog_dt": dipprog_dt,
