@@ -18,11 +18,14 @@ import disruption_py
 from disruption_py.settings import LogSettings, RetrievalSettings
 from disruption_py.workflow import get_shots_data
 
-#SHOT_ID = 1140515015
+MAN_LABEL = False
+#SHOT_ID = 1140515015 # Hot VDE
 #SHOT_ID = 1140827029
 #SHOT_ID = 1120717002
-SHOT_ID = 1140827029
+#SHOT_ID = 1051206029
+#SHOT_ID = 1160714006
 #TODO: Shot 1160714006 having issues (low SXR signal). What do we do about ramp-up?
+SHOT_ID = 1160608008 # Doesn't have current spike, not sure if this is a hot VDE
 signals = [
     "ip",
     "zcur",
@@ -45,7 +48,7 @@ data = get_shots_data(
     output_setting="dataframe",
     num_processes=1,
 )
-print(data)
+#print(data)
 
 with open('sxr.pkl', 'rb') as f:
     df = pickle.load(f)
@@ -60,18 +63,26 @@ axs[2].scatter(df['t_sxr'], df['core_sxr_raw'], marker='.', s=5, c='k')
 axs[3].scatter(df['t_sxr'], df['core_sxr'], marker='.', s=5, c='k')
 axs[4].scatter(df['t_sxr'], df['core_sxr_growth_rate'], marker='.', s=5, c='k')
 axs[5].scatter(df['efit_time'], df['z0'], marker='o', s=10, c='k')
+print("Plotting labeled times")
+print(df['thermal_quench_warnings'])
 for ax in axs:
-    ax.axvline(df['t_disrupt'], linestyle='--', c='b', label='CQ')
+    ax.axvline(df['t_disrupt'], linestyle='--', c='k', label='CQ')
     #ax.axvline(df['t_start'], linestyle='--', c='k', label='tstart')
-    for i, t_tq in enumerate(df['thermal_quench_times']):
-        if i == 0:
-            ax.axvline(t_tq, linestyle='--', c='r', label='TQ')
-        else:
-            ax.axvline(t_tq, linestyle='--', c='r')
+    if not MAN_LABEL:
+        for i, t_tq in enumerate(df['thermal_quench_times']):
+            if i == 0:
+                ax.axvline(t_tq, linestyle='-', c='r', label='TQ')
+            else:
+                ax.axvline(t_tq, linestyle='-', c='r')
+        for i, t_warn in enumerate(df['thermal_quench_warnings']):
+            if i == 0:
+                ax.axvline(t_warn, linestyle='--', c='b', label='TQ warn')
+            else:
+                ax.axvline(t_warn, linestyle='--', c='b')
 axs[0].set_title('C-Mod Shot: ' + str(SHOT_ID))
 axs[0].set_ylabel('Ip [MA]')
 axs[1].set_ylabel(r'$\gamma_{ip}$ [Hz]')
-axs[1].set_ylim(-300,300)
+axs[1].set_ylim(-50,50)
 axs[2].set_ylabel('SXR raw [a.u.]')
 axs[2].set_ylabel('SXR [a.u.]')
 axs[4].set_ylabel(r"$\gamma_{SXR}$ [Hz]")

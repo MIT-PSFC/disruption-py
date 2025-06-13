@@ -2270,16 +2270,19 @@ class CmodPhysicsMethods:
         #      check if ip growth rate above threshold in that window
         # Otherwise, continue
         thermal_quenches = np.full(len(t_sxr), False)
+        warning_flags = np.full(len(t_sxr), False)
         ip_thresh = 300e3 # [A]
-        core_sxr_thresh = 100 # Typically plasma is too cool to measure temperature with SXR
+        core_sxr_thresh = 300 # Typically plasma is too cool to measure temperature with SXR
         sxr_gr_thresh = -1000 # 50% decay over 0.5 ms
-        ip_gr_thresh = 4 # 4% growth over 0.5 ms
+        ip_gr_thresh = 10 
+        z0_thresh = 0.02 # thresh in |z0| for VDE
         t_start = magtime[np.argmax(ip > ip_thresh)]
         in_candidate_thermal_quench = False
         in_thermal_quench = False
         index_tq = 0
         for i, t in enumerate(t_sxr):
-            i_mag = np.argmax(magtime > t)
+            i_mag = np.argmax(magtime > t) - 1
+            i_efit = np.argmax(efit_time > t) - 1
             if in_thermal_quench:
                 # Skip until the thermal quench is over
                 if (core_sxr_growth_rate[i] >=0.):
@@ -2288,8 +2291,10 @@ class CmodPhysicsMethods:
                 # Check if there's an ip spike while the SXR is decaying
                 # TODO: Either look backwards over a window or look for positive & negative changes (latter seems to work and should be more robust)
                 # TODO: Separate positive and negative Ip thresholds based on decay rates?
-                if (np.abs(ip_growth_rate[i_mag]) > ip_gr_thresh):
+                # TODO: Or use z0 as a check for hot VDEs
+                if ip_growth_rate[i_mag] > ip_gr_thresh:
                     thermal_quenches[index_tq] = True
+                    warning_flags[i] = True
                     in_thermal_quench = True
                     in_candidate_thermal_quench = False
                 elif (core_sxr_growth_rate[i] >=0.):
@@ -2297,11 +2302,15 @@ class CmodPhysicsMethods:
             else:
                 # Add buffer to current quench disruption time due to phase shift
                 if ((core_sxr_growth_rate[i] < sxr_gr_thresh) and (ip[i_mag] > ip_thresh) and (core_sxr[i] > core_sxr_thresh) and 
-                        (t <= params.disruption_time + 0.001)):
-                    i_mag_2ms_prev = np.argmax(magtime > t - 0.002)
-                    if (np.max(ip_growth_rate[i_mag_2ms_prev:i_mag+1]) > ip_gr_thresh):
+                        (t <= params.disruption_time)):
+                    i_mag_2ms_prev = np.argmax(magtime > t - 0.0005)
+                    # Look for previous current spike or VDE since hot VDEs lack a current spike
+                    if ((np.max(ip_growth_rate[i_mag_2ms_prev:i_mag+1]) > ip_gr_thresh) or 
+                        (np.any(np.abs(z0[i_efit-2:i_efit+1]) > z0_thresh))
+                        ):
                         # There was already an ip spike w/in the last 2 ms => definitely a TQ
                         thermal_quenches[i] = True
+                        warning_flags[i] = True
                         in_thermal_quench = True
                     else:
                         # Continue looking for ip spike
@@ -2310,6 +2319,7 @@ class CmodPhysicsMethods:
         #mask = np.concatenate(([False], thermal_quenches[:-1] == True))
         #thermal_quenches[mask & thermal_quenches] = False
         thermal_quench_times = t_sxr[thermal_quenches]
+        thermal_quench_warnings = t_sxr[warning_flags]
 
         #Write some signals for plotting
         import pickle
@@ -2325,6 +2335,7 @@ class CmodPhysicsMethods:
                    "t_disrupt": params.disruption_time,
                    "t_start": t_start,
                    "thermal_quench_times": thermal_quench_times,
+                   "thermal_quench_warnings": thermal_quench_warnings,
                    }
         with open('sxr.pkl', 'wb') as f:
             pickle.dump(plot_df, f)
