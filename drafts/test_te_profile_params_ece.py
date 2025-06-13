@@ -3,7 +3,6 @@
 
 import os
 
-from loguru import logger
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -32,7 +31,6 @@ def read_dpy(shot_list, local_data_dir, efit_name, bypass=False, save_data=True,
 
 	# check if requested data already stored locally
 	if os.path.exists(data_path) and not bypass:
-		logger.info('Local dpy data already exists')
 		data = pd.read_hdf(data_path, key=data_key)
 		return data
 
@@ -44,11 +42,10 @@ def read_dpy(shot_list, local_data_dir, efit_name, bypass=False, save_data=True,
 		run_columns=only_columns,
 		only_requested_columns= only_columns is not None
 	)
-	logger.info(f"Getting disruption_py data for {len(shot_list)} shots")
 	data = get_shots_data(
 	    shotlist_setting=shot_list,
 	    retrieval_settings=retrieval_settings,
-	    log_settings=LogSettings(console_level="WARNING"),
+	    log_settings=LogSettings(console_level="DEBUG"),
 	    output_setting="dataframe",
 	 	num_processes = 20,
 	)
@@ -57,13 +54,12 @@ def read_dpy(shot_list, local_data_dir, efit_name, bypass=False, save_data=True,
 		if not os.path.exists(local_data_dir):
 			os.mkdir(local_data_dir)
 		data.to_hdf(data_path, key=data_key, mode='w')
-	logger.success('Done reading dpy data')
 	return data
 
 if __name__=='__main__':
 	
 	shot_list = [1160826029]
-	time_slice = 0.76
+	time_slice = 1.44
 	local_data_dir = '/home/henrycw/projects/disruption-py/drafts/local_data/'
 	efit_name='analysis'
 
@@ -72,12 +68,18 @@ if __name__=='__main__':
 		file.write(f'{time_slice}')
 
 	df = read_dpy(shot_list=shot_list, local_data_dir=local_data_dir, efit_name=efit_name,
-					bypass=False)
-	fig, axs = plt.subplots(3, 1, sharex=True)
-	axs[0].plot(df['time'], df['te_width_ece'], marker='o')
-	axs[1].plot(df['time'], df['te_core_vs_avg_ece'], marker='o')
-	axs[2].plot(df['time'], df['te_edge_vs_avg_ece'], marker='o')
-	plt.show()
+					bypass=True)
+	print(df[['time', 'te_width_ece']])
+	
+	# te_prof = pd.read_csv(f'{local_data_dir}te_prof.csv')
+
+	# fig, axs = plt.subplots(3, 2, sharex=False)
+	# axs[0][0].plot(df['time'], df['te_width_ece'], marker='o')
+	# axs[0][1].plot(df['time'], df['te_core_vs_avg_ece'], marker='o')
+	# axs[0][2].plot(df['time'], df['te_edge_vs_avg_ece'], marker='o')
+	# axs[1][0].plot(te_prof['r'], te_prof['te'], marker='o', c='k', linestyle='none')
+	# axs[1][0].plot(te_prof['r'], te_prof['te_fit'], c='r')
+	# plt.show()
 
 	
 	
