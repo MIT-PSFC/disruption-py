@@ -1443,6 +1443,7 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def _get_te_profile_params_ece(
+        params,
         times,
         gpc1_te_data,
         gpc1_te_time,
@@ -1562,6 +1563,7 @@ class CmodPhysicsMethods:
         Last Major Update: Henry Wietfeldt (08/28/24), (PR: #260)
         """
         # TODO: Delete this preamble code
+        params.logger.critical("HERE")
         local_data_dir = '/home/henrycw/projects/disruption-py/drafts/local_data/'
         with open(f'{local_data_dir}time_slice.txt', mode='r') as file:
             time_slice = np.float32(file.read())
@@ -1640,6 +1642,11 @@ class CmodPhysicsMethods:
             (np.abs(btor) > min_btor) & (lh_power < max_lh_power)
         )
 
+        # TODO: Delete this temporary snippet
+        idx_time_slice = np.argmin(np.abs(efit_time - time_slice))
+        with open(f'{local_data_dir}idx_time_slice.txt', mode='w') as file:
+            file.write(f'{idx_time_slice}')
+
         # Main loop for calculations
         te_core_vs_avg = np.full(len(efit_time), np.nan)
         te_edge_vs_avg = np.full(len(efit_time), np.nan)
@@ -1674,11 +1681,22 @@ class CmodPhysicsMethods:
                 guess = [y.max(), (y.max() - y.min()) / 3]
                 try:
                     pmu = r0[i]
-                    _, psigma = gaussian_fit_with_fixed_mean(pmu, r, y, guess)
+                    # TODO: pa -> _
+                    pa, psigma = gaussian_fit_with_fixed_mean(pmu, r, y, guess)
                 except RuntimeError as exc:
                     if str(exc).startswith("Optimal parameters not found"):
                         continue
                     raise exc
+                # TODO: Delete this snippet
+                if i == idx_time_slice or True:
+                    print('HERE')
+                    import pandas as pd 
+                    from disruption_py.core.utils.math import gauss
+                    df_to_plot = {'r': r,
+                                  'te': y,
+                                  'te_fit': gauss(r, pa, pmu, psigma)  
+                                  }
+                    df_to_plot.to_csv(f'{local_data_dir}te_prof.csv')
 
                 # rescale from sigma to HWHM
                 # https://en.wikipedia.org/wiki/Full_width_at_half_maximum
@@ -1825,6 +1843,7 @@ class CmodPhysicsMethods:
         )  # [m], [s]
 
         return CmodPhysicsMethods._get_te_profile_params_ece(
+            params,
             params.times,
             gpc1_te_data,
             gpc1_te_time,
