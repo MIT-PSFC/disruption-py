@@ -1561,6 +1561,10 @@ class CmodPhysicsMethods:
 
         Last Major Update: Henry Wietfeldt (08/28/24), (PR: #260)
         """
+        # TODO: Delete this preamble code
+        local_data_dir = '/home/henrycw/projects/disruption-py/drafts/local_data/'
+        with open(f'{local_data_dir}time_slice.txt', mode='r') as file:
+            time_slice = np.float32(file.read())
 
         # Constants
         core_bound_factor = 0.2
