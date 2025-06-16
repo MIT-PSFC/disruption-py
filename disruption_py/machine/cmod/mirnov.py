@@ -17,7 +17,7 @@ from disruption_py.machine.tokamak import Tokamak
 
 CMOD_R0 = 0.68  # Major radius of C-Mod [m]
 
-def setup_stfft(f_mirnov=2.5e6, f_target=1e4, frequency_resolution=None) -> ShortTimeFFT:
+def setup_fft(f_mirnov=2.5e6, f_target=1e4, frequency_resolution=100) -> ShortTimeFFT:
     """Set up the Short Time Fast Fourier Transform object for the mirnov signals
 
     Parameters
@@ -26,17 +26,13 @@ def setup_stfft(f_mirnov=2.5e6, f_target=1e4, frequency_resolution=None) -> Shor
         The sampling frequency of the mirnov signals
     f_target : float, optional (default=1e4)
         The sampling frequency of the target timebase. 10 kHz is good for labeling.
-    frequency_resolution : float, optional (default=None)
-        The width of the frequency bins in the FFT. If None, will be set based on the Mirnov frequency and target frequency.
+    frequency_resolution : float, optional (default=100)
+        The width of the frequency bins in the FFT. 100 Hz should be sufficient.
 
     Returns
     -------
     sft : scipy.signal.ShortTimeFFT
     """
-
-    if frequency_resolution is None:
-        frequency_resolution = int(f_mirnov / f_target)
-
     # Window size is the number of samples in the window
     # Think of how many samples you need to measure the minimum frequency you care about
     window_size = int(f_mirnov / frequency_resolution)
@@ -163,13 +159,13 @@ class CmodMirnovMethods:
         theta_pol_all = np.deg2rad(theta_pol_all)
 
         if debug:
-            return all_mirnov_names[20:24], phi_all[20:24], theta_all[20:24], theta_pol_all[20:24]
+            return all_mirnov_names[21:23], phi_all[20:24], theta_all[20:24], theta_pol_all[20:24]
         else:
             return all_mirnov_names, phi_all, theta_all, theta_pol_all
 
     @staticmethod
-    def get_mirnov_stfft(params: PhysicsMethodParams, mirnov_name: str, freq_resolution: float = 250, max_freq: float = 80e3):
-        """Get and the interpolated stfft of a Mirnov coil.
+    def get_mirnov_fft(params: PhysicsMethodParams, mirnov_name: str, freq_resolution: float = 100, max_freq: float = 80e3):
+        """Get and the interpolated fft of a Mirnov coil.
         
         This will work best if the params timebase is uniform.
         """
@@ -187,7 +183,7 @@ class CmodMirnovMethods:
 
             # Set up the fft taking into account the params timebase
             f_timebase = 1 / np.mean(np.diff(params.times))
-            sft = setup_stfft(f_mirnov=f_mirnov, f_target=f_timebase, frequency_resolution=freq_resolution)
+            sft = setup_fft(f_mirnov=f_mirnov, f_target=f_timebase, frequency_resolution=freq_resolution)
             f_indices = np.where(sft.f < max_freq)
             freqs = sft.f[f_indices]
 
@@ -229,7 +225,7 @@ class CmodMirnovMethods:
             Coordinates are probe, frequency, time, phi, theta, and theta_pol.
         """
 
-        all_mirnov_names, phi_all, theta_all, theta_pol_all = CmodMirnovMethods.get_mirnov_names_and_locations(params)
+        all_mirnov_names, phi_all, theta_all, theta_pol_all = CmodMirnovMethods.get_mirnov_names_and_locations(params, debug=True)
 
         valid_mirnov_ffts = []
         valid_mirnov_names = []
@@ -237,7 +233,7 @@ class CmodMirnovMethods:
         saved_freqs = None
 
         for mirnov_name, mirnov_phi, mirnov_theta, mirnov_theta_pol in zip(all_mirnov_names, phi_all, theta_all, theta_pol_all):
-            mirnov_fft, freqs = CmodMirnovMethods.get_mirnov_stfft(params, mirnov_name)
+            mirnov_fft, freqs = CmodMirnovMethods.get_mirnov_fft(params, mirnov_name)
             if mirnov_fft is not None:
                 valid_mirnov_ffts.append(mirnov_fft)
                 valid_mirnov_names.append(mirnov_name)
@@ -246,10 +242,13 @@ class CmodMirnovMethods:
             if saved_freqs is None:
                 saved_freqs = freqs
 
+        valid_mirnov_ffts = np.expand_dims(valid_mirnov_ffts, axis=0)  # Add a new axis for the probe dimension
+
         mirnov_ffts_real = xr.DataArray(
             np.array(valid_mirnov_ffts).real,
-            dims=("probe", "frequency", "time"),
+            dims=("idx", "probe", "frequency", "time"),
             coords={
+                "shot": ("idx", [params.shot_id]),
                 "probe": list(range(len(valid_mirnov_locations))),
                 "probe_name": ("probe", valid_mirnov_names),
                 "frequency": saved_freqs,
@@ -261,8 +260,9 @@ class CmodMirnovMethods:
         )
         mirnov_ffts_imag = xr.DataArray(
             np.array(valid_mirnov_ffts).imag,
-            dims=("probe", "frequency", "time"),
+            dims=("idx", "probe", "frequency", "time"),
             coords={
+                "shot": ("idx", [params.shot_id]),
                 "probe": list(range(len(valid_mirnov_locations))),
                 "probe_name": ("probe", valid_mirnov_names),
                 "frequency": saved_freqs,
@@ -272,8 +272,8 @@ class CmodMirnovMethods:
                 "theta_pol": ("probe", [loc[2] for loc in valid_mirnov_locations]),
             },
         )
-        mirnov_ds_real = mirnov_ffts_real.to_dataset(name="mirnov_fft_real", promote_attrs=True)
-        mirnov_ds_imag = mirnov_ffts_imag.to_dataset(name="mirnov_fft_imag", promote_attrs=True)
+        mirnov_ds_real = mirnov_ffts_real.to_dataset(name="mirnov_fft_real")
+        mirnov_ds_imag = mirnov_ffts_imag.to_dataset(name="mirnov_fft_imag")
         mirnov_ds = xr.merge([mirnov_ds_real, mirnov_ds_imag])
 
         return mirnov_ds
