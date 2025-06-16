@@ -58,28 +58,28 @@ def read_dpy(shot_list, local_data_dir, efit_name, bypass=False, save_data=True,
 
 if __name__=='__main__':
 	
-	shot_list = [1160826029]
-	time_slice = 1.44
+	shot_list = [1150826029]
+	time_slices = [0.98, 1.0, 1.02]
 	local_data_dir = '/home/henrycw/projects/disruption-py/drafts/local_data/'
 	efit_name='analysis'
 
 	# Pass time slice to be read by physics method
-	with open(f'{local_data_dir}time_slice.txt', mode='w') as file:
-		file.write(f'{time_slice}')
+	np.savetxt(f"{local_data_dir}time_slices.txt", time_slices)
 
 	df = read_dpy(shot_list=shot_list, local_data_dir=local_data_dir, efit_name=efit_name,
 					bypass=True)
-	print(df[['time', 'te_width_ece']])
-	
-	# te_prof = pd.read_csv(f'{local_data_dir}te_prof.csv')
+	te_prof = pd.read_csv(f'{local_data_dir}te_prof.csv')
 
-	# fig, axs = plt.subplots(3, 2, sharex=False)
-	# axs[0][0].plot(df['time'], df['te_width_ece'], marker='o')
-	# axs[0][1].plot(df['time'], df['te_core_vs_avg_ece'], marker='o')
-	# axs[0][2].plot(df['time'], df['te_edge_vs_avg_ece'], marker='o')
-	# axs[1][0].plot(te_prof['r'], te_prof['te'], marker='o', c='k', linestyle='none')
-	# axs[1][0].plot(te_prof['r'], te_prof['te_fit'], c='r')
-	# plt.show()
+	fig, axs = plt.subplots(3, 2, sharex='col')
+	axs[0][0].plot(df['time'], df['te_width_ece'], marker='o')
+	axs[1][0].plot(df['time'], df['te_core_vs_avg_ece'], marker='o')
+	axs[2][0].plot(df['time'], df['te_edge_vs_avg_ece'], marker='o')
+	for i, t in enumerate(time_slices):
+		print(i)
+		axs[i][1].plot(te_prof[te_prof['time']==t]['r'], te_prof[te_prof['time']==t]['te'], marker='o', c='k', linestyle='none')
+		axs[i][1].plot(te_prof[te_prof['time']==t]['r'], te_prof[te_prof['time']==t]['te_fit'], c='r')
+		axs[i][1].plot(te_prof[te_prof['time']==t]['r'], te_prof[te_prof['time']==t]['te_guess'], c='g')
+	plt.show()
 
 	
 	
