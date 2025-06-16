@@ -1562,11 +1562,21 @@ class CmodPhysicsMethods:
 
         Last Major Update: Henry Wietfeldt (08/28/24), (PR: #260)
         """
+        # TODO: To fix
+        # 1) Initial guess variance
+        # 2) Check if standard deviation greater than aminor
+        # 2) 1150826029, 990225017-018, 1000511012, 1100910023: r0 doesn't align with center of Te profile
+        # 3) 1160826029: "GPC2 grating to 1.85 mm, 0 degrees. Have not yet found and loaded a xcal so Te's will be wrong."
+        # 4) 1090914006: Serious outlier
+        # 5) 1110215005: Near end of shot, Btor changed, channels misaligned
+
         # TODO: Delete this preamble code
-        params.logger.critical("HERE")
-        local_data_dir = '/home/henrycw/projects/disruption-py/drafts/local_data/'
-        with open(f'{local_data_dir}time_slice.txt', mode='r') as file:
-            time_slice = np.float32(file.read())
+        # import pandas as pd 
+        # from disruption_py.core.utils.math import gauss
+        # import matplotlib.pyplot as plt
+        # local_data_dir = '/home/henrycw/projects/disruption-py/drafts/local_data/'
+        # time_slices = np.genfromtxt(f"{local_data_dir}time_slices.txt", dtype=float)
+        # dfs_to_plot = []
 
         # Constants
         core_bound_factor = 0.2
@@ -1643,9 +1653,9 @@ class CmodPhysicsMethods:
         )
 
         # TODO: Delete this temporary snippet
-        idx_time_slice = np.argmin(np.abs(efit_time - time_slice))
-        with open(f'{local_data_dir}idx_time_slice.txt', mode='w') as file:
-            file.write(f'{idx_time_slice}')
+        # idx_time_slices = []
+        # for t in time_slices:
+        #     idx_time_slices.append(np.argmin(np.abs(efit_time - t)))
 
         # Main loop for calculations
         te_core_vs_avg = np.full(len(efit_time), np.nan)
@@ -1678,35 +1688,49 @@ class CmodPhysicsMethods:
                 # Estimate Te width using Gaussian fit with center fixed on mag. axis
                 r = radii[i, okay_indices]
                 y = te[i, okay_indices]
-                guess = [y.max(), (y.max() - y.min()) / 3]
+                guess = [y.max(), (r.max() - r.min()) / 3]
                 try:
                     pmu = r0[i]
                     # TODO: pa -> _
                     pa, psigma = gaussian_fit_with_fixed_mean(pmu, r, y, guess)
                 except RuntimeError as exc:
                     if str(exc).startswith("Optimal parameters not found"):
+                        params.logger.warning(f"Optimal parameters not found: {exc}")
                         continue
                     raise exc
                 # TODO: Delete this snippet
-                if i == idx_time_slice or True:
-                    print('HERE')
-                    import pandas as pd 
-                    from disruption_py.core.utils.math import gauss
-                    df_to_plot = {'r': r,
-                                  'te': y,
-                                  'te_fit': gauss(r, pa, pmu, psigma)  
-                                  }
-                    df_to_plot.to_csv(f'{local_data_dir}te_prof.csv')
+                # if i in idx_time_slices:
+                #     params.logger.debug(guess)
+                #     dfs_to_plot.append(pd.DataFrame(
+                #                     {
+                #                     'time': efit_time[i].round(4),
+                #                     'r': r,
+                #                     'te': y,
+                #                     'te_fit': gauss(r, pa, pmu, psigma),
+                #                     'te_guess': gauss(r, guess[0], pmu, guess[1])  
+                #                     }
+                #                     ))
 
                 # rescale from sigma to HWHM
                 # https://en.wikipedia.org/wiki/Full_width_at_half_maximum
-                te_hwhm[i] = np.abs(psigma) * np.sqrt(2 * np.log(2))
+                if psigma < 0 or psigma > aminor[i]:
+                    params.logger.debug(f"Fitting failure for te_width_ece, psigma: {psigma}")
+                    # Should we also set the peaking factor to np.nan, since ECE is likely not 
+                    # reliable if fitting fails?
+                    continue
+                else:
+                    te_hwhm[i] = psigma * np.sqrt(2 * np.log(2))
 
                 # Calculate core/edge vs. average using uniformly sampled radial basis
                 r_equal_spaced = np.linspace(r0[i], r0[i] + aminor[i], 100)
+                params.logger.debug(np.min(r_equal_spaced))
                 te_equal_spaced = interp1(
                     r, y, r_equal_spaced, fill_value=(y[0], y[-1])
                 )
+                # if i in idx_time_slices:
+                #     params.logger.debug(f"Edge: {r0[i] + aminor[i]}")
+                #     plt.scatter(r_equal_spaced, te_equal_spaced)
+                #     plt.show()
                 core_indices = (
                     np.abs(r_equal_spaced - r0[i]) < core_bound_factor * aminor[i]
                 ) & (~np.isnan(te_equal_spaced))
@@ -1725,6 +1749,9 @@ class CmodPhysicsMethods:
         te_core_vs_avg = interp1(efit_time, te_core_vs_avg, times)
         te_edge_vs_avg = interp1(efit_time, te_edge_vs_avg, times)
         te_hwhm = interp1(efit_time, te_hwhm, times)
+        # TODO: Delete this line
+        # df_profiles = pd.concat(dfs_to_plot, ignore_index=True)
+        # df_profiles.to_csv(f'{local_data_dir}te_prof.csv')
         return {
             "te_core_vs_avg_ece": te_core_vs_avg,
             "te_edge_vs_avg_ece": te_edge_vs_avg,
