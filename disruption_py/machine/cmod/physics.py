@@ -1443,7 +1443,6 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def _get_te_profile_params_ece(
-        params,
         times,
         gpc1_te_data,
         gpc1_te_time,
@@ -1453,6 +1452,7 @@ class CmodPhysicsMethods:
         gpc2_te_time,
         gpc2_rad_data,
         gpc2_rad_time,
+        te0,
         efit_time,
         r0,
         aminor,
@@ -1533,6 +1533,8 @@ class CmodPhysicsMethods:
             Radial positions corresponding to GPC2 channels
         gpc2_rad_time: array_like
             Time basis of GPC2 channel radial positions
+        te0: array_like
+            Central electron temperature calculated from GPC2 system
         efit_time : array_like
             Time basis of '_efit_tree'
         r0 : array_like
@@ -1565,10 +1567,13 @@ class CmodPhysicsMethods:
         # TODO: To fix
         # 1) Initial guess variance
         # 2) Check if standard deviation greater than aminor
-        # 2) 1150826029, 990225017-018, 1000511012, 1100910023: r0 doesn't align with center of Te profile
+        # 2) 1150826029, 990225017-018, 1000511012, 1100910023, 1160616024: r0 doesn't align with center of Te profile
+        #   - Add check that max of okay indices is within 2 cm of rmagx
         # 3) 1160826029: "GPC2 grating to 1.85 mm, 0 degrees. Have not yet found and loaded a xcal so Te's will be wrong."
         # 4) 1090914006: Serious outlier
+        #   - Add check for okay indices that Te < 2 * Te_core
         # 5) 1110215005: Near end of shot, Btor changed, channels misaligned
+        
 
         # TODO: Delete this preamble code
         # import pandas as pd 
@@ -1620,6 +1625,7 @@ class CmodPhysicsMethods:
                 gpc2_rad[i, :] = interp1(gpc2_rad_time, gpc2_rad_data[i, :], efit_time)
             else:
                 gpc2_rad[i, :] = np.full(len(efit_time), np.nan)
+        te0 = interp1(gpc2_te_time, te0, efit_time)
 
         # Combine GPC systems and extend the last radii measurement up until the last
         # EFIT. Radii depend on Bt, which should be stable until the current quench.
@@ -1656,6 +1662,7 @@ class CmodPhysicsMethods:
         # idx_time_slices = []
         # for t in time_slices:
         #     idx_time_slices.append(np.argmin(np.abs(efit_time - t)))
+        # print(idx_time_slices)
 
         # Main loop for calculations
         te_core_vs_avg = np.full(len(efit_time), np.nan)
@@ -1666,6 +1673,7 @@ class CmodPhysicsMethods:
             calib_indices = (te[i, :] > min_te) & (radii[i, :] > 0)
             harmonic_overlap_indices = radii[i, :] < min_r_to_avoid_harmonic_overlap
             nonthermal_overlap_indices = np.full(len(radii[i, :]), False)
+            outlier_indices = te[i,:] > 1.5*te0[i]
 
             # Identify rising tail (overlap with non-thermal emission). Finding the min
             # Te near the edge and checking outwards for a rising tail seems to do well
@@ -1682,22 +1690,41 @@ class CmodPhysicsMethods:
                 calib_indices
                 & (~harmonic_overlap_indices)
                 & (~nonthermal_overlap_indices)
+                & (~outlier_indices)
             )
 
             if np.sum(okay_indices) > min_okay_channels:
-                # Estimate Te width using Gaussian fit with center fixed on mag. axis
                 r = radii[i, okay_indices]
                 y = te[i, okay_indices]
+                # TODO: Update this comment, only care about peak being inside of r0
+                # Check that the Te profile is consistent with the radial position of the 
+                # magnetic axis from EFIT, which is an essential assumption in the rest
+                # of the calculations of the Te profile parameters
+                # TODO: Instead check if Te rmagx agrees with Te0
+                te_rmagx = y[np.argmin(np.abs(r - r0[i]))]
+                if 1.5*te_rmagx < te0[i]:
+                    continue
+
+                # Check that there are two raw points in the core and in the edge
+                # so that the GPC systems are properly aligned to measure peaking factors
+                # and ensure a reasonable Gaussian fit
+                num_raw_core = np.sum((np.abs(r - r0[i]) < core_bound_factor * aminor[i]
+                                )  & (~np.isnan(y)))
+                num_raw_edge = np.sum((np.abs(r - r0[i]) > edge_bound_factor * aminor[i]
+                                )  & (~np.isnan(y)))
+                if num_raw_core < 2 or num_raw_edge < 2:
+                    continue
+
+                # Estimate Te width using Gaussian fit with center fixed on mag. axis
                 guess = [y.max(), (r.max() - r.min()) / 3]
                 try:
                     pmu = r0[i]
                     # TODO: pa -> _
                     pa, psigma = gaussian_fit_with_fixed_mean(pmu, r, y, guess)
-                except RuntimeError as exc:
-                    if str(exc).startswith("Optimal parameters not found"):
-                        params.logger.warning(f"Optimal parameters not found: {exc}")
+                except RuntimeError as e:
+                    if str(e).startswith("Optimal parameters not found"):
                         continue
-                    raise exc
+                    raise e
                 # TODO: Delete this snippet
                 # if i in idx_time_slices:
                 #     params.logger.debug(guess)
@@ -1707,16 +1734,16 @@ class CmodPhysicsMethods:
                 #                     'r': r,
                 #                     'te': y,
                 #                     'te_fit': gauss(r, pa, pmu, psigma),
-                #                     'te_guess': gauss(r, guess[0], pmu, guess[1])  
+                #                     'te_guess': gauss(r, guess[0], pmu, guess[1]),
+                #                     'r0': r0[i],
+                #                     'a': aminor[i]
                 #                     }
                 #                     ))
 
                 # rescale from sigma to HWHM
                 # https://en.wikipedia.org/wiki/Full_width_at_half_maximum
                 if psigma < 0 or psigma > aminor[i]:
-                    params.logger.debug(f"Fitting failure for te_width_ece, psigma: {psigma}")
-                    # Should we also set the peaking factor to np.nan, since ECE is likely not 
-                    # reliable if fitting fails?
+                    # Set the peaking factor to np.nan, since ECE is likely not reliable if fitting fails
                     continue
                 else:
                     te_hwhm[i] = psigma * np.sqrt(2 * np.log(2))
@@ -1750,8 +1777,9 @@ class CmodPhysicsMethods:
         te_edge_vs_avg = interp1(efit_time, te_edge_vs_avg, times)
         te_hwhm = interp1(efit_time, te_hwhm, times)
         # TODO: Delete this line
-        # df_profiles = pd.concat(dfs_to_plot, ignore_index=True)
-        # df_profiles.to_csv(f'{local_data_dir}te_prof.csv')
+        # if len(dfs_to_plot) > 0:
+        #     df_profiles = pd.concat(dfs_to_plot, ignore_index=True)
+        #     df_profiles.to_csv(f'{local_data_dir}te_prof.csv')
         return {
             "te_core_vs_avg_ece": te_core_vs_avg,
             "te_edge_vs_avg_ece": te_edge_vs_avg,
@@ -1869,8 +1897,13 @@ class CmodPhysicsMethods:
             f"{node_path}:radii", tree_name="electrons"
         )  # [m], [s]
 
+        # Te0 from GPC2 useful to check for outliers in the GPC channels
+        # which be caused by some artifact or systematic error
+        te0 = params.mds_conn.get_data(
+            r"\gpc2_te0", tree_name="electrons"
+        )
+
         return CmodPhysicsMethods._get_te_profile_params_ece(
-            params,
             params.times,
             gpc1_te_data,
             gpc1_te_time,
@@ -1880,6 +1913,7 @@ class CmodPhysicsMethods:
             gpc2_te_time,
             gpc2_rad_data,
             gpc2_rad_time,
+            te0,
             efit_time,
             r0,
             aminor,
