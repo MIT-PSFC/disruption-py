@@ -1750,7 +1750,6 @@ class CmodPhysicsMethods:
 
                 # Calculate core/edge vs. average using uniformly sampled radial basis
                 r_equal_spaced = np.linspace(r0[i], r0[i] + aminor[i], 100)
-                params.logger.debug(np.min(r_equal_spaced))
                 te_equal_spaced = interp1(
                     r, y, r_equal_spaced, fill_value=(y[0], y[-1])
                 )
