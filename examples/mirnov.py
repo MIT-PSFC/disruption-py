@@ -32,6 +32,7 @@ def main():
     retrieval_settings = RetrievalSettings(
         run_methods=run_methods,
         efit_nickname_setting="default",
+        time_setting="mirnov",
     )
 
     result = get_shots_data(
