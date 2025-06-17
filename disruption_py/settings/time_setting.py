@@ -663,6 +663,39 @@ class SharedTimeSetting(TimeSetting):
         tmax = np.min([np.max(t) for t in others])
         return times[np.where((times >= tmin) & (times <= tmax))]
 
+class MirnovTimeSetting(TimeSetting):
+    """
+    Time setting for getting high-resolution Mirnov FFTs.
+    Matches the range of EFIT but uses a uniform 10 kHz timebase.
+    """
+
+    def _get_times(self, params: TimeSettingParams) -> np.ndarray:
+        """
+        Parameters
+        ----------
+        params : TimeSettingParams
+            Parameters needed to retrieve the timebase.
+
+        Returns
+        -------
+        np.ndarray
+            Array of times in the timebase.
+        """
+        (efit_time,) = params.mds_conn.get_dims(
+            r"\efit_aeqdsk:ali", tree_name="_efit_tree", astype="float64"
+        )
+        efit_time_unit = params.mds_conn.get_data(
+            r"units_of(dim_of(\efit_aeqdsk:ali))", tree_name="_efit_tree", astype="str"
+        )
+        if efit_time_unit not in {"s", "ms", "us"}:
+            params.logger.verbose(
+                "Failed to get the time units of EFIT tree '{tree}', assuming seconds.",
+                tree=params.mds_conn.get_tree_name_of_nickname("_efit_tree"),
+            )
+
+        max_time = np.max(efit_time)
+        mirnov_time = np.round(np.arange(0, max_time + 1e-4, 1e-4), 4)
+        return _postprocess(times=mirnov_time, units=efit_time_unit)
 
 # --8<-- [start:time_setting_dict]
 _time_setting_mappings: Dict[str, TimeSetting] = {
@@ -674,6 +707,7 @@ _time_setting_mappings: Dict[str, TimeSetting] = {
     },
     "ip": IpTimeSetting(),
     "ip_efit": SharedTimeSetting([IpTimeSetting(), EfitTimeSetting()]),
+    "mirnov": MirnovTimeSetting(),
 }
 # --8<-- [end:time_setting_dict]
 
