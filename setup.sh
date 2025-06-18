@@ -13,6 +13,7 @@ then
    export MDSPLUS_DIR=/usr/local/mdsplus
    export DISPY_DIR=/usr/local/mfe/disruptions/disruption-py
    export DISPY_TOKAMAK=cmod
+   export default_tree_path=alcdata-archives::/cmod/trees/archives/~i~h/~g~f/~e~d/~t
 
 elif [[ -d /fusion/projects/disruption_warning ]]
 then
