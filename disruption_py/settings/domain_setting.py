@@ -89,6 +89,12 @@ class DomainSetting(ABC):
             Array of modified times.
         """
 
+    def _get_run_params(self) -> dict:
+        """
+        DOCSTRING
+        """
+        return {"DomainSetting": None}
+
 
 class DomainSettingDict(DomainSetting):
     """
@@ -162,6 +168,12 @@ class FullDomainSetting(DomainSetting):
             The full timebase.
         """
         return params.physics_method_params.times
+
+    def _get_run_params(self) -> dict:
+        """
+        DOCSTRING
+        """
+        return {"DomainSetting": {"name": "FullDomainSetting"}}
 
 
 class FlattopDomainSetting(DomainSetting):
@@ -306,6 +318,12 @@ class FlattopDomainSetting(DomainSetting):
             return None
         return params.physics_method_params.times[indices_flattop]
 
+    def _get_run_params(self) -> dict:
+        """
+        DOCSTRING
+        """
+        return {"DomainSetting": {"name": "FlattopDomainSetting"}}
+
 
 class RampupAndFlattopDomainSetting(DomainSetting):
     """
@@ -366,6 +384,12 @@ class RampupAndFlattopDomainSetting(DomainSetting):
             return None
         end_index = np.max(indices_flattop)
         return params.physics_method_params.times[:end_index]
+
+    def _get_run_params(self) -> dict:
+        """
+        DOCSTRING
+        """
+        return {"DomainSetting": {"name": "RampupAndFlattopDomainSetting"}}
 
 
 # --8<-- [start:domain_setting_dict]
