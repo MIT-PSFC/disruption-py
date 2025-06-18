@@ -948,15 +948,21 @@ class CmodPhysicsMethods:
         btor = interp1(t_mag, btor, params.times)  # Interpolate BT with sign
 
         n_sensors = len(bp13_signals)
-        if 1 < n_sensors < 4:
-            # Log warning if there are less than 4 but more than 1 sensors.
+        if n_sensors == 3:
+            # Log warning if there are only 3 available sensors.
             params.logger.warning(
-                f"Only {n_sensors} of 4 BP13 sensors are available for calculating the n=1 mode."
+                (
+                    f"get_n_equal_1_amplitude: {n_sensors} of 4 BP13 sensors "
+                    "are available for calculating the n=1 mode."
+                )
             )
-        elif n_sensors <= 1:
-            # Can't calculate n=1 mode if there are less than 2 available sensors
+        elif n_sensors < 3:
+            # Can't calculate n=1 mode if there are less than 3 available sensors
             params.logger.warning(
-                f"Not enough sensors to calculate the n=1 mode ({n_sensors} of 4 available)."
+                (
+                    "get_n_equal_1_amplitude: Not enough sensors to calculate the "
+                    f"n=1 mode ({n_sensors} of 4 available)."
+                )
             )
             return {
                 "n_equal_1_mode": [np.nan],
