@@ -970,7 +970,7 @@ class CmodPhysicsMethods:
         a = np.array(a)
 
         # Compute the least squares fit
-        coeffs = np.linalg.pinv(a) @ bp13_signals
+        coeffs = np.matmul(np.linalg.pinv(a), bp13_signals)
         # The n=1 amplitude at each time is sqrt(A2^2 + A3^2)
         # The n=1 phase at each time is arctan(-A2/A3), using complex number
         # phasor formalism, exp(i(phi - delta))
