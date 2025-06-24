@@ -36,10 +36,6 @@ class ProcessMDSConnection:
         )
         # pylint: disable=no-member
         self.conn = MDSplus.Connection(conn_string)
-        try:
-            self.conn.get("shorten_path()")
-        except MDSplus.mdsExceptions.TdiUNKNOWN_VAR:
-            logger.debug("MDSplus does not support the `shorten_path()` method.")
 
     @classmethod
     def from_config(cls, tokamak: Tokamak):

@@ -25,21 +25,25 @@ class EastPhysicsMethods:
     @physics_method(columns=["time_until_disrupt"], tokamak=Tokamak.EAST)
     def get_time_until_disrupt(params: PhysicsMethodParams):
         """
-        Calculate the time until the disruption for a given shot. If the shot does
-        not disrupt, return NaN.
+        Calculate the time until disruption.
+
+        Currently, the disruption time is queried from the `DISRUPTIONS` table
+        in the SQL database of each machine. These disruption times were calculated
+        using Robert Granetz's routine.
 
         Parameters
         ----------
         params : PhysicsMethodParams
-            Parameters containing MDS connection and shot information.
+            The parameters containing the disruption information and times.
 
         Returns
         -------
         dict
-            A dictionary containing the time until disruption. If the shot does
-            not disrupt, return NaN.
+            A dictionary with a single key `time_until_disrupt`.
 
-        Last major update: 11/19/24 by William Wei
+        References
+        -------
+        - issues: #[223](https://github.com/MIT-PSFC/disruption-py/issues/223)
         """
         if params.disrupted:
             return {"time_until_disrupt": params.disruption_time - params.times}
@@ -59,12 +63,9 @@ class EastPhysicsMethods:
     )
     def get_ip_parameters(params: PhysicsMethodParams):
         """
-        This routine calculates Ip_error = (Ip - Ip_programmed), i.e. how much
-        the actual plasma current differs from the requested current.  It
-        linearly interpolates both the programmed and measured plasma currents
-        onto the given timebase.  The routine also calculates the time
-        derivatives of the measured Ip and programmed Ip.  The time derivatives
-        are useful for discriminating between rampup, flattop, and rampdown.
+        This routine retrieves the plasma current signals. It then calculates the error
+        between the programmed and the actual plasma current, and the time derivatives
+        of the actual and the programmed plasma current.
 
         Parameters
         ----------
@@ -75,26 +76,18 @@ class EastPhysicsMethods:
         -------
         dict
             A dictionary containing the following keys:
-            - 'ip' : array
-                Measured plasma current [A].
-            - 'ip_prog' : array
-                Programmed (requested) plasma current [A].
-            - 'ip_error' : array
-                ip - ip_prog [A].
-            - 'ip_error_normalized' : array
-                ip_error normalized to ip_prog [dimensionless].
-            - 'dip_dt' : array
-                Time derivative of the measured plasma current [A/s].
-            - 'dipprog_dt' : array
-                Time derivative of the programmed plasma current [A/s]
+
+            - `ip`: Measured plasma current.
+            - `ip_prog`: Programmed plasma current.
+            - `ip_error`: Error between the actual and programmed plasma currents.
+            - `ip_error_normalized`: `ip_error` normalized to `ip_prog`.
+            - `dip_dt`: Time derivative of the measured plasma current.
+            - `dipprog_dt`: Time derivative of the programmed plasma current.
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_Ip_parameters.m
-
-        Original author: Robert Granetz, Dec 2015
-
-        Last major update: 11/19/24 by William Wei
+        - original source: [get_Ip_parameters.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/EAST/get_Ip_parameters.m)
         """
         ip = [np.nan]
         ip_prog = [np.nan]
@@ -219,15 +212,12 @@ class EastPhysicsMethods:
     @physics_method(columns=["v_loop"], tokamak=Tokamak.EAST)
     def get_v_loop(params: PhysicsMethodParams):
         r"""
-        This routine gets the loop voltage (\vp1_s) from the EAST tree. The signal in the
-        tree is derived by taking the time derivative of a flux loop near the
-        inboard midplane.  Two possible signals are available, one digitised at a
-        high rate (50 kHz), and the other sub-sampled down to 1 kHz.  This
-        routine reads in the 1 kHz signal.  It linearly interpolates the loop
-        voltage signal onto the specified timebase.
+        retrieve the loop voltage signal.
 
-        If \vp1_s isn't available, the method will fall back to using \pcvloop from the
-        pcs_east tree instead.
+        By default, this routine gets the loop voltage from `\vp1_s` from the `east` tree.
+        This signal is derived by taking the time derivative of a flux loop
+        near the inboard midplane. If `\vp1_s` isn't available, the method will fall back
+        to reading `\pcvloop` from the `pcs_east` tree instead.
 
         Parameters
         ----------
@@ -237,17 +227,14 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-            - 'v_loop' : array
-                Calculated loop voltage [V].
+            A dictionary containing the loop voltage (`v_loop`).
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_v_loop.m
-
-        Original Author: Robert Granetz, Apr 2016
-
-        Last major update: 11/19/24 by William Wei
+        - original source: [get_v_loop.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/EAST/get_v_loop.m)
+        - pull requests: #[411](https://github.com/MIT-PSFC/disruption-py/pull/
+        411), #[451](https://github.com/MIT-PSFC/disruption-py/pull/451)
         """
         v_loop = [np.nan]
 
@@ -285,15 +272,14 @@ class EastPhysicsMethods:
     )
     def get_z_error(params: PhysicsMethodParams):
         r"""
-        This script calculates Z_error = Z_cur - Z_programmed, or how much the
-        actual vertical position differs from the requested position.  Two
-        different methods are used to calculate Z_error, and both versions are
-        returned by the routine.  The original method gets the z-centroid from
-        the \zcur calculated by EFIT; the other uses the z-centroid from the
-        \lmsz signal calculated by the plasma control system (PCS).  The
-        normalized versions of the lmsz-derived signals are also returned.  They
-        are normalized to the plasma minor radius.  All the signals are linearly
-        interpolated onto the given timebase.
+        Retrieve the programmed and measured vertical positions of the plasma current
+        centroid, then calculate the control error.
+
+        This routine uses two methods to compute `z_error`. The first and original method
+        gets the z-centroid from `\zcur` which is calculated by EFIT. The second method uses
+        the z-centroid from the `\lmsz` signal which is calculated by the plasma control
+        system (PCS). For the *lmsz*-derived signals, this routine also returns their normalized
+        version by dividing them by the plasma minor radius.
 
         Parameters
         ----------
@@ -303,33 +289,15 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-            - 'zcur' : array
-                Calculated z from EFIT [m].
-            - 'z_prog' : array
-                Programmed/requested/target z [m].
-            - 'z_error' : array
-                z_error = z_cur - z_prog [m].
-            - 'zcur_lmsz' : array
-                Calculated z from PCS [m].
-            - 'z_error_lmsz' : array
-                z_error_lmsz = zcur_lmsz - z_prog [m].
-            - 'zcur_lmsz_normalized' : array
-                zcur_lmsz / aminor
-            - 'z_error_lmsz_normalized' : array
-                z_error_lmsz_normalized = z_error_lmsz / aminor
+            A dictionary containing the programmed vertical position (`z_prog`), the measured
+            vertical positions (`zcur` and `zcur_lmsz)`, the errors (`z_error` and
+            `z_error_lmsz`), and the normalized *lmsz*-derived signals (`zcur_lmsz_normalized`
+            and `z_error_lmsz_normalized`).
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_Z_error.m
-
-        Original Authors
-        ----------------
-        - Wang Bo, 2015/12/10
-        - Alex Tinguely, 2015/09/09
-        - Robert Granetz
-
-        Last major update: 11/19/24 by William Wei
+        - original source: [get_Z_error.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/EAST/get_Z_error.m)
         """
         # Read in the calculated zcur from EFIT
         zcur, zcur_time = params.mds_conn.get_data_with_dims(
@@ -383,19 +351,22 @@ class EastPhysicsMethods:
     )
     def get_density_parameters(params: PhysicsMethodParams):
         r"""
-        This routine obtains the line-averaged density from the HCN vertical
-        chord.  The node is called \DFSDEV in the PCS_EAST tree.  This signal is
-        also used by the PCS for feedback control of the density.
+        Calculate the electron density, its time derivative, and the Greenwald fraction.
 
-        The plasma density is also measured by a POlarimeter/INTerferometer
-        diagnostic (PO INT), which has 11 horizontal chords.  The midplane
-        channel is \POINT_N6 in the EAST tree.  (This diagnostic uses an FIR
-        laser at 432 micrometers.)  However, I found that the POINT density
-        measurement is bad on a significant fraction of EAST shots, even in
-        2017.
+        The Greenwald fraction is the ratio of the measured electron density $n_e$ and
+        the Greenwald density limit $n_G$ which is defined as [^1]:
 
-        The routine also calculates the Greenwald density using aminor coming
-        from EFIT.  The time derivative of electron density is also obtained.
+        $$
+        n_G = \frac{I_p}{\pi a^2}
+        $$
+
+        where $n_G$ is given in $10^{20} m^{-3}$ and $I_p$ is in MA.
+
+        The line-averaged electron density is obtained from the HCN vertical chord.
+        This signal is also used by the plasma control system (PCS) for feedback control of
+        the density.
+
+        [^1]: https://wiki.fusion.ciemat.es/wiki/Greenwald_limit
 
         Parameters
         ----------
@@ -405,21 +376,13 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-            - 'n_e' : array
-                Density as measured by the polarimeter.interferometer [m^-3].
-            - 'greenwald_fraction' : array
-                greenwald_fraction = ne / nG [dimensionless].
-            - 'dn/dt' : array
-                dn_dt = d(ne)/dt [m^-3/s].
+            A dictionary containing electron density (`n_e`), its time derivative (`dn_dt`),
+            and the Greenwald fraction (`greenwald_fraction`).
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_density_parameters.m
-
-        Original Author: Robert Granetz, Apr 2017
-
-        Last major update: 11/19/24 by William Wei
+        - original source: [get_density_parameters.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/EAST/get_density_parameters.m)
         """
         ne = [np.nan]
         greenwald_fraction = [np.nan]
@@ -486,7 +449,8 @@ class EastPhysicsMethods:
     @physics_method(columns=["p_rad"], tokamak=Tokamak.EAST)
     def get_radiated_power(params: PhysicsMethodParams):
         """
-        Calculate total radiated power in bulk plasma from the AXUV arrays.
+        Calculate total radiated power in bulk plasma measured by
+        the AXUV arrays.
 
         Parameters
         ----------
@@ -496,13 +460,12 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-            - 'p_rad' : array
-                Radiated power [W].
+            A dictionary containing the total radiated power (`p_rad`).
 
         References
         -------
-        - Prad_bulk_xuv2014_2016.m (Not in repo)
+        - original source: Prad_bulk_xuv2014_2016.m (currently not available in the repository)
+        - pull requests: #[411](https://github.com/MIT-PSFC/disruption-py/pull/411)
         """
         # Get the raw AXUV data
         try:
@@ -561,30 +524,32 @@ class EastPhysicsMethods:
         tokamak=Tokamak.EAST,
     )
     def get_power(params: PhysicsMethodParams):
-        """
-        This function gets the auxiliary heating powers -- electron cyclotron
-        resonance heating (p_ECRH), neutral beam injection system (p_NBI)
-        ion cyclotron (p_ICRF), and lower hybrid (p_LH). If any of the auxiliary
-        heating powers are not available (there was no ICRF or LH), then this
-        function returns an array of zeros for them.
+        r"""
+        This routine gets the auxiliary heating powers: electron cyclotron
+        resonance heating (`p_ecrh`), neutral beam injection system (`p_nbi`)
+        ion cyclotron (`p_icrf`), and lower hybrid (`p_lh`). If any of the auxiliary
+        heating powers were not available during a shot, then it returns an array
+        of zeros for them.
 
-        This function also calculates the total input power, the radiated input
-        fraction, and the radiated loss function by calling get_p_ohm and
-        get_radiated_power.
+        This routine also calculates the total input power, the radiated input
+        fraction, and the radiated loss function. These parameters are defined as:
+        $$
+        p_\text{input} = p_\text{ohmic} + p_\text{lh} + p_\text{icrf} + p_\text{ecrh}
+        + p_\text{nbi}
+        $$
+        $$
+        f_\text{rad input} = \frac{p_\text{rad}}{p_\text{input}}
+        $$
+        $$
+        f_\text{rad loss} = \frac{p_\text{rad}}{p_\text{rad} + dW_\text{mhd}/dt}
+        $$
 
-        Notes
-        ----------
-        For the moment we assume that the MDSplus trees always have the corresponding
-        tree nodes for each of the powers, even if the heating source or diagnostic
-        was not turned on in that shot. If the method is not able to access a particular
-        node, then we assume the tree is broken and skips computing that power, rather than
-        considering that heating source or diagnostic was turned off during that shot and assign
-        an array of 0 to that power. This was not the case in several shots on CMOD, and we need
-        to verify this on EAST in the future.
-
-        For now, if we encounter an MdsException error for any of the powers, we return
-        that power with nans and skip calculating the radiated fractions and p_input
-        if applicable.
+        Note that currently we assume that the MDSplus trees always have the corresponding
+        tree nodes for each of the powers, even if a heating source/diagnostic was turned
+        off during that shot. If the routine fails to find a tree or a tree node,
+        then it assumes that tree is broken and returns the corresponding power as an array
+        of `nans`. The routine will also skip calculating `p_input` or the radiated fractions if
+        any of its inputs is an array of `nans`.
 
         Parameters
         ----------
@@ -594,33 +559,16 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-            - 'p_ecrh' : array
-                Electron cyclotron resonance heating power [W].
-            - 'p_lh' : array
-                Lower hybrid power [W].
-            - 'p_icrf' : array
-                Ion cyclotron resonance heating power [W].
-            - 'p_nbi' : array
-                Neutral beam injection power [W].
-            - 'p_input' : array
-                Total input power = p_ohm + p_lh + p_icrf + p_ecrh + p_nbi [W].
-            - 'rad_input_frac' : array
-                Radiated input fraction = p_rad / p_input [%].
-            - 'rad_loss_frac' : array
-                Radiated loss fraction = p_rad / (p_rad + dWmhd/dt) [%].
+            A dictionary containing the auxiliary heating powers (`p_ecrh`, `p_lh`, `p_icrf`,
+            `p_nbi`), the total input power (`p_input`), and the radiated fractions
+            (`rad_input_frac`, `rad_loss_frac`).
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_power.m
-
-        Original Author
-        ----------------
-        - Wang Bo, Dec 2015
-        - Robert Granetz, Oct 2015
-        - Alex Tinguely, Oct 2016
-
-        Last major update: 11/20/24 by William Wei
+        - original source: [get_power.m](https://github.com/MIT-PSFC/disruption-py/blob/
+        matlab/EAST/get_power.m)
+        - pull requests: #[411](https://github.com/MIT-PSFC/disruption-py/pull/411), #[451](https:
+        //github.com/MIT-PSFC/disruption-py/pull/451)
         """
         p_ecrh = [np.nan]
         p_lh = [np.nan]
@@ -772,20 +720,8 @@ class EastPhysicsMethods:
     @physics_method(columns=["p_oh"], tokamak=Tokamak.EAST)
     def get_p_ohm(params: PhysicsMethodParams):
         r"""
-        This script calculates the ohmic power, p_ohm. We use the following
-        expression to calculate P_ohm:
-
-        P_ohm = Ip * V_resistive
-
-        where: V_resistive = V_loop - V_inductive = V_loop - L * dIp/dt
-        and L = L_internal = mu0 * R0 * li/2
-
-        - pcs_east node '\pcvloop'        is used for V_loop,
-        - efit18   node '\efit_aeqdsk:li' is used for li,
-        - pcs_east node '\pcrl01'         is used for Ip
-
-        If the EFIT data or the magnetics Ip data is not available, then P_ohm is
-        returned as NaN.
+        Calculate the ohmic heating power from the loop voltage, inductive voltage, and
+        plasma current.
 
         Parameters
         ----------
@@ -795,21 +731,12 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-            - 'p_oh' : array
-                Ohmic power [W].
+            A dictionary containing the ohmic heating power (`p_oh`).
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_P_ohm.m
-
-        Original Authors
-        ----------------
-        Wang Bo, Dec 2015
-        Alex Tinguely, Sep 2015
-        Robert Granetz, Oct 2015 -- Jun 2016
-
-        Last major update: 2014/11/21 by William Wei
+        - original source: [get_P_ohm.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/EAST/get_P_ohm.m)
         """
         # Get raw signals
         try:
@@ -863,12 +790,9 @@ class EastPhysicsMethods:
     )
     def get_n_equal_1_data(params: PhysicsMethodParams):
         """
-        This function computes the amplitude and phase of the n=1 Fourier
-        component of the net saddle signals (total saddle signals minus the
-        calculated pickup from the RMP coils) and interpolates the signals onto
-        the specified timebase.  It also computes the amplitude and phase of the
-        n=1 Fourier component of the calculated pickup from the RMP coils into
-        the database.
+        Compute the amplitude and phase of the $n$=1 Fourier component of the net
+        saddle signals (total saddle signals minus the calculated pickup from
+        the RMP coils).
 
         Parameters
         ----------
@@ -879,29 +803,22 @@ class EastPhysicsMethods:
         -------
         dict
             A dictionary containing the following keys:
-            - 'n_equal_1_mode' : array
-                Amplitude of n=1 Fourier component of saddle signals after
-                subtracting the calculated pickup from the RMP coil currents [T].
-            - 'n_equal_1_phase' : array
-                Toroidal phase angle of above [rad].
-            - 'n_equal_1_normalized' : array
-                'n_equal_1_mode' normalized to btor.
-            'rmp_n_equal_1' : array
-                Amplitude of the n=1 Fourier component of the calculated pickup
-                of the RMP coils on the saddle signals [T].
-            'rmp_n_equal_1_phase' : array
-                toroidal phase angle of above [rad].
+
+            - `n_equal_1_mode`: Amplitude of $n$=1 Fourier component of saddle signals
+            after subtracting the calculated pickup from the RMP coil currents.
+            - `n_equal_1_phase`: Toroidal phase of the $n$=1 mode.
+            - `n_equal_1_normalized`: `n_equal_1_mode` normalized to the toroidal magnetic
+            field (`btor`).
+            - `rmp_n_equal_1`: Amplitude of the $n$=1 Fourier component of the calculated
+            pickup of the RMP coils on the saddle signals.
+            - `rmp_n_equal_1_phase`: toroidal phase of the $n$=1 rmp pickup.
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_n_equal_1_data.m
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_rmp_and_saddle_signals.m
-
-        Original Authors
-        ----------------
-        Robert Granetz, Apr 2017
-
-        Last major update: 2014/11/26 by William Wei
+        - original source: [get_n_equal_1_data.m](https://github.com/MIT-PSFC/disruption-
+        py/blob/matlab/EAST/get_n_equal_1_data.m), [get_rmp_and_saddle_signals.m](https://
+        github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_rmp_and_saddle_signals.m)
+        - pull requests: #[411](https://github.com/MIT-PSFC/disruption-py/pull/411)
         """
         n_equal_1_mode = [np.nan]
         n_equal_1_phase = [np.nan]
@@ -999,21 +916,7 @@ class EastPhysicsMethods:
     @physics_method(columns=["btor"], tokamak=Tokamak.EAST)
     def get_btor(params: PhysicsMethodParams):
         r"""
-        Fetch and calculate the toroidal magnetic field signal.
-
-        For shots < 60000, the TF current was in node "\it" in the "eng_tree",
-        and the timebase of the signal was not well-defined.
-
-        For shots between 60000 (on 2016/01/29) and 65165 (2016/05/01), the
-        "\it" node is in the "pcs_east" tree, with a proper timebase.
-
-        For shots after 65165, the "\it" node was back in the "eng_tree" tree
-        (with a proper timebase).
-
-        Also, starting with shot 60000, there is a fibreoptic-based measurement
-        of the TF current. The signals are "\focs_it" (digitized at 50 kHz) and
-        "\focs_it_s" (sub-sampled at 1 kHz), both in the "east" tree.  The latter
-        two signals differ by 1.6% from the \it signal (as of 2016/04/18).
+        Calculate the toroidal magnetic field.
 
         Parameters
         ----------
@@ -1023,17 +926,15 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-            - 'btor' : array
-                Toroidal magnetic field [T].
+            A dictionary containing the toroidal magnetic field (`btor`).
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_n_equal_1_data.m
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_mirnov_std.m
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_n1rms_n2rms.m
-
-        Last major update: 2014/11/26 by William Wei
+        - original sources: [get_n_equal_1_data.m](https://github.com/MIT-PSFC/disr
+        uption-py/blob/matlab/EAST/get_n_equal_1_data.m), [get_mirnov_std.m](https:
+        //github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_mirnov_std.m),
+        [get_n1rms_n2rms.m](https://github.com/MIT-PSFC/disruption-py/blob/matlab/
+        EAST/get_n1rms_n2rms.m)
         """
         if 60000 <= params.shot_id <= 65165:
             tree = "pcs_east"
@@ -1058,9 +959,15 @@ class EastPhysicsMethods:
     @staticmethod
     @physics_method(columns=["kappa_area"], tokamak=Tokamak.EAST)
     def get_kappa_area(params: PhysicsMethodParams):
-        """
-        This script computes kappa_area (elongation parameter) defined as
-        plasma area / (pi * aminor**2)
+        r"""
+        Calculate the plasma's ellipticity (*kappa*, also known as
+        the elongation) using its area and minor radius. It is defined as:
+
+        $$
+        \kappa_{area} = \frac{A}{\pi a^2}
+        $$
+
+        where $A$ is the plasma cross-sectional area and $a$ is the minor radius.
 
         Parameters
         ----------
@@ -1070,21 +977,12 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-            - 'kappa_area' : array
-                Computed elongation parameter
+            A dictionary containing the `kappa_area` signal.
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_kappa_area.m
-
-        Original Authors
-        ----------------
-        Robert Granetz, Dec 2015
-        Alex Tinguely, Oct 2015
-        Cristina Rea, Aug 2018
-
-        Last major update: 2014/11/25 by William Wei
+        - original source: [get_kappa_area.m](https://github.com/MIT-PSFC/disrup
+        tion-py/blob/matlab/EAST/get_kappa_area.m)
         """
         # Get area and aminor from EastEfitMethods
         efit_params = EastEfitMethods.get_efit_parameters(params=params)
@@ -1099,9 +997,15 @@ class EastPhysicsMethods:
     @staticmethod
     @physics_method(columns=["pkappa_area"], tokamak=Tokamak.EAST)
     def get_pkappa_area(params: PhysicsMethodParams):
-        """
-        This script computes kappa_area (elongation parameter) defined as
-        plasma area / (pi * aminor**2) using data from the P-EFIT tree.
+        r"""
+        Calculate the plasma's ellipticity (*kappa*) using the area and minor
+        radius data from the P-EFIT tree. `kappa_area` is defined as:
+
+        $$
+        \kappa_{area} = \frac{A}{\pi a^2}
+        $$
+
+        where $A$ is the plasma cross-sectional area and $a$ is the minor radius.
 
         Parameters
         ----------
@@ -1111,19 +1015,12 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-            - 'pkappa_area' : array
-                Computed elongation parameter using data from the P-EFIT tree.
+            A dictionary containing the `pkappa_area` signal.
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_PEFIT_parameters.m
-
-        Original Authors
-        ----------------
-        Cristina Rea, May 2019
-
-        Last major update: 2014/11/25 by William Wei
+        - original source: [get_PEFIT_parameters.m](https://github.com/MIT-PSFC/
+        disruption-py/blob/matlab/EAST/get_PEFIT_parameters.m)
         """
         # Get area and aminor from EastEfitMethods
         pefit_params = EastEfitMethods.get_pefit_parameters(params=params)
@@ -1142,17 +1039,9 @@ class EastPhysicsMethods:
     )
     def get_pcs_parameters(params: PhysicsMethodParams):
         """
-        This function gets many of the real time signals that are actually used
-        in the plasma control system (PCS) on the EAST tokamak.
-
-        For development of a disruption prediction algorithm that we want to run
-        in real time in the PCS, it is better to train on a database of these real
-        time signals than on the processed signals in the analysis trees and east
-        trees.
-
-        Note: since 2018 the EFIT-derived signals used in the PCS are calculated
-        by P-EFIT, which is different than RT-EFIT.  This information came from
-        QP Yuan <qpyuan@ipp.ac.cn>
+        Retrieve a subset of the real-time diagnostic signals that are used in the EAST
+        plasma control system (PCS). These signals are either calculated by RT-EFIT (pre-2018)
+        or P-EFIT (since 2018).
 
         Parameters
         ----------
@@ -1162,27 +1051,12 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-            - 'ip_error_rt' : array
-                error between actual and pre-programmed plasma currents
-            - 'q95_rt' : array
-                q95 calculated by RT-EFIT for PCS (P-EFIT since 2018)
-            - 'beta_p_rt' : array
-                beta_p calculated by RT-EFIT for PCS (P-EFIT since 2018)
-            - 'li_rt' : array
-                li calculated by RT-EFIT for PCS (P-EFIT since 2018)
-            - 'wmhd_rt' : array
-                Wmhd calculated by RT-EFIT for PCS (P-EFIT since 2018)
+            A dictionary containing `ip_error_rt`, `q95_rt`, `beta_p_rt`, `li_rt`, and `wmhd_rt`.
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_pcs.m
-
-        Original Author
-        ----------------
-        Robert Granetz, Dec 2018
-
-        Last major update: 2014/11/22 by William Wei
+        - original source: [get_pcs.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/EAST/get_pcs.m)
         """
         output = {}
 
@@ -1226,20 +1100,8 @@ class EastPhysicsMethods:
     @physics_method(columns=["p_rad_rt", "p_lh_rt", "p_nbi_rt"], tokamak=Tokamak.EAST)
     def get_pcs_power(params: PhysicsMethodParams):
         """
-        This function gets the real time power signals that are actually used
-        in the plasma control system (PCS) on the EAST tokamak.
-
-        For development of a disruption prediction algorithm that we want to run
-        in real time in the PCS, it is better to train on a database of these real
-        time signals than on the processed signals in the analysis trees and east
-        trees.
-
-        Note: since 2018 the EFIT-derived signals used in the PCS are calculated
-        by P-EFIT, which is different than RT-EFIT.  This information came from
-        QP Yuan <qpyuan@ipp.ac.cn>
-
-        As of Nov 2024, only p_rad_rt, p_lh_rt, and p_nbi_rt have been implemented.
-        All other PCS signals weren't implemented in original MATLAB script.
+        Retrieve and calculate real-time power signals that are available
+        in the EAST plasma control system (PCS).
 
         Parameters
         ----------
@@ -1250,37 +1112,15 @@ class EastPhysicsMethods:
         -------
         dict
             A dictionary containing the following keys:
-            - 'p_rad_rt' : array
-                radiated power [W]
-            - [UNAVAILABLE] 'p_ecrh_rt' : array
-                electron cyclotron resonance heating power [W]
-            - 'p_lh_RT' : array
-                lower hybrid power [W]
-            - [UNAVAILABLE] 'p_oh_rt' : array
-                ohmic power [W]
-            - [UNAVAILABLE] 'p_icrf_rt' : array
-                ion cyclotron power [W]
-            - 'p_nbi_RT' : array
-                neutral beam injection power [W]
-            - [UNAVAILABLE] 'rad_input_frac' : array
-                rad_input_frac = p_rad/p_input [%]
-                               = p_rad/(p_ohm + p_lh + p_icrh + p_ecrh + p_nbi)
-                               = ratio of radiated power to total input power
-            - [UNAVAILABLE] 'rad_loss_frac' : array
-                rad_loss_frac = p_rad/p_loss
-                              = p_rad/(p_rad + p_cond + p_conv)
-                              = p_rad/(p_input - dWmhd/dt)
-                              = ratio of radiated power to total loss power
+
+            - `p_rad_rt`: radiated power.
+            - `p_lh_RT`: lower hybrid heating power.
+            - `p_nbi_RT`: neutral beam injection heating power.
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_pcs.m
-
-        Original Author
-        ----------------
-        Robert Granetz, Dec 2018
-
-        Last major update: 2014/11/22 by William Wei
+        - original source: [get_pcs.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/EAST/get_pcs.m)
         """
         # Get p_rad_rt
         try:
@@ -1369,12 +1209,10 @@ class EastPhysicsMethods:
     @physics_method(columns=["prad_peaking"], tokamak=Tokamak.EAST)
     def get_prad_peaking(params: PhysicsMethodParams):
         """
-        This routine calculates the peaking factor of the profiles of radiated
-        power measured by the AXUV arrays on EAST.  Here we define the peaking
-        factor as the ratio of the average of the Prad signals of the core
-        channels to the average of all the channels, excluding those that look in
-        the divertor region (core-to-average).  This routine linearly
-        interpolates the prad_peaking signal onto the given timebase.
+        Calculates the peaking factor of the radiated power measured by
+        the AXUV arrays. It is defined as the ratio of the average of the
+        centralmost 6 channels to the average of all of the non-divertor-
+        viewing channels (core-to-average).
 
         Parameters
         ----------
@@ -1384,25 +1222,15 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-                - 'prad_peaking' : array
-                    Ratio of core Prad signals to all Prad signals
-
-        Note
-        ------
-        For now we are defining "core" to be the centralmost 6 chords out of the
-        64 chords in the EAST axuv arrays, and "all" to be all of the non-divertor
-        -viewing chords.  See comments later in this code for more details.
+            A dictionary containing the peaking factor for the radiated
+            power profile (`prad_peaking`).
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_prad_peaking.m
-
-        Original Author
-        ----------------
-        Robert Granetz, May 2019
-
-        Last major update: 2014/11/22 by William Wei
+        - original source: [get_prad_peaking.m](https://github.com/MIT-PSFC/disr
+        uption-py/blob/matlab/EAST/get_prad_peaking.m)
+        - pull requests: #[411](https://github.com/MIT-PSFC/disruption-py/pull/
+        411), #[451](https://github.com/MIT-PSFC/disruption-py/pull/451)
         """
         xuv, xuvtime = EastPhysicsMethods._get_raw_axuv_data(params)
 
@@ -1453,12 +1281,8 @@ class EastPhysicsMethods:
     )
     def get_mirnov_std(params: PhysicsMethodParams):
         """
-        Compute mirnov_std and mirnov_std_normalized
-
-        The set of Mirnov sensors digitized at 200 kHz (from Dalong):
-            - cmp1t~cmp26t  (c-port),
-            - kmp1t~kmp26t (k-port),
-        all in the EAST tree
+        Fetch the signal from a single Mirnov sensor, then compute the rolling
+        standard deviation over time using a fixed 1 ms window.
 
         Parameters
         ----------
@@ -1469,16 +1293,16 @@ class EastPhysicsMethods:
         -------
         dict
             A dictionary containing the following keys:
-                - 'mirnov_std' : array
-                    stdev of a mirnov sensor
-                - 'mirnov_std_normalized' : array
-                    mirnov_std normalized to btor
+
+            - `mirnov_std`: rolling standard deviation of a mirnov sensor.
+            - `mirnov_std_normalized`: `mirnov_std` normalized to the toroidal
+            magnetic field (`btor`).
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_mirnov_std.m
-
-        Last major update: 2014/11/22 by William Wei
+        - original source: [get_mirnov_std.m](https://github.com/MIT-PSFC/disrupt
+        ion-py/blob/matlab/EAST/get_mirnov_std.m)
+        - pull requests: #[411](https://github.com/MIT-PSFC/disruption-py/pull/411)
         """
         mirnov_std = np.full(len(params.times), np.nan)
         mirnov_std_normalized = [np.nan]
@@ -1511,13 +1335,9 @@ class EastPhysicsMethods:
     )
     def get_n1rms_n2rms(params: PhysicsMethodParams):
         """
-        Read in the saddle sensor data and the rmp currents from the MDSplus
-        tree.  All the outputs have time as their 1st dimension,
-        i.e. rmp(time,rmpcoil#) and sad(time,saddlecoil#), and the time arrays
-        are column vectors.
-
-        The ordering of the rmp data is: irmpu1 to irmpu8, then irmpl1 to irmpl8.
-        The ordering of the saddle data is: sad_pa, sad_bc, .. sad_no.
+        Retrieve the Mirnov sensor array data and compute the $n$=1 and 2 Fourier
+        mode amplitudes. Then calculate the rolling standard deviation of the amplitudes
+        over a 1 ms window and normalize them to the toroidal magnetic field (`btor`).
 
         Parameters
         ----------
@@ -1528,20 +1348,17 @@ class EastPhysicsMethods:
         -------
         dict
             A dictionary containing the following keys:
-                - 'n1rms' : array
-                    std over a time window of the n=1 mode from the Mirnov array [T].
-                - 'n2rms' : array
-                    std over a time window of the n=2 mode from the Mirnov array [T].
-                - 'n1rms_normalized' : array
-                    n1rms normalized to btor [dimensionless].
-                - 'n2rms_normalized' : array
-                    n2rms normalized to btor [dimensionless].
+
+            - `n1rms`: rolling standard deviation of the $n$=1 mode from the Mirnov array.
+            - `n2rms`: rolling standard deviation the $n$=2 mode from the Mirnov array.
+            - `n1rms_normalized`: `n1rms` normalized to `btor`.
+            - `n2rms_normalized`: `n2rms` normalized to `btor`.
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_n1rms_n2rms.m
-
-        Last major update: 2014/11/25 by William Wei
+        - original source: [get_n1rms_n2rms.m](https://github.com/MIT-PSFC/disruption-py/blob
+        /matlab/EAST/get_n1rms_n2rms.m)
+        - pull requests: #[411](https://github.com/MIT-PSFC/disruption-py/pull/411)
         """
         n1rms = np.full(len(params.times), np.nan)
         n2rms = np.full(len(params.times), np.nan)
@@ -1609,7 +1426,7 @@ class EastPhysicsMethods:
     @physics_method(columns=["h98"], tokamak=Tokamak.EAST)
     def get_h98(params: PhysicsMethodParams):
         """
-        Get the H98y2 energy confinement time parameter.
+        Get the *H98y2* energy confinement factor.
 
         Parameters
         ----------
@@ -1619,15 +1436,12 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-            - 'h98' : array
-                H98y2 energy confinement time.
+            A dictionary containing the *H98y2* energy confinement factor (`h98`).
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_h98.m
-
-        Last major update: 11/25/24 by William Wei
+        - original source: [get_h98.m](https://github.com/MIT-PSFC/disruption-py/blob/
+        matlab/EAST/get_h98.m)
         """
         h98_y2 = [np.nan]
 
@@ -1729,10 +1543,8 @@ class EastPhysicsMethods:
     )
     def get_efit_gaps(params: PhysicsMethodParams):
         """
-        This script calculates upper and lower gaps from the EFIT and P-EFIT
-        information on plasma boundary and first wall geometry. This is needed
-        because the EAST version of EFIT does not output the upper and lower
-        gaps directly.
+        Calculate the upper and lower gaps from the EFIT/P-EFIT
+        plasma boundary and first wall geometry information.
 
         Parameters
         ----------
@@ -1742,27 +1554,16 @@ class EastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the following keys:
-            - 'upper_gap' : array
-                Upper gap [m].
-            - 'lower_gap' : array
-                Lower gap [m].
-            - 'pupper_gap' : array
-                Upper gap computed from the P-EFIT tree [m].
-            - 'plower_gap' : array
-                Lower gap computed from the P-EFIT tree [m].
+            A dictionary containing the upper and lower gaps computed from
+            EFIT (`upper_gap` and `lower_gap`) and P-EFIT (`pupper_gap` and
+            `plower_gap`) data.
 
         References
         -------
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_EFIT_gaps.m
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/EAST/get_PEFIT_gaps.m
-
-        Original Authors
-        ----------------
-        Robert Granetz
-        Jiaxiang Zhu
-
-        Last major update: 2015/03/29 by William Wei
+        - original sources: [get_EFIT_gaps.m](https://github.com/MIT-PSFC/disruption-
+        py/blob/matlab/EAST/get_EFIT_gaps.m), [get_PEFIT_gaps.m](https://github.com/M
+        IT-PSFC/disruption-py/blob/matlab/EAST/get_PEFIT_gaps.m)
+        - pull requests: #[411](https://github.com/MIT-PSFC/disruption-py/pull/411)
         """
         efit_gaps = EastPhysicsMethods._get_efit_gaps(params=params, tree="_efit_tree")
         pefit_gaps = EastPhysicsMethods._get_efit_gaps(params=params, tree="pefit_east")
