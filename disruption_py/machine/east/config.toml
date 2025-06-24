@@ -21,9 +21,7 @@ expected_failure_columns = [
   "mirnov_std",
   "mirnov_std_normalized",
   "p_input",
-  "p_lh", # east/east_1 tree issues
   "p_oh",
-  "p_rad", # east/east_1 tree issues
   "prad_peaking",
   "q0",
   "q95",
