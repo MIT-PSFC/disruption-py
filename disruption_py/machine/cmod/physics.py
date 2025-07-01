@@ -882,13 +882,16 @@ class CmodPhysicsMethods:
         -------
         - original source: [get_n_equal_1_amplitude.m](https://github.com/MIT-PSFC/disruption-py/
         blob/matlab/CMOD/matlab-core/get_n_equal_1_amplitude.m)
+        - pull requests: #[460](https://github.com/MIT-PSFC/disruption-py/pull/460)
         - issues: #[211](https://github.com/MIT-PSFC/disruption-py/issues/211)
-
         """
         # These sensors are placed toroidally around the machine. Letters refer to
         # the 2 ports the sensors were placed between.
         bp13_names = ["BP13_BC", "BP13_DE", "BP13_GH", "BP13_JK"]
-        bp13_signals = np.full((len(params.times), len(bp13_names)), np.nan)
+        bp13_signals = []
+        # Create the 'design' matrix ('A') for the linear system of equations:
+        # Bp(phi) = A1 + A2*sin(phi) + A3*cos(phi)
+        a = []
 
         path = r"\mag_bp_coils."
         bp_node_names = params.mds_conn.get_data(
@@ -917,16 +920,26 @@ class CmodPhysicsMethods:
         # 3. Interpolate bp onto shot timebase
 
         for i, bp13_name in enumerate(bp13_names):
-            signal = params.mds_conn.get_data(
-                path + bp13_name, tree_name="magnetics"
-            )  # [T]
+            try:
+                signal = params.mds_conn.get_data(
+                    path + bp13_name, tree_name="magnetics"
+                )  # [T]
+            # Sensor not available, skip
+            except mdsExceptions.MdsException:
+                continue
             if len(signal) == 1:
-                raise CalculationError(f"No data for {bp13_name}")
+                continue
 
             baseline = np.mean(signal[baseline_indices])
             signal = signal - baseline
             signal = signal - bp13_btor_pickup_coeffs[i] * btor
-            bp13_signals[:, i] = interp1(t_mag, signal, params.times)
+            bp13_signals.append(interp1(t_mag, signal, params.times))
+            a_row = [
+                1,
+                np.sin(bp13_phi[i] * np.pi / 180),
+                np.cos(bp13_phi[i] * np.pi / 180),
+            ]
+            a.append(a_row)
 
         # TODO: Examine edge case behavior of sign
         polarity = np.sign(np.mean(btor))
@@ -934,19 +947,36 @@ class CmodPhysicsMethods:
         btor_magnitude = interp1(t_mag, btor_magnitude, params.times)
         btor = interp1(t_mag, btor, params.times)  # Interpolate BT with sign
 
-        # Create the 'design' matrix ('A') for the linear system of equations:
-        # Bp(phi) = A1 + A2*sin(phi) + A3*cos(phi)
-        ncoeffs = 3
-        a = np.full((len(bp13_names), ncoeffs), np.nan)
-        a[:, 0] = np.ones(4)
-        a[:, 1] = np.sin(bp13_phi * np.pi / 180.0)
-        a[:, 2] = np.cos(bp13_phi * np.pi / 180.0)
-        coeffs = np.linalg.pinv(a) @ bp13_signals.T
+        n_sensors = len(bp13_signals)
+        if n_sensors == 3:
+            # Log warning if there are only 3 available sensors.
+            params.logger.warning(
+                "get_n_equal_1_amplitude: "
+                "{n} of 4 BP13 sensors are available for calculating the n=1 mode.",
+                n=n_sensors,
+            )
+        elif n_sensors < 3:
+            # Can't calculate n=1 mode if there are less than 3 available sensors
+            params.logger.warning(
+                "get_n_equal_1_amplitude: "
+                "Not enough sensors to calculate the n=1 mode ({n} of 4 available).",
+                n=n_sensors,
+            )
+            return {
+                "n_equal_1_mode": [np.nan],
+                "n_equal_1_normalized": [np.nan],
+                "n_equal_1_phase": [np.nan],
+                "bt": btor,
+            }
+        bp13_signals = np.array(bp13_signals)
+        a = np.array(a)
+
+        # Compute the least squares fit
+        coeffs = np.matmul(np.linalg.pinv(a), bp13_signals)
         # The n=1 amplitude at each time is sqrt(A2^2 + A3^2)
         # The n=1 phase at each time is arctan(-A2/A3), using complex number
         # phasor formalism, exp(i(phi - delta))
         n_equal_1_amplitude = np.sqrt(coeffs[1, :] ** 2 + coeffs[2, :] ** 2)
-        # TODO: Confirm arctan2 = atan2
         n_equal_1_phase = np.arctan2(-coeffs[1, :], coeffs[2, :])
         n_equal_1_normalized = n_equal_1_amplitude / btor_magnitude
         # INFO: Debugging purpose block of code at end of matlab file
