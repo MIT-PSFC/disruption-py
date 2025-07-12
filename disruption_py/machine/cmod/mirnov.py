@@ -174,6 +174,7 @@ class CmodMirnovMethods:
             mirnov_signal, mirnov_times = params.mds_conn.get_data_with_dims(
                         path=f"{path}.{mirnov_name}",
                         tree_name="magnetics",
+                        astype="float32",
             )
             # Get the sampling frequency of the Mirnov signal
             f_mirnov = 1 / np.mean(np.diff(mirnov_times))
@@ -202,8 +203,6 @@ class CmodMirnovMethods:
             return mirnov_fft_interp, freqs
         except Exception as e:
             return None, None
-
-
 
     @staticmethod
     @physics_method(
@@ -272,8 +271,35 @@ class CmodMirnovMethods:
                 "theta_pol": ("probe", [loc[2] for loc in valid_mirnov_locations]),
             },
         )
-        mirnov_ds_real = mirnov_ffts_real.to_dataset(name="mirnov_fft_real")
-        mirnov_ds_imag = mirnov_ffts_imag.to_dataset(name="mirnov_fft_imag")
+        mirnov_ds_real = mirnov_ffts_real.astype(np.float32).to_dataset(name="mirnov_fft_real")
+        mirnov_ds_imag = mirnov_ffts_imag.astype(np.float32).to_dataset(name="mirnov_fft_imag")
         mirnov_ds = xr.merge([mirnov_ds_real, mirnov_ds_imag])
 
         return mirnov_ds
+    
+    @staticmethod
+    @physics_method(
+        tokamak=Tokamak.CMOD,
+    )
+    def get_preferred_mirnov_sxx(params: PhysicsMethodParams):
+        """Get the Sxx of a single Mirnov coil in the shot, in order of preference from a few consistently 'good' probes"""
+
+        preferred_mirnov_names = ["BP02_GHK", "BP01_ABK"]
+
+        for mirnov_name in preferred_mirnov_names:
+            mirnov_fft, freqs = CmodMirnovMethods.get_mirnov_fft(params, mirnov_name)
+            if mirnov_fft is not None:
+                params.logger.info(f"Using {mirnov_name} for Sxx")
+                mirnov_sxx = np.abs(mirnov_fft) ** 2
+                return xr.DataArray(
+                    mirnov_sxx,
+                    dims=("frequency", "time"),
+                    coords={
+                        "shot": params.shot_id,
+                        "frequency": freqs,
+                        "time": params.times,
+                    },
+                    attrs={
+                        "probe_name": mirnov_name,
+                    },
+                ).astype(np.float32).to_dataset(name="mirnov_sxx")
