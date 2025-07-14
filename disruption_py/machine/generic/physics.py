@@ -26,8 +26,8 @@ class GenericPhysicsMethods:
         as a categorical feature:
 
         - 1: ramp-up
-        - 0: flat-top
-        - -1: ramp-down
+        - 2: flat-top
+        - 3: ramp-down
 
         Parameters
         ----------
@@ -103,7 +103,7 @@ class GenericPhysicsMethods:
         else:
             flattop_start, flattop_end = indices_flattop[0], indices_flattop[-1] + 1
             shot_domain[:flattop_start] = 1
-            shot_domain[flattop_start:flattop_end] = 0
-            shot_domain[flattop_end:] = -1
+            shot_domain[flattop_start:flattop_end] = 2
+            shot_domain[flattop_end:] = 3
 
         return {"shot_domain": shot_domain}
