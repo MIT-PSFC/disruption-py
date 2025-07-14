@@ -6,18 +6,19 @@ correctly when the tokamak parameter is set to either `None` or a specific
 tokamak instance.
 """
 
-import numpy as np
+import os
+
 import pytest
 
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.machine.tokamak import resolve_tokamak_from_environment
-from disruption_py.settings.retrieval_settings import RetrievalSettings
+from disruption_py.settings import LogSettings, RetrievalSettings
 from disruption_py.workflow import get_shots_data
 
 
 @pytest.mark.parametrize("tok", [None, resolve_tokamak_from_environment()])
-def test_tokamak_parameter(shotlist, tok):
+def test_tokamak_parameter(shotlist, tok, test_folder_f):
     """
     Ensure physics methods run when the tokamak parameter is set as either
     `None` or a specific tokamak.
@@ -31,7 +32,7 @@ def test_tokamak_parameter(shotlist, tok):
 
     @physics_method(columns=[col_name], tokamak=tok)
     def my_physics_method(params: PhysicsMethodParams):
-        return {col_name: np.ones(shape=len(params.times))}
+        return {col_name: params.times**0}
 
     retrieval_settings = RetrievalSettings(
         run_columns=[col_name],
@@ -41,8 +42,13 @@ def test_tokamak_parameter(shotlist, tok):
     shot_data = get_shots_data(
         shotlist_setting=shotlist[:1],
         retrieval_settings=retrieval_settings,
-        output_setting="dataframe",
-        num_processes=1,
-        log_settings="WARNING",
+        output_setting=os.path.join(test_folder_f, "output.nc"),
+        log_settings=LogSettings(
+            console_level="WARNING",
+            file_path=os.path.join(test_folder_f, "output.log"),
+        ),
     )
-    assert col_name in shot_data.columns
+    assert col_name in shot_data.data_vars
+    assert shotlist[0] in shot_data.shot
+    assert len(shot_data.time)
+    assert all(shot_data[col_name].values == 1)

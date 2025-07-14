@@ -12,11 +12,11 @@ from loguru import logger
 
 from disruption_py.config import config
 from disruption_py.core.utils.math import matlab_gradient_1d_vectorized
-from disruption_py.core.utils.misc import get_temporary_folder
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings import LogSettings, RetrievalSettings
 from disruption_py.workflow import get_shots_data
+from tests.conftest import test_folder
 from tests.utils.data_difference import DataDifference
 from tests.utils.factory import get_tokamak_test_columns
 
@@ -24,9 +24,9 @@ from tests.utils.factory import get_tokamak_test_columns
 def get_fresh_data(
     tokamak: Tokamak,
     shotlist: List[int],
-    log_file_path: str,
+    folder: str,
     test_columns: List[str] = None,
-    console_log_level: str = "WARNING",
+    console_level: str = "WARNING",
 ) -> Dict[int, pd.DataFrame]:
     """
     Get fresh data for a list of shots.
@@ -37,11 +37,11 @@ def get_fresh_data(
         The tokamak for which to retrieve data.
     shotlist : List[int]
         A list of shot IDs to retrieve data for.
-    log_file_path : str
-        The path to the log file.
+    folder : str
+        The path to the folder.
     test_columns : List[str], optional
         A list of columns to retrieve.
-    console_log_level : str, optional
+    console_level : str, optional
         The log level for console output. Default is "WARNING".
 
     Returns
@@ -55,17 +55,17 @@ def get_fresh_data(
         run_columns=test_columns,
         only_requested_columns=True,
     )
-    return get_shots_data(
+    out = get_shots_data(
         tokamak=tokamak,
         shotlist_setting=shotlist,
         retrieval_settings=retrieval_settings,
-        output_setting="dict",
+        output_setting=os.path.join(folder, "output/"),
         log_settings=LogSettings(
-            file_path=log_file_path,
-            file_level="DEBUG",
-            console_level=console_log_level,
+            console_level=console_level,
+            file_path=os.path.join(folder, "output.log"),
         ),
     )
+    return {k: v.to_dataframe() for k, v in out.items()}
 
 
 def get_cached_from_fresh(
@@ -105,7 +105,7 @@ def get_cached_from_fresh(
             sql_data,
             on=merge_col,
             direction="nearest",
-            tolerance=config().time_const,
+            tolerance=config().time.time_const,
         )
     return shot_data
 
@@ -181,7 +181,7 @@ def eval_shot_against_cache(
     if "PYTEST_CURRENT_TEST" in os.environ or not expect_failure:
         assert not data_difference.failed, (
             f"Comparison failed on shot {data_difference.shot_id}, "
-            "column {data_difference.data_column}"
+            f"column {data_difference.data_column}"
         )
 
     return data_difference
@@ -192,7 +192,7 @@ def eval_against_cache(
     shotlist: List[int],
     expected_failure_columns: List[str],
     test_columns=None,
-    console_log_level="WARNING",
+    console_level="WARNING",
 ) -> Dict[int, pd.DataFrame]:
     """
     Evaluate fresh data against cached data for specified shots.
@@ -212,7 +212,7 @@ def eval_against_cache(
     test_columns : List[str], optional
         A list of columns to test against the cached data. If None, the function
         will determine the columns based on the available data.
-    console_log_level : str, optional
+    console_level : str, optional
         The log level for console output. Default is "WARNING".
 
     Returns
@@ -221,9 +221,6 @@ def eval_against_cache(
         A dictionary mapping shot identifiers to their corresponding data
         differences as DataFrames.
     """
-
-    tempfolder = get_temporary_folder()
-    print(f"Outputting to temporary folder: {tempfolder}")
 
     @contextmanager
     def monkey_patch_numpy_gradient():
@@ -238,9 +235,9 @@ def eval_against_cache(
         fresh_data = get_fresh_data(
             tokamak=tokamak,
             shotlist=shotlist,
-            log_file_path=os.path.join(tempfolder, "data_retrieval.log"),
+            folder=test_folder("eval_against_cache"),
             test_columns=test_columns,
-            console_log_level=console_log_level,
+            console_level=console_level,
         )
     cache_data = get_cached_from_fresh(tokamak, shotlist, fresh_data, test_columns)
 

@@ -6,15 +6,15 @@ Module for utility functions related to class instantiation, data manipulation, 
 
 import os
 import subprocess
+import sys
 import time
 import warnings
 from functools import lru_cache
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import List, Type
+from typing import Dict, List, Tuple, Type
 
 import numpy as np
-import pandas as pd
 from loguru import logger
 
 
@@ -59,50 +59,6 @@ def safe_cast(array: np.ndarray, dtype, copy=False) -> np.ndarray:
         return array.astype(dtype, copy=copy)
 
 
-def safe_df_concat(base_df: pd.DataFrame, new_dfs: List[pd.DataFrame]) -> pd.DataFrame:
-    """
-    Safely concatenate a base DataFrame with a list of new DataFrames.
-
-    Parameters
-    ----------
-    base_df : pd.DataFrame
-        The base DataFrame to concatenate with.
-    new_dfs : List[pd.DataFrame]
-        A list of new DataFrames to concatenate.
-
-    Returns
-    -------
-    pd.DataFrame
-        The concatenated DataFrame.
-    """
-    if isinstance(new_dfs, pd.DataFrame):
-        new_dfs = [new_dfs]
-
-    all_cols = set(base_df.columns).union(*[set(new_df.columns) for new_df in new_dfs])
-
-    new_dfs = [new_df.dropna(axis=1, how="all") for new_df in new_dfs]
-    new_dfs = [
-        new_df
-        for new_df in new_dfs
-        if not new_df.empty and not new_df.isna().all().all()
-    ]
-
-    if not new_dfs:
-        return base_df
-
-    if base_df.empty:
-        concat_df = pd.concat(new_dfs, axis=0, ignore_index=True, sort=False)
-    else:
-        concat_df = pd.concat(
-            [base_df] + new_dfs, axis=0, ignore_index=True, sort=False
-        )
-
-    missing_cols = all_cols - set(concat_df.columns)
-    for col in missing_cols:
-        concat_df[col] = np.nan
-    return concat_df
-
-
 @lru_cache
 def get_commit_hash() -> str:
     """
@@ -125,23 +81,28 @@ def get_commit_hash() -> str:
 
 
 @lru_cache
-def get_temporary_folder() -> Path:
+def get_temporary_folder() -> str:
     """
     Create and return a temporary folder.
     The result is cached to return the same path for different invocations.
 
     Returns
     -------
-    Path
+    str
         Resulting temporary folder.
     """
 
     # create temporary top folder
-    top = os.path.join("/tmp", os.getenv("USER"), "disruption-py")
+    top = os.path.join(
+        "/tmp",
+        os.getenv("USER"),
+        "disruption-py",
+        ("." if "pytest" in sys.modules else "") + time.strftime("%Y-%m-%d"),
+    )
     Path(top).mkdir(parents=True, exist_ok=True)
 
     # create temporary sub folder
-    return mkdtemp(prefix=time.strftime("%Y%m%d-%H%M%S-"), dir=top)
+    return mkdtemp(dir=top, prefix=time.strftime("%H.%M.%S-"))
 
 
 def shot_msg(message: str) -> str:
@@ -212,3 +173,23 @@ def get_elapsed_time(elapsed: float) -> str:
     if not out:
         out += [f"{ms:.0f}ms"]
     return " ".join(out)
+
+
+def to_tuple(
+    data: Dict[str, np.ndarray], dim: str
+) -> Dict[str, Tuple[str, np.ndarray]]:
+    """
+    Recreate a dictionary by making all values a 2-tuple with a given string.
+
+    Parameters
+    ----------
+    data : Dict[str, np.ndarray]
+        Dictionary of array data.
+    dim : str
+        String to be added as first element of the tuple.
+
+    Returns
+    -------
+    Dict[str, Tuple[str, np.ndarray]]
+    """
+    return {k: (dim, v) for k, v in data.items()}
