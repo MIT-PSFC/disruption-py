@@ -52,10 +52,10 @@ Users can create their own routines and/or use built-in ones that retrieve and d
 These routines are then interpolated on a requested timebase across the specified set of plasma discharges (or shots) to assemble a dataset and save it under a variety of available formats.
 
 <p align="center">
-<img src="docs/workflow.png" alt="Schematic flowchart of a typical DisruptionPy workflow. By Y Wei (2024)" width="400" onerror="this.onerror=null;this.src='workflow.png';" />
+<img src="docs/workflow.png" alt="Schematic flowchart of a typical DisruptionPy workflow (by: Y Wei)" width="500" onerror="this.onerror=null;this.src='workflow.png';" />
 </p>
 
-_Figure: Schematic flowchart of a typical DisruptionPy workflow. By Y Wei (2024) [[6](https://meetings.aps.org/Meeting/DPP24/Session/PP12.10)]._
+_Figure: Schematic flowchart of a typical DisruptionPy workflow (by: Y Wei)._
 
 ### Acknowledgments
 
