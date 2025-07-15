@@ -5,6 +5,7 @@ Module for generic physics methods.
 """
 import numpy as np
 
+from disruption_py.config import config
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.machine.cmod import CmodPhysicsMethods
@@ -53,8 +54,8 @@ class GenericPhysicsMethods:
         - issues: #[408](https://github.com/MIT-PSFC/disruption-py/issues/408)
         """
         # Initialize dictionaries
-        thresholds = {"dipprog_dt": None, "ip_prog": None, "power_supply_railed": None}
-        signals = {"dipprog_dt": None, "ip_prog": None, "power_supply_railed": None}
+        signals = {}
+        thresholds = config(params.tokamak).physics.shot_domain_thresholds
         conditions = {
             "dipprog_dt": lambda signal, threshold: np.abs(signal) <= threshold,
             "ip_prog": lambda signal, threshold: np.abs(signal) >= threshold,
@@ -62,21 +63,15 @@ class GenericPhysicsMethods:
         }
         # Get data and threshold parameters
         if params.tokamak == Tokamak.CMOD:
-            thresholds["dipprog_dt"] = 50e3
-            thresholds["ip_prog"] = 100e3
             ip_parameters = CmodPhysicsMethods.get_ip_parameters(params=params)
             signals["dipprog_dt"] = ip_parameters["dipprog_dt"]
             signals["ip_prog"] = ip_parameters["ip_prog"]
         elif params.tokamak == Tokamak.D3D:
-            thresholds["dipprog_dt"] = 2e3
-            thresholds["ip_prog"] = 100e3
-            thresholds["power_supply_railed"] = 1
             ip_parameters = D3DPhysicsMethods.get_ip_parameters(params=params)
             signals["dipprog_dt"] = ip_parameters["dipprog_dt"]
             signals["ip_prog"] = ip_parameters["ip_prog"]
             signals["power_supply_railed"] = ip_parameters["power_supply_railed"]
         elif params.tokamak == Tokamak.EAST:
-            thresholds["dipprog_dt"] = 1e3
             ip_parameters = EastPhysicsMethods.get_ip_parameters(params=params)
             signals["dipprog_dt"] = ip_parameters["dipprog_dt"]
         else:
@@ -86,8 +81,9 @@ class GenericPhysicsMethods:
         # Get flattop domain indices
         indices_flattop = np.arange(len(shot_domain))
         for name in ["dipprog_dt", "ip_prog", "power_supply_railed"]:
-            if all(v is not None for v in (signals[name], thresholds[name])):
-                (indices,) = np.where(conditions[name](signals[name], thresholds[name]))
+            sig, thr = signals.get(name, None), thresholds.get(name, None)
+            if all(v is not None for v in (sig, thr)):
+                (indices,) = np.where(conditions[name](sig, thr))
                 indices_flattop = np.intersect1d(
                     indices_flattop, indices, assume_unique=True
                 )
