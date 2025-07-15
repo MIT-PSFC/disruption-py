@@ -74,6 +74,7 @@ class GenericPhysicsMethods:
             ip_parameters = D3DPhysicsMethods.get_ip_parameters(params=params)
             signals["dipprog_dt"] = ip_parameters["dipprog_dt"]
             signals["ip_prog"] = ip_parameters["ip_prog"]
+            signals["power_supply_railed"] = ip_parameters["power_supply_railed"]
         elif params.tokamak == Tokamak.EAST:
             thresholds["dipprog_dt"] = 1e3
             ip_parameters = EastPhysicsMethods.get_ip_parameters(params=params)
