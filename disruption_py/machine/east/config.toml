@@ -7,6 +7,9 @@ driver = "MySQL"
 host = "202.127.205.10"
 port = 3306
 
+[east.physics.shot_domain_thresholds]
+dipprog_dt = 1e3
+
 [east.tests]
 expected_failure_columns = [
   "beta_n",
