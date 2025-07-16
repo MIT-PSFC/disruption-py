@@ -7,7 +7,7 @@ driver = "FreeTDS"
 host = "d3drdb"
 port = 8001
 
-[d3d.physics.shot_domain_thresholds]
+[d3d.physics.time_domain_thresholds]
 dipprog_dt = 2e3
 ip_prog = 100e3
 power_supply_railed = 1

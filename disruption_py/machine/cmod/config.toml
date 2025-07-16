@@ -7,7 +7,7 @@ driver = "ODBC"
 host = "alcdb2"
 port = 1433
 
-[cmod.physics.shot_domain_thresholds]
+[cmod.physics.time_domain_thresholds]
 dipprog_dt = 50e3
 ip_prog = 100e3
 
