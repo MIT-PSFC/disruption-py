@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Unit tests for the retrieval settings which covers data retrieval from various
-sources and the time domain of the data retrieved.
+Unit tests for the retrieval settings.
 """
 
 import os
@@ -16,10 +15,10 @@ from disruption_py.workflow import get_shots_data
 from tests.conftest import skip_on_fast_execution
 
 
-@pytest.fixture(scope="module", name="full_domain_data")
-def full_domain_data_fixture(tokamak, shotlist, test_folder_m) -> xr.Dataset:
+@pytest.fixture(scope="module", name="data")
+def data_fixture(tokamak, shotlist, test_folder_m) -> xr.Dataset:
     """
-    Get data for the full time domain.
+    Get data.
     """
     return get_shots_data(
         tokamak=tokamak,
@@ -97,7 +96,7 @@ def test_run_methods_and_columns(
     run_columns,
     expected_cols,
     forbidden_cols,
-    full_domain_data,
+    data,
     test_folder_f,
 ):
     """
@@ -127,7 +126,7 @@ def test_run_methods_and_columns(
     # Expected columns None means all columns (except forbidden cols) are returned
     if expected_cols is None:
         assert set(results.data_vars) == set(
-            k for k in full_domain_data.data_vars if k not in forbidden_cols
+            k for k in data.data_vars if k not in forbidden_cols
         )
     else:
         assert set(results.data_vars) == set(expected_cols)
