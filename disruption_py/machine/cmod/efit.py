@@ -19,13 +19,15 @@ class CmodEfitMethods:
 
     Attributes
     ----------
-    efit_cols : dict
-        A dictionary mapping parameter names to their corresponding EFIT data paths.
+    efit_parameter_cols : dict
+        A dictionary mapping parameter names to their corresponding aeqdsk EFIT data paths.
+    efit_equilibrium_cols : dict
+        A dictionary mapping equilibrium names to their corresponding geqdsk EFIT data paths.
     efit_derivs : dict
         A dictionary mapping derivative parameter names to their corresponding base parameters.
     """
 
-    efit_cols = {
+    efit_parameter_cols = {
         "beta_p": r"\efit_aeqdsk:betap",
         "kappa": r"\efit_aeqdsk:eout",
         "li": r"\efit_aeqdsk:ali",
@@ -47,10 +49,15 @@ class CmodEfitMethods:
 
     efit_derivs = {"dbetap_dt": "beta_p", "dli_dt": "li", "dwmhd_dt": "wmhd"}
 
+    # This should contain everything which is necessary to https://freeqdsk.readthedocs.io/en/stable/geqdsk.html#freeqdsk.geqdsk.write
+    efit_equilibrium_cols = {
+        "r_grid": r"\efit_geqdsk:r_grid",
+    }
+
     @staticmethod
     @physics_method(
         columns=[
-            *efit_cols.keys(),
+            *efit_parameter_cols.keys(),
             *efit_derivs.keys(),
         ],
         tokamak=Tokamak.CMOD,
@@ -98,6 +105,38 @@ class CmodEfitMethods:
                 efit_data[param] = interp1(efit_time, efit_data[param], params.times)
 
         return efit_data
+    
+    @staticmethod
+    @physics_method(
+        tokamak=Tokamak.CMOD,
+    )
+    def get_efit_equilibrium(params: PhysicsMethodParams):
+        """
+        Retrieve EFIT equilibrium data for CMOD.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDS connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the retrieved EFIT equilibrium data.
+        """
+        efit_equilibrium = {}
+        for param, path in CmodEfitMethods.efit_equilibrium_cols.items():
+            try:
+                efit_equilibrium[param] = params.mds_conn.get_data(
+                    path=path,
+                    tree_name="_efit_tree",
+                )
+            except mdsExceptions.MdsException as e:
+                params.logger.warning(repr(e))
+                params.logger.opt(exception=True).debug(e)
+                efit_equilibrium[param] = np.full(len(params.times), np.nan)
+
+        return efit_equilibrium
 
     @staticmethod
     def efit_check(params: PhysicsMethodParams):
