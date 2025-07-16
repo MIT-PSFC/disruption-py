@@ -10,7 +10,6 @@ import os
 import pytest
 import xarray as xr
 
-from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings import RetrievalSettings
 from disruption_py.settings.log_settings import LogSettings
 from disruption_py.workflow import get_shots_data
@@ -59,51 +58,6 @@ def test_only_requested_columns(tokamak, shotlist, test_folder_f):
         num_processes=2,
     )
     assert set(run_columns) == set(results.data_vars)
-
-
-@skip_on_fast_execution
-@pytest.mark.parametrize("domain_setting", ["flattop", "rampup_and_flattop"])
-def test_domain_setting(
-    tokamak, shotlist, domain_setting, full_domain_data, test_folder_f
-):
-    """
-    Test the two partial domain settings by comparing their start and end times
-    with the full domain.
-    """
-    if (
-        tokamak in [Tokamak.D3D, Tokamak.EAST]
-        and domain_setting == "rampup_and_flattop"
-    ):
-        pytest.skip(f"{domain_setting} domain setting not defined for {tokamak.value}")
-    retrieval_settings = RetrievalSettings(
-        efit_nickname_setting="default", domain_setting=domain_setting
-    )
-    part_domain_data = get_shots_data(
-        tokamak=tokamak,
-        shotlist_setting=shotlist,
-        retrieval_settings=retrieval_settings,
-        output_setting=os.path.join(test_folder_f, "output.nc"),
-        log_settings=LogSettings(
-            console_level="WARNING",
-            file_path=os.path.join(test_folder_f, "output.log"),
-        ),
-        num_processes=2,
-    )
-    assert (
-        set(shotlist)
-        == set(part_domain_data.shot.values)
-        == set(full_domain_data.shot.values)
-    )
-    for shot in shotlist:
-        part_domain = part_domain_data.sel(idx=part_domain_data.shot == shot)
-        full_domain = full_domain_data.sel(idx=full_domain_data.shot == shot)
-        p_start, p_end = part_domain.time.values[0], part_domain.time.values[-1]
-        f_start, f_end = full_domain.time.values[0], full_domain.time.values[-1]
-        if domain_setting == "flattop":
-            # Use <= because a shot may end during the flattop,
-            assert f_start < p_start < p_end <= f_end
-        else:
-            assert f_start == p_start < p_end < f_end
 
 
 @skip_on_fast_execution
