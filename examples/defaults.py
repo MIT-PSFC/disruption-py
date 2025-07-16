@@ -17,7 +17,6 @@ retrieval_settings = RetrievalSettings(
     custom_physics_methods=[],
     # timebase settings
     time_setting="disruption_warning",
-    domain_setting="full",
 )
 
 shot_data = get_shots_data(

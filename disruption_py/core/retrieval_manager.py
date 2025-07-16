@@ -14,7 +14,6 @@ from disruption_py.core.utils.misc import shot_msg
 from disruption_py.inout.mds import MDSConnection, ProcessMDSConnection
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
-from disruption_py.settings.domain_setting import DomainSettingParams
 from disruption_py.settings.nickname_setting import NicknameSettingParams
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.settings.time_setting import TimeSettingParams
@@ -190,7 +189,6 @@ class RetrievalManager:
         mds_conn: MDSConnection,
         disruption_time: float,
         retrieval_settings: RetrievalSettings,
-        **kwargs,
     ) -> PhysicsMethodParams:
         """
         Set up the physics method parameters for the shot.
@@ -205,8 +203,6 @@ class RetrievalManager:
             The disruption time of the shot.
         retrieval_settings : RetrievalSettings
             The settings for data retrieval.
-        **kwargs : dict
-            Additional keyword arguments.
 
         Returns
         -------
@@ -228,47 +224,6 @@ class RetrievalManager:
             mds_conn=mds_conn,
             times=times,
         )
-
-        # Modify already existing shot properties, such as modifying timebase
-        physics_method_params = self._modify_method_params_for_settings(
-            physics_method_params, retrieval_settings, **kwargs
-        )
-
-        return physics_method_params
-
-    def _modify_method_params_for_settings(
-        self,
-        physics_method_params: PhysicsMethodParams,
-        retrieval_settings: RetrievalSettings,
-        **_kwargs,
-    ) -> PhysicsMethodParams:
-        """
-        Modify the physics method parameters based on retrieval settings.
-
-        Parameters
-        ----------
-        physics_method_params : PhysicsMethodParams
-            The parameters for the physics method to modify.
-        retrieval_settings : RetrievalSettings
-            The settings for data retrieval.
-        **_kwargs : dict
-            Additional keyword arguments.
-
-        Returns
-        -------
-        PhysicsMethodParams
-            The modified physics method parameters.
-        """
-        new_timebase = retrieval_settings.domain_setting.get_domain(
-            DomainSettingParams(
-                physics_method_params=physics_method_params,
-                tokamak=self.tokamak,
-            )
-        )
-        if new_timebase is not None:
-            physics_method_params.times = new_timebase
-            # TODO: Make this only modify the cached results for new times
-            physics_method_params.cached_results.clear()
 
         return physics_method_params
 

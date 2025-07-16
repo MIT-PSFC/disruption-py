@@ -8,7 +8,6 @@ settings for retrieving data for a single shot.
 from dataclasses import dataclass, field
 from typing import List
 
-from disruption_py.settings.domain_setting import DomainSetting, resolve_domain_setting
 from disruption_py.settings.nickname_setting import (
     NicknameSetting,
     resolve_nickname_setting,
@@ -47,10 +46,6 @@ class RetrievalSettings:
         Time setting for the shot (default is "disruption_warning"). The retrieved
         data will be interpolated to this timebase. Can pass any `TimeSettingType`
         that resolves to a TimeSetting. See TimeSetting for more details.
-    domain_setting : DomainSetting, optional
-        Domain setting for the timebase (default is "full"). Either "full", "flattop",
-        or "rampup_and_flattop". Can pass any `DomainSettingType` that resolves
-        to a `DomainSetting` such as the listed strings.
     """
 
     # Shot creation settings
@@ -64,7 +59,6 @@ class RetrievalSettings:
 
     # Timebase setting
     time_setting: TimeSetting = "disruption_warning"
-    domain_setting: DomainSetting = "full"
 
     def __post_init__(self):
         """Resolve settings after initialization."""
@@ -79,7 +73,6 @@ class RetrievalSettings:
         """
 
         self.time_setting = resolve_time_setting(self.time_setting)
-        self.domain_setting = resolve_domain_setting(self.domain_setting)
         self.efit_nickname_setting = resolve_nickname_setting(
             self.efit_nickname_setting
         )
