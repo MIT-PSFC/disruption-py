@@ -20,8 +20,8 @@ class GenericPhysicsMethods:
     """
 
     @staticmethod
-    @physics_method(columns=["shot_domain"])
-    def get_shot_domain(params: PhysicsMethodParams):
+    @physics_method(columns=["time_domain"])
+    def get_time_domain(params: PhysicsMethodParams):
         r"""
         Get the domain (or phase) of every time point in a shot and return it
         as a categorical feature:
@@ -38,7 +38,7 @@ class GenericPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the categorical feature `shot_domain`.
+            A dictionary containing the categorical feature `time_domain`.
 
         References
         -------
@@ -55,7 +55,7 @@ class GenericPhysicsMethods:
         """
         # Initialize dictionaries
         signals = {}
-        thresholds = config(params.tokamak).physics.shot_domain_thresholds
+        thresholds = config(params.tokamak).physics.time_domain_thresholds
         conditions = {
             "dipprog_dt": lambda signal, threshold: np.abs(signal) <= threshold,
             "ip_prog": lambda signal, threshold: np.abs(signal) >= threshold,
@@ -75,11 +75,11 @@ class GenericPhysicsMethods:
             ip_parameters = EastPhysicsMethods.get_ip_parameters(params=params)
             signals["dipprog_dt"] = ip_parameters["dipprog_dt"]
         else:
-            return {"shot_domain": [np.nan]}
+            return {"time_domain": [np.nan]}
 
-        shot_domain = np.full(len(params.times), np.nan)
+        time_domain = np.full(len(params.times), np.nan)
         # Get flattop domain indices
-        indices_flattop = np.arange(len(shot_domain))
+        indices_flattop = np.arange(len(time_domain))
         for name in ["dipprog_dt", "ip_prog", "power_supply_railed"]:
             sig, thr = signals.get(name, None), thresholds.get(name, None)
             if all(v is not None for v in (sig, thr)):
@@ -96,11 +96,11 @@ class GenericPhysicsMethods:
         # Assign shot domains
         if len(indices_flattop) == 0:
             # Shot only has ramp up phase
-            shot_domain[:] = 1
+            time_domain[:] = 1
         else:
             flattop_start, flattop_end = indices_flattop[0], indices_flattop[-1] + 1
-            shot_domain[:flattop_start] = 1
-            shot_domain[flattop_start:flattop_end] = 2
-            shot_domain[flattop_end:] = 3
+            time_domain[:flattop_start] = 1
+            time_domain[flattop_start:flattop_end] = 2
+            time_domain[flattop_end:] = 3
 
-        return {"shot_domain": shot_domain}
+        return {"time_domain": time_domain}
