@@ -357,6 +357,8 @@ D3D_PROBES_BR = {
     'ESL67B334': {'R': 2.389, 'Z': -0.806, 'phi': 334.0, 'gamma': -24.1, 'L': 0.454, 'W': 30.0, 'NA': 2.2697, 'type': 'Br'},
 }
 
+
+
 class D3DMirnovMethods:
     """
     Class for retrieving and processing Mirnov-related signals for D3D
@@ -377,33 +379,31 @@ class D3DMirnovMethods:
             The names of all the Mirnov coils.
         phi_all : numpy.ndarray
             The toroidal angles of the Mirnov coils
-        theta_all : numpy.ndarray
-            The poloidal angles of the Mirnov coils
-        theta_pol_all : numpy.ndarray
-            The poloidal offset angles of the Mirnov coils.
+        gamma : np.ndarray
+            planar offset of the Mirnov coils
         """
         
     @staticmethod
-    def get_mirnov_fft(params: PhysicsMethodParams, mirnov_name: str, freq_resolution: float = 100, max_freq: float = 80e3):
+    def get_mirnov_fft(params: PhysicsMethodParams, mirnov_name: str, freq_resolution: float = 100, max_freq: float = 80e3, suffix="D"):
         """Get and the interpolated fft of a Mirnov coil.
         
         This will work best if the params timebase is uniform.
         """
-        path = f"ptdata('{mirnov_name}E', {params.shot_id})"
+        # There is a difference between E probes and D probes, D probes tend to be the 500 kHz ones.
+        path = f"ptdata('{mirnov_name}{suffix}', {params.shot_id})"
         try:
             mirnov_signal, mirnov_times = params.mds_conn.get_data_with_dims(
                         path=path,
                         tree_name="d3d",
                         astype="float32",
             )
-            #dim = params.mds_conn.get(f"dim_of({path})")
             # DIII-D mirnov times are in ms, convert to seconds
             mirnov_times = mirnov_times / 1000.0
             # Get the sampling frequency of the Mirnov signal
             f_mirnov = 1 / np.mean(np.diff(mirnov_times))
             params.logger.verbose(f"Using Mirnov frequency of {f_mirnov} Hz on {mirnov_name}")
-            # if not np.isclose(f_mirnov, 2e6, rtol=0.01):
-            #     params.logger.warning(f"[Shot {params.shot_id}] Got Mirnov frequency of {f_mirnov} Hz on {mirnov_name}, expected 2 MHz on DIII-D")
+            if not np.isclose(f_mirnov, 500e3, rtol=0.01):
+                params.logger.warning(f"[Shot {params.shot_id}] Got Mirnov frequency of {f_mirnov} Hz on {mirnov_name}, expected 500 kHz on DIII-D")
 
             # Set up the fft taking into account the params timebase
             f_timebase = 1 / np.mean(np.diff(params.times))
@@ -507,22 +507,23 @@ class D3DMirnovMethods:
     def get_preferred_mirnov_sxx(params: PhysicsMethodParams):
         """Get the Sxx of a single Mirnov coil in the shot, in order of preference from a few consistently 'good' probes"""
 
-        preferred_mirnov_names = D3D_PROBES_BP.keys()
+        # From the R0 toroidal array
+        preferred_mirnov_names = ['MPI66M020', 'MPI66M097', 'MPI66M200', 'MPI66M247', 'MPI66M277', 'MPI66M340']
 
         for mirnov_name in preferred_mirnov_names:
             mirnov_fft, freqs = D3DMirnovMethods.get_mirnov_fft(params, mirnov_name)
-            # if mirnov_fft is not None:
-            #     params.logger.info(f"Using {mirnov_name} for Sxx")
-            #     mirnov_sxx = np.abs(mirnov_fft) ** 2
-            #     return xr.DataArray(
-            #         mirnov_sxx,
-            #         dims=("frequency", "time"),
-            #         coords={
-            #             "shot": params.shot_id,
-            #             "frequency": freqs,
-            #             "time": params.times,
-            #         },
-            #         attrs={
-            #             "probe_name": mirnov_name,
-            #         },
-            #     ).astype(np.float32).to_dataset(name="mirnov_sxx")
+            if mirnov_fft is not None:
+                params.logger.info(f"Using {mirnov_name} for Sxx")
+                mirnov_sxx = np.abs(mirnov_fft) ** 2
+                return xr.DataArray(
+                    mirnov_sxx,
+                    dims=("frequency", "time"),
+                    coords={
+                        "shot": params.shot_id,
+                        "frequency": freqs,
+                        "time": params.times,
+                    },
+                    attrs={
+                        "probe_name": mirnov_name,
+                    },
+                ).astype(np.float32).to_dataset(name="mirnov_sxx")
