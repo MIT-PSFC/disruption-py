@@ -363,25 +363,6 @@ class D3DMirnovMethods:
     """
     Class for retrieving and processing Mirnov-related signals for D3D
     """
-
-    @staticmethod
-    def get_mirnov_names_and_locations(params: PhysicsMethodParams, debug=False):
-        """Get the names and locations of the Mirnov coils in the ANALYSIS tree.
-
-        Parameters
-        ----------
-        params : PhysicsMethodParams
-            The parameters for the physics method.
-
-        Returns
-        -------
-        all_mirnov_names : list[str]
-            The names of all the Mirnov coils.
-        phi_all : numpy.ndarray
-            The toroidal angles of the Mirnov coils
-        gamma : np.ndarray
-            planar offset of the Mirnov coils
-        """
         
     @staticmethod
     def get_mirnov_fft(params: PhysicsMethodParams, mirnov_name: str, freq_resolution: float = 100, max_freq: float = 80e3, suffix="D"):
@@ -401,9 +382,9 @@ class D3DMirnovMethods:
             mirnov_times = mirnov_times / 1000.0
             # Get the sampling frequency of the Mirnov signal
             f_mirnov = 1 / np.mean(np.diff(mirnov_times))
-            params.logger.verbose(f"Using Mirnov frequency of {f_mirnov} Hz on {mirnov_name}")
             if not np.isclose(f_mirnov, 500e3, rtol=0.01):
-                params.logger.warning(f"[Shot {params.shot_id}] Got Mirnov frequency of {f_mirnov} Hz on {mirnov_name}, expected 500 kHz on DIII-D")
+                raise ValueError(f"Unexpected Mirnov frequency {f_mirnov} Hz for {mirnov_name}, expected 500 kHz on DIII-D")
+            params.logger.verbose(f"Using Mirnov frequency of {f_mirnov} Hz on {mirnov_name}")
 
             # Set up the fft taking into account the params timebase
             f_timebase = 1 / np.mean(np.diff(params.times))
@@ -425,6 +406,7 @@ class D3DMirnovMethods:
 
             return mirnov_fft_interp, freqs
         except Exception as e:
+            params.logger.warning(f"[Shot {params.shot_id}] Mirnov FFT encountered problem: {e}")
             return None, None
 
     @staticmethod
@@ -447,19 +429,22 @@ class D3DMirnovMethods:
             Coordinates are probe, frequency, time, phi, theta, and theta_pol.
         """
 
-        all_mirnov_names, phi_all, theta_all, theta_pol_all = D3DMirnovMethods.get_mirnov_names_and_locations(params, debug=True)
-
         valid_mirnov_ffts = []
         valid_mirnov_names = []
         valid_mirnov_locations = []
         saved_freqs = None
 
-        for mirnov_name, mirnov_phi, mirnov_theta, mirnov_theta_pol in zip(all_mirnov_names, phi_all, theta_all, theta_pol_all):
+        for mirnov_name, mirnov_location in D3D_PROBES_BP.items():
+            mirnov_R = mirnov_location['R']
+            mirnov_phi = mirnov_location['phi']
+            mirnov_Z = mirnov_location['Z']
+            mirnov_gamma = mirnov_location['gamma']
+
             mirnov_fft, freqs = D3DMirnovMethods.get_mirnov_fft(params, mirnov_name)
             if mirnov_fft is not None:
                 valid_mirnov_ffts.append(mirnov_fft)
                 valid_mirnov_names.append(mirnov_name)
-                valid_mirnov_locations.append((mirnov_phi, mirnov_theta, mirnov_theta_pol))
+                valid_mirnov_locations.append((mirnov_R, mirnov_phi, mirnov_Z, mirnov_gamma))
 
             if saved_freqs is None:
                 saved_freqs = freqs
@@ -475,9 +460,10 @@ class D3DMirnovMethods:
                 "probe_name": ("probe", valid_mirnov_names),
                 "frequency": saved_freqs,
                 "time": params.times,
-                "phi": ("probe", [loc[0] for loc in valid_mirnov_locations]),
-                "theta": ("probe", [loc[1] for loc in valid_mirnov_locations]),
-                "theta_pol": ("probe", [loc[2] for loc in valid_mirnov_locations]),
+                "R": ("probe", [loc[0] for loc in valid_mirnov_locations]),
+                "phi": ("probe", [loc[1] for loc in valid_mirnov_locations]),
+                "Z": ("probe", [loc[2] for loc in valid_mirnov_locations]),
+                "gamma": ("probe", [loc[3] for loc in valid_mirnov_locations]),
             },
         )
         mirnov_ffts_imag = xr.DataArray(
@@ -489,9 +475,10 @@ class D3DMirnovMethods:
                 "probe_name": ("probe", valid_mirnov_names),
                 "frequency": saved_freqs,
                 "time": params.times,
-                "phi": ("probe", [loc[0] for loc in valid_mirnov_locations]),
-                "theta": ("probe", [loc[1] for loc in valid_mirnov_locations]),
-                "theta_pol": ("probe", [loc[2] for loc in valid_mirnov_locations]),
+                "R": ("probe", [loc[0] for loc in valid_mirnov_locations]),
+                "phi": ("probe", [loc[1] for loc in valid_mirnov_locations]),
+                "Z": ("probe", [loc[2] for loc in valid_mirnov_locations]),
+                "gamma": ("probe", [loc[3] for loc in valid_mirnov_locations]),
             },
         )
         mirnov_ds_real = mirnov_ffts_real.astype(np.float32).to_dataset(name="mirnov_fft_real")
