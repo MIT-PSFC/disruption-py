@@ -731,7 +731,10 @@ class TMDBTimeSetting(TimeSetting):
         )
 
         max_time = np.max(efit_time)
-        tmdb_time = np.round(np.arange(0, max_time + 1e-3, 1e-3), 3)
+        if params.tokamak == Tokamak.CMOD:
+            tmdb_time = np.round(np.arange(0, max_time + 1e-3, 1e-3), 3)
+        if params.tokamak == Tokamak.D3D:
+            tmdb_time = np.round(np.arange(0, max_time + 1, 1), 0)
         return _postprocess(times=tmdb_time, units=efit_time_unit)
 
 
