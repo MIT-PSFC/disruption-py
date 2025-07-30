@@ -246,7 +246,7 @@ class DisruptionNicknameSetting(NicknameSetting):
             return DefaultNicknameSetting().get_tree_name(params)
         efit_trees = params.database.query(
             "select tree from code_rundb.dbo.plasmas where "
-            f"shot = {params.shot_id} and runtag = 'DIS' and deleted = 0 order by idx",
+            f"shot = {params.shot_id} and runtag = 'DISPY' and deleted = 0 order by idx",
             use_pandas=False,
         )
         if len(efit_trees) == 0:
@@ -269,7 +269,7 @@ class DisruptionNicknameSetting(NicknameSetting):
         """
         if params.disruption_time is None:
             return DefaultNicknameSetting().get_tree_name(params)
-        return "efit18"
+        return "efit21"
 
     def _get_tree_name(self, params: NicknameSettingParams) -> str:
         """
