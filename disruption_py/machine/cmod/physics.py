@@ -1443,13 +1443,11 @@ class CmodPhysicsMethods:
 
     @staticmethod
     def _get_te_profile_params_ece(
-        params,
         times,
         te,
         te_time,
         ece_radii,
         ece_radii_time,
-        te0,
         efit_time,
         r0,
         aminor,
@@ -1514,24 +1512,14 @@ class CmodPhysicsMethods:
         ----------
         times : array_like
             Requested time basis
-        gpc1_te_array: array_like
-            Te measurements from GPC diagnostic
-        gpc1_te_time: array_like
-            Time basis of GPC Te measurements
-        gpc1_rad_data: array_like
-            Radial positions corresponding to GPC channels
-        gpc1_rad_time: array_like
-            Time basis of GPC channel radial positions
-        gpc2_te_array: array_like
+        te: array_like
             Te measurements from GPC2 diagnostic
-        gpc2_te_time: array_like
+        te_time: array_like
             Time basis of GPC2 Te measurements
-        gpc2_rad_data: array_like
+        ece_radii: array_like
             Radial positions corresponding to GPC2 channels
-        gpc2_rad_time: array_like
+        ece_radii_time: array_like
             Time basis of GPC2 channel radial positions
-        te0: array_like
-            Central electron temperature calculated from GPC2 system
         efit_time : array_like
             Time basis of '_efit_tree'
         r0 : array_like
@@ -1561,15 +1549,6 @@ class CmodPhysicsMethods:
 
         Last Major Update: Henry Wietfeldt (08/28/24), (PR: #260)
         """
-
-        # TODO: Delete this preamble code
-        import pandas as pd 
-        from disruption_py.core.utils.math import gauss
-        # import matplotlib.pyplot as plt
-        local_data_dir = '/home/henrycw/projects/disruption-py/drafts/local_data/'
-        time_slices = np.genfromtxt(f"{local_data_dir}time_slices.txt", dtype=float)
-        dfs_to_plot = []
-
         # Constants
         core_bound_factor = 0.2
         edge_bound_factor = 0.8
@@ -1591,7 +1570,7 @@ class CmodPhysicsMethods:
         r0 = interp1(efit_time, r0, te_time)
         aminor = interp1(efit_time, aminor, te_time)
 
-        # Extend the last radii measurement up until the last EFIT. 
+        # Extend the last radii measurement up until the last EFIT.
         # Radii depend on Bt, which should be stable until the current quench.
         indx_last_rad = np.argmax(te_time > ece_radii_time[-1]) - 1
         for i in range(len(radii)):
@@ -1619,11 +1598,6 @@ class CmodPhysicsMethods:
         (okay_time_indices,) = np.where(
             (np.abs(btor) > min_btor) & (lh_power < max_lh_power) & (te_time > ece_radii_time[0])
         )
-
-        # TODO: Delete this temporary snippet for testing
-        idx_time_slices = []
-        for t in time_slices:
-            idx_time_slices.append(np.argmin(np.abs(te_time - t)))
 
         # Main loop for calculations
         te_core_vs_avg = np.full(len(te_time), np.nan)
@@ -1653,7 +1627,6 @@ class CmodPhysicsMethods:
             if np.sum(okay_indices) > min_okay_channels:
                 r = radii[i, okay_indices]
                 y = te[i, okay_indices]
-
                 # Check that there are two raw points in the core and in the edge
                 # so that profile is properly aligned to measure peaking factors
                 # and ensure a reasonable Gaussian fit
@@ -1669,31 +1642,11 @@ class CmodPhysicsMethods:
                 guess = [y.max(), (r.max() - r.min()) / 3]
                 try:
                     pmu = r0[i]
-                    # TODO: pa -> _
-                    pa, psigma = gaussian_fit_with_fixed_mean(pmu, r, y, guess)
+                    _, psigma = gaussian_fit_with_fixed_mean(pmu, r, y, guess)
                 except RuntimeError as e:
                     if str(e).startswith("Optimal parameters not found"):
-                        params.logger.debug({e})
                         continue
                     raise e
-                # TODO: Delete this snippet
-                if i in idx_time_slices:
-                    params.logger.debug(guess)
-                    dfs_to_plot.append(pd.DataFrame(
-                                    {
-                                    'time': te_time[i].round(3),
-                                    'r': r,
-                                    'te': y,
-                                    'te_fit': gauss(r, pa, pmu, psigma),
-                                    'te_fit_pa': pa,
-                                    'te_fit_pmu': pmu,
-                                    'te_fit_psigma': psigma,
-                                    'te_guess': gauss(r, guess[0], pmu, guess[1]),
-                                    'r0': r0[i],
-                                    'a': aminor[i]
-                                    }
-                                    ))
-
                 # rescale from sigma to HWHM for sigma values that are physical
                 # https://en.wikipedia.org/wiki/Full_width_at_half_maximum
                 te_width[i] = psigma * np.sqrt(2 * np.log(2))
@@ -1703,10 +1656,6 @@ class CmodPhysicsMethods:
                 te_equal_spaced = interp1(
                     r, y, r_equal_spaced, fill_value=(y[0], y[-1])
                 )
-                # if i in idx_time_slices:
-                #     params.logger.debug(f"Edge: {r0[i] + aminor[i]}")
-                #     plt.scatter(r_equal_spaced, te_equal_spaced)
-                #     plt.show()
                 core_indices = (
                     np.abs(r_equal_spaced - r0[i]) < core_bound_factor * aminor[i]
                 ) & (~np.isnan(te_equal_spaced))
@@ -1725,8 +1674,6 @@ class CmodPhysicsMethods:
         te_core_vs_avg = interp1(te_time, te_core_vs_avg, times)
         te_edge_vs_avg = interp1(te_time, te_edge_vs_avg, times)
         te_width = interp1(te_time, te_width, times)
-        te0 = interp1(te_time, te0, times)
-
         # Sanity check: Te width should be positive and less than minor radius
         # Unphysical Te width indicates ECE profile may be bad so set peaking factors to NaN too
         aminor = interp1(te_time, aminor, times)
@@ -1734,21 +1681,15 @@ class CmodPhysicsMethods:
         te_width[unphysical_mask] = np.nan
         te_core_vs_avg[unphysical_mask] = np.nan
         te_edge_vs_avg[unphysical_mask] = np.nan
-
-        # TODO: Delete this line
-        if len(dfs_to_plot) > 0:
-            df_profiles = pd.concat(dfs_to_plot, ignore_index=True)
-            df_profiles.to_csv(f'{local_data_dir}te_prof.csv')
         return {
             "te_core_vs_avg_ece": te_core_vs_avg,
             "te_edge_vs_avg_ece": te_edge_vs_avg,
             "te_width_ece": te_width,
-            "te0": te0
         }
 
     @staticmethod
     @physics_method(
-        columns=["te_core_vs_avg_ece", "te_edge_vs_avg_ece", "te_width_ece", "te0", "te_width_err"],
+        columns=["te_core_vs_avg_ece", "te_edge_vs_avg_ece", "te_width_ece"],
         tokamak=Tokamak.CMOD,
     )
     def get_te_profile_params_ece(params: PhysicsMethodParams):
@@ -1825,21 +1766,12 @@ class CmodPhysicsMethods:
         gpc2_rad_data, gpc2_rad_time = params.mds_conn.get_data_with_dims(
             f"{node_path}:radii", tree_name="electrons"
         )  # [m], [s]
-
-        # Te0 from GPC2 useful to check for outliers in the GPC channels
-        # which be caused by some artifact or systematic error
-        te0 = params.mds_conn.get_data(
-            r"\gpc2_te0", tree_name="electrons"
-        )
-
         return CmodPhysicsMethods._get_te_profile_params_ece(
-            params,
             params.times,
             gpc2_te_data,
             gpc2_te_time,
             gpc2_rad_data,
             gpc2_rad_time,
-            te0,
             efit_time,
             r0,
             aminor,
