@@ -1457,8 +1457,8 @@ class CmodPhysicsMethods:
         lh_time,
     ):
         """
-        Calculates Te PF and width from ECE data using the two GPC diagnostic systems.
-        GPC diagnostics look at the mid-plane, and each channel detects a different
+        Calculates Te PF and width from ECE data using the GPC2 diagnostic system.
+        GPC2 looks at the mid-plane, and each channel detects a different
         emitted frequency associated with the second harmonic, which depends on B and
         therefore R.
         - te_width is the half-width at half-max of a Gaussian fit of the Te profile
@@ -1547,7 +1547,7 @@ class CmodPhysicsMethods:
           p. 053506, 2005, doi: 10.1063/1.1899311.
         - https://github.com/MIT-PSFC/disruption-py/pull/260
 
-        Last Major Update: Henry Wietfeldt (08/28/24), (PR: #260)
+        Last Major Update: Henry Wietfeldt (08/12/25), (PR: #)
         """
         # Constants
         core_bound_factor = 0.2
@@ -1574,7 +1574,7 @@ class CmodPhysicsMethods:
         # Radii depend on Bt, which should be stable until the current quench.
         indx_last_rad = np.argmax(te_time > ece_radii_time[-1]) - 1
         for i in range(len(radii)):
-            radii[i, indx_last_rad+1:] = radii[i, indx_last_rad]
+            radii[i, indx_last_rad + 1 :] = radii[i, indx_last_rad]
 
         # Remaining calculations loop over time then radii so transpose for efficient
         # caching
@@ -1596,7 +1596,9 @@ class CmodPhysicsMethods:
             lh_power = np.zeros(len(te_time))
         lh_power = np.nan_to_num(lh_power, nan=0.0)
         (okay_time_indices,) = np.where(
-            (np.abs(btor) > min_btor) & (lh_power < max_lh_power) & (te_time > ece_radii_time[0])
+            (np.abs(btor) > min_btor)
+            & (lh_power < max_lh_power)
+            & (te_time > ece_radii_time[0])
         )
 
         # Main loop for calculations
@@ -1605,8 +1607,8 @@ class CmodPhysicsMethods:
         te_width = np.full(len(te_time), np.nan)
         for i in okay_time_indices:
             # Only consider points that are likely to accurately measure Te
-            calib_indices = (te[i, :] > min_te) & (radii[i,:] < r0[i] + aminor[i])
-            harmonic_overlap_indices = (radii[i, :] < min_r_to_avoid_harmonic_overlap)
+            calib_indices = (te[i, :] > min_te) & (radii[i, :] < r0[i] + aminor[i])
+            harmonic_overlap_indices = radii[i, :] < min_r_to_avoid_harmonic_overlap
             nonthermal_overlap_indices = np.full(len(radii[i, :]), False)
             # Identify rising tail (overlap with non-thermal emission). Finding the min
             # Te near the edge and checking outwards for a rising tail seems to do well
@@ -1630,10 +1632,12 @@ class CmodPhysicsMethods:
                 # Check that there are two raw points in the core and in the edge
                 # so that profile is properly aligned to measure peaking factors
                 # and ensure a reasonable Gaussian fit
-                num_raw_core = np.sum((np.abs(r - r0[i]) < core_bound_factor * aminor[i]
-                                )  & (~np.isnan(y)))
-                num_raw_edge = np.sum((np.abs(r - r0[i]) > edge_bound_factor * aminor[i]
-                                )  & (~np.isnan(y)))
+                num_raw_core = np.sum(
+                    (np.abs(r - r0[i]) < core_bound_factor * aminor[i]) & (~np.isnan(y))
+                )
+                num_raw_edge = np.sum(
+                    (np.abs(r - r0[i]) > edge_bound_factor * aminor[i]) & (~np.isnan(y))
+                )
                 if num_raw_core < 2 or num_raw_edge < 2:
                     continue
 
