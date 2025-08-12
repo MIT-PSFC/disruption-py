@@ -1482,7 +1482,7 @@ class CmodPhysicsMethods:
           is much LOWER than Thomson Scattering, for some portion of the LFS profile
           (typically starting around r/a 0.8?). In this case ECE cannot be used." An
           example shot with ECE cutoffs is 1140226024 (Calibration of Thomson density
-          using ECE cutoffs), 1160930034. Because the critical density is proportional 
+          using ECE cutoffs), 1160930034. Because the critical density is proportional
           to B^2, shots with B = 5.4 T on axis would need to have very high densities to
           experience a cutoff in the profile. We could look for cutoffs by comparing
           the B profile to the ne profile and checking that ne < ncrit throughout the
