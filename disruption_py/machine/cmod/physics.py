@@ -1555,7 +1555,7 @@ class CmodPhysicsMethods:
         min_okay_channels = 9
         min_te = 0.02  # [keV]
         min_btor = 4.5  # [T]
-        max_lh_power = 10000.0  # [kW]
+        max_lh_power = 1.0  # [kW]
         min_r_to_avoid_harmonic_overlap = 0.6  # [m]
         rising_tail_factor = 1.2
 
