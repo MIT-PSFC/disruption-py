@@ -933,7 +933,11 @@ class CmodPhysicsMethods:
             baseline = np.mean(signal[baseline_indices])
             signal = signal - baseline
             signal = signal - bp13_btor_pickup_coeffs[i] * btor
-            bp13_signals.append(interp1(t_mag, signal, params.times))
+            signal = interp1(t_mag, signal, params.times)
+            # Check if the signal's magnitude is >1T; if so consider this sensor as broken
+            if np.mean(abs(signal)) > 1:
+                continue
+            bp13_signals.append(signal)
             a_row = [
                 1,
                 np.sin(bp13_phi[i] * np.pi / 180),
