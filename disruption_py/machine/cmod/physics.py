@@ -1486,10 +1486,10 @@ class CmodPhysicsMethods:
           example shot with ECE cutoffs is 1140226024 (Calibration of Thomson density
           using ECE cutoffs), 1160930034. Because the critical density is proportional
           to B^2, shots with B = 5.4 T on axis would need to have very high densities to
-          experience a cutoff in the profile. Most cutoffs are caught shots 
+          experience a cutoff in the profile. Most cutoffs are caught shots
           by ignoring shots with B < 4.5 T. To identify cutoffs on higher field shots,
           we compare the line averaged density to the critical density for a cutoff
-          at r = a/sqrt(3), which is where n(r) = <n> (line averaged) for parabolic 
+          at r = a/sqrt(3), which is where n(r) = <n> (line averaged) for parabolic
           profiles with moderate peaking. For B=5.4 T, n_crit = 4.2e20 m^-3.
         - Non-aligned grating: The gratings were usually aligned for radial coverage
           assuming Bt=5.4T. For low Bt shots (like 2.8T), sometimes the gratings were
@@ -1566,7 +1566,7 @@ class CmodPhysicsMethods:
         min_r_to_avoid_harmonic_overlap = 0.6  # [m]
         rising_tail_factor = 1.2
         max_te_over_te0 = 2.0
-        cmod_maj_rad = 0.68 # [m]
+        cmod_maj_rad = 0.68  # [m]
 
         # Interpolate data onto Te timebase. The shape of the plasma (r0 and a)
         # radial positions of ECE channels (determined by Btor) should be approx. constant
@@ -1627,7 +1627,7 @@ class CmodPhysicsMethods:
             # Only consider points that are likely to accurately measure Te
             calib_indices = (te[i, :] > min_te) & (radii[i, :] < r0[i] + aminor[i])
             harmonic_overlap_indices = radii[i, :] < min_r_to_avoid_harmonic_overlap
-            outlier_indices = te[i,:] > max_te_over_te0 * te0[i]
+            outlier_indices = te[i, :] > max_te_over_te0 * te0[i]
             density_cutoff_indices = n_e[i] > n_crit[i]
             nonthermal_overlap_indices = np.full(len(radii[i, :]), False)
             # Identify rising tail (overlap with non-thermal emission). Finding the min
@@ -1795,12 +1795,10 @@ class CmodPhysicsMethods:
         )  # [m], [s]
         # Te0 from GPC2 useful to check for outliers in the GPC channels
         # which be caused by some artifact or systematic error
-        gpc2_te0 = params.mds_conn.get_data(
-            r"\gpc2_te0", tree_name="electrons"
-        )
+        gpc2_te0 = params.mds_conn.get_data(r"\gpc2_te0", tree_name="electrons")
         # Line average density [m^-3] to check for cutoffs
         densities = CmodPhysicsMethods.get_densities(params)
-        n_e = densities['n_e']
+        n_e = densities["n_e"]
         return CmodPhysicsMethods._get_te_profile_params_ece(
             params.times,
             gpc2_te_data,
