@@ -7,6 +7,7 @@ Module for retrieving and calculating data for CMOD physics methods.
 import warnings
 
 import numpy as np
+import scipy.constants as const
 from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.caching import cache_method
@@ -1448,6 +1449,7 @@ class CmodPhysicsMethods:
         te_time,
         ece_radii,
         ece_radii_time,
+        te0,
         efit_time,
         r0,
         aminor,
@@ -1455,6 +1457,7 @@ class CmodPhysicsMethods:
         t_mag,
         lh_power,
         lh_time,
+        n_e,
     ):
         """
         Calculates Te PF and width from ECE data using the GPC2 diagnostic system.
@@ -1476,7 +1479,6 @@ class CmodPhysicsMethods:
         across the arbitrary core or edge boundary.
 
         ECE as a Te profile diagnostic can suffer from several artifacts:
-        Artifacts currently NOT explicitly checked for
         - Density cutoffs: High ne plasmas (typically H-modes) can have an ECE cutoff.
           According to Amanda Hubbard, "what you wil see is a section of profile which
           is much LOWER than Thomson Scattering, for some portion of the LFS profile
@@ -1484,11 +1486,11 @@ class CmodPhysicsMethods:
           example shot with ECE cutoffs is 1140226024 (Calibration of Thomson density
           using ECE cutoffs), 1160930034. Because the critical density is proportional
           to B^2, shots with B = 5.4 T on axis would need to have very high densities to
-          experience a cutoff in the profile. We could look for cutoffs by comparing
-          the B profile to the ne profile and checking that ne < ncrit throughout the
-          profile; however, a simpler check for now is to ignore shots with B < 4.5 T
-          and assume there are no cutoffs with B >= 4.5 T.
-        Artifacts currently checked for
+          experience a cutoff in the profile. Most cutoffs are caught shots 
+          by ignoring shots with B < 4.5 T. To identify cutoffs on higher field shots,
+          we compare the line averaged density to the critical density for a cutoff
+          at r = a/sqrt(3), which is where n(r) = <n> (line averaged) for parabolic 
+          profiles with moderate peaking. For B=5.4 T, n_crit = 4.2e20 m^-3.
         - Non-aligned grating: The gratings were usually aligned for radial coverage
           assuming Bt=5.4T. For low Bt shots (like 2.8T), sometimes the gratings were
           adjusted, sometimes not. Low Bt shots also tend to have low signal and often
@@ -1520,6 +1522,8 @@ class CmodPhysicsMethods:
             Radial positions corresponding to GPC2 channels
         ece_radii_time: array_like
             Time basis of GPC2 channel radial positions
+        te0: array_like
+            The central electron temperature inferred from the GPC2 system
         efit_time : array_like
             Time basis of '_efit_tree'
         r0 : array_like
@@ -1534,6 +1538,8 @@ class CmodPhysicsMethods:
             Lower hybrid power
         lh_time: array_like
             Time basis of lower hybrid power
+        n_e: array_like
+            Line averaged density with view of plasma core and times as time basis
 
         Returns
         -------
@@ -1559,6 +1565,8 @@ class CmodPhysicsMethods:
         max_lh_power = 1.0  # [kW]
         min_r_to_avoid_harmonic_overlap = 0.6  # [m]
         rising_tail_factor = 1.2
+        max_te_over_te0 = 2.0
+        cmod_maj_rad = 0.68 # [m]
 
         # Interpolate data onto Te timebase. The shape of the plasma (r0 and a)
         # radial positions of ECE channels (determined by Btor) should be approx. constant
@@ -1570,6 +1578,7 @@ class CmodPhysicsMethods:
                 radii[i, :] = interp1(ece_radii_time, ece_radii[i, :], te_time)
         r0 = interp1(efit_time, r0, te_time)
         aminor = interp1(efit_time, aminor, te_time)
+        n_e = interp1(times, n_e, te_time)
 
         # Extend the last radii measurement up until the last EFIT.
         # Radii depend on Bt, which should be stable until the current quench.
@@ -1602,6 +1611,14 @@ class CmodPhysicsMethods:
             & (te_time > ece_radii_time[0])
         )
 
+        # Critical density for 2nd harmonic X-mod cutoffs due to right-hand cutoff frequency
+        # Source: Zhurovich, et. al, Rev. Sci. Instrum., 2005, doi: 10.1063/1.1899311
+        # For moderately peaked profiles, n(r) = n0(1 - nu*(r/a)^2), the line integrated
+        # density is approximately equal to n(r=a/sqrt(3)), so calculate critical density
+        # for cutoff (n > n_crit) at r = a/sqrt(3)
+        btor_midrad = btor * cmod_maj_rad / (cmod_maj_rad + aminor / np.sqrt(3))
+        n_crit = 2 * btor_midrad**2 * const.epsilon_0 / const.m_e
+
         # Main loop for calculations
         te_core_vs_avg = np.full(len(te_time), np.nan)
         te_edge_vs_avg = np.full(len(te_time), np.nan)
@@ -1610,6 +1627,8 @@ class CmodPhysicsMethods:
             # Only consider points that are likely to accurately measure Te
             calib_indices = (te[i, :] > min_te) & (radii[i, :] < r0[i] + aminor[i])
             harmonic_overlap_indices = radii[i, :] < min_r_to_avoid_harmonic_overlap
+            outlier_indices = te[i,:] > max_te_over_te0 * te0[i]
+            density_cutoff_indices = n_e[i] > n_crit[i]
             nonthermal_overlap_indices = np.full(len(radii[i, :]), False)
             # Identify rising tail (overlap with non-thermal emission). Finding the min
             # Te near the edge and checking outwards for a rising tail seems to do well
@@ -1625,7 +1644,9 @@ class CmodPhysicsMethods:
             okay_indices = (
                 calib_indices
                 & (~harmonic_overlap_indices)
+                & (~outlier_indices)
                 & (~nonthermal_overlap_indices)
+                & (~density_cutoff_indices)
             )
             if np.sum(okay_indices) > min_okay_channels:
                 r = radii[i, okay_indices]
@@ -1737,7 +1758,8 @@ class CmodPhysicsMethods:
         -------
         - referenced sources: [get_ECE_data_cmod.m](https://github.com/MIT-PSFC/
         disruption-py/blob/matlab/CMOD/matlab-core/get_ECE_data_cmod.m)
-        - pull requests: #[260](https://github.com/MIT-PSFC/disruption-py/pull/260)
+        - pull requests: #[260](https://github.com/MIT-PSFC/disruption-py/pull/260),
+        #[466](https://github.com/MIT-PSFC/disruption-py/pull/466)
         """
 
         # Get magnetic axis data from EFIT
@@ -1771,12 +1793,21 @@ class CmodPhysicsMethods:
         gpc2_rad_data, gpc2_rad_time = params.mds_conn.get_data_with_dims(
             f"{node_path}:radii", tree_name="electrons"
         )  # [m], [s]
+        # Te0 from GPC2 useful to check for outliers in the GPC channels
+        # which be caused by some artifact or systematic error
+        gpc2_te0 = params.mds_conn.get_data(
+            r"\gpc2_te0", tree_name="electrons"
+        )
+        # Line average density [m^-3] to check for cutoffs
+        densities = CmodPhysicsMethods.get_densities(params)
+        n_e = densities['n_e']
         return CmodPhysicsMethods._get_te_profile_params_ece(
             params.times,
             gpc2_te_data,
             gpc2_te_time,
             gpc2_rad_data,
             gpc2_rad_time,
+            gpc2_te0,
             efit_time,
             r0,
             aminor,
@@ -1784,6 +1815,7 @@ class CmodPhysicsMethods:
             t_mag,
             lh_power,
             lh_time,
+            n_e,
         )
 
     @staticmethod
