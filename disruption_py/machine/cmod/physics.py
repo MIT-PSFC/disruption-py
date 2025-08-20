@@ -1579,6 +1579,11 @@ class CmodPhysicsMethods:
         r0 = interp1(efit_time, r0, te_time)
         aminor = interp1(efit_time, aminor, te_time)
         n_e = interp1(times, n_e, te_time)
+        btor = interp1(t_mag, btor, te_time)
+        if len(lh_time) > 1:
+            lh_power = interp1(lh_time, lh_power, te_time)
+        else:
+            lh_power = np.zeros(len(te_time))
 
         # Extend the last radii measurement up until the last EFIT.
         # Radii depend on Bt, which should be stable until the current quench.
@@ -1595,22 +1600,6 @@ class CmodPhysicsMethods:
             radii[i, :] = radii[i, sorted_index]
             te[i, :] = te[i, sorted_index]
 
-        # Time slices with low Btor are unreliable because gratings are often not
-        # aligned to field, signal is low, and there are frequent density cutoffs.
-        # Time slices with LH heating are unreliable because direct electron heating
-        # leads to non-thermal emission
-        btor = interp1(t_mag, btor, te_time)
-        if len(lh_time) > 1:
-            lh_power = interp1(lh_time, lh_power, te_time)
-        else:
-            lh_power = np.zeros(len(te_time))
-        lh_power = np.nan_to_num(lh_power, nan=0.0)
-        (okay_time_indices,) = np.where(
-            (np.abs(btor) > min_btor)
-            & (lh_power < max_lh_power)
-            & (te_time > ece_radii_time[0])
-        )
-
         # Critical density for 2nd harmonic X-mod cutoffs due to right-hand cutoff frequency
         # Source: Zhurovich, et. al, Rev. Sci. Instrum., 2005, doi: 10.1063/1.1899311
         # For moderately peaked profiles, n(r) = n0(1 - nu*(r/a)^2), the line integrated
@@ -1619,16 +1608,27 @@ class CmodPhysicsMethods:
         btor_midrad = btor * cmod_maj_rad / (cmod_maj_rad + aminor / np.sqrt(3))
         n_crit = 2 * btor_midrad**2 * const.epsilon_0 / const.m_e
 
+        # Time slices with low Btor are unreliable because gratings are often not
+        # aligned to field, signal is low, and there are frequent density cutoffs.
+        # Time slices with LH heating are unreliable because direct electron heating
+        # leads to non-thermal emission
+        lh_power = np.nan_to_num(lh_power, nan=0.0)
+        (okay_time_indices,) = np.where(
+            (np.abs(btor) > min_btor)
+            & (lh_power < max_lh_power)
+            & (n_e < n_crit)
+            & (te_time > ece_radii_time[0])
+        )
+
         # Main loop for calculations
         te_core_vs_avg = np.full(len(te_time), np.nan)
         te_edge_vs_avg = np.full(len(te_time), np.nan)
         te_hwm = np.full(len(te_time), np.nan)
         for i in okay_time_indices:
-            # Only consider points that are likely to accurately measure Te
+            # Only consider radial channels that are likely to accurately measure Te
             calib_indices = (te[i, :] > min_te) & (radii[i, :] < r0[i] + aminor[i])
             harmonic_overlap_indices = radii[i, :] < min_r_to_avoid_harmonic_overlap
             outlier_indices = te[i, :] > max_te_over_te0 * te0[i]
-            density_cutoff_indices = n_e[i] > n_crit[i]
             nonthermal_overlap_indices = np.full(len(radii[i, :]), False)
             # Identify rising tail (overlap with non-thermal emission). Finding the min
             # Te near the edge and checking outwards for a rising tail seems to do well
@@ -1646,7 +1646,6 @@ class CmodPhysicsMethods:
                 & (~harmonic_overlap_indices)
                 & (~outlier_indices)
                 & (~nonthermal_overlap_indices)
-                & (~density_cutoff_indices)
             )
             if np.sum(okay_indices) > min_okay_channels:
                 r = radii[i, okay_indices]
