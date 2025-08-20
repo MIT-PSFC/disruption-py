@@ -1757,8 +1757,8 @@ class CmodPhysicsMethods:
         -------
         - referenced sources: [get_ECE_data_cmod.m](https://github.com/MIT-PSFC/
         disruption-py/blob/matlab/CMOD/matlab-core/get_ECE_data_cmod.m)
-        - pull requests: #[260](https://github.com/MIT-PSFC/disruption-py/pull/260),
-        #[466](https://github.com/MIT-PSFC/disruption-py/pull/466)
+        - pull requests: #[260](https://github.com/MIT-PSFC/disruption-py/pull/260), #[466](https:
+        //github.com/MIT-PSFC/disruption-py/pull/466)
         """
 
         # Get magnetic axis data from EFIT
