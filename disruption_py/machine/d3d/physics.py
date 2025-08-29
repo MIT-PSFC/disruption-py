@@ -7,6 +7,7 @@ Module for retrieving and calculating data for DIII-D physics methods.
 import numpy as np
 import scipy
 
+from disruption_py.inout.mds import mdsExceptions
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.errors import CalculationError
@@ -240,8 +241,8 @@ class D3DPhysicsMethods:
         except mdsExceptions.MdsException as e:
             params.logger.warning("Failed to open bolom tree.")
             params.logger.opt(exception=True).debug(e)
-        upper_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
-        lower_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
+        upper_channels = [f"bol_u{i + 1:02d}_v" for i in range(24)]
+        lower_channels = [f"bol_l{i + 1:02d}_v" for i in range(24)]
         bol_channels = upper_channels + lower_channels
         bol_signals = []
         for i in range(48):
@@ -1589,13 +1590,11 @@ class D3DPhysicsMethods:
 
         # Get bolometry data
         bol_prm, _ = params.mds_conn.get_data_with_dims(r"\bol_prm", tree_name="bolom")
-        upper_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
-        lower_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
+        upper_channels = [f"bol_u{i + 1:02d}_v" for i in range(24)]
+        lower_channels = [f"bol_l{i + 1:02d}_v" for i in range(24)]
         bol_channels = upper_channels + lower_channels
         bol_signals = []
-        bol_times = (
-            []
-        )  # TODO: Decide whether to actually use all bol_times instead of just first one
+        bol_times = []  # TODO: Decide whether to actually use all bol_times instead of just first one
         for i in range(48):
             bol_signal, bol_time = params.mds_conn.get_data_with_dims(
                 rf"\top.raw:{bol_channels[i]}", tree_name="bolom"

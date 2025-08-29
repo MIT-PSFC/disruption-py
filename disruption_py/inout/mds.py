@@ -29,8 +29,10 @@ except ModuleNotFoundError:
         # finally, create dummy class
         class MDSplus:
             """Dummy MDSplus class."""
+
             class Connection:
                 """Dummy Connection class."""
+
             # pylint: disable-next=invalid-name
             class mdsExceptions:
                 """Dummy mdsExceptions class."""

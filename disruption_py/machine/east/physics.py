@@ -7,6 +7,7 @@ Module for retrieving and calculating data for EAST physics methods.
 import numpy as np
 import scipy
 
+from disruption_py.inout.mds import mdsExceptions
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1, matlab_smooth
@@ -832,11 +833,11 @@ class EastPhysicsMethods:
         rmp = np.full((len(rmptime), 16), np.nan)
         for i in range(8):
             # Get irmpu1 to irmpu8
-            signal = params.mds_conn.get_data(rf"\irmpu{i+1}", tree_name="east")
+            signal = params.mds_conn.get_data(rf"\irmpu{i + 1}", tree_name="east")
             if len(signal) == len(rmptime):
                 rmp[:, i] = signal
             # Get irmpl1 to irmpl8
-            signal = params.mds_conn.get_data(rf"\irmpl{i+1}", tree_name="east")
+            signal = params.mds_conn.get_data(rf"\irmpl{i + 1}", tree_name="east")
             if len(signal) == len(rmptime):
                 rmp[:, i + 8] = signal
         # Get saddle coil signals
