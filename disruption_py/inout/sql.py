@@ -5,7 +5,6 @@ Module for managing SQL database connections.
 """
 
 import os
-import sys
 import threading
 from typing import List
 from urllib.parse import quote_plus
@@ -40,10 +39,6 @@ class ShotDatabase:
         passwd,
         **_kwargs,
     ):
-
-        if "pyodbc" not in sys.modules:
-            raise RuntimeError("No pyodbc module!")
-
         logger.debug(
             "Database initialization: {user}@{host}/{db_name}",
             user=user,
@@ -94,7 +89,9 @@ class ShotDatabase:
 
         # dummy database
         if not db_conf.get("host") or not db_conf.get("db_name"):
-            logger.debug("Did not setup database.")
+            logger.warning("No SQL server/database!")
+
+        if db_conf.driver == "dummy":
             return DummyDatabase()
 
         # read sybase login

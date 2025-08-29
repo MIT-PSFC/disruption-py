@@ -141,19 +141,20 @@ class RetrievalManager:
 
         mds_conn = self.process_mds_conn.get_shot_connection(shot_id=shot_id)
 
-        mds_conn.add_tree_nickname_funcs(
-            tree_nickname_funcs={
-                "_efit_tree": lambda: retrieval_settings.efit_nickname_setting.get_tree_name(
-                    NicknameSettingParams(
-                        shot_id=shot_id,
-                        mds_conn=mds_conn,
-                        database=self.process_database,
-                        disruption_time=disruption_time,
-                        tokamak=self.tokamak,
+        if isinstance(mds_conn, ProcessMDSConnection):
+            mds_conn.add_tree_nickname_funcs(
+                tree_nickname_funcs={
+                    "_efit_tree": lambda: retrieval_settings.efit_nickname_setting.get_tree_name(
+                        NicknameSettingParams(
+                            shot_id=shot_id,
+                            mds_conn=mds_conn,
+                            database=self.process_database,
+                            disruption_time=disruption_time,
+                            tokamak=self.tokamak,
+                        )
                     )
-                )
-            }
-        )
+                }
+            )
 
         physics_method_params = self.setup_physics_method_params(
             shot_id=shot_id,

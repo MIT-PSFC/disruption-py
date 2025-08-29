@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Union
 
+import xarray as xr
 import numpy as np
 from loguru import logger
 
@@ -16,6 +17,7 @@ from disruption_py.config import config
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.misc import shot_msg_patch
 from disruption_py.inout.mds import MDSConnection, mdsExceptions
+from disruption_py.inout.s3 import S3Connection
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.east.util import EastUtilMethods
 from disruption_py.machine.tokamak import Tokamak
@@ -183,6 +185,7 @@ class TimeSettingDict(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
+        print(self.resolved_time_setting_dict)
         chosen_setting = self.resolved_time_setting_dict.get(params.tokamak, None)
         if chosen_setting is not None:
             return chosen_setting.get_times(params)
@@ -491,6 +494,7 @@ class IpTimeSetting(TimeSetting):
             Tokamak.D3D: self.d3d_times,
             Tokamak.EAST: self.east_times,
             Tokamak.HBTEP: self.hbtep_times,
+            Tokamak.MAST: self.mast_times,
         }
 
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
@@ -583,6 +587,28 @@ class IpTimeSetting(TimeSetting):
             r"\top.sensors.rogowskis:ip", tree_name="hbtep2"
         )
         return ip_time
+
+
+    def mast_times(self, params: TimeSettingParams) -> np.ndarray:
+        """
+        Retrieve the Ip timebase for the MAST tokamak.
+
+        Parameters
+        ----------
+        params : TimeSettingParams
+            Parameters needed to retrieve the timebase.
+
+        Returns
+        -------
+        np.ndarray
+            Array of times in the timebase.
+        """
+        conn: S3Connection = params.mds_conn.conn
+        file_name = f"s3://mast/level2/shots/{params.shot_id}.zarr"
+        mapper = conn.get_mapper(file_name)
+        ds = xr.open_zarr(mapper, group="summary")
+        times = ds["time"].values
+        return times
 
 
 class SignalTimeSetting(TimeSetting):
