@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Union
 
+import xarray as xr
 import numpy as np
 from disruption_py.machine.mast.util import MastUtilMethods
 from loguru import logger
@@ -17,6 +18,7 @@ from disruption_py.config import config
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.misc import shot_msg_patch
 from disruption_py.inout.mds import MDSConnection, mdsExceptions
+from disruption_py.inout.s3 import S3Connection
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.east.util import EastUtilMethods
 from disruption_py.machine.tokamak import Tokamak
@@ -184,6 +186,7 @@ class TimeSettingDict(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
+        print(self.resolved_time_setting_dict)
         chosen_setting = self.resolved_time_setting_dict.get(params.tokamak, None)
         if chosen_setting is not None:
             return chosen_setting.get_times(params)
