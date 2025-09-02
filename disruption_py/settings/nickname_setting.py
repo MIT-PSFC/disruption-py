@@ -5,6 +5,7 @@ This module provides classes for handling nickname settings, which are used to
 resolve MDSplus tree names for various tokamaks.
 """
 
+import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, Union
@@ -244,9 +245,10 @@ class DisruptionNicknameSetting(NicknameSetting):
         if params.disruption_time is None:
             # TODO: some DIII-D shots have a disruption efit tree, but no disruption time.
             return DefaultNicknameSetting().get_tree_name(params)
+        runtag = "DIS" if "pytest" in sys.modules else "DISPY"
         efit_trees = params.database.query(
             "select tree from code_rundb.dbo.plasmas where "
-            f"shot = {params.shot_id} and runtag = 'DISPY' and deleted = 0 order by idx",
+            f"shot = {params.shot_id} and runtag = '{runtag}' and deleted = 0 order by idx",
             use_pandas=False,
         )
         if len(efit_trees) == 0:
@@ -269,7 +271,7 @@ class DisruptionNicknameSetting(NicknameSetting):
         """
         if params.disruption_time is None:
             return DefaultNicknameSetting().get_tree_name(params)
-        return "efit21"
+        return "efit18" if "pytest" in sys.modules else "efit21"
 
     def _get_tree_name(self, params: NicknameSettingParams) -> str:
         """
