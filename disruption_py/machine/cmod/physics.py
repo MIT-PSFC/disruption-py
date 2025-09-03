@@ -1623,7 +1623,7 @@ class CmodPhysicsMethods:
         # Main loop for calculations
         te_core_vs_avg = np.full(len(te_time), np.nan)
         te_edge_vs_avg = np.full(len(te_time), np.nan)
-        te_hwm = np.full(len(te_time), np.nan)
+        te_hwhm = np.full(len(te_time), np.nan)
         for i in okay_time_indices:
             # Only consider radial channels that are likely to accurately measure Te
             calib_indices = (te[i, :] > min_te) & (radii[i, :] < r0[i] + aminor[i])
@@ -1672,9 +1672,10 @@ class CmodPhysicsMethods:
                     if str(exc).startswith("Optimal parameters not found"):
                         continue
                     raise exc
-                # rescale from sigma to HWHM for sigma values that are physical
+
+                # rescale from sigma to HWHM
                 # https://en.wikipedia.org/wiki/Full_width_at_half_maximum
-                te_hwm[i] = np.abs(psigma) * np.sqrt(2 * np.log(2))
+                te_hwhm[i] = np.abs(psigma) * np.sqrt(2 * np.log(2))
 
                 # Calculate core/edge vs. average using uniformly sampled radial basis
                 r_equal_spaced = np.linspace(r0[i], r0[i] + aminor[i], 100)
@@ -1698,18 +1699,18 @@ class CmodPhysicsMethods:
 
         te_core_vs_avg = interp1(te_time, te_core_vs_avg, times)
         te_edge_vs_avg = interp1(te_time, te_edge_vs_avg, times)
-        te_hwm = interp1(te_time, te_hwm, times)
+        te_hwhm = interp1(te_time, te_hwhm, times)
         # Sanity check: Te width should be positive and less than minor radius
         # Unphysical Te width indicates ECE profile may be bad so set peaking factors to NaN too
         aminor = interp1(te_time, aminor, times)
-        unphysical_mask = (te_hwm < 0) | (te_hwm > aminor)
-        te_hwm[unphysical_mask] = np.nan
+        unphysical_mask = (te_hwhm < 0) | (te_hwhm > aminor)
+        te_hwhm[unphysical_mask] = np.nan
         te_core_vs_avg[unphysical_mask] = np.nan
         te_edge_vs_avg[unphysical_mask] = np.nan
         return {
             "te_core_vs_avg_ece": te_core_vs_avg,
             "te_edge_vs_avg_ece": te_edge_vs_avg,
-            "te_width_ece": te_hwm,
+            "te_width_ece": te_hwhm,
         }
 
     @staticmethod
