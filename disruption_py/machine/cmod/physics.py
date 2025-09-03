@@ -755,7 +755,7 @@ class CmodPhysicsMethods:
             kwa["p_ohm"] = np.full(len(params.times), np.nan)
         # Plasma magnetic energy, and respective time base
         kwa["wmhd"], kwa["efit_time"] = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:wplasm", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:wplasm", tree_name="_efit_tree"
         )  # [J], [s]
         return CmodPhysicsMethods._get_power(params.times, **kwa)
 

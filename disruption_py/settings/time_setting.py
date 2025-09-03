@@ -249,7 +249,7 @@ class EfitTimeSetting(TimeSetting):
             Array of times in the timebase.
         """
         (efit_time,) = params.mds_conn.get_dims(
-            r"\efit_aeqdsk:ali", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:ali", tree_name="_efit_tree"
         )
         efit_time_unit = params.mds_conn.get_data(
             r"units_of(dim_of(\efit_aeqdsk:ali))", tree_name="_efit_tree", astype="str"
@@ -595,7 +595,7 @@ class SignalTimeSetting(TimeSetting):
         """
         try:
             (signal_time,) = params.mds_conn.get_dims(
-                self.signal_path, tree_name=self.tree_name, astype="float64"
+                self.signal_path, tree_name=self.tree_name
             )
         except mdsExceptions.MdsException:
             params.logger.error(
