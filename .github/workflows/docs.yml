@@ -32,7 +32,7 @@ jobs:
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install poetry
         run: pipx install poetry
@@ -50,7 +50,7 @@ jobs:
         run: poetry run mkdocs build --site-dir _site
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
 
   deploy:
     if: |
