@@ -242,10 +242,15 @@ class DisruptionNicknameSetting(NicknameSetting):
         str
             The resolved EFIT tree name.
         """
-        if params.disruption_time is None:
-            # TODO: some DIII-D shots have a disruption efit tree, but no disruption time.
+        if "pytest" not in sys.modules:
+            # all shots have "efit21" / DISPY tree
+            runtag = "DISPY"
+        elif params.disruption_time is None:
+            # non-disruptive shots use the default tree
             return DefaultNicknameSetting().get_tree_name(params)
-        runtag = "DIS" if "pytest" in sys.modules else "DISPY"
+        else:
+            # disruptive shots have "efit18" / DIS tree
+            runtag = "DIS"
         efit_trees = params.database.query(
             "select tree from code_rundb.dbo.plasmas where "
             f"shot = {params.shot_id} and runtag = '{runtag}' and deleted = 0 order by idx",
@@ -269,9 +274,11 @@ class DisruptionNicknameSetting(NicknameSetting):
         str
             The resolved EFIT tree name.
         """
+        if "pytest" not in sys.modules:
+            return "efit21"
         if params.disruption_time is None:
             return DefaultNicknameSetting().get_tree_name(params)
-        return "efit18" if "pytest" in sys.modules else "efit21"
+        return "efit18"
 
     def _get_tree_name(self, params: NicknameSettingParams) -> str:
         """
