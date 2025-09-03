@@ -196,7 +196,7 @@ class MDSConnection:
         self,
         path: str,
         tree_name: str = None,
-        astype: str = "float64",
+        astype: str | None = None,
         arguments: Any = None,
     ) -> np.ndarray:
         """
@@ -208,8 +208,8 @@ class MDSConnection:
             MDSplus path to record.
         tree_name : str, optional
             The name of the tree that must be open for retrieval.
-        astype : str, optional, default = "float64"
-            The data type for explicit casting.
+        astype : str, optional, default = None
+            The data type for explicit casting, or None.
         arguments : Any, optional
             Arguments for MDSplus TDI Expression. Default None.
             Please see MDSplus documentation for more information.
@@ -236,7 +236,7 @@ class MDSConnection:
         path: str,
         tree_name: str = None,
         dim_nums: List = None,
-        astype: str = "float64",
+        astype: str | None = None,
         cast_all: bool = False,
     ) -> Tuple:
         """
@@ -250,8 +250,8 @@ class MDSConnection:
             The name of the tree that must be open for retrieval.
         dim_nums : List, optional
             A list of dimensions that should have their size retrieved. Default [0].
-        astype : str, optional, default = "float64"
-            The data type for explicit casting.
+        astype : str, optional, default = None
+            The data type for explicit casting, or None.
         cast_all : bool, optional. Default False.
             Whether to cast both data and dims, or only data.
 
@@ -285,7 +285,7 @@ class MDSConnection:
         path: str,
         tree_name: str = None,
         dim_nums: List = None,
-        astype: str = None,
+        astype: str | None = None,
     ) -> Tuple:
         """
         Get the specified dimensions for record at specified path.
@@ -298,8 +298,8 @@ class MDSConnection:
             The name of the tree that must be open for retrieval.
         dim_nums : List, optional
             A list of dimensions that should have their size retrieved. Default [0].
-        astype : str, optional
-            The data type for explicit casting.
+        astype : str, optional, default = None
+            The data type for explicit casting, or None.
 
         Returns
         -------
