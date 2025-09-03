@@ -5,6 +5,7 @@ Module for helper, not physics, methods.
 import numpy as np
 
 from disruption_py.core.physics_method.params import PhysicsMethodParams
+from disruption_py.config import config
 
 from MDSplus import mdsExceptions
 
@@ -48,17 +49,15 @@ class D3DUtilMethods:
     @staticmethod
     def check_chisq(params: PhysicsMethodParams, signal: np.ndarray) -> np.ndarray:
         """
-        Check chisq and remove unreliable data points
+        Check chisq and remove unreliable EFIT data points
 
         Consider making this a generic method or move to utils (prefer not to because MDS access)
         """
-        chisq_threshold = 50  # to be added to machine specific config
-
         try:
             chisq = params.mds_conn.get_data(
                 r"\efit_a_eqdsk:chisq", tree_name="_efit_tree"
             )
-            invalid_indices = np.where(chisq > chisq_threshold)
+            invalid_indices = np.where(chisq > config(params.tokamak).validity.chisq_threshold)
         except mdsExceptions.MdsException as e:
             params.logger.warning(
                 "Failed to obtain chisq to remove unreliable time points.",

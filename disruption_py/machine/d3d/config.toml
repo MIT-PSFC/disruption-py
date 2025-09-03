@@ -116,3 +116,6 @@ duration_before_disruption = 0.10
 end_of_current_threshold = 100e3
 minimum_duration = 0.1
 minimum_ip = 400e3
+
+[d3d.validity]
+chisq_threshold = 50
