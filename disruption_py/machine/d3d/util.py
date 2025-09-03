@@ -57,7 +57,6 @@ class D3DUtilMethods:
             chisq = params.mds_conn.get_data(
                 r"\efit_a_eqdsk:chisq", tree_name="_efit_tree"
             )
-            invalid_indices = np.where(chisq > config(params.tokamak).validity.chisq_threshold)
         except mdsExceptions.MdsException as e:
             params.logger.warning(
                 "Failed to obtain chisq to remove unreliable time points.",
@@ -69,6 +68,8 @@ class D3DUtilMethods:
             params.logger.warning(
                 "Length of signal does not match length of chisq. Return original signal.",
             )
-
+            return signal
+        
+        invalid_indices = np.where(chisq > config(params.tokamak).validity.chisq_threshold)
         signal[invalid_indices] = np.nan
         return signal
