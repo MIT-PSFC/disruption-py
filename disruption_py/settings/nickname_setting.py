@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, Union
 
+from disruption_py.config import config
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.inout.mds import MDSConnection
 from disruption_py.inout.sql import ShotDatabase
@@ -242,15 +243,17 @@ class DisruptionNicknameSetting(NicknameSetting):
         str
             The resolved EFIT tree name.
         """
-        if "pytest" not in sys.modules:
-            # all shots have "efit21" / DISPY tree
-            runtag = "DISPY"
-        elif params.disruption_time is None:
-            # non-disruptive shots use the default tree
-            return DefaultNicknameSetting().get_tree_name(params)
-        else:
-            # disruptive shots have "efit18" / DIS tree
+
+        # all shots have "efit21" / DISPY tree, but
+        # only disruptive shots have "efit18" / DIS tree, thus
+        # non-disruptive shots should use the default tree
+
+        runtag = config(params.tokamak).efit.runtag
+        if "pytest" in sys.modules:
             runtag = "DIS"
+        if runtag == "DIS" and params.disruption_time is None:
+            return DefaultNicknameSetting().get_tree_name(params)
+
         efit_trees = params.database.query(
             "select tree from code_rundb.dbo.plasmas where "
             f"shot = {params.shot_id} and runtag = '{runtag}' and deleted = 0 order by idx",
