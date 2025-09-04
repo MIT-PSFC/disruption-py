@@ -7,7 +7,6 @@ Module for managing connections to MDSplus.
 import threading
 from typing import Any, Callable, Dict, List, Tuple
 
-import MDSplus
 import numpy as np
 from loguru import logger
 
@@ -15,6 +14,15 @@ from disruption_py.config import config
 from disruption_py.core.utils.misc import safe_cast, shot_msg
 from disruption_py.core.utils.shared_instance import SharedInstance
 from disruption_py.machine.tokamak import Tokamak
+
+try:
+    # first, try full-fledged MDSplus
+    import MDSplus
+except ModuleNotFoundError:
+    # then, fall back onto mdsthin
+    from mdsthin import MDSplus
+# shortcuts for downstream imports
+mdsExceptions = MDSplus.mdsExceptions
 
 
 class ProcessMDSConnection:
