@@ -582,7 +582,7 @@ requires-dist = [
     { name = "dynaconf", specifier = ">=3.2.0" },
     { name = "loguru", specifier = ">=0.7.0" },
     { name = "netcdf4", specifier = ">=1.7.0" },
-    { name = "numpy", specifier = ">=1.26.0,<2.0.0" },
+    { name = "numpy", specifier = ">1.26.0" },
     { name = "pandas", specifier = ">=2.2.0" },
     { name = "pyodbc", specifier = ">=5.2.0" },
     { name = "scipy", specifier = ">=1.15.0" },
