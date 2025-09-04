@@ -74,22 +74,22 @@ def _better_mds_exceptions(func):
             path = kwargs.get("path", None)
         try:
             return func(*args, **kwargs)
-        except MDSplus.mdsExceptions.TreeFOPENR:
+        except mdsExceptions.TreeFOPENR:
             nick = kwargs.get("tree_name", None)
             tree = self.tree_name(nick)
             if nick == tree:
                 nick = ""
-            raise MDSplus.mdsExceptions.TreeFOPENR(
+            raise mdsExceptions.TreeFOPENR(
                 "Tree not found. "
                 + (f"Nick: {nick}, " if nick else "")
                 + f"Tree: {tree}"
             ) from None
-        except MDSplus.mdsExceptions.MdsException as e:
-            if isinstance(e, MDSplus.mdsExceptions.TreeNNF):
+        except mdsExceptions.MdsException as e:
+            if isinstance(e, mdsExceptions.TreeNNF):
                 err = "Node not found"
-            elif isinstance(e, MDSplus.mdsExceptions.TreeNODATA):
+            elif isinstance(e, mdsExceptions.TreeNODATA):
                 err = "No data available"
-            elif isinstance(e, MDSplus.mdsExceptions.TreeBADRECORD):
+            elif isinstance(e, mdsExceptions.TreeBADRECORD):
                 err = "Bad record"
             else:
                 err = "MDSplus error"
@@ -164,7 +164,7 @@ class MDSConnection:
         for tree in self.open_trees:
             try:
                 self.conn.closeTree(tree, self.shot_id)
-            except MDSplus.mdsExceptions.TreeNOT_OPEN:
+            except mdsExceptions.TreeNOT_OPEN:
                 break
         self.open_trees = []
 
