@@ -4,11 +4,11 @@
 
 import numpy as np
 import scipy as sp
-from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
 from disruption_py.core.utils.misc import safe_cast
+from disruption_py.inout.mds import mdsExceptions
 from disruption_py.machine.cmod.efit import CmodEfitMethods
 
 

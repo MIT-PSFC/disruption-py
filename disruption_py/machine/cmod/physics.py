@@ -7,7 +7,6 @@ Module for retrieving and calculating data for CMOD physics methods.
 import warnings
 
 import numpy as np
-from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
@@ -19,6 +18,7 @@ from disruption_py.core.utils.math import (
     gaussian_fit_with_fixed_mean,
     interp1,
 )
+from disruption_py.inout.mds import mdsExceptions
 from disruption_py.machine.cmod.thomson import CmodThomsonDensityMeasure
 from disruption_py.machine.tokamak import Tokamak
 

@@ -5,11 +5,11 @@ Module for retrieving and processing EFIT parameters for CMOD.
 """
 
 import numpy as np
-from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
+from disruption_py.inout.mds import mdsExceptions
 from disruption_py.machine.tokamak import Tokamak
 
 
