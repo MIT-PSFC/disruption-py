@@ -1059,7 +1059,11 @@ class D3DPhysicsMethods:
                     ts = ts[option]
                     break
             efit_dict = D3DPhysicsMethods._get_efit_dict(params)
-        except (NotImplementedError, CalculationError, mdsExceptions.MdsException) as e:
+        except (
+            NotImplementedError,
+            CalculationError,
+            mdsExceptions.MdsException,
+        ) as e:
             ts = {}
             params.logger.warning("Failed to get TS data")
             params.logger.opt(exception=True).debug(e)
