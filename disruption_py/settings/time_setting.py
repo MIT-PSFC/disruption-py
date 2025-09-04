@@ -185,7 +185,6 @@ class TimeSettingDict(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        print(self.resolved_time_setting_dict)
         chosen_setting = self.resolved_time_setting_dict.get(params.tokamak, None)
         if chosen_setting is not None:
             return chosen_setting.get_times(params)
