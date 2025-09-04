@@ -544,6 +544,7 @@ source = { editable = "." }
 dependencies = [
     { name = "dynaconf" },
     { name = "loguru" },
+    { name = "mdsthin" },
     { name = "netcdf4" },
     { name = "numpy" },
     { name = "pandas" },
@@ -581,6 +582,7 @@ lab = [
 requires-dist = [
     { name = "dynaconf", specifier = ">=3.2.0" },
     { name = "loguru", specifier = ">=0.7.0" },
+    { name = "mdsthin", specifier = ">=1.5.0" },
     { name = "netcdf4", specifier = ">=1.7.0" },
     { name = "numpy", specifier = ">=1.26.0,<2.0.0" },
     { name = "pandas", specifier = ">=2.2.0" },
@@ -1430,6 +1432,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/e7/ff/0ffefdcac38932a54d2b5eed4e0ba8a408f215002cd178ad1df0f2806ff8/mccabe-0.7.0.tar.gz", hash = "sha256:348e0240c33b60bbdf4e523192ef919f28cb2c3d7d5c7794f74009290f236325", size = 9658, upload-time = "2022-01-24T01:14:51.113Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/27/1a/1f68f9ba0c207934b35b86a8ca3aad8395a3d6dd7921c0686e23853ff5a9/mccabe-0.7.0-py2.py3-none-any.whl", hash = "sha256:6c2d30ab6be0e4a46919781807b4f0d834ebdd6c6e3dca0bda5a15f863427b6e", size = 7350, upload-time = "2022-01-24T01:14:49.62Z" },
+]
+
+[[package]]
+name = "mdsthin"
+version = "1.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f6/22/84557a4cbf8c0da5130b2bf12adf30ce4dcc75666205446d32c6c024ad2b/mdsthin-1.5.0.tar.gz", hash = "sha256:b45eacbb30bb06a13789a14e227efbf025683b8e75ae775c3dee74870324da62", size = 67068, upload-time = "2025-04-02T20:59:16.85Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/84/3e/f552f5f352a17dbf031dee904e4f189eaa01f9028dba1ca6278e9528c48b/mdsthin-1.5.0-py3-none-any.whl", hash = "sha256:894f9487d4b2b17423c7577d445bb322403a52013ccf38e2367252db1d0f5d6e", size = 81834, upload-time = "2025-04-02T20:59:15.437Z" },
 ]
 
 [[package]]

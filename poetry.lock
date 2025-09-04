@@ -1960,6 +1960,21 @@ files = [
 ]
 
 [[package]]
+name = "mdsthin"
+version = "1.5.0"
+description = "MDSplus Thin-Client implemented in pure python"
+optional = false
+python-versions = ">=3.7"
+groups = ["main"]
+files = [
+    {file = "mdsthin-1.5.0-py3-none-any.whl", hash = "sha256:894f9487d4b2b17423c7577d445bb322403a52013ccf38e2367252db1d0f5d6e"},
+    {file = "mdsthin-1.5.0.tar.gz", hash = "sha256:b45eacbb30bb06a13789a14e227efbf025683b8e75ae775c3dee74870324da62"},
+]
+
+[package.dependencies]
+numpy = "*"
+
+[[package]]
 name = "mergedeep"
 version = "1.3.4"
 description = "A deep merge function for 🐍."
@@ -4131,4 +4146,4 @@ dev = ["doc8", "flake8", "flake8-import-order", "rstcheck[sphinx]", "sphinx"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<4"
-content-hash = "cd1ecd4499afc82ed7c67f060fefcb439094ab1a6b2e923d4156982fe89b257e"
+content-hash = "4072be35dc181e233a7dcc8acd61615079b9433c031807e7129889fe98c178cc"
