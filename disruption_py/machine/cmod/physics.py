@@ -7,7 +7,6 @@ Module for retrieving and calculating data for C-MOD physics methods.
 import warnings
 
 import numpy as np
-import scipy.constants as const
 
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
