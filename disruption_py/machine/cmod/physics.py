@@ -7,7 +7,9 @@ Module for retrieving and calculating data for CMOD physics methods.
 import warnings
 
 import numpy as np
+import xarray as xr
 import scipy.constants as const
+from scipy.interpolate import RegularGridInterpolator, interp1d
 from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.caching import cache_method
@@ -21,7 +23,9 @@ from disruption_py.core.utils.math import (
     interp1,
 )
 from disruption_py.machine.cmod.thomson import CmodThomsonDensityMeasure
+from disruption_py.machine.cmod.efit import CmodEfitMethods
 from disruption_py.machine.tokamak import Tokamak
+
 
 
 class CmodPhysicsMethods:
@@ -1291,6 +1295,7 @@ class CmodPhysicsMethods:
         Because the TS chords have uneven spacings, measurements are first interpolated
         to an array of equally spaced vertical positions and then used to calculate
         the peaking factors.
+        TODO(ZanderKeith) I don't think this works if the TS chords are not perfectly aligned in R
 
         Parameters:
         ----------
@@ -1496,6 +1501,165 @@ class CmodPhysicsMethods:
         return CmodPhysicsMethods._get_peaking_factors(
             params.times, ts_time, ts_te, ts_ne, ts_z, efit_time, bminor, z0
         )
+
+    @staticmethod
+    @physics_method(
+        columns=["ne_rho", "te_rho"],
+        tokamak=Tokamak.CMOD,
+    )
+    def get_ts_profiles(params: PhysicsMethodParams):
+        """
+        Retrieve the electron temperature and density profiles from the Thomson
+        scattering diagnostic and interpolate them to normalized minor radius
+        """
+
+        # Ignore shots on blacklist
+        if CmodPhysicsMethods._is_on_blacklist(params.shot_id):
+            raise CalculationError("Shot is on blacklist")
+
+        # Nodes for core and edge TS data
+        # https://cmodwiki.psfc.mit.edu/index.php/Thomson_Scattering
+        if params.shot_id > 1020000000:
+            core_ne_node = ".yag_new.results.profiles.ne_rz"
+            core_Te_node = ".yag_new.results.profiles.te_rz"
+            core_z_node = ".yag_new.results.profiles.z_sorted"
+        else:
+            core_ne_node = ".yag.results.global.profile.ne_rz_t"
+            core_Te_node = ".yag.results.global.profile.te_rz_t"
+            core_z_node = ".yag.results.global.profile.z_sorted"
+        edge_ne_node = ".yag_edgets.results.ne"
+        edge_Te_node = ".yag_edgets.results.te"
+        edge_z_node = ".yag_edgets.data.fiber_z"
+        r_node = ".yag.results.param.r"
+
+        ts_te_core_keV, ts_time = params.mds_conn.get_data_with_dims(core_Te_node, tree_name="electrons") # [keV], [s]
+        ts_te_core = ts_te_core_keV * 1000 # [keV] -> [eV]
+        ts_ne_core = params.mds_conn.get_data(core_ne_node, tree_name="electrons") # [m^-3]
+        ts_z_core = params.mds_conn.get_data(core_z_node, tree_name="electrons") # [m]
+        ts_te_edge = params.mds_conn.get_data(edge_Te_node, tree_name="electrons") # [eV]
+        ts_ne_edge = params.mds_conn.get_data(edge_ne_node, tree_name="electrons") # [m^-3]
+        ts_z_edge = params.mds_conn.get_data(edge_z_node, tree_name="electrons") # [m]
+        ts_r = params.mds_conn.get_data(r_node, tree_name="electrons") # [m]
+
+        # Combine core and edge data
+        ts_te = np.concatenate((ts_te_core, ts_te_edge))
+        ts_ne = np.concatenate((ts_ne_core, ts_ne_edge))
+        ts_z = np.concatenate((ts_z_core, ts_z_edge))
+
+        # Trim everything so that ts_time >= 0
+        (valid_time_indices,) = np.where(ts_time >= 0)
+        ts_time = ts_time[valid_time_indices]
+        ts_te = ts_te[:, valid_time_indices]
+        ts_ne = ts_ne[:, valid_time_indices]
+
+        # Ensure equal number of points and positions
+        if len(ts_ne) != len(ts_z) or len(ts_ne) != len(ts_te):
+            raise CalculationError(
+                "Mismatch in size of TS data!\nTe size: {te}, ne size: {ne}, r size: {r}, z size: {z}".format(
+                    te=len(ts_te), ne=len(ts_ne), r=len(ts_r), z=len(ts_z)
+                )
+            )
+        
+        # EFIT data interpolated onto the TS timebase (TS is likely much slower)
+        efit_dict = CmodEfitMethods._get_efit_equilibrium(params, ts_time)
+        rgrid = efit_dict["rgrid"]
+        zgrid = efit_dict["zgrid"]
+        psirz = efit_dict["psirz"]
+        psin = efit_dict["psin"]
+        rhovn = efit_dict["rhovn"]
+        ssibry = efit_dict["ssibry"]
+        ssimag = efit_dict["ssimag"]
+        # print(f"rhovn range: {np.nanmin(rhovn):.3f} to {np.nanmax(rhovn):.3f}")
+        # print(f"psin range: {psin.min():.3f} to {psin.max():.3f}")
+        # print(f"TS R: {ts_r}, Z range: {ts_z.min():.3f} to {ts_z.max():.3f}")
+
+        # Normalize psirz to psin
+        psi_norm_f = ssibry - ssimag
+        problems = np.where(psi_norm_f == 0)[0]
+        # Prevent divide by 0 error by replacing 0s in the denominator
+        if len(problems) > 0:
+            psi_norm_f[problems] = 1
+        psirz_n = (
+            psirz - ssimag
+        ) / psi_norm_f
+        if len(problems) > 0:
+            psirz_n[problems, :, :] = 0
+
+        # Implement a 3D (time,radial,vertical) gridded interpolation
+        # efit_dict['psirz'] has the dimensions (r,z,time)
+        rz_to_psin = RegularGridInterpolator(
+            [rgrid, zgrid, ts_time],
+            psirz_n,
+            method="linear",
+            bounds_error=False,
+            fill_value=np.nan,
+        )
+
+        # Get interpolation from psin to rho
+        psin_to_rho = RegularGridInterpolator(
+            [psin, ts_time],
+            rhovn,
+            method="linear",
+            bounds_error=False,
+            fill_value=np.nan,
+        )
+
+        # Prepare output arrays
+        n_times = len(ts_time)
+        n_rhovn = len(rhovn)
+        rho = np.full((n_rhovn, n_times), np.nan)
+
+        for t in range(n_times):
+            for i in range(n_rhovn):
+                psi = rz_to_psin((ts_r, ts_z[i], ts_time[t]))
+                rho_at_t = psin_to_rho((psi, ts_time[t]))
+                rho[i, t] = rho_at_t
+
+        # Fit the profiles to a polynomial in rho and sample on uniform rho grid
+        rhogrid = np.linspace(0, 1, n_rhovn)
+        te_rho = np.full((n_rhovn, n_times), np.nan)
+        ne_rho = np.full((n_rhovn, n_times), np.nan)
+
+        for t in range(n_times):
+            valid_points = (rho[:, t] >= 0) & (rho[:, t] <= 1) & (ts_te[:, t] > 0) & (ts_ne[:, t] > 0)
+            if np.sum(valid_points) == 0:
+                continue
+            te_valid = ts_te[valid_points, t]
+            ne_valid = ts_ne[valid_points, t]
+            rho_valid = rho[valid_points, t]
+
+            # Sort by valid rho values
+            sort_idx = np.argsort(rho_valid)
+            rho_valid = rho_valid[sort_idx]
+            te_valid = te_valid[sort_idx]
+            ne_valid = ne_valid[sort_idx]
+
+            # Simple interpolation, extrapolate by holding last value in core and edge
+            te_interp = interp1(rho_valid, te_valid, rhogrid, "linear", fill_value=(te_valid[0], te_valid[-1]), bounds_error=False)
+            ne_interp = interp1(rho_valid, ne_valid, rhogrid, "linear", fill_value=(ne_valid[0], ne_valid[-1]), bounds_error=False)
+
+            te_rho[:, t] = te_interp
+            ne_rho[:, t] = ne_interp
+
+        # Create xarray dataset
+        te_rho_da = xr.DataArray(
+            te_rho,
+            dims=["rho", "time"],
+            coords={"rho": rhogrid, "time": ts_time},
+        )
+        ne_rho_da = xr.DataArray(
+            ne_rho,
+            dims=["rho", "time"],
+            coords={"rho": rhogrid, "time": ts_time},
+        )
+
+        te_ds = te_rho_da.astype(np.float32).to_dataset(name="te_rho")
+        ne_ds = ne_rho_da.astype(np.float32).to_dataset(name="ne_rho")
+
+        profile_ds = xr.merge([te_ds, ne_ds])
+
+        return profile_ds
+        
 
     @staticmethod
     def _get_te_profile_params_ece(
@@ -2148,7 +2312,8 @@ class CmodPhysicsMethods:
         `_get_peaking_factors_no_tci`, and `_get_edge_parameters` to fail?
         """
         return (
-            1120000000 < shot_id < 1120213000
+            shot_id < 1000000000  # edge system data only exists post 1000000000 https://cmodwiki.psfc.mit.edu/index.php/Thomson_Scattering
+            or 1120000000 < shot_id < 1120213000
             or 1140000000 < shot_id < 1140227000
             or 1150000000 < shot_id < 1150610000
             or 1160000000 < shot_id < 1160303000
