@@ -1498,6 +1498,63 @@ class CmodPhysicsMethods:
         )
 
     @staticmethod
+    @physics_method(
+        columns=["ne_rho", "te_rho"],
+        tokamak=Tokamak.CMOD,
+    )
+    def get_ts_profiles(params: PhysicsMethodParams):
+        """
+        Retrieve the electron temperature and density profiles from the Thomson
+        scattering diagnostic and interpolate them to normalized minor radius
+        """
+
+        # Ignore shots on blacklist
+        if CmodPhysicsMethods._is_on_blacklist(params.shot_id):
+            raise CalculationError("Shot is on blacklist")
+
+        # Nodes for core and edge TS data
+        # https://cmodwiki.psfc.mit.edu/index.php/Thomson_Scattering
+        if params.shot_id > 1020000000:
+            core_ne_node = ".yag_new.results.profiles.ne_rz"
+            core_Te_node = ".yag_new.results.profiles.te_rz"
+            core_z_node = ".yag_new.results.profiles.z_sorted"
+        else:
+            core_ne_node = ".yag.results.global.profile.ne_rz_t"
+            core_Te_node = ".yag.results.global.profile.te_rz_t"
+            core_z_node = ".yag.results.global.profile.z_sorted"
+        edge_ne_node = ".yag_edgets.results.ne"
+        edge_Te_node = ".yag_edgets.results.te"
+        edge_z_node = ".yag_edgets.data.fiber_z"
+        r_node = ".yag.results.param.r"
+
+        ts_te_core_keV, ts_time = params.mds_conn.get_data_with_dims(core_Te_node, tree_name="electrons") # [keV], [s]
+        ts_te_core = ts_te_core_keV * 1000 # [keV] -> [eV]
+        ts_ne_core = params.mds_conn.get_data(core_ne_node, tree_name="electrons") # [m^-3]
+        ts_z_core = params.mds_conn.get_data(core_z_node, tree_name="electrons") # [m]
+        ts_te_edge = params.mds_conn.get_data(edge_Te_node, tree_name="electrons") # [keV]
+        ts_te_edge = ts_te_edge * 1000 # [keV] -> [eV]
+        ts_ne_edge = params.mds_conn.get_data(edge_ne_node, tree_name="electrons") # [m^-3]
+        ts_z_edge = params.mds_conn.get_data(edge_z_node, tree_name="electrons") # [m]
+        ts_r = params.mds_conn.get_data(r_node, tree_name="electrons") # [m]
+
+        # Combine core and edge data
+        ts_te = np.concatenate((ts_te_core, ts_te_edge))
+        ts_ne = np.concatenate((ts_ne_core, ts_ne_edge))
+        ts_z = np.concatenate((ts_z_core, ts_z_edge))
+
+        # Ensure equal number of points and positions
+        if len(ts_ne) != len(ts_z) or len(ts_te) != len(ts_ne):
+            raise CalculationError(
+                "Mismatch in size of TS data!\nTe size: {te}, ne size: {ne}, r size: {r}, z size: {z}".format(
+                    te=len(ts_te), ne=len(ts_ne), r=len(ts_r), z=len(ts_z)
+                )
+            )
+        
+        
+
+
+
+    @staticmethod
     def _get_te_profile_params_ece(
         times,
         te,
@@ -2148,7 +2205,8 @@ class CmodPhysicsMethods:
         `_get_peaking_factors_no_tci`, and `_get_edge_parameters` to fail?
         """
         return (
-            1120000000 < shot_id < 1120213000
+            shot_id < 1000000000  # edge system data only exists post 1000000000 https://cmodwiki.psfc.mit.edu/index.php/Thomson_Scattering
+            or 1120000000 < shot_id < 1120213000
             or 1140000000 < shot_id < 1140227000
             or 1150000000 < shot_id < 1150610000
             or 1160000000 < shot_id < 1160303000
