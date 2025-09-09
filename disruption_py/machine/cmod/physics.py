@@ -267,6 +267,27 @@ class CmodPhysicsMethods:
         )
 
     @staticmethod
+    @physics_method(
+        columns=["btor"],
+        tokamak=Tokamak.CMOD,
+    )
+    def get_magnetics_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve magnetic field parameters for CMOD.
+        """
+        btor, t_mag = params.mds_conn.get_data_with_dims(
+            r"\btor", tree_name="magnetics"
+        )  # [T], [s]
+        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
+        # on by t=-1. So pick the time before that to calculate baseline
+        baseline_indices = np.where(t_mag <= -1.8)
+        btor = btor - np.mean(btor[baseline_indices])
+
+        btor = interp1(t_mag, btor, params.times, bounds_error=False, fill_value=0.0)
+
+        return {"btor": btor}
+
+    @staticmethod
     def _get_z_parameters(times, z_prog, pcstime, z_error_without_ip, ip, dpcstime):
         """
         Get values of Z_error, Z_prog, and derived signals from plasma control
