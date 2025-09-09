@@ -52,7 +52,13 @@ class CmodEfitMethods:
     # This should contain everything which is necessary to recreate a geqdsk
     # https://freeqdsk.readthedocs.io/en/stable/geqdsk.html#freeqdsk.geqdsk.write
     efit_equilibrium_cols = {
-        "r_grid": r"\efit_geqdsk:r_grid",
+        "rgrid": {"path": r"\efit_geqdsk:rgrid", "val": "grid"},
+        "zgrid": {"path": r"\efit_geqdsk:zgrid", "val": "grid"},
+        "psirz": {"path": r"\efit_geqdsk:psirz", "val": "2D"},
+        "psin": {"path": r"\efit_geqdsk:psin", "val": "grid"},
+        "rhovn": {"path": r"\efit_geqdsk:rhovn", "val": "1D"},
+        "ssibry": {"path": r"\efit_geqdsk:ssibry", "val": "scalar"},
+        "ssimag": {"path": r"\efit_geqdsk:ssimag", "val": "scalar"},
     }
 
     @staticmethod
@@ -108,7 +114,45 @@ class CmodEfitMethods:
         return efit_data
     
     @staticmethod
+    def _get_efit_equilibrium(params: PhysicsMethodParams, timebase):
+        efit_time = params.mds_conn.get_data(
+            r"\efit_aeqdsk:time", tree_name="_efit_tree"
+        )
+        efit_equilibrium = {}
+        for param, info in CmodEfitMethods.efit_equilibrium_cols.items():
+            path = info["path"]
+            val = info["val"]
+            try:
+                param_data = params.mds_conn.get_data(
+                    path=path,
+                    tree_name="_efit_tree",
+                )
+                if val == "grid":
+                    # Just the grid, doesn't change with time
+                    efit_equilibrium[param] = param_data
+                elif val in ["1D", "scalar"]:
+                    # 1D data, interpolate in time
+                    interp_data = interp1(efit_time, param_data, timebase)
+                    efit_equilibrium[param] = interp_data
+                elif val in ["1D", "2D"]:
+                    # TODO(ZanderKeith): There's some tomfoolery here.
+                    # For something like psirz, the data has shape (time, grid, grid), but I'm unsure if it goes (time, r, z) or (time, z, r).
+                    # For now I'm assuming it starts as (time, z, r) since that's how it would be transposed from how it's built in mdsplus (r, z, time)
+                    # That means returning from this function it will be in (r, z, time)
+                    interp_data = interp1(efit_time, param_data.T, timebase)
+                    efit_equilibrium[param] = interp_data
+            except mdsExceptions.MdsException as e:
+                params.logger.warning(repr(e))
+                params.logger.opt(exception=True).debug(e)
+                efit_equilibrium[param] = np.full(len(timebase), np.nan)
+
+        return efit_equilibrium
+    
+    @staticmethod
     @physics_method(
+        columns=[
+            *efit_equilibrium_cols.keys(),
+        ],
         tokamak=Tokamak.CMOD,
     )
     def get_efit_equilibrium(params: PhysicsMethodParams):
@@ -125,19 +169,8 @@ class CmodEfitMethods:
         dict
             A dictionary containing the retrieved EFIT equilibrium data.
         """
-        efit_equilibrium = {}
-        for param, path in CmodEfitMethods.efit_equilibrium_cols.items():
-            try:
-                efit_equilibrium[param] = params.mds_conn.get_data(
-                    path=path,
-                    tree_name="_efit_tree",
-                )
-            except mdsExceptions.MdsException as e:
-                params.logger.warning(repr(e))
-                params.logger.opt(exception=True).debug(e)
-                efit_equilibrium[param] = np.full(len(params.times), np.nan)
 
-        return efit_equilibrium
+        return CmodEfitMethods._get_efit_equilibrium(params, params.times)
 
     @staticmethod
     def efit_check(params: PhysicsMethodParams):
