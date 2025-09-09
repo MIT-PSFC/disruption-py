@@ -721,20 +721,14 @@ class TMDBTimeSetting(TimeSetting):
         (efit_time,) = params.mds_conn.get_dims(
             r"\efit_aeqdsk:ali", tree_name="_efit_tree", astype="float64"
         )
-        efit_time_unit = params.mds_conn.get_data(
-            r"units_of(dim_of(\efit_aeqdsk:ali))", tree_name="_efit_tree", astype="str"
-        )
-        if efit_time_unit not in {"s", "ms", "us"}:
-            params.logger.verbose(
-                "Failed to get the time units of EFIT tree '{tree}', assuming seconds.",
-                tree=params.mds_conn.get_tree_name_of_nickname("_efit_tree"),
-        )
 
         max_time = np.max(efit_time)
         if params.tokamak == Tokamak.CMOD:
             tmdb_time = np.round(np.arange(0, max_time + 1e-3, 1e-3), 3)
+            efit_time_unit = "s"
         if params.tokamak == Tokamak.D3D:
             tmdb_time = np.round(np.arange(0, max_time + 1, 1), 0)
+            efit_time_unit = "ms"
         return _postprocess(times=tmdb_time, units=efit_time_unit)
 
 
