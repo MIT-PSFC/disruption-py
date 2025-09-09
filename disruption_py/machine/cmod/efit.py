@@ -49,7 +49,8 @@ class CmodEfitMethods:
 
     efit_derivs = {"dbetap_dt": "beta_p", "dli_dt": "li", "dwmhd_dt": "wmhd"}
 
-    # This should contain everything which is necessary to https://freeqdsk.readthedocs.io/en/stable/geqdsk.html#freeqdsk.geqdsk.write
+    # This should contain everything which is necessary to recreate a geqdsk
+    # https://freeqdsk.readthedocs.io/en/stable/geqdsk.html#freeqdsk.geqdsk.write
     efit_equilibrium_cols = {
         "r_grid": r"\efit_geqdsk:r_grid",
     }
@@ -81,8 +82,8 @@ class CmodEfitMethods:
         )  # [s]
         efit_data = {}
 
-        # Get data from each of the columns in efit_cols one at a time
-        for param, path in CmodEfitMethods.efit_cols.items():
+        # Get data from each of the columns in efit_parameter_cols one at a time
+        for param, path in CmodEfitMethods.efit_parameter_cols.items():
             try:
                 efit_data[param] = params.mds_conn.get_data(
                     path=path,
