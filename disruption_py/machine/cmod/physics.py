@@ -1572,19 +1572,36 @@ class CmodPhysicsMethods:
         psirz = efit_dict["psirz"]
         psin = efit_dict["psin"]
         rhovn = efit_dict["rhovn"]
+        ssibry = efit_dict["ssibry"]
+        ssimag = efit_dict["ssimag"]
+        print(f"rhovn range: {np.nanmin(rhovn):.3f} to {np.nanmax(rhovn):.3f}")
+        print(f"psin range: {psin.min():.3f} to {psin.max():.3f}")
+        print(f"TS R: {ts_r}, Z range: {ts_z.min():.3f} to {ts_z.max():.3f}")
+
+        # Normalize psirz to psin
+        psi_norm_f = ssibry - ssimag
+        problems = np.where(psi_norm_f == 0)[0]
+        # Prevent divide by 0 error by replacing 0s in the denominator
+        if len(problems) > 0:
+            psi_norm_f[problems] = 1
+        psirz_n = (
+            psirz - ssimag
+        ) / psi_norm_f
+        if len(problems) > 0:
+            psirz_n[problems, :, :] = 0
 
         # Implement a 3D (time,radial,vertical) gridded interpolation
         # efit_dict['psirz'] has the dimensions (r,z,time)
-        rz_to_psi = RegularGridInterpolator(
+        rz_to_psin = RegularGridInterpolator(
             [rgrid, zgrid, ts_time],
-            psirz,
+            psirz_n,
             method="linear",
             bounds_error=False,
             fill_value=np.nan,
         )
 
-        # Get interpolation from psi to rho
-        psi_to_rho = RegularGridInterpolator(
+        # Get interpolation from psin to rho
+        psin_to_rho = RegularGridInterpolator(
             [psin, ts_time],
             rhovn,
             method="linear",
@@ -1599,8 +1616,8 @@ class CmodPhysicsMethods:
 
         for t in range(n_times):
             for i in range(n_rhovn):
-                psi = rz_to_psi((ts_r, ts_z[i], ts_time[t]))
-                rho_at_t = psi_to_rho((psi, ts_time[t]))
+                psi = rz_to_psin((ts_r, ts_z[i], ts_time[t]))
+                rho_at_t = psin_to_rho((psi, ts_time[t]))
                 rho[i, t] = rho_at_t
 
         # Fit the profiles to a polynomial in rho and sample on uniform rho grid

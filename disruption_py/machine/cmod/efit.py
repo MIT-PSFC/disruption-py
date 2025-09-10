@@ -57,6 +57,8 @@ class CmodEfitMethods:
         "psirz": {"path": r"\efit_geqdsk:psirz", "val": "2D"},
         "psin": {"path": r"\efit_geqdsk:psin", "val": "grid"},
         "rhovn": {"path": r"\efit_geqdsk:rhovn", "val": "1D"},
+        "ssibry": {"path": r"\efit_geqdsk:ssibry", "val": "scalar"},
+        "ssimag": {"path": r"\efit_geqdsk:ssimag", "val": "scalar"},
     }
 
     @staticmethod
