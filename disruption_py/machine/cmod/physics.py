@@ -7,7 +7,9 @@ Module for retrieving and calculating data for CMOD physics methods.
 import warnings
 
 import numpy as np
+import xarray as xr
 import scipy.constants as const
+from scipy.interpolate import RegularGridInterpolator, interp1d
 from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.caching import cache_method
@@ -21,7 +23,9 @@ from disruption_py.core.utils.math import (
     interp1,
 )
 from disruption_py.machine.cmod.thomson import CmodThomsonDensityMeasure
+from disruption_py.machine.cmod.efit import CmodEfitMethods
 from disruption_py.machine.tokamak import Tokamak
+
 
 
 class CmodPhysicsMethods:
@@ -1291,6 +1295,7 @@ class CmodPhysicsMethods:
         Because the TS chords have uneven spacings, measurements are first interpolated
         to an array of equally spaced vertical positions and then used to calculate
         the peaking factors.
+        TODO(ZanderKeith) I don't think this works if the TS chords are not perfectly aligned in R
 
         Parameters:
         ----------
@@ -1542,17 +1547,99 @@ class CmodPhysicsMethods:
         ts_ne = np.concatenate((ts_ne_core, ts_ne_edge))
         ts_z = np.concatenate((ts_z_core, ts_z_edge))
 
+        # Trim everything so that ts_time >= 0
+        (valid_time_indices,) = np.where(ts_time >= 0)
+        ts_time = ts_time[valid_time_indices]
+        ts_te = ts_te[:, valid_time_indices]
+        ts_ne = ts_ne[:, valid_time_indices]
+
+        # Fill in nans with 0s
+        ts_te = np.nan_to_num(ts_te, copy=False, nan=0)
+        ts_ne = np.nan_to_num(ts_ne, copy=False, nan=0)
+
         # Ensure equal number of points and positions
-        if len(ts_ne) != len(ts_z) or len(ts_te) != len(ts_ne):
+        if len(ts_ne) != len(ts_z) or len(ts_ne) != len(ts_te):
             raise CalculationError(
                 "Mismatch in size of TS data!\nTe size: {te}, ne size: {ne}, r size: {r}, z size: {z}".format(
                     te=len(ts_te), ne=len(ts_ne), r=len(ts_r), z=len(ts_z)
                 )
             )
         
+        # EFIT data interpolated onto the TS timebase (TS is likely much slower)
+        efit_dict = CmodEfitMethods._get_efit_equilibrium(params, ts_time)
+        rgrid = efit_dict["rgrid"]
+        zgrid = efit_dict["zgrid"]
+        psirz = efit_dict["psirz"]
+        psin = efit_dict["psin"]
+        rhovn = efit_dict["rhovn"]
+
+        # Implement a 3D (time,radial,vertical) gridded interpolation
+        # efit_dict['psirz'] has the dimensions (r,z,time)
+        rz_to_psi = RegularGridInterpolator(
+            [rgrid, zgrid, ts_time],
+            psirz,
+            method="linear",
+            bounds_error=False,
+            fill_value=np.nan,
+        )
+
+        # Get interpolation from psi to rho
+        psi_to_rho = RegularGridInterpolator(
+            [psin, ts_time],
+            rhovn,
+            method="linear",
+            bounds_error=False,
+            fill_value=np.nan,
+        )
+
+        # Prepare output arrays
+        n_times = len(ts_time)
+        n_rhovn = len(rhovn)
+        rho = np.full((n_rhovn, n_times), np.nan)
+
+        for t in range(n_times):
+            for i in range(n_rhovn):
+                psi = rz_to_psi((ts_r, ts_z[i], ts_time[t]))
+                rho_at_t = psi_to_rho((psi, ts_time[t]))
+                rho[i, t] = rho_at_t
+
+        # Fit the profiles to a polynomial in rho and sample on uniform rho grid
+        rhogrid = np.linspace(0, 1, n_rhovn)
+        te_rho = np.full((n_rhovn, n_times), 0)
+        ne_rho = np.full((n_rhovn, n_times), 0)
+
+        for t in range(n_times):
+            valid_points = (rho[:, t] >= 0) & (rho[:, t] <= 1) & (ts_te[:, t] > 0) & (ts_ne[:, t] > 0)
+            if np.sum(valid_points) < 5:
+                continue
+            te_valid = ts_te[valid_points, t]
+            ne_valid = ts_ne[valid_points, t]
+            rho_valid = rho[valid_points, t]
+
+            te_fit = np.polyfit(rho_valid, te_valid, 4)
+            ne_fit = np.polyfit(rho_valid, ne_valid, 4)
+            te_rho[:, t] = np.polyval(te_fit, rhogrid)
+            ne_rho[:, t] = np.polyval(ne_fit, rhogrid)
+
+        # Create xarray dataset
+        te_rho_da = xr.DataArray(
+            te_rho,
+            dims=["rho", "time"],
+            coords={"rho": rhogrid, "time": ts_time},
+        )
+        ne_rho_da = xr.DataArray(
+            ne_rho,
+            dims=["rho", "time"],
+            coords={"rho": rhogrid, "time": ts_time},
+        )
+
+        te_ds = te_rho_da.astype(np.float32).to_dataset(name="te_rho")
+        ne_ds = ne_rho_da.astype(np.float32).to_dataset(name="ne_rho")
+
+        profile_ds = xr.merge([te_ds, ne_ds])
+
+        return profile_ds
         
-
-
 
     @staticmethod
     def _get_te_profile_params_ece(
