@@ -1607,13 +1607,13 @@ class CmodPhysicsMethods:
         # Prepare output arrays
         n_times = len(ts_time)
         n_rhovn = len(rhovn)
-        rho = np.full((n_rhovn, n_times), np.nan)
+        n_chords = len(ts_z)
+        rho_chord = np.full((n_chords, n_times), np.nan)
 
         for t in range(n_times):
-            for i in range(n_rhovn):
-                psi = rz_to_psin((ts_r, ts_z[i], ts_time[t]))
-                rho_at_t = psin_to_rho((psi, ts_time[t]))
-                rho[i, t] = rho_at_t
+            for i in range(n_chords):
+                psi_chord = rz_to_psin((ts_r, ts_z[i], ts_time[t])) 
+                rho_chord[i, t] = psin_to_rho((psi_chord, ts_time[t]))
 
         # Fit the profiles to a polynomial in rho and sample on uniform rho grid
         rhogrid = np.linspace(0, 1, n_rhovn)
@@ -1621,12 +1621,12 @@ class CmodPhysicsMethods:
         ne_rho = np.full((n_rhovn, n_times), np.nan)
 
         for t in range(n_times):
-            valid_points = (rho[:, t] >= 0) & (rho[:, t] <= 1) & (ts_te[:, t] > 0) & (ts_ne[:, t] > 0)
+            valid_points = (rho_chord[:, t] >= 0) & (rho_chord[:, t] <= 1) & (ts_te[:, t] > 0) & (ts_ne[:, t] > 0)
             if np.sum(valid_points) == 0:
                 continue
             te_valid = ts_te[valid_points, t]
             ne_valid = ts_ne[valid_points, t]
-            rho_valid = rho[valid_points, t]
+            rho_valid = rho_chord[valid_points, t]
 
             # Sort by valid rho values
             sort_idx = np.argsort(rho_valid)
@@ -1641,16 +1641,28 @@ class CmodPhysicsMethods:
             te_rho[:, t] = te_interp
             ne_rho[:, t] = ne_interp
 
+        # Interpolate to requested time basis
+        te_rho_final = interp1(ts_time, te_rho, params.times, "previous", axis=1, fill_value=np.nan, bounds_error=False)
+        ne_rho_final = interp1(ts_time, ne_rho, params.times, "previous", axis=1, fill_value=np.nan, bounds_error=False)
+
         # Create xarray dataset
         te_rho_da = xr.DataArray(
-            te_rho,
-            dims=["rho", "time"],
-            coords={"rho": rhogrid, "time": ts_time},
+            te_rho_final,
+            dims=("rho", "idx"),
+            coords={
+                "shot": params.shot_id,
+                "rho": rhogrid,
+                "time": ("idx", params.times)
+            },
         )
         ne_rho_da = xr.DataArray(
-            ne_rho,
-            dims=["rho", "time"],
-            coords={"rho": rhogrid, "time": ts_time},
+            ne_rho_final,
+            dims=("rho", "idx"),
+            coords={
+                "shot": params.shot_id,
+                "rho": rhogrid,
+                "time": ("idx", params.times)
+            },
         )
 
         te_ds = te_rho_da.astype(np.float32).to_dataset(name="te_rho")
@@ -1659,7 +1671,6 @@ class CmodPhysicsMethods:
         profile_ds = xr.merge([te_ds, ne_ds])
 
         return profile_ds
-        
 
     @staticmethod
     def _get_te_profile_params_ece(
