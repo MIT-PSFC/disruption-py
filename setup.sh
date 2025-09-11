@@ -37,6 +37,15 @@ then
    export ODBCSYSINI=$DISPY_DIR
    export DISPY_TOKAMAK=east
 
+elif [[ -d /opt/hbt/disruptions ]]
+then
+
+   # HBT-EP server
+   export PATH=/usr/bin:/usr/sbin
+   export MDSPLUS_DIR=/usr/local/mdsplus
+   export DISPY_DIR=/opt/hbt/disruptions/disruption-py
+   export DISPY_TOKAMAK=hbtep
+
 else
 
    exit 1
