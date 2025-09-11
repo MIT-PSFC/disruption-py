@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 import time
+import warnings
 from functools import lru_cache
 from pathlib import Path
 from tempfile import mkdtemp
@@ -33,6 +34,31 @@ def without_duplicates(lst: List):
     """
     seen = set()
     return [x for x in lst if not (x in seen or seen.add(x))]
+
+
+def safe_cast(array: np.ndarray, dtype, copy=False) -> np.ndarray:
+    """
+    Safely cast a NumPy array to a specified dtype, suppressing warnings.
+
+    Parameters
+    ----------
+    array : np.ndarray
+        The NumPy array to cast.
+    dtype : type
+        The target data type to cast the array to.
+    copy : bool, optional
+        Whether to create a copy of the array (default is False).
+
+    Returns
+    -------
+    np.ndarray
+        The casted NumPy array.
+    """
+    if isinstance(array, str) and dtype == "str":
+        return array
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=RuntimeWarning)
+        return array.astype(dtype, copy=copy)
 
 
 @lru_cache
