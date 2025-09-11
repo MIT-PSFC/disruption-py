@@ -54,6 +54,8 @@ def safe_cast(array: np.ndarray, dtype, copy=False) -> np.ndarray:
     np.ndarray
         The casted NumPy array.
     """
+    if isinstance(array, str) and dtype == "str":
+        return array
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=RuntimeWarning)
         return array.astype(dtype, copy=copy)
