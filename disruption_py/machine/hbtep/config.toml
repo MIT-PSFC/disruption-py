@@ -1,0 +1,5 @@
+[cmod.inout.mds]
+mdsplus_connection_string = "maxwell.ap.columbia.edu:8003"
+
+[hbtep.tests.shots]
+flattop1_fast = 103590
