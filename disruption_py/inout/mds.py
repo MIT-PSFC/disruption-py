@@ -4,6 +4,7 @@
 Module for managing connections to MDSplus.
 """
 
+import sys
 import threading
 from typing import Any, Callable, Dict, List, Tuple
 
@@ -65,6 +66,9 @@ def _better_mds_exceptions(func):
     Decorator to catch MDSplus exceptions and recreate them with a more descriptive
     error message which includes the tree and the node path.
     """
+
+    if "mdsthin" in sys.modules:
+        return func
 
     def wrapper(*args, **kwargs):
         self = args[0]
