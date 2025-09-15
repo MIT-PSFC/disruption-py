@@ -45,6 +45,7 @@ then
    export MDSPLUS_DIR=/usr/local/mdsplus
    export DISPY_DIR=/opt/hbt/disruptions/disruption-py
    export DISPY_TOKAMAK=hbtep
+   export default_tree_path=maxwell.ap.columbia.edu:8003::
 
 else
 
