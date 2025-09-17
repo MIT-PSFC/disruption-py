@@ -4,6 +4,12 @@ endpoint_url = "https://s3.echo.stfc.ac.uk"
 [mast.inout.sql]
 driver = "dummy"
 
+[mast.tests]
+expected_failure_columns = []
+test_columns = [
+  "ip",
+]
+
 [mast.tests.shots]
 example = 30420
 
