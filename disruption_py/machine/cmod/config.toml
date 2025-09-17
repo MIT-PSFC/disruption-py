@@ -1,3 +1,6 @@
+[cmod.efit]
+tree = "efit18"
+
 [cmod.inout.mds]
 mdsplus_connection_string = "alcdata-archives"
 

@@ -277,11 +277,17 @@ class DisruptionNicknameSetting(NicknameSetting):
         str
             The resolved EFIT tree name.
         """
-        if "pytest" not in sys.modules:
-            return "efit21"
-        if params.disruption_time is None:
+
+        # all shots have efit21 tree, but
+        # only disruptive shots have efit18 tree, thus
+        # non-disruptive shots should use the default tree
+
+        tree = config(params.tokamak).efit.tree
+        if "pytest" in sys.modules:
+            tree = "efit18"
+        if tree == "efit18" and params.disruption_time is None:
             return DefaultNicknameSetting().get_tree_name(params)
-        return "efit18"
+        return tree
 
     def _get_tree_name(self, params: NicknameSettingParams) -> str:
         """
