@@ -31,7 +31,6 @@ class XarrayConnection:
             server=endpoint_url,
             pid=threading.get_native_id(),
         )
-
         # pylint: disable=no-member
 
     @property

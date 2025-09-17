@@ -53,12 +53,13 @@ dependencies = [
   "numpy>=1.26.0,<2.0.0",
   "pandas>=2.2.0,<2.3.3",
   "pyodbc>=5.2.0",
-  "s3fs>=2025.7.0",
   "scipy>=1.15.0",
   "SQLAlchemy>=2.0.0",
   "tqdm>=4.67.0",
   "xarray>=2025.1.0,<2025.8.0",
   "zarr>=3",
+  "aiohttp (>=3.12.15,<4.0.0)",
+  "requests (>=2.32.5,<3.0.0)",
 ]
 description = "An open-source physics-based Scientific Framework for Disruption Analysis of Fusion Plasmas for AI/ML applications"
 keywords = [
