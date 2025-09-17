@@ -19,9 +19,13 @@ from disruption_py.machine.tokamak import Tokamak
 try:
     # first, try full-fledged MDSplus
     import MDSplus
+
+    MDSPLUS_PACKAGE = "MDSplus"
 except ModuleNotFoundError:
     # then, fall back onto mdsthin
     from mdsthin import MDSplus
+
+    MDSPLUS_PACKAGE = "mdsthin"
 # shortcuts for downstream imports
 mdsExceptions = MDSplus.mdsExceptions
 
