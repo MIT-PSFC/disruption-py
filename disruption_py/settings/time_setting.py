@@ -9,15 +9,14 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Union
 
-import xarray as xr
 import numpy as np
+from disruption_py.machine.mast.util import MastUtilMethods
 from loguru import logger
 
 from disruption_py.config import config
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.misc import shot_msg_patch
 from disruption_py.inout.mds import MDSConnection, mdsExceptions
-from disruption_py.inout.s3 import S3Connection
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.east.util import EastUtilMethods
 from disruption_py.machine.tokamak import Tokamak
@@ -235,6 +234,14 @@ class EfitTimeSetting(TimeSetting):
     Time setting for using the EFIT timebase.
     """
 
+    def __init__(self):
+        """
+        Initialize with tokamak overrides.
+        """
+        self.tokamak_overrides = {
+            Tokamak.MAST: self.mast_times,
+        }
+
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
         """
         Retrieve the EFIT timebase for the tested tokamaks.
@@ -262,6 +269,23 @@ class EfitTimeSetting(TimeSetting):
             )
         return _postprocess(times=efit_time, units=efit_time_unit)
 
+    def mast_times(self, params: TimeSettingParams) -> np.ndarray:
+        """
+        Retrieve the EFIT timebase for the MAST tokamak.
+
+        Parameters
+        ----------
+        params : TimeSettingParams
+            Parameters needed to retrieve the timebase.
+
+        Returns
+        -------
+        np.ndarray
+            Array of times in the timebase.
+        """
+        efit_time = MastUtilMethods.retrieve_efit_time(params.mds_conn, params.shot_id)
+        return efit_time
+
 
 class DisruptionTimeSetting(TimeSetting):
     """
@@ -279,6 +303,7 @@ class DisruptionTimeSetting(TimeSetting):
             Tokamak.D3D: self.d3d_times,
             Tokamak.EAST: self.east_times,
             Tokamak.HBTEP: self.hbtep_times,
+            Tokamak.MAST: self.mast_times,
         }
 
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
@@ -343,12 +368,8 @@ class DisruptionTimeSetting(TimeSetting):
         For now, this method returns a uniform array between 0 and 12 ms with 10 us interval
         based on the ip timebase.
         This will be replaced once a get_disruption_time method is implemented for HBT-EP
-
-        Returns
-        -------
-        np.ndarray
-            Array of times in the timebase.
         """
+
         t_ip = params.mds_conn.get_dims(
             r"\top.sensors.rogowskis:ip", tree_name="hbtep2"
         )  # [s]
@@ -356,6 +377,23 @@ class DisruptionTimeSetting(TimeSetting):
         t_ip = t_ip[(t_ip >= 0) & (t_ip <= 12e-3)]
         steps = round(10e-6 / (t_ip[1] - t_ip[0]))
         return t_ip[::steps]
+
+    def mast_times(self, params: TimeSettingParams) -> np.ndarray:
+        """
+        Retrieve the disruption timebase for the MAST.
+
+        Parameters
+        ----------
+        params : TimeSettingParams
+            Parameters needed to retrieve the timebase.
+
+        Returns
+        -------
+        np.ndarray
+            Array of times in the timebase.
+        """
+        ip, ip_time = MastUtilMethods.retrieve_ip(params.mds_conn, params.shot_id)
+        return self._calculate_disruption_times(params, ip, ip_time)
 
     @classmethod
     def _calculate_disruption_times(
@@ -602,12 +640,8 @@ class IpTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        conn: S3Connection = params.mds_conn.conn
-        file_name = f"s3://mast/level2/shots/{params.shot_id}.zarr"
-        mapper = conn.get_mapper(file_name)
-        ds = xr.open_zarr(mapper, group="summary")
-        times = ds["time"].values
-        return times
+        _, ip_time = MastUtilMethods.retrieve_ip(params.mds_conn, params.shot_id)
+        return ip_time
 
 
 class SignalTimeSetting(TimeSetting):
@@ -733,7 +767,11 @@ _time_setting_mappings: Dict[str, TimeSetting] = {
         Tokamak.CMOD: EfitTimeSetting(),
         Tokamak.D3D: DisruptionTimeSetting(),
         Tokamak.EAST: DisruptionTimeSetting(),
+<<<<<<< HEAD
         Tokamak.HBTEP: DisruptionTimeSetting(),
+=======
+        Tokamak.MAST: DisruptionTimeSetting(),
+>>>>>>> 218db71 (Add support for different timebases to MAST)
     },
     "ip": IpTimeSetting(),
     "ip_efit": SharedTimeSetting([IpTimeSetting(), EfitTimeSetting()]),

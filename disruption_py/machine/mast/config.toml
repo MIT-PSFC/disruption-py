@@ -6,3 +6,12 @@ driver = "dummy"
 
 [mast.tests.shots]
 example = 30420
+
+[mast.time]
+disruption_time_start = 0.2
+disruption_time_step = 0.001
+dt_before_disruption = 0.010
+duration_before_disruption = 0.25
+end_of_current_threshold = 200e3
+minimum_duration = 0.1
+minimum_ip = 200e3
