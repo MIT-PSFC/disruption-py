@@ -8,6 +8,7 @@ import xarray as xr
 from disruption_py.core.utils.math import interp1
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
+from disruption_py.inout.xarray import XarrayConnection
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -23,10 +24,9 @@ class MastPhysicsMethods:
     )
     def get_ip_parameters(params: PhysicsMethodParams):
         """Get Ip parameters"""
-        conn = params.mds_conn.conn
-        file_name = f"s3://mast/level2/shots/{params.shot_id}.zarr"
-        mapper = conn.get_mapper(file_name)
-        ds = xr.open_zarr(mapper, group="summary")
+        conn: XarrayConnection = params.mds_conn
+        file_name = conn.get_shot_file_path(params.shot_id)
+        ds = xr.open_zarr(file_name, group="summary")
         ip = ds["ip"].values
         magtime = ds["time"].values
 

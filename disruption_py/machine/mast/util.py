@@ -5,7 +5,7 @@ Module for helper, not physics, methods.
 import xarray as xr
 import numpy as np
 
-from disruption_py.inout.s3 import S3Connection
+from disruption_py.inout.xarray import XarrayConnection
 
 
 class MastUtilMethods:
@@ -40,7 +40,7 @@ class MastUtilMethods:
         return ip
 
     @staticmethod
-    def retrieve_ip(mds_conn: S3Connection, shot_id: int):
+    def retrieve_ip(conn: XarrayConnection, shot_id: int):
         """
         Read in the measured plasma current, Ip.
 
@@ -56,17 +56,15 @@ class MastUtilMethods:
         tuple[np.ndarray, np.ndarray]
             Plasma current [A], time base of plasma current [s].
         """
-        conn = mds_conn.conn
-        file_name = f"s3://mast/level2/shots/{shot_id}.zarr"
-        mapper = conn.get_mapper(file_name)
-        ds = xr.open_zarr(mapper, group="summary")
+        file_name = conn.get_shot_file_path(shot_id)
+        ds = xr.open_zarr(file_name, group="summary")
         ip = ds["ip"].values
         ip_time = ds["time"].values
         ip = MastUtilMethods.subtract_ip_baseline_offset(ip, ip_time)
         return ip, ip_time
 
     @staticmethod
-    def retrieve_efit_time(mds_conn: S3Connection, shot_id: int):
+    def retrieve_efit_time(conn: XarrayConnection, shot_id: int):
         """
         Read in the EFIT time base.
 
@@ -82,9 +80,7 @@ class MastUtilMethods:
         np.ndarray
             EFIT time base [s].
         """
-        conn = mds_conn.conn
-        file_name = f"s3://mast/level2/shots/{shot_id}.zarr"
-        mapper = conn.get_mapper(file_name)
-        ds = xr.open_zarr(mapper, group="equilibrium")
+        file_name = conn.get_shot_file_path(shot_id)
+        ds = xr.open_zarr(file_name, group="equilibrium")
         efit_time = ds["time"].values
         return efit_time

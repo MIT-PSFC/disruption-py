@@ -39,6 +39,9 @@ class ShotDatabase:
         passwd,
         **_kwargs,
     ):
+        if "pyodbc" not in sys.modules:
+            raise RuntimeError("No pyodbc module!")
+
         logger.debug(
             "Database initialization: {user}@{host}/{db_name}",
             user=user,
@@ -89,9 +92,7 @@ class ShotDatabase:
 
         # dummy database
         if not db_conf.get("host") or not db_conf.get("db_name"):
-            logger.warning("No SQL server/database!")
-
-        if db_conf.driver == "dummy":
+            logger.debug("Did not setup database.")
             return DummyDatabase()
 
         # read sybase login

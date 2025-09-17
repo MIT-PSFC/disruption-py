@@ -1,5 +1,7 @@
-[mast.inout.s3]
+[mast.inout.xarray]
 endpoint_url = "https://s3.echo.stfc.ac.uk"
+file_path = "mast/level2/shots"
+file_ext = 'zarr'
 
 [mast.inout.sql]
 driver = "dummy"
