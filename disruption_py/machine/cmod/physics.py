@@ -226,9 +226,7 @@ class CmodPhysicsMethods:
             # Ip wire can be one of 16 but is normally no. 16
             for wire_index in range(16, 0, -1):
                 wire_node_name = params.mds_conn.get_data(
-                    f"{node_path}:P_{wire_index:02d}:name",
-                    tree_name="pcs",
-                    astype=None,
+                    f"{node_path}:P_{wire_index:02d}:name", tree_name="pcs"
                 )
                 if wire_node_name == "IP":
                     try:
@@ -382,9 +380,7 @@ class CmodPhysicsMethods:
         for node_path, start in active_wire_segments:
             for wire_index in range(1, 17):
                 wire_node_name = params.mds_conn.get_data(
-                    f"{node_path}:P_{wire_index:02d}:name",
-                    tree_name="pcs",
-                    astype=None,
+                    f"{node_path}:P_{wire_index:02d}:name", tree_name="pcs"
                 )
                 if wire_node_name == "ZCUR":
                     try:
@@ -895,7 +891,7 @@ class CmodPhysicsMethods:
 
         path = r"\mag_bp_coils."
         bp_node_names = params.mds_conn.get_data(
-            f"{path}nodename", tree_name="magnetics", astype=None
+            f"{path}nodename", tree_name="magnetics"
         )
         phi = params.mds_conn.get_data(f"{path}phi", tree_name="magnetics")  # [degree]
         btor_pickup_coeffs = params.mds_conn.get_data(

@@ -252,7 +252,7 @@ class EfitTimeSetting(TimeSetting):
             r"\efit_aeqdsk:ali", tree_name="_efit_tree"
         )
         efit_time_unit = params.mds_conn.get_data(
-            r"units_of(dim_of(\efit_aeqdsk:ali))", tree_name="_efit_tree", astype="str"
+            r"units_of(dim_of(\efit_aeqdsk:ali))", tree_name="_efit_tree"
         )
         if efit_time_unit not in {"s", "ms", "us"}:
             params.logger.verbose(
@@ -604,9 +604,7 @@ class SignalTimeSetting(TimeSetting):
             )
             raise
         signal_unit = params.mds_conn.get_data(
-            f"units_of(dim_of({self.signal_path}))",
-            tree_name=self.tree_name,
-            astype="str",
+            f"units_of(dim_of({self.signal_path}))", tree_name=self.tree_name
         )
         if (
             not signal_unit.strip()
