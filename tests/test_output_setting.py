@@ -71,6 +71,9 @@ def test_output_exists(fresh_data, test_folder_m):
     ds_dsk = xr.open_dataset(ds_path)
     dt_dsk = xr.open_datatree(dt_path)
     df_dsk = pd.read_csv(df_path, index_col=0)
+    for col in df_dsk:
+        if df_dsk[col].dtype == "float64":
+            df_dsk[col] = df_dsk[col].astype("float32")
 
     # format types
     assert isinstance(dict_out, dict), "Wrong type for dict output"
