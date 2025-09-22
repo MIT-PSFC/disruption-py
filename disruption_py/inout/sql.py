@@ -83,6 +83,11 @@ class ShotDatabase:
 
         db_conf = config(tokamak).inout.sql
 
+        # dummy database
+        if not db_conf.get("host") or not db_conf.get("db_name"):
+            logger.warning("No SQL server/database!")
+            return DummyDatabase()
+
         # read sybase login
         if any(f"db_{key}" not in db_conf for key in ["user", "pass"]):
             db_name = db_conf["db_name"]
