@@ -1,5 +1,8 @@
 [cmod.inout.mds]
 mdsplus_connection_string = "maxwell.ap.columbia.edu:8003"
 
+[cmod.inout.sql]
+host = ""
+
 [hbtep.tests.shots]
 flattop1_fast = 103590
