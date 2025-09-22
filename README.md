@@ -34,6 +34,7 @@ Currently supported devices are:
 - [DIII-D](https://en.wikipedia.org/wiki/DIII-D_(tokamak))
 - [EAST](https://en.wikipedia.org/wiki/Experimental_Advanced_Superconducting_Tokamak)
 - [HBT-EP](https://fusion.columbia.edu/facilities/hbt-ep-tokamak)
+- [MAST](https://en.wikipedia.org/wiki/Mega_Ampere_Spherical_Tokamak)
 
 
 ## Overview
