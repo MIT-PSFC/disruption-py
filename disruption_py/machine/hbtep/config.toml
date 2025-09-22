@@ -1,7 +1,7 @@
-[cmod.inout.mds]
+[hbtep.inout.mds]
 mdsplus_connection_string = "maxwell.ap.columbia.edu:8003"
 
-[cmod.inout.sql]
+[hbtep.inout.sql]
 host = ""
 
 [hbtep.tests.shots]
