@@ -5,18 +5,24 @@ Module for managing SQL database connections.
 """
 
 import os
+import sys
 import threading
 from typing import List
 from urllib.parse import quote_plus
 
 import pandas as pd
-import pyodbc
 from loguru import logger
 from sqlalchemy import create_engine
 
 from disruption_py.config import config
 from disruption_py.core.utils.shared_instance import SharedInstance
 from disruption_py.machine.tokamak import Tokamak
+
+try:
+    import pyodbc
+except ImportError:
+    # libodbc.so.2: cannot open shared object file
+    pass
 
 
 class ShotDatabase:
@@ -34,6 +40,9 @@ class ShotDatabase:
         passwd,
         **_kwargs,
     ):
+
+        if "pyodbc" not in sys.modules:
+            raise RuntimeError("No pyodbc module!")
 
         logger.debug(
             "Database initialization: {user}@{host}/{db_name}",
