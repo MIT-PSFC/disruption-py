@@ -52,8 +52,8 @@ def run_test_time_setting(
     )
     times = shot_data["time"].to_numpy()
     # Check start, end, and length of time array
-    assert times[0] == pytest.approx(t_start, rel=1e-4)
-    assert times[-1] == pytest.approx(t_stop, rel=1e-4)
+    assert times[0] == pytest.approx(t_start, abs=1e-4)
+    assert times[-1] == pytest.approx(t_stop, abs=1e-4)
     assert len(times) == length
     # Check for duplicated time point
     assert len(times) == len(np.unique(times))
