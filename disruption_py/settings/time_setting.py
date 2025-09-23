@@ -84,7 +84,7 @@ def _postprocess(times: np.ndarray, units: str = "") -> np.ndarray:
     np.ndarray
         Post-processed array of times.
     """
-    times = np.unique(times)
+    times = np.unique(times).astype("float32")
     units = units.lower().strip()
     if units == "ms":
         return times * 1e-3
