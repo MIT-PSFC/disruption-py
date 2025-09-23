@@ -65,7 +65,7 @@ def test_shared_time_setting(tokamak: Tokamak, test_folder_f: str):
     """
     test_setup = {
         Tokamak.CMOD: ["analysis", 1150805012, 0.0601, 1.2799, 6100],
-        Tokamak.D3D: ["efit01", 161228, 0.1, 5.0395, 9880],
+        Tokamak.D3D: ["efit01", 161228, 0.1, 5.04, 9881],
         Tokamak.EAST: ["efit_east", 55012, 0.301, 5.7, 5401],
     }
     run_test_time_setting(tokamak, "ip_efit", *test_setup[tokamak], test_folder_f)
