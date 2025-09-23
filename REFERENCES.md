@@ -7,6 +7,7 @@
 
 ### Papers
 
+- AR Saperstein, _et al._ (2025), _"Design and development of an off-normal warning system for SPARC"_, Nucl. Fusion, accepted for publication, DOI: [10.1088/1741-4326/ae074e](https://doi.org/10.1088/1741-4326/ae074e)
 - GL Trevisan, _et al._ (2025), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, JOSS, [submitted](https://github.com/openjournals/joss-reviews/issues/8538)
 
 ### Conferences
