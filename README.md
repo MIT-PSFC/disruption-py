@@ -59,7 +59,7 @@ _Figure: Schematic flowchart of a typical DisruptionPy workflow (by: Y Wei)._
 
 ### Acknowledgments
 
-The most recent revamp of DisruptionPy [[4](https://meetings.aps.org/Meeting/DPP24/Session/PP12.27), [5](https://meetings.aps.org/Meeting/DPP24/Session/PP12.9), [6](https://meetings.aps.org/Meeting/DPP24/Session/PP12.10)] was partially supported by DOE FES under Award DE-SC0024368, "Open and FAIR Fusion for Machine Learning Applications" [[7](https://crea-psfc.github.io/open-fair-fusion/)].
+The most recent revamp of DisruptionPy was partially supported by DOE FES under Award DE-SC0024368, "Open and FAIR Fusion for Machine Learning Applications" [[4](https://crea-psfc.github.io/open-fair-fusion/)].
 
 ### References
 
@@ -69,13 +69,7 @@ The most recent revamp of DisruptionPy [[4](https://meetings.aps.org/Meeting/DPP
 
 3. WH Hu, C Rea, et al. (2021), _"Real-time prediction of high-density EAST disruptions using random forest"_, **Nuclear Fusion** 61 066034, [DOI:10.1088/1741-4326/abf74d](https://doi.org/10.1088/1741-4326/abf74d).
 
-4. C Rea, et al. (2024), _"Open and FAIR Fusion for Machine Learning Applications"_, 66th APS Division of Plasma Physics Meeting, [PP12.27](https://meetings.aps.org/Meeting/DPP24/Session/PP12.27).
-
-5. GL Trevisan, et al. (2024), _"Functional Improvements and Technical Developments of a Community-driven and Physics-informed Numerical Library for Disruption Studies"_, 66th APS Division of Plasma Physics Meeting, [PP12.9](https://meetings.aps.org/Meeting/DPP24/Session/PP12.9).
-
-6. Y Wei, et al. (2024), _"Physics validation of parameter methods in DisruptionPy"_, 66th APS Division of Plasma Physics Meeting, [PP12.10](https://meetings.aps.org/Meeting/DPP24/Session/PP12.10).
-
-7. C Rea, et al. (2023), _"Open and FAIR Fusion for Machine Learning Applications"_, [Project website](https://crea-psfc.github.io/open-fair-fusion/).
+4. C Rea, et al. (2023), _"Open and FAIR Fusion for Machine Learning Applications"_, [Project website](https://crea-psfc.github.io/open-fair-fusion/).
 
 
 ## Repository layout
@@ -232,3 +226,7 @@ Several contributors have been involved in the development of the code since the
 - Josh Lorincz, Undergraduate Student,
 - Amos Decker, Undergraduate Student,
 - William Wei, PostDoctoral Associate.
+
+## References
+
+The full list of references can be found in [REFERENCES.md](REFERENCES.md).
