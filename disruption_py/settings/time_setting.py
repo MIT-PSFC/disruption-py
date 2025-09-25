@@ -468,6 +468,7 @@ class IpTimeSetting(TimeSetting):
             Tokamak.CMOD: self.cmod_times,
             Tokamak.D3D: self.d3d_times,
             Tokamak.EAST: self.east_times,
+            Tokamak.HBTEP: self.hbtep_times,
         }
 
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
@@ -542,6 +543,25 @@ class IpTimeSetting(TimeSetting):
         # by 17.0 ms
         if params.shot_id < 44432:
             ip_time -= 0.0170
+        return ip_time
+
+    def hbtep_times(self, params: TimeSettingParams) -> np.ndarray:
+        """
+        Retrieve the Ip timebase for the HBT-EP tokamak.
+
+        Parameters
+        ----------
+        params : TimeSettingParams
+            Parameters needed to retrieve the timebase.
+
+        Returns
+        -------
+        np.ndarray
+            Array of times in the timebase.
+        """
+        (ip_time,) = params.mds_conn.get_dims(
+            r"\top.sensors.rogowskis:ip", tree_name="hbtep2"
+        )
         return ip_time
 
 
