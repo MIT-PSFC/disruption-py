@@ -20,12 +20,16 @@ class D3DEfitMethods:
 
     # EFIT Variables
     efit_cols = {
+        "aminor": r"\efit_a_eqdsk:aminor",
         "beta_n": r"\efit_a_eqdsk:betan",
         "beta_p": r"\efit_a_eqdsk:betap",
         "kappa": r"\efit_a_eqdsk:kappa",
         "li": r"\efit_a_eqdsk:li",
         "upper_gap": r"\efit_a_eqdsk:gaptop",
         "lower_gap": r"\efit_a_eqdsk:gapbot",
+        "tritop": r"\efit_a_eqdsk:tritop",
+        "tribot": r"\efit_a_eqdsk:tribot",
+        "r0": r"\efit_a_eqdsk:r0",
         "q0": r"\efit_a_eqdsk:q0",
         "qstar": r"\efit_a_eqdsk:qstar",
         "q95": r"\efit_a_eqdsk:q95",

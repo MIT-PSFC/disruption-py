@@ -6,6 +6,7 @@ Module for retrieving and calculating data for DIII-D physics methods.
 
 import numpy as np
 import scipy
+import xarray as xr
 from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.caching import cache_method
@@ -680,6 +681,86 @@ class D3DPhysicsMethods:
             "dipprog_dt": dipprog_dt,
             "power_supply_railed": power_supply_railed,
         }
+
+    @staticmethod
+    @physics_method(columns=["bt"], tokamak=Tokamak.D3D)
+    def get_magnetics_parameters(params: PhysicsMethodParams):
+        """
+        Get the toroidal magnetic field at the magnetic axis.
+        """
+        b_tor, t_mag = params.mds_conn.get_data_with_dims(
+            f"ptdata('bt', {params.shot_id})", tree_name="d3d"
+        )
+        t_mag /= 1e3  # [ms] -> [s]
+        b_tor = interp1(t_mag, b_tor, params.times)  # [T]
+        return {"bt": b_tor}
+
+    @staticmethod
+    @physics_method(columns=["wmhdf", "betapf"], tokamak=Tokamak.D3D)
+    def get_pedestal_parameters(params: PhysicsMethodParams):
+        """
+        Get the pedestal plasma parameters.
+        """
+        wmhdf, t_wmhdf = params.mds_conn.get_data_with_dims(
+            r"\wmhdf", tree_name="pedestal"
+        )
+        betapf, t_betapf = params.mds_conn.get_data_with_dims(
+            r"\betapf", tree_name="pedestal"
+        )
+
+        t_wmhdf = t_wmhdf / 1e3  # [ms] -> [s]
+        t_betapf = t_betapf / 1e3  # [ms] -> [s]
+
+        wmhdf = interp1(t_wmhdf, wmhdf, params.times)
+        betapf = interp1(t_betapf, betapf, params.times)
+
+        return {"wmhdf": wmhdf, "betapf": betapf}
+
+    @staticmethod
+    @physics_method(columns=["ne_rho", "te_rho"], tokamak=Tokamak.D3D)
+    def get_zipfit_profiles(params: PhysicsMethodParams):
+        """
+        Get the electron density and temperature profiles from the ZIPFIT analysis.
+
+        """
+
+        # te_rho has shape (rho, time)
+        # t_zipfit already in seconds
+        te_rho, t_zipfit = params.mds_conn.get_data_with_dims(r"PROFILE_FITS.ZIPFIT.ETEMPFIT", tree_name="electrons")
+        ne_rho, _ = params.mds_conn.get_data_with_dims(r"PROFILE_FITS.ZIPFIT.EDENSFIT", tree_name="electrons")
+
+        te_rho_final = interp1(t_zipfit, te_rho, params.times, axis=1)
+        ne_rho_final = interp1(t_zipfit, ne_rho, params.times, axis=1)
+
+        # TODO(ZanderKeith): Verify rho is correct
+        rhogrid = np.linspace(0, 1, te_rho.shape[0])
+
+        # Create xarray dataset
+        te_rho_da = xr.DataArray(
+            te_rho_final,
+            dims=("rho", "idx"),
+            coords={
+                "shot": params.shot_id,
+                "rho": rhogrid,
+                "time": ("idx", params.times)
+            },
+        )
+        ne_rho_da = xr.DataArray(
+            ne_rho_final,
+            dims=("rho", "idx"),
+            coords={
+                "shot": params.shot_id,
+                "rho": rhogrid,
+                "time": ("idx", params.times)
+            },
+        )
+
+        te_ds = te_rho_da.astype(np.float32).to_dataset(name="te_rho")
+        ne_ds = ne_rho_da.astype(np.float32).to_dataset(name="ne_rho")
+
+        profile_ds = xr.merge([te_ds, ne_ds])
+
+        return profile_ds
 
     @staticmethod
     @physics_method(
