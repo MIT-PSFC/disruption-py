@@ -726,11 +726,17 @@ class D3DPhysicsMethods:
 
         # te_rho has shape (rho, time)
         # t_zipfit already in seconds
+        efit_time = (
+            params.mds_conn.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree")
+            / 1.0e3
+        )
         te_rho, t_zipfit = params.mds_conn.get_data_with_dims(r"PROFILE_FITS.ZIPFIT.ETEMPFIT", tree_name="electrons")
         ne_rho, _ = params.mds_conn.get_data_with_dims(r"PROFILE_FITS.ZIPFIT.EDENSFIT", tree_name="electrons")
 
         te_rho_final = interp1(t_zipfit, te_rho, params.times, axis=1)
         ne_rho_final = interp1(t_zipfit, ne_rho, params.times, axis=1)
+
+        other_fit, t_other = params.mds_conn.get_data_with_dims(r"PROFILES.EDENSFIT", tree_name="zipfit01")
 
         # TODO(ZanderKeith): Verify rho is correct
         rhogrid = np.linspace(0, 1, te_rho.shape[0])
