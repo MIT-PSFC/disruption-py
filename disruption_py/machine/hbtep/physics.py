@@ -119,3 +119,34 @@ class HbtepPhysicsMethods:
         aminor = interp1(t_ip, aminor, params.times, "linear")
 
         return {"r": r, "aminor": aminor}
+
+    @staticmethod
+    @physics_method(columns=["btor"], tokamak=Tokamak.HBTEP)
+    def get_btor(params: PhysicsMethodParams):
+        """
+        Calculate B_tor from the TF probe data
+        """
+        btor, t_btor = params.mds_conn.get_data_with_dims(
+            r"\TOP.SENSORS.TF_PROBE", tree_name="hbtep2"
+        )  # [T], [s]
+        btor = interp1(t_btor, btor, params.times, "linear")
+
+        r = HbtepPhysicsMethods.get_plasma_radii(params)["r"]
+        btor = btor * 1.23 / r
+        return {"btor": btor}
+
+    @staticmethod
+    @physics_method(columns=["qstar"], tokamak=Tokamak.HBTEP)
+    def get_qstar(params: PhysicsMethodParams):
+        """
+        Calculate the edge safety factor from magnetic measurements
+        """
+        ip = HbtepPhysicsMethods.get_ip(params)["ip"]
+        radii = HbtepPhysicsMethods.get_plasma_radii(params)
+        r, aminor = radii["r"], radii["aminor"]
+        btor = HbtepPhysicsMethods.get_btor(params)["btor"]
+
+        # Calculate qstar
+        qstar = aminor**2 * btor / (2e-7 * ip * r)
+        qstar *= 1.15  # 15% correction factor -- Jeff Levesque
+        return {"qstar": qstar}
