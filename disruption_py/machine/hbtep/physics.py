@@ -174,3 +174,20 @@ class HbtepPhysicsMethods:
         )  # [arb], [s]
         h_alpha = interp1(t_h_alpha, h_alpha, params.times, "linear")
         return {"h_alpha": h_alpha}
+
+    @staticmethod
+    @physics_method(columns=["sxr_midplane"], tokamak=Tokamak.HBTEP)
+    def get_sxr_midplane(params: PhysicsMethodParams):
+        """
+        Get the soft x-ray midplane sensor data
+        """
+        sxr, t_sxr = params.mds_conn.get_data_with_dims(
+            r"\TOP.DEVICES.NORTH_RACK:CPCI:INPUT_74", tree_name="hbtep2"
+        )  # [arb], [s]
+        # offset subtraction
+        (offset_indices,) = np.where((0 < t_sxr) & (t_sxr < 0.5e-3))
+        offset = sxr[offset_indices].mean()
+        sxr = -(sxr - offset)
+        # interpolate to requested timebase
+        sxr = interp1(t_sxr, sxr, params.times, "linear")
+        return {"sxr_midplane": sxr}
