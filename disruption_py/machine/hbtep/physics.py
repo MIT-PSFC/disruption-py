@@ -162,3 +162,15 @@ class HbtepPhysicsMethods:
         )  # [V], [s]
         v_loop = interp1(t_v_loop, v_loop, params.times, "linear")
         return {"v_loop": v_loop}
+
+    @staticmethod
+    @physics_method(columns=["h_alpha"], tokamak=Tokamak.HBTEP)
+    def get_h_alpha(params: PhysicsMethodParams):
+        """
+        Get D alpha line emission from spectrometer
+        """
+        h_alpha, t_h_alpha = params.mds_conn.get_data_with_dims(
+            r"\TOP.SENSORS.SPECTROMETER", tree_name="hbtep2"
+        )  # [arb], [s]
+        h_alpha = interp1(t_h_alpha, h_alpha, params.times, "linear")
+        return {"h_alpha": h_alpha}
