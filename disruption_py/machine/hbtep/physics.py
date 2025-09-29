@@ -150,3 +150,15 @@ class HbtepPhysicsMethods:
         qstar = aminor**2 * btor / (2e-7 * ip * r)
         qstar *= 1.15  # 15% correction factor -- Jeff Levesque
         return {"qstar": qstar}
+
+    @staticmethod
+    @physics_method(columns=["v_loop"], tokamak=Tokamak.HBTEP)
+    def get_v_loop(params: PhysicsMethodParams):
+        """
+        Get v_loop measurement
+        """
+        v_loop, t_v_loop = params.mds_conn.get_data_with_dims(
+            r"\TOP.SENSORS.LOOP_VOLTAGE", tree_name="hbtep2"
+        )  # [V], [s]
+        v_loop = interp1(t_v_loop, v_loop, params.times, "linear")
+        return {"v_loop": v_loop}
