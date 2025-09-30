@@ -214,16 +214,13 @@ class HbtepPhysicsMethods:
     def get_n_mode_data(params: PhysicsMethodParams):
         """
         Get the n=1 and 2 mode amplitdes, phases, and frequencies from the toroidal array (TA)
-        # TODO: implement this function
         """
         # Get TA data
         ta_data = HbtepPhysicsMethods._get_ta_data(params)
         data = ta_data["ta_pol_data_filt"]
         time = ta_data["ta_pol_time"]
         phi = ta_data["ta_pol_phi"]
-        n, m = len(data), len(
-            data[0]
-        )  # TODO: decide if we need to convert data to np.ndarray
+        n = len(data)
 
         # Construct A matrix and calculate its inversion
         A = np.zeros((n, 5))
@@ -303,7 +300,7 @@ class HbtepPhysicsMethods:
         time = pa_data["pa1_time"]
         theta = pa_data["pa1_theta"]
         phi = pa_data["pa1_phi"]
-        n, m = len(data), len(data[0])
+        n = len(data)
         # Construct A matrix and calculate its inversion
         A = np.zeros((n, 11))
         A[:, 0] = np.ones(n)
