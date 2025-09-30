@@ -276,6 +276,98 @@ class HbtepPhysicsMethods:
         }
 
     @staticmethod
+    @physics_method(
+        columns=[
+            "m_equal_2_mode",
+            "m_equal_2_normalized",
+            "m_equal_2_phase",
+            "m_equal_2_frequency",
+            "m_equal_3_mode",
+            "m_equal_3_normalized",
+            "m_equal_3_phase",
+            "m_equal_3_frequency",
+            "m_equal_4_mode",
+            "m_equal_4_normalized",
+            "m_equal_4_phase",
+            "m_equal_4_frequency",
+        ],
+        tokamak=Tokamak.HBTEP,
+    )
+    def get_m_mode_data(params: PhysicsMethodParams):
+        """
+        Get the m=2,3,4 mode amplitdes, phases, and frequencies from the poloidal array (PA1)
+        """
+        # Get PA1 data
+        pa_data = HbtepPhysicsMethods._get_pa_data(params)
+        data = pa_data["pa1_data_filt"]
+        time = pa_data["pa1_time"]
+        theta = pa_data["pa1_theta"]
+        phi = pa_data["pa1_phi"]
+        n, m = len(data), len(data[0])
+        # Construct A matrix and calculate its inversion
+        A = np.zeros((n, 11))
+        A[:, 0] = np.ones(n)
+        for i in range(1, 6):
+            A[:, i * 2 - 1] = np.sin(i * theta - phi)
+            A[:, i * 2] = np.cos(i * theta - phi)
+        Ainv = np.linalg.pinv(A)
+
+        # Use least squares to solve for coefficients
+        x = np.matmul(Ainv, data)
+        m2_amp = np.sqrt(x[3, :] ** 2 + x[4, :] ** 2)  # [T]
+        m3_amp = np.sqrt(x[5, :] ** 2 + x[6, :] ** 2)
+        m4_amp = np.sqrt(x[7, :] ** 2 + x[8, :] ** 2)
+        m2_phase = np.arctan2(x[3, :], x[4, :])
+        m3_phase = np.arctan2(x[5, :], x[6, :])
+        m4_phase = np.arctan2(x[7, :], x[8, :])
+
+        # Calculate mode frequency. Note that gaussian_low_pass_filter is not a causal filter.
+        m2_phase_filt = gaussian_low_pass_filter(
+            HbtepUtilMethods.unwrap_phase(m2_phase), time, 1e-5
+        )
+        m3_phase_filt = gaussian_low_pass_filter(
+            HbtepUtilMethods.unwrap_phase(m3_phase), time, 1e-5
+        )
+        m4_phase_filt = gaussian_low_pass_filter(
+            HbtepUtilMethods.unwrap_phase(m4_phase), time, 1e-5
+        )
+        m2_freq = np.gradient(m2_phase_filt) / np.gradient(time) / (2 * np.pi)
+        m3_freq = np.gradient(m3_phase_filt) / np.gradient(time) / (2 * np.pi)
+        m4_freq = np.gradient(m4_phase_filt) / np.gradient(time) / (2 * np.pi)
+
+        # Interpolate output data to the requested timebase
+        m2_amp = interp1(time, m2_amp, params.times, "linear")
+        m3_amp = interp1(time, m3_amp, params.times, "linear")
+        m4_amp = interp1(time, m4_amp, params.times, "linear")
+        m2_phase = interp1(time, m2_phase, params.times, "linear")
+        m3_phase = interp1(time, m3_phase, params.times, "linear")
+        m4_phase = interp1(time, m4_phase, params.times, "linear")
+        m2_freq = interp1(time, m2_freq, params.times, "linear")
+        m3_freq = interp1(time, m3_freq, params.times, "linear")
+        m4_freq = interp1(time, m4_freq, params.times, "linear")
+
+        # Calculate normalized mode amplitudes
+        btor = HbtepPhysicsMethods.get_btor(params)["btor"]
+        m2_amp_norm = m2_amp / btor
+        m3_amp_norm = m3_amp / btor
+        m4_amp_norm = m4_amp / btor
+
+        return {
+            "m_equal_2_mode": m2_amp,
+            "m_equal_2_normalized": m2_amp_norm,
+            "m_equal_2_phase": m2_phase,
+            "m_equal_2_frequency": m2_freq,
+            "m_equal_3_mode": m3_amp,
+            "m_equal_3_normalized": m3_amp_norm,
+            "m_equal_3_phase": m3_phase,
+            "m_equal_3_frequency": m3_freq,
+            "m_equal_4_mode": m4_amp,
+            "m_equal_4_normalized": m4_amp_norm,
+            "m_equal_4_phase": m4_phase,
+            "m_equal_4_frequency": m4_freq,
+        }
+
+    @staticmethod
     @cache_method
     def _get_ta_data(params: PhysicsMethodParams):
         r"""
@@ -411,5 +503,212 @@ class HbtepPhysicsMethods:
         output["ta_pol_data_filt"] = ta_pol_data_filt
         output["ta_rad_data_raw"] = ta_rad_data_raw
         output["ta_rad_data_filt"] = ta_rad_data_filt
+
+        return output
+
+    @staticmethod
+    @cache_method
+    def _get_pa_data(params: PhysicsMethodParams):
+        r"""
+        Get poloidal field measurements from the 2 poloidal array (PA) sensors
+        PA sensors are stored in \HBTEP2::TOP.SENSORS.MAGNETIC:[SENSOR_NAME]
+        Return PA1 and PA2 data in their original timebases
+
+        Known bad sensor(s): PA2_S14P, PA2_S27P
+        """
+        output = {}
+        output["bad_sensors"] = ["PA2_S14P", "PA2_S27P"]
+        # Sensor names
+        output["pa1_names"] = [
+            "PA1_S01P",
+            "PA1_S02P",
+            "PA1_S03P",
+            "PA1_S04P",
+            "PA1_S05P",
+            "PA1_S06P",
+            "PA1_S07P",
+            "PA1_S08P",
+            "PA1_S09P",
+            "PA1_S10P",
+            "PA1_S11P",
+            "PA1_S12P",
+            "PA1_S13P",
+            "PA1_S14P",
+            "PA1_S15P",
+            "PA1_S16P",
+            "PA1_S17P",
+            "PA1_S18P",
+            "PA1_S19P",
+            "PA1_S20P",
+            "PA1_S21P",
+            "PA1_S22P",
+            "PA1_S23P",
+            "PA1_S24P",
+            "PA1_S25P",
+            "PA1_S26P",
+            "PA1_S27P",
+            "PA1_S28P",
+            "PA1_S29P",
+            "PA1_S30P",
+            "PA1_S31P",
+            "PA1_S32P",
+        ]
+        output["pa2_names"] = [
+            "PA2_S01P",
+            "PA2_S02P",
+            "PA2_S03P",
+            "PA2_S04P",
+            "PA2_S05P",
+            "PA2_S06P",
+            "PA2_S07P",
+            "PA2_S08P",
+            "PA2_S09P",
+            "PA2_S10P",
+            "PA2_S11P",
+            "PA2_S12P",
+            "PA2_S13P",
+            "PA2_S14P",
+            "PA2_S15P",
+            "PA2_S16P",
+            "PA2_S17P",
+            "PA2_S18P",
+            "PA2_S19P",
+            "PA2_S20P",
+            "PA2_S21P",
+            "PA2_S22P",
+            "PA2_S23P",
+            "PA2_S24P",
+            "PA2_S25P",
+            "PA2_S26P",
+            "PA2_S27P",
+            "PA2_S28P",
+            "PA2_S29P",
+            "PA2_S30P",
+            "PA2_S31P",
+            "PA2_S32P",
+        ]
+
+        # Toroidal and poloidal positions of the sensors
+        output["pa1_theta"] = (
+            np.array(
+                [
+                    -174.74778518,
+                    -164.23392461,
+                    -153.66901098,
+                    -143.01895411,
+                    -132.24974382,
+                    -121.3277924,
+                    -110.22067715,
+                    -98.93591492,
+                    -87.23999699,
+                    -75.60839722,
+                    -63.97679673,
+                    -52.34519359,
+                    -40.71359604,
+                    -29.08199717,
+                    -17.45039318,
+                    -5.81879416,
+                    5.81280487,
+                    17.44440438,
+                    29.07600466,
+                    40.70760263,
+                    52.33920936,
+                    63.97080017,
+                    75.60240749,
+                    87.23400093,
+                    98.93591492,
+                    110.22067715,
+                    121.3277924,
+                    132.24974382,
+                    143.01895411,
+                    153.66901098,
+                    164.23392461,
+                    174.74778518,
+                ]
+            )
+            * np.pi
+            / 180.0
+        )
+        output["pa2_theta"] = (
+            np.array(
+                [
+                    -174.74778518,
+                    -164.23392461,
+                    -153.66901098,
+                    -143.01895411,
+                    -132.24974382,
+                    -121.3277924,
+                    -110.22067715,
+                    -98.93591492,
+                    -87.23999699,
+                    -75.60839722,
+                    -63.97679673,
+                    -52.34519359,
+                    -40.71359604,
+                    -29.08199717,
+                    -17.45039318,
+                    -5.81879416,
+                    5.81280487,
+                    17.44440438,
+                    29.07600466,
+                    40.70760263,
+                    52.33920936,
+                    63.97080017,
+                    75.60240749,
+                    87.23400093,
+                    98.93591492,
+                    110.22067715,
+                    121.3277924,
+                    132.24974382,
+                    143.01895411,
+                    153.66901098,
+                    164.23392461,
+                    174.74778518,
+                ]
+            )
+            * np.pi
+            / 180.0
+        )
+        output["pa1_phi"] = np.ones(len(output["pa1_theta"])) * 317.5 * np.pi / 180
+        output["pa2_phi"] = np.ones(len(output["pa2_theta"])) * 317.5 * np.pi / 180.0
+
+        # Get PA time
+        pa1_time = params.mds_conn.get_dims(
+            r"\TOP.SENSORS.MAGNETIC:PA1_S01P", tree_name="hbtep2"
+        )
+        pa2_time = params.mds_conn.get_dims(
+            r"\TOP.SENSORS.MAGNETIC:PA2_S01P", tree_name="hbtep2"
+        )
+        output["pa1_time"] = pa1_time[0]
+        output["pa2_time"] = pa2_time[0]
+        # Magnetic sensor's sampling rate should be 1/(2e-6)=500kHz
+        fs_pa1 = (1 / (output["pa1_time"][1] - output["pa1_time"][0])).round()
+        fs_pa2 = (1 / (output["pa2_time"][1] - output["pa2_time"][0])).round()
+
+        # Get PA data
+        pa1_data_raw, pa1_data_filt = [], []
+        for sensor_name in output["pa1_names"]:
+            sensor_data_raw = params.mds_conn.get_data(
+                r"\TOP.SENSORS.MAGNETIC:" + sensor_name, tree_name="hbtep2"
+            )
+            sensor_data_filt = butterworth_filter(
+                sensor_data_raw, fs=fs_pa1, cutoff=2e3, order=2, btype="high"
+            )
+            pa1_data_raw.append(sensor_data_raw)
+            pa1_data_filt.append(sensor_data_filt)
+        pa2_data_raw, pa2_data_filt = [], []
+        for sensor_name in output["pa2_names"]:
+            sensor_data_raw = params.mds_conn.get_data(
+                r"\TOP.SENSORS.MAGNETIC:" + sensor_name, tree_name="hbtep2"
+            )
+            sensor_data_filt = butterworth_filter(
+                sensor_data_raw, fs=fs_pa2, cutoff=2e3, order=2, btype="high"
+            )
+            pa2_data_raw.append(sensor_data_raw)
+            pa2_data_filt.append(sensor_data_filt)
+        output["pa1_data_raw"] = pa1_data_raw
+        output["pa1_data_filt"] = pa1_data_filt
+        output["pa2_data_raw"] = pa2_data_raw
+        output["pa2_data_filt"] = pa2_data_filt
 
         return output
