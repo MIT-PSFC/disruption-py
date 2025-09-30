@@ -374,19 +374,16 @@ class HbtepPhysicsMethods:
         # Toroidal and poloidal positions of the radial sensors -- not implemented in hbteplib
 
         # Get TA time
-        output["ta_pol_time"] = params.mds_conn.get_dims(
+        ta_pol_time = params.mds_conn.get_dims(
             r"\TOP.SENSORS.MAGNETIC:TA01_S1P", tree_name="hbtep2"
-        )[
-            0
-        ]  # [s]
-        output["ta_rad_time"] = params.mds_conn.get_dims(
+        )
+        ta_rad_time = params.mds_conn.get_dims(
             r"\TOP.SENSORS.MAGNETIC:TA01_S2R", tree_name="hbtep2"
-        )[
-            0
-        ]  # [s]
-        fs_ta_pol = (
-            1 / (output["ta_pol_time"][1] - output["ta_pol_time"][0])
-        ).round()  # should be 1/(2e-6)=500kHz
+        )
+        output["ta_pol_time"] = ta_pol_time[0]  # [s]
+        output["ta_rad_time"] = ta_rad_time[0]  # [s]
+        # Magnetic sensor's sampling rate should be 1/(2e-6)=500kHz
+        fs_ta_pol = (1 / (output["ta_pol_time"][1] - output["ta_pol_time"][0])).round()
         fs_ta_rad = (1 / (output["ta_rad_time"][1] - output["ta_rad_time"][0])).round()
 
         # Get TA data
