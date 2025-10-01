@@ -26,13 +26,13 @@ jobs:
         tool: [black, isort, pylint, ruff, toml-sort, yamllint]
     name: ${{ matrix.tool }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install poetry
         run: pipx install poetry
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version-file: 'pyproject.toml'
           cache: 'poetry'
@@ -51,7 +51,7 @@ jobs:
       github.event.pull_request.draft == false
     steps:
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install shellcheck
         run: sudo apt-get install shellcheck
