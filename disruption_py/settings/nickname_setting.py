@@ -5,10 +5,12 @@ This module provides classes for handling nickname settings, which are used to
 resolve MDSplus tree names for various tokamaks.
 """
 
+import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, Union
 
+from disruption_py.config import config
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.inout.mds import MDSConnection
 from disruption_py.inout.sql import ShotDatabase
@@ -241,12 +243,20 @@ class DisruptionNicknameSetting(NicknameSetting):
         str
             The resolved EFIT tree name.
         """
-        if params.disruption_time is None:
-            # TODO: some DIII-D shots have a disruption efit tree, but no disruption time.
+
+        # all shots have "efit21" / DISPY tree, but
+        # only disruptive shots have "efit18" / DIS tree, thus
+        # non-disruptive shots should use the default tree
+
+        runtag = config(params.tokamak).efit.runtag
+        if "pytest" in sys.modules:
+            runtag = "DIS"
+        if runtag == "DIS" and params.disruption_time is None:
             return DefaultNicknameSetting().get_tree_name(params)
+
         efit_trees = params.database.query(
             "select tree from code_rundb.dbo.plasmas where "
-            f"shot = {params.shot_id} and runtag = 'DIS' and deleted = 0 order by idx",
+            f"shot = {params.shot_id} and runtag = '{runtag}' and deleted = 0 order by idx",
             use_pandas=False,
         )
         if len(efit_trees) == 0:
@@ -267,9 +277,17 @@ class DisruptionNicknameSetting(NicknameSetting):
         str
             The resolved EFIT tree name.
         """
-        if params.disruption_time is None:
+
+        # all shots have efit21 tree, but
+        # only disruptive shots have efit18 tree, thus
+        # non-disruptive shots should use the default tree
+
+        tree = config(params.tokamak).efit.tree
+        if "pytest" in sys.modules:
+            tree = "efit18"
+        if tree == "efit18" and params.disruption_time is None:
             return DefaultNicknameSetting().get_tree_name(params)
-        return "efit18"
+        return tree
 
     def _get_tree_name(self, params: NicknameSettingParams) -> str:
         """
