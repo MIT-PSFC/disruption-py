@@ -376,6 +376,52 @@ class HbtepPhysicsMethods:
         return {"sxr_total": sxr_total}
 
     @staticmethod
+    @physics_method(
+        columns=["euv_000_total", "euv_025_total", "euv_090_total", "euv_270_total"],
+        tokamak=Tokamak.HBTEP,
+    )
+    def get_euv_total(params: PhysicsMethodParams):
+        """
+        Get the total emissions from the 4 EUV fan arrays
+        - 000: outboard midplane array, total emission
+        - 025: outboard upper midplane array, emission from top one-third of the plasma
+        - 090: top array, emission from the inboard half of the plasma
+        - 270: bottom array, emission from the outboard half of the plasma
+        """
+        euv_data = HbtepPhysicsMethods._get_euv_data(params)
+        euv_000_total = interp1(
+            euv_data["time"],
+            np.sum(euv_data["euv_000_data"], axis=0),
+            params.times,
+            "linear",
+        )
+        euv_025_total = interp1(
+            euv_data["time"],
+            np.sum(euv_data["euv_025_data"], axis=0),
+            params.times,
+            "linear",
+        )
+        euv_090_total = interp1(
+            euv_data["time"],
+            np.sum(euv_data["euv_090_data"], axis=0),
+            params.times,
+            "linear",
+        )
+        euv_270_total = interp1(
+            euv_data["time"],
+            np.sum(euv_data["euv_270_data"], axis=0),
+            params.times,
+            "linear",
+        )
+
+        return {
+            "euv_000_total": euv_000_total,
+            "euv_025_total": euv_025_total,
+            "euv_090_total": euv_090_total,
+            "euv_270_total": euv_270_total,
+        }
+
+    @staticmethod
     @cache_method
     def _get_ta_data(params: PhysicsMethodParams):
         r"""
@@ -781,4 +827,112 @@ class HbtepPhysicsMethods:
         output["det_ap_pol"] = 0.001270000007934868
         output["det_ap_tor"] = 0.02539999969303608
 
+        return output
+
+    @staticmethod
+    @cache_method
+    def _get_euv_data(params: PhysicsMethodParams):
+        """
+        Get data from the 4 EUV fan array
+        """
+        output = {}
+        output["detectors"] = [0, 25, 90, 270]  # poloidal location of the 4 fan arrays
+
+        time = params.mds_conn.get_dims(
+            r"\TOP.SENSORS.EUV.POL.DET000.channel_01:RAW", tree_name="hbtep2"
+        )
+        output["time"] = time[0]
+
+        for detector in output["detectors"]:
+            data, r, z, gain = [], [], [], []
+            for channel in range(1, 17):
+                address = (
+                    rf"\TOP.SENSORS.EUV.POL.DET{detector:03d}.CHANNEL_{channel:02d}"
+                )
+                data.append(
+                    params.mds_conn.get_data(address + ":RAW", tree_name="hbtep2")
+                )
+                r.append(params.mds_conn.get_data(address + ":R", tree_name="hbtep2"))
+                z.append(params.mds_conn.get_data(address + ":Z", tree_name="hbtep2"))
+                gain.append(
+                    params.mds_conn.get_data(address + ":GAIN", tree_name="hbtep2")
+                )
+            output[f"euv_{detector:03d}_data"] = data
+            output[f"euv_{detector:03d}_r"] = r
+            output[f"euv_{detector:03d}_z"] = z
+            output[f"euv_{detector:03d}_gain"] = gain
+
+        # Aperture location
+        output["det_ap_r"] = [1.160508, 1.090508, 0.907057, 0.929746]
+        output["det_ap_z"] = [0.000000, 0.099975, 0.166773, -0.173440]
+        output["det_ap_pol"] = [0.000635, 0.000635, 0.000635, 0.000635]
+        output["det_ap_tor"] = [0.00635, 0.0254, 0.0254, 0.0244]
+        output["orientation"] = [90, 90, 150, 145]  # direction of the aperture [deg]
+        # Impact parameters in Tree ordering
+        output["impact_parameters"] = [
+            -15.20239282,
+            -13.88379581,
+            -12.34664158,
+            -10.57283874,
+            -8.55643016,
+            -6.31046679,
+            -3.87255431,
+            -1.30599562,
+            1.30599562,
+            3.87255431,
+            6.31046679,
+            8.55643016,
+            10.57283874,
+            12.34664158,
+            13.88379581,
+            15.20239282,
+            4.30322029,
+            5.05782374,
+            5.82121675,
+            6.58965689,
+            7.3590901,
+            8.12525048,
+            8.88376096,
+            9.63024278,
+            10.36044694,
+            11.07036625,
+            11.75634593,
+            12.41518118,
+            13.04417992,
+            13.64121203,
+            14.20472504,
+            14.73373985,
+            0.48160587,
+            -0.45909578,
+            -1.48806338,
+            -2.60489231,
+            -3.80409537,
+            -5.0735163,
+            -6.39312401,
+            -7.73487081,
+            -9.06416928,
+            -10.34320912,
+            -11.53564661,
+            -12.61149041,
+            -13.55074303,
+            -14.34481908,
+            -14.99565891,
+            -15.51324615,
+            14.72875124,
+            14.0599001,
+            13.28190271,
+            12.39369218,
+            11.39994292,
+            10.31173957,
+            9.14636266,
+            7.92605538,
+            6.67595335,
+            5.42160618,
+            4.18662977,
+            2.99095252,
+            1.84984336,
+            0.7737403,
+            -0.23139142,
+            -1.16322417,
+        ]
         return output
