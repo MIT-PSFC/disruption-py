@@ -365,6 +365,17 @@ class HbtepPhysicsMethods:
         }
 
     @staticmethod
+    @physics_method(columns=["sxr_total"], tokamak=Tokamak.HBTEP)
+    def get_sxr_total(params: PhysicsMethodParams):
+        """
+        Get the top sxr fan array data and calculate the sum of the 10 good channels
+        """
+        sxr_data = HbtepPhysicsMethods._get_sxr_data(params)
+        sxr_total = np.sum(sxr_data["data"], axis=0)
+        sxr_total = interp1(sxr_data["time"], sxr_total, params.times, "linear")
+        return {"sxr_total": sxr_total}
+
+    @staticmethod
     @cache_method
     def _get_ta_data(params: PhysicsMethodParams):
         r"""
@@ -707,5 +718,67 @@ class HbtepPhysicsMethods:
         output["pa1_data_filt"] = pa1_data_filt
         output["pa2_data_raw"] = pa2_data_raw
         output["pa2_data_filt"] = pa2_data_filt
+
+        return output
+
+    @staticmethod
+    @cache_method
+    def _get_sxr_data(params: PhysicsMethodParams):
+        """
+        Get the top sxr fan array data
+
+        Only 10 (of 16) of the SXR sensors are included in the data below.  Some of the
+        missing sensors are broken and others include anamolous or attenuated
+        results.
+        """
+        output = {}
+        output["sensor_num"] = [1, 2, 3, 4, 6, 9, 11, 12, 14, 16]
+        # channels = output['sensor_num'] + 75
+
+        time = params.mds_conn.get_dims(
+            r"\TOP.SENSORS.SXR_FAN.CHANNEL_01:RAW", tree_name="hbtep2"
+        )
+        output["time"] = time[0]
+
+        # Fetch data
+        data = []
+        r = []
+        z = []
+        midplane = []
+        for n in output["sensor_num"]:
+            data.append(
+                params.mds_conn.get_data(
+                    rf"\TOP.SENSORS.SXR_FAN.CHANNEL_{n:02d}:RAW",
+                    tree_name="hbtep2",
+                )
+            )
+            r.append(
+                params.mds_conn.get_data(
+                    rf"\TOP.SENSORS.SXR_FAN.CHANNEL_{n:02d}:R",
+                    tree_name="hbtep2",
+                )
+            )
+            z.append(
+                params.mds_conn.get_data(
+                    rf"\TOP.SENSORS.SXR_FAN.CHANNEL_{n:02d}:Z",
+                    tree_name="hbtep2",
+                )
+            )
+            midplane.append(
+                params.mds_conn.get_data(
+                    rf"\TOP.SENSORS.SXR_FAN.CHANNEL_{n:02d}:MIDPLANE",
+                    tree_name="hbtep2",
+                )
+            )
+        output["data"] = data
+        output["r"] = r
+        output["z"] = z
+        output["midplane"] = midplane
+
+        # Aperture location
+        output["det_ap_r"] = 0.9654660224914551
+        output["det_ap_z"] = 0.2211250066757202
+        output["det_ap_pol"] = 0.001270000007934868
+        output["det_ap_tor"] = 0.02539999969303608
 
         return output
