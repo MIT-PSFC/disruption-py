@@ -1,4 +1,5 @@
 import threading
+import xarray as xr
 from typing import Optional
 from loguru import logger
 
@@ -14,7 +15,7 @@ class XarrayConnection:
     def __init__(
         self,
         file_path: str,
-        file_ext: str = ".zarr",
+        file_ext: str = "zarr",
         endpoint_url: Optional[str] = None,
     ):
         if file_path is None:
@@ -29,6 +30,7 @@ class XarrayConnection:
             server=endpoint_url,
             pid=threading.get_native_id(),
         )
+
         # pylint: disable=no-member
 
     @property
@@ -49,12 +51,27 @@ class XarrayConnection:
 
     def get_shot_connection(self, shot_id: int):
         """Get connection."""
+        file_path = self.get_shot_file_path(shot_id)
+        engine = "zarr" if self.file_ext == "zarr" else "netcdf4"
+        self.data_tree = xr.open_datatree(file_path, engine=engine)
         return self
 
     def get_shot_file_path(self, shot_id: int):
         """Get file path for individual shot."""
         file_path = f"{self.folder_path}/{shot_id}.{self.file_ext}"
         return file_path
+
+    def get_data(self, shot_id: int, group: str, variable: str):
+        """Get data from the connection."""
+        if self.data_tree is None:
+            self.get_shot_connection(shot_id)
+
+        try:
+            return self.data_tree[group][variable].values
+        except KeyError as ex:
+            raise KeyError(
+                f"Variable '{variable}' not found in group '{group}'."
+            ) from ex
 
     def cleanup(self):
         pass

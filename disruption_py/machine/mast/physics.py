@@ -27,10 +27,8 @@ class MastPhysicsMethods:
     def get_ip_parameters(params: PhysicsMethodParams):
         """Get Ip parameters"""
         conn: XarrayConnection = params.mds_conn
-        file_name = conn.get_shot_file_path(params.shot_id)
-        ds = xr.open_zarr(file_name, group="summary")
-        ip = ds["ip"].values
-        magtime = ds["time"].values
+        ip = conn.get_data(params.shot_id, "summary", "ip")
+        magtime = conn.get_data(params.shot_id, "summary", "time")
 
         times = params.times
         ip = interp1(magtime, ip, times)
@@ -44,11 +42,9 @@ class MastPhysicsMethods:
     def get_power(params: PhysicsMethodParams):
         """Get power parameters"""
         conn: XarrayConnection = params.mds_conn
-        file_name = conn.get_shot_file_path(params.shot_id)
-        ds = xr.open_zarr(file_name, group="summary")
-        power_nbi = ds["power_nbi"].values
-        power_radiated = ds["power_radiated"].values
-        base_time = ds["time"].values
+        power_nbi = conn.get_data(params.shot_id, "summary", "power_nbi")
+        power_radiated = conn.get_data(params.shot_id, "summary", "power_radiated")
+        base_time = conn.get_data(params.shot_id, "summary", "time")
 
         times = params.times
         power_nbi = interp1(base_time, power_nbi, times)
@@ -63,12 +59,14 @@ class MastPhysicsMethods:
     def get_gas(params: PhysicsMethodParams):
         """Get gas injection parameters"""
         conn: XarrayConnection = params.mds_conn
-        file_name = conn.get_shot_file_path(params.shot_id)
-        ds = xr.open_zarr(file_name, group="gas_injection")
-        total_injected = ds["total_injected"].values
-        inboard_total = ds["inboard_total"].values
-        outboard_total = ds["outboard_total"].values
-        base_time = ds["time"].values
+        total_injected = conn.get_data(
+            params.shot_id, "gas_injection", "total_injected"
+        )
+        inboard_total = conn.get_data(params.shot_id, "gas_injection", "inboard_total")
+        outboard_total = conn.get_data(
+            params.shot_id, "gas_injection", "outboard_total"
+        )
+        base_time = conn.get_data(params.shot_id, "gas_injection", "time")
 
         times = params.times
         total_injected = interp1(base_time, total_injected, times)
@@ -87,13 +85,11 @@ class MastPhysicsMethods:
     )
     def get_ts_parameters(params: PhysicsMethodParams):
         """Get Thomson parameters"""
-        conn: XarrayConnection = params.mds_conn
-        file_name = conn.get_shot_file_path(params.shot_id)
-        ds = xr.open_zarr(file_name, group="thomson_scattering")
         times = params.times
-        base_time = ds["time"].values
-        t_e_core = ds["t_e_core"].values
-        n_e_core = ds["n_e_core"].values
+        conn: XarrayConnection = params.mds_conn
+        t_e_core = conn.get_data(params.shot_id, "thomson_scattering", "t_e_core")
+        n_e_core = conn.get_data(params.shot_id, "thomson_scattering", "n_e_core")
+        base_time = conn.get_data(params.shot_id, "thomson_scattering", "time")
         t_e_core = interp1(base_time, t_e_core, times)
         n_e_core = interp1(base_time, n_e_core, times)
         return {"t_e_core": t_e_core, "n_e_core": n_e_core}
@@ -132,16 +128,13 @@ class MastPhysicsMethods:
         """
 
         conn: XarrayConnection = params.mds_conn
-        file_name = conn.get_shot_file_path(params.shot_id)
-        ds = xr.open_zarr(file_name, group="summary")
-        n_e = ds["line_average_n_e"].values
-        t_n = ds["time"].values
-        ip = ds["ip"].values
-        t_ip = ds["time"].values
+        n_e = conn.get_data(params.shot_id, "summary", "line_average_n_e")
+        t_n = conn.get_data(params.shot_id, "summary", "time")
+        ip = conn.get_data(params.shot_id, "summary", "ip")
+        t_ip = conn.get_data(params.shot_id, "summary", "time")
 
-        ds = xr.open_zarr(file_name, group="equilibrium")
-        a_minor = ds["minor_radius"].values
-        t_a = ds["time"].values
+        a_minor = conn.get_data(params.shot_id, "equilibrium", "minor_radius")
+        t_a = conn.get_data(params.shot_id, "equilibrium", "time")
 
         return MastPhysicsMethods._get_densities(
             params.times, n_e, t_n, ip, t_ip, a_minor, t_a
