@@ -28,7 +28,6 @@ expected_failure_columns = [
   "dn_dt",
   "dwmhd_dt",
   "greenwald_fraction",
-  "h_alpha",
   "kappa",
   "kappa_area",
   "li",
