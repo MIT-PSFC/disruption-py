@@ -27,8 +27,8 @@ class MastPhysicsMethods:
     def get_ip_parameters(params: PhysicsMethodParams):
         """Get Ip parameters"""
         conn: XarrayConnection = params.mds_conn
-        ip = conn.get_data(params.shot_id, "summary", "ip")
-        magtime = conn.get_data(params.shot_id, "summary", "time")
+        ip = conn.get_data(params.shot_id, "summary/ip")
+        magtime = conn.get_data(params.shot_id, "summary/time")
 
         times = params.times
         ip = interp1(magtime, ip, times)
@@ -42,9 +42,9 @@ class MastPhysicsMethods:
     def get_power(params: PhysicsMethodParams):
         """Get power parameters"""
         conn: XarrayConnection = params.mds_conn
-        power_nbi = conn.get_data(params.shot_id, "summary", "power_nbi")
-        power_radiated = conn.get_data(params.shot_id, "summary", "power_radiated")
-        base_time = conn.get_data(params.shot_id, "summary", "time")
+        power_nbi = conn.get_data(params.shot_id, "summary/power_nbi")
+        power_radiated = conn.get_data(params.shot_id, "summary/power_radiated")
+        base_time = conn.get_data(params.shot_id, "summary/time")
 
         times = params.times
         power_nbi = interp1(base_time, power_nbi, times)
@@ -59,14 +59,10 @@ class MastPhysicsMethods:
     def get_gas(params: PhysicsMethodParams):
         """Get gas injection parameters"""
         conn: XarrayConnection = params.mds_conn
-        total_injected = conn.get_data(
-            params.shot_id, "gas_injection", "total_injected"
-        )
-        inboard_total = conn.get_data(params.shot_id, "gas_injection", "inboard_total")
-        outboard_total = conn.get_data(
-            params.shot_id, "gas_injection", "outboard_total"
-        )
-        base_time = conn.get_data(params.shot_id, "gas_injection", "time")
+        total_injected = conn.get_data(params.shot_id, "gas_injection/total_injected")
+        inboard_total = conn.get_data(params.shot_id, "gas_injection/inboard_total")
+        outboard_total = conn.get_data(params.shot_id, "gas_injection/outboard_total")
+        base_time = conn.get_data(params.shot_id, "gas_injection/time")
 
         times = params.times
         total_injected = interp1(base_time, total_injected, times)
@@ -87,9 +83,9 @@ class MastPhysicsMethods:
         """Get Thomson parameters"""
         times = params.times
         conn: XarrayConnection = params.mds_conn
-        t_e_core = conn.get_data(params.shot_id, "thomson_scattering", "t_e_core")
-        n_e_core = conn.get_data(params.shot_id, "thomson_scattering", "n_e_core")
-        base_time = conn.get_data(params.shot_id, "thomson_scattering", "time")
+        t_e_core = conn.get_data(params.shot_id, "thomson_scattering/t_e_core")
+        n_e_core = conn.get_data(params.shot_id, "thomson_scattering/n_e_core")
+        base_time = conn.get_data(params.shot_id, "thomson_scattering/time")
         t_e_core = interp1(base_time, t_e_core, times)
         n_e_core = interp1(base_time, n_e_core, times)
         return {"t_e_core": t_e_core, "n_e_core": n_e_core}
@@ -128,13 +124,13 @@ class MastPhysicsMethods:
         """
 
         conn: XarrayConnection = params.mds_conn
-        n_e = conn.get_data(params.shot_id, "summary", "line_average_n_e")
-        t_n = conn.get_data(params.shot_id, "summary", "time")
-        ip = conn.get_data(params.shot_id, "summary", "ip")
-        t_ip = conn.get_data(params.shot_id, "summary", "time")
+        n_e = conn.get_data(params.shot_id, "summary/line_average_n_e")
+        t_n = conn.get_data(params.shot_id, "summary/time")
+        ip = conn.get_data(params.shot_id, "summary/ip")
+        t_ip = conn.get_data(params.shot_id, "summary/time")
 
-        a_minor = conn.get_data(params.shot_id, "equilibrium", "minor_radius")
-        t_a = conn.get_data(params.shot_id, "equilibrium", "time")
+        a_minor = conn.get_data(params.shot_id, "equilibrium/minor_radius")
+        t_a = conn.get_data(params.shot_id, "equilibrium/time")
 
         return MastPhysicsMethods._get_densities(
             params.times, n_e, t_n, ip, t_ip, a_minor, t_a

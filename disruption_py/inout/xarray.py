@@ -2,6 +2,7 @@ import threading
 import xarray as xr
 from typing import Optional
 from loguru import logger
+from zarr import group
 
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.config import config
@@ -61,17 +62,15 @@ class XarrayConnection:
         file_path = f"{self.folder_path}/{shot_id}.{self.file_ext}"
         return file_path
 
-    def get_data(self, shot_id: int, group: str, variable: str):
+    def get_data(self, shot_id: int, path: str):
         """Get data from the connection."""
         if self.data_tree is None:
             self.get_shot_connection(shot_id)
 
         try:
-            return self.data_tree[group][variable].values
+            return self.data_tree[path].values
         except KeyError as ex:
-            raise KeyError(
-                f"Variable '{variable}' not found in group '{group}'."
-            ) from ex
+            raise KeyError(f"Variable '{path}' not found.") from ex
 
     def cleanup(self):
         pass
