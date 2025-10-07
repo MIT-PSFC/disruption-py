@@ -9,22 +9,26 @@
 
 - AR Saperstein, _et al._ (2025), _"Design and development of an off-normal warning system for SPARC"_, Nucl. Fusion **65** 116007, DOI: [10.1088/1741-4326/ae074e](https://doi.org/10.1088/1741-4326/ae074e)
 - GL Trevisan, _et al._ (2025), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, JOSS, [submitted](https://github.com/openjournals/joss-reviews/issues/8538)
+- AD Maris, _et al._ (2024), _"Correlation of the L-mode density limit with edge collisionality"_, Nucl. Fusion **65** 016051, DOI: [10.1088/1741-4326/ad90f0](https://doi.org/10.1088/1741-4326/ad90f0)
 
 ### Conferences
 
 - [67th APS-DPP Meeting (2025)](https://meetings.aps.org/Meeting/DPP25)
-  - ...
+  - AD Maris, _et al._ (2025), _"Collisionality scaling of the tokamak density limit: data-driven analysis, cross-device prediction, and real-time avoidance"_
 
 - [45th ITPA-MDC Meeting (2025)](https://sites.google.com/pppl.gov/itpa-mdc2025)
   - AR Saperstein, _et al._ (2025), _"Progress on the development of an off-normal warning system for SPARC"_
+  - AD Maris, _et al._ (2025), _"Cross-device prediction and real-time avoidance of the density limit"_
 
 - [66th APS-DPP Meeting (2024)](https://meetings.aps.org/Meeting/DPP24)
   - C Rea, _et al._ (2024), _"Open and FAIR Fusion for Machine Learning Applications"_, [PP12.27](https://meetings.aps.org/Meeting/DPP24/Session/PP12.27)
   - GL Trevisan, _et al._ (2024), _"Functional Improvements and Technical Developments of a Community-driven and Physics-informed Numerical Library for Disruption Studies"_, [PP12.9](https://meetings.aps.org/Meeting/DPP24/Session/PP12.9)
   - Y Wei, _et al._ (2024), _"Physics validation of parameter methods in DisruptionPy"_, [PP12.10](https://meetings.aps.org/Meeting/DPP24/Session/PP12.10)
   - AR Saperstein, _et al._ (2024), _"Development and preliminary calibration of an off-normal warning system for SPARC"_, [TO06.9](https://meetings.aps.org/Meeting/DPP24/Session/TO06.9)
+  - AD Maris, _et al._ (2024), _"Correlation of the tokamak density limit with edge collisionality"_, **Invited** [BI02.02](https://meetings.aps.org/Meeting/DPP24/Session/BI02.2)
 
 - [3rd IAEA Technical Meeting on Plasma Disruptions and their Mitigation (2024)](https://conferences.iaea.org/event/380/)
   - AR Saperstein, _et al._ (2024), _"Development and preliminary calibration of an off-normal warning system for SPARC"_, [32305](https://conferences.iaea.org/event/380/contributions/32305/)
+  - AD Maris, _et al._ (2024), _"Correlation of the tokamak density limit with edge collisionality"_, [32301](https://conferences.iaea.org/event/380/contributions/32301/)
 
 - [65th APS-DPP Meeting (2023)](https://meetings.aps.org/Meeting/DPP23)
