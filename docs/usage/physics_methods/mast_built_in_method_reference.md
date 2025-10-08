@@ -1,4 +1,4 @@
-## Built-in Methods For CMod { .doc .doc-heading }
+## Built-in Methods For MAST { .doc .doc-heading }
 ::: disruption_py.machine.mast.physics
     handler: python
 	options:
