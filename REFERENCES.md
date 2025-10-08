@@ -16,9 +16,15 @@
 - [67th APS-DPP Meeting (2025)](https://meetings.aps.org/Meeting/DPP25)
   - AD Maris, _et al._ (2025), _"Collisionality scaling of the tokamak density limit: data-driven analysis, cross-device prediction, and real-time avoidance"_
 
+- [6th International Conference on Data-Driven Plasma Science (2025)](https://web.cvent.com/event/7de9d238-e170-4fbf-8de5-20abc5c6eb49/summary)
+  - Y Wei, _et al._ (2025), _"DisruptionPy: An open-source physics-based scientific package for disruption studies on magnetic fusion experiment devices"_
+
 - [45th ITPA-MDC Meeting (2025)](https://sites.google.com/pppl.gov/itpa-mdc2025)
   - AR Saperstein, _et al._ (2025), _"Progress on the development of an off-normal warning system for SPARC"_
   - AD Maris, _et al._ (2025), _"Cross-device prediction and real-time avoidance of the density limit"_
+
+- [Open Source Software for Fusion Energy (2025)](https://ossfe.org/OSSFE_2025/#welcome-to-ossfe-2025)
+  - Y Wei, _et al._ (2025), _"DisruptionPy: an open-source Python library for disruption study."_, [POS-10](https://ossfe.org/OSSFE_2025/y-disruptionpy)
 
 - [66th APS-DPP Meeting (2024)](https://meetings.aps.org/Meeting/DPP24)
   - C Rea, _et al._ (2024), _"Open and FAIR Fusion for Machine Learning Applications"_, [PP12.27](https://meetings.aps.org/Meeting/DPP24/Session/PP12.27)
