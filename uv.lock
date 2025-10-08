@@ -545,7 +545,6 @@ source = { editable = "." }
 dependencies = [
     { name = "dynaconf" },
     { name = "loguru" },
-    { name = "mdsthin" },
     { name = "netcdf4" },
     { name = "numpy" },
     { name = "pandas" },
@@ -559,6 +558,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "black" },
+    { name = "mdsthin" },
     { name = "pylint" },
     { name = "pytest" },
     { name = "ruff" },
@@ -583,7 +583,6 @@ lab = [
 requires-dist = [
     { name = "dynaconf", specifier = ">=3.2.0" },
     { name = "loguru", specifier = ">=0.7.0" },
-    { name = "mdsthin", specifier = ">=1.5.0" },
     { name = "netcdf4", specifier = ">=1.7.0" },
     { name = "numpy", specifier = ">=1.26.0,<2.0.0" },
     { name = "pandas", specifier = ">=2.2.0" },
@@ -597,6 +596,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "black", specifier = ">=25.1.0" },
+    { name = "mdsthin", specifier = ">=1.5.0" },
     { name = "pylint", specifier = ">=3.3.0" },
     { name = "pytest", specifier = ">=8.3.0" },
     { name = "ruff", specifier = ">=0.9.0" },
