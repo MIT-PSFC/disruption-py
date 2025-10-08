@@ -104,8 +104,8 @@ def get_shots_data(
     log_settings = resolve_log_settings(log_settings)
     log_settings.setup_logging()
 
-    if "MDSplus" not in sys.modules and "mdsthin" in sys.modules:
-        logger.warning("Cannot import MDSplus, falling back onto `mdsthin`!")
+    if "mdsthin" in sys.modules:
+        logger.warning("Cannot import MDSplus, falling back onto mdsthin!")
 
     tokamak = resolve_tokamak_from_environment(tokamak)
     database = _get_database_instance(tokamak, database_initializer)
