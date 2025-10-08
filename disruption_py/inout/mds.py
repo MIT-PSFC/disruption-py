@@ -19,13 +19,13 @@ from disruption_py.machine.tokamak import Tokamak
 try:
     # first, try full-fledged MDSplus
     import MDSplus
-
-    MDSPLUS_PACKAGE = "MDSplus"
-except ModuleNotFoundError:
-    # then, fall back onto mdsthin
-    from mdsthin import MDSplus
-
-    MDSPLUS_PACKAGE = "mdsthin"
+except ModuleNotFoundError as e:
+    try:
+        # then, fall back onto mdsthin
+        from mdsthin import MDSplus
+    except ModuleNotFoundError:
+        # pylint: disable-next=raise-missing-from
+        raise e
 # shortcuts for downstream imports
 mdsExceptions = MDSplus.mdsExceptions
 

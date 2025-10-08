@@ -5,6 +5,7 @@ main workflow
 """
 
 import argparse
+import sys
 import time
 from itertools import repeat
 from multiprocessing import Pool
@@ -19,7 +20,7 @@ from disruption_py.core.utils.misc import (
     get_elapsed_time,
     without_duplicates,
 )
-from disruption_py.inout.mds import MDSPLUS_PACKAGE, ProcessMDSConnection
+from disruption_py.inout.mds import ProcessMDSConnection
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.settings import RetrievalSettings
@@ -103,6 +104,9 @@ def get_shots_data(
     log_settings = resolve_log_settings(log_settings)
     log_settings.setup_logging()
 
+    if "MDSplus" not in sys.modules and "mdsthin" in sys.modules:
+        logger.warning("Cannot import MDSplus, falling back onto `mdsthin`!")
+
     tokamak = resolve_tokamak_from_environment(tokamak)
     database = _get_database_instance(tokamak, database_initializer)
     # Clean-up parameters
@@ -127,7 +131,6 @@ def get_shots_data(
         log_settings.reset_handlers(num_shots=len(shotlist_list))
 
     # log start
-    logger.debug("MDSplus package: {pkg}", pkg=MDSPLUS_PACKAGE)
     logger.info(
         "Starting workflow: {n:,} shot{s} / {m} process{p}",
         n=len(shotlist_list),
