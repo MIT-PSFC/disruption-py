@@ -11,12 +11,11 @@ from typing import Dict, List, Tuple, Union
 
 import numpy as np
 from loguru import logger
-from MDSplus import mdsExceptions
 
 from disruption_py.config import config
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.misc import shot_msg_patch
-from disruption_py.inout.mds import MDSConnection
+from disruption_py.inout.mds import MDSConnection, mdsExceptions
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.east.util import EastUtilMethods
 from disruption_py.machine.tokamak import Tokamak

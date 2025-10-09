@@ -4,10 +4,10 @@
 Module for managing connections to MDSplus.
 """
 
+import sys
 import threading
 from typing import Any, Callable, Dict, List, Tuple
 
-import MDSplus
 import numpy as np
 from loguru import logger
 
@@ -15,6 +15,19 @@ from disruption_py.config import config
 from disruption_py.core.utils.misc import shot_msg
 from disruption_py.core.utils.shared_instance import SharedInstance
 from disruption_py.machine.tokamak import Tokamak
+
+try:
+    # first, try full-fledged MDSplus
+    import MDSplus
+except ModuleNotFoundError as e:
+    try:
+        # then, fall back onto mdsthin
+        from mdsthin import MDSplus
+    except ModuleNotFoundError:
+        # pylint: disable-next=raise-missing-from
+        raise e
+# shortcuts for downstream imports
+mdsExceptions = MDSplus.mdsExceptions
 
 
 class ProcessMDSConnection:
@@ -58,6 +71,9 @@ def _better_mds_exceptions(func):
     error message which includes the tree and the node path.
     """
 
+    if "mdsthin" in sys.modules:
+        return func
+
     def wrapper(*args, **kwargs):
         self = args[0]
         if len(args) > 1:
@@ -66,22 +82,22 @@ def _better_mds_exceptions(func):
             path = kwargs.get("path", None)
         try:
             return func(*args, **kwargs)
-        except MDSplus.mdsExceptions.TreeFOPENR:
+        except mdsExceptions.TreeFOPENR:
             nick = kwargs.get("tree_name", None)
             tree = self.tree_name(nick)
             if nick == tree:
                 nick = ""
-            raise MDSplus.mdsExceptions.TreeFOPENR(
+            raise mdsExceptions.TreeFOPENR(
                 "Tree not found. "
                 + (f"Nick: {nick}, " if nick else "")
                 + f"Tree: {tree}"
             ) from None
-        except MDSplus.mdsExceptions.MdsException as e:
-            if isinstance(e, MDSplus.mdsExceptions.TreeNNF):
+        except mdsExceptions.MdsException as e:
+            if isinstance(e, mdsExceptions.TreeNNF):
                 err = "Node not found"
-            elif isinstance(e, MDSplus.mdsExceptions.TreeNODATA):
+            elif isinstance(e, mdsExceptions.TreeNODATA):
                 err = "No data available"
-            elif isinstance(e, MDSplus.mdsExceptions.TreeBADRECORD):
+            elif isinstance(e, mdsExceptions.TreeBADRECORD):
                 err = "Bad record"
             else:
                 err = "MDSplus error"
@@ -156,7 +172,7 @@ class MDSConnection:
         for tree in self.open_trees:
             try:
                 self.conn.closeTree(tree, self.shot_id)
-            except MDSplus.mdsExceptions.TreeNOT_OPEN:
+            except mdsExceptions.TreeNOT_OPEN:
                 break
         self.open_trees = []
 
