@@ -56,7 +56,6 @@ nav:
       - Data I/O:
           - SQL Database: usage/sql_database.md
           - MDSplus Connection: usage/mds_connection_reference.md
-  - FAQ: faq.md
   - GitHub: https://github.com/MIT-PSFC/disruption-py
 markdown_extensions:
   - attr_list
