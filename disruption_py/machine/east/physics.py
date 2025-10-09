@@ -6,11 +6,11 @@ Module for retrieving and calculating data for DIII-D physics methods.
 
 import numpy as np
 import scipy
-from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1, matlab_smooth
+from disruption_py.inout.mds import mdsExceptions
 from disruption_py.machine.east.efit import EastEfitMethods
 from disruption_py.machine.east.util import EastUtilMethods
 from disruption_py.machine.tokamak import Tokamak

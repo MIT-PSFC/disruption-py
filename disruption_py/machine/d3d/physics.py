@@ -6,7 +6,6 @@ Module for retrieving and calculating data for DIII-D physics methods.
 
 import numpy as np
 import scipy
-from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
@@ -18,6 +17,7 @@ from disruption_py.core.utils.math import (
     matlab_gsastd,
     matlab_power,
 )
+from disruption_py.inout.mds import mdsExceptions
 from disruption_py.machine.d3d.util import D3DUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 

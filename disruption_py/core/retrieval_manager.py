@@ -3,7 +3,7 @@
 """
 Module for managing retrieval of shot data from a tokamak.
 """
-import MDSplus.mdsExceptions
+
 import numpy as np
 import pandas as pd
 from loguru import logger
@@ -11,7 +11,7 @@ from loguru import logger
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.physics_method.runner import populate_shot
 from disruption_py.core.utils.misc import shot_msg
-from disruption_py.inout.mds import MDSConnection, ProcessMDSConnection
+from disruption_py.inout.mds import MDSConnection, ProcessMDSConnection, mdsExceptions
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings.nickname_setting import NicknameSettingParams
@@ -99,7 +99,7 @@ class RetrievalManager:
             logger.opt(exception=True).debug(
                 shot_msg("Failed retrieval!"), shot=shot_id
             )
-            if isinstance(e, MDSplus.mdsExceptions.MDSplusERROR):
+            if isinstance(e, mdsExceptions.MDSplusERROR):
                 physics_method_params.mds_conn.reconnect()
             retrieved_data = None
 
@@ -110,7 +110,7 @@ class RetrievalManager:
         except Exception as e:
             logger.critical(shot_msg("Failed cleanup! {e}"), shot=shot_id, e=repr(e))
             logger.opt(exception=True).debug(shot_msg("Failed cleanup!"), shot=shot_id)
-            if isinstance(e, MDSplus.mdsExceptions.MDSplusERROR):
+            if isinstance(e, mdsExceptions.MDSplusERROR):
                 physics_method_params.mds_conn.reconnect()
             retrieved_data = None
 
