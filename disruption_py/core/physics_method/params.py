@@ -64,7 +64,7 @@ class PhysicsMethodParams:
         return to_tuple(
             data={
                 "shot": len(self.times) * [self.shot_id],
-                "time": self.times,
+                "time": self.times.astype("float32"),
             },
             dim="idx",
         )

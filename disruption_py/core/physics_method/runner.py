@@ -276,7 +276,7 @@ def populate_shot(
             # create dataset
             data_vars = to_tuple(data, dim="idx")
             coords = physics_method_params.to_coords()
-            result = xr.Dataset(data_vars=data_vars, coords=coords)
+            result = xr.Dataset(data_vars=data_vars, coords=coords).astype("float32")
 
         datasets += [result]
 

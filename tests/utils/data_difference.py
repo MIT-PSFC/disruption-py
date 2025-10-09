@@ -11,7 +11,6 @@ import numpy as np
 import pandas as pd
 
 from disruption_py.config import config
-from disruption_py.core.utils.misc import safe_cast
 
 
 @dataclass
@@ -132,17 +131,14 @@ class DataDifference:
                 len(self.fresh_column_data)
             )
 
-        relative_difference = safe_cast(
-            np.where(
-                self.cache_column_data != 0,
-                np.abs(
-                    (self.fresh_column_data - self.cache_column_data)
-                    / self.cache_column_data
-                ),
-                np.where(self.fresh_column_data != 0, np.inf, np.nan),
+        relative_difference = np.where(
+            self.cache_column_data != 0,
+            np.abs(
+                (self.fresh_column_data - self.cache_column_data)
+                / self.cache_column_data
             ),
-            "float64",
-        )  # necessary in case all produced values are nan
+            np.where(self.fresh_column_data != 0, np.inf, np.nan),
+        )
 
         numeric_anomalies_mask = np.where(
             np.isnan(relative_difference),

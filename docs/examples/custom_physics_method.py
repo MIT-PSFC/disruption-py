@@ -43,15 +43,9 @@ def decorated_physics_method(params: PhysicsMethodParams) -> dict:
 # pylint: disable=duplicate-code
 @physics_method(columns=["custom_kappa_area"], tokamak=Tokamak.CMOD)
 def get_custom_kappa_area(params: PhysicsMethodParams):
-    aminor = params.mds_conn.get_data(
-        r"\efit_aeqdsk:aminor", tree_name="_efit_tree", astype="float64"
-    )
-    area = params.mds_conn.get_data(
-        r"\efit_aeqdsk:area", tree_name="_efit_tree", astype="float64"
-    )
-    times = params.mds_conn.get_data(
-        r"\efit_aeqdsk:time", tree_name="_efit_tree", astype="float64"
-    )
+    aminor = params.mds_conn.get_data(r"\efit_aeqdsk:aminor", tree_name="_efit_tree")
+    area = params.mds_conn.get_data(r"\efit_aeqdsk:area", tree_name="_efit_tree")
+    times = params.mds_conn.get_data(r"\efit_aeqdsk:time", tree_name="_efit_tree")
 
     # Ensure aminor and area are not 0 or less than 0
     aminor[aminor <= 0] = 0.001
