@@ -688,6 +688,7 @@ _time_setting_mappings: Dict[str, TimeSetting] = {
         Tokamak.CMOD: EfitTimeSetting(),
         Tokamak.D3D: DisruptionTimeSetting(),
         Tokamak.EAST: DisruptionTimeSetting(),
+        Tokamak.HBTEP: ListTimeSetting(np.arange(0, 12e-3, 10e-6)),
     },
     "ip": IpTimeSetting(),
     "ip_efit": SharedTimeSetting([IpTimeSetting(), EfitTimeSetting()]),
