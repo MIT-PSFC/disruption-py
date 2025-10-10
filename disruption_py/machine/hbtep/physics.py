@@ -58,7 +58,6 @@ class HbtepPhysicsMethods:
     def get_plasma_radii(params: PhysicsMethodParams):
         """
         Get the major & minor radii
-        # TODO: get the updated limitor configuration post ~2023(?) from hbtplot.py
         """
         # Determined by Daisuke during copper plasma calibration
         a = 0.00643005
@@ -109,15 +108,22 @@ class HbtepPhysicsMethods:
         r = r_major / 100  # Convert to meters
 
         # Calculate aminor
+        # Default: top-down limited, aminor=0.15
         aminor = np.ones(len(r)) * 0.15
+        # Get outboard-limited time points
         (outboard_limited_indices,) = np.where(r > 0.92)
-        aminor[outboard_limited_indices] = (
-            1.07 - r[outboard_limited_indices]
-        )  # Outboard limited
-        (inboard_limited_indices,) = np.where(r < (0.92 - 0.01704))
-        aminor[inboard_limited_indices] = (
-            r[inboard_limited_indices] - 0.75296
-        )  # inward limited
+        aminor[outboard_limited_indices] = 1.07 - r[outboard_limited_indices]
+        # Get inboard-limited time points
+        if params.shot_id >= 117122:
+            # Use new limiting surface post 2023 HFS SOL tiles installation
+            (inboard_limited_indices,) = np.where(r < 0.92)
+            aminor[inboard_limited_indices] = np.sqrt(
+                (r[inboard_limited_indices] - 0.77244) ** 2 + 0.03478**2
+            )
+            aminor[aminor > 0.15] = 0.15
+        else:
+            (inboard_limited_indices,) = np.where(r < (0.92 - 0.01704))
+            aminor[inboard_limited_indices] = r[inboard_limited_indices] - 0.75296
 
         # Interpolate to requested timebase
         r = interp1(t_ip, r, params.times, "linear")
