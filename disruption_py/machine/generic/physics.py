@@ -77,6 +77,11 @@ class GenericPhysicsMethods:
         else:
             return {"time_domain": [np.nan]}
 
+        # Check if all signals are available and valid
+        for signal in signals.values():
+            if np.isnan(signal).all():
+                return {"time_domain": [np.nan]}
+
         time_domain = np.full(len(params.times), np.nan)
         # Get flattop domain indices
         indices_flattop = np.arange(len(time_domain))
