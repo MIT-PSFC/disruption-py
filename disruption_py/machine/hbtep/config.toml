@@ -4,5 +4,9 @@ mdsplus_connection_string = "maxwell.ap.columbia.edu:8003"
 [hbtep.inout.sql]
 host = ""
 
+[hbtep.tests]
+expected_failure_columns = []
+test_columns = []
+
 [hbtep.tests.shots]
 flattop1_fast = 103590
