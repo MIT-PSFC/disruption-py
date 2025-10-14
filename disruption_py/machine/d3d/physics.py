@@ -170,7 +170,7 @@ class D3DPhysicsMethods:
                 r"\top.nb:pinj", tree_name="d3d"
             )
             t_nbi /= 1e3  # [ms] -> [s]
-            p_nbi *= 1e3  # [KW] -> [W]
+            p_nbi = p_nbi * 1e3  # [KW] -> [W]
             if len(t_nbi) > 2:
                 p_nbi = interp1(
                     t_nbi,
