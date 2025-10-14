@@ -229,16 +229,16 @@ class HbtepPhysicsMethods:
         n = len(data)
 
         # Construct A matrix and calculate its inversion
-        A = np.zeros((n, 5))
-        A[:, 0] = np.ones(n)
-        A[:, 1] = np.sin(phi)
-        A[:, 2] = np.cos(phi)
-        A[:, 3] = np.sin(2 * phi)
-        A[:, 4] = np.cos(2 * phi)
-        Ainv = np.linalg.pinv(A)
+        a_matrix = np.zeros((n, 5))
+        a_matrix[:, 0] = np.ones(n)
+        a_matrix[:, 1] = np.sin(phi)
+        a_matrix[:, 2] = np.cos(phi)
+        a_matrix[:, 3] = np.sin(2 * phi)
+        a_matrix[:, 4] = np.cos(2 * phi)
+        a_matrix_inv = np.linalg.pinv(a_matrix)
 
         # Use least squares to solve for coefficients
-        x = np.matmul(Ainv, data)
+        x = np.matmul(a_matrix_inv, data)
         n1_amp = np.sqrt(x[1, :] ** 2 + x[2, :] ** 2)  # [T]
         n2_amp = np.sqrt(x[1, :] ** 2 + x[2, :] ** 2)
         n1_phase = -np.arctan2(x[1, :], x[2, :])  # *-1 to corrected the slope of phase
@@ -308,15 +308,15 @@ class HbtepPhysicsMethods:
         phi = pa_data["pa1_phi"]
         n = len(data)
         # Construct A matrix and calculate its inversion
-        A = np.zeros((n, 11))
-        A[:, 0] = np.ones(n)
+        a_matrix = np.zeros((n, 11))
+        a_matrix[:, 0] = np.ones(n)
         for i in range(1, 6):
-            A[:, i * 2 - 1] = np.sin(i * theta - phi)
-            A[:, i * 2] = np.cos(i * theta - phi)
-        Ainv = np.linalg.pinv(A)
+            a_matrix[:, i * 2 - 1] = np.sin(i * theta - phi)
+            a_matrix[:, i * 2] = np.cos(i * theta - phi)
+        a_matrix_inv = np.linalg.pinv(a_matrix)
 
         # Use least squares to solve for coefficients
-        x = np.matmul(Ainv, data)
+        x = np.matmul(a_matrix_inv, data)
         m2_amp = np.sqrt(x[3, :] ** 2 + x[4, :] ** 2)  # [T]
         m3_amp = np.sqrt(x[5, :] ** 2 + x[6, :] ** 2)
         m4_amp = np.sqrt(x[7, :] ** 2 + x[8, :] ** 2)

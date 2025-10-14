@@ -11,7 +11,8 @@ class HbtepUtilMethods:
     but are not physics methods.
     """
 
-    def unwrap_phase(phase):
+    @staticmethod
+    def unwrap_phase(phase: np.ndarray):
         """
         Takes in phase array (in radians).  I think it needs to be centered about 0.
         Unwraps phase data so that it is continuous.

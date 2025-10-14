@@ -1021,7 +1021,7 @@ def butterworth_filter(signal, fs, cutoff, order, btype="high"):
     return y
 
 
-def gaussian_low_pass_filter(y, t, timeWidth=1.0 / 20000):
+def gaussian_low_pass_filter(y, t, time_width=1.0 / 20000):
     """
     Low pass filter using scipy's gaussian filters.
     Note that this is not a causal filter.
@@ -1052,13 +1052,11 @@ def gaussian_low_pass_filter(y, t, timeWidth=1.0 / 20000):
 
     dt = t[1] - t[0]
 
-    # Calculate sigma from FWHM (timeWidth).
+    # Calculate sigma from FWHM (time_width).
     # The relationship is FWHM = 2 * sqrt(2 * ln(2)) * sigma_time_domain,
     # which is approximately FWHM = 2.355 * sigma_time_domain.
     # We need to find sigma_time_domain in units of samples, so we divide by dt.
-    sigma_time_domain = timeWidth / (2 * np.sqrt(2 * np.log(2)))
+    sigma_time_domain = time_width / (2 * np.sqrt(2 * np.log(2)))
     sigma_in_samples = sigma_time_domain / dt
 
-    yFiltered = gaussian_filter1d(y, sigma=sigma_in_samples, mode="reflect")
-
-    return yFiltered
+    return gaussian_filter1d(y, sigma=sigma_in_samples, mode="reflect")
