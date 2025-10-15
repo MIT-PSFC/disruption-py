@@ -1,4 +1,4 @@
-## Built-in Methods For CMod { .doc .doc-heading }
+## Built-in Methods For HBT-EP { .doc .doc-heading }
 ::: disruption_py.machine.hbtep.physics
     handler: python
 	options:
