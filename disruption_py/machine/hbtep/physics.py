@@ -54,6 +54,7 @@ class HbtepPhysicsMethods:
         return {"i_vfc": i_vfc, "i_ohc": i_ohc}
 
     @staticmethod
+    @cache_method
     @physics_method(columns=["r", "aminor"], tokamak=Tokamak.HBTEP)
     def get_plasma_radii(params: PhysicsMethodParams):
         """
