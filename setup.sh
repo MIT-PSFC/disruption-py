@@ -42,7 +42,8 @@ then
 
    # HBT-EP server
    export PATH=/usr/bin:/usr/sbin
-   export MDSPLUS_DIR=/usr/local/mdsplus
+   export MDSPLUS_DIR=/opt/hbt/disruptions/disruption-py/mdsplus/alpha
+   export MDSPLUS_LIB=/usr/local/mdsplus/lib
    export DISPY_DIR=/opt/hbt/disruptions/disruption-py
    export DISPY_TOKAMAK=hbtep
    export default_tree_path=maxwell.ap.columbia.edu:8003::
