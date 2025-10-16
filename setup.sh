@@ -13,7 +13,7 @@ then
    export MDSPLUS_DIR=/usr/local/mdsplus
    export DISPY_DIR=/usr/local/mfe/disruptions/disruption-py
    export DISPY_TOKAMAK=cmod
-   export default_tree_path=alcdata-archives::/cmod/trees/archives/~i~h/~g~f/~e~d/~t
+   export MDS_HOST=alcdata-archives
 
 elif [[ -d /fusion/projects/disruption_warning ]]
 then
@@ -23,6 +23,7 @@ then
    export MDSPLUS_DIR=/fusion/usc/c8/opt/mdsplus/alpha/7.139.59
    export DISPY_DIR=/fusion/projects/disruption_warning/disruption-py
    export DISPY_TOKAMAK=d3d
+   export MDS_HOST=atlas
 
 elif [[ -d /project/disruption ]]
 then
@@ -36,6 +37,7 @@ then
    export DISPY_DIR=/project/disruption
    export ODBCSYSINI=$DISPY_DIR
    export DISPY_TOKAMAK=east
+   export MDS_HOST=mds.ipp.ac.cn
 
 elif [[ -d /opt/hbt/disruptions ]]
 then
@@ -46,7 +48,7 @@ then
    export MDSPLUS_LIB=/usr/local/mdsplus/lib
    export DISPY_DIR=/opt/hbt/disruptions/disruption-py
    export DISPY_TOKAMAK=hbtep
-   export default_tree_path=maxwell.ap.columbia.edu:8003::
+   export MDS_HOST=maxwell.ap.columbia.edu:8003
 
 else
 
@@ -66,6 +68,7 @@ fi
 export PATH=$PATH:${MDSPLUS_BIN:-$MDSPLUS_DIR/bin}
 export PYTHONPATH=${MDSPLUS_API:-$MDSPLUS_DIR/python}:$PYTHONPATH
 export LD_LIBRARY_PATH=${MDSPLUS_LIB:-$MDSPLUS_DIR/lib}:$LD_LIBRARY_PATH
+export default_tree_path=${MDS_HOST}::
 
 # poetry
 export PATH=$DISPY_DIR/poetry/bin:$PATH
