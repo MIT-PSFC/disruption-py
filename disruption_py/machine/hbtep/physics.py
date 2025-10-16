@@ -224,10 +224,19 @@ class HbtepPhysicsMethods:
         """
         # Get TA data
         ta_data = HbtepPhysicsMethods._get_ta_data(params)
-        data = ta_data["ta_pol_data_filt"]
-        time = ta_data["ta_pol_time"]
-        phi = ta_data["ta_pol_phi"]
+
+        # Get the shortest time array and interpolate every signal to that time base
+        time = ta_data["ta_pol_time"][0]
+        for t_signal in ta_data["ta_pol_time"][1:]:
+            if len(t_signal) < len(time):
+                time = t_signal
+        data = []
+        for signal, t_signal in zip(
+            ta_data["ta_pol_data_filt"], ta_data["ta_pol_time"]
+        ):
+            data.append(interp1(t_signal, signal, time))
         n = len(data)
+        phi = ta_data["ta_pol_phi"]
 
         # Construct A matrix and calculate its inversion
         a_matrix = np.zeros((n, 5))
@@ -526,44 +535,41 @@ class HbtepPhysicsMethods:
         )
         # Toroidal and poloidal positions of the radial sensors -- not implemented in hbteplib
 
-        # Get TA time
-        ta_pol_time = params.mds_conn.get_dims(
-            r"\top.sensors.magnetic:ta01_s1p", tree_name="hbtep2"
-        )
-        ta_rad_time = params.mds_conn.get_dims(
-            r"\top.sensors.magnetic:ta01_s2r", tree_name="hbtep2"
-        )
-        output["ta_pol_time"] = ta_pol_time[0]  # [s]
-        output["ta_rad_time"] = ta_rad_time[0]  # [s]
-        # Magnetic sensor's sampling rate should be 1/(2e-6)=500kHz
-        fs_ta_pol = (1 / (output["ta_pol_time"][1] - output["ta_pol_time"][0])).round()
-        fs_ta_rad = (1 / (output["ta_rad_time"][1] - output["ta_rad_time"][0])).round()
-
-        # Get TA data
-        ta_pol_data_raw, ta_pol_data_filt = [], []
+        # Get TA data and time
+        ta_pol_data_raw = []
+        ta_pol_data_filt = []
+        ta_pol_time = []
         for sensor_name in output["ta_pol_names"]:
-            sensor_data_raw = params.mds_conn.get_data(
+            sensor_data_raw, sensor_time = params.mds_conn.get_data_with_dims(
                 r"\top.sensors.magnetic:" + sensor_name, tree_name="hbtep2"
             )  # TODO: unit
+            fs_ta_pol = round(1 / (sensor_time[1] - sensor_time[0]))
             sensor_data_filt = butterworth_filter(
                 sensor_data_raw, fs=fs_ta_pol, cutoff=2e3, order=2, btype="high"
             )
             ta_pol_data_raw.append(sensor_data_raw)
             ta_pol_data_filt.append(sensor_data_filt)
-        ta_rad_data_raw, ta_rad_data_filt = [], []
+            ta_pol_time.append(sensor_time)
+        ta_rad_data_raw = []
+        ta_rad_data_filt = []
+        ta_rad_time = []
         for sensor_name in output["ta_rad_names"]:
-            sensor_data_raw = params.mds_conn.get_data(
+            sensor_data_raw, sensor_time = params.mds_conn.get_data_with_dims(
                 r"\top.sensors.magnetic:" + sensor_name, tree_name="hbtep2"
             )  # TODO: unit
+            fs_ta_rad = round(1 / (sensor_time[1] - sensor_time[0]))
             sensor_data_filt = butterworth_filter(
                 sensor_data_raw, fs=fs_ta_rad, cutoff=2e3, order=2, btype="high"
             )
             ta_rad_data_raw.append(sensor_data_raw)
             ta_rad_data_filt.append(sensor_data_filt)
+            ta_rad_time.append(sensor_time)
         output["ta_pol_data_raw"] = ta_pol_data_raw
         output["ta_pol_data_filt"] = ta_pol_data_filt
+        output["ta_pol_time"] = ta_pol_time
         output["ta_rad_data_raw"] = ta_rad_data_raw
         output["ta_rad_data_filt"] = ta_rad_data_filt
+        output["ta_rad_time"] = ta_rad_time
 
         return output
 
