@@ -276,6 +276,7 @@ class DisruptionTimeSetting(TimeSetting):
         self.tokamak_overrides = {
             Tokamak.D3D: self.d3d_times,
             Tokamak.EAST: self.east_times,
+            Tokamak.HBTEP: self.hbtep_times,
         }
 
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
@@ -332,6 +333,27 @@ class DisruptionTimeSetting(TimeSetting):
         """
         ip, ip_time = EastUtilMethods.retrieve_ip(params.mds_conn, params.shot_id)
         return self._calculate_disruption_times(params, ip, ip_time)
+
+    def hbtep_times(self, params: TimeSettingParams) -> np.ndarray:
+        """
+        Retrieve the disruption timebase for HBT-EP.
+
+        For now, this method returns a uniform array between 0 and 12 ms with 10 us interval
+        based on the ip timebase.
+        This will be replaced once a get_disruption_time method is implemented for HBT-EP
+
+        Returns
+        -------
+        np.ndarray
+            Array of times in the timebase.
+        """
+        t_ip = params.mds_conn.get_dims(
+            r"\TOP.SENSORS.ROGOWSKIS:IP", tree_name="hbtep2"
+        )  # [s]
+        t_ip = t_ip[0]
+        t_ip = t_ip[(t_ip >= 0) & (t_ip <= 12e-3)]
+        steps = round(10e-6 / (t_ip[1] - t_ip[0]))
+        return t_ip[::steps]
 
     @classmethod
     def _calculate_disruption_times(
@@ -688,7 +710,7 @@ _time_setting_mappings: Dict[str, TimeSetting] = {
         Tokamak.CMOD: EfitTimeSetting(),
         Tokamak.D3D: DisruptionTimeSetting(),
         Tokamak.EAST: DisruptionTimeSetting(),
-        Tokamak.HBTEP: ListTimeSetting(np.arange(0, 12e-3, 10e-6)),
+        Tokamak.HBTEP: DisruptionTimeSetting(),
     },
     "ip": IpTimeSetting(),
     "ip_efit": SharedTimeSetting([IpTimeSetting(), EfitTimeSetting()]),
