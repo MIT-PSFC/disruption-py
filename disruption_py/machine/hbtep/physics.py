@@ -32,7 +32,7 @@ class HbtepPhysicsMethods:
         Get the plasma current
         """
         ip, t_ip = params.mds_conn.get_data_with_dims(
-            r"\TOP.SENSORS.ROGOWSKIS:IP", tree_name="hbtep2"
+            r"\top.sensors.rogowskis:ip", tree_name="hbtep2"
         )  # [A], [s]
         ip = interp1(t_ip, ip, params.times, "linear")
         return {"ip": ip}
@@ -44,10 +44,10 @@ class HbtepPhysicsMethods:
         Get the ohmic heating and vertical field coil currents
         """
         i_vfc, t_vfc = params.mds_conn.get_data_with_dims(
-            r"\TOP.SENSORS.VF_CURRENT", tree_name="hbtep2"
+            r"\top.sensors.vf_current", tree_name="hbtep2"
         )  # [A], [s]
         i_ohc, t_ohc = params.mds_conn.get_data_with_dims(
-            r"\TOP.SENSORS.OH_CURRENT", tree_name="hbtep2"
+            r"\top.sensors.oh_current", tree_name="hbtep2"
         )  # [A], [s]
         i_vfc = interp1(t_vfc, i_vfc, params.times, "linear")
         i_ohc = interp1(t_ohc, i_ohc, params.times, "linear")
@@ -71,21 +71,21 @@ class HbtepPhysicsMethods:
 
         # get vf and oh data
         i_vfc, t_vfc = params.mds_conn.get_data_with_dims(
-            r"\TOP.SENSORS.VF_CURRENT", tree_name="hbtep2"
+            r"\top.sensors.vf_current", tree_name="hbtep2"
         )  # [A], [s]
         i_ohc, t_ohc = params.mds_conn.get_data_with_dims(
-            r"\TOP.SENSORS.OH_CURRENT", tree_name="hbtep2"
+            r"\top.sensors.oh_current", tree_name="hbtep2"
         )  # [A], [s]
 
         # get plasma current
         ip, t_ip = params.mds_conn.get_data_with_dims(
-            r"\TOP.SENSORS.ROGOWSKIS:IP", tree_name="hbtep2"
+            r"\top.sensors.rogowskis:ip", tree_name="hbtep2"
         )  # [A], [s]
         ip *= 1212.3 * 1e-9  # ip gain
 
         # get cosine Rogowski data
         cos1_raw, t_cos1_raw = params.mds_conn.get_data_with_dims(
-            r"\TOP.SENSORS.ROGOWSKIS:COS_1:RAW", tree_name="hbtep2"
+            r"\top.sensors.rogowskis:cos_1:raw", tree_name="hbtep2"
         )  # TODO: units?, TODO: check if we need to specify time range
         # calculate and subtract offset
         (indices,) = np.where((-1e-3 < t_cos1_raw) & (t_cos1_raw < 0))
@@ -139,7 +139,7 @@ class HbtepPhysicsMethods:
         Calculate B_tor from the TF probe data
         """
         btor, t_btor = params.mds_conn.get_data_with_dims(
-            r"\TOP.SENSORS.TF_PROBE", tree_name="hbtep2"
+            r"\top.sensors.tf_probe", tree_name="hbtep2"
         )  # [T], [s]
         btor = interp1(t_btor, btor, params.times, "linear")
 
@@ -170,7 +170,7 @@ class HbtepPhysicsMethods:
         Get v_loop measurement
         """
         v_loop, t_v_loop = params.mds_conn.get_data_with_dims(
-            r"\TOP.SENSORS.LOOP_VOLTAGE", tree_name="hbtep2"
+            r"\top.sensors.loop_voltage", tree_name="hbtep2"
         )  # [V], [s]
         v_loop = interp1(t_v_loop, v_loop, params.times, "linear")
         return {"v_loop": v_loop}
@@ -182,7 +182,7 @@ class HbtepPhysicsMethods:
         Get D alpha line emission from spectrometer
         """
         h_alpha, t_h_alpha = params.mds_conn.get_data_with_dims(
-            r"\TOP.SENSORS.SPECTROMETER", tree_name="hbtep2"
+            r"\top.sensors.spectrometer", tree_name="hbtep2"
         )  # [arb], [s]
         h_alpha = interp1(t_h_alpha, h_alpha, params.times, "linear")
         return {"h_alpha": h_alpha}
@@ -194,7 +194,7 @@ class HbtepPhysicsMethods:
         Get the soft x-ray midplane sensor data
         """
         sxr, t_sxr = params.mds_conn.get_data_with_dims(
-            r"\TOP.DEVICES.NORTH_RACK:CPCI:INPUT_74", tree_name="hbtep2"
+            r"\top.devices.north_rack:cpci:input_74", tree_name="hbtep2"
         )  # [arb], [s]
         # offset subtraction
         (offset_indices,) = np.where((0 < t_sxr) & (t_sxr < 0.5e-3))
@@ -528,10 +528,10 @@ class HbtepPhysicsMethods:
 
         # Get TA time
         ta_pol_time = params.mds_conn.get_dims(
-            r"\TOP.SENSORS.MAGNETIC:TA01_S1P", tree_name="hbtep2"
+            r"\top.sensors.magnetic:ta01_s1p", tree_name="hbtep2"
         )
         ta_rad_time = params.mds_conn.get_dims(
-            r"\TOP.SENSORS.MAGNETIC:TA01_S2R", tree_name="hbtep2"
+            r"\top.sensors.magnetic:ta01_s2r", tree_name="hbtep2"
         )
         output["ta_pol_time"] = ta_pol_time[0]  # [s]
         output["ta_rad_time"] = ta_rad_time[0]  # [s]
@@ -543,7 +543,7 @@ class HbtepPhysicsMethods:
         ta_pol_data_raw, ta_pol_data_filt = [], []
         for sensor_name in output["ta_pol_names"]:
             sensor_data_raw = params.mds_conn.get_data(
-                r"\TOP.SENSORS.MAGNETIC:" + sensor_name, tree_name="hbtep2"
+                r"\top.sensors.magnetic:" + sensor_name, tree_name="hbtep2"
             )  # TODO: unit
             sensor_data_filt = butterworth_filter(
                 sensor_data_raw, fs=fs_ta_pol, cutoff=2e3, order=2, btype="high"
@@ -553,7 +553,7 @@ class HbtepPhysicsMethods:
         ta_rad_data_raw, ta_rad_data_filt = [], []
         for sensor_name in output["ta_rad_names"]:
             sensor_data_raw = params.mds_conn.get_data(
-                r"\TOP.SENSORS.MAGNETIC:" + sensor_name, tree_name="hbtep2"
+                r"\top.sensors.magnetic:" + sensor_name, tree_name="hbtep2"
             )  # TODO: unit
             sensor_data_filt = butterworth_filter(
                 sensor_data_raw, fs=fs_ta_rad, cutoff=2e3, order=2, btype="high"
@@ -735,10 +735,10 @@ class HbtepPhysicsMethods:
 
         # Get PA time
         pa1_time = params.mds_conn.get_dims(
-            r"\TOP.SENSORS.MAGNETIC:PA1_S01P", tree_name="hbtep2"
+            r"\top.sensors.magnetic:pa1_s01p", tree_name="hbtep2"
         )
         pa2_time = params.mds_conn.get_dims(
-            r"\TOP.SENSORS.MAGNETIC:PA2_S01P", tree_name="hbtep2"
+            r"\top.sensors.magnetic:pa2_s01p", tree_name="hbtep2"
         )
         output["pa1_time"] = pa1_time[0]
         output["pa2_time"] = pa2_time[0]
@@ -750,7 +750,7 @@ class HbtepPhysicsMethods:
         pa1_data_raw, pa1_data_filt = [], []
         for sensor_name in output["pa1_names"]:
             sensor_data_raw = params.mds_conn.get_data(
-                r"\TOP.SENSORS.MAGNETIC:" + sensor_name, tree_name="hbtep2"
+                r"\Top.sensors.magnetic:" + sensor_name, tree_name="hbtep2"
             )
             sensor_data_filt = butterworth_filter(
                 sensor_data_raw, fs=fs_pa1, cutoff=2e3, order=2, btype="high"
@@ -760,7 +760,7 @@ class HbtepPhysicsMethods:
         pa2_data_raw, pa2_data_filt = [], []
         for sensor_name in output["pa2_names"]:
             sensor_data_raw = params.mds_conn.get_data(
-                r"\TOP.SENSORS.MAGNETIC:" + sensor_name, tree_name="hbtep2"
+                r"\top.sensors.magnetic:" + sensor_name, tree_name="hbtep2"
             )
             sensor_data_filt = butterworth_filter(
                 sensor_data_raw, fs=fs_pa2, cutoff=2e3, order=2, btype="high"
@@ -789,7 +789,7 @@ class HbtepPhysicsMethods:
         # channels = output['sensor_num'] + 75
 
         time = params.mds_conn.get_dims(
-            r"\TOP.SENSORS.SXR_FAN.CHANNEL_01:RAW", tree_name="hbtep2"
+            r"\top.sensors.sxr_fan.channel_01:raw", tree_name="hbtep2"
         )
         output["time"] = time[0]
 
@@ -801,25 +801,25 @@ class HbtepPhysicsMethods:
         for n in output["sensor_num"]:
             data.append(
                 params.mds_conn.get_data(
-                    rf"\TOP.SENSORS.SXR_FAN.CHANNEL_{n:02d}:RAW",
+                    rf"\top.sensors.sxr_fan.channel_{n:02d}:raw",
                     tree_name="hbtep2",
                 )
             )
             r.append(
                 params.mds_conn.get_data(
-                    rf"\TOP.SENSORS.SXR_FAN.CHANNEL_{n:02d}:R",
+                    rf"\top.sensors.sxr_fan.channel_{n:02d}:r",
                     tree_name="hbtep2",
                 )
             )
             z.append(
                 params.mds_conn.get_data(
-                    rf"\TOP.SENSORS.SXR_FAN.CHANNEL_{n:02d}:Z",
+                    rf"\top.sensors.sxr_fan.channel_{n:02d}:z",
                     tree_name="hbtep2",
                 )
             )
             midplane.append(
                 params.mds_conn.get_data(
-                    rf"\TOP.SENSORS.SXR_FAN.CHANNEL_{n:02d}:MIDPLANE",
+                    rf"\top.sensors.sxr_fan.channel_{n:02d}:midplane",
                     tree_name="hbtep2",
                 )
             )
@@ -846,7 +846,7 @@ class HbtepPhysicsMethods:
         output["detectors"] = [0, 25, 90, 270]  # poloidal location of the 4 fan arrays
 
         time = params.mds_conn.get_dims(
-            r"\TOP.SENSORS.EUV.POL.DET000.channel_01:RAW", tree_name="hbtep2"
+            r"\top.sensors.euv.pol.det000.channel_01:raw", tree_name="hbtep2"
         )
         output["time"] = time[0]
 
@@ -854,15 +854,15 @@ class HbtepPhysicsMethods:
             data, r, z, gain = [], [], [], []
             for channel in range(1, 17):
                 address = (
-                    rf"\TOP.SENSORS.EUV.POL.DET{detector:03d}.CHANNEL_{channel:02d}"
+                    rf"\top.sensors.euv.pol.det{detector:03d}.channel_{channel:02d}"
                 )
                 data.append(
-                    params.mds_conn.get_data(address + ":RAW", tree_name="hbtep2")
+                    params.mds_conn.get_data(address + ":raw", tree_name="hbtep2")
                 )
-                r.append(params.mds_conn.get_data(address + ":R", tree_name="hbtep2"))
-                z.append(params.mds_conn.get_data(address + ":Z", tree_name="hbtep2"))
+                r.append(params.mds_conn.get_data(address + ":r", tree_name="hbtep2"))
+                z.append(params.mds_conn.get_data(address + ":z", tree_name="hbtep2"))
                 gain.append(
-                    params.mds_conn.get_data(address + ":GAIN", tree_name="hbtep2")
+                    params.mds_conn.get_data(address + ":gain", tree_name="hbtep2")
                 )
             output[f"euv_{detector:03d}_data"] = data
             output[f"euv_{detector:03d}_r"] = r
