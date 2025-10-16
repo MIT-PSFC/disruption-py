@@ -312,11 +312,19 @@ class HbtepPhysicsMethods:
         """
         # Get PA1 data
         pa_data = HbtepPhysicsMethods._get_pa_data(params)
-        data = pa_data["pa1_data_filt"]
-        time = pa_data["pa1_time"]
+
+        # Get the shortest time array and interpolate every signal to that time base
+        time = pa_data["pa1_time"][0]
+        for t_signal in pa_data["pa1_time"][1:]:
+            if len(t_signal) < len(time):
+                time = t_signal
+        data = []
+        for signal, t_signal in zip(pa_data["pa1_data_filt"], pa_data["pa1_time"]):
+            data.append(interp1(t_signal, signal, time))
+        n = len(data)
         theta = pa_data["pa1_theta"]
         phi = pa_data["pa1_phi"]
-        n = len(data)
+
         # Construct A matrix and calculate its inversion
         a_matrix = np.zeros((n, 11))
         a_matrix[:, 0] = np.ones(n)
@@ -736,47 +744,44 @@ class HbtepPhysicsMethods:
             * np.pi
             / 180.0
         )
-        output["pa1_phi"] = np.ones(len(output["pa1_theta"])) * 317.5 * np.pi / 180
+        output["pa1_phi"] = np.ones(len(output["pa1_theta"])) * 317.5 * np.pi / 180.0
         output["pa2_phi"] = np.ones(len(output["pa2_theta"])) * 317.5 * np.pi / 180.0
 
-        # Get PA time
-        pa1_time = params.mds_conn.get_dims(
-            r"\top.sensors.magnetic:pa1_s01p", tree_name="hbtep2"
-        )
-        pa2_time = params.mds_conn.get_dims(
-            r"\top.sensors.magnetic:pa2_s01p", tree_name="hbtep2"
-        )
-        output["pa1_time"] = pa1_time[0]
-        output["pa2_time"] = pa2_time[0]
-        # Magnetic sensor's sampling rate should be 1/(2e-6)=500kHz
-        fs_pa1 = (1 / (output["pa1_time"][1] - output["pa1_time"][0])).round()
-        fs_pa2 = (1 / (output["pa2_time"][1] - output["pa2_time"][0])).round()
-
-        # Get PA data
-        pa1_data_raw, pa1_data_filt = [], []
+        # Get PA data and time
+        pa1_data_raw = []
+        pa1_data_filt = []
+        pa1_time = []
         for sensor_name in output["pa1_names"]:
-            sensor_data_raw = params.mds_conn.get_data(
+            sensor_data_raw, sensor_time = params.mds_conn.get_data_with_dims(
                 r"\Top.sensors.magnetic:" + sensor_name, tree_name="hbtep2"
             )
+            fs_pa1 = round(1 / (sensor_time[1] - sensor_time[0]))
             sensor_data_filt = butterworth_filter(
                 sensor_data_raw, fs=fs_pa1, cutoff=2e3, order=2, btype="high"
             )
             pa1_data_raw.append(sensor_data_raw)
             pa1_data_filt.append(sensor_data_filt)
-        pa2_data_raw, pa2_data_filt = [], []
+            pa1_time.append(sensor_time)
+        pa2_data_raw = []
+        pa2_data_filt = []
+        pa2_time = []
         for sensor_name in output["pa2_names"]:
-            sensor_data_raw = params.mds_conn.get_data(
+            sensor_data_raw, sensor_time = params.mds_conn.get_data_with_dims(
                 r"\top.sensors.magnetic:" + sensor_name, tree_name="hbtep2"
             )
+            fs_pa2 = round(1 / (sensor_time[1] - sensor_time[0]))
             sensor_data_filt = butterworth_filter(
                 sensor_data_raw, fs=fs_pa2, cutoff=2e3, order=2, btype="high"
             )
             pa2_data_raw.append(sensor_data_raw)
             pa2_data_filt.append(sensor_data_filt)
+            pa2_time.append(sensor_time)
         output["pa1_data_raw"] = pa1_data_raw
         output["pa1_data_filt"] = pa1_data_filt
+        output["pa1_time"] = pa1_time
         output["pa2_data_raw"] = pa2_data_raw
         output["pa2_data_filt"] = pa2_data_filt
+        output["pa2_time"] = pa2_time
 
         return output
 
