@@ -133,6 +133,7 @@ class HbtepPhysicsMethods:
         return {"r": r, "aminor": aminor}
 
     @staticmethod
+    @cache_method
     @physics_method(columns=["btor"], tokamak=Tokamak.HBTEP)
     def get_btor(params: PhysicsMethodParams):
         """
