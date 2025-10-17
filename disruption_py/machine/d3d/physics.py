@@ -1058,7 +1058,7 @@ class D3DPhysicsMethods:
                 params.logger.opt(exception=True).debug(e)
 
         # Calculate te_pf & ne_pf
-        if ts_radius in ts:
+        if ts and ts_radius in ts:
             # Drop data outside of valid range
             invalid_indices = np.where(
                 (ts[ts_radius] < ts_radial_range[0])
