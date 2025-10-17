@@ -456,49 +456,9 @@ class HbtepPhysicsMethods:
         output = {}
         # Sensor names
         output["ta_pol_names"] = [
-            "TA01_S1P",
-            "TA01_S2P",
-            "TA01_S3P",
-            "TA02_S1P",
-            "TA02_S2P",
-            "TA02_S3P",
-            "TA03_S1P",
-            "TA03_S2P",
-            "TA03_S3P",
-            "TA04_S1P",
-            "TA04_S2P",
-            "TA04_S3P",
-            "TA05_S1P",
-            "TA05_S2P",
-            "TA05_S3P",
-            "TA06_S1P",
-            "TA06_S2P",
-            "TA06_S3P",
-            "TA07_S1P",
-            "TA07_S2P",
-            "TA07_S3P",
-            "TA08_S1P",
-            "TA08_S2P",
-            "TA08_S3P",
-            "TA09_S1P",
-            "TA09_S2P",
-            "TA09_S3P",
-            "TA10_S1P",
-            "TA10_S2P",
-            "TA10_S3P",
+            f"ta{i:02}_s{j}p" for i in range(1, 11) for j in range(1, 4)
         ]
-        output["ta_rad_names"] = [
-            "TA01_S2R",
-            "TA02_S2R",
-            "TA03_S2R",
-            "TA04_S2R",
-            "TA05_S2R",
-            "TA06_S2R",
-            "TA07_S2R",
-            "TA08_S2R",
-            "TA09_S2R",
-            "TA10_S2R",
-        ]
+        output["ta_rad_names"] = [f"ta{i:02}_s2r" for i in range(1, 11)]
         # Toroidal and poloidal positions of the poloidal sensors
         output["ta_pol_phi"] = np.deg2rad(
             [
@@ -588,77 +548,10 @@ class HbtepPhysicsMethods:
         Known bad sensor(s): PA2_S14P, PA2_S27P
         """
         output = {}
-        output["bad_sensors"] = ["PA2_S14P", "PA2_S27P"]
+        output["bad_sensors"] = ["pa2_s14p", "pa2_s27p"]
         # Sensor names
-        output["pa1_names"] = [
-            "PA1_S01P",
-            "PA1_S02P",
-            "PA1_S03P",
-            "PA1_S04P",
-            "PA1_S05P",
-            "PA1_S06P",
-            "PA1_S07P",
-            "PA1_S08P",
-            "PA1_S09P",
-            "PA1_S10P",
-            "PA1_S11P",
-            "PA1_S12P",
-            "PA1_S13P",
-            "PA1_S14P",
-            "PA1_S15P",
-            "PA1_S16P",
-            "PA1_S17P",
-            "PA1_S18P",
-            "PA1_S19P",
-            "PA1_S20P",
-            "PA1_S21P",
-            "PA1_S22P",
-            "PA1_S23P",
-            "PA1_S24P",
-            "PA1_S25P",
-            "PA1_S26P",
-            "PA1_S27P",
-            "PA1_S28P",
-            "PA1_S29P",
-            "PA1_S30P",
-            "PA1_S31P",
-            "PA1_S32P",
-        ]
-        output["pa2_names"] = [
-            "PA2_S01P",
-            "PA2_S02P",
-            "PA2_S03P",
-            "PA2_S04P",
-            "PA2_S05P",
-            "PA2_S06P",
-            "PA2_S07P",
-            "PA2_S08P",
-            "PA2_S09P",
-            "PA2_S10P",
-            "PA2_S11P",
-            "PA2_S12P",
-            "PA2_S13P",
-            "PA2_S14P",
-            "PA2_S15P",
-            "PA2_S16P",
-            "PA2_S17P",
-            "PA2_S18P",
-            "PA2_S19P",
-            "PA2_S20P",
-            "PA2_S21P",
-            "PA2_S22P",
-            "PA2_S23P",
-            "PA2_S24P",
-            "PA2_S25P",
-            "PA2_S26P",
-            "PA2_S27P",
-            "PA2_S28P",
-            "PA2_S29P",
-            "PA2_S30P",
-            "PA2_S31P",
-            "PA2_S32P",
-        ]
-
+        output["pa1_names"] = [f"pa1_s{i:02}p" for i in range(1, 33)]
+        output["pa2_names"] = [f"pa2_s{i:02}p" for i in range(1, 33)]
         # Toroidal and poloidal positions of the sensors
         output["pa1_theta"] = np.deg2rad(
             [
@@ -741,7 +634,7 @@ class HbtepPhysicsMethods:
         pa1_time = []
         for sensor_name in output["pa1_names"]:
             sensor_data_raw, sensor_time = params.mds_conn.get_data_with_dims(
-                r"\Top.sensors.magnetic:" + sensor_name, tree_name="hbtep2"
+                r"\top.sensors.magnetic:" + sensor_name, tree_name="hbtep2"
             )
             fs_pa1 = round(1 / (sensor_time[1] - sensor_time[0]))
             sensor_data_filt = butterworth_filter(
