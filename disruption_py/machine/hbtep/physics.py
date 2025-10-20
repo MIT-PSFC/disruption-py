@@ -26,6 +26,7 @@ class HbtepPhysicsMethods:
     """
 
     @staticmethod
+    @cache_method
     @physics_method(columns=["ip"], tokamak=Tokamak.HBTEP)
     def get_ip(params: PhysicsMethodParams):
         """
