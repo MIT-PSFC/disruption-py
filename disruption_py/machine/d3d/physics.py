@@ -407,15 +407,25 @@ class D3DPhysicsMethods:
         ption-py/blob/matlab/DIII-D/get_density_parameters.m)
         - pull requests: #[249](https://github.com/MIT-PSFC/disruption-py/pull/249)
         """
-        ne, t_ne = params.mds_conn.get_data_with_dims(
-            r"\density", tree_name="_efit_tree"
-        )
+        try:
+            ne, t_ne = params.mds_conn.get_data_with_dims(
+                r"\density", tree_name="_efit_tree"
+            )
+        except mdsExceptions.MdsException:
+            ne = [np.nan]
+            t_ne = [np.nan]
         # If EFIT disruption tree does not contain density data,
         # then read density from BCI subtree of D3D main tree
-        # TODO: Find a shot to test this logic
-        if len(~np.isnan(ne)) == 0:
+        # Example: 170480:
+        #  - r"\density" gives ne = array([], shape=(4, 0), dtype=float64),
+        #  - r"\denv2" gives actual density data
+        if not ne or len(~np.isnan(ne)) == 0:
             ne, t_ne = params.mds_conn.get_data_with_dims(r"\denv2", tree_name="d3d")
-
+            tree_name = params.mds_conn.get_tree_name_of_nickname("_efit_tree")
+            params.logger.verbose(
+                rf"density: data from \{tree_name}:density is either empty or invalid."
+                r" Use \d3d:denv2 instead."
+            )
         ne = ne * 1.0e6  # [cm^3] -> [m^3]
         t_ne = t_ne / 1.0e3  # [ms] -> [s]
         dne_dt = np.gradient(ne, t_ne)
