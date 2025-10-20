@@ -747,7 +747,9 @@ class D3DPhysicsMethods:
             ip_rt = interp1(t_ip_rt, ip_rt, params.times, "linear")
             dip_dt_rt = interp1(t_ip_rt, dip_dt_rt, params.times, "linear")
         except mdsExceptions.MdsException as e:
-            params.logger.warning("Failed to get measured plasma current parameters")
+            params.logger.warning(
+                "ip_rt: Failed to get measured plasma current parameters. Setting to NaN."
+            )
             params.logger.opt(exception=True).debug(e)
         # Get programmed plasma current parameters
         try:
@@ -762,7 +764,9 @@ class D3DPhysicsMethods:
             ip_prog_rt = interp1(t_ip_prog_rt, ip_prog_rt, params.times, "linear")
             dipprog_dt_rt = interp1(t_ip_prog_rt, dipprog_dt_rt, params.times, "linear")
         except mdsExceptions.MdsException as e:
-            params.logger.warning("Failed to get programmed plasma current parameters")
+            params.logger.warning(
+                "ip_prog_rt: Failed to get programmed plasma current parameters. Setting to NaN."
+            )
             params.logger.opt(exception=True).debug(e)
         try:
             ip_error_rt, t_ip_error_rt = params.mds_conn.get_data_with_dims(
@@ -772,7 +776,9 @@ class D3DPhysicsMethods:
             ip_error_rt = ip_error_rt * 1.0e6 * 0.5  # [MA] -> [A]
             ip_error_rt = interp1(t_ip_error_rt, ip_error_rt, params.times, "linear")
         except mdsExceptions.MdsException as e:
-            params.logger.warning("Failed to get ipeecoil signal. Setting to NaN.")
+            params.logger.warning(
+                "ip_error_rt: Failed to get ipeecoil signal. Setting to NaN."
+            )
             params.logger.opt(exception=True).debug(e)
         # Now get the signal pointname 'ipimode'.  This PCS signal denotes whether
         # or not PCS is actually feedback controlling the plasma current.  There
@@ -790,11 +796,14 @@ class D3DPhysicsMethods:
             t_ipimode = t_ipimode / 1.0e3  # [ms] -> [s]
             ipimode = interp1(t_ipimode, ipimode, params.times, "linear")
         except mdsExceptions.MdsException as e:
-            params.logger.warning("Failed to get ipimode signal. Setting to NaN.")
+            params.logger.warning(
+                "ipimode: Failed to get ipimode signal. Setting to NaN."
+            )
             params.logger.opt(exception=True).debug(e)
             ipimode = np.full(len(params.times), np.nan)
-        (feedback_off_indices,) = np.where((ipimode != 0) & (ipimode == 3))
-        ip_error_rt[feedback_off_indices] = np.nan
+        if ~np.isnan(ip_error_rt).all() and ~np.isnan(ipimode).all():
+            (feedback_off_indices,) = np.where((ipimode != 0) & (ipimode == 3))
+            ip_error_rt[feedback_off_indices] = np.nan
         # Finally, get 'epsoff' to determine if/when the E-coil power supplies have railed
         # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
         # PCS feedback control of Ip is not being applied.  Therefore the
@@ -811,16 +820,17 @@ class D3DPhysicsMethods:
             power_supply_railed = np.zeros(len(params.times))
             (railed_indices,) = np.where(np.abs(epsoff) > 0.5)
             power_supply_railed[railed_indices] = 1
-            # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
-            # PCS feedback control of Ip is not being applied.  Therefore the
-            # 'ip_error' parameter is undefined for these times.
-            (ps_railed_indices,) = np.where(power_supply_railed != 0)
-            ip_error_rt[ps_railed_indices] = np.nan
         except mdsExceptions.MdsException as e:
             params.logger.warning(
-                "Failed to get epsoff signal. power_supply_railed will be NaN.",
+                "power_supply_railed: Failed to get epsoff signal. Setting to NaN.",
             )
             params.logger.opt(exception=True).debug(e)
+        # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
+        # PCS feedback control of Ip is not being applied.  Therefore the
+        # 'ip_error' parameter is undefined for these times.
+        if ~np.isnan(ip_error_rt).all() and ~np.isnan(power_supply_railed).all():
+            (ps_railed_indices,) = np.where(power_supply_railed != 0)
+            ip_error_rt[ps_railed_indices] = np.nan
         return {
             "ip_rt": ip_rt,
             "ip_prog_rt": ip_prog_rt,
