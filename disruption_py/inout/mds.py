@@ -279,8 +279,8 @@ class MDSConnection:
         dims = [self.conn.get(f"dim_of(_sig,{dim_num})").data() for dim_num in dim_nums]
 
         data = self._check_mds_data(data)
-        for i in range(len(dims)):
-            dims[i] = self._check_mds_data(dims[i])
+        for i, dim in enumerate(dims):
+            dims[i] = self._check_mds_data(dim)
         return data, *dims
 
     @_better_mds_exceptions
@@ -316,8 +316,8 @@ class MDSConnection:
         logger.trace(shot_msg("Getting dims: {path}"), shot=self.shot_id, path=path)
         dims = [self.conn.get(f"dim_of({path},{d})").data() for d in dim_nums]
 
-        for i in range(len(dims)):
-            dims[i] = self._check_mds_data(dims[i])
+        for i, dim in enumerate(dims):
+            dims[i] = self._check_mds_data(dim)
         return dims
 
     def _check_mds_data(self, data) -> np.ndarray:
