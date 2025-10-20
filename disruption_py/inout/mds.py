@@ -322,9 +322,9 @@ class MDSConnection:
 
     def _check_mds_data(self, data) -> np.ndarray:
         """
-        Check and adjust the type and shape of mds data retrieved
+        Check and adjust the type and shape of the retrieved MDS data
 
-        Examples of identified errenous data:
+        Example of identified errenous data:
         - D3D 176571 EFIT signals - a single float instead of a np.array
         """
         if not isinstance(data, np.ndarray):
@@ -335,7 +335,7 @@ class MDSConnection:
                 # e.g. unit
                 pass
             else:
-                raise TypeError("Invalid data type.")
+                raise TypeError("Invalid MDS data type.")
         return data
 
     # nicknames
