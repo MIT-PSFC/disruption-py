@@ -348,7 +348,7 @@ class DisruptionTimeSetting(TimeSetting):
             Array of times in the timebase.
         """
         t_ip = params.mds_conn.get_dims(
-            r"\TOP.SENSORS.ROGOWSKIS:IP", tree_name="hbtep2"
+            r"\top.sensors.rogowskis:ip", tree_name="hbtep2"
         )  # [s]
         t_ip = t_ip[0]
         t_ip = t_ip[(t_ip >= 0) & (t_ip <= 12e-3)]
