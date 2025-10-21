@@ -87,7 +87,7 @@ class HbtepPhysicsMethods:
         # get cosine Rogowski data
         cos1_raw, t_cos1_raw = params.mds_conn.get_data_with_dims(
             r"\top.sensors.rogowskis:cos_1:raw", tree_name="hbtep2"
-        )  # TODO: units?, TODO: check if we need to specify time range
+        )  # [A/s], [s]
         # calculate and subtract offset
         (indices,) = np.where((-1e-3 < t_cos1_raw) & (t_cos1_raw < 0))
         cos1_raw_offset = np.mean(cos1_raw[indices])
@@ -508,7 +508,7 @@ class HbtepPhysicsMethods:
         for sensor_name in output["ta_pol_names"]:
             sensor_data_raw, sensor_time = params.mds_conn.get_data_with_dims(
                 r"\top.sensors.magnetic:" + sensor_name, tree_name="hbtep2"
-            )  # TODO: unit
+            )  # [T], [s]
             fs_ta_pol = round(1 / (sensor_time[1] - sensor_time[0]))
             sensor_data_filt = butterworth_filter(
                 sensor_data_raw, fs=fs_ta_pol, cutoff=2e3, order=2, btype="high"
@@ -522,7 +522,7 @@ class HbtepPhysicsMethods:
         for sensor_name in output["ta_rad_names"]:
             sensor_data_raw, sensor_time = params.mds_conn.get_data_with_dims(
                 r"\top.sensors.magnetic:" + sensor_name, tree_name="hbtep2"
-            )  # TODO: unit
+            )  # [T], [s]
             fs_ta_rad = round(1 / (sensor_time[1] - sensor_time[0]))
             sensor_data_filt = butterworth_filter(
                 sensor_data_raw, fs=fs_ta_rad, cutoff=2e3, order=2, btype="high"
