@@ -26,7 +26,7 @@ class HbtepUtilMethods:
         phase : numpy.ndarray
             data being unwrapped
 
-        Return
+        Returns
         ------
         phase_unwrapped : numpy.ndarray
             unwrapped data array

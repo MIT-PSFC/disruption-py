@@ -675,7 +675,7 @@ class HbtepPhysicsMethods:
         Get the top sxr fan array data
 
         Only 10 (of 16) of the SXR sensors are included in the data below.  Some of the
-        missing sensors are broken and others include anamolous or attenuated
+        missing sensors are broken and others include anomalous or attenuated
         results.
         """
         output = {}
