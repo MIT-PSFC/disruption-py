@@ -517,9 +517,7 @@ class IpTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        (ip_time,) = params.mds_conn.get_dims(
-            f"ptdata('ip', {params.shot_id})"
-        )
+        (ip_time,) = params.mds_conn.get_dims(f"ptdata('ip', {params.shot_id})")
         ip_time /= 1e3  # [ms] -> [s]
         return ip_time
 
