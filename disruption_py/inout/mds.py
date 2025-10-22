@@ -239,7 +239,6 @@ class MDSConnection:
         logger.trace(shot_msg("Getting data: {path}"), shot=self.shot_id, path=path)
         data = self.conn.get(f"_sig={path}", arguments).data()
 
-        data = self._check_mds_data(data)
         return data
 
     @_better_mds_exceptions
@@ -278,9 +277,6 @@ class MDSConnection:
         data = self.conn.get("_sig=" + path).data()
         dims = [self.conn.get(f"dim_of(_sig,{dim_num})").data() for dim_num in dim_nums]
 
-        data = self._check_mds_data(data)
-        for i, dim in enumerate(dims):
-            dims[i] = self._check_mds_data(dim)
         return data, *dims
 
     @_better_mds_exceptions
@@ -316,27 +312,7 @@ class MDSConnection:
         logger.trace(shot_msg("Getting dims: {path}"), shot=self.shot_id, path=path)
         dims = [self.conn.get(f"dim_of({path},{d})").data() for d in dim_nums]
 
-        for i, dim in enumerate(dims):
-            dims[i] = self._check_mds_data(dim)
         return dims
-
-    def _check_mds_data(self, data) -> np.ndarray:
-        """
-        Check and adjust the type and shape of the retrieved MDS data
-
-        Example of identified errenous data:
-        - D3D 176571 EFIT signals - a single float instead of a np.array
-        """
-        if not isinstance(data, np.ndarray):
-            if type(data) in [int, float, np.float32, np.float64]:
-                # e.g. D3D 176571 EFIT signals
-                data = np.array([data])
-            elif type(data) in [str, np.str_]:
-                # e.g. unit
-                pass
-            else:
-                raise TypeError("Invalid MDS data type.")
-        return data
 
     # nicknames
 
