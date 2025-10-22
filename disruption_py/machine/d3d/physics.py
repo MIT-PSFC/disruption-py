@@ -419,7 +419,7 @@ class D3DPhysicsMethods:
         # Example: 170480:
         #  - r"\density" gives ne = array([], shape=(4, 0), dtype=float64),
         #  - r"\denv2" gives actual density data
-        if not ne or len(~np.isnan(ne)) == 0:
+        if sum(~np.isnan(ne)) == 0:
             ne, t_ne = params.mds_conn.get_data_with_dims(r"\denv2", tree_name="d3d")
             tree_name = params.mds_conn.get_tree_name_of_nickname("_efit_tree")
             params.logger.verbose(
