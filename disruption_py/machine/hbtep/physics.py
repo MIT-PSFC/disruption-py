@@ -252,7 +252,7 @@ class HbtepPhysicsMethods:
         # Use least squares to solve for coefficients
         x = np.matmul(a_matrix_inv, data)
         n1_amp = np.sqrt(x[1, :] ** 2 + x[2, :] ** 2)  # [T]
-        n2_amp = np.sqrt(x[1, :] ** 2 + x[2, :] ** 2)
+        n2_amp = np.sqrt(x[3, :] ** 2 + x[4, :] ** 2)
         n1_phase = -np.arctan2(x[1, :], x[2, :])  # *-1 to corrected the slope of phase
         n2_phase = -np.arctan2(x[3, :], x[4, :])
 
