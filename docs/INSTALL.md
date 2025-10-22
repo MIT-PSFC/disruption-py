@@ -1,11 +1,12 @@
 
 # Installation
 
-Three _public_ installations are currently maintained automatically:
+Several _public_ installations are currently maintained automatically:
 
 - on the C-MOD MFE workstations,
 - on the DIII-D `omega` cluster,
-- on the EAST `cs` servers.
+- on the EAST `cs` servers,
+- on the HBT-EP `landau` server.
 
 A _private_ installation is possible on any machine, either on a personal laptop, or on any experimental cluster.
 
@@ -18,8 +19,7 @@ Snippets for quick addition to a user's `.bashrc` file are provided in the subse
 
 #### Python
 
-A recent Python 3.12 version is installed as a [miniconda](https://docs.anaconda.com/free/miniconda/) distribution.
-It might be used directly from the `"$DISPY_DIR"/miniconda` folder.
+A minimal Python 3.12 distribution is installed in the `"$DISPY_DIR"/cpython/3.12` folder, and can be used in order to create further virtual environments.
 
 #### Dependency management
 
@@ -124,6 +124,18 @@ Suggested snippet to be appended to the user's `~/.bashrc` file:
 ```bash
 # disruption-py
 export DISPY_DIR=/project/disruption-py
+export DISPY_BRANCH=main # default. or dev
+export PATH=$PATH:$DISPY_DIR/repo/auto:$DISPY_DIR/poetry/bin:$DISPY_DIR/uv
+alias disruption-activate='source "$DISPY_DIR"/repo/auto/activate.sh'
+```
+
+### HBT-EP
+
+Suggested snippet to be appended to the user's `~/.bashrc` file:
+
+```bash
+# disruption-py
+export DISPY_DIR=/opt/hbt/disruptions/disruption-py
 export DISPY_BRANCH=main # default. or dev
 export PATH=$PATH:$DISPY_DIR/repo/auto:$DISPY_DIR/poetry/bin:$DISPY_DIR/uv
 alias disruption-activate='source "$DISPY_DIR"/repo/auto/activate.sh'

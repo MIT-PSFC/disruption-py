@@ -4,6 +4,7 @@
 example module for SQL.
 """
 
+import pytest
 
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.workflow import get_database
@@ -22,7 +23,12 @@ def main():
         + " where shot in (select shot from disruptions)",
         "select count(distinct shot) from disruptions",
     ]
+
     tokamak = resolve_tokamak_from_environment()
+    if tokamak is Tokamak.HBTEP:
+        pytest.skip("No SQL for HBT-EP")
+        assert False
+
     db = get_database(tokamak=tokamak)
 
     if tokamak is Tokamak.D3D:

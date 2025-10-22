@@ -49,6 +49,8 @@ nav:
                 d3d_built_in_method_reference.md"
               - EAST Built-in Methods: "usage/physics_methods/\
                 east_built_in_method_reference.md"
+              - HBT-EP Built-in Methods: "usage/physics_methods/\
+                hbtep_built_in_method_reference.md"
               - Physics Method Decorators: "usage/physics_methods/\
                 decorator_reference.md"
           - Parameter Reference: "usage/physics_methods/\

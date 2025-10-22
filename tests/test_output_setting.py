@@ -12,6 +12,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
+from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.output_setting import DataTreeOutputSetting
 from disruption_py.settings.retrieval_settings import RetrievalSettings
@@ -29,9 +30,12 @@ def fresh_data_fixture(shotlist, tokamak, test_folder_m) -> Dict:
         os.path.join(test_folder_m, "dataframe.csv"),
         DataTreeOutputSetting(path=os.path.join(test_folder_m, "datatree.nc")),
     ]
+    column = "kappa_area"
+    if tokamak == Tokamak.HBTEP:
+        column = "ip"
     retrieval_settings = RetrievalSettings(
         efit_nickname_setting="disruption",
-        run_columns=["kappa"],
+        run_columns=[column],
         only_requested_columns=True,
     )
     return get_shots_data(
