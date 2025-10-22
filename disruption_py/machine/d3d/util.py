@@ -32,7 +32,7 @@ class D3DUtilMethods:
         """
         polarity = np.unique(
             params.mds_conn.get_data(
-                f"ptdata('iptdirect', {params.shot_id})", tree_name="d3d"
+                f"ptdata('iptdirect', {params.shot_id})"
             )
         )
         if len(polarity) > 1:

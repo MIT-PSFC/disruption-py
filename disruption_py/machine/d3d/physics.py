@@ -321,15 +321,13 @@ class D3DPhysicsMethods:
         """
         # Get edge loop voltage and smooth it a bit with a median filter
         v_loop, t_v_loop = params.mds_conn.get_data_with_dims(
-            f'ptdata("vloopb", {params.shot_id})', tree_name="d3d"
+            f'ptdata("vloopb", {params.shot_id})'
         )
         t_v_loop /= 1e3  # [ms] -> [s]
         v_loop = scipy.signal.medfilt(v_loop, 11)
         v_loop = interp1(t_v_loop, v_loop, params.times, "linear")
         # Get plasma current
-        ip, t_ip = params.mds_conn.get_data_with_dims(
-            f"ptdata('ip', {params.shot_id})", tree_name="d3d"
-        )
+        ip, t_ip = params.mds_conn.get_data_with_dims(f"ptdata('ip', {params.shot_id})")
         t_ip /= 1e3  # [ms] -> [s]
 
         # Alessandro Pau (JET & AUG) has given Cristina a robust routine that
@@ -447,7 +445,7 @@ class D3DPhysicsMethods:
         )
         try:
             ip, t_ip = params.mds_conn.get_data_with_dims(
-                f"ptdata('ip', {params.shot_id})", tree_name="_efit_tree"
+                f"ptdata('ip', {params.shot_id})"
             )  # [A], [ms]
             t_ip = t_ip / 1.0e3  # [ms] -> [s]
             ipsign = np.sign(np.sum(ip))
@@ -510,7 +508,7 @@ class D3DPhysicsMethods:
         - pull requests: #[251](https://github.com/MIT-PSFC/disruption-py/pull/251)
         """
         ne_rt, t_ne_rt = params.mds_conn.get_data_with_dims(
-            f"ptdata('dssdenest', {params.shot_id})", tree_name="_efit_tree"
+            f"ptdata('dssdenest', {params.shot_id})"
         )  # [10^19 m^-3]
         t_ne_rt = t_ne_rt / 1.0e3  # [ms] to [s]
         ne_rt = ne_rt * 1.0e19  # [10^19 m^-3] -> [m^-3]
@@ -615,7 +613,7 @@ class D3DPhysicsMethods:
         # Get measured plasma current parameters
         try:
             ip, t_ip = params.mds_conn.get_data_with_dims(
-                f"ptdata('ip', {params.shot_id})", tree_name="d3d"
+                f"ptdata('ip', {params.shot_id})"
             )  # [A], [ms]
             t_ip = t_ip / 1.0e3  # [ms] -> [s]
             dip_dt = np.gradient(ip, t_ip)
@@ -627,7 +625,7 @@ class D3DPhysicsMethods:
         # Get programmed plasma current parameters
         try:
             ip_prog, t_ip_prog = params.mds_conn.get_data_with_dims(
-                f"ptdata('iptipp', {params.shot_id})", tree_name="d3d"
+                f"ptdata('iptipp', {params.shot_id})"
             )  # [A], [ms]
             t_ip_prog = t_ip_prog / 1.0e3  # [ms] -> [s]
             polarity = D3DUtilMethods.get_polarity(params)
@@ -649,7 +647,7 @@ class D3DPhysicsMethods:
         # 'ip_prog' signal is irrelevant, and therefore 'ip_error' is not defined.
         try:
             ipimode, t_ipimode = params.mds_conn.get_data_with_dims(
-                f"ptdata('ipimode', {params.shot_id})", tree_name="d3d"
+                f"ptdata('ipimode', {params.shot_id})"
             )
             t_ipimode = t_ipimode / 1.0e3  # [ms] -> [s]
             ipimode = interp1(t_ipimode, ipimode, params.times, "linear")
@@ -672,7 +670,7 @@ class D3DPhysicsMethods:
         # 'ip_error' parameter is undefined for these times.
         try:
             epsoff, t_epsoff = params.mds_conn.get_data_with_dims(
-                f"ptdata('epsoff', {params.shot_id})", tree_name="d3d"
+                f"ptdata('epsoff', {params.shot_id})"
             )
             t_epsoff = t_epsoff / 1.0e3  # [ms] -> [s]
             # Avoid problem with simultaneity of epsoff being triggered exactly
@@ -739,7 +737,7 @@ class D3DPhysicsMethods:
         # TODO: Why open d3d and not the rt efit tree?
         try:
             ip_rt, t_ip_rt = params.mds_conn.get_data_with_dims(
-                f"ptdata('ipsip', {params.shot_id})", tree_name="d3d"
+                f"ptdata('ipsip', {params.shot_id})"
             )  # [MA], [ms]
             t_ip_rt = t_ip_rt / 1.0e3  # [ms] -> [s]
             ip_rt = ip_rt * 1.0e6  # [MA] -> [A]
@@ -754,7 +752,7 @@ class D3DPhysicsMethods:
         # Get programmed plasma current parameters
         try:
             ip_prog_rt, t_ip_prog_rt = params.mds_conn.get_data_with_dims(
-                f"ptdata('ipsiptargt', {params.shot_id})", tree_name="d3d"
+                f"ptdata('ipsiptargt', {params.shot_id})"
             )  # [MA], [ms]
             t_ip_prog_rt = t_ip_prog_rt / 1.0e3  # [ms] -> [s]
             ip_prog_rt = ip_prog_rt * 1.0e6 * 0.5  # [MA] -> [A]
@@ -770,7 +768,7 @@ class D3DPhysicsMethods:
             params.logger.opt(exception=True).debug(e)
         try:
             ip_error_rt, t_ip_error_rt = params.mds_conn.get_data_with_dims(
-                f"ptdata('ipeecoil', {params.shot_id})", tree_name="d3d"
+                f"ptdata('ipeecoil', {params.shot_id})"
             )  # [MA], [ms]
             t_ip_error_rt = t_ip_error_rt / 1.0e3  # [ms] to [s]
             ip_error_rt = ip_error_rt * 1.0e6 * 0.5  # [MA] -> [A]
@@ -791,7 +789,7 @@ class D3DPhysicsMethods:
         # 'ip_prog' signal is irrelevant, and therefore 'ip_error' is not defined.
         try:
             ipimode, t_ipimode = params.mds_conn.get_data_with_dims(
-                f"ptdata('ipimode', {params.shot_id})", tree_name="d3d"
+                f"ptdata('ipimode', {params.shot_id})"
             )
             t_ipimode = t_ipimode / 1.0e3  # [ms] -> [s]
             ipimode = interp1(t_ipimode, ipimode, params.times, "linear")
@@ -810,7 +808,7 @@ class D3DPhysicsMethods:
         # 'ip_error' parameter is undefined for these times.
         try:
             epsoff, t_epsoff = params.mds_conn.get_data_with_dims(
-                f"ptdata('epsoff', {params.shot_id})", tree_name="d3d"
+                f"ptdata('epsoff', {params.shot_id})"
             )
             t_epsoff = t_epsoff / 1.0e3  # [ms] -> [s]
             # Avoid problem with simultaneity of epsoff being triggered exactly on
@@ -872,7 +870,7 @@ class D3DPhysicsMethods:
         nominal_flattop_radius = 0.59
         # Get z_cur
         z_cur, t_z_cur = params.mds_conn.get_data_with_dims(
-            f"ptdata('vpszp', {params.shot_id})", tree_name="d3d"
+            f"ptdata('vpszp', {params.shot_id})"
         )
         t_z_cur = t_z_cur / 1.0e3  # [ms] -> [s]
         z_cur = z_cur / 1.0e2  # [cm] -> [m]
@@ -927,7 +925,7 @@ class D3DPhysicsMethods:
         # Calculate n1rms_norm
         try:
             b_tor, t_b_tor = params.mds_conn.get_data_with_dims(
-                f"ptdata('bt', {params.shot_id})", tree_name="d3d"
+                f"ptdata('bt', {params.shot_id})"
             )
             t_b_tor /= 1e3  # [ms] -> [s]
             b_tor = interp1(t_b_tor, b_tor, params.times)  # [T]
@@ -1032,12 +1030,12 @@ class D3DPhysicsMethods:
         calculate_prad_pf = False
         try:
             rad_cva, t_rad_cva = params.mds_conn.get_data_with_dims(
-                f"ptdata('dpsrrdcva', {params.shot_id})", tree_name="d3d"
+                f"ptdata('dpsrrdcva', {params.shot_id})"
             )  # [], [ms]
             t_rad_cva /= 1e3  # [ms] -> [s]
             rad_cva = interp1(t_rad_cva, rad_cva, params.times)
             rad_xdiv, t_rad_xdiv = params.mds_conn.get_data_with_dims(
-                f"ptdata('dpsrrdxdiv', {params.shot_id})", tree_name="d3d"
+                f"ptdata('dpsrrdxdiv', {params.shot_id})"
             )  # [], [ms]
             t_rad_xdiv /= 1e3  # [ms] -> [s]
             rad_xdiv = interp1(t_rad_xdiv, rad_xdiv, params.times)

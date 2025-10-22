@@ -309,7 +309,7 @@ class DisruptionTimeSetting(TimeSetting):
             Array of times in the timebase.
         """
         raw_ip, ip_time = params.mds_conn.get_data_with_dims(
-            f"ptdata('ip', {params.shot_id})", tree_name="d3d"
+            f"ptdata('ip', {params.shot_id})"
         )
         ip_time = ip_time / 1.0e3
         baseline = np.mean(raw_ip[:10])
@@ -518,7 +518,7 @@ class IpTimeSetting(TimeSetting):
             Array of times in the timebase.
         """
         (ip_time,) = params.mds_conn.get_dims(
-            f"ptdata('ip', {params.shot_id})", tree_name=None
+            f"ptdata('ip', {params.shot_id})"
         )
         ip_time /= 1e3  # [ms] -> [s]
         return ip_time
