@@ -9,6 +9,7 @@
 
 - AR Saperstein, _et al._ (2025), _"Design and development of an off-normal warning system for SPARC"_, Nucl. Fusion **65** 116007, DOI: [10.1088/1741-4326/ae074e](https://doi.org/10.1088/1741-4326/ae074e)
 - GL Trevisan, _et al._ (2025), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, JOSS, [submitted](https://github.com/openjournals/joss-reviews/issues/8538)
+- J Stillerman, _et al._ (2025), _"MDSplusML: Optimizations for data access to facilitate machine learning pipelines"_, Fus. Eng. Des. **211** 114770, DOI: [10.1016/j.fusengdes.2024.114770](https://doi.org/10.1016/j.fusengdes.2024.114770)
 - AD Maris, _et al._ (2024), _"Correlation of the L-mode density limit with edge collisionality"_, Nucl. Fusion **65** 016051, DOI: [10.1088/1741-4326/ad90f0](https://doi.org/10.1088/1741-4326/ad90f0)
 - Z Keith, _et al._ (2024), _"Risk-aware framework development for disruption prediction: Alcator C-Mod and DIII-D survival analysis"_, JoFE 43:21, DOI: [10.1007/s10894-024-00413-y](https://doi.org/10.1007/s10894-024-00413-y)
 
