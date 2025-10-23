@@ -32,6 +32,7 @@ Currently supported machines are:
 - [Alcator C-Mod](https://en.wikipedia.org/wiki/Alcator_C-Mod)
 - [DIII-D](https://en.wikipedia.org/wiki/DIII-D_(tokamak))
 - [EAST](https://en.wikipedia.org/wiki/Experimental_Advanced_Superconducting_Tokamak)
+- [HBT-EP](https://fusion.columbia.edu/facilities/hbt-ep-tokamak)
 
 ## Overview
 

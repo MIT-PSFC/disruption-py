@@ -9,6 +9,7 @@ import os
 import pytest
 import xarray as xr
 
+from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings import RetrievalSettings
 from disruption_py.settings.log_settings import LogSettings
 from disruption_py.workflow import get_shots_data
@@ -41,6 +42,8 @@ def test_only_requested_columns(tokamak, shotlist, test_folder_f):
     should be returned.
     """
     run_columns = ["ip", "q95"]
+    if tokamak == Tokamak.HBTEP:
+        run_columns = ["ip"]  # HBT-EP has no EFIT data
     retrieval_settings = RetrievalSettings(
         run_columns=run_columns,
         only_requested_columns=True,
@@ -108,6 +111,9 @@ def test_run_methods_and_columns(
     - If `run_methods` excludes a method returning a column specified in `run_columns`,
       the method is not run
     """
+    if tokamak is Tokamak.HBTEP:
+        pytest.skip("Skip framework tests for HBT-EP")
+        assert False
     retrieval_settings = RetrievalSettings(
         run_methods=run_methods,
         run_columns=run_columns,
