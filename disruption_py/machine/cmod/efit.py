@@ -200,6 +200,9 @@ class CmodEfitMethods:
         Sometimes the C-Mod EFIT uses 'x' and 'y' instead of 'r' and 'z' for parameter names
         This function will convert them to the standard GEQDSK naming convention.
 
+        Also, since it doesn't really make sense to get interpolated 'nbbbs', we're not including it in the dataset.
+        Later you can look at the nonzero values in 'rbbbs' or 'zbbbs' to determine how many boundary points there are at each time.
+
         Parameters
         ----------
         params : PhysicsMethodParams
@@ -212,13 +215,19 @@ class CmodEfitMethods:
         """
         # Get EFIT time array
         efit_time = params.mds_conn.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree")
-        
+
+        # Grid parameters (For C-Mod a lot are missing, but can be inferred from rgrid/zgrid)
+        grid_params = {
+            "nw": params.mds_conn.get_data(r"\efit_g_eqdsk:mw", tree_name="_efit_tree"),        # Number of horizontal grid points
+            "nh": params.mds_conn.get_data(r"\efit_g_eqdsk:mh", tree_name="_efit_tree"),        # Number of vertical grid points
+            "rdim": params.mds_conn.get_data(r"\efit_g_eqdsk:xdim", tree_name="_efit_tree"),    # Horizontal dimension of grid [m]
+            "zdim": params.mds_conn.get_data(r"\efit_g_eqdsk:zdim", tree_name="_efit_tree"),    # Vertical dimension of grid [m]
+        }
+        rgrid = params.mds_conn.get_data(r"\efit_g_eqdsk:rgrid", tree_name="_efit_tree"),  # R grid [m]
+        zgrid = params.mds_conn.get_data(r"\efit_g_eqdsk:zgrid", tree_name="_efit_tree"),  # Z grid [m]
+
         # Scalar parameters
         scalar_params = {
-            # Grid dimensions
-            "nw": params.mds_conn.get_data(r"\efit_g_eqdsk:mw", tree_name="_efit_tree"),  # Number of horizontal grid points
-            "nh": params.mds_conn.get_data(r"\efit_g_eqdsk:mh", tree_name="_efit_tree"),  # Number of vertical grid points
-            
             # Plasma parameters
             "cpasma": params.mds_conn.get_data(r"\efit_g_eqdsk:cpasma", tree_name="_efit_tree"),  # Plasma current [A]
             "bcentr": params.mds_conn.get_data(r"\efit_g_eqdsk:bcentr", tree_name="_efit_tree"),  # Vacuum toroidal field [T]
@@ -231,14 +240,6 @@ class CmodEfitMethods:
             # Note that ssimag is -1 * simagx from the aeqdsk, apparently
             "ssimag": params.mds_conn.get_data(r"\efit_g_eqdsk:ssimag", tree_name="_efit_tree"),   # Flux at magnetic axis [Wb]
             "ssibry": params.mds_conn.get_data(r"\efit_g_eqdsk:ssibry", tree_name="_efit_tree"),   # Flux at plasma boundary [Wb]
-        }
-
-        # Grid boundaries (For C-Mod a lot are missing, but can be inferred from rgrid/zgrid)
-        grid_params = {
-            "rdim": params.mds_conn.get_data(r"\efit_g_eqdsk:xdim", tree_name="_efit_tree"),     # Horizontal dimension of grid [m]
-            "zdim": params.mds_conn.get_data(r"\efit_g_eqdsk:zdim", tree_name="_efit_tree"),     # Vertical dimension of grid [m]
-            "rgrid": params.mds_conn.get_data(r"\efit_g_eqdsk:rgrid", tree_name="_efit_tree"),  # R grid [m]
-            "zgrid": params.mds_conn.get_data(r"\efit_g_eqdsk:zgrid", tree_name="_efit_tree"),  # Z grid [m]
         }
         
         # 1D profile parameters
@@ -274,61 +275,65 @@ class CmodEfitMethods:
             ylim = np.array([])
         nlim = xlim.shape[0] if xlim.ndim > 0 else 0   # Number of limiter points
         
-        # Create coordinate arrays
-        nw = scalar_params["nw"][0] if hasattr(scalar_params["nw"], '__len__') else scalar_params["nw"]
-        nh = scalar_params["nh"][0] if hasattr(scalar_params["nh"], '__len__') else scalar_params["nh"]
-        
-        # Create time-dependent data arrays
+        # Create data variables for the dataset
         data_vars = {}
         
         # Add scalar parameters
-        for param, values in scalar_params.items():
+        for param, values_raw in scalar_params.items():
+            values_interp = interp1(efit_time, values_raw, params.times)
             data_vars[param] = xr.DataArray(
-                values,
-                dims=["time"],
-                coords={"time": efit_time},
+                values_interp,
+                dims=["idx"],
+                coords={"time": ("idx", params.times)},
                 attrs={"description": f"GEQDSK parameter {param}"}
             )
         
-        # Add 1D profile parameters
-        for param, values in profile_params.items():
-            if values.ndim == 2:  # Time-dependent profiles
+        # Add 1D profile parameters.
+        for param, values_raw in profile_params.items():
+            if values_raw.ndim == 2:  # Time-dependent profiles
+                # For some reason these are stored as (psi_idx, time) so transpose them
+                values_interp = np.array([interp1(efit_time, values_raw[i, :], params.times) for i in range(values_raw.shape[0])]).T
                 data_vars[param] = xr.DataArray(
-                    values,
-                    dims=["psi_index", "time"],
+                    values_interp,
+                    dims=["idx", "psi_idx"],
                     coords={
-                        "time": efit_time,
-                        "psi_index": np.arange(values.shape[0])
+                        "time": ("idx", params.times),
+                        "psi_idx": np.arange(values_interp.shape[1])
                     },
                     attrs={"description": f"GEQDSK 1D profile {param}"}
                 )
             else:  # Single profile
                 data_vars[param] = xr.DataArray(
-                    values,
-                    dims=["psi_index"],
-                    coords={"psi_index": np.arange(len(values))},
+                    values_raw,
+                    dims=["psi_idx"],
+                    coords={"psi_idx": np.arange(len(values_raw))},
                     attrs={"description": f"GEQDSK 1D profile {param}"}
                 )
         
         # Add 2D flux map
         if psi_2d.ndim == 3:  # Time-dependent 2D data
+            psi_2d_interp = np.array([[interp1(efit_time, psi_2d[:, i, j], params.times) for j in range(psi_2d.shape[2])] for i in range(psi_2d.shape[1])]).T
             data_vars["psirz"] = xr.DataArray(
-                psi_2d,
-                dims=["time", "r_index", "z_index"],
+                psi_2d_interp,
+                dims=["idx", "r_idx", "z_idx"],
                 coords={
-                    "time": efit_time,
-                    "r_index": np.arange(psi_2d.shape[1]),
-                    "z_index": np.arange(psi_2d.shape[2])
+                    "time": ("idx", params.times),
+                    "r_idx": ("r_idx", np.arange(psi_2d.shape[1])),
+                    "z_idx": ("z_idx", np.arange(psi_2d.shape[2])),
+                    "rgrid": ("r_idx", rgrid[0]),
+                    "zgrid": ("z_idx", zgrid[0])
                 },
                 attrs={"description": "2D poloidal flux map", "units": "Wb"}
             )
         else:  # Single time slice
             data_vars["psirz"] = xr.DataArray(
                 psi_2d,
-                dims=["r_index", "z_index"],
+                dims=["r_idx", "z_idx"],
                 coords={
-                    "r_index": np.arange(psi_2d.shape[0]),
-                    "z_index": np.arange(psi_2d.shape[1])
+                    "r_idx": np.arange(psi_2d.shape[1]),
+                    "z_idx": np.arange(psi_2d.shape[2]),
+                    "rgrid": ("r_idx", rgrid[0]),
+                    "zgrid": ("z_idx", zgrid[0])
                 },
                 attrs={"description": "2D poloidal flux map", "units": "Wb"}
             )
@@ -336,35 +341,39 @@ class CmodEfitMethods:
         # Add boundary data
         if len(rbbbs) > 0:
             if rbbbs.ndim == 2:  # Time-dependent boundary
+                # Transpose to (time, boundary_idx)
+                rbbbs_interp = np.array([interp1(efit_time, rbbbs[i, :], params.times) for i in range(rbbbs.shape[0])]).T
                 data_vars["rbbbs"] = xr.DataArray(
-                    rbbbs,
-                    dims=["boundary_index", "time"],
+                    rbbbs_interp,
+                    dims=["idx", "boundary_idx"],
                     coords={
-                        "time": efit_time,
-                        "boundary_index": np.arange(rbbbs.shape[0])
+                        "time": ("idx", params.times),
+                        "boundary_idx": np.arange(rbbbs_interp.shape[1])
                     },
                     attrs={"description": "R coordinates of plasma boundary", "units": "m"}
                 )
+                # Transpose to (time, boundary_idx)
+                zbbbs_interp = np.array([interp1(efit_time, zbbbs[i, :], params.times) for i in range(zbbbs.shape[0])]).T
                 data_vars["zbbbs"] = xr.DataArray(
-                    zbbbs,
-                    dims=["boundary_index", "time"],
+                    zbbbs_interp,
+                    dims=["idx", "boundary_idx"],
                     coords={
-                        "time": efit_time,
-                        "boundary_index": np.arange(zbbbs.shape[0])
+                        "time": ("idx", params.times),
+                        "boundary_idx": np.arange(zbbbs_interp.shape[1])
                     },
                     attrs={"description": "Z coordinates of plasma boundary", "units": "m"}
                 )
             else:  # Single boundary
                 data_vars["rbbbs"] = xr.DataArray(
                     rbbbs,
-                    dims=["boundary_index"],
-                    coords={"boundary_index": np.arange(len(rbbbs))},
+                    dims=["boundary_idx"],
+                    coords={"boundary_idx": np.arange(len(rbbbs))},
                     attrs={"description": "R coordinates of plasma boundary", "units": "m"}
                 )
                 data_vars["zbbbs"] = xr.DataArray(
                     zbbbs,
-                    dims=["boundary_index"],
-                    coords={"boundary_index": np.arange(len(zbbbs))},
+                    dims=["boundary_idx"],
+                    coords={"boundary_idx": np.arange(len(zbbbs))},
                     attrs={"description": "Z coordinates of plasma boundary", "units": "m"}
                 )
         
@@ -372,102 +381,36 @@ class CmodEfitMethods:
         if len(xlim) > 0:
             data_vars["rlim"] = xr.DataArray(
                 xlim,
-                dims=["limiter_index"],
-                coords={"limiter_index": np.arange(len(xlim))},
+                dims=["limiter_idx"],
+                coords={"limiter_idx": np.arange(len(xlim))},
                 attrs={"description": "R coordinates of limiter", "units": "m"}
             )
             data_vars["zlim"] = xr.DataArray(
                 ylim,
-                dims=["limiter_index"],
-                coords={"limiter_index": np.arange(len(ylim))},
+                dims=["limiter_idx"],
+                coords={"limiter_idx": np.arange(len(ylim))},
                 attrs={"description": "Z coordinates of limiter", "units": "m"}
             )
-        
-        # Add number of boundary and limiter points
-        data_vars["nbbbs"] = xr.DataArray(
-            nbbbs,
-            dims=["time"] if hasattr(nbbbs, '__len__') and len(nbbbs) > 1 else [],
-            coords={"time": efit_time} if hasattr(nbbbs, '__len__') and len(nbbbs) > 1 else {},
-            attrs={"description": "Number of plasma boundary points"}
-        )
         data_vars["nlim"] = xr.DataArray(
             nlim,
             dims=[],
             attrs={"description": "Number of limiter points"}
         )
 
-        data_vars.update(
-            {"rdim": grid_params["rdim"],
-             "zdim": grid_params["zdim"],}
-        )
-        data_vars["rgrid"] = xr.DataArray(
-            grid_params["rgrid"],
-            dims=["r_index"],
-            coords={"r_index": np.arange(len(grid_params["rgrid"]))},
-            attrs={"description": "R grid points", "units": "m"}
-        )
-        data_vars["zgrid"] = xr.DataArray(
-            grid_params["zgrid"],
-            dims=["z_index"],
-            coords={"z_index": np.arange(len(grid_params["zgrid"]))},
-            attrs={"description": "Z grid points", "units": "m"}
-        )
-        
+        data_vars.update(grid_params)
+
         # Create the dataset
         geqdsk_dataset = xr.Dataset(
-            data_vars,
+            data_vars=data_vars,
+            coords={
+                "time": ("idx", params.times),
+                "shot": ("idx", np.repeat(params.shot_id, len(params.times), axis=0)),
+            },
             attrs={
                 "description": "GEQDSK equilibrium parameters for C-Mod",
                 "source": "EFIT reconstruction",
             }
         )
-        
-        # Interpolate time-dependent variables to params.times, and replace the 
-
-        # Only interpolate time-dependent variables
-        time_dependent_vars = [var for var in geqdsk_dataset.data_vars 
-                                if "time" in geqdsk_dataset[var].dims]
-        time_independent_vars = [var for var in geqdsk_dataset.data_vars 
-                                  if "time" not in geqdsk_dataset[var].dims]
-        for var in time_dependent_vars:
-            if geqdsk_dataset[var].ndim == 1:  # scalar time series
-                geqdsk_dataset[var] = xr.DataArray(
-                    interp1(efit_time, geqdsk_dataset[var].values, params.times),
-                    dims=["time"],
-                    coords={"time": params.times},
-                    attrs=geqdsk_dataset[var].attrs
-                )
-            elif geqdsk_dataset[var].ndim == 2 and "time" in geqdsk_dataset[var].dims:  # 1D with time
-                interpolated_data = np.array([interp1(efit_time, geqdsk_dataset[var].values[i, :], params.times)for i in range(geqdsk_dataset[var].shape[0])])
-                other_dim = [dim for dim in geqdsk_dataset[var].dims if dim != "time"][0]
-                geqdsk_dataset[var] = xr.DataArray(
-                    interpolated_data,
-                    dims=[other_dim, "time"],
-                    coords={
-                        "time": params.times,
-                        other_dim: geqdsk_dataset[var].coords[other_dim]
-                    },
-                    attrs=geqdsk_dataset[var].attrs
-                )
-            elif geqdsk_dataset[var].ndim == 3 and "time" in geqdsk_dataset[var].dims:  # 2D with time
-                interpolated_data = np.array([[interp1(efit_time, geqdsk_dataset[var].values[:, i, j], params.times) for j in range(geqdsk_dataset[var].shape[2])] for i in range(geqdsk_dataset[var].shape[1])])
-                other_dims = [dim for dim in geqdsk_dataset[var].dims if dim != "time"]
-                geqdsk_dataset[var] = xr.DataArray(
-                    interpolated_data,
-                    dims=[*other_dims, "time"],
-                    coords={
-                        "time": params.times,
-                        other_dims[0]: geqdsk_dataset[var].coords[other_dims[0]],
-                        other_dims[1]: geqdsk_dataset[var].coords[other_dims[1]],
-                    },
-                    attrs=geqdsk_dataset[var].attrs
-                )
-
-            
-
-        # Modify dataset so "time" coordinate is on dimension "idx"
-        geqdsk_dataset = geqdsk_dataset.rename_dims({"time": "idx"})
-        geqdsk_dataset = geqdsk_dataset.assign_coords({"time": ("idx", params.times), "shot": ("idx", params.shot_id)})
         
         return geqdsk_dataset
 
