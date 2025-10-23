@@ -159,9 +159,9 @@ class CmodMirnovMethods:
         theta_pol_all = np.deg2rad(theta_pol_all)
 
         if debug:
-            return all_mirnov_names[21:23], phi_all[20:24], theta_all[20:24], theta_pol_all[20:24]
+            return all_mirnov_names[21:23], R_all[20:24], Z_all[20:24], phi_all[20:24], theta_all[20:24], theta_pol_all[20:24]
         else:
-            return all_mirnov_names, phi_all, theta_all, theta_pol_all
+            return all_mirnov_names, R_all, Z_all, phi_all, theta_all, theta_pol_all
 
     @staticmethod
     def get_mirnov_fft(params: PhysicsMethodParams, mirnov_name: str, freq_resolution: float = 100, max_freq: float = 80e3):
@@ -224,51 +224,53 @@ class CmodMirnovMethods:
             Coordinates are probe, frequency, time, phi, theta, and theta_pol.
         """
 
-        all_mirnov_names, phi_all, theta_all, theta_pol_all = CmodMirnovMethods.get_mirnov_names_and_locations(params, debug=True)
+        all_mirnov_names, R_all, Z_all, phi_all, theta_all, theta_pol_all = CmodMirnovMethods.get_mirnov_names_and_locations(params, debug=False)
 
         valid_mirnov_ffts = []
         valid_mirnov_names = []
         valid_mirnov_locations = []
         saved_freqs = None
 
-        for mirnov_name, mirnov_phi, mirnov_theta, mirnov_theta_pol in zip(all_mirnov_names, phi_all, theta_all, theta_pol_all):
+        for mirnov_name, mirnov_R, mirnov_Z, mirnov_phi, mirnov_theta, mirnov_theta_pol in zip(all_mirnov_names, R_all, Z_all, phi_all, theta_all, theta_pol_all):
             mirnov_fft, freqs = CmodMirnovMethods.get_mirnov_fft(params, mirnov_name)
             if mirnov_fft is not None:
                 valid_mirnov_ffts.append(mirnov_fft)
                 valid_mirnov_names.append(mirnov_name)
-                valid_mirnov_locations.append((mirnov_phi, mirnov_theta, mirnov_theta_pol))
+                valid_mirnov_locations.append((mirnov_R, mirnov_Z, mirnov_phi, mirnov_theta, mirnov_theta_pol))
 
             if saved_freqs is None:
                 saved_freqs = freqs
 
-        valid_mirnov_ffts = np.expand_dims(valid_mirnov_ffts, axis=0)  # Add a new axis for the probe dimension
-
         mirnov_ffts_real = xr.DataArray(
             np.array(valid_mirnov_ffts).real,
-            dims=("idx", "probe", "frequency", "time"),
+            dims=("probe", "frequency", "idx"),
             coords={
-                "shot": ("idx", [params.shot_id]),
+                "shot": ("idx", np.repeat(params.shot_id, len(params.times))),
                 "probe": list(range(len(valid_mirnov_locations))),
                 "probe_name": ("probe", valid_mirnov_names),
                 "frequency": saved_freqs,
-                "time": params.times,
-                "phi": ("probe", [loc[0] for loc in valid_mirnov_locations]),
-                "theta": ("probe", [loc[1] for loc in valid_mirnov_locations]),
-                "theta_pol": ("probe", [loc[2] for loc in valid_mirnov_locations]),
+                "time": ("idx", params.times),
+                "R": ("probe", [loc[0] for loc in valid_mirnov_locations]),
+                "Z": ("probe", [loc[1] for loc in valid_mirnov_locations]),
+                "phi": ("probe", [loc[2] for loc in valid_mirnov_locations]),
+                "theta": ("probe", [loc[3] for loc in valid_mirnov_locations]),
+                "theta_pol": ("probe", [loc[4] for loc in valid_mirnov_locations]),
             },
         )
         mirnov_ffts_imag = xr.DataArray(
             np.array(valid_mirnov_ffts).imag,
-            dims=("idx", "probe", "frequency", "time"),
+            dims=("probe", "frequency", "idx"),
             coords={
-                "shot": ("idx", [params.shot_id]),
+                "shot": ("idx", np.repeat(params.shot_id, len(params.times))),
                 "probe": list(range(len(valid_mirnov_locations))),
                 "probe_name": ("probe", valid_mirnov_names),
                 "frequency": saved_freqs,
-                "time": params.times,
-                "phi": ("probe", [loc[0] for loc in valid_mirnov_locations]),
-                "theta": ("probe", [loc[1] for loc in valid_mirnov_locations]),
-                "theta_pol": ("probe", [loc[2] for loc in valid_mirnov_locations]),
+                "time": ("idx", params.times),
+                "R": ("probe", [loc[0] for loc in valid_mirnov_locations]),
+                "Z": ("probe", [loc[1] for loc in valid_mirnov_locations]),
+                "phi": ("probe", [loc[2] for loc in valid_mirnov_locations]),
+                "theta": ("probe", [loc[3] for loc in valid_mirnov_locations]),
+                "theta_pol": ("probe", [loc[4] for loc in valid_mirnov_locations]),
             },
         )
         mirnov_ds_real = mirnov_ffts_real.astype(np.float32).to_dataset(name="mirnov_fft_real")
