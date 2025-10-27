@@ -39,11 +39,11 @@
 
 - [66th APS-DPP Meeting (2024)](https://meetings.aps.org/Meeting/DPP24)
   - AD Maris, _et al._ (2024), _"Correlation of the tokamak density limit with edge collisionality"_, [BI02.2](https://meetings.aps.org/Meeting/DPP24/Session/BI02.2)
-  - AR Saperstein, _et al._ (2024), _"Development and preliminary calibration of an off-normal warning system for SPARC"_, [TO06.9](https://meetings.aps.org/Meeting/DPP24/Session/TO06.9)
   - H Wietfeldt, _et al._ (2024), _"Discerning Why Some High-Z UFOs in C-Mod Caused Immediate Disruptions while Others Did Not"_, [NP12.111](https://meetings.aps.org/Meeting/DPP24/Session/NP12.111)
   - GL Trevisan, _et al._ (2024), _"Functional Improvements and Technical Developments of a Community-driven and Physics-informed Numerical Library for Disruption Studies"_, [PP12.9](https://meetings.aps.org/Meeting/DPP24/Session/PP12.9)
   - Y Wei, _et al._ (2024), _"Physics validation of parameter methods in DisruptionPy"_, [PP12.10](https://meetings.aps.org/Meeting/DPP24/Session/PP12.10)
   - C Rea, _et al._ (2024), _"Open and FAIR Fusion for Machine Learning Applications"_, [PP12.27](https://meetings.aps.org/Meeting/DPP24/Session/PP12.27)
+  - AR Saperstein, _et al._ (2024), _"Development and preliminary calibration of an off-normal warning system for SPARC"_, [TO06.9](https://meetings.aps.org/Meeting/DPP24/Session/TO06.9)
 
 - [3rd IAEA Technical Meeting on Plasma Disruptions and their Mitigation (2024)](https://conferences.iaea.org/event/380/)
   - AD Maris, _et al._ (2024), _"Correlation of the tokamak density limit with edge collisionality"_, [32301](https://conferences.iaea.org/event/380/contributions/32301/)
