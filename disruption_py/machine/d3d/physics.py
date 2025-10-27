@@ -412,12 +412,15 @@ class D3DPhysicsMethods:
         except mdsExceptions.MdsException:
             ne = [np.nan]
             t_ne = [np.nan]
-        # If EFIT disruption tree does not contain density data,
+        # If EFIT disruption tree does not contain density data or if the data is invalid,
         # then read density from BCI subtree of D3D main tree
-        # Example: 170480:
-        #  - r"\density" gives ne = array([], shape=(4, 0), dtype=float64),
-        #  - r"\denv2" gives actual density data
-        if not np.isfinite(ne).any():
+        # Example 1: 170480:
+        #  - "\efit01:density" gives ne = array([], shape=(4, 0), dtype=float64),
+        #  - "\d3d:denv2" gives actual density data
+        # Example 2: 172756:
+        #  - r"\efit01:density" gives ne = array([4.06199e19]), t_ne = array([1800])
+        #  - "\d3d:denv2" gives actual density data
+        if not np.isfinite(ne).any() or len(ne) < 2:
             ne, t_ne = params.mds_conn.get_data_with_dims(r"\denv2", tree_name="d3d")
             tree_name = params.mds_conn.get_tree_name_of_nickname("_efit_tree")
             params.logger.verbose(
