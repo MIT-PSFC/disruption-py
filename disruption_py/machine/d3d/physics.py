@@ -823,6 +823,7 @@ class D3DPhysicsMethods:
                 "power_supply_railed: Failed to get epsoff signal. Setting to NaN.",
             )
             params.logger.opt(exception=True).debug(e)
+            power_supply_railed = np.full(len(params.times), np.nan)
         # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
         # PCS feedback control of Ip is not being applied.  Therefore the
         # 'ip_error' parameter is undefined for these times.
