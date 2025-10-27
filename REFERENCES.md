@@ -16,9 +16,14 @@
 ### Conferences
 
 - [67th APS-DPP Meeting (2025)](https://meetings.aps.org/Meeting/DPP25)
-  - AD Maris, _et al._ (2025), _"Collisionality scaling of the tokamak density limit: data-driven analysis, cross-device prediction, and real-time avoidance"_
-  - H Wietfeldt, _et al._ (2025), _"Assessing the Risk of UFO Disruptions to SPARC via a Multi-device Study"_
-  - Z Keith, _et al._ (2025), _"Enabling data-driven NTM studies with advanced mode labeling"_
+  - AD Maris, _et al._ (2025), _"Collisionality scaling of the tokamak density limit: data-driven analysis, cross-device prediction, and real-time avoidance"_ [BO04.5](https://meetings.aps.org/Meeting/DPP25/Session/BO04.5)
+  - Z Keith, _et al._ (2025), _"Enabling data-driven NTM studies with advanced mode labeling"_, [BP13.167](https://meetings.aps.org/Meeting/DPP25/Session/BP13.167)
+  - C Rea, _et al._ (2025), _"Research in support of the SPARC Off-Normal Warning System"_, [JO04.9](https://meetings.aps.org/Meeting/DPP25/Session/JO04.9)
+  - AR Saperstein, _et al._ (2025), _"Validation of simulated radiative collapse events in TORAX"_, [NP13.161](https://meetings.aps.org/Meeting/DPP25/Session/NP13.161)
+  - H Wietfeldt, _et al._ (2025), _"Characterization of UFOs on Alcator C-Mod and WEST to inform SPARC operation"_ [NP13.163](https://meetings.aps.org/Meeting/DPP25/Session/NP13.163)
+  - E Zapata Cornejo, _et al._ (2025), _"Time series classification algorithms for confinement regime identification in C-Mod"_ [NP13.170](https://meetings.aps.org/Meeting/DPP25/Session/NP13.170)
+  - GL Trevisan, _et al._ (2025), _"A large-scale automated EFIT recomputation workflow for disruption studies at 1 kHz"_, [PP13.93](https://meetings.aps.org/Meeting/DPP25/Session/PP13.93)
+  - Y Wei, _et al._ (2025), _"Scikit-disruption: machine learning toolkit for disruption analysis"_, [PP13.98](https://meetings.aps.org/Meeting/DPP25/Session/PP13.98)
 
 - [6th International Conference on Data-Driven Plasma Science (2025)](https://web.cvent.com/event/7de9d238-e170-4fbf-8de5-20abc5c6eb49/summary)
   - Y Wei, _et al._ (2025), _"DisruptionPy: An open-source physics-based scientific package for disruption studies on magnetic fusion experiment devices"_
