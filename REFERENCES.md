@@ -26,12 +26,12 @@
   - Y Wei, _et al._ (2025), _"Scikit-disruption: machine learning toolkit for disruption analysis"_, [PP13.98](https://meetings.aps.org/Meeting/DPP25/Session/PP13.98)
 
 - [6th International Conference on Data-Driven Plasma Science (2025)](https://web.cvent.com/event/7de9d238-e170-4fbf-8de5-20abc5c6eb49/summary)
-  - Y Wei, _et al._ (2025), _"DisruptionPy: An open-source physics-based scientific package for disruption studies on magnetic fusion experiment devices"_
   - Z Keith, _et al._ (2025), _"A tearing mode database for Alcator C-Mod and DIII-D"_
+  - Y Wei, _et al._ (2025), _"DisruptionPy: An open-source physics-based scientific package for disruption studies on magnetic fusion experiment devices"_
 
 - [45th ITPA-MDC Meeting (2025)](https://sites.google.com/pppl.gov/itpa-mdc2025)
-  - AR Saperstein, _et al._ (2025), _"Progress on the development of an off-normal warning system for SPARC"_
   - AD Maris, _et al._ (2025), _"Cross-device prediction and real-time avoidance of the density limit"_
+  - AR Saperstein, _et al._ (2025), _"Progress on the development of an off-normal warning system for SPARC"_
   - H Wietfeldt, _et al._ (2025), _"Characterizing UFO Disruptions on Alcator C-Mod"_
 
 - [Open Source Software for Fusion Energy (2025)](https://ossfe.org/OSSFE_2025/#welcome-to-ossfe-2025)
@@ -46,7 +46,7 @@
   - C Rea, _et al._ (2024), _"Open and FAIR Fusion for Machine Learning Applications"_, [PP12.27](https://meetings.aps.org/Meeting/DPP24/Session/PP12.27)
 
 - [3rd IAEA Technical Meeting on Plasma Disruptions and their Mitigation (2024)](https://conferences.iaea.org/event/380/)
-  - AR Saperstein, _et al._ (2024), _"Development and preliminary calibration of an off-normal warning system for SPARC"_, [32305](https://conferences.iaea.org/event/380/contributions/32305/)
   - AD Maris, _et al._ (2024), _"Correlation of the tokamak density limit with edge collisionality"_, [32301](https://conferences.iaea.org/event/380/contributions/32301/)
+  - AR Saperstein, _et al._ (2024), _"Development and preliminary calibration of an off-normal warning system for SPARC"_, [32305](https://conferences.iaea.org/event/380/contributions/32305/)
 
 - [65th APS-DPP Meeting (2023)](https://meetings.aps.org/Meeting/DPP23)
