@@ -19,6 +19,13 @@ from disruption_py.core.utils.misc import get_commit_hash, get_temporary_folder
 
 LogSettingsType = Union["LogSettings", str, int]
 
+# Add VERBOSE level if it does not already exist
+if not hasattr(logger.__class__, "verbose"):
+    logger.level("VERBOSE", color="<dim>", no=15)
+    # Bind the verbose level to the class so it can be used in any file even
+    # after changing the logger instance
+    logger.__class__.verbose = partialmethod(logger.__class__.log, "VERBOSE")
+
 
 @dataclass
 class LogSettings:
@@ -129,20 +136,12 @@ class LogSettings:
         # once, so there is no need to add it to the reset_handlers method.
         logger.level("TRACE", color="<cyan><dim>")
         logger.level("DEBUG", color="<blue>")
-        # Ensure the level does not already exist because the level no can only
-        # be added once. This might happen if the logger is re-initialized.
-        try:
-            logger.level("VERBOSE", color="<dim>")
-        except ValueError:
-            logger.level("VERBOSE", color="<dim>", no=15)
+        logger.level("VERBOSE", color="<dim>")
         logger.level("INFO", color="")
         logger.level("SUCCESS", color="<green>")
         logger.level("WARNING", color="<yellow>")
         logger.level("ERROR", color="<red>")
-        # Bind the verbose level to the class so it can be used in any file even
-        # after changing the logger instance
-        logger.__class__.verbose = partialmethod(logger.__class__.log, "VERBOSE")
-
+ #
         self.reset_handlers(num_shots=None)
 
         # header
