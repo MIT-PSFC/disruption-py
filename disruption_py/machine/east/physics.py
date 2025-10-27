@@ -833,11 +833,11 @@ class EastPhysicsMethods:
         rmp = np.full((len(rmptime), 16), np.nan)
         for i in range(8):
             # Get irmpu1 to irmpu8
-            signal = params.mds_conn.get_data(rf"\irmpu{i + 1}", tree_name="east")
+            signal = params.mds_conn.get_data(rf"\irmpu{i+1}", tree_name="east")
             if len(signal) == len(rmptime):
                 rmp[:, i] = signal
             # Get irmpl1 to irmpl8
-            signal = params.mds_conn.get_data(rf"\irmpl{i + 1}", tree_name="east")
+            signal = params.mds_conn.get_data(rf"\irmpl{i+1}", tree_name="east")
             if len(signal) == len(rmptime):
                 rmp[:, i + 8] = signal
         # Get saddle coil signals
