@@ -656,9 +656,9 @@ class D3DPhysicsMethods:
             params.logger.opt(exception=True).debug(e)
             ipimode = [np.nan]
         if (
-            ~np.isnan(ip).all()
-            and ~np.isnan(ip_prog).all()
-            and ~np.isnan(ipimode).all()
+            np.isfinite(ip).any()
+            and np.isfinite(ip_prog).any()
+            and np.isfinite(ipimode).any()
         ):
             feedback_on_indices = np.where((ipimode == 0) | (ipimode == 3))
             ip_error[feedback_on_indices] = (
@@ -799,7 +799,7 @@ class D3DPhysicsMethods:
             )
             params.logger.opt(exception=True).debug(e)
             ipimode = np.full(len(params.times), np.nan)
-        if ~np.isnan(ip_error_rt).all() and ~np.isnan(ipimode).all():
+        if np.isfinite(ip_error_rt).any() and np.isfinite(ipimode).any():
             (feedback_off_indices,) = np.where((ipimode != 0) & (ipimode == 3))
             ip_error_rt[feedback_off_indices] = np.nan
         # Finally, get 'epsoff' to determine if/when the E-coil power supplies have railed
@@ -827,7 +827,7 @@ class D3DPhysicsMethods:
         # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
         # PCS feedback control of Ip is not being applied.  Therefore the
         # 'ip_error' parameter is undefined for these times.
-        if ~np.isnan(ip_error_rt).all() and ~np.isnan(power_supply_railed).all():
+        if np.isfinite(ip_error_rt).any() and np.isfinite(power_supply_railed).any():
             (ps_railed_indices,) = np.where(power_supply_railed != 0)
             ip_error_rt[ps_railed_indices] = np.nan
         return {
