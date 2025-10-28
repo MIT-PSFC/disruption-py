@@ -57,3 +57,4 @@ Here follows a non-exhaustive list of projects, publications, and conference con
   - AR Saperstein, _et al._ (2024), _"Development and preliminary calibration of an off-normal warning system for SPARC"_, [32305](https://conferences.iaea.org/event/380/contributions/32305/)
 
 - [65th APS-DPP Meeting (2023)](https://meetings.aps.org/Meeting/DPP23)
+  - Z Keith, _et al._ (2023), _"Risk-aware framework development for disruption prediction: Alcator C-Mod survival analysis"_, [JP11.124](https://meetings.aps.org/Meeting/DPP23/Session/JP11.124)
