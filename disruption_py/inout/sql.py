@@ -39,6 +39,7 @@ class ShotDatabase:
         passwd,
         **_kwargs,
     ):
+
         if "pyodbc" not in sys.modules:
             raise RuntimeError("No pyodbc module!")
 
