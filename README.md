@@ -23,6 +23,7 @@
 [![Available: Zenodo](https://zenodo.org/badge/DOI/10.5281/zenodo.13935223.svg)](https://doi.org/10.5281/zenodo.13935223)
 [![License: MIT](https://img.shields.io/pypi/l/disruption-py?color=750014)](https://github.com/MIT-PSFC/disruption-py/blob/main/LICENSE)
 
+
 ## Concept
 
 DisruptionPy is an open-source Scientific Python package for fast retrieval of experimental Fusion data from [MDSplus](https://www.mdsplus.org/) servers.
@@ -33,16 +34,17 @@ Currently supported machines are:
 - [DIII-D](https://en.wikipedia.org/wiki/DIII-D_(tokamak))
 - [EAST](https://en.wikipedia.org/wiki/Experimental_Advanced_Superconducting_Tokamak)
 
+
 ## Overview
 
 ### Background
 
 A key element to ensure steady state operations in magnetically-confined tokamak devices is the prediction and avoidance of disruptions.
 These are sudden losses of the thermal and magnetic energy stored within the plasma, which can occur when tokamaks operate near stability boundaries or because of hardware anomalies.
-The energy stored in the plasma and released during disruptions over milliseconds can cause severe damage to plasma-facing components, limiting experimental operations and the device's lifespan [[1](https://doi.org/10.1080/15361055.2023.2229675)].
+The energy stored in the plasma and released during disruptions over milliseconds can cause severe damage to plasma-facing components, limiting experimental operations and the device's lifespan [[FST2023](https://doi.org/10.1080/15361055.2023.2229675)].
 Disruptions still pose a serious challenge to next-generation fusion devices such as [ITER](https://en.wikipedia.org/wiki/ITER) or [SPARC](https://en.wikipedia.org/wiki/SPARC_(tokamak)), which will have to operate near some of the limits of plasma stability to achieve intended performance and will do so at for long and frequent intervals.
 Fusion science currently lacks first-principle, theoretical solutions to fully predict and avoid disruptions.
-However, previous work [[2](https://doi.org/10.1088/1741-4326/ab28bf), [3](https://doi.org/10.1088/1741-4326/abf74d)] has shown the usefulness of machine-learning (ML) algorithms for disruption prevention for both [DIII-D](https://en.wikipedia.org/wiki/DIII-D_(tokamak)) and [EAST](https://en.wikipedia.org/wiki/Experimental_Advanced_Superconducting_Tokamak) operations.
+However, previous work [[NF2019](https://doi.org/10.1088/1741-4326/ab28bf), [NF2021](https://doi.org/10.1088/1741-4326/abf74d)] has shown the usefulness of machine-learning (ML) algorithms for disruption prevention for both [DIII-D](https://en.wikipedia.org/wiki/DIII-D_(tokamak)) and [EAST](https://en.wikipedia.org/wiki/Experimental_Advanced_Superconducting_Tokamak) operations.
 DisruptionPy provides a standardized analysis pipeline across different fusion devices to build ML-ready datasets.
 
 ### Workflow
@@ -59,17 +61,7 @@ _Figure: Schematic flowchart of a typical DisruptionPy workflow (by: Y Wei)._
 
 ### Acknowledgments
 
-The most recent revamp of DisruptionPy was partially supported by DOE FES under Award DE-SC0024368, "Open and FAIR Fusion for Machine Learning Applications" [[4](https://crea-psfc.github.io/open-fair-fusion/)].
-
-### References
-
-1. AD Maris, A Wang, C Rea, RS Granetz, E Marmar (2023), _"The Impact of Disruptions on the Economics of a Tokamak Power Plant"_, **Fusion Science and Technology** 80(5) 636-652, [DOI:10.1080/15361055.2023.2229675](https://doi.org/10.1080/15361055.2023.2229675).
-
-2. C Rea, KJ Montes, KG Erickson, RS Granetz & RA Tinguely (2019), _"A real-time machine learning-based disruption predictor in DIII-D"_, **Nuclear Fusion** 59 096016, [DOI:10.1088/1741-4326/ab28bf](https://doi.org/10.1088/1741-4326/ab28bf).
-
-3. WH Hu, C Rea, et al. (2021), _"Real-time prediction of high-density EAST disruptions using random forest"_, **Nuclear Fusion** 61 066034, [DOI:10.1088/1741-4326/abf74d](https://doi.org/10.1088/1741-4326/abf74d).
-
-4. C Rea, et al. (2023), _"Open and FAIR Fusion for Machine Learning Applications"_, [Project website](https://crea-psfc.github.io/open-fair-fusion/).
+The most recent revamp of DisruptionPy was partially supported by DOE FES under Award DE-SC0024368, ["Open and FAIR Fusion for Machine Learning Applications"](https://crea-psfc.github.io/open-fair-fusion/).
 
 
 ## Repository layout
