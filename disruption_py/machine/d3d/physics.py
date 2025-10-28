@@ -823,7 +823,7 @@ class D3DPhysicsMethods:
             power_supply_railed[railed_indices] = 1
         except mdsExceptions.MdsException as e:
             params.logger.warning(
-                "power_supply_railed: Failed to get epsoff signal. Setting to NaN.",
+                "power_supply_railed: Failed to get epsoff signal. Setting to NaN."
             )
             params.logger.opt(exception=True).debug(e)
             power_supply_railed = np.full(len(params.times), np.nan)
