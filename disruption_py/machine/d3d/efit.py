@@ -79,6 +79,9 @@ class D3DEfitMethods:
         for param in efit_data:
             efit_data[param][invalid_indices] = np.nan
         for deriv_param, param in D3DEfitMethods.efit_derivs.items():
+            if len(efit_data[param]) < 2:
+                efit_data[deriv_param] = [np.nan]
+                continue
             efit_data[deriv_param] = np.gradient(efit_data[param], efit_time)
         if not np.array_equal(params.times, efit_time):
             for param in efit_data:
