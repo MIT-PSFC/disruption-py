@@ -38,6 +38,9 @@ Here follows a non-exhaustive list of projects, publications, and conference con
   - AR Saperstein, _et al._ (2025), _"Progress on the development of an off-normal warning system for SPARC"_
   - H Wietfeldt, _et al._ (2025), _"Characterizing UFO Disruptions on Alcator C-Mod"_
 
+- [3rd AI for Fusion CRP (2025)](https://nucleus.iaea.org/sites/ai4atoms/ai4fusion/SitePages/3rd-Meeting-of-the-AI-for-Fusion-(CRP).aspx)
+  - C Rea, _et al._ (2025), _"Open and FAIR Fusion for Machine Learning Applications"_
+
 - [Open Source Software for Fusion Energy (2025)](https://ossfe.org/OSSFE_2025/#welcome-to-ossfe-2025)
   - Y Wei, _et al._ (2025), _"DisruptionPy: an open-source Python library for disruption study."_, [POS-10](https://ossfe.org/OSSFE_2025/y-disruptionpy)
 
