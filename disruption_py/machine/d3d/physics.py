@@ -803,7 +803,7 @@ class D3DPhysicsMethods:
             params.logger.opt(exception=True).debug(e)
             ipimode = np.full(len(params.times), np.nan)
         if np.isfinite(ip_error_rt).any() and np.isfinite(ipimode).any():
-            (feedback_off_indices,) = np.where((ipimode != 0) & (ipimode == 3))
+            (feedback_off_indices,) = np.where((ipimode != 0) & (ipimode != 3))
             ip_error_rt[feedback_off_indices] = np.nan
         # Finally, get 'epsoff' to determine if/when the E-coil power supplies have railed
         # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
