@@ -178,7 +178,7 @@ DisruptionPy itself does not provide access to any of the underlying servers.
 While we honor the legacy `sybase_login` file credential format for database connections, we recommend using the following configuration snippet for maximum flexibility:
 
 ```toml
-# ~/.config/disruption-py/config.toml
+# ~/.config/disruption-py/user.toml
 
 [cmod.inout.sql]
 db_user = ""
