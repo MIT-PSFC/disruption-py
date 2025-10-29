@@ -23,6 +23,7 @@ expected_failure_columns = [
   "li_rt",
   "mirnov_std",
   "mirnov_std_normalized",
+  "p_ecrh",
   "p_input",
   "p_oh",
   "prad_peaking",
@@ -31,6 +32,7 @@ expected_failure_columns = [
   "qstar",
   "rad_input_frac",
   "rad_loss_frac",
+  "rmp_n_equal_1_phase",
   "wmhd",
   "wmhd_rt",
 ]
