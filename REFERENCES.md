@@ -25,7 +25,7 @@ Here follows a non-exhaustive list of projects, publications, and conference con
   - C Rea, _et al._ (2025), _"Research in support of the SPARC Off-Normal Warning System"_, [JO04.9](https://meetings.aps.org/Meeting/DPP25/Session/JO04.9)
   - AR Saperstein, _et al._ (2025), _"Validation of simulated radiative collapse events in TORAX"_, [NP13.161](https://meetings.aps.org/Meeting/DPP25/Session/NP13.161)
   - H Wietfeldt, _et al._ (2025), _"Characterization of UFOs on Alcator C-Mod and WEST to inform SPARC operation"_ [NP13.163](https://meetings.aps.org/Meeting/DPP25/Session/NP13.163)
-  - E Zapata Cornejo, _et al._ (2025), _"Time series classification algorithms for confinement regime identification in C-Mod"_ [NP13.170](https://meetings.aps.org/Meeting/DPP25/Session/NP13.170)
+  - EdD Zapata-Cornejo, _et al._ (2025), _"Time series classification algorithms for confinement regime identification in C-Mod"_ [NP13.170](https://meetings.aps.org/Meeting/DPP25/Session/NP13.170)
   - GL Trevisan, _et al._ (2025), _"A large-scale automated EFIT recomputation workflow for disruption studies at 1 kHz"_, [PP13.93](https://meetings.aps.org/Meeting/DPP25/Session/PP13.93)
   - Y Wei, _et al._ (2025), _"Scikit-disruption: machine learning toolkit for disruption analysis"_, [PP13.98](https://meetings.aps.org/Meeting/DPP25/Session/PP13.98)
 
