@@ -129,7 +129,7 @@ class MDSConnection:
     """
 
     def __init__(
-        self, conn: MDSplus.Connection, shot_id: int,  # pylint: disable=no-member
+        self, conn: MDSplus.Connection, shot_id: int  # pylint: disable=no-member
     ):
         self.conn = conn
         self.shot_id = shot_id

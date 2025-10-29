@@ -1593,10 +1593,10 @@ class D3DPhysicsMethods:
         upper_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
         lower_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
         bol_channels = upper_channels + lower_channels
-        bol_signals = (
+        bol_signals = []
+        bol_times = (
             []
-        )
-        bol_times = []  # TODO: Decide whether to actually use all bol_times instead of just first one
+        )  # TODO: Decide whether to actually use all bol_times instead of just first one
         for i in range(48):
             bol_signal, bol_time = params.mds_conn.get_data_with_dims(
                 rf"\top.raw:{bol_channels[i]}", tree_name="bolom"
