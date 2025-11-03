@@ -65,7 +65,7 @@ show:
 release:
 	poetry version minor
 	make lock
-	git commit -am 'bump version to v$(poetry version -s)'
+	git commit -am 'bump version to v$(shell poetry version -s)'
 	git show
 
 # test #
