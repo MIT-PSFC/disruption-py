@@ -36,7 +36,7 @@ clean-delete:
 
 # poetry #
 
-.PHONY: install install-all uninstall reinstall lock update show
+.PHONY: install install-all uninstall reinstall lock update show release
 
 install:
 	poetry install --with dev
@@ -61,6 +61,12 @@ update:
 
 show:
 	poetry show --latest --why --top-level --with dev,lab,docs
+
+release:
+	poetry version minor
+	make lock
+	git commit -am 'bump version to v$(poetry version -s)'
+	git show
 
 # test #
 
