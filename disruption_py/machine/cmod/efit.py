@@ -222,6 +222,7 @@ class CmodEfitMethods:
             "nh": params.mds_conn.get_data(r"\efit_g_eqdsk:mh", tree_name="_efit_tree"),        # Number of vertical grid points
             "rdim": params.mds_conn.get_data(r"\efit_g_eqdsk:xdim", tree_name="_efit_tree"),    # Horizontal dimension of grid [m]
             "zdim": params.mds_conn.get_data(r"\efit_g_eqdsk:zdim", tree_name="_efit_tree"),    # Vertical dimension of grid [m]
+            "rcentr": params.mds_conn.get_data(r"\efit_g_eqdsk:Rcentr", tree_name="_efit_tree"), # R of center of grid [m]
         }
         rgrid = params.mds_conn.get_data(r"\efit_g_eqdsk:rgrid", tree_name="_efit_tree"),  # R grid [m]
         zgrid = params.mds_conn.get_data(r"\efit_g_eqdsk:zgrid", tree_name="_efit_tree"),  # Z grid [m]

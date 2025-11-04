@@ -117,11 +117,14 @@ class CmodMirnovMethods:
         # These are the coils without positions in MDSPlus, need to hard-code values.
         # Taken from here: https://cmodwiki.psfc.mit.edu/index.php/FastMagneticsLocations#2010_Locations
         # Might need to include some logic for pre and post 2010... TODO(ZanderKeith)
+        # The only things that change pre and post 2010 are the EF probes, so 
 
         mirnov_names_tab = ["BP1T_ABK", "BP2T_ABK", "BP3T_ABK", "BP4T_ABK", "BP5T_ABK", "BP6T_ABK"]
         mirnov_names_tgh = ["BP1T_GHK", "BP2T_GHK", "BP3T_GHK", "BP4T_GHK", "BP5T_GHK", "BP6T_GHK"]
         mirnov_names_top = ["BP_KA_TOP", "BP_AB_TOP", "BP_BC_TOP", "BP_EF_TOP"]
         mirnov_names_bot = ["BP_KA_BOT", "BP_BC_BOT", "BP_EF_BOT"]
+
+        mirnov_names_diff = ["BP_EF_TOP", "BP_EF_BOT"]
 
         phi_tab = [-23.10, -25.50, -27.90, -23.10, -25.50, -27.90]
         phi_tgh = [-224.40, -226.80, -229.20, -224.40, -226.80, -229.20]
