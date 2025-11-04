@@ -234,12 +234,12 @@ class CmodEfitMethods:
             "bcentr": params.mds_conn.get_data(r"\efit_g_eqdsk:bcentr", tree_name="_efit_tree"),  # Vacuum toroidal field [T]
             
             # Magnetic axis
+            # Note that ssimag is -1 * simagx from the aeqdsk, apparently
             "rmaxis": params.mds_conn.get_data(r"\efit_g_eqdsk:rmaxis", tree_name="_efit_tree"), # R of magnetic axis [m]
             "zmaxis": params.mds_conn.get_data(r"\efit_g_eqdsk:zmaxis", tree_name="_efit_tree"), # Z of magnetic axis [m]
+            "ssimag": params.mds_conn.get_data(r"\efit_g_eqdsk:ssimag", tree_name="_efit_tree"),   # Flux at magnetic axis [Wb]
             
             # Plasma boundary
-            # Note that ssimag is -1 * simagx from the aeqdsk, apparently
-            "ssimag": params.mds_conn.get_data(r"\efit_g_eqdsk:ssimag", tree_name="_efit_tree"),   # Flux at magnetic axis [Wb]
             "ssibry": params.mds_conn.get_data(r"\efit_g_eqdsk:ssibry", tree_name="_efit_tree"),   # Flux at plasma boundary [Wb]
         }
         
