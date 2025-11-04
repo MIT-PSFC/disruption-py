@@ -35,10 +35,10 @@ def setup_fft(f_mirnov=2.5e6, f_target=1e4, frequency_resolution=100) -> ShortTi
     """
     # Window size is the number of samples in the window
     # Think of how many samples you need to measure the minimum frequency you care about
-    window_size = int(f_mirnov / frequency_resolution)
+    window_size = round(f_mirnov / frequency_resolution)
     # Hop is how much the window is slid between timesteps.
     # Slide the window based on the target frequency so interpolation is minimized
-    hop = int(f_mirnov / f_target)
+    hop = round(f_mirnov / f_target)
     # Something something kaiser window is optimal, just pick a beta that works
     window = kaiser(window_size, beta=14)
     sft = ShortTimeFFT(win=window, hop=hop, fs=f_mirnov)
@@ -167,7 +167,7 @@ class CmodMirnovMethods:
             return all_mirnov_names, R_all, Z_all, phi_all, theta_all, theta_pol_all
 
     @staticmethod
-    def get_mirnov_fft(params: PhysicsMethodParams, mirnov_name: str, freq_resolution: float = 100, max_freq: float = 80e3):
+    def get_mirnov_fft(params: PhysicsMethodParams, mirnov_name: str, freq_resolution: float = 1000, max_freq: float = 80e3):
         """Get and the interpolated fft of a Mirnov coil.
         
         This will work best if the params timebase is uniform.

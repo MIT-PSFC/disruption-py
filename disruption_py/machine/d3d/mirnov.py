@@ -365,7 +365,7 @@ class D3DMirnovMethods:
     """
         
     @staticmethod
-    def get_mirnov_fft(params: PhysicsMethodParams, mirnov_name: str, freq_resolution: float = 100, max_freq: float = 80e3, suffix="D"):
+    def get_mirnov_fft(params: PhysicsMethodParams, mirnov_name: str, freq_resolution: float = 1000, max_freq: float = 80e3, suffix="D"):
         """Get and the interpolated fft of a Mirnov coil.
         
         This will work best if the params timebase is uniform.
@@ -382,8 +382,8 @@ class D3DMirnovMethods:
             mirnov_times = mirnov_times / 1000.0
             # Get the sampling frequency of the Mirnov signal
             f_mirnov = 1 / np.mean(np.diff(mirnov_times))
-            if not np.isclose(f_mirnov, 500e3, rtol=0.01):
-                raise ValueError(f"Unexpected Mirnov frequency {f_mirnov} Hz for {mirnov_name}, expected 500 kHz on DIII-D")
+            if not (np.isclose(f_mirnov, 200e3, rtol=0.01) or np.isclose(f_mirnov, 500e3, rtol=0.01)):
+                raise ValueError(f"Unexpected Mirnov frequency {f_mirnov} Hz for {mirnov_name}, expected 200 kHz or 500 kHz on DIII-D")
             params.logger.verbose(f"Using Mirnov frequency of {f_mirnov} Hz on {mirnov_name}")
 
             # Set up the fft taking into account the params timebase
@@ -434,6 +434,7 @@ class D3DMirnovMethods:
         valid_mirnov_locations = []
         saved_freqs = None
 
+        num_probes = 20 # Temporarily limit to 20 probes for speed
         for mirnov_name, mirnov_location in D3D_PROBES_BP.items():
             mirnov_R = mirnov_location['R']
             mirnov_phi = mirnov_location['phi']
@@ -448,18 +449,20 @@ class D3DMirnovMethods:
 
             if saved_freqs is None:
                 saved_freqs = freqs
-
-        valid_mirnov_ffts = np.expand_dims(valid_mirnov_ffts, axis=0)  # Add a new axis for the probe dimension
+            
+            num_probes -= 1
+            if num_probes <= 0:
+                break
 
         mirnov_ffts_real = xr.DataArray(
             np.array(valid_mirnov_ffts).real,
-            dims=("idx", "probe", "frequency", "time"),
+            dims=("probe", "frequency", "idx"),
             coords={
-                "shot": ("idx", [params.shot_id]),
+                "shot": ("idx", np.repeat(params.shot_id, len(params.times))),
                 "probe": list(range(len(valid_mirnov_locations))),
                 "probe_name": ("probe", valid_mirnov_names),
                 "frequency": saved_freqs,
-                "time": params.times,
+                "time": ("idx", params.times),
                 "R": ("probe", [loc[0] for loc in valid_mirnov_locations]),
                 "phi": ("probe", [loc[1] for loc in valid_mirnov_locations]),
                 "Z": ("probe", [loc[2] for loc in valid_mirnov_locations]),
@@ -468,13 +471,13 @@ class D3DMirnovMethods:
         )
         mirnov_ffts_imag = xr.DataArray(
             np.array(valid_mirnov_ffts).imag,
-            dims=("idx", "probe", "frequency", "time"),
+            dims=("probe", "frequency", "idx"),
             coords={
-                "shot": ("idx", [params.shot_id]),
+                "shot": ("idx", np.repeat(params.shot_id, len(params.times))),
                 "probe": list(range(len(valid_mirnov_locations))),
                 "probe_name": ("probe", valid_mirnov_names),
                 "frequency": saved_freqs,
-                "time": params.times,
+                "time": ("idx", params.times),
                 "R": ("probe", [loc[0] for loc in valid_mirnov_locations]),
                 "phi": ("probe", [loc[1] for loc in valid_mirnov_locations]),
                 "Z": ("probe", [loc[2] for loc in valid_mirnov_locations]),
