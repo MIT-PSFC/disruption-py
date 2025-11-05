@@ -75,7 +75,7 @@ class CmodMirnovMethods:
         mirnov_names_gh = [f"BP0{p}_GHK" for p in range(1, 10)] + [f"BP{p}_GHK" for p in range(10, 21)]
         mirnov_names_k = [f"BP0{p}_K" for p in range(1, 7)]
 
-        # There's some tomfoolery in here because the probe locations are in a different tree from the signals, so we need to cut off the extra probes
+        # There's some tomfoolery in here because the sensor locations are in a different tree from the signals, so we need to cut off the extra sensors
         # that are NOT being digitized
         phi_ab, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.phi_AB", tree_name="magnetics")
         phi_gh, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.phi_GH", tree_name="magnetics")
@@ -94,10 +94,10 @@ class CmodMirnovMethods:
         # theta_pol_k, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.theta_pol_K", tree_name="magnetics")  # noqa: ERA001
         theta_pol_k = np.empty_like(Z_k)  # Calibration data doesn't exist, so we'll just say NaN and deal with it later
 
-        # For each of the above, we need to cut off the extra probes that are NOT being digitized
-        # This is a bit of a kludge, but I'm expecting probes which aren't digitized to not show up in the analysis tree
-        # TODO(ZanderKeith): Just hardcode all the analysis tree probes
-        # The digitized probes are the first 20 for AB and GH, and the first 6 for K
+        # For each of the above, we need to cut off the extra sensors that are NOT being digitized
+        # This is a bit of a kludge, but I'm expecting sensors which aren't digitized to not show up in the analysis tree
+        # TODO(ZanderKeith): Just hardcode all the analysis tree sensors
+        # The digitized sensors are the first 20 for AB and GH, and the first 6 for K
         phi_ab = phi_ab[:len(mirnov_names_ab)]
         phi_gh = phi_gh[:len(mirnov_names_gh)]
         phi_k = phi_k[:7]
@@ -117,7 +117,7 @@ class CmodMirnovMethods:
         # These are the coils without positions in MDSPlus, need to hard-code values.
         # Taken from here: https://cmodwiki.psfc.mit.edu/index.php/FastMagneticsLocations#2010_Locations
         # Might need to include some logic for pre and post 2010... TODO(ZanderKeith)
-        # The only things that change pre and post 2010 are the EF probes
+        # The only things that change pre and post 2010 are the EF sensors
 
         mirnov_names_tab = ["BP1T_ABK", "BP2T_ABK", "BP3T_ABK", "BP4T_ABK", "BP5T_ABK", "BP6T_ABK"]
         mirnov_names_tgh = ["BP1T_GHK", "BP2T_GHK", "BP3T_GHK", "BP4T_GHK", "BP5T_GHK", "BP6T_GHK"]
@@ -219,8 +219,8 @@ class CmodMirnovMethods:
         -------
         mirnov_ffts : xarray.DataSet
             The FFT of the Mirnov coils.
-            Dimensions are probe, frequency, and time.
-            Coordinates are probe, frequency, time, phi, theta, and theta_pol.
+            Dimensions are sensor, frequency, and time.
+            Coordinates are sensor, frequency, time, phi, theta, and theta_pol.
         """
 
         all_mirnov_names, R_all, phi_all, Z_all, theta_pol_all = CmodMirnovMethods.get_mirnov_names_and_locations(params, debug=False)
@@ -242,34 +242,34 @@ class CmodMirnovMethods:
 
         mirnov_ffts_real = xr.DataArray(
             np.array(valid_mirnov_ffts).real,
-            dims=("probe", "frequency", "idx"),
+            dims=("sensor", "frequency", "idx"),
             coords={
                 "shot": ("idx", np.repeat(params.shot_id, len(params.times))),
                 "time": ("idx", params.times),
                 "frequency": saved_freqs,
-                "probe": list(range(len(valid_mirnov_locations))),
-                "probe_name": ("probe", valid_mirnov_names),
-                "type": ("probe", ["Bp"] * len(valid_mirnov_names)),    # All probes are Bp
-                "R": ("probe", [loc[0] for loc in valid_mirnov_locations]),
-                "phi": ("probe", [loc[1] for loc in valid_mirnov_locations]),
-                "Z": ("probe", [loc[2] for loc in valid_mirnov_locations]),
-                "theta_pol": ("probe", [loc[3] for loc in valid_mirnov_locations]),
+                "sensor": list(range(len(valid_mirnov_locations))),
+                "sensor_name": ("sensor", valid_mirnov_names),
+                "type": ("sensor", ["Bp"] * len(valid_mirnov_names)),    # All sensors are Bp
+                "R": ("sensor", [loc[0] for loc in valid_mirnov_locations]),
+                "phi": ("sensor", [loc[1] for loc in valid_mirnov_locations]),
+                "Z": ("sensor", [loc[2] for loc in valid_mirnov_locations]),
+                "theta_pol": ("sensor", [loc[3] for loc in valid_mirnov_locations]),
             },
         )
         mirnov_ffts_imag = xr.DataArray(
             np.array(valid_mirnov_ffts).imag,
-            dims=("probe", "frequency", "idx"),
+            dims=("sensor", "frequency", "idx"),
             coords={
                 "shot": ("idx", np.repeat(params.shot_id, len(params.times))),
                 "time": ("idx", params.times),
                 "frequency": saved_freqs,
-                "probe": list(range(len(valid_mirnov_locations))),
-                "probe_name": ("probe", valid_mirnov_names),
-                "type": ("probe", ["Bp"] * len(valid_mirnov_names)),    # All probes are Bp
-                "R": ("probe", [loc[0] for loc in valid_mirnov_locations]),
-                "phi": ("probe", [loc[1] for loc in valid_mirnov_locations]),
-                "Z": ("probe", [loc[2] for loc in valid_mirnov_locations]),
-                "theta_pol": ("probe", [loc[3] for loc in valid_mirnov_locations]),
+                "sensor": list(range(len(valid_mirnov_locations))),
+                "sensor_name": ("sensor", valid_mirnov_names),
+                "type": ("sensor", ["Bp"] * len(valid_mirnov_names)),    # All sensors are Bp
+                "R": ("sensor", [loc[0] for loc in valid_mirnov_locations]),
+                "phi": ("sensor", [loc[1] for loc in valid_mirnov_locations]),
+                "Z": ("sensor", [loc[2] for loc in valid_mirnov_locations]),
+                "theta_pol": ("sensor", [loc[3] for loc in valid_mirnov_locations]),
             },
         )
         mirnov_ds_real = mirnov_ffts_real.astype(np.float32).to_dataset(name="mirnov_fft_real")
@@ -283,7 +283,7 @@ class CmodMirnovMethods:
         tokamak=Tokamak.CMOD,
     )
     def get_preferred_mirnov_sxx(params: PhysicsMethodParams):
-        """Get the Sxx of a single Mirnov coil in the shot, in order of preference from a few consistently 'good' probes"""
+        """Get the Sxx of a single Mirnov coil in the shot, in order of preference from a few consistently 'good' sensors"""
 
         preferred_mirnov_names = ["BP02_GHK", "BP01_ABK"]
 
@@ -301,6 +301,6 @@ class CmodMirnovMethods:
                         "time": params.times,
                     },
                     attrs={
-                        "probe_name": mirnov_name,
+                        "sensor_name": mirnov_name,
                     },
                 ).astype(np.float32).to_dataset(name="mirnov_sxx")
