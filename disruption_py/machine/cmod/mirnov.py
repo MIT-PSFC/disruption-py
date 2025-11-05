@@ -117,7 +117,7 @@ class CmodMirnovMethods:
         # These are the coils without positions in MDSPlus, need to hard-code values.
         # Taken from here: https://cmodwiki.psfc.mit.edu/index.php/FastMagneticsLocations#2010_Locations
         # Might need to include some logic for pre and post 2010... TODO(ZanderKeith)
-        # The only things that change pre and post 2010 are the EF probes, so 
+        # The only things that change pre and post 2010 are the EF probes
 
         mirnov_names_tab = ["BP1T_ABK", "BP2T_ABK", "BP3T_ABK", "BP4T_ABK", "BP5T_ABK", "BP6T_ABK"]
         mirnov_names_tgh = ["BP1T_GHK", "BP2T_GHK", "BP3T_GHK", "BP4T_GHK", "BP5T_GHK", "BP6T_GHK"]
@@ -126,16 +126,16 @@ class CmodMirnovMethods:
 
         mirnov_names_diff = ["BP_EF_TOP", "BP_EF_BOT"]
 
-        phi_tab = [-23.10, -25.50, -27.90, -23.10, -25.50, -27.90]
-        phi_tgh = [-224.40, -226.80, -229.20, -224.40, -226.80, -229.20]
-        phi_top = [-344.80, -10.16, -59.87, -169.55]
-        phi_bot = [-344.80, -59.87, -169.55]
-
-        # Yes, the order of these is different from the c-mod wiki website. I'm putting it like phi, R, Z, theta_pol
+        # Yes, the order of these is different from the c-mod wiki website. I'm putting it like R, phi, Z, theta_pol
         R_tab = [0.9045, 0.9045, 0.9045, 0.9045, 0.9045, 0.9045]
         R_tgh = [0.9042, 0.9042, 0.9042, 0.9042, 0.9042, 0.9042]
         R_top = [0.9126, 0.9126, 0.9146, 0.9126]
         R_bot = [0.9131, 0.9151, 0.9131]
+
+        phi_tab = [-23.10, -25.50, -27.90, -23.10, -25.50, -27.90]
+        phi_tgh = [-224.40, -226.80, -229.20, -224.40, -226.80, -229.20]
+        phi_top = [-344.80, -10.16, -59.87, -169.55]
+        phi_bot = [-344.80, -59.87, -169.55]
 
         Z_tab = [0.1030, 0.1030, 0.1030, -0.1030, -0.1030, -0.1030]
         Z_tgh = [0.1000, 0.1000, 0.1000, -0.1000, -0.1000, -0.1000]
@@ -149,22 +149,18 @@ class CmodMirnovMethods:
 
         all_mirnov_names = mirnov_names_ab + mirnov_names_gh + mirnov_names_k + mirnov_names_tab + mirnov_names_tgh + mirnov_names_top + mirnov_names_bot
 
+        R_all = np.concatenate((R_ab, R_gh, R_k, R_tab, R_tgh, R_top, R_bot))
         phi_all = np.concatenate((phi_ab, phi_gh, phi_k, phi_tab, phi_tgh, phi_top, phi_bot))
         phi_all = np.deg2rad(phi_all)
-        R_all = np.concatenate((R_ab, R_gh, R_k, R_tab, R_tgh, R_top, R_bot))
         Z_all = np.concatenate((Z_ab, Z_gh, Z_k, Z_tab, Z_tgh, Z_top, Z_bot))
-
-        # The angle we care about is when the hypotenuse is the minor radius
-        Rd = R_all - CMOD_R0
-        theta_all = np.arctan2(Z_all, Rd)
 
         theta_pol_all = np.concatenate((theta_pol_ab, theta_pol_gh, theta_pol_k, theta_pol_tab, theta_pol_tgh, theta_pol_top, theta_pol_bot))
         theta_pol_all = np.deg2rad(theta_pol_all)
 
         if debug:
-            return all_mirnov_names[21:23], R_all[20:24], Z_all[20:24], phi_all[20:24], theta_all[20:24], theta_pol_all[20:24]
+            return all_mirnov_names[21:23], R_all[20:24], phi_all[20:24], Z_all[20:24],  theta_pol_all[20:24]
         else:
-            return all_mirnov_names, R_all, Z_all, phi_all, theta_all, theta_pol_all
+            return all_mirnov_names, R_all, phi_all, Z_all, theta_pol_all
 
     @staticmethod
     def get_mirnov_fft(params: PhysicsMethodParams, mirnov_name: str, freq_resolution: float = 1000, max_freq: float = 80e3):
@@ -227,19 +223,19 @@ class CmodMirnovMethods:
             Coordinates are probe, frequency, time, phi, theta, and theta_pol.
         """
 
-        all_mirnov_names, R_all, Z_all, phi_all, theta_all, theta_pol_all = CmodMirnovMethods.get_mirnov_names_and_locations(params, debug=False)
+        all_mirnov_names, R_all, phi_all, Z_all, theta_pol_all = CmodMirnovMethods.get_mirnov_names_and_locations(params, debug=False)
 
         valid_mirnov_ffts = []
         valid_mirnov_names = []
         valid_mirnov_locations = []
         saved_freqs = None
 
-        for mirnov_name, mirnov_R, mirnov_Z, mirnov_phi, mirnov_theta, mirnov_theta_pol in zip(all_mirnov_names, R_all, Z_all, phi_all, theta_all, theta_pol_all):
+        for mirnov_name, mirnov_R, mirnov_phi, mirnov_Z, mirnov_theta_pol in zip(all_mirnov_names, R_all, phi_all, Z_all, theta_pol_all):
             mirnov_fft, freqs = CmodMirnovMethods.get_mirnov_fft(params, mirnov_name)
             if mirnov_fft is not None:
                 valid_mirnov_ffts.append(mirnov_fft)
                 valid_mirnov_names.append(mirnov_name)
-                valid_mirnov_locations.append((mirnov_R, mirnov_Z, mirnov_phi, mirnov_theta, mirnov_theta_pol))
+                valid_mirnov_locations.append((mirnov_R, mirnov_phi, mirnov_Z, mirnov_theta_pol))
 
             if saved_freqs is None:
                 saved_freqs = freqs
@@ -249,15 +245,15 @@ class CmodMirnovMethods:
             dims=("probe", "frequency", "idx"),
             coords={
                 "shot": ("idx", np.repeat(params.shot_id, len(params.times))),
+                "time": ("idx", params.times),
+                "frequency": saved_freqs,
                 "probe": list(range(len(valid_mirnov_locations))),
                 "probe_name": ("probe", valid_mirnov_names),
-                "frequency": saved_freqs,
-                "time": ("idx", params.times),
+                "type": ("probe", ["Bp"] * len(valid_mirnov_names)),    # All probes are Bp
                 "R": ("probe", [loc[0] for loc in valid_mirnov_locations]),
-                "Z": ("probe", [loc[1] for loc in valid_mirnov_locations]),
-                "phi": ("probe", [loc[2] for loc in valid_mirnov_locations]),
-                "theta": ("probe", [loc[3] for loc in valid_mirnov_locations]),
-                "theta_pol": ("probe", [loc[4] for loc in valid_mirnov_locations]),
+                "phi": ("probe", [loc[1] for loc in valid_mirnov_locations]),
+                "Z": ("probe", [loc[2] for loc in valid_mirnov_locations]),
+                "theta_pol": ("probe", [loc[3] for loc in valid_mirnov_locations]),
             },
         )
         mirnov_ffts_imag = xr.DataArray(
@@ -265,15 +261,15 @@ class CmodMirnovMethods:
             dims=("probe", "frequency", "idx"),
             coords={
                 "shot": ("idx", np.repeat(params.shot_id, len(params.times))),
+                "time": ("idx", params.times),
+                "frequency": saved_freqs,
                 "probe": list(range(len(valid_mirnov_locations))),
                 "probe_name": ("probe", valid_mirnov_names),
-                "frequency": saved_freqs,
-                "time": ("idx", params.times),
+                "type": ("probe", ["Bp"] * len(valid_mirnov_names)),    # All probes are Bp
                 "R": ("probe", [loc[0] for loc in valid_mirnov_locations]),
-                "Z": ("probe", [loc[1] for loc in valid_mirnov_locations]),
-                "phi": ("probe", [loc[2] for loc in valid_mirnov_locations]),
-                "theta": ("probe", [loc[3] for loc in valid_mirnov_locations]),
-                "theta_pol": ("probe", [loc[4] for loc in valid_mirnov_locations]),
+                "phi": ("probe", [loc[1] for loc in valid_mirnov_locations]),
+                "Z": ("probe", [loc[2] for loc in valid_mirnov_locations]),
+                "theta_pol": ("probe", [loc[3] for loc in valid_mirnov_locations]),
             },
         )
         mirnov_ds_real = mirnov_ffts_real.astype(np.float32).to_dataset(name="mirnov_fft_real")
