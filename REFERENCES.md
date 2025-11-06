@@ -10,7 +10,7 @@ Here follows a non-exhaustive list of projects, publications, and conference con
 ### Publications
 
 - AR Saperstein, _et al._ (2025), _"Design and development of an off-normal warning system for SPARC"_, Nucl. Fusion **65** 116007, DOI: [10.1088/1741-4326/ae074e](https://doi.org/10.1088/1741-4326/ae074e)
-- GL Trevisan, _et al._ (2025), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, JOSS, [submitted](https://github.com/openjournals/joss-reviews/issues/8538)
+- GL Trevisan, _et al._ (2025), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, JOSS, [under review](https://github.com/openjournals/joss-reviews/issues/9364)
 - L Spangher, _et al._ (2025), _"DisruptionBench and Complimentary New Models: Two Advancements in Machine Learning Driven Disruption Prediction"_, J. Fusion. Energ. **44** 26, DOI: [10.1007/s10894-025-00495-2](https://doi.org/10.1007/s10894-025-00495-2)
 - J Stillerman, _et al._ (2025), _"MDSplusML: Optimizations for data access to facilitate machine learning pipelines"_, Fus. Eng. Des. **211** 114770, DOI: [10.1016/j.fusengdes.2024.114770](https://doi.org/10.1016/j.fusengdes.2024.114770)
 - AD Maris, _et al._ (2024), _"Correlation of the L-mode density limit with edge collisionality"_, Nucl. Fusion **65** 016051, DOI: [10.1088/1741-4326/ad90f0](https://doi.org/10.1088/1741-4326/ad90f0)
