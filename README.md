@@ -102,7 +102,7 @@ uv add disruption-py
 pip install disruption-py
 ```
 
-For custom installations, please refer to our [Installation guide](docs/INSTALL.md).
+For custom installations, please refer to our [Installation guide](INSTALL.md).
 
 Starting with [v0.11](https://github.com/MIT-PSFC/disruption-py/releases/tag/v0.11), we support execution through [on-the-fly virtual environment creation with `uv`](https://docs.astral.sh/uv/guides/tools/):
 
