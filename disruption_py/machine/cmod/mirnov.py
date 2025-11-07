@@ -92,7 +92,7 @@ class CmodMirnovMethods:
         theta_pol_ab, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.theta_pol_AB", tree_name="magnetics")
         theta_pol_gh, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.theta_pol_GH", tree_name="magnetics")
         # theta_pol_k, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.theta_pol_K", tree_name="magnetics")  # noqa: ERA001
-        theta_pol_k = np.empty_like(Z_k)  # Calibration data doesn't exist, so we'll just say NaN and deal with it later
+        theta_pol_k = np.nan * np.zeros_like(Z_k)  # Calibration data doesn't exist, so we'll just say NaN and deal with it later
 
         # For each of the above, we need to cut off the extra sensors that are NOT being digitized
         # This is a bit of a kludge, but I'm expecting sensors which aren't digitized to not show up in the analysis tree
@@ -189,9 +189,9 @@ class CmodMirnovMethods:
 
             mirnov_fft_full = sft.stft(mirnov_signal)[f_indices]
 
-            # Interpolate the STFFTs to the timebase
+            # Interpolate the STFFTs using 'nearest' so we don't mess with phases
             fft_times = (sft.delta_t * np.arange(mirnov_fft_full.shape[1])) + mirnov_times[0]
-            mirnov_fft_interp = interp1(fft_times, mirnov_fft_full, params.times)
+            mirnov_fft_interp = interp1(fft_times, mirnov_fft_full, params.times, kind='nearest')
 
             # Check if the average difference between frequencies is NOT close to the frequency resolution
             if not np.isclose(np.mean(np.diff(freqs)), freq_resolution, atol=1):
