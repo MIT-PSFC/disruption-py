@@ -224,7 +224,7 @@ Several contributors have been involved in the development of the code since the
 
 DisruptionPy can be cited as follows:
 
-- GL Trevisan, _et al._ (2025), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, JOSS, [submitted](https://github.com/openjournals/joss-reviews/issues/8538)
+- GL Trevisan, _et al._ (2025), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, JOSS, [under review](https://github.com/openjournals/joss-reviews/issues/9364)
 - GL Trevisan, _et al._ (2024), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, Zenodo, DOI: [10.5281/zenodo.13935223](https://doi.org/10.5281/zenodo.13935223)
 
 A list of works derived from DisruptionPy can be found in [REFERENCES.md](REFERENCES.md).
