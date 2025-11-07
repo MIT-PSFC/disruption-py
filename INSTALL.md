@@ -143,7 +143,7 @@ alias disruption-activate='source "$DISPY_DIR"/repo/auto/activate.sh'
 
 ## Private installation
 
-As Free and Open-Source Software (FOSS), disruption-py can also be installed on any machine.
+As Free/Libre and Open-Source Software (FLOSS), disruption-py can also be installed on any machine.
 We currently provide an installation guide for Ubuntu-based boxes, but generic Unix machines or Windows systems should support similar or equivalent steps. 
 
 ### Pre-requisites
