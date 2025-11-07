@@ -21,6 +21,7 @@ class Tokamak(Enum):
     D3D = "d3d"
     CMOD = "cmod"
     EAST = "east"
+    HBTEP = "hbtep"
 
 
 def resolve_tokamak_from_environment(tokamak: Union[Tokamak, str] = None):
@@ -51,6 +52,8 @@ def resolve_tokamak_from_environment(tokamak: Union[Tokamak, str] = None):
         return Tokamak.D3D
     if os.path.exists("/project/disruption"):
         return Tokamak.EAST
+    if os.path.exists("/opt/hbt/disruptions"):
+        return Tokamak.HBTEP
     # case 5
     raise ValueError(
         "Tokamak is unspecified and could not be determined from the environment."

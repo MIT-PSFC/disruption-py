@@ -7,6 +7,9 @@ driver = "MySQL"
 host = "202.127.205.10"
 port = 3306
 
+[east.physics.time_domain_thresholds]
+dipprog_dt = 1e3
+
 [east.tests]
 expected_failure_columns = [
   "beta_n",
@@ -20,22 +23,16 @@ expected_failure_columns = [
   "li_rt",
   "mirnov_std",
   "mirnov_std_normalized",
-  "n_equal_1_mode", # east/east_1 tree issues
-  "n_equal_1_normalized", # east/east_1 tree issues
-  "n_equal_1_phase", # east/east_1 tree issues
+  "p_ecrh",
   "p_input",
-  "p_lh", # east/east_1 tree issues
   "p_oh",
-  "p_rad", # east/east_1 tree issues
   "prad_peaking",
   "q0",
   "q95",
   "qstar",
   "rad_input_frac",
   "rad_loss_frac",
-  "rmp_n_equal_1", # east/east_1 tree issues
-  "rmp_n_equal_1_phase", # east/east_1 tree issues
-  "v_loop", # east/east_1 tree issues
+  "rmp_n_equal_1_phase",
   "wmhd",
   "wmhd_rt",
 ]

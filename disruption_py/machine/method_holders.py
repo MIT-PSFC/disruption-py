@@ -11,16 +11,22 @@ def get_method_holders(tokamak: Tokamak):
     """
     # such an import pattern lets us avoid dynamic imports or code introspection
     # pylint: disable=import-outside-toplevel
+    from disruption_py.machine.generic import METHOD_HOLDERS as GENERIC
+
     if tokamak is Tokamak.D3D:
         from disruption_py.machine.d3d import METHOD_HOLDERS
 
-        return METHOD_HOLDERS
+        return GENERIC + METHOD_HOLDERS
     if tokamak is Tokamak.CMOD:
         from disruption_py.machine.cmod import METHOD_HOLDERS
 
-        return METHOD_HOLDERS
+        return GENERIC + METHOD_HOLDERS
     if tokamak is Tokamak.EAST:
         from disruption_py.machine.east import METHOD_HOLDERS
+
+        return GENERIC + METHOD_HOLDERS
+    if tokamak is Tokamak.HBTEP:
+        from disruption_py.machine.hbtep import METHOD_HOLDERS
 
         return METHOD_HOLDERS
     raise ValueError(f"Invalid tokamak for physics methods {tokamak}")

@@ -11,12 +11,11 @@ from typing import Dict, List, Tuple, Union
 
 import numpy as np
 from loguru import logger
-from MDSplus import mdsExceptions
 
 from disruption_py.config import config
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.misc import shot_msg_patch
-from disruption_py.inout.mds import MDSConnection
+from disruption_py.inout.mds import MDSConnection, mdsExceptions
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.east.util import EastUtilMethods
 from disruption_py.machine.tokamak import Tokamak
@@ -84,7 +83,7 @@ def _postprocess(times: np.ndarray, units: str = "") -> np.ndarray:
     np.ndarray
         Post-processed array of times.
     """
-    times = np.unique(times)
+    times = np.unique(times).astype("float32")
     units = units.lower().strip()
     if units == "ms":
         return times * 1e-3
@@ -249,10 +248,10 @@ class EfitTimeSetting(TimeSetting):
             Array of times in the timebase.
         """
         (efit_time,) = params.mds_conn.get_dims(
-            r"\efit_aeqdsk:ali", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:ali", tree_name="_efit_tree"
         )
         efit_time_unit = params.mds_conn.get_data(
-            r"units_of(dim_of(\efit_aeqdsk:ali))", tree_name="_efit_tree", astype="str"
+            r"units_of(dim_of(\efit_aeqdsk:ali))", tree_name="_efit_tree"
         )
         if efit_time_unit not in {"s", "ms", "us"}:
             params.logger.verbose(
@@ -277,6 +276,7 @@ class DisruptionTimeSetting(TimeSetting):
         self.tokamak_overrides = {
             Tokamak.D3D: self.d3d_times,
             Tokamak.EAST: self.east_times,
+            Tokamak.HBTEP: self.hbtep_times,
         }
 
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
@@ -310,7 +310,7 @@ class DisruptionTimeSetting(TimeSetting):
             Array of times in the timebase.
         """
         raw_ip, ip_time = params.mds_conn.get_data_with_dims(
-            f"ptdata('ip', {params.shot_id})", tree_name="d3d"
+            f"ptdata('ip', {params.shot_id})"
         )
         ip_time = ip_time / 1.0e3
         baseline = np.mean(raw_ip[:10])
@@ -333,6 +333,27 @@ class DisruptionTimeSetting(TimeSetting):
         """
         ip, ip_time = EastUtilMethods.retrieve_ip(params.mds_conn, params.shot_id)
         return self._calculate_disruption_times(params, ip, ip_time)
+
+    def hbtep_times(self, params: TimeSettingParams) -> np.ndarray:
+        """
+        Retrieve the disruption timebase for HBT-EP.
+
+        For now, this method returns a uniform array between 0 and 12 ms with 10 us interval
+        based on the ip timebase.
+        This will be replaced once a get_disruption_time method is implemented for HBT-EP
+
+        Returns
+        -------
+        np.ndarray
+            Array of times in the timebase.
+        """
+        t_ip = params.mds_conn.get_dims(
+            r"\top.sensors.rogowskis:ip", tree_name="hbtep2"
+        )  # [s]
+        t_ip = t_ip[0]
+        t_ip = t_ip[(t_ip >= 0) & (t_ip <= 12e-3)]
+        steps = round(10e-6 / (t_ip[1] - t_ip[0]))
+        return t_ip[::steps]
 
     @classmethod
     def _calculate_disruption_times(
@@ -469,6 +490,7 @@ class IpTimeSetting(TimeSetting):
             Tokamak.CMOD: self.cmod_times,
             Tokamak.D3D: self.d3d_times,
             Tokamak.EAST: self.east_times,
+            Tokamak.HBTEP: self.hbtep_times,
         }
 
     def _get_times(self, params: TimeSettingParams) -> np.ndarray:
@@ -518,9 +540,7 @@ class IpTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        (ip_time,) = params.mds_conn.get_dims(
-            f"ptdata('ip', {params.shot_id})", tree_name=None
-        )
+        (ip_time,) = params.mds_conn.get_dims(f"ptdata('ip', {params.shot_id})")
         ip_time /= 1e3  # [ms] -> [s]
         return ip_time
 
@@ -543,6 +563,25 @@ class IpTimeSetting(TimeSetting):
         # by 17.0 ms
         if params.shot_id < 44432:
             ip_time -= 0.0170
+        return ip_time
+
+    def hbtep_times(self, params: TimeSettingParams) -> np.ndarray:
+        """
+        Retrieve the Ip timebase for the HBT-EP tokamak.
+
+        Parameters
+        ----------
+        params : TimeSettingParams
+            Parameters needed to retrieve the timebase.
+
+        Returns
+        -------
+        np.ndarray
+            Array of times in the timebase.
+        """
+        (ip_time,) = params.mds_conn.get_dims(
+            r"\top.sensors.rogowskis:ip", tree_name="hbtep2"
+        )
         return ip_time
 
 
@@ -595,7 +634,7 @@ class SignalTimeSetting(TimeSetting):
         """
         try:
             (signal_time,) = params.mds_conn.get_dims(
-                self.signal_path, tree_name=self.tree_name, astype="float64"
+                self.signal_path, tree_name=self.tree_name
             )
         except mdsExceptions.MdsException:
             params.logger.error(
@@ -604,9 +643,7 @@ class SignalTimeSetting(TimeSetting):
             )
             raise
         signal_unit = params.mds_conn.get_data(
-            f"units_of(dim_of({self.signal_path}))",
-            tree_name=self.tree_name,
-            astype="str",
+            f"units_of(dim_of({self.signal_path}))", tree_name=self.tree_name
         )
         if (
             not signal_unit.strip()
@@ -671,6 +708,7 @@ _time_setting_mappings: Dict[str, TimeSetting] = {
         Tokamak.CMOD: EfitTimeSetting(),
         Tokamak.D3D: DisruptionTimeSetting(),
         Tokamak.EAST: DisruptionTimeSetting(),
+        Tokamak.HBTEP: DisruptionTimeSetting(),
     },
     "ip": IpTimeSetting(),
     "ip_efit": SharedTimeSetting([IpTimeSetting(), EfitTimeSetting()]),

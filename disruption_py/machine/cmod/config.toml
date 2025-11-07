@@ -1,3 +1,6 @@
+[cmod.efit]
+tree = "efit18"
+
 [cmod.inout.mds]
 mdsplus_connection_string = "alcdata-archives"
 
@@ -6,6 +9,10 @@ db_name = "logbook"
 driver = "ODBC"
 host = "alcdb2"
 port = 1433
+
+[cmod.physics.time_domain_thresholds]
+dipprog_dt = 50e3
+ip_prog = 100e3
 
 [cmod.tests]
 expected_failure_columns = [

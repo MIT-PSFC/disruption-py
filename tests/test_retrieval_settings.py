@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Unit tests for the retrieval settings which covers data retrieval from various
-sources and the time domain of the data retrieved.
+Unit tests for the retrieval settings.
 """
 
 import os
@@ -17,10 +16,10 @@ from disruption_py.workflow import get_shots_data
 from tests.conftest import skip_on_fast_execution
 
 
-@pytest.fixture(scope="module", name="full_domain_data")
-def full_domain_data_fixture(tokamak, shotlist, test_folder_m) -> xr.Dataset:
+@pytest.fixture(scope="module", name="data")
+def data_fixture(tokamak, shotlist, test_folder_m) -> xr.Dataset:
     """
-    Get data for the full time domain.
+    Get data.
     """
     return get_shots_data(
         tokamak=tokamak,
@@ -43,6 +42,8 @@ def test_only_requested_columns(tokamak, shotlist, test_folder_f):
     should be returned.
     """
     run_columns = ["ip", "q95"]
+    if tokamak == Tokamak.HBTEP:
+        run_columns = ["ip"]  # HBT-EP has no EFIT data
     retrieval_settings = RetrievalSettings(
         run_columns=run_columns,
         only_requested_columns=True,
@@ -59,51 +60,6 @@ def test_only_requested_columns(tokamak, shotlist, test_folder_f):
         num_processes=2,
     )
     assert set(run_columns) == set(results.data_vars)
-
-
-@skip_on_fast_execution
-@pytest.mark.parametrize("domain_setting", ["flattop", "rampup_and_flattop"])
-def test_domain_setting(
-    tokamak, shotlist, domain_setting, full_domain_data, test_folder_f
-):
-    """
-    Test the two partial domain settings by comparing their start and end times
-    with the full domain.
-    """
-    if (
-        tokamak in [Tokamak.D3D, Tokamak.EAST]
-        and domain_setting == "rampup_and_flattop"
-    ):
-        pytest.skip(f"{domain_setting} domain setting not defined for {tokamak.value}")
-    retrieval_settings = RetrievalSettings(
-        efit_nickname_setting="default", domain_setting=domain_setting
-    )
-    part_domain_data = get_shots_data(
-        tokamak=tokamak,
-        shotlist_setting=shotlist,
-        retrieval_settings=retrieval_settings,
-        output_setting=os.path.join(test_folder_f, "output.nc"),
-        log_settings=LogSettings(
-            console_level="WARNING",
-            file_path=os.path.join(test_folder_f, "output.log"),
-        ),
-        num_processes=2,
-    )
-    assert (
-        set(shotlist)
-        == set(part_domain_data.shot.values)
-        == set(full_domain_data.shot.values)
-    )
-    for shot in shotlist:
-        part_domain = part_domain_data.sel(idx=part_domain_data.shot == shot)
-        full_domain = full_domain_data.sel(idx=full_domain_data.shot == shot)
-        p_start, p_end = part_domain.time.values[0], part_domain.time.values[-1]
-        f_start, f_end = full_domain.time.values[0], full_domain.time.values[-1]
-        if domain_setting == "flattop":
-            # Use <= because a shot may end during the flattop,
-            assert f_start < p_start < p_end <= f_end
-        else:
-            assert f_start == p_start < p_end < f_end
 
 
 @skip_on_fast_execution
@@ -143,7 +99,7 @@ def test_run_methods_and_columns(
     run_columns,
     expected_cols,
     forbidden_cols,
-    full_domain_data,
+    data,
     test_folder_f,
 ):
     """
@@ -155,6 +111,9 @@ def test_run_methods_and_columns(
     - If `run_methods` excludes a method returning a column specified in `run_columns`,
       the method is not run
     """
+    if tokamak is Tokamak.HBTEP:
+        pytest.skip("Skip framework tests for HBT-EP")
+        assert False
     retrieval_settings = RetrievalSettings(
         run_methods=run_methods,
         run_columns=run_columns,
@@ -173,7 +132,7 @@ def test_run_methods_and_columns(
     # Expected columns None means all columns (except forbidden cols) are returned
     if expected_cols is None:
         assert set(results.data_vars) == set(
-            k for k in full_domain_data.data_vars if k not in forbidden_cols
+            k for k in data.data_vars if k not in forbidden_cols
         )
     else:
         assert set(results.data_vars) == set(expected_cols)

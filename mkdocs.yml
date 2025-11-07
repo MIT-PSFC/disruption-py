@@ -29,12 +29,12 @@ nav:
   - Overview:
       - Background: index.md
       - Installation: INSTALL.md
+      - References: REFERENCES.md
   - Usage:
       - Entry points:
           - Workflow: usage/workflow_reference.md
       - Settings:
           - Settings Classes:
-              - Domain Setting: usage/settings/domain_setting.md
               - Log Settings: usage/settings/log_settings.md
               - Nickname Setting: usage/settings/nickname_setting.md
               - Output Setting: usage/settings/output_setting.md
@@ -48,6 +48,10 @@ nav:
                 cmod_built_in_method_reference.md"
               - D3D Built-in Methods: "usage/physics_methods/\
                 d3d_built_in_method_reference.md"
+              - EAST Built-in Methods: "usage/physics_methods/\
+                east_built_in_method_reference.md"
+              - HBT-EP Built-in Methods: "usage/physics_methods/\
+                hbtep_built_in_method_reference.md"
               - Physics Method Decorators: "usage/physics_methods/\
                 decorator_reference.md"
           - Parameter Reference: "usage/physics_methods/\
@@ -55,7 +59,6 @@ nav:
       - Data I/O:
           - SQL Database: usage/sql_database.md
           - MDSplus Connection: usage/mds_connection_reference.md
-  - FAQ: faq.md
   - GitHub: https://github.com/MIT-PSFC/disruption-py
 markdown_extensions:
   - attr_list

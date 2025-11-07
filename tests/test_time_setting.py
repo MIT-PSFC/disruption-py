@@ -34,10 +34,13 @@ def run_test_time_setting(
     """
     Retrieve data, then the check time array against the specified targets.
     """
+    column = "kappa_area"
+    if tokamak == Tokamak.HBTEP:
+        column = "ip"
     # Retrieve data
     retrieval_settings = RetrievalSettings(
         efit_nickname_setting=efit_tree,
-        run_columns=["kappa_area"],
+        run_columns=[column],
         time_setting=time_setting,
     )
     shot_data = get_shots_data(
@@ -52,8 +55,8 @@ def run_test_time_setting(
     )
     times = shot_data["time"].to_numpy()
     # Check start, end, and length of time array
-    assert times[0] == pytest.approx(t_start, rel=1e-4)
-    assert times[-1] == pytest.approx(t_stop, rel=1e-4)
+    assert times[0] == pytest.approx(t_start, abs=1e-4)
+    assert times[-1] == pytest.approx(t_stop, abs=1e-4)
     assert len(times) == length
     # Check for duplicated time point
     assert len(times) == len(np.unique(times))
@@ -63,9 +66,12 @@ def test_shared_time_setting(tokamak: Tokamak, test_folder_f: str):
     """
     Test SharedTimeSetting by using the 'ip_efit' shortcut.
     """
+    if tokamak is Tokamak.HBTEP:
+        pytest.skip("HBT-EP signals share the same time base")
+        assert False
     test_setup = {
         Tokamak.CMOD: ["analysis", 1150805012, 0.0601, 1.2799, 6100],
-        Tokamak.D3D: ["efit01", 161228, 0.1, 5.0395, 9880],
+        Tokamak.D3D: ["efit01", 161228, 0.1, 5.04, 9881],
         Tokamak.EAST: ["efit_east", 55012, 0.301, 5.7, 5401],
     }
     run_test_time_setting(tokamak, "ip_efit", *test_setup[tokamak], test_folder_f)
@@ -99,6 +105,14 @@ def test_signal_time_setting(tokamak: Tokamak, test_folder_f: str):
             -5.5,
             9.199,
             14702,
+        ],
+        Tokamak.HBTEP: [
+            SignalTimeSetting("hbtep2", r"\top.sensors.magnetic:pa1_s01p"),
+            "disruption",
+            102709,
+            -0.001998,
+            0.028726,
+            15363,
         ],
     }
     run_test_time_setting(tokamak, *test_setup[tokamak], test_folder_f)

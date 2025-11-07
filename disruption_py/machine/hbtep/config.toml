@@ -1,0 +1,15 @@
+[hbtep.inout.mds]
+mdsplus_connection_string = "maxwell.ap.columbia.edu:8003"
+
+[hbtep.inout.sql]
+host = ""
+
+[hbtep.tests]
+expected_failure_columns = []
+test_columns = []
+
+[hbtep.tests.shots]
+flattop1_full = 77324
+flattop2_full = 102709
+flattop3_fast = 103590
+flattop4_full = 117676

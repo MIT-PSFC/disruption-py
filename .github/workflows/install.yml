@@ -1,0 +1,69 @@
+---
+
+name: Install
+
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+
+  install:
+    if: |
+      github.event_name == 'push' ||
+      github.event.pull_request.draft == false
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - '3.11'
+          - '3.12'
+          - '3.13'
+        tool:
+          - poetry
+          - uv
+        route:
+          - pyproject
+          - lockfile
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '${{ matrix.version }}'
+
+      - name: Install tool via pipx
+        run: pipx install ${{ matrix.tool }}
+
+      - name: Log versions
+        run: |
+          python --version
+          pip --version
+          pipx --version
+          ${{ matrix.tool }} --version
+
+      - name: Remove lockfiles
+        if: ${{ matrix.route == 'pyproject' }}
+        run: rm -fv *.lock
+
+      - name: Install via poetry
+        if: ${{ matrix.tool == 'poetry' }}
+        run: poetry install -v
+
+      - name: Install via uv
+        if: ${{ matrix.tool == 'uv' }}
+        run: uv sync -v
+
+      - name: Test import
+        run: ${{ matrix.tool }} run python -c "import disruption_py"

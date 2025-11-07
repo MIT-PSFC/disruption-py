@@ -10,7 +10,6 @@ from typing import Dict
 
 import numpy as np
 import xarray as xr
-from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.metadata import (
@@ -20,6 +19,7 @@ from disruption_py.core.physics_method.metadata import (
 )
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.misc import get_elapsed_time, to_tuple
+from disruption_py.inout.mds import mdsExceptions
 from disruption_py.machine.method_holders import get_method_holders
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 
@@ -276,7 +276,7 @@ def populate_shot(
             # create dataset
             data_vars = to_tuple(data, dim="idx")
             coords = physics_method_params.to_coords()
-            result = xr.Dataset(data_vars=data_vars, coords=coords)
+            result = xr.Dataset(data_vars=data_vars, coords=coords).astype("float32")
 
         datasets += [result]
 

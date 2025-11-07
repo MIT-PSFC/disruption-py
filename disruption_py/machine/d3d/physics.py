@@ -6,7 +6,6 @@ Module for retrieving and calculating data for DIII-D physics methods.
 
 import numpy as np
 import scipy
-from MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
@@ -18,6 +17,7 @@ from disruption_py.core.utils.math import (
     matlab_gsastd,
     matlab_power,
 )
+from disruption_py.inout.mds import mdsExceptions
 from disruption_py.machine.d3d.util import D3DUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 
@@ -170,7 +170,7 @@ class D3DPhysicsMethods:
                 r"\top.nb:pinj", tree_name="d3d"
             )
             t_nbi /= 1e3  # [ms] -> [s]
-            p_nbi *= 1e3  # [KW] -> [W]
+            p_nbi = p_nbi * 1e3  # [KW] -> [W]
             if len(t_nbi) > 2:
                 p_nbi = interp1(
                     t_nbi,
@@ -321,15 +321,13 @@ class D3DPhysicsMethods:
         """
         # Get edge loop voltage and smooth it a bit with a median filter
         v_loop, t_v_loop = params.mds_conn.get_data_with_dims(
-            f'ptdata("vloopb", {params.shot_id})', tree_name="d3d"
+            f'ptdata("vloopb", {params.shot_id})'
         )
         t_v_loop /= 1e3  # [ms] -> [s]
         v_loop = scipy.signal.medfilt(v_loop, 11)
         v_loop = interp1(t_v_loop, v_loop, params.times, "linear")
         # Get plasma current
-        ip, t_ip = params.mds_conn.get_data_with_dims(
-            f"ptdata('ip', {params.shot_id})", tree_name="d3d"
-        )
+        ip, t_ip = params.mds_conn.get_data_with_dims(f"ptdata('ip', {params.shot_id})")
         t_ip /= 1e3  # [ms] -> [s]
 
         # Alessandro Pau (JET & AUG) has given Cristina a robust routine that
@@ -407,15 +405,28 @@ class D3DPhysicsMethods:
         ption-py/blob/matlab/DIII-D/get_density_parameters.m)
         - pull requests: #[249](https://github.com/MIT-PSFC/disruption-py/pull/249)
         """
-        ne, t_ne = params.mds_conn.get_data_with_dims(
-            r"\density", tree_name="_efit_tree"
-        )
-        # If EFIT disruption tree does not contain density data,
+        try:
+            ne, t_ne = params.mds_conn.get_data_with_dims(
+                r"\density", tree_name="_efit_tree"
+            )
+        except mdsExceptions.MdsException:
+            ne = [np.nan]
+            t_ne = [np.nan]
+        # If EFIT disruption tree does not contain density data or if the data is invalid,
         # then read density from BCI subtree of D3D main tree
-        # TODO: Find a shot to test this logic
-        if len(~np.isnan(ne)) == 0:
+        # Example 1: 170480:
+        #  - "\efit01:density" gives ne = array([], shape=(4, 0), dtype=float64),
+        #  - "\d3d:denv2" gives actual density data
+        # Example 2: 172756:
+        #  - r"\efit01:density" gives ne = array([4.06199e19]), t_ne = array([1800])
+        #  - "\d3d:denv2" gives actual density data
+        if not np.isfinite(ne).any() or len(ne) < 2:
             ne, t_ne = params.mds_conn.get_data_with_dims(r"\denv2", tree_name="d3d")
-
+            tree_name = params.mds_conn.get_tree_name_of_nickname("_efit_tree")
+            params.logger.verbose(
+                rf"density: data from \{tree_name}:density is either empty or invalid."
+                r" Use \d3d:denv2 instead."
+            )
         ne = ne * 1.0e6  # [cm^3] -> [m^3]
         t_ne = t_ne / 1.0e3  # [ms] -> [s]
         dne_dt = np.gradient(ne, t_ne)
@@ -437,7 +448,7 @@ class D3DPhysicsMethods:
         )
         try:
             ip, t_ip = params.mds_conn.get_data_with_dims(
-                f"ptdata('ip', {params.shot_id})", tree_name="_efit_tree"
+                f"ptdata('ip', {params.shot_id})"
             )  # [A], [ms]
             t_ip = t_ip / 1.0e3  # [ms] -> [s]
             ipsign = np.sign(np.sum(ip))
@@ -456,7 +467,7 @@ class D3DPhysicsMethods:
             params.logger.opt(exception=True).debug(e)
 
             err = "operands could not be broadcast together with shapes"
-            if isinstance(ValueError, e) and err not in e.args:
+            if isinstance(e, ValueError) and err not in e.args:
                 raise
 
             g_f = [np.nan]
@@ -500,7 +511,7 @@ class D3DPhysicsMethods:
         - pull requests: #[251](https://github.com/MIT-PSFC/disruption-py/pull/251)
         """
         ne_rt, t_ne_rt = params.mds_conn.get_data_with_dims(
-            f"ptdata('dssdenest', {params.shot_id})", tree_name="_efit_tree"
+            f"ptdata('dssdenest', {params.shot_id})"
         )  # [10^19 m^-3]
         t_ne_rt = t_ne_rt / 1.0e3  # [ms] to [s]
         ne_rt = ne_rt * 1.0e19  # [10^19 m^-3] -> [m^-3]
@@ -557,7 +568,14 @@ class D3DPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["ip", "ip_error", "dip_dt", "dipprog_dt", "power_supply_railed"],
+        columns=[
+            "ip",
+            "ip_prog",
+            "ip_error",
+            "dip_dt",
+            "dipprog_dt",
+            "power_supply_railed",
+        ],
         tokamak=Tokamak.D3D,
     )
     def get_ip_parameters(params: PhysicsMethodParams):
@@ -598,7 +616,7 @@ class D3DPhysicsMethods:
         # Get measured plasma current parameters
         try:
             ip, t_ip = params.mds_conn.get_data_with_dims(
-                f"ptdata('ip', {params.shot_id})", tree_name="d3d"
+                f"ptdata('ip', {params.shot_id})"
             )  # [A], [ms]
             t_ip = t_ip / 1.0e3  # [ms] -> [s]
             dip_dt = np.gradient(ip, t_ip)
@@ -610,7 +628,7 @@ class D3DPhysicsMethods:
         # Get programmed plasma current parameters
         try:
             ip_prog, t_ip_prog = params.mds_conn.get_data_with_dims(
-                f"ptdata('iptipp', {params.shot_id})", tree_name="d3d"
+                f"ptdata('iptipp', {params.shot_id})"
             )  # [A], [ms]
             t_ip_prog = t_ip_prog / 1.0e3  # [ms] -> [s]
             polarity = D3DUtilMethods.get_polarity(params)
@@ -632,25 +650,30 @@ class D3DPhysicsMethods:
         # 'ip_prog' signal is irrelevant, and therefore 'ip_error' is not defined.
         try:
             ipimode, t_ipimode = params.mds_conn.get_data_with_dims(
-                f"ptdata('ipimode', {params.shot_id})", tree_name="d3d"
+                f"ptdata('ipimode', {params.shot_id})"
             )
             t_ipimode = t_ipimode / 1.0e3  # [ms] -> [s]
             ipimode = interp1(t_ipimode, ipimode, params.times, "linear")
         except mdsExceptions.MdsException as e:
             params.logger.warning("Failed to get ipimode signal. Setting to NaN.")
             params.logger.opt(exception=True).debug(e)
-            ipimode = np.full(len(params.times), np.nan)
-        feedback_on_indices = np.where((ipimode == 0) | (ipimode == 3))
-        ip_error[feedback_on_indices] = (
-            ip[feedback_on_indices] - ip_prog[feedback_on_indices]
-        )
+            ipimode = [np.nan]
+        if (
+            np.isfinite(ip).any()
+            and np.isfinite(ip_prog).any()
+            and np.isfinite(ipimode).any()
+        ):
+            feedback_on_indices = np.where((ipimode == 0) | (ipimode == 3))
+            ip_error[feedback_on_indices] = (
+                ip[feedback_on_indices] - ip_prog[feedback_on_indices]
+            )
         # Finally, get 'epsoff' to determine if/when the E-coil power supplies have railed
         # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
         # PCS feedback control of Ip is not being applied.  Therefore the
         # 'ip_error' parameter is undefined for these times.
         try:
             epsoff, t_epsoff = params.mds_conn.get_data_with_dims(
-                f"ptdata('epsoff', {params.shot_id})", tree_name="d3d"
+                f"ptdata('epsoff', {params.shot_id})"
             )
             t_epsoff = t_epsoff / 1.0e3  # [ms] -> [s]
             # Avoid problem with simultaneity of epsoff being triggered exactly
@@ -667,6 +690,7 @@ class D3DPhysicsMethods:
             power_supply_railed = [np.nan]
         return {
             "ip": ip,
+            "ip_prog": ip_prog,
             "ip_error": ip_error,
             "dip_dt": dip_dt,
             "dipprog_dt": dipprog_dt,
@@ -716,7 +740,7 @@ class D3DPhysicsMethods:
         # TODO: Why open d3d and not the rt efit tree?
         try:
             ip_rt, t_ip_rt = params.mds_conn.get_data_with_dims(
-                f"ptdata('ipsip', {params.shot_id})", tree_name="d3d"
+                f"ptdata('ipsip', {params.shot_id})"
             )  # [MA], [ms]
             t_ip_rt = t_ip_rt / 1.0e3  # [ms] -> [s]
             ip_rt = ip_rt * 1.0e6  # [MA] -> [A]
@@ -724,12 +748,14 @@ class D3DPhysicsMethods:
             ip_rt = interp1(t_ip_rt, ip_rt, params.times, "linear")
             dip_dt_rt = interp1(t_ip_rt, dip_dt_rt, params.times, "linear")
         except mdsExceptions.MdsException as e:
-            params.logger.warning("Failed to get measured plasma current parameters")
+            params.logger.warning(
+                "ip_rt: Failed to get measured plasma current parameters. Setting to NaN."
+            )
             params.logger.opt(exception=True).debug(e)
         # Get programmed plasma current parameters
         try:
             ip_prog_rt, t_ip_prog_rt = params.mds_conn.get_data_with_dims(
-                f"ptdata('ipsiptargt', {params.shot_id})", tree_name="d3d"
+                f"ptdata('ipsiptargt', {params.shot_id})"
             )  # [MA], [ms]
             t_ip_prog_rt = t_ip_prog_rt / 1.0e3  # [ms] -> [s]
             ip_prog_rt = ip_prog_rt * 1.0e6 * 0.5  # [MA] -> [A]
@@ -739,17 +765,21 @@ class D3DPhysicsMethods:
             ip_prog_rt = interp1(t_ip_prog_rt, ip_prog_rt, params.times, "linear")
             dipprog_dt_rt = interp1(t_ip_prog_rt, dipprog_dt_rt, params.times, "linear")
         except mdsExceptions.MdsException as e:
-            params.logger.warning("Failed to get programmed plasma current parameters")
+            params.logger.warning(
+                "ip_prog_rt: Failed to get programmed plasma current parameters. Setting to NaN."
+            )
             params.logger.opt(exception=True).debug(e)
         try:
             ip_error_rt, t_ip_error_rt = params.mds_conn.get_data_with_dims(
-                f"ptdata('ipeecoil', {params.shot_id})", tree_name="d3d"
+                f"ptdata('ipeecoil', {params.shot_id})"
             )  # [MA], [ms]
             t_ip_error_rt = t_ip_error_rt / 1.0e3  # [ms] to [s]
             ip_error_rt = ip_error_rt * 1.0e6 * 0.5  # [MA] -> [A]
             ip_error_rt = interp1(t_ip_error_rt, ip_error_rt, params.times, "linear")
         except mdsExceptions.MdsException as e:
-            params.logger.warning("Failed to get ipeecoil signal. Setting to NaN.")
+            params.logger.warning(
+                "ip_error_rt: Failed to get ipeecoil signal. Setting to NaN."
+            )
             params.logger.opt(exception=True).debug(e)
         # Now get the signal pointname 'ipimode'.  This PCS signal denotes whether
         # or not PCS is actually feedback controlling the plasma current.  There
@@ -762,23 +792,26 @@ class D3DPhysicsMethods:
         # 'ip_prog' signal is irrelevant, and therefore 'ip_error' is not defined.
         try:
             ipimode, t_ipimode = params.mds_conn.get_data_with_dims(
-                f"ptdata('ipimode', {params.shot_id})", tree_name="d3d"
+                f"ptdata('ipimode', {params.shot_id})"
             )
             t_ipimode = t_ipimode / 1.0e3  # [ms] -> [s]
             ipimode = interp1(t_ipimode, ipimode, params.times, "linear")
         except mdsExceptions.MdsException as e:
-            params.logger.warning("Failed to get ipimode signal. Setting to NaN.")
+            params.logger.warning(
+                "ipimode: Failed to get ipimode signal. Setting to NaN."
+            )
             params.logger.opt(exception=True).debug(e)
             ipimode = np.full(len(params.times), np.nan)
-        (feedback_off_indices,) = np.where((ipimode != 0) & (ipimode == 3))
-        ip_error_rt[feedback_off_indices] = np.nan
+        if np.isfinite(ip_error_rt).any() and np.isfinite(ipimode).any():
+            (feedback_off_indices,) = np.where((ipimode != 0) & (ipimode != 3))
+            ip_error_rt[feedback_off_indices] = np.nan
         # Finally, get 'epsoff' to determine if/when the E-coil power supplies have railed
         # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
         # PCS feedback control of Ip is not being applied.  Therefore the
         # 'ip_error' parameter is undefined for these times.
         try:
             epsoff, t_epsoff = params.mds_conn.get_data_with_dims(
-                f"ptdata('epsoff', {params.shot_id})", tree_name="d3d"
+                f"ptdata('epsoff', {params.shot_id})"
             )
             t_epsoff = t_epsoff / 1.0e3  # [ms] -> [s]
             # Avoid problem with simultaneity of epsoff being triggered exactly on
@@ -788,16 +821,18 @@ class D3DPhysicsMethods:
             power_supply_railed = np.zeros(len(params.times))
             (railed_indices,) = np.where(np.abs(epsoff) > 0.5)
             power_supply_railed[railed_indices] = 1
-            # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
-            # PCS feedback control of Ip is not being applied.  Therefore the
-            # 'ip_error' parameter is undefined for these times.
-            (ps_railed_indices,) = np.where(power_supply_railed != 0)
-            ip_error_rt[ps_railed_indices] = np.nan
         except mdsExceptions.MdsException as e:
             params.logger.warning(
-                "Failed to get epsoff signal. power_supply_railed will be NaN.",
+                "power_supply_railed: Failed to get epsoff signal. Setting to NaN."
             )
             params.logger.opt(exception=True).debug(e)
+            power_supply_railed = np.full(len(params.times), np.nan)
+        # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
+        # PCS feedback control of Ip is not being applied.  Therefore the
+        # 'ip_error' parameter is undefined for these times.
+        if np.isfinite(ip_error_rt).any() and np.isfinite(power_supply_railed).any():
+            (ps_railed_indices,) = np.where(power_supply_railed != 0)
+            ip_error_rt[ps_railed_indices] = np.nan
         return {
             "ip_rt": ip_rt,
             "ip_prog_rt": ip_prog_rt,
@@ -839,7 +874,7 @@ class D3DPhysicsMethods:
         nominal_flattop_radius = 0.59
         # Get z_cur
         z_cur, t_z_cur = params.mds_conn.get_data_with_dims(
-            f"ptdata('vpszp', {params.shot_id})", tree_name="d3d"
+            f"ptdata('vpszp', {params.shot_id})"
         )
         t_z_cur = t_z_cur / 1.0e3  # [ms] -> [s]
         z_cur = z_cur / 1.0e2  # [cm] -> [m]
@@ -894,7 +929,7 @@ class D3DPhysicsMethods:
         # Calculate n1rms_norm
         try:
             b_tor, t_b_tor = params.mds_conn.get_data_with_dims(
-                f"ptdata('bt', {params.shot_id})", tree_name="d3d"
+                f"ptdata('bt', {params.shot_id})"
             )
             t_b_tor /= 1e3  # [ms] -> [s]
             b_tor = interp1(t_b_tor, b_tor, params.times)  # [T]
@@ -999,12 +1034,12 @@ class D3DPhysicsMethods:
         calculate_prad_pf = False
         try:
             rad_cva, t_rad_cva = params.mds_conn.get_data_with_dims(
-                f"ptdata('dpsrrdcva', {params.shot_id})", tree_name="d3d"
+                f"ptdata('dpsrrdcva', {params.shot_id})"
             )  # [], [ms]
             t_rad_cva /= 1e3  # [ms] -> [s]
             rad_cva = interp1(t_rad_cva, rad_cva, params.times)
             rad_xdiv, t_rad_xdiv = params.mds_conn.get_data_with_dims(
-                f"ptdata('dpsrrdxdiv', {params.shot_id})", tree_name="d3d"
+                f"ptdata('dpsrrdxdiv', {params.shot_id})"
             )  # [], [ms]
             t_rad_xdiv /= 1e3  # [ms] -> [s]
             rad_xdiv = interp1(t_rad_xdiv, rad_xdiv, params.times)
@@ -1045,7 +1080,7 @@ class D3DPhysicsMethods:
                 params.logger.opt(exception=True).debug(e)
 
         # Calculate te_pf & ne_pf
-        if ts_radius in ts:
+        if ts and ts_radius in ts:
             # Drop data outside of valid range
             invalid_indices = np.where(
                 (ts[ts_radius] < ts_radial_range[0])
