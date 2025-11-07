@@ -6,6 +6,10 @@ file_ext = 'zarr'
 [mast.inout.sql]
 driver = "dummy"
 
+[mast.physics.time_domain_thresholds]
+dipprog_dt = 50e3
+ip_prog = 100e3
+
 [mast.tests]
 expected_failure_columns = []
 test_columns = [
@@ -13,7 +17,7 @@ test_columns = [
 ]
 
 [mast.tests.shots]
-example = 30420
+example = 30421
 
 [mast.time]
 disruption_time_start = 0.2

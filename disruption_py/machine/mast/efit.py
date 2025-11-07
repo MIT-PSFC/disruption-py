@@ -16,7 +16,7 @@ class MastEfitMethods:
     """
 
     efit_properties = [
-        "beta_normal",
+        "beta_tor_normal",
         "elongation",
         "elongation_axis",
         "magnetic_axis_r",

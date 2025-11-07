@@ -6,7 +6,6 @@ Physics methods for MAST.
 
 import numpy as np
 from disruption_py.core.physics_method.errors import CalculationError
-import xarray as xr
 from disruption_py.core.utils.math import interp1
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
@@ -28,11 +27,20 @@ class MastPhysicsMethods:
         """Get Ip parameters"""
         conn: XarrayConnection = params.mds_conn
         ip = conn.get_data(params.shot_id, "summary/ip")
+        ip_prog = conn.get_data(params.shot_id, "pulse_schedule/i_plasma")
+        ip_prog_time = conn.get_data(params.shot_id, "pulse_schedule/time")
         magtime = conn.get_data(params.shot_id, "summary/time")
+
+        dip_dt = np.gradient(ip, magtime)
+        dipprog_dt = np.gradient(ip_prog, ip_prog_time)
 
         times = params.times
         ip = interp1(magtime, ip, times)
-        return {"ip": ip}
+        ip_prog = interp1(ip_prog_time, ip_prog, times)
+        dip_dt = interp1(magtime, dip_dt, times)
+        dipprog_dt = interp1(ip_prog_time, dipprog_dt, times)
+
+        return {"ip": ip, "dip_dt": dip_dt, "ip_prog": ip_prog, "dipprog_dt": dipprog_dt}
 
     @staticmethod
     @physics_method(

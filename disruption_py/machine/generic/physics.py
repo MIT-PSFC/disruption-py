@@ -11,6 +11,7 @@ from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.machine.cmod import CmodPhysicsMethods
 from disruption_py.machine.d3d import D3DPhysicsMethods
 from disruption_py.machine.east import EastPhysicsMethods
+from disruption_py.machine.mast.physics import MastPhysicsMethods
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -74,6 +75,10 @@ class GenericPhysicsMethods:
         elif params.tokamak == Tokamak.EAST:
             ip_parameters = EastPhysicsMethods.get_ip_parameters(params=params)
             signals["dipprog_dt"] = ip_parameters["dipprog_dt"]
+        elif params.tokamak == Tokamak.MAST:
+            ip_parameters = MastPhysicsMethods.get_ip_parameters(params=params)
+            signals["dipprog_dt"] = ip_parameters["dipprog_dt"]
+            signals["ip_prog"] = ip_parameters["ip_prog"]
         else:
             return {"time_domain": [np.nan]}
 
