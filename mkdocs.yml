@@ -29,6 +29,7 @@ nav:
   - Overview:
       - Background: index.md
       - Installation: INSTALL.md
+      - References: REFERENCES.md
   - Usage:
       - Entry points:
           - Workflow: usage/workflow_reference.md
