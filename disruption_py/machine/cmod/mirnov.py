@@ -197,7 +197,7 @@ class CmodMirnovMethods:
             if not np.isclose(np.mean(np.diff(freqs)), freq_resolution, atol=1):
                 params.logger.warning(f"[Shot {params.shot_id}] The Mirnov frequency resolution is not {freq_resolution} Hz")
             # Replace the frequencies with nice integers (for the sake of consistency)
-            freqs = np.arange(0, max_freq, freq_resolution)
+            freqs = np.round(freqs, -2)
 
             return mirnov_fft_interp, freqs
         except Exception as e:
