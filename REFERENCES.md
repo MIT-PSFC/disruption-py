@@ -26,7 +26,7 @@ Here follows a non-exhaustive list of projects, publications, and conference con
   - AR Saperstein, _et al._ (2025), _"Validation of simulated radiative collapse events in TORAX"_, [NP13.161](https://schedule.aps.org/dpp/2025/events/NP13/161)
   - H Wietfeldt, _et al._ (2025), _"Characterization of UFOs on Alcator C-Mod and WEST to inform SPARC operation"_ [NP13.163](https://schedule.aps.org/dpp/2025/events/NP13/163)
   - EdD Zapata-Cornejo, _et al._ (2025), _"Time series classification algorithms for confinement regime identification in C-Mod"_ [NP13.169](https://schedule.aps.org/dpp/2025/events/NP13/169)
-  - GL Trevisan, _et al._ (2025), _"A large-scale automated EFIT recomputation workflow for disruption studies at 1 kHz"_, [PP13.93](https://schedule.aps.org/dpp/2025/events/PP13/93)
+  - GL Trevisan, _et al._ (2025), _"A large-scale automated EFIT recomputation workflow for disruption studies at 1 kHz"_, [PP13.88](https://schedule.aps.org/dpp/2025/events/PP13/88)
 
 - [6th International Conference on Data-Driven Plasma Science (2025)](https://web.cvent.com/event/7de9d238-e170-4fbf-8de5-20abc5c6eb49/summary)
   - Z Keith, _et al._ (2025), _"A tearing mode database for Alcator C-Mod and DIII-D"_
