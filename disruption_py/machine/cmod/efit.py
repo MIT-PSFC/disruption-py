@@ -239,8 +239,8 @@ class CmodEfitMethods:
                     "time": ("idx", params.times),
                     "r_idx": ("r_idx", np.arange(psi_2d.shape[1])),
                     "z_idx": ("z_idx", np.arange(psi_2d.shape[2])),
-                    "rgrid": ("r_idx", rgrid[0]),
-                    "zgrid": ("z_idx", zgrid[0])
+                    "rgrid": ("r_idx", rgrid),
+                    "zgrid": ("z_idx", zgrid)
                 },
                 attrs={"description": "2D poloidal flux map", "units": "Wb"}
             )
@@ -251,8 +251,8 @@ class CmodEfitMethods:
                 coords={
                     "r_idx": np.arange(psi_2d.shape[1]),
                     "z_idx": np.arange(psi_2d.shape[2]),
-                    "rgrid": ("r_idx", rgrid[0]),
-                    "zgrid": ("z_idx", zgrid[0])
+                    "rgrid": ("r_idx", rgrid),
+                    "zgrid": ("z_idx", zgrid)
                 },
                 attrs={"description": "2D poloidal flux map", "units": "Wb"}
             )
