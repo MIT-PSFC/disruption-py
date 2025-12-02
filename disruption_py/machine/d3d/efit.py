@@ -177,8 +177,8 @@ class D3DEfitMethods:
             "zdim": params.mds_conn.get_data(r"\efit_g_eqdsk:zdim", tree_name="_efit_tree"),    # Vertical dimension of grid [m]
             "zmid": params.mds_conn.get_data(r"\efit_g_eqdsk:zmid", tree_name="_efit_tree"),    # Z at center of grid [m]
         }
-        rgrid = params.mds_conn.get_data(r"\efit_g_eqdsk:r", tree_name="_efit_tree"),  # R grid [m]
-        zgrid = params.mds_conn.get_data(r"\efit_g_eqdsk:z", tree_name="_efit_tree"),  # Z grid [m]
+        rgrid = params.mds_conn.get_data(r"\efit_g_eqdsk:r", tree_name="_efit_tree")  # R grid [m]
+        zgrid = params.mds_conn.get_data(r"\efit_g_eqdsk:z", tree_name="_efit_tree")  # Z grid [m]
 
         # Scalar parameters
         scalar_params = {
@@ -275,8 +275,8 @@ class D3DEfitMethods:
                     "time": ("idx", params.times),
                     "r_idx": ("r_idx", np.arange(psi_2d.shape[1])),
                     "z_idx": ("z_idx", np.arange(psi_2d.shape[2])),
-                    "rgrid": ("r_idx", rgrid[0]),
-                    "zgrid": ("z_idx", zgrid[0])
+                    "rgrid": ("r_idx", rgrid),
+                    "zgrid": ("z_idx", zgrid)
                 },
                 attrs={"description": "2D poloidal flux map", "units": "Wb"}
             )
@@ -287,8 +287,8 @@ class D3DEfitMethods:
                 coords={
                     "r_idx": np.arange(psi_2d.shape[1]),
                     "z_idx": np.arange(psi_2d.shape[2]),
-                    "rgrid": ("r_idx", rgrid[0]),
-                    "zgrid": ("z_idx", zgrid[0])
+                    "rgrid": ("r_idx", rgrid),
+                    "zgrid": ("z_idx", zgrid)
                 },
                 attrs={"description": "2D poloidal flux map", "units": "Wb"}
             )
@@ -316,8 +316,8 @@ class D3DEfitMethods:
                         "boundary_idx": np.arange(zbbbs_interp.shape[1])
                     },
                     attrs={"description": "Z coordinates of plasma boundary", "units": "m"}
-                ),
-                nbbbs_interp = np.array([interp1(efit_time, nbbbs, params.times)])
+                )
+                nbbbs_interp = interp1(efit_time, nbbbs, params.times)
                 data_vars["nbbbs"] = xr.DataArray(
                     nbbbs_interp,
                     dims=["idx"],
