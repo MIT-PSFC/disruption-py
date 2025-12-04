@@ -1,4 +1,5 @@
 import threading
+import numpy as np
 import xarray as xr
 from typing import Optional
 from loguru import logger
@@ -68,8 +69,15 @@ class XarrayConnection:
 
         try:
             return self.data_tree[path].values
-        except KeyError as ex:
-            raise KeyError(f"Variable '{path}' not found.") from ex
+        except KeyError:
+            logger.warning(
+                "PID #{pid} | Variable '{path}' not found for shot {shot_id}.",
+                pid=threading.get_native_id(),
+                path=path,
+                shot_id=shot_id,
+            )
+            return np.array([np.nan])
+
 
     def cleanup(self):
         pass

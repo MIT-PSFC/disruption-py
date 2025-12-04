@@ -35,10 +35,11 @@ class MastPhysicsMethods:
         dipprog_dt = np.gradient(ip_prog, ip_prog_time)
 
         times = params.times
-        ip = interp1(magtime, ip, times)
-        ip_prog = interp1(ip_prog_time, ip_prog, times)
-        dip_dt = interp1(magtime, dip_dt, times)
-        dipprog_dt = interp1(ip_prog_time, dipprog_dt, times)
+
+        ip = MastPhysicsMethods._interpolate_1d(magtime, ip, times)
+        ip_prog = MastPhysicsMethods._interpolate_1d(ip_prog_time, ip_prog, times)
+        dip_dt = MastPhysicsMethods._interpolate_1d(magtime, dip_dt, times)
+        dipprog_dt = MastPhysicsMethods._interpolate_1d(ip_prog_time, dipprog_dt, times)
 
         return {"ip": ip, "dip_dt": dip_dt, "ip_prog": ip_prog, "dipprog_dt": dipprog_dt}
 
@@ -50,13 +51,14 @@ class MastPhysicsMethods:
     def get_power(params: PhysicsMethodParams):
         """Get power parameters"""
         conn: XarrayConnection = params.mds_conn
+
         power_nbi = conn.get_data(params.shot_id, "summary/power_nbi")
         power_radiated = conn.get_data(params.shot_id, "summary/power_radiated")
         base_time = conn.get_data(params.shot_id, "summary/time")
 
         times = params.times
-        power_nbi = interp1(base_time, power_nbi, times)
-        power_radiated = interp1(base_time, power_radiated, times)
+        power_nbi = MastPhysicsMethods._interpolate_1d(base_time, power_nbi, times)
+        power_radiated = MastPhysicsMethods._interpolate_1d(base_time, power_radiated, times)
         return {"power_nbi": power_nbi, "power_radiated": power_radiated}
 
     @staticmethod
@@ -67,15 +69,16 @@ class MastPhysicsMethods:
     def get_gas(params: PhysicsMethodParams):
         """Get gas injection parameters"""
         conn: XarrayConnection = params.mds_conn
+
         total_injected = conn.get_data(params.shot_id, "gas_injection/total_injected")
         inboard_total = conn.get_data(params.shot_id, "gas_injection/inboard_total")
         outboard_total = conn.get_data(params.shot_id, "gas_injection/outboard_total")
         base_time = conn.get_data(params.shot_id, "gas_injection/time")
 
         times = params.times
-        total_injected = interp1(base_time, total_injected, times)
-        inboard_total = interp1(base_time, inboard_total, times)
-        outboard_total = interp1(base_time, outboard_total, times)
+        total_injected = MastPhysicsMethods._interpolate_1d(base_time, total_injected, times)
+        inboard_total = MastPhysicsMethods._interpolate_1d(base_time, inboard_total, times)
+        outboard_total = MastPhysicsMethods._interpolate_1d(base_time, outboard_total, times)
         return {
             "total_injected": total_injected,
             "inboard_total": inboard_total,
@@ -91,11 +94,13 @@ class MastPhysicsMethods:
         """Get Thomson parameters"""
         times = params.times
         conn: XarrayConnection = params.mds_conn
+
         t_e_core = conn.get_data(params.shot_id, "thomson_scattering/t_e_core")
         n_e_core = conn.get_data(params.shot_id, "thomson_scattering/n_e_core")
         base_time = conn.get_data(params.shot_id, "thomson_scattering/time")
-        t_e_core = interp1(base_time, t_e_core, times)
-        n_e_core = interp1(base_time, n_e_core, times)
+
+        t_e_core = MastPhysicsMethods._interpolate_1d(base_time, t_e_core, times)
+        n_e_core = MastPhysicsMethods._interpolate_1d(base_time, n_e_core, times)
         return {"t_e_core": t_e_core, "n_e_core": n_e_core}
 
     @staticmethod
@@ -136,7 +141,6 @@ class MastPhysicsMethods:
         t_n = conn.get_data(params.shot_id, "summary/time")
         ip = conn.get_data(params.shot_id, "summary/ip")
         t_ip = conn.get_data(params.shot_id, "summary/time")
-
         a_minor = conn.get_data(params.shot_id, "equilibrium/minor_radius")
         t_a = conn.get_data(params.shot_id, "equilibrium/time")
 
@@ -186,3 +190,11 @@ class MastPhysicsMethods:
         n_g = abs(ip) / (np.pi * a_minor**2) * 1e20  # Greenwald density in m ^-3
         g_f = n_e / n_g
         return {"n_e": n_e, "dn_dt": dn_dt, "greenwald_fraction": g_f}
+
+    @staticmethod
+    def _interpolate_1d(x, y, x_new):
+        """Safely interpolate 1D data with handling for all-NaN y values."""
+        if len(x) != len(y) and np.isnan(y).all():
+            # if all y are NaN (is a missing signal), just return array of NaNs with same shape as x_new
+            return np.full_like(x_new, np.nan)
+        return interp1(x, y, x_new)
