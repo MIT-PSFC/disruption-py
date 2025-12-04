@@ -54,7 +54,7 @@ class XarrayConnection:
         """Get connection."""
         file_path = self.get_shot_file_path(shot_id)
         engine = "zarr" if self.file_ext == "zarr" else "netcdf4"
-        self.data_tree = xr.open_datatree(file_path, engine=engine)
+        self.data_tree = xr.open_datatree(file_path, engine=engine, chunks=None, create_default_indexes=False)
         return self
 
     def get_shot_file_path(self, shot_id: int):
