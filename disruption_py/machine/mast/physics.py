@@ -15,7 +15,8 @@ from disruption_py.machine.tokamak import Tokamak
 
 class MastPhysicsMethods:
     """
-    MAST class to serve as a method holder.
+    This class provides methods to retrieve and calculate physics-related data
+    for MAST.
     """
 
     @staticmethod
@@ -24,7 +25,19 @@ class MastPhysicsMethods:
         tokamak=Tokamak.MAST,
     )
     def get_ip_parameters(params: PhysicsMethodParams):
-        """Get Ip parameters"""
+        """Get Ip parameters
+        
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection, shot id and more.
+            
+        Returns
+        -------
+        dict
+            A dictionary containing plasma current (`ip`), its time derivative (`dip_dt`),
+            programmed plasma current (`ip_prog`), and its time derivative (`dipprog_dt`).
+        """
         conn: XarrayConnection = params.mds_conn
         ip = conn.get_data(params.shot_id, "summary/ip")
         ip_prog = conn.get_data(params.shot_id, "pulse_schedule/i_plasma")
@@ -49,7 +62,19 @@ class MastPhysicsMethods:
         tokamak=Tokamak.MAST,
     )
     def get_power(params: PhysicsMethodParams):
-        """Get power parameters"""
+        """Get power parameters
+        
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing neutral beam injection power (`power_nbi`) and
+            radiated power (`power_radiated`).
+        """
         conn: XarrayConnection = params.mds_conn
 
         power_nbi = conn.get_data(params.shot_id, "summary/power_nbi")
@@ -67,7 +92,19 @@ class MastPhysicsMethods:
         tokamak=Tokamak.MAST,
     )
     def get_gas(params: PhysicsMethodParams):
-        """Get gas injection parameters"""
+        """Get gas injection parameters
+        
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing total injected gas (`total_injected`),
+            inboard total gas (`inboard_total`), and outboard total gas (`outboard_total`).
+        """
         conn: XarrayConnection = params.mds_conn
 
         total_injected = conn.get_data(params.shot_id, "gas_injection/total_injected")
@@ -91,7 +128,19 @@ class MastPhysicsMethods:
         tokamak=Tokamak.MAST,
     )
     def get_ts_parameters(params: PhysicsMethodParams):
-        """Get Thomson parameters"""
+        """Get Thomson parameters
+        
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing core electron temperature (`t_e_core`) and
+            core electron density (`n_e_core`).
+        """
         times = params.times
         conn: XarrayConnection = params.mds_conn
 
@@ -126,7 +175,7 @@ class MastPhysicsMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            The parameters containing the MDSplus connection, shot id and more.
+            The parameters containing the Xarray connection, shot id and more.
 
         Returns
         -------
@@ -193,7 +242,22 @@ class MastPhysicsMethods:
 
     @staticmethod
     def _interpolate_1d(x, y, x_new):
-        """Safely interpolate 1D data with handling for all-NaN y values."""
+        """Safely interpolate 1D data with handling for all-NaN y values.
+        
+        Parameters
+        ----------
+        x : array_like
+            Original x-coordinates of the data points.
+        y : array_like
+            Original y-coordinates of the data points.
+        x_new : array_like
+            New x-coordinates where interpolation is desired.
+
+        Returns
+        -------
+        array_like
+            Interpolated y-coordinates corresponding to x_new.
+        """
         if len(x) != len(y) and np.isnan(y).all():
             # if all y are NaN (is a missing signal), just return array of NaNs with same shape as x_new
             return np.full_like(x_new, np.nan)
