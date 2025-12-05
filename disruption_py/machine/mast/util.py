@@ -2,8 +2,8 @@
 Module for helper, not physics, methods.
 """
 
-import xarray as xr
 import numpy as np
+import xarray as xr
 
 from disruption_py.inout.xarray import XarrayConnection
 

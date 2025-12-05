@@ -11,7 +11,6 @@ from typing import Dict
 import numpy as np
 import xarray as xr
 
-from disruption_py.inout.mds import mdsExceptions
 from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.metadata import (
     BoundMethodMetadata,

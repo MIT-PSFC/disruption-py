@@ -2,11 +2,9 @@
 Module for retrieving and processing EFIT parameters for CMOD.
 """
 
-from disruption_py.core.utils.math import interp1
-import xarray as xr
-
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
+from disruption_py.core.utils.math import interp1
 from disruption_py.inout.xarray import XarrayConnection
 
 
@@ -43,7 +41,7 @@ class MastEfitMethods:
             A dictionary containing the retrieved EFIT parameters.
         """
         conn: XarrayConnection = params.mds_conn
-        eq_time = conn.get_data(params.shot_id, "equilibrium/time") 
+        eq_time = conn.get_data(params.shot_id, "equilibrium/time")
         times = params.times
 
         outputs = {}

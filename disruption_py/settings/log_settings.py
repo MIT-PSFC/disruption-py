@@ -141,7 +141,7 @@ class LogSettings:
         logger.level("SUCCESS", color="<green>")
         logger.level("WARNING", color="<yellow>")
         logger.level("ERROR", color="<red>")
- #
+        #
         self.reset_handlers(num_shots=None)
 
         # header

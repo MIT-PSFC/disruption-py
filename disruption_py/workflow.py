@@ -21,8 +21,8 @@ from disruption_py.core.utils.misc import (
     without_duplicates,
 )
 from disruption_py.inout.mds import ProcessMDSConnection
-from disruption_py.inout.xarray import XarrayConnection
 from disruption_py.inout.sql import ShotDatabase
+from disruption_py.inout.xarray import XarrayConnection
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.settings import RetrievalSettings
 from disruption_py.settings.log_settings import LogSettings, resolve_log_settings
@@ -212,10 +212,11 @@ def get_mdsplus_class(
     inout_cfg = config(tokamak).inout
     if "mds" in inout_cfg:
         return ProcessMDSConnection.from_config(tokamak=tokamak)
-    elif "xarray" in inout_cfg:
+
+    if "xarray" in inout_cfg:
         return XarrayConnection.from_config(tokamak=tokamak)
-    else:
-        raise ValueError("No valid MDSplus or xarray connection found.")
+
+    raise ValueError("No valid MDSplus or xarray connection found.")
 
 
 def _get_database_instance(tokamak, database_initializer):

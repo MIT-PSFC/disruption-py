@@ -1,12 +1,16 @@
+"""
+Module for connecting to Xarray data stores.
+"""
+
 import threading
+from typing import Optional
+
 import numpy as np
 import xarray as xr
-from typing import Optional
 from loguru import logger
-from zarr import group
 
-from disruption_py.machine.tokamak import Tokamak
 from disruption_py.config import config
+from disruption_py.machine.tokamak import Tokamak
 
 
 class XarrayConnection:
@@ -26,6 +30,7 @@ class XarrayConnection:
         self.endpoint_url = endpoint_url
         self.file_path = file_path
         self.file_ext = file_ext
+        self.data_tree: Optional[xr.DataTree] = None
 
         logger.debug(
             "PID #{pid} | Connecting to Xarray store: {server}",
@@ -36,10 +41,11 @@ class XarrayConnection:
 
     @property
     def folder_path(self):
+        """Get full folder path including endpoint URL if provided."""
         if self.endpoint_url is not None:
             return f"{self.endpoint_url}/{self.file_path}"
-        else:
-            return self.file_path
+
+        return self.file_path
 
     @classmethod
     def from_config(cls, tokamak: Tokamak):
@@ -51,10 +57,12 @@ class XarrayConnection:
         return XarrayConnection(**params)
 
     def get_shot_connection(self, shot_id: int):
-        """Get connection."""
+        """Get connection to xarray store for individual shot."""
         file_path = self.get_shot_file_path(shot_id)
         engine = "zarr" if self.file_ext == "zarr" else "netcdf4"
-        self.data_tree = xr.open_datatree(file_path, engine=engine, chunks=None, create_default_indexes=False)
+        self.data_tree = xr.open_datatree(
+            file_path, engine=engine, chunks=None, create_default_indexes=False
+        )
         return self
 
     def get_shot_file_path(self, shot_id: int):
@@ -76,8 +84,5 @@ class XarrayConnection:
                 path=path,
                 shot_id=shot_id,
             )
-            return np.array([np.nan])
 
-
-    def cleanup(self):
-        pass
+        return np.array([np.nan])

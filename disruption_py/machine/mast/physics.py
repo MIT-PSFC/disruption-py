@@ -5,10 +5,11 @@ Physics methods for MAST.
 """
 
 import numpy as np
-from disruption_py.core.physics_method.errors import CalculationError
-from disruption_py.core.utils.math import interp1
+
 from disruption_py.core.physics_method.decorator import physics_method
+from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.params import PhysicsMethodParams
+from disruption_py.core.utils.math import interp1
 from disruption_py.inout.xarray import XarrayConnection
 from disruption_py.machine.tokamak import Tokamak
 
@@ -26,12 +27,12 @@ class MastPhysicsMethods:
     )
     def get_ip_parameters(params: PhysicsMethodParams):
         """Get Ip parameters
-        
+
         Parameters
         ----------
         params : PhysicsMethodParams
             The parameters containing the Xarray connection, shot id and more.
-            
+
         Returns
         -------
         dict
@@ -54,7 +55,12 @@ class MastPhysicsMethods:
         dip_dt = MastPhysicsMethods._interpolate_1d(magtime, dip_dt, times)
         dipprog_dt = MastPhysicsMethods._interpolate_1d(ip_prog_time, dipprog_dt, times)
 
-        return {"ip": ip, "dip_dt": dip_dt, "ip_prog": ip_prog, "dipprog_dt": dipprog_dt}
+        return {
+            "ip": ip,
+            "dip_dt": dip_dt,
+            "ip_prog": ip_prog,
+            "dipprog_dt": dipprog_dt,
+        }
 
     @staticmethod
     @physics_method(
@@ -63,7 +69,7 @@ class MastPhysicsMethods:
     )
     def get_power(params: PhysicsMethodParams):
         """Get power parameters
-        
+
         Parameters
         ----------
         params : PhysicsMethodParams
@@ -83,7 +89,9 @@ class MastPhysicsMethods:
 
         times = params.times
         power_nbi = MastPhysicsMethods._interpolate_1d(base_time, power_nbi, times)
-        power_radiated = MastPhysicsMethods._interpolate_1d(base_time, power_radiated, times)
+        power_radiated = MastPhysicsMethods._interpolate_1d(
+            base_time, power_radiated, times
+        )
         return {"power_nbi": power_nbi, "power_radiated": power_radiated}
 
     @staticmethod
@@ -93,7 +101,7 @@ class MastPhysicsMethods:
     )
     def get_gas(params: PhysicsMethodParams):
         """Get gas injection parameters
-        
+
         Parameters
         ----------
         params : PhysicsMethodParams
@@ -113,9 +121,15 @@ class MastPhysicsMethods:
         base_time = conn.get_data(params.shot_id, "gas_injection/time")
 
         times = params.times
-        total_injected = MastPhysicsMethods._interpolate_1d(base_time, total_injected, times)
-        inboard_total = MastPhysicsMethods._interpolate_1d(base_time, inboard_total, times)
-        outboard_total = MastPhysicsMethods._interpolate_1d(base_time, outboard_total, times)
+        total_injected = MastPhysicsMethods._interpolate_1d(
+            base_time, total_injected, times
+        )
+        inboard_total = MastPhysicsMethods._interpolate_1d(
+            base_time, inboard_total, times
+        )
+        outboard_total = MastPhysicsMethods._interpolate_1d(
+            base_time, outboard_total, times
+        )
         return {
             "total_injected": total_injected,
             "inboard_total": inboard_total,
@@ -129,7 +143,7 @@ class MastPhysicsMethods:
     )
     def get_ts_parameters(params: PhysicsMethodParams):
         """Get Thomson parameters
-        
+
         Parameters
         ----------
         params : PhysicsMethodParams
@@ -243,7 +257,7 @@ class MastPhysicsMethods:
     @staticmethod
     def _interpolate_1d(x, y, x_new):
         """Safely interpolate 1D data with handling for all-NaN y values.
-        
+
         Parameters
         ----------
         x : array_like
@@ -259,6 +273,7 @@ class MastPhysicsMethods:
             Interpolated y-coordinates corresponding to x_new.
         """
         if len(x) != len(y) and np.isnan(y).all():
-            # if all y are NaN (is a missing signal), just return array of NaNs with same shape as x_new
+            # if all y are NaN (is a missing signal)
+            # just return array of NaNs with same shape as x_new
             return np.full_like(x_new, np.nan)
         return interp1(x, y, x_new)

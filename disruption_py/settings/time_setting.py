@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
-from disruption_py.machine.mast.util import MastUtilMethods
 from loguru import logger
 
 from disruption_py.config import config
@@ -19,6 +18,7 @@ from disruption_py.core.utils.misc import shot_msg_patch
 from disruption_py.inout.mds import MDSConnection, mdsExceptions
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.east.util import EastUtilMethods
+from disruption_py.machine.mast.util import MastUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -624,7 +624,6 @@ class IpTimeSetting(TimeSetting):
             r"\top.sensors.rogowskis:ip", tree_name="hbtep2"
         )
         return ip_time
-
 
     def mast_times(self, params: TimeSettingParams) -> np.ndarray:
         """

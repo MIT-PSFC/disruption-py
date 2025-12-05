@@ -44,16 +44,19 @@ def resolve_tokamak_from_environment(tokamak: Union[Tokamak, str] = None):
     else:
         # case 3
         tokamak = config().get("tokamak")
+
+    tokamak_name = Tokamak.MAST  # default
+
     if tokamak:
-        return map_string_to_enum(tokamak, Tokamak)
+        tokamak_name = map_string_to_enum(tokamak, Tokamak)
     # case 4
     if os.path.exists("/usr/local/mfe/disruptions"):
-        return Tokamak.CMOD
+        tokamak_name = Tokamak.CMOD
     if os.path.exists("/fusion/projects/disruption_warning"):
-        return Tokamak.D3D
+        tokamak_name = Tokamak.D3D
     if os.path.exists("/project/disruption"):
-        return Tokamak.EAST
+        tokamak_name = Tokamak.EAST
     if os.path.exists("/opt/hbt/disruptions"):
-        return Tokamak.HBTEP
-    # case 5
-    return Tokamak.MAST
+        tokamak_name = Tokamak.HBTEP
+
+    return tokamak_name
