@@ -43,16 +43,13 @@ class MastEfitMethods:
             A dictionary containing the retrieved EFIT parameters.
         """
         conn: XarrayConnection = params.mds_conn
-        file_name = conn.get_shot_file_path(params.shot_id)
-        ds = xr.open_zarr(file_name, group="equilibrium")
-
-        base_time = ds["time"].values
+        eq_time = conn.get_data(params.shot_id, "equilibrium/time") 
         times = params.times
 
         outputs = {}
         for prop in MastEfitMethods.efit_properties:
-            item = ds[prop].values
-            item = interp1(base_time, item, times)
+            signal = conn.get_data(params.shot_id, f"equilibrium/{prop}")
+            item = interp1(eq_time, signal, times)
             outputs[prop] = item
 
         return outputs
