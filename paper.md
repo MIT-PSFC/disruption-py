@@ -23,6 +23,9 @@ authors:
   - name: Cristina Rea
     orcid: 0000-0002-9948-2649
     affiliation: 1
+  - name: Robert S. Granetz
+    orcid: 0000-0002-6560-1881
+    affiliation: 1
   - name: MIT PSFC Disruptions Group
     affiliation: 1
 affiliations:
