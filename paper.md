@@ -17,6 +17,9 @@ authors:
   - name: Amos M. Decker
     orcid: 0009-0004-3728-3259
     affiliation: 1
+  - name: Joshua Lorincz
+    orcid: 0009-0003-0288-9501
+    affiliation: 1
   - name: Cristina Rea
     orcid: 0000-0002-9948-2649
     affiliation: 1
