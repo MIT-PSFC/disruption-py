@@ -72,7 +72,7 @@ def get_temporary_folder() -> str:
 
     # create temporary top folder
     top = os.path.join(
-        "/tmp",
+        os.getenv("LOCALSCRATCH", "/tmp"),
         os.getenv("USER"),
         "disruption-py",
         ("." if "pytest" in sys.modules else "") + time.strftime("%Y-%m-%d"),
