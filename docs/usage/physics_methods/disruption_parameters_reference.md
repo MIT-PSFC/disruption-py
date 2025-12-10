@@ -1,5 +1,5 @@
 
-## Disruption Parameter Descriptions
+## C-Mod Disruption Parameter Descriptions
 
 | Parameter | Description | Units | Validity Range |
 |---|---|---|---|
