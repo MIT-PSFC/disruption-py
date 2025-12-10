@@ -88,4 +88,4 @@ class XarrayConnection:
         return np.array([np.nan])
 
     def cleanup(self):
-        pass
+        """Cleanup the connection."""
