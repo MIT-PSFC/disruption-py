@@ -17,15 +17,31 @@ from disruption_py.core.utils.shared_instance import SharedInstance
 from disruption_py.machine.tokamak import Tokamak
 
 try:
+
     # first, try full-fledged MDSplus
     import MDSplus
-except ModuleNotFoundError as e:
+
+except ModuleNotFoundError:
+
     try:
+
         # then, fall back onto mdsthin
         from mdsthin import MDSplus
+
     except ModuleNotFoundError:
-        # pylint: disable-next=raise-missing-from
-        raise e
+
+        # finally, create dummy class
+        class MDSplus:
+            """Dummy MDSplus class."""
+
+            class Connection:
+                """Dummy Connection class."""
+
+            # pylint: disable-next=invalid-name
+            class mdsExceptions:
+                """Dummy mdsExceptions class."""
+
+
 # shortcuts for downstream imports
 mdsExceptions = MDSplus.mdsExceptions
 
