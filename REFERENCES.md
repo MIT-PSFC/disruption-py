@@ -21,7 +21,7 @@ Here follows a non-exhaustive list of projects, publications, and conference con
 
 - [67th APS-DPP Meeting (2025)](https://meetings.aps.org/Meeting/DPP25)
   - AD Maris, _et al._ (2025), _"Collisionality scaling of the tokamak density limit: data-driven analysis, cross-device prediction, and real-time avoidance"_ [BO04.5](https://schedule.aps.org/dpp/2025/events/BO04/5)
-  - Z Keith, _et al._ (2025), _"Enabling data-driven NTM studies with advanced mode labeling"_, [BP13.167](https://schedule.aps.org/dpp/2025/events/BP13/167)
+  - Z Keith, _et al._ (2025), _"Enabling data-driven NTM studies with advanced mode labeling"_, [BP13.164](https://schedule.aps.org/dpp/2025/events/BP13/164)
   - C Rea, _et al._ (2025), _"Research in support of the SPARC Off-Normal Warning System"_, [JO04.9](https://schedule.aps.org/dpp/2025/events/JO04/9)
   - AR Saperstein, _et al._ (2025), _"Validation of simulated radiative collapse events in TORAX"_, [NP13.161](https://schedule.aps.org/dpp/2025/events/NP13/161)
   - H Wietfeldt, _et al._ (2025), _"Characterization of UFOs on Alcator C-Mod and WEST to inform SPARC operation"_ [NP13.157](https://schedule.aps.org/dpp/2025/events/NP13/157)
