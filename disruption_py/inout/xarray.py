@@ -89,3 +89,6 @@ class XarrayConnection:
 
     def cleanup(self):
         """Cleanup the connection."""
+
+    def reconnect(self):
+        """Reconnect the connection."""
