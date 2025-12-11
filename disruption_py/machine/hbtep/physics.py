@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Module for retrieving and calculating data for HBTEP physics methods.
+Module for retrieving and calculating data for HBT-EP physics methods.
 """
 
 import numpy as np

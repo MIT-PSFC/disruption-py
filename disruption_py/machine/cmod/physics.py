@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Module for retrieving and calculating data for CMOD physics methods.
+Module for retrieving and calculating data for C-MOD physics methods.
 """
 
 import warnings

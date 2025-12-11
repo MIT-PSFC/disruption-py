@@ -1,5 +1,5 @@
-## Built-in Methods For CMod { .doc .doc-heading }
-::: disruption_py.machine.cmod.physics
+## EAST Physics Methods { .doc .doc-heading }
+::: disruption_py.machine.east.physics
     handler: python
 	options:
 	  heading_level: 2

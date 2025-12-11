@@ -1,5 +1,5 @@
-## Built-in Methods For HBT-EP { .doc .doc-heading }
-::: disruption_py.machine.hbtep.physics
+## DIII-D Physics Methods { .doc .doc-heading }
+::: disruption_py.machine.d3d.physics
     handler: python
 	options:
 	  heading_level: 2
