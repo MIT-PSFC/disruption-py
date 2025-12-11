@@ -51,10 +51,10 @@ class MastPhysicsMethods:
 
         times = params.times
 
-        ip = MastPhysicsMethods._interpolate_1d(magtime, ip, times)
-        ip_prog = MastPhysicsMethods._interpolate_1d(ip_prog_time, ip_prog, times)
-        dip_dt = MastPhysicsMethods._interpolate_1d(magtime, dip_dt, times)
-        dipprog_dt = MastPhysicsMethods._interpolate_1d(ip_prog_time, dipprog_dt, times)
+        ip = MastPhysicsMethods.interpolate_1d(magtime, ip, times)
+        ip_prog = MastPhysicsMethods.interpolate_1d(ip_prog_time, ip_prog, times)
+        dip_dt = MastPhysicsMethods.interpolate_1d(magtime, dip_dt, times)
+        dipprog_dt = MastPhysicsMethods.interpolate_1d(ip_prog_time, dipprog_dt, times)
 
         return {
             "ip": ip,
@@ -89,8 +89,8 @@ class MastPhysicsMethods:
         base_time = conn.get_data(params.shot_id, "summary/time")
 
         times = params.times
-        power_nbi = MastPhysicsMethods._interpolate_1d(base_time, power_nbi, times)
-        power_radiated = MastPhysicsMethods._interpolate_1d(
+        power_nbi = MastPhysicsMethods.interpolate_1d(base_time, power_nbi, times)
+        power_radiated = MastPhysicsMethods.interpolate_1d(
             base_time, power_radiated, times
         )
         return {"power_nbi": power_nbi, "power_radiated": power_radiated}
@@ -122,13 +122,13 @@ class MastPhysicsMethods:
         base_time = conn.get_data(params.shot_id, "gas_injection/time")
 
         times = params.times
-        total_injected = MastPhysicsMethods._interpolate_1d(
+        total_injected = MastPhysicsMethods.interpolate_1d(
             base_time, total_injected, times
         )
-        inboard_total = MastPhysicsMethods._interpolate_1d(
+        inboard_total = MastPhysicsMethods.interpolate_1d(
             base_time, inboard_total, times
         )
-        outboard_total = MastPhysicsMethods._interpolate_1d(
+        outboard_total = MastPhysicsMethods.interpolate_1d(
             base_time, outboard_total, times
         )
         return {
@@ -163,8 +163,8 @@ class MastPhysicsMethods:
         n_e_core = conn.get_data(params.shot_id, "thomson_scattering/n_e_core")
         base_time = conn.get_data(params.shot_id, "thomson_scattering/time")
 
-        t_e_core = MastPhysicsMethods._interpolate_1d(base_time, t_e_core, times)
-        n_e_core = MastPhysicsMethods._interpolate_1d(base_time, n_e_core, times)
+        t_e_core = MastPhysicsMethods.interpolate_1d(base_time, t_e_core, times)
+        n_e_core = MastPhysicsMethods.interpolate_1d(base_time, n_e_core, times)
         return {"t_e_core": t_e_core, "n_e_core": n_e_core}
 
     @staticmethod
@@ -256,7 +256,7 @@ class MastPhysicsMethods:
         return {"n_e": n_e, "dn_dt": dn_dt, "greenwald_fraction": g_f}
 
     @staticmethod
-    def _interpolate_1d(x, y, x_new):
+    def interpolate_1d(x, y, x_new):
         """Safely interpolate 1D data with handling for all-NaN y values.
 
         Parameters

@@ -4,8 +4,8 @@ Module for retrieving and processing EFIT parameters for CMOD.
 
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.math import interp1
 from disruption_py.inout.xarray import XarrayConnection
+from disruption_py.machine.mast.physics import MastPhysicsMethods
 
 
 class MastEfitMethods:
@@ -47,7 +47,7 @@ class MastEfitMethods:
         outputs = {}
         for prop in MastEfitMethods.efit_properties:
             signal = conn.get_data(params.shot_id, f"equilibrium/{prop}")
-            item = interp1(eq_time, signal, times)
+            item = MastPhysicsMethods.interpolate_1d(eq_time, signal, times)
             outputs[prop] = item
 
         return outputs
