@@ -41,6 +41,12 @@ except ModuleNotFoundError:
             class mdsExceptions:
                 """Dummy mdsExceptions class."""
 
+                class MDSplusERROR(Exception):
+                    """Dummy MDSplusERROR class."""
+
+                class MdsException(Exception):
+                    """Dummy MdsException class."""
+
 
 # shortcuts for downstream imports
 mdsExceptions = MDSplus.mdsExceptions
