@@ -2194,6 +2194,13 @@ class CmodPhysicsMethods:
                         },
                     )
 
+        # If all profiles failed, return None
+        if all(
+            np.all(np.isnan(data_vars[key].values))
+            for key in data_vars
+        ):
+            return None
+
         profile_ds = xr.Dataset(
             data_vars=data_vars,
             coords={
