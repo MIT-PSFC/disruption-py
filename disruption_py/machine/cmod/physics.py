@@ -7,6 +7,7 @@ Module for retrieving and calculating data for CMOD physics methods.
 import warnings
 
 import numpy as np
+import xarray as xr
 import scipy.constants as const
 
 from disruption_py.core.physics_method.caching import cache_method
@@ -2128,3 +2129,79 @@ class CmodPhysicsMethods:
             or 1150000000 < shot_id < 1150610000
             or 1160000000 < shot_id < 1160303000
         )
+    
+    @staticmethod
+    @physics_method(
+        tokamak=Tokamak.CMOD,
+    )
+    def get_thomson_profiles(params: PhysicsMethodParams):
+        """
+        Retrieve Thomson scattering profiles for electron temperature and density from those that were put in yag_fit.
+        
+        Loosely informed by the script at "/home/tolman/mdsplus/testtree/forscript.py"
+        """
+        data_vars = {}
+        psinorm_new = np.linspace(0, 1, 100)
+
+        # Retrieve profiles for all combinations of quantity, coordinate, and fit type
+        for quant in ['ne', 'te']:
+            for fit_type in ['polynomial', 'mtanh']:
+                nodename_data = f".yag_fit.{quant}_psinorm.{fit_type}.profile"
+                nodename_coord = f".yag_fit.{quant}_psinorm.{fit_type}.profrval"
+                try:
+                    profile_data, profile_time = params.mds_conn.get_data_with_dims(
+                        nodename_data,
+                        tree_name="electrons",
+                    )
+                    coord_data = params.mds_conn.get_data(nodename_coord, tree_name="electrons")
+
+                    # Linear profile interpolation in psinorm
+                    profile_data_psinorm_interp = interp1(
+                        coord_data,
+                        profile_data.T,
+                        psinorm_new,
+                        fill_value="extrapolate",
+                    )
+
+                    # Rectilinear profile interpolation in time
+                    profile_data_time_interp = interp1(
+                        profile_time,
+                        profile_data_psinorm_interp.T,
+                        params.times,
+                        kind="previous",
+                    )
+
+                    # Store profile data and psi coord
+                    data_vars[f"{quant}_{fit_type}_profile"] = xr.DataArray(
+                        profile_data_time_interp.astype(np.float32).T,
+                        dims=("idx", "psinorm"),
+                        coords={
+                            "time": ("idx", params.times),
+                            "psinorm": psinorm_new.astype(np.float32),
+                        },
+                    )
+                except Exception as e:
+                    params.logger.verbose(
+                        f"Failed to retrieve {nodename_data}: {str(e)}"
+                    )
+                    # Make empty DataArray with correct dimensions and coords
+                    data_vars[f"{quant}_{fit_type}_profile"] = xr.DataArray(
+                        np.full((len(params.times), len(psinorm_new)), np.nan, dtype=np.float32),
+                        dims=("idx", "psinorm"),
+                        coords={
+                            "time": ("idx", params.times),
+                            "psinorm": psinorm_new.astype(np.float32),
+                        },
+                    )
+
+        profile_ds = xr.Dataset(
+            data_vars=data_vars,
+            coords={
+                "time": ("idx", params.times),
+                "shot": ("idx", np.full(len(params.times), params.shot_id)),
+            },
+            attrs={
+                "description": "Thomson scattering profiles from yag_fit",
+            }
+        )
+        return profile_ds
