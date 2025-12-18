@@ -2134,7 +2134,7 @@ class CmodPhysicsMethods:
     @physics_method(
         tokamak=Tokamak.CMOD,
     )
-    def get_thomson_profiles(params: PhysicsMethodParams):
+    def get_yag_fit_profiles(params: PhysicsMethodParams):
         """
         Retrieve Thomson scattering profiles for electron temperature and density from those that were put in yag_fit.
         
@@ -2228,6 +2228,111 @@ class CmodPhysicsMethods:
             },
             attrs={
                 "description": "Thomson scattering profiles from yag_fit",
+            }
+        )
+        return profile_ds
+    
+    @staticmethod
+    @physics_method(
+        tokamak=Tokamak.CMOD,
+    )
+    def get_thomson_points(params: PhysicsMethodParams):
+        """
+        Retrieve raw Thomson scattering measurement points for electron temperature and density.
+
+        A few notes:
+        - Thomson YAG time by default runs from -0.5s to 2.0s (https://cmodwiki.psfc.mit.edu/index.php/Thomson_scattering_programming)  
+        - See https://cmodwiki.psfc.mit.edu/index.php/Thomson_Scattering
+        """
+
+        data_vars = {}
+
+        # TODO(ZanderKeith) verify this rho lines up with the R,Z and EFIT rho
+        nodename_rho = f".yag_new.results.profiles.rho_t"
+        rho_data, rho_time = params.mds_conn.get_data_with_dims(nodename_rho, tree_name="electrons")
+        # Cut time to positive values only
+        valid_time_indices = rho_time >= 0
+        rho_data = rho_data[:, valid_time_indices]
+        rho_time = rho_time[valid_time_indices]
+        # Replace -1 with nan
+        rho_data[rho_data == -1] = np.nan
+
+        rho_data_interp = interp1(
+            rho_time,
+            rho_data,
+            params.times,
+            kind="previous",
+        )
+
+        for quant in ["ne", "te"]:
+            nodename_data = f".yag_new.results.profiles.{quant}_rz"
+            nodename_error = f".yag_new.results.profiles.{quant}_err"
+
+            profile_data, profile_time = params.mds_conn.get_data_with_dims(
+                nodename_data,
+                tree_name="electrons",
+            )
+            error_data = params.mds_conn.get_data(
+                nodename_error,
+                tree_name="electrons",
+            )
+            # Cut time to positive values only
+            valid_time_indices = profile_time >= 0
+            profile_data = profile_data[:, valid_time_indices]
+            error_data = error_data[:, valid_time_indices]
+            profile_time = profile_time[valid_time_indices]
+            # Replace 0 with nan
+            profile_data[profile_data == 0] = np.nan
+            error_data[error_data == 0] = np.nan
+            
+            # Raise error if profile and rho time do not match
+            if not np.array_equal(profile_time, rho_time):
+                raise ValueError(
+                    f"Thomson scattering {quant} profile time does not match rho time."
+                )
+
+            # Rectilinear data interpolation in time
+            profile_data_interp = interp1(
+                profile_time,
+                profile_data,
+                params.times,
+                kind="previous",
+            )
+            error_data_interp = interp1(
+                profile_time,
+                error_data,
+                params.times,
+                kind="previous",
+            )
+
+            # Store profile data and rho coord
+            data_vars[f"{quant}_profile"] = xr.DataArray(
+                profile_data_interp.astype(np.float32).T,
+                dims=("idx", "ts_channel"),
+                coords={
+                    "time": ("idx", params.times),
+                    "ts_channel": np.arange(profile_data.shape[0], dtype=np.int32),
+                    "rho": (("idx", "ts_channel"), rho_data_interp.T.astype(np.float32)),
+                },
+            )
+            data_vars[f"{quant}_error"] = xr.DataArray(
+                error_data_interp.astype(np.float32).T,
+                dims=("idx", "ts_channel"),
+                coords={
+                    "time": ("idx", params.times),
+                    "ts_channel": np.arange(error_data.shape[0], dtype=np.int32),
+                    "rho": (("idx", "ts_channel"), rho_data_interp.T.astype(np.float32)),
+                },
+            )
+
+        profile_ds = xr.Dataset(
+            data_vars=data_vars,
+            coords={
+                "time": ("idx", params.times),
+                "shot": ("idx", np.full(len(params.times), params.shot_id)),
+            },
+            attrs={
+                "description": "Thomson scattering raw measurement points",
             }
         )
         return profile_ds
