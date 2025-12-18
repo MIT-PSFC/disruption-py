@@ -958,7 +958,7 @@ class D3DPhysicsMethods:
         -------
         - original source: [get_n1_bradial_d3d.m](https://github.com/MIT-PSFC/disruption-py
         /blob/matlab/DIII-D/get_n1_bradial_d3d.m)
-        - pull requests:
+        - pull requests: #[500](https://github.com/MIT-PSFC/disruption-py/pull/500)
         - issues: #[261](https://github.com/MIT-PSFC/disruption-py/issues/261)
         """
         # The following shots are missing bradial calculations in MDSplus and
