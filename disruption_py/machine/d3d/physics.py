@@ -917,7 +917,9 @@ class D3DPhysicsMethods:
 
         References
         -------
-        # TODO: finish references
+        - original sources: [get_n1_bradial_d3d.m](https://github.com/MIT-PSFC/disruption
+        -py/blob/matlab/DIII-D/get_n1_bradial_d3d.m), [get_n1rms_d3d.m](https://github.com
+        /MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_n1rms_d3d.m)
         """
         try:
             b_tor, t_b_tor = params.mds_conn.get_data_with_dims(
@@ -938,26 +940,34 @@ class D3DPhysicsMethods:
     )
     def get_n1_bradial_parameters(params: PhysicsMethodParams):
         """
-        TODO: finish docstring
-        Docstring for get_n1_bradial_parameters
+        This method obtaines the n=1 Bradial information (`n_equal_1_mode`) from
+        the ESLD coils (units of Tesla). It also calculates the normalized Bradial,
+        dividing by the toroidal B-field (`n_equal_1_normalized`).
 
-        :param params: Description
-        :type params: PhysicsMethodParams
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing `n_equal_1_mode` and `n_equal_1_normalized`.
 
         References
-        https://github.com/MIT-PSFC/disruption-py/issues/261
-        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_n1_bradial_d3d.m
-
-        This method was previously removed in v0.8
+        -------
+        - original source: [get_n1_bradial_d3d.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/DIII-D/get_n1_bradial_d3d.m)
+        - pull requests:
+        - issues: #[261](https://github.com/MIT-PSFC/disruption-py/issues/261)
         """
         # The following shots are missing bradial calculations in MDSplus and
         # must be loaded from a separate datafile
-        # TODO: re-check these shot range
         if 156199 <= params.shot_id <= 172430:
-            # TODO: load from tree files on disc
+            # TODO: load data from custom tree structures
             raise NotImplementedError
         if 176030 <= params.shot_id <= 176912:
-            # TODO: load from netcdf file on disc
+            # TODO: load data from NetCDF file
             raise NotImplementedError
 
         try:
@@ -1023,7 +1033,7 @@ class D3DPhysicsMethods:
         n1rms, t_n1rms = params.mds_conn.get_data_with_dims(r"\n1rms", tree_name="d3d")
         n1rms *= 1.0e-4  # Gauss -> Tesla
         t_n1rms /= 1e3  # [ms] -> [s]
-        n1rms = interp1(t_n1rms, n1rms, params.times)    
+        n1rms = interp1(t_n1rms, n1rms, params.times)
         # Calculate n1rms_norm
         b_tor = D3DPhysicsMethods.get_btor(params)["btor"]
         if np.isnan(b_tor).all():
