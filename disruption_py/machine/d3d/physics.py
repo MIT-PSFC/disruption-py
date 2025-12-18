@@ -899,8 +899,41 @@ class D3DPhysicsMethods:
         return {"zcur": z_cur, "zcur_normalized": z_cur_norm}
 
     @staticmethod
+    @cache_method
+    @physics_method(columns=["btor"], tokamak=Tokamak.D3D)
+    def get_btor(params: PhysicsMethodParams):
+        """
+        Calculate the toroidal magnetic field.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing the toroidal magnetic field (`btor`).
+
+        References
+        -------
+        # TODO: finish references
+        """
+        try:
+            b_tor, t_b_tor = params.mds_conn.get_data_with_dims(
+                f"ptdata('bt', {params.shot_id})"
+            )  # [ms], [T]
+        except mdsExceptions.MdsException as e:
+            params.logger.warning("Failed to get b_tor signal")
+            params.logger.opt(exception=True).debug(e)
+            return {"btor": [np.nan]}
+        t_b_tor /= 1e3  # [ms] -> [s]
+        b_tor = interp1(t_b_tor, b_tor, params.times)
+        return {"btor": b_tor}
+
+    @staticmethod
     @physics_method(
-        columns=["n_equal_1_normalized", "n_equal_1_mode", "btor"],
+        columns=["n_equal_1_normalized", "n_equal_1_mode"],
         tokamak=Tokamak.D3D,
     )
     def get_n1_bradial_parameters(params: PhysicsMethodParams):
@@ -950,25 +983,16 @@ class D3DPhysicsMethods:
         n_equal_1_mode = interp1(t_n1, n_equal_1_mode, params.times)
 
         # Calculate n_equal_1_normalized
-        # TODO: move b_tor calculation to an individual method?
-        # TODO: shouldn't we interpolate b_tor to n1_mode timebase, compute _norm, then interpolate to output timebase?
-        try:
-            b_tor, t_b_tor = params.mds_conn.get_data_with_dims(
-                f"ptdata('bt', {params.shot_id})"
-            )  # [ms], [T]
-            t_b_tor /= 1e3  # [ms] -> [s]
-            b_tor = interp1(t_b_tor, b_tor, params.times)  # [T]
-            n_equal_1_normalized = n_equal_1_mode / np.abs(b_tor)
-        except mdsExceptions.MdsException as e:
+        b_tor = D3DPhysicsMethods.get_btor(params)["btor"]
+        if np.isnan(b_tor).all():
             params.logger.warning(
                 "Failed to get b_tor signal to compute n_equal_1_normalized"
             )
-            params.logger.opt(exception=True).debug(e)
             n_equal_1_normalized = [np.nan]
+        n_equal_1_normalized = n_equal_1_mode / np.abs(b_tor)
         return {
             "n_equal_1_mode": n_equal_1_mode,
             "n_equal_1_normalized": n_equal_1_normalized,
-            "btor": b_tor,
         }
 
     @staticmethod
@@ -998,21 +1022,15 @@ class D3DPhysicsMethods:
         n1rms, t_n1rms = params.mds_conn.get_data_with_dims(r"\n1rms", tree_name="d3d")
         n1rms *= 1.0e-4  # Gauss -> Tesla
         t_n1rms /= 1e3  # [ms] -> [s]
-        n1rms = interp1(t_n1rms, n1rms, params.times)
+        n1rms = interp1(t_n1rms, n1rms, params.times)    
         # Calculate n1rms_norm
-        try:
-            b_tor, t_b_tor = params.mds_conn.get_data_with_dims(
-                f"ptdata('bt', {params.shot_id})"
-            )
-            t_b_tor /= 1e3  # [ms] -> [s]
-            b_tor = interp1(t_b_tor, b_tor, params.times)  # [T]
-            n1rms_norm = n1rms / np.abs(b_tor)
-        except mdsExceptions.MdsException as e:
+        b_tor = D3DPhysicsMethods.get_btor(params)["btor"]
+        if np.isnan(b_tor).all():
             params.logger.warning(
-                "Failed to get b_tor signal to compute n1rms_normalized"
+                "Failed to get b_tor signal to compute n_equal_1_normalized"
             )
-            params.logger.opt(exception=True).debug(e)
             n1rms_norm = [np.nan]
+        n1rms_norm = n1rms / np.abs(b_tor)
         return {"n1rms": n1rms, "n1rms_normalized": n1rms_norm}
 
     # TODO: Need to test and unblock recalculating peaking factors
