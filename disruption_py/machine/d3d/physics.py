@@ -899,6 +899,72 @@ class D3DPhysicsMethods:
         return {"zcur": z_cur, "zcur_normalized": z_cur_norm}
 
     @staticmethod
+    @physics_method(
+        columns=["n_equal_1_normalized", "n_equal_1_mode"],
+        tokamak=Tokamak.D3D,
+    )
+    def get_n1_bradial_parameters(params: PhysicsMethodParams):
+        '''
+        TODO: finish docstring
+        Docstring for get_n1_bradial_parameters
+        
+        :param params: Description
+        :type params: PhysicsMethodParams
+        
+        References
+        https://github.com/MIT-PSFC/disruption-py/issues/261
+        https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_n1_bradial_d3d.m
+        
+        This method was previously removed in v0.8
+        '''
+        # The following shots are missing bradial calculations in MDSplus and
+        # must be loaded from a separate datafile
+        # TODO: re-check these shot range
+        if 156199 <= params.shot_id <= 172430:
+            # TODO: load from tree files on disc
+            raise NotImplementedError
+        if 176030 <= params.shot_id <= 176912:
+            # TODO: load from netcdf file on disc
+            raise NotImplementedError
+        
+        try:
+            # Get data from the ONFR system
+            n_equal_1_mode, t_n1 = params.mds_conn.get_data_with_dims(
+                f"ptdata('onsbradial', {params.shot_id})",
+            )   # [G], [ms] # TODO: check unit
+        except mdsExceptions.MdsException:
+            try:
+                # Fallback: get data from the legacy DUD system
+                n_equal_1_mode, t_n1 = params.mds_conn.get_data_with_dims(
+                    f"ptdata('dusbradial', {params.shot_id})",
+                )   # [G], [ms] # TODO: check unit
+                params.logger.verbose('n_equal_1_mode: Failed to get ONSBRADIAL signal. Use DUSBRADIAL instead.')
+            except mdsExceptions.MdsException:
+                params.logger.debug("n_equal_1_mode: Failed to get either ONSBRADIAL or DUSBRADIAL signal")
+                return {"n_equal_1_normalized": [np.nan], "n_equal_1_mode": [np.nan]}
+        t_n1 /= 1e3 # [ms] -> [s]
+        n_equal_1_mode = interp1(t_n1, n_equal_1_mode, params.times)
+        
+        # Calculate n_equal_1_normalized
+        # TODO: move b_tor calculation to an individual method?
+        # TODO: shouldn't we interpolate b_tor to n1_mode timebase, compute _norm, then interpolate to output timebase?
+        try:
+            b_tor, t_b_tor = params.mds_conn.get_data_with_dims(
+                f"ptdata('bt', {params.shot_id})"
+            )   # [ms], [T?]    # TODO: check unit -- this should be identical to n1rms_norm computation
+            t_b_tor /= 1e3  # [ms] -> [s]
+            b_tor = interp1(t_b_tor, b_tor, params.times)  # [T]
+            n_equal_1_normalized = n_equal_1_mode / np.abs(b_tor)
+        except mdsExceptions.MdsException as e:
+            params.logger.warning(
+                "Failed to get b_tor signal to compute n_equal_1_normalized"
+            )
+            params.logger.opt(exception=True).debug(e)
+            n_equal_1_normalized = [np.nan]
+        # TODO: return btor? Yes in CMOD and EAST
+        return {"n_equal_1_mode": n_equal_1_mode, "n_equal_1_normalized": n_equal_1_normalized}
+
+    @staticmethod
     @physics_method(columns=["n1rms", "n1rms_normalized"], tokamak=Tokamak.D3D)
     def get_n1rms_parameters(params: PhysicsMethodParams):
         r"""
