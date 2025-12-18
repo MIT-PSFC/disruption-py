@@ -2148,12 +2148,17 @@ class CmodPhysicsMethods:
             for fit_type in ['polynomial', 'mtanh']:
                 nodename_data = f".yag_fit.{quant}_psinorm.{fit_type}.profile"
                 nodename_coord = f".yag_fit.{quant}_psinorm.{fit_type}.profrval"
+                nodename_penalty = f".yag_fit.{quant}_psinorm.{fit_type}.penalty"
                 try:
                     profile_data, profile_time = params.mds_conn.get_data_with_dims(
                         nodename_data,
                         tree_name="electrons",
                     )
                     coord_data = params.mds_conn.get_data(nodename_coord, tree_name="electrons")
+                    profile_penalty = params.mds_conn.get_data(
+                        nodename_penalty,
+                        tree_name="electrons",
+                    )
 
                     # Linear profile interpolation in psinorm
                     profile_data_psinorm_interp = interp1(
@@ -2171,6 +2176,13 @@ class CmodPhysicsMethods:
                         kind="previous",
                     )
 
+                    profile_penalty_interp = interp1(
+                        profile_time,
+                        profile_penalty,
+                        params.times,
+                        kind="previous",
+                    )
+
                     # Store profile data and psi coord
                     data_vars[f"{quant}_{fit_type}_profile"] = xr.DataArray(
                         profile_data_time_interp.astype(np.float32).T,
@@ -2178,6 +2190,13 @@ class CmodPhysicsMethods:
                         coords={
                             "time": ("idx", params.times),
                             "psinorm": psinorm_new.astype(np.float32),
+                        },
+                    )
+                    data_vars[f"{quant}_{fit_type}_penalty"] = xr.DataArray(
+                        profile_penalty_interp.astype(np.float32),
+                        dims=("idx"),
+                        coords={
+                            "time": ("idx", params.times),
                         },
                     )
                 except Exception as e:
