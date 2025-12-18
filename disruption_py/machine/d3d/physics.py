@@ -980,6 +980,7 @@ class D3DPhysicsMethods:
                 )
                 return {"n_equal_1_normalized": [np.nan], "n_equal_1_mode": [np.nan]}
         t_n1 /= 1e3  # [ms] -> [s]
+        n_equal_1_mode *= 1.0e-4  # [G] -> [T]
         n_equal_1_mode = interp1(t_n1, n_equal_1_mode, params.times)
 
         # Calculate n_equal_1_normalized
