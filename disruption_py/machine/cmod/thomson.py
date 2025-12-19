@@ -328,14 +328,18 @@ class CmodThomsonGPProfiles:
 
     @jax.jit
     def gp_profile_single_timestep(
-        signal_data,
-        signal_error,
-        signal_rho,
-        result_rho,
-        edge_rho=1.2,
-        edge_value=1e-3,
-        edge_error=0.5,
-        epsilon=1e-3,
+        signal_data: jnp.ndarray,
+        signal_error: jnp.ndarray,
+        signal_rho: jnp.ndarray,
+        result_rho: jnp.ndarray,
+        kernel: gpx.kernels.AbstractKernel,
+        edge_rho: float,
+        edge_value: float,
+        edge_error: float,
+        epsilon: float,
+        outlier_penalty: float,
+        outlier_cutoff: float,
+        jitter: float,
         ):
         """
         Fit a single timestep using Gaussian Processes.
@@ -366,21 +370,28 @@ class CmodThomsonGPProfiles:
             The normalized radius (rho) values corresponding to the signal data.
         result_rho : jnp.ndarray
             The rho values where the fitted profile should be evaluated.
-        edge_rho : float, optional
-            The rho value at the edge where the signal is expected to approach edge_value (default is 1.2).
-        edge_value : float, optional
-            The expected signal value at edge_rho (default is 1e-3).
-        edge_error : float, optional
-            The uncertainty associated with the edge_value (default is 0.5).
-        epsilon : float, optional
-            A small value added to avoid log(0) issues (default is 1e-3).
+        kernel : gpx.kernels.AbstractKernel
+            The kernel to use for the Gaussian Process. Must be initialized outside this jitted function.
+        edge_rho : float
+            The rho value at the edge where the signal is expected to approach edge_value
+        edge_value : float
+            The expected signal value at edge_rho.
+        edge_error : float
+            The uncertainty associated with the edge_value.
+        epsilon : float
+            A small value added to avoid log(0) issues.
+        outlier_penalty : float
+            The error value to assign to identified outliers to effectively ignore them.
+        outlier_cutoff : float
+            The rho value below which outliers will be identified.
+        jitter : float
+            A small jitter value added to the diagonal of the covariance matrix for numerical stability.
 
         Returns
         -------
         jnp.ndarray, jnp.ndarray
             The fitted signal profile and its standard deviation evaluated at result_rho.
         """
-        kernel = gpx.kernels.Matern32()  # Kernel that allows some roughness but is still smooth
 
         # Ensure inputs are jnp arrays with a flat shape. They will be reshaped as needed for given matrix operations.
         signal_data = jnp.array(signal_data).flatten()
@@ -405,7 +416,7 @@ class CmodThomsonGPProfiles:
         # Perform a quick GP fit without boundary conditions to identify outliers
         K_rough = kernel.gram(rho2.reshape(-1,1)).to_dense()  # K(X, X), prior covariance at observed points
         noise_rough = jnp.diag(errors_log ** 2)  # Observation noise, GPJax uses variance
-        K_total_rough = K_rough + noise_rough + jnp.eye(len(rho2)) * 1e-6  # Add small jitter for numerical stability
+        K_total_rough = K_rough + noise_rough + jnp.eye(len(rho2)) * jitter  # Add small jitter for numerical stability
         # Make predictions at observed points
         alpha = jnp.linalg.solve(K_total_rough, observations_log)
         predictions_rough = K_rough @ alpha
@@ -414,12 +425,12 @@ class CmodThomsonGPProfiles:
         predictions_std = jnp.sqrt(jnp.maximum(predictions_var, 0))
         # Identify outliers as core points where residual > 3 * predicted stddev
         residuals = jnp.abs(observations_log - predictions_rough)
-        outlier_mask = (residuals > (3 * predictions_std)) & (signal_rho < 0.8)
+        outlier_mask = (residuals > (3 * predictions_std)) & (signal_rho < outlier_cutoff)
         
         # Make new arrays without outliers
-        observations_clean = observations_log[~outlier_mask]
-        errors_clean = errors_log[~outlier_mask]
-        rho2_clean = rho2[~outlier_mask]
+        errors_clean = jnp.where(outlier_mask, outlier_penalty, errors_log)
+        observations_clean = observations_log  # Value won't matter due to large error
+        rho2_clean = rho2
 
         # Add synthetic edge point
         y = jnp.concatenate(
@@ -475,7 +486,7 @@ class CmodThomsonGPProfiles:
         
         # Add observation noise
         noise_aug = jnp.diag(jnp.concatenate([y_std**2, y_deriv_bc_std**2]))
-        K_total_aug = K_aug + noise_aug + jnp.eye(K_aug.shape[0]) * 1e-6  # Add small jitter for numerical stability
+        K_total_aug = K_aug + noise_aug + jnp.eye(K_aug.shape[0]) * jitter  # Add small jitter for numerical stability
 
         # Prepare augmented observations
         y_aug = jnp.concatenate([y, y_deriv_bc])
@@ -504,7 +515,20 @@ class CmodThomsonGPProfiles:
         
         return signal_pred, signal_error
 
-    def gp_profile(self, signal_data, signal_rho, result_rho):
+    def gp_profile(
+        signal_data, 
+        signal_error, 
+        signal_rho, 
+        result_rho, 
+        kernel=gpx.kernels.Matern32(),
+        edge_rho=1.2,
+        edge_value=1e-3,
+        edge_error=0.5,
+        epsilon=1e-3,
+        outlier_penalty=1e6,
+        outlier_cutoff=0.8,
+        jitter=1e-6,
+    ):
         """
         Fit Gaussian Process profiles over multiple timesteps.
 
@@ -512,10 +536,28 @@ class CmodThomsonGPProfiles:
         ----------
         signal_data : jnp.ndarray
             The signal data to fit. Expected shape is (n_times, n_measurements).
+        signal_error : jnp.ndarray
+            The standard deviations associated with the signal data. Expected shape is (n_times, n_measurements).
         signal_rho : jnp.ndarray
-            The normalized radius (rho) values corresponding to the signal data. Expected shape is (n_measurements,).
+            The normalized radius (rho) values corresponding to the signal data. Expected shape is (n_times, n_measurements).
         result_rho : jnp.ndarray
             The rho values where the fitted profile should be evaluated. Expected shape is (n_result_points,).
+        kernel : gpx.kernels.Kernel, optional
+            The kernel to use for the Gaussian Process (default is Matern32).
+        edge_rho : float, optional
+            The rho value at the edge where the signal is expected to approach edge_value (default is 1.2).
+        edge_value : float, optional
+            The expected signal value at edge_rho (default is 1e-3).
+        edge_error : float, optional
+            The uncertainty associated with the edge_value (default is 0.5).
+        epsilon : float, optional
+            A small value added to avoid log(0) issues (default is 1e-3).
+        outlier_penalty : float, optional
+            The error value to assign to identified outliers to effectively ignore them (default is 1e6).
+        outlier_cutoff : float, optional
+            The rho value below which outliers will be identified (default is 0.8).
+        jitter : float, optional
+            A small jitter value added to the diagonal of the covariance matrix for numerical stability (default is 1e-6).
 
         Returns
         -------
@@ -523,4 +565,27 @@ class CmodThomsonGPProfiles:
             The fitted signal profiles and their standard deviations evaluated at result_rho.
             Shapes are both (n_times, n_result_points).
         """
+
+        signal_pred_all, signal_error_all = jax.vmap(
+            CmodThomsonGPProfiles.gp_profile_single_timestep,
+            in_axes=(0, 0, 0, None, None, None, None, None, None, None, None, None),  # 12 args: data, error, rho (all vmapped), result_rho, edge_rho, edge_value, edge_error, epsilon, kernel
+            out_axes=(0, 0)
+        )(
+            signal_data,
+            signal_error,
+            signal_rho,
+            result_rho,
+            kernel,
+            edge_rho,
+            edge_value,
+            edge_error,
+            epsilon,
+            outlier_penalty,
+            outlier_cutoff,
+            jitter,
+        )
+
+        return signal_pred_all, signal_error_all
+
+        
         

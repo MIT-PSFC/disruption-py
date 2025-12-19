@@ -21,7 +21,7 @@ from disruption_py.core.utils.math import (
     interp1,
 )
 from disruption_py.inout.mds import mdsExceptions
-from disruption_py.machine.cmod.thomson import CmodThomsonDensityMeasure
+from disruption_py.machine.cmod.thomson import CmodThomsonDensityMeasure, CmodThomsonGPProfiles
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -2233,204 +2233,243 @@ class CmodPhysicsMethods:
         return profile_ds
     
     @staticmethod
-    @physics_method(
-        tokamak=Tokamak.CMOD,
-    )
-    def get_thomson_points(params: PhysicsMethodParams):
+    @cache_method
+    def _get_thomson_channels_raw(params: PhysicsMethodParams):
         """
-        Retrieve raw Thomson scattering measurement points for electron temperature and density.
+        Retrieve raw Thomson scattering measurement channels for electron temperature and density.
         Combines both core and edge Thomson data into a single dataset.
 
         A few notes:
         - Thomson YAG time by default runs from -0.5s to 2.0s (https://cmodwiki.psfc.mit.edu/index.php/Thomson_scattering_programming)
         - See https://cmodwiki.psfc.mit.edu/index.php/Thomson_Scattering
-        - See https://cmodwiki.psfc.mit.edu/index.php/Edge_Thomson_Scattering
         """
 
-        # ========== Get Core Thomson Data ==========
-        # TODO(ZanderKeith) verify this rho lines up with the R,Z and EFIT rho
-        nodename_rho_core = f".yag_new.results.profiles.rho_t"
-        rho_core_data, rho_core_time = params.mds_conn.get_data_with_dims(nodename_rho_core, tree_name="electrons")
-        # Cut time to positive values only
-        valid_time_indices = rho_core_time >= 0
-        rho_core_data = rho_core_data[:, valid_time_indices]
-        rho_core_time = rho_core_time[valid_time_indices]
-        # Replace -1 with nan
-        rho_core_data[rho_core_data == -1] = np.nan
+        core_nodes = {
+            "rho": ".yag_new.results.profiles.rho_t",
+            "ne": ".yag_new.results.profiles.ne_rz",
+            "ne_error": ".yag_new.results.profiles.ne_err",
+            "te": ".yag_new.results.profiles.te_rz",
+            "te_error": ".yag_new.results.profiles.te_err",
+        }
+        edge_nodes = {
+            "rho": ".yag_edgets.results.psinorm",
+            "ne": ".yag_edgets.results.ne",
+            "ne_error": ".yag_edgets.results.ne.error",
+            "te": ".yag_edgets.results.te",
+            "te_error": ".yag_edgets.results.te.error",
+        }
 
-        rho_core_data_interp = interp1(
-            rho_core_time,
-            rho_core_data,
-            params.times,
-            kind="previous",
-        )
-
-        core_data = {}
-        for quant in ["ne", "te"]:
-            nodename_data = f".yag_new.results.profiles.{quant}_rz"
-            nodename_error = f".yag_new.results.profiles.{quant}_err"
-
-            profile_data, profile_time = params.mds_conn.get_data_with_dims(
-                nodename_data,
-                tree_name="electrons",
-            )
-            error_data = params.mds_conn.get_data(
-                nodename_error,
-                tree_name="electrons",
-            )
-            # Cut time to positive values only
-            valid_time_indices = profile_time >= 0
-            profile_data = profile_data[:, valid_time_indices]
-            error_data = error_data[:, valid_time_indices]
-            profile_time = profile_time[valid_time_indices]
-            # Replace 0 with nan
-            profile_data[profile_data == 0] = np.nan
-            error_data[error_data == 0] = np.nan
-
-            # Raise error if profile and rho time do not match
-            if not np.array_equal(profile_time, rho_core_time):
-                raise ValueError(
-                    f"Thomson scattering {quant} profile time does not match rho time."
-                )
-
-            # Rectilinear data interpolation in time
-            profile_data_interp = interp1(
-                profile_time,
-                profile_data,
-                params.times,
-                kind="previous",
-            )
-            error_data_interp = interp1(
-                profile_time,
-                error_data,
-                params.times,
-                kind="previous",
-            )
-
-            core_data[quant] = profile_data_interp.astype(np.float32).T
-            core_data[f"{quant}_error"] = error_data_interp.astype(np.float32).T
-
-        n_core_channels = rho_core_data.shape[0]
-
-        # ========== Get Edge Thomson Data ==========
-        nodename_rho_edge = f".yag_edgets.results.psinorm"
-        rho_edge_data, rho_edge_time = params.mds_conn.get_data_with_dims(nodename_rho_edge, tree_name="electrons")
-        # Cut time to positive values only
-        valid_time_indices = rho_edge_time >= 0
-        rho_edge_data = rho_edge_data[:, valid_time_indices]
-        rho_edge_time = rho_edge_time[valid_time_indices]
-        # Replace -1 with nan
-        rho_edge_data[rho_edge_data == -1] = np.nan
-
-        rho_edge_data_interp = interp1(
-            rho_edge_time,
-            rho_edge_data,
-            params.times,
-            kind="previous",
-        )
-
-        edge_data = {}
-        for quant in ["ne", "te"]:
-            nodename_data = f".yag_edgets.results.{quant}"
-            nodename_error = f".yag_edgets.results.{quant}.error"
-
-            profile_data, profile_time = params.mds_conn.get_data_with_dims(
-                nodename_data,
-                tree_name="electrons",
-            )
-            error_data = params.mds_conn.get_data(
-                nodename_error,
-                tree_name="electrons",
-            )
-
-            # Cut time to positive values only
-            valid_time_indices = profile_time >= 0
-            profile_data = profile_data[:, valid_time_indices]
-            error_data = error_data[:, valid_time_indices]
-            profile_time = profile_time[valid_time_indices]
-            # Replace 0 with nan
-            profile_data[profile_data == 0] = np.nan
-            error_data[error_data == 0] = np.nan
-
-            # Raise error if profile and rho time do not match
-            if not np.array_equal(profile_time, rho_edge_time):
-                raise ValueError(
-                    f"Edge Thomson scattering {quant} profile time does not match rho time."
-                )
-
-            # Rectilinear data interpolation in time
-            profile_data_interp = interp1(
-                profile_time,
-                profile_data,
-                params.times,
-                kind="previous",
-            )
-            error_data_interp = interp1(
-                profile_time,
-                error_data,
-                params.times,
-                kind="previous",
-            )
-
-            if quant == "te":
-                # Edge Thomson Te is in eV, convert to keV to match core Thomson
-                profile_data_interp /= 1000.0
-                error_data_interp /= 1000.0
-
-            edge_data[quant] = profile_data_interp.astype(np.float32).T
-            edge_data[f"{quant}_error"] = error_data_interp.astype(np.float32).T
-
-        n_edge_channels = rho_edge_data.shape[0]
-
-        # ========== Combine Core and Edge Data ==========
-        n_total_channels = n_core_channels + n_edge_channels
-
-        # Create combined ts_channel coordinate
-        ts_channel = np.arange(n_total_channels, dtype=np.int32)
-
-        # Create array_source coordinate ("core" or "edge")
-        array_source = np.array(
-            ["core"] * n_core_channels + ["edge"] * n_edge_channels,
-            dtype=object
-        )
-
-        # Combine rho data
-        rho_combined = np.concatenate([
-            rho_core_data_interp.T,
-            rho_edge_data_interp.T
-        ], axis=1).astype(np.float32)
-
-        # Build data variables
         data_vars = {}
-        for quant in ["ne", "te"]:
-            # Combine core and edge data
-            combined_data = np.concatenate([
-                core_data[quant],
-                edge_data[quant]
-            ], axis=1)
-            combined_error = np.concatenate([
-                core_data[f"{quant}_error"],
-                edge_data[f"{quant}_error"]
-            ], axis=1)
+        for region, nodes in zip(["core", "edge"], [core_nodes, edge_nodes]):
+            # Retrieve rho data
+            rho_data, rho_time = params.mds_conn.get_data_with_dims(
+                nodes["rho"],
+                tree_name="electrons",
+            )
+            # Cut time to positive values only
+            valid_time_indices = rho_time >= 0
+            rho_data = rho_data[:, valid_time_indices]
+            rho_time = rho_time[valid_time_indices]
+            # Replace -1 with nan
+            rho_data[rho_data == -1] = np.nan
 
-            data_vars[f"{quant}_points"] = xr.DataArray(
-                combined_data,
-                dims=("idx", "ts_channel"),
+            data_vars[f"rho_{region}"] = xr.DataArray(
+                rho_data.astype(np.float32).T,
+                dims=("time", f"{region}_channel"),
                 coords={
-                    "time": ("idx", params.times),
-                    "ts_channel": ts_channel,
-                    "ts_rho": (("idx", "ts_channel"), rho_combined),
-                    "ts_array_source": ("ts_channel", array_source),
+                    "time": rho_time,
+                    f"{region}_channel": np.arange(rho_data.shape[0]),
                 },
             )
-            data_vars[f"{quant}_points_error"] = xr.DataArray(
-                combined_error,
-                dims=("idx", "ts_channel"),
+
+            # Retrieve profiles for ne and te
+            for quant in ["ne", "te"]:
+                profile_data, profile_time = params.mds_conn.get_data_with_dims(
+                    nodes[quant],
+                    tree_name="electrons",
+                )
+                error_data = params.mds_conn.get_data(
+                    nodes[f"{quant}_error"],
+                    tree_name="electrons",
+                )
+                # Cut time to positive values only
+                valid_time_indices = profile_time >= 0
+                profile_data = profile_data[:, valid_time_indices]
+                error_data = error_data[:, valid_time_indices]
+                profile_time = profile_time[valid_time_indices]
+                # Replace 0 with nan
+                profile_data[profile_data == 0] = np.nan
+                error_data[error_data == 0] = np.nan
+
+                if region == "edge" and quant == "te":
+                    # Edge Te profile is given in eV, convert to keV
+                    profile_data = profile_data / 1000.0
+                    error_data = error_data / 1000.0
+
+                # Raise error if profile and rho time do not match
+                if not np.array_equal(profile_time, rho_time):
+                    raise ValueError(
+                        f"{region.capitalize()} Thomson scattering {quant} profile time does not match rho time."
+                    )
+
+                data_vars[f"{quant}_{region}"] = xr.DataArray(
+                    profile_data.astype(np.float32).T,
+                    dims=("time", f"{region}_channel"),
+                    coords={
+                        "time": profile_time,
+                        f"{region}_channel": np.arange(profile_data.shape[0]),
+                    },
+                )
+                data_vars[f"{quant}_error_{region}"] = xr.DataArray(
+                    error_data.astype(np.float32).T,
+                    dims=("time", f"{region}_channel"),
+                    coords={
+                        "time": profile_time,
+                        f"{region}_channel": np.arange(error_data.shape[0]),
+                    },
+                )
+
+        # Combine core and edge data into a single dataset
+        n_core_channels = data_vars["ne_core"].shape[1]
+        n_edge_channels = data_vars["ne_edge"].shape[1]
+        ts_channel = np.arange(
+            n_core_channels + n_edge_channels
+        )
+        array_source = np.array(["core"] * n_core_channels + ["edge"] * n_edge_channels)
+        rho_combined = np.concatenate(
+            [data_vars["rho_core"].values, data_vars["rho_edge"].values],
+            axis=1,
+        )
+
+        profile_ds = xr.Dataset(
+            data_vars={
+                "ts_channel_rho": (("time", "ts_channel_idx"), rho_combined.astype(np.float32)),
+                "ts_channel_ne": (("time", "ts_channel_idx"), np.concatenate(
+                    [data_vars["ne_core"].values, data_vars["ne_edge"].values],
+                    axis=1,
+                ).astype(np.float32)),
+                "ts_channel_ne_error": (("time", "ts_channel_idx"), np.concatenate(
+                    [data_vars["ne_error_core"].values, data_vars["ne_error_edge"].values],
+                    axis=1,
+                ).astype(np.float32)),
+                "ts_channel_te": (("time", "ts_channel_idx"), np.concatenate(
+                    [data_vars["te_core"].values, data_vars["te_edge"].values],
+                    axis=1, 
+                ).astype(np.float32)),
+                "ts_channel_te_error": (("time", "ts_channel_idx"), np.concatenate(
+                    [data_vars["te_error_core"].values, data_vars["te_error_edge"].values],
+                    axis=1,
+                ).astype(np.float32)),
+            },
+            coords={
+                "time": data_vars["rho_core"]["time"].values,
+                "ts_channel_idx": ts_channel,
+                "array_source": ("ts_channel_idx", array_source),
+            },
+            attrs={
+                "description": "Raw Thomson scattering measurement channels from core and edge systems",
+            }
+        )
+
+        return profile_ds
+
+    @staticmethod
+    @physics_method(
+        tokamak=Tokamak.CMOD,
+    )
+    def get_thomson_channels(params: PhysicsMethodParams):
+        
+        ds_raw = CmodPhysicsMethods._get_thomson_channels_raw(params)
+        if ds_raw is None:
+            return None
+        
+        # Interpolate onto requested timebase
+        ds_interp = xr.Dataset(
+            data_vars={
+                var: (ds_raw[var].dims, interp1(
+                    ds_raw["time"].values,
+                    ds_raw[var].values.T,
+                    params.times,
+                ).T.astype(np.float32))
+                for var in ds_raw.data_vars
+            },
+            coords={
+                "time": ("idx", params.times),
+                "shot": ("idx", np.full(len(params.times), params.shot_id)),
+                "ts_channel_idx": ds_raw["ts_channel_idx"].values,
+                "array_source": ("ts_channel_idx", ds_raw["array_source"].values),
+            },
+            attrs=ds_raw.attrs,
+        )
+        # Remove 'time' as a dimension, since it's now 'idx'
+        # but keep it as a coordinate
+        ds_interp = ds_interp.swap_dims({"time": "idx"})
+
+        return ds_interp
+
+    @staticmethod
+    @physics_method(
+        tokamak=Tokamak.CMOD,
+    )
+    def get_gp_fit_profiles(params: PhysicsMethodParams):
+        """
+        Retrieve Thomson scattering profiles for electron temperature and density using Gaussian Process fitting.
+        """
+        import gpjax as gpx
+
+        ds_raw = CmodPhysicsMethods._get_thomson_channels_raw(params)
+        if ds_raw is None:
+            return None
+        
+        data_vars = {}
+        fit_rho = np.linspace(0, 1.2, 100)
+        for quant, edge_error in zip(['te', 'ne'], [0.5, 1e19]):
+            # Perform GP fit
+            signal_data = ds_raw[f'ts_channel_{quant}'].values
+            signal_error = ds_raw[f'ts_channel_{quant}_error'].values
+            signal_rho = ds_raw['ts_channel_rho'].values
+
+            fit_data, fit_error = CmodThomsonGPProfiles.gp_profile(
+                signal_data,
+                signal_error,
+                signal_rho,
+                result_rho=fit_rho,
+                kernel=gpx.kernels.Matern32(),
+                edge_rho=fit_rho[-1],
+                edge_error=edge_error,
+                epsilon=1e-3,
+                outlier_penalty=1e6,
+                outlier_cutoff=0.8,
+                jitter=1e-6,
+            )
+
+            # Interpolate onto requested timebase
+            fit_data_interp = interp1(
+                ds_raw["time"].values,
+                fit_data.T,
+                params.times,
+            ).T.astype(np.float32)
+
+            fit_error_interp = interp1(
+                ds_raw["time"].values,
+                fit_error.T,
+                params.times,
+            ).T.astype(np.float32)
+
+            data_vars[f"ts_gp_{quant}"] = xr.DataArray(
+                fit_data_interp,
+                dims=("idx", "ts_gp_rho"),
                 coords={
                     "time": ("idx", params.times),
-                    "ts_channel": ts_channel,
-                    "ts_rho": (("idx", "ts_channel"), rho_combined),
-                    "ts_array_source": ("ts_channel", array_source),
+                    "ts_gp_rho": fit_rho.astype(np.float32),
+                },
+            )
+            data_vars[f"ts_gp_{quant}_error"] = xr.DataArray(
+                fit_error_interp,
+                dims=("idx", "ts_gp_rho"),
+                coords={
+                    "time": ("idx", params.times),
+                    "ts_gp_rho": fit_rho.astype(np.float32),
                 },
             )
 
@@ -2439,9 +2478,10 @@ class CmodPhysicsMethods:
             coords={
                 "time": ("idx", params.times),
                 "shot": ("idx", np.full(len(params.times), params.shot_id)),
+                "ts_gp_rho": fit_rho.astype(np.float32),
             },
             attrs={
-                "description": "Thomson scattering raw measurement points (core and edge combined)",
+                "description": "Thomson scattering profiles from Gaussian Process fitting",
             }
         )
         return profile_ds
