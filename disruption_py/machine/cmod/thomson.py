@@ -5,6 +5,11 @@
 import numpy as np
 import scipy as sp
 
+import jax
+jax.config.update("jax_enable_x64", True) # The data is in f32, but doing computations in f64 improves stability
+import jax.numpy as jnp
+import gpjax as gpx
+
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
 from disruption_py.inout.mds import mdsExceptions
@@ -314,3 +319,208 @@ class CmodThomsonDensityMeasure:
             psi[:, i] = sp.interpolate.griddata(points, values, (r, z), method="cubic")
 
         return psi
+
+
+class CmodThomsonGPProfiles:
+    """
+    Helper class for using Gaussian Processes to fit Thomson scattering profiles.
+    """
+
+    @jax.jit
+    def gp_profile_single_timestep(
+        signal_data,
+        signal_error,
+        signal_rho,
+        result_rho,
+        edge_rho=1.2,
+        edge_value=1e-3,
+        edge_error=0.5,
+        epsilon=1e-3,
+        ):
+        """
+        Fit a single timestep using Gaussian Processes.
+        Assumes there are no missing / nan values in the input data.
+
+        Since this is a 1D profile of a physical plasma quantity, we can make the following assumptions to constrain the fit:
+        1. The signal is always positive.
+        2. The signal has zero gradient at the core (rho=0).
+        3. The signal goes to some relatively known value at the edge (rho=edge_rho).
+        - For ne, Te, J, etc., this value should be 0
+        - For q it could be taken as something like 10
+
+        Implementing these assumptions is done as follows:
+        1. Use a log-transform on the signal values.
+        2. Using JAX, we compute covariences in both the kernel function and its derivative, and add a low-uncertainty data point at (0, signal(0)).
+        3. A synthetic data point is added at (edge_rho, edge_value) with uncertainty edge_error.
+
+        The final piece which makes the profiles 'look good' is fitting in rho^2 space.
+        This essentially spreads out the edge region, allowing the GP to vary more quickly there while remaining smooth in the core.
+
+        Parameters
+        ----------
+        signal_data : jnp.ndarray
+            The signal data to fit.
+        signal_error : jnp.ndarray
+            The standard deviations associated with the signal data.
+        signal_rho : jnp.ndarray
+            The normalized radius (rho) values corresponding to the signal data.
+        result_rho : jnp.ndarray
+            The rho values where the fitted profile should be evaluated.
+        edge_rho : float, optional
+            The rho value at the edge where the signal is expected to approach edge_value (default is 1.2).
+        edge_value : float, optional
+            The expected signal value at edge_rho (default is 1e-3).
+        edge_error : float, optional
+            The uncertainty associated with the edge_value (default is 0.5).
+        epsilon : float, optional
+            A small value added to avoid log(0) issues (default is 1e-3).
+
+        Returns
+        -------
+        jnp.ndarray, jnp.ndarray
+            The fitted signal profile and its standard deviation evaluated at result_rho.
+        """
+        kernel = gpx.kernels.Matern32()  # Kernel that allows some roughness but is still smooth
+
+        # Ensure inputs are jnp arrays with a flat shape. They will be reshaped as needed for given matrix operations.
+        signal_data = jnp.array(signal_data).flatten()
+        signal_error = jnp.array(signal_error).flatten()
+        signal_rho = jnp.array(signal_rho).flatten()
+        result_rho = jnp.array(result_rho).flatten()
+
+        # Normalize inputs by average value to improve numerical stability
+        norm_factor = jnp.mean(signal_data)
+        observations_norm = signal_data / norm_factor
+        errors_norm = signal_error / norm_factor
+
+        # Transform to log-space to enforce positivity
+        observations_log = jnp.log(observations_norm + epsilon)
+        # Error in log space std_y = |dy/dx| * std_x = (1/x) * std_x
+        # Intuition is that in log space we care about relative error, not absolute error
+        errors_log = errors_norm / (observations_norm + epsilon)
+
+        # Transform rho to rho^2 space to allow more variation near edge while maintaining smoothness in core
+        rho2 = signal_rho ** 2
+
+        # Perform a quick GP fit without boundary conditions to identify outliers
+        K_rough = kernel.gram(rho2.reshape(-1,1)).to_dense()  # K(X, X), prior covariance at observed points
+        noise_rough = jnp.diag(errors_log ** 2)  # Observation noise, GPJax uses variance
+        K_total_rough = K_rough + noise_rough + jnp.eye(len(rho2)) * 1e-6  # Add small jitter for numerical stability
+        # Make predictions at observed points
+        alpha = jnp.linalg.solve(K_total_rough, observations_log)
+        predictions_rough = K_rough @ alpha
+        # Compute prediction variance at training points
+        predictions_var = jnp.diag(K_rough - K_rough @ jnp.linalg.solve(K_total_rough, K_rough))
+        predictions_std = jnp.sqrt(jnp.maximum(predictions_var, 0))
+        # Identify outliers as core points where residual > 3 * predicted stddev
+        residuals = jnp.abs(observations_log - predictions_rough)
+        outlier_mask = (residuals > (3 * predictions_std)) & (signal_rho < 0.8)
+        
+        # Make new arrays without outliers
+        observations_clean = observations_log[~outlier_mask]
+        errors_clean = errors_log[~outlier_mask]
+        rho2_clean = rho2[~outlier_mask]
+
+        # Add synthetic edge point
+        y = jnp.concatenate(
+            [observations_clean, jnp.array([jnp.log(edge_value / norm_factor + epsilon)])]
+        )
+        y_std = jnp.concatenate(
+            [errors_clean, jnp.array([edge_error / norm_factor / (edge_value / norm_factor + epsilon)])]
+        )
+        x = jnp.concatenate(
+            [rho2_clean, jnp.array([edge_rho**2])]
+        )
+
+        # Now it's time to get funky
+        x_deriv_bc = jnp.array([0.0])  # Derivative boundary condition at rho=0
+        y_deriv_bc = jnp.array([0.0])  # We want d(signal)/d(rho) = 0 at rho=0
+        y_deriv_bc_std = jnp.array([1e-6])  # Small uncertainty on derivative BC, since the gradient really should be 0 there
+        
+        def _kernel_dx2(kernel, x1, x2):
+            """Compute dk(x1, x2)/dx2 with autodiff"""
+            def k_func(x2_arg):
+                return kernel(x1, x2_arg).squeeze()
+            grad_fn = jax.grad(k_func)
+            return grad_fn(x2)
+        
+        def _kernel_dx1_dx2(kernel, x1, x2):
+            """Compute d2k(x1, x2)/dx1dx2 with autodiff"""
+            def dk_dx2(x1_arg):
+                def k_func(x2_arg):
+                    return kernel(x1_arg, x2_arg).squeeze()
+                grad_fn = jax.grad(k_func)
+                return grad_fn(x2).squeeze()
+            grad_fn = jax.grad(dk_dx2)
+            return grad_fn(x1)
+        
+        # Build augmented kernel matrix
+        # K = [[K_ff,  K_fd],
+        #      [K_df,  K_dd]]
+        # where f = function values, d = derivatives
+
+        # K_ff: value-value covariances
+        K_ff = kernel.gram(x.reshape(-1, 1)).to_dense()
+        # K_fd: value-derivative cross-covariances
+        K_fd = jax.vmap(lambda x1: jax.vmap(lambda x2: _kernel_dx2(kernel, x1, x2))(x_deriv_bc.reshape(-1, 1)))(x.reshape(-1, 1)).reshape(-1, 1)
+        # K_df: derivative-value cross-covariances (just the transpose of K_fd)
+        K_df = K_fd.T
+        # K_dd: derivative-derivative covariances
+        K_dd = jax.vmap(lambda x1: jax.vmap(lambda x2: _kernel_dx1_dx2(kernel, x1, x2))(x_deriv_bc.reshape(-1, 1)))(x_deriv_bc.reshape(-1, 1)).reshape(-1, 1)
+
+        K_aug = jnp.block([
+            [K_ff, K_fd],
+            [K_df, K_dd]
+        ])
+        
+        # Add observation noise
+        noise_aug = jnp.diag(jnp.concatenate([y_std**2, y_deriv_bc_std**2]))
+        K_total_aug = K_aug + noise_aug + jnp.eye(K_aug.shape[0]) * 1e-6  # Add small jitter for numerical stability
+
+        # Prepare augmented observations
+        y_aug = jnp.concatenate([y, y_deriv_bc])
+
+        # Rho values to predict at
+        x_pred = result_rho**2
+
+        # Build cross-covariance matrix between prediction points and training points
+        K_star_f = kernel.cross_covariance(x_pred.reshape(-1, 1), x.reshape(-1, 1)) 
+        K_star_d = jax.vmap(lambda x1: jax.vmap(lambda x2: _kernel_dx2(kernel, x1, x2).squeeze())(x_deriv_bc.reshape(-1, 1)))(x_pred.reshape(-1, 1)).reshape(x_pred.shape[0], 1)
+        K_star = jnp.hstack([K_star_f, K_star_d])
+
+        # Make predictions at new points
+        alpha_aug = jnp.linalg.solve(K_total_aug, y_aug)
+        y_pred = K_star @ alpha_aug
+        # Compute prediction variance at training points
+        y_pred_var = jnp.diag(
+            kernel.gram(x_pred.reshape(-1, 1)).to_dense()
+            - K_star @ jnp.linalg.solve(K_total_aug, K_star.T)
+        )
+        y_error = jnp.sqrt(jnp.maximum(y_pred_var, 0))
+
+        # Transform back to normal space in rho and signal
+        signal_pred = jnp.exp(y_pred) * norm_factor - epsilon
+        signal_error = y_error * jnp.exp(y_pred) * norm_factor
+        
+        return signal_pred, signal_error
+
+    def gp_profile(self, signal_data, signal_rho, result_rho):
+        """
+        Fit Gaussian Process profiles over multiple timesteps.
+
+        Parameters
+        ----------
+        signal_data : jnp.ndarray
+            The signal data to fit. Expected shape is (n_times, n_measurements).
+        signal_rho : jnp.ndarray
+            The normalized radius (rho) values corresponding to the signal data. Expected shape is (n_measurements,).
+        result_rho : jnp.ndarray
+            The rho values where the fitted profile should be evaluated. Expected shape is (n_result_points,).
+
+        Returns
+        -------
+        jnp.ndarray, jnp.ndarray
+            The fitted signal profiles and their standard deviations evaluated at result_rho.
+            Shapes are both (n_times, n_result_points).
+        """
+        
