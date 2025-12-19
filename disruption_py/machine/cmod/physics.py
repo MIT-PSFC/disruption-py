@@ -2390,6 +2390,7 @@ class CmodPhysicsMethods:
                     ds_raw["time"].values,
                     ds_raw[var].values.T,
                     params.times,
+                    kind="previous",
                 ).T.astype(np.float32))
                 for var in ds_raw.data_vars
             },
@@ -2448,12 +2449,14 @@ class CmodPhysicsMethods:
                 ds_raw["time"].values,
                 fit_data.T,
                 params.times,
+                kind="previous",
             ).T.astype(np.float32)
 
             fit_error_interp = interp1(
                 ds_raw["time"].values,
                 fit_error.T,
                 params.times,
+                kind="previous",
             ).T.astype(np.float32)
 
             data_vars[f"ts_gp_{quant}"] = xr.DataArray(

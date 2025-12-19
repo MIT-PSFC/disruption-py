@@ -404,7 +404,6 @@ class CmodThomsonGPProfiles:
         valid_mask = ~jnp.isnan(signal_data) & ~jnp.isnan(signal_error) & ~jnp.isnan(signal_rho) & (signal_data > 0) & (signal_error > 0)
 
         # Replace invalid data with 0 at the edge point
-        # Use nanmedian to ignore NaN values, then provide fallback if all values are NaN
         signal_data = jnp.where(valid_mask, signal_data, edge_value)
         signal_error = jnp.where(valid_mask, signal_error, outlier_penalty)  # Give invalid points huge error
         signal_rho = jnp.where(valid_mask, signal_rho, edge_rho)  # Dummy rho value for invalid points
