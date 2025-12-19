@@ -399,7 +399,18 @@ class CmodThomsonGPProfiles:
         signal_rho = jnp.array(signal_rho).flatten()
         result_rho = jnp.array(result_rho).flatten()
 
+        # Handle NaN and invalid values by replacing them with dummy values and giving them huge error bars
+        # This keeps array shapes constant for JIT compilation
+        valid_mask = ~jnp.isnan(signal_data) & ~jnp.isnan(signal_error) & ~jnp.isnan(signal_rho) & (signal_data > 0) & (signal_error > 0)
+
+        # Replace invalid data with 0 at the edge point
+        # Use nanmedian to ignore NaN values, then provide fallback if all values are NaN
+        signal_data = jnp.where(valid_mask, signal_data, edge_value)
+        signal_error = jnp.where(valid_mask, signal_error, outlier_penalty)  # Give invalid points huge error
+        signal_rho = jnp.where(valid_mask, signal_rho, edge_rho)  # Dummy rho value for invalid points
+
         # Normalize inputs by average value to improve numerical stability
+        # Use nanmean to handle any remaining NaNs
         norm_factor = jnp.mean(signal_data)
         observations_norm = signal_data / norm_factor
         errors_norm = signal_error / norm_factor
@@ -512,7 +523,12 @@ class CmodThomsonGPProfiles:
         # Transform back to normal space in rho and signal
         signal_pred = jnp.exp(y_pred) * norm_factor - epsilon
         signal_error = y_error * jnp.exp(y_pred) * norm_factor
-        
+
+        # If insufficient valid data (< 3 points), return NaN
+        n_valid = jnp.sum(valid_mask)
+        signal_pred = jnp.where(n_valid >= 3, signal_pred, jnp.nan)
+        signal_error = jnp.where(n_valid >= 3, signal_error, jnp.nan)
+
         return signal_pred, signal_error
 
     def gp_profile(
