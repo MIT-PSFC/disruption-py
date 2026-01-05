@@ -65,26 +65,6 @@ _Figure: Schematic flowchart of a typical DisruptionPy workflow (by: Y Wei)._
 The most recent revamp of DisruptionPy was partially supported by DOE FES under Award DE-SC0024368, ["Open and FAIR Fusion for Machine Learning Applications"](https://crea-psfc.github.io/open-fair-fusion/).
 
 
-## Repository layout
-
-Notable branches:
-
-- `main`, the [stable branch](https://github.com/MIT-PSFC/disruption-py/tree/main),
-- `dev`, the [development branch](https://github.com/MIT-PSFC/disruption-py/tree/dev),
-- `matlab`, the [historical branch](https://github.com/MIT-PSFC/disruption-py/tree/matlab).
-
-
-## Project layout
-
-Brief description of the folders in our project:
-
-- `disruption_py/`, package source code,
-- `docs/`, documentation sources,
-- `examples/`, example workflows,
-- `scripts/`, miscellaneous scripts,
-- `tests/`, testing workflows.
-
-
 ## Installation
 
 DisruptionPy is now open-source and [available at PyPI](https://pypi.org/project/disruption-py/)!
