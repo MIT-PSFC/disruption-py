@@ -75,7 +75,7 @@ Each device hosts experimental data separately and may require authorization for
 
 DisruptionPy itself does not provide access to any of the underlying servers.
 
-To obtain access, please contact your host at the desidered institution.
+To obtain access, please contact your host at the desired institution.
 
 ### Data sources
 
@@ -130,7 +130,7 @@ uvx disruption-py
 pipx install disruption-py
 ```
 
-If you use `uv`, please refer to this convenient snippet to execute DisruptionPy from any given branch: 
+If you use `uv`, please refer to this convenient snippet to execute DisruptionPy from any given branch:
 
 ```bash
 # execute from $DISPY_BRANCH, or dev as default
@@ -201,7 +201,7 @@ db_user = ""
 db_pass = ""
 ```
 
-The above configuration file may be exploited to further override any framework configuration parameter.
+The above configuration file may be used to further override any framework configuration parameter.
 
 
 ## Getting Started
@@ -234,7 +234,7 @@ options:
 ```
 
 A parameter-less command-line invocation would compute all physics methods for a given device on a few prototypical shots.
-If unspecified, the device is inferred from the local environment.  
+If unspecified, the device is inferred from the local environment.
 
 ```bash
 # execute default workflow
