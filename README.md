@@ -265,7 +265,7 @@ Make sure you refer to the latest version of our [development branch](https://gi
 
 #### before 2021
 
-The backbone material for this project, that is, the original MATLAB code, was authored by several contributors at [MIT PSFC](https://www.psfc.mit.edu/) before 2021:
+The ancestor MATLAB code was authored by several contributors at [MIT PSFC](https://www.psfc.mit.edu/) before 2021:
 
 - Robert Granetz, Principal Research Scientist,
 - Cristina Rea, then Research Scientist,
@@ -289,6 +289,8 @@ Several contributors have been involved in the development of the code since the
 - Josh Lorincz, Undergraduate Student,
 - Amos Decker, Undergraduate Student,
 - William Wei, PostDoctoral Associate.
+
+For a complete list of contributors, please refer to the [Contributors](https://github.com/MIT-PSFC/disruption-py/graphs/contributors) page.
 
 
 ## Citation
