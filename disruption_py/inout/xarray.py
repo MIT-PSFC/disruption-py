@@ -90,6 +90,9 @@ class XarrayConnection:
                 shot_id=shot_id,
             )
 
+        if return_xarray:
+            return None
+
         return np.array([np.nan])
 
     def cleanup(self):
