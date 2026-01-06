@@ -15,6 +15,8 @@ class MastEfitMethods:
 
     efit_properties = [
         "beta_tor_normal",
+        "beta_tor",
+        "beta_pol",
         "elongation",
         "elongation_axis",
         "magnetic_axis_r",
@@ -22,6 +24,12 @@ class MastEfitMethods:
         "triangularity_lower",
         "triangularity_upper",
         "minor_radius",
+        "bvac_rmag",
+        "bphi_rmag",
+        "li",
+        "whmd",
+        "vloop_static",
+        "q95",
     ]
 
     @staticmethod
@@ -49,5 +57,8 @@ class MastEfitMethods:
             signal = conn.get_data(params.shot_id, f"equilibrium/{prop}")
             item = MastPhysicsMethods.interpolate_1d(eq_time, signal, times)
             outputs[prop] = item
+
+        if "whmd" in outputs:
+            outputs['wmhd'] = outputs.pop('whmd')
 
         return outputs

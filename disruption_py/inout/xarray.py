@@ -70,13 +70,18 @@ class XarrayConnection:
         file_path = f"{self.folder_path}/{shot_id}.{self.file_ext}"
         return file_path
 
-    def get_data(self, shot_id: int, path: str):
+    def get_data(self, shot_id: int, path: str, return_xarray: bool = False):
         """Get data from the connection."""
         if self.data_tree is None:
             self.get_shot_connection(shot_id)
 
         try:
-            return self.data_tree[path].values
+            item = self.data_tree[path]
+
+            if return_xarray:
+                return item
+
+            return item.values
         except KeyError:
             logger.warning(
                 "PID #{pid} | Variable '{path}' not found for shot {shot_id}.",

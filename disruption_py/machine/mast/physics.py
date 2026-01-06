@@ -213,6 +213,72 @@ class MastPhysicsMethods:
         )
 
     @staticmethod
+    @physics_method(
+        columns=["soft_x_rays"],
+        tokamak=Tokamak.MAST,
+    )
+    def get_sxr(params: PhysicsMethodParams):
+        """
+        Retrieve soft X-ray (SXR) data.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing SXR data (`sxr_data`) and corresponding time points (`sxr_time`).
+        """
+        conn: XarrayConnection = params.mds_conn
+        hcam = conn.get_data(params.shot_id, "soft_x_rays/horizontal_cam_upper", return_xarray=True)
+        hcam = hcam.isel(horizontal_cam_upper_channel=7)
+        hcam = hcam.squeeze(drop=True)
+        hcam = hcam.drop_vars(["horizontal_cam_upper_channel"])
+        sxr_time = hcam.time.values
+        sxr_data = hcam.values
+
+        times = params.times
+        sxr_data = MastPhysicsMethods.interpolate_1d(sxr_time, sxr_data, times)
+        return {"soft_x_rays": sxr_data}
+
+    @staticmethod
+    @physics_method(
+        columns=["dalpha"],
+        tokamak=Tokamak.MAST,
+    )
+    def get_dalpha(params: PhysicsMethodParams):
+        """
+        Retrieve D-alpha signal data.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing D-alpha signal data (`dalpha`).
+        """
+        conn: XarrayConnection = params.mds_conn
+
+        dalpha = conn.get_data(params.shot_id, "spectrometer_visible/filter_spectrometer_dalpha_voltage", return_xarray=True)
+        dalpha = dalpha.isel(dalpha_channel=2)
+        dalpha = dalpha.dropna(dim="time")
+        dalpha = dalpha.squeeze(drop=True)
+        dalpha = dalpha.drop_vars("dalpha_channel")
+        dalpha_time = dalpha.time.values
+        dalpha_data = dalpha.values
+
+        times = params.times
+        dalpha_data = MastPhysicsMethods.interpolate_1d(
+            dalpha_time, dalpha_data, times
+        )
+        return {"dalpha": dalpha_data}
+
+    @staticmethod
     def _get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
         """
         Calculate electron density, its time derivative, and the Greenwald fraction.
