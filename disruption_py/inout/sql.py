@@ -94,7 +94,7 @@ class ShotDatabase:
 
         # dummy database
         if not db_conf.get("host") or not db_conf.get("db_name"):
-            logger.warning("No SQL server/database!")
+            logger.debug("Did not setup database.")
             return DummyDatabase()
 
         # read sybase login
