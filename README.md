@@ -120,20 +120,22 @@ Several public installations are currently maintained automatically, as outlined
 
 Most users will want to use DisruptionPy as a standalone application.
 
-DisruptionPy workflows can easily be executed on the fly, without first creating a dummy project.
+DisruptionPy can easily be installed in its own virtual environment without first creating a dummy project.
 
 ```bash
 # if you use uv
-uvx disruption-py
+uv tool install disruption-py
 
 # if you use pipx
 pipx install disruption-py
 ```
 
-If you use `uv`, please refer to this convenient snippet to execute DisruptionPy from any given branch:
+If you use `uv`, you can also execute DisruptionPy on the fly without a persistent virtual environment, either from PyPI or from any branch on Github:
 
 ```bash
-# execute from $DISPY_BRANCH, or dev as default
+# if you use uv, from PyPI
+uvx disruption-py
+# or from Github
 uvx --from git+https://github.com/MIT-PSFC/disruption-py@"${DISPY_BRANCH:-dev}" disruption-py
 ```
 
