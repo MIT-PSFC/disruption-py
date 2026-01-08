@@ -106,6 +106,7 @@ We recommend using either [Poetry](https://python-poetry.org/) or [uv](https://d
 ### Branches
 
 We suggest to install DisruptionPy:
+
 - from the stable branch, `main`, for production workflows;
 - from the development branch, `dev`, for development workflows;
 - from any other branch, only for testing workflows.
@@ -235,11 +236,11 @@ options:
   -l LOG_LEVEL, --log-level LOG_LEVEL
 ```
 
-A parameter-less command-line invocation would compute all physics methods for a given device on a few prototypical shots.
+A parameter-less command-line invocation allows to compute all physics methods for a given device on a few prototypical shots.
 If unspecified, the device is inferred from the local environment.
 
 ```bash
-# execute default workflow
+# default workflow
 disruption-py
 ```
 
