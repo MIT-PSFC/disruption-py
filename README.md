@@ -28,7 +28,7 @@
 
 DisruptionPy is an open-source Scientific Python package for fast retrieval of experimental Fusion data from [MDSplus](https://www.mdsplus.org/) servers.
 The library allows an efficient database preparation for downstream analysis and/or ML model development for disruption studies.
-Currently supported machines are:
+Currently supported devices are:
 
 - [Alcator C-Mod](https://en.wikipedia.org/wiki/Alcator_C-Mod)
 - [DIII-D](https://en.wikipedia.org/wiki/DIII-D_(tokamak))
@@ -65,31 +65,86 @@ _Figure: Schematic flowchart of a typical DisruptionPy workflow (by: Y Wei)._
 The most recent revamp of DisruptionPy was partially supported by DOE FES under Award DE-SC0024368, ["Open and FAIR Fusion for Machine Learning Applications"](https://crea-psfc.github.io/open-fair-fusion/).
 
 
-## Repository layout
+## Devices
 
-Notable branches:
+DisruptionPy supports data extraction workflows on several fusion devices.
 
-- `main`, the [stable branch](https://github.com/MIT-PSFC/disruption-py/tree/main),
-- `dev`, the [development branch](https://github.com/MIT-PSFC/disruption-py/tree/dev),
-- `matlab`, the [historical branch](https://github.com/MIT-PSFC/disruption-py/tree/matlab).
+### Access
 
+Each device hosts experimental data separately and may require authorization for access.
 
-## Project layout
+DisruptionPy itself does not provide access to any of the underlying servers.
 
-Brief description of the folders in our project:
+To obtain access, please contact your host at the desired institution.
 
-- `disruption_py/`, package source code,
-- `docs/`, documentation sources,
-- `examples/`, example workflows,
-- `scripts/`, miscellaneous scripts,
-- `tests/`, testing workflows.
+### Data sources
 
+Most machines require both MDSplus and SQL database access for full functionality.
+
+| Device        | Institution | Data    | Metadata | Access           |
+|---------------|-------------|---------|----------|------------------|
+| Alcator C-Mod | MIT PSFC    | MDSplus | SQL      | :yellow_circle:  |
+| DIII-D        | GA          | MDSplus | SQL      | :yellow_circle:  |
+| EAST          | ASIPP       | MDSplus | SQL      | :red_circle:     |
+| HBT-EP        | Columbia    | MDSplus | -        | :yellow_circle:  |
 
 ## Installation
 
-DisruptionPy is now open-source and [available at PyPI](https://pypi.org/project/disruption-py/)!
+DisruptionPy is [open-source on Github](https://github.com/MIT-PSFC/disruption-py/) and [available at PyPI](https://pypi.org/project/disruption-py/)!
 
-For standard installations, please follow the usual way:
+### Pre-requisites
+
+Depending on the target device, DisruptionPy may need non-Python software to be installed as a pre-requisite.
+For more details, please refer to the Devices section above and our [Installation guide](INSTALL.md).
+
+### Dependencies
+
+DisruptionPy follows best practices for project metadata (eg: [pyproject.toml](https://peps.python.org/pep-0621/) and [dependency groups](https://peps.python.org/pep-0735/)) and can therefore be installed with all its dependencies through any standard Python package manager.
+
+We recommend using either [Poetry](https://python-poetry.org/) or [uv](https://docs.astral.sh/uv/) for a user-friendly virtual environment experience.
+
+### Branches
+
+We suggest to install DisruptionPy:
+
+- from the stable branch, `main`, for production workflows;
+- from the development branch, `dev`, for development workflows;
+- from any other branch, only for testing workflows.
+
+### A) Run pre-installed
+
+If executing on a supported server, installation might not be necessary at all!
+
+Several public installations are currently maintained automatically, as outlined in our [Installation guide](INSTALL.md).
+
+### B) Install as an application
+
+Most users will want to use DisruptionPy as a standalone application.
+
+DisruptionPy can easily be installed in its own virtual environment without first creating a dummy project.
+
+```bash
+# if you use uv
+uv tool install disruption-py
+
+# if you use pipx
+pipx install disruption-py
+```
+
+If you use `uv`, you can also execute DisruptionPy on the fly without a persistent virtual environment, either from PyPI or from any branch on Github:
+
+```bash
+# if you use uv, from PyPI
+uvx disruption-py
+# or from Github
+uvx --from git+https://github.com/MIT-PSFC/disruption-py@"${DISPY_BRANCH:-dev}" disruption-py
+```
+
+### C) Install as a dependency
+
+Some users will want to use DisruptionPy as a dependency within their own project.
+
+In order to install DisruptionPy, please choose the appropriate snippet:
 
 ```bash
 # if you use poetry
@@ -102,13 +157,54 @@ uv add disruption-py
 pip install disruption-py
 ```
 
-For custom installations, please refer to our [Installation guide](INSTALL.md).
+### D) Install from source
 
-Starting with [v0.11](https://github.com/MIT-PSFC/disruption-py/releases/tag/v0.11), we support execution through [on-the-fly virtual environment creation with `uv`](https://docs.astral.sh/uv/guides/tools/):
+Most developers will want to install DisruptionPy from source, in order to be able to modify the codebase as needed.
+
+As a quick reference, DisruptionPy can be cloned and installed as follows:
 
 ```bash
-uvx disruption-py
+git clone https://github.com/MIT-PSFC/disruption-py -b dev
+cd disruption-py
+
+# if you use poetry
+poetry install
+
+# if you use uv
+uv sync
+
+# if you use venv/pip
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
 ```
+
+For custom development installations, please refer to our [Installation guide](INSTALL.md).
+
+### Configuration
+
+Depending on the target device, DisruptionPy may benefit from SQL access.
+For more details, please refer to the Devices section above.
+
+While we honor the legacy `sybase_login` file credential format for database connections, we recommend using the following configuration snippet for maximum flexibility:
+
+```toml
+# ~/.config/disruption-py/user.toml
+
+[cmod.inout.sql]
+db_user = ""
+db_pass = ""
+
+[d3d.inout.sql]
+db_user = ""
+db_pass = ""
+
+[east.inout.sql]
+db_user = ""
+db_pass = ""
+```
+
+The above configuration file may be used to further override any framework configuration parameter.
 
 
 ## Getting Started
@@ -118,6 +214,7 @@ When installed, a simple command-line entry point is available as `disruption-py
 The command-line arguments, which are subject to change, are documented in the help message:
 
 ```bash
+# show help message
 disruption-py --help
 ```
 ```
@@ -139,11 +236,12 @@ options:
   -l LOG_LEVEL, --log-level LOG_LEVEL
 ```
 
-A typical command-line invocation of the entry point would be:
+A parameter-less command-line invocation allows to compute all physics methods for a given device on a few prototypical shots.
+If unspecified, the device is inferred from the local environment.
 
 ```bash
-# fetch EFIT-based parameters for a couple of 2015 Alcator C-MOD shots
-disruption-py -m get_efit_parameters -o efit.csv 1150805012 1150805020
+# default workflow
+disruption-py
 ```
 
 For simplified workflows, a flattened invocation of our data pipeline is available from Python, as well:
@@ -155,31 +253,6 @@ out = run(*args)
 
 For more complicated workflows requiring the configuration of all the settings according to the specific user needs, a full-fledged disruption script might be necessary.
 Please refer to our `examples/defaults.py` script for a quickstart workflow with explicit default arguments.
-
-
-## Configuration
-
-DisruptionPy itself does not provide access to any of the underlying servers.
-
-While we honor the legacy `sybase_login` file credential format for database connections, we recommend using the following configuration snippet for maximum flexibility:
-
-```toml
-# ~/.config/disruption-py/user.toml
-
-[cmod.inout.sql]
-db_user = ""
-db_pass = ""
-
-[d3d.inout.sql]
-db_user = ""
-db_pass = ""
-
-[east.inout.sql]
-db_user = ""
-db_pass = ""
-```
-
-Any configuration parameter can be overridden by the above configuration file.
 
 
 ## Contributing
@@ -195,7 +268,7 @@ Make sure you refer to the latest version of our [development branch](https://gi
 
 #### before 2021
 
-The backbone material for this project, that is, the original MATLAB code, was authored by several contributors at [MIT PSFC](https://www.psfc.mit.edu/) before 2021:
+The ancestor MATLAB code was authored by several contributors at [MIT PSFC](https://www.psfc.mit.edu/) before 2021:
 
 - Robert Granetz, Principal Research Scientist,
 - Cristina Rea, then Research Scientist,
@@ -219,6 +292,8 @@ Several contributors have been involved in the development of the code since the
 - Josh Lorincz, Undergraduate Student,
 - Amos Decker, Undergraduate Student,
 - William Wei, PostDoctoral Associate.
+
+For a complete list of contributors, please refer to the [Contributors](https://github.com/MIT-PSFC/disruption-py/graphs/contributors) page.
 
 
 ## Citation
