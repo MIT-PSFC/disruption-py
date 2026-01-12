@@ -326,6 +326,7 @@ class CmodThomsonGPProfiles:
     Helper class for using Gaussian Processes to fit Thomson scattering profiles.
     """
 
+    @staticmethod
     @jax.jit
     def gp_profile_single_timestep(
         signal_data: jnp.ndarray,
@@ -333,32 +334,29 @@ class CmodThomsonGPProfiles:
         signal_rho: jnp.ndarray,
         result_rho: jnp.ndarray,
         kernel: gpx.kernels.AbstractKernel,
-        edge_rho: float,
-        edge_value: float,
-        edge_error: float,
-        epsilon: float,
+        constraint_val: jnp.ndarray,
+        constraint_grad: jnp.ndarray,
         outlier_penalty: float,
         outlier_cutoff: float,
+        shift: float,
         jitter: float,
         ):
         """
         Fit a single timestep using Gaussian Processes.
         Assumes there are no missing / nan values in the input data.
 
-        Since this is a 1D profile of a physical plasma quantity, we can make the following assumptions to constrain the fit:
+        Since this is a 1D profile of a physical plasma quantity, we can make a few assumptions to improve the fit quality:
         1. The signal is always positive.
-        2. The signal has zero gradient at the core (rho=0).
-        3. The signal goes to some relatively known value at the edge (rho=edge_rho).
-        - For ne, Te, J, etc., this value should be 0
-        - For q it could be taken as something like 10
+        2. The signal has known gradient points (e.g. d(signal)/d(rho) = 0 at rho=0).
+        3. The signal has known edge values (e.g. signal approaches some small value at edge_rho).
 
         Implementing these assumptions is done as follows:
         1. Use a log-transform on the signal values.
-        2. Using JAX, we compute covariences in both the kernel function and its derivative, and add a low-uncertainty data point at (0, signal(0)).
-        3. A synthetic data point is added at (edge_rho, edge_value) with uncertainty edge_error.
+        2. Synthetic data points are added with boundary conditions on the gradients and values.
 
         The final piece which makes the profiles 'look good' is fitting in rho^2 space.
         This essentially spreads out the edge region, allowing the GP to vary more quickly there while remaining smooth in the core.
+        TODO(ZanderKeith): There is a more rigorous way to do this with non-stationary kernels (see Chilenski's thesis) but this is good for now.
 
         Parameters
         ----------
@@ -372,18 +370,16 @@ class CmodThomsonGPProfiles:
             The rho values where the fitted profile should be evaluated.
         kernel : gpx.kernels.AbstractKernel
             The kernel to use for the Gaussian Process. Must be initialized outside this jitted function.
-        edge_rho : float
-            The rho value at the edge where the signal is expected to approach edge_value
-        edge_value : float
-            The expected signal value at edge_rho.
-        edge_error : float
-            The uncertainty associated with the edge_value.
-        epsilon : float
-            A small value added to avoid log(0) issues.
+        constraint_val : jnp.ndarray
+            Nx3 array of added (rho, value, error) points where the signal value is constrained.
+        constraint_grad : jnp.ndarray
+            Nx3 array of added (rho, gradient, error) points where the signal gradient is constrained.
         outlier_penalty : float
             The error value to assign to identified outliers to effectively ignore them.
         outlier_cutoff : float
             The rho value below which outliers will be identified.
+        shift : float
+            A small shift value added before log-transform to avoid log(0) issues.
         jitter : float
             A small jitter value added to the diagonal of the covariance matrix for numerical stability.
 
@@ -402,11 +398,7 @@ class CmodThomsonGPProfiles:
         # Handle NaN and invalid values by replacing them with dummy values and giving them huge error bars
         # This keeps array shapes constant for JIT compilation
         valid_mask = ~jnp.isnan(signal_data) & ~jnp.isnan(signal_error) & ~jnp.isnan(signal_rho) & (signal_data > 0) & (signal_error > 0)
-
-        # Replace invalid data with 0 at the edge point
-        signal_data = jnp.where(valid_mask, signal_data, edge_value)
-        signal_error = jnp.where(valid_mask, signal_error, outlier_penalty)  # Give invalid points huge error
-        signal_rho = jnp.where(valid_mask, signal_rho, edge_rho)  # Dummy rho value for invalid points
+        signal_error = jnp.where(valid_mask, signal_error, outlier_penalty)
 
         # Normalize inputs by average value to improve numerical stability
         # Use nanmean to handle any remaining NaNs
@@ -415,10 +407,10 @@ class CmodThomsonGPProfiles:
         errors_norm = signal_error / norm_factor
 
         # Transform to log-space to enforce positivity
-        observations_log = jnp.log(observations_norm + epsilon)
-        # Error in log space std_y = |dy/dx| * std_x = (1/x) * std_x
-        # Intuition is that in log space we care about relative error, not absolute error
-        errors_log = errors_norm / (observations_norm + epsilon)
+        # Shift values up by 1 to avoid log(0) issues and make the transformation more stable
+        observations_log = jnp.log(observations_norm + shift)
+        # Error in log space: std_y = |dy/dx| * std_x = (1/(x+shift)) * std_x
+        errors_log = errors_norm / (observations_norm + shift)
 
         # Transform rho to rho^2 space to allow more variation near edge while maintaining smoothness in core
         rho2 = signal_rho ** 2
@@ -442,21 +434,26 @@ class CmodThomsonGPProfiles:
         observations_clean = observations_log  # Value won't matter due to large error
         rho2_clean = rho2
 
-        # Add synthetic edge point
-        y = jnp.concatenate(
-            [observations_clean, jnp.array([jnp.log(edge_value / norm_factor + epsilon)])]
-        )
-        y_std = jnp.concatenate(
-            [errors_clean, jnp.array([edge_error / norm_factor / (edge_value / norm_factor + epsilon)])]
-        )
-        x = jnp.concatenate(
-            [rho2_clean, jnp.array([edge_rho**2])]
-        )
+        # Add synthetic value constraint points from constraint_val array
+        # constraint_val is Nx3: (rho, value, error)
+        constraint_val_rho = constraint_val[:, 0]
+        constraint_val_value = constraint_val[:, 1]
+        constraint_val_error = constraint_val[:, 2]
 
-        # Now it's time to get funky
-        x_deriv_bc = jnp.array([0.0])  # Derivative boundary condition at rho=0
-        y_deriv_bc = jnp.array([0.0])  # We want d(signal)/d(rho) = 0 at rho=0
-        y_deriv_bc_std = jnp.array([1e-6])  # Small uncertainty on derivative BC, since the gradient really should be 0 there
+        # Transform constraint values to log space using same shift as observations
+        constraint_val_norm = constraint_val_value / norm_factor
+        constraint_val_log = jnp.log(constraint_val_norm + shift)
+        constraint_val_error_log = (constraint_val_error / norm_factor) / (constraint_val_norm + shift)
+
+        y = jnp.concatenate([observations_clean, constraint_val_log])
+        y_std = jnp.concatenate([errors_clean, constraint_val_error_log])
+        x = jnp.concatenate([rho2_clean, constraint_val_rho**2])
+
+        # Add gradient constraint points from constraint_grad array
+        # constraint_grad is Mx3: (rho, gradient, error)
+        x_deriv_bc = constraint_grad[:, 0]
+        y_deriv_bc = constraint_grad[:, 1]
+        y_deriv_bc_std = constraint_grad[:, 2]
         
         def _kernel_dx2(kernel, x1, x2):
             """Compute dk(x1, x2)/dx2 with autodiff"""
@@ -480,14 +477,16 @@ class CmodThomsonGPProfiles:
         #      [K_df,  K_dd]]
         # where f = function values, d = derivatives
 
+        n_deriv_bc = len(x_deriv_bc)
+
         # K_ff: value-value covariances
         K_ff = kernel.gram(x.reshape(-1, 1)).to_dense()
-        # K_fd: value-derivative cross-covariances
-        K_fd = jax.vmap(lambda x1: jax.vmap(lambda x2: _kernel_dx2(kernel, x1, x2))(x_deriv_bc.reshape(-1, 1)))(x.reshape(-1, 1)).reshape(-1, 1)
+        # K_fd: value-derivative cross-covariances (n_obs x n_deriv_bc)
+        K_fd = jax.vmap(lambda x1: jax.vmap(lambda x2: _kernel_dx2(kernel, x1, x2))(x_deriv_bc.reshape(-1, 1)))(x.reshape(-1, 1)).reshape(len(x), n_deriv_bc)
         # K_df: derivative-value cross-covariances (just the transpose of K_fd)
         K_df = K_fd.T
-        # K_dd: derivative-derivative covariances
-        K_dd = jax.vmap(lambda x1: jax.vmap(lambda x2: _kernel_dx1_dx2(kernel, x1, x2))(x_deriv_bc.reshape(-1, 1)))(x_deriv_bc.reshape(-1, 1)).reshape(-1, 1)
+        # K_dd: derivative-derivative covariances (n_deriv_bc x n_deriv_bc)
+        K_dd = jax.vmap(lambda x1: jax.vmap(lambda x2: _kernel_dx1_dx2(kernel, x1, x2))(x_deriv_bc.reshape(-1, 1)))(x_deriv_bc.reshape(-1, 1)).reshape(n_deriv_bc, n_deriv_bc)
 
         K_aug = jnp.block([
             [K_ff, K_fd],
@@ -505,8 +504,8 @@ class CmodThomsonGPProfiles:
         x_pred = result_rho**2
 
         # Build cross-covariance matrix between prediction points and training points
-        K_star_f = kernel.cross_covariance(x_pred.reshape(-1, 1), x.reshape(-1, 1)) 
-        K_star_d = jax.vmap(lambda x1: jax.vmap(lambda x2: _kernel_dx2(kernel, x1, x2).squeeze())(x_deriv_bc.reshape(-1, 1)))(x_pred.reshape(-1, 1)).reshape(x_pred.shape[0], 1)
+        K_star_f = kernel.cross_covariance(x_pred.reshape(-1, 1), x.reshape(-1, 1))
+        K_star_d = jax.vmap(lambda x1: jax.vmap(lambda x2: _kernel_dx2(kernel, x1, x2).squeeze())(x_deriv_bc.reshape(-1, 1)))(x_pred.reshape(-1, 1)).reshape(len(x_pred), n_deriv_bc)
         K_star = jnp.hstack([K_star_f, K_star_d])
 
         # Make predictions at new points
@@ -520,7 +519,8 @@ class CmodThomsonGPProfiles:
         y_error = jnp.sqrt(jnp.maximum(y_pred_var, 0))
 
         # Transform back to normal space in rho and signal
-        signal_pred = jnp.exp(y_pred) * norm_factor - epsilon
+        # Reverse the shift and normalization
+        signal_pred = (jnp.exp(y_pred) - shift) * norm_factor
         signal_error = y_error * jnp.exp(y_pred) * norm_factor
 
         # If insufficient valid data (< 3 points), return NaN
@@ -530,18 +530,18 @@ class CmodThomsonGPProfiles:
 
         return signal_pred, signal_error
 
+    @staticmethod
     def gp_profile(
-        signal_data, 
-        signal_error, 
-        signal_rho, 
-        result_rho, 
+        signal_data,
+        signal_error,
+        signal_rho,
+        result_rho,
         kernel=gpx.kernels.Matern32(),
-        edge_rho=1.2,
-        edge_value=1e-3,
-        edge_error=0.5,
-        epsilon=1e-3,
+        constraint_val=jnp.array([[1.1, 0, 0.01], [1.2, 0, 0.01], [1.3, 0, 0.01], [1.4, 0, 0.01]]),
+        constraint_grad=jnp.array([[0, 0, 0], [1.1, 0, 0.1], [1.2, 0, 0.1], [1.3, 0, 0.1], [1.4, 0, 0.1]]),
         outlier_penalty=1e6,
         outlier_cutoff=0.8,
+        shift=1,
         jitter=1e-6,
     ):
         """
@@ -559,18 +559,16 @@ class CmodThomsonGPProfiles:
             The rho values where the fitted profile should be evaluated. Expected shape is (n_result_points,).
         kernel : gpx.kernels.Kernel, optional
             The kernel to use for the Gaussian Process (default is Matern32).
-        edge_rho : float, optional
-            The rho value at the edge where the signal is expected to approach edge_value (default is 1.2).
-        edge_value : float, optional
-            The expected signal value at edge_rho (default is 1e-3).
-        edge_error : float, optional
-            The uncertainty associated with the edge_value (default is 0.5).
-        epsilon : float, optional
-            A small value added to avoid log(0) issues (default is 1e-3).
+        constraint_val : jnp.ndarray
+            Nx3 array of added (rho, value, error) points where the signal value is constrained.
+        constraint_grad : jnp.ndarray
+            Nx3 array of added (rho, gradient, error) points where the signal gradient is constrained.
         outlier_penalty : float, optional
             The error value to assign to identified outliers to effectively ignore them (default is 1e6).
         outlier_cutoff : float, optional
             The rho value below which outliers will be identified (default is 0.8).
+        shift : float, optional
+            A small shift value added before log-transform to avoid log(0) issues (default is 1).
         jitter : float, optional
             A small jitter value added to the diagonal of the covariance matrix for numerical stability (default is 1e-6).
 
@@ -583,7 +581,7 @@ class CmodThomsonGPProfiles:
 
         signal_pred_all, signal_error_all = jax.vmap(
             CmodThomsonGPProfiles.gp_profile_single_timestep,
-            in_axes=(0, 0, 0, None, None, None, None, None, None, None, None, None),  # 12 args: data, error, rho (all vmapped), result_rho, edge_rho, edge_value, edge_error, epsilon, kernel
+            in_axes=(0, 0, 0, None, None, None, None, None, None, None, None),  # 11 args: data, error, rho (all vmapped over time), result_rho, kernel, constraint_val, constraint_grad, outlier_penalty, outlier_cutoff, shift, jitter
             out_axes=(0, 0)
         )(
             signal_data,
@@ -591,12 +589,11 @@ class CmodThomsonGPProfiles:
             signal_rho,
             result_rho,
             kernel,
-            edge_rho,
-            edge_value,
-            edge_error,
-            epsilon,
+            constraint_val,
+            constraint_grad,
             outlier_penalty,
             outlier_cutoff,
+            shift,
             jitter,
         )
 

@@ -2442,13 +2442,49 @@ class CmodPhysicsMethods:
         """
         import gpjax as gpx
 
+        # Profile constraints taken from Table 2.7 of Chilenski PhD thesis (2016)
+        # Constraints are in (rho, value, error) format
+        profile_constraints = {
+            "te": {
+                "val": np.array([
+                    [1.1, 0, 0.01],
+                    [1.2, 0, 0.01],
+                    [1.3, 0, 0.01],
+                    [1.4, 0, 0.01],
+                ]),
+                "grad": np.array([
+                    [0.0, 0, 0.0],
+                    [1.1, 0, 0.1],
+                    [1.2, 0, 0.1],
+                    [1.3, 0, 0.1],
+                    [1.4, 0, 0.1],
+                ]),
+            },
+            "ne": {
+                "val": np.array([
+                    [1.1, 0, 0.01*1e-20],
+                    [1.2, 0, 0.01*1e-20],
+                    [1.3, 0, 0.01*1e-20],
+                    [1.4, 0, 0.01*1e-20],
+                ]),
+                "grad": np.array([
+                    [0.0, 0, 0.0],
+                    [1.1, 0, 0.1*1e-20],
+                    [1.2, 0, 0.1*1e-20],
+                    [1.3, 0, 0.1*1e-20],
+                    [1.4, 0, 0.1*1e-20],
+                ]),
+            }
+        }
+
         ds_raw = CmodPhysicsMethods._get_thomson_channels_raw(params)
         if ds_raw is None:
             return None
         
         data_vars = {}
-        fit_rho = np.linspace(0, 1.2, 100)
-        for quant, edge_error in zip(['te', 'ne'], [0.5, 1e19]):
+        fit_rho = np.linspace(0, 1.4, 140)
+        final_rho = 1.2
+        for quant, constraints in profile_constraints.items():
             # Perform GP fit
             signal_data = ds_raw[f'ts_channel_{quant}'].values
             signal_error = ds_raw[f'ts_channel_{quant}_error'].values
@@ -2460,11 +2496,11 @@ class CmodPhysicsMethods:
                 signal_rho,
                 result_rho=fit_rho,
                 kernel=gpx.kernels.Matern32(),
-                edge_rho=fit_rho[-1],
-                edge_error=edge_error,
-                epsilon=1e-3,
+                constraint_val=constraints["val"],
+                constraint_grad=constraints["grad"],
                 outlier_penalty=1e6,
                 outlier_cutoff=0.8,
+                shift=1,
                 jitter=1e-6,
             )
 
@@ -2511,4 +2547,7 @@ class CmodPhysicsMethods:
                 "description": "Thomson scattering profiles from Gaussian Process fitting",
             }
         )
+
+        # Cut the profiles at final_rho
+        profile_ds = profile_ds.sel(ts_gp_rho=slice(0, final_rho))
         return profile_ds
