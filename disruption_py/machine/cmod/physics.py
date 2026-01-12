@@ -2261,105 +2261,129 @@ class CmodPhysicsMethods:
 
         data_vars = {}
         for region, nodes in zip(["core", "edge"], [core_nodes, edge_nodes]):
-            # Retrieve rho data
-            rho_data, rho_time = params.mds_conn.get_data_with_dims(
-                nodes["rho"],
-                tree_name="electrons",
-            )
-            # Cut time to positive values only
-            valid_time_indices = rho_time >= 0
-            rho_data = rho_data[:, valid_time_indices]
-            rho_time = rho_time[valid_time_indices]
-            # Replace -1 with nan
-            rho_data[rho_data == -1] = np.nan
-
-            data_vars[f"rho_{region}"] = xr.DataArray(
-                rho_data.astype(np.float32).T,
-                dims=("time", f"{region}_channel"),
-                coords={
-                    "time": rho_time,
-                    f"{region}_channel": np.arange(rho_data.shape[0]),
-                },
-            )
-
-            # Retrieve profiles for ne and te
-            for quant in ["ne", "te"]:
-                profile_data, profile_time = params.mds_conn.get_data_with_dims(
-                    nodes[quant],
-                    tree_name="electrons",
-                )
-                error_data = params.mds_conn.get_data(
-                    nodes[f"{quant}_error"],
+            try:
+                # Retrieve rho data
+                rho_data, rho_time = params.mds_conn.get_data_with_dims(
+                    nodes["rho"],
                     tree_name="electrons",
                 )
                 # Cut time to positive values only
-                valid_time_indices = profile_time >= 0
-                profile_data = profile_data[:, valid_time_indices]
-                error_data = error_data[:, valid_time_indices]
-                profile_time = profile_time[valid_time_indices]
-                # Replace 0 with nan
-                profile_data[profile_data == 0] = np.nan
-                error_data[error_data == 0] = np.nan
+                valid_time_indices = rho_time >= 0
+                rho_data = rho_data[:, valid_time_indices]
+                rho_time = rho_time[valid_time_indices]
+                # Replace -1 with nan
+                rho_data[rho_data == -1] = np.nan
 
-                if region == "edge" and quant == "te":
-                    # Edge Te profile is given in eV, convert to keV
-                    profile_data = profile_data / 1000.0
-                    error_data = error_data / 1000.0
+                data_vars[f"rho_{region}"] = xr.DataArray(
+                    rho_data.astype(np.float32).T,
+                    dims=("time", f"{region}_channel"),
+                    coords={
+                        "time": rho_time,
+                        f"{region}_channel": np.arange(rho_data.shape[0]),
+                    },
+                )
 
-                # Raise error if profile and rho time do not match
-                if not np.array_equal(profile_time, rho_time):
-                    raise ValueError(
-                        f"{region.capitalize()} Thomson scattering {quant} profile time does not match rho time."
+                # Retrieve profiles for ne and te
+                for quant in ["ne", "te"]:
+                    profile_data, profile_time = params.mds_conn.get_data_with_dims(
+                        nodes[quant],
+                        tree_name="electrons",
                     )
+                    error_data = params.mds_conn.get_data(
+                        nodes[f"{quant}_error"],
+                        tree_name="electrons",
+                    )
+                    # Cut time to positive values only
+                    valid_time_indices = profile_time >= 0
+                    profile_data = profile_data[:, valid_time_indices]
+                    error_data = error_data[:, valid_time_indices]
+                    profile_time = profile_time[valid_time_indices]
+                    # Replace 0 with nan
+                    profile_data[profile_data == 0] = np.nan
+                    error_data[error_data == 0] = np.nan
 
-                data_vars[f"{quant}_{region}"] = xr.DataArray(
-                    profile_data.astype(np.float32).T,
-                    dims=("time", f"{region}_channel"),
-                    coords={
-                        "time": profile_time,
-                        f"{region}_channel": np.arange(profile_data.shape[0]),
-                    },
-                )
-                data_vars[f"{quant}_error_{region}"] = xr.DataArray(
-                    error_data.astype(np.float32).T,
-                    dims=("time", f"{region}_channel"),
-                    coords={
-                        "time": profile_time,
-                        f"{region}_channel": np.arange(error_data.shape[0]),
-                    },
-                )
+                    if region == "edge" and quant == "te":
+                        # Edge Te profile is given in eV, convert to keV
+                        profile_data = profile_data / 1000.0
+                        error_data = error_data / 1000.0
+
+                    # Raise error if profile and rho time do not match
+                    if not np.array_equal(profile_time, rho_time):
+                        raise ValueError(
+                            f"{region.capitalize()} Thomson scattering {quant} profile time does not match rho time."
+                        )
+
+                    data_vars[f"{quant}_{region}"] = xr.DataArray(
+                        profile_data.astype(np.float32).T,
+                        dims=("time", f"{region}_channel"),
+                        coords={
+                            "time": profile_time,
+                            f"{region}_channel": np.arange(profile_data.shape[0]),
+                        },
+                    )
+                    data_vars[f"{quant}_error_{region}"] = xr.DataArray(
+                        error_data.astype(np.float32).T,
+                        dims=("time", f"{region}_channel"),
+                        coords={
+                            "time": profile_time,
+                            f"{region}_channel": np.arange(error_data.shape[0]),
+                        },
+                    )
+            except Exception as e:
+                if region == "edge":
+                    warnings.warn(
+                        f"Edge Thomson scattering data not found: {e}. Continuing with core data only.",
+                        UserWarning
+                    )
+                    continue
+                else:
+                    # Core data is required, so re-raise the exception
+                    raise
 
         # Combine core and edge data into a single dataset
         n_core_channels = data_vars["ne_core"].shape[1]
-        n_edge_channels = data_vars["ne_edge"].shape[1]
-        ts_channel = np.arange(
-            n_core_channels + n_edge_channels
-        )
-        array_source = np.array(["core"] * n_core_channels + ["edge"] * n_edge_channels)
-        rho_combined = np.concatenate(
-            [data_vars["rho_core"].values, data_vars["rho_edge"].values],
-            axis=1,
-        )
+        has_edge_data = "ne_edge" in data_vars
+
+        if has_edge_data:
+            n_edge_channels = data_vars["ne_edge"].shape[1]
+            ts_channel = np.arange(n_core_channels + n_edge_channels)
+            array_source = np.array(["core"] * n_core_channels + ["edge"] * n_edge_channels)
+            rho_combined = np.concatenate(
+                [data_vars["rho_core"].values, data_vars["rho_edge"].values],
+                axis=1,
+            )
+            ne_combined = np.concatenate(
+                [data_vars["ne_core"].values, data_vars["ne_edge"].values],
+                axis=1,
+            )
+            ne_error_combined = np.concatenate(
+                [data_vars["ne_error_core"].values, data_vars["ne_error_edge"].values],
+                axis=1,
+            )
+            te_combined = np.concatenate(
+                [data_vars["te_core"].values, data_vars["te_edge"].values],
+                axis=1,
+            )
+            te_error_combined = np.concatenate(
+                [data_vars["te_error_core"].values, data_vars["te_error_edge"].values],
+                axis=1,
+            )
+        else:
+            ts_channel = np.arange(n_core_channels)
+            array_source = np.array(["core"] * n_core_channels)
+            rho_combined = data_vars["rho_core"].values
+            ne_combined = data_vars["ne_core"].values
+            ne_error_combined = data_vars["ne_error_core"].values
+            te_combined = data_vars["te_core"].values
+            te_error_combined = data_vars["te_error_core"].values
 
         profile_ds = xr.Dataset(
             data_vars={
                 "ts_channel_rho": (("time", "ts_channel_idx"), rho_combined.astype(np.float32)),
-                "ts_channel_ne": (("time", "ts_channel_idx"), np.concatenate(
-                    [data_vars["ne_core"].values, data_vars["ne_edge"].values],
-                    axis=1,
-                ).astype(np.float32)),
-                "ts_channel_ne_error": (("time", "ts_channel_idx"), np.concatenate(
-                    [data_vars["ne_error_core"].values, data_vars["ne_error_edge"].values],
-                    axis=1,
-                ).astype(np.float32)),
-                "ts_channel_te": (("time", "ts_channel_idx"), np.concatenate(
-                    [data_vars["te_core"].values, data_vars["te_edge"].values],
-                    axis=1, 
-                ).astype(np.float32)),
-                "ts_channel_te_error": (("time", "ts_channel_idx"), np.concatenate(
-                    [data_vars["te_error_core"].values, data_vars["te_error_edge"].values],
-                    axis=1,
-                ).astype(np.float32)),
+                "ts_channel_ne": (("time", "ts_channel_idx"), ne_combined.astype(np.float32)),
+                "ts_channel_ne_error": (("time", "ts_channel_idx"), ne_error_combined.astype(np.float32)),
+                "ts_channel_te": (("time", "ts_channel_idx"), te_combined.astype(np.float32)),
+                "ts_channel_te_error": (("time", "ts_channel_idx"), te_error_combined.astype(np.float32)),
             },
             coords={
                 "time": data_vars["rho_core"]["time"].values,
