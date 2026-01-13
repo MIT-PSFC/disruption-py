@@ -111,7 +111,7 @@ def get_shots_data(
         logger.info("Imported MDSplus.")
     elif "mdsthin" in sys.modules:
         logger.warning("Imported mdsthin!")
-    elif not config(tokamak).inout.mds.mdsplus_connection_string:
+    elif not config(tokamak).inout.get("mds"):
         logger.debug("Did not import MDSplus.")
     else:
         raise ModuleNotFoundError("Cannot import MDSplus.")

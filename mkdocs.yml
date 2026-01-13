@@ -55,11 +55,9 @@ nav:
               - HBT-EP Built-in Methods: "usage/physics_methods/\
                 hbtep_method_reference.md"
               - MAST Built-in Methods: "usage/physics_methods/\
-                mast_built_in_method_reference.md"
+                mast_method_reference.md"
           - Physics Method Decorators: "usage/physics_methods/\
             decorator_reference.md"
-              - Physics Method Decorators: "usage/physics_methods/\
-                decorator_reference.md"
           - Parameter Reference: "usage/physics_methods/\
             disruption_parameters_reference.md"
       - Data I/O:

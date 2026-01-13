@@ -88,6 +88,7 @@ Most machines require both MDSplus and SQL database access for full functionalit
 | DIII-D        | GA          | MDSplus | SQL      | :yellow_circle:  |
 | EAST          | ASIPP       | MDSplus | SQL      | :red_circle:     |
 | HBT-EP        | Columbia    | MDSplus | -        | :yellow_circle:  |
+| MAST          | UKAEA       | S3      | -        | :green_circle:   |
 
 ## Installation
 
