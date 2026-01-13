@@ -47,13 +47,13 @@ def resolve_tokamak_from_environment(tokamak: Union[Tokamak, str] = None):
     if tokamak:
         return map_string_to_enum(tokamak, Tokamak)
     # case 4
-    if os.path.exists("/usr/local/mfe/disruptions"):
-        return Tokamak.CMOD
-    if os.path.exists("/fusion/projects/disruption_warning"):
-        return Tokamak.D3D
-    if os.path.exists("/project/disruption"):
-        return Tokamak.EAST
-    if os.path.exists("/opt/hbt/disruptions"):
-        return Tokamak.HBTEP
+    for test_tokamak, test_folder in [
+        (Tokamak.CMOD, "/usr/local/mfe/disruptions"),
+        (Tokamak.D3D, "/fusion/projects/disruption_warning"),
+        (Tokamak.EAST, "/project/disruption"),
+        (Tokamak.HBTEP, "/opt/hbt/disruptions"),
+    ]:
+        if os.path.exists(test_folder):
+            return test_tokamak
     # case 5
     return Tokamak.MAST
