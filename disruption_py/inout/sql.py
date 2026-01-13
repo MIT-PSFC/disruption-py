@@ -5,6 +5,7 @@ Module for managing SQL database connections.
 """
 
 import os
+import sys
 import threading
 from typing import List
 from urllib.parse import quote_plus
