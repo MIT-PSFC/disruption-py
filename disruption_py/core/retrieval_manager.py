@@ -141,7 +141,7 @@ class RetrievalManager:
 
         mds_conn = self.process_mds_conn.get_shot_connection(shot_id=shot_id)
 
-        if isinstance(mds_conn, ProcessMDSConnection):
+        if isinstance(mds_conn, MDSConnection):
             mds_conn.add_tree_nickname_funcs(
                 tree_nickname_funcs={
                     "_efit_tree": lambda: retrieval_settings.efit_nickname_setting.get_tree_name(
