@@ -25,8 +25,8 @@ def main():
     ]
 
     tokamak = resolve_tokamak_from_environment()
-    if tokamak is Tokamak.HBTEP:
-        pytest.skip("No SQL for HBT-EP")
+    if tokamak in [Tokamak.HBTEP, Tokamak.MAST]:
+        pytest.skip(f"No SQL for {tokamak.value}")
         assert False
 
     db = get_database(tokamak=tokamak)
