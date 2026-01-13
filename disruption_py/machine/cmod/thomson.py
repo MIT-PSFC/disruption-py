@@ -327,7 +327,7 @@ class CmodThomsonGPProfiles:
     """
 
     @staticmethod
-    @jax.jit
+    @jax.jit(static_argnames=["rho_transform_fn"])
     def gp_profile_single_timestep(
         signal_data: jnp.ndarray,
         signal_error: jnp.ndarray,
@@ -336,6 +336,7 @@ class CmodThomsonGPProfiles:
         kernel: gpx.kernels.AbstractKernel,
         constraint_val: jnp.ndarray,
         constraint_grad: jnp.ndarray,
+        rho_transform_fn: callable, 
         outlier_penalty: float,
         outlier_cutoff: float,
         jitter: float,
@@ -373,6 +374,8 @@ class CmodThomsonGPProfiles:
             Nx3 array of added (rho, value, error) points where the signal value is constrained.
         constraint_grad : jnp.ndarray
             Nx3 array of added (rho, gradient, error) points where the signal gradient is constrained.
+        rho_transform_fn : callable
+            A function that transforms rho values before fitting (e.g. to rho^2 space).
         outlier_penalty : float
             The error value to assign to identified outliers to effectively ignore them.
         outlier_cutoff : float
@@ -402,13 +405,13 @@ class CmodThomsonGPProfiles:
         observations_norm = signal_data / norm_factor
         errors_norm = signal_error / norm_factor
 
-        # Transform rho to rho^2 space to allow more variation near edge while maintaining smoothness in core
-        rho2 = signal_rho ** 2
+        # Transform rho to a different space to allow more variation near edge while maintaining smoothness in core
+        rho_trans = rho_transform_fn(signal_rho)
 
         # Perform a quick GP fit to identify outliers
-        K_rough = kernel.gram(rho2.reshape(-1,1)).to_dense()  # K(X, X), prior covariance at observed points
+        K_rough = kernel.gram(rho_trans.reshape(-1,1)).to_dense()  # K(X, X), prior covariance at observed points
         noise_rough = jnp.diag(errors_norm ** 2)  # Observation noise, GPJax uses variance
-        K_total_rough = K_rough + noise_rough + jnp.eye(len(rho2)) * jitter  # Add small jitter for numerical stability
+        K_total_rough = K_rough + noise_rough + jnp.eye(len(rho_trans)) * jitter  # Add small jitter for numerical stability
         # Make predictions at observed points
         alpha = jnp.linalg.solve(K_total_rough, observations_norm)
         predictions_rough = K_rough @ alpha
@@ -419,7 +422,7 @@ class CmodThomsonGPProfiles:
         # Make new arrays without outliers
         errors_clean = jnp.where(outlier_mask, outlier_penalty, errors_norm)
         observations_clean = observations_norm  # Value won't matter due to large error
-        rho2_clean = rho2
+        rho_trans_clean = rho_trans
 
         # Add synthetic value constraint points from constraint_val array
         # constraint_val is Nx3: (rho, value, error)
@@ -433,11 +436,11 @@ class CmodThomsonGPProfiles:
 
         y = jnp.concatenate([observations_clean, constraint_val_norm])
         y_std = jnp.concatenate([errors_clean, constraint_val_error_norm])
-        x = jnp.concatenate([rho2_clean, constraint_val_rho**2])
+        x = jnp.concatenate([rho_trans_clean, rho_transform_fn(constraint_val_rho)])
 
         # Add gradient constraint points from constraint_grad array
         # constraint_grad is Mx3: (rho, gradient, error)
-        x_deriv_bc = constraint_grad[:, 0]
+        x_deriv_bc = rho_transform_fn(constraint_grad[:, 0])
         y_deriv_bc = constraint_grad[:, 1]
         y_deriv_bc_std = constraint_grad[:, 2]
         
@@ -487,7 +490,7 @@ class CmodThomsonGPProfiles:
         y_aug = jnp.concatenate([y, y_deriv_bc])
 
         # Rho values to predict at
-        x_pred = result_rho**2
+        x_pred = rho_transform_fn(result_rho)
 
         # Build cross-covariance matrix between prediction points and training points
         K_star_f = kernel.cross_covariance(x_pred.reshape(-1, 1), x.reshape(-1, 1))
@@ -527,6 +530,7 @@ class CmodThomsonGPProfiles:
         kernel=gpx.kernels.Matern32(),
         constraint_val=jnp.array([[1.1, 0, 0.01], [1.2, 0, 0.01], [1.3, 0, 0.01], [1.4, 0, 0.01]]),
         constraint_grad=jnp.array([[0, 0, 0], [1.1, 0, 0.1], [1.2, 0, 0.1], [1.3, 0, 0.1], [1.4, 0, 0.1]]),
+        rho_transform_fn=lambda rho: rho**2,
         outlier_penalty=1e6,
         outlier_cutoff=0.8,
         jitter=1e-6,
@@ -550,6 +554,8 @@ class CmodThomsonGPProfiles:
             Nx3 array of added (rho, value, error) points where the signal value is constrained.
         constraint_grad : jnp.ndarray
             Nx3 array of added (rho, gradient, error) points where the signal gradient is constrained.
+        rho_transform_fn : callable, optional
+            A function that transforms rho values before fitting (default is to square rho).
         outlier_penalty : float, optional
             The error value to assign to identified outliers to effectively ignore them (default is 1e6).
         outlier_cutoff : float, optional
@@ -566,7 +572,7 @@ class CmodThomsonGPProfiles:
 
         signal_pred_all, signal_error_all = jax.vmap(
             CmodThomsonGPProfiles.gp_profile_single_timestep,
-            in_axes=(0, 0, 0, None, None, None, None, None, None, None),  # 10 args: data, error, rho (all vmapped over time), result_rho, kernel, constraint_val, constraint_grad, outlier_penalty, outlier_cutoff, jitter
+            in_axes=(0, 0, 0, None, None, None, None, None, None, None, None),  # 10 args: data, error, rho (all vmapped over time), result_rho, kernel, constraint_val, constraint_grad, rho_transform_fn, outlier_penalty, outlier_cutoff, jitter
             out_axes=(0, 0)
         )(
             signal_data,
@@ -576,6 +582,7 @@ class CmodThomsonGPProfiles:
             kernel,
             constraint_val,
             constraint_grad,
+            rho_transform_fn,
             outlier_penalty,
             outlier_cutoff,
             jitter,

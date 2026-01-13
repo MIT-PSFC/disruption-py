@@ -2483,7 +2483,7 @@ class CmodPhysicsMethods:
         
         data_vars = {}
         fit_rho = np.linspace(0, 1.4, 140)
-        final_rho = 1.2
+        final_rho = 1.1
         for quant, constraints in profile_constraints.items():
             # Perform GP fit
             signal_data = ds_raw[f'ts_channel_{quant}'].values
@@ -2498,6 +2498,7 @@ class CmodPhysicsMethods:
                 kernel=gpx.kernels.Matern52(),
                 constraint_val=constraints["val"],
                 constraint_grad=constraints["grad"],
+                rho_transform_fn=lambda rho: rho**(2+rho),
                 outlier_penalty=1e6,
                 outlier_cutoff=0.8,
                 jitter=1e-6,
