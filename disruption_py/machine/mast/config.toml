@@ -1,9 +1,9 @@
+[mast.inout.sql]
+
 [mast.inout.xarray]
 endpoint_url = "https://s3.echo.stfc.ac.uk"
-file_path = "mast/level2/shots"
 file_ext = 'zarr'
-
-[mast.inout.sql]
+file_path = "mast/level2/shots"
 
 [mast.physics.time_domain_thresholds]
 dipprog_dt = 50e3
@@ -12,33 +12,33 @@ ip_prog = 100e3
 [mast.tests]
 expected_failure_columns = []
 test_columns = [
-  'beta_tor_normal', 
-  'dip_dt', 
-  'dipprog_dt', 
-  'dn_dt', 
-  'elongation', 
-  'elongation_axis', 
-  'greenwald_fraction', 
-  'inboard_total', 
-  'ip', 
-  'ip_prog', 
-  'magnetic_axis_r', 
-  'magnetic_axis_z', 
-  'minor_radius', 
-  'n_e', 
-  'n_e_core', 
-  'outboard_total', 
-  'power_nbi', 
-  'power_radiated', 
-  't_e_core', 
-  'time_domain', 
-  'total_injected', 
-  'triangularity_lower', 
-  'triangularity_upper'
+  'beta_tor_normal',
+  'dip_dt',
+  'dipprog_dt',
+  'dn_dt',
+  'elongation',
+  'elongation_axis',
+  'greenwald_fraction',
+  'inboard_total',
+  'ip',
+  'ip_prog',
+  'magnetic_axis_r',
+  'magnetic_axis_z',
+  'minor_radius',
+  'n_e',
+  'n_e_core',
+  'outboard_total',
+  'power_nbi',
+  'power_radiated',
+  't_e_core',
+  'time_domain',
+  'total_injected',
+  'triangularity_lower',
+  'triangularity_upper',
 ]
 
 [mast.tests.shots]
-example = [30421, 30113, 30014]
+example = [30014, 30113, 30421]
 
 [mast.time]
 disruption_time_start = 0.2
