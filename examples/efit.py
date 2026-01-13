@@ -31,6 +31,9 @@ def main():
     elif tokamak is Tokamak.HBTEP:
         pytest.skip("No EFIT for HBT-EP")
         assert False
+    elif tokamak is Tokamak.MAST:
+        shotlist = [30421]
+        shape = (406, 16)
     else:
         raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 
