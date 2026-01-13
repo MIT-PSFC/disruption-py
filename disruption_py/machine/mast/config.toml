@@ -4,7 +4,6 @@ file_path = "mast/level2/shots"
 file_ext = 'zarr'
 
 [mast.inout.sql]
-driver = "dummy"
 
 [mast.physics.time_domain_thresholds]
 dipprog_dt = 50e3
