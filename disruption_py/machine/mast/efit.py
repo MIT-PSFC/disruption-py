@@ -59,6 +59,6 @@ class MastEfitMethods:
             outputs[prop] = item
 
         if "whmd" in outputs:
-            outputs['wmhd'] = outputs.pop('whmd')
+            outputs["wmhd"] = outputs.pop("whmd")
 
         return outputs

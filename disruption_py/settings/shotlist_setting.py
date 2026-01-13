@@ -107,6 +107,7 @@ class FileShotlistSetting(ShotlistSetting):
             self.shotlist = arr.astype(int).tolist()
         return self.shotlist
 
+
 class IncludedShotlistSetting(FileShotlistSetting):
     """
     Use the shotlist from one of the provided data files.

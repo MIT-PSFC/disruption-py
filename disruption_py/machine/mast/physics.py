@@ -229,10 +229,13 @@ class MastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing SXR data (`sxr_data`) and corresponding time points (`sxr_time`).
+            A dictionary containing SXR data (`sxr_data`) and
+            corresponding time points (`sxr_time`).
         """
         conn: XarrayConnection = params.mds_conn
-        hcam = conn.get_data(params.shot_id, "soft_x_rays/horizontal_cam_upper", return_xarray=True)
+        hcam = conn.get_data(
+            params.shot_id, "soft_x_rays/horizontal_cam_upper", return_xarray=True
+        )
 
         if hcam is not None:
             hcam = hcam.isel(horizontal_cam_upper_channel=7)
@@ -269,7 +272,11 @@ class MastPhysicsMethods:
         """
         conn: XarrayConnection = params.mds_conn
 
-        dalpha = conn.get_data(params.shot_id, "spectrometer_visible/filter_spectrometer_dalpha_voltage", return_xarray=True)
+        dalpha = conn.get_data(
+            params.shot_id,
+            "spectrometer_visible/filter_spectrometer_dalpha_voltage",
+            return_xarray=True,
+        )
 
         if dalpha is not None:
             dalpha = dalpha.isel(dalpha_channel=2)
@@ -284,9 +291,7 @@ class MastPhysicsMethods:
         dalpha_data = dalpha.values
 
         times = params.times
-        dalpha_data = MastPhysicsMethods.interpolate_1d(
-            dalpha_time, dalpha_data, times
-        )
+        dalpha_data = MastPhysicsMethods.interpolate_1d(dalpha_time, dalpha_data, times)
         return {"dalpha": dalpha_data}
 
     @staticmethod
