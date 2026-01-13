@@ -46,15 +46,15 @@ nav:
           - Physics Methods:
               - Generic Physics Methods: "usage/physics_methods/\
                 generic_method_reference.md"
-              - C-Mod Built-in Methods: "usage/physics_methods/\
+              - C-Mod Physics Methods: "usage/physics_methods/\
                 cmod_method_reference.md"
-              - DIII-D Built-in Methods: "usage/physics_methods/\
+              - DIII-D Physics Methods: "usage/physics_methods/\
                 d3d_method_reference.md"
-              - EAST Built-in Methods: "usage/physics_methods/\
+              - EAST Physics Methods: "usage/physics_methods/\
                 east_method_reference.md"
-              - HBT-EP Built-in Methods: "usage/physics_methods/\
+              - HBT-EP Physics Methods: "usage/physics_methods/\
                 hbtep_method_reference.md"
-              - MAST Built-in Methods: "usage/physics_methods/\
+              - MAST Physics Methods: "usage/physics_methods/\
                 mast_method_reference.md"
           - Physics Method Decorators: "usage/physics_methods/\
             decorator_reference.md"
