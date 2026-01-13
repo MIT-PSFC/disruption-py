@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 Module for connecting to Xarray data stores.
 """

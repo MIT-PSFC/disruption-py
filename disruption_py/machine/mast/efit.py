@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 Module for retrieving and processing EFIT parameters for CMOD.
 """
