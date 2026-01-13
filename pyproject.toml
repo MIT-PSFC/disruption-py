@@ -47,9 +47,10 @@ classifiers = [
 ]
 dependencies = [
   "dynaconf>=3.2.0",
+  "gpjax",
   "loguru>=0.7.0",
   "netcdf4>=1.7.0,<1.7.3",
-  "numpy>=1.26.0,<2.0.0",
+  "numpy",
   "pandas>=2.2.0,<2.3.3",
   "pyodbc>=5.2.0",
   "scipy>=1.15.0",
