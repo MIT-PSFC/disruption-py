@@ -405,19 +405,16 @@ class CmodThomsonGPProfiles:
         # Transform rho to rho^2 space to allow more variation near edge while maintaining smoothness in core
         rho2 = signal_rho ** 2
 
-        # Perform a quick GP fit without boundary conditions to identify outliers
+        # Perform a quick GP fit to identify outliers
         K_rough = kernel.gram(rho2.reshape(-1,1)).to_dense()  # K(X, X), prior covariance at observed points
         noise_rough = jnp.diag(errors_norm ** 2)  # Observation noise, GPJax uses variance
         K_total_rough = K_rough + noise_rough + jnp.eye(len(rho2)) * jitter  # Add small jitter for numerical stability
         # Make predictions at observed points
         alpha = jnp.linalg.solve(K_total_rough, observations_norm)
         predictions_rough = K_rough @ alpha
-        # Compute prediction variance at training points
-        predictions_var = jnp.diag(K_rough - K_rough @ jnp.linalg.solve(K_total_rough, K_rough))
-        predictions_std = jnp.sqrt(jnp.maximum(predictions_var, 0))
-        # Identify outliers as core points where residual > 3 * predicted stddev
+        # Identify outliers as core points where residual > 3 * measurement error
         residuals = jnp.abs(observations_norm - predictions_rough)
-        outlier_mask = (residuals > (3 * predictions_std)) & (signal_rho < outlier_cutoff)
+        outlier_mask = (residuals > (3 * errors_norm)) & (signal_rho < outlier_cutoff)
 
         # Make new arrays without outliers
         errors_clean = jnp.where(outlier_mask, outlier_penalty, errors_norm)
