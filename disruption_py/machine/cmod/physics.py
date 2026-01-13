@@ -2495,12 +2495,11 @@ class CmodPhysicsMethods:
                 signal_error,
                 signal_rho,
                 result_rho=fit_rho,
-                kernel=gpx.kernels.Matern32(),
+                kernel=gpx.kernels.Matern52(),
                 constraint_val=constraints["val"],
                 constraint_grad=constraints["grad"],
                 outlier_penalty=1e6,
                 outlier_cutoff=0.8,
-                shift=1,
                 jitter=1e-6,
             )
 

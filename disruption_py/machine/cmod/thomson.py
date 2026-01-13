@@ -338,7 +338,6 @@ class CmodThomsonGPProfiles:
         constraint_grad: jnp.ndarray,
         outlier_penalty: float,
         outlier_cutoff: float,
-        shift: float,
         jitter: float,
         ):
         """
@@ -346,12 +345,12 @@ class CmodThomsonGPProfiles:
         Assumes there are no missing / nan values in the input data.
 
         Since this is a 1D profile of a physical plasma quantity, we can make a few assumptions to improve the fit quality:
-        1. The signal is always positive.
+        1. The signal is always positive (enforced by clipping predictions).
         2. The signal has known gradient points (e.g. d(signal)/d(rho) = 0 at rho=0).
-        3. The signal has known edge values (e.g. signal approaches some small value at edge_rho).
+        3. The signal has known edge values (e.g. signal approaches zero at the edge).
 
         Implementing these assumptions is done as follows:
-        1. Use a log-transform on the signal values.
+        1. Positivity is enforced by clipping negative predictions to zero.
         2. Synthetic data points are added with boundary conditions on the gradients and values.
 
         The final piece which makes the profiles 'look good' is fitting in rho^2 space.
@@ -378,8 +377,6 @@ class CmodThomsonGPProfiles:
             The error value to assign to identified outliers to effectively ignore them.
         outlier_cutoff : float
             The rho value below which outliers will be identified.
-        shift : float
-            A small shift value added before log-transform to avoid log(0) issues.
         jitter : float
             A small jitter value added to the diagonal of the covariance matrix for numerical stability.
 
@@ -401,37 +398,30 @@ class CmodThomsonGPProfiles:
         signal_error = jnp.where(valid_mask, signal_error, outlier_penalty)
 
         # Normalize inputs by average value to improve numerical stability
-        # Use nanmean to handle any remaining NaNs
         norm_factor = jnp.mean(signal_data)
         observations_norm = signal_data / norm_factor
         errors_norm = signal_error / norm_factor
-
-        # Transform to log-space to enforce positivity
-        # Shift values up by 1 to avoid log(0) issues and make the transformation more stable
-        observations_log = jnp.log(observations_norm + shift)
-        # Error in log space: std_y = |dy/dx| * std_x = (1/(x+shift)) * std_x
-        errors_log = errors_norm / (observations_norm + shift)
 
         # Transform rho to rho^2 space to allow more variation near edge while maintaining smoothness in core
         rho2 = signal_rho ** 2
 
         # Perform a quick GP fit without boundary conditions to identify outliers
         K_rough = kernel.gram(rho2.reshape(-1,1)).to_dense()  # K(X, X), prior covariance at observed points
-        noise_rough = jnp.diag(errors_log ** 2)  # Observation noise, GPJax uses variance
+        noise_rough = jnp.diag(errors_norm ** 2)  # Observation noise, GPJax uses variance
         K_total_rough = K_rough + noise_rough + jnp.eye(len(rho2)) * jitter  # Add small jitter for numerical stability
         # Make predictions at observed points
-        alpha = jnp.linalg.solve(K_total_rough, observations_log)
+        alpha = jnp.linalg.solve(K_total_rough, observations_norm)
         predictions_rough = K_rough @ alpha
         # Compute prediction variance at training points
         predictions_var = jnp.diag(K_rough - K_rough @ jnp.linalg.solve(K_total_rough, K_rough))
         predictions_std = jnp.sqrt(jnp.maximum(predictions_var, 0))
         # Identify outliers as core points where residual > 3 * predicted stddev
-        residuals = jnp.abs(observations_log - predictions_rough)
+        residuals = jnp.abs(observations_norm - predictions_rough)
         outlier_mask = (residuals > (3 * predictions_std)) & (signal_rho < outlier_cutoff)
-        
+
         # Make new arrays without outliers
-        errors_clean = jnp.where(outlier_mask, outlier_penalty, errors_log)
-        observations_clean = observations_log  # Value won't matter due to large error
+        errors_clean = jnp.where(outlier_mask, outlier_penalty, errors_norm)
+        observations_clean = observations_norm  # Value won't matter due to large error
         rho2_clean = rho2
 
         # Add synthetic value constraint points from constraint_val array
@@ -440,13 +430,12 @@ class CmodThomsonGPProfiles:
         constraint_val_value = constraint_val[:, 1]
         constraint_val_error = constraint_val[:, 2]
 
-        # Transform constraint values to log space using same shift as observations
+        # Normalize constraint values
         constraint_val_norm = constraint_val_value / norm_factor
-        constraint_val_log = jnp.log(constraint_val_norm + shift)
-        constraint_val_error_log = (constraint_val_error / norm_factor) / (constraint_val_norm + shift)
+        constraint_val_error_norm = constraint_val_error / norm_factor
 
-        y = jnp.concatenate([observations_clean, constraint_val_log])
-        y_std = jnp.concatenate([errors_clean, constraint_val_error_log])
+        y = jnp.concatenate([observations_clean, constraint_val_norm])
+        y_std = jnp.concatenate([errors_clean, constraint_val_error_norm])
         x = jnp.concatenate([rho2_clean, constraint_val_rho**2])
 
         # Add gradient constraint points from constraint_grad array
@@ -518,10 +507,12 @@ class CmodThomsonGPProfiles:
         )
         y_error = jnp.sqrt(jnp.maximum(y_pred_var, 0))
 
-        # Transform back to normal space in rho and signal
-        # Reverse the shift and normalization
-        signal_pred = (jnp.exp(y_pred) - shift) * norm_factor
-        signal_error = y_error * jnp.exp(y_pred) * norm_factor
+        # Transform back to normal space and clip to ensure positivity
+        signal_pred = y_pred * norm_factor
+        signal_error = y_error * norm_factor
+
+        # Clip predictions to be non-negative
+        signal_pred = jnp.maximum(signal_pred, 0.0)
 
         # If insufficient valid data (< 3 points), return NaN
         n_valid = jnp.sum(valid_mask)
@@ -541,7 +532,6 @@ class CmodThomsonGPProfiles:
         constraint_grad=jnp.array([[0, 0, 0], [1.1, 0, 0.1], [1.2, 0, 0.1], [1.3, 0, 0.1], [1.4, 0, 0.1]]),
         outlier_penalty=1e6,
         outlier_cutoff=0.8,
-        shift=1,
         jitter=1e-6,
     ):
         """
@@ -567,8 +557,6 @@ class CmodThomsonGPProfiles:
             The error value to assign to identified outliers to effectively ignore them (default is 1e6).
         outlier_cutoff : float, optional
             The rho value below which outliers will be identified (default is 0.8).
-        shift : float, optional
-            A small shift value added before log-transform to avoid log(0) issues (default is 1).
         jitter : float, optional
             A small jitter value added to the diagonal of the covariance matrix for numerical stability (default is 1e-6).
 
@@ -581,7 +569,7 @@ class CmodThomsonGPProfiles:
 
         signal_pred_all, signal_error_all = jax.vmap(
             CmodThomsonGPProfiles.gp_profile_single_timestep,
-            in_axes=(0, 0, 0, None, None, None, None, None, None, None, None),  # 11 args: data, error, rho (all vmapped over time), result_rho, kernel, constraint_val, constraint_grad, outlier_penalty, outlier_cutoff, shift, jitter
+            in_axes=(0, 0, 0, None, None, None, None, None, None, None),  # 10 args: data, error, rho (all vmapped over time), result_rho, kernel, constraint_val, constraint_grad, outlier_penalty, outlier_cutoff, jitter
             out_axes=(0, 0)
         )(
             signal_data,
@@ -593,7 +581,6 @@ class CmodThomsonGPProfiles:
             constraint_grad,
             outlier_penalty,
             outlier_cutoff,
-            shift,
             jitter,
         )
 
