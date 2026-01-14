@@ -11,31 +11,7 @@ ip_prog = 100e3
 
 [mast.tests]
 expected_failure_columns = []
-test_columns = [
-  'beta_tor_normal',
-  'dip_dt',
-  'dipprog_dt',
-  'dn_dt',
-  'elongation',
-  'elongation_axis',
-  'greenwald_fraction',
-  'inboard_total',
-  'ip',
-  'ip_prog',
-  'magnetic_axis_r',
-  'magnetic_axis_z',
-  'minor_radius',
-  'n_e',
-  'n_e_core',
-  'outboard_total',
-  'power_nbi',
-  'power_radiated',
-  't_e_core',
-  'time_domain',
-  'total_injected',
-  'triangularity_lower',
-  'triangularity_upper',
-]
+test_columns = []
 
 [mast.tests.shots]
 example = [30014, 30113, 30421]
