@@ -14,7 +14,9 @@ expected_failure_columns = []
 test_columns = []
 
 [mast.tests.shots]
-example = [30014, 30113, 30421]
+a_fast = 30421
+b_full = 30113
+c_full = 30014
 
 [mast.time]
 disruption_time_start = 0.2
