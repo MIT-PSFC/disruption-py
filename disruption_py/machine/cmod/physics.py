@@ -847,6 +847,27 @@ class CmodPhysicsMethods:
 
     @staticmethod
     @physics_method(
+        columns=["btor"],
+        tokamak=Tokamak.CMOD,
+    )
+    def get_magnetics_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve magnetic field parameters for CMOD.
+        """
+        btor, t_mag = params.mds_conn.get_data_with_dims(
+            r"\btor", tree_name="magnetics"
+        )  # [T], [s]
+        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
+        # on by t=-1. So pick the time before that to calculate baseline
+        baseline_indices = np.where(t_mag <= -1.8)
+        btor = btor - np.mean(btor[baseline_indices])
+
+        btor = interp1(t_mag, btor, params.times, bounds_error=False, fill_value=0.0)
+
+        return {"btor": btor}
+
+    @staticmethod
+    @physics_method(
         columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase", "bt"],
         tokamak=Tokamak.CMOD,
     )
