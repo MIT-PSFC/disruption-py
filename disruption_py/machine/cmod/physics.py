@@ -1588,7 +1588,7 @@ class CmodPhysicsMethods:
         if has_edge_data:
             n_edge_channels = data_vars["ne_edge"].shape[1]
             ts_channel = np.arange(n_core_channels + n_edge_channels)
-            array_source = np.array(["core"] * n_core_channels + ["edge"] * n_edge_channels)
+            ts_array = np.array(["core"] * n_core_channels + ["edge"] * n_edge_channels)
             rho_combined = np.concatenate(
                 [data_vars["rho_core"].values, data_vars["rho_edge"].values],
                 axis=1,
@@ -1611,7 +1611,7 @@ class CmodPhysicsMethods:
             )
         else:
             ts_channel = np.arange(n_core_channels)
-            array_source = np.array(["core"] * n_core_channels)
+            ts_array = np.array(["core"] * n_core_channels)
             rho_combined = data_vars["rho_core"].values
             ne_combined = data_vars["ne_core"].values
             ne_error_combined = data_vars["ne_error_core"].values
@@ -1629,7 +1629,7 @@ class CmodPhysicsMethods:
             coords={
                 "time": data_vars["rho_core"]["time"].values,
                 "ts_channel_idx": ts_channel,
-                "array_source": ("ts_channel_idx", array_source),
+                "ts_array": ("ts_channel_idx", ts_array),
             },
             attrs={
                 "description": "Raw Thomson scattering measurement channels from core and edge systems",
@@ -1656,10 +1656,10 @@ class CmodPhysicsMethods:
                 "ts_channel_te_error": ds_raw["ts_channel_te_error"],
             },
             coords={
-                "time": ("idx", params.times),
-                "shot": ("idx", np.full(len(params.times), params.shot_id)),
+                "time": ("idx", ds_raw.time.values),
+                "shot": ("idx", np.full(len(ds_raw.time), params.shot_id)),
                 "ts_channel_idx": ds_raw["ts_channel_idx"].values,
-                "array_source": ("ts_channel_idx", ds_raw["array_source"].values),
+                "ts_array": ("ts_channel_idx", ds_raw["ts_array"].values),
             },
             attrs=ds_raw.attrs,
         )
