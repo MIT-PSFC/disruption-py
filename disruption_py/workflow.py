@@ -106,14 +106,9 @@ def get_shots_data(
 
     tokamak = resolve_tokamak_from_environment(tokamak)
 
-    if "MDSplus" in sys.modules:
-        logger.info("Imported MDSplus.")
-    elif "mdsthin" in sys.modules:
+    if "mdsthin" in sys.modules:
         logger.warning("Imported mdsthin!")
-    elif not config(tokamak).inout.mds.mdsplus_connection_string:
-        logger.debug("Did not import MDSplus.")
-    else:
-        raise ModuleNotFoundError("Cannot import MDSplus.")
+
 
     database = _get_database_instance(tokamak, database_initializer)
     # Clean-up parameters
