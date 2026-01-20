@@ -281,7 +281,7 @@ def populate_shot(
         datasets += [result]
 
     # merge dataarrays/datasets into dataset
-    dataset = xr.merge(datasets)
+    dataset = xr.merge(datasets, compat="no_conflicts")
 
     # log statistics
     if dataset:
