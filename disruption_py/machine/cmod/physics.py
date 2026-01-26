@@ -2128,3 +2128,143 @@ class CmodPhysicsMethods:
             or 1150000000 < shot_id < 1150610000
             or 1160000000 < shot_id < 1160303000
         )
+
+@physics_method(columns=["thermal_quench_time"], tokamak=Tokamak.CMOD)
+def label_thermal_quench_onset_time(params: PhysicsMethodParams):
+    """
+    Labels the onset time of the thermal quench for a given shot (NaN for non-disruptive shots)
+    using a vertical SXR array due to its off-axis views and robustness across shots, 
+    as opposed to ECE. The labeling method is non-causal (i.e. post-shot processing). 
+    The TQ is found by searching for min(dSXR/dt) in a time window prior to the CQ.
+    There is a tension between using longer windows to find the first TQ in a multi-stage TQ
+    versus using a shorter window to avoid labeling sawtooth crashes.
+    Thus, for shots with multi-stage thermal quenches, (see shots 1050830034 and 1120717002),
+    this algorithm struggles to select the first thermal quench. Based on manual testing 
+    of 120 shots, about 5% of flattop disruptions on C-Mod feature multi-stage thermal quenches. 
+    This algorithm has only been tested on flattop disruptions.
+    ----------
+    params: PhysicsMethodParams
+        The parameters storing the requested time base, shot id, etc
+    Returns
+    ----------
+    thermal_quench_time : array_like
+        time of thermal quench onset for the shot, identical values at each time-slice
+
+    Last Major Update: Henry Wietfeldt (1/26/26)
+    """
+    from scipy.signal import butter, filtfilt, resample_poly
+    thermal_quench_time = np.full(len(params.times), np.nan)
+
+    # Get current data for obtaining start of current quench
+    ip, magtime = params.mds_conn.get_data_with_dims(
+        r"\ip", tree_name="magnetics"
+    )
+    ip = np.abs(ip)
+
+    # Get SXR chords
+    n_chords = 38
+    array_path = r"\top.brightnesses.array_1"
+    try:
+        chord_01, t_sxr = params.mds_conn.get_data_with_dims(
+            array_path + ":chord_01",
+            tree_name="xtomo",
+        ) # Units: W/m^2, s
+    except mdsExceptions.MdsException:
+        print(params.shot_id)
+        params.logger.debug("Failed to get SXR " + array_path + " data")
+        return {"thermal_quench_time": np.full(len(params.times), np.nan)}
+    valid_times = (t_sxr > 0) & (t_sxr < 2.0)
+    t_sxr = t_sxr[valid_times]
+    sxr = np.zeros(shape=(n_chords, len(t_sxr)))
+    sxr[0] = chord_01[valid_times]
+    # Get all other SXR chords
+    for i in range(1, n_chords):
+        try:
+            chord, t_chord = params.mds_conn.get_data_with_dims(
+                array_path + ":chord_" + f"{i+1:02}",
+                tree_name="xtomo",
+            )
+        except mdsExceptions.MdsException:
+            params.logger.debug("Failed to get SXR " + array_path + " chord " + str(i+1) + " data")
+            sxr[i] = 0.
+            continue
+        # Subtract constant background
+        chord = chord - np.mean(chord[t_chord < 0.])
+        # Occasionally the time bases of a chord are of a different length
+        # Usually one timebase is just cut off early after shot is over
+        valid_times = (t_chord > 0) & (t_chord < 2.)
+        # Goods chords should be of the same shape
+        if len(chord[valid_times]) == sxr.shape[1]:
+            sxr[i] = chord[valid_times]
+    sample_time = t_sxr[1] - t_sxr[0]
+    sample_freq = 1 / sample_time
+
+    # Remove bad chords by checking each chord's autocorrelation.
+    # Bad chords often have significant white noise, meaning low autocorrelation (< 10 ms)
+    # Good chords should have an autocorrelation of 100s of ms
+    # See shot 1050311013 as an example with some bad chords
+    noise_autorr_cutoff = 0.01 # [s]
+    for i, chord in enumerate(sxr):
+        # Use 300 ms prior to current quench for speed-up during autocorr O(N^2)
+        idx_start = np.argmin(np.abs(t_sxr - (params.disruption_time - 0.3)))
+        idx_end = np.argmin(np.abs(t_sxr - (params.disruption_time)))
+        chord = chord[idx_start:idx_end]
+        sample_freq_5kHz = 5000 # [Hz]
+        if sample_freq > sample_freq_5kHz:
+            # 2012-2016 has 250 kHz sampling frequency. Resample to 5 kHz frequency 
+            # (native SXR sample frequency of earlier campaigns) for speed-up
+            chord = resample_poly(chord, up=1, down=sample_freq//sample_freq_5kHz)
+        autocorr = np.correlate(chord, chord, mode='full')
+        max_autocorr = np.max(autocorr)
+        if max_autocorr > 0:
+            autocorr = autocorr / np.max(autocorr)  # Normalize
+        else:
+            sxr[i] = 0.
+            continue
+        index_no_lag = np.argmax(autocorr)
+        index_decay = np.argmax(autocorr[index_no_lag:] < 0)
+        if (index_decay*(1/sample_freq_5kHz) < noise_autorr_cutoff):
+            sxr[i] = 0.
+
+    # Noncausal Butterworth low pass filter to smooth transient SXR spikes during TQ.
+    # Cutoff of 1.0 kHz and order 2 seems to filter recombination SXR spikes
+    # while maintaining decent resolution of TQ based on scan from 0.25 kHz - 2 kHz
+    # Results were fairly insensitive within these windows on the 100 shots checked
+    # See shot 1120913013 as example of large recombination spike
+    bworth_cutoff = 1000 # [Hz]
+    bworth_order = 2
+    normalized_cutoff = bworth_cutoff / (0.5*sample_freq)
+    b, a = butter(bworth_order, normalized_cutoff, btype='low', analog=False)
+    core_sxr_raw = np.max(sxr, axis=0)
+    sxr = filtfilt(b, a, sxr, axis=1)
+    core_sxr = np.max(sxr, axis=0)
+    dcore_sxr_dt = np.diff(core_sxr, prepend=0)/sample_time
+
+    # Search for the onset of the CQ so that we can search for the TQ in a small time window
+    # to avoid labeleing sawtooth crashes as the thermal quench
+    # Some current quenches can be long (see shots 1050311013, 1050802017). 
+    # Set Ip prior to disruption as minimum in prior time window (not median due to case of ramp-down)
+    idx_start = np.argmin(np.abs(magtime - (params.disruption_time - 0.04)))
+    idx_end = np.argmin(np.abs(magtime - (params.disruption_time - 0.02)))
+    ip_prior = np.min(ip[idx_start:idx_end])
+    # CQ onset is last moment Ip is >90% Ip prior to disruption
+    idx_cq_onset = np.where(ip > 0.9*ip_prior)[0][-1]
+    cq_onset_time = magtime[idx_cq_onset]
+
+    # Search for TQ midpoint as min(dSXR/dt) in window of 5 ms prior to current quench onset
+    wndw_before_cq = 0.005 # [s]
+    idx_start = np.argmin(np.abs(t_sxr - (cq_onset_time - wndw_before_cq)))
+    idx_end = np.argmin(np.abs(t_sxr - (cq_onset_time)))
+    t_max_sxr_drop = t_sxr[idx_start + np.argmin(dcore_sxr_dt[idx_start:idx_end])]
+
+    # Find onset of thermal quench in 0.5 ms window prior to midpoint of TQ
+    # Thermal quenches on C-Mod are almost always shorter than 1 ms
+    # Label onset as max of SXR signal on 0.5 ms window preceding max drop in SXR
+    # Use raw signal bc smoothed signal as a longer crash time.
+    # Note this sometimes picks up on recombination spikes
+    wndw_before_tq_mid = 0.0005 # [s]
+    idx_start = np.argmin(np.abs(t_sxr - (t_max_sxr_drop - wndw_before_tq_mid)))
+    idx_end = np.argmin(np.abs(t_sxr - (t_max_sxr_drop)))
+    tq_time_scalar = t_sxr[idx_start + np.argmax(core_sxr_raw[idx_start:idx_end])]
+    thermal_quench_time = tq_time_scalar * np.ones(len(params.times))
+    return {"thermal_quench_time": thermal_quench_time}
