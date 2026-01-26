@@ -2133,14 +2133,14 @@ class CmodPhysicsMethods:
 def label_thermal_quench_onset_time(params: PhysicsMethodParams):
     """
     Labels the onset time of the thermal quench for a given shot (NaN for non-disruptive shots)
-    using a vertical SXR array due to its off-axis views and robustness across shots, 
-    as opposed to ECE. The labeling method is non-causal (i.e. post-shot processing). 
+    using a vertical SXR array due to its off-axis views and robustness across shots,
+    as opposed to ECE. The labeling method is non-causal (i.e. post-shot processing).
     The TQ is found by searching for min(dSXR/dt) in a time window prior to the CQ.
     There is a tension between using longer windows to find the first TQ in a multi-stage TQ
     versus using a shorter window to avoid labeling sawtooth crashes.
     Thus, for shots with multi-stage thermal quenches, (see shots 1050830034 and 1120717002),
-    this algorithm struggles to select the first thermal quench. Based on manual testing 
-    of 120 shots, about 5% of flattop disruptions on C-Mod feature multi-stage thermal quenches. 
+    this algorithm struggles to select the first thermal quench. Based on manual testing
+    of 120 shots, about 5% of flattop disruptions on C-Mod feature multi-stage thermal quenches.
     This algorithm has only been tested on flattop disruptions.
     ----------
     params: PhysicsMethodParams
@@ -2209,11 +2209,11 @@ def label_thermal_quench_onset_time(params: PhysicsMethodParams):
         idx_start = np.argmin(np.abs(t_sxr - (params.disruption_time - 0.3)))
         idx_end = np.argmin(np.abs(t_sxr - (params.disruption_time)))
         chord = chord[idx_start:idx_end]
-        sample_freq_5kHz = 5000 # [Hz]
-        if sample_freq > sample_freq_5kHz:
-            # 2012-2016 has 250 kHz sampling frequency. Resample to 5 kHz frequency 
+        sample_freq_5khz = 5000 # [Hz]
+        if sample_freq > 5000:
+            # 2012-2016 has 250 kHz sampling frequency. Resample to 5 kHz frequency
             # (native SXR sample frequency of earlier campaigns) for speed-up
-            chord = resample_poly(chord, up=1, down=sample_freq//sample_freq_5kHz)
+            chord = resample_poly(chord, up=1, down=sample_freq//sample_freq_5khz)
         autocorr = np.correlate(chord, chord, mode='full')
         max_autocorr = np.max(autocorr)
         if max_autocorr > 0:
@@ -2223,7 +2223,7 @@ def label_thermal_quench_onset_time(params: PhysicsMethodParams):
             continue
         index_no_lag = np.argmax(autocorr)
         index_decay = np.argmax(autocorr[index_no_lag:] < 0)
-        if (index_decay*(1/sample_freq_5kHz) < noise_autorr_cutoff):
+        if index_decay*(1/sample_freq_5khz) < noise_autorr_cutoff:
             sxr[i] = 0.
 
     # Noncausal Butterworth low pass filter to smooth transient SXR spikes during TQ.
@@ -2242,8 +2242,8 @@ def label_thermal_quench_onset_time(params: PhysicsMethodParams):
 
     # Search for the onset of the CQ so that we can search for the TQ in a small time window
     # to avoid labeleing sawtooth crashes as the thermal quench
-    # Some current quenches can be long (see shots 1050311013, 1050802017). 
-    # Set Ip prior to disruption as minimum in prior time window (not median due to case of ramp-down)
+    # Some current quenches can be long (see shots 1050311013, 1050802017).
+    # Set Ip prior to disruption as minimum in prior time window (not median for ramp-down)
     idx_start = np.argmin(np.abs(magtime - (params.disruption_time - 0.04)))
     idx_end = np.argmin(np.abs(magtime - (params.disruption_time - 0.02)))
     ip_prior = np.min(ip[idx_start:idx_end])
