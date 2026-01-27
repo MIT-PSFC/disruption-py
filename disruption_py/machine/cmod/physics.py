@@ -2142,6 +2142,8 @@ class CmodPhysicsMethods:
         """
         from scipy.signal import butter, filtfilt, resample_poly
         thermal_quench_time = np.full(len(params.times), np.nan)
+        if params.disruption_time is None:
+            return {"thermal_quench_time": thermal_quench_time}
 
         # Get current data for obtaining start of current quench
         ip, magtime = params.mds_conn.get_data_with_dims(
