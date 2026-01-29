@@ -17,6 +17,12 @@ Here follows a non-exhaustive list of projects, publications, and conference con
 - GL Trevisan, _et al._ (2024), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, Zenodo, DOI: [10.5281/zenodo.13935223](https://doi.org/10.5281/zenodo.13935223)
 - Z Keith, _et al._ (2024), _"Risk-aware framework development for disruption prediction: Alcator C-Mod and DIII-D survival analysis"_,  J. Fusion. Energ. **43** 21, DOI: [10.1007/s10894-024-00413-y](https://doi.org/10.1007/s10894-024-00413-y)
 
+### Databases
+
+- Z Keith, _et al._ (2025), _"Tearing Mode Database"_, Zenodo, DOI: [10.5281/zenodo.17612862](https://doi.org/10.5281/zenodo.17612862)
+- AD Maris, _et al._ (2025), _"Open Density Limit Database"_, Github, [`MIT-PSFC/open_density_limit_database`](https://github.com/MIT-PSFC/open_density_limit_database)
+- MIT PSFC Disruption Studies Group (2023-2024), _"AI/ML For Fusion -- Database preparation workflows"_, Github, [`MIT-PSFC/wm-summer-school`](https://github.com/MIT-PSFC/wm-summer-school)
+
 ### Conferences
 
 - [67th APS-DPP Meeting (2025)](https://meetings.aps.org/Meeting/DPP25)
