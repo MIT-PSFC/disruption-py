@@ -28,6 +28,7 @@ jobs:
           - C-MOD
           - DIII-D
           - HBT-EP
+          - MAST
     steps:
 
       - name: Checkout
@@ -180,7 +181,8 @@ jobs:
 
       - name: Test EFIT
         if: ${{ matrix.tokamak == 'C-MOD'
-             || matrix.tokamak == 'DIII-D' }}
+             || matrix.tokamak == 'DIII-D'
+             || matrix.tokamak == 'MAST' }}
         run: poetry run python examples/efit.py
 
       - name: Run all tests
