@@ -27,12 +27,16 @@ jobs:
         tokamak:
           - C-MOD
           - DIII-D
+          - HBT-EP
     steps:
 
       - name: Checkout
         uses: actions/checkout@v6
 
       - name: Add MDSplus sources
+        if: ${{ matrix.tokamak == 'C-MOD'
+             || matrix.tokamak == 'DIII-D'
+             || matrix.tokamak == 'HBT-EP' }}
         env:
           GPG: http://www.mdsplus.org/dist/mdsplus.gpg.key
           KEY: /usr/share/keyrings/mdsplus.asc
@@ -45,15 +49,24 @@ jobs:
           | sudo tee "$APT"
 
       - name: Update sources
+        if: ${{ matrix.tokamak == 'C-MOD'
+             || matrix.tokamak == 'DIII-D'
+             || matrix.tokamak == 'HBT-EP' }}
         run: sudo apt-get update
 
       - name: Install prerequisites
+        if: ${{ matrix.tokamak == 'C-MOD'
+             || matrix.tokamak == 'DIII-D'
+             || matrix.tokamak == 'HBT-EP' }}
         run: |
           sudo apt-get install msodbcsql17 # pre-installed
           sudo apt-get install tdsodbc unixodbc # freetds
           sudo apt-get install mdsplus-alpha-python # mdsplus
 
       - name: Configure MDSplus
+        if: ${{ matrix.tokamak == 'C-MOD'
+             || matrix.tokamak == 'DIII-D'
+             || matrix.tokamak == 'HBT-EP' }}
         run: |
           {
              echo PYTHONPATH=/usr/local/mdsplus/python
@@ -62,6 +75,9 @@ jobs:
           | tee -a "$GITHUB_ENV"
 
       - name: Setup SSH key
+        if: ${{ matrix.tokamak == 'C-MOD'
+             || matrix.tokamak == 'DIII-D'
+             || matrix.tokamak == 'HBT-EP' }}
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_TUNNEL }}" \
@@ -111,6 +127,21 @@ jobs:
           echo DISPY_TOKAMAK=d3d \
           | tee -a "$GITHUB_ENV"
 
+      - name: Setup HBT-EP
+        if: ${{ matrix.tokamak == 'HBT-EP' }}
+        run: |
+          ssh "${{ secrets.HBTEP_USER }}@${{ secrets.HBTEP_HOST }}" \
+            -p "${{ secrets.HBTEP_PORT }}" \
+            -L 8003:maxwell.ap.columbia.edu:8003 \
+            -o StrictHostKeyChecking=no \
+            -N -v 2> ssh.log &
+          echo "$!" \
+          | tee ssh.pid
+          echo "127.0.0.1 maxwell.ap.columbia.edu" \
+          | sudo tee -a /etc/hosts
+          echo DISPY_TOKAMAK=hbtep \
+          | tee -a "$GITHUB_ENV"
+
       - name: Install poetry
         run: pipx install poetry
 
@@ -124,6 +155,9 @@ jobs:
         run: make install-all
 
       - name: Check tunnel
+        if: ${{ matrix.tokamak == 'C-MOD'
+             || matrix.tokamak == 'DIII-D'
+             || matrix.tokamak == 'HBT-EP' }}
         run: |
           xargs -a ssh.pid ps -p || true
           if ! grep 'Authenticated.*publickey' ssh.log
@@ -134,16 +168,26 @@ jobs:
           fi
 
       - name: Test SQL
+        if: ${{ matrix.tokamak == 'C-MOD'
+             || matrix.tokamak == 'DIII-D' }}
         run: poetry run python examples/sql.py
 
       - name: Test MDSplus
+        if: ${{ matrix.tokamak == 'C-MOD'
+             || matrix.tokamak == 'DIII-D'
+             || matrix.tokamak == 'HBT-EP' }}
         run: poetry run python examples/mdsplus.py
 
       - name: Test EFIT
+        if: ${{ matrix.tokamak == 'C-MOD'
+             || matrix.tokamak == 'DIII-D' }}
         run: poetry run python examples/efit.py
 
       - name: Run all tests
         run: make test
 
       - name: Close tunnel
+        if: ${{ matrix.tokamak == 'C-MOD'
+             || matrix.tokamak == 'DIII-D'
+             || matrix.tokamak == 'HBT-EP' }}
         run: xargs -a ssh.pid kill -TERM
