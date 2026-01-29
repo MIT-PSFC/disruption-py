@@ -20,6 +20,9 @@ authors:
   - name: Joshua Lorincz
     orcid: 0009-0003-0288-9501
     affiliation: 1
+  - name: Samuel L. Jackson
+    orcid: 0000-0001-5301-5095
+    affiliation: 2
   - name: Cristina Rea
     orcid: 0000-0002-9948-2649
     affiliation: 1
@@ -31,6 +34,8 @@ authors:
 affiliations:
  - name: MIT Plasma Science and Fusion Center, Cambridge MA, USA
    index: 1
+ - name: U.K. Atomic Energy Authority, Culham Centre for Fusion Energy, Culham Science Centre, Abingdon, U.K.
+   index: 2
 date: 27 June 2025
 bibliography: paper.bib
 ---
