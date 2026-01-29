@@ -61,7 +61,7 @@ def physics_method(
         def timed_wrapper(params, *args, **kwargs):
             start_time = time.time()
             result = wrapper(params, *args, **kwargs)
-            params.logger.info(
+            params.logger.verbose(
                 "{t:.3f}s : {name}",
                 name=method.__name__,
                 t=time.time() - start_time,
