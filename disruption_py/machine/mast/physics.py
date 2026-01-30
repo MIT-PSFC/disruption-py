@@ -12,7 +12,7 @@ from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
-from disruption_py.inout.xarray import XarrayConnection
+from disruption_py.inout.xarray_backend import XarrayConnection
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -285,12 +285,12 @@ class MastPhysicsMethods:
             dalpha = dalpha.dropna(dim="time")
             dalpha = dalpha.squeeze(drop=True)
             dalpha = dalpha.drop_vars("dalpha_channel")
+
+            dalpha_time = dalpha.time.values
+            dalpha_data = dalpha.values
         else:
             dalpha_time = np.array([np.nan])
             dalpha_data = np.array([np.nan])
-
-        dalpha_time = dalpha.time.values
-        dalpha_data = dalpha.values
 
         times = params.times
         dalpha_data = MastPhysicsMethods.interpolate_1d(dalpha_time, dalpha_data, times)

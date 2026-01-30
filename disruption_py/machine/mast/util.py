@@ -7,7 +7,7 @@ Module for helper, not physics, methods.
 import numpy as np
 import xarray as xr
 
-from disruption_py.inout.xarray import XarrayConnection
+from disruption_py.inout.xarray_backend import XarrayConnection
 
 
 class MastUtilMethods:
@@ -48,7 +48,7 @@ class MastUtilMethods:
 
         Parameters
         ----------
-        mds_conn : S3Connection
+        conn : XarrayConnection
             Connection to S3 bucket.
         shot_id : int
             Shot number.
@@ -72,7 +72,7 @@ class MastUtilMethods:
 
         Parameters
         ----------
-        mds_conn : S3Connection
+        conn : XarrayConnection
             Connection to S3 bucket.
         shot_id : int
             Shot number.
