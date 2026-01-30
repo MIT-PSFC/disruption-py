@@ -79,7 +79,7 @@ _total shots_ | **120**
 _years_ | **2022**
 _maintainer_ | [William Wei](https://github.com/yumouwei)
 
-This list of shots was collected to investigate on developing data-drive ML models for tracking the n=1 mode evolution from images collected by the high-speed camera diagnostic on HBT-EP. A full description of the dataset is available in [Y. Wei, 2014, Optical-Based Microsecond Latency MHD Mode Tracking Through Deep Learning](https://www.proquest.com/openview/3339ba1f549ee7793e92260e50292d5d/1?pq-origsite=gscholar&cbl=18750&diss=y) _Chapter 4: Experiments and data preparation_ and _Appendix B: Extended dataset description_.
+This list of shots was collected to investigate on developing data-drive ML models for tracking the n=1 mode evolution from images collected by the high-speed camera diagnostic on HBT-EP. A full description of the dataset is available in [Y. Wei, 2024, Optical-Based Microsecond Latency MHD Mode Tracking Through Deep Learning](https://www.proquest.com/openview/3339ba1f549ee7793e92260e50292d5d/1?pq-origsite=gscholar&cbl=18750&diss=y) _Chapter 4: Experiments and data preparation_ and _Appendix B: Extended dataset description_.
 
 ### Details
 
