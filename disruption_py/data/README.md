@@ -90,3 +90,8 @@ Column description:
 - `shot_style` (integer): scenario of the shot which is mainly characterized by the `q_edge` evolution, see _Appendix B_,
 - `group` (integer): category of a shot within a `shot_style`, see _Appendix B_,
 - `table` (string): location of the shot in _Appendix B_.
+
+### Publications
+
+- [Y. Wei et al 2023 Plasma Phys. Control. Fusion 65 074002](https://iopscience.iop.org/article/10.1088/1361-6587/acd581/meta)
+- [Y. Wei et al 2024 Rev. Sci. Instrum. 95, 073509](https://pubs.aip.org/aip/rsi/article-abstract/95/7/073509/3302456/Low-latency-optical-based-mode-tracking-with?redirectedFrom=fulltext)
