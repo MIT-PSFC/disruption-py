@@ -22,7 +22,7 @@ from disruption_py.core.utils.misc import (
 )
 from disruption_py.inout.mds import ProcessMDSConnection
 from disruption_py.inout.sql import ShotDatabase
-from disruption_py.inout.xarray_backend import XarrayConnection
+from disruption_py.inout.xr import XarrayConnection
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.settings import RetrievalSettings
 from disruption_py.settings.log_settings import LogSettings, resolve_log_settings

@@ -6,7 +6,7 @@ Module for retrieving and processing EFIT parameters for MAST.
 
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.inout.xarray_backend import XarrayConnection
+from disruption_py.inout.xr import XarrayConnection
 from disruption_py.machine.mast.physics import MastPhysicsMethods
 
 

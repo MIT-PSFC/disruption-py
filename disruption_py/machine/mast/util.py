@@ -7,7 +7,7 @@ Module for helper, not physics, methods.
 import numpy as np
 import xarray as xr
 
-from disruption_py.inout.xarray_backend import XarrayConnection
+from disruption_py.inout.xr import XarrayConnection
 
 
 class MastUtilMethods:
