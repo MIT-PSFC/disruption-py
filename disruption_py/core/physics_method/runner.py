@@ -288,6 +288,15 @@ def populate_shot(
     dataset.attrs.update({"tokamak": physics_method_params.tokamak.value})
     dataset.attrs.update(get_metadata())
 
+    # set attributes for data vars
+    try:
+        attributes = config(physics_method_params.tokamak).physics.attributes
+    except KeyError:
+        attributes = {}
+    for data_var, attrs in attributes.items():
+        if data_var in dataset:
+            dataset[data_var].attrs.update(attrs)
+
     # log statistics
     if dataset:
         tot = len(dataset.data_vars)
