@@ -6,6 +6,7 @@ Module for retrieving and calculating data for DIII-D physics methods.
 
 import numpy as np
 import scipy
+import xarray as xr
 
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
@@ -1731,3 +1732,100 @@ class D3DPhysicsMethods:
         ) / psi_norm_f[:, np.newaxis, np.newaxis]
         efit_dict["psin"][problems, :, :] = 0
         return efit_dict
+
+
+    @staticmethod
+    @physics_method(columns=["bt"], tokamak=Tokamak.D3D)
+    def get_magnetics_parameters(params: PhysicsMethodParams):
+        """
+        Get the toroidal magnetic field at the magnetic axis.
+        """
+        b_tor, t_mag = params.mds_conn.get_data_with_dims(
+            f"ptdata('bt', {params.shot_id})", tree_name="d3d"
+        )
+        t_mag /= 1e3  # [ms] -> [s]
+        b_tor = interp1(t_mag, b_tor, params.times)  # [T]
+        return {"bt": b_tor}
+
+    @staticmethod
+    @physics_method(columns=["wmhdf", "betapf"], tokamak=Tokamak.D3D)
+    def get_pedestal_parameters(params: PhysicsMethodParams):
+        """
+        Get the pedestal plasma parameters.
+        """
+        wmhdf, t_wmhdf = params.mds_conn.get_data_with_dims(
+            r"\wmhdf", tree_name="pedestal"
+        )
+        betapf, t_betapf = params.mds_conn.get_data_with_dims(
+            r"\betapf", tree_name="pedestal"
+        )
+
+        t_wmhdf = t_wmhdf / 1e3  # [ms] -> [s]
+        t_betapf = t_betapf / 1e3  # [ms] -> [s]
+
+        wmhdf = interp1(t_wmhdf, wmhdf, params.times)
+        betapf = interp1(t_betapf, betapf, params.times)
+
+        return {"wmhdf": wmhdf, "betapf": betapf}
+
+    @staticmethod
+    @physics_method(columns=["ne_rho", "te_rho"], tokamak=Tokamak.D3D)
+    def get_zipfit_profiles(params: PhysicsMethodParams):
+        """
+        Get the electron density and temperature profiles from the ZIPFIT analysis.
+        https://diii-d.gat.com/d3d-wiki/images/2/2b/Fsm.pdf
+        """
+
+        # te_data has shape (time, rho)
+        te_data, te_rho = params.mds_conn.get_data_with_dims(r"PROFILE_FITS.ZIPFIT.ETEMPFIT", tree_name="electrons")
+        _te_rhomax, te_time = params.mds_conn.get_data_with_dims(r"PROFILE_FITS.ZIPFIT.ETEMPFIT.RHOMAX", tree_name="electrons")
+        ne_data, ne_rho = params.mds_conn.get_data_with_dims(r"PROFILE_FITS.ZIPFIT.EDENSFIT", tree_name="electrons")
+        _ne_rhomax, ne_time = params.mds_conn.get_data_with_dims(r"PROFILE_FITS.ZIPFIT.EDENSFIT.RHOMAX", tree_name="electrons")
+
+        other_fit, rho_other = params.mds_conn.get_data_with_dims(r"PROFILES.EDENSFIT", tree_name="zipfit01")
+
+        # If there's a time mismatch, fill in missing times with NaNs
+        if not np.array_equal(te_time, ne_time):
+            all_times = np.union1d(te_time, ne_time)
+            te_data_interp = np.full((len(all_times), te_data.shape[1]), np.nan)
+            ne_data_interp = np.full((len(all_times), ne_data.shape[1]), np.nan)
+
+            for i, t in enumerate(all_times):
+                te_idx = np.where(te_time == t)[0]
+                ne_idx = np.where(ne_time == t)[0]
+                if len(te_idx) > 0:
+                    te_data_interp[i, :] = te_data[te_idx[0], :]
+                if len(ne_idx) > 0:
+                    ne_data_interp[i, :] = ne_data[ne_idx[0], :]
+
+            te_data = te_data_interp
+            ne_data = ne_data_interp
+            te_time = all_times
+            ne_time = all_times
+
+        # Create xarray dataset
+        te_rho_da = xr.DataArray(
+            te_data,
+            dims=("idx", "rho"),
+            coords={
+                "shot": params.shot_id,
+                "rho": te_rho,
+                "time": ("idx", te_time/1e3)
+            },
+        )
+        ne_rho_da = xr.DataArray(
+            ne_data,
+            dims=("idx", "rho"),
+            coords={
+                "shot": params.shot_id,
+                "rho": ne_rho,
+                "time": ("idx", ne_time/1e3)
+            },
+        )
+
+        te_ds = te_rho_da.astype(np.float32).to_dataset(name="te_rho")
+        ne_ds = ne_rho_da.astype(np.float32).to_dataset(name="ne_rho")
+
+        profile_ds = xr.merge([te_ds, ne_ds], compat="no_conflicts")
+
+        return profile_ds
