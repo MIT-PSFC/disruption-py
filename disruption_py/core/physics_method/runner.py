@@ -285,14 +285,12 @@ def populate_shot(
     dataset = xr.merge(datasets, compat="no_conflicts")
 
     # set attributes for dataset
-    dataset.attrs.update({"tokamak": physics_method_params.tokamak.value})
+    tokamak = physics_method_params.tokamak
+    dataset.attrs.update({"tokamak": tokamak.name})
     dataset.attrs.update(get_metadata())
 
     # set attributes for data vars
-    try:
-        attributes = config(physics_method_params.tokamak).physics.attributes
-    except (AttributeError, KeyError):
-        attributes = {}
+    attributes = config(tokamak).get("physics", {}).get("attributes", {})
     for data_var, attrs in attributes.items():
         if data_var in dataset:
             dataset[data_var].attrs.update(attrs)
