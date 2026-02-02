@@ -79,7 +79,8 @@ _total shots_ | **120**
 _years_ | **2022**
 _maintainer_ | [William Wei](https://github.com/yumouwei)
 
-This list of shots was collected to investigate developing data-driven ML models for tracking the n=1 mode evolution from images collected by the high-speed camera diagnostic on HBT-EP. A full description of the dataset is available in [Y. Wei, 2024, Optical-Based Microsecond Latency MHD Mode Tracking Through Deep Learning](https://www.proquest.com/openview/3339ba1f549ee7793e92260e50292d5d/1?pq-origsite=gscholar&cbl=18750&diss=y) _Chapter 4: Experiments and data preparation_ and _Appendix B: Extended dataset description_.
+This list of shots was collected to investigate developing data-driven ML models for tracking the n=1 mode evolution from images collected by the high-speed camera diagnostic on HBT-EP.
+A full description of the dataset is available in [Y. Wei, 2024, Optical-Based Microsecond Latency MHD Mode Tracking Through Deep Learning](https://www.proquest.com/openview/3339ba1f549ee7793e92260e50292d5d), _Chapter 4: Experiments and data preparation_ and _Appendix B: Extended dataset description_.
 
 ### Details
 
@@ -93,5 +94,5 @@ Column description:
 
 ### Publications
 
-- [Y. Wei et al 2023 Plasma Phys. Control. Fusion 65 074002](https://iopscience.iop.org/article/10.1088/1361-6587/acd581/meta)
-- [Y. Wei et al 2024 Rev. Sci. Instrum. 95, 073509](https://pubs.aip.org/aip/rsi/article-abstract/95/7/073509/3302456/Low-latency-optical-based-mode-tracking-with?redirectedFrom=fulltext)
+- [Y. Wei, et al. (2023) Plasma Phys. Control. Fusion **65** 074002](https://doi.org/10.1088/1361-6587/acd581)
+- [Y. Wei, et al. (2024) Rev. Sci. Instrum. **95** 073509](https://doi.org/10.1063/5.0190354)
