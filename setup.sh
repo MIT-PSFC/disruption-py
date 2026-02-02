@@ -13,7 +13,7 @@ then
    export MDSPLUS_DIR=/usr/local/mdsplus
    export DISPY_DIR=/usr/local/mfe/disruptions/disruption-py
    export DISPY_TOKAMAK=cmod
-   export MDS_HOST=alcdata-archives
+   export MDS_HOST=mfedata01
 
 elif [[ -d /fusion/projects/disruption_warning ]]
 then
