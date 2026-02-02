@@ -291,7 +291,7 @@ def populate_shot(
     # set attributes for data vars
     try:
         attributes = config(physics_method_params.tokamak).physics.attributes
-    except KeyError:
+    except AttributeError, KeyError:
         attributes = {}
     for data_var, attrs in attributes.items():
         if data_var in dataset:
