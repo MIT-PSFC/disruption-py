@@ -68,7 +68,7 @@ class MastPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["power_nbi", "power_radiated"],
+        columns=["p_nbi", "p_rad"],
         tokamak=Tokamak.MAST,
     )
     def get_power(params: PhysicsMethodParams):
@@ -96,11 +96,11 @@ class MastPhysicsMethods:
         power_radiated = MastUtilMethods.interpolate_1d(
             base_time, power_radiated, times
         )
-        return {"power_nbi": power_nbi, "power_radiated": power_radiated}
+        return {"p_nbi": power_nbi, "p_rad": power_radiated}
 
     @staticmethod
     @physics_method(
-        columns=["total_injected", "inboard_total", "outboard_total"],
+        columns=["gas_total_injected", "gas_inboard_total", "gas_outboard_total"],
         tokamak=Tokamak.MAST,
     )
     def get_gas(params: PhysicsMethodParams):
@@ -133,9 +133,9 @@ class MastPhysicsMethods:
             base_time, outboard_total, times
         )
         return {
-            "total_injected": total_injected,
-            "inboard_total": inboard_total,
-            "outboard_total": outboard_total,
+            "gas_total_injected": total_injected,
+            "gas_inboard_total": inboard_total,
+            "gas_outboard_total": outboard_total,
         }
 
     @staticmethod
@@ -258,7 +258,7 @@ class MastPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["soft_x_rays"],
+        columns=["sxr"],
         tokamak=Tokamak.MAST,
     )
     def get_sxr(params: PhysicsMethodParams):
@@ -293,7 +293,7 @@ class MastPhysicsMethods:
 
         times = params.times
         sxr_data = MastUtilMethods.interpolate_1d(sxr_time, sxr_data, times)
-        return {"soft_x_rays": sxr_data}
+        return {"sxr": sxr_data}
 
     @staticmethod
     @physics_method(
