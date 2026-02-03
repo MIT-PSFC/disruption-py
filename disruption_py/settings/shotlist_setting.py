@@ -170,6 +170,7 @@ _get_shotlist_setting_mappings: Dict[str, ShotlistSetting] = {
         """),
     "cmod_ufo": IncludedShotlistSetting("cmod_ufo.csv"),
     "cmod_vde": IncludedShotlistSetting("cmod_vde.csv"),
+    "hbtep_fastcam": IncludedShotlistSetting("hbtep_fastcam.csv"),
 }
 # --8<-- [end:get_shotlist_setting_dict]
 
