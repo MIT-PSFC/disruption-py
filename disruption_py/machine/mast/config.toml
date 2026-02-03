@@ -14,14 +14,12 @@ expected_failure_columns = []
 test_columns = []
 
 [mast.tests.shots]
-disruption_fast = 30421
-no_disruption_fast = 29666
 disruption1_full = 30113
 disruption2_full = 30014
+disruption_fast = 30421
 no_disruption1_full = 29165
 no_disruption2_full = 28864
-
-
+no_disruption_fast = 29666
 
 [mast.time]
 disruption_time_start = 0.2
