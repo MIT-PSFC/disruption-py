@@ -7,7 +7,7 @@ Module for retrieving and processing EFIT parameters for MAST.
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.inout.xr import XarrayConnection
-from disruption_py.machine.mast.physics import MastPhysicsMethods
+from disruption_py.machine.mast.util import MastUtilMethods
 
 
 class MastEfitMethods:
@@ -29,7 +29,6 @@ class MastEfitMethods:
         "bvac_rmag",
         "bphi_rmag",
         "li",
-        "whmd",
         "vloop_static",
         "q95",
     ]
@@ -57,10 +56,7 @@ class MastEfitMethods:
         outputs = {}
         for prop in MastEfitMethods.efit_properties:
             signal = conn.get_data(params.shot_id, f"equilibrium/{prop}")
-            item = MastPhysicsMethods.interpolate_1d(eq_time, signal, times)
+            item = MastUtilMethods.interpolate_1d(eq_time, signal, times)
             outputs[prop] = item
-
-        if "whmd" in outputs:
-            outputs["wmhd"] = outputs.pop("whmd")
 
         return outputs

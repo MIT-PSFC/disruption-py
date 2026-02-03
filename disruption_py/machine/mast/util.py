@@ -5,9 +5,9 @@ Module for helper, not physics, methods.
 """
 
 import numpy as np
-import xarray as xr
 
 from disruption_py.inout.xr import XarrayConnection
+from disruption_py.core.utils.math import interp1
 
 
 class MastUtilMethods:
@@ -15,31 +15,6 @@ class MastUtilMethods:
     A class of helper methods that might fetch and compute data from MDSplus
     but are not physics methods.
     """
-
-    @staticmethod
-    def subtract_ip_baseline_offset(ip, ip_time):
-        """
-        Subtract the baseline offset from the plasma current signal.
-
-        Parameters
-        ----------
-        ip : np.ndarray
-            Plasma current [A].
-        ip_time : np.ndarray
-            Time base of plasma current [s].
-
-        Returns
-        -------
-        np.ndarray
-            Offset-subtracted plasma current [A].
-        """
-        # Get indices of time before any PF supplies turn on
-        (base_indices,) = np.where(ip_time <= -5.8)
-        # Subtract offset
-        if len(base_indices) > 0:
-            baseline = sum(ip[base_indices]) / len(base_indices)
-            ip -= baseline
-        return ip
 
     @staticmethod
     def retrieve_ip(conn: XarrayConnection, shot_id: int):
@@ -58,11 +33,8 @@ class MastUtilMethods:
         tuple[np.ndarray, np.ndarray]
             Plasma current [A], time base of plasma current [s].
         """
-        file_name = conn.get_shot_file_path(shot_id)
-        ds = xr.open_zarr(file_name, group="summary")
-        ip = ds["ip"].values
-        ip_time = ds["time"].values
-        ip = MastUtilMethods.subtract_ip_baseline_offset(ip, ip_time)
+        ip = conn.get_data(shot_id, "summary/ip")  # ensure data is cached
+        ip_time = conn.get_data(shot_id, "summary/time")
         return ip, ip_time
 
     @staticmethod
@@ -82,7 +54,29 @@ class MastUtilMethods:
         np.ndarray
             EFIT time base [s].
         """
-        file_name = conn.get_shot_file_path(shot_id)
-        ds = xr.open_zarr(file_name, group="equilibrium")
-        efit_time = ds["time"].values
+        efit_time = conn.get_data(shot_id, "equilibrium/time")
         return efit_time
+
+    @staticmethod
+    def interpolate_1d(x, y, x_new):
+        """Safely interpolate 1D data with handling for all-NaN y values.
+
+        Parameters
+        ----------
+        x : array_like
+            Original x-coordinates of the data points.
+        y : array_like
+            Original y-coordinates of the data points.
+        x_new : array_like
+            New x-coordinates where interpolation is desired.
+
+        Returns
+        -------
+        array_like
+            Interpolated y-coordinates corresponding to x_new.
+        """
+        if len(x) != len(y) and np.isnan(y).all():
+            # if all y are NaN (is a missing signal)
+            # just return array of NaNs with same shape as x_new
+            return np.full_like(x_new, np.nan)
+        return interp1(x, y, x_new)

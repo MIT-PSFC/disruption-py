@@ -4,8 +4,9 @@
 Module for connecting to Xarray data stores.
 """
 
+from isort import file
+
 import threading
-from typing import Optional
 
 import numpy as np
 import xarray as xr
@@ -24,7 +25,7 @@ class XarrayConnection:
         self,
         file_path: str,
         file_ext: str = "zarr",
-        endpoint_url: Optional[str] = None,
+        endpoint_url: str | None = None,
     ):
         if file_path is None:
             return
@@ -32,14 +33,13 @@ class XarrayConnection:
         self.endpoint_url = endpoint_url
         self.file_path = file_path
         self.file_ext = file_ext
-        self.data_tree: Optional[xr.DataTree] = None
+        self.data_tree: xr.DataTree | None = None
 
         logger.debug(
             "PID #{pid} | Connecting to Xarray store: {server}",
             server=endpoint_url,
             pid=threading.get_native_id(),
         )
-        # pylint: disable=no-member
 
     @property
     def folder_path(self):
@@ -55,13 +55,20 @@ class XarrayConnection:
         Create instance of the connection based on the file path, file extension, and endpoint URL
         from the configuration.
         """
-        params = dict(config(tokamak).inout.xarray)
+        params = config(tokamak).inout.xarray
         return XarrayConnection(**params)
 
     def get_shot_connection(self, shot_id: int):
         """Get connection to xarray store for individual shot."""
         file_path = self.get_shot_file_path(shot_id)
         engine = "zarr" if self.file_ext == "zarr" else "netcdf4"
+
+        logger.debug(
+            "PID #{pid} | Opening data tree at {file_path}",
+            file_path=file_path,
+            pid=threading.get_native_id(),
+        )
+
         self.data_tree = xr.open_datatree(
             file_path, engine=engine, chunks=None, create_default_indexes=False
         )

@@ -13,6 +13,7 @@ from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
 from disruption_py.inout.xr import XarrayConnection
+from disruption_py.machine.mast.util import MastUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -25,7 +26,7 @@ class MastPhysicsMethods:
     @staticmethod
     @cache_method
     @physics_method(
-        columns=["ip"],
+        columns=["ip", "dip_dt", "ip_prog", "dipprog_dt"],
         tokamak=Tokamak.MAST,
     )
     def get_ip_parameters(params: PhysicsMethodParams):
@@ -53,10 +54,10 @@ class MastPhysicsMethods:
 
         times = params.times
 
-        ip = MastPhysicsMethods.interpolate_1d(magtime, ip, times)
-        ip_prog = MastPhysicsMethods.interpolate_1d(ip_prog_time, ip_prog, times)
-        dip_dt = MastPhysicsMethods.interpolate_1d(magtime, dip_dt, times)
-        dipprog_dt = MastPhysicsMethods.interpolate_1d(ip_prog_time, dipprog_dt, times)
+        ip = MastUtilMethods.interpolate_1d(magtime, ip, times)
+        ip_prog = MastUtilMethods.interpolate_1d(ip_prog_time, ip_prog, times)
+        dip_dt = MastUtilMethods.interpolate_1d(magtime, dip_dt, times)
+        dipprog_dt = MastUtilMethods.interpolate_1d(ip_prog_time, dipprog_dt, times)
 
         return {
             "ip": ip,
@@ -91,8 +92,8 @@ class MastPhysicsMethods:
         base_time = conn.get_data(params.shot_id, "summary/time")
 
         times = params.times
-        power_nbi = MastPhysicsMethods.interpolate_1d(base_time, power_nbi, times)
-        power_radiated = MastPhysicsMethods.interpolate_1d(
+        power_nbi = MastUtilMethods.interpolate_1d(base_time, power_nbi, times)
+        power_radiated = MastUtilMethods.interpolate_1d(
             base_time, power_radiated, times
         )
         return {"power_nbi": power_nbi, "power_radiated": power_radiated}
@@ -124,13 +125,11 @@ class MastPhysicsMethods:
         base_time = conn.get_data(params.shot_id, "gas_injection/time")
 
         times = params.times
-        total_injected = MastPhysicsMethods.interpolate_1d(
+        total_injected = MastUtilMethods.interpolate_1d(
             base_time, total_injected, times
         )
-        inboard_total = MastPhysicsMethods.interpolate_1d(
-            base_time, inboard_total, times
-        )
-        outboard_total = MastPhysicsMethods.interpolate_1d(
+        inboard_total = MastUtilMethods.interpolate_1d(base_time, inboard_total, times)
+        outboard_total = MastUtilMethods.interpolate_1d(
             base_time, outboard_total, times
         )
         return {
@@ -165,8 +164,8 @@ class MastPhysicsMethods:
         n_e_core = conn.get_data(params.shot_id, "thomson_scattering/n_e_core")
         base_time = conn.get_data(params.shot_id, "thomson_scattering/time")
 
-        t_e_core = MastPhysicsMethods.interpolate_1d(base_time, t_e_core, times)
-        n_e_core = MastPhysicsMethods.interpolate_1d(base_time, n_e_core, times)
+        t_e_core = MastUtilMethods.interpolate_1d(base_time, t_e_core, times)
+        n_e_core = MastUtilMethods.interpolate_1d(base_time, n_e_core, times)
         return {"t_e_core": t_e_core, "n_e_core": n_e_core}
 
     @staticmethod
@@ -215,88 +214,6 @@ class MastPhysicsMethods:
         )
 
     @staticmethod
-    @physics_method(
-        columns=["soft_x_rays"],
-        tokamak=Tokamak.MAST,
-    )
-    def get_sxr(params: PhysicsMethodParams):
-        """
-        Retrieve soft X-ray (SXR) data.
-
-        Parameters
-        ----------
-        params : PhysicsMethodParams
-            The parameters containing the Xarray connection, shot id and more.
-
-        Returns
-        -------
-        dict
-            A dictionary containing SXR data (`sxr_data`) and
-            corresponding time points (`sxr_time`).
-        """
-        conn: XarrayConnection = params.mds_conn
-        hcam = conn.get_data(
-            params.shot_id, "soft_x_rays/horizontal_cam_upper", return_xarray=True
-        )
-
-        if hcam is not None:
-            hcam = hcam.isel(horizontal_cam_upper_channel=7)
-            hcam = hcam.squeeze(drop=True)
-            hcam = hcam.drop_vars(["horizontal_cam_upper_channel"])
-            sxr_time = hcam.time.values
-            sxr_data = hcam.values
-        else:
-            sxr_time = np.array([np.nan])
-            sxr_data = np.array([np.nan])
-
-        times = params.times
-        sxr_data = MastPhysicsMethods.interpolate_1d(sxr_time, sxr_data, times)
-        return {"soft_x_rays": sxr_data}
-
-    @staticmethod
-    @physics_method(
-        columns=["dalpha"],
-        tokamak=Tokamak.MAST,
-    )
-    def get_dalpha(params: PhysicsMethodParams):
-        """
-        Retrieve D-alpha signal data.
-
-        Parameters
-        ----------
-        params : PhysicsMethodParams
-            The parameters containing the Xarray connection, shot id and more.
-
-        Returns
-        -------
-        dict
-            A dictionary containing D-alpha signal data (`dalpha`).
-        """
-        conn: XarrayConnection = params.mds_conn
-
-        dalpha = conn.get_data(
-            params.shot_id,
-            "spectrometer_visible/filter_spectrometer_dalpha_voltage",
-            return_xarray=True,
-        )
-
-        if dalpha is not None:
-            dalpha = dalpha.isel(dalpha_channel=2)
-            dalpha = dalpha.dropna(dim="time")
-            dalpha = dalpha.squeeze(drop=True)
-            dalpha = dalpha.drop_vars("dalpha_channel")
-
-            dalpha_time = dalpha.time.values
-            dalpha_data = dalpha.values
-        else:
-            dalpha_time = np.array([np.nan])
-            dalpha_data = np.array([np.nan])
-
-        times = params.times
-        dalpha_data = MastPhysicsMethods.interpolate_1d(dalpha_time, dalpha_data, times)
-        return {"dalpha": dalpha_data}
-
-    @staticmethod
     def _get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
         """
         Calculate electron density, its time derivative, and the Greenwald fraction.
@@ -340,25 +257,83 @@ class MastPhysicsMethods:
         return {"n_e": n_e, "dn_dt": dn_dt, "greenwald_fraction": g_f}
 
     @staticmethod
-    def interpolate_1d(x, y, x_new):
-        """Safely interpolate 1D data with handling for all-NaN y values.
+    @physics_method(
+        columns=["soft_x_rays"],
+        tokamak=Tokamak.MAST,
+    )
+    def get_sxr(params: PhysicsMethodParams):
+        """
+        Retrieve soft X-ray (SXR) data.
 
         Parameters
         ----------
-        x : array_like
-            Original x-coordinates of the data points.
-        y : array_like
-            Original y-coordinates of the data points.
-        x_new : array_like
-            New x-coordinates where interpolation is desired.
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection, shot id and more.
 
         Returns
         -------
-        array_like
-            Interpolated y-coordinates corresponding to x_new.
+        dict
+            A dictionary containing SXR data (`sxr_data`) and
+            corresponding time points (`sxr_time`).
         """
-        if len(x) != len(y) and np.isnan(y).all():
-            # if all y are NaN (is a missing signal)
-            # just return array of NaNs with same shape as x_new
-            return np.full_like(x_new, np.nan)
-        return interp1(x, y, x_new)
+        conn: XarrayConnection = params.mds_conn
+        hcam = conn.get_data(
+            params.shot_id, "soft_x_rays/horizontal_cam_upper", return_xarray=True
+        )
+
+        if hcam is not None:
+            hcam = hcam.isel(horizontal_cam_upper_channel=7)
+            hcam = hcam.squeeze(drop=True)
+            hcam = hcam.drop_vars(["horizontal_cam_upper_channel"])
+            sxr_time = hcam.time.values
+            sxr_data = hcam.values
+        else:
+            sxr_time = np.array([np.nan])
+            sxr_data = np.array([np.nan])
+
+        times = params.times
+        sxr_data = MastUtilMethods.interpolate_1d(sxr_time, sxr_data, times)
+        return {"soft_x_rays": sxr_data}
+
+    @staticmethod
+    @physics_method(
+        columns=["dalpha"],
+        tokamak=Tokamak.MAST,
+    )
+    def get_dalpha(params: PhysicsMethodParams):
+        """
+        Retrieve D-alpha signal data.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing D-alpha signal data (`dalpha`).
+        """
+        conn: XarrayConnection = params.mds_conn
+
+        dalpha = conn.get_data(
+            params.shot_id,
+            "spectrometer_visible/filter_spectrometer_dalpha_voltage",
+            return_xarray=True,
+        )
+
+        if dalpha is not None:
+            dalpha = dalpha.isel(dalpha_channel=2)
+            dalpha = dalpha.dropna(dim="time")
+            dalpha = dalpha.squeeze(drop=True)
+            dalpha = dalpha.drop_vars("dalpha_channel")
+
+            dalpha_time = dalpha.time.values
+            dalpha_data = dalpha.values
+        else:
+            dalpha_time = np.array([np.nan])
+            dalpha_data = np.array([np.nan])
+
+        times = params.times
+        dalpha_data = MastUtilMethods.interpolate_1d(dalpha_time, dalpha_data, times)
+        return {"dalpha": dalpha_data}
