@@ -47,17 +47,15 @@ classifiers = [
 ]
 dependencies = [
   "dynaconf>=3.2.0",
-  "fsspec[s3]>=2025.9.0",
   "loguru>=0.7.0",
-  "netcdf4>=1.7.0,<1.7.3",
+  "netcdf4>=1.7.0",
   "numpy>=1.26.0,<2.0.0",
-  "pandas[parquet]>=2.2.0,<2.3.3",
+  "pandas>=2.2.0",
   "pyodbc>=5.2.0",
   "scipy>=1.15.0",
   "SQLAlchemy>=2.0.0",
   "tqdm>=4.67.0",
   "xarray>=2025.1.0",
-  "zarr>=3.0.0",
 ]
 description = "An open-source physics-based Scientific Framework for Disruption Analysis of Fusion Plasmas for AI/ML applications"
 keywords = [
