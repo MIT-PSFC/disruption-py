@@ -4,8 +4,6 @@
 Module for connecting to Xarray data stores.
 """
 
-from isort import file
-
 import threading
 
 import numpy as np

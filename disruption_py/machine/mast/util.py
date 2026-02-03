@@ -6,8 +6,8 @@ Module for helper, not physics, methods.
 
 import numpy as np
 
-from disruption_py.inout.xr import XarrayConnection
 from disruption_py.core.utils.math import interp1
+from disruption_py.inout.xr import XarrayConnection
 
 
 class MastUtilMethods:
