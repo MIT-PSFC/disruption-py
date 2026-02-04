@@ -297,7 +297,7 @@ class MastPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["dalpha"],
+        columns=["d_alpha"],
         tokamak=Tokamak.MAST,
     )
     def get_dalpha(params: PhysicsMethodParams):
@@ -336,4 +336,4 @@ class MastPhysicsMethods:
 
         times = params.times
         dalpha_data = MastUtilMethods.interpolate_1d(dalpha_time, dalpha_data, times)
-        return {"dalpha": dalpha_data}
+        return {"d_alpha": dalpha_data}

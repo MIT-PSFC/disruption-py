@@ -54,7 +54,7 @@ units = "T"
 description = "Bvac at rmag"
 units = "T"
 
-[mast.physics.attributes.dalpha]
+[mast.physics.attributes.d_alpha]
 description = "D-alpha camera signal"
 units = "V"
 
