@@ -319,7 +319,7 @@ class DatasetOutputSetting(SingleOutputSetting):
         if not self.results:
             logger.critical("Nothing to concatenate!")
             return xr.Dataset()
-        return xr.concat(self.results.values(), dim="idx")
+        return xr.concat(self.results.values(), dim="idx", combine_attrs="no_conflicts")
 
 
 class DataTreeOutputSetting(SingleOutputSetting):
