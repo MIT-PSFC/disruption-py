@@ -61,8 +61,8 @@ def config(tokamak: Union[Enum, str] = None):
             imas = attrs.get("imas")
             if not imas:
                 continue
-            _, page, *_ = attrs["imas"].split("/")
-            anchor = re.sub(r"\(.*?\)", "", "-".join(attrs["imas"].split("/")[1:]))
+            _, page, *_ = imas.split("/")
+            anchor = re.sub(r"\(.*?\)", "", "-".join(imas.split("/")[1:]))
             attributes[data_var]["url"] = f"{base}/{page}.html#{anchor}"
 
     return configs[tokamak]
