@@ -30,6 +30,10 @@ class D3DEfitMethods:
         "q95": r"\efit_a_eqdsk:q95",
         "wmhd": r"\efit_a_eqdsk:wmhd",
         "chisq": r"\efit_a_eqdsk:chisq",
+        "aminor": r"\efit_a_eqdsk:aminor",
+        "tritop": r"\efit_a_eqdsk:tritop",
+        "tribot": r"\efit_a_eqdsk:tribot",
+        "rmaxis": r"\efit_g_eqdsk:rmaxis",
     }
 
     efit_derivs = {"dbetap_dt": "beta_p", "dli_dt": "li", "dwmhd_dt": "wmhd"}

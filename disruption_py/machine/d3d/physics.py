@@ -133,7 +133,7 @@ class D3DPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["p_rad", "p_nbi", "p_ech", "radiated_fraction"],
+        columns=["p_rad", "p_nbi", "p_ech", "p_ich", "p_lhcd","radiated_fraction"],
         tokamak=Tokamak.D3D,
     )
     def get_power_parameters(params: PhysicsMethodParams):
@@ -219,6 +219,63 @@ class D3DPhysicsMethods:
             params.logger.warning("Failed to open ECH node. Setting to zeros")
             params.logger.opt(exception=True).debug(e)
 
+
+        # Get ion cyclotron heating (ICH) power
+        try:
+            p_ich, t_ich = params.mds_conn.get_data_with_dims(
+                r"\top.ich:ichpwr", tree_name="rf"
+            )
+            t_ich /= 1e3  # [ms] -> [s]
+            if len(t_ich) > 2:
+                # Sometimes, t_ich has an extra "0" value tacked on to the end.
+                # This must be removed before the interpolation.
+                if t_ich[-1] == 0:
+                    t_ich, p_ich = t_ich[:-1], p_ich[:-1]
+                p_ich = interp1(
+                    t_ich,
+                    p_ich,
+                    params.times,
+                    "linear",
+                    bounds_error=False,
+                    fill_value=0.0,
+                )
+            else:
+                params.logger.verbose(
+                    "No ICH power data found in this shot. Setting to zeros",
+                )
+                p_ich = np.zeros(len(params.times))
+        except mdsExceptions.MdsException as e:
+            p_ich = np.zeros(len(params.times))
+            params.logger.warning("Failed to open ICH node. Setting to zeros")
+            params.logger.opt(exception=True).debug(e)
+
+        # Get lower hybrid current drive (LHCD) power
+        try:
+            p_lhcd, t_lhcd = params.mds_conn.get_data_with_dims(r"\top.lhcd:lh_power", tree_name="rf")
+            t_lhcd /= 1e3  # [ms] -> [s]
+            if len(t_lhcd) > 2:
+                # Sometimes, t_lhcd has an extra "0" value tacked on to the end.
+                # This must be removed before the interpolation.
+                if t_lhcd[-1] == 0:
+                    t_lhcd, p_lhcd = t_lhcd[:-1], p_lhcd[:-1]
+                p_lhcd = interp1(
+                    t_lhcd,
+                    p_lhcd,
+                    params.times,
+                    "linear",
+                    bounds_error=False,
+                    fill_value=0.0,
+                )
+            else:
+                params.logger.verbose(
+                    "No LHCD power data found in this shot. Setting to zeros",
+                )
+                p_lhcd = np.zeros(len(params.times))
+        except mdsExceptions.MdsException as e:
+            p_lhcd = np.zeros(len(params.times))
+            params.logger.warning("Failed to open LHCD node. Setting to zeros")
+            params.logger.opt(exception=True).debug(e)
+
         # Get ohmic power and loop voltage
         ohmic_parameters = D3DPhysicsMethods.get_ohmic_parameters(params)
         p_ohm = ohmic_parameters["p_ohm"]
@@ -280,8 +337,10 @@ class D3DPhysicsMethods:
         p_rad[p_rad < 0] = 0
         p_nbi[p_nbi < 0] = 0
         p_ech[p_ech < 0] = 0
+        p_ich[p_ich < 0] = 0
+        p_lhcd[p_lhcd < 0] = 0
 
-        p_input = p_ohm + p_nbi + p_ech  # [W]
+        p_input = p_ohm + p_nbi + p_ech + p_ich + p_lhcd  # [W]
         rad_fraction = p_rad / p_input
         rad_fraction[np.isinf(rad_fraction)] = np.nan
 
@@ -289,6 +348,8 @@ class D3DPhysicsMethods:
             "p_rad": p_rad,
             "p_nbi": p_nbi,
             "p_ech": p_ech,
+            "p_ich": p_ich,
+            "p_lhcd": p_lhcd,
             "radiated_fraction": rad_fraction,
         }
 
