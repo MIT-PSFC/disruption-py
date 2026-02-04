@@ -90,13 +90,13 @@ jobs:
         run: |
           ssh "${{ secrets.CMOD_USER }}@${{ secrets.CMOD_HOST }}" \
             -p "${{ secrets.CMOD_PORT }}" \
-            -L 8000:alcdata-archives:8000 \
+            -L 8000:mfedata01:8000 \
             -L 1433:alcdb2:1433 \
             -o StrictHostKeyChecking=no \
             -N -v 2> ssh.log &
           echo "$!" \
           | tee ssh.pid
-          echo "127.0.0.1 alcdata-archives alcdb2" \
+          echo "127.0.0.1 mfedata01 alcdb2" \
           | sudo tee -a /etc/hosts
           echo "${{ secrets.CMOD_LOGIN }}" \
           | tee ~/logbook.sybase_login \

@@ -3,6 +3,7 @@
 """
 Module for defining parameters used in physics methods for DisruptionPy.
 """
+
 from dataclasses import dataclass, field
 from typing import Any, Dict, Tuple
 

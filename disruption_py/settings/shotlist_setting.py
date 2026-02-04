@@ -158,8 +158,7 @@ _get_shotlist_setting_mappings: Dict[str, ShotlistSetting] = {
     "disruption_warning": DatabaseShotlistSetting(
         "select distinct shot from disruption_warning"
     ),
-    "plasmas": DatabaseShotlistSetting(
-        """
+    "plasmas": DatabaseShotlistSetting("""
         if exists (select * from information_schema.tables where table_name = 'summary')
         begin
             select distinct shot from summary where ipmax > 100e3 and pulse_length > 0.1;
@@ -168,10 +167,10 @@ _get_shotlist_setting_mappings: Dict[str, ShotlistSetting] = {
         begin
             select distinct shot from summaries where ipmax > 100e3 and pulse_length > 0.1;
         end
-        """
-    ),
+        """),
     "cmod_ufo": IncludedShotlistSetting("cmod_ufo.csv"),
     "cmod_vde": IncludedShotlistSetting("cmod_vde.csv"),
+    "hbtep_fastcam": IncludedShotlistSetting("hbtep_fastcam.csv"),
 }
 # --8<-- [end:get_shotlist_setting_dict]
 

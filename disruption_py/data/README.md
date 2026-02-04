@@ -66,3 +66,33 @@ Column description:
 - `thermal_quench_time` (float, seconds): time of the thermal quench, determined from core Te measurements using an ECE diagnostic system,
 - `vetted` (bool): whether the shot has been manually validated as a UFO disruption, True (1) or False (0),
 - `notes` (string): additional notes.
+
+# HBT-EP shotlist
+
+## MHD Mode Tracking Using High-Speed Camera
+
+info|value
+-|-
+_file_ | `hbtep_fastcam.csv`
+_machine_ | **HBT-EP**
+_total shots_ | **120**
+_years_ | **2022**
+_maintainer_ | [William Wei](https://github.com/yumouwei)
+
+This list of shots was collected to investigate developing data-driven ML models for tracking the n=1 mode evolution from images collected by the high-speed camera diagnostic on HBT-EP.
+A full description of the dataset is available in [Y. Wei, 2024, Optical-Based Microsecond Latency MHD Mode Tracking Through Deep Learning](https://www.proquest.com/openview/3339ba1f549ee7793e92260e50292d5d), _Chapter 4: Experiments and data preparation_ and _Appendix B: Extended dataset description_.
+
+### Details
+
+Column description:
+- `shot` (integer): shot numbers,
+- `t_start` (float, seconds): starting time of the analysis range,
+- `t_stop` (float, seconds): ending time of the analysis range,
+- `shot_style` (integer): scenario of the shot which is mainly characterized by the `q_edge` evolution, see _Appendix B_,
+- `group` (integer): category of a shot within a `shot_style`, see _Appendix B_,
+- `table` (string): location of the shot in _Appendix B_.
+
+### Publications
+
+- [Y. Wei, et al. (2023) Plasma Phys. Control. Fusion **65** 074002](https://doi.org/10.1088/1361-6587/acd581)
+- [Y. Wei, et al. (2024) Rev. Sci. Instrum. **95** 073509](https://doi.org/10.1063/5.0190354)

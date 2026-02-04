@@ -3,6 +3,7 @@
 """
 Module for generic physics methods.
 """
+
 import numpy as np
 
 from disruption_py.config import config
