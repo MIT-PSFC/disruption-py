@@ -11,6 +11,7 @@ from typing import Dict
 import numpy as np
 import xarray as xr
 
+from disruption_py.config import config
 from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.metadata import (
     BoundMethodMetadata,
@@ -18,7 +19,7 @@ from disruption_py.core.physics_method.metadata import (
     is_physics_method,
 )
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.misc import get_elapsed_time, to_tuple
+from disruption_py.core.utils.misc import get_elapsed_time, get_metadata, to_tuple
 from disruption_py.inout.mds import mdsExceptions
 from disruption_py.machine.method_holders import get_method_holders
 from disruption_py.settings.retrieval_settings import RetrievalSettings
@@ -282,6 +283,17 @@ def populate_shot(
 
     # merge dataarrays/datasets into dataset
     dataset = xr.merge(datasets, compat="no_conflicts")
+
+    # set attributes for dataset
+    tokamak = physics_method_params.tokamak
+    dataset.attrs.update({"tokamak": tokamak.name})
+    dataset.attrs.update(get_metadata())
+
+    # set attributes for data vars
+    attributes = config(tokamak).get("physics", {}).get("attributes", {})
+    for data_var, attrs in attributes.items():
+        if data_var in dataset:
+            dataset[data_var].attrs.update(attrs)
 
     # log statistics
     if dataset:
