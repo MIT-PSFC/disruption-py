@@ -51,7 +51,7 @@ units = "A/s"
 
 [cmod.physics.attributes.dipprog_dt]
 description = "Time derivative of the programmed plasma current."
-units = "A"
+units = "A/s"
 validity = [-5.0e6, 5.0e6]
 
 [cmod.physics.attributes.dli_dt]
