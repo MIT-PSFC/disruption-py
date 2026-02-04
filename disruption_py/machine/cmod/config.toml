@@ -115,7 +115,7 @@ validity = [0.2, 4.5]
 
 [cmod.physics.attributes.lower_gap]
 description = "Bottom gap (EFIT)."
-imas = "/equilibrium/time_slice(itime)/boundary/gap(i1)"
+imas = "/equilibrium/time_slice(itime)/boundary/gap(i1)/value"
 units = "m"
 validity = [0.025, 0.25]
 
@@ -263,7 +263,7 @@ units = "dimensionless"
 
 [cmod.physics.attributes.upper_gap]
 description = "Top gap (EFIT)."
-imas = "/equilibrium/time_slice(itime)/boundary/gap(i1)"
+imas = "/equilibrium/time_slice(itime)/boundary/gap(i1)/value"
 units = "m"
 validity = [0, inf]
 
