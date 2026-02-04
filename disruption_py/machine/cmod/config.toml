@@ -13,304 +13,304 @@ port = 1433
 [cmod.physics.attributes.a_minor]
 description = "Minor radius (EFIT)."
 imas = "/equilibrium/time_slice(itime)/boundary/minor_radius"
-unit = "dimensionless"
+units = "dimensionless"
 
 [cmod.physics.attributes.beta_n]
 description = "Normalized plasma beta computed from EFIT."
 imas = "/summary/global_quantities/beta_tor_norm"
-unit = "dimensionless"
+units = "dimensionless"
 validity = [0, 2]
 
 [cmod.physics.attributes.beta_p]
 description = "Beta poloidal (EFIT)."
 imas = "/equilibrium/time_slice(itime)/global_quantities/beta_pol"
-unit = "dimensionless"
+units = "dimensionless"
 validity = [0, 1.5]
 
 [cmod.physics.attributes.bt]
 description = "Toroidal magnetic field strength."
 imas = "/summary/global_quantities/b0"
-unit = "T"
+units = "T"
 
 [cmod.physics.attributes.chisq]
 description = "Magnetic chi^2 (EFIT)."
-unit = "dimensionless"
+units = "dimensionless"
 validity = [0.1, 40]
 
 [cmod.physics.attributes.dbetap_dt]
 description = "Time derivative of the poloidal beta (EFIT)."
-unit = "s^-1"
+units = "s^-1"
 
 [cmod.physics.attributes.dip_dt]
 description = "Time derivative of the Actual plasma current."
-unit = "A/s"
+units = "A/s"
 
 [cmod.physics.attributes.dip_smoothed]
 description = "Smoothed time derivative of the measured plasma current."
-unit = "A/s"
+units = "A/s"
 
 [cmod.physics.attributes.dipprog_dt]
 description = "Time derivative of the programmed plasma current."
-unit = "A"
+units = "A"
 validity = [-5.0e6, 5.0e6]
 
 [cmod.physics.attributes.dli_dt]
 description = "Time derivative of the internal inductance (EFIT)."
-unit = "s^-1"
+units = "s^-1"
 
 [cmod.physics.attributes.dn_dt]
 description = "Time derivative of the measured line-averaged electron density."
 imas = "/summary/line_averaged/dn_e_dt"
-unit = "m^-3*s^-1"
+units = "m^-3*s^-1"
 
 [cmod.physics.attributes.dprad_dt]
 description = "Time derivative of the measured radiated power."
-unit = "W/s"
+units = "W/s"
 
 [cmod.physics.attributes.dwmhd_dt]
 description = "Time derivative of the total plasma energy (EFIT)."
-unit = "J/s"
+units = "J/s"
 
 [cmod.physics.attributes.greenwald_fraction]
 description = "Greenwald fraction."
 imas = "/summary/global_quantities/greenwald_fraction"
-unit = "dimensionless"
+units = "dimensionless"
 validity = [0, 1.5]
 
 [cmod.physics.attributes.i_efc]
 description = "Error field correction (EFC) current."
-unit = "A"
+units = "A"
 
 [cmod.physics.attributes.ip]
 description = "Actual plasma current."
 imas = "/summary/global_quantities/ip"
-unit = "A"
+units = "A"
 
 [cmod.physics.attributes.ip_error]
 description = "Difference between the actual and programmed plasma current."
-unit = "A"
+units = "A"
 
 [cmod.physics.attributes.ip_prog]
 description = "Programmed plasma current."
 imas = "/pulse_schedule/flux_control/plasma_current/reference"
-unit = "A"
+units = "A"
 
 [cmod.physics.attributes.kappa]
 description = "Elongation at plasma boundary (EFIT)."
 imas = "/equilibrium/time_slice(itime)/global_quantities/elongation"
-unit = "dimensionless"
+units = "dimensionless"
 validity = [0.8, 2]
 
 [cmod.physics.attributes.kappa_area]
 description = "Elongation calculated using the plasma area and minor radius from EFIT."
 imas = "/summary/boundary/elongation"
-unit = "dimensionless"
+units = "dimensionless"
 validity = [0.8, 2]
 
 [cmod.physics.attributes.li]
 description = "Internal inductance (EFIT)."
 imas = "/equilibrium/time_slice(itime)/global_quantities/li_3"
-unit = "dimensionless"
+units = "dimensionless"
 validity = [0.2, 4.5]
 
 [cmod.physics.attributes.lower_gap]
 description = "Bottom gap (EFIT)."
 imas = "/equilibrium/time_slice(itime)/boundary/gap(i1)"
-unit = "m"
+units = "m"
 validity = [0.025, 0.25]
 
 [cmod.physics.attributes.n_e]
 description = "Measured line-averaged electron density."
 imas = "/summary/line_averaged/n_e"
-unit = "m^-3"
+units = "m^-3"
 validity = [0.2e20, 7e20]
 
 [cmod.physics.attributes.n_equal_1_mode]
 description = "Amplitude of the n=1 mode."
 imas = "/mhd_linear/time_slice(itime)/toroidal_mode(i1)/plasma/b_field_perturbed"
-unit = "T"
+units = "T"
 validity = [0, 0.02]
 
 [cmod.physics.attributes.n_equal_1_normalized]
 description = "Amplitude of the n=1 mode normalized to the toroidal magnetic field."
-unit = "dimensionless"
+units = "dimensionless"
 
 [cmod.physics.attributes.n_equal_1_phase]
 description = "Phase of the n=1 mode."
-unit = "rad"
+units = "rad"
 
 [cmod.physics.attributes.n_over_ncrit]
 description = "Vertical stability parameter, vacuum field index normalized to critical index. (EFIT)."
-unit = "dimensionless"
+units = "dimensionless"
 validity = [-3, 3]
 
 [cmod.physics.attributes.ne_peaking]
 description = "Peaking factor of the electron density profile measured by the Thomson scattering diagnostic."
-unit = "dimensionless"
+units = "dimensionless"
 
 [cmod.physics.attributes.p_icrf]
 description = "Ion cyclotron resonant heating power."
 imas = "/summary/heating_current_drive/power_launched_ic"
-unit = "W"
+units = "W"
 validity = [0, inf]
 
 [cmod.physics.attributes.p_input]
 description = "Total input power (ohmic + LH + ICRF)."
-unit = "W"
+units = "W"
 
 [cmod.physics.attributes.p_lh]
 description = "Lower hybrid heating power."
 imas = "/summary/heating_current_drive/power_launched_lh"
-unit = "W"
+units = "W"
 validity = [0, inf]
 
 [cmod.physics.attributes.p_oh]
 description = "Ohmic heating power."
 imas = "/summary/global_quantities/power_ohm"
-unit = "W"
+units = "W"
 validity = [0, 5.0e6]
 
 [cmod.physics.attributes.p_rad]
 description = "Radiated power measured by the 2pi diode."
 imas = "/bolometer/power_radiated_total"
-unit = "W"
+units = "W"
 validity = [0, inf]
 
 [cmod.physics.attributes.prad_peaking]
 description = "Peaking factor of the radiated power."
-unit = "dimensionless"
+units = "dimensionless"
 
 [cmod.physics.attributes.pressure_peaking]
 description = "Peaking factor of the electron temperature profile measured by the Thomson scattering diagnostic."
-unit = "dimensionless"
+units = "dimensionless"
 
 [cmod.physics.attributes.q0]
 description = "q at magnetic axis (EFIT)."
 imas = "/equilibrium/time_slice(itime)/global_quantities/q_axis"
-unit = "dimensionless"
+units = "dimensionless"
 validity = [0, 2]
 
 [cmod.physics.attributes.q95]
 description = "q at 95% flux surface (EFIT)."
 imas = "/equilibrium/time_slice(itime)/global_quantities/q_95"
-unit = "dimensionless"
+units = "dimensionless"
 validity = [0, inf]
 
 [cmod.physics.attributes.qstar]
 description = "Equivalent (kink) safety factor (EFIT)."
-unit = "dimensionless"
+units = "dimensionless"
 validity = [0, inf]
 
 [cmod.physics.attributes.radiated_fraction]
 description = "Radiated fraction."
-unit = "dimensionless"
+units = "dimensionless"
 validity = [0, 15]
 
 [cmod.physics.attributes.rmagx]
 description = "Major radius of magnetic axis (EFIT)."
 imas = "/equilibrium/time_slice(itime)/global_quantities/magnetic_axis/r"
-unit = "m"
+units = "m"
 
 [cmod.physics.attributes.ssep]
 description = "Outboard radial distance to external second separatrix for single null configurations. positive for double nulls or single top null and negative for single bottom null. (EFIT)."
-unit = "m"
+units = "m"
 validity = [-1, 1]
 
 [cmod.physics.attributes.sxr]
 description = "Core soft X-ray measurement."
 imas = "/soft_x_rays/channel(i1)/power"
-unit = "W"
+units = "W"
 
 [cmod.physics.attributes.tau_rad]
 description = "Energy confinement time."
 imas = "/summary/global_quantities/tau_energy"
-unit = "s"
+units = "s"
 
 [cmod.physics.attributes.te_core_vs_avg_ece]
 description = "Core-vs-average peaking factor of the electron temperature profile from the electron cyclotron emission (ECE) data."
-unit = "dimensionless"
+units = "dimensionless"
 
 [cmod.physics.attributes.te_edge_vs_avg_ece]
 description = "Edge-vs-average peaking factor of the electron temperature profile from the electron cyclotron emission (ECE) data."
-unit = "dimensionless"
+units = "dimensionless"
 
 [cmod.physics.attributes.te_peaking]
 description = "Peaking factor of the electron temperature profile measured by the Thomson scattering diagnostic."
 imas = "/core_profiles/global_quantities/t_e_peaking"
-unit = "dimensionless"
+units = "dimensionless"
 
 [cmod.physics.attributes.te_width]
 description = "Half-width at half-maximum of the Gaussian fit to the core electron temperature profile."
-unit = "m"
+units = "m"
 
 [cmod.physics.attributes.te_width_ece]
 description = "Half-width at half-maximum of the Gaussian fit to the electron temperature profile from the electron cyclotron emission (ECE) data."
-unit = "dimensionless"
+units = "dimensionless"
 
 [cmod.physics.attributes.time_until_disrupt]
 description = "Time until the current quench."
-unit = "s"
+units = "s"
 
 [cmod.physics.attributes.tribot]
 description = "Bottom triangularity (EFIT)."
 imas = "/equilibrium/time_slice(itime)/boundary/triangularity_lower"
-unit = "dimensionless"
+units = "dimensionless"
 
 [cmod.physics.attributes.tritop]
 description = "Top triangularity (EFIT)."
 imas = "/equilibrium/time_slice(itime)/boundary/triangularity_upper"
-unit = "dimensionless"
+units = "dimensionless"
 
 [cmod.physics.attributes.upper_gap]
 description = "Top gap (EFIT)."
 imas = "/equilibrium/time_slice(itime)/boundary/gap(i1)"
-unit = "m"
+units = "m"
 validity = [0, inf]
 
 [cmod.physics.attributes.v_loop]
 description = "Measured loop voltage."
 imas = "/summary/global_quantities/v_loop"
-unit = "V"
+units = "V"
 validity = [-7, 7]
 
 [cmod.physics.attributes.v_loop_efit]
 description = "Measured loop voltage, smoothed using non-causal filter."
-unit = "V"
+units = "V"
 validity = [-7, 7]
 
 [cmod.physics.attributes.v_surf]
 description = "Plasma surface voltage computed from EFIT."
-unit = "V"
+units = "V"
 
 [cmod.physics.attributes.v_z]
 description = "Vertical velocity of the plasma current centroid."
 imas = "/equilibrium/time_slice(itime)/global_quantities/current_centre/velocity_z"
-unit = "m/s"
+units = "m/s"
 
 [cmod.physics.attributes.wmhd]
 description = "Total plasma energy (EFIT)."
 imas = "/equilibrium/time_slice(itime)/global_quantities/energy_mhd"
-unit = "J"
+units = "J"
 validity = [0, 3e5]
 
 [cmod.physics.attributes.z_error]
 description = "Difference between the actual and programmed vertical position of the plasma current centroid."
-unit = "m"
+units = "m"
 validity = [-1, 1]
 
 [cmod.physics.attributes.z_prog]
 description = "Programmed vertical position of the plasma current centroid."
 imas = "/pulse_schedule/position_control/current_centroid/z/reference"
-unit = "m"
+units = "m"
 
 [cmod.physics.attributes.z_times_v_z]
 description = "Product of the vertical position and vertical velocity of the plasma current centroid."
-unit = "m^2/s"
+units = "m^2/s"
 
 [cmod.physics.attributes.zcur]
 description = "Actual (estimated) vertical position of the plasma current centroid."
 imas = "/equilibrium/time_slice(itime)/global_quantities/current_centre/z"
-unit = "m"
+units = "m"
 validity = [-0.5, 0.5]
 
 [cmod.physics.time_domain_thresholds]
