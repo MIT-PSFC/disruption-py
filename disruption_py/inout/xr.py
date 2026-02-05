@@ -11,6 +11,7 @@ import xarray as xr
 from loguru import logger
 
 from disruption_py.config import config
+from disruption_py.core.utils.misc import shot_msg
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -61,10 +62,10 @@ class XarrayConnection:
         file_path = self.get_shot_file_path(shot_id)
         engine = "zarr" if self.file_ext == "zarr" else "netcdf4"
 
-        logger.debug(
-            "PID #{pid} | Opening data tree at {file_path}",
+        logger.trace(
+            shot_msg("Opening data tree: {file_path}"),
+            shot=shot_id,
             file_path=file_path,
-            pid=threading.get_native_id(),
         )
 
         self.data_tree = xr.open_datatree(
