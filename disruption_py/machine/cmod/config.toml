@@ -60,7 +60,7 @@ units = "s^-1"
 
 [cmod.physics.attributes.dn_dt]
 description = "Time derivative of the measured line-averaged electron density."
-imas = "/summary/line_averaged/dn_e_dt"
+imas = "/summary/line_average/dn_e_dt"
 units = "m^-3*s^-1"
 
 [cmod.physics.attributes.dprad_dt]
@@ -121,7 +121,7 @@ validity = [0.025, 0.25]
 
 [cmod.physics.attributes.n_e]
 description = "Measured line-averaged electron density."
-imas = "/summary/line_averaged/n_e"
+imas = "/summary/line_average/n_e"
 units = "m^-3"
 validity = [0.2e20, 7e20]
 
