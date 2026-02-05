@@ -2,12 +2,12 @@
 
 [mast.inout.xarray]
 endpoint_url = "https://s3.echo.stfc.ac.uk"
-file_ext = 'zarr'
+file_ext = "zarr"
 file_path = "mast/level2/shots"
 
 [mast.physics.attributes.a_minor]
 description = "Minor radius of the plasma boundary (defined as (Rmax-Rmin) / 2 of the boundary)"
-imas = "equilibrium/time_slice(itime)/boundary/minor_radius"
+imas = "/equilibrium/time_slice(itime)/boundary/minor_radius"
 units = "m"
 
 [mast.physics.attributes.beta_n]
@@ -99,7 +99,7 @@ units = "m^-3"
 
 [mast.physics.attributes.p_nbi]
 description = "NBI heating power."
-imas = "summary/heating_current_drive/power_nbi"
+imas = "/summary/heating_current_drive/power_nbi"
 units = "W"
 
 [mast.physics.attributes.p_rad]
@@ -143,7 +143,7 @@ units = "dimensionless"
 
 [mast.physics.attributes.v_loop_dynamic]
 description = "Dynamic LCFS loop voltage from EFIT. Defined as V_loop(t) = loop int(B_p * V_point(t)) / loop int(B_p)(t) where V_point = -2 * pi * d(PSI at each point) / dt"
-units = 'V'
+units = "V"
 
 [mast.physics.attributes.v_loop_static]
 description = "Static LCFS loop voltage from EFIT. Defined as V_loop = -2 * pi * d(psi at LCFS) / dt"
