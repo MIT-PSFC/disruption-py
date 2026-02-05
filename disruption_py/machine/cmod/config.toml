@@ -29,7 +29,7 @@ validity = [0, 1.5]
 
 [cmod.physics.attributes.bt]
 description = "Toroidal magnetic field strength."
-imas = "/summary/global_quantities/b0"
+imas = "/summary/global_quantities/b0/value"
 units = "T"
 
 [cmod.physics.attributes.chisq]
@@ -42,7 +42,7 @@ description = "Time derivative of the poloidal beta (EFIT)."
 units = "s^-1"
 
 [cmod.physics.attributes.dip_dt]
-description = "Time derivative of the Actual plasma current."
+description = "Time derivative of the actual plasma current."
 units = "A/s"
 
 [cmod.physics.attributes.dip_smoothed]
@@ -73,7 +73,7 @@ units = "J/s"
 
 [cmod.physics.attributes.greenwald_fraction]
 description = "Greenwald fraction."
-imas = "/summary/global_quantities/greenwald_fraction"
+imas = "/summary/global_quantities/greenwald_fraction/value"
 units = "dimensionless"
 validity = [0, 1.5]
 
@@ -83,7 +83,7 @@ units = "A"
 
 [cmod.physics.attributes.ip]
 description = "Measured plasma current (Rogowski coil)."
-imas = "/summary/global_quantities/ip"
+imas = "/summary/global_quantities/ip/value"
 units = "A"
 
 [cmod.physics.attributes.ip_error]
@@ -92,12 +92,12 @@ units = "A"
 
 [cmod.physics.attributes.ip_prog]
 description = "Programmed plasma current."
-imas = "/pulse_schedule/flux_control/plasma_current/reference"
+imas = "/pulse_schedule/flux_control/ip/reference"
 units = "A"
 
 [cmod.physics.attributes.kappa]
 description = "Elongation at plasma boundary (EFIT)."
-imas = "/equilibrium/time_slice(itime)/global_quantities/elongation"
+imas = "/equilibrium/time_slice(itime)/boundary/elongation"
 units = "dimensionless"
 validity = [0.8, 2]
 
@@ -121,7 +121,7 @@ validity = [0.025, 0.25]
 
 [cmod.physics.attributes.n_e]
 description = "Measured line-averaged electron density."
-imas = "/summary/line_average/n_e"
+imas = "/summary/line_average/n_e/value"
 units = "m^-3"
 validity = [0.2e20, 7e20]
 
@@ -150,7 +150,7 @@ units = "dimensionless"
 
 [cmod.physics.attributes.p_icrf]
 description = "Total ion cyclotron resonant heating power."
-imas = "/summary/heating_current_drive/power_launched_ic"
+imas = "/summary/heating_current_drive/power_launched_ic/value"
 units = "W"
 validity = [0, inf]
 
@@ -160,13 +160,13 @@ units = "W"
 
 [cmod.physics.attributes.p_lh]
 description = "Total lower hybrid heating power."
-imas = "/summary/heating_current_drive/power_launched_lh"
+imas = "/summary/heating_current_drive/power_launched_lh/value"
 units = "W"
 validity = [0, inf]
 
 [cmod.physics.attributes.p_oh]
 description = "Total Ohmic heating power."
-imas = "/summary/global_quantities/power_ohm"
+imas = "/summary/global_quantities/power_ohm/value"
 units = "W"
 validity = [0, 5.0e6]
 
@@ -181,7 +181,7 @@ description = "Peaking factor of the radiated power."
 units = "dimensionless"
 
 [cmod.physics.attributes.pressure_peaking]
-description = "Peaking factor of the electron temperature profile measured by the Thomson scattering diagnostic."
+description = "Peaking factor of the pressure profile measured by the Thomson scattering diagnostic."
 units = "dimensionless"
 
 [cmod.physics.attributes.q0]
@@ -247,7 +247,7 @@ description = "Half-width at half-maximum of the Gaussian fit to the electron te
 units = "m"
 
 [cmod.physics.attributes.time_until_disrupt]
-description = "Time until the current quench. Nan for non-disruptive discharges."
+description = "Time until the current quench. NaN for non-disruptive discharges."
 units = "s"
 
 [cmod.physics.attributes.tribot]
@@ -268,7 +268,7 @@ validity = [0, inf]
 
 [cmod.physics.attributes.v_loop]
 description = "Measured loop voltage."
-imas = "/summary/global_quantities/v_loop"
+imas = "/summary/global_quantities/v_loop/value"
 units = "V"
 validity = [-7, 7]
 
