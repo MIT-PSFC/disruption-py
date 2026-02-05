@@ -212,7 +212,7 @@ imas = "/equilibrium/time_slice(itime)/global_quantities/magnetic_axis/r"
 units = "m"
 
 [cmod.physics.attributes.ssep]
-description = "Outboard radial distance to external second separatrix for single null configurations. positive for single top-null and negative for single bottom-null. Near-zero for double-null (EFIT)."
+description = "Outboard radial distance to external second separatrix for single null configurations. Positive for single top-null and negative for single bottom-null. Near-zero for double-null (EFIT)."
 units = "m"
 validity = [-1, 1]
 
