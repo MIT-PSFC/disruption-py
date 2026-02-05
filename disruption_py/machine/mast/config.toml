@@ -5,31 +5,15 @@ endpoint_url = "https://s3.echo.stfc.ac.uk"
 file_ext = 'zarr'
 file_path = "mast/level2/shots"
 
-[mast.physics.time_domain_thresholds]
-dipprog_dt = 50e3
-ip_prog = 100e3
+[mast.physics.attributes.a_minor]
+description = "Minor radius of the plasma boundary (defined as (Rmax-Rmin) / 2 of the boundary)"
+imas = "equilibrium/time_slice(itime)/boundary/minor_radius"
+units = "m"
 
-[mast.tests]
-expected_failure_columns = []
-test_columns = []
-
-[mast.tests.shots]
-disruption1_full = 30113
-disruption2_full = 30014
-disruption_fast = 30421
-no_disruption1_full = 29165
-no_disruption2_full = 28864
-no_disruption_fast = 29666
-
-[mast.time]
-disruption_time_start = 0.0
-disruption_time_step = 0.001
-dt_before_disruption = 0.010
-duration_before_disruption = 0.25
-end_of_current_threshold = 200e3
-minimum_duration = 0.1
-minimum_ip = 200e3
-
+[mast.physics.attributes.beta_n]
+description = "Toroidal beta, defined as the volume-averaged total perpendicular."
+imas = "/equilibrium/time_slice(itime)/global_quantities/beta_tor_normal"
+units = "dimensionless"
 
 [mast.physics.attributes.beta_p]
 description = "Beta poloidal (EFIT)."
@@ -39,11 +23,6 @@ unitss = "dimensionless"
 [mast.physics.attributes.beta_t]
 description = "Beta toroidal (EFIT)."
 imas = "/equilibrium/time_slice(itime)/global_quantities/beta_tor"
-units = "dimensionless"
-
-[mast.physics.attributes.beta_n]
-description = "Toroidal beta, defined as the volume-averaged total perpendicular."
-imas = "/equilibrium/time_slice(itime)/global_quantities/beta_tor_normal"
 units = "dimensionless"
 
 [mast.physics.attributes.bphi_rmag]
@@ -70,11 +49,6 @@ units = "A"
 description = "Time derivative of the measured line-averaged electron density."
 imas = "/summary/line_averaged/dn_e_dt"
 units = "m^-3*s^-1"
-
-[mast.physics.attributes.kappa]
-description = "Elongation at plasma boundary (EFIT)."
-imas = "/equilibrium/time_slice(itime)/global_quantities/elongation"
-units = "dimensionless"
 
 [mast.physics.attributes.gas_inboard_total]
 description = "Gas injected by the inboard valves"
@@ -103,25 +77,15 @@ description = "Programmed plasma current."
 imas = "/pulse_schedule/flux_control/plasma_current/reference"
 units = "A"
 
+[mast.physics.attributes.kappa]
+description = "Elongation at plasma boundary (EFIT)."
+imas = "/equilibrium/time_slice(itime)/global_quantities/elongation"
+units = "dimensionless"
+
 [mast.physics.attributes.li]
 description = "Internal inductance (EFIT)."
 imas = "/equilibrium/time_slice(itime)/global_quantities/li_3"
 units = "dimensionless"
-
-[mast.physics.attributes.rmagx]
-description = "Major radius of the magnetic axis"
-imas = "/equilibrium/time_slice(itime)/global_quantities/magnetic_axis_r"
-units = "m"
-
-[mast.physics.attributes.rmagz]
-description = "Height of the magnetic axis"
-imas = "/equilibrium/time_slice(itime)/global_quantities/magnetic_axis_z"
-units = "m"
-
-[mast.physics.attributes.a_minor]
-description = "Minor radius of the plasma boundary (defined as (Rmax-Rmin) / 2 of the boundary)"
-imas = "equilibrium/time_slice(itime)/boundary/minor_radius" 
-units = "m"
 
 [mast.physics.attributes.n_e]
 description = "Measured line-averaged electron density."
@@ -133,20 +97,30 @@ description = "Core electron density measurement"
 imas = "/thomson_scattering/channel(i1)/n_e"
 units = "m^-3"
 
-[mast.physics.attributes.p_rad]
-description = "Radiated power measured by the 2pi diode."
-imas = "/bolometer/power_radiated_total"
-units = "W"
-
 [mast.physics.attributes.p_nbi]
 description = "NBI heating power."
 imas = "summary/heating_current_drive/power_nbi"
+units = "W"
+
+[mast.physics.attributes.p_rad]
+description = "Radiated power measured by the 2pi diode."
+imas = "/bolometer/power_radiated_total"
 units = "W"
 
 [mast.physics.attributes.q95]
 description = "q at 95% flux surface (EFIT)."
 imas = "/equilibrium/time_slice(itime)/global_quantities/q_95"
 units = "dimensionless"
+
+[mast.physics.attributes.rmagx]
+description = "Major radius of the magnetic axis"
+imas = "/equilibrium/time_slice(itime)/global_quantities/magnetic_axis_r"
+units = "m"
+
+[mast.physics.attributes.rmagz]
+description = "Height of the magnetic axis"
+imas = "/equilibrium/time_slice(itime)/global_quantities/magnetic_axis_z"
+units = "m"
 
 [mast.physics.attributes.sxr]
 description = "Core soft X-ray measurement."
@@ -174,3 +148,28 @@ units = 'V'
 [mast.physics.attributes.v_loop_static]
 description = "Static LCFS loop voltage from EFIT. Defined as V_loop = -2 * pi * d(psi at LCFS) / dt"
 units = "V"
+
+[mast.physics.time_domain_thresholds]
+dipprog_dt = 50e3
+ip_prog = 100e3
+
+[mast.tests]
+expected_failure_columns = []
+test_columns = []
+
+[mast.tests.shots]
+disruption1_full = 30113
+disruption2_full = 30014
+disruption_fast = 30421
+no_disruption1_full = 29659
+no_disruption2_full = 28864
+no_disruption_fast = 29666
+
+[mast.time]
+disruption_time_start = 0.0
+disruption_time_step = 0.001
+dt_before_disruption = 0.010
+duration_before_disruption = 0.25
+end_of_current_threshold = 200e3
+minimum_duration = 0.1
+minimum_ip = 200e3
