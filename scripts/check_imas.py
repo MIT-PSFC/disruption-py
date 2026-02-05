@@ -15,7 +15,6 @@ import sys
 
 import requests
 import xarray as xr
-from colorama import Fore
 
 cache = {}
 
