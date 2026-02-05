@@ -12,7 +12,7 @@ units = "m"
 
 [mast.physics.attributes.beta_n]
 description = "Toroidal beta, defined as the volume-averaged total perpendicular."
-imas = "/equilibrium/time_slice(itime)/global_quantities/beta_tor_normal"
+imas = "/equilibrium/time_slice(itime)/global_quantities/beta_tor_nor"
 units = "dimensionless"
 
 [mast.physics.attributes.beta_p]
@@ -47,7 +47,7 @@ units = "A"
 
 [mast.physics.attributes.dn_dt]
 description = "Time derivative of the measured line-averaged electron density."
-imas = "/summary/line_averaged/dn_e_dt"
+imas = "/summary/line_average/dn_e_dt"
 units = "m^-3*s^-1"
 
 [mast.physics.attributes.gas_inboard_total]
@@ -89,7 +89,7 @@ units = "dimensionless"
 
 [mast.physics.attributes.n_e]
 description = "Measured line-averaged electron density."
-imas = "/summary/line_averaged/n_e"
+imas = "/summary/line_average/n_e"
 units = "m^-3"
 
 [mast.physics.attributes.n_e_core]
@@ -114,12 +114,12 @@ units = "dimensionless"
 
 [mast.physics.attributes.rmagx]
 description = "Major radius of the magnetic axis"
-imas = "/equilibrium/time_slice(itime)/global_quantities/magnetic_axis_r"
+imas = "/equilibrium/time_slice(itime)/global_quantities/magnetic_axis/r"
 units = "m"
 
 [mast.physics.attributes.rmagz]
 description = "Height of the magnetic axis"
-imas = "/equilibrium/time_slice(itime)/global_quantities/magnetic_axis_z"
+imas = "/equilibrium/time_slice(itime)/global_quantities/magnetic_axis/z"
 units = "m"
 
 [mast.physics.attributes.sxr]
