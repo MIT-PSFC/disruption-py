@@ -29,7 +29,7 @@ for k, da in xr.open_dataset(sys.argv[1]).items():
         continue
 
     base, anchor = url.split("#")
-    found = f'href="#{anchor}"' in cache.get(base, requests.get(base).text)
+    found = f'href="#{anchor}"' in cache.setdefault(base, requests.get(base).text)
 
     print(f"\timas = \x1b[{'32m' if found else '31m'}{imas}\x1b[39m")
     print(f"\turl  = {url}")
