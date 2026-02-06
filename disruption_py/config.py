@@ -5,6 +5,7 @@ Loads configuration settings using Dynaconf for a given tokamak.
 """
 
 import os
+import re
 from enum import Enum
 from typing import Union
 
@@ -52,4 +53,16 @@ def config(tokamak: Union[Enum, str] = None):
             env=tokamak,
             merge_enabled=True,
         )
+
+        # build imas urls
+        base = "https://imas-data-dictionary.readthedocs.io/en/latest/generated/ids"
+        attributes = configs[tokamak].get("physics", {}).get("attributes", {})
+        for data_var, attrs in attributes.items():
+            imas = attrs.get("imas")
+            if not imas:
+                continue
+            _, page, *_ = imas.split("/")
+            anchor = re.sub(r"\(.*?\)", "", "-".join(imas.split("/")[1:]))
+            attributes[data_var]["url"] = f"{base}/{page}.html#{anchor}"
+
     return configs[tokamak]
