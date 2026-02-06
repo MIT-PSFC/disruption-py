@@ -16,21 +16,22 @@ class MastEfitMethods:
     """
 
     efit_properties = {
+        "a_minor": "minor_radius",
         "beta_n": "beta_tor_normal",
-        "beta_t": "beta_tor",
         "beta_p": "beta_pol",
+        "beta_t": "beta_tor",
+        "bphi_rmag": "bphi_rmag",
+        "bvac_rmag": "bvac_rmag",
         "kappa": "elongation",
+        "li": "li",
+        "q95": "q95",
         "rmagx": "magnetic_axis_r",
         "rmagz": "magnetic_axis_z",
         "tribot": "triangularity_lower",
         "tritop": "triangularity_upper",
-        "a_minor": "minor_radius",
-        "bvac_rmag": "bvac_rmag",
-        "bphi_rmag": "bphi_rmag",
-        "li": "li",
-        "v_loop_static": "vloop_static",
         "v_loop_dynamic": "vloop_dynamic",
-        "q95": "q95",
+        "v_loop_static": "vloop_static",
+        "wmhd": "wmhd",
     }
 
     @staticmethod
