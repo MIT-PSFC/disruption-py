@@ -74,7 +74,7 @@ units = "A"
 
 [mast.physics.attributes.ip_prog]
 description = "Programmed plasma current."
-imas = "/pulse_schedule/flux_control/plasma_current/reference"
+imas = "/pulse_schedule/flux_control/ip"
 units = "A"
 
 [mast.physics.attributes.kappa]
