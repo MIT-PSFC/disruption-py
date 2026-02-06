@@ -79,7 +79,7 @@ units = "A"
 
 [mast.physics.attributes.kappa]
 description = "Elongation at plasma boundary (EFIT)."
-imas = "/equilibrium/time_slice(itime)/global_quantities/elongation"
+imas = "/equilibrium/time_slice(itime)/boundary/elongation"
 units = "dimensionless"
 
 [mast.physics.attributes.li]
