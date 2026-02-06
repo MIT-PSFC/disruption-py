@@ -92,10 +92,9 @@ class XarrayConnection:
             return item.values
         except KeyError:
             logger.warning(
-                "PID #{pid} | Variable '{path}' not found for shot {shot_id}.",
-                pid=threading.get_native_id(),
+                shot_msg("Variable not found: {path}"),
                 path=path,
-                shot_id=shot_id,
+                shot=shot_id,
             )
 
         if return_xarray:
