@@ -12,7 +12,7 @@ units = "m"
 
 [mast.physics.attributes.beta_n]
 description = "Toroidal beta, defined as the volume-averaged total perpendicular."
-imas = "/equilibrium/time_slice(itime)/global_quantities/beta_tor_nor"
+imas = "/equilibrium/time_slice(itime)/global_quantities/beta_tor_norm"
 units = "dimensionless"
 
 [mast.physics.attributes.beta_p]
