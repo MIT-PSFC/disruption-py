@@ -995,7 +995,7 @@ class D3DPhysicsMethods:
         - issues: #[261](https://github.com/MIT-PSFC/disruption-py/issues/261)
         """
         ## Thomson parameters
-        ts_data_type = "blessed"  # either 'blessed', 'unblessed', or 'ptdata'
+        ts_data_type = "blessed"  # either 'blessed', 'unblessed', or 'ptdata'   # NOTE: debug
         # metric to use for core/edge binning (either 'psin' or 'rhovn')
         ts_radius = "rhovn"
         # ts_radius value defining boundary of 'core' region (between 0 and 1)
@@ -1471,61 +1471,110 @@ class D3DPhysicsMethods:
         elif data_source == "unblessed":
             mds_path = r"\top.ts.revisions.revision00."
         elif data_source == "ptdata":
-            mds_path = r"\top.ts.blessed."  # Don't ask...I don't have the answer
-            raise NotImplementedError("ptdata case not fully implemented yet")  # TODO
+            # Get the Thomson data that are available in the real-time system
+            mds_path = r"\top.ts.blessed."  # Source for the radial & vertical chord positions
+            suffix = {"core": "cor", "tangential": "tan"}
+            # Account for pointname formatting change in 2017
+            if params.shot_id < 172749:  # First shot on Sep 19, 2017
+                suffix["tangential"] = "hor"
+                # TODO: figure out how 'hor' system was implemented. 
+                # 161228: tsshorne1 to tsshorne6 -- check MDSplus if there are only 6 chords
         else:
             raise CalculationError(f"Invalid data_source: {data_source}")
-
-        # Account for pointname formatting change in 2017 (however using ptdata is unimplemented)
-        # NOTE: "suffix" is only used if data_source="ptdata" which isn't implemented yet
-        suffix = {"core": "cor", "tangential": "tan"}
-        if params.shot_id < 172749:  # First shot on Sep 19, 2017
-            suffix["tangential"] = "hor"
 
         lasers = {}
         for laser in ts_systems:
             lasers[laser] = {}
             sub_tree = f"{mds_path}{laser}"
-            try:
-                (t_sub_tree,) = params.mds_conn.get_dims(
-                    f"{sub_tree}:temp", tree_name="electrons"
-                )
-                # lasers[laser]['time'] gets overwritten in the loop later
-                lasers[laser]["time"] = t_sub_tree / 1.0e3  # [ms] -> [s]
-            except mdsExceptions.MdsException as e:
-                lasers[laser] = None
-                params.logger.warning(
-                    "Failed to get {laser} time. Setting laser data to None.",
-                    laser=laser,
-                )
-                params.logger.opt(exception=True).debug(e)
-                continue
-            child_nodes = {
-                "r": "r",
-                "z": "z",
-                "te": "temp",
-                "ne": "density",
-                "time": "time",
-                "te_error": "temp_e",
-                "ne_error": "density_e",
-            }
-            for node, name in child_nodes.items():
+            if data_source == 'ptdata':
+                print('Using PTDATA for Thomson data source (experimental)')
+                
                 try:
-                    lasers[laser][node] = params.mds_conn.get_data(
-                        f"{sub_tree}:{name}", tree_name="electrons"
+                    lasers[laser]["time"] = params.mds_conn.get_dims(f"ptdata('tss{suffix[laser]}te00', {params.shot_id})")[0]
+                    # lasers[laser]["time"] /= 1.0e3 # [ms] -> [s]  TODO: uncomment this after fixing the 'time' overwritten bug
+                except:
+                    pass
+                
+                # Get r, z from MDSplus
+                # TODO: make this look better
+                child_nodes = {
+                    "r": "r",
+                    "z": "z",
+                }
+                for node, name in child_nodes.items():
+                    try:
+                        lasers[laser][node] = params.mds_conn.get_data(
+                            f"{sub_tree}:{name}", tree_name="electrons"
+                        )
+                    except mdsExceptions.MdsException as e:
+                        lasers[laser][node] = np.full(lasers[laser]["time"].shape, np.nan)
+                        params.logger.warning(
+                            "Failed to get {laser}:{name}({node}) data, Setting to all NaNs.",
+                            laser=laser,
+                            name=name,
+                            node=node,
+                        )
+                        params.logger.opt(exception=True).debug(e)
+                        
+                # Get Te and ne from PTDATA
+                # dpp_master.h: used cor00--cor43, tan00--tan09
+                n_chords = len(lasers[laser]['r'])
+                lasers[laser]['te'] = np.full((n_chords, len(lasers[laser]["time"])), np.nan)
+                lasers[laser]['ne'] = np.full((n_chords, len(lasers[laser]["time"])), np.nan)
+                for i in range(n_chords):
+                    for signal in ['te', 'ne']:
+                        if params.shot_id < 172749 and laser == 'tangential':
+                            ptdata_address = f"ptdata('tsshor{signal}{i}', {params.shot_id})"
+                        else:
+                            ptdata_address = f"ptdata('tss{suffix[laser]}{signal}{i:02d}', {params.shot_id})"
+                        try:
+                            lasers[laser][signal][i, :] = params.mds_conn.get_data(ptdata_address)
+                        except:
+                            print(f'{ptdata_address} unavailable')
+                # Set te_error and ne_error to nan array (unavailable in PTDATA)
+                lasers[laser]['te_error'] = np.full_like(lasers[laser]['te'], np.nan)
+                lasers[laser]['ne_error'] = np.full_like(lasers[laser]['te'], np.nan)
+            else:
+                try:
+                    (t_sub_tree,) = params.mds_conn.get_dims(
+                        f"{sub_tree}:temp", tree_name="electrons"
                     )
+                    # lasers[laser]['time'] gets overwritten in the loop later -- TODO: fix this!
+                    lasers[laser]["time"] = t_sub_tree / 1.0e3  # [ms] -> [s]
                 except mdsExceptions.MdsException as e:
-                    lasers[laser][node] = np.full(lasers[laser]["time"].shape, np.nan)
+                    lasers[laser] = None
                     params.logger.warning(
-                        "Failed to get {laser}:{name}({node}) data, Setting to all NaNs.",
+                        "Failed to get {laser} time. Setting laser data to None.",
                         laser=laser,
-                        name=name,
-                        node=node,
                     )
                     params.logger.opt(exception=True).debug(e)
+                    continue
+                child_nodes = {
+                    "r": "r",
+                    "z": "z",
+                    "te": "temp",
+                    "ne": "density",
+                    "time": "time",
+                    "te_error": "temp_e",
+                    "ne_error": "density_e",
+                }
+                for node, name in child_nodes.items():
+                    try:
+                        lasers[laser][node] = params.mds_conn.get_data(
+                            f"{sub_tree}:{name}", tree_name="electrons"
+                        )
+                    except mdsExceptions.MdsException as e:
+                        lasers[laser][node] = np.full(lasers[laser]["time"].shape, np.nan)
+                        params.logger.warning(
+                            "Failed to get {laser}:{name}({node}) data, Setting to all NaNs.",
+                            laser=laser,
+                            name=name,
+                            node=node,
+                        )
+                        params.logger.opt(exception=True).debug(e)
             # Place NaNs for broken channels
-            lasers[laser]["te"][lasers[laser]["te"] == 0] = np.nan
-            lasers[laser]["ne"][lasers[laser]["ne"] == 0] = np.nan
+            lasers[laser]["te"][lasers[laser]["te"] == 0] = np.nan    # NOTE: disabled for debugging
+            lasers[laser]["ne"][lasers[laser]["ne"] == 0] = np.nan    # NOTE: disabled for debugging
             lasers[laser]["time"] /= 1e3  # [ms] -> [s]
 
         # If both systems/lasers available, combine them and interpolate the data
