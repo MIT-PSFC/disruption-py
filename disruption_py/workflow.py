@@ -106,6 +106,7 @@ def get_shots_data(
     log_settings.setup_logging()
 
     tokamak = resolve_tokamak_from_environment(tokamak)
+    logger.info(f"Resolved tokamak: {tokamak.name}")
 
     if "MDSplus" in sys.modules:
         logger.info("Imported MDSplus.")
