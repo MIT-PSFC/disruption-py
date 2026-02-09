@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 Unit tests for the time_setting
 
@@ -66,8 +68,8 @@ def test_shared_time_setting(tokamak: Tokamak, test_folder_f: str):
     """
     Test SharedTimeSetting by using the 'ip_efit' shortcut.
     """
-    if tokamak is Tokamak.HBTEP:
-        pytest.skip("HBT-EP signals share the same time base")
+    if tokamak in [Tokamak.HBTEP, Tokamak.MAST]:
+        pytest.skip(f"not available on {tokamak.name}")
         assert False
     test_setup = {
         Tokamak.CMOD: ["analysis", 1150805012, 0.0601, 1.2799, 6100],
@@ -81,6 +83,9 @@ def test_signal_time_setting(tokamak: Tokamak, test_folder_f: str):
     """
     Test SignalTimeSetting using a signal that is not Ip or a EFIT signal.
     """
+    if tokamak is Tokamak.MAST:
+        pytest.skip("not available on MAST")
+        assert False
     test_setup = {
         Tokamak.CMOD: [
             SignalTimeSetting("spectroscopy", r"\twopi_diode"),

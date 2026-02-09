@@ -34,6 +34,7 @@ Currently supported devices are:
 - [DIII-D](https://en.wikipedia.org/wiki/DIII-D_(tokamak))
 - [EAST](https://en.wikipedia.org/wiki/Experimental_Advanced_Superconducting_Tokamak)
 - [HBT-EP](https://fusion.columbia.edu/facilities/hbt-ep-tokamak)
+- [MAST](https://en.wikipedia.org/wiki/Mega_Ampere_Spherical_Tokamak)
 
 
 ## Overview
@@ -87,6 +88,7 @@ Most machines require both MDSplus and SQL database access for full functionalit
 | DIII-D        | GA          | MDSplus | SQL      | :yellow_circle:  |
 | EAST          | ASIPP       | MDSplus | SQL      | :red_circle:     |
 | HBT-EP        | Columbia    | MDSplus | -        | :yellow_circle:  |
+| MAST          | UKAEA       | S3      | -        | :green_circle:   |
 
 ## Installation
 

@@ -1,0 +1,175 @@
+[mast.inout.sql]
+
+[mast.inout.xarray]
+endpoint_url = "https://s3.echo.stfc.ac.uk"
+file_ext = "zarr"
+file_path = "mast/level2/shots"
+
+[mast.physics.attributes.a_minor]
+description = "Minor radius of the plasma boundary (defined as (Rmax-Rmin) / 2 of the boundary)"
+imas = "/equilibrium/time_slice(itime)/boundary/minor_radius"
+units = "m"
+
+[mast.physics.attributes.beta_n]
+description = "Toroidal beta, defined as the volume-averaged total perpendicular."
+imas = "/equilibrium/time_slice(itime)/global_quantities/beta_tor_norm"
+units = "dimensionless"
+
+[mast.physics.attributes.beta_p]
+description = "Beta poloidal (EFIT)."
+imas = "/equilibrium/time_slice(itime)/global_quantities/beta_pol"
+unitss = "dimensionless"
+
+[mast.physics.attributes.beta_t]
+description = "Beta toroidal (EFIT)."
+imas = "/equilibrium/time_slice(itime)/global_quantities/beta_tor"
+units = "dimensionless"
+
+[mast.physics.attributes.bphi_rmag]
+description = "Bphi at rmag"
+units = "T"
+
+[mast.physics.attributes.bvac_rmag]
+description = "Bvac at rmag"
+units = "T"
+
+[mast.physics.attributes.d_alpha]
+description = "D-alpha camera signal"
+units = "V"
+
+[mast.physics.attributes.dip_dt]
+description = "Time derivative of the Actual plasma current."
+units = "A/s"
+
+[mast.physics.attributes.dipprog_dt]
+description = "Time derivative of the programmed plasma current."
+units = "A"
+
+[mast.physics.attributes.dn_dt]
+description = "Time derivative of the measured line-averaged electron density."
+imas = "/summary/line_average/dn_e_dt"
+units = "m^-3*s^-1"
+
+[mast.physics.attributes.gas_inboard_total]
+description = "Gas injected by the inboard valves"
+units = "cps"
+
+[mast.physics.attributes.gas_outboard_total]
+description = "Gas injected by the outboard valves"
+units = "cps"
+
+[mast.physics.attributes.gas_total_injected]
+description = "Total cumulative injected gas"
+units = "counts"
+
+[mast.physics.attributes.greenwald_fraction]
+description = "Greenwald fraction."
+imas = "/summary/global_quantities/greenwald_fraction"
+units = "dimensionless"
+
+[mast.physics.attributes.ip]
+description = "Actual plasma current."
+imas = "/summary/global_quantities/ip"
+units = "A"
+
+[mast.physics.attributes.ip_prog]
+description = "Programmed plasma current."
+imas = "/pulse_schedule/flux_control/ip/reference"
+units = "A"
+
+[mast.physics.attributes.kappa]
+description = "Elongation at plasma boundary (EFIT)."
+imas = "/equilibrium/time_slice(itime)/boundary/elongation"
+units = "dimensionless"
+
+[mast.physics.attributes.li]
+description = "Internal inductance (EFIT)."
+imas = "/equilibrium/time_slice(itime)/global_quantities/li_3"
+units = "dimensionless"
+
+[mast.physics.attributes.n_e]
+description = "Measured line-averaged electron density."
+imas = "/summary/line_average/n_e"
+units = "m^-3"
+
+[mast.physics.attributes.n_e_core]
+description = "Core electron density measurement"
+imas = "/thomson_scattering/channel(i1)/n_e"
+units = "m^-3"
+
+[mast.physics.attributes.p_nbi]
+description = "NBI heating power."
+imas = "/summary/heating_current_drive/power_nbi"
+units = "W"
+
+[mast.physics.attributes.p_rad]
+description = "Radiated power measured by the 2pi diode."
+imas = "/bolometer/power_radiated_total"
+units = "W"
+
+[mast.physics.attributes.q95]
+description = "q at 95% flux surface (EFIT)."
+imas = "/equilibrium/time_slice(itime)/global_quantities/q_95"
+units = "dimensionless"
+
+[mast.physics.attributes.rmagx]
+description = "Major radius of the magnetic axis"
+imas = "/equilibrium/time_slice(itime)/global_quantities/magnetic_axis/r"
+units = "m"
+
+[mast.physics.attributes.rmagz]
+description = "Height of the magnetic axis"
+imas = "/equilibrium/time_slice(itime)/global_quantities/magnetic_axis/z"
+units = "m"
+
+[mast.physics.attributes.sxr]
+description = "Core soft X-ray measurement."
+units = "V"
+
+[mast.physics.attributes.t_e_core]
+description = "Core electron temperature measurement"
+imas = "/thomson_scattering/channel(i1)/t_e"
+units = "eV"
+
+[mast.physics.attributes.triagbot]
+description = "Bottom triangularity (EFIT)."
+imas = "/equilibrium/time_slice(itime)/boundary/triangularity_lower"
+units = "dimensionless"
+
+[mast.physics.attributes.triagtop]
+description = "Top triangularity (EFIT)."
+imas = "/equilibrium/time_slice(itime)/boundary/triangularity_upper"
+units = "dimensionless"
+
+[mast.physics.attributes.v_loop_dynamic]
+description = "Dynamic LCFS loop voltage from EFIT. Defined as V_loop(t) = loop int(B_p * V_point(t)) / loop int(B_p)(t) where V_point = -2 * pi * d(PSI at each point) / dt"
+units = "V"
+
+[mast.physics.attributes.v_loop_static]
+description = "Static LCFS loop voltage from EFIT. Defined as V_loop = -2 * pi * d(psi at LCFS) / dt"
+units = "V"
+
+[mast.physics.time_domain_thresholds]
+dipprog_dt = 50e3
+ip_prog = 100e3
+
+[mast.tests]
+expected_failure_columns = []
+test_columns = []
+
+[mast.tests.shots]
+disruption1_full = 30113
+disruption2_full = 30014
+disruption_fast = 30421
+no_disruption1_full = 29659
+no_disruption2_full = 28864
+no_disruption_fast = 29666
+
+[mast.time]
+disruption_time_start = 0.0
+disruption_time_step = 0.001
+dt_before_disruption = 0.010
+duration_before_disruption = 0.25
+end_of_current_threshold = 200e3
+minimum_duration = 0.1
+minimum_ip = 200e3

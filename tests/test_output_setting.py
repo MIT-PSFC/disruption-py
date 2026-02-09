@@ -31,7 +31,7 @@ def fresh_data_fixture(shotlist, tokamak, test_folder_m) -> Dict:
         DataTreeOutputSetting(path=os.path.join(test_folder_m, "datatree.nc")),
     ]
     column = "kappa_area"
-    if tokamak == Tokamak.HBTEP:
+    if tokamak in [Tokamak.HBTEP, Tokamak.MAST]:
         column = "ip"
     retrieval_settings = RetrievalSettings(
         efit_nickname_setting="disruption",

@@ -4,6 +4,8 @@
 example module for MDSplus.
 """
 
+import pytest
+
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.workflow import get_mdsplus_class
 
@@ -33,6 +35,9 @@ def main():
         shape = (15358,)
         tree = "hbtep2"
         node = r"\top.sensors.rogowskis:ip"
+    elif tokamak is Tokamak.MAST:
+        pytest.skip("No MDSplus for MAST")
+        assert False
     else:
         raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 
