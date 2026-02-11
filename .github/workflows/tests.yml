@@ -27,12 +27,17 @@ jobs:
         tokamak:
           - C-MOD
           - DIII-D
+          - HBT-EP
+          - MAST
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Add MDSplus sources
+        if: ${{ matrix.tokamak == 'C-MOD'
+             || matrix.tokamak == 'DIII-D'
+             || matrix.tokamak == 'HBT-EP' }}
         env:
           GPG: http://www.mdsplus.org/dist/mdsplus.gpg.key
           KEY: /usr/share/keyrings/mdsplus.asc
@@ -45,15 +50,24 @@ jobs:
           | sudo tee "$APT"
 
       - name: Update sources
+        if: ${{ matrix.tokamak == 'C-MOD'
+             || matrix.tokamak == 'DIII-D'
+             || matrix.tokamak == 'HBT-EP' }}
         run: sudo apt-get update
 
       - name: Install prerequisites
+        if: ${{ matrix.tokamak == 'C-MOD'
+             || matrix.tokamak == 'DIII-D'
+             || matrix.tokamak == 'HBT-EP' }}
         run: |
           sudo apt-get install msodbcsql17 # pre-installed
           sudo apt-get install tdsodbc unixodbc # freetds
           sudo apt-get install mdsplus-alpha-python # mdsplus
 
       - name: Configure MDSplus
+        if: ${{ matrix.tokamak == 'C-MOD'
+             || matrix.tokamak == 'DIII-D'
+             || matrix.tokamak == 'HBT-EP' }}
         run: |
           {
              echo PYTHONPATH=/usr/local/mdsplus/python
@@ -62,6 +76,9 @@ jobs:
           | tee -a "$GITHUB_ENV"
 
       - name: Setup SSH key
+        if: ${{ matrix.tokamak == 'C-MOD'
+             || matrix.tokamak == 'DIII-D'
+             || matrix.tokamak == 'HBT-EP' }}
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_TUNNEL }}" \
@@ -74,13 +91,13 @@ jobs:
         run: |
           ssh "${{ secrets.CMOD_USER }}@${{ secrets.CMOD_HOST }}" \
             -p "${{ secrets.CMOD_PORT }}" \
-            -L 8000:alcdata-archives:8000 \
+            -L 8000:mfedata01:8000 \
             -L 1433:alcdb2:1433 \
             -o StrictHostKeyChecking=no \
             -N -v 2> ssh.log &
           echo "$!" \
           | tee ssh.pid
-          echo "127.0.0.1 alcdata-archives alcdb2" \
+          echo "127.0.0.1 mfedata01 alcdb2" \
           | sudo tee -a /etc/hosts
           echo "${{ secrets.CMOD_LOGIN }}" \
           | tee ~/logbook.sybase_login \
@@ -111,6 +128,21 @@ jobs:
           echo DISPY_TOKAMAK=d3d \
           | tee -a "$GITHUB_ENV"
 
+      - name: Setup HBT-EP
+        if: ${{ matrix.tokamak == 'HBT-EP' }}
+        run: |
+          ssh "${{ secrets.HBTEP_USER }}@${{ secrets.HBTEP_HOST }}" \
+            -p "${{ secrets.HBTEP_PORT }}" \
+            -L 8003:maxwell.ap.columbia.edu:8003 \
+            -o StrictHostKeyChecking=no \
+            -N -v 2> ssh.log &
+          echo "$!" \
+          | tee ssh.pid
+          echo "127.0.0.1 maxwell.ap.columbia.edu" \
+          | sudo tee -a /etc/hosts
+          echo DISPY_TOKAMAK=hbtep \
+          | tee -a "$GITHUB_ENV"
+
       - name: Install poetry
         run: pipx install poetry
 
@@ -124,6 +156,9 @@ jobs:
         run: make install-all
 
       - name: Check tunnel
+        if: ${{ matrix.tokamak == 'C-MOD'
+             || matrix.tokamak == 'DIII-D'
+             || matrix.tokamak == 'HBT-EP' }}
         run: |
           xargs -a ssh.pid ps -p || true
           if ! grep 'Authenticated.*publickey' ssh.log
@@ -134,16 +169,27 @@ jobs:
           fi
 
       - name: Test SQL
+        if: ${{ matrix.tokamak == 'C-MOD'
+             || matrix.tokamak == 'DIII-D' }}
         run: poetry run python examples/sql.py
 
       - name: Test MDSplus
+        if: ${{ matrix.tokamak == 'C-MOD'
+             || matrix.tokamak == 'DIII-D'
+             || matrix.tokamak == 'HBT-EP' }}
         run: poetry run python examples/mdsplus.py
 
       - name: Test EFIT
+        if: ${{ matrix.tokamak == 'C-MOD'
+             || matrix.tokamak == 'DIII-D'
+             || matrix.tokamak == 'MAST' }}
         run: poetry run python examples/efit.py
 
       - name: Run all tests
         run: make test
 
       - name: Close tunnel
+        if: ${{ matrix.tokamak == 'C-MOD'
+             || matrix.tokamak == 'DIII-D'
+             || matrix.tokamak == 'HBT-EP' }}
         run: xargs -a ssh.pid kill -TERM

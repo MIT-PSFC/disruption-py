@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Module for retrieving and calculating data for DIII-D physics methods.
+Module for retrieving and calculating data for EAST physics methods.
 """
 
 import numpy as np

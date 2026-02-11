@@ -1,6 +1,5 @@
-
-## Built-in Methods For D3D { .doc .doc-heading }
-::: disruption_py.machine.d3d.physics
+## Built-in Methods For MAST { .doc .doc-heading }
+::: disruption_py.machine.mast.physics
     handler: python
 	options:
 	  heading_level: 2

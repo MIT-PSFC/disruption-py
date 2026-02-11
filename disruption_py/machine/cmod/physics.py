@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Module for retrieving and calculating data for CMOD physics methods.
+Module for retrieving and calculating data for C-MOD physics methods.
 """
 
 import warnings
@@ -1447,7 +1447,7 @@ class CmodPhysicsMethods:
         if use_ts_tci_calibration:
             # This shouldn't affect ne_PF (except if calib is not between 0.5 & 1.5)
             # because we're just multiplying ne by a constant
-            (nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _) = (
+            nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = (
                 CmodThomsonDensityMeasure.compare_ts_tci(params)
             )
             if np.mean(nl_ts1) != 1e32 and np.mean(nl_ts2) != 1e32:

@@ -22,6 +22,7 @@ from disruption_py.core.utils.misc import (
 )
 from disruption_py.inout.mds import ProcessMDSConnection
 from disruption_py.inout.sql import ShotDatabase
+from disruption_py.inout.xr import XarrayConnection
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.settings import RetrievalSettings
 from disruption_py.settings.log_settings import LogSettings, resolve_log_settings
@@ -104,10 +105,18 @@ def get_shots_data(
     log_settings = resolve_log_settings(log_settings)
     log_settings.setup_logging()
 
-    if "mdsthin" in sys.modules:
-        logger.warning("Cannot import MDSplus, falling back onto mdsthin!")
-
     tokamak = resolve_tokamak_from_environment(tokamak)
+    logger.info("Resolved tokamak: {tokamak}", tokamak=tokamak.name)
+
+    if "MDSplus" in sys.modules:
+        logger.info("Imported MDSplus.")
+    elif "mdsthin" in sys.modules:
+        logger.warning("Imported mdsthin!")
+    elif not config(tokamak).inout.get("mds"):
+        logger.debug("Did not import MDSplus.")
+    else:
+        raise ModuleNotFoundError("Cannot import MDSplus.")
+
     database = _get_database_instance(tokamak, database_initializer)
     # Clean-up parameters
     if retrieval_settings is None:
@@ -195,12 +204,20 @@ def get_database(
 
 def get_mdsplus_class(
     tokamak: Tokamak = None,
-) -> ProcessMDSConnection:
+) -> ProcessMDSConnection | XarrayConnection:
     """
     Get the MDSplus connection for the tokamak.
     """
     tokamak = resolve_tokamak_from_environment(tokamak)
-    return ProcessMDSConnection.from_config(tokamak=tokamak)
+
+    inout_cfg = config(tokamak).inout
+    if "mds" in inout_cfg:
+        return ProcessMDSConnection.from_config(tokamak=tokamak)
+
+    if "xarray" in inout_cfg:
+        return XarrayConnection.from_config(tokamak=tokamak)
+
+    raise ValueError("No valid MDSplus or xarray connection found.")
 
 
 def _get_database_instance(tokamak, database_initializer):

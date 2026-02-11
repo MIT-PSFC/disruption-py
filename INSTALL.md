@@ -13,7 +13,6 @@ A _private_ installation is possible on any machine, either on a personal laptop
 ## Public installations
 
 The MIT PSFC Disruption Studies Group hosts a `disruption-py` installation in a NFS folder.
-The following steps apply to both C-MOD workstations and the DIII-D cluster.
 
 Snippets for quick addition to a user's `.bashrc` file are provided in the subsections below.
 
@@ -172,8 +171,8 @@ Python is obviously a requirement for disruption-py -- please make sure you are 
 which python
 ```
 
-Python requirements should be installed from the Poetry-native lockfile `poetry.lock` committed to the repository in the main folder.
-If necessary, backward-compatible pip-style `requirements.txt` files can be produced through the [Poetry export command](https://python-poetry.org/docs/cli/#export).
+Python requirements should be installed from the Poetry-native lockfile `poetry.lock` committed to the repository in the main folder, or the corresponding uv-native lockfile `uv.lock`.
+If necessary, backward-compatible pip-style `requirements.txt` files can be produced through the [Poetry export command](https://python-poetry.org/docs/cli/#export) or the equivalent [uv export command](https://docs.astral.sh/uv/concepts/projects/sync/#exporting-the-lockfile).
 
 ### Virtual environments
 

@@ -1,4 +1,4 @@
-## Built-in Methods For CMod { .doc .doc-heading }
+## C-Mod Physics Methods { .doc .doc-heading }
 ::: disruption_py.machine.cmod.physics
     handler: python
 	options:

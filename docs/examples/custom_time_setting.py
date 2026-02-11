@@ -2,7 +2,6 @@
 
 """Example usage of `get_shots_data` demonstrating using a custom time setting."""
 
-
 from disruption_py.settings import RetrievalSettings, TimeSetting, TimeSettingParams
 from disruption_py.workflow import get_shots_data
 

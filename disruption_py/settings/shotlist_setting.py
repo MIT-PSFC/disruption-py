@@ -98,8 +98,11 @@ class FileShotlistSetting(ShotlistSetting):
 
     def _get_shotlist(self, params: ShotlistSettingParams) -> List:
         if not self.shotlist:
-            self.kwargs.setdefault("header", "infer")
-            df = pd.read_csv(self.file_path, **self.kwargs)
+            if self.file_path.endswith(".parquet"):
+                df = pd.read_parquet(self.file_path, **self.kwargs)
+            else:
+                self.kwargs.setdefault("header", "infer")
+                df = pd.read_csv(self.file_path, **self.kwargs)
             arr = df.values[:, self.column_index]
             self.shotlist = arr.astype(int).tolist()
         return self.shotlist
@@ -158,8 +161,7 @@ _get_shotlist_setting_mappings: Dict[str, ShotlistSetting] = {
     "disruption_warning": DatabaseShotlistSetting(
         "select distinct shot from disruption_warning"
     ),
-    "plasmas": DatabaseShotlistSetting(
-        """
+    "plasmas": DatabaseShotlistSetting("""
         if exists (select * from information_schema.tables where table_name = 'summary')
         begin
             select distinct shot from summary where ipmax > 100e3 and pulse_length > 0.1;
@@ -168,10 +170,10 @@ _get_shotlist_setting_mappings: Dict[str, ShotlistSetting] = {
         begin
             select distinct shot from summaries where ipmax > 100e3 and pulse_length > 0.1;
         end
-        """
-    ),
+        """),
     "cmod_ufo": IncludedShotlistSetting("cmod_ufo.csv"),
     "cmod_vde": IncludedShotlistSetting("cmod_vde.csv"),
+    "hbtep_fastcam": IncludedShotlistSetting("hbtep_fastcam.csv"),
 }
 # --8<-- [end:get_shotlist_setting_dict]
 
@@ -179,6 +181,7 @@ _get_shotlist_setting_mappings: Dict[str, ShotlistSetting] = {
 _file_suffix_to_shotlist_setting: Dict[str, Type[ShotlistSetting]] = {
     ".txt": FileShotlistSetting,
     ".csv": FileShotlistSetting,
+    ".parquet": FileShotlistSetting,
 }
 # --8<-- [end:file_suffix_to_shotlist_setting_dict]
 

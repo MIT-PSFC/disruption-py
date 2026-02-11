@@ -4,10 +4,11 @@
 Module for utility functions related to class instantiation, data manipulation, and version control.
 """
 
+import importlib.metadata
 import os
 import subprocess
 import sys
-import time
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from tempfile import mkdtemp
@@ -47,13 +48,50 @@ def get_commit_hash() -> str:
     """
     try:
         commit_hash = (
-            subprocess.check_output(["git", "rev-parse", "HEAD"])
+            subprocess.check_output(
+                ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL
+            )
             .decode("ascii")
             .strip()
         )
     except subprocess.CalledProcessError:
         commit_hash = ""
     return commit_hash
+
+
+@lru_cache
+def get_metadata() -> Dict[str, str]:
+    """
+    Gather workflow metadata.
+
+    Returns
+    -------
+    Dict[str, str]
+        The workflow metadata.
+    """
+
+    package, *_ = __name__.split(".")
+    version = importlib.metadata.version(package)
+    tag = "v" + ".".join(version.split(".")[:2])
+    repo = "https://github.com/MIT-PSFC/disruption-py"
+    commit = get_commit_hash()
+    if commit:
+        source = f"{repo}/tree/{commit}"
+    else:
+        source = f"{repo}/releases/tag/{tag}"
+
+    metadata = {
+        "user": os.getenv("USER"),
+        "host": os.uname().nodename,
+        "time": datetime.now().isoformat(),
+        "package": package,
+        "version": version,
+        "commit": commit,
+        "source": source,
+    }
+    if not commit:
+        metadata.pop("commit")
+    return metadata
 
 
 @lru_cache
@@ -70,15 +108,15 @@ def get_temporary_folder() -> str:
 
     # create temporary top folder
     top = os.path.join(
-        "/tmp",
+        os.getenv("LOCALSCRATCH", "/tmp"),
         os.getenv("USER"),
         "disruption-py",
-        ("." if "pytest" in sys.modules else "") + time.strftime("%Y-%m-%d"),
+        ("." if "pytest" in sys.modules else "") + datetime.now().strftime("%Y-%m-%d"),
     )
     Path(top).mkdir(parents=True, exist_ok=True)
 
     # create temporary sub folder
-    return mkdtemp(dir=top, prefix=time.strftime("%H.%M.%S-"))
+    return mkdtemp(dir=top, prefix=datetime.now().strftime("%H.%M.%S-"))
 
 
 def shot_msg(message: str) -> str:
