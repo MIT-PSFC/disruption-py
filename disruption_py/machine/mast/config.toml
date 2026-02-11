@@ -18,7 +18,7 @@ units = "dimensionless"
 [mast.physics.attributes.beta_p]
 description = "Beta poloidal (EFIT)."
 imas = "/equilibrium/time_slice(itime)/global_quantities/beta_pol"
-unitss = "dimensionless"
+units = "dimensionless"
 
 [mast.physics.attributes.beta_t]
 description = "Beta toroidal (EFIT)."
@@ -43,7 +43,7 @@ units = "A/s"
 
 [mast.physics.attributes.dipprog_dt]
 description = "Time derivative of the programmed plasma current."
-units = "A"
+units = "A/s"
 
 [mast.physics.attributes.dn_dt]
 description = "Time derivative of the measured line-averaged electron density."
@@ -131,12 +131,12 @@ description = "Core electron temperature measurement"
 imas = "/thomson_scattering/channel(i1)/t_e"
 units = "eV"
 
-[mast.physics.attributes.triagbot]
+[mast.physics.attributes.tribot]
 description = "Bottom triangularity (EFIT)."
 imas = "/equilibrium/time_slice(itime)/boundary/triangularity_lower"
 units = "dimensionless"
 
-[mast.physics.attributes.triagtop]
+[mast.physics.attributes.tritop]
 description = "Top triangularity (EFIT)."
 imas = "/equilibrium/time_slice(itime)/boundary/triangularity_upper"
 units = "dimensionless"

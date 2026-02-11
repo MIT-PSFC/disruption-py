@@ -8,6 +8,7 @@ from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.inout.xr import XarrayConnection
 from disruption_py.machine.mast.util import MastUtilMethods
+from disruption_py.machine.tokamak import Tokamak
 
 
 class MastEfitMethods:
@@ -35,7 +36,7 @@ class MastEfitMethods:
     }
 
     @staticmethod
-    @physics_method(columns=list(efit_properties.keys()))
+    @physics_method(columns=list(efit_properties.keys()), tokamak=Tokamak.MAST)
     def get_efit_parameters(params: PhysicsMethodParams):
         """
         Retrieve EFIT parameters for MAST.

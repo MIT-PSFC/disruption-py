@@ -58,25 +58,30 @@ class MastUtilMethods:
         return efit_time
 
     @staticmethod
-    def interpolate_1d(x, y, x_new):
+    def interpolate_1d(x: np.ndarray, y: np.ndarray, x_new: np.ndarray) -> np.ndarray:
         """Safely interpolate 1D data with handling for all-NaN y values.
 
         Parameters
         ----------
-        x : array_like
+        x : np.ndarray
             Original x-coordinates of the data points.
-        y : array_like
+        y : np.ndarray
             Original y-coordinates of the data points.
-        x_new : array_like
+        x_new : np.ndarray
             New x-coordinates where interpolation is desired.
 
         Returns
         -------
-        array_like
+        np.ndarray
             Interpolated y-coordinates corresponding to x_new.
         """
-        if len(x) != len(y) and np.isnan(y).all():
+        if np.isnan(y).all() or len(x) < 2:
             # if all y are NaN (is a missing signal)
+            # or if x has only a single number
             # just return array of NaNs with same shape as x_new
             return np.full_like(x_new, np.nan)
+
+        if len(x) != len(y):
+            raise ValueError("x and y must have the same length for interpolation.")
+
         return interp1(x, y, x_new)
