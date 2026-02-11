@@ -77,6 +77,7 @@ class MastUtilMethods:
         """
         if np.isnan(y).all() or len(x) < 2:
             # if all y are NaN (is a missing signal)
+            # or if x has only a single number
             # just return array of NaNs with same shape as x_new
             return np.full_like(x_new, np.nan)
 
