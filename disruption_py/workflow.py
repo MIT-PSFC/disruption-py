@@ -124,6 +124,9 @@ def get_shots_data(
     # dump configuration
     json_file_path = os.path.join(get_temporary_folder(), ".config.json")
     config_dict = filter_dict(config(tokamak).to_dict(), "_pass")
+    config_dict.get("PHYSICS", {}).pop("attributes", None)
+    if "pytest" not in sys.modules:
+        config_dict.pop("TESTS", None)
     with open(json_file_path, "w", encoding="utf8") as f:
         json.dump(config_dict, f, indent=3, sort_keys=True)
     logger.debug("Dumped configuration into: {path}", path=json_file_path)
