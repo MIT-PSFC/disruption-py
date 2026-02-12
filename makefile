@@ -122,36 +122,51 @@ ruff:
 shellcheck:
 	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	shellcheck --version
-	find -type f -not -path '*/.git/*' -not -path '*/.venv/*' \
-	| xargs grep -l '^#!/bin/bash' \
-	| while read -r F; \
+	@KO=0; \
+	for F in $$(find -type f -not -path '*/.git/*' -not -path '*/.venv/*'); \
 	do \
-	   echo "--> $$F"; \
+	   grep -l '^#!/bin/bash' "$$F" || continue; \
 	   shellcheck "$$F"; \
-	done
+	   RC=$$?; \
+	   KO=$$((KO+RC)); \
+	   echo "--> $$F = $$RC"; \
+	done; \
+	exit "$$KO"
 
 yamllint:
 	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	poetry run yamllint --version
-	find -type f -iname '*.y*ml' -not -empty -not -path '*/.venv/*' \
-	| while read -r F; \
+	@KO=0; \
+	for F in $$(find -type f -iname '*.y*ml' -not -empty -not -path '*/.venv/*'); \
 	do \
 	   echo "--> $$F"; \
 	   poetry run yamllint "$$F"; \
-	done
+	   RC=$$?; \
+	   KO=$$((KO+RC)); \
+	   echo "--> $$F = $$RC"; \
+	done; \
+	exit "$$KO"
 
 toml-sort:
 	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	poetry run toml-sort --version
-	find -maxdepth 1 -type f -iname '*.toml' -not -empty -not -path '*/.venv/*'\
-	| while read -r F; \
+	@KO=0; \
+	for F in $$(find -maxdepth 1 -type f -iname '*.toml' -not -empty -not -path '*/.venv/*'); \
 	do \
 	   echo "--> $$F"; \
 	   poetry run toml-sort $(CHECK_ARG) "$$F"; \
-	done
-	find -mindepth 2 -type f -iname '*.toml' -not -empty -not -path '*/.venv/*' \
-	| while read -r F; \
+	   RC=$$?; \
+	   KO=$$((KO+RC)); \
+	   echo "--> $$F = $$RC"; \
+	done; \
+	exit "$$KO"
+	@KO=0; \
+	for F in $$(find -mindepth 2 -type f -iname '*.toml' -not -empty -not -path '*/.venv/*'); \
 	do \
 	   echo "--> $$F"; \
 	   poetry run toml-sort $(CHECK_ARG) --all "$$F"; \
-	done
+	   RC=$$?; \
+	   KO=$$((KO+RC)); \
+	   echo "--> $$F = $$RC"; \
+	done; \
+	exit "$$KO"
