@@ -211,14 +211,14 @@ def to_tuple(
 
 def filter_dict(i: Dict, s: str) -> Dict:
     """
-    Filter a dictionary by removing all keys that match a given pattern.
+    Filter a dictionary by removing all keys that contain a given substring.
 
     Parameters
     ----------
     i : Dict
         Input dictionary.
     s : str
-        String pattern to filter out.
+        Substring to filter out.
 
     Returns
     -------
