@@ -16,10 +16,7 @@ from tqdm.auto import tqdm
 
 from disruption_py.config import config
 from disruption_py.core.retrieval_manager import RetrievalManager
-from disruption_py.core.utils.misc import (
-    get_elapsed_time,
-    without_duplicates,
-)
+from disruption_py.core.utils.misc import get_elapsed_time, without_duplicates
 from disruption_py.inout.mds import ProcessMDSConnection
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.inout.xr import XarrayConnection
