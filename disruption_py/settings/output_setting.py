@@ -324,7 +324,11 @@ class DatasetOutputSetting(SingleOutputSetting):
         if not self.results:
             logger.critical("Nothing to concatenate!")
             return xr.Dataset()
+
         ds = xr.concat(self.results.values(), dim="idx", combine_attrs="no_conflicts")
+        if "shot" not in ds.coords or "time" not in ds.coords:
+            return ds
+
         took = -time.time()
         ds = ds.sortby("shot", "time")
         took += time.time()
