@@ -330,7 +330,7 @@ class DatasetOutputSetting(SingleOutputSetting):
             return ds
 
         took = -time.time()
-        ds = ds.sortby("shot", "time")
+        ds = ds.sortby(["shot", "time"])
         took += time.time()
         logger.debug("Sorted {tot:,} rows in {sec:.3f}s.", tot=len(ds.idx), sec=took)
         return ds
