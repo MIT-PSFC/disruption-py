@@ -5,6 +5,7 @@ Handles retrieving shotlists from various sources including lists, files, and SQ
 databases.
 """
 
+import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from importlib import resources
@@ -98,7 +99,7 @@ class FileShotlistSetting(ShotlistSetting):
 
     def _get_shotlist(self, params: ShotlistSettingParams) -> List:
         if not self.shotlist:
-            if self.file_path.endswith(".parquet"):
+            if os.fspath(self.file_path).endswith(".parquet"):
                 df = pd.read_parquet(self.file_path, **self.kwargs)
             else:
                 self.kwargs.setdefault("header", "infer")
