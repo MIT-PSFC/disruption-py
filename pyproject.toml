@@ -113,6 +113,7 @@ ignore_case = true
 in_place = true
 sort_table_keys = true
 trailing_comma_inline_array = true
+overrides."*.physics.attributes.*.validity".inline_arrays = false
 
 [tool.uv]
 default-groups = []
