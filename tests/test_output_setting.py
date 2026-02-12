@@ -94,8 +94,8 @@ def test_output_exists(fresh_data, test_folder_m):
     pd.testing.assert_frame_equal(df_out, df_dsk)
 
     # format equivalence
-    xr.testing.assert_identical(ds_out, xr.concat(dict_out.values(), dim="idx"))
-    xr.testing.assert_identical(
-        ds_out, xr.concat([dt.to_dataset() for dt in dt_out.values()], dim="idx")
-    )
+    for ds_list in [dict_out.values(), [dt.to_dataset() for dt in dt_out.values()]]:
+        xr.testing.assert_identical(
+            ds_out, xr.concat(ds_list, dim="idx").sortby("shot", "time")
+        )
     pd.testing.assert_frame_equal(df_out, ds_out.to_dataframe()[df_out.columns])
