@@ -127,6 +127,7 @@ shellcheck:
 	while IFS= read -r -d '' F; \
 	do \
 	   grep -q '^#!/bin/bash' "$$F" || continue; \
+	   echo "--> $$F"; \
 	   shellcheck "$$F"; \
 	   RC=$$?; \
 	   echo "--> $$F = $$RC"; \
