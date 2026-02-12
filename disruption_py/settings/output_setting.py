@@ -266,8 +266,13 @@ class SingleOutputSetting(DictOutputSetting):
         xr.Dataset | xr.DataTree | pd.DataFrame
             The resulting object.
         """
-        logger.debug("Concatenating {tot} shots.", tot=len(self.results))
+        logger.debug("Concatenating {tot:,} shots...", tot=len(self.results))
+        took = -time.time()
         self.result = self.concat()
+        took += time.time()
+        logger.info(
+            "Concatenated {tot:,} shots in {sec:.3f}s.", tot=len(self.results), sec=took
+        )
         self.results = {}
         return self.result
 
@@ -319,7 +324,12 @@ class DatasetOutputSetting(SingleOutputSetting):
         if not self.results:
             logger.critical("Nothing to concatenate!")
             return xr.Dataset()
-        return xr.concat(self.results.values(), dim="idx", combine_attrs="no_conflicts")
+        ds = xr.concat(self.results.values(), dim="idx", combine_attrs="no_conflicts")
+        took = -time.time()
+        ds = ds.sortby("shot", "time")
+        took += time.time()
+        logger.debug("Sorted {tot:,} rows in {sec:.3f}s.", tot=len(ds.idx), sec=took)
+        return ds
 
 
 class DataTreeOutputSetting(SingleOutputSetting):
