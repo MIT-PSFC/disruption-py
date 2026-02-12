@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 
 # parameters #
 
@@ -123,50 +124,48 @@ shellcheck:
 	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	shellcheck --version
 	@KO=0; \
-	for F in $$(find -type f -not -path '*/.git/*' -not -path '*/.venv/*'); \
+	while IFS= read -r -d '' F; \
 	do \
-	   grep -l '^#!/bin/bash' "$$F" || continue; \
+	   grep -q '^#!/bin/bash' "$$F" || continue; \
 	   shellcheck "$$F"; \
 	   RC=$$?; \
-	   KO=$$((KO+RC)); \
 	   echo "--> $$F = $$RC"; \
-	done; \
+	   [ "$$RC" -eq 0 ] || KO=1; \
+	done < <(find -type f -not -path '*/.git/*' -not -path '*/.venv/*' -print0); \
 	exit "$$KO"
 
 yamllint:
 	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	poetry run yamllint --version
 	@KO=0; \
-	for F in $$(find -type f -iname '*.y*ml' -not -empty -not -path '*/.venv/*'); \
+	while IFS= read -r -d '' F; \
 	do \
 	   echo "--> $$F"; \
 	   poetry run yamllint "$$F"; \
 	   RC=$$?; \
-	   KO=$$((KO+RC)); \
 	   echo "--> $$F = $$RC"; \
-	done; \
+	   [ "$$RC" -eq 0 ] || KO=1; \
+	done < <(find -type f -iname '*.y*ml' -not -empty -not -path '*/.venv/*' -print0); \
 	exit "$$KO"
 
 toml-sort:
 	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	poetry run toml-sort --version
 	@KO=0; \
-	for F in $$(find -maxdepth 1 -type f -iname '*.toml' -not -empty -not -path '*/.venv/*'); \
+	while IFS= read -r -d '' F; \
 	do \
 	   echo "--> $$F"; \
 	   poetry run toml-sort $(CHECK_ARG) "$$F"; \
 	   RC=$$?; \
-	   KO=$$((KO+RC)); \
 	   echo "--> $$F = $$RC"; \
-	done; \
-	exit "$$KO"
-	@KO=0; \
-	for F in $$(find -mindepth 2 -type f -iname '*.toml' -not -empty -not -path '*/.venv/*'); \
+	   [ "$$RC" -eq 0 ] || KO=1; \
+	done < <(find -maxdepth 1 -type f -iname '*.toml' -not -empty -not -path '*/.venv/*' -print0); \
+	while IFS= read -r -d '' F; \
 	do \
 	   echo "--> $$F"; \
 	   poetry run toml-sort $(CHECK_ARG) --all "$$F"; \
 	   RC=$$?; \
-	   KO=$$((KO+RC)); \
 	   echo "--> $$F = $$RC"; \
-	done; \
+	   [ "$$RC" -eq 0 ] || KO=1; \
+	done < <(find -mindepth 2 -type f -iname '*.toml' -not -empty -not -path '*/.venv/*' -print0); \
 	exit "$$KO"
