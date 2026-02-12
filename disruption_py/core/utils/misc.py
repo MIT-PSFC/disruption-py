@@ -12,7 +12,7 @@ from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import Any, Dict, List, Tuple, Type
+from typing import Dict, List, Tuple, Type
 
 import numpy as np
 from loguru import logger
@@ -209,20 +209,20 @@ def to_tuple(
     return {k: (dim, v) for k, v in data.items()}
 
 
-def filter_dict(i: Dict[Any, Any], s: str) -> Dict[Any, Any]:
+def filter_dict(i: Dict, s: str) -> Dict:
     """
     Filter a dictionary by removing all keys that match a given pattern.
 
     Parameters
     ----------
-    i : Dict[Any, Any]
+    i : Dict
         Input dictionary.
     s : str
         String pattern to filter out.
 
     Returns
     -------
-    Dict[Any, Any]
+    Dict
         Output dictionary.
     """
     o = {}
