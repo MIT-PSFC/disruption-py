@@ -122,7 +122,7 @@ def get_shots_data(
         raise ModuleNotFoundError("Cannot import MDSplus.")
 
     # dump configuration
-    json_file_path = os.path.join(get_temporary_folder(), ".config.json")
+    json_file_path = os.path.join(get_temporary_folder(), "config.json")
     config_dict = filter_dict(config(tokamak).to_dict(), "_pass")
     config_dict.get("PHYSICS", {}).pop("attributes", None)
     if "pytest" not in sys.modules:
