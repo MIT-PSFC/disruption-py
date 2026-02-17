@@ -129,7 +129,7 @@ def get_shots_data(
         config_dict.pop("TESTS", None)
     with open(json_file_path, "w", encoding="utf8") as f:
         json.dump(config_dict, f, indent=3, sort_keys=True)
-    logger.debug("Dumped configuration into: {path}", path=json_file_path)
+    logger.verbose("Dumped configuration: {path}", path=json_file_path)
 
     database = _get_database_instance(tokamak, database_initializer)
     # Clean-up parameters
