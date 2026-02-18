@@ -207,3 +207,30 @@ def to_tuple(
     Dict[str, Tuple[str, np.ndarray]]
     """
     return {k: (dim, v) for k, v in data.items()}
+
+
+def filter_dict(i: Dict, s: str) -> Dict:
+    """
+    Filter a dictionary by removing all keys that contain a given substring.
+
+    Parameters
+    ----------
+    i : Dict
+        Input dictionary.
+    s : str
+        Substring to filter out.
+
+    Returns
+    -------
+    Dict
+        Output dictionary.
+    """
+    o = {}
+    for k, v in i.items():
+        if isinstance(k, str) and s in k:
+            continue
+        if isinstance(v, dict):
+            o[k] = filter_dict(v, s)
+        else:
+            o[k] = v
+    return o
