@@ -7,7 +7,7 @@ Module for helper, not physics, methods.
 import numpy as np
 import scipy
 
-from disruption_py.inout.mds import MDSConnection
+from disruption_py.inout.base import DataConnection
 
 
 class EastUtilMethods:
@@ -42,7 +42,7 @@ class EastUtilMethods:
         return ip
 
     @staticmethod
-    def retrieve_ip(mds_conn: MDSConnection, shot_id: int):
+    def retrieve_ip(mds_conn: DataConnection, shot_id: int):
         """
         Read in the measured plasma current, Ip. There are several different
         measurements of Ip: IPE, IPG, IPM (all in the EAST tree), and PCRL01
@@ -54,8 +54,8 @@ class EastUtilMethods:
 
         Parameters
         ----------
-        mds_conn : MDSConnection
-            Connection to MDSplus server.
+        mds_conn : DataConnection
+            Data connection for the shot.
         shot_id : int
             Shot number.
 

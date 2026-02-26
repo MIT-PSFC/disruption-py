@@ -7,7 +7,7 @@ Module for helper, not physics, methods.
 import numpy as np
 
 from disruption_py.core.utils.math import interp1
-from disruption_py.inout.xr import XarrayConnection
+from disruption_py.inout.base import DataConnection
 
 
 class MastUtilMethods:
@@ -17,44 +17,40 @@ class MastUtilMethods:
     """
 
     @staticmethod
-    def retrieve_ip(conn: XarrayConnection, shot_id: int):
+    def retrieve_ip(conn: DataConnection):
         """
         Read in the measured plasma current, Ip.
 
         Parameters
         ----------
-        conn : XarrayConnection
-            Connection to S3 bucket.
-        shot_id : int
-            Shot number.
+        conn : DataConnection
+            Per-shot data connection.
 
         Returns
         -------
         tuple[np.ndarray, np.ndarray]
             Plasma current [A], time base of plasma current [s].
         """
-        ip = conn.get_data(shot_id, "summary/ip")  # ensure data is cached
-        ip_time = conn.get_data(shot_id, "summary/time")
+        ip = conn.get_data("summary/ip")
+        ip_time = conn.get_data("summary/time")
         return ip, ip_time
 
     @staticmethod
-    def retrieve_efit_time(conn: XarrayConnection, shot_id: int):
+    def retrieve_efit_time(conn: DataConnection):
         """
         Read in the EFIT time base.
 
         Parameters
         ----------
-        conn : XarrayConnection
-            Connection to S3 bucket.
-        shot_id : int
-            Shot number.
+        conn : DataConnection
+            Per-shot data connection.
 
         Returns
         -------
         np.ndarray
             EFIT time base [s].
         """
-        efit_time = conn.get_data(shot_id, "equilibrium/time")
+        efit_time = conn.get_data("equilibrium/time")
         return efit_time
 
     @staticmethod

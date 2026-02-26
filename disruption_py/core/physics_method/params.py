@@ -11,7 +11,7 @@ import numpy as np
 from loguru import logger
 
 from disruption_py.core.utils.misc import shot_msg_patch, to_tuple
-from disruption_py.inout.mds import MDSConnection
+from disruption_py.inout.base import DataConnection
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -25,7 +25,7 @@ class PhysicsMethodParams:
     shot_id: int
     tokamak: Tokamak
     disruption_time: float
-    mds_conn: MDSConnection
+    mds_conn: DataConnection
     times: np.ndarray
 
     def __post_init__(self):
