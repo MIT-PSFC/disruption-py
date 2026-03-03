@@ -259,11 +259,42 @@ Please refer to our `examples/defaults.py` script for a quickstart workflow with
 
 ## Contributing
 
-Make sure you refer to the latest version of our [development branch](https://github.com/MIT-PSFC/disruption-py/tree/dev)!
+Make sure you branch off the latest version of our [development branch](https://github.com/MIT-PSFC/disruption-py/tree/dev)!
 
 - If you encounter any problems, please [create a new issue](https://github.com/MIT-PSFC/disruption-py/issues/new).
 - If you would like to contribute, please [submit a pull request](https://github.com/MIT-PSFC/disruption-py/compare/dev...).
 - If you have general questions, please [start a new discussion](https://github.com/MIT-PSFC/disruption-py/discussions/new?category=q-a).
+
+#### Testing
+
+In order to validate your code and test your workflows, please:
+
+1. Install the necessary `dev`elopment dependencies:
+
+```bash
+# if you use poetry
+poetry install --with dev
+
+# if you use uv
+uv sync --group dev
+```
+
+2. Verify that the code satisfies our linting rules:
+
+```bash
+# if you use poetry
+make check
+```
+
+3. Verify that the workflows pass our test suite:
+
+```bash
+# if you use poetry
+poetry run pytest
+
+# if you use uv
+uv run pytest
+```
 
 
 ## Credits
