@@ -62,7 +62,7 @@ Given the sheer number of available diagnostic systems, and possible plasma mode
 Fast and agile numerical frameworks for database preparation and preprocessing are necessary for letting researchers focus on novel algorithms and benchmark different architectures and models.
 
 As the Fusion Community prepares for the upcoming burning plasma devices, the multiple existing data repositories already face numerous interoperability challenges.
-Previous community reporting [@humphreys_2020] identified the need to improve several aspects of existing platforms, ranging from hardware and technology to software, including development of optimized ML-ready workflows for fusion scientific discovery.
+Previous community reporting [@humphreys_2020] identified the need to improve several aspects of existing platforms, ranging from hardware and technology to software, including development of optimized ML-ready workflows for scientific discovery.
 Therein, the authors highlighted the current different data access systems, the various data storage formats, and a lack of adequately-labeled data as main challenges that need to be addressed by the research community.
 
 Additional example of similar frameworks for experimental data retrieval and database preparation are `TokSearch` [@sammuli_2018] and `DEFUSE` [@pau_2023].
