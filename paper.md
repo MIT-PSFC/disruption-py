@@ -49,8 +49,8 @@ bibliography: paper.bib
 `DisruptionPy` also supports extracting data using Xarray, which is interoperable with the open MAST [@jackson_2024; @jackson_2025] dataset, therefore enabling researchers to easily access and analyze historical MAST data without the need to participate in a collaboration agreement.
 `DisruptionPy` relies on established numerical libraries, e.g. `NumPy`, `SciPy`, `Pandas`, `Xarray`, to allow effortless manipulation of either raw or pre-processed data into complicated feature-extraction workflows for database generation.
 
-The heterogeneous set of scripts from which `DisruptionPy` was developed led to several high-profile scientific publications [@hu_2021; @keith_2024; @maris_2024; @montes_2019; @rea_2018; @rea_2018; @rea_2019; @rea_2020; @spangher_2025; @tinguely_2019; @zhu_2020; @zhu_2021; @zhu_2023].
-`DisruptionPy` itself is now the basis for the scientific work of the entire Disruptions Group at MIT PSFC and will undoubtedly lead to further high-impact results in the near future.
+The heterogeneous set of scripts from which `DisruptionPy` was developed led to several high-profile scientific publications [@rea_2018_1; @rea_2018_2; @rea_2019; @rea_2020; @montes_2019; @tinguely_2019; @zhu_2020; @zhu_2021; @zhu_2023; @hu_2021].
+`DisruptionPy` itself, as the new high-quality basis for the scientific work of the entire Disruptions Group at MIT PSFC, enabled further publications in recent years [@keith_2024; @maris_2024; @spangher_2025; @saperstein_2025] and will undoubtedly continue to lead to further high-impact results in the near future, as more scientific projects that leverage it reach maturity.
 
 # Statement of need
 
