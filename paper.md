@@ -65,6 +65,8 @@ As the Fusion Community prepares for the upcoming burning plasma devices, the mu
 Previous community reporting [@humphreys_2020] identified the need to improve several aspects of existing platforms, ranging from hardware and technology to software, including development of optimized ML-ready workflows for scientific discovery.
 Therein, the authors highlighted the current different data access systems, the various data storage formats, and a lack of adequately-labeled data as main challenges that need to be addressed by the research community.
 
+In such context, the open-source development of `DisruptionPy` satisfies the crucial need for shared and validated data-processing workflows, and the framework's helpfulness will only grow as more experimental devices relax their requirements for data access and evolve towards open data and FAIR (Findable, Accessible, Interoperable, Reusable) principles [@wilkinson_2016].
+
 Additional example of similar frameworks for experimental data retrieval and database preparation are `TokSearch` [@sammuli_2018] and `DEFUSE` [@pau_2023].
 The `TokSearch` library [@sammuli_2018] was developed to efficiently query, process, and analyze experimental data from DIII-D for ML applications.
 It leverages a distributed file format to increase throughput and a dedicated API to transfer data from MDSplus and export it in Parquet format.
