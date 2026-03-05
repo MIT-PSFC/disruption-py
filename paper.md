@@ -46,7 +46,7 @@ bibliography: paper.bib
 
 `DisruptionPy` originated as an institutional effort from the Plasma Science and Fusion Center within the Massachusetts Institute of Technology (MIT PSFC) to create a shared and validated set of feature-extraction routines, and evolved into an open-source scientific framework in order to aid disruption scientists everywhere.
 `DisruptionPy` natively supports efficiently extracting data from `MDSplus` [@stillerman_1997; @stillerman_2025], the leading open-source storage back-end for most fusion experiments, and enables scientists to carry out complicated Python-based computations at scale across entire experimental databases.
-`DisruptionPy` also supports extracting data from the open FAIR MAST [@jackson_2024; @jackson_2025] dataset, enabling researchers to easily access and analyze historical MAST data without connection to an institution.
+`DisruptionPy` also supports extracting data using Xarray, which is interoperable with the open MAST [@jackson_2024; @jackson_2025] dataset, therefore enabling researchers to easily access and analyze historical MAST data without the need to participate in a collaboration agreement.
 `DisruptionPy` relies on established numerical libraries, e.g. `NumPy`, `SciPy`, `Pandas`, `Xarray`, to allow effortless manipulation of either raw or pre-processed data into complicated feature-extraction workflows for database generation.
 
 The heterogeneous set of scripts from which `DisruptionPy` was developed led to several high-profile scientific publications [@hu_2021; @keith_2024; @maris_2024; @montes_2019; @rea_2018; @rea_2018; @rea_2019; @rea_2020; @spangher_2025; @tinguely_2019; @zhu_2020; @zhu_2021; @zhu_2023].
