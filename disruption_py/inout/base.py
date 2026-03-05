@@ -1,4 +1,7 @@
-"""Abstract base classes for data connections.
+#!/usr/bin/env python3
+
+"""
+Abstract base classes for data connections.
 
 DataConnection: per-shot data access (get_data, get_data_with_dims, get_dims).
 ProcessConnection: per-process factory that creates DataConnection instances.
