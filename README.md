@@ -26,7 +26,7 @@
 
 ## Concept
 
-DisruptionPy is an open-source Scientific Python package for fast retrieval of experimental Fusion data from [MDSplus](https://www.mdsplus.org/) servers.
+DisruptionPy is an open-source Scientific Python package for fast retrieval of experimental Fusion data from [MDSplus](https://www.mdsplus.org/) servers or [Xarray](https://xarray.dev/) stores.
 The library allows an efficient database preparation for downstream analysis and/or ML model development for disruption studies.
 Currently supported devices are:
 
