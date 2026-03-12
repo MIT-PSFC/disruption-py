@@ -31,12 +31,12 @@ class ProcessXarrayConnection(ProcessConnection):
         file_ext: str = "zarr",
         endpoint_url: str | None = None,
     ):
-        if file_path is None:
-            return
-
         self.endpoint_url = endpoint_url
         self.file_path = file_path
         self.file_ext = file_ext
+
+        if file_path is None:
+            return
 
         logger.debug(
             "PID #{pid} | Connecting to Xarray store: {server}",
@@ -104,7 +104,7 @@ class XarrayDataConnection(DataConnection):
 
     def get_data(
         self, path: str, group: str = None, return_xarray: bool = False, **kwargs
-    ) -> np.ndarray:
+    ) -> "np.ndarray | xr.DataArray | None":
         """Get data from the connection.
 
         Parameters
@@ -120,7 +120,9 @@ class XarrayDataConnection(DataConnection):
 
         Returns
         -------
-        np.ndarray or xr.DataArray
+        np.ndarray or xr.DataArray or None
+            numpy array by default, xr.DataArray if return_xarray=True,
+            or None if variable not found and return_xarray=True.
         """
         path = self._resolve_path(path, group)
         logger.trace(shot_msg("Getting data: {path}"), shot=self._shot_id, path=path)
@@ -218,7 +220,3 @@ class XarrayDataConnection(DataConnection):
         if self.data_tree is not None:
             self.data_tree.close()
             self.data_tree = None
-
-
-# Backward compatibility alias
-XarrayConnection = ProcessXarrayConnection

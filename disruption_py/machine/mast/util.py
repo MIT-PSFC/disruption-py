@@ -7,7 +7,7 @@ Module for helper, not physics, methods.
 import numpy as np
 
 from disruption_py.core.utils.math import interp1
-from disruption_py.inout.base import DataConnection
+from disruption_py.inout.xr import XarrayDataConnection
 
 
 class MastUtilMethods:
@@ -17,14 +17,14 @@ class MastUtilMethods:
     """
 
     @staticmethod
-    def retrieve_ip(conn: DataConnection):
+    def retrieve_ip(conn: XarrayDataConnection):
         """
         Read in the measured plasma current, Ip.
 
         Parameters
         ----------
-        conn : DataConnection
-            Per-shot data connection.
+        conn : XarrayDataConnection
+            Per-shot Xarray data connection.
 
         Returns
         -------
@@ -36,14 +36,14 @@ class MastUtilMethods:
         return ip, ip_time
 
     @staticmethod
-    def retrieve_efit_time(conn: DataConnection):
+    def retrieve_efit_time(conn: XarrayDataConnection):
         """
         Read in the EFIT time base.
 
         Parameters
         ----------
-        conn : DataConnection
-            Per-shot data connection.
+        conn : XarrayDataConnection
+            Per-shot Xarray data connection.
 
         Returns
         -------

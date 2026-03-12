@@ -235,10 +235,6 @@ def get_process_connection(
     raise ValueError("No valid MDSplus or xarray connection found.")
 
 
-# Deprecated alias
-get_mdsplus_class = get_process_connection
-
-
 def _get_database_instance(tokamak, database_initializer):
     """
     Create database instance
