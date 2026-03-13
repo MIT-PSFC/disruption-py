@@ -1530,9 +1530,13 @@ class D3DPhysicsMethods:
                 # Get Te and ne from PTDATA
                 # dpp_master.h: only used cor00--cor43, tan00--tan09
                 n_chords = len(lasers[laser]['r'])
+                i_chords = range(n_chords)
+                if params.shot_id < 172749:
+                    # Correct channel indices for pre-12749 shots
+                    i_chords = range(1, n_chords+1)
                 lasers[laser]['te'] = np.full((n_chords, len(lasers[laser]["time"])), np.nan)
                 lasers[laser]['ne'] = np.full((n_chords, len(lasers[laser]["time"])), np.nan)
-                for i in range(n_chords):
+                for i in i_chords:
                     for signal in ['te', 'ne']:
                         if params.shot_id < 172749 and laser == 'tangential':
                             ptdata_address = f"ptdata('tsshor{signal}{i}', {params.shot_id})"
@@ -1584,8 +1588,8 @@ class D3DPhysicsMethods:
                         )
                         params.logger.opt(exception=True).debug(e)
             # Place NaNs for broken channels
-            lasers[laser]["te"][lasers[laser]["te"] == 0] = np.nan    # NOTE: disabled for debugging
-            lasers[laser]["ne"][lasers[laser]["ne"] == 0] = np.nan    # NOTE: disabled for debugging
+            lasers[laser]["te"][lasers[laser]["te"] == 0] = np.nan
+            lasers[laser]["ne"][lasers[laser]["ne"] == 0] = np.nan
             lasers[laser]["time"] /= 1e3  # [ms] -> [s]
 
         # If both systems/lasers available, combine them and interpolate the data
