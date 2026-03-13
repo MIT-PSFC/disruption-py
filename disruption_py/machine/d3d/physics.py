@@ -995,7 +995,7 @@ class D3DPhysicsMethods:
         - issues: #[261](https://github.com/MIT-PSFC/disruption-py/issues/261)
         """
         ## Thomson parameters
-        ts_data_type = "ptdata"  # either 'blessed', 'unblessed', or 'ptdata'   # NOTE: debug
+        ts_data_type = "blessed"  # either 'blessed', 'unblessed', or 'ptdata'
         # metric to use for core/edge binning (either 'psin' or 'rhovn')
         ts_radius = "rhovn"
         # ts_radius value defining boundary of 'core' region (between 0 and 1)
