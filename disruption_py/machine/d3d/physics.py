@@ -995,7 +995,7 @@ class D3DPhysicsMethods:
         - issues: #[261](https://github.com/MIT-PSFC/disruption-py/issues/261)
         """
         ## Thomson parameters
-        ts_data_type = "blessed"  # either 'blessed', 'unblessed', or 'ptdata'   # NOTE: debug
+        ts_data_type = "ptdata"  # either 'blessed', 'unblessed', or 'ptdata'   # NOTE: debug
         # metric to use for core/edge binning (either 'psin' or 'rhovn')
         ts_radius = "rhovn"
         # ts_radius value defining boundary of 'core' region (between 0 and 1)
@@ -1474,11 +1474,21 @@ class D3DPhysicsMethods:
             # Get the Thomson data that are available in the real-time system
             mds_path = r"\top.ts.blessed."  # Source for the radial & vertical chord positions
             suffix = {"core": "cor", "tangential": "tan"}
+            laser_time_address = {
+                "core": f"ptdata('tsscorte00', {params.shot_id})",
+                "tangential": f"ptdata('tsstante00, {params.shot_id})",
+            }
             # Account for pointname formatting change in 2017
             if params.shot_id < 172749:  # First shot on Sep 19, 2017
+                # Note: for shots between 154362 and 172536 in the HBP shotlist, 
+                # the available channels are:
+                #   - core:       tsscor**10 to tsscor**40
+                #   - tangential: tsshor**1 to tsshor**6
                 suffix["tangential"] = "hor"
-                # TODO: figure out how 'hor' system was implemented. 
-                # 161228: tsshorne1 to tsshorne6 -- check MDSplus if there are only 6 chords
+                laser_time_address = {
+                    "core": f"ptdata('tsscorte10', {params.shot_id})",
+                    "tangential": f"ptdata('tsshorte1', {params.shot_id})",
+                }   # TODO: do this in a cleaner way!
         else:
             raise CalculationError(f"Invalid data_source: {data_source}")
 
@@ -1490,10 +1500,11 @@ class D3DPhysicsMethods:
                 print('Using PTDATA for Thomson data source (experimental)')
                 
                 try:
-                    lasers[laser]["time"] = params.mds_conn.get_dims(f"ptdata('tss{suffix[laser]}te00', {params.shot_id})")[0]
+                    lasers[laser]["time"] = params.mds_conn.get_dims(laser_time_address[laser])[0]
                     # lasers[laser]["time"] /= 1.0e3 # [ms] -> [s]  TODO: uncomment this after fixing the 'time' overwritten bug
                 except:
-                    pass
+                    # TODO: raise some error
+                    continue
                 
                 # Get r, z from MDSplus
                 # TODO: make this look better
@@ -1517,7 +1528,7 @@ class D3DPhysicsMethods:
                         params.logger.opt(exception=True).debug(e)
                         
                 # Get Te and ne from PTDATA
-                # dpp_master.h: used cor00--cor43, tan00--tan09
+                # dpp_master.h: only used cor00--cor43, tan00--tan09
                 n_chords = len(lasers[laser]['r'])
                 lasers[laser]['te'] = np.full((n_chords, len(lasers[laser]["time"])), np.nan)
                 lasers[laser]['ne'] = np.full((n_chords, len(lasers[laser]["time"])), np.nan)
