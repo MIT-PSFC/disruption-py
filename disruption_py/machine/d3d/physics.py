@@ -1476,7 +1476,7 @@ class D3DPhysicsMethods:
             suffix = {"core": "cor", "tangential": "tan"}
             laser_time_address = {
                 "core": f"ptdata('tsscorte00', {params.shot_id})",
-                "tangential": f"ptdata('tsstante00, {params.shot_id})",
+                "tangential": f"ptdata('tsstante00', {params.shot_id})",
             }
             # Account for pointname formatting change in 2017
             if params.shot_id < 172749:  # First shot on Sep 19, 2017
@@ -1532,7 +1532,7 @@ class D3DPhysicsMethods:
                 n_chords = len(lasers[laser]['r'])
                 i_chords = range(n_chords)
                 if params.shot_id < 172749:
-                    # Correct channel indices for pre-12749 shots
+                    # Correct channel indices for pre-172749 shots
                     i_chords = range(1, n_chords+1)
                 lasers[laser]['te'] = np.full((n_chords, len(lasers[laser]["time"])), np.nan)
                 lasers[laser]['ne'] = np.full((n_chords, len(lasers[laser]["time"])), np.nan)
