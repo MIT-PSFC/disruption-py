@@ -1034,12 +1034,12 @@ class D3DPhysicsMethods:
         calculate_prad_pf = False
         try:
             rad_cva, t_rad_cva = params.mds_conn.get_data_with_dims(
-                f"ptdata('dpsrrdcva', {params.shot_id})"
+                f"ptdata('dpsrdcva', {params.shot_id})"
             )  # [], [ms]
             t_rad_cva /= 1e3  # [ms] -> [s]
             rad_cva = interp1(t_rad_cva, rad_cva, params.times)
             rad_xdiv, t_rad_xdiv = params.mds_conn.get_data_with_dims(
-                f"ptdata('dpsrrdxdiv', {params.shot_id})"
+                f"ptdata('dpsrdxdiv', {params.shot_id})"
             )  # [], [ms]
             t_rad_xdiv /= 1e3  # [ms] -> [s]
             rad_xdiv = interp1(t_rad_xdiv, rad_xdiv, params.times)
