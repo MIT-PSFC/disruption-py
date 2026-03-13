@@ -1482,11 +1482,11 @@ class D3DPhysicsMethods:
             if params.shot_id < 172749:  # First shot on Sep 19, 2017
                 # Note: for shots between 154362 and 172536 in the HBP shotlist, 
                 # the available channels are:
-                #   - core:       tsscor**10 to tsscor**40
+                #   - core:       tsscor**1 to tsscor**41
                 #   - tangential: tsshor**1 to tsshor**6
                 suffix["tangential"] = "hor"
                 laser_time_address = {
-                    "core": f"ptdata('tsscorte10', {params.shot_id})",
+                    "core": f"ptdata('tsscorte1', {params.shot_id})",
                     "tangential": f"ptdata('tsshorte1', {params.shot_id})",
                 }   # TODO: do this in a cleaner way!
         else:
@@ -1538,8 +1538,9 @@ class D3DPhysicsMethods:
                 lasers[laser]['ne'] = np.full((n_chords, len(lasers[laser]["time"])), np.nan)
                 for i in i_chords:
                     for signal in ['te', 'ne']:
-                        if params.shot_id < 172749 and laser == 'tangential':
-                            ptdata_address = f"ptdata('tsshor{signal}{i}', {params.shot_id})"
+                        if params.shot_id < 172749:
+                            # pre-172749 shots: channel index starts from 1, no prefix 0
+                            ptdata_address = f"ptdata('tss{suffix[laser]}{signal}{i}', {params.shot_id})"
                         else:
                             ptdata_address = f"ptdata('tss{suffix[laser]}{signal}{i:02d}', {params.shot_id})"
                         try:
