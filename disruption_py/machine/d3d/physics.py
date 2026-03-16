@@ -1574,7 +1574,9 @@ class D3DPhysicsMethods:
             mds_path = r"\top.ts.revisions.revision00."
         elif data_source == "ptdata":
             # Get the Thomson data that are available in the real-time system
-            mds_path = r"\top.ts.blessed."  # Source for the radial & vertical chord positions
+            mds_path = (
+                r"\top.ts.blessed."  # Source for the radial & vertical chord positions
+            )
             suffix = {"core": "cor", "tangential": "tan"}
             laser_time_address = {
                 "core": f"ptdata('tsscorte00', {params.shot_id})",
@@ -1582,7 +1584,7 @@ class D3DPhysicsMethods:
             }
             # Account for pointname formatting change in 2017
             if params.shot_id < 172749:  # First shot on Sep 19, 2017
-                # Note: for shots between 154362 and 172536 in the HBP shotlist, 
+                # Note: for shots between 154362 and 172536 in the HBP shotlist,
                 # the available channels are:
                 #   - core:       tsscor**1 to tsscor**41
                 #   - tangential: tsshor**1 to tsshor**6
@@ -1590,7 +1592,7 @@ class D3DPhysicsMethods:
                 laser_time_address = {
                     "core": f"ptdata('tsscorte1', {params.shot_id})",
                     "tangential": f"ptdata('tsshorte1', {params.shot_id})",
-                }   # TODO: do this in a cleaner way!
+                }  # TODO: do this in a cleaner way!
         else:
             raise CalculationError(f"Invalid data_source: {data_source}")
 
@@ -1598,17 +1600,19 @@ class D3DPhysicsMethods:
         for laser in ts_systems:
             lasers[laser] = {}
             sub_tree = f"{mds_path}{laser}"
-            if data_source == 'ptdata':
-                print('Using PTDATA for Thomson data source (experimental)')
-                
+            if data_source == "ptdata":
+                print("Using PTDATA for Thomson data source (experimental)")
+
                 try:
-                    lasers[laser]["time"] = params.mds_conn.get_dims(laser_time_address[laser])[0]
-                    lasers[laser]["time"] /= 1.0e3 # [ms] -> [s]
+                    lasers[laser]["time"] = params.mds_conn.get_dims(
+                        laser_time_address[laser]
+                    )[0]
+                    lasers[laser]["time"] /= 1.0e3  # [ms] -> [s]
                 except:
                     # TODO: raise some error
                     lasers[laser] = None
                     continue
-                
+
                 # Get r, z from MDSplus
                 # TODO: make this look better
                 child_nodes = {
@@ -1621,7 +1625,9 @@ class D3DPhysicsMethods:
                             f"{sub_tree}:{name}", tree_name="electrons"
                         )
                     except mdsExceptions.MdsException as e:
-                        lasers[laser][node] = np.full(lasers[laser]["time"].shape, np.nan)
+                        lasers[laser][node] = np.full(
+                            lasers[laser]["time"].shape, np.nan
+                        )
                         params.logger.warning(
                             "Failed to get {laser}:{name}({node}) data, Setting to all NaNs.",
                             laser=laser,
@@ -1629,30 +1635,36 @@ class D3DPhysicsMethods:
                             node=node,
                         )
                         params.logger.opt(exception=True).debug(e)
-                        
+
                 # Get Te and ne from PTDATA
                 # dpp_master.h: only used cor00--cor43, tan00--tan09
-                n_chords = len(lasers[laser]['r'])
+                n_chords = len(lasers[laser]["r"])
                 i_chords = range(n_chords)
                 if params.shot_id < 172749:
                     # Correct channel indices for pre-172749 shots
-                    i_chords = range(1, n_chords+1)
-                lasers[laser]['te'] = np.full((n_chords, len(lasers[laser]["time"])), np.nan)
-                lasers[laser]['ne'] = np.full((n_chords, len(lasers[laser]["time"])), np.nan)
+                    i_chords = range(1, n_chords + 1)
+                lasers[laser]["te"] = np.full(
+                    (n_chords, len(lasers[laser]["time"])), np.nan
+                )
+                lasers[laser]["ne"] = np.full(
+                    (n_chords, len(lasers[laser]["time"])), np.nan
+                )
                 for i in i_chords:
-                    for signal in ['te', 'ne']:
+                    for signal in ["te", "ne"]:
                         if params.shot_id < 172749:
                             # pre-172749 shots: channel index starts from 1, no prefix 0
                             ptdata_address = f"ptdata('tss{suffix[laser]}{signal}{i}', {params.shot_id})"
                         else:
                             ptdata_address = f"ptdata('tss{suffix[laser]}{signal}{i:02d}', {params.shot_id})"
                         try:
-                            lasers[laser][signal][i, :] = params.mds_conn.get_data(ptdata_address)
+                            lasers[laser][signal][i, :] = params.mds_conn.get_data(
+                                ptdata_address
+                            )
                         except:
-                            print(f'{ptdata_address} unavailable')
+                            print(f"{ptdata_address} unavailable")
                 # Set te_error and ne_error to nan array (unavailable in PTDATA)
-                lasers[laser]['te_error'] = np.full_like(lasers[laser]['te'], np.nan)
-                lasers[laser]['ne_error'] = np.full_like(lasers[laser]['te'], np.nan)
+                lasers[laser]["te_error"] = np.full_like(lasers[laser]["te"], np.nan)
+                lasers[laser]["ne_error"] = np.full_like(lasers[laser]["te"], np.nan)
             else:
                 try:
                     (t_sub_tree,) = params.mds_conn.get_dims(
@@ -1683,7 +1695,9 @@ class D3DPhysicsMethods:
                             f"{sub_tree}:{name}", tree_name="electrons"
                         )
                     except mdsExceptions.MdsException as e:
-                        lasers[laser][node] = np.full(lasers[laser]["time"].shape, np.nan)
+                        lasers[laser][node] = np.full(
+                            lasers[laser]["time"].shape, np.nan
+                        )
                         params.logger.warning(
                             "Failed to get {laser}:{name}({node}) data, Setting to all NaNs.",
                             laser=laser,
@@ -1692,11 +1706,10 @@ class D3DPhysicsMethods:
                         )
                         params.logger.opt(exception=True).debug(e)
                 lasers[laser]["time"] /= 1e3  # [ms] -> [s]
-                
+
             # Place NaNs for broken channels
             lasers[laser]["te"][lasers[laser]["te"] == 0] = np.nan
             lasers[laser]["ne"][lasers[laser]["ne"] == 0] = np.nan
-            
 
         # If both systems/lasers available, combine them and interpolate the data
         # from the tangential system onto the finer (core) timebase
