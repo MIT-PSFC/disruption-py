@@ -9,7 +9,7 @@ Here follows a non-exhaustive list of projects, publications, and conference con
 
 ### Publications
 
-- GL Trevisan, _et al._ (2026), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, Journal of Open Source Software, [accepted](https://joss.theoj.org/papers/e98dd4586a1383f120c5005b539ca6f8)
+- GL Trevisan, _et al._ (2026), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, Journal of Open Source Software, DOI: [10.21105/joss.09364](https://doi.org/10.21105/joss.09364)
 - AR Saperstein, _et al._ (2025), _"Design and development of an off-normal warning system for SPARC"_, Nuclear Fusion **65** 116007, DOI: [10.1088/1741-4326/ae074e](https://doi.org/10.1088/1741-4326/ae074e)
 - L Spangher, _et al._ (2025), _"DisruptionBench and Complimentary New Models: Two Advancements in Machine Learning Driven Disruption Prediction"_, Journal of Fusion Energy **44** 26, DOI: [10.1007/s10894-025-00495-2](https://doi.org/10.1007/s10894-025-00495-2)
 - J Stillerman, _et al._ (2025), _"MDSplusML: Optimizations for data access to facilitate machine learning pipelines"_, Fusion Engineering and Design **211** 114770, DOI: [10.1016/j.fusengdes.2024.114770](https://doi.org/10.1016/j.fusengdes.2024.114770)

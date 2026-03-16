@@ -24,6 +24,9 @@ identifiers:
   - type: doi
     value: 10.5281/zenodo.13935223
     description: Zenodo
+- type: doi
+    value: 10.21105/joss.09364
+    description: Journal of Open Source Software
 repository-code: 'https://github.com/MIT-PSFC/disruption-py'
 url: 'https://mit-psfc.github.io/disruption-py/'
 repository-artifact: 'https://pypi.org/project/disruption-py/'
