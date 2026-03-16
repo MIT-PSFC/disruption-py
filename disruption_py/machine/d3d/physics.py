@@ -1517,22 +1517,27 @@ class D3DPhysicsMethods:
                     "r": "r",
                     "z": "z",
                 }
+                is_laser_available = True
                 for node, name in child_nodes.items():
                     try:
                         lasers[laser][node] = params.mds_conn.get_data(
                             f"{sub_tree}:{name}", tree_name="electrons"
                         )
                     except mdsExceptions.MdsException as e:
-                        lasers[laser][node] = np.full(
-                            lasers[laser]["time"].shape, np.nan
-                        )
+                        # Fail to get r or z of this laser. Skip it.
                         params.logger.warning(
-                            "Failed to get {laser}:{name}({node}) data, Setting to all NaNs.",
+                            "Failed to get {laser}:{name}({node}) data, Setting laser data to None.",
                             laser=laser,
                             name=name,
                             node=node,
                         )
                         params.logger.opt(exception=True).debug(e)
+                        is_laser_available = False
+                        break
+                if not is_laser_available:
+                    # Skip this laser
+                    lasers[laser] = None
+                    continue
 
                 # Get Te and ne from PTDATA
                 # dpp_master.h: only used cor00--cor43, tan00--tan09
