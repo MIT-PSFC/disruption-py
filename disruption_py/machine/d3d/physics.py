@@ -1501,9 +1501,10 @@ class D3DPhysicsMethods:
                 
                 try:
                     lasers[laser]["time"] = params.mds_conn.get_dims(laser_time_address[laser])[0]
-                    # lasers[laser]["time"] /= 1.0e3 # [ms] -> [s]  TODO: uncomment this after fixing the 'time' overwritten bug
+                    lasers[laser]["time"] /= 1.0e3 # [ms] -> [s]
                 except:
                     # TODO: raise some error
+                    lasers[laser] = None
                     continue
                 
                 # Get r, z from MDSplus
@@ -1588,10 +1589,12 @@ class D3DPhysicsMethods:
                             node=node,
                         )
                         params.logger.opt(exception=True).debug(e)
+                lasers[laser]["time"] /= 1e3  # [ms] -> [s]
+                
             # Place NaNs for broken channels
             lasers[laser]["te"][lasers[laser]["te"] == 0] = np.nan
             lasers[laser]["ne"][lasers[laser]["ne"] == 0] = np.nan
-            lasers[laser]["time"] /= 1e3  # [ms] -> [s]
+            
 
         # If both systems/lasers available, combine them and interpolate the data
         # from the tangential system onto the finer (core) timebase
