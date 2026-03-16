@@ -52,7 +52,7 @@ DisruptionPy provides a standardized analysis pipeline across different fusion d
 
 ### Workflow
 
-DisruptionPy makes it easy to retrieve experimental data from [MDSplus](https://www.mdsplus.org/) fusion repositories efficiently.
+DisruptionPy makes it easy to efficiently retrieve experimental data from [MDSplus](https://www.mdsplus.org/) fusion repositories or [Xarray](https://xarray.dev/) stores.
 Users can create their own routines and/or use built-in ones that retrieve and derive a variety of important signals from experimental data for disruption analysis.
 These routines are then interpolated on a requested timebase across the specified set of plasma discharges (or shots) to assemble a dataset and save it under a variety of available formats.
 
