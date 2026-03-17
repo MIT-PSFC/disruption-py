@@ -85,3 +85,32 @@ class MastUtilMethods:
             raise ValueError("x and y must have the same length for interpolation.")
 
         return interp1(x, y, x_new)
+
+    @staticmethod
+    def gradient_1d(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        """Safely compute the gradient of 1D data with handling for all-NaN y values.
+
+        Parameters
+        ----------
+        x : np.ndarray
+            x-coordinates of the data points.
+        y : np.ndarray
+            y-coordinates of the data points.
+
+        Returns
+        -------
+        np.ndarray
+            Gradient of y with respect to x.
+        """
+        if np.isnan(y).all() or len(x) < 2:
+            # if all y are NaN (is a missing signal)
+            # or if x has only a single number
+            # just return array of NaNs with same shape as x
+            return np.full_like(x, np.nan)
+
+        if len(x) != len(y):
+            raise ValueError(
+                "x and y must have the same length for gradient calculation."
+            )
+
+        return np.gradient(y, x)

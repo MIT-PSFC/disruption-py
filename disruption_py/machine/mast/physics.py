@@ -49,9 +49,8 @@ class MastPhysicsMethods:
         ip_prog_time = conn.get_data(params.shot_id, "pulse_schedule/time")
         magtime = conn.get_data(params.shot_id, "summary/time")
 
-        dip_dt = np.gradient(ip, magtime)
-        dipprog_dt = np.gradient(ip_prog, ip_prog_time)
-
+        dip_dt = MastUtilMethods.gradient_1d(magtime, ip)
+        dipprog_dt = MastUtilMethods.gradient_1d(ip_prog_time, ip_prog)
         times = params.times
 
         ip = MastUtilMethods.interpolate_1d(magtime, ip, times)
@@ -241,8 +240,17 @@ class MastPhysicsMethods:
             A dictionary containing interpolated electron density (`n_e`),
             its time derivative (`dn_dt`), and the Greenwald fraction (`greenwald_fraction`).
         """
+        if np.isnan(n_e).all():
+            # Edge case: n_e is NaN, return NaN for all outputs
+            return {
+                "n_e": n_e,
+                "dn_dt": np.full_like(n_e, np.nan),
+                "greenwald_fraction": np.full_like(n_e, np.nan),
+            }
+
         if len(n_e) != len(t_n):
             raise CalculationError("n_e and t_n are different lengths")
+
         # get the gradient of n_E
         dn_dt = np.gradient(n_e, t_n)
         n_e = interp1(t_n, n_e, times)
