@@ -15,18 +15,58 @@ authors:
     orcid: 'https://orcid.org/0000-0003-4920-6109'
   - given-names: Cristina
     family-names: Rea
-    email: crea@psfc.mit.edu
     affiliation: MIT PSFC
     orcid: 'https://orcid.org/0000-0002-9948-2649'
   - name: MIT PSFC Disruption Studies Group
     website: 'https://disruptions.mit.edu/'
-identifiers:
-  - type: doi
-    value: 10.5281/zenodo.13935223
-    description: Zenodo
-- type: doi
-    value: 10.21105/joss.09364
-    description: Journal of Open Source Software
+doi: 10.5281/zenodo.13935223
+preferred-citation:
+  type: article
+  authors:
+  - given-names: Gregorio L.
+    family-names: Trevisan
+    email: gtrevisan@psfc.mit.edu
+    affiliation: MIT PSFC
+    orcid: 'https://orcid.org/0000-0003-4920-6109'
+  - given-names: Yumou
+    family-names: Wei
+    affiliation: MIT PSFC
+    orcid: 'https://orcid.org/0000-0002-8868-0017'
+  - given-names: Amos M.
+    family-names: Decker
+    affiliation: MIT PSFC
+    orcid: 'https://orcid.org/0009-0004-3728-3259'
+  - given-names: Joshua
+    family-names: Lorincz
+    affiliation: MIT PSFC
+    orcid: 'https://orcid.org/0009-0003-0288-9501'
+  - given-names: Samuel L.
+    family-names: Jackson
+    affiliation: UKAEA
+    orcid: 'https://orcid.org/0000-0001-5301-5095'
+  - given-names: Cristina
+    family-names: Rea
+    affiliation: MIT PSFC
+    orcid: 'https://orcid.org/0000-0002-9948-2649'
+  - given-names: Robert S.
+    family-names: Granetz
+    affiliation: MIT PSFC
+    orcid: 'https://orcid.org/0000-0002-6560-1881'
+  - name: MIT PSFC Disruption Studies Group
+    affiliation: MIT PSFC
+    website: 'https://disruptions.mit.edu/'
+  doi: 10.21105/joss.09364
+  journal: "Journal of Open Source Software"
+  month: 9
+  start: 1
+  end: 10
+  title: >-
+    DisruptionPy: An open-source physics-based Scientific
+    Framework for Disruption Analysis of Fusion Plasmas for
+    AI/ML applications
+  issue: 1
+  volume: 1
+  year: 2026
 repository-code: 'https://github.com/MIT-PSFC/disruption-py'
 url: 'https://mit-psfc.github.io/disruption-py/'
 repository-artifact: 'https://pypi.org/project/disruption-py/'
