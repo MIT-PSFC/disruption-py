@@ -25,6 +25,9 @@ Here follows a non-exhaustive list of projects, publications, and conference con
 
 ### Conferences
 
+- [6th Fusion HPC Workshop (2026)](https://hpcfusion.bsc.es/2026/)
+  - EdD Zapata Cornejo, _et al._ (2026), _"Discovering features for confinement regime operational spaces using classification and Bayesian optimization"_
+
 - [67th APS-DPP Meeting (2025)](https://meetings.aps.org/Meeting/DPP25)
   - AD Maris, _et al._ (2025), _"Collisionality scaling of the tokamak density limit: data-driven analysis, cross-device prediction, and real-time avoidance"_ [BO04.5](https://schedule.aps.org/dpp/2025/events/BO04/5)
   - Z Keith, _et al._ (2025), _"Enabling data-driven NTM studies with advanced mode labeling"_, [BP13.164](https://schedule.aps.org/dpp/2025/events/BP13/164)
