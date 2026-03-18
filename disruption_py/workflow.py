@@ -5,6 +5,8 @@ main workflow
 """
 
 import argparse
+import json
+import os
 import sys
 import time
 from itertools import repeat
@@ -17,7 +19,9 @@ from tqdm.auto import tqdm
 from disruption_py.config import config
 from disruption_py.core.retrieval_manager import RetrievalManager
 from disruption_py.core.utils.misc import (
+    filter_dict,
     get_elapsed_time,
+    get_temporary_folder,
     without_duplicates,
 )
 from disruption_py.inout.mds import ProcessMDSConnection
@@ -116,6 +120,16 @@ def get_shots_data(
         logger.debug("Did not import MDSplus.")
     else:
         raise ModuleNotFoundError("Cannot import MDSplus.")
+
+    # dump configuration
+    json_file_path = os.path.join(get_temporary_folder(), "config.json")
+    config_dict = filter_dict(config(tokamak).to_dict(), "_pass")
+    config_dict.get("PHYSICS", {}).pop("attributes", None)
+    if "pytest" not in sys.modules:
+        config_dict.pop("TESTS", None)
+    with open(json_file_path, "w", encoding="utf8") as f:
+        json.dump(config_dict, f, indent=3, sort_keys=True)
+    logger.verbose("Dumped configuration: {path}", path=json_file_path)
 
     database = _get_database_instance(tokamak, database_initializer)
     # Clean-up parameters
