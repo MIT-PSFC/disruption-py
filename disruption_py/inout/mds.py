@@ -14,6 +14,7 @@ from loguru import logger
 from disruption_py.config import config
 from disruption_py.core.utils.misc import shot_msg
 from disruption_py.core.utils.shared_instance import SharedInstance
+from disruption_py.inout.base import DataConnection, ProcessConnection
 from disruption_py.machine.tokamak import Tokamak
 
 try:
@@ -52,9 +53,9 @@ except ModuleNotFoundError:
 mdsExceptions = MDSplus.mdsExceptions
 
 
-class ProcessMDSConnection:
+class ProcessMDSConnection(ProcessConnection):
     """
-    Abstract class for connecting to MDSplus.
+    Process-level MDSplus connection.
 
     Ensure that a single MDSPlus connection is used by each process for all shots
     retrieved by that process.
@@ -73,7 +74,7 @@ class ProcessMDSConnection:
         self.conn = MDSplus.Connection(conn_string)
 
     @classmethod
-    def from_config(cls, tokamak: Tokamak):
+    def from_config(cls, tokamak: Tokamak) -> "ProcessMDSConnection":
         """
         Create instance of the MDS connection based on the connection string
         from the configuration.
@@ -82,7 +83,7 @@ class ProcessMDSConnection:
             config(tokamak).inout.mds.mdsplus_connection_string
         )
 
-    def get_shot_connection(self, shot_id: int):
+    def get_shot_connection(self, shot_id: int) -> "MDSConnection":
         """Get MDSPlus Connection wrapper for individual shot."""
         return MDSConnection(self.conn, shot_id)
 
@@ -129,7 +130,7 @@ def _better_mds_exceptions(func):
     return wrapper
 
 
-class MDSConnection:
+class MDSConnection(DataConnection):
     """
     Wrapper class for MDSPlus Connection class used for handling individual shots.
     """
@@ -138,10 +139,15 @@ class MDSConnection:
         self, conn: MDSplus.Connection, shot_id: int  # pylint: disable=no-member
     ):
         self.conn = conn
-        self.shot_id = shot_id
+        self._shot_id = shot_id
         self.tree_nickname_funcs = {}
         self.tree_nicknames = {}
         self.open_trees = []
+
+    @property
+    def shot_id(self) -> int:
+        """The shot ID this connection is bound to."""
+        return self._shot_id
 
     def reconnect(self):
         """
@@ -233,8 +239,10 @@ class MDSConnection:
     def get_data(
         self,
         path: str,
+        group: str = None,
         tree_name: str = None,
         arguments: Any = None,
+        **kwargs,
     ) -> np.ndarray:
         """
         Get data for record at specified path.
@@ -243,6 +251,8 @@ class MDSConnection:
         ----------
         path : str
             MDSplus path to record.
+        group : str, optional
+            Alias for tree_name (generic interface).
         tree_name : str, optional
             The name of the tree that must be open for retrieval.
         arguments : Any, optional
@@ -254,6 +264,7 @@ class MDSConnection:
         np.ndarray
             Returns the node data.
         """
+        tree_name = tree_name or group
 
         if tree_name is not None:
             self.open_tree(tree_name)
@@ -267,8 +278,10 @@ class MDSConnection:
     def get_data_with_dims(
         self,
         path: str,
-        tree_name: str = None,
+        group: str = None,
         dim_nums: List = None,
+        tree_name: str = None,
+        **kwargs,
     ) -> Tuple:
         """
         Get data and dimension(s) for record at specified path.
@@ -277,17 +290,19 @@ class MDSConnection:
         ----------
         path : str
             MDSplus path to record.
-        tree_name : str, optional
-            The name of the tree that must be open for retrieval.
+        group : str, optional
+            Alias for tree_name (generic interface).
         dim_nums : List, optional
             A list of dimensions that should have their size retrieved. Default [0].
+        tree_name : str, optional
+            The name of the tree that must be open for retrieval.
 
         Returns
         -------
         Tuple
             Returns the node data, followed by the requested dimensions.
         """
-
+        tree_name = tree_name or group
         dim_nums = dim_nums or [0]
 
         if tree_name is not None:
@@ -305,8 +320,10 @@ class MDSConnection:
     def get_dims(
         self,
         path: str,
-        tree_name: str = None,
+        group: str = None,
         dim_nums: List = None,
+        tree_name: str = None,
+        **kwargs,
     ) -> Tuple:
         """
         Get the specified dimensions for record at specified path.
@@ -315,17 +332,19 @@ class MDSConnection:
         ----------
         path : str
             MDSplus path to record.
-        tree_name : str, optional
-            The name of the tree that must be open for retrieval.
+        group : str, optional
+            Alias for tree_name (generic interface).
         dim_nums : List, optional
             A list of dimensions that should have their size retrieved. Default [0].
+        tree_name : str, optional
+            The name of the tree that must be open for retrieval.
 
         Returns
         -------
         Tuple
             Returns the requested dimensions as a tuple.
         """
-
+        tree_name = tree_name or group
         dim_nums = dim_nums or [0]
 
         if tree_name is not None:
@@ -334,7 +353,7 @@ class MDSConnection:
         logger.trace(shot_msg("Getting dims: {path}"), shot=self.shot_id, path=path)
         dims = [self.conn.get(f"dim_of({path},{d})").data() for d in dim_nums]
 
-        return dims
+        return tuple(dims)
 
     # nicknames
 

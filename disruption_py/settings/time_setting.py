@@ -15,7 +15,8 @@ from loguru import logger
 from disruption_py.config import config
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.misc import shot_msg_patch
-from disruption_py.inout.mds import MDSConnection, mdsExceptions
+from disruption_py.inout.base import DataConnection
+from disruption_py.inout.mds import mdsExceptions
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.east.util import EastUtilMethods
 from disruption_py.machine.mast.util import MastUtilMethods
@@ -31,8 +32,8 @@ class TimeSettingParams:
     ----------
     shot_id : int
         Shot ID for the timebase being created.
-    mds_conn : MDSConnection
-        Connection to MDSPlus for retrieving MDSPlus data.
+    mds_conn : DataConnection
+        Data connection for the shot.
     database : ShotDatabase
         Database object with connection to the SQL database.
     disruption_time : float
@@ -42,7 +43,7 @@ class TimeSettingParams:
     """
 
     shot_id: int
-    mds_conn: MDSConnection
+    mds_conn: DataConnection
     database: ShotDatabase
     disruption_time: float
     tokamak: Tokamak
@@ -283,7 +284,7 @@ class EfitTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        efit_time = MastUtilMethods.retrieve_efit_time(params.mds_conn, params.shot_id)
+        efit_time = MastUtilMethods.retrieve_efit_time(params.mds_conn)
         return efit_time
 
 
@@ -392,7 +393,7 @@ class DisruptionTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        ip, ip_time = MastUtilMethods.retrieve_ip(params.mds_conn, params.shot_id)
+        ip, ip_time = MastUtilMethods.retrieve_ip(params.mds_conn)
         return self._calculate_disruption_times(params, ip, ip_time)
 
     @classmethod
@@ -639,7 +640,7 @@ class IpTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        _, ip_time = MastUtilMethods.retrieve_ip(params.mds_conn, params.shot_id)
+        _, ip_time = MastUtilMethods.retrieve_ip(params.mds_conn)
         return ip_time
 
 
