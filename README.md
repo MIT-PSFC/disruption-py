@@ -98,7 +98,10 @@ DisruptionPy is [open-source on Github](https://github.com/MIT-PSFC/disruption-p
 ### Pre-requisites
 
 Depending on the target device, DisruptionPy may need non-Python software to be installed as a pre-requisite.
+Please install pre-requisites, namely either MDSplus or SQL drivers, _only if required_.
 For more details, please refer to the Devices section above and our [Installation guide](INSTALL.md).
+
+Note: [MDSplus might not yet support Apple Silicon chips](https://www.mdsplus.org/index.php/Latest_Macintosh_Distributions).
 
 ### Dependencies
 
