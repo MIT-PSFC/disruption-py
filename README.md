@@ -81,7 +81,8 @@ To obtain access, please contact your host at the desired institution.
 
 ### Data sources
 
-Most machines require both MDSplus and SQL database access for full functionality.
+Workflows targeting the only open-access device, MAST, do not require additional software.
+Other machines require MDSplus support, and possibly SQL database access for full functionality.
 
 | Device        | Institution | Data    | Metadata | Access           |
 |---------------|-------------|---------|----------|------------------|
