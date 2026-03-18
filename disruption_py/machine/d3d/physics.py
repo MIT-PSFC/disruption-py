@@ -899,6 +899,114 @@ class D3DPhysicsMethods:
         return {"zcur": z_cur, "zcur_normalized": z_cur_norm}
 
     @staticmethod
+    @cache_method
+    @physics_method(columns=["btor"], tokamak=Tokamak.D3D)
+    def get_btor(params: PhysicsMethodParams):
+        """
+        Calculate the toroidal magnetic field.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing MDS connection and shot information
+
+        Returns
+        -------
+        dict
+            A dictionary containing the toroidal magnetic field (`btor`).
+
+        References
+        -------
+        - original sources: [get_n1_bradial_d3d.m](https://github.com/MIT-PSFC/disruption
+        -py/blob/matlab/DIII-D/get_n1_bradial_d3d.m), [get_n1rms_d3d.m](https://github.com
+        /MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_n1rms_d3d.m)
+        """
+        try:
+            b_tor, t_b_tor = params.mds_conn.get_data_with_dims(
+                f"ptdata('bt', {params.shot_id})"
+            )  # [ms], [T]
+        except mdsExceptions.MdsException as e:
+            params.logger.warning("Failed to get b_tor signal")
+            params.logger.opt(exception=True).debug(e)
+            return {"btor": [np.nan]}
+        t_b_tor /= 1e3  # [ms] -> [s]
+        b_tor = interp1(t_b_tor, b_tor, params.times)
+        return {"btor": b_tor}
+
+    @staticmethod
+    @physics_method(
+        columns=["n_equal_1_normalized", "n_equal_1_mode"],
+        tokamak=Tokamak.D3D,
+    )
+    def get_n1_bradial_parameters(params: PhysicsMethodParams):
+        """
+        This method obtaines the n=1 Bradial information (`n_equal_1_mode`) from
+        the ESLD coils (units of Tesla). It also calculates the normalized Bradial,
+        dividing by the toroidal B-field (`n_equal_1_normalized`).
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing `n_equal_1_mode` and `n_equal_1_normalized`.
+
+        References
+        -------
+        - original source: [get_n1_bradial_d3d.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/DIII-D/get_n1_bradial_d3d.m)
+        - pull requests: #[500](https://github.com/MIT-PSFC/disruption-py/pull/500)
+        - issues: #[261](https://github.com/MIT-PSFC/disruption-py/issues/261)
+        """
+        # The following shots are missing bradial calculations in MDSplus and
+        # must be loaded from a separate datafile
+        if 156199 <= params.shot_id <= 172430:
+            # TODO: load data from custom tree structures
+            raise NotImplementedError
+        if 176030 <= params.shot_id <= 176912:
+            # TODO: load data from NetCDF file
+            raise NotImplementedError
+
+        try:
+            # Get data from the ONFR system
+            n_equal_1_mode, t_n1 = params.mds_conn.get_data_with_dims(
+                f"ptdata('onsbradial', {params.shot_id})",
+            )  # [G], [ms]
+        except mdsExceptions.MdsException:
+            try:
+                # Fallback: get data from the legacy DUD system
+                n_equal_1_mode, t_n1 = params.mds_conn.get_data_with_dims(
+                    f"ptdata('dusbradial', {params.shot_id})",
+                )  # [G], [ms]
+                params.logger.verbose(
+                    "n_equal_1_mode: Failed to get ONSBRADIAL signal. Use DUSBRADIAL instead."
+                )
+            except mdsExceptions.MdsException:
+                params.logger.warning(
+                    "n_equal_1_mode: Failed to get either ONSBRADIAL or DUSBRADIAL signal"
+                )
+                return {"n_equal_1_normalized": [np.nan], "n_equal_1_mode": [np.nan]}
+        t_n1 /= 1e3  # [ms] -> [s]
+        n_equal_1_mode *= 1.0e-4  # [G] -> [T]
+        n_equal_1_mode = interp1(t_n1, n_equal_1_mode, params.times)
+
+        # Calculate n_equal_1_normalized
+        b_tor = D3DPhysicsMethods.get_btor(params)["btor"]
+        if np.isnan(b_tor).all():
+            params.logger.warning(
+                "Failed to get b_tor signal to compute n_equal_1_normalized"
+            )
+            n_equal_1_normalized = [np.nan]
+        n_equal_1_normalized = n_equal_1_mode / np.abs(b_tor)
+        return {
+            "n_equal_1_mode": n_equal_1_mode,
+            "n_equal_1_normalized": n_equal_1_normalized,
+        }
+
+    @staticmethod
     @physics_method(columns=["n1rms", "n1rms_normalized"], tokamak=Tokamak.D3D)
     def get_n1rms_parameters(params: PhysicsMethodParams):
         r"""
@@ -927,19 +1035,13 @@ class D3DPhysicsMethods:
         t_n1rms /= 1e3  # [ms] -> [s]
         n1rms = interp1(t_n1rms, n1rms, params.times)
         # Calculate n1rms_norm
-        try:
-            b_tor, t_b_tor = params.mds_conn.get_data_with_dims(
-                f"ptdata('bt', {params.shot_id})"
-            )
-            t_b_tor /= 1e3  # [ms] -> [s]
-            b_tor = interp1(t_b_tor, b_tor, params.times)  # [T]
-            n1rms_norm = n1rms / np.abs(b_tor)
-        except mdsExceptions.MdsException as e:
+        b_tor = D3DPhysicsMethods.get_btor(params)["btor"]
+        if np.isnan(b_tor).all():
             params.logger.warning(
-                "Failed to get b_tor signal to compute n1rms_normalized"
+                "Failed to get b_tor signal to compute n_equal_1_normalized"
             )
-            params.logger.opt(exception=True).debug(e)
             n1rms_norm = [np.nan]
+        n1rms_norm = n1rms / np.abs(b_tor)
         return {"n1rms": n1rms, "n1rms_normalized": n1rms_norm}
 
     # TODO: Need to test and unblock recalculating peaking factors
