@@ -24,6 +24,8 @@ Here follows a non-exhaustive list of projects, publications, and conference con
 - MIT PSFC Disruption Studies Group (2023-2024), _"AI/ML For Fusion -- Database preparation workflows"_, Github, [`MIT-PSFC/wm-summer-school`](https://github.com/MIT-PSFC/wm-summer-school)
 
 ### Conferences
+- [6th Fusion HPC Workshop (2026)](https://hpcfusion.bsc.es/2026/)
+  - EdD Zapata Cornejo, _et al._ (2026), _"Discovering features for confinement regime operational spaces using classification and Bayesian optimization"_, [Abstract](https://hpcfusion.bsc.es/2026/wp-content/uploads/sites/9/2026/02/Enrique-Zapata_abstract.pdf)
 
 - [67th APS-DPP Meeting (2025)](https://meetings.aps.org/Meeting/DPP25)
   - AD Maris, _et al._ (2025), _"Collisionality scaling of the tokamak density limit: data-driven analysis, cross-device prediction, and real-time avoidance"_ [BO04.5](https://schedule.aps.org/dpp/2025/events/BO04/5)
