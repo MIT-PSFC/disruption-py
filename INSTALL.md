@@ -147,14 +147,18 @@ We currently provide an installation guide for Ubuntu-based boxes, but generic U
 
 ### Pre-requisites
 
-Disruption-py currently needs non-python software to be installed as a pre-requisite:
+DisruptionPy may need non-Python software to be installed as a pre-requisite, depending on the target device.
+Please refer to the Devices section in our [general README](README.md) and install the necessary pre-requisites _only if required_ by the target device.
 
 1. [MDSplus](https://www.mdsplus.org/): to connect to MDSplus data servers,
 2. SQL drivers: to connect to SQL database servers.
 
-MDSplus can be installed using their [installation guide](https://www.mdsplus.org/index.php/Downloads).
+MDSplus can be installed using their [installation guide](https://www.mdsplus.org/index.php/Downloads), but [it might not yet support Apple Silicon chips](https://www.mdsplus.org/index.php/Latest_Macintosh_Distributions).
 
 On Ubuntu-based systems, SQL drivers might be installed for example through the [Microsoft ODBC Driver](https://learn.microsoft.com/en-us/sql/connect/odbc/linux-mac/installing-the-microsoft-odbc-driver-for-sql-server?view=sql-server-ver16) `msodbcsql18` package, or [FreeTDS](https://www.freetds.org/) `{tds,unix}odbc` packages.
+
+Step-by-step instructions for installing either MDSplus or SQL drivers are beyond the scope of this installation guide.
+Nonetheless, please get in touch with us and we will gladly try and provide support for any non-standard workflow.
 
 Note:
 

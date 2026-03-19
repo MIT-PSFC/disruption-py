@@ -81,7 +81,8 @@ To obtain access, please contact your host at the desired institution.
 
 ### Data sources
 
-Most machines require both MDSplus and SQL database access for full functionality.
+Workflows targeting the only open-access device, MAST, do not require additional software.
+Other machines require MDSplus support, and possibly SQL database access for full functionality.
 
 | Device        | Institution | Data    | Metadata | Access           |
 |---------------|-------------|---------|----------|------------------|
@@ -98,7 +99,10 @@ DisruptionPy is [open-source on Github](https://github.com/MIT-PSFC/disruption-p
 ### Pre-requisites
 
 Depending on the target device, DisruptionPy may need non-Python software to be installed as a pre-requisite.
+Please install pre-requisites, namely either MDSplus or SQL drivers, _only if required_.
 For more details, please refer to the Devices section above and our [Installation guide](INSTALL.md).
+
+Note: [MDSplus might not yet support Apple Silicon chips](https://www.mdsplus.org/index.php/Latest_Macintosh_Distributions).
 
 ### Dependencies
 
