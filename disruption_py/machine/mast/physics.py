@@ -240,6 +240,7 @@ class MastPhysicsMethods:
             A dictionary containing interpolated electron density (`n_e`),
             its time derivative (`dn_dt`), and the Greenwald fraction (`greenwald_fraction`).
         """
+
         if np.isnan(n_e).all():
             # Edge case: n_e is NaN, return NaN for all outputs
             return {
@@ -257,6 +258,15 @@ class MastPhysicsMethods:
         dn_dt = interp1(t_n, dn_dt, times)
         ip = -ip / 1e6  # Convert from A to MA and take positive value
         ip = interp1(t_ip, ip, times)
+
+        if np.isnan(a_minor).all():
+            # Edge case: a_minor is NaN, return NaN for greenwald_fraction
+            return {
+                "n_e": n_e,
+                "dn_dt": dn_dt,
+                "greenwald_fraction": np.full_like(n_e, np.nan),
+            }
+
         a_minor = interp1(t_a, a_minor, times, bounds_error=False, fill_value=np.nan)
         # make sure aminor is not 0 or less than 0
         a_minor[a_minor <= 0] = 0.001
@@ -334,7 +344,6 @@ class MastPhysicsMethods:
             dalpha = dalpha.isel(dalpha_channel=2)
             dalpha = dalpha.dropna(dim="time")
             dalpha = dalpha.squeeze(drop=True)
-            dalpha = dalpha.drop_vars("dalpha_channel")
 
             dalpha_time = dalpha.time.values
             dalpha_data = dalpha.values
