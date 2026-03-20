@@ -20,13 +20,14 @@
 [![Supported versions](https://img.shields.io/pypi/pyversions/disruption-py)](https://github.com/MIT-PSFC/disruption-py/blob/main/pyproject.toml)
 [![Stats: downloads](https://static.pepy.tech/badge/disruption-py)](https://pepy.tech/project/disruption-py)
 [![Available: PyPI](https://img.shields.io/pypi/v/disruption-py.svg)](https://pypi.org/project/disruption-py/)
+[![Paper: JOSS](https://joss.theoj.org/papers/e98dd4586a1383f120c5005b539ca6f8/status.svg)](https://joss.theoj.org/papers/e98dd4586a1383f120c5005b539ca6f8)
 [![Available: Zenodo](https://zenodo.org/badge/DOI/10.5281/zenodo.13935223.svg)](https://doi.org/10.5281/zenodo.13935223)
 [![License: MIT](https://img.shields.io/pypi/l/disruption-py?color=750014)](https://github.com/MIT-PSFC/disruption-py/blob/main/LICENSE)
 
 
 ## Concept
 
-DisruptionPy is an open-source Scientific Python package for fast retrieval of experimental Fusion data from [MDSplus](https://www.mdsplus.org/) servers.
+DisruptionPy is an open-source Scientific Python package for fast retrieval of experimental Fusion data from [MDSplus](https://www.mdsplus.org/) servers or [Xarray](https://xarray.dev/) stores.
 The library allows an efficient database preparation for downstream analysis and/or ML model development for disruption studies.
 Currently supported devices are:
 
@@ -51,7 +52,7 @@ DisruptionPy provides a standardized analysis pipeline across different fusion d
 
 ### Workflow
 
-DisruptionPy makes it easy to retrieve experimental data from [MDSplus](https://www.mdsplus.org/) fusion repositories efficiently.
+DisruptionPy makes it easy to efficiently retrieve experimental data from [MDSplus](https://www.mdsplus.org/) fusion repositories or [Xarray](https://xarray.dev/) stores.
 Users can create their own routines and/or use built-in ones that retrieve and derive a variety of important signals from experimental data for disruption analysis.
 These routines are then interpolated on a requested timebase across the specified set of plasma discharges (or shots) to assemble a dataset and save it under a variety of available formats.
 
@@ -80,7 +81,8 @@ To obtain access, please contact your host at the desired institution.
 
 ### Data sources
 
-Most machines require both MDSplus and SQL database access for full functionality.
+Workflows targeting the only open-access device, MAST, do not require additional software.
+Other machines require MDSplus support, and possibly SQL database access for full functionality.
 
 | Device        | Institution | Data    | Metadata | Access           |
 |---------------|-------------|---------|----------|------------------|
@@ -97,7 +99,10 @@ DisruptionPy is [open-source on Github](https://github.com/MIT-PSFC/disruption-p
 ### Pre-requisites
 
 Depending on the target device, DisruptionPy may need non-Python software to be installed as a pre-requisite.
+Please install pre-requisites, namely either MDSplus or SQL drivers, _only if required_.
 For more details, please refer to the Devices section above and our [Installation guide](INSTALL.md).
+
+Note: [MDSplus might not yet support Apple Silicon chips](https://www.mdsplus.org/index.php/Latest_Macintosh_Distributions).
 
 ### Dependencies
 
@@ -259,11 +264,42 @@ Please refer to our `examples/defaults.py` script for a quickstart workflow with
 
 ## Contributing
 
-Make sure you refer to the latest version of our [development branch](https://github.com/MIT-PSFC/disruption-py/tree/dev)!
+Make sure you branch off the latest version of our [development branch](https://github.com/MIT-PSFC/disruption-py/tree/dev)!
 
 - If you encounter any problems, please [create a new issue](https://github.com/MIT-PSFC/disruption-py/issues/new).
 - If you would like to contribute, please [submit a pull request](https://github.com/MIT-PSFC/disruption-py/compare/dev...).
 - If you have general questions, please [start a new discussion](https://github.com/MIT-PSFC/disruption-py/discussions/new?category=q-a).
+
+#### Testing
+
+In order to validate your code and test your workflows, please:
+
+1. Install the necessary `dev`elopment dependencies:
+
+```bash
+# if you use poetry
+poetry install --with dev
+
+# if you use uv
+uv sync --group dev
+```
+
+2. Verify that the code satisfies our linting rules:
+
+```bash
+# if you use poetry
+make check
+```
+
+3. Verify that the workflows pass our test suite:
+
+```bash
+# if you use poetry
+poetry run pytest
+
+# if you use uv
+uv run pytest
+```
 
 
 ## Credits
@@ -302,7 +338,7 @@ For a complete list of contributors, please refer to the [Contributors](https://
 
 DisruptionPy can be cited as follows:
 
-- GL Trevisan, _et al._ (2025), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, JOSS, [under review](https://github.com/openjournals/joss-reviews/issues/9364)
+- GL Trevisan, _et al._ (2026), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, Journal of Open Source Software, [accepted](https://joss.theoj.org/papers/e98dd4586a1383f120c5005b539ca6f8)
 - GL Trevisan, _et al._ (2024), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, Zenodo, DOI: [10.5281/zenodo.13935223](https://doi.org/10.5281/zenodo.13935223)
 
 A list of works derived from DisruptionPy can be found in [REFERENCES.md](REFERENCES.md).
