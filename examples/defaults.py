@@ -26,7 +26,7 @@ shot_data = get_shots_data(
     tokamak=None,
     # default None: standard SQL/MDSplus connection
     database_initializer=None,
-    mds_connection_initializer=None,
+    connection_initializer=None,
     retrieval_settings=retrieval_settings,
     output_setting="dataset",
     num_processes=1,

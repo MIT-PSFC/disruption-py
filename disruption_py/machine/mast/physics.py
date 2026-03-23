@@ -42,7 +42,7 @@ class MastPhysicsMethods:
             A dictionary containing plasma current (`ip`), its time derivative (`dip_dt`),
             programmed plasma current (`ip_prog`), and its time derivative (`dipprog_dt`).
         """
-        conn = params.mds_conn
+        conn = params.data_conn
         ip = conn.get_data("summary/ip")
         ip_prog = conn.get_data("pulse_schedule/i_plasma")
         ip_prog_time = conn.get_data("pulse_schedule/time")
@@ -84,7 +84,7 @@ class MastPhysicsMethods:
             A dictionary containing neutral beam injection power (`power_nbi`) and
             radiated power (`power_radiated`).
         """
-        conn = params.mds_conn
+        conn = params.data_conn
 
         power_nbi = conn.get_data("summary/power_nbi")
         power_radiated = conn.get_data("summary/power_radiated")
@@ -116,7 +116,7 @@ class MastPhysicsMethods:
             A dictionary containing total injected gas (`total_injected`),
             inboard total gas (`inboard_total`), and outboard total gas (`outboard_total`).
         """
-        conn = params.mds_conn
+        conn = params.data_conn
 
         total_injected = conn.get_data("gas_injection/total_injected")
         inboard_total = conn.get_data("gas_injection/inboard_total")
@@ -157,7 +157,7 @@ class MastPhysicsMethods:
             core electron density (`n_e_core`).
         """
         times = params.times
-        conn = params.mds_conn
+        conn = params.data_conn
 
         t_e_core = conn.get_data("thomson_scattering/t_e_core")
         n_e_core = conn.get_data("thomson_scattering/n_e_core")
@@ -200,7 +200,7 @@ class MastPhysicsMethods:
 
         """
 
-        conn = params.mds_conn
+        conn = params.data_conn
         n_e = conn.get_data("summary/line_average_n_e")
         t_n = conn.get_data("summary/time")
         ip = conn.get_data("summary/ip")
@@ -275,7 +275,7 @@ class MastPhysicsMethods:
             A dictionary containing SXR data (`sxr_data`) and
             corresponding time points (`sxr_time`).
         """
-        conn = params.mds_conn
+        conn = params.data_conn
         hcam = conn.get_data("soft_x_rays/horizontal_cam_upper", return_xarray=True)
 
         if hcam is not None:
@@ -311,7 +311,7 @@ class MastPhysicsMethods:
         dict
             A dictionary containing D-alpha signal data (`dalpha`).
         """
-        conn = params.mds_conn
+        conn = params.data_conn
 
         dalpha = conn.get_data(
             "spectrometer_visible/filter_spectrometer_dalpha_voltage",

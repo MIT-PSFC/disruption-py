@@ -18,14 +18,14 @@ from disruption_py.machine.tokamak import Tokamak
 @dataclass
 class PhysicsMethodParams:
     """
-    Holder for useful variables for the physics methods like an MDSplus connection
+    Holder for useful variables for the physics methods like a data connection
     and the timebase for the data.
     """
 
     shot_id: int
     tokamak: Tokamak
     disruption_time: float
-    mds_conn: DataConnection
+    data_conn: DataConnection
     times: np.ndarray
 
     def __post_init__(self):
@@ -49,7 +49,7 @@ class PhysicsMethodParams:
         """
         Clean up resources used by the physics method parameters.
         """
-        self.mds_conn.cleanup()
+        self.data_conn.cleanup()
         self.times = None
         self.cached_results.clear()
 

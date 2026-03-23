@@ -35,7 +35,7 @@ class GenericPhysicsMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            The parameters containing the MDSplus connection, shot id and more.
+            The parameters containing the data connection, shot id and more.
 
         Returns
         -------

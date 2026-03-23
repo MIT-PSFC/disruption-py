@@ -161,7 +161,7 @@ def populate_method(
     Parameters
     ----------
     physics_method_params : PhysicsMethodParams
-        Parameters containing MDS connection and shot information
+        Parameters containing data connection and shot information
     bound_method_metadata : BoundMethodMetadata
         The metadata for a physics method like the associated tokamak, columns, etc.
 
@@ -176,12 +176,10 @@ def populate_method(
     physics_method_params.logger.trace("Starting method: {name}", name=name)
 
     try:
-
         result = method(params=physics_method_params)
 
     # pylint: disable-next=broad-exception-caught
     except Exception as e:
-
         # log exception
         level = "ERROR"
         if isinstance(e, mdsExceptions.MDSplusERROR):
@@ -196,7 +194,7 @@ def populate_method(
 
         # reconnect if needed
         if isinstance(e, mdsExceptions.MDSplusERROR):
-            physics_method_params.mds_conn.reconnect()
+            physics_method_params.data_conn.reconnect()
 
     return result
 
@@ -243,7 +241,6 @@ def populate_shot(
     start_time = time.time()
     datasets = []
     for bound_method_metadata in run_bound_method_metadata:
-
         # run method
         result = populate_method(
             physics_method_params=physics_method_params,
@@ -252,7 +249,6 @@ def populate_shot(
 
         # convert non-dataset dict to dataset
         if not isinstance(result, (xr.DataArray, xr.Dataset)):
-
             times = physics_method_params.times
 
             # create data_vars dict
