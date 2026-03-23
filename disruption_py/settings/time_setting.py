@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
+import scipy
 from loguru import logger
 
 from disruption_py.config import config
@@ -504,7 +505,9 @@ class DisruptionTimeSetting(TimeSetting):
             duration = 0
             return duration, signal_max
         polarity = np.sign(
-            np.trapz(signal[finite_indices], signal_time[finite_indices])
+            scipy.integrate.trapezoid(
+                signal[finite_indices], signal_time[finite_indices]
+            )
         )
         polarized_signal = polarity * signal
         (valid_indices,) = np.where(
