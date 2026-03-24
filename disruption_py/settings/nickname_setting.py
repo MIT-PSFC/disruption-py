@@ -305,7 +305,7 @@ class DisruptionNicknameSetting(NicknameSetting):
 
         # cache hit
         if os.path.isfile(csv):
-            logger.info(
+            logger.debug(
                 "Loading EFIT '{runtag}' trees from cache: {csv}",
                 runtag=runtag,
                 csv=csv,
@@ -332,7 +332,7 @@ class DisruptionNicknameSetting(NicknameSetting):
             return
 
         # log results
-        logger.info(
+        logger.debug(
             "Fetched EFIT '{runtag}' trees in {sec:.3f}s: {tot:,} rows, {unique:,} unique shots.",
             runtag=runtag,
             sec=took,
@@ -345,7 +345,7 @@ class DisruptionNicknameSetting(NicknameSetting):
         self._d3d_efit_trees = _efit_df_to_dict(df)
 
         # write cache
-        logger.debug("Caching EFIT '{runtag}' tree: {csv}", runtag=runtag, csv=csv)
+        logger.debug("Caching EFIT '{runtag}' trees: {csv}", runtag=runtag, csv=csv)
         df.to_csv(csv)
 
     def _d3d_nickname(self, params: NicknameSettingParams) -> str:
