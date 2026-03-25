@@ -24,7 +24,7 @@ try:
 except ModuleNotFoundError as e:
 
     # then, check and raise if numpy issue
-    if "numpy" in e.__context__.msg:
+    if e.__context__ and "numpy" in e.__context__.msg:
         raise ImportError("MDSplus vs numpy incompatibility") from e
 
     try:
