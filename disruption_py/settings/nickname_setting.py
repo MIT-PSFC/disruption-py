@@ -53,18 +53,18 @@ class NicknameSettingParams:
     tokamak: Tokamak
 
 
-def _efit_df_to_dict(df: pd.DataFrame) -> dict:
+def _efit_df_to_dict(df: pd.DataFrame) -> dict[int, str]:
     """
     Build shot/tree dict from an indexed DataFrame.
     When multiple rows exist for the same shot, select the largest idx.
     """
-    return (
+    df = (
         df.reset_index()
         .sort_values("idx", ascending=False)
         .drop_duplicates("shot", keep="first")
         .set_index("shot")["tree"]
-        .pipe(lambda s: {int(k): v for k, v in s.items()})
     )
+    return df.to_dict()
 
 
 class NicknameSetting(ABC):
