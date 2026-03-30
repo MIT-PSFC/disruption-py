@@ -159,7 +159,7 @@ class ShotDatabase:
             )
         return self._thread_connections[current_thread]
 
-    def query(self, query: str, use_pandas: bool = True):
+    def query(self, query: str, use_pandas=True):
         """
         query sql database
 
@@ -280,10 +280,9 @@ class DummyDatabase(ShotDatabase):
     def conn(self):
         return DummyObject()
 
-    def query(self, query: str, use_pandas: bool = True):
-        if use_pandas:
-            return pd.DataFrame()
-        return []
+    # pylint: disable-next=arguments-differ
+    def query(self, **_kwargs):
+        return pd.DataFrame()
 
     # pylint: disable-next=arguments-differ
     def get_shots_data(self, **_kwargs):
