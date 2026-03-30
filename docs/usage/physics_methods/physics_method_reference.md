@@ -39,7 +39,7 @@ def ***_method(params: PhysicsMethodParams) -> dict:
 	...
 ```
 
-2. To retrieve data from MDSplus use the `params` ([`PhysicsMethodParams`][disruption_py.core.physics_method.params.PhysicsMethodParams]) object. It contains many useful attributes, among which are the following:
+2. To retrieve data use the `params` ([`PhysicsMethodParams`][disruption_py.core.physics_method.params.PhysicsMethodParams]) object. It contains many useful attributes, among which are the following:
     - `params.shot_id`: the shot id of the shot for which data is being retrieved.
 	- `params.data_conn`: the data connection for the shot, used to retrieve data. See [`DataConnection`][disruption_py.inout.base.DataConnection] for details.
     - `params.times`: the timebase of the shot for which data is being retrieved as a NumPy array of times.
