@@ -298,7 +298,8 @@ class DisruptionNicknameSetting(NicknameSetting):
         if "pytest" in sys.modules:
             runtag = "DIS"
 
-        # cache above the unique runid folder
+        # write to unique runid folder, cache to parent
+        tmp = os.path.join(get_temporary_folder(), f"rundb_{runtag}.csv")
         csv = os.path.join(
             os.path.dirname(get_temporary_folder()), f"rundb_{runtag}.csv"
         )
@@ -346,7 +347,11 @@ class DisruptionNicknameSetting(NicknameSetting):
 
         # write cache
         logger.debug("Caching EFIT '{runtag}' trees: {csv}", runtag=runtag, csv=csv)
-        df.to_csv(csv)
+        df.to_csv(tmp)
+        if os.path.exists(csv):
+            logger.warning("Removing stale EFIT cache: {csv}", csv=csv)
+            os.remove(csv)
+        os.link(tmp, csv)
 
     def _d3d_nickname(self, params: NicknameSettingParams) -> str:
         """
