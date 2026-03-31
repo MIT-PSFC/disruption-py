@@ -99,24 +99,34 @@ class CmodThomsonDensityMeasure:
                 if nyag1 == nyag2:
                     indices1 = 2 * np.arange(nyag1)
                     indices2 = indices1 + 1
-                else:
-                    indices1 = 2 * np.arange(nyag1) + (nyag1 > nyag2)
+                elif nyag1 < nyag2:
+                    indices1 = 2 * np.arange(nyag1)
                     indices2 = np.concatenate(
                         (
-                            2 * np.arange(nyag2) + (nyag1 < nyag2),
-                            2 * nyag2 + np.arange(nyag1 - nyag2 - 1),
+                            2 * np.arange(nyag1) + 1,
+                            2 * nyag1 + np.arange(nyag2 - nyag1),
                         )
                     )
-        (v_ind1,) = np.where(indices1 < nt)
-        if nyag1 > 0 and v_ind1.size > 0:
-            indices1 = indices1[v_ind1]
-        else:
-            indices1 = -1
-        (v_ind2,) = np.where(indices2 < nt)
-        if nyag2 > 0 and v_ind2.size > 0:
-            indices2 = indices2[v_ind2]
-        else:
-            indices2 = -1
+                else:  # nyag1 > nyag2
+                    indices2 = 2 * np.arange(nyag2) + 1
+                    indices1 = np.concatenate(
+                        (
+                            2 * np.arange(nyag2),
+                            2 * nyag2 + np.arange(nyag1 - nyag2),
+                        )
+                    )
+        if isinstance(indices1, np.ndarray):
+            (v_ind1,) = np.where(indices1 < nt)
+            if nyag1 > 0 and v_ind1.size > 0:
+                indices1 = indices1[v_ind1]
+            else:
+                indices1 = -1
+        if isinstance(indices2, np.ndarray):
+            (v_ind2,) = np.where(indices2 < nt)
+            if nyag2 > 0 and v_ind2.size > 0:
+                indices2 = indices2[v_ind2]
+            else:
+                indices2 = -1
         return nyag1, nyag2, indices1, indices2
 
     @staticmethod
