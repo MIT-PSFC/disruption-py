@@ -12,7 +12,6 @@ then
    export DISPY_DIR=/usr/local/mfe/disruptions/disruption-py
    export DISPY_TOKAMAK=cmod
    export PATH=/usr/local/bin:/usr/sbin:/usr/bin:/usr/local/cmod/bin:/opt/thinlinc/bin
-   export MDSPLUS_DIR=/usr/local/mdsplus
    export MDS_HOST=mfedata01
 
 elif [[ -d /fusion/projects/disruption_warning ]]
@@ -33,7 +32,6 @@ then
    export DISPY_DIR=/project/disruption
    export DISPY_TOKAMAK=east
    export MDSPLUS_DIR=/project/disruption/mdsplus
-   export MDSPLUS_API=$MDSPLUS_DIR/alpha/python
    export MDSPLUS_BIN=$MDSPLUS_DIR/7.18-3/bin64
    export MDSPLUS_LIB=$MDSPLUS_DIR/7.18-3/lib64
    export ODBCSYSINI=$DISPY_DIR
@@ -46,8 +44,6 @@ then
    export PATH=/usr/bin:/usr/sbin
    export DISPY_DIR=/opt/hbt/disruptions/disruption-py
    export DISPY_TOKAMAK=hbtep
-   export MDSPLUS_DIR=/opt/hbt/disruptions/disruption-py/mdsplus/alpha
-   export MDSPLUS_LIB=/usr/local/mdsplus/lib
    export MDS_HOST=maxwell.ap.columbia.edu:8003
 
 else
@@ -65,8 +61,9 @@ then
 fi
 
 # mdsplus
+export MDSPLUS_DIR=${MDSPLUS_DIR:-/usr/local/mdsplus}
 export PATH=$PATH:${MDSPLUS_BIN:-$MDSPLUS_DIR/bin}
-export PYTHONPATH=${MDSPLUS_API:-$MDSPLUS_DIR/python}:$PYTHONPATH
+export PYTHONPATH=${MDSPLUS_API:-$DISPY_DIR/mdsplus/stable/python}:$PYTHONPATH
 export LD_LIBRARY_PATH=${MDSPLUS_LIB:-$MDSPLUS_DIR/lib}:$LD_LIBRARY_PATH
 export default_tree_path=${MDS_HOST}::
 
