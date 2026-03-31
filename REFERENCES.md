@@ -5,7 +5,8 @@ Here follows a non-exhaustive list of projects, publications, and conference con
 
 ### Projects
 
-- C Rea, _et al._ (2023), _"Open and FAIR Fusion for Machine Learning Applications"_, [Project website](https://crea-psfc.github.io/open-fair-fusion/).
+- C Rea, _et al._ (2023), _"Open and FAIR Fusion for Machine Learning Applications"_, [Project website](https://disruptions.mit.edu/projects/open-fair-fusion/)
+- C Rea, _et al._ (2022), _"SPARC Disruption Strategies Research Project Proposal"_, [Project website](https://disruptions.mit.edu/projects/sparc-rpp/)
 
 ### Publications
 
