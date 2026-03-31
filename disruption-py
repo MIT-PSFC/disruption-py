@@ -1,9 +1,0 @@
-#!/bin/bash
-
-# activate
-# shellcheck source=/dev/null
-source "$(dirname "$0")/activate.sh"
-
-# execute
-disruption-py "$@"
-
