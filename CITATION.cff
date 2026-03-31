@@ -1,4 +1,11 @@
 cff-version: 1.2.0
+abstract: >
+  DisruptionPy is an open-source Scientific Python package
+  for fast retrieval of experimental Fusion data from
+  MDSplus servers or Xarray stores.
+  The library allows an efficient database preparation for
+  downstream analysis and/or ML model development for
+  disruption studies.
 authors:
 - family-names: Trevisan
   given-names: Gregorio L.
@@ -50,5 +57,8 @@ preferred-citation:
   type: article
   url: "https://joss.theoj.org/papers/10.21105/joss.09364"
   volume: 11
+repository-artifact: "https://pypi.org/project/disruption-py/"
+repository-code: "https://github.com/MIT-PSFC/disruption-py/"
 title: "DisruptionPy: An open-source physics-based scientific framework
   for disruption analysis of fusion plasmas"
+url: "https://mit-psfc.github.io/disruption-py/"
