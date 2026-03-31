@@ -293,7 +293,9 @@ def cli():
     parser.add_argument("-p", "--processes", type=int, default=1)
     parser.add_argument("-l", "--log-level", type=str, default="VERBOSE")
 
-    print(run(**vars(parser.parse_args())))
+    out = run(**vars(parser.parse_args()))
+    print(out)
+    return not len(out)
 
 
 if __name__ == "__main__":
