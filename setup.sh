@@ -9,20 +9,20 @@ if [[ -d /usr/local/mfe/disruptions ]]
 then
 
    # C-MOD workstations
-   export PATH=/usr/local/bin:/usr/sbin:/usr/bin:/usr/local/cmod/bin:/opt/thinlinc/bin
-   export MDSPLUS_DIR=/usr/local/mdsplus
    export DISPY_DIR=/usr/local/mfe/disruptions/disruption-py
    export DISPY_TOKAMAK=cmod
+   export PATH=/usr/local/bin:/usr/sbin:/usr/bin:/usr/local/cmod/bin:/opt/thinlinc/bin
+   export MDSPLUS_DIR=/usr/local/mdsplus
    export MDS_HOST=mfedata01
 
 elif [[ -d /fusion/projects/disruption_warning ]]
 then
 
    # DIII-D cluster
-   export PATH=/usr/bin:/usr/sbin
-   export MDSPLUS_DIR=/fusion/usc/c8/opt/mdsplus/alpha/7.139.59
    export DISPY_DIR=/fusion/projects/disruption_warning/disruption-py
    export DISPY_TOKAMAK=d3d
+   export PATH=/usr/bin:/usr/sbin
+   export MDSPLUS_DIR=/fusion/usc/c8/opt/mdsplus/alpha/7.139.59
    export MDS_HOST=atlas
 
 elif [[ -d /project/disruption ]]
@@ -30,13 +30,13 @@ then
 
    # EAST cluster
    export PATH=/usr/bin:/usr/sbin
+   export DISPY_DIR=/project/disruption
+   export DISPY_TOKAMAK=east
    export MDSPLUS_DIR=/project/disruption/mdsplus
    export MDSPLUS_API=$MDSPLUS_DIR/alpha/python
    export MDSPLUS_BIN=$MDSPLUS_DIR/7.18-3/bin64
    export MDSPLUS_LIB=$MDSPLUS_DIR/7.18-3/lib64
-   export DISPY_DIR=/project/disruption
    export ODBCSYSINI=$DISPY_DIR
-   export DISPY_TOKAMAK=east
    export MDS_HOST=mds.ipp.ac.cn
 
 elif [[ -d /opt/hbt/disruptions ]]
@@ -44,10 +44,10 @@ then
 
    # HBT-EP server
    export PATH=/usr/bin:/usr/sbin
-   export MDSPLUS_DIR=/opt/hbt/disruptions/disruption-py/mdsplus/alpha
-   export MDSPLUS_LIB=/usr/local/mdsplus/lib
    export DISPY_DIR=/opt/hbt/disruptions/disruption-py
    export DISPY_TOKAMAK=hbtep
+   export MDSPLUS_DIR=/opt/hbt/disruptions/disruption-py/mdsplus/alpha
+   export MDSPLUS_LIB=/usr/local/mdsplus/lib
    export MDS_HOST=maxwell.ap.columbia.edu:8003
 
 else
