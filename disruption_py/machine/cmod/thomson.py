@@ -244,7 +244,9 @@ class CmodThomsonDensityMeasure:
         psits = CmodThomsonDensityMeasure._efit_rz2psi(params, rts, zts, nets_core_t)
         mtci = 101
         ztci = -0.4 + 0.8 * np.arange(0, mtci) / (mtci - 1)
-        rtci = rtci[nlnum] + np.zeros((1, mtci))
+        # There are 10 TCI channels like NL_01, NL_02, ..., NL_10
+        # nlnum is 1-indexed to match the channel numbering, but we need to convert it to 0-indexed for array indexing
+        rtci = rtci[nlnum-1] + np.zeros((1, mtci))
         psitci = CmodThomsonDensityMeasure._efit_rz2psi(params, rtci, ztci, nets_core_t)
         psia = interp1(psia_t, psia, nets_core_t)
         psi_0 = interp1(psia_t, psi_0, nets_core_t)
