@@ -217,17 +217,17 @@ class CmodThomsonDensityMeasure:
             ".YAG_NEW.RESULTS.PROFILES:Z_SORTED", tree_name="electrons"
         )
         mts_core = len(zts_core)
-        zts_edge = params.data_conn.get_data(r"\fiber_z")
+        zts_edge = params.data_conn.get_data(r"\fiber_z", tree_name="electrons")
         mts_edge = len(zts_edge)
         try:
-            nets_edge = params.data_conn.get_data(r"\ts_ne")
-            nets_edge_err = params.data_conn.get_data(r"\ts_ne_err")
+            nets_edge = params.data_conn.get_data(r"\ts_ne", tree_name="electrons")
+            nets_edge_err = params.data_conn.get_data(r"\ts_ne_err", tree_name="electrons")
         except mdsExceptions.MdsException:
             nets_edge = np.zeros((len(nets_core[:, 1]), mts_edge))
             nets_edge_err = nets_edge + 1e20
         mts = mts_core + mts_edge
-        rts = params.data_conn.get(".YAG.RESULTS.PARAM:R") + np.zeros((1, mts))
-        rtci = params.data_conn.get_data(".tci.results:rad")
+        rts = params.data_conn.get_data(".YAG.RESULTS.PARAM:R", tree_name="electrons") + np.zeros((1, mts))
+        rtci = params.data_conn.get_data(".tci.results:rad", tree_name="electrons")
         nts = len(nets_core_t)
         zts = np.zeros((1, mts))
         zts[:, :mts_core] = zts_core
