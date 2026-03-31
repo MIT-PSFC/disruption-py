@@ -1471,6 +1471,47 @@ class CmodPhysicsMethods:
         return CmodPhysicsMethods._get_peaking_factors(
             params.times, ts_time, ts_te, ts_ne, ts_z, efit_time, bminor, z0
         )
+    
+    @staticmethod
+    @physics_method(
+        columns=["nl_ts1", "nl_ts2", "nl_tci1", "nl_tci2"],
+        tokamak=Tokamak.CMOD,
+    )
+    def get_ts_tci_comparison(params: PhysicsMethodParams):
+        """
+        Return Thomson scattering and TCI line-integrated density measurements
+        interpolated onto the standard timebase.
+
+        Returns
+        -------
+        dict
+            nl_ts1, nl_ts2 : TS line-integrated density for YAG 1 and 2 [m^-2]
+            nl_tci1, nl_tci2 : TCI line-integrated density at YAG 1 and 2 timestamps [m^-2]
+        """
+        nl_ts1, nl_ts2, nl_tci1, nl_tci2, time1, time2 = (
+            CmodThomsonDensityMeasure.compare_ts_tci(params)
+        )
+        nan_times = np.full(len(params.times), np.nan)
+
+        if not isinstance(time1, int):
+            ts1 = interp1(time1, nl_ts1, params.times)
+            tci1 = interp1(time1, nl_tci1, params.times)
+        else:
+            ts1, tci1 = nan_times.copy(), nan_times.copy()
+
+        if not isinstance(time2, int):
+            ts2 = interp1(time2, nl_ts2, params.times)
+            tci2 = interp1(time2, nl_tci2, params.times)
+        else:
+            ts2, tci2 = nan_times.copy(), nan_times.copy()
+
+        return {
+            "nl_ts1": ts1,
+            "nl_ts2": ts2,
+            "nl_tci1": tci1,
+            "nl_tci2": tci2,
+        }
+
 
     @staticmethod
     def _get_te_profile_params_ece(
