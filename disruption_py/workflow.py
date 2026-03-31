@@ -295,7 +295,7 @@ def cli():
 
     out = run(**vars(parser.parse_args()))
     print(out)
-    return not len(out)
+    return len(out) == 0
 
 
 if __name__ == "__main__":
