@@ -318,9 +318,9 @@ class CmodThomsonDensityMeasure:
             # Find the index of the closest time
             time_idx = np.argmin(np.abs(times - time))
             # Extract the corresponding psirz slice and transpose it
-            psirz = np.transpose(psirz[time_idx, :, :])
+            psirz_t = np.transpose(psirz[time_idx, :, :])
             # Perform cubic interpolation on the psirz slice
-            values = psirz.flatten()
+            values = psirz_t.flatten()
             psi[:, i] = scipy.interpolate.griddata(
                 points, values, (r, z), method="cubic"
             )
