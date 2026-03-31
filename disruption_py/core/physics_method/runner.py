@@ -176,10 +176,12 @@ def populate_method(
     physics_method_params.logger.trace("Starting method: {name}", name=name)
 
     try:
+
         result = method(params=physics_method_params)
 
     # pylint: disable-next=broad-exception-caught
     except Exception as e:
+
         # log exception
         level = "ERROR"
         if isinstance(e, mdsExceptions.MDSplusERROR):
@@ -241,6 +243,7 @@ def populate_shot(
     start_time = time.time()
     datasets = []
     for bound_method_metadata in run_bound_method_metadata:
+
         # run method
         result = populate_method(
             physics_method_params=physics_method_params,
@@ -249,6 +252,7 @@ def populate_shot(
 
         # convert non-dataset dict to dataset
         if not isinstance(result, (xr.DataArray, xr.Dataset)):
+
             times = physics_method_params.times
 
             # create data_vars dict
