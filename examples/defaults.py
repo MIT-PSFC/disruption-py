@@ -24,7 +24,7 @@ shot_data = get_shots_data(
     shotlist_setting=[],
     # default None: detect from environment
     tokamak=None,
-    # default None: standard SQL/MDSplus connection
+    # default None: standard backend connection(s)
     database_initializer=None,
     connection_initializer=None,
     retrieval_settings=retrieval_settings,
