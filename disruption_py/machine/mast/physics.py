@@ -12,7 +12,6 @@ from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
-from disruption_py.inout.xr import XarrayConnection
 from disruption_py.machine.mast.util import MastUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 
@@ -43,11 +42,11 @@ class MastPhysicsMethods:
             A dictionary containing plasma current (`ip`), its time derivative (`dip_dt`),
             programmed plasma current (`ip_prog`), and its time derivative (`dipprog_dt`).
         """
-        conn: XarrayConnection = params.mds_conn
-        ip = conn.get_data(params.shot_id, "summary/ip")
-        ip_prog = conn.get_data(params.shot_id, "pulse_schedule/i_plasma")
-        ip_prog_time = conn.get_data(params.shot_id, "pulse_schedule/time")
-        magtime = conn.get_data(params.shot_id, "summary/time")
+        conn = params.mds_conn
+        ip = conn.get_data("summary/ip")
+        ip_prog = conn.get_data("pulse_schedule/i_plasma")
+        ip_prog_time = conn.get_data("pulse_schedule/time")
+        magtime = conn.get_data("summary/time")
 
         dip_dt = np.gradient(ip, magtime)
         dipprog_dt = np.gradient(ip_prog, ip_prog_time)
@@ -85,11 +84,11 @@ class MastPhysicsMethods:
             A dictionary containing neutral beam injection power (`power_nbi`) and
             radiated power (`power_radiated`).
         """
-        conn: XarrayConnection = params.mds_conn
+        conn = params.mds_conn
 
-        power_nbi = conn.get_data(params.shot_id, "summary/power_nbi")
-        power_radiated = conn.get_data(params.shot_id, "summary/power_radiated")
-        base_time = conn.get_data(params.shot_id, "summary/time")
+        power_nbi = conn.get_data("summary/power_nbi")
+        power_radiated = conn.get_data("summary/power_radiated")
+        base_time = conn.get_data("summary/time")
 
         times = params.times
         power_nbi = MastUtilMethods.interpolate_1d(base_time, power_nbi, times)
@@ -117,12 +116,12 @@ class MastPhysicsMethods:
             A dictionary containing total injected gas (`total_injected`),
             inboard total gas (`inboard_total`), and outboard total gas (`outboard_total`).
         """
-        conn: XarrayConnection = params.mds_conn
+        conn = params.mds_conn
 
-        total_injected = conn.get_data(params.shot_id, "gas_injection/total_injected")
-        inboard_total = conn.get_data(params.shot_id, "gas_injection/inboard_total")
-        outboard_total = conn.get_data(params.shot_id, "gas_injection/outboard_total")
-        base_time = conn.get_data(params.shot_id, "gas_injection/time")
+        total_injected = conn.get_data("gas_injection/total_injected")
+        inboard_total = conn.get_data("gas_injection/inboard_total")
+        outboard_total = conn.get_data("gas_injection/outboard_total")
+        base_time = conn.get_data("gas_injection/time")
 
         times = params.times
         total_injected = MastUtilMethods.interpolate_1d(
@@ -158,11 +157,11 @@ class MastPhysicsMethods:
             core electron density (`n_e_core`).
         """
         times = params.times
-        conn: XarrayConnection = params.mds_conn
+        conn = params.mds_conn
 
-        t_e_core = conn.get_data(params.shot_id, "thomson_scattering/t_e_core")
-        n_e_core = conn.get_data(params.shot_id, "thomson_scattering/n_e_core")
-        base_time = conn.get_data(params.shot_id, "thomson_scattering/time")
+        t_e_core = conn.get_data("thomson_scattering/t_e_core")
+        n_e_core = conn.get_data("thomson_scattering/n_e_core")
+        base_time = conn.get_data("thomson_scattering/time")
 
         t_e_core = MastUtilMethods.interpolate_1d(base_time, t_e_core, times)
         n_e_core = MastUtilMethods.interpolate_1d(base_time, n_e_core, times)
@@ -201,13 +200,13 @@ class MastPhysicsMethods:
 
         """
 
-        conn: XarrayConnection = params.mds_conn
-        n_e = conn.get_data(params.shot_id, "summary/line_average_n_e")
-        t_n = conn.get_data(params.shot_id, "summary/time")
-        ip = conn.get_data(params.shot_id, "summary/ip")
-        t_ip = conn.get_data(params.shot_id, "summary/time")
-        a_minor = conn.get_data(params.shot_id, "equilibrium/minor_radius")
-        t_a = conn.get_data(params.shot_id, "equilibrium/time")
+        conn = params.mds_conn
+        n_e = conn.get_data("summary/line_average_n_e")
+        t_n = conn.get_data("summary/time")
+        ip = conn.get_data("summary/ip")
+        t_ip = conn.get_data("summary/time")
+        a_minor = conn.get_data("equilibrium/minor_radius")
+        t_a = conn.get_data("equilibrium/time")
 
         return MastPhysicsMethods._get_densities(
             params.times, n_e, t_n, ip, t_ip, a_minor, t_a
@@ -276,10 +275,8 @@ class MastPhysicsMethods:
             A dictionary containing SXR data (`sxr_data`) and
             corresponding time points (`sxr_time`).
         """
-        conn: XarrayConnection = params.mds_conn
-        hcam = conn.get_data(
-            params.shot_id, "soft_x_rays/horizontal_cam_upper", return_xarray=True
-        )
+        conn = params.mds_conn
+        hcam = conn.get_data("soft_x_rays/horizontal_cam_upper", return_xarray=True)
 
         if hcam is not None:
             hcam = hcam.isel(horizontal_cam_upper_channel=7)
@@ -314,10 +311,9 @@ class MastPhysicsMethods:
         dict
             A dictionary containing D-alpha signal data (`dalpha`).
         """
-        conn: XarrayConnection = params.mds_conn
+        conn = params.mds_conn
 
         dalpha = conn.get_data(
-            params.shot_id,
             "spectrometer_visible/filter_spectrometer_dalpha_voltage",
             return_xarray=True,
         )
