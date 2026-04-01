@@ -55,7 +55,7 @@ class EastUtilMethods:
         Parameters
         ----------
         mds_conn : MDSConnection
-            Connection to MDSplus server.
+            MDSplus connection for the shot.
         shot_id : int
             Shot number.
 

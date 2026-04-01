@@ -71,7 +71,10 @@ release:
 
 # test #
 
-.PHONY: quick test test-fast
+.PHONY: go quick test test-fast
+
+go:
+	poetry run disruption-py -l debug
 
 quick:
 	poetry run pytest -v tests/test_quick.py

@@ -18,7 +18,7 @@ from loguru import logger
 from disruption_py.config import config
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.misc import get_temporary_folder
-from disruption_py.inout.mds import MDSConnection
+from disruption_py.inout.base import DataConnection
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
 
@@ -36,8 +36,8 @@ class NicknameSettingParams:
     ----------
     shot_id : int
         The shot ID for which to resolve nicknames.
-    mds_conn : MDSConnection
-        MDSConnection object for accessing MDSPlus data.
+    mds_conn : DataConnection
+        Data connection for the shot.
     database : ShotDatabase
         Database connection for querying tokamak shot data.
     disruption_time : float
@@ -47,7 +47,7 @@ class NicknameSettingParams:
     """
 
     shot_id: int
-    mds_conn: MDSConnection
+    mds_conn: DataConnection
     database: ShotDatabase
     disruption_time: float
     tokamak: Tokamak

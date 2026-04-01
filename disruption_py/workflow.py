@@ -24,9 +24,10 @@ from disruption_py.core.utils.misc import (
     get_temporary_folder,
     without_duplicates,
 )
+from disruption_py.inout.base import ProcessConnection
 from disruption_py.inout.mds import ProcessMDSConnection
 from disruption_py.inout.sql import ShotDatabase
-from disruption_py.inout.xr import XarrayConnection
+from disruption_py.inout.xr import ProcessXarrayConnection
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.settings import RetrievalSettings
 from disruption_py.settings.log_settings import LogSettings, resolve_log_settings
@@ -73,7 +74,7 @@ def get_shots_data(
     shotlist_setting: ShotlistSettingType,
     tokamak: Tokamak = None,
     database_initializer: Callable[..., ShotDatabase] = None,
-    mds_connection_initializer: Callable[..., ProcessMDSConnection] = None,
+    mds_connection_initializer: Callable[..., ProcessConnection] = None,
     retrieval_settings: RetrievalSettings = None,
     output_setting: OutputSetting = "dataset",
     num_processes: int = 1,
@@ -217,11 +218,11 @@ def get_database(
     return ShotDatabase.from_config(tokamak=tokamak)
 
 
-def get_mdsplus_class(
+def get_process_connection(
     tokamak: Tokamak = None,
-) -> ProcessMDSConnection | XarrayConnection:
+) -> ProcessConnection:
     """
-    Get the MDSplus connection for the tokamak.
+    Get the process-level data connection for the tokamak.
     """
     tokamak = resolve_tokamak_from_environment(tokamak)
 
@@ -230,7 +231,7 @@ def get_mdsplus_class(
         return ProcessMDSConnection.from_config(tokamak=tokamak)
 
     if "xarray" in inout_cfg:
-        return XarrayConnection.from_config(tokamak=tokamak)
+        return ProcessXarrayConnection.from_config(tokamak=tokamak)
 
     raise ValueError("No valid MDSplus or xarray connection found.")
 
@@ -250,7 +251,7 @@ def _get_mds_instance(tokamak, mds_connection_initializer):
     """
     if mds_connection_initializer:
         return mds_connection_initializer()
-    return get_mdsplus_class(tokamak)
+    return get_process_connection(tokamak)
 
 
 def run(tokamak, methods, shots, efit_tree, time_base, output, processes, log_level):
@@ -294,9 +295,10 @@ def cli():
     parser.add_argument("-p", "--processes", type=int, default=1)
     parser.add_argument("-l", "--log-level", type=str, default="VERBOSE")
 
-    return run(**vars(parser.parse_args()))
+    out = run(**vars(parser.parse_args()))
+    print(out)
+    return 2 if out is None else len(out) == 0
 
 
 if __name__ == "__main__":
-    out = cli()
-    print(out)
+    sys.exit(cli())

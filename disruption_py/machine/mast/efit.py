@@ -6,7 +6,6 @@ Module for retrieving and processing EFIT parameters for MAST.
 
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.inout.xr import XarrayConnection
 from disruption_py.machine.mast.util import MastUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 
@@ -51,13 +50,13 @@ class MastEfitMethods:
         dict
             A dictionary containing the retrieved EFIT parameters.
         """
-        conn: XarrayConnection = params.mds_conn
-        eq_time = conn.get_data(params.shot_id, "equilibrium/time")
+        conn = params.mds_conn
+        eq_time = conn.get_data("equilibrium/time")
         times = params.times
 
         outputs = {}
         for key, prop in MastEfitMethods.efit_properties.items():
-            signal = conn.get_data(params.shot_id, f"equilibrium/{prop}")
+            signal = conn.get_data(f"equilibrium/{prop}")
             item = MastUtilMethods.interpolate_1d(eq_time, signal, times)
             outputs[key] = item
 

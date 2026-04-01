@@ -11,7 +11,8 @@ from loguru import logger
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.physics_method.runner import populate_shot
 from disruption_py.core.utils.misc import shot_msg
-from disruption_py.inout.mds import MDSConnection, ProcessMDSConnection, mdsExceptions
+from disruption_py.inout.base import DataConnection, ProcessConnection
+from disruption_py.inout.mds import MDSConnection, mdsExceptions
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings.nickname_setting import NicknameSettingParams
@@ -29,15 +30,15 @@ class RetrievalManager:
         The tokamak instance.
     process_database : ShotDatabase
         The SQL database
-    process_mds_conn : ProcessMDSConnection
-        The MDS connection
+    process_mds_conn : ProcessConnection
+        The process-level data connection
     """
 
     def __init__(
         self,
         tokamak: Tokamak,
         process_database: ShotDatabase,
-        process_mds_conn: ProcessMDSConnection,
+        process_mds_conn: ProcessConnection,
     ):
         """
         Parameters
@@ -46,8 +47,8 @@ class RetrievalManager:
             The tokamak instance.
         process_database : ShotDatabase
             The SQL database.
-        process_mds_conn : ProcessMDSConnection
-            The MDS connection.
+        process_mds_conn : ProcessConnection
+            The process-level data connection.
         """
         self.tokamak = tokamak
         self.process_database = process_database
@@ -187,7 +188,7 @@ class RetrievalManager:
     def setup_physics_method_params(
         self,
         shot_id: int,
-        mds_conn: MDSConnection,
+        mds_conn: DataConnection,
         disruption_time: float,
         retrieval_settings: RetrievalSettings,
     ) -> PhysicsMethodParams:
@@ -198,8 +199,8 @@ class RetrievalManager:
         ----------
         shot_id : int
             The ID of the shot.
-        mds_conn : MDSConnection
-            The MDS connection for the shot.
+        mds_conn : DataConnection
+            The data connection for the shot.
         disruption_time : float
             The disruption time of the shot.
         retrieval_settings : RetrievalSettings
@@ -231,7 +232,7 @@ class RetrievalManager:
     def _init_times(
         self,
         shot_id: int,
-        mds_conn: MDSConnection,
+        mds_conn: DataConnection,
         disruption_time: float,
         retrieval_settings: RetrievalSettings,
     ) -> np.ndarray:
@@ -242,8 +243,8 @@ class RetrievalManager:
         ----------
         shot_id : int
             The ID of the shot.
-        mds_conn : MDSConnection
-            The MDS connection for the shot.
+        mds_conn : DataConnection
+            The data connection for the shot.
         disruption_time : float
             The disruption time of the shot.
         retrieval_settings : RetrievalSettings
