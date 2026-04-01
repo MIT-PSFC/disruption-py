@@ -3,7 +3,7 @@
 """Module for processing Thomson electron density measurements."""
 
 import numpy as np
-import scipy as sp
+import scipy
 
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
@@ -157,7 +157,7 @@ class CmodThomsonDensityMeasure:
                 y = n_e[i, ind]
                 _, ind_uniq = np.unique(x, return_index=True)
                 y = y[ind_uniq]
-                nlts[i] = np.trapz(y, x)
+                nlts[i] = scipy.integrate.trapezoid(y, x)
         return nlts, nlts_t
 
     @staticmethod
@@ -311,6 +311,8 @@ class CmodThomsonDensityMeasure:
             psirz = np.transpose(psirz[time_idx, :, :])
             # Perform cubic interpolation on the psirz slice
             values = psirz.flatten()
-            psi[:, i] = sp.interpolate.griddata(points, values, (r, z), method="cubic")
+            psi[:, i] = scipy.interpolate.griddata(
+                points, values, (r, z), method="cubic"
+            )
 
         return psi

@@ -294,9 +294,10 @@ def cli():
     parser.add_argument("-p", "--processes", type=int, default=1)
     parser.add_argument("-l", "--log-level", type=str, default="VERBOSE")
 
-    return run(**vars(parser.parse_args()))
+    out = run(**vars(parser.parse_args()))
+    print(out)
+    return 2 if out is None else len(out) == 0
 
 
 if __name__ == "__main__":
-    out = cli()
-    print(out)
+    sys.exit(cli())

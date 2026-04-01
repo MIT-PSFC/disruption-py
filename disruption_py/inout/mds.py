@@ -22,7 +22,11 @@ try:
     # first, try full-fledged MDSplus
     import MDSplus
 
-except ModuleNotFoundError:
+except ModuleNotFoundError as e:
+
+    # then, check and raise if numpy issue
+    if "numpy" in getattr(getattr(e, "__context__", None), "msg", ""):
+        raise ImportError("MDSplus vs numpy incompatibility") from e
 
     try:
 
