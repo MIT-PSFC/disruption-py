@@ -59,13 +59,13 @@ def _execute_retrieval(args):
     tuple of shot id and the dataframe
     """
     tokamak, db_init, conn_init, retrieval_settings, shot_id = args
-    database = _get_database_instance(tokamak, db_init)
-    data_conn = _get_connection_instance(tokamak, conn_init)
+    process_database = _get_database_instance(tokamak, db_init)
+    process_data_conn = _get_connection_instance(tokamak, conn_init)
 
     retrieval_manager = RetrievalManager(
         tokamak=tokamak,
-        process_database=database,
-        process_data_conn=data_conn,
+        process_database=process_database,
+        process_data_conn=process_data_conn,
     )
     return shot_id, retrieval_manager.get_shot_data(shot_id, retrieval_settings)
 
