@@ -51,21 +51,21 @@ def _execute_retrieval(args):
     Params
     ------
     args : List
-        tokamak, database initializer, mds connection initializer, retrieval
+        tokamak, database initializer, connection initializer, retrieval
         settings, and the shot id
 
     Returns
     -------
     tuple of shot id and the dataframe
     """
-    tokamak, db_init, mds_init, retrieval_settings, shot_id = args
-    database = _get_database_instance(tokamak, db_init)
-    mds_conn = _get_mds_instance(tokamak, mds_init)
+    tokamak, db_init, conn_init, retrieval_settings, shot_id = args
+    process_database = _get_database_instance(tokamak, db_init)
+    process_data_conn = _get_connection_instance(tokamak, conn_init)
 
     retrieval_manager = RetrievalManager(
         tokamak=tokamak,
-        process_database=database,
-        process_mds_conn=mds_conn,
+        process_database=process_database,
+        process_data_conn=process_data_conn,
     )
     return shot_id, retrieval_manager.get_shot_data(shot_id, retrieval_settings)
 
@@ -74,21 +74,29 @@ def get_shots_data(
     shotlist_setting: ShotlistSettingType,
     tokamak: Tokamak = None,
     database_initializer: Callable[..., ShotDatabase] = None,
-    mds_connection_initializer: Callable[..., ProcessConnection] = None,
+    connection_initializer: Callable[..., ProcessConnection] = None,
     retrieval_settings: RetrievalSettings = None,
     output_setting: OutputSetting = "dataset",
     num_processes: int = 1,
     log_settings: LogSettings = None,
 ) -> Any:
     """
-    Get shot data for all shots from shotlist_setting from CMOD.
+    Get shot data for all shots specified by shotlist_setting.
 
-    Attributes
+    Parameters
     ----------
     shotlist_setting : ShotlistSettingType
         Data retrieved for all shotlist specified by the setting. See ShotlistSetting
         for more details.
-    retrieval_settings : RetrievalSettings
+    tokamak : Tokamak, optional
+        The tokamak to retrieve data for. If None, detected from the environment.
+    database_initializer : Callable[..., ShotDatabase], optional
+        Factory for creating a database connection. If None, the default database
+        for the tokamak is used.
+    connection_initializer : Callable[..., ProcessConnection], optional
+        Factory for creating a process-level data connection. If None, the default
+        connection for the tokamak is used.
+    retrieval_settings : RetrievalSettings, optional
         The settings that each shot uses when retrieving data. See RetrievalSettings
         for more details. If None, the default values of each setting in
         RetrievalSettings is used.
@@ -100,8 +108,9 @@ def get_shots_data(
     num_processes : int
         The number of processes to use for data retrieval. If 1, the data is retrieved
         in serial. If > 1, the data is retrieved in parallel.
-    log_settings : LogSettings
+    log_settings : LogSettings, optional
         Settings for logging.
+
     Returns
     -------
     Any
@@ -168,7 +177,7 @@ def get_shots_data(
         args = zip(
             repeat(tokamak),
             repeat(database_initializer),
-            repeat(mds_connection_initializer),
+            repeat(connection_initializer),
             repeat(retrieval_settings),
             shotlist_list,
         )
@@ -244,12 +253,12 @@ def _get_database_instance(tokamak, database_initializer):
     return get_database(tokamak)
 
 
-def _get_mds_instance(tokamak, mds_connection_initializer):
+def _get_connection_instance(tokamak, connection_initializer):
     """
-    Create MDSplus instance
+    Create process connection instance
     """
-    if mds_connection_initializer:
-        return mds_connection_initializer()
+    if connection_initializer:
+        return connection_initializer()
     return get_process_connection(tokamak)
 
 

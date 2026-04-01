@@ -50,7 +50,7 @@ class MastEfitMethods:
         dict
             A dictionary containing the retrieved EFIT parameters.
         """
-        conn = params.mds_conn
+        conn = params.data_conn
         eq_time = conn.get_data("equilibrium/time")
         times = params.times
 

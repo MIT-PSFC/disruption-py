@@ -19,21 +19,21 @@ class D3DUtilMethods:
     def get_polarity(params: PhysicsMethodParams):
         """
         Get the plasma current polarity. Accepts PhysicsMethodParams to access
-        the MDS connection, but it is not a physics method.
+        the data connection, but it is not a physics method.
 
         Returns the first value of polarity array if the polarity is not constant.
 
         Parameters
         ----------
         params : PhysicsMethodParams
-            Parameters containing MDS connection and shot information.
+            Parameters containing data connection and shot information.
 
         Returns
         -------
         polarity value, -1 or 1.
         """
         polarity = np.unique(
-            params.mds_conn.get_data(f"ptdata('iptdirect', {params.shot_id})")
+            params.data_conn.get_data(f"ptdata('iptdirect', {params.shot_id})")
         )
         if len(polarity) > 1:
             params.logger.info(

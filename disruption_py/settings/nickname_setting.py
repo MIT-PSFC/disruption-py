@@ -30,7 +30,7 @@ class NicknameSettingParams:
     ----------
     shot_id : int
         The shot ID for which to resolve nicknames.
-    mds_conn : DataConnection
+    data_conn : DataConnection
         Data connection for the shot.
     database : ShotDatabase
         Database connection for querying tokamak shot data.
@@ -41,7 +41,7 @@ class NicknameSettingParams:
     """
 
     shot_id: int
-    mds_conn: DataConnection
+    data_conn: DataConnection
     database: ShotDatabase
     disruption_time: float
     tokamak: Tokamak

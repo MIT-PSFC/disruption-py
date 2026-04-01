@@ -61,6 +61,7 @@ nav:
           - Parameter Reference: "usage/physics_methods/\
             disruption_parameters_reference.md"
       - Data I/O:
+          - Data Connection (Base): usage/data_connection_reference.md
           - SQL Database: usage/sql_database.md
           - MDSplus Connection: usage/mds_connection_reference.md
   - GitHub: https://github.com/MIT-PSFC/disruption-py
