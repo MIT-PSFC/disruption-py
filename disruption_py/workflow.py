@@ -173,6 +173,7 @@ def get_shots_data(
     )
 
     took = -time.time()
+    retrieval_settings.efit_nickname_setting.prefetch_db(database, tokamak)
     with Pool(processes=num_processes) as pool:
         args = zip(
             repeat(tokamak),
