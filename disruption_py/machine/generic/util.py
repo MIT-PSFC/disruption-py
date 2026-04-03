@@ -39,7 +39,9 @@ class GenericUtilMethods:
             return {"duration": 0, "ip_max": 0, "polarity": 1}
 
         # Determine the polarity of the plasma current.
-        polarity = np.sign(scipy.integrate.trapezoid(ip[finite_indices], ip_time[finite_indices]))
+        polarity = np.sign(
+            scipy.integrate.trapezoid(ip[finite_indices], ip_time[finite_indices])
+        )
         ip_upright = ip * polarity
 
         # Find all the times that Ip is greater than the threshold.  The largest

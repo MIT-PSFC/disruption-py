@@ -138,7 +138,7 @@ class GenericPhysicsMethods:
             "abs_ip_max": lambda ip_max, ip_threshold: abs(ip_max) > ip_threshold,
             "ip0_over_ip_max": lambda ip0_over_ip_max, rampdown_threshold: ip0_over_ip_max
             > rampdown_threshold,
-            "ip0_over_max_didt": lambda ip0_over_max_didt, tau_cq_max: - ip0_over_max_didt
+            "ip0_over_max_didt": lambda ip0_over_max_didt, tau_cq_max: -ip0_over_max_didt
             < tau_cq_max,
             "abs_ip_final": lambda ip_final, ip_final_max: abs(ip_final) < ip_final_max,
             "abs_ip0": lambda ip0, ip_threshold: abs(ip0) > ip_threshold,
