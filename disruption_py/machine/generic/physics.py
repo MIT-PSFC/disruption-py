@@ -150,7 +150,7 @@ class GenericPhysicsMethods:
             - d3d: [test_for_disruption.m]
             - east: [test_for_disruption.m]
             - kstar: [test_for_disruption_kstar.m]
-        - pull requests:
+        - pull requests: #[545](https://github.com/MIT-PSFC/disruption-py/pull/545)
         - issues: #[223](https://github.com/MIT-PSFC/disruption-py/issues/223)
         """
         # Initialize test criteria
