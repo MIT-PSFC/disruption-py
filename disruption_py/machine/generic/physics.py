@@ -9,6 +9,7 @@ import numpy as np
 from disruption_py.config import config
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
+from disruption_py.inout.mds import mdsExceptions
 from disruption_py.machine.cmod import CmodPhysicsMethods
 from disruption_py.machine.d3d import D3DPhysicsMethods
 from disruption_py.machine.east import EastPhysicsMethods
@@ -125,6 +126,8 @@ class GenericPhysicsMethods:
 
         Implement current quench time computation from Bob's scripts
 
+        Either parameters or thresholds = None -> indicate that we will skip this test
+
         Args:
             params (PhysicsMethodParams): _description_
         """
@@ -134,7 +137,7 @@ class GenericPhysicsMethods:
             "abs_ip_max": lambda ip_max, ip_threshold: abs(ip_max) > ip_threshold,
             "ip0_over_ip_max": lambda ip0_over_ip_max, rampdown_threshold: ip0_over_ip_max
             > rampdown_threshold,
-            "ip0_over_max_didt": lambda ip0_over_max_didt, tau_cq_max: ip0_over_max_didt
+            "ip0_over_max_didt": lambda ip0_over_max_didt, tau_cq_max: - ip0_over_max_didt
             < tau_cq_max,
             "abs_ip_final": lambda ip_final, ip_final_max: abs(ip_final) < ip_final_max,
             "abs_ip0": lambda ip0, ip_threshold: abs(ip0) > ip_threshold,
@@ -153,7 +156,7 @@ class GenericPhysicsMethods:
             }
             # Get ip and t_ip
             try:
-                ip, t_ip = params.mds_conn.get_data_with_dims(
+                ip, t_ip = params.data_conn.get_data_with_dims(
                     f"ptdata('ip', {params.shot_id})"
                 )  # [A], [ms]
                 t_ip = t_ip / 1.0e3  # [ms] -> [s]
@@ -196,7 +199,7 @@ class GenericPhysicsMethods:
 
         # Compute dI/dt during the latter part of the discharge
         (time_indices,) = np.where((t_ip > duration - 0.05) & (t_ip < duration + 0.05))
-        dIdt_upright = np.diff(ip_upright[time_indices]) / diff(t_ip[time_indices])
+        dIdt_upright = np.diff(ip_upright[time_indices]) / np.diff(t_ip[time_indices])
         indx = np.argmin(dIdt_upright)
         candidate_max_didt = dIdt_upright[indx] * polarity
         candidate_t_disrupt = t_ip[time_indices[indx]]
@@ -215,17 +218,23 @@ class GenericPhysicsMethods:
             "ip0_over_max_didt": (
                 candidate_ip0 / candidate_max_didt if candidate_max_didt != 0 else None
             ),
-            "abs_ip_final": abs(ip_final),
-            "abs_ip0": abs(candidate_ip0),
+            "abs_ip_final": ip_final,
+            "abs_ip0": candidate_ip0,
         }
 
-        # Run all tests
+        # Run all 6 tests
         for test, criterion in criteria.items():
             parameter, threshold = parameters[test], thresholds[test]
-            if all(x is not None for x in (parameter, threshold)) and not criterion(
-                parameter, threshold
-            ):
-                # Failed any of the 6 test criteria. Mark the shot as non-disruptive.
+            # Use threshold = None to indicate that we will skip a test.
+            if threshold is None:
+                continue
+            # Use parameter = None to indicate a failed computation.
+            if parameter is None:
+                # TODO: consider raising an error.
+                return {"current_quench_time": [np.nan]}
+            # Run the test criteriion.
+            if not criterion(parameter, threshold):
+                # Failed the test, mark the shot as non-disruptive.
                 return {"current_quench_time": [np.nan]}
 
-        return {"current_quench_time": [candidate_t_disrupt]}
+        return {"current_quench_time": np.full(len(params.times), candidate_t_disrupt)}

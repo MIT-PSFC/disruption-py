@@ -33,13 +33,13 @@ class GenericUtilMethods:
         if len(finite_indices) == 0:
             return {"duration": 0, "ip_max": 0, "polarity": 1}
         dt = np.diff(ip_time)
-        duration = sum(dt(finite_indices[:-1]))
+        duration = sum(dt[finite_indices[:-1]])
         if duration < 0.1:
             # Assume < 100 ms is not a bona fide plasma
             return {"duration": 0, "ip_max": 0, "polarity": 1}
 
         # Determine the polarity of the plasma current.
-        polarity = np.sign(np.trapz(ip[finite_indices], ip_time[finite_indices]))
+        polarity = np.sign(scipy.integrate.trapezoid(ip[finite_indices], ip_time[finite_indices]))
         ip_upright = ip * polarity
 
         # Find all the times that Ip is greater than the threshold.  The largest
@@ -51,7 +51,7 @@ class GenericUtilMethods:
         (indices,) = np.where((ip_upright >= threshold) & (ip_time > 0))
         # Get the last index
         max_idx = indices[-1] if len(indices) > 0 else None
-        duration = ip_time(max_idx)
+        duration = ip_time[max_idx]
         if max_idx == len(ip_time) - 1:
             duration = -duration  # TODO: what is this for?
 
