@@ -145,15 +145,6 @@ class GenericPhysicsMethods:
 
         # Get machine-specific parameters
         if params.tokamak == Tokamak.D3D:
-            # TODO: put these in dynaconf
-            thresholds = {
-                "shot_duration": 0.5,
-                "abs_ip_max": 0.1e6,
-                "ip0_over_ip_max": 0.33,
-                "ip0_over_max_didt": 0.05,
-                "abs_ip_final": 100e3,
-                "abs_ip0": 0.1e6,
-            }
             # Get ip and t_ip
             try:
                 ip, t_ip = params.data_conn.get_data_with_dims(
@@ -175,17 +166,19 @@ class GenericPhysicsMethods:
         else:
             raise NotImplementedError
 
+        # Get test thresholds
+        thresholds = config(params.tokamak).physics.current_quench_time_thresholds
+
         # Compute parameters for the tests
-        # Get duration and polarity
+        # Get the duration and polarity
         end_of_current_params = GenericUtilMethods.get_end_of_current(
             ip=ip, ip_time=t_ip, threshold=thresholds["abs_ip_max"]
         )
         duration = end_of_current_params["duration"]
         polarity = end_of_current_params["polarity"]
 
-        ip_upright = ip * polarity
-
         # Find the maximum plasma current excluding the current spike
+        ip_upright = ip * polarity
         (time_indices,) = np.where((t_ip > 0) & (t_ip < duration - 0.050))
         ip_max = max(ip_upright[time_indices]) * polarity
 
