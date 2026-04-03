@@ -144,9 +144,17 @@ class GenericPhysicsMethods:
             "abs_ip0": lambda ip0, ip_threshold: abs(ip0) > ip_threshold,
         }
 
-        # Get machine-specific parameters
-        if params.tokamak == Tokamak.D3D:
-            # Get ip and t_ip
+        # Get ip and ip timebase
+        if params.tokamak == Tokamak.CMOD:
+            try:
+                ip, t_ip = params.data_conn.get_data_with_dims(
+                    r"\ip", tree_name="magnetics"
+                )  # [A], [s]
+            except mdsExceptions.MdsException as e:
+                params.logger.warning(
+                    "Failed to get measured plasma current parameters. Skip current quench time computation."
+                )
+        elif params.tokamak == Tokamak.D3D:
             try:
                 ip, t_ip = params.data_conn.get_data_with_dims(
                     f"ptdata('ip', {params.shot_id})"
