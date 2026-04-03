@@ -52,7 +52,4 @@ class GenericUtilMethods:
         if max_idx == len(ip_time) - 1:
             duration = -duration  # TODO: what is this for?
 
-        # Find Ip_max (with correct polarity)
-        ip_max = max(ip_upright) * polarity
-
         return {"duration": duration, "polarity": polarity}
