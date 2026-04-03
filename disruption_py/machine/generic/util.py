@@ -17,14 +17,9 @@ class GenericUtilMethods:
     @staticmethod
     def get_end_of_current(ip, ip_time, threshold=1e5):
         """
-        Python implementation of end_of_current_d3d.m and other variants
+        Python translation of the original MATLAB implementation based on end_of_current_d3d.m
 
-        Args:
-            ip (_type_): _description_
-            ip_time (_type_): _description_
-            threshold (_type_): _description_
-
-        Returns {duration, polarity}
+        Returns a dictionary of `duration` and `polarity`.
         """
         # Determine if there was any finite plasma current on this shot.  If
         # not, then the shot was a "no plasma" shot, and the end-of-shot is set

@@ -123,14 +123,35 @@ class GenericPhysicsMethods:
     @physics_method(columns=["current_quench_time"])
     def get_current_quench_time(params: PhysicsMethodParams):
         """
-        TODO: write docstring
+        Determine and compute the current quench time of a shot. If a shot is determined to be non-disruptive,
+        return the current quench time as NaN. The criteria for a disruptive shot are as follows:
 
-        Implement current quench time computation from Bob's scripts
+        - 1. Shot duration > duration_min: reject very short shots.
+        - 2. abs(Ip_max) > ip_threshold: reject very low current shots.
+        - 3. Ip0 / Ip_max > rampdown_threshold: reject shots that disrupt late in current ramp down.
+        - 4. -Ip0 / max_dIdt < tau_CQ_max: reject shots with relatively slow current decay.
+        - 5. abs(Ip_final) < Ip_final_max: reject minor disruptions.
+        - 6. abs(Ip0) > Ip_threshold: reject very low current disruptions.
 
-        Either parameters or thresholds = None -> indicate that we will skip this test
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the data connection, shot id and more.
 
-        Args:
-            params (PhysicsMethodParams): _description_
+        Returns
+        -------
+        dict
+            A dictionary containing the `current_quench_time`.
+
+        References
+        -------
+        - original source:
+            - cmod: [test_disrupt.pro]
+            - d3d: [test_for_disruption.m]
+            - east: [test_for_disruption.m]
+            - kstar: [test_for_disruption_kstar.m]
+        - pull requests:
+        - issues: #[223](https://github.com/MIT-PSFC/disruption-py/issues/223)
         """
         # Initialize test criteria
         criteria = {
