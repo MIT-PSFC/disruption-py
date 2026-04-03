@@ -14,8 +14,8 @@ from disruption_py.machine.cmod import CmodPhysicsMethods
 from disruption_py.machine.d3d import D3DPhysicsMethods
 from disruption_py.machine.east import EastPhysicsMethods
 from disruption_py.machine.east.util import EastUtilMethods
-from disruption_py.machine.mast.physics import MastPhysicsMethods
 from disruption_py.machine.generic.util import GenericUtilMethods
+from disruption_py.machine.mast.physics import MastPhysicsMethods
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -123,8 +123,9 @@ class GenericPhysicsMethods:
     @physics_method(columns=["current_quench_time"])
     def get_current_quench_time(params: PhysicsMethodParams):
         """
-        Determine and compute the current quench time of a shot. If a shot is determined to be non-disruptive,
-        return the current quench time as NaN. The criteria for a disruptive shot are as follows:
+        Determine and compute the current quench time of a shot. If a shot is determined
+        to be non-disruptive, return the current quench time as NaN. The criteria for a
+        disruptive shot are as follows:
 
         - 1. Shot duration > duration_min: reject very short shots.
         - 2. abs(Ip_max) > ip_threshold: reject very low current shots.
@@ -171,9 +172,10 @@ class GenericPhysicsMethods:
                 ip, t_ip = params.data_conn.get_data_with_dims(
                     r"\ip", tree_name="magnetics"
                 )  # [A], [s]
-            except mdsExceptions.MdsException as e:
+            except mdsExceptions.MdsException:
                 params.logger.warning(
-                    "Failed to get measured plasma current parameters. Skip current quench time computation."
+                    "Failed to get measured plasma current parameters. "
+                    "Skip current quench time computation."
                 )
         elif params.tokamak == Tokamak.D3D:
             try:
@@ -181,9 +183,10 @@ class GenericPhysicsMethods:
                     f"ptdata('ip', {params.shot_id})"
                 )  # [A], [ms]
                 t_ip = t_ip / 1.0e3  # [ms] -> [s]
-            except mdsExceptions.MdsException as e:
+            except mdsExceptions.MdsException:
                 params.logger.warning(
-                    "Failed to get measured plasma current parameters. Skip current quench time computation."
+                    "Failed to get measured plasma current parameters. "
+                    "Skip current quench time computation."
                 )
             # Subtract baseline offset to ip
             (baseline_indices,) = np.where(t_ip <= 0)
@@ -221,9 +224,9 @@ class GenericPhysicsMethods:
 
         # Compute dI/dt during the latter part of the discharge
         (time_indices,) = np.where((t_ip > duration - 0.05) & (t_ip < duration + 0.05))
-        dIdt_upright = np.diff(ip_upright[time_indices]) / np.diff(t_ip[time_indices])
-        indx = np.argmin(dIdt_upright)
-        candidate_max_didt = dIdt_upright[indx] * polarity
+        didt_upright = np.diff(ip_upright[time_indices]) / np.diff(t_ip[time_indices])
+        indx = np.argmin(didt_upright)
+        candidate_max_didt = didt_upright[indx] * polarity
         candidate_t_disrupt = t_ip[time_indices[indx]]
 
         # Compute ip_final
