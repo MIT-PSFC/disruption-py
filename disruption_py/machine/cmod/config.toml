@@ -312,6 +312,14 @@ imas = "/equilibrium/time_slice(itime)/global_quantities/current_centre/z"
 units = "m"
 validity = [-0.5, 0.5]
 
+[cmod.physics.current_quench_time_thresholds]
+shot_duration = 0.1
+abs_ip_max = 0.1e6
+ip0_over_ip_max = 0.33
+ip0_over_max_didt = 0.05
+abs_ip_final = 50e3
+abs_ip0 = 0.1e6
+
 [cmod.physics.time_domain_thresholds]
 dipprog_dt = 50e3
 ip_prog = 100e3

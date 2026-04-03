@@ -10,6 +10,14 @@ port = 3306
 [east.physics.time_domain_thresholds]
 dipprog_dt = 1e3
 
+[east.physics.current_quench_time_thresholds]
+shot_duration = 0.6
+abs_ip_max = 0.2e6
+ip0_over_ip_max = 0.33
+ip0_over_max_didt = 0.05
+abs_ip_final = 100e3
+abs_ip0 = 0.2e6
+
 [east.tests]
 expected_failure_columns = [
   "beta_n",
