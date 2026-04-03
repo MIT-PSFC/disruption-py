@@ -13,6 +13,7 @@ from disruption_py.inout.mds import mdsExceptions
 from disruption_py.machine.cmod import CmodPhysicsMethods
 from disruption_py.machine.d3d import D3DPhysicsMethods
 from disruption_py.machine.east import EastPhysicsMethods
+from disruption_py.machine.east.util import EastUtilMethods
 from disruption_py.machine.mast.physics import MastPhysicsMethods
 from disruption_py.machine.generic.util import GenericUtilMethods
 from disruption_py.machine.tokamak import Tokamak
@@ -161,8 +162,7 @@ class GenericPhysicsMethods:
                 ip_baseline = np.mean(ip[baseline_indices])
                 ip -= ip_baseline
         elif params.tokamak == Tokamak.EAST:
-            # ip, t_ip = EastUtilMethods.retrieve_ip(params, shot_id)
-            raise NotImplementedError
+            ip, t_ip = EastUtilMethods.retrieve_ip(params, params.shot_id)
         else:
             raise NotImplementedError
 
