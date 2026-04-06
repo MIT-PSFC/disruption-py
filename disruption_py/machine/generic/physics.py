@@ -195,6 +195,13 @@ class GenericPhysicsMethods:
                 ip -= ip_baseline
         elif params.tokamak == Tokamak.EAST:
             ip, t_ip = EastUtilMethods.retrieve_ip(params, params.shot_id)
+        elif params.tokamak == Tokamak.HBTEP:
+            ip, t_ip = params.data_conn.get_data_with_dims(
+                r"\top.sensors.rogowskis:ip", tree_name="hbtep2"
+            )  # [A], [s]
+        elif params.tokamak == Tokamak.MAST:
+            ip = params.data_conn.get_data("summary/ip")
+            t_ip = params.data_conn.get_data("summary/time")
         else:
             raise NotImplementedError
 
