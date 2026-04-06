@@ -16,6 +16,17 @@ from tqdm.auto import tqdm
 
 from disruption_py.core.utils.misc import get_metadata, get_temporary_folder
 
+# Register the custom VERBOSE level at module import time so it is available
+# in multiprocessing worker processes (which use `spawn` on macOS/Windows and
+# therefore do not inherit the main process's level registration).
+if not hasattr(logger.__class__, "verbose"):
+    try:
+        logger.level("VERBOSE", no=15, color="<dim>")
+    except TypeError:
+        # Level already exists (re-import), just update the color.
+        logger.level("VERBOSE", color="<dim>")
+    logger.__class__.verbose = partialmethod(logger.__class__.log, "VERBOSE")
+
 LogSettingsType = Union["LogSettings", str, int]
 
 
@@ -124,23 +135,16 @@ class LogSettings:
         if self._logging_has_been_setup:
             return
 
-        # Set custom style and add a VERBOSE level. This only needs to be done
-        # once, so there is no need to add it to the reset_handlers method.
+        # Set custom colors for built-in levels. VERBOSE is already registered
+        # at module level (see top of file) to ensure availability in
+        # multiprocessing workers that use the `spawn` start method.
         logger.level("TRACE", color="<cyan><dim>")
         logger.level("DEBUG", color="<blue>")
-        # Ensure the level does not already exist because the level no can only
-        # be added once. This might happen if the logger is re-initialized.
-        try:
-            logger.level("VERBOSE", color="<dim>")
-        except ValueError:
-            logger.level("VERBOSE", color="<dim>", no=15)
+        logger.level("VERBOSE", color="<dim>")
         logger.level("INFO", color="")
         logger.level("SUCCESS", color="<green>")
         logger.level("WARNING", color="<yellow>")
         logger.level("ERROR", color="<red>")
-        # Bind the verbose level to the class so it can be used in any file even
-        # after changing the logger instance
-        logger.__class__.verbose = partialmethod(logger.__class__.log, "VERBOSE")
 
         self.reset_handlers(num_shots=None)
 
