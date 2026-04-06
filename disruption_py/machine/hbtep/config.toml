@@ -4,7 +4,7 @@ mdsplus_connection_string = "maxwell.ap.columbia.edu:8003"
 [hbtep.inout.sql]
 host = ""
 
-[mast.physics.current_quench_time_thresholds]
+[hbtep.physics.current_quench_time_thresholds]
 abs_ip0 = 0.1e6
 abs_ip_final = 50e3
 abs_ip_max = 0.1e6
