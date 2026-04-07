@@ -89,10 +89,22 @@ class CmodMirnovMethods:
         Z_gh, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.Z_GH", tree_name="magnetics")
         Z_k, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.Z_K", tree_name="magnetics")
 
-        theta_pol_ab, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.theta_pol_AB", tree_name="magnetics")
-        theta_pol_gh, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.theta_pol_GH", tree_name="magnetics")
+        # Annoyingly, the below nodes are the arctan(Z/R) poloidal angle of the sensors, not the poloidal orientation angle of the sensor relative to the midplane 
+        # See "Locations/Orientations of fast magnetic coils" subsection of the C-Mod wiki for more details: https://cmodwiki.psfc.mit.edu/index.php/Magnetics
+        # theta_pol_ab, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.theta_pol_AB", tree_name="magnetics")
+        # theta_pol_gh, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.theta_pol_GH", tree_name="magnetics")
+
+        # These are the correct nodes. We are assuming that the ordering of the nodes is BPXX_ABK [01 to 24], BPXT_ABK [1 to 6], and that _GHK carries the BP0X_K sensors in its last 6 indices.
+        # That this is the correct address is confermed by  https://cmodwiki.psfc.mit.edu/index.php/Magnetics
+        theta_pol_ab, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.processed.rf_lim_data.theta_pol_AB", tree_name="magnetics") 
+        theta_pol_gh, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.processed.rf_lim_data.theta_pol_GH", tree_name="magnetics") 
+
         # theta_pol_k, _ = params.mds_conn.get_data_with_dims(r"\magnetics::top.rf_lim_coils.theta_pol_K", tree_name="magnetics")  # noqa: ERA001
-        theta_pol_k = np.nan * np.zeros_like(Z_k)  # Calibration data doesn't exist, so we'll just say NaN and deal with it later
+        # theta_pol_k = np.nan * np.zeros_like(Z_k)  # Calibration data doesn't exist, so we'll just say NaN and deal with it later
+        theta_pol_k = [-72.7, -72.7, -72.7, -72.7, -107.1, -107.1]  # Assuming same poloidal orientation as _AB sensors which are nearby in R, Z
+        
+        # To double-check the theta_pol orderings, the below MDS node can be consulted:
+        # names = params.mds_conn.get_data(r"\magnetics::top.rf_lim_coils:nodename", tree_name="magnetics", astype='str')
 
         # For each of the above, we need to cut off the extra sensors that are NOT being digitized
         # This is a bit of a kludge, but I'm expecting sensors which aren't digitized to not show up in the analysis tree
@@ -142,10 +154,17 @@ class CmodMirnovMethods:
         Z_top = [0.0985, 0.0985, 0.0985, 0.1082]
         Z_bot = [-0.0985, -0.0985, -0.1092]
 
-        theta_pol_tab = [23.7, 23.7, 23.7, -23.7, -23.7, -23.7]
-        theta_pol_tgh = [23.1, 23.1, 23.1, -23.1, -23.1, -23.1]
-        theta_pol_top = [18.0, 18.0, 18.0, 19.8]
-        theta_pol_bot = [-18.0, -18.0, -20.0]
+        # These hadcoded orientaitons are still arctan(Z/R), not the poloidal orientation angle with respect to the midplane
+        # The replacement node r"\magnetics::top.processed.rf_lim_data.XXXXX" doesn't exist for these sensors, so we have to hardcode them.
+        # # We are assuming the same poloidal orientation as AB and GH sensors which are nerby in R, Z. 
+        # theta_pol_tab = [23.7, 23.7, 23.7, -23.7, -23.7, -23.7]
+        # theta_pol_tgh = [23.1, 23.1, 23.1, -23.1, -23.1, -23.1]
+        # theta_pol_top = [18.0, 18.0, 18.0, 19.8]
+        # theta_pol_bot = [-18.0, -18.0, -20.0]
+        theta_pol_tab = [-71.09, -71.09, -71.09, -108.9, -108.9, -108.9]
+        theta_pol_tgh = [-72.3, -72.3, -72.3, -107.69, -107.69, -107.69]
+        theta_pol_top = [-72.3, -71.09, -72.3, -72.3]
+        theta_pol_bot = [-118.5, -118.5, -118.5]
 
         all_mirnov_names = mirnov_names_ab + mirnov_names_gh + mirnov_names_k + mirnov_names_tab + mirnov_names_tgh + mirnov_names_top + mirnov_names_bot
 
@@ -207,7 +226,7 @@ class CmodMirnovMethods:
     @physics_method(
         tokamak=Tokamak.CMOD,
     )
-    def get_all_mirnov_ffts(params: PhysicsMethodParams):
+    def get_all_mirnov_ffts(params: PhysicsMethodParams,freq_resolution: float = 1000, max_freq: float = 85e3):
         """Get all FFTs of the available Mirnov coils for this shot.
 
         Parameters
@@ -231,7 +250,7 @@ class CmodMirnovMethods:
         saved_freqs = None
 
         for mirnov_name, mirnov_R, mirnov_phi, mirnov_Z, mirnov_theta_pol in zip(all_mirnov_names, R_all, phi_all, Z_all, theta_pol_all):
-            mirnov_fft, freqs = CmodMirnovMethods.get_mirnov_fft(params, mirnov_name)
+            mirnov_fft, freqs = CmodMirnovMethods.get_mirnov_fft(params, mirnov_name, freq_resolution = freq_resolution, max_freq  = max_freq)
             if mirnov_fft is not None:
                 valid_mirnov_ffts.append(mirnov_fft)
                 valid_mirnov_names.append(mirnov_name)
@@ -304,3 +323,75 @@ class CmodMirnovMethods:
                         "sensor_name": mirnov_name,
                     },
                 ).astype(np.float32).to_dataset(name="mirnov_sxx")
+            
+        raise ValueError(f"No preferred Mirnov coils found for shot {params.shot_id}")
+            
+
+
+    # Just pull the Mirnovs themsselves
+    @staticmethod
+    @physics_method(
+        tokamak=Tokamak.CMOD,
+    )
+
+    def get_all_mirnov_signals(params: PhysicsMethodParams):
+        """Get all Mirnov coil signals for this shot.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters for the physics method.
+
+        Returns
+        -------
+        mirnov_signals : xarray.DataSet
+            The signals of the Mirnov coils.
+            Dimensions are sensor and time.
+            Coordinates are sensor, time, phi, theta, and theta_pol.
+        """
+
+        all_mirnov_names, R_all, phi_all, Z_all, theta_pol_all = CmodMirnovMethods.get_mirnov_names_and_locations(params, debug=False)
+
+        valid_mirnov_signals = []
+        valid_mirnov_names = []
+        valid_mirnov_locations = []
+
+        for mirnov_name, mirnov_R, mirnov_phi, mirnov_Z, mirnov_theta_pol in zip(all_mirnov_names, R_all, phi_all, Z_all, theta_pol_all):
+            try:
+                mirnov_signal, mirnov_times = params.mds_conn.get_data_with_dims(
+                            path=f"\magnetics::top.active_mhd.signals.{mirnov_name}",
+                            tree_name="magnetics",
+                            astype="float32",
+                )
+                # Interpolate the signal onto the params timebase
+                mirnov_signal_interp = interp1(mirnov_times, mirnov_signal, params.times, kind='linear', fill_value=0.0)
+
+                valid_mirnov_signals.append(mirnov_signal_interp)
+                valid_mirnov_names.append(mirnov_name)
+                valid_mirnov_locations.append((mirnov_R, mirnov_phi, mirnov_Z, mirnov_theta_pol))
+            except mdsExceptions.TreeNOT_OPEN:
+                continue
+            except Exception as e:
+                print("Exception: ", e)
+                continue
+
+        mirnov_signals = xr.DataArray(
+            np.array(valid_mirnov_signals),
+            dims=("sensor", "idx"),
+            coords={
+                "shot": ("idx", np.repeat(params.shot_id, len(params.times))),
+                "time": ("idx", params.times),
+                "sensor": list(range(len(valid_mirnov_locations))),
+                "sensor_name": ("sensor", valid_mirnov_names),
+                "type": ("sensor", ["Bp"] * len(valid_mirnov_names)),    # All sensors are Bp
+                "R": ("sensor", [loc[0] for loc in valid_mirnov_locations]),
+                "phi": ("sensor", [loc[1] for loc in valid_mirnov_locations]),
+                "Z": ("sensor", [loc[2] for loc in valid_mirnov_locations]),
+                "theta_pol": ("sensor", [loc[3] for loc in valid_mirnov_locations]),
+            },
+        )
+        mirnov_ds = mirnov_signals.astype(np.float32).to_dataset(name="mirnov_signal")
+        return mirnov_ds
+    
+
+    
