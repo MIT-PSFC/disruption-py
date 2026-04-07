@@ -2144,9 +2144,10 @@ class CmodPhysicsMethods:
         thermal_quench_time = np.full(len(params.times), np.nan)
         if params.disruption_time is None:
             return {"thermal_quench_time": thermal_quench_time}
+        params.logger.debug(params.disruption_time)
 
         # Get current data for obtaining start of current quench
-        ip, magtime = params.mds_conn.get_data_with_dims(
+        ip, magtime = params.data_conn.get_data_with_dims(
             r"\ip", tree_name="magnetics"
         )
         ip = np.abs(ip)
@@ -2155,7 +2156,7 @@ class CmodPhysicsMethods:
         n_chords = 38
         array_path = r"\top.brightnesses.array_1"
         try:
-            chord_01, t_sxr = params.mds_conn.get_data_with_dims(
+            chord_01, t_sxr = params.data_conn.get_data_with_dims(
                 array_path + ":chord_01",
                 tree_name="xtomo",
             ) # Units: W/m^2, s
@@ -2170,7 +2171,7 @@ class CmodPhysicsMethods:
         # Get all other SXR chords
         for i in range(1, n_chords):
             try:
-                chord, t_chord = params.mds_conn.get_data_with_dims(
+                chord, t_chord = params.data_conn.get_data_with_dims(
                     array_path + ":chord_" + f"{i+1:02}",
                     tree_name="xtomo",
                 )
@@ -2245,6 +2246,10 @@ class CmodPhysicsMethods:
         wndw_before_cq = 0.005 # [s]
         idx_start = np.argmin(np.abs(t_sxr - (cq_onset_time - wndw_before_cq)))
         idx_end = np.argmin(np.abs(t_sxr - (cq_onset_time)))
+        # When params.disruption_time > 2 s, the SXR data stops prior to the labeled CQ
+        if idx_start == len(t_sxr) - 1:
+            params.logger.warning(f"No SXR data at time of CQ. params.disruption_time = {params.disruption_time:.3f}")
+            return {"thermal_quench_time": np.full(len(params.times), np.nan)}
         t_max_sxr_drop = t_sxr[idx_start + np.argmin(dcore_sxr_dt[idx_start:idx_end])]
 
         # Find onset of thermal quench in 0.5 ms window prior to midpoint of TQ
