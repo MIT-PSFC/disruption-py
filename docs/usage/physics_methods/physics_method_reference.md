@@ -11,6 +11,7 @@ For more information on available methods please see the built-in method documen
 - [DIII-D Physics Methods](d3d_method_reference.md)
 - [EAST Physics Methods](east_method_reference.md)
 - [HBT-EP Physics Methods](hbtep_method_reference.md)
+- [MAST Physics Methods](mast_method_reference.md)
 
 ## Custom Physics Methods { .doc .doc-heading }
 Users of DisruptionPy can create their own custom physics methods by adding the [`@physics_method`][disruption_py.core.physics_method.decorator.physics_method] decorator to a method. These custom physics methods can then be passed as the `custom_physics_methods` parameter in [`RetrievalSettings`][disruption_py.settings.retrieval_settings] and their results will be included alongside those returned by the built-in methods. See [Physics Method Decorators](decorator_reference.md) for more details on decorators.
@@ -38,9 +39,9 @@ def ***_method(params: PhysicsMethodParams) -> dict:
 	...
 ```
 
-2. To retrieve data from MDSplus use the `params` ([`PhysicsMethodParams`][disruption_py.core.physics_method.params.PhysicsMethodParams]) object. It contains many useful attributes, among which are the following:
+2. To retrieve data use the `params` ([`PhysicsMethodParams`][disruption_py.core.physics_method.params.PhysicsMethodParams]) object. It contains many useful attributes, among which are the following:
     - `params.shot_id`: the shot id of the shot for which data is being retrieved.
-	- `params.mds_conn`: a wrapper around the MDSplus connection for the process, that makes it easier to get data for a shot. See [`MDSConnection`][disruption_py.inout.mds.MDSConnection] for details.
+	- `params.data_conn`: the data connection for the shot, used to retrieve data. See [`DataConnection`][disruption_py.inout.base.DataConnection] for details.
     - `params.times`: the timebase of the shot for which data is being retrieved as a NumPy array of times.
 ??? example "Shot Data Request Examples"
 

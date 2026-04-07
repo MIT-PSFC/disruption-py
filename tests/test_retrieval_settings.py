@@ -111,8 +111,8 @@ def test_run_methods_and_columns(
     - If `run_methods` excludes a method returning a column specified in `run_columns`,
       the method is not run
     """
-    if tokamak is Tokamak.HBTEP:
-        pytest.skip("Skip framework tests for HBT-EP")
+    if tokamak in [Tokamak.HBTEP, Tokamak.MAST]:
+        pytest.skip(f"skip framework tests for {tokamak.name}")
         assert False
     retrieval_settings = RetrievalSettings(
         run_methods=run_methods,

@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 
 # parameters #
 
@@ -70,7 +71,10 @@ release:
 
 # test #
 
-.PHONY: quick test test-fast
+.PHONY: go quick test test-fast
+
+go:
+	poetry run disruption-py -l debug
 
 quick:
 	poetry run pytest -v tests/test_quick.py
@@ -122,36 +126,50 @@ ruff:
 shellcheck:
 	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	shellcheck --version
-	find -type f -not -path '*/.git/*' -not -path '*/.venv/*' \
-	| xargs grep -l '^#!/bin/bash' \
-	| while read -r F; \
+	@KO=0; \
+	while IFS= read -r -d '' F; \
 	do \
+	   grep -q '^#!/bin/bash' "$$F" || continue; \
 	   echo "--> $$F"; \
 	   shellcheck "$$F"; \
-	done
+	   RC=$$?; \
+	   echo "--> $$F = $$RC"; \
+	   [ "$$RC" -eq 0 ] || KO=1; \
+	done < <(find -type f -not -path '*/.git/*' -not -path '*/.venv/*' -print0); \
+	exit "$$KO"
 
 yamllint:
 	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	poetry run yamllint --version
-	find -type f -iname '*.y*ml' -not -empty -not -path '*/.venv/*' \
-	| while read -r F; \
+	@KO=0; \
+	while IFS= read -r -d '' F; \
 	do \
 	   echo "--> $$F"; \
 	   poetry run yamllint "$$F"; \
-	done
+	   RC=$$?; \
+	   echo "--> $$F = $$RC"; \
+	   [ "$$RC" -eq 0 ] || KO=1; \
+	done < <(find -type f -iname '*.y*ml' -not -empty -not -path '*/.venv/*' -print0); \
+	exit "$$KO"
 
 toml-sort:
 	@[ "$(GITHUB_ACTIONS)" != "true" ] || \
 	poetry run toml-sort --version
-	find -maxdepth 1 -type f -iname '*.toml' -not -empty -not -path '*/.venv/*'\
-	| while read -r F; \
+	@KO=0; \
+	while IFS= read -r -d '' F; \
 	do \
 	   echo "--> $$F"; \
 	   poetry run toml-sort $(CHECK_ARG) "$$F"; \
-	done
-	find -mindepth 2 -type f -iname '*.toml' -not -empty -not -path '*/.venv/*' \
-	| while read -r F; \
+	   RC=$$?; \
+	   echo "--> $$F = $$RC"; \
+	   [ "$$RC" -eq 0 ] || KO=1; \
+	done < <(find -maxdepth 1 -type f -iname '*.toml' -not -empty -not -path '*/.venv/*' -print0); \
+	while IFS= read -r -d '' F; \
 	do \
 	   echo "--> $$F"; \
 	   poetry run toml-sort $(CHECK_ARG) --all "$$F"; \
-	done
+	   RC=$$?; \
+	   echo "--> $$F = $$RC"; \
+	   [ "$$RC" -eq 0 ] || KO=1; \
+	done < <(find -mindepth 2 -type f -iname '*.toml' -not -empty -not -path '*/.venv/*' -print0); \
+	exit "$$KO"

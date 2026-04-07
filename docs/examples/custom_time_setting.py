@@ -2,7 +2,6 @@
 
 """Example usage of `get_shots_data` demonstrating using a custom time setting."""
 
-
 from disruption_py.settings import RetrievalSettings, TimeSetting, TimeSettingParams
 from disruption_py.workflow import get_shots_data
 
@@ -12,7 +11,7 @@ class PRadTime(TimeSetting):
 
     def _get_times(self, params: TimeSettingParams):
         """Return prad times"""
-        (time_array,) = params.mds_conn.get_dims(
+        (time_array,) = params.data_conn.get_dims(
             r"\twopi_diode", tree_name="spectroscopy"
         )
         time_array = time_array[time_array > 0]

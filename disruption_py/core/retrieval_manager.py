@@ -11,7 +11,8 @@ from loguru import logger
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.physics_method.runner import populate_shot
 from disruption_py.core.utils.misc import shot_msg
-from disruption_py.inout.mds import MDSConnection, ProcessMDSConnection, mdsExceptions
+from disruption_py.inout.base import DataConnection, ProcessConnection
+from disruption_py.inout.mds import MDSConnection, mdsExceptions
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings.nickname_setting import NicknameSettingParams
@@ -29,15 +30,15 @@ class RetrievalManager:
         The tokamak instance.
     process_database : ShotDatabase
         The SQL database
-    process_mds_conn : ProcessMDSConnection
-        The MDS connection
+    process_data_conn : ProcessConnection
+        The process-level data connection
     """
 
     def __init__(
         self,
         tokamak: Tokamak,
         process_database: ShotDatabase,
-        process_mds_conn: ProcessMDSConnection,
+        process_data_conn: ProcessConnection,
     ):
         """
         Parameters
@@ -46,12 +47,12 @@ class RetrievalManager:
             The tokamak instance.
         process_database : ShotDatabase
             The SQL database.
-        process_mds_conn : ProcessMDSConnection
-            The MDS connection.
+        process_data_conn : ProcessConnection
+            The process-level data connection.
         """
         self.tokamak = tokamak
         self.process_database = process_database
-        self.process_mds_conn = process_mds_conn
+        self.process_data_conn = process_data_conn
 
     def get_shot_data(
         self, shot_id, retrieval_settings: RetrievalSettings
@@ -100,7 +101,7 @@ class RetrievalManager:
                 shot_msg("Failed retrieval!"), shot=shot_id
             )
             if isinstance(e, mdsExceptions.MDSplusERROR):
-                physics_method_params.mds_conn.reconnect()
+                physics_method_params.data_conn.reconnect()
             retrieved_data = None
 
         # shot cleanup
@@ -111,7 +112,7 @@ class RetrievalManager:
             logger.critical(shot_msg("Failed cleanup! {e}"), shot=shot_id, e=repr(e))
             logger.opt(exception=True).debug(shot_msg("Failed cleanup!"), shot=shot_id)
             if isinstance(e, mdsExceptions.MDSplusERROR):
-                physics_method_params.mds_conn.reconnect()
+                physics_method_params.data_conn.reconnect()
             retrieved_data = None
 
         return retrieved_data
@@ -134,30 +135,31 @@ class RetrievalManager:
         Returns
         -------
         PhysicsMethodParams, or None
-            Parameters containing MDS connection and shot information
+            Parameters containing data connection and shot information
         """
 
         disruption_time = self.process_database.get_disruption_time(shot_id=shot_id)
 
-        mds_conn = self.process_mds_conn.get_shot_connection(shot_id=shot_id)
+        data_conn = self.process_data_conn.get_shot_connection(shot_id=shot_id)
 
-        mds_conn.add_tree_nickname_funcs(
-            tree_nickname_funcs={
-                "_efit_tree": lambda: retrieval_settings.efit_nickname_setting.get_tree_name(
-                    NicknameSettingParams(
-                        shot_id=shot_id,
-                        mds_conn=mds_conn,
-                        database=self.process_database,
-                        disruption_time=disruption_time,
-                        tokamak=self.tokamak,
+        if isinstance(data_conn, MDSConnection):
+            data_conn.add_tree_nickname_funcs(
+                tree_nickname_funcs={
+                    "_efit_tree": lambda: retrieval_settings.efit_nickname_setting.get_tree_name(
+                        NicknameSettingParams(
+                            shot_id=shot_id,
+                            data_conn=data_conn,
+                            database=self.process_database,
+                            disruption_time=disruption_time,
+                            tokamak=self.tokamak,
+                        )
                     )
-                )
-            }
-        )
+                }
+            )
 
         physics_method_params = self.setup_physics_method_params(
             shot_id=shot_id,
-            mds_conn=mds_conn,
+            data_conn=data_conn,
             disruption_time=disruption_time,
             retrieval_settings=retrieval_settings,
             **kwargs,
@@ -179,14 +181,14 @@ class RetrievalManager:
         cls : type
             The class type.
         physics_method_params : PhysicsMethodParams
-            Parameters containing MDS connection and shot information.
+            Parameters containing data connection and shot information.
         """
         physics_method_params.cleanup()
 
     def setup_physics_method_params(
         self,
         shot_id: int,
-        mds_conn: MDSConnection,
+        data_conn: DataConnection,
         disruption_time: float,
         retrieval_settings: RetrievalSettings,
     ) -> PhysicsMethodParams:
@@ -197,8 +199,8 @@ class RetrievalManager:
         ----------
         shot_id : int
             The ID of the shot.
-        mds_conn : MDSConnection
-            The MDS connection for the shot.
+        data_conn : DataConnection
+            The data connection for the shot.
         disruption_time : float
             The disruption time of the shot.
         retrieval_settings : RetrievalSettings
@@ -212,7 +214,7 @@ class RetrievalManager:
 
         times = self._init_times(
             shot_id=shot_id,
-            mds_conn=mds_conn,
+            data_conn=data_conn,
             disruption_time=disruption_time,
             retrieval_settings=retrieval_settings,
         )
@@ -221,7 +223,7 @@ class RetrievalManager:
             shot_id=shot_id,
             tokamak=self.tokamak,
             disruption_time=disruption_time,
-            mds_conn=mds_conn,
+            data_conn=data_conn,
             times=times,
         )
 
@@ -230,7 +232,7 @@ class RetrievalManager:
     def _init_times(
         self,
         shot_id: int,
-        mds_conn: MDSConnection,
+        data_conn: DataConnection,
         disruption_time: float,
         retrieval_settings: RetrievalSettings,
     ) -> np.ndarray:
@@ -241,8 +243,8 @@ class RetrievalManager:
         ----------
         shot_id : int
             The ID of the shot.
-        mds_conn : MDSConnection
-            The MDS connection for the shot.
+        data_conn : DataConnection
+            The data connection for the shot.
         disruption_time : float
             The disruption time of the shot.
         retrieval_settings : RetrievalSettings
@@ -255,7 +257,7 @@ class RetrievalManager:
         """
         setting_params = TimeSettingParams(
             shot_id=shot_id,
-            mds_conn=mds_conn,
+            data_conn=data_conn,
             database=self.process_database,
             disruption_time=disruption_time,
             tokamak=self.tokamak,

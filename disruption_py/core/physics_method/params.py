@@ -3,6 +3,7 @@
 """
 Module for defining parameters used in physics methods for DisruptionPy.
 """
+
 from dataclasses import dataclass, field
 from typing import Any, Dict, Tuple
 
@@ -10,21 +11,21 @@ import numpy as np
 from loguru import logger
 
 from disruption_py.core.utils.misc import shot_msg_patch, to_tuple
-from disruption_py.inout.mds import MDSConnection
+from disruption_py.inout.base import DataConnection
 from disruption_py.machine.tokamak import Tokamak
 
 
 @dataclass
 class PhysicsMethodParams:
     """
-    Holder for useful variables for the physics methods like an MDSplus connection
+    Holder for useful variables for the physics methods like a data connection
     and the timebase for the data.
     """
 
     shot_id: int
     tokamak: Tokamak
     disruption_time: float
-    mds_conn: MDSConnection
+    data_conn: DataConnection
     times: np.ndarray
 
     def __post_init__(self):
@@ -48,7 +49,7 @@ class PhysicsMethodParams:
         """
         Clean up resources used by the physics method parameters.
         """
-        self.mds_conn.cleanup()
+        self.data_conn.cleanup()
         self.times = None
         self.cached_results.clear()
 
