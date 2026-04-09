@@ -2189,6 +2189,7 @@ class CmodPhysicsMethods:
                 sxr[i] = chord[valid_times]
         sample_time = t_sxr[1] - t_sxr[0]
         sample_freq = 1 / sample_time
+        params.logger.warning(f"Max of SXR Raw: {np.max(sxr)}")
 
         # Remove bad chords by checking each chord's autocorrelation.
         # Bad chords often have significant white noise, meaning low autocorrelation (< 10 ms)
@@ -2213,8 +2214,16 @@ class CmodPhysicsMethods:
                 sxr[i] = 0.
                 continue
             index_no_lag = np.argmax(autocorr)
-            index_decay = np.argmax(autocorr[index_no_lag:] < 0)
+            params.logger.debug(f"Chord {i+1}. Autocorr[index_no_lag]: {autocorr[index_no_lag:index_no_lag + 8]}")
+            crosses_zero = autocorr[index_no_lag:] < 0
+            if np.any(crosses_zero):
+                index_decay = np.argmax(crosses_zero)
+            else:
+                # See shot 1120223007 for example of why this if-else logic is necessary
+                index_decay = len(crosses_zero)
+            params.logger.debug(f"Chord {i+1} index_decay: {index_decay}")
             if index_decay*(1/sample_freq_5khz) < noise_autorr_cutoff:
+                params.logger.debug(f"Removing chord {i+1}. Norm. Autocorr: {index_decay*(1/sample_freq_5khz)}")
                 sxr[i] = 0.
 
         # Noncausal Butterworth low pass filter to smooth transient SXR spikes during TQ.
@@ -2257,6 +2266,7 @@ class CmodPhysicsMethods:
         # Label onset as max of SXR signal on 0.5 ms window preceding max drop in SXR
         # Use raw signal bc smoothed signal as a longer crash time.
         # Note this sometimes picks up on recombination spikes
+        # TODO: Use np.where to take last maximum in case the SXR has saturated and there are multiple maxima
         wndw_before_tq_mid = 0.0005 # [s]
         idx_start = np.argmin(np.abs(t_sxr - (t_max_sxr_drop - wndw_before_tq_mid)))
         idx_end = np.argmin(np.abs(t_sxr - (t_max_sxr_drop)))
