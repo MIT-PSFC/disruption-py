@@ -554,7 +554,7 @@ class CmodPhysicsMethods:
             )
             v_loop, v_loop_time = params.data_conn.get_data_with_dims(
                 r"\efit_aeqdsk:vloopt", tree_name="_efit_tree"
-            )  # [V], [s]
+            )  # [V], [s] 
         if len(v_loop_time) <= 1:
             raise CalculationError("No data for v_loop_time")
 
@@ -2261,8 +2261,31 @@ class CmodPhysicsMethods:
         idx_start = np.argmin(np.abs(t_sxr - (t_max_sxr_drop - wndw_before_tq_mid)))
         idx_end = np.argmin(np.abs(t_sxr - (t_max_sxr_drop)))
         tq_time_scalar = t_sxr[idx_start + np.argmax(core_sxr_raw[idx_start:idx_end])]
-        thermal_quench_time = tq_time_scalar * np.ones(len(params.times))
-        return {"thermal_quench_time": thermal_quench_time}
+
+        # TODO: Delete this block during clean-up
+        # TODO: Comment this out when running over many shots
+        #Write some signals for plotting
+        #Get magnetic axis data from EFIT for testing purposes
+        # z0, efit_time = params.data_conn.get_data_with_dims(
+        #     r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
+        # )  # [cm], [s]
+        # z0 *= 0.01 # [cm] -> [m]
+        import pickle
+        plot_df = {"magtime":magtime,
+                    "ip": ip,
+                    "t_sxr": t_sxr,
+                    "core_sxr_raw": core_sxr_raw,
+                    "core_sxr": core_sxr,
+                    "core_sxr_growth_rate": dcore_sxr_dt,
+                    "t_disrupt": params.disruption_time,
+                    "cq_onset_time": cq_onset_time,
+                    "t_max_sxr_drop": t_max_sxr_drop,
+                    "thermal_quench_time_scalar": tq_time_scalar,
+                    }
+        with open('sxr.pkl', 'wb') as f:
+            pickle.dump(plot_df, f)
+
+        return {"thermal_quench_time": tq_time_scalar*np.ones(len(params.times))}
 
     @staticmethod
     def _is_on_blacklist(shot_id: int) -> bool:
