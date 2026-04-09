@@ -2189,7 +2189,6 @@ class CmodPhysicsMethods:
                 sxr[i] = chord[valid_times]
         sample_time = t_sxr[1] - t_sxr[0]
         sample_freq = 1 / sample_time
-        params.logger.warning(f"Max of SXR Raw: {np.max(sxr)}")
 
         # Remove bad chords by checking each chord's autocorrelation.
         # Bad chords often have significant white noise, meaning low autocorrelation (< 10 ms)
@@ -2271,7 +2270,7 @@ class CmodPhysicsMethods:
         idx_end = np.argmin(np.abs(t_sxr - (t_max_sxr_drop)))
         window = core_sxr_raw[idx_start:idx_end]
         # Want last maximum in case the SXR has saturated and there are multiple maxima
-        max_sxr_indx = np.nonzero(window == np.max(window))[-1]
+        max_sxr_indx = np.nonzero(window == np.max(window))[0][-1]
         tq_time_scalar = t_sxr[idx_start + max_sxr_indx]
 
         # TODO: Delete this block during clean-up
