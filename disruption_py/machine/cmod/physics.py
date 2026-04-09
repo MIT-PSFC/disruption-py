@@ -2261,16 +2261,17 @@ class CmodPhysicsMethods:
         t_max_sxr_drop = t_sxr[idx_start + np.argmin(dcore_sxr_dt[idx_start:idx_end])]
 
         # Find onset of thermal quench in 0.5 ms window prior to midpoint of TQ
-        # Thermal quenches on C-Mod are almost always shorter than 1 ms
-        # Label onset as max of SXR signal on 0.5 ms window preceding max drop in SXR
-        # Use raw signal bc smoothed signal as a longer crash time.
+        # Thermal quenches on C-Mod are almost always shorter than 1 ms, hence the 0.5 ms window
+        # Find max of SXR signal on 0.5 ms window preceding max drop in SXR and label onset as
+        # last timestep with SXR > 90% of that max value
+        # Use raw signal bc smoothed signal has a longer crash time.
         # Note this sometimes picks up on recombination spikes
         wndw_before_tq_midpoint = 0.0005 # [s]
         idx_start = np.argmin(np.abs(t_sxr - (t_max_sxr_drop - wndw_before_tq_midpoint)))
         idx_end = np.argmin(np.abs(t_sxr - (t_max_sxr_drop)))
         window = core_sxr_raw[idx_start:idx_end]
         # Want last maximum in case the SXR has saturated and there are multiple maxima
-        max_sxr_indx = np.nonzero(window == np.max(window))[0][-1]
+        max_sxr_indx = np.nonzero(window >= 0.9*np.max(window))[0][-1]
         tq_time_scalar = t_sxr[idx_start + max_sxr_indx]
 
         # TODO: Delete this block during clean-up
@@ -2281,20 +2282,20 @@ class CmodPhysicsMethods:
         #     r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
         # )  # [cm], [s]
         # z0 *= 0.01 # [cm] -> [m]
-        import pickle
-        plot_df = {"magtime":magtime,
-                    "ip": ip,
-                    "t_sxr": t_sxr,
-                    "core_sxr_raw": core_sxr_raw,
-                    "core_sxr": core_sxr,
-                    "core_sxr_growth_rate": dcore_sxr_dt,
-                    "t_disrupt": params.disruption_time,
-                    "cq_onset_time": cq_onset_time,
-                    "t_max_sxr_drop": t_max_sxr_drop,
-                    "thermal_quench_time_scalar": tq_time_scalar,
-                    }
-        with open('sxr.pkl', 'wb') as f:
-            pickle.dump(plot_df, f)
+        # import pickle
+        # plot_df = {"magtime":magtime,
+        #             "ip": ip,
+        #             "t_sxr": t_sxr,
+        #             "core_sxr_raw": core_sxr_raw,
+        #             "core_sxr": core_sxr,
+        #             "core_sxr_growth_rate": dcore_sxr_dt,
+        #             "t_disrupt": params.disruption_time,
+        #             "cq_onset_time": cq_onset_time,
+        #             "t_max_sxr_drop": t_max_sxr_drop,
+        #             "thermal_quench_time_scalar": tq_time_scalar,
+        #             }
+        # with open('sxr.pkl', 'wb') as f:
+        #     pickle.dump(plot_df, f)
 
         return {"thermal_quench_time": tq_time_scalar*np.ones(len(params.times))}
 

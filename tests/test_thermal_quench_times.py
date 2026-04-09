@@ -65,7 +65,7 @@ print(f"Median |Error| = {1e3*np.median(np.abs(error)):.3f} ms")
 print(f"Std Dev |Error| = {1e3*np.std(np.abs(error)):.3f} ms")
 print(f"Min Error = {1e3*np.min(error):.3f} ms")
 print(f"Max Error = {1e3*np.max(error):.3f} ms")
-print(f"Num Outliers (|error| > 1 ms) = {np.sum(~db_test['within_tq_range'])} out of {len(shotlist)} shots")
+print(f"Num Outliers (outisde TQ [start, end] by >1 ms) = {np.sum(~db_test['within_tq_range'])} out of {len(shotlist)} shots")
 
 # Plot onset errors
 plt.hist(db_test['onset_error_s'], bins=50)

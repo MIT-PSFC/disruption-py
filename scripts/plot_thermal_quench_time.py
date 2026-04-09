@@ -24,7 +24,7 @@ MAN_LABEL = False
 #TODO: Shot 1160714006 having issues (low SXR signal). What do we do about ramp-up?
 # TODO: Shot 11405522001 has significant SXR spike when plasma hits wall, after main TQ
 # TODO: Search for first time at which dSXR/dt is w/in factor of 2 from max?
-SHOT_ID = 1140826003
+SHOT_ID = 1120927010
 signals = [
     "ip",
     "zcur",
