@@ -610,6 +610,7 @@ class D3DPhysicsMethods:
         -------
         - original source: [get_Ip_parameters.m](https://github.com/MIT-PSFC/disruption-py/blob
         /matlab/DIII-D/get_Ip_parameters.m)
+        - issues: #[506](https://github.com/MIT-PSFC/disruption-py/issues/506)
         """
         ip = [np.nan]
         ip_prog = [np.nan]
@@ -684,7 +685,11 @@ class D3DPhysicsMethods:
             # on the last time sample
             t_epsoff += 0.001
             epsoff = interp1(t_epsoff, epsoff, params.times, "linear")
-            railed_indices = np.where(np.abs(epsoff) > 0.5)
+            if params.shot_id >= 198183:
+                # Post 2023/2024 wiring change: high=good, 0=bad
+                (railed_indices,) = np.where(np.abs(epsoff) < 0.5)
+            else:
+                (railed_indices,) = np.where(np.abs(epsoff) > 0.5)
             power_supply_railed = np.zeros(len(params.times))
             power_supply_railed[railed_indices] = 1
             ip_error[railed_indices] = np.nan
@@ -734,6 +739,7 @@ class D3DPhysicsMethods:
         - original source: [get_Ip_parameters_RT.m](https://github.com/MIT-PSFC/disruption-py
         /blob/matlab/DIII-D/get_Ip_parameters_RT.m)
         - pull requests: #[254](https://github.com/MIT-PSFC/disruption-py/pull/254)
+        - issues: #[506](https://github.com/MIT-PSFC/disruption-py/issues/506)
         """
         ip_rt = [np.nan]
         ip_prog_rt = [np.nan]
@@ -823,7 +829,11 @@ class D3DPhysicsMethods:
             t_epsoff += 0.001
             epsoff = interp1(t_epsoff, epsoff, params.times, "linear")
             power_supply_railed = np.zeros(len(params.times))
-            (railed_indices,) = np.where(np.abs(epsoff) > 0.5)
+            if params.shot_id >= 198183:
+                # Post 2023/2024 wiring change: high=good, 0=bad
+                (railed_indices,) = np.where(np.abs(epsoff) < 0.5)
+            else:
+                (railed_indices,) = np.where(np.abs(epsoff) > 0.5)
             power_supply_railed[railed_indices] = 1
         except mdsExceptions.MdsException as e:
             params.logger.warning(
