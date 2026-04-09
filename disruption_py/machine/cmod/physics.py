@@ -2266,11 +2266,13 @@ class CmodPhysicsMethods:
         # Label onset as max of SXR signal on 0.5 ms window preceding max drop in SXR
         # Use raw signal bc smoothed signal as a longer crash time.
         # Note this sometimes picks up on recombination spikes
-        # TODO: Use np.where to take last maximum in case the SXR has saturated and there are multiple maxima
-        wndw_before_tq_mid = 0.0005 # [s]
-        idx_start = np.argmin(np.abs(t_sxr - (t_max_sxr_drop - wndw_before_tq_mid)))
+        wndw_before_tq_midpoint = 0.0005 # [s]
+        idx_start = np.argmin(np.abs(t_sxr - (t_max_sxr_drop - wndw_before_tq_midpoint)))
         idx_end = np.argmin(np.abs(t_sxr - (t_max_sxr_drop)))
-        tq_time_scalar = t_sxr[idx_start + np.argmax(core_sxr_raw[idx_start:idx_end])]
+        window = core_sxr_raw[idx_start:idx_end]
+        # Want last maximum in case the SXR has saturated and there are multiple maxima
+        max_sxr_indx = np.nonzero(window == np.max(window))[-1]
+        tq_time_scalar = t_sxr[idx_start + max_sxr_indx]
 
         # TODO: Delete this block during clean-up
         # TODO: Comment this out when running over many shots
