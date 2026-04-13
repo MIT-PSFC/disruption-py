@@ -194,7 +194,7 @@ class CmodThomsonDensityMeasure:
         n_e = [1e32]
         n_e_sig = [1e32]
         flag = 1
-        _valid_indices, efit_times = CmodEfitMethods.efit_check(params)
+        _, efit_times = CmodEfitMethods.efit_check(params)
         ip = params.data_conn.get_data(r"\ip", "cmod")
         if np.mean(ip) > 0:
             flag = 0
