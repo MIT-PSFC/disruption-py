@@ -1471,10 +1471,15 @@ class CmodPhysicsMethods:
         return CmodPhysicsMethods._get_peaking_factors(
             params.times, ts_time, ts_te, ts_ne, ts_z, efit_time, bminor, z0
         )
-    
+
     @staticmethod
     @physics_method(
-        columns=["ne_line_avg_ts1", "ne_line_avg_ts2", "ne_line_avg_tci1", "ne_line_avg_tci2"],
+        columns=[
+            "ne_line_int_ts1",
+            "ne_line_int_ts2",
+            "ne_line_int_tci1",
+            "ne_line_int_tci2",
+        ],
         tokamak=Tokamak.CMOD,
     )
     def get_ts_tci_comparison(params: PhysicsMethodParams):
@@ -1485,13 +1490,15 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            ne_line_avg_ts1, ne_line_avg_ts2 : TS line-integrated density for YAG 1 and 2 [m^-2]
-            ne_line_avg_tci1, ne_line_avg_tci2 : TCI line-integrated density at YAG 1 and 2 timestamps [m^-2]
+            ne_line_int_ts1 : TS line-integrated density for YAG 1 timestamps [m^-2]
+            ne_line_int_ts2 : TS line-integrated density for YAG 2 timestamps [m^-2]
+            ne_line_int_tci1 : TCI line-integrated density at YAG 1 timestamps [m^-2]
+            ne_line_int_tci2 : TCI line-integrated density at YAG 2 timestamps [m^-2]
         """
         nl_ts1, nl_ts2, nl_tci1, nl_tci2, time1, time2 = (
             CmodThomsonDensityMeasure.compare_ts_tci(params)
         )
-        
+
         # If time1 or time2 is an int (-1) that means there's no valid data, replace with [np.nan]
         if isinstance(time1, int):
             ts1, tci1 = [np.nan], [np.nan]
@@ -1506,12 +1513,11 @@ class CmodPhysicsMethods:
             tci2 = interp1(time2, nl_tci2, params.times)
 
         return {
-            "ne_line_avg_ts1": ts1,
-            "ne_line_avg_ts2": ts2,
-            "ne_line_avg_tci1": tci1,
-            "ne_line_avg_tci2": tci2,
+            "ne_line_int_ts1": ts1,
+            "ne_line_int_ts2": ts2,
+            "ne_line_int_tci1": tci1,
+            "ne_line_int_tci2": tci2,
         }
-
 
     @staticmethod
     def _get_te_profile_params_ece(

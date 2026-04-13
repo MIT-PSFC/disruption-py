@@ -144,6 +144,24 @@ description = "Vertical stability parameter, vacuum field index normalized to cr
 units = "dimensionless"
 validity = [-3, 3]
 
+[cmod.physics.attributes.ne_line_int_tci1]
+description = "TCI line-integrated electron density sampled at YAG 1 laser timestamps."
+imas = "/interferometer/channel(i1)/n_e_line"
+units = "m^-2"
+
+[cmod.physics.attributes.ne_line_int_tci2]
+description = "TCI line-integrated electron density sampled at YAG 2 laser timestamps."
+imas = "/interferometer/channel(i1)/n_e_line"
+units = "m^-2"
+
+[cmod.physics.attributes.ne_line_int_ts1]
+description = "Thomson scattering line-integrated electron density along TCI chord, sampled at YAG 1 laser timestamps."
+units = "m^-2"
+
+[cmod.physics.attributes.ne_line_int_ts2]
+description = "Thomson scattering line-integrated electron density along TCI chord, sampled at YAG 2 laser timestamps."
+units = "m^-2"
+
 [cmod.physics.attributes.ne_peaking]
 description = "Peaking factor of the electron density profile measured by the Thomson scattering diagnostic."
 units = "dimensionless"

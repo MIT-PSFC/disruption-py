@@ -125,5 +125,7 @@ class CmodEfitMethods:
         ]
         _n = values[2].data()
         valid_indices = np.nonzero(_n)
-        (times,) = params.data_conn.get_dims(r"\efit_aeqdsk:lflag", tree_name="_efit_tree")
+        (times,) = params.data_conn.get_dims(
+            r"\efit_aeqdsk:lflag", tree_name="_efit_tree"
+        )
         return valid_indices, times[valid_indices]
