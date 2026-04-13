@@ -223,7 +223,8 @@ class CmodThomsonDensityMeasure:
             nets_edge = np.zeros((len(nets_core[:, 1]), mts_edge))
             nets_edge_err = nets_edge + 1e20
         mts = mts_core + mts_edge
-        rts = params.data_conn.get_data(".YAG.RESULTS.PARAM:R", tree_name="electrons") + np.zeros((1, mts))
+        rts_float = params.data_conn.get_data(".YAG.RESULTS.PARAM:R", tree_name="electrons")
+        rts = np.full((1, mts), rts_float)  # (1, mts) array of chord location in R
         rtci = params.data_conn.get_data(".tci.results:rad", tree_name="electrons")
         nts = len(nets_core_t)
         zts = np.zeros((1, mts))
@@ -246,7 +247,7 @@ class CmodThomsonDensityMeasure:
         ztci = -0.4 + 0.8 * np.arange(0, mtci) / (mtci - 1)
         # There are 10 TCI channels like NL_01, NL_02, ..., NL_10
         # nlnum is 1-indexed to match the channel numbering, but we need to convert it to 0-indexed for array indexing
-        rtci = rtci[nlnum-1] + np.zeros((1, mtci))
+        rtci = rtci[nlnum - 1] + np.zeros((1, mtci))
         psitci = CmodThomsonDensityMeasure._efit_rz2psi(params, rtci, ztci, nets_core_t)
         psia = interp1(psia_t, psia, nets_core_t)
         psi_0 = interp1(psia_t, psi_0, nets_core_t)
