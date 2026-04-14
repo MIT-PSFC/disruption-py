@@ -54,6 +54,7 @@ dependencies = [
   "pandas[parquet]>=2.2.0",
   "pyodbc>=5.2.0",
   "scipy>=1.15.0",
+  "shellcheck-py>=0.10.0",
   "SQLAlchemy>=2.0.0",
   "tqdm>=4.67.0",
   "xarray>=2025.1.0",
