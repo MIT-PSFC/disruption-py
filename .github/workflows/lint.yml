@@ -5,22 +5,12 @@ name: Lint
 # yamllint disable-line rule:truthy
 on:
   push:
-    branches:
-      - main
-      - dev
-  pull_request:
-    branches:
-      - main
-      - dev
 
 jobs:
 
 
   lint:
     runs-on: ubuntu-22.04
-    if: |
-      github.event_name == 'push' ||
-      github.event.pull_request.draft == false
     strategy:
       matrix:
         tool: [black, isort, pylint, ruff, shellcheck, toml-sort, yamllint]
