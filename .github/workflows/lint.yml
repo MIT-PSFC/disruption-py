@@ -23,7 +23,7 @@ jobs:
       github.event.pull_request.draft == false
     strategy:
       matrix:
-        tool: [black, isort, pylint, ruff, toml-sort, yamllint]
+        tool: [black, isort, pylint, ruff, shellcheck, toml-sort, yamllint]
     name: ${{ matrix.tool }}
     steps:
       - uses: actions/checkout@v6
@@ -42,19 +42,3 @@ jobs:
 
       - name: Run ${{ matrix.tool }}
         run: make ${{ matrix.tool }}
-
-
-  shellcheck:
-    runs-on: ubuntu-22.04
-    if: |
-      github.event_name == 'push' ||
-      github.event.pull_request.draft == false
-    steps:
-
-      - uses: actions/checkout@v6
-
-      - name: Install shellcheck
-        run: sudo apt-get install shellcheck
-
-      - name: Run shellcheck
-        run: make shellcheck
