@@ -14,14 +14,13 @@
 #
 # usage examples:
 #
-#    disruption-errors.sh -h
 #    disruption-errors.sh -m get_ip_parameters disruption_warning
 #    disruption-errors.sh /path/to/run/output.log
 #    ls /path/to/run/*log | xargs -n1 disruption-errors.sh
 #
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-IGNORE="${0%.sh}.ignore"
+IGNORE="${BASH_SOURCE[0]%.sh}.ignore"
 
 TMPD="${LOCALSCRATCH:-/tmp}/$USER/disruption-py/.$(date +%F)"
 mkdir -p "$TMPD" || exit 10
@@ -49,7 +48,7 @@ fi
 [[ -s "$LOG" ]] || exit 12
 
 echo -e "\033[36m"
-realpath "$LOG" "$TMPF" "$TMPS"
+realpath -m "$LOG" "$TMPF" "$TMPS"
 
 echo -e "\033[31m"
 grep -e ERROR -e CRITICAL "$LOG" \
