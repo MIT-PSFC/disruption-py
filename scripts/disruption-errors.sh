@@ -75,7 +75,7 @@ done < "$TMPE" \
 echo -e "\033[32m"
 cut -d'|' -f1 "$TMPL.2" \
 | cut -d'#' -f2 \
-| sort -n \
+| sort -un \
 | tee "$TMPL" \
 | xargs
 
