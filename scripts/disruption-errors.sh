@@ -38,9 +38,8 @@ else
    | grep -e ERROR -e CRITICAL -e 'INFO.*workflow' -e 'INFO.*Logging' \
    | grep -vFf "$IGNORE" \
    | tee "$TMPF"
-   echo "disruption-py: rc ${PIPESTATUS[0]}"
 
-   LOG=$(grep -o 'Logging:.*' "$TMPF" | cut -d' ' -f2)
+   LOG=$(grep -o 'Logging:.*\.log' "$TMPF" | cut -d' ' -f2)
 
 fi
 
