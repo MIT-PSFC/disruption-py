@@ -571,18 +571,17 @@ class D3DPhysicsMethods:
         return {"n_e_rt": ne_rt, "greenwald_fraction_rt": g_f_rt, "dn_dt_rt": dne_dt_rt}
 
     @staticmethod
-    @cache_method
     @physics_method(columns=["power_supply_railed"], tokamak=Tokamak.D3D)
     def get_power_supply_railed(params: PhysicsMethodParams):
         """
         Get the power supply railed indicator from the epsoff signal.
 
-        For shots before 196645, times at which power_supply_railed ~=0 (i.e. epsoff ~=0)
+        For shots before 196645, times at which power_supply_railed !=0 (i.e. epsoff !=0)
         mean that PCS feedback control of Ip is not being applied. Therefore the
         'ip_error' parameter is undefined for these times.
 
         For shots starting at 198183, the wiring of epsoff signal was switched to
-        high=good and 0=bad during the 2023/2024 vent.
+        high = good and 0 = bad during the 2023/2024 vent.
 
         Parameters
         ----------
@@ -632,7 +631,6 @@ class D3DPhysicsMethods:
             "ip_error",
             "dip_dt",
             "dipprog_dt",
-            "power_supply_railed",
         ],
         tokamak=Tokamak.D3D,
     )
@@ -654,6 +652,7 @@ class D3DPhysicsMethods:
             A dictionary containing the following keys:
 
             - `ip`: Measured plasma current values interpolated to the specified times.
+            - `ip_prog`: Programmed plasma current values interpolated to the specified times.
             - `ip_error`: Error between the actual and programmed plasma currents.
             - `dip_dt`: Time derivative of the measured plasma current.
             - `dipprog_dt`: Time derivative of the programmed plasma current.
@@ -774,8 +773,8 @@ class D3DPhysicsMethods:
         -------
         - original source: [get_Ip_parameters_RT.m](https://github.com/MIT-PSFC/disruption-py
         /blob/matlab/DIII-D/get_Ip_parameters_RT.m)
-        - pull requests: #[254](https://github.com/MIT-PSFC/disruption-py/pull/254), #[547](https:
-        //github.com/MIT-PSFC/disruption-py/pull/547)
+        - pull requests: #[254](https://github.com/MIT-PSFC/disruption-
+        py/pull/254), #[547](https://github.com/MIT-PSFC/disruption-py/pull/547)
         - issues: #[506](https://github.com/MIT-PSFC/disruption-py/issues/506)
         """
         ip_rt = [np.nan]
