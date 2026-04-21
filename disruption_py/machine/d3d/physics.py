@@ -577,6 +577,13 @@ class D3DPhysicsMethods:
         """
         Get the power supply railed indicator from the epsoff signal.
 
+        For shots before 196645, times at which power_supply_railed ~=0 (i.e. epsoff ~=0)
+        mean that PCS feedback control of Ip is not being applied. Therefore the
+        'ip_error' parameter is undefined for these times.
+
+        For shots starting at 198183, the wiring of epsoff signal was switched to
+        high=good and 0=bad during the 2023/2024 vent.
+
         Parameters
         ----------
         params : PhysicsMethodParams
@@ -585,8 +592,15 @@ class D3DPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the "power_supply_railed" signal, which indicates if 
+            A dictionary containing the "power_supply_railed" signal, which indicates if
             the power supply has railed (1) or not (0), or NaN if failed.
+
+        References
+        -------
+        - original source: [get_Ip_parameters_RT.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/DIII-D/get_Ip_parameters_RT.m)
+        - pull requests: #[547](https://github.com/MIT-PSFC/disruption-py/pull/547)
+        - issues: #[506](https://github.com/MIT-PSFC/disruption-py/issues/506)
         """
         try:
             epsoff, t_epsoff = params.data_conn.get_data_with_dims(
@@ -608,7 +622,7 @@ class D3DPhysicsMethods:
             params.logger.warning("Failed to get epsoff signal. Setting to NaN.")
             params.logger.opt(exception=True).debug(e)
             power_supply_railed = np.full(len(params.times), np.nan)
-        return {'power_supply_railed': power_supply_railed}
+        return {"power_supply_railed": power_supply_railed}
 
     @staticmethod
     @physics_method(
