@@ -926,7 +926,7 @@ class D3DPhysicsMethods:
         /MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_n1rms_d3d.m)
         """
         try:
-            b_tor, t_b_tor = params.mds_conn.get_data_with_dims(
+            b_tor, t_b_tor = params.data_conn.get_data_with_dims(
                 f"ptdata('bt', {params.shot_id})"
             )  # [ms], [T]
         except mdsExceptions.MdsException as e:
@@ -976,13 +976,13 @@ class D3DPhysicsMethods:
 
         try:
             # Get data from the ONFR system
-            n_equal_1_mode, t_n1 = params.mds_conn.get_data_with_dims(
+            n_equal_1_mode, t_n1 = params.data_conn.get_data_with_dims(
                 f"ptdata('onsbradial', {params.shot_id})",
             )  # [G], [ms]
         except mdsExceptions.MdsException:
             try:
                 # Fallback: get data from the legacy DUD system
-                n_equal_1_mode, t_n1 = params.mds_conn.get_data_with_dims(
+                n_equal_1_mode, t_n1 = params.data_conn.get_data_with_dims(
                     f"ptdata('dusbradial', {params.shot_id})",
                 )  # [G], [ms]
                 params.logger.verbose(
