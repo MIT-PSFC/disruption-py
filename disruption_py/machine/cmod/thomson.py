@@ -5,6 +5,7 @@
 import numpy as np
 import scipy
 
+from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
 from disruption_py.inout.mds import mdsExceptions
@@ -271,6 +272,7 @@ class CmodThomsonDensityMeasure:
         return t, z, n_e, n_e_sig
 
     @staticmethod
+    @cache_method
     def _efit_rz2psi(params: PhysicsMethodParams, r, z, t, tree="analysis"):
         """
         Interpolate the magnetic flux function (psi) from R and Z coordinates.

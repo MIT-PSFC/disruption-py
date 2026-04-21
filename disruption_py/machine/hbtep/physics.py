@@ -26,7 +26,6 @@ class HbtepPhysicsMethods:
     """
 
     @staticmethod
-    @cache_method
     @physics_method(columns=["ip"], tokamak=Tokamak.HBTEP)
     def get_ip(params: PhysicsMethodParams):
         """
@@ -55,7 +54,6 @@ class HbtepPhysicsMethods:
         return {"i_vfc": i_vfc, "i_ohc": i_ohc}
 
     @staticmethod
-    @cache_method
     @physics_method(columns=["r", "aminor"], tokamak=Tokamak.HBTEP)
     def get_plasma_radii(params: PhysicsMethodParams):
         """
@@ -134,7 +132,6 @@ class HbtepPhysicsMethods:
         return {"r": r, "aminor": aminor}
 
     @staticmethod
-    @cache_method
     @physics_method(columns=["btor"], tokamak=Tokamak.HBTEP)
     def get_btor(params: PhysicsMethodParams):
         """
