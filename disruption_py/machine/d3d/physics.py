@@ -571,6 +571,46 @@ class D3DPhysicsMethods:
         return {"n_e_rt": ne_rt, "greenwald_fraction_rt": g_f_rt, "dn_dt_rt": dne_dt_rt}
 
     @staticmethod
+    @cache_method
+    @physics_method(columns=["power_supply_railed"], tokamak=Tokamak.D3D)
+    def get_power_supply_railed(params: PhysicsMethodParams):
+        """
+        Get the power supply railed indicator from the epsoff signal.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing data connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the "power_supply_railed" signal, which indicates if 
+            the power supply has railed (1) or not (0), or NaN if failed.
+        """
+        try:
+            epsoff, t_epsoff = params.data_conn.get_data_with_dims(
+                f"ptdata('epsoff', {params.shot_id})"
+            )
+            t_epsoff = t_epsoff / 1.0e3  # [ms] -> [s]
+            # Avoid problem with simultaneity of epsoff being triggered exactly
+            # on the last time sample
+            t_epsoff += 0.001
+            epsoff = interp1(t_epsoff, epsoff, params.times, "linear")
+            power_supply_railed = np.zeros(len(params.times))
+            if params.shot_id >= 198183:
+                # Post 2023/2024 wiring change: high=good, 0=bad
+                (railed_indices,) = np.where(np.abs(epsoff) < 0.5)
+            else:
+                (railed_indices,) = np.where(np.abs(epsoff) > 0.5)
+            power_supply_railed[railed_indices] = 1
+        except mdsExceptions.MdsException as e:
+            params.logger.warning("Failed to get epsoff signal. Setting to NaN.")
+            params.logger.opt(exception=True).debug(e)
+            power_supply_railed = np.full(len(params.times), np.nan)
+        return {'power_supply_railed': power_supply_railed}
+
+    @staticmethod
     @physics_method(
         columns=[
             "ip",
@@ -677,27 +717,10 @@ class D3DPhysicsMethods:
         # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
         # PCS feedback control of Ip is not being applied.  Therefore the
         # 'ip_error' parameter is undefined for these times.
-        try:
-            epsoff, t_epsoff = params.data_conn.get_data_with_dims(
-                f"ptdata('epsoff', {params.shot_id})"
-            )
-            t_epsoff = t_epsoff / 1.0e3  # [ms] -> [s]
-            # Avoid problem with simultaneity of epsoff being triggered exactly
-            # on the last time sample
-            t_epsoff += 0.001
-            epsoff = interp1(t_epsoff, epsoff, params.times, "linear")
-            if params.shot_id >= 198183:
-                # Post 2023/2024 wiring change: high=good, 0=bad
-                (railed_indices,) = np.where(np.abs(epsoff) < 0.5)
-            else:
-                (railed_indices,) = np.where(np.abs(epsoff) > 0.5)
-            power_supply_railed = np.zeros(len(params.times))
-            power_supply_railed[railed_indices] = 1
+        power_supply_railed = D3DPhysicsMethods._get_power_supply_railed(params)
+        if np.isfinite(power_supply_railed).any():
+            (railed_indices,) = np.where(power_supply_railed == 1)
             ip_error[railed_indices] = np.nan
-        except mdsExceptions.MdsException as e:
-            params.logger.warning("Failed to get epsoff signal. Setting to NaN.")
-            params.logger.opt(exception=True).debug(e)
-            power_supply_railed = [np.nan]
         return {
             "ip": ip,
             "ip_prog": ip_prog,
@@ -821,28 +844,7 @@ class D3DPhysicsMethods:
         # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
         # PCS feedback control of Ip is not being applied.  Therefore the
         # 'ip_error' parameter is undefined for these times.
-        try:
-            epsoff, t_epsoff = params.data_conn.get_data_with_dims(
-                f"ptdata('epsoff', {params.shot_id})"
-            )
-            t_epsoff = t_epsoff / 1.0e3  # [ms] -> [s]
-            # Avoid problem with simultaneity of epsoff being triggered exactly on
-            # the last time sample
-            t_epsoff += 0.001
-            epsoff = interp1(t_epsoff, epsoff, params.times, "linear")
-            power_supply_railed = np.zeros(len(params.times))
-            if params.shot_id >= 198183:
-                # Post 2023/2024 wiring change: high=good, 0=bad
-                (railed_indices,) = np.where(np.abs(epsoff) < 0.5)
-            else:
-                (railed_indices,) = np.where(np.abs(epsoff) > 0.5)
-            power_supply_railed[railed_indices] = 1
-        except mdsExceptions.MdsException as e:
-            params.logger.warning(
-                "power_supply_railed: Failed to get epsoff signal. Setting to NaN."
-            )
-            params.logger.opt(exception=True).debug(e)
-            power_supply_railed = np.full(len(params.times), np.nan)
+        power_supply_railed = D3DPhysicsMethods._get_power_supply_railed(params)
         # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
         # PCS feedback control of Ip is not being applied.  Therefore the
         # 'ip_error' parameter is undefined for these times.
