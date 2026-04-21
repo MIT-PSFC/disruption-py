@@ -657,8 +657,6 @@ class D3DPhysicsMethods:
             - `ip_error`: Error between the actual and programmed plasma currents.
             - `dip_dt`: Time derivative of the measured plasma current.
             - `dipprog_dt`: Time derivative of the programmed plasma current.
-            - `power_supply_railed`: Indicator of whether the power supply has railed
-            at the specified times.
 
         References
         -------
@@ -742,7 +740,6 @@ class D3DPhysicsMethods:
             "ip_error": ip_error,
             "dip_dt": dip_dt,
             "dipprog_dt": dipprog_dt,
-            "power_supply_railed": power_supply_railed,
         }
 
     @staticmethod
@@ -861,9 +858,6 @@ class D3DPhysicsMethods:
         # 'ip_error' parameter is undefined for these times.
         power_supply_railed = D3DPhysicsMethods.get_power_supply_railed(params)
         power_supply_railed = power_supply_railed["power_supply_railed"]
-        # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
-        # PCS feedback control of Ip is not being applied.  Therefore the
-        # 'ip_error' parameter is undefined for these times.
         if np.isfinite(ip_error_rt).any() and np.isfinite(power_supply_railed).any():
             (ps_railed_indices,) = np.where(power_supply_railed != 0)
             ip_error_rt[ps_railed_indices] = np.nan
