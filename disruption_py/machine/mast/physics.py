@@ -23,7 +23,6 @@ class MastPhysicsMethods:
     """
 
     @staticmethod
-    @cache_method
     @physics_method(
         columns=["ip", "dip_dt", "ip_prog", "dipprog_dt"],
         tokamak=Tokamak.MAST,
