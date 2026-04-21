@@ -731,7 +731,8 @@ class D3DPhysicsMethods:
         # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
         # PCS feedback control of Ip is not being applied.  Therefore the
         # 'ip_error' parameter is undefined for these times.
-        power_supply_railed = D3DPhysicsMethods._get_power_supply_railed(params)
+        power_supply_railed = D3DPhysicsMethods.get_power_supply_railed(params)
+        power_supply_railed = power_supply_railed["power_supply_railed"]
         if np.isfinite(power_supply_railed).any():
             (railed_indices,) = np.where(power_supply_railed == 1)
             ip_error[railed_indices] = np.nan
@@ -858,7 +859,8 @@ class D3DPhysicsMethods:
         # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
         # PCS feedback control of Ip is not being applied.  Therefore the
         # 'ip_error' parameter is undefined for these times.
-        power_supply_railed = D3DPhysicsMethods._get_power_supply_railed(params)
+        power_supply_railed = D3DPhysicsMethods.get_power_supply_railed(params)
+        power_supply_railed = power_supply_railed["power_supply_railed"]
         # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
         # PCS feedback control of Ip is not being applied.  Therefore the
         # 'ip_error' parameter is undefined for these times.
