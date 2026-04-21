@@ -62,14 +62,14 @@ class CmodEfitMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            The parameters containing the MDS connection and shot information.
+            The parameters containing the data connection and shot information.
 
         Returns
         -------
         dict
             A dictionary containing the retrieved EFIT parameters.
         """
-        efit_time = params.mds_conn.get_data(
+        efit_time = params.data_conn.get_data(
             r"\efit_aeqdsk:time", tree_name="_efit_tree"
         )  # [s]
         efit_data = {}
@@ -77,7 +77,7 @@ class CmodEfitMethods:
         # Get data from each of the columns in efit_cols one at a time
         for param, path in CmodEfitMethods.efit_cols.items():
             try:
-                efit_data[param] = params.mds_conn.get_data(
+                efit_data[param] = params.data_conn.get_data(
                     path=path,
                     tree_name="_efit_tree",
                 )
@@ -108,7 +108,7 @@ class CmodEfitMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            The parameters containing the MDS connection and shot information.
+            The parameters containing the data connection and shot information.
 
         Returns
         -------
@@ -116,7 +116,7 @@ class CmodEfitMethods:
             A tuple containing valid indices and corresponding times.
         """
         values = [
-            params.mds_conn.get(expr, tree_name="analysis")
+            params.data_conn.get(expr, tree_name="analysis")
             for expr in [
                 r"_lf=\efit_aeqdsk:lflag",
                 r"_l0=((sum(_lf,1) - _lf[*,20] - _lf[*,1])==0)",
@@ -125,5 +125,7 @@ class CmodEfitMethods:
         ]
         _n = values[2].data()
         valid_indices = np.nonzero(_n)
-        (times,) = params.mds_conn.get_dims(r"\efit_aeqdsk:lflag", tree_name="analysis")
+        (times,) = params.data_conn.get_dims(
+            r"\efit_aeqdsk:lflag", tree_name="analysis"
+        )
         return valid_indices, times[valid_indices]

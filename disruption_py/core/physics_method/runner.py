@@ -161,7 +161,7 @@ def populate_method(
     Parameters
     ----------
     physics_method_params : PhysicsMethodParams
-        Parameters containing MDS connection and shot information
+        Parameters containing data connection and shot information
     bound_method_metadata : BoundMethodMetadata
         The metadata for a physics method like the associated tokamak, columns, etc.
 
@@ -196,7 +196,7 @@ def populate_method(
 
         # reconnect if needed
         if isinstance(e, mdsExceptions.MDSplusERROR):
-            physics_method_params.mds_conn.reconnect()
+            physics_method_params.data_conn.reconnect()
 
     return result
 
