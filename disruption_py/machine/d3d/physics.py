@@ -903,7 +903,6 @@ class D3DPhysicsMethods:
         return {"zcur": z_cur, "zcur_normalized": z_cur_norm}
 
     @staticmethod
-    @cache_method
     @physics_method(columns=["btor"], tokamak=Tokamak.D3D)
     def get_btor(params: PhysicsMethodParams):
         """
@@ -928,7 +927,7 @@ class D3DPhysicsMethods:
         try:
             b_tor, t_b_tor = params.data_conn.get_data_with_dims(
                 f"ptdata('bt', {params.shot_id})"
-            )  # [ms], [T]
+            )  # [T], [ms]
         except mdsExceptions.MdsException as e:
             params.logger.warning("Failed to get b_tor signal")
             params.logger.opt(exception=True).debug(e)
@@ -944,9 +943,9 @@ class D3DPhysicsMethods:
     )
     def get_n1_bradial_parameters(params: PhysicsMethodParams):
         """
-        This method obtaines the n=1 Bradial information (`n_equal_1_mode`) from
-        the ESLD coils (units of Tesla). It also calculates the normalized Bradial,
-        dividing by the toroidal B-field (`n_equal_1_normalized`).
+        This method obtains the n=1 radial magnetic field information (`n_equal_1_mode`) from
+        the ESLD coils (units of Tesla). It also calculates the normalized radial magnetic field
+        by dividing by the toroidal B-field (`n_equal_1_normalized`).
 
         Parameters
         ----------
@@ -1004,7 +1003,8 @@ class D3DPhysicsMethods:
                 "Failed to get b_tor signal to compute n_equal_1_normalized"
             )
             n_equal_1_normalized = [np.nan]
-        n_equal_1_normalized = n_equal_1_mode / np.abs(b_tor)
+        else:
+            n_equal_1_normalized = n_equal_1_mode / np.abs(b_tor)
         return {
             "n_equal_1_mode": n_equal_1_mode,
             "n_equal_1_normalized": n_equal_1_normalized,
@@ -1042,10 +1042,11 @@ class D3DPhysicsMethods:
         b_tor = D3DPhysicsMethods.get_btor(params)["btor"]
         if np.isnan(b_tor).all():
             params.logger.warning(
-                "Failed to get b_tor signal to compute n_equal_1_normalized"
+                "Failed to get b_tor signal to compute n1rms_normalized"
             )
             n1rms_norm = [np.nan]
-        n1rms_norm = n1rms / np.abs(b_tor)
+        else:
+            n1rms_norm = n1rms / np.abs(b_tor)
         return {"n1rms": n1rms, "n1rms_normalized": n1rms_norm}
 
     # TODO: Need to test and unblock recalculating peaking factors
