@@ -10,7 +10,7 @@ import numpy as np
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.math import interp1, causal_boxcar_smooth
+from disruption_py.core.utils.math import causal_boxcar_smooth, interp1
 from disruption_py.machine.mast.util import MastUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 
@@ -355,7 +355,7 @@ class MastPhysicsMethods:
         conn = params.data_conn
         r0 = conn.get_data("equilibrium/magnetic_axis_r")
         li = conn.get_data("equilibrium/li")
-        v_loop = conn.get_data( "equilibrium/vloop_dynamic")
+        v_loop = conn.get_data("equilibrium/vloop_dynamic")
         ip = conn.get_data("summary/ip")
         summary_time = conn.get_data("summary/time")
         equilibrium_time = conn.get_data("equilibrium/time")
@@ -375,7 +375,7 @@ class MastPhysicsMethods:
         v_inductive = inductance * dip_smoothed
         v_resistive = v_loop - v_inductive
         p_oh = ip * v_resistive
-        
+
         # Set negative p_ohm values to 0
         p_oh = np.clip(p_oh, 0, None)
 
