@@ -8,7 +8,7 @@ Physics methods for MAST.
 import numpy as np
 
 from disruption_py.core.physics_method.decorator import physics_method
-from disruption_py.core.physics_method.errors import CalculationError
+from disruption_py.core.physics_method.errors import MismatchCalculationError
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
 from disruption_py.machine.mast.util import MastUtilMethods
@@ -239,7 +239,9 @@ class MastPhysicsMethods:
             its time derivative (`dn_dt`), and the Greenwald fraction (`greenwald_fraction`).
         """
         if len(n_e) != len(t_n):
-            raise CalculationError("n_e and t_n are different lengths")
+            raise MismatchCalculationError(
+                f"len(n_e) = {len(n_e)} vs. len(t_n) = {len(t_n)}"
+            )
         # get the gradient of n_E
         dn_dt = np.gradient(n_e, t_n)
         n_e = interp1(t_n, n_e, times)

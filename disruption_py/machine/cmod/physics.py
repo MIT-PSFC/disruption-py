@@ -11,7 +11,11 @@ import scipy.constants as const
 
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
-from disruption_py.core.physics_method.errors import CalculationError, FetchDataError
+from disruption_py.core.physics_method.errors import (
+    CalculationError,
+    FetchDataError,
+    MismatchCalculationError,
+)
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import (
     causal_boxcar_smooth,
@@ -555,8 +559,8 @@ class CmodPhysicsMethods:
             v_loop, v_loop_time = params.data_conn.get_data_with_dims(
                 r"\efit_aeqdsk:vloopt", tree_name="_efit_tree"
             )  # [V], [s]
-        if len(v_loop_time) <= 1:
-            raise FetchDataError("v_loop_time")
+        if len(v_loop_time) < 2:
+            raise CalculationError(f"v_loop_time length: {len(v_loop_time)}")
 
         li, efittime = params.data_conn.get_data_with_dims(
             r"\efit_aeqdsk:ali", tree_name="_efit_tree"
@@ -1018,7 +1022,9 @@ class CmodPhysicsMethods:
             its time derivative (`dn_dt`), and the Greenwald fraction (`greenwald_fraction`).
         """
         if len(n_e) != len(t_n):
-            raise CalculationError("n_e and t_n are different lengths")
+            raise MismatchCalculationError(
+                f"len(n_e) = {len(n_e)} vs. len(t_n) = {len(t_n)}"
+            )
         # get the gradient of n_E
         dn_dt = np.gradient(n_e, t_n)
         n_e = interp1(t_n, n_e, times)
@@ -1439,8 +1445,8 @@ class CmodPhysicsMethods:
         ts_z = np.concatenate((ts_z_core, ts_z_edge))
         # Make sure that there are equal numbers of edge position and edge temperature points
         if len(ts_z_edge) != ts_te_edge.shape[0]:
-            raise CalculationError(
-                "TS edge data and z positions are not the same length for shot"
+            raise MismatchCalculationError(
+                f"len(ts_z_edge) = {len(ts_z_edge)} vs. ts_te_edge.shape[0] = {ts_te_edge.shape[0]}"
             )
 
         # Calibrate ts_ne using TCI -- slow
