@@ -11,7 +11,7 @@ import scipy.constants as const
 
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
-from disruption_py.core.physics_method.errors import CalculationError
+from disruption_py.core.physics_method.errors import CalculationError, FetchDataError
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import (
     causal_boxcar_smooth,
@@ -418,7 +418,7 @@ class CmodPhysicsMethods:
                     continue
                 break
         if z_wire_index == -1:
-            raise CalculationError("Data source error: No ZCUR wire was found")
+            raise FetchDataError("ZCUR wire")
         # Read in A_OUT, which is a 16xN matrix of the errors for *all* 16 wires for
         # *all* of the segments. Note that DPCS time is usually taken at 10kHz.
         wire_errors, dpcstime = params.data_conn.get_data_with_dims(
@@ -556,7 +556,7 @@ class CmodPhysicsMethods:
                 r"\efit_aeqdsk:vloopt", tree_name="_efit_tree"
             )  # [V], [s]
         if len(v_loop_time) <= 1:
-            raise CalculationError("No data for v_loop_time")
+            raise FetchDataError("v_loop_time")
 
         li, efittime = params.data_conn.get_data_with_dims(
             r"\efit_aeqdsk:ali", tree_name="_efit_tree"
