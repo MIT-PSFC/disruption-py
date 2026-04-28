@@ -12,6 +12,7 @@ import xarray as xr
 from loguru import logger
 
 from disruption_py.config import config
+from disruption_py.core.physics_method.errors import FetchDataError
 from disruption_py.core.utils.misc import shot_msg
 from disruption_py.inout.base import DataConnection, ProcessConnection
 from disruption_py.machine.tokamak import Tokamak
@@ -103,8 +104,12 @@ class XarrayDataConnection(DataConnection):
         return path
 
     def get_data(
-        self, path: str, group: str = None, return_xarray: bool = False, **kwargs
-    ) -> "np.ndarray | xr.DataArray | None":
+        self,
+        path: str,
+        group: str = None,
+        return_xarray: bool = False,
+        **kwargs,
+    ) -> np.ndarray | xr.DataArray:
         """Get data from the connection.
 
         Parameters
@@ -120,31 +125,18 @@ class XarrayDataConnection(DataConnection):
 
         Returns
         -------
-        np.ndarray or xr.DataArray or None
-            numpy array by default, xr.DataArray if return_xarray=True,
-            or None if variable not found and return_xarray=True.
+        np.ndarray or xr.DataArray
+            numpy array by default, xr.DataArray if return_xarray=True.
         """
         path = self._resolve_path(path, group)
         logger.trace(shot_msg("Getting data: {path}"), shot=self._shot_id, path=path)
 
         try:
             item = self.data_tree[path]
+        except KeyError as e:
+            raise FetchDataError(path) from e
 
-            if return_xarray:
-                return item
-
-            return item.values
-        except KeyError:
-            logger.warning(
-                shot_msg("Variable not found: {path}"),
-                path=path,
-                shot=self._shot_id,
-            )
-
-        if return_xarray:
-            return None
-
-        return np.array([np.nan])
+        return item if return_xarray else item.values
 
     def get_data_with_dims(
         self,
