@@ -601,26 +601,21 @@ class D3DPhysicsMethods:
         - pull requests: #[547](https://github.com/MIT-PSFC/disruption-py/pull/547)
         - issues: #[506](https://github.com/MIT-PSFC/disruption-py/issues/506)
         """
-        try:
-            epsoff, t_epsoff = params.data_conn.get_data_with_dims(
-                f"ptdata('epsoff', {params.shot_id})"
-            )
-            t_epsoff = t_epsoff / 1.0e3  # [ms] -> [s]
-            # Avoid problem with simultaneity of epsoff being triggered exactly
-            # on the last time sample
-            t_epsoff += 0.001
-            epsoff = interp1(t_epsoff, epsoff, params.times, "linear")
-            power_supply_railed = np.zeros(len(params.times))
-            if params.shot_id >= 198183:
-                # Post 2023/2024 wiring change: high=good, 0=bad
-                (railed_indices,) = np.where(np.abs(epsoff) < 0.5)
-            else:
-                (railed_indices,) = np.where(np.abs(epsoff) > 0.5)
-            power_supply_railed[railed_indices] = 1
-        except mdsExceptions.MdsException as e:
-            params.logger.warning("Failed to get epsoff signal. Setting to NaN.")
-            params.logger.opt(exception=True).debug(e)
-            power_supply_railed = np.full(len(params.times), np.nan)
+        epsoff, t_epsoff = params.data_conn.get_data_with_dims(
+            f"ptdata('epsoff', {params.shot_id})"
+        )
+        t_epsoff = t_epsoff / 1.0e3  # [ms] -> [s]
+        # Avoid problem with simultaneity of epsoff being triggered exactly
+        # on the last time sample
+        t_epsoff += 0.001
+        epsoff = interp1(t_epsoff, epsoff, params.times, "linear")
+        power_supply_railed = np.zeros(len(params.times))
+        if params.shot_id >= 198183:
+            # Post 2023/2024 wiring change: high=good, 0=bad
+            (railed_indices,) = np.where(np.abs(epsoff) < 0.5)
+        else:
+            (railed_indices,) = np.where(np.abs(epsoff) > 0.5)
+        power_supply_railed[railed_indices] = 1
         return {"power_supply_railed": power_supply_railed}
 
     @staticmethod
@@ -728,11 +723,18 @@ class D3DPhysicsMethods:
         # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
         # PCS feedback control of Ip is not being applied.  Therefore the
         # 'ip_error' parameter is undefined for these times.
-        power_supply_railed = D3DPhysicsMethods.get_power_supply_railed(params)
-        power_supply_railed = power_supply_railed["power_supply_railed"]
-        if np.isfinite(power_supply_railed).any():
-            (railed_indices,) = np.where(power_supply_railed == 1)
-            ip_error[railed_indices] = np.nan
+        try:
+            power_supply_railed = D3DPhysicsMethods.get_power_supply_railed(params)
+            power_supply_railed = power_supply_railed["power_supply_railed"]
+            if np.isfinite(power_supply_railed).any():
+                (railed_indices,) = np.where(power_supply_railed == 1)
+                ip_error[railed_indices] = np.nan
+        except mdsExceptions.MdsException:
+            params.logger.warning(
+                "get_ip_parameters: Failed to get power_supply_railed signal "
+                "to filter out time points where ip_error is not defined. "
+                "Returning ip_error as is."
+            )
         return {
             "ip": ip,
             "ip_prog": ip_prog,
@@ -855,11 +857,21 @@ class D3DPhysicsMethods:
         # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
         # PCS feedback control of Ip is not being applied.  Therefore the
         # 'ip_error' parameter is undefined for these times.
-        power_supply_railed = D3DPhysicsMethods.get_power_supply_railed(params)
-        power_supply_railed = power_supply_railed["power_supply_railed"]
-        if np.isfinite(ip_error_rt).any() and np.isfinite(power_supply_railed).any():
-            (ps_railed_indices,) = np.where(power_supply_railed != 0)
-            ip_error_rt[ps_railed_indices] = np.nan
+        try:
+            power_supply_railed = D3DPhysicsMethods.get_power_supply_railed(params)
+            power_supply_railed = power_supply_railed["power_supply_railed"]
+            if (
+                np.isfinite(ip_error_rt).any()
+                and np.isfinite(power_supply_railed).any()
+            ):
+                (ps_railed_indices,) = np.where(power_supply_railed != 0)
+                ip_error_rt[ps_railed_indices] = np.nan
+        except mdsExceptions.MdsException:
+            params.logger.warning(
+                "get_rt_ip_parameters: Failed to get power_supply_railed signal "
+                "to filter out time points where ip_error_rt is not defined. "
+                "Returning ip_error_rt as is."
+            )
         return {
             "ip_rt": ip_rt,
             "ip_prog_rt": ip_prog_rt,
