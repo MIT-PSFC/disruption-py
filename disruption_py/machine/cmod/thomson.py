@@ -41,10 +41,10 @@ class CmodThomsonDensityMeasure:
         nl_tci2 = [1e32]
         ts_time1 = [1e32]
         ts_time2 = [1e32]
-        (tci_time,) = params.data_conn.get_dims(
+        (tci_time,) = params.get_dims(
             ".YAG_NEW.RESULTS.PROFILES:NE_RZ", tree_name="electrons"
         )
-        tci, tci_t = params.data_conn.get_data_with_dims(
+        tci, tci_t = params.get_data_with_dims(
             f".TCI.RESULTS:NL_{nlnum:02d}", tree_name="electrons"
         )
         nlts, nlts_t = CmodThomsonDensityMeasure._integrate_ts_tci(params, nlnum)
@@ -83,12 +83,12 @@ class CmodThomsonDensityMeasure:
         tuple
             Tuple containing the number of YAGs and their indices.
         """
-        nyag1 = params.data_conn.get_data(r"\knobs:pulses_q", tree_name="electrons")
-        nyag2 = params.data_conn.get_data(r"\knobs:pulses_q_2", tree_name="electrons")
+        nyag1 = params.get_data(r"\knobs:pulses_q", tree_name="electrons")
+        nyag2 = params.get_data(r"\knobs:pulses_q_2", tree_name="electrons")
         indices1 = -1
         indices2 = -1
-        dark = params.data_conn.get_data(r"\n_dark_prior", tree_name="electrons")
-        ntotal = params.data_conn.get_data(r"\n_total", tree_name="electrons")
+        dark = params.get_data(r"\n_dark_prior", tree_name="electrons")
+        ntotal = params.get_data(r"\n_total", tree_name="electrons")
         nt = ntotal - dark
         if nyag1 == 0:
             if nyag2 != 0:
@@ -186,39 +186,39 @@ class CmodThomsonDensityMeasure:
         n_e_sig = [1e32]
         flag = 1
         valid_indices, efit_times = CmodEfitMethods.efit_check(params)
-        ip = params.data_conn.get_data(r"\ip", "cmod")
+        ip = params.get_data(r"\ip", "cmod")
         if np.mean(ip) > 0:
             flag = 0
-        efit_times = params.data_conn.get_data(
+        efit_times = params.get_data(
             r"\efit_aeqdsk:time", tree_name="_efit_tree"
         )
         t1 = np.amin(efit_times)
         t2 = np.amax(efit_times)
-        psia, psia_t = params.data_conn.get_data_with_dims(
+        psia, psia_t = params.get_data_with_dims(
             r"\efit_aeqdsk:SIBDRY", tree_name="_efit_tree"
         )
         psi_0 = params.data_conn.get(r"\efit_aeqdsk:SIMAGX", tree_name="_efit_tree")
-        nets_core, nets_core_t = params.data_conn.get_data_with_dims(
+        nets_core, nets_core_t = params.get_data_with_dims(
             ".YAG_NEW.RESULTS.PROFILES:NE_RZ", tree_name="electrons"
         )
-        nets_core_err = params.data_conn.get_data(
+        nets_core_err = params.get_data(
             ".YAG_NEW.RESULTS.PROFILES:NE_ERR", tree_name="electrons"
         )
-        zts_core = params.data_conn.get_data(
+        zts_core = params.get_data(
             ".YAG_NEW.RESULTS.PROFILES:Z_SORTED", tree_name="electrons"
         )
         mts_core = len(zts_core)
-        zts_edge = params.data_conn.get_data(r"\fiber_z")
+        zts_edge = params.get_data(r"\fiber_z")
         mts_edge = len(zts_edge)
         try:
-            nets_edge = params.data_conn.get_data(r"\ts_ne")
-            nets_edge_err = params.data_conn.get_data(r"\ts_ne_err")
+            nets_edge = params.get_data(r"\ts_ne")
+            nets_edge_err = params.get_data(r"\ts_ne_err")
         except mdsExceptions.MdsException:
             nets_edge = np.zeros((len(nets_core[:, 1]), mts_edge))
             nets_edge_err = nets_edge + 1e20
         mts = mts_core + mts_edge
         rts = params.data_conn.get(".YAG.RESULTS.PARAM:R") + np.zeros((1, mts))
-        rtci = params.data_conn.get_data(".tci.results:rad")
+        rtci = params.get_data(".tci.results:rad")
         nts = len(nets_core_t)
         zts = np.zeros((1, mts))
         zts[:, :mts_core] = zts_core
@@ -298,7 +298,7 @@ class CmodThomsonDensityMeasure:
         r = r.flatten()
         z = z.flatten()
         psi = np.full((len(r), len(t)), np.nan)
-        psirz, rgrid, zgrid, times = params.data_conn.get_data_with_dims(
+        psirz, rgrid, zgrid, times = params.get_data_with_dims(
             r"\efit_geqdsk:psirz", tree_name=tree, dim_nums=[0, 1, 2]
         )
         rgrid, zgrid = np.meshgrid(rgrid, zgrid)

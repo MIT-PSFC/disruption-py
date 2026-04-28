@@ -61,7 +61,7 @@ class CmodPhysicsMethods:
         for node_path in children_paths:
             node_path = node_path.strip()
             if node_path.split(".")[-1].startswith("SEG_"):
-                is_on = params.data_conn.get_data(
+                is_on = params.get_data(
                     'getnci($, "STATE")', arguments=f"{node_path}:SEG_NUM"
                 )
                 # 0 represents node being on, 1 represents node being off
@@ -70,7 +70,7 @@ class CmodPhysicsMethods:
                 active_segments.append(
                     (
                         node_path,
-                        params.data_conn.get_data(
+                        params.get_data(
                             f"{node_path}:start_time", tree_name="pcs"
                         ),
                     )
@@ -226,17 +226,17 @@ class CmodPhysicsMethods:
         for node_path, start in active_segments:
             # Ip wire can be one of 16 but is normally no. 16
             for wire_index in range(16, 0, -1):
-                wire_node_name = params.data_conn.get_data(
+                wire_node_name = params.get_data(
                     f"{node_path}:P_{wire_index:02d}:name", tree_name="pcs"
                 )
                 if wire_node_name == "IP":
                     try:
-                        pid_gains = params.data_conn.get_data(
+                        pid_gains = params.get_data(
                             f"{node_path}:P_{wire_index:02d}:pid_gains",
                             tree_name="pcs",
                         )
                         if np.any(pid_gains):
-                            signal, sigtime = params.data_conn.get_data_with_dims(
+                            signal, sigtime = params.get_data_with_dims(
                                 f"{node_path}:P_{wire_index:02d}", tree_name="pcs"
                             )
                             ip_prog_temp = interp1(
@@ -257,7 +257,7 @@ class CmodPhysicsMethods:
                         params.logger.warning(repr(e))
                         params.logger.opt(exception=True).debug(e)
                     break  # Break out of wire_index loop
-        ip, magtime = params.data_conn.get_data_with_dims(
+        ip, magtime = params.get_data_with_dims(
             r"\ip", tree_name="magnetics"
         )  # [A], [s]
         return CmodPhysicsMethods._get_ip_parameters(
@@ -380,17 +380,17 @@ class CmodPhysicsMethods:
 
         for node_path, start in active_wire_segments:
             for wire_index in range(1, 17):
-                wire_node_name = params.data_conn.get_data(
+                wire_node_name = params.get_data(
                     f"{node_path}:P_{wire_index:02d}:name", tree_name="pcs"
                 )
                 if wire_node_name == "ZCUR":
                     try:
-                        pid_gains = params.data_conn.get_data(
+                        pid_gains = params.get_data(
                             f"{node_path}:P_{wire_index:02d}:pid_gains",
                             tree_name="pcs",
                         )
                         if np.any(pid_gains):
-                            signal, sigtime = params.data_conn.get_data_with_dims(
+                            signal, sigtime = params.get_data_with_dims(
                                 f"{node_path}:P_{wire_index:02d}", tree_name="pcs"
                             )
                             end = sigtime[
@@ -421,7 +421,7 @@ class CmodPhysicsMethods:
             raise CalculationError("Data source error: No ZCUR wire was found")
         # Read in A_OUT, which is a 16xN matrix of the errors for *all* 16 wires for
         # *all* of the segments. Note that DPCS time is usually taken at 10kHz.
-        wire_errors, dpcstime = params.data_conn.get_data_with_dims(
+        wire_errors, dpcstime = params.get_data_with_dims(
             r"\top.hardware.dpcs.signals:a_out", tree_name="hybrid", dim_nums=[1]
         )
         # The value of Z_error we read is not in the units we want. It must be *divided*
@@ -438,7 +438,7 @@ class CmodPhysicsMethods:
             else:
                 end = active_wire_segments[i + 1][1]
             # DPCS refers to PCS so we need to open the common ancestor tree, HYBRID
-            z_factor = params.data_conn.get_data(
+            z_factor = params.get_data(
                 rf"\dpcs::top.seg_{i + 1:02d}:p_{z_wire_index:02d}:predictor:factor",
                 tree_name="hybrid",
             )
@@ -452,16 +452,16 @@ class CmodPhysicsMethods:
         # before 2015.
         # TODO: Try to fix this
         if params.shot_id > 1150101000:
-            ip_without_factor = params.data_conn.get_data(
+            ip_without_factor = params.get_data(
                 r"\top.hardware.dpcs.signals.a_in:input_056", tree_name="hybrid"
             )
-            ip_factor = params.data_conn.get_data(
+            ip_factor = params.get_data(
                 r"\top.dpcs_config.inputs:input_056:p_to_v_expr",
                 tree_name="hybrid",
             )
             ip = ip_without_factor * ip_factor  # [A]
         else:
-            ip, ip_time = params.data_conn.get_data_with_dims(
+            ip, ip_time = params.get_data_with_dims(
                 r"\ip", tree_name="magnetics"
             )  # [A], [s]
             ip = interp1(ip_time, ip, dpcstime)
@@ -542,7 +542,7 @@ class CmodPhysicsMethods:
         - pull requests: #[367](https://github.com/MIT-PSFC/disruption-py/pull/367)
         """
         try:
-            v_loop, v_loop_time = params.data_conn.get_data_with_dims(
+            v_loop, v_loop_time = params.get_data_with_dims(
                 r"\top.mflux:v0", tree_name="analysis"
             )  # [V], [s]
             # Apply 6-point boxcar smoothing to raw vloop signal.
@@ -552,17 +552,17 @@ class CmodPhysicsMethods:
             params.logger.verbose(
                 r"v_loop: Failed to get \top.mflux:v0 data. Use \efit_aeqdsk:vloopt instead."
             )
-            v_loop, v_loop_time = params.data_conn.get_data_with_dims(
+            v_loop, v_loop_time = params.get_data_with_dims(
                 r"\efit_aeqdsk:vloopt", tree_name="_efit_tree"
             )  # [V], [s]
         if len(v_loop_time) <= 1:
             raise CalculationError("No data for v_loop_time")
 
-        li, efittime = params.data_conn.get_data_with_dims(
+        li, efittime = params.get_data_with_dims(
             r"\efit_aeqdsk:ali", tree_name="_efit_tree"
         )  # [dimensionless], [s]
         ip_parameters = CmodPhysicsMethods.get_ip_parameters(params=params)
-        r0 = params.data_conn.get_data(
+        r0 = params.get_data(
             r"\efit_aeqdsk:rmagx/100", tree_name="_efit_tree"
         )  # [m]
 
@@ -739,7 +739,7 @@ class CmodPhysicsMethods:
             p = f"p_{val}"
             t = f"t_{val}"
             try:
-                kwa[p], kwa[t] = params.data_conn.get_data_with_dims(
+                kwa[p], kwa[t] = params.get_data_with_dims(
                     node, tree_name=tree
                 )
             except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF):
@@ -751,7 +751,7 @@ class CmodPhysicsMethods:
         except mdsExceptions.TreeException:
             kwa["p_ohm"] = np.full(len(params.times), np.nan)
         # Plasma magnetic energy, and respective time base
-        kwa["wmhd"], kwa["efit_time"] = params.data_conn.get_data_with_dims(
+        kwa["wmhd"], kwa["efit_time"] = params.get_data_with_dims(
             r"\efit_aeqdsk:wplasm", tree_name="_efit_tree"
         )  # [J], [s]
         return CmodPhysicsMethods._get_power(params.times, **kwa)
@@ -807,13 +807,13 @@ class CmodPhysicsMethods:
         - original source: [get_kappa_area.m](https://github.com/MIT-PSFC/disruption-py/
         blob/matlab/CMOD/matlab-core/get_kappa_area.m)
         """
-        aminor = params.data_conn.get_data(
+        aminor = params.get_data(
             r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )  # [m]
-        area = params.data_conn.get_data(
+        area = params.get_data(
             r"\efit_aeqdsk:areao/1e4", tree_name="_efit_tree"
         )  # [m^2]
-        times = params.data_conn.get_data(
+        times = params.get_data(
             r"\efit_aeqdsk:time", tree_name="_efit_tree"
         )  # [s]
 
@@ -891,11 +891,11 @@ class CmodPhysicsMethods:
         a = []
 
         path = r"\mag_bp_coils."
-        bp_node_names = params.data_conn.get_data(
+        bp_node_names = params.get_data(
             f"{path}nodename", tree_name="magnetics"
         )
-        phi = params.data_conn.get_data(f"{path}phi", tree_name="magnetics")  # [degree]
-        btor_pickup_coeffs = params.data_conn.get_data(
+        phi = params.get_data(f"{path}phi", tree_name="magnetics")  # [degree]
+        btor_pickup_coeffs = params.get_data(
             f"{path}btor_pickup", tree_name="magnetics"
         )  # [dimensionless]
         _, bp13_indices, _ = np.intersect1d(
@@ -903,7 +903,7 @@ class CmodPhysicsMethods:
         )
         bp13_phi = phi[bp13_indices] + 360  # INFO
         bp13_btor_pickup_coeffs = btor_pickup_coeffs[bp13_indices]
-        btor, t_mag = params.data_conn.get_data_with_dims(
+        btor, t_mag = params.get_data_with_dims(
             r"\btor", tree_name="magnetics"
         )  # [T], [s]
         # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
@@ -918,7 +918,7 @@ class CmodPhysicsMethods:
 
         for i, bp13_name in enumerate(bp13_names):
             try:
-                signal = params.data_conn.get_data(
+                signal = params.get_data(
                     path + bp13_name, tree_name="magnetics"
                 )  # [T]
             # Sensor not available, skip
@@ -1069,17 +1069,17 @@ class CmodPhysicsMethods:
         matlab/CMOD/matlab-core/get_densities.m)
         """
         # Line-integrated density
-        n_e, t_n = params.data_conn.get_data_with_dims(
+        n_e, t_n = params.get_data_with_dims(
             r".tci.results:nl_04", tree_name="electrons"
         )  # [m^-3], [s]
         # Divide by chord length of ~0.6m to get line averaged density.
         # For future refernce, chord length is stored in
         # .01*\analysis::efit_aeqdsk:rco2v[3,*]
         n_e = np.squeeze(n_e) / 0.6
-        ip, t_ip = params.data_conn.get_data_with_dims(
+        ip, t_ip = params.get_data_with_dims(
             r"\ip", tree_name="magnetics"
         )  # [A], [s]
-        a_minor, t_a = params.data_conn.get_data_with_dims(
+        a_minor, t_a = params.get_data_with_dims(
             r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )  # [m], [s]
 
@@ -1129,7 +1129,7 @@ class CmodPhysicsMethods:
         - original source: [get_efc_current.m](https://github.com/MIT-PSFC/disruption-py/
         blob/matlab/CMOD/matlab-core/get_efc_current.m)
         """
-        iefc, t_iefc = params.data_conn.get_data_with_dims(
+        iefc, t_iefc = params.get_data_with_dims(
             r"\efc:u_bus_r_cur", tree_name="engineering"
         )  # [A], [s]
         return CmodPhysicsMethods._get_efc_current(params.times, iefc, t_iefc)
@@ -1243,13 +1243,13 @@ class CmodPhysicsMethods:
         # dependent dimensions being time and z (vertical coordinate)
         node_path = ".yag_new.results.profiles"
 
-        ts_data, ts_time = params.data_conn.get_data_with_dims(
+        ts_data, ts_time = params.get_data_with_dims(
             f"{node_path}:te_rz", tree_name="electrons"
         )  # [keV], [s]
-        ts_z = params.data_conn.get_data(
+        ts_z = params.get_data(
             f"{node_path}:z_sorted", tree_name="electrons"
         )  # [m]
-        ts_error = params.data_conn.get_data(
+        ts_error = params.get_data(
             f"{node_path}:te_err", tree_name="electrons"
         )  # [keV]
 
@@ -1404,38 +1404,38 @@ class CmodPhysicsMethods:
             raise CalculationError("Shot is on blacklist")
         # Fetch data
         # Get EFIT geometry data
-        z0 = params.data_conn.get_data(
+        z0 = params.get_data(
             r"\efit_aeqdsk:zmagx/100", tree_name="_efit_tree"
         )  # [m]
-        kappa = params.data_conn.get_data(
+        kappa = params.get_data(
             r"\efit_aeqdsk:kappa", tree_name="_efit_tree"
         )  # [dimensionless]
-        aminor, efit_time = params.data_conn.get_data_with_dims(
+        aminor, efit_time = params.get_data_with_dims(
             r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )  # [m], [s]
         bminor = aminor * kappa
 
         # Get Te data and TS time basis
         node_ext = ".yag_new.results.profiles"
-        ts_te_core, ts_time = params.data_conn.get_data_with_dims(
+        ts_te_core, ts_time = params.get_data_with_dims(
             f"{node_ext}:te_rz", tree_name="electrons"
         )  # [keV], [s]
         ts_te_core = ts_te_core * 1000  # [keV] -> [eV]
-        ts_te_edge = params.data_conn.get_data(r"\ts_te")  # [eV]
+        ts_te_edge = params.get_data(r"\ts_te")  # [eV]
         ts_te = np.concatenate((ts_te_core, ts_te_edge)) * 11600  # [eV] -> [K]
 
         # Get ne data
-        ts_ne_core = params.data_conn.get_data(
+        ts_ne_core = params.get_data(
             f"{node_ext}:ne_rz", tree_name="electrons"
         )  # [m^-3]
-        ts_ne_edge = params.data_conn.get_data(r"\ts_ne")  # [m^-3]
+        ts_ne_edge = params.get_data(r"\ts_ne")  # [m^-3]
         ts_ne = np.concatenate((ts_ne_core, ts_ne_edge))
 
         # Get TS chord positions
-        ts_z_core = params.data_conn.get_data(
+        ts_z_core = params.get_data(
             f"{node_ext}:z_sorted", tree_name="electrons"
         )  # [m]
-        ts_z_edge = params.data_conn.get_data(r"\fiber_z", tree_name="electrons")  # [m]
+        ts_z_edge = params.get_data(r"\fiber_z", tree_name="electrons")  # [m]
         ts_z = np.concatenate((ts_z_core, ts_z_edge))
         # Make sure that there are equal numbers of edge position and edge temperature points
         if len(ts_z_edge) != ts_te_edge.shape[0]:
@@ -1793,19 +1793,19 @@ class CmodPhysicsMethods:
         """
 
         # Get magnetic axis data from EFIT
-        r0 = params.data_conn.get_data(
+        r0 = params.get_data(
             r"\efit_aeqdsk:rmagx/100", tree_name="_efit_tree"
         )  # [m]
-        aminor, efit_time = params.data_conn.get_data_with_dims(
+        aminor, efit_time = params.get_data_with_dims(
             r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )  # [m], [s]
 
         # Btor and LH Power used for filtering okay time slices
-        btor, t_mag = params.data_conn.get_data_with_dims(
+        btor, t_mag = params.get_data_with_dims(
             r"\btor", tree_name="magnetics"
         )  # [T], [s]
         try:
-            lh_power, lh_time = params.data_conn.get_data_with_dims(
+            lh_power, lh_time = params.get_data_with_dims(
                 ".results:netpow", tree_name="lh"
             )  # [kW], [s]
         except mdsExceptions.MdsException:
@@ -1817,15 +1817,15 @@ class CmodPhysicsMethods:
 
         # Read in Te profile measurements from GPC2 (19 channels)
         node_path = ".gpc_2.results"
-        gpc2_te_data, gpc2_te_time = params.data_conn.get_data_with_dims(
+        gpc2_te_data, gpc2_te_time = params.get_data_with_dims(
             f"{node_path}:gpc2_te", tree_name="electrons"
         )  # [keV], [s]
-        gpc2_rad_data, gpc2_rad_time = params.data_conn.get_data_with_dims(
+        gpc2_rad_data, gpc2_rad_time = params.get_data_with_dims(
             f"{node_path}:radii", tree_name="electrons"
         )  # [m], [s]
         # Te0 from GPC2 useful to check for outliers in the GPC channels
         # which be caused by some artifact or systematic error
-        gpc2_te0 = params.data_conn.get_data(r"\gpc2_te0", tree_name="electrons")
+        gpc2_te0 = params.get_data(r"\gpc2_te0", tree_name="electrons")
         # Line average density [m^-3] to check for cutoffs
         densities = CmodPhysicsMethods.get_densities(params)
         n_e = densities["n_e"]
@@ -1878,27 +1878,27 @@ class CmodPhysicsMethods:
         """
         prad_peaking = np.full(len(params.times), np.nan)
         nan_output = {"prad_peaking": prad_peaking}
-        r0 = params.data_conn.get_data(
+        r0 = params.get_data(
             r"\efit_aeqdsk:rmagx/100", tree_name="_efit_tree"
         )  # [m]
-        z0 = params.data_conn.get_data(
+        z0 = params.get_data(
             r"\efit_aeqdsk:zmagx/100", tree_name="_efit_tree"
         )  # [m]
-        aminor, efit_time = params.data_conn.get_data_with_dims(
+        aminor, efit_time = params.get_data_with_dims(
             r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )  # [m], [s]
         got_axa = False
         try:
-            bright_axa, t_axa, r_axa = params.data_conn.get_data_with_dims(
+            bright_axa, t_axa, r_axa = params.get_data_with_dims(
                 r"\TOP.BOLOMETER.RESULTS.DIODE.AXA:BRIGHT",
                 tree_name="spectroscopy",
                 dim_nums=[1, 0],
             )  # [W/m^2], [s], [m]
-            z_axa = params.data_conn.get_data(
+            z_axa = params.get_data(
                 r"\TOP.BOLOMETER.DIODE_CALIB.AXA:Z_O",
                 tree_name="spectroscopy",
             )  # [m]
-            good_axa = params.data_conn.get_data(
+            good_axa = params.get_data(
                 r"\TOP.BOLOMETER.DIODE_CALIB.AXA:GOOD",
                 tree_name="spectroscopy",
             )  # [index]
@@ -1907,16 +1907,16 @@ class CmodPhysicsMethods:
             params.logger.debug("Failed to get AXA data")
         got_axj = False
         try:
-            bright_axj, t_axj, r_axj = params.data_conn.get_data_with_dims(
+            bright_axj, t_axj, r_axj = params.get_data_with_dims(
                 r"\TOP.BOLOMETER.RESULTS.DIODE.AXJ:BRIGHT",
                 tree_name="spectroscopy",
                 dim_nums=[1, 0],
             )  # [W/m^2], [s], [m]
-            z_axj = params.data_conn.get_data(
+            z_axj = params.get_data(
                 r"\TOP.BOLOMETER.DIODE_CALIB.AXJ:Z_O",
                 tree_name="spectroscopy",
             )  # [m]
-            good_axj = params.data_conn.get_data(
+            good_axj = params.get_data(
                 r"\TOP.BOLOMETER.DIODE_CALIB.AXJ:GOOD",
                 tree_name="spectroscopy",
             )  # [index]
@@ -1993,7 +1993,7 @@ class CmodPhysicsMethods:
         blob/matlab/CMOD/matlab-core/get_sxr_data.m)
 
         """
-        sxr, t_sxr = params.data_conn.get_data_with_dims(
+        sxr, t_sxr = params.get_data_with_dims(
             r"\top.brightnesses.array_1:chord_16",
             tree_name="xtomo",
         )  # [W/m^2], [s]
@@ -2046,16 +2046,16 @@ class CmodPhysicsMethods:
 
         """
         # Get signals from EFIT tree
-        beta_t, efittime = params.data_conn.get_data_with_dims(
+        beta_t, efittime = params.get_data_with_dims(
             r"\efit_aeqdsk:betat", tree_name="_efit_tree"
         )  # [%], [s]
-        ip = params.data_conn.get_data(
+        ip = params.get_data(
             r"\efit_aeqdsk:cpasma/1e6", tree_name="_efit_tree"
         )  # [MA]
-        aminor = params.data_conn.get_data(
+        aminor = params.get_data(
             r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )  # [m]
-        btor = params.data_conn.get_data(
+        btor = params.get_data(
             r"\efit_aeqdsk:btaxp", tree_name="_efit_tree"
         )  # [T]
 
@@ -2106,7 +2106,7 @@ class CmodPhysicsMethods:
         are zeros for every shot.
         """
         # Get signals from EFIT tree
-        sibdry, efit_time = params.data_conn.get_data_with_dims(
+        sibdry, efit_time = params.get_data_with_dims(
             r"\efit_aeqdsk:sibdry", tree_name="_efit_tree"
         )  # [V*s/rad], [s]
 

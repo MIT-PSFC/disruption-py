@@ -31,7 +31,7 @@ class HbtepPhysicsMethods:
         """
         Get the plasma current
         """
-        ip, t_ip = params.data_conn.get_data_with_dims(
+        ip, t_ip = params.get_data_with_dims(
             r"\top.sensors.rogowskis:ip", tree_name="hbtep2"
         )  # [A], [s]
         ip = interp1(t_ip, ip, params.times, "linear")
@@ -43,10 +43,10 @@ class HbtepPhysicsMethods:
         """
         Get the ohmic heating and vertical field coil currents
         """
-        i_vfc, t_vfc = params.data_conn.get_data_with_dims(
+        i_vfc, t_vfc = params.get_data_with_dims(
             r"\top.sensors.vf_current", tree_name="hbtep2"
         )  # [A], [s]
-        i_ohc, t_ohc = params.data_conn.get_data_with_dims(
+        i_ohc, t_ohc = params.get_data_with_dims(
             r"\top.sensors.oh_current", tree_name="hbtep2"
         )  # [A], [s]
         i_vfc = interp1(t_vfc, i_vfc, params.times, "linear")
@@ -69,21 +69,21 @@ class HbtepPhysicsMethods:
         oh_pickup = 7.0723416e-08
 
         # get vf and oh data
-        i_vfc, t_vfc = params.data_conn.get_data_with_dims(
+        i_vfc, t_vfc = params.get_data_with_dims(
             r"\top.sensors.vf_current", tree_name="hbtep2"
         )  # [A], [s]
-        i_ohc, t_ohc = params.data_conn.get_data_with_dims(
+        i_ohc, t_ohc = params.get_data_with_dims(
             r"\top.sensors.oh_current", tree_name="hbtep2"
         )  # [A], [s]
 
         # get plasma current
-        ip, t_ip = params.data_conn.get_data_with_dims(
+        ip, t_ip = params.get_data_with_dims(
             r"\top.sensors.rogowskis:ip", tree_name="hbtep2"
         )  # [A], [s]
         ip *= 1212.3 * 1e-9  # ip gain
 
         # get cosine Rogowski data
-        cos1_raw, t_cos1_raw = params.data_conn.get_data_with_dims(
+        cos1_raw, t_cos1_raw = params.get_data_with_dims(
             r"\top.sensors.rogowskis:cos_1:raw", tree_name="hbtep2"
         )  # [A/s], [s]
         # calculate and subtract offset
@@ -137,7 +137,7 @@ class HbtepPhysicsMethods:
         """
         Calculate B_tor from the TF probe data
         """
-        btor, t_btor = params.data_conn.get_data_with_dims(
+        btor, t_btor = params.get_data_with_dims(
             r"\top.sensors.tf_probe", tree_name="hbtep2"
         )  # [T], [s]
         btor = interp1(t_btor, btor, params.times, "linear")
@@ -168,7 +168,7 @@ class HbtepPhysicsMethods:
         """
         Get v_loop measurement
         """
-        v_loop, t_v_loop = params.data_conn.get_data_with_dims(
+        v_loop, t_v_loop = params.get_data_with_dims(
             r"\top.sensors.loop_voltage", tree_name="hbtep2"
         )  # [V], [s]
         v_loop = interp1(t_v_loop, v_loop, params.times, "linear")
@@ -180,7 +180,7 @@ class HbtepPhysicsMethods:
         """
         Get D alpha line emission from spectrometer
         """
-        h_alpha, t_h_alpha = params.data_conn.get_data_with_dims(
+        h_alpha, t_h_alpha = params.get_data_with_dims(
             r"\top.sensors.spectrometer", tree_name="hbtep2"
         )  # [arb], [s]
         h_alpha = interp1(t_h_alpha, h_alpha, params.times, "linear")
@@ -192,7 +192,7 @@ class HbtepPhysicsMethods:
         """
         Get the soft x-ray midplane sensor data
         """
-        sxr, t_sxr = params.data_conn.get_data_with_dims(
+        sxr, t_sxr = params.get_data_with_dims(
             r"\top.devices.north_rack:cpci:input_74", tree_name="hbtep2"
         )  # [arb], [s]
         # offset subtraction
@@ -503,7 +503,7 @@ class HbtepPhysicsMethods:
         ta_pol_data_filt = []
         ta_pol_time = []
         for sensor_name in output["ta_pol_names"]:
-            sensor_data_raw, sensor_time = params.data_conn.get_data_with_dims(
+            sensor_data_raw, sensor_time = params.get_data_with_dims(
                 r"\top.sensors.magnetic:" + sensor_name, tree_name="hbtep2"
             )  # [T], [s]
             fs_ta_pol = round(1 / (sensor_time[1] - sensor_time[0]))
@@ -517,7 +517,7 @@ class HbtepPhysicsMethods:
         ta_rad_data_filt = []
         ta_rad_time = []
         for sensor_name in output["ta_rad_names"]:
-            sensor_data_raw, sensor_time = params.data_conn.get_data_with_dims(
+            sensor_data_raw, sensor_time = params.get_data_with_dims(
                 r"\top.sensors.magnetic:" + sensor_name, tree_name="hbtep2"
             )  # [T], [s]
             fs_ta_rad = round(1 / (sensor_time[1] - sensor_time[0]))
@@ -632,7 +632,7 @@ class HbtepPhysicsMethods:
         pa1_data_filt = []
         pa1_time = []
         for sensor_name in output["pa1_names"]:
-            sensor_data_raw, sensor_time = params.data_conn.get_data_with_dims(
+            sensor_data_raw, sensor_time = params.get_data_with_dims(
                 r"\top.sensors.magnetic:" + sensor_name, tree_name="hbtep2"
             )
             fs_pa1 = round(1 / (sensor_time[1] - sensor_time[0]))
@@ -646,7 +646,7 @@ class HbtepPhysicsMethods:
         pa2_data_filt = []
         pa2_time = []
         for sensor_name in output["pa2_names"]:
-            sensor_data_raw, sensor_time = params.data_conn.get_data_with_dims(
+            sensor_data_raw, sensor_time = params.get_data_with_dims(
                 r"\top.sensors.magnetic:" + sensor_name, tree_name="hbtep2"
             )
             fs_pa2 = round(1 / (sensor_time[1] - sensor_time[0]))
@@ -679,7 +679,7 @@ class HbtepPhysicsMethods:
         output["sensor_num"] = [1, 2, 3, 4, 6, 9, 11, 12, 14, 16]
         # channels = output['sensor_num'] + 75
 
-        time = params.data_conn.get_dims(
+        time = params.get_dims(
             r"\top.sensors.sxr_fan.channel_01:raw", tree_name="hbtep2"
         )
         output["time"] = time[0]
@@ -691,25 +691,25 @@ class HbtepPhysicsMethods:
         midplane = []
         for n in output["sensor_num"]:
             data.append(
-                params.data_conn.get_data(
+                params.get_data(
                     rf"\top.sensors.sxr_fan.channel_{n:02d}:raw",
                     tree_name="hbtep2",
                 )
             )
             r.append(
-                params.data_conn.get_data(
+                params.get_data(
                     rf"\top.sensors.sxr_fan.channel_{n:02d}:r",
                     tree_name="hbtep2",
                 )
             )
             z.append(
-                params.data_conn.get_data(
+                params.get_data(
                     rf"\top.sensors.sxr_fan.channel_{n:02d}:z",
                     tree_name="hbtep2",
                 )
             )
             midplane.append(
-                params.data_conn.get_data(
+                params.get_data(
                     rf"\top.sensors.sxr_fan.channel_{n:02d}:midplane",
                     tree_name="hbtep2",
                 )
@@ -736,7 +736,7 @@ class HbtepPhysicsMethods:
         output = {}
         output["detectors"] = [0, 25, 90, 270]  # poloidal location of the 4 fan arrays
 
-        time = params.data_conn.get_dims(
+        time = params.get_dims(
             r"\top.sensors.euv.pol.det000.channel_01:raw", tree_name="hbtep2"
         )
         output["time"] = time[0]
@@ -748,12 +748,12 @@ class HbtepPhysicsMethods:
                     rf"\top.sensors.euv.pol.det{detector:03d}.channel_{channel:02d}"
                 )
                 data.append(
-                    params.data_conn.get_data(address + ":raw", tree_name="hbtep2")
+                    params.get_data(address + ":raw", tree_name="hbtep2")
                 )
-                r.append(params.data_conn.get_data(address + ":r", tree_name="hbtep2"))
-                z.append(params.data_conn.get_data(address + ":z", tree_name="hbtep2"))
+                r.append(params.get_data(address + ":r", tree_name="hbtep2"))
+                z.append(params.get_data(address + ":z", tree_name="hbtep2"))
                 gain.append(
-                    params.data_conn.get_data(address + ":gain", tree_name="hbtep2")
+                    params.get_data(address + ":gain", tree_name="hbtep2")
                 )
             output[f"euv_{detector:03d}_data"] = data
             output[f"euv_{detector:03d}_r"] = r

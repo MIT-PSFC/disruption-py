@@ -40,10 +40,10 @@ class MastPhysicsMethods:
             A dictionary containing plasma current (`ip`), its time derivative (`dip_dt`),
             programmed plasma current (`ip_prog`), and its time derivative (`dipprog_dt`).
         """
-        ip = params.data_conn.get_data("summary/ip")
-        ip_prog = params.data_conn.get_data("pulse_schedule/i_plasma")
-        ip_prog_time = params.data_conn.get_data("pulse_schedule/time")
-        magtime = params.data_conn.get_data("summary/time")
+        ip = params.get_data("summary/ip")
+        ip_prog = params.get_data("pulse_schedule/i_plasma")
+        ip_prog_time = params.get_data("pulse_schedule/time")
+        magtime = params.get_data("summary/time")
 
         dip_dt = np.gradient(ip, magtime)
         dipprog_dt = np.gradient(ip_prog, ip_prog_time)
@@ -82,9 +82,9 @@ class MastPhysicsMethods:
             radiated power (`power_radiated`).
         """
 
-        power_nbi = params.data_conn.get_data("summary/power_nbi")
-        power_radiated = params.data_conn.get_data("summary/power_radiated")
-        base_time = params.data_conn.get_data("summary/time")
+        power_nbi = params.get_data("summary/power_nbi")
+        power_radiated = params.get_data("summary/power_radiated")
+        base_time = params.get_data("summary/time")
 
         times = params.times
         power_nbi = MastUtilMethods.interpolate_1d(base_time, power_nbi, times)
@@ -113,10 +113,10 @@ class MastPhysicsMethods:
             inboard total gas (`inboard_total`), and outboard total gas (`outboard_total`).
         """
 
-        total_injected = params.data_conn.get_data("gas_injection/total_injected")
-        inboard_total = params.data_conn.get_data("gas_injection/inboard_total")
-        outboard_total = params.data_conn.get_data("gas_injection/outboard_total")
-        base_time = params.data_conn.get_data("gas_injection/time")
+        total_injected = params.get_data("gas_injection/total_injected")
+        inboard_total = params.get_data("gas_injection/inboard_total")
+        outboard_total = params.get_data("gas_injection/outboard_total")
+        base_time = params.get_data("gas_injection/time")
 
         times = params.times
         total_injected = MastUtilMethods.interpolate_1d(
@@ -153,9 +153,9 @@ class MastPhysicsMethods:
         """
         times = params.times
 
-        t_e_core = params.data_conn.get_data("thomson_scattering/t_e_core")
-        n_e_core = params.data_conn.get_data("thomson_scattering/n_e_core")
-        base_time = params.data_conn.get_data("thomson_scattering/time")
+        t_e_core = params.get_data("thomson_scattering/t_e_core")
+        n_e_core = params.get_data("thomson_scattering/n_e_core")
+        base_time = params.get_data("thomson_scattering/time")
 
         t_e_core = MastUtilMethods.interpolate_1d(base_time, t_e_core, times)
         n_e_core = MastUtilMethods.interpolate_1d(base_time, n_e_core, times)
@@ -194,12 +194,12 @@ class MastPhysicsMethods:
 
         """
 
-        n_e = params.data_conn.get_data("summary/line_average_n_e")
-        t_n = params.data_conn.get_data("summary/time")
-        ip = params.data_conn.get_data("summary/ip")
-        t_ip = params.data_conn.get_data("summary/time")
-        a_minor = params.data_conn.get_data("equilibrium/minor_radius")
-        t_a = params.data_conn.get_data("equilibrium/time")
+        n_e = params.get_data("summary/line_average_n_e")
+        t_n = params.get_data("summary/time")
+        ip = params.get_data("summary/ip")
+        t_ip = params.get_data("summary/time")
+        a_minor = params.get_data("equilibrium/minor_radius")
+        t_a = params.get_data("equilibrium/time")
 
         return MastPhysicsMethods._get_densities(
             params.times, n_e, t_n, ip, t_ip, a_minor, t_a
@@ -268,7 +268,7 @@ class MastPhysicsMethods:
             A dictionary containing SXR data (`sxr_data`) and
             corresponding time points (`sxr_time`).
         """
-        hcam = params.data_conn.get_data("soft_x_rays/horizontal_cam_upper", return_xarray=True)
+        hcam = params.get_data("soft_x_rays/horizontal_cam_upper", return_xarray=True)
 
         if hcam is not None:
             hcam = hcam.isel(horizontal_cam_upper_channel=7)
@@ -304,7 +304,7 @@ class MastPhysicsMethods:
             A dictionary containing D-alpha signal data (`dalpha`).
         """
 
-        dalpha = params.data_conn.get_data(
+        dalpha = params.get_data(
             "spectrometer_visible/filter_spectrometer_dalpha_voltage",
             return_xarray=True,
         )
