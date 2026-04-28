@@ -97,6 +97,11 @@ description = "Core electron density measurement"
 imas = "/thomson_scattering/channel(i1)/n_e"
 units = "m^-3"
 
+[mast.physics.attributes.p_oh]
+description = "Total Ohmic heating power."
+imas = "/summary/global_quantities/power_ohm"
+units = "W"
+
 [mast.physics.attributes.p_nbi]
 description = "NBI heating power."
 imas = "/summary/heating_current_drive/power_nbi"

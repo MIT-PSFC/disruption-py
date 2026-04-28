@@ -216,7 +216,7 @@ class MastPhysicsMethods:
         Calculate electron density, its time derivative, and the Greenwald fraction.
 
         Parameters
-        ----------causal_boxcar_smooth
+        ----------
         times : array_like
             Time points at which to interpolate the densities.
         n_e : array_like
