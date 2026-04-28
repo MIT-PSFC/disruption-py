@@ -12,7 +12,7 @@ import xarray as xr
 from loguru import logger
 
 from disruption_py.config import config
-from disruption_py.core.physics_method.errors import FetchDataError
+from disruption_py.core.physics_method.errors import FetchDataError, NanDataError
 from disruption_py.core.utils.misc import shot_msg
 from disruption_py.inout.base import DataConnection, ProcessConnection
 from disruption_py.machine.tokamak import Tokamak
@@ -107,6 +107,7 @@ class XarrayDataConnection(DataConnection):
         self,
         path: str,
         group: str = None,
+        required: bool = False,
         return_xarray: bool = False,
         **kwargs,
     ) -> np.ndarray | xr.DataArray:
@@ -118,6 +119,8 @@ class XarrayDataConnection(DataConnection):
             Variable path, e.g. "summary/ip" or just "ip" if group is provided.
         group : str, optional
             Group prefix. If provided and path has no "/", prepends group.
+        required : bool, optional
+            If True, raise an error if the data is all NaNs.
         return_xarray : bool, optional
             If True, return the raw xarray DataArray instead of numpy values.
         **kwargs
@@ -136,12 +139,16 @@ class XarrayDataConnection(DataConnection):
         except KeyError as e:
             raise FetchDataError(path) from e
 
+        if required and not np.any(np.isfinite(item)):
+            raise NanDataError(path)
+
         return item if return_xarray else item.values
 
     def get_data_with_dims(
         self,
         path: str,
         group: str = None,
+        required: bool = False,
         dim_nums: List = None,
         **kwargs,
     ) -> Tuple:
@@ -153,6 +160,8 @@ class XarrayDataConnection(DataConnection):
             Variable path.
         group : str, optional
             Group prefix.
+        required : bool, optional
+            If True, raise an error if the data is all NaNs.
         dim_nums : List, optional
             Dimension indices to retrieve. Default [0].
         **kwargs
@@ -176,6 +185,9 @@ class XarrayDataConnection(DataConnection):
         for d in dim_nums:
             dim_name = dim_names[d]
             dims.append(item.coords[dim_name].values)
+
+        if required and not np.any(np.isfinite(data)):
+            raise NanDataError(path)
 
         return data, *dims
 
