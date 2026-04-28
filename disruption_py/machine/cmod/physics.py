@@ -70,9 +70,7 @@ class CmodPhysicsMethods:
                 active_segments.append(
                     (
                         node_path,
-                        params.get_data(
-                            f"{node_path}:start_time", tree_name="pcs"
-                        ),
+                        params.get_data(f"{node_path}:start_time", tree_name="pcs"),
                     )
                 )
 
@@ -562,9 +560,7 @@ class CmodPhysicsMethods:
             r"\efit_aeqdsk:ali", tree_name="_efit_tree"
         )  # [dimensionless], [s]
         ip_parameters = CmodPhysicsMethods.get_ip_parameters(params=params)
-        r0 = params.get_data(
-            r"\efit_aeqdsk:rmagx/100", tree_name="_efit_tree"
-        )  # [m]
+        r0 = params.get_data(r"\efit_aeqdsk:rmagx/100", tree_name="_efit_tree")  # [m]
 
         return CmodPhysicsMethods._get_ohmic_parameters(
             params.times,
@@ -739,9 +735,7 @@ class CmodPhysicsMethods:
             p = f"p_{val}"
             t = f"t_{val}"
             try:
-                kwa[p], kwa[t] = params.get_data_with_dims(
-                    node, tree_name=tree
-                )
+                kwa[p], kwa[t] = params.get_data_with_dims(node, tree_name=tree)
             except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF):
                 kwa[p], kwa[t] = None, None
         # Ohmic power
@@ -813,9 +807,7 @@ class CmodPhysicsMethods:
         area = params.get_data(
             r"\efit_aeqdsk:areao/1e4", tree_name="_efit_tree"
         )  # [m^2]
-        times = params.get_data(
-            r"\efit_aeqdsk:time", tree_name="_efit_tree"
-        )  # [s]
+        times = params.get_data(r"\efit_aeqdsk:time", tree_name="_efit_tree")  # [s]
 
         aminor[aminor <= 0] = 0.001  # make sure aminor is not 0 or less than 0
         # make sure area is not 0 or less than 0
@@ -891,9 +883,7 @@ class CmodPhysicsMethods:
         a = []
 
         path = r"\mag_bp_coils."
-        bp_node_names = params.get_data(
-            f"{path}nodename", tree_name="magnetics"
-        )
+        bp_node_names = params.get_data(f"{path}nodename", tree_name="magnetics")
         phi = params.get_data(f"{path}phi", tree_name="magnetics")  # [degree]
         btor_pickup_coeffs = params.get_data(
             f"{path}btor_pickup", tree_name="magnetics"
@@ -918,9 +908,7 @@ class CmodPhysicsMethods:
 
         for i, bp13_name in enumerate(bp13_names):
             try:
-                signal = params.get_data(
-                    path + bp13_name, tree_name="magnetics"
-                )  # [T]
+                signal = params.get_data(path + bp13_name, tree_name="magnetics")  # [T]
             # Sensor not available, skip
             except mdsExceptions.MdsException:
                 continue
@@ -1076,9 +1064,7 @@ class CmodPhysicsMethods:
         # For future refernce, chord length is stored in
         # .01*\analysis::efit_aeqdsk:rco2v[3,*]
         n_e = np.squeeze(n_e) / 0.6
-        ip, t_ip = params.get_data_with_dims(
-            r"\ip", tree_name="magnetics"
-        )  # [A], [s]
+        ip, t_ip = params.get_data_with_dims(r"\ip", tree_name="magnetics")  # [A], [s]
         a_minor, t_a = params.get_data_with_dims(
             r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )  # [m], [s]
@@ -1246,9 +1232,7 @@ class CmodPhysicsMethods:
         ts_data, ts_time = params.get_data_with_dims(
             f"{node_path}:te_rz", tree_name="electrons"
         )  # [keV], [s]
-        ts_z = params.get_data(
-            f"{node_path}:z_sorted", tree_name="electrons"
-        )  # [m]
+        ts_z = params.get_data(f"{node_path}:z_sorted", tree_name="electrons")  # [m]
         ts_error = params.get_data(
             f"{node_path}:te_err", tree_name="electrons"
         )  # [keV]
@@ -1404,9 +1388,7 @@ class CmodPhysicsMethods:
             raise CalculationError("Shot is on blacklist")
         # Fetch data
         # Get EFIT geometry data
-        z0 = params.get_data(
-            r"\efit_aeqdsk:zmagx/100", tree_name="_efit_tree"
-        )  # [m]
+        z0 = params.get_data(r"\efit_aeqdsk:zmagx/100", tree_name="_efit_tree")  # [m]
         kappa = params.get_data(
             r"\efit_aeqdsk:kappa", tree_name="_efit_tree"
         )  # [dimensionless]
@@ -1793,9 +1775,7 @@ class CmodPhysicsMethods:
         """
 
         # Get magnetic axis data from EFIT
-        r0 = params.get_data(
-            r"\efit_aeqdsk:rmagx/100", tree_name="_efit_tree"
-        )  # [m]
+        r0 = params.get_data(r"\efit_aeqdsk:rmagx/100", tree_name="_efit_tree")  # [m]
         aminor, efit_time = params.get_data_with_dims(
             r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )  # [m], [s]
@@ -1878,12 +1858,8 @@ class CmodPhysicsMethods:
         """
         prad_peaking = np.full(len(params.times), np.nan)
         nan_output = {"prad_peaking": prad_peaking}
-        r0 = params.get_data(
-            r"\efit_aeqdsk:rmagx/100", tree_name="_efit_tree"
-        )  # [m]
-        z0 = params.get_data(
-            r"\efit_aeqdsk:zmagx/100", tree_name="_efit_tree"
-        )  # [m]
+        r0 = params.get_data(r"\efit_aeqdsk:rmagx/100", tree_name="_efit_tree")  # [m]
+        z0 = params.get_data(r"\efit_aeqdsk:zmagx/100", tree_name="_efit_tree")  # [m]
         aminor, efit_time = params.get_data_with_dims(
             r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )  # [m], [s]
@@ -2049,15 +2025,11 @@ class CmodPhysicsMethods:
         beta_t, efittime = params.get_data_with_dims(
             r"\efit_aeqdsk:betat", tree_name="_efit_tree"
         )  # [%], [s]
-        ip = params.get_data(
-            r"\efit_aeqdsk:cpasma/1e6", tree_name="_efit_tree"
-        )  # [MA]
+        ip = params.get_data(r"\efit_aeqdsk:cpasma/1e6", tree_name="_efit_tree")  # [MA]
         aminor = params.get_data(
             r"\efit_aeqdsk:aout/100", tree_name="_efit_tree"
         )  # [m]
-        btor = params.get_data(
-            r"\efit_aeqdsk:btaxp", tree_name="_efit_tree"
-        )  # [T]
+        btor = params.get_data(r"\efit_aeqdsk:btaxp", tree_name="_efit_tree")  # [T]
 
         # Calculate beta_n
         with np.errstate(divide="ignore", invalid="ignore"):

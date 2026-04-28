@@ -65,8 +65,7 @@ class D3DEfitMethods:
             for k, v in D3DEfitMethods.efit_cols.items()
         }
         efit_time = (
-            params.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree")
-            / 1.0e3
+            params.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree") / 1.0e3
         )  # [ms] -> [s]
 
         # EFIT reconstructions are sometimes invalid, particularly when very close
@@ -112,8 +111,7 @@ class D3DEfitMethods:
             for k, v in D3DEfitMethods.rt_efit_cols.items()
         }
         efit_time = (
-            params.get_data(r"\efit_a_eqdsk:atime", tree_name="efitrt1")
-            / 1.0e3
+            params.get_data(r"\efit_a_eqdsk:atime", tree_name="efitrt1") / 1.0e3
         )  # [ms] -> [s]
         # EFIT reconstructions are sometimes invalid, particularly when very close
         # to a disruption.  There are a number of EFIT parameters that can indicate

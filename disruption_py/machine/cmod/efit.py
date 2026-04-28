@@ -69,9 +69,7 @@ class CmodEfitMethods:
         dict
             A dictionary containing the retrieved EFIT parameters.
         """
-        efit_time = params.get_data(
-            r"\efit_aeqdsk:time", tree_name="_efit_tree"
-        )  # [s]
+        efit_time = params.get_data(r"\efit_aeqdsk:time", tree_name="_efit_tree")  # [s]
         efit_data = {}
 
         # Get data from each of the columns in efit_cols one at a time
@@ -125,7 +123,5 @@ class CmodEfitMethods:
         ]
         _n = values[2].data()
         valid_indices = np.nonzero(_n)
-        (times,) = params.get_dims(
-            r"\efit_aeqdsk:lflag", tree_name="analysis"
-        )
+        (times,) = params.get_dims(r"\efit_aeqdsk:lflag", tree_name="analysis")
         return valid_indices, times[valid_indices]

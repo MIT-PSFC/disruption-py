@@ -242,9 +242,7 @@ class EastPhysicsMethods:
         # Get "\vp1_s" signal from the EAST tree.  (This signal is a sub-sampled
         # version of "vp1".)
         try:
-            v_loop, v_loop_time = params.get_data_with_dims(
-                r"\vp1_s", tree_name="east"
-            )
+            v_loop, v_loop_time = params.get_data_with_dims(r"\vp1_s", tree_name="east")
         except mdsExceptions.MdsException:
             params.logger.verbose(
                 r"v_loop: Failed to get \vp1_s data. Use \pcvloop from pcs_east instead."
@@ -436,9 +434,7 @@ class EastPhysicsMethods:
         for iarray in range(4):
             for ichan in range(16):
                 ichord = 16 * iarray + ichan
-                signal = params.get_data(
-                    r"\pxuv" + str(ichord + 1), tree_name="east_1"
-                )
+                signal = params.get_data(r"\pxuv" + str(ichord + 1), tree_name="east_1")
                 # Subtract baseline
                 signal = signal - np.mean(signal[:100])
                 # TODO: change this to causal smoothing
@@ -586,9 +582,7 @@ class EastPhysicsMethods:
             """
             heating_power = np.zeros(params.times.shape)
             for node in nodes:
-                power_node, time_node = params.get_data_with_dims(
-                    node, tree_name=tree
-                )
+                power_node, time_node = params.get_data_with_dims(node, tree_name=tree)
                 heating_power += interp1(
                     time_node,
                     power_node,
@@ -1475,12 +1469,8 @@ class EastPhysicsMethods:
         xcoords, ycoords = data
 
         # Get first wall geometry data
-        xfirstwall = params.get_data(
-            r"\top.results.geqdsk:xlim", tree_name=tree
-        )
-        yfirstwall = params.get_data(
-            r"\top.results.geqdsk:ylim", tree_name=tree
-        )
+        xfirstwall = params.get_data(r"\top.results.geqdsk:xlim", tree_name=tree)
+        yfirstwall = params.get_data(r"\top.results.geqdsk:ylim", tree_name=tree)
         seed = np.ones((len(xcoords), 1))
         xfirstwall = np.reshape(xfirstwall, (-1, 1))
         yfirstwall = np.reshape(yfirstwall, (-1, 1))

@@ -189,9 +189,7 @@ class CmodThomsonDensityMeasure:
         ip = params.get_data(r"\ip", "cmod")
         if np.mean(ip) > 0:
             flag = 0
-        efit_times = params.get_data(
-            r"\efit_aeqdsk:time", tree_name="_efit_tree"
-        )
+        efit_times = params.get_data(r"\efit_aeqdsk:time", tree_name="_efit_tree")
         t1 = np.amin(efit_times)
         t2 = np.amax(efit_times)
         psia, psia_t = params.get_data_with_dims(

@@ -119,9 +119,7 @@ class D3DPhysicsMethods:
             "h_alpha": [np.nan],
         }
         try:
-            h_alpha, t_h_alpha = params.get_data_with_dims(
-                r"\fs04", tree_name="d3d"
-            )
+            h_alpha, t_h_alpha = params.get_data_with_dims(r"\fs04", tree_name="d3d")
             t_h_alpha /= 1e3  # [ms] -> [s]
             h_alpha = interp1(t_h_alpha, h_alpha, params.times, "linear")
             output["h_alpha"] = h_alpha
@@ -166,9 +164,7 @@ class D3DPhysicsMethods:
         """
         # Get neutral beam injected power
         try:
-            p_nbi, t_nbi = params.get_data_with_dims(
-                r"\top.nb:pinj", tree_name="d3d"
-            )
+            p_nbi, t_nbi = params.get_data_with_dims(r"\top.nb:pinj", tree_name="d3d")
             t_nbi /= 1e3  # [ms] -> [s]
             p_nbi = p_nbi * 1e3  # [KW] -> [W]
             if len(t_nbi) > 2:
@@ -234,9 +230,7 @@ class D3DPhysicsMethods:
         smoothing_window = 0.010  # [s]
 
         try:
-            bol_prm, _ = params.get_data_with_dims(
-                r"\bol_prm", tree_name="bolom"
-            )
+            bol_prm, _ = params.get_data_with_dims(r"\bol_prm", tree_name="bolom")
         except mdsExceptions.MdsException as e:
             params.logger.warning("Failed to open bolom tree.")
             params.logger.opt(exception=True).debug(e)
@@ -249,9 +243,7 @@ class D3DPhysicsMethods:
                 rf"\top.raw:{bol_channels[i]}", tree_name="bolom"
             )
             bol_signals.append(bol_signal)
-        bol_time = params.get_dims(
-            rf"\top.raw:{bol_channels[0]}", tree_name="bolom"
-        )[0]
+        bol_time = params.get_dims(rf"\top.raw:{bol_channels[0]}", tree_name="bolom")[0]
         bol_time /= 1e3  # [ms] -> [s]
         a_struct = matlab_get_bolo(
             shot_id=params.shot_id,
@@ -327,9 +319,7 @@ class D3DPhysicsMethods:
         v_loop = scipy.signal.medfilt(v_loop, 11)
         v_loop = interp1(t_v_loop, v_loop, params.times, "linear")
         # Get plasma current
-        ip, t_ip = params.get_data_with_dims(
-            f"ptdata('ip', {params.shot_id})"
-        )
+        ip, t_ip = params.get_data_with_dims(f"ptdata('ip', {params.shot_id})")
         t_ip /= 1e3  # [ms] -> [s]
 
         # Alessandro Pau (JET & AUG) has given Cristina a robust routine that
@@ -354,9 +344,7 @@ class D3DPhysicsMethods:
         )
         t_li /= 1e3
         # Use chisq to determine which time slices are invalid
-        chisq = params.get_data(
-            r"\efit_a_eqdsk:chisq", tree_name="_efit_tree"
-        )
+        chisq = params.get_data(r"\efit_a_eqdsk:chisq", tree_name="_efit_tree")
         # Filter out invalid indices of efit reconstruction
         (invalid_indices,) = np.where(chisq > 50)
         li[invalid_indices] = np.nan
@@ -410,9 +398,7 @@ class D3DPhysicsMethods:
         - pull requests: #[249](https://github.com/MIT-PSFC/disruption-py/pull/249)
         """
         try:
-            ne, t_ne = params.get_data_with_dims(
-                r"\density", tree_name="_efit_tree"
-            )
+            ne, t_ne = params.get_data_with_dims(r"\density", tree_name="_efit_tree")
         except mdsExceptions.MdsException:
             ne = [np.nan]
             t_ne = [np.nan]
@@ -877,9 +863,7 @@ class D3DPhysicsMethods:
         """
         nominal_flattop_radius = 0.59
         # Get z_cur
-        z_cur, t_z_cur = params.get_data_with_dims(
-            f"ptdata('vpszp', {params.shot_id})"
-        )
+        z_cur, t_z_cur = params.get_data_with_dims(f"ptdata('vpszp', {params.shot_id})")
         t_z_cur = t_z_cur / 1.0e3  # [ms] -> [s]
         z_cur = z_cur / 1.0e2  # [cm] -> [m]
         z_cur = interp1(t_z_cur, z_cur, params.times, "linear")
@@ -889,9 +873,7 @@ class D3DPhysicsMethods:
                 r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
             )  # [m], [ms]
             t_a = t_a / 1.0e3  # [ms] -> [s]
-            chisq = params.get_data(
-                r"\efit_a_eqdsk:chisq", tree_name="_efit_tree"
-            )
+            chisq = params.get_data(r"\efit_a_eqdsk:chisq", tree_name="_efit_tree")
             (invalid_indices,) = np.where(chisq > 50)
             a_minor[invalid_indices] = np.nan
             a_minor = interp1(t_a, a_minor, params.times, "linear")
@@ -1327,13 +1309,9 @@ class D3DPhysicsMethods:
         /blob/matlab/DIII-D/get_kappa_area.m)
         - pull requests: #[256](https://github.com/MIT-PSFC/disruption-py/pull/256)
         """
-        a_minor = params.get_data(
-            r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
-        )
+        a_minor = params.get_data(r"\efit_a_eqdsk:aminor", tree_name="_efit_tree")
         area = params.get_data(r"\efit_a_eqdsk:area", tree_name="_efit_tree")
-        chisq = params.get_data(
-            r"\efit_a_eqdsk:chisq", tree_name="_efit_tree"
-        )
+        chisq = params.get_data(r"\efit_a_eqdsk:chisq", tree_name="_efit_tree")
         t = params.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree")
         t /= 1e3  # [ms] -> [s]
         kappa_area = area / (np.pi * a_minor**2)
@@ -1369,9 +1347,7 @@ class D3DPhysicsMethods:
         - pull requests: #[258](https://github.com/MIT-PSFC/disruption-py/pull/258)
         """
         # Get efit_time
-        efit_time = params.get_data(
-            r"\efit_a_eqdsk:atime", tree_name="_efit_tree"
-        )
+        efit_time = params.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree")
         efit_time /= 1e3  # [ms] -> [s]
         # Compute triangularity
         try:
@@ -1388,12 +1364,8 @@ class D3DPhysicsMethods:
             delta = None
         # Compute squareness
         try:
-            sqfod = params.get_data(
-                r"\efit_a_eqdsk:sqfod", tree_name="_efit_tree"
-            )
-            sqfou = params.get_data(
-                r"\efit_a_eqdsk:sqfou", tree_name="_efit_tree"
-            )
+            sqfod = params.get_data(r"\efit_a_eqdsk:sqfod", tree_name="_efit_tree")
+            sqfou = params.get_data(r"\efit_a_eqdsk:sqfou", tree_name="_efit_tree")
             squareness = (sqfod + sqfou) / 2.0
         except mdsExceptions.MdsException as e:
             params.logger.warning("Failed to obtain squareness signals")
@@ -1401,18 +1373,14 @@ class D3DPhysicsMethods:
             squareness = None
         # Get aminor
         try:
-            aminor = params.get_data(
-                r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
-            )
+            aminor = params.get_data(r"\efit_a_eqdsk:aminor", tree_name="_efit_tree")
         except mdsExceptions.MdsException as e:
             params.logger.warning("Failed to obtain aminor signals")
             params.logger.opt(exception=True).debug(e)
             aminor = None
         # Check chisq for invalid indices
         try:
-            chisq = params.get_data(
-                r"\efit_a_eqdsk:chisq", tree_name="_efit_tree"
-            )
+            chisq = params.get_data(r"\efit_a_eqdsk:chisq", tree_name="_efit_tree")
             invalid_indices = np.where(chisq > 50)
         except mdsExceptions.MdsException as e:
             params.logger.warning(

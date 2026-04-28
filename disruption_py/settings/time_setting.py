@@ -258,9 +258,7 @@ class EfitTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        (efit_time,) = params.get_dims(
-            r"\efit_aeqdsk:ali", tree_name="_efit_tree"
-        )
+        (efit_time,) = params.get_dims(r"\efit_aeqdsk:ali", tree_name="_efit_tree")
         efit_time_unit = params.get_data(
             r"units_of(dim_of(\efit_aeqdsk:ali))", tree_name="_efit_tree"
         )
@@ -338,9 +336,7 @@ class DisruptionTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        raw_ip, ip_time = params.get_data_with_dims(
-            f"ptdata('ip', {params.shot_id})"
-        )
+        raw_ip, ip_time = params.get_data_with_dims(f"ptdata('ip', {params.shot_id})")
         ip_time = ip_time / 1.0e3
         baseline = np.mean(raw_ip[:10])
         ip = raw_ip - baseline
@@ -372,9 +368,7 @@ class DisruptionTimeSetting(TimeSetting):
         This will be replaced once a get_disruption_time method is implemented for HBT-EP
         """
 
-        t_ip = params.get_dims(
-            r"\top.sensors.rogowskis:ip", tree_name="hbtep2"
-        )  # [s]
+        t_ip = params.get_dims(r"\top.sensors.rogowskis:ip", tree_name="hbtep2")  # [s]
         t_ip = t_ip[0]
         t_ip = t_ip[(t_ip >= 0) & (t_ip <= 12e-3)]
         steps = round(10e-6 / (t_ip[1] - t_ip[0]))
@@ -624,9 +618,7 @@ class IpTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        (ip_time,) = params.get_dims(
-            r"\top.sensors.rogowskis:ip", tree_name="hbtep2"
-        )
+        (ip_time,) = params.get_dims(r"\top.sensors.rogowskis:ip", tree_name="hbtep2")
         return ip_time
 
     def mast_times(self, params: TimeSettingParams) -> np.ndarray:
@@ -695,9 +687,7 @@ class SignalTimeSetting(TimeSetting):
             Array of times in the timebase.
         """
         try:
-            (signal_time,) = params.get_dims(
-                self.signal_path, tree_name=self.tree_name
-            )
+            (signal_time,) = params.get_dims(self.signal_path, tree_name=self.tree_name)
         except mdsExceptions.MdsException:
             params.logger.error(
                 "Failed to set up timebase for signal {signal_path}",

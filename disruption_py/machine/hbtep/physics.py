@@ -747,14 +747,10 @@ class HbtepPhysicsMethods:
                 address = (
                     rf"\top.sensors.euv.pol.det{detector:03d}.channel_{channel:02d}"
                 )
-                data.append(
-                    params.get_data(address + ":raw", tree_name="hbtep2")
-                )
+                data.append(params.get_data(address + ":raw", tree_name="hbtep2"))
                 r.append(params.get_data(address + ":r", tree_name="hbtep2"))
                 z.append(params.get_data(address + ":z", tree_name="hbtep2"))
-                gain.append(
-                    params.get_data(address + ":gain", tree_name="hbtep2")
-                )
+                gain.append(params.get_data(address + ":gain", tree_name="hbtep2"))
             output[f"euv_{detector:03d}_data"] = data
             output[f"euv_{detector:03d}_r"] = r
             output[f"euv_{detector:03d}_z"] = z
