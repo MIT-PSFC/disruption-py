@@ -178,7 +178,11 @@ class XarrayDataConnection(DataConnection):
             shot_msg("Getting data and dims: {path}"), shot=self._shot_id, path=path
         )
 
-        item = self.data_tree[path]
+        try:
+            item = self.data_tree[path]
+        except KeyError as e:
+            raise FetchDataError(path) from e
+
         data = item.values
         dim_names = list(item.dims)
         dims = []
