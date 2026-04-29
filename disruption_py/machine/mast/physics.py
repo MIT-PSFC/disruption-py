@@ -362,7 +362,10 @@ class MastPhysicsMethods:
 
         # compute derived quantities
         dip_dt = np.gradient(ip, summary_time)
-        dip_smoothed = causal_boxcar_smooth(dip_dt, 6)
+        if len(dip_dt) >= 6:
+            dip_smoothed = causal_boxcar_smooth(dip_dt, 6)
+        else:
+            dip_smoothed = dip_dt
         inductance = 4.0 * np.pi * 1.0e-7 * r0 * li / 2.0
 
         # interpolate to consistent time-base
