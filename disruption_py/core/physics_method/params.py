@@ -83,7 +83,7 @@ class PhysicsMethodParams:
         """
         return self.data_conn.get_data(*args, **kwargs)
 
-    def get_data_with_dims(self, *args, **kwargs) -> np.ndarray:
+    def get_data_with_dims(self, *args, **kwargs) -> Tuple:
         """
         Get data with dimensions using the data connection.
 
@@ -96,7 +96,7 @@ class PhysicsMethodParams:
         """
         return self.data_conn.get_data_with_dims(*args, **kwargs)
 
-    def get_dims(self, *args, **kwargs) -> np.ndarray:
+    def get_dims(self, *args, **kwargs) -> Tuple:
         """
         Get dimensions using the data connection.
 
