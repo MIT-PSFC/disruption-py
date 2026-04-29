@@ -7,6 +7,7 @@ Module for retrieving and calculating data for EAST physics methods.
 import numpy as np
 import scipy
 
+from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1, matlab_smooth
@@ -411,6 +412,7 @@ class EastPhysicsMethods:
         return {"n_e": ne, "greenwald_fraction": greenwald_fraction, "dn_dt": dn_dt}
 
     @staticmethod
+    @cache_method
     def _get_raw_axuv_data(params: PhysicsMethodParams):
         """
         Get the raw (uncalibrated) data from the AXUV arrays for calculating
@@ -1455,6 +1457,7 @@ class EastPhysicsMethods:
         return {"h98": h98_y2}
 
     @staticmethod
+    @cache_method
     def _get_efit_gaps(params: PhysicsMethodParams, tree: str = "_efit_tree"):
         """
         Hidden method to calculate the EFIT and P-EFIT gaps
