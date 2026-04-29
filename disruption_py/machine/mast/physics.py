@@ -338,7 +338,9 @@ class MastPhysicsMethods:
         tokamak=Tokamak.MAST,
     )
     def get_ohmic_parameters(params: PhysicsMethodParams):
-        """Get Ohmic parameters
+        """
+        Calculate the ohmic heating power from the dynamic loop voltage,
+        inductive voltage, and plasma current
 
         Parameters
         ----------
@@ -349,6 +351,10 @@ class MastPhysicsMethods:
         -------
         dict
             A dictionary containing the total Ohmic heating power (`p_oh`).
+
+        References
+        ------
+        - pull requests: #[553](https://github.com/MIT-PSFC/disruption-py/pull/553)
         """
 
         # load relevant parameters
