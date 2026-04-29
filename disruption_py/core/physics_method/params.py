@@ -71,40 +71,13 @@ class PhysicsMethodParams:
         )
 
     def get_data(self, *args, **kwargs) -> np.ndarray:
-        """
-        Get data using the data connection.
-
-        Parameters
-        ----------
-        *args
-            Positional arguments for `data_conn.get_data`.
-        **kwargs
-            Keyword arguments for `data_conn.get_data`.
-        """
+        """Get data using the data connection."""
         return self.data_conn.get_data(*args, **kwargs)
 
     def get_data_with_dims(self, *args, **kwargs) -> Tuple:
-        """
-        Get data with dimensions using the data connection.
-
-        Parameters
-        ----------
-        *args
-            Positional arguments for `data_conn.get_data_with_dims`.
-        **kwargs
-            Keyword arguments for `data_conn.get_data_with_dims`.
-        """
+        """Get data with dimensions using the data connection."""
         return self.data_conn.get_data_with_dims(*args, **kwargs)
 
     def get_dims(self, *args, **kwargs) -> Tuple:
-        """
-        Get dimensions using the data connection.
-
-        Parameters
-        ----------
-        *args
-            Positional arguments for `data_conn.get_dims`.
-        **kwargs
-            Keyword arguments for `data_conn.get_dims`.
-        """
+        """Get dimensions using the data connection."""
         return self.data_conn.get_dims(*args, **kwargs)
