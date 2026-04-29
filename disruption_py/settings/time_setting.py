@@ -304,7 +304,7 @@ class EfitTimeSetting(TimeSetting):
         if efit_time_unit not in {"s", "ms", "us"}:
             params.logger.verbose(
                 "Failed to get the time units of EFIT tree '{tree}', assuming seconds.",
-                tree=params.get_tree_name_of_nickname("_efit_tree"),
+                tree=params.data_conn.get_tree_name_of_nickname("_efit_tree"),
             )
         return _postprocess(times=efit_time, units=efit_time_unit)
 

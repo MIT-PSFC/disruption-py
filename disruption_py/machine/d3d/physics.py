@@ -412,7 +412,7 @@ class D3DPhysicsMethods:
         #  - "\d3d:denv2" gives actual density data
         if not np.isfinite(ne).any() or len(ne) < 2:
             ne, t_ne = params.get_data_with_dims(r"\denv2", tree_name="d3d")
-            tree_name = params.get_tree_name_of_nickname("_efit_tree")
+            tree_name = params.data_conn.get_tree_name_of_nickname("_efit_tree")
             params.logger.verbose(
                 rf"density: data from \{tree_name}:density is either empty or invalid."
                 r" Use \d3d:denv2 instead."
