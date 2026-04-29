@@ -576,7 +576,8 @@ class D3DPhysicsMethods:
         """
         Get the power supply railed indicator from the epsoff signal.
 
-        For shots before 196645, times at which power_supply_railed !=0 (i.e. epsoff !=0)
+        For shots prior to 198183 (196645 being the last plasma shot), times at
+        which power_supply_railed !=0 (i.e. epsoff !=0)
         mean that PCS feedback control of Ip is not being applied. Therefore the
         'ip_error' parameter is undefined for these times.
 
