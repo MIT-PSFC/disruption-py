@@ -79,8 +79,6 @@ class MastUtilMethods:
             return np.full_like(x_new, np.nan)
 
         if len(x) != len(y):
-            raise MismatchCalculationError(
-                "x and y must have the same length for interpolation."
-            )
+            raise MismatchCalculationError(f"len(x) = {len(x)} vs. len(y) = {len(y)}")
 
         return interp1(x, y, x_new)
