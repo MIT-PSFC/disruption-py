@@ -25,6 +25,9 @@ Here follows a non-exhaustive list of projects, publications, and conference con
 
 ### Conferences
 
+- [46th ITPEA-MDC Meeting (2026)](https://www.iter.org/scientists/itpa/itpea-meetings)
+  - H Wietfeldt, _et al._ (2026), _"Characterization of UFOs on Alcator C-Mod and WEST"_
+
 - [6th Fusion HPC Workshop (2026)](https://hpcfusion.bsc.es/2026/)
   - EdD Zapata Cornejo, _et al._ (2026), _"Discovering features for confinement regime operational spaces using classification and Bayesian optimization"_
 
