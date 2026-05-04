@@ -367,9 +367,10 @@ class MastPhysicsMethods:
         equilibrium_time = conn.get_data("equilibrium/time")
 
         # compute derived quantities
+        smooth_window_size = 30
         dip_dt = np.gradient(ip, summary_time)
-        if len(dip_dt) >= 6:
-            dip_smoothed = causal_boxcar_smooth(dip_dt, 30)
+        if len(dip_dt) >= smooth_window_size:
+            dip_smoothed = causal_boxcar_smooth(dip_dt, smooth_window_size)
         else:
             dip_smoothed = dip_dt
         inductance = 4.0 * np.pi * 1.0e-7 * r0 * li / 2.0
