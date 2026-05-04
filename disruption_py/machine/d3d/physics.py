@@ -6,6 +6,7 @@ Module for retrieving and calculating data for DIII-D physics methods.
 
 import numpy as np
 import scipy
+import xarray as xr
 
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
@@ -965,23 +966,33 @@ class D3DPhysicsMethods:
             # TODO: load data from custom tree structures
             raise NotImplementedError
         if 176030 <= params.shot_id <= 176912:
-            # TODO: load data from NetCDF file
-            raise NotImplementedError
-
-        try:
-            # Get data from the ONFR system
-            n_equal_1_mode, t_n1 = params.data_conn.get_data_with_dims(
-                f"ptdata('onsbradial', {params.shot_id})",
-            )  # [G], [ms]
-        except mdsExceptions.MdsException:
-            # Fallback: get data from the legacy DUD system
+            # Load data from a NetCDF file on Omega
+            # TODO: check if running on Omega, otherwise raise an error
             params.logger.verbose(
-                "get_n1_bradial_parameters: Failed to get ONSBRADIAL signal. "
-                "Retrieving from DUSBRADIAL instead."
+                "get_n1_bradial_parameters: Retrieving data from recalc.nc."
             )
-            n_equal_1_mode, t_n1 = params.data_conn.get_data_with_dims(
-                f"ptdata('dusbradial', {params.shot_id})",
-            )  # [G], [ms]
+            filename = (
+                "/fusion/projects/disruption_warning/software/recalc_bradial/recalc.nc"
+            )
+            ds = xr.open_dataset(filename)
+            shot_data = ds.sel(shot=params.shot_id)
+            n_equal_1_mode = shot_data["dusbradial_calculated"].values.copy()  # [G]
+            t_n1 = shot_data["times"].values.copy()  # [ms]
+        else:
+            try:
+                # Get data from the ONFR system
+                n_equal_1_mode, t_n1 = params.data_conn.get_data_with_dims(
+                    f"ptdata('onsbradial', {params.shot_id})",
+                )  # [G], [ms]
+            except mdsExceptions.MdsException:
+                # Fallback: get data from the legacy DUD system
+                params.logger.verbose(
+                    "get_n1_bradial_parameters: Failed to get ONSBRADIAL signal. "
+                    "Retrieving from DUSBRADIAL instead."
+                )
+                n_equal_1_mode, t_n1 = params.data_conn.get_data_with_dims(
+                    f"ptdata('dusbradial', {params.shot_id})",
+                )  # [G], [ms]
         t_n1 /= 1e3  # [ms] -> [s]
         n_equal_1_mode *= 1.0e-4  # [G] -> [T]
         n_equal_1_mode = interp1(t_n1, n_equal_1_mode, params.times)
