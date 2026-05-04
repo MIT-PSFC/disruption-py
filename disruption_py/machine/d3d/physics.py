@@ -969,9 +969,11 @@ class D3DPhysicsMethods:
         if 156199 <= params.shot_id <= 172430:
             # Load data from custom tree structures on Omega
             # TODO: check if running on Omega, otherwise raise an error
-            os.environ["bradial_path"] = config(
-                "d3d"
-            ).physics.get_n1_bradial_parameters.recomputed_tree_path
+            params.logger.verbose(
+                "get_n1_bradial_parameters: Retrieving recomputed DUSBRADIAL signal "
+                "from custom MDSplus trees."
+            )
+            os.environ["bradial_path"] = config("d3d").physics.bradial_path.mds_trees
             try:
                 tree = MDSplus.Tree("bradial", params.shot_id)
                 n_equal_1_mode = tree.getNode("dusbradial").data().squeeze()  # [G]
@@ -983,9 +985,9 @@ class D3DPhysicsMethods:
             # Load data from a NetCDF file on Omega
             # TODO: check if running on Omega, otherwise raise an error
             params.logger.verbose(
-                "get_n1_bradial_parameters: Retrieving data from recalc.nc."
+                "get_n1_bradial_parameters: Retrieving recomputed DUSBRADIAL signal from recalc.nc."
             )
-            filename = config("d3d").physics.get_n1_bradial_parameters.recalc_nc_path
+            filename = config("d3d").physics.bradial_path.recalc_nc
             ds = xr.open_dataset(filename)
             shot_data = ds.sel(shot=params.shot_id)
             n_equal_1_mode = shot_data["dusbradial_calculated"].values.copy()  # [G]
