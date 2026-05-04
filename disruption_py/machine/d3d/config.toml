@@ -12,6 +12,7 @@ port = 8001
 
 [d3d.physics.get_n1_bradial_parameters]
 recalc_nc_path = "/fusion/projects/disruption_warning/software/recalc_bradial/recalc.nc"
+recomputed_tree_path = "/fusion/projects/disruption_warning/software/recalc_bradial/bradial"
 
 [d3d.physics.time_domain_thresholds]
 dipprog_dt = 2e3

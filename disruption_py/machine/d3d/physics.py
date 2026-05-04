@@ -4,6 +4,9 @@
 Module for retrieving and calculating data for DIII-D physics methods.
 """
 
+import os
+
+import MDSplus
 import numpy as np
 import scipy
 import xarray as xr
@@ -964,9 +967,16 @@ class D3DPhysicsMethods:
         # The following shots are missing bradial calculations in MDSplus and
         # must be loaded from a separate datafile
         if 156199 <= params.shot_id <= 172430:
-            # TODO: load data from custom tree structures
-            raise NotImplementedError
-        if 176030 <= params.shot_id <= 176912:
+            # Load data from custom tree structures on Omega
+            # TODO: check if running on Omega, otherwise raise an error
+            os.environ["bradial_path"] = config(
+                "d3d"
+            ).physics.get_n1_bradial_parameters.recomputed_tree_path
+            tree = MDSplus.Tree("bradial", params.shot_id)
+            n_equal_1_mode = tree.getNode("dusbradial").data().squeeze()  # [G]
+            t_n1 = tree.getNode("dusbradial").dim_of().data()  # [ms]
+            # TODO: unset os.environ?
+        elif 176030 <= params.shot_id <= 176912:
             # Load data from a NetCDF file on Omega
             # TODO: check if running on Omega, otherwise raise an error
             params.logger.verbose(
