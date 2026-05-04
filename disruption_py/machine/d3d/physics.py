@@ -8,6 +8,7 @@ import numpy as np
 import scipy
 import xarray as xr
 
+from disruption_py.config import config
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.errors import CalculationError
@@ -971,9 +972,7 @@ class D3DPhysicsMethods:
             params.logger.verbose(
                 "get_n1_bradial_parameters: Retrieving data from recalc.nc."
             )
-            filename = (
-                "/fusion/projects/disruption_warning/software/recalc_bradial/recalc.nc"
-            )
+            filename = config("d3d").physics.get_n1_bradial_parameters.recalc_nc_path
             ds = xr.open_dataset(filename)
             shot_data = ds.sel(shot=params.shot_id)
             n_equal_1_mode = shot_data["dusbradial_calculated"].values.copy()  # [G]
