@@ -972,10 +972,13 @@ class D3DPhysicsMethods:
             os.environ["bradial_path"] = config(
                 "d3d"
             ).physics.get_n1_bradial_parameters.recomputed_tree_path
-            tree = MDSplus.Tree("bradial", params.shot_id)
-            n_equal_1_mode = tree.getNode("dusbradial").data().squeeze()  # [G]
-            t_n1 = tree.getNode("dusbradial").dim_of().data()  # [ms]
-            # TODO: unset os.environ?
+            try:
+                tree = MDSplus.Tree("bradial", params.shot_id)
+                n_equal_1_mode = tree.getNode("dusbradial").data().squeeze()  # [G]
+                t_n1 = tree.getNode("dusbradial").dim_of().data()  # [ms]
+            finally:
+                tree.close()
+                del os.environ["bradial_path"]
         elif 176030 <= params.shot_id <= 176912:
             # Load data from a NetCDF file on Omega
             # TODO: check if running on Omega, otherwise raise an error
