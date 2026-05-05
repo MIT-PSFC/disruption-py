@@ -8,6 +8,7 @@ import numpy as np
 
 from disruption_py.config import config
 from disruption_py.core.physics_method.decorator import physics_method
+from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.machine.cmod import CmodPhysicsMethods
 from disruption_py.machine.d3d import D3DPhysicsMethods
@@ -218,8 +219,8 @@ class GenericPhysicsMethods:
         # Find the plasma current right before the end of the discharge
         (time_indices,) = np.where((t_ip > duration - 0.06) & (t_ip < duration - 0.04))
         if len(time_indices) == 0:
-            raise ValueError(
-                "Invalid timebase for shot {param.shot_id}. Cannot compute current quench time."
+            raise CalculationError(
+                "Invalid timebase. Cannot compute current quench time."
             )
         candidate_ip0 = np.mean(ip_upright[time_indices]) * polarity
 
