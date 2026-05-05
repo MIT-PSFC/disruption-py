@@ -220,6 +220,10 @@ class GenericPhysicsMethods:
         # Find the maximum plasma current excluding the current spike
         ip_upright = ip * polarity
         (time_indices,) = np.where((t_ip > 0) & (t_ip < duration - 0.050))
+        if len(time_indices) == 0:
+            raise CalculationError(
+                "Invalid timebase. Cannot compute current quench time."
+            )
         ip_max = max(ip_upright[time_indices]) * polarity
 
         # Find the plasma current right before the end of the discharge
@@ -245,6 +249,10 @@ class GenericPhysicsMethods:
         (time_indices,) = np.where(
             (t_ip > candidate_t_disrupt) & (t_ip < candidate_t_disrupt + 0.15)
         )
+        if len(time_indices) == 0:
+            raise CalculationError(
+                "Invalid timebase. Cannot compute current quench time."
+            )
         ip_final = min(ip_upright[time_indices])
 
         # Collect the computed parameters for the tests
