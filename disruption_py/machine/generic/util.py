@@ -49,7 +49,9 @@ class GenericUtilMethods:
         # Get the last index
         max_idx = indices[-1] if len(indices) > 0 else None
         duration = ip_time[max_idx]
+        # Check to see if the plasma current signal has been digitized
+        # for long enough to capture the end of the discharge.
         if max_idx == len(ip_time) - 1:
-            duration = -duration  # TODO: what is this for?
+            duration = -duration
 
         return {"duration": duration, "polarity": polarity}

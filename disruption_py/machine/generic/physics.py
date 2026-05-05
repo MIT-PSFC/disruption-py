@@ -203,6 +203,12 @@ class GenericPhysicsMethods:
         )
         duration = end_of_current_params["duration"]
         polarity = end_of_current_params["polarity"]
+        # Check for incomplete digitization
+        if duration < 0:
+            raise CalculationError(
+                "Plasma current signal may not have been digitized for long enough "
+                "to capture the end of the discharge. Cannot determine current_quench_time."
+            )
         # Check for a bona-fide plasma
         if duration == 0:
             params.logger.verbose(
