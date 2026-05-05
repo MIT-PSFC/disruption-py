@@ -233,6 +233,10 @@ class GenericPhysicsMethods:
         # Compute dI/dt during the latter part of the discharge
         (time_indices,) = np.where((t_ip > duration - 0.05) & (t_ip < duration + 0.05))
         didt_upright = np.diff(ip_upright[time_indices]) / np.diff(t_ip[time_indices])
+        if len(didt_upright) == 0:
+            raise CalculationError(
+                "Invalid timebase. Cannot compute current quench time."
+            )
         indx = np.argmin(didt_upright)
         candidate_max_didt = didt_upright[indx] * polarity
         candidate_t_disrupt = t_ip[time_indices[indx]]
