@@ -9,7 +9,6 @@ import numpy as np
 from disruption_py.config import config
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.inout.mds import mdsExceptions
 from disruption_py.machine.cmod import CmodPhysicsMethods
 from disruption_py.machine.d3d import D3DPhysicsMethods
 from disruption_py.machine.east import EastPhysicsMethods
@@ -168,27 +167,15 @@ class GenericPhysicsMethods:
 
         # Get ip and ip timebase
         if params.tokamak == Tokamak.CMOD:
-            try:
-                ip, t_ip = params.data_conn.get_data_with_dims(
-                    r"\ip", tree_name="magnetics"
-                )  # [A], [s]
-            except mdsExceptions.MdsException:
-                params.logger.warning(
-                    "Failed to get measured plasma current parameters. "
-                    "Skip current quench time computation."
-                )
+            ip, t_ip = params.data_conn.get_data_with_dims(
+                r"\ip", tree_name="magnetics"
+            )  # [A], [s]
         elif params.tokamak == Tokamak.D3D:
-            try:
-                ip, t_ip = params.data_conn.get_data_with_dims(
-                    f"ptdata('ip', {params.shot_id})"
-                )  # [A], [ms]
-                t_ip = t_ip / 1.0e3  # [ms] -> [s]
-            except mdsExceptions.MdsException:
-                params.logger.warning(
-                    "Failed to get measured plasma current parameters. "
-                    "Skip current quench time computation."
-                )
-            # Subtract baseline offset to ip
+            ip, t_ip = params.data_conn.get_data_with_dims(
+                f"ptdata('ip', {params.shot_id})"
+            )  # [A], [ms]
+            t_ip = t_ip / 1.0e3  # [ms] -> [s]
+            # Subtract baseline offset from ip
             (baseline_indices,) = np.where(t_ip <= 0)
             if len(baseline_indices) > 0:
                 ip_baseline = np.mean(ip[baseline_indices])
