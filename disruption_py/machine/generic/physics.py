@@ -225,6 +225,11 @@ class GenericPhysicsMethods:
                 "Invalid timebase. Cannot compute current quench time."
             )
         ip_max = max(ip_upright[time_indices]) * polarity
+        if ip_max == 0:
+            # ip_max is in the denominator of `ip0_over_ip_max` so it cannot be 0.
+            raise CalculationError(
+                "Maximum plasma current is zero. Cannot compute current quench time."
+            )
 
         # Find the plasma current right before the end of the discharge
         (time_indices,) = np.where((t_ip > duration - 0.06) & (t_ip < duration - 0.04))
@@ -244,6 +249,11 @@ class GenericPhysicsMethods:
         indx = np.argmin(didt_upright)
         candidate_max_didt = didt_upright[indx] * polarity
         candidate_t_disrupt = t_ip[time_indices[indx]]
+        if candidate_max_didt == 0:
+            # candidate_max_didt is in the denominator of `ip0_over_max_didt` so it cannot be 0.
+            raise CalculationError(
+                "Maximum dI/dt is zero. Cannot compute current quench time."
+            )
 
         # Compute ip_final
         (time_indices,) = np.where(
@@ -259,10 +269,8 @@ class GenericPhysicsMethods:
         parameters = {
             "shot_duration": duration,
             "abs_ip_max": ip_max,
-            "ip0_over_ip_max": candidate_ip0 / ip_max if ip_max != 0 else None,
-            "ip0_over_max_didt": (
-                candidate_ip0 / candidate_max_didt if candidate_max_didt != 0 else None
-            ),
+            "ip0_over_ip_max": candidate_ip0 / ip_max,
+            "ip0_over_max_didt": candidate_ip0 / candidate_max_didt,
             "abs_ip_final": ip_final,
             "abs_ip0": candidate_ip0,
         }
@@ -273,10 +281,6 @@ class GenericPhysicsMethods:
             # Use threshold = None to indicate that we will skip a test.
             if threshold is None:
                 continue
-            # Use parameter = None to indicate a failed computation.
-            if parameter is None:
-                # TODO: consider raising an error.
-                return {"current_quench_time": [np.nan]}
             # Run the test criteriion.
             if not criterion(parameter, threshold):
                 # Failed the test, mark the shot as non-disruptive.
