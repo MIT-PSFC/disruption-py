@@ -972,9 +972,14 @@ class D3DPhysicsMethods:
                 "get_n1_bradial_parameters: Retrieving recomputed DUSBRADIAL signal "
                 "from custom MDSplus trees."
             )
-            os.environ["bradial_path"] = config("d3d").physics.bradial_path.mds_trees
+            os.environ["bradial_path"] = config(
+                params.tokamak
+            ).physics.bradial_path.mds_trees
             try:
                 tree = MDSplus.Tree("bradial", params.shot_id)
+                params.logger.debug(
+                    "Opened custom tree: {tree}", tree=tree.getFileName()
+                )
                 n_equal_1_mode = tree.getNode("dusbradial").data().squeeze()  # [G]
                 t_n1 = tree.getNode("dusbradial").dim_of().data()  # [ms]
             finally:
@@ -986,10 +991,10 @@ class D3DPhysicsMethods:
             params.logger.verbose(
                 "get_n1_bradial_parameters: Retrieving recomputed DUSBRADIAL signal from recalc.nc."
             )
-            filename = config("d3d").physics.bradial_path.recalc_nc
+            filename = config(params.tokamak).physics.bradial_path.recalc_nc
             ds = xr.open_dataset(filename)
             shot_data = ds.sel(shot=params.shot_id)
-            n_equal_1_mode = shot_data["dusbradial_calculated"].values.copy()  # [G]
+            n_equal_1_mode = shot_data["dusbradial_calculated"].values  # [G]
             t_n1 = shot_data["times"].values.copy()  # [ms]
         else:
             try:
