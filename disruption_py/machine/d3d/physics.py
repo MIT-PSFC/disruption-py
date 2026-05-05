@@ -967,14 +967,18 @@ class D3DPhysicsMethods:
         # must be loaded from a separate datafile
         if 156199 <= params.shot_id <= 172430:
             # Load data from custom tree structures on Omega
-            # TODO: check if running on Omega, otherwise raise an error
             params.logger.verbose(
                 "get_n1_bradial_parameters: Retrieving recomputed DUSBRADIAL signal "
                 "from custom MDSplus trees."
             )
-            os.environ["bradial_path"] = config(
-                params.tokamak
-            ).physics.bradial_path.mds_trees
+            # Check if the custom bradial tree exists
+            bradial_path = config(params.tokamak).physics.bradial_path.mds_trees
+            tree_path = os.path.join(bradial_path, f"bradial_{params.shot_id}.tree")
+            if not os.path.exists(tree_path):
+                raise FileNotFoundError(
+                    f"custom MDSplus tree does not exist: {tree_path}"
+                )
+            os.environ["bradial_path"] = bradial_path
             try:
                 tree = MDSplus.Tree("bradial", params.shot_id)
                 params.logger.debug(
@@ -987,11 +991,13 @@ class D3DPhysicsMethods:
                 del os.environ["bradial_path"]
         elif 176030 <= params.shot_id <= 176912:
             # Load data from a NetCDF file on Omega
-            # TODO: check if running on Omega, otherwise raise an error
             params.logger.verbose(
                 "get_n1_bradial_parameters: Retrieving recomputed DUSBRADIAL signal from recalc.nc."
             )
+            # Check if the NetCDF file exists
             filename = config(params.tokamak).physics.bradial_path.recalc_nc
+            if not os.path.exists(filename):
+                raise FileNotFoundError(f"recalc.nc file does not exist: {filename}")
             ds = xr.open_dataset(filename)
             shot_data = ds.sel(shot=params.shot_id)
             n_equal_1_mode = shot_data["dusbradial_calculated"].values  # [G]
