@@ -202,6 +202,13 @@ class GenericPhysicsMethods:
         )
         duration = end_of_current_params["duration"]
         polarity = end_of_current_params["polarity"]
+        # Check for a bona-fide plasma
+        if duration == 0:
+            params.logger.verbose(
+                "get_current_quench_time: Shot does not satisfy the "
+                "bona fide plasma criterion. Marking as non-disruptive."
+            )
+            return {"current_quench_time": [np.nan]}
 
         # Find the maximum plasma current excluding the current spike
         ip_upright = ip * polarity
