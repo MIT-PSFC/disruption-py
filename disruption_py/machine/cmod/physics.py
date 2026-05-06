@@ -20,9 +20,9 @@ from disruption_py.core.utils.math import (
     interp1,
 )
 from disruption_py.inout.mds import mdsExceptions
+from disruption_py.machine.cmod.efit import CmodEfitMethods
 from disruption_py.machine.cmod.thomson import CmodThomsonDensityMeasure
 from disruption_py.machine.tokamak import Tokamak
-from disruption_py.machine.cmod.efit import CmodEfitMethods
 
 
 class CmodPhysicsMethods:
