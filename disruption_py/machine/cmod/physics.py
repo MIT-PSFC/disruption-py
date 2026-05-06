@@ -2256,7 +2256,8 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary with the power threshold for L-H transition (`pow_thr_LH_Martin`), in Watts [W]
+            A dictionary with the power threshold for L-H transition
+            (`pow_thr_LH_Martin`), in Watts [W]
 
         References
         ----------
