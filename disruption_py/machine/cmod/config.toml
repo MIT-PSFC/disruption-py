@@ -186,6 +186,11 @@ imas = "/bolometer/power_radiated_total"
 units = "W"
 validity = [0, inf]
 
+[cmod.physics.attributes.pow_thr_LH_Martin]
+description = "Martin 2008 L-H transition power threshold scaling."
+units = "W"
+validity = [0, 0.1e8]
+
 [cmod.physics.attributes.prad_peaking]
 description = "Peaking factor of the radiated power."
 units = "dimensionless"
@@ -193,11 +198,6 @@ units = "dimensionless"
 [cmod.physics.attributes.pressure_peaking]
 description = "Peaking factor of the pressure profile measured by the Thomson scattering diagnostic."
 units = "dimensionless"
-
-[cmod.physics.attributes.pow_thr_LH_Martin]
-description = "Martin 2008 L-H transition power threshold scaling."
-units = "W"
-validity = [0, 0.1e8]
 
 [cmod.physics.attributes.q0]
 description = "Safety factor at magnetic axis (EFIT)."
