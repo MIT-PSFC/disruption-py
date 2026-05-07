@@ -1473,6 +1473,53 @@ class CmodPhysicsMethods:
         )
 
     @staticmethod
+    @physics_method(
+        columns=[
+            "ne_line_int_ts1",
+            "ne_line_int_ts2",
+            "ne_line_int_tci1",
+            "ne_line_int_tci2",
+        ],
+        tokamak=Tokamak.CMOD,
+    )
+    def get_ts_tci_comparison(params: PhysicsMethodParams):
+        """
+        Return Thomson scattering and TCI line-integrated density measurements
+        interpolated onto the standard timebase.
+
+        Returns
+        -------
+        dict
+            ne_line_int_ts1 : TS line-integrated density for YAG 1 timestamps [m^-2]
+            ne_line_int_ts2 : TS line-integrated density for YAG 2 timestamps [m^-2]
+            ne_line_int_tci1 : TCI line-integrated density at YAG 1 timestamps [m^-2]
+            ne_line_int_tci2 : TCI line-integrated density at YAG 2 timestamps [m^-2]
+        """
+        nl_ts1, nl_ts2, nl_tci1, nl_tci2, time1, time2 = (
+            CmodThomsonDensityMeasure.compare_ts_tci(params)
+        )
+
+        # If time1 or time2 is an int (-1) that means there's no valid data, replace with [np.nan]
+        if isinstance(time1, int):
+            ts1, tci1 = [np.nan], [np.nan]
+        else:
+            ts1 = interp1(time1, nl_ts1, params.times)
+            tci1 = interp1(time1, nl_tci1, params.times)
+
+        if isinstance(time2, int):
+            ts2, tci2 = [np.nan], [np.nan]
+        else:
+            ts2 = interp1(time2, nl_ts2, params.times)
+            tci2 = interp1(time2, nl_tci2, params.times)
+
+        return {
+            "ne_line_int_ts1": ts1,
+            "ne_line_int_ts2": ts2,
+            "ne_line_int_tci1": tci1,
+            "ne_line_int_tci2": tci2,
+        }
+
+    @staticmethod
     def _get_te_profile_params_ece(
         times,
         te,

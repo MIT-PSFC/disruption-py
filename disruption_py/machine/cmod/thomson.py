@@ -63,8 +63,8 @@ class CmodThomsonDensityMeasure:
             ts_time2 = tci_time[indices2]
             (valid_indices,) = np.where((ts_time2 >= t0) & (ts_time2 <= t1))
             if valid_indices.size > 0:
-                nl_tci1 = interp1(tci_t, tci, ts_time2[valid_indices])
-                nl_ts1 = interp1(nlts_t, nlts, ts_time2[valid_indices])
+                nl_tci2 = interp1(tci_t, tci, ts_time2[valid_indices])
+                nl_ts2 = interp1(nlts_t, nlts, ts_time2[valid_indices])
                 time2 = ts_time2[valid_indices]
         return nl_ts1, nl_ts2, nl_tci1, nl_tci2, time1, time2
 
@@ -100,24 +100,34 @@ class CmodThomsonDensityMeasure:
                 if nyag1 == nyag2:
                     indices1 = 2 * np.arange(nyag1)
                     indices2 = indices1 + 1
-                else:
-                    indices1 = 2 * np.arange(nyag1) + (nyag1 > nyag2)
+                elif nyag1 < nyag2:
+                    indices1 = 2 * np.arange(nyag1)
                     indices2 = np.concatenate(
                         (
-                            2 * np.arange(nyag2) + (nyag1 < nyag2),
-                            2 * nyag2 + np.arange(nyag1 - nyag2 - 1),
+                            2 * np.arange(nyag1) + 1,
+                            2 * nyag1 + np.arange(nyag2 - nyag1),
                         )
                     )
-        (v_ind1,) = np.where(indices1 < nt)
-        if nyag1 > 0 and v_ind1.size > 0:
-            indices1 = indices1[v_ind1]
-        else:
-            indices1 = -1
-        (v_ind2,) = np.where(indices2 < nt)
-        if nyag2 > 0 and v_ind2.size > 0:
-            indices2 = indices2[v_ind2]
-        else:
-            indices2 = -1
+                else:  # nyag1 > nyag2
+                    indices2 = 2 * np.arange(nyag2) + 1
+                    indices1 = np.concatenate(
+                        (
+                            2 * np.arange(nyag2),
+                            2 * nyag2 + np.arange(nyag1 - nyag2),
+                        )
+                    )
+        if isinstance(indices1, np.ndarray):
+            (v_ind1,) = np.where(indices1 < nt)
+            if nyag1 > 0 and v_ind1.size > 0:
+                indices1 = indices1[v_ind1]
+            else:
+                indices1 = -1
+        if isinstance(indices2, np.ndarray):
+            (v_ind2,) = np.where(indices2 < nt)
+            if nyag2 > 0 and v_ind2.size > 0:
+                indices2 = indices2[v_ind2]
+            else:
+                indices2 = -1
         return nyag1, nyag2, indices1, indices2
 
     @staticmethod
@@ -185,13 +195,10 @@ class CmodThomsonDensityMeasure:
         n_e = [1e32]
         n_e_sig = [1e32]
         flag = 1
-        valid_indices, efit_times = CmodEfitMethods.efit_check(params)
+        _, efit_times = CmodEfitMethods.efit_check(params)
         ip = params.data_conn.get_data(r"\ip", "cmod")
         if np.mean(ip) > 0:
             flag = 0
-        efit_times = params.data_conn.get_data(
-            r"\efit_aeqdsk:time", tree_name="_efit_tree"
-        )
         t1 = np.amin(efit_times)
         t2 = np.amax(efit_times)
         psia, psia_t = params.data_conn.get_data_with_dims(
@@ -208,17 +215,22 @@ class CmodThomsonDensityMeasure:
             ".YAG_NEW.RESULTS.PROFILES:Z_SORTED", tree_name="electrons"
         )
         mts_core = len(zts_core)
-        zts_edge = params.data_conn.get_data(r"\fiber_z")
+        zts_edge = params.data_conn.get_data(r"\fiber_z", tree_name="electrons")
         mts_edge = len(zts_edge)
         try:
-            nets_edge = params.data_conn.get_data(r"\ts_ne")
-            nets_edge_err = params.data_conn.get_data(r"\ts_ne_err")
+            nets_edge = params.data_conn.get_data(r"\ts_ne", tree_name="electrons")
+            nets_edge_err = params.data_conn.get_data(
+                r"\ts_ne_err", tree_name="electrons"
+            )
         except mdsExceptions.MdsException:
             nets_edge = np.zeros((len(nets_core[:, 1]), mts_edge))
             nets_edge_err = nets_edge + 1e20
         mts = mts_core + mts_edge
-        rts = params.data_conn.get(".YAG.RESULTS.PARAM:R") + np.zeros((1, mts))
-        rtci = params.data_conn.get_data(".tci.results:rad")
+        rts_float = params.data_conn.get_data(
+            ".YAG.RESULTS.PARAM:R", tree_name="electrons"
+        )
+        rts = np.full((1, mts), rts_float)  # (1, mts) array of chord location in R
+        rtci = params.data_conn.get_data(".tci.results:rad", tree_name="electrons")
         nts = len(nets_core_t)
         zts = np.zeros((1, mts))
         zts[:, :mts_core] = zts_core
@@ -238,7 +250,10 @@ class CmodThomsonDensityMeasure:
         psits = CmodThomsonDensityMeasure._efit_rz2psi(params, rts, zts, nets_core_t)
         mtci = 101
         ztci = -0.4 + 0.8 * np.arange(0, mtci) / (mtci - 1)
-        rtci = rtci[nlnum] + np.zeros((1, mtci))
+        # There are 10 TCI channels like NL_01, NL_02, ..., NL_10
+        # nlnum is 1-indexed to match the channel numbering
+        # but we need to convert it to 0-indexed for array indexing
+        rtci = rtci[nlnum - 1] + np.zeros((1, mtci))
         psitci = CmodThomsonDensityMeasure._efit_rz2psi(params, rtci, ztci, nets_core_t)
         psia = interp1(psia_t, psia, nets_core_t)
         psi_0 = interp1(psia_t, psi_0, nets_core_t)
@@ -310,9 +325,9 @@ class CmodThomsonDensityMeasure:
             # Find the index of the closest time
             time_idx = np.argmin(np.abs(times - time))
             # Extract the corresponding psirz slice and transpose it
-            psirz = np.transpose(psirz[time_idx, :, :])
+            psirz_t = np.transpose(psirz[time_idx, :, :])
             # Perform cubic interpolation on the psirz slice
-            values = psirz.flatten()
+            values = psirz_t.flatten()
             psi[:, i] = scipy.interpolate.griddata(
                 points, values, (r, z), method="cubic"
             )
