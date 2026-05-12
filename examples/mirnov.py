@@ -25,7 +25,8 @@ def main():
             "Please use a different tokamak or method."
         )
     elif tokamak is Tokamak.CMOD:
-        shotlist = [1160714026   ] #1160714026,1160930034 1160826001 1051202011  1160714026 1110316031
+        shotlist = [1120906030
+    ] #1160714026,1160930034 1160826001 1051202011  1160714026 1110316031
     else:
         raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 
@@ -36,20 +37,21 @@ def main():
         efit_nickname_setting="default",
         time_setting="mirnov",
     )
+    for shot in shotlist:
+        print(f"Processing shot: {shot}")   
+        result = get_shots_data(
+            tokamak=tokamak,
+            shotlist_setting=[shot],
+            retrieval_settings=retrieval_settings,
+            output_setting="dataset",
+        )
 
-    result = get_shots_data(
-        tokamak=tokamak,
-        shotlist_setting=shotlist,
-        retrieval_settings=retrieval_settings,
-        output_setting="dataset",
-    )
-
-    # Apply frequency response correction to the Mirnov FFT data
-    # result = apply_freq_correction(result)
-    
-    
-    result.to_netcdf(f'../data_archive/{shotlist[0]}.nc',format='NETCDF4')
-    result.to_netcdf(f'../TARS/tars/scratch/input_data/{shotlist[0]}.nc',format='NETCDF4',mode='w')
+        # Apply frequency response correction to the Mirnov FFT data
+        result = apply_freq_correction(result)
+        
+        
+        # result.to_netcdf(f'../data_archive/{shotlist[0]}.nc',format='NETCDF4')
+        result.to_netcdf(f'../TARS/tars/scratch/input_data/{shot}.nc',format='NETCDF4',mode='w')
 
 
     print(result)
