@@ -144,7 +144,7 @@ do
       2>&1
 
       # install
-      poetry install --with lab --with dev \
+      uv sync --group lab --group dev \
       > "$LOG/install.log" \
       2>&1
 
