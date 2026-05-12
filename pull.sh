@@ -193,6 +193,19 @@ do
 
       } &
 
+      # cache
+      if [[ "$DISPY_BRANCH" == "main" ]]
+      then
+         {
+            uv cache dir
+            uv cache size -H
+            uv cache prune
+            uv cache size -H
+         } \
+         > "$LOG/cache.log" \
+         2>&1
+      fi
+
       wait # DEBUG
 
    done
