@@ -26,6 +26,8 @@ Here follows a non-exhaustive list of projects, publications, and conference con
 ### Conferences
 
 - [46th ITPEA-MDC Meeting (2026)](https://www.iter.org/scientists/itpa/itpea-meetings)
+  - Z Keith, _et al._ (2026), _"Multi-device validation of tearing physics"_
+  - AR Saperstein, _et al._ (2026), _"Off-normal simulations of radiative collapse events in Alcator C-Mod"_
   - H Wietfeldt, _et al._ (2026), _"Characterization of UFOs on Alcator C-Mod and WEST"_
 
 - [6th Fusion HPC Workshop (2026)](https://hpcfusion.bsc.es/2026/)
