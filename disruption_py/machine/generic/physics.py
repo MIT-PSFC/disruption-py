@@ -35,7 +35,7 @@ class GenericPhysicsMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            The parameters containing the MDSplus connection, shot id and more.
+            The parameters containing the data connection, shot id and more.
 
         Returns
         -------
@@ -70,9 +70,10 @@ class GenericPhysicsMethods:
             signals["ip_prog"] = ip_parameters["ip_prog"]
         elif params.tokamak == Tokamak.D3D:
             ip_parameters = D3DPhysicsMethods.get_ip_parameters(params=params)
+            psr_parameter = D3DPhysicsMethods.get_power_supply_railed(params=params)
             signals["dipprog_dt"] = ip_parameters["dipprog_dt"]
             signals["ip_prog"] = ip_parameters["ip_prog"]
-            signals["power_supply_railed"] = ip_parameters["power_supply_railed"]
+            signals["power_supply_railed"] = psr_parameter["power_supply_railed"]
         elif params.tokamak == Tokamak.EAST:
             ip_parameters = EastPhysicsMethods.get_ip_parameters(params=params)
             signals["dipprog_dt"] = ip_parameters["dipprog_dt"]

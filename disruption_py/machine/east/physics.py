@@ -7,6 +7,7 @@ Module for retrieving and calculating data for EAST physics methods.
 import numpy as np
 import scipy
 
+from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1, matlab_smooth
@@ -70,7 +71,7 @@ class EastPhysicsMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            Parameters containing MDS connection and shot information
+            Parameters containing data connection and shot information
 
         Returns
         -------
@@ -96,7 +97,7 @@ class EastPhysicsMethods:
         dip_dt = [np.nan]
         dipprog_dt = [np.nan]
 
-        ip, ip_time = EastUtilMethods.retrieve_ip(params.mds_conn, params.shot_id)
+        ip, ip_time = EastUtilMethods.retrieve_ip(params.data_conn, params.shot_id)
         # Calculate dip_dt
         dip_dt = np.gradient(ip, ip_time)
 
@@ -115,12 +116,12 @@ class EastPhysicsMethods:
 
         # Start with \lmtipref (standard Ip programming), which is defined for the
         # entire shot, and defines the timebase for the programmed Ip signal.
-        ip_prog, ip_prog_time = params.mds_conn.get_data_with_dims(
+        ip_prog, ip_prog_time = params.data_conn.get_data_with_dims(
             r"\lmtipref*1e6", tree_name="pcs_east"
         )  # [A], [s]
 
         # Now check to see if there is a transition to isoflux control
-        sytps1, time_sytps1 = params.mds_conn.get_data_with_dims(
+        sytps1, time_sytps1 = params.data_conn.get_data_with_dims(
             r"\sytps1", tree_name="pcs_east"
         )
         (sytps1_indices,) = np.where(sytps1 > 0)
@@ -131,7 +132,7 @@ class EastPhysicsMethods:
 
         if len(sytps1_indices) > 0 and time_sytps1[0] <= ip_prog_time[-1]:
             try:
-                ietip, ietip_time = params.mds_conn.get_data_with_dims(
+                ietip, ietip_time = params.data_conn.get_data_with_dims(
                     r"\ietip", tree_name="pcs_east"
                 )
                 ietip = interp1(ietip_time, ietip, ip_prog_time)
@@ -139,7 +140,7 @@ class EastPhysicsMethods:
                 ietip = np.full(len(ip_prog_time), np.nan)
 
             try:
-                idtip, idtip_time = params.mds_conn.get_data_with_dims(
+                idtip, idtip_time = params.data_conn.get_data_with_dims(
                     r"\idtip", tree_name="pcs_east"
                 )
                 idtip = interp1(idtip_time, idtip, ip_prog_time)
@@ -147,7 +148,7 @@ class EastPhysicsMethods:
                 idtip = np.full(len(ip_prog_time), np.nan)
 
             try:
-                istip, istip_time = params.mds_conn.get_data_with_dims(
+                istip, istip_time = params.data_conn.get_data_with_dims(
                     r"\istip", tree_name="pcs_east"
                 )
                 istip = interp1(istip_time, istip, ip_prog_time)
@@ -155,7 +156,7 @@ class EastPhysicsMethods:
                 istip = np.full(len(ip_prog_time), np.nan)
 
             try:
-                iutip, iutip_time = params.mds_conn.get_data_with_dims(
+                iutip, iutip_time = params.data_conn.get_data_with_dims(
                     r"\iutip", tree_name="pcs_east"
                 )
                 iutip = interp1(iutip_time, iutip, ip_prog_time)
@@ -222,7 +223,7 @@ class EastPhysicsMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            Parameters containing MDS connection and shot information
+            Parameters containing data connection and shot information
 
         Returns
         -------
@@ -241,14 +242,14 @@ class EastPhysicsMethods:
         # Get "\vp1_s" signal from the EAST tree.  (This signal is a sub-sampled
         # version of "vp1".)
         try:
-            v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
+            v_loop, v_loop_time = params.data_conn.get_data_with_dims(
                 r"\vp1_s", tree_name="east"
             )
         except mdsExceptions.MdsException:
             params.logger.verbose(
                 r"v_loop: Failed to get \vp1_s data. Use \pcvloop from pcs_east instead."
             )
-            v_loop, v_loop_time = params.mds_conn.get_data_with_dims(
+            v_loop, v_loop_time = params.data_conn.get_data_with_dims(
                 r"\pcvloop", tree_name="pcs_east"
             )  # [V]
 
@@ -284,7 +285,7 @@ class EastPhysicsMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            Parameters containing MDS connection and shot information
+            Parameters containing data connection and shot information
 
         Returns
         -------
@@ -300,7 +301,7 @@ class EastPhysicsMethods:
         blob/matlab/EAST/get_Z_error.m)
         """
         # Read in the calculated zcur from EFIT
-        zcur, zcur_time = params.mds_conn.get_data_with_dims(
+        zcur, zcur_time = params.data_conn.get_data_with_dims(
             r"\efit_aeqdsk:zcur", tree_name="_efit_tree"
         )  # [A], [s]
         # Deal with rare bug
@@ -309,15 +310,15 @@ class EastPhysicsMethods:
 
         # Read in aminor from EFIT
         # TODO: use \aminor or \aout? -- MATLAB: \aminor
-        aminor = params.mds_conn.get_data(r"\aminor", tree_name="_efit_tree")  # [m]
+        aminor = params.data_conn.get_data(r"\aminor", tree_name="_efit_tree")  # [m]
         aminor = aminor[unique_indices]
 
         # Next, get the programmed/requested/target Z from PCS, and the
         # calculated Z-centroid from PCS
-        z_prog, z_prog_time = params.mds_conn.get_data_with_dims(
+        z_prog, z_prog_time = params.data_conn.get_data_with_dims(
             r"\lmtzref/100", tree_name="pcs_east"
         )  # [m], [s] (Node says 'm' but it's wrong)
-        zcur_lmsz, lmsz_time = params.mds_conn.get_data_with_dims(
+        zcur_lmsz, lmsz_time = params.data_conn.get_data_with_dims(
             r"\lmsz", tree_name="pcs_east"
         )  # [m], [s]
 
@@ -371,7 +372,7 @@ class EastPhysicsMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            Parameters containing MDS connection and shot information
+            Parameters containing data connection and shot information
 
         Returns
         -------
@@ -389,7 +390,7 @@ class EastPhysicsMethods:
         dn_dt = [np.nan]
 
         # Get the density and calculate dn_dt
-        ne, netime = params.mds_conn.get_data_with_dims(
+        ne, netime = params.data_conn.get_data_with_dims(
             r"\dfsdev*1e19", tree_name="pcs_east"
         )  # [m^-3], [s]
         dn_dt = np.gradient(ne, netime)  # [m^-3/s]
@@ -400,7 +401,7 @@ class EastPhysicsMethods:
 
         # Calculate Greenwald density
         # TODO: use \aminor or \aout? -- MATLAB: \aout
-        aminor, efittime = params.mds_conn.get_data_with_dims(
+        aminor, efittime = params.data_conn.get_data_with_dims(
             r"\efit_aeqdsk:aout", tree_name="_efit_tree"
         )  # [m], [s]
         aminor = interp1(efittime, aminor, params.times)
@@ -411,6 +412,7 @@ class EastPhysicsMethods:
         return {"n_e": ne, "greenwald_fraction": greenwald_fraction, "dn_dt": dn_dt}
 
     @staticmethod
+    @cache_method
     def _get_raw_axuv_data(params: PhysicsMethodParams):
         """
         Get the raw (uncalibrated) data from the AXUV arrays for calculating
@@ -423,7 +425,7 @@ class EastPhysicsMethods:
         these functions different.
         """
         # Get XUV data
-        (xuvtime,) = params.mds_conn.get_dims(r"\pxuv1", tree_name="east_1")  # [s]
+        (xuvtime,) = params.data_conn.get_dims(r"\pxuv1", tree_name="east_1")  # [s]
         # There are 64 AXUV chords, arranged in 4 arrays of 16 channels each
         xuv = np.full((len(xuvtime), 64), np.nan)
 
@@ -434,7 +436,7 @@ class EastPhysicsMethods:
         for iarray in range(4):
             for ichan in range(16):
                 ichord = 16 * iarray + ichan
-                signal = params.mds_conn.get_data(
+                signal = params.data_conn.get_data(
                     r"\pxuv" + str(ichord + 1), tree_name="east_1"
                 )
                 # Subtract baseline
@@ -455,7 +457,7 @@ class EastPhysicsMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            Parameters containing MDS connection and shot information
+            Parameters containing data connection and shot information
 
         Returns
         -------
@@ -554,7 +556,7 @@ class EastPhysicsMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            Parameters containing MDS connection and shot information
+            Parameters containing data connection and shot information
 
         Returns
         -------
@@ -584,7 +586,7 @@ class EastPhysicsMethods:
             """
             heating_power = np.zeros(params.times.shape)
             for node in nodes:
-                power_node, time_node = params.mds_conn.get_data_with_dims(
+                power_node, time_node = params.data_conn.get_data_with_dims(
                     node, tree_name=tree
                 )
                 heating_power += interp1(
@@ -620,7 +622,7 @@ class EastPhysicsMethods:
 
         # Get ECRH power
         try:
-            p_ecrh, ecrh_time = params.mds_conn.get_data_with_dims(
+            p_ecrh, ecrh_time = params.data_conn.get_data_with_dims(
                 r"\pecrh1i*1e3", tree_name="analysis"
             )  # [W], [s]
             (baseline_indices,) = np.where(ecrh_time < 0)
@@ -681,7 +683,7 @@ class EastPhysicsMethods:
 
         # Get Wmhd, calculate dWmhd_dt, and calculate p_loss
         try:
-            wmhd, efittime = params.mds_conn.get_data_with_dims(
+            wmhd, efittime = params.data_conn.get_data_with_dims(
                 r"\efit_aeqdsk:wmhd", tree_name="_efit_tree"
             )  # [W], [s]
             dwmhd_dt = np.gradient(wmhd, efittime)
@@ -726,7 +728,7 @@ class EastPhysicsMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            Parameters containing MDS connection and shot information
+            Parameters containing data connection and shot information
 
         Returns
         -------
@@ -740,14 +742,14 @@ class EastPhysicsMethods:
         """
         # Get raw signals
         try:
-            vloop, vloop_time = params.mds_conn.get_data_with_dims(
+            vloop, vloop_time = params.data_conn.get_data_with_dims(
                 r"\pcvloop", tree_name="pcs_east"
             )  # [V]
-            li, li_time = params.mds_conn.get_data_with_dims(
+            li, li_time = params.data_conn.get_data_with_dims(
                 r"\efit_aeqdsk:li", tree_name="_efit_tree"
             )  # [H]
             # Fetch raw ip signal to calculate dip_dt and apply smoothing
-            ip, ip_time = params.mds_conn.get_data_with_dims(
+            ip, ip_time = params.data_conn.get_data_with_dims(
                 r"\pcrl01", tree_name="pcs_east"
             )  # [A]
         except mdsExceptions.MdsException:
@@ -797,7 +799,7 @@ class EastPhysicsMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            Parameters containing MDS connection and shot information
+            Parameters containing data connection and shot information
 
         Returns
         -------
@@ -828,19 +830,19 @@ class EastPhysicsMethods:
 
         # Get the rmp coil currents
         # Translated from get_rmp_and_saddle_signals.m
-        (rmptime,) = params.mds_conn.get_dims(r"\irmpu1", tree_name="east")
+        (rmptime,) = params.data_conn.get_dims(r"\irmpu1", tree_name="east")
         rmp = np.full((len(rmptime), 16), np.nan)
         for i in range(8):
             # Get irmpu1 to irmpu8
-            signal = params.mds_conn.get_data(rf"\irmpu{i+1}", tree_name="east")
+            signal = params.data_conn.get_data(rf"\irmpu{i+1}", tree_name="east")
             if len(signal) == len(rmptime):
                 rmp[:, i] = signal
             # Get irmpl1 to irmpl8
-            signal = params.mds_conn.get_data(rf"\irmpl{i+1}", tree_name="east")
+            signal = params.data_conn.get_data(rf"\irmpl{i+1}", tree_name="east")
             if len(signal) == len(rmptime):
                 rmp[:, i + 8] = signal
         # Get saddle coil signals
-        (saddletime,) = params.mds_conn.get_dims(r"\sad_pa", tree_name="east")
+        (saddletime,) = params.data_conn.get_dims(r"\sad_pa", tree_name="east")
         saddle = np.full((len(saddletime), 8), np.nan)
         saddle_nodes = [
             r"\sad_pa",
@@ -854,11 +856,11 @@ class EastPhysicsMethods:
         ]
         for i, node in enumerate(saddle_nodes[:7]):
             try:
-                saddle[:, i] = params.mds_conn.get_data(node, tree_name="east")
+                saddle[:, i] = params.data_conn.get_data(node, tree_name="east")
             except mdsExceptions.MdsException:
                 saddle[:, i] = 0
-        sad_lo = params.mds_conn.get_data(r"\sad_lo", tree_name="east")
-        sad_lm = params.mds_conn.get_data(r"\sad_lm", tree_name="east")
+        sad_lo = params.data_conn.get_data(r"\sad_lo", tree_name="east")
+        sad_lm = params.data_conn.get_data(r"\sad_lm", tree_name="east")
         saddle[:, 7] = sad_lo - sad_lm
 
         # Calculate RMP n=1 Fourier component amplitude and phase (on the timebase
@@ -921,7 +923,7 @@ class EastPhysicsMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            Parameters containing MDS connection and shot information
+            Parameters containing data connection and shot information
 
         Returns
         -------
@@ -940,7 +942,7 @@ class EastPhysicsMethods:
             tree = "pcs_east"
         else:
             tree = "eng_tree"
-        itf, btor_time = params.mds_conn.get_data_with_dims(r"\it", tree_name=tree)
+        itf, btor_time = params.data_conn.get_data_with_dims(r"\it", tree_name=tree)
         btor = (
             (4 * np.pi * 1e-7) * itf * (16 * 130) / (2 * np.pi * 1.8)
         )  # about 4,327 amps/tesla
@@ -972,7 +974,7 @@ class EastPhysicsMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            Parameters containing MDS connection and shot information
+            Parameters containing data connection and shot information
 
         Returns
         -------
@@ -1010,7 +1012,7 @@ class EastPhysicsMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            Parameters containing MDS connection and shot information
+            Parameters containing data connection and shot information
 
         Returns
         -------
@@ -1046,7 +1048,7 @@ class EastPhysicsMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            The parameters containing the MDS connection and shot information.
+            The parameters containing the data connection and shot information.
 
         Returns
         -------
@@ -1069,7 +1071,7 @@ class EastPhysicsMethods:
         }
         for name, node in signals.items():
             try:
-                signal, timearray = params.mds_conn.get_data_with_dims(
+                signal, timearray = params.data_conn.get_data_with_dims(
                     node, tree_name="pcs_east"
                 )
                 signal = interp1(
@@ -1081,7 +1083,7 @@ class EastPhysicsMethods:
 
         # Get q95_rt
         try:
-            q95_rt, q95_rt_time = params.mds_conn.get_data_with_dims(
+            q95_rt, q95_rt_time = params.data_conn.get_data_with_dims(
                 r"\q95", tree_name="pefitrt_east"
             )
             # Deal with bug
@@ -1106,7 +1108,7 @@ class EastPhysicsMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            The parameters containing the MDS connection and shot information.
+            The parameters containing the data connection and shot information.
 
         Returns
         -------
@@ -1124,7 +1126,7 @@ class EastPhysicsMethods:
         """
         # Get p_rad_rt
         try:
-            p_rad_rt, timearray = params.mds_conn.get_data_with_dims(
+            p_rad_rt, timearray = params.data_conn.get_data_with_dims(
                 r"\pcprad", tree_name="pcs_east"
             )
             p_rad_rt = interp1(
@@ -1144,7 +1146,7 @@ class EastPhysicsMethods:
         try:
             nbi_signals = {}
             for name, node in nbi_nodes.items():
-                signal, timearray = params.mds_conn.get_data_with_dims(
+                signal, timearray = params.data_conn.get_data_with_dims(
                     node, tree_name="pefitrt_east"
                 )
                 signal = interp1(
@@ -1168,7 +1170,7 @@ class EastPhysicsMethods:
         try:
             lh_signals = {}
             for name, node in lh_nodes.items():
-                signal, timearray = params.mds_conn.get_data_with_dims(
+                signal, timearray = params.data_conn.get_data_with_dims(
                     node, tree_name="pefitrt_east"
                 )
                 signal = interp1(
@@ -1217,7 +1219,7 @@ class EastPhysicsMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            The parameters containing the MDS connection and shot information.
+            The parameters containing the data connection and shot information.
 
         Returns
         -------
@@ -1287,7 +1289,7 @@ class EastPhysicsMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            The parameters containing the MDS connection and shot information.
+            The parameters containing the data connection and shot information.
 
         Returns
         -------
@@ -1312,7 +1314,7 @@ class EastPhysicsMethods:
 
         # Get the Mirnov signal from \cmp1t (5 MHz)
         time_window = 0.001
-        bp_dot, bp_dot_time = params.mds_conn.get_data_with_dims(
+        bp_dot, bp_dot_time = params.data_conn.get_data_with_dims(
             r"\cmp1t", tree_name="east"
         )  # [T/s], [s]
         for i, time in enumerate(params.times):
@@ -1342,7 +1344,7 @@ class EastPhysicsMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            The parameters containing the MDS connection and shot information.
+            The parameters containing the data connection and shot information.
 
         Returns
         -------
@@ -1365,7 +1367,7 @@ class EastPhysicsMethods:
         n1rms_normalized = [np.nan]
         n2rms_normalized = [np.nan]
 
-        (mirtime,) = params.mds_conn.get_dims(r"\mitab2", tree_name="east")
+        (mirtime,) = params.data_conn.get_dims(r"\mitab2", tree_name="east")
         mir = np.full((len(mirtime), 16), np.nan)
         mir_nodes = [
             r"\mitab2",
@@ -1387,7 +1389,7 @@ class EastPhysicsMethods:
         ]
         for i, node in enumerate(mir_nodes):
             try:
-                mir[:, i] = params.mds_conn.get_data(node, tree_name="east")
+                mir[:, i] = params.data_conn.get_data(node, tree_name="east")
             except mdsExceptions.MdsException:
                 continue
 
@@ -1431,7 +1433,7 @@ class EastPhysicsMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            Parameters containing MDS connection and shot information
+            Parameters containing data connection and shot information
 
         Returns
         -------
@@ -1445,7 +1447,7 @@ class EastPhysicsMethods:
         """
         h98_y2 = [np.nan]
 
-        h98_y2, h98_y2_time = params.mds_conn.get_data_with_dims(
+        h98_y2, h98_y2_time = params.data_conn.get_data_with_dims(
             r"\h98_mhd", tree_name="energy_east"
         )
 
@@ -1455,6 +1457,7 @@ class EastPhysicsMethods:
         return {"h98": h98_y2}
 
     @staticmethod
+    @cache_method
     def _get_efit_gaps(params: PhysicsMethodParams, tree: str = "_efit_tree"):
         """
         Hidden method to calculate the EFIT and P-EFIT gaps
@@ -1463,7 +1466,7 @@ class EastPhysicsMethods:
         lower_gap = [np.nan]
 
         # Get plasma boundary data
-        data, efittime = params.mds_conn.get_data_with_dims(
+        data, efittime = params.data_conn.get_data_with_dims(
             r"\top.results.geqdsk:bdry", tree_name=tree
         )
         # Convert the order of indices to MATLAB order
@@ -1472,10 +1475,10 @@ class EastPhysicsMethods:
         xcoords, ycoords = data
 
         # Get first wall geometry data
-        xfirstwall = params.mds_conn.get_data(
+        xfirstwall = params.data_conn.get_data(
             r"\top.results.geqdsk:xlim", tree_name=tree
         )
-        yfirstwall = params.mds_conn.get_data(
+        yfirstwall = params.data_conn.get_data(
             r"\top.results.geqdsk:ylim", tree_name=tree
         )
         seed = np.ones((len(xcoords), 1))
@@ -1549,7 +1552,7 @@ class EastPhysicsMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            Parameters containing MDS connection and shot information
+            Parameters containing data connection and shot information
 
         Returns
         -------
