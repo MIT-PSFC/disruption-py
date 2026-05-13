@@ -571,6 +571,55 @@ class D3DPhysicsMethods:
         return {"n_e_rt": ne_rt, "greenwald_fraction_rt": g_f_rt, "dn_dt_rt": dne_dt_rt}
 
     @staticmethod
+    @physics_method(columns=["power_supply_railed"], tokamak=Tokamak.D3D)
+    def get_power_supply_railed(params: PhysicsMethodParams):
+        """
+        Get the power supply railed indicator from the epsoff signal.
+
+        For shots prior to 198183 (196645 being the last plasma shot), times at
+        which power_supply_railed !=0 (i.e. epsoff !=0)
+        mean that PCS feedback control of Ip is not being applied. Therefore the
+        'ip_error' parameter is undefined for these times.
+
+        For shots starting at 198183, the wiring of epsoff signal was switched to
+        high = good and 0 = bad during the 2023/2024 vent.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            Parameters containing data connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the "power_supply_railed" signal, which indicates if
+            the power supply has railed (1) or not (0), or NaN if failed.
+
+        References
+        -------
+        - original source: [get_Ip_parameters_RT.m](https://github.com/MIT-PSFC/disruption-py
+        /blob/matlab/DIII-D/get_Ip_parameters_RT.m)
+        - pull requests: #[547](https://github.com/MIT-PSFC/disruption-py/pull/547)
+        - issues: #[506](https://github.com/MIT-PSFC/disruption-py/issues/506)
+        """
+        epsoff, t_epsoff = params.data_conn.get_data_with_dims(
+            f"ptdata('epsoff', {params.shot_id})"
+        )
+        t_epsoff = t_epsoff / 1.0e3  # [ms] -> [s]
+        # Avoid problem with simultaneity of epsoff being triggered exactly
+        # on the last time sample
+        t_epsoff += 0.001
+        epsoff = interp1(t_epsoff, epsoff, params.times, "linear")
+        power_supply_railed = np.zeros(len(params.times))
+        if params.shot_id >= 198183:
+            # Post 2023/2024 wiring change: high=good, 0=bad
+            (railed_indices,) = np.where(np.abs(epsoff) < 0.5)
+        else:
+            (railed_indices,) = np.where(np.abs(epsoff) > 0.5)
+        power_supply_railed[railed_indices] = 1
+        return {"power_supply_railed": power_supply_railed}
+
+    @staticmethod
     @physics_method(
         columns=[
             "ip",
@@ -578,7 +627,6 @@ class D3DPhysicsMethods:
             "ip_error",
             "dip_dt",
             "dipprog_dt",
-            "power_supply_railed",
         ],
         tokamak=Tokamak.D3D,
     )
@@ -600,16 +648,17 @@ class D3DPhysicsMethods:
             A dictionary containing the following keys:
 
             - `ip`: Measured plasma current values interpolated to the specified times.
+            - `ip_prog`: Programmed plasma current values interpolated to the specified times.
             - `ip_error`: Error between the actual and programmed plasma currents.
             - `dip_dt`: Time derivative of the measured plasma current.
             - `dipprog_dt`: Time derivative of the programmed plasma current.
-            - `power_supply_railed`: Indicator of whether the power supply has railed
-            at the specified times.
 
         References
         -------
         - original source: [get_Ip_parameters.m](https://github.com/MIT-PSFC/disruption-py/blob
         /matlab/DIII-D/get_Ip_parameters.m)
+        - pull requests: #[547](https://github.com/MIT-PSFC/disruption-py/pull/547)
+        - issues: #[506](https://github.com/MIT-PSFC/disruption-py/issues/506)
         """
         ip = [np.nan]
         ip_prog = [np.nan]
@@ -676,29 +725,23 @@ class D3DPhysicsMethods:
         # PCS feedback control of Ip is not being applied.  Therefore the
         # 'ip_error' parameter is undefined for these times.
         try:
-            epsoff, t_epsoff = params.data_conn.get_data_with_dims(
-                f"ptdata('epsoff', {params.shot_id})"
+            power_supply_railed = D3DPhysicsMethods.get_power_supply_railed(params)
+            power_supply_railed = power_supply_railed["power_supply_railed"]
+            if np.isfinite(power_supply_railed).any():
+                (railed_indices,) = np.where(power_supply_railed == 1)
+                ip_error[railed_indices] = np.nan
+        except mdsExceptions.MdsException:
+            params.logger.warning(
+                "get_ip_parameters: Failed to get power_supply_railed signal "
+                "to filter out time points where ip_error is not defined. "
+                "Returning ip_error as is."
             )
-            t_epsoff = t_epsoff / 1.0e3  # [ms] -> [s]
-            # Avoid problem with simultaneity of epsoff being triggered exactly
-            # on the last time sample
-            t_epsoff += 0.001
-            epsoff = interp1(t_epsoff, epsoff, params.times, "linear")
-            railed_indices = np.where(np.abs(epsoff) > 0.5)
-            power_supply_railed = np.zeros(len(params.times))
-            power_supply_railed[railed_indices] = 1
-            ip_error[railed_indices] = np.nan
-        except mdsExceptions.MdsException as e:
-            params.logger.warning("Failed to get epsoff signal. Setting to NaN.")
-            params.logger.opt(exception=True).debug(e)
-            power_supply_railed = [np.nan]
         return {
             "ip": ip,
             "ip_prog": ip_prog,
             "ip_error": ip_error,
             "dip_dt": dip_dt,
             "dipprog_dt": dipprog_dt,
-            "power_supply_railed": power_supply_railed,
         }
 
     @staticmethod
@@ -733,7 +776,9 @@ class D3DPhysicsMethods:
         -------
         - original source: [get_Ip_parameters_RT.m](https://github.com/MIT-PSFC/disruption-py
         /blob/matlab/DIII-D/get_Ip_parameters_RT.m)
-        - pull requests: #[254](https://github.com/MIT-PSFC/disruption-py/pull/254)
+        - pull requests: #[254](https://github.com/MIT-PSFC/disruption-
+        py/pull/254), #[547](https://github.com/MIT-PSFC/disruption-py/pull/547)
+        - issues: #[506](https://github.com/MIT-PSFC/disruption-py/issues/506)
         """
         ip_rt = [np.nan]
         ip_prog_rt = [np.nan]
@@ -814,29 +859,20 @@ class D3DPhysicsMethods:
         # PCS feedback control of Ip is not being applied.  Therefore the
         # 'ip_error' parameter is undefined for these times.
         try:
-            epsoff, t_epsoff = params.data_conn.get_data_with_dims(
-                f"ptdata('epsoff', {params.shot_id})"
-            )
-            t_epsoff = t_epsoff / 1.0e3  # [ms] -> [s]
-            # Avoid problem with simultaneity of epsoff being triggered exactly on
-            # the last time sample
-            t_epsoff += 0.001
-            epsoff = interp1(t_epsoff, epsoff, params.times, "linear")
-            power_supply_railed = np.zeros(len(params.times))
-            (railed_indices,) = np.where(np.abs(epsoff) > 0.5)
-            power_supply_railed[railed_indices] = 1
-        except mdsExceptions.MdsException as e:
+            power_supply_railed = D3DPhysicsMethods.get_power_supply_railed(params)
+            power_supply_railed = power_supply_railed["power_supply_railed"]
+            if (
+                np.isfinite(ip_error_rt).any()
+                and np.isfinite(power_supply_railed).any()
+            ):
+                (ps_railed_indices,) = np.where(power_supply_railed != 0)
+                ip_error_rt[ps_railed_indices] = np.nan
+        except mdsExceptions.MdsException:
             params.logger.warning(
-                "power_supply_railed: Failed to get epsoff signal. Setting to NaN."
+                "get_rt_ip_parameters: Failed to get power_supply_railed signal "
+                "to filter out time points where ip_error_rt is not defined. "
+                "Returning ip_error_rt as is."
             )
-            params.logger.opt(exception=True).debug(e)
-            power_supply_railed = np.full(len(params.times), np.nan)
-        # Times at which power_supply_railed ~=0 (i.e. epsoff ~=0) mean that
-        # PCS feedback control of Ip is not being applied.  Therefore the
-        # 'ip_error' parameter is undefined for these times.
-        if np.isfinite(ip_error_rt).any() and np.isfinite(power_supply_railed).any():
-            (ps_railed_indices,) = np.where(power_supply_railed != 0)
-            ip_error_rt[ps_railed_indices] = np.nan
         return {
             "ip_rt": ip_rt,
             "ip_prog_rt": ip_prog_rt,
