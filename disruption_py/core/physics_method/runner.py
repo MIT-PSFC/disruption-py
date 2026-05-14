@@ -12,7 +12,7 @@ import numpy as np
 import xarray as xr
 
 from disruption_py.config import config
-from disruption_py.core.physics_method.errors import CalculationError
+from disruption_py.core.physics_method.errors import CustomError
 from disruption_py.core.physics_method.metadata import (
     BoundMethodMetadata,
     get_method_metadata,
@@ -186,7 +186,7 @@ def populate_method(
         level = "ERROR"
         if isinstance(e, mdsExceptions.MDSplusERROR):
             pass
-        elif isinstance(e, (mdsExceptions.MdsException, CalculationError)):
+        elif isinstance(e, (mdsExceptions.MdsException, CustomError)):
             level = "WARNING"
         physics_method_params.logger.log(level, "{name}: {exc}", name=name, exc=repr(e))
         physics_method_params.logger.opt(exception=True).debug(name)

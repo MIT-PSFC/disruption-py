@@ -12,6 +12,7 @@ import xarray as xr
 from loguru import logger
 
 from disruption_py.config import config
+from disruption_py.core.physics_method.errors import FetchDataError, NanDataError
 from disruption_py.core.utils.misc import shot_msg
 from disruption_py.inout.base import DataConnection, ProcessConnection
 from disruption_py.machine.tokamak import Tokamak
@@ -103,8 +104,13 @@ class XarrayDataConnection(DataConnection):
         return path
 
     def get_data(
-        self, path: str, group: str = None, return_xarray: bool = False, **kwargs
-    ) -> "np.ndarray | xr.DataArray | None":
+        self,
+        path: str,
+        group: str = None,
+        required: bool = False,
+        return_xarray: bool = False,
+        **kwargs,
+    ) -> np.ndarray | xr.DataArray:
         """Get data from the connection.
 
         Parameters
@@ -113,6 +119,8 @@ class XarrayDataConnection(DataConnection):
             Variable path, e.g. "summary/ip" or just "ip" if group is provided.
         group : str, optional
             Group prefix. If provided and path has no "/", prepends group.
+        required : bool, optional
+            If True, raise an error if the data is all NaNs.
         return_xarray : bool, optional
             If True, return the raw xarray DataArray instead of numpy values.
         **kwargs
@@ -120,36 +128,27 @@ class XarrayDataConnection(DataConnection):
 
         Returns
         -------
-        np.ndarray or xr.DataArray or None
-            numpy array by default, xr.DataArray if return_xarray=True,
-            or None if variable not found and return_xarray=True.
+        np.ndarray or xr.DataArray
+            numpy array by default, xr.DataArray if return_xarray=True.
         """
         path = self._resolve_path(path, group)
         logger.trace(shot_msg("Getting data: {path}"), shot=self._shot_id, path=path)
 
         try:
             item = self.data_tree[path]
+        except KeyError as e:
+            raise FetchDataError(path) from e
 
-            if return_xarray:
-                return item
+        if required and not np.any(np.isfinite(item)):
+            raise NanDataError(path)
 
-            return item.values
-        except KeyError:
-            logger.warning(
-                shot_msg("Variable not found: {path}"),
-                path=path,
-                shot=self._shot_id,
-            )
-
-        if return_xarray:
-            return None
-
-        return np.array([np.nan])
+        return item if return_xarray else item.values
 
     def get_data_with_dims(
         self,
         path: str,
         group: str = None,
+        required: bool = False,
         dim_nums: List = None,
         **kwargs,
     ) -> Tuple:
@@ -161,6 +160,8 @@ class XarrayDataConnection(DataConnection):
             Variable path.
         group : str, optional
             Group prefix.
+        required : bool, optional
+            If True, raise an error if the data is all NaNs.
         dim_nums : List, optional
             Dimension indices to retrieve. Default [0].
         **kwargs
@@ -177,13 +178,20 @@ class XarrayDataConnection(DataConnection):
             shot_msg("Getting data and dims: {path}"), shot=self._shot_id, path=path
         )
 
-        item = self.data_tree[path]
+        try:
+            item = self.data_tree[path]
+        except KeyError as e:
+            raise FetchDataError(path) from e
+
         data = item.values
         dim_names = list(item.dims)
         dims = []
         for d in dim_nums:
             dim_name = dim_names[d]
             dims.append(item.coords[dim_name].values)
+
+        if required and not np.any(np.isfinite(data)):
+            raise NanDataError(path)
 
         return data, *dims
 
