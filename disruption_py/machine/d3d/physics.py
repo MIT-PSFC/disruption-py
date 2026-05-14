@@ -993,9 +993,7 @@ class D3DPhysicsMethods:
             bradial_path = config(params.tokamak).physics.bradial_path.mds_trees
             tree_path = os.path.join(bradial_path, f"bradial_{params.shot_id}.tree")
             if not os.path.exists(tree_path):
-                raise FileNotFoundError(
-                    f"custom MDSplus tree does not exist: {tree_path}"
-                )
+                raise FetchDataError(f"custom MDSplus tree does not exist: {tree_path}")
             os.environ["bradial_path"] = bradial_path
             try:
                 tree = MDSplus.Tree("bradial", params.shot_id)
@@ -1015,7 +1013,7 @@ class D3DPhysicsMethods:
             # Check if the NetCDF file exists
             filename = config(params.tokamak).physics.bradial_path.recalc_nc
             if not os.path.exists(filename):
-                raise FileNotFoundError(f"recalc.nc file does not exist: {filename}")
+                raise FetchDataError(f"recalc.nc file does not exist: {filename}")
             ds = xr.open_dataset(filename)
             shot_data = ds.sel(shot=params.shot_id)
             n_equal_1_mode = shot_data["dusbradial_calculated"].values  # [G]
