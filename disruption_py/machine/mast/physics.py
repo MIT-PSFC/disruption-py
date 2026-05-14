@@ -272,15 +272,11 @@ class MastPhysicsMethods:
         """
         hcam = params.get_data("soft_x_rays/horizontal_cam_upper", return_xarray=True)
 
-        if hcam is not None:
-            hcam = hcam.isel(horizontal_cam_upper_channel=7)
-            hcam = hcam.squeeze(drop=True)
-            hcam = hcam.drop_vars(["horizontal_cam_upper_channel"])
-            sxr_time = hcam.time.values
-            sxr_data = hcam.values
-        else:
-            sxr_time = np.array([np.nan])
-            sxr_data = np.array([np.nan])
+        hcam = hcam.isel(horizontal_cam_upper_channel=7)
+        hcam = hcam.squeeze(drop=True)
+        hcam = hcam.drop_vars(["horizontal_cam_upper_channel"])
+        sxr_time = hcam.time.values
+        sxr_data = hcam.values
 
         times = params.times
         sxr_data = MastUtilMethods.interpolate_1d(sxr_time, sxr_data, times)
@@ -311,17 +307,13 @@ class MastPhysicsMethods:
             return_xarray=True,
         )
 
-        if dalpha is not None:
-            dalpha = dalpha.isel(dalpha_channel=2)
-            dalpha = dalpha.dropna(dim="time")
-            dalpha = dalpha.squeeze(drop=True)
-            dalpha = dalpha.drop_vars("dalpha_channel")
+        dalpha = dalpha.isel(dalpha_channel=2)
+        dalpha = dalpha.dropna(dim="time")
+        dalpha = dalpha.squeeze(drop=True)
+        dalpha = dalpha.drop_vars("dalpha_channel")
 
-            dalpha_time = dalpha.time.values
-            dalpha_data = dalpha.values
-        else:
-            dalpha_time = np.array([np.nan])
-            dalpha_data = np.array([np.nan])
+        dalpha_time = dalpha.time.values
+        dalpha_data = dalpha.values
 
         times = params.times
         dalpha_data = MastUtilMethods.interpolate_1d(dalpha_time, dalpha_data, times)
