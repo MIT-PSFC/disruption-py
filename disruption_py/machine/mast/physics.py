@@ -10,7 +10,7 @@ import numpy as np
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.errors import MismatchCalculationError
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.math import interp1
+from disruption_py.core.utils.math import causal_boxcar_smooth, interp1
 from disruption_py.machine.mast.util import MastUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 
@@ -318,3 +318,61 @@ class MastPhysicsMethods:
         times = params.times
         dalpha_data = MastUtilMethods.interpolate_1d(dalpha_time, dalpha_data, times)
         return {"d_alpha": dalpha_data}
+
+    @staticmethod
+    @physics_method(
+        columns=["p_oh"],
+        tokamak=Tokamak.MAST,
+    )
+    def get_ohmic_parameters(params: PhysicsMethodParams):
+        """
+        Calculate the ohmic heating power from the dynamic loop voltage,
+        inductive voltage, and plasma current
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the total Ohmic heating power (`p_oh`).
+
+        References
+        ------
+        - pull requests: #[553](https://github.com/MIT-PSFC/disruption-py/pull/553)
+        """
+
+        # load relevant parameters
+        r0 = params.get_data("equilibrium/magnetic_axis_r")
+        li = params.get_data("equilibrium/li")
+        v_loop = params.get_data("equilibrium/vloop_dynamic")
+        ip = params.get_data("summary/ip")
+        summary_time = params.get_data("summary/time")
+        equilibrium_time = params.get_data("equilibrium/time")
+
+        # compute derived quantities
+        smooth_window_size = 30
+        dip_dt = np.gradient(ip, summary_time)
+        if len(dip_dt) >= smooth_window_size:
+            dip_smoothed = causal_boxcar_smooth(dip_dt, smooth_window_size)
+        else:
+            dip_smoothed = dip_dt
+        inductance = 4.0 * np.pi * 1.0e-7 * r0 * li / 2.0
+
+        # interpolate to consistent time-base
+        v_loop = interp1(equilibrium_time, v_loop, params.times)
+        inductance = interp1(equilibrium_time, inductance, params.times)
+        dip_smoothed = interp1(summary_time, dip_smoothed, params.times)
+        ip = interp1(summary_time, ip, params.times)
+
+        # calculate p_oh
+        v_inductive = inductance * dip_smoothed
+        v_resistive = v_loop - v_inductive
+        p_oh = ip * v_resistive
+
+        # Set negative p_ohm values to 0
+        p_oh = np.clip(p_oh, 0, None)
+
+        return {"p_oh": p_oh}
