@@ -12,6 +12,7 @@ import numpy as np
 from loguru import logger
 
 from disruption_py.config import config
+from disruption_py.core.physics_method.errors import NanDataError
 from disruption_py.core.utils.misc import shot_msg
 from disruption_py.core.utils.shared_instance import SharedInstance
 from disruption_py.inout.base import DataConnection, ProcessConnection
@@ -244,6 +245,7 @@ class MDSConnection(DataConnection):
         self,
         path: str,
         group: str = None,
+        required: bool = False,
         tree_name: str = None,
         arguments: Any = None,
         **kwargs,
@@ -257,6 +259,8 @@ class MDSConnection(DataConnection):
             MDSplus path to record.
         group : str, optional
             Alias for tree_name (generic interface).
+        required : bool, optional
+            If True, raise an error if the data is all NaNs.
         tree_name : str, optional
             The name of the tree that must be open for retrieval.
         arguments : Any, optional
@@ -276,6 +280,9 @@ class MDSConnection(DataConnection):
         logger.trace(shot_msg("Getting data: {path}"), shot=self.shot_id, path=path)
         data = self.conn.get(f"_sig={path}", arguments).data()
 
+        if required and not np.any(np.isfinite(data)):
+            raise NanDataError(path)
+
         return data
 
     @_better_mds_exceptions
@@ -283,6 +290,7 @@ class MDSConnection(DataConnection):
         self,
         path: str,
         group: str = None,
+        required: bool = False,
         dim_nums: List = None,
         tree_name: str = None,
         **kwargs,
@@ -296,6 +304,8 @@ class MDSConnection(DataConnection):
             MDSplus path to record.
         group : str, optional
             Alias for tree_name (generic interface).
+        required : bool, optional
+            If True, raise an error if the data is all NaNs.
         dim_nums : List, optional
             A list of dimensions that should have their size retrieved. Default [0].
         tree_name : str, optional
@@ -317,6 +327,9 @@ class MDSConnection(DataConnection):
         )
         data = self.conn.get("_sig=" + path).data()
         dims = [self.conn.get(f"dim_of(_sig,{dim_num})").data() for dim_num in dim_nums]
+
+        if required and not np.any(np.isfinite(data)):
+            raise NanDataError(path)
 
         return data, *dims
 

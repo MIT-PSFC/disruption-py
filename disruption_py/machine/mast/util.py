@@ -6,6 +6,7 @@ Module for helper, not physics, methods.
 
 import numpy as np
 
+from disruption_py.core.physics_method.errors import MismatchCalculationError
 from disruption_py.core.utils.math import interp1
 from disruption_py.inout.xr import XarrayDataConnection
 
@@ -78,6 +79,6 @@ class MastUtilMethods:
             return np.full_like(x_new, np.nan)
 
         if len(x) != len(y):
-            raise ValueError("x and y must have the same length for interpolation.")
+            raise MismatchCalculationError(f"len(x) = {len(x)} vs. len(y) = {len(y)}")
 
         return interp1(x, y, x_new)

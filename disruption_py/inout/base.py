@@ -29,7 +29,9 @@ class DataConnection(ABC):
         """The shot ID this connection is bound to."""
 
     @abstractmethod
-    def get_data(self, path: str, group: str = None, **kwargs) -> np.ndarray:
+    def get_data(
+        self, path: str, group: str = None, required: bool = False, **kwargs
+    ) -> np.ndarray:
         """Get data at path.
 
         Parameters
@@ -38,6 +40,8 @@ class DataConnection(ABC):
             Data path (node path for MDSplus, variable name for Xarray).
         group : str, optional
             Container name (tree for MDSplus, group for Xarray).
+        required : bool, optional
+            If True, raise an error if the data is all NaNs.
         **kwargs
             Backend-specific options.
 
@@ -51,6 +55,7 @@ class DataConnection(ABC):
         self,
         path: str,
         group: str = None,
+        required: bool = False,
         dim_nums: List = None,
         **kwargs,
     ) -> Tuple:
@@ -62,6 +67,8 @@ class DataConnection(ABC):
             Data path.
         group : str, optional
             Container name.
+        required : bool, optional
+            If True, raise an error if the data is all NaNs.
         dim_nums : List, optional
             Dimension indices to retrieve. Default [0].
         **kwargs

@@ -8,7 +8,7 @@ Physics methods for MAST.
 import numpy as np
 
 from disruption_py.core.physics_method.decorator import physics_method
-from disruption_py.core.physics_method.errors import CalculationError
+from disruption_py.core.physics_method.errors import MismatchCalculationError
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
 from disruption_py.machine.mast.util import MastUtilMethods
@@ -234,7 +234,9 @@ class MastPhysicsMethods:
             its time derivative (`dn_dt`), and the Greenwald fraction (`greenwald_fraction`).
         """
         if len(n_e) != len(t_n):
-            raise CalculationError("n_e and t_n are different lengths")
+            raise MismatchCalculationError(
+                f"len(n_e) = {len(n_e)} vs. len(t_n) = {len(t_n)}"
+            )
         # get the gradient of n_E
         dn_dt = np.gradient(n_e, t_n)
         n_e = interp1(t_n, n_e, times)
@@ -270,15 +272,11 @@ class MastPhysicsMethods:
         """
         hcam = params.get_data("soft_x_rays/horizontal_cam_upper", return_xarray=True)
 
-        if hcam is not None:
-            hcam = hcam.isel(horizontal_cam_upper_channel=7)
-            hcam = hcam.squeeze(drop=True)
-            hcam = hcam.drop_vars(["horizontal_cam_upper_channel"])
-            sxr_time = hcam.time.values
-            sxr_data = hcam.values
-        else:
-            sxr_time = np.array([np.nan])
-            sxr_data = np.array([np.nan])
+        hcam = hcam.isel(horizontal_cam_upper_channel=7)
+        hcam = hcam.squeeze(drop=True)
+        hcam = hcam.drop_vars(["horizontal_cam_upper_channel"])
+        sxr_time = hcam.time.values
+        sxr_data = hcam.values
 
         times = params.times
         sxr_data = MastUtilMethods.interpolate_1d(sxr_time, sxr_data, times)
@@ -309,17 +307,13 @@ class MastPhysicsMethods:
             return_xarray=True,
         )
 
-        if dalpha is not None:
-            dalpha = dalpha.isel(dalpha_channel=2)
-            dalpha = dalpha.dropna(dim="time")
-            dalpha = dalpha.squeeze(drop=True)
-            dalpha = dalpha.drop_vars("dalpha_channel")
+        dalpha = dalpha.isel(dalpha_channel=2)
+        dalpha = dalpha.dropna(dim="time")
+        dalpha = dalpha.squeeze(drop=True)
+        dalpha = dalpha.drop_vars("dalpha_channel")
 
-            dalpha_time = dalpha.time.values
-            dalpha_data = dalpha.values
-        else:
-            dalpha_time = np.array([np.nan])
-            dalpha_data = np.array([np.nan])
+        dalpha_time = dalpha.time.values
+        dalpha_data = dalpha.values
 
         times = params.times
         dalpha_data = MastUtilMethods.interpolate_1d(dalpha_time, dalpha_data, times)
