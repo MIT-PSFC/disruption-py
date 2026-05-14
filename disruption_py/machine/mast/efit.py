@@ -50,13 +50,12 @@ class MastEfitMethods:
         dict
             A dictionary containing the retrieved EFIT parameters.
         """
-        conn = params.data_conn
-        eq_time = conn.get_data("equilibrium/time")
+        eq_time = params.get_data("equilibrium/time")
         times = params.times
 
         outputs = {}
         for key, prop in MastEfitMethods.efit_properties.items():
-            signal = conn.get_data(f"equilibrium/{prop}")
+            signal = params.get_data(f"equilibrium/{prop}")
             item = MastUtilMethods.interpolate_1d(eq_time, signal, times)
             outputs[key] = item
 
