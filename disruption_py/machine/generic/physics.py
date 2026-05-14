@@ -169,11 +169,11 @@ class GenericPhysicsMethods:
 
         # Get ip and ip timebase
         if params.tokamak == Tokamak.CMOD:
-            ip, t_ip = params.data_conn.get_data_with_dims(
+            ip, t_ip = params.get_data_with_dims(
                 r"\ip", tree_name="magnetics"
             )  # [A], [s]
         elif params.tokamak == Tokamak.D3D:
-            ip, t_ip = params.data_conn.get_data_with_dims(
+            ip, t_ip = params.get_data_with_dims(
                 f"ptdata('ip', {params.shot_id})"
             )  # [A], [ms]
             t_ip = t_ip / 1.0e3  # [ms] -> [s]
@@ -185,12 +185,12 @@ class GenericPhysicsMethods:
         elif params.tokamak == Tokamak.EAST:
             ip, t_ip = EastUtilMethods.retrieve_ip(params, params.shot_id)
         elif params.tokamak == Tokamak.HBTEP:
-            ip, t_ip = params.data_conn.get_data_with_dims(
+            ip, t_ip = params.get_data_with_dims(
                 r"\top.sensors.rogowskis:ip", tree_name="hbtep2"
             )  # [A], [s]
         elif params.tokamak == Tokamak.MAST:
-            ip = params.data_conn.get_data("summary/ip")
-            t_ip = params.data_conn.get_data("summary/time")
+            ip = params.get_data("summary/ip")
+            t_ip = params.get_data("summary/time")
         else:
             raise NotImplementedError
 
