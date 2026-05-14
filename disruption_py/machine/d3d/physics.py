@@ -946,7 +946,7 @@ class D3DPhysicsMethods:
         -py/blob/matlab/DIII-D/get_n1_bradial_d3d.m), [get_n1rms_d3d.m](https://github.com
         /MIT-PSFC/disruption-py/blob/matlab/DIII-D/get_n1rms_d3d.m)
         """
-        b_tor, t_b_tor = params.data_conn.get_data_with_dims(
+        b_tor, t_b_tor = params.get_data_with_dims(
             f"ptdata('bt', {params.shot_id})"
         )  # [T], [ms]
         t_b_tor /= 1e3  # [ms] -> [s]
@@ -1023,7 +1023,7 @@ class D3DPhysicsMethods:
         else:
             try:
                 # Get data from the ONFR system
-                n_equal_1_mode, t_n1 = params.data_conn.get_data_with_dims(
+                n_equal_1_mode, t_n1 = params.get_data_with_dims(
                     f"ptdata('onsbradial', {params.shot_id})",
                 )  # [G], [ms]
             except mdsExceptions.MdsException:
@@ -1032,7 +1032,7 @@ class D3DPhysicsMethods:
                     "get_n1_bradial_parameters: Failed to get ONSBRADIAL signal. "
                     "Retrieving from DUSBRADIAL instead."
                 )
-                n_equal_1_mode, t_n1 = params.data_conn.get_data_with_dims(
+                n_equal_1_mode, t_n1 = params.get_data_with_dims(
                     f"ptdata('dusbradial', {params.shot_id})",
                 )  # [G], [ms]
         t_n1 /= 1e3  # [ms] -> [s]
