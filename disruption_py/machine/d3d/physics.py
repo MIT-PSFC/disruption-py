@@ -81,7 +81,7 @@ class D3DPhysicsMethods:
             "h98": [np.nan],
         }
         try:
-            h_98, t_h_98 = params.data_conn.get_data_with_dims(
+            h_98, t_h_98 = params.get_data_with_dims(
                 r"\H_THH98Y2", tree_name="transport"
             )
             t_h_98 /= 1e3  # [ms] -> [s]
@@ -119,9 +119,7 @@ class D3DPhysicsMethods:
             "h_alpha": [np.nan],
         }
         try:
-            h_alpha, t_h_alpha = params.data_conn.get_data_with_dims(
-                r"\fs04", tree_name="d3d"
-            )
+            h_alpha, t_h_alpha = params.get_data_with_dims(r"\fs04", tree_name="d3d")
             t_h_alpha /= 1e3  # [ms] -> [s]
             h_alpha = interp1(t_h_alpha, h_alpha, params.times, "linear")
             output["h_alpha"] = h_alpha
@@ -166,9 +164,7 @@ class D3DPhysicsMethods:
         """
         # Get neutral beam injected power
         try:
-            p_nbi, t_nbi = params.data_conn.get_data_with_dims(
-                r"\top.nb:pinj", tree_name="d3d"
-            )
+            p_nbi, t_nbi = params.get_data_with_dims(r"\top.nb:pinj", tree_name="d3d")
             t_nbi /= 1e3  # [ms] -> [s]
             p_nbi = p_nbi * 1e3  # [KW] -> [W]
             if len(t_nbi) > 2:
@@ -191,7 +187,7 @@ class D3DPhysicsMethods:
         # Get electron cyclotron heating (ECH) power. It's point data, so it's not
         # stored in an MDSplus tree
         try:
-            p_ech, t_ech = params.data_conn.get_data_with_dims(
+            p_ech, t_ech = params.get_data_with_dims(
                 r"\top.ech.total:echpwrc", tree_name="rf"
             )
             t_ech /= 1e3  # [ms] -> [s]
@@ -234,9 +230,7 @@ class D3DPhysicsMethods:
         smoothing_window = 0.010  # [s]
 
         try:
-            bol_prm, _ = params.data_conn.get_data_with_dims(
-                r"\bol_prm", tree_name="bolom"
-            )
+            bol_prm, _ = params.get_data_with_dims(r"\bol_prm", tree_name="bolom")
         except mdsExceptions.MdsException as e:
             params.logger.warning("Failed to open bolom tree.")
             params.logger.opt(exception=True).debug(e)
@@ -245,13 +239,11 @@ class D3DPhysicsMethods:
         bol_channels = upper_channels + lower_channels
         bol_signals = []
         for i in range(48):
-            bol_signal = params.data_conn.get_data(
+            bol_signal = params.get_data(
                 rf"\top.raw:{bol_channels[i]}", tree_name="bolom"
             )
             bol_signals.append(bol_signal)
-        bol_time = params.data_conn.get_dims(
-            rf"\top.raw:{bol_channels[0]}", tree_name="bolom"
-        )[0]
+        bol_time = params.get_dims(rf"\top.raw:{bol_channels[0]}", tree_name="bolom")[0]
         bol_time /= 1e3  # [ms] -> [s]
         a_struct = matlab_get_bolo(
             shot_id=params.shot_id,
@@ -320,16 +312,14 @@ class D3DPhysicsMethods:
         - issues: #[229](https://github.com/MIT-PSFC/disruption-py/issues/229)
         """
         # Get edge loop voltage and smooth it a bit with a median filter
-        v_loop, t_v_loop = params.data_conn.get_data_with_dims(
+        v_loop, t_v_loop = params.get_data_with_dims(
             f'ptdata("vloopb", {params.shot_id})'
         )
         t_v_loop /= 1e3  # [ms] -> [s]
         v_loop = scipy.signal.medfilt(v_loop, 11)
         v_loop = interp1(t_v_loop, v_loop, params.times, "linear")
         # Get plasma current
-        ip, t_ip = params.data_conn.get_data_with_dims(
-            f"ptdata('ip', {params.shot_id})"
-        )
+        ip, t_ip = params.get_data_with_dims(f"ptdata('ip', {params.shot_id})")
         t_ip /= 1e3  # [ms] -> [s]
 
         # Alessandro Pau (JET & AUG) has given Cristina a robust routine that
@@ -349,19 +339,17 @@ class D3DPhysicsMethods:
             ends_type=1,
             slew_rate=0,
         )
-        li, t_li = params.data_conn.get_data_with_dims(
+        li, t_li = params.get_data_with_dims(
             r"\efit_a_eqdsk:li", tree_name="_efit_tree"
         )
         t_li /= 1e3
         # Use chisq to determine which time slices are invalid
-        chisq = params.data_conn.get_data(
-            r"\efit_a_eqdsk:chisq", tree_name="_efit_tree"
-        )
+        chisq = params.get_data(r"\efit_a_eqdsk:chisq", tree_name="_efit_tree")
         # Filter out invalid indices of efit reconstruction
         (invalid_indices,) = np.where(chisq > 50)
         li[invalid_indices] = np.nan
 
-        r_0, t_r0 = params.data_conn.get_data_with_dims(
+        r_0, t_r0 = params.get_data_with_dims(
             r"\top.results.geqdsk:rmaxis", tree_name="_efit_tree"
         )  # [m], [ms]
         t_r0 /= 1e3  # [ms] -> [s]
@@ -410,9 +398,7 @@ class D3DPhysicsMethods:
         - pull requests: #[249](https://github.com/MIT-PSFC/disruption-py/pull/249)
         """
         try:
-            ne, t_ne = params.data_conn.get_data_with_dims(
-                r"\density", tree_name="_efit_tree"
-            )
+            ne, t_ne = params.get_data_with_dims(r"\density", tree_name="_efit_tree")
         except mdsExceptions.MdsException:
             ne = [np.nan]
             t_ne = [np.nan]
@@ -425,7 +411,7 @@ class D3DPhysicsMethods:
         #  - r"\efit01:density" gives ne = array([4.06199e19]), t_ne = array([1800])
         #  - "\d3d:denv2" gives actual density data
         if not np.isfinite(ne).any() or len(ne) < 2:
-            ne, t_ne = params.data_conn.get_data_with_dims(r"\denv2", tree_name="d3d")
+            ne, t_ne = params.get_data_with_dims(r"\denv2", tree_name="d3d")
             tree_name = params.data_conn.get_tree_name_of_nickname("_efit_tree")
             params.logger.verbose(
                 rf"density: data from \{tree_name}:density is either empty or invalid."
@@ -451,13 +437,13 @@ class D3DPhysicsMethods:
             bounds_error=False,
         )
         try:
-            ip, t_ip = params.data_conn.get_data_with_dims(
+            ip, t_ip = params.get_data_with_dims(
                 f"ptdata('ip', {params.shot_id})"
             )  # [A], [ms]
             t_ip = t_ip / 1.0e3  # [ms] -> [s]
             ipsign = np.sign(np.sum(ip))
             ip = interp1(t_ip, ip * ipsign, params.times, "linear")  # positive definite
-            a_minor, t_a = params.data_conn.get_data_with_dims(
+            a_minor, t_a = params.get_data_with_dims(
                 r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
             )  # [m], [ms]
             t_a = t_a / 1.0e3  # [ms] -> [s]
@@ -514,7 +500,7 @@ class D3DPhysicsMethods:
         /disruption-py/blob/matlab/DIII-D/get_density_parameters_RT.m)
         - pull requests: #[251](https://github.com/MIT-PSFC/disruption-py/pull/251)
         """
-        ne_rt, t_ne_rt = params.data_conn.get_data_with_dims(
+        ne_rt, t_ne_rt = params.get_data_with_dims(
             f"ptdata('dssdenest', {params.shot_id})"
         )  # [10^19 m^-3]
         t_ne_rt = t_ne_rt / 1.0e3  # [ms] to [s]
@@ -526,12 +512,12 @@ class D3DPhysicsMethods:
         # Get real time ip to calculate the Greenwald density
 
         try:
-            ip_rt, t_ip_rt = params.data_conn.get_data_with_dims(
+            ip_rt, t_ip_rt = params.get_data_with_dims(
                 f"ptdata('ipsip', {params.shot_id})"
             )  # [MA], [ms]
             t_ip_rt = t_ip_rt / 1.0e3  # [ms] to [s]
         except mdsExceptions.MdsException:
-            ip_rt, t_ip_rt = params.data_conn.get_data_with_dims(
+            ip_rt, t_ip_rt = params.get_data_with_dims(
                 f"ptdata('ipspr15v', {params.shot_id})"
             )  # [volts; 2 V/MA], [ms]
             t_ip_rt = t_ip_rt / 1.0e3  # [ms] to [s]
@@ -548,7 +534,7 @@ class D3DPhysicsMethods:
 
         # For the real-time (RT) signals, read from the EFITRT1 tree
         try:
-            a_minor_rt, t_a_rt = params.data_conn.get_data_with_dims(
+            a_minor_rt, t_a_rt = params.get_data_with_dims(
                 r"\efit_a_eqdsk:aminor", tree_name="efitrt1"
             )  # [m], [ms]
             t_a_rt = t_a_rt / 1.0e3  # [ms] -> [s]
@@ -602,7 +588,7 @@ class D3DPhysicsMethods:
         - pull requests: #[547](https://github.com/MIT-PSFC/disruption-py/pull/547)
         - issues: #[506](https://github.com/MIT-PSFC/disruption-py/issues/506)
         """
-        epsoff, t_epsoff = params.data_conn.get_data_with_dims(
+        epsoff, t_epsoff = params.get_data_with_dims(
             f"ptdata('epsoff', {params.shot_id})"
         )
         t_epsoff = t_epsoff / 1.0e3  # [ms] -> [s]
@@ -668,7 +654,7 @@ class D3DPhysicsMethods:
         ip_error = np.full(len(params.times), np.nan)
         # Get measured plasma current parameters
         try:
-            ip, t_ip = params.data_conn.get_data_with_dims(
+            ip, t_ip = params.get_data_with_dims(
                 f"ptdata('ip', {params.shot_id})"
             )  # [A], [ms]
             t_ip = t_ip / 1.0e3  # [ms] -> [s]
@@ -680,7 +666,7 @@ class D3DPhysicsMethods:
             params.logger.opt(exception=True).debug(e)
         # Get programmed plasma current parameters
         try:
-            ip_prog, t_ip_prog = params.data_conn.get_data_with_dims(
+            ip_prog, t_ip_prog = params.get_data_with_dims(
                 f"ptdata('iptipp', {params.shot_id})"
             )  # [A], [ms]
             t_ip_prog = t_ip_prog / 1.0e3  # [ms] -> [s]
@@ -702,7 +688,7 @@ class D3DPhysicsMethods:
         #  Anything else: not in normal Ip feedback mode.  In this case, the
         # 'ip_prog' signal is irrelevant, and therefore 'ip_error' is not defined.
         try:
-            ipimode, t_ipimode = params.data_conn.get_data_with_dims(
+            ipimode, t_ipimode = params.get_data_with_dims(
                 f"ptdata('ipimode', {params.shot_id})"
             )
             t_ipimode = t_ipimode / 1.0e3  # [ms] -> [s]
@@ -788,7 +774,7 @@ class D3DPhysicsMethods:
         # Get measured plasma current parameters
         # TODO: Why open d3d and not the rt efit tree?
         try:
-            ip_rt, t_ip_rt = params.data_conn.get_data_with_dims(
+            ip_rt, t_ip_rt = params.get_data_with_dims(
                 f"ptdata('ipsip', {params.shot_id})"
             )  # [MA], [ms]
             t_ip_rt = t_ip_rt / 1.0e3  # [ms] -> [s]
@@ -803,7 +789,7 @@ class D3DPhysicsMethods:
             params.logger.opt(exception=True).debug(e)
         # Get programmed plasma current parameters
         try:
-            ip_prog_rt, t_ip_prog_rt = params.data_conn.get_data_with_dims(
+            ip_prog_rt, t_ip_prog_rt = params.get_data_with_dims(
                 f"ptdata('ipsiptargt', {params.shot_id})"
             )  # [MA], [ms]
             t_ip_prog_rt = t_ip_prog_rt / 1.0e3  # [ms] -> [s]
@@ -819,7 +805,7 @@ class D3DPhysicsMethods:
             )
             params.logger.opt(exception=True).debug(e)
         try:
-            ip_error_rt, t_ip_error_rt = params.data_conn.get_data_with_dims(
+            ip_error_rt, t_ip_error_rt = params.get_data_with_dims(
                 f"ptdata('ipeecoil', {params.shot_id})"
             )  # [MA], [ms]
             t_ip_error_rt = t_ip_error_rt / 1.0e3  # [ms] to [s]
@@ -840,7 +826,7 @@ class D3DPhysicsMethods:
         #  Anything else: not in normal Ip feedback mode.  In this case, the
         # 'ip_prog' signal is irrelevant, and therefore 'ip_error' is not defined.
         try:
-            ipimode, t_ipimode = params.data_conn.get_data_with_dims(
+            ipimode, t_ipimode = params.get_data_with_dims(
                 f"ptdata('ipimode', {params.shot_id})"
             )
             t_ipimode = t_ipimode / 1.0e3  # [ms] -> [s]
@@ -913,21 +899,17 @@ class D3DPhysicsMethods:
         """
         nominal_flattop_radius = 0.59
         # Get z_cur
-        z_cur, t_z_cur = params.data_conn.get_data_with_dims(
-            f"ptdata('vpszp', {params.shot_id})"
-        )
+        z_cur, t_z_cur = params.get_data_with_dims(f"ptdata('vpszp', {params.shot_id})")
         t_z_cur = t_z_cur / 1.0e3  # [ms] -> [s]
         z_cur = z_cur / 1.0e2  # [cm] -> [m]
         z_cur = interp1(t_z_cur, z_cur, params.times, "linear")
         # Compute z_cur_norm
         try:
-            a_minor, t_a = params.data_conn.get_data_with_dims(
+            a_minor, t_a = params.get_data_with_dims(
                 r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
             )  # [m], [ms]
             t_a = t_a / 1.0e3  # [ms] -> [s]
-            chisq = params.data_conn.get_data(
-                r"\efit_a_eqdsk:chisq", tree_name="_efit_tree"
-            )
+            chisq = params.get_data(r"\efit_a_eqdsk:chisq", tree_name="_efit_tree")
             (invalid_indices,) = np.where(chisq > 50)
             a_minor[invalid_indices] = np.nan
             a_minor = interp1(t_a, a_minor, params.times, "linear")
@@ -962,13 +944,13 @@ class D3DPhysicsMethods:
         - pull requests: #[257](https://github.com/MIT-PSFC/disruption-py/pull/257)
         """
         # Get n1rms signal from d3d tree
-        n1rms, t_n1rms = params.data_conn.get_data_with_dims(r"\n1rms", tree_name="d3d")
+        n1rms, t_n1rms = params.get_data_with_dims(r"\n1rms", tree_name="d3d")
         n1rms *= 1.0e-4  # Gauss -> Tesla
         t_n1rms /= 1e3  # [ms] -> [s]
         n1rms = interp1(t_n1rms, n1rms, params.times)
         # Calculate n1rms_norm
         try:
-            b_tor, t_b_tor = params.data_conn.get_data_with_dims(
+            b_tor, t_b_tor = params.get_data_with_dims(
                 f"ptdata('bt', {params.shot_id})"
             )
             t_b_tor /= 1e3  # [ms] -> [s]
@@ -1073,12 +1055,12 @@ class D3DPhysicsMethods:
         # Get precomputed rad_cva & rad_xdiv data stored in ptdata tree
         calculate_prad_pf = False
         try:
-            rad_cva, t_rad_cva = params.data_conn.get_data_with_dims(
+            rad_cva, t_rad_cva = params.get_data_with_dims(
                 f"ptdata('dpsrrdcva', {params.shot_id})"
             )  # [], [ms]
             t_rad_cva /= 1e3  # [ms] -> [s]
             rad_cva = interp1(t_rad_cva, rad_cva, params.times)
-            rad_xdiv, t_rad_xdiv = params.data_conn.get_data_with_dims(
+            rad_xdiv, t_rad_xdiv = params.get_data_with_dims(
                 f"ptdata('dpsrrdxdiv', {params.shot_id})"
             )  # [], [ms]
             t_rad_xdiv /= 1e3  # [ms] -> [s]
@@ -1316,7 +1298,7 @@ class D3DPhysicsMethods:
             A dictionary containing `z_eff`
         """
         # Get Zeff
-        zeff, t_zeff = params.data_conn.get_data_with_dims(
+        zeff, t_zeff = params.get_data_with_dims(
             r"\top.spectroscopy.vb.zeff:zeff", tree_name="d3d"
         )
         t_zeff = t_zeff / 1.0e3  # [ms] -> [s]
@@ -1363,14 +1345,10 @@ class D3DPhysicsMethods:
         /blob/matlab/DIII-D/get_kappa_area.m)
         - pull requests: #[256](https://github.com/MIT-PSFC/disruption-py/pull/256)
         """
-        a_minor = params.data_conn.get_data(
-            r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
-        )
-        area = params.data_conn.get_data(r"\efit_a_eqdsk:area", tree_name="_efit_tree")
-        chisq = params.data_conn.get_data(
-            r"\efit_a_eqdsk:chisq", tree_name="_efit_tree"
-        )
-        t = params.data_conn.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree")
+        a_minor = params.get_data(r"\efit_a_eqdsk:aminor", tree_name="_efit_tree")
+        area = params.get_data(r"\efit_a_eqdsk:area", tree_name="_efit_tree")
+        chisq = params.get_data(r"\efit_a_eqdsk:chisq", tree_name="_efit_tree")
+        t = params.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree")
         t /= 1e3  # [ms] -> [s]
         kappa_area = area / (np.pi * a_minor**2)
         invalid_indices = np.where(chisq > 50)
@@ -1405,16 +1383,14 @@ class D3DPhysicsMethods:
         - pull requests: #[258](https://github.com/MIT-PSFC/disruption-py/pull/258)
         """
         # Get efit_time
-        efit_time = params.data_conn.get_data(
-            r"\efit_a_eqdsk:atime", tree_name="_efit_tree"
-        )
+        efit_time = params.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree")
         efit_time /= 1e3  # [ms] -> [s]
         # Compute triangularity
         try:
-            tritop = params.data_conn.get_data(
+            tritop = params.get_data(
                 r"\efit_a_eqdsk:tritop", tree_name="_efit_tree"
             )  # meters
-            tribot = params.data_conn.get_data(
+            tribot = params.get_data(
                 r"\efit_a_eqdsk:tribot", tree_name="_efit_tree"
             )  # meters
             delta = (tritop + tribot) / 2.0
@@ -1424,12 +1400,8 @@ class D3DPhysicsMethods:
             delta = None
         # Compute squareness
         try:
-            sqfod = params.data_conn.get_data(
-                r"\efit_a_eqdsk:sqfod", tree_name="_efit_tree"
-            )
-            sqfou = params.data_conn.get_data(
-                r"\efit_a_eqdsk:sqfou", tree_name="_efit_tree"
-            )
+            sqfod = params.get_data(r"\efit_a_eqdsk:sqfod", tree_name="_efit_tree")
+            sqfou = params.get_data(r"\efit_a_eqdsk:sqfou", tree_name="_efit_tree")
             squareness = (sqfod + sqfou) / 2.0
         except mdsExceptions.MdsException as e:
             params.logger.warning("Failed to obtain squareness signals")
@@ -1437,18 +1409,14 @@ class D3DPhysicsMethods:
             squareness = None
         # Get aminor
         try:
-            aminor = params.data_conn.get_data(
-                r"\efit_a_eqdsk:aminor", tree_name="_efit_tree"
-            )
+            aminor = params.get_data(r"\efit_a_eqdsk:aminor", tree_name="_efit_tree")
         except mdsExceptions.MdsException as e:
             params.logger.warning("Failed to obtain aminor signals")
             params.logger.opt(exception=True).debug(e)
             aminor = None
         # Check chisq for invalid indices
         try:
-            chisq = params.data_conn.get_data(
-                r"\efit_a_eqdsk:chisq", tree_name="_efit_tree"
-            )
+            chisq = params.get_data(r"\efit_a_eqdsk:chisq", tree_name="_efit_tree")
             invalid_indices = np.where(chisq > 50)
         except mdsExceptions.MdsException as e:
             params.logger.warning(
@@ -1529,7 +1497,7 @@ class D3DPhysicsMethods:
             lasers[laser] = {}
             sub_tree = f"{mds_path}{laser}"
             try:
-                (t_sub_tree,) = params.data_conn.get_dims(
+                (t_sub_tree,) = params.get_dims(
                     f"{sub_tree}:temp", tree_name="electrons"
                 )
                 # lasers[laser]['time'] gets overwritten in the loop later
@@ -1553,7 +1521,7 @@ class D3DPhysicsMethods:
             }
             for node, name in child_nodes.items():
                 try:
-                    lasers[laser][node] = params.data_conn.get_data(
+                    lasers[laser][node] = params.get_data(
                         f"{sub_tree}:{name}", tree_name="electrons"
                     )
                 except mdsExceptions.MdsException as e:
@@ -1630,7 +1598,7 @@ class D3DPhysicsMethods:
             return False
 
         # Get bolometry data
-        bol_prm, _ = params.data_conn.get_data_with_dims(r"\bol_prm", tree_name="bolom")
+        bol_prm, _ = params.get_data_with_dims(r"\bol_prm", tree_name="bolom")
         upper_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
         lower_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
         bol_channels = upper_channels + lower_channels
@@ -1639,7 +1607,7 @@ class D3DPhysicsMethods:
             []
         )  # TODO: Decide whether to actually use all bol_times instead of just first one
         for i in range(48):
-            bol_signal, bol_time = params.data_conn.get_data_with_dims(
+            bol_signal, bol_time = params.get_data_with_dims(
                 rf"\top.raw:{bol_channels[i]}", tree_name="bolom"
             )
             bol_time /= 1e3  # [ms] -> [s]
@@ -1654,7 +1622,7 @@ class D3DPhysicsMethods:
             smoothing_window,
         )
         b_struct = matlab_power(a_struct)
-        r_major_axis, efit_time = params.data_conn.get_data_with_dims(
+        r_major_axis, efit_time = params.get_data_with_dims(
             r"\top.results.geqdsk:rmaxis", tree_name="_efit_tree"
         )
         efit_time /= 1e3  # [ms] -> [s]
@@ -1745,13 +1713,13 @@ class D3DPhysicsMethods:
         """
         path = r"\top.results.geqdsk:"
         nodes = ["z", "r", "rhovn", "psirz", "zmaxis", "ssimag", "ssibry"]
-        (efit_dict_time,) = params.data_conn.get_dims(
+        (efit_dict_time,) = params.get_dims(
             f"{path}psirz", tree_name="_efit_tree", dim_nums=[2]
         )
         efit_dict = {"time": efit_dict_time / 1e3}  # [ms] -> [s]
         for node in nodes:
             try:
-                efit_dict[node] = params.data_conn.get_data(
+                efit_dict[node] = params.get_data(
                     f"{path}{node}", tree_name="_efit_tree"
                 )
             except mdsExceptions.MdsException as e:
