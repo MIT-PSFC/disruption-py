@@ -11,9 +11,7 @@ class PRadTime(TimeSetting):
 
     def _get_times(self, params: TimeSettingParams):
         """Return prad times"""
-        (time_array,) = params.data_conn.get_dims(
-            r"\twopi_diode", tree_name="spectroscopy"
-        )
+        (time_array,) = params.get_dims(r"\twopi_diode", tree_name="spectroscopy")
         time_array = time_array[time_array > 0]
         return time_array
 
