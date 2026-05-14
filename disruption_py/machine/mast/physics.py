@@ -345,13 +345,12 @@ class MastPhysicsMethods:
         """
 
         # load relevant parameters
-        conn = params.data_conn
-        r0 = conn.get_data("equilibrium/magnetic_axis_r")
-        li = conn.get_data("equilibrium/li")
-        v_loop = conn.get_data("equilibrium/vloop_dynamic")
-        ip = conn.get_data("summary/ip")
-        summary_time = conn.get_data("summary/time")
-        equilibrium_time = conn.get_data("equilibrium/time")
+        r0 = params.get_data("equilibrium/magnetic_axis_r")
+        li = params.get_data("equilibrium/li")
+        v_loop = params.get_data("equilibrium/vloop_dynamic")
+        ip = params.get_data("summary/ip")
+        summary_time = params.get_data("summary/time")
+        equilibrium_time = params.get_data("equilibrium/time")
 
         # compute derived quantities
         smooth_window_size = 30
