@@ -995,16 +995,29 @@ class D3DPhysicsMethods:
             if not os.path.exists(tree_path):
                 raise FetchDataError(f"custom MDSplus tree does not exist: {tree_path}")
             os.environ["bradial_path"] = bradial_path
+            # Read from the custom bradial tree
+            tree = None
             try:
-                tree = MDSplus.Tree("bradial", params.shot_id)
+                try:
+                    tree = MDSplus.Tree("bradial", params.shot_id)
+                except mdsExceptions.MdsException:
+                    raise FetchDataError(
+                        "get_n1_bradial_parameters: Failed to open custom MDSplus tree."
+                    )
                 params.logger.debug(
                     "Opened custom tree: {tree}", tree=tree.getFileName()
                 )
-                n_equal_1_mode = tree.getNode("dusbradial").data().squeeze()  # [G]
-                t_n1 = tree.getNode("dusbradial").dim_of().data()  # [ms]
+                try:
+                    n_equal_1_mode = tree.getNode("dusbradial").data().squeeze()  # [G]
+                    t_n1 = tree.getNode("dusbradial").dim_of().data()  # [ms]
+                except mdsExceptions.MdsException:
+                    raise FetchDataError(
+                        "get_n1_bradial_parameters: Failed to read dusbradial from the custom tree."
+                    )
             finally:
-                tree.close()
-                del os.environ["bradial_path"]
+                if tree is not None:
+                    tree.close()
+                os.environ.pop("bradial_path", None)
         elif 176030 <= params.shot_id <= 176912:
             # Load data from a NetCDF file on Omega
             params.logger.verbose(
