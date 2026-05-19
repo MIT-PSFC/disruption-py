@@ -10,6 +10,10 @@ driver = "FreeTDS"
 host = "d3drdb"
 port = 8001
 
+[d3d.physics.bradial_path]
+mds_trees = "/fusion/projects/disruption_warning/software/recalc_bradial/bradial"
+recalc_nc = "/fusion/projects/disruption_warning/software/recalc_bradial/recalc.nc"
+
 [d3d.physics.time_domain_thresholds]
 dipprog_dt = 2e3
 ip_prog = 100e3
