@@ -981,19 +981,20 @@ class D3DPhysicsMethods:
         - pull requests: #[500](https://github.com/MIT-PSFC/disruption-py/pull/500)
         - issues: #[261](https://github.com/MIT-PSFC/disruption-py/issues/261)
         """
+
         # The following shots are missing bradial calculations in MDSplus and
         # must be loaded from a separate datafile
         if 156199 <= params.shot_id <= 172430:
             # Load data from custom tree structures on Omega
             params.logger.verbose(
-                "get_n1_bradial_parameters: Retrieving recomputed DUSBRADIAL signal "
-                "from custom MDSplus trees."
+                "get_n1_bradial_parameters: "
+                "Retrieving recomputed DUSBRADIAL signal from custom MDSplus trees."
             )
             # Check if the custom bradial tree exists
             bradial_path = config(params.tokamak).physics.bradial_path.mds_trees
             tree_path = os.path.join(bradial_path, f"bradial_{params.shot_id}.tree")
             if not os.path.exists(tree_path):
-                raise FetchDataError(f"custom MDSplus tree does not exist: {tree_path}")
+                raise FetchDataError(f"Missing custom tree: {tree_path}")
             os.environ["bradial_path"] = bradial_path
             # Read from the custom bradial tree
             try:
@@ -1006,19 +1007,25 @@ class D3DPhysicsMethods:
                 t_n1 = tree.getNode("dusbradial").dim_of().data()  # [ms]
             finally:
                 tree.close()
+
         elif 176030 <= params.shot_id <= 176912:
             # Load data from a NetCDF file on Omega
             params.logger.verbose(
-                "get_n1_bradial_parameters: Retrieving recomputed DUSBRADIAL signal from recalc.nc."
+                "get_n1_bradial_parameters: "
+                "Retrieving recomputed DUSBRADIAL signal from recalc.nc."
             )
             # Check if the NetCDF file exists
             filename = config(params.tokamak).physics.bradial_path.recalc_nc
             if not os.path.exists(filename):
-                raise FetchDataError(f"recalc.nc file does not exist: {filename}")
+                raise FetchDataError(f"Missing recalc.nc file: {filename}")
             ds = xr.open_dataset(filename)
+            params.logger.debug("Opened recalc.nc file: {nc}", nc=filename)
+            if params.shot_id not in ds.shot:
+                raise FetchDataError("Shot data missing from recalc.nc.")
             shot_data = ds.sel(shot=params.shot_id)
             n_equal_1_mode = shot_data["dusbradial_calculated"].values  # [G]
             t_n1 = shot_data["times"].values.copy()  # [ms]
+
         else:
             try:
                 # Get data from the ONFR system
