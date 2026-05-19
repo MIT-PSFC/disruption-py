@@ -995,12 +995,8 @@ class D3DPhysicsMethods:
             tree_path = os.path.join(bradial_path, f"bradial_{params.shot_id}.tree")
             if not os.path.exists(tree_path):
                 raise FetchDataError(f"Missing custom tree: {tree_path}")
-            os.environ["bradial_path"] = bradial_path
             # Read from the custom bradial tree
-            try:
-                tree = MDSplus.Tree("bradial", params.shot_id)
-            finally:
-                os.environ.pop("bradial_path", None)
+            tree = MDSplus.Tree("bradial", params.shot_id, path=bradial_path)
             params.logger.debug("Opened custom tree: {tree}", tree=tree.getFileName())
             try:
                 n_equal_1_mode = tree.getNode("dusbradial").data().squeeze()  # [G]
