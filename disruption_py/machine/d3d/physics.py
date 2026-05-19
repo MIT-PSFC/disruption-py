@@ -1019,8 +1019,11 @@ class D3DPhysicsMethods:
             if params.shot_id not in ds.shot:
                 raise FetchDataError("Shot data missing from recalc.nc.")
             shot_data = ds.sel(shot=params.shot_id)
-            n_equal_1_mode = shot_data["dusbradial_calculated"].values  # [G]
-            t_n1 = shot_data["times"].values.copy()  # [ms]
+            try:
+                n_equal_1_mode = shot_data["dusbradial_calculated"].values  # [G]
+                t_n1 = shot_data["times"].values  # [ms]
+            finally:
+                ds.close()
 
         else:
             try:
