@@ -154,6 +154,14 @@ units = "V"
 description = "Static LCFS loop voltage from EFIT. Defined as V_loop = -2 * pi * d(psi at LCFS) / dt"
 units = "V"
 
+[mast.physics.current_quench_time_thresholds]
+abs_ip0 = 0.1e6
+abs_ip_final = 50e3
+abs_ip_max = 0.1e6
+ip0_over_ip_max = 0.33
+ip0_over_max_didt = 0.05
+shot_duration = 0.1
+
 [mast.physics.time_domain_thresholds]
 dipprog_dt = 50e3
 ip_prog = 100e3
