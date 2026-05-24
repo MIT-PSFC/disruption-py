@@ -147,6 +147,8 @@ class MDSConnection(DataConnection):
         self._shot_id = shot_id
         self.tree_nickname_funcs = {}
         self.tree_nicknames = {}
+        # Phase 2 hook: cascade objects keyed by nickname, for retry on data-path failures.
+        self.tree_nickname_cascades = {}
         self.open_trees = []
 
     @property
@@ -374,13 +376,28 @@ class MDSConnection(DataConnection):
 
     # nicknames
 
-    def add_tree_nickname_funcs(self, tree_nickname_funcs: Dict[str, Callable]):
+    def add_tree_nickname_funcs(
+        self,
+        tree_nickname_funcs: Dict[str, Callable],
+        tree_nickname_cascades: Dict[str, Any] = None,
+    ):
         """
         Add tree nickname functions to the connection.
 
         Required because some tree nickname functions require the connection to exist.
+
+        Parameters
+        ----------
+        tree_nickname_funcs : dict
+            Mapping of nickname -> callable that resolves to a tree name.
+        tree_nickname_cascades : dict, optional
+            Mapping of nickname -> originating NicknameSetting (e.g. a
+            NicknameSettingList). Stored on the connection so the cascade is
+            available to future retry logic.
         """
         self.tree_nickname_funcs.update(tree_nickname_funcs)
+        if tree_nickname_cascades:
+            self.tree_nickname_cascades.update(tree_nickname_cascades)
 
     def get_tree_name_of_nickname(self, nickname: str):
         """

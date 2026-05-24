@@ -10,20 +10,25 @@ import sys
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, Union
+from typing import Dict, List, Union
 
 import pandas as pd
 from loguru import logger
 
 from disruption_py.config import config
+from disruption_py.core.physics_method.errors import FetchDataError
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.misc import get_temporary_folder
 from disruption_py.inout.base import DataConnection
+from disruption_py.inout.mds import mdsExceptions
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
 
 NicknameSettingType = Union[
-    "NicknameSettingType", str, Dict[Tokamak, "NicknameSettingType"]
+    "NicknameSetting",
+    str,
+    List[Union[str, "NicknameSetting"]],
+    Dict[Tokamak, "NicknameSettingType"],
 ]
 
 
@@ -232,6 +237,91 @@ class StaticNicknameSetting(NicknameSetting):
         return self.tree_name
 
 
+class NicknameSettingList(NicknameSetting):
+    """
+    Cascade nickname setting. Tries each item in order via ``open_tree``,
+    returning the first that opens successfully. Falls back to the next on
+    ``mdsExceptions.TreeFOPENR``.
+
+    Parameters
+    ----------
+    items : list
+        Cascade of tree-name strings or NicknameSetting instances. Tried in
+        order; the first item that opens wins.
+    """
+
+    def __init__(self, items: list):
+        """
+        Initialize with a cascade of items to try in order.
+
+        Parameters
+        ----------
+        items : list
+            Non-empty cascade. Each item is a tree-name string or a
+            NicknameSetting instance.
+        """
+        if not items:
+            raise ValueError("NicknameSettingList requires at least one item.")
+        self.items = items
+        self.resolved_items = [self._resolve_item(item) for item in items]
+
+    @staticmethod
+    def _resolve_item(item):
+        """Validate a cascade item: must be a string or NicknameSetting."""
+        if isinstance(item, NicknameSetting):
+            return item
+        if isinstance(item, str):
+            return item
+        raise ValueError(
+            "NicknameSettingList items must be str or NicknameSetting, "
+            f"got {type(item).__name__}: {item!r}"
+        )
+
+    def _get_tree_name(self, params: NicknameSettingParams) -> str:
+        """
+        Try each cascade item via ``open_tree``; return the first that opens.
+
+        Parameters
+        ----------
+        params : NicknameSettingParams
+            Parameters needed to determine the nickname.
+
+        Returns
+        -------
+        str
+            The tree name of the first cascade item that opened successfully.
+
+        Raises
+        ------
+        FetchDataError
+            If no item in the cascade could be opened.
+        """
+        attempts: List[str] = []
+        for item in self.resolved_items:
+            candidate = item if isinstance(item, str) else type(item).__name__
+            try:
+                if isinstance(item, NicknameSetting):
+                    candidate = item.get_tree_name(params)
+                params.data_conn.open_tree(candidate)
+            except (mdsExceptions.TreeFOPENR, FetchDataError):
+                # TreeFOPENR = tree missing; FetchDataError = nested cascade exhausted.
+                attempts.append(candidate)
+                continue
+            if attempts:
+                logger.verbose(
+                    "Nickname cascade for shot {shot}: selected '{name}' "
+                    "after failed: {prior}",
+                    shot=params.shot_id,
+                    name=candidate,
+                    prior=", ".join(attempts),
+                )
+            return candidate
+        raise FetchDataError(
+            f"No tree in nickname cascade could be opened for shot "
+            f"{params.shot_id}. Tried: {attempts}"
+        )
+
+
 class DefaultNicknameSetting(NicknameSetting):
     """
     Nickname setting to resolve the '_efit_tree' nickname to the default EFIT tree.
@@ -417,9 +507,7 @@ class DisruptionNicknameSetting(NicknameSetting):
         tree = config(params.tokamak).efit.tree
         if "pytest" in sys.modules:
             tree = "efit18"
-        if tree == "efit18" and params.disruption_time is None:
-            return DefaultNicknameSetting().get_tree_name(params)
-        return tree
+        return NicknameSettingList([tree, "analysis"]).get_tree_name(params)
 
     def _get_tree_name(self, params: NicknameSettingParams) -> str:
         """
@@ -453,7 +541,9 @@ def resolve_nickname_setting(nickname_setting: NicknameSettingType) -> NicknameS
     Parameters
     ----------
     nickname_setting : NicknameSettingType
-        The nickname setting, which can be a string, a dictionary, or a NicknameSetting instance.
+        The nickname setting: a NicknameSetting instance, a string (single tree
+        name, registered key like "disruption", or comma-separated cascade), a
+        list (cascade), or a dictionary (per-tokamak dispatch).
 
     Returns
     -------
@@ -462,11 +552,21 @@ def resolve_nickname_setting(nickname_setting: NicknameSettingType) -> NicknameS
     """
     if isinstance(nickname_setting, NicknameSetting):
         return nickname_setting
+    if isinstance(nickname_setting, list):
+        return NicknameSettingList(nickname_setting)
     if isinstance(nickname_setting, dict):
         return NicknameSettingDict(nickname_setting)
     if isinstance(nickname_setting, str):
         if nickname_setting in _nickname_setting_mappings:
             return _nickname_setting_mappings[nickname_setting]
+        if "," in nickname_setting:
+            tokens = [s.strip() for s in nickname_setting.split(",") if s.strip()]
+            # Registered keys map to their class; other tokens are literal tree names.
+            items = [
+                _nickname_setting_mappings[s] if s in _nickname_setting_mappings else s
+                for s in tokens
+            ]
+            return NicknameSettingList(items)
         return StaticNicknameSetting(nickname_setting)
 
     raise ValueError(f"Invalid nickname setting type {type(nickname_setting)}.")
