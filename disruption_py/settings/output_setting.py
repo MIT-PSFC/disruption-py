@@ -18,7 +18,7 @@ import pandas as pd
 import xarray as xr
 from loguru import logger
 
-from disruption_py.core.utils.misc import get_temporary_folder
+from disruption_py.core.utils.misc import get_metadata, get_temporary_folder
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -325,7 +325,8 @@ class DatasetOutputSetting(SingleOutputSetting):
             logger.critical("Nothing to concatenate!")
             return xr.Dataset()
 
-        ds = xr.concat(self.results.values(), dim="idx", combine_attrs="no_conflicts")
+        ds = xr.concat(self.results.values(), dim="idx", combine_attrs="drop_conflicts")
+        ds.attrs.update(get_metadata())
         if "shot" not in ds.coords or "time" not in ds.coords:
             return ds
 
