@@ -360,34 +360,35 @@ D3D_PROBES_BR = {
 
 
 # Bp sensor categories mapping
-_BP_SENSOR_CATEGORIES = (
-    ('Bp_322_deg_pol_array', ['MPI11M322', 'MPI1A322', 'MPI2A322', 'MPI3A322', 'MPI4A322', 'MPI5A322', 
+_BP_SENSOR_CATEGORIES = {
+
+    'Bp_322_deg_pol_array': ['MPI11M322', 'MPI1A322', 'MPI2A322', 'MPI3A322', 'MPI4A322', 'MPI5A322', 
                                'MPI8A322', 'MPI89A322', 'MPI9A322', 'MPI79FA322', 'MPI79NA322', 'MPI7FA322', 
                                'MPI7NA322', 'MPI67A322', 'MPI6FA322', 'MPI6NA322', 'MPI66M322', 'MPI1B322', 
                                'MPI2B322', 'MPI3B322', 'MPI4B322', 'MPI5B322', 'MPI8B322', 'MPI89B322', 
-                               'MPI9B322', 'MPI79B322', 'MPI7FB322', 'MPI7NB322', 'MPI67B322', 'MPI6FB322', 'MPI6NB322']),
-    ('Bp_67_deg_backup_probes', ['MPI2A067', 'MPI11M067', 'MPI2B067', 'MPI67A097', 'MPI66M067', 'MPI67B097']),
-    ('Bp_142_deg_pol_array', ['MPI1A139', 'MPI2A139', 'MPI3A139', 'MPI4A139', 'MPI5A139', 'MPI79A147', 
+                               'MPI9B322', 'MPI79B322', 'MPI7FB322', 'MPI7NB322', 'MPI67B322', 'MPI6FB322', 'MPI6NB322'],
+    'Bp_67_deg_backup_probes': ['MPI2A067', 'MPI11M067', 'MPI2B067', 'MPI67A097', 'MPI66M067', 'MPI67B097'],
+    'Bp_142_deg_pol_array': ['MPI1A139', 'MPI2A139', 'MPI3A139', 'MPI4A139', 'MPI5A139', 'MPI79A147', 
                                'MPI67A142', 'MPI67A157', 'MPI6NA132', 'MPI6NA157', 'MPI66M157', 'MPI6NB157', 
                                'MPI6FB142', 'MPI67B157', 'MPI7NB142', 'MPI79B142', 'MPI5B139', 'MPI4B139', 
-                               'MPI3B139', 'MPI2B139', 'MPI1B139', 'MPI1B157']),
-    ('Bp_upper_divertor_baffles', ['MPI1U157', 'MPI2U157', 'MPI3U157', 'MPI4U157', 'MPI5U157', 'MPI6U157', 'MPI7U157']),
-    ('Bp_r0_elm_array_127_137_deg', ['MPI66M127', 'MPI66M132', 'MPI66M137', 'MPI66B137', 'MPI6NB137']),
-    ('Bp_r0_elm_array_307_317_deg', ['MPI66M307', 'MPI66M312', 'MPI6NA312', 'MPI66B312', 'MPI6NB312']),
-    ('Bp_lower_divertor_toroidal_array', ['MPI1L020', 'MPI2L020', 'MPI1L050', 'MPI1L110', 'MPI1L180', 
-                                           'MPI2L180', 'MPI3L180', 'MPI1L230', 'MPI1L320']),
-    ('Bp_r0_toroidal_array', ['MPI66M020', 'MPI66M097', 'MPI66M200', 'MPI66M247', 'MPI66M277', 'MPI66M340']),
-    ('Bp_r_plus_1_toroidal_array', ['MPI67A022', 'MPI67A037', 'MPI67A052', 'MPI67A067', 'MPI67A082', 
-                                     'MPI67A217', 'MPI67A262', 'MPI67A277', 'MPI67A307', 'MPI67A337']),
-    ('Bp_r_minus_1_toroidal_array', ['MPI67B022', 'MPI67B037', 'MPI67B052', 'MPI67B217', 'MPI67B277', 'MPI67B337']),
-    ('Bp_r_plus_2_toroidal_array', ['MPI79A072', 'MPI79A222', 'MPI79A272']),
-    ('Bp_r_minus_2_toroidal_array', ['MPI79B067', 'MPI79B217', 'MPI79B277']),
-    ('Bp_hfs_vertical_array_139_deg', ['MPI5A139']),
-    ('Bp_hfs_vertical_array_199_deg', ['MPI5A199', 'MPI4A199', 'MPI3A199', 'MPI2A199', 'MPI1A199', 
-                                        'MPI1B199', 'MPI2B199', 'MPI3B199', 'MPI4B199', 'MPI5B199']),
-    ('Bp_hfs_toroidal_array_above_midplane', ['MPI1A011', 'MPI1A049', 'MPI1A109', 'MPI1A244', 'MPI1A274', 'MPI1A341']),
-    ('Bp_hfs_toroidal_array_below_midplane', ['MPI1B011', 'MPI1B049', 'MPI1B109', 'MPI1B244', 'MPI1B274', 'MPI1B341']),
-)
+                               'MPI3B139', 'MPI2B139', 'MPI1B139', 'MPI1B157'],
+    'Bp_upper_divertor_baffles': ['MPI1U157', 'MPI2U157', 'MPI3U157', 'MPI4U157', 'MPI5U157', 'MPI6U157', 'MPI7U157'],
+    'Bp_r0_elm_array_127_137_deg': ['MPI66M127', 'MPI66M132', 'MPI66M137', 'MPI66B137', 'MPI6NB137'],
+    'Bp_r0_elm_array_307_317_deg': ['MPI66M307', 'MPI66M312', 'MPI6NA312', 'MPI66B312', 'MPI6NB312'],
+    'Bp_lower_divertor_toroidal_array': ['MPI1L020', 'MPI2L020', 'MPI1L050', 'MPI1L110', 'MPI1L180', 
+                                           'MPI2L180', 'MPI3L180', 'MPI1L230', 'MPI1L320'],
+    'Bp_r0_toroidal_array': ['MPI66M020', 'MPI66M097', 'MPI66M200', 'MPI66M247', 'MPI66M277', 'MPI66M340'],
+    'Bp_r_plus_1_toroidal_array': ['MPI67A022', 'MPI67A037', 'MPI67A052', 'MPI67A067', 'MPI67A082', 
+                                     'MPI67A217', 'MPI67A262', 'MPI67A277', 'MPI67A307', 'MPI67A337'],
+    'Bp_r_minus_1_toroidal_array': ['MPI67B022', 'MPI67B037', 'MPI67B052', 'MPI67B217', 'MPI67B277', 'MPI67B337'],
+    'Bp_r_plus_2_toroidal_array': ['MPI79A072', 'MPI79A222', 'MPI79A272'],
+    'Bp_r_minus_2_toroidal_array': ['MPI79B067', 'MPI79B217', 'MPI79B277'],
+    'Bp_hfs_vertical_array_139_deg': ['MPI5A139'],
+    'Bp_hfs_vertical_array_199_deg': ['MPI5A199', 'MPI4A199', 'MPI3A199', 'MPI2A199', 'MPI1A199', 
+                                        'MPI1B199', 'MPI2B199', 'MPI3B199', 'MPI4B199', 'MPI5B199'],
+    'Bp_hfs_toroidal_array_above_midplane': ['MPI1A011', 'MPI1A049', 'MPI1A109', 'MPI1A244', 'MPI1A274', 'MPI1A341'],
+    'Bp_hfs_toroidal_array_below_midplane': ['MPI1B011', 'MPI1B049', 'MPI1B109', 'MPI1B244', 'MPI1B274', 'MPI1B341'],
+}
 
 
 
@@ -417,8 +418,8 @@ def get_bp_sensor_category(sensor_name: str) -> str:
     'Bp_67_deg_backup_probes'
     """
     # Search for the sensor in the categories
-    for category_name, sensor_list in _BP_SENSOR_CATEGORIES:
-        if sensor_name in sensor_list:
+    for category_name in _BP_SENSOR_CATEGORIES:
+        if sensor_name in _BP_SENSOR_CATEGORIES[category_name]:
             return category_name
     
     raise ValueError(f"Sensor '{sensor_name}' not found in D3D_SENSORS_BP categories")
@@ -447,7 +448,8 @@ class D3DMirnovMethods:
             mirnov_times = mirnov_times / 1000.0
             # Get the sampling frequency of the Mirnov signal
             f_mirnov = 1 / np.mean(np.diff(mirnov_times))
-            if not (np.isclose(f_mirnov, 200e3, rtol=0.01) or np.isclose(f_mirnov, 500e3, rtol=0.01)):
+            if not (np.isclose(f_mirnov, 200e3, rtol=0.01) or np.isclose(f_mirnov, 500e3, rtol=0.01),\
+                np.isclose(f_mirnov, 100e3, rtol=0.01)):
                 raise ValueError(f"Unexpected Mirnov frequency {f_mirnov} Hz for {mirnov_name}, expected 200 kHz or 500 kHz on DIII-D")
             params.logger.verbose(f"Using Mirnov frequency of {f_mirnov} Hz on {mirnov_name}")
 
@@ -500,7 +502,11 @@ class D3DMirnovMethods:
         saved_freqs = None
 
         num_probes = 20 # Temporarily limit to 20 probes for speed
-        for mirnov_name, mirnov_location in D3D_PROBES_BP.items():
+        # Pull subset from specific array
+        names = _BP_SENSOR_CATEGORIES['Bp_r0_toroidal_array']
+        for mirnov_name, mirnov_location in D3D_SENSORS_BP.items():
+            if mirnov_name not in names:
+                continue
             mirnov_R = mirnov_location['R']
             mirnov_phi = mirnov_location['phi']
             mirnov_Z = mirnov_location['Z']

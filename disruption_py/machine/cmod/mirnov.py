@@ -41,7 +41,7 @@ def setup_fft(f_mirnov=2.5e6, f_target=1e4, frequency_resolution=100) -> ShortTi
     hop = round(f_mirnov / f_target)
     # Something something kaiser window is optimal, just pick a beta that works
     window = kaiser(window_size, beta=14)
-    sft = ShortTimeFFT(win=window, hop=hop, fs=f_mirnov)
+    sft = ShortTimeFFT(win=window, hop=hop, fs=f_mirnov, scale_to="magnitude")
     return sft
 
 class CmodMirnovMethods:
