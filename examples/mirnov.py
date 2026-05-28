@@ -50,7 +50,7 @@ def main():
         result = apply_freq_correction(result)
         
         
-        # result.to_netcdf(f'../data_archive/{shotlist[0]}.nc',format='NETCDF4')
+        # result.to_netcdf(f'../data_archive/{shot}.nc',format='NETCDF4', mode='w')
         result.to_netcdf(f'../TARS/tars/scratch/input_data/{shot}.nc',format='NETCDF4',mode='w')
 
 

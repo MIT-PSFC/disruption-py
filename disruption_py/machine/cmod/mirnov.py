@@ -41,7 +41,7 @@ def setup_fft(f_mirnov=2.5e6, f_target=1e4, frequency_resolution=100) -> ShortTi
     hop = round(f_mirnov / f_target)
     # Something something kaiser window is optimal, just pick a beta that works
     window = kaiser(window_size, beta=14)
-    sft = ShortTimeFFT(win=window, hop=hop, fs=f_mirnov)
+    sft = ShortTimeFFT(win=window, hop=hop, fs=f_mirnov, scale_to="magnitude",)
     return sft
 
 class CmodMirnovMethods:
@@ -139,20 +139,27 @@ class CmodMirnovMethods:
         mirnov_names_diff = ["BP_EF_TOP", "BP_EF_BOT"]
 
         # Yes, the order of these is different from the c-mod wiki website. I'm putting it like R, phi, Z, theta_pol
+        #TODO(RianC): There may be an inconsistency of order 5mm for the _t sensors with respect to the C-Mod
+        # CAD: The default R values put the sensors slight outside of the limiter tiles
+        # This is not an issue when running without a FEM Mesh, but will produce incorrect result
+        # With the mesh (as the sensors would no longer be eddy-shielded)
         R_tab = [0.9045, 0.9045, 0.9045, 0.9045, 0.9045, 0.9045]
         R_tgh = [0.9042, 0.9042, 0.9042, 0.9042, 0.9042, 0.9042]
         R_top = [0.9126, 0.9126, 0.9146, 0.9126]
         R_bot = [0.9131, 0.9151, 0.9131]
 
         phi_tab = [-23.10, -25.50, -27.90, -23.10, -25.50, -27.90]
-        phi_tgh = [-224.40, -226.80, -229.20, -224.40, -226.80, -229.20]
+        # The -7.2 degrees is a required correction to align the GH limiter with the C-Mod CAD model
+        # We are choosing to treat the CAD as the "source of truth" for sensor locations vs the MDS+ tree.
+        phi_tgh = np.array([-224.40, -226.80, -229.20, -224.40, -226.80, -229.20]) - 7.2
         phi_top = [-344.80, -10.16, -59.87, -169.55]
         phi_bot = [-344.80, -59.87, -169.55]
 
+        # Note: There are slight shifts in probe locations pre and post 2010
         Z_tab = [0.1030, 0.1030, 0.1030, -0.1030, -0.1030, -0.1030]
         Z_tgh = [0.1000, 0.1000, 0.1000, -0.1000, -0.1000, -0.1000]
-        Z_top = [0.0985, 0.0985, 0.0985, 0.1082]
-        Z_bot = [-0.0985, -0.0985, -0.1092]
+        Z_top = [0.0985, 0.0985, 0.0985, 0.1082 if int(str(params.shot_id)[1:3]) > 10 else 0.0985]  
+        Z_bot = [-0.0985, -0.0985, -0.1082 if int(str(params.shot_id)[1:3]) > 10 else -0.0985]  
 
         # These hadcoded orientaitons are still arctan(Z/R), not the poloidal orientation angle with respect to the midplane
         # The replacement node r"\magnetics::top.processed.rf_lim_data.XXXXX" doesn't exist for these sensors, so we have to hardcode them.
@@ -169,7 +176,8 @@ class CmodMirnovMethods:
         all_mirnov_names = mirnov_names_ab + mirnov_names_gh + mirnov_names_k + mirnov_names_tab + mirnov_names_tgh + mirnov_names_top + mirnov_names_bot
 
         R_all = np.concatenate((R_ab, R_gh, R_k, R_tab, R_tgh, R_top, R_bot))
-        phi_all = np.concatenate((phi_ab, phi_gh, phi_k, phi_tab, phi_tgh, phi_top, phi_bot))
+        # See above note about the GH limiter
+        phi_all = np.concatenate((phi_ab, phi_gh - 7.2, phi_k, phi_tab, phi_tgh, phi_top, phi_bot))
         phi_all = np.deg2rad(phi_all)
         Z_all = np.concatenate((Z_ab, Z_gh, Z_k, Z_tab, Z_tgh, Z_top, Z_bot))
 
