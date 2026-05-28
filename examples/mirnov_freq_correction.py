@@ -73,11 +73,11 @@ def __cal_Correction(sensor_name,freq):
     return  f, np.interp(freq,f,H_spline) * fine_cal * fine_caln
 
 
-def __cal_Correction_improved(sensor_name,freq):
+def __cal_Correction_improved(sensor_name,freq, cal_shotno=1150319903):
     # Golfinopoulos Mirnov calibration: valid for (20kHz <= f <= 1.2MHz)
     # Interpolated down to 0 kHz
 
-    CAL_PATH = 'examples/Empirical_Transfer_Function_Splines_1150319903.npz'
+    CAL_PATH = f'examples/Empirical_Transfer_Function_Splines_{cal_shotno}.npz'
     transfer_splines = np.load(CAL_PATH, allow_pickle=True)
 
     # The odd [()] nomenclature is required to access the dictionary stored in the numpy file
