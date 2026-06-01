@@ -6,7 +6,7 @@ from scipy.io import loadmat
 def apply_freq_correction(ds: xr.Dataset) -> xr.Dataset:
     complex_fft = ds["mirnov_fft_real"] + 1j * ds["mirnov_fft_imag"]
 
-    sensor_dim = "sensor"
+    sensor_dim = "sensor_idx"
     freq_dim = next((d for d in complex_fft.dims if "freq" in d.lower()), None)
     if freq_dim is None:
         raise KeyError(
@@ -55,22 +55,22 @@ def apply_freq_correction(ds: xr.Dataset) -> xr.Dataset:
 
 
   
-def __cal_Correction(sensor_name,freq):
-    # Sears Mirnov calibration: Only valid for high-freq data (f>=100kHz)
-    CAL_PATH = '/mnt/home/sears/Matlab/Calibration/cal_v2/'
-    try:mat = loadmat(CAL_PATH+'451_responses/'+sensor_name +'_cal.mat')
-    except: mat = loadmat(CAL_PATH+'451_responses/'+'BP1T_GHK' +'_cal.mat')
-    f = mat['f'][0]; H_spline = mat['H_spline'][0]
-    try:
-        mat = loadmat(CAL_PATH+'fine_tuning/'+sensor_name +'_cal+.mat')
-        fine_cal= mat['fine_cal'][0,0]
-        mat = loadmat(CAL_PATH+'fine_tuning/'+sensor_name +'_caln.mat')
-        fine_caln = mat['fine_caln'][0,0]
-    except: fine_cal = fine_caln = 1
-    #return f,H_spline,fine_cal,fine_caln 
+# def __cal_Correction(sensor_name,freq):
+#     # Sears Mirnov calibration: Only valid for high-freq data (f>=100kHz)
+#     CAL_PATH = '/mnt/home/sears/Matlab/Calibration/cal_v2/'
+#     try:mat = loadmat(CAL_PATH+'451_responses/'+sensor_name +'_cal.mat')
+#     except: mat = loadmat(CAL_PATH+'451_responses/'+'BP1T_GHK' +'_cal.mat')
+#     f = mat['f'][0]; H_spline = mat['H_spline'][0]
+#     try:
+#         mat = loadmat(CAL_PATH+'fine_tuning/'+sensor_name +'_cal+.mat')
+#         fine_cal= mat['fine_cal'][0,0]
+#         mat = loadmat(CAL_PATH+'fine_tuning/'+sensor_name +'_caln.mat')
+#         fine_caln = mat['fine_caln'][0,0]
+#     except: fine_cal = fine_caln = 1
+#     #return f,H_spline,fine_cal,fine_caln 
     
     
-    return  f, np.interp(freq,f,H_spline) * fine_cal * fine_caln
+#     return  f, np.interp(freq,f,H_spline) * fine_cal * fine_caln
 
 
 def __cal_Correction_improved(sensor_name,freq, cal_shotno=1150319903):

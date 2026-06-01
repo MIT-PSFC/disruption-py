@@ -269,34 +269,34 @@ class CmodMirnovMethods:
 
         mirnov_ffts_real = xr.DataArray(
             np.array(valid_mirnov_ffts).real,
-            dims=("sensor", "frequency", "idx"),
+            dims=("sensor_idx", "frequency_idx", "idx"),
             coords={
                 "shot": ("idx", np.repeat(params.shot_id, len(params.times))),
                 "time": ("idx", params.times),
-                "frequency": saved_freqs,
-                "sensor": list(range(len(valid_mirnov_locations))),
-                "sensor_name": ("sensor", valid_mirnov_names),
-                "type": ("sensor", ["Bp"] * len(valid_mirnov_names)),    # All sensors are Bp
-                "R": ("sensor", [loc[0] for loc in valid_mirnov_locations]),
-                "phi": ("sensor", [loc[1] for loc in valid_mirnov_locations]),
-                "Z": ("sensor", [loc[2] for loc in valid_mirnov_locations]),
-                "theta_pol": ("sensor", [loc[3] for loc in valid_mirnov_locations]),
+                "frequency": ("frequency_idx", saved_freqs),
+                "sensor_idx": list(range(len(valid_mirnov_locations))),
+                "sensor_name": ("sensor_idx", valid_mirnov_names),
+                "type": ("sensor_idx", ["Bp"] * len(valid_mirnov_names)),    # All sensors are Bp
+                "sensor_R": ("sensor_idx", [loc[0] for loc in valid_mirnov_locations]),
+                "sensor_phi": ("sensor_idx", [loc[1] for loc in valid_mirnov_locations]),
+                "sensor_Z": ("sensor_idx", [loc[2] for loc in valid_mirnov_locations]),
+                "sensor_theta": ("sensor_idx", [loc[3] for loc in valid_mirnov_locations]),
             },
         )
         mirnov_ffts_imag = xr.DataArray(
             np.array(valid_mirnov_ffts).imag,
-            dims=("sensor", "frequency", "idx"),
+            dims=("sensor_idx", "frequency_idx", "idx"),
             coords={
                 "shot": ("idx", np.repeat(params.shot_id, len(params.times))),
                 "time": ("idx", params.times),
-                "frequency": saved_freqs,
-                "sensor": list(range(len(valid_mirnov_locations))),
-                "sensor_name": ("sensor", valid_mirnov_names),
-                "type": ("sensor", ["Bp"] * len(valid_mirnov_names)),    # All sensors are Bp
-                "R": ("sensor", [loc[0] for loc in valid_mirnov_locations]),
-                "phi": ("sensor", [loc[1] for loc in valid_mirnov_locations]),
-                "Z": ("sensor", [loc[2] for loc in valid_mirnov_locations]),
-                "theta_pol": ("sensor", [loc[3] for loc in valid_mirnov_locations]),
+                "frequency": ("frequency_idx", saved_freqs),
+                "sensor_idx": list(range(len(valid_mirnov_locations))),
+                "sensor_name": ("sensor_idx", valid_mirnov_names),
+                "type": ("sensor_idx", ["Bp"] * len(valid_mirnov_names)),    # All sensors are Bp
+                "sensor_R": ("sensor_idx", [loc[0] for loc in valid_mirnov_locations]),
+                "sensor_phi": ("sensor_idx", [loc[1] for loc in valid_mirnov_locations]),
+                "sensor_Z": ("sensor_idx", [loc[2] for loc in valid_mirnov_locations]),
+                "sensor_theta": ("sensor_idx", [loc[3] for loc in valid_mirnov_locations]),
             },
         )
         mirnov_ds_real = mirnov_ffts_real.astype(np.float32).to_dataset(name="mirnov_fft_real")
