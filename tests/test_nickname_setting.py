@@ -89,9 +89,13 @@ def test_resolve_string_comma_strips_whitespace():
 
 
 def test_resolve_list_cascade():
-    """A list dispatches to NicknameSettingList."""
+    """A Python list dispatches to NicknameSettingList and resolves registered keys."""
     out = resolve_nickname_setting(["efit21", "analysis"])
     assert isinstance(out, NicknameSettingList)
+    # "analysis" is a registered (deprecated) alias for DefaultNicknameSetting,
+    # so list inputs resolve registered keys the same way comma-strings do.
+    assert out.resolved_items[0] == "efit21"
+    assert isinstance(out.resolved_items[1], DefaultNicknameSetting)
 
 
 def test_resolve_dict_dispatch():
@@ -106,7 +110,8 @@ def test_resolve_dict_value_can_be_cascade():
     assert isinstance(out, NicknameSettingDict)
     inner = out.resolved_nickname_setting_dict[Tokamak.CMOD]
     assert isinstance(inner, NicknameSettingList)
-    assert inner.resolved_items == ["efit21", "efit18", "analysis"]
+    assert inner.resolved_items[:2] == ["efit21", "efit18"]
+    assert isinstance(inner.resolved_items[2], DefaultNicknameSetting)
 
 
 def test_resolve_invalid_type():
@@ -131,6 +136,13 @@ def test_list_bad_item_type(bad_item):
     """Cascade items must be str or NicknameSetting."""
     with pytest.raises(ValueError, match="must be str or NicknameSetting"):
         NicknameSettingList([bad_item])
+
+
+@pytest.mark.parametrize("empty_item", ["", "   ", "\t"])
+def test_list_empty_string_rejected(empty_item):
+    """Empty / whitespace-only string items are rejected at construction."""
+    with pytest.raises(ValueError, match="non-empty strings"):
+        NicknameSettingList([empty_item])
 
 
 def test_list_accepts_nicknamesetting_instances():

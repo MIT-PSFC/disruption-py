@@ -6,7 +6,7 @@ Module for managing connections to MDSplus.
 
 import sys
 import threading
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 from loguru import logger
@@ -379,7 +379,7 @@ class MDSConnection(DataConnection):
     def add_tree_nickname_funcs(
         self,
         tree_nickname_funcs: Dict[str, Callable],
-        tree_nickname_cascades: Dict[str, Any] = None,
+        tree_nickname_cascades: Optional[Dict[str, Any]] = None,
     ):
         """
         Add tree nickname functions to the connection.

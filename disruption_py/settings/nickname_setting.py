@@ -241,7 +241,8 @@ class NicknameSettingList(NicknameSetting):
     """
     Cascade nickname setting. Tries each item in order via ``open_tree``,
     returning the first that opens successfully. Falls back to the next on
-    ``mdsExceptions.TreeFOPENR``.
+    ``mdsExceptions.TreeFOPENR`` (tree missing) or ``FetchDataError``
+    (nested cascade exhausted).
 
     Parameters
     ----------
@@ -267,11 +268,17 @@ class NicknameSettingList(NicknameSetting):
 
     @staticmethod
     def _resolve_item(item):
-        """Validate a cascade item: must be a string or NicknameSetting."""
+        """Validate a cascade item: must be a NicknameSetting or non-empty string."""
         if isinstance(item, NicknameSetting):
             return item
         if isinstance(item, str):
-            return item
+            stripped = item.strip()
+            if not stripped:
+                raise ValueError(
+                    "NicknameSettingList items must be non-empty strings, "
+                    f"got {item!r}"
+                )
+            return stripped
         raise ValueError(
             "NicknameSettingList items must be str or NicknameSetting, "
             f"got {type(item).__name__}: {item!r}"
@@ -553,7 +560,7 @@ def resolve_nickname_setting(nickname_setting: NicknameSettingType) -> NicknameS
     if isinstance(nickname_setting, NicknameSetting):
         return nickname_setting
     if isinstance(nickname_setting, list):
-        return NicknameSettingList(nickname_setting)
+        return NicknameSettingList([_map_cascade_item(i) for i in nickname_setting])
     if isinstance(nickname_setting, dict):
         return NicknameSettingDict(nickname_setting)
     if isinstance(nickname_setting, str):
@@ -561,12 +568,15 @@ def resolve_nickname_setting(nickname_setting: NicknameSettingType) -> NicknameS
             return _nickname_setting_mappings[nickname_setting]
         if "," in nickname_setting:
             tokens = [s.strip() for s in nickname_setting.split(",") if s.strip()]
-            # Registered keys map to their class; other tokens are literal tree names.
-            items = [
-                _nickname_setting_mappings[s] if s in _nickname_setting_mappings else s
-                for s in tokens
-            ]
-            return NicknameSettingList(items)
+            return NicknameSettingList([_map_cascade_item(t) for t in tokens])
         return StaticNicknameSetting(nickname_setting)
 
     raise ValueError(f"Invalid nickname setting type {type(nickname_setting)}.")
+
+
+def _map_cascade_item(item):
+    """Map a cascade item: registered string keys resolve to their NicknameSetting;
+    other strings and NicknameSetting instances pass through unchanged."""
+    if isinstance(item, str) and item in _nickname_setting_mappings:
+        return _nickname_setting_mappings[item]
+    return item
