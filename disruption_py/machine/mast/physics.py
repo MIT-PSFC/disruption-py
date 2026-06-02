@@ -320,14 +320,133 @@ class MastPhysicsMethods:
         return {"d_alpha": dalpha_data}
 
     @staticmethod
+    def _get_prad_peaking(
+        times,
+        power,
+        bolo_time,
+        first_r,
+        first_z,
+        second_r,
+        second_z,
+        validity,
+        channel_type,
+        rmag,
+        zmag,
+        efit_time,
+    ):
+        """
+        Calculate the Prad CVA peaking factor from MAST bolometer data.
+
+        Following Rea et al. (2020):
+        - CVA: mean power in core channels / mean power in non-divertor channels
+
+        Core channels are those whose chords pass within 6% of the vertical machine
+        scale from the magnetic axis (Rea et al. 2020, Eq. 3). Divertor channels
+        (excluded from the denominator) are those beyond 25% of the vertical scale.
+        Only fan-array channels (channel_type == 0) are used.
+
+        Note: XDIV is not computed for MAST as its symmetric double-null geometry
+        makes a single divertor-vs-all metric ambiguous.
+
+        Parameters
+        ----------
+        times : array_like
+            Requested time basis.
+        power : np.ndarray
+            Bolometer power array of shape (n_channels, n_times).
+        bolo_time : np.ndarray
+            Time base of the bolometer measurements.
+        first_r, first_z : np.ndarray
+            R and Z coordinates of the first point (detector/aperture) for each channel.
+        second_r, second_z : np.ndarray
+            R and Z coordinates of the second point (chord direction) for each channel.
+        validity : np.ndarray
+            Validity flags for each channel; 1 = valid, 0 = invalid.
+        channel_type : np.ndarray
+            Channel type identifier; 0 = vertical fan array.
+        rmag, zmag : np.ndarray
+            Magnetic axis R and Z positions on the equilibrium time base.
+        efit_time : np.ndarray
+            Time base of the equilibrium data.
+
+        Returns
+        -------
+        dict
+            A dictionary containing `p_rad_peaking` and `p_rad_peaking_xdiv`.
+        """
+        # Use only fan-array channels (type 0) for consistent vertical coverage
+        (fan_idx,) = np.where(channel_type == 0)
+        fan_valid = validity[fan_idx] == 1  # (n_fan,)
+
+        fr = first_r[fan_idx]
+        fz = first_z[fan_idx]
+        sr = second_r[fan_idx]
+        sz = second_z[fan_idx]
+
+        # Derive thresholds from fan geometry (Rea et al. 2020, Eq. 3)
+        vert_scale = 2.0 * np.max(np.abs(sz))
+        core_threshold = 0.06 * vert_scale
+        div_threshold = 0.25 * vert_scale
+
+        # Interpolate magnetic axis position onto the bolometer time base
+        rmag_t = MastUtilMethods.interpolate_1d(efit_time, rmag, bolo_time)
+        zmag_t = MastUtilMethods.interpolate_1d(efit_time, zmag, bolo_time)
+
+        # Compute Z-intersection of each chord with vertical R = Rmag(t)
+        # Z_j(t) = fz + (Rmag(t) - fr) * (sz - fz) / (sr - fr)   [Rea et al. 2020, Eq. 2]
+        dR = sr - fr  # (n_fan,)
+        dZ = sz - fz  # (n_fan,)
+
+        with np.errstate(divide="ignore", invalid="ignore"):
+            Z_j = fz[:, np.newaxis] + (
+                (rmag_t[np.newaxis, :] - fr[:, np.newaxis])
+                * (dZ[:, np.newaxis] / dR[:, np.newaxis])
+            )  # (n_fan, n_times)
+
+        dist_from_axis = np.abs(Z_j - zmag_t[np.newaxis, :])  # (n_fan, n_times)
+
+        valid_2d = fan_valid[:, np.newaxis] & ~np.isnan(Z_j)
+        core_mask = valid_2d & (dist_from_axis < core_threshold)
+        all_but_div = valid_2d & ~(dist_from_axis > div_threshold)
+
+        fan_power = power[fan_idx, :]  # (n_fan, n_times)
+
+        with np.errstate(invalid="ignore"):
+            core_mean = np.nanmean(np.where(core_mask, fan_power, np.nan), axis=0)
+            abd_mean = np.nanmean(np.where(all_but_div, fan_power, np.nan), axis=0)
+
+        prad_cva = np.where(abd_mean != 0, core_mean / abd_mean, np.nan)
+
+        # Zero out times where equilibrium data is unavailable
+        eq_nan = np.isnan(rmag_t) | np.isnan(zmag_t)
+        prad_cva[eq_nan] = np.nan
+
+        prad_cva = MastUtilMethods.interpolate_1d(bolo_time, prad_cva, times)
+
+        return {"p_rad_peaking": prad_cva}
+
+    @staticmethod
     @physics_method(
-        columns=["p_oh"],
+        columns=["p_rad_peaking"],
         tokamak=Tokamak.MAST,
     )
-    def get_ohmic_parameters(params: PhysicsMethodParams):
-        """
-        Calculate the ohmic heating power from the dynamic loop voltage,
-        inductive voltage, and plasma current
+    def get_prad_peaking(params: PhysicsMethodParams):
+        r"""
+        Calculate the radiated power CVA peaking factor using the MAST bolometer arrays.
+
+        Following Rea et al. (2020):
+
+        $$
+        P_{\text{rad,CVA}} = \frac{\langle P_j \rangle_{j \in C}}
+                                   {\langle P_j \rangle_{j \notin D}}
+        $$
+
+        where C is the core bin (chords passing within 6% of the vertical machine scale
+        from the magnetic axis) and D is the divertor bin (chords passing farther than
+        25% of the vertical scale from the magnetic axis).
+
+        The XDIV peaking factor is not computed for MAST because its symmetric
+        double-null geometry makes a single divertor-vs-all metric ambiguous.
 
         Parameters
         ----------
@@ -337,42 +456,183 @@ class MastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing the total Ohmic heating power (`p_oh`).
+            A dictionary containing `p_rad_peaking`.
 
         References
-        ------
-        - pull requests: #[553](https://github.com/MIT-PSFC/disruption-py/pull/553)
+        -------
+        - Rea et al. (2020), *Fusion Sci. Technol.* 76(8), 912-924.
+          DOI: 10.1080/15361055.2020.1798589
         """
+        conn: XarrayConnection = params.mds_conn
 
-        # load relevant parameters
-        r0 = params.get_data("equilibrium/magnetic_axis_r")
-        li = params.get_data("equilibrium/li")
-        v_loop = params.get_data("equilibrium/vloop_dynamic")
-        ip = params.get_data("summary/ip")
-        summary_time = params.get_data("summary/time")
-        equilibrium_time = params.get_data("equilibrium/time")
+        power = conn.get_data(params.shot_id, "bolometer/power")
+        bolo_time = conn.get_data(params.shot_id, "bolometer/time")
+        first_r = conn.get_data(params.shot_id, "bolometer/first_point_r")
+        first_z = conn.get_data(params.shot_id, "bolometer/first_point_z")
+        second_r = conn.get_data(params.shot_id, "bolometer/second_point_r")
+        second_z = conn.get_data(params.shot_id, "bolometer/second_point_z")
+        validity = conn.get_data(params.shot_id, "bolometer/validity")
+        channel_type = conn.get_data(params.shot_id, "bolometer/channel_type")
 
-        # compute derived quantities
-        smooth_window_size = 30
-        dip_dt = np.gradient(ip, summary_time)
-        if len(dip_dt) >= smooth_window_size:
-            dip_smoothed = causal_boxcar_smooth(dip_dt, smooth_window_size)
-        else:
-            dip_smoothed = dip_dt
-        inductance = 4.0 * np.pi * 1.0e-7 * r0 * li / 2.0
+        rmag = conn.get_data(params.shot_id, "equilibrium/magnetic_axis_r")
+        zmag = conn.get_data(params.shot_id, "equilibrium/magnetic_axis_z")
+        efit_time = conn.get_data(params.shot_id, "equilibrium/time")
 
-        # interpolate to consistent time-base
-        v_loop = interp1(equilibrium_time, v_loop, params.times)
-        inductance = interp1(equilibrium_time, inductance, params.times)
-        dip_smoothed = interp1(summary_time, dip_smoothed, params.times)
-        ip = interp1(summary_time, ip, params.times)
+        return MastPhysicsMethods._get_prad_peaking(
+            params.times,
+            power,
+            bolo_time,
+            first_r,
+            first_z,
+            second_r,
+            second_z,
+            validity,
+            channel_type,
+            rmag,
+            zmag,
+            efit_time,
+        )
 
-        # calculate p_oh
-        v_inductive = inductance * dip_smoothed
-        v_resistive = v_loop - v_inductive
-        p_oh = ip * v_resistive
+    @staticmethod
+    def _get_te_ne_peaking(times, te_profile, ne_profile, rho, ts_time):
+        """
+        Calculate Te and ne peaking factors from Thomson scattering profile data.
 
-        # Set negative p_ohm values to 0
-        p_oh = np.clip(p_oh, 0, None)
+        Following Rea et al. (2020), the core bin is defined as channels with
+        normalized effective radius rho < 0.3. The peaking factor is the ratio of
+        the mean value in the core bin to the mean over all channels.
 
-        return {"p_oh": p_oh}
+        Parameters
+        ----------
+        times : array_like
+            Requested time basis.
+        te_profile : np.ndarray
+            Electron temperature profile, shape (n_channels, n_times), in eV.
+        ne_profile : np.ndarray
+            Electron density profile, shape (n_channels, n_times), in m^-3.
+        rho : np.ndarray
+            Normalized effective radius (rho = r/r_boundary) for each Thomson channel,
+            shape (n_channels,).
+        ts_time : np.ndarray
+            Time base of the Thomson scattering measurements.
+
+        Returns
+        -------
+        dict
+            A dictionary containing `t_e_peaking` and `n_e_peaking`.
+        """
+        core_mask = (
+            rho < 0.3
+        )  # channels within 30% of normalized radius (Rea et al. 2020, Eq. 7)
+        n_times = len(ts_time)
+        te_pf = np.full(n_times, np.nan)
+        ne_pf = np.full(n_times, np.nan)
+
+        for i_time in range(n_times):
+            te_t = te_profile[:, i_time]
+            ne_t = ne_profile[:, i_time]
+
+            valid = np.isfinite(te_t) & np.isfinite(ne_t) & (te_t > 0) & (ne_t > 0)
+            core_valid = valid & core_mask
+
+            if core_valid.sum() < 2 or valid.sum() < 3:
+                continue
+
+            te_avg = np.mean(te_t[valid])
+            ne_avg = np.mean(ne_t[valid])
+            if te_avg > 0:
+                te_pf[i_time] = np.mean(te_t[core_valid]) / te_avg
+            if ne_avg > 0:
+                ne_pf[i_time] = np.mean(ne_t[core_valid]) / ne_avg
+
+        te_pf = MastUtilMethods.interpolate_1d(ts_time, te_pf, times)
+        ne_pf = MastUtilMethods.interpolate_1d(ts_time, ne_pf, times)
+
+        return {"t_e_peaking": te_pf, "n_e_peaking": ne_pf}
+
+    @staticmethod
+    @physics_method(
+        columns=["t_e_peaking", "n_e_peaking"],
+        tokamak=Tokamak.MAST,
+    )
+    def get_te_ne_peaking(params: PhysicsMethodParams):
+        r"""
+        Calculate Te and ne peaking factors from Thomson scattering profile data.
+
+        The peaking factor for each quantity is defined following Rea et al. (2020):
+
+        $$
+        T_{e,\text{pf}} = \frac{\langle T_j \rangle_{j \in C}}{T_{\text{avg}}}
+        \qquad
+        n_{e,\text{pf}} = \frac{\langle n_j \rangle_{j \in C}}{n_{\text{avg}}}
+        $$
+
+        where C is the set of Thomson scattering channels with normalized effective
+        radius $\rho_j < 0.3$ and the denominators are mean values over all channels.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing `t_e_peaking` and `n_e_peaking`.
+
+        Raises
+        ------
+        CalculationError
+            If Thomson scattering profile data is not available for this shot.
+            Required zarr paths: ``thomson_scattering/t_e``,
+            ``thomson_scattering/n_e``, ``equilibrium/magnetic_axis_r``,
+            ``equilibrium/minor_radius``.
+
+        References
+        -------
+        - Rea et al. (2020), *Fusion Sci. Technol.* 76(8), 912-924.
+          DOI: 10.1080/15361055.2020.1798589
+        """
+        conn: XarrayConnection = params.mds_conn
+
+        # 2D profile arrays: dims (major_radius, time)
+        te_xr = conn.get_data(
+            params.shot_id, "thomson_scattering/t_e", return_xarray=True
+        )
+        ne_xr = conn.get_data(
+            params.shot_id, "thomson_scattering/n_e", return_xarray=True
+        )
+
+        if any(x is None for x in (te_xr, ne_xr)):
+            raise CalculationError(
+                "Thomson scattering profile data not available. "
+                "Requires zarr paths: thomson_scattering/t_e, thomson_scattering/n_e."
+            )
+
+        r_ts = te_xr.coords["major_radius"].values
+        ts_time = te_xr.coords["time"].values
+
+        # Compute normalised effective radius rho = |R_TS - R_mag| / a_minor
+        # using time-averaged equilibrium values (TS channels are at fixed R).
+        r_mag = conn.get_data(params.shot_id, "equilibrium/magnetic_axis_r")
+        a_minor = conn.get_data(params.shot_id, "equilibrium/minor_radius")
+        r_mag_mean = np.nanmean(r_mag)
+        a_minor_mean = np.nanmean(a_minor)
+        if (
+            not np.isfinite(r_mag_mean)
+            or not np.isfinite(a_minor_mean)
+            or a_minor_mean <= 0
+        ):
+            raise CalculationError(
+                "Cannot compute rho for Thomson scattering channels: "
+                "equilibrium magnetic_axis_r or minor_radius unavailable."
+            )
+        rho = np.abs(r_ts - r_mag_mean) / a_minor_mean
+
+        return MastPhysicsMethods._get_te_ne_peaking(
+            params.times,
+            te_xr.values,
+            ne_xr.values,
+            rho,
+            ts_time,
+        )
