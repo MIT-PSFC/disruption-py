@@ -7,11 +7,12 @@ def apply_freq_correction(ds: xr.Dataset) -> xr.Dataset:
     complex_fft = ds["mirnov_fft_real"] + 1j * ds["mirnov_fft_imag"]
 
     sensor_dim = "sensor_idx"
-    freq_dim = next((d for d in complex_fft.dims if "freq" in d.lower()), None)
-    if freq_dim is None:
+    freq_coord = 'frequency'
+    frequency_dim = 'frequency_idx'
+    if freq_coord not in complex_fft.coords:
         raise KeyError(
-            f"Could not find frequency dimension in {complex_fft.dims}. "
-            "Expected a dimension name containing 'freq'."
+            f"Could not find frequency coordinate in {complex_fft.dims}. "
+            "Expected a coordinate name containing 'freq'."
         )
 
     sensor_name_key = None
@@ -22,10 +23,12 @@ def apply_freq_correction(ds: xr.Dataset) -> xr.Dataset:
     if sensor_name_key is None:
         raise KeyError("Could not find sensor name field. Expected 'sensor_names' or 'sensor_name'.")
 
-    other_dims = [d for d in complex_fft.dims if d not in (sensor_dim, freq_dim)]
-    corrected = complex_fft.transpose(sensor_dim, freq_dim, *other_dims).copy(deep=True)
+    other_dims = [d for d in complex_fft.dims if d not in (sensor_dim, frequency_dim)]
+    freq_vals = ds.coords[freq_coord].values
 
-    freq_vals = ds.coords[freq_dim].values
+    corrected = complex_fft.transpose(sensor_dim, frequency_dim, *other_dims).copy(deep=True)
+
+    freq_vals = ds.coords[freq_coord].values
     sensor_indices = ds.coords[sensor_dim].values
     sensor_name_arr = ds[sensor_name_key]
 
@@ -44,7 +47,7 @@ def apply_freq_correction(ds: xr.Dataset) -> xr.Dataset:
 
         corrected.loc[{sensor_dim: sensor_idx}] = (
             corrected.sel({sensor_dim: sensor_idx})
-            / xr.DataArray(H, dims=[freq_dim], coords={freq_dim: freq_vals})
+            * xr.DataArray(H, dims=[frequency_dim], coords={frequency_dim: freq_vals})
         )
 
     corrected = corrected.transpose(*complex_fft.dims)
@@ -92,4 +95,4 @@ def __cal_Correction_improved(sensor_name,freq, cal_shotno=1150319903):
         return __cal_Correction_improved('bp01_abk',freq)
     
 
-    return  freq, 1/H_spline
+    return  freq, H_spline

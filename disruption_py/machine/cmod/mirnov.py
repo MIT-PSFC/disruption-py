@@ -33,7 +33,7 @@ def setup_fft(f_mirnov=2.5e6, f_target=1e4, frequency_resolution=100) -> ShortTi
     -------
     sft : scipy.signal.ShortTimeFFT
     """
-    # Window size is the number of samples in the window
+    # Window size is the number of samples in the windowW
     # Think of how many samples you need to measure the minimum frequency you care about
     window_size = round(f_mirnov / frequency_resolution)
     # Hop is how much the window is slid between timesteps.
@@ -41,7 +41,7 @@ def setup_fft(f_mirnov=2.5e6, f_target=1e4, frequency_resolution=100) -> ShortTi
     hop = round(f_mirnov / f_target)
     # Something something kaiser window is optimal, just pick a beta that works
     window = kaiser(window_size, beta=14)
-    sft = ShortTimeFFT(win=window, hop=hop, fs=f_mirnov, scale_to="magnitude")
+    sft = ShortTimeFFT(win=window, hop=hop, fs=f_mirnov, scale_to="magnitude", fft_mode='onesided2X')
     return sft
 
 class CmodMirnovMethods:
@@ -367,7 +367,7 @@ class CmodMirnovMethods:
         for mirnov_name, mirnov_R, mirnov_phi, mirnov_Z, mirnov_theta_pol in zip(all_mirnov_names, R_all, phi_all, Z_all, theta_pol_all):
             try:
                 mirnov_signal, mirnov_times = params.mds_conn.get_data_with_dims(
-                            path=f"\magnetics::top.active_mhd.signals.{mirnov_name}",
+                            path=rf"\magnetics::top.active_mhd.signals.{mirnov_name}",
                             tree_name="magnetics",
                             astype="float32",
                 )
