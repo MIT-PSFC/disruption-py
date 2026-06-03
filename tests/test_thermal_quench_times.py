@@ -61,11 +61,11 @@ db_test.to_csv('test_thermal_quench_results.csv')
 
 # Print summary statistics
 error = db_test['onset_error_s'].to_numpy()
-print(f"Mean |Error| = {1e3*np.mean(np.abs(error)):.3f} ms")
-print(f"Median |Error| = {1e3*np.median(np.abs(error)):.3f} ms")
-print(f"Std Dev |Error| = {1e3*np.std(np.abs(error)):.3f} ms")
-print(f"Min Error = {1e3*np.min(error):.3f} ms")
-print(f"Max Error = {1e3*np.max(error):.3f} ms")
+print(f"Mean |Error| = {1e3*np.nanmean(np.abs(error)):.3f} ms")
+print(f"Median |Error| = {1e3*np.nanmedian(np.abs(error)):.3f} ms")
+print(f"Std Dev |Error| = {1e3*np.nanstd(np.abs(error)):.3f} ms")
+print(f"Min Error = {1e3*np.nanmin(error):.3f} ms")
+print(f"Max Error = {1e3*np.nanmax(error):.3f} ms")
 print(f"Num Outliers (outisde TQ [start, end] by >1 ms) = {np.sum(~db_test['within_tq_range'])} out of {len(shotlist)} shots")
 
 # Plot onset errors

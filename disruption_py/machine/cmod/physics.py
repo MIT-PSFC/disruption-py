@@ -2119,7 +2119,11 @@ class CmodPhysicsMethods:
 
         Last Major Update: Henry Wietfeldt (1/26/26)
         """
+        import os
+        import pandas as pd
         from scipy.signal import butter, filtfilt, resample_poly
+        from time import perf_counter
+        t0 = perf_counter()
         thermal_quench_time = np.full(len(params.times), np.nan)
         if params.disruption_time is None:
             return {"thermal_quench_time": thermal_quench_time}
@@ -2132,6 +2136,7 @@ class CmodPhysicsMethods:
         ip = np.abs(ip)
 
         # Get SXR chords
+        t0_read = perf_counter()
         n_chords = 38
         array_path = r"\top.brightnesses.array_1"
         try:
@@ -2168,11 +2173,13 @@ class CmodPhysicsMethods:
                 sxr[i] = chord[valid_times]
         sample_time = t_sxr[1] - t_sxr[0]
         sample_freq = 1 / sample_time
+        timings = {'read_mds': perf_counter() - t0_read}
 
         # Remove bad chords by checking each chord's autocorrelation.
         # Bad chords often have significant white noise, meaning low autocorrelation (< 10 ms)
         # Good chords should have an autocorrelation of 100s of ms
         # See shot 1050311013 as an example with some bad chords
+        t0_autocorr = perf_counter()
         noise_autorr_cutoff = 0.01 # [s]
         for i, chord in enumerate(sxr):
             # Use 300 ms prior to current quench for speed-up during autocorr O(N^2)
@@ -2203,12 +2210,14 @@ class CmodPhysicsMethods:
             if index_decay*(1/sample_freq_5khz) < noise_autorr_cutoff:
                 params.logger.debug(f"Removing chord {i+1}. Norm. Autocorr: {index_decay*(1/sample_freq_5khz)}")
                 sxr[i] = 0.
+        timings['autocorr'] = perf_counter() - t0_autocorr
 
         # Noncausal Butterworth low pass filter to smooth transient SXR spikes during TQ.
         # Cutoff of 1.0 kHz and order 2 seems to filter recombination SXR spikes
         # while maintaining decent resolution of TQ based on scan from 0.25 kHz - 2 kHz
         # Results were fairly insensitive within these windows on the 100 shots checked
         # See shot 1120913013 as example of large recombination spike
+        t0_bworth = perf_counter()
         bworth_cutoff = 1000 # [Hz]
         bworth_order = 2
         normalized_cutoff = bworth_cutoff / (0.5*sample_freq)
@@ -2217,7 +2226,9 @@ class CmodPhysicsMethods:
         sxr = filtfilt(b, a, sxr, axis=1)
         core_sxr = np.max(sxr, axis=0)
         dcore_sxr_dt = np.diff(core_sxr, prepend=0)/sample_time
+        timings['bworth'] = perf_counter() - t0_bworth
 
+        t0_find_tq = perf_counter()
         # Search for the onset of the CQ so that we can search for the TQ in a small time window
         # to avoid labeleing sawtooth crashes as the thermal quench
         # Some current quenches can be long (see shots 1050311013, 1050802017).
@@ -2252,6 +2263,7 @@ class CmodPhysicsMethods:
         # Want last maximum in case the SXR has saturated and there are multiple maxima
         max_sxr_indx = np.nonzero(window >= 0.9*np.max(window))[0][-1]
         tq_time_scalar = t_sxr[idx_start + max_sxr_indx]
+        timings['find_tq'] = perf_counter() - t0_find_tq
 
         # TODO: Delete this block during clean-up
         # TODO: Comment this out when running over many shots
@@ -2278,6 +2290,12 @@ class CmodPhysicsMethods:
         #             }
         # with open('sxr.pkl', 'wb') as f:
         #     pickle.dump(plot_df, f)
+
+        # Output timings (TODO: Remove this eventually)
+        timings['total'] = perf_counter() - t0
+        fn = os.path.join('/home/henrycw/projects/label-thermal-quench/disruption-py-label-thermal-quench/disruption-py/tq_timing', f'timing_{params.shot_id}.csv')
+        pd.DataFrame([timings]).to_csv(fn, index=False)
+
         # TODO: Remove t_disrupt, core_sxr
         core_sxr = interp1(t_sxr, core_sxr_raw, params.times)
         return {"thermal_quench_time": tq_time_scalar*np.ones(len(params.times)), "t_disrupt": params.disruption_time*np.ones(len(params.times)), "core_sxr": core_sxr}
