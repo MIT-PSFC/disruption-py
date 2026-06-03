@@ -24,7 +24,7 @@ MAN_LABEL = False
 #TODO: Shot 1160714006 having issues (low SXR signal). What do we do about ramp-up?
 # TODO: Shot 11405522001 has significant SXR spike when plasma hits wall, after main TQ
 # TODO: Search for first time at which dSXR/dt is w/in factor of 2 from max?
-SHOT_ID = 1120927010
+SHOT_ID = 1140826003
 signals = [
     "ip",
     "zcur",
@@ -56,17 +56,18 @@ df['ip'] = np.abs(df['ip']/1e6)
 print(df['cq_onset_time'])
 
 plt.rcParams['font.size'] = 14
-fig, axs = plt.subplots(4, 1, sharex=True, figsize=(14,7))
+fig, axs = plt.subplots(5, 1, sharex=True, figsize=(14,7))
 #axs[0].set_xlim(0.6, 0.64)
-axs[0].scatter(df['magtime'], df['ip'], marker='.', s=10, c='k')
-axs[1].scatter(df['t_sxr'], df['core_sxr_raw'], marker='.', s=5, c='k')
-axs[2].scatter(df['t_sxr'], df['core_sxr'], marker='.', s=5, c='k')
-axs[3].scatter(df['t_sxr'], df['core_sxr_growth_rate'], marker='.', s=5, c='k')
+axs[0].plot(df['magtime'], df['ip'], marker='.', ms=10, c='k', linestyle='-')
+axs[1].plot(df['t_ece'], df['te0_ece'], marker='.', ms=5, c='k', linestyle='-')
+axs[2].scatter(df['t_sxr'], df['core_sxr_raw'], marker='.', s=5, c='k')
+axs[3].scatter(df['t_sxr'], df['core_sxr'], marker='.', s=5, c='k')
+axs[4].scatter(df['t_sxr'], df['core_sxr_growth_rate'], marker='.', s=5, c='k')
 # axs[4].scatter(df['efit_time'], df['z0'], marker='o', s=10, c='k')
 print("Plotting labeled times")
 for ax in axs:
     ax.axvline(df['t_disrupt'], linestyle='-', c='k', label='t_disrupt')
-    ax.axvline(df['cq_onset_time'], linestyle='--', c='k', label='CQ Onset')
+    ax.axvline(df['cq_onset_time'], linestyle='--', c='k', label='CQ Onset', lw=2)
     #ax.axvline(df['t_start'], linestyle='--', c='k', label='tstart')
     if not MAN_LABEL:
         ax.axvline(df['thermal_quench_time_scalar'], linestyle='-', c='r', label='TQ Onset')
@@ -84,9 +85,10 @@ for ax in axs:
         #         ax.axvline(t_warn, linestyle='--', c='b')
 axs[0].set_title('C-Mod Shot: ' + str(SHOT_ID))
 axs[0].set_ylabel('Ip [MA]')
-axs[1].set_ylabel('SXR raw')
-axs[2].set_ylabel('SXR filt')
-axs[3].set_ylabel(r"$dSXR/dt$ [Hz]")
+axs[1].set_ylabel('Te0 [keV]')
+axs[2].set_ylabel('SXR raw')
+axs[3].set_ylabel('SXR filt')
+axs[4].set_ylabel(r"$dSXR/dt$ [Hz]")
 # axs[3].set_ylim(-8e3, 2e3)
 # axs[4].set_ylabel('Z0 [m]')
 # axs[4].set_xlabel("Time [s]")

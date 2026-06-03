@@ -2117,7 +2117,8 @@ class CmodPhysicsMethods:
         return {"v_surf": v_surf}
     
     @staticmethod
-    @physics_method(columns=["thermal_quench_time"], tokamak=Tokamak.CMOD)
+    # TODO: Remove t_disrupt, core_sxr
+    @physics_method(columns=["thermal_quench_time", "t_disrupt", "core_sxr"], tokamak=Tokamak.CMOD)
     def get_thermal_quench_onset_time(params: PhysicsMethodParams):
         """
         Labels the onset time of the thermal quench for a given shot (NaN for non-disruptive shots)
@@ -2282,10 +2283,13 @@ class CmodPhysicsMethods:
         #     r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
         # )  # [cm], [s]
         # z0 *= 0.01 # [cm] -> [m]
+        # te0_ece, t_ece = params.data_conn.get_data_with_dims(r"\gpc2_te0", tree_name="electrons")
         # import pickle
         # plot_df = {"magtime":magtime,
         #             "ip": ip,
         #             "t_sxr": t_sxr,
+        #             "t_ece": t_ece,
+        #             "te0_ece": te0_ece,
         #             "core_sxr_raw": core_sxr_raw,
         #             "core_sxr": core_sxr,
         #             "core_sxr_growth_rate": dcore_sxr_dt,
@@ -2296,8 +2300,9 @@ class CmodPhysicsMethods:
         #             }
         # with open('sxr.pkl', 'wb') as f:
         #     pickle.dump(plot_df, f)
-
-        return {"thermal_quench_time": tq_time_scalar*np.ones(len(params.times))}
+        # TODO: Remove t_disrupt, core_sxr
+        core_sxr = interp1(t_sxr, core_sxr_raw, params.times)
+        return {"thermal_quench_time": tq_time_scalar*np.ones(len(params.times)), "t_disrupt": params.disruption_time*np.ones(len(params.times)), "core_sxr": core_sxr}
 
     @staticmethod
     def _is_on_blacklist(shot_id: int) -> bool:

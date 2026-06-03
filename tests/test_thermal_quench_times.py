@@ -21,7 +21,8 @@ print(f"Number of shots: len(shotlist)")
 
 signals = [
     "ip",
-    "thermal_quench_time"
+    "thermal_quench_time",
+    "t_disrupt"
 ]
 
 # default method for pulling disruption-py data

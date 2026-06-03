@@ -9,6 +9,7 @@ import os
 import logging
 
 import numpy as np
+import pandas as pd
 
 from disruption_py.settings import LogSettings, RetrievalSettings
 from disruption_py.workflow import get_shots_data
