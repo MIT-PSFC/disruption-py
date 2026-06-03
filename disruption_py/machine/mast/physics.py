@@ -6,6 +6,7 @@ Physics methods for MAST.
 """
 
 import numpy as np
+import xarray as xr
 
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.errors import MismatchCalculationError
@@ -376,3 +377,41 @@ class MastPhysicsMethods:
         p_oh = np.clip(p_oh, 0, None)
 
         return {"p_oh": p_oh}
+
+    @staticmethod
+    @physics_method(
+        columns=["ts_te_eV", "ts_ne"],
+        tokamak=Tokamak.MAST,
+    )
+    def get_ts_channels(params: PhysicsMethodParams):
+        """Get Thomson scattering channel profile data.
+
+        Returns 2D electron temperature and density profiles from the MAST core
+        Thomson scattering system (AYC) as xarray DataArrays indexed by
+        (time, major_radius). The major_radius coordinate gives the position of
+        each channel in meters along the midplane.
+
+        Te is in eV and ne is in m^-3.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary with:
+            - ``ts_te_eV``: xr.DataArray of electron temperature [eV]
+              with dims (time, major_radius).
+            - ``ts_ne``: xr.DataArray of electron density [m^-3]
+              with dims (time, major_radius).
+        """
+        te_raw = params.get_data("thomson_scattering/t_e", return_xarray=True)
+        ne_raw = params.get_data("thomson_scattering/n_e", return_xarray=True)
+
+        # Raw data has dims (major_radius, time); transpose to (time, major_radius)
+        te = te_raw.transpose("time", "major_radius")
+        ne = ne_raw.transpose("time", "major_radius")
+
+        return {"ts_te_eV": te, "ts_ne": ne}
