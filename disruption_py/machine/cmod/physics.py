@@ -2139,29 +2139,73 @@ class CmodPhysicsMethods:
         t0_read = perf_counter()
         n_chords = 38
         array_path = r"\top.brightnesses.array_1"
+        # try:
+        #     chord_01, t_sxr = params.get_data_with_dims(
+        #         array_path + ":chord_01",
+        #         tree_name="xtomo",
+        #     ) # Units: W/m^2, s
+        # except mdsExceptions.MdsException:
+        #     print(params.shot_id)
+        #     params.logger.debug("Failed to get SXR " + array_path + " data")
+        #     return {"thermal_quench_time": np.full(len(params.times), np.nan)}
+        # valid_times = (t_sxr > 0) & (t_sxr < 2.0)
+        # t_sxr = t_sxr[valid_times]
+        # sxr = np.zeros(shape=(n_chords, len(t_sxr)))
+        # sxr[0] = chord_01[valid_times]
+        # # Get all other SXR chords
+        # for i in range(1, n_chords):
+        #     try:
+        #         chord, t_chord = params.get_data_with_dims(
+        #             array_path + ":chord_" + f"{i+1:02}",
+        #             tree_name="xtomo",
+        #         )
+        #     except mdsExceptions.MdsException:
+        #         params.logger.debug("Failed to get SXR " + array_path + " chord " + str(i+1) + " data")
+        #         sxr[i] = 0.
+        #         continue
+        #     # Subtract constant background
+        #     chord = chord - np.mean(chord[t_chord < 0.])
+        #     # Occasionally the time bases of a chord are of a different length
+        #     # Usually one timebase is just cut off early after shot is over
+        #     valid_times = (t_chord > 0) & (t_chord < 2.)
+        #     # Goods chords should be of the same shape
+        #     if len(chord[valid_times]) == sxr.shape[1]:
+        #         sxr[i] = chord[valid_times]
+
+
+        # Use getMany to read 38 SXR chords and their time arrays in one batch
+        params.data_conn.conn.openTree("xtomo", params.shot_id)
+        gm = params.data_conn.conn.getMany()
+        for i in range(n_chords):
+            chord_key = f"chord_{i+1:02}"
+            node_path = f"{array_path}:{chord_key}"
+            # Append data expression
+            gm.append(f"data_{chord_key}", node_path)
+            gm.append(f"time_{chord_key}", f"data(dim_of({node_path}))")
+        sxr_results = gm.execute()
+
+        # Unpack the first SXR chord to get the shape of the SXR data
+        chord_key = "chord_01"
         try:
-            chord_01, t_sxr = params.get_data_with_dims(
-                array_path + ":chord_01",
-                tree_name="xtomo",
-            ) # Units: W/m^2, s
-        except mdsExceptions.MdsException:
-            print(params.shot_id)
+            chord =  np.array(sxr_results.get(f"data_{chord_key}")["value"].data())
+            t_sxr = np.array(sxr_results.get(f"time_{chord_key}")["value"].data())
+        except mdsExceptions.MdsException as e:
             params.logger.debug("Failed to get SXR " + array_path + " data")
             return {"thermal_quench_time": np.full(len(params.times), np.nan)}
+        chord = chord - np.mean(chord[t_sxr < 0.])
         valid_times = (t_sxr > 0) & (t_sxr < 2.0)
         t_sxr = t_sxr[valid_times]
         sxr = np.zeros(shape=(n_chords, len(t_sxr)))
-        sxr[0] = chord_01[valid_times]
-        # Get all other SXR chords
+        sxr[0] = chord[valid_times]
+        # Unpack the rest of the chords
         for i in range(1, n_chords):
+            chord_key = f"chord_{i+1:02}"
             try:
-                chord, t_chord = params.get_data_with_dims(
-                    array_path + ":chord_" + f"{i+1:02}",
-                    tree_name="xtomo",
-                )
-            except mdsExceptions.MdsException:
-                params.logger.debug("Failed to get SXR " + array_path + " chord " + str(i+1) + " data")
-                sxr[i] = 0.
+                # TODO: Remove np.array?
+                chord =  np.array(sxr_results.get(f"data_{chord_key}")["value"].data())
+                t_chord = np.array(sxr_results.get(f"time_{chord_key}")["value"].data())
+            except mdsExceptions.MdsException as e:
+                params.logger.debug("Failed to get SXR " + array_path + " data")
                 continue
             # Subtract constant background
             chord = chord - np.mean(chord[t_chord < 0.])
@@ -2171,6 +2215,7 @@ class CmodPhysicsMethods:
             # Goods chords should be of the same shape
             if len(chord[valid_times]) == sxr.shape[1]:
                 sxr[i] = chord[valid_times]
+
         sample_time = t_sxr[1] - t_sxr[0]
         sample_freq = 1 / sample_time
         timings = {'read_mds': perf_counter() - t0_read}
