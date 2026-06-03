@@ -16,7 +16,8 @@ def main():
     execute a simple workflow to fetch EFIT parameters.
     """
 
-    tokamak = resolve_tokamak_from_environment()
+    # tokamak = resolve_tokamak_from_environment()
+    tokamak = Tokamak.MAST
 
     run_methods = ["get_efit_parameters", "get_geqdsk_parameters"]
     if tokamak is Tokamak.D3D:

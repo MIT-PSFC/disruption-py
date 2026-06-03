@@ -5,6 +5,12 @@ endpoint_url = "https://s3.echo.stfc.ac.uk"
 file_ext = "zarr"
 file_path = "mast/level2/shots"
 
+[mast.inout.efm_zarr]
+endpoint_url = "https://s3.echo.stfc.ac.uk"
+file_path = "mast/level1/shots"
+file_ext = "zarr"
+group = "efm"
+
 [mast.physics.attributes.a_minor]
 description = "Minor radius of the plasma boundary (defined as (Rmax-Rmin) / 2 of the boundary)"
 imas = "/equilibrium/time_slice(itime)/boundary/minor_radius"
