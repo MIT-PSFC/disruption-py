@@ -5,6 +5,7 @@ This module defines the LogSettings class, which provides settings and setup for
 logging in both files and console with customizable levels and formats.
 """
 
+import multiprocessing
 import os
 import sys
 from dataclasses import dataclass
@@ -15,6 +16,29 @@ from loguru import logger
 from tqdm.auto import tqdm
 
 from disruption_py.core.utils.misc import get_metadata, get_temporary_folder
+
+# Register logger state at module import time so it is available in every
+# process, including multiprocessing workers that use `spawn` (macOS/Windows)
+# or `forkserver` (Linux, Python 3.14+) start methods. These do not inherit
+# the main process's loguru state, so anything the workers need must live
+# here — not in setup_logging(), which only runs in the main process.
+if not hasattr(logger.__class__, "verbose"):
+    try:
+        logger.level("VERBOSE", no=15, color="<dim>")
+    except TypeError:
+        # Level already exists (re-import), just update the color.
+        logger.level("VERBOSE", color="<dim>")
+    logger.__class__.verbose = partialmethod(logger.__class__.log, "VERBOSE")
+
+# Custom colors for built-in levels. Must run at module level so workers
+# inherit them via re-import under spawn/forkserver.
+logger.level("TRACE", color="<cyan><dim>")
+logger.level("DEBUG", color="<blue>")
+logger.level("VERBOSE", color="<dim>")
+logger.level("INFO", color="")
+logger.level("SUCCESS", color="<green>")
+logger.level("WARNING", color="<yellow>")
+logger.level("ERROR", color="<red>")
 
 LogSettingsType = Union["LogSettings", str, int]
 
@@ -105,13 +129,16 @@ class LogSettings:
             diagnose=True,
         )
 
-        # Add file handler if log file path is provided
+        # Add file handler if log file path is provided. Main process truncates
+        # to start a fresh log; workers append so they don't wipe the main
+        # process's output under spawn/forkserver.
         if self.file_path is not None:
+            is_main = multiprocessing.current_process().name == "MainProcess"
             logger.add(
                 self.file_path,
                 level=self.file_level,
                 format=file_format,
-                mode="w",
+                mode="w" if is_main else "a",
                 enqueue=True,
                 backtrace=False,
                 diagnose=True,
@@ -123,24 +150,6 @@ class LogSettings:
         """
         if self._logging_has_been_setup:
             return
-
-        # Set custom style and add a VERBOSE level. This only needs to be done
-        # once, so there is no need to add it to the reset_handlers method.
-        logger.level("TRACE", color="<cyan><dim>")
-        logger.level("DEBUG", color="<blue>")
-        # Ensure the level does not already exist because the level no can only
-        # be added once. This might happen if the logger is re-initialized.
-        try:
-            logger.level("VERBOSE", color="<dim>")
-        except ValueError:
-            logger.level("VERBOSE", color="<dim>", no=15)
-        logger.level("INFO", color="")
-        logger.level("SUCCESS", color="<green>")
-        logger.level("WARNING", color="<yellow>")
-        logger.level("ERROR", color="<red>")
-        # Bind the verbose level to the class so it can be used in any file even
-        # after changing the logger instance
-        logger.__class__.verbose = partialmethod(logger.__class__.log, "VERBOSE")
 
         self.reset_handlers(num_shots=None)
 

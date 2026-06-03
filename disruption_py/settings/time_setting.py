@@ -64,6 +64,18 @@ class TimeSettingParams:
         """
         return self.disruption_time is not None
 
+    def get_data(self, *args, **kwargs) -> np.ndarray:
+        """Get data using the data connection."""
+        return self.data_conn.get_data(*args, **kwargs)
+
+    def get_data_with_dims(self, *args, **kwargs) -> Tuple:
+        """Get data with dimensions using the data connection."""
+        return self.data_conn.get_data_with_dims(*args, **kwargs)
+
+    def get_dims(self, *args, **kwargs) -> Tuple:
+        """Get dimensions using the data connection."""
+        return self.data_conn.get_dims(*args, **kwargs)
+
 
 TimeSettingType = Union[
     "TimeSetting", str, Dict[Tokamak, "TimeSettingType"], List["TimeSettingType"]
@@ -258,10 +270,8 @@ class EfitTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        (efit_time,) = params.data_conn.get_dims(
-            r"\efit_aeqdsk:ali", tree_name="_efit_tree"
-        )
-        efit_time_unit = params.data_conn.get_data(
+        (efit_time,) = params.get_dims(r"\efit_aeqdsk:ali", tree_name="_efit_tree")
+        efit_time_unit = params.get_data(
             r"units_of(dim_of(\efit_aeqdsk:ali))", tree_name="_efit_tree"
         )
         if efit_time_unit not in {"s", "ms", "us"}:
@@ -338,9 +348,7 @@ class DisruptionTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        raw_ip, ip_time = params.data_conn.get_data_with_dims(
-            f"ptdata('ip', {params.shot_id})"
-        )
+        raw_ip, ip_time = params.get_data_with_dims(f"ptdata('ip', {params.shot_id})")
         ip_time = ip_time / 1.0e3
         baseline = np.mean(raw_ip[:10])
         ip = raw_ip - baseline
@@ -372,9 +380,7 @@ class DisruptionTimeSetting(TimeSetting):
         This will be replaced once a get_disruption_time method is implemented for HBT-EP
         """
 
-        t_ip = params.data_conn.get_dims(
-            r"\top.sensors.rogowskis:ip", tree_name="hbtep2"
-        )  # [s]
+        t_ip = params.get_dims(r"\top.sensors.rogowskis:ip", tree_name="hbtep2")  # [s]
         t_ip = t_ip[0]
         t_ip = t_ip[(t_ip >= 0) & (t_ip <= 12e-3)]
         steps = round(10e-6 / (t_ip[1] - t_ip[0]))
@@ -568,7 +574,7 @@ class IpTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        (ip_time,) = params.data_conn.get_dims(r"\ip", tree_name="magnetics")
+        (ip_time,) = params.get_dims(r"\ip", tree_name="magnetics")
         return ip_time
 
     def d3d_times(self, params: TimeSettingParams) -> np.ndarray:
@@ -585,7 +591,7 @@ class IpTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        (ip_time,) = params.data_conn.get_dims(f"ptdata('ip', {params.shot_id})")
+        (ip_time,) = params.get_dims(f"ptdata('ip', {params.shot_id})")
         ip_time /= 1e3  # [ms] -> [s]
         return ip_time
 
@@ -603,7 +609,7 @@ class IpTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        (ip_time,) = params.data_conn.get_dims(r"\pcrl01", tree_name="pcs_east")
+        (ip_time,) = params.get_dims(r"\pcrl01", tree_name="pcs_east")
         # For shots before year 2014, the PCRL01 timebase needs to be shifted
         # by 17.0 ms
         if params.shot_id < 44432:
@@ -624,9 +630,7 @@ class IpTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        (ip_time,) = params.data_conn.get_dims(
-            r"\top.sensors.rogowskis:ip", tree_name="hbtep2"
-        )
+        (ip_time,) = params.get_dims(r"\top.sensors.rogowskis:ip", tree_name="hbtep2")
         return ip_time
 
     def mast_times(self, params: TimeSettingParams) -> np.ndarray:
@@ -695,16 +699,14 @@ class SignalTimeSetting(TimeSetting):
             Array of times in the timebase.
         """
         try:
-            (signal_time,) = params.data_conn.get_dims(
-                self.signal_path, tree_name=self.tree_name
-            )
+            (signal_time,) = params.get_dims(self.signal_path, tree_name=self.tree_name)
         except mdsExceptions.MdsException:
             params.logger.error(
                 "Failed to set up timebase for signal {signal_path}",
                 signal_path=self.signal_path,
             )
             raise
-        signal_unit = params.data_conn.get_data(
+        signal_unit = params.get_data(
             f"units_of(dim_of({self.signal_path}))", tree_name=self.tree_name
         )
         if (
