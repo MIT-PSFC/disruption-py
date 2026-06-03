@@ -2126,7 +2126,7 @@ class CmodPhysicsMethods:
         params.logger.debug(params.disruption_time)
 
         # Get current data for obtaining start of current quench
-        ip, magtime = params.data_conn.get_data_with_dims(
+        ip, magtime = params.get_data_with_dims(
             r"\ip", tree_name="magnetics"
         )
         ip = np.abs(ip)
@@ -2135,7 +2135,7 @@ class CmodPhysicsMethods:
         n_chords = 38
         array_path = r"\top.brightnesses.array_1"
         try:
-            chord_01, t_sxr = params.data_conn.get_data_with_dims(
+            chord_01, t_sxr = params.get_data_with_dims(
                 array_path + ":chord_01",
                 tree_name="xtomo",
             ) # Units: W/m^2, s
@@ -2150,7 +2150,7 @@ class CmodPhysicsMethods:
         # Get all other SXR chords
         for i in range(1, n_chords):
             try:
-                chord, t_chord = params.data_conn.get_data_with_dims(
+                chord, t_chord = params.get_data_with_dims(
                     array_path + ":chord_" + f"{i+1:02}",
                     tree_name="xtomo",
                 )
@@ -2257,11 +2257,11 @@ class CmodPhysicsMethods:
         # TODO: Comment this out when running over many shots
         #Write some signals for plotting
         #Get magnetic axis data from EFIT for testing purposes
-        # z0, efit_time = params.data_conn.get_data_with_dims(
+        # z0, efit_time = params.get_data_with_dims(
         #     r"\efit_aeqdsk:zmagx", tree_name="_efit_tree"
         # )  # [cm], [s]
         # z0 *= 0.01 # [cm] -> [m]
-        # te0_ece, t_ece = params.data_conn.get_data_with_dims(r"\gpc2_te0", tree_name="electrons")
+        # te0_ece, t_ece = params.get_data_with_dims(r"\gpc2_te0", tree_name="electrons")
         # import pickle
         # plot_df = {"magtime":magtime,
         #             "ip": ip,
