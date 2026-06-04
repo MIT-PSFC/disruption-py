@@ -2127,7 +2127,6 @@ class CmodPhysicsMethods:
         thermal_quench_time = np.full(len(params.times), np.nan)
         if params.disruption_time is None:
             return {"thermal_quench_time": thermal_quench_time}
-        params.logger.debug(params.disruption_time)
 
         # Get current data for obtaining start of current quench
         ip, magtime = params.get_data_with_dims(
@@ -2139,21 +2138,11 @@ class CmodPhysicsMethods:
         t0_read = perf_counter()
         n_chords = 38
         array_path = r"\top.brightnesses.array_1"
-        try:
-            chord_01, t_sxr = params.get_data_with_dims(
-                array_path + ":chord_01",
-                tree_name="xtomo",
-            ) # Units: W/m^2, s
-        except mdsExceptions.MdsException:
-            print(params.shot_id)
-            params.logger.debug("Failed to get SXR " + array_path + " data")
-            return {"thermal_quench_time": np.full(len(params.times), np.nan)}
-        valid_times = (t_sxr > 0) & (t_sxr < 2.0)
-        t_sxr = t_sxr[valid_times]
-        sxr = np.zeros(shape=(n_chords, len(t_sxr)))
-        sxr[0] = chord_01[valid_times]
-        # Get all other SXR chords
-        for i in range(1, n_chords):
+        # Initialize sxr, etc after first successful read of a chord so we know the size
+        sxr = None
+        t_sxr = None
+        valid_times = None
+        for i in range(n_chords):
             try:
                 chord, t_chord = params.get_data_with_dims(
                     array_path + ":chord_" + f"{i+1:02}",
@@ -2161,15 +2150,22 @@ class CmodPhysicsMethods:
                 )
             except mdsExceptions.MdsException:
                 params.logger.debug("Failed to get SXR " + array_path + " chord " + str(i+1) + " data")
-                sxr[i] = 0.
+                if sxr is not None:
+                    sxr[i] = 0.
                 continue
             # Subtract constant background
             chord = chord - np.mean(chord[t_chord < 0.])
+            if sxr is None:
+                valid_times = (t_chord > 0) & (t_chord < params.disruption_time + 0.05)
+                t_sxr = t_chord[valid_times]
+                sxr = np.zeros(shape=(n_chords, len(t_sxr)))
+                sxr[i] = chord[valid_times]
+                continue
             # Occasionally the time bases of a chord are of a different length
             # Usually one timebase is just cut off early after shot is over
-            valid_times = (t_chord > 0) & (t_chord < 2.)
+            valid_times = (t_chord > 0) & (t_chord < params.disruption_time + 0.05)
             # Goods chords should be of the same shape
-            if len(chord[valid_times]) == sxr.shape[1]:
+            if np.sum(valid_times) == sxr.shape[1]:
                 sxr[i] = chord[valid_times]
 
         sample_time = t_sxr[1] - t_sxr[0]
@@ -2245,9 +2241,8 @@ class CmodPhysicsMethods:
         wndw_before_cq = 0.005 # [s]
         idx_start = np.argmin(np.abs(t_sxr - (cq_onset_time - wndw_before_cq)))
         idx_end = np.argmin(np.abs(t_sxr - (cq_onset_time)))
-        # When params.disruption_time > 2 s, the SXR data stops prior to the labeled CQ
         if idx_start == len(t_sxr) - 1:
-            params.logger.warning(f"No SXR data at time of CQ. params.disruption_time = {params.disruption_time:.3f}")
+            params.logger.debug(f"No SXR data at time of CQ. params.disruption_time = {params.disruption_time:.3f}")
             return {"thermal_quench_time": np.full(len(params.times), np.nan)}
         t_max_sxr_drop = t_sxr[idx_start + np.argmin(dcore_sxr_dt[idx_start:idx_end])]
 

@@ -17,7 +17,7 @@ from disruption_py.workflow import get_shots_data
 
 # Shotlist of all C-Mod shots 2012-2016
 SHOTLIST_FN = '/home/henrycw/projects/ufo-characterization/shotlists/cmod_shots_2012_to_2016.txt'
-NUM_SUBSET = 500 # Number of shots to randomly select from Shotlist
+NUM_SUBSET = 1000 # Number of shots to randomly select from Shotlist
 
 shotlist = np.genfromtxt(SHOTLIST_FN, dtype=int)
 rng = np.random.default_rng(seed=42)

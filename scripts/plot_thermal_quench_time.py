@@ -24,7 +24,8 @@ MAN_LABEL = False
 #TODO: Shot 1160714006 having issues (low SXR signal). What do we do about ramp-up?
 # TODO: Shot 11405522001 has significant SXR spike when plasma hits wall, after main TQ
 # TODO: Search for first time at which dSXR/dt is w/in factor of 2 from max?
-SHOT_ID = 1140826003
+# 1050421007
+SHOT_ID = 1050311013
 signals = [
     "ip",
     "zcur",
@@ -89,6 +90,8 @@ axs[1].set_ylabel('Te0 [keV]')
 axs[2].set_ylabel('SXR raw')
 axs[3].set_ylabel('SXR filt')
 axs[4].set_ylabel(r"$dSXR/dt$ [Hz]")
+axs[-1].set_xlabel('Time [s]')
+#axs[-1].set_xlim(0.49, 0.508)
 # axs[3].set_ylim(-8e3, 2e3)
 # axs[4].set_ylabel('Z0 [m]')
 # axs[4].set_xlabel("Time [s]")
