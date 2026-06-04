@@ -9,6 +9,7 @@ import numpy as np
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
+from disruption_py.inout.mds import mdsExceptions
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -33,6 +34,17 @@ class D3DEfitMethods:
     }
 
     efit_derivs = {"dbetap_dt": "beta_p", "dli_dt": "li", "dwmhd_dt": "wmhd"}
+
+    quality_cols = {
+        "current": r"\efit_a_eqdsk:cpasma",
+        "wmhd": r"\efit_a_eqdsk:wmhd",
+        "jflag": r"\efit_a_eqdsk:jflag",
+        "chisq": r"\efit_a_eqdsk:chisq",
+        "cerror": r"\efit_a_eqdsk:cerror",
+        "num_iter": r"\efit_fitout:nitera",
+        "max_iter": r"\efit_geqdsk.out1:mxiter",
+    }
+
     rt_efit_cols = {
         "beta_p_rt": r"\efit_a_eqdsk:betap",
         "li_rt": r"\efit_a_eqdsk:li",
@@ -126,3 +138,59 @@ class D3DEfitMethods:
             for param in efit_data:
                 efit_data[param] = interp1(efit_time, efit_data[param], params.times)
         return efit_data
+
+    @staticmethod
+    @physics_method(
+        columns=["efit_quality_timeslice", "efit_quality_shot"],
+        tokamak=Tokamak.D3D,
+    )
+    def get_efit_quality(params: PhysicsMethodParams):
+        """
+        Calculate EFIT quality metrics for a given shot on D3D.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the data connection and shot information.
+
+        Returns
+        -------
+        dict
+            A dictionary containing EFIT quality metrics for the given timeslice.
+        """
+        efit_time = (
+            params.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree") / 1.0e3
+        )  # [ms] -> [s]
+        efit_data = {}
+
+        for param, path in D3DEfitMethods.quality_cols.items():
+            try:
+                efit_data[param] = params.get_data(
+                    path=path,
+                    tree_name="_efit_tree",
+                )
+            except mdsExceptions.MdsException as e:
+                params.logger.warning(repr(e))
+                params.logger.opt(exception=True).debug(e)
+                efit_data[param] = np.full(len(efit_time), np.nan)
+
+        max_iter = efit_data["max_iter"]
+        max_iter_scalar = float(max_iter[0]) if np.ndim(max_iter) > 0 else float(max_iter)
+        if not np.isfinite(max_iter_scalar):
+            max_iter_scalar = float("inf")
+
+        from disruption_py.machine.generic.efit import GenericEFITMethods  # noqa: PLC0415
+
+        ds = GenericEFITMethods.efit_quality(
+            shot_id=params.shot_id,
+            efit_time=efit_time,
+            current=efit_data["current"],
+            wmhd=efit_data["wmhd"],
+            jflag=efit_data["jflag"],
+            chisq=efit_data["chisq"],
+            cerror=efit_data["cerror"],
+            num_iter=efit_data["num_iter"],
+            max_iter=max_iter_scalar,
+        )
+
+        return ds
