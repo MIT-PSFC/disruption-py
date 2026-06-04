@@ -148,3 +148,138 @@ class GenericEFITMethods:
 
         return ds_geqdsk
     
+    @staticmethod
+    def efit_quality(
+        shot_id: int,
+        efit_time: np.ndarray,
+        ip: np.ndarray,
+        wmhd: np.ndarray,
+        chisq: np.ndarray,
+        jflag: np.ndarray,
+        num_iter: np.ndarray,
+        max_iter: int,
+        lflag: np.ndarray | None = None,
+        terror: np.ndarray | None = None,
+        cerror: np.ndarray | None = None,
+    ):
+        """
+        Determine if specific timeslices are good and if the shot as a whole is good.
+
+        Timeslice logic:
+        - A timeslice is considered "perfect" (0) if it has no issues.
+        - A timeslice is considered "good" (1) if it has minor issues, such as:
+            - chisq > 10
+            - jflag = 0 (indicating a non-converged solution, but it may still be usable)
+            - lflag != 0 (indicating specific issues, only available on C-Mod)
+            - terror != 0 (indicating convergence issues, only available on C-Mod)
+            - cerror != 0 (indicating convergence issues, only available on DIII-D)
+        - A timeslice is considered "bad" (2) if it has major issues, such as:
+            - chisq > 50
+            - num_iter >= max_iter (indicating failure to converge within the maximum iterations)
+        
+        Shot logic:
+        - A shot is considered "perfect" (0) if all timeslices are perfect.
+        - A shot is considered "good" (1) if it has no more than 20% bad timeslices and at least 80% good or perfect timeslices.
+        - A shot is considered "bad" (2) if it has more than 20% bad timeslices or less than 80% good or perfect timeslices.
+
+        Parameters:
+            shot_id: int
+                ID of the shot.
+            efit_time: np.ndarray
+                Time array corresponding to EFIT outputs.
+            chisq: np.ndarray
+                Chi-squared values from EFIT.
+            jflag: np.ndarray
+                JFLAG values from EFIT. 1 indicates good, 0 indicates bad
+            num_iter: np.ndarray
+                Number of iterations taken to converge
+            max_iter: int
+                Maximum number of iterations allowed to reach convergence
+            lflag: np.ndarray | None
+                2D array of specific error flags over time. Only available on C-Mod
+            terror: np.ndarray | None
+                Convergence error flag. Only available on C-Mod
+            cerror: np.ndarray | None
+                Convergence error flag. Only available on DIII-D
+
+        Returns:
+            ds_quality: An xarray Dataset containing the quality of each timeslice and the overall shot quality.
+            - efit_quality_timeslice: 0 indicates a perfect timeslice (no issues), 1 indicates a good timeslice (minor issues), and 2 indicates a bad timeslice (major issues).
+            - efit_quality_shot: 0 indicates a perfect shot (no issues), 1 indicates a good shot (minor issues), and 2 indicates a bad shot (major issues).
+            - all non-nan input parameters
+        """
+        num_timesteps = len(efit_time)
+
+        is_bad = np.asarray(num_iter) >= max_iter
+        is_bad |= np.asarray(chisq) > 50
+
+        is_minor = np.zeros(num_timesteps, dtype=bool)
+        is_minor |= np.asarray(chisq) > 10
+        is_minor |= np.asarray(jflag) == 0
+        # If jflag is 1, we know that lflag is all cleared, no need to check it.
+        if terror is not None:
+            te = np.asarray(terror)
+            is_minor |= np.isfinite(te) & (te != 0)
+        if cerror is not None:
+            ce = np.asarray(cerror)
+            is_minor |= np.isfinite(ce) & (ce != 0)
+
+        timeslice_quality = np.zeros(num_timesteps, dtype=int)
+        timeslice_quality[is_minor] = 1
+        timeslice_quality[is_bad] = 2
+
+        bad_fraction = np.sum(is_bad) / num_timesteps if num_timesteps > 0 else 0.0
+        if np.all(timeslice_quality == 0):
+            shot_quality = 0
+        elif bad_fraction <= 0.20:
+            shot_quality = 1
+        else:
+            shot_quality = 2
+
+        logger.debug(
+            "Shot {shot}: {bad:.1%} bad timeslices, shot quality={q}",
+            shot=shot_id,
+            bad=bad_fraction,
+            q=shot_quality,
+        )
+
+        def _include(arr: np.ndarray | None) -> np.ndarray | None:
+            if arr is None:
+                return None
+            a = np.asarray(arr, dtype=float)
+            return a if np.any(np.isfinite(a)) else None
+
+        input_vars_1d = {
+            "ip": _include(ip),
+            "wmhd": _include(wmhd),
+            "chisq": _include(chisq),
+            "jflag": _include(jflag),
+            "num_iter": _include(num_iter),
+            "terror": _include(terror),
+            "cerror": _include(cerror),
+        }
+
+        lflag_included = _include(lflag)
+        lflag_var = {}
+        if lflag_included is not None:
+            lf = np.asarray(lflag_included)
+            if lf.ndim == 2:
+                # (n_flags, n_times) -> store as (n_times, n_flags)
+                lflag_var = {"lflag": (("idx", "lflag_idx"), lf.T)}
+            else:
+                lflag_var = {"lflag": ("idx", lf)}
+
+        return xr.Dataset(
+            data_vars={
+                "efit_quality_timeslice": ("idx", timeslice_quality),
+                "efit_quality_shot": ("idx", np.full(num_timesteps, shot_quality, dtype=int)),
+                **{k: ("idx", v) for k, v in input_vars_1d.items() if v is not None},
+                **lflag_var,
+            },
+            coords={
+                "time": ("idx", efit_time),
+                "shot": ("idx", np.repeat(shot_id, num_timesteps)),
+                **({"max_iter": float(max_iter)} if np.isfinite(float(max_iter)) else {}),
+            },
+        )
+
