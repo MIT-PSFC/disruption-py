@@ -5,7 +5,6 @@ Module for retrieving and processing EFIT parameters for CMOD.
 """
 
 import numpy as np
-import xarray as xr
 
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
@@ -205,7 +204,15 @@ class CmodEfitMethods:
         #   2D psirz: (T, z, r)
         #   boundary (rbdry, zbdry): (boundary_idx, T)
         # make_geqdsk_dataset expects time on axis 0 for all signals.
-        time_last_params = {"fpol", "pres", "ffprime", "pprime", "qpsi", "rbdry", "zbdry"}
+        time_last_params = {
+            "fpol",
+            "pres",
+            "ffprime",
+            "pprime",
+            "qpsi",
+            "rbdry",
+            "zbdry",
+        }
         needs_interp = not np.array_equal(params.times, efit_time)
         for param in geqdsk_data:
             if geqdsk_data[param] is None:
@@ -224,7 +231,6 @@ class CmodEfitMethods:
                 # psirz: (T, z, r) - time already first, interp along axis 0
                 if needs_interp:
                     geqdsk_data[param] = interp1(efit_time, data, params.times, axis=0)
-
 
         # This is EFIT, determine COCOS based on the sign of median Ip and B0 https://efit-ai.gitlab.io/efit/files.html
         sign_Ip = np.sign(np.median(geqdsk_data["current"]))
@@ -268,7 +274,7 @@ class CmodEfitMethods:
         )
 
         return ds
-    
+
     @staticmethod
     @physics_method(
         columns=["efit_quality_timeslice", "efit_quality_shot"],
@@ -288,7 +294,7 @@ class CmodEfitMethods:
         dict
             A dictionary containing EFIT quality metrics for the given timeslice.
         """
-        
+
         efit_time = params.get_data(r"\efit_aeqdsk:time", tree_name="_efit_tree")  # [s]
         efit_data = {}
 
@@ -307,7 +313,7 @@ class CmodEfitMethods:
         ds = GenericEFITMethods.efit_quality(
             shot_id=params.shot_id,
             efit_time=efit_time,
-            ip=efit_data["current"],
+            current=efit_data["current"],
             wmhd=efit_data["wmhd"],
             lflag=efit_data["lflag"],
             jflag=efit_data["jflag"],

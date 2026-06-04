@@ -8,6 +8,7 @@ import numpy as np
 import xarray as xr
 from loguru import logger
 
+
 class GenericEFITMethods:
     """
     Class to hold generic EFIT methods.
@@ -118,10 +119,14 @@ class GenericEFITMethods:
                 "rbdry": (("idx", "boundary_idx"), rbdry),
                 "zbdry": (("idx", "boundary_idx"), zbdry),
                 # Limiter (static - not time-dependent)
-                **({
-                    "rlim": ("limiter_idx", rlim),
-                    "zlim": ("limiter_idx", zlim),
-                } if rlim is not None and zlim is not None else {}),
+                **(
+                    {
+                        "rlim": ("limiter_idx", rlim),
+                        "zlim": ("limiter_idx", zlim),
+                    }
+                    if rlim is not None and zlim is not None
+                    else {}
+                ),
             },
             coords={
                 "time": ("idx", times),
@@ -137,22 +142,26 @@ class GenericEFITMethods:
                 # profile, LCFS, and limiter indices
                 "psi_idx": np.arange(qpsi.shape[1]),
                 "boundary_idx": np.arange(rbdry.shape[1]),
-                **({
-                    "limiter_idx": np.arange(len(rlim)),
-                } if rlim is not None else {}),
+                **(
+                    {
+                        "limiter_idx": np.arange(len(rlim)),
+                    }
+                    if rlim is not None
+                    else {}
+                ),
             },
             attrs={
                 "cocos": cocos_input,
-            }
+            },
         )
 
         return ds_geqdsk
-    
+
     @staticmethod
     def efit_quality(
         shot_id: int,
         efit_time: np.ndarray,
-        ip: np.ndarray,
+        current: np.ndarray,
         wmhd: np.ndarray,
         chisq: np.ndarray,
         jflag: np.ndarray,
@@ -171,12 +180,12 @@ class GenericEFITMethods:
             - chisq > 10
             - jflag = 0 (indicating a non-converged solution, but it may still be usable)
             - lflag != 0 (indicating specific issues, only available on C-Mod)
-            - terror != 0 (indicating convergence issues, only available on C-Mod)
-            - cerror != 0 (indicating convergence issues, only available on DIII-D)
+            - terror > 0.005 (C-Mod convergence error threshold)
+            - cerror > 0.01 (DIII-D convergence error threshold)
         - A timeslice is considered "bad" (2) if it has major issues, such as:
             - chisq > 50
             - num_iter >= max_iter (indicating failure to converge within the maximum iterations)
-        
+
         Shot logic:
         - A shot is considered "perfect" (0) if all timeslices are perfect.
         - A shot is considered "good" (1) if it has no more than 20% bad timeslices and at least 80% good or perfect timeslices.
@@ -219,10 +228,10 @@ class GenericEFITMethods:
         # If jflag is 1, we know that lflag is all cleared, no need to check it.
         if terror is not None:
             te = np.asarray(terror)
-            is_minor |= np.isfinite(te) & (te != 0)
+            is_minor |= np.isfinite(te) & (te > 0.005)
         if cerror is not None:
             ce = np.asarray(cerror)
-            is_minor |= np.isfinite(ce) & (ce != 0)
+            is_minor |= np.isfinite(ce) & (ce > 0.01)
 
         timeslice_quality = np.zeros(num_timesteps, dtype=int)
         timeslice_quality[is_minor] = 1
@@ -250,7 +259,7 @@ class GenericEFITMethods:
             return a if np.any(np.isfinite(a)) else None
 
         input_vars_1d = {
-            "ip": _include(ip),
+            "current": _include(current),
             "wmhd": _include(wmhd),
             "chisq": _include(chisq),
             "jflag": _include(jflag),
@@ -272,14 +281,20 @@ class GenericEFITMethods:
         return xr.Dataset(
             data_vars={
                 "efit_quality_timeslice": ("idx", timeslice_quality),
-                "efit_quality_shot": ("idx", np.full(num_timesteps, shot_quality, dtype=int)),
+                "efit_quality_shot": (
+                    "idx",
+                    np.full(num_timesteps, shot_quality, dtype=int),
+                ),
                 **{k: ("idx", v) for k, v in input_vars_1d.items() if v is not None},
                 **lflag_var,
             },
             coords={
                 "time": ("idx", efit_time),
                 "shot": ("idx", np.repeat(shot_id, num_timesteps)),
-                **({"max_iter": float(max_iter)} if np.isfinite(float(max_iter)) else {}),
+                **(
+                    {"max_iter": float(max_iter)}
+                    if np.isfinite(float(max_iter))
+                    else {}
+                ),
             },
         )
-
