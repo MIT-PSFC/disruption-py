@@ -18,7 +18,7 @@ from disruption_py.machine.cmod.mirnov import setup_fft
 
 # DIII-D Magnetic Sensors Dictionary
 # Data extracted from "Magnetic Diagnostics – Coordinates Of The Sensors" document
-# Ted Strait and S. Munaretto - Last Update 2020-05-05
+# Ted Strait and S. Munaretto - Last Update 9/30/22
 D3D_SENSORS_BP = {
     # Bp - 322 degree poloidal array
     'MPI11M322': {'R': 0.973, 'Z': -0.002, 'phi': 322.5, 'gamma': 89.9, 'L': 0.115, 'W': 0.0556, 'NA': 0.04977, 'type': 'Bp'},
