@@ -2253,11 +2253,7 @@ class CmodPhysicsMethods:
         # Want last maximum in case the SXR has saturated and there are multiple maxima
         max_sxr_indx = np.nonzero(window >= 0.9 * np.max(window))[0][-1]
         tq_time_scalar = t_sxr[idx_start + max_sxr_indx]
-        return {
-            "thermal_quench_time": tq_time_scalar * np.ones(len(params.times)),
-            "t_disrupt": params.disruption_time * np.ones(len(params.times)),
-            "core_sxr": core_sxr,
-        }
+        return {"thermal_quench_time": tq_time_scalar * np.ones(len(params.times))}
 
     @staticmethod
     def _is_on_blacklist(shot_id: int) -> bool:
