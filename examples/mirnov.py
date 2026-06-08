@@ -18,7 +18,8 @@ def main():
 
     tokamak = resolve_tokamak_from_environment()
 
-    run_methods = ["get_all_mirnov_ffts", "get_geqdsk_parameters","get_ip_parameters"]
+    run_methods = ["get_all_mirnov_ffts", "get_geqdsk_parameters",\
+                   "get_ip_parameters", "get_efit_parameters", "efit_check"]
     if tokamak in [Tokamak.D3D]:
         shotlist = [179118]#161228
     elif tokamak is Tokamak.CMOD:

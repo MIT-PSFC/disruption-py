@@ -416,6 +416,9 @@ class CmodEfitMethods:
         return geqdsk_dataset
 
     @staticmethod
+    @physics_method(
+        tokamak=Tokamak.CMOD,
+    )
     def efit_check(params: PhysicsMethodParams):
         """
         Check the validity of EFIT parameters for the given shot.
@@ -442,4 +445,25 @@ class CmodEfitMethods:
         _n = values[2].data()
         valid_indices = np.nonzero(_n)
         (times,) = params.mds_conn.get_dims(r"\efit_aeqdsk:lflag", tree_name="analysis")
-        return valid_indices, times[valid_indices]
+
+        # values[0] is an MDSplus Array; call .data() to get numpy-like data
+        lf_raw = np.array(values[0].data())
+        lflag_sum = np.sum(lf_raw, axis=0)
+
+        # Interpolate EFIT-derived quantities to the requested timebase if needed
+        # (EFIT arrays often have a coarser time sampling than the workflow `params.times`).
+        try:
+            (efit_times,) = params.mds_conn.get_dims(r"\efit_aeqdsk:lflag", tree_name="analysis")
+        except Exception:
+            efit_times = params.times
+
+        if not np.array_equal(params.times, efit_times):
+            lflag_sum = interp1(efit_times, lflag_sum, params.times)
+            lf_raw = np.array([interp1(efit_times, lf_raw[i, :], params.times) for i in range(lf_raw.shape[0])])
+
+        # Return simple numpy arrays in a dict so the physics_method wrapper
+        # can handle them uniformly with other method returns.
+        return {
+            "lflag_sum": lflag_sum.T,
+            "lflag_raw": lf_raw,
+        }

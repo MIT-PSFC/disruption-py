@@ -257,11 +257,23 @@ def populate_shot(
             # create data_vars dict
             data = {}
             for k, v in result.items():
-                if len(v) == len(times):
+                # handle 1D arrays aligned with times
+                try:
+                    v_len = len(v)
+                except Exception:
+                    v_len = None
+
+                if v_len == len(times):
                     # as expected
                     data[k] = v
                     continue
-                if all(np.isnan(v)):
+                # handle arrays where the last axis corresponds to time
+                if hasattr(v, "shape") and len(v.shape) >= 1 and v.shape[-1] == len(times):
+                    # transpose so time is first axis (idx)
+                    v = np.asarray(v).T
+                    data[k] = v
+                    continue
+                if np.all(np.isnan(v)):
                     # pad all-nan var
                     physics_method_params.logger.debug("All-nan data: {col}", col=k)
                     data[k] = np.nan * times
@@ -273,8 +285,19 @@ def populate_shot(
                     times=times.shape,
                 )
 
-            # create dataset
-            data_vars = to_tuple(data, dim="idx")
+            # create dataset, handling multi-dimensional arrays by providing
+            # explicit dimension tuples so xarray can construct Variables.
+            data_vars = {}
+            for k, v in data.items():
+                arr = np.asarray(v)
+                if arr.ndim == 1:
+                    dims = "idx"
+                elif arr.ndim == 2:
+                    dims = ("idx", "flag")
+                else:
+                    # for higher dims, put time on first axis and create generic dims
+                    dims = tuple(["idx"] + [f"dim{i}" for i in range(1, arr.ndim)])
+                data_vars[k] = (dims, arr)
             coords = physics_method_params.to_coords()
             result = xr.Dataset(data_vars=data_vars, coords=coords)
 
@@ -284,11 +307,11 @@ def populate_shot(
     dataset = xr.merge(datasets)
 
     # log statistics
-    if dataset:
-        tot = len(dataset.data_vars)
+    tot = len(dataset.data_vars)
+    if tot:
         nok = int(dataset.notnull().any().to_array().sum())
     else:
-        nok, tot = 0, 0
+        nok = 0
     percent = (nok / tot * 100) if tot else 0
     if percent >= 75:
         level = "SUCCESS"
