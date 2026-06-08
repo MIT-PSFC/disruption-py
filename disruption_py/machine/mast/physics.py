@@ -636,3 +636,40 @@ class MastPhysicsMethods:
             rho,
             ts_time,
         )
+
+    @staticmethod
+    @physics_method(
+        columns=["z_error", "z_prog", "z_cur", "v_z", "z_times_v_z"],
+        tokamak=Tokamak.MAST,
+    )
+    def get_z_parameters(params: PhysicsMethodParams):
+        conn: XarrayConnection = params.mds_conn
+
+        z_ref = conn.get_data(params.shot_id, "pulse_schedule/z_ref").squeeze()
+        zip_prx = conn.get_data(params.shot_id, "controllers/zip_proxy").squeeze()
+        t_ctrl = conn.get_data(params.shot_id, "controllers/time")
+        ip_raw = conn.get_data(params.shot_id, "summary/ip").squeeze()
+        t_ip = conn.get_data(params.shot_id, "summary/time")
+
+        if any(not np.isfinite(x).any() for x in (z_ref, zip_prx, t_ctrl, ip_raw, t_ip)):
+            raise CalculationError("z_parameters: required signal(s) not available.")
+
+        ip_ctrl = MastUtilMethods.interpolate_1d(t_ip, ip_raw, t_ctrl)
+
+        # Avoid amplifying noise when plasma is off (threshold: 10 kA)
+        safe_ip = np.where(np.abs(ip_ctrl) > 1e4, ip_ctrl, np.nan)
+
+        z_cur = zip_prx / safe_ip  # [m·A / A = m]
+        z_error = z_cur - z_ref
+        v_z = np.gradient(z_cur, t_ctrl)
+        z_times_v_z = z_cur * v_z
+
+        return {
+            "z_prog": MastUtilMethods.interpolate_1d(t_ctrl, z_ref, params.times),
+            "z_cur": MastUtilMethods.interpolate_1d(t_ctrl, z_cur, params.times),
+            "z_error": MastUtilMethods.interpolate_1d(t_ctrl, z_error, params.times),
+            "v_z": MastUtilMethods.interpolate_1d(t_ctrl, v_z, params.times),
+            "z_times_v_z": MastUtilMethods.interpolate_1d(
+                t_ctrl, z_times_v_z, params.times
+            ),
+        }
