@@ -64,7 +64,7 @@ class MastPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["p_nbi", "p_rad"],
+        columns=["p_nbi", "p_ohm", "p_rad"],
         tokamak=Tokamak.MAST,
     )
     def get_power(params: PhysicsMethodParams):
@@ -78,8 +78,8 @@ class MastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing neutral beam injection power (`power_nbi`) and
-            radiated power (`power_radiated`).
+            A dictionary containing neutral beam injection power (`p_nbi`),
+            ohmic power (`p_ohm`), and radiated power (`p_rad`).
         """
 
         power_nbi = params.get_data("summary/power_nbi")
@@ -88,10 +88,11 @@ class MastPhysicsMethods:
 
         times = params.times
         power_nbi = MastUtilMethods.interpolate_1d(base_time, power_nbi, times)
+        power_ohm = MastUtilMethods.interpolate_1d(base_time, power_ohm, times)
         power_radiated = MastUtilMethods.interpolate_1d(
             base_time, power_radiated, times
         )
-        return {"p_nbi": power_nbi, "p_rad": power_radiated}
+        return {"p_nbi": power_nbi, "p_ohm": power_ohm, "p_rad": power_radiated}
 
     @staticmethod
     @physics_method(
@@ -252,7 +253,7 @@ class MastPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["sxr"],
+        columns=["sxr_core", "sxr_edge"],
         tokamak=Tokamak.MAST,
     )
     def get_sxr(params: PhysicsMethodParams):
@@ -272,15 +273,31 @@ class MastPhysicsMethods:
         """
         hcam = params.get_data("soft_x_rays/horizontal_cam_upper", return_xarray=True)
 
-        hcam = hcam.isel(horizontal_cam_upper_channel=7)
-        hcam = hcam.squeeze(drop=True)
-        hcam = hcam.drop_vars(["horizontal_cam_upper_channel"])
-        sxr_time = hcam.time.values
-        sxr_data = hcam.values
+        if hcam is not None:
+            hcam_channel = hcam.isel(horizontal_cam_upper_channel=0)
+            hcam_channel = hcam_channel.squeeze(drop=True)
+            hcam_channel = hcam_channel.drop_vars(["horizontal_cam_upper_channel"])
+            sxr_time = hcam_channel.time.values
+            sxr_core = hcam_channel.values
+        else:
+            sxr_time = np.array([np.nan])
+            sxr_core = np.array([np.nan])
 
         times = params.times
-        sxr_data = MastUtilMethods.interpolate_1d(sxr_time, sxr_data, times)
-        return {"sxr": sxr_data}
+        sxr_core = MastUtilMethods.interpolate_1d(sxr_time, sxr_core, times)
+
+        if hcam is not None:
+            hcam_channel = hcam.isel(horizontal_cam_upper_channel=7)
+            hcam_channel = hcam_channel.squeeze(drop=True)
+            hcam_channel = hcam_channel.drop_vars(["horizontal_cam_upper_channel"])
+            sxr_edge = hcam_channel.values
+        else:
+            sxr_edge = np.array([np.nan])
+
+        times = params.times
+        sxr_edge = MastUtilMethods.interpolate_1d(sxr_time, sxr_edge, times)
+
+        return {"sxr_core": sxr_core, "sxr_edge": sxr_edge}
 
     @staticmethod
     @physics_method(
@@ -345,9 +362,6 @@ class MastPhysicsMethods:
         (excluded from the denominator) are those beyond 25% of the vertical scale.
         Only fan-array channels (channel_type == 0) are used.
 
-        Note: XDIV is not computed for MAST as its symmetric double-null geometry
-        makes a single divertor-vs-all metric ambiguous.
-
         Parameters
         ----------
         times : array_like
@@ -411,9 +425,16 @@ class MastPhysicsMethods:
 
         fan_power = power[fan_idx, :]  # (n_fan, n_times)
 
-        with np.errstate(invalid="ignore"):
-            core_mean = np.nanmean(np.where(core_mask, fan_power, np.nan), axis=0)
-            abd_mean = np.nanmean(np.where(all_but_div, fan_power, np.nan), axis=0)
+        core_vals = np.where(core_mask, fan_power, np.nan)
+        abd_vals = np.where(all_but_div, fan_power, np.nan)
+        core_count = np.isfinite(core_vals).sum(axis=0)
+        abd_count = np.isfinite(abd_vals).sum(axis=0)
+        core_mean = np.nansum(core_vals, axis=0) / np.where(
+            core_count > 0, core_count, np.nan
+        )
+        abd_mean = np.nansum(abd_vals, axis=0) / np.where(
+            abd_count > 0, abd_count, np.nan
+        )
 
         prad_cva = np.where(abd_mean != 0, core_mean / abd_mean, np.nan)
 
@@ -465,17 +486,17 @@ class MastPhysicsMethods:
         """
         conn: XarrayConnection = params.mds_conn
 
-        power = conn.get_data(params.shot_id, "bolometer/power")
+        power = conn.get_data(params.shot_id, "bolometer/power").squeeze()
         bolo_time = conn.get_data(params.shot_id, "bolometer/time")
-        first_r = conn.get_data(params.shot_id, "bolometer/first_point_r")
-        first_z = conn.get_data(params.shot_id, "bolometer/first_point_z")
-        second_r = conn.get_data(params.shot_id, "bolometer/second_point_r")
-        second_z = conn.get_data(params.shot_id, "bolometer/second_point_z")
-        validity = conn.get_data(params.shot_id, "bolometer/validity")
-        channel_type = conn.get_data(params.shot_id, "bolometer/channel_type")
+        first_r = conn.get_data(params.shot_id, "bolometer/first_point_r").squeeze()
+        first_z = conn.get_data(params.shot_id, "bolometer/first_point_z").squeeze()
+        second_r = conn.get_data(params.shot_id, "bolometer/second_point_r").squeeze()
+        second_z = conn.get_data(params.shot_id, "bolometer/second_point_z").squeeze()
+        validity = conn.get_data(params.shot_id, "bolometer/validity").squeeze()
+        channel_type = conn.get_data(params.shot_id, "bolometer/channel_type").squeeze()
 
-        rmag = conn.get_data(params.shot_id, "equilibrium/magnetic_axis_r")
-        zmag = conn.get_data(params.shot_id, "equilibrium/magnetic_axis_z")
+        rmag = conn.get_data(params.shot_id, "equilibrium/magnetic_axis_r").squeeze()
+        zmag = conn.get_data(params.shot_id, "equilibrium/magnetic_axis_z").squeeze()
         efit_time = conn.get_data(params.shot_id, "equilibrium/time")
 
         return MastPhysicsMethods._get_prad_peaking(
@@ -631,8 +652,8 @@ class MastPhysicsMethods:
 
         return MastPhysicsMethods._get_te_ne_peaking(
             params.times,
-            te_xr.values,
-            ne_xr.values,
+            te_xr.values.squeeze(),
+            ne_xr.values.squeeze(),
             rho,
             ts_time,
         )
@@ -651,7 +672,9 @@ class MastPhysicsMethods:
         ip_raw = conn.get_data(params.shot_id, "summary/ip").squeeze()
         t_ip = conn.get_data(params.shot_id, "summary/time")
 
-        if any(not np.isfinite(x).any() for x in (z_ref, zip_prx, t_ctrl, ip_raw, t_ip)):
+        if any(
+            not np.isfinite(x).any() for x in (z_ref, zip_prx, t_ctrl, ip_raw, t_ip)
+        ):
             raise CalculationError("z_parameters: required signal(s) not available.")
 
         ip_ctrl = MastUtilMethods.interpolate_1d(t_ip, ip_raw, t_ctrl)

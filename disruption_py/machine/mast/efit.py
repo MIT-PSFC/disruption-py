@@ -29,6 +29,7 @@ class MastEfitMethods:
         "rmagz": "magnetic_axis_z",
         "tribot": "triangularity_lower",
         "tritop": "triangularity_upper",
+        "volume": "volume",
         "v_loop_dynamic": "vloop_dynamic",
         "v_loop_static": "vloop_static",
         "wmhd": "wmhd",
