@@ -21,6 +21,7 @@ from disruption_py.core.retrieval_manager import RetrievalManager
 from disruption_py.core.utils.misc import (
     filter_dict,
     get_elapsed_time,
+    get_metadata,
     get_temporary_folder,
     without_duplicates,
 )
@@ -193,6 +194,9 @@ def get_shots_data(
         ):
             if shot_data is not None:
                 num_success += 1
+                # stamp workflow metadata in the main process, as under
+                # spawn/forkserver each worker would resolve its own time
+                shot_data.attrs.update(get_metadata())
                 output_setting.output_shot(
                     OutputSettingParams(
                         shot_id=shot_id,
