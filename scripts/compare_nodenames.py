@@ -7,12 +7,13 @@ import sys
 import warnings
 from multiprocessing import Pool
 
-import MDSplus as mds
+import mdsthin.MDSplus as mds
 import numpy as np
 import pandas as pd
-from MDSplus.compound import Signal
-from MDSplus.mdsExceptions import TreeFOPENR, TreeNODATA
-from MDSplus.tree import Tree, TreeNode
+from mdsthin.MDSplus import Signal, Tree, TreeNode
+from mdsthin.MDSplus import mdsExceptions
+TreeFOPENR = mdsExceptions.TreeFOPENR
+TreeNODATA = mdsExceptions.TreeNODATA
 
 
 class NodeNameComparer:

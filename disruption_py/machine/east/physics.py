@@ -6,7 +6,7 @@ Module for retrieving and calculating data for DIII-D physics methods.
 
 import numpy as np
 import scipy
-from MDSplus import mdsExceptions
+from mdsthin.MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
