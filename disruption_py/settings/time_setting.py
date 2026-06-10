@@ -695,7 +695,7 @@ class MirnovTimeSetting(TimeSetting):
 
         max_time = np.max(efit_time)
         if params.tokamak == Tokamak.CMOD:
-            mirnov_time = np.round(np.arange(0, max_time + 1e-4 +10e-3, 1e-4), 4)
+            mirnov_time = np.round(np.arange(0, max_time + 1e-4 +100e-3, 1e-3), 4)
         if params.tokamak == Tokamak.D3D:
             # DIII-D times are always reported in ms and this gets converted elsewhere
             mirnov_time = np.round(np.arange(0, max_time + 1e-1, 1e-1), 1)
