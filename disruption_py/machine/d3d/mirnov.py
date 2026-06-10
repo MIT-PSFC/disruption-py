@@ -7,7 +7,7 @@ Module for retrieving and processing EFIT parameters for CMOD.
 from tkinter.font import names
 
 import numpy as np
-from MDSplus import mdsExceptions
+from mdsthin.MDSplus import mdsExceptions
 from scipy.signal import ShortTimeFFT
 from scipy.signal.windows import kaiser
 import xarray as xr

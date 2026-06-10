@@ -7,7 +7,7 @@ Module for managing connections to MDSplus.
 import threading
 from typing import Any, Callable, Dict, List, Tuple
 
-import MDSplus
+import mdsthin.MDSplus as MDSplus
 import numpy as np
 from loguru import logger
 
