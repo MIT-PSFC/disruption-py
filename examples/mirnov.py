@@ -42,52 +42,63 @@ def main():
             retrieval_settings=retrieval_settings,
             output_setting="dataset",
         )
-
-        # Apply frequency response correction to the Mirnov FFT data
-        result = apply_freq_correction(result)
-        
-        
-        # result.to_netcdf(f'../data_archive/{shot}.nc',format='NETCDF4', mode='w')
-        result.to_netcdf(f'../TARS/tars/scratch/input_data/{shot}.nc',format='NETCDF4',mode='w')
+    # return result 
+    # Apply frequency response correction to the Mirnov FFT data
+    # result = apply_freq_correction(result)
+    
+    
+    # result.to_netcdf(f'../data_archive/{shot}.nc',format='NETCDF4', mode='w')
+    result.to_netcdf(f'../TARS/tars/scratch/input_data/{shot}.nc',format='NETCDF4',mode='w')
 
 
     print(result)
+    return result
     
 
 if __name__ == "__main__":
-    main()
+    result =  main()
 
-'''
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib import rc
+    import matplotlib.colors as mcolors
+    plt.rcParams["figure.figsize"] = (6, 6)
+    plt.rcParams["font.weight"] = "bold"
+    plt.rcParams["axes.labelweight"] = "bold"
+    plt.rcParams["lines.linewidth"] = 2
+    plt.rcParams["lines.markeredgewidth"] = 2
+    rc("font", **{"family": "serif", "serif": ["Palatino"]})
+    rc("font", **{"size": 11})
+    rc("text", usetex=True)
 
-vmin, vmax = 0.0, 6  # set your desired limits
-levels = np.linspace(vmin, vmax, 101)
-norm = mcolors.Normalize(vmin=vmin, vmax=vmax, clip=True)
+    vmin, vmax = 0.0, 6  # set your desired limits
+    levels = np.linspace(vmin, vmax, 101)
+    norm = mcolors.Normalize(vmin=vmin, vmax=vmax, clip=True)
 
-fig, ax = plt.subplots(2, 1, layout='constrained', sharex=True, figsize=(4, 5))
-dat = np.sqrt( result.sel(probe=0).mirnov_fft_real**2 + result.sel(probe=0).mirnov_fft_real**2 ) 
-im = ax[0].contourf(
-	result.time,
-	result.frequency * 1e-3,
-	dat,
-	levels=levels,      # critical: cap contour levels at vmax
-	norm=norm,
-	extend='neither'
-)
-ax[0].set_ylabel('Frequency [kHz]')
+    fig, ax = plt.subplots(2, 1, layout='constrained', sharex=True, figsize=(4, 5))
+    dat = np.sqrt( result.sel(probe=0).mirnov_fft_real**2 + result.sel(probe=0).mirnov_fft_real**2 ) 
+    im = ax[0].contourf(
+        result.time,
+        result.frequency * 1e-3,
+        dat,
+        levels=levels,      # critical: cap contour levels at vmax
+        norm=norm,
+        extend='neither',
+        zorder=-5
+    )
+    ax[0].set_ylabel('Frequency [kHz]')
+    ax[0].set_rasterization_zorder(-1)
 
-cbar = fig.colorbar(im, ax=ax[0], label='Mirnov Signal [T/s?]', extend='neither')
-cbar.set_ticks(np.linspace(vmin, vmax, 6))  # optional, for clean tick control
+    cbar = fig.colorbar(im, ax=ax[0], label='Mirnov Signal [T/s?]', extend='neither')
+    cbar.set_ticks(np.linspace(vmin, vmax, 6))  # optional, for clean tick control
 
-ax[1].plot(result.time, result.ip * 1e-6, label=f'MPI66M020 Shot {shotlist[0]}')
-ax[1].legend()
-ax[1].set_ylabel('$I_p$ [MA]')
-ax[1].set_xlabel('Time [s]')
-ax[1].grid()
+    ax[1].plot(result.time, result.ip * 1e-6, label=f'MPI66M020 Shot {179118}')
+    ax[1].legend()
+    ax[1].set_ylabel('$I_p$ [MA]')
+    ax[1].set_xlabel('Time [s]')
+    ax[1].grid()
 
-fig.savefig('/home/chandrar/Mirnov_out_1.png')
-plt.show()
+    fig.savefig('/home/chandrar/Mirnov_out_1.pdf', transparent=True)
+    print('Saved: /home/chandrar/Mirnov_out_1.pdf')
+    plt.show()
 
-'''

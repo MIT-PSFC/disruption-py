@@ -4,6 +4,8 @@
 Module for retrieving and processing EFIT parameters for CMOD.
 """
 
+from tkinter.font import names
+
 import numpy as np
 from MDSplus import mdsExceptions
 from scipy.signal import ShortTimeFFT
@@ -503,7 +505,8 @@ class D3DMirnovMethods:
 
         num_probes = 20 # Temporarily limit to 20 probes for speed
         # Pull subset from specific array
-        names = _BP_SENSOR_CATEGORIES['Bp_r0_toroidal_array']
+        names = _BP_SENSOR_CATEGORIES['Bp_r0_toroidal_array'].copy()
+        names.extend(_BP_SENSOR_CATEGORIES['Bp_r_plus_1_toroidal_array'])
         for mirnov_name, mirnov_location in D3D_SENSORS_BP.items():
             if mirnov_name not in names:
                 continue
@@ -527,13 +530,13 @@ class D3DMirnovMethods:
 
         mirnov_ffts_real = xr.DataArray(
             np.array(valid_mirnov_ffts).real,
-            dims=("sensor_idx", "frequency_idx", "time_idx"),
+            dims=("sensor_idx", "frequency_idx", "idx"),
             coords={
                 "shot": ("idx", np.repeat(params.shot_id, len(params.times))),
                 "sensor_idx": list(range(len(valid_mirnov_locations))),
                 "sensor_name": ("sensor_idx", valid_mirnov_names),
                 "frequency": ("frequency_idx", saved_freqs),
-                "time": ("time_idx", params.times),
+                "time": ("idx", params.times),
                 "sensor_R": ("sensor_idx", [loc[0] for loc in valid_mirnov_locations]),
                 "sensor_phi": ("sensor_idx", [loc[1] for loc in valid_mirnov_locations]),
                 "sensor_Z": ("sensor_idx", [loc[2] for loc in valid_mirnov_locations]),
@@ -542,13 +545,13 @@ class D3DMirnovMethods:
         )
         mirnov_ffts_imag = xr.DataArray(
             np.array(valid_mirnov_ffts).imag,
-            dims=("sensor_idx", "frequency_idx", "time_idx"),
+            dims=("sensor_idx", "frequency_idx", "idx"),
             coords={
                 "shot": ("idx", np.repeat(params.shot_id, len(params.times))),
                 "sensor_idx": list(range(len(valid_mirnov_locations))),
                 "sensor_name": ("sensor_idx", valid_mirnov_names),
                 "frequency": ("frequency_idx", saved_freqs),
-                "time": ("time_idx", params.times),
+                "time": ("idx", params.times),
                 "sensor_R": ("sensor_idx", [loc[0] for loc in valid_mirnov_locations]),
                 "sensor_phi": ("sensor_idx", [loc[1] for loc in valid_mirnov_locations]),
                 "sensor_Z": ("sensor_idx", [loc[2] for loc in valid_mirnov_locations]),
@@ -569,7 +572,9 @@ class D3DMirnovMethods:
         """Get the Sxx of a single Mirnov coil in the shot, in order of preference from a few consistently 'good' probes"""
 
         # From the R0 toroidal array
-        preferred_mirnov_names = ['MPI66M020', 'MPI66M097', 'MPI66M200', 'MPI66M247', 'MPI66M277', 'MPI66M340']
+        preferred_mirnov_names = ['MPI66M020', 'MPI66M097', 'MPI66M200', 'MPI66M247', 'MPI66M277', 'MPI66M340', \
+                                  'MPI67A022', 'MPI67A037', 'MPI67A052', 'MPI67A067', 'MPI67A082', 'MPI67A217', \
+                                  'MPI67A262', 'MPI67A277', 'MPI67A307', 'MPI67A337']
 
         for mirnov_name in preferred_mirnov_names:
             mirnov_fft, freqs = D3DMirnovMethods.get_mirnov_fft(params, mirnov_name)
