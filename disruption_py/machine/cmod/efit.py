@@ -48,6 +48,7 @@ class CmodEfitMethods:
         "a_minor": r"\efit_aeqdsk:aout/100",
         "rmagx": r"\efit_aeqdsk:rmagx/100",
         "chisq": r"\efit_aeqdsk:tsaisq",
+        "rout": r"\efit_aeqdsk:rout/100",
     }
 
     efit_derivs = {"dbetap_dt": "beta_p", "dli_dt": "li", "dwmhd_dt": "wmhd"}

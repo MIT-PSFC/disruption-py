@@ -8,6 +8,7 @@ import warnings
 
 import numpy as np
 import scipy.constants as const
+import xarray as xr
 
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
@@ -842,6 +843,27 @@ class CmodPhysicsMethods:
 
     @staticmethod
     @physics_method(
+        columns=["btor"],
+        tokamak=Tokamak.CMOD,
+    )
+    def get_magnetics_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve magnetic field parameters for CMOD.
+        """
+        btor, t_mag = params.get_data_with_dims(
+            r"\btor", tree_name="magnetics"
+        )  # [T], [s]
+        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
+        # on by t=-1. So pick the time before that to calculate baseline
+        baseline_indices = np.where(t_mag <= -1.8)
+        btor = btor - np.mean(btor[baseline_indices])
+
+        btor = interp1(t_mag, btor, params.times, bounds_error=False, fill_value=0.0)
+
+        return {"btor": btor}
+
+    @staticmethod
+    @physics_method(
         columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase", "bt"],
         tokamak=Tokamak.CMOD,
     )
@@ -1459,6 +1481,246 @@ class CmodPhysicsMethods:
         return CmodPhysicsMethods._get_peaking_factors(
             params.times, ts_time, ts_te, ts_ne, ts_z, efit_time, bminor, z0
         )
+
+    @staticmethod
+    @cache_method
+    def _get_thomson_channels_raw(params: PhysicsMethodParams):
+        """
+        Retrieve raw Thomson scattering measurement channels for electron temperature and density.
+        Combines both core and edge Thomson data into a single dataset.
+        Channel locations are given on the normalized poloidal flux (psi_n) grid.
+
+        The stored core psinorm node (.yag_new.results.profiles.psinorm) is empty on
+        most shots, so instead the channel midplane-mapped major radii (r_mid_t / rmid)
+        are mapped to psi_n using the EFIT flux at the magnetic axis height. The same
+        mapping is used for core and edge so the channel locations are consistent
+        (the stored edge psinorm agrees with this mapping to within ~0.01).
+
+        A few notes:
+        - Thomson YAG time by default runs from -0.5s to 2.0s (https://cmodwiki.psfc.mit.edu/index.php/Thomson_scattering_programming)
+        - See https://cmodwiki.psfc.mit.edu/index.php/Thomson_Scattering
+        """
+
+        core_nodes = {
+            "r_mid": ".yag_new.results.profiles.r_mid_t",
+            "ne": ".yag_new.results.profiles.ne_rz",
+            "ne_error": ".yag_new.results.profiles.ne_err",
+            "te": ".yag_new.results.profiles.te_rz",
+            "te_error": ".yag_new.results.profiles.te_err",
+        }
+        edge_nodes = {
+            "r_mid": ".yag_edgets.results.rmid",
+            "ne": ".yag_edgets.results.ne",
+            "ne_error": ".yag_edgets.results.ne.error",
+            "te": ".yag_edgets.results.te",
+            "te_error": ".yag_edgets.results.te.error",
+        }
+
+        # Fetch the EFIT flux data needed to map channel R_mid -> psi_n
+        ssimag, efit_time = params.get_data_with_dims(
+            r"\efit_g_eqdsk:ssimag", tree_name="_efit_tree"
+        )  # [Wb/rad], [s]
+        ssibry = params.get_data(r"\efit_g_eqdsk:ssibry", tree_name="_efit_tree")
+        rgrid = params.get_data(r"\efit_g_eqdsk:rgrid", tree_name="_efit_tree")  # [m]
+        zgrid = params.get_data(r"\efit_g_eqdsk:zgrid", tree_name="_efit_tree")  # [m]
+        psirz = params.get_data(r"\efit_g_eqdsk:psirz", tree_name="_efit_tree")  # (time, z, r)
+        zmagx = params.get_data(r"\efit_aeqdsk:zmagx", tree_name="_efit_tree") / 100  # [cm] -> [m]
+
+        def map_r_mid_to_psi_n(r_mid: np.ndarray, times: np.ndarray) -> np.ndarray:
+            """Map midplane major radii (time, channel) [m] to psi_n using the
+            nearest EFIT equilibrium, evaluated at the magnetic axis height."""
+            psi_n = np.full(r_mid.shape, np.nan, dtype=np.float32)
+            t_eq_indices = np.argmin(np.abs(efit_time[:, None] - times[None, :]), axis=0)
+            for i, i_eq in enumerate(t_eq_indices):
+                denom = ssibry[i_eq] - ssimag[i_eq]
+                if not np.isfinite(denom) or np.abs(denom) < 1e-10:
+                    continue
+                # psi along the midplane (z = magnetic axis height)
+                psi_mid = np.array(
+                    [
+                        np.interp(zmagx[i_eq], zgrid, psirz[i_eq, :, j])
+                        for j in range(len(rgrid))
+                    ]
+                )
+                psi_n[i, :] = (np.interp(r_mid[i, :], rgrid, psi_mid) - ssimag[i_eq]) / denom
+            return psi_n
+
+        data_vars = {}
+        for region, nodes in zip(["core", "edge"], [core_nodes, edge_nodes]):
+            try:
+                # Retrieve midplane-mapped channel radii and map them to psi_n
+                r_mid_data, r_mid_time = params.get_data_with_dims(
+                    nodes["r_mid"],
+                    tree_name="electrons",
+                )
+                # Cut time to positive values only
+                valid_time_indices = r_mid_time >= 0
+                r_mid_data = r_mid_data[:, valid_time_indices]
+                r_mid_time = r_mid_time[valid_time_indices]
+                # Replace -1 (invalid channel sentinel) with nan
+                r_mid_data = r_mid_data.astype(np.float64)
+                r_mid_data[r_mid_data == -1] = np.nan
+
+                psi_n_data = map_r_mid_to_psi_n(r_mid_data.T, r_mid_time)  # (time, channel)
+                psi_n_time = r_mid_time
+
+                data_vars[f"psi_n_{region}"] = xr.DataArray(
+                    psi_n_data.astype(np.float32),
+                    dims=("time", f"{region}_channel"),
+                    coords={
+                        "time": psi_n_time,
+                        f"{region}_channel": np.arange(psi_n_data.shape[1]),
+                    },
+                )
+
+                # Retrieve profiles for ne and te
+                for quant in ["ne", "te"]:
+                    profile_data, profile_time = params.get_data_with_dims(
+                        nodes[quant],
+                        tree_name="electrons",
+                    )
+                    error_data = params.get_data(
+                        nodes[f"{quant}_error"],
+                        tree_name="electrons",
+                    )
+                    # Cut time to positive values only
+                    valid_time_indices = profile_time >= 0
+                    profile_data = profile_data[:, valid_time_indices]
+                    error_data = error_data[:, valid_time_indices]
+                    profile_time = profile_time[valid_time_indices]
+                    # Replace 0 with nan
+                    profile_data[profile_data == 0] = np.nan
+                    error_data[error_data == 0] = np.nan
+
+                    if region == "edge" and quant == "te":
+                        # Edge Te profile is given in eV, convert to keV
+                        profile_data = profile_data / 1000.0
+                        error_data = error_data / 1000.0
+
+                    # Raise error if profile and psi_n time do not match
+                    if not np.array_equal(profile_time, psi_n_time):
+                        raise ValueError(
+                            f"{region.capitalize()} Thomson scattering {quant} profile time does not match psi_n time."
+                        )
+
+                    data_vars[f"{quant}_{region}"] = xr.DataArray(
+                        profile_data.astype(np.float32).T,
+                        dims=("time", f"{region}_channel"),
+                        coords={
+                            "time": profile_time,
+                            f"{region}_channel": np.arange(profile_data.shape[0]),
+                        },
+                    )
+                    data_vars[f"{quant}_error_{region}"] = xr.DataArray(
+                        error_data.astype(np.float32).T,
+                        dims=("time", f"{region}_channel"),
+                        coords={
+                            "time": profile_time,
+                            f"{region}_channel": np.arange(error_data.shape[0]),
+                        },
+                    )
+            except Exception as e:
+                if region == "edge":
+                    warnings.warn(
+                        f"Edge Thomson scattering data not found: {e}. Continuing with core data only.",
+                        UserWarning,
+                    )
+                    continue
+                else:
+                    # Core data is required, so re-raise the exception
+                    raise
+
+        # Combine core and edge data into a single dataset
+        n_core_channels = data_vars["ne_core"].shape[1]
+        has_edge_data = "ne_edge" in data_vars
+
+        if has_edge_data:
+            n_edge_channels = data_vars["ne_edge"].shape[1]
+            ts_channel = np.arange(n_core_channels + n_edge_channels)
+            ts_array = np.array(["core"] * n_core_channels + ["edge"] * n_edge_channels)
+            psi_n_combined = np.concatenate(
+                [data_vars["psi_n_core"].values, data_vars["psi_n_edge"].values],
+                axis=1,
+            )
+            ne_combined = np.concatenate(
+                [data_vars["ne_core"].values, data_vars["ne_edge"].values],
+                axis=1,
+            )
+            ne_error_combined = np.concatenate(
+                [data_vars["ne_error_core"].values, data_vars["ne_error_edge"].values],
+                axis=1,
+            )
+            te_combined = np.concatenate(
+                [data_vars["te_core"].values, data_vars["te_edge"].values],
+                axis=1,
+            )
+            te_error_combined = np.concatenate(
+                [data_vars["te_error_core"].values, data_vars["te_error_edge"].values],
+                axis=1,
+            )
+        else:
+            ts_channel = np.arange(n_core_channels)
+            ts_array = np.array(["core"] * n_core_channels)
+            psi_n_combined = data_vars["psi_n_core"].values
+            ne_combined = data_vars["ne_core"].values
+            ne_error_combined = data_vars["ne_error_core"].values
+            te_combined = data_vars["te_core"].values
+            te_error_combined = data_vars["te_error_core"].values
+
+        profile_ds = xr.Dataset(
+            data_vars={
+                "ts_channel_psi_n": (("time", "ts_channel_idx"), psi_n_combined.astype(np.float32)),
+                "ts_channel_ne": (("time", "ts_channel_idx"), ne_combined.astype(np.float32)),
+                "ts_channel_ne_error": (("time", "ts_channel_idx"), ne_error_combined.astype(np.float32)),
+                "ts_channel_te": (("time", "ts_channel_idx"), te_combined.astype(np.float32)),
+                "ts_channel_te_error": (("time", "ts_channel_idx"), te_error_combined.astype(np.float32)),
+            },
+            coords={
+                "time": data_vars["psi_n_core"]["time"].values,
+                "ts_channel_idx": ts_channel,
+                "ts_array": ("ts_channel_idx", ts_array),
+            },
+            attrs={
+                "description": "Raw Thomson scattering measurement channels from core and edge systems",
+            },
+        )
+
+        return profile_ds
+
+    @staticmethod
+    @physics_method(
+        tokamak=Tokamak.CMOD,
+    )
+    def get_thomson_channels(params: PhysicsMethodParams):
+        """
+        Retrieve the raw Thomson scattering channels (core and edge) with the
+        channel locations on the normalized poloidal flux (psi_n) grid, on the
+        Thomson measurement timebase.
+        """
+        ds_raw = CmodPhysicsMethods._get_thomson_channels_raw(params)
+        if ds_raw is None:
+            return None
+
+        ds = xr.Dataset(
+            data_vars={
+                "ts_channel_psi_n": ds_raw["ts_channel_psi_n"],
+                "ts_channel_ne": ds_raw["ts_channel_ne"],
+                "ts_channel_ne_error": ds_raw["ts_channel_ne_error"],
+                "ts_channel_te": ds_raw["ts_channel_te"],
+                "ts_channel_te_error": ds_raw["ts_channel_te_error"],
+            },
+            coords={
+                "time": ("idx", ds_raw.time.values),
+                "shot": ("idx", np.full(len(ds_raw.time), params.shot_id)),
+                "ts_channel_idx": ds_raw["ts_channel_idx"].values,
+                "ts_array": ("ts_channel_idx", ds_raw["ts_array"].values),
+            },
+            attrs=ds_raw.attrs,
+        )
+        # Remove 'time' as a dimension, since it's now 'idx'
+        # but keep it as a coordinate
+        ds = ds.swap_dims({"time": "idx"})
+        return ds
 
     @staticmethod
     def _get_te_profile_params_ece(

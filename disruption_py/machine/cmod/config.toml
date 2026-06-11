@@ -1,5 +1,6 @@
+# efit21 is the 1 kHz EFIT tree
 [cmod.efit]
-tree = "efit18"
+tree = "efit21"
 
 [cmod.inout.mds]
 mdsplus_connection_string = "mfedata01"
