@@ -2144,12 +2144,13 @@ class CmodPhysicsMethods:
         for i in range(n_chords):
             try:
                 chord, t_chord = params.get_data_with_dims(
-                    array_path + ":chord_" + f"{i+1:02}",
+                    f"{array_path}:chord_{i+1:02}",
                     tree_name="xtomo",
                 )
             except mdsExceptions.MdsException:
                 params.logger.debug(
-                    "Failed to get SXR " + array_path + " chord " + str(i + 1) + " data"
+                    "get_thermal_quench_onset_time: "
+                    f"Failed to get SXR {array_path} chord {i+1} data."
                 )
                 if sxr is not None:
                     sxr[i] = 0.0
@@ -2238,7 +2239,7 @@ class CmodPhysicsMethods:
         idx_end = np.argmin(np.abs(t_sxr - (cq_onset_time)))
         if idx_start == len(t_sxr) - 1:
             params.logger.debug(
-                "get_thermal_quench_time: No SXR data at time of CQ."
+                "get_thermal_quench_onset_time: No SXR data at time of CQ."
                 f"params.disruption_time = {params.disruption_time:.3f}"
             )
             return {"thermal_quench_time": [np.nan]}
@@ -2259,6 +2260,7 @@ class CmodPhysicsMethods:
         # Want last maximum in case the SXR has saturated and there are multiple maxima
         max_sxr_indx = np.nonzero(window >= 0.9 * np.max(window))[0][-1]
         tq_time_scalar = t_sxr[idx_start + max_sxr_indx]
+
         return {"thermal_quench_time": np.full(len(params.times), tq_time_scalar)}
 
     @staticmethod
