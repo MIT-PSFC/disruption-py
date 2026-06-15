@@ -82,13 +82,14 @@ units = "dimensionless"
 validity = [0, 1.5]
 
 [cmod.physics.attributes.h98]
-description = "H98 confinement enhancement factor."
+description = "H98 energy confinement time enhancement factor over the IPB98(y,2) scaling."
+imas = "/summary/global_quantities/h_98"
 units = "dimensionless"
 validity = [0.05, 1.75]
 
 [cmod.physics.attributes.h_alpha]
 description = "H-alpha line emission intensity."
-units = "W/(m2*sr)"
+units = "W/(m^2*sr)"
 validity = [0.0, 161.920898]
 
 [cmod.physics.attributes.i_efc]
@@ -190,7 +191,7 @@ imas = "/bolometer/power_radiated_total"
 units = "W"
 validity = [0, inf]
 
-[cmod.physics.attributes.pow_thr_LH_Martin]
+[cmod.physics.attributes.pow_thr_lh_martin]
 description = "Martin 2008 L-H transition power threshold scaling."
 units = "W"
 validity = [0, 0.1e8]

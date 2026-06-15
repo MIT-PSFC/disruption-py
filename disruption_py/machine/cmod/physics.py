@@ -2118,7 +2118,7 @@ class CmodPhysicsMethods:
         radiative events, and changes of confinement regimes.
 
         In case of using this signal for ELM detection, it is recommended to
-        use the native time base of the signal to avoid loosing ELMs.
+        use the native time base of the signal to avoid losing ELMs.
 
         Parameters
         ----------
@@ -2128,25 +2128,19 @@ class CmodPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary with the H-alpha signal (`h_alpha`). In IS brightness units [W/(m2*sr)].
+            A dictionary with the H-alpha signal (`h_alpha`). In SI brightness units [W/(m^2*sr)].
 
-        Last major update by Enrique Zapata zapata_e@mit.edu
+        References
+        -------
+        - pull requests: #[562](https://github.com/MIT-PSFC/disruption-py/pull/562)
         """
-        output = {
-            "h_alpha": [np.nan],
-        }
         # Get signals from SPECTROSCOPY tree
-        try:
-            h_alpha, time_halpha = params.data_conn.get_data_with_dims(
-                r"\SPECTROSCOPY::HA_2_BRIGHT", group="SPECTROSCOPY"
-            )  # [mW/(cm2*sr)], [s]
-            # Interpolate Halpha to params.times
-            h_alpha_interp = interp1(time_halpha, h_alpha, params.times)
-            output["h_alpha"] = 10 * h_alpha_interp  # [W/(m2*sr)]
-        except ValueError as e:
-            params.logger.warning("Failed to get H_alpha signal. Returning NaNs.")
-            params.logger.opt(exception=True).debug(e)
-        return output
+        h_alpha, time_halpha = params.get_data_with_dims(
+            r"\spectroscopy::ha_2_bright", tree_name="spectroscopy"
+        )  # [mW/(cm^2*sr)], [s]
+        # Interpolate Halpha to params.times
+        h_alpha_interp = interp1(time_halpha, h_alpha, params.times)
+        return {"h_alpha": 10 * h_alpha_interp}  # [W/(m^2*sr)]
 
     @staticmethod
     @physics_method(columns=["h98"], tokamak=Tokamak.CMOD)
@@ -2166,23 +2160,22 @@ class CmodPhysicsMethods:
 
         References
         ----------
-        Scaling from eq. 20, ITER Physics Basis Chapter 2
-        https://iopscience.iop.org/article/10.1088/0029-5515/39/12/302/pdf
+        - Scaling from eq. 20, [ITER Physics Basis Chapter 2][ITER_reference]
+        - pull requests: #[562](https://github.com/MIT-PSFC/disruption-py/pull/562)
 
-        Original Author: Andrew Maris (maris@mit.edu)
-        Last major update by Enrique Zapata (zapata_e@mit.edu)
+        [ITER_reference]: https://iopscience.iop.org/article/10.1088/0029-5515/39/12/302/pdf
         """
 
         # Get parameters for calculating confinement time
-        powers_df = CmodPhysicsMethods.get_power(params=params)
-        efit_df = CmodEfitMethods.get_efit_parameters(params=params)
-        density_df = CmodPhysicsMethods.get_densities(params=params)
-        ip_df = CmodPhysicsMethods.get_ip_parameters(params=params)
+        powers_dict = CmodPhysicsMethods.get_power(params=params)
+        efit_dict = CmodEfitMethods.get_efit_parameters(params=params)
+        density_dict = CmodPhysicsMethods.get_densities(params=params)
+        ip_dict = CmodPhysicsMethods.get_ip_parameters(params=params)
 
         # Get btor
-        btor, t_mag = params.data_conn.get_data_with_dims(
-            r"\btor", group="magnetics"
-        )  # tmag: [s]
+        btor, t_mag = params.get_data_with_dims(
+            r"\btor", tree_name="magnetics"
+        )  # btor: [T], tmag: [s]
         # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
         # on by t=-1. So pick the time before that to calculate baseline
         baseline_indices = np.where(t_mag <= -1.8)
@@ -2190,15 +2183,15 @@ class CmodPhysicsMethods:
         btor = np.abs(interp1(t_mag, btor, params.times))
 
         # Get signals
-        ip = np.abs(ip_df.get("ip")) / 1.0e6  # [A] -> [MA]
-        n_e = density_df.get("n_e") / 1.0e19  # [m^-3] -> [10^19 m^-3]
-        p_input = powers_df.get("p_input") / 1.0e6  # [W] -> [MW]
-        dwmhd_dt = efit_df.get("dwmhd_dt") / 1.0e6  # [W] -> [MW]
-        wmhd = efit_df.get("wmhd") / 1.0e6  # [J] -> [MJ]
-        r0 = efit_df.get("rmagx")  # [m]
-        a_minor = efit_df.get("a_minor")  # [m]
+        ip = np.abs(ip_dict.get("ip")) / 1.0e6  # [A] -> [MA]
+        n_e = density_dict.get("n_e") / 1.0e19  # [m^-3] -> [10^19 m^-3]
+        p_input = powers_dict.get("p_input") / 1.0e6  # [W] -> [MW]
+        dwmhd_dt = efit_dict.get("dwmhd_dt") / 1.0e6  # [W] -> [MW]
+        wmhd = efit_dict.get("wmhd") / 1.0e6  # [J] -> [MJ]
+        r0 = efit_dict.get("rmagx")  # [m]
+        a_minor = efit_dict.get("a_minor")  # [m]
         epsilon = a_minor / r0
-        kappa = efit_df.get("kappa")
+        kappa = efit_dict.get("kappa")
         tau = wmhd / (p_input - dwmhd_dt)
 
         # Compute 1998 tau_E scaling, taking A (atomic mass) = 2.
@@ -2221,7 +2214,7 @@ class CmodPhysicsMethods:
         return output
 
     @staticmethod
-    @physics_method(columns=["pow_thr_LH_Martin"], tokamak=Tokamak.CMOD)
+    @physics_method(columns=["pow_thr_lh_martin"], tokamak=Tokamak.CMOD)
     def get_itpa_pow_thr(params: PhysicsMethodParams):
         """
         Power threshold for L-H transition.
@@ -2235,39 +2228,40 @@ class CmodPhysicsMethods:
         -------
         dict
             A dictionary with the power threshold for L-H transition
-            (`pow_thr_LH_Martin`), in Watts [W]
+            (`pow_thr_lh_martin`), in Watts [W]
 
         References
         ----------
-        Scaling from Y R Martin et al 2008 J. Phys.: Conf. Ser. 123 012033
-        DOI 10.1088/1742-6596/123/1/012033
+        - Scaling from Equation 2, Y. R. Martin _et al_ (2008) J. Phys.: Conf. Ser. **123** 012033
+        [DOI 10.1088/1742-6596/123/1/012033][martin_reference]
+        - pull requests: #[562](https://github.com/MIT-PSFC/disruption-py/pull/562)
 
-        Last major update by Enrique Zapata
+        [martin_reference]: https://iopscience.iop.org/article/10.1088/1742-6596/123/1/012033/pdf
         """
 
-        density_df = CmodPhysicsMethods.get_densities(params=params)
-        areao_df = CmodPhysicsMethods.get_kappa_area(params=params)
+        density_dict = CmodPhysicsMethods.get_densities(params=params)
+        # Get area and interpolate to time base
+        area, t_aeqdsk = params.get_data_with_dims(
+            r"\efit_aeqdsk:areao/1e4", tree_name="_efit_tree"
+        )  # area: [m^2], t_aeqdsk: [s]
+        area = interp1(t_aeqdsk, area, params.times)
 
         # Get BT
-        btor, t_mag = params.data_conn.get_data_with_dims(
-            r"\btor", group="magnetics"
-        )  # tmag: [s]
+        btor, t_mag = params.get_data_with_dims(
+            r"\btor", tree_name="magnetics"
+        )  # btor: [T], tmag: [s]
         # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
         # on by t=-1. So pick the time before that to calculate baseline
         baseline_indices = np.where(t_mag <= -1.8)
         btor = btor - np.mean(btor[baseline_indices])
         btor = np.abs(interp1(t_mag, btor, params.times))  # [T]
-        n_e = density_df.get("n_e") / 1.0e20  # [m^-3] -> [10^20 m^-3]
-        areao = areao_df.get("kappa_area")  # [m^2]
+        n_e = density_dict.get("n_e") / 1.0e20  # [m^-3] -> [10^20 m^-3]
 
         # Estimate power threshold.
         itpa_power_thr = (
             0.0488
             * (np.sign(n_e) * np.abs(n_e) ** 0.717)
             * (np.sign(btor) * np.abs(btor) ** 0.803)
-            * (np.sign(areao) * np.abs(areao) ** 0.941)
+            * (np.sign(area) * np.abs(area) ** 0.941)
         )
-        output = {
-            "pow_thr_LH_Martin": 1e6 * itpa_power_thr,
-        }
-        return output
+        return {"pow_thr_lh_martin": 1.0e6 * itpa_power_thr}
