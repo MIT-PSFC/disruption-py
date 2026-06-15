@@ -2175,30 +2175,27 @@ class CmodPhysicsMethods:
         # Good chords should have an autocorrelation of 100s of ms
         # See shot 1050311013 as an example with some bad chords
         noise_autorr_cutoff = 0.01  # [s]
+        # Use 300 ms prior to current quench for speed-up during autocorr O(N^2)
+        idx_start = np.argmin(np.abs(t_sxr - (params.disruption_time - 0.3)))
+        idx_end = np.argmin(np.abs(t_sxr - params.disruption_time))
+        sample_freq_5khz = 5000  # [Hz]
         for i, chord in enumerate(sxr):
-            # Use 300 ms prior to current quench for speed-up during autocorr O(N^2)
-            idx_start = np.argmin(np.abs(t_sxr - (params.disruption_time - 0.3)))
-            idx_end = np.argmin(np.abs(t_sxr - (params.disruption_time)))
             chord = chord[idx_start:idx_end]
-            sample_freq_5khz = 5000  # [Hz]
-            if sample_freq > 5000:
+            if sample_freq > sample_freq_5khz:
                 # 2012-2016 has 250 kHz sampling frequency. Resample to 5 kHz frequency
                 # (native SXR sample frequency of earlier campaigns) for speed-up
                 chord = resample_poly(chord, up=1, down=sample_freq // sample_freq_5khz)
             autocorr = np.correlate(chord, chord, mode="full")
             max_autocorr = np.max(autocorr)
             if max_autocorr > 0:
-                autocorr = autocorr / np.max(autocorr)  # Normalize
+                autocorr = autocorr / max_autocorr
             else:
                 sxr[i] = 0.0
                 continue
             index_no_lag = np.argmax(autocorr)
             crosses_zero = autocorr[index_no_lag:] < 0
-            if np.any(crosses_zero):
-                index_decay = np.argmax(crosses_zero)
-            else:
-                # See shot 1120223007 for example of why this if-else logic is necessary
-                index_decay = len(crosses_zero)
+            # See shot 1120223007 for example of why this fallback is necessary
+            index_decay = np.argmax(crosses_zero) if np.any(crosses_zero) else len(crosses_zero)
             if index_decay * (1 / sample_freq_5khz) < noise_autorr_cutoff:
                 params.logger.debug(
                     f"Removing chord {i+1}. Norm. Autocorr: {index_decay*(1/sample_freq_5khz)}"
