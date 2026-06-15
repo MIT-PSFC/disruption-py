@@ -2102,7 +2102,7 @@ class CmodPhysicsMethods:
         Labels the onset time of the thermal quench for a given shot (NaN for non-disruptive shots)
         using a vertical SXR array due to its off-axis views and robustness across shots,
         as opposed to ECE. The labeling method is non-causal (i.e. post-shot processing).
-        The TQ is found by finding min(dSXR/dt) in a time window prior to the CQ
+        The TQ is found by finding $\\min(d\\text{SXR}/dt)$ in a time window prior to the CQ
         and then searching backwards for the onset of the TQ.
         There is a tension between using longer windows to find the first TQ in a multi-stage TQ
         versus using a shorter window to avoid labeling sawtooth crashes.
@@ -2110,15 +2110,21 @@ class CmodPhysicsMethods:
         this algorithm struggles to select the first thermal quench. Based on manual testing
         of 120 shots, about 5% of flattop disruptions on C-Mod feature multi-stage thermal quenches.
         This algorithm has only been tested on flattop disruptions.
+
+        Parameters
         ----------
         params: PhysicsMethodParams
-            The parameters storing the requested time base, shot id, etc
+            The parameters containing the data connection and shot info.
+
         Returns
         ----------
         thermal_quench_time : array_like
             time of thermal quench onset for the shot, identical values at each time-slice
 
-        Last Major Update: Henry Wietfeldt (06/08/26)
+        References
+        ----------
+        - pull requests:
+        - issues:
         """
 
         thermal_quench_time = np.full(len(params.times), np.nan)
