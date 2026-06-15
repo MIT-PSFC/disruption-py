@@ -186,6 +186,7 @@ class GenericEFITMethods:
             - chisq > 50
             - num_iter >= max_iter (indicating failure to converge within the maximum iterations)
             - wmhd < 0
+            - current == 0 and wmhd == 0
 
         Shot logic:
         - A shot is considered "perfect" (0) if all timeslices are perfect.
@@ -222,8 +223,8 @@ class GenericEFITMethods:
 
         is_bad = np.asarray(num_iter) >= max_iter
         is_bad |= np.asarray(chisq) > 50
-        is_bad |= np.asarray(wmhd) < 0
-
+        is_bad |= np.asarray(wmhd) <= 0
+        is_bad |= np.asarray(current) == 0
         is_minor = np.zeros(num_timesteps, dtype=bool)
         is_minor |= np.asarray(chisq) > 10
         is_minor |= np.asarray(jflag) == 0
