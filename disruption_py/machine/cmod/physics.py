@@ -2126,10 +2126,9 @@ class CmodPhysicsMethods:
         - pull requests:
         - issues:
         """
-
-        thermal_quench_time = np.full(len(params.times), np.nan)
+        # Skip labeling the thermal quench time if the shot is non-disruptive
         if params.disruption_time is None:
-            return {"thermal_quench_time": thermal_quench_time}
+            return {"thermal_quench_time": [np.nan]}
 
         # Get current data for obtaining start of current quench
         ip, magtime = params.get_data_with_dims(r"\ip", tree_name="magnetics")
@@ -2239,9 +2238,10 @@ class CmodPhysicsMethods:
         idx_end = np.argmin(np.abs(t_sxr - (cq_onset_time)))
         if idx_start == len(t_sxr) - 1:
             params.logger.debug(
-                f"No SXR data at time of CQ. params.disruption_time = {params.disruption_time:.3f}"
+                "get_thermal_quench_time: No SXR data at time of CQ."
+                f"params.disruption_time = {params.disruption_time:.3f}"
             )
-            return {"thermal_quench_time": np.full(len(params.times), np.nan)}
+            return {"thermal_quench_time": [np.nan]}
         t_max_sxr_drop = t_sxr[idx_start + np.argmin(dcore_sxr_dt[idx_start:idx_end])]
 
         # Find onset of thermal quench in 0.5 ms window prior to midpoint of TQ
@@ -2259,7 +2259,7 @@ class CmodPhysicsMethods:
         # Want last maximum in case the SXR has saturated and there are multiple maxima
         max_sxr_indx = np.nonzero(window >= 0.9 * np.max(window))[0][-1]
         tq_time_scalar = t_sxr[idx_start + max_sxr_indx]
-        return {"thermal_quench_time": tq_time_scalar * np.ones(len(params.times))}
+        return {"thermal_quench_time": np.full(len(params.times), tq_time_scalar)}
 
     @staticmethod
     def _is_on_blacklist(shot_id: int) -> bool:
