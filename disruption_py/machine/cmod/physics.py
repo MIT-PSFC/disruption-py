@@ -2174,7 +2174,7 @@ class CmodPhysicsMethods:
         # Bad chords often have significant white noise, meaning low autocorrelation (< 10 ms)
         # Good chords should have an autocorrelation of 100s of ms
         # See shot 1050311013 as an example with some bad chords
-        noise_autorr_cutoff = 0.01  # [s]
+        noise_autocorr_cutoff = 0.01  # [s]
         # Use 300 ms prior to current quench for speed-up during autocorr O(N^2)
         idx_start = np.argmin(np.abs(t_sxr - (params.disruption_time - 0.3)))
         idx_end = np.argmin(np.abs(t_sxr - params.disruption_time))
@@ -2195,10 +2195,14 @@ class CmodPhysicsMethods:
             index_no_lag = np.argmax(autocorr)
             crosses_zero = autocorr[index_no_lag:] < 0
             # See shot 1120223007 for example of why this fallback is necessary
-            index_decay = np.argmax(crosses_zero) if np.any(crosses_zero) else len(crosses_zero)
-            if index_decay * (1 / sample_freq_5khz) < noise_autorr_cutoff:
+            index_decay = (
+                np.argmax(crosses_zero) if np.any(crosses_zero) else len(crosses_zero)
+            )
+            autocorr_decay_time = index_decay / sample_freq_5khz
+            if autocorr_decay_time < noise_autocorr_cutoff:
                 params.logger.debug(
-                    f"Removing chord {i+1}. Norm. Autocorr: {index_decay*(1/sample_freq_5khz)}"
+                    "get_thermal_quench_onset_time: "
+                    f"Removing chord {i+1}. Norm. Autocorr: {autocorr_decay_time:.3f}."
                 )
                 sxr[i] = 0.0
 
@@ -2217,7 +2221,7 @@ class CmodPhysicsMethods:
         dcore_sxr_dt = np.diff(core_sxr, prepend=0) / sample_time
 
         # Search for the onset of the CQ so that we can search for the TQ in a small time window
-        # to avoid labeleing sawtooth crashes as the thermal quench
+        # to avoid labeling sawtooth crashes as the thermal quench
         # Some current quenches can be long (see shots 1050311013, 1050802017).
         # Set Ip prior to disruption as minimum in prior time window (not median for ramp-down)
         idx_start = np.argmin(np.abs(magtime - (params.disruption_time - 0.04)))
@@ -2230,11 +2234,11 @@ class CmodPhysicsMethods:
         # Search for TQ midpoint as min(dSXR/dt) in window of 5 ms prior to current quench onset
         wndw_before_cq = 0.005  # [s]
         idx_start = np.argmin(np.abs(t_sxr - (cq_onset_time - wndw_before_cq)))
-        idx_end = np.argmin(np.abs(t_sxr - (cq_onset_time)))
+        idx_end = np.argmin(np.abs(t_sxr - cq_onset_time))
         if idx_start == len(t_sxr) - 1:
             params.logger.debug(
                 "get_thermal_quench_onset_time: No SXR data at time of CQ."
-                f"params.disruption_time = {params.disruption_time:.3f}"
+                f"params.disruption_time = {params.disruption_time:.3f}."
             )
             return {"thermal_quench_time": [np.nan]}
         t_max_sxr_drop = t_sxr[idx_start + np.argmin(dcore_sxr_dt[idx_start:idx_end])]
@@ -2249,11 +2253,11 @@ class CmodPhysicsMethods:
         idx_start = np.argmin(
             np.abs(t_sxr - (t_max_sxr_drop - wndw_before_tq_midpoint))
         )
-        idx_end = np.argmin(np.abs(t_sxr - (t_max_sxr_drop)))
+        idx_end = np.argmin(np.abs(t_sxr - t_max_sxr_drop))
         window = core_sxr_raw[idx_start:idx_end]
         # Want last maximum in case the SXR has saturated and there are multiple maxima
-        max_sxr_indx = np.nonzero(window >= 0.9 * np.max(window))[0][-1]
-        tq_time_scalar = t_sxr[idx_start + max_sxr_indx]
+        max_sxr_idx = np.nonzero(window >= 0.9 * np.max(window))[0][-1]
+        tq_time_scalar = t_sxr[idx_start + max_sxr_idx]
 
         return {"thermal_quench_time": np.full(len(params.times), tq_time_scalar)}
 
