@@ -2137,10 +2137,8 @@ class CmodPhysicsMethods:
         # Get SXR chords
         n_chords = 38
         array_path = r"\top.brightnesses.array_1"
-        # Initialize sxr, etc after first successful read of a chord so we know the size
-        sxr = None
+        chords = {}
         t_sxr = None
-        valid_times = None
         for i in range(n_chords):
             try:
                 chord, t_chord = params.get_data_with_dims(
@@ -2152,23 +2150,22 @@ class CmodPhysicsMethods:
                     "get_thermal_quench_onset_time: "
                     f"Failed to get SXR {array_path} chord {i+1} data."
                 )
-                if sxr is not None:
-                    sxr[i] = 0.0
                 continue
             # Subtract constant background
             chord = chord - np.mean(chord[t_chord < 0.0])
-            if sxr is None:
-                valid_times = (t_chord > 0) & (t_chord < params.disruption_time + 0.05)
-                t_sxr = t_chord[valid_times]
-                sxr = np.zeros(shape=(n_chords, len(t_sxr)))
-                sxr[i] = chord[valid_times]
-                continue
+            valid = (t_chord > 0) & (t_chord < params.disruption_time + 0.05)
+            if t_sxr is None:
+                t_sxr = t_chord[valid]
             # Occasionally the time bases of a chord are of a different length
             # Usually one timebase is just cut off early after shot is over
-            valid_times = (t_chord > 0) & (t_chord < params.disruption_time + 0.05)
-            # Goods chords should be of the same shape
-            if np.sum(valid_times) == sxr.shape[1]:
-                sxr[i] = chord[valid_times]
+            if np.sum(valid) == len(t_sxr):
+                chords[i] = chord[valid]
+
+        if t_sxr is None:
+            return {"thermal_quench_time": [np.nan]}
+        sxr = np.zeros((n_chords, len(t_sxr)))
+        for i, data in chords.items():
+            sxr[i] = data
 
         sample_time = t_sxr[1] - t_sxr[0]
         sample_freq = 1 / sample_time
