@@ -2109,6 +2109,8 @@ class CmodPhysicsMethods:
         Thus, for shots with multi-stage thermal quenches, (see shots 1050830034 and 1120717002),
         this algorithm struggles to select the first thermal quench. Based on manual testing
         of 120 shots, about 5% of flattop disruptions on C-Mod feature multi-stage thermal quenches.
+        For flattop disruptions, the automated labels are generally within 1 ms of the manually
+        labeled thermal quench onsest, though labels are occasionally 3-4 ms early or late.
         This algorithm has only been tested on flattop disruptions.
 
         Parameters
@@ -2123,8 +2125,9 @@ class CmodPhysicsMethods:
 
         References
         ----------
-        - pull requests:
-        - issues:
+        - pull requests: #[564](https://github.com/MIT-PSFC/disruption-py/pull/564)
+        - issues: #[542](https://github.com/MIT-PSFC/disruption-py/issues/542)
+
         """
         # Skip labeling the thermal quench time if the shot is non-disruptive
         if params.disruption_time is None:
