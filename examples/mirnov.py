@@ -10,6 +10,29 @@ from disruption_py.workflow import get_shots_data
 
 from mirnov_freq_correction import apply_freq_correction
 
+# Possible sawtooth candidate shots
+163105 # possible 2/2 (continuous band)
+163107 # same as above? maybe 3/2 + sawteeth
+163112 # Possible 4/3 + concurrent sawteeth
+163116 # Precursor unclear
+
+180514 # some sawteeth, low precursor clarity
+180515 # slight more precursor activity
+180516 # STAR SHOT: Mode spec fails (5/1), very clear precursor, very clear Te crash, slight growth of 1/1 amplitude
+180517
+180519 # less clear
+
+190300, # Odd shot, skip
+176989, # S
+170210, # n=1 bursts, no obvious Te crash
+
+145460, # Interesting frequency ramp case. 1/1 may be continuous through multiple st crashes, has burst "groups"
+145461, # Same
+145459, 145465, 145456  #same
+145470,#  potential missmatch between rotation freq and 1/1, small dataset
+
+
+190329, 190324, 190254, # Very short, probably not useful
 
 def main():
     """
