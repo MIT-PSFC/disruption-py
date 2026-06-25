@@ -11,10 +11,6 @@ from typing import Dict, List, Tuple, Union
 
 import numpy as np
 from loguru import logger
-<<<<<<< HEAD
-from mdsthin.MDSplus import mdsExceptions
-=======
->>>>>>> main
 
 from disruption_py.config import config
 from disruption_py.core.utils.enums import map_string_to_enum
@@ -781,10 +777,10 @@ class MirnovTimeSetting(TimeSetting):
             Array of times in the timebase.
         """
         (efit_time,) = params.mds_conn.get_dims(
-            r"\efit_aeqdsk:ali", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:ali", tree_name="_efit_tree",# astype="float64"
         )
         efit_time_unit = params.mds_conn.get_data(
-            r"units_of(dim_of(\efit_aeqdsk:ali))", tree_name="_efit_tree", astype="str"
+            r"units_of(dim_of(\efit_aeqdsk:ali))", tree_name="_efit_tree",# astype="str"
         )
         if efit_time_unit not in {"s", "ms", "us"}:
             params.logger.verbose(

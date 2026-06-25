@@ -5,12 +5,7 @@ Module for retrieving and processing EFIT parameters for CMOD.
 """
 
 import numpy as np
-<<<<<<< HEAD
-from mdsthin.MDSplus import mdsExceptions
-
 import xarray as xr
-=======
->>>>>>> main
 
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
@@ -288,8 +283,8 @@ class CmodEfitMethods:
             values_interp = interp1(efit_time, values_raw, params.times)
             data_vars[param] = xr.DataArray(
                 values_interp,
-                dims=["idx"],
-                coords={"time": ("idx", params.times)},
+                dims=["time_idx"],
+                coords={"time": ("time_idx", params.times)},
                 attrs={"description": f"GEQDSK parameter {param}"}
             )
         
@@ -300,9 +295,9 @@ class CmodEfitMethods:
                 values_interp = np.array([interp1(efit_time, values_raw[i, :], params.times) for i in range(values_raw.shape[0])]).T
                 data_vars[param] = xr.DataArray(
                     values_interp,
-                    dims=["idx", "psi_idx"],
+                    dims=["time_idx", "psi_idx"],
                     coords={
-                        "time": ("idx", params.times),
+                        "time": ("time_idx", params.times),
                         "psi_idx": np.arange(values_interp.shape[1])
                     },
                     attrs={"description": f"GEQDSK 1D profile {param}"}
@@ -320,9 +315,9 @@ class CmodEfitMethods:
             psi_2d_interp = np.array([[interp1(efit_time, psi_2d[:, i, j], params.times) for j in range(psi_2d.shape[2])] for i in range(psi_2d.shape[1])]).T
             data_vars["psirz"] = xr.DataArray(
                 psi_2d_interp,
-                dims=["idx", "r_idx", "z_idx"],
+                dims=["time_idx", "r_idx", "z_idx"],
                 coords={
-                    "time": ("idx", params.times),
+                    "time": ("time_idx", params.times),
                     "r_idx": ("r_idx", np.arange(psi_2d.shape[1])),
                     "z_idx": ("z_idx", np.arange(psi_2d.shape[2])),
                     "rgrid": ("r_idx", rgrid[0]),
@@ -350,9 +345,9 @@ class CmodEfitMethods:
                 rbbbs_interp = np.array([interp1(efit_time, rbbbs[i, :], params.times) for i in range(rbbbs.shape[0])]).T
                 data_vars["rbbbs"] = xr.DataArray(
                     rbbbs_interp,
-                    dims=["idx", "boundary_idx"],
+                    dims=["time_idx", "boundary_idx"],
                     coords={
-                        "time": ("idx", params.times),
+                        "time": ("time_idx", params.times),
                         "boundary_idx": np.arange(rbbbs_interp.shape[1])
                     },
                     attrs={"description": "R coordinates of plasma boundary", "units": "m"}
@@ -361,9 +356,9 @@ class CmodEfitMethods:
                 zbbbs_interp = np.array([interp1(efit_time, zbbbs[i, :], params.times) for i in range(zbbbs.shape[0])]).T
                 data_vars["zbbbs"] = xr.DataArray(
                     zbbbs_interp,
-                    dims=["idx", "boundary_idx"],
+                    dims=["time_idx", "boundary_idx"],
                     coords={
-                        "time": ("idx", params.times),
+                        "time": ("time_idx", params.times),
                         "boundary_idx": np.arange(zbbbs_interp.shape[1])
                     },
                     attrs={"description": "Z coordinates of plasma boundary", "units": "m"}
@@ -408,8 +403,8 @@ class CmodEfitMethods:
         geqdsk_dataset = xr.Dataset(
             data_vars=data_vars,
             coords={
-                "time": ("idx", params.times),
-                "shot": ("idx", np.repeat(params.shot_id, len(params.times), axis=0)),
+                "time": ("time_idx", params.times),
+                "shot": ("time_idx", np.repeat(params.shot_id, len(params.times), axis=0)),
             },
             attrs={
                 "description": "GEQDSK equilibrium parameters for C-Mod",

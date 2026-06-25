@@ -1643,20 +1643,22 @@ class CmodPhysicsMethods:
         # Create xarray dataset
         te_rho_da = xr.DataArray(
             te_rho_final,
-            dims=("rho", "idx"),
+            dims=("rho", "time_idx"),
             coords={
+                "time_idx": np.arange(len(params.times)),
                 "shot": params.shot_id,
                 "rho": rhogrid,
-                "time": ("idx", params.times)
+                "time": ("time_idx", params.times)
             },
         )
         ne_rho_da = xr.DataArray(
             ne_rho_final,
-            dims=("rho", "idx"),
+            dims=("rho", "time_idx"),
             coords={
+                "time_idx": np.arange(len(params.times)),
                 "shot": params.shot_id,
                 "rho": rhogrid,
-                "time": ("idx", params.times)
+                "time": ("time_idx", params.times)
             },
         )
 

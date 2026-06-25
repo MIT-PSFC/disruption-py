@@ -292,12 +292,12 @@ def populate_shot(
             for k, v in data.items():
                 arr = np.asarray(v)
                 if arr.ndim == 1:
-                    dims = "idx"
+                    dims = "time_idx"
                 elif arr.ndim == 2:
-                    dims = ("idx", "flag")
+                    dims = ("time_idx", "flag")
                 else:
                     # for higher dims, put time on first axis and create generic dims
-                    dims = tuple(["idx"] + [f"dim{i}" for i in range(1, arr.ndim)])
+                    dims = tuple(["time_idx"] + [f"dim{i}" for i in range(1, arr.ndim)])
                 data_vars[k] = (dims, arr)
             coords = physics_method_params.to_coords()
             result = xr.Dataset(data_vars=data_vars, coords=coords).astype("float32")

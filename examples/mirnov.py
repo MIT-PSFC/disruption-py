@@ -72,7 +72,7 @@ def main():
     
     
     # result.to_netcdf(f'../data_archive/{shot}.nc',format='NETCDF4', mode='w')
-    result.to_netcdf(f'../TARS/tars/scratch/input_data/{shot}.nc',format='NETCDF4',mode='w')
+    # result.to_netcdf(f'../TARS/tars/scratch/input_data/{shot}.nc',format='NETCDF4',mode='w')
 
 
     print(result)
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     norm = mcolors.Normalize(vmin=vmin, vmax=vmax, clip=True)
 
     fig, ax = plt.subplots(2, 1, layout='constrained', sharex=True, figsize=(4, 5))
-    dat = np.sqrt( result.sel(probe=0).mirnov_fft_real**2 + result.sel(probe=0).mirnov_fft_real**2 ) 
+    dat = np.sqrt( result.sel(sensor_idx=0).mirnov_fft_real**2 + result.sel(sensor_idx=0).mirnov_fft_real**2 ) 
     im = ax[0].contourf(
         result.time,
         result.frequency * 1e-3,

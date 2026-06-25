@@ -5,7 +5,7 @@ Module for retrieving and processing EFIT parameters for CMOD.
 """
 
 import numpy as np
-from mdsthin.MDSplus import mdsExceptions
+from disruption_py.inout.mds import mdsExceptions
 from scipy.signal import ShortTimeFFT
 from scipy.signal.windows import kaiser
 import xarray as xr
@@ -200,7 +200,7 @@ class CmodMirnovMethods:
             mirnov_signal, mirnov_times = params.mds_conn.get_data_with_dims(
                         path=f"{path}.{mirnov_name}",
                         tree_name="magnetics",
-                        astype="float32",
+                        #astype="float32",
             )
             # Get the sampling frequency of the Mirnov signal
             f_mirnov = 1 / np.mean(np.diff(mirnov_times))
@@ -228,6 +228,7 @@ class CmodMirnovMethods:
 
             return mirnov_fft_interp, freqs
         except Exception as e:
+            print(f"[Shot {params.shot_id}] Failed to get Mirnov FFT for {mirnov_name}: {e}")
             return None, None
 
     @staticmethod
@@ -269,10 +270,11 @@ class CmodMirnovMethods:
 
         mirnov_ffts_real = xr.DataArray(
             np.array(valid_mirnov_ffts).real,
-            dims=("sensor_idx", "frequency_idx", "idx"),
+            dims=("sensor_idx", "frequency_idx", "time_idx"),
             coords={
-                "shot": ("idx", np.repeat(params.shot_id, len(params.times))),
-                "time": ("idx", params.times),
+                "time_idx": np.arange(len(params.times)),
+                "shot": ("time_idx", np.repeat(params.shot_id, len(params.times))),
+                "time": ("time_idx", params.times),
                 "frequency": ("frequency_idx", saved_freqs),
                 "sensor_idx": list(range(len(valid_mirnov_locations))),
                 "sensor_name": ("sensor_idx", valid_mirnov_names),
@@ -285,10 +287,11 @@ class CmodMirnovMethods:
         )
         mirnov_ffts_imag = xr.DataArray(
             np.array(valid_mirnov_ffts).imag,
-            dims=("sensor_idx", "frequency_idx", "idx"),
+            dims=("sensor_idx", "frequency_idx", "time_idx"),
             coords={
-                "shot": ("idx", np.repeat(params.shot_id, len(params.times))),
-                "time": ("idx", params.times),
+                "time_idx": np.arange(len(params.times)),
+                "shot": ("time_idx", np.repeat(params.shot_id, len(params.times))),
+                "time": ("time_idx", params.times),
                 "frequency": ("frequency_idx", saved_freqs),
                 "sensor_idx": list(range(len(valid_mirnov_locations))),
                 "sensor_name": ("sensor_idx", valid_mirnov_names),
@@ -385,10 +388,11 @@ class CmodMirnovMethods:
 
         mirnov_signals = xr.DataArray(
             np.array(valid_mirnov_signals),
-            dims=("sensor", "idx"),
+            dims=("sensor", "time_idx"),
             coords={
-                "shot": ("idx", np.repeat(params.shot_id, len(params.times))),
-                "time": ("idx", params.times),
+                "time_idx": np.arange(len(params.times)),
+                "shot": ("time_idx", np.repeat(params.shot_id, len(params.times))),
+                "time": ("time_idx", params.times),
                 "sensor": list(range(len(valid_mirnov_locations))),
                 "sensor_name": ("sensor", valid_mirnov_names),
                 "type": ("sensor", ["Bp"] * len(valid_mirnov_names)),    # All sensors are Bp

@@ -60,12 +60,13 @@ class PhysicsMethodParams:
         Returns
         -------
         Dict[str, Tuple[str, np.ndarray]]
-            A dictionary with `shot` and `time` as coordinates for dimension `idx`.
+            A dictionary with `shot` and `time` as coordinates for dimension `time_idx`.
         """
         return to_tuple(
             data={
+                "time_idx": np.arange(len(self.times)),
                 "shot": len(self.times) * [self.shot_id],
                 "time": self.times.astype("float32"),
             },
-            dim="idx",
+            dim="time_idx",
         )

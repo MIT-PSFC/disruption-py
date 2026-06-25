@@ -4,10 +4,6 @@
 
 import numpy as np
 import scipy as sp
-<<<<<<< HEAD
-from mdsthin.MDSplus import mdsExceptions
-=======
->>>>>>> main
 
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1

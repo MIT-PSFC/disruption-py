@@ -1,9 +1,5 @@
 [d3d.efit]
-<<<<<<< HEAD
-runtag = "DISPY"
-=======
 runtag = "DIS"
->>>>>>> main
 
 [d3d.inout.mds]
 mdsplus_connection_string = "atlas"

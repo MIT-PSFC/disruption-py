@@ -7,7 +7,7 @@ Module for retrieving and processing EFIT parameters for CMOD.
 from tkinter.font import names
 
 import numpy as np
-from mdsthin.MDSplus import mdsExceptions
+from disruption_py.inout.mds import mdsExceptions
 from scipy.signal import ShortTimeFFT
 from scipy.signal.windows import kaiser
 import xarray as xr
@@ -530,13 +530,14 @@ class D3DMirnovMethods:
 
         mirnov_ffts_real = xr.DataArray(
             np.array(valid_mirnov_ffts).real,
-            dims=("sensor_idx", "frequency_idx", "idx"),
+            dims=("sensor_idx", "frequency_idx", "time_idx"),
             coords={
-                "shot": ("idx", np.repeat(params.shot_id, len(params.times))),
+                "time_idx": np.arange(len(params.times)),
+                "shot": ("time_idx", np.repeat(params.shot_id, len(params.times))),
                 "sensor_idx": list(range(len(valid_mirnov_locations))),
                 "sensor_name": ("sensor_idx", valid_mirnov_names),
                 "frequency": ("frequency_idx", saved_freqs),
-                "time": ("idx", params.times),
+                "time": ("time_idx", params.times),
                 "sensor_R": ("sensor_idx", [loc[0] for loc in valid_mirnov_locations]),
                 "sensor_phi": ("sensor_idx", [loc[1] for loc in valid_mirnov_locations]),
                 "sensor_Z": ("sensor_idx", [loc[2] for loc in valid_mirnov_locations]),
@@ -545,13 +546,14 @@ class D3DMirnovMethods:
         )
         mirnov_ffts_imag = xr.DataArray(
             np.array(valid_mirnov_ffts).imag,
-            dims=("sensor_idx", "frequency_idx", "idx"),
+            dims=("sensor_idx", "frequency_idx", "time_idx"),
             coords={
-                "shot": ("idx", np.repeat(params.shot_id, len(params.times))),
+                "time_idx": np.arange(len(params.times)),
+                "shot": ("time_idx", np.repeat(params.shot_id, len(params.times))),
                 "sensor_idx": list(range(len(valid_mirnov_locations))),
                 "sensor_name": ("sensor_idx", valid_mirnov_names),
                 "frequency": ("frequency_idx", saved_freqs),
-                "time": ("idx", params.times),
+                "time": ("time_idx", params.times),
                 "sensor_R": ("sensor_idx", [loc[0] for loc in valid_mirnov_locations]),
                 "sensor_phi": ("sensor_idx", [loc[1] for loc in valid_mirnov_locations]),
                 "sensor_Z": ("sensor_idx", [loc[2] for loc in valid_mirnov_locations]),
