@@ -8,10 +8,6 @@ import sys
 import threading
 from typing import Any, Callable, Dict, List, Tuple
 
-<<<<<<< HEAD
-import mdsthin.MDSplus as MDSplus
-=======
->>>>>>> main
 import numpy as np
 from loguru import logger
 

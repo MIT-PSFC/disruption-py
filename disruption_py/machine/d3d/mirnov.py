@@ -443,8 +443,7 @@ class D3DMirnovMethods:
         try:
             mirnov_signal, mirnov_times = params.mds_conn.get_data_with_dims(
                         path=path,
-                        tree_name="d3d",
-                        astype="float32",
+                        tree_name="d3d"
             )
             # DIII-D mirnov times are in ms, convert to seconds
             mirnov_times = mirnov_times / 1000.0
@@ -503,13 +502,9 @@ class D3DMirnovMethods:
         valid_mirnov_locations = []
         saved_freqs = None
 
-        num_probes = 20 # Temporarily limit to 20 probes for speed
-        # Pull subset from specific array
-        names = _BP_SENSOR_CATEGORIES['Bp_r0_toroidal_array'].copy()
-        names.extend(_BP_SENSOR_CATEGORIES['Bp_r_plus_1_toroidal_array'])
+        # names = _BP_SENSOR_CATEGORIES['Bp_r0_toroidal_array'].copy()
+        # names.extend(_BP_SENSOR_CATEGORIES['Bp_r_plus_1_toroidal_array'])
         for mirnov_name, mirnov_location in D3D_SENSORS_BP.items():
-            if mirnov_name not in names:
-                continue
             mirnov_R = mirnov_location['R']
             mirnov_phi = mirnov_location['phi']
             mirnov_Z = mirnov_location['Z']
@@ -523,11 +518,6 @@ class D3DMirnovMethods:
 
             if saved_freqs is None:
                 saved_freqs = freqs
-            
-            num_probes -= 1
-            if num_probes <= 0:
-                break
-
         mirnov_ffts_real = xr.DataArray(
             np.array(valid_mirnov_ffts).real,
             dims=("sensor_idx", "frequency_idx", "idx"),

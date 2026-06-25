@@ -3081,13 +3081,8 @@ name = "numpy"
 version = "2.3.2"
 description = "Fundamental package for array computing in Python"
 optional = false
-<<<<<<< HEAD
-python-versions = ">=3.11"
-groups = ["main", "lab"]
-=======
 python-versions = ">=3.9"
 groups = ["main", "dev", "lab"]
->>>>>>> main
 files = [
     {file = "numpy-2.3.2-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:852ae5bed3478b92f093e30f785c98e0cb62fa0a939ed057c31716e18a7a22b9"},
     {file = "numpy-2.3.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:7a0e27186e781a69959d0230dd9909b5e26024f8da10683bd6344baea1885168"},
@@ -5415,10 +5410,5 @@ test = ["coverage (>=7.10)", "hypothesis", "mypy", "numpydoc", "packaging", "pyt
 
 [metadata]
 lock-version = "2.1"
-<<<<<<< HEAD
-python-versions = ">=3.11,<4"
-content-hash = "d7545b0abd6815362d10da96ad44747a1ea1137e31c229e05eccfae614e95b37"
-=======
 python-versions = ">=3.11,<3.14"
 content-hash = "7e678577d2b97f92136a6ace2b0443db17402a6bdb5ae9465007be804382bf9a"
->>>>>>> main

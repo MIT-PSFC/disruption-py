@@ -11,10 +11,6 @@ from typing import Dict, List, Tuple, Union
 
 import numpy as np
 from loguru import logger
-<<<<<<< HEAD
-from mdsthin.MDSplus import mdsExceptions
-=======
->>>>>>> main
 
 from disruption_py.config import config
 from disruption_py.core.utils.enums import map_string_to_enum

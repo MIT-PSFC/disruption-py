@@ -3,11 +3,7 @@
 """
 Module for managing retrieval of shot data from a tokamak.
 """
-<<<<<<< HEAD
-import mdsthin.MDSplus as MDSplus
-=======
 
->>>>>>> main
 import numpy as np
 import pandas as pd
 from loguru import logger
