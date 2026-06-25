@@ -3,6 +3,7 @@
 """
 Module for managing retrieval of shot data from a tokamak.
 """
+
 import numpy as np
 import pandas as pd
 from loguru import logger

@@ -10,6 +10,7 @@ data/*
 *.log
 *.pkl
 *.joblib
+*.nc
 shot_*profileX*
 scripts/output/*
 scripts/*.txt

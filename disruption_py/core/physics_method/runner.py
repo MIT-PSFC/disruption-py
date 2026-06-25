@@ -39,17 +39,19 @@ def get_all_physics_methods(all_passed: list) -> set:
     set
         A set of callable physics methods found in the provided list.
     """
-    physics_methods = set()
+    physics_methods_by_name = {}
     for passed in all_passed:
         if callable(passed) and is_physics_method(passed):
-            physics_methods.add(passed)
+            method_metadata = get_method_metadata(passed)
+            physics_methods_by_name[method_metadata.name] = passed
 
         for method_name in dir(passed):
             method = getattr(passed, method_name, None)
             if method is None or not is_physics_method(method):
                 continue
-            physics_methods.add(method)
-    return physics_methods
+            method_metadata = get_method_metadata(method)
+            physics_methods_by_name[method_metadata.name] = method
+    return set(physics_methods_by_name.values())
 
 
 def bind_method_metadata(
