@@ -5,6 +5,7 @@ requires = ["poetry-core>=2.0"]
 [dependency-groups]
 dev = [
   "black>=25.1.0",
+  "mdsthin>=1.5.0",
   "pylint>=3.3.0",
   "pytest>=8.3.0",
   "ruff>=0.9.0",
@@ -35,7 +36,6 @@ classifiers = [
   "Development Status :: 4 - Beta",
   "Environment :: Console",
   "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: MIT License",
   "Natural Language :: English",
   "Operating System :: POSIX :: Linux",
   "Programming Language :: Python :: 3",
@@ -47,17 +47,19 @@ classifiers = [
 ]
 dependencies = [
   "dynaconf>=3.2.0",
+  "fsspec[s3]>=2025.9.0",
   "loguru>=0.7.0",
   "matplotlib>=3.10.6",
   "mdsthin>=1.6.4",
   "netcdf4>=1.7.0",
-  "numpy>1.26.0",
-  "pandas>=2.2.0",
+  "numpy>=1.26.0,<2.0.0",
+  "pandas[parquet]>=2.2.0",
   "pyodbc>=5.2.0",
   "scipy>=1.15.0",
   "SQLAlchemy>=2.0.0",
   "tqdm>=4.67.0",
-  "xarray>=2025.1.0,<2025.8.0",
+  "xarray>=2025.1.0",
+  "zarr>=3.0.0",
 ]
 description = "An open-source physics-based Scientific Framework for Disruption Analysis of Fusion Plasmas for AI/ML applications"
 keywords = [
@@ -72,8 +74,8 @@ maintainers = [
 ]
 name = "disruption-py"
 readme = "README.md"
-requires-python = ">=3.11,<4"
-version = "0.12.0-dev"
+requires-python = ">=3.11,<3.14"
+version = "0.14.0"
 
 [project.scripts]
 disruption-py = "disruption_py.workflow:cli"
@@ -86,32 +88,11 @@ repository = "https://github.com/MIT-PSFC/disruption-py/"
 [tool.poetry.group.dev]
 optional = true
 
-[tool.poetry.group.dev.dependencies]
-black = "^25.1.0"
-pylint = "^3.3.0"
-pytest = "^8.3.0"
-ruff = "^0.9.0"
-toml-sort = "^0.24.0"
-yamllint = "^1.36.0"
-
 [tool.poetry.group.docs]
 optional = true
 
-[tool.poetry.group.docs.dependencies]
-black = "^25.1.0"
-mkdocs = "^1.6.0"
-mkdocs-literate-nav = "^0.6.0"
-mkdocs-material = "^9.6.0"
-mkdocstrings = {extras = ["python"], version = "^0.29.0"}
-
 [tool.poetry.group.lab]
 optional = true
-
-[tool.poetry.group.lab.dependencies]
-ipykernel = "^6.29.0"
-ipympl = "^0.9.0"
-jupyterlab = "^4.3.0"
-matplotlib = "^3.10.0"
 
 [tool.pylint]
 disable = [
@@ -134,6 +115,7 @@ ignore_case = true
 in_place = true
 sort_table_keys = true
 trailing_comma_inline_array = true
+overrides."*.physics.attributes.*.validity".inline_arrays = false
 
 [tool.uv]
 default-groups = []

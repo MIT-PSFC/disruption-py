@@ -4,6 +4,8 @@
 example module for EFIT.
 """
 
+import pytest
+
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.settings import RetrievalSettings
 from disruption_py.workflow import get_shots_data
@@ -26,6 +28,12 @@ def main():
     elif tokamak is Tokamak.EAST:
         shotlist = [55555]
         shape = (69, 16)
+    elif tokamak is Tokamak.HBTEP:
+        pytest.skip("No EFIT for HBT-EP")
+        assert False
+    elif tokamak is Tokamak.MAST:
+        shotlist = [30421]
+        shape = (406, 16)
     else:
         raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 

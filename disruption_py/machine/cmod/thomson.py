@@ -4,11 +4,14 @@
 
 import numpy as np
 import scipy as sp
+<<<<<<< HEAD
 from mdsthin.MDSplus import mdsExceptions
+=======
+>>>>>>> main
 
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
-from disruption_py.core.utils.misc import safe_cast
+from disruption_py.inout.mds import mdsExceptions
 from disruption_py.machine.cmod.efit import CmodEfitMethods
 
 
@@ -297,7 +300,6 @@ class CmodThomsonDensityMeasure:
         r = r.flatten()
         z = z.flatten()
         psi = np.full((len(r), len(t)), np.nan)
-        z = safe_cast(z, "float32")
         psirz, rgrid, zgrid, times = params.mds_conn.get_data_with_dims(
             r"\efit_geqdsk:psirz", tree_name=tree, dim_nums=[0, 1, 2]
         )

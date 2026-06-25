@@ -5,7 +5,6 @@ This module defines the LogSettings class, which provides settings and setup for
 logging in both files and console with customizable levels and formats.
 """
 
-import importlib.metadata
 import os
 import sys
 from dataclasses import dataclass
@@ -15,7 +14,7 @@ from typing import Union
 from loguru import logger
 from tqdm.auto import tqdm
 
-from disruption_py.core.utils.misc import get_commit_hash, get_temporary_folder
+from disruption_py.core.utils.misc import get_metadata, get_temporary_folder
 
 LogSettingsType = Union["LogSettings", str, int]
 
@@ -146,24 +145,18 @@ class LogSettings:
         self.reset_handlers(num_shots=None)
 
         # header
-        package, *_ = __name__.split(".")
-        commit = get_commit_hash()
+        metadata = get_metadata()
+        commit = metadata.get("commit")
         logger.info(
-            "Starting: {p} ~ v{v}{t}{c} / {u}@{h}",
-            p=package,
-            v=importlib.metadata.version(package),
-            t=" # " if commit else "",
-            c=commit,
-            u=os.getenv("USER"),
-            h=os.uname().nodename,
+            "Starting: {package} ~ v{version}{strcommit} / {user}@{host}",
+            strcommit=f" # {commit}" if commit else "",
+            **metadata,
         )
         if self.file_path is not None:
             logger.info("Logging: {l}", l=self.file_path)
         logger.debug(
-            "Repository: {url}{append}{commit}",
-            url="https://github.com/MIT-PSFC/disruption-py",
-            append="/commit/" if commit else "",
-            commit=commit,
+            "Source: {source}",
+            source=metadata["source"],
         )
         logger.debug("Executable: {e}", e=sys.executable)
 

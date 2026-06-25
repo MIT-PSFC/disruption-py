@@ -25,4 +25,12 @@ def get_method_holders(tokamak: Tokamak):
         from disruption_py.machine.east import METHOD_HOLDERS
 
         return GENERIC + METHOD_HOLDERS
+    if tokamak is Tokamak.MAST:
+        from disruption_py.machine.mast import METHOD_HOLDERS
+
+        return GENERIC + METHOD_HOLDERS
+    if tokamak is Tokamak.HBTEP:
+        from disruption_py.machine.hbtep import METHOD_HOLDERS
+
+        return METHOD_HOLDERS
     raise ValueError(f"Invalid tokamak for physics methods {tokamak}")

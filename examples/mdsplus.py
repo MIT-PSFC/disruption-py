@@ -4,6 +4,8 @@
 example module for MDSplus.
 """
 
+import pytest
+
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.workflow import get_mdsplus_class
 
@@ -15,28 +17,36 @@ def main():
 
     tokamak = resolve_tokamak_from_environment()
 
+    node = r"dim_of(\efit_aeqdsk:li)"
     if tokamak is Tokamak.D3D:
         shot = 161228
         shape = (196,)
-        efit = "efit01"
+        tree = "efit01"
     elif tokamak is Tokamak.CMOD:
         shot = 1150805012
         shape = (62,)
-        efit = "analysis"
+        tree = "analysis"
     elif tokamak is Tokamak.EAST:
         shot = 55555
         shape = (102,)
-        efit = "efit_east"
+        tree = "efit_east"
+    elif tokamak is Tokamak.HBTEP:
+        shot = 103590
+        shape = (15358,)
+        tree = "hbtep2"
+        node = r"\top.sensors.rogowskis:ip"
+    elif tokamak is Tokamak.MAST:
+        pytest.skip("No MDSplus for MAST")
+        assert False
     else:
         raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 
     mds = get_mdsplus_class(tokamak).conn
     print(f"Initialized MDSplus: {mds.hostspec}")
 
-    mds.openTree(efit, shot)
+    mds.openTree(tree, shot)
     print("#", shot)
 
-    node = r"dim_of(\efit_aeqdsk:li)"
     print(">", node)
 
     out = mds.get(node).data()

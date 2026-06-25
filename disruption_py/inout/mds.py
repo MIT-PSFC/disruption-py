@@ -4,17 +4,56 @@
 Module for managing connections to MDSplus.
 """
 
+import sys
 import threading
 from typing import Any, Callable, Dict, List, Tuple
 
+<<<<<<< HEAD
 import mdsthin.MDSplus as MDSplus
+=======
+>>>>>>> main
 import numpy as np
 from loguru import logger
 
 from disruption_py.config import config
-from disruption_py.core.utils.misc import safe_cast, shot_msg
+from disruption_py.core.utils.misc import shot_msg
 from disruption_py.core.utils.shared_instance import SharedInstance
 from disruption_py.machine.tokamak import Tokamak
+
+try:
+
+    # first, try full-fledged MDSplus
+    import MDSplus
+
+except ModuleNotFoundError:
+
+    try:
+
+        # then, fall back onto mdsthin
+        from mdsthin import MDSplus
+
+    except ModuleNotFoundError:
+
+        # finally, create dummy class
+        class MDSplus:
+            """Dummy MDSplus class."""
+
+            class Connection:
+                """Dummy Connection class."""
+
+            # pylint: disable-next=invalid-name
+            class mdsExceptions:
+                """Dummy mdsExceptions class."""
+
+                class MDSplusERROR(Exception):
+                    """Dummy MDSplusERROR class."""
+
+                class MdsException(Exception):
+                    """Dummy MdsException class."""
+
+
+# shortcuts for downstream imports
+mdsExceptions = MDSplus.mdsExceptions
 
 
 class ProcessMDSConnection:
@@ -58,6 +97,9 @@ def _better_mds_exceptions(func):
     error message which includes the tree and the node path.
     """
 
+    if "mdsthin" in sys.modules:
+        return func
+
     def wrapper(*args, **kwargs):
         self = args[0]
         if len(args) > 1:
@@ -66,22 +108,22 @@ def _better_mds_exceptions(func):
             path = kwargs.get("path", None)
         try:
             return func(*args, **kwargs)
-        except MDSplus.mdsExceptions.TreeFOPENR:
+        except mdsExceptions.TreeFOPENR:
             nick = kwargs.get("tree_name", None)
             tree = self.tree_name(nick)
             if nick == tree:
                 nick = ""
-            raise MDSplus.mdsExceptions.TreeFOPENR(
+            raise mdsExceptions.TreeFOPENR(
                 "Tree not found. "
                 + (f"Nick: {nick}, " if nick else "")
                 + f"Tree: {tree}"
             ) from None
-        except MDSplus.mdsExceptions.MdsException as e:
-            if isinstance(e, MDSplus.mdsExceptions.TreeNNF):
+        except mdsExceptions.MdsException as e:
+            if isinstance(e, mdsExceptions.TreeNNF):
                 err = "Node not found"
-            elif isinstance(e, MDSplus.mdsExceptions.TreeNODATA):
+            elif isinstance(e, mdsExceptions.TreeNODATA):
                 err = "No data available"
-            elif isinstance(e, MDSplus.mdsExceptions.TreeBADRECORD):
+            elif isinstance(e, mdsExceptions.TreeBADRECORD):
                 err = "Bad record"
             else:
                 err = "MDSplus error"
@@ -156,7 +198,7 @@ class MDSConnection:
         for tree in self.open_trees:
             try:
                 self.conn.closeTree(tree, self.shot_id)
-            except MDSplus.mdsExceptions.TreeNOT_OPEN:
+            except mdsExceptions.TreeNOT_OPEN:
                 break
         self.open_trees = []
 
@@ -196,7 +238,6 @@ class MDSConnection:
         self,
         path: str,
         tree_name: str = None,
-        astype: str = "float64",
         arguments: Any = None,
     ) -> np.ndarray:
         """
@@ -208,8 +249,6 @@ class MDSConnection:
             MDSplus path to record.
         tree_name : str, optional
             The name of the tree that must be open for retrieval.
-        astype : str, optional, default = "float64"
-            The data type for explicit casting.
         arguments : Any, optional
             Arguments for MDSplus TDI Expression. Default None.
             Please see MDSplus documentation for more information.
@@ -225,8 +264,6 @@ class MDSConnection:
 
         logger.trace(shot_msg("Getting data: {path}"), shot=self.shot_id, path=path)
         data = self.conn.get(f"_sig={path}", arguments).data()
-        if astype:
-            data = safe_cast(data, astype)
 
         return data
 
@@ -236,8 +273,6 @@ class MDSConnection:
         path: str,
         tree_name: str = None,
         dim_nums: List = None,
-        astype: str = "float64",
-        cast_all: bool = False,
     ) -> Tuple:
         """
         Get data and dimension(s) for record at specified path.
@@ -250,10 +285,6 @@ class MDSConnection:
             The name of the tree that must be open for retrieval.
         dim_nums : List, optional
             A list of dimensions that should have their size retrieved. Default [0].
-        astype : str, optional, default = "float64"
-            The data type for explicit casting.
-        cast_all : bool, optional. Default False.
-            Whether to cast both data and dims, or only data.
 
         Returns
         -------
@@ -272,11 +303,6 @@ class MDSConnection:
         data = self.conn.get("_sig=" + path).data()
         dims = [self.conn.get(f"dim_of(_sig,{dim_num})").data() for dim_num in dim_nums]
 
-        if astype:
-            data = safe_cast(data, astype)
-            if cast_all:
-                dims = [safe_cast(dim, astype) for dim in dims]
-
         return data, *dims
 
     @_better_mds_exceptions
@@ -285,7 +311,6 @@ class MDSConnection:
         path: str,
         tree_name: str = None,
         dim_nums: List = None,
-        astype: str = None,
     ) -> Tuple:
         """
         Get the specified dimensions for record at specified path.
@@ -298,8 +323,6 @@ class MDSConnection:
             The name of the tree that must be open for retrieval.
         dim_nums : List, optional
             A list of dimensions that should have their size retrieved. Default [0].
-        astype : str, optional
-            The data type for explicit casting.
 
         Returns
         -------
@@ -314,9 +337,6 @@ class MDSConnection:
 
         logger.trace(shot_msg("Getting dims: {path}"), shot=self.shot_id, path=path)
         dims = [self.conn.get(f"dim_of({path},{d})").data() for d in dim_nums]
-
-        if astype:
-            dims = [safe_cast(dim, astype) for dim in dims]
 
         return dims
 

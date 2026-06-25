@@ -1,0 +1,51 @@
+cff-version: 1.2.0
+title: >-
+  DisruptionPy: An open-source physics-based Scientific
+  Framework for Disruption Analysis of Fusion Plasmas for
+  AI/ML applications
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Gregorio L.
+    family-names: Trevisan
+    email: gtrevisan@psfc.mit.edu
+    affiliation: MIT PSFC
+    orcid: 'https://orcid.org/0000-0003-4920-6109'
+  - given-names: Cristina
+    family-names: Rea
+    email: crea@psfc.mit.edu
+    affiliation: MIT PSFC
+    orcid: 'https://orcid.org/0000-0002-9948-2649'
+  - name: MIT PSFC Disruption Studies Group
+    website: 'https://disruptions.mit.edu/'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.13935223
+    description: Zenodo
+repository-code: 'https://github.com/MIT-PSFC/disruption-py'
+url: 'https://mit-psfc.github.io/disruption-py/'
+repository-artifact: 'https://pypi.org/project/disruption-py/'
+abstract: >
+  DisruptionPy is an open-source Scientific Python package
+  for fast retrieval of experimental Fusion data from
+  MDSplus servers or Xarray stores.
+
+  The library allows an efficient database preparation for
+  downstream analysis and/or ML model development for
+  disruption studies.
+
+
+  Currently supported devices are:
+
+  - Alcator C-Mod
+
+  - DIII-D
+
+  - EAST
+
+  - HBT-EP
+
+  - MAST
+license: MIT

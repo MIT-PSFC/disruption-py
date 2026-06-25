@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Module for retrieving and calculating data for CMOD physics methods.
+Module for retrieving and calculating data for C-MOD physics methods.
 """
 
 import warnings
@@ -9,8 +9,6 @@ import warnings
 import numpy as np
 import xarray as xr
 import scipy.constants as const
-from scipy.interpolate import RegularGridInterpolator, interp1d
-from mdsthin.MDSplus import mdsExceptions
 
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
@@ -22,6 +20,7 @@ from disruption_py.core.utils.math import (
     gaussian_fit_with_fixed_mean,
     interp1,
 )
+from disruption_py.inout.mds import mdsExceptions
 from disruption_py.machine.cmod.thomson import CmodThomsonDensityMeasure
 from disruption_py.machine.cmod.efit import CmodEfitMethods
 from disruption_py.machine.tokamak import Tokamak
@@ -231,9 +230,7 @@ class CmodPhysicsMethods:
             # Ip wire can be one of 16 but is normally no. 16
             for wire_index in range(16, 0, -1):
                 wire_node_name = params.mds_conn.get_data(
-                    f"{node_path}:P_{wire_index:02d}:name",
-                    tree_name="pcs",
-                    astype=None,
+                    f"{node_path}:P_{wire_index:02d}:name", tree_name="pcs"
                 )
                 if wire_node_name == "IP":
                     try:
@@ -408,9 +405,7 @@ class CmodPhysicsMethods:
         for node_path, start in active_wire_segments:
             for wire_index in range(1, 17):
                 wire_node_name = params.mds_conn.get_data(
-                    f"{node_path}:P_{wire_index:02d}:name",
-                    tree_name="pcs",
-                    astype=None,
+                    f"{node_path}:P_{wire_index:02d}:name", tree_name="pcs"
                 )
                 if wire_node_name == "ZCUR":
                     try:
@@ -781,7 +776,7 @@ class CmodPhysicsMethods:
             kwa["p_ohm"] = np.full(len(params.times), np.nan)
         # Plasma magnetic energy, and respective time base
         kwa["wmhd"], kwa["efit_time"] = params.mds_conn.get_data_with_dims(
-            r"\efit_aeqdsk:wplasm", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:wplasm", tree_name="_efit_tree"
         )  # [J], [s]
         return CmodPhysicsMethods._get_power(params.times, **kwa)
 
@@ -921,7 +916,7 @@ class CmodPhysicsMethods:
 
         path = r"\mag_bp_coils."
         bp_node_names = params.mds_conn.get_data(
-            f"{path}nodename", tree_name="magnetics", astype=None
+            f"{path}nodename", tree_name="magnetics"
         )
         phi = params.mds_conn.get_data(f"{path}phi", tree_name="magnetics")  # [degree]
         btor_pickup_coeffs = params.mds_conn.get_data(
@@ -1477,7 +1472,7 @@ class CmodPhysicsMethods:
         if use_ts_tci_calibration:
             # This shouldn't affect ne_PF (except if calib is not between 0.5 & 1.5)
             # because we're just multiplying ne by a constant
-            (nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _) = (
+            nl_ts1, nl_ts2, nl_tci1, nl_tci2, _, _ = (
                 CmodThomsonDensityMeasure.compare_ts_tci(params)
             )
             if np.mean(nl_ts1) != 1e32 and np.mean(nl_ts2) != 1e32:

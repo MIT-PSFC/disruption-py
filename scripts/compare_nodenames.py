@@ -7,13 +7,11 @@ import sys
 import warnings
 from multiprocessing import Pool
 
-import mdsthin.MDSplus as mds
 import numpy as np
 import pandas as pd
-from mdsthin.MDSplus import Signal, Tree, TreeNode
-from mdsthin.MDSplus import mdsExceptions
-TreeFOPENR = mdsExceptions.TreeFOPENR
-TreeNODATA = mdsExceptions.TreeNODATA
+from MDSplus import mdsExceptions
+from MDSplus.compound import Signal
+from MDSplus.tree import Tree, TreeNode
 
 
 class NodeNameComparer:
@@ -91,7 +89,7 @@ class NodeNameComparer:
         try:
             record.getNid()
             return True
-        except (TreeNODATA, TreeFOPENR, AttributeError):
+        except (mdsExceptions.TreeNODATA, mdsExceptions.TreeFOPENR, AttributeError):
             pass
         return False
 
@@ -125,7 +123,7 @@ class NodeNameComparer:
         """
         try:
             return parent.getNode(node_name)
-        except mds.mdsExceptions.TreeNNF:
+        except mdsExceptions.TreeNNF:
             return None
 
     def compare_names_one_shot(self, shot: int) -> tuple[int, int]:
@@ -135,7 +133,7 @@ class NodeNameComparer:
         """
         try:
             tree = Tree("analysis", shot)
-        except mds.mdsExceptions.TreeFOPENR:
+        except mdsExceptions.TreeFOPENR:
             return None
 
         ref_record, new_record = None, None
@@ -144,14 +142,14 @@ class NodeNameComparer:
         if ref_node is not None:
             try:
                 ref_record = ref_node.getRecord()
-            except (TreeNODATA, TreeFOPENR, AttributeError):
+            except (mdsExceptions.TreeNODATA, mdsExceptions.TreeFOPENR, AttributeError):
                 pass
 
         new_node = NodeNameComparer.get_node(f"{self.parent_name}:{self.new}", tree)
         if new_node is not None:
             try:
                 new_record = new_node.getRecord()
-            except (TreeNODATA, TreeFOPENR, AttributeError):
+            except (mdsExceptions.TreeNODATA, mdsExceptions.TreeFOPENR, AttributeError):
                 pass
 
         # ref has no data

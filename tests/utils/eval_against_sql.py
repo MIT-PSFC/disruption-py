@@ -94,7 +94,7 @@ def get_cached_from_fresh(
     shot_data = {}
     for shot_id in shotlist:
         times = fresh_data[shot_id]["time"]
-        sql_data = db.get_shots_data([shot_id], cols=test_columns)
+        sql_data = db.get_shots_data([shot_id], cols=test_columns).astype("float32")
 
         if sql_data.empty:
             shot_data[shot_id] = pd.DataFrame()

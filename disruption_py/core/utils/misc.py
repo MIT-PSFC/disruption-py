@@ -4,11 +4,11 @@
 Module for utility functions related to class instantiation, data manipulation, and version control.
 """
 
+import importlib.metadata
 import os
 import subprocess
 import sys
-import time
-import warnings
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from tempfile import mkdtemp
@@ -36,29 +36,6 @@ def without_duplicates(lst: List):
     return [x for x in lst if not (x in seen or seen.add(x))]
 
 
-def safe_cast(array: np.ndarray, dtype, copy=False) -> np.ndarray:
-    """
-    Safely cast a NumPy array to a specified dtype, suppressing warnings.
-
-    Parameters
-    ----------
-    array : np.ndarray
-        The NumPy array to cast.
-    dtype : type
-        The target data type to cast the array to.
-    copy : bool, optional
-        Whether to create a copy of the array (default is False).
-
-    Returns
-    -------
-    np.ndarray
-        The casted NumPy array.
-    """
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=RuntimeWarning)
-        return array.astype(dtype, copy=copy)
-
-
 @lru_cache
 def get_commit_hash() -> str:
     """
@@ -71,13 +48,50 @@ def get_commit_hash() -> str:
     """
     try:
         commit_hash = (
-            subprocess.check_output(["git", "rev-parse", "HEAD"])
+            subprocess.check_output(
+                ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL
+            )
             .decode("ascii")
             .strip()
         )
     except subprocess.CalledProcessError:
         commit_hash = ""
     return commit_hash
+
+
+@lru_cache
+def get_metadata() -> Dict[str, str]:
+    """
+    Gather workflow metadata.
+
+    Returns
+    -------
+    Dict[str, str]
+        The workflow metadata.
+    """
+
+    package, *_ = __name__.split(".")
+    version = importlib.metadata.version(package)
+    tag = "v" + ".".join(version.split(".")[:2])
+    repo = "https://github.com/MIT-PSFC/disruption-py"
+    commit = get_commit_hash()
+    if commit:
+        source = f"{repo}/tree/{commit}"
+    else:
+        source = f"{repo}/releases/tag/{tag}"
+
+    metadata = {
+        "user": os.getenv("USER"),
+        "host": os.uname().nodename,
+        "time": datetime.now().isoformat(),
+        "package": package,
+        "version": version,
+        "commit": commit,
+        "source": source,
+    }
+    if not commit:
+        metadata.pop("commit")
+    return metadata
 
 
 @lru_cache
@@ -94,15 +108,15 @@ def get_temporary_folder() -> str:
 
     # create temporary top folder
     top = os.path.join(
-        "/tmp",
+        os.getenv("LOCALSCRATCH", "/tmp"),
         os.getenv("USER"),
         "disruption-py",
-        ("." if "pytest" in sys.modules else "") + time.strftime("%Y-%m-%d"),
+        ("." if "pytest" in sys.modules else "") + datetime.now().strftime("%Y-%m-%d"),
     )
     Path(top).mkdir(parents=True, exist_ok=True)
 
     # create temporary sub folder
-    return mkdtemp(dir=top, prefix=time.strftime("%H.%M.%S-"))
+    return mkdtemp(dir=top, prefix=datetime.now().strftime("%H.%M.%S-"))
 
 
 def shot_msg(message: str) -> str:
@@ -193,3 +207,30 @@ def to_tuple(
     Dict[str, Tuple[str, np.ndarray]]
     """
     return {k: (dim, v) for k, v in data.items()}
+
+
+def filter_dict(i: Dict, s: str) -> Dict:
+    """
+    Filter a dictionary by removing all keys that contain a given substring.
+
+    Parameters
+    ----------
+    i : Dict
+        Input dictionary.
+    s : str
+        Substring to filter out.
+
+    Returns
+    -------
+    Dict
+        Output dictionary.
+    """
+    o = {}
+    for k, v in i.items():
+        if isinstance(k, str) and s in k:
+            continue
+        if isinstance(v, dict):
+            o[k] = filter_dict(v, s)
+        else:
+            o[k] = v
+    return o

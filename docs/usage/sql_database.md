@@ -22,8 +22,6 @@ The dataset contains unique plasma discharges from MIT's Alcator C-Mod tokamak, 
 	'kappa_area', 'I_efc', 'SXR', 'H_alpha', 'Prad_peaking_CVA'
 	```
 
-	For more details on computed values please see [parameter reference][disruption-parameter-descriptions].
-
 ## Retrieving data from the SQL database { .doc .doc-heading }
 Here is an example retrieving data from `disruption_warning` or `disruptions` table
 ```python

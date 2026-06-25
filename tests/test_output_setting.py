@@ -12,6 +12,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
+from disruption_py.machine.tokamak import Tokamak
 from disruption_py.settings.log_settings import LogSettings
 from disruption_py.settings.output_setting import DataTreeOutputSetting
 from disruption_py.settings.retrieval_settings import RetrievalSettings
@@ -29,9 +30,12 @@ def fresh_data_fixture(shotlist, tokamak, test_folder_m) -> Dict:
         os.path.join(test_folder_m, "dataframe.csv"),
         DataTreeOutputSetting(path=os.path.join(test_folder_m, "datatree.nc")),
     ]
+    column = "kappa_area"
+    if tokamak in [Tokamak.HBTEP, Tokamak.MAST]:
+        column = "ip"
     retrieval_settings = RetrievalSettings(
         efit_nickname_setting="disruption",
-        run_columns=["kappa"],
+        run_columns=[column],
         only_requested_columns=True,
     )
     return get_shots_data(
@@ -71,6 +75,9 @@ def test_output_exists(fresh_data, test_folder_m):
     ds_dsk = xr.open_dataset(ds_path)
     dt_dsk = xr.open_datatree(dt_path)
     df_dsk = pd.read_csv(df_path, index_col=0)
+    for col in df_dsk:
+        if df_dsk[col].dtype == "float64":
+            df_dsk[col] = df_dsk[col].astype("float32")
 
     # format types
     assert isinstance(dict_out, dict), "Wrong type for dict output"
@@ -87,8 +94,8 @@ def test_output_exists(fresh_data, test_folder_m):
     pd.testing.assert_frame_equal(df_out, df_dsk)
 
     # format equivalence
-    xr.testing.assert_identical(ds_out, xr.concat(dict_out.values(), dim="idx"))
-    xr.testing.assert_identical(
-        ds_out, xr.concat([dt.to_dataset() for dt in dt_out.values()], dim="idx")
-    )
+    for ds_list in [dict_out.values(), [dt.to_dataset() for dt in dt_out.values()]]:
+        xr.testing.assert_identical(
+            ds_out, xr.concat(ds_list, dim="idx").sortby(["shot", "time"])
+        )
     pd.testing.assert_frame_equal(df_out, ds_out.to_dataframe()[df_out.columns])

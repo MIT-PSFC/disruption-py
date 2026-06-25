@@ -79,7 +79,7 @@ class EastEfitMethods:
             for k, v in EastEfitMethods.efit_cols.items()
         }
         efit_time = params.mds_conn.get_data(
-            r"\efit_aeqdsk:atime", tree_name="_efit_tree", astype="float64"
+            r"\efit_aeqdsk:atime", tree_name="_efit_tree"
         )  # TODO: [unit?]
 
         # EFIT reconstructions are sometimes invalid, particularly when very close

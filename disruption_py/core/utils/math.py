@@ -13,8 +13,9 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 from scipy.interpolate import interp1d
+from scipy.ndimage import gaussian_filter1d
 from scipy.optimize import OptimizeWarning, curve_fit
-from scipy.signal import lfilter, medfilt
+from scipy.signal import butter, lfilter, medfilt
 
 pd.options.mode.chained_assignment = None
 
@@ -1007,3 +1008,55 @@ def matlab_gradient_1d_vectorized(f, h, **_kwargs):
     g[1:-1] = (f[2:] - f[:-2]) / (h[2:] - h[:-2])
 
     return g
+
+
+def butterworth_filter(signal, fs, cutoff, order, btype="high"):
+    """
+    Apply a Butterworth filter to a signal
+    """
+    nyq = 0.5 * fs
+    normal_cutoff = cutoff / nyq
+    b, a = butter(order, normal_cutoff, btype=btype, analog=False)
+    y = lfilter(b, a, signal)
+    return y
+
+
+def gaussian_low_pass_filter(y, t, time_width=1.0 / 20000):
+    """
+    Low pass filter using scipy's gaussian filters.
+    Note that this is not a causal filter.
+
+    Parameters
+    ----------
+    y : numpy.array
+        time dependent data
+    t : numpy.array
+        time
+    timeWidth : float
+        Full Width at Half Maximum (FWHM) of the Gaussian in the time domain. This
+        effectively sets the cutoff frequency of the filter.
+
+    Returns
+    -------
+    yFiltered : numpy.array
+        filtered time dependent data
+
+    References
+    ----------
+    https://en.wikipedia.org/wiki/Full_width_at_half_maximum
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.ndimage.gaussian_filter1d.html
+
+    """
+    if len(t) < 2:
+        return y
+
+    dt = t[1] - t[0]
+
+    # Calculate sigma from FWHM (time_width).
+    # The relationship is FWHM = 2 * sqrt(2 * ln(2)) * sigma_time_domain,
+    # which is approximately FWHM = 2.355 * sigma_time_domain.
+    # We need to find sigma_time_domain in units of samples, so we divide by dt.
+    sigma_time_domain = time_width / (2 * np.sqrt(2 * np.log(2)))
+    sigma_in_samples = sigma_time_domain / dt
+
+    return gaussian_filter1d(y, sigma=sigma_in_samples, mode="reflect")
