@@ -1,8 +1,9 @@
 [mast.inout.sql]
 
 [mast.inout.xarray]
+endpoint_url = "https://s3.echo.stfc.ac.uk"
 file_ext = "zarr"
-file_path = "./"
+file_path = "mast/level2/shots"
 
 [mast.physics.attributes.a_minor]
 description = "Minor radius of the plasma boundary (defined as (Rmax-Rmin) / 2 of the boundary)"
