@@ -675,7 +675,13 @@ class MastPhysicsMethods:
         if any(
             not np.isfinite(x).any() for x in (z_ref, zip_prx, t_ctrl, ip_raw, t_ip)
         ):
-            raise CalculationError("z_parameters: required signal(s) not available.")
+            params.logger.warning(
+                "z_parameters: required signal(s) not available. Returning NaNs."
+            )
+            return {
+                col: [np.nan]
+                for col in ("z_error", "z_prog", "z_cur", "v_z", "z_times_v_z")
+            }
 
         ip_ctrl = MastUtilMethods.interpolate_1d(t_ip, ip_raw, t_ctrl)
 
