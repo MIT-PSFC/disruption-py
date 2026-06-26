@@ -2161,9 +2161,12 @@ class CmodPhysicsMethods:
         References
         ----------
         - Scaling from eq. 20, [ITER Physics Basis Chapter 2][ITER_reference]
+        - Data used to construct the scaling are described in
+          [ITER H Mode Confinement Database Update][DB2]
         - pull requests: #[562](https://github.com/MIT-PSFC/disruption-py/pull/562)
 
         [ITER_reference]: https://iopscience.iop.org/article/10.1088/0029-5515/39/12/302/pdf
+        [DB2]: https://iopscience.iop.org/article/10.1088/0029-5515/34/1/I10/pdf
         """
 
         # Get parameters for calculating confinement time
