@@ -46,7 +46,7 @@ jobs:
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Add MDSplus sources
         if: ${{ matrix.tokamak == 'C-MOD'
