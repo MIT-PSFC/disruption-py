@@ -29,6 +29,93 @@ from disruption_py.machine.cmod.thomson import CmodThomsonDensityMeasure
 from disruption_py.machine.tokamak import Tokamak
 
 
+def _lcfs_crossing_radius(
+    r_from_axis: np.ndarray, psi_n_from_axis: np.ndarray
+) -> float:
+    """Midplane radius where psi_n first crosses 1, walking away from the axis.
+
+    Both arrays must be ordered starting at the axis and moving outward.
+    Returns NaN if psi_n never reaches 1.
+    """
+    above = psi_n_from_axis >= 1.0
+    if not above.any():
+        return np.nan
+    idx = int(np.argmax(above))
+    if idx == 0:
+        return float(r_from_axis[0])
+    r0, r1 = float(r_from_axis[idx - 1]), float(r_from_axis[idx])
+    p0, p1 = float(psi_n_from_axis[idx - 1]), float(psi_n_from_axis[idx])
+    if p1 == p0:
+        return r1
+    return r0 + (1.0 - p0) * (r1 - r0) / (p1 - p0)
+
+
+def _map_r_mid_to_psi_n_and_rho(
+    r_mid: np.ndarray,
+    times: np.ndarray,
+    efit_time: np.ndarray,
+    ssimag: np.ndarray,
+    ssibry: np.ndarray,
+    rgrid: np.ndarray,
+    zgrid: np.ndarray,
+    psirz: np.ndarray,
+    zmagx: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Map midplane major radii (time, channel) [m] to psi_n and rho using
+    the nearest EFIT equilibrium, evaluated at the magnetic axis height.
+
+    rho is the normalized minor radius: the channel's midplane distance
+    from the magnetic axis divided by the axis-to-LCFS distance on the
+    same side (inboard/outboard), so 0 = axis and 1 = LCFS.
+    """
+    psi_n = np.full(r_mid.shape, np.nan, dtype=np.float32)
+    rho = np.full(r_mid.shape, np.nan, dtype=np.float32)
+    t_eq_indices = np.argmin(np.abs(efit_time[:, None] - times[None, :]), axis=0)
+    for i, i_eq in enumerate(t_eq_indices):
+        denom = ssibry[i_eq] - ssimag[i_eq]
+        if not np.isfinite(denom) or np.abs(denom) < 1e-10:
+            continue
+        # psi along the midplane (z = magnetic axis height)
+        psi_mid = np.array(
+            [
+                np.interp(zmagx[i_eq], zgrid, psirz[i_eq, :, j])
+                for j in range(len(rgrid))
+            ]
+        )
+        psi_n_mid = (psi_mid - ssimag[i_eq]) / denom
+        psi_n[i, :] = np.interp(r_mid[i, :], rgrid, psi_n_mid)
+
+        # Magnetic axis radius from the midplane psi_n minimum,
+        # parabola-refined since the EFIT grid is coarse (a few cm)
+        i_axis = int(np.argmin(psi_n_mid))
+        r_axis = float(rgrid[i_axis])
+        if 0 < i_axis < len(rgrid) - 1:
+            p_m = psi_n_mid[i_axis - 1]
+            p_0 = psi_n_mid[i_axis]
+            p_p = psi_n_mid[i_axis + 1]
+            curv = p_m - 2 * p_0 + p_p
+            if curv > 0:
+                r_axis += (
+                    0.5
+                    * (p_m - p_p)
+                    / curv
+                    * float(rgrid[i_axis + 1] - rgrid[i_axis - 1])
+                    / 2.0
+                )
+
+        # LCFS midplane radii on each side of the axis
+        r_lcfs_out = _lcfs_crossing_radius(rgrid[i_axis:], psi_n_mid[i_axis:])
+        r_lcfs_in = _lcfs_crossing_radius(rgrid[i_axis::-1], psi_n_mid[i_axis::-1])
+
+        r_ch = r_mid[i, :]
+        outboard = r_ch >= r_axis
+        if np.isfinite(r_lcfs_out) and r_lcfs_out > r_axis:
+            rho[i, outboard] = (r_ch[outboard] - r_axis) / (r_lcfs_out - r_axis)
+        if np.isfinite(r_lcfs_in) and r_lcfs_in < r_axis:
+            rho[i, ~outboard] = (r_axis - r_ch[~outboard]) / (r_axis - r_lcfs_in)
+    return psi_n, rho
+
+
 class CmodPhysicsMethods:
     """
     This class provides methods to retrieve and calculate physics-related data
@@ -1462,7 +1549,7 @@ class CmodPhysicsMethods:
             )
             if np.mean(nl_ts1) != 1e32 and np.mean(nl_ts2) != 1e32:
                 nl_tci = np.concatenate((nl_tci1, nl_tci2))
-                nl_ts = np.concatenate((nl_ts1 + nl_ts2))
+                nl_ts = np.concatenate(nl_ts1 + nl_ts2)
                 calib = np.mean(nl_tci) / np.mean(nl_ts)
             elif np.mean(nl_ts1) != 1e32 and np.mean(nl_ts2) == 1e32:
                 calib = np.mean(nl_tci1) / np.mean(nl_ts1)
@@ -1488,13 +1575,20 @@ class CmodPhysicsMethods:
         """
         Retrieve raw Thomson scattering measurement channels for electron temperature and density.
         Combines both core and edge Thomson data into a single dataset.
-        Channel locations are given on the normalized poloidal flux (psi_n) grid.
+        Channel locations are given both as normalized poloidal flux (psi_n) and as
+        normalized minor radius (rho).
 
         The stored core psinorm node (.yag_new.results.profiles.psinorm) is empty on
         most shots, so instead the channel midplane-mapped major radii (r_mid_t / rmid)
         are mapped to psi_n using the EFIT flux at the magnetic axis height. The same
         mapping is used for core and edge so the channel locations are consistent
         (the stored edge psinorm agrees with this mapping to within ~0.01).
+
+        rho is computed by comparing the channel midplane radius to the magnetic
+        axis and LCFS radii on the same midplane psi profile:
+        rho = (R_mid - R_axis) / (R_lcfs - R_axis) on the channel's side of the
+        axis, so 0 = axis and 1 = LCFS. This is the channel's location in real
+        space, NOT sqrt(psi_n).
 
         A few notes:
         - Thomson YAG time by default runs from -0.5s to 2.0s (https://cmodwiki.psfc.mit.edu/index.php/Thomson_scattering_programming)
@@ -1523,27 +1617,12 @@ class CmodPhysicsMethods:
         ssibry = params.get_data(r"\efit_g_eqdsk:ssibry", tree_name="_efit_tree")
         rgrid = params.get_data(r"\efit_g_eqdsk:rgrid", tree_name="_efit_tree")  # [m]
         zgrid = params.get_data(r"\efit_g_eqdsk:zgrid", tree_name="_efit_tree")  # [m]
-        psirz = params.get_data(r"\efit_g_eqdsk:psirz", tree_name="_efit_tree")  # (time, z, r)
-        zmagx = params.get_data(r"\efit_aeqdsk:zmagx", tree_name="_efit_tree") / 100  # [cm] -> [m]
-
-        def map_r_mid_to_psi_n(r_mid: np.ndarray, times: np.ndarray) -> np.ndarray:
-            """Map midplane major radii (time, channel) [m] to psi_n using the
-            nearest EFIT equilibrium, evaluated at the magnetic axis height."""
-            psi_n = np.full(r_mid.shape, np.nan, dtype=np.float32)
-            t_eq_indices = np.argmin(np.abs(efit_time[:, None] - times[None, :]), axis=0)
-            for i, i_eq in enumerate(t_eq_indices):
-                denom = ssibry[i_eq] - ssimag[i_eq]
-                if not np.isfinite(denom) or np.abs(denom) < 1e-10:
-                    continue
-                # psi along the midplane (z = magnetic axis height)
-                psi_mid = np.array(
-                    [
-                        np.interp(zmagx[i_eq], zgrid, psirz[i_eq, :, j])
-                        for j in range(len(rgrid))
-                    ]
-                )
-                psi_n[i, :] = (np.interp(r_mid[i, :], rgrid, psi_mid) - ssimag[i_eq]) / denom
-            return psi_n
+        psirz = params.get_data(
+            r"\efit_g_eqdsk:psirz", tree_name="_efit_tree"
+        )  # (time, z, r)
+        zmagx = (
+            params.get_data(r"\efit_aeqdsk:zmagx", tree_name="_efit_tree") / 100
+        )  # [cm] -> [m]
 
         data_vars = {}
         for region, nodes in zip(["core", "edge"], [core_nodes, edge_nodes]):
@@ -1561,7 +1640,17 @@ class CmodPhysicsMethods:
                 r_mid_data = r_mid_data.astype(np.float64)
                 r_mid_data[r_mid_data == -1] = np.nan
 
-                psi_n_data = map_r_mid_to_psi_n(r_mid_data.T, r_mid_time)  # (time, channel)
+                psi_n_data, rho_data = _map_r_mid_to_psi_n_and_rho(
+                    r_mid_data.T,
+                    r_mid_time,
+                    efit_time,
+                    ssimag,
+                    ssibry,
+                    rgrid,
+                    zgrid,
+                    psirz,
+                    zmagx,
+                )  # each (time, channel)
                 psi_n_time = r_mid_time
 
                 data_vars[f"psi_n_{region}"] = xr.DataArray(
@@ -1570,6 +1659,14 @@ class CmodPhysicsMethods:
                     coords={
                         "time": psi_n_time,
                         f"{region}_channel": np.arange(psi_n_data.shape[1]),
+                    },
+                )
+                data_vars[f"rho_{region}"] = xr.DataArray(
+                    rho_data.astype(np.float32),
+                    dims=("time", f"{region}_channel"),
+                    coords={
+                        "time": psi_n_time,
+                        f"{region}_channel": np.arange(rho_data.shape[1]),
                     },
                 )
 
@@ -1642,6 +1739,10 @@ class CmodPhysicsMethods:
                 [data_vars["psi_n_core"].values, data_vars["psi_n_edge"].values],
                 axis=1,
             )
+            rho_combined = np.concatenate(
+                [data_vars["rho_core"].values, data_vars["rho_edge"].values],
+                axis=1,
+            )
             ne_combined = np.concatenate(
                 [data_vars["ne_core"].values, data_vars["ne_edge"].values],
                 axis=1,
@@ -1662,6 +1763,7 @@ class CmodPhysicsMethods:
             ts_channel = np.arange(n_core_channels)
             ts_array = np.array(["core"] * n_core_channels)
             psi_n_combined = data_vars["psi_n_core"].values
+            rho_combined = data_vars["rho_core"].values
             ne_combined = data_vars["ne_core"].values
             ne_error_combined = data_vars["ne_error_core"].values
             te_combined = data_vars["te_core"].values
@@ -1669,11 +1771,30 @@ class CmodPhysicsMethods:
 
         profile_ds = xr.Dataset(
             data_vars={
-                "ts_channel_psi_n": (("time", "ts_channel_idx"), psi_n_combined.astype(np.float32)),
-                "ts_channel_ne": (("time", "ts_channel_idx"), ne_combined.astype(np.float32)),
-                "ts_channel_ne_error": (("time", "ts_channel_idx"), ne_error_combined.astype(np.float32)),
-                "ts_channel_te": (("time", "ts_channel_idx"), te_combined.astype(np.float32)),
-                "ts_channel_te_error": (("time", "ts_channel_idx"), te_error_combined.astype(np.float32)),
+                "ts_channel_psi_n": (
+                    ("time", "ts_channel_idx"),
+                    psi_n_combined.astype(np.float32),
+                ),
+                "ts_channel_rho": (
+                    ("time", "ts_channel_idx"),
+                    rho_combined.astype(np.float32),
+                ),
+                "ts_channel_ne": (
+                    ("time", "ts_channel_idx"),
+                    ne_combined.astype(np.float32),
+                ),
+                "ts_channel_ne_error": (
+                    ("time", "ts_channel_idx"),
+                    ne_error_combined.astype(np.float32),
+                ),
+                "ts_channel_te": (
+                    ("time", "ts_channel_idx"),
+                    te_combined.astype(np.float32),
+                ),
+                "ts_channel_te_error": (
+                    ("time", "ts_channel_idx"),
+                    te_error_combined.astype(np.float32),
+                ),
             },
             coords={
                 "time": data_vars["psi_n_core"]["time"].values,
@@ -1694,8 +1815,8 @@ class CmodPhysicsMethods:
     def get_thomson_channels(params: PhysicsMethodParams):
         """
         Retrieve the raw Thomson scattering channels (core and edge) with the
-        channel locations on the normalized poloidal flux (psi_n) grid, on the
-        Thomson measurement timebase.
+        channel locations given as normalized poloidal flux (psi_n) and as
+        normalized minor radius (rho), on the Thomson measurement timebase.
         """
         ds_raw = CmodPhysicsMethods._get_thomson_channels_raw(params)
         if ds_raw is None:
@@ -1704,6 +1825,7 @@ class CmodPhysicsMethods:
         ds = xr.Dataset(
             data_vars={
                 "ts_channel_psi_n": ds_raw["ts_channel_psi_n"],
+                "ts_channel_rho": ds_raw["ts_channel_rho"],
                 "ts_channel_ne": ds_raw["ts_channel_ne"],
                 "ts_channel_ne_error": ds_raw["ts_channel_ne_error"],
                 "ts_channel_te": ds_raw["ts_channel_te"],
