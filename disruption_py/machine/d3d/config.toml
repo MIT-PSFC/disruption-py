@@ -1,5 +1,5 @@
 [d3d.efit]
-runtag = "DIS"
+runtag = "DISPY"
 
 [d3d.inout.mds]
 mdsplus_connection_string = "atlas"
