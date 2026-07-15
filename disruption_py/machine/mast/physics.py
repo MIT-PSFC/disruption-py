@@ -238,6 +238,9 @@ class MastPhysicsMethods:
             raise MismatchCalculationError(
                 f"len(n_e) = {len(n_e)} vs. len(t_n) = {len(t_n)}"
             )
+        MastUtilMethods.require_aligned("n_e", n_e, t_n)
+        MastUtilMethods.require_aligned("ip", ip, t_ip)
+        MastUtilMethods.require_aligned("a_minor", a_minor, t_a)
         # get the gradient of n_E
         dn_dt = np.gradient(n_e, t_n)
         n_e = interp1(t_n, n_e, times)
@@ -388,8 +391,34 @@ class MastPhysicsMethods:
         dict
             A dictionary containing `p_rad_peaking` and `p_rad_peaking_xdiv`.
         """
+        if power.ndim != 2:
+            raise CalculationError(
+                "Expected a 2-D (channel, time) bolometer power array, "
+                f"got shape {power.shape}"
+            )
+
+        # Every per-channel array is indexed by the fan channels selected below
+        n_channels = power.shape[0]
+        per_channel = {
+            "first_point_r": first_r,
+            "first_point_z": first_z,
+            "second_point_r": second_r,
+            "second_point_z": second_z,
+            "validity": validity,
+            "channel_type": channel_type,
+        }
+        for name, array in per_channel.items():
+            if array.shape != (n_channels,):
+                raise CalculationError(
+                    f"bolometer/{name} has shape {array.shape}, "
+                    f"expected ({n_channels},) to match the power array"
+                )
+
         # Use only fan-array channels (type 0) for consistent vertical coverage
         (fan_idx,) = np.where(channel_type == 0)
+        if fan_idx.size == 0:
+            raise CalculationError("No bolometer fan-array channels in this shot")
+
         fan_valid = validity[fan_idx] == 1  # (n_fan,)
 
         fr = first_r[fan_idx]
@@ -485,19 +514,38 @@ class MastPhysicsMethods:
           DOI: 10.1080/15361055.2020.1798589
         """
         conn: XarrayConnection = params.mds_conn
+        shot_id = params.shot_id
 
-        power = conn.get_data(params.shot_id, "bolometer/power").squeeze()
-        bolo_time = conn.get_data(params.shot_id, "bolometer/time")
-        first_r = conn.get_data(params.shot_id, "bolometer/first_point_r").squeeze()
-        first_z = conn.get_data(params.shot_id, "bolometer/first_point_z").squeeze()
-        second_r = conn.get_data(params.shot_id, "bolometer/second_point_r").squeeze()
-        second_z = conn.get_data(params.shot_id, "bolometer/second_point_z").squeeze()
-        validity = conn.get_data(params.shot_id, "bolometer/validity").squeeze()
-        channel_type = conn.get_data(params.shot_id, "bolometer/channel_type").squeeze()
+        power = MastUtilMethods.require_signal(conn, shot_id, "bolometer/power")
+        bolo_time = MastUtilMethods.require_time_base(conn, shot_id, "bolometer/time")
+        first_r = MastUtilMethods.require_signal(
+            conn, shot_id, "bolometer/first_point_r"
+        )
+        first_z = MastUtilMethods.require_signal(
+            conn, shot_id, "bolometer/first_point_z"
+        )
+        second_r = MastUtilMethods.require_signal(
+            conn, shot_id, "bolometer/second_point_r"
+        )
+        second_z = MastUtilMethods.require_signal(
+            conn, shot_id, "bolometer/second_point_z"
+        )
+        validity = MastUtilMethods.require_signal(conn, shot_id, "bolometer/validity")
+        channel_type = MastUtilMethods.require_signal(
+            conn, shot_id, "bolometer/channel_type"
+        )
 
-        rmag = conn.get_data(params.shot_id, "equilibrium/magnetic_axis_r").squeeze()
-        zmag = conn.get_data(params.shot_id, "equilibrium/magnetic_axis_z").squeeze()
-        efit_time = conn.get_data(params.shot_id, "equilibrium/time")
+        rmag = MastUtilMethods.require_signal(
+            conn, shot_id, "equilibrium/magnetic_axis_r"
+        )
+        zmag = MastUtilMethods.require_signal(
+            conn, shot_id, "equilibrium/magnetic_axis_z"
+        )
+        efit_time = MastUtilMethods.require_time_base(conn, shot_id, "equilibrium/time")
+
+        MastUtilMethods.require_aligned("bolometer/power", power, bolo_time)
+        MastUtilMethods.require_aligned("equilibrium/magnetic_axis_r", rmag, efit_time)
+        MastUtilMethods.require_aligned("equilibrium/magnetic_axis_z", zmag, efit_time)
 
         return MastPhysicsMethods._get_prad_peaking(
             params.times,
