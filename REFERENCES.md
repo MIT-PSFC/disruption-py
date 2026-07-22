@@ -25,6 +25,8 @@ Here follows a non-exhaustive list of projects, publications, and conference con
 - MIT PSFC Disruption Studies Group (2023-2024), _"AI/ML For Fusion -- Database preparation workflows"_, Github, [`MIT-PSFC/wm-summer-school`](https://github.com/MIT-PSFC/wm-summer-school)
 
 ### Conferences
+- [Fourth IAEA Technical Meeting on Plasma Disruptions and their Mitigation](https://conferences.iaea.org/event/451/)
+  - AR Saperstein, _et al._ (2026)_"Off-Normal Simulations (ONSIMs) of radiative collapses on Alcator C-Mod"_
 
 - [46th ITPEA-MDC Meeting (2026)](https://www.iter.org/scientists/itpa/itpea-meetings)
   - Z Keith, _et al._ (2026), _"Multi-device validation of tearing physics"_
