@@ -26,6 +26,9 @@ Here follows a non-exhaustive list of projects, publications, and conference con
 
 ### Conferences
 
+- 68th APS-DPP Meeting (2026)
+  - GL Trevisan, _et al._ (2026), _"An open-access multi-tokamak dataset for transient analysis and AI/ML studies"
+
 - [46th ITPEA-MDC Meeting (2026)](https://www.iter.org/scientists/itpa/itpea-meetings)
   - Z Keith, _et al._ (2026), _"Multi-device validation of tearing physics"_
   - AR Saperstein, _et al._ (2026), _"Off-normal simulations of radiative collapse events in Alcator C-Mod"_
