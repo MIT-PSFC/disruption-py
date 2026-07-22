@@ -30,7 +30,10 @@ Here follows a non-exhaustive list of projects, publications, and conference con
 - 68th APS-DPP Meeting (2026)
   - GL Trevisan, _et al._ (2026), _"An open-access multi-tokamak dataset for transient analysis and AI/ML studies"_
   - S Chaturvedi, _et al._ (2026), _"Maintainable and Extensible Software Architecture for Multi-Machine Disruption Studies with DisruptionPy"_
+  - Z Keith, _et al._ (2026), _"Comparing hybrid physics models for full-shot transport prediction"_
 
+- [7th International Conference on Data-Driven Plasma Science (2026)](https://www.icddps.org/)
+  - Z Keith, _et al._ (2026), _"Benchmarking hybrid models for full-shot transport prediction"_
 
 - [46th ITPEA-MDC Meeting (2026)](https://www.iter.org/scientists/itpa/itpea-meetings)
   - Z Keith, _et al._ (2026), _"Multi-device validation of tearing physics"_
