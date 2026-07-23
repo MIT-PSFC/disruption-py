@@ -30,6 +30,7 @@ Here follows a non-exhaustive list of projects, publications, and conference con
   - GL Trevisan, _et al._ (2026), _"An open-access multi-tokamak dataset for transient analysis and AI/ML studies"_
   - S Chaturvedi, _et al._ (2026), _"Maintainable and Extensible Software Architecture for Multi-Machine Disruption Studies with DisruptionPy"_
   - Z Keith, _et al._ (2026), _"Comparing hybrid physics models for full-shot transport prediction"_
+  - M Tobin, _et al._ (2026), _"A multi-tokamak study of neoclassical tearing mode seeding phenomena with automated database analysis"_
 
 - [7th International Conference on Data-Driven Plasma Science (2026)](https://www.icddps.org/)
   - Z Keith, _et al._ (2026), _"Benchmarking hybrid models for full-shot transport prediction"_
