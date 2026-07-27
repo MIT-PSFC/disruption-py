@@ -6,11 +6,17 @@ Physics methods for MAST.
 """
 
 import numpy as np
+import scipy.constants as const
 
 from disruption_py.core.physics_method.decorator import physics_method
-from disruption_py.core.physics_method.errors import MismatchCalculationError
+from disruption_py.core.physics_method.errors import (
+    MismatchCalculationError,
+    CalculationError,
+)
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import causal_boxcar_smooth, interp1
+from disruption_py.core.utils.math import gaussian_fit, interp1
+from disruption_py.inout.xr import XarrayDataConnection
 from disruption_py.machine.mast.util import MastUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 
@@ -64,7 +70,7 @@ class MastPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["p_nbi", "p_ohm", "p_rad"],
+        columns=["p_nbi", "p_oh", "p_rad"],
         tokamak=Tokamak.MAST,
     )
     def get_power(params: PhysicsMethodParams):
@@ -79,7 +85,7 @@ class MastPhysicsMethods:
         -------
         dict
             A dictionary containing neutral beam injection power (`p_nbi`),
-            ohmic power (`p_ohm`), and radiated power (`p_rad`).
+            ohmic power (`p_oh`), and radiated power (`p_rad`).
         """
 
         power_nbi = params.get_data("summary/power_nbi")
@@ -92,7 +98,7 @@ class MastPhysicsMethods:
         power_radiated = MastUtilMethods.interpolate_1d(
             base_time, power_radiated, times
         )
-        return {"p_nbi": power_nbi, "p_ohm": power_ohm, "p_rad": power_radiated}
+        return {"p_nbi": power_nbi, "p_oh": power_ohm, "p_rad": power_radiated}
 
     @staticmethod
     @physics_method(
@@ -135,7 +141,7 @@ class MastPhysicsMethods:
 
     @staticmethod
     @physics_method(
-        columns=["t_e_core", "n_e_core"],
+        columns=["te_core", "ne_core"],
         tokamak=Tokamak.MAST,
     )
     def get_ts_parameters(params: PhysicsMethodParams):
@@ -149,8 +155,8 @@ class MastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing core electron temperature (`t_e_core`) and
-            core electron density (`n_e_core`).
+            A dictionary containing core electron temperature (`te_core`) and
+            core electron density (`ne_core`).
         """
         times = params.times
 
@@ -158,9 +164,9 @@ class MastPhysicsMethods:
         n_e_core = params.get_data("thomson_scattering/n_e_core")
         base_time = params.get_data("thomson_scattering/time")
 
-        t_e_core = MastUtilMethods.interpolate_1d(base_time, t_e_core, times)
-        n_e_core = MastUtilMethods.interpolate_1d(base_time, n_e_core, times)
-        return {"t_e_core": t_e_core, "n_e_core": n_e_core}
+        te_core = MastUtilMethods.interpolate_1d(base_time, t_e_core, times)
+        ne_core = MastUtilMethods.interpolate_1d(base_time, n_e_core, times)
+        return {"te_core": te_core, "ne_core": ne_core}
 
     @staticmethod
     @physics_method(
@@ -389,7 +395,7 @@ class MastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing `p_rad_peaking` and `p_rad_peaking_xdiv`.
+            A dictionary containing `prad_peaking`.
         """
         if power.ndim != 2:
             raise CalculationError(
@@ -473,11 +479,11 @@ class MastPhysicsMethods:
 
         prad_cva = MastUtilMethods.interpolate_1d(bolo_time, prad_cva, times)
 
-        return {"p_rad_peaking": prad_cva}
+        return {"prad_peaking": prad_cva}
 
     @staticmethod
     @physics_method(
-        columns=["p_rad_peaking"],
+        columns=["prad_peaking"],
         tokamak=Tokamak.MAST,
     )
     def get_prad_peaking(params: PhysicsMethodParams):
@@ -506,7 +512,7 @@ class MastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing `p_rad_peaking`.
+            A dictionary containing `prad_peaking`.
 
         References
         -------
@@ -563,9 +569,10 @@ class MastPhysicsMethods:
         )
 
     @staticmethod
-    def _get_te_ne_peaking(times, te_profile, ne_profile, rho, ts_time):
+    def _get_te_ne_peaking(times, te_profile, ne_profile, pe_profile, rho, ts_time):
         """
-        Calculate Te and ne peaking factors from Thomson scattering profile data.
+        Calculate Te, ne and pressure peaking factors from Thomson scattering
+        profile data.
 
         Following Rea et al. (2020), the core bin is defined as channels with
         normalized effective radius rho < 0.3. The peaking factor is the ratio of
@@ -579,6 +586,8 @@ class MastPhysicsMethods:
             Electron temperature profile, shape (n_channels, n_times), in eV.
         ne_profile : np.ndarray
             Electron density profile, shape (n_channels, n_times), in m^-3.
+        pe_profile : np.ndarray
+            Electron pressure profile, shape (n_channels, n_times), in Pa.
         rho : np.ndarray
             Normalized effective radius (rho = r/r_boundary) for each Thomson channel,
             shape (n_channels,).
@@ -588,7 +597,8 @@ class MastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing `t_e_peaking` and `n_e_peaking`.
+            A dictionary containing `te_peaking`, `ne_peaking` and
+            `pressure_peaking`.
         """
         core_mask = (
             rho < 0.3
@@ -596,11 +606,14 @@ class MastPhysicsMethods:
         n_times = len(ts_time)
         te_pf = np.full(n_times, np.nan)
         ne_pf = np.full(n_times, np.nan)
+        pressure_pf = np.full(n_times, np.nan)
 
         for i_time in range(n_times):
             te_t = te_profile[:, i_time]
             ne_t = ne_profile[:, i_time]
+            pe_t = pe_profile[:, i_time]
 
+            # one shared mask, so the three factors are computed over the same channels
             valid = np.isfinite(te_t) & np.isfinite(ne_t) & (te_t > 0) & (ne_t > 0)
             core_valid = valid & core_mask
 
@@ -609,24 +622,33 @@ class MastPhysicsMethods:
 
             te_avg = np.mean(te_t[valid])
             ne_avg = np.mean(ne_t[valid])
+            pe_avg = np.mean(pe_t[valid])
             if te_avg > 0:
                 te_pf[i_time] = np.mean(te_t[core_valid]) / te_avg
             if ne_avg > 0:
                 ne_pf[i_time] = np.mean(ne_t[core_valid]) / ne_avg
+            if pe_avg > 0:
+                pressure_pf[i_time] = np.mean(pe_t[core_valid]) / pe_avg
 
         te_pf = MastUtilMethods.interpolate_1d(ts_time, te_pf, times)
         ne_pf = MastUtilMethods.interpolate_1d(ts_time, ne_pf, times)
+        pressure_pf = MastUtilMethods.interpolate_1d(ts_time, pressure_pf, times)
 
-        return {"t_e_peaking": te_pf, "n_e_peaking": ne_pf}
+        return {
+            "te_peaking": te_pf,
+            "ne_peaking": ne_pf,
+            "pressure_peaking": pressure_pf,
+        }
 
     @staticmethod
     @physics_method(
-        columns=["t_e_peaking", "n_e_peaking"],
+        columns=["te_peaking", "ne_peaking", "pressure_peaking"],
         tokamak=Tokamak.MAST,
     )
     def get_te_ne_peaking(params: PhysicsMethodParams):
         r"""
-        Calculate Te and ne peaking factors from Thomson scattering profile data.
+        Calculate Te, ne and pressure peaking factors from Thomson scattering
+        profile data.
 
         The peaking factor for each quantity is defined following Rea et al. (2020):
 
@@ -634,10 +656,15 @@ class MastPhysicsMethods:
         T_{e,\text{pf}} = \frac{\langle T_j \rangle_{j \in C}}{T_{\text{avg}}}
         \qquad
         n_{e,\text{pf}} = \frac{\langle n_j \rangle_{j \in C}}{n_{\text{avg}}}
+        \qquad
+        p_{e,\text{pf}} = \frac{\langle p_j \rangle_{j \in C}}{p_{\text{avg}}}
         $$
 
         where C is the set of Thomson scattering channels with normalized effective
         radius $\rho_j < 0.3$ and the denominators are mean values over all channels.
+
+        The electron pressure profile is read from ``thomson_scattering/p_e`` where
+        available, and otherwise reconstructed as $p_e = n_e k T_e$.
 
         Parameters
         ----------
@@ -647,7 +674,8 @@ class MastPhysicsMethods:
         Returns
         -------
         dict
-            A dictionary containing `t_e_peaking` and `n_e_peaking`.
+            A dictionary containing `te_peaking`, `ne_peaking` and
+            `pressure_peaking`.
 
         Raises
         ------
@@ -671,6 +699,9 @@ class MastPhysicsMethods:
         ne_xr = conn.get_data(
             params.shot_id, "thomson_scattering/n_e", return_xarray=True
         )
+        pe_xr = conn.get_data(
+            params.shot_id, "thomson_scattering/p_e", return_xarray=True
+        )
 
         if any(x is None for x in (te_xr, ne_xr)):
             raise CalculationError(
@@ -678,37 +709,168 @@ class MastPhysicsMethods:
                 "Requires zarr paths: thomson_scattering/t_e, thomson_scattering/n_e."
             )
 
+        te_profile = te_xr.values.squeeze()
+        ne_profile = ne_xr.values.squeeze()
+        if pe_xr is None:
+            # p_e = n_e k T_e, with T_e in eV so that k T_e = e * T_e [J]
+            params.logger.warning(
+                "thomson_scattering/p_e unavailable, reconstructing from n_e and t_e."
+            )
+            pe_profile = ne_profile * te_profile * const.e
+        else:
+            pe_profile = pe_xr.values.squeeze()
+
         r_ts = te_xr.coords["major_radius"].values
         ts_time = te_xr.coords["time"].values
 
-        # Compute normalised effective radius rho = |R_TS - R_mag| / a_minor
-        # using time-averaged equilibrium values (TS channels are at fixed R).
-        r_mag = conn.get_data(params.shot_id, "equilibrium/magnetic_axis_r")
-        a_minor = conn.get_data(params.shot_id, "equilibrium/minor_radius")
-        r_mag_mean = np.nanmean(r_mag)
-        a_minor_mean = np.nanmean(a_minor)
-        if (
-            not np.isfinite(r_mag_mean)
-            or not np.isfinite(a_minor_mean)
-            or a_minor_mean <= 0
-        ):
-            raise CalculationError(
-                "Cannot compute rho for Thomson scattering channels: "
-                "equilibrium magnetic_axis_r or minor_radius unavailable."
-            )
-        rho = np.abs(r_ts - r_mag_mean) / a_minor_mean
+        rho, _, _ = MastUtilMethods.thomson_rho(conn, params.shot_id, r_ts)
 
         return MastPhysicsMethods._get_te_ne_peaking(
             params.times,
-            te_xr.values.squeeze(),
-            ne_xr.values.squeeze(),
+            te_profile,
+            ne_profile,
+            pe_profile,
             rho,
             ts_time,
         )
 
     @staticmethod
+    def _get_te_width(times, te_profile, r_ts, ts_time, r_mag, a_minor):
+        """
+        Fit a Gaussian to each electron temperature profile and return its
+        half-width at half-maximum.
+
+        Parameters
+        ----------
+        times : array_like
+            Requested time basis.
+        te_profile : np.ndarray
+            Electron temperature profile, shape (n_channels, n_times), in eV.
+        r_ts : np.ndarray
+            Major radius of each Thomson scattering channel [m], shape (n_channels,).
+        ts_time : np.ndarray
+            Time base of the Thomson scattering measurements.
+        r_mag : float
+            Time-averaged major radius of the magnetic axis [m], used to reject fits
+            whose centre falls outside the plasma.
+        a_minor : float
+            Time-averaged minor radius [m], used as the scale for both the centre and
+            the width rejection windows.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the electron temperature profile width
+            (`te_width`).
+        """
+        # sort by major radius
+        idx = np.argsort(r_ts)
+        r_ts = r_ts[idx]
+        te_profile = te_profile[idx]
+        # init output
+        te_hwhm = np.full(len(ts_time), np.nan)
+        # select valid times, dropping the pre-shot part of the TS time base
+        (valid_times,) = np.where(ts_time > 0)
+        for i_time in valid_times:
+            y = te_profile[:, i_time]
+            (ok_indices,) = np.where(np.isfinite(y) & (y > 0))
+            # skip if not enough points
+            if len(ok_indices) < 3:
+                continue
+            # working arrays
+            y = y[ok_indices]
+            r = r_ts[ok_indices]
+            # initial guess
+            i = y.argmax()
+            guess = [y[i], r[i], (r.max() - r.min()) / 3]
+            # actual fit; MAST level-2 data carries no Te uncertainty, so unlike the
+            # C-Mod equivalent the fit is unweighted
+            try:
+                _, pmean, psigma = gaussian_fit(r, y, guess)
+            except RuntimeError as exc:
+                if str(exc).startswith("Optimal parameters not found"):
+                    continue
+                raise exc
+            # reject points whose fitted centre falls outside the plasma
+            if np.abs(pmean - r_mag) > a_minor:
+                continue
+            # store output
+            te_hwhm[i_time] = np.abs(psigma)
+        # rescale from sigma to HWHM
+        # https://en.wikipedia.org/wiki/Full_width_at_half_maximum
+        te_hwhm *= np.sqrt(2 * np.log(2))
+        # reject points with unphysical HWHM
+        te_hwhm[te_hwhm > a_minor] = np.nan
+        # time interpolation
+        te_hwhm = MastUtilMethods.interpolate_1d(ts_time, te_hwhm, times)
+        return {"te_width": te_hwhm}
+
+    @staticmethod
+    @physics_method(columns=["te_width"], tokamak=Tokamak.MAST)
+    def get_te_width(params: PhysicsMethodParams):
+        """
+        Retrieve the electron temperature profile from the Thomson scattering (TS)
+        diagnostic, then calculate the half-width at half-maximum of the Gaussian
+        fit to the profile.
+
+        MAST's TS channels lie along the major radius, so the fit is performed
+        against `major_radius` rather than the vertical coordinate used on C-Mod.
+        Fits are discarded when the fitted centre falls further than a minor radius
+        from the magnetic axis, or when the resulting width exceeds a minor radius.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the electron temperature profile width
+            (`te_width`).
+
+        Raises
+        ------
+        CalculationError
+            If Thomson scattering profile data is not available for this shot.
+            Required zarr paths: ``thomson_scattering/t_e``,
+            ``equilibrium/magnetic_axis_r``, ``equilibrium/minor_radius``.
+
+        References
+        -------
+        - original source: [get_TS_data_cmod.m](https://github.com/MIT-PSFC/
+        disruption-py/blob/matlab/CMOD/matlab-core/get_TS_data_cmod.m), adapted from
+        the vertical C-Mod geometry to the radial MAST geometry.
+        """
+        conn: XarrayConnection = params.mds_conn
+
+        # 2D profile array: dims (major_radius, time)
+        te_xr = conn.get_data(
+            params.shot_id, "thomson_scattering/t_e", return_xarray=True
+        )
+        if te_xr is None:
+            raise CalculationError(
+                "Thomson scattering profile data not available. "
+                "Requires zarr path: thomson_scattering/t_e."
+            )
+
+        r_ts = te_xr.coords["major_radius"].values
+        ts_time = te_xr.coords["time"].values
+
+        _, r_mag, a_minor = MastUtilMethods.thomson_rho(conn, params.shot_id, r_ts)
+
+        return MastPhysicsMethods._get_te_width(
+            params.times,
+            te_xr.values.squeeze(),
+            r_ts,
+            ts_time,
+            r_mag,
+            a_minor,
+        )
+
+    @staticmethod
     @physics_method(
-        columns=["z_error", "z_prog", "z_cur", "v_z", "z_times_v_z"],
+        columns=["z_error", "z_prog", "zcur", "v_z", "z_times_v_z"],
         tokamak=Tokamak.MAST,
     )
     def get_z_parameters(params: PhysicsMethodParams):
@@ -728,7 +890,7 @@ class MastPhysicsMethods:
             )
             return {
                 col: [np.nan]
-                for col in ("z_error", "z_prog", "z_cur", "v_z", "z_times_v_z")
+                for col in ("z_error", "z_prog", "zcur", "v_z", "z_times_v_z")
             }
 
         ip_ctrl = MastUtilMethods.interpolate_1d(t_ip, ip_raw, t_ctrl)
@@ -736,14 +898,14 @@ class MastPhysicsMethods:
         # Avoid amplifying noise when plasma is off (threshold: 10 kA)
         safe_ip = np.where(np.abs(ip_ctrl) > 1e4, ip_ctrl, np.nan)
 
-        z_cur = zip_prx / safe_ip  # [m·A / A = m]
-        z_error = z_cur - z_ref
-        v_z = np.gradient(z_cur, t_ctrl)
-        z_times_v_z = z_cur * v_z
+        zcur = zip_prx / safe_ip  # [m·A / A = m]
+        z_error = zcur - z_ref
+        v_z = np.gradient(zcur, t_ctrl)
+        z_times_v_z = zcur * v_z
 
         return {
             "z_prog": MastUtilMethods.interpolate_1d(t_ctrl, z_ref, params.times),
-            "z_cur": MastUtilMethods.interpolate_1d(t_ctrl, z_cur, params.times),
+            "zcur": MastUtilMethods.interpolate_1d(t_ctrl, zcur, params.times),
             "z_error": MastUtilMethods.interpolate_1d(t_ctrl, z_error, params.times),
             "v_z": MastUtilMethods.interpolate_1d(t_ctrl, v_z, params.times),
             "z_times_v_z": MastUtilMethods.interpolate_1d(

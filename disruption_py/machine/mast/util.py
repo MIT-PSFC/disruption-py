@@ -180,6 +180,51 @@ class MastUtilMethods:
         return efit_time
 
     @staticmethod
+    def thomson_rho(conn: XarrayConnection, shot_id: int, r_ts: np.ndarray):
+        """
+        Normalised effective radius rho = |R_TS - R_mag| / a_minor for each Thomson
+        scattering channel.
+
+        The Thomson channels sit at fixed major radius, so time-averaged equilibrium
+        values are used. The averages are returned alongside rho because callers also
+        need them to bound profile fits in machine coordinates.
+
+        Parameters
+        ----------
+        conn : XarrayConnection
+            Connection to the data store.
+        shot_id : int
+            Shot number.
+        r_ts : np.ndarray
+            Major radius of each Thomson scattering channel [m].
+
+        Returns
+        -------
+        tuple[np.ndarray, float, float]
+            Normalised effective radius per channel, time-averaged major radius of
+            the magnetic axis [m], time-averaged minor radius [m].
+
+        Raises
+        ------
+        CalculationError
+            If the equilibrium magnetic axis or minor radius is unavailable.
+        """
+        r_mag = conn.get_data(shot_id, "equilibrium/magnetic_axis_r")
+        a_minor = conn.get_data(shot_id, "equilibrium/minor_radius")
+        r_mag_mean = np.nanmean(r_mag)
+        a_minor_mean = np.nanmean(a_minor)
+        if (
+            not np.isfinite(r_mag_mean)
+            or not np.isfinite(a_minor_mean)
+            or a_minor_mean <= 0
+        ):
+            raise CalculationError(
+                "Cannot compute rho for Thomson scattering channels: "
+                "equilibrium magnetic_axis_r or minor_radius unavailable."
+            )
+        return np.abs(r_ts - r_mag_mean) / a_minor_mean, r_mag_mean, a_minor_mean
+
+    @staticmethod
     def interpolate_1d(x: np.ndarray, y: np.ndarray, x_new: np.ndarray) -> np.ndarray:
         """Safely interpolate 1D data with handling for all-NaN y values.
 

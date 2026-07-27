@@ -92,12 +92,12 @@ description = "Measured line-averaged electron density."
 imas = "/summary/line_average/n_e"
 units = "m^-3"
 
-[mast.physics.attributes.n_e_core]
+[mast.physics.attributes.ne_core]
 description = "Core electron density measurement"
 imas = "/thomson_scattering/channel(i1)/n_e"
 units = "m^-3"
 
-[mast.physics.attributes.n_e_peaking]
+[mast.physics.attributes.ne_peaking]
 description = "Peaking factor of the electron density profile measured by the Thomson scattering diagnostic."
 units = "dimensionless"
 
@@ -106,7 +106,7 @@ description = "NBI heating power."
 imas = "/summary/heating_current_drive/power_nbi"
 units = "W"
 
-[mast.physics.attributes.p_ohm]
+[mast.physics.attributes.p_oh]
 description = "Ohmic heating power."
 imas = "/summary/heating_current_drive/power_ohm"
 units = "W"
@@ -116,8 +116,12 @@ description = "Radiated power measured by the 2pi diode."
 imas = "/bolometer/power_radiated_total"
 units = "W"
 
-[mast.physics.attributes.p_rad_peaking]
+[mast.physics.attributes.prad_peaking]
 description = "Peaking factor of the radiated power."
+units = "dimensionless"
+
+[mast.physics.attributes.pressure_peaking]
+description = "Peaking factor of the electron pressure profile measured by the Thomson scattering diagnostic."
 units = "dimensionless"
 
 [mast.physics.attributes.q95]
@@ -147,15 +151,19 @@ units = "V"
 description = "Edge soft X-ray measurement."
 units = "V"
 
-[mast.physics.attributes.t_e_core]
+[mast.physics.attributes.te_core]
 description = "Core electron temperature measurement"
 imas = "/thomson_scattering/channel(i1)/t_e"
 units = "eV"
 
-[mast.physics.attributes.t_e_peaking]
+[mast.physics.attributes.te_peaking]
 description = "Peaking factor of the electron temperature profile measured by the Thomson scattering diagnostic."
 imas = "/core_profiles/global_quantities/t_e_peaking"
 units = "dimensionless"
+
+[mast.physics.attributes.te_width]
+description = "Half-width at half-maximum of the Gaussian fit to the electron temperature profile."
+units = "m"
 
 [mast.physics.attributes.tribot]
 description = "Bottom triangularity (EFIT)."
@@ -198,11 +206,6 @@ description = "Total plasma energy (EFIT)."
 imas = "/equilibrium/time_slice(itime)/global_quantities/energy_mhd"
 units = "J"
 
-[mast.physics.attributes.z_cur]
-description = "Measured vertical position of the plasma current centroid."
-imas = "/equilibrium/time_slice(itime)/global_quantities/current_centre/z"
-units = "m"
-
 [mast.physics.attributes.z_error]
 description = "Difference between the measured and programmed vertical position of the plasma current centroid."
 units = "m"
@@ -215,6 +218,11 @@ units = "m"
 [mast.physics.attributes.z_times_v_z]
 description = "Product of the vertical position and vertical velocity of the plasma current centroid."
 units = "m^2/s"
+
+[mast.physics.attributes.zcur]
+description = "Measured vertical position of the plasma current centroid."
+imas = "/equilibrium/time_slice(itime)/global_quantities/current_centre/z"
+units = "m"
 
 [mast.physics.time_domain_thresholds]
 dipprog_dt = 50e3
