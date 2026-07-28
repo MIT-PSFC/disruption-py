@@ -90,6 +90,7 @@ class MastPhysicsMethods:
 
         power_nbi = params.get_data("summary/power_nbi")
         power_radiated = params.get_data("summary/power_radiated")
+        power_ohm = params.get_data("summary/power_ohmic")
         base_time = params.get_data("summary/time")
 
         times = params.times
@@ -709,8 +710,8 @@ class MastPhysicsMethods:
                 "Requires zarr paths: thomson_scattering/t_e, thomson_scattering/n_e."
             )
 
-        te_profile = te_xr.values.squeeze()
-        ne_profile = ne_xr.values.squeeze()
+        te_profile = te_xr.values
+        ne_profile = ne_xr.values
         if pe_xr is None:
             # p_e = n_e k T_e, with T_e in eV so that k T_e = e * T_e [J]
             params.logger.warning(
@@ -718,7 +719,7 @@ class MastPhysicsMethods:
             )
             pe_profile = ne_profile * te_profile * const.e
         else:
-            pe_profile = pe_xr.values.squeeze()
+            pe_profile = pe_xr.values
 
         r_ts = te_xr.coords["major_radius"].values
         ts_time = te_xr.coords["time"].values
@@ -861,7 +862,7 @@ class MastPhysicsMethods:
 
         return MastPhysicsMethods._get_te_width(
             params.times,
-            te_xr.values.squeeze(),
+            te_xr.values,
             r_ts,
             ts_time,
             r_mag,
@@ -876,10 +877,10 @@ class MastPhysicsMethods:
     def get_z_parameters(params: PhysicsMethodParams):
         conn: XarrayConnection = params.mds_conn
 
-        z_ref = conn.get_data(params.shot_id, "pulse_schedule/z_ref").squeeze()
-        zip_prx = conn.get_data(params.shot_id, "controllers/zip_proxy").squeeze()
+        z_ref = conn.get_data(params.shot_id, "pulse_schedule/z_ref")
+        zip_prx = conn.get_data(params.shot_id, "controllers/zip_proxy")
         t_ctrl = conn.get_data(params.shot_id, "controllers/time")
-        ip_raw = conn.get_data(params.shot_id, "summary/ip").squeeze()
+        ip_raw = conn.get_data(params.shot_id, "summary/ip")
         t_ip = conn.get_data(params.shot_id, "summary/time")
 
         if any(

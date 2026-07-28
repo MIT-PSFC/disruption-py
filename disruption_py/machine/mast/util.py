@@ -23,11 +23,12 @@ class MastUtilMethods:
     @staticmethod
     def get_signal(conn: XarrayDataConnection, shot_id: int, path: str) -> np.ndarray:
         """
-        Read a signal, squeezed but never 0-dimensional.
+        Read a signal, never 0-dimensional.
 
         `XarrayConnection.get_data` returns a length-1 NaN array for a variable that is
-        absent from the shot. Squeezing that sentinel collapses it to a 0-d array, which
-        then fails deep inside the numerics rather than at the point of the missing data.
+        absent from the shot, and a 0-d array for a scalar variable. Either way the
+        caller gets at least 1-D, so a missing signal fails at the point of the missing
+        data rather than deep inside the numerics.
 
         Parameters
         ----------
@@ -41,9 +42,9 @@ class MastUtilMethods:
         Returns
         -------
         np.ndarray
-            The signal, with singleton dimensions dropped but at least 1-D.
+            The signal, at least 1-D.
         """
-        return np.atleast_1d(conn.get_data(shot_id, path).squeeze())
+        return np.atleast_1d(conn.get_data(shot_id, path))
 
     @staticmethod
     def require_signal(conn: XarrayConnection, shot_id: int, path: str) -> np.ndarray:
@@ -62,7 +63,7 @@ class MastUtilMethods:
         Returns
         -------
         np.ndarray
-            The signal, with singleton dimensions dropped but at least 1-D.
+            The signal, at least 1-D.
 
         Raises
         ------
@@ -180,7 +181,7 @@ class MastUtilMethods:
         return efit_time
 
     @staticmethod
-    def thomson_rho(conn: XarrayConnection, shot_id: int, r_ts: np.ndarray):
+    def thomson_rho(conn: XarrayDataConnection, shot_id: int, r_ts: np.ndarray):
         """
         Normalised effective radius rho = |R_TS - R_mag| / a_minor for each Thomson
         scattering channel.
@@ -242,7 +243,7 @@ class MastUtilMethods:
         np.ndarray
             Interpolated y-coordinates corresponding to x_new.
         """
-        # a missing signal squeezes down to a 0-d array, which has no len()
+        # a 0-d array has no len()
         x = np.atleast_1d(x)
         y = np.atleast_1d(y)
 
