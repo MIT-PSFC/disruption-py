@@ -59,20 +59,6 @@ def _execute_retrieval(args):
     -------
     tuple of shot id and the dataframe
     """
-    # On macOS/Windows, multiprocessing uses "spawn" so worker processes start
-    # fresh without the VERBOSE log level registered in the parent. Re-apply the
-    # minimal logger setup so params.logger.verbose() doesn't raise AttributeError.
-    from functools import partialmethod
-
-    from loguru import logger as _logger
-
-    try:
-        _logger.level("VERBOSE", no=15, color="<dim>")
-    except Exception:
-        pass
-    if not hasattr(_logger.__class__, "verbose"):
-        _logger.__class__.verbose = partialmethod(_logger.__class__.log, "VERBOSE")
-
     tokamak, db_init, mds_init, retrieval_settings, shot_id = args
     database = _get_database_instance(tokamak, db_init)
     mds_conn = _get_mds_instance(tokamak, mds_init)
