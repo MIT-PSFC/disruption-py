@@ -11,7 +11,7 @@ updates:
     cooldown:
       default-days: 7
     groups:
-      deps:
+      Actions:
         patterns:
           - "*"
     reviewers:
