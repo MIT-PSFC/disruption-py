@@ -8,5 +8,11 @@ updates:
     target-branch: "dev"
     schedule:
       interval: "monthly"
+    cooldown:
+      default-days: 7
+    groups:
+      deps:
+        patterns:
+          - "*"
     reviewers:
       - gtrevisan
