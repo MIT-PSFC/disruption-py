@@ -247,13 +247,22 @@ class MastPhysicsMethods:
             )
         MastUtilMethods.require_aligned("n_e", n_e, t_n)
         MastUtilMethods.require_aligned("ip", ip, t_ip)
-        MastUtilMethods.require_aligned("a_minor", a_minor, t_a)
         # get the gradient of n_E
         dn_dt = np.gradient(n_e, t_n)
         n_e = interp1(t_n, n_e, times)
         dn_dt = interp1(t_n, dn_dt, times)
         ip = -ip / 1e6  # Convert from A to MA and take positive value
         ip = interp1(t_ip, ip, times)
+
+        if not np.any(np.isfinite(a_minor)) or np.size(t_a) < 2:
+            # No usable equilibrium: the densities stand, the Greenwald fraction cannot.
+            return {
+                "n_e": n_e,
+                "dn_dt": dn_dt,
+                "greenwald_fraction": np.full_like(n_e, np.nan),
+            }
+
+        MastUtilMethods.require_aligned("a_minor", a_minor, t_a)
         a_minor = interp1(t_a, a_minor, times, bounds_error=False, fill_value=np.nan)
         # make sure aminor is not 0 or less than 0
         a_minor[a_minor <= 0] = 0.001
@@ -286,7 +295,6 @@ class MastPhysicsMethods:
         if hcam is not None:
             hcam_channel = hcam.isel(horizontal_cam_upper_channel=0)
             hcam_channel = hcam_channel.squeeze(drop=True)
-            hcam_channel = hcam_channel.drop_vars(["horizontal_cam_upper_channel"])
             sxr_time = hcam_channel.time.values
             sxr_core = hcam_channel.values
         else:
@@ -299,7 +307,6 @@ class MastPhysicsMethods:
         if hcam is not None:
             hcam_channel = hcam.isel(horizontal_cam_upper_channel=7)
             hcam_channel = hcam_channel.squeeze(drop=True)
-            hcam_channel = hcam_channel.drop_vars(["horizontal_cam_upper_channel"])
             sxr_edge = hcam_channel.values
         else:
             sxr_edge = np.array([np.nan])
@@ -843,7 +850,7 @@ class MastPhysicsMethods:
         disruption-py/blob/matlab/CMOD/matlab-core/get_TS_data_cmod.m), adapted from
         the vertical C-Mod geometry to the radial MAST geometry.
         """
-        conn: XarrayConnection = params.mds_conn
+        conn: XarrayDataConnection = params.mds_conn
 
         # 2D profile array: dims (major_radius, time)
         te_xr = conn.get_data(
