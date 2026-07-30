@@ -34,6 +34,7 @@ Here follows a non-exhaustive list of projects, publications, and conference con
   - M Tobin, _et al._ (2026), _"A multi-tokamak study of neoclassical tearing mode seeding phenomena with automated database analysis"_
   - NJ Barbour, _et al._ (2026), _"Automated Quality Assessment of 1 kHz EFIT Computations"_
   - AR Saperstein, _et al_ (2026), _"Validation of off-normal simulations of radiative collapse events in Alcator C-Mod"_
+  - H Wietfeldt, _et al._ (2026), _"Characterization of transient impurity events on Alcator C-Mod and WEST"_
 
 - [7th International Conference on Data-Driven Plasma Science (2026)](https://www.icddps.org/)
   - Z Keith, _et al._ (2026), _"Benchmarking hybrid models for full-shot transport prediction"_
