@@ -28,12 +28,12 @@ fetch:
 .PHONY: clean-list clean-delete
 
 clean-list:
-	echo $(DELETE_OBJS) | xargs -n1 find -name
-	find -type d -empty
+	echo $(DELETE_OBJS) | xargs -n1 find . -name
+	find . -type d -empty
 
 clean-delete:
-	echo $(DELETE_OBJS) | xargs -n1 find -name | xargs rm -rfv
-	find -type d -empty -delete
+	echo $(DELETE_OBJS) | xargs -n1 find . -name | xargs rm -rfv
+	find . -type d -empty -delete
 
 # poetry #
 
@@ -135,7 +135,7 @@ shellcheck:
 	   RC=$$?; \
 	   echo "--> $$F = $$RC"; \
 	   [ "$$RC" -eq 0 ] || KO=1; \
-	done < <(find -type f -not -path '*/.git/*' -not -path '*/.venv/*' -print0); \
+	done < <(find . -type f -not -path '*/.git/*' -not -path '*/.venv/*' -print0); \
 	exit "$$KO"
 
 yamllint:
@@ -149,7 +149,7 @@ yamllint:
 	   RC=$$?; \
 	   echo "--> $$F = $$RC"; \
 	   [ "$$RC" -eq 0 ] || KO=1; \
-	done < <(find -type f -iname '*.y*ml' -not -empty -not -path '*/.venv/*' -print0); \
+	done < <(find . -type f -iname '*.y*ml' -not -empty -not -path '*/.venv/*' -print0); \
 	exit "$$KO"
 
 toml-sort:
@@ -163,7 +163,7 @@ toml-sort:
 	   RC=$$?; \
 	   echo "--> $$F = $$RC"; \
 	   [ "$$RC" -eq 0 ] || KO=1; \
-	done < <(find -maxdepth 1 -type f -iname '*.toml' -not -empty -not -path '*/.venv/*' -print0); \
+	done < <(find . -maxdepth 1 -type f -iname '*.toml' -not -empty -not -path '*/.venv/*' -print0); \
 	while IFS= read -r -d '' F; \
 	do \
 	   echo "--> $$F"; \
@@ -171,5 +171,5 @@ toml-sort:
 	   RC=$$?; \
 	   echo "--> $$F = $$RC"; \
 	   [ "$$RC" -eq 0 ] || KO=1; \
-	done < <(find -mindepth 2 -type f -iname '*.toml' -not -empty -not -path '*/.venv/*' -print0); \
+	done < <(find . -mindepth 2 -type f -iname '*.toml' -not -empty -not -path '*/.venv/*' -print0); \
 	exit "$$KO"
