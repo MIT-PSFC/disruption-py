@@ -76,6 +76,9 @@ class MastPhysicsMethods:
     def get_power(params: PhysicsMethodParams):
         """Get power parameters
 
+        The Ohmic heating power is calculated from the dynamic loop voltage,
+        inductive voltage, and plasma current.
+
         Parameters
         ----------
         params : PhysicsMethodParams
@@ -85,7 +88,11 @@ class MastPhysicsMethods:
         -------
         dict
             A dictionary containing neutral beam injection power (`p_nbi`),
-            ohmic power (`p_oh`), and radiated power (`p_rad`).
+            total Ohmic heating power (`p_oh`), and radiated power (`p_rad`).
+
+        References
+        ------
+        - pull requests: #[553](https://github.com/MIT-PSFC/disruption-py/pull/553)
         """
 
         power_nbi = params.get_data("summary/power_nbi")
@@ -95,11 +102,88 @@ class MastPhysicsMethods:
 
         times = params.times
         power_nbi = MastUtilMethods.interpolate_1d(base_time, power_nbi, times)
-        power_ohm = MastUtilMethods.interpolate_1d(base_time, power_ohm, times)
         power_radiated = MastUtilMethods.interpolate_1d(
             base_time, power_radiated, times
         )
+
+        try:
+            power_ohm = MastPhysicsMethods._get_p_ohm(params)
+        except CalculationError as exc:
+            # a missing equilibrium or Ip signal must not take out p_nbi and p_rad
+            params.logger.warning("p_oh: {exc}", exc=exc)
+            power_ohm = np.full_like(times, np.nan)
+
         return {"p_nbi": power_nbi, "p_oh": power_ohm, "p_rad": power_radiated}
+
+    @staticmethod
+    def _get_p_ohm(params: PhysicsMethodParams):
+        """
+        Calculate the ohmic heating power from the dynamic loop voltage,
+        inductive voltage, and plasma current.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection, shot id and more.
+
+        Returns
+        -------
+        np.ndarray
+            The total Ohmic heating power [W], on the requested time base.
+
+        Raises
+        ------
+        CalculationError
+            If any of the required signals are missing or misaligned.
+        """
+        conn: XarrayConnection = params.mds_conn
+        shot_id = params.shot_id
+
+        # load relevant parameters
+        r0 = MastUtilMethods.require_signal(
+            conn, shot_id, "equilibrium/magnetic_axis_r"
+        )
+        li = MastUtilMethods.require_signal(conn, shot_id, "equilibrium/li")
+        v_loop = MastUtilMethods.require_signal(
+            conn, shot_id, "equilibrium/vloop_dynamic"
+        )
+        ip = MastUtilMethods.require_signal(conn, shot_id, "summary/ip")
+        summary_time = MastUtilMethods.require_time_base(conn, shot_id, "summary/time")
+        equilibrium_time = MastUtilMethods.require_time_base(
+            conn, shot_id, "equilibrium/time"
+        )
+
+        MastUtilMethods.require_aligned("summary/ip", ip, summary_time)
+        for path, signal in (
+            ("equilibrium/magnetic_axis_r", r0),
+            ("equilibrium/li", li),
+            ("equilibrium/vloop_dynamic", v_loop),
+        ):
+            MastUtilMethods.require_aligned(path, signal, equilibrium_time)
+
+        # compute derived quantities
+        smooth_window_size = 30
+        dip_dt = np.gradient(ip, summary_time)
+        if len(dip_dt) >= smooth_window_size:
+            dip_smoothed = causal_boxcar_smooth(dip_dt, smooth_window_size)
+        else:
+            dip_smoothed = dip_dt
+        inductance = 4.0 * np.pi * 1.0e-7 * r0 * li / 2.0
+
+        # interpolate to consistent time-base
+        times = params.times
+        v_loop = MastUtilMethods.interpolate_1d(equilibrium_time, v_loop, times)
+        inductance = MastUtilMethods.interpolate_1d(equilibrium_time, inductance, times)
+        dip_smoothed = MastUtilMethods.interpolate_1d(summary_time, dip_smoothed, times)
+        ip = MastUtilMethods.interpolate_1d(summary_time, ip, times)
+
+        # calculate p_oh
+        v_inductive = inductance * dip_smoothed
+        v_resistive = v_loop - v_inductive
+        p_oh = ip * v_resistive
+
+        # Set negative p_ohm values to 0
+        return np.clip(p_oh, 0, None)
 
     @staticmethod
     @physics_method(

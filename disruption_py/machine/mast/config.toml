@@ -107,8 +107,8 @@ imas = "/summary/heating_current_drive/power_nbi"
 units = "W"
 
 [mast.physics.attributes.p_oh]
-description = "Ohmic heating power."
-imas = "/summary/heating_current_drive/power_ohm"
+description = "Total Ohmic heating power."
+imas = "/summary/global_quantities/power_ohm"
 units = "W"
 
 [mast.physics.attributes.p_rad]
