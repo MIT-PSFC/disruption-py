@@ -24,7 +24,6 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '3.11'
           - '3.12'
           - '3.13'
         tool:
