@@ -23,6 +23,7 @@ then
    export PATH=/usr/bin:/usr/sbin
    export MDSPLUS_DIR=/fusion/usc/c8/opt/mdsplus/alpha/7.139.59
    export MDS_HOST=atlas
+   export LOCALSCRATCH=/local-scratch
 
 elif [[ -d /project/disruption ]]
 then
