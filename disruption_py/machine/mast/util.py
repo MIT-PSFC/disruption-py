@@ -12,7 +12,6 @@ from disruption_py.core.physics_method.errors import (
 )
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
-from disruption_py.settings import TimeSettingParams
 
 
 class MastUtilMethods:
@@ -56,7 +55,7 @@ class MastUtilMethods:
         return signal
 
     @staticmethod
-    def retrieve_ip(params: TimeSettingParams):
+    def retrieve_ip(params: PhysicsMethodParams):
         """
         Read in the measured plasma current, Ip.
 

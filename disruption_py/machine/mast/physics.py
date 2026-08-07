@@ -522,19 +522,19 @@ class MastPhysicsMethods:
         zmag_t = MastUtilMethods.interpolate_1d(efit_time, zmag, bolo_time)
 
         # Compute Z-intersection of each chord with vertical R = Rmag(t)
-        # Z_j(t) = fz + (Rmag(t) - fr) * (sz - fz) / (sr - fr)   [Rea et al. 2020, Eq. 2]
-        dR = sr - fr  # (n_fan,)
-        dZ = sz - fz  # (n_fan,)
+        # z_j(t) = fz + (Rmag(t) - fr) * (sz - fz) / (sr - fr)   [Rea et al. 2020, Eq. 2]
+        d_r = sr - fr  # (n_fan,)
+        d_z = sz - fz  # (n_fan,)
 
         with np.errstate(divide="ignore", invalid="ignore"):
-            Z_j = fz[:, np.newaxis] + (
+            z_j = fz[:, np.newaxis] + (
                 (rmag_t[np.newaxis, :] - fr[:, np.newaxis])
-                * (dZ[:, np.newaxis] / dR[:, np.newaxis])
+                * (d_z[:, np.newaxis] / d_r[:, np.newaxis])
             )  # (n_fan, n_times)
 
-        dist_from_axis = np.abs(Z_j - zmag_t[np.newaxis, :])  # (n_fan, n_times)
+        dist_from_axis = np.abs(z_j - zmag_t[np.newaxis, :])  # (n_fan, n_times)
 
-        valid_2d = fan_valid[:, np.newaxis] & ~np.isnan(Z_j)
+        valid_2d = fan_valid[:, np.newaxis] & ~np.isnan(z_j)
         core_mask = valid_2d & (dist_from_axis < core_threshold)
         all_but_div = valid_2d & ~(dist_from_axis > div_threshold)
 
@@ -926,6 +926,20 @@ class MastPhysicsMethods:
         tokamak=Tokamak.MAST,
     )
     def get_z_parameters(params: PhysicsMethodParams):
+        """
+        Retrieve the z parameters from the MAST diagnostic data.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the z parameters: `z_error`,
+            `z_prog`, `zcur`, `v_z`, and `z_times_v_z`.
+        """
         z_ref = params.get_data("pulse_schedule/z_ref")
         zip_prx = params.get_data("controllers/zip_proxy")
         t_ctrl = params.get_data("controllers/time")
