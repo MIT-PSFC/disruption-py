@@ -10,13 +10,11 @@ import scipy.constants as const
 
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.errors import (
-    MismatchCalculationError,
     CalculationError,
+    MismatchCalculationError,
 )
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.math import causal_boxcar_smooth, interp1
-from disruption_py.core.utils.math import gaussian_fit, interp1
-from disruption_py.inout.xr import XarrayDataConnection
+from disruption_py.core.utils.math import causal_boxcar_smooth, gaussian_fit, interp1
 from disruption_py.machine.mast.util import MastUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 
@@ -97,7 +95,6 @@ class MastPhysicsMethods:
 
         power_nbi = params.get_data("summary/power_nbi")
         power_radiated = params.get_data("summary/power_radiated")
-        power_ohm = params.get_data("summary/power_ohmic")
         base_time = params.get_data("summary/time")
 
         times = params.times
@@ -136,22 +133,13 @@ class MastPhysicsMethods:
         CalculationError
             If any of the required signals are missing or misaligned.
         """
-        conn: XarrayConnection = params.mds_conn
-        shot_id = params.shot_id
-
         # load relevant parameters
-        r0 = MastUtilMethods.require_signal(
-            conn, shot_id, "equilibrium/magnetic_axis_r"
-        )
-        li = MastUtilMethods.require_signal(conn, shot_id, "equilibrium/li")
-        v_loop = MastUtilMethods.require_signal(
-            conn, shot_id, "equilibrium/vloop_dynamic"
-        )
-        ip = MastUtilMethods.require_signal(conn, shot_id, "summary/ip")
-        summary_time = MastUtilMethods.require_time_base(conn, shot_id, "summary/time")
-        equilibrium_time = MastUtilMethods.require_time_base(
-            conn, shot_id, "equilibrium/time"
-        )
+        r0 = params.get_data("equilibrium/magnetic_axis_r")
+        li = params.get_data("equilibrium/li")
+        v_loop = params.get_data("equilibrium/vloop_dynamic")
+        ip = params.get_data("summary/ip")
+        summary_time = params.get_data("summary/time")
+        equilibrium_time = params.get_data("equilibrium/time")
 
         MastUtilMethods.require_aligned("summary/ip", ip, summary_time)
         for path, signal in (
@@ -611,35 +599,18 @@ class MastPhysicsMethods:
         - Rea et al. (2020), *Fusion Sci. Technol.* 76(8), 912-924.
           DOI: 10.1080/15361055.2020.1798589
         """
-        conn: XarrayConnection = params.mds_conn
-        shot_id = params.shot_id
+        power = params.get_data("bolometer/power")
+        bolo_time = params.get_data("bolometer/time")
+        first_r = params.get_data("bolometer/first_point_r")
+        first_z = params.get_data("bolometer/first_point_z")
+        second_r = params.get_data("bolometer/second_point_r")
+        second_z = params.get_data("bolometer/second_point_z")
+        validity = params.get_data("bolometer/validity")
+        channel_type = params.get_data("bolometer/channel_type")
 
-        power = MastUtilMethods.require_signal(conn, shot_id, "bolometer/power")
-        bolo_time = MastUtilMethods.require_time_base(conn, shot_id, "bolometer/time")
-        first_r = MastUtilMethods.require_signal(
-            conn, shot_id, "bolometer/first_point_r"
-        )
-        first_z = MastUtilMethods.require_signal(
-            conn, shot_id, "bolometer/first_point_z"
-        )
-        second_r = MastUtilMethods.require_signal(
-            conn, shot_id, "bolometer/second_point_r"
-        )
-        second_z = MastUtilMethods.require_signal(
-            conn, shot_id, "bolometer/second_point_z"
-        )
-        validity = MastUtilMethods.require_signal(conn, shot_id, "bolometer/validity")
-        channel_type = MastUtilMethods.require_signal(
-            conn, shot_id, "bolometer/channel_type"
-        )
-
-        rmag = MastUtilMethods.require_signal(
-            conn, shot_id, "equilibrium/magnetic_axis_r"
-        )
-        zmag = MastUtilMethods.require_signal(
-            conn, shot_id, "equilibrium/magnetic_axis_z"
-        )
-        efit_time = MastUtilMethods.require_time_base(conn, shot_id, "equilibrium/time")
+        rmag = params.get_data("equilibrium/magnetic_axis_r")
+        zmag = params.get_data("equilibrium/magnetic_axis_z")
+        efit_time = params.get_data("equilibrium/time")
 
         MastUtilMethods.require_aligned("bolometer/power", power, bolo_time)
         MastUtilMethods.require_aligned("equilibrium/magnetic_axis_r", rmag, efit_time)
@@ -782,18 +753,10 @@ class MastPhysicsMethods:
         - Rea et al. (2020), *Fusion Sci. Technol.* 76(8), 912-924.
           DOI: 10.1080/15361055.2020.1798589
         """
-        conn: XarrayConnection = params.mds_conn
-
         # 2D profile arrays: dims (major_radius, time)
-        te_xr = conn.get_data(
-            params.shot_id, "thomson_scattering/t_e", return_xarray=True
-        )
-        ne_xr = conn.get_data(
-            params.shot_id, "thomson_scattering/n_e", return_xarray=True
-        )
-        pe_xr = conn.get_data(
-            params.shot_id, "thomson_scattering/p_e", return_xarray=True
-        )
+        te_xr = params.get_data("thomson_scattering/t_e", return_xarray=True)
+        ne_xr = params.get_data("thomson_scattering/n_e", return_xarray=True)
+        pe_xr = params.get_data("thomson_scattering/p_e", return_xarray=True)
 
         if any(x is None for x in (te_xr, ne_xr)):
             raise CalculationError(
@@ -815,7 +778,7 @@ class MastPhysicsMethods:
         r_ts = te_xr.coords["major_radius"].values
         ts_time = te_xr.coords["time"].values
 
-        rho, _, _ = MastUtilMethods.thomson_rho(conn, params.shot_id, r_ts)
+        rho, _, _ = MastUtilMethods.thomson_rho(params, r_ts)
 
         return MastPhysicsMethods._get_te_ne_peaking(
             params.times,
@@ -934,12 +897,9 @@ class MastPhysicsMethods:
         disruption-py/blob/matlab/CMOD/matlab-core/get_TS_data_cmod.m), adapted from
         the vertical C-Mod geometry to the radial MAST geometry.
         """
-        conn: XarrayDataConnection = params.mds_conn
-
         # 2D profile array: dims (major_radius, time)
-        te_xr = conn.get_data(
-            params.shot_id, "thomson_scattering/t_e", return_xarray=True
-        )
+        te_xr = params.get_data("thomson_scattering/t_e", return_xarray=True)
+
         if te_xr is None:
             raise CalculationError(
                 "Thomson scattering profile data not available. "
@@ -949,7 +909,7 @@ class MastPhysicsMethods:
         r_ts = te_xr.coords["major_radius"].values
         ts_time = te_xr.coords["time"].values
 
-        _, r_mag, a_minor = MastUtilMethods.thomson_rho(conn, params.shot_id, r_ts)
+        _, r_mag, a_minor = MastUtilMethods.thomson_rho(params, r_ts)
 
         return MastPhysicsMethods._get_te_width(
             params.times,
@@ -966,13 +926,11 @@ class MastPhysicsMethods:
         tokamak=Tokamak.MAST,
     )
     def get_z_parameters(params: PhysicsMethodParams):
-        conn: XarrayConnection = params.mds_conn
-
-        z_ref = conn.get_data(params.shot_id, "pulse_schedule/z_ref")
-        zip_prx = conn.get_data(params.shot_id, "controllers/zip_proxy")
-        t_ctrl = conn.get_data(params.shot_id, "controllers/time")
-        ip_raw = conn.get_data(params.shot_id, "summary/ip")
-        t_ip = conn.get_data(params.shot_id, "summary/time")
+        z_ref = params.get_data("pulse_schedule/z_ref")
+        zip_prx = params.get_data("controllers/zip_proxy")
+        t_ctrl = params.get_data("controllers/time")
+        ip_raw = params.get_data("summary/ip")
+        t_ip = params.get_data("summary/time")
 
         if any(
             not np.isfinite(x).any() for x in (z_ref, zip_prx, t_ctrl, ip_raw, t_ip)

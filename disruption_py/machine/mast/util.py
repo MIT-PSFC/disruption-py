@@ -10,8 +10,9 @@ from disruption_py.core.physics_method.errors import (
     CalculationError,
     MismatchCalculationError,
 )
+from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
-from disruption_py.inout.xr import XarrayDataConnection
+from disruption_py.settings import TimeSettingParams
 
 
 class MastUtilMethods:
@@ -19,95 +20,6 @@ class MastUtilMethods:
     A class of helper methods that might fetch and compute data from MDSplus
     but are not physics methods.
     """
-
-    @staticmethod
-    def get_signal(conn: XarrayDataConnection, shot_id: int, path: str) -> np.ndarray:
-        """
-        Read a signal, never 0-dimensional.
-
-        `XarrayConnection.get_data` returns a length-1 NaN array for a variable that is
-        absent from the shot, and a 0-d array for a scalar variable. Either way the
-        caller gets at least 1-D, so a missing signal fails at the point of the missing
-        data rather than deep inside the numerics.
-
-        Parameters
-        ----------
-        conn : XarrayConnection
-            Connection to the data store.
-        shot_id : int
-            Shot number.
-        path : str
-            Path to the variable in the shot's data tree.
-
-        Returns
-        -------
-        np.ndarray
-            The signal, at least 1-D.
-        """
-        return np.atleast_1d(conn.get_data(shot_id, path))
-
-    @staticmethod
-    def require_signal(conn: XarrayConnection, shot_id: int, path: str) -> np.ndarray:
-        """
-        Read a signal that a calculation cannot proceed without.
-
-        Parameters
-        ----------
-        conn : XarrayConnection
-            Connection to the data store.
-        shot_id : int
-            Shot number.
-        path : str
-            Path to the variable in the shot's data tree.
-
-        Returns
-        -------
-        np.ndarray
-            The signal, at least 1-D.
-
-        Raises
-        ------
-        CalculationError
-            If the signal is absent from the shot or holds no finite samples.
-        """
-        signal = MastUtilMethods.get_signal(conn, shot_id, path)
-        if not np.any(np.isfinite(signal)):
-            raise CalculationError(f"No valid data for signal: {path}")
-        return signal
-
-    @staticmethod
-    def require_time_base(
-        conn: XarrayConnection, shot_id: int, path: str
-    ) -> np.ndarray:
-        """
-        Read a time base, which needs two samples before anything can be
-        interpolated or differentiated against it.
-
-        Parameters
-        ----------
-        conn : XarrayConnection
-            Connection to the data store.
-        shot_id : int
-            Shot number.
-        path : str
-            Path to the time variable in the shot's data tree.
-
-        Returns
-        -------
-        np.ndarray
-            The time base.
-
-        Raises
-        ------
-        CalculationError
-            If the time base is absent, all-NaN, or shorter than two samples.
-        """
-        time = MastUtilMethods.require_signal(conn, shot_id, path)
-        if time.ndim != 1 or time.size < 2:
-            raise CalculationError(
-                f"Time base {path} needs at least 2 samples, got shape {time.shape}"
-            )
-        return time
 
     @staticmethod
     def require_aligned(path: str, signal: np.ndarray, time: np.ndarray) -> np.ndarray:
@@ -144,32 +56,32 @@ class MastUtilMethods:
         return signal
 
     @staticmethod
-    def retrieve_ip(conn: XarrayDataConnection):
+    def retrieve_ip(params: TimeSettingParams):
         """
         Read in the measured plasma current, Ip.
 
         Parameters
         ----------
-        conn : XarrayDataConnection
-            Per-shot Xarray data connection.
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection and shot id.
 
         Returns
         -------
         tuple[np.ndarray, np.ndarray]
             Plasma current [A], time base of plasma current [s].
         """
-        ip = conn.get_data("summary/ip")
-        ip_time = conn.get_data("summary/time")
+        ip = params.get_data("summary/ip")
+        ip_time = params.get_data("summary/time")
         return ip, ip_time
 
     @staticmethod
-    def retrieve_efit_time(conn: XarrayDataConnection):
+    def retrieve_efit_time(params: PhysicsMethodParams):
         """
         Read in the EFIT time base.
 
         Parameters
         ----------
-        conn : XarrayDataConnection
+        params : PhysicsMethodParams
             Per-shot Xarray data connection.
 
         Returns
@@ -177,11 +89,11 @@ class MastUtilMethods:
         np.ndarray
             EFIT time base [s].
         """
-        efit_time = conn.get_data("equilibrium/time")
+        efit_time = params.get_data("equilibrium/time")
         return efit_time
 
     @staticmethod
-    def thomson_rho(conn: XarrayDataConnection, shot_id: int, r_ts: np.ndarray):
+    def thomson_rho(params: PhysicsMethodParams, r_ts: np.ndarray):
         """
         Normalised effective radius rho = |R_TS - R_mag| / a_minor for each Thomson
         scattering channel.
@@ -192,10 +104,8 @@ class MastUtilMethods:
 
         Parameters
         ----------
-        conn : XarrayConnection
-            Connection to the data store.
-        shot_id : int
-            Shot number.
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection and shot id.
         r_ts : np.ndarray
             Major radius of each Thomson scattering channel [m].
 
@@ -210,8 +120,8 @@ class MastUtilMethods:
         CalculationError
             If the equilibrium magnetic axis or minor radius is unavailable.
         """
-        r_mag = conn.get_data(shot_id, "equilibrium/magnetic_axis_r")
-        a_minor = conn.get_data(shot_id, "equilibrium/minor_radius")
+        r_mag = params.get_data("equilibrium/magnetic_axis_r")
+        a_minor = params.get_data("equilibrium/minor_radius")
         r_mag_mean = np.nanmean(r_mag)
         a_minor_mean = np.nanmean(a_minor)
         if (
