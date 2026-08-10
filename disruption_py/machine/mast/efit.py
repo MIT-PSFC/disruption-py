@@ -4,6 +4,8 @@
 Module for retrieving and processing EFIT parameters for MAST.
 """
 
+import numpy as np
+
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.machine.mast.util import MastUtilMethods
@@ -49,15 +51,33 @@ class MastEfitMethods:
         Returns
         -------
         dict
-            A dictionary containing the retrieved EFIT parameters.
+            A dictionary containing the retrieved EFIT parameters. Properties whose
+            underlying signal is missing for this shot are returned as NaN rather
+            than dropping the whole equilibrium reconstruction.
         """
-        eq_time = params.get_data("equilibrium/time")
         times = params.times
+        eq_time = MastUtilMethods.get_data_or_none(params, "equilibrium/time")
+        if eq_time is None:
+            params.logger.warning(
+                "get_efit_parameters: equilibrium/time not available. Returning NaNs."
+            )
+            return {
+                key: np.full_like(times, np.nan)
+                for key in MastEfitMethods.efit_properties
+            }
 
         outputs = {}
         for key, prop in MastEfitMethods.efit_properties.items():
-            signal = params.get_data(f"equilibrium/{prop}")
-            item = MastUtilMethods.interpolate_1d(eq_time, signal, times)
-            outputs[key] = item
+            signal = MastUtilMethods.get_data_or_none(params, f"equilibrium/{prop}")
+            if signal is None:
+                params.logger.warning(
+                    "get_efit_parameters: equilibrium/{prop} not available. "
+                    "Returning NaNs for {key}.",
+                    prop=prop,
+                    key=key,
+                )
+                outputs[key] = np.full_like(times, np.nan)
+                continue
+            outputs[key] = MastUtilMethods.interpolate_1d(eq_time, signal, times)
 
         return outputs
