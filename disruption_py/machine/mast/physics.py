@@ -850,19 +850,16 @@ class MastPhysicsMethods:
             A dictionary containing `te_peaking`, `ne_peaking` and
             `pressure_peaking`.
 
-        Raises
-        ------
-        CalculationError
-            If Thomson scattering profile data is not available for this shot.
-            Required zarr paths: ``thomson_scattering/t_e``,
-            ``thomson_scattering/n_e``, ``equilibrium/magnetic_axis_r``,
-            ``equilibrium/minor_radius``.
-
         References
         -------
         - Rea et al. (2020), *Fusion Sci. Technol.* 76(8), 912-924.
           DOI: 10.1080/15361055.2020.1798589
         """
+        nan_result = {
+            col: np.full_like(params.times, np.nan)
+            for col in ("te_peaking", "ne_peaking", "pressure_peaking")
+        }
+
         # 2D profile arrays: dims (major_radius, time)
         te_xr = MastUtilMethods.get_data_or_none(
             params, "thomson_scattering/t_e", return_xarray=True
@@ -875,10 +872,11 @@ class MastPhysicsMethods:
         )
 
         if any(x is None for x in (te_xr, ne_xr)):
-            raise CalculationError(
-                "Thomson scattering profile data not available. "
-                "Requires zarr paths: thomson_scattering/t_e, thomson_scattering/n_e."
+            params.logger.warning(
+                "get_te_ne_peaking: Thomson scattering profile data not available. "
+                "Returning NaNs."
             )
+            return nan_result
 
         te_profile = te_xr.values
         ne_profile = ne_xr.values
@@ -894,7 +892,13 @@ class MastPhysicsMethods:
         r_ts = te_xr.coords["major_radius"].values
         ts_time = te_xr.coords["time"].values
 
-        rho, _, _ = MastUtilMethods.thomson_rho(params, r_ts)
+        try:
+            rho, _, _ = MastUtilMethods.thomson_rho(params, r_ts)
+        except CalculationError as exc:
+            # equilibrium unavailable: can't locate the core bin, so peaking
+            # factors can't be computed for this shot
+            params.logger.warning("get_te_ne_peaking: {exc}", exc=exc)
+            return nan_result
 
         return MastPhysicsMethods._get_te_ne_peaking(
             params.times,
@@ -1000,34 +1004,35 @@ class MastPhysicsMethods:
             A dictionary containing the electron temperature profile width
             (`te_width`).
 
-        Raises
-        ------
-        CalculationError
-            If Thomson scattering profile data is not available for this shot.
-            Required zarr paths: ``thomson_scattering/t_e``,
-            ``equilibrium/magnetic_axis_r``, ``equilibrium/minor_radius``.
-
         References
         -------
         - original source: [get_TS_data_cmod.m](https://github.com/MIT-PSFC/
         disruption-py/blob/matlab/CMOD/matlab-core/get_TS_data_cmod.m), adapted from
         the vertical C-Mod geometry to the radial MAST geometry.
         """
+        nan_result = {"te_width": np.full_like(params.times, np.nan)}
+
         # 2D profile array: dims (major_radius, time)
         te_xr = MastUtilMethods.get_data_or_none(
             params, "thomson_scattering/t_e", return_xarray=True
         )
 
         if te_xr is None:
-            raise CalculationError(
-                "Thomson scattering profile data not available. "
-                "Requires zarr path: thomson_scattering/t_e."
+            params.logger.warning(
+                "get_te_width: thomson_scattering/t_e not available. Returning NaNs."
             )
+            return nan_result
 
         r_ts = te_xr.coords["major_radius"].values
         ts_time = te_xr.coords["time"].values
 
-        _, r_mag, a_minor = MastUtilMethods.thomson_rho(params, r_ts)
+        try:
+            _, r_mag, a_minor = MastUtilMethods.thomson_rho(params, r_ts)
+        except CalculationError as exc:
+            # equilibrium unavailable: can't bound the Gaussian fit rejection
+            # window, so the width can't be computed for this shot
+            params.logger.warning("get_te_width: {exc}", exc=exc)
+            return nan_result
 
         return MastPhysicsMethods._get_te_width(
             params.times,
