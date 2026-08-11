@@ -137,6 +137,9 @@ class XarrayDataConnection(DataConnection):
         try:
             item = self.data_tree[path]
         except KeyError as e:
+            if not required:
+                nan_result = np.array([np.nan])
+                return nan_result if not return_xarray else xr.DataArray(nan_result)
             raise FetchDataError(path) from e
 
         if required and not np.any(np.isfinite(item)):

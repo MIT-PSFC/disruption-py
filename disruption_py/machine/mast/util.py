@@ -8,7 +8,7 @@ import numpy as np
 
 from disruption_py.core.physics_method.errors import (
     CalculationError,
-    FetchDataError,
+    DataError,
     MismatchCalculationError,
 )
 from disruption_py.core.physics_method.params import PhysicsMethodParams
@@ -20,37 +20,6 @@ class MastUtilMethods:
     A class of helper methods that might fetch and compute data from MDSplus
     but are not physics methods.
     """
-
-    @staticmethod
-    def get_data_or_none(params: PhysicsMethodParams, path: str, **kwargs):
-        """
-        Fetch data, returning None if the signal is entirely absent from the
-        shot's data tree, instead of raising.
-
-        This is for signals that are only sometimes recorded (e.g. an optional
-        diagnostic, or a system added partway through the campaign), where the
-        caller has a sensible fallback. Signals that are always expected to be
-        present should keep using ``params.get_data`` directly, so a genuinely
-        missing signal still surfaces as a clear failure.
-
-        Parameters
-        ----------
-        params : PhysicsMethodParams
-            The parameters containing the Xarray connection and shot id.
-        path : str
-            Variable path, e.g. "summary/ip".
-        **kwargs
-            Forwarded to ``params.get_data``.
-
-        Returns
-        -------
-        np.ndarray, xr.DataArray, or None
-            The fetched data, or None if the path does not exist for this shot.
-        """
-        try:
-            return params.get_data(path, **kwargs)
-        except FetchDataError:
-            return None
 
     @staticmethod
     def require_aligned(path: str, signal: np.ndarray, time: np.ndarray) -> np.ndarray:
@@ -151,15 +120,17 @@ class MastUtilMethods:
         CalculationError
             If the equilibrium magnetic axis or minor radius is unavailable.
         """
-        r_mag = MastUtilMethods.get_data_or_none(params, "equilibrium/magnetic_axis_r")
-        a_minor = MastUtilMethods.get_data_or_none(params, "equilibrium/minor_radius")
-        r_mag_mean = np.nanmean(r_mag) if r_mag is not None else np.nan
-        a_minor_mean = np.nanmean(a_minor) if a_minor is not None else np.nan
-        if (
-            not np.isfinite(r_mag_mean)
-            or not np.isfinite(a_minor_mean)
-            or a_minor_mean <= 0
-        ):
+        try:
+            r_mag = params.get_data("equilibrium/magnetic_axis_r", required=True)
+            a_minor = params.get_data("equilibrium/minor_radius", required=True)
+        except DataError as exc:
+            raise CalculationError(
+                "Cannot compute rho for Thomson scattering channels: "
+                "equilibrium magnetic_axis_r or minor_radius unavailable."
+            ) from exc
+        r_mag_mean = np.nanmean(r_mag)
+        a_minor_mean = np.nanmean(a_minor)
+        if a_minor_mean <= 0:
             raise CalculationError(
                 "Cannot compute rho for Thomson scattering channels: "
                 "equilibrium magnetic_axis_r or minor_radius unavailable."

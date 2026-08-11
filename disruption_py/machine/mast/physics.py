@@ -11,6 +11,7 @@ import scipy.constants as const
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.errors import (
     CalculationError,
+    DataError,
     FetchDataError,
     MismatchCalculationError,
 )
@@ -55,16 +56,13 @@ class MastPhysicsMethods:
         ip = MastUtilMethods.interpolate_1d(magtime, ip, times)
         dip_dt = MastUtilMethods.interpolate_1d(magtime, dip_dt, times)
 
-        ip_prog = MastUtilMethods.get_data_or_none(params, "pulse_schedule/i_plasma")
-        ip_prog_time = MastUtilMethods.get_data_or_none(params, "pulse_schedule/time")
-        if ip_prog is None or ip_prog_time is None:
+        try:
+            ip_prog = params.get_data("pulse_schedule/i_plasma", required=True)
+            ip_prog_time = params.get_data("pulse_schedule/time", required=True)
+        except DataError:
             # older shots lack a recorded pulse schedule; ip/dip_dt stand on their own
-            params.logger.warning(
-                "get_ip_parameters: pulse_schedule data not available. "
-                "Returning NaNs for ip_prog, dipprog_dt."
-            )
-            ip_prog = np.full_like(times, np.nan)
-            dipprog_dt = np.full_like(times, np.nan)
+            ip_prog = [np.nan]
+            dipprog_dt = [np.nan]
         else:
             dipprog_dt = np.gradient(ip_prog, ip_prog_time)
             ip_prog = MastUtilMethods.interpolate_1d(ip_prog_time, ip_prog, times)
@@ -98,44 +96,24 @@ class MastPhysicsMethods:
         dict
             A dictionary containing neutral beam injection power (`p_nbi`),
             total Ohmic heating power (`p_oh`), and radiated power (`p_rad`).
-
-        References
-        ------
-        - pull requests: #[553](https://github.com/MIT-PSFC/disruption-py/pull/553)
         """
 
         base_time = params.get_data("summary/time")
         times = params.times
 
-        power_nbi = MastUtilMethods.get_data_or_none(params, "summary/power_nbi")
-        if power_nbi is not None:
-            power_nbi = MastUtilMethods.interpolate_1d(base_time, power_nbi, times)
-        else:
-            params.logger.warning(
-                "get_power: summary/power_nbi not available. Returning NaNs for p_nbi."
-            )
-            power_nbi = np.full_like(times, np.nan)
+        power_nbi = params.get_data("summary/power_nbi")
+        power_nbi = MastUtilMethods.interpolate_1d(base_time, power_nbi, times)
 
-        power_radiated = MastUtilMethods.get_data_or_none(
-            params, "summary/power_radiated"
+        power_radiated = params.get_data("summary/power_radiated")
+        power_radiated = MastUtilMethods.interpolate_1d(
+            base_time, power_radiated, times
         )
-        if power_radiated is not None:
-            power_radiated = MastUtilMethods.interpolate_1d(
-                base_time, power_radiated, times
-            )
-        else:
-            params.logger.warning(
-                "get_power: summary/power_radiated not available. "
-                "Returning NaNs for p_rad."
-            )
-            power_radiated = np.full_like(times, np.nan)
 
         try:
             power_ohm = MastPhysicsMethods._get_p_ohm(params)
-        except (CalculationError, FetchDataError) as exc:
+        except (CalculationError, FetchDataError):
             # a missing equilibrium or Ip signal must not take out p_nbi and p_rad
-            params.logger.warning("p_oh: {exc}", exc=exc)
-            power_ohm = np.full_like(times, np.nan)
+            power_ohm = [np.nan]
 
         return {"p_nbi": power_nbi, "p_oh": power_ohm, "p_rad": power_radiated}
 
@@ -222,38 +200,16 @@ class MastPhysicsMethods:
 
         times = params.times
 
-        base_time = MastUtilMethods.get_data_or_none(params, "gas_injection/time")
-        if base_time is None:
-            params.logger.warning(
-                "get_gas: gas_injection/time not available. Returning NaNs."
-            )
-            return {
-                "gas_total_injected": np.full_like(times, np.nan),
-                "gas_inboard_total": np.full_like(times, np.nan),
-                "gas_outboard_total": np.full_like(times, np.nan),
-            }
+        base_time = params.get_data("gas_injection/time")
 
-        def _fetch(col: str, path: str) -> np.ndarray:
-            signal = MastUtilMethods.get_data_or_none(params, path)
-            if signal is None:
-                params.logger.warning(
-                    "get_gas: {path} not available. Returning NaNs for {col}.",
-                    path=path,
-                    col=col,
-                )
-                return np.full_like(times, np.nan)
+        def _fetch(path: str) -> np.ndarray:
+            signal = params.get_data(path)
             return MastUtilMethods.interpolate_1d(base_time, signal, times)
 
         return {
-            "gas_total_injected": _fetch(
-                "gas_total_injected", "gas_injection/total_injected"
-            ),
-            "gas_inboard_total": _fetch(
-                "gas_inboard_total", "gas_injection/inboard_total"
-            ),
-            "gas_outboard_total": _fetch(
-                "gas_outboard_total", "gas_injection/outboard_total"
-            ),
+            "gas_total_injected": _fetch("gas_injection/total_injected"),
+            "gas_inboard_total": _fetch("gas_injection/inboard_total"),
+            "gas_outboard_total": _fetch("gas_injection/outboard_total"),
         }
 
     @staticmethod
@@ -277,31 +233,15 @@ class MastPhysicsMethods:
         """
         times = params.times
 
-        base_time = MastUtilMethods.get_data_or_none(params, "thomson_scattering/time")
-        if base_time is None:
-            params.logger.warning(
-                "get_ts_parameters: thomson_scattering/time not available. "
-                "Returning NaNs."
-            )
-            return {
-                "te_core": np.full_like(times, np.nan),
-                "ne_core": np.full_like(times, np.nan),
-            }
+        base_time = params.get_data("thomson_scattering/time")
 
-        def _fetch(col: str, path: str) -> np.ndarray:
-            signal = MastUtilMethods.get_data_or_none(params, path)
-            if signal is None:
-                params.logger.warning(
-                    "get_ts_parameters: {path} not available. Returning NaNs for {col}.",
-                    path=path,
-                    col=col,
-                )
-                return np.full_like(times, np.nan)
+        def _fetch(path: str) -> np.ndarray:
+            signal = params.get_data(path)
             return MastUtilMethods.interpolate_1d(base_time, signal, times)
 
         return {
-            "te_core": _fetch("te_core", "thomson_scattering/t_e_core"),
-            "ne_core": _fetch("ne_core", "thomson_scattering/n_e_core"),
+            "te_core": _fetch("thomson_scattering/t_e_core"),
+            "ne_core": _fetch("thomson_scattering/n_e_core"),
         }
 
     @staticmethod
@@ -337,43 +277,36 @@ class MastPhysicsMethods:
 
         """
 
-        n_e = MastUtilMethods.get_data_or_none(params, "summary/line_average_n_e")
-        if n_e is None:
+        try:
+            n_e = params.get_data("summary/line_average_n_e", required=True)
+        except DataError:
             # some shots lack a line-average density measurement entirely
-            params.logger.warning(
-                "get_densities: summary/line_average_n_e not available. Returning NaNs."
-            )
-            nan_times = np.full_like(params.times, np.nan)
             return {
-                "n_e": nan_times,
-                "dn_dt": nan_times.copy(),
-                "greenwald_fraction": nan_times.copy(),
+                "n_e": [np.nan],
+                "dn_dt": [np.nan],
+                "greenwald_fraction": [np.nan],
             }
         t_n = params.get_data("summary/time")
         ip = params.get_data("summary/ip")
         t_ip = params.get_data("summary/time")
-        a_minor = MastUtilMethods.get_data_or_none(params, "equilibrium/minor_radius")
-        t_a = MastUtilMethods.get_data_or_none(params, "equilibrium/time")
-        if a_minor is None or t_a is None:
-            # no equilibrium: n_e/dn_dt still stand, greenwald_fraction cannot be computed
-            params.logger.warning(
-                "get_densities: equilibrium data not available. "
-                "Returning NaNs for greenwald_fraction."
-            )
-            a_minor = np.array([np.nan])
-            t_a = np.array([])
+        # a_minor/t_a: if equilibrium data is missing, _get_densities already
+        # returns NaN for greenwald_fraction while n_e/dn_dt still stand
+        a_minor = params.get_data("equilibrium/minor_radius")
+        t_a = params.get_data("equilibrium/time")
 
         return MastPhysicsMethods._get_densities(
-            params.times, n_e, t_n, ip, t_ip, a_minor, t_a
+            params, params.times, n_e, t_n, ip, t_ip, a_minor, t_a
         )
 
     @staticmethod
-    def _get_densities(times, n_e, t_n, ip, t_ip, a_minor, t_a):
+    def _get_densities(params, times, n_e, t_n, ip, t_ip, a_minor, t_a):
         """
         Calculate electron density, its time derivative, and the Greenwald fraction.
 
         Parameters
         ----------
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection, shot id and more.
         times : array_like
             Time points at which to interpolate the densities.
         n_e : array_like
@@ -410,10 +343,14 @@ class MastPhysicsMethods:
 
         if not np.any(np.isfinite(a_minor)) or np.size(t_a) < 2:
             # No usable equilibrium: the densities stand, the Greenwald fraction cannot.
+            params.logger.warning(
+                "get_densities: equilibrium/minor_radius not available. "
+                "Returning NaN for greenwald_fraction."
+            )
             return {
                 "n_e": n_e,
                 "dn_dt": dn_dt,
-                "greenwald_fraction": np.full_like(n_e, np.nan),
+                "greenwald_fraction": [np.nan],
             }
 
         MastUtilMethods.require_aligned("a_minor", a_minor, t_a)
@@ -444,14 +381,14 @@ class MastPhysicsMethods:
             A dictionary containing SXR data (`sxr_data`) and
             corresponding time points (`sxr_time`).
         """
-        hcam = MastUtilMethods.get_data_or_none(
-            params, "soft_x_rays/horizontal_cam_upper", return_xarray=True
-        )
-        if hcam is None:
-            params.logger.warning(
-                "get_sxr: soft_x_rays/horizontal_cam_upper not available. "
-                "Returning NaNs."
+        try:
+            hcam = params.get_data(
+                "soft_x_rays/horizontal_cam_upper",
+                return_xarray=True,
+                required=True,
             )
+        except DataError:
+            hcam = None
 
         if hcam is not None:
             hcam_channel = hcam.isel(horizontal_cam_upper_channel=0)
@@ -497,17 +434,14 @@ class MastPhysicsMethods:
             A dictionary containing D-alpha signal data (`dalpha`).
         """
 
-        dalpha = MastUtilMethods.get_data_or_none(
-            params,
-            "spectrometer_visible/filter_spectrometer_dalpha_voltage",
-            return_xarray=True,
-        )
-        if dalpha is None:
-            params.logger.warning(
-                "get_dalpha: spectrometer_visible/filter_spectrometer_dalpha_voltage "
-                "not available. Returning NaNs."
+        try:
+            dalpha = params.get_data(
+                "spectrometer_visible/filter_spectrometer_dalpha_voltage",
+                return_xarray=True,
+                required=True,
             )
-            return {"d_alpha": np.full_like(params.times, np.nan)}
+        except DataError:
+            return {"d_alpha": [np.nan]}
 
         dalpha = dalpha.isel(dalpha_channel=2)
         dalpha = dalpha.dropna(dim="time")
@@ -574,7 +508,7 @@ class MastPhysicsMethods:
             A dictionary containing `prad_peaking`.
         """
         if power.ndim != 2:
-            raise CalculationError(
+            raise MismatchCalculationError(
                 "Expected a 2-D (channel, time) bolometer power array, "
                 f"got shape {power.shape}"
             )
@@ -695,21 +629,16 @@ class MastPhysicsMethods:
         - Rea et al. (2020), *Fusion Sci. Technol.* 76(8), 912-924.
           DOI: 10.1080/15361055.2020.1798589
         """
-        power = MastUtilMethods.get_data_or_none(params, "bolometer/power")
-        if power is None:
+        try:
+            power = params.get_data("bolometer/power", required=True)
+        except DataError:
             # bolometer diagnostic not installed/recorded for this shot
-            params.logger.warning(
-                "get_prad_peaking: bolometer/power not available. Returning NaNs."
-            )
-            return {"prad_peaking": np.full_like(params.times, np.nan)}
+            return {"prad_peaking": [np.nan]}
 
-        rmag = MastUtilMethods.get_data_or_none(params, "equilibrium/magnetic_axis_r")
-        if rmag is None:
-            params.logger.warning(
-                "get_prad_peaking: equilibrium/magnetic_axis_r not available. "
-                "Returning NaNs."
-            )
-            return {"prad_peaking": np.full_like(params.times, np.nan)}
+        try:
+            rmag = params.get_data("equilibrium/magnetic_axis_r", required=True)
+        except DataError:
+            return {"prad_peaking": [np.nan]}
 
         bolo_time = params.get_data("bolometer/time")
         first_r = params.get_data("bolometer/first_point_r")
@@ -856,35 +785,31 @@ class MastPhysicsMethods:
           DOI: 10.1080/15361055.2020.1798589
         """
         nan_result = {
-            col: np.full_like(params.times, np.nan)
-            for col in ("te_peaking", "ne_peaking", "pressure_peaking")
+            col: [np.nan] for col in ("te_peaking", "ne_peaking", "pressure_peaking")
         }
 
         # 2D profile arrays: dims (major_radius, time)
-        te_xr = MastUtilMethods.get_data_or_none(
-            params, "thomson_scattering/t_e", return_xarray=True
-        )
-        ne_xr = MastUtilMethods.get_data_or_none(
-            params, "thomson_scattering/n_e", return_xarray=True
-        )
-        pe_xr = MastUtilMethods.get_data_or_none(
-            params, "thomson_scattering/p_e", return_xarray=True
-        )
-
-        if any(x is None for x in (te_xr, ne_xr)):
-            params.logger.warning(
-                "get_te_ne_peaking: Thomson scattering profile data not available. "
-                "Returning NaNs."
+        try:
+            te_xr = params.get_data(
+                "thomson_scattering/t_e", return_xarray=True, required=True
             )
+            ne_xr = params.get_data(
+                "thomson_scattering/n_e", return_xarray=True, required=True
+            )
+        except DataError:
             return nan_result
+
+        try:
+            pe_xr = params.get_data(
+                "thomson_scattering/p_e", return_xarray=True, required=True
+            )
+        except DataError:
+            pe_xr = None
 
         te_profile = te_xr.values
         ne_profile = ne_xr.values
         if pe_xr is None:
             # p_e = n_e k T_e, with T_e in eV so that k T_e = e * T_e [J]
-            params.logger.warning(
-                "thomson_scattering/p_e unavailable, reconstructing from n_e and t_e."
-            )
             pe_profile = ne_profile * te_profile * const.e
         else:
             pe_profile = pe_xr.values
@@ -894,10 +819,9 @@ class MastPhysicsMethods:
 
         try:
             rho, _, _ = MastUtilMethods.thomson_rho(params, r_ts)
-        except CalculationError as exc:
+        except CalculationError:
             # equilibrium unavailable: can't locate the core bin, so peaking
             # factors can't be computed for this shot
-            params.logger.warning("get_te_ne_peaking: {exc}", exc=exc)
             return nan_result
 
         return MastPhysicsMethods._get_te_ne_peaking(
@@ -1010,28 +934,19 @@ class MastPhysicsMethods:
         disruption-py/blob/matlab/CMOD/matlab-core/get_TS_data_cmod.m), adapted from
         the vertical C-Mod geometry to the radial MAST geometry.
         """
-        nan_result = {"te_width": np.full_like(params.times, np.nan)}
+        nan_result = {"te_width": [np.nan]}
 
         # 2D profile array: dims (major_radius, time)
-        te_xr = MastUtilMethods.get_data_or_none(
-            params, "thomson_scattering/t_e", return_xarray=True
-        )
-
-        if te_xr is None:
-            params.logger.warning(
-                "get_te_width: thomson_scattering/t_e not available. Returning NaNs."
-            )
-            return nan_result
+        te_xr = params.get_data("thomson_scattering/t_e", return_xarray=True)
 
         r_ts = te_xr.coords["major_radius"].values
         ts_time = te_xr.coords["time"].values
 
         try:
             _, r_mag, a_minor = MastUtilMethods.thomson_rho(params, r_ts)
-        except CalculationError as exc:
+        except CalculationError:
             # equilibrium unavailable: can't bound the Gaussian fit rejection
             # window, so the width can't be computed for this shot
-            params.logger.warning("get_te_width: {exc}", exc=exc)
             return nan_result
 
         return MastPhysicsMethods._get_te_width(
@@ -1067,25 +982,15 @@ class MastPhysicsMethods:
             col: [np.nan] for col in ("z_error", "z_prog", "zcur", "v_z", "z_times_v_z")
         }
 
-        z_ref = MastUtilMethods.get_data_or_none(params, "pulse_schedule/z_ref")
-        zip_prx = MastUtilMethods.get_data_or_none(params, "controllers/zip_proxy")
-        t_ctrl = MastUtilMethods.get_data_or_none(params, "controllers/time")
-        ip_raw = MastUtilMethods.get_data_or_none(params, "summary/ip")
-        t_ip = MastUtilMethods.get_data_or_none(params, "summary/time")
-
-        if any(x is None for x in (z_ref, zip_prx, t_ctrl, ip_raw, t_ip)):
-            # e.g. older shots without the zip_proxy controller signal
-            params.logger.warning(
-                "get_z_parameters: required signal(s) not available. Returning NaNs."
-            )
-            return nan_result
-
-        if any(
-            not np.isfinite(x).any() for x in (z_ref, zip_prx, t_ctrl, ip_raw, t_ip)
-        ):
-            params.logger.warning(
-                "get_z_parameters: required signal(s) all-NaN. Returning NaNs."
-            )
+        try:
+            z_ref = params.get_data("pulse_schedule/z_ref", required=True)
+            zip_prx = params.get_data("controllers/zip_proxy", required=True)
+            t_ctrl = params.get_data("controllers/time", required=True)
+            ip_raw = params.get_data("summary/ip", required=True)
+            t_ip = params.get_data("summary/time", required=True)
+        except DataError:
+            # e.g. older shots without the zip_proxy controller signal, or
+            # signal(s) present but entirely NaN
             return nan_result
 
         ip_ctrl = MastUtilMethods.interpolate_1d(t_ip, ip_raw, t_ctrl)
