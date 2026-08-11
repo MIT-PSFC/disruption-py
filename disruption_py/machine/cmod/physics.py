@@ -7,7 +7,6 @@ Module for retrieving and calculating data for C-MOD physics methods.
 import warnings
 
 import numpy as np
-import scipy.constants as const
 import scipy
 
 from disruption_py.core.physics_method.caching import cache_method
@@ -1625,7 +1624,7 @@ class CmodPhysicsMethods:
         # density is approximately equal to n(r=a/sqrt(3)), so calculate critical density
         # for cutoff (n > n_crit) at r = a/sqrt(3)
         btor_midrad = btor * cmod_maj_rad / (cmod_maj_rad + aminor / np.sqrt(3))
-        n_crit = 2 * btor_midrad**2 * const.epsilon_0 / const.m_e
+        n_crit = 2 * btor_midrad**2 * scipy.constants.epsilon_0 / scipy.constants.m_e
 
         # Time slices with low Btor are unreliable because gratings are often not
         # aligned to field, signal is low, and there are frequent density cutoffs.
