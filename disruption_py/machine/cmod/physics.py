@@ -8,7 +8,7 @@ import warnings
 
 import numpy as np
 import scipy.constants as const
-from scipy.signal import butter, filtfilt, resample_poly
+import scipy
 
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
@@ -2097,7 +2097,7 @@ class CmodPhysicsMethods:
 
     @staticmethod
     @physics_method(columns=["thermal_quench_time"], tokamak=Tokamak.CMOD)
-    def get_thermal_quench_onset_time(params: PhysicsMethodParams):
+    def get_thermal_quench_time(params: PhysicsMethodParams):
         """
         Labels the onset time of the thermal quench for a given shot (NaN for non-disruptive shots)
         using a vertical SXR array due to its off-axis views and robustness across shots,
@@ -2150,7 +2150,7 @@ class CmodPhysicsMethods:
                 )
             except mdsExceptions.MdsException:
                 params.logger.debug(
-                    "get_thermal_quench_onset_time: "
+                    "get_thermal_quench_time: "
                     f"Failed to get SXR {array_path} chord {i+1} data."
                 )
                 continue
@@ -2187,7 +2187,7 @@ class CmodPhysicsMethods:
             if sample_freq > sample_freq_5khz:
                 # 2012-2016 has 250 kHz sampling frequency. Resample to 5 kHz frequency
                 # (native SXR sample frequency of earlier campaigns) for speed-up
-                chord = resample_poly(chord, up=1, down=sample_freq // sample_freq_5khz)
+                chord = scipy.signal.resample_poly(chord, up=1, down=sample_freq // sample_freq_5khz)
             autocorr = np.correlate(chord, chord, mode="full")
             max_autocorr = np.max(autocorr)
             if max_autocorr > 0:
@@ -2204,7 +2204,7 @@ class CmodPhysicsMethods:
             autocorr_decay_time = index_decay / sample_freq_5khz
             if autocorr_decay_time < noise_autocorr_cutoff:
                 params.logger.debug(
-                    "get_thermal_quench_onset_time: "
+                    "get_thermal_quench_time: "
                     f"Removing chord {i+1}. Norm. Autocorr: {autocorr_decay_time:.3f}."
                 )
                 sxr[i] = 0.0
@@ -2217,9 +2217,9 @@ class CmodPhysicsMethods:
         bworth_cutoff = 1000  # [Hz]
         bworth_order = 2
         normalized_cutoff = bworth_cutoff / (0.5 * sample_freq)
-        b, a = butter(bworth_order, normalized_cutoff, btype="low", analog=False)
+        b, a = scipy.signal.butter(bworth_order, normalized_cutoff, btype="low", analog=False)
         core_sxr_raw = np.max(sxr, axis=0)
-        sxr = filtfilt(b, a, sxr, axis=1)
+        sxr = scipy.signal.filtfilt(b, a, sxr, axis=1)
         core_sxr = np.max(sxr, axis=0)
         dcore_sxr_dt = np.diff(core_sxr, prepend=0) / sample_time
 
@@ -2240,7 +2240,7 @@ class CmodPhysicsMethods:
         idx_end = np.argmin(np.abs(t_sxr - cq_onset_time))
         if idx_start == len(t_sxr) - 1:
             params.logger.debug(
-                "get_thermal_quench_onset_time: No SXR data at time of CQ."
+                "get_thermal_quench_time: No SXR data at time of CQ."
                 f"params.disruption_time = {params.disruption_time:.3f}."
             )
             return {"thermal_quench_time": [np.nan]}
