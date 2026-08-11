@@ -15,6 +15,7 @@ from disruption_py.core.physics_method.errors import (
     CalculationError,
     FetchDataError,
     MismatchCalculationError,
+    NanDataError,
 )
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import (
@@ -2130,7 +2131,7 @@ class CmodPhysicsMethods:
         """
         # Skip labeling the thermal quench time if the shot is non-disruptive
         if params.disruption_time is None:
-            return {"thermal_quench_time": [np.nan]}
+            raise NanDataError("shot is non-disruptive")
 
         # Get current data for obtaining start of current quench
         ip, magtime = params.get_data_with_dims(r"\ip", tree_name="magnetics")
@@ -2164,7 +2165,7 @@ class CmodPhysicsMethods:
                 chords[i] = chord[valid]
 
         if t_sxr is None:
-            return {"thermal_quench_time": [np.nan]}
+            raise FetchDataError("No available chords for SXR array 1")
         sxr = np.zeros((n_chords, len(t_sxr)))
         for i, data in chords.items():
             sxr[i] = data
@@ -2186,7 +2187,9 @@ class CmodPhysicsMethods:
             if sample_freq > sample_freq_5khz:
                 # 2012-2016 has 250 kHz sampling frequency. Resample to 5 kHz frequency
                 # (native SXR sample frequency of earlier campaigns) for speed-up
-                chord = scipy.signal.resample_poly(chord, up=1, down=sample_freq // sample_freq_5khz)
+                chord = scipy.signal.resample_poly(
+                    chord, up=1, down=sample_freq // sample_freq_5khz
+                )
             autocorr = np.correlate(chord, chord, mode="full")
             max_autocorr = np.max(autocorr)
             if max_autocorr > 0:
@@ -2216,7 +2219,9 @@ class CmodPhysicsMethods:
         bworth_cutoff = 1000  # [Hz]
         bworth_order = 2
         normalized_cutoff = bworth_cutoff / (0.5 * sample_freq)
-        b, a = scipy.signal.butter(bworth_order, normalized_cutoff, btype="low", analog=False)
+        b, a = scipy.signal.butter(
+            bworth_order, normalized_cutoff, btype="low", analog=False
+        )
         core_sxr_raw = np.max(sxr, axis=0)
         sxr = scipy.signal.filtfilt(b, a, sxr, axis=1)
         core_sxr = np.max(sxr, axis=0)
@@ -2238,11 +2243,10 @@ class CmodPhysicsMethods:
         idx_start = np.argmin(np.abs(t_sxr - (cq_onset_time - wndw_before_cq)))
         idx_end = np.argmin(np.abs(t_sxr - cq_onset_time))
         if idx_start == len(t_sxr) - 1:
-            params.logger.debug(
-                "get_thermal_quench_time: No SXR data at time of CQ."
-                f"params.disruption_time = {params.disruption_time:.3f}."
+            raise NanDataError(
+                f"No SXR data at time of CQ."
+                f"params.disruption_time = {params.disruption_time:.3f} s."
             )
-            return {"thermal_quench_time": [np.nan]}
         t_max_sxr_drop = t_sxr[idx_start + np.argmin(dcore_sxr_dt[idx_start:idx_end])]
 
         # Find onset of thermal quench in 0.5 ms window prior to midpoint of TQ
