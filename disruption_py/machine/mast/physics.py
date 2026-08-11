@@ -456,57 +456,66 @@ class MastPhysicsMethods:
         return {"d_alpha": dalpha_data}
 
     @staticmethod
-    def _get_prad_peaking(
-        times,
-        power,
-        bolo_time,
-        first_r,
-        first_z,
-        second_r,
-        second_z,
-        validity,
-        channel_type,
-        rmag,
-        zmag,
-        efit_time,
-    ):
-        """
-        Calculate the Prad CVA peaking factor from MAST bolometer data.
+    @physics_method(
+        columns=["prad_peaking"],
+        tokamak=Tokamak.MAST,
+    )
+    def get_prad_peaking(params: PhysicsMethodParams):
+        r"""
+        Calculate the radiated power CVA peaking factor using the MAST bolometer arrays.
 
         Following Rea et al. (2020):
-        - CVA: mean power in core channels / mean power in non-divertor channels
 
-        Core channels are those whose chords pass within 6% of the vertical machine
-        scale from the magnetic axis (Rea et al. 2020, Eq. 3). Divertor channels
-        (excluded from the denominator) are those beyond 25% of the vertical scale.
-        Only fan-array channels (channel_type == 0) are used.
+        $$
+        P_{\text{rad,CVA}} = \frac{\langle P_j \rangle_{j \in C}}
+                                   {\langle P_j \rangle_{j \notin D}}
+        $$
+
+        where C is the core bin (chords passing within 6% of the vertical machine scale
+        from the magnetic axis) and D is the divertor bin (chords passing farther than
+        25% of the vertical scale from the magnetic axis). Only fan-array channels
+        (channel_type == 0) are used.
+
+        The XDIV peaking factor is not computed for MAST because its symmetric
+        double-null geometry makes a single divertor-vs-all metric ambiguous.
 
         Parameters
         ----------
-        times : array_like
-            Requested time basis.
-        power : np.ndarray
-            Bolometer power array of shape (n_channels, n_times).
-        bolo_time : np.ndarray
-            Time base of the bolometer measurements.
-        first_r, first_z : np.ndarray
-            R and Z coordinates of the first point (detector/aperture) for each channel.
-        second_r, second_z : np.ndarray
-            R and Z coordinates of the second point (chord direction) for each channel.
-        validity : np.ndarray
-            Validity flags for each channel; 1 = valid, 0 = invalid.
-        channel_type : np.ndarray
-            Channel type identifier; 0 = vertical fan array.
-        rmag, zmag : np.ndarray
-            Magnetic axis R and Z positions on the equilibrium time base.
-        efit_time : np.ndarray
-            Time base of the equilibrium data.
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection, shot id and more.
 
         Returns
         -------
         dict
             A dictionary containing `prad_peaking`.
+
+        References
+        -------
+        - Rea et al. (2020), *Fusion Sci. Technol.* 76(8), 912-924.
+          DOI: 10.1080/15361055.2020.1798589
         """
+        try:
+            power = params.get_data("bolometer/power", required=True)
+            rmag = params.get_data("equilibrium/magnetic_axis_r", required=True)
+        except DataError:
+            # bolometer diagnostic not installed/recorded for this shot
+            return {"prad_peaking": [np.nan]}
+
+        bolo_time = params.get_data("bolometer/time")
+        first_r = params.get_data("bolometer/first_point_r")
+        first_z = params.get_data("bolometer/first_point_z")
+        second_r = params.get_data("bolometer/second_point_r")
+        second_z = params.get_data("bolometer/second_point_z")
+        validity = params.get_data("bolometer/validity")
+        channel_type = params.get_data("bolometer/channel_type")
+
+        zmag = params.get_data("equilibrium/magnetic_axis_z")
+        efit_time = params.get_data("equilibrium/time")
+
+        MastUtilMethods.require_aligned("bolometer/power", power, bolo_time)
+        MastUtilMethods.require_aligned("equilibrium/magnetic_axis_r", rmag, efit_time)
+        MastUtilMethods.require_aligned("equilibrium/magnetic_axis_z", zmag, efit_time)
+
         if power.ndim != 2:
             raise MismatchCalculationError(
                 "Expected a 2-D (channel, time) bolometer power array, "
@@ -587,88 +596,9 @@ class MastPhysicsMethods:
         eq_nan = np.isnan(rmag_t) | np.isnan(zmag_t)
         prad_cva[eq_nan] = np.nan
 
-        prad_cva = MastUtilMethods.interpolate_1d(bolo_time, prad_cva, times)
+        prad_cva = MastUtilMethods.interpolate_1d(bolo_time, prad_cva, params.times)
 
         return {"prad_peaking": prad_cva}
-
-    @staticmethod
-    @physics_method(
-        columns=["prad_peaking"],
-        tokamak=Tokamak.MAST,
-    )
-    def get_prad_peaking(params: PhysicsMethodParams):
-        r"""
-        Calculate the radiated power CVA peaking factor using the MAST bolometer arrays.
-
-        Following Rea et al. (2020):
-
-        $$
-        P_{\text{rad,CVA}} = \frac{\langle P_j \rangle_{j \in C}}
-                                   {\langle P_j \rangle_{j \notin D}}
-        $$
-
-        where C is the core bin (chords passing within 6% of the vertical machine scale
-        from the magnetic axis) and D is the divertor bin (chords passing farther than
-        25% of the vertical scale from the magnetic axis).
-
-        The XDIV peaking factor is not computed for MAST because its symmetric
-        double-null geometry makes a single divertor-vs-all metric ambiguous.
-
-        Parameters
-        ----------
-        params : PhysicsMethodParams
-            The parameters containing the Xarray connection, shot id and more.
-
-        Returns
-        -------
-        dict
-            A dictionary containing `prad_peaking`.
-
-        References
-        -------
-        - Rea et al. (2020), *Fusion Sci. Technol.* 76(8), 912-924.
-          DOI: 10.1080/15361055.2020.1798589
-        """
-        try:
-            power = params.get_data("bolometer/power", required=True)
-        except DataError:
-            # bolometer diagnostic not installed/recorded for this shot
-            return {"prad_peaking": [np.nan]}
-
-        try:
-            rmag = params.get_data("equilibrium/magnetic_axis_r", required=True)
-        except DataError:
-            return {"prad_peaking": [np.nan]}
-
-        bolo_time = params.get_data("bolometer/time")
-        first_r = params.get_data("bolometer/first_point_r")
-        first_z = params.get_data("bolometer/first_point_z")
-        second_r = params.get_data("bolometer/second_point_r")
-        second_z = params.get_data("bolometer/second_point_z")
-        validity = params.get_data("bolometer/validity")
-        channel_type = params.get_data("bolometer/channel_type")
-
-        zmag = params.get_data("equilibrium/magnetic_axis_z")
-        efit_time = params.get_data("equilibrium/time")
-
-        MastUtilMethods.require_aligned("bolometer/power", power, bolo_time)
-        MastUtilMethods.require_aligned("equilibrium/magnetic_axis_r", rmag, efit_time)
-        MastUtilMethods.require_aligned("equilibrium/magnetic_axis_z", zmag, efit_time)
-
-        return MastPhysicsMethods._get_prad_peaking(
-            params.times,
-            power,
-            bolo_time,
-            first_r,
-            first_z,
-            second_r,
-            second_z,
-            validity,
-            channel_type,
-            rmag,
-            zmag,
-            efit_time,
-        )
 
     @staticmethod
     def _get_te_ne_peaking(times, te_profile, ne_profile, pe_profile, rho, ts_time):
