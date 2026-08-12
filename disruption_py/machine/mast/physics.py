@@ -736,34 +736,45 @@ class MastPhysicsMethods:
         )
 
     @staticmethod
-    def _get_te_width(times, te_profile, r_ts, ts_time, r_mag, a_minor):
+    @physics_method(columns=["te_width"], tokamak=Tokamak.MAST)
+    def get_te_width(params: PhysicsMethodParams):
         """
-        Fit a Gaussian to each electron temperature profile and return its
-        half-width at half-maximum.
+        Retrieve the electron temperature profile from the Thomson scattering (TS)
+        diagnostic, then calculate the half-width at half-maximum of the Gaussian
+        fit to the profile.
+
+        MAST's TS channels lie along the major radius, so the fit is performed
+        against `major_radius` rather than the vertical coordinate used on C-Mod.
+        Fits are discarded when the fitted centre falls further than a minor radius
+        from the magnetic axis, or when the resulting width exceeds a minor radius.
 
         Parameters
         ----------
-        times : array_like
-            Requested time basis.
-        te_profile : np.ndarray
-            Electron temperature profile, shape (n_channels, n_times), in eV.
-        r_ts : np.ndarray
-            Major radius of each Thomson scattering channel [m], shape (n_channels,).
-        ts_time : np.ndarray
-            Time base of the Thomson scattering measurements.
-        r_mag : float
-            Time-averaged major radius of the magnetic axis [m], used to reject fits
-            whose centre falls outside the plasma.
-        a_minor : float
-            Time-averaged minor radius [m], used as the scale for both the centre and
-            the width rejection windows.
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection, shot id and more.
 
         Returns
         -------
         dict
             A dictionary containing the electron temperature profile width
             (`te_width`).
+
+        References
+        -------
+        - original source: [get_TS_data_cmod.m](https://github.com/MIT-PSFC/
+        disruption-py/blob/matlab/CMOD/matlab-core/get_TS_data_cmod.m), adapted from
+        the vertical C-Mod geometry to the radial MAST geometry.
         """
+
+        # 2D profile array: dims (major_radius, time)
+        te_xr = params.get_data("thomson_scattering/t_e", return_xarray=True)
+
+        r_ts = te_xr.coords["major_radius"].values
+        ts_time = te_xr.coords["time"].values
+        te_profile = te_xr.values
+
+        _, r_mag, a_minor = MastUtilMethods.thomson_rho(params, r_ts)
+
         # sort by major radius
         idx = np.argsort(r_ts)
         r_ts = r_ts[idx]
@@ -803,56 +814,8 @@ class MastPhysicsMethods:
         # reject points with unphysical HWHM
         te_hwhm[te_hwhm > a_minor] = np.nan
         # time interpolation
-        te_hwhm = MastUtilMethods.interpolate_1d(ts_time, te_hwhm, times)
+        te_hwhm = MastUtilMethods.interpolate_1d(ts_time, te_hwhm, params.times)
         return {"te_width": te_hwhm}
-
-    @staticmethod
-    @physics_method(columns=["te_width"], tokamak=Tokamak.MAST)
-    def get_te_width(params: PhysicsMethodParams):
-        """
-        Retrieve the electron temperature profile from the Thomson scattering (TS)
-        diagnostic, then calculate the half-width at half-maximum of the Gaussian
-        fit to the profile.
-
-        MAST's TS channels lie along the major radius, so the fit is performed
-        against `major_radius` rather than the vertical coordinate used on C-Mod.
-        Fits are discarded when the fitted centre falls further than a minor radius
-        from the magnetic axis, or when the resulting width exceeds a minor radius.
-
-        Parameters
-        ----------
-        params : PhysicsMethodParams
-            The parameters containing the Xarray connection, shot id and more.
-
-        Returns
-        -------
-        dict
-            A dictionary containing the electron temperature profile width
-            (`te_width`).
-
-        References
-        -------
-        - original source: [get_TS_data_cmod.m](https://github.com/MIT-PSFC/
-        disruption-py/blob/matlab/CMOD/matlab-core/get_TS_data_cmod.m), adapted from
-        the vertical C-Mod geometry to the radial MAST geometry.
-        """
-
-        # 2D profile array: dims (major_radius, time)
-        te_xr = params.get_data("thomson_scattering/t_e", return_xarray=True)
-
-        r_ts = te_xr.coords["major_radius"].values
-        ts_time = te_xr.coords["time"].values
-
-        _, r_mag, a_minor = MastUtilMethods.thomson_rho(params, r_ts)
-
-        return MastPhysicsMethods._get_te_width(
-            params.times,
-            te_xr.values,
-            r_ts,
-            ts_time,
-            r_mag,
-            a_minor,
-        )
 
     @staticmethod
     @physics_method(
