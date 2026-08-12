@@ -17,6 +17,7 @@ from disruption_py.core.physics_method.errors import (
 )
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import causal_boxcar_smooth, gaussian_fit, interp1
+from disruption_py.core.utils.misc import require_aligned
 from disruption_py.machine.mast.util import MastUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 
@@ -146,13 +147,13 @@ class MastPhysicsMethods:
         summary_time = params.get_data("summary/time")
         equilibrium_time = params.get_data("equilibrium/time")
 
-        MastUtilMethods.require_aligned("summary/ip", ip, summary_time)
+        require_aligned("summary/ip", ip, summary_time)
         for path, signal in (
             ("equilibrium/magnetic_axis_r", r0),
             ("equilibrium/li", li),
             ("equilibrium/vloop_dynamic", v_loop),
         ):
-            MastUtilMethods.require_aligned(path, signal, equilibrium_time)
+            require_aligned(path, signal, equilibrium_time)
 
         # compute derived quantities
         smooth_window_size = 30
@@ -332,8 +333,8 @@ class MastPhysicsMethods:
             raise MismatchCalculationError(
                 f"len(n_e) = {len(n_e)} vs. len(t_n) = {len(t_n)}"
             )
-        MastUtilMethods.require_aligned("n_e", n_e, t_n)
-        MastUtilMethods.require_aligned("ip", ip, t_ip)
+        require_aligned("n_e", n_e, t_n)
+        require_aligned("ip", ip, t_ip)
         # get the gradient of n_E
         dn_dt = np.gradient(n_e, t_n)
         n_e = interp1(t_n, n_e, times)
@@ -353,7 +354,7 @@ class MastPhysicsMethods:
                 "greenwald_fraction": [np.nan],
             }
 
-        MastUtilMethods.require_aligned("a_minor", a_minor, t_a)
+        require_aligned("a_minor", a_minor, t_a)
         a_minor = interp1(t_a, a_minor, times, bounds_error=False, fill_value=np.nan)
         # make sure aminor is not 0 or less than 0
         a_minor[a_minor <= 0] = 0.001
@@ -512,9 +513,9 @@ class MastPhysicsMethods:
         zmag = params.get_data("equilibrium/magnetic_axis_z")
         efit_time = params.get_data("equilibrium/time")
 
-        MastUtilMethods.require_aligned("bolometer/power", power, bolo_time)
-        MastUtilMethods.require_aligned("equilibrium/magnetic_axis_r", rmag, efit_time)
-        MastUtilMethods.require_aligned("equilibrium/magnetic_axis_z", zmag, efit_time)
+        require_aligned("bolometer/power", power, bolo_time)
+        require_aligned("equilibrium/magnetic_axis_r", rmag, efit_time)
+        require_aligned("equilibrium/magnetic_axis_z", zmag, efit_time)
 
         if power.ndim != 2:
             raise MismatchCalculationError(

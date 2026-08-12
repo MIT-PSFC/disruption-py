@@ -22,40 +22,6 @@ class MastUtilMethods:
     """
 
     @staticmethod
-    def require_aligned(path: str, signal: np.ndarray, time: np.ndarray) -> np.ndarray:
-        """
-        Check a signal is sampled on the time base it will be interpolated against.
-
-        The last axis is the time axis for both 1-D traces and 2-D (channel, time)
-        profiles, so this covers both.
-
-        Parameters
-        ----------
-        path : str
-            Path of the signal, used for the error message.
-        signal : np.ndarray
-            The signal to check.
-        time : np.ndarray
-            The time base the signal should be sampled on.
-
-        Returns
-        -------
-        np.ndarray
-            The signal, unchanged.
-
-        Raises
-        ------
-        CalculationError
-            If the signal's time axis does not match the length of the time base.
-        """
-        if signal.shape[-1] != len(time):
-            raise CalculationError(
-                f"{path} has {signal.shape[-1]} samples "
-                f"but its time base has {len(time)}"
-            )
-        return signal
-
-    @staticmethod
     def retrieve_ip(params: PhysicsMethodParams):
         """
         Read in the measured plasma current, Ip.
