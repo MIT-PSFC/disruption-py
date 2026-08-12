@@ -278,15 +278,7 @@ class MastPhysicsMethods:
 
         """
 
-        try:
-            n_e = params.get_data("summary/line_average_n_e", required=True)
-        except DataError:
-            # some shots lack a line-average density measurement entirely
-            return {
-                "n_e": [np.nan],
-                "dn_dt": [np.nan],
-                "greenwald_fraction": [np.nan],
-            }
+        n_e = params.get_data("summary/line_average_n_e", required=True)
         t_n = params.get_data("summary/time")
         ip = params.get_data("summary/ip")
         t_ip = params.get_data("summary/time")
@@ -382,35 +374,24 @@ class MastPhysicsMethods:
             A dictionary containing SXR data (`sxr_data`) and
             corresponding time points (`sxr_time`).
         """
-        try:
-            hcam = params.get_data(
-                "soft_x_rays/horizontal_cam_upper",
-                return_xarray=True,
-                required=True,
-            )
-        except DataError:
-            hcam = None
+        hcam = params.get_data(
+            "soft_x_rays/horizontal_cam_upper",
+            return_xarray=True,
+            required=True,
+        )
 
-        if hcam is not None:
-            hcam_channel = hcam.isel(horizontal_cam_upper_channel=0)
-            hcam_channel = hcam_channel.squeeze(drop=True)
-            sxr_time = hcam_channel.time.values
-            sxr_core = hcam_channel.values
-        else:
-            sxr_time = np.array([np.nan])
-            sxr_core = np.array([np.nan])
+        hcam_channel = hcam.isel(horizontal_cam_upper_channel=0)
+        hcam_channel = hcam_channel.squeeze(drop=True)
+        sxr_time = hcam_channel.time.values
+        sxr_core = hcam_channel.values
 
         times = params.times
         sxr_core = MastUtilMethods.interpolate_1d(sxr_time, sxr_core, times)
 
-        if hcam is not None:
-            hcam_channel = hcam.isel(horizontal_cam_upper_channel=7)
-            hcam_channel = hcam_channel.squeeze(drop=True)
-            sxr_edge = hcam_channel.values
-        else:
-            sxr_edge = np.array([np.nan])
+        hcam_channel = hcam.isel(horizontal_cam_upper_channel=7)
+        hcam_channel = hcam_channel.squeeze(drop=True)
+        sxr_edge = hcam_channel.values
 
-        times = params.times
         sxr_edge = MastUtilMethods.interpolate_1d(sxr_time, sxr_edge, times)
 
         return {"sxr_core": sxr_core, "sxr_edge": sxr_edge}
@@ -435,14 +416,11 @@ class MastPhysicsMethods:
             A dictionary containing D-alpha signal data (`dalpha`).
         """
 
-        try:
-            dalpha = params.get_data(
-                "spectrometer_visible/filter_spectrometer_dalpha_voltage",
-                return_xarray=True,
-                required=True,
-            )
-        except DataError:
-            return {"d_alpha": [np.nan]}
+        dalpha = params.get_data(
+            "spectrometer_visible/filter_spectrometer_dalpha_voltage",
+            return_xarray=True,
+            required=True,
+        )
 
         dalpha = dalpha.isel(dalpha_channel=2)
         dalpha = dalpha.dropna(dim="time")
@@ -495,12 +473,8 @@ class MastPhysicsMethods:
         - Rea et al. (2020), *Fusion Sci. Technol.* 76(8), 912-924.
           DOI: 10.1080/15361055.2020.1798589
         """
-        try:
-            power = params.get_data("bolometer/power", required=True)
-            rmag = params.get_data("equilibrium/magnetic_axis_r", required=True)
-        except DataError:
-            # bolometer diagnostic not installed/recorded for this shot
-            return {"prad_peaking": [np.nan]}
+        power = params.get_data("bolometer/power", required=True)
+        rmag = params.get_data("equilibrium/magnetic_axis_r", required=True)
 
         bolo_time = params.get_data("bolometer/time")
         first_r = params.get_data("bolometer/first_point_r")
@@ -720,15 +694,12 @@ class MastPhysicsMethods:
         }
 
         # 2D profile arrays: dims (major_radius, time)
-        try:
-            te_xr = params.get_data(
-                "thomson_scattering/t_e", return_xarray=True, required=True
-            )
-            ne_xr = params.get_data(
-                "thomson_scattering/n_e", return_xarray=True, required=True
-            )
-        except DataError:
-            return nan_result
+        te_xr = params.get_data(
+            "thomson_scattering/t_e", return_xarray=True, required=True
+        )
+        ne_xr = params.get_data(
+            "thomson_scattering/n_e", return_xarray=True, required=True
+        )
 
         try:
             pe_xr = params.get_data(
@@ -903,20 +874,11 @@ class MastPhysicsMethods:
             A dictionary containing the z parameters: `z_error`,
             `z_prog`, `zcur`, `v_z`, and `z_times_v_z`.
         """
-        nan_result = {
-            col: [np.nan] for col in ("z_error", "z_prog", "zcur", "v_z", "z_times_v_z")
-        }
-
-        try:
-            z_ref = params.get_data("pulse_schedule/z_ref", required=True)
-            zip_prx = params.get_data("controllers/zip_proxy", required=True)
-            t_ctrl = params.get_data("controllers/time", required=True)
-            ip_raw = params.get_data("summary/ip", required=True)
-            t_ip = params.get_data("summary/time", required=True)
-        except DataError:
-            # e.g. older shots without the zip_proxy controller signal, or
-            # signal(s) present but entirely NaN
-            return nan_result
+        z_ref = params.get_data("pulse_schedule/z_ref", required=True)
+        zip_prx = params.get_data("controllers/zip_proxy", required=True)
+        t_ctrl = params.get_data("controllers/time", required=True)
+        ip_raw = params.get_data("summary/ip", required=True)
+        t_ip = params.get_data("summary/time", required=True)
 
         ip_ctrl = MastUtilMethods.interpolate_1d(t_ip, ip_raw, t_ctrl)
 
