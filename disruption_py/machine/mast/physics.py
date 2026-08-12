@@ -864,7 +864,6 @@ class MastPhysicsMethods:
         disruption-py/blob/matlab/CMOD/matlab-core/get_TS_data_cmod.m), adapted from
         the vertical C-Mod geometry to the radial MAST geometry.
         """
-        nan_result = {"te_width": [np.nan]}
 
         # 2D profile array: dims (major_radius, time)
         te_xr = params.get_data("thomson_scattering/t_e", return_xarray=True)
@@ -872,12 +871,7 @@ class MastPhysicsMethods:
         r_ts = te_xr.coords["major_radius"].values
         ts_time = te_xr.coords["time"].values
 
-        try:
-            _, r_mag, a_minor = MastUtilMethods.thomson_rho(params, r_ts)
-        except CalculationError:
-            # equilibrium unavailable: can't bound the Gaussian fit rejection
-            # window, so the width can't be computed for this shot
-            return nan_result
+        _, r_mag, a_minor = MastUtilMethods.thomson_rho(params, r_ts)
 
         return MastPhysicsMethods._get_te_width(
             params.times,
