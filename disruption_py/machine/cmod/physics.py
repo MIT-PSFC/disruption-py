@@ -2129,9 +2129,15 @@ class CmodPhysicsMethods:
         - issues: #[542](https://github.com/MIT-PSFC/disruption-py/issues/542)
 
         """
+        # Import must be within function to avoid circular imports
+        from disruption_py.machine.generic.physics import GenericPhysicsMethods
+
+        cq_time = GenericPhysicsMethods.get_current_quench_time(params)[
+            "current_quench_time"
+        ][0]
         # Skip labeling the thermal quench time if the shot is non-disruptive
-        if params.disruption_time is None:
-            raise NanDataError("shot is non-disruptive")
+        if np.isnan(cq_time):
+            raise CalculationError("shot is non-disruptive.")
 
         # Get current data for obtaining start of current quench
         ip, magtime = params.get_data_with_dims(r"\ip", tree_name="magnetics")
@@ -2156,7 +2162,7 @@ class CmodPhysicsMethods:
                 continue
             # Subtract constant background
             chord = chord - np.mean(chord[t_chord < 0.0])
-            valid = (t_chord > 0) & (t_chord < params.disruption_time + 0.05)
+            valid = (t_chord > 0) & (t_chord < cq_time + 0.05)
             if t_sxr is None:
                 t_sxr = t_chord[valid]
             # Occasionally the time bases of a chord are of a different length
@@ -2179,8 +2185,8 @@ class CmodPhysicsMethods:
         # See shot 1050311013 as an example with some bad chords
         noise_autocorr_cutoff = 0.01  # [s]
         # Use 300 ms prior to current quench for speed-up during autocorr O(N^2)
-        idx_start = np.argmin(np.abs(t_sxr - (params.disruption_time - 0.3)))
-        idx_end = np.argmin(np.abs(t_sxr - params.disruption_time))
+        idx_start = np.argmin(np.abs(t_sxr - (cq_time - 0.3)))
+        idx_end = np.argmin(np.abs(t_sxr - cq_time))
         sample_freq_5khz = 5000  # [Hz]
         for i, chord in enumerate(sxr):
             chord = chord[idx_start:idx_end]
@@ -2231,8 +2237,8 @@ class CmodPhysicsMethods:
         # to avoid labeling sawtooth crashes as the thermal quench
         # Some current quenches can be long (see shots 1050311013, 1050802017).
         # Set Ip prior to disruption as minimum in prior time window (not median for ramp-down)
-        idx_start = np.argmin(np.abs(magtime - (params.disruption_time - 0.04)))
-        idx_end = np.argmin(np.abs(magtime - (params.disruption_time - 0.02)))
+        idx_start = np.argmin(np.abs(magtime - (cq_time - 0.04)))
+        idx_end = np.argmin(np.abs(magtime - (cq_time - 0.02)))
         ip_prior = np.min(ip[idx_start:idx_end])
         # CQ onset is last moment Ip is >90% Ip prior to disruption
         idx_cq_onset = np.where(ip > 0.9 * ip_prior)[0][-1]
@@ -2244,8 +2250,7 @@ class CmodPhysicsMethods:
         idx_end = np.argmin(np.abs(t_sxr - cq_onset_time))
         if idx_start == len(t_sxr) - 1:
             raise NanDataError(
-                f"No SXR data at time of CQ."
-                f"params.disruption_time = {params.disruption_time:.3f} s."
+                f"No SXR data at time of CQ." f"CQ time = {cq_time:.3f} s."
             )
         t_max_sxr_drop = t_sxr[idx_start + np.argmin(dcore_sxr_dt[idx_start:idx_end])]
 
