@@ -198,15 +198,24 @@ class MastPhysicsMethods:
         times = params.times
 
         base_time = params.get_data("gas_injection/time")
+        gas_total_injected = params.get_data("gas_injection/total_injected")
+        gas_inboard_total = params.get_data("gas_injection/inboard_total")
+        gas_outboard_total = params.get_data("gas_injection/outboard_total")
 
-        def _fetch(path: str) -> np.ndarray:
-            signal = params.get_data(path)
-            return MastUtilMethods.interpolate_1d(base_time, signal, times)
+        gas_total_injected = MastUtilMethods.interpolate_1d(
+            base_time, gas_total_injected, times
+        )
+        gas_inboard_total = MastUtilMethods.interpolate_1d(
+            base_time, gas_inboard_total, times
+        )
+        gas_outboard_total = MastUtilMethods.interpolate_1d(
+            base_time, gas_outboard_total, times
+        )
 
         return {
-            "gas_total_injected": _fetch("gas_injection/total_injected"),
-            "gas_inboard_total": _fetch("gas_injection/inboard_total"),
-            "gas_outboard_total": _fetch("gas_injection/outboard_total"),
+            "gas_total_injected": gas_total_injected,
+            "gas_inboard_total": gas_inboard_total,
+            "gas_outboard_total": gas_outboard_total,
         }
 
     @staticmethod
@@ -231,14 +240,15 @@ class MastPhysicsMethods:
         times = params.times
 
         base_time = params.get_data("thomson_scattering/time")
+        te_core = params.get_data("thomson_scattering/t_e_core")
+        ne_core = params.get_data("thomson_scattering/n_e_core")
 
-        def _fetch(path: str) -> np.ndarray:
-            signal = params.get_data(path)
-            return MastUtilMethods.interpolate_1d(base_time, signal, times)
+        te_core = MastUtilMethods.interpolate_1d(base_time, te_core, times)
+        ne_core = MastUtilMethods.interpolate_1d(base_time, ne_core, times)
 
         return {
-            "te_core": _fetch("thomson_scattering/t_e_core"),
-            "ne_core": _fetch("thomson_scattering/n_e_core"),
+            "te_core": te_core,
+            "ne_core": ne_core,
         }
 
     @staticmethod
