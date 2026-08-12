@@ -11,13 +11,13 @@ import scipy.constants as const
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.errors import (
     CalculationError,
+    CustomError,
     DataError,
-    FetchDataError,
     MismatchCalculationError,
 )
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import causal_boxcar_smooth, gaussian_fit, interp1
-from disruption_py.core.utils.misc import require_aligned
+from disruption_py.core.utils.misc import assert_equal_length
 from disruption_py.machine.mast.util import MastUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 
@@ -112,7 +112,7 @@ class MastPhysicsMethods:
 
         try:
             power_ohm = MastPhysicsMethods._get_p_ohm(params)
-        except (CalculationError, FetchDataError):
+        except CustomError:
             # a missing equilibrium or Ip signal must not take out p_nbi and p_rad
             power_ohm = [np.nan]
 
@@ -147,13 +147,9 @@ class MastPhysicsMethods:
         summary_time = params.get_data("summary/time")
         equilibrium_time = params.get_data("equilibrium/time")
 
-        require_aligned("summary/ip", ip, summary_time)
-        for path, signal in (
-            ("equilibrium/magnetic_axis_r", r0),
-            ("equilibrium/li", li),
-            ("equilibrium/vloop_dynamic", v_loop),
-        ):
-            require_aligned(path, signal, equilibrium_time)
+        assert_equal_length(ip, summary_time)
+        for signal in (r0, li, v_loop):
+            assert_equal_length(signal, equilibrium_time)
 
         # compute derived quantities
         smooth_window_size = 30
@@ -282,51 +278,18 @@ class MastPhysicsMethods:
         t_n = params.get_data("summary/time")
         ip = params.get_data("summary/ip")
         t_ip = params.get_data("summary/time")
-        # a_minor/t_a: if equilibrium data is missing, _get_densities already
-        # returns NaN for greenwald_fraction while n_e/dn_dt still stand
+        # a_minor/t_a: if equilibrium data is missing, the Greenwald fraction
+        # below is returned as NaN while n_e/dn_dt still stand
         a_minor = params.get_data("equilibrium/minor_radius")
         t_a = params.get_data("equilibrium/time")
+        times = params.times
 
-        return MastPhysicsMethods._get_densities(
-            params, params.times, n_e, t_n, ip, t_ip, a_minor, t_a
-        )
-
-    @staticmethod
-    def _get_densities(params, times, n_e, t_n, ip, t_ip, a_minor, t_a):
-        """
-        Calculate electron density, its time derivative, and the Greenwald fraction.
-
-        Parameters
-        ----------
-        params : PhysicsMethodParams
-            The parameters containing the Xarray connection, shot id and more.
-        times : array_like
-            Time points at which to interpolate the densities.
-        n_e : array_like
-            Electron density values.
-        t_n : array_like
-            Corresponding time values for electron density.
-        ip : array_like
-            Plasma current values.
-        t_ip : array_like
-            Corresponding time values for plasma current.
-        a_minor : array_like
-            Minor radius values.
-        t_a : array_like
-            Corresponding time values for minor radius.
-
-        Returns
-        -------
-        dict
-            A dictionary containing interpolated electron density (`n_e`),
-            its time derivative (`dn_dt`), and the Greenwald fraction (`greenwald_fraction`).
-        """
         if len(n_e) != len(t_n):
             raise MismatchCalculationError(
                 f"len(n_e) = {len(n_e)} vs. len(t_n) = {len(t_n)}"
             )
-        require_aligned("n_e", n_e, t_n)
-        require_aligned("ip", ip, t_ip)
+        assert_equal_length(n_e, t_n)
+        assert_equal_length(ip, t_ip)
         # get the gradient of n_E
         dn_dt = np.gradient(n_e, t_n)
         n_e = interp1(t_n, n_e, times)
@@ -346,7 +309,7 @@ class MastPhysicsMethods:
                 "greenwald_fraction": [np.nan],
             }
 
-        require_aligned("a_minor", a_minor, t_a)
+        assert_equal_length(a_minor, t_a)
         a_minor = interp1(t_a, a_minor, times, bounds_error=False, fill_value=np.nan)
         # make sure aminor is not 0 or less than 0
         a_minor[a_minor <= 0] = 0.001
@@ -487,9 +450,9 @@ class MastPhysicsMethods:
         zmag = params.get_data("equilibrium/magnetic_axis_z")
         efit_time = params.get_data("equilibrium/time")
 
-        require_aligned("bolometer/power", power, bolo_time)
-        require_aligned("equilibrium/magnetic_axis_r", rmag, efit_time)
-        require_aligned("equilibrium/magnetic_axis_z", zmag, efit_time)
+        assert_equal_length(power, bolo_time)
+        assert_equal_length(rmag, efit_time)
+        assert_equal_length(zmag, efit_time)
 
         if power.ndim != 2:
             raise MismatchCalculationError(
@@ -576,78 +539,6 @@ class MastPhysicsMethods:
         return {"prad_peaking": prad_cva}
 
     @staticmethod
-    def _get_te_ne_peaking(times, te_profile, ne_profile, pe_profile, rho, ts_time):
-        """
-        Calculate Te, ne and pressure peaking factors from Thomson scattering
-        profile data.
-
-        Following Rea et al. (2020), the core bin is defined as channels with
-        normalized effective radius rho < 0.3. The peaking factor is the ratio of
-        the mean value in the core bin to the mean over all channels.
-
-        Parameters
-        ----------
-        times : array_like
-            Requested time basis.
-        te_profile : np.ndarray
-            Electron temperature profile, shape (n_channels, n_times), in eV.
-        ne_profile : np.ndarray
-            Electron density profile, shape (n_channels, n_times), in m^-3.
-        pe_profile : np.ndarray
-            Electron pressure profile, shape (n_channels, n_times), in Pa.
-        rho : np.ndarray
-            Normalized effective radius (rho = r/r_boundary) for each Thomson channel,
-            shape (n_channels,).
-        ts_time : np.ndarray
-            Time base of the Thomson scattering measurements.
-
-        Returns
-        -------
-        dict
-            A dictionary containing `te_peaking`, `ne_peaking` and
-            `pressure_peaking`.
-        """
-        core_mask = (
-            rho < 0.3
-        )  # channels within 30% of normalized radius (Rea et al. 2020, Eq. 7)
-        n_times = len(ts_time)
-        te_pf = np.full(n_times, np.nan)
-        ne_pf = np.full(n_times, np.nan)
-        pressure_pf = np.full(n_times, np.nan)
-
-        for i_time in range(n_times):
-            te_t = te_profile[:, i_time]
-            ne_t = ne_profile[:, i_time]
-            pe_t = pe_profile[:, i_time]
-
-            # one shared mask, so the three factors are computed over the same channels
-            valid = np.isfinite(te_t) & np.isfinite(ne_t) & (te_t > 0) & (ne_t > 0)
-            core_valid = valid & core_mask
-
-            if core_valid.sum() < 2 or valid.sum() < 3:
-                continue
-
-            te_avg = np.mean(te_t[valid])
-            ne_avg = np.mean(ne_t[valid])
-            pe_avg = np.mean(pe_t[valid])
-            if te_avg > 0:
-                te_pf[i_time] = np.mean(te_t[core_valid]) / te_avg
-            if ne_avg > 0:
-                ne_pf[i_time] = np.mean(ne_t[core_valid]) / ne_avg
-            if pe_avg > 0:
-                pressure_pf[i_time] = np.mean(pe_t[core_valid]) / pe_avg
-
-        te_pf = MastUtilMethods.interpolate_1d(ts_time, te_pf, times)
-        ne_pf = MastUtilMethods.interpolate_1d(ts_time, ne_pf, times)
-        pressure_pf = MastUtilMethods.interpolate_1d(ts_time, pressure_pf, times)
-
-        return {
-            "te_peaking": te_pf,
-            "ne_peaking": ne_pf,
-            "pressure_peaking": pressure_pf,
-        }
-
-    @staticmethod
     @physics_method(
         columns=["te_peaking", "ne_peaking", "pressure_peaking"],
         tokamak=Tokamak.MAST,
@@ -689,10 +580,6 @@ class MastPhysicsMethods:
         - Rea et al. (2020), *Fusion Sci. Technol.* 76(8), 912-924.
           DOI: 10.1080/15361055.2020.1798589
         """
-        nan_result = {
-            col: [np.nan] for col in ("te_peaking", "ne_peaking", "pressure_peaking")
-        }
-
         # 2D profile arrays: dims (major_radius, time)
         te_xr = params.get_data(
             "thomson_scattering/t_e", return_xarray=True, required=True
@@ -701,12 +588,9 @@ class MastPhysicsMethods:
             "thomson_scattering/n_e", return_xarray=True, required=True
         )
 
-        try:
-            pe_xr = params.get_data(
-                "thomson_scattering/p_e", return_xarray=True, required=True
-            )
-        except DataError:
-            pe_xr = None
+        pe_xr = params.get_data(
+            "thomson_scattering/p_e", return_xarray=True, required=True
+        )
 
         te_profile = te_xr.values
         ne_profile = ne_xr.values
@@ -719,21 +603,46 @@ class MastPhysicsMethods:
         r_ts = te_xr.coords["major_radius"].values
         ts_time = te_xr.coords["time"].values
 
-        try:
-            rho, _, _ = MastUtilMethods.thomson_rho(params, r_ts)
-        except CalculationError:
-            # equilibrium unavailable: can't locate the core bin, so peaking
-            # factors can't be computed for this shot
-            return nan_result
+        rho, _, _ = MastUtilMethods.thomson_rho(params, r_ts)
 
-        return MastPhysicsMethods._get_te_ne_peaking(
-            params.times,
-            te_profile,
-            ne_profile,
-            pe_profile,
-            rho,
-            ts_time,
-        )
+        # channels within 30% of normalized radius (Rea et al. 2020, Eq. 7)
+        core_mask = rho < 0.3
+        n_times = len(ts_time)
+        te_pf = np.full(n_times, np.nan)
+        ne_pf = np.full(n_times, np.nan)
+        pressure_pf = np.full(n_times, np.nan)
+
+        for i_time in range(n_times):
+            te_t = te_profile[:, i_time]
+            ne_t = ne_profile[:, i_time]
+            pe_t = pe_profile[:, i_time]
+
+            # one shared mask, so the three factors are computed over the same channels
+            valid = np.isfinite(te_t) & np.isfinite(ne_t) & (te_t > 0) & (ne_t > 0)
+            core_valid = valid & core_mask
+
+            if core_valid.sum() < 2 or valid.sum() < 3:
+                continue
+
+            te_avg = np.mean(te_t[valid])
+            ne_avg = np.mean(ne_t[valid])
+            pe_avg = np.mean(pe_t[valid])
+            if te_avg > 0:
+                te_pf[i_time] = np.mean(te_t[core_valid]) / te_avg
+            if ne_avg > 0:
+                ne_pf[i_time] = np.mean(ne_t[core_valid]) / ne_avg
+            if pe_avg > 0:
+                pressure_pf[i_time] = np.mean(pe_t[core_valid]) / pe_avg
+
+        te_pf = MastUtilMethods.interpolate_1d(ts_time, te_pf, params.times)
+        ne_pf = MastUtilMethods.interpolate_1d(ts_time, ne_pf, params.times)
+        pressure_pf = MastUtilMethods.interpolate_1d(ts_time, pressure_pf, params.times)
+
+        return {
+            "te_peaking": te_pf,
+            "ne_peaking": ne_pf,
+            "pressure_peaking": pressure_pf,
+        }
 
     @staticmethod
     @physics_method(columns=["te_width"], tokamak=Tokamak.MAST)

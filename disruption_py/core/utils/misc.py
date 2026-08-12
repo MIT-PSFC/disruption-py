@@ -17,7 +17,7 @@ from typing import Dict, List, Tuple, Type
 import numpy as np
 from loguru import logger
 
-from disruption_py.core.physics_method.errors import CalculationError
+from disruption_py.core.physics_method.errors import MismatchCalculationError
 
 
 def without_duplicates(lst: List):
@@ -211,21 +211,16 @@ def to_tuple(
     return {k: (dim, v) for k, v in data.items()}
 
 
-def require_aligned(path: str, signal: np.ndarray, time: np.ndarray) -> np.ndarray:
+def assert_equal_length(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     """
-    Check a signal is sampled on the time base it will be interpolated against.
-
-    The last axis is the time axis for both 1-D traces and 2-D (channel, time)
-    profiles, so this covers both.
+    Assert that two arrays have the same length, raising an error if they do not.
 
     Parameters
     ----------
-    path : str
-        Path of the signal, used for the error message.
-    signal : np.ndarray
-        The signal to check.
-    time : np.ndarray
-        The time base the signal should be sampled on.
+    a : np.ndarray
+        The first array to check.
+    b : np.ndarray
+        The second array to check.
 
     Returns
     -------
@@ -234,14 +229,14 @@ def require_aligned(path: str, signal: np.ndarray, time: np.ndarray) -> np.ndarr
 
     Raises
     ------
-    CalculationError
-        If the signal's time axis does not match the length of the time base.
+    MismatchCalculationError
+        If the lengths of the two arrays do not match.
     """
-    if signal.shape[-1] != len(time):
-        raise CalculationError(
-            f"{path} has {signal.shape[-1]} samples but its time base has {len(time)}"
+    if a.shape[-1] != len(b):
+        raise MismatchCalculationError(
+            f"a has length {a.shape[-1]} but b has length {len(b)}"
         )
-    return signal
+    return a
 
 
 def filter_dict(i: Dict, s: str) -> Dict:

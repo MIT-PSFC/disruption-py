@@ -8,7 +8,6 @@ import numpy as np
 
 from disruption_py.core.physics_method.errors import (
     CalculationError,
-    DataError,
     MismatchCalculationError,
 )
 from disruption_py.core.physics_method.params import PhysicsMethodParams
@@ -86,14 +85,8 @@ class MastUtilMethods:
         CalculationError
             If the equilibrium magnetic axis or minor radius is unavailable.
         """
-        try:
-            r_mag = params.get_data("equilibrium/magnetic_axis_r", required=True)
-            a_minor = params.get_data("equilibrium/minor_radius", required=True)
-        except DataError as exc:
-            raise CalculationError(
-                "Cannot compute rho for Thomson scattering channels: "
-                "equilibrium magnetic_axis_r or minor_radius unavailable."
-            ) from exc
+        r_mag = params.get_data("equilibrium/magnetic_axis_r", required=True)
+        a_minor = params.get_data("equilibrium/minor_radius", required=True)
         r_mag_mean = np.nanmean(r_mag)
         a_minor_mean = np.nanmean(a_minor)
         if a_minor_mean <= 0:
