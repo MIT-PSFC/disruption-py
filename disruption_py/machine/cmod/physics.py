@@ -24,15 +24,42 @@ from disruption_py.core.utils.math import (
     interp1,
 )
 from disruption_py.inout.mds import mdsExceptions
+from disruption_py.machine.cmod.profiles import CmodEdgeCoreProfiles
 from disruption_py.machine.cmod.thomson import CmodThomsonDensityMeasure
 from disruption_py.machine.tokamak import Tokamak
 
 
-class CmodPhysicsMethods:
+class CmodPhysicsMethods:  # pylint: disable=too-many-public-methods
     """
     This class provides methods to retrieve and calculate physics-related data
     for CMOD.
     """
+
+    # Edge/core profile columns per physics method (Maris 2025). Referenced by
+    # both the @physics_method decorators and the method bodies; the column
+    # values are computed once per shot in `CmodEdgeCoreProfiles.compute_all`.
+    profile_cols = {
+        "edge_profiles": ["n_edge", "t_edge", "p_edge", "t_edge_ece"],
+        "edge_profiles_fit": ["n_edge_fit", "t_edge_fit", "p_edge_fit"],
+        "edge_dimensionless": [
+            "nu_star_edge",
+            "rho_star_edge",
+            "beta_t_edge",
+            "nu_star_edge_fit",
+            "rho_star_edge_fit",
+            "beta_t_edge_fit",
+        ],
+        "core_profiles": ["n_core", "t_core", "p_core", "t_core_ece"],
+        "core_profiles_fit": ["n_core_fit", "t_core_fit", "p_core_fit"],
+        "core_dimensionless": [
+            "nu_star_core",
+            "rho_star_core",
+            "beta_t_core",
+            "nu_star_core_fit",
+            "rho_star_core_fit",
+            "beta_t_core_fit",
+        ],
+    }
 
     @staticmethod
     @cache_method
@@ -2093,6 +2120,241 @@ class CmodPhysicsMethods:
         v_surf = interp1(efit_time, v_surf, params.times)
 
         return {"v_surf": v_surf}
+
+    @staticmethod
+    @cache_method
+    def _get_profile_data(params: PhysicsMethodParams):
+        """
+        Compute every edge/core profile column once per shot and timebase.
+
+        All seven edge/core physics methods read from this cached result, so
+        the EFIT flux grid, the Thomson and ECE reads, and the profile fits
+        happen a single time per shot.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the data connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary of all edge/core columns, each of `len(params.times)`.
+        """
+        try:
+            return CmodEdgeCoreProfiles.compute_all(params)
+        # Deliberately broad (mirroring the runner): an unexpected failure must
+        # still cache the all-NaN fallback, or each of the seven methods would
+        # re-trigger the expensive EFIT/Thomson/ECE reads.
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            params.logger.warning(f"profiles: unexpected failure: {repr(e)}")
+            params.logger.opt(exception=True).debug(e)
+            return {
+                col: np.full(len(params.times), np.nan)
+                for col in CmodEdgeCoreProfiles.all_columns()
+            }
+
+    @staticmethod
+    def _select_profile_columns(params: PhysicsMethodParams, key: str):
+        """
+        Return the subset of `_get_profile_data` named by `profile_cols[key]`.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the data connection, shot id and more.
+        key : str
+            A key of `CmodPhysicsMethods.profile_cols`.
+
+        Returns
+        -------
+        dict
+            The requested columns.
+        """
+        data = CmodPhysicsMethods._get_profile_data(params=params)
+        return {col: data[col] for col in CmodPhysicsMethods.profile_cols[key]}
+
+    @staticmethod
+    @physics_method(columns=profile_cols["edge_profiles"], tokamak=Tokamak.CMOD)
+    def get_edge_profiles(params: PhysicsMethodParams):
+        r"""
+        Calculate the averaged edge electron density, temperature and total pressure.
+
+        Raw Thomson-scattering band average over $\rho \in [0.85, 0.95]$, where
+        $\rho = \sqrt{\psi_N}$, following Maris 2025 (section 2.2); the total
+        pressure is $p = 2 n T$ (assuming $T_i = T_e$ and $n_i = n_e$).
+        `t_edge_ece` is an independent, *unfiltered* GPC2-ECE estimate of the
+        same band, for cross-checking only.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the data connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the edge density (`n_edge`) [m^-3],
+            temperature (`t_edge`) [eV], total pressure (`p_edge`) [Pa], and
+            ECE temperature (`t_edge_ece`) [eV].
+
+        References
+        ----------
+        - AD Maris, et al. (2025) DOI: 10.1088/1741-4326/ad90f0
+        """
+        return CmodPhysicsMethods._select_profile_columns(params, "edge_profiles")
+
+    @staticmethod
+    @physics_method(columns=profile_cols["edge_profiles_fit"], tokamak=Tokamak.CMOD)
+    def get_edge_profiles_fit(params: PhysicsMethodParams):
+        r"""
+        Calculate the edge ne/Te/pressure from an Osborne modified-tanh fit.
+
+        Per Thomson time slice, the ne and Te profiles are fitted vs $\psi_N$
+        with the Osborne modified-tanh pedestal form and averaged over
+        $\rho \in [0.85, 0.95]$ -- the profile-fit alternative to the raw band
+        average of `get_edge_profiles`.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the data connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the fitted edge density (`n_edge_fit`)
+            [m^-3], temperature (`t_edge_fit`) [eV], and total pressure
+            (`p_edge_fit`) [Pa].
+
+        References
+        ----------
+        - AD Maris, et al. (2025) DOI: 10.1088/1741-4326/ad90f0
+        - the modified-tanh pedestal form of T Osborne, as implemented for
+        Alcator C-Mod in the JW Hughes IDL analysis scripts
+        """
+        return CmodPhysicsMethods._select_profile_columns(params, "edge_profiles_fit")
+
+    @staticmethod
+    @physics_method(columns=profile_cols["edge_dimensionless"], tokamak=Tokamak.CMOD)
+    def get_edge_dimensionless(params: PhysicsMethodParams):
+        r"""
+        Calculate the dimensionless edge variables:
+
+        - edge collisionality $\nu^*_\text{edge}$ (eq. 2),
+        - normalized ion gyroradius $\rho^*_\text{edge}$ (eq. 3)
+        - edge toroidal beta $\beta_{T,\text{edge}}$ (eq. 4)
+
+        evaluated from the edge band $\rho \in [0.85, 0.95]$
+        for both the raw Thomson averaged band and
+        the Osborne-fit profiles (`*_fit`).
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the data connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing `nu_star_edge`, `rho_star_edge`,
+            `beta_t_edge`, and their `*_fit` variants (all dimensionless).
+
+        References
+        ----------
+        - eqs. (2)-(4) from AD Maris, et al. (2025) DOI: 10.1088/1741-4326/ad90f0
+        """
+        return CmodPhysicsMethods._select_profile_columns(params, "edge_dimensionless")
+
+    @staticmethod
+    @physics_method(columns=profile_cols["core_profiles"], tokamak=Tokamak.CMOD)
+    def get_core_profiles(params: PhysicsMethodParams):
+        r"""
+        Calculate the averaged core electron density, temperature and total pressure.
+
+        It uses raw Thomson-scattering band average over $\rho \in [0, 0.2]$ -- the
+        core analogue of `get_edge_profiles`, using the same machinery with
+        the core rho band (the band mirrors the existing DisruptionPy core
+        convention `core_bound_factor = 0.2`). `t_core_ece` is an independent,
+        *unfiltered* GPC2-ECE estimate of the same band.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the data connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the core density (`n_core`) [m^-3],
+            temperature (`t_core`) [eV], total pressure (`p_core`) [Pa], and
+            ECE temperature (`t_core_ece`) [eV].
+
+        References
+        ----------
+        - AD Maris, et al. (2025) DOI: 10.1088/1741-4326/ad90f0
+        """
+        return CmodPhysicsMethods._select_profile_columns(params, "core_profiles")
+
+    @staticmethod
+    @physics_method(columns=profile_cols["core_profiles_fit"], tokamak=Tokamak.CMOD)
+    def get_core_profiles_fit(params: PhysicsMethodParams):
+        r"""
+        Calculate the core ne/Te/pressure from an Osborne modified-tanh fit.
+
+        The core-band ($\rho \in [0, 0.2]$) analogue of
+        `get_edge_profiles_fit`.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the data connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the fitted core density (`n_core_fit`)
+            [m^-3], temperature (`t_core_fit`) [eV], and total pressure
+            (`p_core_fit`) [Pa].
+
+        References
+        ----------
+        - AD Maris, et al. (2025), DOI: 10.1088/1741-4326/ad90f0
+        - the modified-tanh pedestal form of T Osborne, as implemented for
+        Alcator C-Mod in the JW Hughes IDL analysis scripts
+        """
+        return CmodPhysicsMethods._select_profile_columns(params, "core_profiles_fit")
+
+    @staticmethod
+    @physics_method(columns=profile_cols["core_dimensionless"], tokamak=Tokamak.CMOD)
+    def get_core_dimensionless(params: PhysicsMethodParams):
+        r"""
+        Calculate the dimensionless core variables:
+
+        - core collisionality
+        - normalized ion gyroradius
+        - toroidal beta
+
+        (Maris 2025 eqs. 2-4 evaluated over the core band
+        $\rho \in [0, 0.2]$), for both the raw Thomson band average and the
+        Osborne-fit profiles (`*_fit`).
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the data connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing `nu_star_core`, `rho_star_core`,
+            `beta_t_core`, and their `*_fit` variants (all dimensionless).
+
+        References
+        ----------
+        - eqs. (2)-(4) AD Maris, et al. (2025) DOI: 10.1088/1741-4326/ad90f0
+        """
+        return CmodPhysicsMethods._select_profile_columns(params, "core_dimensionless")
 
     @staticmethod
     def _is_on_blacklist(shot_id: int) -> bool:
