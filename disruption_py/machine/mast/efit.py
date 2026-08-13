@@ -4,10 +4,7 @@
 Module for retrieving and processing EFIT parameters for MAST.
 """
 
-import numpy as np
-
 from disruption_py.core.physics_method.decorator import physics_method
-from disruption_py.core.physics_method.errors import DataError
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.machine.mast.util import MastUtilMethods
 from disruption_py.machine.tokamak import Tokamak
@@ -57,10 +54,7 @@ class MastEfitMethods:
             than dropping the whole equilibrium reconstruction.
         """
         times = params.times
-        try:
-            eq_time = params.get_data("equilibrium/time", required=True)
-        except DataError:
-            return {key: [np.nan] for key in MastEfitMethods.efit_properties}
+        eq_time = params.get_data("equilibrium/time", required=True)
 
         outputs = {}
         for key, prop in MastEfitMethods.efit_properties.items():

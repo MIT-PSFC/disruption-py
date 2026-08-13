@@ -6,7 +6,6 @@ Physics methods for MAST.
 """
 
 import numpy as np
-import scipy.constants as const
 
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.errors import (
@@ -62,6 +61,10 @@ class MastPhysicsMethods:
             ip_prog_time = params.get_data("pulse_schedule/time", required=True)
         except DataError:
             # older shots lack a recorded pulse schedule; ip/dip_dt stand on their own
+            params.logger.warning(
+                "get_ip_parameters: pulse_schedule/i_plasma not available. "
+                "Returning NaN for ip_prog and dipprog_dt."
+            )
             ip_prog = [np.nan]
             dipprog_dt = [np.nan]
         else:
@@ -353,18 +356,17 @@ class MastPhysicsMethods:
             required=True,
         )
 
-        hcam_channel = hcam.isel(horizontal_cam_upper_channel=0)
-        hcam_channel = hcam_channel.squeeze(drop=True)
-        sxr_time = hcam_channel.time.values
-        sxr_core = hcam_channel.values
-
         times = params.times
+
+        hcam_core_channel = hcam.isel(horizontal_cam_upper_channel=0)
+        hcam_core_channel = hcam_core_channel.squeeze(drop=True)
+        sxr_time = hcam_core_channel.time.values
+        sxr_core = hcam_core_channel.values
         sxr_core = MastUtilMethods.interpolate_1d(sxr_time, sxr_core, times)
 
-        hcam_channel = hcam.isel(horizontal_cam_upper_channel=7)
-        hcam_channel = hcam_channel.squeeze(drop=True)
-        sxr_edge = hcam_channel.values
-
+        hcam_edge_channel = hcam.isel(horizontal_cam_upper_channel=7)
+        hcam_edge_channel = hcam_edge_channel.squeeze(drop=True)
+        sxr_edge = hcam_edge_channel.values
         sxr_edge = MastUtilMethods.interpolate_1d(sxr_time, sxr_edge, times)
 
         return {"sxr_core": sxr_core, "sxr_edge": sxr_edge}
@@ -604,11 +606,7 @@ class MastPhysicsMethods:
 
         te_profile = te_xr.values
         ne_profile = ne_xr.values
-        if pe_xr is None:
-            # p_e = n_e k T_e, with T_e in eV so that k T_e = e * T_e [J]
-            pe_profile = ne_profile * te_profile * const.e
-        else:
-            pe_profile = pe_xr.values
+        pe_profile = pe_xr.values
 
         r_ts = te_xr.coords["major_radius"].values
         ts_time = te_xr.coords["time"].values
