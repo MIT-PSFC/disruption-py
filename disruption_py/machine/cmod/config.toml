@@ -27,6 +27,26 @@ imas = "/equilibrium/time_slice(itime)/global_quantities/beta_pol"
 units = "dimensionless"
 validity = [0, 1.5]
 
+[cmod.physics.attributes.beta_t_core]
+description = "Toroidal beta of the core band (rho in [0, 0.2]), 4*mu0*n*T/B_T^2, from the raw Thomson band average."
+units = "dimensionless"
+validity = [1e-4, 0.2]
+
+[cmod.physics.attributes.beta_t_core_fit]
+description = "Toroidal beta of the core band (rho in [0, 0.2]), from the Osborne modified-tanh profile core fit."
+units = "dimensionless"
+validity = [1e-4, 0.2]
+
+[cmod.physics.attributes.beta_t_edge]
+description = "Edge toroidal beta (rho in [0.85, 0.95]), 4*mu0*n*T/B_T^2 as a fraction, from the raw Thomson edge average."
+units = "dimensionless"
+validity = [1e-5, 1.5e-2]
+
+[cmod.physics.attributes.beta_t_edge_fit]
+description = "Edge toroidal beta (rho in [0.85, 0.95]), from the Osborne modified-tanh profile edge fit."
+units = "dimensionless"
+validity = [1e-5, 1.5e-2]
+
 [cmod.physics.attributes.bt]
 description = "Toroidal magnetic field strength."
 imas = "/summary/global_quantities/b0/value"
@@ -123,11 +143,36 @@ imas = "/equilibrium/time_slice(itime)/boundary/gap(i1)/value"
 units = "m"
 validity = [0.025, 0.25]
 
+[cmod.physics.attributes.lsvm_d]
+description = "L-mode density limit proximity metric: nu_star_edge / (3.5*beta_t_edge^-0.40) (Maris 2025, eq. 7). Values above 1 are on the density-limit-unstable side."
+units = "dimensionless"
+validity = [1e-2, 1e2]
+
+[cmod.physics.attributes.n_core]
+description = "Core electron density averaged over rho in [0, 0.2] from the Thomson scattering profiles."
+units = "m^-3"
+validity = [1e18, 1e21]
+
+[cmod.physics.attributes.n_core_fit]
+description = "Core electron density averaged over rho in [0, 0.2] from the Osborne modified-tanh fit to the Thomson profiles."
+units = "m^-3"
+validity = [1e18, 1e21]
+
 [cmod.physics.attributes.n_e]
 description = "Measured line-averaged electron density."
 imas = "/summary/line_average/n_e/value"
 units = "m^-3"
 validity = [0.2e20, 7e20]
+
+[cmod.physics.attributes.n_edge]
+description = "Edge electron density averaged over rho in [0.85, 0.95] from the Thomson scattering profile."
+units = "m^-3"
+validity = [1e18, 5e20]
+
+[cmod.physics.attributes.n_edge_fit]
+description = "Edge electron density averaged over rho in [0.85, 0.95] from fit to the Thomson profiles."
+units = "m^-3"
+validity = [1e18, 5e20]
 
 [cmod.physics.attributes.n_equal_1_mode]
 description = "Amplitude of the n=1 mode."
@@ -151,6 +196,46 @@ validity = [-3, 3]
 [cmod.physics.attributes.ne_peaking]
 description = "Peaking factor of the electron density profile measured by the Thomson scattering diagnostic."
 units = "dimensionless"
+
+[cmod.physics.attributes.nu_star_core]
+description = "Collisionality of the core band (rho in [0, 0.2]), from the raw Thomson core average."
+units = "dimensionless"
+validity = [1e-3, 1e3]
+
+[cmod.physics.attributes.nu_star_core_fit]
+description = "Collisionality of the core band (rho in [0, 0.2]), from modified-tanh profile fit."
+units = "dimensionless"
+validity = [1e-3, 1e3]
+
+[cmod.physics.attributes.nu_star_edge]
+description = "Edge collisionality (rho in [0.85, 0.95]), from the raw Thomson edge average."
+units = "dimensionless"
+validity = [1e-1, 1e4]
+
+[cmod.physics.attributes.nu_star_edge_fit]
+description = "Edge collisionality (rho in [0.85, 0.95]), from the Osborne modified-tanh profile fit."
+units = "dimensionless"
+validity = [1e-1, 1e4]
+
+[cmod.physics.attributes.p_core]
+description = "Total core pressure, 2*n*T over rho in [0, 0.2], assuming equal ion and electron densities and temperatures."
+units = "Pa"
+validity = [1e2, 1e6]
+
+[cmod.physics.attributes.p_core_fit]
+description = "Total core pressure over rho in [0, 0.2], from the Osborne modified-tanh profile fit."
+units = "Pa"
+validity = [1e2, 1e6]
+
+[cmod.physics.attributes.p_edge]
+description = "Total edge pressure, 2*n*T over rho in [0.85, 0.95], assuming equal ion and electron densities and temperatures."
+units = "Pa"
+validity = [1e1, 1e5]
+
+[cmod.physics.attributes.p_edge_fit]
+description = "Total edge pressure over rho in [0.85, 0.95], from the Osborne modified-tanh profile fit."
+units = "Pa"
+validity = [1e1, 1e5]
 
 [cmod.physics.attributes.p_icrf]
 description = "Total ion cyclotron resonant heating power."
@@ -210,6 +295,26 @@ description = "Total radiated power fraction."
 units = "dimensionless"
 validity = [0, 15]
 
+[cmod.physics.attributes.rho_star_core]
+description = "Normalized ion gyroradius of the core band (rho in [0, 0.2]), from the raw Thomson core average."
+units = "dimensionless"
+validity = [5e-3, 5e-2]
+
+[cmod.physics.attributes.rho_star_core_fit]
+description = "Normalized ion gyroradius of the core band (rho in [0, 0.2]), from the Osborne modified-tanh profile core fit."
+units = "dimensionless"
+validity = [5e-3, 5e-2]
+
+[cmod.physics.attributes.rho_star_edge]
+description = "Edge normalized ion gyroradius (rho in [0.85, 0.95]), from the raw Thomson edge average."
+units = "dimensionless"
+validity = [2e-3, 1e-2]
+
+[cmod.physics.attributes.rho_star_edge_fit]
+description = "Edge normalized ion gyroradius (rho in [0.85, 0.95]), from the Osborne modified-tanh profile edge fit."
+units = "dimensionless"
+validity = [2e-3, 1e-2]
+
 [cmod.physics.attributes.rmagx]
 description = "Major radius of magnetic axis (EFIT)."
 imas = "/equilibrium/time_slice(itime)/global_quantities/magnetic_axis/r"
@@ -224,6 +329,37 @@ validity = [-1, 1]
 description = "Core soft X-ray measurement."
 imas = "/soft_x_rays/channel(i1)/power"
 units = "W"
+
+[cmod.physics.attributes.t_core]
+description = "Core electron temperature averaged over rho in [0, 0.2] from the Thomson scattering profiles."
+imas = "/core_profiles/profiles_1d(itime)/electrons/temperature"
+units = "eV"
+validity = [50, 1e4]
+
+[cmod.physics.attributes.t_core_ece]
+description = "Core electron temperature averaged over rho in [0, 0.2] from the electron cyclotron emission (ECE) data. Unfiltered cross-check only."
+units = "eV"
+validity = [50, 1e4]
+
+[cmod.physics.attributes.t_core_fit]
+description = "Core electron temperature averaged over rho in [0, 0.2] from the Osborne modified-tanh fit to the Thomson profiles."
+units = "eV"
+validity = [50, 1e4]
+
+[cmod.physics.attributes.t_edge]
+description = "Edge electron temperature averaged over rho in [0.85, 0.95] from the Thomson scattering profiles."
+units = "eV"
+validity = [10, 1e3]
+
+[cmod.physics.attributes.t_edge_ece]
+description = "Edge electron temperature averaged over rho in [0.85, 0.95] from the electron cyclotron emission (ECE) data. Unfiltered cross-check only."
+units = "eV"
+validity = [10, 1e3]
+
+[cmod.physics.attributes.t_edge_fit]
+description = "Edge electron temperature averaged over rho in [0.85, 0.95] from the Osborne modified-tanh fit to the Thomson profiles."
+units = "eV"
+validity = [10, 1e3]
 
 [cmod.physics.attributes.tau_rad]
 description = "Radiative cooling time-scale."
