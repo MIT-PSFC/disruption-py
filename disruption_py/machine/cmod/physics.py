@@ -2357,6 +2357,43 @@ class CmodPhysicsMethods:  # pylint: disable=too-many-public-methods
         return CmodPhysicsMethods._select_profile_columns(params, "core_dimensionless")
 
     @staticmethod
+    @physics_method(columns=["lsvm_d"], tokamak=Tokamak.CMOD)
+    def get_lsvm_d(params: PhysicsMethodParams):
+        r"""
+        Calculate the L-mode density limit (LDL) proximity metric.
+
+        $$
+        \text{lsvm}_d = \frac{\nu^*_\text{edge}}
+        {3.5\,\beta_{T,\text{edge}}^{-0.40}}
+        $$
+
+        is the ratio of the measured edge collisionality to the empirical
+        stability boundary $\nu^{*,\text{limit}}_\text{edge} =
+        3.5\,\beta_{T,\text{edge}}^{-0.40}$ identified by the linear support
+        vector machine of Maris 2025 (eq. 7, calibrated to 95% true positive
+        rate), with $\beta_{T,\text{edge}}$ as a fraction. Values above 1
+        place the discharge on the density-limit-unstable side of the
+        boundary. Computed from the averaged raw (non-fit) edge band values.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the data connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the LDL proximity metric (`lsvm_d`),
+            dimensionless.
+
+        References
+        ----------
+        - eq. (7) AD Maris, et al. (2025) DOI: 10.1088/1741-4326/ad90f0
+        """
+        data = CmodPhysicsMethods._get_profile_data(params=params)
+        return {"lsvm_d": data["lsvm_d"]}
+
+    @staticmethod
     def _is_on_blacklist(shot_id: int) -> bool:
         """
         TODO why will these shots cause `_get_peaking_factors`,
