@@ -2131,6 +2131,7 @@ class CmodPhysicsMethods:
         """
         # Import must be within function to avoid circular imports
         from disruption_py.machine.generic.physics import GenericPhysicsMethods
+        import time
 
         cq_time = GenericPhysicsMethods.get_current_quench_time(params)[
             "current_quench_time"
@@ -2144,22 +2145,36 @@ class CmodPhysicsMethods:
         ip = np.abs(ip)
 
         # Get SXR chords
+        tt_0 = time.perf_counter()
         n_chords = 38
         array_path = r"\top.brightnesses.array_1"
         chords = {}
+        # t_sxr stores only the valid SXR timelength (0 to just after the current quench)
+        # t_chord stores the entire timelength, useful to avoid reading identical time bases
         t_sxr = None
+        t_chord = None
         for i in range(n_chords):
-            try:
-                chord, t_chord = params.get_data_with_dims(
-                    f"{array_path}:chord_{i+1:02}",
-                    tree_name="xtomo",
-                )
-            except mdsExceptions.MdsException:
-                params.logger.debug(
-                    "get_thermal_quench_time: "
-                    f"Failed to get SXR {array_path} chord {i+1} data."
-                )
-                continue
+            if t_chord is not None:
+                try:
+                    chord = params.get_data(f"{array_path}:chord_{i+1:02}",tree_name="xtomo")
+                except mdsExceptions.MdsException:
+                    params.logger.debug("Failed to get SXR {} chord {} data.", array_path, i+1)
+                    continue
+                if (len(t_chord) != len(chord)):
+                    params.logger.critical('Chords have different lengths!')
+            if t_chord is None or len(t_chord) != len(chord):
+                # Get the full time axis as well
+                try:
+                    chord, t_chord = params.get_data_with_dims(
+                        f"{array_path}:chord_{i+1:02}",
+                        tree_name="xtomo",
+                    )
+                except mdsExceptions.MdsException:
+                    params.logger.debug(
+                        "get_thermal_quench_time: "
+                        f"Failed to get SXR {array_path} chord {i+1} data."
+                    )
+                    continue
             # Subtract constant background
             chord = chord - np.mean(chord[t_chord < 0.0])
             valid = (t_chord > 0) & (t_chord < cq_time + 0.05)
@@ -2169,6 +2184,10 @@ class CmodPhysicsMethods:
             # Usually one timebase is just cut off early after shot is over
             if np.sum(valid) == len(t_sxr):
                 chords[i] = chord[valid]
+        tt_1 = time.perf_counter()
+        params.logger.warning("Read time: {} s", tt_1 - tt_0)
+        #np.savetxt(f'timing_slow/{params.shot_id}.txt', np.array([tt_1-tt_0]))
+
 
         if t_sxr is None:
             raise FetchDataError("No available chords for SXR array 1")
