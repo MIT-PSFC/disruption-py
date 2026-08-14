@@ -2149,23 +2149,27 @@ class CmodPhysicsMethods:
         n_chords = 38
         array_path = r"\top.brightnesses.array_1"
         chords = {}
-        t_wndw_start = cq_time - 0.3
+        t_bgrnd_start = -0.05
+        t_wndw_start = cq_time - 0.1
         t_wndw_end = cq_time
         # t_sxr stores only the valid SXR timelength (0 to just after the current quench)
         # t_chord stores the entire timelength, useful to avoid reading identical time bases
         t_sxr = None
         t_chord = None
+        i_t0 = 1
         i_chord_start = 0
         i_chord_end = -1
         for i in range(5, 28):
             if t_chord is not None:
                 try:
-                    expr = f"data({array_path}:CHORD_{i+1:02})[{i_chord_start} : {i_chord_end-1}]"
+                    sig = f"{array_path}:CHORD_{i+1:02}"
+                    expr = (f"data({sig})[{i_chord_start} : {i_chord_end-1}] "
+                            f"- mean(f_float(data({sig})[{i_bgrnd_start} : {i_t0-1}]))")
                     chord = params.get_data(expr, tree_name="xtomo")
                     #chord = params.get_data(f"i_to_x({array_path}:chord_{i+1:02}, {i_chord_start} .. {i_chord_end-1})",tree_name="xtomo")
                     #chord = params.get_data(f"{array_path}:chord_{i+1:02}",tree_name="xtomo")
                 except mdsExceptions.MdsException:
-                    params.logger.debug("Failed to get SXR {} chord {} data.", array_path, i+1)
+                    params.logger.warning("Failed to get SXR {} chord {} data.", array_path, i+1)
                     continue
                 if (len(t_chord) != len(chord)):
                     params.logger.warning('SXR chords have different lengths: len(chord): {}, len(t_chord): {}', len(chord), len(t_chord))
@@ -2177,13 +2181,15 @@ class CmodPhysicsMethods:
                         tree_name="xtomo",
                     )
                 except mdsExceptions.MdsException:
-                    params.logger.debug(
+                    params.logger.warning(
                         "get_thermal_quench_time: "
                         f"Failed to get SXR {array_path} chord {i+1} data."
                     )
                     continue
                 # print(len(t_chord))
                 # print(cq_time)
+                i_bgrnd_start = np.argmin(np.abs(t_chord - t_bgrnd_start))
+                i_t0 = np.maximum(1, np.argmin(np.abs(t_chord)))
                 i_chord_start = np.argmin(np.abs(t_chord - (t_wndw_start)))
                 # print(i_chord_start)
                 i_chord_end = np.argmin(np.abs(t_chord - t_wndw_end)) + 1
@@ -2192,7 +2198,8 @@ class CmodPhysicsMethods:
                 chord = chord[i_chord_start:i_chord_end]
                 
             # # Subtract constant background
-            # chord = chord - np.mean(chord[t_chord < 0.0])
+            # TODO: Add background subtraction to TDI call
+            #chord = chord - np.mean(chord[t_chord < 0.0])
             # valid = (t_chord > t_wndw_start) & (t_chord < t_wndw_end)
             # if t_sxr is None:
             #     t_sxr = t_chord
@@ -2200,10 +2207,11 @@ class CmodPhysicsMethods:
             # # Usually one timebase is just cut off early after shot is over
             # if np.sum(valid) == len(t_sxr):
             #     chords[i] = chord[valid]
+            chords[i] = chord
         t_sxr = t_chord
         tt_1 = time.perf_counter()
         params.logger.warning("Read time: {} s", tt_1 - tt_0)
-        #np.savetxt(f'timing_raw_of_idx_short/{params.shot_id}.txt', np.array([tt_1-tt_0]))
+        np.savetxt(f'timing_bgrnd_short/{params.shot_id}.txt', np.array([tt_1-tt_0]))
 
 
         if t_sxr is None:
@@ -2236,10 +2244,7 @@ class CmodPhysicsMethods:
             if max_autocorr > 0:
                 autocorr = autocorr / max_autocorr
             else:
-                params.logger.critical(
-                    "get_thermal_quench_time: "
-                    f"Removing noisy chord {i+1}"
-                )
+                params.logger.debug("Removing noisy SXR chord {}", i+1)
                 sxr[i] = 0.0
                 continue
             index_no_lag = np.argmax(autocorr)
@@ -2250,13 +2255,10 @@ class CmodPhysicsMethods:
             )
             autocorr_decay_time = index_decay / sample_freq_5khz
             if autocorr_decay_time < noise_autocorr_cutoff:
-                params.logger.critical(
-                    "get_thermal_quench_time: "
-                    f"Removing chord {i+1}. Norm. Autocorr: {autocorr_decay_time:.3f}."
-                )
+                params.logger.debug("Removing noisy SXR chord {}: autocorr decay time: {}", i+1, autocorr_decay_time)
                 sxr[i] = 0.0
         tt_3 = time.perf_counter()
-        params.logger.warning("Autocorr time: {} s", tt_3 - tt_2)
+        #params.logger.warning("Autocorr time: {} s", tt_3 - tt_2)
 
         # Noncausal Butterworth low pass filter to smooth transient SXR spikes during TQ.
         # Cutoff of 1.0 kHz and order 2 seems to filter recombination SXR spikes
