@@ -2146,7 +2146,6 @@ class CmodPhysicsMethods:
 
         # Get SXR chords
         tt_0 = time.perf_counter()
-        n_chords = 38
         array_path = r"\top.brightnesses.array_1"
         chords = {}
         t_bgrnd_start = -0.05
@@ -2158,10 +2157,11 @@ class CmodPhysicsMethods:
         t_chord = None
         first_chord = None
         idx_first_chord = 5
+        idx_last_chord = 27
+        n_chords = idx_last_chord - idx_first_chord + 1
 
         # Get the first available chord to get the time basis
-        nfails = 0
-        while first_chord is None and idx_first_chord <= 28:
+        while first_chord is None and idx_first_chord <= idx_last_chord:
             try:
                 first_chord, t_chord = params.get_data_with_dims(
                     f"{array_path}:chord_{idx_first_chord+1:02}",
@@ -2175,7 +2175,6 @@ class CmodPhysicsMethods:
                 idx_first_chord += 1
         if first_chord is None:
             raise FetchDataError("No available chords for SXR array 1")
-
         i_bgrnd_start = np.argmin(np.abs(t_chord - t_bgrnd_start))
         i_t0 = np.maximum(1, np.argmin(np.abs(t_chord)))
         i_chord_start = np.argmin(np.abs(t_chord - (t_wndw_start)))
@@ -2184,30 +2183,38 @@ class CmodPhysicsMethods:
         first_chord -= np.mean(first_chord[i_bgrnd_start:i_t0])
         t_chord = t_chord[i_chord_start:i_chord_end]
         first_chord = first_chord[i_chord_start:i_chord_end] 
-        chords[idx_first_chord] = first_chord
-
-        # Attempt to get all other chords in one expression
-
-        # Fallback: get chord data individually
-        for i in range(idx_first_chord+1, 28):
-            try:
-                sig = f"{array_path}:CHORD_{i+1:02}"
-                expr = (f"data({sig})[{i_chord_start} : {i_chord_end-1}] "
-                        f"- mean(f_float(data({sig})[{i_bgrnd_start} : {i_t0-1}]))")
-                chord = params.get_data(expr, tree_name="xtomo")
-            except mdsExceptions.MdsException:
-                params.logger.warning("Failed to get SXR {} chord {} data.", array_path, i+1)
-                continue
-            chords[i] = chord
 
         t_sxr = t_chord
+        sxr = np.zeros((idx_last_chord+1, len(t_sxr)))
+        sxr[idx_first_chord] = first_chord
+
+        # Attempt to get all other chords with background subtraction in one expression
+        chord_exprs = []
+        for i in range(idx_first_chord+1, idx_last_chord+1):
+            sig = f"{array_path}:CHORD_{i+1:02}"
+            chord_exprs.append(f"data({sig})[{i_chord_start} : {i_chord_end-1}] "
+                            f"- mean(f_float(data({sig})[{i_bgrnd_start} : {i_t0-1}]))")
+        expr = "[" + ", ".join(chord_exprs) + "]"
+        try:
+            block = np.asarray(params.get_data(expr, tree_name="xtomo"))
+            sxr[idx_first_chord+1 : idx_last_chord+1] = block
+        except mdsExceptions.MdsException:
+            params.logger.warning("Batch read of SXR chords failed. Falling back to individual chord reads")
+            # Fallback: get chord data individually
+            for i in range(idx_first_chord+1, idx_last_chord+1):
+                try:
+                    sig = f"{array_path}:CHORD_{i+1:02}"
+                    expr = (f"data({sig})[{i_chord_start} : {i_chord_end-1}] "
+                            f"- mean(f_float(data({sig})[{i_bgrnd_start} : {i_t0-1}]))")
+                    chord = params.get_data(expr, tree_name="xtomo")
+                except mdsExceptions.MdsException:
+                    params.logger.warning("Failed to get SXR {} chord {} data.", array_path, i+1)
+                    continue
+                sxr[i] = chord
+
         tt_1 = time.perf_counter()
         params.logger.warning("Read time: {} s", tt_1 - tt_0)
-        np.savetxt(f'timing_pre_batch_call/{params.shot_id}.txt', np.array([tt_1-tt_0]))
-
-        sxr = np.zeros((n_chords, len(t_sxr)))
-        for i, data in chords.items():
-            sxr[i] = data
+        np.savetxt(f'timing_batch_call/{params.shot_id}.txt', np.array([tt_1-tt_0]))
 
         sample_time = t_sxr[1] - t_sxr[0]
         sample_freq = 1 / sample_time
