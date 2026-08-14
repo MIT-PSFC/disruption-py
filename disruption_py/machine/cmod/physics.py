@@ -2156,66 +2156,55 @@ class CmodPhysicsMethods:
         # t_chord stores the entire timelength, useful to avoid reading identical time bases
         t_sxr = None
         t_chord = None
-        i_t0 = 1
-        i_chord_start = 0
-        i_chord_end = -1
-        for i in range(5, 28):
-            if t_chord is not None:
-                try:
-                    sig = f"{array_path}:CHORD_{i+1:02}"
-                    expr = (f"data({sig})[{i_chord_start} : {i_chord_end-1}] "
-                            f"- mean(f_float(data({sig})[{i_bgrnd_start} : {i_t0-1}]))")
-                    chord = params.get_data(expr, tree_name="xtomo")
-                    #chord = params.get_data(f"i_to_x({array_path}:chord_{i+1:02}, {i_chord_start} .. {i_chord_end-1})",tree_name="xtomo")
-                    #chord = params.get_data(f"{array_path}:chord_{i+1:02}",tree_name="xtomo")
-                except mdsExceptions.MdsException:
-                    params.logger.warning("Failed to get SXR {} chord {} data.", array_path, i+1)
-                    continue
-                if (len(t_chord) != len(chord)):
-                    params.logger.warning('SXR chords have different lengths: len(chord): {}, len(t_chord): {}', len(chord), len(t_chord))
-            if t_chord is None or len(t_chord) != len(chord):
-                # Get the full time axis as well
-                try:
-                    chord, t_chord = params.get_data_with_dims(
-                        f"{array_path}:chord_{i+1:02}",
-                        tree_name="xtomo",
-                    )
-                except mdsExceptions.MdsException:
-                    params.logger.warning(
-                        "get_thermal_quench_time: "
-                        f"Failed to get SXR {array_path} chord {i+1} data."
-                    )
-                    continue
-                # print(len(t_chord))
-                # print(cq_time)
-                i_bgrnd_start = np.argmin(np.abs(t_chord - t_bgrnd_start))
-                i_t0 = np.maximum(1, np.argmin(np.abs(t_chord)))
-                i_chord_start = np.argmin(np.abs(t_chord - (t_wndw_start)))
-                # print(i_chord_start)
-                i_chord_end = np.argmin(np.abs(t_chord - t_wndw_end)) + 1
-                # print(i_chord_end)
-                t_chord = t_chord[i_chord_start:i_chord_end]
-                chord = chord[i_chord_start:i_chord_end]
-                
-            # # Subtract constant background
-            # TODO: Add background subtraction to TDI call
-            #chord = chord - np.mean(chord[t_chord < 0.0])
-            # valid = (t_chord > t_wndw_start) & (t_chord < t_wndw_end)
-            # if t_sxr is None:
-            #     t_sxr = t_chord
-            # # Occasionally the time bases of a chord are of a different length
-            # # Usually one timebase is just cut off early after shot is over
-            # if np.sum(valid) == len(t_sxr):
-            #     chords[i] = chord[valid]
+        first_chord = None
+        idx_first_chord = 5
+
+        # Get the first available chord to get the time basis
+        nfails = 0
+        while first_chord is None and idx_first_chord <= 28:
+            try:
+                first_chord, t_chord = params.get_data_with_dims(
+                    f"{array_path}:chord_{idx_first_chord+1:02}",
+                    tree_name="xtomo",
+                )
+            except mdsExceptions.MdsException:
+                params.logger.warning(
+                    "get_thermal_quench_time: "
+                    f"Failed to get SXR {array_path} chord {idx_first_chord+1} data."
+                )
+                idx_first_chord += 1
+        if first_chord is None:
+            raise FetchDataError("No available chords for SXR array 1")
+
+        i_bgrnd_start = np.argmin(np.abs(t_chord - t_bgrnd_start))
+        i_t0 = np.maximum(1, np.argmin(np.abs(t_chord)))
+        i_chord_start = np.argmin(np.abs(t_chord - (t_wndw_start)))
+        i_chord_end = np.argmin(np.abs(t_chord - t_wndw_end)) + 1
+        # Subtract background and add to chords
+        first_chord -= np.mean(first_chord[i_bgrnd_start:i_t0])
+        t_chord = t_chord[i_chord_start:i_chord_end]
+        first_chord = first_chord[i_chord_start:i_chord_end] 
+        chords[idx_first_chord] = first_chord
+
+        # Attempt to get all other chords in one expression
+
+        # Fallback: get chord data individually
+        for i in range(idx_first_chord+1, 28):
+            try:
+                sig = f"{array_path}:CHORD_{i+1:02}"
+                expr = (f"data({sig})[{i_chord_start} : {i_chord_end-1}] "
+                        f"- mean(f_float(data({sig})[{i_bgrnd_start} : {i_t0-1}]))")
+                chord = params.get_data(expr, tree_name="xtomo")
+            except mdsExceptions.MdsException:
+                params.logger.warning("Failed to get SXR {} chord {} data.", array_path, i+1)
+                continue
             chords[i] = chord
+
         t_sxr = t_chord
         tt_1 = time.perf_counter()
         params.logger.warning("Read time: {} s", tt_1 - tt_0)
-        np.savetxt(f'timing_bgrnd_short/{params.shot_id}.txt', np.array([tt_1-tt_0]))
+        np.savetxt(f'timing_pre_batch_call/{params.shot_id}.txt', np.array([tt_1-tt_0]))
 
-
-        if t_sxr is None:
-            raise FetchDataError("No available chords for SXR array 1")
         sxr = np.zeros((n_chords, len(t_sxr)))
         for i, data in chords.items():
             sxr[i] = data
