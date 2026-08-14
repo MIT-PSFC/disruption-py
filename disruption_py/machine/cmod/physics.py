@@ -2149,19 +2149,26 @@ class CmodPhysicsMethods:
         n_chords = 38
         array_path = r"\top.brightnesses.array_1"
         chords = {}
+        t_wndw_start = cq_time - 0.3
+        t_wndw_end = cq_time
         # t_sxr stores only the valid SXR timelength (0 to just after the current quench)
         # t_chord stores the entire timelength, useful to avoid reading identical time bases
         t_sxr = None
         t_chord = None
-        for i in range(n_chords):
+        i_chord_start = 0
+        i_chord_end = -1
+        for i in range(5, 28):
             if t_chord is not None:
                 try:
-                    chord = params.get_data(f"{array_path}:chord_{i+1:02}",tree_name="xtomo")
+                    expr = f"data({array_path}:CHORD_{i+1:02})[{i_chord_start} : {i_chord_end-1}]"
+                    chord = params.get_data(expr, tree_name="xtomo")
+                    #chord = params.get_data(f"i_to_x({array_path}:chord_{i+1:02}, {i_chord_start} .. {i_chord_end-1})",tree_name="xtomo")
+                    #chord = params.get_data(f"{array_path}:chord_{i+1:02}",tree_name="xtomo")
                 except mdsExceptions.MdsException:
                     params.logger.debug("Failed to get SXR {} chord {} data.", array_path, i+1)
                     continue
                 if (len(t_chord) != len(chord)):
-                    params.logger.critical('Chords have different lengths!')
+                    params.logger.warning('SXR chords have different lengths: len(chord): {}, len(t_chord): {}', len(chord), len(t_chord))
             if t_chord is None or len(t_chord) != len(chord):
                 # Get the full time axis as well
                 try:
@@ -2175,18 +2182,28 @@ class CmodPhysicsMethods:
                         f"Failed to get SXR {array_path} chord {i+1} data."
                     )
                     continue
-            # Subtract constant background
-            chord = chord - np.mean(chord[t_chord < 0.0])
-            valid = (t_chord > 0) & (t_chord < cq_time + 0.05)
-            if t_sxr is None:
-                t_sxr = t_chord[valid]
-            # Occasionally the time bases of a chord are of a different length
-            # Usually one timebase is just cut off early after shot is over
-            if np.sum(valid) == len(t_sxr):
-                chords[i] = chord[valid]
+                # print(len(t_chord))
+                # print(cq_time)
+                i_chord_start = np.argmin(np.abs(t_chord - (t_wndw_start)))
+                # print(i_chord_start)
+                i_chord_end = np.argmin(np.abs(t_chord - t_wndw_end)) + 1
+                # print(i_chord_end)
+                t_chord = t_chord[i_chord_start:i_chord_end]
+                chord = chord[i_chord_start:i_chord_end]
+                
+            # # Subtract constant background
+            # chord = chord - np.mean(chord[t_chord < 0.0])
+            # valid = (t_chord > t_wndw_start) & (t_chord < t_wndw_end)
+            # if t_sxr is None:
+            #     t_sxr = t_chord
+            # # Occasionally the time bases of a chord are of a different length
+            # # Usually one timebase is just cut off early after shot is over
+            # if np.sum(valid) == len(t_sxr):
+            #     chords[i] = chord[valid]
+        t_sxr = t_chord
         tt_1 = time.perf_counter()
         params.logger.warning("Read time: {} s", tt_1 - tt_0)
-        #np.savetxt(f'timing_slow/{params.shot_id}.txt', np.array([tt_1-tt_0]))
+        #np.savetxt(f'timing_raw_of_idx_short/{params.shot_id}.txt', np.array([tt_1-tt_0]))
 
 
         if t_sxr is None:
