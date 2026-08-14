@@ -2219,24 +2219,27 @@ class CmodPhysicsMethods:
         # Bad chords often have significant white noise, meaning low autocorrelation (< 10 ms)
         # Good chords should have an autocorrelation of 100s of ms
         # See shot 1050311013 as an example with some bad chords
-        noise_autocorr_cutoff = 0.01  # [s]
-        # Use 300 ms prior to current quench for speed-up during autocorr O(N^2)
-        idx_start = np.argmin(np.abs(t_sxr - (cq_time - 0.3)))
-        idx_end = np.argmin(np.abs(t_sxr - cq_time))
+        tt_2 = time.perf_counter()
         sample_freq_5khz = 5000  # [Hz]
-        for i, chord in enumerate(sxr):
-            chord = chord[idx_start:idx_end]
-            if sample_freq > sample_freq_5khz:
-                # 2012-2016 has 250 kHz sampling frequency. Resample to 5 kHz frequency
-                # (native SXR sample frequency of earlier campaigns) for speed-up
-                chord = scipy.signal.resample_poly(
-                    chord, up=1, down=sample_freq // sample_freq_5khz
-                )
+        if sample_freq > sample_freq_5khz:
+            # 2012-2016 has 250 kHz sampling frequency. Resample to 5 kHz frequency
+            # (native SXR sample frequency of earlier campaigns) for speed-up in autocorr
+            sxr_for_autocorr = scipy.signal.resample_poly(
+                sxr, up=1, down=sample_freq // sample_freq_5khz, axis=-1
+        )
+        else:
+            sxr_for_autocorr = sxr.copy()
+        noise_autocorr_cutoff = 0.01  # [s]
+        for i, chord in enumerate(sxr_for_autocorr):
             autocorr = np.correlate(chord, chord, mode="full")
             max_autocorr = np.max(autocorr)
             if max_autocorr > 0:
                 autocorr = autocorr / max_autocorr
             else:
+                params.logger.critical(
+                    "get_thermal_quench_time: "
+                    f"Removing noisy chord {i+1}"
+                )
                 sxr[i] = 0.0
                 continue
             index_no_lag = np.argmax(autocorr)
@@ -2247,11 +2250,13 @@ class CmodPhysicsMethods:
             )
             autocorr_decay_time = index_decay / sample_freq_5khz
             if autocorr_decay_time < noise_autocorr_cutoff:
-                params.logger.debug(
+                params.logger.critical(
                     "get_thermal_quench_time: "
                     f"Removing chord {i+1}. Norm. Autocorr: {autocorr_decay_time:.3f}."
                 )
                 sxr[i] = 0.0
+        tt_3 = time.perf_counter()
+        params.logger.warning("Autocorr time: {} s", tt_3 - tt_2)
 
         # Noncausal Butterworth low pass filter to smooth transient SXR spikes during TQ.
         # Cutoff of 1.0 kHz and order 2 seems to filter recombination SXR spikes
