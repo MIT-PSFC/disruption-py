@@ -2188,38 +2188,34 @@ class CmodPhysicsMethods:
         sxr = np.zeros((idx_last_chord+1, len(t_sxr)))
         sxr[idx_first_chord] = first_chord
 
-        # Attempt to get all other chords with background subtraction in one expression
-        chord_exprs = []
+        # Read snippets of other chords with background subtraction
+        # using a TDI expressions for the best speed-up
         for i in range(idx_first_chord+1, idx_last_chord+1):
-            sig = f"{array_path}:CHORD_{i+1:02}"
-            chord_exprs.append(f"data({sig})[{i_chord_start} : {i_chord_end-1}] "
-                            f"- mean(f_float(data({sig})[{i_bgrnd_start} : {i_t0-1}]))")
-        expr = "[" + ", ".join(chord_exprs) + "]"
-        try:
-            block = np.asarray(params.get_data(expr, tree_name="xtomo"))
-            sxr[idx_first_chord+1 : idx_last_chord+1] = block
-        except mdsExceptions.MdsException:
-            params.logger.warning("Batch read of SXR chords failed. Falling back to individual chord reads")
-            # Fallback: get chord data individually
-            for i in range(idx_first_chord+1, idx_last_chord+1):
-                try:
-                    sig = f"{array_path}:CHORD_{i+1:02}"
-                    expr = (f"data({sig})[{i_chord_start} : {i_chord_end-1}] "
-                            f"- mean(f_float(data({sig})[{i_bgrnd_start} : {i_t0-1}]))")
-                    chord = params.get_data(expr, tree_name="xtomo")
-                except mdsExceptions.MdsException:
-                    params.logger.warning("Failed to get SXR {} chord {} data.", array_path, i+1)
-                    continue
-                sxr[i] = chord
+            try:
+                sig = f"{array_path}:CHORD_{i+1:02}"
+                tdi = f"""
+                    _s = f_float(data({sig}));
+                    _y = _s[{i_chord_start} : {i_chord_end-1}]
+                        - mean(_s[{i_bgrnd_start} : {i_t0-1}]);
+                    _y
+                    """
+                chord = params.get_data(tdi, tree_name="xtomo")
+            except mdsExceptions.MdsException:
+                params.logger.warning("Failed to get SXR {} chord {} data.", array_path, i+1)
+                continue
+            sxr[i] = chord
 
         tt_1 = time.perf_counter()
         params.logger.warning("Read time: {} s", tt_1 - tt_0)
-        np.savetxt(f'timing_batch_call/{params.shot_id}.txt', np.array([tt_1-tt_0]))
+        #np.savetxt(f'timing_tdi/{params.shot_id}.txt', np.array([tt_1-tt_0]))
 
         sample_time = t_sxr[1] - t_sxr[0]
         sample_freq = 1 / sample_time
 
         # Remove bad chords by checking each chord's autocorrelation.
+        # Note that due to background subtraction but not subtraction of the mean,
+        # this can be dominated by a DC pedestal of physical signal, and is effectively an SNR test
+        # not an autocorrelation time. Intentional and helps to keep chords with constant, real signal
         # Bad chords often have significant white noise, meaning low autocorrelation (< 10 ms)
         # Good chords should have an autocorrelation of 100s of ms
         # See shot 1050311013 as an example with some bad chords
