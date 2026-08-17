@@ -2147,23 +2147,20 @@ class CmodPhysicsMethods:
         # Get SXR chords
         tt_0 = time.perf_counter()
         array_path = r"\top.brightnesses.array_1"
-        chords = {}
         t_bgrnd_start = -0.05
         t_wndw_start = cq_time - 0.1
         t_wndw_end = cq_time
         # t_sxr stores only the valid SXR timelength (0 to just after the current quench)
         # t_chord stores the entire timelength, useful to avoid reading identical time bases
         t_sxr = None
-        t_chord = None
         first_chord = None
         idx_first_chord = 5
         idx_last_chord = 27
-        n_chords = idx_last_chord - idx_first_chord + 1
 
         # Get the first available chord to get the time basis
         while first_chord is None and idx_first_chord <= idx_last_chord:
             try:
-                first_chord, t_chord = params.get_data_with_dims(
+                first_chord, t_sxr = params.get_data_with_dims(
                     f"{array_path}:chord_{idx_first_chord+1:02}",
                     tree_name="xtomo",
                 )
@@ -2175,39 +2172,38 @@ class CmodPhysicsMethods:
                 idx_first_chord += 1
         if first_chord is None:
             raise FetchDataError("No available chords for SXR array 1")
-        i_bgrnd_start = np.argmin(np.abs(t_chord - t_bgrnd_start))
-        i_t0 = np.maximum(1, np.argmin(np.abs(t_chord)))
-        i_chord_start = np.argmin(np.abs(t_chord - (t_wndw_start)))
-        i_chord_end = np.argmin(np.abs(t_chord - t_wndw_end)) + 1
+        i_bgrnd_start = np.argmin(np.abs(t_sxr - t_bgrnd_start))
+        i_t0 = np.maximum(1, np.argmin(np.abs(t_sxr)))
+        i_chord_start = np.argmin(np.abs(t_sxr - (t_wndw_start)))
+        i_chord_end = np.argmin(np.abs(t_sxr - t_wndw_end)) + 1
         # Subtract background and add to chords
         first_chord -= np.mean(first_chord[i_bgrnd_start:i_t0])
-        t_chord = t_chord[i_chord_start:i_chord_end]
-        first_chord = first_chord[i_chord_start:i_chord_end] 
+        t_sxr = t_sxr[i_chord_start:i_chord_end]
+        first_chord = first_chord[i_chord_start:i_chord_end]
 
-        t_sxr = t_chord
-        sxr = np.zeros((idx_last_chord+1, len(t_sxr)))
+        sxr = np.zeros((idx_last_chord + 1, len(t_sxr)))
         sxr[idx_first_chord] = first_chord
 
         # Read snippets of other chords with background subtraction
         # using a TDI expressions for the best speed-up
-        for i in range(idx_first_chord+1, idx_last_chord+1):
+        for i in range(idx_first_chord + 1, idx_last_chord + 1):
             try:
                 sig = f"{array_path}:CHORD_{i+1:02}"
-                tdi = f"""
+                tdi_expr = f"""
                     _s = f_float(data({sig}));
                     _y = _s[{i_chord_start} : {i_chord_end-1}]
                         - mean(_s[{i_bgrnd_start} : {i_t0-1}]);
                     _y
                     """
-                chord = params.get_data(tdi, tree_name="xtomo")
+                chord = params.get_data(tdi_expr, tree_name="xtomo")
             except mdsExceptions.MdsException:
-                params.logger.warning("Failed to get SXR {} chord {} data.", array_path, i+1)
+                params.logger.warning(
+                    "Failed to get SXR {} chord {} data.", array_path, i + 1
+                )
                 continue
-            sxr[i] = chord
-
+            sxr[i] = first_chord
         tt_1 = time.perf_counter()
-        params.logger.warning("Read time: {} s", tt_1 - tt_0)
-        #np.savetxt(f'timing_tdi/{params.shot_id}.txt', np.array([tt_1-tt_0]))
+        params.logger.debug("Read time: {} s", tt_1 - tt_0)
 
         sample_time = t_sxr[1] - t_sxr[0]
         sample_freq = 1 / sample_time
@@ -2215,18 +2211,17 @@ class CmodPhysicsMethods:
         # Remove bad chords by checking each chord's autocorrelation.
         # Note that due to background subtraction but not subtraction of the mean,
         # this can be dominated by a DC pedestal of physical signal, and is effectively an SNR test
-        # not an autocorrelation time. Intentional and helps to keep chords with constant, real signal
+        # not an autocorrelation time. Intentional and helps to keep chords with flat, real signal
         # Bad chords often have significant white noise, meaning low autocorrelation (< 10 ms)
         # Good chords should have an autocorrelation of 100s of ms
         # See shot 1050311013 as an example with some bad chords
-        tt_2 = time.perf_counter()
         sample_freq_5khz = 5000  # [Hz]
         if sample_freq > sample_freq_5khz:
             # 2012-2016 has 250 kHz sampling frequency. Resample to 5 kHz frequency
             # (native SXR sample frequency of earlier campaigns) for speed-up in autocorr
             sxr_for_autocorr = scipy.signal.resample_poly(
                 sxr, up=1, down=sample_freq // sample_freq_5khz, axis=-1
-        )
+            )
         else:
             sxr_for_autocorr = sxr.copy()
         noise_autocorr_cutoff = 0.01  # [s]
@@ -2236,7 +2231,7 @@ class CmodPhysicsMethods:
             if max_autocorr > 0:
                 autocorr = autocorr / max_autocorr
             else:
-                params.logger.debug("Removing noisy SXR chord {}", i+1)
+                params.logger.debug("Removing noisy SXR chord {}", i + 1)
                 sxr[i] = 0.0
                 continue
             index_no_lag = np.argmax(autocorr)
@@ -2247,10 +2242,12 @@ class CmodPhysicsMethods:
             )
             autocorr_decay_time = index_decay / sample_freq_5khz
             if autocorr_decay_time < noise_autocorr_cutoff:
-                params.logger.debug("Removing noisy SXR chord {}: autocorr decay time: {}", i+1, autocorr_decay_time)
+                params.logger.debug(
+                    "Removing noisy SXR chord {}: autocorr decay time: {}",
+                    i + 1,
+                    autocorr_decay_time,
+                )
                 sxr[i] = 0.0
-        tt_3 = time.perf_counter()
-        #params.logger.warning("Autocorr time: {} s", tt_3 - tt_2)
 
         # Noncausal Butterworth low pass filter to smooth transient SXR spikes during TQ.
         # Cutoff of 1.0 kHz and order 2 seems to filter recombination SXR spikes
