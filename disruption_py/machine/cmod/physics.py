@@ -2190,7 +2190,7 @@ class CmodPhysicsMethods:
             try:
                 sig = f"{array_path}:CHORD_{i+1:02}"
                 tdi_expr = f"""
-                    _s = f_float(data({sig}));
+                    _s = data({sig});
                     _y = _s[{i_chord_start} : {i_chord_end-1}]
                         - mean(_s[{i_bgrnd_start} : {i_t0-1}]);
                     _y
@@ -2201,9 +2201,9 @@ class CmodPhysicsMethods:
                     "Failed to get SXR {} chord {} data.", array_path, i + 1
                 )
                 continue
-            sxr[i] = first_chord
+            sxr[i] = chord
         tt_1 = time.perf_counter()
-        params.logger.debug("Read time: {} s", tt_1 - tt_0)
+        params.logger.warning("Read time: {} s", tt_1 - tt_0)
 
         sample_time = t_sxr[1] - t_sxr[0]
         sample_freq = 1 / sample_time
