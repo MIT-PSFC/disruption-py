@@ -7,7 +7,6 @@ main workflow
 import argparse
 import json
 import os
-import resource
 import sys
 import time
 from itertools import repeat
@@ -22,6 +21,7 @@ from disruption_py.core.retrieval_manager import RetrievalManager
 from disruption_py.core.utils.misc import (
     filter_dict,
     get_elapsed_time,
+    get_max_rss,
     get_metadata,
     get_temporary_folder,
     without_duplicates,
@@ -175,7 +175,7 @@ def get_shots_data(
     )
     logger.debug(
         "Starting workflow: MaxRSS = {mem:,.1f} MB",
-        mem=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024,
+        mem=get_max_rss(),
     )
 
     took = -time.time()
@@ -226,7 +226,7 @@ def get_shots_data(
     )
     logger.debug(
         "Completed workflow: MaxRSS = {mem:,.1f} MB",
-        mem=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024,
+        mem=get_max_rss(),
     )
 
     results = output_setting.get_results()
@@ -234,7 +234,7 @@ def get_shots_data(
 
     logger.debug(
         "Saved to disk: MaxRSS = {mem:,.1f} MB",
-        mem=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024,
+        mem=get_max_rss(),
     )
 
     return results

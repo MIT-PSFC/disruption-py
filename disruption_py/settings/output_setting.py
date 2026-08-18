@@ -7,7 +7,6 @@ This module provides classes and methods to manage various output settings.
 """
 
 import os
-import resource
 import shutil
 import sys
 import tempfile
@@ -20,7 +19,7 @@ import pandas as pd
 import xarray as xr
 from loguru import logger
 
-from disruption_py.core.utils.misc import get_temporary_folder, shot_msg
+from disruption_py.core.utils.misc import get_max_rss, get_temporary_folder, shot_msg
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -286,7 +285,7 @@ class SingleOutputSetting(DictOutputSetting):
         )
         logger.debug(
             "Read shots: MaxRSS = {mem:,.1f} MB",
-            mem=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024,
+            mem=get_max_rss(),
         )
 
         logger.debug("Concatenating {tot:,} shots...", tot=len(self.results))
@@ -298,7 +297,7 @@ class SingleOutputSetting(DictOutputSetting):
         )
         logger.debug(
             "Concatenated shots: MaxRSS = {mem:,.1f} MB",
-            mem=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024,
+            mem=get_max_rss(),
         )
         self.results = {}
 
