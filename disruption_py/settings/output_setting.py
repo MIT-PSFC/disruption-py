@@ -309,6 +309,12 @@ class SingleOutputSetting(DictOutputSetting):
         """
 
         if not self.path:
+            # load results so that shards can be removed
+            for shot, result in self.results.items():
+                result.load()
+                shard = self.shards[shot]
+                logger.trace("Removing shard: {shard}", shard=shard)
+                os.remove(shard)
             return ""
         if os.path.exists(self.path) and os.path.getsize(self.path):
             raise FileExistsError(f"File already exists! {self.path}")
