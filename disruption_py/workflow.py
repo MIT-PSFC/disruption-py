@@ -7,6 +7,7 @@ main workflow
 import argparse
 import json
 import os
+import resource
 import sys
 import time
 from itertools import repeat
@@ -172,6 +173,10 @@ def get_shots_data(
         m=num_processes,
         p="es" if num_processes > 1 else "",
     )
+    logger.debug(
+        "Starting workflow: MaxRSS = {mem:,.1f} MB",
+        mem=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024,
+    )
 
     took = -time.time()
     retrieval_settings.efit_nickname_setting.prefetch_db(database, tokamak)
@@ -219,9 +224,27 @@ def get_shots_data(
         elapsed=get_elapsed_time(took),
         each=took / total,
     )
+    logger.debug(
+        "Completed workflow: MaxRSS = {mem:,.1f} MB",
+        mem=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024,
+    )
 
     results = output_setting.get_results()
     output_setting.to_disk()
+
+    logger.debug(
+        "Saved to disk: MaxRSS = {mem:,.1f} MB",
+        mem=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024,
+    )
+
+    if isinstance(results, dict):
+        for k in results:
+            results[k].load()
+        logger.debug(
+            "Loaded: MaxRSS = {mem:,.1f} MB",
+            mem=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024,
+        )
+
     return results
 
 
