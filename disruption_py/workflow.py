@@ -237,14 +237,6 @@ def get_shots_data(
         mem=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024,
     )
 
-    if isinstance(results, dict):
-        for k in results:
-            results[k].load()
-        logger.debug(
-            "Loaded: MaxRSS = {mem:,.1f} MB",
-            mem=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024,
-        )
-
     return results
 
 
