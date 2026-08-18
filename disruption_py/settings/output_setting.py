@@ -275,6 +275,20 @@ class SingleOutputSetting(DictOutputSetting):
         xr.Dataset | xr.DataTree | pd.DataFrame
             The resulting object.
         """
+
+        logger.debug("Reading {tot:,} shots...", tot=len(self.results))
+        took = -time.time()
+        for result in self.results.values():
+            result.load()
+        took += time.time()
+        logger.info(
+            "Read {tot:,} shots in {sec:.3f}s.", tot=len(self.results), sec=took
+        )
+        logger.debug(
+            "Read shots: MaxRSS = {mem:,.1f} MB",
+            mem=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024,
+        )
+
         logger.debug("Concatenating {tot:,} shots...", tot=len(self.results))
         took = -time.time()
         self.result = self.concat()
