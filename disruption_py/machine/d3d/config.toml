@@ -37,6 +37,7 @@ validity = [0, 1.5]
 description = "Toroidal magnetic field strength."
 imas = "/summary/global_quantities/b0/value"
 units = "T"
+validity = [-2.5, 2.5]
 
 [d3d.physics.attributes.chisq]
 description = "Magnetic chi^2 (EFIT)."
@@ -182,8 +183,23 @@ imas = "/equilibrium/time_slice(itime)/boundary/gap(i1)/value"
 units = "m"
 validity = [0.025, 0.25]
 
+[d3d.physics.attributes.n1rms]
+description = "RMS amplitude of the n=1 magnetic field perturbation."
+units = "T"
+validity = [0, 0.02]
+
+[d3d.physics.attributes.n1rms_normalized]
+description = "RMS of the n=1 mode normalized to the toroidal magnetic field strength."
+units = "dimensionless"
+
 [d3d.physics.attributes.n_e]
 description = "Measured line-averaged electron density."
+imas = "/summary/line_average/n_e/value"
+units = "m^-3"
+validity = [0.2e20, 7e20]
+
+[d3d.physics.attributes.n_e_rt]
+description = "Real-time measured line-averaged electron density available to PCS."
 imas = "/summary/line_average/n_e/value"
 units = "m^-3"
 validity = [0.2e20, 7e20]
@@ -199,7 +215,7 @@ description = "Amplitude of the n=1 mode normalized to the toroidal magnetic fie
 units = "dimensionless"
 
 [d3d.physics.attributes.ne_peaking_cva_rt]
-description = "Peaking factor of the electron density profile, core vs all channels"
+description = "Peaking factor of the electron density profile, core vs all channels."
 units = "dimensionless"
 
 [d3d.physics.attributes.p_ech]
