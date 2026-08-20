@@ -2153,40 +2153,33 @@ class CmodPhysicsMethods:
         # t_sxr stores only the valid SXR timelength (0 to just after the current quench)
         # t_chord stores the entire timelength, useful to avoid reading identical time bases
         t_sxr = None
-        first_chord = None
         idx_first_chord = 5
         idx_last_chord = 27
 
-        # Get the first available chord to get the time basis
-        while first_chord is None and idx_first_chord <= idx_last_chord:
+        # Get the first available time basis
+        while t_sxr is None and idx_first_chord <= idx_last_chord:
             try:
-                first_chord, t_sxr = params.get_data_with_dims(
-                    f"{array_path}:chord_{idx_first_chord+1:02}",
-                    tree_name="xtomo",
-                )
+                tdi_expr = f"dim_of({array_path}:chord_{idx_first_chord+1:02})"
+                t_sxr = params.get_data(tdi_expr, tree_name="xtomo")
             except mdsExceptions.MdsException:
                 params.logger.warning(
                     "get_thermal_quench_time: "
-                    f"Failed to get SXR {array_path} chord {idx_first_chord+1} data."
+                    f"Failed to get SXR {array_path} chord {idx_first_chord+1} time base."
                 )
                 idx_first_chord += 1
-        if first_chord is None:
+        if t_sxr is None:
             raise FetchDataError("No available chords for SXR array 1")
         i_bgrnd_start = np.argmin(np.abs(t_sxr - t_bgrnd_start))
         i_t0 = np.maximum(1, np.argmin(np.abs(t_sxr)))
         i_chord_start = np.argmin(np.abs(t_sxr - (t_wndw_start)))
         i_chord_end = np.argmin(np.abs(t_sxr - t_wndw_end)) + 1
-        # Subtract background and add to chords
-        first_chord -= np.mean(first_chord[i_bgrnd_start:i_t0])
         t_sxr = t_sxr[i_chord_start:i_chord_end]
-        first_chord = first_chord[i_chord_start:i_chord_end]
 
         sxr = np.zeros((idx_last_chord + 1, len(t_sxr)))
-        sxr[idx_first_chord] = first_chord
 
         # Read snippets of other chords with background subtraction
         # using a TDI expressions for the best speed-up
-        for i in range(idx_first_chord + 1, idx_last_chord + 1):
+        for i in range(idx_first_chord, idx_last_chord + 1):
             try:
                 sig = f"{array_path}:CHORD_{i+1:02}"
                 tdi_expr = f"""
@@ -2204,6 +2197,7 @@ class CmodPhysicsMethods:
             sxr[i] = chord
         tt_1 = time.perf_counter()
         params.logger.warning("Read time: {} s", tt_1 - tt_0)
+        np.savetxt(f'timing_read_timebase/{params.shot_id}.txt', np.array([tt_1 - tt_0]))
 
         sample_time = t_sxr[1] - t_sxr[0]
         sample_freq = 1 / sample_time
