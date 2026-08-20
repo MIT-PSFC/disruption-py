@@ -2153,7 +2153,7 @@ class CmodPhysicsMethods:
         # t_sxr stores only the valid SXR timelength (0 to just after the current quench)
         # t_chord stores the entire timelength, useful to avoid reading identical time bases
         t_sxr = None
-        idx_first_chord = 5
+        idx_first_chord = 7
         idx_last_chord = 27
 
         # Get the first available time basis
@@ -2197,7 +2197,6 @@ class CmodPhysicsMethods:
             sxr[i] = chord
         tt_1 = time.perf_counter()
         params.logger.warning("Read time: {} s", tt_1 - tt_0)
-        np.savetxt(f'timing_read_timebase/{params.shot_id}.txt', np.array([tt_1 - tt_0]))
 
         sample_time = t_sxr[1] - t_sxr[0]
         sample_freq = 1 / sample_time
