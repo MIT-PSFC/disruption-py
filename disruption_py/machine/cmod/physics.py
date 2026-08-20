@@ -2148,8 +2148,8 @@ class CmodPhysicsMethods:
         tt_0 = time.perf_counter()
         array_path = r"\top.brightnesses.array_1"
         t_bgrnd_start = -0.05
-        t_wndw_start = cq_time - 0.1
-        t_wndw_end = cq_time
+        t_wndw_start = cq_time - 0.2
+        t_wndw_end = cq_time + 0.05
         # t_sxr stores only the valid SXR timelength (0 to just after the current quench)
         # t_chord stores the entire timelength, useful to avoid reading identical time bases
         t_sxr = None
