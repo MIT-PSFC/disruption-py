@@ -2234,7 +2234,7 @@ class CmodPhysicsMethods:
                 np.argmax(crosses_zero) if np.any(crosses_zero) else len(crosses_zero)
             )
             autocorr_decay_time = index_decay / autocorr_sample_freq
-            if autocorr_decay_time < tq_params["noise_autocorr_cutoff"]:
+            if autocorr_decay_time < tq_params["autocorr_noise_cutoff"]:
                 params.logger.debug(
                     "Removing noisy SXR chord {}: autocorr decay time: {}",
                     idx_first_chord + i + 1,

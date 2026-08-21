@@ -322,21 +322,22 @@ units = "s"
 validity = [0, 3]
 
 [cmod.physics.thermal_quench_time_params]
+autocorr_noise_cutoff = 0.01
+autocorr_sample_freq = 5e3
+bworth_cutoff = 1e3
+bworth_order = 2
+cq_onset_frac = 0.9
+cq_onset_wndw = 0.005
+idx_first_chord = 7
+idx_last_chord = 27
+ip_pre_cq_wndw_end = -0.02
+ip_pre_cq_wndw_start = -0.04
 t_bgrnd_start = -0.05
 t_wndw_pre_cq = -0.2
 t_wndw_post_cq = 0.05
-idx_first_chord = 7
-idx_last_chord = 27
-autocorr_sample_freq = 5e3
-noise_autocorr_cutoff = 0.01
-bworth_cutoff = 1e3
-bworth_order = 2
-ip_pre_cq_wndw_start = -0.04
-ip_pre_cq_wndw_end = -0.02
-cq_onset_wndw = 0.005
-tq_onset_wndw = 0.0005
-cq_onset_frac = 0.9
 tq_onset_frac = 0.9
+tq_onset_wndw = 0.0005
+
 
 [cmod.physics.current_quench_time_thresholds]
 abs_ip0 = 0.1e6
