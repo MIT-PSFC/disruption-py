@@ -250,6 +250,11 @@ units = "m"
 description = "Half-width at half-maximum of the Gaussian fit to the electron temperature profile from the electron cyclotron emission (ECE) data."
 units = "m"
 
+[cmod.physics.attributes.thermal_quench_time]
+description = "Time of the disruptive thermal quench onset. NaN for non-disruptive discharges."
+units = "s"
+validity = [0, 3]
+
 [cmod.physics.attributes.time_until_disrupt]
 description = "Time until the current quench. NaN for non-disruptive discharges."
 units = "s"
@@ -316,10 +321,13 @@ imas = "/equilibrium/time_slice(itime)/global_quantities/current_centre/z"
 units = "m"
 validity = [-0.5, 0.5]
 
-[cmod.physics.attributes.thermal_quench_time]
-description = "Time of the disruptive thermal quench onset. NaN for non-disruptive discharges."
-units = "s"
-validity = [0, 3]
+[cmod.physics.current_quench_time_thresholds]
+abs_ip0 = 0.1e6
+abs_ip_final = 50e3
+abs_ip_max = 0.1e6
+ip0_over_ip_max = 0.33
+ip0_over_max_didt = 0.05
+shot_duration = 0.1
 
 [cmod.physics.thermal_quench_time_params]
 autocorr_noise_cutoff = 0.01
@@ -337,15 +345,6 @@ t_wndw_pre_cq = -0.2
 t_wndw_post_cq = 0.05
 tq_onset_frac = 0.9
 tq_onset_wndw = 0.0005
-
-
-[cmod.physics.current_quench_time_thresholds]
-abs_ip0 = 0.1e6
-abs_ip_final = 50e3
-abs_ip_max = 0.1e6
-ip0_over_ip_max = 0.33
-ip0_over_max_didt = 0.05
-shot_duration = 0.1
 
 [cmod.physics.time_domain_thresholds]
 dipprog_dt = 50e3
