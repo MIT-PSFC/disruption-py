@@ -341,8 +341,8 @@ idx_last_chord = 27
 ip_pre_cq_wndw_end = -0.02
 ip_pre_cq_wndw_start = -0.04
 t_bgrnd_start = -0.05
-t_wndw_pre_cq = -0.2
 t_wndw_post_cq = 0.05
+t_wndw_pre_cq = -0.2
 tq_onset_frac = 0.9
 tq_onset_wndw = 0.0005
 
