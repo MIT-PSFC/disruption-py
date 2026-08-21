@@ -2131,7 +2131,6 @@ class CmodPhysicsMethods:
         """
         # Import must be within function to avoid circular imports
         from disruption_py.machine.generic.physics import GenericPhysicsMethods
-        import time
 
         cq_time = GenericPhysicsMethods.get_current_quench_time(params)[
             "current_quench_time"
@@ -2145,58 +2144,56 @@ class CmodPhysicsMethods:
         ip = np.abs(ip)
 
         # Get SXR chords
-        tt_0 = time.perf_counter()
         array_path = r"\top.brightnesses.array_1"
+        # Chords and relevant snippets of chord data to read
         t_bgrnd_start = -0.05
         t_wndw_start = cq_time - 0.2
         t_wndw_end = cq_time + 0.05
-        # t_sxr stores only the valid SXR timelength (0 to just after the current quench)
-        # t_chord stores the entire timelength, useful to avoid reading identical time bases
-        t_sxr = None
         idx_first_chord = 7
         idx_last_chord = 27
 
-        # Get the first available time basis
+        # Get the first available time basis to determine slices of chords to read
+        t_sxr = None
         while t_sxr is None and idx_first_chord <= idx_last_chord:
             try:
                 tdi_expr = f"dim_of({array_path}:chord_{idx_first_chord+1:02})"
                 t_sxr = params.get_data(tdi_expr, tree_name="xtomo")
             except mdsExceptions.MdsException:
-                params.logger.warning(
+                params.logger.debug(
                     "get_thermal_quench_time: "
                     f"Failed to get SXR {array_path} chord {idx_first_chord+1} time base."
                 )
                 idx_first_chord += 1
         if t_sxr is None:
             raise FetchDataError("No available chords for SXR array 1")
-        i_bgrnd_start = np.argmin(np.abs(t_sxr - t_bgrnd_start))
-        i_t0 = np.maximum(1, np.argmin(np.abs(t_sxr)))
-        i_chord_start = np.argmin(np.abs(t_sxr - (t_wndw_start)))
-        i_chord_end = np.argmin(np.abs(t_sxr - t_wndw_end)) + 1
-        t_sxr = t_sxr[i_chord_start:i_chord_end]
+        j_bgrnd_start = np.argmin(np.abs(t_sxr - t_bgrnd_start))
+        j_t0 = np.maximum(1, np.argmin(np.abs(t_sxr)))
+        j_chord_start = np.argmin(np.abs(t_sxr - (t_wndw_start)))
+        j_chord_end = np.argmin(np.abs(t_sxr - t_wndw_end)) + 1
+        t_sxr = t_sxr[j_chord_start:j_chord_end]
 
-        sxr = np.zeros((idx_last_chord + 1, len(t_sxr)))
-
-        # Read snippets of other chords with background subtraction
-        # using a TDI expressions for the best speed-up
-        for i in range(idx_first_chord, idx_last_chord + 1):
+        n_chords = idx_last_chord - idx_first_chord + 1
+        sxr = np.zeros((n_chords, len(t_sxr)))
+        # Read snippets of other chords with background subtraction using a TDI expression
+        # for fast reads (important for 2012-2016 shots with 250 kHz digitization)
+        for i in range(n_chords):
             try:
-                sig = f"{array_path}:CHORD_{i+1:02}"
+                sig = f"{array_path}:CHORD_{idx_first_chord+i+1:02}"
                 tdi_expr = f"""
                     _s = data({sig});
-                    _y = _s[{i_chord_start} : {i_chord_end-1}]
-                        - mean(_s[{i_bgrnd_start} : {i_t0-1}]);
+                    _y = _s[{j_chord_start} : {j_chord_end-1}]
+                        - mean(_s[{j_bgrnd_start} : {j_t0-1}]);
                     _y
                     """
                 chord = params.get_data(tdi_expr, tree_name="xtomo")
             except mdsExceptions.MdsException:
                 params.logger.warning(
-                    "Failed to get SXR {} chord {} data.", array_path, i + 1
+                    "Failed to get SXR {} chord {} data.",
+                    array_path,
+                    idx_first_chord + i + 1,
                 )
                 continue
             sxr[i] = chord
-        tt_1 = time.perf_counter()
-        params.logger.warning("Read time: {} s", tt_1 - tt_0)
 
         sample_time = t_sxr[1] - t_sxr[0]
         sample_freq = 1 / sample_time
@@ -2224,7 +2221,9 @@ class CmodPhysicsMethods:
             if max_autocorr > 0:
                 autocorr = autocorr / max_autocorr
             else:
-                params.logger.debug("Removing noisy SXR chord {}", i + 1)
+                params.logger.debug(
+                    "Removing bad SXR chord {}", idx_first_chord + i + 1
+                )
                 sxr[i] = 0.0
                 continue
             index_no_lag = np.argmax(autocorr)
@@ -2237,7 +2236,7 @@ class CmodPhysicsMethods:
             if autocorr_decay_time < noise_autocorr_cutoff:
                 params.logger.debug(
                     "Removing noisy SXR chord {}: autocorr decay time: {}",
-                    i + 1,
+                    idx_first_chord + i + 1,
                     autocorr_decay_time,
                 )
                 sxr[i] = 0.0
