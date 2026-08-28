@@ -1,0 +1,7 @@
+[default.physics.attributes.current_quench_time]
+description = "Time of the current quench event. NaN for non-disruptive discharges."
+units = "s"
+
+[default.physics.attributes.time_domain]
+description = "Categorical phase of shot at each time. 1: ramp-up, 2: flat-top, 3: ramp-down."
+units = "dimensionless"
