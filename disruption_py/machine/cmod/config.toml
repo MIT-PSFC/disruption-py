@@ -37,10 +37,6 @@ description = "Magnetic chi^2 (EFIT)."
 units = "dimensionless"
 validity = [0.1, 40.0]
 
-[cmod.physics.attributes.current_quench_time]
-description = "Time of the current quench event. NaN for non-disruptive discharges."
-units = "s"
-
 [cmod.physics.attributes.dbetap_dt]
 description = "Time derivative of the poloidal beta (EFIT)."
 units = "s^-1"
