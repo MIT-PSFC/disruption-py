@@ -7,6 +7,7 @@ This module provides classes and methods to manage various output settings.
 """
 
 import os
+import shutil
 import sys
 import tempfile
 import time
@@ -18,7 +19,7 @@ import pandas as pd
 import xarray as xr
 from loguru import logger
 
-from disruption_py.core.utils.misc import get_temporary_folder
+from disruption_py.core.utils.misc import get_max_rss, get_temporary_folder, shot_msg
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -163,6 +164,7 @@ class DictOutputSetting(OutputSetting):
             If False, no results are written to disk.
         """
         self.results: Dict[int, xr.Dataset] = {}
+        self.shards: Dict[int, str] = {}
         if path is True:
             path = os.path.join(get_temporary_folder(), "output")
             if os.path.exists(path) or "pytest" in sys.modules:
@@ -178,7 +180,15 @@ class DictOutputSetting(OutputSetting):
         params : OutputSettingParams
             The parameters for outputting shot results.
         """
-        self.results[params.shot_id] = params.result
+        self.shards[params.shot_id] = shard = os.path.join(
+            get_temporary_folder(), f".{params.shot_id}.{os.urandom(8).hex()}.nc"
+        )
+        logger.trace(
+            shot_msg("Saving shard: {shard}"), shot=params.shot_id, shard=shard
+        )
+        params.result.to_netcdf(shard)
+        params.result.close()
+        self.results[params.shot_id] = params.result = xr.open_dataset(shard)
 
     def get_results(self) -> OutputDictType:
         """
@@ -206,16 +216,14 @@ class DictOutputSetting(OutputSetting):
         else:
             os.makedirs(self.path)
 
-        t = time.time()
-        for shot, dataset in self.results.items():
+        for shot, result in self.results.items():
+            shard = self.shards.get(shot)
             cdf = os.path.join(self.path, f"{shot}.nc")
-            logger.trace("Saving result: {cdf}", cdf=cdf)
-            dataset.to_netcdf(cdf)
-        logger.info(
-            "Saved results in {took:.3f} s: {path}",
-            took=time.time() - t,
-            path=self.path,
-        )
+            logger.trace("Moving shard: {cdf}", cdf=cdf)
+            shutil.move(shard, cdf)
+            result.close()
+            self.results[shot] = xr.open_dataset(cdf)
+        logger.info("Saved results: {path}", path=self.path)
         return self.path
 
 
@@ -266,6 +274,20 @@ class SingleOutputSetting(DictOutputSetting):
         xr.Dataset | xr.DataTree | pd.DataFrame
             The resulting object.
         """
+
+        logger.debug("Reading {tot:,} shots...", tot=len(self.results))
+        took = -time.time()
+        for result in self.results.values():
+            result.load()
+        took += time.time()
+        logger.info(
+            "Read {tot:,} shots in {sec:.3f}s.", tot=len(self.results), sec=took
+        )
+        logger.debug(
+            "Read shots: MaxRSS = {mem:,.1f} MB",
+            mem=get_max_rss(),
+        )
+
         logger.debug("Concatenating {tot:,} shots...", tot=len(self.results))
         took = -time.time()
         self.result = self.concat()
@@ -273,7 +295,12 @@ class SingleOutputSetting(DictOutputSetting):
         logger.info(
             "Concatenated {tot:,} shots in {sec:.3f}s.", tot=len(self.results), sec=took
         )
+        logger.debug(
+            "Concatenated shots: MaxRSS = {mem:,.1f} MB",
+            mem=get_max_rss(),
+        )
         self.results = {}
+
         return self.result
 
     def to_disk(self) -> str:
@@ -282,6 +309,12 @@ class SingleOutputSetting(DictOutputSetting):
         """
 
         if not self.path:
+            # load results so that shards can be removed
+            for shot, result in self.results.items():
+                result.load()
+                shard = self.shards[shot]
+                logger.trace("Removing shard: {shard}", shard=shard)
+                os.remove(shard)
             return ""
         if os.path.exists(self.path) and os.path.getsize(self.path):
             raise FileExistsError(f"File already exists! {self.path}")
@@ -304,6 +337,11 @@ class SingleOutputSetting(DictOutputSetting):
             took=time.time() - t,
             path=self.path,
         )
+
+        for shard in self.shards.values():
+            logger.trace("Removing shard: {shard}", shard=shard)
+            os.remove(shard)
+
         return self.path
 
 

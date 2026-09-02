@@ -21,6 +21,7 @@ from disruption_py.core.retrieval_manager import RetrievalManager
 from disruption_py.core.utils.misc import (
     filter_dict,
     get_elapsed_time,
+    get_max_rss,
     get_metadata,
     get_temporary_folder,
     without_duplicates,
@@ -172,6 +173,10 @@ def get_shots_data(
         m=num_processes,
         p="es" if num_processes > 1 else "",
     )
+    logger.debug(
+        "Starting workflow: MaxRSS = {mem:,.1f} MB",
+        mem=get_max_rss(),
+    )
 
     took = -time.time()
     retrieval_settings.efit_nickname_setting.prefetch_db(database, tokamak)
@@ -219,9 +224,19 @@ def get_shots_data(
         elapsed=get_elapsed_time(took),
         each=took / total,
     )
+    logger.debug(
+        "Completed workflow: MaxRSS = {mem:,.1f} MB",
+        mem=get_max_rss(),
+    )
 
     results = output_setting.get_results()
     output_setting.to_disk()
+
+    logger.debug(
+        "Saved to disk: MaxRSS = {mem:,.1f} MB",
+        mem=get_max_rss(),
+    )
+
     return results
 
 
