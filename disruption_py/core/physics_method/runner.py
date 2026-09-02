@@ -267,6 +267,8 @@ def populate_shot(
                     physics_method_params.logger.debug("All-nan data: {col}", col=k)
                     data[k] = np.nan * times
                     continue
+                # Set variables with length mismatches to nan and include in output.
+                data[k] = np.nan * times
                 physics_method_params.logger.error(
                     "Data length mismatch: {col} {shape} vs times {times}",
                     col=k,
