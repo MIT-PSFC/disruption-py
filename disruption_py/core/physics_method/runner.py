@@ -265,16 +265,15 @@ def populate_shot(
                 if all(np.isnan(v)):
                     # pad all-nan var
                     physics_method_params.logger.debug("All-nan data: {col}", col=k)
-                    data[k] = np.nan * times
-                    continue
-                # Set variables with length mismatches to nan and include in output.
+                else:
+                    # Set variables with length mismatches to nan and log error.
+                    physics_method_params.logger.error(
+                        "Data length mismatch: {col} {shape} vs times {times}",
+                        col=k,
+                        shape=v.shape,
+                        times=times.shape,
+                    )
                 data[k] = np.nan * times
-                physics_method_params.logger.error(
-                    "Data length mismatch: {col} {shape} vs times {times}",
-                    col=k,
-                    shape=v.shape,
-                    times=times.shape,
-                )
 
             # create dataset
             data_vars = to_tuple(data, dim="idx")
