@@ -809,8 +809,8 @@ class D3DPhysicsMethods:
                 "ip_prog_rt: Failed to get programmed plasma current parameters. Setting to NaN."
             )
             params.logger.opt(exception=True).debug(e)
-            # Return nan if polarity read fails after ip_prog_rt read succeeds.
             ip_prog_rt = [np.nan]
+            dipprog_dt_rt = [np.nan]
         try:
             ip_error_rt, t_ip_error_rt = params.get_data_with_dims(
                 f"ptdata('ipeecoil', {params.shot_id})"
