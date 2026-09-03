@@ -246,6 +246,11 @@ units = "m"
 description = "Half-width at half-maximum of the Gaussian fit to the electron temperature profile from the electron cyclotron emission (ECE) data."
 units = "m"
 
+[cmod.physics.attributes.thermal_quench_time]
+description = "Time of the disruptive thermal quench onset. NaN for non-disruptive discharges."
+units = "s"
+validity = [0.0, 3.0]
+
 [cmod.physics.attributes.time_until_disrupt]
 description = "Time until the current quench. NaN for non-disruptive discharges."
 units = "s"
@@ -319,6 +324,23 @@ abs_ip_max = 0.1e6
 ip0_over_ip_max = 0.33
 ip0_over_max_didt = 0.05
 shot_duration = 0.1
+
+[cmod.physics.thermal_quench_time_params]
+autocorr_noise_cutoff = 0.01
+autocorr_sample_freq = 5e3
+bworth_cutoff = 1e3
+bworth_order = 2
+cq_onset_frac = 0.9
+cq_onset_wndw = 0.005
+idx_first_chord = 7
+idx_last_chord = 27
+ip_pre_cq_wndw_end = -0.02
+ip_pre_cq_wndw_start = -0.04
+t_bgrnd_start = -0.05
+t_wndw_post_cq = 0.05
+t_wndw_pre_cq = -0.2
+tq_onset_frac = 0.9
+tq_onset_wndw = 0.0005
 
 [cmod.physics.time_domain_thresholds]
 dipprog_dt = 50e3
