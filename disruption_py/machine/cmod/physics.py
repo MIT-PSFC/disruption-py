@@ -2178,12 +2178,10 @@ class CmodPhysicsMethods:
         for i in range(n_chords):
             try:
                 sig = f"{array_path}:CHORD_{idx_first_chord+i+1:02}"
-                tdi_expr = f"""
-                    _s = data({sig});
-                    _y = _s[{j_chord_start} : {j_chord_end-1}]
-                        - mean(_s[{j_bgrnd_start} : {j_t0-1}]);
-                    _y
-                    """
+                tdi_expr = (
+                    f"_s=data({sig}), "
+                    f"_s[{j_chord_start}:{j_chord_end-1}] - mean(_s[{j_bgrnd_start}:{j_t0-1}])"
+                )
                 chord = params.get_data(tdi_expr, tree_name="xtomo")
             except mdsExceptions.MdsException:
                 params.logger.warning(
