@@ -6,9 +6,12 @@ Module for helper, not physics, methods.
 
 import numpy as np
 
-from disruption_py.core.physics_method.errors import MismatchCalculationError
+from disruption_py.core.physics_method.errors import (
+    CalculationError,
+    MismatchCalculationError,
+)
+from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
-from disruption_py.inout.xr import XarrayDataConnection
 
 
 class MastUtilMethods:
@@ -18,32 +21,32 @@ class MastUtilMethods:
     """
 
     @staticmethod
-    def retrieve_ip(conn: XarrayDataConnection):
+    def retrieve_ip(params: PhysicsMethodParams):
         """
         Read in the measured plasma current, Ip.
 
         Parameters
         ----------
-        conn : XarrayDataConnection
-            Per-shot Xarray data connection.
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection and shot id.
 
         Returns
         -------
         tuple[np.ndarray, np.ndarray]
             Plasma current [A], time base of plasma current [s].
         """
-        ip = conn.get_data("summary/ip")
-        ip_time = conn.get_data("summary/time")
+        ip = params.get_data("summary/ip")
+        ip_time = params.get_data("summary/time")
         return ip, ip_time
 
     @staticmethod
-    def retrieve_efit_time(conn: XarrayDataConnection):
+    def retrieve_efit_time(params: PhysicsMethodParams):
         """
         Read in the EFIT time base.
 
         Parameters
         ----------
-        conn : XarrayDataConnection
+        params : PhysicsMethodParams
             Per-shot Xarray data connection.
 
         Returns
@@ -51,8 +54,47 @@ class MastUtilMethods:
         np.ndarray
             EFIT time base [s].
         """
-        efit_time = conn.get_data("equilibrium/time")
+        efit_time = params.get_data("equilibrium/time")
         return efit_time
+
+    @staticmethod
+    def thomson_rho(params: PhysicsMethodParams, r_ts: np.ndarray):
+        """
+        Normalised effective radius rho = |R_TS - R_mag| / a_minor for each Thomson
+        scattering channel.
+
+        The Thomson channels sit at fixed major radius, so time-averaged equilibrium
+        values are used. The averages are returned alongside rho because callers also
+        need them to bound profile fits in machine coordinates.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection and shot id.
+        r_ts : np.ndarray
+            Major radius of each Thomson scattering channel [m].
+
+        Returns
+        -------
+        tuple[np.ndarray, float, float]
+            Normalised effective radius per channel, time-averaged major radius of
+            the magnetic axis [m], time-averaged minor radius [m].
+
+        Raises
+        ------
+        CalculationError
+            If the equilibrium magnetic axis or minor radius is unavailable.
+        """
+        r_mag = params.get_data("equilibrium/magnetic_axis_r", required=True)
+        a_minor = params.get_data("equilibrium/minor_radius", required=True)
+        r_mag_mean = np.nanmean(r_mag)
+        a_minor_mean = np.nanmean(a_minor)
+        if a_minor_mean <= 0:
+            raise CalculationError(
+                "Cannot compute rho for Thomson scattering channels: "
+                "equilibrium magnetic_axis_r or minor_radius unavailable."
+            )
+        return np.abs(r_ts - r_mag_mean) / a_minor_mean, r_mag_mean, a_minor_mean
 
     @staticmethod
     def interpolate_1d(x: np.ndarray, y: np.ndarray, x_new: np.ndarray) -> np.ndarray:
@@ -72,6 +114,10 @@ class MastUtilMethods:
         np.ndarray
             Interpolated y-coordinates corresponding to x_new.
         """
+        # a 0-d array has no len()
+        x = np.atleast_1d(x)
+        y = np.atleast_1d(y)
+
         if np.isnan(y).all() or len(x) < 2:
             # if all y are NaN (is a missing signal)
             # or if x has only a single number

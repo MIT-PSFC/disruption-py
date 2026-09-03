@@ -29,6 +29,7 @@ class MastEfitMethods:
         "rmagz": "magnetic_axis_z",
         "tribot": "triangularity_lower",
         "tritop": "triangularity_upper",
+        "volume": "volume",
         "v_loop_dynamic": "vloop_dynamic",
         "v_loop_static": "vloop_static",
         "wmhd": "wmhd",
@@ -48,15 +49,16 @@ class MastEfitMethods:
         Returns
         -------
         dict
-            A dictionary containing the retrieved EFIT parameters.
+            A dictionary containing the retrieved EFIT parameters. Properties whose
+            underlying signal is missing for this shot are returned as NaN rather
+            than dropping the whole equilibrium reconstruction.
         """
-        eq_time = params.get_data("equilibrium/time")
         times = params.times
+        eq_time = params.get_data("equilibrium/time", required=True)
 
         outputs = {}
         for key, prop in MastEfitMethods.efit_properties.items():
             signal = params.get_data(f"equilibrium/{prop}")
-            item = MastUtilMethods.interpolate_1d(eq_time, signal, times)
-            outputs[key] = item
+            outputs[key] = MastUtilMethods.interpolate_1d(eq_time, signal, times)
 
         return outputs
