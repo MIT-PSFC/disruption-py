@@ -1,3 +1,9 @@
+[default.log]
+file_level = "DEBUG"
+info_threshold = 50
+success_threshold = 500
+warning_threshold = 1000
+
 [default.tests]
 match_fraction = 0.95 # Fraction of signals that must match between MDSplus and SQL
 val_tolerance = 0.01 # Tolerance for comparing values between MDSplus and SQL
