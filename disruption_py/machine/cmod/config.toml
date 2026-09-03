@@ -249,7 +249,7 @@ units = "m"
 [cmod.physics.attributes.thermal_quench_time]
 description = "Time of the disruptive thermal quench onset. NaN for non-disruptive discharges."
 units = "s"
-validity = [0, 3]
+validity = [0.0, 3.0]
 
 [cmod.physics.attributes.time_until_disrupt]
 description = "Time until the current quench. NaN for non-disruptive discharges."
