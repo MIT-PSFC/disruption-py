@@ -77,6 +77,18 @@ imas = "/summary/global_quantities/greenwald_fraction/value"
 units = "dimensionless"
 validity = [0.0, 1.5]
 
+[cmod.physics.attributes.h98]
+description = "H98 energy confinement time enhancement factor over the IPB98(y,2) scaling."
+imas = "/summary/global_quantities/h_98"
+units = "dimensionless"
+validity = [0.05, 1.75]
+
+[cmod.physics.attributes.h_alpha]
+description = "H-alpha line emission intensity."
+imas = "/spectrometer_visible/channel(i1)/grating_spectrometer/processed_line(i2)/radiance"
+units = "W/(m^2*sr)"
+validity = [0.0, 161.920898]
+
 [cmod.physics.attributes.i_efc]
 description = "Error field correction (EFC) coil current."
 units = "A"
@@ -106,6 +118,11 @@ description = "Elongation calculated using the plasma area and minor radius from
 imas = "/summary/boundary/elongation"
 units = "dimensionless"
 validity = [0.8, 2.0]
+
+[cmod.physics.attributes.lh_power_threshold]
+description = "Martin 2008 L-H transition power threshold scaling."
+units = "W"
+validity = [0.0, 0.1e8]
 
 [cmod.physics.attributes.li]
 description = "Normalized internal inductance, li(3) (EFIT)."
