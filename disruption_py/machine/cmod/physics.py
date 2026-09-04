@@ -842,8 +842,42 @@ class CmodPhysicsMethods:
         return {"v_0": v_0}
 
     @staticmethod
+    @physics_method(columns=["bt"], tokamak=Tokamak.CMOD)
+    def get_btor(params: PhysicsMethodParams):
+        """
+        Get the toroidal magnetic field.
+
+        The field is fetched from the magnetics tree, baseline-subtracted, and
+        interpolated onto the requested timebase. Its sign is preserved.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the toroidal magnetic field (`bt`) [T].
+
+        References
+        -------
+        - original source: [get_n_equal_1_amplitude.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/CMOD/matlab-core/get_n_equal_1_amplitude.m)
+        - pull requests: #[562](https://github.com/MIT-PSFC/disruption-py/pull/562)
+        """
+        btor, t_mag = params.get_data_with_dims(
+            r"\btor", tree_name="magnetics"
+        )  # [T], [s]
+        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
+        # on by t=-1. So pick the time before that to calculate baseline
+        (baseline_indices,) = np.where(t_mag <= -1.8)
+        btor = btor - np.mean(btor[baseline_indices])
+        return {"bt": interp1(t_mag, btor, params.times)}
+
+    @staticmethod
     @physics_method(
-        columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase", "bt"],
+        columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase"],
         tokamak=Tokamak.CMOD,
     )
     def get_n_equal_1_amplitude(params: PhysicsMethodParams):
@@ -869,8 +903,8 @@ class CmodPhysicsMethods:
         -------
         dict
             A dictionary containing the calculated n=1 mode amplitude (`n_equal_1_mode`)
-            and phase (`n_equal_1_phase`), the n=1 mode amplitude normalized to the toroidal
-            field strength (`n_equal_1_normalized`), and the toroidal field strength (`bt`).
+            and phase (`n_equal_1_phase`), and the n=1 mode amplitude normalized to the
+            toroidal field strength (`n_equal_1_normalized`).
 
         References
         -------
@@ -903,7 +937,7 @@ class CmodPhysicsMethods:
         )  # [T], [s]
         # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
         # on by t=-1. So pick the time before that to calculate baseline
-        baseline_indices = np.where(t_mag <= -1.8)
+        (baseline_indices,) = np.where(t_mag <= -1.8)
         btor = btor - np.mean(btor[baseline_indices])
         path = r"\mag_bp_coils.signals."
         # For each sensor:
@@ -939,7 +973,6 @@ class CmodPhysicsMethods:
         polarity = np.sign(np.mean(btor))
         btor_magnitude = btor * polarity
         btor_magnitude = interp1(t_mag, btor_magnitude, params.times)
-        btor = interp1(t_mag, btor, params.times)  # Interpolate BT with sign
 
         n_sensors = len(bp13_signals)
         if n_sensors == 3:
@@ -960,7 +993,6 @@ class CmodPhysicsMethods:
                 "n_equal_1_mode": [np.nan],
                 "n_equal_1_normalized": [np.nan],
                 "n_equal_1_phase": [np.nan],
-                "bt": btor,
             }
         bp13_signals = np.array(bp13_signals)
         a = np.array(a)
@@ -979,7 +1011,6 @@ class CmodPhysicsMethods:
             "n_equal_1_mode": n_equal_1_amplitude,
             "n_equal_1_normalized": n_equal_1_normalized,
             "n_equal_1_phase": n_equal_1_phase,
-            "bt": btor,
         }
 
     @staticmethod
@@ -2175,15 +2206,8 @@ class CmodPhysicsMethods:
         density_dict = CmodPhysicsMethods.get_densities(params=params)
         ip_dict = CmodPhysicsMethods.get_ip_parameters(params=params)
 
-        # Get btor
-        btor, t_mag = params.get_data_with_dims(
-            r"\btor", tree_name="magnetics"
-        )  # btor: [T], tmag: [s]
-        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
-        # on by t=-1. So pick the time before that to calculate baseline
-        baseline_indices = np.where(t_mag <= -1.8)
-        btor = btor - np.mean(btor[baseline_indices])
-        btor = np.abs(interp1(t_mag, btor, params.times))
+        # Get the magnitude of the toroidal field
+        btor = np.abs(CmodPhysicsMethods.get_btor(params=params)["bt"])  # [T]
 
         # Get signals
         ip = np.abs(ip_dict.get("ip")) / 1.0e6  # [A] -> [MA]
@@ -2217,8 +2241,8 @@ class CmodPhysicsMethods:
         return output
 
     @staticmethod
-    @physics_method(columns=["pow_thr_lh_martin"], tokamak=Tokamak.CMOD)
-    def get_itpa_pow_thr(params: PhysicsMethodParams):
+    @physics_method(columns=["lh_power_threshold"], tokamak=Tokamak.CMOD)
+    def get_lh_power_threshold(params: PhysicsMethodParams):
         """
         Power threshold for L-H transition.
 
@@ -2231,7 +2255,7 @@ class CmodPhysicsMethods:
         -------
         dict
             A dictionary with the power threshold for L-H transition
-            (`pow_thr_lh_martin`), in Watts [W]
+            (`lh_power_threshold`), in Watts [W]
 
         References
         ----------
@@ -2249,22 +2273,15 @@ class CmodPhysicsMethods:
         )  # area: [m^2], t_aeqdsk: [s]
         area = interp1(t_aeqdsk, area, params.times)
 
-        # Get BT
-        btor, t_mag = params.get_data_with_dims(
-            r"\btor", tree_name="magnetics"
-        )  # btor: [T], tmag: [s]
-        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
-        # on by t=-1. So pick the time before that to calculate baseline
-        baseline_indices = np.where(t_mag <= -1.8)
-        btor = btor - np.mean(btor[baseline_indices])
-        btor = np.abs(interp1(t_mag, btor, params.times))  # [T]
+        # Get the magnitude of the toroidal field
+        btor = np.abs(CmodPhysicsMethods.get_btor(params=params)["bt"])  # [T]
         n_e = density_dict.get("n_e") / 1.0e20  # [m^-3] -> [10^20 m^-3]
 
         # Estimate power threshold.
-        itpa_power_thr = (
+        lh_power_threshold = (
             0.0488
             * (np.sign(n_e) * np.abs(n_e) ** 0.717)
             * (np.sign(btor) * np.abs(btor) ** 0.803)
             * (np.sign(area) * np.abs(area) ** 0.941)
         )
-        return {"pow_thr_lh_martin": 1.0e6 * itpa_power_thr}
+        return {"lh_power_threshold": 1.0e6 * lh_power_threshold}
