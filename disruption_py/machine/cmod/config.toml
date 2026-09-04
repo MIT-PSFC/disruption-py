@@ -122,7 +122,7 @@ validity = [0.8, 2.0]
 [cmod.physics.attributes.lh_power_threshold]
 description = "Martin 2008 L-H transition power threshold scaling."
 units = "W"
-validity = [0, 0.1e8]
+validity = [0.0, 0.1e8]
 
 [cmod.physics.attributes.li]
 description = "Normalized internal inductance, li(3) (EFIT)."
