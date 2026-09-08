@@ -767,7 +767,8 @@ class D3DPhysicsMethods:
         - original source: [get_Ip_parameters_RT.m](https://github.com/MIT-PSFC/disruption-py
         /blob/matlab/DIII-D/get_Ip_parameters_RT.m)
         - pull requests: #[254](https://github.com/MIT-PSFC/disruption-
-        py/pull/254), #[547](https://github.com/MIT-PSFC/disruption-py/pull/547)
+        py/pull/254), #[547](https://github.com/MIT-PSFC/disruption-py/pull/547),
+        #[596](https://github.com/MIT-PSFC/disruption-py/pull/596)
         - issues: #[506](https://github.com/MIT-PSFC/disruption-py/issues/506)
         """
         ip_rt = [np.nan]
@@ -808,6 +809,8 @@ class D3DPhysicsMethods:
                 "ip_prog_rt: Failed to get programmed plasma current parameters. Setting to NaN."
             )
             params.logger.opt(exception=True).debug(e)
+            ip_prog_rt = [np.nan]
+            dipprog_dt_rt = [np.nan]
         try:
             ip_error_rt, t_ip_error_rt = params.get_data_with_dims(
                 f"ptdata('ipeecoil', {params.shot_id})"
