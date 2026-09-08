@@ -10,6 +10,7 @@ Here follows a non-exhaustive list of projects, publications, and conference con
 
 ### Publications
 
+- AR Saperstein, _et al._ (2026), _"Off-Normal Simulations of radiative events on Alcator C-Mod"_, Nuclear Fusion, _submitted_
 - GL Trevisan, _et al._ (2026), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, Journal of Open Source Software **11** 119, DOI: [10.21105/joss.09364](https://doi.org/10.21105/joss.09364), [BibTeX](https://doi2bib.org/bib/10.21105/joss.09364)
 - AD Maris, _et al._ (2026), _"Real-time avoidance of the L-mode and H-mode density limit via machine-learned stability metrics"_, DOI: [10.1088/1741-4326/ae4efe](https://doi.org/10.1088/1741-4326/ae4efe), [BibTeX](https://doi2bib.org/bib/10.1088/1741-4326/ae4efe)
 - AR Saperstein, _et al._ (2025), _"Design and development of an off-normal warning system for SPARC"_, Nuclear Fusion **65** 116007, DOI: [10.1088/1741-4326/ae074e](https://doi.org/10.1088/1741-4326/ae074e), [BibTeX](https://doi2bib.org/bib/10.1088/1741-4326/ae074e)
