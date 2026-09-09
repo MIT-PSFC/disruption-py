@@ -56,7 +56,7 @@ class GenericPhysicsMethods:
         """
 
         # function-level imports allow machine methods to import generic methods without circularity
-        # pylint: disable=import-outside-toplevel
+        # pylint: disable=import-outside-toplevel, cyclic-import
         from disruption_py.machine.cmod.physics import CmodPhysicsMethods
         from disruption_py.machine.d3d.physics import D3DPhysicsMethods
         from disruption_py.machine.east.physics import EastPhysicsMethods
