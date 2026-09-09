@@ -13,6 +13,9 @@ from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.machine.generic.util import GenericUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 
+# importing machine methods at the function level allows machine methods
+# to import generic methods at the module level and avoid cyclic imports
+
 
 class GenericPhysicsMethods:
     """
@@ -53,8 +56,6 @@ class GenericPhysicsMethods:
         - pull requests: #[433](https://github.com/MIT-PSFC/disruption-py/pull/433)
         - issues: #[408](https://github.com/MIT-PSFC/disruption-py/issues/408)
         """
-
-        # function-level imports allow machine methods to import generic methods without circularity
 
         # Initialize dictionaries
         signals = {}
@@ -165,8 +166,6 @@ class GenericPhysicsMethods:
         - pull requests: #[545](https://github.com/MIT-PSFC/disruption-py/pull/545)
         - issues: #[223](https://github.com/MIT-PSFC/disruption-py/issues/223)
         """
-
-        # function-level imports allow machine methods to import generic methods without circularity
 
         # Initialize test criteria
         criteria = {
