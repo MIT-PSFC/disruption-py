@@ -10,12 +10,8 @@ from disruption_py.config import config
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.errors import CalculationError
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.machine.cmod import CmodPhysicsMethods
-from disruption_py.machine.d3d import D3DPhysicsMethods
-from disruption_py.machine.east import EastPhysicsMethods
 from disruption_py.machine.east.util import EastUtilMethods
 from disruption_py.machine.generic.util import GenericUtilMethods
-from disruption_py.machine.mast.physics import MastPhysicsMethods
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -58,6 +54,14 @@ class GenericPhysicsMethods:
         - pull requests: #[433](https://github.com/MIT-PSFC/disruption-py/pull/433)
         - issues: #[408](https://github.com/MIT-PSFC/disruption-py/issues/408)
         """
+
+        # function-level imports allow machine methods to import generic methods without circularity
+        # pylint: disable=import-outside-toplevel
+        from disruption_py.machine.cmod.physics import CmodPhysicsMethods
+        from disruption_py.machine.d3d.physics import D3DPhysicsMethods
+        from disruption_py.machine.east.physics import EastPhysicsMethods
+        from disruption_py.machine.mast.physics import MastPhysicsMethods
+
         # Initialize dictionaries
         signals = {}
         thresholds = config(params.tokamak).physics.time_domain_thresholds
