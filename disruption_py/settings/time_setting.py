@@ -400,7 +400,7 @@ class DisruptionTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        ip, ip_time = MastUtilMethods.retrieve_ip(params.data_conn)
+        ip, ip_time = MastUtilMethods.retrieve_ip(params)
         return self._calculate_disruption_times(params, ip, ip_time)
 
     @classmethod
