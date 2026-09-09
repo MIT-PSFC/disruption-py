@@ -27,6 +27,9 @@ Here follows a non-exhaustive list of projects, publications, and conference con
 
 ### Conferences
 
+- [Fourth IAEA Technical Meeting on Plasma Disruptions and their Mitigation](https://conferences.iaea.org/event/451/)
+  - AR Saperstein, _et al._ (2026)_, "Off-Normal Simulations (ONSIMs) of radiative collapses on Alcator C-Mod"_, [abstract](https://conferences.iaea.org/event/451/contributions/42908/)
+
 - [46th ITPEA-MDC Meeting (2026)](https://www.iter.org/scientists/itpa/itpea-meetings)
   - Z Keith, _et al._ (2026), _"Multi-device validation of tearing physics"_
   - AR Saperstein, _et al._ (2026), _"Off-normal simulations of radiative collapse events in Alcator C-Mod"_
