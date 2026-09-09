@@ -15,6 +15,7 @@ from typing import Union
 from loguru import logger
 from tqdm.auto import tqdm
 
+from disruption_py.config import config
 from disruption_py.core.utils.misc import get_metadata, get_temporary_folder
 
 # Register logger state at module import time so it is available in every
@@ -48,13 +49,20 @@ class LogSettings:
     """
     Settings for configuring logging.
 
+    Defaults for `file_level` and the console thresholds are read from the
+    `[log]` section of the layered configuration (repo `config.toml`, then
+    `~/.config/disruption-py/user.toml`, then `DISPY_LOG__*` environment
+    variables, e.g. `DISPY_LOG__WARNING_THRESHOLD=2000`). Values passed
+    explicitly always take precedence over the configuration.
+
     Attributes
     ----------
     file_path : str, optional
         Path to the log file. If None, no log file will be created.
         By default, a log file will be created in a temporary folder.
-    file_level : str
-        Logging level for the log file (default is "DEBUG").
+    file_level : str, optional
+        Logging level for the log file. Default is None, so the level is read
+        from the configuration (`log.file_level`, "DEBUG" out of the box).
         Possible values are:
         "TRACE", "DEBUG", "VERBOSE" (custom), "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL".
         See: https://loguru.readthedocs.io/en/stable/api/logger.html#levels
@@ -64,28 +72,45 @@ class LogSettings:
         Possible values are:
         "TRACE", "DEBUG", "VERBOSE" (custom), "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL".
         See: https://loguru.readthedocs.io/en/stable/api/logger.html#levels
-    warning_threshold : int
+    warning_threshold : int, optional
         If number of shots is greater than this threshold, the console log level will
-        be "WARNING". Default is 1000.
-    success_threshold : int
+        be "WARNING". Default is None, so the value is read from the configuration
+        (`log.warning_threshold`, 1000 out of the box).
+    success_threshold : int, optional
         If number of shots is greater than this threshold and less than the warning_threshold,
-        the console log level will be "SUCCESS". Default is 500.
-    info_threshold : int
+        the console log level will be "SUCCESS". Default is None, so the value is read
+        from the configuration (`log.success_threshold`, 500 out of the box).
+    info_threshold : int, optional
         If number of shots is greater than this threshold and less than the success_threshold,
-        the console log level will be "INFO". Default is 50.
+        the console log level will be "INFO". Default is None, so the value is read
+        from the configuration (`log.info_threshold`, 50 out of the box).
     _logging_has_been_setup : bool
         Internal flag to prevent multiple setups (default is False).
     """
 
     file_path: str = os.path.join(get_temporary_folder(), "output.log")
-    file_level: str = "DEBUG"
+    file_level: str = None
     console_level: str = None
 
-    warning_threshold: int = 1000
-    success_threshold: int = 500
-    info_threshold: int = 50
+    warning_threshold: int = None
+    success_threshold: int = None
+    info_threshold: int = None
 
     _logging_has_been_setup: bool = False
+
+    def __post_init__(self):
+        # Resolve unset tunables from the layered config (repo config.toml,
+        # user.toml, DISPY_LOG__* environment variables). Explicit arguments
+        # always win.
+        log_config = config().log
+        if self.file_level is None:
+            self.file_level = log_config.file_level
+        if self.warning_threshold is None:
+            self.warning_threshold = log_config.warning_threshold
+        if self.success_threshold is None:
+            self.success_threshold = log_config.success_threshold
+        if self.info_threshold is None:
+            self.info_threshold = log_config.info_threshold
 
     def reset_handlers(self, num_shots: int = None):
         """
