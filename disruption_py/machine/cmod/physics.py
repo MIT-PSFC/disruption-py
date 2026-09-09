@@ -27,6 +27,7 @@ from disruption_py.core.utils.math import (
 )
 from disruption_py.inout.mds import mdsExceptions
 from disruption_py.machine.cmod.thomson import CmodThomsonDensityMeasure
+from disruption_py.machine.generic.physics import GenericPhysicsMethods
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -2130,8 +2131,6 @@ class CmodPhysicsMethods:
         - issues: #[542](https://github.com/MIT-PSFC/disruption-py/issues/542)
 
         """
-        # Import must be within function to avoid circular imports
-        from disruption_py.machine.generic.physics import GenericPhysicsMethods
 
         cq_time = GenericPhysicsMethods.get_current_quench_time(params)[
             "current_quench_time"
