@@ -21,12 +21,14 @@ from disruption_py.core.retrieval_manager import RetrievalManager
 from disruption_py.core.utils.misc import (
     filter_dict,
     get_elapsed_time,
+    get_metadata,
     get_temporary_folder,
     without_duplicates,
 )
+from disruption_py.inout.base import ProcessConnection
 from disruption_py.inout.mds import ProcessMDSConnection
 from disruption_py.inout.sql import ShotDatabase
-from disruption_py.inout.xr import XarrayConnection
+from disruption_py.inout.xr import ProcessXarrayConnection
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.settings import RetrievalSettings
 from disruption_py.settings.log_settings import LogSettings, resolve_log_settings
@@ -50,21 +52,21 @@ def _execute_retrieval(args):
     Params
     ------
     args : List
-        tokamak, database initializer, mds connection initializer, retrieval
+        tokamak, database initializer, connection initializer, retrieval
         settings, and the shot id
 
     Returns
     -------
     tuple of shot id and the dataframe
     """
-    tokamak, db_init, mds_init, retrieval_settings, shot_id = args
-    database = _get_database_instance(tokamak, db_init)
-    mds_conn = _get_mds_instance(tokamak, mds_init)
+    tokamak, db_init, conn_init, retrieval_settings, shot_id = args
+    process_database = _get_database_instance(tokamak, db_init)
+    process_data_conn = _get_connection_instance(tokamak, conn_init)
 
     retrieval_manager = RetrievalManager(
         tokamak=tokamak,
-        process_database=database,
-        process_mds_conn=mds_conn,
+        process_database=process_database,
+        process_data_conn=process_data_conn,
     )
     return shot_id, retrieval_manager.get_shot_data(shot_id, retrieval_settings)
 
@@ -73,21 +75,29 @@ def get_shots_data(
     shotlist_setting: ShotlistSettingType,
     tokamak: Tokamak = None,
     database_initializer: Callable[..., ShotDatabase] = None,
-    mds_connection_initializer: Callable[..., ProcessMDSConnection] = None,
+    connection_initializer: Callable[..., ProcessConnection] = None,
     retrieval_settings: RetrievalSettings = None,
     output_setting: OutputSetting = "dataset",
     num_processes: int = 1,
     log_settings: LogSettings = None,
 ) -> Any:
     """
-    Get shot data for all shots from shotlist_setting from CMOD.
+    Get shot data for all shots specified by shotlist_setting.
 
-    Attributes
+    Parameters
     ----------
     shotlist_setting : ShotlistSettingType
         Data retrieved for all shotlist specified by the setting. See ShotlistSetting
         for more details.
-    retrieval_settings : RetrievalSettings
+    tokamak : Tokamak, optional
+        The tokamak to retrieve data for. If None, detected from the environment.
+    database_initializer : Callable[..., ShotDatabase], optional
+        Factory for creating a database connection. If None, the default database
+        for the tokamak is used.
+    connection_initializer : Callable[..., ProcessConnection], optional
+        Factory for creating a process-level data connection. If None, the default
+        connection for the tokamak is used.
+    retrieval_settings : RetrievalSettings, optional
         The settings that each shot uses when retrieving data. See RetrievalSettings
         for more details. If None, the default values of each setting in
         RetrievalSettings is used.
@@ -99,8 +109,9 @@ def get_shots_data(
     num_processes : int
         The number of processes to use for data retrieval. If 1, the data is retrieved
         in serial. If > 1, the data is retrieved in parallel.
-    log_settings : LogSettings
+    log_settings : LogSettings, optional
         Settings for logging.
+
     Returns
     -------
     Any
@@ -163,11 +174,16 @@ def get_shots_data(
     )
 
     took = -time.time()
-    with Pool(processes=num_processes) as pool:
+    retrieval_settings.efit_nickname_setting.prefetch_db(database, tokamak)
+    with Pool(
+        processes=num_processes,
+        initializer=log_settings.reset_handlers,
+        initargs=(len(shotlist_list),),
+    ) as pool:
         args = zip(
             repeat(tokamak),
             repeat(database_initializer),
-            repeat(mds_connection_initializer),
+            repeat(connection_initializer),
             repeat(retrieval_settings),
             shotlist_list,
         )
@@ -178,6 +194,9 @@ def get_shots_data(
         ):
             if shot_data is not None:
                 num_success += 1
+                # stamp workflow metadata in the main process, as under
+                # spawn/forkserver each worker would resolve its own time
+                shot_data.attrs.update(get_metadata())
                 output_setting.output_shot(
                     OutputSettingParams(
                         shot_id=shot_id,
@@ -216,11 +235,11 @@ def get_database(
     return ShotDatabase.from_config(tokamak=tokamak)
 
 
-def get_mdsplus_class(
+def get_process_connection(
     tokamak: Tokamak = None,
-) -> ProcessMDSConnection | XarrayConnection:
+) -> ProcessConnection:
     """
-    Get the MDSplus connection for the tokamak.
+    Get the process-level data connection for the tokamak.
     """
     tokamak = resolve_tokamak_from_environment(tokamak)
 
@@ -229,7 +248,7 @@ def get_mdsplus_class(
         return ProcessMDSConnection.from_config(tokamak=tokamak)
 
     if "xarray" in inout_cfg:
-        return XarrayConnection.from_config(tokamak=tokamak)
+        return ProcessXarrayConnection.from_config(tokamak=tokamak)
 
     raise ValueError("No valid MDSplus or xarray connection found.")
 
@@ -243,13 +262,13 @@ def _get_database_instance(tokamak, database_initializer):
     return get_database(tokamak)
 
 
-def _get_mds_instance(tokamak, mds_connection_initializer):
+def _get_connection_instance(tokamak, connection_initializer):
     """
-    Create MDSplus instance
+    Create process connection instance
     """
-    if mds_connection_initializer:
-        return mds_connection_initializer()
-    return get_mdsplus_class(tokamak)
+    if connection_initializer:
+        return connection_initializer()
+    return get_process_connection(tokamak)
 
 
 def run(tokamak, methods, shots, efit_tree, time_base, output, processes, log_level):
@@ -293,9 +312,10 @@ def cli():
     parser.add_argument("-p", "--processes", type=int, default=1)
     parser.add_argument("-l", "--log-level", type=str, default="VERBOSE")
 
-    return run(**vars(parser.parse_args()))
+    out = run(**vars(parser.parse_args()))
+    print(out)
+    return 2 if out is None else len(out) == 0
 
 
 if __name__ == "__main__":
-    out = cli()
-    print(out)
+    sys.exit(cli())

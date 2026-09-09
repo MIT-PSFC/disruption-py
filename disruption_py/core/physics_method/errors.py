@@ -5,11 +5,37 @@ Custom exceptions for the physics methods.
 """
 
 
-class CalculationError(Exception):
+class CustomError(Exception):
     """
-    Custom error specific to physics methods that should be raised when we know
-    the result of a calculation is invalid.
+    Base custom error.
     """
 
-    def __init__(self, message):
-        super().__init__(message)
+
+class DataError(CustomError):
+    """
+    Generic data error.
+    """
+
+
+class CalculationError(CustomError):
+    """
+    Generic calculation error.
+    """
+
+
+class FetchDataError(DataError):
+    """
+    Fetch data error.
+    """
+
+
+class NanDataError(DataError):
+    """
+    NaN data error.
+    """
+
+
+class MismatchCalculationError(CalculationError):
+    """
+    Mismatch calculation error.
+    """

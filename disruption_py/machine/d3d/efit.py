@@ -53,7 +53,7 @@ class D3DEfitMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            Parameters containing MDS connection and shot information.
+            Parameters containing data connection and shot information.
 
         Returns
         -------
@@ -61,12 +61,11 @@ class D3DEfitMethods:
             A dictionary containing the EFIT parameters and their derivatives.
         """
         efit_data = {
-            k: params.mds_conn.get_data(v, tree_name="_efit_tree")
+            k: params.get_data(v, tree_name="_efit_tree")
             for k, v in D3DEfitMethods.efit_cols.items()
         }
         efit_time = (
-            params.mds_conn.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree")
-            / 1.0e3
+            params.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree") / 1.0e3
         )  # [ms] -> [s]
 
         # EFIT reconstructions are sometimes invalid, particularly when very close
@@ -100,7 +99,7 @@ class D3DEfitMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            Parameters containing MDS connection and shot information.
+            Parameters containing data connection and shot information.
 
         Returns
         -------
@@ -108,12 +107,11 @@ class D3DEfitMethods:
             A dictionary containing the real-time EFIT parameters.
         """
         efit_data = {
-            k: params.mds_conn.get_data(v, tree_name="efitrt1")
+            k: params.get_data(v, tree_name="efitrt1")
             for k, v in D3DEfitMethods.rt_efit_cols.items()
         }
         efit_time = (
-            params.mds_conn.get_data(r"\efit_a_eqdsk:atime", tree_name="efitrt1")
-            / 1.0e3
+            params.get_data(r"\efit_a_eqdsk:atime", tree_name="efitrt1") / 1.0e3
         )  # [ms] -> [s]
         # EFIT reconstructions are sometimes invalid, particularly when very close
         # to a disruption.  There are a number of EFIT parameters that can indicate
