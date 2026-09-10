@@ -230,13 +230,12 @@ def get_shots_data(
     )
 
     results = output_setting.get_results()
-    output_setting.to_disk()
-
     logger.debug(
-        "Saved to disk: MaxRSS = {mem:,.1f} MB",
+        "Obtained results: MaxRSS = {mem:,.1f} MB",
         mem=get_max_rss(),
     )
 
+    output_setting.to_disk()
     return results
 
 
