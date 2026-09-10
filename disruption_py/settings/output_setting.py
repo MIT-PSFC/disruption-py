@@ -349,6 +349,7 @@ class SingleOutputSetting(DictOutputSetting):
         """
 
         if self.path:
+            os.makedirs(os.path.dirname(self.path), exist_ok=True)
             t = time.time()
             for method in ["to_netcdf", "to_csv"]:
                 if not hasattr(self.result, method):
