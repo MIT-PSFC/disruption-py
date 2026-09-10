@@ -7,8 +7,6 @@ This module provides classes and methods to manage various output settings.
 """
 
 import os
-import shutil
-import sys
 import tempfile
 import time
 from abc import ABC, abstractmethod
@@ -163,12 +161,29 @@ class DictOutputSetting(OutputSetting):
             If True, a temporary location will be used.
             If False, no results are written to disk.
         """
+
+        # include DictOutputSetting but exclude subclasses
+        # pylint: disable=unidiomatic-typecheck
+
         self.results: Dict[int, xr.Dataset] = {}
         self.shards: Dict[int, str] = {}
+
         if path is True:
             path = os.path.join(get_temporary_folder(), "output")
-            if os.path.exists(path) or "pytest" in sys.modules:
-                path = tempfile.mkdtemp(dir=get_temporary_folder(), prefix="output-")
+
+        if type(self) is not DictOutputSetting:
+            # subclasses write/remove shards in the temporary folder
+            pass
+        elif path is False:
+            # explicit DictOutputSetting without path defeats its purpose
+            logger.warning("Memory optimization requires unloading to disk!")
+        else:
+            # standard
+            logger.trace("Creating output folder: {path}", path=path)
+            os.makedirs(path, exist_ok=True)
+            if os.listdir(path):
+                logger.warning("Output folder is not empty! {path}", path=path)
+
         self.path = path
 
     def _output_shot(self, params: OutputSettingParams):
@@ -180,13 +195,39 @@ class DictOutputSetting(OutputSetting):
         params : OutputSettingParams
             The parameters for outputting shot results.
         """
-        self.shards[params.shot_id] = shard = os.path.join(
-            get_temporary_folder(), f".{params.shot_id}.{os.urandom(8).hex()}.nc"
-        )
+
+        # include DictOutputSetting but exclude subclasses
+        # pylint: disable=unidiomatic-typecheck
+
+        if type(self) is DictOutputSetting and self.path is False:
+            # do not shard
+            self.results[params.shot_id] = params.result
+            return
+
+        file = f"{params.shot_id}.nc"
+        if type(self) is DictOutputSetting:
+            # shard (i.e. store) into output folder
+            shard = os.path.join(self.path, file)
+            if os.path.exists(shard):
+                logger.warning(f"Output file already exists! {shard}")
+                # rename shard to avoid losing data
+                _, shard = tempfile.mkstemp(
+                    dir=self.path, prefix=f"{params.shot_id}.", suffix=".nc"
+                )
+        else:
+            # shard into temporary folder
+            _, shard = tempfile.mkstemp(
+                dir=get_temporary_folder(), prefix=f".{params.shot_id}.", suffix=".nc"
+            )
+
+        # save to disk
+        self.shards[params.shot_id] = shard
         logger.trace(
             shot_msg("Saving shard: {shard}"), shot=params.shot_id, shard=shard
         )
         params.result.to_netcdf(shard)
+
+        # lazy reload
         params.result.close()
         self.results[params.shot_id] = params.result = xr.open_dataset(shard)
 
@@ -208,21 +249,9 @@ class DictOutputSetting(OutputSetting):
 
         if not self.path:
             return ""
-        if os.path.exists(self.path):
-            if not os.path.isdir(self.path):
-                raise FileExistsError(f"Path already exists! {self.path}")
-            if os.listdir(self.path):
-                logger.warning("Output folder already exists! {path}", path=self.path)
-        else:
-            os.makedirs(self.path)
-
-        for shot, result in self.results.items():
-            shard = self.shards.get(shot)
-            cdf = os.path.join(self.path, f"{shot}.nc")
-            logger.trace("Moving shard: {cdf}", cdf=cdf)
-            shutil.move(shard, cdf)
-            result.close()
-            self.results[shot] = xr.open_dataset(cdf)
+        # if the DictOutputSetting.to_disk method is called,
+        # there is nothing to do but to log the output folder
+        # subclasses will handle their own writing to disk
         logger.info("Saved results: {path}", path=self.path)
         return self.path
 
@@ -241,17 +270,27 @@ class SingleOutputSetting(DictOutputSetting):
         path : str | bool, default = True
             The path for writing results to disk.
             If True, a unique temporary location will be used.
-            If False, no results are written to disk.
+            If False, no results are written to disk (excluding temporary shards).
         """
+
+        # although we instantiate a DictOutputSetting without path, temporary
+        # shards are still saved to disk to protect against data loss, and cleaned
+        # up only after successfully persisting the SingleOutputSetting to disk
         super().__init__(path=False)
         self.result = None
+
         if path is True:
-            ext = ".csv" if "DataFrame" in self.__class__.__name__ else ".nc"
-            path = os.path.join(get_temporary_folder(), f"output{ext}")
-            if os.path.exists(path) or "pytest" in sys.modules:
-                _, path = tempfile.mkstemp(
-                    dir=get_temporary_folder(), prefix="output-", suffix=ext
-                )
+            ext = "csv" if isinstance(self, DataFrameOutputSetting) else "nc"
+            path = os.path.join(get_temporary_folder(), f"output.{ext}")
+
+        if path and os.path.exists(path):
+            logger.warning(f"Output file already exists! {path}")
+            # rename file to avoid losing data
+            name, ext = os.path.splitext(path)
+            _, path = tempfile.mkstemp(
+                dir=os.path.dirname(path), prefix=f"{name}.", suffix=ext
+            )
+
         self.path = path
 
     @abstractmethod
@@ -308,35 +347,21 @@ class SingleOutputSetting(DictOutputSetting):
         Save the resulting object into a file.
         """
 
-        if not self.path:
-            # load results so that shards can be removed
-            for shot, result in self.results.items():
-                result.load()
-                shard = self.shards[shot]
-                logger.trace("Removing shard: {shard}", shard=shard)
-                os.remove(shard)
-            return ""
-        if os.path.exists(self.path) and os.path.getsize(self.path):
-            raise FileExistsError(f"File already exists! {self.path}")
-
-        logger.debug(
-            "Saving {type}: {path}", type=self.result.__class__.__name__, path=self.path
-        )
-
-        t = time.time()
-        for method in ["to_netcdf", "to_csv"]:
-            if not hasattr(self.result, method):
-                continue
-            getattr(self.result, method)(self.path)
-            break
-        else:
-            raise NotImplementedError("Could not save object to file.")
-        logger.info(
-            "Saved {type} in {took:.3f} s: {path}",
-            type=self.result.__class__.__name__,
-            took=time.time() - t,
-            path=self.path,
-        )
+        if self.path:
+            t = time.time()
+            for method in ["to_netcdf", "to_csv"]:
+                if not hasattr(self.result, method):
+                    continue
+                getattr(self.result, method)(self.path)
+                break
+            else:
+                raise NotImplementedError("Could not save object to file.")
+            logger.info(
+                "Saved {type} in {took:.3f} s: {path}",
+                type=type(self).__name__.removesuffix("OutputSetting"),
+                took=time.time() - t,
+                path=self.path,
+            )
 
         for shard in self.shards.values():
             logger.trace("Removing shard: {shard}", shard=shard)
