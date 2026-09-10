@@ -211,14 +211,16 @@ class DictOutputSetting(OutputSetting):
             if os.path.exists(shard):
                 logger.warning(f"Output file already exists! {shard}")
                 # rename shard to avoid losing data
-                _, shard = tempfile.mkstemp(
+                fd, shard = tempfile.mkstemp(
                     dir=self.path, prefix=f"{params.shot_id}.", suffix=".nc"
                 )
+                os.close(fd)
         else:
             # shard into temporary folder
-            _, shard = tempfile.mkstemp(
+            fd, shard = tempfile.mkstemp(
                 dir=get_temporary_folder(), prefix=f".{params.shot_id}.", suffix=".nc"
             )
+            os.close(fd)
 
         # save to disk
         self.shards[params.shot_id] = shard
@@ -286,10 +288,9 @@ class SingleOutputSetting(DictOutputSetting):
         if path and os.path.exists(path):
             logger.warning(f"Output file already exists! {path}")
             # rename file to avoid losing data
-            name, ext = os.path.splitext(path)
-            _, path = tempfile.mkstemp(
-                dir=os.path.dirname(path), prefix=f"{name}.", suffix=ext
-            )
+            folder = os.path.dirname(path)
+            name, ext = os.path.splitext(os.path.basename(path))
+            _, path = tempfile.mkstemp(dir=folder, prefix=f"{name}.", suffix=ext)
 
         self.path = path
 
