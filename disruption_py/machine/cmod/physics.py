@@ -24,6 +24,7 @@ from disruption_py.core.utils.math import (
     interp1,
 )
 from disruption_py.inout.mds import mdsExceptions
+from disruption_py.machine.cmod.efit import CmodEfitMethods
 from disruption_py.machine.cmod.thomson import CmodThomsonDensityMeasure
 from disruption_py.machine.tokamak import Tokamak
 
@@ -841,8 +842,42 @@ class CmodPhysicsMethods:
         return {"v_0": v_0}
 
     @staticmethod
+    @physics_method(columns=["bt"], tokamak=Tokamak.CMOD)
+    def get_btor(params: PhysicsMethodParams):
+        """
+        Get the toroidal magnetic field.
+
+        The field is fetched from the magnetics tree, baseline-subtracted, and
+        interpolated onto the requested timebase. Its sign is preserved.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the toroidal magnetic field (`bt`) [T].
+
+        References
+        -------
+        - original source: [get_n_equal_1_amplitude.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/CMOD/matlab-core/get_n_equal_1_amplitude.m)
+        - pull requests: #[562](https://github.com/MIT-PSFC/disruption-py/pull/562)
+        """
+        btor, t_mag = params.get_data_with_dims(
+            r"\btor", tree_name="magnetics"
+        )  # [T], [s]
+        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
+        # on by t=-1. So pick the time before that to calculate baseline
+        (baseline_indices,) = np.where(t_mag <= -1.8)
+        btor = btor - np.mean(btor[baseline_indices])
+        return {"bt": interp1(t_mag, btor, params.times)}
+
+    @staticmethod
     @physics_method(
-        columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase", "bt"],
+        columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase"],
         tokamak=Tokamak.CMOD,
     )
     def get_n_equal_1_amplitude(params: PhysicsMethodParams):
@@ -857,7 +892,7 @@ class CmodPhysicsMethods:
         don't have to be numerically integrated. These four sensors were working
         well in 2014, 2015, and 2016. I looked at our locked mode MGI run on
         1150605, and the different applied A-coil phasings do indeed show up on
-        the *n*=1 signal.
+        the *n*=1 signal. The toroidal field is obtained from `get_btor`.
 
         Parameters
         ----------
@@ -868,14 +903,15 @@ class CmodPhysicsMethods:
         -------
         dict
             A dictionary containing the calculated n=1 mode amplitude (`n_equal_1_mode`)
-            and phase (`n_equal_1_phase`), the n=1 mode amplitude normalized to the toroidal
-            field strength (`n_equal_1_normalized`), and the toroidal field strength (`bt`).
+            and phase (`n_equal_1_phase`), and the n=1 mode amplitude normalized to the
+            toroidal field strength (`n_equal_1_normalized`).
 
         References
         -------
         - original source: [get_n_equal_1_amplitude.m](https://github.com/MIT-PSFC/disruption-py/
         blob/matlab/CMOD/matlab-core/get_n_equal_1_amplitude.m)
-        - pull requests: #[460](https://github.com/MIT-PSFC/disruption-py/pull/460)
+        - pull requests: #[460](https://github.com/MIT-PSFC/disruption-py/pull/460), #[562](https:
+        //github.com/MIT-PSFC/disruption-py/pull/562)
         - issues: #[211](https://github.com/MIT-PSFC/disruption-py/issues/211)
         """
         # These sensors are placed toroidally around the machine. Letters refer to
@@ -897,32 +933,32 @@ class CmodPhysicsMethods:
         )
         bp13_phi = phi[bp13_indices] + 360  # INFO
         bp13_btor_pickup_coeffs = btor_pickup_coeffs[bp13_indices]
-        btor, t_mag = params.get_data_with_dims(
-            r"\btor", tree_name="magnetics"
-        )  # [T], [s]
-        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
-        # on by t=-1. So pick the time before that to calculate baseline
-        baseline_indices = np.where(t_mag <= -1.8)
-        btor = btor - np.mean(btor[baseline_indices])
+        # Baseline-subtracted toroidal field on the requested timebase, (Before PR#562 it used to
+        # remove the btor pickup from each sensor and to normalize the n=1 mode)
+        bt = CmodPhysicsMethods.get_btor(params=params)["bt"]  # [T]
         path = r"\mag_bp_coils.signals."
         # For each sensor:
         # 1. Subtract baseline offset
-        # 2. Subtract btor pickup
-        # 3. Interpolate bp onto shot timebase
+        # 2. Interpolate bp onto shot timebase
+        # 3. Subtract btor pickup
 
         for i, bp13_name in enumerate(bp13_names):
             try:
-                signal = params.get_data(path + bp13_name, tree_name="magnetics")  # [T]
+                signal, t_signal = params.get_data_with_dims(
+                    path + bp13_name, tree_name="magnetics"
+                )  # [T], [s]
             # Sensor not available, skip
             except mdsExceptions.MdsException:
                 continue
             if len(signal) == 1:
                 continue
 
-            baseline = np.mean(signal[baseline_indices])
-            signal = signal - baseline
-            signal = signal - bp13_btor_pickup_coeffs[i] * btor
-            signal = interp1(t_mag, signal, params.times)
+            # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
+            # on by t=-1. So pick the time before that to calculate baseline
+            (baseline_indices,) = np.where(t_signal <= -1.8)
+            signal = signal - np.mean(signal[baseline_indices])
+            signal = interp1(t_signal, signal, params.times)
+            signal = signal - bp13_btor_pickup_coeffs[i] * bt
             # Check if the signal's magnitude is >1T; if so consider this sensor as broken
             if np.mean(abs(signal)) > 1:
                 continue
@@ -935,10 +971,8 @@ class CmodPhysicsMethods:
             a.append(a_row)
 
         # TODO: Examine edge case behavior of sign
-        polarity = np.sign(np.mean(btor))
-        btor_magnitude = btor * polarity
-        btor_magnitude = interp1(t_mag, btor_magnitude, params.times)
-        btor = interp1(t_mag, btor, params.times)  # Interpolate BT with sign
+        polarity = np.sign(np.nanmean(bt))
+        btor_magnitude = bt * polarity
 
         n_sensors = len(bp13_signals)
         if n_sensors == 3:
@@ -959,7 +993,6 @@ class CmodPhysicsMethods:
                 "n_equal_1_mode": [np.nan],
                 "n_equal_1_normalized": [np.nan],
                 "n_equal_1_phase": [np.nan],
-                "bt": btor,
             }
         bp13_signals = np.array(bp13_signals)
         a = np.array(a)
@@ -978,7 +1011,6 @@ class CmodPhysicsMethods:
             "n_equal_1_mode": n_equal_1_amplitude,
             "n_equal_1_normalized": n_equal_1_normalized,
             "n_equal_1_phase": n_equal_1_phase,
-            "bt": btor,
         }
 
     @staticmethod
@@ -2106,3 +2138,155 @@ class CmodPhysicsMethods:
             or 1150000000 < shot_id < 1150610000
             or 1160000000 < shot_id < 1160303000
         )
+
+    @staticmethod
+    @physics_method(columns=["h_alpha"], tokamak=Tokamak.CMOD)
+    def get_h_alpha(params: PhysicsMethodParams):
+        """
+        Get the H_alpha line emission intensity.
+
+        The intensity of H-alpha radiance indicates presence of ELMs, and/or
+        radiative events, and changes of confinement regimes.
+
+        In case of using this signal for ELM detection, it is recommended to
+        use the native time base of the signal to avoid losing ELMs.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary with the H-alpha signal (`h_alpha`). In SI brightness units [W/(m^2*sr)].
+
+        References
+        -------
+        - pull requests: #[562](https://github.com/MIT-PSFC/disruption-py/pull/562)
+        """
+        # Get signals from SPECTROSCOPY tree
+        h_alpha, time_halpha = params.get_data_with_dims(
+            r"\spectroscopy::ha_2_bright", tree_name="spectroscopy"
+        )  # [mW/(cm^2*sr)], [s]
+        # Interpolate Halpha to params.times
+        h_alpha_interp = interp1(time_halpha, h_alpha, params.times)
+        return {"h_alpha": 10 * h_alpha_interp}  # [W/(m^2*sr)]
+
+    @staticmethod
+    @physics_method(columns=["h98"], tokamak=Tokamak.CMOD)
+    def get_h98(params: PhysicsMethodParams):
+        """
+        Compute H98 by getting tau_E
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary with the H98 confinement enhancement factor (`h98`), which is dimensionless
+
+        References
+        ----------
+        - Scaling from eq. 20, [ITER Physics Basis Chapter 2][ITER_reference]
+        - Data used to construct the scaling are described in
+          [ITER H Mode Confinement Database Update][DB2]
+        - pull requests: #[562](https://github.com/MIT-PSFC/disruption-py/pull/562)
+
+        [ITER_reference]: https://iopscience.iop.org/article/10.1088/0029-5515/39/12/302/pdf
+        [DB2]: https://iopscience.iop.org/article/10.1088/0029-5515/34/1/I10/pdf
+        """
+
+        # Get parameters for calculating confinement time
+        powers_dict = CmodPhysicsMethods.get_power(params=params)
+        efit_dict = CmodEfitMethods.get_efit_parameters(params=params)
+        density_dict = CmodPhysicsMethods.get_densities(params=params)
+        ip_dict = CmodPhysicsMethods.get_ip_parameters(params=params)
+
+        # Get the magnitude of the toroidal field
+        btor = np.abs(CmodPhysicsMethods.get_btor(params=params)["bt"])  # [T]
+
+        # Get signals
+        ip = np.abs(ip_dict.get("ip")) / 1.0e6  # [A] -> [MA]
+        n_e = density_dict.get("n_e") / 1.0e19  # [m^-3] -> [10^19 m^-3]
+        p_input = powers_dict.get("p_input") / 1.0e6  # [W] -> [MW]
+        dwmhd_dt = efit_dict.get("dwmhd_dt") / 1.0e6  # [W] -> [MW]
+        wmhd = efit_dict.get("wmhd") / 1.0e6  # [J] -> [MJ]
+        r0 = efit_dict.get("rmagx")  # [m]
+        a_minor = efit_dict.get("a_minor")  # [m]
+        epsilon = a_minor / r0
+        kappa = efit_dict.get("kappa")
+        tau = wmhd / (p_input - dwmhd_dt)
+
+        # Compute 1998 tau_E scaling, taking A (atomic mass) = 2.
+        tau_98 = (
+            0.0562
+            * (np.sign(n_e) * np.abs(n_e) ** 0.41)
+            * (2**0.19)
+            * (np.sign(ip) * np.abs(ip) ** 0.93)
+            * (np.sign(r0) * np.abs(r0) ** 1.97)
+            * (np.sign(epsilon) * np.abs(epsilon) ** 0.58)
+            * (np.sign(kappa) * np.abs(kappa) ** 0.78)
+            * (np.sign(btor) * np.abs(btor) ** 0.15)
+            * (np.sign((p_input - dwmhd_dt)) * np.abs((p_input - dwmhd_dt)) ** -0.69)
+        )
+        h98 = tau / tau_98
+        h98[h98 <= 0] = 0
+        output = {
+            "h98": h98,
+        }
+        return output
+
+    @staticmethod
+    @physics_method(columns=["lh_power_threshold"], tokamak=Tokamak.CMOD)
+    def get_lh_power_threshold(params: PhysicsMethodParams):
+        """
+        Power threshold for L-H transition.
+
+        Martin 2008 scaling P_thr = 0.0488 n_e^0.717 B_t^0.803 S^0.941 [MW], with n_e the
+        line-averaged density [10^20 m^-3], B_t the toroidal field [T] and S the plasma
+        surface area [m^2] from EFIT (`psurfa`).
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary with the power threshold for L-H transition
+            (`lh_power_threshold`), in Watts [W]
+
+        References
+        ----------
+        - Scaling from Equation 2, Y. R. Martin _et al_ (2008) J. Phys.: Conf. Ser. **123** 012033
+        [DOI 10.1088/1742-6596/123/1/012033][martin_reference]
+        - pull requests: #[562](https://github.com/MIT-PSFC/disruption-py/pull/562)
+
+        [martin_reference]: https://iopscience.iop.org/article/10.1088/1742-6596/123/1/012033/pdf
+        """
+
+        density_dict = CmodPhysicsMethods.get_densities(params=params)
+        # Plasma surface area from EFIT, interpolated to the time base. The node has
+        # no units attribute in the tree, but its values are in m^2 (~7 m^2 on C-Mod).
+        surface_area, t_aeqdsk = params.get_data_with_dims(
+            r"\efit_aeqdsk:psurfa", tree_name="_efit_tree"
+        )  # surface_area: [m^2], t_aeqdsk: [s]
+        surface_area = interp1(t_aeqdsk, surface_area, params.times)
+
+        # Get the magnitude of the toroidal field
+        btor = np.abs(CmodPhysicsMethods.get_btor(params=params)["bt"])  # [T]
+        n_e = density_dict.get("n_e") / 1.0e20  # [m^-3] -> [10^20 m^-3]
+
+        # Estimate power threshold.
+        lh_power_threshold = (
+            0.0488
+            * (np.sign(n_e) * np.abs(n_e) ** 0.717)
+            * (np.sign(btor) * np.abs(btor) ** 0.803)
+            * (np.sign(surface_area) * np.abs(surface_area) ** 0.941)
+        )
+        return {"lh_power_threshold": 1.0e6 * lh_power_threshold}
