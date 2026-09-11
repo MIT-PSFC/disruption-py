@@ -2246,6 +2246,10 @@ class CmodPhysicsMethods:
         """
         Power threshold for L-H transition.
 
+        Martin 2008 scaling P_thr = 0.0488 n_e^0.717 B_t^0.803 S^0.941 [MW], with n_e the
+        line-averaged density [10^20 m^-3], B_t the toroidal field [T] and S the plasma
+        surface area [m^2] from EFIT (`psurfa`).
+
         Parameters
         ----------
         params : PhysicsMethodParams
@@ -2267,11 +2271,12 @@ class CmodPhysicsMethods:
         """
 
         density_dict = CmodPhysicsMethods.get_densities(params=params)
-        # Get area and interpolate to time base
-        area, t_aeqdsk = params.get_data_with_dims(
-            r"\efit_aeqdsk:areao/1e4", tree_name="_efit_tree"
-        )  # area: [m^2], t_aeqdsk: [s]
-        area = interp1(t_aeqdsk, area, params.times)
+        # Plasma surface area from EFIT, interpolated to the time base. The node has
+        # no units attribute in the tree, but its values are in m^2 (~7 m^2 on C-Mod).
+        surface_area, t_aeqdsk = params.get_data_with_dims(
+            r"\efit_aeqdsk:psurfa", tree_name="_efit_tree"
+        )  # surface_area: [m^2], t_aeqdsk: [s]
+        surface_area = interp1(t_aeqdsk, surface_area, params.times)
 
         # Get the magnitude of the toroidal field
         btor = np.abs(CmodPhysicsMethods.get_btor(params=params)["bt"])  # [T]
@@ -2282,6 +2287,6 @@ class CmodPhysicsMethods:
             0.0488
             * (np.sign(n_e) * np.abs(n_e) ** 0.717)
             * (np.sign(btor) * np.abs(btor) ** 0.803)
-            * (np.sign(area) * np.abs(area) ** 0.941)
+            * (np.sign(surface_area) * np.abs(surface_area) ** 0.941)
         )
         return {"lh_power_threshold": 1.0e6 * lh_power_threshold}
