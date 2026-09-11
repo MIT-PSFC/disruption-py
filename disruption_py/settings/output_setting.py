@@ -290,7 +290,8 @@ class SingleOutputSetting(DictOutputSetting):
             # rename file to avoid losing data
             folder = os.path.dirname(path)
             name, ext = os.path.splitext(os.path.basename(path))
-            _, path = tempfile.mkstemp(dir=folder, prefix=f"{name}.", suffix=ext)
+            fd, path = tempfile.mkstemp(dir=folder, prefix=f"{name}.", suffix=ext)
+            os.close(fd)
 
         self.path = path
 
@@ -372,7 +373,7 @@ class SingleOutputSetting(DictOutputSetting):
             logger.trace("Removing shard: {shard}", shard=shard)
             os.remove(shard)
 
-        return self.path
+        return self.path if self.path else ""
 
 
 class DatasetOutputSetting(SingleOutputSetting):
