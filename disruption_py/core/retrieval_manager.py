@@ -4,13 +4,15 @@
 Module for managing retrieval of shot data from a tokamak.
 """
 
+import os
+
 import numpy as np
 import pandas as pd
 from loguru import logger
 
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.physics_method.runner import populate_shot
-from disruption_py.core.utils.misc import shot_msg
+from disruption_py.core.utils.misc import get_max_rss, shot_msg
 from disruption_py.inout.base import DataConnection, ProcessConnection
 from disruption_py.inout.mds import MDSConnection, mdsExceptions
 from disruption_py.inout.sql import ShotDatabase
@@ -114,6 +116,13 @@ class RetrievalManager:
             if isinstance(e, mdsExceptions.MDSplusERROR):
                 physics_method_params.data_conn.reconnect()
             retrieved_data = None
+
+        logger.debug(
+            shot_msg("Completed: MaxRSS = {mem:,.1f} MB @ PID = {pid}"),
+            shot=shot_id,
+            mem=get_max_rss(),
+            pid=os.getpid(),
+        )
 
         return retrieved_data
 
