@@ -319,6 +319,7 @@ class SingleOutputSetting(DictOutputSetting):
         took = -time.time()
         for result in self.results.values():
             result.load()
+            result.close()
         took += time.time()
         logger.info(
             "Read {tot:,} shots in {sec:.3f}s.", tot=len(self.results), sec=took
