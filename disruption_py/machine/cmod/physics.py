@@ -892,7 +892,7 @@ class CmodPhysicsMethods:
         don't have to be numerically integrated. These four sensors were working
         well in 2014, 2015, and 2016. I looked at our locked mode MGI run on
         1150605, and the different applied A-coil phasings do indeed show up on
-        the *n*=1 signal.
+        the *n*=1 signal. The toroidal field is obtained from `get_btor`.
 
         Parameters
         ----------
@@ -910,7 +910,8 @@ class CmodPhysicsMethods:
         -------
         - original source: [get_n_equal_1_amplitude.m](https://github.com/MIT-PSFC/disruption-py/
         blob/matlab/CMOD/matlab-core/get_n_equal_1_amplitude.m)
-        - pull requests: #[460](https://github.com/MIT-PSFC/disruption-py/pull/460)
+        - pull requests: #[460](https://github.com/MIT-PSFC/disruption-py/pull/460), #[562](https:
+        //github.com/MIT-PSFC/disruption-py/pull/562)
         - issues: #[211](https://github.com/MIT-PSFC/disruption-py/issues/211)
         """
         # These sensors are placed toroidally around the machine. Letters refer to
@@ -932,32 +933,32 @@ class CmodPhysicsMethods:
         )
         bp13_phi = phi[bp13_indices] + 360  # INFO
         bp13_btor_pickup_coeffs = btor_pickup_coeffs[bp13_indices]
-        btor, t_mag = params.get_data_with_dims(
-            r"\btor", tree_name="magnetics"
-        )  # [T], [s]
-        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
-        # on by t=-1. So pick the time before that to calculate baseline
-        (baseline_indices,) = np.where(t_mag <= -1.8)
-        btor = btor - np.mean(btor[baseline_indices])
+        # Baseline-subtracted toroidal field on the requested timebase, (Before PR#562 it used to
+        # remove the btor pickup from each sensor and to normalize the n=1 mode)
+        bt = CmodPhysicsMethods.get_btor(params=params)["bt"]  # [T]
         path = r"\mag_bp_coils.signals."
         # For each sensor:
         # 1. Subtract baseline offset
-        # 2. Subtract btor pickup
-        # 3. Interpolate bp onto shot timebase
+        # 2. Interpolate bp onto shot timebase
+        # 3. Subtract btor pickup
 
         for i, bp13_name in enumerate(bp13_names):
             try:
-                signal = params.get_data(path + bp13_name, tree_name="magnetics")  # [T]
+                signal, t_signal = params.get_data_with_dims(
+                    path + bp13_name, tree_name="magnetics"
+                )  # [T], [s]
             # Sensor not available, skip
             except mdsExceptions.MdsException:
                 continue
             if len(signal) == 1:
                 continue
 
-            baseline = np.mean(signal[baseline_indices])
-            signal = signal - baseline
-            signal = signal - bp13_btor_pickup_coeffs[i] * btor
-            signal = interp1(t_mag, signal, params.times)
+            # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
+            # on by t=-1. So pick the time before that to calculate baseline
+            (baseline_indices,) = np.where(t_signal <= -1.8)
+            signal = signal - np.mean(signal[baseline_indices])
+            signal = interp1(t_signal, signal, params.times)
+            signal = signal - bp13_btor_pickup_coeffs[i] * bt
             # Check if the signal's magnitude is >1T; if so consider this sensor as broken
             if np.mean(abs(signal)) > 1:
                 continue
@@ -970,9 +971,8 @@ class CmodPhysicsMethods:
             a.append(a_row)
 
         # TODO: Examine edge case behavior of sign
-        polarity = np.sign(np.mean(btor))
-        btor_magnitude = btor * polarity
-        btor_magnitude = interp1(t_mag, btor_magnitude, params.times)
+        polarity = np.sign(np.nanmean(bt))
+        btor_magnitude = bt * polarity
 
         n_sensors = len(bp13_signals)
         if n_sensors == 3:
