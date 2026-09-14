@@ -2112,7 +2112,7 @@ class CmodPhysicsMethods:
         this algorithm struggles to select the first thermal quench. Based on manual testing
         of 120 shots, about 5% of flattop disruptions on C-Mod feature multi-stage thermal quenches.
         For flattop disruptions, the automated labels are generally within 1 ms of the manually
-        labeled thermal quench onsest, though labels are occasionally 3-4 ms early or late.
+        labeled thermal quench onset, though labels are occasionally 3-4 ms early or late.
         This algorithm has only been tested on flattop disruptions.
 
         Parameters
@@ -2172,6 +2172,7 @@ class CmodPhysicsMethods:
 
         n_chords = tq_params["idx_last_chord"] - idx_first_chord + 1
         sxr = np.zeros((n_chords, len(t_sxr)))
+        valid_chords = np.ones(n_chords, dtype=bool)
         # Read snippets of other chords with background subtraction using a TDI expression
         # for fast reads (important for 2012-2016 shots with 250 kHz digitization)
         for i in range(n_chords):
@@ -2188,6 +2189,7 @@ class CmodPhysicsMethods:
                     array_path,
                     idx_first_chord + i + 1,
                 )
+                valid_chords[i] = False
                 continue
             sxr[i] = chord
 
@@ -2222,7 +2224,7 @@ class CmodPhysicsMethods:
                 params.logger.debug(
                     "Removing bad SXR chord {}", idx_first_chord + i + 1
                 )
-                sxr[i] = 0.0
+                valid_chords[i] = False
                 continue
             index_no_lag = np.argmax(autocorr)
             crosses_zero = autocorr[index_no_lag:] < 0
@@ -2237,7 +2239,10 @@ class CmodPhysicsMethods:
                     idx_first_chord + i + 1,
                     autocorr_decay_time,
                 )
-                sxr[i] = 0.0
+                valid_chords[i] = False
+        if not np.any(valid_chords):
+            raise NanDataError("No valid SXR chords after removing noisy chords")
+        sxr = sxr[valid_chords]
 
         # Noncausal Butterworth low pass filter to smooth transient SXR spikes during TQ.
         # Cutoff of 1.0 kHz and order 2 seems to filter recombination SXR spikes
@@ -2275,7 +2280,7 @@ class CmodPhysicsMethods:
         idx_end = np.argmin(np.abs(t_sxr - cq_onset_time))
         if idx_start == len(t_sxr) - 1:
             raise NanDataError(
-                f"No SXR data at time of CQ." f"CQ time = {cq_time:.3f} s."
+                f"No SXR data at time of CQ. " f"CQ time = {cq_time:.3f} s."
             )
         t_max_sxr_drop = t_sxr[idx_start + np.argmin(dcore_sxr_dt[idx_start:idx_end])]
 
