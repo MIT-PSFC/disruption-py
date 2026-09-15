@@ -531,6 +531,10 @@ class MastPhysicsMethods:
 
         core_vals = np.where(core_mask, fan_power, np.nan)
         abd_vals = np.where(all_but_div, fan_power, np.nan)
+
+        core_vals = np.where(core_vals < 0, np.nan, core_vals)
+        abd_vals = np.where(abd_vals < 0, np.nan, abd_vals)
+
         core_count = np.isfinite(core_vals).sum(axis=0)
         abd_count = np.isfinite(abd_vals).sum(axis=0)
         core_mean = np.nansum(core_vals, axis=0) / np.where(
