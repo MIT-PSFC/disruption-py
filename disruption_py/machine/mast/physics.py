@@ -7,12 +7,10 @@ Physics methods for MAST.
 
 import numpy as np
 
-from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
-from disruption_py.core.physics_method.errors import CalculationError
+from disruption_py.core.physics_method.errors import MismatchCalculationError
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.math import interp1
-from disruption_py.inout.xr import XarrayConnection
+from disruption_py.core.utils.math import causal_boxcar_smooth, interp1
 from disruption_py.machine.mast.util import MastUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 
@@ -24,7 +22,6 @@ class MastPhysicsMethods:
     """
 
     @staticmethod
-    @cache_method
     @physics_method(
         columns=["ip", "dip_dt", "ip_prog", "dipprog_dt"],
         tokamak=Tokamak.MAST,
@@ -43,11 +40,10 @@ class MastPhysicsMethods:
             A dictionary containing plasma current (`ip`), its time derivative (`dip_dt`),
             programmed plasma current (`ip_prog`), and its time derivative (`dipprog_dt`).
         """
-        conn: XarrayConnection = params.mds_conn
-        ip = conn.get_data(params.shot_id, "summary/ip")
-        ip_prog = conn.get_data(params.shot_id, "pulse_schedule/i_plasma")
-        ip_prog_time = conn.get_data(params.shot_id, "pulse_schedule/time")
-        magtime = conn.get_data(params.shot_id, "summary/time")
+        ip = params.get_data("summary/ip")
+        ip_prog = params.get_data("pulse_schedule/i_plasma")
+        ip_prog_time = params.get_data("pulse_schedule/time")
+        magtime = params.get_data("summary/time")
 
         dip_dt = np.gradient(ip, magtime)
         dipprog_dt = np.gradient(ip_prog, ip_prog_time)
@@ -85,11 +81,10 @@ class MastPhysicsMethods:
             A dictionary containing neutral beam injection power (`power_nbi`) and
             radiated power (`power_radiated`).
         """
-        conn: XarrayConnection = params.mds_conn
 
-        power_nbi = conn.get_data(params.shot_id, "summary/power_nbi")
-        power_radiated = conn.get_data(params.shot_id, "summary/power_radiated")
-        base_time = conn.get_data(params.shot_id, "summary/time")
+        power_nbi = params.get_data("summary/power_nbi")
+        power_radiated = params.get_data("summary/power_radiated")
+        base_time = params.get_data("summary/time")
 
         times = params.times
         power_nbi = MastUtilMethods.interpolate_1d(base_time, power_nbi, times)
@@ -117,12 +112,11 @@ class MastPhysicsMethods:
             A dictionary containing total injected gas (`total_injected`),
             inboard total gas (`inboard_total`), and outboard total gas (`outboard_total`).
         """
-        conn: XarrayConnection = params.mds_conn
 
-        total_injected = conn.get_data(params.shot_id, "gas_injection/total_injected")
-        inboard_total = conn.get_data(params.shot_id, "gas_injection/inboard_total")
-        outboard_total = conn.get_data(params.shot_id, "gas_injection/outboard_total")
-        base_time = conn.get_data(params.shot_id, "gas_injection/time")
+        total_injected = params.get_data("gas_injection/total_injected")
+        inboard_total = params.get_data("gas_injection/inboard_total")
+        outboard_total = params.get_data("gas_injection/outboard_total")
+        base_time = params.get_data("gas_injection/time")
 
         times = params.times
         total_injected = MastUtilMethods.interpolate_1d(
@@ -158,11 +152,10 @@ class MastPhysicsMethods:
             core electron density (`n_e_core`).
         """
         times = params.times
-        conn: XarrayConnection = params.mds_conn
 
-        t_e_core = conn.get_data(params.shot_id, "thomson_scattering/t_e_core")
-        n_e_core = conn.get_data(params.shot_id, "thomson_scattering/n_e_core")
-        base_time = conn.get_data(params.shot_id, "thomson_scattering/time")
+        t_e_core = params.get_data("thomson_scattering/t_e_core")
+        n_e_core = params.get_data("thomson_scattering/n_e_core")
+        base_time = params.get_data("thomson_scattering/time")
 
         t_e_core = MastUtilMethods.interpolate_1d(base_time, t_e_core, times)
         n_e_core = MastUtilMethods.interpolate_1d(base_time, n_e_core, times)
@@ -201,13 +194,12 @@ class MastPhysicsMethods:
 
         """
 
-        conn: XarrayConnection = params.mds_conn
-        n_e = conn.get_data(params.shot_id, "summary/line_average_n_e")
-        t_n = conn.get_data(params.shot_id, "summary/time")
-        ip = conn.get_data(params.shot_id, "summary/ip")
-        t_ip = conn.get_data(params.shot_id, "summary/time")
-        a_minor = conn.get_data(params.shot_id, "equilibrium/minor_radius")
-        t_a = conn.get_data(params.shot_id, "equilibrium/time")
+        n_e = params.get_data("summary/line_average_n_e")
+        t_n = params.get_data("summary/time")
+        ip = params.get_data("summary/ip")
+        t_ip = params.get_data("summary/time")
+        a_minor = params.get_data("equilibrium/minor_radius")
+        t_a = params.get_data("equilibrium/time")
 
         return MastPhysicsMethods._get_densities(
             params.times, n_e, t_n, ip, t_ip, a_minor, t_a
@@ -242,7 +234,9 @@ class MastPhysicsMethods:
             its time derivative (`dn_dt`), and the Greenwald fraction (`greenwald_fraction`).
         """
         if len(n_e) != len(t_n):
-            raise CalculationError("n_e and t_n are different lengths")
+            raise MismatchCalculationError(
+                f"len(n_e) = {len(n_e)} vs. len(t_n) = {len(t_n)}"
+            )
         # get the gradient of n_E
         dn_dt = np.gradient(n_e, t_n)
         n_e = interp1(t_n, n_e, times)
@@ -276,20 +270,13 @@ class MastPhysicsMethods:
             A dictionary containing SXR data (`sxr_data`) and
             corresponding time points (`sxr_time`).
         """
-        conn: XarrayConnection = params.mds_conn
-        hcam = conn.get_data(
-            params.shot_id, "soft_x_rays/horizontal_cam_upper", return_xarray=True
-        )
+        hcam = params.get_data("soft_x_rays/horizontal_cam_upper", return_xarray=True)
 
-        if hcam is not None:
-            hcam = hcam.isel(horizontal_cam_upper_channel=7)
-            hcam = hcam.squeeze(drop=True)
-            hcam = hcam.drop_vars(["horizontal_cam_upper_channel"])
-            sxr_time = hcam.time.values
-            sxr_data = hcam.values
-        else:
-            sxr_time = np.array([np.nan])
-            sxr_data = np.array([np.nan])
+        hcam = hcam.isel(horizontal_cam_upper_channel=7)
+        hcam = hcam.squeeze(drop=True)
+        hcam = hcam.drop_vars(["horizontal_cam_upper_channel"])
+        sxr_time = hcam.time.values
+        sxr_data = hcam.values
 
         times = params.times
         sxr_data = MastUtilMethods.interpolate_1d(sxr_time, sxr_data, times)
@@ -314,26 +301,78 @@ class MastPhysicsMethods:
         dict
             A dictionary containing D-alpha signal data (`dalpha`).
         """
-        conn: XarrayConnection = params.mds_conn
 
-        dalpha = conn.get_data(
-            params.shot_id,
+        dalpha = params.get_data(
             "spectrometer_visible/filter_spectrometer_dalpha_voltage",
             return_xarray=True,
         )
 
-        if dalpha is not None:
-            dalpha = dalpha.isel(dalpha_channel=2)
-            dalpha = dalpha.dropna(dim="time")
-            dalpha = dalpha.squeeze(drop=True)
-            dalpha = dalpha.drop_vars("dalpha_channel")
+        dalpha = dalpha.isel(dalpha_channel=2)
+        dalpha = dalpha.dropna(dim="time")
+        dalpha = dalpha.squeeze(drop=True)
+        dalpha = dalpha.drop_vars("dalpha_channel")
 
-            dalpha_time = dalpha.time.values
-            dalpha_data = dalpha.values
-        else:
-            dalpha_time = np.array([np.nan])
-            dalpha_data = np.array([np.nan])
+        dalpha_time = dalpha.time.values
+        dalpha_data = dalpha.values
 
         times = params.times
         dalpha_data = MastUtilMethods.interpolate_1d(dalpha_time, dalpha_data, times)
         return {"d_alpha": dalpha_data}
+
+    @staticmethod
+    @physics_method(
+        columns=["p_oh"],
+        tokamak=Tokamak.MAST,
+    )
+    def get_ohmic_parameters(params: PhysicsMethodParams):
+        """
+        Calculate the ohmic heating power from the dynamic loop voltage,
+        inductive voltage, and plasma current
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the Xarray connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the total Ohmic heating power (`p_oh`).
+
+        References
+        ------
+        - pull requests: #[553](https://github.com/MIT-PSFC/disruption-py/pull/553)
+        """
+
+        # load relevant parameters
+        r0 = params.get_data("equilibrium/magnetic_axis_r")
+        li = params.get_data("equilibrium/li")
+        v_loop = params.get_data("equilibrium/vloop_dynamic")
+        ip = params.get_data("summary/ip")
+        summary_time = params.get_data("summary/time")
+        equilibrium_time = params.get_data("equilibrium/time")
+
+        # compute derived quantities
+        smooth_window_size = 30
+        dip_dt = np.gradient(ip, summary_time)
+        if len(dip_dt) >= smooth_window_size:
+            dip_smoothed = causal_boxcar_smooth(dip_dt, smooth_window_size)
+        else:
+            dip_smoothed = dip_dt
+        inductance = 4.0 * np.pi * 1.0e-7 * r0 * li / 2.0
+
+        # interpolate to consistent time-base
+        v_loop = interp1(equilibrium_time, v_loop, params.times)
+        inductance = interp1(equilibrium_time, inductance, params.times)
+        dip_smoothed = interp1(summary_time, dip_smoothed, params.times)
+        ip = interp1(summary_time, ip, params.times)
+
+        # calculate p_oh
+        v_inductive = inductance * dip_smoothed
+        v_resistive = v_loop - v_inductive
+        p_oh = ip * v_resistive
+
+        # Set negative p_ohm values to 0
+        p_oh = np.clip(p_oh, 0, None)
+
+        return {"p_oh": p_oh}
