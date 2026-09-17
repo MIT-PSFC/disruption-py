@@ -13,6 +13,9 @@ from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.machine.generic.util import GenericUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 
+# importing machine methods at the function level allows machine methods
+# to import generic methods at the module level and avoid cyclic imports
+
 
 class GenericPhysicsMethods:
     """
@@ -54,13 +57,6 @@ class GenericPhysicsMethods:
         - issues: #[408](https://github.com/MIT-PSFC/disruption-py/issues/408)
         """
 
-        # function-level imports allow machine methods to import generic methods without circularity
-        # pylint: disable=import-outside-toplevel, cyclic-import
-        from disruption_py.machine.cmod.physics import CmodPhysicsMethods
-        from disruption_py.machine.d3d.physics import D3DPhysicsMethods
-        from disruption_py.machine.east.physics import EastPhysicsMethods
-        from disruption_py.machine.mast.physics import MastPhysicsMethods
-
         # Initialize dictionaries
         signals = {}
         thresholds = config(params.tokamak).physics.time_domain_thresholds
@@ -71,19 +67,31 @@ class GenericPhysicsMethods:
         }
         # Get data and threshold parameters
         if params.tokamak == Tokamak.CMOD:
+            # pylint: disable-next=import-outside-toplevel, cyclic-import
+            from disruption_py.machine.cmod.physics import CmodPhysicsMethods
+
             ip_parameters = CmodPhysicsMethods.get_ip_parameters(params=params)
             signals["dipprog_dt"] = ip_parameters["dipprog_dt"]
             signals["ip_prog"] = ip_parameters["ip_prog"]
         elif params.tokamak == Tokamak.D3D:
+            # pylint: disable-next=import-outside-toplevel, cyclic-import
+            from disruption_py.machine.d3d.physics import D3DPhysicsMethods
+
             ip_parameters = D3DPhysicsMethods.get_ip_parameters(params=params)
             psr_parameter = D3DPhysicsMethods.get_power_supply_railed(params=params)
             signals["dipprog_dt"] = ip_parameters["dipprog_dt"]
             signals["ip_prog"] = ip_parameters["ip_prog"]
             signals["power_supply_railed"] = psr_parameter["power_supply_railed"]
         elif params.tokamak == Tokamak.EAST:
+            # pylint: disable-next=import-outside-toplevel, cyclic-import
+            from disruption_py.machine.east.physics import EastPhysicsMethods
+
             ip_parameters = EastPhysicsMethods.get_ip_parameters(params=params)
             signals["dipprog_dt"] = ip_parameters["dipprog_dt"]
         elif params.tokamak == Tokamak.MAST:
+            # pylint: disable-next=import-outside-toplevel, cyclic-import
+            from disruption_py.machine.mast.physics import MastPhysicsMethods
+
             ip_parameters = MastPhysicsMethods.get_ip_parameters(params=params)
             signals["dipprog_dt"] = ip_parameters["dipprog_dt"]
             signals["ip_prog"] = ip_parameters["ip_prog"]
@@ -159,10 +167,6 @@ class GenericPhysicsMethods:
         - issues: #[223](https://github.com/MIT-PSFC/disruption-py/issues/223)
         """
 
-        # function-level imports allow machine methods to import generic methods without circularity
-        # pylint: disable=import-outside-toplevel, cyclic-import
-        from disruption_py.machine.east.util import EastUtilMethods
-
         # Initialize test criteria
         criteria = {
             "shot_duration": lambda duration, duration_min: duration > duration_min,
@@ -191,6 +195,9 @@ class GenericPhysicsMethods:
                 ip_baseline = np.mean(ip[baseline_indices])
                 ip -= ip_baseline
         elif params.tokamak == Tokamak.EAST:
+            # pylint: disable-next=import-outside-toplevel, cyclic-import
+            from disruption_py.machine.east.util import EastUtilMethods
+
             ip, t_ip = EastUtilMethods.retrieve_ip(params, params.shot_id)
         elif params.tokamak == Tokamak.HBTEP:
             ip, t_ip = params.get_data_with_dims(
