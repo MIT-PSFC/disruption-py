@@ -38,6 +38,8 @@ class CmodPhysicsMethods:
     for CMOD.
     """
 
+    # pylint: disable=too-many-public-methods
+
     @staticmethod
     @cache_method
     def _get_active_wire_segments(params: PhysicsMethodParams):
