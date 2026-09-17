@@ -1836,10 +1836,7 @@ class CmodPhysicsMethods:
         )
 
     @staticmethod
-    @physics_method(
-        columns=["prad_peaking"],
-        tokamak=Tokamak.CMOD,
-    )
+    @physics_method(columns=["prad_peaking"], tokamak=Tokamak.CMOD)
     def get_prad_peaking(params: PhysicsMethodParams):
         """
         Calculate the peaking factor for radiated power.
@@ -2138,7 +2135,7 @@ class CmodPhysicsMethods:
         # Skip labeling the thermal quench time if the shot is non-disruptive
         if np.isnan(cq_time):
             raise CalculationError("shot is non-disruptive.")
-        tq_params = config(Tokamak.CMOD).physics.thermal_quench_time_params
+        tq_params = config(params.tokamak).physics.thermal_quench_time_params
         # Get current data for obtaining start of current quench
         ip, magtime = params.get_data_with_dims(r"\ip", tree_name="magnetics")
         ip = np.abs(ip)
@@ -2154,7 +2151,9 @@ class CmodPhysicsMethods:
             except mdsExceptions.MdsException:
                 params.logger.debug(
                     "get_thermal_quench_time: "
-                    f"Failed to get SXR {array_path} chord {idx_first_chord+1} time base."
+                    "Failed to get SXR {} chord {} time base.",
+                    array_path,
+                    idx_first_chord + 1,
                 )
                 idx_first_chord += 1
         if t_sxr is None:
