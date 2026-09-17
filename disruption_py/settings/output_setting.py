@@ -224,7 +224,7 @@ class DictOutputSetting(OutputSetting):
 
         # save to disk
         self.shards[params.shot_id] = shard
-        logger.trace(
+        logger.debug(
             shot_msg("Saving shard: {shard}"), shot=params.shot_id, shard=shard
         )
         params.result.to_netcdf(shard)
@@ -370,7 +370,7 @@ class SingleOutputSetting(DictOutputSetting):
             )
 
         for shard in self.shards.values():
-            logger.trace("Removing shard: {shard}", shard=shard)
+            logger.debug("Removing shard: {shard}", shard=shard)
             os.remove(shard)
 
         return self.path if self.path else ""
