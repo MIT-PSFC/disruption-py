@@ -2196,8 +2196,8 @@ class CmodPhysicsMethods:
           [ITER H Mode Confinement Database Update][DB2]
         - pull requests: #[562](https://github.com/MIT-PSFC/disruption-py/pull/562)
 
-        [ITER_reference]: https://iopscience.iop.org/article/10.1088/0029-5515/39/12/302/pdf
-        [DB2]: https://iopscience.iop.org/article/10.1088/0029-5515/34/1/I10/pdf
+        [ITER_reference]: https://doi.org/10.1088/0029-5515/39/12/302
+        [DB2]: https://doi.org/10.1088/0029-5515/34/1/I10
         """
 
         # Get parameters for calculating confinement time
@@ -2267,7 +2267,7 @@ class CmodPhysicsMethods:
         [DOI 10.1088/1742-6596/123/1/012033][martin_reference]
         - pull requests: #[562](https://github.com/MIT-PSFC/disruption-py/pull/562)
 
-        [martin_reference]: https://iopscience.iop.org/article/10.1088/1742-6596/123/1/012033/pdf
+        [martin_reference]: https://doi.org/10.1088/1742-6596/123/1/012033
         """
 
         density_dict = CmodPhysicsMethods.get_densities(params=params)
