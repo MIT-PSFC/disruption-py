@@ -2235,10 +2235,7 @@ class CmodPhysicsMethods:
         )
         h98 = tau / tau_98
         h98[h98 <= 0] = 0
-        output = {
-            "h98": h98,
-        }
-        return output
+        return {"h98": h98}
 
     @staticmethod
     @physics_method(columns=["lh_power_threshold"], tokamak=Tokamak.CMOD)
