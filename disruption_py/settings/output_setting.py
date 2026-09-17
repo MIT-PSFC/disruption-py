@@ -230,8 +230,7 @@ class DictOutputSetting(OutputSetting):
         params.result.to_netcdf(shard)
 
         # lazy reload
-        params.result.close()
-        self.results[params.shot_id] = params.result = xr.open_dataset(shard)
+        self.results[params.shot_id] = xr.open_dataset(shard)
 
     def get_results(self) -> OutputDictType:
         """
