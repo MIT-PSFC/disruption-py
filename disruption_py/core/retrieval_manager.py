@@ -15,7 +15,10 @@ from disruption_py.inout.base import DataConnection, ProcessConnection
 from disruption_py.inout.mds import MDSConnection, mdsExceptions
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.tokamak import Tokamak
-from disruption_py.settings.nickname_setting import NicknameSettingParams
+from disruption_py.settings.nickname_setting import (
+    NicknameSettingList,
+    NicknameSettingParams,
+)
 from disruption_py.settings.retrieval_settings import RetrievalSettings
 from disruption_py.settings.time_setting import TimeSettingParams
 
@@ -143,9 +146,15 @@ class RetrievalManager:
         data_conn = self.process_data_conn.get_shot_connection(shot_id=shot_id)
 
         if isinstance(data_conn, MDSConnection):
+            efit_setting = retrieval_settings.efit_nickname_setting
+            cascades = (
+                {"_efit_tree": efit_setting}
+                if isinstance(efit_setting, NicknameSettingList)
+                else None
+            )
             data_conn.add_tree_nickname_funcs(
                 tree_nickname_funcs={
-                    "_efit_tree": lambda: retrieval_settings.efit_nickname_setting.get_tree_name(
+                    "_efit_tree": lambda: efit_setting.get_tree_name(
                         NicknameSettingParams(
                             shot_id=shot_id,
                             data_conn=data_conn,
@@ -154,7 +163,8 @@ class RetrievalManager:
                             tokamak=self.tokamak,
                         )
                     )
-                }
+                },
+                tree_nickname_cascades=cascades,
             )
 
         physics_method_params = self.setup_physics_method_params(
