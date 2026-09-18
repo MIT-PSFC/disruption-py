@@ -11,6 +11,7 @@ Here follows a non-exhaustive list of projects, publications, and conference con
 ### Publications
 
 - GL Trevisan, _et al._ (2026), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, Journal of Open Source Software **11** 119, DOI: [10.21105/joss.09364](https://doi.org/10.21105/joss.09364), [BibTeX](https://doi2bib.org/bib/10.21105/joss.09364)
+- AD Maris, _et al._ (2026), _"Real-time avoidance of the L-mode and H-mode density limit via machine-learned stability metrics"_, DOI: [10.1088/1741-4326/ae4efe](https://doi.org/10.1088/1741-4326/ae4efe), [BibTeX](https://doi2bib.org/bib/10.1088/1741-4326/ae4efe)
 - AR Saperstein, _et al._ (2025), _"Design and development of an off-normal warning system for SPARC"_, Nuclear Fusion **65** 116007, DOI: [10.1088/1741-4326/ae074e](https://doi.org/10.1088/1741-4326/ae074e), [BibTeX](https://doi2bib.org/bib/10.1088/1741-4326/ae074e)
 - L Spangher, _et al._ (2025), _"DisruptionBench and Complimentary New Models: Two Advancements in Machine Learning Driven Disruption Prediction"_, Journal of Fusion Energy **44** 26, DOI: [10.1007/s10894-025-00495-2](https://doi.org/10.1007/s10894-025-00495-2), [BibTeX](https://doi2bib.org/bib/10.1007/s10894-025-00495-2)
 - J Stillerman, _et al._ (2025), _"MDSplusML: Optimizations for data access to facilitate machine learning pipelines"_, Fusion Engineering and Design **211** 114770, DOI: [10.1016/j.fusengdes.2024.114770](https://doi.org/10.1016/j.fusengdes.2024.114770), [BibTeX](https://doi2bib.org/bib/10.1016/j.fusengdes.2024.114770)
@@ -34,15 +35,15 @@ Here follows a non-exhaustive list of projects, publications, and conference con
 - [6th Fusion HPC Workshop (2026)](https://hpcfusion.bsc.es/2026/)
     - EdD Zapata Cornejo, _et al._ (2026), _"Discovering features for confinement regime operational spaces using classification and Bayesian optimization"_
 
-- [67th APS-DPP Meeting (2025)](https://meetings.aps.org/Meeting/DPP25)
-    - AD Maris, _et al._ (2025), _"Collisionality scaling of the tokamak density limit: data-driven analysis, cross-device prediction, and real-time avoidance"_ [BO04.5](https://schedule.aps.org/dpp/2025/events/BO04/5)
-    - Z Keith, _et al._ (2025), _"Enabling data-driven NTM studies with advanced mode labeling"_, [BP13.164](https://schedule.aps.org/dpp/2025/events/BP13/164)
-    - C Rea, _et al._ (2025), _"Research in support of the SPARC Off-Normal Warning System"_, [JO04.9](https://schedule.aps.org/dpp/2025/events/JO04/9)
-    - AR Saperstein, _et al._ (2025), _"Validation of simulated radiative collapse events in TORAX"_, [NP13.155](https://schedule.aps.org/dpp/2025/events/NP13/155)
-    - H Wietfeldt, _et al._ (2025), _"Characterization of UFOs on Alcator C-Mod and WEST to inform SPARC operation"_ [NP13.157](https://schedule.aps.org/dpp/2025/events/NP13/157)
-    - EdD Zapata Cornejo, _et al._ (2025), _"Time series classification algorithms for confinement regime identification in C-Mod"_ [NP13.163](https://schedule.aps.org/dpp/2025/events/NP13/163)
-    - GL Trevisan, _et al._ (2025), _"A large-scale automated EFIT recomputation workflow for disruption studies at 1 kHz"_, [PP13.88](https://schedule.aps.org/dpp/2025/events/PP13/88)
-    - Y Wei, _et al._ (2025), _"Scikit-disruption: machine learning toolkit for disruption analysis"_, [PP13.93](https://schedule.aps.org/dpp/2025/events/PP13/93)
+- [67th APS-DPP Meeting (2025)](https://meetings-archive.aps.org/dpp/2025/)
+    - AD Maris, _et al._ (2025), _"Collisionality scaling of the tokamak density limit: data-driven analysis, cross-device prediction, and real-time avoidance"_ [BO04.5](https://meetings-archive.aps.org/dpp/2025/bo04/5/)
+    - Z Keith, _et al._ (2025), _"Enabling data-driven NTM studies with advanced mode labeling"_, [BP13.164](https://meetings-archive.aps.org/dpp/2025/bp13/164/)
+    - C Rea, _et al._ (2025), _"Research in support of the SPARC Off-Normal Warning System"_, [JO04.9](https://meetings-archive.aps.org/dpp/2025/jo04/9/)
+    - AR Saperstein, _et al._ (2025), _"Validation of simulated radiative collapse events in TORAX"_, [NP13.155](https://meetings-archive.aps.org/dpp/2025/np13/155/)
+    - H Wietfeldt, _et al._ (2025), _"Characterization of UFOs on Alcator C-Mod and WEST to inform SPARC operation"_ [NP13.157](https://meetings-archive.aps.org/dpp/2025/np13/157/)
+    - EdD Zapata Cornejo, _et al._ (2025), _"Time series classification algorithms for confinement regime identification in C-Mod"_ [NP13.163](https://meetings-archive.aps.org/dpp/2025/np13/163/)
+    - GL Trevisan, _et al._ (2025), _"A large-scale automated EFIT recomputation workflow for disruption studies at 1 kHz"_, [PP13.88](https://meetings-archive.aps.org/dpp/2025/pp13/88/)
+    - Y Wei, _et al._ (2025), _"Scikit-disruption: machine learning toolkit for disruption analysis"_, [PP13.93](https://meetings-archive.aps.org/dpp/2025/pp13/93/)
 
 - [6th International Conference on Data-Driven Plasma Science (2025)](https://web.cvent.com/event/7de9d238-e170-4fbf-8de5-20abc5c6eb49/summary)
     - Z Keith, _et al._ (2025), _"A tearing mode database for Alcator C-Mod and DIII-D"_

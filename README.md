@@ -102,8 +102,6 @@ Depending on the target device, DisruptionPy may need non-Python software to be 
 Please install pre-requisites, namely either MDSplus or SQL drivers, _only if required_.
 For more details, please refer to the Devices section above and our [Installation guide](INSTALL.md).
 
-Note: [MDSplus might not yet support Apple Silicon chips](https://www.mdsplus.org/index.php/Latest_Macintosh_Distributions).
-
 ### Dependencies
 
 DisruptionPy follows best practices for project metadata (eg: [pyproject.toml](https://peps.python.org/pep-0621/) and [dependency groups](https://peps.python.org/pep-0735/)) and can therefore be installed with all its dependencies through any standard Python package manager.
