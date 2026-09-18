@@ -49,11 +49,15 @@ class LogSettings:
     """
     Settings for configuring logging.
 
-    Defaults for `file_level` and the console thresholds are read from the
-    `[log]` section of the layered configuration (repo `config.toml`, then
-    `~/.config/disruption-py/user.toml`, then `DISPY_LOG__*` environment
-    variables, e.g. `DISPY_LOG__WARNING_THRESHOLD=2000`). Values passed
-    explicitly always take precedence over the configuration.
+    Defaults for `file_level`, `console_level` and the console thresholds are
+    read from the `[log]` section of the layered configuration (repo
+    `config.toml`, then `~/.config/disruption-py/user.toml`, then `DISPY_LOG__*`
+    environment variables, e.g. `DISPY_LOG__WARNING_THRESHOLD=2000`). Values
+    passed explicitly always take precedence over the configuration.
+
+    The file log level never ends up less verbose than the console: if the
+    console level resolves below `file_level` (e.g. "TRACE" against the default
+    "DEBUG"), the file handler is lowered to match.
 
     Attributes
     ----------
@@ -67,8 +71,9 @@ class LogSettings:
         "TRACE", "DEBUG", "VERBOSE" (custom), "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL".
         See: https://loguru.readthedocs.io/en/stable/api/logger.html#levels
     console_level : str or int, optional
-        The log level for the console. Default is None, so log level will be determined
-        dynamically based on the number of shots.
+        The log level for the console. Default is None, so the level is read
+        from the configuration (`log.console_level`); when that is unset too,
+        the level is determined dynamically based on the number of shots.
         Possible values are:
         "TRACE", "DEBUG", "VERBOSE" (custom), "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL".
         See: https://loguru.readthedocs.io/en/stable/api/logger.html#levels
@@ -105,12 +110,39 @@ class LogSettings:
         log_config = config().log
         if self.file_level is None:
             self.file_level = log_config.file_level
+        if self.console_level is None:
+            # unset in the configuration means dynamic
+            self.console_level = log_config.get("console_level")
         if self.warning_threshold is None:
             self.warning_threshold = log_config.warning_threshold
         if self.success_threshold is None:
             self.success_threshold = log_config.success_threshold
         if self.info_threshold is None:
             self.info_threshold = log_config.info_threshold
+        # normalize level names once, so that the object and the config dump
+        # carry the same spelling that loguru expects
+        if isinstance(self.file_level, str):
+            self.file_level = self.file_level.upper()
+        if isinstance(self.console_level, str):
+            self.console_level = self.console_level.upper()
+
+    def to_config(self) -> dict:
+        """
+        Return the effective settings in the shape of the `[log]` config section,
+        so that they can be written back into the configuration at runtime.
+
+        Returns
+        -------
+        dict
+            The resolved log configuration.
+        """
+        return {
+            "file_level": self.file_level,
+            "console_level": self.console_level,
+            "warning_threshold": self.warning_threshold,
+            "success_threshold": self.success_threshold,
+            "info_threshold": self.info_threshold,
+        }
 
     def reset_handlers(self, num_shots: int = None):
         """
@@ -161,7 +193,7 @@ class LogSettings:
             is_main = multiprocessing.current_process().name == "MainProcess"
             logger.add(
                 self.file_path,
-                level=self.file_level,
+                level=resolve_file_level(self.file_level, console_level),
                 format=file_format,
                 mode="w" if is_main else "a",
                 enqueue=True,
@@ -195,6 +227,44 @@ class LogSettings:
         logger.debug("Executable: {e}", e=sys.executable)
 
         self._logging_has_been_setup = True
+
+
+def level_no(level: str | int) -> int:
+    """
+    Convert a log level name or number to its loguru severity number.
+
+    Parameters
+    ----------
+    level : str | int
+        Level name (e.g. "DEBUG") or number.
+
+    Returns
+    -------
+    int
+        The severity number.
+    """
+    if isinstance(level, int):
+        return level
+    return logger.level(level.upper()).no
+
+
+def resolve_file_level(file_level: str | int, console_level: str | int) -> int:
+    """
+    Resolve the file log level so that it is at least as verbose as the console.
+
+    Parameters
+    ----------
+    file_level : str | int
+        The configured file log level.
+    console_level : str | int
+        The effective console log level.
+
+    Returns
+    -------
+    int
+        The severity number to use for the file handler.
+    """
+    return min(level_no(file_level), level_no(console_level))
 
 
 def resolve_log_settings(

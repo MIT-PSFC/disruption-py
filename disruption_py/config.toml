@@ -1,4 +1,5 @@
 [default.log]
+# console_level = "VERBOSE" # unset: chosen dynamically from the number of shots
 file_level = "DEBUG"
 info_threshold = 50
 success_threshold = 500
