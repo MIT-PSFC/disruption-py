@@ -184,6 +184,13 @@ class DictOutputSetting(OutputSetting):
             if os.listdir(path):
                 logger.warning("Output folder is not empty! {path}", path=path)
 
+        if path:
+            logger.info(
+                "{kind} folder: {path}",
+                kind="Output" if type(self) is DictOutputSetting else "Temporary",
+                path=path,
+            )
+
         self.path = path
 
     def _output_shot(self, params: OutputSettingParams):
@@ -283,6 +290,8 @@ class SingleOutputSetting(DictOutputSetting):
         if path is True:
             ext = "csv" if isinstance(self, DataFrameOutputSetting) else "nc"
             path = os.path.join(get_temporary_folder(), f"output.{ext}")
+            with open(path, "w", encoding="utf8") as f:
+                f.write("")
 
         if path and os.path.exists(path):
             logger.warning(f"Output file already exists! {path}")
@@ -291,6 +300,9 @@ class SingleOutputSetting(DictOutputSetting):
             name, ext = os.path.splitext(os.path.basename(path))
             fd, path = tempfile.mkstemp(dir=folder, prefix=f"{name}.", suffix=ext)
             os.close(fd)
+
+        if path:
+            logger.info("Output file: {path}", path=path)
 
         self.path = path
 
