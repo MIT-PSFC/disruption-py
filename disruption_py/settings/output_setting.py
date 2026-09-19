@@ -295,13 +295,16 @@ class SingleOutputSetting(DictOutputSetting):
             ext = "csv" if isinstance(self, DataFrameOutputSetting) else "nc"
             path = os.path.join(get_temporary_folder(), f"output.{ext}")
 
+        folder = os.path.dirname(path)
         if not os.path.exists(path):
+            # create path to avoid race conditions
+            if folder:
+                os.makedirs(folder, exist_ok=True)
             with open(path, "w", encoding="utf8") as f:
                 f.write("")
         else:
-            logger.warning(f"Output file already exists! {path}")
             # rename file to avoid losing data
-            folder = os.path.dirname(path)
+            logger.warning(f"Output file already exists! {path}")
             name, ext = os.path.splitext(os.path.basename(path))
             fd, path = tempfile.mkstemp(dir=folder, prefix=f"{name}.", suffix=ext)
             os.close(fd)
@@ -365,9 +368,6 @@ class SingleOutputSetting(DictOutputSetting):
         """
 
         if self.path:
-            folder = os.path.dirname(self.path)
-            if folder:
-                os.makedirs(folder, exist_ok=True)
             t = time.time()
             for method in ["to_netcdf", "to_csv"]:
                 if not hasattr(self.result, method):
