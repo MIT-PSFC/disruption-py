@@ -287,13 +287,18 @@ class SingleOutputSetting(DictOutputSetting):
         super().__init__(path=False)
         self.result = None
 
+        if path is False:
+            self.path = path
+            return
+
         if path is True:
             ext = "csv" if isinstance(self, DataFrameOutputSetting) else "nc"
             path = os.path.join(get_temporary_folder(), f"output.{ext}")
+
+        if not os.path.exists(path):
             with open(path, "w", encoding="utf8") as f:
                 f.write("")
-
-        if path and os.path.exists(path):
+        else:
             logger.warning(f"Output file already exists! {path}")
             # rename file to avoid losing data
             folder = os.path.dirname(path)
@@ -301,9 +306,7 @@ class SingleOutputSetting(DictOutputSetting):
             fd, path = tempfile.mkstemp(dir=folder, prefix=f"{name}.", suffix=ext)
             os.close(fd)
 
-        if path:
-            logger.info("Output file: {path}", path=path)
-
+        logger.info("Output file: {path}", path=path)
         self.path = path
 
     @abstractmethod
