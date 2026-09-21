@@ -120,7 +120,7 @@ class RetrievalManager:
         rss, hwm = get_rss()
         logger.debug(
             shot_msg(
-                "Completed: RSS = {rss:,.1f} MB, MaxRSS = {hwm:,.1f} MB @ PID = {pid}"
+                "Completed retrieval: RSS = {rss:,.1f} MB, MaxRSS = {hwm:,.1f} MB @ PID = {pid}"
             ),
             shot=shot_id,
             rss=rss,
