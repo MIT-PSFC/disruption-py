@@ -247,6 +247,8 @@ def get_rss() -> float:
     """
 
     rss = hwm = 0.0
+    if not os.path.exists("/proc/self/status"):
+        return rss, hwm
     with open("/proc/self/status", "r", encoding="utf8") as fh:
         for line in fh:
             if line.startswith("VmHWM:"):
