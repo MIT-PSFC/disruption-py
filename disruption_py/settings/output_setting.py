@@ -17,7 +17,7 @@ import pandas as pd
 import xarray as xr
 from loguru import logger
 
-from disruption_py.core.utils.misc import get_max_rss, get_temporary_folder, shot_msg
+from disruption_py.core.utils.misc import get_rss, get_temporary_folder, shot_msg
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -342,10 +342,7 @@ class SingleOutputSetting(DictOutputSetting):
         logger.info(
             "Read {tot:,} shots in {sec:.3f}s.", tot=len(self.results), sec=took
         )
-        logger.debug(
-            "Read shots: MaxRSS = {mem:,.1f} MB",
-            mem=get_max_rss(),
-        )
+        logger.debug("Read shots: RSS = {:,.1f} MB, MaxRSS = {:,.1f} MB", *get_rss())
 
         logger.debug("Concatenating {tot:,} shots...", tot=len(self.results))
         took = -time.time()
@@ -355,8 +352,7 @@ class SingleOutputSetting(DictOutputSetting):
             "Concatenated {tot:,} shots in {sec:.3f}s.", tot=len(self.results), sec=took
         )
         logger.debug(
-            "Concatenated shots: MaxRSS = {mem:,.1f} MB",
-            mem=get_max_rss(),
+            "Concatenated shots: RSS = {:,.1f} MB, MaxRSS = {:,.1f} MB", *get_rss()
         )
         self.results = {}
 

@@ -6,7 +6,6 @@ Module for utility functions related to class instantiation, data manipulation, 
 
 import importlib.metadata
 import os
-import resource
 import subprocess
 import sys
 from datetime import datetime
@@ -237,17 +236,23 @@ def filter_dict(i: Dict, s: str) -> Dict:
     return o
 
 
-def get_max_rss() -> float:
+def get_rss() -> float:
     """
-    Get the maximum resident set size (RSS) used by the process in MB.
+    Get the current and peak RSS used by the process in MB.
 
     Returns
     -------
-    float
-        Maximum RSS in MB.
+    float, float
+        Current and peak RSS in MB.
     """
-    if sys.platform == "darwin":
-        scale = 1024**2
-    else:
-        scale = 1024
-    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / scale
+
+    rss = hwm = 0.
+    with open("/proc/self/status", "r", encoding="utf8") as fh:
+        for line in fh:
+            if line.startswith("VmHWM:"):
+                hwm = int(line.split()[1]) / 1024
+            elif line.startswith("VmRSS:"):
+                rss = int(line.split()[1]) / 1024
+            if rss and hwm:
+                break
+    return rss, hwm
