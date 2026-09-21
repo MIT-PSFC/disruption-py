@@ -246,7 +246,7 @@ def get_rss() -> float:
         Current and peak RSS in MB.
     """
 
-    rss = hwm = 0.
+    rss = hwm = 0.0
     with open("/proc/self/status", "r", encoding="utf8") as fh:
         for line in fh:
             if line.startswith("VmHWM:"):
