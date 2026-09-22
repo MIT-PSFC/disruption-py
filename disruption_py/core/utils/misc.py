@@ -236,25 +236,25 @@ def filter_dict(i: Dict, s: str) -> Dict:
     return o
 
 
-def get_rss() -> float:
+def get_rss() -> Tuple[float, float]:
     """
     Get the current and peak RSS used by the process in MB.
 
     Returns
     -------
     float, float
-        Current and peak RSS in MB.
+        Current and peak RSS in MB, or (0., 0.) if not available.
     """
 
     rss = hwm = 0.0
     if not os.path.exists("/proc/self/status"):
         return rss, hwm
-    with open("/proc/self/status", "r", encoding="utf8") as fh:
-        for line in fh:
+    with open("/proc/self/status", "r", encoding="utf8") as f:
+        for line in f:
             if line.startswith("VmHWM:"):
-                hwm = int(line.split()[1]) / 1024
+                hwm = float(line.split()[1]) / 1024
             elif line.startswith("VmRSS:"):
-                rss = int(line.split()[1]) / 1024
+                rss = float(line.split()[1]) / 1024
             if rss and hwm:
                 break
     return rss, hwm
