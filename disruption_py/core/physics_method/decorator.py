@@ -29,9 +29,6 @@ def physics_method(
     `retrieval_settings` or in the built-in method list. If run, the result of the
     decorated method will be output to the `output_setting`.
 
-    A common pattern for parameterized methods is first retrieving data from MDSplus
-    using the `mds_conn` and then using that retrieved data to compute data to return.
-
     Parameters
     ----------
     cache : bool, optional

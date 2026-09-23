@@ -42,7 +42,7 @@ class EastUtilMethods:
         return ip
 
     @staticmethod
-    def retrieve_ip(mds_conn: MDSConnection, shot_id: int):
+    def retrieve_ip(data_conn: MDSConnection, shot_id: int):
         """
         Read in the measured plasma current, Ip. There are several different
         measurements of Ip: IPE, IPG, IPM (all in the EAST tree), and PCRL01
@@ -54,8 +54,8 @@ class EastUtilMethods:
 
         Parameters
         ----------
-        mds_conn : MDSConnection
-            Connection to MDSplus server.
+        data_conn : MDSConnection
+            Data connection for the shot.
         shot_id : int
             Shot number.
 
@@ -65,7 +65,7 @@ class EastUtilMethods:
             Plasma current [A], time base of plasma current [s].
         """
 
-        ip, ip_time = mds_conn.get_data_with_dims(
+        ip, ip_time = data_conn.get_data_with_dims(
             r"\pcrl01", tree_name="pcs_east"
         )  # [A], [s]
 
