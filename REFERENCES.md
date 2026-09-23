@@ -27,6 +27,18 @@ Here follows a non-exhaustive list of projects, publications, and conference con
 
 ### Conferences
 
+- 68th APS-DPP Meeting (2026)
+  - GL Trevisan, _et al._ (2026), _"An open-access multi-tokamak dataset for transient analysis and AI/ML studies"_
+  - S Chaturvedi, _et al._ (2026), _"Maintainable and Extensible Software Architecture for Multi-Machine Disruption Studies with DisruptionPy"_
+  - Z Keith, _et al._ (2026), _"Comparing hybrid physics models for full-shot transport prediction"_
+  - M Tobin, _et al._ (2026), _"A multi-tokamak study of neoclassical tearing mode seeding phenomena with automated database analysis"_
+  - NJ Barbour, _et al._ (2026), _"Automated Quality Assessment of 1 kHz EFIT Computations"_
+  - AR Saperstein, _et al_ (2026), _"Validation of off-normal simulations of radiative collapse events in Alcator C-Mod"_
+  - H Wietfeldt, _et al._ (2026), _"Characterization of transient impurity events on Alcator C-Mod and WEST"_
+
+- [7th International Conference on Data-Driven Plasma Science (2026)](https://www.icddps.org/)
+  - Z Keith, _et al._ (2026), _"Benchmarking hybrid models for full-shot transport prediction"_
+
 - [46th ITPEA-MDC Meeting (2026)](https://www.iter.org/scientists/itpa/itpea-meetings)
   - Z Keith, _et al._ (2026), _"Multi-device validation of tearing physics"_
   - AR Saperstein, _et al._ (2026), _"Off-normal simulations of radiative collapse events in Alcator C-Mod"_
