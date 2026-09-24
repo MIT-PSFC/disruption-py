@@ -723,7 +723,7 @@ class MastPhysicsMethods:
             except RuntimeError as exc:
                 if str(exc).startswith("Optimal parameters not found"):
                     continue
-                raise exc
+                raise
             # reject points whose fitted centre falls outside the plasma
             if np.abs(pmean - r_mag) > a_minor:
                 continue
