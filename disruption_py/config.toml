@@ -1,9 +1,6 @@
 [default.log]
-# console_level = "VERBOSE" # unset: chosen dynamically from the number of shots
-file_level = "DEBUG"
-info_threshold = 50
-success_threshold = 500
-warning_threshold = 1000
+console_level = "INFO"
+file_level = "DEBUG" # never less verbose than the console level
 
 [default.tests]
 match_fraction = 0.95 # Fraction of signals that must match between MDSplus and SQL

@@ -165,10 +165,6 @@ def get_shots_data(
         logger.critical("Nothing to do!")
         return None
 
-    # Dynamically set the console log level based on the number of shots
-    if log_settings.console_level is None:
-        log_settings.reset_handlers(num_shots=len(shotlist_list))
-
     # log start
     logger.info(
         "Starting workflow: {n:,} shot{s} / {m} process{p}",
@@ -183,7 +179,6 @@ def get_shots_data(
     with Pool(
         processes=num_processes,
         initializer=log_settings.reset_handlers,
-        initargs=(len(shotlist_list),),
     ) as pool:
         args = zip(
             repeat(tokamak),
@@ -316,7 +311,7 @@ def cli():
     parser.add_argument("-o", "--output", type=str, default="dataset")
     parser.add_argument("-p", "--processes", type=int, default=1)
     parser.add_argument(
-        "-l", "--log-level", type=str, default=config().log.get("console_level")
+        "-l", "--log-level", type=str, default=config().log.console_level
     )
 
     out = run(**vars(parser.parse_args()))

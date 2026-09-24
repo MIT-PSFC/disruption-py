@@ -45,30 +45,24 @@ def test_log_settings_defaults_from_config():
     Unset LogSettings fields are resolved from the [log] config section.
     """
     settings = LogSettings()
-    assert settings.file_level == config().log.file_level
-    # unset in the configuration: chosen dynamically from the number of shots
-    assert settings.console_level is config().log.get("console_level") is None
-    assert settings.warning_threshold == config().log.warning_threshold
-    assert settings.success_threshold == config().log.success_threshold
-    assert settings.info_threshold == config().log.info_threshold
+    assert settings.console_level == config().log.console_level
+    assert settings.file_level == resolve_file_level(
+        config().log.file_level, config().log.console_level
+    )
 
 
 def test_log_settings_env_override(monkeypatch):
     """
     DISPY_LOG__* environment variables override the config file defaults.
     """
-    monkeypatch.setenv("DISPY_LOG__WARNING_THRESHOLD", "2000")
-    monkeypatch.setenv("DISPY_LOG__FILE_LEVEL", "INFO")
     monkeypatch.setenv("DISPY_LOG__CONSOLE_LEVEL", "WARNING")
     # drop the cached config so the environment variables are re-read
     configs.pop("default", None)
     try:
         settings = LogSettings()
-        assert settings.warning_threshold == 2000
-        assert settings.file_level == "INFO"
         assert settings.console_level == "WARNING"
-        # untouched fields still come from the config file
-        assert settings.success_threshold == 500
+        # untouched fields still come from the layered configuration
+        assert settings.file_level == config().log.file_level
     finally:
         # rebuild the cache without the overrides for subsequent tests
         configs.pop("default", None)
@@ -78,33 +72,28 @@ def test_log_settings_argument_wins():
     """
     Explicitly passed values take precedence over the configuration.
     """
-    settings = LogSettings(warning_threshold=7, file_level="ERROR")
-    assert settings.warning_threshold == 7
-    assert settings.file_level == "ERROR"
+    settings = LogSettings(console_level="warning", file_level="trace")
+    assert settings.console_level == "WARNING"
+    assert settings.file_level == "TRACE"
     # unset fields still resolve from the configuration
-    assert settings.info_threshold == config().log.info_threshold
+    settings = LogSettings(console_level="WARNING")
+    assert settings.file_level == config().log.file_level
 
 
 def test_log_settings_to_config():
     """
     The effective settings round-trip into the shape of the [log] section.
     """
-    settings = LogSettings(console_level="info")
+    settings = LogSettings(console_level="warning")
     log_config = settings.to_config()
     # level names are normalized to the spelling loguru expects
-    assert log_config["console_level"] == "INFO"
+    assert log_config["console_level"] == "WARNING"
     assert log_config["file_level"] == config().log.file_level
-    assert set(log_config) == {
-        "file_level",
-        "console_level",
-        "warning_threshold",
-        "success_threshold",
-        "info_threshold",
-    }
+    assert set(log_config) == {"file_level", "console_level"}
     # written back, the configuration reflects the runtime value
     config("cmod").update({"log": log_config})
     try:
-        assert config("cmod").log.console_level == "INFO"
+        assert config("cmod").log.console_level == "WARNING"
         assert config("cmod").log.file_level == config().log.file_level
     finally:
         configs.pop("cmod", None)
@@ -116,8 +105,14 @@ def test_file_level_floor():
     """
     assert level_no("debug") == level_no("DEBUG") == 10
     # a more verbose console lowers the file level to match
-    assert resolve_file_level("DEBUG", "TRACE") == level_no("TRACE")
-    # a quieter console (e.g. dynamic WARNING on large runs) never raises it
-    assert resolve_file_level("DEBUG", "WARNING") == level_no("DEBUG")
+    assert resolve_file_level("DEBUG", "TRACE") == "TRACE"
+    # a quieter console never raises it
+    assert resolve_file_level("DEBUG", "WARNING") == "DEBUG"
     # numeric levels are accepted as is
     assert resolve_file_level("DEBUG", 5) == 5
+    # the floor is applied at construction, so the dump carries it too
+    settings = LogSettings(file_level="DEBUG", console_level="trace")
+    assert settings.file_level == "TRACE"
+    assert settings.to_config()["file_level"] == "TRACE"
+    settings = LogSettings(file_level="DEBUG", console_level="WARNING")
+    assert settings.file_level == "DEBUG"
