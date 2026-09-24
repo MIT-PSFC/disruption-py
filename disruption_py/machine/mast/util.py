@@ -47,7 +47,7 @@ class MastUtilMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            Per-shot Xarray data connection.
+            The parameters containing the Xarray connection and shot id.
 
         Returns
         -------
