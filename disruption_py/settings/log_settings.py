@@ -144,16 +144,21 @@ class LogSettings:
             diagnose=True,
         )
 
-        # Add file handler if log file path is provided. Main process truncates
-        # to start a fresh log; workers append so they don't wipe the main
-        # process's output under spawn/forkserver.
+        # Add file handler if log file path is provided. The main process
+        # truncates once; every process then appends, so no process writes
+        # at a stale offset over what the others have written.
         if self.file_path is not None:
-            is_main = multiprocessing.current_process().name == "MainProcess"
+            if multiprocessing.current_process().name == "MainProcess":
+                folder = os.path.dirname(self.file_path)
+                if folder:
+                    os.makedirs(folder, exist_ok=True)
+                with open(self.file_path, "w", encoding="utf8"):
+                    pass
             logger.add(
                 self.file_path,
                 level=self.file_level,
                 format=file_format,
-                mode="w" if is_main else "a",
+                mode="a",
                 enqueue=True,
                 backtrace=False,
                 diagnose=True,
