@@ -514,6 +514,7 @@ class MastPhysicsMethods:
         # z_j(t) = fz + (Rmag(t) - fr) * (sz - fz) / (sr - fr)   [Rea et al. 2020, Eq. 2]
         d_r = sr - fr  # (n_fan,)
         d_z = sz - fz  # (n_fan,)
+        # https://github.com/pylint-dev/pylint/issues/10806
         # pylint: disable-next=no-member
         valid_dr = np.abs(d_r) > np.finfo(float).eps
 
