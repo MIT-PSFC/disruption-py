@@ -12,6 +12,7 @@ from disruption_py.core.physics_method.errors import (
 )
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
+from disruption_py.inout.base import DataConnection
 
 
 class MastUtilMethods:
@@ -21,40 +22,40 @@ class MastUtilMethods:
     """
 
     @staticmethod
-    def retrieve_ip(params: PhysicsMethodParams):
+    def retrieve_ip(data_conn: DataConnection):
         """
         Read in the measured plasma current, Ip.
 
         Parameters
         ----------
-        params : PhysicsMethodParams
-            The parameters containing the Xarray connection and shot id.
+        data_conn : DataConnection
+            The Xarray connection for the shot.
 
         Returns
         -------
         tuple[np.ndarray, np.ndarray]
             Plasma current [A], time base of plasma current [s].
         """
-        ip = params.get_data("summary/ip")
-        ip_time = params.get_data("summary/time")
+        ip = data_conn.get_data("summary/ip")
+        ip_time = data_conn.get_data("summary/time")
         return ip, ip_time
 
     @staticmethod
-    def retrieve_efit_time(params: PhysicsMethodParams):
+    def retrieve_efit_time(data_conn: DataConnection):
         """
         Read in the EFIT time base.
 
         Parameters
         ----------
-        params : PhysicsMethodParams
-            The parameters containing the Xarray connection and shot id.
+        data_conn : DataConnection
+            Per-shot Xarray data connection.
 
         Returns
         -------
         np.ndarray
             EFIT time base [s].
         """
-        efit_time = params.get_data("equilibrium/time")
+        efit_time = data_conn.get_data("equilibrium/time")
         return efit_time
 
     @staticmethod

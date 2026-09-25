@@ -514,6 +514,7 @@ class MastPhysicsMethods:
         # z_j(t) = fz + (Rmag(t) - fr) * (sz - fz) / (sr - fr)   [Rea et al. 2020, Eq. 2]
         d_r = sr - fr  # (n_fan,)
         d_z = sz - fz  # (n_fan,)
+        # pylint: disable-next=no-member
         valid_dr = np.abs(d_r) > np.finfo(float).eps
 
         z_j = np.full((len(fan_idx), len(bolo_time)), np.nan, dtype=float)
@@ -580,7 +581,7 @@ class MastPhysicsMethods:
         radius $\rho_j < 0.3$ and the denominators are mean values over all channels.
 
         The electron pressure profile is read from ``thomson_scattering/p_e`` where
-        available, and otherwise reconstructed as $p_e = n_e k T_e$.
+        available.
 
         Parameters
         ----------
@@ -632,7 +633,14 @@ class MastPhysicsMethods:
             pe_t = pe_profile[:, i_time]
 
             # one shared mask, so the three factors are computed over the same channels
-            valid = np.isfinite(te_t) & np.isfinite(ne_t) & (te_t > 0) & (ne_t > 0)
+            valid = (
+                np.isfinite(te_t)
+                & np.isfinite(ne_t)
+                & np.isfinite(pe_t)
+                & (te_t > 0)
+                & (ne_t > 0)
+                & (pe_t > 0)
+            )
             core_valid = valid & core_mask
 
             if core_valid.sum() < 2 or valid.sum() < 3:
