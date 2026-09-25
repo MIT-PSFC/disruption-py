@@ -89,10 +89,15 @@ class MastUtilMethods:
         a_minor = params.get_data("equilibrium/minor_radius", required=True)
         r_mag_mean = np.nanmean(r_mag)
         a_minor_mean = np.nanmean(a_minor)
-        if a_minor_mean <= 0:
+        if not np.isfinite(r_mag_mean) or not np.isfinite(a_minor_mean):
             raise CalculationError(
                 "Cannot compute rho for Thomson scattering channels: "
                 "equilibrium magnetic_axis_r or minor_radius unavailable."
+            )
+        if a_minor_mean <= 0:
+            raise CalculationError(
+                "Cannot compute rho for Thomson scattering channels: "
+                "equilibrium minor_radius must be positive."
             )
         return np.abs(r_ts - r_mag_mean) / a_minor_mean, r_mag_mean, a_minor_mean
 
