@@ -514,16 +514,18 @@ class MastPhysicsMethods:
         # z_j(t) = fz + (Rmag(t) - fr) * (sz - fz) / (sr - fr)   [Rea et al. 2020, Eq. 2]
         d_r = sr - fr  # (n_fan,)
         d_z = sz - fz  # (n_fan,)
+        valid_dr = np.abs(d_r) > np.finfo(float).eps
 
+        z_j = np.full((len(fan_idx), len(bolo_time)), np.nan, dtype=float)
         with np.errstate(divide="ignore", invalid="ignore"):
-            z_j = fz[:, np.newaxis] + (
-                (rmag_t[np.newaxis, :] - fr[:, np.newaxis])
-                * (d_z[:, np.newaxis] / d_r[:, np.newaxis])
+            z_j[valid_dr, :] = fz[valid_dr, np.newaxis] + (
+                (rmag_t[np.newaxis, :] - fr[valid_dr, np.newaxis])
+                * (d_z[valid_dr, np.newaxis] / d_r[valid_dr, np.newaxis])
             )  # (n_fan, n_times)
 
         dist_from_axis = np.abs(z_j - zmag_t[np.newaxis, :])  # (n_fan, n_times)
 
-        valid_2d = fan_valid[:, np.newaxis] & ~np.isnan(z_j)
+        valid_2d = fan_valid[:, np.newaxis] & valid_dr[:, np.newaxis] & np.isfinite(z_j)
         core_mask = valid_2d & (dist_from_axis < core_threshold)
         all_but_div = valid_2d & ~(dist_from_axis > div_threshold)
 
