@@ -62,7 +62,9 @@ def test_log_settings_env_override(monkeypatch):
         settings = LogSettings()
         assert settings.console_level == "WARNING"
         # untouched fields still come from the layered configuration
-        assert settings.file_level == config().log.file_level
+        assert settings.file_level == resolve_file_level(
+            config().log.file_level, "WARNING"
+        )
     finally:
         # rebuild the cache without the overrides for subsequent tests
         configs.pop("default", None)
@@ -77,7 +79,7 @@ def test_log_settings_argument_wins():
     assert settings.file_level == "TRACE"
     # unset fields still resolve from the configuration
     settings = LogSettings(console_level="WARNING")
-    assert settings.file_level == config().log.file_level
+    assert settings.file_level == resolve_file_level(config().log.file_level, "WARNING")
 
 
 def test_log_settings_to_config():
@@ -88,13 +90,15 @@ def test_log_settings_to_config():
     log_config = settings.to_config()
     # level names are normalized to the spelling loguru expects
     assert log_config["console_level"] == "WARNING"
-    assert log_config["file_level"] == config().log.file_level
+    assert log_config["file_level"] == resolve_file_level(
+        config().log.file_level, "WARNING"
+    )
     assert set(log_config) == {"file_level", "console_level"}
     # written back, the configuration reflects the runtime value
     config("cmod").update({"log": log_config})
     try:
         assert config("cmod").log.console_level == "WARNING"
-        assert config("cmod").log.file_level == config().log.file_level
+        assert config("cmod").log.file_level == log_config["file_level"]
     finally:
         configs.pop("cmod", None)
 
