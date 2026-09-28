@@ -17,6 +17,8 @@ from typing import Dict, List, Tuple, Type
 import numpy as np
 from loguru import logger
 
+from disruption_py.core.physics_method.errors import MismatchCalculationError
+
 
 def without_duplicates(lst: List):
     """
@@ -207,6 +209,34 @@ def to_tuple(
     Dict[str, Tuple[str, np.ndarray]]
     """
     return {k: (dim, v) for k, v in data.items()}
+
+
+def assert_equal_length(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """
+    Assert that two arrays have the same length, raising an error if they do not.
+
+    Parameters
+    ----------
+    a : np.ndarray
+        The first array to check.
+    b : np.ndarray
+        The second array to check.
+
+    Returns
+    -------
+    np.ndarray
+        The signal, unchanged.
+
+    Raises
+    ------
+    MismatchCalculationError
+        If the lengths of the two arrays do not match.
+    """
+    if a.shape[-1] != len(b):
+        raise MismatchCalculationError(
+            f"a has length {a.shape[-1]} but b has length {len(b)}"
+        )
+    return a
 
 
 def filter_dict(i: Dict, s: str) -> Dict:
