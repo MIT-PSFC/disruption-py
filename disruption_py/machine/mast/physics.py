@@ -102,16 +102,25 @@ class MastPhysicsMethods:
             total Ohmic heating power (`p_oh`), and radiated power (`p_rad`).
         """
 
-        base_time = params.get_data("summary/time")
         times = params.times
 
-        power_nbi = params.get_data("summary/power_nbi")
-        power_nbi = MastUtilMethods.interpolate_1d(base_time, power_nbi, times)
+        base_time = params.get_data("summary/time")
 
-        power_radiated = params.get_data("summary/power_radiated")
-        power_radiated = MastUtilMethods.interpolate_1d(
-            base_time, power_radiated, times
-        )
+        try:
+            power_nbi = params.get_data("summary/power_nbi")
+            power_nbi = MastUtilMethods.interpolate_1d(base_time, power_nbi, times)
+        except CustomError:
+            # a missing NBI signal must not take out p_oh and p_rad
+            power_nbi = [np.nan]
+
+        try:
+            power_radiated = params.get_data("summary/power_radiated")
+            power_radiated = MastUtilMethods.interpolate_1d(
+                base_time, power_radiated, times
+            )
+        except CustomError:
+            # a missing radiated power signal must not take out p_nbi and p_oh
+            power_radiated = [np.nan]
 
         try:
             power_ohm = MastPhysicsMethods._get_p_ohm(params)
