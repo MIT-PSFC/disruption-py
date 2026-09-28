@@ -27,6 +27,10 @@ Here follows a non-exhaustive list of projects, publications, and conference con
 
 ### Conferences
 
+- [Second Workshop on AI for Accelerating Fusion Energy and Plasma Science (AI for Fusion) (2026)](https://conferences.iaea.org/event/454/)
+  - G Galleher, _et al._ (2026), _"Machine-Learning Inference of Separatrix Parameters for Real-Time Plasma Control"_
+  - EdD Zapata Cornejo, _et al._ (2026), _"Enabling scaled-up search of discharges and events in Alcator C-Mod multivariate time series, images and text"_
+
 - [46th ITPEA-MDC Meeting (2026)](https://www.iter.org/scientists/itpa/itpea-meetings)
   - Z Keith, _et al._ (2026), _"Multi-device validation of tearing physics"_
   - AR Saperstein, _et al._ (2026), _"Off-normal simulations of radiative collapse events in Alcator C-Mod"_
