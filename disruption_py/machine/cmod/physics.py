@@ -2442,7 +2442,7 @@ class CmodPhysicsMethods:
             * (np.sign((p_input - dwmhd_dt)) * np.abs((p_input - dwmhd_dt)) ** -0.69)
         )
         h98 = tau / tau_98
-        h98[h98 <= 0] = 0
+        h98[(h98 <= 0) | ((p_input - dwmhd_dt) <= 0)] = 0
         return {"h98": h98}
 
     @staticmethod
