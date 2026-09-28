@@ -34,7 +34,7 @@ shot_data = get_shots_data(
         # default None: "output.log" in temporary session folder
         file_path=None,
         file_level="DEBUG",
-        # default None: VERBOSE, or higher based on number of shots
+        # default None: read from the configuration, "INFO" out of the box
         console_level=None,
     ),
 )
