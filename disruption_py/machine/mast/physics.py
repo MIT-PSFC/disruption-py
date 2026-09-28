@@ -778,7 +778,7 @@ class MastPhysicsMethods:
             A dictionary containing the z parameters: `z_error`,
             `z_prog`, `zcur`, `v_z`, and `z_times_v_z`.
         """
-z_ref = params.get_data("pulse_schedule/z_ref", required=True)
+        z_ref = params.get_data("pulse_schedule/z_ref", required=True)
         t_z_ref = params.get_data("pulse_schedule/time", required=True)
         zip_prx = params.get_data("controllers/zip_proxy", required=True)
         t_ctrl = params.get_data("controllers/time", required=True)
@@ -797,9 +797,7 @@ z_ref = params.get_data("pulse_schedule/z_ref", required=True)
         z_times_v_z = zcur * v_z
 
         return {
-            "z_prog": MastUtilMethods.interpolate_1d(
-                t_ctrl, z_ref_ctrl, params.times
-            ),
+            "z_prog": MastUtilMethods.interpolate_1d(t_ctrl, z_ref_ctrl, params.times),
             "zcur": MastUtilMethods.interpolate_1d(t_ctrl, zcur, params.times),
             "z_error": MastUtilMethods.interpolate_1d(t_ctrl, z_error, params.times),
             "v_z": MastUtilMethods.interpolate_1d(t_ctrl, v_z, params.times),
