@@ -284,6 +284,21 @@ class NicknameSettingList(NicknameSetting):
             f"got {type(item).__name__}: {item!r}"
         )
 
+    def prefetch_db(self, database: ShotDatabase, tokamak: Tokamak) -> None:
+        """
+        Forward pre-fetching to every NicknameSetting item in the cascade.
+
+        Parameters
+        ----------
+        database : ShotDatabase
+            Database connection for querying tokamak shot data.
+        tokamak : Tokamak
+            The tokamak for which results are being processed.
+        """
+        for item in self.resolved_items:
+            if isinstance(item, NicknameSetting):
+                item.prefetch_db(database, tokamak)
+
     def _get_tree_name(self, params: NicknameSettingParams) -> str:
         """
         Try each cascade item via ``open_tree``; return the first that opens.
@@ -315,7 +330,8 @@ class NicknameSettingList(NicknameSetting):
                 attempts.append(candidate)
                 continue
             if attempts:
-                logger.verbose(
+                logger.log(
+                    "VERBOSE",
                     "Nickname cascade for shot {shot}: selected '{name}' "
                     "after failed: {prior}",
                     shot=params.shot_id,

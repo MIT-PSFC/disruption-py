@@ -254,3 +254,25 @@ def test_cascade_falls_through_on_nested_fetch_data_error():
     assert cascade.get_tree_name(_params(conn)) == "analysis"
     # The failing nickname never reached open_tree, so only "analysis" was attempted.
     assert conn.opened == ["analysis"]
+
+
+class _RecordsPrefetch(NicknameSetting):
+    """Test helper: records prefetch_db calls and resolves to a fixed tree."""
+
+    def __init__(self):
+        self.prefetched = []
+
+    def prefetch_db(self, database, tokamak):
+        self.prefetched.append((database, tokamak))
+
+    def _get_tree_name(self, params):
+        return "efit18"
+
+
+def test_cascade_forwards_prefetch_db_to_nicknamesetting_items():
+    """prefetch_db reaches every NicknameSetting item; plain strings are skipped."""
+    first, last = _RecordsPrefetch(), _RecordsPrefetch()
+    cascade = NicknameSettingList([first, "analysis", last])
+    cascade.prefetch_db("db", Tokamak.D3D)
+    assert first.prefetched == [("db", Tokamak.D3D)]
+    assert last.prefetched == [("db", Tokamak.D3D)]
