@@ -8,8 +8,10 @@ logging in both files and console with customizable levels and formats.
 import multiprocessing
 import os
 import sys
+import threading
 from dataclasses import dataclass
 from functools import partialmethod
+from multiprocessing.queues import SimpleQueue
 from typing import Union
 
 from loguru import logger
@@ -121,9 +123,15 @@ class LogSettings:
             "console_level": self.console_level,
         }
 
-    def reset_handlers(self):
+    def reset_handlers(self, console_queue: SimpleQueue = None):
         """
         Remove default logger and set up custom handlers.
+
+        Parameters
+        ----------
+        console_queue : SimpleQueue, optional
+            Workers relay console lines to this queue instead of writing them,
+            see `ConsoleRelay`.
         """
         # Remove default logger
         logger.remove()
@@ -133,16 +141,23 @@ class LogSettings:
         console_format = "{time:HH:mm:ss.SSS} " + message_format
         file_format = "{time:YYYY-MM-DD HH:mm:ss.SSS} " + message_format
 
-        # Add console handler
-        logger.add(
-            lambda msg: tqdm.write(msg, end=""),
-            level=self.console_level,
-            format=console_format,
-            colorize=True,
-            enqueue=True,
-            backtrace=False,
-            diagnose=True,
-        )
+        # Add console handler: main writes through tqdm to keep the bar intact,
+        # workers relay to main synchronously so nothing is left behind at exit
+        console_kwargs = {
+            "level": self.console_level,
+            "format": console_format,
+            "colorize": True,
+            "backtrace": False,
+            "diagnose": True,
+        }
+        if console_queue is None:
+            logger.add(
+                lambda msg: tqdm.write(msg, end=""), enqueue=True, **console_kwargs
+            )
+        else:
+            logger.add(
+                lambda msg: console_queue.put(str(msg)), enqueue=False, **console_kwargs
+            )
 
         # Add file handler if log file path is provided. The main process
         # truncates once; every process then appends, so no process writes
@@ -190,6 +205,49 @@ class LogSettings:
         logger.debug("Executable: {e}", e=sys.executable)
 
         self._logging_has_been_setup = True
+
+
+class ConsoleRelay:
+    """
+    Route worker console lines through the main process, which owns the
+    progress bar: workers put formatted lines on `queue` (see
+    `LogSettings.reset_handlers`), a thread here writes them via `tqdm.write`.
+    Wrap the pool with it, so that the pool exits first and every line is out.
+    """
+
+    _STOP = None
+
+    def __init__(self):
+        self.queue = multiprocessing.SimpleQueue()
+        self._thread = threading.Thread(target=self._drain, daemon=True)
+
+    def _drain(self):
+        """
+        Write relayed lines until the stop sentinel arrives.
+        """
+        while (msg := self.queue.get()) is not self._STOP:
+            try:
+                tqdm.write(msg, end="")
+            except (OSError, ValueError):
+                # console gone: keep draining, or workers block on a full pipe
+                pass
+
+    def __enter__(self):
+        """
+        Start the drain thread.
+        """
+        self._thread.start()
+        return self
+
+    def __exit__(self, *exc_info):
+        """
+        Stop the drain thread once every relayed line is written.
+        """
+        self.queue.put(self._STOP)
+        # the timeout guards a worker killed mid-write (truncated frame)
+        self._thread.join(timeout=5)
+        self.queue.close()
+        return False
 
 
 def level_no(level: str | int) -> int:
