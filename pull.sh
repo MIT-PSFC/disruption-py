@@ -5,9 +5,9 @@
 source "$(dirname "${BASH_SOURCE[0]}")/setup.sh"
 
 # folder
-DISPY_LOG="$DISPY_DIR/logs/$(basename "${0%.sh}").$(date +%F.%s)"
-export DISPY_LOG=$DISPY_LOG
-mkdir -p "$DISPY_LOG"
+DISPY_LOG_DIR="$DISPY_DIR/logs/$(basename "${0%.sh}").$(date +%F.%s)"
+export DISPY_LOG_DIR=$DISPY_LOG_DIR
+mkdir -p "$DISPY_LOG_DIR"
 
 # poetry
 {
@@ -16,7 +16,7 @@ mkdir -p "$DISPY_LOG"
    poetry self update
    poetry --version
 } \
-> "$DISPY_LOG/poetry.log" \
+> "$DISPY_LOG_DIR/poetry.log" \
 2>&1
 
 # uv
@@ -26,7 +26,7 @@ mkdir -p "$DISPY_LOG"
    uv self update
    uv --version
 } \
-> "$DISPY_LOG/uv.log" \
+> "$DISPY_LOG_DIR/uv.log" \
 2>&1
 
 # API token
@@ -52,7 +52,7 @@ do
 
    # log
    echo -e "\n$(date) :: $DISPY_BRANCH = $FOLDER"
-   export LOG="$DISPY_LOG/$DISPY_BRANCH"
+   export LOG="$DISPY_LOG_DIR/$DISPY_BRANCH"
    mkdir -p "$LOG"
    pushd "$FOLDER" &> /dev/null || exit 10
 
@@ -215,5 +215,5 @@ do
 
 done \
 2>&1 \
-| tee "$DISPY_LOG/all.log"
+| tee "$DISPY_LOG_DIR/all.log"
 
