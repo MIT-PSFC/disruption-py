@@ -7,14 +7,16 @@ Module for retrieving and calculating data for C-MOD physics methods.
 import warnings
 
 import numpy as np
-import scipy.constants as const
+import scipy
 
+from disruption_py.config import config
 from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.errors import (
     CalculationError,
     FetchDataError,
     MismatchCalculationError,
+    NanDataError,
 )
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import (
@@ -24,7 +26,9 @@ from disruption_py.core.utils.math import (
     interp1,
 )
 from disruption_py.inout.mds import mdsExceptions
+from disruption_py.machine.cmod.efit import CmodEfitMethods
 from disruption_py.machine.cmod.thomson import CmodThomsonDensityMeasure
+from disruption_py.machine.generic.physics import GenericPhysicsMethods
 from disruption_py.machine.tokamak import Tokamak
 
 
@@ -33,6 +37,8 @@ class CmodPhysicsMethods:
     This class provides methods to retrieve and calculate physics-related data
     for CMOD.
     """
+
+    # pylint: disable=too-many-public-methods
 
     @staticmethod
     @cache_method
@@ -841,8 +847,42 @@ class CmodPhysicsMethods:
         return {"v_0": v_0}
 
     @staticmethod
+    @physics_method(columns=["bt"], tokamak=Tokamak.CMOD)
+    def get_btor(params: PhysicsMethodParams):
+        """
+        Get the toroidal magnetic field.
+
+        The field is fetched from the magnetics tree, baseline-subtracted, and
+        interpolated onto the requested timebase. Its sign is preserved.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the toroidal magnetic field (`bt`) [T].
+
+        References
+        -------
+        - original source: [get_n_equal_1_amplitude.m](https://github.com/MIT-PSFC/disruption-py/
+        blob/matlab/CMOD/matlab-core/get_n_equal_1_amplitude.m)
+        - pull requests: #[562](https://github.com/MIT-PSFC/disruption-py/pull/562)
+        """
+        btor, t_mag = params.get_data_with_dims(
+            r"\btor", tree_name="magnetics"
+        )  # [T], [s]
+        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
+        # on by t=-1. So pick the time before that to calculate baseline
+        (baseline_indices,) = np.where(t_mag <= -1.8)
+        btor = btor - np.mean(btor[baseline_indices])
+        return {"bt": interp1(t_mag, btor, params.times)}
+
+    @staticmethod
     @physics_method(
-        columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase", "bt"],
+        columns=["n_equal_1_mode", "n_equal_1_normalized", "n_equal_1_phase"],
         tokamak=Tokamak.CMOD,
     )
     def get_n_equal_1_amplitude(params: PhysicsMethodParams):
@@ -857,7 +897,7 @@ class CmodPhysicsMethods:
         don't have to be numerically integrated. These four sensors were working
         well in 2014, 2015, and 2016. I looked at our locked mode MGI run on
         1150605, and the different applied A-coil phasings do indeed show up on
-        the *n*=1 signal.
+        the *n*=1 signal. The toroidal field is obtained from `get_btor`.
 
         Parameters
         ----------
@@ -868,14 +908,15 @@ class CmodPhysicsMethods:
         -------
         dict
             A dictionary containing the calculated n=1 mode amplitude (`n_equal_1_mode`)
-            and phase (`n_equal_1_phase`), the n=1 mode amplitude normalized to the toroidal
-            field strength (`n_equal_1_normalized`), and the toroidal field strength (`bt`).
+            and phase (`n_equal_1_phase`), and the n=1 mode amplitude normalized to the
+            toroidal field strength (`n_equal_1_normalized`).
 
         References
         -------
         - original source: [get_n_equal_1_amplitude.m](https://github.com/MIT-PSFC/disruption-py/
         blob/matlab/CMOD/matlab-core/get_n_equal_1_amplitude.m)
-        - pull requests: #[460](https://github.com/MIT-PSFC/disruption-py/pull/460)
+        - pull requests: #[460](https://github.com/MIT-PSFC/disruption-py/pull/460), #[562](https:
+        //github.com/MIT-PSFC/disruption-py/pull/562)
         - issues: #[211](https://github.com/MIT-PSFC/disruption-py/issues/211)
         """
         # These sensors are placed toroidally around the machine. Letters refer to
@@ -897,32 +938,32 @@ class CmodPhysicsMethods:
         )
         bp13_phi = phi[bp13_indices] + 360  # INFO
         bp13_btor_pickup_coeffs = btor_pickup_coeffs[bp13_indices]
-        btor, t_mag = params.get_data_with_dims(
-            r"\btor", tree_name="magnetics"
-        )  # [T], [s]
-        # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
-        # on by t=-1. So pick the time before that to calculate baseline
-        baseline_indices = np.where(t_mag <= -1.8)
-        btor = btor - np.mean(btor[baseline_indices])
+        # Baseline-subtracted toroidal field on the requested timebase, (Before PR#562 it used to
+        # remove the btor pickup from each sensor and to normalize the n=1 mode)
+        bt = CmodPhysicsMethods.get_btor(params=params)["bt"]  # [T]
         path = r"\mag_bp_coils.signals."
         # For each sensor:
         # 1. Subtract baseline offset
-        # 2. Subtract btor pickup
-        # 3. Interpolate bp onto shot timebase
+        # 2. Interpolate bp onto shot timebase
+        # 3. Subtract btor pickup
 
         for i, bp13_name in enumerate(bp13_names):
             try:
-                signal = params.get_data(path + bp13_name, tree_name="magnetics")  # [T]
+                signal, t_signal = params.get_data_with_dims(
+                    path + bp13_name, tree_name="magnetics"
+                )  # [T], [s]
             # Sensor not available, skip
             except mdsExceptions.MdsException:
                 continue
             if len(signal) == 1:
                 continue
 
-            baseline = np.mean(signal[baseline_indices])
-            signal = signal - baseline
-            signal = signal - bp13_btor_pickup_coeffs[i] * btor
-            signal = interp1(t_mag, signal, params.times)
+            # Toroidal power supply takes time to turn on, from ~ -1.8 and should be
+            # on by t=-1. So pick the time before that to calculate baseline
+            (baseline_indices,) = np.where(t_signal <= -1.8)
+            signal = signal - np.mean(signal[baseline_indices])
+            signal = interp1(t_signal, signal, params.times)
+            signal = signal - bp13_btor_pickup_coeffs[i] * bt
             # Check if the signal's magnitude is >1T; if so consider this sensor as broken
             if np.mean(abs(signal)) > 1:
                 continue
@@ -935,10 +976,8 @@ class CmodPhysicsMethods:
             a.append(a_row)
 
         # TODO: Examine edge case behavior of sign
-        polarity = np.sign(np.mean(btor))
-        btor_magnitude = btor * polarity
-        btor_magnitude = interp1(t_mag, btor_magnitude, params.times)
-        btor = interp1(t_mag, btor, params.times)  # Interpolate BT with sign
+        polarity = np.sign(np.nanmean(bt))
+        btor_magnitude = bt * polarity
 
         n_sensors = len(bp13_signals)
         if n_sensors == 3:
@@ -959,7 +998,6 @@ class CmodPhysicsMethods:
                 "n_equal_1_mode": [np.nan],
                 "n_equal_1_normalized": [np.nan],
                 "n_equal_1_phase": [np.nan],
-                "bt": btor,
             }
         bp13_signals = np.array(bp13_signals)
         a = np.array(a)
@@ -978,7 +1016,6 @@ class CmodPhysicsMethods:
             "n_equal_1_mode": n_equal_1_amplitude,
             "n_equal_1_normalized": n_equal_1_normalized,
             "n_equal_1_phase": n_equal_1_phase,
-            "bt": btor,
         }
 
     @staticmethod
@@ -1624,7 +1661,7 @@ class CmodPhysicsMethods:
         # density is approximately equal to n(r=a/sqrt(3)), so calculate critical density
         # for cutoff (n > n_crit) at r = a/sqrt(3)
         btor_midrad = btor * cmod_maj_rad / (cmod_maj_rad + aminor / np.sqrt(3))
-        n_crit = 2 * btor_midrad**2 * const.epsilon_0 / const.m_e
+        n_crit = 2 * btor_midrad**2 * scipy.constants.epsilon_0 / scipy.constants.m_e
 
         # Time slices with low Btor are unreliable because gratings are often not
         # aligned to field, signal is low, and there are frequent density cutoffs.
@@ -1833,10 +1870,7 @@ class CmodPhysicsMethods:
         )
 
     @staticmethod
-    @physics_method(
-        columns=["prad_peaking"],
-        tokamak=Tokamak.CMOD,
-    )
+    @physics_method(columns=["prad_peaking"], tokamak=Tokamak.CMOD)
     def get_prad_peaking(params: PhysicsMethodParams):
         """
         Calculate the peaking factor for radiated power.
@@ -2095,6 +2129,212 @@ class CmodPhysicsMethods:
         return {"v_surf": v_surf}
 
     @staticmethod
+    @physics_method(columns=["thermal_quench_time"], tokamak=Tokamak.CMOD)
+    def get_thermal_quench_time(params: PhysicsMethodParams):
+        """
+        Labels the onset time of the thermal quench for a given shot (NaN for non-disruptive shots)
+        using a vertical SXR array due to its off-axis views and robustness across shots,
+        as opposed to ECE. The labeling method is non-causal (i.e. post-shot processing).
+        The TQ is found by finding $\\min(d\\text{SXR}/dt)$ in a time window prior to the CQ
+        and then searching backwards for the onset of the TQ.
+        There is a tension between using longer windows to find the first TQ in a multi-stage TQ
+        versus using a shorter window to avoid labeling sawtooth crashes.
+        Thus, for shots with multi-stage thermal quenches, (see shots 1050830034 and 1120717002),
+        this algorithm struggles to select the first thermal quench. Based on manual testing
+        of 120 shots, about 5% of flattop disruptions on C-Mod feature multi-stage thermal quenches.
+        For flattop disruptions, the automated labels are generally within 1 ms of the manually
+        labeled thermal quench onset, though labels are occasionally 3-4 ms early or late.
+        This algorithm has only been tested on flattop disruptions.
+
+        Parameters
+        ----------
+        params: PhysicsMethodParams
+            The parameters containing the data connection and shot info.
+
+        Returns
+        ----------
+        thermal_quench_time : array_like
+            time of thermal quench onset for the shot, identical values at each time-slice
+
+        References
+        ----------
+        - pull requests: #[564](https://github.com/MIT-PSFC/disruption-py/pull/564)
+        - issues: #[542](https://github.com/MIT-PSFC/disruption-py/issues/542)
+
+        """
+
+        cq_time = GenericPhysicsMethods.get_current_quench_time(params)[
+            "current_quench_time"
+        ][0]
+        # Skip labeling the thermal quench time if the shot is non-disruptive
+        if np.isnan(cq_time):
+            raise CalculationError("shot is non-disruptive.")
+        tq_params = config(params.tokamak).physics.thermal_quench_time_params
+        # Get current data for obtaining start of current quench
+        ip, magtime = params.get_data_with_dims(r"\ip", tree_name="magnetics")
+        ip = np.abs(ip)
+
+        # Get the first available time basis to determine slices of chords to read
+        array_path = r"\top.brightnesses.array_1"
+        t_sxr = None
+        idx_first_chord = tq_params["idx_first_chord"]
+        while t_sxr is None and idx_first_chord <= tq_params["idx_last_chord"]:
+            try:
+                tdi_expr = f"dim_of({array_path}:chord_{idx_first_chord+1:02})"
+                t_sxr = params.get_data(tdi_expr, tree_name="xtomo")
+            except mdsExceptions.MdsException:
+                params.logger.debug(
+                    "get_thermal_quench_time: "
+                    "Failed to get SXR {} chord {} time base.",
+                    array_path,
+                    idx_first_chord + 1,
+                )
+                idx_first_chord += 1
+        if t_sxr is None:
+            raise FetchDataError("No available chords for SXR array 1")
+        # Get relevant snippets of chord data to read
+        j_bgrnd_start = np.argmin(np.abs(t_sxr - tq_params["t_bgrnd_start"]))
+        j_t0 = np.maximum(1, np.argmin(np.abs(t_sxr)))
+        j_chord_start = np.argmin(
+            np.abs(t_sxr - (cq_time + tq_params["t_wndw_pre_cq"]))
+        )
+        j_chord_end = (
+            np.argmin(np.abs(t_sxr - (cq_time + tq_params["t_wndw_post_cq"]))) + 1
+        )
+        t_sxr = t_sxr[j_chord_start:j_chord_end]
+
+        n_chords = tq_params["idx_last_chord"] - idx_first_chord + 1
+        sxr = np.zeros((n_chords, len(t_sxr)))
+        valid_chords = np.ones(n_chords, dtype=bool)
+        # Read snippets of other chords with background subtraction using a TDI expression
+        # for fast reads (important for 2012-2016 shots with 250 kHz digitization)
+        for i in range(n_chords):
+            try:
+                sig = f"{array_path}:CHORD_{idx_first_chord+i+1:02}"
+                tdi_expr = (
+                    f"_s=data({sig}), "
+                    f"_s[{j_chord_start}:{j_chord_end-1}] - mean(_s[{j_bgrnd_start}:{j_t0-1}])"
+                )
+                chord = params.get_data(tdi_expr, tree_name="xtomo")
+            except mdsExceptions.MdsException:
+                params.logger.warning(
+                    "Failed to get SXR {} chord {} data.",
+                    array_path,
+                    idx_first_chord + i + 1,
+                )
+                valid_chords[i] = False
+                continue
+            sxr[i] = chord
+
+        sample_time = t_sxr[1] - t_sxr[0]
+        sample_freq = 1 / sample_time
+
+        # Remove bad chords by checking each chord's autocorrelation.
+        # Note that due to background subtraction but not subtraction of the mean,
+        # this can be dominated by a DC pedestal of physical signal, and is effectively an SNR test
+        # not an autocorrelation time. Intentional and helps to keep chords with flat, real signal
+        # Bad chords often have significant white noise, meaning low autocorrelation (< 10 ms)
+        # Good chords should have an autocorrelation of 100s of ms
+        # See shot 1050311013 as an example with some bad chords
+        if sample_freq > tq_params["autocorr_sample_freq"]:
+            # 2012-2016 has 250 kHz sampling frequency. Downsample for speed-up in autocorr
+            sxr_for_autocorr = scipy.signal.resample_poly(
+                sxr,
+                up=1,
+                down=sample_freq // tq_params["autocorr_sample_freq"],
+                axis=-1,
+            )
+            autocorr_sample_freq = tq_params["autocorr_sample_freq"]
+        else:
+            sxr_for_autocorr = sxr.copy()
+            autocorr_sample_freq = sample_freq
+        for i, chord in enumerate(sxr_for_autocorr):
+            autocorr = np.correlate(chord, chord, mode="full")
+            max_autocorr = np.max(autocorr)
+            if max_autocorr > 0:
+                autocorr = autocorr / max_autocorr
+            else:
+                params.logger.debug(
+                    "Removing bad SXR chord {}", idx_first_chord + i + 1
+                )
+                valid_chords[i] = False
+                continue
+            index_no_lag = np.argmax(autocorr)
+            crosses_zero = autocorr[index_no_lag:] < 0
+            # See shot 1120223007 for example of why this fallback is necessary
+            index_decay = (
+                np.argmax(crosses_zero) if np.any(crosses_zero) else len(crosses_zero)
+            )
+            autocorr_decay_time = index_decay / autocorr_sample_freq
+            if autocorr_decay_time < tq_params["autocorr_noise_cutoff"]:
+                params.logger.debug(
+                    "Removing noisy SXR chord {}: autocorr decay time: {}",
+                    idx_first_chord + i + 1,
+                    autocorr_decay_time,
+                )
+                valid_chords[i] = False
+        if not np.any(valid_chords):
+            raise NanDataError("No valid SXR chords after removing noisy chords")
+        sxr = sxr[valid_chords]
+
+        # Noncausal Butterworth low pass filter to smooth transient SXR spikes during TQ.
+        # Cutoff of 1.0 kHz and order 2 seems to filter recombination SXR spikes
+        # while maintaining decent resolution of TQ based on scan from 0.25 kHz - 2 kHz
+        # Results were fairly insensitive within these windows on the 100 shots checked
+        # See shot 1120913013 as example of large recombination spike
+        normalized_cutoff = tq_params["bworth_cutoff"] / (0.5 * sample_freq)
+        b, a = scipy.signal.butter(
+            tq_params["bworth_order"], normalized_cutoff, btype="low", analog=False
+        )
+        core_sxr_raw = np.max(sxr, axis=0)
+        sxr = scipy.signal.filtfilt(b, a, sxr, axis=1)
+        core_sxr = np.max(sxr, axis=0)
+        dcore_sxr_dt = np.diff(core_sxr, prepend=0) / sample_time
+
+        # Search for the onset of the CQ so that we can search for the TQ in a small time window
+        # to avoid labeling sawtooth crashes as the thermal quench
+        # Some current quenches can be long (see shots 1050311013, 1050802017).
+        # Set Ip prior to disruption as minimum in prior time window (not median for ramp-down)
+        idx_start = np.argmin(
+            np.abs(magtime - (cq_time + tq_params["ip_pre_cq_wndw_start"]))
+        )
+        idx_end = np.argmin(
+            np.abs(magtime - (cq_time + tq_params["ip_pre_cq_wndw_end"]))
+        )
+        ip_prior = np.min(ip[idx_start:idx_end])
+        # CQ onset is last moment Ip is above a pct threshold of Ip prior to disruption
+        idx_cq_onset = np.where(ip > tq_params["cq_onset_frac"] * ip_prior)[0][-1]
+        cq_onset_time = magtime[idx_cq_onset]
+
+        # Search for TQ midpoint as min(dSXR/dt) in window of 5 ms prior to current quench onset
+        idx_start = np.argmin(
+            np.abs(t_sxr - (cq_onset_time - tq_params["cq_onset_wndw"]))
+        )
+        idx_end = np.argmin(np.abs(t_sxr - cq_onset_time))
+        if idx_start == len(t_sxr) - 1:
+            raise NanDataError(f"No SXR data at CQ time = {cq_time:.3f} s.")
+        t_max_sxr_drop = t_sxr[idx_start + np.argmin(dcore_sxr_dt[idx_start:idx_end])]
+
+        # Find onset of thermal quench in 0.5 ms window prior to midpoint of TQ
+        # Thermal quenches on C-Mod are almost always shorter than 1 ms, hence the 0.5 ms window
+        # Find max of SXR signal on 0.5 ms window preceding max drop in SXR and label onset as
+        # last timestep with SXR > 90% of that max value
+        # Use raw signal bc smoothed signal has a longer crash time.
+        # Note this sometimes picks up on recombination spikes
+        idx_start = np.argmin(
+            np.abs(t_sxr - (t_max_sxr_drop - tq_params["tq_onset_wndw"]))
+        )
+        idx_end = np.argmin(np.abs(t_sxr - t_max_sxr_drop))
+        window = core_sxr_raw[idx_start:idx_end]
+        # Want last maximum in case the SXR has saturated and there are multiple maxima
+        max_sxr_idx = np.nonzero(window >= tq_params["tq_onset_frac"] * np.max(window))[
+            0
+        ][-1]
+        tq_time_scalar = t_sxr[idx_start + max_sxr_idx]
+
+        return {"thermal_quench_time": np.full(len(params.times), tq_time_scalar)}
+
+    @staticmethod
     def _is_on_blacklist(shot_id: int) -> bool:
         """
         TODO why will these shots cause `_get_peaking_factors`,
@@ -2106,3 +2346,152 @@ class CmodPhysicsMethods:
             or 1150000000 < shot_id < 1150610000
             or 1160000000 < shot_id < 1160303000
         )
+
+    @staticmethod
+    @physics_method(columns=["h_alpha"], tokamak=Tokamak.CMOD)
+    def get_h_alpha(params: PhysicsMethodParams):
+        """
+        Get the H_alpha line emission intensity.
+
+        The intensity of H-alpha radiance indicates presence of ELMs, and/or
+        radiative events, and changes of confinement regimes.
+
+        In case of using this signal for ELM detection, it is recommended to
+        use the native time base of the signal to avoid losing ELMs.
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary with the H-alpha signal (`h_alpha`). In SI brightness units [W/(m^2*sr)].
+
+        References
+        -------
+        - pull requests: #[562](https://github.com/MIT-PSFC/disruption-py/pull/562)
+        """
+        # Get signals from SPECTROSCOPY tree
+        h_alpha, time_halpha = params.get_data_with_dims(
+            r"\spectroscopy::ha_2_bright", tree_name="spectroscopy"
+        )  # [mW/(cm^2*sr)], [s]
+        # Interpolate Halpha to params.times
+        h_alpha_interp = interp1(time_halpha, h_alpha, params.times)
+        return {"h_alpha": 10 * h_alpha_interp}  # [W/(m^2*sr)]
+
+    @staticmethod
+    @physics_method(columns=["h98"], tokamak=Tokamak.CMOD)
+    def get_h98(params: PhysicsMethodParams):
+        """
+        Compute H98 by getting tau_E
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary with the H98 confinement enhancement factor (`h98`), which is dimensionless
+
+        References
+        ----------
+        - Scaling from eq. 20, [ITER Physics Basis Chapter 2][ITER_reference]
+        - Data used to construct the scaling are described in
+          [ITER H Mode Confinement Database Update][DB2]
+        - pull requests: #[562](https://github.com/MIT-PSFC/disruption-py/pull/562)
+
+        [ITER_reference]: https://doi.org/10.1088/0029-5515/39/12/302
+        [DB2]: https://doi.org/10.1088/0029-5515/34/1/I10
+        """
+
+        # Get parameters for calculating confinement time
+        powers_dict = CmodPhysicsMethods.get_power(params=params)
+        efit_dict = CmodEfitMethods.get_efit_parameters(params=params)
+        density_dict = CmodPhysicsMethods.get_densities(params=params)
+        ip_dict = CmodPhysicsMethods.get_ip_parameters(params=params)
+
+        # Get the magnitude of the toroidal field
+        btor = np.abs(CmodPhysicsMethods.get_btor(params=params)["bt"])  # [T]
+
+        # Get signals
+        ip = np.abs(ip_dict.get("ip")) / 1.0e6  # [A] -> [MA]
+        n_e = density_dict.get("n_e") / 1.0e19  # [m^-3] -> [10^19 m^-3]
+        p_input = powers_dict.get("p_input") / 1.0e6  # [W] -> [MW]
+        dwmhd_dt = efit_dict.get("dwmhd_dt") / 1.0e6  # [W] -> [MW]
+        wmhd = efit_dict.get("wmhd") / 1.0e6  # [J] -> [MJ]
+        r0 = efit_dict.get("rmagx")  # [m]
+        a_minor = efit_dict.get("a_minor")  # [m]
+        epsilon = a_minor / r0
+        kappa = efit_dict.get("kappa")
+        tau = wmhd / (p_input - dwmhd_dt)
+
+        # Compute 1998 tau_E scaling, taking A (atomic mass) = 2.
+        tau_98 = (
+            0.0562
+            * (np.sign(n_e) * np.abs(n_e) ** 0.41)
+            * (2**0.19)
+            * (np.sign(ip) * np.abs(ip) ** 0.93)
+            * (np.sign(r0) * np.abs(r0) ** 1.97)
+            * (np.sign(epsilon) * np.abs(epsilon) ** 0.58)
+            * (np.sign(kappa) * np.abs(kappa) ** 0.78)
+            * (np.sign(btor) * np.abs(btor) ** 0.15)
+            * (np.sign((p_input - dwmhd_dt)) * np.abs((p_input - dwmhd_dt)) ** -0.69)
+        )
+        h98 = tau / tau_98
+        h98[(h98 <= 0) | ((p_input - dwmhd_dt) <= 0)] = 0
+        return {"h98": h98}
+
+    @staticmethod
+    @physics_method(columns=["lh_power_threshold"], tokamak=Tokamak.CMOD)
+    def get_lh_power_threshold(params: PhysicsMethodParams):
+        """
+        Power threshold for L-H transition.
+
+        Martin 2008 scaling P_thr = 0.0488 n_e^0.717 B_t^0.803 S^0.941 [MW], with n_e the
+        line-averaged density [10^20 m^-3], B_t the toroidal field [T] and S the plasma
+        surface area [m^2] from EFIT (`psurfa`).
+
+        Parameters
+        ----------
+        params : PhysicsMethodParams
+            The parameters containing the MDSplus connection, shot id and more.
+
+        Returns
+        -------
+        dict
+            A dictionary with the power threshold for L-H transition
+            (`lh_power_threshold`), in Watts [W]
+
+        References
+        ----------
+        - Scaling from Equation 2, Y. R. Martin _et al_ (2008) J. Phys.: Conf. Ser. **123** 012033
+        [DOI 10.1088/1742-6596/123/1/012033][martin_reference]
+        - pull requests: #[562](https://github.com/MIT-PSFC/disruption-py/pull/562)
+
+        [martin_reference]: https://doi.org/10.1088/1742-6596/123/1/012033
+        """
+
+        density_dict = CmodPhysicsMethods.get_densities(params=params)
+        # Plasma surface area from EFIT, interpolated to the time base. The node has
+        # no units attribute in the tree, but its values are in m^2 (~7 m^2 on C-Mod).
+        surface_area, t_aeqdsk = params.get_data_with_dims(
+            r"\efit_aeqdsk:psurfa", tree_name="_efit_tree"
+        )  # surface_area: [m^2], t_aeqdsk: [s]
+        surface_area = interp1(t_aeqdsk, surface_area, params.times)
+
+        # Get the magnitude of the toroidal field
+        btor = np.abs(CmodPhysicsMethods.get_btor(params=params)["bt"])  # [T]
+        n_e = density_dict.get("n_e") / 1.0e20  # [m^-3] -> [10^20 m^-3]
+
+        # Estimate power threshold.
+        lh_power_threshold = (
+            0.0488
+            * (np.sign(n_e) * np.abs(n_e) ** 0.717)
+            * (np.sign(btor) * np.abs(btor) ** 0.803)
+            * (np.sign(surface_area) * np.abs(surface_area) ** 0.941)
+        )
+        return {"lh_power_threshold": 1.0e6 * lh_power_threshold}

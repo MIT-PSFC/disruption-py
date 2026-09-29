@@ -17,6 +17,8 @@ from typing import Dict, List, Tuple, Type
 import numpy as np
 from loguru import logger
 
+from disruption_py.core.physics_method.errors import MismatchCalculationError
+
 
 def without_duplicates(lst: List):
     """
@@ -209,6 +211,34 @@ def to_tuple(
     return {k: (dim, v) for k, v in data.items()}
 
 
+def assert_equal_length(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """
+    Assert that two arrays have the same length, raising an error if they do not.
+
+    Parameters
+    ----------
+    a : np.ndarray
+        The first array to check.
+    b : np.ndarray
+        The second array to check.
+
+    Returns
+    -------
+    np.ndarray
+        The signal, unchanged.
+
+    Raises
+    ------
+    MismatchCalculationError
+        If the lengths of the two arrays do not match.
+    """
+    if a.shape[-1] != len(b):
+        raise MismatchCalculationError(
+            f"a has length {a.shape[-1]} but b has length {len(b)}"
+        )
+    return a
+
+
 def filter_dict(i: Dict, s: str) -> Dict:
     """
     Filter a dictionary by removing all keys that contain a given substring.
@@ -234,3 +264,27 @@ def filter_dict(i: Dict, s: str) -> Dict:
         else:
             o[k] = v
     return o
+
+
+def get_rss() -> Tuple[float, float]:
+    """
+    Get the current and peak RSS used by the process in MB.
+
+    Returns
+    -------
+    float, float
+        Current and peak RSS in MB, or (0., 0.) if not available.
+    """
+
+    rss = hwm = 0.0
+    if not os.path.exists("/proc/self/status"):
+        return rss, hwm
+    with open("/proc/self/status", "r", encoding="utf8") as f:
+        for line in f:
+            if line.startswith("VmHWM:"):
+                hwm = float(line.split()[1]) / 1024
+            elif line.startswith("VmRSS:"):
+                rss = float(line.split()[1]) / 1024
+            if rss and hwm:
+                break
+    return rss, hwm

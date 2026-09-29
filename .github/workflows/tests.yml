@@ -46,7 +46,7 @@ jobs:
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Add MDSplus sources
         if: ${{ matrix.tokamak == 'C-MOD'
@@ -161,7 +161,7 @@ jobs:
         run: pipx install poetry
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: 'poetry'

@@ -22,6 +22,7 @@ from disruption_py.core.utils.misc import (
     filter_dict,
     get_elapsed_time,
     get_metadata,
+    get_rss,
     get_temporary_folder,
     without_duplicates,
 )
@@ -132,6 +133,17 @@ def get_shots_data(
     else:
         raise ModuleNotFoundError("Cannot import MDSplus.")
 
+    # Clean-up parameters
+    if retrieval_settings is None:
+        retrieval_settings = RetrievalSettings()
+
+    retrieval_settings.resolve()
+    output_setting = resolve_output_setting(output_setting)
+
+    # write the effective settings back into the configuration, so that the
+    # dump below reflects the actual runtime values rather than the file defaults
+    config(tokamak).update({"log": log_settings.to_config()})
+
     # dump configuration
     json_file_path = os.path.join(get_temporary_folder(), "config.json")
     config_dict = filter_dict(config(tokamak).to_dict(), "_pass")
@@ -143,12 +155,6 @@ def get_shots_data(
     logger.verbose("Dumped configuration: {path}", path=json_file_path)
 
     database = _get_database_instance(tokamak, database_initializer)
-    # Clean-up parameters
-    if retrieval_settings is None:
-        retrieval_settings = RetrievalSettings()
-
-    retrieval_settings.resolve()
-    output_setting = resolve_output_setting(output_setting)
 
     # do not spawn unnecessary processes
     shotlist_setting_params = ShotlistSettingParams(database, tokamak)
@@ -160,10 +166,6 @@ def get_shots_data(
         logger.critical("Nothing to do!")
         return None
 
-    # Dynamically set the console log level based on the number of shots
-    if log_settings.console_level is None:
-        log_settings.reset_handlers(num_shots=len(shotlist_list))
-
     # log start
     logger.info(
         "Starting workflow: {n:,} shot{s} / {m} process{p}",
@@ -172,13 +174,12 @@ def get_shots_data(
         m=num_processes,
         p="es" if num_processes > 1 else "",
     )
-
+    logger.debug("Starting workflow: RSS = {:,.1f} MB, MaxRSS = {:,.1f} MB", *get_rss())
     took = -time.time()
     retrieval_settings.efit_nickname_setting.prefetch_db(database, tokamak)
     with Pool(
         processes=num_processes,
         initializer=log_settings.reset_handlers,
-        initargs=(len(shotlist_list),),
     ) as pool:
         args = zip(
             repeat(tokamak),
@@ -219,8 +220,16 @@ def get_shots_data(
         elapsed=get_elapsed_time(took),
         each=took / total,
     )
+    logger.debug(
+        "Completed workflow: RSS = {:,.1f} MB, MaxRSS = {:,.1f} MB", *get_rss()
+    )
 
     results = output_setting.get_results()
+    logger.debug(
+        "Obtained results: RSS = {:,.1f} MB, MaxRSS = {:,.1f} MB",
+        *get_rss(),
+    )
+
     output_setting.to_disk()
     return results
 
@@ -310,7 +319,9 @@ def cli():
     parser.add_argument("-b", "--time-base", type=str, default="disruption_warning")
     parser.add_argument("-o", "--output", type=str, default="dataset")
     parser.add_argument("-p", "--processes", type=int, default=1)
-    parser.add_argument("-l", "--log-level", type=str, default="VERBOSE")
+    parser.add_argument(
+        "-l", "--log-level", type=str, default=config().log.console_level
+    )
 
     out = run(**vars(parser.parse_args()))
     print(out)
