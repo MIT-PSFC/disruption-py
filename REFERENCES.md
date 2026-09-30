@@ -36,7 +36,6 @@ Here follows a non-exhaustive list of projects, publications, and conference con
   - AR Saperstein, _et al_ (2026), _"Validation of off-normal simulations of radiative collapse events in Alcator C-Mod"_
   - H Wietfeldt, _et al._ (2026), _"Characterization of transient impurity events on Alcator C-Mod and WEST"_
   - E Liang, _et al._ (2026), _"Physics-Guided Interpretation of Phase-Dependent Disruption Prediction in Alcator C-Mod"_
-  - F Valenzuela, _et al._ (2026), _"Alcator C-Mod Logbook Metadata Extraction With LLMs"_
   - E d D Zapata Cornejo, _et al._ (2026), _"Radiative disruption precursors detection in Alcator C-Mod via the DEFUSE interoperable framework"_
 
 - [7th International Conference on Data-Driven Plasma Science (2026)](https://www.icddps.org/)
