@@ -26,14 +26,11 @@ def map_string_to_enum(value, enum_class, should_raise=True):
         if should_raise is False.
     """
     if isinstance(value, enum_class):
-        enum_value = value
-    else:
-        try:
-            enum_value = enum_class(value)
-        except ValueError as e:
-            if should_raise:
-                raise ValueError(
-                    f"Cannot convert value '{value}' to enum for '{enum_class}'"
-                ) from e
-            return None
-    return enum_value
+        return value
+    if value in enum_class:
+        return enum_class(value)
+    if value:
+        return enum_class[value]
+    if should_raise:
+        raise ValueError(f"Value '{value}' is not a valid member of {enum_class}.")
+    return None
