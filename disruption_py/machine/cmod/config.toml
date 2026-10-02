@@ -265,6 +265,8 @@ units = "m"
 
 [cmod.physics.attributes.terror]
 description = "Equilibrium convergence error (EFIT)."
+imas = "/equilibrium/time_slice(itime)/convergence/grad_shafranov_deviation_expression"
+units = "dimensionless"
 
 [cmod.physics.attributes.thermal_quench_time]
 description = "Time of the disruptive thermal quench onset. NaN for non-disruptive discharges."
