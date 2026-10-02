@@ -29,7 +29,7 @@ def map_string_to_enum(value, enum_class, should_raise=True):
         return value
     if value in enum_class:
         return enum_class(value)
-    if value:
+    if value in enum_class.__members__:
         return enum_class[value]
     if should_raise:
         raise ValueError(f"Value '{value}' is not a valid member of {enum_class}.")
