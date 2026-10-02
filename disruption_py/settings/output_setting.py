@@ -237,7 +237,9 @@ class DictOutputSetting(OutputSetting):
             shot_msg("Saving shard: {shard}"), shot=params.shot_id, shard=shard
         )
         encoding = config(params.tokamak).get("netcdf", {}).get("encoding", {})
-        params.result.to_netcdf(shard, encoding={k: encoding for k in params.result})
+        params.result.to_netcdf(
+            shard, encoding={k: encoding for k in params.result.data_vars}
+        )
 
         # lazy reload
         self.results[params.shot_id] = xr.open_dataset(shard)
@@ -375,7 +377,7 @@ class SingleOutputSetting(DictOutputSetting):
                 encoding = config(tokamak).get("netcdf", {}).get("encoding", {})
                 logger.trace("NetCDF encoding: {encoding}", encoding=encoding)
                 self.result.to_netcdf(
-                    self.path, encoding={k: encoding for k in self.result}
+                    self.path, encoding={k: encoding for k in self.result.data_vars}
                 )
             elif hasattr(self.result, "to_csv"):
                 self.result.to_csv(self.path)
