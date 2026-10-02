@@ -223,22 +223,21 @@ The command-line arguments, which are subject to change, are documented in the h
 disruption-py --help
 ```
 ```
-usage: disruption-py [-h] [-t TOKAMAK] [-m METHODS] [-e EFIT_TREE] [-b TIME_BASE]
-                          [-o OUTPUT_FILE] [-p PROCESSES] [-l LOG_LEVEL]
-                          [shots ...]
+usage: disruption-py [-h] [-t TOKAMAK] [-m METHODS] [-e EFIT_TREE] [-b TIME_BASE] [-o OUTPUT] [-p PROCESSES] [-a] [-l LOG_LEVEL] [shots ...]
 
 positional arguments:
   shots
 
 options:
   -h, --help            show this help message and exit
-  -t TOKAMAK, --tokamak TOKAMAK
-  -m METHODS, --methods METHODS
-  -e EFIT_TREE, --efit-tree EFIT_TREE
-  -b TIME_BASE, --time-base TIME_BASE
-  -o OUTPUT_FILE, --output-file OUTPUT_FILE
-  -p PROCESSES, --processes PROCESSES
-  -l LOG_LEVEL, --log-level LOG_LEVEL
+  -t, --tokamak TOKAMAK
+  -m, --methods METHODS
+  -e, --efit-tree EFIT_TREE
+  -b, --time-base TIME_BASE
+  -o, --output OUTPUT
+  -p, --processes PROCESSES
+  -a, --artifacts
+  -l, --log-level LOG_LEVEL
 ```
 
 A parameter-less command-line invocation allows to compute all physics methods for a given device on a few prototypical shots.
