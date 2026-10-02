@@ -263,6 +263,9 @@ units = "m"
 description = "Half-width at half-maximum of the Gaussian fit to the electron temperature profile from the electron cyclotron emission (ECE) data."
 units = "m"
 
+[cmod.physics.attributes.terror]
+description = "Equilibrium convergence error (EFIT)."
+
 [cmod.physics.attributes.thermal_quench_time]
 description = "Time of the disruptive thermal quench onset. NaN for non-disruptive discharges."
 units = "s"

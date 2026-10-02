@@ -38,6 +38,7 @@ class CmodEfitMethods:
         "qstar": r"\efit_aeqdsk:qsta",
         "rmagx": r"\efit_aeqdsk:rmagx/100",
         "ssep": r"\efit_aeqdsk:ssep/100",
+        "terror": r"\efit_aeqdsk:terror",
         "tribot": r"\efit_aeqdsk:doutl",
         "tritop": r"\efit_aeqdsk:doutu",
         "upper_gap": r"\efit_aeqdsk:otop/100",

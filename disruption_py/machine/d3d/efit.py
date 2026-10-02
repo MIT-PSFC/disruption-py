@@ -28,6 +28,7 @@ class D3DEfitMethods:
         "q0": r"\efit_a_eqdsk:q0",
         "q95": r"\efit_a_eqdsk:q95",
         "qstar": r"\efit_a_eqdsk:qstar",
+        "terror": r"\efit_a_eqdsk:error",
         "upper_gap": r"\efit_a_eqdsk:gaptop",
         "wmhd": r"\efit_a_eqdsk:wmhd",
     }

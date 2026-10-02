@@ -292,6 +292,9 @@ description = "Peaking factor of the electron temperature profile, core vs all c
 units = "dimensionless"
 validity = [0.0, inf]
 
+[d3d.physics.attributes.terror]
+description = "Equilibrium convergence error (EFIT)."
+
 [d3d.physics.attributes.time_until_disrupt]
 description = "Time until the current quench. NaN for non-disruptive discharges."
 units = "s"
