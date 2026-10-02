@@ -21,24 +21,25 @@ class D3DEfitMethods:
     efit_cols = {
         "beta_n": r"\efit_a_eqdsk:betan",
         "beta_p": r"\efit_a_eqdsk:betap",
+        "chisq": r"\efit_a_eqdsk:chisq",
         "kappa": r"\efit_a_eqdsk:kappa",
         "li": r"\efit_a_eqdsk:li",
-        "upper_gap": r"\efit_a_eqdsk:gaptop",
         "lower_gap": r"\efit_a_eqdsk:gapbot",
         "q0": r"\efit_a_eqdsk:q0",
-        "qstar": r"\efit_a_eqdsk:qstar",
         "q95": r"\efit_a_eqdsk:q95",
+        "qstar": r"\efit_a_eqdsk:qstar",
+        "terror": r"\efit_a_eqdsk:error",
+        "upper_gap": r"\efit_a_eqdsk:gaptop",
         "wmhd": r"\efit_a_eqdsk:wmhd",
-        "chisq": r"\efit_a_eqdsk:chisq",
     }
 
     efit_derivs = {"dbetap_dt": "beta_p", "dli_dt": "li", "dwmhd_dt": "wmhd"}
     rt_efit_cols = {
         "beta_p_rt": r"\efit_a_eqdsk:betap",
+        "chisq_rt": r"\efit_a_eqdsk:chisq",
         "li_rt": r"\efit_a_eqdsk:li",
         "q95_rt": r"\efit_a_eqdsk:q95",
         "wmhd_rt": r"\efit_a_eqdsk:wmhd",
-        "chisq_rt": r"\efit_a_eqdsk:chisq",
     }
 
     @staticmethod
