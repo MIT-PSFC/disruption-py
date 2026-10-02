@@ -223,7 +223,9 @@ The command-line arguments, which are subject to change, are documented in the h
 disruption-py --help
 ```
 ```
-usage: disruption-py [-h] [-t TOKAMAK] [-m METHODS] [-e EFIT_TREE] [-b TIME_BASE] [-o OUTPUT] [-p PROCESSES] [-a] [-l LOG_LEVEL] [shots ...]
+usage: disruption-py [-h] [-t TOKAMAK] [-m METHODS] [-e EFIT_TREE] [-b TIME_BASE]
+                          [-o OUTPUT] [-p PROCESSES] [-a] [-l LOG_LEVEL]
+                          [shots ...]
 
 positional arguments:
   shots
