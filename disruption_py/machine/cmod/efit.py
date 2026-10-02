@@ -26,23 +26,23 @@ class CmodEfitMethods:
     """
 
     efit_cols = {
+        "a_minor": r"\efit_aeqdsk:aout/100",
         "beta_p": r"\efit_aeqdsk:betap",
+        "chisq": r"\efit_aeqdsk:tsaisq",
         "kappa": r"\efit_aeqdsk:eout",
         "li": r"\efit_aeqdsk:ali",
-        "upper_gap": r"\efit_aeqdsk:otop/100",
         "lower_gap": r"\efit_aeqdsk:obott/100",
+        "n_over_ncrit": r"-\efit_aeqdsk:xnnc",
         "q0": r"\efit_aeqdsk:qqmagx",
-        "qstar": r"\efit_aeqdsk:qsta",
         "q95": r"\efit_aeqdsk:qpsib",
+        "qstar": r"\efit_aeqdsk:qsta",
+        "rmagx": r"\efit_aeqdsk:rmagx/100",
+        "ssep": r"\efit_aeqdsk:ssep/100",
+        "tribot": r"\efit_aeqdsk:doutl",
+        "tritop": r"\efit_aeqdsk:doutu",
+        "upper_gap": r"\efit_aeqdsk:otop/100",
         "v_loop_efit": r"\efit_aeqdsk:vloopt",
         "wmhd": r"\efit_aeqdsk:wplasm",
-        "ssep": r"\efit_aeqdsk:ssep/100",
-        "n_over_ncrit": r"-\efit_aeqdsk:xnnc",
-        "tritop": r"\efit_aeqdsk:doutu",
-        "tribot": r"\efit_aeqdsk:doutl",
-        "a_minor": r"\efit_aeqdsk:aout/100",
-        "rmagx": r"\efit_aeqdsk:rmagx/100",
-        "chisq": r"\efit_aeqdsk:tsaisq",
     }
 
     efit_derivs = {"dbetap_dt": "beta_p", "dli_dt": "li", "dwmhd_dt": "wmhd"}
