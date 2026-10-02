@@ -12,14 +12,14 @@ import numpy as np
 import xarray as xr
 
 from disruption_py.config import config
-from disruption_py.core.physics_method.errors import CalculationError
+from disruption_py.core.physics_method.errors import CustomError
 from disruption_py.core.physics_method.metadata import (
     BoundMethodMetadata,
     get_method_metadata,
     is_physics_method,
 )
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.core.utils.misc import get_elapsed_time, get_metadata, to_tuple
+from disruption_py.core.utils.misc import get_elapsed_time, to_tuple
 from disruption_py.inout.mds import mdsExceptions
 from disruption_py.machine.method_holders import get_method_holders
 from disruption_py.settings.retrieval_settings import RetrievalSettings
@@ -161,7 +161,7 @@ def populate_method(
     Parameters
     ----------
     physics_method_params : PhysicsMethodParams
-        Parameters containing MDS connection and shot information
+        Parameters containing data connection and shot information
     bound_method_metadata : BoundMethodMetadata
         The metadata for a physics method like the associated tokamak, columns, etc.
 
@@ -186,7 +186,7 @@ def populate_method(
         level = "ERROR"
         if isinstance(e, mdsExceptions.MDSplusERROR):
             pass
-        elif isinstance(e, (mdsExceptions.MdsException, CalculationError)):
+        elif isinstance(e, (mdsExceptions.MdsException, CustomError)):
             level = "WARNING"
         physics_method_params.logger.log(level, "{name}: {exc}", name=name, exc=repr(e))
         physics_method_params.logger.opt(exception=True).debug(name)
@@ -196,7 +196,7 @@ def populate_method(
 
         # reconnect if needed
         if isinstance(e, mdsExceptions.MDSplusERROR):
-            physics_method_params.mds_conn.reconnect()
+            physics_method_params.data_conn.reconnect()
 
     return result
 
@@ -263,16 +263,18 @@ def populate_shot(
                     data[k] = v
                     continue
                 if all(np.isnan(v)):
-                    # pad all-nan var
+                    # all-nan var
                     physics_method_params.logger.debug("All-nan data: {col}", col=k)
-                    data[k] = np.nan * times
-                    continue
-                physics_method_params.logger.error(
-                    "Data length mismatch: {col} {shape} vs times {times}",
-                    col=k,
-                    shape=v.shape,
-                    times=times.shape,
-                )
+                else:
+                    # length mismatch
+                    physics_method_params.logger.error(
+                        "Data length mismatch: {col} {shape} vs times {times}",
+                        col=k,
+                        shape=v.shape,
+                        times=times.shape,
+                    )
+                # pad all-nan var
+                data[k] = np.nan * times
 
             # create dataset
             data_vars = to_tuple(data, dim="idx")
@@ -287,7 +289,6 @@ def populate_shot(
     # set attributes for dataset
     tokamak = physics_method_params.tokamak
     dataset.attrs.update({"tokamak": tokamak.name})
-    dataset.attrs.update(get_metadata())
 
     # set attributes for data vars
     attributes = config(tokamak).get("physics", {}).get("attributes", {})
