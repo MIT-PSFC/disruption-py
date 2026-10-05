@@ -520,11 +520,23 @@ class CmodPhysicsMethods:
         # Set negative p_ohm values to 0
         (indices,) = np.where(p_ohm < 0)
         p_ohm[indices] = 0
-        return {"p_oh": p_ohm, "v_loop": v_loop}
+        # Fix to P_ohm by including the change in Li
+        # Source: Romero, Nucl. Fusion, 2011 Eq. 24
+        # TODO: Add smoothing to inductance immediately after calculation
+        # Use 3 points, which should add < 1 ms delay
+        inductance_smooth = causal_boxcar_smooth(inductance, 3)
+        dinductance = np.gradient(inductance_smooth, efittime)
+        # Factor of 0.5 from taking d/dt (0.5*L*I^2)
+        v_inductive_fix = inductance * dip_smoothed + 0.5*ip*dinductance
+        v_resistive_fix = v_loop - v_inductive_fix
+        p_ohm_fix = ip*v_resistive_fix
+        # Set negative P_ohm_fix values to 0
+        p_ohm_fix[p_ohm_fix < 0] = 0
+        return {"p_oh": p_ohm, "v_loop": v_loop, "p_oh_fix": p_ohm_fix, "v_inductive_fix": v_inductive_fix, "inductance": inductance, "inductance_smooth":inductance_smooth}
 
     @staticmethod
     @physics_method(
-        columns=["p_oh", "v_loop"],
+        columns=["p_oh", "v_loop", "v_inductive_fix", "inductance", "inductance_smooth"],
         tokamak=Tokamak.CMOD,
     )
     def get_ohmic_parameters(params: PhysicsMethodParams):
