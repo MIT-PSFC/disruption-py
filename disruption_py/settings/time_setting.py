@@ -10,12 +10,14 @@ from dataclasses import dataclass
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
+import scipy
 from loguru import logger
 
 from disruption_py.config import config
 from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.misc import shot_msg_patch
-from disruption_py.inout.mds import MDSConnection, mdsExceptions
+from disruption_py.inout.base import DataConnection
+from disruption_py.inout.mds import mdsExceptions
 from disruption_py.inout.sql import ShotDatabase
 from disruption_py.machine.east.util import EastUtilMethods
 from disruption_py.machine.mast.util import MastUtilMethods
@@ -31,8 +33,8 @@ class TimeSettingParams:
     ----------
     shot_id : int
         Shot ID for the timebase being created.
-    mds_conn : MDSConnection
-        Connection to MDSPlus for retrieving MDSPlus data.
+    data_conn : DataConnection
+        Data connection for the shot.
     database : ShotDatabase
         Database object with connection to the SQL database.
     disruption_time : float
@@ -42,7 +44,7 @@ class TimeSettingParams:
     """
 
     shot_id: int
-    mds_conn: MDSConnection
+    data_conn: DataConnection
     database: ShotDatabase
     disruption_time: float
     tokamak: Tokamak
@@ -61,6 +63,18 @@ class TimeSettingParams:
             True if the shot was disrupted, False otherwise.
         """
         return self.disruption_time is not None
+
+    def get_data(self, *args, **kwargs) -> np.ndarray:
+        """Get data using the data connection."""
+        return self.data_conn.get_data(*args, **kwargs)
+
+    def get_data_with_dims(self, *args, **kwargs) -> Tuple:
+        """Get data with dimensions using the data connection."""
+        return self.data_conn.get_data_with_dims(*args, **kwargs)
+
+    def get_dims(self, *args, **kwargs) -> Tuple:
+        """Get dimensions using the data connection."""
+        return self.data_conn.get_dims(*args, **kwargs)
 
 
 TimeSettingType = Union[
@@ -256,16 +270,14 @@ class EfitTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        (efit_time,) = params.mds_conn.get_dims(
-            r"\efit_aeqdsk:ali", tree_name="_efit_tree"
-        )
-        efit_time_unit = params.mds_conn.get_data(
+        (efit_time,) = params.get_dims(r"\efit_aeqdsk:ali", tree_name="_efit_tree")
+        efit_time_unit = params.get_data(
             r"units_of(dim_of(\efit_aeqdsk:ali))", tree_name="_efit_tree"
         )
         if efit_time_unit not in {"s", "ms", "us"}:
             params.logger.verbose(
                 "Failed to get the time units of EFIT tree '{tree}', assuming seconds.",
-                tree=params.mds_conn.get_tree_name_of_nickname("_efit_tree"),
+                tree=params.data_conn.get_tree_name_of_nickname("_efit_tree"),
             )
         return _postprocess(times=efit_time, units=efit_time_unit)
 
@@ -283,7 +295,7 @@ class EfitTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        efit_time = MastUtilMethods.retrieve_efit_time(params.mds_conn, params.shot_id)
+        efit_time = MastUtilMethods.retrieve_efit_time(params.data_conn)
         return efit_time
 
 
@@ -336,9 +348,7 @@ class DisruptionTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        raw_ip, ip_time = params.mds_conn.get_data_with_dims(
-            f"ptdata('ip', {params.shot_id})"
-        )
+        raw_ip, ip_time = params.get_data_with_dims(f"ptdata('ip', {params.shot_id})")
         ip_time = ip_time / 1.0e3
         baseline = np.mean(raw_ip[:10])
         ip = raw_ip - baseline
@@ -358,7 +368,7 @@ class DisruptionTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        ip, ip_time = EastUtilMethods.retrieve_ip(params.mds_conn, params.shot_id)
+        ip, ip_time = EastUtilMethods.retrieve_ip(params.data_conn, params.shot_id)
         return self._calculate_disruption_times(params, ip, ip_time)
 
     def hbtep_times(self, params: TimeSettingParams) -> np.ndarray:
@@ -370,9 +380,7 @@ class DisruptionTimeSetting(TimeSetting):
         This will be replaced once a get_disruption_time method is implemented for HBT-EP
         """
 
-        t_ip = params.mds_conn.get_dims(
-            r"\top.sensors.rogowskis:ip", tree_name="hbtep2"
-        )  # [s]
+        t_ip = params.get_dims(r"\top.sensors.rogowskis:ip", tree_name="hbtep2")  # [s]
         t_ip = t_ip[0]
         t_ip = t_ip[(t_ip >= 0) & (t_ip <= 12e-3)]
         steps = round(10e-6 / (t_ip[1] - t_ip[0]))
@@ -392,7 +400,7 @@ class DisruptionTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        ip, ip_time = MastUtilMethods.retrieve_ip(params.mds_conn, params.shot_id)
+        ip, ip_time = MastUtilMethods.retrieve_ip(params.data_conn)
         return self._calculate_disruption_times(params, ip, ip_time)
 
     @classmethod
@@ -504,7 +512,9 @@ class DisruptionTimeSetting(TimeSetting):
             duration = 0
             return duration, signal_max
         polarity = np.sign(
-            np.trapz(signal[finite_indices], signal_time[finite_indices])
+            scipy.integrate.trapezoid(
+                signal[finite_indices], signal_time[finite_indices]
+            )
         )
         polarized_signal = polarity * signal
         (valid_indices,) = np.where(
@@ -564,7 +574,7 @@ class IpTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        (ip_time,) = params.mds_conn.get_dims(r"\ip", tree_name="magnetics")
+        (ip_time,) = params.get_dims(r"\ip", tree_name="magnetics")
         return ip_time
 
     def d3d_times(self, params: TimeSettingParams) -> np.ndarray:
@@ -581,7 +591,7 @@ class IpTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        (ip_time,) = params.mds_conn.get_dims(f"ptdata('ip', {params.shot_id})")
+        (ip_time,) = params.get_dims(f"ptdata('ip', {params.shot_id})")
         ip_time /= 1e3  # [ms] -> [s]
         return ip_time
 
@@ -599,7 +609,7 @@ class IpTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        (ip_time,) = params.mds_conn.get_dims(r"\pcrl01", tree_name="pcs_east")
+        (ip_time,) = params.get_dims(r"\pcrl01", tree_name="pcs_east")
         # For shots before year 2014, the PCRL01 timebase needs to be shifted
         # by 17.0 ms
         if params.shot_id < 44432:
@@ -620,9 +630,7 @@ class IpTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        (ip_time,) = params.mds_conn.get_dims(
-            r"\top.sensors.rogowskis:ip", tree_name="hbtep2"
-        )
+        (ip_time,) = params.get_dims(r"\top.sensors.rogowskis:ip", tree_name="hbtep2")
         return ip_time
 
     def mast_times(self, params: TimeSettingParams) -> np.ndarray:
@@ -639,7 +647,7 @@ class IpTimeSetting(TimeSetting):
         np.ndarray
             Array of times in the timebase.
         """
-        _, ip_time = MastUtilMethods.retrieve_ip(params.mds_conn, params.shot_id)
+        _, ip_time = MastUtilMethods.retrieve_ip(params.data_conn)
         return ip_time
 
 
@@ -691,16 +699,14 @@ class SignalTimeSetting(TimeSetting):
             Array of times in the timebase.
         """
         try:
-            (signal_time,) = params.mds_conn.get_dims(
-                self.signal_path, tree_name=self.tree_name
-            )
+            (signal_time,) = params.get_dims(self.signal_path, tree_name=self.tree_name)
         except mdsExceptions.MdsException:
             params.logger.error(
                 "Failed to set up timebase for signal {signal_path}",
                 signal_path=self.signal_path,
             )
             raise
-        signal_unit = params.mds_conn.get_data(
+        signal_unit = params.get_data(
             f"units_of(dim_of({self.signal_path}))", tree_name=self.tree_name
         )
         if (

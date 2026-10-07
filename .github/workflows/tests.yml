@@ -17,7 +17,11 @@ jobs:
 
 
   pytest:
-    runs-on: ubuntu-22.04
+    name: >
+      ${{ startsWith(matrix.os, 'macos')
+      && 'pytest (macos)'
+      || format('pytest ({0})', matrix.tokamak) }}
+    runs-on: ${{ matrix.os }}
     if: |
       github.event_name == 'push' ||
       github.event.pull_request.draft == false
@@ -29,10 +33,20 @@ jobs:
           - DIII-D
           - HBT-EP
           - MAST
+        os:
+          - ubuntu-22.04
+          - macos-15-intel
+        exclude:
+          - tokamak: C-MOD
+            os: macos-15-intel
+          - tokamak: DIII-D
+            os: macos-15-intel
+          - tokamak: HBT-EP
+            os: macos-15-intel
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Add MDSplus sources
         if: ${{ matrix.tokamak == 'C-MOD'
@@ -46,7 +60,7 @@ jobs:
         run: |
           curl -fsSL "$GPG" \
           | sudo tee "$KEY"
-          echo "deb [arch=amd64 signed-by=$KEY] $REPO MDSplus alpha" \
+          echo "deb [arch=amd64 signed-by=$KEY] $REPO MDSplus stable" \
           | sudo tee "$APT"
 
       - name: Update sources
@@ -62,7 +76,7 @@ jobs:
         run: |
           sudo apt-get install msodbcsql17 # pre-installed
           sudo apt-get install tdsodbc unixodbc # freetds
-          sudo apt-get install mdsplus-alpha-python # mdsplus
+          sudo apt-get install mdsplus-python # mdsplus
 
       - name: Configure MDSplus
         if: ${{ matrix.tokamak == 'C-MOD'
@@ -147,7 +161,7 @@ jobs:
         run: pipx install poetry
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: 'poetry'

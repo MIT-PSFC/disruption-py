@@ -102,8 +102,6 @@ Depending on the target device, DisruptionPy may need non-Python software to be 
 Please install pre-requisites, namely either MDSplus or SQL drivers, _only if required_.
 For more details, please refer to the Devices section above and our [Installation guide](INSTALL.md).
 
-Note: [MDSplus might not yet support Apple Silicon chips](https://www.mdsplus.org/index.php/Latest_Macintosh_Distributions).
-
 ### Dependencies
 
 DisruptionPy follows best practices for project metadata (eg: [pyproject.toml](https://peps.python.org/pep-0621/) and [dependency groups](https://peps.python.org/pep-0735/)) and can therefore be installed with all its dependencies through any standard Python package manager.
@@ -338,7 +336,7 @@ For a complete list of contributors, please refer to the [Contributors](https://
 
 DisruptionPy can be cited as follows:
 
-- GL Trevisan, _et al._ (2026), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, Journal of Open Source Software, [accepted](https://joss.theoj.org/papers/e98dd4586a1383f120c5005b539ca6f8)
+- GL Trevisan, _et al._ (2026), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, Journal of Open Source Software **11** 119, DOI: [10.21105/joss.09364](https://doi.org/10.21105/joss.09364)
 - GL Trevisan, _et al._ (2024), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, Zenodo, DOI: [10.5281/zenodo.13935223](https://doi.org/10.5281/zenodo.13935223)
 
 A list of works derived from DisruptionPy can be found in [REFERENCES.md](REFERENCES.md).

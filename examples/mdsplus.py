@@ -7,7 +7,7 @@ example module for MDSplus.
 import pytest
 
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
-from disruption_py.workflow import get_mdsplus_class
+from disruption_py.workflow import get_process_connection
 
 
 def main():
@@ -41,7 +41,7 @@ def main():
     else:
         raise ValueError(f"Unspecified or unsupported tokamak: {tokamak}.")
 
-    mds = get_mdsplus_class(tokamak).conn
+    mds = get_process_connection(tokamak).conn
     print(f"Initialized MDSplus: {mds.hostspec}")
 
     mds.openTree(tree, shot)
