@@ -237,7 +237,7 @@ def get_shots_data(
     output = output_setting.to_disk()
 
     if artifacts:
-        return json.dumps(
+        return results, json.dumps(
             {
                 "config": json_file_path,
                 "folder": get_temporary_folder(),
@@ -350,8 +350,15 @@ def cli():
         "-l", "--log-level", type=str, default=config().log.console_level
     )
 
-    out = run(**vars(parser.parse_args()))
-    print(out)
+    args = vars(parser.parse_args())
+    out = run(**args)
+
+    if args["artifacts"]:
+        out, artifacts = out
+        print(artifacts)
+    else:
+        print(out)
+
     return 2 if out is None else len(out) == 0
 
 
