@@ -75,8 +75,8 @@ class D3DEfitMethods:
         # The EFIT chi squared value, 'chisq', is also worthy of an investigation.
 
         (invalid_indices,) = np.where(efit_data["terror"] > 0.01)
-        params.logger.verbose(
-            "Removing {invalid:,} out of {total:,} time slices. Valid slices are {percent:.1f}%.",
+        params.logger.debug(
+            "Removing {invalid:,} out of {total:,} time slices, valid slices are {percent:.1f}%.",
             invalid=len(invalid_indices),
             total=len(efit_time),
             percent=100 * (len(efit_time) - len(invalid_indices)) / len(efit_time),
