@@ -120,6 +120,7 @@ def get_shots_data(
     -------
     Any
         The value of OutputSetting.get_results. See OutputSetting for more details.
+        If `artifacts` is True, returns a tuple of the results and the artifacts in JSON.
     """
 
     log_settings = resolve_log_settings(log_settings)
