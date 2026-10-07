@@ -27,10 +27,9 @@ IGNORE="${BASH_SOURCE[0]%.sh}.ignore"
 
 TMPD="${LOCALSCRATCH:-/tmp}/$USER/disruption-py/.$(date +%F)"
 mkdir -p "$TMPD" || exit 10
-TMPF=$(mktemp -p "$TMPD" "errors-$(date +%s)-XXX")
-TMPS=$TMPF.stats
-TMPE=$TMPF.errs
-TMPL=$TMPF.shots
+TMPS=$(mktemp -p "$TMPD" "errors-$(date +%s)-XXX.stats")
+TMPE=${TMPS%.stats}.errs
+TMPL=${TMPS%.stats}.shots
 
 if [[ $# -eq 1 ]] && [[ -f "$1" ]] && [[ "$1" =~ \.log$ ]]
 then
