@@ -292,10 +292,6 @@ description = "Peaking factor of the electron temperature profile, core vs all c
 units = "dimensionless"
 validity = [0.0, inf]
 
-[d3d.physics.attributes.time_until_disrupt]
-description = "Time until the current quench. NaN for non-disruptive discharges."
-units = "s"
-
 [d3d.physics.attributes.upper_gap]
 description = "Top gap between x-point and wall (EFIT)."
 imas = "/equilibrium/time_slice(itime)/boundary/gap(i1)/value"
@@ -438,7 +434,6 @@ test_columns = [
   "squareness",
   "te_peaking_cva_rt",
   "time",
-  "time_until_disrupt",
   "upper_gap",
   "v_loop",
   "wmhd",
