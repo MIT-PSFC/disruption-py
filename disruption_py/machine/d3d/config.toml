@@ -296,6 +296,7 @@ validity = [0.0, inf]
 description = "Equilibrium convergence error (EFIT)."
 imas = "/equilibrium/time_slice(itime)/convergence/grad_shafranov_deviation_expression"
 units = "dimensionless"
+validity = [0.0, 0.01]
 
 [d3d.physics.attributes.time_until_disrupt]
 description = "Time until the current quench. NaN for non-disruptive discharges."
