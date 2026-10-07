@@ -11,7 +11,7 @@ import sys
 import time
 from itertools import repeat
 from multiprocessing import Pool
-from typing import Any, Callable
+from typing import Any, Callable, Dict, Tuple
 
 from loguru import logger
 from tqdm.auto import tqdm
@@ -82,7 +82,7 @@ def get_shots_data(
     num_processes: int = 1,
     log_settings: LogSettings = None,
     artifacts: bool = False,
-) -> Any:
+) -> Any | Tuple[Any, Dict]:
     """
     Get shot data for all shots specified by shotlist_setting.
 
@@ -114,13 +114,13 @@ def get_shots_data(
     log_settings : LogSettings, optional
         Settings for logging.
     artifacts : bool, optional
-        Whether to output salient artifacts in JSON format. Defaults to False.
+        Whether to output salient artifacts in a dictionary. Defaults to False.
 
     Returns
     -------
-    Any
+    Any | Tuple[Any, Dict]
         The value of OutputSetting.get_results. See OutputSetting for more details.
-        If `artifacts` is True, returns a tuple of the results and the artifacts in JSON.
+        If `artifacts` is True, returns a tuple of the results and the artifacts dictionary.
     """
 
     log_settings = resolve_log_settings(log_settings)
@@ -238,14 +238,12 @@ def get_shots_data(
     output = output_setting.to_disk()
 
     if artifacts:
-        return results, json.dumps(
-            {
-                "config": json_file_path,
-                "folder": get_temporary_folder(),
-                "log": log_settings.file_path,
-                "output": output,
-            }
-        )
+        return results, {
+            "config": json_file_path,
+            "folder": get_temporary_folder(),
+            "log": log_settings.file_path,
+            "output": output,
+        }
 
     return results
 
@@ -356,7 +354,7 @@ def cli():
 
     if args["artifacts"]:
         out, artifacts = out
-        print(artifacts)
+        print(json.dumps(artifacts))
     else:
         print(out)
 
