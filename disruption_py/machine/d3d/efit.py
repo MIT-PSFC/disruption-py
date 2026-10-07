@@ -69,12 +69,18 @@ class D3DEfitMethods:
             params.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree") / 1.0e3
         )  # [ms] -> [s]
 
-        # EFIT reconstructions are sometimes invalid, particularly when very close
-        # to a disruption.  There are a number of EFIT parameters that can indicate
-        # invalid reconstructions, such as 'terror' and 'chisq'.  Here we use
-        # 'chisq' to determine which time slices should be excluded from our
-        # disruption warning database.
-        invalid_indices = np.where(efit_data["chisq"] > 50)
+        # EFIT reconstructions should be not trusted without further checks.
+        # Here we fully discard any EFIT-derived quantity if the reconstruction
+        # convergence residual error, 'terror', is over a threshold of 0.01.
+        # The EFIT chi squared value, 'chisq', is also worthy of an investigation.
+
+        (invalid_indices,) = np.where(efit_data["terror"] > 0.01)
+        params.logger.verbose(
+            "Removing {invalid:,} out of {total:,} time slices. Valid slices are {percent:.1f}%.",
+            invalid=len(invalid_indices),
+            total=len(efit_time),
+            percent=100 * (len(efit_time) - len(invalid_indices)) / len(efit_time),
+        )
 
         for param in efit_data:
             efit_data[param][invalid_indices] = np.nan
