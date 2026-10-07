@@ -11,7 +11,7 @@ import sys
 import time
 from itertools import repeat
 from multiprocessing import Pool
-from typing import Any, Callable
+from typing import Any, Callable, Dict, Tuple
 
 from loguru import logger
 from tqdm.auto import tqdm
@@ -81,7 +81,8 @@ def get_shots_data(
     output_setting: OutputSetting = "dataset",
     num_processes: int = 1,
     log_settings: LogSettings = None,
-) -> Any:
+    artifacts: bool = False,
+) -> Any | Tuple[Any, Dict]:
     """
     Get shot data for all shots specified by shotlist_setting.
 
@@ -112,12 +113,16 @@ def get_shots_data(
         in serial. If > 1, the data is retrieved in parallel.
     log_settings : LogSettings, optional
         Settings for logging.
+    artifacts : bool, optional
+        Whether to output salient artifacts in a dictionary. Defaults to False.
 
     Returns
     -------
-    Any
+    Any | Tuple[Any, Dict]
         The value of OutputSetting.get_results. See OutputSetting for more details.
+        If `artifacts` is True, returns a tuple of the results and the artifacts dictionary.
     """
+
     log_settings = resolve_log_settings(log_settings)
     log_settings.setup_logging()
 
@@ -230,7 +235,16 @@ def get_shots_data(
         *get_rss(),
     )
 
-    output_setting.to_disk()
+    output = output_setting.to_disk()
+
+    if artifacts:
+        return results, {
+            "config": json_file_path,
+            "folder": get_temporary_folder(),
+            "log": log_settings.file_path,
+            "output": output,
+        }
+
     return results
 
 
@@ -280,7 +294,17 @@ def _get_connection_instance(tokamak, connection_initializer):
     return get_process_connection(tokamak)
 
 
-def run(tokamak, methods, shots, efit_tree, time_base, output, processes, log_level):
+def run(
+    tokamak,
+    methods,
+    shots,
+    efit_tree,
+    time_base,
+    output,
+    processes,
+    log_level,
+    artifacts,
+):
     """
     simple workflow.
     """
@@ -302,6 +326,7 @@ def run(tokamak, methods, shots, efit_tree, time_base, output, processes, log_le
         num_processes=processes,
         log_settings=log_level,
         output_setting=output,
+        artifacts=artifacts,
     )
 
 
@@ -319,12 +344,20 @@ def cli():
     parser.add_argument("-b", "--time-base", type=str, default="disruption_warning")
     parser.add_argument("-o", "--output", type=str, default="dataset")
     parser.add_argument("-p", "--processes", type=int, default=1)
+    parser.add_argument("-a", "--artifacts", action="store_const", const=1, default=0)
     parser.add_argument(
         "-l", "--log-level", type=str, default=config().log.console_level
     )
 
-    out = run(**vars(parser.parse_args()))
-    print(out)
+    args = vars(parser.parse_args())
+    out = run(**args)
+
+    if args["artifacts"]:
+        out, artifacts = out
+        print(json.dumps(artifacts))
+    else:
+        print(out)
+
     return 2 if out is None else len(out) == 0
 
 
