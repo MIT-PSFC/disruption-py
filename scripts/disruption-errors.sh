@@ -27,32 +27,23 @@ IGNORE="${BASH_SOURCE[0]%.sh}.ignore"
 
 TMPD="${LOCALSCRATCH:-/tmp}/$USER/disruption-py/.$(date +%F)"
 mkdir -p "$TMPD" || exit 10
-TMPF=$(mktemp -p "$TMPD" "errors-$(date +%s)-XXX.log")
-TMPS=${TMPF%.log}.stats
-TMPE=${TMPF%.log}.errs
-TMPL=${TMPF%.log}.shots
+TMPF=$(mktemp -p "$TMPD" "errors-$(date +%s)-XXX")
+TMPS=$TMPF.stats
+TMPE=$TMPF.errs
+TMPL=$TMPF.shots
 
 if [[ $# -eq 1 ]] && [[ -f "$1" ]] && [[ "$1" =~ \.log$ ]]
 then
-
-   LOG=$1
-
+   LOG=$(realpath "$1")
 else
-
-   uv run disruption-py -l info "$@" \
-   | grep -e ERROR -e CRITICAL -e 'INFO.*workflow' -e 'INFO.*Logging' \
-   | grep -vFf "$IGNORE" \
-   | tee "$TMPF"
-
-   LOG=$(grep -o 'Logging:.*\.log' "$TMPF" | cut -d' ' -f2)
-
+   LOG=$(uv run disruption-py -a -l info "$@" | jq -r .log)
 fi
 
 [[ -n "$LOG" ]] || exit 11
 [[ -s "$LOG" ]] || exit 12
 
 echo -e "\033[36m"
-realpath -m "$LOG" "$TMPF" "$TMPE" "$TMPS" "$TMPL"
+realpath -m "$LOG" "$TMPE" "$TMPS" "$TMPL"
 
 echo -e "\033[31m"
 grep -e ERROR -e CRITICAL "$LOG" \
