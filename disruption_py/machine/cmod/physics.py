@@ -670,6 +670,12 @@ class CmodPhysicsMethods:
         rad_fraction = p_rad / p_input
         rad_fraction[rad_fraction == np.inf] = np.nan
 
+        # Negative energy and injected or radiated power values are nonphysical.
+        p_rad[p_rad < 0] = np.nan
+        p_icrf[p_icrf < 0] = np.nan
+        rad_fraction[rad_fraction < 0] = np.nan
+        wmhd[wmhd < 0] = np.nan
+
         # Calculate radiation confinement time
         wmhd = interp1(efit_time, wmhd, times)
         tau_rad = wmhd / np.where(p_rad != 0, p_rad, np.nan)
@@ -2078,6 +2084,7 @@ class CmodPhysicsMethods:
 
         # Interpolate beta_n to params.times
         beta_n = interp1(efittime, beta_n, params.times)
+        beta_n[beta_n < 0] = np.nan
 
         return {"beta_n": beta_n}
 
