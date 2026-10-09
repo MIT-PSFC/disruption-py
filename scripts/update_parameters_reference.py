@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parent.parent
 MACHINE_DIR = ROOT / "disruption_py" / "machine"
 DOC = ROOT / "docs" / "usage" / "physics_methods" / "disruption_parameters_reference.md"
 
-# display names for each machine directory; generic configs use the `default` key
+# Optional display names per machine directory (default: dir name)
 NAMES = {
     "cmod": "C-Mod",
     "d3d": "DIII-D",
@@ -77,7 +77,10 @@ def main():
             attributes = cfg.get("physics", {}).get("attributes")
             if not attributes:
                 continue
-            name = NAMES.get(machine_dir.name, machine_dir.name)
+            name = NAMES.get(machine_dir.name)
+            if name is None:
+                name = machine_dir.name
+                print(f"Note: '{machine_dir.name}' not in NAMES, using '{name}'")
             title = f"{name} Disruption Parameter Descriptions"
             sections[title] = make_section(title, attributes)
             print(f"{machine_dir.name}: {len(attributes)} parameters")
