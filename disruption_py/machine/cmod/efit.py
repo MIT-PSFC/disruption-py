@@ -95,6 +95,10 @@ class CmodEfitMethods:
             for param in efit_data:
                 efit_data[param] = interp1(efit_time, efit_data[param], params.times)
 
+        # Beta, elongation, and stored thermal energy cannot be negative.
+        for param in ("beta_p", "kappa", "wmhd"):
+            efit_data[param][efit_data[param] < 0] = np.nan
+
         return efit_data
 
     @staticmethod
