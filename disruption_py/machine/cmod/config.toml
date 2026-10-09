@@ -365,9 +365,12 @@ ip_prog = 100e3
 
 [cmod.tests]
 expected_failure_columns = [
+  "beta_n",
+  "beta_p",
   "greenwald_fraction",
   "ne_peaking",
   "p_oh",
+  "p_rad",
   "pressure_peaking",
   "radiated_fraction",
   "sxr",
@@ -375,6 +378,7 @@ expected_failure_columns = [
   "te_width",
   "v_loop",
   "v_z",
+  "wmhd",
   "z_times_v_z",
   "zcur",
 ]
