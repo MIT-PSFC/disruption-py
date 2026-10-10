@@ -32,7 +32,11 @@ from disruption_py.inout.sql import ShotDatabase
 from disruption_py.inout.xr import ProcessXarrayConnection
 from disruption_py.machine.tokamak import Tokamak, resolve_tokamak_from_environment
 from disruption_py.settings import RetrievalSettings
-from disruption_py.settings.log_settings import LogSettings, resolve_log_settings
+from disruption_py.settings.log_settings import (
+    ConsoleRelay,
+    LogSettings,
+    resolve_log_settings,
+)
 from disruption_py.settings.output_setting import (
     OutputSetting,
     OutputSettingParams,
@@ -69,7 +73,12 @@ def _execute_retrieval(args):
         process_database=process_database,
         process_data_conn=process_data_conn,
     )
-    return shot_id, retrieval_manager.get_shot_data(shot_id, retrieval_settings)
+    try:
+        return shot_id, retrieval_manager.get_shot_data(shot_id, retrieval_settings)
+    finally:
+        # flush the queued sinks: the pool terminates workers on exit and
+        # would drop whatever the writer thread had not written yet
+        logger.complete()
 
 
 def get_shots_data(
@@ -177,10 +186,14 @@ def get_shots_data(
     logger.debug("Starting workflow: RSS = {:,.1f} MB, MaxRSS = {:,.1f} MB", *get_rss())
     took = -time.time()
     retrieval_settings.efit_nickname_setting.prefetch_db(database, tokamak)
-    with Pool(
-        processes=num_processes,
-        initializer=log_settings.reset_handlers,
-    ) as pool:
+    with (
+        ConsoleRelay() as relay,
+        Pool(
+            processes=num_processes,
+            initializer=log_settings.reset_handlers,
+            initargs=(relay.queue,),
+        ) as pool,
+    ):
         args = zip(
             repeat(tokamak),
             repeat(database_initializer),
@@ -191,7 +204,10 @@ def get_shots_data(
         num_success = 0
 
         for shot_id, shot_data in tqdm(
-            pool.imap(_execute_retrieval, args), total=len(shotlist_list), leave=False
+            pool.imap(_execute_retrieval, args),
+            total=len(shotlist_list),
+            leave=False,
+            disable=None,  # no bar when the output is not a terminal
         ):
             if shot_data is not None:
                 num_success += 1
