@@ -915,8 +915,8 @@ class CmodPhysicsMethods:
         -------
         - original source: [get_n_equal_1_amplitude.m](https://github.com/MIT-PSFC/disruption-py/
         blob/matlab/CMOD/matlab-core/get_n_equal_1_amplitude.m)
-        - pull requests: #[460](https://github.com/MIT-PSFC/disruption-py/pull/460), #[562](https:
-        //github.com/MIT-PSFC/disruption-py/pull/562)
+        - pull requests: #[460](https://github.com/MIT-PSFC/disruption-py/pull/460),
+          #[562](https://github.com/MIT-PSFC/disruption-py/pull/562)
         - issues: #[211](https://github.com/MIT-PSFC/disruption-py/issues/211)
         """
         # These sensors are placed toroidally around the machine. Letters refer to
