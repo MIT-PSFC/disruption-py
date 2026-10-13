@@ -2020,6 +2020,7 @@ class CmodPhysicsMethods:
             tree_name="xtomo",
         )  # [W/m^2], [s]
         sxr = interp1(t_sxr, sxr, params.times)
+        sxr[sxr < 0] = np.nan
         return {"sxr": sxr}
 
     @staticmethod
