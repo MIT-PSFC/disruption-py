@@ -96,7 +96,19 @@ class CmodEfitMethods:
                 efit_data[param] = interp1(efit_time, efit_data[param], params.times)
 
         # The following columns cannot be negative:
-        for col in ("a_minor", "beta_p", "rmagx", "kappa", "wmhd", "chisq", "q0", "qstar", "q95"):
+        non_negative_columns = (
+            "a_minor",
+            "beta_p",
+            "rmagx",
+            "kappa",
+            "wmhd",
+            "chisq",
+            "q0",
+            "qstar",
+            "q95",
+        )
+
+        for col in non_negative_columns:
             efit_data[col][efit_data[col] < 0] = np.nan
 
         return efit_data
