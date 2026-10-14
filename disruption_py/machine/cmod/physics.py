@@ -665,22 +665,21 @@ class CmodPhysicsMethods:
         # Replace nans with zeros in p_ohm
         np.nan_to_num(p_ohm, copy=False, nan=0.0)
 
+        # Negative energy and injected or radiated power values are nonphysical.
+        p_ohm[p_ohm < 0] = 0.0  # See _get_ohmic_parameters and (#416).
+        p_lh[p_lh < 0] = np.nan
+        p_icrf[p_icrf < 0] = np.nan
+        p_rad[p_rad < 0] = np.nan
+        wmhd[wmhd < 0] = np.nan
+
         # Calculate radiated fraction
         p_input = p_ohm + p_lh + p_icrf
         rad_fraction = p_rad / p_input
         rad_fraction[rad_fraction == np.inf] = np.nan
 
-        # Negative energy and injected or radiated power values are nonphysical.
-        p_input[p_input < 0] = np.nan
-        p_rad[p_rad < 0] = np.nan
-        p_icrf[p_icrf < 0] = np.nan
-        rad_fraction[rad_fraction < 0] = np.nan
-        wmhd[wmhd < 0] = np.nan
-
         # Calculate radiation confinement time
         wmhd = interp1(efit_time, wmhd, times)
         tau_rad = wmhd / np.where(p_rad != 0, p_rad, np.nan)
-        tau_rad[tau_rad < 0] = np.nan
         return {
             "p_rad": p_rad,
             "dprad_dt": dprad,
