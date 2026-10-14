@@ -14,6 +14,7 @@ port = 1433
 description = "Minor radius (EFIT)."
 imas = "/equilibrium/time_slice(itime)/boundary/minor_radius"
 units = "m"
+validity = [0.1, 0.3]
 
 [cmod.physics.attributes.beta_n]
 description = "Normalized plasma beta computed from EFIT."
@@ -174,6 +175,7 @@ validity = [0.0, inf]
 [cmod.physics.attributes.p_input]
 description = "Total input power (ohmic + LH + ICRF)."
 units = "W"
+validity = [0.0, inf]
 
 [cmod.physics.attributes.p_lh]
 description = "Total lower hybrid heating power."
@@ -227,6 +229,7 @@ validity = [0.0, 15.0]
 description = "Major radius of magnetic axis (EFIT)."
 imas = "/equilibrium/time_slice(itime)/global_quantities/magnetic_axis/r"
 units = "m"
+validity = [0.6, 0.8]
 
 [cmod.physics.attributes.ssep]
 description = "Outboard radial distance to external second separatrix for single null configurations. Positive for single top-null and negative for single bottom-null. Near-zero for double-null (EFIT)."
@@ -237,10 +240,12 @@ validity = [-1.0, 1.0]
 description = "Core soft X-ray measurement."
 imas = "/soft_x_rays/channel(i1)/power"
 units = "W"
+validity = [0.0, inf]
 
 [cmod.physics.attributes.tau_rad]
 description = "Radiative cooling time-scale."
 units = "s"
+validity = [0.0, inf]
 
 [cmod.physics.attributes.te_core_vs_avg_ece]
 description = "Core-vs-average peaking factor of the electron temperature profile from the electron cyclotron emission (ECE) data."
