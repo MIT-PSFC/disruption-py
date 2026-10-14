@@ -99,13 +99,13 @@ class CmodEfitMethods:
         non_negative_columns = [
             "a_minor",
             "beta_p",
-            "rmagx",
-            "kappa",
-            "wmhd",
             "chisq",
+            "kappa",
             "q0",
             "qstar",
             "q95",
+            "rmagx",
+            "wmhd",
         ]
 
         for col in non_negative_columns:
