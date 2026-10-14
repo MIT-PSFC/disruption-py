@@ -671,6 +671,7 @@ class CmodPhysicsMethods:
         rad_fraction[rad_fraction == np.inf] = np.nan
 
         # Negative energy and injected or radiated power values are nonphysical.
+        p_input[p_input < 0] = np.nan
         p_rad[p_rad < 0] = np.nan
         p_icrf[p_icrf < 0] = np.nan
         rad_fraction[rad_fraction < 0] = np.nan
