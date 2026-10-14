@@ -915,8 +915,8 @@ class CmodPhysicsMethods:
         -------
         - original source: [get_n_equal_1_amplitude.m](https://github.com/MIT-PSFC/disruption-py/
         blob/matlab/CMOD/matlab-core/get_n_equal_1_amplitude.m)
-        - pull requests: #[460](https://github.com/MIT-PSFC/disruption-py/pull/460), #[562](https:
-        //github.com/MIT-PSFC/disruption-py/pull/562)
+        - pull requests: #[460](https://github.com/MIT-PSFC/disruption-py/pull/460),
+          #[562](https://github.com/MIT-PSFC/disruption-py/pull/562)
         - issues: #[211](https://github.com/MIT-PSFC/disruption-py/issues/211)
         """
         # These sensors are placed toroidally around the machine. Letters refer to
@@ -1054,12 +1054,12 @@ class CmodPhysicsMethods:
         dn_dt = np.gradient(n_e, t_n)
         n_e = interp1(t_n, n_e, times)
         dn_dt = interp1(t_n, dn_dt, times)
-        ip = -ip / 1e6  # Convert from A to MA and take positive value
+        ip = abs(ip) / 1e6  # Convert from A to MA and take positive value
         ip = interp1(t_ip, ip, times)
         a_minor = interp1(t_a, a_minor, times, bounds_error=False, fill_value=np.nan)
         # make sure aminor is not 0 or less than 0
         a_minor[a_minor <= 0] = 0.001
-        n_g = abs(ip) / (np.pi * a_minor**2) * 1e20  # Greenwald density in m ^-3
+        n_g = ip / (np.pi * a_minor**2) * 1e20  # Greenwald density in m ^-3
         g_f = n_e / n_g
         return {"n_e": n_e, "dn_dt": dn_dt, "greenwald_fraction": g_f}
 
