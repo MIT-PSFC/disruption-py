@@ -344,10 +344,10 @@ def cli():
     parser.add_argument("-b", "--time-base", type=str, default="disruption_warning")
     parser.add_argument("-o", "--output", type=str, default="dataset")
     parser.add_argument("-p", "--processes", type=int, default=1)
-    parser.add_argument("-a", "--artifacts", action="store_const", const=1, default=0)
     parser.add_argument(
         "-l", "--log-level", type=str, default=config().log.console_level
     )
+    parser.add_argument("-a", "--artifacts", action="store_true")
 
     args = vars(parser.parse_args())
     out = run(**args)

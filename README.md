@@ -238,8 +238,8 @@ options:
   -b, --time-base TIME_BASE
   -o, --output OUTPUT
   -p, --processes PROCESSES
-  -a, --artifacts
   -l, --log-level LOG_LEVEL
+  -a, --artifacts
 ```
 
 A parameter-less command-line invocation allows to compute all physics methods for a given device on a few prototypical shots.
