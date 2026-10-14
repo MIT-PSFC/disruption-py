@@ -268,10 +268,6 @@ description = "Time of the disruptive thermal quench onset. NaN for non-disrupti
 units = "s"
 validity = [0.0, 3.0]
 
-[cmod.physics.attributes.time_until_disrupt]
-description = "Time until the current quench. NaN for non-disruptive discharges."
-units = "s"
-
 [cmod.physics.attributes.tribot]
 description = "Bottom triangularity (EFIT)."
 imas = "/equilibrium/time_slice(itime)/boundary/triangularity_lower"
@@ -416,7 +412,6 @@ test_columns = [
   "te_peaking",
   "te_width",
   "time",
-  "time_until_disrupt",
   "upper_gap",
   "v_loop",
   "v_loop_efit",
