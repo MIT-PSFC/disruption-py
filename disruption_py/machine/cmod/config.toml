@@ -14,7 +14,7 @@ port = 1433
 description = "Minor radius (EFIT)."
 imas = "/equilibrium/time_slice(itime)/boundary/minor_radius"
 units = "m"
-validity = [0.1, 0.3]
+validity = [0.0, inf]
 
 [cmod.physics.attributes.beta_n]
 description = "Normalized plasma beta computed from EFIT."
