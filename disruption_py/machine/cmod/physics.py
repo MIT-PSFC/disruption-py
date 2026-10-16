@@ -628,10 +628,10 @@ class CmodPhysicsMethods:
             A dictionary containing the calculated power values, including
             "p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", "radiated_fraction", and "tau_rad".
 
-        Last major update by William Wei on 1/6/2025
         References
         ----------
-        - https://github.com/MIT-PSFC/disruption-py/pull/367
+        - pull requests [#367](https://github.com/MIT-PSFC/disruption-py/pull/367),
+          [#610](https://github.com/MIT-PSFC/disruption-py/pull/610)
 
         """
         if p_lh is not None and isinstance(t_lh, np.ndarray) and len(t_lh) > 1:
@@ -2066,7 +2066,7 @@ class CmodPhysicsMethods:
 
         References
         ----------
-        - pull request: #[343](https://github.com/MIT-PSFC/disruption-py/pull/343)
+        - pull requests: #[343](https://github.com/MIT-PSFC/disruption-py/pull/343)
 
         """
         # Get signals from EFIT tree

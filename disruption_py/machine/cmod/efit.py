@@ -68,6 +68,10 @@ class CmodEfitMethods:
         -------
         dict
             A dictionary containing the retrieved EFIT parameters.
+        
+        References
+        ----------
+        - pull requests: #[610](https://github.com/MIT-PSFC/disruption-py/pull/610)
         """
         efit_time = params.get_data(r"\efit_aeqdsk:time", tree_name="_efit_tree")  # [s]
         efit_data = {}
