@@ -665,8 +665,9 @@ class CmodPhysicsMethods:
         # Replace nans with zeros in p_ohm
         np.nan_to_num(p_ohm, copy=False, nan=0.0)
 
-        # Negative energy and injected or radiated power values are nonphysical.
-        p_ohm[p_ohm < 0] = 0.0  # See _get_ohmic_parameters and (#416).
+        # Negative energy and injected or radiated power values are nonphysical
+        # Negative Ohmic power values are set to 0
+        # See _get_ohmic_parameters and (https://github.com/MIT-PSFC/disruption-py/pull/416)
         p_lh[p_lh < 0] = np.nan
         p_icrf[p_icrf < 0] = np.nan
         p_rad[p_rad < 0] = np.nan

@@ -68,7 +68,7 @@ class CmodEfitMethods:
         -------
         dict
             A dictionary containing the retrieved EFIT parameters.
-        
+
         References
         ----------
         - pull requests: #[610](https://github.com/MIT-PSFC/disruption-py/pull/610)
@@ -99,7 +99,7 @@ class CmodEfitMethods:
             for param in efit_data:
                 efit_data[param] = interp1(efit_time, efit_data[param], params.times)
 
-        # The following columns cannot be negative:
+        # The following columns cannot be negative
         non_negative_columns = [
             "a_minor",
             "beta_p",
