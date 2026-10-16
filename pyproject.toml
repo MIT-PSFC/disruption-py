@@ -8,7 +8,7 @@ dev = [
   "mdsthin>=1.5.0",
   "pylint>=3.3.0",
   "pytest>=8.3.0",
-  "ruff>=0.9.0",
+  "ruff>=0.9.0,<0.16.0",
   "toml-sort>=0.24.0",
   "yamllint>=1.36.0",
 ]
@@ -28,9 +28,9 @@ lab = [
 
 [project]
 authors = [
-  {name = "Gregorio L. Trevisan", email = "gtrevisan@psfc.mit.edu"},
-  {name = "Cristina Rea", email = "crea@psfc.mit.edu"},
-  {name = "MIT PSFC Disruption Studies Group", email = "disruption-py@lists.psfc.mit.edu"},
+  { name = "Gregorio L. Trevisan", email = "gtrevisan@psfc.mit.edu" },
+  { name = "Cristina Rea", email = "crea@psfc.mit.edu" },
+  { name = "MIT PSFC Disruption Studies Group", email = "disruption-py@lists.psfc.mit.edu" },
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -50,10 +50,11 @@ dependencies = [
   "fsspec[s3]>=2025.9.0",
   "loguru>=0.7.0",
   "netcdf4>=1.7.0",
-  "numpy>=1.26.0,<2.0.0",
+  "numpy>=1.26.0",
   "pandas[parquet]>=2.2.0",
   "pyodbc>=5.2.0",
-  "scipy>=1.15.0",
+  "scipy>=1.15.0,<1.18.0",
+  "shellcheck-py>=0.10.0",
   "SQLAlchemy>=2.0.0",
   "tqdm>=4.67.0",
   "xarray>=2025.1.0",
@@ -68,12 +69,12 @@ keywords = [
 ]
 license = "MIT"
 maintainers = [
-  {name = "Gregorio L. Trevisan", email = "gtrevisan@psfc.mit.edu"},
+  { name = "Gregorio L. Trevisan", email = "gtrevisan@psfc.mit.edu" },
 ]
 name = "disruption-py"
 readme = "README.md"
-requires-python = ">=3.11,<3.14"
-version = "0.14.0"
+requires-python = ">=3.12,<3.14"
+version = "0.15.0.dev0"
 
 [project.scripts]
 disruption-py = "disruption_py.workflow:cli"
@@ -111,9 +112,9 @@ min-similarity-lines = 5
 [tool.tomlsort]
 ignore_case = true
 in_place = true
+overrides."*.physics.attributes.*.validity".inline_arrays = false
 sort_table_keys = true
 trailing_comma_inline_array = true
-overrides."*.physics.attributes.*.validity".inline_arrays = false
 
 [tool.uv]
 default-groups = []

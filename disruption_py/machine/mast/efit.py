@@ -6,7 +6,6 @@ Module for retrieving and processing EFIT parameters for MAST.
 
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
-from disruption_py.inout.xr import XarrayConnection
 from disruption_py.machine.mast.util import MastUtilMethods
 from disruption_py.machine.tokamak import Tokamak
 
@@ -30,6 +29,7 @@ class MastEfitMethods:
         "rmagz": "magnetic_axis_z",
         "tribot": "triangularity_lower",
         "tritop": "triangularity_upper",
+        "volume": "volume",
         "v_loop_dynamic": "vloop_dynamic",
         "v_loop_static": "vloop_static",
         "wmhd": "wmhd",
@@ -49,16 +49,16 @@ class MastEfitMethods:
         Returns
         -------
         dict
-            A dictionary containing the retrieved EFIT parameters.
+            A dictionary containing the retrieved EFIT parameters. Properties whose
+            underlying signal is missing for this shot are returned as NaN rather
+            than dropping the whole equilibrium reconstruction.
         """
-        conn: XarrayConnection = params.mds_conn
-        eq_time = conn.get_data(params.shot_id, "equilibrium/time")
         times = params.times
+        eq_time = params.get_data("equilibrium/time", required=True)
 
         outputs = {}
         for key, prop in MastEfitMethods.efit_properties.items():
-            signal = conn.get_data(params.shot_id, f"equilibrium/{prop}")
-            item = MastUtilMethods.interpolate_1d(eq_time, signal, times)
-            outputs[key] = item
+            signal = params.get_data(f"equilibrium/{prop}")
+            outputs[key] = MastUtilMethods.interpolate_1d(eq_time, signal, times)
 
         return outputs
