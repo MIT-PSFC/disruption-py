@@ -628,10 +628,10 @@ class CmodPhysicsMethods:
             A dictionary containing the calculated power values, including
             "p_rad", "dprad_dt", "p_lh", "p_icrf", "p_input", "radiated_fraction", and "tau_rad".
 
-        Last major update by William Wei on 1/6/2025
         References
         ----------
-        - https://github.com/MIT-PSFC/disruption-py/pull/367
+        - pull requests [#367](https://github.com/MIT-PSFC/disruption-py/pull/367),
+          [#610](https://github.com/MIT-PSFC/disruption-py/pull/610)
 
         """
         if p_lh is not None and isinstance(t_lh, np.ndarray) and len(t_lh) > 1:
@@ -664,6 +664,14 @@ class CmodPhysicsMethods:
 
         # Replace nans with zeros in p_ohm
         np.nan_to_num(p_ohm, copy=False, nan=0.0)
+
+        # Negative energy and injected or radiated power values are nonphysical
+        # Negative Ohmic power values are set to 0
+        # See _get_ohmic_parameters and (https://github.com/MIT-PSFC/disruption-py/pull/416)
+        p_lh[p_lh < 0] = np.nan
+        p_icrf[p_icrf < 0] = np.nan
+        p_rad[p_rad < 0] = np.nan
+        wmhd[wmhd < 0] = np.nan
 
         # Calculate radiated fraction
         p_input = p_ohm + p_lh + p_icrf
@@ -2014,6 +2022,7 @@ class CmodPhysicsMethods:
             tree_name="xtomo",
         )  # [W/m^2], [s]
         sxr = interp1(t_sxr, sxr, params.times)
+        sxr[sxr < 0] = np.nan
         return {"sxr": sxr}
 
     @staticmethod
@@ -2058,7 +2067,7 @@ class CmodPhysicsMethods:
 
         References
         ----------
-        - pull request: #[343](https://github.com/MIT-PSFC/disruption-py/pull/343)
+        - pull requests: #[343](https://github.com/MIT-PSFC/disruption-py/pull/343)
 
         """
         # Get signals from EFIT tree
@@ -2078,6 +2087,7 @@ class CmodPhysicsMethods:
 
         # Interpolate beta_n to params.times
         beta_n = interp1(efittime, beta_n, params.times)
+        beta_n[beta_n < 0] = np.nan
 
         return {"beta_n": beta_n}
 
