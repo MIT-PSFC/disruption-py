@@ -379,7 +379,9 @@ class CmodPhysicsMethods:
         - issues: #[133](https://github.com/MIT-PSFC/disruption-py/issues/133)
         """
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
+        dpcstime = pcstime.copy()
         z_prog = np.full(pcstime.shape, np.nan)
+        wire_errors = np.array(np.nan)
         z_prog_temp = z_prog.copy()
         z_wire_index = -1
         active_wire_segments = CmodPhysicsMethods._get_active_wire_segments(
@@ -429,31 +431,45 @@ class CmodPhysicsMethods:
             raise FetchDataError("ZCUR wire")
         # Read in A_OUT, which is a 16xN matrix of the errors for *all* 16 wires for
         # *all* of the segments. Note that DPCS time is usually taken at 10kHz.
-        wire_errors, dpcstime = params.get_data_with_dims(
-            r"\top.hardware.dpcs.signals:a_out", tree_name="hybrid", dim_nums=[1]
-        )
-        # The value of Z_error we read is not in the units we want. It must be *divided*
-        #  by a factor AND *divided* by the plasma current.
-        z_error_without_factor_and_ip = wire_errors[:, z_wire_index]
-        z_error_without_ip = np.full(z_error_without_factor_and_ip.shape, np.nan)
-        # Also, it turns out that different segments have different factors. So we
-        # search through the active segments (determined above), find the factors,
-        # and *divide* by the factor only for the times in the active segment (as
-        # determined from start_times and stop_times.
-        for i, (_, start) in enumerate(active_wire_segments):
-            if i == len(active_wire_segments) - 1:
-                end = pcstime[-1]
-            else:
-                end = active_wire_segments[i + 1][1]
-            # DPCS refers to PCS so we need to open the common ancestor tree, HYBRID
-            z_factor = params.get_data(
-                rf"\dpcs::top.seg_{i + 1:02d}:p_{z_wire_index:02d}:predictor:factor",
-                tree_name="hybrid",
+        try:
+            wire_errors, dpcstime = params.get_data_with_dims(
+                r"\top.hardware.dpcs.signals:a_out", tree_name="hybrid", dim_nums=[1]
             )
-            temp_indx = np.where((dpcstime >= start) & (dpcstime <= end))
-            z_error_without_ip[temp_indx] = (
-                z_error_without_factor_and_ip[temp_indx] / z_factor
-            )  # [A*m]
+        except mdsExceptions.MdsException as e:
+            params.logger.warning(repr(e))
+            params.logger.opt(exception=True).debug(e)
+
+        # Handle edge case of improper shape of A_OUT
+        # Example: Shot 1060621025 stores 1-D array instead of expected 2-D
+        z_error_without_ip = np.full(dpcstime.shape, np.nan)
+        if wire_errors.ndim != 2:
+            params.logger.warning(
+                f"get_z_parameters: "
+                f"DPCS A_OUT has unexpected dimension {wire_errors.ndim}; "
+                f"using NaN Z_current errors"
+            )
+        else:
+            z_error_without_factor_and_ip = wire_errors[:, z_wire_index]
+            # The value of Z_error we read is not in the units we want. It must be *divided*
+            #  by a factor AND *divided* by the plasma current.
+            # Also, it turns out that different segments have different factors. So we
+            # search through the active segments (determined above), find the factors,
+            # and *divide* by the factor only for the times in the active segment (as
+            # determined from start_times and stop_times.
+            for i, (_, start) in enumerate(active_wire_segments):
+                if i == len(active_wire_segments) - 1:
+                    end = pcstime[-1]
+                else:
+                    end = active_wire_segments[i + 1][1]
+                # DPCS refers to PCS so we need to open the common ancestor tree, HYBRID
+                z_factor = params.get_data(
+                    rf"\dpcs::top.seg_{i + 1:02d}:p_{z_wire_index:02d}:predictor:factor",
+                    tree_name="hybrid",
+                )
+                temp_indx = np.where((dpcstime >= start) & (dpcstime <= end))
+                z_error_without_ip[temp_indx] = (
+                    z_error_without_factor_and_ip[temp_indx] / z_factor
+                )  # [A*m]
         # Next we grab ip, which comes from a_in:input_056. This also requires
         # *multiplication* by a factor.
         # NOTE that I can't get the following ip_without_factor to work for shots
