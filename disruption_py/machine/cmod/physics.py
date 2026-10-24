@@ -1485,6 +1485,10 @@ class CmodPhysicsMethods:
         )  # [keV], [s]
         ts_te_core = ts_te_core * 1000  # [keV] -> [eV]
         ts_te_edge = params.get_data(r"\ts_te")  # [eV]
+        if len(ts_te_core) != len(ts_te_edge):
+            raise MismatchCalculationError(
+                f"len(ts_te_core) = {len(ts_te_core)} vs. len(ts_te_edge) = {len(ts_te_edge)}"
+            )
         ts_te = np.concatenate((ts_te_core, ts_te_edge)) * 11600  # [eV] -> [K]
 
         # Get ne data
