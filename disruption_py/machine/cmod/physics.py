@@ -777,6 +777,13 @@ class CmodPhysicsMethods:
             t = f"t_{val}"
             try:
                 kwa[p], kwa[t] = params.get_data_with_dims(node, tree_name=tree)
+                if kwa[p].shape != kwa[t].shape:
+                    params.logger.warning(
+                        f"get_power: {p} has different shape than {t}. "
+                        f"Setting {p} and {t} to np.nan."
+                    )
+                    kwa[p] = [np.nan]
+                    kwa[t] = [np.nan]
             except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF):
                 kwa[p], kwa[t] = None, None
         # Ohmic power
