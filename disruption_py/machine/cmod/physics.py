@@ -439,6 +439,13 @@ class CmodPhysicsMethods:
             params.logger.warning(repr(e))
             params.logger.opt(exception=True).debug(e)
 
+        # Private methods do not receive params for logging, so
+        # Handle IndexError raised in private np.gradient call here
+        if dpcstime.size < 2:
+            params.logger.warning("get_z_parameters: "
+                                  "dpcstime.size < 2. Setting to array([NaN, NaN])")
+            dpcstime = np.full(2, np.nan, dtype=float)
+
         # Handle edge case of improper shape of A_OUT
         # Example: Shot 1060621025 stores 1-D array instead of expected 2-D
         z_error_without_ip = np.full(dpcstime.shape, np.nan)
