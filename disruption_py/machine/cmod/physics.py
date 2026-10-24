@@ -1869,6 +1869,13 @@ class CmodPhysicsMethods:
             lh_power, lh_time = params.get_data_with_dims(
                 ".results:netpow", tree_name="lh"
             )  # [kW], [s]
+            if lh_power.shape != lh_time.shape:
+                params.logger.warning(
+                    "get_te_profile_params_ece: lh_power and lh_time have different shapes. "
+                    "Setting lh_power and lh_time to np.nan."
+                )
+                lh_power = [np.nan]
+                lh_time = [np.nan]
         except mdsExceptions.MdsException:
             # When LH power is off, it's often not stored in tree or it's a single 0.
             lh_power = 0.0
