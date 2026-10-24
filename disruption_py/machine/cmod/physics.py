@@ -2044,8 +2044,11 @@ class CmodPhysicsMethods:
             r"\top.brightnesses.array_1:chord_16",
             tree_name="xtomo",
         )  # [W/m^2], [s]
-        sxr = interp1(t_sxr, sxr, params.times)
-        sxr[sxr < 0] = np.nan
+        if sxr.size == t_sxr.size:
+            sxr = interp1(t_sxr, sxr, params.times)
+            sxr[sxr < 0] = np.nan
+        else:
+            sxr = np.full(params.times.shape, np.nan)
         return {"sxr": sxr}
 
     @staticmethod
