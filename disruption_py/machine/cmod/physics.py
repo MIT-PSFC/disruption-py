@@ -497,7 +497,7 @@ class CmodPhysicsMethods:
             # Ensure that z_error has same time base as ip
             if len(ip) != len(dpcstime):
                 params.logger.warning(
-                    "get_z_parameters: len(ip_time) != len(dpcstime). "
+                    "get_z_parameters: len(ip) != len(dpcstime). "
                     "Setting z_error, ip, and dpcstime to NaN."
                 )
                 z_error_without_ip = np.full_like(dpcstime, np.nan)
@@ -1498,7 +1498,7 @@ class CmodPhysicsMethods:
         ts_te_edge = params.get_data(r"\ts_te")  # [eV]
         ts_te = None
         ts_ne = None
-        # Ensure equal number of edge and core time time points before concatenation
+        # Ensure equal number of edge and core time points before concatenation
         if len(ts_time) != ts_te_edge.shape[1]:
             params.logger.warning(
                 f"get_peaking_factors: "
@@ -1909,8 +1909,8 @@ class CmodPhysicsMethods:
                     "get_te_profile_params_ece: lh_power and lh_time have different shapes. "
                     "Setting lh_power and lh_time to np.nan."
                 )
-                lh_power = np.array(np.nan)
-                lh_time = np.array(np.nan)
+                lh_power = np.full_like(efit_time, np.nan)
+                lh_time = np.full_like(efit_time, np.nan)
         except mdsExceptions.MdsException:
             # When LH power is off, it's often not stored in tree or it's a single 0.
             lh_power = 0.0
