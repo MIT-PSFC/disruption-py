@@ -1703,7 +1703,7 @@ class CmodPhysicsMethods:
         aminor = interp1(efit_time, aminor, te_time)
         n_e = interp1(times, n_e, te_time)
         btor = interp1(t_mag, btor, te_time)
-        if len(lh_time) > 1:
+        if lh_time.size > 1:
             lh_power = interp1(lh_time, lh_power, te_time)
         else:
             lh_power = np.zeros(len(te_time))
