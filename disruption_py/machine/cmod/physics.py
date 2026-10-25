@@ -442,7 +442,8 @@ class CmodPhysicsMethods:
             params.logger.opt(exception=True).debug(e)
 
         # Private methods do not receive params for logging, so
-        # Handle IndexError raised in private np.gradient call here
+        # handle IndexError raised in private np.gradient call here.
+        # At least two points are needed for np.gradient
         if dpcstime.size < 2:
             params.logger.warning(
                 "get_z_parameters: " "dpcstime.size < 2. Setting to array([NaN, NaN])"
