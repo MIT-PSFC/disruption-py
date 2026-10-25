@@ -431,6 +431,8 @@ class CmodPhysicsMethods:
             raise FetchDataError("ZCUR wire")
         # Read in A_OUT, which is a 16xN matrix of the errors for *all* 16 wires for
         # *all* of the segments. Note that DPCS time is usually taken at 10kHz.
+        # If MDS fetch fails, execution continues with NaN placeholders.
+        # Expected result of MDS fetch failure is z_prog returns, while others are set to NaN.
         try:
             wire_errors, dpcstime = params.get_data_with_dims(
                 r"\top.hardware.dpcs.signals:a_out", tree_name="hybrid", dim_nums=[1]
@@ -451,9 +453,9 @@ class CmodPhysicsMethods:
         z_error_without_ip = np.full(dpcstime.shape, np.nan)
         if wire_errors.ndim != 2:
             params.logger.warning(
-                f"get_z_parameters: "
+                "get_z_parameters: "
                 f"DPCS A_OUT has unexpected dimension {wire_errors.ndim}; "
-                f"using NaN Z_current errors"
+                "using NaN Z_current errors"
             )
         else:
             z_error_without_factor_and_ip = wire_errors[:, z_wire_index]
@@ -491,6 +493,14 @@ class CmodPhysicsMethods:
                 tree_name="hybrid",
             )
             ip = ip_without_factor * ip_factor  # [A]
+            # Ensure that z_error has same time base as ip
+            if len(ip) != len(dpcstime):
+                params.logger.warning(
+                    "get_z_parameters: len(ip_time) != len(dpcstime). "
+                    "Setting z_error, ip, and dpcstime to NaN."
+                )
+                z_error_without_ip = np.full_like(dpcstime, np.nan)
+                ip = np.full_like(dpcstime, np.nan)
         else:
             ip, ip_time = params.get_data_with_dims(
                 r"\ip", tree_name="magnetics"
@@ -782,8 +792,8 @@ class CmodPhysicsMethods:
                         f"get_power: {p} has different shape than {t}. "
                         f"Setting {p} and {t} to np.nan."
                     )
-                    kwa[p] = [np.nan]
-                    kwa[t] = [np.nan]
+                    kwa[p] = np.array(np.nan)
+                    kwa[t] = np.array(np.nan)
             except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF):
                 kwa[p], kwa[t] = None, None
         # Ohmic power
@@ -1884,8 +1894,8 @@ class CmodPhysicsMethods:
                     "get_te_profile_params_ece: lh_power and lh_time have different shapes. "
                     "Setting lh_power and lh_time to np.nan."
                 )
-                lh_power = [np.nan]
-                lh_time = [np.nan]
+                lh_power = np.array(np.nan)
+                lh_time = np.array(np.nan)
         except mdsExceptions.MdsException:
             # When LH power is off, it's often not stored in tree or it's a single 0.
             lh_power = 0.0
