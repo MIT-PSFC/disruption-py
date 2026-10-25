@@ -1485,11 +1485,17 @@ class CmodPhysicsMethods:
         )  # [keV], [s]
         ts_te_core = ts_te_core * 1000  # [keV] -> [eV]
         ts_te_edge = params.get_data(r"\ts_te")  # [eV]
-        if len(ts_te_core) != len(ts_te_edge):
-            raise MismatchCalculationError(
-                f"len(ts_te_core) = {len(ts_te_core)} vs. len(ts_te_edge) = {len(ts_te_edge)}"
+        ts_te = None
+        # Ensure equal number of edge and core time time points before concatenation
+        if len(ts_time) != ts_te_edge.shape[1]:
+            params.logger.warning(
+                f"get_peaking_factors: "
+                f"len(ts_te_core) = {len(ts_te_core)} vs. len(ts_te_edge) = {len(ts_te_edge)}. "
+                f"Setting ts_te to NaN."
             )
-        ts_te = np.concatenate((ts_te_core, ts_te_edge)) * 11600  # [eV] -> [K]
+            ts_te = np.full((ts_te_core.shape[0] + ts_te_edge.shape[0], ts_time), np.nan)
+        else:
+            ts_te = np.concatenate((ts_te_core, ts_te_edge)) * 11600  # [eV] -> [K]
 
         # Get ne data
         ts_ne_core = params.get_data(
