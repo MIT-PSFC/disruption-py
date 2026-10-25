@@ -444,8 +444,9 @@ class CmodPhysicsMethods:
         # Private methods do not receive params for logging, so
         # Handle IndexError raised in private np.gradient call here
         if dpcstime.size < 2:
-            params.logger.warning("get_z_parameters: "
-                                  "dpcstime.size < 2. Setting to array([NaN, NaN])")
+            params.logger.warning(
+                "get_z_parameters: " "dpcstime.size < 2. Setting to array([NaN, NaN])"
+            )
             dpcstime = np.full(2, np.nan, dtype=float)
 
         # Handle edge case of improper shape of A_OUT
@@ -1504,7 +1505,9 @@ class CmodPhysicsMethods:
                 f"len(ts_time) = {len(ts_time)} vs. ts_te_edge.shape[1] = {ts_te_edge.shape[1]}. "
                 f"Setting ts_te to NaN."
             )
-            ts_te = np.full((ts_te_core.shape[0] + ts_te_edge.shape[0], len(ts_time)), np.nan)
+            ts_te = np.full(
+                (ts_te_core.shape[0] + ts_te_edge.shape[0], len(ts_time)), np.nan
+            )
         else:
             ts_te = np.concatenate((ts_te_core, ts_te_edge)) * 11600  # [eV] -> [K]
 
@@ -1520,7 +1523,9 @@ class CmodPhysicsMethods:
                 f"len(ts_ne_core) = {len(ts_time)} vs. ts_ne_edge.shape[1] = {ts_ne_edge.shape[1]}. "
                 f"Setting ts_ne to NaN."
             )
-            ts_ne = np.full((ts_ne_core.shape[0] + ts_ne_edge.shape[0], len(ts_time)), np.nan)
+            ts_ne = np.full(
+                (ts_ne_core.shape[0] + ts_ne_edge.shape[0], len(ts_time)), np.nan
+            )
         else:
             ts_ne = np.concatenate((ts_ne_core, ts_ne_edge))
 
