@@ -446,7 +446,7 @@ class CmodPhysicsMethods:
         # At least two points are needed for np.gradient
         if dpcstime.size < 2:
             params.logger.warning(
-                "get_z_parameters: " "dpcstime.size < 2. Setting to array([NaN, NaN])"
+                "get_z_parameters: dpcstime.size < 2. Setting to array([NaN, NaN])"
             )
             dpcstime = np.full(2, np.nan, dtype=float)
 
@@ -1520,9 +1520,12 @@ class CmodPhysicsMethods:
         # Ensure equal number of edge and core time time points before concatenation
         if len(ts_time) != ts_ne_edge.shape[1]:
             params.logger.warning(
-                f"get_peaking_factors: "
-                f"len(ts_ne_core) = {len(ts_time)} vs. ts_ne_edge.shape[1] = {ts_ne_edge.shape[1]}. "
-                f"Setting ts_ne to NaN."
+                (
+                    "get_peaking_factors: "
+                    f"len(ts_ne_core) = {len(ts_time)}"
+                    f"vs. ts_ne_edge.shape[1] = {ts_ne_edge.shape[1]}. "
+                    "Setting ts_ne to NaN."
+                )
             )
             ts_ne = np.full(
                 (ts_ne_core.shape[0] + ts_ne_edge.shape[0], len(ts_time)), np.nan
