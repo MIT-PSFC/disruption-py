@@ -667,12 +667,12 @@ class CmodPhysicsMethods:
           [#610](https://github.com/MIT-PSFC/disruption-py/pull/610)
 
         """
-        if p_lh is not None and isinstance(t_lh, np.ndarray) and len(t_lh) > 1:
+        if p_lh is not None and isinstance(t_lh, np.ndarray) and t_lh.size > 1:
             p_lh = interp1(t_lh, p_lh * 1.0e3, times, fill_value=0)  # [kW] -> [W]
         else:
             p_lh = np.zeros(len(times))
 
-        if p_icrf is not None and isinstance(t_icrf, np.ndarray) and len(t_icrf) > 1:
+        if p_icrf is not None and isinstance(t_icrf, np.ndarray) and t_icrf.size > 1:
             p_icrf = interp1(t_icrf, p_icrf * 1.0e6, times, fill_value=0)  # [MW] -> [W]
         else:
             p_icrf = np.zeros(len(times))
