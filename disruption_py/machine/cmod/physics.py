@@ -1496,14 +1496,15 @@ class CmodPhysicsMethods:
         ts_te_core = ts_te_core * 1000  # [keV] -> [eV]
         ts_te_edge = params.get_data(r"\ts_te")  # [eV]
         ts_te = None
+        ts_ne = None
         # Ensure equal number of edge and core time time points before concatenation
         if len(ts_time) != ts_te_edge.shape[1]:
             params.logger.warning(
                 f"get_peaking_factors: "
-                f"len(ts_te_core) = {len(ts_te_core)} vs. len(ts_te_edge) = {len(ts_te_edge)}. "
+                f"len(ts_time) = {len(ts_time)} vs. ts_te_edge.shape[1] = {ts_te_edge.shape[1]}. "
                 f"Setting ts_te to NaN."
             )
-            ts_te = np.full((ts_te_core.shape[0] + ts_te_edge.shape[0], ts_time), np.nan)
+            ts_te = np.full((ts_te_core.shape[0] + ts_te_edge.shape[0], len(ts_time)), np.nan)
         else:
             ts_te = np.concatenate((ts_te_core, ts_te_edge)) * 11600  # [eV] -> [K]
 
@@ -1512,7 +1513,16 @@ class CmodPhysicsMethods:
             f"{node_ext}:ne_rz", tree_name="electrons"
         )  # [m^-3]
         ts_ne_edge = params.get_data(r"\ts_ne")  # [m^-3]
-        ts_ne = np.concatenate((ts_ne_core, ts_ne_edge))
+        # Ensure equal number of edge and core time time points before concatenation
+        if len(ts_time) != ts_ne_edge.shape[1]:
+            params.logger.warning(
+                f"get_peaking_factors: "
+                f"len(ts_ne_core) = {len(ts_time)} vs. ts_ne_edge.shape[1] = {ts_ne_edge.shape[1]}. "
+                f"Setting ts_ne to NaN."
+            )
+            ts_ne = np.full((ts_ne_core.shape[0] + ts_ne_edge.shape[0], len(ts_time)), np.nan)
+        else:
+            ts_ne = np.concatenate((ts_ne_core, ts_ne_edge))
 
         # Get TS chord positions
         ts_z_core = params.get_data(
