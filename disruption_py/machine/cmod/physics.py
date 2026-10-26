@@ -1531,7 +1531,7 @@ class CmodPhysicsMethods:
             params.logger.warning(
                 (
                     "get_peaking_factors: "
-                    f"len(ts_ne_core) = {len(ts_time)}"
+                    f"len(ts_ne_core) = {len(ts_time)} "
                     f"vs. ts_ne_edge.shape[1] = {ts_ne_edge.shape[1]}. "
                     "Setting ts_ne to NaN."
                 )
