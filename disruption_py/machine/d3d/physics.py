@@ -376,8 +376,8 @@ class D3DPhysicsMethods:
         try:
             ne, t_ne = params.get_data_with_dims(r"\density", tree_name="_efit_tree")
         except mdsExceptions.MdsException:
-            ne = [np.nan]
-            t_ne = [np.nan]
+            ne = np.array(np.nan)
+            t_ne = np.array(np.nan)
         # If EFIT disruption tree does not contain density data or if the data is invalid,
         # then read density from BCI subtree of D3D main tree
         # Example 1: 170480:
@@ -386,7 +386,7 @@ class D3DPhysicsMethods:
         # Example 2: 172756:
         #  - r"\efit01:density" gives ne = array([4.06199e19]), t_ne = array([1800])
         #  - "\d3d:denv2" gives actual density data
-        if not np.isfinite(ne).any() or len(ne) < 2:
+        if not np.isfinite(ne).any() or ne.size < 2:
             ne, t_ne = params.get_data_with_dims(r"\denv2", tree_name="d3d")
             tree_name = params.data_conn.get_tree_name_of_nickname("_efit_tree")
             params.logger.verbose(
@@ -395,7 +395,15 @@ class D3DPhysicsMethods:
             )
         ne = ne * 1.0e6  # [cm^3] -> [m^3]
         t_ne = t_ne / 1.0e3  # [ms] -> [s]
-        dne_dt = np.gradient(ne, t_ne)
+        # np.gradient requires at least two points
+        dne_dt = None
+        if ne.size < 2:
+            params.logger.warning(
+                "get_density_parameters: ne.size < 2. Setting dne_dt to np.nan."
+            )
+            dne_dt = np.full_like(t_ne, np.nan)
+        else:
+            dne_dt = np.gradient(ne, t_ne)
         # NOTE: t_ne has higher resolution than efit_time so t_ne[0] < efit_time[0]
         # because of rounding, meaning we need to allow extrapolation
         ne = interp1(
