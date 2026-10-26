@@ -445,7 +445,7 @@ class CmodPhysicsMethods:
         # At least two points are needed for np.gradient.
         if dpcstime.size < 2:
             params.logger.warning(
-                "get_z_parameters: dpcstime.size < 2. Setting to array([NaN, NaN])"
+                "get_z_parameters: dpcstime.size < 2. Setting to array([np.nan, np.nan])"
             )
             dpcstime = np.full(2, np.nan, dtype=float)
 
@@ -458,14 +458,14 @@ class CmodPhysicsMethods:
                 (
                     "get_z_parameters: "
                     f"DPCS A_OUT has unexpected dimension {wire_errors.ndim}; "
-                    "Setting z_cur errors to NaN."
+                    "Setting z_cur errors to np.nan."
                 )
             )
         elif z_wire_index == -1:
             params.logger.warning(
                 (
                     "get_z_parameters: Failed to read ZCUR wire. "
-                    "Setting z_cur errors to NaN."
+                    "Setting z_cur errors to np.nan."
                 )
             )
         else:
@@ -508,7 +508,7 @@ class CmodPhysicsMethods:
             if len(ip) != len(dpcstime):
                 params.logger.warning(
                     "get_z_parameters: len(ip) != len(dpcstime). "
-                    "Setting z_error, ip, and dpcstime to NaN."
+                    "Setting z_error, ip, and dpcstime to np.nan."
                 )
                 z_error_without_ip = np.full_like(dpcstime, np.nan)
                 ip = np.full_like(dpcstime, np.nan)
@@ -800,7 +800,8 @@ class CmodPhysicsMethods:
                 kwa[p], kwa[t] = params.get_data_with_dims(node, tree_name=tree)
                 if kwa[p].shape != kwa[t].shape:
                     params.logger.warning(
-                        f"get_power: {p} has different shape than {t}. "
+                        f"get_power: {p} has different shape than {t}: "
+                        f"{kwa[p].shape} vs. {kwa[t].shape}. "
                         f"Setting {p} and {t} to np.nan."
                     )
                     kwa[p] = np.array(np.nan)
@@ -1513,7 +1514,7 @@ class CmodPhysicsMethods:
             params.logger.warning(
                 f"get_peaking_factors: "
                 f"len(ts_time) = {len(ts_time)} vs. ts_te_edge.shape[1] = {ts_te_edge.shape[1]}. "
-                f"Setting ts_te to NaN."
+                f"Setting ts_te to np.nan."
             )
             ts_te = np.full(
                 (ts_te_core.shape[0] + ts_te_edge.shape[0], len(ts_time)), np.nan
@@ -1533,7 +1534,7 @@ class CmodPhysicsMethods:
                     "get_peaking_factors: "
                     f"len(ts_ne_core) = {len(ts_time)} "
                     f"vs. ts_ne_edge.shape[1] = {ts_ne_edge.shape[1]}. "
-                    "Setting ts_ne to NaN."
+                    "Setting ts_ne to np.nan."
                 )
             )
             ts_ne = np.full(
@@ -1919,7 +1920,8 @@ class CmodPhysicsMethods:
             )  # [kW], [s]
             if lh_power.shape != lh_time.shape:
                 params.logger.warning(
-                    "get_te_profile_params_ece: lh_power and lh_time have different shapes. "
+                    "get_te_profile_params_ece: lh_power and lh_time have different shapes: "
+                    f"{lh_power.shape} vs. {lh_time.shape}. "
                     "Setting lh_power and lh_time to np.nan."
                 )
                 lh_power = np.full_like(efit_time, np.nan)
