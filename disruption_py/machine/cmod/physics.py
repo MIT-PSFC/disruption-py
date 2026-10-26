@@ -375,9 +375,11 @@ class CmodPhysicsMethods:
         -------
         - original source: [get_Z_parameters.m](https://github.com/MIT-PSFC/
         disruption-py/blob/matlab/CMOD/matlab-core/get_Z_parameters.m)
-        - pull requests: #[134](https://github.com/MIT-PSFC/disruption-py/pull/
-        134), #[136](https://github.com/MIT-PSFC/disruption-py/pull/136)
-        - issues: #[133](https://github.com/MIT-PSFC/disruption-py/issues/133)
+        - pull requests: #[134](https://github.com/MIT-PSFC/disruption-py/pull/134),
+          #[136](https://github.com/MIT-PSFC/disruption-py/pull/136),
+          #[612](https://github.com/MIT-PSFC/disruption-py/pull/612)
+        - issues: #[133](https://github.com/MIT-PSFC/disruption-py/issues/133),
+          #[593](https://github.com/MIT-PSFC/disruption-py/issues/593)
         """
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
         dpcstime = pcstime.copy()
@@ -781,8 +783,10 @@ class CmodPhysicsMethods:
         -------
         - original source: [get_power.m](https://github.com/MIT-PSFC/disruption-py
         /blob/matlab/CMOD/matlab-core/get_power.m)
-        - pull requests: #[62](https://github.com/MIT-PSFC/disruption-py/pull/62), #[367](https:
-        //github.com/MIT-PSFC/disruption-py/pull/367)
+        - pull requests: #[62](https://github.com/MIT-PSFC/disruption-py/pull/62),
+          #[367](https://github.com/MIT-PSFC/disruption-py/pull/367),
+          #[612](https://github.com/MIT-PSFC/disruption-py/pull/612)
+        - issues: #[593](https://github.com/MIT-PSFC/disruption-py/issues/593)
         """
         # Get LH power, ICRF power, radiated power, and respective time bases
         # Data source of LH, ICRF, and radiated power:
@@ -1480,10 +1484,12 @@ class CmodPhysicsMethods:
         -------
         - original source: [get_peaking_factor_cmod.m](https://github.com/MIT-PSFC/
         disruption-py/blob/matlab/CMOD/matlab-core/get_peaking_factor_cmod.m)
-        - pull requests: #[216](https://github.com/MIT-PSFC/disruption-py/
-        pull/216), #[225](https://github.com/MIT-PSFC/disruption-py/pull/
-        225), #[268](https://github.com/MIT-PSFC/disruption-py/pull/268)
-        - issues: #[210](https://github.com/MIT-PSFC/disruption-py/issues/210)
+        - pull requests: #[216](https://github.com/MIT-PSFC/disruption-py/pull/216),
+          #[225](https://github.com/MIT-PSFC/disruption-py/pull/225),
+          #[268](https://github.com/MIT-PSFC/disruption-py/pull/268),
+          #[612](https://github.com/MIT-PSFC/disruption-py/pull/612)
+        - issues: #[210](https://github.com/MIT-PSFC/disruption-py/issues/210),
+          #[593](https://github.com/MIT-PSFC/disruption-py/issues/593)
         """
         use_ts_tci_calibration = False
         # Ignore shots on the blacklist
@@ -1900,8 +1906,10 @@ class CmodPhysicsMethods:
         -------
         - referenced sources: [get_ECE_data_cmod.m](https://github.com/MIT-PSFC/
         disruption-py/blob/matlab/CMOD/matlab-core/get_ECE_data_cmod.m)
-        - pull requests: #[260](https://github.com/MIT-PSFC/disruption-py/pull/260), #[466](https:
-        //github.com/MIT-PSFC/disruption-py/pull/466)
+        - pull requests: #[260](https://github.com/MIT-PSFC/disruption-py/pull/260),
+          #[466](https://github.com/MIT-PSFC/disruption-py/pull/466),
+          #[612](https://github.com/MIT-PSFC/disruption-py/pull/612)
+        - issues: #[593](https://github.com/MIT-PSFC/disruption-py/issues/593)
         """
 
         # Get magnetic axis data from EFIT
@@ -2101,7 +2109,10 @@ class CmodPhysicsMethods:
         References
         -------
         - original source: [get_sxr_data.m](https://github.com/MIT-PSFC/disruption-py/
-        blob/matlab/CMOD/matlab-core/get_sxr_data.m)
+          blob/matlab/CMOD/matlab-core/get_sxr_data.m)
+        - pull-requests: #[612](https://github.com/MIT-PSFC/disruption-py/pull/612)
+        - issues: #[593](https://github.com/MIT-PSFC/disruption-py/issues/593)
+
 
         """
         sxr, t_sxr = params.get_data_with_dims(
