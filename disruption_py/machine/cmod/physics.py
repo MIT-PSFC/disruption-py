@@ -804,8 +804,8 @@ class CmodPhysicsMethods:
                         f"{kwa[p].shape} vs. {kwa[t].shape}. "
                         f"Setting {p} and {t} to np.nan."
                     )
-                    kwa[p] = np.array(np.nan)
-                    kwa[t] = np.array(np.nan)
+                    kwa[p] = np.full_like(params.times, np.nan)
+                    kwa[t] = np.full_like(params.times, np.nan)
             except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF):
                 kwa[p], kwa[t] = None, None
         # Ohmic power
