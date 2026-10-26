@@ -358,6 +358,7 @@ class CmodPhysicsMethods:
         the plasma control system (PCS), then calculate the estimated current centroid
         position $z_\text{cur} = z_\text{prog} + z_\text{error}$, the vertical velocity
         $v_z = \frac{d}{dt}z_\text{cur}$, and the product $z_\text{cur} \cdot v_z$.
+        Attempts to return $z_{\text{prog}}$ even if $z_{\text{cur}}$ calculation fails.
 
         Parameters
         ----------
@@ -381,7 +382,7 @@ class CmodPhysicsMethods:
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
         dpcstime = pcstime.copy()
         z_prog = np.full(pcstime.shape, np.nan)
-        wire_errors = np.array(np.nan)
+        wire_errors = np.full(pcstime.shape, np.nan)
         z_prog_temp = z_prog.copy()
         z_wire_index = -1
         active_wire_segments = CmodPhysicsMethods._get_active_wire_segments(
@@ -427,8 +428,6 @@ class CmodPhysicsMethods:
                 else:
                     continue
                 break
-        if z_wire_index == -1:
-            raise FetchDataError("ZCUR wire")
         # Read in A_OUT, which is a 16xN matrix of the errors for *all* 16 wires for
         # *all* of the segments. Note that DPCS time is usually taken at 10kHz.
         # If MDS fetch fails, execution continues with NaN placeholders.
@@ -443,21 +442,31 @@ class CmodPhysicsMethods:
 
         # Private methods do not receive params for logging, so
         # handle IndexError raised in private np.gradient call here.
-        # At least two points are needed for np.gradient
+        # At least two points are needed for np.gradient.
         if dpcstime.size < 2:
             params.logger.warning(
                 "get_z_parameters: dpcstime.size < 2. Setting to array([NaN, NaN])"
             )
             dpcstime = np.full(2, np.nan, dtype=float)
 
-        # Handle edge case of improper shape of A_OUT
-        # Example: Shot 1060621025 stores 1-D array instead of expected 2-D
+        # Handle edge case of improper shape of A_OUT.
+        # Example: Shot 1060621025 stores 1-D array instead of expected 2-D.
+        # Also confirm that a ZCUR wire was read.
         z_error_without_ip = np.full(dpcstime.shape, np.nan)
         if wire_errors.ndim != 2:
             params.logger.warning(
-                "get_z_parameters: "
-                f"DPCS A_OUT has unexpected dimension {wire_errors.ndim}; "
-                "using NaN Z_current errors"
+                (
+                    "get_z_parameters: "
+                    f"DPCS A_OUT has unexpected dimension {wire_errors.ndim}; "
+                    "Setting z_cur errors to NaN."
+                )
+            )
+        elif z_wire_index == -1:
+            params.logger.warning(
+                (
+                    "get_z_parameters: Failed to read ZCUR wire. "
+                    "Setting z_cur errors to NaN."
+                )
             )
         else:
             z_error_without_factor_and_ip = wire_errors[:, z_wire_index]
@@ -1517,7 +1526,7 @@ class CmodPhysicsMethods:
             f"{node_ext}:ne_rz", tree_name="electrons"
         )  # [m^-3]
         ts_ne_edge = params.get_data(r"\ts_ne")  # [m^-3]
-        # Ensure equal number of edge and core time time points before concatenation
+        # Ensure equal number of edge and core time points before concatenation
         if len(ts_time) != ts_ne_edge.shape[1]:
             params.logger.warning(
                 (
