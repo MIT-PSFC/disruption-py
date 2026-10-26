@@ -2111,8 +2111,11 @@ class CmodPhysicsMethods:
             sxr[sxr < 0] = np.nan
         else:
             params.logger.warning(
-                "get_sxr_data: sxr has different size than t_sxr. "
-                "Setting sxr to np.nan."
+                (
+                    "get_sxr_data: sxr has different size than t_sxr: "
+                    f"{sxr.size} vs. {t_sxr.size}. "
+                    "Setting sxr to np.nan."
+                )
             )
             sxr = np.full(params.times.shape, np.nan)
         return {"sxr": sxr}
