@@ -135,7 +135,7 @@ class LogSettings:
 
         # Add console handler
         logger.add(
-            lambda msg: tqdm.write(msg, end=""),
+            lambda msg: tqdm.write(msg, end="", file=sys.stderr),
             level=self.console_level,
             format=console_format,
             colorize=True,
