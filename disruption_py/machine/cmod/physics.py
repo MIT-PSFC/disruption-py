@@ -923,8 +923,8 @@ class CmodPhysicsMethods:
         -------
         - original source: [get_n_equal_1_amplitude.m](https://github.com/MIT-PSFC/disruption-py/
         blob/matlab/CMOD/matlab-core/get_n_equal_1_amplitude.m)
-        - pull requests: #[460](https://github.com/MIT-PSFC/disruption-py/pull/460), #[562](https:
-        //github.com/MIT-PSFC/disruption-py/pull/562)
+        - pull requests: #[460](https://github.com/MIT-PSFC/disruption-py/pull/460),
+          #[562](https://github.com/MIT-PSFC/disruption-py/pull/562)
         - issues: #[211](https://github.com/MIT-PSFC/disruption-py/issues/211)
         """
         # These sensors are placed toroidally around the machine. Letters refer to
@@ -1062,12 +1062,12 @@ class CmodPhysicsMethods:
         dn_dt = np.gradient(n_e, t_n)
         n_e = interp1(t_n, n_e, times)
         dn_dt = interp1(t_n, dn_dt, times)
-        ip = -ip / 1e6  # Convert from A to MA and take positive value
+        ip = abs(ip) / 1e6  # Convert from A to MA and take positive value
         ip = interp1(t_ip, ip, times)
         a_minor = interp1(t_a, a_minor, times, bounds_error=False, fill_value=np.nan)
         # make sure aminor is not 0 or less than 0
         a_minor[a_minor <= 0] = 0.001
-        n_g = abs(ip) / (np.pi * a_minor**2) * 1e20  # Greenwald density in m ^-3
+        n_g = ip / (np.pi * a_minor**2) * 1e20  # Greenwald density in m ^-3
         g_f = n_e / n_g
         return {"n_e": n_e, "dn_dt": dn_dt, "greenwald_fraction": g_f}
 
@@ -1608,16 +1608,15 @@ class CmodPhysicsMethods:
         -------
         Dictionary of te_core_vs_avg_ece, te_edge_vs_avg_ece, and te_width_ece.
 
-        Sources:
-        - https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/
+        References
+        ----------
+        - original source: https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/
           get_ECE_data_cmod.m
         - K. Zhurovich, et. al. "Calibration of Thomson scattering systems using
           electron cyclotron emission cutoff data," Rev. Sci. Instrum., vol. 76, no. 5,
           p. 053506, 2005, doi: 10.1063/1.1899311.
-        - https://github.com/MIT-PSFC/disruption-py/pull/260
-        - https://github.com/MIT-PSFC/disruption-py/pull/466
-
-        Last Major Update: Henry Wietfeldt (08/12/25), (PR: #466)
+        - pull requests: #[260](https://github.com/MIT-PSFC/disruption-py/pull/260),
+          #[466](https://github.com/MIT-PSFC/disruption-py/pull/466)
         """
         # Constants
         core_bound_factor = 0.2
@@ -1820,9 +1819,9 @@ class CmodPhysicsMethods:
         References
         -------
         - referenced sources: [get_ECE_data_cmod.m](https://github.com/MIT-PSFC/
-        disruption-py/blob/matlab/CMOD/matlab-core/get_ECE_data_cmod.m)
-        - pull requests: #[260](https://github.com/MIT-PSFC/disruption-py/pull/260), #[466](https:
-        //github.com/MIT-PSFC/disruption-py/pull/466)
+          disruption-py/blob/matlab/CMOD/matlab-core/get_ECE_data_cmod.m)
+        - pull requests: #[260](https://github.com/MIT-PSFC/disruption-py/pull/260),
+          #[466](https://github.com/MIT-PSFC/disruption-py/pull/466)
         """
 
         # Get magnetic axis data from EFIT
@@ -1897,11 +1896,11 @@ class CmodPhysicsMethods:
         -------
         - original source: [get_Prad_peaking.m](https://github.com/MIT-PSFC/disruption-py/
         blob/matlab/CMOD/matlab-core/get_Prad_peaking.m)
-        - pull requests: #[200](https://github.com/MIT-PSFC/disruption-py/
-        pull/200), #[227](https://github.com/MIT-PSFC/disruption-py/pull/227)
-        - issues: #[92](https://github.com/MIT-PSFC/disruption-py/issues/
-        92), #[192](https://github.com/MIT-PSFC/disruption-py/
-        issues/192), #[206](https://github.com/MIT-PSFC/disruption-py/issues/206)
+        - pull requests: #[200](https://github.com/MIT-PSFC/disruption-py/pull/200),
+          #[227](https://github.com/MIT-PSFC/disruption-py/pull/227)
+        - issues: #[92](https://github.com/MIT-PSFC/disruption-py/issues/92),
+          #[192](https://github.com/MIT-PSFC/disruption-py/issues/192),
+          #[206](https://github.com/MIT-PSFC/disruption-py/issues/206)
 
         """
         prad_peaking = np.full(len(params.times), np.nan)
@@ -2115,12 +2114,12 @@ class CmodPhysicsMethods:
 
         References
         -------
-        - pull requests: #[23](https://github.com/MIT-PSFC/disruption-py/
-        pull/23), #[344](https://github.com/MIT-PSFC/disruption-py/pull/344), #[345](https://
-        github.com/MIT-PSFC/disruption-py/pull/345), #[356](https://github.com/MIT-PSFC/
-        disruption-py/pull/356)
-        - issues: #[25](https://github.com/MIT-PSFC/disruption-py/issues/25), #[29](https://
-        github.com/MIT-PSFC/disruption-py/issues/29)
+        - pull requests: #[23](https://github.com/MIT-PSFC/disruption-py/pull/23),
+          #[344](https://github.com/MIT-PSFC/disruption-py/pull/344),
+          #[345](https://github.com/MIT-PSFC/disruption-py/pull/345),
+          # #[356](https://github.com/MIT-PSFC/disruption-py/pull/356)
+        - issues: #[25](https://github.com/MIT-PSFC/disruption-py/issues/25),
+          #[29](https://github.com/MIT-PSFC/disruption-py/issues/29)
 
         Notes
         -------
