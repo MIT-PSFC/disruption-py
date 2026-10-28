@@ -2338,7 +2338,7 @@ class CmodPhysicsMethods:
                 )
                 chord = params.get_data(tdi_expr, tree_name="xtomo")
             except mdsExceptions.MdsException:
-                params.logger.warning(
+                params.logger.debug(
                     "Failed to get SXR {} chord {} data.",
                     array_path,
                     idx_first_chord + i + 1,
@@ -2346,7 +2346,7 @@ class CmodPhysicsMethods:
                 valid_chords[i] = False
                 continue
             if len(chord) != len(t_sxr):
-                params.logger.warning(
+                params.logger.debug(
                     "Skipping SXR {} chord {}: got {} samples, expected {}.",
                     array_path,
                     idx_first_chord + i + 1,
