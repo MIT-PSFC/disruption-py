@@ -2322,7 +2322,9 @@ class CmodPhysicsMethods:
         )
         t_sxr = t_sxr[j_chord_start:j_chord_end]
         if len(t_sxr) < 2:
-            raise NanDataError(f"No SXR data at CQ time = {cq_time:.3f} s.")
+            raise NanDataError(
+                "get_thermal_quench_time: " f"No SXR data at CQ time = {cq_time:.3f} s."
+            )
 
         n_chords = tq_params["idx_last_chord"] - idx_first_chord + 1
         sxr = np.zeros((n_chords, len(t_sxr)))
@@ -2339,7 +2341,7 @@ class CmodPhysicsMethods:
                 chord = params.get_data(tdi_expr, tree_name="xtomo")
             except mdsExceptions.MdsException:
                 params.logger.debug(
-                    "Failed to get SXR {} chord {} data.",
+                    "get_thermal_quench_time: Failed to get SXR {} chord {} data.",
                     array_path,
                     idx_first_chord + i + 1,
                 )
@@ -2347,6 +2349,7 @@ class CmodPhysicsMethods:
                 continue
             if len(chord) != len(t_sxr):
                 params.logger.debug(
+                    "get_thermal_quench_time: "
                     "Skipping SXR {} chord {}: got {} samples, expected {}.",
                     array_path,
                     idx_first_chord + i + 1,
@@ -2386,7 +2389,8 @@ class CmodPhysicsMethods:
                 autocorr = autocorr / max_autocorr
             else:
                 params.logger.debug(
-                    "Removing bad SXR chord {}", idx_first_chord + i + 1
+                    "get_thermal_quench_time: Removing bad SXR chord {}",
+                    idx_first_chord + i + 1,
                 )
                 valid_chords[i] = False
                 continue
@@ -2399,13 +2403,17 @@ class CmodPhysicsMethods:
             autocorr_decay_time = index_decay / autocorr_sample_freq
             if autocorr_decay_time < tq_params["autocorr_noise_cutoff"]:
                 params.logger.debug(
+                    "get_thermal_quench_time: "
                     "Removing noisy SXR chord {}: autocorr decay time: {}",
                     idx_first_chord + i + 1,
                     autocorr_decay_time,
                 )
                 valid_chords[i] = False
         if not np.any(valid_chords):
-            raise NanDataError("No valid SXR chords after removing noisy chords")
+            raise NanDataError(
+                "get_thermal_quench_time: "
+                "No valid SXR chords after removing noisy chords"
+            )
         sxr = sxr[valid_chords]
 
         # Noncausal Butterworth low pass filter to smooth transient SXR spikes during TQ.
