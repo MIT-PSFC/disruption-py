@@ -14,6 +14,7 @@ from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.errors import (
     CalculationError,
+    DataError,
     FetchDataError,
     MismatchCalculationError,
     NanDataError,
@@ -2320,6 +2321,8 @@ class CmodPhysicsMethods:
             np.argmin(np.abs(t_sxr - (cq_time + tq_params["t_wndw_post_cq"]))) + 1
         )
         t_sxr = t_sxr[j_chord_start:j_chord_end]
+        if len(t_sxr) < 2:
+            raise NanDataError(f"No SXR data at CQ time = {cq_time:.3f} s.")
 
         n_chords = tq_params["idx_last_chord"] - idx_first_chord + 1
         sxr = np.zeros((n_chords, len(t_sxr)))
@@ -2339,6 +2342,16 @@ class CmodPhysicsMethods:
                     "Failed to get SXR {} chord {} data.",
                     array_path,
                     idx_first_chord + i + 1,
+                )
+                valid_chords[i] = False
+                continue
+            if len(chord) != len(t_sxr):
+                params.logger.warning(
+                    "Skipping SXR {} chord {}: got {} samples, expected {}.",
+                    array_path,
+                    idx_first_chord + i + 1,
+                    len(chord),
+                    len(t_sxr),
                 )
                 valid_chords[i] = False
                 continue
@@ -2444,10 +2457,11 @@ class CmodPhysicsMethods:
         )
         idx_end = np.argmin(np.abs(t_sxr - t_max_sxr_drop))
         window = core_sxr_raw[idx_start:idx_end]
+        peak = np.max(window)
+        if peak < 0:
+            raise DataError(f"Negative SXR peak ({peak:.3g}) before max drop in SXR.")
         # Want last maximum in case the SXR has saturated and there are multiple maxima
-        max_sxr_idx = np.nonzero(window >= tq_params["tq_onset_frac"] * np.max(window))[
-            0
-        ][-1]
+        max_sxr_idx = np.nonzero(window >= tq_params["tq_onset_frac"] * peak)[0][-1]
         tq_time_scalar = t_sxr[idx_start + max_sxr_idx]
 
         return {"thermal_quench_time": np.full(len(params.times), tq_time_scalar)}
