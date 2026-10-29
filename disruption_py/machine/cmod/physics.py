@@ -2453,7 +2453,7 @@ class CmodPhysicsMethods:
         idx_end = np.argmin(np.abs(t_sxr - cq_onset_time))
         if idx_start == len(t_sxr) - 1:
             raise NanDataError(
-                "get_thermal_quench_time: " f"No SXR data at CQ time = {cq_time:.3f} s."
+                f"get_thermal_quench_time: No SXR data at CQ time = {cq_time:.3f} s."
             )
         t_max_sxr_drop = t_sxr[idx_start + np.argmin(dcore_sxr_dt[idx_start:idx_end])]
 
