@@ -2277,7 +2277,8 @@ class CmodPhysicsMethods:
 
         References
         ----------
-        - pull requests: #[564](https://github.com/MIT-PSFC/disruption-py/pull/564)
+        - pull requests: #[564](https://github.com/MIT-PSFC/disruption-py/pull/564),
+          #[612](https://github.com/MIT-PSFC/disruption-py/pull/612)
         - issues: #[542](https://github.com/MIT-PSFC/disruption-py/issues/542)
 
         """
