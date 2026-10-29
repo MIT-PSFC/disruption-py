@@ -14,6 +14,7 @@ from disruption_py.core.physics_method.caching import cache_method
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.errors import (
     CalculationError,
+    DataError,
     FetchDataError,
     MismatchCalculationError,
     NanDataError,
@@ -358,6 +359,7 @@ class CmodPhysicsMethods:
         the plasma control system (PCS), then calculate the estimated current centroid
         position $z_\text{cur} = z_\text{prog} + z_\text{error}$, the vertical velocity
         $v_z = \frac{d}{dt}z_\text{cur}$, and the product $z_\text{cur} \cdot v_z$.
+        Attempts to return $z_{\text{prog}}$ even if $z_{\text{cur}}$ calculation fails.
 
         Parameters
         ----------
@@ -374,12 +376,16 @@ class CmodPhysicsMethods:
         -------
         - original source: [get_Z_parameters.m](https://github.com/MIT-PSFC/
         disruption-py/blob/matlab/CMOD/matlab-core/get_Z_parameters.m)
-        - pull requests: #[134](https://github.com/MIT-PSFC/disruption-py/pull/
-        134), #[136](https://github.com/MIT-PSFC/disruption-py/pull/136)
-        - issues: #[133](https://github.com/MIT-PSFC/disruption-py/issues/133)
+        - pull requests: #[134](https://github.com/MIT-PSFC/disruption-py/pull/134),
+          #[136](https://github.com/MIT-PSFC/disruption-py/pull/136),
+          #[612](https://github.com/MIT-PSFC/disruption-py/pull/612)
+        - issues: #[133](https://github.com/MIT-PSFC/disruption-py/issues/133),
+          #[593](https://github.com/MIT-PSFC/disruption-py/issues/593)
         """
         pcstime = np.array(np.arange(-4, 12.383, 0.001))
+        dpcstime = pcstime.copy()
         z_prog = np.full(pcstime.shape, np.nan)
+        wire_errors = np.full(pcstime.shape, np.nan)
         z_prog_temp = z_prog.copy()
         z_wire_index = -1
         active_wire_segments = CmodPhysicsMethods._get_active_wire_segments(
@@ -425,35 +431,68 @@ class CmodPhysicsMethods:
                 else:
                     continue
                 break
-        if z_wire_index == -1:
-            raise FetchDataError("ZCUR wire")
         # Read in A_OUT, which is a 16xN matrix of the errors for *all* 16 wires for
         # *all* of the segments. Note that DPCS time is usually taken at 10kHz.
-        wire_errors, dpcstime = params.get_data_with_dims(
-            r"\top.hardware.dpcs.signals:a_out", tree_name="hybrid", dim_nums=[1]
-        )
-        # The value of Z_error we read is not in the units we want. It must be *divided*
-        #  by a factor AND *divided* by the plasma current.
-        z_error_without_factor_and_ip = wire_errors[:, z_wire_index]
-        z_error_without_ip = np.full(z_error_without_factor_and_ip.shape, np.nan)
-        # Also, it turns out that different segments have different factors. So we
-        # search through the active segments (determined above), find the factors,
-        # and *divide* by the factor only for the times in the active segment (as
-        # determined from start_times and stop_times.
-        for i, (_, start) in enumerate(active_wire_segments):
-            if i == len(active_wire_segments) - 1:
-                end = pcstime[-1]
-            else:
-                end = active_wire_segments[i + 1][1]
-            # DPCS refers to PCS so we need to open the common ancestor tree, HYBRID
-            z_factor = params.get_data(
-                rf"\dpcs::top.seg_{i + 1:02d}:p_{z_wire_index:02d}:predictor:factor",
-                tree_name="hybrid",
+        # If MDS fetch fails, execution continues with NaN placeholders.
+        # Expected result of MDS fetch failure is z_prog returns, while others are set to NaN.
+        try:
+            wire_errors, dpcstime = params.get_data_with_dims(
+                r"\top.hardware.dpcs.signals:a_out", tree_name="hybrid", dim_nums=[1]
             )
-            temp_indx = np.where((dpcstime >= start) & (dpcstime <= end))
-            z_error_without_ip[temp_indx] = (
-                z_error_without_factor_and_ip[temp_indx] / z_factor
-            )  # [A*m]
+        except mdsExceptions.MdsException as e:
+            params.logger.warning(repr(e))
+            params.logger.opt(exception=True).debug(e)
+
+        # Private methods do not receive params for logging, so
+        # handle IndexError raised in private np.gradient call here.
+        # At least two points are needed for np.gradient.
+        if dpcstime.size < 2:
+            params.logger.warning(
+                "get_z_parameters: dpcstime.size < 2. Setting to array([np.nan, np.nan])"
+            )
+            dpcstime = np.full(2, np.nan, dtype=float)
+
+        # Handle edge case of improper shape of A_OUT.
+        # Example: Shot 1060621025 stores 1-D array instead of expected 2-D.
+        # Also confirm that a ZCUR wire was read.
+        z_error_without_ip = np.full(dpcstime.shape, np.nan)
+        if wire_errors.ndim != 2:
+            params.logger.warning(
+                (
+                    "get_z_parameters: "
+                    f"DPCS A_OUT has unexpected dimension {wire_errors.ndim}; "
+                    "Setting z_cur errors to np.nan."
+                )
+            )
+        elif z_wire_index == -1:
+            params.logger.warning(
+                (
+                    "get_z_parameters: Failed to read ZCUR wire. "
+                    "Setting z_cur errors to np.nan."
+                )
+            )
+        else:
+            z_error_without_factor_and_ip = wire_errors[:, z_wire_index]
+            # The value of Z_error we read is not in the units we want. It must be *divided*
+            #  by a factor AND *divided* by the plasma current.
+            # Also, it turns out that different segments have different factors. So we
+            # search through the active segments (determined above), find the factors,
+            # and *divide* by the factor only for the times in the active segment (as
+            # determined from start_times and stop_times.
+            for i, (_, start) in enumerate(active_wire_segments):
+                if i == len(active_wire_segments) - 1:
+                    end = pcstime[-1]
+                else:
+                    end = active_wire_segments[i + 1][1]
+                # DPCS refers to PCS so we need to open the common ancestor tree, HYBRID
+                z_factor = params.get_data(
+                    rf"\dpcs::top.seg_{i + 1:02d}:p_{z_wire_index:02d}:predictor:factor",
+                    tree_name="hybrid",
+                )
+                temp_indx = np.where((dpcstime >= start) & (dpcstime <= end))
+                z_error_without_ip[temp_indx] = (
+                    z_error_without_factor_and_ip[temp_indx] / z_factor
+                )  # [A*m]
         # Next we grab ip, which comes from a_in:input_056. This also requires
         # *multiplication* by a factor.
         # NOTE that I can't get the following ip_without_factor to work for shots
@@ -468,6 +507,14 @@ class CmodPhysicsMethods:
                 tree_name="hybrid",
             )
             ip = ip_without_factor * ip_factor  # [A]
+            # Ensure that z_error has same time base as ip
+            if len(ip) != len(dpcstime):
+                params.logger.warning(
+                    "get_z_parameters: len(ip) != len(dpcstime). "
+                    "Setting z_error, ip, and dpcstime to np.nan."
+                )
+                z_error_without_ip = np.full_like(dpcstime, np.nan)
+                ip = np.full_like(dpcstime, np.nan)
         else:
             ip, ip_time = params.get_data_with_dims(
                 r"\ip", tree_name="magnetics"
@@ -634,12 +681,12 @@ class CmodPhysicsMethods:
           [#610](https://github.com/MIT-PSFC/disruption-py/pull/610)
 
         """
-        if p_lh is not None and isinstance(t_lh, np.ndarray) and len(t_lh) > 1:
+        if p_lh is not None and isinstance(t_lh, np.ndarray) and t_lh.size > 1:
             p_lh = interp1(t_lh, p_lh * 1.0e3, times, fill_value=0)  # [kW] -> [W]
         else:
             p_lh = np.zeros(len(times))
 
-        if p_icrf is not None and isinstance(t_icrf, np.ndarray) and len(t_icrf) > 1:
+        if p_icrf is not None and isinstance(t_icrf, np.ndarray) and t_icrf.size > 1:
             p_icrf = interp1(t_icrf, p_icrf * 1.0e6, times, fill_value=0)  # [MW] -> [W]
         else:
             p_icrf = np.zeros(len(times))
@@ -737,8 +784,10 @@ class CmodPhysicsMethods:
         -------
         - original source: [get_power.m](https://github.com/MIT-PSFC/disruption-py
         /blob/matlab/CMOD/matlab-core/get_power.m)
-        - pull requests: #[62](https://github.com/MIT-PSFC/disruption-py/pull/62), #[367](https:
-        //github.com/MIT-PSFC/disruption-py/pull/367)
+        - pull requests: #[62](https://github.com/MIT-PSFC/disruption-py/pull/62),
+          #[367](https://github.com/MIT-PSFC/disruption-py/pull/367),
+          #[612](https://github.com/MIT-PSFC/disruption-py/pull/612)
+        - issues: #[593](https://github.com/MIT-PSFC/disruption-py/issues/593)
         """
         # Get LH power, ICRF power, radiated power, and respective time bases
         # Data source of LH, ICRF, and radiated power:
@@ -754,6 +803,14 @@ class CmodPhysicsMethods:
             t = f"t_{val}"
             try:
                 kwa[p], kwa[t] = params.get_data_with_dims(node, tree_name=tree)
+                if kwa[p].shape != kwa[t].shape:
+                    params.logger.warning(
+                        f"get_power: {p} has different shape than {t}: "
+                        f"{kwa[p].shape} vs. {kwa[t].shape}. "
+                        f"Setting {p} and {t} to np.nan."
+                    )
+                    kwa[p] = np.full_like(params.times, np.nan)
+                    kwa[t] = np.full_like(params.times, np.nan)
             except (mdsExceptions.TreeFOPENR, mdsExceptions.TreeNNF):
                 kwa[p], kwa[t] = None, None
         # Ohmic power
@@ -1428,10 +1485,12 @@ class CmodPhysicsMethods:
         -------
         - original source: [get_peaking_factor_cmod.m](https://github.com/MIT-PSFC/
         disruption-py/blob/matlab/CMOD/matlab-core/get_peaking_factor_cmod.m)
-        - pull requests: #[216](https://github.com/MIT-PSFC/disruption-py/
-        pull/216), #[225](https://github.com/MIT-PSFC/disruption-py/pull/
-        225), #[268](https://github.com/MIT-PSFC/disruption-py/pull/268)
-        - issues: #[210](https://github.com/MIT-PSFC/disruption-py/issues/210)
+        - pull requests: #[216](https://github.com/MIT-PSFC/disruption-py/pull/216),
+          #[225](https://github.com/MIT-PSFC/disruption-py/pull/225),
+          #[268](https://github.com/MIT-PSFC/disruption-py/pull/268),
+          #[612](https://github.com/MIT-PSFC/disruption-py/pull/612)
+        - issues: #[210](https://github.com/MIT-PSFC/disruption-py/issues/210),
+          #[593](https://github.com/MIT-PSFC/disruption-py/issues/593)
         """
         use_ts_tci_calibration = False
         # Ignore shots on the blacklist
@@ -1455,14 +1514,41 @@ class CmodPhysicsMethods:
         )  # [keV], [s]
         ts_te_core = ts_te_core * 1000  # [keV] -> [eV]
         ts_te_edge = params.get_data(r"\ts_te")  # [eV]
-        ts_te = np.concatenate((ts_te_core, ts_te_edge)) * 11600  # [eV] -> [K]
+        ts_te = None
+        ts_ne = None
+        # Ensure equal number of edge and core time points before concatenation
+        if len(ts_time) != ts_te_edge.shape[1]:
+            params.logger.warning(
+                f"get_peaking_factors: "
+                f"len(ts_time) = {len(ts_time)} vs. ts_te_edge.shape[1] = {ts_te_edge.shape[1]}. "
+                f"Setting ts_te to np.nan."
+            )
+            ts_te = np.full(
+                (ts_te_core.shape[0] + ts_te_edge.shape[0], len(ts_time)), np.nan
+            )
+        else:
+            ts_te = np.concatenate((ts_te_core, ts_te_edge)) * 11600  # [eV] -> [K]
 
         # Get ne data
         ts_ne_core = params.get_data(
             f"{node_ext}:ne_rz", tree_name="electrons"
         )  # [m^-3]
         ts_ne_edge = params.get_data(r"\ts_ne")  # [m^-3]
-        ts_ne = np.concatenate((ts_ne_core, ts_ne_edge))
+        # Ensure equal number of edge and core time points before concatenation
+        if len(ts_time) != ts_ne_edge.shape[1]:
+            params.logger.warning(
+                (
+                    "get_peaking_factors: "
+                    f"len(ts_ne_core) = {len(ts_time)} "
+                    f"vs. ts_ne_edge.shape[1] = {ts_ne_edge.shape[1]}. "
+                    "Setting ts_ne to np.nan."
+                )
+            )
+            ts_ne = np.full(
+                (ts_ne_core.shape[0] + ts_ne_edge.shape[0], len(ts_time)), np.nan
+            )
+        else:
+            ts_ne = np.concatenate((ts_ne_core, ts_ne_edge))
 
         # Get TS chord positions
         ts_z_core = params.get_data(
@@ -1643,7 +1729,7 @@ class CmodPhysicsMethods:
         aminor = interp1(efit_time, aminor, te_time)
         n_e = interp1(times, n_e, te_time)
         btor = interp1(t_mag, btor, te_time)
-        if len(lh_time) > 1:
+        if lh_time.size > 1:
             lh_power = interp1(lh_time, lh_power, te_time)
         else:
             lh_power = np.zeros(len(te_time))
@@ -1821,8 +1907,10 @@ class CmodPhysicsMethods:
         -------
         - referenced sources: [get_ECE_data_cmod.m](https://github.com/MIT-PSFC/
         disruption-py/blob/matlab/CMOD/matlab-core/get_ECE_data_cmod.m)
-        - pull requests: #[260](https://github.com/MIT-PSFC/disruption-py/pull/260), #[466](https:
-        //github.com/MIT-PSFC/disruption-py/pull/466)
+        - pull requests: #[260](https://github.com/MIT-PSFC/disruption-py/pull/260),
+          #[466](https://github.com/MIT-PSFC/disruption-py/pull/466),
+          #[612](https://github.com/MIT-PSFC/disruption-py/pull/612)
+        - issues: #[593](https://github.com/MIT-PSFC/disruption-py/issues/593)
         """
 
         # Get magnetic axis data from EFIT
@@ -1839,6 +1927,14 @@ class CmodPhysicsMethods:
             lh_power, lh_time = params.get_data_with_dims(
                 ".results:netpow", tree_name="lh"
             )  # [kW], [s]
+            if lh_power.shape != lh_time.shape:
+                params.logger.warning(
+                    "get_te_profile_params_ece: lh_power and lh_time have different shapes: "
+                    f"{lh_power.shape} vs. {lh_time.shape}. "
+                    "Setting lh_power and lh_time to np.nan."
+                )
+                lh_power = np.full_like(efit_time, np.nan)
+                lh_time = np.full_like(efit_time, np.nan)
         except mdsExceptions.MdsException:
             # When LH power is off, it's often not stored in tree or it's a single 0.
             lh_power = 0.0
@@ -2014,15 +2110,28 @@ class CmodPhysicsMethods:
         References
         -------
         - original source: [get_sxr_data.m](https://github.com/MIT-PSFC/disruption-py/
-        blob/matlab/CMOD/matlab-core/get_sxr_data.m)
+          blob/matlab/CMOD/matlab-core/get_sxr_data.m)
+        - pull requests: #[612](https://github.com/MIT-PSFC/disruption-py/pull/612)
+        - issues: #[593](https://github.com/MIT-PSFC/disruption-py/issues/593)
+
 
         """
         sxr, t_sxr = params.get_data_with_dims(
             r"\top.brightnesses.array_1:chord_16",
             tree_name="xtomo",
         )  # [W/m^2], [s]
-        sxr = interp1(t_sxr, sxr, params.times)
-        sxr[sxr < 0] = np.nan
+        if sxr.size == t_sxr.size:
+            sxr = interp1(t_sxr, sxr, params.times)
+            sxr[sxr < 0] = np.nan
+        else:
+            params.logger.warning(
+                (
+                    "get_sxr_data: sxr has different size than t_sxr: "
+                    f"{sxr.size} vs. {t_sxr.size}. "
+                    "Setting sxr to np.nan."
+                )
+            )
+            sxr = np.full(params.times.shape, np.nan)
         return {"sxr": sxr}
 
     @staticmethod
@@ -2168,7 +2277,8 @@ class CmodPhysicsMethods:
 
         References
         ----------
-        - pull requests: #[564](https://github.com/MIT-PSFC/disruption-py/pull/564)
+        - pull requests: #[564](https://github.com/MIT-PSFC/disruption-py/pull/564),
+          #[612](https://github.com/MIT-PSFC/disruption-py/pull/612)
         - issues: #[542](https://github.com/MIT-PSFC/disruption-py/issues/542)
 
         """
@@ -2212,6 +2322,10 @@ class CmodPhysicsMethods:
             np.argmin(np.abs(t_sxr - (cq_time + tq_params["t_wndw_post_cq"]))) + 1
         )
         t_sxr = t_sxr[j_chord_start:j_chord_end]
+        if len(t_sxr) < 2:
+            raise NanDataError(
+                f"get_thermal_quench_time: No SXR data at CQ time = {cq_time:.3f} s."
+            )
 
         n_chords = tq_params["idx_last_chord"] - idx_first_chord + 1
         sxr = np.zeros((n_chords, len(t_sxr)))
@@ -2227,10 +2341,21 @@ class CmodPhysicsMethods:
                 )
                 chord = params.get_data(tdi_expr, tree_name="xtomo")
             except mdsExceptions.MdsException:
-                params.logger.warning(
-                    "Failed to get SXR {} chord {} data.",
+                params.logger.debug(
+                    "get_thermal_quench_time: Failed to get SXR {} chord {} data.",
                     array_path,
                     idx_first_chord + i + 1,
+                )
+                valid_chords[i] = False
+                continue
+            if len(chord) != len(t_sxr):
+                params.logger.debug(
+                    "get_thermal_quench_time: "
+                    "Skipping SXR {} chord {}: got {} samples, expected {}.",
+                    array_path,
+                    idx_first_chord + i + 1,
+                    len(chord),
+                    len(t_sxr),
                 )
                 valid_chords[i] = False
                 continue
@@ -2265,7 +2390,8 @@ class CmodPhysicsMethods:
                 autocorr = autocorr / max_autocorr
             else:
                 params.logger.debug(
-                    "Removing bad SXR chord {}", idx_first_chord + i + 1
+                    "get_thermal_quench_time: Removing bad SXR chord {}",
+                    idx_first_chord + i + 1,
                 )
                 valid_chords[i] = False
                 continue
@@ -2278,13 +2404,17 @@ class CmodPhysicsMethods:
             autocorr_decay_time = index_decay / autocorr_sample_freq
             if autocorr_decay_time < tq_params["autocorr_noise_cutoff"]:
                 params.logger.debug(
+                    "get_thermal_quench_time: "
                     "Removing noisy SXR chord {}: autocorr decay time: {}",
                     idx_first_chord + i + 1,
                     autocorr_decay_time,
                 )
                 valid_chords[i] = False
         if not np.any(valid_chords):
-            raise NanDataError("No valid SXR chords after removing noisy chords")
+            raise NanDataError(
+                "get_thermal_quench_time: "
+                "No valid SXR chords after removing noisy chords"
+            )
         sxr = sxr[valid_chords]
 
         # Noncausal Butterworth low pass filter to smooth transient SXR spikes during TQ.
@@ -2322,7 +2452,9 @@ class CmodPhysicsMethods:
         )
         idx_end = np.argmin(np.abs(t_sxr - cq_onset_time))
         if idx_start == len(t_sxr) - 1:
-            raise NanDataError(f"No SXR data at CQ time = {cq_time:.3f} s.")
+            raise NanDataError(
+                f"get_thermal_quench_time: No SXR data at CQ time = {cq_time:.3f} s."
+            )
         t_max_sxr_drop = t_sxr[idx_start + np.argmin(dcore_sxr_dt[idx_start:idx_end])]
 
         # Find onset of thermal quench in 0.5 ms window prior to midpoint of TQ
@@ -2336,10 +2468,14 @@ class CmodPhysicsMethods:
         )
         idx_end = np.argmin(np.abs(t_sxr - t_max_sxr_drop))
         window = core_sxr_raw[idx_start:idx_end]
+        peak = np.max(window)
+        if peak < 0:
+            raise DataError(
+                "get_thermal_quench_time: "
+                f"Negative SXR peak ({peak:.3g}) before max drop in SXR."
+            )
         # Want last maximum in case the SXR has saturated and there are multiple maxima
-        max_sxr_idx = np.nonzero(window >= tq_params["tq_onset_frac"] * np.max(window))[
-            0
-        ][-1]
+        max_sxr_idx = np.nonzero(window >= tq_params["tq_onset_frac"] * peak)[0][-1]
         tq_time_scalar = t_sxr[idx_start + max_sxr_idx]
 
         return {"thermal_quench_time": np.full(len(params.times), tq_time_scalar)}
