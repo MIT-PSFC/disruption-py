@@ -2111,7 +2111,7 @@ class CmodPhysicsMethods:
         -------
         - original source: [get_sxr_data.m](https://github.com/MIT-PSFC/disruption-py/
           blob/matlab/CMOD/matlab-core/get_sxr_data.m)
-        - pull-requests: #[612](https://github.com/MIT-PSFC/disruption-py/pull/612)
+        - pull requests: #[612](https://github.com/MIT-PSFC/disruption-py/pull/612)
         - issues: #[593](https://github.com/MIT-PSFC/disruption-py/issues/593)
 
 
@@ -2323,7 +2323,7 @@ class CmodPhysicsMethods:
         t_sxr = t_sxr[j_chord_start:j_chord_end]
         if len(t_sxr) < 2:
             raise NanDataError(
-                "get_thermal_quench_time: " f"No SXR data at CQ time = {cq_time:.3f} s."
+                f"get_thermal_quench_time: No SXR data at CQ time = {cq_time:.3f} s."
             )
 
         n_chords = tq_params["idx_last_chord"] - idx_first_chord + 1
@@ -2451,7 +2451,9 @@ class CmodPhysicsMethods:
         )
         idx_end = np.argmin(np.abs(t_sxr - cq_onset_time))
         if idx_start == len(t_sxr) - 1:
-            raise NanDataError(f"No SXR data at CQ time = {cq_time:.3f} s.")
+            raise NanDataError(
+                "get_thermal_quench_time: " f"No SXR data at CQ time = {cq_time:.3f} s."
+            )
         t_max_sxr_drop = t_sxr[idx_start + np.argmin(dcore_sxr_dt[idx_start:idx_end])]
 
         # Find onset of thermal quench in 0.5 ms window prior to midpoint of TQ
@@ -2467,7 +2469,10 @@ class CmodPhysicsMethods:
         window = core_sxr_raw[idx_start:idx_end]
         peak = np.max(window)
         if peak < 0:
-            raise DataError(f"Negative SXR peak ({peak:.3g}) before max drop in SXR.")
+            raise DataError(
+                "get_thermal_quench_time: "
+                f"Negative SXR peak ({peak:.3g}) before max drop in SXR."
+            )
         # Want last maximum in case the SXR has saturated and there are multiple maxima
         max_sxr_idx = np.nonzero(window >= tq_params["tq_onset_frac"] * peak)[0][-1]
         tq_time_scalar = t_sxr[idx_start + max_sxr_idx]
