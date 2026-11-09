@@ -27,7 +27,7 @@ Here follows a non-exhaustive list of projects, publications, and conference con
 
 ### Conferences
 
-- 68th APS-DPP Meeting (2026)
+- [68th APS-DPP Meeting (2026)](https://schedule.aps.org/dppgec/2026/schedule/)
   - AR Saperstein, _et al._ (2026), _"Validation of off-normal simulations of radiative collapse events in Alcator C-Mod"_ [GO03.8](https://schedule.aps.org/dppgec/2026/events/DPP-GO03/8)
   - GL Trevisan, _et al._ (2026), _"An open-access multi-tokamak dataset for transient analysis and AI/ML studies"_ [GM10.4](https://schedule.aps.org/dppgec/2026/events/DPP-GM10/4)
   - H Wietfeldt, _et al._ (2026), _"Characterization of transient impurity events on Alcator C-Mod and WEST"_ [JO03.12](https://schedule.aps.org/dppgec/2026/events/DPP-JO03/12)
