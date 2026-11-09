@@ -88,38 +88,6 @@ class CmodPhysicsMethods:
         return active_segments
 
     @staticmethod
-    @physics_method(columns=["time_until_disrupt"], tokamak=Tokamak.CMOD)
-    def get_time_until_disrupt(params: PhysicsMethodParams):
-        """
-        Calculate the time until disruption.
-
-        Currently, the disruption time is queried from the `DISRUPTIONS` table
-        in the SQL database of each machine. These disruption times were calculated
-        using Robert Granetz's routine.
-
-        Parameters
-        ----------
-        params : PhysicsMethodParams
-            The parameters containing the disruption information and times.
-
-        Returns
-        -------
-        dict
-            A dictionary with a single key `time_until_disrupt`.
-
-        References
-        -------
-        - original source: [get_t_disrupt.m](https://github.com/MIT-PSFC/disruption-py
-        /blob/matlab/CMOD/matlab-core/get_t_disrupt.m)
-        - issues: #[223](https://github.com/MIT-PSFC/disruption-py/issues/223)
-
-        """
-        time_until_disrupt = [np.nan]
-        if params.disrupted:
-            time_until_disrupt = params.disruption_time - params.times
-        return {"time_until_disrupt": time_until_disrupt}
-
-    @staticmethod
     def _get_ip_parameters(times, ip, magtime, ip_prog, pcstime):
         """
         Calculates actual and programmed current as well as their derivatives

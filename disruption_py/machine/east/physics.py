@@ -23,34 +23,6 @@ class EastPhysicsMethods:
     """
 
     @staticmethod
-    @physics_method(columns=["time_until_disrupt"], tokamak=Tokamak.EAST)
-    def get_time_until_disrupt(params: PhysicsMethodParams):
-        """
-        Calculate the time until disruption.
-
-        Currently, the disruption time is queried from the `DISRUPTIONS` table
-        in the SQL database of each machine. These disruption times were calculated
-        using Robert Granetz's routine.
-
-        Parameters
-        ----------
-        params : PhysicsMethodParams
-            The parameters containing the disruption information and times.
-
-        Returns
-        -------
-        dict
-            A dictionary with a single key `time_until_disrupt`.
-
-        References
-        -------
-        - issues: #[223](https://github.com/MIT-PSFC/disruption-py/issues/223)
-        """
-        if params.disrupted:
-            return {"time_until_disrupt": params.disruption_time - params.times}
-        return {"time_until_disrupt": [np.nan]}
-
-    @staticmethod
     @physics_method(
         columns=[
             "ip",
