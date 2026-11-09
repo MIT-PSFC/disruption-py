@@ -48,7 +48,7 @@ class ProcessXarrayConnection(ProcessConnection):
     @property
     def folder_path(self):
         """Get full folder path including endpoint URL if provided."""
-        if self.endpoint_url is not None:
+        if self.endpoint_url:
             return f"{self.endpoint_url}/{self.file_path}"
 
         return self.file_path

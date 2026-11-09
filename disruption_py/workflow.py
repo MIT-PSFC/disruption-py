@@ -11,7 +11,7 @@ import sys
 import time
 from itertools import repeat
 from multiprocessing import Pool
-from typing import Any, Callable
+from typing import Any, Callable, Dict, Tuple
 
 from loguru import logger
 from tqdm.auto import tqdm
@@ -22,6 +22,7 @@ from disruption_py.core.utils.misc import (
     filter_dict,
     get_elapsed_time,
     get_metadata,
+    get_rss,
     get_temporary_folder,
     without_duplicates,
 )
@@ -80,7 +81,8 @@ def get_shots_data(
     output_setting: OutputSetting = "dataset",
     num_processes: int = 1,
     log_settings: LogSettings = None,
-) -> Any:
+    artifacts: bool = False,
+) -> Any | Tuple[Any, Dict]:
     """
     Get shot data for all shots specified by shotlist_setting.
 
@@ -111,12 +113,16 @@ def get_shots_data(
         in serial. If > 1, the data is retrieved in parallel.
     log_settings : LogSettings, optional
         Settings for logging.
+    artifacts : bool, optional
+        Whether to output salient artifacts in a dictionary. Defaults to False.
 
     Returns
     -------
-    Any
+    Any | Tuple[Any, Dict]
         The value of OutputSetting.get_results. See OutputSetting for more details.
+        If `artifacts` is True, returns a tuple of the results and the artifacts dictionary.
     """
+
     log_settings = resolve_log_settings(log_settings)
     log_settings.setup_logging()
 
@@ -132,6 +138,17 @@ def get_shots_data(
     else:
         raise ModuleNotFoundError("Cannot import MDSplus.")
 
+    # Clean-up parameters
+    if retrieval_settings is None:
+        retrieval_settings = RetrievalSettings()
+
+    retrieval_settings.resolve()
+    output_setting = resolve_output_setting(output_setting)
+
+    # write the effective settings back into the configuration, so that the
+    # dump below reflects the actual runtime values rather than the file defaults
+    config(tokamak).update({"log": log_settings.to_config()})
+
     # dump configuration
     json_file_path = os.path.join(get_temporary_folder(), "config.json")
     config_dict = filter_dict(config(tokamak).to_dict(), "_pass")
@@ -143,12 +160,6 @@ def get_shots_data(
     logger.verbose("Dumped configuration: {path}", path=json_file_path)
 
     database = _get_database_instance(tokamak, database_initializer)
-    # Clean-up parameters
-    if retrieval_settings is None:
-        retrieval_settings = RetrievalSettings()
-
-    retrieval_settings.resolve()
-    output_setting = resolve_output_setting(output_setting)
 
     # do not spawn unnecessary processes
     shotlist_setting_params = ShotlistSettingParams(database, tokamak)
@@ -160,10 +171,6 @@ def get_shots_data(
         logger.critical("Nothing to do!")
         return None
 
-    # Dynamically set the console log level based on the number of shots
-    if log_settings.console_level is None:
-        log_settings.reset_handlers(num_shots=len(shotlist_list))
-
     # log start
     logger.info(
         "Starting workflow: {n:,} shot{s} / {m} process{p}",
@@ -172,13 +179,12 @@ def get_shots_data(
         m=num_processes,
         p="es" if num_processes > 1 else "",
     )
-
+    logger.debug("Starting workflow: RSS = {:,.1f} MB, MaxRSS = {:,.1f} MB", *get_rss())
     took = -time.time()
     retrieval_settings.efit_nickname_setting.prefetch_db(database, tokamak)
     with Pool(
         processes=num_processes,
         initializer=log_settings.reset_handlers,
-        initargs=(len(shotlist_list),),
     ) as pool:
         args = zip(
             repeat(tokamak),
@@ -219,9 +225,26 @@ def get_shots_data(
         elapsed=get_elapsed_time(took),
         each=took / total,
     )
+    logger.debug(
+        "Completed workflow: RSS = {:,.1f} MB, MaxRSS = {:,.1f} MB", *get_rss()
+    )
 
     results = output_setting.get_results()
-    output_setting.to_disk()
+    logger.debug(
+        "Obtained results: RSS = {:,.1f} MB, MaxRSS = {:,.1f} MB",
+        *get_rss(),
+    )
+
+    output = output_setting.to_disk()
+
+    if artifacts:
+        return results, {
+            "config": json_file_path,
+            "folder": get_temporary_folder(),
+            "log": log_settings.file_path,
+            "output": output,
+        }
+
     return results
 
 
@@ -271,7 +294,17 @@ def _get_connection_instance(tokamak, connection_initializer):
     return get_process_connection(tokamak)
 
 
-def run(tokamak, methods, shots, efit_tree, time_base, output, processes, log_level):
+def run(
+    tokamak,
+    methods,
+    shots,
+    efit_tree,
+    time_base,
+    output,
+    processes,
+    log_level,
+    artifacts,
+):
     """
     simple workflow.
     """
@@ -293,6 +326,7 @@ def run(tokamak, methods, shots, efit_tree, time_base, output, processes, log_le
         num_processes=processes,
         log_settings=log_level,
         output_setting=output,
+        artifacts=artifacts,
     )
 
 
@@ -310,10 +344,20 @@ def cli():
     parser.add_argument("-b", "--time-base", type=str, default="disruption_warning")
     parser.add_argument("-o", "--output", type=str, default="dataset")
     parser.add_argument("-p", "--processes", type=int, default=1)
-    parser.add_argument("-l", "--log-level", type=str, default="VERBOSE")
+    parser.add_argument(
+        "-l", "--log-level", type=str, default=config().log.console_level
+    )
+    parser.add_argument("-a", "--artifacts", action="store_true")
 
-    out = run(**vars(parser.parse_args()))
-    print(out)
+    args = vars(parser.parse_args())
+    out = run(**args)
+
+    if args["artifacts"]:
+        out, artifacts = out
+        print(json.dumps(artifacts))
+    else:
+        print(out)
+
     return 2 if out is None else len(out) == 0
 
 
