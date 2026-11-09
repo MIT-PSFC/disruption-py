@@ -1327,7 +1327,8 @@ class CmodPhysicsMethods:
 
         References:
         ----------
-        - https://github.com/MIT-PSFC/disruption-py/blob/matlab/CMOD/matlab-core/get_peaking_factor_cmod.m  # pylint: disable=line-too-long
+        - https://github.com/MIT-PSFC/disruption-py/blob
+          /matlab/CMOD/matlab-core/get_peaking_factor_cmod.m
         - https://github.com/MIT-PSFC/disruption-py/issues/210
         - https://github.com/MIT-PSFC/disruption-py/pull/216
         - https://github.com/MIT-PSFC/disruption-py/pull/268
