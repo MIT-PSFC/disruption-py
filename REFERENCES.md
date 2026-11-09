@@ -33,15 +33,12 @@ Here follows a non-exhaustive list of projects, publications, and conference con
   - Z Keith, _et al._ (2026), _"Comparing hybrid physics models for full-shot transport prediction"_
   - M Tobin, _et al._ (2026), _"A multi-tokamak study of neoclassical tearing mode seeding phenomena with automated database analysis"_
   - NJ Barbour, _et al._ (2026), _"Automated Quality Assessment of 1 kHz EFIT Computations"_
-  - AR Saperstein, _et al_ (2026), _"Validation of off-normal simulations of radiative collapse events in Alcator C-Mod"_
+  - AR Saperstein, _et al._ (2026), _"Validation of off-normal simulations of radiative collapse events in Alcator C-Mod"_
   - H Wietfeldt, _et al._ (2026), _"Characterization of transient impurity events on Alcator C-Mod and WEST"_
   - E Liang, _et al._ (2026), _"Physics-Guided Interpretation of Phase-Dependent Disruption Prediction in Alcator C-Mod"_
   - E d D Zapata Cornejo, _et al._ (2026), _"Radiative disruption precursors detection in Alcator C-Mod via the DEFUSE interoperable framework"_
 
-- [7th International Conference on Data-Driven Plasma Science (2026)](https://www.icddps.org/)
-  - Z Keith, _et al._ (2026), _"Benchmarking hybrid models for full-shot transport prediction"_
-
-- [Fourth IAEA Technical Meeting on Plasma Disruptions and their Mitigation](https://conferences.iaea.org/event/451/)
+- [4th IAEA Technical Meeting on Plasma Disruptions and their Mitigation](https://conferences.iaea.org/event/451/)
   - AR Saperstein, _et al._ (2026)_, "Off-Normal Simulations (ONSIMs) of radiative collapses on Alcator C-Mod"_, [abstract](https://conferences.iaea.org/event/451/contributions/42908/)
 
 - [46th ITPEA-MDC Meeting (2026)](https://www.iter.org/scientists/itpa/itpea-meetings)
