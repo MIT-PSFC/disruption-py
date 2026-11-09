@@ -27,6 +27,10 @@ Here follows a non-exhaustive list of projects, publications, and conference con
 
 ### Conferences
 
+- [2nd Workshop on AI for Accelerating Fusion Energy and Plasma Science (2026)](https://conferences.iaea.org/event/454/)
+  - G Galleher, _et al._ (2026), _"Machine-Learning Inference of Separatrix Parameters for Real-Time Plasma Control"_, [abstract](https://conferences.iaea.org/event/454/contributions/43142/)
+  - EdD Zapata Cornejo, _et al._ (2026), _"Enabling scaled-up search of discharges and events in Alcator C-Mod multivariate time series, images and text"_, [abstract](https://conferences.iaea.org/event/454/contributions/43120/)
+
 - [68th APS-DPP Meeting (2026)](https://schedule.aps.org/dppgec/2026/schedule/)
   - AR Saperstein, _et al._ (2026), _"Validation of off-normal simulations of radiative collapse events in Alcator C-Mod"_ [GO03.8](https://schedule.aps.org/dppgec/2026/events/DPP-GO03/8)
   - GL Trevisan, _et al._ (2026), _"An open-access multi-tokamak dataset for transient analysis and AI/ML studies"_ [GM10.4](https://schedule.aps.org/dppgec/2026/events/DPP-GM10/4)
