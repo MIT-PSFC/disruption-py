@@ -92,10 +92,14 @@ description = "Measured line-averaged electron density."
 imas = "/summary/line_average/n_e"
 units = "m^-3"
 
-[mast.physics.attributes.n_e_core]
+[mast.physics.attributes.ne_core]
 description = "Core electron density measurement"
 imas = "/thomson_scattering/channel(i1)/n_e"
 units = "m^-3"
+
+[mast.physics.attributes.ne_peaking]
+description = "Peaking factor of the electron density profile measured by the Thomson scattering diagnostic."
+units = "dimensionless"
 
 [mast.physics.attributes.p_nbi]
 description = "NBI heating power."
@@ -111,6 +115,14 @@ units = "W"
 description = "Radiated power measured by the 2pi diode."
 imas = "/bolometer/power_radiated_total"
 units = "W"
+
+[mast.physics.attributes.prad_peaking]
+description = "Peaking factor of the radiated power."
+units = "dimensionless"
+
+[mast.physics.attributes.pressure_peaking]
+description = "Peaking factor of the electron pressure profile measured by the Thomson scattering diagnostic."
+units = "dimensionless"
 
 [mast.physics.attributes.q95]
 description = "q at 95% flux surface (EFIT)."
@@ -131,10 +143,27 @@ units = "m"
 description = "Core soft X-ray measurement."
 units = "V"
 
-[mast.physics.attributes.t_e_core]
+[mast.physics.attributes.sxr_core]
+description = "Core soft X-ray measurement."
+units = "V"
+
+[mast.physics.attributes.sxr_edge]
+description = "Edge soft X-ray measurement."
+units = "V"
+
+[mast.physics.attributes.te_core]
 description = "Core electron temperature measurement"
 imas = "/thomson_scattering/channel(i1)/t_e"
 units = "eV"
+
+[mast.physics.attributes.te_peaking]
+description = "Peaking factor of the electron temperature profile measured by the Thomson scattering diagnostic."
+imas = "/core_profiles/global_quantities/t_e_peaking"
+units = "dimensionless"
+
+[mast.physics.attributes.te_width]
+description = "Half-width at half-maximum of the Gaussian fit to the electron temperature profile."
+units = "m"
 
 [mast.physics.attributes.tribot]
 description = "Bottom triangularity (EFIT)."
@@ -153,6 +182,39 @@ units = "V"
 [mast.physics.attributes.v_loop_static]
 description = "Static LCFS loop voltage from EFIT. Defined as V_loop = -2 * pi * d(psi at LCFS) / dt"
 units = "V"
+
+[mast.physics.attributes.v_z]
+description = "Vertical velocity of the plasma current centroid."
+imas = "/equilibrium/time_slice(itime)/global_quantities/current_centre/velocity_z"
+units = "m/s"
+
+[mast.physics.attributes.volume]
+description = "Volume of the plasma."
+imas = "/equilibrium/time_slice(itime)/global_quantities/volume"
+units = "m^3"
+
+[mast.physics.attributes.wmhd]
+description = "Total plasma energy (EFIT)."
+imas = "/equilibrium/time_slice(itime)/global_quantities/energy_mhd"
+units = "J"
+
+[mast.physics.attributes.z_error]
+description = "Difference between the measured and programmed vertical position of the plasma current centroid."
+units = "m"
+
+[mast.physics.attributes.z_prog]
+description = "Programmed vertical position of the plasma current centroid."
+imas = "/pulse_schedule/position_control/current_centroid/z/reference"
+units = "m"
+
+[mast.physics.attributes.z_times_v_z]
+description = "Product of the vertical position and vertical velocity of the plasma current centroid."
+units = "m^2/s"
+
+[mast.physics.attributes.zcur]
+description = "Measured vertical position of the plasma current centroid."
+imas = "/equilibrium/time_slice(itime)/global_quantities/current_centre/z"
+units = "m"
 
 [mast.physics.current_quench_time_thresholds]
 abs_ip0 = 0.1e6
@@ -183,6 +245,6 @@ disruption_time_start = 0.0
 disruption_time_step = 0.001
 dt_before_disruption = 0.010
 duration_before_disruption = 0.25
-end_of_current_threshold = 200e3
+end_of_current_threshold = 50e3
 minimum_duration = 0.1
 minimum_ip = 200e3

@@ -34,7 +34,7 @@ class D3DUtilMethods:
         """
         polarity = np.unique(params.get_data(f"ptdata('iptdirect', {params.shot_id})"))
         if len(polarity) > 1:
-            params.logger.info(
+            params.logger.verbose(
                 "Polarity of Ip target is not constant. Using value at first timestep.",
             )
             params.logger.debug("Polarity array: {polarity}", polarity=polarity)
