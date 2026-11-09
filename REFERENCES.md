@@ -27,7 +27,18 @@ Here follows a non-exhaustive list of projects, publications, and conference con
 
 ### Conferences
 
-- [Fourth IAEA Technical Meeting on Plasma Disruptions and their Mitigation](https://conferences.iaea.org/event/451/)
+- [68th APS-DPP Meeting (2026)](https://schedule.aps.org/dppgec/2026/schedule/)
+  - AR Saperstein, _et al._ (2026), _"Validation of off-normal simulations of radiative collapse events in Alcator C-Mod"_ [GO03.8](https://schedule.aps.org/dppgec/2026/events/DPP-GO03/8)
+  - GL Trevisan, _et al._ (2026), _"An open-access multi-tokamak dataset for transient analysis and AI/ML studies"_ [GM10.4](https://schedule.aps.org/dppgec/2026/events/DPP-GM10/4)
+  - H Wietfeldt, _et al._ (2026), _"Characterization of transient impurity events on Alcator C-Mod and WEST"_ [JO03.12](https://schedule.aps.org/dppgec/2026/events/DPP-JO03/12)
+  - S Chaturvedi, _et al._ (2026), _"Maintainable and Extensible Software Architecture for Multi-Machine Disruption Studies with DisruptionPy"_ [KP11.63](https://schedule.aps.org/dppgec/2026/events/DPP-KP11/63)
+  - NJ Barbour, _et al._ (2026), _"Automated Quality Assessment of 1 kHz EFIT Computations"_ [KP11.83](https://schedule.aps.org/dppgec/2026/events/DPP-KP11/83)
+  - E Liang, _et al._ (2026), _"Physics-Guided Interpretation of Phase-Dependent Disruption Prediction in Alcator C-Mod"_ [KP11.96](https://schedule.aps.org/dppgec/2026/events/DPP-KP11/96)
+  - M Tobin, _et al._ (2026), _"A multi-tokamak study of neoclassical tearing mode seeding phenomena with automated database analysis"_ [OO04.5](https://schedule.aps.org/dppgec/2026/events/DPP-OO04/5)
+  - Z Keith, _et al._ (2026), _"Comparing hybrid physics models for full-shot transport prediction"_ [BP11.57](https://schedule.aps.org/dppgec/2026/events/DPP-BP11/57)
+  - E d D Zapata Cornejo, _et al._ (2026), _"Radiative disruption precursors detection in Alcator C-Mod via the DEFUSE interoperable framework"_ [BP11.59](https://schedule.aps.org/dppgec/2026/events/DPP-BP11/59)
+
+- [4th IAEA Technical Meeting on Plasma Disruptions and their Mitigation](https://conferences.iaea.org/event/451/)
   - AR Saperstein, _et al._ (2026)_, "Off-Normal Simulations (ONSIMs) of radiative collapses on Alcator C-Mod"_, [abstract](https://conferences.iaea.org/event/451/contributions/42908/)
 
 - [46th ITPEA-MDC Meeting (2026)](https://www.iter.org/scientists/itpa/itpea-meetings)
