@@ -1905,20 +1905,19 @@ class CmodPhysicsMethods:
             lh_power, lh_time = params.get_data_with_dims(
                 ".results:netpow", tree_name="lh"
             )  # [kW], [s]
-            if lh_power.shape != lh_time.shape:
-                params.logger.warning(
-                    "get_te_profile_params_ece: lh_power and lh_time have different shapes: "
-                    f"{lh_power.shape} vs. {lh_time.shape}. "
-                    "Setting lh_power and lh_time to np.nan."
-                )
-                lh_power = np.full_like(efit_time, np.nan)
-                lh_time = np.full_like(efit_time, np.nan)
         except mdsExceptions.MdsException:
             # When LH power is off, it's often not stored in tree or it's a single 0.
             lh_power = 0.0
         if not isinstance(lh_power, np.ndarray):
             lh_time = np.copy(efit_time)
             lh_power = np.zeros(len(efit_time))
+
+        if lh_power.shape != lh_time.shape:
+            raise MismatchCalculationError(
+                "get_te_profile_params_ece: lh_power and lh_time have different shapes: "
+                f"{lh_power.shape} vs. {lh_time.shape}. "
+                "Returning np.nan for ECE profile parameters."
+            )
 
         # Read in Te profile measurements from GPC2 (19 channels)
         node_path = ".gpc_2.results"
