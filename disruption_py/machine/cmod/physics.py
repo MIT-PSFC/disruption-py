@@ -402,7 +402,7 @@ class CmodPhysicsMethods:
         # Read in A_OUT, which is a 16xN matrix of the errors for *all* 16 wires for
         # *all* of the segments. Note that DPCS time is usually taken at 10kHz.
         # If MDS fetch fails, execution continues with NaN placeholders.
-        # Expected result of MDS fetch failure is z_prog returns, while others are set to NaN.
+        # Expected result of MDS fetch failure is that z_prog returns, while others are set to NaN
         try:
             wire_errors, dpcstime = params.get_data_with_dims(
                 r"\top.hardware.dpcs.signals:a_out", tree_name="hybrid", dim_nums=[1]
@@ -467,14 +467,22 @@ class CmodPhysicsMethods:
         # before 2015.
         # TODO: Try to fix this
         if params.shot_id > 1150101000:
-            ip_without_factor = params.get_data(
-                r"\top.hardware.dpcs.signals.a_in:input_056", tree_name="hybrid"
-            )
-            ip_factor = params.get_data(
-                r"\top.dpcs_config.inputs:input_056:p_to_v_expr",
-                tree_name="hybrid",
-            )
-            ip = ip_without_factor * ip_factor  # [A]
+            # Preserve z_prog in case of failed MDSplus reads
+            try:
+                ip_without_factor = params.get_data(
+                    r"\top.hardware.dpcs.signals.a_in:input_056", tree_name="hybrid"
+                )
+                ip_factor = params.get_data(
+                    r"\top.dpcs_config.inputs:input_056:p_to_v_expr",
+                    tree_name="hybrid",
+                )
+                ip = ip_without_factor * ip_factor  # [A]
+            except mdsExceptions.MdsException as e:
+                params.logger.warning(
+                    f"get_z_paramters: {repr(e)}. Setting z_cur errors to NaN."
+                )
+                params.logger.opt(exception=True).debug(e)
+                ip = np.full_like(z_error_without_ip, np.nan)
             # Ensure that z_error has same time base as ip
             if len(ip) != len(dpcstime):
                 params.logger.warning(
