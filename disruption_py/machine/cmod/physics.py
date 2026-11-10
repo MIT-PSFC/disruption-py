@@ -1512,12 +1512,13 @@ class CmodPhysicsMethods:
         )  # [m^-3]
         ts_ne_edge = params.get_data(r"\ts_ne")  # [m^-3]
         # Ensure equal number of edge and core time points before concatenation
-        if len(ts_time) != ts_ne_edge.shape[1]:
+        if len(ts_time) != ts_ne_edge.shape[1] or len(ts_time) != ts_ne_core.shape[1]:
             params.logger.warning(
                 (
                     "get_peaking_factors: "
-                    f"len(ts_ne_core) = {len(ts_time)} "
-                    f"vs. ts_ne_edge.shape[1] = {ts_ne_edge.shape[1]}. "
+                    f"len(ts_time) = {len(ts_time)}, "
+                    f"ts_ne_edge.shape[1] = {ts_ne_edge.shape[1]}, "
+                    f"ts_ne_core.shape[1] = {ts_ne_core.shape[1]}. "
                     "Setting ts_ne to np.nan."
                 )
             )
