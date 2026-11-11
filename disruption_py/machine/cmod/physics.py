@@ -479,7 +479,7 @@ class CmodPhysicsMethods:
                 ip = ip_without_factor * ip_factor  # [A]
             except mdsExceptions.MdsException as e:
                 params.logger.warning(
-                    f"get_z_paramters: {repr(e)}. Setting z_cur errors to NaN."
+                    f"get_z_parameters: {repr(e)}. Setting z_cur errors to NaN."
                 )
                 params.logger.opt(exception=True).debug(e)
                 ip = np.full_like(z_error_without_ip, np.nan)
