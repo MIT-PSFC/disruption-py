@@ -4,6 +4,14 @@ mdsplus_connection_string = "maxwell.ap.columbia.edu:8003"
 [hbtep.inout.sql]
 host = ""
 
+[hbtep.physics.current_quench_time_thresholds]
+abs_ip0 = 0.1e6
+abs_ip_final = 50e3
+abs_ip_max = 0.1e6
+ip0_over_ip_max = 0.33
+ip0_over_max_didt = 0.05
+shot_duration = 0.1
+
 [hbtep.tests]
 expected_failure_columns = []
 test_columns = []

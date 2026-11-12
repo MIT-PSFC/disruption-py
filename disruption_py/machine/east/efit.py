@@ -65,7 +65,7 @@ class EastEfitMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            The parameters containing the MDS connection and shot information.
+            The parameters containing the data connection and shot information.
 
         Returns
         -------
@@ -75,10 +75,10 @@ class EastEfitMethods:
         # pylint: disable=duplicate-code
 
         efit_data = {
-            k: params.mds_conn.get_data(v, tree_name="_efit_tree")
+            k: params.get_data(v, tree_name="_efit_tree")
             for k, v in EastEfitMethods.efit_cols.items()
         }
-        efit_time = params.mds_conn.get_data(
+        efit_time = params.get_data(
             r"\efit_aeqdsk:atime", tree_name="_efit_tree"
         )  # TODO: [unit?]
 
@@ -113,7 +113,7 @@ class EastEfitMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            The parameters containing the MDS connection and shot information.
+            The parameters containing the data connection and shot information.
 
         Returns
         -------
@@ -122,7 +122,7 @@ class EastEfitMethods:
         """
         # pylint: disable=duplicate-code
 
-        efit_time = params.mds_conn.get_data(
+        efit_time = params.get_data(
             r"\efit_a_eqdsk:atime", tree_name="pefit_east"
         )  # TODO: [unit?]
 
@@ -130,7 +130,7 @@ class EastEfitMethods:
         efit_time, unique_indices = np.unique(efit_time, return_index=True)
 
         efit_data = {
-            k: params.mds_conn.get_data(v, tree_name="pefit_east")[unique_indices]
+            k: params.get_data(v, tree_name="pefit_east")[unique_indices]
             for k, v in EastEfitMethods.pefit_cols.items()
         }
 
