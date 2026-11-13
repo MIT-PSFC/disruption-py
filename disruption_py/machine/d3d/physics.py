@@ -395,31 +395,31 @@ class D3DPhysicsMethods:
             )
         ne = ne * 1.0e6  # [cm^3] -> [m^3]
         t_ne = t_ne / 1.0e3  # [ms] -> [s]
-        # np.gradient requires at least two points
-        dne_dt = None
+        # np.gradient and interp1d require at least two points
         if ne.size < 2:
             params.logger.warning(
-                "get_density_parameters: ne.size < 2. Setting dne_dt to np.nan."
+                "get_density_parameters: ne.size < 2. Setting n_e and dn_dt to np.nan."
             )
-            dne_dt = np.full_like(t_ne, np.nan)
+            ne = np.full_like(params.times, np.nan, dtype=float)
+            dne_dt = np.full_like(params.times, np.nan, dtype=float)
         else:
             dne_dt = np.gradient(ne, t_ne)
-        # NOTE: t_ne has higher resolution than efit_time so t_ne[0] < efit_time[0]
-        # because of rounding, meaning we need to allow extrapolation
-        ne = interp1(
-            t_ne,
-            ne,
-            params.times,
-            "linear",
-            bounds_error=False,
-        )
-        dne_dt = interp1(
-            t_ne,
-            dne_dt,
-            params.times,
-            "linear",
-            bounds_error=False,
-        )
+            # NOTE: t_ne has higher resolution than efit_time so t_ne[0] < efit_time[0]
+            # because of rounding, meaning we need to allow extrapolation
+            ne = interp1(
+                t_ne,
+                ne,
+                params.times,
+                "linear",
+                bounds_error=False,
+            )
+            dne_dt = interp1(
+                t_ne,
+                dne_dt,
+                params.times,
+                "linear",
+                bounds_error=False,
+            )
         try:
             ip, t_ip = params.get_data_with_dims(
                 f"ptdata('ip', {params.shot_id})"
