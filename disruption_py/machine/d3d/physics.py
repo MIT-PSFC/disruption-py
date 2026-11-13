@@ -630,10 +630,10 @@ class D3DPhysicsMethods:
         - pull requests: #[547](https://github.com/MIT-PSFC/disruption-py/pull/547)
         - issues: #[506](https://github.com/MIT-PSFC/disruption-py/issues/506)
         """
-        ip = [np.nan]
-        ip_prog = [np.nan]
-        dip_dt = [np.nan]
-        dipprog_dt = [np.nan]
+        ip = np.full_like(params.times, np.nan)
+        ip_prog = np.full_like(params.times, np.nan)
+        dip_dt = np.full_like(params.times, np.nan)
+        dipprog_dt = np.full_like(params.times, np.nan)
         # Fill with nans instead of using a single nan because indices are used
         ip_error = np.full(len(params.times), np.nan)
         # Get measured plasma current parameters
@@ -642,12 +642,19 @@ class D3DPhysicsMethods:
                 f"ptdata('ip', {params.shot_id})"
             )  # [A], [ms]
             t_ip = t_ip / 1.0e3  # [ms] -> [s]
-            dip_dt = np.gradient(ip, t_ip)
-            ip = interp1(t_ip, ip, params.times, "linear")
-            dip_dt = interp1(t_ip, dip_dt, params.times, "linear")
         except mdsExceptions.MdsException as e:
             params.logger.warning("Failed to get measured plasma current parameters")
             params.logger.opt(exception=True).debug(e)
+        if ip.size < 2 or t_ip.size < 2:
+            params.logger.warning(
+                "get_ip_parameters: ip.size or t_ip.size < 2. Setting ip and dip_dt to NaN."
+            )
+            ip = np.full_like(params.times, np.nan)
+            dip_dt = np.full_like(params.times, np.nan)
+        else:
+            dip_dt = np.gradient(ip, t_ip)
+            ip = interp1(t_ip, ip, params.times, "linear")
+            dip_dt = interp1(t_ip, dip_dt, params.times, "linear")
         # Get programmed plasma current parameters
         try:
             ip_prog, t_ip_prog = params.get_data_with_dims(
