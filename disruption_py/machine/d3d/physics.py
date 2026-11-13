@@ -60,7 +60,7 @@ class D3DPhysicsMethods:
             h_98, t_h_98 = params.get_data_with_dims(
                 r"\H_THH98Y2", tree_name="transport"
             )
-            t_h_98 /= 1e3  # [ms] -> [s]
+            t_h_98 = t_h_98 / 1e3  # [ms] -> [s]
             h_98 = interp1(t_h_98, h_98, params.times, "linear")
             output["h98"] = h_98
         except ValueError as e:
@@ -96,7 +96,7 @@ class D3DPhysicsMethods:
         }
         try:
             h_alpha, t_h_alpha = params.get_data_with_dims(r"\fs04", tree_name="d3d")
-            t_h_alpha /= 1e3  # [ms] -> [s]
+            t_h_alpha = t_h_alpha / 1e3  # [ms] -> [s]
             h_alpha = interp1(t_h_alpha, h_alpha, params.times, "linear")
             output["h_alpha"] = h_alpha
         except ValueError as e:
@@ -141,7 +141,7 @@ class D3DPhysicsMethods:
         # Get neutral beam injected power
         try:
             p_nbi, t_nbi = params.get_data_with_dims(r"\top.nb:pinj", tree_name="d3d")
-            t_nbi /= 1e3  # [ms] -> [s]
+            t_nbi = t_nbi / 1e3  # [ms] -> [s]
             p_nbi = p_nbi * 1e3  # [KW] -> [W]
             if len(t_nbi) > 2:
                 p_nbi = interp1(
@@ -166,7 +166,7 @@ class D3DPhysicsMethods:
             p_ech, t_ech = params.get_data_with_dims(
                 r"\top.ech.total:echpwrc", tree_name="rf"
             )
-            t_ech /= 1e3  # [ms] -> [s]
+            t_ech = t_ech / 1e3  # [ms] -> [s]
             if len(t_ech) > 2:
                 # Sometimes, t_ech has an extra "0" value tacked on to the end.
                 # This must be removed before the interpolation.
@@ -220,7 +220,7 @@ class D3DPhysicsMethods:
             )
             bol_signals.append(bol_signal)
         bol_time = params.get_dims(rf"\top.raw:{bol_channels[0]}", tree_name="bolom")[0]
-        bol_time /= 1e3  # [ms] -> [s]
+        bol_time = bol_time / 1e3  # [ms] -> [s]
         a_struct = matlab_get_bolo(
             shot_id=params.shot_id,
             bol_channels=bol_channels,
@@ -291,12 +291,12 @@ class D3DPhysicsMethods:
         v_loop, t_v_loop = params.get_data_with_dims(
             f'ptdata("vloopb", {params.shot_id})'
         )
-        t_v_loop /= 1e3  # [ms] -> [s]
+        t_v_loop = t_v_loop / 1e3  # [ms] -> [s]
         v_loop = scipy.signal.medfilt(v_loop, 11)
         v_loop = interp1(t_v_loop, v_loop, params.times, "linear")
         # Get plasma current
         ip, t_ip = params.get_data_with_dims(f"ptdata('ip', {params.shot_id})")
-        t_ip /= 1e3  # [ms] -> [s]
+        t_ip = t_ip / 1e3  # [ms] -> [s]
 
         # Alessandro Pau (JET & AUG) has given Cristina a robust routine that
         # performs time differentiation with smoothing, while preserving causality.
@@ -318,7 +318,7 @@ class D3DPhysicsMethods:
         li, t_li = params.get_data_with_dims(
             r"\efit_a_eqdsk:li", tree_name="_efit_tree"
         )
-        t_li /= 1e3
+        t_li = t_li / 1e3
         # Use chisq to determine which time slices are invalid
         chisq = params.get_data(r"\efit_a_eqdsk:chisq", tree_name="_efit_tree")
         # Filter out invalid indices of efit reconstruction
@@ -328,7 +328,7 @@ class D3DPhysicsMethods:
         r_0, t_r0 = params.get_data_with_dims(
             r"\top.results.geqdsk:rmaxis", tree_name="_efit_tree"
         )  # [m], [ms]
-        t_r0 /= 1e3  # [ms] -> [s]
+        t_r0 = t_r0 / 1e3  # [ms] -> [s]
 
         li = interp1(t_li, li, params.times, "linear")
         r_0 = interp1(t_r0, r_0, params.times, "linear")
@@ -505,7 +505,7 @@ class D3DPhysicsMethods:
                 f"ptdata('ipspr15v', {params.shot_id})"
             )  # [volts; 2 V/MA], [ms]
             t_ip_rt = t_ip_rt / 1.0e3  # [ms] to [s]
-            ip_rt /= 2  # [volts] to [MA]
+            ip_rt = ip_rt / 2  # [volts] to [MA]
         ip_sign = np.sign(np.sum(ip_rt))
         ip_rt = interp1(t_ip_rt, ip_rt * ip_sign, params.times, "linear")
 
@@ -932,7 +932,7 @@ class D3DPhysicsMethods:
         b_tor, t_b_tor = params.get_data_with_dims(
             f"ptdata('bt', {params.shot_id})"
         )  # [T], [ms]
-        t_b_tor /= 1e3  # [ms] -> [s]
+        t_b_tor = t_b_tor / 1e3  # [ms] -> [s]
         b_tor = interp1(t_b_tor, b_tor, params.times)
         return {"btor": b_tor}
 
@@ -1023,8 +1023,8 @@ class D3DPhysicsMethods:
                 n_equal_1_mode, t_n1 = params.get_data_with_dims(
                     f"ptdata('dusbradial', {params.shot_id})",
                 )  # [G], [ms]
-        t_n1 /= 1e3  # [ms] -> [s]
-        n_equal_1_mode *= 1.0e-4  # [G] -> [T]
+        t_n1 = t_n1 / 1e3  # [ms] -> [s]
+        n_equal_1_mode = n_equal_1_mode * 1.0e-4  # [G] -> [T]
         n_equal_1_mode = interp1(t_n1, n_equal_1_mode, params.times)
 
         # Calculate n_equal_1_normalized
@@ -1067,8 +1067,8 @@ class D3DPhysicsMethods:
         """
         # Get n1rms signal from d3d tree
         n1rms, t_n1rms = params.get_data_with_dims(r"\n1rms", tree_name="d3d")
-        n1rms *= 1.0e-4  # Gauss -> Tesla
-        t_n1rms /= 1e3  # [ms] -> [s]
+        n1rms = n1rms * 1.0e-4  # Gauss -> Tesla
+        t_n1rms = t_n1rms / 1e3  # [ms] -> [s]
         n1rms = interp1(t_n1rms, n1rms, params.times)
         # Calculate n1rms_norm
         try:
@@ -1176,12 +1176,12 @@ class D3DPhysicsMethods:
             rad_cva, t_rad_cva = params.get_data_with_dims(
                 f"ptdata('dpsrrdcva', {params.shot_id})"
             )  # [], [ms]
-            t_rad_cva /= 1e3  # [ms] -> [s]
+            t_rad_cva = t_rad_cva / 1e3  # [ms] -> [s]
             rad_cva = interp1(t_rad_cva, rad_cva, params.times)
             rad_xdiv, t_rad_xdiv = params.get_data_with_dims(
                 f"ptdata('dpsrrdxdiv', {params.shot_id})"
             )  # [], [ms]
-            t_rad_xdiv /= 1e3  # [ms] -> [s]
+            t_rad_xdiv = t_rad_xdiv / 1e3  # [ms] -> [s]
             rad_xdiv = interp1(t_rad_xdiv, rad_xdiv, params.times)
         except mdsExceptions.MdsException as e:
             calculate_prad_pf = True
@@ -1467,7 +1467,7 @@ class D3DPhysicsMethods:
         area = params.get_data(r"\efit_a_eqdsk:area", tree_name="_efit_tree")
         chisq = params.get_data(r"\efit_a_eqdsk:chisq", tree_name="_efit_tree")
         t = params.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree")
-        t /= 1e3  # [ms] -> [s]
+        t = t / 1e3  # [ms] -> [s]
         kappa_area = area / (np.pi * a_minor**2)
         invalid_indices = np.where(chisq > 50)
         kappa_area[invalid_indices] = np.nan
@@ -1502,7 +1502,7 @@ class D3DPhysicsMethods:
         """
         # Get efit_time
         efit_time = params.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree")
-        efit_time /= 1e3  # [ms] -> [s]
+        efit_time = efit_time / 1e3  # [ms] -> [s]
         # Compute triangularity
         try:
             tritop = params.get_data(
@@ -1728,7 +1728,7 @@ class D3DPhysicsMethods:
             bol_signal, bol_time = params.get_data_with_dims(
                 rf"\top.raw:{bol_channels[i]}", tree_name="bolom"
             )
-            bol_time /= 1e3  # [ms] -> [s]
+            bol_time = bol_time / 1e3  # [ms] -> [s]
             bol_signals.append(bol_signal)
             bol_times.append(bol_time)
         a_struct = matlab_get_bolo(
@@ -1743,7 +1743,7 @@ class D3DPhysicsMethods:
         r_major_axis, efit_time = params.get_data_with_dims(
             r"\top.results.geqdsk:rmaxis", tree_name="_efit_tree"
         )
-        efit_time /= 1e3  # [ms] -> [s]
+        efit_time = efit_time / 1e3  # [ms] -> [s]
         output = {
             "ch_avail": [],
             "z": [],
