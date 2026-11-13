@@ -223,7 +223,7 @@ The command-line arguments, which are subject to change, are documented in the h
 disruption-py --help
 ```
 ```
-usage: disruption-py [-h] [-t TOKAMAK] [-m METHODS] [-e EFIT_TREE] [-b TIME_BASE]
+usage: disruption-py [-h] [-t TOKAMAK] [-m METHODS] [-c COLUMNS] [-e EFIT_TREE] [-b TIME_BASE]
                           [-o OUTPUT] [-p PROCESSES] [-a] [-l LOG_LEVEL]
                           [shots ...]
 
@@ -234,6 +234,7 @@ options:
   -h, --help            show this help message and exit
   -t, --tokamak TOKAMAK
   -m, --methods METHODS
+  -c, --columns COLUMNS
   -e, --efit-tree EFIT_TREE
   -b, --time-base TIME_BASE
   -o, --output OUTPUT
