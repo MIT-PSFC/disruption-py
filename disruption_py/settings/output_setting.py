@@ -17,6 +17,8 @@ import pandas as pd
 import xarray as xr
 from loguru import logger
 
+from disruption_py.config import config
+from disruption_py.core.utils.enums import map_string_to_enum
 from disruption_py.core.utils.misc import get_rss, get_temporary_folder, shot_msg
 from disruption_py.machine.tokamak import Tokamak
 
@@ -234,7 +236,10 @@ class DictOutputSetting(OutputSetting):
         logger.debug(
             shot_msg("Saving shard: {shard}"), shot=params.shot_id, shard=shard
         )
-        params.result.to_netcdf(shard)
+        encoding = config(params.tokamak).get("netcdf", {}).get("encoding", {})
+        params.result.to_netcdf(
+            shard, encoding={k: encoding for k in params.result.data_vars}
+        )
 
         # lazy reload
         self.results[params.shot_id] = xr.open_dataset(shard)
@@ -365,11 +370,17 @@ class SingleOutputSetting(DictOutputSetting):
 
         if self.path:
             t = time.time()
-            for method in ["to_netcdf", "to_csv"]:
-                if not hasattr(self.result, method):
-                    continue
-                getattr(self.result, method)(self.path)
-                break
+            if hasattr(self.result, "to_netcdf"):
+                tokamak = map_string_to_enum(
+                    self.result.attrs.get("tokamak", None), Tokamak, should_raise=False
+                )
+                encoding = config(tokamak).get("netcdf", {}).get("encoding", {})
+                logger.trace("NetCDF encoding: {encoding}", encoding=encoding)
+                self.result.to_netcdf(
+                    self.path, encoding={k: encoding for k in self.result.data_vars}
+                )
+            elif hasattr(self.result, "to_csv"):
+                self.result.to_csv(self.path)
             else:
                 raise NotImplementedError("Could not save object to file.")
             logger.info(
