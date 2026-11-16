@@ -1302,7 +1302,13 @@ class D3DPhysicsMethods:
             ne_pf = interp1(ts["time"], ne_pf, params.times)
 
         # Calculate prad_cva, prad_xdiv
-        if calculate_prad_pf and p_rad:
+        if calculate_prad_pf and p_rad and not p_rad["ch_avail"]:
+            # e.g. shot 126006: matlab_get_bolo flags all channels bad and returns a placeholder
+            params.logger.warning(
+                "get_peaking_factors: No valid bolometer channels. "
+                "Setting prad_peaking factors to NaN."
+            )
+        elif calculate_prad_pf and p_rad:
             # Interpolate zmaxis and channel intersects x onto the bolometer timebase
             z_m_axis = interp1(efit_dict["time"], efit_dict["zmaxis"], p_rad["t"])
             z_m_axis = np.repeat(z_m_axis[:, np.newaxis], p_rad["x"].shape[1], axis=1)
@@ -1669,7 +1675,7 @@ class D3DPhysicsMethods:
                         node=node,
                     )
                     params.logger.opt(exception=True).debug(e)
-            # Empty nodes sometimes return scalars instead of arrays (e.g. shot 100313) 
+            # Empty nodes sometimes return scalars instead of arrays (e.g. shot 100313)
             if np.ndim(lasers[laser]["te"]) == 0 or np.ndim(lasers[laser]["ne"]) == 0:
                 params.logger.warning(
                     "{laser} Thomson data is empty. Setting laser data to None.",
