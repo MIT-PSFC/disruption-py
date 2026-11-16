@@ -205,41 +205,48 @@ class D3DPhysicsMethods:
         # analysis so that the smoothing is causal, and uses a shorter window.
         smoothing_window = 0.010  # [s]
 
+        p_rad = np.full(len(params.times), np.nan)
         try:
             bol_prm, _ = params.get_data_with_dims(r"\bol_prm", tree_name="bolom")
         except mdsExceptions.MdsException as e:
-            params.logger.warning("Failed to open bolom tree.")
-            params.logger.opt(exception=True).debug(e)
-        upper_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
-        lower_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
-        bol_channels = upper_channels + lower_channels
-        bol_signals = []
-        for i in range(48):
-            bol_signal = params.get_data(
-                rf"\top.raw:{bol_channels[i]}", tree_name="bolom"
+            bol_prm = None
+            params.logger.warning(
+                "get_power_parameters: Failed to open bolom tree. "
+                "Setting p_rad to NaN."
             )
-            bol_signals.append(bol_signal)
-        bol_time = params.get_dims(rf"\top.raw:{bol_channels[0]}", tree_name="bolom")[0]
-        bol_time = bol_time / 1e3  # [ms] -> [s]
-        a_struct = matlab_get_bolo(
-            shot_id=params.shot_id,
-            bol_channels=bol_channels,
-            bol_prm=bol_prm,
-            bol_top=bol_signals,
-            bol_time=bol_time,
-            drtau=smoothing_window * 1e3,
-        )
-        ier = 0
-        for j in range(48):
-            # TODO: Ask about how many valid channels are needed for proper calculation
-            if a_struct.channels[j].ier == 1:
-                ier = 1
-                p_rad = np.full(len(params.times), np.nan)
-                break
-        if ier == 0:
-            b_struct = matlab_power(a_struct)
-            p_rad = b_struct.pwrmix  # [W]
-            p_rad = interp1(a_struct.raw_time, p_rad, params.times, "linear")
+            params.logger.opt(exception=True).debug(e)
+        if bol_prm is not None:
+            upper_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
+            lower_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
+            bol_channels = upper_channels + lower_channels
+            bol_signals = []
+            for i in range(48):
+                bol_signal = params.get_data(
+                    rf"\top.raw:{bol_channels[i]}", tree_name="bolom"
+                )
+                bol_signals.append(bol_signal)
+            bol_time = params.get_dims(
+                rf"\top.raw:{bol_channels[0]}", tree_name="bolom"
+            )[0]
+            bol_time = bol_time / 1e3  # [ms] -> [s]
+            a_struct = matlab_get_bolo(
+                shot_id=params.shot_id,
+                bol_channels=bol_channels,
+                bol_prm=bol_prm,
+                bol_top=bol_signals,
+                bol_time=bol_time,
+                drtau=smoothing_window * 1e3,
+            )
+            ier = 0
+            for j in range(48):
+                # TODO: Ask about how many valid channels are needed for proper calculation
+                if a_struct.channels[j].ier == 1:
+                    ier = 1
+                    break
+            if ier == 0:
+                b_struct = matlab_power(a_struct)
+                p_rad = b_struct.pwrmix  # [W]
+                p_rad = interp1(a_struct.raw_time, p_rad, params.times, "linear")
 
         # Remove any negative values from the power data
         # TODO: Could p_ohm be negative?
