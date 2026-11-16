@@ -661,11 +661,19 @@ class D3DPhysicsMethods:
                 f"ptdata('iptipp', {params.shot_id})"
             )  # [A], [ms]
             t_ip_prog = t_ip_prog / 1.0e3  # [ms] -> [s]
-            polarity = D3DUtilMethods.get_polarity(params)
-            ip_prog = ip_prog * polarity
-            dipprog_dt = np.gradient(ip_prog, t_ip_prog)
-            ip_prog = interp1(t_ip_prog, ip_prog, params.times, "linear")
-            dipprog_dt = interp1(t_ip_prog, dipprog_dt, params.times, "linear")
+            if ip_prog.size < 2 or t_ip_prog.size < 2:
+                params.logger.warning(
+                    "get_ip_parameters: ip_prog.size or t_ip_prog.size < 2. "
+                    "Setting ip_prog and dipprog_dt to NaN."
+                )
+                ip_prog = np.full_like(params.times, np.nan)
+                dipprog_dt = np.full_like(params.times, np.nan)
+            else:
+                polarity = D3DUtilMethods.get_polarity(params)
+                ip_prog = ip_prog * polarity
+                dipprog_dt = np.gradient(ip_prog, t_ip_prog)
+                ip_prog = interp1(t_ip_prog, ip_prog, params.times, "linear")
+                dipprog_dt = interp1(t_ip_prog, dipprog_dt, params.times, "linear")
         except mdsExceptions.MdsException as e:
             params.logger.warning("Failed to get programmed plasma current parameters")
             params.logger.opt(exception=True).debug(e)
