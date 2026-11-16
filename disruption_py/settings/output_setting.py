@@ -371,11 +371,17 @@ class SingleOutputSetting(DictOutputSetting):
         if self.path:
             t = time.time()
             if hasattr(self.result, "to_netcdf"):
-                tokamak = map_string_to_enum(
-                    self.result.attrs.get("tokamak", None), Tokamak, should_raise=False
-                )
-                encoding = config(tokamak).get("netcdf", {}).get("encoding", {})
-                logger.trace("NetCDF encoding: {encoding}", encoding=encoding)
+                if isinstance(self.result, xr.Dataset):
+                    tokamak = map_string_to_enum(
+                        self.result.attrs.get("tokamak", None),
+                        Tokamak,
+                        should_raise=False,
+                    )
+                    encoding = config(tokamak).get("netcdf", {}).get("encoding", {})
+                    logger.trace("NetCDF encoding: {encoding}", encoding=encoding)
+                else:
+                    # not implemented for DataTrees
+                    encoding = {}
                 self.result.to_netcdf(
                     self.path, encoding={k: encoding for k in self.result.data_vars}
                 )
