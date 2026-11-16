@@ -1675,8 +1675,15 @@ class D3DPhysicsMethods:
                         node=node,
                     )
                     params.logger.opt(exception=True).debug(e)
-            # Empty nodes sometimes return scalars instead of arrays (e.g. shot 100313)
-            if np.ndim(lasers[laser]["te"]) == 0 or np.ndim(lasers[laser]["ne"]) == 0:
+            # Empty nodes return scalars (e.g. shot 100313) or zero-size arrays (e.g. 70683)
+            te = lasers[laser]["te"]
+            ne = lasers[laser]["ne"]
+            if (
+                np.ndim(te) == 0
+                or np.size(te) == 0
+                or np.ndim(ne) == 0
+                or np.size(ne) == 0
+            ):
                 params.logger.warning(
                     "{laser} Thomson data is empty. Setting laser data to None.",
                     laser=laser,
