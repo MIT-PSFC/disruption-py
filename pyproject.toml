@@ -28,9 +28,9 @@ lab = [
 
 [project]
 authors = [
-  {name = "Gregorio L. Trevisan", email = "gtrevisan@psfc.mit.edu"},
-  {name = "Cristina Rea", email = "crea@psfc.mit.edu"},
-  {name = "MIT PSFC Disruption Studies Group", email = "disruption-py@lists.psfc.mit.edu"},
+  { name = "Gregorio L. Trevisan", email = "gtrevisan@psfc.mit.edu" },
+  { name = "Cristina Rea", email = "crea@psfc.mit.edu" },
+  { name = "MIT PSFC Disruption Studies Group", email = "disruption-py@lists.psfc.mit.edu" },
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -69,7 +69,7 @@ keywords = [
 ]
 license = "MIT"
 maintainers = [
-  {name = "Gregorio L. Trevisan", email = "gtrevisan@psfc.mit.edu"},
+  { name = "Gregorio L. Trevisan", email = "gtrevisan@psfc.mit.edu" },
 ]
 name = "disruption-py"
 readme = "README.md"
@@ -112,9 +112,9 @@ min-similarity-lines = 5
 [tool.tomlsort]
 ignore_case = true
 in_place = true
+overrides."*.physics.attributes.*.validity".inline_arrays = false
 sort_table_keys = true
 trailing_comma_inline_array = true
-overrides."*.physics.attributes.*.validity".inline_arrays = false
 
 [tool.uv]
 default-groups = []

@@ -68,6 +68,10 @@ class CmodEfitMethods:
         -------
         dict
             A dictionary containing the retrieved EFIT parameters.
+
+        References
+        ----------
+        - pull requests: #[610](https://github.com/MIT-PSFC/disruption-py/pull/610)
         """
         efit_time = params.get_data(r"\efit_aeqdsk:time", tree_name="_efit_tree")  # [s]
         efit_data = {}
@@ -94,6 +98,22 @@ class CmodEfitMethods:
         if not np.array_equal(params.times, efit_time):
             for param in efit_data:
                 efit_data[param] = interp1(efit_time, efit_data[param], params.times)
+
+        # The following columns cannot be negative
+        non_negative_columns = [
+            "a_minor",
+            "beta_p",
+            "chisq",
+            "kappa",
+            "q0",
+            "qstar",
+            "q95",
+            "rmagx",
+            "wmhd",
+        ]
+
+        for col in non_negative_columns:
+            efit_data[col][efit_data[col] < 0] = np.nan
 
         return efit_data
 
