@@ -1669,6 +1669,14 @@ class D3DPhysicsMethods:
                         node=node,
                     )
                     params.logger.opt(exception=True).debug(e)
+            # Empty nodes sometimes return scalars instead of arrays (e.g. shot 100313) 
+            if np.ndim(lasers[laser]["te"]) == 0 or np.ndim(lasers[laser]["ne"]) == 0:
+                params.logger.warning(
+                    "{laser} Thomson data is empty. Setting laser data to None.",
+                    laser=laser,
+                )
+                lasers[laser] = None
+                continue
             # Place NaNs for broken channels
             lasers[laser]["te"][lasers[laser]["te"] == 0] = np.nan
             lasers[laser]["ne"][lasers[laser]["ne"] == 0] = np.nan
