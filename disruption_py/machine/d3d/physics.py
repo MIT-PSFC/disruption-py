@@ -378,6 +378,9 @@ class D3DPhysicsMethods:
         except mdsExceptions.MdsException:
             ne = np.array(np.nan)
             t_ne = np.array(np.nan)
+        # Some shots (e.g. 101560) store \density as 2D time segments; flatten them
+        ne = np.ravel(ne)
+        t_ne = np.ravel(t_ne)
         # If EFIT disruption tree does not contain density data or if the data is invalid,
         # then read density from BCI subtree of D3D main tree
         # Example 1: 170480:
