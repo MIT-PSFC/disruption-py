@@ -1219,11 +1219,18 @@ class D3DPhysicsMethods:
 
         # Get raw Thomson data
         try:
-            ts = D3DPhysicsMethods._get_ne_te(params, data_source=ts_data_type)
+            ts_all = D3DPhysicsMethods._get_ne_te(params, data_source=ts_data_type)
+            ts = {}
             for option in ts_options:
-                if ts.get(option) is not None:
-                    ts = ts[option]
+                if ts_all.get(option) is not None:
+                    ts = ts_all[option]
                     break
+            if not ts:
+                # e.g. shot 96618: {"core": None, "tangential": None}
+                params.logger.warning(
+                    "get_peaking_factors: No Thomson scattering data available. "
+                    "Setting T_e and n_e peaking factors to NaN."
+                )
             efit_dict = D3DPhysicsMethods._get_efit_dict(params)
         except (NotImplementedError, CalculationError, mdsExceptions.MdsException) as e:
             ts = {}
