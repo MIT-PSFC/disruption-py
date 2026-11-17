@@ -652,19 +652,20 @@ class D3DPhysicsMethods:
                 f"ptdata('ip', {params.shot_id})"
             )  # [A], [ms]
             t_ip = t_ip / 1.0e3  # [ms] -> [s]
+            if ip.size < 2 or t_ip.size < 2:
+                params.logger.warning(
+                    "get_ip_parameters: ip.size or t_ip.size < 2. "
+                    "Setting ip and dip_dt to NaN."
+                )
+                ip = np.full_like(params.times, np.nan)
+                dip_dt = np.full_like(params.times, np.nan)
+            else:
+                dip_dt = np.gradient(ip, t_ip)
+                ip = interp1(t_ip, ip, params.times, "linear")
+                dip_dt = interp1(t_ip, dip_dt, params.times, "linear")
         except mdsExceptions.MdsException as e:
             params.logger.warning("Failed to get measured plasma current parameters")
             params.logger.opt(exception=True).debug(e)
-        if ip.size < 2 or t_ip.size < 2:
-            params.logger.warning(
-                "get_ip_parameters: ip.size or t_ip.size < 2. Setting ip and dip_dt to NaN."
-            )
-            ip = np.full_like(params.times, np.nan)
-            dip_dt = np.full_like(params.times, np.nan)
-        else:
-            dip_dt = np.gradient(ip, t_ip)
-            ip = interp1(t_ip, ip, params.times, "linear")
-            dip_dt = interp1(t_ip, dip_dt, params.times, "linear")
         # Get programmed plasma current parameters
         try:
             ip_prog, t_ip_prog = params.get_data_with_dims(
@@ -1220,7 +1221,7 @@ class D3DPhysicsMethods:
         try:
             ts = D3DPhysicsMethods._get_ne_te(params, data_source=ts_data_type)
             for option in ts_options:
-                if option in ts:
+                if ts.get(option) is not None:
                     ts = ts[option]
                     break
             efit_dict = D3DPhysicsMethods._get_efit_dict(params)
