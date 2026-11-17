@@ -509,7 +509,7 @@ class D3DPhysicsMethods:
             params.logger.warning(
                 "get_rt_density_parameters: No real-time density data found. "
                 "Setting ne_rt and dne_dt_rt to NaN."
-                )
+            )
             ne_rt = np.full(len(params.times), np.nan)
             dne_dt_rt = np.full(len(params.times), np.nan)
 
