@@ -143,7 +143,8 @@ class D3DPhysicsMethods:
             p_nbi, t_nbi = params.get_data_with_dims(r"\top.nb:pinj", tree_name="d3d")
             t_nbi = t_nbi / 1e3  # [ms] -> [s]
             p_nbi = p_nbi * 1e3  # [KW] -> [W]
-            if np.size(t_nbi) > 2:
+            # Empty nodes can return a short placeholder array (e.g. shot 105188)
+            if np.size(t_nbi) > 2 and np.size(p_nbi) == np.size(t_nbi):
                 p_nbi = interp1(
                     t_nbi,
                     p_nbi,
@@ -153,7 +154,7 @@ class D3DPhysicsMethods:
                     fill_value=0.0,
                 )
             else:
-                params.logger.verbose("No NBI power data found in this shot.")
+                params.logger.verbose("No valid NBI power data found in this shot.")
                 p_nbi = np.zeros(len(params.times))
         except mdsExceptions.MdsException as e:
             p_nbi = np.zeros(len(params.times))
