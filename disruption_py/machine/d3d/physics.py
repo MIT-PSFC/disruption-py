@@ -1701,7 +1701,7 @@ class D3DPhysicsMethods:
             # Place NaNs for broken channels
             lasers[laser]["te"][lasers[laser]["te"] == 0] = np.nan
             lasers[laser]["ne"][lasers[laser]["ne"] == 0] = np.nan
-            lasers[laser]["time"] /= 1e3  # [ms] -> [s]
+            lasers[laser]["time"] = lasers[laser]["time"] / 1e3  # [ms] -> [s]
 
         # If both systems/lasers available, combine them and interpolate the data
         # from the tangential system onto the finer (core) timebase
