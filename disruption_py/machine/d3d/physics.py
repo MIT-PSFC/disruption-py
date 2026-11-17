@@ -143,7 +143,7 @@ class D3DPhysicsMethods:
             p_nbi, t_nbi = params.get_data_with_dims(r"\top.nb:pinj", tree_name="d3d")
             t_nbi = t_nbi / 1e3  # [ms] -> [s]
             p_nbi = p_nbi * 1e3  # [KW] -> [W]
-            if len(t_nbi) > 2:
+            if np.size(t_nbi) > 2:
                 p_nbi = interp1(
                     t_nbi,
                     p_nbi,
@@ -167,7 +167,7 @@ class D3DPhysicsMethods:
                 r"\top.ech.total:echpwrc", tree_name="rf"
             )
             t_ech = t_ech / 1e3  # [ms] -> [s]
-            if len(t_ech) > 2:
+            if np.size(t_ech) > 2:
                 # Sometimes, t_ech has an extra "0" value tacked on to the end.
                 # This must be removed before the interpolation.
                 if t_ech[-1] == 0:
