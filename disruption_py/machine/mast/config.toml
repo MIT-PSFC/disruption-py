@@ -166,7 +166,7 @@ units = "W"
 
 [mast.physics.attributes.prad_peaking]
 description = "Peaking factor of the radiated power."
-latex = '$P_{\mathrm{rad}, \mathrm{core}}/\langle P_{\mathrm{rad}} \rangle$'
+latex = '$P_{\mathrm{rad,core}}/\langle P_{\mathrm{rad}} \rangle$'
 source = "Bolometer, EFIT"
 units = "dimensionless"
 

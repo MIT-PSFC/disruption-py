@@ -269,7 +269,7 @@ validity = [0.0, inf]
 
 [cmod.physics.attributes.prad_peaking]
 description = "Peaking factor of the radiated power."
-latex = '$P_{\mathrm{rad}, \mathrm{core}}/\langle P_{\mathrm{rad}} \rangle$'
+latex = '$P_{\mathrm{rad,core}}/\langle P_{\mathrm{rad}} \rangle$'
 source = "AXA/AXJ diode arrays, EFIT"
 units = "dimensionless"
 
@@ -341,7 +341,7 @@ validity = [0.0, inf]
 
 [cmod.physics.attributes.te_core_vs_avg_ece]
 description = "Core-vs-average peaking factor of the electron temperature profile from the electron cyclotron emission (ECE) data."
-latex = '$T_{e,\mathrm{core},\mathrm{ECE}}/\langle T_{e, \mathrm{ECE}} \rangle$'
+latex = '$T_{e,\mathrm{core},\mathrm{ECE}}/\langle T_{e,\mathrm{ECE}} \rangle$'
 source = "ECE (GPC2), EFIT"
 units = "dimensionless"
 
