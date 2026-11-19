@@ -13,6 +13,7 @@ from itertools import repeat
 from multiprocessing import Pool
 from typing import Any, Callable, Dict, Tuple
 
+import numpy as np
 from loguru import logger
 from tqdm.auto import tqdm
 
@@ -43,6 +44,35 @@ from disruption_py.settings.shotlist_setting import (
     ShotlistSettingType,
     shotlist_setting_runner,
 )
+
+
+def _init_worker(log_settings, gradient):
+    """
+    Initializer for each worker process.
+
+    Under the spawn and forkserver start methods (the default on Linux since
+    Python 3.14), workers do not inherit the parent's state, so a replaced
+    `np.gradient` (e.g. the MATLAB algorithm used for testing against the SQL cache)
+    would be lost.
+    Re-apply it, and reset the log handlers when initializing each worker process.
+
+    Params
+    ------
+    log_settings : LogSettings
+        Settings whose handlers are reset in the worker.
+    gradient : Callable
+        The `numpy.gradient` function in effect in the parent process.
+
+    References
+    ----------
+    pull requests: [#546](https://github.com/MIT-PSFC/disruption-py/pull/546),
+    [#614](https://github.com/MIT-PSFC/disruption-py/pull/614)
+
+    issues: [#580](https://github.com/MIT-PSFC/disruption-py/issues/580)
+    """
+    if np.gradient is not gradient:
+        np.gradient = gradient
+    log_settings.reset_handlers()
 
 
 def _execute_retrieval(args):
@@ -184,7 +214,8 @@ def get_shots_data(
     retrieval_settings.efit_nickname_setting.prefetch_db(database, tokamak)
     with Pool(
         processes=num_processes,
-        initializer=log_settings.reset_handlers,
+        initializer=_init_worker,
+        initargs=(log_settings, np.gradient),
     ) as pool:
         args = zip(
             repeat(tokamak),
