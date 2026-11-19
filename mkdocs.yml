@@ -31,6 +31,8 @@ nav:
       - Workflow: workflow.md
       - Quickstart: quickstart.md
       - Examples: examples.md
+      - Acknowledgements: acknowledgments.md
+      - Citation: citing.md
   - Installation:
       - Installation: installation/install.md
       - Configuration: installation/configuration.md
