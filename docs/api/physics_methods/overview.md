@@ -6,15 +6,15 @@ While you can define your own, existing built-in physics methods are defined ins
 
 For more information on available methods please see the built-in method documentation pages:
 
-- [Generic Physics Methods](generic_method_reference.md)
-- [C-Mod Physics Methods](cmod_method_reference.md)
-- [DIII-D Physics Methods](d3d_method_reference.md)
-- [EAST Physics Methods](east_method_reference.md)
-- [HBT-EP Physics Methods](hbtep_method_reference.md)
-- [MAST Physics Methods](mast_method_reference.md)
+- [Generic Physics Methods](../../devices/generic.md)
+- [C-Mod Physics Methods](../../devices/cmod/physics_methods.md)
+- [DIII-D Physics Methods](../../devices/d3d/physics_methods.md)
+- [EAST Physics Methods](../../devices/east/physics_methods.md)
+- [HBT-EP Physics Methods](../../devices/hbtep/physics_methods.md)
+- [MAST Physics Methods](../../devices/mast/physics_methods.md)
 
 ## Custom Physics Methods { .doc .doc-heading }
-Users of DisruptionPy can create their own custom physics methods by adding the [`@physics_method`][disruption_py.core.physics_method.decorator.physics_method] decorator to a method. These custom physics methods can then be passed as the `custom_physics_methods` parameter in [`RetrievalSettings`][disruption_py.settings.retrieval_settings] and their results will be included alongside those returned by the built-in methods. See [Physics Method Decorators](decorator_reference.md) for more details on decorators.
+Users of DisruptionPy can create their own custom physics methods by adding the [`@physics_method`][disruption_py.core.physics_method.decorator.physics_method] decorator to a method. These custom physics methods can then be passed as the `custom_physics_methods` parameter in [`RetrievalSettings`][disruption_py.settings.retrieval_settings] and their results will be included alongside those returned by the built-in methods. See [Physics Method Decorators](decorators.md) for more details on decorators.
 
 ### Physics methods structure
 

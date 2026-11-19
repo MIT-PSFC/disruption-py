@@ -26,45 +26,59 @@ extra_css:
   - stylesheets/disruptions.css
   - https://unpkg.com/katex@0/dist/katex.min.css
 nav:
-  - Overview:
+  - Home:
       - Background: index.md
-      - Installation: INSTALL.md
-      - References: REFERENCES.md
-  - Usage:
+      - Workflow diagram: workflow.md
+      - Quickstart: quickstart.md
+      - Examples: examples.md
+  - Installation:
+      - Install: installation/install.md
+      - Configuration: installation/configuration.md
+      - Data access (MDSplus/SQL): installation/data_access.md
+      - Troubleshooting: installation/troubleshooting.md
+  - Devices:
+      - Overview: devices/index.md
+      - Supported devices: devices/supported.md
+      - Generic physics methods: devices/generic.md
+      - C-Mod:
+          - Physics methods: devices/cmod/physics_methods.md
+          - Parameter Reference: devices/cmod/parameters.md
+          - disruption_warning dataset: devices/cmod/disruption_warning.md
+      - DIII-D:
+          - Physics methods: devices/d3d/physics_methods.md
+          - Parameter Reference: devices/d3d/parameters.md
+          - disruption_warning dataset: devices/d3d/disruption_warning.md
+      - EAST:
+          - Physics methods: devices/east/physics_methods.md
+          - Parameter Reference: devices/east/parameters.md
+      - HBT-EP:
+          - Physics methods: devices/hbtep/physics_methods.md
+          - Parameter Reference: devices/hbtep/parameters.md
+      - MAST:
+          - Physics methods: devices/mast/physics_methods.md
+          - Parameter Reference: devices/mast/parameters.md
+  - APIs:
       - Entry points:
-          - Workflow: usage/workflow_reference.md
+          - Workflow: api/workflow.md
       - Settings:
-          - Settings Classes:
-              - Log Settings: usage/settings/log_settings.md
-              - Nickname Setting: usage/settings/nickname_setting.md
-              - Output Setting: usage/settings/output_setting.md
-              - Retrieval Settings: usage/settings/retrieval_settings.md
-              - Shotlist Setting: usage/settings/shotlist_setting.md
-              - Time Setting: usage/settings/time_setting.md
-      - Calculated Parameters:
-          - Overview: usage/physics_methods/physics_method_reference.md
-          - Physics Methods:
-              - Generic Physics Methods: "usage/physics_methods/\
-                generic_method_reference.md"
-              - C-Mod Physics Methods: "usage/physics_methods/\
-                cmod_method_reference.md"
-              - DIII-D Physics Methods: "usage/physics_methods/\
-                d3d_method_reference.md"
-              - EAST Physics Methods: "usage/physics_methods/\
-                east_method_reference.md"
-              - HBT-EP Physics Methods: "usage/physics_methods/\
-                hbtep_method_reference.md"
-              - MAST Physics Methods: "usage/physics_methods/\
-                mast_method_reference.md"
-          - Physics Method Decorators: "usage/physics_methods/\
-            decorator_reference.md"
-          - Parameter Reference: "usage/physics_methods/\
-            disruption_parameters_reference.md"
+          - Log Settings: api/settings/log_settings.md
+          - Nickname Setting: api/settings/nickname_setting.md
+          - Output Setting: api/settings/output_setting.md
+          - Retrieval Settings: api/settings/retrieval_settings.md
+          - Shotlist Setting: api/settings/shotlist_setting.md
+          - Time Setting: api/settings/time_setting.md
+      - Physics Methods:
+          - Overview: api/physics_methods/overview.md
+          - Decorators: api/physics_methods/decorators.md
       - Data I/O:
-          - Data Connection (Base): usage/data_connection_reference.md
-          - SQL Database: usage/sql_database.md
-          - MDSplus Connection: usage/mds_connection_reference.md
-  - GitHub: https://github.com/MIT-PSFC/disruption-py
+          - Data Connection (Base): api/data_io/data_connection.md
+          - SQL Database: api/data_io/sql_database.md
+          - MDSplus Connection: api/data_io/mds_connection.md
+  - Links:
+      - References: references.md
+      - GitHub repo: https://github.com/MIT-PSFC/disruption-py
+      - Issues: https://github.com/MIT-PSFC/disruption-py/issues
+      - Changelog / Releases: https://github.com/MIT-PSFC/disruption-py/releases
 markdown_extensions:
   - attr_list
   - admonition
