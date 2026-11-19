@@ -1,5 +1,3 @@
-# Examples
-
 The [`examples/`](https://github.com/MIT-PSFC/disruption-py/tree/main/examples) folder of the repository contains ready-to-run scripts.
 The EFIT, MDSplus, and SQL examples are also run by the test suite.
 

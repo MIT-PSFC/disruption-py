@@ -70,13 +70,13 @@ DisruptionPy makes it easy to efficiently retrieve experimental data from [MDSpl
 Users can create their own routines and/or use built-in ones that retrieve and derive a variety of important signals from experimental data for disruption analysis.
 These routines are then interpolated on a requested timebase across the specified set of plasma discharges (or shots) to assemble a dataset and save it under a variety of available formats.
 
-<!-- --8<-- [end:workflow] -->
-
 <p align="center">
 <img src="docs/workflow.png" alt="Schematic flowchart of a typical DisruptionPy workflow (by: Y Wei)" width="75%" onerror="this.onerror=null;this.src='workflow.png';" />
 </p>
 
 _Figure: Schematic flowchart of a typical DisruptionPy workflow (by: Y Wei)._
+
+<!-- --8<-- [end:workflow] -->
 
 ### Acknowledgments
 
@@ -345,6 +345,8 @@ uv run pytest
 
 ## Credits
 
+<!-- --8<-- [start:credits] -->
+
 #### before 2021
 
 The ancestor MATLAB code was authored by several contributors at [MIT PSFC](https://www.psfc.mit.edu/) before 2021:
@@ -374,12 +376,17 @@ Several contributors have been involved in the development of the code since the
 
 For a complete list of contributors, please refer to the [Contributors](https://github.com/MIT-PSFC/disruption-py/graphs/contributors) page.
 
+<!-- --8<-- [end:credits] -->
 
 ## Citation
+<!-- --8<-- [start:citing] -->
 
 DisruptionPy can be cited as follows:
 
 - GL Trevisan, _et al._ (2026), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, Journal of Open Source Software **11** 119, DOI: [10.21105/joss.09364](https://doi.org/10.21105/joss.09364)
 - GL Trevisan, _et al._ (2024), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, Zenodo, DOI: [10.5281/zenodo.13935223](https://doi.org/10.5281/zenodo.13935223)
 
+<!-- --8<-- [end:citing] -->
+
 A list of works derived from DisruptionPy can be found in [REFERENCES.md](REFERENCES.md).
+

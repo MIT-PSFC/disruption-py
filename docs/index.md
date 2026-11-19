@@ -8,6 +8,26 @@ _An open-source physics-based Scientific Framework for Disruption Analysis of Fu
 
 --8<-- "README.md:background"
 
+## Workflow
+
+--8<-- "README.md:workflow"
+
+## Quickstart
+
+--8<-- "README.md:quickstart"
+
+## Examples
+
+--8<-- "docs/examples.md"
+
 ## Acknowledgments
 
 --8<-- "README.md:acknowledgments"
+
+### Development History
+
+--8<-- "README.md:credits"
+
+## Citation
+
+--8<-- "docs/citing.md"

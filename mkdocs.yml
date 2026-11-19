@@ -28,7 +28,7 @@ extra_css:
 nav:
   - Home:
       - Background: index.md
-      - Workflow diagram: workflow.md
+      - Workflow: workflow.md
       - Quickstart: quickstart.md
       - Examples: examples.md
   - Installation:
@@ -79,6 +79,7 @@ nav:
       - GitHub repo: https://github.com/MIT-PSFC/disruption-py
       - Issues: https://github.com/MIT-PSFC/disruption-py/issues
       - Changelog / Releases: https://github.com/MIT-PSFC/disruption-py/releases
+  - Citing DisruptionPy: citing.md
 markdown_extensions:
   - attr_list
   - admonition
