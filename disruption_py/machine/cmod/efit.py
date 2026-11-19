@@ -58,7 +58,12 @@ class CmodEfitMethods:
     )
     def get_efit_parameters(params: PhysicsMethodParams):
         """
-        Retrieve EFIT parameters for CMOD.
+        Retrieve EFIT parameters for C-MOD.
+
+        EFIT reconstructions should be not trusted without further checks.
+        Here we fully discard any EFIT-derived quantity if the reconstruction
+        convergence residual error, 'terror', is over a threshold of 0.01.
+        The EFIT chi squared value, 'chisq', is also worthy of an investigation.
 
         Parameters
         ----------
@@ -88,6 +93,18 @@ class CmodEfitMethods:
                 params.logger.warning(repr(e))
                 params.logger.opt(exception=True).debug(e)
                 efit_data[param] = np.full(len(efit_time), np.nan)
+
+        # pylint: disable=duplicate-code
+        (invalid_indices,) = np.where(efit_data["terror"] > 0.01)
+        params.logger.debug(
+            "Removing {invalid:,} out of {total:,} time slices, valid slices are {percent:.1f}%.",
+            invalid=len(invalid_indices),
+            total=len(efit_time),
+            percent=100 * (len(efit_time) - len(invalid_indices)) / len(efit_time),
+        )
+        for param in efit_data.values():
+            param[invalid_indices] = np.nan
+        # pylint: enable=duplicate-code
 
         for deriv_param, param in CmodEfitMethods.efit_derivs.items():
             efit_data[deriv_param] = np.gradient(
