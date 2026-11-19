@@ -37,7 +37,6 @@ nav:
       - Installation: installation/install.md
       - Configuration: installation/configuration.md
       - Data access (MDSplus/SQL): installation/data_access.md
-      - Troubleshooting: installation/troubleshooting.md
   - Devices:
       - Overview: devices/index.md
       - Generic physics methods: devices/generic.md
