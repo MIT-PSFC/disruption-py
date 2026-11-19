@@ -92,7 +92,6 @@ test_columns = [
   "rad_loss_frac",
   "rmp_n_equal_1",
   "rmp_n_equal_1_phase",
-  "time_until_disrupt",
   "upper_gap",
   "v_loop",
   "wmhd",
