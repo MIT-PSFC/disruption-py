@@ -163,7 +163,7 @@ Please refer to the Devices section in our [general README](https://github.com/M
 1. [MDSplus](https://www.mdsplus.org/): to connect to MDSplus data servers,
 2. SQL drivers: to connect to SQL database servers.
 
-MDSplus can be installed using their [installation guide](https://www.mdsplus.org/index.php/Downloads), but [it might not yet support Apple Silicon chips](https://www.mdsplus.org/index.php/Latest_Macintosh_Distributions).
+MDSplus can be installed using their [installation guide](https://www.mdsplus.org/index.php/Downloads).
 
 On Ubuntu-based systems, SQL drivers might be installed for example through the [Microsoft ODBC Driver](https://learn.microsoft.com/en-us/sql/connect/odbc/linux-mac/installing-the-microsoft-odbc-driver-for-sql-server?view=sql-server-ver16) `msodbcsql18` package, or [FreeTDS](https://www.freetds.org/) `{tds,unix}odbc` packages.
 
