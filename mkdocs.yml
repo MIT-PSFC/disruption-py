@@ -75,7 +75,7 @@ nav:
           - MDSplus Connection: api/data_io/mds_connection.md
   - Links:
       - References: references.md
-      - GitHub repo: https://github.com/MIT-PSFC/disruption-py
+      - GitHub Repo: https://github.com/MIT-PSFC/disruption-py
       - Issues: https://github.com/MIT-PSFC/disruption-py/issues
       - Changelog / Releases: https://github.com/MIT-PSFC/disruption-py/releases
   - Citing DisruptionPy: citing.md
