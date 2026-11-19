@@ -2,7 +2,7 @@
 
 --8<-- "README.md:devices_access"
 
-See [Supported devices](../devices/supported.md) for which data sources each device requires.
+See [Supported devices](../devices/index.md) for which data sources each device requires.
 
 ## Pre-requisites
 
