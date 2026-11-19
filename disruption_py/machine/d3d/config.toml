@@ -292,6 +292,12 @@ description = "Peaking factor of the electron temperature profile, core vs all c
 units = "dimensionless"
 validity = [0.0, inf]
 
+[d3d.physics.attributes.terror]
+description = "Equilibrium convergence error (EFIT)"
+imas = "/equilibrium/time_slice(itime)/convergence/grad_shafranov_deviation_value"
+units = "dimensionless"
+validity = [0.0, 0.01]
+
 [d3d.physics.attributes.upper_gap]
 description = "Top gap between x-point and wall (EFIT)."
 imas = "/equilibrium/time_slice(itime)/boundary/gap(i1)/value"
