@@ -10,7 +10,7 @@ _An open-source physics-based Scientific Framework for Disruption Analysis of Fu
 
 ## Workflow
 
---8<-- "README.md:workflow"
+--8<-- "docs/workflow.md"
 
 ## Quickstart
 
