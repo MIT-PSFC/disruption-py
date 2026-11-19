@@ -62,22 +62,24 @@ class CmodEfitMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            The parameters containing the MDS connection and shot information.
+            The parameters containing the data connection and shot information.
 
         Returns
         -------
         dict
             A dictionary containing the retrieved EFIT parameters.
+
+        References
+        ----------
+        - pull requests: #[610](https://github.com/MIT-PSFC/disruption-py/pull/610)
         """
-        efit_time = params.mds_conn.get_data(
-            r"\efit_aeqdsk:time", tree_name="_efit_tree"
-        )  # [s]
+        efit_time = params.get_data(r"\efit_aeqdsk:time", tree_name="_efit_tree")  # [s]
         efit_data = {}
 
         # Get data from each of the columns in efit_cols one at a time
         for param, path in CmodEfitMethods.efit_cols.items():
             try:
-                efit_data[param] = params.mds_conn.get_data(
+                efit_data[param] = params.get_data(
                     path=path,
                     tree_name="_efit_tree",
                 )
@@ -97,6 +99,22 @@ class CmodEfitMethods:
             for param in efit_data:
                 efit_data[param] = interp1(efit_time, efit_data[param], params.times)
 
+        # The following columns cannot be negative
+        non_negative_columns = [
+            "a_minor",
+            "beta_p",
+            "chisq",
+            "kappa",
+            "q0",
+            "qstar",
+            "q95",
+            "rmagx",
+            "wmhd",
+        ]
+
+        for col in non_negative_columns:
+            efit_data[col][efit_data[col] < 0] = np.nan
+
         return efit_data
 
     @staticmethod
@@ -108,7 +126,7 @@ class CmodEfitMethods:
         Parameters
         ----------
         params : PhysicsMethodParams
-            The parameters containing the MDS connection and shot information.
+            The parameters containing the data connection and shot information.
 
         Returns
         -------
@@ -116,7 +134,7 @@ class CmodEfitMethods:
             A tuple containing valid indices and corresponding times.
         """
         values = [
-            params.mds_conn.get(expr, tree_name="analysis")
+            params.data_conn.get(expr, tree_name="analysis")
             for expr in [
                 r"_lf=\efit_aeqdsk:lflag",
                 r"_l0=((sum(_lf,1) - _lf[*,20] - _lf[*,1])==0)",
@@ -125,5 +143,5 @@ class CmodEfitMethods:
         ]
         _n = values[2].data()
         valid_indices = np.nonzero(_n)
-        (times,) = params.mds_conn.get_dims(r"\efit_aeqdsk:lflag", tree_name="analysis")
+        (times,) = params.get_dims(r"\efit_aeqdsk:lflag", tree_name="analysis")
         return valid_indices, times[valid_indices]
