@@ -30,4 +30,4 @@ _An open-source physics-based Scientific Framework for Disruption Analysis of Fu
 
 ## Citation
 
---8<-- "docs/citing.md"
+--8<-- "docs/citation.md"

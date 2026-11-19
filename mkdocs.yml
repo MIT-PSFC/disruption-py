@@ -32,7 +32,7 @@ nav:
       - Quickstart: quickstart.md
       - Examples: examples.md
       - Acknowledgements: acknowledgments.md
-      - Citation: citing.md
+      - Citation: citation_home.md
   - Installation:
       - Installation: installation/install.md
       - Configuration: installation/configuration.md
@@ -80,7 +80,7 @@ nav:
       - GitHub Repo: https://github.com/MIT-PSFC/disruption-py
       - Issues: https://github.com/MIT-PSFC/disruption-py/issues
       - Changelog / Releases: https://github.com/MIT-PSFC/disruption-py/releases
-  - Citing DisruptionPy: citing.md
+  - Citation: citation.md
 markdown_extensions:
   - attr_list
   - admonition
