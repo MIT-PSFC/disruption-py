@@ -8,3 +8,11 @@ Methods that work on any device are listed under [Generic physics methods](gener
 ## Access
 
 --8<-- "README.md:devices_access"
+
+# Supported devices
+
+--8<-- "README.md:devices_list"
+
+## Data sources
+
+--8<-- "README.md:devices_sources"

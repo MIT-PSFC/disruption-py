@@ -27,18 +27,17 @@ extra_css:
   - https://unpkg.com/katex@0/dist/katex.min.css
 nav:
   - Home:
-      - Background: index.md
+      - Overview: index.md
       - Workflow: workflow.md
       - Quickstart: quickstart.md
       - Examples: examples.md
   - Installation:
-      - Install: installation/install.md
+      - Installation: installation/install.md
       - Configuration: installation/configuration.md
       - Data access (MDSplus/SQL): installation/data_access.md
       - Troubleshooting: installation/troubleshooting.md
   - Devices:
       - Overview: devices/index.md
-      - Supported devices: devices/supported.md
       - Generic physics methods: devices/generic.md
       - C-Mod:
           - Physics methods: devices/cmod/physics_methods.md

@@ -1,4 +1,4 @@
-# Workflow diagram
+# Workflow Diagram
 
 --8<-- "README.md:workflow"
 
