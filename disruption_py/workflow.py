@@ -297,6 +297,7 @@ def _get_connection_instance(tokamak, connection_initializer):
 def run(
     tokamak,
     methods,
+    columns,
     shots,
     efit_tree,
     time_base,
@@ -314,9 +315,14 @@ def run(
     if not shots:
         shots, *_ = config(tokamak).tests.shots.values()
     methods = methods or None
+    columns = columns or None
 
     sett = RetrievalSettings(
-        efit_nickname_setting=efit_tree, time_setting=time_base, run_methods=methods
+        efit_nickname_setting=efit_tree,
+        time_setting=time_base,
+        run_methods=methods,
+        run_columns=columns,
+        only_requested_columns=columns is not None,
     )
 
     return get_shots_data(
@@ -340,6 +346,7 @@ def cli():
     parser.add_argument("shots", nargs="*")
     parser.add_argument("-t", "--tokamak", type=str)
     parser.add_argument("-m", "--methods", type=str, action="append")
+    parser.add_argument("-c", "--columns", type=str, action="append")
     parser.add_argument("-e", "--efit-tree", type=str, default="disruption")
     parser.add_argument("-b", "--time-base", type=str, default="disruption_warning")
     parser.add_argument("-o", "--output", type=str, default="dataset")
