@@ -2,6 +2,7 @@
 # DisruptionPy
 
 #### An open-source physics-based Scientific Framework for Disruption Analysis of Fusion Plasmas for AI/ML applications
+<!-- --8<-- [start:badges] -->
 
 [![Workflow: Lint](https://github.com/MIT-PSFC/disruption-py/actions/workflows/lint.yml/badge.svg)](https://github.com/MIT-PSFC/disruption-py/actions/workflows/lint.yml)
 [![Workflow: Tests](https://github.com/MIT-PSFC/disruption-py/actions/workflows/tests.yml/badge.svg)](https://github.com/MIT-PSFC/disruption-py/actions/workflows/tests.yml)
@@ -24,6 +25,7 @@
 [![Available: Zenodo](https://zenodo.org/badge/DOI/10.5281/zenodo.13935223.svg)](https://doi.org/10.5281/zenodo.13935223)
 [![License: MIT](https://img.shields.io/pypi/l/disruption-py?color=750014)](https://github.com/MIT-PSFC/disruption-py/blob/main/LICENSE)
 
+<!-- --8<-- [end:badges] -->
 
 ## Concept
 
