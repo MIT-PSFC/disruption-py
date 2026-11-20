@@ -4,7 +4,7 @@ The `disruption_warning` SQL table for C-Mod contains important disruption param
 See [SQL Database](../../api/data_io/sql_database.md) for how to retrieve data from it.
 
 The dataset contains unique plasma discharges from MIT's Alcator C-Mod tokamak, from the 2012 to 2016 experimental campaigns, plus additional discharges from 2005.
-??? info "Available columns on CMod"
+??? info "Available columns on C-Mod"
 
 	```
 	'dbkey', 'shot', 'time', 'time_until_disrupt', 'ip_error', 'dip_dt',

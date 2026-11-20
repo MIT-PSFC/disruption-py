@@ -1,7 +1,7 @@
-DisruptionPy uses logbook sql databases for convenience when retrieving data from MDSPlus. Users may also use DisruptionPy to directly retrieve data from the logbook database's `disruption_warning` tables.
+DisruptionPy uses logbook sql databases for convenience when retrieving data from MDSplus. Users may also use DisruptionPy to directly retrieve data from the logbook database's `disruption_warning` tables.
 
 ## The `disruption_warning` table { .doc .doc-heading }
-The `disruption_warning` sql tables for CMod and DIII-D contain important disruption parameters for a large number of shots.
+The `disruption_warning` sql tables for C-Mod and DIII-D contain important disruption parameters for a large number of shots.
 Each dataset is described on its device page:
 
 - [C-Mod `disruption_warning` dataset](../../devices/cmod/disruption_warning.md)

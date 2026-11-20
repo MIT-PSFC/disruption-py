@@ -22,7 +22,7 @@ disruption_py/settings/nickname_setting.py:nickname_setting_keys
 -->
 
 
-## Built-in Implemenations { .doc .doc-heading }
+## Built-in Implementations { .doc .doc-heading }
 
 ::: disruption_py.settings.nickname_setting
     handler: python

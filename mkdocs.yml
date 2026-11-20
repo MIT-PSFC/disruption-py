@@ -31,7 +31,7 @@ nav:
       - Workflow: workflow.md
       - Quickstart: quickstart.md
       - Examples: examples.md
-      - Acknowledgements: acknowledgments.md
+      - Acknowledgments: acknowledgments.md
       - Citation: citation_home.md
   - Installation:
       - Installation: installation/install.md
