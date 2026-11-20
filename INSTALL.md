@@ -1,6 +1,8 @@
 
 # Installation
 
+<!-- --8<-- [start:public] -->
+
 Several _public_ installations are currently maintained automatically:
 
 - on the C-MOD MFE workstations,
@@ -140,20 +142,28 @@ export PATH=$PATH:$DISPY_DIR/repo/auto:$DISPY_DIR/poetry/bin:$DISPY_DIR/uv
 alias disruption-activate='source "$DISPY_DIR"/repo/auto/activate.sh'
 ```
 
+<!-- --8<-- [end:public] -->
+
 ## Private installation
+
+<!-- --8<-- [start:private_intro] -->
 
 As Free/Libre and Open-Source Software (FLOSS), disruption-py can also be installed on any machine.
 We currently provide an installation guide for Ubuntu-based boxes, but generic Unix machines or Windows systems should support similar or equivalent steps. 
 
+<!-- --8<-- [end:private_intro] -->
+
 ### Pre-requisites
 
+<!-- --8<-- [start:private_prereqs] -->
+
 DisruptionPy may need non-Python software to be installed as a pre-requisite, depending on the target device.
-Please refer to the Devices section in our [general README](README.md) and install the necessary pre-requisites _only if required_ by the target device.
+Please refer to the [Devices](README.md#devices) section in our general README and install the necessary pre-requisites _only if required_ by the target device.
 
 1. [MDSplus](https://www.mdsplus.org/): to connect to MDSplus data servers,
 2. SQL drivers: to connect to SQL database servers.
 
-MDSplus can be installed using their [installation guide](https://www.mdsplus.org/index.php/Downloads), but [it might not yet support Apple Silicon chips](https://www.mdsplus.org/index.php/Latest_Macintosh_Distributions).
+MDSplus can be installed using their [installation guide](https://www.mdsplus.org/index.php/Downloads).
 
 On Ubuntu-based systems, SQL drivers might be installed for example through the [Microsoft ODBC Driver](https://learn.microsoft.com/en-us/sql/connect/odbc/linux-mac/installing-the-microsoft-odbc-driver-for-sql-server?view=sql-server-ver16) `msodbcsql18` package, or [FreeTDS](https://www.freetds.org/) `{tds,unix}odbc` packages.
 
@@ -167,7 +177,11 @@ For virtual environments, even those created off the system python, this small p
 
 Alternatively, one might adopt the more standard and more obvious solution of adding the equivalent path to the `PYTHONPATH` environment variable, which does get read by virtual environments and inherited by subshells.
 
+<!-- --8<-- [end:private_prereqs] -->
+
 ### Requirements
+
+<!-- --8<-- [start:private_env] -->
 
 Python is obviously a requirement for disruption-py -- please make sure you are running the desired Python version before creating a new installation, e.g.:
 
@@ -186,3 +200,6 @@ If using Poetry, one will be created automatically, e.g.:
 ```bash
 poetry install --with dev
 ```
+
+<!-- --8<-- [end:private_env] -->
+

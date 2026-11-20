@@ -2,6 +2,7 @@
 # DisruptionPy
 
 #### An open-source physics-based Scientific Framework for Disruption Analysis of Fusion Plasmas for AI/ML applications
+<!-- --8<-- [start:badges] -->
 
 [![Workflow: Lint](https://github.com/MIT-PSFC/disruption-py/actions/workflows/lint.yml/badge.svg)](https://github.com/MIT-PSFC/disruption-py/actions/workflows/lint.yml)
 [![Workflow: Tests](https://github.com/MIT-PSFC/disruption-py/actions/workflows/tests.yml/badge.svg)](https://github.com/MIT-PSFC/disruption-py/actions/workflows/tests.yml)
@@ -24,12 +25,20 @@
 [![Available: Zenodo](https://zenodo.org/badge/DOI/10.5281/zenodo.13935223.svg)](https://doi.org/10.5281/zenodo.13935223)
 [![License: MIT](https://img.shields.io/pypi/l/disruption-py?color=750014)](https://github.com/MIT-PSFC/disruption-py/blob/main/LICENSE)
 
+<!-- --8<-- [end:badges] -->
 
 ## Concept
 
+<!-- --8<-- [start:concept] -->
+
 DisruptionPy is an open-source Scientific Python package for fast retrieval of experimental Fusion data from [MDSplus](https://www.mdsplus.org/) servers or [Xarray](https://xarray.dev/) stores.
 The library allows an efficient database preparation for downstream analysis and/or ML model development for disruption studies.
+
+<!-- --8<-- [end:concept] -->
+
 Currently supported devices are:
+
+<!-- --8<-- [start:devices_list] -->
 
 - [Alcator C-Mod](https://en.wikipedia.org/wiki/Alcator_C-Mod)
 - [DIII-D](https://en.wikipedia.org/wiki/DIII-D_(tokamak))
@@ -37,10 +46,13 @@ Currently supported devices are:
 - [HBT-EP](https://fusion.columbia.edu/facilities/hbt-ep-tokamak)
 - [MAST](https://en.wikipedia.org/wiki/Mega_Ampere_Spherical_Tokamak)
 
+<!-- --8<-- [end:devices_list] -->
 
 ## Overview
 
 ### Background
+
+<!-- --8<-- [start:background] -->
 
 A key element to ensure steady state operations in magnetically-confined tokamak devices is the prediction and avoidance of disruptions.
 These are sudden losses of the thermal and magnetic energy stored within the plasma, which can occur when tokamaks operate near stability boundaries or because of hardware anomalies.
@@ -50,11 +62,17 @@ Fusion science currently lacks first-principle, theoretical solutions to fully p
 However, previous work [[NF2019](https://doi.org/10.1088/1741-4326/ab28bf), [NF2021](https://doi.org/10.1088/1741-4326/abf74d)] has shown the usefulness of machine-learning (ML) algorithms for disruption prevention for both [DIII-D](https://en.wikipedia.org/wiki/DIII-D_(tokamak)) and [EAST](https://en.wikipedia.org/wiki/Experimental_Advanced_Superconducting_Tokamak) operations.
 DisruptionPy provides a standardized analysis pipeline across different fusion devices to build ML-ready datasets.
 
+<!-- --8<-- [end:background] -->
+
 ### Workflow
+
+<!-- --8<-- [start:workflow] -->
 
 DisruptionPy makes it easy to efficiently retrieve experimental data from [MDSplus](https://www.mdsplus.org/) fusion repositories or [Xarray](https://xarray.dev/) stores.
 Users can create their own routines and/or use built-in ones that retrieve and derive a variety of important signals from experimental data for disruption analysis.
 These routines are then interpolated on a requested timebase across the specified set of plasma discharges (or shots) to assemble a dataset and save it under a variety of available formats.
+
+<!-- --8<-- [end:workflow] -->
 
 <p align="center">
 <img src="docs/workflow.png" alt="Schematic flowchart of a typical DisruptionPy workflow (by: Y Wei)" width="75%" onerror="this.onerror=null;this.src='workflow.png';" />
@@ -62,16 +80,27 @@ These routines are then interpolated on a requested timebase across the specifie
 
 _Figure: Schematic flowchart of a typical DisruptionPy workflow (by: Y Wei)._
 
+
+
 ### Acknowledgments
+
+<!-- --8<-- [start:acknowledgments] -->
 
 The most recent revamp of DisruptionPy was partially supported by DOE FES under Award DE-SC0024368, ["Open and FAIR Fusion for Machine Learning Applications"](https://crea-psfc.github.io/open-fair-fusion/).
 
+<!-- --8<-- [end:acknowledgments] -->
 
 ## Devices
 
+<!-- --8<-- [start:devices_intro] -->
+
 DisruptionPy supports data extraction workflows on several fusion devices.
 
+<!-- --8<-- [end:devices_intro] -->
+
 ### Access
+
+<!-- --8<-- [start:devices_access] -->
 
 Each device hosts experimental data separately and may require authorization for access.
 
@@ -79,7 +108,11 @@ DisruptionPy itself does not provide access to any of the underlying servers.
 
 To obtain access, please contact your host at the desired institution.
 
+<!-- --8<-- [end:devices_access] -->
+
 ### Data sources
+
+<!-- --8<-- [start:devices_sources] -->
 
 Workflows targeting the only open-access device, MAST, do not require additional software.
 Other machines require MDSplus support, and possibly SQL database access for full functionality.
@@ -92,7 +125,11 @@ Other machines require MDSplus support, and possibly SQL database access for ful
 | HBT-EP        | Columbia    | MDSplus | -        | :yellow_circle:  |
 | MAST          | UKAEA       | S3      | -        | :green_circle:   |
 
+<!-- --8<-- [end:devices_sources] -->
+
 ## Installation
+
+<!-- --8<-- [start:install] -->
 
 DisruptionPy is [open-source on Github](https://github.com/MIT-PSFC/disruption-py/) and [available at PyPI](https://pypi.org/project/disruption-py/)!
 
@@ -100,7 +137,7 @@ DisruptionPy is [open-source on Github](https://github.com/MIT-PSFC/disruption-p
 
 Depending on the target device, DisruptionPy may need non-Python software to be installed as a pre-requisite.
 Please install pre-requisites, namely either MDSplus or SQL drivers, _only if required_.
-For more details, please refer to the Devices section above and our [Installation guide](INSTALL.md).
+For more details, please refer to the [Devices](#devices) section and our [Installation guide](INSTALL.md).
 
 ### Dependencies
 
@@ -186,10 +223,14 @@ pip install -e .
 
 For custom development installations, please refer to our [Installation guide](INSTALL.md).
 
+<!-- --8<-- [end:install] -->
+
 ### Configuration
 
+<!-- --8<-- [start:configuration] -->
+
 Depending on the target device, DisruptionPy may benefit from SQL access.
-For more details, please refer to the Devices section above.
+For more details, please refer to the [Devices](#devices) section.
 
 While we honor the legacy `sybase_login` file credential format for database connections, we recommend using the following configuration snippet for maximum flexibility:
 
@@ -211,8 +252,11 @@ db_pass = ""
 
 The above configuration file may be used to further override any framework configuration parameter.
 
+<!-- --8<-- [end:configuration] -->
 
 ## Getting Started
+
+<!-- --8<-- [start:quickstart] -->
 
 When installed, a simple command-line entry point is available as `disruption-py`.
 
@@ -261,6 +305,7 @@ out = run(*args)
 For more complicated workflows requiring the configuration of all the settings according to the specific user needs, a full-fledged disruption script might be necessary.
 Please refer to our `examples/defaults.py` script for a quickstart workflow with explicit default arguments.
 
+<!-- --8<-- [end:quickstart] -->
 
 ## Contributing
 
@@ -304,6 +349,8 @@ uv run pytest
 
 ## Credits
 
+<!-- --8<-- [start:credits] -->
+
 #### before 2021
 
 The ancestor MATLAB code was authored by several contributors at [MIT PSFC](https://www.psfc.mit.edu/) before 2021:
@@ -333,12 +380,17 @@ Several contributors have been involved in the development of the code since the
 
 For a complete list of contributors, please refer to the [Contributors](https://github.com/MIT-PSFC/disruption-py/graphs/contributors) page.
 
+<!-- --8<-- [end:credits] -->
 
 ## Citation
+<!-- --8<-- [start:citing] -->
 
 DisruptionPy can be cited as follows:
 
 - GL Trevisan, _et al._ (2026), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, Journal of Open Source Software **11** 119, DOI: [10.21105/joss.09364](https://doi.org/10.21105/joss.09364)
 - GL Trevisan, _et al._ (2024), _"DisruptionPy: An open-source physics-based scientific framework for disruption analysis of fusion plasmas"_, Zenodo, DOI: [10.5281/zenodo.13935223](https://doi.org/10.5281/zenodo.13935223)
 
+<!-- --8<-- [end:citing] -->
+
 A list of works derived from DisruptionPy can be found in [REFERENCES.md](REFERENCES.md).
+
