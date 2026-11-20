@@ -73,7 +73,12 @@ For a physics method to be run after calling [`get_shots_data`][disruption_py.wo
 	- If neither `run_methods` nor `run_columns` is specified, all built-in methods will be run
 
 
-Once all designated methods have been collected, DisruptionPy optimizes their execution order to minimize resource usage by using the information supplied in the `physics_method` decorator. Once reordering is complete, the methods are run.
+The information supplied in the `physics_method` decorator reduces resource usage in two ways:
+
+- The `tokamak` and `columns` parameters determine which methods are run, so methods for other tokamaks or that produce no requested columns are skipped.
+- When `cache` is `True` (the default), a method's result is stored for the shot and timebase, so calls to the same method from other methods reuse the stored result instead of recomputing it.
+
+Once all designated methods have been collected, they are run.
 
 
 ::: disruption_py.core.physics_method.params
