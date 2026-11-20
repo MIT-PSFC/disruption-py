@@ -135,7 +135,7 @@ DisruptionPy is [open-source on Github](https://github.com/MIT-PSFC/disruption-p
 
 Depending on the target device, DisruptionPy may need non-Python software to be installed as a pre-requisite.
 Please install pre-requisites, namely either MDSplus or SQL drivers, _only if required_.
-For more details, please refer to the Devices section above and our [Installation guide](INSTALL.md).
+For more details, please refer to the [Devices](#devices) section and our [Installation guide](INSTALL.md).
 
 ### Dependencies
 
@@ -228,7 +228,7 @@ For custom development installations, please refer to our [Installation guide](I
 <!-- --8<-- [start:configuration] -->
 
 Depending on the target device, DisruptionPy may benefit from SQL access.
-For more details, please refer to the Devices section above.
+For more details, please refer to the [Devices](#devices) section.
 
 While we honor the legacy `sybase_login` file credential format for database connections, we recommend using the following configuration snippet for maximum flexibility:
 
