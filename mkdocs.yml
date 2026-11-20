@@ -74,6 +74,7 @@ nav:
           - Data Connection (Base): api/data_io/data_connection.md
           - SQL Database: api/data_io/sql_database.md
           - MDSplus Connection: api/data_io/mds_connection.md
+          - Xarray Connection: api/data_io/xarray_connection.md
   - Links:
       - References: references.md
       - GitHub Repo: https://github.com/MIT-PSFC/disruption-py
