@@ -158,7 +158,7 @@ We currently provide an installation guide for Ubuntu-based boxes, but generic U
 <!-- --8<-- [start:private_prereqs] -->
 
 DisruptionPy may need non-Python software to be installed as a pre-requisite, depending on the target device.
-Please refer to the Devices section in our [general README](https://github.com/MIT-PSFC/disruption-py/blob/main/README.md) and install the necessary pre-requisites _only if required_ by the target device.
+Please refer to the Devices section in our [general README](README.md) and install the necessary pre-requisites _only if required_ by the target device.
 
 1. [MDSplus](https://www.mdsplus.org/): to connect to MDSplus data servers,
 2. SQL drivers: to connect to SQL database servers.

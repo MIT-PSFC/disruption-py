@@ -135,7 +135,7 @@ DisruptionPy is [open-source on Github](https://github.com/MIT-PSFC/disruption-p
 
 Depending on the target device, DisruptionPy may need non-Python software to be installed as a pre-requisite.
 Please install pre-requisites, namely either MDSplus or SQL drivers, _only if required_.
-For more details, please refer to the Devices section above and our [Installation guide](https://github.com/MIT-PSFC/disruption-py/blob/main/INSTALL.md).
+For more details, please refer to the Devices section above and our [Installation guide](INSTALL.md).
 
 ### Dependencies
 
@@ -155,7 +155,7 @@ We suggest to install DisruptionPy:
 
 If executing on a supported server, installation might not be necessary at all!
 
-Several public installations are currently maintained automatically, as outlined in our [Installation guide](https://github.com/MIT-PSFC/disruption-py/blob/main/INSTALL.md).
+Several public installations are currently maintained automatically, as outlined in our [Installation guide](INSTALL.md).
 
 ### B) Install as an application
 
@@ -219,7 +219,7 @@ source .venv/bin/activate
 pip install -e .
 ```
 
-For custom development installations, please refer to our [Installation guide](https://github.com/MIT-PSFC/disruption-py/blob/main/INSTALL.md).
+For custom development installations, please refer to our [Installation guide](INSTALL.md).
 
 <!-- --8<-- [end:install] -->
 

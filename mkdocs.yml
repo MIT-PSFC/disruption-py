@@ -81,6 +81,11 @@ nav:
       - Issues: https://github.com/MIT-PSFC/disruption-py/issues
       - Changelog / Releases: https://github.com/MIT-PSFC/disruption-py/releases
   - Citation: citation.md
+hooks:
+  - scripts/mkdocs_hooks.py
+validation:
+  links:
+    absolute_links: relative_to_docs
 markdown_extensions:
   - attr_list
   - admonition
