@@ -29,6 +29,7 @@ nav:
   - Home:
       - Overview: index.md
       - Workflow: workflow.md
+      - Installation: installation.md
       - Quickstart: quickstart.md
       - Examples: examples.md
       - Acknowledgments: acknowledgments.md

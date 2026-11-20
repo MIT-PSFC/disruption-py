@@ -1,8 +1,4 @@
-# Install
-
---8<-- "README.md:install"
-
-## Installation guide
+# Installation guide
 
 --8<-- "INSTALL.md:public"
 
