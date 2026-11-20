@@ -17,7 +17,10 @@ disruption_py/settings/nickname_setting.py:nickname_setting_keys
 --8<--
 ```
 - A dictionary mapping tokamak type strings to the desired `NicknameSetting` for that tokamak.  E.g. `{'cmod': 'efit'}`.
---8<-- "disruption_py/machine/tokamak.py:allowed_tokamak_types_snippet"
+<!-- --8<-- "disruption_py/machine/tokamak.py:allowed_tokamak_types_snippet" 
+  TODO: update the allowed_tokamak_types_snippet
+-->
+
 
 ## Built-in Implemenations { .doc .doc-heading }
 
