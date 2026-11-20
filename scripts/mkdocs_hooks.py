@@ -15,6 +15,11 @@ Example, for a section of README.md pasted into docs/installation/install.md:
     [Installation guide](INSTALL.md)
     -> [Installation guide](/installation/install.md)
 
+The same applies to links to README.md sections that have a page of their own
+in the documentation: in-page anchors within README.md, such as
+`[Devices](#devices)`, and links from other files, such as
+`[Devices](README.md#devices)` in INSTALL.md. Both go to the Devices page.
+
 The hook is registered in mkdocs.yml under `hooks:`, and MkDocs calls
 `on_config` below once, when it loads the configuration.
 """
@@ -53,6 +58,30 @@ _LINK = re.compile(
 )
 
 
+# Links to these README.md sections are rewritten.
+# Keys: in-page anchors exactly as they appear in links in README.md; GitHub
+# derives them from the heading, e.g. `## Devices` -> `#devices`.
+# Values: the documentation page with the same content, relative to docs/.
+# Any page with a link to one of these anchors is rewritten, so do not list an
+# anchor that a documentation page uses to link to one of its own headings.
+README_SECTION_TO_PAGE = {
+    "#devices": "devices/index.md",
+}
+
+# Matches the target part of a Markdown link to one of the README sections above,
+# e.g. the `](#devices)` in `[Devices](#devices)`.
+# The anchor must be the whole target, so `](#devices-list)` does not match.
+_SECTIONS = "|".join(re.escape(anchor) for anchor in README_SECTION_TO_PAGE)
+_SECTION_LINK = re.compile(
+    rf"""
+    \]\(                       # `](`: end of the link text, start of the target
+    (?P<section>{_SECTIONS})   # one of the anchors, e.g. `#devices`
+    \)                         # `)`: end of the target
+    """,
+    re.VERBOSE,
+)
+
+
 def _rewrite_link(match: re.Match) -> str:
     """
     Return the replacement for one matched link target.
@@ -62,9 +91,26 @@ def _rewrite_link(match: re.Match) -> str:
     that the page exists and converts the target into a relative URL that works
     from whichever page the link ends up on.
     """
-    page = REPO_FILE_TO_PAGE[match["file"]]
+    file = match["file"]
     anchor = match["anchor"] or ""
-    return f"](/{page}{anchor})"
+
+    # A link from another file to a README section, e.g. `README.md#devices`
+    # in INSTALL.md: go to that section's own page, as for `#devices` below.
+    if file == "README.md" and anchor in README_SECTION_TO_PAGE:
+        return f"](/{README_SECTION_TO_PAGE[anchor]})"
+
+    return f"](/{REPO_FILE_TO_PAGE[file]}{anchor})"
+
+
+def _rewrite_section_link(match: re.Match) -> str:
+    """
+    Return the replacement for one matched README section link.
+
+    The anchor is dropped: the section is the whole target page. As for
+    `_rewrite_link`, the leading `/` makes the target relative to docs/.
+    """
+    page = README_SECTION_TO_PAGE[match["section"]]
+    return f"](/{page})"
 
 
 class RepoLinkPreprocessor(Preprocessor):
@@ -77,7 +123,10 @@ class RepoLinkPreprocessor(Preprocessor):
 
     def run(self, lines: list[str]) -> list[str]:
         """Rewrite every matching link target on every line."""
-        return [_LINK.sub(_rewrite_link, line) for line in lines]
+        return [
+            _SECTION_LINK.sub(_rewrite_section_link, _LINK.sub(_rewrite_link, line))
+            for line in lines
+        ]
 
 
 class RepoLinkExtension(Extension):
