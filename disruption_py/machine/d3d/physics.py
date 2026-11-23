@@ -800,9 +800,17 @@ class D3DPhysicsMethods:
             )  # [MA], [ms]
             t_ip_rt = t_ip_rt / 1.0e3  # [ms] -> [s]
             ip_rt = ip_rt * 1.0e6  # [MA] -> [A]
-            dip_dt_rt = np.gradient(ip_rt, t_ip_rt)
-            ip_rt = interp1(t_ip_rt, ip_rt, params.times, "linear")
-            dip_dt_rt = interp1(t_ip_rt, dip_dt_rt, params.times, "linear")
+            if np.size(t_ip_rt) > 1:
+                dip_dt_rt = np.gradient(ip_rt, t_ip_rt)
+                ip_rt = interp1(t_ip_rt, ip_rt, params.times, "linear")
+                dip_dt_rt = interp1(t_ip_rt, dip_dt_rt, params.times, "linear")
+            else:
+                params.logger.warning(
+                    "get_rt_ip_parameters: No real-time Ip data found. "
+                    "Setting ip_rt and dip_dt_rt to NaN"
+                )
+                ip_rt = np.full(len(params.times), np.nan)
+                dip_dt_rt = np.full(len(params.times), np.nan)                
         except mdsExceptions.MdsException as e:
             params.logger.warning(
                 "ip_rt: Failed to get measured plasma current parameters. Setting to NaN."
@@ -817,9 +825,17 @@ class D3DPhysicsMethods:
             ip_prog_rt = ip_prog_rt * 1.0e6 * 0.5  # [MA] -> [A]
             polarity = D3DUtilMethods.get_polarity(params)
             ip_prog_rt = ip_prog_rt * polarity
-            dipprog_dt_rt = np.gradient(ip_prog_rt, t_ip_prog_rt)
-            ip_prog_rt = interp1(t_ip_prog_rt, ip_prog_rt, params.times, "linear")
-            dipprog_dt_rt = interp1(t_ip_prog_rt, dipprog_dt_rt, params.times, "linear")
+            if np.size(t_ip_prog_rt) > 1:
+                dipprog_dt_rt = np.gradient(ip_prog_rt, t_ip_prog_rt)
+                ip_prog_rt = interp1(t_ip_prog_rt, ip_prog_rt, params.times, "linear")
+                dipprog_dt_rt = interp1(t_ip_prog_rt, dipprog_dt_rt, params.times, "linear")
+            else:
+                params.logger.warning(
+                    "get_rt_ip_parameters: No real-time density data found. "
+                    "Setting ip_prog_rt and dipprog_dt_rt to NaN"
+                )
+                ip_prog_rt = np.full(len(params.times), np.nan)
+                dipprog_dt_rt = np.full(len(params.times), np.nan)                 
         except mdsExceptions.MdsException as e:
             params.logger.warning(
                 "ip_prog_rt: Failed to get programmed plasma current parameters. Setting to NaN."
