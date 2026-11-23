@@ -507,14 +507,14 @@ class D3DPhysicsMethods:
         )  # [10^19 m^-3]
         t_ne_rt = t_ne_rt / 1.0e3  # [ms] to [s]
         ne_rt = ne_rt * 1.0e19  # [10^19 m^-3] -> [m^-3]
-        # Empty nodes can sometimes return a single placeholder sample (e.g. shot 109929)
-        if np.size(t_ne_rt) > 1:
+        # Empty nodes can return placeholder samples or mismatched arrays (e.g. shot 109929)
+        if np.size(ne_rt) > 1 and np.size(ne_rt) == np.size(t_ne_rt):
             dne_dt_rt = np.gradient(ne_rt, t_ne_rt)  # [m^-3/s]
             ne_rt = interp1(t_ne_rt, ne_rt, params.times, "linear")
             dne_dt_rt = interp1(t_ne_rt, dne_dt_rt, params.times, "linear")
         else:
             params.logger.warning(
-                "get_rt_density_parameters: No real-time density data found. "
+                "get_rt_density_parameters: No valid real-time density data found. "
                 "Setting ne_rt and dne_dt_rt to NaN."
             )
             ne_rt = np.full(len(params.times), np.nan)
