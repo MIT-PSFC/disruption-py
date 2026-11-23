@@ -45,7 +45,7 @@ validity = [0.0, 1.5]
 description = "Toroidal magnetic field strength"
 imas = "/summary/global_quantities/b0/value"
 latex = '$B_T$'
-source = "Magnetics (toroidal field)"
+source = "Magnetics"
 units = "T"
 validity = [-2.5, 2.5]
 
@@ -66,7 +66,7 @@ validity = [0.1, 70.0]
 [d3d.physics.attributes.current_quench_time]
 description = "Time of the current quench event. NaN for non-disruptive discharges"
 latex = '$t_{\mathrm{CQ}}$'
-source = "Magnetics (Rogowski coil)"
+source = "Magnetics"
 units = "s"
 
 [d3d.physics.attributes.dbetap_dt]
@@ -91,7 +91,7 @@ units = "dimensionless"
 [d3d.physics.attributes.dip_dt]
 description = "Time derivative of the actual plasma current"
 latex = '$dI_p/dt$'
-source = "Magnetics (Rogowski coil)"
+source = "Magnetics"
 units = "A/s"
 
 [d3d.physics.attributes.dip_dt_rt]
@@ -144,7 +144,7 @@ units = "J/s"
 description = "Greenwald fraction"
 imas = "/summary/global_quantities/greenwald_fraction/value"
 latex = '$f_{\mathrm{GW}}$'
-source = "CO2 interferometer, Magnetics (Rogowski coil), EFIT"
+source = "CO2 interferometer, Magnetics, EFIT"
 units = "dimensionless"
 validity = [0.0, 1.5]
 
@@ -175,13 +175,13 @@ validity = [0.0, 161.920898]
 description = "Measured plasma current (Rogowski coil)"
 imas = "/summary/global_quantities/ip/value"
 latex = '$I_p$'
-source = "Magnetics (Rogowski coil)"
+source = "Magnetics"
 units = "A"
 
 [d3d.physics.attributes.ip_error]
 description = "Difference between the measured and programmed plasma current"
 latex = '$I_{p,\mathrm{err}}$'
-source = "Magnetics (Rogowski coil), Plasma control system (PCS)"
+source = "Magnetics, Plasma control system (PCS)"
 units = "A"
 
 [d3d.physics.attributes.ip_error_rt]
@@ -284,14 +284,14 @@ validity = [0.2e20, 7.0e20]
 description = "Amplitude of the n=1 mode"
 imas = "/mhd_linear/time_slice(itime)/toroidal_mode(i1)/plasma/b_field_perturbed"
 latex = '$\delta B_{n=1}$'
-source = "Magnetics (radial field saddle loops)"
+source = "Magnetics"
 units = "T"
 validity = [0.0, 0.02]
 
 [d3d.physics.attributes.n_equal_1_normalized]
 description = "Amplitude of the n=1 mode normalized to the toroidal magnetic field"
 latex = '$\delta B_{n=1}/B_T$'
-source = "Magnetics (radial field saddle loops)"
+source = "Magnetics"
 units = "dimensionless"
 
 [d3d.physics.attributes.ne_peaking_cva_rt]
@@ -328,7 +328,7 @@ validity = [0.0, 5.0e6]
 description = "Total radiated power measured by 2pi foil bolometer"
 imas = "/bolometer/power_radiated_total"
 latex = '$P_{\mathrm{rad}}$'
-source = "Bolometer (2pi foil)"
+source = "Bolometer"
 units = "W"
 validity = [0.0, inf]
 
@@ -385,7 +385,7 @@ validity = [0.0, inf]
 [d3d.physics.attributes.radiated_fraction]
 description = "Total radiated power fraction"
 latex = '$f_{\mathrm{rad}}$'
-source = "Bolometer (2pi foil), NBI system, ECH system, Magnetics, EFIT"
+source = "Bolometer, NBI system, ECH system, Magnetics, EFIT"
 units = "dimensionless"
 validity = [0.0, 15.0]
 
@@ -414,7 +414,7 @@ validity = [0.0, inf]
 description = "Measured loop voltage"
 imas = "/summary/global_quantities/v_loop/value"
 latex = '$V_{\mathrm{loop}}$'
-source = "Magnetics (flux loops)"
+source = "Magnetics"
 units = "V"
 validity = [-7.0, 7.0]
 
