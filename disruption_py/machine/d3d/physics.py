@@ -524,52 +524,58 @@ class D3DPhysicsMethods:
         # Get real time ip to calculate the Greenwald density.
         g_f_rt = np.full(len(params.times), np.nan)
         try:
-            ip_rt, t_ip_rt = params.get_data_with_dims(
-                f"ptdata('ipsip', {params.shot_id})"
-            )  # [MA], [ms]
+            try:
+                ip_rt, t_ip_rt = params.get_data_with_dims(
+                    f"ptdata('ipsip', {params.shot_id})"
+                )  # [MA], [ms]
+            except mdsExceptions.MdsException:
+                ip_rt, t_ip_rt = params.get_data_with_dims(
+                    f"ptdata('ipspr15v', {params.shot_id})"
+                )  # [volts; 2 V/MA], [ms]
+                ip_rt = ip_rt / 2  # [volts] to [MA]
             t_ip_rt = t_ip_rt / 1.0e3  # [ms] to [s]
-        except mdsExceptions.MdsException:
-            ip_rt, t_ip_rt = params.get_data_with_dims(
-                f"ptdata('ipspr15v', {params.shot_id})"
-            )  # [volts; 2 V/MA], [ms]
-            t_ip_rt = t_ip_rt / 1.0e3  # [ms] to [s]
-            ip_rt = ip_rt / 2  # [volts] to [MA]
-        if np.size(ip_rt) < 2 or np.size(ip_rt) != np.size(t_ip_rt):
+            if np.size(ip_rt) < 2 or np.size(ip_rt) != np.size(t_ip_rt):
+                params.logger.warning(
+                    "get_rt_density_parameters: Invalid real-time Ip data. "
+                    "Setting greenwald_fraction_rt to NaN."
+                )
+            else:
+                ip_sign = np.sign(np.sum(ip_rt))
+                ip_rt = interp1(t_ip_rt, ip_rt * ip_sign, params.times, "linear")
+
+                # Read in EFIT minor radius and timebase.  This is also needed to calculate
+                # the Greenwald density limit.  However, if the minor radius data is not
+                # available, use a default fixed value of 0.59 m.  (We surveyed several
+                # hundred shots to determine this default value.)  Note that the efit
+                # timebase data is in a node called "atime" instead of "time" (where "time"
+                # does not work).
+
+                # For the real-time (RT) signals, read from the EFITRT1 tree
+                try:
+                    a_minor_rt, t_a_rt = params.get_data_with_dims(
+                        r"\efit_a_eqdsk:aminor", tree_name="efitrt1"
+                    )  # [m], [ms]
+                    t_a_rt = t_a_rt / 1.0e3  # [ms] -> [s]
+                    a_minor_rt = interp1(t_a_rt, a_minor_rt, params.times, "linear")
+                except mdsExceptions.MdsException:
+                    a_minor_rt = 0.59 * np.ones(len(params.times))
+                try:
+                    with np.errstate(divide="ignore"):
+                        n_g_rt = ip_rt / (np.pi * a_minor_rt**2)  # [MA/m^2]
+                        g_f_rt = ne_rt / 1.0e20 / n_g_rt
+                except ValueError as e:
+                    params.logger.warning("Failed to compute Greenwald fraction rt.")
+                    params.logger.opt(exception=True).debug(e)
+
+                    err = "operands could not be broadcast together with shapes"
+                    if err not in e.args:
+                        raise
+        except mdsExceptions.MdsException as e:
             params.logger.warning(
-                "get_rt_density_parameters: Invalid real-time Ip data. "
+                "get_rt_density_parameters: Failed to get real-time Ip data. "
                 "Setting greenwald_fraction_rt to NaN."
             )
-        else:
-            ip_sign = np.sign(np.sum(ip_rt))
-            ip_rt = interp1(t_ip_rt, ip_rt * ip_sign, params.times, "linear")
-
-            # Read in EFIT minor radius and timebase.  This is also needed to calculate
-            # the Greenwald density limit.  However, if the minor radius data is not
-            # available, use a default fixed value of 0.59 m.  (We surveyed several
-            # hundred shots to determine this default value.)  Note that the efit
-            # timebase data is in a node called "atime" instead of "time" (where "time"
-            # does not work).
-
-            # For the real-time (RT) signals, read from the EFITRT1 tree
-            try:
-                a_minor_rt, t_a_rt = params.get_data_with_dims(
-                    r"\efit_a_eqdsk:aminor", tree_name="efitrt1"
-                )  # [m], [ms]
-                t_a_rt = t_a_rt / 1.0e3  # [ms] -> [s]
-                a_minor_rt = interp1(t_a_rt, a_minor_rt, params.times, "linear")
-            except mdsExceptions.MdsException:
-                a_minor_rt = 0.59 * np.ones(len(params.times))
-            try:
-                with np.errstate(divide="ignore"):
-                    n_g_rt = ip_rt / (np.pi * a_minor_rt**2)  # [MA/m^2]
-                    g_f_rt = ne_rt / 1.0e20 / n_g_rt
-            except ValueError as e:
-                params.logger.warning("Failed to compute Greenwald fraction rt.")
-                params.logger.opt(exception=True).debug(e)
-
-                err = "operands could not be broadcast together with shapes"
-                if err not in e.args:
-                    raise
+            params.logger.opt(exception=True).debug(e)
 
         return {"n_e_rt": ne_rt, "greenwald_fraction_rt": g_f_rt, "dn_dt_rt": dne_dt_rt}
 
