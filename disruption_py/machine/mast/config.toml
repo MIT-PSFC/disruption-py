@@ -48,13 +48,13 @@ units = "T"
 [mast.physics.attributes.d_alpha]
 description = "D-alpha camera signal"
 latex = '$D_\alpha$'
-source = "Visible spectroscopy (D-alpha filter)"
+source = "Visible spectroscopy"
 units = "V"
 
 [mast.physics.attributes.dip_dt]
 description = "Time derivative of the Actual plasma current"
 latex = '$dI_p/dt$'
-source = "Magnetics (Rogowski coil)"
+source = "Magnetics"
 units = "A/s"
 
 [mast.physics.attributes.dipprog_dt]
@@ -92,14 +92,14 @@ units = "counts"
 description = "Greenwald fraction"
 imas = "/summary/global_quantities/greenwald_fraction"
 latex = '$f_{\mathrm{GW}}$'
-source = "Interferometer, Magnetics (Rogowski coil), EFIT"
+source = "Interferometer, Magnetics, EFIT"
 units = "dimensionless"
 
 [mast.physics.attributes.ip]
 description = "Actual plasma current"
 imas = "/summary/global_quantities/ip"
 latex = '$I_p$'
-source = "Magnetics (Rogowski coil)"
+source = "Magnetics"
 units = "A"
 
 [mast.physics.attributes.ip_prog]
@@ -265,7 +265,7 @@ units = "V"
 description = "Vertical velocity of the plasma current centroid"
 imas = "/equilibrium/time_slice(itime)/global_quantities/current_centre/velocity_z"
 latex = '$v_z$'
-source = "Plasma control system (PCS), Magnetics (Rogowski coil)"
+source = "Plasma control system (PCS), Magnetics"
 units = "m/s"
 
 [mast.physics.attributes.volume]
@@ -285,7 +285,7 @@ units = "J"
 [mast.physics.attributes.z_error]
 description = "Difference between the measured and programmed vertical position of the plasma current centroid"
 latex = '$z_{\mathrm{err}}$'
-source = "Plasma control system (PCS), Magnetics (Rogowski coil)"
+source = "Plasma control system (PCS), Magnetics"
 units = "m"
 
 [mast.physics.attributes.z_prog]
@@ -298,14 +298,14 @@ units = "m"
 [mast.physics.attributes.z_times_v_z]
 description = "Product of the vertical position and vertical velocity of the plasma current centroid"
 latex = '$z_{\mathrm{cur}} v_z$'
-source = "Plasma control system (PCS), Magnetics (Rogowski coil)"
+source = "Plasma control system (PCS), Magnetics"
 units = "m^2/s"
 
 [mast.physics.attributes.zcur]
 description = "Measured vertical position of the plasma current centroid"
 imas = "/equilibrium/time_slice(itime)/global_quantities/current_centre/z"
 latex = '$z_{\mathrm{cur}}$'
-source = "Plasma control system (PCS), Magnetics (Rogowski coil)"
+source = "Plasma control system (PCS), Magnetics"
 units = "m"
 
 [mast.physics.current_quench_time_thresholds]
