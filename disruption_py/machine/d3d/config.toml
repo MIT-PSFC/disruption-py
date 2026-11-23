@@ -144,7 +144,7 @@ units = "J/s"
 description = "Greenwald fraction"
 imas = "/summary/global_quantities/greenwald_fraction/value"
 latex = '$f_{\mathrm{GW}}$'
-origin = ["CO2 interferometer", "Magnetics", "EFIT"]
+origin = ["CO2 interferometer", "EFIT", "Magnetics"]
 units = "dimensionless"
 validity = [0.0, 1.5]
 
@@ -297,7 +297,7 @@ units = "dimensionless"
 [d3d.physics.attributes.ne_peaking_cva_rt]
 description = "Peaking factor of the electron density profile, core vs all channels"
 latex = '$n_{e,\mathrm{core}}/\langle n_e \rangle_{\mathrm{RT}}$'
-origin = ["Thomson scattering", "EFIT"]
+origin = ["EFIT", "Thomson scattering"]
 units = "dimensionless"
 
 [d3d.physics.attributes.p_ech]
@@ -320,7 +320,7 @@ validity = [0.0, inf]
 description = "Total Ohmic heating power"
 imas = "/summary/global_quantities/power_ohm/value"
 latex = '$P_{\mathrm{OH}}$'
-origin = ["Magnetics", "EFIT"]
+origin = ["EFIT", "Magnetics"]
 units = "W"
 validity = [0.0, 5.0e6]
 
@@ -342,13 +342,13 @@ validity = [0.0, 1.0]
 [d3d.physics.attributes.prad_peaking_cva_rt]
 description = "Peaking factor for the radiated power, core vs all-but-divertor channels"
 latex = '$P_{\mathrm{rad,core}}/\langle P_{\mathrm{rad}} \rangle_{\mathrm{RT}}$'
-origin = ["Plasma control system (PCS)", "Bolometer", "EFIT"]
+origin = ["Bolometer", "EFIT", "Plasma control system (PCS)"]
 units = "dimensionless"
 
 [d3d.physics.attributes.prad_peaking_xdiv_rt]
 description = "Peaking factor for the radiated power, divertor vs all-but-core channels"
 latex = '$P_{\mathrm{rad,div}}/\langle P_{\mathrm{rad}} \rangle_{\mathrm{RT}}$'
-origin = ["Plasma control system (PCS)", "Bolometer", "EFIT"]
+origin = ["Bolometer", "EFIT", "Plasma control system (PCS)"]
 units = "dimensionless"
 
 [d3d.physics.attributes.q0]
@@ -385,7 +385,7 @@ validity = [0.0, inf]
 [d3d.physics.attributes.radiated_fraction]
 description = "Total radiated power fraction"
 latex = '$f_{\mathrm{rad}}$'
-origin = ["Bolometer", "NBI system", "ECH system", "Magnetics", "EFIT"]
+origin = ["Bolometer", "ECH system", "EFIT", "Magnetics", "NBI system"]
 units = "dimensionless"
 validity = [0.0, 15.0]
 
@@ -398,7 +398,7 @@ units = "dimensionless"
 [d3d.physics.attributes.te_peaking_cva_rt]
 description = "Peaking factor of the electron temperature profile, core vs all channels"
 latex = '$T_{e,\mathrm{core}}/\langle T_e \rangle_{\mathrm{RT}}$'
-origin = ["Thomson scattering", "EFIT"]
+origin = ["EFIT", "Thomson scattering"]
 units = "dimensionless"
 validity = [0.0, inf]
 
@@ -452,7 +452,7 @@ validity = [-0.5, 0.5]
 [d3d.physics.attributes.zcur_normalized]
 description = "Measured vertical position of the plasma current centroid normalized to plasma minor radius"
 latex = '$z_{\mathrm{cur}}/a$'
-origin = ["Plasma control system (PCS)", "EFIT"]
+origin = ["EFIT", "Plasma control system (PCS)"]
 units = "dimensionless"
 
 [d3d.physics.bradial_path]

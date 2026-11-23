@@ -102,7 +102,7 @@ units = "J/s"
 description = "Greenwald fraction"
 imas = "/summary/global_quantities/greenwald_fraction/value"
 latex = '$f_{\mathrm{GW}}$'
-origin = ["Two-color interferometer (TCI)", "Magnetics", "EFIT"]
+origin = ["EFIT", "Magnetics", "Two-color interferometer (TCI)"]
 units = "dimensionless"
 validity = [0.0, 1.5]
 
@@ -110,7 +110,7 @@ validity = [0.0, 1.5]
 description = "H98 energy confinement time enhancement factor over the IPB98(y,2) scaling"
 imas = "/summary/global_quantities/h_98"
 latex = '$H_{98(y,2)}$'
-origin = ["EFIT", "Two-color interferometer (TCI)", "Magnetics", "Heating systems"]
+origin = ["EFIT", "Heating systems", "Magnetics", "Two-color interferometer (TCI)"]
 units = "dimensionless"
 validity = [0.05, 1.75]
 
@@ -167,7 +167,7 @@ validity = [0.8, 2.0]
 [cmod.physics.attributes.lh_power_threshold]
 description = "Martin 2008 L-H transition power threshold scaling"
 latex = '$P_{\mathrm{thresh}}$'
-origin = ["Two-color interferometer (TCI)", "Magnetics", "EFIT"]
+origin = ["EFIT", "Magnetics", "Two-color interferometer (TCI)"]
 units = "W"
 validity = [0.0, 1.0e7]
 
@@ -225,7 +225,7 @@ validity = [-3.0, 3.0]
 [cmod.physics.attributes.ne_peaking]
 description = "Peaking factor of the electron density profile measured by the Thomson scattering diagnostic"
 latex = '$n_{e,\mathrm{core}}/\langle n_e \rangle$'
-origin = ["Thomson scattering", "EFIT"]
+origin = ["EFIT", "Thomson scattering"]
 units = "dimensionless"
 
 [cmod.physics.attributes.p_icrf]
@@ -239,7 +239,7 @@ validity = [0.0, inf]
 [cmod.physics.attributes.p_input]
 description = "Total input power (ohmic + LH + ICRF)"
 latex = '$P_{\mathrm{input}}$'
-origin = ["Magnetics", "EFIT", "LH system", "ICRF system"]
+origin = ["EFIT", "ICRF system", "LH system", "Magnetics"]
 units = "W"
 validity = [0.0, inf]
 
@@ -255,7 +255,7 @@ validity = [0.0, inf]
 description = "Total Ohmic heating power"
 imas = "/summary/global_quantities/power_ohm/value"
 latex = '$P_{\mathrm{OH}}$'
-origin = ["Magnetics", "EFIT"]
+origin = ["EFIT", "Magnetics"]
 units = "W"
 validity = [0.0, 5.0e6]
 
@@ -276,7 +276,7 @@ units = "dimensionless"
 [cmod.physics.attributes.pressure_peaking]
 description = "Peaking factor of the pressure profile measured by the Thomson scattering diagnostic"
 latex = '$p_{\mathrm{core}}/\langle p \rangle$'
-origin = ["Thomson scattering", "EFIT"]
+origin = ["EFIT", "Thomson scattering"]
 units = "dimensionless"
 
 [cmod.physics.attributes.q0]
@@ -305,7 +305,7 @@ validity = [0.0, inf]
 [cmod.physics.attributes.radiated_fraction]
 description = "Total radiated power fraction"
 latex = '$f_{\mathrm{rad}}$'
-origin = ["Bolometer", "Magnetics", "EFIT", "LH system", "ICRF system"]
+origin = ["Bolometer", "EFIT", "ICRF system", "LH system", "Magnetics"]
 units = "dimensionless"
 validity = [0.0, 15.0]
 
@@ -355,7 +355,7 @@ units = "dimensionless"
 description = "Peaking factor of the electron temperature profile measured by the Thomson scattering diagnostic"
 imas = "/core_profiles/global_quantities/t_e_peaking"
 latex = '$T_{e,\mathrm{core}}/\langle T_e \rangle$'
-origin = ["Thomson scattering", "EFIT"]
+origin = ["EFIT", "Thomson scattering"]
 units = "dimensionless"
 
 [cmod.physics.attributes.te_width]
@@ -373,7 +373,7 @@ units = "m"
 [cmod.physics.attributes.thermal_quench_time]
 description = "Time of the disruptive thermal quench onset. NaN for non-disruptive discharges"
 latex = '$t_{\mathrm{TQ}}$'
-origin = ["Soft X-ray tomography (XTOMO)", "Magnetics"]
+origin = ["Magnetics", "Soft X-ray tomography (XTOMO)"]
 units = "s"
 validity = [0.0, 3.0]
 
@@ -424,7 +424,7 @@ units = "V"
 description = "Vertical velocity of the plasma current centroid"
 imas = "/equilibrium/time_slice(itime)/global_quantities/current_centre/velocity_z"
 latex = '$v_z$'
-origin = ["Plasma control system (PCS)", "Magnetics"]
+origin = ["Magnetics", "Plasma control system (PCS)"]
 units = "m/s"
 
 [cmod.physics.attributes.wmhd]
@@ -438,7 +438,7 @@ validity = [5.0e3, 3.0e5]
 [cmod.physics.attributes.z_error]
 description = "Difference between the measured and programmed vertical position of the plasma current centroid"
 latex = '$z_{\mathrm{err}}$'
-origin = ["Plasma control system (PCS)", "Magnetics"]
+origin = ["Magnetics", "Plasma control system (PCS)"]
 units = "m"
 validity = [-1.0, 1.0]
 
@@ -452,14 +452,14 @@ units = "m"
 [cmod.physics.attributes.z_times_v_z]
 description = "Product of the vertical position and vertical velocity of the plasma current centroid"
 latex = '$z_{\mathrm{cur}} v_z$'
-origin = ["Plasma control system (PCS)", "Magnetics"]
+origin = ["Magnetics", "Plasma control system (PCS)"]
 units = "m^2/s"
 
 [cmod.physics.attributes.zcur]
 description = "Measured vertical position of the plasma current centroid"
 imas = "/equilibrium/time_slice(itime)/global_quantities/current_centre/z"
 latex = '$z_{\mathrm{cur}}$'
-origin = ["Plasma control system (PCS)", "Magnetics"]
+origin = ["Magnetics", "Plasma control system (PCS)"]
 units = "m"
 validity = [-0.5, 0.5]
 

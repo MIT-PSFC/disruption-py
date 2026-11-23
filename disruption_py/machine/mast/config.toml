@@ -92,7 +92,7 @@ units = "counts"
 description = "Greenwald fraction"
 imas = "/summary/global_quantities/greenwald_fraction"
 latex = '$f_{\mathrm{GW}}$'
-origin = ["Interferometer", "Magnetics", "EFIT"]
+origin = ["EFIT", "Interferometer", "Magnetics"]
 units = "dimensionless"
 
 [mast.physics.attributes.ip]
@@ -140,7 +140,7 @@ units = "m^-3"
 [mast.physics.attributes.ne_peaking]
 description = "Peaking factor of the electron density profile measured by the Thomson scattering diagnostic"
 latex = '$n_{e,\mathrm{core}}/\langle n_e \rangle$'
-origin = ["Thomson scattering", "EFIT"]
+origin = ["EFIT", "Thomson scattering"]
 units = "dimensionless"
 
 [mast.physics.attributes.p_nbi]
@@ -154,7 +154,7 @@ units = "W"
 description = "Total Ohmic heating power"
 imas = "/summary/global_quantities/power_ohm"
 latex = '$P_{\mathrm{OH}}$'
-origin = ["Magnetics", "EFIT"]
+origin = ["EFIT", "Magnetics"]
 units = "W"
 
 [mast.physics.attributes.p_rad]
@@ -173,7 +173,7 @@ units = "dimensionless"
 [mast.physics.attributes.pressure_peaking]
 description = "Peaking factor of the electron pressure profile measured by the Thomson scattering diagnostic"
 latex = '$p_{\mathrm{core}}/\langle p \rangle$'
-origin = ["Thomson scattering", "EFIT"]
+origin = ["EFIT", "Thomson scattering"]
 units = "dimensionless"
 
 [mast.physics.attributes.q95]
@@ -226,7 +226,7 @@ units = "eV"
 description = "Peaking factor of the electron temperature profile measured by the Thomson scattering diagnostic"
 imas = "/core_profiles/global_quantities/t_e_peaking"
 latex = '$T_{e,\mathrm{core}}/\langle T_e \rangle$'
-origin = ["Thomson scattering", "EFIT"]
+origin = ["EFIT", "Thomson scattering"]
 units = "dimensionless"
 
 [mast.physics.attributes.te_width]
@@ -265,7 +265,7 @@ units = "V"
 description = "Vertical velocity of the plasma current centroid"
 imas = "/equilibrium/time_slice(itime)/global_quantities/current_centre/velocity_z"
 latex = '$v_z$'
-origin = ["Plasma control system (PCS)", "Magnetics"]
+origin = ["Magnetics", "Plasma control system (PCS)"]
 units = "m/s"
 
 [mast.physics.attributes.volume]
@@ -285,7 +285,7 @@ units = "J"
 [mast.physics.attributes.z_error]
 description = "Difference between the measured and programmed vertical position of the plasma current centroid"
 latex = '$z_{\mathrm{err}}$'
-origin = ["Plasma control system (PCS)", "Magnetics"]
+origin = ["Magnetics", "Plasma control system (PCS)"]
 units = "m"
 
 [mast.physics.attributes.z_prog]
@@ -298,14 +298,14 @@ units = "m"
 [mast.physics.attributes.z_times_v_z]
 description = "Product of the vertical position and vertical velocity of the plasma current centroid"
 latex = '$z_{\mathrm{cur}} v_z$'
-origin = ["Plasma control system (PCS)", "Magnetics"]
+origin = ["Magnetics", "Plasma control system (PCS)"]
 units = "m^2/s"
 
 [mast.physics.attributes.zcur]
 description = "Measured vertical position of the plasma current centroid"
 imas = "/equilibrium/time_slice(itime)/global_quantities/current_centre/z"
 latex = '$z_{\mathrm{cur}}$'
-origin = ["Plasma control system (PCS)", "Magnetics"]
+origin = ["Magnetics", "Plasma control system (PCS)"]
 units = "m"
 
 [mast.physics.current_quench_time_thresholds]
