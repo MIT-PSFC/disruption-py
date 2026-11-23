@@ -38,7 +38,7 @@ validity = [0.0, 1.5]
 description = "Toroidal magnetic field strength"
 imas = "/summary/global_quantities/b0/value"
 latex = '$B_T$'
-source = "Magnetics (toroidal field)"
+source = "Magnetics"
 units = "T"
 
 [cmod.physics.attributes.chisq]
@@ -57,13 +57,13 @@ units = "s^-1"
 [cmod.physics.attributes.dip_dt]
 description = "Time derivative of the actual plasma current"
 latex = '$dI_p/dt$'
-source = "Magnetics (Rogowski coil)"
+source = "Magnetics"
 units = "A/s"
 
 [cmod.physics.attributes.dip_smoothed]
 description = "Time derivative of the smoothed measured plasma current"
 latex = '$dI_{p,\mathrm{smooth}}/dt$'
-source = "Magnetics (Rogowski coil)"
+source = "Magnetics"
 units = "A/s"
 
 [cmod.physics.attributes.dipprog_dt]
@@ -89,7 +89,7 @@ units = "m^-3*s^-1"
 [cmod.physics.attributes.dprad_dt]
 description = "Time derivative of the measured total radiated power"
 latex = '$dP_{\mathrm{rad}}/dt$'
-source = "Bolometer (2pi diode)"
+source = "Bolometer"
 units = "W/s"
 
 [cmod.physics.attributes.dwmhd_dt]
@@ -102,7 +102,7 @@ units = "J/s"
 description = "Greenwald fraction"
 imas = "/summary/global_quantities/greenwald_fraction/value"
 latex = '$f_{\mathrm{GW}}$'
-source = "Two-color interferometer (TCI), Magnetics (Rogowski coil), EFIT"
+source = "Two-color interferometer (TCI), Magnetics, EFIT"
 units = "dimensionless"
 validity = [0.0, 1.5]
 
@@ -132,13 +132,13 @@ units = "A"
 description = "Measured plasma current (Rogowski coil)"
 imas = "/summary/global_quantities/ip/value"
 latex = '$I_p$'
-source = "Magnetics (Rogowski coil)"
+source = "Magnetics"
 units = "A"
 
 [cmod.physics.attributes.ip_error]
 description = "Difference between the measured and programmed plasma current"
 latex = '$I_{p,\mathrm{err}}$'
-source = "Magnetics (Rogowski coil), Plasma control system (PCS)"
+source = "Magnetics, Plasma control system (PCS)"
 units = "A"
 
 [cmod.physics.attributes.ip_prog]
@@ -199,20 +199,20 @@ validity = [0.2e20, 7.0e20]
 description = "Amplitude of the n=1 mode"
 imas = "/mhd_linear/time_slice(itime)/toroidal_mode(i1)/plasma/b_field_perturbed"
 latex = '$\delta B_{n=1}$'
-source = "Magnetics (BP pickup coils)"
+source = "Magnetics"
 units = "T"
 validity = [0.0, 0.02]
 
 [cmod.physics.attributes.n_equal_1_normalized]
 description = "Amplitude of the n=1 mode normalized to the toroidal magnetic field"
 latex = '$\delta B_{n=1}/B_T$'
-source = "Magnetics (BP pickup coils)"
+source = "Magnetics"
 units = "dimensionless"
 
 [cmod.physics.attributes.n_equal_1_phase]
 description = "Phase of the n=1 mode"
 latex = '$\phi_{n=1}$'
-source = "Magnetics (BP pickup coils)"
+source = "Magnetics"
 units = "rad"
 
 [cmod.physics.attributes.n_over_ncrit]
@@ -263,14 +263,14 @@ validity = [0.0, 5.0e6]
 description = "Total radiated power measured by the 2pi diode"
 imas = "/bolometer/power_radiated_total"
 latex = '$P_{\mathrm{rad}}$'
-source = "Bolometer (2pi diode)"
+source = "Bolometer"
 units = "W"
 validity = [0.0, inf]
 
 [cmod.physics.attributes.prad_peaking]
 description = "Peaking factor of the radiated power"
 latex = '$P_{\mathrm{rad,core}}/\langle P_{\mathrm{rad}} \rangle$'
-source = "AXA/AXJ diode arrays, EFIT"
+source = "Absolute extreme ultraviolet (AXUV) diode arrays (AXA/AXJ), EFIT"
 units = "dimensionless"
 
 [cmod.physics.attributes.pressure_peaking]
@@ -305,7 +305,7 @@ validity = [0.0, inf]
 [cmod.physics.attributes.radiated_fraction]
 description = "Total radiated power fraction"
 latex = '$f_{\mathrm{rad}}$'
-source = "Bolometer (2pi diode), Magnetics, EFIT, LH system, ICRF system"
+source = "Bolometer, Magnetics, EFIT, LH system, ICRF system"
 units = "dimensionless"
 validity = [0.0, 15.0]
 
@@ -335,7 +335,7 @@ validity = [0.0, inf]
 [cmod.physics.attributes.tau_rad]
 description = "Radiative cooling time-scale"
 latex = '$\tau_{\mathrm{rad}}$'
-source = "Bolometer (2pi diode), EFIT"
+source = "Bolometer, EFIT"
 units = "s"
 validity = [0.0, inf]
 
@@ -373,7 +373,7 @@ units = "m"
 [cmod.physics.attributes.thermal_quench_time]
 description = "Time of the disruptive thermal quench onset. NaN for non-disruptive discharges"
 latex = '$t_{\mathrm{TQ}}$'
-source = "Soft X-ray tomography (XTOMO), Magnetics (Rogowski coil)"
+source = "Soft X-ray tomography (XTOMO), Magnetics"
 units = "s"
 validity = [0.0, 3.0]
 
@@ -403,7 +403,7 @@ validity = [0.0, inf]
 description = "Measured loop voltage"
 imas = "/summary/global_quantities/v_loop/value"
 latex = '$V_{\mathrm{loop}}$'
-source = "Magnetics (flux loops)"
+source = "Magnetics"
 units = "V"
 validity = [-7.0, 7.0]
 
@@ -424,7 +424,7 @@ units = "V"
 description = "Vertical velocity of the plasma current centroid"
 imas = "/equilibrium/time_slice(itime)/global_quantities/current_centre/velocity_z"
 latex = '$v_z$'
-source = "Plasma control system (PCS), Magnetics (Rogowski coil)"
+source = "Plasma control system (PCS), Magnetics"
 units = "m/s"
 
 [cmod.physics.attributes.wmhd]
@@ -438,7 +438,7 @@ validity = [5.0e3, 3.0e5]
 [cmod.physics.attributes.z_error]
 description = "Difference between the measured and programmed vertical position of the plasma current centroid"
 latex = '$z_{\mathrm{err}}$'
-source = "Plasma control system (PCS), Magnetics (Rogowski coil)"
+source = "Plasma control system (PCS), Magnetics"
 units = "m"
 validity = [-1.0, 1.0]
 
@@ -452,14 +452,14 @@ units = "m"
 [cmod.physics.attributes.z_times_v_z]
 description = "Product of the vertical position and vertical velocity of the plasma current centroid"
 latex = '$z_{\mathrm{cur}} v_z$'
-source = "Plasma control system (PCS), Magnetics (Rogowski coil)"
+source = "Plasma control system (PCS), Magnetics"
 units = "m^2/s"
 
 [cmod.physics.attributes.zcur]
 description = "Measured vertical position of the plasma current centroid"
 imas = "/equilibrium/time_slice(itime)/global_quantities/current_centre/z"
 latex = '$z_{\mathrm{cur}}$'
-source = "Plasma control system (PCS), Magnetics (Rogowski coil)"
+source = "Plasma control system (PCS), Magnetics"
 units = "m"
 validity = [-0.5, 0.5]
 
