@@ -168,22 +168,29 @@ class D3DPhysicsMethods:
                 r"\top.ech.total:echpwrc", tree_name="rf"
             )
             t_ech = t_ech / 1e3  # [ms] -> [s]
-            if np.size(t_ech) > 2:
+            # Empty nodes can return placeholder arrays with mismatched dimensions.
+            if np.size(t_ech) > 2 and np.size(p_ech) == np.size(t_ech):
                 # Sometimes, t_ech has an extra "0" value tacked on to the end.
                 # This must be removed before the interpolation.
                 if t_ech[-1] == 0:
                     t_ech, p_ech = t_ech[:-1], p_ech[:-1]
-                p_ech = interp1(
-                    t_ech,
-                    p_ech,
-                    params.times,
-                    "linear",
-                    bounds_error=False,
-                    fill_value=0.0,
-                )
+                if np.size(t_ech) > 1:
+                    p_ech = interp1(
+                        t_ech,
+                        p_ech,
+                        params.times,
+                        "linear",
+                        bounds_error=False,
+                        fill_value=0.0,
+                    )
+                else:
+                    params.logger.verbose(
+                        "No valid ECH power data found in this shot. Setting to zeros",
+                    )
+                    p_ech = np.zeros(len(params.times))
             else:
                 params.logger.verbose(
-                    "No ECH power data found in this shot. Setting to zeros",
+                    "No valid ECH power data found in this shot. Setting to zeros",
                 )
                 p_ech = np.zeros(len(params.times))
         except mdsExceptions.MdsException as e:
