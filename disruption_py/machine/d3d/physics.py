@@ -135,8 +135,10 @@ class D3DPhysicsMethods:
         -------
         - original source: [get_power_d3d.m](https://github.com/MIT-PSFC/disruption-py
         /blob/matlab/DIII-D/get_power_d3d.m)
-        - pull requests: #[234](https://github.com/MIT-PSFC/disruption-py/pull/234)
-        - issues: #[229](https://github.com/MIT-PSFC/disruption-py/issues/229)
+        - pull requests: #[234](https://github.com/MIT-PSFC/disruption-py/pull/234),
+        #[618](https://github.com/MIT-PSFC/disruption-py/pull/618)
+        - issues: #[229](https://github.com/MIT-PSFC/disruption-py/issues/229),
+        #[594](https://github.com/MIT-PSFC/disruption-py/issues/594)
         """
         # Get neutral beam injected power
         try:
@@ -380,7 +382,9 @@ class D3DPhysicsMethods:
         -------
         - original source: [get_density_parameters.m](https://github.com/MIT-PSFC/disru
         ption-py/blob/matlab/DIII-D/get_density_parameters.m)
-        - pull requests: #[249](https://github.com/MIT-PSFC/disruption-py/pull/249)
+        - pull requests: #[249](https://github.com/MIT-PSFC/disruption-py/pull/249),
+        #[618](https://github.com/MIT-PSFC/disruption-py/pull/618)
+        - issues: #[594](https://github.com/MIT-PSFC/disruption-py/issues/594)
         """
         try:
             ne, t_ne = params.get_data_with_dims(r"\density", tree_name="_efit_tree")
@@ -493,7 +497,9 @@ class D3DPhysicsMethods:
         -------
         - original source: [get_density_parameters_RT.m](https://github.com/MIT-PSFC
         /disruption-py/blob/matlab/DIII-D/get_density_parameters_RT.m)
-        - pull requests: #[251](https://github.com/MIT-PSFC/disruption-py/pull/251)
+        - pull requests: #[251](https://github.com/MIT-PSFC/disruption-py/pull/251),
+        #[618](https://github.com/MIT-PSFC/disruption-py/pull/618)
+        - issues: #[594](https://github.com/MIT-PSFC/disruption-py/issues/594)
         """
         ne_rt, t_ne_rt = params.get_data_with_dims(
             f"ptdata('dssdenest', {params.shot_id})"
@@ -658,8 +664,10 @@ class D3DPhysicsMethods:
         -------
         - original source: [get_Ip_parameters.m](https://github.com/MIT-PSFC/disruption-py/blob
         /matlab/DIII-D/get_Ip_parameters.m)
-        - pull requests: #[547](https://github.com/MIT-PSFC/disruption-py/pull/547)
-        - issues: #[506](https://github.com/MIT-PSFC/disruption-py/issues/506)
+        - pull requests: #[547](https://github.com/MIT-PSFC/disruption-py/pull/547),
+        #[618](https://github.com/MIT-PSFC/disruption-py/pull/618)
+        - issues: #[506](https://github.com/MIT-PSFC/disruption-py/issues/506),
+        #[594](https://github.com/MIT-PSFC/disruption-py/issues/594)
         """
         ip = np.full_like(params.times, np.nan)
         ip_prog = np.full_like(params.times, np.nan)
@@ -795,8 +803,10 @@ class D3DPhysicsMethods:
         /blob/matlab/DIII-D/get_Ip_parameters_RT.m)
         - pull requests: #[254](https://github.com/MIT-PSFC/disruption-
         py/pull/254), #[547](https://github.com/MIT-PSFC/disruption-py/pull/547),
-        #[596](https://github.com/MIT-PSFC/disruption-py/pull/596)
-        - issues: #[506](https://github.com/MIT-PSFC/disruption-py/issues/506)
+        #[596](https://github.com/MIT-PSFC/disruption-py/pull/596),
+        #[618](https://github.com/MIT-PSFC/disruption-py/pull/618)
+        - issues: #[506](https://github.com/MIT-PSFC/disruption-py/issues/506),
+        #[594](https://github.com/MIT-PSFC/disruption-py/issues/594)
         """
         ip_rt = [np.nan]
         ip_prog_rt = [np.nan]
@@ -1196,8 +1206,10 @@ class D3DPhysicsMethods:
         - original source: [get_peaking_factors_d3d.m](https://github.com/MIT-PSFC/
         disruption-py/blob/matlab/DIII-D/get_peaking_factors_d3d.m)
         - pull requests: #[265](https://github.com/MIT-PSFC/disruption-py/pull/
-        265), #[328](https://github.com/MIT-PSFC/disruption-py/pull/328)
-        - issues: #[261](https://github.com/MIT-PSFC/disruption-py/issues/261)
+        265), #[328](https://github.com/MIT-PSFC/disruption-py/pull/328),
+        #[618](https://github.com/MIT-PSFC/disruption-py/pull/618)
+        - issues: #[261](https://github.com/MIT-PSFC/disruption-py/issues/261),
+        #[594](https://github.com/MIT-PSFC/disruption-py/issues/594)
         """
         ## Thomson parameters
         ts_data_type = "blessed"  # either 'blessed', 'unblessed', or 'ptdata'
@@ -1663,6 +1675,8 @@ class D3DPhysicsMethods:
         References
         -------
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/utils/load_ne_Te.m
+        - pull requests: #[618](https://github.com/MIT-PSFC/disruption-py/pull/618)
+        - issues: #[594](https://github.com/MIT-PSFC/disruption-py/issues/594)
 
         NOTE: data_source="ptdata" has not been fully implemented; however, for now this
         option isn't used in any of the methods.
