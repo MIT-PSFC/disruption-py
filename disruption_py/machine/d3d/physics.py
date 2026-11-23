@@ -174,20 +174,14 @@ class D3DPhysicsMethods:
                 # This must be removed before the interpolation.
                 if t_ech[-1] == 0:
                     t_ech, p_ech = t_ech[:-1], p_ech[:-1]
-                if np.size(t_ech) > 1:
-                    p_ech = interp1(
-                        t_ech,
-                        p_ech,
-                        params.times,
-                        "linear",
-                        bounds_error=False,
-                        fill_value=0.0,
-                    )
-                else:
-                    params.logger.verbose(
-                        "No valid ECH power data found in this shot. Setting to zeros",
-                    )
-                    p_ech = np.zeros(len(params.times))
+                p_ech = interp1(
+                    t_ech,
+                    p_ech,
+                    params.times,
+                    "linear",
+                    bounds_error=False,
+                    fill_value=0.0,
+                )
             else:
                 params.logger.verbose(
                     "No valid ECH power data found in this shot. Setting to zeros",
