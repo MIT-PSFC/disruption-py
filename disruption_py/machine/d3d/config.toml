@@ -14,14 +14,14 @@ port = 8001
 description = "Minor radius (EFIT)"
 imas = "/equilibrium/time_slice(itime)/boundary/minor_radius"
 latex = '$a$'
-origin = "EFIT"
+origin = ["EFIT"]
 units = "m"
 
 [d3d.physics.attributes.beta_n]
 description = "Normalized plasma beta computed from EFIT"
 imas = "/summary/global_quantities/beta_tor_norm"
 latex = '$\beta_N$'
-origin = "EFIT"
+origin = ["EFIT"]
 units = "dimensionless"
 validity = [0.0, 2.0]
 
@@ -29,7 +29,7 @@ validity = [0.0, 2.0]
 description = "Beta poloidal (EFIT)"
 imas = "/equilibrium/time_slice(itime)/global_quantities/beta_pol"
 latex = '$\beta_p$'
-origin = "EFIT"
+origin = ["EFIT"]
 units = "dimensionless"
 validity = [0.0, 1.5]
 
@@ -37,7 +37,7 @@ validity = [0.0, 1.5]
 description = "Beta poloidal from real-time EFIT calculation"
 imas = "/equilibrium/time_slice(itime)/global_quantities/beta_pol"
 latex = '$\beta_{p,\mathrm{RT}}$'
-origin = "Real-time EFIT"
+origin = ["Real-time EFIT"]
 units = "dimensionless"
 validity = [0.0, 1.5]
 
@@ -45,106 +45,106 @@ validity = [0.0, 1.5]
 description = "Toroidal magnetic field strength"
 imas = "/summary/global_quantities/b0/value"
 latex = '$B_T$'
-origin = "Magnetics"
+origin = ["Magnetics"]
 units = "T"
 validity = [-2.5, 2.5]
 
 [d3d.physics.attributes.chisq]
 description = "Magnetic chi^2 (EFIT)"
 latex = '$\chi^2$'
-origin = "EFIT"
+origin = ["EFIT"]
 units = "dimensionless"
 validity = [0.1, 70.0]
 
 [d3d.physics.attributes.chisq_rt]
 description = "Magnetic chi^2 from real-time EFIT calculation"
 latex = '$\chi^2_{\mathrm{RT}}$'
-origin = "Real-time EFIT"
+origin = ["Real-time EFIT"]
 units = "dimensionless"
 validity = [0.1, 70.0]
 
 [d3d.physics.attributes.current_quench_time]
 description = "Time of the current quench event. NaN for non-disruptive discharges"
 latex = '$t_{\mathrm{CQ}}$'
-origin = "Magnetics"
+origin = ["Magnetics"]
 units = "s"
 
 [d3d.physics.attributes.dbetap_dt]
 description = "Time derivative of the poloidal beta (EFIT)"
 latex = '$d\beta_p/dt$'
-origin = "EFIT"
+origin = ["EFIT"]
 units = "s^-1"
 
 [d3d.physics.attributes.dbetap_dt_rt]
 description = "Time derivative of the poloidal beta from real-time EFIT calculation"
 latex = '$d\beta_{p,\mathrm{RT}}/dt$'
-origin = "Real-time EFIT"
+origin = ["Real-time EFIT"]
 units = "s^-1"
 
 [d3d.physics.attributes.delta]
 description = "Triangularity at plasma boundary (EFIT)"
 imas = "/equilibrium/time_slice(itime)/boundary/triangularity"
 latex = '$\delta$'
-origin = "EFIT"
+origin = ["EFIT"]
 units = "dimensionless"
 
 [d3d.physics.attributes.dip_dt]
 description = "Time derivative of the actual plasma current"
 latex = '$dI_p/dt$'
-origin = "Magnetics"
+origin = ["Magnetics"]
 units = "A/s"
 
 [d3d.physics.attributes.dip_dt_rt]
 description = "Time derivative of the real-time actual plasma current"
 latex = '$dI_{p,\mathrm{RT}}/dt$'
-origin = "Plasma control system (PCS)"
+origin = ["Plasma control system (PCS)"]
 units = "A/s"
 
 [d3d.physics.attributes.dipprog_dt]
 description = "Time derivative of the programmed plasma current"
 latex = '$dI_{p,\mathrm{prog}}/dt$'
-origin = "Plasma control system (PCS)"
+origin = ["Plasma control system (PCS)"]
 units = "A/s"
 validity = [-5.0e6, 5.0e6]
 
 [d3d.physics.attributes.dipprog_dt_rt]
 description = "Time derivative of the real-time programmed plasma current"
 latex = '$dI_{p,\mathrm{prog,RT}}/dt$'
-origin = "Plasma control system (PCS)"
+origin = ["Plasma control system (PCS)"]
 units = "A/s"
 validity = [-5.0e6, 5.0e6]
 
 [d3d.physics.attributes.dli_dt]
 description = "Time derivative of the internal inductance (EFIT)"
 latex = '$d\ell_i/dt$'
-origin = "EFIT"
+origin = ["EFIT"]
 units = "s^-1"
 
 [d3d.physics.attributes.dn_dt]
 description = "Time derivative of the measured line-averaged electron density"
 imas = "/summary/line_average/dn_e_dt"
 latex = '$d\bar{n}_e/dt$'
-origin = "CO2 interferometer"
+origin = ["CO2 interferometer"]
 units = "m^-3*s^-1"
 
 [d3d.physics.attributes.dn_dt_rt]
 description = "Time derivative of the measured line-averaged electron density available to PCS in real-time"
 imas = "/summary/line_average/dn_e_dt"
 latex = '$d\bar{n}_{e,\mathrm{RT}}/dt$'
-origin = "Plasma control system (PCS)"
+origin = ["Plasma control system (PCS)"]
 units = "m^-3*s^-1"
 
 [d3d.physics.attributes.dwmhd_dt]
 description = "Time derivative of the total plasma energy (EFIT)"
 latex = '$dW_{\mathrm{MHD}}/dt$'
-origin = "EFIT"
+origin = ["EFIT"]
 units = "J/s"
 
 [d3d.physics.attributes.greenwald_fraction]
 description = "Greenwald fraction"
 imas = "/summary/global_quantities/greenwald_fraction/value"
 latex = '$f_{\mathrm{GW}}$'
-origin = "CO2 interferometer, Magnetics, EFIT"
+origin = ["CO2 interferometer", "Magnetics", "EFIT"]
 units = "dimensionless"
 validity = [0.0, 1.5]
 
@@ -152,7 +152,7 @@ validity = [0.0, 1.5]
 description = "Greenwald fraction calculated from real-time density"
 imas = "/summary/global_quantities/greenwald_fraction/value"
 latex = '$f_{\mathrm{GW,RT}}$'
-origin = "Plasma control system (PCS), Real-time EFIT"
+origin = ["Plasma control system (PCS)", "Real-time EFIT"]
 units = "dimensionless"
 validity = [0.0, 1.5]
 
@@ -160,14 +160,14 @@ validity = [0.0, 1.5]
 description = "H98 energy confinement time enhancement factor over the IPB98(y,2) scaling"
 imas = "/summary/global_quantities/h_98"
 latex = '$H_{98(y,2)}$'
-origin = "Transport analysis"
+origin = ["Transport analysis"]
 units = "dimensionless"
 validity = [0.05, 1.75]
 
 [d3d.physics.attributes.h_alpha]
 description = "H-alpha line emission intensity"
 latex = '$H_\alpha$'
-origin = "Filterscopes"
+origin = ["Filterscopes"]
 units = "W/(m^2*sr)"
 validity = [0.0, 161.920898]
 
@@ -175,47 +175,47 @@ validity = [0.0, 161.920898]
 description = "Measured plasma current (Rogowski coil)"
 imas = "/summary/global_quantities/ip/value"
 latex = '$I_p$'
-origin = "Magnetics"
+origin = ["Magnetics"]
 units = "A"
 
 [d3d.physics.attributes.ip_error]
 description = "Difference between the measured and programmed plasma current"
 latex = '$I_{p,\mathrm{err}}$'
-origin = "Magnetics, Plasma control system (PCS)"
+origin = ["Magnetics", "Plasma control system (PCS)"]
 units = "A"
 
 [d3d.physics.attributes.ip_error_rt]
 description = "Difference between the real-time measured and programmed plasma current"
 latex = '$I_{p,\mathrm{err,RT}}$'
-origin = "Plasma control system (PCS)"
+origin = ["Plasma control system (PCS)"]
 units = "A"
 
 [d3d.physics.attributes.ip_prog]
 description = "Programmed plasma current"
 imas = "/pulse_schedule/flux_control/ip/reference"
 latex = '$I_{p,\mathrm{prog}}$'
-origin = "Plasma control system (PCS)"
+origin = ["Plasma control system (PCS)"]
 units = "A"
 
 [d3d.physics.attributes.ip_prog_rt]
 description = "Real-time programmed plasma current"
 imas = "/pulse_schedule/flux_control/ip/reference"
 latex = '$I_{p,\mathrm{prog,RT}}$'
-origin = "Plasma control system (PCS)"
+origin = ["Plasma control system (PCS)"]
 units = "A"
 
 [d3d.physics.attributes.ip_rt]
 description = "Real-time measured plasma current (Rogowski coil)"
 imas = "/summary/global_quantities/ip/value"
 latex = '$I_{p,\mathrm{RT}}$'
-origin = "Plasma control system (PCS)"
+origin = ["Plasma control system (PCS)"]
 units = "A"
 
 [d3d.physics.attributes.kappa]
 description = "Elongation at plasma boundary (EFIT)"
 imas = "/equilibrium/time_slice(itime)/boundary/elongation"
 latex = '$\kappa$'
-origin = "EFIT"
+origin = ["EFIT"]
 units = "dimensionless"
 validity = [0.8, 2.0]
 
@@ -223,7 +223,7 @@ validity = [0.8, 2.0]
 description = "Elongation calculated using the plasma area and minor radius from EFIT"
 imas = "/summary/boundary/elongation"
 latex = '$\kappa_{\mathrm{area}}$'
-origin = "EFIT"
+origin = ["EFIT"]
 units = "dimensionless"
 validity = [0.8, 2.0]
 
@@ -231,7 +231,7 @@ validity = [0.8, 2.0]
 description = "Normalized internal inductance, li(3) (EFIT)"
 imas = "/equilibrium/time_slice(itime)/global_quantities/li_3"
 latex = '$\ell_i$'
-origin = "EFIT"
+origin = ["EFIT"]
 units = "dimensionless"
 validity = [0.2, 4.5]
 
@@ -239,7 +239,7 @@ validity = [0.2, 4.5]
 description = "Normalized internal inductance, li(3) from real-time EFIT calculation"
 imas = "/equilibrium/time_slice(itime)/global_quantities/li_3"
 latex = '$\ell_{i,\mathrm{RT}}$'
-origin = "Real-time EFIT"
+origin = ["Real-time EFIT"]
 units = "dimensionless"
 validity = [0.2, 4.5]
 
@@ -247,28 +247,28 @@ validity = [0.2, 4.5]
 description = "Bottom gap between x-point and wall (EFIT)"
 imas = "/equilibrium/time_slice(itime)/boundary/gap(i1)/value"
 latex = '$\mathrm{gap}_{\mathrm{lower}}$'
-origin = "EFIT"
+origin = ["EFIT"]
 units = "m"
 validity = [0.025, 0.25]
 
 [d3d.physics.attributes.n1rms]
 description = "RMS amplitude of the n=1 magnetic field perturbation"
 latex = '$\delta B_{n=1,\mathrm{RMS}}$'
-origin = "Magnetics"
+origin = ["Magnetics"]
 units = "T"
 validity = [0.0, 0.02]
 
 [d3d.physics.attributes.n1rms_normalized]
 description = "RMS of the n=1 mode normalized to the toroidal magnetic field strength"
 latex = '$\delta B_{n=1,\mathrm{RMS}}/B_T$'
-origin = "Magnetics"
+origin = ["Magnetics"]
 units = "dimensionless"
 
 [d3d.physics.attributes.n_e]
 description = "Measured line-averaged electron density"
 imas = "/summary/line_average/n_e/value"
 latex = '$\bar{n}_e$'
-origin = "CO2 interferometer"
+origin = ["CO2 interferometer"]
 units = "m^-3"
 validity = [0.2e20, 7.0e20]
 
@@ -276,7 +276,7 @@ validity = [0.2e20, 7.0e20]
 description = "Real-time measured line-averaged electron density available to PCS"
 imas = "/summary/line_average/n_e/value"
 latex = '$\bar{n}_{e,\mathrm{RT}}$'
-origin = "Plasma control system (PCS)"
+origin = ["Plasma control system (PCS)"]
 units = "m^-3"
 validity = [0.2e20, 7.0e20]
 
@@ -284,27 +284,27 @@ validity = [0.2e20, 7.0e20]
 description = "Amplitude of the n=1 mode"
 imas = "/mhd_linear/time_slice(itime)/toroidal_mode(i1)/plasma/b_field_perturbed"
 latex = '$\delta B_{n=1}$'
-origin = "Magnetics"
+origin = ["Magnetics"]
 units = "T"
 validity = [0.0, 0.02]
 
 [d3d.physics.attributes.n_equal_1_normalized]
 description = "Amplitude of the n=1 mode normalized to the toroidal magnetic field"
 latex = '$\delta B_{n=1}/B_T$'
-origin = "Magnetics"
+origin = ["Magnetics"]
 units = "dimensionless"
 
 [d3d.physics.attributes.ne_peaking_cva_rt]
 description = "Peaking factor of the electron density profile, core vs all channels"
 latex = '$n_{e,\mathrm{core}}/\langle n_e \rangle_{\mathrm{RT}}$'
-origin = "Thomson scattering, EFIT"
+origin = ["Thomson scattering", "EFIT"]
 units = "dimensionless"
 
 [d3d.physics.attributes.p_ech]
 description = "Total electron cyclotron resonant heating power"
 imas = "/summary/heating_current_drive/power_launched_ec/value"
 latex = '$P_{\mathrm{ECH}}$'
-origin = "Electron cyclotron heating (ECH) system"
+origin = ["Electron cyclotron heating (ECH) system"]
 units = "W"
 validity = [0.0, inf]
 
@@ -312,7 +312,7 @@ validity = [0.0, inf]
 description = "Total neutral beam injection heating power"
 imas = "/summary/heating_current_drive/power_launched_nbi/value"
 latex = '$P_{\mathrm{NBI}}$'
-origin = "Neutral beam injection (NBI) system"
+origin = ["Neutral beam injection (NBI) system"]
 units = "W"
 validity = [0.0, inf]
 
@@ -320,7 +320,7 @@ validity = [0.0, inf]
 description = "Total Ohmic heating power"
 imas = "/summary/global_quantities/power_ohm/value"
 latex = '$P_{\mathrm{OH}}$'
-origin = "Magnetics, EFIT"
+origin = ["Magnetics", "EFIT"]
 units = "W"
 validity = [0.0, 5.0e6]
 
@@ -328,34 +328,34 @@ validity = [0.0, 5.0e6]
 description = "Total radiated power measured by 2pi foil bolometer"
 imas = "/bolometer/power_radiated_total"
 latex = '$P_{\mathrm{rad}}$'
-origin = "Bolometer"
+origin = ["Bolometer"]
 units = "W"
 validity = [0.0, inf]
 
 [d3d.physics.attributes.power_supply_railed]
 description = "Power supply railed signal indicator for PCS feedback control of Ip"
 latex = '$P_{\mathrm{railed}}$'
-origin = "Plasma control system (PCS)"
+origin = ["Plasma control system (PCS)"]
 units = "dimensionless"
 validity = [0.0, 1.0]
 
 [d3d.physics.attributes.prad_peaking_cva_rt]
 description = "Peaking factor for the radiated power, core vs all-but-divertor channels"
 latex = '$P_{\mathrm{rad,core}}/\langle P_{\mathrm{rad}} \rangle_{\mathrm{RT}}$'
-origin = "Plasma control system (PCS), Bolometer, EFIT"
+origin = ["Plasma control system (PCS)", "Bolometer", "EFIT"]
 units = "dimensionless"
 
 [d3d.physics.attributes.prad_peaking_xdiv_rt]
 description = "Peaking factor for the radiated power, divertor vs all-but-core channels"
 latex = '$P_{\mathrm{rad,div}}/\langle P_{\mathrm{rad}} \rangle_{\mathrm{RT}}$'
-origin = "Plasma control system (PCS), Bolometer, EFIT"
+origin = ["Plasma control system (PCS)", "Bolometer", "EFIT"]
 units = "dimensionless"
 
 [d3d.physics.attributes.q0]
 description = "Safety factor at magnetic axis (EFIT)"
 imas = "/equilibrium/time_slice(itime)/global_quantities/q_axis"
 latex = '$q_0$'
-origin = "EFIT"
+origin = ["EFIT"]
 units = "dimensionless"
 validity = [0.0, 2.0]
 
@@ -363,7 +363,7 @@ validity = [0.0, 2.0]
 description = "Safety factor at 95% flux surface (EFIT)"
 imas = "/equilibrium/time_slice(itime)/global_quantities/q_95"
 latex = '$q_{95}$'
-origin = "EFIT"
+origin = ["EFIT"]
 units = "dimensionless"
 validity = [0.0, inf]
 
@@ -371,34 +371,34 @@ validity = [0.0, inf]
 description = "Safety factor at 95% flux surface from real-time EFIT calculation"
 imas = "/equilibrium/time_slice(itime)/global_quantities/q_95"
 latex = '$q_{95,\mathrm{RT}}$'
-origin = "Real-time EFIT"
+origin = ["Real-time EFIT"]
 units = "dimensionless"
 validity = [0.0, inf]
 
 [d3d.physics.attributes.qstar]
 description = "Equivalent (kink) safety factor (EFIT)"
 latex = '$q_*$'
-origin = "EFIT"
+origin = ["EFIT"]
 units = "dimensionless"
 validity = [0.0, inf]
 
 [d3d.physics.attributes.radiated_fraction]
 description = "Total radiated power fraction"
 latex = '$f_{\mathrm{rad}}$'
-origin = "Bolometer, NBI system, ECH system, Magnetics, EFIT"
+origin = ["Bolometer", "NBI system", "ECH system", "Magnetics", "EFIT"]
 units = "dimensionless"
 validity = [0.0, 15.0]
 
 [d3d.physics.attributes.squareness]
 description = "Average of lower-outer and upper-outer squareness, T. Luce PPCF 55 (2013) 095009"
 latex = '$\zeta$'
-origin = "EFIT"
+origin = ["EFIT"]
 units = "dimensionless"
 
 [d3d.physics.attributes.te_peaking_cva_rt]
 description = "Peaking factor of the electron temperature profile, core vs all channels"
 latex = '$T_{e,\mathrm{core}}/\langle T_e \rangle_{\mathrm{RT}}$'
-origin = "Thomson scattering, EFIT"
+origin = ["Thomson scattering", "EFIT"]
 units = "dimensionless"
 validity = [0.0, inf]
 
@@ -406,7 +406,7 @@ validity = [0.0, inf]
 description = "Top gap between x-point and wall (EFIT)"
 imas = "/equilibrium/time_slice(itime)/boundary/gap(i1)/value"
 latex = '$\mathrm{gap}_{\mathrm{upper}}$'
-origin = "EFIT"
+origin = ["EFIT"]
 units = "m"
 validity = [0.0, inf]
 
@@ -414,7 +414,7 @@ validity = [0.0, inf]
 description = "Measured loop voltage"
 imas = "/summary/global_quantities/v_loop/value"
 latex = '$V_{\mathrm{loop}}$'
-origin = "Magnetics"
+origin = ["Magnetics"]
 units = "V"
 validity = [-7.0, 7.0]
 
@@ -422,7 +422,7 @@ validity = [-7.0, 7.0]
 description = "Total plasma energy (EFIT)"
 imas = "/equilibrium/time_slice(itime)/global_quantities/energy_mhd"
 latex = '$W_{\mathrm{MHD}}$'
-origin = "EFIT"
+origin = ["EFIT"]
 units = "J"
 validity = [5.0e3, 3.0e5]
 
@@ -430,7 +430,7 @@ validity = [5.0e3, 3.0e5]
 description = "Total plasma energy from real-time EFIT calculation"
 imas = "/equilibrium/time_slice(itime)/global_quantities/energy_mhd"
 latex = '$W_{\mathrm{MHD,RT}}$'
-origin = "Real-time EFIT"
+origin = ["Real-time EFIT"]
 units = "J"
 validity = [5.0e3, 3.0e5]
 
@@ -438,21 +438,21 @@ validity = [5.0e3, 3.0e5]
 description = "Effective charge"
 imas = "/summary/local/magnetic_axis/zeff/value"
 latex = '$Z_{\mathrm{eff}}$'
-origin = "Visible bremsstrahlung"
+origin = ["Visible bremsstrahlung"]
 units = "dimensionless"
 
 [d3d.physics.attributes.zcur]
 description = "Measured vertical position of the plasma current centroid"
 imas = "/equilibrium/time_slice(itime)/global_quantities/current_centre/z"
 latex = '$z_{\mathrm{cur}}$'
-origin = "Plasma control system (PCS)"
+origin = ["Plasma control system (PCS)"]
 units = "m"
 validity = [-0.5, 0.5]
 
 [d3d.physics.attributes.zcur_normalized]
 description = "Measured vertical position of the plasma current centroid normalized to plasma minor radius"
 latex = '$z_{\mathrm{cur}}/a$'
-origin = "Plasma control system (PCS), EFIT"
+origin = ["Plasma control system (PCS)", "EFIT"]
 units = "dimensionless"
 
 [d3d.physics.bradial_path]
