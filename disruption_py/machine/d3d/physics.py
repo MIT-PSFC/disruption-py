@@ -413,10 +413,11 @@ class D3DPhysicsMethods:
             )
         ne = ne * 1.0e6  # [cm^3] -> [m^3]
         t_ne = t_ne / 1.0e3  # [ms] -> [s]
-        # np.gradient and interp1d require at least two points
-        if ne.size < 2:
+        # np.gradient and interp1d require compatible arrays with at least two points.
+        if ne.size < 2 or ne.size != t_ne.size:
             params.logger.warning(
-                "get_density_parameters: ne.size < 2. Setting n_e and dn_dt to np.nan."
+                "get_density_parameters: Invalid density data. "
+                "Setting n_e and dn_dt to np.nan."
             )
             ne = np.full_like(params.times, np.nan, dtype=float)
             dne_dt = np.full_like(params.times, np.nan, dtype=float)
@@ -520,8 +521,8 @@ class D3DPhysicsMethods:
             ne_rt = np.full(len(params.times), np.nan)
             dne_dt_rt = np.full(len(params.times), np.nan)
 
-        # Get real time ip to calculate the Greenwald density
-
+        # Get real time ip to calculate the Greenwald density.
+        g_f_rt = np.full(len(params.times), np.nan)
         try:
             ip_rt, t_ip_rt = params.get_data_with_dims(
                 f"ptdata('ipsip', {params.shot_id})"
@@ -533,37 +534,42 @@ class D3DPhysicsMethods:
             )  # [volts; 2 V/MA], [ms]
             t_ip_rt = t_ip_rt / 1.0e3  # [ms] to [s]
             ip_rt = ip_rt / 2  # [volts] to [MA]
-        ip_sign = np.sign(np.sum(ip_rt))
-        ip_rt = interp1(t_ip_rt, ip_rt * ip_sign, params.times, "linear")
+        if np.size(ip_rt) < 2 or np.size(ip_rt) != np.size(t_ip_rt):
+            params.logger.warning(
+                "get_rt_density_parameters: Invalid real-time Ip data. "
+                "Setting greenwald_fraction_rt to NaN."
+            )
+        else:
+            ip_sign = np.sign(np.sum(ip_rt))
+            ip_rt = interp1(t_ip_rt, ip_rt * ip_sign, params.times, "linear")
 
-        # Read in EFIT minor radius and timebase.  This is also needed to calculate
-        # the Greenwald density limit.  However, if the minor radius data is not
-        # available, use a default fixed value of 0.59 m.  (We surveyed several
-        # hundred shots to determine this default value.)  Note that the efit
-        # timebase data is in a node called "atime" instead of "time" (where "time"
-        # does not work).
+            # Read in EFIT minor radius and timebase.  This is also needed to calculate
+            # the Greenwald density limit.  However, if the minor radius data is not
+            # available, use a default fixed value of 0.59 m.  (We surveyed several
+            # hundred shots to determine this default value.)  Note that the efit
+            # timebase data is in a node called "atime" instead of "time" (where "time"
+            # does not work).
 
-        # For the real-time (RT) signals, read from the EFITRT1 tree
-        try:
-            a_minor_rt, t_a_rt = params.get_data_with_dims(
-                r"\efit_a_eqdsk:aminor", tree_name="efitrt1"
-            )  # [m], [ms]
-            t_a_rt = t_a_rt / 1.0e3  # [ms] -> [s]
-            a_minor_rt = interp1(t_a_rt, a_minor_rt, params.times, "linear")
-        except mdsExceptions.MdsException:
-            a_minor_rt = 0.59 * np.ones(len(params.times))
-        try:
-            with np.errstate(divide="ignore"):
-                n_g_rt = ip_rt / (np.pi * a_minor_rt**2)  # [MA/m^2]
-                g_f_rt = ne_rt / 1.0e20 / n_g_rt
-        except ValueError as e:
-            params.logger.warning("Failed to compute Greenwald fraction rt.")
-            params.logger.opt(exception=True).debug(e)
+            # For the real-time (RT) signals, read from the EFITRT1 tree
+            try:
+                a_minor_rt, t_a_rt = params.get_data_with_dims(
+                    r"\efit_a_eqdsk:aminor", tree_name="efitrt1"
+                )  # [m], [ms]
+                t_a_rt = t_a_rt / 1.0e3  # [ms] -> [s]
+                a_minor_rt = interp1(t_a_rt, a_minor_rt, params.times, "linear")
+            except mdsExceptions.MdsException:
+                a_minor_rt = 0.59 * np.ones(len(params.times))
+            try:
+                with np.errstate(divide="ignore"):
+                    n_g_rt = ip_rt / (np.pi * a_minor_rt**2)  # [MA/m^2]
+                    g_f_rt = ne_rt / 1.0e20 / n_g_rt
+            except ValueError as e:
+                params.logger.warning("Failed to compute Greenwald fraction rt.")
+                params.logger.opt(exception=True).debug(e)
 
-            err = "operands could not be broadcast together with shapes"
-            if err not in e.args:
-                raise
-            g_f_rt = [np.nan]
+                err = "operands could not be broadcast together with shapes"
+                if err not in e.args:
+                    raise
 
         return {"n_e_rt": ne_rt, "greenwald_fraction_rt": g_f_rt, "dn_dt_rt": dne_dt_rt}
 
@@ -669,9 +675,9 @@ class D3DPhysicsMethods:
                 f"ptdata('ip', {params.shot_id})"
             )  # [A], [ms]
             t_ip = t_ip / 1.0e3  # [ms] -> [s]
-            if ip.size < 2 or t_ip.size < 2:
+            if ip.size < 2 or ip.size != t_ip.size:
                 params.logger.warning(
-                    "get_ip_parameters: ip.size or t_ip.size < 2. "
+                    "get_ip_parameters: Invalid measured plasma current data. "
                     "Setting ip and dip_dt to NaN."
                 )
                 ip = np.full_like(params.times, np.nan)
@@ -689,9 +695,9 @@ class D3DPhysicsMethods:
                 f"ptdata('iptipp', {params.shot_id})"
             )  # [A], [ms]
             t_ip_prog = t_ip_prog / 1.0e3  # [ms] -> [s]
-            if ip_prog.size < 2 or t_ip_prog.size < 2:
+            if ip_prog.size < 2 or ip_prog.size != t_ip_prog.size:
                 params.logger.warning(
-                    "get_ip_parameters: ip_prog.size or t_ip_prog.size < 2. "
+                    "get_ip_parameters: Invalid programmed plasma current data. "
                     "Setting ip_prog and dipprog_dt to NaN."
                 )
                 ip_prog = np.full_like(params.times, np.nan)
