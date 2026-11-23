@@ -387,9 +387,6 @@ class D3DPhysicsMethods:
         except mdsExceptions.MdsException:
             ne = np.array(np.nan)
             t_ne = np.array(np.nan)
-        # Some shots (e.g. 101560) store \density as 2D time segments; flatten them
-        ne = np.ravel(ne)
-        t_ne = np.ravel(t_ne)
         # If EFIT disruption tree does not contain density data or if the data is invalid,
         # then read density from BCI subtree of D3D main tree
         # Example 1: 170480:
@@ -398,7 +395,8 @@ class D3DPhysicsMethods:
         # Example 2: 172756:
         #  - r"\efit01:density" gives ne = array([4.06199e19]), t_ne = array([1800])
         #  - "\d3d:denv2" gives actual density data
-        if not np.isfinite(ne).any() or ne.size < 2:
+        # Some shots (e.g. 101560) store \density as 2D time segments; treat as invalid
+        if ne.ndim > 1 or t_ne.ndim > 1 or not np.isfinite(ne).any() or ne.size < 2:
             ne, t_ne = params.get_data_with_dims(r"\denv2", tree_name="d3d")
             tree_name = params.data_conn.get_tree_name_of_nickname("_efit_tree")
             params.logger.verbose(
@@ -408,7 +406,7 @@ class D3DPhysicsMethods:
         ne = ne * 1.0e6  # [cm^3] -> [m^3]
         t_ne = t_ne / 1.0e3  # [ms] -> [s]
         # np.gradient and interp1d require compatible arrays with at least two points.
-        if ne.size < 2 or ne.size != t_ne.size:
+        if ne.ndim > 1 or t_ne.ndim > 1 or ne.size < 2 or ne.size != t_ne.size:
             params.logger.warning(
                 "get_density_parameters: Invalid density data. "
                 "Setting n_e and dn_dt to np.nan."
