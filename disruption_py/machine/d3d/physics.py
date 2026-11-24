@@ -60,7 +60,7 @@ class D3DPhysicsMethods:
             h_98, t_h_98 = params.get_data_with_dims(
                 r"\H_THH98Y2", tree_name="transport"
             )
-            t_h_98 /= 1e3  # [ms] -> [s]
+            t_h_98 = t_h_98 / 1e3  # [ms] -> [s]
             h_98 = interp1(t_h_98, h_98, params.times, "linear")
             output["h98"] = h_98
         except ValueError as e:
@@ -96,7 +96,7 @@ class D3DPhysicsMethods:
         }
         try:
             h_alpha, t_h_alpha = params.get_data_with_dims(r"\fs04", tree_name="d3d")
-            t_h_alpha /= 1e3  # [ms] -> [s]
+            t_h_alpha = t_h_alpha / 1e3  # [ms] -> [s]
             h_alpha = interp1(t_h_alpha, h_alpha, params.times, "linear")
             output["h_alpha"] = h_alpha
         except ValueError as e:
@@ -135,15 +135,18 @@ class D3DPhysicsMethods:
         -------
         - original source: [get_power_d3d.m](https://github.com/MIT-PSFC/disruption-py
         /blob/matlab/DIII-D/get_power_d3d.m)
-        - pull requests: #[234](https://github.com/MIT-PSFC/disruption-py/pull/234)
-        - issues: #[229](https://github.com/MIT-PSFC/disruption-py/issues/229)
+        - pull requests: #[234](https://github.com/MIT-PSFC/disruption-py/pull/234),
+        #[618](https://github.com/MIT-PSFC/disruption-py/pull/618)
+        - issues: #[229](https://github.com/MIT-PSFC/disruption-py/issues/229),
+        #[594](https://github.com/MIT-PSFC/disruption-py/issues/594)
         """
         # Get neutral beam injected power
         try:
             p_nbi, t_nbi = params.get_data_with_dims(r"\top.nb:pinj", tree_name="d3d")
-            t_nbi /= 1e3  # [ms] -> [s]
+            t_nbi = t_nbi / 1e3  # [ms] -> [s]
             p_nbi = p_nbi * 1e3  # [KW] -> [W]
-            if len(t_nbi) > 2:
+            # Empty nodes can return a short placeholder array (e.g. shot 105188)
+            if np.size(t_nbi) > 2 and np.size(p_nbi) == np.size(t_nbi):
                 p_nbi = interp1(
                     t_nbi,
                     p_nbi,
@@ -153,7 +156,7 @@ class D3DPhysicsMethods:
                     fill_value=0.0,
                 )
             else:
-                params.logger.verbose("No NBI power data found in this shot.")
+                params.logger.verbose("No valid NBI power data found in this shot.")
                 p_nbi = np.zeros(len(params.times))
         except mdsExceptions.MdsException as e:
             p_nbi = np.zeros(len(params.times))
@@ -166,8 +169,9 @@ class D3DPhysicsMethods:
             p_ech, t_ech = params.get_data_with_dims(
                 r"\top.ech.total:echpwrc", tree_name="rf"
             )
-            t_ech /= 1e3  # [ms] -> [s]
-            if len(t_ech) > 2:
+            t_ech = t_ech / 1e3  # [ms] -> [s]
+            # Empty nodes can return placeholder arrays with mismatched dimensions.
+            if np.size(t_ech) > 2 and np.size(p_ech) == np.size(t_ech):
                 # Sometimes, t_ech has an extra "0" value tacked on to the end.
                 # This must be removed before the interpolation.
                 if t_ech[-1] == 0:
@@ -182,7 +186,7 @@ class D3DPhysicsMethods:
                 )
             else:
                 params.logger.verbose(
-                    "No ECH power data found in this shot. Setting to zeros",
+                    "No valid ECH power data found in this shot. Setting to zeros",
                 )
                 p_ech = np.zeros(len(params.times))
         except mdsExceptions.MdsException as e:
@@ -205,41 +209,48 @@ class D3DPhysicsMethods:
         # analysis so that the smoothing is causal, and uses a shorter window.
         smoothing_window = 0.010  # [s]
 
+        p_rad = np.full(len(params.times), np.nan)
         try:
             bol_prm, _ = params.get_data_with_dims(r"\bol_prm", tree_name="bolom")
         except mdsExceptions.MdsException as e:
-            params.logger.warning("Failed to open bolom tree.")
-            params.logger.opt(exception=True).debug(e)
-        upper_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
-        lower_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
-        bol_channels = upper_channels + lower_channels
-        bol_signals = []
-        for i in range(48):
-            bol_signal = params.get_data(
-                rf"\top.raw:{bol_channels[i]}", tree_name="bolom"
+            bol_prm = None
+            params.logger.warning(
+                "get_power_parameters: Failed to open bolom tree. "
+                "Setting p_rad to NaN."
             )
-            bol_signals.append(bol_signal)
-        bol_time = params.get_dims(rf"\top.raw:{bol_channels[0]}", tree_name="bolom")[0]
-        bol_time /= 1e3  # [ms] -> [s]
-        a_struct = matlab_get_bolo(
-            shot_id=params.shot_id,
-            bol_channels=bol_channels,
-            bol_prm=bol_prm,
-            bol_top=bol_signals,
-            bol_time=bol_time,
-            drtau=smoothing_window * 1e3,
-        )
-        ier = 0
-        for j in range(48):
-            # TODO: Ask about how many valid channels are needed for proper calculation
-            if a_struct.channels[j].ier == 1:
-                ier = 1
-                p_rad = np.full(len(params.times), np.nan)
-                break
-        if ier == 0:
-            b_struct = matlab_power(a_struct)
-            p_rad = b_struct.pwrmix  # [W]
-            p_rad = interp1(a_struct.raw_time, p_rad, params.times, "linear")
+            params.logger.opt(exception=True).debug(e)
+        if bol_prm is not None:
+            upper_channels = [f"bol_u{i+1:02d}_v" for i in range(24)]
+            lower_channels = [f"bol_l{i+1:02d}_v" for i in range(24)]
+            bol_channels = upper_channels + lower_channels
+            bol_signals = []
+            for i in range(48):
+                bol_signal = params.get_data(
+                    rf"\top.raw:{bol_channels[i]}", tree_name="bolom"
+                )
+                bol_signals.append(bol_signal)
+            bol_time = params.get_dims(
+                rf"\top.raw:{bol_channels[0]}", tree_name="bolom"
+            )[0]
+            bol_time = bol_time / 1e3  # [ms] -> [s]
+            a_struct = matlab_get_bolo(
+                shot_id=params.shot_id,
+                bol_channels=bol_channels,
+                bol_prm=bol_prm,
+                bol_top=bol_signals,
+                bol_time=bol_time,
+                drtau=smoothing_window * 1e3,
+            )
+            ier = 0
+            for j in range(48):
+                # TODO: Ask about how many valid channels are needed for proper calculation
+                if a_struct.channels[j].ier == 1:
+                    ier = 1
+                    break
+            if ier == 0:
+                b_struct = matlab_power(a_struct)
+                p_rad = b_struct.pwrmix  # [W]
+                p_rad = interp1(a_struct.raw_time, p_rad, params.times, "linear")
 
         # Remove any negative values from the power data
         # TODO: Could p_ohm be negative?
@@ -291,12 +302,12 @@ class D3DPhysicsMethods:
         v_loop, t_v_loop = params.get_data_with_dims(
             f'ptdata("vloopb", {params.shot_id})'
         )
-        t_v_loop /= 1e3  # [ms] -> [s]
+        t_v_loop = t_v_loop / 1e3  # [ms] -> [s]
         v_loop = scipy.signal.medfilt(v_loop, 11)
         v_loop = interp1(t_v_loop, v_loop, params.times, "linear")
         # Get plasma current
         ip, t_ip = params.get_data_with_dims(f"ptdata('ip', {params.shot_id})")
-        t_ip /= 1e3  # [ms] -> [s]
+        t_ip = t_ip / 1e3  # [ms] -> [s]
 
         # Alessandro Pau (JET & AUG) has given Cristina a robust routine that
         # performs time differentiation with smoothing, while preserving causality.
@@ -318,7 +329,7 @@ class D3DPhysicsMethods:
         li, t_li = params.get_data_with_dims(
             r"\efit_a_eqdsk:li", tree_name="_efit_tree"
         )
-        t_li /= 1e3
+        t_li = t_li / 1e3
         # Use chisq to determine which time slices are invalid
         chisq = params.get_data(r"\efit_a_eqdsk:chisq", tree_name="_efit_tree")
         # Filter out invalid indices of efit reconstruction
@@ -328,7 +339,7 @@ class D3DPhysicsMethods:
         r_0, t_r0 = params.get_data_with_dims(
             r"\top.results.geqdsk:rmaxis", tree_name="_efit_tree"
         )  # [m], [ms]
-        t_r0 /= 1e3  # [ms] -> [s]
+        t_r0 = t_r0 / 1e3  # [ms] -> [s]
 
         li = interp1(t_li, li, params.times, "linear")
         r_0 = interp1(t_r0, r_0, params.times, "linear")
@@ -371,13 +382,15 @@ class D3DPhysicsMethods:
         -------
         - original source: [get_density_parameters.m](https://github.com/MIT-PSFC/disru
         ption-py/blob/matlab/DIII-D/get_density_parameters.m)
-        - pull requests: #[249](https://github.com/MIT-PSFC/disruption-py/pull/249)
+        - pull requests: #[249](https://github.com/MIT-PSFC/disruption-py/pull/249),
+        #[618](https://github.com/MIT-PSFC/disruption-py/pull/618)
+        - issues: #[594](https://github.com/MIT-PSFC/disruption-py/issues/594)
         """
         try:
             ne, t_ne = params.get_data_with_dims(r"\density", tree_name="_efit_tree")
         except mdsExceptions.MdsException:
-            ne = [np.nan]
-            t_ne = [np.nan]
+            ne = np.array(np.nan)
+            t_ne = np.array(np.nan)
         # If EFIT disruption tree does not contain density data or if the data is invalid,
         # then read density from BCI subtree of D3D main tree
         # Example 1: 170480:
@@ -386,7 +399,8 @@ class D3DPhysicsMethods:
         # Example 2: 172756:
         #  - r"\efit01:density" gives ne = array([4.06199e19]), t_ne = array([1800])
         #  - "\d3d:denv2" gives actual density data
-        if not np.isfinite(ne).any() or len(ne) < 2:
+        # Some shots (e.g. 101560) store \density as 2D time segments; treat as invalid
+        if ne.ndim > 1 or t_ne.ndim > 1 or not np.isfinite(ne).any() or ne.size < 2:
             ne, t_ne = params.get_data_with_dims(r"\denv2", tree_name="d3d")
             tree_name = params.data_conn.get_tree_name_of_nickname("_efit_tree")
             params.logger.verbose(
@@ -395,23 +409,32 @@ class D3DPhysicsMethods:
             )
         ne = ne * 1.0e6  # [cm^3] -> [m^3]
         t_ne = t_ne / 1.0e3  # [ms] -> [s]
-        dne_dt = np.gradient(ne, t_ne)
-        # NOTE: t_ne has higher resolution than efit_time so t_ne[0] < efit_time[0]
-        # because of rounding, meaning we need to allow extrapolation
-        ne = interp1(
-            t_ne,
-            ne,
-            params.times,
-            "linear",
-            bounds_error=False,
-        )
-        dne_dt = interp1(
-            t_ne,
-            dne_dt,
-            params.times,
-            "linear",
-            bounds_error=False,
-        )
+        # np.gradient and interp1d require compatible arrays with at least two points.
+        if ne.ndim > 1 or t_ne.ndim > 1 or ne.size < 2 or ne.size != t_ne.size:
+            params.logger.warning(
+                "get_density_parameters: Invalid density data. "
+                "Setting n_e and dn_dt to np.nan."
+            )
+            ne = np.full_like(params.times, np.nan, dtype=float)
+            dne_dt = np.full_like(params.times, np.nan, dtype=float)
+        else:
+            dne_dt = np.gradient(ne, t_ne)
+            # NOTE: t_ne has higher resolution than efit_time so t_ne[0] < efit_time[0]
+            # because of rounding, meaning we need to allow extrapolation
+            ne = interp1(
+                t_ne,
+                ne,
+                params.times,
+                "linear",
+                bounds_error=False,
+            )
+            dne_dt = interp1(
+                t_ne,
+                dne_dt,
+                params.times,
+                "linear",
+                bounds_error=False,
+            )
         try:
             ip, t_ip = params.get_data_with_dims(
                 f"ptdata('ip', {params.shot_id})"
@@ -474,61 +497,83 @@ class D3DPhysicsMethods:
         -------
         - original source: [get_density_parameters_RT.m](https://github.com/MIT-PSFC
         /disruption-py/blob/matlab/DIII-D/get_density_parameters_RT.m)
-        - pull requests: #[251](https://github.com/MIT-PSFC/disruption-py/pull/251)
+        - pull requests: #[251](https://github.com/MIT-PSFC/disruption-py/pull/251),
+        #[618](https://github.com/MIT-PSFC/disruption-py/pull/618)
+        - issues: #[594](https://github.com/MIT-PSFC/disruption-py/issues/594)
         """
         ne_rt, t_ne_rt = params.get_data_with_dims(
             f"ptdata('dssdenest', {params.shot_id})"
         )  # [10^19 m^-3]
         t_ne_rt = t_ne_rt / 1.0e3  # [ms] to [s]
         ne_rt = ne_rt * 1.0e19  # [10^19 m^-3] -> [m^-3]
-        dne_dt_rt = np.gradient(ne_rt, t_ne_rt)  # [m^-3/s]
-        ne_rt = interp1(t_ne_rt, ne_rt, params.times, "linear")
-        dne_dt_rt = interp1(t_ne_rt, dne_dt_rt, params.times, "linear")
+        # Empty nodes can return placeholder samples or mismatched arrays (e.g. shot 109929)
+        if np.size(ne_rt) > 1 and np.size(ne_rt) == np.size(t_ne_rt):
+            dne_dt_rt = np.gradient(ne_rt, t_ne_rt)  # [m^-3/s]
+            ne_rt = interp1(t_ne_rt, ne_rt, params.times, "linear")
+            dne_dt_rt = interp1(t_ne_rt, dne_dt_rt, params.times, "linear")
+        else:
+            params.logger.warning(
+                "get_rt_density_parameters: No valid real-time density data found. "
+                "Setting ne_rt and dne_dt_rt to NaN."
+            )
+            ne_rt = np.full(len(params.times), np.nan)
+            dne_dt_rt = np.full(len(params.times), np.nan)
 
-        # Get real time ip to calculate the Greenwald density
-
+        # Get real time ip to calculate the Greenwald density.
+        g_f_rt = np.full(len(params.times), np.nan)
         try:
-            ip_rt, t_ip_rt = params.get_data_with_dims(
-                f"ptdata('ipsip', {params.shot_id})"
-            )  # [MA], [ms]
+            try:
+                ip_rt, t_ip_rt = params.get_data_with_dims(
+                    f"ptdata('ipsip', {params.shot_id})"
+                )  # [MA], [ms]
+            except mdsExceptions.MdsException:
+                ip_rt, t_ip_rt = params.get_data_with_dims(
+                    f"ptdata('ipspr15v', {params.shot_id})"
+                )  # [volts; 2 V/MA], [ms]
+                ip_rt = ip_rt / 2  # [volts] to [MA]
             t_ip_rt = t_ip_rt / 1.0e3  # [ms] to [s]
-        except mdsExceptions.MdsException:
-            ip_rt, t_ip_rt = params.get_data_with_dims(
-                f"ptdata('ipspr15v', {params.shot_id})"
-            )  # [volts; 2 V/MA], [ms]
-            t_ip_rt = t_ip_rt / 1.0e3  # [ms] to [s]
-            ip_rt /= 2  # [volts] to [MA]
-        ip_sign = np.sign(np.sum(ip_rt))
-        ip_rt = interp1(t_ip_rt, ip_rt * ip_sign, params.times, "linear")
+            if np.size(ip_rt) < 2 or np.size(ip_rt) != np.size(t_ip_rt):
+                params.logger.warning(
+                    "get_rt_density_parameters: Invalid real-time Ip data. "
+                    "Setting greenwald_fraction_rt to NaN."
+                )
+            else:
+                ip_sign = np.sign(np.sum(ip_rt))
+                ip_rt = interp1(t_ip_rt, ip_rt * ip_sign, params.times, "linear")
 
-        # Read in EFIT minor radius and timebase.  This is also needed to calculate
-        # the Greenwald density limit.  However, if the minor radius data is not
-        # available, use a default fixed value of 0.59 m.  (We surveyed several
-        # hundred shots to determine this default value.)  Note that the efit
-        # timebase data is in a node called "atime" instead of "time" (where "time"
-        # does not work).
+                # Read in EFIT minor radius and timebase.  This is also needed to calculate
+                # the Greenwald density limit.  However, if the minor radius data is not
+                # available, use a default fixed value of 0.59 m.  (We surveyed several
+                # hundred shots to determine this default value.)  Note that the efit
+                # timebase data is in a node called "atime" instead of "time" (where "time"
+                # does not work).
 
-        # For the real-time (RT) signals, read from the EFITRT1 tree
-        try:
-            a_minor_rt, t_a_rt = params.get_data_with_dims(
-                r"\efit_a_eqdsk:aminor", tree_name="efitrt1"
-            )  # [m], [ms]
-            t_a_rt = t_a_rt / 1.0e3  # [ms] -> [s]
-            a_minor_rt = interp1(t_a_rt, a_minor_rt, params.times, "linear")
-        except mdsExceptions.MdsException:
-            a_minor_rt = 0.59 * np.ones(len(params.times))
-        try:
-            with np.errstate(divide="ignore"):
-                n_g_rt = ip_rt / (np.pi * a_minor_rt**2)  # [MA/m^2]
-                g_f_rt = ne_rt / 1.0e20 / n_g_rt
-        except ValueError as e:
-            params.logger.warning("Failed to compute Greenwald fraction rt.")
+                # For the real-time (RT) signals, read from the EFITRT1 tree
+                try:
+                    a_minor_rt, t_a_rt = params.get_data_with_dims(
+                        r"\efit_a_eqdsk:aminor", tree_name="efitrt1"
+                    )  # [m], [ms]
+                    t_a_rt = t_a_rt / 1.0e3  # [ms] -> [s]
+                    a_minor_rt = interp1(t_a_rt, a_minor_rt, params.times, "linear")
+                except mdsExceptions.MdsException:
+                    a_minor_rt = 0.59 * np.ones(len(params.times))
+                try:
+                    with np.errstate(divide="ignore"):
+                        n_g_rt = ip_rt / (np.pi * a_minor_rt**2)  # [MA/m^2]
+                        g_f_rt = ne_rt / 1.0e20 / n_g_rt
+                except ValueError as e:
+                    params.logger.warning("Failed to compute Greenwald fraction rt.")
+                    params.logger.opt(exception=True).debug(e)
+
+                    err = "operands could not be broadcast together with shapes"
+                    if err not in e.args:
+                        raise
+        except mdsExceptions.MdsException as e:
+            params.logger.warning(
+                "get_rt_density_parameters: Failed to get real-time Ip data. "
+                "Setting greenwald_fraction_rt to NaN."
+            )
             params.logger.opt(exception=True).debug(e)
-
-            err = "operands could not be broadcast together with shapes"
-            if err not in e.args:
-                raise
-            g_f_rt = [np.nan]
 
         return {"n_e_rt": ne_rt, "greenwald_fraction_rt": g_f_rt, "dn_dt_rt": dne_dt_rt}
 
@@ -619,13 +664,15 @@ class D3DPhysicsMethods:
         -------
         - original source: [get_Ip_parameters.m](https://github.com/MIT-PSFC/disruption-py/blob
         /matlab/DIII-D/get_Ip_parameters.m)
-        - pull requests: #[547](https://github.com/MIT-PSFC/disruption-py/pull/547)
-        - issues: #[506](https://github.com/MIT-PSFC/disruption-py/issues/506)
+        - pull requests: #[547](https://github.com/MIT-PSFC/disruption-py/pull/547),
+        #[618](https://github.com/MIT-PSFC/disruption-py/pull/618)
+        - issues: #[506](https://github.com/MIT-PSFC/disruption-py/issues/506),
+        #[594](https://github.com/MIT-PSFC/disruption-py/issues/594)
         """
-        ip = [np.nan]
-        ip_prog = [np.nan]
-        dip_dt = [np.nan]
-        dipprog_dt = [np.nan]
+        ip = np.full_like(params.times, np.nan)
+        ip_prog = np.full_like(params.times, np.nan)
+        dip_dt = np.full_like(params.times, np.nan)
+        dipprog_dt = np.full_like(params.times, np.nan)
         # Fill with nans instead of using a single nan because indices are used
         ip_error = np.full(len(params.times), np.nan)
         # Get measured plasma current parameters
@@ -634,9 +681,17 @@ class D3DPhysicsMethods:
                 f"ptdata('ip', {params.shot_id})"
             )  # [A], [ms]
             t_ip = t_ip / 1.0e3  # [ms] -> [s]
-            dip_dt = np.gradient(ip, t_ip)
-            ip = interp1(t_ip, ip, params.times, "linear")
-            dip_dt = interp1(t_ip, dip_dt, params.times, "linear")
+            if ip.size < 2 or ip.size != t_ip.size:
+                params.logger.warning(
+                    "get_ip_parameters: Invalid measured plasma current data. "
+                    "Setting ip and dip_dt to NaN."
+                )
+                ip = np.full_like(params.times, np.nan)
+                dip_dt = np.full_like(params.times, np.nan)
+            else:
+                dip_dt = np.gradient(ip, t_ip)
+                ip = interp1(t_ip, ip, params.times, "linear")
+                dip_dt = interp1(t_ip, dip_dt, params.times, "linear")
         except mdsExceptions.MdsException as e:
             params.logger.warning("Failed to get measured plasma current parameters")
             params.logger.opt(exception=True).debug(e)
@@ -646,11 +701,19 @@ class D3DPhysicsMethods:
                 f"ptdata('iptipp', {params.shot_id})"
             )  # [A], [ms]
             t_ip_prog = t_ip_prog / 1.0e3  # [ms] -> [s]
-            polarity = D3DUtilMethods.get_polarity(params)
-            ip_prog = ip_prog * polarity
-            dipprog_dt = np.gradient(ip_prog, t_ip_prog)
-            ip_prog = interp1(t_ip_prog, ip_prog, params.times, "linear")
-            dipprog_dt = interp1(t_ip_prog, dipprog_dt, params.times, "linear")
+            if ip_prog.size < 2 or ip_prog.size != t_ip_prog.size:
+                params.logger.warning(
+                    "get_ip_parameters: Invalid programmed plasma current data. "
+                    "Setting ip_prog and dipprog_dt to NaN."
+                )
+                ip_prog = np.full_like(params.times, np.nan)
+                dipprog_dt = np.full_like(params.times, np.nan)
+            else:
+                polarity = D3DUtilMethods.get_polarity(params)
+                ip_prog = ip_prog * polarity
+                dipprog_dt = np.gradient(ip_prog, t_ip_prog)
+                ip_prog = interp1(t_ip_prog, ip_prog, params.times, "linear")
+                dipprog_dt = interp1(t_ip_prog, dipprog_dt, params.times, "linear")
         except mdsExceptions.MdsException as e:
             params.logger.warning("Failed to get programmed plasma current parameters")
             params.logger.opt(exception=True).debug(e)
@@ -740,8 +803,10 @@ class D3DPhysicsMethods:
         /blob/matlab/DIII-D/get_Ip_parameters_RT.m)
         - pull requests: #[254](https://github.com/MIT-PSFC/disruption-
         py/pull/254), #[547](https://github.com/MIT-PSFC/disruption-py/pull/547),
-        #[596](https://github.com/MIT-PSFC/disruption-py/pull/596)
-        - issues: #[506](https://github.com/MIT-PSFC/disruption-py/issues/506)
+        #[596](https://github.com/MIT-PSFC/disruption-py/pull/596),
+        #[618](https://github.com/MIT-PSFC/disruption-py/pull/618)
+        - issues: #[506](https://github.com/MIT-PSFC/disruption-py/issues/506),
+        #[594](https://github.com/MIT-PSFC/disruption-py/issues/594)
         """
         ip_rt = [np.nan]
         ip_prog_rt = [np.nan]
@@ -756,9 +821,17 @@ class D3DPhysicsMethods:
             )  # [MA], [ms]
             t_ip_rt = t_ip_rt / 1.0e3  # [ms] -> [s]
             ip_rt = ip_rt * 1.0e6  # [MA] -> [A]
-            dip_dt_rt = np.gradient(ip_rt, t_ip_rt)
-            ip_rt = interp1(t_ip_rt, ip_rt, params.times, "linear")
-            dip_dt_rt = interp1(t_ip_rt, dip_dt_rt, params.times, "linear")
+            if np.size(ip_rt) > 1 and np.size(ip_rt) == np.size(t_ip_rt):
+                dip_dt_rt = np.gradient(ip_rt, t_ip_rt)
+                ip_rt = interp1(t_ip_rt, ip_rt, params.times, "linear")
+                dip_dt_rt = interp1(t_ip_rt, dip_dt_rt, params.times, "linear")
+            else:
+                params.logger.warning(
+                    "get_rt_ip_parameters: No valid real-time Ip data found. "
+                    "Setting ip_rt and dip_dt_rt to NaN"
+                )
+                ip_rt = np.full(len(params.times), np.nan)
+                dip_dt_rt = np.full(len(params.times), np.nan)
         except mdsExceptions.MdsException as e:
             params.logger.warning(
                 "ip_rt: Failed to get measured plasma current parameters. Setting to NaN."
@@ -773,9 +846,19 @@ class D3DPhysicsMethods:
             ip_prog_rt = ip_prog_rt * 1.0e6 * 0.5  # [MA] -> [A]
             polarity = D3DUtilMethods.get_polarity(params)
             ip_prog_rt = ip_prog_rt * polarity
-            dipprog_dt_rt = np.gradient(ip_prog_rt, t_ip_prog_rt)
-            ip_prog_rt = interp1(t_ip_prog_rt, ip_prog_rt, params.times, "linear")
-            dipprog_dt_rt = interp1(t_ip_prog_rt, dipprog_dt_rt, params.times, "linear")
+            if np.size(ip_prog_rt) > 1 and np.size(ip_prog_rt) == np.size(t_ip_prog_rt):
+                dipprog_dt_rt = np.gradient(ip_prog_rt, t_ip_prog_rt)
+                ip_prog_rt = interp1(t_ip_prog_rt, ip_prog_rt, params.times, "linear")
+                dipprog_dt_rt = interp1(
+                    t_ip_prog_rt, dipprog_dt_rt, params.times, "linear"
+                )
+            else:
+                params.logger.warning(
+                    "get_rt_ip_parameters: No valid real-time programmed Ip data found. "
+                    "Setting ip_prog_rt and dipprog_dt_rt to NaN"
+                )
+                ip_prog_rt = np.full(len(params.times), np.nan)
+                dipprog_dt_rt = np.full(len(params.times), np.nan)
         except mdsExceptions.MdsException as e:
             params.logger.warning(
                 "ip_prog_rt: Failed to get programmed plasma current parameters. Setting to NaN."
@@ -924,7 +1007,7 @@ class D3DPhysicsMethods:
         b_tor, t_b_tor = params.get_data_with_dims(
             f"ptdata('bt', {params.shot_id})"
         )  # [T], [ms]
-        t_b_tor /= 1e3  # [ms] -> [s]
+        t_b_tor = t_b_tor / 1e3  # [ms] -> [s]
         b_tor = interp1(t_b_tor, b_tor, params.times)
         return {"btor": b_tor}
 
@@ -1015,8 +1098,8 @@ class D3DPhysicsMethods:
                 n_equal_1_mode, t_n1 = params.get_data_with_dims(
                     f"ptdata('dusbradial', {params.shot_id})",
                 )  # [G], [ms]
-        t_n1 /= 1e3  # [ms] -> [s]
-        n_equal_1_mode *= 1.0e-4  # [G] -> [T]
+        t_n1 = t_n1 / 1e3  # [ms] -> [s]
+        n_equal_1_mode = n_equal_1_mode * 1.0e-4  # [G] -> [T]
         n_equal_1_mode = interp1(t_n1, n_equal_1_mode, params.times)
 
         # Calculate n_equal_1_normalized
@@ -1059,8 +1142,8 @@ class D3DPhysicsMethods:
         """
         # Get n1rms signal from d3d tree
         n1rms, t_n1rms = params.get_data_with_dims(r"\n1rms", tree_name="d3d")
-        n1rms *= 1.0e-4  # Gauss -> Tesla
-        t_n1rms /= 1e3  # [ms] -> [s]
+        n1rms = n1rms * 1.0e-4  # Gauss -> Tesla
+        t_n1rms = t_n1rms / 1e3  # [ms] -> [s]
         n1rms = interp1(t_n1rms, n1rms, params.times)
         # Calculate n1rms_norm
         try:
@@ -1123,8 +1206,10 @@ class D3DPhysicsMethods:
         - original source: [get_peaking_factors_d3d.m](https://github.com/MIT-PSFC/
         disruption-py/blob/matlab/DIII-D/get_peaking_factors_d3d.m)
         - pull requests: #[265](https://github.com/MIT-PSFC/disruption-py/pull/
-        265), #[328](https://github.com/MIT-PSFC/disruption-py/pull/328)
-        - issues: #[261](https://github.com/MIT-PSFC/disruption-py/issues/261)
+        265), #[328](https://github.com/MIT-PSFC/disruption-py/pull/328),
+        #[618](https://github.com/MIT-PSFC/disruption-py/pull/618)
+        - issues: #[261](https://github.com/MIT-PSFC/disruption-py/issues/261),
+        #[594](https://github.com/MIT-PSFC/disruption-py/issues/594)
         """
         ## Thomson parameters
         ts_data_type = "blessed"  # either 'blessed', 'unblessed', or 'ptdata'
@@ -1168,12 +1253,12 @@ class D3DPhysicsMethods:
             rad_cva, t_rad_cva = params.get_data_with_dims(
                 f"ptdata('dpsrrdcva', {params.shot_id})"
             )  # [], [ms]
-            t_rad_cva /= 1e3  # [ms] -> [s]
+            t_rad_cva = t_rad_cva / 1e3  # [ms] -> [s]
             rad_cva = interp1(t_rad_cva, rad_cva, params.times)
             rad_xdiv, t_rad_xdiv = params.get_data_with_dims(
                 f"ptdata('dpsrrdxdiv', {params.shot_id})"
             )  # [], [ms]
-            t_rad_xdiv /= 1e3  # [ms] -> [s]
+            t_rad_xdiv = t_rad_xdiv / 1e3  # [ms] -> [s]
             rad_xdiv = interp1(t_rad_xdiv, rad_xdiv, params.times)
         except mdsExceptions.MdsException as e:
             calculate_prad_pf = True
@@ -1185,11 +1270,18 @@ class D3DPhysicsMethods:
 
         # Get raw Thomson data
         try:
-            ts = D3DPhysicsMethods._get_ne_te(params, data_source=ts_data_type)
+            ts_all = D3DPhysicsMethods._get_ne_te(params, data_source=ts_data_type)
+            ts = {}
             for option in ts_options:
-                if option in ts:
-                    ts = ts[option]
+                if ts_all.get(option) is not None:
+                    ts = ts_all[option]
                     break
+            if not ts:
+                # e.g. shot 96618: {"core": None, "tangential": None}
+                params.logger.warning(
+                    "get_peaking_factors: No Thomson scattering data available. "
+                    "Setting T_e and n_e peaking factors to NaN."
+                )
             efit_dict = D3DPhysicsMethods._get_efit_dict(params)
         except (NotImplementedError, CalculationError, mdsExceptions.MdsException) as e:
             ts = {}
@@ -1276,7 +1368,13 @@ class D3DPhysicsMethods:
             ne_pf = interp1(ts["time"], ne_pf, params.times)
 
         # Calculate prad_cva, prad_xdiv
-        if calculate_prad_pf and p_rad:
+        if calculate_prad_pf and p_rad and not p_rad["ch_avail"]:
+            # e.g. shot 126006: matlab_get_bolo flags all channels bad and returns a placeholder
+            params.logger.warning(
+                "get_peaking_factors: No valid bolometer channels. "
+                "Setting prad_peaking factors to NaN."
+            )
+        elif calculate_prad_pf and p_rad:
             # Interpolate zmaxis and channel intersects x onto the bolometer timebase
             z_m_axis = interp1(efit_dict["time"], efit_dict["zmaxis"], p_rad["t"])
             z_m_axis = np.repeat(z_m_axis[:, np.newaxis], p_rad["x"].shape[1], axis=1)
@@ -1459,7 +1557,7 @@ class D3DPhysicsMethods:
         area = params.get_data(r"\efit_a_eqdsk:area", tree_name="_efit_tree")
         chisq = params.get_data(r"\efit_a_eqdsk:chisq", tree_name="_efit_tree")
         t = params.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree")
-        t /= 1e3  # [ms] -> [s]
+        t = t / 1e3  # [ms] -> [s]
         kappa_area = area / (np.pi * a_minor**2)
         invalid_indices = np.where(chisq > 50)
         kappa_area[invalid_indices] = np.nan
@@ -1494,7 +1592,7 @@ class D3DPhysicsMethods:
         """
         # Get efit_time
         efit_time = params.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree")
-        efit_time /= 1e3  # [ms] -> [s]
+        efit_time = efit_time / 1e3  # [ms] -> [s]
         # Compute triangularity
         try:
             tritop = params.get_data(
@@ -1577,6 +1675,8 @@ class D3DPhysicsMethods:
         References
         -------
         https://github.com/MIT-PSFC/disruption-py/blob/matlab/DIII-D/utils/load_ne_Te.m
+        - pull requests: #[618](https://github.com/MIT-PSFC/disruption-py/pull/618)
+        - issues: #[594](https://github.com/MIT-PSFC/disruption-py/issues/594)
 
         NOTE: data_source="ptdata" has not been fully implemented; however, for now this
         option isn't used in any of the methods.
@@ -1643,10 +1743,25 @@ class D3DPhysicsMethods:
                         node=node,
                     )
                     params.logger.opt(exception=True).debug(e)
+            # Empty nodes return scalars (e.g. shot 100313) or zero-size arrays (e.g. 70683)
+            te = lasers[laser]["te"]
+            ne = lasers[laser]["ne"]
+            if (
+                np.ndim(te) == 0
+                or np.size(te) == 0
+                or np.ndim(ne) == 0
+                or np.size(ne) == 0
+            ):
+                params.logger.warning(
+                    "{laser} Thomson data is empty. Setting laser data to None.",
+                    laser=laser,
+                )
+                lasers[laser] = None
+                continue
             # Place NaNs for broken channels
             lasers[laser]["te"][lasers[laser]["te"] == 0] = np.nan
             lasers[laser]["ne"][lasers[laser]["ne"] == 0] = np.nan
-            lasers[laser]["time"] /= 1e3  # [ms] -> [s]
+            lasers[laser]["time"] = lasers[laser]["time"] / 1e3  # [ms] -> [s]
 
         # If both systems/lasers available, combine them and interpolate the data
         # from the tangential system onto the finer (core) timebase
@@ -1720,7 +1835,7 @@ class D3DPhysicsMethods:
             bol_signal, bol_time = params.get_data_with_dims(
                 rf"\top.raw:{bol_channels[i]}", tree_name="bolom"
             )
-            bol_time /= 1e3  # [ms] -> [s]
+            bol_time = bol_time / 1e3  # [ms] -> [s]
             bol_signals.append(bol_signal)
             bol_times.append(bol_time)
         a_struct = matlab_get_bolo(
@@ -1735,7 +1850,7 @@ class D3DPhysicsMethods:
         r_major_axis, efit_time = params.get_data_with_dims(
             r"\top.results.geqdsk:rmaxis", tree_name="_efit_tree"
         )
-        efit_time /= 1e3  # [ms] -> [s]
+        efit_time = efit_time / 1e3  # [ms] -> [s]
         output = {
             "ch_avail": [],
             "z": [],
