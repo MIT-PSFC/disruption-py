@@ -6,6 +6,7 @@ Module for retrieving and processing EFIT parameters for DIII-D.
 
 import numpy as np
 
+from disruption_py.config import config
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
@@ -21,24 +22,25 @@ class D3DEfitMethods:
     efit_cols = {
         "beta_n": r"\efit_a_eqdsk:betan",
         "beta_p": r"\efit_a_eqdsk:betap",
+        "chisq": r"\efit_a_eqdsk:chisq",
         "kappa": r"\efit_a_eqdsk:kappa",
         "li": r"\efit_a_eqdsk:li",
-        "upper_gap": r"\efit_a_eqdsk:gaptop",
         "lower_gap": r"\efit_a_eqdsk:gapbot",
         "q0": r"\efit_a_eqdsk:q0",
-        "qstar": r"\efit_a_eqdsk:qstar",
         "q95": r"\efit_a_eqdsk:q95",
+        "qstar": r"\efit_a_eqdsk:qstar",
+        "terror": r"\efit_a_eqdsk:error",
+        "upper_gap": r"\efit_a_eqdsk:gaptop",
         "wmhd": r"\efit_a_eqdsk:wmhd",
-        "chisq": r"\efit_a_eqdsk:chisq",
     }
 
     efit_derivs = {"dbetap_dt": "beta_p", "dli_dt": "li", "dwmhd_dt": "wmhd"}
     rt_efit_cols = {
         "beta_p_rt": r"\efit_a_eqdsk:betap",
+        "chisq_rt": r"\efit_a_eqdsk:chisq",
         "li_rt": r"\efit_a_eqdsk:li",
         "q95_rt": r"\efit_a_eqdsk:q95",
         "wmhd_rt": r"\efit_a_eqdsk:wmhd",
-        "chisq_rt": r"\efit_a_eqdsk:chisq",
     }
 
     @staticmethod
@@ -49,6 +51,11 @@ class D3DEfitMethods:
     def get_efit_parameters(params: PhysicsMethodParams):
         """
         Retrieve EFIT parameters and their time derivatives.
+
+        EFIT reconstructions should be not trusted without further checks.
+        Here we fully discard any EFIT-derived quantity if the reconstruction
+        convergence residual error, 'terror', is over a threshold of 0.01.
+        The EFIT chi squared value, 'chisq', is also worthy of an investigation.
 
         Parameters
         ----------
@@ -68,15 +75,31 @@ class D3DEfitMethods:
             params.get_data(r"\efit_a_eqdsk:atime", tree_name="_efit_tree") / 1.0e3
         )  # [ms] -> [s]
 
-        # EFIT reconstructions are sometimes invalid, particularly when very close
-        # to a disruption.  There are a number of EFIT parameters that can indicate
-        # invalid reconstructions, such as 'terror' and 'chisq'.  Here we use
-        # 'chisq' to determine which time slices should be excluded from our
-        # disruption warning database.
-        invalid_indices = np.where(efit_data["chisq"] > 50)
+        # pylint: disable=duplicate-code
+        threshold = (
+            config(params.tokamak)
+            .get("physics", {})
+            .get("efit_thresholds", {})
+            .get("terror")
+        )
+        if not threshold:
+            params.logger.warning("Ignoring `terror` threshold...")
+        else:
+            params.logger.debug(
+                "Enforcing threshold: `terror` < {threshold}", threshold=threshold
+            )
+            (invalid_indices,) = np.where(efit_data["terror"] > threshold)
+            params.logger.debug(
+                "Removing {invalid:,} out of {total:,} time slices, "
+                "valid slices are {percent:.1f}%.",
+                invalid=len(invalid_indices),
+                total=len(efit_time),
+                percent=100 * (len(efit_time) - len(invalid_indices)) / len(efit_time),
+            )
+            for param in efit_data.values():
+                param[invalid_indices] = np.nan
+        # pylint: enable=duplicate-code
 
-        for param in efit_data:
-            efit_data[param][invalid_indices] = np.nan
         for deriv_param, param in D3DEfitMethods.efit_derivs.items():
             if len(efit_data[param]) < 2:
                 efit_data[deriv_param] = [np.nan]

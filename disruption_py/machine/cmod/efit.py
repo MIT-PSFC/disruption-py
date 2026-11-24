@@ -6,6 +6,7 @@ Module for retrieving and processing EFIT parameters for CMOD.
 
 import numpy as np
 
+from disruption_py.config import config
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
@@ -26,23 +27,24 @@ class CmodEfitMethods:
     """
 
     efit_cols = {
+        "a_minor": r"\efit_aeqdsk:aout/100",
         "beta_p": r"\efit_aeqdsk:betap",
+        "chisq": r"\efit_aeqdsk:tsaisq",
         "kappa": r"\efit_aeqdsk:eout",
         "li": r"\efit_aeqdsk:ali",
-        "upper_gap": r"\efit_aeqdsk:otop/100",
         "lower_gap": r"\efit_aeqdsk:obott/100",
+        "n_over_ncrit": r"-\efit_aeqdsk:xnnc",
         "q0": r"\efit_aeqdsk:qqmagx",
-        "qstar": r"\efit_aeqdsk:qsta",
         "q95": r"\efit_aeqdsk:qpsib",
+        "qstar": r"\efit_aeqdsk:qsta",
+        "rmagx": r"\efit_aeqdsk:rmagx/100",
+        "ssep": r"\efit_aeqdsk:ssep/100",
+        "terror": r"\efit_aeqdsk:terror",
+        "tribot": r"\efit_aeqdsk:doutl",
+        "tritop": r"\efit_aeqdsk:doutu",
+        "upper_gap": r"\efit_aeqdsk:otop/100",
         "v_loop_efit": r"\efit_aeqdsk:vloopt",
         "wmhd": r"\efit_aeqdsk:wplasm",
-        "ssep": r"\efit_aeqdsk:ssep/100",
-        "n_over_ncrit": r"-\efit_aeqdsk:xnnc",
-        "tritop": r"\efit_aeqdsk:doutu",
-        "tribot": r"\efit_aeqdsk:doutl",
-        "a_minor": r"\efit_aeqdsk:aout/100",
-        "rmagx": r"\efit_aeqdsk:rmagx/100",
-        "chisq": r"\efit_aeqdsk:tsaisq",
     }
 
     efit_derivs = {"dbetap_dt": "beta_p", "dli_dt": "li", "dwmhd_dt": "wmhd"}
@@ -57,7 +59,12 @@ class CmodEfitMethods:
     )
     def get_efit_parameters(params: PhysicsMethodParams):
         """
-        Retrieve EFIT parameters for CMOD.
+        Retrieve EFIT parameters for C-MOD.
+
+        EFIT reconstructions should be not trusted without further checks.
+        Here we fully discard any EFIT-derived quantity if the reconstruction
+        convergence residual error, 'terror', is over a threshold of 0.01.
+        The EFIT chi squared value, 'chisq', is also worthy of an investigation.
 
         Parameters
         ----------
@@ -87,6 +94,31 @@ class CmodEfitMethods:
                 params.logger.warning(repr(e))
                 params.logger.opt(exception=True).debug(e)
                 efit_data[param] = np.full(len(efit_time), np.nan)
+
+        # pylint: disable=duplicate-code
+        threshold = (
+            config(params.tokamak)
+            .get("physics", {})
+            .get("efit_thresholds", {})
+            .get("terror")
+        )
+        if not threshold:
+            params.logger.warning("Ignoring `terror` threshold...")
+        else:
+            params.logger.debug(
+                "Enforcing threshold: `terror` < {threshold}", threshold=threshold
+            )
+            (invalid_indices,) = np.where(efit_data["terror"] > threshold)
+            params.logger.debug(
+                "Removing {invalid:,} out of {total:,} time slices, "
+                "valid slices are {percent:.1f}%.",
+                invalid=len(invalid_indices),
+                total=len(efit_time),
+                percent=100 * (len(efit_time) - len(invalid_indices)) / len(efit_time),
+            )
+            for param in efit_data.values():
+                param[invalid_indices] = np.nan
+        # pylint: enable=duplicate-code
 
         for deriv_param, param in CmodEfitMethods.efit_derivs.items():
             efit_data[deriv_param] = np.gradient(

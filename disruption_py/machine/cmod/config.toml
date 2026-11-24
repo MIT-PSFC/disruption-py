@@ -268,6 +268,14 @@ units = "m"
 description = "Half-width at half-maximum of the Gaussian fit to the electron temperature profile from the electron cyclotron emission (ECE) data."
 units = "m"
 
+[cmod.physics.attributes.terror]
+description = "Equilibrium convergence error (EFIT)"
+imas = "/equilibrium/time_slice(itime)/convergence/grad_shafranov_deviation_value"
+latex = '\Delta_\psi'
+origin = ["EFIT"]
+units = "dimensionless"
+validity = [0.0, 0.01]
+
 [cmod.physics.attributes.thermal_quench_time]
 description = "Time of the disruptive thermal quench onset. NaN for non-disruptive discharges."
 units = "s"
@@ -343,6 +351,9 @@ ip0_over_ip_max = 0.33
 ip0_over_max_didt = 0.05
 shot_duration = 0.1
 
+[cmod.physics.efit_thresholds]
+terror = 0.01
+
 [cmod.physics.thermal_quench_time_params]
 autocorr_noise_cutoff = 0.01
 autocorr_sample_freq = 5e3
@@ -368,15 +379,22 @@ ip_prog = 100e3
 expected_failure_columns = [
   "beta_n",
   "beta_p",
+  "dbetap_dt",
+  "dli_dt",
+  "dwmhd_dt",
   "greenwald_fraction",
+  "lower_gap",
+  "n_over_ncrit",
   "ne_peaking",
   "p_oh",
   "p_rad",
   "pressure_peaking",
   "radiated_fraction",
+  "ssep",
   "sxr",
   "te_peaking",
   "te_width",
+  "upper_gap",
   "v_loop",
   "v_z",
   "wmhd",

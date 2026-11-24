@@ -292,6 +292,14 @@ description = "Peaking factor of the electron temperature profile, core vs all c
 units = "dimensionless"
 validity = [0.0, inf]
 
+[d3d.physics.attributes.terror]
+description = "Equilibrium convergence error (EFIT)"
+imas = "/equilibrium/time_slice(itime)/convergence/grad_shafranov_deviation_value"
+latex = '\Delta_\psi'
+origin = ["EFIT"]
+units = "dimensionless"
+validity = [0.0, 0.01]
+
 [d3d.physics.attributes.upper_gap]
 description = "Top gap between x-point and wall (EFIT)."
 imas = "/equilibrium/time_slice(itime)/boundary/gap(i1)/value"
@@ -342,6 +350,9 @@ abs_ip_max = 0.1e6
 ip0_over_ip_max = 0.33
 ip0_over_max_didt = 0.05
 shot_duration = 0.5
+
+[d3d.physics.efit_thresholds]
+terror = 0.01
 
 [d3d.physics.time_domain_thresholds]
 dipprog_dt = 2e3
