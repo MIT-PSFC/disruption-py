@@ -45,6 +45,7 @@ def config(tokamak: Union[Enum, str] = None):
             root_path=os.path.dirname(__file__),
             settings_files=[
                 "config.toml",
+                "machine/generic/config.toml",
                 f"machine/{tokamak}/config.toml",
                 user_config,
             ],

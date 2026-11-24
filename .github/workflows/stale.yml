@@ -15,7 +15,7 @@ jobs:
   stale:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/stale@v10
+      - uses: actions/stale@v11.0.0
         with:
           days-before-stale: 180
           days-before-close: 30

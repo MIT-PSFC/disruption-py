@@ -13,6 +13,7 @@ from typing import Dict, List, Type, Union
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 
 import disruption_py.data
 from disruption_py.core.utils.enums import map_string_to_enum
@@ -148,6 +149,7 @@ class DatabaseShotlistSetting(ShotlistSetting):
         self.use_pandas = use_pandas
 
     def _get_shotlist(self, params: ShotlistSettingParams) -> List:
+        logger.trace("Executing query: {query}", query=self.sql_query)
         if self.use_pandas:
             query_result_df = params.database.query(
                 query=self.sql_query, use_pandas=True
@@ -183,6 +185,7 @@ _file_suffix_to_shotlist_setting: Dict[str, Type[ShotlistSetting]] = {
     ".txt": FileShotlistSetting,
     ".csv": FileShotlistSetting,
     ".parquet": FileShotlistSetting,
+    ";": DatabaseShotlistSetting,
 }
 # --8<-- [end:file_suffix_to_shotlist_setting_dict]
 

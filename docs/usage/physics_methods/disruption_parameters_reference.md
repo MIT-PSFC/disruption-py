@@ -29,7 +29,6 @@
 | shot | Discharge identifier, replicated per each time slice | - | - |
 | ssep | Distance on midplane between 1st and 2nd separatrices | m | - |
 | time | Time during the discharge | s | - |
-| time_until_disrupt | Elapsing time before the disruption event. Target variable | s | NaN or numeric |
 | upper_gap | Upper gap | m | [0, 0.21] |
 | v_loop | Edge loop voltage; time derivative of a weighted average of flux loops obtained from MFLUXloop voltage | V | [-7, 26] |
 | z_error | Difference between the actual position of the current centroid and the requested one (Z_prog) | m | - |
