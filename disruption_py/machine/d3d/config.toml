@@ -295,6 +295,8 @@ validity = [0.0, inf]
 [d3d.physics.attributes.terror]
 description = "Equilibrium convergence error (EFIT)"
 imas = "/equilibrium/time_slice(itime)/convergence/grad_shafranov_deviation_value"
+latex = '\Delta_\psi'
+origin = ["EFIT"]
 units = "dimensionless"
 validity = [0.0, 0.01]
 
