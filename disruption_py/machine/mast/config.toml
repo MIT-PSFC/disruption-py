@@ -8,303 +8,303 @@ file_path = "mast/level2/shots"
 [mast.physics.attributes.a_minor]
 description = "Minor radius of the plasma boundary (defined as (Rmax-Rmin) / 2 of the boundary)"
 imas = "/equilibrium/time_slice(itime)/boundary/minor_radius"
-latex = '$a$'
+latex = 'a'
 origin = ["EFIT"]
 units = "m"
 
 [mast.physics.attributes.beta_n]
 description = "Toroidal beta, defined as the volume-averaged total perpendicular"
 imas = "/equilibrium/time_slice(itime)/global_quantities/beta_tor_norm"
-latex = '$\beta_N$'
+latex = '\beta_N'
 origin = ["EFIT"]
 units = "dimensionless"
 
 [mast.physics.attributes.beta_p]
 description = "Beta poloidal (EFIT)"
 imas = "/equilibrium/time_slice(itime)/global_quantities/beta_pol"
-latex = '$\beta_p$'
+latex = '\beta_p'
 origin = ["EFIT"]
 units = "dimensionless"
 
 [mast.physics.attributes.beta_t]
 description = "Beta toroidal (EFIT)"
 imas = "/equilibrium/time_slice(itime)/global_quantities/beta_tor"
-latex = '$\beta_T$'
+latex = '\beta_T'
 origin = ["EFIT"]
 units = "dimensionless"
 
 [mast.physics.attributes.bphi_rmag]
 description = "Bphi at rmag"
-latex = '$B_\phi(R_{\mathrm{mag}})$'
+latex = 'B_\phi(R_{\mathrm{mag}})'
 origin = ["EFIT"]
 units = "T"
 
 [mast.physics.attributes.bvac_rmag]
 description = "Bvac at rmag"
-latex = '$B_{\mathrm{vac}}(R_{\mathrm{mag}})$'
+latex = 'B_{\mathrm{vac}}(R_{\mathrm{mag}})'
 origin = ["EFIT"]
 units = "T"
 
 [mast.physics.attributes.d_alpha]
 description = "D-alpha camera signal"
-latex = '$D_\alpha$'
+latex = 'D_\alpha'
 origin = ["Visible spectroscopy"]
 units = "V"
 
 [mast.physics.attributes.dip_dt]
 description = "Time derivative of the Actual plasma current"
-latex = '$dI_p/dt$'
+latex = 'dI_p/dt'
 origin = ["Magnetics"]
 units = "A/s"
 
 [mast.physics.attributes.dipprog_dt]
 description = "Time derivative of the programmed plasma current"
-latex = '$dI_{p,\mathrm{prog}}/dt$'
+latex = 'dI_{p,\mathrm{prog}}/dt'
 origin = ["Plasma control system (PCS)"]
 units = "A/s"
 
 [mast.physics.attributes.dn_dt]
 description = "Time derivative of the measured line-averaged electron density"
 imas = "/summary/line_average/dn_e_dt"
-latex = '$d\bar{n}_e/dt$'
+latex = 'd\bar{n}_e/dt'
 origin = ["Interferometer"]
 units = "m^-3*s^-1"
 
 [mast.physics.attributes.gas_inboard_total]
 description = "Gas injected by the inboard valves"
-latex = '$N_{\mathrm{gas,inboard}}$'
+latex = 'N_{\mathrm{gas,inboard}}'
 origin = ["Gas injection system"]
 units = "cps"
 
 [mast.physics.attributes.gas_outboard_total]
 description = "Gas injected by the outboard valves"
-latex = '$N_{\mathrm{gas,outboard}}$'
+latex = 'N_{\mathrm{gas,outboard}}'
 origin = ["Gas injection system"]
 units = "cps"
 
 [mast.physics.attributes.gas_total_injected]
 description = "Total cumulative injected gas"
-latex = '$N_{\mathrm{gas,total}}$'
+latex = 'N_{\mathrm{gas,total}}'
 origin = ["Gas injection system"]
 units = "counts"
 
 [mast.physics.attributes.greenwald_fraction]
 description = "Greenwald fraction"
 imas = "/summary/global_quantities/greenwald_fraction"
-latex = '$f_{\mathrm{GW}}$'
+latex = 'f_{\mathrm{GW}}'
 origin = ["EFIT", "Interferometer", "Magnetics"]
 units = "dimensionless"
 
 [mast.physics.attributes.ip]
 description = "Actual plasma current"
 imas = "/summary/global_quantities/ip"
-latex = '$I_p$'
+latex = 'I_p'
 origin = ["Magnetics"]
 units = "A"
 
 [mast.physics.attributes.ip_prog]
 description = "Programmed plasma current"
 imas = "/pulse_schedule/flux_control/ip/reference"
-latex = '$I_{p,\mathrm{prog}}$'
+latex = 'I_{p,\mathrm{prog}}'
 origin = ["Plasma control system (PCS)"]
 units = "A"
 
 [mast.physics.attributes.kappa]
 description = "Elongation at plasma boundary (EFIT)"
 imas = "/equilibrium/time_slice(itime)/boundary/elongation"
-latex = '$\kappa$'
+latex = '\kappa'
 origin = ["EFIT"]
 units = "dimensionless"
 
 [mast.physics.attributes.li]
 description = "Internal inductance (EFIT)"
 imas = "/equilibrium/time_slice(itime)/global_quantities/li_3"
-latex = '$\ell_i$'
+latex = '\ell_i'
 origin = ["EFIT"]
 units = "dimensionless"
 
 [mast.physics.attributes.n_e]
 description = "Measured line-averaged electron density"
 imas = "/summary/line_average/n_e"
-latex = '$\bar{n}_e$'
+latex = '\bar{n}_e'
 origin = ["Interferometer"]
 units = "m^-3"
 
 [mast.physics.attributes.ne_core]
 description = "Core electron density measurement"
 imas = "/thomson_scattering/channel(i1)/n_e"
-latex = '$n_{e,\mathrm{core}}$'
+latex = 'n_{e,\mathrm{core}}'
 origin = ["Thomson scattering"]
 units = "m^-3"
 
 [mast.physics.attributes.ne_peaking]
 description = "Peaking factor of the electron density profile measured by the Thomson scattering diagnostic"
-latex = '$n_{e,\mathrm{core}}/\langle n_e \rangle$'
+latex = 'n_{e,\mathrm{core}}/\langle n_e \rangle'
 origin = ["EFIT", "Thomson scattering"]
 units = "dimensionless"
 
 [mast.physics.attributes.p_nbi]
 description = "NBI heating power"
 imas = "/summary/heating_current_drive/power_nbi"
-latex = '$P_{\mathrm{NBI}}$'
+latex = 'P_{\mathrm{NBI}}'
 origin = ["Neutral beam injection (NBI) system"]
 units = "W"
 
 [mast.physics.attributes.p_oh]
 description = "Total Ohmic heating power"
 imas = "/summary/global_quantities/power_ohm"
-latex = '$P_{\mathrm{OH}}$'
+latex = 'P_{\mathrm{OH}}'
 origin = ["EFIT", "Magnetics"]
 units = "W"
 
 [mast.physics.attributes.p_rad]
 description = "Radiated power measured by the 2pi diode"
 imas = "/bolometer/power_radiated_total"
-latex = '$P_{\mathrm{rad}}$'
+latex = 'P_{\mathrm{rad}}'
 origin = ["Bolometer"]
 units = "W"
 
 [mast.physics.attributes.prad_peaking]
 description = "Peaking factor of the radiated power"
-latex = '$P_{\mathrm{rad,core}}/\langle P_{\mathrm{rad}} \rangle$'
+latex = 'P_{\mathrm{rad,core}}/\langle P_{\mathrm{rad}} \rangle'
 origin = ["Bolometer", "EFIT"]
 units = "dimensionless"
 
 [mast.physics.attributes.pressure_peaking]
 description = "Peaking factor of the electron pressure profile measured by the Thomson scattering diagnostic"
-latex = '$p_{\mathrm{core}}/\langle p \rangle$'
+latex = 'p_{\mathrm{core}}/\langle p \rangle'
 origin = ["EFIT", "Thomson scattering"]
 units = "dimensionless"
 
 [mast.physics.attributes.q95]
 description = "q at 95% flux surface (EFIT)"
 imas = "/equilibrium/time_slice(itime)/global_quantities/q_95"
-latex = '$q_{95}$'
+latex = 'q_{95}'
 origin = ["EFIT"]
 units = "dimensionless"
 
 [mast.physics.attributes.rmagx]
 description = "Major radius of the magnetic axis"
 imas = "/equilibrium/time_slice(itime)/global_quantities/magnetic_axis/r"
-latex = '$R_{\mathrm{mag}}$'
+latex = 'R_{\mathrm{mag}}'
 origin = ["EFIT"]
 units = "m"
 
 [mast.physics.attributes.rmagz]
 description = "Height of the magnetic axis"
 imas = "/equilibrium/time_slice(itime)/global_quantities/magnetic_axis/z"
-latex = '$Z_{\mathrm{mag}}$'
+latex = 'Z_{\mathrm{mag}}'
 origin = ["EFIT"]
 units = "m"
 
 [mast.physics.attributes.sxr]
 description = "Core soft X-ray measurement"
-latex = '$\mathrm{SXR}$'
+latex = '\mathrm{SXR}'
 origin = ["Soft X-ray cameras"]
 units = "V"
 
 [mast.physics.attributes.sxr_core]
 description = "Core soft X-ray measurement"
-latex = '$\mathrm{SXR}_{\mathrm{core}}$'
+latex = '\mathrm{SXR}_{\mathrm{core}}'
 origin = ["Soft X-ray cameras"]
 units = "V"
 
 [mast.physics.attributes.sxr_edge]
 description = "Edge soft X-ray measurement"
-latex = '$\mathrm{SXR}_{\mathrm{edge}}$'
+latex = '\mathrm{SXR}_{\mathrm{edge}}'
 origin = ["Soft X-ray cameras"]
 units = "V"
 
 [mast.physics.attributes.te_core]
 description = "Core electron temperature measurement"
 imas = "/thomson_scattering/channel(i1)/t_e"
-latex = '$T_{e,\mathrm{core}}$'
+latex = 'T_{e,\mathrm{core}}'
 origin = ["Thomson scattering"]
 units = "eV"
 
 [mast.physics.attributes.te_peaking]
 description = "Peaking factor of the electron temperature profile measured by the Thomson scattering diagnostic"
 imas = "/core_profiles/global_quantities/t_e_peaking"
-latex = '$T_{e,\mathrm{core}}/\langle T_e \rangle$'
+latex = 'T_{e,\mathrm{core}}/\langle T_e \rangle'
 origin = ["EFIT", "Thomson scattering"]
 units = "dimensionless"
 
 [mast.physics.attributes.te_width]
 description = "Half-width at half-maximum of the Gaussian fit to the electron temperature profile"
-latex = '$T_{e,\mathrm{width}}$'
+latex = 'T_{e,\mathrm{width}}'
 origin = ["Thomson scattering"]
 units = "m"
 
 [mast.physics.attributes.tribot]
 description = "Bottom triangularity (EFIT)"
 imas = "/equilibrium/time_slice(itime)/boundary/triangularity_lower"
-latex = '$\delta_{\mathrm{lower}}$'
+latex = '\delta_{\mathrm{lower}}'
 origin = ["EFIT"]
 units = "dimensionless"
 
 [mast.physics.attributes.tritop]
 description = "Top triangularity (EFIT)"
 imas = "/equilibrium/time_slice(itime)/boundary/triangularity_upper"
-latex = '$\delta_{\mathrm{upper}}$'
+latex = '\delta_{\mathrm{upper}}'
 origin = ["EFIT"]
 units = "dimensionless"
 
 [mast.physics.attributes.v_loop_dynamic]
 description = "Dynamic LCFS loop voltage from EFIT. Defined as V_loop(t) = loop int(B_p * V_point(t)) / loop int(B_p)(t) where V_point = -2 * pi * d(PSI at each point) / dt"
-latex = '$V_{\mathrm{loop,dyn}}$'
+latex = 'V_{\mathrm{loop,dyn}}'
 origin = ["EFIT"]
 units = "V"
 
 [mast.physics.attributes.v_loop_static]
 description = "Static LCFS loop voltage from EFIT. Defined as V_loop = -2 * pi * d(psi at LCFS) / dt"
-latex = '$V_{\mathrm{loop,static}}$'
+latex = 'V_{\mathrm{loop,static}}'
 origin = ["EFIT"]
 units = "V"
 
 [mast.physics.attributes.v_z]
 description = "Vertical velocity of the plasma current centroid"
 imas = "/equilibrium/time_slice(itime)/global_quantities/current_centre/velocity_z"
-latex = '$v_z$'
+latex = 'v_z'
 origin = ["Magnetics", "Plasma control system (PCS)"]
 units = "m/s"
 
 [mast.physics.attributes.volume]
 description = "Volume of the plasma"
 imas = "/equilibrium/time_slice(itime)/global_quantities/volume"
-latex = '$V_p$'
+latex = 'V_p'
 origin = ["EFIT"]
 units = "m^3"
 
 [mast.physics.attributes.wmhd]
 description = "Total plasma energy (EFIT)"
 imas = "/equilibrium/time_slice(itime)/global_quantities/energy_mhd"
-latex = '$W_{\mathrm{MHD}}$'
+latex = 'W_{\mathrm{MHD}}'
 origin = ["EFIT"]
 units = "J"
 
 [mast.physics.attributes.z_error]
 description = "Difference between the measured and programmed vertical position of the plasma current centroid"
-latex = '$z_{\mathrm{err}}$'
+latex = 'z_{\mathrm{err}}'
 origin = ["Magnetics", "Plasma control system (PCS)"]
 units = "m"
 
 [mast.physics.attributes.z_prog]
 description = "Programmed vertical position of the plasma current centroid"
 imas = "/pulse_schedule/position_control/current_centroid/z/reference"
-latex = '$z_{\mathrm{prog}}$'
+latex = 'z_{\mathrm{prog}}'
 origin = ["Plasma control system (PCS)"]
 units = "m"
 
 [mast.physics.attributes.z_times_v_z]
 description = "Product of the vertical position and vertical velocity of the plasma current centroid"
-latex = '$z_{\mathrm{cur}} v_z$'
+latex = 'z_{\mathrm{cur}} v_z'
 origin = ["Magnetics", "Plasma control system (PCS)"]
 units = "m^2/s"
 
 [mast.physics.attributes.zcur]
 description = "Measured vertical position of the plasma current centroid"
 imas = "/equilibrium/time_slice(itime)/global_quantities/current_centre/z"
-latex = '$z_{\mathrm{cur}}$'
+latex = 'z_{\mathrm{cur}}'
 origin = ["Magnetics", "Plasma control system (PCS)"]
 units = "m"
 
