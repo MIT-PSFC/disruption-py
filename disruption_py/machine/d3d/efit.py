@@ -6,6 +6,7 @@ Module for retrieving and processing EFIT parameters for DIII-D.
 
 import numpy as np
 
+from disruption_py.config import config
 from disruption_py.core.physics_method.decorator import physics_method
 from disruption_py.core.physics_method.params import PhysicsMethodParams
 from disruption_py.core.utils.math import interp1
@@ -75,15 +76,28 @@ class D3DEfitMethods:
         )  # [ms] -> [s]
 
         # pylint: disable=duplicate-code
-        (invalid_indices,) = np.where(efit_data["terror"] > 0.01)
-        params.logger.debug(
-            "Removing {invalid:,} out of {total:,} time slices, valid slices are {percent:.1f}%.",
-            invalid=len(invalid_indices),
-            total=len(efit_time),
-            percent=100 * (len(efit_time) - len(invalid_indices)) / len(efit_time),
+        threshold = (
+            config(params.tokamak)
+            .get("physics", {})
+            .get("efit_thresholds", {})
+            .get("terror")
         )
-        for param in efit_data.values():
-            param[invalid_indices] = np.nan
+        if not threshold:
+            params.logger.warning("Ignoring `terror` threshold...")
+        else:
+            params.logger.debug(
+                "Enforcing threshold: `terror` < {threshold}", threshold=threshold
+            )
+            (invalid_indices,) = np.where(efit_data["terror"] > threshold)
+            params.logger.debug(
+                "Removing {invalid:,} out of {total:,} time slices, "
+                "valid slices are {percent:.1f}%.",
+                invalid=len(invalid_indices),
+                total=len(efit_time),
+                percent=100 * (len(efit_time) - len(invalid_indices)) / len(efit_time),
+            )
+            for param in efit_data.values():
+                param[invalid_indices] = np.nan
         # pylint: enable=duplicate-code
 
         for deriv_param, param in D3DEfitMethods.efit_derivs.items():
