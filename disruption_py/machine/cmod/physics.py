@@ -1471,7 +1471,7 @@ class CmodPhysicsMethods:
         """
         use_ts_tci_calibration = False
         # Ignore shots on the blacklist
-        if CmodPhysicsMethods._is_on_blacklist(params.shot_id):
+        if CmodPhysicsMethods._is_on_ts_blacklist(params):
             raise CalculationError("Shot is on blacklist")
         # Fetch data
         # Get EFIT geometry data
@@ -2458,17 +2458,14 @@ class CmodPhysicsMethods:
         return {"thermal_quench_time": np.full(len(params.times), tq_time_scalar)}
 
     @staticmethod
-    def _is_on_blacklist(shot_id: int) -> bool:
+    def _is_on_ts_blacklist(params: PhysicsMethodParams) -> bool:
         """
-        TODO why will these shots cause `_get_peaking_factors`,
-        `_get_peaking_factors_no_tci`, and `_get_edge_parameters` to fail?
+        Returns whether the shot falls in the C-Mod Thomson Scattering blacklist,
+        which was updated according to data provided by J Hughes.
         """
-        return (
-            1120000000 < shot_id < 1120213000
-            or 1140000000 < shot_id < 1140227000
-            or 1150000000 < shot_id < 1150610000
-            or 1160000000 < shot_id < 1160303000
-        )
+        day = params.shot_id // 1000
+        blacklist = config(params.tokamak).physics.thomson_scattering.blacklist
+        return any(a <= day < b for a, b in blacklist)
 
     @staticmethod
     @physics_method(columns=["h_alpha"], tokamak=Tokamak.CMOD)
