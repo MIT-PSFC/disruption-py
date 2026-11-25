@@ -40,13 +40,12 @@ nav:
       - Data access (MDSplus/SQL): installation/data_access.md
   - Devices:
       - Overview: devices/index.md
-      - Generic physics methods: devices/generic.md
       - C-Mod:
-          - Physics methods: devices/cmod/physics_methods.md
           - Parameter Reference: devices/cmod/parameters.md
+          - Physics methods: devices/cmod/physics_methods.md
       - DIII-D:
-          - Physics methods: devices/d3d/physics_methods.md
           - Parameter Reference: devices/d3d/parameters.md
+          - Physics methods: devices/d3d/physics_methods.md
       - EAST:
           - Physics methods: devices/east/physics_methods.md
           - Parameter Reference: devices/east/parameters.md
@@ -56,6 +55,7 @@ nav:
       - MAST:
           - Physics methods: devices/mast/physics_methods.md
           - Parameter Reference: devices/mast/parameters.md
+      - Generic physics methods: devices/generic.md
   - APIs:
       - Entry points:
           - Workflow: api/workflow.md
