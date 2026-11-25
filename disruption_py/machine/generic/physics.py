@@ -139,12 +139,12 @@ class GenericPhysicsMethods:
         to be non-disruptive, return the current quench time as NaN. The criteria for a
         disruptive shot are as follows:
 
-        - 1. Shot duration > duration_min: reject very short shots.
-        - 2. abs(Ip_max) > ip_threshold: reject very low current shots.
-        - 3. Ip0 / Ip_max > rampdown_threshold: reject shots that disrupt late in current ramp down.
-        - 4. -Ip0 / max_dIdt < tau_CQ_max: reject shots with relatively slow current decay.
-        - 5. abs(Ip_final) < Ip_final_max: reject minor disruptions.
-        - 6. abs(Ip0) > Ip_threshold: reject very low current disruptions.
+        1. Shot duration > duration_min: reject very short shots.
+        2. abs(Ip_max) > ip_threshold: reject very low current shots.
+        3. Ip0 / Ip_max > rampdown_threshold: reject shots that disrupt late in current ramp down.
+        4. -Ip0 / max_dIdt < tau_CQ_max: reject shots with relatively slow current decay.
+        5. abs(Ip_final) < Ip_final_max: reject minor disruptions.
+        6. abs(Ip0) > Ip_threshold: reject very low current disruptions.
 
         Parameters
         ----------
