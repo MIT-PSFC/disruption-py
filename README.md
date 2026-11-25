@@ -376,7 +376,9 @@ Several contributors have been involved in the development of the code since the
 - Gregorio L. Trevisan, Research Scientist,
 - Josh Lorincz, Undergraduate Student,
 - Amos Decker, Undergraduate Student,
-- William Wei, PostDoctoral Associate.
+- William Wei, PostDoctoral Associate,
+- Nathaniel Barbour, PostDoctoral Associate,
+- Sameer Chaturvedi, Software Engineer.
 
 For a complete list of contributors, please refer to the [Contributors](https://github.com/MIT-PSFC/disruption-py/graphs/contributors) page.
 
