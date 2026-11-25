@@ -2,7 +2,7 @@ DisruptionPy defines abstract base classes for data connections, allowing physic
 
 ## Connection Architecture { .doc .doc-heading }
 
-[`DataConnection`][disruption_py.inout.base.DataConnection] is the per-shot data access interface. Each instance is bound to a single shot and provides methods for retrieving data and dimensions. Concrete implementations include [`MDSConnection`][disruption_py.inout.mds.MDSConnection] for MDSplus and `XarrayDataConnection` for Xarray/Zarr.
+[`DataConnection`][disruption_py.inout.base.DataConnection] is the per-shot data access interface. Each instance is bound to a single shot and provides methods for retrieving data and dimensions. Concrete implementations include [`MDSConnection`][disruption_py.inout.mds.MDSConnection] for MDSplus and [`XarrayDataConnection`][disruption_py.inout.xr.XarrayDataConnection] for Xarray/Zarr.
 
 [`ProcessConnection`][disruption_py.inout.base.ProcessConnection] is the per-process factory that creates `DataConnection` instances for each shot. This separation ensures multiprocessing safety -- each process holds its own `ProcessConnection`, which produces independent `DataConnection` objects per shot.
 

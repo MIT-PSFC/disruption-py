@@ -121,7 +121,7 @@ class CmodEfitMethods:
     def efit_check(params: PhysicsMethodParams):
         """
         Check the validity of EFIT parameters for the given shot.
-        # TODO: Get description from Jinxiang
+          #TODO: Get description from Jinxiang
 
         Parameters
         ----------
