@@ -47,14 +47,14 @@ nav:
           - Parameter Reference: devices/d3d/parameters.md
           - Physics methods: devices/d3d/physics_methods.md
       - EAST:
-          - Physics methods: devices/east/physics_methods.md
           - Parameter Reference: devices/east/parameters.md
+          - Physics methods: devices/east/physics_methods.md
       - HBT-EP:
-          - Physics methods: devices/hbtep/physics_methods.md
           - Parameter Reference: devices/hbtep/parameters.md
+          - Physics methods: devices/hbtep/physics_methods.md
       - MAST:
-          - Physics methods: devices/mast/physics_methods.md
           - Parameter Reference: devices/mast/parameters.md
+          - Physics methods: devices/mast/physics_methods.md
       - Generic physics methods: devices/generic.md
   - APIs:
       - Entry points:
